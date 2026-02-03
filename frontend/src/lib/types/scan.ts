@@ -1,0 +1,91 @@
+interface ScanProgress {
+	current_page: number;
+	total_pages: number;
+	percentage: number;
+}
+
+export interface ScreenshotArtifact {
+	scanner_type?: string;
+	violation_id: string;
+	page_id: string;
+	page_url?: string;
+	url: string;
+	thumbnail_url?: string;
+	captured_at?: string;
+}
+
+interface ScannerArtifactBundle {
+	scanner_type: string;
+	results_json?: string;
+	report_html?: string;
+	scan_stage_log?: string;
+	scan_recipe?: string;
+}
+
+interface ScanArtifacts {
+	report_json: string;
+	report_html: string;
+	scan_stage_log?: string;
+	scan_recipe?: string;
+	extraction_stage_log?: string;
+	extraction_recipe?: string;
+	screenshots?: ScreenshotArtifact[];
+	scanner_artifacts?: Record<string, ScannerArtifactBundle>;
+}
+
+export interface ScanResult {
+	id: string;
+	state: string;
+	error?: string;
+	error_details?: string;
+	last_stage?: string;
+	violations?: number;
+	progress?: ScanProgress;
+	artifacts?: ScanArtifacts;
+	created_at: string;
+	updated_at: string;
+}
+
+export type ScanStatus =
+	| 'pending'
+	| 'processing'
+	| 'extracting'
+	| 'scanning'
+	| 'completing'
+	| 'complete'
+	| 'failed'
+	| 'loading'
+	| 'error';
+
+interface ScannerCapabilities {
+	outputFormats: string[];
+	supportsScreenshots: boolean;
+	supportsConcurrency: boolean;
+	requiresBrowser: boolean;
+	supportsOffline: boolean;
+	maxConcurrency: number;
+}
+
+export interface ScannerDefinition {
+	id: string;
+	name: string;
+	version: string;
+	description: string;
+	categories: string[];
+	aliases: string[];
+	enabled: boolean;
+	builtIn: boolean;
+	capabilities: ScannerCapabilities;
+	image?: string;
+}
+
+export interface ScannerSelection {
+	id: string;
+	enabled: boolean;
+	config?: Record<string, unknown>;
+}
+
+export interface ScannersResponse {
+	scanners: ScannerDefinition[];
+	categories: string[];
+}

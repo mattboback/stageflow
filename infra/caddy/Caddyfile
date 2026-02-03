@@ -1,0 +1,66 @@
+{
+    # Set to your email for ACME registration (Let's Encrypt).
+    # Example: email you@example.com
+    email {$CADDY_EMAIL:you@example.com}
+}
+
+# Public domain for this stack (override via STAGEFLOW_PUBLIC_DOMAIN).
+{$STAGEFLOW_PUBLIC_DOMAIN:stageflow.org} {
+    # Proxy API requests directly to platform-api
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8100
+    }
+
+    # Expose MinIO buckets publicly (path-style) for presigned URLs
+    # CORS headers required for fetch() redirects from API
+    # Preserve Host header so presigned URLs remain valid
+    handle /scanner-artifacts/* {
+        header {
+            # Match the served hostname (supports www/apex without extra config).
+            Access-Control-Allow-Origin "https://{http.request.host}"
+            Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+            Access-Control-Allow-Headers "Content-Type, Range"
+            Access-Control-Expose-Headers "Content-Length, Content-Range"
+            Vary Origin
+        }
+        @options method OPTIONS
+        respond @options 204
+        reverse_proxy 127.0.0.1:9100 {
+            # Preserve Host so MinIO can validate SigV4 presigned URLs.
+            header_up Host {http.request.host}
+        }
+    }
+
+    handle /scanner-staging/* {
+        header {
+            # Match the served hostname (supports www/apex without extra config).
+            Access-Control-Allow-Origin "https://{http.request.host}"
+            Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+            Access-Control-Allow-Headers "Content-Type, Range"
+            Access-Control-Expose-Headers "Content-Length, Content-Range"
+            Vary Origin
+        }
+        @options method OPTIONS
+        respond @options 204
+        reverse_proxy 127.0.0.1:9100 {
+            # Preserve Host so MinIO can validate SigV4 presigned URLs.
+            header_up Host {http.request.host}
+        }
+    }
+
+    # Protected Grafana monitoring dashboard
+    handle /monitoring* {
+        # Optional HTTP Basic Auth (recommended for public exposure).
+        # Create `infra/caddy/snippets/monitoring-basicauth.caddy` (gitignored) to enable.
+        # Uses a glob so the snippet is optional (Caddy warns if missing, but still loads).
+        import snippets/monitoring-basicauth*.caddy
+
+        # Proxy to Grafana (served from the /monitoring subpath)
+        reverse_proxy 127.0.0.1:3101
+    }
+
+    # Proxy everything else to the frontend
+    handle /* {
+        reverse_proxy 127.0.0.1:3100
+    }
+}

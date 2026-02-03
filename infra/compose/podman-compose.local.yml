@@ -1,0 +1,36 @@
+# Local development overrides
+# Use with: podman compose -f infra/compose/podman-compose.yml -f infra/compose/podman-compose.local.yml up -d
+
+services:
+  frontend:
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
+        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3010}
+        VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
+        VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility scanning platform}
+    ports:
+      - "3010:3000"
+
+  platform-api:
+    environment:
+      MINIO_USE_PROXY_URLS: "false"
+      PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:3010,http://localhost:3000,http://localhost:8080
+    ports:
+      - "8080:8080"
+
+  minio:
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  grafana:
+    ports:
+      - "3001:3001"
+
+  nats:
+    ports:
+      - "4222:4222"

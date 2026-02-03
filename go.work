@@ -1,0 +1,13 @@
+go 1.25
+
+use (
+	./packages/contracts/report/generated/go
+	./packages/contracts/scanner-manifest
+	./packages/shared-go
+	./platform/api
+	./platform/extractor
+	./platform/orchestrator
+	./tests/e2e
+	./tools/job-status-cli
+	./tools/suite-runner
+)

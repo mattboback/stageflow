@@ -1,0 +1,25 @@
+[Unit]
+Description=StageFlow Grafana
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow-orchestrator.service
+Requires=stageflow-orchestrator.service
+
+[Service]
+EnvironmentFile=@APP_ENV_FILE@
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=docker.io/grafana/grafana:12.2.0
+EnvironmentFile=@APP_ENV_FILE@
+Pod=stageflow.pod
+Volume=stageflow_grafana_data:/var/lib/grafana
+Volume=@REPO_ROOT@/infra/grafana/provisioning:/etc/grafana/provisioning:ro
+Volume=stageflow_orchestrator_data:/data/orchestrator:ro
+Environment=GF_INSTALL_PLUGINS=frser-sqlite-datasource
+Environment=GF_SERVER_HTTP_PORT=3001
+Environment=GF_SERVER_SERVE_FROM_SUB_PATH=true
+
+[Install]
+WantedBy=stageflow.target

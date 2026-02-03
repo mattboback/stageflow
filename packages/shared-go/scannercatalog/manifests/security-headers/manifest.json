@@ -1,0 +1,22 @@
+{
+  "id": "security-headers",
+  "name": "Security Headers Scanner",
+  "version": "1.0.0",
+  "description": "Analyzes HTTP security headers and detects common security misconfigurations",
+  "aliases": ["security", "headers", "csp", "hsts"],
+  "author": "Stageflow",
+  "capabilities": {
+    "categories": ["security"],
+    "outputFormats": ["json", "html"],
+    "supportsScreenshots": false,
+    "supportsConcurrency": true,
+    "requiresBrowser": true,
+    "supportsOffline": false,
+    "maxConcurrency": 10,
+    "estimatedTimePerPage": 2000
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "SecurityHeadersScanner"
+  }
+}

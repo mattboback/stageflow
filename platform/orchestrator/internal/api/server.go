@@ -1,0 +1,408 @@
+// Package api exposes the orchestrator's HTTP endpoints.
+package api
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/mattboback/stageflow/packages/shared-go/events"
+	"github.com/mattboback/stageflow/packages/shared-go/httputil"
+	"github.com/mattboback/stageflow/packages/shared-go/models"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+)
+
+// Publisher provides NATS event publishing capabilities.
+type Publisher interface {
+	PublishJobCreated(ctx context.Context, payload *events.JobCreatedPayload) error
+}
+
+const (
+	defaultJobsListLimit    = 50
+	maxJobsListLimit        = 1000
+	defaultJobEventsLimit   = 500
+	maxJobEventsLimit       = 5000
+	minPaginationLimitValue = 1
+)
+
+// Server provides HTTP API endpoints for job and pod status.
+type Server struct {
+	database     *db.Database
+	podmanClient PodmanClient
+	publisher    Publisher
+	port         string
+	server       *http.Server
+}
+
+// PodmanClient is the subset of Podman operations the API server needs.
+type PodmanClient interface {
+	ListPods(ctx context.Context) ([]podman.PodInfo, error)
+	InspectPod(ctx context.Context, podID string) (*podman.PodInfo, error)
+}
+
+func parsePaginationParams(query url.Values, defaultLimit, maxLimit int) (limit, offset int) {
+	limit = defaultLimit
+
+	if limitStr := query.Get("limit"); limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed >= minPaginationLimitValue && parsed <= maxLimit {
+			limit = parsed
+		}
+	}
+
+	offset = 0
+
+	if offsetStr := query.Get("offset"); offsetStr != "" {
+		if parsed, err := strconv.Atoi(offsetStr); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	return limit, offset
+}
+
+// Config contains configuration for the API server.
+type Config struct {
+	Database     *db.Database
+	PodmanClient PodmanClient
+	Publisher    Publisher
+	Port         string // Default: "8081"
+}
+
+// NewServer creates a new API server.
+func NewServer(cfg *Config) *Server {
+	if cfg.Port == "" {
+		cfg.Port = "8081"
+	}
+
+	s := &Server{
+		database:     cfg.Database,
+		podmanClient: cfg.PodmanClient,
+		publisher:    cfg.Publisher,
+		port:         cfg.Port,
+	}
+
+	mux := http.NewServeMux()
+
+	// Admin endpoints only (public API is platform-api).
+	mux.HandleFunc("/api/v1/jobs", s.handleListJobs)
+	mux.HandleFunc("/api/v1/jobs/", s.handleJobRoutes)
+
+	// Test endpoints for direct job creation
+	mux.HandleFunc("/api/v1/test/jobs", s.handleCreateTestJob)
+
+	mux.HandleFunc("/api/v1/pods", s.handleListPods)
+	mux.HandleFunc("/api/v1/pods/", s.handlePodDetails)
+
+	mux.HandleFunc("/api/v1/status", s.handleSystemStatus)
+
+	mux.HandleFunc("/healthz", s.handleHealth)
+
+	s.server = &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           mux,
+		ReadHeaderTimeout: 15 * time.Second,
+	}
+
+	return s
+}
+
+// handleJobRoutes handles job subroutes:
+//   - GET /api/v1/jobs/{job_id}
+//   - GET /api/v1/jobs/{job_id}/events
+func (s *Server) handleJobRoutes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	trimmed := strings.TrimPrefix(r.URL.Path, "/api/v1/jobs/")
+	if trimmed == "" {
+		httputil.RespondError(w, http.StatusBadRequest, "Missing job ID")
+
+		return
+	}
+
+	if strings.HasSuffix(trimmed, "/events") {
+		jobID := strings.TrimSuffix(trimmed, "/events")
+		jobID = strings.TrimSuffix(jobID, "/")
+
+		if jobID == "" {
+			httputil.RespondError(w, http.StatusBadRequest, "Missing job ID")
+
+			return
+		}
+
+		limit, offset := parsePaginationParams(r.URL.Query(), defaultJobEventsLimit, maxJobEventsLimit)
+
+		eventsList, err := s.database.ListJobEvents(r.Context(), jobID, db.ListJobEventsOptions{Limit: limit, Offset: offset})
+		if err != nil {
+			slog.Error("Failed to list job events", "job_id", jobID, "error", err)
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to retrieve job events")
+
+			return
+		}
+
+		httputil.RespondOK(w, map[string]any{
+			"job_id": jobID,
+			"events": eventsList,
+			"limit":  limit,
+			"offset": offset,
+		})
+
+		return
+	}
+
+	// Default: GET /api/v1/jobs/{job_id}
+	jobID := strings.TrimSuffix(trimmed, "/")
+
+	job, err := s.database.GetJob(r.Context(), jobID)
+	if err != nil {
+		slog.Warn("Job not found", "job_id", jobID, "error", err)
+		httputil.RespondNotFound(w, "Job")
+
+		return
+	}
+
+	httputil.RespondOK(w, map[string]any{
+		"job": job,
+	})
+}
+
+// Start starts the HTTP server.
+func (s *Server) Start() error {
+	slog.Info("Starting orchestrator API server", "port", s.port)
+
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("failed to start server: %w", err)
+	}
+
+	return nil
+}
+
+// Shutdown gracefully shuts down the server.
+func (s *Server) Shutdown(ctx context.Context) error {
+	slog.Info("Shutting down orchestrator API server...")
+
+	return s.server.Shutdown(ctx)
+}
+
+// handleListJobs handles GET /api/v1/jobs
+// Query parameters:
+//   - state: filter by job state (optional)
+//   - limit: max number of results (default: 50)
+//   - offset: skip N results (default: 0)
+func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	query := r.URL.Query()
+
+	var stateFilter *models.JobState
+
+	if stateStr := query.Get("state"); stateStr != "" {
+		state := models.JobState(stateStr)
+		stateFilter = &state
+	}
+
+	limit, offset := parsePaginationParams(query, defaultJobsListLimit, maxJobsListLimit)
+
+	jobs, err := s.database.ListJobs(r.Context(), db.ListJobsOptions{
+		State:  stateFilter,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		slog.Error("Failed to list jobs", "error", err)
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to retrieve jobs")
+
+		return
+	}
+
+	totalCount, err := s.database.CountJobs(r.Context(), stateFilter)
+	if err != nil {
+		slog.Warn("Failed to count jobs", "error", err)
+
+		totalCount = len(jobs) // fallback
+	}
+
+	response := map[string]any{
+		"jobs":   jobs,
+		"total":  totalCount,
+		"limit":  limit,
+		"offset": offset,
+	}
+
+	httputil.RespondOK(w, response)
+}
+
+// handleListPods handles GET /api/v1/pods
+// Lists all pods from Podman with job associations.
+func (s *Server) handleListPods(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	if s.podmanClient == nil {
+		httputil.RespondError(w, http.StatusServiceUnavailable, "Podman client not configured")
+
+		return
+	}
+
+	pods, err := s.podmanClient.ListPods(r.Context())
+	if err != nil {
+		slog.Error("Failed to list pods", "error", err)
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to retrieve pods")
+
+		return
+	}
+
+	enrichedPods := make([]map[string]any, 0, len(pods))
+
+	for _, pod := range pods {
+		podData := map[string]any{
+			"id":     pod.ID,
+			"name":   pod.Name,
+			"status": pod.Status,
+			"job_id": nil,
+		}
+
+		// Try to extract job ID from pod name (format: job-{jobID})
+		if strings.HasPrefix(pod.Name, "job-") {
+			jobID := strings.TrimPrefix(pod.Name, "job-")
+			podData["job_id"] = jobID
+
+			if job, err := s.database.GetJob(r.Context(), jobID); err == nil {
+				podData["job_state"] = job.State
+			}
+		}
+
+		enrichedPods = append(enrichedPods, podData)
+	}
+
+	httputil.RespondOK(w, map[string]any{
+		"pods":  enrichedPods,
+		"total": len(enrichedPods),
+	})
+}
+
+// handlePodDetails handles GET /api/v1/pods/{id}
+// Returns detailed pod information including containers.
+func (s *Server) handlePodDetails(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	if s.podmanClient == nil {
+		httputil.RespondError(w, http.StatusServiceUnavailable, "Podman client not configured")
+
+		return
+	}
+
+	podID := strings.TrimPrefix(r.URL.Path, "/api/v1/pods/")
+	if podID == "" {
+		httputil.RespondError(w, http.StatusBadRequest, "Missing pod ID")
+
+		return
+	}
+
+	podInfo, err := s.podmanClient.InspectPod(r.Context(), podID)
+	if err != nil {
+		slog.Error("Failed to inspect pod", "error", err, "pod_id", podID)
+		httputil.RespondNotFound(w, "Pod")
+
+		return
+	}
+
+	httputil.RespondOK(w, podInfo)
+}
+
+// handleSystemStatus handles GET /api/v1/status
+// Returns overall system status and statistics.
+func (s *Server) handleSystemStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
+
+		return
+	}
+
+	stateCounts := make(map[string]int)
+
+	for _, state := range []models.JobState{
+		models.JobStatePending,
+		models.JobStateExtracting,
+		models.JobStateReady,
+		models.JobStateScanning,
+		models.JobStateCompleting,
+		models.JobStateDone,
+		models.JobStateFailed,
+	} {
+		count, err := s.database.CountJobs(r.Context(), &state)
+		if err != nil {
+			slog.Warn("Failed to count jobs for state", "state", state, "error", err)
+
+			count = 0
+		}
+
+		stateCounts[string(state)] = count
+	}
+
+	totalJobs, err := s.database.CountJobs(r.Context(), nil)
+	if err != nil {
+		slog.Warn("Failed to count total jobs", "error", err)
+
+		totalJobs = 0
+	}
+
+	pods := []podman.PodInfo{}
+
+	if s.podmanClient != nil {
+		podList, listErr := s.podmanClient.ListPods(r.Context())
+		if listErr != nil {
+			slog.Warn("Failed to list pods", "error", listErr)
+		} else {
+			pods = podList
+		}
+	}
+
+	podStatusCounts := make(map[string]int)
+	for _, pod := range pods {
+		podStatusCounts[pod.Status]++
+	}
+
+	response := map[string]any{
+		"jobs": map[string]any{
+			"total":     totalJobs,
+			"by_state":  stateCounts,
+			"active":    stateCounts["PENDING"] + stateCounts["EXTRACTING"] + stateCounts["READY_TO_SCAN"] + stateCounts["SCANNING"] + stateCounts["COMPLETING"],
+			"completed": stateCounts["DONE"],
+			"failed":    stateCounts["FAILED"],
+		},
+		"pods": map[string]any{
+			"total":     len(pods),
+			"by_status": podStatusCounts,
+		},
+	}
+
+	httputil.RespondOK(w, response)
+}
+
+// handleHealth handles GET /healthz.
+func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	httputil.RespondOK(w, map[string]string{
+		"status": "healthy",
+	})
+}

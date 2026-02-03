@@ -1,0 +1,35 @@
+[Unit]
+Description=StageFlow Orchestrator
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow-nats.service stageflow-minio.service
+Requires=stageflow-nats.service stageflow-minio.service
+
+[Service]
+EnvironmentFile=@APP_ENV_FILE@
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=stageflow/orchestrator:latest
+EnvironmentFile=@APP_ENV_FILE@
+Pod=stageflow.pod
+SecurityLabelDisable=true
+Volume=%t/podman/podman.sock:/run/podman/podman.sock:z
+Volume=stageflow_orchestrator_data:/data
+Volume=@REPO_ROOT@/infra/scanners/scanners.yaml:/data/scanners.yaml:ro
+Environment=NATS_URL=nats://nats:4222
+Environment=PODMAN_SOCKET=/run/podman/podman.sock
+Environment=DB_PATH=/data/jobs.db
+Environment=SCANNER_CONFIG_PATH=/data/scanners.yaml
+Environment=MINIO_ENDPOINT=minio:9000
+Environment=MINIO_USE_SSL=false
+Environment=EXTRACTION_IMAGE=stageflow/extractor:latest
+Environment=SCANNER_IMAGE=stageflow/scanner-runner:latest
+Environment=API_PORT=8081
+Environment=NATS_HOST=nats
+Environment=MINIO_HOST=minio
+Environment=POD_NETWORK=@NETWORK_NAME@
+
+[Install]
+WantedBy=stageflow.target

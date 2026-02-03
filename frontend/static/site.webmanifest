@@ -1,0 +1,14 @@
+{
+	"name": "StageFlow",
+	"short_name": "StageFlow",
+	"icons": [
+		{
+			"src": "/favicon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml"
+		}
+	],
+	"theme_color": "#f7f6f2",
+	"background_color": "#f7f6f2",
+	"display": "standalone"
+}

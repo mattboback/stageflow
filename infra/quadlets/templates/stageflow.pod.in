@@ -1,0 +1,26 @@
+[Unit]
+Description=StageFlow Pod
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target
+
+[Pod]
+PodName=stageflow
+Network=@NETWORK_NAME@
+
+# Host (loopback-only) published ports for Caddy / local access
+PublishPort=127.0.0.1:3100:3000
+PublishPort=127.0.0.1:8100:8080
+PublishPort=127.0.0.1:9100:9000
+PublishPort=127.0.0.1:3101:3001
+
+# Network-scoped aliases for service discovery from job pods and other stacks
+NetworkAlias=nats
+NetworkAlias=minio
+NetworkAlias=orchestrator
+NetworkAlias=platform-api
+NetworkAlias=frontend
+NetworkAlias=grafana
+
+[Install]
+WantedBy=stageflow.target

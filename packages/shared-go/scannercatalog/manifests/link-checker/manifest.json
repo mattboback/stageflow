@@ -1,0 +1,22 @@
+{
+  "id": "link-checker",
+  "name": "Link Checker Scanner",
+  "version": "1.0.0",
+  "description": "Validates all links on the page, checking for broken links, redirect chains, and link quality issues",
+  "aliases": ["links", "broken-links", "404"],
+  "author": "Stageflow",
+  "capabilities": {
+    "categories": ["quality"],
+    "outputFormats": ["json", "html"],
+    "supportsScreenshots": false,
+    "supportsConcurrency": true,
+    "requiresBrowser": true,
+    "supportsOffline": false,
+    "maxConcurrency": 3,
+    "estimatedTimePerPage": 10000
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "LinkCheckerScanner"
+  }
+}

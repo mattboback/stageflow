@@ -1,0 +1,82 @@
+{
+  "id": "ai-navigator",
+  "name": "AI Navigator",
+  "version": "1.0.0",
+  "description": "LLM-powered Playwright agent that navigates toward a goal and produces a step-by-step trace.",
+  "aliases": ["agent", "agentic", "flow"],
+  "author": "Stageflow",
+  "capabilities": {
+    "categories": ["custom"],
+    "outputFormats": ["json", "html"],
+    "supportsScreenshots": true,
+    "supportsConcurrency": false,
+    "requiresBrowser": true,
+    "supportsOffline": false,
+    "maxConcurrency": 1,
+    "estimatedTimePerPage": 30000
+  },
+  "requirements": {
+    "resources": {
+      "maxMemoryMB": 2048,
+      "maxTimeoutMs": 600000
+    }
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "AiNavigatorScanner"
+  },
+  "configSchema": {
+    "type": "object",
+    "required": ["goal", "vision"],
+    "properties": {
+      "goal": {
+        "type": "object",
+        "required": ["objective"],
+        "properties": {
+          "objective": { "type": "string", "minLength": 1 },
+          "successCriteria": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "value"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["url-contains", "url-matches", "element-visible", "text-visible", "custom"]
+                },
+                "value": { "type": "string" }
+              }
+            }
+          },
+          "maxSteps": { "type": "number", "minimum": 1 },
+          "maxWallTimeMs": { "type": "number", "minimum": 1 },
+          "inputValues": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      },
+      "vision": {
+        "type": "object",
+        "required": ["model"],
+        "properties": {
+          "provider": { "type": "string", "enum": ["openrouter"], "default": "openrouter" },
+          "model": { "type": "string", "minLength": 1 },
+          "maxTokens": { "type": "number", "minimum": 1 },
+          "timeoutMs": { "type": "number", "minimum": 1 },
+          "maxImageBytes": { "type": "number", "minimum": 1 },
+          "maxConcurrency": { "type": "number", "minimum": 1 },
+          "retry": {
+            "type": "object",
+            "required": ["maxAttempts"],
+            "properties": {
+              "maxAttempts": { "type": "number", "minimum": 1 },
+              "baseDelayMs": { "type": "number", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

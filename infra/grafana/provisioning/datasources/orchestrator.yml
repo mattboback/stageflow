@@ -1,0 +1,10 @@
+apiVersion: 1
+
+datasources:
+  - name: Orchestrator DB
+    type: frser-sqlite-datasource
+    access: proxy
+    isDefault: true
+    jsonData:
+      path: /data/orchestrator/jobs.db
+    editable: false

@@ -1,0 +1,53 @@
+# Example staging host block.
+# Add this to the Caddy instance that serves your public domains.
+#
+# Uses the staging compose overlay loopback ports:
+#   frontend: 127.0.0.1:3300
+#   gateway:  127.0.0.1:4300
+#   minio:    127.0.0.1:9300
+#   grafana:  127.0.0.1:3301
+
+staging.example.com {
+    handle /api/* {
+        reverse_proxy 127.0.0.1:4300
+    }
+
+    handle /scanner-artifacts/* {
+        header {
+            Access-Control-Allow-Origin "https://{http.request.host}"
+            Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+            Access-Control-Allow-Headers "Content-Type, Range"
+            Access-Control-Expose-Headers "Content-Length, Content-Range"
+            Vary Origin
+        }
+        @options method OPTIONS
+        respond @options 204
+        reverse_proxy 127.0.0.1:9300 {
+            header_up Host {http.request.host}
+        }
+    }
+
+    handle /scanner-staging/* {
+        header {
+            Access-Control-Allow-Origin "https://{http.request.host}"
+            Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+            Access-Control-Allow-Headers "Content-Type, Range"
+            Access-Control-Expose-Headers "Content-Length, Content-Range"
+            Vary Origin
+        }
+        @options method OPTIONS
+        respond @options 204
+        reverse_proxy 127.0.0.1:9300 {
+            header_up Host {http.request.host}
+        }
+    }
+
+    handle /monitoring* {
+        import snippets/monitoring-basicauth*.caddy
+        reverse_proxy 127.0.0.1:3301
+    }
+
+    handle /* {
+        reverse_proxy 127.0.0.1:3300
+    }
+}

@@ -1,0 +1,177 @@
+package orchestrator
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"strconv"
+
+	"github.com/mattboback/stageflow/packages/shared-go/logging"
+	"github.com/mattboback/stageflow/packages/shared-go/models"
+	"github.com/mattboback/stageflow/packages/shared-go/storage"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+)
+
+func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) error {
+	if job.State == models.JobStateExtracting {
+		slog.Debug("Job already extracting", "job_id", job.ID)
+	} else {
+		if !o.stateMachine.CanTransition(job.State, models.JobStateExtracting) {
+			msg := fmt.Sprintf("job %s cannot transition to EXTRACTING from %s", job.ID, job.State)
+			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
+			o.failJobSafeWithDetails(ctx, job.ID, "extraction", msg, stateTransitionDetails(job.State, models.JobStateExtracting))
+
+			return fmt.Errorf("%s", msg)
+		}
+
+		if err := o.database.UpdateJobState(ctx, job.ID, models.JobStateExtracting); err != nil {
+			return fmt.Errorf("failed to update job state: %w", err)
+		}
+
+		job.State = models.JobStateExtracting
+
+		// Record extraction start time for metrics
+		if err := o.database.RecordExtractionStart(ctx, job.ID); err != nil {
+			slog.Warn("Failed to record extraction start", "job_id", job.ID, "error", err)
+		}
+	}
+
+	podReq := &podman.PodCreateRequest{
+		Name: "job-" + job.ID,
+		Labels: map[string]string{
+			"managed_by": "orchestrator",
+			"job_id":     job.ID,
+		},
+		HostAdd: o.podHostMappings,
+	}
+	if o.podNetwork != "" {
+		podReq.Networks = map[string]podman.PerNetworkOptions{
+			o.podNetwork: {},
+		}
+		podReq.Netns = podman.PodNetns{Nsmode: "bridge"}
+	}
+
+	podResp, err := o.podmanClient.CreatePod(ctx, podReq)
+	if err != nil {
+		return fmt.Errorf("failed to create pod: %w", err)
+	}
+
+	if err := o.database.UpdateJobPodID(ctx, job.ID, podResp.ID); err != nil {
+		return fmt.Errorf("failed to update job pod ID: %w", err)
+	}
+
+	slog.Info("Created pod for job", "pod_id", podResp.ID, "job_id", job.ID)
+	o.recordInternalEvent(ctx, job.ID, "orchestrator.pod.created", map[string]any{
+		"pod_id": podResp.ID,
+	})
+
+	if err := o.startExtractionWorkerWithTimeout(ctx, job, podResp.ID); err != nil {
+		return fmt.Errorf("failed to start extraction worker: %w", err)
+	}
+
+	// Watchdog: fail the job if extraction exceeds timeout.
+	go o.watchDeadline(backgroundWithCorrelation(ctx), job.ID, models.JobStateExtracting, o.extractionTimeout, "extraction")
+
+	return nil
+}
+
+// startExtractionWorkerWithTimeout starts the extraction worker and enforces a hard startup budget.
+func (o *Orchestrator) startExtractionWorkerWithTimeout(ctx context.Context, job *models.Job, podID string) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, o.extractionTimeout)
+	defer cancel()
+
+	resultChan := make(chan error, 1)
+
+	go func() {
+		resultChan <- o.startExtractionWorker(timeoutCtx, job, podID)
+	}()
+
+	select {
+	case err := <-resultChan:
+		return err
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("extraction worker start timed out after %v", o.extractionTimeout)
+	}
+}
+
+func (o *Orchestrator) startExtractionWorker(ctx context.Context, job *models.Job, podID string) error {
+	natsURL := "nats://" + o.natsHost + ":4222"
+	minioEndpoint := o.minioHost + ":9000"
+
+	env := map[string]string{
+		"JOB_ID":                job.ID,
+		"INPUT_PATH":            job.InputPath,
+		"NATS_URL":              natsURL,
+		"MINIO_ENDPOINT":        minioEndpoint,
+		"MINIO_ACCESS_KEY":      o.minioAccessKey,
+		"MINIO_SECRET_KEY":      o.minioSecretKey,
+		"MINIO_USE_SSL":         strconv.FormatBool(o.minioUseSSL),
+		"WORKSPACE":             "/workspace",
+		"PORT":                  "8080",
+		"MINIO_ARTIFACT_BUCKET": storage.BucketArtifacts,
+	}
+
+	if requestID := logging.RequestID(ctx); requestID != "" {
+		env["REQUEST_ID"] = requestID
+	}
+
+	if runID := logging.RunID(ctx); runID != "" {
+		env["RUN_ID"] = runID
+	}
+
+	// Workspace volume is shared across extraction and scanners for this job.
+	volumeName := "workspace-" + job.ID
+	if err := o.podmanClient.CreateVolume(ctx, volumeName); err != nil {
+		return fmt.Errorf("failed to create workspace volume: %w", err)
+	}
+
+	workspaceVolume, err := o.podmanClient.InspectVolume(ctx, volumeName)
+	if err != nil {
+		return fmt.Errorf("failed to inspect workspace volume: %w", err)
+	}
+
+	containerReq := &podman.ContainerCreateRequest{
+		Name:  "extraction-worker-" + job.ID,
+		Image: o.extractionImage,
+		Pod:   podID,
+		Env:   env,
+		Mounts: []podman.VolumeMount{
+			{
+				// Bind to the volume mountpoint so runc receives a valid host path.
+				Type:        "bind",
+				Source:      workspaceVolume.Mountpoint,
+				Destination: "/workspace",
+			},
+		},
+		Labels: map[string]string{
+			"managed_by": "orchestrator",
+			"job_id":     job.ID,
+			"component":  "extraction-worker",
+		},
+	}
+
+	containerResp, err := o.podmanClient.CreateContainer(ctx, containerReq)
+	if err != nil {
+		return fmt.Errorf("failed to create extraction worker container: %w", err)
+	}
+
+	slog.Info("Created extraction worker container", "container_id", containerResp.ID, "job_id", job.ID)
+	o.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
+		"component":    "extraction-worker",
+		"container_id": containerResp.ID,
+	})
+
+	if err := o.podmanClient.StartContainer(ctx, containerResp.ID); err != nil {
+		return fmt.Errorf("failed to start extraction worker container: %w", err)
+	}
+
+	slog.Info("Started extraction worker container", "container_id", containerResp.ID, "job_id", job.ID)
+	o.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
+		"component":    "extraction-worker",
+		"container_id": containerResp.ID,
+	})
+
+	go o.monitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "extraction")
+
+	return nil
+}

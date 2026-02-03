@@ -1,0 +1,30 @@
+# Scanner overrides used by deployments.
+#
+# Copy this file to `infra/scanners/scanners.yaml` (gitignored) if you want to
+# customize scanner enablement, images, or resource limits without committing.
+#
+# To apply, set: SCANNER_CONFIG_PATH=/data/scanners.yaml (or any mounted path).
+
+scanners:
+  axe:
+    enabled: true
+
+  lighthouse:
+    enabled: true
+    # Resource caps for smaller machines.
+    requirements:
+      maxMemoryMB: 2048
+      maxTimeoutMs: 60000
+
+  # Disabled by default (enable explicitly when needed).
+  ai-navigator:
+    enabled: false
+
+  link-checker:
+    enabled: false
+
+  seo:
+    enabled: false
+
+  security-headers:
+    enabled: false

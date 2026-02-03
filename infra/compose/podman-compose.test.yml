@@ -1,0 +1,35 @@
+# Development overlay - exposes ports for local testing
+# Usage: podman compose -f infra/compose/podman-compose.yml -f infra/compose/podman-compose.test.yml up
+
+services:
+  nats:
+    ports:
+      - "127.0.0.1:4222:4222"
+
+  minio:
+    environment:
+      MINIO_DOMAIN: localhost
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+  grafana:
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  platform-api:
+    environment:
+      MINIO_PUBLIC_ENDPOINT: "localhost:9000"
+      MINIO_PUBLIC_USE_SSL: "false"
+      MINIO_USE_PROXY_URLS: "false"
+      PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  orchestrator:
+    ports:
+      - "127.0.0.1:8081:8081"
+
+  frontend:
+    ports:
+      - "127.0.0.1:3000:3000"

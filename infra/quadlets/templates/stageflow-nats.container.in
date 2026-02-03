@@ -1,0 +1,20 @@
+[Unit]
+Description=StageFlow NATS (JetStream)
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+EnvironmentFile=@APP_ENV_FILE@
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=docker.io/library/nats:2.12.2-alpine
+EnvironmentFile=@APP_ENV_FILE@
+Pod=stageflow.pod
+Volume=stageflow_nats_data:/data
+Exec=-js -sd /data
+
+[Install]
+WantedBy=stageflow.target

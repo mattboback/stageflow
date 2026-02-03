@@ -1,0 +1,17 @@
+[Unit]
+Description=StageFlow Frontend
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow-platform-api.service
+Requires=stageflow-platform-api.service
+
+[Service]
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=stageflow/frontend:latest
+Pod=stageflow.pod
+
+[Install]
+WantedBy=stageflow.target
