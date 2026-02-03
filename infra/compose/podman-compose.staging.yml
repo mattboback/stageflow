@@ -1,0 +1,24 @@
+# Staging overlay - production-like stack with isolated loopback ports
+# Usage:
+#   podman compose -p stageflow-staging \
+#     -f infra/compose/podman-compose.yml \
+#     -f infra/compose/podman-compose.staging.yml \
+#     --env-file .env.staging up -d
+
+services:
+  minio:
+    ports:
+      - "127.0.0.1:9300:9000"
+      - "127.0.0.1:9301:9001"
+
+  grafana:
+    ports:
+      - "127.0.0.1:3301:3001"
+
+  platform-api:
+    ports:
+      - "127.0.0.1:8300:8080"
+
+  frontend:
+    ports:
+      - "127.0.0.1:3300:3000"

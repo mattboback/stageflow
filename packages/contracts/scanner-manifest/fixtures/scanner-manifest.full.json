@@ -1,0 +1,68 @@
+{
+  "id": "full-example",
+  "name": "Full Example Scanner",
+  "version": "2.3.4-alpha.1+build.7",
+  "description": "Full manifest example with every optional field populated.",
+  "author": "Stageflow",
+  "license": "MIT",
+  "homepage": "https://example.com/scanners/full-example",
+  "repository": "https://github.com/example/full-example",
+  "aliases": ["example", "demo"],
+  "capabilities": {
+    "categories": ["accessibility", "performance"],
+    "outputFormats": ["json", "html"],
+    "supportsScreenshots": true,
+    "supportsConcurrency": true,
+    "requiresBrowser": true,
+    "supportsOffline": false,
+    "maxConcurrency": 3,
+    "estimatedTimePerPage": 5000
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "foo": { "type": "string" },
+      "bar": { "type": "number" }
+    },
+    "required": ["foo"],
+    "additionalProperties": false
+  },
+  "requirements": {
+    "browser": {
+      "type": "chromium",
+      "headless": true,
+      "args": ["--no-sandbox"]
+    },
+    "nodeVersion": ">=18",
+    "externalTools": [
+      {
+        "name": "curl",
+        "command": "curl",
+        "version": "8.0.0",
+        "optional": true
+      }
+    ],
+    "network": {
+      "requiresInternet": true,
+      "allowedHosts": ["example.com"]
+    },
+    "resources": {
+      "maxMemoryMB": 1024,
+      "maxTimeoutMs": 60000
+    }
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "ExampleScanner",
+    "factoryName": "createScanner"
+  },
+  "output": {
+    "severityMapping": {
+      "fatal": "critical",
+      "warn": "minor"
+    },
+    "categoryPrefix": "demo",
+    "includeRawResults": true,
+    "reportTemplate": "./templates/report.html"
+  }
+}

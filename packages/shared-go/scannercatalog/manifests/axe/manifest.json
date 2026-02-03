@@ -1,0 +1,64 @@
+{
+  "id": "axe",
+  "name": "Axe Accessibility Scanner",
+  "version": "1.0.0",
+  "description": "WCAG accessibility testing using axe-core engine. Detects accessibility violations and provides remediation guidance.",
+  "aliases": ["accessibility", "a11y", "wcag", "keyboard", "keyboard-nav"],
+  "author": "Stageflow",
+  "license": "MIT",
+  "homepage": "https://github.com/dequelabs/axe-core",
+  "capabilities": {
+    "categories": ["accessibility"],
+    "outputFormats": ["json", "html"],
+    "supportsScreenshots": true,
+    "supportsConcurrency": true,
+    "requiresBrowser": true,
+    "supportsOffline": true,
+    "maxConcurrency": 4,
+    "estimatedTimePerPage": 5000
+  },
+  "requirements": {
+    "browser": {
+      "type": "chromium",
+      "headless": true
+    },
+    "resources": {
+      "maxMemoryMB": 2048,
+      "maxTimeoutMs": 300000
+    }
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "AxeScanner"
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "rules": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Specific axe rules to enable (empty = all rules)"
+      },
+      "disabledRules": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Specific axe rules to disable"
+      },
+      "standard": {
+        "type": "string",
+        "enum": ["wcag2a", "wcag2aa", "wcag2aaa", "wcag21a", "wcag21aa", "wcag22aa"],
+        "default": "wcag21aa",
+        "description": "WCAG conformance level to test against"
+      },
+      "includeBestPractices": {
+        "type": "boolean",
+        "default": true,
+        "description": "Include best practice rules beyond WCAG"
+      }
+    }
+  },
+  "output": {
+    "categoryPrefix": "a11y",
+    "includeRawResults": false
+  }
+}

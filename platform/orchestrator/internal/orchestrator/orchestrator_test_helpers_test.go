@@ -1,0 +1,252 @@
+package orchestrator
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+
+	report "github.com/mattboback/stageflow/packages/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/packages/shared-go/events"
+	"github.com/mattboback/stageflow/packages/shared-go/models"
+	"github.com/mattboback/stageflow/packages/shared-go/storage"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+)
+
+// mockPodmanClient is a mock Podman client for testing.
+type mockPodmanClient struct {
+	createPodFunc       func(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
+	stopPodFunc         func(ctx context.Context, podID string) error
+	removePodFunc       func(ctx context.Context, podID string, force bool) error
+	createVolumeFunc    func(ctx context.Context, name string) error
+	inspectVolumeFunc   func(ctx context.Context, name string) (*podman.VolumeInfo, error)
+	removeVolumeFunc    func(ctx context.Context, name string, force bool) error
+	createContainerFunc func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
+	startContainerFunc  func(ctx context.Context, containerID string) error
+	waitContainerFunc   func(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error)
+	removeContainerFunc func(ctx context.Context, containerID string, force bool) error
+	getLogsFunc         func(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
+}
+
+func (m *mockPodmanClient) CreatePod(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
+	if m.createPodFunc != nil {
+		return m.createPodFunc(ctx, req)
+	}
+	return &podman.PodCreateResponse{ID: "pod-12345"}, nil
+}
+
+func (m *mockPodmanClient) StopPod(ctx context.Context, podID string) error {
+	if m.stopPodFunc != nil {
+		return m.stopPodFunc(ctx, podID)
+	}
+	return nil
+}
+
+func (m *mockPodmanClient) RemovePod(ctx context.Context, podID string, force bool) error {
+	if m.removePodFunc != nil {
+		return m.removePodFunc(ctx, podID, force)
+	}
+	return nil
+}
+
+func (m *mockPodmanClient) CreateVolume(ctx context.Context, name string) error {
+	if m.createVolumeFunc != nil {
+		return m.createVolumeFunc(ctx, name)
+	}
+	return nil
+}
+
+func (m *mockPodmanClient) InspectVolume(ctx context.Context, name string) (*podman.VolumeInfo, error) {
+	if m.inspectVolumeFunc != nil {
+		return m.inspectVolumeFunc(ctx, name)
+	}
+	return &podman.VolumeInfo{
+		Name:       name,
+		Mountpoint: fmt.Sprintf("/volumes/%s/_data", name),
+	}, nil
+}
+
+func (m *mockPodmanClient) RemoveVolume(ctx context.Context, name string, force bool) error {
+	if m.removeVolumeFunc != nil {
+		return m.removeVolumeFunc(ctx, name, force)
+	}
+	return nil
+}
+
+func (m *mockPodmanClient) CreateContainer(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	if m.createContainerFunc != nil {
+		return m.createContainerFunc(ctx, req)
+	}
+	return &podman.ContainerCreateResponse{ID: "container-12345"}, nil
+}
+
+func (m *mockPodmanClient) StartContainer(ctx context.Context, containerID string) error {
+	if m.startContainerFunc != nil {
+		return m.startContainerFunc(ctx, containerID)
+	}
+	return nil
+}
+
+func (m *mockPodmanClient) WaitContainer(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error) {
+	if m.waitContainerFunc != nil {
+		return m.waitContainerFunc(ctx, containerID)
+	}
+	return &podman.ContainerWaitResponse{StatusCode: 0}, nil
+}
+
+func (m *mockPodmanClient) RemoveContainer(ctx context.Context, containerID string, force bool) error {
+	if m.removeContainerFunc != nil {
+		return m.removeContainerFunc(ctx, containerID, force)
+	}
+	return nil
+}
+
+func (m *mockPodmanClient) GetContainerLogs(ctx context.Context, containerID string, stdout, stderr bool) (string, error) {
+	if m.getLogsFunc != nil {
+		return m.getLogsFunc(ctx, containerID, stdout, stderr)
+	}
+	return "", nil
+}
+
+// mockPublisher is a mock event publisher for testing.
+type mockPublisher struct {
+	mu                    sync.Mutex
+	publishedJobCompleted []*events.JobCompletedPayload
+	publishedJobFailed    []*events.JobFailedPayload
+}
+
+func (m *mockPublisher) PublishJobCompleted(_ context.Context, payload *events.JobCompletedPayload) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.publishedJobCompleted = append(m.publishedJobCompleted, payload)
+
+	return nil
+}
+
+func (m *mockPublisher) PublishJobFailed(_ context.Context, payload *events.JobFailedPayload) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.publishedJobFailed = append(m.publishedJobFailed, payload)
+
+	return nil
+}
+
+func (m *mockPublisher) failedCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return len(m.publishedJobFailed)
+}
+
+func (m *mockPublisher) completedCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return len(m.publishedJobCompleted)
+}
+
+func (m *mockPublisher) firstCompleted() *events.JobCompletedPayload {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(m.publishedJobCompleted) == 0 {
+		return nil
+	}
+
+	return m.publishedJobCompleted[0]
+}
+
+func newInMemoryDB(t *testing.T) *db.Database {
+	t.Helper()
+	database, err := db.NewDatabase(&db.Config{Path: ":memory:"})
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := database.Close(); err != nil {
+			t.Fatalf("Failed to close database: %v", err)
+		}
+	})
+	return database
+}
+
+func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPublisher, *memoryStorage) {
+	t.Helper()
+	database := newInMemoryDB(t)
+
+	publisher := &mockPublisher{
+		publishedJobCompleted: make([]*events.JobCompletedPayload, 0),
+		publishedJobFailed:    make([]*events.JobFailedPayload, 0),
+	}
+
+	mem := newMemoryStorage()
+
+	orchestrator := NewOrchestrator(&Config{
+		PodmanClient:   &mockPodmanClient{},
+		Database:       database,
+		Publisher:      publisher,
+		Storage:        mem,
+		StagingStorage: mem,
+	})
+
+	return orchestrator, database, publisher, mem
+}
+
+func insertJob(t *testing.T, database *db.Database, job *models.Job) {
+	t.Helper()
+	if err := database.CreateJob(context.Background(), job); err != nil {
+		t.Fatalf("Failed to insert job: %v", err)
+	}
+}
+
+func seedScanResults(t *testing.T, store *memoryStorage, jobID, resultsPath string) {
+	t.Helper()
+
+	now := time.Now().UTC()
+	results := report.UnifiedReportV2{
+		Version: reportVersion,
+		Meta: report.ReportMeta{
+			JobId:       jobID,
+			ScannedAt:   &now,
+			CompletedAt: &now,
+		},
+		Summary: report.ReportSummary{
+			TotalIssues: 0,
+			BySeverity: report.SeverityCounts{
+				Critical: 0,
+				Serious:  0,
+				Moderate: 0,
+				Minor:    0,
+			},
+			ByScanner:       map[string]int{},
+			PagesScanned:    1,
+			PagesWithIssues: 0,
+		},
+		Pages: []report.PageSummary{
+			{
+				Id:         "page-1",
+				Url:        "https://example.com/" + jobID,
+				Path:       stringPtr("/"),
+				IssueCount: 0,
+				DurationMs: 0,
+				StartedAt:  &now,
+				FinishedAt: &now,
+			},
+		},
+		Issues: nil,
+	}
+
+	data, err := json.Marshal(results)
+	if err != nil {
+		t.Fatalf("marshal scan results: %v", err)
+	}
+	if err := store.UploadFile(context.Background(), storage.BucketArtifacts, resultsPath, bytes.NewReader(data), int64(len(data))); err != nil {
+		t.Fatalf("seed scan results: %v", err)
+	}
+}

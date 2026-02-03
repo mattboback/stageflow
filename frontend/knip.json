@@ -1,0 +1,6 @@
+{
+	"$schema": "node_modules/knip/schema.json",
+	"entry": ["src/routes/**/*.svelte"],
+	"project": ["src/**/*.{ts,js,svelte}"],
+	"ignoreExportsUsedInFile": true
+}

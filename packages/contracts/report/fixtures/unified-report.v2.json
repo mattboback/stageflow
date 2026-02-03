@@ -1,0 +1,81 @@
+{
+  "version": "2.0.0",
+  "meta": {
+    "jobId": "job-123",
+    "baseUrl": "http://localhost:8080",
+    "scannedAt": "2025-12-22T00:00:00Z",
+    "completedAt": "2025-12-22T00:00:01Z",
+    "durationMs": 1000
+  },
+  "summary": {
+    "totalIssues": 1,
+    "bySeverity": {
+      "critical": 1,
+      "serious": 0,
+      "moderate": 0,
+      "minor": 0,
+      "info": 0
+    },
+    "byScanner": {
+      "axe": 1
+    },
+    "pagesScanned": 1,
+    "pagesWithIssues": 1
+  },
+  "scanners": [
+    {
+      "id": "axe",
+      "name": "Axe",
+      "status": "success",
+      "issueCount": 1,
+      "severity": {
+        "critical": 1,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "info": 0
+      },
+      "toolVersion": "0.1.0",
+      "durationMs": 1000,
+      "resultsPath": "job-123/axe/results.json",
+      "reportPath": "job-123/axe/report.html"
+    }
+  ],
+  "pages": [
+    {
+      "id": "page-1",
+      "url": "http://localhost:8080/index.html",
+      "path": "/index.html",
+      "issueCount": 1,
+      "bySeverity": {
+        "critical": 1,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0,
+        "info": 0
+      },
+      "durationMs": 1000,
+      "startedAt": "2025-12-22T00:00:00Z",
+      "finishedAt": "2025-12-22T00:00:01Z"
+    }
+  ],
+  "issues": [
+    {
+      "id": "axe-color-contrast-page-1",
+      "scanner": "axe",
+      "ruleId": "color-contrast",
+      "severity": "critical",
+      "title": "Elements must have sufficient color contrast",
+      "description": "Text must have sufficient contrast against its background.",
+      "helpUrl": "https://example.com/rules/color-contrast",
+      "wcagTags": ["wcag2aa"],
+      "pageId": "page-1",
+      "pageUrl": "http://localhost:8080/index.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": []
+    }
+  ],
+  "artifacts": [],
+  "errors": []
+}

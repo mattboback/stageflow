@@ -1,0 +1,29 @@
+[Unit]
+Description=StageFlow Platform API
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow-nats.service stageflow-minio.service stageflow-orchestrator.service
+Requires=stageflow-nats.service stageflow-minio.service stageflow-orchestrator.service
+
+[Service]
+EnvironmentFile=@APP_ENV_FILE@
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=stageflow/platform-api:latest
+EnvironmentFile=@APP_ENV_FILE@
+Pod=stageflow.pod
+Volume=stageflow_web_server_data:/data
+Volume=@REPO_ROOT@/infra/scanners/scanners.yaml:/data/scanners.yaml:ro
+Environment=PORT=8080
+Environment=NATS_URL=nats://nats:4222
+Environment=SCANNER_CONFIG_PATH=/data/scanners.yaml
+Environment=MINIO_ENDPOINT=minio:9000
+Environment=MINIO_USE_SSL=false
+Environment=MINIO_PUBLIC_USE_SSL=true
+Environment=MINIO_USE_PROXY_URLS=false
+Environment=PLATFORM_API_STATUS_DB_PATH=/data/platform_api_status.db
+
+[Install]
+WantedBy=stageflow.target

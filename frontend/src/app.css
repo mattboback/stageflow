@@ -1,0 +1,402 @@
+/* Fonts are self-hosted via @fontsource packages imported in +layout.svelte */
+@import 'tailwindcss';
+
+@theme {
+	/* Font families - using self-hosted variable fonts */
+	--font-display:
+		'Source Serif 4 Variable', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+	--font-body:
+		'Source Sans 3 Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		'Segoe UI', sans-serif;
+	--font-mono:
+		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+	/* Surfaces (light-only) */
+	--color-paper: #f7f6f2;
+	--color-surface: #ffffff;
+	--color-surface-muted: #fbfaf7;
+
+	/* Text */
+	--color-ink: #111111;
+	--color-ink-muted: #4b5563;
+	--color-ink-faint: #5f6673;
+
+	/* Borders */
+	--color-line: #e6e2d8;
+
+	/* Accent (charcoal + vermillion) */
+	--color-accent: #e23d28;
+	--color-accent-hover: #c83422;
+	--color-accent-soft: #fde8e4;
+	--color-accent-ink: #7a1f15;
+
+	/* Shadows (neutral, subtle) */
+	--shadow-xs: 0 1px 2px rgba(17, 17, 17, 0.04);
+	--shadow-sm: 0 1px 3px rgba(17, 17, 17, 0.06), 0 1px 2px rgba(17, 17, 17, 0.04);
+	--shadow-md: 0 6px 12px -6px rgba(17, 17, 17, 0.16), 0 2px 4px -2px rgba(17, 17, 17, 0.08);
+	--shadow-lg: 0 16px 30px -18px rgba(17, 17, 17, 0.2), 0 8px 16px -10px rgba(17, 17, 17, 0.12);
+	--shadow-xl: 0 28px 44px -30px rgba(17, 17, 17, 0.28), 0 14px 24px -18px rgba(17, 17, 17, 0.18);
+
+	/* Animation Timing */
+	--duration-fast: 150ms;
+	--duration-normal: 200ms;
+	--duration-slow: 300ms;
+	--duration-slower: 500ms;
+	--ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@layer base {
+	html {
+		@apply antialiased;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		html {
+			scroll-behavior: auto;
+		}
+
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.001ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.001ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
+
+	body {
+		font-family: var(--font-body);
+		font-weight: 450;
+		@apply bg-paper text-ink selection:bg-accent-soft selection:text-ink;
+	}
+
+	/* Typography utilities */
+	h1,
+	h2,
+	h3,
+	.font-display {
+		font-family: var(--font-display);
+	}
+
+	code,
+	pre,
+	.font-mono {
+		font-family: var(--font-mono);
+	}
+
+	/* Tech Grid Background Pattern */
+	.bg-grid-pattern {
+		background-size: 50px 50px;
+		background-image:
+			linear-gradient(to right, rgba(17, 17, 17, 0.06) 1px, transparent 1px),
+			linear-gradient(to bottom, rgba(17, 17, 17, 0.06) 1px, transparent 1px);
+	}
+
+	/* Dot matrix pattern */
+	.bg-dot-pattern {
+		background-size: 20px 20px;
+		background-image: radial-gradient(circle, rgba(17, 17, 17, 0.08) 1px, transparent 1px);
+	}
+
+	/* Scanline overlay */
+	.bg-scanlines {
+		background-image: repeating-linear-gradient(
+			0deg,
+			transparent,
+			transparent 2px,
+			rgba(17, 17, 17, 0.015) 2px,
+			rgba(17, 17, 17, 0.015) 4px
+		);
+	}
+
+	/* Accessible skip link */
+	.skip-link {
+		position: fixed;
+		left: 1rem;
+		top: -3rem;
+		z-index: 100;
+		padding: 0.75rem 1rem;
+		border-radius: 0.75rem;
+		background: var(--color-accent);
+		color: #fff;
+		font-weight: 700;
+		box-shadow: var(--shadow-lg);
+		transition:
+			top 0.2s ease,
+			box-shadow 0.2s ease;
+		text-decoration: none;
+	}
+
+	.skip-link:focus {
+		top: 1rem;
+		outline: 3px solid #fff;
+		outline-offset: 2px;
+		box-shadow: var(--shadow-xl);
+	}
+
+	/* Global focus ring for accessibility */
+	*:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	/* Remove default focus for mouse users, keep for keyboard */
+	*:focus:not(:focus-visible) {
+		outline: none;
+	}
+}
+
+@layer components {
+	.glass-panel {
+		@apply border-line bg-surface/80 border backdrop-blur-md;
+	}
+
+	.container-width {
+		@apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+	}
+
+	.section-padding {
+		@apply py-16 lg:py-24;
+	}
+
+	.h1-display {
+		font-family: var(--font-display);
+		@apply text-ink text-4xl font-bold tracking-[-0.02em] sm:text-5xl lg:text-6xl;
+	}
+
+	.h2-display {
+		font-family: var(--font-display);
+		@apply text-ink text-3xl font-bold tracking-[-0.02em] sm:text-4xl;
+	}
+
+	.h3-display {
+		font-family: var(--font-display);
+		@apply text-ink text-xl font-semibold tracking-[-0.01em] sm:text-2xl;
+	}
+
+	.nav-link {
+		@apply text-ink-muted hover:text-ink text-sm font-medium;
+	}
+
+	/* Text Gradients */
+	.text-gradient {
+		@apply from-accent to-accent-hover bg-gradient-to-r bg-clip-text text-transparent;
+	}
+
+	/* Animations */
+	.animate-fade-in {
+		animation: fadeIn 0.3s ease-in;
+	}
+
+	@keyframes fadeIn {
+		from {
+			opacity: 0;
+			transform: translateY(10px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	.animate-slide-up {
+		animation: slideUp 0.3s ease-out;
+	}
+
+	@keyframes slideUp {
+		from {
+			opacity: 0;
+			transform: translateY(100%);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Shimmer animation for skeleton loaders */
+	@keyframes shimmer {
+		100% {
+			transform: translateX(100%);
+		}
+	}
+
+	/* Donut chart segment animation */
+	.animate-donut-segment {
+		animation: donutGrow 0.6s ease-out forwards;
+		stroke-dashoffset: 100%;
+	}
+
+	@keyframes donutGrow {
+		from {
+			stroke-dasharray: 0 100%;
+		}
+		to {
+			stroke-dasharray: var(--segment-length) var(--segment-gap);
+		}
+	}
+
+	/* Bar chart entrance animation */
+	.animate-bar-entrance {
+		animation: barEntrance 0.4s ease-out forwards;
+		opacity: 0;
+		transform: translateY(8px);
+	}
+
+	@keyframes barEntrance {
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Hotspot pulse animation */
+	.animate-hotspot-pulse {
+		animation: hotspotPulse 2s ease-in-out infinite;
+	}
+
+	@keyframes hotspotPulse {
+		0%,
+		100% {
+			opacity: 0.8;
+			box-shadow: 0 0 0 0 currentColor;
+		}
+		50% {
+			opacity: 1;
+			box-shadow: 0 0 0 4px transparent;
+		}
+	}
+
+	/* Score ring fill animation */
+	.animate-score-ring {
+		animation: scoreRingFill 1.2s var(--ease-out) forwards;
+	}
+
+	@keyframes scoreRingFill {
+		from {
+			stroke-dashoffset: var(--circumference, 565);
+		}
+		to {
+			stroke-dashoffset: var(--target-offset, 0);
+		}
+	}
+
+	/* Count up animation for numbers */
+	.animate-count-up {
+		animation: countUp 0.8s var(--ease-out) forwards;
+	}
+
+	@keyframes countUp {
+		from {
+			opacity: 0;
+			transform: scale(0.8) translateY(4px);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1) translateY(0);
+		}
+	}
+
+	/* Section entrance animation */
+	.animate-section-enter {
+		animation: sectionEnter 0.5s var(--ease-out) both;
+	}
+
+	@keyframes sectionEnter {
+		from {
+			opacity: 0;
+			transform: translateY(16px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	/* Subtle scale on hover for interactive elements */
+	.hover-lift {
+		transition:
+			transform var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-fast) var(--ease-out);
+	}
+
+	.hover-lift:hover {
+		transform: translateY(-1px);
+		box-shadow: var(--shadow-md);
+	}
+
+	/* Mermaid Diagram Styling */
+	.mermaid-container {
+		@apply border-line bg-surface rounded-lg border p-4;
+	}
+
+	.mermaid-container svg {
+		@apply mx-auto max-w-full;
+	}
+
+	/* No Scrollbar utility */
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
+	}
+
+	.no-scrollbar {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+
+	/* === TECHY ARTIFACT UTILITIES === */
+
+	/* Border glow on hover */
+	.hover-glow {
+		transition: box-shadow var(--duration-normal) var(--ease-out);
+	}
+
+	.hover-glow:hover {
+		box-shadow:
+			0 0 0 1px rgba(226, 61, 40, 0.15),
+			0 0 20px -5px rgba(226, 61, 40, 0.1);
+	}
+
+	/* Technical card variant */
+	.card-tech {
+		@apply border-line bg-surface rounded-md border;
+		box-shadow: var(--shadow-xs);
+		transition:
+			border-color var(--duration-fast) var(--ease-out),
+			box-shadow var(--duration-fast) var(--ease-out);
+	}
+
+	.card-tech:hover {
+		@apply border-ink/20;
+		box-shadow:
+			0 0 0 1px rgba(226, 61, 40, 0.1),
+			var(--shadow-sm);
+	}
+
+	/* Section label with terminal prefix */
+	.section-label-tech {
+		font-family: var(--font-mono);
+		@apply text-ink-faint text-xs font-medium tracking-[0.15em] uppercase;
+	}
+
+	.section-label-tech::before {
+		content: '$';
+		@apply text-accent mr-2;
+	}
+
+	/* Monospace stats */
+	.stat-mono {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.02em;
+	}
+
+	/* Coordinate marker decoration */
+	.coord-marker {
+		font-family: var(--font-mono);
+		@apply text-ink-faint/30 pointer-events-none text-[9px] tracking-wider;
+	}
+}

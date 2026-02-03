@@ -1,0 +1,344 @@
+{
+  "version": "2.0.0",
+  "meta": {
+    "jobId": "job-123",
+    "baseUrl": "http://localhost:8080",
+    "scannedAt": "2025-12-22T00:00:00Z",
+    "completedAt": "2025-12-22T00:00:12Z",
+    "durationMs": 12000
+  },
+  "summary": {
+    "score": 82,
+    "scoreGrade": "B",
+    "totalIssues": 8,
+    "bySeverity": {
+      "critical": 1,
+      "serious": 2,
+      "moderate": 3,
+      "minor": 1,
+      "info": 1
+    },
+    "byScanner": {
+      "ai-navigator": 1,
+      "axe": 3,
+      "lighthouse": 1,
+      "link-checker": 1,
+      "security-headers": 1,
+      "seo": 1
+    },
+    "pagesScanned": 2,
+    "pagesWithIssues": 2,
+    "lighthouseCategories": [
+      { "id": "performance", "title": "Performance", "avgScore": 0.73 },
+      { "id": "accessibility", "title": "Accessibility", "avgScore": 0.89 },
+      { "id": "best-practices", "title": "Best Practices", "avgScore": 0.92 },
+      { "id": "seo", "title": "SEO", "avgScore": 0.83 }
+    ]
+  },
+  "scanners": [
+    {
+      "id": "ai-navigator",
+      "name": "AI Navigator",
+      "status": "success",
+      "issueCount": 1,
+      "severity": { "critical": 0, "serious": 0, "moderate": 0, "minor": 0, "info": 1 },
+      "toolVersion": "0.1.0",
+      "startedAt": "2025-12-22T00:00:00Z",
+      "completedAt": "2025-12-22T00:00:02Z",
+      "durationMs": 2000,
+      "resultsPath": "job-123/ai-navigator/results.json",
+      "reportPath": "job-123/ai-navigator/report.html"
+    },
+    {
+      "id": "axe",
+      "name": "Axe",
+      "status": "success",
+      "issueCount": 3,
+      "severity": { "critical": 1, "serious": 1, "moderate": 1, "minor": 0, "info": 0 },
+      "toolVersion": "0.1.0",
+      "startedAt": "2025-12-22T00:00:02Z",
+      "completedAt": "2025-12-22T00:00:05Z",
+      "durationMs": 3000,
+      "resultsPath": "job-123/axe/results.json",
+      "reportPath": "job-123/axe/report.html"
+    },
+    {
+      "id": "lighthouse",
+      "name": "Lighthouse",
+      "status": "success",
+      "issueCount": 1,
+      "severity": { "critical": 0, "serious": 0, "moderate": 1, "minor": 0, "info": 0 },
+      "toolVersion": "12.0.0",
+      "startedAt": "2025-12-22T00:00:05Z",
+      "completedAt": "2025-12-22T00:00:08Z",
+      "durationMs": 3000,
+      "resultsPath": "job-123/lighthouse/results.json",
+      "reportPath": "job-123/lighthouse/report.html"
+    },
+    {
+      "id": "link-checker",
+      "name": "Link Checker",
+      "status": "success",
+      "issueCount": 1,
+      "severity": { "critical": 0, "serious": 1, "moderate": 0, "minor": 0, "info": 0 },
+      "toolVersion": "0.1.0",
+      "startedAt": "2025-12-22T00:00:08Z",
+      "completedAt": "2025-12-22T00:00:09Z",
+      "durationMs": 1000,
+      "resultsPath": "job-123/link-checker/results.json",
+      "reportPath": "job-123/link-checker/report.html"
+    },
+    {
+      "id": "security-headers",
+      "name": "Security Headers",
+      "status": "success",
+      "issueCount": 1,
+      "severity": { "critical": 0, "serious": 0, "moderate": 1, "minor": 0, "info": 0 },
+      "toolVersion": "0.1.0",
+      "startedAt": "2025-12-22T00:00:09Z",
+      "completedAt": "2025-12-22T00:00:10Z",
+      "durationMs": 1000,
+      "resultsPath": "job-123/security-headers/results.json",
+      "reportPath": "job-123/security-headers/report.html"
+    },
+    {
+      "id": "seo",
+      "name": "SEO",
+      "status": "success",
+      "issueCount": 1,
+      "severity": { "critical": 0, "serious": 0, "moderate": 0, "minor": 1, "info": 0 },
+      "toolVersion": "0.1.0",
+      "startedAt": "2025-12-22T00:00:10Z",
+      "completedAt": "2025-12-22T00:00:12Z",
+      "durationMs": 2000,
+      "resultsPath": "job-123/seo/results.json",
+      "reportPath": "job-123/seo/report.html"
+    }
+  ],
+  "pages": [
+    {
+      "id": "page-1",
+      "url": "http://localhost:8080/index.html",
+      "path": "/index.html",
+      "issueCount": 5,
+      "bySeverity": { "critical": 1, "serious": 2, "moderate": 1, "minor": 1, "info": 0 },
+      "durationMs": 6500,
+      "startedAt": "2025-12-22T00:00:00Z",
+      "finishedAt": "2025-12-22T00:00:06Z"
+    },
+    {
+      "id": "page-2",
+      "url": "http://localhost:8080/about.html",
+      "path": "/about.html",
+      "issueCount": 3,
+      "bySeverity": { "critical": 0, "serious": 0, "moderate": 1, "minor": 1, "info": 1 },
+      "durationMs": 5500,
+      "startedAt": "2025-12-22T00:00:06Z",
+      "finishedAt": "2025-12-22T00:00:12Z"
+    }
+  ],
+  "issues": [
+    {
+      "id": "axe-color-contrast-page-1",
+      "scanner": "axe",
+      "ruleId": "color-contrast",
+      "severity": "critical",
+      "severityRaw": "serious",
+      "title": "Elements must have sufficient color contrast",
+      "description": "Text must have sufficient contrast against its background.",
+      "helpUrl": "https://example.com/rules/color-contrast",
+      "wcagTags": ["wcag2aa", "1.4.3"],
+      "pageId": "page-1",
+      "pageUrl": "http://localhost:8080/index.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [
+        {
+          "target": ["#hero a.cta"],
+          "selector": "#hero a.cta",
+          "html": "<a class=\"cta\" href=\"/signup\">Get Started</a>",
+          "failureSummary": "Fix any of the following: Element has insufficient color contrast of 2.5 (foreground color: #777, background color: #fff).",
+          "textSnippet": "Get Started",
+          "elementId": "axe-color-contrast-page-1-el-0",
+          "artifactIds": ["ss-axe-color-contrast-page-1"]
+        }
+      ],
+      "category": "accessibility",
+      "howToFix": "Increase the contrast ratio to at least 4.5:1 for normal text (or 3:1 for large text)."
+    },
+    {
+      "id": "axe-image-alt-page-2",
+      "scanner": "axe",
+      "ruleId": "image-alt",
+      "severity": "moderate",
+      "title": "Images must have alternate text",
+      "description": "Informative images must have an alt attribute describing the image.",
+      "helpUrl": "https://example.com/rules/image-alt",
+      "wcagTags": ["wcag2a", "1.1.1"],
+      "pageId": "page-2",
+      "pageUrl": "http://localhost:8080/about.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [
+        {
+          "target": ["img#team-photo"],
+          "selector": "img#team-photo",
+          "html": "<img id=\"team-photo\" src=\"/img/team.jpg\">",
+          "failureSummary": "Fix any of the following: Element does not have an alt attribute.",
+          "elementId": "axe-image-alt-page-2-el-0"
+        }
+      ],
+      "category": "accessibility"
+    },
+    {
+      "id": "axe-aria-input-field-name-page-1",
+      "scanner": "axe",
+      "ruleId": "aria-input-field-name",
+      "severity": "serious",
+      "title": "ARIA input fields must have an accessible name",
+      "description": "Form controls must have labels or accessible names.",
+      "helpUrl": "https://example.com/rules/aria-input-field-name",
+      "wcagTags": ["wcag2a", "4.1.2"],
+      "pageId": "page-1",
+      "pageUrl": "http://localhost:8080/index.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [
+        {
+          "target": ["#email"],
+          "selector": "#email",
+          "html": "<input id=\"email\" type=\"email\" placeholder=\"Email\">",
+          "failureSummary": "Fix any of the following: aria-label attribute does not exist or is empty.",
+          "elementId": "axe-aria-input-field-name-page-1-el-0"
+        }
+      ],
+      "category": "accessibility"
+    },
+    {
+      "id": "lh-unused-javascript-page-1",
+      "scanner": "lighthouse",
+      "ruleId": "unused-javascript",
+      "severity": "moderate",
+      "title": "Reduce unused JavaScript",
+      "description": "Reduce unused JavaScript to decrease bytes consumed by network activity.",
+      "helpUrl": "https://web.dev/articles/unused-javascript",
+      "wcagTags": [],
+      "pageId": "page-1",
+      "pageUrl": "http://localhost:8080/index.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [],
+      "category": "performance"
+    },
+    {
+      "id": "link-checker-empty-href-page-1",
+      "scanner": "link-checker",
+      "ruleId": "empty-href",
+      "severity": "serious",
+      "title": "Link has empty or placeholder href",
+      "description": "Links with empty href, javascript:void(0), or # placeholders provide poor user experience and accessibility.",
+      "helpUrl": "https://example.com/rules/empty-href",
+      "wcagTags": [],
+      "pageId": "page-1",
+      "pageUrl": "http://localhost:8080/index.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [
+        {
+          "target": ["a.more"],
+          "selector": "a.more",
+          "html": "<a class=\"more\" href=\"#\">Read more</a>",
+          "elementId": "link-checker-empty-href-page-1-el-0"
+        }
+      ],
+      "category": "accessibility"
+    },
+    {
+      "id": "security-headers-missing-csp-page-2",
+      "scanner": "security-headers",
+      "ruleId": "content-security-policy",
+      "severity": "moderate",
+      "title": "Missing Content-Security-Policy header",
+      "description": "A Content-Security-Policy (CSP) helps mitigate XSS and data injection attacks.",
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+      "wcagTags": [],
+      "pageId": "page-2",
+      "pageUrl": "http://localhost:8080/about.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [],
+      "category": "security"
+    },
+    {
+      "id": "seo-missing-meta-description-page-2",
+      "scanner": "seo",
+      "ruleId": "meta-description",
+      "severity": "minor",
+      "title": "Missing meta description",
+      "description": "Pages should include a meta description for better search result snippets.",
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta/name",
+      "wcagTags": [],
+      "pageId": "page-2",
+      "pageUrl": "http://localhost:8080/about.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [],
+      "category": "seo"
+    },
+    {
+      "id": "ai-navigator-keyboard-path-suggestion-page-2",
+      "scanner": "ai-navigator",
+      "ruleId": "keyboard-navigation-path",
+      "severity": "info",
+      "title": "Consider adding a clearer keyboard navigation path",
+      "description": "AI review suggests adding a visible skip link and ensuring consistent focus order for primary navigation.",
+      "helpUrl": "https://example.com/rules/keyboard-navigation-path",
+      "wcagTags": ["wcag2a", "2.4.1"],
+      "pageId": "page-2",
+      "pageUrl": "http://localhost:8080/about.html",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "occurrences": [],
+      "category": "custom",
+      "scannerData": {
+        "model": "gpt-4.1-mini",
+        "confidence": 0.62
+      }
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "report-ai-navigator",
+      "type": "html",
+      "path": "job-123/ai-navigator/report.html",
+      "mime": "text/html"
+    },
+    { "id": "report-axe", "type": "html", "path": "job-123/axe/report.html", "mime": "text/html" },
+    {
+      "id": "report-lighthouse",
+      "type": "html",
+      "path": "job-123/lighthouse/report.html",
+      "mime": "text/html"
+    },
+    {
+      "id": "report-link-checker",
+      "type": "html",
+      "path": "job-123/link-checker/report.html",
+      "mime": "text/html"
+    },
+    {
+      "id": "report-security-headers",
+      "type": "html",
+      "path": "job-123/security-headers/report.html",
+      "mime": "text/html"
+    },
+    { "id": "report-seo", "type": "html", "path": "job-123/seo/report.html", "mime": "text/html" },
+    {
+      "id": "ss-axe-color-contrast-page-1",
+      "type": "screenshot",
+      "path": "job-123/screenshots/axe-color-contrast-page-1.png",
+      "mime": "image/png"
+    }
+  ],
+  "errors": []
+}

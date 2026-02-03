@@ -1,0 +1,43 @@
+# Root .dockerignore for portfolio-backend build context
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Node modules (frontend/scanner)
+**/node_modules
+**/dist
+**/.next
+
+# Tests
+**/test
+**/*_test.go
+**/*.test.ts
+**/__tests__
+**/coverage
+
+# Documentation
+*.md
+docs
+
+# Local config
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+
+# CI/CD
+.github
+tests
+
+# OS files
+.DS_Store
+Thumbs.db

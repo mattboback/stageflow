@@ -1,0 +1,79 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.staging
+.env.local
+.env.*.local
+.env.ci.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+coverage.out
+coverage.html
+.nyc_output/
+*.coverprofile
+
+# Temporary / local data
+*.tmp
+.cache/
+.playwright-mcp/
+.tech-debt-audit/
+# Local-only Caddy snippets (secrets)
+infra/caddy/snippets/monitoring-basicauth*.caddy
+# Root-only local runtime data (avoid ignoring real source folders named "data")
+/data/
+.go/
+.direnv/
+repo-context.md
+flattened_repo*.md
+flattened_repo*.json
+pipeline_logs.txt
+log.duff
+
+# Allow frontend source data
+# Go build artifacts
+bin/
+portfolio/gateway/backend
+# Ignore only known/intentional local binaries (never mask source dirs like cmd/server or internal/server)
+portfolio/gateway/server
+platform/api/platform-api
+platform/api/platform-api-healthcheck
+platform/orchestrator/orchestrator
+platform/extractor/extractor
+tools/job-status-cli/job-status-cli
+tools/suite-runner/suite-runner
+
+# Go build cache
+.gocache/
+**/.gocache/
+
+# Deployment-specific scanner overrides (copy from infra/scanners/scanners.example.yaml)
+infra/scanners/scanners.yaml

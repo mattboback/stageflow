@@ -1,0 +1,74 @@
+{
+  "id": "lighthouse",
+  "name": "Google Lighthouse",
+  "version": "1.0.0",
+  "description": "Performance, accessibility, SEO, and best practices auditing using Google Lighthouse.",
+  "aliases": ["performance", "best-practices", "pwa"],
+  "author": "Stageflow",
+  "license": "MIT",
+  "homepage": "https://developers.google.com/web/tools/lighthouse",
+  "capabilities": {
+    "categories": ["performance", "accessibility", "seo", "quality"],
+    "outputFormats": ["json", "html"],
+    "supportsScreenshots": false,
+    "supportsConcurrency": false,
+    "requiresBrowser": true,
+    "supportsOffline": false,
+    "maxConcurrency": 1,
+    "estimatedTimePerPage": 30000
+  },
+  "requirements": {
+    "browser": {
+      "type": "chromium",
+      "headless": true
+    },
+    "resources": {
+      "maxMemoryMB": 4096,
+      "maxTimeoutMs": 120000
+    }
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "LighthouseScanner"
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "categories": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["performance", "accessibility", "best-practices", "seo", "pwa"]
+        },
+        "default": ["performance", "accessibility", "best-practices", "seo"],
+        "description": "Lighthouse categories to audit"
+      },
+      "throttling": {
+        "type": "string",
+        "enum": ["mobile", "desktop", "none"],
+        "default": "mobile",
+        "description": "Network/CPU throttling preset"
+      },
+      "formFactor": {
+        "type": "string",
+        "enum": ["mobile", "desktop"],
+        "default": "mobile",
+        "description": "Device form factor for emulation"
+      },
+      "onlyAudits": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Only run these specific audits"
+      },
+      "skipAudits": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Skip these specific audits"
+      }
+    }
+  },
+  "output": {
+    "categoryPrefix": "lighthouse",
+    "includeRawResults": true
+  }
+}

@@ -1,0 +1,305 @@
+<script lang="ts">
+	import { Button, Chip, Label, Select, SelectField, Textarea } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
+	import {
+		AlertTriangle,
+		Bot,
+		ChevronDown,
+		ChevronUp,
+		Info,
+		Plus,
+		Sparkles,
+		Trash2
+	} from 'lucide-svelte';
+
+	interface Props {
+		objective: string;
+		model: string;
+		maxSteps: number;
+		maxWallTimeMs: number;
+		inputValues: Array<{ key: string; value: string }>;
+		successCriteria: Array<{ type: string; value: string }>;
+		isValid: boolean;
+		onObjectiveChange: (value: string) => void;
+		onModelChange: (value: string) => void;
+		onMaxStepsChange: (value: number) => void;
+		onMaxWallTimeMsChange: (value: number) => void;
+		onInputValuesChange: (values: Array<{ key: string; value: string }>) => void;
+		onSuccessCriteriaChange: (criteria: Array<{ type: string; value: string }>) => void;
+	}
+
+	const {
+		objective,
+		model,
+		maxSteps,
+		maxWallTimeMs,
+		inputValues,
+		successCriteria,
+		isValid,
+		onObjectiveChange,
+		onModelChange,
+		onMaxStepsChange,
+		onMaxWallTimeMsChange,
+		onInputValuesChange,
+		onSuccessCriteriaChange
+	}: Props = $props();
+
+	let showAdvancedSettings = $state(false);
+
+	// Available AI models
+	const aiModels = [
+		{ value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Fast & Affordable)' },
+		{ value: 'openai/gpt-4o', label: 'GPT-4o (Best Quality)' },
+		{ value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+		{ value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku (Fast)' },
+		{ value: 'google/gemini-pro-vision', label: 'Gemini Pro Vision' }
+	];
+
+	// Success criteria types
+	const successCriteriaTypes = [
+		{ value: 'url-contains', label: 'URL Contains' },
+		{ value: 'url-matches', label: 'URL Matches (Regex)' },
+		{ value: 'element-visible', label: 'Element Visible (Selector)' },
+		{ value: 'text-visible', label: 'Text Visible' },
+		{ value: 'custom', label: 'Custom Condition' }
+	];
+
+	function addInputValue() {
+		onInputValuesChange([...inputValues, { key: '', value: '' }]);
+	}
+
+	function removeInputValue(index: number) {
+		onInputValuesChange(inputValues.filter((_, i) => i !== index));
+	}
+
+	function updateInputValue(index: number, field: 'key' | 'value', newValue: string) {
+		onInputValuesChange(
+			inputValues.map((item, i) => (i === index ? { ...item, [field]: newValue } : item))
+		);
+	}
+
+	function addSuccessCriterion() {
+		onSuccessCriteriaChange([...successCriteria, { type: 'url-contains', value: '' }]);
+	}
+
+	function removeSuccessCriterion(index: number) {
+		onSuccessCriteriaChange(successCriteria.filter((_, i) => i !== index));
+	}
+
+	function updateSuccessCriterion(index: number, field: 'type' | 'value', newValue: string) {
+		onSuccessCriteriaChange(
+			successCriteria.map((item, i) => (i === index ? { ...item, [field]: newValue } : item))
+		);
+	}
+</script>
+
+<div class="animate-fade-in space-y-5 rounded-xl border-2 border-purple-200 bg-purple-50/50 p-6">
+	<div class="mb-4 flex items-center gap-3">
+		<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
+			<Bot class="h-5 w-5 text-purple-600" />
+		</div>
+		<div>
+			<h3 class="text-ink text-sm font-semibold">AI Navigator Configuration</h3>
+			<p class="text-ink-muted text-xs">Configure how the AI agent will navigate your site</p>
+		</div>
+		{#if !isValid}
+			<Chip tone="warning" size="xs" class="ml-auto gap-1 font-medium">
+				<AlertTriangle class="h-3 w-3" />
+				Required
+			</Chip>
+		{/if}
+	</div>
+
+	<!-- Objective (Required) -->
+	<div>
+		<Label for="ai-objective" class="mb-2 flex items-center gap-1 text-sm font-semibold">
+			Goal Objective
+			<span class="text-accent">*</span>
+		</Label>
+		<Textarea
+			id="ai-objective"
+			value={objective}
+			oninput={(e) => onObjectiveChange(e.currentTarget.value)}
+			placeholder="Navigate to the contact page and fill out the inquiry form with the provided test data..."
+			rows={3}
+			class={cn('text-sm', !objective.trim() && 'border-amber-300 focus:border-amber-500')}
+		/>
+		<p class="text-ink-faint mt-1.5 flex items-start gap-1.5 text-xs">
+			<Info class="mt-0.5 h-3 w-3 shrink-0" />
+			Describe what the AI agent should accomplish on your website.
+		</p>
+	</div>
+
+	<!-- Model Selection (Required) -->
+	<div>
+		<Label for="ai-model" class="mb-2 flex items-center gap-1 text-sm font-semibold">
+			AI Model
+			<span class="text-accent">*</span>
+		</Label>
+		<SelectField
+			id="ai-model"
+			variant="prominent"
+			value={model}
+			onchange={(e) => onModelChange(e.currentTarget.value)}
+		>
+			{#each aiModels as aiModel (aiModel.value)}
+				<option value={aiModel.value}>{aiModel.label}</option>
+			{/each}
+		</SelectField>
+	</div>
+
+	<!-- Input Values (for form fills) -->
+	<div>
+		<div class="mb-2 flex items-center justify-between">
+			<Label class="text-sm font-semibold">Input Values</Label>
+			<Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" onclick={addInputValue}>
+				<Plus class="h-3 w-3" />
+				Add Field
+			</Button>
+		</div>
+		<p class="text-ink-faint mb-3 text-xs">
+			Key-value pairs the AI can use to fill forms (e.g., email, name, message).
+		</p>
+		{#if inputValues.length === 0}
+			<div class="bg-surface border-line rounded-lg border py-4 text-center">
+				<p class="text-ink-muted text-xs">No input values defined</p>
+			</div>
+		{:else}
+			<div class="space-y-2">
+				{#each inputValues as inputValue, index (index)}
+					<div class="flex items-center gap-2">
+						<input
+							type="text"
+							placeholder="Field name"
+							value={inputValue.key}
+							oninput={(e) => updateInputValue(index, 'key', e.currentTarget.value)}
+							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none"
+						/>
+						<input
+							type="text"
+							placeholder="Value"
+							value={inputValue.value}
+							oninput={(e) => updateInputValue(index, 'value', e.currentTarget.value)}
+							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none"
+						/>
+						<button
+							type="button"
+							onclick={() => removeInputValue(index)}
+							class="text-ink-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
+						>
+							<Trash2 class="h-4 w-4" />
+						</button>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Advanced Settings Toggle -->
+	<button
+		type="button"
+		onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
+		class="border-line bg-surface hover:bg-surface-muted flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors"
+	>
+		<span class="text-ink text-sm font-medium">Advanced Settings</span>
+		{#if showAdvancedSettings}
+			<ChevronUp class="text-ink-muted h-4 w-4" />
+		{:else}
+			<ChevronDown class="text-ink-muted h-4 w-4" />
+		{/if}
+	</button>
+
+	{#if showAdvancedSettings}
+		<div class="animate-fade-in space-y-5 pt-2">
+			<!-- Max Steps & Timeout -->
+			<div class="grid gap-4 sm:grid-cols-2">
+				<div>
+					<Label for="ai-max-steps" class="mb-2 block text-sm font-semibold">Max Steps</Label>
+					<input
+						id="ai-max-steps"
+						type="number"
+						min="1"
+						max="50"
+						value={maxSteps}
+						oninput={(e) => onMaxStepsChange(parseInt(e.currentTarget.value) || 10)}
+						class="border-line bg-surface text-ink focus:border-accent w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+					/>
+					<p class="text-ink-faint mt-1 text-xs">Maximum navigation actions</p>
+				</div>
+				<div>
+					<Label for="ai-timeout" class="mb-2 block text-sm font-semibold">Timeout (seconds)</Label>
+					<input
+						id="ai-timeout"
+						type="number"
+						min="10"
+						max="300"
+						value={maxWallTimeMs / 1000}
+						oninput={(e) => onMaxWallTimeMsChange(parseInt(e.currentTarget.value) * 1000 || 120000)}
+						class="border-line bg-surface text-ink focus:border-accent w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+					/>
+					<p class="text-ink-faint mt-1 text-xs">Maximum wall clock time</p>
+				</div>
+			</div>
+
+			<!-- Success Criteria -->
+			<div>
+				<div class="mb-2 flex items-center justify-between">
+					<Label class="text-sm font-semibold">Success Criteria</Label>
+					<Button variant="ghost" size="sm" class="h-7 gap-1 text-xs" onclick={addSuccessCriterion}>
+						<Plus class="h-3 w-3" />
+						Add Criterion
+					</Button>
+				</div>
+				<p class="text-ink-faint mb-3 text-xs">Conditions to verify the goal was achieved.</p>
+				{#if successCriteria.length === 0}
+					<div class="bg-surface border-line rounded-lg border py-4 text-center">
+						<p class="text-ink-muted text-xs">
+							No success criteria defined (AI will determine completion)
+						</p>
+					</div>
+				{:else}
+					<div class="space-y-2">
+						{#each successCriteria as criterion, index (index)}
+							<div class="flex items-center gap-2">
+								<Select
+									value={criterion.type}
+									onchange={(e) => updateSuccessCriterion(index, 'type', e.currentTarget.value)}
+									class="w-40 shrink-0"
+								>
+									{#each successCriteriaTypes as type (type.value)}
+										<option value={type.value}>{type.label}</option>
+									{/each}
+								</Select>
+								<input
+									type="text"
+									placeholder={criterion.type === 'element-visible'
+										? 'CSS selector'
+										: 'Value to match'}
+									value={criterion.value}
+									oninput={(e) => updateSuccessCriterion(index, 'value', e.currentTarget.value)}
+									class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none"
+								/>
+								<button
+									type="button"
+									onclick={() => removeSuccessCriterion(index)}
+									class="text-ink-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
+								>
+									<Trash2 class="h-4 w-4" />
+								</button>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<!-- AI Beta Notice -->
+	<div class="flex items-start gap-2 rounded-lg bg-purple-100/50 p-3">
+		<Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
+		<p class="text-xs text-purple-700">
+			<strong>Experimental:</strong> AI Navigator uses vision models to understand and interact with
+			your site. Results may vary based on page complexity.
+		</p>
+	</div>
+</div>

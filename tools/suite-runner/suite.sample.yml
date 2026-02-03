@@ -1,0 +1,11 @@
+domains:
+  - https://example.com
+  - https://blog.example.com
+modules: [axe, keyboard]
+screenshot: false
+thresholds:
+  max_critical: 0
+  max_serious: 5
+  max_total: 50
+timeout_seconds: 900
+stream_retry_seconds: 3

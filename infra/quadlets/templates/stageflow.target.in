@@ -1,0 +1,19 @@
+[Unit]
+Description=StageFlow Stack
+Wants=stageflow-pod.service
+Wants=stageflow-nats.service
+Wants=stageflow-minio.service
+Wants=stageflow-orchestrator.service
+Wants=stageflow-platform-api.service
+Wants=stageflow-frontend.service
+Wants=stageflow-grafana.service
+After=stageflow-pod.service
+After=stageflow-nats.service
+After=stageflow-minio.service
+After=stageflow-orchestrator.service
+After=stageflow-platform-api.service
+After=stageflow-frontend.service
+After=stageflow-grafana.service
+
+[Install]
+WantedBy=default.target
