@@ -61,6 +61,31 @@ for template in "${TEMPLATE_DIR}"/*.in; do
   echo "Installed ${output_path}"
 done
 
+# systemd prefers unit files from ~/.config/systemd/user over quadlet-generated targets.
+# Make the repo authoritative by also installing stageflow.target there.
+USER_SYSTEMD_DIR="${HOME}/.config/systemd/user"
+USER_TARGET="${USER_SYSTEMD_DIR}/stageflow.target"
+RENDERED_TARGET="${OUTPUT_DIR}/stageflow.target"
+
+if [[ ! -f "${RENDERED_TARGET}" ]]; then
+  echo "quadlet-install: missing rendered target: ${RENDERED_TARGET}" >&2
+  exit 1
+fi
+
+mkdir -p "${USER_SYSTEMD_DIR}"
+
+timestamp="$(date +%Y%m%d_%H%M%S)"
+backup_dir="${USER_SYSTEMD_DIR}/_backup_stageflow_${timestamp}"
+mkdir -p "${backup_dir}"
+
+if [[ -f "${USER_TARGET}" ]]; then
+  cp "${USER_TARGET}" "${backup_dir}/stageflow.target"
+  echo "Backed up ${USER_TARGET} -> ${backup_dir}/stageflow.target"
+fi
+
+cp "${RENDERED_TARGET}" "${USER_TARGET}"
+echo "Installed ${USER_TARGET}"
+
 if command -v systemctl >/dev/null 2>&1; then
   systemctl --user daemon-reload
 fi

@@ -7,7 +7,7 @@
 # Default API URL: http://localhost:8080
 # For production testing:
 #   ./scripts/test-event-flow.sh https://your-domain.com
-#   ./scripts/test-event-flow.sh http://127.0.0.1:4100  # Quadlets (no Caddy)
+#   ./scripts/test-event-flow.sh http://127.0.0.1:8100  # Quadlets / loopback published port
 
 set -euo pipefail
 
@@ -38,6 +38,14 @@ test_health() {
         fi
     fi
 
+    # Public API scanners endpoint: /api/v1/scanners (behind frontend/Caddy)
+    if response=$(curl -fsS --max-time 10 "${API_URL}/v1/scanners" 2>/dev/null); then
+        if echo "$response" | jq -e 'type == "array" or (type == "object" and (.scanners? | type == "array"))' >/dev/null 2>&1; then
+            log_info "✓ Health check passed (/api/v1/scanners)"
+            return 0
+        fi
+    fi
+
     # Platform API health: /healthz (direct: http://localhost:8080/healthz)
     if response=$(curl -fsS --max-time 10 "${API_BASE}/healthz" 2>/dev/null); then
         if status=$(echo "$response" | jq -r '.status // empty' 2>/dev/null); then
@@ -48,7 +56,7 @@ test_health() {
         fi
     fi
 
-    log_error "✗ Health check failed (tried ${API_URL}/health and ${API_BASE}/healthz)"
+    log_error "✗ Health check failed (tried ${API_URL}/health, ${API_URL}/v1/scanners, and ${API_BASE}/healthz)"
     return 1
 }
 
