@@ -21,7 +21,7 @@ try {
 }
 
 async function test() {
-  const url = process.argv[2] ?? "https://matthewboback.com";
+  const url = process.argv[2] ?? "https://stageflow.org";
 
   let browser;
   try {

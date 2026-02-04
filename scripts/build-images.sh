@@ -25,17 +25,13 @@ build() {
 echo "[images] Building Go services..."
 build stageflow/platform-api:latest platform/api/Dockerfile
 build stageflow/orchestrator:latest platform/orchestrator/Dockerfile
-build stageflow/portfolio-gateway:latest portfolio/gateway/Dockerfile
 
 echo "[images] Building frontend (SvelteKit)..."
-build stageflow/portfolio-frontend:latest portfolio/frontend/Dockerfile \
+build stageflow/frontend:latest frontend/Dockerfile \
   --build-arg VITE_API_URL="${VITE_API_URL:-https://example.com}" \
-  --build-arg VITE_OWNER_NAME="${VITE_OWNER_NAME:-StageFlow}" \
-  --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow | Portfolio}" \
+  --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-https://example.com}" \
-  --build-arg VITE_CONTACT_EMAIL="${VITE_CONTACT_EMAIL:-you@example.com}" \
   --build-arg VITE_GITHUB_URL="${VITE_GITHUB_URL:-https://github.com/your-handle}" \
-  --build-arg VITE_LINKEDIN_URL="${VITE_LINKEDIN_URL:-https://www.linkedin.com/in/your-handle}" \
   --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Podman-native web accessibility scanning platform}" \
   --build-arg VITE_AI_NAVIGATOR_DEFAULT_MODEL="${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}"
 

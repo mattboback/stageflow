@@ -33,7 +33,7 @@ type ServerConfig struct {
 	StatusStore         *status.Store
 	ScannerRegistry     *scannerregistry.Registry
 	MinIOEndpoint       string // Internal MinIO endpoint (e.g., "minio:9000")
-	MinIOPublicEndpoint string // Public endpoint (e.g., "matthewboback.com")
+	MinIOPublicEndpoint string // Public endpoint (e.g., "stageflow.org")
 	MinIOPublicUseSSL   bool   // Whether to use HTTPS for public URLs
 }
 

@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>{title} | {SITE.ownerName}</title>
+	<title>{title} | {SITE.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

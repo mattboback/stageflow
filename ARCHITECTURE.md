@@ -25,7 +25,7 @@
 
 StageFlow is a polyglot microservices platform built with:
 
-- **Go 1.25** - Backend services (API, Orchestrator, Gateway, Extractor)
+- **Go 1.25** - Backend services (API, Orchestrator, Extractor)
 - **TypeScript/Bun** - Scanner runtime with Playwright
 - **SvelteKit 5** - Frontend SPA
 - **NATS JetStream** - Event messaging
@@ -40,28 +40,19 @@ StageFlow is a polyglot microservices platform built with:
 |                              Caddy                                     |
 |                         (Reverse Proxy)                                |
 |   - Auto HTTPS via Let's Encrypt                                       |
-|   - Routes: /api/* -> Gateway, /monitoring/* -> Grafana, /* -> SPA    |
+|   - Routes: /api/* -> Platform API, /monitoring/* -> Grafana, /* -> SPA |
 +---------------------------+-------------------------------------------+
                             |
             +---------------+---------------+
             |                               |
             v                               v
-+---------------------+         +---------------------+
-|   Portfolio         |         |   MinIO             |
-|   Frontend          |         |   (presigned URLs)  |
-|   (SvelteKit SPA)   |         |   /scanner-*        |
-|   :3000             |         |   :9000             |
++---------------------+
+|   Frontend          |         |   MinIO             |
+|   (SvelteKit SPA)   |         |   (presigned URLs)  |
+|   :3000             |         |   /scanner-*        |
 +----------+----------+         +---------------------+
            |
-           v
-+---------------------+
-|   Portfolio         |
-|   Gateway           |
-|   (Go/Gin)          |
-|   :4000             |
-+----------+----------+
-           |
-           | (proxies to)
+           | API requests (/api/*)
            v
 +---------------------+         +---------------------+
 |   Platform API      |<------->|   NATS JetStream    |
@@ -214,41 +205,18 @@ platform/scanner-runner/
 - Upload results to MinIO
 - Publish completion events to NATS
 
-### Portfolio Gateway (`portfolio/gateway`)
-
-The public-facing API gateway for the portfolio application.
-
-```
-portfolio/gateway/
-+-- cmd/server/
-|   +-- main.go
-+-- internal/gateway/
-    +-- server.go            # Gin router setup
-    +-- handlers.go          # Request handlers
-    +-- middleware.go        # CORS, rate limiting
-    +-- ratelimit.go         # Token bucket implementation
-    +-- config.go
-```
-
-**Key Responsibilities:**
-- Rate limiting (per-IP token bucket)
-- CORS handling
-- Proxy requests to Platform API
-- Serve portfolio project data
-
-### Portfolio Frontend (`portfolio/frontend`)
+### Frontend (`frontend`)
 
 The SvelteKit single-page application.
 
 ```
-portfolio/frontend/
+frontend/
 +-- src/
 |   +-- routes/
 |   |   +-- +page.svelte     # Home
 |   |   +-- +layout.svelte   # Root layout
 |   |   +-- playground/      # Scanner playground
 |   |   +-- scan/[id]/       # Scan status/results
-|   |   +-- projects/        # Case studies
 |   +-- lib/
 |   |   +-- components/
 |   |   |   +-- ui/          # Design system primitives
@@ -278,8 +246,8 @@ portfolio/frontend/
 
 ```
 +----------+     +----------+     +----------+     +------------+
-|  Client  |---->| Gateway  |---->|   API    |---->|   MinIO    |
-| (upload) |     |  :4000   |     |  :8080   |     | (staging)  |
+|  Client  |---->| Frontend |---->|   API    |---->|   MinIO    |
+| (upload) |     |  :3000   |     |  :8080   |     | (staging)  |
 +----------+     +----------+     +----+-----+     +------------+
                                        |
                                        | job.created (NATS)
@@ -299,7 +267,7 @@ portfolio/frontend/
                                              | job.completed (NATS)
                                              v
 +----------+     +----------+     +------------+
-|  Client  |<----| Gateway  |<----|    API     |
+|  Client  |<----| Frontend |<----|    API     |
 | (results)|     | (SSE)    |     | (status)   |
 +----------+     +----------+     +------------+
 ```
@@ -308,8 +276,8 @@ portfolio/frontend/
 
 ```
 +----------+     +----------+     +----------+
-|  Client  |---->| Gateway  |---->|   API    |
-| (URLs)   |     |  :4000   |     |  :8080   |
+|  Client  |---->| Frontend |---->|   API    |
+| (URLs)   |     |  :3000   |     |  :8080   |
 +----------+     +----------+     +----+-----+
                                        |
                                        | job.created (NATS)
@@ -1735,7 +1703,7 @@ This approach reduces report noise while preserving evidence that multiple tools
 ```
 
 - **Optional auth**: If `PLATFORM_API_TOKEN` is not set, requests pass through
-- **Gateway passthrough**: Portfolio Gateway forwards auth headers to Platform API
+- **Proxy passthrough**: Caddy forwards auth headers to Platform API
 
 ### SSRF Protection
 
@@ -1758,20 +1726,8 @@ URL-based scans are validated to prevent Server-Side Request Forgery:
 
 ### Rate Limiting
 
-Portfolio Gateway implements per-IP rate limiting:
-
-```go
-type RateLimiter struct {
-    limiters map[string]*rate.Limiter  // IP -> limiter
-    mu       sync.Mutex
-    rate     rate.Limit  // Requests per second
-    burst    int         // Burst allowance
-}
-
-// Default limits:
-// - General: 60 requests/minute
-// - Scan endpoints: 5 requests/minute
-```
+StageFlow does not include a separate in-repo API gateway rate-limiter service.
+Apply rate limiting at the edge proxy (Caddy, CDN, or load balancer) per deployment.
 
 ### Request Limits
 
@@ -1795,8 +1751,7 @@ type RateLimiter struct {
 | `stageflow/orchestrator`       | distroless               | ~20 MB |
 | `stageflow/extractor`          | alpine                   | ~10 MB |
 | `stageflow/scanner-runner`     | playwright (chromium)    | ~1.5 GB|
-| `stageflow/portfolio-gateway`  | distroless               | ~15 MB |
-| `stageflow/portfolio-frontend` | nginx:alpine             | ~25 MB |
+| `stageflow/frontend`           | nginx:alpine             | ~25 MB |
 
 ### Network Topology
 
@@ -1809,8 +1764,7 @@ stageflow_net (Podman network)
 |   +-- grafana (grafana/grafana:12.2.0)
 |   +-- platform-api
 |   +-- orchestrator
-|   +-- portfolio-gateway
-|   +-- portfolio-frontend
+|   +-- frontend
 |
 +-- Dynamic pods (created per job)
     +-- job-{jobID}
@@ -1843,8 +1797,7 @@ stageflow_net (Podman network)
 +-- stageflow-minio.container
 +-- stageflow-orchestrator.container
 +-- stageflow-platform-api.container
-+-- stageflow-portfolio-gateway.container
-+-- stageflow-portfolio-frontend.container
++-- stageflow-frontend.container
 +-- stageflow-grafana.container
 ```
 
@@ -1856,8 +1809,7 @@ stageflow.target
 +-- stageflow-minio.service
 +-- stageflow-orchestrator.service (after: nats, minio)
 +-- stageflow-platform-api.service (after: orchestrator)
-+-- stageflow-portfolio-gateway.service (after: platform-api)
-+-- stageflow-portfolio-frontend.service (after: gateway)
++-- stageflow-frontend.service (after: platform-api)
 +-- stageflow-grafana.service (after: orchestrator)
 ```
 
@@ -1865,9 +1817,9 @@ stageflow.target
 
 ```
 {$STAGEFLOW_PUBLIC_DOMAIN} {
-    # API routes -> Gateway
+    # API routes -> Platform API
     handle /api/* {
-        reverse_proxy 127.0.0.1:4100
+        reverse_proxy 127.0.0.1:8100
     }
 
     # MinIO presigned URLs with CORS

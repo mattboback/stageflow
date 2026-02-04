@@ -35,7 +35,7 @@ copy generated types into `node_modules/@stageflow/contracts-report`:
 platform/scanner-runner/scripts/prepare-contracts-report-types.mjs
 ```
 
-The portfolio frontend currently imports directly from the generated file:
+The StageFlow frontend currently imports directly from the generated file:
 
 ```
 packages/contracts/report/generated/typescript/unified-report.v2.ts

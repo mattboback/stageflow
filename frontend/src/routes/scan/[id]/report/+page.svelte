@@ -27,7 +27,7 @@
 </script>
 
 <svelte:head>
-	<title>Scan Report | {SITE.ownerName}</title>
+	<title>Scan Report | {SITE.name}</title>
 	<meta name="description" content="Multi-scanner report view" />
 	<meta name="robots" content="noindex" />
 </svelte:head>

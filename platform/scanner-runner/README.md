@@ -9,7 +9,7 @@ It is responsible for:
 - Uploading artifacts to object storage and publishing scan lifecycle events over NATS.
 
 It is **not** responsible for:
-- Accepting job submissions (handled by Platform API / Gateway).
+- Accepting job submissions (handled by Platform API).
 - Pod/container orchestration (handled by the Orchestrator service).
 - Aggregating multi-scanner output into a job-level report (handled by the Orchestrator).
 
