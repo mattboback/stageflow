@@ -29,7 +29,7 @@
 </script>
 
 <svelte:head>
-	<title>Scan Results | {SITE.ownerName}</title>
+	<title>Scan Results | {SITE.name}</title>
 	<meta name="description" content="View scan status and generated artifacts." />
 	<meta name="robots" content="noindex" />
 </svelte:head>

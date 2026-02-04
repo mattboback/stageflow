@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { SITE } from '$lib/config/site';
 	import { buttonVariants } from '$lib/components/ui';
+	import { SITE } from '$lib/config/site';
 	import { cn } from '$lib/utils';
 	import { ArrowRight, CheckCircle, Zap, Shield, Layers } from 'lucide-svelte';
 </script>
@@ -89,7 +89,7 @@
 					{ name: 'Security Headers', desc: 'CSP, HSTS, X-Frame-Options' },
 					{ name: 'Link Checker', desc: 'Broken link detection' },
 					{ name: 'AI Navigator', desc: 'Goal-based flow testing' }
-				] as scanner}
+				] as scanner (scanner.name)}
 					<div class="border-line flex items-start gap-3 rounded-lg border p-4">
 						<CheckCircle class="text-accent mt-0.5 h-5 w-5 flex-shrink-0" />
 						<div>

@@ -4,14 +4,14 @@
 # Usage:
 #   ./scripts/test-event-flow.sh [API_BASE_URL]
 #
-# Default API URL: http://localhost:4000
+# Default API URL: http://localhost:8080
 # For production testing:
 #   ./scripts/test-event-flow.sh https://your-domain.com
 #   ./scripts/test-event-flow.sh http://127.0.0.1:4100  # Quadlets (no Caddy)
 
 set -euo pipefail
 
-DEFAULT_API_BASE="${STAGEFLOW_API_BASE:-http://localhost:4000}"
+DEFAULT_API_BASE="${STAGEFLOW_API_BASE:-http://localhost:8080}"
 API_BASE="${1:-$DEFAULT_API_BASE}"
 API_URL="${API_BASE}/api"
 
@@ -28,11 +28,11 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 test_health() {
     log_info "Test 1: Health check..."
 
-    # Public gateway health: /api/health (behind Caddy: https://<domain>/api/health)
+    # Public API health: /api/health (behind Caddy: https://<domain>/api/health)
     if response=$(curl -fsS --max-time 10 "${API_URL}/health" 2>/dev/null); then
         if status=$(echo "$response" | jq -r '.status // empty' 2>/dev/null); then
             if [ "$status" = "healthy" ]; then
-                log_info "✓ Health check passed (gateway)"
+                log_info "✓ Health check passed (/api/health)"
                 return 0
             fi
         fi

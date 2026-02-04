@@ -6,35 +6,29 @@ FROM oven/bun:1.3.0-alpine AS builder
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY portfolio/frontend/package.json portfolio/frontend/bun.lock ./
+COPY frontend/package.json frontend/bun.lock ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile
 
 # Copy SvelteKit source code
-COPY portfolio/frontend/svelte.config.js portfolio/frontend/vite.config.ts portfolio/frontend/tsconfig.json ./
-COPY portfolio/frontend/src ./src
-COPY portfolio/frontend/static ./static
+COPY frontend/svelte.config.js frontend/vite.config.ts frontend/tsconfig.json ./
+COPY frontend/src ./src
+COPY frontend/static ./static
 
 # Build arguments for environment variables.
 # These are baked into the static build at image build-time.
 ARG VITE_API_URL
-ARG VITE_OWNER_NAME
 ARG VITE_SITE_TITLE
 ARG VITE_SITE_URL
-ARG VITE_CONTACT_EMAIL
 ARG VITE_GITHUB_URL
-ARG VITE_LINKEDIN_URL
 ARG VITE_TAGLINE
 ARG VITE_AI_NAVIGATOR_DEFAULT_MODEL
 
 ENV VITE_API_URL=${VITE_API_URL} \
-    VITE_OWNER_NAME=${VITE_OWNER_NAME} \
     VITE_SITE_TITLE=${VITE_SITE_TITLE} \
     VITE_SITE_URL=${VITE_SITE_URL} \
-    VITE_CONTACT_EMAIL=${VITE_CONTACT_EMAIL} \
     VITE_GITHUB_URL=${VITE_GITHUB_URL} \
-    VITE_LINKEDIN_URL=${VITE_LINKEDIN_URL} \
     VITE_TAGLINE=${VITE_TAGLINE} \
     VITE_AI_NAVIGATOR_DEFAULT_MODEL=${VITE_AI_NAVIGATOR_DEFAULT_MODEL}
 
@@ -53,7 +47,7 @@ FROM nginx:alpine AS runner
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy nginx config
-COPY portfolio/frontend/nginx.conf /etc/nginx/nginx.conf
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
 
 # Copy built assets from builder (SvelteKit adapter-static outputs to build/)
 COPY --from=builder /app/build /usr/share/nginx/html

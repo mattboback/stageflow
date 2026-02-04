@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>Playground Error | {SITE.ownerName}</title>
+	<title>Playground Error | {SITE.name}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
 

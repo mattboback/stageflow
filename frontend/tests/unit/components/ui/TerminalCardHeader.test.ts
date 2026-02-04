@@ -6,22 +6,22 @@ describe('TerminalCardHeader', () => {
 	afterEach(() => { cleanup(); });
 
 	it('renders the path', () => {
-		const { getByText } = render(TerminalCardHeader, { props: { path: '/projects/demo' } });
-		expect(getByText('/projects/demo')).toBeInTheDocument();
+		const { getByText } = render(TerminalCardHeader, { props: { path: '/scan/demo' } });
+		expect(getByText('/scan/demo')).toBeInTheDocument();
 	});
 
 	it('renders badges when provided', () => {
 		const { getByText } = render(TerminalCardHeader, {
 			props: {
-				path: '/projects/demo',
+				path: '/scan/demo',
 				badges: [
-					{ label: 'Case Study', variant: 'terminal' },
-					{ label: 'Featured', variant: 'status' }
+					{ label: 'Scan', variant: 'terminal' },
+					{ label: 'Complete', variant: 'status' }
 				]
 			}
 		});
 
-		expect(getByText('Case Study')).toBeInTheDocument();
-		expect(getByText('Featured')).toBeInTheDocument();
+		expect(getByText('Scan')).toBeInTheDocument();
+		expect(getByText('Complete')).toBeInTheDocument();
 	});
 });

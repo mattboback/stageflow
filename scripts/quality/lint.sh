@@ -20,12 +20,12 @@ while read -r module; do
 done < <(go_modules)
 
 if command -v bun >/dev/null 2>&1; then
-	echo "[node] lint portfolio-frontend"
-	if [[ ! -d "${REPO_ROOT}/portfolio/frontend/node_modules" ]]; then
-		(cd "${REPO_ROOT}/portfolio/frontend" && bun install --frozen-lockfile)
+	echo "[node] lint frontend"
+	if [[ ! -d "${REPO_ROOT}/frontend/node_modules" ]]; then
+		(cd "${REPO_ROOT}/frontend" && bun install --frozen-lockfile)
 	fi
-	(cd "${REPO_ROOT}/portfolio/frontend" && bun run lint)
-	(cd "${REPO_ROOT}/portfolio/frontend" && bun run type-check)
+	(cd "${REPO_ROOT}/frontend" && bun run lint)
+	(cd "${REPO_ROOT}/frontend" && bun run type-check)
 
 	echo "[node] lint scanner-runner"
 	if [[ ! -d "${REPO_ROOT}/platform/scanner-runner/node_modules" ]]; then

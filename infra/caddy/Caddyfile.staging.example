@@ -3,13 +3,13 @@
 #
 # Uses the staging compose overlay loopback ports:
 #   frontend: 127.0.0.1:3300
-#   gateway:  127.0.0.1:4300
+#   platform: 127.0.0.1:8300
 #   minio:    127.0.0.1:9300
 #   grafana:  127.0.0.1:3301
 
 staging.example.com {
     handle /api/* {
-        reverse_proxy 127.0.0.1:4300
+        reverse_proxy 127.0.0.1:8300
     }
 
     handle /scanner-artifacts/* {

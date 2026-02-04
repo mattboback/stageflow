@@ -15,7 +15,6 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'lcov', 'json-summary'],
 			include: [
-				'src/lib/components/case-studies/**/*.ts',
 				'src/lib/components/ui/**/*.ts',
 				'src/lib/utils/**/*.ts'
 			],

@@ -25,7 +25,7 @@
 	<meta property="og:url" content={canonicalUrl} />
 	<meta property="og:image" content="{canonicalUrl}/og-image.png" />
 	<meta property="og:type" content="website" />
-	<meta property="og:site_name" content={SITE.ownerName} />
+	<meta property="og:site_name" content={SITE.name} />
 
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:image" content="{canonicalUrl}/og-image.png" />

@@ -24,7 +24,7 @@ import type {
 	ScannerStatus,
 	ScannerSummary,
 	UnifiedReportV2
-} from '../../../../../packages/contracts/report/generated/typescript/unified-report.v2';
+} from '../../../../packages/contracts/report/generated/typescript/unified-report.v2';
 
 export type {
 	IssueSeverity,

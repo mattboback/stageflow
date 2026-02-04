@@ -266,7 +266,7 @@ deploy MODE='full':
             ;;
     esac
 
-[group('run'), doc('Run a service locally (SERVICE=frontend|api|orchestrator|gateway MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=frontend|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
