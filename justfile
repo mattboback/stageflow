@@ -42,21 +42,22 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
     cmd="{{CMD}}"
     env="{{ENV}}"
     endpoint="{{ENDPOINT}}"
+    root_dir="{{repo_root}}"
 
     echo "==> Ensuring stageflow_net network exists..."
     {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
 
     project="{{compose_project}}"
     env_args=()
-    [[ -f .env ]] && env_args=(--env-file .env)
+    [[ -f "$root_dir/.env" ]] && env_args=(--env-file "$root_dir/.env")
 
     files=()
     case "$env" in
         dev)
-            files=(-f infra/compose/podman-compose.yml -f infra/compose/podman-compose.test.yml)
+            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.test.yml")
             ;;
         local)
-            files=(-f infra/compose/podman-compose.yml -f infra/compose/podman-compose.local.yml)
+            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.local.yml")
             ;;
         *)
             echo "ENV must be dev or local (got: $env)" >&2
@@ -84,7 +85,7 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
         init)
             echo "==> Initializing MinIO buckets ($endpoint)..."
             set -a
-            [[ -f .env ]] && . ./.env
+            [[ -f "$root_dir/.env" ]] && . "$root_dir/.env"
             set +a
             MINIO_ENDPOINT="$endpoint" ./infra/minio/init-buckets.sh
             ;;
@@ -168,6 +169,28 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
 ci:
     ./scripts/quality/ci.sh
 
+[group('quality'), doc('Run API event-flow checks (API_BASE optional)')]
+event-flow API_BASE='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ -n "{{API_BASE}}" ]]; then
+        ./scripts/test-event-flow.sh "{{API_BASE}}"
+    else
+        ./scripts/test-event-flow.sh
+    fi
+
+[group('quality'), doc('Run smoke checks (BASE_URL optional)')]
+smoke BASE_URL='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    if [[ -n "{{BASE_URL}}" ]]; then
+        ./scripts/smoke.sh "{{BASE_URL}}"
+    else
+        ./scripts/smoke.sh
+    fi
+
 [group('build'), doc('Build all artifacts (Go + frontend + runner)')]
 build:
     #!/usr/bin/env bash
@@ -199,8 +222,13 @@ prod CMD='up':
     cmd="{{CMD}}"
 
     case "$cmd" in
+        prune)
+            echo "==> Pruning legacy StageFlow (portfolio) units..."
+            ./scripts/quadlet-prune-legacy.sh
+            ;;
         install)
             echo "==> Installing Quadlet units..."
+            ./scripts/quadlet-prune-legacy.sh
             ./scripts/quadlet-install.sh
             ;;
         up)
@@ -238,7 +266,7 @@ prod CMD='up':
             done
             ;;
         *)
-            echo "CMD must be install, up, down, restart, logs, ps, or health (got: $cmd)" >&2
+            echo "CMD must be prune, install, up, down, restart, logs, ps, or health (got: $cmd)" >&2
             exit 2
             ;;
     esac
@@ -273,6 +301,14 @@ run SERVICE MODE='dev':
 
     service="{{SERVICE}}"
     mode="{{MODE}}"
+    root_dir="{{repo_root}}"
+
+    if [[ -f "$root_dir/.env" ]]; then
+        set -a
+        # shellcheck disable=SC1091
+        source "$root_dir/.env"
+        set +a
+    fi
 
     case "$service" in
         frontend)
