@@ -123,12 +123,24 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 
 export function getDefaultScannerSelections(scanners: ScannerDefinition[]): ScannerSelection[] {
 	const enabledScanners = scanners.filter((scanner) => scanner.enabled);
-	const defaultScannerId = enabledScanners.some((scanner) => scanner.id === 'axe')
-		? 'axe'
-		: enabledScanners[0]?.id;
+	if (enabledScanners.length === 0) {
+		return [];
+	}
 
-	return enabledScanners.map((scanner) => ({
+	const hasNonAiScanner = enabledScanners.some((scanner) => scanner.id !== 'ai-navigator');
+
+	const selections = enabledScanners.map((scanner) => ({
 		id: scanner.id,
-		enabled: scanner.id === defaultScannerId
+		enabled: hasNonAiScanner ? scanner.id !== 'ai-navigator' : false
 	}));
+
+	if (!selections.some((scanner) => scanner.enabled)) {
+		const fallbackId = enabledScanners[0]?.id;
+		return selections.map((scanner) => ({
+			...scanner,
+			enabled: scanner.id === fallbackId
+		}));
+	}
+
+	return selections;
 }
