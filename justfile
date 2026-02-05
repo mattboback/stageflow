@@ -171,13 +171,21 @@ ci:
     set -euo pipefail
 
     echo "==> Go build..."
-    {{go}} build ./...
+    while IFS= read -r dir; do
+        [[ -n "$dir" ]] || continue
+        echo "  -> $dir"
+        (cd "$dir" && {{go}} build ./...)
+    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> Go lint..."
     golangci-lint run
 
     echo "==> Go test..."
-    {{go}} test -race ./...
+    while IFS= read -r dir; do
+        [[ -n "$dir" ]] || continue
+        echo "  -> $dir"
+        (cd "$dir" && {{go}} test -race ./...)
+    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> Frontend CI..."
     (cd {{frontend_dir}} && {{bun}} run ci)
