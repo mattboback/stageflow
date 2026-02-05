@@ -21,14 +21,22 @@ func TestDiscoverHTML_SimpleDirectory(t *testing.T) {
 		t.Errorf("Expected 2 pages, got %d", len(pages))
 	}
 
-	// Verify pages have correct structure
+	assertPageFields(t, pages)
+	assertSimpleExtensions(t, pages)
+}
+
+func assertPageFields(t *testing.T, pages []HTMLPage) {
+	t.Helper()
+
 	for i, page := range pages {
 		if page.ID == "" {
 			t.Errorf("Page %d has empty ID", i)
 		}
+
 		if page.Path == "" {
 			t.Errorf("Page %d has empty Path", i)
 		}
+
 		if page.File == "" {
 			t.Errorf("Page %d has empty File", i)
 		}
@@ -43,14 +51,20 @@ func TestDiscoverHTML_SimpleDirectory(t *testing.T) {
 			t.Errorf("Page %d path should start with /: %s", i, page.Path)
 		}
 	}
+}
+
+func assertSimpleExtensions(t *testing.T, pages []HTMLPage) {
+	t.Helper()
 
 	// Verify we found both .html and .htm files
 	foundHTML := false
 	foundHTM := false
+
 	for _, page := range pages {
 		if filepath.Ext(page.File) == ".html" {
 			foundHTML = true
 		}
+
 		if filepath.Ext(page.File) == ".htm" {
 			foundHTM = true
 		}
@@ -59,6 +73,7 @@ func TestDiscoverHTML_SimpleDirectory(t *testing.T) {
 	if !foundHTML {
 		t.Error("Expected to find .html files")
 	}
+
 	if !foundHTM {
 		t.Error("Expected to find .htm files")
 	}
@@ -79,6 +94,7 @@ func TestDiscoverHTML_NestedDirectory(t *testing.T) {
 
 	// Verify nested paths are correct
 	foundDeep := false
+
 	for _, page := range pages {
 		if page.Path == "/subdir/deep.html" {
 			foundDeep = true
@@ -225,6 +241,7 @@ func TestDiscoverHTML_PathFormat(t *testing.T) {
 
 func writeTestFile(t *testing.T, path string, data []byte) {
 	t.Helper()
+
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("failed to write file %s: %v", path, err)
 	}
@@ -232,6 +249,7 @@ func writeTestFile(t *testing.T, path string, data []byte) {
 
 func makeDir(t *testing.T, path string) {
 	t.Helper()
+
 	if err := os.MkdirAll(path, 0o750); err != nil {
 		t.Fatalf("failed to create directory %s: %v", path, err)
 	}
@@ -239,6 +257,7 @@ func makeDir(t *testing.T, path string) {
 
 func writeBenchFile(b *testing.B, path string, data []byte) {
 	b.Helper()
+
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		b.Fatalf("failed to write file %s: %v", path, err)
 	}
@@ -246,6 +265,7 @@ func writeBenchFile(b *testing.B, path string, data []byte) {
 
 func makeBenchDir(b *testing.B, path string) {
 	b.Helper()
+
 	if err := os.MkdirAll(path, 0o750); err != nil {
 		b.Fatalf("failed to create directory %s: %v", path, err)
 	}
@@ -273,6 +293,7 @@ func TestDiscoverHTML_SymlinksIgnored(t *testing.T) {
 	if len(pages) != 1 {
 		t.Fatalf("Expected 1 page (symlink ignored), got %d", len(pages))
 	}
+
 	if pages[0].File != originalFile {
 		t.Fatalf("Expected discovered file to be original, got %s", pages[0].File)
 	}
@@ -316,13 +337,14 @@ func TestIsHTMLFile(t *testing.T) {
 // Benchmark discovery performance.
 func BenchmarkDiscoverHTML_Small(b *testing.B) {
 	tmpDir := b.TempDir()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		filename := filepath.Join(tmpDir, "page"+string(rune('0'+i))+".html")
 		writeBenchFile(b, filename, []byte("<html></html>"))
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, _ = DiscoverHTML(tmpDir)
 	}
 }
@@ -331,7 +353,7 @@ func BenchmarkDiscoverHTML_Large(b *testing.B) {
 	tmpDir := b.TempDir()
 
 	// Create nested structure with many files
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		subDir := filepath.Join(tmpDir, "dir"+string(rune('0'+i%10)))
 		makeBenchDir(b, subDir)
 		filename := filepath.Join(subDir, "page"+string(rune('0'+i))+".html")
@@ -339,7 +361,8 @@ func BenchmarkDiscoverHTML_Large(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		_, _ = DiscoverHTML(tmpDir)
 	}
 }

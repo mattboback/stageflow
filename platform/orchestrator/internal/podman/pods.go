@@ -52,8 +52,8 @@ func (c *Client) CreatePod(ctx context.Context, req *PodCreateRequest) (*PodCrea
 	defer func() { _ = resp.Body.Close() }()
 
 	var result PodCreateResponse
-	if err := parseResponse(resp, &result); err != nil {
-		return nil, err
+	if parseErr := parseResponse(resp, &result); parseErr != nil {
+		return nil, parseErr
 	}
 
 	return &result, nil
@@ -71,8 +71,8 @@ func (c *Client) InspectPod(ctx context.Context, podID string) (*PodInfo, error)
 	defer func() { _ = resp.Body.Close() }()
 
 	var result PodInfo
-	if err := parseResponse(resp, &result); err != nil {
-		return nil, err
+	if parseErr := parseResponse(resp, &result); parseErr != nil {
+		return nil, parseErr
 	}
 
 	return &result, nil
@@ -130,8 +130,8 @@ func (c *Client) ListPods(ctx context.Context) ([]PodInfo, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	var result []PodInfo
-	if err := parseResponse(resp, &result); err != nil {
-		return nil, err
+	if parseErr := parseResponse(resp, &result); parseErr != nil {
+		return nil, parseErr
 	}
 
 	return result, nil

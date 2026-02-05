@@ -95,19 +95,21 @@ func TestUnifiedReport_JSONShape_AndStrictRoundTrip(t *testing.T) {
 
 	// Verify key JSON field names (camelCase in report contract).
 	var top map[string]any
-	if err := json.Unmarshal(b, &top); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	if unmarshalErr := json.Unmarshal(b, &top); unmarshalErr != nil {
+		t.Fatalf("unmarshal: %v", unmarshalErr)
 	}
 
-	metaAny, ok := top["meta"]
-	if !ok {
+	metaAny, metaExists := top["meta"]
+	if !metaExists {
 		t.Fatalf("expected meta in JSON: %s", string(b))
 	}
-	meta, ok := metaAny.(map[string]any)
-	if !ok {
+
+	meta, metaOK := metaAny.(map[string]any)
+	if !metaOK {
 		t.Fatalf("expected meta to be object")
 	}
-	if _, ok := meta["jobId"]; !ok {
+
+	if _, jobIDExists := meta["jobId"]; !jobIDExists {
 		t.Fatalf("expected meta.jobId key (not snake_case): %s", string(b))
 	}
 
@@ -116,19 +118,22 @@ func TestUnifiedReport_JSONShape_AndStrictRoundTrip(t *testing.T) {
 	dec.DisallowUnknownFields()
 
 	var decoded report.UnifiedReportV2
-	if err := dec.Decode(&decoded); err != nil {
-		t.Fatalf("strict unmarshal: %v", err)
+	if decodeErr := dec.Decode(&decoded); decodeErr != nil {
+		t.Fatalf("strict unmarshal: %v", decodeErr)
 	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		t.Fatalf("expected EOF after single JSON value, got %v", err)
+
+	if trailingErr := dec.Decode(&struct{}{}); trailingErr != io.EOF {
+		t.Fatalf("expected EOF after single JSON value, got %v", trailingErr)
 	}
 
 	if decoded.Meta.JobId != "job-123" || decoded.Summary.TotalIssues != 3 {
 		t.Fatalf("Expected roundtrip to preserve key fields")
 	}
+
 	if len(decoded.Issues) != 1 || len(decoded.Issues[0].Occurrences) != 1 {
 		t.Fatalf("Expected one issue with one occurrence")
 	}
+
 	if decoded.Issues[0].Occurrences[0].Target[0] != "button.primary" {
 		t.Fatalf("Expected occurrence targets to be preserved")
 	}
@@ -138,15 +143,18 @@ func strPtr(value string) *string {
 	if value == "" {
 		return nil
 	}
+
 	return &value
 }
 
 func intPtr(value int) *int {
 	v := value
+
 	return &v
 }
 
 func floatPtr(value float64) *float64 {
 	v := value
+
 	return &v
 }

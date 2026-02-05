@@ -45,8 +45,8 @@ func (o *Orchestrator) handleURLJob(ctx context.Context, job *models.Job) error 
 			return fmt.Errorf("failed to create pod: %w", err)
 		}
 
-		if err := o.database.UpdateJobPodID(ctx, job.ID, podResp.ID); err != nil {
-			return fmt.Errorf("failed to update job pod ID: %w", err)
+		if podUpdateErr := o.database.UpdateJobPodID(ctx, job.ID, podResp.ID); podUpdateErr != nil {
+			return fmt.Errorf("failed to update job pod ID: %w", podUpdateErr)
 		}
 
 		job.PodID = podResp.ID

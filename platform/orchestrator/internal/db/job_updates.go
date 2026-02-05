@@ -124,7 +124,16 @@ func (d *Database) CompleteJob(ctx context.Context, jobID string) error {
 
 	now := time.Now()
 
-	result, err := d.db.ExecContext(ctx, query, models.JobStateDone, now, now, jobID, models.JobStateDone, models.JobStateFailed)
+	result, err := d.db.ExecContext(
+		ctx,
+		query,
+		models.JobStateDone,
+		now,
+		now,
+		jobID,
+		models.JobStateDone,
+		models.JobStateFailed,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to complete job: %w", err)
 	}
@@ -165,7 +174,17 @@ func (d *Database) FailJob(ctx context.Context, jobID, errorMsg string) error {
 
 	now := time.Now()
 
-	result, err := d.db.ExecContext(ctx, query, models.JobStateFailed, errorMsg, now, now, jobID, models.JobStateFailed, models.JobStateDone)
+	result, err := d.db.ExecContext(
+		ctx,
+		query,
+		models.JobStateFailed,
+		errorMsg,
+		now,
+		now,
+		jobID,
+		models.JobStateFailed,
+		models.JobStateDone,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to fail job: %w", err)
 	}

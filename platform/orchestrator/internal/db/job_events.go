@@ -125,11 +125,28 @@ func (d *Database) InsertJobEvent(ctx context.Context, e *JobEventInsert) error 
 		duration = *e.DurationMs
 	}
 
-	_, err := d.db.ExecContext(ctx, query,
-		e.JobID, e.Event, e.Timestamp, nullIfEmpty(e.Payload),
-		nullIfEmpty(e.RequestID), nullIfEmpty(e.RunID), nullIfEmpty(e.Producer),
-		nullIfEmpty(e.NATSSubject), nullIfEmpty(e.NATSStream), nullIfEmpty(e.NATSConsumer), streamSeq, consumerSeq, deliveries, storedAt,
-		nullIfEmpty(e.HandlerStatus), nullIfEmpty(e.HandlerError), duration,
+	_, err := d.db.ExecContext(
+		ctx,
+		query,
+		e.JobID,
+		e.Event,
+		e.Timestamp,
+		nullIfEmpty(e.Payload),
+		nullIfEmpty(e.RequestID),
+		nullIfEmpty(e.RunID),
+		nullIfEmpty(e.Producer),
+		nullIfEmpty(
+			e.NATSSubject,
+		),
+		nullIfEmpty(e.NATSStream),
+		nullIfEmpty(e.NATSConsumer),
+		streamSeq,
+		consumerSeq,
+		deliveries,
+		storedAt,
+		nullIfEmpty(e.HandlerStatus),
+		nullIfEmpty(e.HandlerError),
+		duration,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert job event: %w", err)
@@ -193,7 +210,7 @@ func (d *Database) ListJobEvents(ctx context.Context, jobID string, opts ListJob
 			duration    sql.NullInt64
 		)
 
-		if err := rows.Scan(
+		if scanErr := rows.Scan(
 			&event.ID,
 			&event.JobID,
 			&event.Event,
@@ -212,8 +229,8 @@ func (d *Database) ListJobEvents(ctx context.Context, jobID string, opts ListJob
 			&event.HandlerStatus,
 			&event.HandlerError,
 			&duration,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan event: %w", err)
+		); scanErr != nil {
+			return nil, fmt.Errorf("failed to scan event: %w", scanErr)
 		}
 
 		if payloadJSON.Valid {
@@ -244,8 +261,8 @@ func (d *Database) ListJobEvents(ctx context.Context, jobID string, opts ListJob
 		events = append(events, event)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed iterating job events: %w", err)
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("failed iterating job events: %w", rowsErr)
 	}
 
 	return events, nil

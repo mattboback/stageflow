@@ -93,14 +93,14 @@ func (s *StaticServer) Start(ctx context.Context) error {
 	s.listener = listener
 
 	go func() {
-		err := server.Serve(listener)
-		if errors.Is(err, http.ErrServerClosed) {
+		serveErr := server.Serve(listener)
+		if errors.Is(serveErr, http.ErrServerClosed) {
 			s.done <- nil
 
 			return
 		}
 
-		s.done <- err
+		s.done <- serveErr
 	}()
 
 	log.Printf("Static server started on %s serving %s", listener.Addr().String(), s.siteDir)

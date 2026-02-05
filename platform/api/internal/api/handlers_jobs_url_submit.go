@@ -130,8 +130,8 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if err := s.statusStore.HandleJobCreated(ctx, payload); err != nil {
-		logging.Error(ctx, "Failed to persist job status", "error", err)
+	if persistErr := s.statusStore.HandleJobCreated(ctx, payload); persistErr != nil {
+		logging.Error(ctx, "Failed to persist job status", "error", persistErr)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to persist job")
 
 		return
@@ -141,8 +141,8 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	envelope.RequestID = logging.RequestID(ctx)
 	envelope.RunID = logging.RunID(ctx)
 
-	if err := s.config.Publisher.PublishJobCreated(ctx, envelope); err != nil {
-		logging.Error(ctx, "Failed to publish job.created event", "error", err)
+	if publishErr := s.config.Publisher.PublishJobCreated(ctx, envelope); publishErr != nil {
+		logging.Error(ctx, "Failed to publish job.created event", "error", publishErr)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue job")
 
 		return

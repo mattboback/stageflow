@@ -1,7 +1,10 @@
 package scannerregistry
 
-import (
-	"testing"
+import "testing"
+
+const (
+	scannerNameAxe = "Axe"
+	defaultImage   = "default:latest"
 )
 
 func TestNewRegistry(t *testing.T) {
@@ -28,164 +31,117 @@ func TestNewRegistry(t *testing.T) {
 	}
 }
 
-func TestRegistry_Register(t *testing.T) {
-	t.Run("registers valid scanner", func(t *testing.T) {
-		reg := NewRegistry("")
-		def := &Definition{
-			ID:         "axe",
-			Name:       "Axe Scanner",
-			Categories: []string{"accessibility"},
-			Aliases:    []string{"axe-core"},
-			Enabled:    true,
+func TestRegistry_Register_ValidScanner(t *testing.T) {
+	reg := NewRegistry("")
+	def := &Definition{
+		ID:         moduleAxe,
+		Name:       "Axe Scanner",
+		Categories: []string{categoryAccessibility},
+		Aliases:    []string{moduleAxeAlias},
+		Enabled:    true,
+	}
+
+	if err := reg.Register(def); err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	got, ok := reg.Get(moduleAxe)
+	if !ok {
+		t.Fatal("expected scanner to be registered")
+	}
+
+	if got.Name != "Axe Scanner" {
+		t.Errorf("expected Name 'Axe Scanner', got '%s'", got.Name)
+	}
+}
+
+func TestRegistry_Register_RejectsEmptyID(t *testing.T) {
+	reg := NewRegistry("")
+	def := &Definition{ID: "", Name: "Scanner"}
+
+	if err := reg.Register(def); err == nil {
+		t.Fatal("expected error for empty ID")
+	}
+}
+
+func TestRegistry_Register_RejectsEmptyName(t *testing.T) {
+	reg := NewRegistry("")
+	def := &Definition{ID: "test", Name: ""}
+
+	if err := reg.Register(def); err == nil {
+		t.Fatal("expected error for empty name")
+	}
+}
+
+func TestRegistry_Register_DuplicateAlias(t *testing.T) {
+	reg := NewRegistry("")
+	def1 := &Definition{ID: "scanner1", Name: "Scanner 1", Aliases: []string{"shared-alias"}}
+	def2 := &Definition{ID: "scanner2", Name: "Scanner 2", Aliases: []string{"shared-alias"}}
+
+	registerDefinition(t, reg, def1)
+
+	if err := reg.Register(def2); err == nil {
+		t.Fatal("expected error for duplicate alias")
+	}
+}
+
+func TestRegistry_Register_AllowsAliasUpdate(t *testing.T) {
+	reg := NewRegistry("")
+	def := &Definition{ID: "scanner1", Name: "Scanner 1", Aliases: []string{"my-alias"}}
+
+	registerDefinition(t, reg, def)
+
+	def.Name = "Scanner 1 Updated"
+	if err := reg.Register(def); err != nil {
+		t.Fatalf("Second Register() error = %v", err)
+	}
+}
+
+func TestRegistry_Register_UpdatesExistingScanner(t *testing.T) {
+	reg := NewRegistry("")
+	def := &Definition{ID: moduleAxe, Name: "Axe v1", Categories: []string{"old-category"}}
+	updated := &Definition{ID: moduleAxe, Name: "Axe v2", Categories: []string{"new-category"}}
+
+	registerDefinition(t, reg, def)
+	registerDefinition(t, reg, updated)
+
+	got, _ := reg.Get(moduleAxe)
+	if got.Name != "Axe v2" {
+		t.Errorf("expected Name 'Axe v2', got '%s'", got.Name)
+	}
+
+	cats := reg.Categories()
+	for _, c := range cats {
+		if c == "old-category" {
+			t.Fatal("old category should have been removed")
 		}
-
-		err := reg.Register(def)
-		if err != nil {
-			t.Fatalf("Register() error = %v", err)
-		}
-
-		got, ok := reg.Get("axe")
-		if !ok {
-			t.Fatal("expected scanner to be registered")
-		}
-
-		if got.Name != "Axe Scanner" {
-			t.Errorf("expected Name 'Axe Scanner', got '%s'", got.Name)
-		}
-	})
-
-	t.Run("rejects empty ID", func(t *testing.T) {
-		reg := NewRegistry("")
-		def := &Definition{
-			ID:   "",
-			Name: "Scanner",
-		}
-
-		err := reg.Register(def)
-		if err == nil {
-			t.Error("expected error for empty ID")
-		}
-	})
-
-	t.Run("rejects empty name", func(t *testing.T) {
-		reg := NewRegistry("")
-		def := &Definition{
-			ID:   "test",
-			Name: "",
-		}
-
-		err := reg.Register(def)
-		if err == nil {
-			t.Error("expected error for empty name")
-		}
-	})
-
-	t.Run("rejects duplicate alias from different scanner", func(t *testing.T) {
-		reg := NewRegistry("")
-
-		def1 := &Definition{
-			ID:      "scanner1",
-			Name:    "Scanner 1",
-			Aliases: []string{"shared-alias"},
-		}
-
-		def2 := &Definition{
-			ID:      "scanner2",
-			Name:    "Scanner 2",
-			Aliases: []string{"shared-alias"},
-		}
-
-		if err := reg.Register(def1); err != nil {
-			t.Fatalf("Register(def1) error = %v", err)
-		}
-
-		err := reg.Register(def2)
-		if err == nil {
-			t.Error("expected error for duplicate alias")
-		}
-	})
-
-	t.Run("allows same alias when updating same scanner", func(t *testing.T) {
-		reg := NewRegistry("")
-
-		def := &Definition{
-			ID:      "scanner1",
-			Name:    "Scanner 1",
-			Aliases: []string{"my-alias"},
-		}
-
-		if err := reg.Register(def); err != nil {
-			t.Fatalf("First Register() error = %v", err)
-		}
-
-		def.Name = "Scanner 1 Updated"
-		if err := reg.Register(def); err != nil {
-			t.Fatalf("Second Register() error = %v", err)
-		}
-	})
-
-	t.Run("updates existing scanner", func(t *testing.T) {
-		reg := NewRegistry("")
-
-		def := &Definition{
-			ID:         "axe",
-			Name:       "Axe v1",
-			Categories: []string{"old-category"},
-		}
-
-		if err := reg.Register(def); err != nil {
-			t.Fatalf("First Register() error = %v", err)
-		}
-
-		updated := &Definition{
-			ID:         "axe",
-			Name:       "Axe v2",
-			Categories: []string{"new-category"},
-		}
-
-		if err := reg.Register(updated); err != nil {
-			t.Fatalf("Second Register() error = %v", err)
-		}
-
-		got, _ := reg.Get("axe")
-		if got.Name != "Axe v2" {
-			t.Errorf("expected Name 'Axe v2', got '%s'", got.Name)
-		}
-
-		// Old category should be removed
-		cats := reg.Categories()
-		for _, c := range cats {
-			if c == "old-category" {
-				t.Error("old category should have been removed")
-			}
-		}
-	})
+	}
 }
 
 func TestRegistry_Unregister(t *testing.T) {
 	t.Run("removes existing scanner", func(t *testing.T) {
 		reg := NewRegistry("")
 		def := &Definition{
-			ID:         "axe",
-			Name:       "Axe",
-			Categories: []string{"accessibility"},
-			Aliases:    []string{"axe-core"},
+			ID:         moduleAxe,
+			Name:       scannerNameAxe,
+			Categories: []string{categoryAccessibility},
+			Aliases:    []string{moduleAxeAlias},
 		}
 
-		_ = reg.Register(def)
+		registerDefinition(t, reg, def)
 
-		ok := reg.Unregister("axe")
+		ok := reg.Unregister(moduleAxe)
 		if !ok {
 			t.Error("expected Unregister to return true")
 		}
 
-		_, found := reg.Get("axe")
+		_, found := reg.Get(moduleAxe)
 		if found {
 			t.Error("expected scanner to be removed")
 		}
 
 		// Alias should also be removed
-		_, found = reg.Resolve("axe-core")
+		_, found = reg.Resolve(moduleAxeAlias)
 		if found {
 			t.Error("expected alias to be removed")
 		}
@@ -203,17 +159,17 @@ func TestRegistry_Unregister(t *testing.T) {
 
 func TestRegistry_Get(t *testing.T) {
 	reg := NewRegistry("")
-	def := &Definition{ID: "axe", Name: "Axe"}
-	_ = reg.Register(def)
+	def := &Definition{ID: moduleAxe, Name: scannerNameAxe}
+	registerDefinition(t, reg, def)
 
 	t.Run("finds registered scanner", func(t *testing.T) {
-		got, ok := reg.Get("axe")
+		got, ok := reg.Get(moduleAxe)
 		if !ok {
 			t.Fatal("expected to find scanner")
 		}
 
-		if got.ID != "axe" {
-			t.Errorf("expected ID 'axe', got '%s'", got.ID)
+		if got.ID != moduleAxe {
+			t.Errorf("expected ID %q, got %q", moduleAxe, got.ID)
 		}
 	})
 
@@ -228,29 +184,29 @@ func TestRegistry_Get(t *testing.T) {
 func TestRegistry_Resolve(t *testing.T) {
 	reg := NewRegistry("")
 	def := &Definition{
-		ID:      "axe",
-		Name:    "Axe",
-		Aliases: []string{"axe-core", "AXE"},
+		ID:      moduleAxe,
+		Name:    scannerNameAxe,
+		Aliases: []string{moduleAxeAlias, "AXE"},
 	}
-	_ = reg.Register(def)
+	registerDefinition(t, reg, def)
 
 	t.Run("resolves by ID", func(t *testing.T) {
-		got, ok := reg.Resolve("axe")
-		if !ok || got.ID != "axe" {
+		got, ok := reg.Resolve(moduleAxe)
+		if !ok || got.ID != moduleAxe {
 			t.Error("expected to resolve by ID")
 		}
 	})
 
 	t.Run("resolves by alias", func(t *testing.T) {
-		got, ok := reg.Resolve("axe-core")
-		if !ok || got.ID != "axe" {
+		got, ok := reg.Resolve(moduleAxeAlias)
+		if !ok || got.ID != moduleAxe {
 			t.Error("expected to resolve by alias")
 		}
 	})
 
 	t.Run("resolves by alias case-insensitively", func(t *testing.T) {
 		got, ok := reg.Resolve("AXE")
-		if !ok || got.ID != "axe" {
+		if !ok || got.ID != moduleAxe {
 			t.Error("expected to resolve case-insensitively")
 		}
 	})
@@ -265,9 +221,9 @@ func TestRegistry_Resolve(t *testing.T) {
 
 func TestRegistry_List(t *testing.T) {
 	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "zscanner", Name: "Z Scanner"})
-	_ = reg.Register(&Definition{ID: "ascanner", Name: "A Scanner"})
-	_ = reg.Register(&Definition{ID: "mscanner", Name: "M Scanner"})
+	registerDefinition(t, reg, &Definition{ID: "zscanner", Name: "Z Scanner"})
+	registerDefinition(t, reg, &Definition{ID: "ascanner", Name: "A Scanner"})
+	registerDefinition(t, reg, &Definition{ID: "mscanner", Name: "M Scanner"})
 
 	list := reg.List()
 
@@ -287,9 +243,9 @@ func TestRegistry_List(t *testing.T) {
 
 func TestRegistry_ListEnabled(t *testing.T) {
 	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "enabled1", Name: "Enabled 1", Enabled: true})
-	_ = reg.Register(&Definition{ID: "disabled1", Name: "Disabled 1", Enabled: false})
-	_ = reg.Register(&Definition{ID: "enabled2", Name: "Enabled 2", Enabled: true})
+	registerDefinition(t, reg, &Definition{ID: "enabled1", Name: "Enabled 1", Enabled: true})
+	registerDefinition(t, reg, &Definition{ID: "disabled1", Name: "Disabled 1", Enabled: false})
+	registerDefinition(t, reg, &Definition{ID: "enabled2", Name: "Enabled 2", Enabled: true})
 
 	list := reg.ListEnabled()
 
@@ -306,8 +262,8 @@ func TestRegistry_ListEnabled(t *testing.T) {
 
 func TestRegistry_Categories(t *testing.T) {
 	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "s1", Name: "S1", Categories: []string{"cat1", "cat2"}})
-	_ = reg.Register(&Definition{ID: "s2", Name: "S2", Categories: []string{"cat2", "cat3"}})
+	registerDefinition(t, reg, &Definition{ID: "s1", Name: "S1", Categories: []string{"cat1", "cat2"}})
+	registerDefinition(t, reg, &Definition{ID: "s2", Name: "S2", Categories: []string{"cat2", "cat3"}})
 
 	cats := reg.Categories()
 
@@ -326,12 +282,29 @@ func TestRegistry_Categories(t *testing.T) {
 
 func TestRegistry_ListByCategory(t *testing.T) {
 	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "axe", Name: "Axe", Categories: []string{"accessibility"}, Enabled: true})
-	_ = reg.Register(&Definition{ID: "lighthouse", Name: "Lighthouse", Categories: []string{"performance", "accessibility"}, Enabled: true})
-	_ = reg.Register(&Definition{ID: "disabled", Name: "Disabled", Categories: []string{"accessibility"}, Enabled: false})
+	registerDefinition(
+		t,
+		reg,
+		&Definition{ID: moduleAxe, Name: scannerNameAxe, Categories: []string{categoryAccessibility}, Enabled: true},
+	)
+	registerDefinition(
+		t,
+		reg,
+		&Definition{
+			ID:         moduleLighthouse,
+			Name:       "Lighthouse",
+			Categories: []string{categoryPerformance, categoryAccessibility},
+			Enabled:    true,
+		},
+	)
+	registerDefinition(
+		t,
+		reg,
+		&Definition{ID: moduleDisabled, Name: "Disabled", Categories: []string{categoryAccessibility}, Enabled: false},
+	)
 
 	t.Run("returns enabled scanners in category", func(t *testing.T) {
-		list := reg.ListByCategory("accessibility")
+		list := reg.ListByCategory(categoryAccessibility)
 
 		if len(list) != 2 {
 			t.Fatalf("expected 2 scanners in accessibility, got %d", len(list))
@@ -347,9 +320,9 @@ func TestRegistry_ListByCategory(t *testing.T) {
 }
 
 func TestRegistry_GetImage(t *testing.T) {
-	reg := NewRegistry("default:latest")
-	_ = reg.Register(&Definition{ID: "custom", Name: "Custom", Image: "custom:v1"})
-	_ = reg.Register(&Definition{ID: "noimage", Name: "No Image"})
+	reg := NewRegistry(defaultImage)
+	registerDefinition(t, reg, &Definition{ID: "custom", Name: "Custom", Image: "custom:v1"})
+	registerDefinition(t, reg, &Definition{ID: "noimage", Name: "No Image"})
 
 	t.Run("returns scanner image", func(t *testing.T) {
 		img := reg.GetImage("custom")
@@ -360,15 +333,15 @@ func TestRegistry_GetImage(t *testing.T) {
 
 	t.Run("returns default image when not set", func(t *testing.T) {
 		img := reg.GetImage("noimage")
-		if img != "default:latest" {
-			t.Errorf("expected 'default:latest', got '%s'", img)
+		if img != defaultImage {
+			t.Errorf("expected %q, got %q", defaultImage, img)
 		}
 	})
 
 	t.Run("returns default for unknown scanner", func(t *testing.T) {
 		img := reg.GetImage("unknown")
-		if img != "default:latest" {
-			t.Errorf("expected 'default:latest', got '%s'", img)
+		if img != defaultImage {
+			t.Errorf("expected %q, got %q", defaultImage, img)
 		}
 	})
 }
@@ -380,8 +353,8 @@ func TestRegistry_Count(t *testing.T) {
 		t.Errorf("expected 0, got %d", reg.Count())
 	}
 
-	_ = reg.Register(&Definition{ID: "s1", Name: "S1"})
-	_ = reg.Register(&Definition{ID: "s2", Name: "S2"})
+	registerDefinition(t, reg, &Definition{ID: "s1", Name: "S1"})
+	registerDefinition(t, reg, &Definition{ID: "s2", Name: "S2"})
 
 	if reg.Count() != 2 {
 		t.Errorf("expected 2, got %d", reg.Count())
@@ -390,9 +363,9 @@ func TestRegistry_Count(t *testing.T) {
 
 func TestRegistry_CountEnabled(t *testing.T) {
 	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "enabled1", Name: "E1", Enabled: true})
-	_ = reg.Register(&Definition{ID: "enabled2", Name: "E2", Enabled: true})
-	_ = reg.Register(&Definition{ID: "disabled1", Name: "D1", Enabled: false})
+	registerDefinition(t, reg, &Definition{ID: "enabled1", Name: "E1", Enabled: true})
+	registerDefinition(t, reg, &Definition{ID: "enabled2", Name: "E2", Enabled: true})
+	registerDefinition(t, reg, &Definition{ID: "disabled1", Name: "D1", Enabled: false})
 
 	if reg.CountEnabled() != 2 {
 		t.Errorf("expected 2 enabled, got %d", reg.CountEnabled())

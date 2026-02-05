@@ -62,6 +62,7 @@ func TestStartScanning_StateTransitions(t *testing.T) {
 
 			err := orch.startScanning(context.Background(), job)
 
+			//nolint:nestif // Test error validation requires nested checks
 			if tt.expectError {
 				if err == nil {
 					t.Fatal("expected error but got none")
@@ -72,10 +73,11 @@ func TestStartScanning_StateTransitions(t *testing.T) {
 				}
 
 				// Verify state was updated
-				updatedJob, err := database.GetJob(context.Background(), job.ID)
-				if err != nil {
-					t.Fatalf("failed to get job: %v", err)
+				updatedJob, getErr := database.GetJob(context.Background(), job.ID)
+				if getErr != nil {
+					t.Fatalf("failed to get job: %v", getErr)
 				}
+
 				if updatedJob.State != models.JobStateScanning {
 					t.Fatalf("expected state SCANNING, got %s", updatedJob.State)
 				}
@@ -226,12 +228,14 @@ func TestGetScannerTypes_ModuleResolution(t *testing.T) {
 
 			for _, expected := range tt.expectContains {
 				found := false
+
 				for _, scanner := range scanners {
 					if scanner == expected {
 						found = true
 						break
 					}
 				}
+
 				if !found {
 					t.Fatalf("expected scanner %q not found in result", expected)
 				}
@@ -245,7 +249,7 @@ func TestStartScannersWithTimeout_Timeout(t *testing.T) {
 
 	// Override mock to delay container creation
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, _ *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		// Wait longer than timeout
 		time.Sleep(200 * time.Millisecond)
 		return &podman.ContainerCreateResponse{ID: "container-delayed"}, nil
@@ -275,6 +279,7 @@ func TestStartScannersWithTimeout_Timeout(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}
+
 	if err.Error() != "scanner start timed out after 50ms" {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -289,6 +294,7 @@ func TestStartScannersWithTimeout_ConcurrentFailure(t *testing.T) {
 		if req.Name == "scanner-lighthouse-job-fail" {
 			return nil, errors.New("failed to create lighthouse container")
 		}
+
 		return &podman.ContainerCreateResponse{ID: "container-success"}, nil
 	}
 
@@ -320,6 +326,7 @@ func TestStartSingleScanner_EnvironmentVariables(t *testing.T) {
 
 	// Capture environment variables passed to container
 	var capturedEnv map[string]string
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
 	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedEnv = req.Env
@@ -375,12 +382,15 @@ func TestStartSingleScanner_EnvironmentVariables(t *testing.T) {
 	if capturedEnv["JOB_ID"] != job.ID {
 		t.Fatalf("expected JOB_ID=%s, got %s", job.ID, capturedEnv["JOB_ID"])
 	}
+
 	if capturedEnv["SCANNER_TYPE"] != "axe" {
 		t.Fatalf("expected SCANNER_TYPE=axe, got %s", capturedEnv["SCANNER_TYPE"])
 	}
+
 	if capturedEnv["A11Y_SHOT_ENABLED"] != "true" {
 		t.Fatalf("expected A11Y_SHOT_ENABLED=true, got %s", capturedEnv["A11Y_SHOT_ENABLED"])
 	}
+
 	if capturedEnv["A11Y_HIGHLIGHT_STYLE"] != "solid" {
 		t.Fatalf("expected A11Y_HIGHLIGHT_STYLE=solid, got %s", capturedEnv["A11Y_HIGHLIGHT_STYLE"])
 	}
@@ -390,8 +400,9 @@ func TestStartSingleScanner_URLJobProvenance(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 
 	var capturedEnv map[string]string
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedEnv = req.Env
 		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
 	}
@@ -418,9 +429,10 @@ func TestStartSingleScanner_URLJobProvenance(t *testing.T) {
 		t.Fatal("expected SCAN_URLS environment variable for URL job")
 	} else {
 		var urls []string
-		if err := json.Unmarshal([]byte(scanURLs), &urls); err != nil {
-			t.Fatalf("failed to unmarshal SCAN_URLS: %v", err)
+		if unmarshalErr := json.Unmarshal([]byte(scanURLs), &urls); unmarshalErr != nil {
+			t.Fatalf("failed to unmarshal SCAN_URLS: %v", unmarshalErr)
 		}
+
 		if len(urls) != 2 {
 			t.Fatalf("expected 2 URLs, got %d", len(urls))
 		}
@@ -442,15 +454,21 @@ func TestStartSingleScanner_AINavigatorAPIKey(t *testing.T) {
 
 	// Set the API key environment variable
 	os.Setenv("OPENROUTER_API_KEY", "test-api-key-123")
+
 	defer os.Unsetenv("OPENROUTER_API_KEY")
+
 	os.Setenv("OPENROUTER_APP_TITLE", "StageFlow Test")
+
 	defer os.Unsetenv("OPENROUTER_APP_TITLE")
+
 	os.Setenv("OPENROUTER_APP_REFERER", "https://example.com")
+
 	defer os.Unsetenv("OPENROUTER_APP_REFERER")
 
 	var capturedEnv map[string]string
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedEnv = req.Env
 		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
 	}
@@ -496,8 +514,9 @@ func TestStartSingleScanner_ScannerConfig(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 
 	var capturedEnv map[string]string
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedEnv = req.Env
 		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
 	}
@@ -534,9 +553,10 @@ func TestStartSingleScanner_ScannerConfig(t *testing.T) {
 		t.Fatal("expected SCANNER_OPTIONS environment variable")
 	} else {
 		var parsedConfig map[string]any
-		if err := json.Unmarshal([]byte(options), &parsedConfig); err != nil {
-			t.Fatalf("failed to unmarshal SCANNER_OPTIONS: %v", err)
+		if unmarshalErr := json.Unmarshal([]byte(options), &parsedConfig); unmarshalErr != nil {
+			t.Fatalf("failed to unmarshal SCANNER_OPTIONS: %v", unmarshalErr)
 		}
+
 		if parsedConfig["maxPages"].(float64) != 10 {
 			t.Fatalf("expected maxPages=10, got %v", parsedConfig["maxPages"])
 		}
@@ -547,8 +567,9 @@ func TestStartSingleScanner_VolumeMounts(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 
 	var capturedMounts []podman.VolumeMount
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedMounts = req.Mounts
 		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
 	}
@@ -580,6 +601,7 @@ func TestStartSingleScanner_VolumeMounts(t *testing.T) {
 	if workspaceMount.Destination != "/workspace" {
 		t.Fatalf("expected workspace mount at /workspace, got %s", workspaceMount.Destination)
 	}
+
 	if !workspaceMount.ReadOnly {
 		t.Fatal("expected workspace mount to be read-only")
 	}
@@ -589,6 +611,7 @@ func TestStartSingleScanner_VolumeMounts(t *testing.T) {
 	if resultsMount.Destination != "/results" {
 		t.Fatalf("expected results mount at /results, got %s", resultsMount.Destination)
 	}
+
 	if resultsMount.ReadOnly {
 		t.Fatal("expected results mount to be writable")
 	}
@@ -598,8 +621,9 @@ func TestStartSingleScanner_ResourceLimits(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 
 	var capturedLimits *podman.ResourceLimits
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedLimits = req.ResourceLimits
 		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
 	}
@@ -630,6 +654,7 @@ func TestStartSingleScanner_ResourceLimits(t *testing.T) {
 	if capturedLimits.MemoryLimitMB != 2048 {
 		t.Fatalf("expected memory limit 2048, got %d", capturedLimits.MemoryLimitMB)
 	}
+
 	if capturedLimits.MemorySwapMB != 2048 {
 		t.Fatalf("expected memory swap 2048, got %d", capturedLimits.MemorySwapMB)
 	}
@@ -639,8 +664,9 @@ func TestStartSingleScanner_ContainerLabels(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 
 	var capturedLabels map[string]string
+
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.createContainerFunc = func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
 		capturedLabels = req.Labels
 		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
 	}
@@ -706,10 +732,10 @@ func TestStartSingleScanner_VolumeCreationFailure(t *testing.T) {
 
 	// Override mock to fail volume inspection
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.inspectVolumeFunc = func(ctx context.Context, name string) (*podman.VolumeInfo, error) {
+	mockPodman.inspectVolumeFunc = func(_ context.Context, _ string) (*podman.VolumeInfo, error) {
 		return nil, errors.New("volume not found")
 	}
-	mockPodman.createVolumeFunc = func(ctx context.Context, name string) error {
+	mockPodman.createVolumeFunc = func(_ context.Context, _ string) error {
 		return errors.New("failed to create volume")
 	}
 
@@ -736,7 +762,7 @@ func TestStartSingleScanner_ContainerStartFailure(t *testing.T) {
 
 	// Override mock to fail container start
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
-	mockPodman.startContainerFunc = func(ctx context.Context, containerID string) error {
+	mockPodman.startContainerFunc = func(_ context.Context, _ string) error {
 		return errors.New("failed to start container")
 	}
 
@@ -756,6 +782,7 @@ func TestStartSingleScanner_ContainerStartFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for container start failure")
 	}
+
 	if err.Error() != "failed to start axe scanner container: failed to start container" {
 		t.Fatalf("unexpected error message: %v", err)
 	}

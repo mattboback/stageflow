@@ -37,12 +37,13 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create NATS client: %v", err)
 	}
+
 	t.Cleanup(func() {
 		_ = client.Close()
 	})
 
-	if err := ensureStreamsWithRetry(ctx, client, 20, 250*time.Millisecond); err != nil {
-		t.Fatalf("failed to ensure streams: %v", err)
+	if ensureErr := ensureStreamsWithRetry(ctx, client, 20, 250*time.Millisecond); ensureErr != nil {
+		t.Fatalf("failed to ensure streams: %v", ensureErr)
 	}
 
 	store := newStatusStore(t)
@@ -50,8 +51,9 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 
 	subCtx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
-	if err := service.SubscribeToStatusEvents(subCtx, store); err != nil {
-		t.Fatalf("failed to subscribe to events: %v", err)
+
+	if subscribeErr := service.SubscribeToStatusEvents(subCtx, store); subscribeErr != nil {
+		t.Fatalf("failed to subscribe to events: %v", subscribeErr)
 	}
 
 	jobID := "nats-integration-job"
@@ -63,8 +65,8 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 	}
 
 	createdEnv := events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", jobCreated)
-	if err := service.PublishJobCreated(ctx, createdEnv); err != nil {
-		t.Fatalf("failed to publish job.created: %v", err)
+	if publishErr := service.PublishJobCreated(ctx, createdEnv); publishErr != nil {
+		t.Fatalf("failed to publish job.created: %v", publishErr)
 	}
 
 	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
@@ -120,24 +122,35 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 func newStatusStore(t *testing.T) *status.Store {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "status.db")
+
 	store, err := status.NewStore(&status.Config{Path: dbPath})
 	if err != nil {
 		t.Fatalf("failed to create status store: %v", err)
 	}
+
 	t.Cleanup(func() {
 		_ = store.Close()
 	})
+
 	return store
 }
 
-func waitForRecord(t *testing.T, store *status.Store, jobID string, condition func(*status.JobRecord) bool) *status.JobRecord { //nolint:unparam // keep jobID for clearer call sites
+//nolint:unparam // jobID always receives the same value in tests, but keep for clarity.
+func waitForRecord(
+	t *testing.T,
+	store *status.Store,
+	jobID string,
+	condition func(*status.JobRecord) bool,
+) *status.JobRecord {
 	t.Helper()
+
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		rec, err := store.GetJob(context.Background(), jobID)
 		if err == nil && condition(rec) {
 			return rec
 		}
+
 		time.Sleep(50 * time.Millisecond)
 	}
 
@@ -145,13 +158,21 @@ func waitForRecord(t *testing.T, store *status.Store, jobID string, condition fu
 	if err != nil {
 		t.Fatalf("job %s not found: %v", jobID, err)
 	}
+
 	t.Fatalf("condition not met for job %s, record: %+v", jobID, rec)
 
 	return nil
 }
 
-func publishEnvelope(ctx context.Context, t *testing.T, client *sharedmsg.Client, subject, eventName, jobID string, payload interface{}) {
+func publishEnvelope(
+	ctx context.Context,
+	t *testing.T,
+	client *sharedmsg.Client,
+	subject, eventName, jobID string,
+	payload interface{},
+) {
 	t.Helper()
+
 	envelope := events.NewEnvelope(eventName, jobID, "integration-test", payload)
 	if err := client.PublishEvent(ctx, subject, envelope); err != nil {
 		t.Fatalf("failed to publish %s: %v", subject, err)
@@ -160,12 +181,14 @@ func publishEnvelope(ctx context.Context, t *testing.T, client *sharedmsg.Client
 
 func ensureStreamsWithRetry(ctx context.Context, client *sharedmsg.Client, attempts int, delay time.Duration) error {
 	var err error
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		if err = client.EnsureStreams(ctx); err == nil {
 			return nil
 		}
+
 		time.Sleep(delay)
 	}
+
 	return err
 }
 
@@ -174,13 +197,16 @@ func startNATSServer(tb testing.TB) string {
 
 	// In restricted sandboxes, binding to TCP ports may be disallowed. Skip instead of failing.
 	listenCfg := &net.ListenConfig{}
+
 	l, err := listenCfg.Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		if errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) {
 			tb.Skipf("skipping NATS integration test: cannot bind to local TCP port in this environment: %v", err)
 		}
+
 		tb.Fatalf("failed to probe TCP listen support: %v", err)
 	}
+
 	_ = l.Close()
 
 	opts := &natsserver.Options{
@@ -198,6 +224,7 @@ func startNATSServer(tb testing.TB) string {
 	}
 
 	go srv.Start()
+
 	if !srv.ReadyForConnections(10 * time.Second) {
 		tb.Fatalf("timed out waiting for NATS to accept connections")
 	}

@@ -107,6 +107,7 @@ func TestNextState(t *testing.T) {
 				t.Errorf("NextState(%s, %s) error = %v, wantErr %v", tt.current, tt.event, err, tt.wantErr)
 				return
 			}
+
 			if got != tt.want {
 				t.Errorf("NextState(%s, %s) = %s, want %s", tt.current, tt.event, got, tt.want)
 			}
@@ -229,6 +230,7 @@ func TestFailureFromAnyState(t *testing.T) {
 			if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
+
 			if nextState != models.JobStateFailed {
 				t.Errorf("Expected error event to lead to FAILED, got %s", nextState)
 			}

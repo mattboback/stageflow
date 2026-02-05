@@ -22,9 +22,30 @@ func TestDeduplicateIssues_NoEquivalents(t *testing.T) {
 
 func TestDeduplicateIssues_ImageAltDuplicates(t *testing.T) {
 	issues := []report.IssueDetail{
-		{Id: "1", Scanner: "axe", RuleId: "image-alt", PageId: "page1", Severity: report.IssueSeverityCritical, Title: "Images must have alternative text"},
-		{Id: "2", Scanner: "seo", RuleId: "images-missing-alt", PageId: "page1", Severity: report.IssueSeveritySerious, Title: "Images Missing Alt Text"},
-		{Id: "3", Scanner: "lighthouse", RuleId: "image-alt", PageId: "page1", Severity: report.IssueSeveritySerious, Title: "Image elements have alt attributes"},
+		{
+			Id:       "1",
+			Scanner:  "axe",
+			RuleId:   "image-alt",
+			PageId:   "page1",
+			Severity: report.IssueSeverityCritical,
+			Title:    "Images must have alternative text",
+		},
+		{
+			Id:       "2",
+			Scanner:  "seo",
+			RuleId:   "images-missing-alt",
+			PageId:   "page1",
+			Severity: report.IssueSeveritySerious,
+			Title:    "Images Missing Alt Text",
+		},
+		{
+			Id:       "3",
+			Scanner:  "lighthouse",
+			RuleId:   "image-alt",
+			PageId:   "page1",
+			Severity: report.IssueSeveritySerious,
+			Title:    "Image elements have alt attributes",
+		},
 	}
 
 	result := deduplicateIssues(issues)
@@ -56,7 +77,13 @@ func TestDeduplicateIssues_DifferentPages(t *testing.T) {
 
 func TestDeduplicateIssues_ColorContrastDuplicates(t *testing.T) {
 	issues := []report.IssueDetail{
-		{Id: "1", Scanner: "lighthouse", RuleId: "color-contrast", PageId: "page1", Severity: report.IssueSeveritySerious},
+		{
+			Id:       "1",
+			Scanner:  "lighthouse",
+			RuleId:   "color-contrast",
+			PageId:   "page1",
+			Severity: report.IssueSeveritySerious,
+		},
 		{Id: "2", Scanner: "axe", RuleId: "color-contrast", PageId: "page1", Severity: report.IssueSeverityCritical},
 	}
 
@@ -74,9 +101,21 @@ func TestDeduplicateIssues_MixedDuplicatesAndUnique(t *testing.T) {
 		{Id: "1", Scanner: "axe", RuleId: "image-alt", PageId: "page1", Severity: report.IssueSeverityCritical},
 		{Id: "2", Scanner: "seo", RuleId: "images-missing-alt", PageId: "page1", Severity: report.IssueSeveritySerious},
 		// Unique: security header
-		{Id: "3", Scanner: "security-headers", RuleId: "missing-csp", PageId: "page1", Severity: report.IssueSeveritySerious},
+		{
+			Id:       "3",
+			Scanner:  "security-headers",
+			RuleId:   "missing-csp",
+			PageId:   "page1",
+			Severity: report.IssueSeveritySerious,
+		},
 		// Unique: broken link
-		{Id: "4", Scanner: "link-checker", RuleId: "broken-link", PageId: "page1", Severity: report.IssueSeverityModerate},
+		{
+			Id:       "4",
+			Scanner:  "link-checker",
+			RuleId:   "broken-link",
+			PageId:   "page1",
+			Severity: report.IssueSeverityModerate,
+		},
 	}
 
 	result := deduplicateIssues(issues)
@@ -89,6 +128,7 @@ func TestDeduplicateIssues_MixedDuplicatesAndUnique(t *testing.T) {
 	for _, issue := range result {
 		scanners[issue.Scanner] = true
 	}
+
 	assert.True(t, scanners["axe"], "axe issue should be present")
 	assert.True(t, scanners["security-headers"], "security-headers issue should be present")
 	assert.True(t, scanners["link-checker"], "link-checker issue should be present")

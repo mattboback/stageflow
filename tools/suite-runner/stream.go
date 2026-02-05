@@ -15,7 +15,12 @@ type jobStreamUpdate struct {
 	State string `json:"state"`
 }
 
-func waitForTerminalWithRetry(ctx context.Context, client *http.Client, apiURL, jobID string, retryDelay time.Duration) error {
+func waitForTerminalWithRetry(
+	ctx context.Context,
+	client *http.Client,
+	apiURL, jobID string,
+	retryDelay time.Duration,
+) error {
 	for {
 		err := waitForJobTerminalEvent(ctx, client, apiURL, jobID)
 		if err == nil {
@@ -39,7 +44,12 @@ func waitForTerminalWithRetry(ctx context.Context, client *http.Client, apiURL, 
 	}
 }
 
-func outcomeFromTerminalStatus(ctx context.Context, client *http.Client, apiURL, domain, jobID string, th Thresholds) (jobOutcome, error) {
+func outcomeFromTerminalStatus(
+	ctx context.Context,
+	client *http.Client,
+	apiURL, domain, jobID string,
+	th Thresholds,
+) (jobOutcome, error) {
 	status, err := fetchStatus(ctx, client, apiURL, jobID)
 	if err != nil {
 		return jobOutcome{}, err
@@ -47,9 +57,9 @@ func outcomeFromTerminalStatus(ctx context.Context, client *http.Client, apiURL,
 
 	switch status.State {
 	case "DONE":
-		summary, err := fetchResults(ctx, client, status.Artifacts)
-		if err != nil {
-			return jobOutcome{}, err
+		summary, fetchErr := fetchResults(ctx, client, status.Artifacts)
+		if fetchErr != nil {
+			return jobOutcome{}, fetchErr
 		}
 
 		outcome := jobOutcome{
@@ -157,9 +167,9 @@ func waitForJobTerminalEvent(ctx context.Context, client *http.Client, apiURL, j
 
 	reader := bufio.NewReaderSize(resp.Body, 1024*1024)
 	for {
-		eventType, data, err := readNextSSEEvent(reader)
-		if err != nil {
-			return err
+		eventType, data, readErr := readNextSSEEvent(reader)
+		if readErr != nil {
+			return readErr
 		}
 
 		switch eventType {
@@ -167,11 +177,12 @@ func waitForJobTerminalEvent(ctx context.Context, client *http.Client, apiURL, j
 			return nil
 		case "update":
 			var update jobStreamUpdate
-			if err := json.Unmarshal([]byte(data), &update); err != nil {
+			if unmarshalErr := json.Unmarshal([]byte(data), &update); unmarshalErr != nil {
 				continue
 			}
 
-			if update.Type == "complete" || update.Type == "failed" || update.State == "DONE" || update.State == "FAILED" {
+			if update.Type == "complete" || update.Type == "failed" || update.State == "DONE" ||
+				update.State == "FAILED" {
 				return nil
 			}
 		}

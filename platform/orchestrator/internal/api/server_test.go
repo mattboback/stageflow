@@ -55,6 +55,7 @@ func newTestDatabase(t *testing.T) *db.Database {
 	t.Helper()
 
 	path := filepath.Join(t.TempDir(), "jobs.db")
+
 	database, err := db.NewDatabase(&db.Config{Path: path})
 	if err != nil {
 		t.Fatalf("create database: %v", err)
@@ -83,18 +84,18 @@ func newTestDatabase(t *testing.T) *db.Database {
 	}
 
 	for _, job := range jobs {
-		if err := database.CreateJob(context.Background(), job); err != nil {
-			t.Fatalf("seed job %s: %v", job.ID, err)
+		if createErr := database.CreateJob(context.Background(), job); createErr != nil {
+			t.Fatalf("seed job %s: %v", job.ID, createErr)
 		}
 	}
 
-	if err := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
+	if insertErr := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
 		JobID:     "123",
 		Event:     "job.created",
 		Timestamp: time.Now().UTC(),
 		Payload:   "{}",
-	}); err != nil {
-		t.Fatalf("seed job event: %v", err)
+	}); insertErr != nil {
+		t.Fatalf("seed job event: %v", insertErr)
 	}
 
 	return database
@@ -146,9 +147,11 @@ func TestHandleListJobsFiltersAndPagination(t *testing.T) {
 	if resp.Total != 1 {
 		t.Fatalf("expected total 1 pending job, got %d", resp.Total)
 	}
+
 	if len(resp.Jobs) != 1 || resp.Jobs[0].ID != "123" {
 		t.Fatalf("unexpected jobs payload: %+v", resp.Jobs)
 	}
+
 	if resp.Limit != 1 || resp.Offset != 0 {
 		t.Fatalf("limit/offset not echoed back (limit=%d offset=%d)", resp.Limit, resp.Offset)
 	}
@@ -203,9 +206,11 @@ func TestHandleJobRoutes_GetJobEvents(t *testing.T) {
 	if resp.JobID != "123" {
 		t.Fatalf("expected job_id 123, got %q", resp.JobID)
 	}
+
 	if resp.Limit != 10 || resp.Offset != 0 {
 		t.Fatalf("limit/offset not echoed back (limit=%d offset=%d)", resp.Limit, resp.Offset)
 	}
+
 	if len(resp.Events) != 1 || resp.Events[0].Event != "job.created" {
 		t.Fatalf("unexpected events payload: %#v", resp.Events)
 	}
@@ -252,6 +257,7 @@ func TestHandleListPodsEnrichesJobState(t *testing.T) {
 	if got := first["job_id"]; got != "123" {
 		t.Fatalf("expected pod to map to job 123, got %#v", got)
 	}
+
 	if got := first["job_state"]; got != string(models.JobStatePending) {
 		t.Fatalf("expected job_state %q, got %#v", models.JobStatePending, got)
 	}
@@ -273,6 +279,7 @@ func TestHandlePodDetails(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&pod); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
+
 	if pod.ID != "pod-1" || pod.Name != "job-123" {
 		t.Fatalf("unexpected pod payload: %#v", pod)
 	}
@@ -299,13 +306,16 @@ func TestHandleSystemStatusAggregatesCounts(t *testing.T) {
 	if !ok {
 		t.Fatalf("jobs payload missing or wrong type: %#v", resp["jobs"])
 	}
+
 	if total := intFromAny(jobs["total"]); total != 2 {
 		t.Fatalf("expected total jobs 2, got %d", total)
 	}
+
 	byState, ok := jobs["by_state"].(map[string]any)
 	if !ok {
 		t.Fatalf("by_state payload missing")
 	}
+
 	if pending := intFromAny(byState[string(models.JobStatePending)]); pending != 1 {
 		t.Fatalf("expected 1 pending job, got %d", pending)
 	}
@@ -314,6 +324,7 @@ func TestHandleSystemStatusAggregatesCounts(t *testing.T) {
 	if !ok {
 		t.Fatalf("pods payload missing")
 	}
+
 	if totalPods := intFromAny(pods["total"]); totalPods != 2 {
 		t.Fatalf("expected 2 pods, got %d", totalPods)
 	}
@@ -335,6 +346,7 @@ func TestHandleHealth(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
+
 	if resp["status"] != "healthy" {
 		t.Fatalf("unexpected health payload: %#v", resp)
 	}

@@ -36,7 +36,13 @@ var AllJobStates = []JobState{
 
 func (s JobState) IsValid() bool {
 	switch s {
-	case JobStatePending, JobStateExtracting, JobStateReady, JobStateScanning, JobStateCompleting, JobStateDone, JobStateFailed:
+	case JobStatePending,
+		JobStateExtracting,
+		JobStateReady,
+		JobStateScanning,
+		JobStateCompleting,
+		JobStateDone,
+		JobStateFailed:
 		return true
 	default:
 		return false

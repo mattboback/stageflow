@@ -85,29 +85,61 @@ func closeNATSClient(natsClient *sharedmsg.Client) {
 func mustMinIOClient(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client) *storage.MinIOClient {
 	minioClient, err := storage.NewMinIOClient(&cfg.MinIO)
 	if err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, nil, "extraction", fmt.Sprintf("Failed to create MinIO client: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			nil,
+			"extraction",
+			fmt.Sprintf("Failed to create MinIO client: %v", err),
+		)
 	}
 
 	return minioClient
 }
 
-func mustStageLogger(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, minioClient *storage.MinIOClient) *stageLogger {
+func mustStageLogger(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	minioClient *storage.MinIOClient,
+) *stageLogger {
 	stageLog, err := newStageLogger(ctx, cfg, minioClient)
 	if err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, nil, "logging", fmt.Sprintf("Failed to initialize stage logger: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			nil,
+			"logging",
+			fmt.Sprintf("Failed to initialize stage logger: %v", err),
+		)
 	}
 
 	return stageLog
 }
 
-func mustExtractZIP(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, minioClient *storage.MinIOClient) string {
+func mustExtractZIP(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	minioClient *storage.MinIOClient,
+) string {
 	log.Printf("Job %s: Extracting ZIP from MinIO: %s", cfg.JobID, cfg.InputPath)
 
 	ext := extractor.NewExtractor(minioClient)
 
 	siteDir := filepath.Join(cfg.Workspace, "site")
 	if err := ext.Extract(ctx, storage.BucketStaging, cfg.InputPath, siteDir); err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "extraction", fmt.Sprintf("Failed to extract ZIP: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"extraction",
+			fmt.Sprintf("Failed to extract ZIP: %v", err),
+		)
 	}
 
 	stageLog.recordEvent("zip_extracted", map[string]any{"workspace": siteDir})
@@ -133,17 +165,29 @@ func ensureSitePermissions(siteDir string) error {
 			return os.Chmod(path, 0o750)
 		}
 
-		//nolint:gosec // Extracted sites should not be world-readable, only accessible via HTTP.
 		return os.Chmod(path, 0o600)
 	})
 }
 
-func mustDiscoverPages(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, siteDir string) []discovery.HTMLPage {
+func mustDiscoverPages(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	siteDir string,
+) []discovery.HTMLPage {
 	log.Printf("Job %s: Discovering HTML pages in %s", cfg.JobID, siteDir)
 
 	pages, err := discovery.DiscoverHTML(siteDir)
 	if err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "discovery", fmt.Sprintf("Failed to discover HTML: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"discovery",
+			fmt.Sprintf("Failed to discover HTML: %v", err),
+		)
 	}
 
 	log.Printf("Job %s: Discovered %d HTML pages", cfg.JobID, len(pages))
@@ -153,7 +197,13 @@ func mustDiscoverPages(ctx context.Context, cfg *Config, natsClient *sharedmsg.C
 	return pages
 }
 
-func mustGenerateProvenance(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, pages []discovery.HTMLPage) (prov *models.Provenance, baseURL, provenancePath string) {
+func mustGenerateProvenance(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	pages []discovery.HTMLPage,
+) (prov *models.Provenance, baseURL, provenancePath string) {
 	log.Printf("Job %s: Generating provenance.json", cfg.JobID)
 
 	provenanceGen := provenance.NewGenerator()
@@ -162,7 +212,14 @@ func mustGenerateProvenance(ctx context.Context, cfg *Config, natsClient *shared
 
 	prov, err := provenanceGen.Generate(cfg.JobID, baseURL, pages, provenancePath)
 	if err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "provenance", fmt.Sprintf("Failed to generate provenance: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"provenance",
+			fmt.Sprintf("Failed to generate provenance: %v", err),
+		)
 	}
 
 	log.Printf("Job %s: Provenance generated with %d pages", cfg.JobID, len(prov.Pages))
@@ -172,26 +229,53 @@ func mustGenerateProvenance(ctx context.Context, cfg *Config, natsClient *shared
 	return prov, baseURL, provenancePath
 }
 
-func mustUploadProvenance(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, minioClient *storage.MinIOClient, provenancePath string) string {
+func mustUploadProvenance(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	minioClient *storage.MinIOClient,
+	provenancePath string,
+) string {
 	provenanceArtifactPath := cfg.JobID + "/provenance.json"
 	log.Printf("Job %s: Uploading provenance to MinIO: %s", cfg.JobID, provenanceArtifactPath)
 
-	//nolint:gosec // Intended behavior to read generated provenance file
 	provFile, err := os.Open(provenancePath)
 	if err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "provenance_upload", fmt.Sprintf("Failed to open provenance file: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"provenance_upload",
+			fmt.Sprintf("Failed to open provenance file: %v", err),
+		)
 	}
 
 	defer func() { _ = provFile.Close() }()
 
 	provInfo, err := provFile.Stat()
 	if err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "provenance_upload", fmt.Sprintf("Failed to stat provenance file: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"provenance_upload",
+			fmt.Sprintf("Failed to stat provenance file: %v", err),
+		)
 	}
 
 	uploadErr := minioClient.UploadFile(ctx, cfg.ArtifactsBucket, provenanceArtifactPath, provFile, provInfo.Size())
 	if uploadErr != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "provenance_upload", fmt.Sprintf("Failed to upload provenance: %v", uploadErr))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"provenance_upload",
+			fmt.Sprintf("Failed to upload provenance: %v", uploadErr),
+		)
 	}
 
 	stageLog.recordEvent("provenance_uploaded", map[string]any{"path": provenanceArtifactPath})
@@ -199,7 +283,13 @@ func mustUploadProvenance(ctx context.Context, cfg *Config, natsClient *sharedms
 	return provenanceArtifactPath
 }
 
-func mustStartStaticServer(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, siteDir string) *server.StaticServer {
+func mustStartStaticServer(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	siteDir string,
+) *server.StaticServer {
 	log.Printf("Job %s: Starting static server on port %s", cfg.JobID, cfg.Port)
 	siteServer := server.NewStaticServer(&server.Config{
 		SiteDir: siteDir,
@@ -207,7 +297,14 @@ func mustStartStaticServer(ctx context.Context, cfg *Config, natsClient *sharedm
 	})
 
 	if err := siteServer.Start(ctx); err != nil {
-		publishFailureAndExit(ctx, cfg, natsClient, stageLog, "server", fmt.Sprintf("Failed to start static server: %v", err))
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"server",
+			fmt.Sprintf("Failed to start static server: %v", err),
+		)
 	}
 
 	return siteServer
@@ -219,7 +316,14 @@ func stopStaticServer(ctx context.Context, siteServer *server.StaticServer) {
 	}
 }
 
-func publishExtractionReady(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, prov *models.Provenance, baseURL, provenancePath, provenanceArtifactPath string) {
+func publishExtractionReady(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	prov *models.Provenance,
+	baseURL, provenancePath, provenanceArtifactPath string,
+) {
 	log.Printf("Job %s: Static server started, site available at %s", cfg.JobID, baseURL)
 	stageLog.recordEvent("server_started", map[string]any{"port": cfg.Port})
 
@@ -317,7 +421,13 @@ func loadConfig() *Config {
 	}
 }
 
-func waitForShutdown(ctx context.Context, cfg *Config, siteServer *server.StaticServer, natsClient *sharedmsg.Client, stageLog *stageLogger) {
+func waitForShutdown(
+	ctx context.Context,
+	cfg *Config,
+	siteServer *server.StaticServer,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
@@ -335,7 +445,14 @@ func waitForShutdown(ctx context.Context, cfg *Config, siteServer *server.Static
 	case err := <-serverDone:
 		if err != nil {
 			log.Printf("Job %s: Static server exited with error: %v", cfg.JobID, err)
-			publishFailureAndExit(ctx, cfg, natsClient, stageLog, "server", fmt.Sprintf("static server crashed: %v", err))
+			publishFailureAndExit(
+				ctx,
+				cfg,
+				natsClient,
+				stageLog,
+				"server",
+				fmt.Sprintf("static server crashed: %v", err),
+			)
 		}
 
 		log.Printf("Job %s: Static server exited normally", cfg.JobID)
@@ -343,7 +460,13 @@ func waitForShutdown(ctx context.Context, cfg *Config, siteServer *server.Static
 }
 
 // publishFailureAndExit centralizes failure reporting so upstream services always get a terminal event.
-func publishFailureAndExit(ctx context.Context, cfg *Config, natsClient *sharedmsg.Client, stageLog *stageLogger, stage, errorMsg string) {
+func publishFailureAndExit(
+	ctx context.Context,
+	cfg *Config,
+	natsClient *sharedmsg.Client,
+	stageLog *stageLogger,
+	stage, errorMsg string,
+) {
 	jobID := ""
 	requestID := ""
 	runID := ""

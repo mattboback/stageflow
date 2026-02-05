@@ -14,6 +14,7 @@ func TestNewOrchestrator(t *testing.T) {
 	if orch == nil {
 		t.Fatal("Expected orchestrator to be non-nil")
 	}
+
 	if orch.stateMachine == nil {
 		t.Error("Expected state machine to be initialized")
 	}

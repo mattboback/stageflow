@@ -134,8 +134,8 @@ func run() int {
 
 	consumer := messaging.NewConsumer(natsClient, orch)
 
-	if err := consumer.Start(backgroundCtx); err != nil {
-		logger.Error("Failed to start consumer", "error", err)
+	if startErr := consumer.Start(backgroundCtx); startErr != nil {
+		logger.Error("Failed to start consumer", "error", startErr)
 
 		return 1
 	}
@@ -150,8 +150,8 @@ func run() int {
 	sigChan := make(chan os.Signal, 1)
 
 	go func() {
-		if err := apiServer.Start(); err != nil {
-			logger.Error("Failed to start API server", "error", err)
+		if apiStartErr := apiServer.Start(); apiStartErr != nil {
+			logger.Error("Failed to start API server", "error", apiStartErr)
 
 			sigChan <- os.Interrupt
 		}
@@ -168,8 +168,8 @@ func run() int {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := apiServer.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Failed to shutdown API server", "error", err)
+	if shutdownErr := apiServer.Shutdown(shutdownCtx); shutdownErr != nil {
+		logger.Error("Failed to shutdown API server", "error", shutdownErr)
 	}
 
 	return 0

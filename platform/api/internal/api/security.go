@@ -30,13 +30,13 @@ func validateTargetURLsWithResolver(ctx context.Context, resolver ipAddrResolver
 	}
 
 	for _, raw := range urls {
-		target, err := parseTargetURL(raw)
-		if err != nil {
-			return err
+		target, parseErr := parseTargetURL(raw)
+		if parseErr != nil {
+			return parseErr
 		}
 
-		if err := validateHost(ctx, resolver, target); err != nil {
-			return err
+		if hostErr := validateHost(ctx, resolver, target); hostErr != nil {
+			return hostErr
 		}
 	}
 
@@ -63,7 +63,7 @@ func parseTargetURL(raw string) (*targetHost, error) {
 		return nil, fmt.Errorf("URL missing host: %s", trimmed)
 	}
 
-	if h, _, err := net.SplitHostPort(host); err == nil {
+	if h, _, splitErr := net.SplitHostPort(host); splitErr == nil {
 		host = h
 	}
 

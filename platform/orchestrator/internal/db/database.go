@@ -52,24 +52,24 @@ func NewDatabase(config *Config) (*Database, error) {
 
 	// Enable WAL mode for better concurrency
 
-	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
+	if _, walErr := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); walErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
+		return nil, fmt.Errorf("failed to enable WAL mode: %w", walErr)
 	}
 
 	// Allow concurrent writers to wait instead of failing with SQLITE_BUSY.
-	if _, err := db.ExecContext(ctx, "PRAGMA busy_timeout=5000"); err != nil {
+	if _, busyErr := db.ExecContext(ctx, "PRAGMA busy_timeout=5000"); busyErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to set busy_timeout: %w", err)
+		return nil, fmt.Errorf("failed to set busy_timeout: %w", busyErr)
 	}
 
 	// Enable foreign keys
-	if _, err := db.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
+	if _, fkErr := db.ExecContext(ctx, "PRAGMA foreign_keys=ON"); fkErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to enable foreign keys: %w", err)
+		return nil, fmt.Errorf("failed to enable foreign keys: %w", fkErr)
 	}
 
 	db.SetMaxOpenConns(1)
@@ -78,10 +78,10 @@ func NewDatabase(config *Config) (*Database, error) {
 	database := &Database{db: db, path: config.Path}
 
 	// Initialize schema
-	if err := database.initSchema(); err != nil {
+	if schemaErr := database.initSchema(); schemaErr != nil {
 		_ = db.Close()
 
-		return nil, fmt.Errorf("failed to initialize schema: %w", err)
+		return nil, fmt.Errorf("failed to initialize schema: %w", schemaErr)
 	}
 
 	return database, nil
@@ -161,12 +161,15 @@ func (d *Database) initSchema() error {
 	ctx := context.Background()
 
 	if !hasTables {
-		if _, err := d.db.ExecContext(ctx, string(schema)); err != nil {
-			return fmt.Errorf("failed to execute schema: %w", err)
+		if _, execErr := d.db.ExecContext(ctx, string(schema)); execErr != nil {
+			return fmt.Errorf("failed to execute schema: %w", execErr)
 		}
 
-		if _, err := d.db.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version=%d", schemaVersion)); err != nil {
-			return fmt.Errorf("failed to set sqlite user_version: %w", err)
+		if _, versionErr := d.db.ExecContext(
+			ctx,
+			fmt.Sprintf("PRAGMA user_version=%d", schemaVersion),
+		); versionErr != nil {
+			return fmt.Errorf("failed to set sqlite user_version: %w", versionErr)
 		}
 
 		return nil
@@ -180,22 +183,27 @@ func (d *Database) initSchema() error {
 	switch version {
 	case schemaVersion:
 		// Ensure indexes and any CREATE TABLE additions exist.
-		if _, err := d.db.ExecContext(ctx, string(schema)); err != nil {
-			return fmt.Errorf("failed to execute schema: %w", err)
+		if _, schemaExecErr := d.db.ExecContext(ctx, string(schema)); schemaExecErr != nil {
+			return fmt.Errorf("failed to execute schema: %w", schemaExecErr)
 		}
 
 		return nil
 	case 1:
-		if err := d.migrate1To2(ctx); err != nil {
-			return err
+		if migrateErr := d.migrate1To2(ctx); migrateErr != nil {
+			return migrateErr
 		}
 
 		// Re-apply the latest schema to ensure new indexes exist.
-		if _, err := d.db.ExecContext(ctx, string(schema)); err != nil {
-			return fmt.Errorf("failed to execute schema after migration: %w", err)
+		if _, schemaAfterMigrateErr := d.db.ExecContext(ctx, string(schema)); schemaAfterMigrateErr != nil {
+			return fmt.Errorf("failed to execute schema after migration: %w", schemaAfterMigrateErr)
 		}
 	default:
-		return fmt.Errorf("orchestrator DB schema mismatch (have=%d want=%d). Delete %s and restart", version, schemaVersion, d.path)
+		return fmt.Errorf(
+			"orchestrator DB schema mismatch (have=%d want=%d). Delete %s and restart",
+			version,
+			schemaVersion,
+			d.path,
+		)
 	}
 
 	return nil

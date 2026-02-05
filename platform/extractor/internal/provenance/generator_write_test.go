@@ -36,8 +36,8 @@ func TestWriteToFile_ValidJSON(t *testing.T) {
 	}
 
 	var prov models.Provenance
-	if err := json.Unmarshal(data, &prov); err != nil {
-		t.Fatalf("Failed to parse provenance JSON: %v", err)
+	if unmarshalErr := json.Unmarshal(data, &prov); unmarshalErr != nil {
+		t.Fatalf("Failed to parse provenance JSON: %v", unmarshalErr)
 	}
 
 	if prov.JobID != jobID {
@@ -53,6 +53,7 @@ func TestWriteToFile_Formatted(t *testing.T) {
 	}
 
 	outputPath := filepath.Join(t.TempDir(), "provenance.json")
+
 	_, err := gen.Generate("test-job", "http://localhost:8080", pages, outputPath)
 	if err != nil {
 		t.Fatalf("Failed to generate provenance: %v", err)
@@ -79,8 +80,8 @@ func TestWriteToFile_InvalidPath(t *testing.T) {
 	}
 
 	invalidPath := "/nonexistent/directory/provenance.json"
-	err := gen.WriteToFile(prov, invalidPath)
 
+	err := gen.WriteToFile(prov, invalidPath)
 	if err == nil {
 		t.Error("Expected error for invalid path, got nil")
 	}
@@ -103,13 +104,14 @@ func TestWriteToFile_PermissionDenied(t *testing.T) {
 	tmpDir := t.TempDir()
 	noWriteDir := filepath.Join(tmpDir, "nowrite")
 	mustMkdir(t, noWriteDir, 0o555) // Read+execute only
+
 	defer func() {
 		_ = os.Chmod(noWriteDir, 0o750) // #nosec G302 -- restore permissions after test
 	}()
 
 	outputPath := filepath.Join(noWriteDir, "provenance.json")
-	err := gen.WriteToFile(prov, outputPath)
 
+	err := gen.WriteToFile(prov, outputPath)
 	if err == nil {
 		t.Error("Expected permission error, got nil")
 	}

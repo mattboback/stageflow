@@ -61,12 +61,12 @@ func (e *Extractor) Extract(ctx context.Context, bucket, objectPath, destDir str
 		return fmt.Errorf("failed to download ZIP: %w", err)
 	}
 
-	if err := validateZIP(tmpFile.Name(), size); err != nil {
-		return fmt.Errorf("ZIP validation failed: %w", err)
+	if validateErr := validateZIP(tmpFile.Name(), size); validateErr != nil {
+		return fmt.Errorf("ZIP validation failed: %w", validateErr)
 	}
 
-	if err := extractZIP(tmpFile.Name(), destDir); err != nil {
-		return fmt.Errorf("failed to extract ZIP: %w", err)
+	if extractErr := extractZIP(tmpFile.Name(), destDir); extractErr != nil {
+		return fmt.Errorf("failed to extract ZIP: %w", extractErr)
 	}
 
 	return nil
@@ -85,12 +85,12 @@ func ExtractZIPToDir(zipPath, destDir string) error {
 		return fmt.Errorf("zipPath is a directory: %s", zipPath)
 	}
 
-	if err := validateZIP(zipPath, info.Size()); err != nil {
-		return fmt.Errorf("ZIP validation failed: %w", err)
+	if validateErr := validateZIP(zipPath, info.Size()); validateErr != nil {
+		return fmt.Errorf("ZIP validation failed: %w", validateErr)
 	}
 
-	if err := extractZIP(zipPath, destDir); err != nil {
-		return fmt.Errorf("failed to extract ZIP: %w", err)
+	if extractErr := extractZIP(zipPath, destDir); extractErr != nil {
+		return fmt.Errorf("failed to extract ZIP: %w", extractErr)
 	}
 
 	return nil
@@ -132,12 +132,17 @@ func validateZIP(zipPath string, fileSize int64) error {
 			return fmt.Errorf("invalid entry name (NUL byte): %q", file.Name)
 		}
 
-		if _, err := sanitizeZipEntryName(file.Name); err != nil {
-			return err
+		if _, sanitizeErr := sanitizeZipEntryName(file.Name); sanitizeErr != nil {
+			return sanitizeErr
 		}
 
 		if file.UncompressedSize64 > maxEntryUncompressedSize {
-			return fmt.Errorf("ZIP entry too large (%s: %d bytes > %d)", file.Name, file.UncompressedSize64, maxEntryUncompressedSize)
+			return fmt.Errorf(
+				"ZIP entry too large (%s: %d bytes > %d)",
+				file.Name,
+				file.UncompressedSize64,
+				maxEntryUncompressedSize,
+			)
 		}
 
 		totalUncompressed += file.UncompressedSize64
@@ -197,15 +202,14 @@ func extractZIP(zipPath, destDir string) error {
 		}
 	}()
 
-	//nolint:gosec // Extracted sites should not be world-readable, only accessible via HTTP.
-	if err := os.MkdirAll(destDir, 0o750); err != nil {
-		return fmt.Errorf("failed to create destination directory: %w", err)
+	if mkdirErr := os.MkdirAll(destDir, 0o750); mkdirErr != nil {
+		return fmt.Errorf("failed to create destination directory: %w", mkdirErr)
 	}
 
 	for _, file := range r.File {
-		cleanName, err := sanitizeZipEntryName(file.Name)
-		if err != nil {
-			return err
+		cleanName, sanitizeErr := sanitizeZipEntryName(file.Name)
+		if sanitizeErr != nil {
+			return sanitizeErr
 		}
 
 		// #nosec G305 -- file path is validated below before use.
@@ -216,21 +220,19 @@ func extractZIP(zipPath, destDir string) error {
 
 		isDir := file.FileInfo().IsDir() || strings.HasSuffix(strings.ReplaceAll(file.Name, "\\", "/"), "/")
 		if isDir {
-			//nolint:gosec // Extracted sites should not be world-readable, only accessible via HTTP.
-			if err := os.MkdirAll(fpath, 0o750); err != nil {
-				return fmt.Errorf("failed to create directory %s: %w", fpath, err)
+			if mkErr := os.MkdirAll(fpath, 0o750); mkErr != nil {
+				return fmt.Errorf("failed to create directory %s: %w", fpath, mkErr)
 			}
 
 			continue
 		}
 
-		//nolint:gosec // Extracted sites should not be world-readable, only accessible via HTTP.
-		if err := os.MkdirAll(filepath.Dir(fpath), 0o750); err != nil {
-			return fmt.Errorf("failed to create parent directory for %s: %w", fpath, err)
+		if parentErr := os.MkdirAll(filepath.Dir(fpath), 0o750); parentErr != nil {
+			return fmt.Errorf("failed to create parent directory for %s: %w", fpath, parentErr)
 		}
 
-		if err := extractFile(file, fpath); err != nil {
-			return fmt.Errorf("failed to extract %s: %w", file.Name, err)
+		if extractErr := extractFile(file, fpath); extractErr != nil {
+			return fmt.Errorf("failed to extract %s: %w", file.Name, extractErr)
 		}
 	}
 
@@ -272,7 +274,11 @@ func extractFile(file *zip.File, destPath string) error {
 	// Use safe defaults; don't trust ZIP permission bits.
 	perm := os.FileMode(0o600)
 
-	outFile, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm) // #nosec G304 -- destPath validated earlier
+	outFile, err := os.OpenFile(
+		destPath,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		perm,
+	) // #nosec G304 -- destPath validated earlier
 	if err != nil {
 		return err
 	}

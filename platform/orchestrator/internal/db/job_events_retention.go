@@ -58,8 +58,8 @@ func (d *Database) PruneJobEventsBefore(ctx context.Context, cutoff time.Time, b
 			return totalDeleted, nil
 		}
 
-		if err := ctx.Err(); err != nil {
-			return totalDeleted, err
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return totalDeleted, ctxErr
 		}
 	}
 }

@@ -50,15 +50,19 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg == nil {
 		t.Fatal("DefaultConfig() returned nil")
 	}
+
 	if cfg.URL != nats.DefaultURL {
 		t.Fatalf("expected URL %s, got %s", nats.DefaultURL, cfg.URL)
 	}
+
 	if cfg.MaxReconnects != 10 {
 		t.Fatalf("expected MaxReconnects 10, got %d", cfg.MaxReconnects)
 	}
+
 	if cfg.ReconnectWait != 2*time.Second {
 		t.Fatalf("expected ReconnectWait 2s, got %v", cfg.ReconnectWait)
 	}
+
 	if cfg.ConnectTimeout != 10*time.Second {
 		t.Fatalf("expected ConnectTimeout 10s, got %v", cfg.ConnectTimeout)
 	}
@@ -71,6 +75,7 @@ func TestUnmarshalStrict(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test","value":42}`)
+
 		var result struct {
 			Name  string `json:"name"`
 			Value int    `json:"value"`
@@ -79,6 +84,7 @@ func TestUnmarshalStrict(t *testing.T) {
 		if err := unmarshalStrict(data, &result); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if result.Name != "test" || result.Value != 42 {
 			t.Fatalf("unexpected result: %+v", result)
 		}
@@ -88,6 +94,7 @@ func TestUnmarshalStrict(t *testing.T) {
 		t.Parallel()
 
 		data := []byte("{\"name\":\"test\"} \n\t ")
+
 		var result struct {
 			Name string `json:"name"`
 		}
@@ -100,6 +107,7 @@ func TestUnmarshalStrict(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test","unknown_field":"value"}`)
+
 		var result struct {
 			Name string `json:"name"`
 		}
@@ -112,6 +120,7 @@ func TestUnmarshalStrict(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test"}{"extra":"data"}`)
+
 		var result struct {
 			Name string `json:"name"`
 		}
@@ -124,6 +133,7 @@ func TestUnmarshalStrict(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test"}!!!`)
+
 		var result struct {
 			Name string `json:"name"`
 		}
@@ -140,12 +150,14 @@ func TestUnmarshalLenient(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test","unknown_field":"value"}`)
+
 		var result struct {
 			Name string `json:"name"`
 		}
 		if err := unmarshalLenient(data, &result); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if result.Name != "test" {
 			t.Fatalf("unexpected result: %+v", result)
 		}
@@ -155,6 +167,7 @@ func TestUnmarshalLenient(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test"}{"extra":"data"}`)
+
 		var result struct {
 			Name string `json:"name"`
 		}
@@ -167,6 +180,7 @@ func TestUnmarshalLenient(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"name":"test"}!!!`)
+
 		var result struct {
 			Name string `json:"name"`
 		}
@@ -194,6 +208,7 @@ func TestReceivedEventMeta_ContextHelpers(t *testing.T) {
 	if !ok {
 		t.Fatal("expected meta to be present")
 	}
+
 	if got.Event != "x" || got.JobID != "job-1" {
 		t.Fatalf("unexpected meta: %+v", got)
 	}
@@ -212,9 +227,11 @@ func TestClient_MethodGuards(t *testing.T) {
 	if err := c2.Publish(context.Background(), "subj", map[string]any{}); err == nil {
 		t.Fatal("expected error for not-connected client")
 	}
+
 	if err := c2.EnsureStreams(context.Background()); err == nil {
 		t.Fatal("expected error for not-connected client")
 	}
+
 	if err := c2.Subscribe(context.Background(), "s", "subj", "dur", func([]byte) error { return nil }); err == nil {
 		t.Fatal("expected error for not-connected client")
 	}
@@ -239,6 +256,7 @@ func TestValidatePublishEventEnvelope(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
+
 		if !errors.Is(err, ErrBadEnvelope) {
 			t.Fatalf("expected ErrBadEnvelope, got %v", err)
 		}
@@ -251,6 +269,7 @@ func TestValidatePublishEventEnvelope(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
+
 		if !errors.Is(err, ErrBadEnvelope) {
 			t.Fatalf("expected ErrBadEnvelope, got %v", err)
 		}
@@ -269,10 +288,12 @@ func TestValidatePublishEventEnvelope(t *testing.T) {
 		t.Parallel()
 
 		var env *events.Envelope
+
 		err := validatePublishEventEnvelope(env)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
+
 		if !errors.Is(err, ErrBadEnvelope) {
 			t.Fatalf("expected ErrBadEnvelope, got %v", err)
 		}

@@ -52,6 +52,7 @@ func (d *Database) CreateJob(ctx context.Context, job *models.Job) error {
 	return nil
 }
 
+//nolint:gocognit,gocyclo // Scanning many nullable columns requires multiple nil checks
 func scanJobRow(s rowScanner) (*models.Job, error) {
 	var (
 		job                   models.Job

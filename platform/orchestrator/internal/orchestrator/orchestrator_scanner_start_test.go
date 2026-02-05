@@ -24,12 +24,15 @@ func TestStartScannerReusesExistingWorkspaceVolume(t *testing.T) {
 			if strings.HasPrefix(name, "workspace-") {
 				return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
 			}
+
 			if strings.HasPrefix(name, "results-") {
 				if inspectCounts[name] == 1 {
 					return nil, errors.New("not found")
 				}
+
 				return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
 			}
+
 			return nil, fmt.Errorf("unexpected volume %s", name)
 		},
 		createVolumeFunc: func(_ context.Context, _ string) error {

@@ -234,7 +234,7 @@ func TestNewHTTPServer_HandlerIsSet(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/test", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -301,8 +301,8 @@ func TestLoadScannerOverrides_WorkingDirectory(t *testing.T) {
 	}
 
 	defer func() {
-		if err := os.Chdir(origDir); err != nil {
-			t.Errorf("failed to restore working directory: %v", err)
+		if chdirErr := os.Chdir(origDir); chdirErr != nil {
+			t.Errorf("failed to restore working directory: %v", chdirErr)
 		}
 	}()
 
@@ -316,13 +316,13 @@ scanners:
     enabled: true
 `
 
-	if err := os.WriteFile(configPath, []byte(configContent), 0o600); err != nil {
-		t.Fatalf("failed to create test config: %v", err)
+	if writeErr := os.WriteFile(configPath, []byte(configContent), 0o600); writeErr != nil {
+		t.Fatalf("failed to create test config: %v", writeErr)
 	}
 
 	// Change to temp directory
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("failed to change directory: %v", err)
+	if chdirErr := os.Chdir(tmpDir); chdirErr != nil {
+		t.Fatalf("failed to change directory: %v", chdirErr)
 	}
 
 	// Load with empty path - should find config in working directory

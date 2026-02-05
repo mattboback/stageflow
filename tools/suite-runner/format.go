@@ -10,7 +10,17 @@ func printSummary(outcomes []jobOutcome, th Thresholds, out io.Writer) {
 	_, _ = fmt.Fprintln(out, "domain\tstate\tviolations(total/critical/serious)\tjob_id\tpassed")
 
 	for _, o := range outcomes {
-		_, _ = fmt.Fprintf(out, "%s\t%s\t%d/%d/%d\t%s\t%v", o.Domain, o.State, o.TotalViolations, o.Critical, o.Serious, o.JobID, o.Passed)
+		_, _ = fmt.Fprintf(
+			out,
+			"%s\t%s\t%d/%d/%d\t%s\t%v",
+			o.Domain,
+			o.State,
+			o.TotalViolations,
+			o.Critical,
+			o.Serious,
+			o.JobID,
+			o.Passed,
+		)
 
 		if o.Error != "" {
 			_, _ = fmt.Fprintf(out, "\t(%s)", o.Error)

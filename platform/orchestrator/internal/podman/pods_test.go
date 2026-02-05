@@ -25,7 +25,9 @@ func TestCreatePod(t *testing.T) {
 		resp := PodCreateResponse{
 			ID: "pod-12345",
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
@@ -60,7 +62,9 @@ func TestInspectPod(t *testing.T) {
 			Name:   "test-pod",
 			Status: "Running",
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
@@ -76,6 +80,7 @@ func TestInspectPod(t *testing.T) {
 	if result.ID != "pod-123" {
 		t.Errorf("Expected pod ID pod-123, got %s", result.ID)
 	}
+
 	if result.Status != "Running" {
 		t.Errorf("Expected status Running, got %s", result.Status)
 	}
@@ -122,6 +127,7 @@ func TestRemovePod(t *testing.T) {
 		if force != "true" {
 			t.Error("Expected force=true")
 		}
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -142,7 +148,9 @@ func TestListPods(t *testing.T) {
 			{ID: "pod-1", Name: "pod-one", Status: "Running"},
 			{ID: "pod-2", Name: "pod-two", Status: "Stopped"},
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
@@ -158,6 +166,7 @@ func TestListPods(t *testing.T) {
 	if len(result) != 2 {
 		t.Errorf("Expected 2 pods, got %d", len(result))
 	}
+
 	if result[0].ID != "pod-1" {
 		t.Errorf("Expected first pod ID pod-1, got %s", result[0].ID)
 	}

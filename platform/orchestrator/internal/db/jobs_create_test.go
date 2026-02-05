@@ -34,6 +34,7 @@ func TestCreateJob(t *testing.T) {
 	if retrieved.ID != job.ID {
 		t.Errorf("Expected ID %s, got %s", job.ID, retrieved.ID)
 	}
+
 	if retrieved.State != job.State {
 		t.Errorf("Expected state %s, got %s", job.State, retrieved.State)
 	}
@@ -64,6 +65,7 @@ func TestCreateJobWithURLs(t *testing.T) {
 	if got := len(retrieved.URLs); got != len(urls) {
 		t.Fatalf("expected %d URLs, got %d", len(urls), got)
 	}
+
 	for i, u := range urls {
 		if retrieved.URLs[i] != u {
 			t.Errorf("URL %d mismatch: expected %s, got %s", i, u, retrieved.URLs[i])

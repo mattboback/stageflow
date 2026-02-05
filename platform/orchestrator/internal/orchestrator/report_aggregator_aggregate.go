@@ -124,7 +124,12 @@ func (a *reportAggregation) aggregateScanner(ctx context.Context, scannerID stri
 	a.absorbArtifacts(doc.Artifacts)
 }
 
-func (a *reportAggregation) recordScannerFailure(scannerID string, stat *report.ScannerSummary, code, message string, retryable bool) {
+func (a *reportAggregation) recordScannerFailure(
+	scannerID string,
+	stat *report.ScannerSummary,
+	code, message string,
+	retryable bool,
+) {
 	stat.Status = report.ScannerStatusFailed
 	stat.Error = stringPtr(message)
 	a.errors = append(a.errors, report.ReportError{
@@ -145,7 +150,11 @@ func (a *reportAggregation) absorbMeta(meta report.ReportMeta) {
 	a.completedAt = pickLaterTime(a.completedAt, meta.CompletedAt)
 }
 
-func (a *reportAggregation) absorbScannerMetadata(scannerID string, stat *report.ScannerSummary, doc *report.UnifiedReportV2) {
+func (a *reportAggregation) absorbScannerMetadata(
+	scannerID string,
+	stat *report.ScannerSummary,
+	doc *report.UnifiedReportV2,
+) {
 	if len(doc.Scanners) == 0 {
 		return
 	}
@@ -176,7 +185,11 @@ func (a *reportAggregation) absorbLighthouseCategories(categories []report.Light
 	a.lighthouseCategories = append([]report.LighthouseCategorySummary{}, categories...)
 }
 
-func (a *reportAggregation) absorbIssues(scannerID string, issues []report.IssueDetail, severity *report.SeverityCounts) int {
+func (a *reportAggregation) absorbIssues(
+	scannerID string,
+	issues []report.IssueDetail,
+	severity *report.SeverityCounts,
+) int {
 	scannerIssues := 0
 
 	for _, issue := range issues {

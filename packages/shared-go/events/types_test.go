@@ -10,19 +10,23 @@ import (
 
 func mustMarshal(t *testing.T, v any) []byte {
 	t.Helper()
+
 	b, err := json.Marshal(v)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
+
 	return b
 }
 
 func mustUnmarshalMap(t *testing.T, b []byte) map[string]any {
 	t.Helper()
+
 	var m map[string]any
 	if err := json.Unmarshal(b, &m); err != nil {
 		t.Fatalf("unmarshal map: %v", err)
 	}
+
 	return m
 }
 
@@ -41,21 +45,26 @@ func TestEventConstants_NonEmptyUniqueAndWellFormed(t *testing.T) {
 	}
 
 	seen := map[string]struct{}{}
+
 	for _, e := range events {
 		if e == "" {
 			t.Fatalf("event constant should not be empty")
 		}
+
 		if _, ok := seen[e]; ok {
 			t.Fatalf("duplicate event constant: %q", e)
 		}
+
 		seen[e] = struct{}{}
 
 		if strings.ToLower(e) != e {
 			t.Fatalf("event constant should be lowercase: %q", e)
 		}
+
 		if !strings.Contains(e, ".") {
 			t.Fatalf("event constant should be dot-delimited: %q", e)
 		}
+
 		if strings.ContainsAny(e, " \t\n") {
 			t.Fatalf("event constant should not contain whitespace: %q", e)
 		}
@@ -106,6 +115,7 @@ func TestJobCreatedPayload_Validate_AndJSONShape(t *testing.T) {
 			t.Fatalf("expected key %q in JSON: %s", k, string(b))
 		}
 	}
+
 	if _, exists := m["urls"]; exists {
 		t.Fatalf("expected urls to be omitted for zip input: %s", string(b))
 	}
@@ -146,9 +156,11 @@ func TestExtractionReadyPayload_Validate_AndJSONOmitEmpty(t *testing.T) {
 	if _, exists := m["stage_log_path"]; exists {
 		t.Fatalf("expected stage_log_path to be omitted when empty: %s", string(b))
 	}
+
 	if _, exists := m["recipe_path"]; exists {
 		t.Fatalf("expected recipe_path to be omitted when empty: %s", string(b))
 	}
+
 	if _, exists := m["provenance_artifact_path"]; exists {
 		t.Fatalf("expected provenance_artifact_path to be omitted when empty: %s", string(b))
 	}
@@ -214,6 +226,7 @@ func TestScanCompletedPayload_Validate_AndJSONOmitEmpty(t *testing.T) {
 			t.Fatalf("expected key %q in JSON: %s", k, string(b))
 		}
 	}
+
 	if _, exists := m["timing"]; exists {
 		t.Fatalf("expected timing to be omitted when nil: %s", string(b))
 	}
@@ -230,8 +243,10 @@ func TestScanCompletedPayload_Validate_AndJSONOmitEmpty(t *testing.T) {
 	if err := p.Validate(); err != nil {
 		t.Fatalf("expected valid payload with timing: %v", err)
 	}
+
 	b2 := mustMarshal(t, p)
 	m2 := mustUnmarshalMap(t, b2)
+
 	if _, exists := m2["timing"]; !exists {
 		t.Fatalf("expected timing to be present when non-nil: %s", string(b2))
 	}

@@ -16,6 +16,7 @@ func TestExtractFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to open ZIP: %v", err)
 	}
+
 	defer func() {
 		if cerr := r.Close(); cerr != nil {
 			t.Fatalf("Failed to close ZIP reader: %v", cerr)
@@ -27,6 +28,7 @@ func TestExtractFile(t *testing.T) {
 	}
 
 	destPath := filepath.Join(t.TempDir(), "extracted.html")
+
 	extractErr := extractFile(r.File[0], destPath)
 	if extractErr != nil {
 		t.Fatalf("Failed to extract file: %v", extractErr)

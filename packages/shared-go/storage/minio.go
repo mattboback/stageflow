@@ -96,10 +96,17 @@ func (c *MinIOClient) ensureBucket(ctx context.Context, bucket string) error {
 		exists, err := c.client.BucketExists(ctx, bucket)
 		if err != nil {
 			lastErr = err
-			log.Printf("Failed to check/create bucket %s (attempt %d/%d): %v. Retrying in %v...", bucket, attempt, maxRetries, lastErr, retryDelay)
+			log.Printf(
+				"Failed to check/create bucket %s (attempt %d/%d): %v. Retrying in %v...",
+				bucket,
+				attempt,
+				maxRetries,
+				lastErr,
+				retryDelay,
+			)
 
-			if err := waitForRetry(ctx, retryDelay); err != nil {
-				return err
+			if retryErr := waitForRetry(ctx, retryDelay); retryErr != nil {
+				return retryErr
 			}
 
 			continue
@@ -109,12 +116,19 @@ func (c *MinIOClient) ensureBucket(ctx context.Context, bucket string) error {
 			return nil
 		}
 
-		if err := c.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-			lastErr = err
-			log.Printf("Failed to check/create bucket %s (attempt %d/%d): %v. Retrying in %v...", bucket, attempt, maxRetries, lastErr, retryDelay)
+		if makeBucketErr := c.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); makeBucketErr != nil {
+			lastErr = makeBucketErr
+			log.Printf(
+				"Failed to check/create bucket %s (attempt %d/%d): %v. Retrying in %v...",
+				bucket,
+				attempt,
+				maxRetries,
+				lastErr,
+				retryDelay,
+			)
 
-			if err := waitForRetry(ctx, retryDelay); err != nil {
-				return err
+			if retryErr := waitForRetry(ctx, retryDelay); retryErr != nil {
+				return retryErr
 			}
 
 			continue

@@ -149,6 +149,7 @@ func TestValidateTargetURLs_MultipleURLs(t *testing.T) {
 			"https://example.com",
 			"http://8.8.8.8",
 		}
+
 		err := validateTargetURLsWithResolver(context.Background(), resolver, urls)
 		if err != nil {
 			t.Errorf("Expected all valid URLs to be allowed, got error: %v", err)
@@ -161,6 +162,7 @@ func TestValidateTargetURLs_MultipleURLs(t *testing.T) {
 			"http://127.0.0.1", // Should be blocked
 			"https://example.com",
 		}
+
 		err := validateTargetURLsWithResolver(context.Background(), resolver, urls)
 		if err == nil {
 			t.Error("Expected validation to fail when one URL is private")

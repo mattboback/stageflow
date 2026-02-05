@@ -36,6 +36,7 @@ func TestGenerate_Integration(t *testing.T) {
 	}
 
 	provenancePath := filepath.Join(tmpDir, "provenance.json")
+
 	prov, err := gen.Generate("integration-test", "http://localhost:8080", pages, provenancePath)
 	if err != nil {
 		t.Fatalf("Failed to generate provenance: %v", err)
@@ -51,8 +52,8 @@ func TestGenerate_Integration(t *testing.T) {
 	}
 
 	var parsedProv models.Provenance
-	if err := json.Unmarshal(data, &parsedProv); err != nil {
-		t.Fatalf("Failed to parse provenance: %v", err)
+	if unmarshalErr := json.Unmarshal(data, &parsedProv); unmarshalErr != nil {
+		t.Fatalf("Failed to parse provenance: %v", unmarshalErr)
 	}
 
 	if len(parsedProv.Pages) != 4 {

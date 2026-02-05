@@ -34,7 +34,9 @@ func TestE2E_JobEventsLogging(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to insert job.created: %v", err)
 	}
+
 	time.Sleep(10 * time.Millisecond)
+
 	if err := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
 		JobID:     jobID,
 		Event:     "extraction.ready",
@@ -43,7 +45,9 @@ func TestE2E_JobEventsLogging(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Failed to insert extraction.ready: %v", err)
 	}
+
 	time.Sleep(10 * time.Millisecond)
+
 	if err := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
 		JobID:     jobID,
 		Event:     "scan.completed",
@@ -64,6 +68,7 @@ func TestE2E_JobEventsLogging(t *testing.T) {
 				return i
 			}
 		}
+
 		return -1
 	}
 

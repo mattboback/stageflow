@@ -7,16 +7,13 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/scannercatalog"
 )
 
-func TestDefaultConfigMatchesBuiltinCatalog(t *testing.T) {
-	manifests, err := scannercatalog.BuiltinManifests()
-	if err != nil {
-		t.Fatalf("BuiltinManifests() error: %v", err)
-	}
+func assertConfigMatchesManifests(t *testing.T, cfg *Config, manifests []scannercatalog.ScannerManifest) {
+	t.Helper()
 
-	cfg := DefaultConfig()
 	if cfg == nil {
 		t.Fatal("DefaultConfig() returned nil")
 	}
+
 	if cfg.DefaultImage == "" {
 		t.Fatal("DefaultConfig() missing DefaultImage")
 	}
@@ -30,31 +27,55 @@ func TestDefaultConfigMatchesBuiltinCatalog(t *testing.T) {
 		if !ok || def == nil {
 			t.Fatalf("missing scanner definition for %s", m.Id)
 		}
+
 		if def.ID != m.Id || def.Name != m.Name || def.Version != m.Version {
 			t.Fatalf("definition mismatch for %s: %+v vs %+v", m.Id, def, m)
 		}
+
 		if !def.Enabled || !def.BuiltIn {
 			t.Fatalf("expected %s enabled+builtIn", m.Id)
 		}
 	}
+}
+
+func assertDefaultModules(t *testing.T, registry *Registry) {
+	t.Helper()
+
+	defaultModules, err := registry.ResolveModulesStrict(nil)
+	if err != nil {
+		t.Fatalf("ResolveModulesStrict(nil) error: %v", err)
+	}
+
+	if len(defaultModules) != 1 || defaultModules[0] != defaultModuleAxe {
+		t.Fatalf("expected default module %q, got %v", defaultModuleAxe, defaultModules)
+	}
+}
+
+func assertCategoryResolution(t *testing.T, registry *Registry) {
+	t.Helper()
+
+	cats := registry.Categories()
+	sort.Strings(cats)
+
+	for _, category := range cats {
+		_ = registry.ListByCategory(category)
+	}
+}
+
+func TestDefaultConfigMatchesBuiltinCatalog(t *testing.T) {
+	manifests, err := scannercatalog.BuiltinManifests()
+	if err != nil {
+		t.Fatalf("BuiltinManifests() error: %v", err)
+	}
+
+	cfg := DefaultConfig()
+	assertConfigMatchesManifests(t, cfg, manifests)
 
 	registry, err := InitializeRegistry(DefaultConfig())
 	if err != nil {
 		t.Fatalf("InitializeRegistry() error: %v", err)
 	}
 
-	defaultModules, err := registry.ResolveModulesStrict(nil)
-	if err != nil {
-		t.Fatalf("ResolveModulesStrict(nil) error: %v", err)
-	}
-	if len(defaultModules) != 1 || defaultModules[0] != defaultModuleAxe {
-		t.Fatalf("expected default module %q, got %v", defaultModuleAxe, defaultModules)
-	}
-
-	// Ensure categories resolve deterministically.
-	cats := registry.Categories()
-	sort.Strings(cats)
-	for _, category := range cats {
-		_ = registry.ListByCategory(category)
-	}
+	assertDefaultModules(t, registry)
+	assertCategoryResolution(t, registry)
 }

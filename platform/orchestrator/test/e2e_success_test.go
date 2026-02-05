@@ -16,6 +16,7 @@ func TestE2E_SuccessfulJobFlow(t *testing.T) {
 	jobID := "test-job-123"
 
 	t.Log("Step 1: Handling job.created event")
+
 	jobCreated := &events.JobCreatedPayload{
 		JobID:     jobID,
 		InputType: "zip",
@@ -35,14 +36,17 @@ func TestE2E_SuccessfulJobFlow(t *testing.T) {
 	if job.State != models.JobStateExtracting {
 		t.Errorf("Expected state EXTRACTING, got %s", job.State)
 	}
+
 	if job.PodID == "" {
 		t.Error("Expected pod ID to be set")
 	}
+
 	if len(podmanClient.pods) != 1 {
 		t.Errorf("Expected 1 pod to be created, got %d", len(podmanClient.pods))
 	}
 
 	t.Log("Step 2: Handling extraction.ready event")
+
 	extractionReady := &events.ExtractionReadyPayload{
 		JobID:                  jobID,
 		ProvenancePath:         "/workspace/provenance.json",
@@ -62,6 +66,7 @@ func TestE2E_SuccessfulJobFlow(t *testing.T) {
 	}
 
 	t.Log("Step 3: Handling scan.completed event")
+
 	scanCompleted := &events.ScanCompletedPayload{
 		JobID:             jobID,
 		ScannerType:       "axe",
@@ -88,6 +93,7 @@ func TestE2E_SuccessfulJobFlow(t *testing.T) {
 	if job.State != models.JobStateDone {
 		t.Errorf("Expected state DONE, got %s", job.State)
 	}
+
 	if job.CompletedAt == nil {
 		t.Error("Expected CompletedAt to be set")
 	}
@@ -103,6 +109,7 @@ func TestE2E_SuccessfulJobFlow(t *testing.T) {
 		if event.JobID != jobID {
 			t.Errorf("Expected job ID %s, got %s", jobID, event.JobID)
 		}
+
 		if event.Status != "success" {
 			t.Errorf("Expected status success, got %s", event.Status)
 		}

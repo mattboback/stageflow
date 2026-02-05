@@ -21,7 +21,9 @@ func (m *memoryStorage) UploadFile(_ context.Context, bucket, path string, reade
 	if err != nil {
 		return err
 	}
+
 	m.objects[m.key(bucket, path)] = data
+
 	return nil
 }
 
@@ -30,6 +32,7 @@ func (m *memoryStorage) DownloadFile(_ context.Context, bucket, path string) (io
 	if !ok {
 		return nil, fmt.Errorf("object not found: %s/%s", bucket, path)
 	}
+
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 

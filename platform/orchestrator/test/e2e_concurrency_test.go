@@ -17,7 +17,8 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 
 	// Create multiple jobs.
 	t.Logf("Creating %d concurrent jobs", numJobs)
-	for i := 0; i < numJobs; i++ {
+
+	for i := range numJobs {
 		jobID := "concurrent-job-" + string(rune('A'+i))
 
 		jobCreated := &events.JobCreatedPayload{
@@ -36,7 +37,7 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 		t.Errorf("Expected %d pods, got %d", numJobs, len(podmanClient.pods))
 	}
 
-	for i := 0; i < numJobs; i++ {
+	for i := range numJobs {
 		jobID := "concurrent-job-" + string(rune('A'+i))
 
 		if err := orch.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{
@@ -68,8 +69,9 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 		t.Errorf("Expected all pods cleaned up, found %d", len(podmanClient.pods))
 	}
 
-	for i := 0; i < numJobs; i++ {
+	for i := range numJobs {
 		jobID := "concurrent-job-" + string(rune('A'+i))
+
 		job := mustGetJob(t, database, jobID)
 		if job.State != models.JobStateDone {
 			t.Errorf("Job %s: expected DONE, got %s", jobID, job.State)

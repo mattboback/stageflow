@@ -5,74 +5,118 @@ run:
   tests: true
   modules-download-mode: readonly
   go: "1.25"
+  modules-from-go-work: true
+
+issues:
+  max-same-issues: 50
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+    - golines
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/mattboback/stageflow
+    golines:
+      max-len: 120
 
 linters:
   default: none
   enable:
-    # Standard linters (recommended defaults)
-    - errcheck          # Check for unchecked errors
-    - govet             # Reports suspicious constructs
-    - ineffassign       # Detects unused variable assignments
-    - staticcheck       # Comprehensive static analysis (includes gosimple, stylecheck)
-    - unused            # Checks for unused constants, variables, functions, types
+    # --- correctness / bugs ---
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - errorlint
+    - nilerr
+    - nilnil
+    - copyloopvar
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck
+    - noctx
+    - durationcheck
+    - exhaustive
+    - intrange
+    - unconvert
+    - unparam
 
-    # Bug detection
-    - bodyclose         # Checks whether HTTP response body is closed
-    - copyloopvar       # Detects places where loop variables are copied
-    - depguard          # Prevent illegal package imports (monorepo hygiene)
-    - nilerr            # Finds code returning nil even if error is not nil
-    - errorlint         # Find issues with error wrapping
-    - noctx             # Finds sending http request without context.Context
-    - rowserrcheck      # Checks whether Rows.Err is checked
-    - sqlclosecheck     # Checks that sql.Rows, sql.Stmt, sqlx.NamedStmt, pgx.Query are closed
-    - contextcheck      # Check function whether use a non-inherited context
+    # --- security / supply-chain / unicode footguns ---
+    - gosec
+    - asciicheck
+    - bidichk
+    - canonicalheader
+    - depguard
 
-    # Performance
-    - prealloc          # Find slice declarations that could be preallocated
-    - perfsprint        # Checks that fmt.Sprintf can be replaced with faster alternatives
-    - unconvert         # Remove unnecessary type conversions
+    # --- quality / maintainability ---
+    - gocritic
+    - revive
+    - misspell
+    - nolintlint
+    - predeclared
+    - whitespace
+    - wsl_v5
+    - godot
+    - nakedret
+    - gocyclo
+    - gocognit
+    - nestif
+    - goconst
+    - dupl
+    - perfsprint
+    - makezero
+    - usestdlibvars
 
-    # Code quality
-    - gocritic          # Comprehensive linter with many checks
-    - gosec             # Security-oriented linter
-    - misspell          # Finds commonly misspelled English words
-    - revive            # Fast, configurable, extensible linter (golint replacement)
-    - gocyclo           # Cyclomatic complexity checker
-    - unparam           # Reports unused function parameters
-    - dupl              # Tool for code clone detection
-    - gocognit          # Cognitive complexity checker
-    - nestif            # Reports deeply nested if statements
-    - goconst           # Finds repeated strings that could be constants
-    - testifylint       # Checks usage of github.com/stretchr/testify/assert & require
-
-    # Style & consistency
-    - whitespace        # Detects leading and trailing whitespace
-    - wsl_v5            # Whitespace linter - forces blank lines where appropriate
-    - godot             # Check if comments end in a period
-    - nakedret          # Finds naked returns in functions
-    - nlreturn          # Checks for a new line before return and branch statements
-    - predeclared       # Finds code that shadows predeclared identifiers
-    - thelper           # Detects Go test helpers without t.Helper()
-    - tparallel         # Detects inappropriate usage of t.Parallel()
-    - usestdlibvars     # Detect possibility to use variables/constants from stdlib
-    - makezero          # Finds slice declarations with non-zero initial length
+    # --- tests ---
+    - testifylint
+    - thelper
+    - tparallel
 
   settings:
     errcheck:
       check-type-assertions: true
       check-blank: true
       exclude-functions:
-        - io/ioutil.ReadFile
         - io.Copy(*bytes.Buffer)
         - io.Copy(os.Stdout)
 
     govet:
       enable-all: true
       disable:
-        - fieldalignment  # Too strict for most projects
+        - fieldalignment
+      settings:
+        shadow:
+          strict: true
+
+    copyloopvar:
+      check-alias: true
 
     gocyclo:
       min-complexity: 15
+
+    gocognit:
+      min-complexity: 20
+
+    dupl:
+      threshold: 150
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+
+    misspell:
+      locale: US
+
+    perfsprint:
+      strconcat: false
+
+    rowserrcheck:
+      packages:
+        - github.com/jmoiron/sqlx
 
     depguard:
       rules:
@@ -82,9 +126,25 @@ linters:
           deny:
             - pkg: "io/ioutil"
               desc: "io/ioutil is deprecated; use io or os"
+            - pkg: "github.com/golang/protobuf"
+              desc: "Use google.golang.org/protobuf instead"
+            - pkg: "github.com/satori/go.uuid"
+              desc: "Use github.com/google/uuid instead"
+            - pkg: "github.com/gofrs/uuid$"
+              desc: "Use github.com/gofrs/uuid/v5 or later"
+        non-test-files:
+          files:
+            - "!$test"
+          deny:
+            - pkg: "math/rand$"
+              desc: "Use math/rand/v2 instead"
 
-    gocognit:
-      min-complexity: 20
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104
+        - G304
 
     revive:
       severity: warning
@@ -117,7 +177,7 @@ linters:
           severity: warning
         - name: var-naming
           severity: warning
-          disabled: true  # Allow simple package names like "api"
+          disabled: true
         - name: var-declaration
           severity: warning
         - name: range
@@ -141,39 +201,13 @@ linters:
         - name: redefines-builtin-id
           severity: warning
 
-    gosec:
-      severity: medium
-      confidence: medium
-      excludes:
-        - G104  # Audit errors not checked (handled by errcheck)
-        - G304  # File path provided as taint input (common in CLIs)
-
-    gocritic:
-      enabled-tags:
-        - diagnostic
-        - style
-        - performance
-        - opinionated
-      disabled-checks:
-        - hugeParam        # Can be too strict
-        - rangeValCopy     # Can be too strict for readability
-        - commentedOutCode # Sometimes useful to keep
-
-    dupl:
-      threshold: 150
+    nolintlint:
+      allow-no-explanation: [dupl, gocognit, gocyclo, golines]
+      require-explanation: true
+      require-specific: true
 
     nakedret:
       max-func-lines: 30
-
-    nestif:
-      min-complexity: 4
-
-    goconst:
-      min-len: 3
-      min-occurrences: 3
-
-    misspell:
-      locale: US
 
     testifylint:
       enable-all: true
@@ -183,72 +217,34 @@ linters:
     presets:
       - comments
       - std-error-handling
-    paths:
-      - "vendor"
-      - "pkg/mod"
-      - "\\.go/pkg/mod"
-      - "mocks"
-      - "generated"
-      - ".*\\.pb\\.go$"
-      - ".*_mock\\.go$"
+      - common-false-positives
     rules:
-      # Allow longer functions in tests
-      - path: '(.+)_test\.go'
+      - source: "TODO"
+        linters: [godot]
+
+      - text: "should have a package comment"
+        linters: [revive]
+
+      - text: 'exported \S+ \S+ should have comment( \(or a comment on this block\))? or be unexported'
+        linters: [revive]
+
+      - text: 'package comment should be of the form ".+"'
+        source: "// ?(nolint|TODO)"
+        linters: [revive]
+
+      - text: 'comment on exported \S+ \S+ should be of the form ".+"'
+        source: "// ?(nolint|TODO)"
+        linters: [revive, staticcheck]
+
+      - path: "_test\\.go"
         linters:
-          - gocyclo
-          - gocognit
+          - bodyclose
           - dupl
-          - funlen
+          - errcheck
           - goconst
-          - errcheck
-          - gocritic
-          - nlreturn
-          - perfsprint
-          - revive
-          - thelper
-          - tparallel
-          - wsl_v5
-      # Orchestrator complexity debt (non-style) is intentionally scoped to specific files.
-      - path: '^platform/orchestrator/internal/(db/job_scanners\.go|orchestrator/scanning\.go|podman/containers\.go)$'
-        linters:
-          - gocyclo
-      - path: '^platform/orchestrator/internal/(db/jobs\.go|orchestrator/completion\.go|orchestrator/events\.go)$'
-        linters:
-          - gocyclo
-      - path: '^platform/orchestrator/internal/(db/job_scanners\.go|orchestrator/scanning\.go|podman/containers\.go)$'
-        linters:
-          - gocognit
-      - path: '^platform/orchestrator/internal/(db/jobs\.go|orchestrator/completion\.go|orchestrator/events\.go)$'
-        linters:
-          - gocognit
-      - path: '^platform/orchestrator/internal/(orchestrator/event_trace\.go|orchestrator/events\.go|orchestrator/podman_helpers\.go|orchestrator/scanning\.go|podman/client\.go|podman/containers\.go)$'
-        linters:
-          - nestif
-      - path: '^platform/orchestrator/(cmd/orchestrator/main\.go|internal/orchestrator/extraction\.go|internal/orchestrator/url_jobs\.go)$'
-        linters:
-          - nestif
-      - path: '^platform/orchestrator/internal/orchestrator/scanning_test\.go$'
-        linters:
-          - nestif
-      # Allow dot imports for testing packages
-      - path: '(.+)_test\.go'
-        text: "dot-imports"
-        linters:
-          - revive
-      # Ignore some linters for generated code
-      - path: '.*\.pb\.go$'
-        linters:
-          - govet
-          - errcheck
-          - staticcheck
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  settings:
-    goimports:
-      local-prefixes:
-        - github.com/mattboback/stageflow
+          - gosec
+          - noctx
+          - sqlclosecheck
 
 output:
   formats:
@@ -265,9 +261,5 @@ output:
 severity:
   default: warning
   rules:
-    - linters:
-        - errcheck
-        - govet
-        - staticcheck
-        - gosec
+    - linters: [errcheck, govet, staticcheck, gosec, depguard, bodyclose, sqlclosecheck]
       severity: error

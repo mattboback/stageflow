@@ -57,7 +57,12 @@ func (o *Orchestrator) recordJobEvent(ctx context.Context, e *db.JobEventInsert)
 	}
 }
 
-func (o *Orchestrator) withInboundEvent(ctx context.Context, eventName, jobID string, payload any, fn func(context.Context) error) error {
+func (o *Orchestrator) withInboundEvent(
+	ctx context.Context,
+	eventName, jobID string,
+	payload any,
+	fn func(context.Context) error,
+) error {
 	start := time.Now()
 	err := fn(ctx)
 	durationMs := time.Since(start).Milliseconds()
@@ -75,6 +80,7 @@ func (o *Orchestrator) withInboundEvent(ctx context.Context, eventName, jobID st
 		DurationMs:    &durationMs,
 	}
 
+	//nolint:nestif // Meta validation requires multiple optional field checks
 	if meta != nil {
 		if meta.Event != "" {
 			insert.Event = meta.Event

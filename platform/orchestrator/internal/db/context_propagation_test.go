@@ -42,6 +42,7 @@ func TestDatabaseOperations_RespectCanceledContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to fetch job after canceled update: %v", err)
 	}
+
 	if currentJob.State != models.JobStatePending {
 		t.Fatalf("expected job state to remain %s, got %s", models.JobStatePending, currentJob.State)
 	}

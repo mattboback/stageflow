@@ -73,14 +73,16 @@ func (c *Client) CreateContainer(ctx context.Context, req *ContainerCreateReques
 	defer func() { _ = resp.Body.Close() }()
 
 	var result ContainerCreateResponse
-	if err := parseResponse(resp, &result); err != nil {
-		return nil, err
+	if parseErr := parseResponse(resp, &result); parseErr != nil {
+		return nil, parseErr
 	}
 
 	return &result, nil
 }
 
 // buildContainerCreateBody constructs the Podman Libpod API request body with properly nested resource_limits.
+//
+//nolint:gocognit,gocyclo // Container configuration requires multiple optional field checks
 func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 	body := map[string]any{
 		"name":  req.Name,
@@ -100,6 +102,7 @@ func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 		body["env"] = req.Env
 	}
 
+	//nolint:nestif // Mount configuration requires multiple optional field handling
 	if len(req.Mounts) > 0 {
 		// Podman expects OCI runtime-spec mounts (`specs-go.Mount`) where read-only is
 		// expressed via mount options (e.g., "ro"), not a separate boolean field.
@@ -145,6 +148,7 @@ func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 	}
 
 	// Build nested resource_limits structure for Podman API
+	//nolint:nestif // Resource limits require multiple nested optional fields
 	if req.ResourceLimits != nil {
 		resourceLimits := make(map[string]any)
 
@@ -238,8 +242,8 @@ func (c *Client) InspectContainer(ctx context.Context, containerID string) (*Con
 	defer func() { _ = resp.Body.Close() }()
 
 	var result ContainerInfo
-	if err := parseResponse(resp, &result); err != nil {
-		return nil, err
+	if parseErr := parseResponse(resp, &result); parseErr != nil {
+		return nil, parseErr
 	}
 
 	return &result, nil
@@ -269,7 +273,7 @@ func (c *Client) WaitContainer(ctx context.Context, containerID string) (*Contai
 
 	// Podman may return either a JSON object or a bare status code (number).
 	var result ContainerWaitResponse
-	if err := json.Unmarshal(body, &result); err == nil {
+	if unmarshalErr := json.Unmarshal(body, &result); unmarshalErr == nil {
 		// Podman may return {"StatusCode":0} when the container exits cleanly.
 		return &result, nil
 	}

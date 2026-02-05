@@ -92,7 +92,10 @@ func (s *Server) collectJobScreenshots(ctx context.Context, rec *status.JobRecor
 	return allScreenshots
 }
 
-func (s *Server) extractScannerScreenshots(ctx context.Context, jobID, scannerType, resultsKey string) ([]models.ScreenshotArtifact, error) {
+func (s *Server) extractScannerScreenshots(
+	ctx context.Context,
+	jobID, scannerType, resultsKey string,
+) ([]models.ScreenshotArtifact, error) {
 	reader, err := s.config.Storage.DownloadFile(ctx, storage.BucketArtifacts, resultsKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download results.json: %w", err)
@@ -103,8 +106,8 @@ func (s *Server) extractScannerScreenshots(ctx context.Context, jobID, scannerTy
 	}()
 
 	var results report.UnifiedReportV2
-	if err := json.NewDecoder(reader).Decode(&results); err != nil {
-		return nil, fmt.Errorf("failed to parse results.json: %w", err)
+	if decodeErr := json.NewDecoder(reader).Decode(&results); decodeErr != nil {
+		return nil, fmt.Errorf("failed to parse results.json: %w", decodeErr)
 	}
 
 	pageByID := make(map[string]report.PageSummary, len(results.Pages))
@@ -125,7 +128,10 @@ func (s *Server) extractScannerScreenshots(ctx context.Context, jobID, scannerTy
 	return screenshots, nil
 }
 
-func (s *Server) extractReportScreenshots(ctx context.Context, jobID, reportKey string) ([]models.ScreenshotArtifact, error) {
+func (s *Server) extractReportScreenshots(
+	ctx context.Context,
+	jobID, reportKey string,
+) ([]models.ScreenshotArtifact, error) {
 	reader, err := s.config.Storage.DownloadFile(ctx, storage.BucketArtifacts, reportKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download report.json: %w", err)
@@ -136,8 +142,8 @@ func (s *Server) extractReportScreenshots(ctx context.Context, jobID, reportKey 
 	}()
 
 	var aggReport report.UnifiedReportV2
-	if err := json.NewDecoder(reader).Decode(&aggReport); err != nil {
-		return nil, fmt.Errorf("failed to parse report.json: %w", err)
+	if decodeErr := json.NewDecoder(reader).Decode(&aggReport); decodeErr != nil {
+		return nil, fmt.Errorf("failed to parse report.json: %w", decodeErr)
 	}
 
 	pageByID := make(map[string]report.PageSummary, len(aggReport.Pages))
@@ -169,7 +175,8 @@ func (s *Server) collectArtifactScreenshots(
 	screenshots := make([]models.ScreenshotArtifact, 0)
 
 	for _, artifact := range artifacts {
-		if artifact.Type != artifactTypeScreenshot || artifact.Id == "" || artifact.Path == nil || *artifact.Path == "" {
+		if artifact.Type != artifactTypeScreenshot || artifact.Id == "" || artifact.Path == nil ||
+			*artifact.Path == "" {
 			continue
 		}
 
@@ -188,7 +195,12 @@ func (s *Server) collectArtifactScreenshots(
 				continue
 			}
 
-			screenshotURL, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, screenshotKey, 15*time.Minute)
+			screenshotURL, err := s.config.Storage.GetPresignedURL(
+				ctx,
+				storage.BucketArtifacts,
+				screenshotKey,
+				15*time.Minute,
+			)
 			if err != nil {
 				logging.Warn(ctx, "Failed to generate presigned URL for screenshot", "error", err, "key", screenshotKey)
 
@@ -248,7 +260,14 @@ func (s *Server) buildPageOverviewScreenshotV2(
 
 	overviewURL, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, overviewKey, 15*time.Minute)
 	if err != nil {
-		logging.Warn(ctx, "Failed to generate presigned URL for page overview screenshot", "error", err, "key", overviewKey)
+		logging.Warn(
+			ctx,
+			"Failed to generate presigned URL for page overview screenshot",
+			"error",
+			err,
+			"key",
+			overviewKey,
+		)
 
 		return models.ScreenshotArtifact{}, false
 	}

@@ -160,15 +160,15 @@ func (l *stageLogger) writeRecipe(cfg *Config) error {
 		return fmt.Errorf("failed to marshal extraction recipe: %w", err)
 	}
 
-	if err := os.WriteFile(l.recipePath, data, 0o600); err != nil {
-		return fmt.Errorf("failed to write extraction recipe: %w", err)
+	if writeErr := os.WriteFile(l.recipePath, data, 0o600); writeErr != nil {
+		return fmt.Errorf("failed to write extraction recipe: %w", writeErr)
 	}
 
 	sum := sha256.Sum256(data)
 
 	l.recipeHash = hex.EncodeToString(sum[:])
-	if err := l.uploadBytes(l.recipeObjectPath, data); err != nil {
-		return fmt.Errorf("failed to upload extraction recipe: %w", err)
+	if uploadErr := l.uploadBytes(l.recipeObjectPath, data); uploadErr != nil {
+		return fmt.Errorf("failed to upload extraction recipe: %w", uploadErr)
 	}
 
 	return nil
@@ -270,12 +270,12 @@ func (l *stageLogger) finalize(status string, failure *extractionStageFailure) (
 		return "", fmt.Errorf("failed to marshal extraction stage log: %w", err)
 	}
 
-	if err := os.WriteFile(l.stageLogPath, data, 0o600); err != nil {
-		return "", fmt.Errorf("failed to write extraction stage log: %w", err)
+	if writeErr := os.WriteFile(l.stageLogPath, data, 0o600); writeErr != nil {
+		return "", fmt.Errorf("failed to write extraction stage log: %w", writeErr)
 	}
 
-	if err := l.uploadBytes(l.stageLogObject, data); err != nil {
-		return "", fmt.Errorf("failed to upload extraction stage log: %w", err)
+	if uploadErr := l.uploadBytes(l.stageLogObject, data); uploadErr != nil {
+		return "", fmt.Errorf("failed to upload extraction stage log: %w", uploadErr)
 	}
 
 	l.finalized = true

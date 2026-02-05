@@ -12,7 +12,13 @@ import (
 // watchDeadline fails a job if it stays in a given state longer than timeout.
 // It polls periodically and resets the clock whenever the job's updated_at advances
 // or the state moves forward. This acts like a heartbeat without extra messages.
-func (o *Orchestrator) watchDeadline(ctx context.Context, jobID string, expectedState models.JobState, timeout time.Duration, stage string) {
+func (o *Orchestrator) watchDeadline(
+	ctx context.Context,
+	jobID string,
+	expectedState models.JobState,
+	timeout time.Duration,
+	stage string,
+) {
 	ticker := time.NewTicker(o.deadlinePollInterval)
 	defer ticker.Stop()
 
@@ -51,7 +57,12 @@ func (o *Orchestrator) watchDeadline(ctx context.Context, jobID string, expected
 
 		if time.Since(start) >= timeout {
 			slog.Warn("watchDeadline: job exceeded timeout", "job_id", jobID, "stage", stage, "timeout", timeout)
-			o.failJobSafe(backgroundWithCorrelation(ctx), jobID, stage, fmt.Sprintf("%s timed out after %v", stage, timeout))
+			o.failJobSafe(
+				backgroundWithCorrelation(ctx),
+				jobID,
+				stage,
+				fmt.Sprintf("%s timed out after %v", stage, timeout),
+			)
 
 			return
 		}

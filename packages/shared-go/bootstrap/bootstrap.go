@@ -41,14 +41,14 @@ func NewNATSClient(ctx context.Context, cfg config.NATSConfig, opts NATSOptions)
 	}
 
 	if opts.EnsureStreams {
-		if err := client.EnsureStreams(ctx); err != nil {
+		if ensureErr := client.EnsureStreams(ctx); ensureErr != nil {
 			if opts.IgnoreEnsureFailure {
-				return client, err
+				return client, ensureErr
 			}
 
 			_ = client.Close()
 
-			return nil, fmt.Errorf("ensure NATS streams: %w", err)
+			return nil, fmt.Errorf("ensure NATS streams: %w", ensureErr)
 		}
 	}
 
@@ -64,12 +64,12 @@ func NewMinIOClient(ctx context.Context, cfg config.MinIOConfig, opts MinIOOptio
 	}
 
 	if opts.EnsureBuckets {
-		if err := client.EnsureBuckets(ctx); err != nil {
+		if ensureErr := client.EnsureBuckets(ctx); ensureErr != nil {
 			if opts.IgnoreEnsureFailure {
-				return client, err
+				return client, ensureErr
 			}
 
-			return nil, fmt.Errorf("ensure MinIO buckets: %w", err)
+			return nil, fmt.Errorf("ensure MinIO buckets: %w", ensureErr)
 		}
 	}
 

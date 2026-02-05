@@ -16,6 +16,7 @@ func TestRequireNonEmpty(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for empty value")
 	}
+
 	if !strings.Contains(err.Error(), "name") {
 		t.Errorf("error should contain field name: %v", err)
 	}
@@ -48,10 +49,12 @@ func TestValidateAll(t *testing.T) {
 	// Some errors
 	e1 := errors.New("error 1")
 	e2 := errors.New("error 2")
+
 	err = ValidateAll(nil, e1, nil, e2)
 	if err == nil {
 		t.Error("expected combined error")
 	}
+
 	if !strings.Contains(err.Error(), "error 1") || !strings.Contains(err.Error(), "error 2") {
 		t.Errorf("combined error should contain both messages: %v", err)
 	}

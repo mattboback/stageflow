@@ -29,7 +29,7 @@ func TestPruneJobEventsBefore_RemovesOnlyOlderRows(t *testing.T) {
 	oldTimestamp := now.Add(-72 * time.Hour)
 	newTimestamp := now.Add(-30 * time.Minute)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := db.InsertJobEvent(context.Background(), &JobEventInsert{
 			JobID:     job.ID,
 			Event:     "old.event",
@@ -40,7 +40,7 @@ func TestPruneJobEventsBefore_RemovesOnlyOlderRows(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if err := db.InsertJobEvent(context.Background(), &JobEventInsert{
 			JobID:     job.ID,
 			Event:     "new.event",
@@ -125,6 +125,7 @@ func TestStartJobEventsPruner_PrunesInBackground(t *testing.T) {
 	}
 
 	deadline := time.Now().Add(500 * time.Millisecond)
+
 	for {
 		events, err := db.ListJobEvents(context.Background(), job.ID, ListJobEventsOptions{Limit: 10})
 		if err != nil {

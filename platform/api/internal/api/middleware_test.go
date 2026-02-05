@@ -24,8 +24,9 @@ func TestCORSMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	req.Header.Set("Origin", "https://example.com")
+
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -34,12 +35,15 @@ func TestCORSMiddleware(t *testing.T) {
 	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "https://example.com" {
 		t.Errorf("Expected Access-Control-Allow-Origin to echo origin, got %q", got)
 	}
+
 	if rr.Header().Get("Access-Control-Allow-Methods") != "GET, POST, OPTIONS" {
 		t.Error("Expected Access-Control-Allow-Methods header")
 	}
-	if rr.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization, X-API-Key" {
+
+	if rr.Header().Get("Access-Control-Allow-Headers") != "Content-Type, Authorization, X-Api-Key" {
 		t.Error("Expected Access-Control-Allow-Headers header")
 	}
+
 	if rr.Header().Get("Vary") != "Origin" {
 		t.Error("Expected Vary header to include Origin")
 	}
@@ -50,7 +54,7 @@ func TestCORSMiddlewareOptions(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodOptions, "/test", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/test", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -65,7 +69,7 @@ func TestLoggingMiddleware(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -102,6 +106,7 @@ func TestLoggingResponseWriter_ImplementsFlusher(t *testing.T) {
 	}
 
 	flusher.Flush()
+
 	if !rr.flushed {
 		t.Fatalf("expected Flush() to be forwarded to underlying ResponseWriter")
 	}
@@ -112,7 +117,7 @@ func TestAPIKeyMiddleware_NoToken_AllowsRequest(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -129,7 +134,7 @@ func TestAPIKeyMiddleware_WithToken_RejectsMissingKey(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -146,8 +151,9 @@ func TestAPIKeyMiddleware_WithToken_AllowsMatchingKey(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	req.Header.Set("X-API-Key", "secret")
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req.Header.Set("X-Api-Key", "secret")
+
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -161,10 +167,13 @@ func TestTimeoutMiddleware_AllowsFastHandler(t *testing.T) {
 	handler := timeoutMiddleware(50*time.Millisecond, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{"ok":true}`))
+
+		if _, err := w.Write([]byte(`{"ok":true}`)); err != nil {
+			t.Errorf("write response: %v", err)
+		}
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -172,6 +181,7 @@ func TestTimeoutMiddleware_AllowsFastHandler(t *testing.T) {
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected %d, got %d", http.StatusCreated, rr.Code)
 	}
+
 	if got := rr.Header().Get("Content-Type"); got != "application/json" {
 		t.Fatalf("expected Content-Type application/json, got %q", got)
 	}
@@ -182,11 +192,14 @@ func TestTimeoutMiddleware_TimesOutAndIgnoresLateWrites(t *testing.T) {
 
 	handler := timeoutMiddleware(10*time.Millisecond, func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(50 * time.Millisecond)
+
+		// Write after timeout - expected to fail with timeout error
 		_, _ = w.Write([]byte("late"))
+
 		close(lateWriteDone)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	handler(rr, req)
@@ -194,6 +207,7 @@ func TestTimeoutMiddleware_TimesOutAndIgnoresLateWrites(t *testing.T) {
 	if rr.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected %d, got %d", http.StatusServiceUnavailable, rr.Code)
 	}
+
 	if got := rr.Body.String(); strings.Contains(got, "late") {
 		t.Fatalf("expected late writes to be ignored, got body %q", got)
 	}

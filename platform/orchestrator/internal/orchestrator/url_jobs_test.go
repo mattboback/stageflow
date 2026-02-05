@@ -131,7 +131,7 @@ func TestHandleURLJob_ReusesExistingPod(t *testing.T) {
 	podCreateCalls := 0
 
 	mockClient := &mockPodmanClient{
-		createPodFunc: func(_ context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
+		createPodFunc: func(_ context.Context, _ *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
 			podCreateCalls++
 			return &podman.PodCreateResponse{ID: "pod-existing"}, nil
 		},

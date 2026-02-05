@@ -32,6 +32,7 @@ func TestUpdateJobState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if retrieved.State != models.JobStateExtracting {
 		t.Errorf("Expected state EXTRACTING, got %s", retrieved.State)
 	}
@@ -61,6 +62,7 @@ func TestUpdateJobPodID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if retrieved.PodID != "pod-456" {
 		t.Errorf("Expected pod ID pod-456, got %s", retrieved.PodID)
 	}
@@ -90,9 +92,11 @@ func TestCompleteJob(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if retrieved.State != models.JobStateDone {
 		t.Errorf("Expected state DONE, got %s", retrieved.State)
 	}
+
 	if retrieved.CompletedAt == nil {
 		t.Error("Expected CompletedAt to be set")
 	}
@@ -122,12 +126,15 @@ func TestFailJob(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if retrieved.State != models.JobStateFailed {
 		t.Errorf("Expected state FAILED, got %s", retrieved.State)
 	}
+
 	if retrieved.Error != "Test error message" {
 		t.Errorf("Expected error message, got %s", retrieved.Error)
 	}
+
 	if retrieved.CompletedAt == nil {
 		t.Error("Expected CompletedAt to be set")
 	}
@@ -183,6 +190,7 @@ func TestListJobsByState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to list scanning jobs: %v", err)
 	}
+
 	if len(scanningJobs) != 1 {
 		t.Errorf("Expected 1 scanning job, got %d", len(scanningJobs))
 	}

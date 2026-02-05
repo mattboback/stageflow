@@ -115,11 +115,12 @@ func TestCompletionStage(t *testing.T) {
 				t.Errorf("expected stage %q, got %q", tt.expectedStage, stage)
 			}
 
-			if tt.expectedErr == nil && err != nil {
+			switch {
+			case tt.expectedErr == nil && err != nil:
 				t.Errorf("expected nil error, got %v", err)
-			} else if tt.expectedErr != nil && err == nil {
+			case tt.expectedErr != nil && err == nil:
 				t.Error("expected error, got nil")
-			} else if tt.expectedErr != nil && err != nil && err.Error() != tt.expectedErr.Error() {
+			case tt.expectedErr != nil && err != nil && err.Error() != tt.expectedErr.Error():
 				t.Errorf("expected error %q, got %q", tt.expectedErr.Error(), err.Error())
 			}
 		})

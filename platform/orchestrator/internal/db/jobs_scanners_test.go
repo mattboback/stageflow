@@ -28,14 +28,17 @@ func TestRecordScannerCompletionConcurrency(t *testing.T) {
 	}
 
 	start := make(chan struct{})
+
 	type result struct {
 		allComplete bool
 		err         error
 	}
+
 	results := make(chan result, 2)
 
 	run := func(scanner string) {
 		<-start
+
 		allComplete, err := db.RecordScannerCompletion(context.Background(), job.ID, &models.ScannerResult{
 			ScannerType: scanner,
 			ResultsPath: "path/" + scanner + ".json",
@@ -55,6 +58,7 @@ func TestRecordScannerCompletionConcurrency(t *testing.T) {
 	if res1.err != nil {
 		t.Fatalf("scanner1 error: %v", res1.err)
 	}
+
 	if res2.err != nil {
 		t.Fatalf("scanner2 error: %v", res2.err)
 	}

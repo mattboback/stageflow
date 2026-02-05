@@ -9,15 +9,14 @@ import (
 )
 
 func loadSuite(path string) (Suite, error) {
-	//nolint:gosec // Intended behavior for CLI tool to read user-provided file
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return Suite{}, err
 	}
 
 	var s Suite
-	if err := yaml.Unmarshal(data, &s); err != nil {
-		return Suite{}, err
+	if unmarshalErr := yaml.Unmarshal(data, &s); unmarshalErr != nil {
+		return Suite{}, unmarshalErr
 	}
 
 	if len(s.Domains) == 0 {

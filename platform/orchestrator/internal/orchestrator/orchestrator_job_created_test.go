@@ -35,6 +35,7 @@ func TestHandleJobCreated(t *testing.T) {
 	if job.State != models.JobStateExtracting {
 		t.Errorf("Expected state EXTRACTING, got %s", job.State)
 	}
+
 	if job.PodID == "" {
 		t.Error("Expected pod ID to be set")
 	}
@@ -64,6 +65,7 @@ func TestHandleURLJobTransitionsToScanning(t *testing.T) {
 	if job.State != models.JobStateScanning {
 		t.Fatalf("expected state SCANNING, got %s", job.State)
 	}
+
 	if job.PodID == "" {
 		t.Fatalf("expected pod to be created for URL job")
 	}
