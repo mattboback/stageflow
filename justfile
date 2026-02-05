@@ -167,29 +167,20 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
 
 [group('quality'), doc('Run local CI: lint + typecheck + test')]
 ci:
-    ./scripts/quality/ci.sh
-
-[group('quality'), doc('Run API event-flow checks (API_BASE optional)')]
-event-flow API_BASE='':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    if [[ -n "{{API_BASE}}" ]]; then
-        ./scripts/test-event-flow.sh "{{API_BASE}}"
-    else
-        ./scripts/test-event-flow.sh
-    fi
+    echo "==> Go build..."
+    {{go}} build ./...
 
-[group('quality'), doc('Run smoke checks (BASE_URL optional)')]
-smoke BASE_URL='':
-    #!/usr/bin/env bash
-    set -euo pipefail
+    echo "==> Go lint..."
+    golangci-lint run
 
-    if [[ -n "{{BASE_URL}}" ]]; then
-        ./scripts/smoke.sh "{{BASE_URL}}"
-    else
-        ./scripts/smoke.sh
-    fi
+    echo "==> Go test..."
+    {{go}} test -race ./...
+
+    echo "==> Frontend CI..."
+    (cd {{frontend_dir}} && {{bun}} run ci)
 
 [group('build'), doc('Build all artifacts (Go + frontend + runner)')]
 build:
@@ -222,13 +213,8 @@ prod CMD='up':
     cmd="{{CMD}}"
 
     case "$cmd" in
-        prune)
-            echo "==> Pruning legacy StageFlow (portfolio) units..."
-            ./scripts/quadlet-prune-legacy.sh
-            ;;
         install)
             echo "==> Installing Quadlet units..."
-            ./scripts/quadlet-prune-legacy.sh
             ./scripts/quadlet-install.sh
             ;;
         up)
@@ -266,7 +252,7 @@ prod CMD='up':
             done
             ;;
         *)
-            echo "CMD must be prune, install, up, down, restart, logs, ps, or health (got: $cmd)" >&2
+            echo "CMD must be install, up, down, restart, logs, ps, or health (got: $cmd)" >&2
             exit 2
             ;;
     esac
