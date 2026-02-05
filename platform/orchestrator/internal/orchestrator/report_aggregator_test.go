@@ -12,6 +12,7 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/storage"
 )
 
+//nolint:gocyclo // Test function covers multiple aggregation scenarios
 func TestBuildAggregatedReportSuccess(t *testing.T) {
 	ctx := context.Background()
 	mem := newMemoryStorage()
@@ -176,7 +177,12 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 			},
 		},
 		Artifacts: []report.ReportArtifact{
-			{Id: "lh-report", Type: "html", Path: stringPtr("job-1/lighthouse/report.html"), Mime: stringPtr("text/html")},
+			{
+				Id:   "lh-report",
+				Type: "html",
+				Path: stringPtr("job-1/lighthouse/report.html"),
+				Mime: stringPtr("text/html"),
+			},
 		},
 		Errors: nil,
 	}
@@ -185,6 +191,7 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal axe results: %v", err)
 	}
+
 	lhBytes, err := json.Marshal(lighthouseResults)
 	if err != nil {
 		t.Fatalf("marshal lighthouse results: %v", err)
@@ -216,28 +223,34 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildAggregatedReport: %v", err)
 	}
+
 	if reportKey != "job-1/report.json" {
 		t.Fatalf("expected report key job-1/report.json, got %s", reportKey)
 	}
 
 	reportBytes := mem.objects[mem.key(storage.BucketArtifacts, reportKey)]
+
 	var aggReport report.UnifiedReportV2
-	if err := json.Unmarshal(reportBytes, &aggReport); err != nil {
-		t.Fatalf("unmarshal report: %v", err)
+	if unmarshalErr := json.Unmarshal(reportBytes, &aggReport); unmarshalErr != nil {
+		t.Fatalf("unmarshal report: %v", unmarshalErr)
 	}
 
 	if aggReport.Version != reportVersion {
 		t.Fatalf("expected version %s, got %s", reportVersion, aggReport.Version)
 	}
+
 	if aggReport.Meta.JobId != "job-1" {
 		t.Fatalf("expected job-1, got %s", aggReport.Meta.JobId)
 	}
+
 	if aggReport.Summary.TotalIssues != 4 {
 		t.Fatalf("expected 4 total issues, got %d", aggReport.Summary.TotalIssues)
 	}
+
 	if aggReport.Summary.ByScanner["axe"] != 2 || aggReport.Summary.ByScanner["lighthouse"] != 2 {
 		t.Fatalf("unexpected byScanner counts: %#v", aggReport.Summary.ByScanner)
 	}
+
 	if aggReport.Summary.PagesScanned != 2 {
 		t.Fatalf("expected 2 pages, got %d", aggReport.Summary.PagesScanned)
 	}
@@ -246,7 +259,10 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 	if page1.Id != "page-1" || page1.IssueCount != 3 {
 		t.Fatalf("expected merged page-1 with 3 issues, got %#v", page1)
 	}
-	if aggReport.Summary.BySeverity.Critical != 1 || aggReport.Summary.BySeverity.Serious != 1 || aggReport.Summary.BySeverity.Moderate != 1 || aggReport.Summary.BySeverity.Minor != 1 {
+
+	if aggReport.Summary.BySeverity.Critical != 1 || aggReport.Summary.BySeverity.Serious != 1 ||
+		aggReport.Summary.BySeverity.Moderate != 1 ||
+		aggReport.Summary.BySeverity.Minor != 1 {
 		t.Fatalf("unexpected severity totals: %#v", aggReport.Summary.BySeverity)
 	}
 }

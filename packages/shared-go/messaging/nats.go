@@ -280,7 +280,11 @@ func (c *Client) Publish(ctx context.Context, subject string, data any) error {
 	return nil
 }
 
-func (c *Client) Subscribe(ctx context.Context, stream, subject, consumerName string, handler func([]byte) error) error {
+func (c *Client) Subscribe(
+	ctx context.Context,
+	stream, subject, consumerName string,
+	handler func([]byte) error,
+) error {
 	if err := c.ensureReady(); err != nil {
 		return err
 	}
@@ -340,7 +344,11 @@ func (c *Client) Subscribe(ctx context.Context, stream, subject, consumerName st
 	return nil
 }
 
-func (c *Client) SubscribeWithContext(ctx context.Context, stream, subject, consumerName string, handler func(context.Context, jetstream.Msg) error) error {
+func (c *Client) SubscribeWithContext(
+	ctx context.Context,
+	stream, subject, consumerName string,
+	handler func(context.Context, jetstream.Msg) error,
+) error {
 	if err := c.ensureReady(); err != nil {
 		return err
 	}

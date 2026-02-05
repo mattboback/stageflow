@@ -81,17 +81,17 @@ func BuiltinManifests() ([]ScannerManifest, error) {
 			return nil, fmt.Errorf("read embedded manifest %s: %w", p, err)
 		}
 
-		if err := scannermanifest.ValidateManifestJSON(data); err != nil {
-			return nil, fmt.Errorf("validate embedded manifest %s: %w", p, err)
+		if validateErr := scannermanifest.ValidateManifestJSON(data); validateErr != nil {
+			return nil, fmt.Errorf("validate embedded manifest %s: %w", p, validateErr)
 		}
 
 		var m ScannerManifest
-		if err := json.Unmarshal(data, &m); err != nil {
-			return nil, fmt.Errorf("unmarshal embedded manifest %s: %w", p, err)
+		if unmarshalErr := json.Unmarshal(data, &m); unmarshalErr != nil {
+			return nil, fmt.Errorf("unmarshal embedded manifest %s: %w", p, unmarshalErr)
 		}
 
-		if err := validateManifest(&m); err != nil {
-			return nil, fmt.Errorf("validate embedded manifest %s: %w", p, err)
+		if manifestErr := validateManifest(&m); manifestErr != nil {
+			return nil, fmt.Errorf("validate embedded manifest %s: %w", p, manifestErr)
 		}
 
 		if _, ok := seen[m.Id]; ok {

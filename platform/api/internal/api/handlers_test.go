@@ -29,7 +29,7 @@ func TestHandleHealth(t *testing.T) {
 		config: &ServerConfig{},
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	server.handleHealth(rr, req)
@@ -42,7 +42,7 @@ func TestHandleHealth(t *testing.T) {
 func TestHandleJobStatusNotFound(t *testing.T) {
 	server, _, _, _ := newTestServer(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	server.handleJobStatus(rr, req)
@@ -58,6 +58,7 @@ func TestHandleJobURLSubmitEmpty(t *testing.T) {
 	body := bytes.NewBufferString(`{"urls":[]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -82,6 +83,7 @@ func TestHandleJobURLSubmitTooManyURLs(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -95,6 +97,7 @@ func TestHandleJobURLSubmitURLTooLong(t *testing.T) {
 	server, _, _, _ := newTestServer(t)
 
 	longURL := strings.Repeat("a", maxURLLength+1)
+
 	body, err := json.Marshal(map[string]any{"urls": []string{longURL}})
 	if err != nil {
 		t.Fatalf("marshal body: %v", err)
@@ -102,6 +105,7 @@ func TestHandleJobURLSubmitURLTooLong(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -119,6 +123,7 @@ func TestHandleJobURLSubmitBodyTooLarge(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -134,6 +139,7 @@ func TestHandleJobURLSubmitAiNavigatorRequiresScannerConfig(t *testing.T) {
 	body := bytes.NewBufferString(`{"urls":["https://example.com"],"modules":["ai-navigator"]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -175,6 +181,7 @@ func TestHandleJobURLSubmitAiNavigatorAcceptsScannerConfig(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -201,6 +208,7 @@ func TestHandleJobURLSubmitAiNavigatorAcceptsScannerConfig(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected goal to be an object")
 	}
+
 	if goal["objective"] != "Reach checkout" {
 		t.Fatalf("expected goal.objective %q, got %v", "Reach checkout", goal["objective"])
 	}
@@ -231,6 +239,7 @@ func TestHandleJobURLSubmitAiNavigatorUsesDefaultModel(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobURLSubmit(rr, req)
@@ -266,25 +275,56 @@ func TestHandleJobURLSubmitAiNavigatorUsesDefaultModel(t *testing.T) {
 func TestZipUploadToArtifactFlow(t *testing.T) {
 	server, storage, store, publisher := newTestServer(t)
 
-	zipBytes := buildTestZip(t)
+	jobID := uploadZipAndGetJobID(t, server, buildTestZip(t), scannerTypeAxe)
+
+	assertUploadCount(t, storage, 1)
+
+	completeJobWithArtifacts(t, store, jobID, events.ArtifactLocations{
+		ReportJSON: jobID + "/report.json",
+		ReportHTML: jobID + "/report.html",
+	})
+
+	job := assertJobStatusDone(t, server, jobID)
+	if job.Artifacts == nil || job.Artifacts.ReportHTML == "" {
+		t.Fatalf("expected artifacts populated")
+	}
+
+	assertJobReportRedirect(t, server, jobID)
+	assertJobResultsRedirect(t, server, jobID)
+
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected job.created published")
+	}
+}
+
+func uploadZipAndGetJobID(t *testing.T, server *Server, zipBytes []byte, modules string) string {
+	t.Helper()
+
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+
 	part, err := writer.CreateFormFile("file", "site.zip")
 	if err != nil {
 		t.Fatalf("create form file: %v", err)
 	}
-	if _, err := part.Write(zipBytes); err != nil {
-		t.Fatalf("write file: %v", err)
+
+	if _, writeErr := part.Write(zipBytes); writeErr != nil {
+		t.Fatalf("write file: %v", writeErr)
 	}
-	if err := writer.WriteField("modules", "axe"); err != nil {
-		t.Fatalf("failed to write field: %v", err)
+
+	if modules != "" {
+		if fieldErr := writer.WriteField("modules", modules); fieldErr != nil {
+			t.Fatalf("failed to write field: %v", fieldErr)
+		}
 	}
-	if err := writer.Close(); err != nil {
-		t.Fatalf("failed to close writer: %v", err)
+
+	if closeErr := writer.Close(); closeErr != nil {
+		t.Fatalf("failed to close writer: %v", closeErr)
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobZipUpload(rr, req)
@@ -293,68 +333,88 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 		t.Fatalf("expected 201, got %d", rr.Code)
 	}
 
-	var resp map[string]interface{}
-	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
+	var resp map[string]any
+	if decodeErr := json.NewDecoder(rr.Body).Decode(&resp); decodeErr != nil {
+		t.Fatalf("decode response: %v", decodeErr)
 	}
-	jobID := resp["job_id"].(string)
-	if jobID == "" {
+
+	jobIDValue, ok := resp["job_id"]
+	if !ok {
 		t.Fatalf("job_id missing")
 	}
 
-	// ensure file uploaded
-	if len(storage.uploads) != 1 {
-		t.Fatalf("expected 1 upload, got %d", len(storage.uploads))
+	jobID, ok := jobIDValue.(string)
+	if !ok || jobID == "" {
+		t.Fatalf("job_id should be a non-empty string")
 	}
 
-	// Simulate job completion
+	return jobID
+}
+
+func assertUploadCount(t *testing.T, storage *fakeStorage, expected int) {
+	t.Helper()
+
+	if len(storage.uploads) != expected {
+		t.Fatalf("expected %d upload, got %d", expected, len(storage.uploads))
+	}
+}
+
+func completeJobWithArtifacts(t *testing.T, store *status.Store, jobID string, artifacts events.ArtifactLocations) {
+	t.Helper()
+
 	payload := &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: fmt.Sprintf("%s/report.json", jobID),
-			ReportHTML: fmt.Sprintf("%s/report.html", jobID),
-		},
+		JobID:     jobID,
+		Artifacts: artifacts,
 	}
 	if err := store.HandleJobCompleted(context.Background(), payload); err != nil {
 		t.Fatalf("complete job: %v", err)
 	}
+}
 
-	// Status should show DONE with artifacts
-	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, nil)
-	statusRR := httptest.NewRecorder()
-	server.handleJobStatus(statusRR, statusReq)
-	if statusRR.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", statusRR.Code)
+func assertJobStatusDone(t *testing.T, server *Server, jobID string) models.JobStatus {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, http.NoBody)
+	rr := httptest.NewRecorder()
+	server.handleJobStatus(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
+
 	var job models.JobStatus
-	if err := json.NewDecoder(statusRR.Body).Decode(&job); err != nil {
+	if err := json.NewDecoder(rr.Body).Decode(&job); err != nil {
 		t.Fatalf("decode job: %v", err)
 	}
+
 	if job.State != models.JobStateDone {
 		t.Fatalf("expected DONE, got %s", job.State)
 	}
-	if job.Artifacts == nil || job.Artifacts.ReportHTML == "" {
-		t.Fatalf("expected artifacts populated")
-	}
 
-	// Report redirect
-	reportReq := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", nil)
-	reportRR := httptest.NewRecorder()
-	server.handleJobReport(reportRR, reportReq, jobID)
-	if reportRR.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected 307, got %d", reportRR.Code)
-	}
+	return job
+}
 
-	// Results redirect
-	resultsReq := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", nil)
-	resultsRR := httptest.NewRecorder()
-	server.handleJobResults(resultsRR, resultsReq, jobID)
-	if resultsRR.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected 307, got %d", resultsRR.Code)
-	}
+func assertJobReportRedirect(t *testing.T, server *Server, jobID string) {
+	t.Helper()
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected job.created published")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
+	rr := httptest.NewRecorder()
+	server.handleJobReport(rr, req, jobID)
+
+	if rr.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("expected 307, got %d", rr.Code)
+	}
+}
+
+func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
+	t.Helper()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
+	rr := httptest.NewRecorder()
+	server.handleJobResults(rr, req, jobID)
+
+	if rr.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("expected 307, got %d", rr.Code)
 	}
 }
 
@@ -374,14 +434,14 @@ func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
 	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
 		JobID: jobID,
 		Artifacts: events.ArtifactLocations{
-			ReportJSON: fmt.Sprintf("%s/report.json", jobID),
+			ReportJSON: jobID + "/report.json",
 			ReportHTML: "",
 		},
 	}); err != nil {
 		t.Fatalf("complete job: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	server.handleJobReport(rr, req, jobID)
@@ -389,9 +449,11 @@ func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
+
 	if ct := rr.Header().Get("Content-Type"); ct == "" || !strings.HasPrefix(ct, "text/html") {
 		t.Fatalf("expected text/html content-type, got %q", ct)
 	}
+
 	if body := rr.Body.String(); !strings.Contains(body, "/api/v1/jobs/"+jobID+"/results") {
 		t.Fatalf("expected results link in fallback HTML")
 	}
@@ -403,22 +465,27 @@ func TestZipUploadAiNavigatorRequiresScannerConfig(t *testing.T) {
 	zipBytes := buildTestZip(t)
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+
 	part, err := writer.CreateFormFile("file", "site.zip")
 	if err != nil {
 		t.Fatalf("create form file: %v", err)
 	}
-	if _, err := part.Write(zipBytes); err != nil {
-		t.Fatalf("write file: %v", err)
+
+	if _, writeErr := part.Write(zipBytes); writeErr != nil {
+		t.Fatalf("write file: %v", writeErr)
 	}
-	if err := writer.WriteField("modules", "ai-navigator"); err != nil {
-		t.Fatalf("failed to write field: %v", err)
+
+	if fieldErr := writer.WriteField("modules", "ai-navigator"); fieldErr != nil {
+		t.Fatalf("failed to write field: %v", fieldErr)
 	}
-	if err := writer.Close(); err != nil {
-		t.Fatalf("failed to close writer: %v", err)
+
+	if closeErr := writer.Close(); closeErr != nil {
+		t.Fatalf("failed to close writer: %v", closeErr)
 	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
+
 	rr := httptest.NewRecorder()
 
 	server.handleJobZipUpload(rr, req)
@@ -428,8 +495,8 @@ func TestZipUploadAiNavigatorRequiresScannerConfig(t *testing.T) {
 	}
 
 	var parsed httputil.ErrorResponse
-	if err := json.NewDecoder(rr.Body).Decode(&parsed); err != nil {
-		t.Fatalf("decode error response: %v", err)
+	if decodeErr := json.NewDecoder(rr.Body).Decode(&parsed); decodeErr != nil {
+		t.Fatalf("decode error response: %v", decodeErr)
 	}
 
 	if parsed.Error.Field != "scanner_configs.ai-navigator" {
@@ -467,8 +534,10 @@ func (f *fakeStorage) UploadFile(_ context.Context, bucket, path string, reader 
 	if err != nil {
 		return err
 	}
+
 	key := fmt.Sprintf("%s::%s", bucket, path)
 	f.uploads[key] = data
+
 	return nil
 }
 
@@ -524,17 +593,20 @@ func (f *fakeStorage) DownloadFile(_ context.Context, bucket, path string) (io.R
 	if err != nil {
 		return nil, err
 	}
+
 	f.uploads[key] = data
+
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-func (f *fakeStorage) DeleteFile(_ context.Context, _ string, _ string) error {
+func (f *fakeStorage) DeleteFile(_ context.Context, _, _ string) error {
 	return nil
 }
 
 func (f *fakeStorage) FileExists(_ context.Context, bucket, path string) (bool, error) {
 	key := fmt.Sprintf("%s::%s", bucket, path)
 	_, ok := f.uploads[key]
+
 	return ok, nil
 }
 
@@ -542,6 +614,7 @@ func strPtr(value string) *string {
 	if value == "" {
 		return nil
 	}
+
 	return &value
 }
 
@@ -551,16 +624,19 @@ type fakePublisher struct {
 
 func (f *fakePublisher) PublishJobCreated(_ context.Context, envelope *events.Envelope) error {
 	f.envelopes = append(f.envelopes, envelope)
+
 	return nil
 }
 
 func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePublisher) {
 	t.Helper()
 	dir := t.TempDir()
+
 	store, err := status.NewStore(&status.Config{Path: filepath.Join(dir, "status.db")})
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
+
 	t.Cleanup(func() {
 		if closeErr := store.Close(); closeErr != nil {
 			t.Fatalf("close store: %v", closeErr)
@@ -569,6 +645,7 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePub
 
 	storage := newFakeStorage()
 	publisher := &fakePublisher{}
+
 	registry, err := scannerregistry.InitializeRegistry(scannerregistry.DefaultConfig())
 	if err != nil {
 		t.Fatalf("init scanner registry: %v", err)
@@ -585,23 +662,30 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePub
 		scannerRegistry: registry,
 		ipResolver:      defaultSecurityTestResolver(t),
 	}
+
 	return server, storage, store, publisher
 }
 
 func buildTestZip(t *testing.T) []byte {
 	t.Helper()
+
 	var buf bytes.Buffer
+
 	zw := zip.NewWriter(&buf)
+
 	w, err := zw.Create("index.html")
 	if err != nil {
 		t.Fatalf("create zip entry: %v", err)
 	}
+
 	content := []byte("<html><body>Hello</body></html>")
-	if _, err := w.Write(content); err != nil {
-		t.Fatalf("write zip entry: %v", err)
+	if _, writeErr := w.Write(content); writeErr != nil {
+		t.Fatalf("write zip entry: %v", writeErr)
 	}
-	if err := zw.Close(); err != nil {
-		t.Fatalf("close zip: %v", err)
+
+	if closeErr := zw.Close(); closeErr != nil {
+		t.Fatalf("close zip: %v", closeErr)
 	}
+
 	return buf.Bytes()
 }

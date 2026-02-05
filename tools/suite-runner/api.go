@@ -58,8 +58,8 @@ func submitJob(
 	}
 
 	var sr submitResponse
-	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
-		return "", err
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&sr); decodeErr != nil {
+		return "", decodeErr
 	}
 
 	return sr.JobID, nil
@@ -93,8 +93,8 @@ func fetchStatus(ctx context.Context, client *http.Client, apiURL, jobID string)
 	}
 
 	var st jobStatus
-	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
-		return jobStatus{}, err
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&st); decodeErr != nil {
+		return jobStatus{}, decodeErr
 	}
 
 	return st, nil
@@ -131,8 +131,8 @@ func fetchResults(
 	}
 
 	var rs resultsSummary
-	if err := json.NewDecoder(resp.Body).Decode(&rs); err != nil {
-		return resultsSummary{}, err
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&rs); decodeErr != nil {
+		return resultsSummary{}, decodeErr
 	}
 
 	if rs.Summary.ByImpact == nil {

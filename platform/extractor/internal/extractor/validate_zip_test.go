@@ -21,8 +21,8 @@ func TestValidateZIP_Valid(t *testing.T) {
 		t.Fatalf("Failed to stat ZIP: %v", err)
 	}
 
-	if err := validateZIP(zipPath, info.Size()); err != nil {
-		t.Errorf("Expected valid ZIP to pass validation, got error: %v", err)
+	if validateErr := validateZIP(zipPath, info.Size()); validateErr != nil {
+		t.Errorf("Expected valid ZIP to pass validation, got error: %v", validateErr)
 	}
 }
 
@@ -69,9 +69,11 @@ func TestValidateZIP_PathTraversal(t *testing.T) {
 			if tt.wantErr && err == nil {
 				t.Errorf("Expected error containing %q, got nil", tt.errMsg)
 			}
+
 			if tt.wantErr && err != nil && !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("Expected error containing %q, got: %v", tt.errMsg, err)
 			}
+
 			if !tt.wantErr && err != nil {
 				t.Errorf("Expected no error, got: %v", err)
 			}
@@ -93,6 +95,7 @@ func TestValidateZIP_AbsolutePath(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for absolute path, got nil")
 	}
+
 	if err != nil && !strings.Contains(err.Error(), "absolute path") {
 		t.Errorf("Expected 'absolute path' error, got: %v", err)
 	}
@@ -122,16 +125,18 @@ func TestValidateZIP_SizeLimit(t *testing.T) {
 	if closeZipErr := zw.Close(); closeZipErr != nil {
 		t.Fatalf("Failed to close ZIP writer: %v", closeZipErr)
 	}
+
 	if closeFileErr := f.Close(); closeFileErr != nil {
 		t.Fatalf("Failed to close ZIP file: %v", closeFileErr)
 	}
 
-	info, err := os.Stat(zipPath)
-	if err != nil {
-		t.Fatalf("Failed to stat ZIP: %v", err)
+	info, statErr := os.Stat(zipPath)
+	if statErr != nil {
+		t.Fatalf("Failed to stat ZIP: %v", statErr)
 	}
-	if err := validateZIP(zipPath, info.Size()); err != nil {
-		t.Errorf("Normal size ZIP should pass, got: %v", err)
+
+	if validateErr := validateZIP(zipPath, info.Size()); validateErr != nil {
+		t.Errorf("Normal size ZIP should pass, got: %v", validateErr)
 	}
 }
 
@@ -142,13 +147,13 @@ func TestValidateZIP_ExpansionRatio(t *testing.T) {
 		"compressed.html": largeContent,
 	})
 
-	info, err := os.Stat(zipPath)
-	if err != nil {
-		t.Fatalf("Failed to stat ZIP: %v", err)
+	info, statErr := os.Stat(zipPath)
+	if statErr != nil {
+		t.Fatalf("Failed to stat ZIP: %v", statErr)
 	}
 
-	if err := validateZIP(zipPath, info.Size()); err != nil {
-		t.Errorf("Expected normal compression to pass, got: %v", err)
+	if validateErr := validateZIP(zipPath, info.Size()); validateErr != nil {
+		t.Errorf("Expected normal compression to pass, got: %v", validateErr)
 	}
 }
 
@@ -163,6 +168,7 @@ func TestValidateZIP_MaxEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to stat ZIP: %v", err)
 	}
+
 	if validateErr := validateZIP(zipPath, info.Size()); validateErr == nil {
 		t.Fatalf("expected max entries validation error, got nil")
 	}
@@ -175,8 +181,9 @@ func TestValidateZIP_MaxEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to stat ZIP: %v", err)
 	}
-	if err := validateZIP(zipPath2, info2.Size()); err != nil {
-		t.Fatalf("expected under-limit zip to pass, got %v", err)
+
+	if validateErr := validateZIP(zipPath2, info2.Size()); validateErr != nil {
+		t.Fatalf("expected under-limit zip to pass, got %v", validateErr)
 	}
 }
 
@@ -193,21 +200,23 @@ func createZIPWithNEntries(t *testing.T, count int, filename func(i int) string)
 
 	zw := zip.NewWriter(f)
 
-	for i := 0; i < count; i++ {
-		w, err := zw.Create(filename(i))
-		if err != nil {
-			t.Fatalf("create entry: %v", err)
+	for i := range count {
+		w, createErr := zw.Create(filename(i))
+		if createErr != nil {
+			t.Fatalf("create entry: %v", createErr)
 		}
-		if _, err := w.Write([]byte("hi")); err != nil {
-			t.Fatalf("write entry: %v", err)
+
+		if _, writeErr := w.Write([]byte("hi")); writeErr != nil {
+			t.Fatalf("write entry: %v", writeErr)
 		}
 	}
 
-	if err := zw.Close(); err != nil {
-		t.Fatalf("close zip writer: %v", err)
+	if closeZipErr := zw.Close(); closeZipErr != nil {
+		t.Fatalf("close zip writer: %v", closeZipErr)
 	}
-	if err := f.Close(); err != nil {
-		t.Fatalf("close zip file: %v", err)
+
+	if closeFileErr := f.Close(); closeFileErr != nil {
+		t.Fatalf("close zip file: %v", closeFileErr)
 	}
 
 	return zipPath
@@ -215,7 +224,7 @@ func createZIPWithNEntries(t *testing.T, count int, filename func(i int) string)
 
 func BenchmarkExtractZIP(b *testing.B) {
 	files := make(map[string]string)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		files[filepath.Join("pages", fmt.Sprintf("page%03d.html", i))] =
 			"<html><body>Page content here</body></html>"
 	}
@@ -223,7 +232,8 @@ func BenchmarkExtractZIP(b *testing.B) {
 	zipPath := createTestZIP(b, files)
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		destDir := b.TempDir()
 		if err := extractZIP(zipPath, destDir); err != nil {
 			b.Fatalf("Failed to extract ZIP: %v", err)
@@ -247,9 +257,10 @@ func BenchmarkValidateZIP(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		if err := validateZIP(zipPath, info.Size()); err != nil {
-			b.Fatalf("validate: %v", err)
+
+	for range b.N {
+		if validateErr := validateZIP(zipPath, info.Size()); validateErr != nil {
+			b.Fatalf("validate: %v", validateErr)
 		}
 	}
 }

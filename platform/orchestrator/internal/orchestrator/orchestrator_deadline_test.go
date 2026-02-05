@@ -37,12 +37,15 @@ func TestWatchDeadlineFailsStuckJob(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to fetch job: %v", err)
 	}
+
 	if stored.State != models.JobStateFailed {
 		t.Fatalf("expected job to fail due to timeout, got %s", stored.State)
 	}
+
 	if stored.CompletedAt == nil {
 		t.Fatalf("expected CompletedAt to be set after failure")
 	}
+
 	if publisher.failedCount() == 0 {
 		t.Fatalf("expected a job.failed event to be published")
 	}

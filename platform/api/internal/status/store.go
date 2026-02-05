@@ -53,23 +53,23 @@ func NewStore(cfg *Config) (*Store, error) {
 	}
 
 	ctx := context.Background()
-	if _, err := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); err != nil {
+	if _, walErr := db.ExecContext(ctx, "PRAGMA journal_mode=WAL"); walErr != nil {
 		closeStatusDB(db)
 
-		return nil, fmt.Errorf("enable WAL: %w", err)
+		return nil, fmt.Errorf("enable WAL: %w", walErr)
 	}
 
 	// Allow concurrent writers to wait instead of failing with SQLITE_BUSY.
-	if _, err := db.ExecContext(ctx, "PRAGMA busy_timeout=5000"); err != nil {
+	if _, busyErr := db.ExecContext(ctx, "PRAGMA busy_timeout=5000"); busyErr != nil {
 		closeStatusDB(db)
 
-		return nil, fmt.Errorf("set busy_timeout: %w", err)
+		return nil, fmt.Errorf("set busy_timeout: %w", busyErr)
 	}
 
-	if _, err := db.ExecContext(ctx, "PRAGMA foreign_keys=ON"); err != nil {
+	if _, fkErr := db.ExecContext(ctx, "PRAGMA foreign_keys=ON"); fkErr != nil {
 		closeStatusDB(db)
 
-		return nil, fmt.Errorf("enable foreign keys: %w", err)
+		return nil, fmt.Errorf("enable foreign keys: %w", fkErr)
 	}
 
 	// Best practice for SQLite with database/sql: one connection avoids lock contention and
@@ -78,10 +78,10 @@ func NewStore(cfg *Config) (*Store, error) {
 	db.SetMaxIdleConns(1)
 
 	store := &Store{db: db, path: cfg.Path}
-	if err := store.initSchema(); err != nil {
+	if schemaErr := store.initSchema(); schemaErr != nil {
 		closeStatusDB(db)
 
-		return nil, err
+		return nil, schemaErr
 	}
 
 	return store, nil

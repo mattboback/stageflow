@@ -53,6 +53,7 @@ func TestBuildPublicProxyURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			client := &MinIOClient{config: tt.config}
+
 			result := client.buildPublicProxyURL(tt.bucket, tt.path)
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)

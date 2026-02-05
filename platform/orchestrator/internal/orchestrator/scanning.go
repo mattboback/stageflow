@@ -26,7 +26,13 @@ func (o *Orchestrator) startScanning(ctx context.Context, job *models.Job) error
 		if !o.stateMachine.CanTransition(job.State, models.JobStateScanning) {
 			msg := fmt.Sprintf("job %s cannot transition to SCANNING from %s", job.ID, job.State)
 			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
-			o.failJobSafeWithDetails(ctx, job.ID, "scanning", msg, stateTransitionDetails(job.State, models.JobStateScanning))
+			o.failJobSafeWithDetails(
+				ctx,
+				job.ID,
+				"scanning",
+				msg,
+				stateTransitionDetails(job.State, models.JobStateScanning),
+			)
 
 			return fmt.Errorf("%s", msg)
 		}
@@ -43,7 +49,17 @@ func (o *Orchestrator) startScanning(ctx context.Context, job *models.Job) error
 		}
 	}
 
-	slog.Info("Starting scanners", "scanner_count", len(scannerTypes), "job_id", job.ID, "pod_id", job.PodID, "scanners", scannerTypes)
+	slog.Info(
+		"Starting scanners",
+		"scanner_count",
+		len(scannerTypes),
+		"job_id",
+		job.ID,
+		"pod_id",
+		job.PodID,
+		"scanners",
+		scannerTypes,
+	)
 
 	// Set expected scanners in database for completion tracking
 	if err := o.database.SetExpectedScanners(ctx, job.ID, scannerTypes); err != nil {
@@ -83,7 +99,7 @@ func (o *Orchestrator) startScannersWithTimeout(ctx context.Context, job *models
 
 	var firstErr error
 
-	for i := 0; i < len(scannerTypes); i++ {
+	for range scannerTypes {
 		select {
 		case err := <-errChan:
 			if err != nil && firstErr == nil {
@@ -99,6 +115,7 @@ func (o *Orchestrator) startScannersWithTimeout(ctx context.Context, job *models
 	return firstErr
 }
 
+//nolint:gocognit,gocyclo // Scanner startup requires multiple configuration and validation steps
 func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, scannerType string) error {
 	natsURL := "nats://" + o.natsHost + ":4222"
 	minioEndpoint := o.minioHost + ":9000"
@@ -166,6 +183,7 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 		env["SCAN_URLS"] = string(urlsJSON)
 	}
 
+	//nolint:nestif // Scanner config validation requires multiple nested checks
 	if len(job.Config.ScannerConfigs) > 0 {
 		if scannerConfig, ok := job.Config.ScannerConfigs[scannerType]; ok {
 			if len(scannerConfig) > 0 {
@@ -253,8 +271,8 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 		"container_id": containerResp.ID,
 	})
 
-	if err := o.podmanClient.StartContainer(ctx, containerResp.ID); err != nil {
-		return fmt.Errorf("failed to start %s scanner container: %w", scannerType, err)
+	if startErr := o.podmanClient.StartContainer(ctx, containerResp.ID); startErr != nil {
+		return fmt.Errorf("failed to start %s scanner container: %w", scannerType, startErr)
 	}
 
 	slog.Info("Started scanner container", "scanner", scannerType, "container_id", containerResp.ID, "job_id", job.ID)

@@ -24,35 +24,45 @@ type MockEventHandler struct {
 func (m *MockEventHandler) HandleJobCreated(_ context.Context, payload *events.JobCreatedPayload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.JobCreatedCalls = append(m.JobCreatedCalls, payload)
+
 	return m.ReturnError
 }
 
 func (m *MockEventHandler) HandleExtractionReady(_ context.Context, payload *events.ExtractionReadyPayload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.ExtractionReadyCalls = append(m.ExtractionReadyCalls, payload)
+
 	return m.ReturnError
 }
 
 func (m *MockEventHandler) HandleExtractionFailed(_ context.Context, payload *events.ExtractionFailedPayload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.ExtractionFailedCalls = append(m.ExtractionFailedCalls, payload)
+
 	return m.ReturnError
 }
 
 func (m *MockEventHandler) HandleScanCompleted(_ context.Context, payload *events.ScanCompletedPayload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.ScanCompletedCalls = append(m.ScanCompletedCalls, payload)
+
 	return m.ReturnError
 }
 
 func (m *MockEventHandler) HandleScanFailed(_ context.Context, payload *events.ScanFailedPayload) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.ScanFailedCalls = append(m.ScanFailedCalls, payload)
+
 	return m.ReturnError
 }
 
@@ -83,6 +93,7 @@ func TestNewConsumer(t *testing.T) {
 	})
 }
 
+//nolint:gocognit,gocyclo // Test function covers multiple interface scenarios
 func TestEventHandlerInterface(t *testing.T) {
 	t.Run("MockEventHandler implements EventHandler", func(_ *testing.T) {
 		var _ EventHandler = (*MockEventHandler)(nil)
@@ -222,7 +233,6 @@ func TestEventHandlerInterface(t *testing.T) {
 func TestConsumerSubscriptionMethods(t *testing.T) {
 	// These tests verify the Consumer structure
 	// Actual subscription testing requires integration tests with NATS
-
 	t.Run("Consumer Start returns error with nil client", func(t *testing.T) {
 		handler := &MockEventHandler{}
 		consumer := NewConsumer(nil, handler)
@@ -231,15 +241,16 @@ func TestConsumerSubscriptionMethods(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error with nil client, got nil")
 		}
+
 		if !errors.Is(err, sharedmsg.ErrNilClient) {
 			t.Fatalf("expected ErrNilClient, got %v", err)
 		}
 	})
 }
 
+//nolint:gocognit // Test function covers multiple payload structure validations
 func TestEventPayloadStructures(t *testing.T) {
 	// Test that our event payload types have expected fields
-
 	t.Run("JobCreatedPayload fields", func(t *testing.T) {
 		payload := events.JobCreatedPayload{
 			JobID:     "job-1",
@@ -250,9 +261,11 @@ func TestEventPayloadStructures(t *testing.T) {
 		if payload.JobID == "" {
 			t.Error("JobID should not be empty")
 		}
+
 		if payload.InputType != "urls" {
 			t.Errorf("InputType = %q, want %q", payload.InputType, "urls")
 		}
+
 		if len(payload.URLs) != 1 || payload.URLs[0] != "https://example.com" {
 			t.Errorf("URLs = %v, want [https://example.com]", payload.URLs)
 		}
@@ -269,12 +282,15 @@ func TestEventPayloadStructures(t *testing.T) {
 		if payload.ProvenancePath == "" {
 			t.Error("ProvenancePath should not be empty")
 		}
+
 		if payload.JobID == "" {
 			t.Error("JobID should not be empty")
 		}
+
 		if payload.BaseURL == "" {
 			t.Error("BaseURL should not be empty")
 		}
+
 		if payload.TotalPages != 5 {
 			t.Errorf("TotalPages = %d, want %d", payload.TotalPages, 5)
 		}
@@ -295,12 +311,15 @@ func TestEventPayloadStructures(t *testing.T) {
 		if payload.ResultsPath == "" || payload.ReportPath == "" {
 			t.Error("artifact paths should not be empty")
 		}
+
 		if payload.JobID == "" {
 			t.Error("JobID should not be empty")
 		}
+
 		if payload.ScannerType == "" {
 			t.Error("ScannerType should not be empty")
 		}
+
 		if payload.TotalPagesScanned != 5 {
 			t.Errorf("TotalPagesScanned = %d, want %d", payload.TotalPagesScanned, 5)
 		}
@@ -313,10 +332,12 @@ func TestMockHandlerConcurrency(t *testing.T) {
 		ctx := context.Background()
 
 		var wg sync.WaitGroup
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			wg.Add(1)
+
 			go func(i int) {
 				defer wg.Done()
+
 				switch i % 5 {
 				case 0:
 					_ = handler.HandleJobCreated(ctx, &events.JobCreatedPayload{JobID: "job"})

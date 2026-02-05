@@ -105,6 +105,7 @@ func (c *Client) doLibpodRequest(ctx context.Context, method, suffix string, bod
 	}
 
 	// If the chosen prefix yields a 404, retry with the alternate prefix and remember it if it works.
+	//nolint:nestif // API version fallback logic requires nested conditional handling
 	if resp.StatusCode == http.StatusNotFound {
 		var alt string
 

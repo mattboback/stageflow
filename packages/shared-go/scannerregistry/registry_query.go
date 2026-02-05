@@ -24,8 +24,8 @@ func (r *Registry) Resolve(idOrAlias string) (*Definition, bool) {
 		return def, true
 	}
 
-	if id, ok := r.aliasMap[strings.ToLower(idOrAlias)]; ok {
-		if def, ok := r.scanners[id]; ok {
+	if id, aliasFound := r.aliasMap[strings.ToLower(idOrAlias)]; aliasFound {
+		if def, defFound := r.scanners[id]; defFound {
 			return def, true
 		}
 	}
@@ -102,7 +102,7 @@ func (r *Registry) ListByCategory(category string) []*Definition {
 
 	result := make([]*Definition, 0, len(ids))
 	for _, id := range ids {
-		if def, ok := r.scanners[id]; ok && def.Enabled {
+		if def, found := r.scanners[id]; found && def.Enabled {
 			result = append(result, def)
 		}
 	}

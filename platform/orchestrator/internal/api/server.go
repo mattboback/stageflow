@@ -50,7 +50,10 @@ func parsePaginationParams(query url.Values, defaultLimit, maxLimit int) (limit,
 	limit = defaultLimit
 
 	if limitStr := query.Get("limit"); limitStr != "" {
-		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed >= minPaginationLimitValue && parsed <= maxLimit {
+		if parsed, err := strconv.Atoi(
+			limitStr,
+		); err == nil && parsed >= minPaginationLimitValue &&
+			parsed <= maxLimit {
 			limit = parsed
 		}
 	}
@@ -141,7 +144,11 @@ func (s *Server) handleJobRoutes(w http.ResponseWriter, r *http.Request) {
 
 		limit, offset := parsePaginationParams(r.URL.Query(), defaultJobEventsLimit, maxJobEventsLimit)
 
-		eventsList, err := s.database.ListJobEvents(r.Context(), jobID, db.ListJobEventsOptions{Limit: limit, Offset: offset})
+		eventsList, err := s.database.ListJobEvents(
+			r.Context(),
+			jobID,
+			db.ListJobEventsOptions{Limit: limit, Offset: offset},
+		)
 		if err != nil {
 			slog.Error("Failed to list job events", "job_id", jobID, "error", err)
 			httputil.RespondError(w, http.StatusInternalServerError, "Failed to retrieve job events")
@@ -283,7 +290,7 @@ func (s *Server) handleListPods(w http.ResponseWriter, r *http.Request) {
 			jobID := strings.TrimPrefix(pod.Name, "job-")
 			podData["job_id"] = jobID
 
-			if job, err := s.database.GetJob(r.Context(), jobID); err == nil {
+			if job, getJobErr := s.database.GetJob(r.Context(), jobID); getJobErr == nil {
 				podData["job_state"] = job.State
 			}
 		}

@@ -50,8 +50,8 @@ func TestProvenance_JSONTags(t *testing.T) {
 	}
 
 	var m map[string]any
-	if err := json.Unmarshal(b, &m); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	if unmarshalErr := json.Unmarshal(b, &m); unmarshalErr != nil {
+		t.Fatalf("unmarshal: %v", unmarshalErr)
 	}
 
 	for _, k := range []string{"version", "job_id", "base_url", "pages"} {

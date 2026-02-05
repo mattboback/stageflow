@@ -71,14 +71,30 @@ func (d *Database) RecordScanComplete(ctx context.Context, jobID string) error {
 }
 
 // UpdateJobMetrics updates the issue metrics for a job.
-func (d *Database) UpdateJobMetrics(ctx context.Context, jobID string, pagesScanned, total, critical, serious, moderate, minor int) error {
+func (d *Database) UpdateJobMetrics(
+	ctx context.Context,
+	jobID string,
+	pagesScanned, total, critical, serious, moderate, minor int,
+) error {
 	query := `
 		UPDATE jobs
 		SET pages_scanned = ?, total_issues = ?, critical_issues = ?, serious_issues = ?, moderate_issues = ?, minor_issues = ?, updated_at = ?
 		WHERE id = ?
 	`
 
-	if err := d.execJobUpdate(ctx, jobID, query, pagesScanned, total, critical, serious, moderate, minor, time.Now(), jobID); err != nil {
+	if err := d.execJobUpdate(
+		ctx,
+		jobID,
+		query,
+		pagesScanned,
+		total,
+		critical,
+		serious,
+		moderate,
+		minor,
+		time.Now(),
+		jobID,
+	); err != nil {
 		return fmt.Errorf("failed to update job metrics: %w", err)
 	}
 

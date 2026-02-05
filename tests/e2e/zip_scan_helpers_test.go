@@ -47,7 +47,12 @@ func waitForAPI(t *testing.T) {
 func isAPIReady(t *testing.T, client *http.Client) bool {
 	t.Helper()
 
-	healthReq, err := http.NewRequestWithContext(context.Background(), http.MethodGet, apiBaseURL+"/healthz", http.NoBody)
+	healthReq, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		apiBaseURL+"/healthz",
+		http.NoBody,
+	)
 	if err != nil {
 		return false
 	}
@@ -105,8 +110,8 @@ func createTestZip(t *testing.T) string {
 
 	defer func() { _ = dst.Close() }()
 
-	if _, err := io.Copy(dst, src); err != nil {
-		t.Fatalf("Failed to copy fixture zip: %v", err)
+	if _, copyErr := io.Copy(dst, src); copyErr != nil {
+		t.Fatalf("Failed to copy fixture zip: %v", copyErr)
 	}
 
 	return tempPath
@@ -152,7 +157,8 @@ func uploadZip(t *testing.T, zipPath string) string {
 
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusCreated {
 		bodyBytes, readErr := io.ReadAll(resp.Body)
 		if readErr != nil {
 			t.Fatalf("Failed to read upload error body: %v", readErr)
@@ -164,8 +170,8 @@ func uploadZip(t *testing.T, zipPath string) string {
 	var result struct {
 		JobID string `json:"job_id"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
+		t.Fatalf("Failed to decode response: %v", decodeErr)
 	}
 
 	return result.JobID
@@ -231,8 +237,8 @@ func fetchJobStatus(client *http.Client, jobID string) (*jobStatusResponse, erro
 	defer func() { _ = resp.Body.Close() }()
 
 	var status jobStatusResponse
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return nil, err
+	if decodeErr := json.NewDecoder(resp.Body).Decode(&status); decodeErr != nil {
+		return nil, decodeErr
 	}
 
 	return &status, nil

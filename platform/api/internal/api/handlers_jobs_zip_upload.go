@@ -94,8 +94,8 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 
-	jobReq, err := s.parseZipUpload(r.Context(), r)
-	if err != nil && s.handleZipParseError(r.Context(), w, err) {
+	jobReq, parseErr := s.parseZipUpload(r.Context(), r)
+	if parseErr != nil && s.handleZipParseError(r.Context(), w, parseErr) {
 		return
 	}
 
@@ -244,17 +244,30 @@ func (s *Server) processZipPart(ctx context.Context, part *multipart.Part, jobID
 	}
 }
 
-func (s *Server) handleZipFilePart(ctx context.Context, part *multipart.Part, jobID string, state *zipUploadState) error {
+func (s *Server) handleZipFilePart(
+	ctx context.Context,
+	part *multipart.Part,
+	jobID string,
+	state *zipUploadState,
+) error {
 	if state.fileUploaded {
 		return newClientDetailError(
-			httputil.NewValidationError("file", "Multiple 'file' parts are not supported", "Only include one ZIP archive per request."),
+			httputil.NewValidationError(
+				"file",
+				"Multiple 'file' parts are not supported",
+				"Only include one ZIP archive per request.",
+			),
 		)
 	}
 
 	filename := sanitizeFilename(part.FileName())
 	if filename == "" || !strings.HasSuffix(strings.ToLower(filename), ".zip") {
 		return newClientDetailError(
-			httputil.NewValidationError("file", "File must be a ZIP archive", "Upload a .zip file that contains your job data."),
+			httputil.NewValidationError(
+				"file",
+				"File must be a ZIP archive",
+				"Upload a .zip file that contains your job data.",
+			),
 		)
 	}
 
@@ -299,8 +312,8 @@ func handleScannerConfigsPart(ctx context.Context, part *multipart.Part, state *
 	}
 
 	var parsed map[string]map[string]any
-	if err := json.Unmarshal([]byte(value), &parsed); err != nil {
-		logging.Error(ctx, "Failed to parse scanner_configs", "error", err)
+	if unmarshalErr := json.Unmarshal([]byte(value), &parsed); unmarshalErr != nil {
+		logging.Error(ctx, "Failed to parse scanner_configs", "error", unmarshalErr)
 
 		return newClientDetailError(httputil.NewValidationError(
 			"scanner_configs",

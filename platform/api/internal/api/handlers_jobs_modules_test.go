@@ -26,38 +26,38 @@ func TestSplitCSV(t *testing.T) {
 		},
 		{
 			name:     "single value",
-			input:    "axe",
-			expected: []string{"axe"},
+			input:    scannerTypeAxe,
+			expected: []string{scannerTypeAxe},
 		},
 		{
 			name:     "multiple values",
-			input:    "axe,lighthouse,seo",
-			expected: []string{"axe", "lighthouse", "seo"},
+			input:    scannerTypeAxe + ",lighthouse,seo",
+			expected: []string{scannerTypeAxe, "lighthouse", "seo"},
 		},
 		{
 			name:     "trims whitespace around values",
-			input:    " axe , lighthouse , seo ",
-			expected: []string{"axe", "lighthouse", "seo"},
+			input:    " " + scannerTypeAxe + " , lighthouse , seo ",
+			expected: []string{scannerTypeAxe, "lighthouse", "seo"},
 		},
 		{
 			name:     "filters empty parts",
-			input:    "axe,,lighthouse",
-			expected: []string{"axe", "lighthouse"},
+			input:    scannerTypeAxe + ",,lighthouse",
+			expected: []string{scannerTypeAxe, "lighthouse"},
 		},
 		{
 			name:     "handles trailing comma",
-			input:    "axe,lighthouse,",
-			expected: []string{"axe", "lighthouse"},
+			input:    scannerTypeAxe + ",lighthouse,",
+			expected: []string{scannerTypeAxe, "lighthouse"},
 		},
 		{
 			name:     "handles leading comma",
-			input:    ",axe,lighthouse",
-			expected: []string{"axe", "lighthouse"},
+			input:    "," + scannerTypeAxe + ",lighthouse",
+			expected: []string{scannerTypeAxe, "lighthouse"},
 		},
 		{
 			name:     "handles multiple empty parts",
-			input:    "axe,,,lighthouse,,seo",
-			expected: []string{"axe", "lighthouse", "seo"},
+			input:    scannerTypeAxe + ",,,lighthouse,,seo",
+			expected: []string{scannerTypeAxe, "lighthouse", "seo"},
 		},
 	}
 
@@ -69,11 +69,13 @@ func TestSplitCSV(t *testing.T) {
 				if result != nil {
 					t.Errorf("expected nil, got %v", result)
 				}
+
 				return
 			}
 
 			if len(result) != len(tt.expected) {
 				t.Errorf("expected %d items, got %d: %v", len(tt.expected), len(result), result)
+
 				return
 			}
 
@@ -144,16 +146,18 @@ func TestNormalizeModules_NoRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(result) != 1 || result[0] != scannerTypeAxe {
 			t.Errorf("expected [axe], got %v", result)
 		}
 	})
 
 	t.Run("axe explicit returns axe", func(t *testing.T) {
-		result, err := server.normalizeModules([]string{"axe"})
+		result, err := server.normalizeModules([]string{scannerTypeAxe})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(result) != 1 || result[0] != scannerTypeAxe {
 			t.Errorf("expected [axe], got %v", result)
 		}
@@ -174,10 +178,11 @@ func TestNormalizeModules_NoRegistry(t *testing.T) {
 	})
 
 	t.Run("handles whitespace and case", func(t *testing.T) {
-		result, err := server.normalizeModules([]string{" AXE "})
+		result, err := server.normalizeModules([]string{" " + scannerTypeAxe + " "})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(result) != 1 || result[0] != scannerTypeAxe {
 			t.Errorf("expected [axe], got %v", result)
 		}
@@ -192,16 +197,18 @@ func TestNormalizeModules_WithRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(result) == 0 {
 			t.Error("expected non-empty result")
 		}
 	})
 
 	t.Run("valid module resolves", func(t *testing.T) {
-		result, err := server.normalizeModules([]string{"axe"})
+		result, err := server.normalizeModules([]string{scannerTypeAxe})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(result) == 0 {
 			t.Error("expected non-empty result")
 		}
@@ -242,12 +249,15 @@ func TestListSupportedModuleIDs(t *testing.T) {
 
 		// Should contain axe at minimum
 		hasAxe := false
+
 		for _, id := range result {
-			if id == "axe" {
+			if id == scannerTypeAxe {
 				hasAxe = true
+
 				break
 			}
 		}
+
 		if !hasAxe {
 			t.Error("expected result to contain 'axe'")
 		}
@@ -259,10 +269,12 @@ func newTestServerForModules(t *testing.T) *Server {
 	t.Helper()
 
 	dir := t.TempDir()
+
 	store, err := status.NewStore(&status.Config{Path: filepath.Join(dir, "status.db")})
 	if err != nil {
 		t.Fatalf("new store: %v", err)
 	}
+
 	t.Cleanup(func() {
 		if closeErr := store.Close(); closeErr != nil {
 			t.Fatalf("close store: %v", closeErr)

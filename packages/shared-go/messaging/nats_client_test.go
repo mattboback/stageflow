@@ -21,11 +21,17 @@ func TestNewClient_WithNilConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewClient with nil config should use defaults: %v", err)
 	}
-	defer client.Close()
+
+	t.Cleanup(func() {
+		if closeErr := client.Close(); closeErr != nil {
+			t.Errorf("Close() error: %v", closeErr)
+		}
+	})
 
 	if client.nc == nil {
 		t.Fatal("expected non-nil NATS connection")
 	}
+
 	if client.js == nil {
 		t.Fatal("expected non-nil JetStream context")
 	}
@@ -45,7 +51,12 @@ func TestNewClient_WithPartialConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewClient should normalize zero-values: %v", err)
 	}
-	defer client.Close()
+
+	t.Cleanup(func() {
+		if closeErr := client.Close(); closeErr != nil {
+			t.Errorf("Close() error: %v", closeErr)
+		}
+	})
 }
 
 func TestNewClient_InvalidURL(t *testing.T) {
@@ -91,6 +102,8 @@ func TestClient_EnsureReady(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := tt.client.ensureReady()
 			if !errors.Is(err, tt.expectErr) {
 				t.Fatalf("expected error %v, got %v", tt.expectErr, err)
@@ -136,6 +149,8 @@ func TestClient_Publish_InvalidInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := client.Publish(tt.ctx, tt.subject, tt.data)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Publish() error = %v, wantErr %v", err, tt.wantErr)
@@ -148,6 +163,7 @@ func TestClient_Subscribe_InvalidInputs(t *testing.T) {
 	t.Parallel()
 
 	var client *Client
+
 	handler := func([]byte) error { return nil }
 
 	tests := []struct {
@@ -190,6 +206,8 @@ func TestClient_Subscribe_InvalidInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := client.Subscribe(tt.ctx, tt.stream, tt.subject, tt.consumerName, tt.handler)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Subscribe() error = %v, wantErr %v", err, tt.wantErr)
@@ -225,6 +243,8 @@ func TestClient_SubscribeWithContext_InvalidInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := client.SubscribeWithContext(tt.ctx, "stream", "subject", "consumer", nil)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("SubscribeWithContext() error = %v, wantErr %v", err, tt.wantErr)
@@ -262,6 +282,8 @@ func TestClient_PublishEvent_InvalidEnvelope(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := client.PublishEvent(context.Background(), "test.subject", tt.envelope)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("PublishEvent() error = %v, wantErr %v", err, tt.wantErr)
@@ -286,27 +308,47 @@ func TestSubscribeTyped_InvalidSubscription(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name:    "nil client",
-			client:  nil,
-			sub:     Subscription[TestPayload]{Stream: "s", Subject: "subj", Durable: "d", Handler: func(context.Context, *TestPayload) error { return nil }},
+			name:   "nil client",
+			client: nil,
+			sub: Subscription[TestPayload]{
+				Stream:  "s",
+				Subject: "subj",
+				Durable: "d",
+				Handler: func(context.Context, *TestPayload) error { return nil },
+			},
 			wantErr: ErrNilClient,
 		},
 		{
-			name:    "empty stream",
-			client:  &Client{},
-			sub:     Subscription[TestPayload]{Stream: "", Subject: "subj", Durable: "d", Handler: func(context.Context, *TestPayload) error { return nil }},
+			name:   "empty stream",
+			client: &Client{},
+			sub: Subscription[TestPayload]{
+				Stream:  "",
+				Subject: "subj",
+				Durable: "d",
+				Handler: func(context.Context, *TestPayload) error { return nil },
+			},
 			wantErr: ErrBadSubscription,
 		},
 		{
-			name:    "empty subject",
-			client:  &Client{},
-			sub:     Subscription[TestPayload]{Stream: "s", Subject: "", Durable: "d", Handler: func(context.Context, *TestPayload) error { return nil }},
+			name:   "empty subject",
+			client: &Client{},
+			sub: Subscription[TestPayload]{
+				Stream:  "s",
+				Subject: "",
+				Durable: "d",
+				Handler: func(context.Context, *TestPayload) error { return nil },
+			},
 			wantErr: ErrBadSubscription,
 		},
 		{
-			name:    "empty durable",
-			client:  &Client{},
-			sub:     Subscription[TestPayload]{Stream: "s", Subject: "subj", Durable: "", Handler: func(context.Context, *TestPayload) error { return nil }},
+			name:   "empty durable",
+			client: &Client{},
+			sub: Subscription[TestPayload]{
+				Stream:  "s",
+				Subject: "subj",
+				Durable: "",
+				Handler: func(context.Context, *TestPayload) error { return nil },
+			},
 			wantErr: ErrBadSubscription,
 		},
 		{
@@ -319,6 +361,8 @@ func TestSubscribeTyped_InvalidSubscription(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			err := SubscribeTyped(ctx, tt.client, tt.sub)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected error %v, got %v", tt.wantErr, err)
@@ -340,7 +384,9 @@ func TestClient_EnsureStreams_NilContext(t *testing.T) {
 	t.Parallel()
 
 	client := &Client{}
+
 	var nilCtx context.Context
+
 	err := client.EnsureStreams(nilCtx)
 	if !errors.Is(err, ErrNilContext) {
 		t.Fatalf("expected ErrNilContext, got %v", err)
@@ -351,6 +397,7 @@ func TestUnmarshalStrict_UnmarshalableData(t *testing.T) {
 	t.Parallel()
 
 	data := []byte(`invalid json`)
+
 	var result map[string]any
 
 	err := unmarshalStrict(data, &result)
@@ -363,6 +410,7 @@ func TestUnmarshalLenient_UnmarshalableData(t *testing.T) {
 	t.Parallel()
 
 	data := []byte(`invalid json`)
+
 	var result map[string]any
 
 	err := unmarshalLenient(data, &result)
@@ -394,6 +442,7 @@ func TestReceivedEventMetaFromContext_InvalidContext(t *testing.T) {
 
 	// Context with wrong type
 	ctx := context.WithValue(context.Background(), receivedMetaKey{}, "not a meta")
+
 	_, ok := ReceivedEventMetaFromContext(ctx)
 	if ok {
 		t.Fatal("expected false for wrong type in context")
@@ -423,6 +472,8 @@ func TestDefaultConfig_Normalization(t *testing.T) {
 				ConnectTimeout: 5 * time.Second,
 			},
 			validate: func(t *testing.T, cfg *Config) {
+				t.Helper()
+
 				// Normalization happens in NewClient, not in config itself
 				if cfg.URL != "" {
 					t.Fatalf("expected empty URL to remain empty in config, got %s", cfg.URL)
@@ -438,6 +489,8 @@ func TestDefaultConfig_Normalization(t *testing.T) {
 				ConnectTimeout: 0,
 			},
 			validate: func(t *testing.T, cfg *Config) {
+				t.Helper()
+
 				if cfg.MaxReconnects != 0 {
 					t.Fatalf("expected MaxReconnects to remain 0, got %d", cfg.MaxReconnects)
 				}
@@ -447,6 +500,8 @@ func TestDefaultConfig_Normalization(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			tt.validate(t, tt.input)
 		})
 	}
@@ -459,6 +514,7 @@ func TestUnmarshalStrict_EdgeCases(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{}`)
+
 		var result struct{}
 		if err := unmarshalStrict(data, &result); err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -469,10 +525,12 @@ func TestUnmarshalStrict_EdgeCases(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`null`)
+
 		var result *struct{}
 		if err := unmarshalStrict(data, &result); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if result != nil {
 			t.Fatal("expected nil result")
 		}
@@ -482,6 +540,7 @@ func TestUnmarshalStrict_EdgeCases(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"known": {"unknown": "value"}}`)
+
 		var result struct {
 			Known struct {
 				Known string `json:"known"`
@@ -500,6 +559,7 @@ func TestUnmarshalLenient_EdgeCases(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`{"a": {"b": {"c": {"unknown": "deep"}}}}`)
+
 		var result struct {
 			A struct {
 				B struct {
@@ -516,12 +576,14 @@ func TestUnmarshalLenient_EdgeCases(t *testing.T) {
 		t.Parallel()
 
 		data := []byte(`[{"known": "value", "unknown": "ignored"}]`)
+
 		var result []struct {
 			Known string `json:"known"`
 		}
 		if err := unmarshalLenient(data, &result); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
 		if len(result) != 1 || result[0].Known != "value" {
 			t.Fatalf("unexpected result: %+v", result)
 		}
@@ -552,6 +614,7 @@ func TestValidatePublishEventEnvelope_EdgeCases(t *testing.T) {
 		t.Parallel()
 
 		var env any
+
 		err := validatePublishEventEnvelope(env)
 		if err == nil {
 			t.Fatal("expected error for nil interface")

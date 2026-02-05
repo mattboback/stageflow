@@ -80,7 +80,7 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Api-Key")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
@@ -106,7 +106,7 @@ func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		provided := strings.TrimSpace(r.Header.Get("X-API-Key"))
+		provided := strings.TrimSpace(r.Header.Get("X-Api-Key"))
 		if provided == "" {
 			auth := strings.TrimSpace(r.Header.Get("Authorization"))
 			if strings.HasPrefix(strings.ToLower(auth), "bearer ") {

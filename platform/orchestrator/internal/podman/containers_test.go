@@ -34,7 +34,9 @@ func TestCreateContainer(t *testing.T) {
 		resp := ContainerCreateResponse{
 			ID: "container-12345",
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
@@ -84,6 +86,7 @@ func TestStopContainer(t *testing.T) {
 		if timeout != "10" {
 			t.Errorf("Expected timeout=10, got %s", timeout)
 		}
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -104,6 +107,7 @@ func TestRemoveContainer(t *testing.T) {
 		if force != "true" {
 			t.Error("Expected force=true")
 		}
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 
@@ -126,7 +130,9 @@ func TestInspectContainer(t *testing.T) {
 			State:  "running",
 			Status: "Up 5 minutes",
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
@@ -142,6 +148,7 @@ func TestInspectContainer(t *testing.T) {
 	if result.ID != "container-123" {
 		t.Errorf("Expected container ID container-123, got %s", result.ID)
 	}
+
 	if result.State != "running" {
 		t.Errorf("Expected state running, got %s", result.State)
 	}
@@ -155,7 +162,9 @@ func TestWaitContainer(t *testing.T) {
 		resp := ContainerWaitResponse{
 			StatusCode: 0,
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}

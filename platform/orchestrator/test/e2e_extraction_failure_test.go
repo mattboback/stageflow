@@ -16,6 +16,7 @@ func TestE2E_ExtractionFailureFlow(t *testing.T) {
 	jobID := "test-job-456"
 
 	t.Log("Step 1: Handling job.created event")
+
 	jobCreated := &events.JobCreatedPayload{
 		JobID:     jobID,
 		InputType: "zip",
@@ -33,6 +34,7 @@ func TestE2E_ExtractionFailureFlow(t *testing.T) {
 	}
 
 	t.Log("Step 2: Handling extraction.failed event")
+
 	extractionFailed := &events.ExtractionFailedPayload{
 		JobID:        jobID,
 		Error:        "Corrupt ZIP file",
@@ -48,9 +50,11 @@ func TestE2E_ExtractionFailureFlow(t *testing.T) {
 	if job.State != models.JobStateFailed {
 		t.Errorf("Expected state FAILED, got %s", job.State)
 	}
+
 	if job.Error != "Corrupt ZIP file" {
 		t.Errorf("Expected error message 'Corrupt ZIP file', got '%s'", job.Error)
 	}
+
 	if job.CompletedAt == nil {
 		t.Error("Expected CompletedAt to be set on failure")
 	}
@@ -66,6 +70,7 @@ func TestE2E_ExtractionFailureFlow(t *testing.T) {
 		if event.JobID != jobID {
 			t.Errorf("Expected job ID %s, got %s", jobID, event.JobID)
 		}
+
 		if event.Stage != "extraction" {
 			t.Errorf("Expected stage extraction, got %s", event.Stage)
 		}

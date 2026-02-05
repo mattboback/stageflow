@@ -23,26 +23,33 @@ func (m *memoryStorage) UploadFile(_ context.Context, bucket, path string, reade
 	if err != nil {
 		return err
 	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	m.objects[m.key(bucket, path)] = data
+
 	return nil
 }
 
 func (m *memoryStorage) DownloadFile(_ context.Context, bucket, path string) (io.ReadCloser, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	data, ok := m.objects[m.key(bucket, path)]
 	if !ok {
 		return nil, fmt.Errorf("object not found: %s/%s", bucket, path)
 	}
+
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
 func (m *memoryStorage) DeleteFile(_ context.Context, bucket, path string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	delete(m.objects, m.key(bucket, path))
+
 	return nil
 }
 
@@ -53,7 +60,9 @@ func (m *memoryStorage) GetPresignedURL(_ context.Context, bucket, path string, 
 func (m *memoryStorage) FileExists(_ context.Context, bucket, path string) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
 	_, ok := m.objects[m.key(bucket, path)]
+
 	return ok, nil
 }
 

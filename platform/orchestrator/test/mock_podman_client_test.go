@@ -44,7 +44,10 @@ func newMockPodmanClient() *mockPodmanClient {
 	}
 }
 
-func (m *mockPodmanClient) CreatePod(_ context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
+func (m *mockPodmanClient) CreatePod(
+	_ context.Context,
+	req *podman.PodCreateRequest,
+) (*podman.PodCreateResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -66,6 +69,7 @@ func (m *mockPodmanClient) StopPod(_ context.Context, podID string) error {
 	if pod, exists := m.pods[podID]; exists {
 		pod.State = "stopped"
 	}
+
 	return nil
 }
 
@@ -74,6 +78,7 @@ func (m *mockPodmanClient) RemovePod(_ context.Context, podID string, _ bool) er
 	defer m.mu.Unlock()
 
 	delete(m.pods, podID)
+
 	return nil
 }
 
@@ -110,10 +115,14 @@ func (m *mockPodmanClient) RemoveVolume(_ context.Context, name string, _ bool) 
 	defer m.mu.Unlock()
 
 	delete(m.volumes, name)
+
 	return nil
 }
 
-func (m *mockPodmanClient) CreateContainer(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+func (m *mockPodmanClient) CreateContainer(
+	_ context.Context,
+	req *podman.ContainerCreateRequest,
+) (*podman.ContainerCreateResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -136,6 +145,7 @@ func (m *mockPodmanClient) StartContainer(_ context.Context, containerID string)
 	if c, ok := m.containers[containerID]; ok {
 		c.State = "running"
 	}
+
 	return nil
 }
 
@@ -146,6 +156,7 @@ func (m *mockPodmanClient) WaitContainer(_ context.Context, containerID string) 
 	if c, ok := m.containers[containerID]; ok {
 		c.State = "exited"
 	}
+
 	return &podman.ContainerWaitResponse{StatusCode: 0}, nil
 }
 
@@ -154,6 +165,7 @@ func (m *mockPodmanClient) RemoveContainer(_ context.Context, containerID string
 	defer m.mu.Unlock()
 
 	delete(m.containers, containerID)
+
 	return nil
 }
 

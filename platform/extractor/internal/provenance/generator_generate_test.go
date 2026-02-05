@@ -27,9 +27,11 @@ func TestGenerate_Basic(t *testing.T) {
 	if prov.Version == "" {
 		t.Error("Expected Version to be set")
 	}
+
 	if prov.JobID != jobID {
 		t.Errorf("Expected JobID %s, got %s", jobID, prov.JobID)
 	}
+
 	if prov.BaseURL != baseURL {
 		t.Errorf("Expected BaseURL %s, got %s", baseURL, prov.BaseURL)
 	}
@@ -41,6 +43,7 @@ func TestGenerate_Basic(t *testing.T) {
 	if prov.Pages[0].ID != "page-001" {
 		t.Errorf("Expected page ID page-001, got %s", prov.Pages[0].ID)
 	}
+
 	if prov.Pages[0].Path != "/index.html" {
 		t.Errorf("Expected path /index.html, got %s", prov.Pages[0].Path)
 	}
@@ -78,6 +81,7 @@ func TestGenerate_NestedPaths(t *testing.T) {
 	}
 
 	outputPath := filepath.Join(t.TempDir(), "provenance.json")
+
 	prov, err := gen.Generate("test-job-123", "http://localhost:8080", pages, outputPath)
 	if err != nil {
 		t.Fatalf("Failed to generate provenance: %v", err)
@@ -128,6 +132,7 @@ func TestGenerate_DifferentBaseURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			outputPath := filepath.Join(t.TempDir(), "provenance.json")
+
 			prov, err := gen.Generate("test-job", tt.baseURL, pages, outputPath)
 			if err != nil {
 				t.Fatalf("Failed to generate provenance: %v", err)
@@ -144,7 +149,7 @@ func TestGenerate_LargeNumberOfPages(t *testing.T) {
 	gen := NewGenerator()
 
 	pages := make([]discovery.HTMLPage, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		pages[i] = discovery.HTMLPage{
 			ID:   "page-001",
 			Path: "/page.html",
@@ -153,6 +158,7 @@ func TestGenerate_LargeNumberOfPages(t *testing.T) {
 	}
 
 	outputPath := filepath.Join(t.TempDir(), "provenance.json")
+
 	prov, err := gen.Generate("test-job-123", "http://localhost:8080", pages, outputPath)
 	if err != nil {
 		t.Fatalf("Failed to generate provenance: %v", err)

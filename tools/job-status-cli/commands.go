@@ -40,28 +40,30 @@ func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 	}
 
 	var response ListJobsResponse
-	if err := decodeOKJSON(ctx, client, requestURL, &response); err != nil {
-		return err
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+		return decodeErr
 	}
 
-	if _, err := fmt.Fprintf(out, "Jobs (showing %d of %d total)\n\n", len(response.Jobs), response.Total); err != nil {
-		return err
+	if _, writeErr := fmt.Fprintf(
+		out, "Jobs (showing %d of %d total)\n\n", len(response.Jobs), response.Total,
+	); writeErr != nil {
+		return writeErr
 	}
 
 	if len(response.Jobs) == 0 {
-		if _, err := fmt.Fprintln(out, "No jobs found"); err != nil {
-			return err
+		if _, writeErr := fmt.Fprintln(out, "No jobs found"); writeErr != nil {
+			return writeErr
 		}
 
 		return nil
 	}
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	if _, err := fmt.Fprintf(
+	if _, writeErr := fmt.Fprintf(
 		w,
 		"JOB ID\tSTATE\tINPUT TYPE\tCREATED\tCOMPLETED\tERROR\n------\t-----\t----------\t-------\t---------\t-----\n",
-	); err != nil {
-		return err
+	); writeErr != nil {
+		return writeErr
 	}
 
 	now := time.Now()
@@ -77,7 +79,7 @@ func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 			errorStr = truncateWithEllipsis(job.Error, 30)
 		}
 
-		if _, err := fmt.Fprintf(
+		if _, writeErr := fmt.Fprintf(
 			w,
 			"%s\t%s\t%s\t%s\t%s\t%s\n",
 			abbreviate(job.ID, 8),
@@ -86,15 +88,21 @@ func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 			formatDuration(now.Sub(job.CreatedAt)),
 			completedStr,
 			errorStr,
-		); err != nil {
-			return err
+		); writeErr != nil {
+			return writeErr
 		}
 	}
 
 	return w.Flush()
 }
 
-func showJobEvents(ctx context.Context, client *http.Client, out io.Writer, apiURL, jobID string, opts jobEventsOptions) error {
+func showJobEvents(
+	ctx context.Context,
+	client *http.Client,
+	out io.Writer,
+	apiURL, jobID string,
+	opts jobEventsOptions,
+) error {
 	if jobID == "" {
 		return errors.New("job id is required")
 	}
@@ -107,20 +115,20 @@ func showJobEvents(ctx context.Context, client *http.Client, out io.Writer, apiU
 	}
 
 	var response ListJobEventsResponse
-	if err := decodeOKJSON(ctx, client, requestURL, &response); err != nil {
-		return err
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+		return decodeErr
 	}
 
-	if err := writeJobEventsHeading(out, jobID); err != nil {
-		return err
+	if headingErr := writeJobEventsHeading(out, jobID); headingErr != nil {
+		return headingErr
 	}
 
 	if len(response.Events) == 0 {
 		return writeNoJobEventsMessage(out)
 	}
 
-	if err := writeJobEventsTable(out, response.Events); err != nil {
-		return err
+	if tableErr := writeJobEventsTable(out, response.Events); tableErr != nil {
+		return tableErr
 	}
 
 	if !opts.showPayload {
@@ -165,7 +173,10 @@ func writeNoJobEventsMessage(out io.Writer) error {
 
 func writeJobEventsTable(out io.Writer, events []JobEvent) error {
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	if _, err := fmt.Fprintf(w, "WHEN\tEVENT\tSTATUS\tDELIVERIES\tSTREAM_SEQ\tPRODUCER\tERROR\n----\t-----\t------\t----------\t----------\t--------\t-----\n"); err != nil {
+	if _, err := fmt.Fprintf(
+		w,
+		"WHEN\tEVENT\tSTATUS\tDELIVERIES\tSTREAM_SEQ\tPRODUCER\tERROR\n----\t-----\t------\t----------\t----------\t--------\t-----\n",
+	); err != nil {
 		return err
 	}
 
@@ -207,7 +218,13 @@ func writeJobEventsPayloads(out io.Writer, events []JobEvent) error {
 			continue
 		}
 
-		if _, err := fmt.Fprintf(out, "\n%s %s\n%s\n", ev.Timestamp.Format(time.RFC3339), ev.Event, ev.Payload); err != nil {
+		if _, err := fmt.Fprintf(
+			out,
+			"\n%s %s\n%s\n",
+			ev.Timestamp.Format(time.RFC3339),
+			ev.Event,
+			ev.Payload,
+		); err != nil {
 			return err
 		}
 	}
@@ -246,29 +263,32 @@ func listPods(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 	}
 
 	var response ListPodsResponse
-	if err := decodeOKJSON(ctx, client, requestURL, &response); err != nil {
-		return err
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+		return decodeErr
 	}
 
-	if _, err := fmt.Fprintf(out, "Pods (total: %d)\n\n", response.Total); err != nil {
-		return err
+	if _, writeErr := fmt.Fprintf(out, "Pods (total: %d)\n\n", response.Total); writeErr != nil {
+		return writeErr
 	}
 
 	if len(response.Pods) == 0 {
-		if _, err := fmt.Fprintln(out, "No pods found"); err != nil {
-			return err
+		if _, writeErr := fmt.Fprintln(out, "No pods found"); writeErr != nil {
+			return writeErr
 		}
 
 		return nil
 	}
 
 	w := tabwriter.NewWriter(out, 0, 0, 2, ' ', 0)
-	if _, err := fmt.Fprintf(w, "POD ID\tNAME\tSTATUS\tJOB ID\tJOB STATE\n------\t----\t------\t------\t---------\n"); err != nil {
-		return err
+	if _, writeErr := fmt.Fprintf(
+		w,
+		"POD ID\tNAME\tSTATUS\tJOB ID\tJOB STATE\n------\t----\t------\t------\t---------\n",
+	); writeErr != nil {
+		return writeErr
 	}
 
 	for _, pod := range response.Pods {
-		if _, err := fmt.Fprintf(
+		if _, writeErr := fmt.Fprintf(
 			w,
 			"%s\t%s\t%s\t%s\t%s\n",
 			truncate(pod.ID, 12),
@@ -276,8 +296,8 @@ func listPods(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 			pod.Status,
 			formatJobID(pod.JobID),
 			formatJobState(pod.JobState),
-		); err != nil {
-			return err
+		); writeErr != nil {
+			return writeErr
 		}
 	}
 
@@ -291,16 +311,16 @@ func showSystemStatus(ctx context.Context, client *http.Client, out io.Writer, a
 	}
 
 	var response SystemStatusResponse
-	if err := decodeOKJSON(ctx, client, requestURL, &response); err != nil {
-		return err
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+		return decodeErr
 	}
 
-	if _, err := fmt.Fprint(out, "System Status\n=============\n\n"); err != nil {
-		return err
+	if _, writeErr := fmt.Fprint(out, "System Status\n=============\n\n"); writeErr != nil {
+		return writeErr
 	}
 
-	if err := printJobMetrics(out, response.Jobs); err != nil {
-		return err
+	if metricsErr := printJobMetrics(out, response.Jobs); metricsErr != nil {
+		return metricsErr
 	}
 
 	return printPodMetrics(out, response.Pods)

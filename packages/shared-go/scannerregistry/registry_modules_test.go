@@ -1,137 +1,210 @@
 package scannerregistry
 
-import (
-	"testing"
+import "testing"
+
+const (
+	moduleAxe             = defaultModuleAxe
+	moduleAxeAlias        = "axe-core"
+	moduleLighthouse      = "lighthouse"
+	moduleSEO             = "seo"
+	moduleDisabled        = "disabled"
+	moduleUnknown         = "unknown-scanner"
+	categoryAccessibility = "accessibility"
+	categoryPerformance   = "performance"
 )
 
-func TestRegistry_ResolveModules(t *testing.T) {
-	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "axe", Name: "Axe", Categories: []string{"accessibility"}, Aliases: []string{"axe-core"}, Enabled: true})
-	_ = reg.Register(&Definition{ID: "lighthouse", Name: "Lighthouse", Categories: []string{"performance", "accessibility"}, Enabled: true})
-	_ = reg.Register(&Definition{ID: "seo", Name: "SEO", Categories: []string{"seo"}, Enabled: false})
+func registerDefinition(t *testing.T, reg *Registry, def *Definition) {
+	t.Helper()
 
-	t.Run("empty modules returns default axe", func(t *testing.T) {
-		result := reg.ResolveModules([]string{})
-		if len(result) != 1 || result[0] != "axe" {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-
-	t.Run("resolves by scanner ID", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"lighthouse"})
-		if len(result) != 1 || result[0] != "lighthouse" {
-			t.Errorf("expected [lighthouse], got %v", result)
-		}
-	})
-
-	t.Run("resolves by alias", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"axe-core"})
-		if len(result) != 1 || result[0] != "axe" {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-
-	t.Run("resolves by category", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"performance"})
-		if len(result) != 1 || result[0] != "lighthouse" {
-			t.Errorf("expected [lighthouse], got %v", result)
-		}
-	})
-
-	t.Run("deduplicates results", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"axe", "axe-core", "accessibility"})
-		// axe appears via ID, alias, and category - should only appear once
-		axeCount := 0
-		for _, id := range result {
-			if id == "axe" {
-				axeCount++
-			}
-		}
-		if axeCount != 1 {
-			t.Errorf("expected axe to appear once, got %d times in %v", axeCount, result)
-		}
-	})
-
-	t.Run("passes through unknown modules", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"unknown-scanner"})
-		if len(result) != 1 || result[0] != "unknown-scanner" {
-			t.Errorf("expected [unknown-scanner], got %v", result)
-		}
-	})
-
-	t.Run("skips disabled scanners", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"seo"})
-		// Disabled scanner should not be included
-		for _, id := range result {
-			if id == "seo" {
-				t.Errorf("disabled scanner 'seo' should not be included, got %v", result)
-			}
-		}
-	})
-
-	t.Run("skips empty tokens", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"", "  ", "axe"})
-		if len(result) != 1 || result[0] != "axe" {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-
-	t.Run("results are sorted", func(t *testing.T) {
-		result := reg.ResolveModules([]string{"lighthouse", "axe"})
-		if len(result) != 2 {
-			t.Fatalf("expected 2 results, got %d", len(result))
-		}
-		if result[0] != "axe" || result[1] != "lighthouse" {
-			t.Errorf("expected sorted [axe, lighthouse], got %v", result)
-		}
-	})
+	if err := reg.Register(def); err != nil {
+		t.Fatalf("Register(%s) error: %v", def.ID, err)
+	}
 }
 
-func TestRegistry_ResolveModulesStrict(t *testing.T) {
+func newRegistryWithDefaults(t *testing.T) *Registry {
+	t.Helper()
+
 	reg := NewRegistry("")
-	_ = reg.Register(&Definition{ID: "axe", Name: "Axe", Categories: []string{"accessibility"}, Enabled: true})
-	_ = reg.Register(&Definition{ID: "disabled", Name: "Disabled", Enabled: false})
-
-	t.Run("empty modules returns default axe", func(t *testing.T) {
-		result, err := reg.ResolveModulesStrict([]string{})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if len(result) != 1 || result[0] != "axe" {
-			t.Errorf("expected [axe], got %v", result)
-		}
+	registerDefinition(t, reg, &Definition{
+		ID:         moduleAxe,
+		Name:       "Axe",
+		Categories: []string{categoryAccessibility},
+		Aliases:    []string{moduleAxeAlias},
+		Enabled:    true,
+	})
+	registerDefinition(t, reg, &Definition{
+		ID:         moduleLighthouse,
+		Name:       "Lighthouse",
+		Categories: []string{categoryPerformance, categoryAccessibility},
+		Enabled:    true,
+	})
+	registerDefinition(t, reg, &Definition{
+		ID:         moduleSEO,
+		Name:       "SEO",
+		Categories: []string{moduleSEO},
+		Enabled:    false,
 	})
 
-	t.Run("resolves valid module", func(t *testing.T) {
-		result, err := reg.ResolveModulesStrict([]string{"axe"})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if len(result) != 1 || result[0] != "axe" {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
+	return reg
+}
 
-	t.Run("returns error for unknown module", func(t *testing.T) {
-		_, err := reg.ResolveModulesStrict([]string{"unknown"})
-		if err == nil {
-			t.Error("expected error for unknown module")
-		}
-	})
+func newRegistryWithDisabled(t *testing.T) *Registry {
+	t.Helper()
 
-	t.Run("returns error for disabled scanner", func(t *testing.T) {
-		_, err := reg.ResolveModulesStrict([]string{"disabled"})
-		if err == nil {
-			t.Error("expected error for disabled scanner")
-		}
-	})
+	reg := NewRegistry("")
+	registerDefinition(t, reg, &Definition{ID: moduleAxe, Name: "Axe", Enabled: true})
+	registerDefinition(t, reg, &Definition{ID: moduleDisabled, Name: "Disabled", Enabled: false})
 
-	t.Run("returns error when all tokens resolve to empty", func(t *testing.T) {
-		_, err := reg.ResolveModulesStrict([]string{"", "  "})
-		if err == nil {
-			t.Error("expected error when no scanners selected")
+	return reg
+}
+
+func TestRegistry_ResolveModules_EmptyDefaultsToAxe(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules(nil)
+	if len(result) != 1 || result[0] != moduleAxe {
+		t.Errorf("expected [%s], got %v", moduleAxe, result)
+	}
+}
+
+func TestRegistry_ResolveModules_ByID(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{moduleLighthouse})
+	if len(result) != 1 || result[0] != moduleLighthouse {
+		t.Errorf("expected [%s], got %v", moduleLighthouse, result)
+	}
+}
+
+func TestRegistry_ResolveModules_ByAlias(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{moduleAxeAlias})
+	if len(result) != 1 || result[0] != moduleAxe {
+		t.Errorf("expected [%s], got %v", moduleAxe, result)
+	}
+}
+
+func TestRegistry_ResolveModules_ByCategory(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{categoryPerformance})
+	if len(result) != 1 || result[0] != moduleLighthouse {
+		t.Errorf("expected [%s], got %v", moduleLighthouse, result)
+	}
+}
+
+func TestRegistry_ResolveModules_Deduplicates(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{moduleAxe, moduleAxeAlias, categoryAccessibility})
+	axeCount := 0
+
+	for _, id := range result {
+		if id == moduleAxe {
+			axeCount++
 		}
-	})
+	}
+
+	if axeCount != 1 {
+		t.Errorf("expected %s to appear once, got %d times in %v", moduleAxe, axeCount, result)
+	}
+}
+
+func TestRegistry_ResolveModules_PassesThroughUnknown(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{moduleUnknown})
+	if len(result) != 1 || result[0] != moduleUnknown {
+		t.Errorf("expected [%s], got %v", moduleUnknown, result)
+	}
+}
+
+func TestRegistry_ResolveModules_SkipsDisabled(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{moduleSEO})
+
+	for _, id := range result {
+		if id == moduleSEO {
+			t.Fatalf("disabled scanner %q should not be included, got %v", moduleSEO, result)
+		}
+	}
+}
+
+func TestRegistry_ResolveModules_SkipsEmptyTokens(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{"", "  ", moduleAxe})
+	if len(result) != 1 || result[0] != moduleAxe {
+		t.Errorf("expected [%s], got %v", moduleAxe, result)
+	}
+}
+
+func TestRegistry_ResolveModules_Sorted(t *testing.T) {
+	reg := newRegistryWithDefaults(t)
+
+	result := reg.ResolveModules([]string{moduleLighthouse, moduleAxe})
+	if len(result) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(result))
+	}
+
+	if result[0] != moduleAxe || result[1] != moduleLighthouse {
+		t.Errorf("expected sorted [%s, %s], got %v", moduleAxe, moduleLighthouse, result)
+	}
+}
+
+func TestRegistry_ResolveModulesStrict_EmptyDefaultsToAxe(t *testing.T) {
+	reg := newRegistryWithDisabled(t)
+
+	result, err := reg.ResolveModulesStrict(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result) != 1 || result[0] != moduleAxe {
+		t.Errorf("expected [%s], got %v", moduleAxe, result)
+	}
+}
+
+func TestRegistry_ResolveModulesStrict_ResolvesValid(t *testing.T) {
+	reg := newRegistryWithDisabled(t)
+
+	result, err := reg.ResolveModulesStrict([]string{moduleAxe})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(result) != 1 || result[0] != moduleAxe {
+		t.Errorf("expected [%s], got %v", moduleAxe, result)
+	}
+}
+
+func TestRegistry_ResolveModulesStrict_UnknownModule(t *testing.T) {
+	reg := newRegistryWithDisabled(t)
+
+	_, err := reg.ResolveModulesStrict([]string{"unknown"})
+	if err == nil {
+		t.Fatal("expected error for unknown module")
+	}
+}
+
+func TestRegistry_ResolveModulesStrict_DisabledModule(t *testing.T) {
+	reg := newRegistryWithDisabled(t)
+
+	_, err := reg.ResolveModulesStrict([]string{moduleDisabled})
+	if err == nil {
+		t.Fatal("expected error for disabled scanner")
+	}
+}
+
+func TestRegistry_ResolveModulesStrict_AllTokensEmpty(t *testing.T) {
+	reg := newRegistryWithDisabled(t)
+
+	_, err := reg.ResolveModulesStrict([]string{"", "  "})
+	if err == nil {
+		t.Fatal("expected error when no scanners selected")
+	}
 }
 
 func TestRegistry_ResolveModules_NoDefaultAxe(t *testing.T) {

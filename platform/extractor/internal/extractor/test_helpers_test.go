@@ -18,6 +18,7 @@ func createTestZIP(tb testing.TB, files map[string]string) string {
 	if err != nil {
 		tb.Fatalf("Failed to create ZIP file: %v", err)
 	}
+
 	defer func() {
 		if cerr := f.Close(); cerr != nil {
 			tb.Fatalf("Failed to close ZIP file: %v", cerr)
@@ -25,6 +26,7 @@ func createTestZIP(tb testing.TB, files map[string]string) string {
 	}()
 
 	zw := zip.NewWriter(f)
+
 	defer func() {
 		if cerr := zw.Close(); cerr != nil {
 			tb.Fatalf("Failed to close ZIP writer: %v", cerr)
@@ -32,13 +34,13 @@ func createTestZIP(tb testing.TB, files map[string]string) string {
 	}()
 
 	for name, content := range files {
-		fw, err := zw.Create(name)
-		if err != nil {
-			tb.Fatalf("Failed to create ZIP entry %s: %v", name, err)
+		fw, createErr := zw.Create(name)
+		if createErr != nil {
+			tb.Fatalf("Failed to create ZIP entry %s: %v", name, createErr)
 		}
 
-		if _, err := io.WriteString(fw, content); err != nil {
-			tb.Fatalf("Failed to write ZIP entry %s: %v", name, err)
+		if _, writeErr := io.WriteString(fw, content); writeErr != nil {
+			tb.Fatalf("Failed to write ZIP entry %s: %v", name, writeErr)
 		}
 	}
 

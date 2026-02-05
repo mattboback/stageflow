@@ -51,8 +51,8 @@ func LoadOverrides(configPath string) (*Overrides, error) {
 	}
 
 	var overrides Overrides
-	if err := yaml.Unmarshal(data, &overrides); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
+	if unmarshalErr := yaml.Unmarshal(data, &overrides); unmarshalErr != nil {
+		return nil, fmt.Errorf("failed to parse config: %w", unmarshalErr)
 	}
 
 	return &overrides, nil
