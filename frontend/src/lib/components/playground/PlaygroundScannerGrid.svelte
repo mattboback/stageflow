@@ -1,17 +1,20 @@
 <script lang="ts">
+	import type { ScannerPreset } from '$lib/components/playground/scanner-presets';
 	import type { ScannerSelection } from '$lib/types/scan';
 
-	import { Label } from '$lib/components/ui';
+	import { Chip, Label } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
 	import { Bot, Link2, Loader2, Search, Settings2, Shield, Zap } from 'lucide-svelte';
 
 	interface Props {
 		scanners: ScannerSelection[];
 		isLoading: boolean;
+		preset: ScannerPreset;
+		onPresetChange: (preset: ScannerPreset) => void;
 		onToggle: (scannerId: string) => void;
 	}
 
-	const { scanners, isLoading, onToggle }: Props = $props();
+	const { scanners, isLoading, preset, onPresetChange, onToggle }: Props = $props();
 
 	const enabledScannerCount = $derived(scanners.filter((s) => s.enabled).length);
 
@@ -79,6 +82,45 @@
 			</span>
 		{/if}
 	</div>
+	{#if !isLoading && scanners.length > 1}
+		<div class="border-line bg-surface-muted/40 mb-4 rounded-xl border p-3">
+			<div class="flex flex-wrap gap-2">
+				<Chip
+					as="button"
+					type="button"
+					tone={preset === 'coverage' ? 'active' : 'muted'}
+					interactive={true}
+					aria-pressed={preset === 'coverage'}
+					onclick={() => onPresetChange('coverage')}
+				>
+					Coverage
+				</Chip>
+				<Chip
+					as="button"
+					type="button"
+					tone={preset === 'quick' ? 'active' : 'muted'}
+					interactive={true}
+					aria-pressed={preset === 'quick'}
+					onclick={() => onPresetChange('quick')}
+				>
+					Quick
+				</Chip>
+				<Chip
+					as="button"
+					type="button"
+					tone={preset === 'custom' ? 'active' : 'muted'}
+					interactive={true}
+					aria-pressed={preset === 'custom'}
+					onclick={() => onPresetChange('custom')}
+				>
+					Custom
+				</Chip>
+			</div>
+			<p class="text-ink-muted mt-2 text-xs">
+				Coverage runs multiple scanners and may take longer.
+			</p>
+		</div>
+	{/if}
 	{#if isLoading}
 		<div
 			class="text-ink-muted bg-surface-muted flex items-center justify-center gap-2 rounded-xl py-8"
@@ -101,6 +143,7 @@
 				{@const Icon = meta.icon}
 				<button
 					type="button"
+					aria-pressed={scanner.enabled}
 					onclick={() => onToggle(scanner.id)}
 					class={selectableSurfaceClass(
 						'group relative flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all duration-200',

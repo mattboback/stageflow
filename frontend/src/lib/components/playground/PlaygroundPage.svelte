@@ -17,6 +17,11 @@
 	import PlaygroundSidebar from '$lib/components/playground/PlaygroundSidebar.svelte';
 	import PlaygroundUrlInput from '$lib/components/playground/PlaygroundUrlInput.svelte';
 	import PlaygroundZipUpload from '$lib/components/playground/PlaygroundZipUpload.svelte';
+	import {
+		applyScannerPreset,
+		detectScannerPreset,
+		type ScannerPreset
+	} from '$lib/components/playground/scanner-presets';
 	import { Alert, Button, Chip, PageSection, Panel } from '$lib/components/ui';
 	import { AlertTriangle, CheckCircle2, Info, Loader2, Play, ScanSearch } from 'lucide-svelte';
 
@@ -25,6 +30,7 @@
 	let urls = $state('');
 	let file = $state<File | null>(null);
 	let scanners = $state<ScannerSelection[]>([]);
+	let scannerPreset = $state<ScannerPreset>('coverage');
 	let screenshot = $state(true);
 	let highlightStyle = $state<'solid' | 'dashed'>('solid');
 
@@ -59,6 +65,7 @@
 		fetchScanners()
 			.then((data) => {
 				scanners = getDefaultScannerSelections(data.scanners);
+				scannerPreset = detectScannerPreset(scanners);
 			})
 			.catch((e) => {
 				error = e instanceof Error ? e.message : 'Failed to load scanners';
@@ -107,7 +114,16 @@
 	}
 
 	function handleScannerToggle(scannerId: string) {
-		scanners = scanners.map((s) => (s.id === scannerId ? { ...s, enabled: !s.enabled } : s));
+		const nextScanners = scanners.map((s) =>
+			s.id === scannerId ? { ...s, enabled: !s.enabled } : s
+		);
+		scanners = nextScanners;
+		scannerPreset = 'custom';
+	}
+
+	function handlePresetChange(nextPreset: ScannerPreset) {
+		scannerPreset = nextPreset;
+		scanners = applyScannerPreset(scanners, nextPreset);
 	}
 
 	async function handleSubmit() {
@@ -212,6 +228,8 @@
 						<PlaygroundScannerGrid
 							{scanners}
 							isLoading={isLoadingScanners}
+							preset={scannerPreset}
+							onPresetChange={handlePresetChange}
 							onToggle={handleScannerToggle}
 						/>
 
