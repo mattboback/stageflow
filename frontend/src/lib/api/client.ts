@@ -1,5 +1,7 @@
 import type { ScannerDefinition, ScannerSelection, ScannersResponse } from '$lib/types/scan';
 
+import { applyScannerPreset } from '$lib/components/playground/scanner-presets';
+
 import { buildApiUrl } from './utils';
 
 interface SubmitJobParams {
@@ -127,20 +129,10 @@ export function getDefaultScannerSelections(scanners: ScannerDefinition[]): Scan
 		return [];
 	}
 
-	const hasNonAiScanner = enabledScanners.some((scanner) => scanner.id !== 'ai-navigator');
-
 	const selections = enabledScanners.map((scanner) => ({
 		id: scanner.id,
-		enabled: hasNonAiScanner ? scanner.id !== 'ai-navigator' : false
+		enabled: false
 	}));
 
-	if (!selections.some((scanner) => scanner.enabled)) {
-		const fallbackId = enabledScanners[0]?.id;
-		return selections.map((scanner) => ({
-			...scanner,
-			enabled: scanner.id === fallbackId
-		}));
-	}
-
-	return selections;
+	return applyScannerPreset(selections, 'coverage');
 }
