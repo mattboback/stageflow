@@ -1,5 +1,7 @@
 import type { ScannerDefinition, ScannerSelection, ScannersResponse } from '$lib/types/scan';
 
+import { applyScannerPreset } from '$lib/components/playground/scanner-presets';
+
 import { buildApiUrl } from './utils';
 
 interface SubmitJobParams {
@@ -123,12 +125,14 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 
 export function getDefaultScannerSelections(scanners: ScannerDefinition[]): ScannerSelection[] {
 	const enabledScanners = scanners.filter((scanner) => scanner.enabled);
-	const defaultScannerId = enabledScanners.some((scanner) => scanner.id === 'axe')
-		? 'axe'
-		: enabledScanners[0]?.id;
+	if (enabledScanners.length === 0) {
+		return [];
+	}
 
-	return enabledScanners.map((scanner) => ({
+	const selections = enabledScanners.map((scanner) => ({
 		id: scanner.id,
-		enabled: scanner.id === defaultScannerId
+		enabled: false
 	}));
+
+	return applyScannerPreset(selections, 'coverage');
 }
