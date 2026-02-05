@@ -60,7 +60,12 @@ func (p *JobCreatedPayload) Validate() error {
 			return fmt.Errorf("events: JobCreatedPayload.urls is required when input_type=%q", InputTypeURLs)
 		}
 	default:
-		return fmt.Errorf("events: JobCreatedPayload.input_type must be %q or %q (got %q)", InputTypeZip, InputTypeURLs, p.InputType)
+		return fmt.Errorf(
+			"events: JobCreatedPayload.input_type must be %q or %q (got %q)",
+			InputTypeZip,
+			InputTypeURLs,
+			p.InputType,
+		)
 	}
 
 	if len(p.Config.Modules) == 0 {
@@ -157,7 +162,11 @@ func (p *ScanPageCompletedPayload) Validate() error {
 	}
 
 	if p.PageIndex > p.TotalPages {
-		return fmt.Errorf("events: ScanPageCompletedPayload.page_index (%d) cannot exceed total_pages (%d)", p.PageIndex, p.TotalPages)
+		return fmt.Errorf(
+			"events: ScanPageCompletedPayload.page_index (%d) cannot exceed total_pages (%d)",
+			p.PageIndex,
+			p.TotalPages,
+		)
 	}
 
 	return nil
@@ -341,8 +350,7 @@ func (p *JobCompletedPayload) Validate() error {
 			return errors.New("events: JobCompletedPayload.scanner_artifacts has empty key")
 		}
 
-		vv := v
-		if err := vv.Validate(); err != nil {
+		if err := v.Validate(); err != nil {
 			return fmt.Errorf("events: JobCompletedPayload.scanner_artifacts[%q] invalid: %w", k, err)
 		}
 	}

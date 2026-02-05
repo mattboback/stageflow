@@ -67,9 +67,11 @@ func TestNewClient(t *testing.T) {
 	if client == nil {
 		t.Fatal("Expected client to be non-nil")
 	}
+
 	if client.httpClient == nil {
 		t.Error("Expected httpClient to be non-nil")
 	}
+
 	if client.baseURL != "http://unix" {
 		t.Errorf("Expected baseURL http://unix, got %s", client.baseURL)
 	}
@@ -88,6 +90,7 @@ func TestParseResponse_Success(t *testing.T) {
 		StatusCode: http.StatusOK,
 		Body:       http.NoBody,
 	}
+
 	defer func() { _ = resp.Body.Close() }()
 
 	err := parseResponse(resp, nil)
@@ -102,7 +105,9 @@ func TestParseResponse_Error(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader("internal server error")),
 		Header:     make(http.Header),
 	}
+
 	defer func() { _ = resp.Body.Close() }()
+
 	if err := parseResponse(resp, nil); err == nil {
 		t.Error("Expected error for status 500")
 	}
@@ -114,6 +119,7 @@ func TestParseResponse_JSON(t *testing.T) {
 		Body:       io.NopCloser(strings.NewReader(`{"id":"test-123"}`)),
 		Header:     make(http.Header),
 	}
+
 	defer func() { _ = resp.Body.Close() }()
 
 	var result map[string]string

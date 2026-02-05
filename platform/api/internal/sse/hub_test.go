@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"bytes"
 	"encoding/json"
 	"sync"
 	"testing"
@@ -159,7 +160,7 @@ func TestUnsubscribe(t *testing.T) {
 		}
 	})
 
-	t.Run("handles unsubscribe of non-existent client", func(t *testing.T) {
+	t.Run("handles unsubscribe of non-existent client", func(_ *testing.T) {
 		hub := NewHub()
 		client := &Client{
 			JobID:  "non-existent",
@@ -173,124 +174,149 @@ func TestUnsubscribe(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
-	t.Run("sends event to all clients for a job", func(t *testing.T) {
-		hub := NewHub()
-		client1 := hub.Subscribe("job-123")
-		client2 := hub.Subscribe("job-123")
+	t.Run("sends event to all clients for a job", testBroadcastSendsEventToAllClients)
+	t.Run("does not send to clients of different job", testBroadcastSkipsOtherJobs)
+	t.Run("handles non-existent job", testBroadcastHandlesNonExistentJob)
+	t.Run("evicts oldest on full client buffer", testBroadcastEvictsOldestOnFullBuffer)
+	t.Run("handles json marshal error", testBroadcastHandlesMarshalError)
+}
 
-		event := map[string]string{"type": "status", "state": "running"}
-		hub.Broadcast("job-123", event)
+func testBroadcastSendsEventToAllClients(t *testing.T) {
+	hub := NewHub()
+	client1 := hub.Subscribe("job-123")
+	client2 := hub.Subscribe("job-123")
 
-		// Give time for broadcast
-		time.Sleep(10 * time.Millisecond)
+	event := map[string]string{"type": "status", "state": "running"}
+	hub.Broadcast("job-123", event)
 
-		expected, _ := json.Marshal(event)
+	// Give time for broadcast
+	time.Sleep(10 * time.Millisecond)
 
+	expected, err := json.Marshal(event)
+	if err != nil {
+		t.Fatalf("marshal event: %v", err)
+	}
+
+	assertClientReceivesEvent(t, client1, expected, "client1")
+	assertClientReceivesEvent(t, client2, expected, "client2")
+}
+
+func testBroadcastSkipsOtherJobs(t *testing.T) {
+	hub := NewHub()
+	client1 := hub.Subscribe("job-1")
+	client2 := hub.Subscribe("job-2")
+
+	hub.Broadcast("job-1", map[string]string{"msg": "hello"})
+
+	time.Sleep(10 * time.Millisecond)
+
+	assertClientReceivesAny(t, client1, "client1 should receive event")
+	assertClientReceivesNone(t, client2, "client2 should not receive event for different job")
+}
+
+func testBroadcastHandlesNonExistentJob(t *testing.T) {
+	t.Helper()
+
+	hub := NewHub()
+
+	// Should not panic
+	hub.Broadcast("non-existent", map[string]string{"msg": "hello"})
+}
+
+func testBroadcastEvictsOldestOnFullBuffer(t *testing.T) {
+	hub := NewHub()
+	client := hub.Subscribe("job-123")
+
+	// Fill the buffer (capacity is 16)
+	for i := range 16 {
+		hub.Broadcast("job-123", map[string]int{"i": i})
+	}
+
+	// One more event should evict the oldest entry.
+	hub.Broadcast("job-123", map[string]int{"i": 16})
+
+	time.Sleep(10 * time.Millisecond)
+
+	// Should still have 16 events (buffer size) and include the newest value.
+	seen := make(map[int]struct{})
+	count := 0
+	draining := true
+
+	for draining {
 		select {
-		case data := <-client1.Events:
-			if string(data) != string(expected) {
-				t.Errorf("client1 received %s, want %s", data, expected)
-			}
-		default:
-			t.Error("client1 did not receive event")
-		}
-
-		select {
-		case data := <-client2.Events:
-			if string(data) != string(expected) {
-				t.Errorf("client2 received %s, want %s", data, expected)
-			}
-		default:
-			t.Error("client2 did not receive event")
-		}
-	})
-
-	t.Run("does not send to clients of different job", func(t *testing.T) {
-		hub := NewHub()
-		client1 := hub.Subscribe("job-1")
-		client2 := hub.Subscribe("job-2")
-
-		hub.Broadcast("job-1", map[string]string{"msg": "hello"})
-
-		time.Sleep(10 * time.Millisecond)
-
-		// client1 should receive
-		select {
-		case <-client1.Events:
-			// Expected
-		default:
-			t.Error("client1 should receive event")
-		}
-
-		// client2 should not receive
-		select {
-		case <-client2.Events:
-			t.Error("client2 should not receive event for different job")
-		default:
-			// Expected
-		}
-	})
-
-	t.Run("handles non-existent job", func(t *testing.T) {
-		hub := NewHub()
-
-		// Should not panic
-		hub.Broadcast("non-existent", map[string]string{"msg": "hello"})
-	})
-
-	t.Run("evicts oldest on full client buffer", func(t *testing.T) {
-		hub := NewHub()
-		client := hub.Subscribe("job-123")
-
-		// Fill the buffer (capacity is 16)
-		for i := 0; i < 16; i++ {
-			hub.Broadcast("job-123", map[string]int{"i": i})
-		}
-
-		// One more event should evict the oldest entry.
-		hub.Broadcast("job-123", map[string]int{"i": 16})
-
-		time.Sleep(10 * time.Millisecond)
-
-		// Should still have 16 events (buffer size) and include the newest value.
-		seen := make(map[int]struct{})
-		count := 0
-		for {
-			select {
-			case data := <-client.Events:
-				var payload map[string]int
-				if err := json.Unmarshal(data, &payload); err == nil {
-					if v, ok := payload["i"]; ok {
-						seen[v] = struct{}{}
-					}
+		case data := <-client.Events:
+			var payload map[string]int
+			if err := json.Unmarshal(data, &payload); err == nil {
+				if v, ok := payload["i"]; ok {
+					seen[v] = struct{}{}
 				}
-				count++
-			default:
-				goto done
 			}
-		}
-	done:
-		if count != 16 {
-			t.Errorf("received %d events, want 16 (buffer size)", count)
-		}
-		if _, ok := seen[16]; !ok {
-			t.Errorf("expected newest event to be retained")
-		}
-		if _, ok := seen[0]; ok {
-			t.Errorf("expected oldest event to be evicted")
-		}
-	})
 
-	t.Run("handles json marshal error", func(t *testing.T) {
-		hub := NewHub()
-		hub.Subscribe("job-123")
+			count++
+		default:
+			draining = false
+		}
+	}
 
-		// Create an unmarshalable value (channel)
-		hub.Broadcast("job-123", make(chan int))
+	if count != 16 {
+		t.Errorf("received %d events, want 16 (buffer size)", count)
+	}
 
-		// Should not panic and client should receive nothing
-		time.Sleep(10 * time.Millisecond)
-	})
+	if _, ok := seen[16]; !ok {
+		t.Errorf("expected newest event to be retained")
+	}
+
+	if _, ok := seen[0]; ok {
+		t.Errorf("expected oldest event to be evicted")
+	}
+}
+
+func testBroadcastHandlesMarshalError(t *testing.T) {
+	t.Helper()
+
+	hub := NewHub()
+	hub.Subscribe("job-123")
+
+	// Create an unmarshalable value (channel)
+	hub.Broadcast("job-123", make(chan int))
+
+	// Should not panic and client should receive nothing
+	time.Sleep(10 * time.Millisecond)
+}
+
+func assertClientReceivesEvent(t *testing.T, client *Client, expected []byte, label string) {
+	t.Helper()
+
+	select {
+	case data := <-client.Events:
+		if !bytes.Equal(data, expected) {
+			t.Errorf("%s received %s, want %s", label, data, expected)
+		}
+	default:
+		t.Errorf("%s did not receive event", label)
+	}
+}
+
+func assertClientReceivesAny(t *testing.T, client *Client, message string) {
+	t.Helper()
+
+	select {
+	case <-client.Events:
+		// Expected
+	default:
+		t.Error(message)
+	}
+}
+
+func assertClientReceivesNone(t *testing.T, client *Client, message string) {
+	t.Helper()
+
+	select {
+	case <-client.Events:
+		t.Error(message)
+	default:
+		// Expected
+	}
 }
 
 func TestClientCount(t *testing.T) {
@@ -339,104 +365,130 @@ func TestTotalClients(t *testing.T) {
 }
 
 func TestConcurrency(t *testing.T) {
-	t.Run("concurrent subscribe/unsubscribe", func(t *testing.T) {
-		hub := NewHub()
-		var wg sync.WaitGroup
-		clients := make(chan *Client, 100)
+	t.Run("concurrent subscribe/unsubscribe", testConcurrentSubscribeUnsubscribe)
+	t.Run("concurrent broadcast", testConcurrentBroadcast)
+	t.Run("concurrent subscribe and broadcast", testConcurrentSubscribeAndBroadcast)
+}
 
-		// Concurrent subscriptions
-		for i := 0; i < 50; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				client := hub.Subscribe("job-123")
-				clients <- client
-			}()
+func testConcurrentSubscribeUnsubscribe(t *testing.T) {
+	hub := NewHub()
+
+	var wg sync.WaitGroup
+
+	clients := make(chan *Client, 100)
+
+	// Concurrent subscriptions
+	for range 50 {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			client := hub.Subscribe("job-123")
+			clients <- client
+		}()
+	}
+
+	wg.Wait()
+	close(clients)
+
+	if count := hub.ClientCount("job-123"); count != 50 {
+		t.Errorf("ClientCount = %d, want 50", count)
+	}
+
+	// Concurrent unsubscriptions
+	for client := range clients {
+		wg.Add(1)
+
+		go func(c *Client) {
+			defer wg.Done()
+
+			hub.Unsubscribe(c)
+		}(client)
+	}
+
+	wg.Wait()
+
+	if count := hub.ClientCount("job-123"); count != 0 {
+		t.Errorf("ClientCount after unsubscribe = %d, want 0", count)
+	}
+}
+
+func testConcurrentBroadcast(t *testing.T) {
+	hub := NewHub()
+	client := hub.Subscribe("job-123")
+
+	var wg sync.WaitGroup
+
+	// Start broadcasting concurrently
+	for i := range 10 {
+		wg.Add(1)
+
+		go func(i int) {
+			defer wg.Done()
+
+			hub.Broadcast("job-123", map[string]int{"i": i})
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Drain events
+	time.Sleep(10 * time.Millisecond)
+
+	count := 0
+	draining := true
+
+	for draining {
+		select {
+		case <-client.Events:
+			count++
+		default:
+			draining = false
 		}
+	}
 
-		wg.Wait()
-		close(clients)
+	if count != 10 {
+		t.Errorf("received %d events, want 10", count)
+	}
+}
 
-		if count := hub.ClientCount("job-123"); count != 50 {
-			t.Errorf("ClientCount = %d, want 50", count)
-		}
+func testConcurrentSubscribeAndBroadcast(t *testing.T) {
+	hub := NewHub()
 
-		// Concurrent unsubscriptions
-		for client := range clients {
-			wg.Add(1)
-			go func(c *Client) {
-				defer wg.Done()
-				hub.Unsubscribe(c)
-			}(client)
-		}
+	var wg sync.WaitGroup
 
-		wg.Wait()
+	clients := make([]*Client, 0, 20)
 
-		if count := hub.ClientCount("job-123"); count != 0 {
-			t.Errorf("ClientCount after unsubscribe = %d, want 0", count)
-		}
-	})
+	var mu sync.Mutex
 
-	t.Run("concurrent broadcast", func(t *testing.T) {
-		hub := NewHub()
-		client := hub.Subscribe("job-123")
-		var wg sync.WaitGroup
+	// Subscribe and broadcast concurrently
+	for i := range 20 {
+		wg.Add(2)
 
-		// Start broadcasting concurrently
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func(i int) {
-				defer wg.Done()
-				hub.Broadcast("job-123", map[string]int{"i": i})
-			}(i)
-		}
+		go func() {
+			defer wg.Done()
 
-		wg.Wait()
+			c := hub.Subscribe("job-123")
 
-		// Drain events
-		time.Sleep(10 * time.Millisecond)
-		count := 0
-		for {
-			select {
-			case <-client.Events:
-				count++
-			default:
-				goto done
-			}
-		}
-	done:
-		if count != 10 {
-			t.Errorf("received %d events, want 10", count)
-		}
-	})
+			mu.Lock()
 
-	t.Run("concurrent subscribe and broadcast", func(t *testing.T) {
-		hub := NewHub()
-		var wg sync.WaitGroup
-		clients := make([]*Client, 0, 20)
-		var mu sync.Mutex
+			clients = append(clients, c)
 
-		// Subscribe and broadcast concurrently
-		for i := 0; i < 20; i++ {
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				c := hub.Subscribe("job-123")
-				mu.Lock()
-				clients = append(clients, c)
-				mu.Unlock()
-			}()
-			go func(i int) {
-				defer wg.Done()
-				hub.Broadcast("job-123", map[string]int{"i": i})
-			}(i)
-		}
+			mu.Unlock()
+		}()
 
-		wg.Wait()
+		go func(i int) {
+			defer wg.Done()
 
-		// Should not have panicked
-		if len(clients) != 20 {
-			t.Errorf("created %d clients, want 20", len(clients))
-		}
-	})
+			hub.Broadcast("job-123", map[string]int{"i": i})
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Should not have panicked
+	if len(clients) != 20 {
+		t.Errorf("created %d clients, want 20", len(clients))
+	}
 }

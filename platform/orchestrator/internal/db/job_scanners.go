@@ -34,7 +34,13 @@ func (d *Database) SetExpectedScanners(ctx context.Context, jobID string, scanne
 
 // RecordScannerCompletion records that a scanner has completed and stores its results.
 // Returns (allComplete, error) where allComplete is true if all expected scanners are done.
-func (d *Database) RecordScannerCompletion(ctx context.Context, jobID string, result *models.ScannerResult) (allComplete bool, err error) {
+//
+//nolint:gocognit,gocyclo // Complex transaction logic requires multiple validation steps
+func (d *Database) RecordScannerCompletion(
+	ctx context.Context,
+	jobID string,
+	result *models.ScannerResult,
+) (allComplete bool, err error) {
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to begin transaction: %w", err)
@@ -150,8 +156,8 @@ func (d *Database) RecordScannerCompletion(ctx context.Context, jobID string, re
 		return false, fmt.Errorf("failed to record scanner completion: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return false, fmt.Errorf("failed to commit scanner completion: %w", err)
+	if commitErr := tx.Commit(); commitErr != nil {
+		return false, fmt.Errorf("failed to commit scanner completion: %w", commitErr)
 	}
 
 	allComplete = len(completedScanners) >= len(expectedScanners)

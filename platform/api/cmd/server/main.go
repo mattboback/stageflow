@@ -90,8 +90,8 @@ func run() error {
 
 	// Wrap status store with SSE broadcast handler for real-time updates
 	sseHandler := messaging.NewSSEBroadcastHandler(statusStore, server.SSEHub())
-	if err := msgService.SubscribeToStatusEvents(ctx, sseHandler); err != nil {
-		slog.Warn("Failed to subscribe to lifecycle events", "error", err)
+	if subscribeErr := msgService.SubscribeToStatusEvents(ctx, sseHandler); subscribeErr != nil {
+		slog.Warn("Failed to subscribe to lifecycle events", "error", subscribeErr)
 	}
 
 	slog.Info("Subscribed to lifecycle events")
@@ -101,8 +101,8 @@ func run() error {
 	go func() {
 		slog.Info("Server listening", "port", cfg.Port)
 
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server error", "error", err)
+		if listenErr := httpServer.ListenAndServe(); listenErr != nil && listenErr != http.ErrServerClosed {
+			slog.Error("Server error", "error", listenErr)
 		}
 	}()
 
@@ -115,8 +115,8 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	if err := httpServer.Shutdown(ctx); err != nil {
-		slog.Error("Server shutdown error", "error", err)
+	if shutdownErr := httpServer.Shutdown(ctx); shutdownErr != nil {
+		slog.Error("Server shutdown error", "error", shutdownErr)
 	}
 
 	slog.Info("Server stopped")
@@ -160,7 +160,13 @@ func loadScannerRegistry(logger *slog.Logger, configPath string) *scannerregistr
 	}
 
 	if registry != nil {
-		logger.Info("Scanner registry initialized", "scanner_count", registry.Count(), "enabled_count", registry.CountEnabled())
+		logger.Info(
+			"Scanner registry initialized",
+			"scanner_count",
+			registry.Count(),
+			"enabled_count",
+			registry.CountEnabled(),
+		)
 	}
 
 	return registry

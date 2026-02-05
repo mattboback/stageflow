@@ -47,9 +47,11 @@ func TestInsertJobEvent(t *testing.T) {
 	if events[0].Event != "job.created" {
 		t.Errorf("Expected event job.created, got %s", events[0].Event)
 	}
+
 	if events[0].RequestID != "req-1" {
 		t.Errorf("Expected request_id req-1, got %s", events[0].RequestID)
 	}
+
 	if events[0].RunID != "run-1" {
 		t.Errorf("Expected run_id run-1, got %s", events[0].RunID)
 	}
@@ -86,6 +88,7 @@ func TestListJobEvents(t *testing.T) {
 	if events[0].Event != "job.created" {
 		t.Errorf("Expected first event to be job.created, got %s", events[0].Event)
 	}
+
 	if events[2].Event != "scan.completed" {
 		t.Errorf("Expected last event to be scan.completed, got %s", events[2].Event)
 	}

@@ -26,6 +26,8 @@ func TestNewPublisher(t *testing.T) {
 
 // TestEnvelopeConstruction tests that our Publisher correctly constructs envelopes
 // by verifying the events package integration.
+//
+//nolint:gocognit // Test function covers multiple envelope construction scenarios
 func TestEnvelopeConstruction(t *testing.T) {
 	t.Run("JobCompletedPayload creates valid envelope", func(t *testing.T) {
 		payload := &events.JobCompletedPayload{
@@ -103,8 +105,8 @@ func TestEnvelopeConstruction(t *testing.T) {
 			} `json:"payload"`
 		}
 
-		if err := json.Unmarshal(data, &decoded); err != nil {
-			t.Fatalf("failed to unmarshal envelope: %v", err)
+		if unmarshalErr := json.Unmarshal(data, &decoded); unmarshalErr != nil {
+			t.Fatalf("failed to unmarshal envelope: %v", unmarshalErr)
 		}
 
 		if decoded.Payload.Error != "scanner timeout" {
@@ -129,6 +131,7 @@ func TestPublisherMethodSignatures(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error with nil client, got nil")
 		}
+
 		if !errors.Is(err, sharedmsg.ErrNilClient) {
 			t.Fatalf("expected ErrNilClient, got %v", err)
 		}
@@ -146,6 +149,7 @@ func TestPublisherMethodSignatures(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error with nil client, got nil")
 		}
+
 		if !errors.Is(err, sharedmsg.ErrNilClient) {
 			t.Fatalf("expected ErrNilClient, got %v", err)
 		}

@@ -73,15 +73,19 @@ func TestContextHelpersEmptyContext(t *testing.T) {
 	if got := JobID(ctx); got != "" {
 		t.Errorf("JobID() = %q, want empty string", got)
 	}
+
 	if got := RequestID(ctx); got != "" {
 		t.Errorf("RequestID() = %q, want empty string", got)
 	}
+
 	if got := RunID(ctx); got != "" {
 		t.Errorf("RunID() = %q, want empty string", got)
 	}
+
 	if got := Scanner(ctx); got != "" {
 		t.Errorf("Scanner() = %q, want empty string", got)
 	}
+
 	if got := Component(ctx); got != "" {
 		t.Errorf("Component() = %q, want empty string", got)
 	}
@@ -108,12 +112,15 @@ func TestFromContext(t *testing.T) {
 	if attrMap["job_id"] != "job-123" {
 		t.Errorf("job_id = %q, want %q", attrMap["job_id"], "job-123")
 	}
+
 	if attrMap["request_id"] != "req-456" {
 		t.Errorf("request_id = %q, want %q", attrMap["request_id"], "req-456")
 	}
+
 	if attrMap["run_id"] != "run-789" {
 		t.Errorf("run_id = %q, want %q", attrMap["run_id"], "run-789")
 	}
+
 	if attrMap["scanner_type"] != "lighthouse" {
 		t.Errorf("scanner_type = %q, want %q", attrMap["scanner_type"], "lighthouse")
 	}
@@ -121,6 +128,7 @@ func TestFromContext(t *testing.T) {
 
 func TestFromContextEmpty(t *testing.T) {
 	ctx := context.Background()
+
 	attrs := FromContext(ctx)
 	if len(attrs) != 0 {
 		t.Errorf("FromContext() returned %d attrs for empty context, want 0", len(attrs))
@@ -130,6 +138,7 @@ func TestFromContextEmpty(t *testing.T) {
 func TestLWithContext(t *testing.T) {
 	// Set up a buffer to capture log output
 	var buf bytes.Buffer
+
 	handler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
@@ -149,9 +158,11 @@ func TestLWithContext(t *testing.T) {
 	if logEntry["msg"] != "test message" {
 		t.Errorf("msg = %q, want %q", logEntry["msg"], "test message")
 	}
+
 	if logEntry["job_id"] != "job-test" {
 		t.Errorf("job_id = %v, want %q", logEntry["job_id"], "job-test")
 	}
+
 	if logEntry["scanner_type"] != "axe" {
 		t.Errorf("scanner_type = %v, want %q", logEntry["scanner_type"], "axe")
 	}
@@ -159,6 +170,7 @@ func TestLWithContext(t *testing.T) {
 
 func TestConvenienceFunctions(t *testing.T) {
 	var buf bytes.Buffer
+
 	handler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug})
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
@@ -168,13 +180,16 @@ func TestConvenienceFunctions(t *testing.T) {
 	// Test Info
 	buf.Reset()
 	Info(ctx, "info message", "key", "value")
+
 	var entry map[string]interface{}
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("Info: failed to parse log: %v", err)
 	}
+
 	if entry["level"] != "INFO" {
 		t.Errorf("Info level = %v, want INFO", entry["level"])
 	}
+
 	if entry["job_id"] != "job-conv" {
 		t.Errorf("Info job_id = %v, want job-conv", entry["job_id"])
 	}
@@ -182,9 +197,11 @@ func TestConvenienceFunctions(t *testing.T) {
 	// Test Warn
 	buf.Reset()
 	Warn(ctx, "warn message")
+
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("Warn: failed to parse log: %v", err)
 	}
+
 	if entry["level"] != "WARN" {
 		t.Errorf("Warn level = %v, want WARN", entry["level"])
 	}
@@ -192,9 +209,11 @@ func TestConvenienceFunctions(t *testing.T) {
 	// Test Error
 	buf.Reset()
 	Error(ctx, "error message")
+
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("Error: failed to parse log: %v", err)
 	}
+
 	if entry["level"] != "ERROR" {
 		t.Errorf("Error level = %v, want ERROR", entry["level"])
 	}
@@ -202,9 +221,11 @@ func TestConvenienceFunctions(t *testing.T) {
 	// Test Debug
 	buf.Reset()
 	Debug(ctx, "debug message")
+
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("Debug: failed to parse log: %v", err)
 	}
+
 	if entry["level"] != "DEBUG" {
 		t.Errorf("Debug level = %v, want DEBUG", entry["level"])
 	}

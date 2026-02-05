@@ -23,7 +23,11 @@ func NewGenerator() *Generator {
 }
 
 // Generate assembles provenance from discovery output and writes it to outputPath.
-func (g *Generator) Generate(jobID, baseURL string, pages []discovery.HTMLPage, outputPath string) (*models.Provenance, error) {
+func (g *Generator) Generate(
+	jobID, baseURL string,
+	pages []discovery.HTMLPage,
+	outputPath string,
+) (*models.Provenance, error) {
 	u, parseErr := url.Parse(baseURL)
 	if parseErr != nil {
 		return nil, fmt.Errorf("invalid baseURL %q: %w", baseURL, parseErr)
@@ -74,22 +78,22 @@ func (g *Generator) WriteToFile(provenance *models.Provenance, path string) erro
 
 	tmpName := tmp.Name()
 
-	if _, err := tmp.Write(data); err != nil {
+	if _, writeErr := tmp.Write(data); writeErr != nil {
 		_ = tmp.Close()
 
-		return fmt.Errorf("failed to write temp file: %w", err)
+		return fmt.Errorf("failed to write temp file: %w", writeErr)
 	}
 
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("failed to close temp file: %w", err)
+	if closeErr := tmp.Close(); closeErr != nil {
+		return fmt.Errorf("failed to close temp file: %w", closeErr)
 	}
 
 	if chmodErr := os.Chmod(tmpName, 0o600); chmodErr != nil {
 		return fmt.Errorf("failed to chmod temp file: %w", chmodErr)
 	}
 
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("failed to replace provenance file: %w", err)
+	if renameErr := os.Rename(tmpName, path); renameErr != nil {
+		return fmt.Errorf("failed to replace provenance file: %w", renameErr)
 	}
 
 	return nil

@@ -76,7 +76,12 @@ func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool) {
 	return update, true
 }
 
-func fetchJobRecord(ctx context.Context, store *status.Store, w http.ResponseWriter, jobID string) (*status.JobRecord, bool) {
+func fetchJobRecord(
+	ctx context.Context,
+	store *status.Store,
+	w http.ResponseWriter,
+	jobID string,
+) (*status.JobRecord, bool) {
 	rec, err := store.GetJob(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
@@ -112,7 +117,12 @@ func getFlusher(w http.ResponseWriter) (http.Flusher, bool) {
 	return flusher, true
 }
 
-func (s *Server) sendInitialStatus(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, rec *status.JobRecord) bool {
+func (s *Server) sendInitialStatus(
+	ctx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	rec *status.JobRecord,
+) bool {
 	job, buildErr := s.buildJobStatusResponse(ctx, rec)
 	if buildErr != nil {
 		return true
@@ -133,7 +143,12 @@ func (s *Server) sendInitialStatus(ctx context.Context, w http.ResponseWriter, f
 	return true
 }
 
-func (s *Server) handleJobStreamUpdate(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, data []byte) (shouldClose, ok bool) {
+func (s *Server) handleJobStreamUpdate(
+	ctx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	data []byte,
+) (shouldClose, ok bool) {
 	if err := writeSSEEvent(w, flusher, "update", data); err != nil {
 		return false, false
 	}
@@ -157,7 +172,13 @@ func (s *Server) handleJobStreamUpdate(ctx context.Context, w http.ResponseWrite
 	return true, true
 }
 
-func (s *Server) streamJobEvents(ctx context.Context, w http.ResponseWriter, r *http.Request, flusher http.Flusher, clientEvents <-chan []byte) {
+func (s *Server) streamJobEvents(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	flusher http.Flusher,
+	clientEvents <-chan []byte,
+) {
 	heartbeat := time.NewTicker(15 * time.Second)
 	defer heartbeat.Stop()
 

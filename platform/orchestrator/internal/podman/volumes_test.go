@@ -15,6 +15,7 @@ func TestRemoveVolume(t *testing.T) {
 		if force != "true" {
 			t.Errorf("expected force=true, got force=%s", force)
 		}
+
 		w.WriteHeader(http.StatusNoContent)
 	})
 

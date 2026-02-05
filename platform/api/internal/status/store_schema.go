@@ -59,17 +59,20 @@ func (s *Store) initSchema() error {
 		)
 	}
 
-	schema, err := schemaFS.ReadFile("schema.sql")
-	if err != nil {
-		return fmt.Errorf("read schema: %w", err)
+	schema, readErr := schemaFS.ReadFile("schema.sql")
+	if readErr != nil {
+		return fmt.Errorf("read schema: %w", readErr)
 	}
 
-	if _, err := s.db.ExecContext(context.Background(), string(schema)); err != nil {
-		return fmt.Errorf("apply schema: %w", err)
+	if _, execErr := s.db.ExecContext(context.Background(), string(schema)); execErr != nil {
+		return fmt.Errorf("apply schema: %w", execErr)
 	}
 
-	if _, err := s.db.ExecContext(context.Background(), fmt.Sprintf("PRAGMA user_version=%d", schemaVersion)); err != nil {
-		return fmt.Errorf("set sqlite user_version: %w", err)
+	if _, versionErr := s.db.ExecContext(
+		context.Background(),
+		fmt.Sprintf("PRAGMA user_version=%d", schemaVersion),
+	); versionErr != nil {
+		return fmt.Errorf("set sqlite user_version: %w", versionErr)
 	}
 
 	return nil

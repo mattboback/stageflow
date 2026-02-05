@@ -21,21 +21,31 @@ func (o *Orchestrator) downloadScanResults(ctx context.Context, resultsPath stri
 	}()
 
 	var results report.UnifiedReportV2
-	if err := json.NewDecoder(reader).Decode(&results); err != nil {
-		return nil, fmt.Errorf("decode results.json: %w", err)
+	if decodeErr := json.NewDecoder(reader).Decode(&results); decodeErr != nil {
+		return nil, fmt.Errorf("decode results.json: %w", decodeErr)
 	}
 
 	return &results, nil
 }
 
-func (o *Orchestrator) uploadAggregatedReport(ctx context.Context, key string, aggregatedReport report.UnifiedReportV2) error {
+func (o *Orchestrator) uploadAggregatedReport(
+	ctx context.Context,
+	key string,
+	aggregatedReport report.UnifiedReportV2,
+) error {
 	blob, err := json.MarshalIndent(aggregatedReport, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal aggregated report: %w", err)
 	}
 
-	if err := o.storage.UploadFile(ctx, storage.BucketArtifacts, key, bytes.NewReader(blob), int64(len(blob))); err != nil {
-		return fmt.Errorf("upload aggregated report: %w", err)
+	if uploadErr := o.storage.UploadFile(
+		ctx,
+		storage.BucketArtifacts,
+		key,
+		bytes.NewReader(blob),
+		int64(len(blob)),
+	); uploadErr != nil {
+		return fmt.Errorf("upload aggregated report: %w", uploadErr)
 	}
 
 	return nil

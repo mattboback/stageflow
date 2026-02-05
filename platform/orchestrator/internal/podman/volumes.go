@@ -44,8 +44,8 @@ func (c *Client) CreateVolume(ctx context.Context, name string) error {
 	}
 
 	if resp.StatusCode != http.StatusNoContent {
-		if err := json.NewDecoder(resp.Body).Decode(&VolumeInfo{}); err != nil {
-			return fmt.Errorf("failed to decode volume response: %w", err)
+		if decodeErr := json.NewDecoder(resp.Body).Decode(&VolumeInfo{}); decodeErr != nil {
+			return fmt.Errorf("failed to decode volume response: %w", decodeErr)
 		}
 	}
 
@@ -64,8 +64,8 @@ func (c *Client) InspectVolume(ctx context.Context, name string) (*VolumeInfo, e
 	defer func() { _ = resp.Body.Close() }()
 
 	var info VolumeInfo
-	if err := parseResponse(resp, &info); err != nil {
-		return nil, err
+	if parseErr := parseResponse(resp, &info); parseErr != nil {
+		return nil, parseErr
 	}
 
 	return &info, nil

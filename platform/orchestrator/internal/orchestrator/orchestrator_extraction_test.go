@@ -43,12 +43,15 @@ func TestHandleExtractionReady(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if updatedJob.State != models.JobStateScanning {
 		t.Errorf("Expected state SCANNING, got %s", updatedJob.State)
 	}
+
 	if updatedJob.ProvenancePath != "/workspace/provenance.json" {
 		t.Errorf("Expected provenance path to be persisted, got %q", updatedJob.ProvenancePath)
 	}
+
 	if updatedJob.ProvenanceKey != "job-123/provenance.json" {
 		t.Errorf("Expected provenance key to be persisted, got %q", updatedJob.ProvenanceKey)
 	}
@@ -86,9 +89,11 @@ func TestHandleExtractionFailed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if failedJob.State != models.JobStateFailed {
 		t.Errorf("Expected state FAILED, got %s", failedJob.State)
 	}
+
 	if failedJob.Error != "Failed to extract ZIP" {
 		t.Errorf("Expected error message, got %s", failedJob.Error)
 	}

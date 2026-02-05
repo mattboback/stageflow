@@ -43,13 +43,13 @@ func run(args []string, getenv getenvFunc, client *http.Client, stdout, stderr i
 
 	outcomes := make([]jobOutcome, 0, len(suite.Domains))
 	for _, domain := range suite.Domains {
-		jobID, err := submitJob(ctx, client, *apiURL, domain, suite.Modules, suite.Screenshot)
-		if err != nil {
+		jobID, submitErr := submitJob(ctx, client, *apiURL, domain, suite.Modules, suite.Screenshot)
+		if submitErr != nil {
 			outcomes = append(outcomes, jobOutcome{
 				Domain: domain,
 				JobID:  "-",
 				State:  "FAILED",
-				Error:  err.Error(),
+				Error:  submitErr.Error(),
 				Passed: false,
 			})
 

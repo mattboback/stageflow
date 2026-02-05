@@ -36,15 +36,36 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 		"exit_code":    waitResp.StatusCode,
 	})
 
+	//nolint:nestif // Error handling with log extraction requires multiple conditional paths
 	if waitResp.StatusCode != 0 {
 		logs, logErr := o.podmanClient.GetContainerLogs(ctx, containerID, true, true)
 		logTail := ""
 
 		if logErr != nil {
-			slog.Error("Container exited with error", "component", component, "container_id", containerID, "exit_code", waitResp.StatusCode, "log_error", logErr)
+			slog.Error(
+				"Container exited with error",
+				"component",
+				component,
+				"container_id",
+				containerID,
+				"exit_code",
+				waitResp.StatusCode,
+				"log_error",
+				logErr,
+			)
 		} else {
 			logTail = truncateLogs(logs, 500)
-			slog.Error("Container exited with error", "component", component, "container_id", containerID, "exit_code", waitResp.StatusCode, "logs_tail", logTail)
+			slog.Error(
+				"Container exited with error",
+				"component",
+				component,
+				"container_id",
+				containerID,
+				"exit_code",
+				waitResp.StatusCode,
+				"logs_tail",
+				logTail,
+			)
 		}
 
 		if logTail != "" {

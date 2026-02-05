@@ -19,7 +19,13 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 		if !o.stateMachine.CanTransition(job.State, models.JobStateExtracting) {
 			msg := fmt.Sprintf("job %s cannot transition to EXTRACTING from %s", job.ID, job.State)
 			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
-			o.failJobSafeWithDetails(ctx, job.ID, "extraction", msg, stateTransitionDetails(job.State, models.JobStateExtracting))
+			o.failJobSafeWithDetails(
+				ctx,
+				job.ID,
+				"extraction",
+				msg,
+				stateTransitionDetails(job.State, models.JobStateExtracting),
+			)
 
 			return fmt.Errorf("%s", msg)
 		}
@@ -56,8 +62,8 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 		return fmt.Errorf("failed to create pod: %w", err)
 	}
 
-	if err := o.database.UpdateJobPodID(ctx, job.ID, podResp.ID); err != nil {
-		return fmt.Errorf("failed to update job pod ID: %w", err)
+	if podUpdateErr := o.database.UpdateJobPodID(ctx, job.ID, podResp.ID); podUpdateErr != nil {
+		return fmt.Errorf("failed to update job pod ID: %w", podUpdateErr)
 	}
 
 	slog.Info("Created pod for job", "pod_id", podResp.ID, "job_id", job.ID)
@@ -65,12 +71,18 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 		"pod_id": podResp.ID,
 	})
 
-	if err := o.startExtractionWorkerWithTimeout(ctx, job, podResp.ID); err != nil {
-		return fmt.Errorf("failed to start extraction worker: %w", err)
+	if workerErr := o.startExtractionWorkerWithTimeout(ctx, job, podResp.ID); workerErr != nil {
+		return fmt.Errorf("failed to start extraction worker: %w", workerErr)
 	}
 
 	// Watchdog: fail the job if extraction exceeds timeout.
-	go o.watchDeadline(backgroundWithCorrelation(ctx), job.ID, models.JobStateExtracting, o.extractionTimeout, "extraction")
+	go o.watchDeadline(
+		backgroundWithCorrelation(ctx),
+		job.ID,
+		models.JobStateExtracting,
+		o.extractionTimeout,
+		"extraction",
+	)
 
 	return nil
 }
@@ -161,8 +173,8 @@ func (o *Orchestrator) startExtractionWorker(ctx context.Context, job *models.Jo
 		"container_id": containerResp.ID,
 	})
 
-	if err := o.podmanClient.StartContainer(ctx, containerResp.ID); err != nil {
-		return fmt.Errorf("failed to start extraction worker container: %w", err)
+	if startErr := o.podmanClient.StartContainer(ctx, containerResp.ID); startErr != nil {
+		return fmt.Errorf("failed to start extraction worker container: %w", startErr)
 	}
 
 	slog.Info("Started extraction worker container", "container_id", containerResp.ID, "job_id", job.ID)

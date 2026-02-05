@@ -36,15 +36,19 @@ func TestAbbreviateAndTruncation(t *testing.T) {
 	if got, want := abbreviate("", 8), "-"; got != want {
 		t.Fatalf("abbreviate(empty): want %q, got %q", want, got)
 	}
+
 	if got, want := abbreviate("abc", 8), "abc"; got != want {
 		t.Fatalf("abbreviate(short): want %q, got %q", want, got)
 	}
+
 	if got, want := abbreviate("abcdefghijk", 8), "abcdefgh..."; got != want {
 		t.Fatalf("abbreviate(long): want %q, got %q", want, got)
 	}
+
 	if got, want := abbreviate("abcdefghijk", 0), "..."; got != want {
 		t.Fatalf("abbreviate(prefix=0): want %q, got %q", want, got)
 	}
+
 	if got, want := truncateWithEllipsis("abcdefghijk", 8), "abcde..."; got != want {
 		t.Fatalf("truncateWithEllipsis(max=8): want %q, got %q", want, got)
 	}

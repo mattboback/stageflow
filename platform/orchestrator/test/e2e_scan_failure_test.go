@@ -39,6 +39,7 @@ func TestE2E_ScanFailureFlow(t *testing.T) {
 	}
 
 	t.Log("Step 3: Handling scan.failed event")
+
 	scanFailed := &events.ScanFailedPayload{
 		JobID:        jobID,
 		ScannerType:  "axe", // Must match the expected scanner type.
@@ -55,6 +56,7 @@ func TestE2E_ScanFailureFlow(t *testing.T) {
 	if job.State != models.JobStateFailed {
 		t.Errorf("Expected state FAILED, got %s", job.State)
 	}
+
 	if job.Error == "" {
 		t.Errorf("Expected error to be set")
 	}

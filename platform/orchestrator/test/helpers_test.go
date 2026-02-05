@@ -56,20 +56,30 @@ func seedScanResults(t *testing.T, store *memoryStorage, jobID, resultsPath stri
 		t.Fatalf("marshal scan results: %v", err)
 	}
 
-	if err := store.UploadFile(context.Background(), storage.BucketArtifacts, resultsPath, bytes.NewReader(data), int64(len(data))); err != nil {
-		t.Fatalf("seed scan results: %v", err)
+	if uploadErr := store.UploadFile(
+		context.Background(),
+		storage.BucketArtifacts,
+		resultsPath,
+		bytes.NewReader(data),
+		int64(len(data)),
+	); uploadErr != nil {
+		t.Fatalf("seed scan results: %v", uploadErr)
 	}
 }
 
-func setupE2ETest(t *testing.T) (*orchestrator.Orchestrator, *db.Database, *mockPodmanClient, *mockPublisher, *memoryStorage) {
+func setupE2ETest(
+	t *testing.T,
+) (*orchestrator.Orchestrator, *db.Database, *mockPodmanClient, *mockPublisher, *memoryStorage) {
 	t.Helper()
+
 	database, err := db.NewDatabase(&db.Config{Path: ":memory:"})
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
+
 	t.Cleanup(func() {
-		if err := database.Close(); err != nil {
-			t.Fatalf("Failed to close database: %v", err)
+		if closeErr := database.Close(); closeErr != nil {
+			t.Fatalf("Failed to close database: %v", closeErr)
 		}
 	})
 
@@ -90,10 +100,12 @@ func setupE2ETest(t *testing.T) (*orchestrator.Orchestrator, *db.Database, *mock
 
 func mustGetJob(t *testing.T, database *db.Database, jobID string) *models.Job {
 	t.Helper()
+
 	job, err := database.GetJob(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("Failed to get job %s: %v", jobID, err)
 	}
+
 	return job
 }
 
@@ -101,5 +113,6 @@ func strPtr(value string) *string {
 	if value == "" {
 		return nil
 	}
+
 	return &value
 }

@@ -33,9 +33,11 @@ func TestJobState_ValuesAndHelpers(t *testing.T) {
 			if string(tt.state) != tt.want {
 				t.Fatalf("Expected %s, got %s", tt.want, string(tt.state))
 			}
+
 			if tt.state.IsValid() != tt.isValid {
 				t.Fatalf("IsValid mismatch for %q", tt.state)
 			}
+
 			if tt.state.IsTerminal() != tt.isTerminal {
 				t.Fatalf("IsTerminal mismatch for %q", tt.state)
 			}
@@ -68,8 +70,8 @@ func TestJob_JSONTagsAndOmitEmpty(t *testing.T) {
 	}
 
 	var m map[string]any
-	if err := json.Unmarshal(b, &m); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	if unmarshalErr := json.Unmarshal(b, &m); unmarshalErr != nil {
+		t.Fatalf("unmarshal: %v", unmarshalErr)
 	}
 
 	// Required / expected keys
@@ -83,6 +85,7 @@ func TestJob_JSONTagsAndOmitEmpty(t *testing.T) {
 	if _, ok := m["urls"]; ok {
 		t.Fatalf("expected urls to be omitted when nil: %s", string(b))
 	}
+
 	if _, ok := m["completed_at"]; ok {
 		t.Fatalf("expected completed_at to be omitted when nil: %s", string(b))
 	}

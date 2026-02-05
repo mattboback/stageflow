@@ -56,20 +56,20 @@ func ValidateManifestJSON(data []byte) error {
 	}
 
 	var payload any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return fmt.Errorf("decode manifest: %w", err)
+	if unmarshalErr := json.Unmarshal(data, &payload); unmarshalErr != nil {
+		return fmt.Errorf("decode manifest: %w", unmarshalErr)
 	}
 
-	if err := schema.Validate(payload); err != nil {
-		return fmt.Errorf("manifest schema validation failed: %w", err)
+	if validateErr := schema.Validate(payload); validateErr != nil {
+		return fmt.Errorf("manifest schema validation failed: %w", validateErr)
 	}
 
-	if err := validateConfigSchema(data); err != nil {
-		return fmt.Errorf("manifest configSchema validation failed: %w", err)
+	if configErr := validateConfigSchema(data); configErr != nil {
+		return fmt.Errorf("manifest configSchema validation failed: %w", configErr)
 	}
 
-	if err := validateCapabilitiesRules(data); err != nil {
-		return fmt.Errorf("manifest capabilities validation failed: %w", err)
+	if capErr := validateCapabilitiesRules(data); capErr != nil {
+		return fmt.Errorf("manifest capabilities validation failed: %w", capErr)
 	}
 
 	return nil

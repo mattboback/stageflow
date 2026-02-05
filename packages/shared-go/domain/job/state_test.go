@@ -157,6 +157,7 @@ func TestStateRankSQL(t *testing.T) {
 	if sql == "" {
 		t.Error("StateRankSQL() returned empty string")
 	}
+
 	if len(sql) < 50 {
 		t.Errorf("StateRankSQL() returned unexpectedly short string: %s", sql)
 	}

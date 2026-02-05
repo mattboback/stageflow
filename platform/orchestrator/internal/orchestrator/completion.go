@@ -49,6 +49,7 @@ func completionStage(err error) (string, error) {
 	return events.JobFailStageReporting, err
 }
 
+//nolint:gocognit,gocyclo // Aggregation logic requires multiple scanner result checks
 func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job *models.Job) error {
 	if job.State == models.JobStateDone {
 		slog.Debug("Job already completed", "job_id", job.ID)
@@ -69,7 +70,10 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		}
 
 		if err := o.database.UpdateJobState(ctx, job.ID, models.JobStateCompleting); err != nil {
-			return &completionError{Stage: events.JobFailStageReporting, Err: fmt.Errorf("failed to update job state to COMPLETING: %w", err)}
+			return &completionError{
+				Stage: events.JobFailStageReporting,
+				Err:   fmt.Errorf("failed to update job state to COMPLETING: %w", err),
+			}
 		}
 
 		o.recordInternalEvent(ctx, job.ID, "orchestrator.state.transition", map[string]any{
@@ -124,8 +128,8 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 	}
 
 	// Record scan completion time for metrics
-	if err := o.database.RecordScanComplete(ctx, job.ID); err != nil {
-		slog.Warn("Failed to record scan complete", "job_id", job.ID, "error", err)
+	if metricsErr := o.database.RecordScanComplete(ctx, job.ID); metricsErr != nil {
+		slog.Warn("Failed to record scan complete", "job_id", job.ID, "error", metricsErr)
 	}
 
 	var pagesScanned, totalIssues, criticalIssues, seriousIssues, moderateIssues, minorIssues int
@@ -143,19 +147,28 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		minorIssues += result.MinorIssues
 	}
 
-	if err := o.database.UpdateJobMetrics(ctx, job.ID, pagesScanned, totalIssues, criticalIssues, seriousIssues, moderateIssues, minorIssues); err != nil {
-		slog.Warn("Failed to update job metrics", "job_id", job.ID, "error", err)
+	if updateMetricsErr := o.database.UpdateJobMetrics(
+		ctx,
+		job.ID,
+		pagesScanned,
+		totalIssues,
+		criticalIssues,
+		seriousIssues,
+		moderateIssues,
+		minorIssues,
+	); updateMetricsErr != nil {
+		slog.Warn("Failed to update job metrics", "job_id", job.ID, "error", updateMetricsErr)
 	}
 
-	if err := o.database.CompleteJob(ctx, job.ID); err != nil {
-		return &completionError{Stage: "completing", Err: fmt.Errorf("complete job in database: %w", err)}
+	if completeErr := o.database.CompleteJob(ctx, job.ID); completeErr != nil {
+		return &completionError{Stage: "completing", Err: fmt.Errorf("complete job in database: %w", completeErr)}
 	}
 
 	job.State = models.JobStateDone
 
 	if job.PodID != "" {
-		if err := o.cleanupPod(ctx, job.PodID); err != nil {
-			slog.Warn("Failed to cleanup pod", "pod_id", job.PodID, "error", err)
+		if cleanupErr := o.cleanupPod(ctx, job.PodID); cleanupErr != nil {
+			slog.Warn("Failed to cleanup pod", "pod_id", job.PodID, "error", cleanupErr)
 		}
 	}
 
@@ -175,11 +188,11 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		ScannerArtifacts: scannerArtifacts,
 	}
 
-	if err := o.publisher.PublishJobCompleted(ctx, payload); err != nil {
-		slog.Warn("Failed to publish job.completed event", "error", err)
+	if publishErr := o.publisher.PublishJobCompleted(ctx, payload); publishErr != nil {
+		slog.Warn("Failed to publish job.completed event", "error", publishErr)
 		o.recordInternalEvent(ctx, job.ID, "orchestrator.event.publish_failed", map[string]any{
 			"event": "job.completed",
-			"error": err.Error(),
+			"error": publishErr.Error(),
 		})
 	} else {
 		o.recordInternalEvent(ctx, job.ID, "orchestrator.event.published", map[string]any{
@@ -192,7 +205,15 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		scannerList = append(scannerList, st)
 	}
 
-	slog.Info("Job completed successfully", "job_id", job.ID, "scanner_count", len(scannerArtifacts), "scanners", scannerList)
+	slog.Info(
+		"Job completed successfully",
+		"job_id",
+		job.ID,
+		"scanner_count",
+		len(scannerArtifacts),
+		"scanners",
+		scannerList,
+	)
 
 	return nil
 }

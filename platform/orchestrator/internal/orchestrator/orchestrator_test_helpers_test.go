@@ -32,10 +32,14 @@ type mockPodmanClient struct {
 	getLogsFunc         func(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
 }
 
-func (m *mockPodmanClient) CreatePod(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
+func (m *mockPodmanClient) CreatePod(
+	ctx context.Context,
+	req *podman.PodCreateRequest,
+) (*podman.PodCreateResponse, error) {
 	if m.createPodFunc != nil {
 		return m.createPodFunc(ctx, req)
 	}
+
 	return &podman.PodCreateResponse{ID: "pod-12345"}, nil
 }
 
@@ -43,6 +47,7 @@ func (m *mockPodmanClient) StopPod(ctx context.Context, podID string) error {
 	if m.stopPodFunc != nil {
 		return m.stopPodFunc(ctx, podID)
 	}
+
 	return nil
 }
 
@@ -50,6 +55,7 @@ func (m *mockPodmanClient) RemovePod(ctx context.Context, podID string, force bo
 	if m.removePodFunc != nil {
 		return m.removePodFunc(ctx, podID, force)
 	}
+
 	return nil
 }
 
@@ -57,6 +63,7 @@ func (m *mockPodmanClient) CreateVolume(ctx context.Context, name string) error 
 	if m.createVolumeFunc != nil {
 		return m.createVolumeFunc(ctx, name)
 	}
+
 	return nil
 }
 
@@ -64,6 +71,7 @@ func (m *mockPodmanClient) InspectVolume(ctx context.Context, name string) (*pod
 	if m.inspectVolumeFunc != nil {
 		return m.inspectVolumeFunc(ctx, name)
 	}
+
 	return &podman.VolumeInfo{
 		Name:       name,
 		Mountpoint: fmt.Sprintf("/volumes/%s/_data", name),
@@ -74,13 +82,18 @@ func (m *mockPodmanClient) RemoveVolume(ctx context.Context, name string, force 
 	if m.removeVolumeFunc != nil {
 		return m.removeVolumeFunc(ctx, name, force)
 	}
+
 	return nil
 }
 
-func (m *mockPodmanClient) CreateContainer(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+func (m *mockPodmanClient) CreateContainer(
+	ctx context.Context,
+	req *podman.ContainerCreateRequest,
+) (*podman.ContainerCreateResponse, error) {
 	if m.createContainerFunc != nil {
 		return m.createContainerFunc(ctx, req)
 	}
+
 	return &podman.ContainerCreateResponse{ID: "container-12345"}, nil
 }
 
@@ -88,13 +101,18 @@ func (m *mockPodmanClient) StartContainer(ctx context.Context, containerID strin
 	if m.startContainerFunc != nil {
 		return m.startContainerFunc(ctx, containerID)
 	}
+
 	return nil
 }
 
-func (m *mockPodmanClient) WaitContainer(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error) {
+func (m *mockPodmanClient) WaitContainer(
+	ctx context.Context,
+	containerID string,
+) (*podman.ContainerWaitResponse, error) {
 	if m.waitContainerFunc != nil {
 		return m.waitContainerFunc(ctx, containerID)
 	}
+
 	return &podman.ContainerWaitResponse{StatusCode: 0}, nil
 }
 
@@ -102,13 +120,19 @@ func (m *mockPodmanClient) RemoveContainer(ctx context.Context, containerID stri
 	if m.removeContainerFunc != nil {
 		return m.removeContainerFunc(ctx, containerID, force)
 	}
+
 	return nil
 }
 
-func (m *mockPodmanClient) GetContainerLogs(ctx context.Context, containerID string, stdout, stderr bool) (string, error) {
+func (m *mockPodmanClient) GetContainerLogs(
+	ctx context.Context,
+	containerID string,
+	stdout, stderr bool,
+) (string, error) {
 	if m.getLogsFunc != nil {
 		return m.getLogsFunc(ctx, containerID, stdout, stderr)
 	}
+
 	return "", nil
 }
 
@@ -164,15 +188,18 @@ func (m *mockPublisher) firstCompleted() *events.JobCompletedPayload {
 
 func newInMemoryDB(t *testing.T) *db.Database {
 	t.Helper()
+
 	database, err := db.NewDatabase(&db.Config{Path: ":memory:"})
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
+
 	t.Cleanup(func() {
-		if err := database.Close(); err != nil {
-			t.Fatalf("Failed to close database: %v", err)
+		if closeErr := database.Close(); closeErr != nil {
+			t.Fatalf("Failed to close database: %v", closeErr)
 		}
 	})
+
 	return database
 }
 
@@ -200,6 +227,7 @@ func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPubl
 
 func insertJob(t *testing.T, database *db.Database, job *models.Job) {
 	t.Helper()
+
 	if err := database.CreateJob(context.Background(), job); err != nil {
 		t.Fatalf("Failed to insert job: %v", err)
 	}
@@ -246,7 +274,14 @@ func seedScanResults(t *testing.T, store *memoryStorage, jobID, resultsPath stri
 	if err != nil {
 		t.Fatalf("marshal scan results: %v", err)
 	}
-	if err := store.UploadFile(context.Background(), storage.BucketArtifacts, resultsPath, bytes.NewReader(data), int64(len(data))); err != nil {
-		t.Fatalf("seed scan results: %v", err)
+
+	if uploadErr := store.UploadFile(
+		context.Background(),
+		storage.BucketArtifacts,
+		resultsPath,
+		bytes.NewReader(data),
+		int64(len(data)),
+	); uploadErr != nil {
+		t.Fatalf("seed scan results: %v", uploadErr)
 	}
 }

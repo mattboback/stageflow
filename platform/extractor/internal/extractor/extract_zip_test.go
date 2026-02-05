@@ -56,7 +56,9 @@ func TestExtractZIP_PathTraversalBlocked(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error for path traversal, got nil")
 	}
-	if err != nil && !strings.Contains(err.Error(), "path traversal") && !strings.Contains(err.Error(), "illegal file path") {
+
+	if err != nil && !strings.Contains(err.Error(), "path traversal") &&
+		!strings.Contains(err.Error(), "illegal file path") {
 		t.Errorf("Expected traversal error, got: %v", err)
 	}
 

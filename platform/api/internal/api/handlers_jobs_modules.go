@@ -42,7 +42,11 @@ func (s *Server) normalizeModules(explicit []string) ([]string, error) {
 	if err != nil {
 		supportedIDs := s.listSupportedModuleIDs()
 
-		return nil, fmt.Errorf("unsupported scanner module '%s' (supported: %s)", extractModuleName(err.Error()), strings.Join(supportedIDs, ", "))
+		return nil, fmt.Errorf(
+			"unsupported scanner module '%s' (supported: %s)",
+			extractModuleName(err.Error()),
+			strings.Join(supportedIDs, ", "),
+		)
 	}
 
 	return resolved, nil

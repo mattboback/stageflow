@@ -54,9 +54,11 @@ func TestHandleScanCompleted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if completedJob.State != models.JobStateDone {
 		t.Errorf("Expected state DONE, got %s", completedJob.State)
 	}
+
 	if completedJob.CompletedAt == nil {
 		t.Error("Expected CompletedAt to be set")
 	}
@@ -105,6 +107,7 @@ func TestHandleScanFailed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if failedJob.State != models.JobStateFailed {
 		t.Errorf("Expected state FAILED, got %s", failedJob.State)
 	}
@@ -132,7 +135,11 @@ func TestHandleMultipleScanners(t *testing.T) {
 	insertJob(t, database, job)
 
 	// Set expected scanners (this is normally done in startScanning)
-	if err := database.SetExpectedScanners(context.Background(), "job-multi", []string{"axe", "lighthouse"}); err != nil {
+	if err := database.SetExpectedScanners(
+		context.Background(),
+		"job-multi",
+		[]string{"axe", "lighthouse"},
+	); err != nil {
 		t.Fatalf("Failed to set expected scanners: %v", err)
 	}
 
@@ -157,9 +164,11 @@ func TestHandleMultipleScanners(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if partialJob.State == models.JobStateDone {
 		t.Errorf("Expected job to NOT be DONE yet (waiting for lighthouse), got %s", partialJob.State)
 	}
+
 	if publisher.completedCount() != 0 {
 		t.Errorf("Expected 0 job.completed events (waiting for lighthouse), got %d", publisher.completedCount())
 	}
@@ -190,6 +199,7 @@ func TestHandleMultipleScanners(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if completedJob.State != models.JobStateDone {
 		t.Errorf("Expected state DONE after all scanners complete, got %s", completedJob.State)
 	}
@@ -203,6 +213,7 @@ func TestHandleMultipleScanners(t *testing.T) {
 	if len(completedJob.CompletedScanners) != 2 {
 		t.Errorf("Expected 2 completed scanners, got %d", len(completedJob.CompletedScanners))
 	}
+
 	if len(completedJob.ScannerResults) != 2 {
 		t.Errorf("Expected 2 scanner results, got %d", len(completedJob.ScannerResults))
 	}
@@ -233,7 +244,11 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 	insertJob(t, database, job)
 
 	// Set expected scanners
-	if err := database.SetExpectedScanners(context.Background(), "job-partial", []string{"axe", "lighthouse"}); err != nil {
+	if err := database.SetExpectedScanners(
+		context.Background(),
+		"job-partial",
+		[]string{"axe", "lighthouse"},
+	); err != nil {
 		t.Fatalf("Failed to set expected scanners: %v", err)
 	}
 
@@ -271,6 +286,7 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
 	if completedJob.State != models.JobStateDone {
 		t.Errorf("Expected state DONE (partial success), got %s", completedJob.State)
 	}
@@ -279,6 +295,7 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 	if publisher.completedCount() != 1 {
 		t.Errorf("Expected 1 job.completed event, got %d", publisher.completedCount())
 	}
+
 	if publisher.failedCount() != 0 {
 		t.Errorf("Expected 0 job.failed events, got %d", publisher.failedCount())
 	}
@@ -287,6 +304,7 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 	if len(completedJob.ScannerResults) != 2 {
 		t.Errorf("Expected 2 scanner results, got %d", len(completedJob.ScannerResults))
 	}
+
 	if axeResult, ok := completedJob.ScannerResults["axe"]; ok {
 		if !axeResult.Success {
 			t.Error("Expected axe result to be successful")
@@ -294,6 +312,7 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 	} else {
 		t.Error("Expected axe result to exist")
 	}
+
 	if lhResult, ok := completedJob.ScannerResults["lighthouse"]; ok {
 		if lhResult.Success {
 			t.Error("Expected lighthouse result to be failed")

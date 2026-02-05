@@ -27,9 +27,11 @@ func TestReadNextSSEEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read 1: %v", err)
 	}
+
 	if ev != "status" {
 		t.Fatalf("expected status, got %q", ev)
 	}
+
 	if data != "{\"state\":\"PENDING\"}" {
 		t.Fatalf("unexpected data: %q", data)
 	}
@@ -38,9 +40,11 @@ func TestReadNextSSEEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read 2: %v", err)
 	}
+
 	if ev != "update" {
 		t.Fatalf("expected update, got %q", ev)
 	}
+
 	if data != "{\"type\":\"progress\",\"state\":\"SCANNING\"}" {
 		t.Fatalf("unexpected data: %q", data)
 	}
@@ -58,9 +62,11 @@ func TestReadNextSSEEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read 4: %v", err)
 	}
+
 	if ev != "done" {
 		t.Fatalf("expected done, got %q", ev)
 	}
+
 	if data != "{\"type\":\"complete\",\"state\":\"DONE\"}" {
 		t.Fatalf("unexpected data: %q", data)
 	}

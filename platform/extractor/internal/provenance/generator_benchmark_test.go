@@ -16,8 +16,10 @@ func BenchmarkGenerate_Small(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		tmpDir := b.TempDir()
+
 		outputPath := filepath.Join(tmpDir, "provenance.json")
 		if _, err := gen.Generate("test-job", "http://localhost:8080", pages, outputPath); err != nil {
 			b.Fatalf("failed to generate provenance: %v", err)
@@ -29,7 +31,7 @@ func BenchmarkGenerate_Large(b *testing.B) {
 	gen := NewGenerator()
 
 	pages := make([]discovery.HTMLPage, 1000)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		pages[i] = discovery.HTMLPage{
 			ID:   "page-001",
 			Path: "/page.html",
@@ -38,8 +40,10 @@ func BenchmarkGenerate_Large(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for range b.N {
 		tmpDir := b.TempDir()
+
 		outputPath := filepath.Join(tmpDir, "provenance.json")
 		if _, err := gen.Generate("test-job", "http://localhost:8080", pages, outputPath); err != nil {
 			b.Fatalf("failed to generate provenance: %v", err)

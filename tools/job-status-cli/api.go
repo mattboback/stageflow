@@ -62,8 +62,8 @@ func decodeOKJSON(ctx context.Context, client *http.Client, requestURL *url.URL,
 		return fmt.Errorf("API returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(dest); err != nil {
-		return fmt.Errorf("failed to parse response: %w", err)
+	if decodeErr := json.NewDecoder(resp.Body).Decode(dest); decodeErr != nil {
+		return fmt.Errorf("failed to parse response: %w", decodeErr)
 	}
 
 	return nil

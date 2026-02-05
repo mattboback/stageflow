@@ -13,12 +13,19 @@ func TestPageKey(t *testing.T) {
 	if got, want := pageKey("axe", 0, report.PageSummary{Id: "page-1"}), "id:page-1"; got != want {
 		t.Fatalf("pageKey(PageID): want %q, got %q", want, got)
 	}
-	if got, want := pageKey("axe", 0, report.PageSummary{Url: "https://example.com/#frag"}), "url:https://example.com/"; got != want {
+
+	if got, want := pageKey(
+		"axe",
+		0,
+		report.PageSummary{Url: "https://example.com/#frag"},
+	), "url:https://example.com/"; got != want {
 		t.Fatalf("pageKey(URL): want %q, got %q", want, got)
 	}
+
 	if got, want := pageKey("axe", 0, report.PageSummary{Path: stringPtr("/about")}), "path:/about"; got != want {
 		t.Fatalf("pageKey(Path): want %q, got %q", want, got)
 	}
+
 	if got, want := pageKey("axe", 5, report.PageSummary{}), "scan:axe:5"; got != want {
 		t.Fatalf("pageKey(fallback): want %q, got %q", want, got)
 	}
@@ -64,9 +71,12 @@ func TestNormalizeURL(t *testing.T) {
 func TestDerivePageID(t *testing.T) {
 	t.Parallel()
 
-	if got, want := derivePageID(report.PageSummary{Url: "https://example.com/about/"}), "url-example.com-about"; got != want {
+	if got, want := derivePageID(
+		report.PageSummary{Url: "https://example.com/about/"},
+	), "url-example.com-about"; got != want {
 		t.Fatalf("derivePageID(url): want %q, got %q", want, got)
 	}
+
 	if got := derivePageID(report.PageSummary{}); got != "" {
 		t.Fatalf("derivePageID(empty): want empty, got %q", got)
 	}
@@ -81,6 +91,7 @@ func TestPickEarlierPickLater(t *testing.T) {
 	if got, want := pickEarlierTime(&newer, &older), &older; !got.Equal(*want) {
 		t.Fatalf("pickEarlierTime: want %v, got %v", want, got)
 	}
+
 	if got, want := pickLaterTime(&older, &newer), &newer; !got.Equal(*want) {
 		t.Fatalf("pickLaterTime: want %v, got %v", want, got)
 	}
@@ -125,6 +136,7 @@ func TestMergeAggregatedPagePrefersAxeOverview(t *testing.T) {
 	if agg == nil || agg.page.PageOverview == nil {
 		t.Fatalf("expected aggregated page with overview")
 	}
+
 	if got, want := agg.page.PageOverview.ScreenshotFilename, "axe.png"; got != want {
 		t.Fatalf("expected axe overview %q, got %q", want, got)
 	}
@@ -165,30 +177,39 @@ func TestMergeAggregatedPageAggregatesCountsAndTiming(t *testing.T) {
 	if agg == nil {
 		t.Fatalf("expected aggregated page")
 	}
+
 	if got, want := agg.page.Url, "https://example.com/"; got != want {
 		t.Fatalf("URL: want %q, got %q", want, got)
 	}
+
 	if got, want := stringValue(agg.page.Path), "/"; got != want {
 		t.Fatalf("Path: want %q, got %q", want, got)
 	}
+
 	if got, want := agg.page.IssueCount, 3; got != want {
 		t.Fatalf("IssueCount: want %d, got %d", want, got)
 	}
+
 	if agg.page.BySeverity == nil {
 		t.Fatalf("expected BySeverity to be set")
 	}
+
 	if got, want := agg.page.BySeverity.Critical, 1; got != want {
 		t.Fatalf("Critical: want %d, got %d", want, got)
 	}
+
 	if got, want := agg.page.BySeverity.Minor, 2; got != want {
 		t.Fatalf("Minor: want %d, got %d", want, got)
 	}
+
 	if got, want := agg.page.DurationMs, 150.0; got != want {
 		t.Fatalf("DurationMs: want %v, got %v", want, got)
 	}
+
 	if agg.page.StartedAt == nil || !agg.page.StartedAt.Equal(start2) {
 		t.Fatalf("StartedAt: want %v, got %v", start2, agg.page.StartedAt)
 	}
+
 	if agg.page.FinishedAt == nil || !agg.page.FinishedAt.Equal(end2) {
 		t.Fatalf("FinishedAt: want %v, got %v", end2, agg.page.FinishedAt)
 	}

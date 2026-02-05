@@ -76,8 +76,9 @@ func validateAiNavigatorScannerConfig(scannerConfigs map[string]map[string]any) 
 		vision["model"] = defaultModel
 	}
 
-	if provider, ok := vision["provider"]; ok {
-		if providerStr, ok := provider.(string); ok && strings.TrimSpace(providerStr) != "" && !strings.EqualFold(providerStr, "openrouter") {
+	if provider, hasProvider := vision["provider"]; hasProvider {
+		if providerStr, isStr := provider.(string); isStr && strings.TrimSpace(providerStr) != "" &&
+			!strings.EqualFold(providerStr, "openrouter") {
 			detail := httputil.NewValidationError(
 				"scanner_configs.ai-navigator.vision.provider",
 				fmt.Sprintf("ai-navigator vision.provider must be %q", "openrouter"),

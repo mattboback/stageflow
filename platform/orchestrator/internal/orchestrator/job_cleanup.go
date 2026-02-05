@@ -47,8 +47,8 @@ func (o *Orchestrator) failJob(ctx context.Context, jobID, stage, errorMsg, erro
 		return nil
 	}
 
-	if err := o.database.FailJob(ctx, jobID, errorMsg); err != nil {
-		return fmt.Errorf("failed to fail job in database: %w", err)
+	if failErr := o.database.FailJob(ctx, jobID, errorMsg); failErr != nil {
+		return fmt.Errorf("failed to fail job in database: %w", failErr)
 	}
 
 	job.State = models.JobStateFailed
@@ -63,8 +63,8 @@ func (o *Orchestrator) failJob(ctx context.Context, jobID, stage, errorMsg, erro
 	})
 
 	if job.PodID != "" {
-		if err := o.cleanupPod(ctx, job.PodID); err != nil {
-			slog.Warn("Failed to cleanup pod", "pod_id", job.PodID, "error", err)
+		if cleanupErr := o.cleanupPod(ctx, job.PodID); cleanupErr != nil {
+			slog.Warn("Failed to cleanup pod", "pod_id", job.PodID, "error", cleanupErr)
 		}
 	}
 
@@ -79,11 +79,11 @@ func (o *Orchestrator) failJob(ctx context.Context, jobID, stage, errorMsg, erro
 		ErrorDetails: errorDetails,
 	}
 
-	if err := o.publisher.PublishJobFailed(ctx, payload); err != nil {
-		slog.Warn("Failed to publish job.failed event", "error", err)
+	if publishErr := o.publisher.PublishJobFailed(ctx, payload); publishErr != nil {
+		slog.Warn("Failed to publish job.failed event", "error", publishErr)
 		o.recordInternalEvent(ctx, jobID, "orchestrator.event.publish_failed", map[string]any{
 			"event": "job.failed",
-			"error": err.Error(),
+			"error": publishErr.Error(),
 		})
 	} else {
 		o.recordInternalEvent(ctx, jobID, "orchestrator.event.published", map[string]any{

@@ -31,6 +31,7 @@ func (sm *StateMachine) ValidateTransition(from, to models.JobState) error {
 
 // NextState maps lifecycle events to expected states; "error" always yields FAILED.
 func (sm *StateMachine) NextState(current models.JobState, event string) (models.JobState, error) {
+	//nolint:exhaustive // Terminal states (Done, Failed) are handled by the error fallback below.
 	switch current {
 	case models.JobStatePending:
 		if event == "start_extraction" {
