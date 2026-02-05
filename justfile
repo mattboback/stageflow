@@ -178,7 +178,11 @@ ci:
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> Go lint..."
-    golangci-lint run
+    while IFS= read -r dir; do
+        [[ -n "$dir" ]] || continue
+        echo "  -> $dir"
+        (cd "$dir" && golangci-lint run)
+    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> Go test..."
     while IFS= read -r dir; do

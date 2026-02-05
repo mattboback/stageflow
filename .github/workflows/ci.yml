@@ -39,7 +39,11 @@ jobs:
           done
 
       - name: Go lint
-        run: golangci-lint run
+        run: |
+          for dir in $(awk '/^\t\.\//{gsub(/^\t/, ""); print}' go.work); do
+            echo "==> Linting $dir"
+            (cd "$dir" && golangci-lint run)
+          done
 
       - name: Go test
         run: |
