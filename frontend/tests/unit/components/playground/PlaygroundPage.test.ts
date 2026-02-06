@@ -56,7 +56,7 @@ describe('PlaygroundPage', () => {
 
 		render(PlaygroundPage);
 
-		expect(screen.getByText('Configure Your Scan')).toBeInTheDocument();
+		expect(screen.getByText('Configure Scan')).toBeInTheDocument();
 		expect(await screen.findByText('No scanners available')).toBeInTheDocument();
 		expect(screen.getByText('Start Scan')).toBeInTheDocument();
 	});
