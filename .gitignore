@@ -61,9 +61,6 @@ log.duff
 # Allow frontend source data
 # Go build artifacts
 bin/
-portfolio/gateway/backend
-# Ignore only known/intentional local binaries (never mask source dirs like cmd/server or internal/server)
-portfolio/gateway/server
 platform/api/platform-api
 platform/api/platform-api-healthcheck
 platform/orchestrator/orchestrator

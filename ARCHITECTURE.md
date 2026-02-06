@@ -104,7 +104,7 @@ platform/api/
     |   +-- handlers_sse.go  # Server-Sent Events
     |   +-- handlers_scanners.go
     +-- messaging/
-    |   +-- publisher.go     # NATS event publishing
+    |   +-- service.go       # NATS event publishing
     +-- status/
         +-- store.go         # SQLite projection store
         +-- schema.sql       # Status DB schema
@@ -148,7 +148,7 @@ platform/orchestrator/
     +-- messaging/
     |   +-- consumers.go     # NATS consumer setup
     +-- db/
-    |   +-- store.go         # Jobs SQLite store
+    |   +-- database.go      # Jobs SQLite store
     |   +-- job_events.go    # Event audit log
     |   +-- schema.sql       # Orchestrator DB schema
     +-- fsm/
@@ -176,7 +176,7 @@ platform/scanner-runner/
 |   +-- core/
 |   |   +-- scanner-base.ts  # Base scanner class with lifecycle
 |   |   +-- types.ts         # Core type definitions
-|   |   +-- config.ts        # Configuration loader
+|   |   +-- config-loader.ts # Configuration loader
 |   |   +-- browser-manager.ts
 |   |   +-- page-iterator.ts
 |   |   +-- event-publisher.ts
