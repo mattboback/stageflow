@@ -18,9 +18,9 @@
 
 	function getScoreTextColor(score: number): string {
 		const pct = score * 100;
-		if (pct >= 90) return 'text-emerald-700 dark:text-emerald-400';
-		if (pct >= 50) return 'text-amber-700 dark:text-amber-400';
-		return 'text-red-700 dark:text-red-400';
+		if (pct >= 90) return 'text-emerald-700';
+		if (pct >= 50) return 'text-amber-700';
+		return 'text-red-700';
 	}
 </script>
 

@@ -97,6 +97,8 @@
 		Boolean(activeScanner || activePage || activeSeverity || activeCategory || searchTerm.trim())
 	);
 
+	const hasSecondaryFilters = $derived(Boolean(activeCategory || activePage));
+
 	// Debounced search: local state syncs immediately for responsive UI,
 	// but URL update is debounced to avoid expensive recalculations on each keystroke.
 	// We use $state here instead of writable $derived because:
@@ -106,6 +108,7 @@
 	const SEARCH_DEBOUNCE_MS = 250;
 	// eslint-disable-next-line svelte/prefer-writable-derived -- complex bidirectional sync with debounce
 	let localSearchValue = $state('');
+	let showMoreFilters = $state(false);
 
 	// Sync local value when searchTerm prop changes externally (e.g., clear filters, initial load)
 	$effect(() => {
@@ -221,41 +224,50 @@
 							{severity}
 						</button>
 					{/each}
+					<button
+						type="button"
+						onclick={() => { showMoreFilters = !showMoreFilters; }}
+						class="text-ink-muted hover:text-ink ml-auto text-xs font-semibold transition"
+					>
+						{showMoreFilters || hasSecondaryFilters ? 'Less filters' : 'More filters'}
+					</button>
 				</div>
-				<div class="grid gap-3 sm:grid-cols-2">
-					<label class="text-ink-muted text-xs">
-						Category
-						<Select
-							class="mt-1"
-							value={activeCategory ?? 'all'}
-							onchange={(event) => {
-								const value = (event.currentTarget as HTMLSelectElement).value;
-								onCategoryChange(value === 'all' ? null : value);
-							}}
-						>
-							<option value="all">All categories</option>
-							{#each categories as category (category)}
-								<option value={category}>{category}</option>
-							{/each}
-						</Select>
-					</label>
-					<label class="text-ink-muted text-xs">
-						Page
-						<Select
-							class="mt-1"
-							value={activePage ?? 'all'}
-							onchange={(event) => {
-								const value = (event.currentTarget as HTMLSelectElement).value;
-								onPageChange(value === 'all' ? null : value);
-							}}
-						>
-							<option value="all">All pages</option>
-							{#each report.pages as page (page.id)}
-								<option value={page.id}>{page.path ?? page.url}</option>
-							{/each}
-						</Select>
-					</label>
-				</div>
+				{#if showMoreFilters || hasSecondaryFilters}
+					<div class="grid gap-3 sm:grid-cols-2">
+						<label class="text-ink-muted text-xs">
+							Category
+							<Select
+								class="mt-1"
+								value={activeCategory ?? 'all'}
+								onchange={(event) => {
+									const value = (event.currentTarget as HTMLSelectElement).value;
+									onCategoryChange(value === 'all' ? null : value);
+								}}
+							>
+								<option value="all">All categories</option>
+								{#each categories as category (category)}
+									<option value={category}>{category}</option>
+								{/each}
+							</Select>
+						</label>
+						<label class="text-ink-muted text-xs">
+							Page
+							<Select
+								class="mt-1"
+								value={activePage ?? 'all'}
+								onchange={(event) => {
+									const value = (event.currentTarget as HTMLSelectElement).value;
+									onPageChange(value === 'all' ? null : value);
+								}}
+							>
+								<option value="all">All pages</option>
+								{#each report.pages as page (page.id)}
+									<option value={page.id}>{page.path ?? page.url}</option>
+								{/each}
+							</Select>
+						</label>
+					</div>
+				{/if}
 			</div>
 		</div>
 

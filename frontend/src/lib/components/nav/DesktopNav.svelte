@@ -11,36 +11,29 @@
 	const { isActive }: Props = $props();
 </script>
 
-<nav class="hidden md:block" aria-label="Main navigation">
-	<ul class="flex items-center gap-1">
-		{#each navLinks as link (link.href)}
-			<li>
-				<a
-					href={link.href}
-					aria-current={isActive(link.href) ? 'page' : undefined}
-					class={cn(
-						'relative rounded-full px-4 py-2 text-sm font-medium',
-						isActive(link.href) ? 'text-accent-ink' : 'text-ink-muted hover:text-ink'
-					)}
-				>
-					{#if isActive(link.href)}
-						<div class="bg-accent-soft absolute inset-0 -z-10 rounded-full"></div>
-					{/if}
-					{link.label}
-				</a>
-			</li>
-		{/each}
-	</ul>
-</nav>
-
-<div class="hidden items-center gap-3 md:flex">
+<nav class="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+	{#each navLinks as link (link.href)}
+		<a
+			href={link.href}
+			aria-current={isActive(link.href) ? 'page' : undefined}
+			class={cn(
+				'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+				isActive(link.href)
+					? 'text-accent bg-accent-soft'
+					: 'text-ink-muted hover:text-ink'
+			)}
+		>
+			{link.label}
+		</a>
+	{/each}
+	<span class="bg-line mx-2 h-4 w-px"></span>
 	<a
 		href={SITE.githubUrl}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="text-ink-faint hover:bg-surface-muted hover:text-ink rounded-md p-2"
+		class="text-ink-faint hover:text-ink rounded-md p-1.5"
 		aria-label="GitHub"
 	>
-		<GithubIcon class="h-5 w-5" />
+		<GithubIcon class="h-4 w-4" />
 	</a>
-</div>
+</nav>

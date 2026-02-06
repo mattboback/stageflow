@@ -2,7 +2,15 @@
 	import { buttonVariants } from '$lib/components/ui';
 	import { SITE } from '$lib/config/site';
 	import { cn } from '$lib/utils';
-	import { ArrowRight, CheckCircle, Zap, Shield, Layers } from 'lucide-svelte';
+	import {
+		ArrowRight,
+		Bot,
+		CheckCircle,
+		Link2,
+		Search,
+		Shield,
+		Zap
+	} from 'lucide-svelte';
 </script>
 
 <svelte:head>
@@ -11,22 +19,25 @@
 </svelte:head>
 
 <div class="bg-paper min-h-screen">
-	<!-- Hero Section -->
-	<section class="container-width pt-32 pb-20">
-		<div class="mx-auto max-w-3xl text-center">
-			<h1 class="text-ink text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-				Web Quality Scanning
-				<span class="text-accent block">Made Simple</span>
-			</h1>
-			<p class="text-ink-muted mt-6 text-lg leading-relaxed sm:text-xl">
-				{SITE.tagline}. Run accessibility, performance, SEO, and security scans with unified reporting and real-time progress.
+	<!-- Hero -->
+	<section class="container-width pb-20 pt-28">
+		<div class="mx-auto max-w-2xl">
+			<p class="text-accent mb-4 text-sm font-semibold tracking-wide uppercase">
+				Open-Source Scanning Platform
 			</p>
-			<div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+			<h1 class="text-ink text-4xl font-bold tracking-tight sm:text-5xl lg:text-[3.5rem] lg:leading-[1.1]">
+				Find accessibility, performance, and security issues
+				<span class="text-ink-muted">before your users do.</span>
+			</h1>
+			<p class="text-ink-muted mt-6 max-w-xl text-lg leading-relaxed">
+				{SITE.tagline}. Six scanners, real-time progress, unified reports — self-hosted on your infrastructure.
+			</p>
+			<div class="mt-8 flex flex-wrap gap-3">
 				<a
 					href="/playground"
 					class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2')}
 				>
-					Try the Playground
+					Start scanning
 					<ArrowRight class="h-4 w-4" />
 				</a>
 				<a
@@ -35,66 +46,41 @@
 					rel="noopener noreferrer"
 					class={cn(buttonVariants({ variant: 'outline', size: 'lg' }))}
 				>
-					View on GitHub
+					View source
 				</a>
 			</div>
 		</div>
 	</section>
 
-	<!-- Features Section -->
+	<!-- Scanners -->
 	<section class="border-line border-t py-20">
 		<div class="container-width">
-			<h2 class="text-ink text-center text-2xl font-bold sm:text-3xl">Why StageFlow?</h2>
-			<div class="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-				<div class="bg-surface border-line rounded-xl border p-6">
-					<div class="bg-accent-soft text-accent-ink mb-4 inline-flex rounded-lg p-3">
-						<Layers class="h-6 w-6" />
-					</div>
-					<h3 class="text-ink text-lg font-semibold">Multi-Scanner</h3>
-					<p class="text-ink-muted mt-2">
-						Run Axe, Lighthouse, SEO checks, security headers, and link validation in one scan with unified reporting.
-					</p>
-				</div>
-				<div class="bg-surface border-line rounded-xl border p-6">
-					<div class="bg-accent-soft text-accent-ink mb-4 inline-flex rounded-lg p-3">
-						<Zap class="h-6 w-6" />
-					</div>
-					<h3 class="text-ink text-lg font-semibold">Real-Time Progress</h3>
-					<p class="text-ink-muted mt-2">
-						Watch scans progress live with SSE streaming. No more waiting in the dark.
-					</p>
-				</div>
-				<div class="bg-surface border-line rounded-xl border p-6">
-					<div class="bg-accent-soft text-accent-ink mb-4 inline-flex rounded-lg p-3">
-						<Shield class="h-6 w-6" />
-					</div>
-					<h3 class="text-ink text-lg font-semibold">Self-Hosted</h3>
-					<p class="text-ink-muted mt-2">
-						Podman-native, rootless containers. Your data stays on your infrastructure.
-					</p>
-				</div>
+			<div class="mx-auto max-w-2xl">
+				<p class="text-accent mb-2 text-sm font-semibold tracking-wide uppercase">Capabilities</p>
+				<h2 class="text-ink text-2xl font-bold tracking-tight sm:text-3xl">
+					Six scanners, one report
+				</h2>
+				<p class="text-ink-muted mt-3 text-base">
+					Each scan runs the checks you select and merges results into a single, actionable report.
+				</p>
 			</div>
-		</div>
-	</section>
 
-	<!-- Scanners Section -->
-	<section class="border-line border-t py-20">
-		<div class="container-width">
-			<h2 class="text-ink text-center text-2xl font-bold sm:text-3xl">Available Scanners</h2>
-			<div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			<div class="mt-12 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
 				{#each [
-					{ name: 'Axe', desc: 'WCAG accessibility compliance' },
-					{ name: 'Lighthouse', desc: 'Performance & best practices' },
-					{ name: 'SEO', desc: 'Meta tags, headings, structured data' },
-					{ name: 'Security Headers', desc: 'CSP, HSTS, X-Frame-Options' },
-					{ name: 'Link Checker', desc: 'Broken link detection' },
-					{ name: 'AI Navigator', desc: 'Goal-based flow testing' }
+					{ icon: Shield, name: 'Axe', desc: 'WCAG 2.1 AA/AAA accessibility testing with axe-core', color: 'text-blue-600' },
+					{ icon: Zap, name: 'Lighthouse', desc: 'Performance, SEO, and best practices audits by Google', color: 'text-amber-500' },
+					{ icon: Search, name: 'SEO', desc: 'Meta tags, headings, structured data, and crawlability', color: 'text-rose-500' },
+					{ icon: Shield, name: 'Security Headers', desc: 'CSP, HSTS, X-Frame-Options, and header scoring', color: 'text-violet-600' },
+					{ icon: Link2, name: 'Link Checker', desc: 'Broken links, redirect chains, and orphaned pages', color: 'text-emerald-600' },
+					{ icon: Bot, name: 'AI Navigator', desc: 'LLM-powered agent that tests goal-based user flows', color: 'text-purple-600' }
 				] as scanner (scanner.name)}
-					<div class="border-line flex items-start gap-3 rounded-lg border p-4">
-						<CheckCircle class="text-accent mt-0.5 h-5 w-5 flex-shrink-0" />
+					<div class="bg-surface flex gap-4 p-6">
+						<div class={cn('mt-0.5 flex-shrink-0', scanner.color)}>
+							<svelte:component this={scanner.icon} class="h-5 w-5" />
+						</div>
 						<div>
-							<p class="text-ink font-medium">{scanner.name}</p>
-							<p class="text-ink-muted text-sm">{scanner.desc}</p>
+							<p class="text-ink text-sm font-semibold">{scanner.name}</p>
+							<p class="text-ink-muted mt-1 text-sm leading-relaxed">{scanner.desc}</p>
 						</div>
 					</div>
 				{/each}
@@ -102,22 +88,75 @@
 		</div>
 	</section>
 
-	<!-- CTA Section -->
+	<!-- How it works -->
 	<section class="border-line border-t py-20">
-		<div class="container-width text-center">
-			<h2 class="text-ink text-2xl font-bold sm:text-3xl">Ready to scan?</h2>
-			<p class="text-ink-muted mt-4">
-				Try the playground or deploy your own instance.
-			</p>
-			<div class="mt-8">
-				<a
-					href="/playground"
-					class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2')}
-				>
-					Open Playground
-					<ArrowRight class="h-4 w-4" />
-				</a>
+		<div class="container-width">
+			<div class="mx-auto max-w-2xl">
+				<p class="text-accent mb-2 text-sm font-semibold tracking-wide uppercase">Workflow</p>
+				<h2 class="text-ink text-2xl font-bold tracking-tight sm:text-3xl">
+					From URL to report in seconds
+				</h2>
 			</div>
+			<div class="mx-auto mt-12 grid max-w-3xl gap-8 sm:grid-cols-3">
+				{#each [
+					{ step: '1', title: 'Configure', desc: 'Enter URLs or upload a ZIP archive. Select the scanners you need.' },
+					{ step: '2', title: 'Scan', desc: 'Watch real-time progress via SSE. Each scanner runs in an isolated container.' },
+					{ step: '3', title: 'Review', desc: 'Get a unified report with issues, screenshots, remediation tips, and WCAG references.' }
+				] as item (item.step)}
+					<div class="text-center sm:text-left">
+						<div class="bg-accent text-white mx-auto mb-4 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold sm:mx-0">
+							{item.step}
+						</div>
+						<h3 class="text-ink text-base font-semibold">{item.title}</h3>
+						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{item.desc}</p>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<!-- Why -->
+	<section class="border-line border-t py-20">
+		<div class="container-width">
+			<div class="mx-auto max-w-2xl">
+				<p class="text-accent mb-2 text-sm font-semibold tracking-wide uppercase">Why StageFlow</p>
+				<h2 class="text-ink text-2xl font-bold tracking-tight sm:text-3xl">
+					Built for teams that ship
+				</h2>
+			</div>
+			<div class="mx-auto mt-12 grid max-w-3xl gap-6 sm:grid-cols-2">
+				{#each [
+					{ title: 'Self-hosted', desc: 'Runs on your infra with Podman. No data leaves your network.' },
+					{ title: 'Container-isolated', desc: 'Every scanner runs in its own rootless container. Clean, reproducible, secure.' },
+					{ title: 'Real-time streaming', desc: 'SSE-powered live progress. Know exactly what\u2019s happening and when.' },
+					{ title: 'Unified reports', desc: 'All scanner results merged into one report with severity, WCAG mapping, and fix guidance.' }
+				] as feature (feature.title)}
+					<div class="flex gap-3">
+						<CheckCircle class="text-accent mt-0.5 h-5 w-5 flex-shrink-0" />
+						<div>
+							<p class="text-ink text-sm font-semibold">{feature.title}</p>
+							<p class="text-ink-muted mt-1 text-sm leading-relaxed">{feature.desc}</p>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<!-- CTA -->
+	<section class="border-line border-t py-16">
+		<div class="container-width flex flex-col items-center justify-between gap-6 sm:flex-row">
+			<div>
+				<h2 class="text-ink text-xl font-bold">Ready to scan your site?</h2>
+				<p class="text-ink-muted mt-1 text-sm">No account needed. Run your first scan in under a minute.</p>
+			</div>
+			<a
+				href="/playground"
+				class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 shrink-0')}
+			>
+				Open Playground
+				<ArrowRight class="h-4 w-4" />
+			</a>
 		</div>
 	</section>
 </div>

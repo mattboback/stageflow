@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { ReportAudience } from '$lib/types/report-audience';
 	import type { ScanResult } from '$lib/types/scan';
 	import type { UnifiedReport } from '$lib/types/unified-report';
 
@@ -12,13 +11,10 @@
 		jobId: string;
 		report: UnifiedReport;
 		job: ScanResult | null;
-		audience?: ReportAudience;
-		onAudienceChange?: (audience: ReportAudience) => void;
 		onRefreshArtifacts?: () => void;
 	}
 
-	const { jobId, report, job, audience = 'pm', onAudienceChange, onRefreshArtifacts }: Props =
-		$props();
+	const { jobId, report, job, onRefreshArtifacts }: Props = $props();
 
 	const jsonUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null);
 	const htmlUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null);
@@ -26,23 +22,16 @@
 	const scannedAt = $derived(formatTimestamp(report.meta.scannedAt));
 	const completedAt = $derived(formatTimestamp(report.meta.completedAt));
 	const duration = $derived(formatDuration(report.meta.durationMs));
-
-	const audienceOptions: { id: ReportAudience; label: string; hint: string }[] = [
-		{ id: 'pm', label: 'PM', hint: 'Screenshots + impact' },
-		{ id: 'engineer', label: 'Engineer', hint: 'Rules + code details' },
-		{ id: 'designer', label: 'Designer', hint: 'Visual context' }
-	];
 </script>
 
 <Panel class="mb-8 shadow-sm" padding="lg" rounded="3xl">
 	<div class="flex flex-wrap items-start justify-between gap-6">
 		<div>
 			<p class="text-ink-muted text-sm font-semibold tracking-wide uppercase">Scan report</p>
-			<h1 class="text-ink mt-2 text-3xl font-bold">Multi-Scanner Summary</h1>
 			{#if report.meta.baseUrl}
-				<p class="text-ink-muted mt-2 text-sm">{report.meta.baseUrl}</p>
+				<h1 class="text-ink mt-2 text-2xl font-bold">{report.meta.baseUrl}</h1>
 			{/if}
-			<div class="text-ink-muted mt-4 flex flex-wrap gap-4 text-xs">
+			<div class="text-ink-muted mt-3 flex flex-wrap gap-4 text-xs">
 				{#if scannedAt}
 					<span>Scanned {scannedAt}</span>
 				{/if}
@@ -56,7 +45,7 @@
 					<span>State {job.state}</span>
 				{/if}
 			</div>
-			<div class="mt-5 flex flex-wrap items-center gap-3">
+			<div class="mt-4 flex flex-wrap items-center gap-3">
 				{#if jsonUrl}
 					<a
 						href={jsonUrl}
@@ -64,7 +53,7 @@
 						rel="noopener noreferrer"
 						class="text-accent inline-flex items-center gap-2 text-sm font-medium hover:underline"
 					>
-						Open aggregated JSON
+						JSON
 						<ExternalLink class="h-3 w-3" />
 					</a>
 				{/if}
@@ -75,39 +64,17 @@
 						rel="noopener noreferrer"
 						class="text-accent inline-flex items-center gap-2 text-sm font-medium hover:underline"
 					>
-						Open HTML report
+						HTML report
 						<ExternalLink class="h-3 w-3" />
 					</a>
 				{/if}
 				{#if onRefreshArtifacts}
 					<Button variant="outline" size="sm" onclick={onRefreshArtifacts} class="gap-2">
 						<RefreshCw class="h-4 w-4" />
-						Refresh links
+						Refresh
 					</Button>
 				{/if}
 			</div>
-
-			{#if onAudienceChange}
-				<div class="mt-5">
-					<p class="text-ink-muted text-xs font-semibold tracking-wide uppercase">Audience</p>
-					<div class="mt-2 flex flex-wrap items-center gap-2">
-						{#each audienceOptions as opt (opt.id)}
-							<button
-								type="button"
-								onclick={() => onAudienceChange(opt.id)}
-								class={cn(
-									'border-line text-ink-muted hover:bg-surface-muted rounded-full border px-3 py-1 text-xs font-semibold transition',
-									audience === opt.id && 'border-accent bg-accent/10 text-accent'
-								)}
-								aria-pressed={audience === opt.id}
-								title={opt.hint}
-							>
-								{opt.label}
-							</button>
-						{/each}
-					</div>
-				</div>
-			{/if}
 		</div>
 		{#if report.summary.score !== undefined}
 			<div

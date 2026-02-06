@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { LogoMark } from '$lib/components/icons';
 	import { cn } from '$lib/utils';
-	import { Command, Menu, X } from 'lucide-svelte';
+	import { Menu, X } from 'lucide-svelte';
 
 	import DesktopNav from './DesktopNav.svelte';
 	import MobileMenu from './MobileMenu.svelte';
@@ -19,7 +20,6 @@
 		return () => window.removeEventListener('scroll', handleScroll);
 	});
 
-	// Lock body scroll when mobile menu is open
 	$effect(() => {
 		if (mobileMenuOpen) {
 			document.body.style.overflow = 'hidden';
@@ -46,25 +46,21 @@
 
 <header
 	class={cn(
-		'fixed top-0 right-0 left-0 z-50',
+		'fixed top-0 right-0 left-0 z-50 transition-[background-color,border-color,padding] duration-200',
 		scrolled || mobileMenuOpen
-			? 'border-line/70 bg-surface/90 border-b backdrop-blur-md'
-			: 'border-transparent bg-transparent py-2'
+			? 'border-line bg-surface/95 border-b backdrop-blur-sm'
+			: 'border-transparent bg-transparent'
 	)}
 >
-	<div class="container-width flex h-16 items-center justify-between">
+	<div class="container-width flex h-14 items-center justify-between">
 		<!-- Logo -->
 		<a
 			href="/"
-			class="group text-ink relative z-50 flex items-center gap-2.5 font-semibold tracking-tight"
+			class="text-ink relative z-50 flex items-center gap-2"
 			onclick={closeMobileMenu}
 		>
-			<div
-				class="border-line bg-surface text-ink flex h-8 w-8 items-center justify-center rounded-lg border"
-			>
-				<Command class="h-4 w-4" />
-			</div>
-			<span class="text-lg">StageFlow</span>
+			<LogoMark class="text-accent" size={24} />
+			<span class="text-[15px] font-semibold tracking-tight">StageFlow</span>
 		</a>
 
 		<DesktopNav {isActive} />
@@ -73,15 +69,15 @@
 		<div class="flex items-center gap-4 md:hidden">
 			<button
 				onclick={toggleMobileMenu}
-				class="text-ink-muted hover:bg-surface-muted hover:text-ink focus-visible:ring-accent focus-visible:ring-offset-paper relative z-50 rounded-md p-2 focus-visible:ring-2 focus-visible:ring-offset-2"
+				class="text-ink-muted hover:text-ink relative z-50 rounded-md p-2"
 				aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
 				aria-expanded={mobileMenuOpen}
 				aria-controls="mobile-menu"
 			>
 				{#if mobileMenuOpen}
-					<X class="h-6 w-6" />
+					<X class="h-5 w-5" />
 				{:else}
-					<Menu class="h-6 w-6" />
+					<Menu class="h-5 w-5" />
 				{/if}
 			</button>
 		</div>

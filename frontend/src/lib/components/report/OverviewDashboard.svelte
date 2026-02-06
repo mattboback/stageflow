@@ -53,6 +53,23 @@
 			.slice(0, 5);
 	});
 
+	const issueTone = $derived.by((): 'warn' | 'danger' | null => {
+		if (report.summary.totalIssues === 0) return null;
+		const critical = report.summary.bySeverity?.critical ?? 0;
+		if (critical > 0) return 'danger';
+		const serious = report.summary.bySeverity?.serious ?? 0;
+		if (serious > 5) return 'warn';
+		return null;
+	});
+
+	const pagesWithIssuesTone = $derived.by((): 'warn' | 'danger' | null => {
+		if (report.summary.pagesScanned === 0) return null;
+		const ratio = report.summary.pagesWithIssues / report.summary.pagesScanned;
+		if (ratio > 0.75) return 'danger';
+		if (ratio > 0.5) return 'warn';
+		return null;
+	});
+
 	function getStatusIcon(status: string) {
 		switch (status) {
 			case 'success':
@@ -67,10 +84,17 @@
 	}
 </script>
 
-{#snippet summaryCard(title: string, value: number | string)}
+{#snippet summaryCard(title: string, value: number | string, tone?: 'warn' | 'danger' | null)}
 	<Panel class="shadow-sm" padding="sm" rounded="2xl">
 		<p class="text-ink-muted text-sm">{title}</p>
-		<p class="text-ink text-2xl font-bold">{value}</p>
+		<p
+			class={cn(
+				'text-2xl font-bold',
+				tone === 'danger' ? 'text-red-600' : tone === 'warn' ? 'text-amber-600' : 'text-ink'
+			)}
+		>
+			{value}
+		</p>
 	</Panel>
 {/snippet}
 
@@ -112,9 +136,9 @@
 
 <div class="space-y-6">
 	<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-		{@render summaryCard('Total Issues', report.summary.totalIssues)}
+		{@render summaryCard('Total Issues', report.summary.totalIssues, issueTone)}
 		{@render summaryCard('Pages Scanned', report.summary.pagesScanned)}
-		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues)}
+		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
 		{@render summaryCard('Scanners Ran', report.scanners.length)}
 	</div>
 

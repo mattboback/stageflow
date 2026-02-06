@@ -130,10 +130,14 @@
 			report={displayReport}
 			{job}
 			{onRefreshArtifacts}
+		/>
+		<ReportSectionNav
+			report={displayReport}
+			{section}
 			{audience}
+			onSectionChange={setSection}
 			onAudienceChange={(value) => updateQueryParams({ aud: value === 'pm' ? null : value })}
 		/>
-		<ReportSectionNav report={displayReport} {section} onSectionChange={setSection} />
 
 		<svelte:boundary onerror={(e) => console.error('Report section render error:', e)}>
 			{#snippet failed(error, reset)}

@@ -177,18 +177,18 @@
 										onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
 										onkeydown={(e) => {
 											if (e.key === 'Enter' || e.key === ' ') {
-											e.preventDefault();
-											onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`);
-										}
-									}}
-									data-testid="page-overview-marker"
-								>
-									<title>{issue.title} ({issue.severity})</title>
-								</rect>
-							{/if}
-						{/each}
-					</svg>
-				</button>
+												e.preventDefault();
+												onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`);
+											}
+										}}
+										data-testid="page-overview-marker"
+									>
+										<title>{issue.title} ({issue.severity})</title>
+									</rect>
+								{/if}
+							{/each}
+						</svg>
+					</button>
 				</div>
 			</div>
 		</Panel>

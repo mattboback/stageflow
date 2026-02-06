@@ -70,22 +70,21 @@ export function getSeverityBadgeClass(severity?: string | null): string {
 
 /**
  * Returns Tailwind classes for a severity-highlighted container (light background + border).
- * Dark mode compatible.
  */
 export function getSeverityBorderClass(severity?: string | null): string {
 	switch (severity) {
 		case 'critical':
-			return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950';
+			return 'border-red-200 bg-red-50';
 		case 'serious':
-			return 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950';
+			return 'border-orange-200 bg-orange-50';
 		case 'moderate':
-			return 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950';
+			return 'border-amber-200 bg-amber-50';
 		case 'minor':
-			return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950';
+			return 'border-blue-200 bg-blue-50';
 		case 'info':
-			return 'border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950';
+			return 'border-purple-200 bg-purple-50';
 		default:
-			return 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900';
+			return 'border-slate-200 bg-slate-50';
 	}
 }
 
@@ -177,35 +176,35 @@ export function getSeverityChipClass(
 				base,
 				isActive
 					? 'border-red-600 bg-red-600 text-white'
-					: 'border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950'
+					: 'border-red-200 text-red-600 hover:bg-red-50'
 			);
 		case 'serious':
 			return cn(
 				base,
 				isActive
 					? 'border-orange-500 bg-orange-500 text-white'
-					: 'border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950'
+					: 'border-orange-200 text-orange-600 hover:bg-orange-50'
 			);
 		case 'moderate':
 			return cn(
 				base,
 				isActive
 					? 'border-amber-500 bg-amber-500 text-white'
-					: 'border-amber-200 text-amber-600 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950'
+					: 'border-amber-200 text-amber-600 hover:bg-amber-50'
 			);
 		case 'minor':
 			return cn(
 				base,
 				isActive
 					? 'border-blue-500 bg-blue-500 text-white'
-					: 'border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950'
+					: 'border-blue-200 text-blue-600 hover:bg-blue-50'
 			);
 		case 'info':
 			return cn(
 				base,
 				isActive
 					? 'border-purple-500 bg-purple-500 text-white'
-					: 'border-purple-200 text-purple-600 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-400 dark:hover:bg-purple-950'
+					: 'border-purple-200 text-purple-600 hover:bg-purple-50'
 			);
 		default:
 			return cn(base, 'border-line text-ink-muted hover:bg-surface-muted');
