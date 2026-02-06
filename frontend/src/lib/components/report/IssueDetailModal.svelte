@@ -156,7 +156,7 @@
 		'max-h-[90vh] overflow-y-auto shadow-xl'
 	)}
 >
-	<div bind:this={modalRef} class="contents">
+		<div bind:this={modalRef} class="contents">
 		<div class={cn('border-b p-6', getSeverityBorderClass(issue.severity))}>
 			<div class="flex items-start justify-between gap-4">
 				<div>
@@ -231,133 +231,14 @@
 					</div>
 				{/if}
 
-				<!-- Shared Sections -->
-				{#if isPM}
-					<details class="border-line rounded-xl border p-4">
-						<summary class="text-ink cursor-pointer font-semibold">Implementation details</summary>
-						<div class="mt-4 space-y-6">
-							<!-- Description -->
-							<div>
-								<h3 class="text-ink mb-2 font-semibold">Description</h3>
-								<p class="text-ink-muted text-sm leading-relaxed">{issue.description}</p>
-							</div>
-
-							<!-- WCAG Criteria -->
-							{#if issue.wcagTags?.length}
-								<div>
-									<h3 class="text-ink mb-2 font-semibold">WCAG Criteria</h3>
-									<div class="flex flex-wrap gap-2">
-										{#each issue.wcagTags as tag (tag)}
-											{@const criterion = normalizeWcagTag(tag)}
-											{#if criterion}
-												<Chip
-													as="a"
-													href={getWcagUnderstandingUrl(criterion)}
-													target="_blank"
-													rel="noopener noreferrer"
-													tone="muted"
-													size="md"
-													interactive
-													title={`Open WCAG Understanding ${criterion}`}
-												>
-													{criterion}
-												</Chip>
-											{:else}
-												<Chip tone="muted" size="md">
-													{tag}
-												</Chip>
-											{/if}
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							<!-- How to Fix -->
-							{#if issue.howToFix}
-								<div>
-									<h3 class="text-ink mb-2 font-semibold">How to Fix</h3>
-									<p class="text-ink-muted text-sm leading-relaxed whitespace-pre-wrap">
-										{issue.howToFix}
-									</p>
-								</div>
-							{/if}
-
-							<!-- Evidence -->
-							{#if screenshotUrl || pageOverviewUrl}
-								<details class="border-line rounded-xl border p-4">
-									<summary class="text-ink cursor-pointer font-semibold">
-										Technical evidence (optional)
-									</summary>
-									<div class="mt-4 space-y-3">
-										{#if openedFromOverlay}
-											<div class="border-line bg-surface-muted/40 flex items-center justify-between rounded-lg border border-dashed px-3 py-2">
-												<p class="text-ink-muted text-xs">Opened from page highlight.</p>
-												<button
-													type="button"
-													class="text-accent hover:text-accent-strong text-xs font-semibold"
-													onclick={() => {
-														fullPageEvidenceOverride = !showFullPageEvidence;
-													}}
-												>
-													{showFullPageEvidence ? 'Hide full page context' : 'Show full page context'}
-												</button>
-											</div>
-										{/if}
-										<IssueEvidenceSection
-											{issue}
-											{page}
-											{screenshotUrl}
-											{pageOverviewUrl}
-											showPageOverview={shouldShowPageOverview}
-											onElementClick={(elementId) => {
-												localHighlightedElementId = elementId;
-											}}
-										/>
-									</div>
-								</details>
-							{/if}
-
-							<!-- Full Occurrences -->
-							{#if issue.occurrences?.length}
-								<div>
-									<h3 class="text-ink mb-2 font-semibold">
-										Affected Elements ({issue.occurrences.length})
-									</h3>
-									<div class="space-y-3">
-										{#each issue.occurrences.slice(0, 10) as occurrence, idx (idx)}
-											{@const isHighlighted = activeHighlightId && occurrence.elementId === activeHighlightId}
-											<IssueOccurrenceCard
-												{occurrence}
-												index={idx}
-												{issue}
-												{page}
-												{pageOverviewUrl}
-												isHighlighted={!!isHighlighted}
-												showDetails={true}
-												onHighlight={() => {
-													localHighlightedElementId = occurrence.elementId ?? null;
-												}}
-											/>
-										{/each}
-										{#if issue.occurrences.length > 10}
-											<p class="text-ink-muted text-center text-sm">
-												+{issue.occurrences.length - 10} more occurrences
-											</p>
-										{/if}
-									</div>
-								</div>
-							{/if}
-						</div>
-					</details>
-				{:else}
-					<!-- Engineer View (no collapsible details) -->
-					<!-- Description -->
+				{#snippet descriptionBlock()}
 					<div>
 						<h3 class="text-ink mb-2 font-semibold">Description</h3>
 						<p class="text-ink-muted text-sm leading-relaxed">{issue.description}</p>
 					</div>
+				{/snippet}
 
-					<!-- WCAG Criteria -->
+				{#snippet wcagBlock()}
 					{#if issue.wcagTags?.length}
 						<div>
 							<h3 class="text-ink mb-2 font-semibold">WCAG Criteria</h3>
@@ -386,28 +267,10 @@
 							</div>
 						</div>
 					{/if}
+				{/snippet}
 
-					<!-- User Impact (designer view) -->
-					{#if issue.userImpact?.statement && audience === 'designer'}
-						<div>
-							<h3 class="text-ink mb-2 font-semibold">User Impact</h3>
-							<p class="text-ink-muted text-sm leading-relaxed">{issue.userImpact.statement}</p>
-							{#if issue.userImpact.affectedGroups?.length}
-								<div class="mt-2 flex flex-wrap gap-2">
-									{#each issue.userImpact.affectedGroups as group (group)}
-										<span
-											class="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize"
-										>
-											{group}
-										</span>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
-
-					<!-- How to Fix -->
-					{#if issue.howToFix && isEngineer}
+				{#snippet howToFixBlock()}
+					{#if issue.howToFix}
 						<div>
 							<h3 class="text-ink mb-2 font-semibold">How to Fix</h3>
 							<p class="text-ink-muted text-sm leading-relaxed whitespace-pre-wrap">
@@ -415,8 +278,9 @@
 							</p>
 						</div>
 					{/if}
+				{/snippet}
 
-					<!-- Evidence -->
+				{#snippet evidenceBlock()}
 					{#if screenshotUrl || pageOverviewUrl}
 						{#if openedFromOverlay}
 							<div class="border-line bg-surface-muted/40 flex items-center justify-between rounded-lg border border-dashed px-3 py-2">
@@ -443,15 +307,16 @@
 							}}
 						/>
 					{/if}
+				{/snippet}
 
-					<!-- Occurrences -->
-					{#if issue.occurrences?.length && isEngineer}
+				{#snippet occurrencesBlock(limit: number, showDetails: boolean)}
+					{#if issue.occurrences?.length}
 						<div>
 							<h3 class="text-ink mb-2 font-semibold">
 								Affected Elements ({issue.occurrences.length})
 							</h3>
 							<div class="space-y-3">
-								{#each issue.occurrences.slice(0, 10) as occurrence, idx (idx)}
+								{#each issue.occurrences.slice(0, limit) as occurrence, idx (idx)}
 									{@const isHighlighted = activeHighlightId && occurrence.elementId === activeHighlightId}
 									<IssueOccurrenceCard
 										{occurrence}
@@ -460,19 +325,74 @@
 										{page}
 										{pageOverviewUrl}
 										isHighlighted={!!isHighlighted}
-										showDetails={true}
+										{showDetails}
 										onHighlight={() => {
 											localHighlightedElementId = occurrence.elementId ?? null;
 										}}
 									/>
 								{/each}
-								{#if issue.occurrences.length > 10}
+								{#if issue.occurrences.length > limit}
 									<p class="text-ink-muted text-center text-sm">
-										+{issue.occurrences.length - 10} more occurrences
+										+{issue.occurrences.length - limit} more occurrences
 									</p>
 								{/if}
 							</div>
 						</div>
+					{/if}
+				{/snippet}
+
+				<!-- Shared Sections -->
+				{#if isPM}
+					<details class="border-line rounded-xl border p-4">
+						<summary class="text-ink cursor-pointer font-semibold">Implementation details</summary>
+						<div class="mt-4 space-y-6">
+							{@render descriptionBlock()}
+							{@render wcagBlock()}
+							{@render howToFixBlock()}
+
+							{#if screenshotUrl || pageOverviewUrl}
+								<details class="border-line rounded-xl border p-4">
+									<summary class="text-ink cursor-pointer font-semibold">
+										Technical evidence (optional)
+									</summary>
+									<div class="mt-4 space-y-3">
+										{@render evidenceBlock()}
+									</div>
+								</details>
+							{/if}
+
+							{@render occurrencesBlock(10, true)}
+						</div>
+					</details>
+				{:else}
+					{@render descriptionBlock()}
+					{@render wcagBlock()}
+
+					<!-- User Impact (designer view) -->
+					{#if issue.userImpact?.statement && audience === 'designer'}
+						<div>
+							<h3 class="text-ink mb-2 font-semibold">User Impact</h3>
+							<p class="text-ink-muted text-sm leading-relaxed">{issue.userImpact.statement}</p>
+							{#if issue.userImpact.affectedGroups?.length}
+								<div class="mt-2 flex flex-wrap gap-2">
+									{#each issue.userImpact.affectedGroups as group (group)}
+										<span
+											class="rounded bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 capitalize"
+										>
+											{group}
+										</span>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
+
+					{#if isEngineer}
+						{@render howToFixBlock()}
+					{/if}
+					{@render evidenceBlock()}
+					{#if isEngineer}
+						{@render occurrencesBlock(10, true)}
 					{/if}
 				{/if}
 

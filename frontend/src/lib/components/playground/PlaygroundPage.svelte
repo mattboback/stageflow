@@ -172,19 +172,19 @@
 		<div class="grid gap-8 lg:grid-cols-3">
 			<!-- Main Form -->
 			<div class="lg:col-span-2">
-				<Panel padding="none" rounded="xl" class="text-ink overflow-hidden shadow-md">
+				<Panel padding="none" rounded="xl" class="text-ink overflow-hidden">
 					<!-- Header -->
-					<div class="border-line from-surface-muted to-surface border-b bg-gradient-to-r p-6">
+					<div class="border-line border-b p-5">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
-								<div class="bg-accent/10 flex h-10 w-10 items-center justify-center rounded-lg">
-									<ScanSearch class="text-accent h-5 w-5" />
+								<div class="bg-accent/10 flex h-9 w-9 items-center justify-center rounded-lg">
+									<ScanSearch class="text-accent h-[18px] w-[18px]" />
 								</div>
 								<div>
-									<h3 class="text-lg leading-none font-semibold tracking-tight">
-										Configure Your Scan
+									<h3 class="text-base leading-none font-semibold tracking-tight">
+										Configure Scan
 									</h3>
-									<p class="text-ink-muted mt-0.5 text-xs">Select input type and scanners</p>
+									<p class="text-ink-muted mt-0.5 text-xs">Select input and scanners</p>
 								</div>
 							</div>
 							{#if hasValidInput && hasEnabledScanner && isAiConfigValid}

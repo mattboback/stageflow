@@ -40,6 +40,12 @@
 	);
 	const issuesByPage = $derived.by(() => summarizeIssuesByPage(scannerIssues, pagesById));
 	const issuesByRule = $derived.by(() => summarizeIssuesByRule(scannerIssues));
+
+	const scannerDetailSections = $derived.by(() => [
+		{ id: 'security-headers', title: 'Header gaps', items: issuesByRule.slice(0, 10).map(i => ({ key: i.ruleId, label: i.ruleId, count: i.count })) },
+		{ id: 'seo', title: 'SEO topics', items: issuesByRule.slice(0, 10).map(i => ({ key: i.ruleId, label: i.ruleId, count: i.count })) },
+		{ id: 'link-checker', title: 'Broken links by page', items: issuesByPage.slice(0, 12).map(i => ({ key: i.pageId, label: i.label, count: i.count })) }
+	]);
 </script>
 
 {#snippet scannerCard(scanner: UnifiedReport['scanners'][number])}
@@ -188,38 +194,18 @@
 					</Panel>
 				{/if}
 
-				{#if selectedScanner.id === 'security-headers'}
-					<Panel padding="sm" rounded="xl">
-						<p class="text-ink mb-2 text-sm font-semibold">Header gaps</p>
-						<div class="space-y-2 text-sm">
-							{#each issuesByRule.slice(0, 10) as item (item.ruleId)}
-								{@render statRow(item.ruleId, item.count)}
-							{/each}
-						</div>
-					</Panel>
-				{/if}
-
-				{#if selectedScanner.id === 'seo'}
-					<Panel padding="sm" rounded="xl">
-						<p class="text-ink mb-2 text-sm font-semibold">SEO topics</p>
-						<div class="space-y-2 text-sm">
-							{#each issuesByRule.slice(0, 10) as item (item.ruleId)}
-								{@render statRow(item.ruleId, item.count)}
-							{/each}
-						</div>
-					</Panel>
-				{/if}
-
-				{#if selectedScanner.id === 'link-checker'}
-					<Panel padding="sm" rounded="xl">
-						<p class="text-ink mb-2 text-sm font-semibold">Broken links by page</p>
-						<div class="space-y-2 text-sm">
-							{#each issuesByPage.slice(0, 12) as item (item.pageId)}
-								{@render statRow(item.label, item.count)}
-							{/each}
-						</div>
-					</Panel>
-				{/if}
+				{#each scannerDetailSections as detail (detail.id)}
+					{#if selectedScanner.id === detail.id && detail.items.length > 0}
+						<Panel padding="sm" rounded="xl">
+							<p class="text-ink mb-2 text-sm font-semibold">{detail.title}</p>
+							<div class="space-y-2 text-sm">
+								{#each detail.items as item (item.key)}
+									{@render statRow(item.label, item.count)}
+								{/each}
+							</div>
+						</Panel>
+					{/if}
+				{/each}
 			</div>
 		</Panel>
 	{:else}
