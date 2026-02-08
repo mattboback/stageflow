@@ -4,6 +4,15 @@
 
 StageFlow is a polyglot microservices platform that orchestrates web accessibility and quality scans. Submit a URL or upload a ZIP of static HTML, and StageFlow spins up containerized scanners — [axe-core](https://github.com/dequelabs/axe-core), [Lighthouse](https://github.com/GoogleChrome/lighthouse), SEO, security headers, link checking, and an optional AI-powered navigator — then aggregates results into a unified report delivered via Server-Sent Events.
 
+## Docs
+
+- Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Security: [SECURITY.md](SECURITY.md)
+- Support: [SUPPORT.md](SUPPORT.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+
 ## Architecture
 
 ```
@@ -51,23 +60,46 @@ cd stageflow
 
 # Copy environment config
 cp .env.example .env
-# Edit .env with your MinIO/Grafana credentials
+# The defaults are local-dev friendly; you can use any non-empty values for local credentials.
 
 # Install dependencies and create Podman network
 just setup
 
-# Start infrastructure (NATS, MinIO, Grafana)
+# Start the local stack (NATS, MinIO, Grafana, API, orchestrator, frontend)
 just dev up
 
 # Initialize MinIO buckets
 just dev init
 
-# Build container images
+# Build dynamic job images (extractor + scanner-runner)
 just images
-
-# Run the frontend dev server
-just run frontend
 ```
+
+Tip: `just demo` runs the full local setup + prints a ready-to-run URL scan command.
+
+### Local Demo (URL Scan)
+
+1. Open the UI: `http://localhost:3000`
+2. Or submit a URL job via API:
+
+```bash
+job_id="$(
+  curl -sS -X POST http://localhost:8080/api/v1/jobs/urls \
+  -H 'content-type: application/json' \
+  -d '{"urls":["https://example.com"]}' \
+  | jq -r .job_id
+)"
+
+echo "$job_id"
+```
+
+3. Stream progress (SSE):
+
+```bash
+curl -N "http://localhost:8080/api/v1/jobs/$job_id/stream"
+```
+
+Note: URL scans enforce SSRF protections and will reject loopback/private/metadata targets.
 
 ## Justfile Commands
 

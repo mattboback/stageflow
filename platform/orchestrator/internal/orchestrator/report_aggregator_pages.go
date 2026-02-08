@@ -9,6 +9,47 @@ type aggregatedPage struct {
 	overviewScanner string
 }
 
+// recomputePageCounts rebuilds each page's IssueCount and BySeverity from the
+// deduplicated issue list. This ensures page-level counts stay consistent with
+// the report-level summary after cross-scanner deduplication.
+func recomputePageCounts(pages []report.PageSummary, issues []report.IssueDetail) {
+	// Build per-page severity counts from the deduplicated issues.
+	type pageCounts struct {
+		issueCount int
+		severity   report.SeverityCounts
+	}
+
+	byPage := make(map[string]*pageCounts, len(pages))
+	for i := range pages {
+		byPage[pages[i].Id] = &pageCounts{}
+	}
+
+	for _, issue := range issues {
+		pc, ok := byPage[issue.PageId]
+		if !ok {
+			continue
+		}
+
+		pc.issueCount++
+		addSeverity(&pc.severity, issue.Severity)
+	}
+
+	for i := range pages {
+		pc, ok := byPage[pages[i].Id]
+		if !ok {
+			continue
+		}
+
+		pages[i].IssueCount = pc.issueCount
+
+		if pc.issueCount > 0 {
+			pages[i].BySeverity = &pc.severity
+		} else {
+			pages[i].BySeverity = nil
+		}
+	}
+}
+
 func mergeAggregatedPage(
 	pagesByKey map[string]*aggregatedPage,
 	scannerID string,

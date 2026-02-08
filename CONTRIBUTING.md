@@ -71,6 +71,7 @@ just ci
 This runs:
 - Go build, lint (`golangci-lint`), and test (`-race`) across all workspace modules
 - Frontend lint, type-check, and test with coverage
+- Scanner-runner lint, type-check, and test with coverage
 
 ### Running Tests Individually
 
@@ -83,6 +84,12 @@ cd frontend && bun run test
 
 # Frontend with coverage
 cd frontend && bun run test:coverage
+
+# Scanner-runner tests
+cd platform/scanner-runner && bun run test
+
+# Scanner-runner with coverage
+cd platform/scanner-runner && bun run test:coverage
 ```
 
 ## Pull Request Process

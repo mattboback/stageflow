@@ -267,6 +267,199 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 	}
 }
 
+func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
+	ctx := context.Background()
+	mem := newMemoryStorage()
+	registry := scanners.NewRegistry("scanner-runner")
+	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
+	_ = registry.Register(&scanners.Definition{ID: "lighthouse", Name: "Lighthouse", Enabled: true})
+
+	orch := &Orchestrator{
+		storage:         mem,
+		scannerRegistry: registry,
+	}
+
+	now := time.Now().UTC()
+
+	// Both scanners report the same image-alt issue on the same page.
+	axeResults := report.UnifiedReportV2{
+		Version: reportVersion,
+		Meta: report.ReportMeta{
+			JobId:       "job-dedup",
+			BaseUrl:     stringPtr("https://example.com"),
+			ScannedAt:   &now,
+			CompletedAt: &now,
+		},
+		Summary: report.ReportSummary{
+			TotalIssues: 1,
+			BySeverity: report.SeverityCounts{
+				Critical: 1,
+			},
+			PagesScanned:    1,
+			PagesWithIssues: 1,
+		},
+		Pages: []report.PageSummary{
+			{
+				Id:         "page-1",
+				Url:        "https://example.com/",
+				IssueCount: 1,
+				DurationMs: 0,
+			},
+		},
+		Issues: []report.IssueDetail{
+			{
+				Id:           "axe-1",
+				Scanner:      "axe",
+				RuleId:       "image-alt",
+				Severity:     report.IssueSeverityCritical,
+				Title:        "Image alt",
+				Description:  "Missing alt",
+				PageId:       "page-1",
+				PageUrl:      "https://example.com/",
+				ElementCount: 1,
+			},
+		},
+		Scanners: []report.ScannerSummary{
+			{
+				Id:          "axe",
+				Status:      report.ScannerStatusSuccess,
+				IssueCount:  intPtr(1),
+				StartedAt:   &now,
+				CompletedAt: &now,
+				DurationMs:  floatPtr(100),
+			},
+		},
+	}
+
+	lighthouseResults := report.UnifiedReportV2{
+		Version: reportVersion,
+		Meta: report.ReportMeta{
+			JobId:       "job-dedup",
+			BaseUrl:     stringPtr("https://example.com"),
+			ScannedAt:   &now,
+			CompletedAt: &now,
+		},
+		Summary: report.ReportSummary{
+			TotalIssues: 1,
+			BySeverity: report.SeverityCounts{
+				Critical: 1,
+			},
+			PagesScanned:    1,
+			PagesWithIssues: 1,
+		},
+		Pages: []report.PageSummary{
+			{
+				Id:         "page-1",
+				Url:        "https://example.com/",
+				IssueCount: 1,
+				DurationMs: 0,
+			},
+		},
+		Issues: []report.IssueDetail{
+			{
+				Id:           "lh-1",
+				Scanner:      "lighthouse",
+				RuleId:       "image-alt",
+				Severity:     report.IssueSeverityCritical,
+				Title:        "Image alt",
+				Description:  "Missing alt",
+				PageId:       "page-1",
+				PageUrl:      "https://example.com/",
+				ElementCount: 1,
+			},
+		},
+		Scanners: []report.ScannerSummary{
+			{
+				Id:          "lighthouse",
+				Status:      report.ScannerStatusSuccess,
+				IssueCount:  intPtr(1),
+				StartedAt:   &now,
+				CompletedAt: &now,
+				DurationMs:  floatPtr(200),
+			},
+		},
+	}
+
+	axeBytes, _ := json.Marshal(axeResults)
+	lhBytes, _ := json.Marshal(lighthouseResults)
+	mem.objects[mem.key(storage.BucketArtifacts, "job-dedup/axe/results.json")] = axeBytes
+	mem.objects[mem.key(storage.BucketArtifacts, "job-dedup/lighthouse/results.json")] = lhBytes
+
+	job := &models.Job{
+		ID:               "job-dedup",
+		ExpectedScanners: []string{"axe", "lighthouse"},
+		ScannerResults: map[string]*models.ScannerResult{
+			"axe":        {ScannerType: "axe", ResultsPath: "job-dedup/axe/results.json", Success: true},
+			"lighthouse": {ScannerType: "lighthouse", ResultsPath: "job-dedup/lighthouse/results.json", Success: true},
+		},
+	}
+
+	reportKey, err := orch.buildAggregatedReport(ctx, job)
+	if err != nil {
+		t.Fatalf("buildAggregatedReport: %v", err)
+	}
+
+	reportBytes := mem.objects[mem.key(storage.BucketArtifacts, reportKey)]
+
+	var aggReport report.UnifiedReportV2
+	if unmarshalErr := json.Unmarshal(reportBytes, &aggReport); unmarshalErr != nil {
+		t.Fatalf("unmarshal report: %v", unmarshalErr)
+	}
+
+	// After dedup: one issue remains (axe wins with higher priority).
+	if aggReport.Summary.TotalIssues != 1 {
+		t.Fatalf("expected 1 deduplicated issue, got %d", aggReport.Summary.TotalIssues)
+	}
+
+	if len(aggReport.Issues) != 1 {
+		t.Fatalf("expected 1 issue in array, got %d", len(aggReport.Issues))
+	}
+
+	if aggReport.Issues[0].Scanner != "axe" {
+		t.Fatalf("expected axe issue to win dedup, got scanner=%s", aggReport.Issues[0].Scanner)
+	}
+
+	// byScanner must reflect deduplicated counts: only axe=1, no lighthouse entry.
+	byScannerSum := 0
+	for _, count := range aggReport.Summary.ByScanner {
+		byScannerSum += count
+	}
+
+	if byScannerSum != aggReport.Summary.TotalIssues {
+		t.Fatalf(
+			"byScanner sum=%d != totalIssues=%d (byScanner=%v)",
+			byScannerSum,
+			aggReport.Summary.TotalIssues,
+			aggReport.Summary.ByScanner,
+		)
+	}
+
+	if aggReport.Summary.ByScanner["axe"] != 1 {
+		t.Fatalf("expected byScanner[axe]=1, got %d", aggReport.Summary.ByScanner["axe"])
+	}
+
+	// Page-level counts must also reflect deduplication.
+	if len(aggReport.Pages) != 1 {
+		t.Fatalf("expected 1 page, got %d", len(aggReport.Pages))
+	}
+
+	if aggReport.Pages[0].IssueCount != 1 {
+		t.Fatalf("expected page issueCount=1 after dedup, got %d", aggReport.Pages[0].IssueCount)
+	}
+
+	if aggReport.Pages[0].BySeverity == nil {
+		t.Fatal("expected page bySeverity to be set")
+	}
+
+	if aggReport.Pages[0].BySeverity.Critical != 1 {
+		t.Fatalf("expected page critical=1, got %d", aggReport.Pages[0].BySeverity.Critical)
+	}
+
+	if aggReport.Summary.PagesWithIssues != 1 {
+		t.Fatalf("expected pagesWithIssues=1, got %d", aggReport.Summary.PagesWithIssues)
+	}
+}
+
 func TestBuildAggregatedReportNoSuccess(t *testing.T) {
 	ctx := context.Background()
 	mem := newMemoryStorage()

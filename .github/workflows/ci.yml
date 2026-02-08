@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  ci:
-    name: Build & Test
+  go:
+    name: Go (build, lint, test, vuln)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,43 +20,84 @@ jobs:
           cache: true
           cache-dependency-path: "**/*.sum"
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
-        with:
-          bun-version: latest
-
-      - name: Install golangci-lint
+      - name: Install tools
         run: |
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      # Go checks (workspace: build/test each module)
       - name: Go build
         run: |
-          for dir in $(awk '/^\t\.\//{gsub(/^\t/, ""); print}' go.work); do
+          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
             echo "==> Building $dir"
             (cd "$dir" && go build ./...)
           done
 
       - name: Go lint
         run: |
-          for dir in $(awk '/^\t\.\//{gsub(/^\t/, ""); print}' go.work); do
+          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
             echo "==> Linting $dir"
             (cd "$dir" && golangci-lint run)
           done
 
       - name: Go test
         run: |
-          for dir in $(awk '/^\t\.\//{gsub(/^\t/, ""); print}' go.work); do
+          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
             echo "==> Testing $dir"
             (cd "$dir" && go test -race ./...)
           done
 
-      # Frontend checks
-      - name: Frontend install
+      - name: Go vulncheck
+        run: |
+          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
+            echo "==> Vulncheck $dir"
+            (cd "$dir" && govulncheck ./...)
+          done
+
+  frontend:
+    name: Frontend (lint, typecheck, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.3.8"
+
+      - name: Install
         run: bun install --frozen-lockfile
         working-directory: frontend
 
-      - name: Frontend CI
+      - name: Audit (high)
+        run: bun audit --audit-level=high
+        working-directory: frontend
+
+      - name: CI
         run: bun run ci
         working-directory: frontend
+
+  scanner-runner:
+    name: Scanner Runner (lint, typecheck, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: "1.3.8"
+
+      - name: Install
+        run: bun install --frozen-lockfile
+        working-directory: platform/scanner-runner
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Audit (high)
+        run: bun audit --audit-level=high
+        working-directory: platform/scanner-runner
+
+      - name: CI
+        run: bun run ci
+        working-directory: platform/scanner-runner

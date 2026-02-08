@@ -228,6 +228,28 @@ func (a *reportAggregation) absorbArtifacts(artifacts []report.ReportArtifact) {
 
 func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 	pages := a.sortedPages()
+
+	// Deduplicate issues that are flagged by multiple scanners.
+	deduplicatedIssues := deduplicateIssues(a.issues)
+
+	// Recalculate severity counts after deduplication.
+	dedupedSeverity := report.SeverityCounts{}
+	for _, issue := range deduplicatedIssues {
+		addSeverity(&dedupedSeverity, issue.Severity)
+	}
+
+	totalIssues := len(deduplicatedIssues)
+
+	// Recompute byScanner from deduplicated issues so it sums to totalIssues.
+	dedupedByScanner := make(map[string]int, len(a.byScanner))
+	for _, issue := range deduplicatedIssues {
+		dedupedByScanner[issue.Scanner]++
+	}
+
+	// Recompute page-level counts from deduplicated issues so they stay
+	// consistent with the summary totals.
+	recomputePageCounts(pages, deduplicatedIssues)
+
 	pagesWithIssues := 0
 
 	for _, page := range pages {
@@ -236,21 +258,10 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 		}
 	}
 
-	// Deduplicate issues that are flagged by multiple scanners
-	deduplicatedIssues := deduplicateIssues(a.issues)
-
-	// Recalculate severity counts after deduplication
-	dedupedSeverity := report.SeverityCounts{}
-	for _, issue := range deduplicatedIssues {
-		addSeverity(&dedupedSeverity, issue.Severity)
-	}
-
-	totalIssues := len(deduplicatedIssues)
-
 	summary := report.ReportSummary{
 		TotalIssues:          totalIssues,
 		BySeverity:           dedupedSeverity,
-		ByScanner:            a.byScanner, // Keep original scanner counts for reference
+		ByScanner:            dedupedByScanner,
 		PagesScanned:         len(pages),
 		PagesWithIssues:      pagesWithIssues,
 		LighthouseCategories: a.lighthouseCategories,
