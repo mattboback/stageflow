@@ -10,7 +10,7 @@ Network=@NETWORK_NAME@
 
 # Host (loopback-only) published ports for Caddy / local access
 PublishPort=127.0.0.1:3100:3000
-PublishPort=127.0.0.1:8100:8080
+PublishPort=127.0.0.1:4100:8080
 PublishPort=127.0.0.1:9100:9000
 PublishPort=127.0.0.1:3101:3001
 

@@ -32,7 +32,41 @@ setup:
     (cd {{frontend_dir}} && {{bun}} install --frozen-lockfile)
 
     echo "==> Installing scanner-runner dependencies..."
-    (cd {{scanner_dir}} && {{bun}} install --frozen-lockfile)
+    (cd {{scanner_dir}} && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 {{bun}} install --frozen-lockfile)
+
+[group('demo'), doc('Bring up the local stack and print a URL-scan demo command')]
+demo URL='https://example.com':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    url="{{URL}}"
+    root_dir="{{repo_root}}"
+
+    if [[ ! -f "$root_dir/.env" ]]; then
+        echo "Missing .env: copy .env.example to .env first" >&2
+        exit 1
+    fi
+
+    echo "==> Setup..."
+    just setup
+
+    echo "==> Starting stack..."
+    just dev up
+
+    echo "==> Initializing MinIO buckets..."
+    just dev init
+
+    echo "==> Building images..."
+    just images
+
+    echo ""
+    echo "==> Demo ready"
+    echo "UI: http://localhost:3000"
+    echo ""
+    echo "Submit a URL scan:"
+    echo "curl -sS -X POST http://localhost:8080/api/v1/jobs/urls \\"
+    echo "  -H 'content-type: application/json' \\"
+    echo "  -d '{\"urls\":[\"$url\"]}'"
 
 [group('dev'), doc('Local stack: up/down/restart/logs/init (ENV=dev|local)')]
 dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
@@ -193,6 +227,15 @@ ci:
 
     echo "==> Frontend CI..."
     (cd {{frontend_dir}} && {{bun}} run ci)
+
+    echo "==> Frontend audit..."
+    (cd {{frontend_dir}} && {{bun}} audit --audit-level=high)
+
+    echo "==> Scanner-runner CI..."
+    (cd {{scanner_dir}} && {{bun}} run ci)
+
+    echo "==> Scanner-runner audit..."
+    (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
 
 [group('build'), doc('Build all artifacts (Go + frontend + runner)')]
 build:

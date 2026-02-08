@@ -1,0 +1,33 @@
+[Unit]
+Description=StageFlow Caddy Reverse Proxy
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow.pod
+Requires=stageflow.pod
+
+[Service]
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=caddy:2-alpine
+Network=@NETWORK_NAME@
+PublishPort=80:80
+PublishPort=443:443
+PublishPort=443:443/udp
+
+Volume=@REPO_ROOT@/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,z
+Volume=caddy_data:/data:z
+Volume=caddy_config:/config:z
+
+Environment=STAGEFLOW_PUBLIC_DOMAIN=${STAGEFLOW_PUBLIC_DOMAIN}
+Environment=CADDY_EMAIL=${CADDY_EMAIL:-admin@${STAGEFLOW_PUBLIC_DOMAIN}}
+
+HealthCmd=wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Install]
+WantedBy=stageflow.target
