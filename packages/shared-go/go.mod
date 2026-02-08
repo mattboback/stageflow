@@ -10,7 +10,7 @@ require (
 	github.com/mattboback/stageflow/packages/contracts/report/generated/go v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/packages/contracts/scanner-manifest v0.0.0-00010101000000-000000000000
 	github.com/minio/minio-go/v7 v7.0.97
-	github.com/nats-io/nats.go v1.47.0
+	github.com/nats-io/nats.go v1.48.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
