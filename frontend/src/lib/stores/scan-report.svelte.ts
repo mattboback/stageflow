@@ -32,6 +32,8 @@ export function createScanReportStore(id: string) {
 	const POLL_INTERVAL_MS = 5000;
 	const MAX_REPORT_RETRY_ATTEMPTS = 30;
 	const MAX_REPORT_RETRY_DELAY_MS = 10_000;
+	const isReportPendingStatus = (statusCode: number): boolean =>
+		statusCode === 400 || statusCode === 404 || statusCode === 409;
 
 	const addLog = (msg: string) => {
 		if (logSet.has(msg)) return;
@@ -161,7 +163,7 @@ export function createScanReportStore(id: string) {
 				redirect: 'follow'
 			});
 			if (!res.ok) {
-				if (res.status === 400 || res.status === 404) {
+				if (isReportPendingStatus(res.status)) {
 					scheduleReportRetry();
 					return;
 				}

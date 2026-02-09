@@ -141,12 +141,22 @@ type ScannerArtifacts struct {
 	ScanRecipe   string `json:"scan_recipe,omitempty"`
 }
 
+type ScreenshotKind string
+
+const (
+	ScreenshotKindViolation    ScreenshotKind = "violation"
+	ScreenshotKindPageOverview ScreenshotKind = "page_overview"
+)
+
 // ScreenshotArtifact contains metadata and URLs for a screenshot.
 type ScreenshotArtifact struct {
-	ScannerType  string `json:"scanner_type,omitempty"`
-	ViolationID  string `json:"violation_id"`
-	PageID       string `json:"page_id"`
-	PageURL      string `json:"page_url,omitempty"`
-	URL          string `json:"url"`                     // Presigned URL for full-size screenshot
-	ThumbnailURL string `json:"thumbnail_url,omitempty"` // Presigned URL for thumbnail
+	Kind            ScreenshotKind `json:"kind"`
+	IssueID         string         `json:"issue_id,omitempty"`
+	OccurrenceIndex *int           `json:"occurrence_index,omitempty"`
+	ArtifactID      string         `json:"artifact_id"`
+	ScannerID       string         `json:"scanner_id"`
+	PageID          string         `json:"page_id"`
+	PageURL         string         `json:"page_url,omitempty"`
+	URL             string         `json:"url"`                     // Presigned URL for full-size screenshot
+	ThumbnailURL    string         `json:"thumbnail_url,omitempty"` // Presigned URL for thumbnail
 }

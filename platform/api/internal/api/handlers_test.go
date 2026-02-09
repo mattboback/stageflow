@@ -20,6 +20,7 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/httputil"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	"github.com/mattboback/stageflow/packages/shared-go/scannerregistry"
+	"github.com/mattboback/stageflow/packages/shared-go/storage"
 	"github.com/mattboback/stageflow/platform/api/internal/sse"
 	"github.com/mattboback/stageflow/platform/api/internal/status"
 )
@@ -294,6 +295,150 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 
 	if len(publisher.envelopes) != 1 {
 		t.Fatalf("expected job.created published")
+	}
+}
+
+func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
+	server, objectStore, store, _ := newTestServer(t)
+
+	jobID := "job-structured-screenshots"
+	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
+		JobID:     jobID,
+		InputType: models.JobInputTypeURLs,
+		URLs:      []string{"https://example.com"},
+	}); err != nil {
+		t.Fatalf("create job: %v", err)
+	}
+
+	reportKey := jobID + "/report.json"
+	infoCount := 0
+	now := time.Now().UTC()
+	results := report.UnifiedReportV2{
+		Version: "2.0.0",
+		Meta: report.ReportMeta{
+			JobId:       jobID,
+			ScannedAt:   &now,
+			CompletedAt: &now,
+		},
+		Summary: report.ReportSummary{
+			TotalIssues: 1,
+			BySeverity: report.SeverityCounts{
+				Critical: 0,
+				Serious:  1,
+				Moderate: 0,
+				Minor:    0,
+				Info:     &infoCount,
+			},
+			ByScanner:       map[string]int{"axe": 1},
+			PagesScanned:    1,
+			PagesWithIssues: 1,
+		},
+		Scanners: []report.ScannerSummary{
+			{Id: "axe", Name: strPtr("Accessibility"), Status: report.ScannerStatusSuccess},
+		},
+		Pages: []report.PageSummary{
+			{
+				Id:         "page-1",
+				Url:        "http://example.com",
+				IssueCount: 1,
+				DurationMs: 15,
+				PageOverview: &report.PageOverview{
+					ScreenshotFilename: "page-overview-page-1.webp",
+					PageWidth:          1280,
+					PageHeight:         720,
+					Elements:           []report.PageOverviewElement{},
+				},
+			},
+		},
+		Issues: []report.IssueDetail{
+			{
+				Id:           "issue-abc",
+				Scanner:      "axe",
+				RuleId:       "color-contrast",
+				Severity:     report.IssueSeveritySerious,
+				Title:        "Contrast issue",
+				Description:  "Insufficient color contrast",
+				PageId:       "page-1",
+				PageUrl:      "http://example.com",
+				ElementCount: 2,
+				Occurrences: []report.IssueOccurrence{
+					{ElementId: strPtr("issue-abc-el-0"), ArtifactIds: []string{"ss-issue-abc"}},
+					{ElementId: strPtr("issue-abc-el-1"), ArtifactIds: []string{"ss-issue-abc"}},
+				},
+			},
+		},
+		Artifacts: []report.ReportArtifact{
+			{
+				Id:   "ss-issue-abc",
+				Type: "screenshot",
+				Path: strPtr("screenshots/issue-abc.webp"),
+			},
+		},
+		Errors: []report.ReportError{},
+	}
+
+	reportBytes, err := json.Marshal(results)
+	if err != nil {
+		t.Fatalf("marshal report: %v", err)
+	}
+
+	uploadKey := fmt.Sprintf("%s::%s", storage.BucketArtifacts, reportKey)
+	objectStore.uploads[uploadKey] = reportBytes
+
+	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
+		JobID: jobID,
+		Artifacts: events.ArtifactLocations{
+			ReportJSON: reportKey,
+			ReportHTML: jobID + "/report.html",
+		},
+	}); err != nil {
+		t.Fatalf("complete job: %v", err)
+	}
+
+	job := assertJobStatusDone(t, server, jobID)
+	if job.Artifacts == nil {
+		t.Fatalf("expected artifacts in job status")
+	}
+
+	screenshots := job.Artifacts.Screenshots
+	if len(screenshots) != 3 {
+		t.Fatalf("expected 3 screenshots (2 violation + 1 overview), got %d", len(screenshots))
+	}
+
+	var hasPrimary, hasSecondary, hasOverview bool
+	for _, shot := range screenshots {
+		switch {
+		case shot.Kind == models.ScreenshotKindViolation && shot.IssueID == "issue-abc":
+			if shot.ScannerID != "axe" || shot.PageID != "page-1" || shot.ArtifactID != "ss-issue-abc" {
+				t.Fatalf("unexpected primary screenshot payload: %+v", shot)
+			}
+			if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 0 {
+				t.Fatalf("expected primary occurrence_index=0, got %+v", shot.OccurrenceIndex)
+			}
+			hasPrimary = true
+		case shot.Kind == models.ScreenshotKindViolation && shot.IssueID == "issue-abc--occ-2":
+			if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 1 {
+				t.Fatalf("expected secondary occurrence_index=1, got %+v", shot.OccurrenceIndex)
+			}
+			hasSecondary = true
+		case shot.Kind == models.ScreenshotKindPageOverview:
+			if shot.ScannerID != "axe" || shot.PageID != "page-1" {
+				t.Fatalf("unexpected overview screenshot payload: %+v", shot)
+			}
+			if shot.ArtifactID != "page-overview:axe:page-1" {
+				t.Fatalf("unexpected overview artifact_id: %q", shot.ArtifactID)
+			}
+			hasOverview = true
+		}
+	}
+
+	if !hasPrimary || !hasSecondary || !hasOverview {
+		t.Fatalf(
+			"missing expected screenshots: primary=%v secondary=%v overview=%v",
+			hasPrimary,
+			hasSecondary,
+			hasOverview,
+		)
 	}
 }
 

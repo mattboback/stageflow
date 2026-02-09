@@ -50,14 +50,15 @@ func writeSSEKeepalive(w http.ResponseWriter, flusher http.Flusher) error {
 	return nil
 }
 
-func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool) {
+func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool, error) {
 	var update jobStreamUpdate
 	if err := json.Unmarshal(data, &update); err != nil {
-		return jobStreamUpdate{}, false
+		return jobStreamUpdate{}, false, fmt.Errorf("invalid update payload: %w", err)
 	}
 
-	if update.Type != "complete" && update.Type != "failed" && !update.State.IsTerminal() {
-		return jobStreamUpdate{}, false
+	isTerminalType := update.Type == "complete" || update.Type == "failed"
+	if !isTerminalType && !update.State.IsTerminal() {
+		return jobStreamUpdate{}, false, nil
 	}
 
 	if update.State == "" {
@@ -69,11 +70,14 @@ func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool) {
 		}
 	}
 
-	if update.State == "" {
-		return jobStreamUpdate{}, false
+	if !update.State.IsTerminal() {
+		return jobStreamUpdate{}, false, fmt.Errorf(
+			"terminal update has non-terminal state %q",
+			update.State,
+		)
 	}
 
-	return update, true
+	return update, true, nil
 }
 
 func fetchJobRecord(
@@ -153,7 +157,20 @@ func (s *Server) handleJobStreamUpdate(
 		return false, false
 	}
 
-	donePayload, isTerminal := terminalDonePayloadFromUpdate(data)
+	donePayload, isTerminal, parseErr := terminalDonePayloadFromUpdate(data)
+	if parseErr != nil {
+		logging.Warn(
+			ctx,
+			"Ignoring invalid terminal SSE update payload",
+			"error",
+			parseErr,
+			"payload",
+			string(data),
+		)
+
+		return false, true
+	}
+
 	if !isTerminal {
 		return false, true
 	}
@@ -185,22 +202,32 @@ func (s *Server) streamJobEvents(
 	for {
 		select {
 		case <-r.Context().Done():
+			logging.Debug(ctx, "SSE stream closed by client disconnect")
+
 			return
 		case <-heartbeat.C:
 			if err := writeSSEKeepalive(w, flusher); err != nil {
+				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", err)
+
 				return
 			}
 		case data, ok := <-clientEvents:
 			if !ok {
+				logging.Debug(ctx, "SSE hub closed client channel; closing stream")
+
 				return
 			}
 
 			shouldClose, ok := s.handleJobStreamUpdate(ctx, w, flusher, data)
 			if !ok {
+				logging.Debug(ctx, "SSE update write failed; closing stream")
+
 				return
 			}
 
 			if shouldClose {
+				logging.Debug(ctx, "SSE stream closing after terminal update")
+
 				return
 			}
 		}

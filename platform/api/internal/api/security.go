@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
+	"sync"
 )
 
 type targetHost struct {
@@ -106,46 +108,127 @@ func ensureAllowedIP(raw, host string, ip net.IP) error {
 	return nil
 }
 
-// isDisallowedIP returns true for IPs in private, loopback, link-local, or metadata ranges.
-func isDisallowedIP(ip net.IP) bool {
-	privateCIDRs := []string{
-		"127.0.0.0/8",    // loopback
-		"10.0.0.0/8",     // RFC1918
-		"172.16.0.0/12",  // RFC1918
-		"192.168.0.0/16", // RFC1918
-		"169.254.0.0/16", // link-local
+var disallowedIPPrefixValues = []string{
+	"0.0.0.0/8",
+	"10.0.0.0/8",
+	"100.64.0.0/10",
+	"127.0.0.0/8",
+	"169.254.0.0/16",
+	"172.16.0.0/12",
+	"192.0.0.0/24",
+	"192.0.2.0/24",
+	"192.168.0.0/16",
+	"198.18.0.0/15",
+	"198.51.100.0/24",
+	"203.0.113.0/24",
+	"224.0.0.0/4",
+	"240.0.0.0/4",
+	"::/128",
+	"::1/128",
+	"100::/64",
+	"2001:db8::/32",
+	"fc00::/7",
+	"fe80::/10",
+	"fec0::/10",
+	"ff00::/8",
+}
+
+var metadataServiceAddrValues = []string{
+	"169.254.169.254", // IPv4 metadata service
+}
+
+type securityPolicyConfig struct {
+	disallowedPrefixes []netip.Prefix
+	metadataAddrs      []netip.Addr
+}
+
+var (
+	securityPolicyOnce   sync.Once
+	securityPolicyParsed securityPolicyConfig
+	securityPolicyErr    error
+)
+
+// ValidateSecurityConfig verifies hardcoded SSRF disallow lists at process startup.
+func ValidateSecurityConfig() error {
+	_, err := loadSecurityPolicyConfig()
+
+	return err
+}
+
+func loadSecurityPolicyConfig() (securityPolicyConfig, error) {
+	securityPolicyOnce.Do(func() {
+		securityPolicyParsed, securityPolicyErr = parseSecurityPolicyConfig(
+			disallowedIPPrefixValues,
+			metadataServiceAddrValues,
+		)
+	})
+
+	if securityPolicyErr != nil {
+		return securityPolicyConfig{}, securityPolicyErr
 	}
 
-	for _, cidr := range privateCIDRs {
-		_, network, err := net.ParseCIDR(cidr)
+	return securityPolicyParsed, nil
+}
+
+func parseSecurityPolicyConfig(
+	prefixes []string,
+	metadataAddrs []string,
+) (securityPolicyConfig, error) {
+	parsedPrefixes := make([]netip.Prefix, 0, len(prefixes))
+	for _, prefix := range prefixes {
+		value, err := netip.ParsePrefix(prefix)
 		if err != nil {
-			continue
+			return securityPolicyConfig{}, fmt.Errorf("invalid disallowed CIDR %q: %w", prefix, err)
 		}
 
-		if network.Contains(ip) {
+		parsedPrefixes = append(parsedPrefixes, value)
+	}
+
+	parsedMetadataAddrs := make([]netip.Addr, 0, len(metadataAddrs))
+	for _, value := range metadataAddrs {
+		addr, err := netip.ParseAddr(value)
+		if err != nil {
+			return securityPolicyConfig{}, fmt.Errorf("invalid disallowed IP %q: %w", value, err)
+		}
+
+		parsedMetadataAddrs = append(parsedMetadataAddrs, addr)
+	}
+
+	return securityPolicyConfig{
+		disallowedPrefixes: parsedPrefixes,
+		metadataAddrs:      parsedMetadataAddrs,
+	}, nil
+}
+
+// isDisallowedIP returns true for IPs in non-public, loopback, link-local, or metadata ranges.
+func isDisallowedIP(ip net.IP) bool {
+	policy, err := loadSecurityPolicyConfig()
+	if err != nil {
+		return true
+	}
+
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return true
+	}
+
+	if addr.Is4In6() {
+		addr = addr.Unmap()
+	}
+
+	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() ||
+		addr.IsLinkLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() {
+		return true
+	}
+
+	for _, metadataAddr := range policy.metadataAddrs {
+		if addr == metadataAddr {
 			return true
 		}
 	}
 
-	// Common cloud metadata IPv4
-	metadataIPs := []string{
-		"169.254.169.254",
-	}
-
-	for _, m := range metadataIPs {
-		if ip.Equal(net.ParseIP(m)) {
-			return true
-		}
-	}
-
-	// Basic IPv6 local/unique-local checks
-	if ip.To4() == nil {
-		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-			return true
-		}
-		// Unique local addresses fc00::/7
-		_, ula, err := net.ParseCIDR("fc00::/7")
-		if err == nil && ula.Contains(ip) {
+	for _, prefix := range policy.disallowedPrefixes {
+		if prefix.Contains(addr) {
 			return true
 		}
 	}

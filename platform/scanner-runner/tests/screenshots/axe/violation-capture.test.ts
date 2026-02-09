@@ -8,7 +8,10 @@ import type { Locator, Page } from "playwright";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AxeScreenshotConfig } from "../../../src/screenshots/axe/types";
+import type {
+  AxeScreenshotConfig,
+  ViolationScreenshotCaptureResult,
+} from "../../../src/screenshots/axe/types";
 
 import { captureViolationScreenshot } from "../../../src/screenshots/axe/violation-capture";
 
@@ -161,13 +164,24 @@ const createMockPage = (overrides: Partial<Page> = {}): Page => {
   } as unknown as Page;
 };
 
+function expectCaptured(
+  result: ViolationScreenshotCaptureResult,
+): ViolationScreenshotCaptureResult & { status: "captured" } {
+  expect(result.status).toBe("captured");
+  if (result.status !== "captured") {
+    throw new Error(`expected captured result, got ${result.status}`);
+  }
+
+  return result;
+}
+
 describe("captureViolationScreenshot", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("config checks", () => {
-    it("returns null when screenshotsEnabled is false", async () => {
+    it("returns skipped when screenshotsEnabled is false", async () => {
       const mockPage = createMockPage();
       const config = createConfig({ screenshotsEnabled: false });
 
@@ -178,7 +192,7 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: "skipped", reason: "disabled" });
       expect(mockPage.screenshot).not.toHaveBeenCalled();
     });
   });
@@ -202,10 +216,11 @@ describe("captureViolationScreenshot", () => {
       });
 
       expect(captureSemanticOverlayScreenshot).toHaveBeenCalled();
-      expect(result).toBeDefined();
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toBe("semantic-test.png");
     });
 
-    it("returns null for never policy", async () => {
+    it("returns skipped for never policy", async () => {
       const { getScreenshotPolicy } = await import("../../../src/config/rule-behaviors");
       (getScreenshotPolicy as ReturnType<typeof vi.fn>).mockReturnValueOnce("never");
 
@@ -219,7 +234,7 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: "skipped", reason: "policy_never" });
     });
 
     it("continues with default capture for default policy", async () => {
@@ -236,8 +251,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result).toBeDefined();
-      expect(result?.screenshot).toBeDefined();
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toBeDefined();
     });
   });
 
@@ -292,7 +307,8 @@ describe("captureViolationScreenshot", () => {
         });
 
         // Should still produce a result via fallback
-        expect(result).toBeDefined();
+        expect(result.status).toBe("captured");
+        expectCaptured(result);
       });
     });
 
@@ -353,7 +369,7 @@ describe("captureViolationScreenshot", () => {
         });
 
         expect(computeElementClip).toHaveBeenCalled();
-        expect(result).toBeDefined();
+        expectCaptured(result);
       });
 
       it("falls back to viewport when element clip fails", async () => {
@@ -374,7 +390,7 @@ describe("captureViolationScreenshot", () => {
         });
 
         // Should still succeed with viewport fallback
-        expect(result).toBeDefined();
+        expectCaptured(result);
         expect(mockPage.screenshot).toHaveBeenCalledWith({ fullPage: false });
       });
     });
@@ -402,7 +418,8 @@ describe("captureViolationScreenshot", () => {
           cfg: config,
         });
 
-        expect(result).toBeDefined();
+        expect(result.status).toBe("captured");
+        expectCaptured(result);
       });
     });
   });
@@ -490,8 +507,9 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.screenshot).toContain("violation-button-name");
-      expect(result?.screenshot).toContain(".png");
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toContain("violation-button-name");
+      expect(captured.screenshot.screenshot).toContain(".png");
     });
 
     it("returns thumbnail filename", async () => {
@@ -505,7 +523,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.thumbnail).toBeDefined();
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.thumbnail).toBeDefined();
     });
 
     it("returns location info", async () => {
@@ -519,7 +538,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.locationInfo).toMatchObject({
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.locationInfo).toMatchObject({
         scrollY: expect.any(Number),
         viewportHeight: expect.any(Number),
         docHeight: expect.any(Number),
@@ -538,8 +558,9 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.friendlyNode).toBeDefined();
-      expect(result?.friendlyNode?.label).toBeDefined();
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.friendlyNode).toBeDefined();
+      expect(captured.screenshot.friendlyNode?.label).toBeDefined();
     });
 
     it("returns element bounds when available", async () => {
@@ -553,7 +574,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.elementBounds).toBeDefined();
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.elementBounds).toBeDefined();
     });
   });
 
@@ -569,7 +591,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.screenshot).toContain(".png");
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toContain(".png");
     });
 
     it("uses webp extension when outputFormat is webp", async () => {
@@ -583,7 +606,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.screenshot).toContain(".webp");
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toContain(".webp");
     });
 
     it("includes violation ID in filename", async () => {
@@ -597,7 +621,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.screenshot).toContain("color-contrast");
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toContain("color-contrast");
     });
 
     it("uses unknown for undefined violation ID", async () => {
@@ -611,12 +636,13 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result?.screenshot).toContain("unknown");
+      const captured = expectCaptured(result);
+      expect(captured.screenshot.screenshot).toContain("unknown");
     });
   });
 
   describe("error handling", () => {
-    it("returns null on general error", async () => {
+    it("returns failed outcome on general error", async () => {
       const mockPage = {
         viewportSize: vi.fn().mockReturnValue({ width: 1280, height: 720 }),
         screenshot: vi.fn().mockRejectedValue(new Error("Screenshot failed")),
@@ -637,7 +663,7 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result).toBeNull();
+      expect(result.status).toBe("failed");
     });
 
     it("cleans up CSS even on error", async () => {
@@ -682,7 +708,8 @@ describe("captureViolationScreenshot", () => {
       });
 
       // Should still succeed with default viewport
-      expect(result).toBeDefined();
+      expect(result.status).toBe("captured");
+      expectCaptured(result);
     });
   });
 
@@ -699,7 +726,8 @@ describe("captureViolationScreenshot", () => {
       });
 
       // Should still produce viewport fallback
-      expect(result).toBeDefined();
+      expect(result.status).toBe("captured");
+      expectCaptured(result);
     });
 
     it("handles violation with undefined nodes", async () => {
@@ -713,7 +741,8 @@ describe("captureViolationScreenshot", () => {
         cfg: config,
       });
 
-      expect(result).toBeDefined();
+      expect(result.status).toBe("captured");
+      expectCaptured(result);
     });
   });
 });

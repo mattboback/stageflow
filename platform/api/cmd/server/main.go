@@ -36,6 +36,9 @@ func run() error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
+	if err := api.ValidateSecurityConfig(); err != nil {
+		return fmt.Errorf("invalid security policy configuration: %w", err)
+	}
 
 	ctx := context.Background()
 

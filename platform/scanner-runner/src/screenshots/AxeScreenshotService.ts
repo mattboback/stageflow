@@ -3,9 +3,9 @@ import type { Page } from "playwright";
 import type {
   AxeScreenshotConfig,
   AxeViolation,
-  EnhancedScreenshotResult,
   PageOverviewResult,
   PageOverviewViolation,
+  ViolationScreenshotCaptureResult,
 } from "./axe/types";
 
 import { loadAxeScreenshotConfig } from "./axe/config";
@@ -17,6 +17,8 @@ export type {
   AxeViolation,
   EnhancedScreenshotResult,
   PageOverviewViolation,
+  ViolationCaptureFailure,
+  ViolationScreenshotCaptureResult,
 } from "./axe/types";
 
 /**
@@ -39,14 +41,13 @@ export class AxeScreenshotService {
   /**
    * Capture a contextual screenshot highlighting the violation targets.
    *
-   * Returns an object with screenshot and thumbnail filenames, location info,
-   * and human-readable element description, or null if none was captured.
+   * Returns a typed capture outcome: captured, skipped, or failed with reason.
    */
   async captureViolationScreenshot(
     page: Page,
     violation: AxeViolation,
     resultsDir: string,
-  ): Promise<EnhancedScreenshotResult | null> {
+  ): Promise<ViolationScreenshotCaptureResult> {
     return captureViolationScreenshot({
       page,
       violation,

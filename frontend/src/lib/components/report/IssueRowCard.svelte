@@ -59,7 +59,7 @@
 			? getIssueScreenshotUrl({
 					screenshots,
 					scannerId: issue.scanner,
-					ruleId: issue.ruleId,
+					issueId: issue.id,
 					pageId: issue.pageId
 				})
 			: null

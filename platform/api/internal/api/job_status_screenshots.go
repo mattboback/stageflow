@@ -14,46 +14,32 @@ import (
 )
 
 const (
-	pageOverviewViolationID = "__page_overview__"
-	artifactTypeScreenshot  = "screenshot"
-	scannerTypeAxe          = "axe"
+	artifactTypeScreenshot = "screenshot"
+	scannerTypeAxe         = "axe"
+	occurrenceIDDelimiter  = "--occ-"
 )
 
-type screenshotRef struct {
-	ScannerType string
-	RuleID      string
-	PageID      string
+func buildDerivedIssueID(baseIssueID string, occurrenceIndex int) string {
+	if occurrenceIndex <= 0 {
+		return baseIssueID
+	}
+
+	return fmt.Sprintf("%s%s%d", baseIssueID, occurrenceIDDelimiter, occurrenceIndex+1)
 }
 
-func collectScreenshotRefs(issues []report.IssueDetail, defaultScanner string) map[string][]screenshotRef {
-	refs := make(map[string][]screenshotRef)
+func collectScreenshotArtifactPaths(artifacts []report.ReportArtifact) map[string]string {
+	paths := make(map[string]string)
 
-	for _, issue := range issues {
-		scannerType := issue.Scanner
-		if scannerType == "" {
-			scannerType = defaultScanner
-		}
-
-		if scannerType == "" || issue.PageId == "" || issue.RuleId == "" {
+	for _, artifact := range artifacts {
+		if artifact.Type != artifactTypeScreenshot || artifact.Id == "" || artifact.Path == nil ||
+			*artifact.Path == "" {
 			continue
 		}
 
-		for _, occ := range issue.Occurrences {
-			for _, artID := range occ.ArtifactIds {
-				if artID == "" {
-					continue
-				}
-
-				refs[artID] = append(refs[artID], screenshotRef{
-					ScannerType: scannerType,
-					RuleID:      issue.RuleId,
-					PageID:      issue.PageId,
-				})
-			}
-		}
+		paths[artifact.Id] = *artifact.Path
 	}
 
-	return refs
+	return paths
 }
 
 func (s *Server) collectJobScreenshots(ctx context.Context, rec *status.JobRecord) []models.ScreenshotArtifact {
@@ -92,6 +78,44 @@ func (s *Server) collectJobScreenshots(ctx context.Context, rec *status.JobRecor
 	return allScreenshots
 }
 
+func (s *Server) extractScreenshotsFromReport(
+	ctx context.Context,
+	jobID string,
+	results report.UnifiedReportV2,
+	defaultScanner string,
+) []models.ScreenshotArtifact {
+	pageByID := make(map[string]report.PageSummary, len(results.Pages))
+	for _, page := range results.Pages {
+		pageByID[page.Id] = page
+	}
+
+	artifactPathByID := collectScreenshotArtifactPaths(results.Artifacts)
+	screenshots := s.collectIssueScreenshots(
+		ctx,
+		jobID,
+		results.Issues,
+		pageByID,
+		artifactPathByID,
+		defaultScanner,
+	)
+
+	for _, page := range results.Pages {
+		overviewScanner := defaultScanner
+		if overviewScanner == "" {
+			overviewScanner = resolveOverviewScannerV2(results.Issues, page.Id)
+		}
+		if overviewScanner == "" {
+			overviewScanner = scannerTypeAxe
+		}
+
+		if overviewShot, ok := s.buildPageOverviewScreenshotV2(ctx, jobID, overviewScanner, page); ok {
+			screenshots = append(screenshots, overviewShot)
+		}
+	}
+
+	return screenshots
+}
+
 func (s *Server) extractScannerScreenshots(
 	ctx context.Context,
 	jobID, scannerType, resultsKey string,
@@ -110,22 +134,7 @@ func (s *Server) extractScannerScreenshots(
 		return nil, fmt.Errorf("failed to parse results.json: %w", decodeErr)
 	}
 
-	pageByID := make(map[string]report.PageSummary, len(results.Pages))
-	for _, page := range results.Pages {
-		pageByID[page.Id] = page
-	}
-
-	refsByArtifact := collectScreenshotRefs(results.Issues, scannerType)
-
-	screenshots := s.collectArtifactScreenshots(ctx, jobID, pageByID, refsByArtifact, results.Artifacts)
-
-	for _, page := range results.Pages {
-		if overviewShot, ok := s.buildPageOverviewScreenshotV2(ctx, jobID, scannerType, page); ok {
-			screenshots = append(screenshots, overviewShot)
-		}
-	}
-
-	return screenshots, nil
+	return s.extractScreenshotsFromReport(ctx, jobID, results, scannerType), nil
 }
 
 func (s *Server) extractReportScreenshots(
@@ -146,78 +155,149 @@ func (s *Server) extractReportScreenshots(
 		return nil, fmt.Errorf("failed to parse report.json: %w", decodeErr)
 	}
 
-	pageByID := make(map[string]report.PageSummary, len(aggReport.Pages))
-	for _, page := range aggReport.Pages {
-		pageByID[page.Id] = page
-	}
-
-	refsByArtifact := collectScreenshotRefs(aggReport.Issues, "")
-
-	screenshots := s.collectArtifactScreenshots(ctx, jobID, pageByID, refsByArtifact, aggReport.Artifacts)
-
-	for _, page := range aggReport.Pages {
-		overviewScanner := resolveOverviewScannerV2(aggReport.Issues, page.Id)
-		if overviewShot, ok := s.buildPageOverviewScreenshotV2(ctx, jobID, overviewScanner, page); ok {
-			screenshots = append(screenshots, overviewShot)
-		}
-	}
-
-	return screenshots, nil
+	return s.extractScreenshotsFromReport(ctx, jobID, aggReport, ""), nil
 }
 
-func (s *Server) collectArtifactScreenshots(
+func (s *Server) collectIssueScreenshots(
 	ctx context.Context,
 	jobID string,
+	issues []report.IssueDetail,
 	pageByID map[string]report.PageSummary,
-	refsByArtifact map[string][]screenshotRef,
-	artifacts []report.ReportArtifact,
+	artifactPathByID map[string]string,
+	defaultScanner string,
 ) []models.ScreenshotArtifact {
 	screenshots := make([]models.ScreenshotArtifact, 0)
+	seen := make(map[string]struct{})
 
-	for _, artifact := range artifacts {
-		if artifact.Type != artifactTypeScreenshot || artifact.Id == "" || artifact.Path == nil ||
-			*artifact.Path == "" {
+	for _, issue := range issues {
+		scannerID := issue.Scanner
+		if scannerID == "" {
+			scannerID = defaultScanner
+		}
+
+		if scannerID == "" || issue.PageId == "" || issue.Id == "" {
 			continue
 		}
 
-		for _, ref := range refsByArtifact[artifact.Id] {
-			page := pageByID[ref.PageID]
-			screenshotKey, ok := jobScopedJoin(jobID, ref.ScannerType, ref.PageID, *artifact.Path)
+		page := pageByID[issue.PageId]
+		pageURL := page.Url
+		if pageURL == "" {
+			pageURL = issue.PageUrl
+		}
 
-			if !ok {
-				logging.Warn(ctx, "Refusing to presign non-job-scoped screenshot key",
-					"job_id", jobID,
-					"scanner_type", ref.ScannerType,
-					"page_id", ref.PageID,
-					"artifact_path", *artifact.Path,
+		for occurrenceIndex, occurrence := range issue.Occurrences {
+			derivedIssueID := buildDerivedIssueID(issue.Id, occurrenceIndex)
+
+			for _, artifactID := range occurrence.ArtifactIds {
+				if artifactID == "" {
+					continue
+				}
+
+				artifactPath, ok := artifactPathByID[artifactID]
+				if !ok {
+					continue
+				}
+
+				dedupKey := fmt.Sprintf("%s|%d|%s", issue.Id, occurrenceIndex, artifactID)
+				if _, exists := seen[dedupKey]; exists {
+					continue
+				}
+				seen[dedupKey] = struct{}{}
+
+				screenshotKey, ok := jobScopedJoin(jobID, scannerID, issue.PageId, artifactPath)
+
+				if !ok {
+					logging.Warn(ctx, "Refusing to presign non-job-scoped screenshot key",
+						"job_id", jobID,
+						"scanner_id", scannerID,
+						"page_id", issue.PageId,
+						"artifact_path", artifactPath,
+					)
+
+					continue
+				}
+
+				screenshotURL, err := s.config.Storage.GetPresignedURL(
+					ctx,
+					storage.BucketArtifacts,
+					screenshotKey,
+					15*time.Minute,
 				)
+				if err != nil {
+					logging.Warn(
+						ctx,
+						"Failed to generate presigned URL for screenshot",
+						"error",
+						err,
+						"key",
+						screenshotKey,
+					)
 
-				continue
+					continue
+				}
+
+				occurrenceIndexCopy := occurrenceIndex
+				screenshot, valid := buildViolationScreenshotArtifact(
+					derivedIssueID,
+					occurrenceIndexCopy,
+					artifactID,
+					scannerID,
+					issue.PageId,
+					pageURL,
+					screenshotURL,
+				)
+				if !valid {
+					logging.Warn(
+						ctx,
+						"Dropping malformed violation screenshot artifact",
+						"job_id",
+						jobID,
+						"scanner_id",
+						scannerID,
+						"page_id",
+						issue.PageId,
+						"issue_id",
+						derivedIssueID,
+						"artifact_id",
+						artifactID,
+					)
+
+					continue
+				}
+
+				screenshots = append(screenshots, screenshot)
 			}
-
-			screenshotURL, err := s.config.Storage.GetPresignedURL(
-				ctx,
-				storage.BucketArtifacts,
-				screenshotKey,
-				15*time.Minute,
-			)
-			if err != nil {
-				logging.Warn(ctx, "Failed to generate presigned URL for screenshot", "error", err, "key", screenshotKey)
-
-				continue
-			}
-
-			screenshots = append(screenshots, models.ScreenshotArtifact{
-				ScannerType: ref.ScannerType,
-				ViolationID: ref.RuleID,
-				PageID:      ref.PageID,
-				PageURL:     page.Url,
-				URL:         screenshotURL,
-			})
 		}
 	}
 
 	return screenshots
+}
+
+func buildViolationScreenshotArtifact(
+	issueID string,
+	occurrenceIndex int,
+	artifactID string,
+	scannerID string,
+	pageID string,
+	pageURL string,
+	url string,
+) (models.ScreenshotArtifact, bool) {
+	if issueID == "" || artifactID == "" || scannerID == "" || pageID == "" || url == "" {
+		return models.ScreenshotArtifact{}, false
+	}
+
+	occurrenceIndexCopy := occurrenceIndex
+
+	return models.ScreenshotArtifact{
+		Kind:            models.ScreenshotKindViolation,
+		IssueID:         issueID,
+		OccurrenceIndex: &occurrenceIndexCopy,
+		ArtifactID:      artifactID,
+		ScannerID:       scannerID,
+		PageID:          pageID,
+		PageURL:         pageURL,
+		URL:             url,
+	}, true
 }
 
 func resolveOverviewScannerV2(issues []report.IssueDetail, pageID string) string {
@@ -234,6 +314,10 @@ func resolveOverviewScannerV2(issues []report.IssueDetail, pageID string) string
 	}
 
 	return scannerTypeAxe
+}
+
+func buildPageOverviewArtifactID(scannerType, pageID string) string {
+	return fmt.Sprintf("page-overview:%s:%s", scannerType, pageID)
 }
 
 func (s *Server) buildPageOverviewScreenshotV2(
@@ -273,10 +357,11 @@ func (s *Server) buildPageOverviewScreenshotV2(
 	}
 
 	return models.ScreenshotArtifact{
-		ScannerType: scannerType,
-		ViolationID: pageOverviewViolationID,
-		PageID:      page.Id,
-		PageURL:     page.Url,
-		URL:         overviewURL,
+		Kind:       models.ScreenshotKindPageOverview,
+		ArtifactID: buildPageOverviewArtifactID(scannerType, page.Id),
+		ScannerID:  scannerType,
+		PageID:     page.Id,
+		PageURL:    page.Url,
+		URL:        overviewURL,
 	}, true
 }

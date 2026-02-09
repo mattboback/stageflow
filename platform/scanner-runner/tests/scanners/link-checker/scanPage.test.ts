@@ -417,9 +417,9 @@ describe("LinkCheckerScanner.scanPage", () => {
   });
 
   describe("error handling", () => {
-    it("returns success:false when page.goto fails", async () => {
+    it("returns success:false when link extraction fails", async () => {
       const mockPage = createMockPage({
-        goto: vi.fn().mockRejectedValue(new Error("Navigation timeout")),
+        evaluate: vi.fn().mockRejectedValue(new Error("Evaluation timeout")),
       });
 
       const mockLogger = createMockLogger();
@@ -431,19 +431,19 @@ describe("LinkCheckerScanner.scanPage", () => {
       const result = await resultPromise;
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe("Navigation timeout");
+      expect(result.error).toBe("Evaluation timeout");
       expect(result.issues).toHaveLength(0);
       expect(mockLogger.error).toHaveBeenCalledWith(
         "Link check failed",
         expect.objectContaining({
-          error: "Navigation timeout",
+          error: "Evaluation timeout",
         }),
       );
     });
 
     it("returns valid PageScanResult structure even on error", async () => {
       const mockPage = createMockPage({
-        goto: vi.fn().mockRejectedValue(new Error("Network error")),
+        evaluate: vi.fn().mockRejectedValue(new Error("Network error")),
       });
 
       const context = createMockContext({ page: mockPage });
@@ -468,7 +468,7 @@ describe("LinkCheckerScanner.scanPage", () => {
 
     it("handles non-Error thrown values", async () => {
       const mockPage = createMockPage({
-        goto: vi.fn().mockRejectedValue("String error"),
+        evaluate: vi.fn().mockRejectedValue("String error"),
       });
 
       const context = createMockContext({ page: mockPage });

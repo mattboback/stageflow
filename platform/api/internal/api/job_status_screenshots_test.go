@@ -6,50 +6,48 @@ import (
 	report "github.com/mattboback/stageflow/packages/contracts/report/generated/go"
 )
 
-func TestCollectScreenshotRefs(t *testing.T) {
+func TestBuildDerivedIssueID(t *testing.T) {
 	t.Parallel()
 
-	refs := collectScreenshotRefs([]report.IssueDetail{
-		{
-			Scanner: "",
-			RuleId:  "color-contrast",
-			PageId:  "page-1",
-			Occurrences: []report.IssueOccurrence{
-				{ArtifactIds: []string{"a1", "a2", ""}},
-			},
-		},
-		{
-			Scanner: "lighthouse",
-			RuleId:  "lh-performance",
-			PageId:  "page-1",
-			Occurrences: []report.IssueOccurrence{
-				{ArtifactIds: []string{"a1"}},
-			},
-		},
-		{
-			Scanner: scannerTypeAxe,
-			RuleId:  "",
-			PageId:  "page-1",
-			Occurrences: []report.IssueOccurrence{
-				{ArtifactIds: []string{"ignored"}},
-			},
-		},
-	}, scannerTypeAxe)
-
-	if got := len(refs["a1"]); got != 2 {
-		t.Fatalf("expected 2 refs for a1, got %d", got)
+	if got, want := buildDerivedIssueID("abc123", 0), "abc123"; got != want {
+		t.Fatalf("occurrence 0: want %q, got %q", want, got)
 	}
 
-	if got := refs["a1"][0].ScannerType; got != scannerTypeAxe {
-		t.Fatalf("expected default scanner axe for first ref, got %q", got)
+	if got, want := buildDerivedIssueID("abc123", 1), "abc123--occ-2"; got != want {
+		t.Fatalf("occurrence 1: want %q, got %q", want, got)
+	}
+}
+
+func TestCollectScreenshotArtifactPaths(t *testing.T) {
+	t.Parallel()
+
+	path := "screenshots/shot.webp"
+	ignoredPath := "screenshots/not-used.webp"
+
+	paths := collectScreenshotArtifactPaths([]report.ReportArtifact{
+		{
+			Id:   "a1",
+			Type: "screenshot",
+			Path: &path,
+		},
+		{
+			Id:   "ignore-type",
+			Type: "har",
+			Path: &ignoredPath,
+		},
+		{
+			Id:   "",
+			Type: "screenshot",
+			Path: &ignoredPath,
+		},
+	})
+
+	if got, want := len(paths), 1; got != want {
+		t.Fatalf("expected %d screenshot path, got %d", want, got)
 	}
 
-	if got := refs["a2"][0].RuleID; got != "color-contrast" {
-		t.Fatalf("expected rule id propagated, got %q", got)
-	}
-
-	if _, ok := refs["ignored"]; ok {
-		t.Fatalf("expected issue with empty RuleID to be ignored")
+	if got, ok := paths["a1"]; !ok || got != "screenshots/shot.webp" {
+		t.Fatalf("expected artifact path for a1, got %q (exists=%v)", got, ok)
 	}
 }
 
@@ -72,5 +70,66 @@ func TestResolveOverviewScannerV2(t *testing.T) {
 
 	if got, want := resolveOverviewScannerV2(issues, "page-3"), scannerTypeAxe; got != want {
 		t.Fatalf("page-3: want default %q, got %q", want, got)
+	}
+}
+
+func TestBuildPageOverviewArtifactID(t *testing.T) {
+	t.Parallel()
+
+	if got, want := buildPageOverviewArtifactID("axe", "page-1"), "page-overview:axe:page-1"; got != want {
+		t.Fatalf("want %q, got %q", want, got)
+	}
+}
+
+func TestBuildViolationScreenshotArtifact(t *testing.T) {
+	t.Parallel()
+
+	artifact, ok := buildViolationScreenshotArtifact(
+		"issue-a",
+		1,
+		"ss-issue-a",
+		"axe",
+		"page-1",
+		"https://example.com",
+		"https://minio/shot.webp",
+	)
+	if !ok {
+		t.Fatal("expected valid violation screenshot artifact")
+	}
+	if artifact.Kind != "violation" {
+		t.Fatalf("expected kind=violation, got %q", artifact.Kind)
+	}
+	if artifact.OccurrenceIndex == nil || *artifact.OccurrenceIndex != 1 {
+		t.Fatalf("expected occurrence index 1, got %+v", artifact.OccurrenceIndex)
+	}
+}
+
+func TestBuildViolationScreenshotArtifact_RejectsMissingIdentityFields(t *testing.T) {
+	t.Parallel()
+
+	_, ok := buildViolationScreenshotArtifact(
+		"",
+		0,
+		"ss-issue-a",
+		"axe",
+		"page-1",
+		"https://example.com",
+		"https://minio/shot.webp",
+	)
+	if ok {
+		t.Fatal("expected missing issue_id to be rejected")
+	}
+
+	_, ok = buildViolationScreenshotArtifact(
+		"issue-a",
+		0,
+		"",
+		"axe",
+		"page-1",
+		"https://example.com",
+		"https://minio/shot.webp",
+	)
+	if ok {
+		t.Fatal("expected missing artifact_id to be rejected")
 	}
 }
