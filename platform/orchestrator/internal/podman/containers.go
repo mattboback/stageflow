@@ -253,7 +253,7 @@ func (c *Client) InspectContainer(ctx context.Context, containerID string) (*Con
 func (c *Client) WaitContainer(ctx context.Context, containerID string) (*ContainerWaitResponse, error) {
 	path := fmt.Sprintf("/containers/%s/wait", containerID)
 
-	resp, err := c.doLibpodRequest(ctx, http.MethodPost, path, nil)
+	resp, err := c.doLibpodLongPollRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to wait for container: %w", err)
 	}

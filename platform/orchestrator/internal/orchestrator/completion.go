@@ -132,7 +132,7 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		slog.Warn("Failed to record scan complete", "job_id", job.ID, "error", metricsErr)
 	}
 
-	var pagesScanned, totalIssues, criticalIssues, seriousIssues, moderateIssues, minorIssues int
+	var pagesScanned, maxPagesScanned, totalIssues, criticalIssues, seriousIssues, moderateIssues, minorIssues int
 
 	for _, result := range job.ScannerResults {
 		if !result.Success {
@@ -140,6 +140,10 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		}
 
 		pagesScanned += result.PagesScanned
+		if result.PagesScanned > maxPagesScanned {
+			maxPagesScanned = result.PagesScanned
+		}
+
 		totalIssues += result.TotalIssues
 		criticalIssues += result.CriticalIssues
 		seriousIssues += result.SeriousIssues
@@ -172,7 +176,22 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		slog.Warn("Failed to persist completion artifacts", "job_id", job.ID, "error", artifactsErr)
 	}
 
-	if progressErr := o.database.UpdateJobProgress(ctx, job.ID, pagesScanned, pagesScanned); progressErr != nil {
+	// Keep final user-visible progress aligned to per-job page totals.
+	finalTotalPages := job.TotalPages
+	if finalTotalPages <= 0 {
+		finalTotalPages = maxPagesScanned
+	}
+
+	finalCurrentPage := job.CurrentPage
+	if finalCurrentPage <= 0 {
+		finalCurrentPage = finalTotalPages
+	}
+
+	if finalTotalPages > 0 && finalCurrentPage < finalTotalPages {
+		finalCurrentPage = finalTotalPages
+	}
+
+	if progressErr := o.database.UpdateJobProgress(ctx, job.ID, finalCurrentPage, finalTotalPages); progressErr != nil {
 		slog.Warn("Failed to persist final progress", "job_id", job.ID, "error", progressErr)
 	}
 
