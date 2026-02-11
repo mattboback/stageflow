@@ -62,6 +62,12 @@ const (
 )
 
 const (
+	defaultStreamMaxAge       = 72 * time.Hour
+	defaultConsumerAckWait    = 10 * time.Minute
+	defaultConsumerMaxDeliver = 10
+)
+
+const (
 	SubjectJobCreated        = "jobs.events.created"
 	SubjectJobCompleted      = "jobs.events.completed"
 	SubjectJobFailed         = "jobs.events.failed"
@@ -243,7 +249,7 @@ func (c *Client) EnsureStreams(ctx context.Context) error {
 			Name:      s.name,
 			Subjects:  s.subjects,
 			Retention: jetstream.LimitsPolicy,
-			MaxAge:    24 * time.Hour, // Keep messages for 24 hours
+			MaxAge:    defaultStreamMaxAge,
 			Storage:   jetstream.FileStorage,
 		})
 		if err != nil {
@@ -301,8 +307,8 @@ func (c *Client) Subscribe(
 		Durable:       consumerName,
 		FilterSubject: subject,
 		AckPolicy:     jetstream.AckExplicitPolicy,
-		MaxDeliver:    3,
-		AckWait:       30 * time.Second,
+		MaxDeliver:    defaultConsumerMaxDeliver,
+		AckWait:       defaultConsumerAckWait,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create consumer: %w", err)
@@ -365,8 +371,8 @@ func (c *Client) SubscribeWithContext(
 		Durable:       consumerName,
 		FilterSubject: subject,
 		AckPolicy:     jetstream.AckExplicitPolicy,
-		MaxDeliver:    3,
-		AckWait:       30 * time.Second,
+		MaxDeliver:    defaultConsumerMaxDeliver,
+		AckWait:       defaultConsumerAckWait,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create consumer: %w", err)

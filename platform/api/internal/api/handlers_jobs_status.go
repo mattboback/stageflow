@@ -48,7 +48,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, err := s.statusStore.GetJob(ctx, jobID)
+	rec, err := s.loadJobRecord(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
@@ -76,7 +76,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleJobReport(w http.ResponseWriter, r *http.Request, jobID string) {
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, err := s.statusStore.GetJob(ctx, jobID)
+	rec, err := s.loadJobRecord(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
@@ -285,7 +285,7 @@ func (s *Server) handleJobReport(w http.ResponseWriter, r *http.Request, jobID s
 func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID string) {
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, err := s.statusStore.GetJob(ctx, jobID)
+	rec, err := s.loadJobRecord(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			httputil.RespondNotFound(w, "Job")

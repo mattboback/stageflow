@@ -9,6 +9,10 @@ import { type Browser, type BrowserContext, chromium, type Page } from "playwrig
 import { createLogger } from "../utils/logger";
 import { resolvePlaywrightImageChromiumExecutablePath } from "../utils/playwright";
 import {
+  shouldEnforceRuntimeTargetValidation,
+  validateRuntimeTargetURL,
+} from "./target-validation";
+import {
   type BrowserConfig,
   DEFAULT_WAIT_STRATEGY,
   type PreScanAction,
@@ -123,6 +127,10 @@ export class BrowserManager {
     url: string,
     waitStrategy?: WaitStrategy,
   ): Promise<void> {
+    if (shouldEnforceRuntimeTargetValidation()) {
+      await validateRuntimeTargetURL(url);
+    }
+
     const strategy = waitStrategy ?? DEFAULT_WAIT_STRATEGY;
 
     this.logger.debug("Navigating to page", { url, waitStrategy: strategy.type });

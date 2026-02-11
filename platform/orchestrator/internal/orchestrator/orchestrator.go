@@ -4,6 +4,7 @@ package orchestrator
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
@@ -44,6 +45,7 @@ type Orchestrator struct {
 	stateMachine         *fsm.StateMachine
 	publisher            Publisher
 	scannerRegistry      *scanners.Registry
+	monitorWG            sync.WaitGroup
 	natsURL              string
 	minioEndpoint        string
 	minioAccessKey       string
@@ -62,6 +64,7 @@ type Orchestrator struct {
 	stagingStorage       storage.Deleter
 	storage              storage.Client // Full storage access for report generation
 	deadlinePollInterval time.Duration
+	deadlineSweepOnce    sync.Once
 }
 
 // Config wires dependencies and optional overrides into a new Orchestrator.
@@ -177,4 +180,25 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,
 	}
+}
+
+// Start launches background maintenance loops.
+func (o *Orchestrator) Start(ctx context.Context) {
+	if ctx == nil {
+		return
+	}
+
+	o.deadlineSweepOnce.Do(func() {
+		go o.startDeadlineSweeper(ctx)
+	})
+}
+
+// WaitForMonitors blocks until all container monitor goroutines have returned.
+// This is primarily intended for tests to avoid schema teardown races.
+func (o *Orchestrator) WaitForMonitors() {
+	if o == nil {
+		return
+	}
+
+	o.monitorWG.Wait()
 }

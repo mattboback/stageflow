@@ -11,7 +11,7 @@ import (
 )
 
 const jobSelectColumns = `
-id, state, input_type, input_path, urls, pod_id, config_json, created_at, updated_at, completed_at, error, provenance_path, provenance_key, expected_scanners, completed_scanners, scanner_results
+id, state, input_type, input_path, urls, pod_id, config_json, created_at, updated_at, completed_at, error, error_details, last_stage, total_pages, current_page, total_violations, report_json_key, report_key, scan_stage_log_key, scan_recipe_key, extraction_stage_log_key, extraction_recipe_key, provenance_path, provenance_key, expected_scanners, completed_scanners, scanner_results
 `
 
 type rowScanner interface {
@@ -35,7 +35,7 @@ func (d *Database) CreateJob(ctx context.Context, job *models.Job) error {
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err = d.db.ExecContext(ctx, query,
+	_, err = d.execContext(ctx, query,
 		job.ID,
 		job.State,
 		job.InputType,
@@ -52,6 +52,46 @@ func (d *Database) CreateJob(ctx context.Context, job *models.Job) error {
 	return nil
 }
 
+// CreateJobIfAbsent inserts a new job only when it does not already exist.
+func (d *Database) CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool, error) {
+	configJSON, err := json.Marshal(job.Config)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	urlsJSON, err := json.Marshal(job.URLs)
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal urls: %w", err)
+	}
+
+	query := `
+		INSERT INTO jobs (id, state, input_type, input_path, urls, config_json, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO NOTHING
+	`
+
+	result, err := d.execContext(ctx, query,
+		job.ID,
+		job.State,
+		job.InputType,
+		job.InputPath,
+		string(urlsJSON),
+		string(configJSON),
+		job.CreatedAt,
+		job.UpdatedAt,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to create job: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to read rows affected: %w", err)
+	}
+
+	return rows > 0, nil
+}
+
 //nolint:gocognit,gocyclo // Scanning many nullable columns requires multiple nil checks
 func scanJobRow(s rowScanner) (*models.Job, error) {
 	var (
@@ -61,6 +101,17 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		configJSON            string
 		completedAt           sql.NullTime
 		errorStr              sql.NullString
+		errorDetails          sql.NullString
+		lastStage             sql.NullString
+		totalPages            sql.NullInt64
+		currentPage           sql.NullInt64
+		totalViolations       sql.NullInt64
+		reportJSONKey         sql.NullString
+		reportKey             sql.NullString
+		scanStageLogKey       sql.NullString
+		scanRecipeKey         sql.NullString
+		extractionStageLogKey sql.NullString
+		extractionRecipeKey   sql.NullString
 		provenancePath        sql.NullString
 		provenanceKey         sql.NullString
 		expectedScannersJSON  sql.NullString
@@ -80,6 +131,17 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		&job.UpdatedAt,
 		&completedAt,
 		&errorStr,
+		&errorDetails,
+		&lastStage,
+		&totalPages,
+		&currentPage,
+		&totalViolations,
+		&reportJSONKey,
+		&reportKey,
+		&scanStageLogKey,
+		&scanRecipeKey,
+		&extractionStageLogKey,
+		&extractionRecipeKey,
 		&provenancePath,
 		&provenanceKey,
 		&expectedScannersJSON,
@@ -99,6 +161,50 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 
 	if errorStr.Valid {
 		job.Error = errorStr.String
+	}
+
+	if errorDetails.Valid {
+		job.ErrorDetails = errorDetails.String
+	}
+
+	if lastStage.Valid {
+		job.LastStage = lastStage.String
+	}
+
+	if totalPages.Valid {
+		job.TotalPages = int(totalPages.Int64)
+	}
+
+	if currentPage.Valid {
+		job.CurrentPage = int(currentPage.Int64)
+	}
+
+	if totalViolations.Valid {
+		job.TotalViolations = int(totalViolations.Int64)
+	}
+
+	if reportJSONKey.Valid {
+		job.ReportJSONKey = reportJSONKey.String
+	}
+
+	if reportKey.Valid {
+		job.ReportKey = reportKey.String
+	}
+
+	if scanStageLogKey.Valid {
+		job.ScanStageLogKey = scanStageLogKey.String
+	}
+
+	if scanRecipeKey.Valid {
+		job.ScanRecipeKey = scanRecipeKey.String
+	}
+
+	if extractionStageLogKey.Valid {
+		job.ExtractionStageLogKey = extractionStageLogKey.String
+	}
+
+	if extractionRecipeKey.Valid {
+		job.ExtractionRecipeKey = extractionRecipeKey.String
 	}
 
 	if provenancePath.Valid {
@@ -148,7 +254,7 @@ func (d *Database) GetJob(ctx context.Context, jobID string) (*models.Job, error
 		WHERE id = ?
 	`, jobSelectColumns)
 
-	row := d.db.QueryRowContext(ctx, query, jobID)
+	row := d.queryRowContext(ctx, query, jobID)
 
 	job, err := scanJobRow(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -171,7 +277,7 @@ func (d *Database) ListJobsByState(ctx context.Context, state models.JobState) (
 		ORDER BY created_at ASC
 	`, jobSelectColumns)
 
-	rows, err := d.db.QueryContext(ctx, query, state)
+	rows, err := d.queryContext(ctx, query, state)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list jobs: %w", err)
 	}
@@ -222,7 +328,7 @@ func (d *Database) ListJobs(ctx context.Context, opts ListJobsOptions) ([]*model
 		args = append(args, opts.Offset)
 	}
 
-	rows, err := d.db.QueryContext(ctx, query, args...)
+	rows, err := d.queryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list jobs: %w", err)
 	}
@@ -263,7 +369,7 @@ func (d *Database) CountJobs(ctx context.Context, state *models.JobState) (int, 
 
 	var count int
 
-	err := d.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	err := d.queryRowContext(ctx, query, args...).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count jobs: %w", err)
 	}

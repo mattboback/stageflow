@@ -55,22 +55,33 @@ func (s JobState) IsTerminal() bool {
 
 // Job is the persisted scan job record shared across services and APIs.
 type Job struct {
-	ID                string                    `json:"id"`
-	State             JobState                  `json:"state"`
-	InputType         string                    `json:"input_type"`     // "zip" or "urls"
-	InputPath         string                    `json:"input_path"`     // MinIO path (for zip)
-	URLs              []string                  `json:"urls,omitempty"` // URLs to scan (for urls type)
-	PodID             string                    `json:"pod_id,omitempty"`
-	Config            JobConfig                 `json:"config"`
-	CreatedAt         time.Time                 `json:"created_at"`
-	UpdatedAt         time.Time                 `json:"updated_at"`
-	CompletedAt       *time.Time                `json:"completed_at,omitempty"`
-	Error             string                    `json:"error,omitempty"`
-	ProvenancePath    string                    `json:"provenance_path,omitempty"`
-	ProvenanceKey     string                    `json:"provenance_key,omitempty"`
-	ExpectedScanners  []string                  `json:"expected_scanners,omitempty"`
-	CompletedScanners []string                  `json:"completed_scanners,omitempty"`
-	ScannerResults    map[string]*ScannerResult `json:"scanner_results,omitempty"`
+	ID                    string                    `json:"id"`
+	State                 JobState                  `json:"state"`
+	InputType             string                    `json:"input_type"`     // "zip" or "urls"
+	InputPath             string                    `json:"input_path"`     // MinIO path (for zip)
+	URLs                  []string                  `json:"urls,omitempty"` // URLs to scan (for urls type)
+	PodID                 string                    `json:"pod_id,omitempty"`
+	Config                JobConfig                 `json:"config"`
+	CreatedAt             time.Time                 `json:"created_at"`
+	UpdatedAt             time.Time                 `json:"updated_at"`
+	CompletedAt           *time.Time                `json:"completed_at,omitempty"`
+	Error                 string                    `json:"error,omitempty"`
+	ErrorDetails          string                    `json:"error_details,omitempty"`
+	LastStage             string                    `json:"last_stage,omitempty"`
+	TotalPages            int                       `json:"total_pages,omitempty"`
+	CurrentPage           int                       `json:"current_page,omitempty"`
+	TotalViolations       int                       `json:"violations,omitempty"`
+	ReportJSONKey         string                    `json:"report_json_key,omitempty"`
+	ReportKey             string                    `json:"report_key,omitempty"`
+	ScanStageLogKey       string                    `json:"scan_stage_log_key,omitempty"`
+	ScanRecipeKey         string                    `json:"scan_recipe_key,omitempty"`
+	ExtractionStageLogKey string                    `json:"extraction_stage_log_key,omitempty"`
+	ExtractionRecipeKey   string                    `json:"extraction_recipe_key,omitempty"`
+	ProvenancePath        string                    `json:"provenance_path,omitempty"`
+	ProvenanceKey         string                    `json:"provenance_key,omitempty"`
+	ExpectedScanners      []string                  `json:"expected_scanners,omitempty"`
+	CompletedScanners     []string                  `json:"completed_scanners,omitempty"`
+	ScannerResults        map[string]*ScannerResult `json:"scanner_results,omitempty"`
 }
 
 // ScannerResult captures per-scanner artifacts and metrics for a job.
@@ -141,12 +152,22 @@ type ScannerArtifacts struct {
 	ScanRecipe   string `json:"scan_recipe,omitempty"`
 }
 
+type ScreenshotKind string
+
+const (
+	ScreenshotKindViolation    ScreenshotKind = "violation"
+	ScreenshotKindPageOverview ScreenshotKind = "page_overview"
+)
+
 // ScreenshotArtifact contains metadata and URLs for a screenshot.
 type ScreenshotArtifact struct {
-	ScannerType  string `json:"scanner_type,omitempty"`
-	ViolationID  string `json:"violation_id"`
-	PageID       string `json:"page_id"`
-	PageURL      string `json:"page_url,omitempty"`
-	URL          string `json:"url"`                     // Presigned URL for full-size screenshot
-	ThumbnailURL string `json:"thumbnail_url,omitempty"` // Presigned URL for thumbnail
+	Kind            ScreenshotKind `json:"kind"`
+	IssueID         string         `json:"issue_id,omitempty"`
+	OccurrenceIndex *int           `json:"occurrence_index,omitempty"`
+	ArtifactID      string         `json:"artifact_id"`
+	ScannerID       string         `json:"scanner_id"`
+	PageID          string         `json:"page_id"`
+	PageURL         string         `json:"page_url,omitempty"`
+	URL             string         `json:"url"`                     // Presigned URL for full-size screenshot
+	ThumbnailURL    string         `json:"thumbnail_url,omitempty"` // Presigned URL for thumbnail
 }

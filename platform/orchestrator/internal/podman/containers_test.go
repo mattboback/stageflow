@@ -3,6 +3,7 @@ package podman
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 )
@@ -171,6 +172,40 @@ func TestWaitContainer(t *testing.T) {
 	})
 
 	client := mock.newClient()
+
+	result, err := client.WaitContainer(context.Background(), "container-123")
+	if err != nil {
+		t.Fatalf("Failed to wait for container: %v", err)
+	}
+
+	if result.StatusCode != 0 {
+		t.Errorf("Expected status code 0, got %d", result.StatusCode)
+	}
+}
+
+func TestWaitContainer_UsesLongPollClient(t *testing.T) {
+	mock := newMockPodmanServer()
+	defer mock.Close()
+
+	mock.handle("POST", "/v4.0.0/libpod/containers/container-123/wait", func(w http.ResponseWriter, _ *http.Request) {
+		resp := ContainerWaitResponse{StatusCode: 0}
+		w.Header().Set("Content-Type", "application/json")
+
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			t.Fatalf("Failed to encode response: %v", err)
+		}
+	})
+
+	client := &Client{
+		httpClient: &http.Client{
+			Transport: roundTripperFunc(func(_ *http.Request) (*http.Response, error) {
+				return nil, errors.New("regular client should not be used for wait")
+			}),
+		},
+		longPollHTTPClient: &http.Client{Transport: mock},
+		baseURL:            mock.URL,
+		apiPrefix:          libpodV4Prefix,
+	}
 
 	result, err := client.WaitContainer(context.Background(), "container-123")
 	if err != nil {

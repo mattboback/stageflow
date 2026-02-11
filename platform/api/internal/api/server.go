@@ -16,10 +16,16 @@ type JobPublisher interface {
 	PublishJobCreated(ctx context.Context, envelope *events.Envelope) error
 }
 
+// JobStatusReader fetches current job status snapshots.
+type JobStatusReader interface {
+	GetJob(ctx context.Context, jobID string) (*status.JobRecord, error)
+}
+
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
 type Server struct {
 	config          *ServerConfig
-	statusStore     *status.Store
+	statusReader    JobStatusReader
+	pendingJobs     *pendingJobCache
 	sseHub          *sse.Hub
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
@@ -30,7 +36,7 @@ type ServerConfig struct {
 	Port                int
 	Storage             storage.Client
 	Publisher           JobPublisher
-	StatusStore         *status.Store
+	StatusReader        JobStatusReader
 	ScannerRegistry     *scannerregistry.Registry
 	MinIOEndpoint       string // Internal MinIO endpoint (e.g., "minio:9000")
 	MinIOPublicEndpoint string // Public endpoint (e.g., "stageflow.org")
@@ -41,7 +47,8 @@ type ServerConfig struct {
 func NewServer(config *ServerConfig) *Server {
 	return &Server{
 		config:          config,
-		statusStore:     config.StatusStore,
+		statusReader:    config.StatusReader,
+		pendingJobs:     newPendingJobCache(),
 		sseHub:          sse.NewHub(),
 		scannerRegistry: config.ScannerRegistry,
 		ipResolver:      net.DefaultResolver,

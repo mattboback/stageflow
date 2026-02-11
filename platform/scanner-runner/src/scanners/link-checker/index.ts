@@ -32,11 +32,6 @@ export class LinkCheckerScanner extends ScannerBase {
     const issues: Issue[] = [];
 
     try {
-      await page.goto(pageEntry.url, {
-        waitUntil: "domcontentloaded",
-        timeout: 30000,
-      });
-
       const links = await this.extractLinks(page, pageEntry.url);
       logger.info("Extracted links", { count: links.length, url: pageEntry.url });
 

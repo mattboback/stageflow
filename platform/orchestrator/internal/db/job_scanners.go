@@ -59,11 +59,11 @@ func (d *Database) RecordScannerCompletion(
 
 	var expectedJSON, completedJSON, resultsJSON sql.NullString
 
-	row := tx.QueryRowContext(ctx, `
+	row := tx.QueryRowContext(ctx, bindPostgresParams(`
 		SELECT expected_scanners, completed_scanners, scanner_results
 		FROM jobs
 		WHERE id = ?
-	`, jobID)
+	`), jobID)
 
 	rowScanErr := row.Scan(&expectedJSON, &completedJSON, &resultsJSON)
 	if errors.Is(rowScanErr, sql.ErrNoRows) {
@@ -147,11 +147,11 @@ func (d *Database) RecordScannerCompletion(
 		return false, fmt.Errorf("failed to marshal scanner results: %w", err)
 	}
 
-	_, err = tx.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, bindPostgresParams(`
 		UPDATE jobs
 		SET completed_scanners = ?, scanner_results = ?, updated_at = ?
 		WHERE id = ?
-	`, string(completedBytes), string(resultsBytes), time.Now(), jobID)
+	`), string(completedBytes), string(resultsBytes), time.Now(), jobID)
 	if err != nil {
 		return false, fmt.Errorf("failed to record scanner completion: %w", err)
 	}

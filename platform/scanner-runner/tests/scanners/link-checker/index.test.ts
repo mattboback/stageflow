@@ -148,6 +148,7 @@ describe("LinkCheckerScanner", () => {
 
     afterEach(() => {
       globalThis.fetch = originalFetch;
+      delete process.env.SCAN_URLS;
       vi.useRealTimers();
     });
 
@@ -180,11 +181,22 @@ describe("LinkCheckerScanner", () => {
     });
 
     it("tracks redirects", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue({
-        status: 200,
-        redirected: true,
-        url: "https://example.com/final",
-      });
+      globalThis.fetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          status: 302,
+          url: "https://example.com",
+          headers: {
+            get: vi.fn().mockReturnValue("https://example.com/final"),
+          },
+        })
+        .mockResolvedValueOnce({
+          status: 200,
+          url: "https://example.com/final",
+          headers: {
+            get: vi.fn().mockReturnValue(null),
+          },
+        });
 
       const resultPromise = checkSingleLink("https://example.com");
 
@@ -213,6 +225,20 @@ describe("LinkCheckerScanner", () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(2);
       expect(result.status).toBe(200);
+    });
+
+    it("blocks non-public link targets during URL jobs", async () => {
+      process.env.SCAN_URLS = '["https://example.com"]';
+      const mockFetch = vi.fn();
+      globalThis.fetch = mockFetch;
+
+      const resultPromise = checkSingleLink("https://127.0.0.1/private");
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await resultPromise;
+
+      expect(result.status).toBeNull();
+      expect(result.error).toContain("Blocked target URL");
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 

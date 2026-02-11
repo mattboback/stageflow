@@ -4,6 +4,29 @@
 
 StageFlow is a polyglot microservices platform that orchestrates web accessibility and quality scans. Submit a URL or upload a ZIP of static HTML, and StageFlow spins up containerized scanners — [axe-core](https://github.com/dequelabs/axe-core), [Lighthouse](https://github.com/GoogleChrome/lighthouse), SEO, security headers, link checking, and an optional AI-powered navigator — then aggregates results into a unified report delivered via Server-Sent Events.
 
+## Project Write-Up (Implementation Snapshot)
+
+I built StageFlow to run accessibility and quality scans in infrastructure I control, with clear runtime boundaries between API intake, orchestration, scanner execution, and reporting. In practice, the frontend submits jobs to a small Go API surface (`/api/v1/jobs/zip`, `/api/v1/jobs/urls`, `/api/v1/jobs/{id}`, `/api/v1/jobs/{id}/stream`, `/api/v1/scanners`) and then follows progress over SSE.
+
+The intake path is intentionally strict. URL submissions are capped at 2 MB, limited to 100 URLs, and validate each target as `http`/`https` with host checks that block loopback, private, link-local, and metadata-address destinations. ZIP uploads are capped at 100 MB and support scanner module selection plus per-scanner config payloads. For ZIP jobs, files land in a staging bucket first; extraction is handled out-of-process by the extractor service.
+
+The extractor enforces defensive archive handling before any scan runs: entry-count limits, max expansion ratio (ZIP bomb protection), max uncompressed size limits, per-entry size limits, and path sanitization to reject traversal/absolute-path tricks. For URL jobs, the orchestrator skips extraction and starts scanners directly. For ZIP jobs, it creates a pod, runs extraction, waits for `extraction.ready`, then transitions into scanning.
+
+Scanning itself is plugin-driven. The scanner-runner discovers scanner manifests, loads the requested module, validates scanner identity against its manifest, and validates `SCANNER_OPTIONS` against the manifest schema. The orchestrator starts one container per selected scanner module and applies resource limits from scanner definitions (with defaults when not specified). Current built-ins are `axe`, `lighthouse`, `seo`, `security-headers`, `link-checker`, plus `ai-navigator` as an optional module.
+
+What made this project interesting was not just running tools, but normalizing their output into one coherent report. On completion, the orchestrator downloads scanner outputs, merges page and issue data, deduplicates overlapping rules across scanners (for example `axe`/`lighthouse`/`seo` overlap on some checks) using explicit scanner priority, recalculates severity totals, and publishes a unified report artifact set. On the frontend, the scan status store keeps live progress readable with SSE reconnect behavior and a fetch fallback, so users still get a trustworthy terminal state if streaming drops.
+
+### Implementation References
+
+- API routes and intake validation: `platform/api/internal/api/router.go`, `platform/api/internal/api/handlers_jobs_url_submit.go`, `platform/api/internal/api/handlers_jobs_zip_upload.go`
+- URL security policy (SSRF guardrails): `platform/api/internal/api/security.go`
+- ZIP validation and safe extraction: `platform/extractor/internal/extractor/extractor.go`
+- Job lifecycle and scanner startup: `platform/orchestrator/internal/orchestrator/events.go`, `platform/orchestrator/internal/orchestrator/extraction.go`, `platform/orchestrator/internal/orchestrator/scanning.go`
+- Aggregation and cross-scanner deduplication: `platform/orchestrator/internal/orchestrator/report_aggregator_aggregate.go`, `platform/orchestrator/internal/orchestrator/rule_deduplication.go`
+- Plugin loader and schema validation: `platform/scanner-runner/src/worker.ts`
+- Scanner manifests (capabilities/config schemas): `packages/shared-go/scannercatalog/manifests/*/manifest.json`
+- Frontend submit + live status flow: `frontend/src/lib/api/client.ts`, `frontend/src/lib/stores/scan-status.svelte.ts`
+
 ## Docs
 
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -39,7 +62,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full system design, data flows, s
 | Messaging | NATS JetStream |
 | Object Storage | MinIO (S3-compatible) |
 | Containers | Podman (pods, volumes, networking) |
-| Database | SQLite (WAL mode) |
+| Database | PostgreSQL |
 | Reverse Proxy | Caddy (auto-HTTPS) |
 | Monitoring | Grafana |
 

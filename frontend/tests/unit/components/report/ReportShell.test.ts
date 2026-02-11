@@ -125,8 +125,9 @@ function createOccurrenceReport(): UnifiedReport {
 
 const screenshots: ScreenshotArtifact[] = [
 	{
-		scanner_type: 'axe',
-		violation_id: '__page_overview__',
+		kind: 'page_overview',
+		artifact_id: 'page-overview:axe:page-1',
+		scanner_id: 'axe',
 		page_id: 'page-1',
 		url: 'http://example.com/overview.png'
 	}

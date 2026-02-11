@@ -1,0 +1,24 @@
+[Unit]
+Description=StageFlow PostgreSQL
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+EnvironmentFile=@APP_ENV_FILE@
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=docker.io/library/postgres:17-alpine
+EnvironmentFile=@APP_ENV_FILE@
+Pod=stageflow.pod
+Volume=stageflow_postgres_data:/var/lib/postgresql/data
+HealthCmd=/bin/sh -c 'pg_isready -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" || exit 1'
+HealthInterval=10s
+HealthTimeout=5s
+HealthRetries=5
+HealthStartPeriod=10s
+
+[Install]
+WantedBy=stageflow.target

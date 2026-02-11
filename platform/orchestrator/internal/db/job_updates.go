@@ -13,7 +13,7 @@ import (
 func (d *Database) ensureJobExists(ctx context.Context, jobID string) error {
 	var id string
 
-	err := d.db.QueryRowContext(ctx, `SELECT id FROM jobs WHERE id = ?`, jobID).Scan(&id)
+	err := d.queryRowContext(ctx, `SELECT id FROM jobs WHERE id = ?`, jobID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("job not found: %s", jobID)
 	}
@@ -28,13 +28,13 @@ func (d *Database) ensureJobExists(ctx context.Context, jobID string) error {
 func (d *Database) getJobState(ctx context.Context, jobID string) (models.JobState, error) {
 	var state models.JobState
 
-	err := d.db.QueryRowContext(ctx, `SELECT state FROM jobs WHERE id = ?`, jobID).Scan(&state)
+	err := d.queryRowContext(ctx, `SELECT state FROM jobs WHERE id = ?`, jobID).Scan(&state)
 
 	return state, err
 }
 
 func (d *Database) execJobUpdate(ctx context.Context, jobID, query string, args ...any) error {
-	result, err := d.db.ExecContext(ctx, query, args...)
+	result, err := d.execContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (d *Database) CompleteJob(ctx context.Context, jobID string) error {
 
 	now := time.Now()
 
-	result, err := d.db.ExecContext(
+	result, err := d.execContext(
 		ctx,
 		query,
 		models.JobStateDone,
@@ -164,21 +164,23 @@ func (d *Database) CompleteJob(ctx context.Context, jobID string) error {
 }
 
 // FailJob marks a job as failed with an error message.
-func (d *Database) FailJob(ctx context.Context, jobID, errorMsg string) error {
+func (d *Database) FailJob(ctx context.Context, jobID, stage, errorMsg, errorDetails string) error {
 	query := `
 		UPDATE jobs
-		SET state = ?, error = ?, completed_at = ?, updated_at = ?
+		SET state = ?, error = ?, error_details = ?, last_stage = ?, completed_at = ?, updated_at = ?
 		WHERE id = ?
 		  AND state NOT IN (?, ?)
 	`
 
 	now := time.Now()
 
-	result, err := d.db.ExecContext(
+	result, err := d.execContext(
 		ctx,
 		query,
 		models.JobStateFailed,
 		errorMsg,
+		errorDetails,
+		stage,
 		now,
 		now,
 		jobID,
@@ -212,4 +214,133 @@ func (d *Database) FailJob(ctx context.Context, jobID, errorMsg string) error {
 	}
 
 	return fmt.Errorf("job %s not eligible for failure (state=%s)", jobID, state)
+}
+
+// UpdateJobProgress persists page-by-page progress for in-flight jobs.
+func (d *Database) UpdateJobProgress(ctx context.Context, jobID string, currentPage, totalPages int) error {
+	query := `
+		UPDATE jobs
+		SET current_page = CASE WHEN ? > current_page THEN ? ELSE current_page END,
+		    total_pages = CASE WHEN ? > total_pages THEN ? ELSE total_pages END,
+		    updated_at = ?
+		WHERE id = ?
+		  AND state NOT IN (?, ?)
+	`
+
+	now := time.Now()
+
+	if err := d.execJobUpdate(
+		ctx,
+		jobID,
+		query,
+		currentPage,
+		currentPage,
+		totalPages,
+		totalPages,
+		now,
+		jobID,
+		models.JobStateDone,
+		models.JobStateFailed,
+	); err != nil {
+		return fmt.Errorf("failed to update job progress: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateJobExtractionArtifacts stores extraction artifacts produced before scanning.
+func (d *Database) UpdateJobExtractionArtifacts(
+	ctx context.Context,
+	jobID, stageLogKey, recipeKey string,
+) error {
+	query := `
+		UPDATE jobs
+		SET extraction_stage_log_key = CASE
+		        WHEN ? <> '' THEN ?
+		        ELSE extraction_stage_log_key
+		    END,
+		    extraction_recipe_key = CASE
+		        WHEN ? <> '' THEN ?
+		        ELSE extraction_recipe_key
+		    END,
+		    updated_at = ?
+		WHERE id = ?
+		  AND state NOT IN (?, ?)
+	`
+
+	if err := d.execJobUpdate(
+		ctx,
+		jobID,
+		query,
+		stageLogKey,
+		stageLogKey,
+		recipeKey,
+		recipeKey,
+		time.Now(),
+		jobID,
+		models.JobStateDone,
+		models.JobStateFailed,
+	); err != nil {
+		return fmt.Errorf("failed to update extraction artifacts: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateJobCompletionArtifacts stores primary completion artifacts and summary totals.
+func (d *Database) UpdateJobCompletionArtifacts(
+	ctx context.Context,
+	jobID, reportJSONKey, reportKey, stageLogKey, recipeKey string,
+	totalViolations int,
+) error {
+	query := `
+		UPDATE jobs
+		SET report_json_key = CASE
+		        WHEN ? <> '' THEN ?
+		        ELSE report_json_key
+		    END,
+		    report_key = CASE
+		        WHEN ? <> '' THEN ?
+		        ELSE report_key
+		    END,
+		    scan_stage_log_key = CASE
+		        WHEN ? <> '' THEN ?
+		        ELSE scan_stage_log_key
+		    END,
+		    scan_recipe_key = CASE
+		        WHEN ? <> '' THEN ?
+		        ELSE scan_recipe_key
+		    END,
+		    total_violations = CASE
+		        WHEN ? > total_violations THEN ?
+		        ELSE total_violations
+		    END,
+		    updated_at = ?
+		WHERE id = ?
+		  AND state NOT IN (?, ?)
+	`
+
+	if err := d.execJobUpdate(
+		ctx,
+		jobID,
+		query,
+		reportJSONKey,
+		reportJSONKey,
+		reportKey,
+		reportKey,
+		stageLogKey,
+		stageLogKey,
+		recipeKey,
+		recipeKey,
+		totalViolations,
+		totalViolations,
+		time.Now(),
+		jobID,
+		models.JobStateDone,
+		models.JobStateFailed,
+	); err != nil {
+		return fmt.Errorf("failed to update completion artifacts: %w", err)
+	}
+
+	return nil
 }

@@ -50,14 +50,15 @@ func writeSSEKeepalive(w http.ResponseWriter, flusher http.Flusher) error {
 	return nil
 }
 
-func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool) {
+func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool, error) {
 	var update jobStreamUpdate
 	if err := json.Unmarshal(data, &update); err != nil {
-		return jobStreamUpdate{}, false
+		return jobStreamUpdate{}, false, fmt.Errorf("invalid update payload: %w", err)
 	}
 
-	if update.Type != "complete" && update.Type != "failed" && !update.State.IsTerminal() {
-		return jobStreamUpdate{}, false
+	isTerminalType := update.Type == "complete" || update.Type == "failed"
+	if !isTerminalType && !update.State.IsTerminal() {
+		return jobStreamUpdate{}, false, nil
 	}
 
 	if update.State == "" {
@@ -69,34 +70,14 @@ func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool) {
 		}
 	}
 
-	if update.State == "" {
-		return jobStreamUpdate{}, false
+	if !update.State.IsTerminal() {
+		return jobStreamUpdate{}, false, fmt.Errorf(
+			"terminal update has non-terminal state %q",
+			update.State,
+		)
 	}
 
-	return update, true
-}
-
-func fetchJobRecord(
-	ctx context.Context,
-	store *status.Store,
-	w http.ResponseWriter,
-	jobID string,
-) (*status.JobRecord, bool) {
-	rec, err := store.GetJob(ctx, jobID)
-	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
-			http.Error(w, "Job not found", http.StatusNotFound)
-
-			return nil, false
-		}
-
-		logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-
-		return nil, false
-	}
-
-	return rec, true
+	return update, true, nil
 }
 
 func setSSEHeaders(w http.ResponseWriter) {
@@ -153,7 +134,20 @@ func (s *Server) handleJobStreamUpdate(
 		return false, false
 	}
 
-	donePayload, isTerminal := terminalDonePayloadFromUpdate(data)
+	donePayload, isTerminal, parseErr := terminalDonePayloadFromUpdate(data)
+	if parseErr != nil {
+		logging.Warn(
+			ctx,
+			"Ignoring invalid terminal SSE update payload",
+			"error",
+			parseErr,
+			"payload",
+			string(data),
+		)
+
+		return false, true
+	}
+
 	if !isTerminal {
 		return false, true
 	}
@@ -185,22 +179,32 @@ func (s *Server) streamJobEvents(
 	for {
 		select {
 		case <-r.Context().Done():
+			logging.Debug(ctx, "SSE stream closed by client disconnect")
+
 			return
 		case <-heartbeat.C:
 			if err := writeSSEKeepalive(w, flusher); err != nil {
+				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", err)
+
 				return
 			}
 		case data, ok := <-clientEvents:
 			if !ok {
+				logging.Debug(ctx, "SSE hub closed client channel; closing stream")
+
 				return
 			}
 
 			shouldClose, ok := s.handleJobStreamUpdate(ctx, w, flusher, data)
 			if !ok {
+				logging.Debug(ctx, "SSE update write failed; closing stream")
+
 				return
 			}
 
 			if shouldClose {
+				logging.Debug(ctx, "SSE stream closing after terminal update")
+
 				return
 			}
 		}
@@ -224,8 +228,15 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, ok := fetchJobRecord(ctx, s.statusStore, w, jobID)
-	if !ok {
+	rec, err := s.loadJobRecord(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, status.ErrJobNotFound) {
+			http.Error(w, "Job not found", http.StatusNotFound)
+		} else {
+			logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+		}
+
 		return
 	}
 
@@ -251,7 +262,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := writeSSEEvent(w, flusher, "done", done); err != nil {
+		if writeErr := writeSSEEvent(w, flusher, "done", done); writeErr != nil {
 			return
 		}
 

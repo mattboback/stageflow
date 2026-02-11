@@ -16,6 +16,7 @@ type MockEventHandler struct {
 	JobCreatedCalls       []*events.JobCreatedPayload
 	ExtractionReadyCalls  []*events.ExtractionReadyPayload
 	ExtractionFailedCalls []*events.ExtractionFailedPayload
+	ScanPageCalls         []*events.ScanPageCompletedPayload
 	ScanCompletedCalls    []*events.ScanCompletedPayload
 	ScanFailedCalls       []*events.ScanFailedPayload
 	ReturnError           error
@@ -44,6 +45,15 @@ func (m *MockEventHandler) HandleExtractionFailed(_ context.Context, payload *ev
 	defer m.mu.Unlock()
 
 	m.ExtractionFailedCalls = append(m.ExtractionFailedCalls, payload)
+
+	return m.ReturnError
+}
+
+func (m *MockEventHandler) HandleScanPageCompleted(_ context.Context, payload *events.ScanPageCompletedPayload) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.ScanPageCalls = append(m.ScanPageCalls, payload)
 
 	return m.ReturnError
 }
@@ -197,6 +207,29 @@ func TestEventHandlerInterface(t *testing.T) {
 		}
 	})
 
+	t.Run("MockEventHandler records ScanPageCompleted calls", func(t *testing.T) {
+		handler := &MockEventHandler{}
+		payload := &events.ScanPageCompletedPayload{
+			JobID:      "job-scan-page",
+			PageID:     "page-1",
+			PageIndex:  3,
+			TotalPages: 10,
+		}
+
+		err := handler.HandleScanPageCompleted(context.Background(), payload)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+
+		if len(handler.ScanPageCalls) != 1 {
+			t.Fatalf("expected 1 call, got %d", len(handler.ScanPageCalls))
+		}
+
+		if handler.ScanPageCalls[0].PageIndex != 3 {
+			t.Errorf("PageIndex = %d, want 3", handler.ScanPageCalls[0].PageIndex)
+		}
+	})
+
 	t.Run("MockEventHandler records ScanFailed calls", func(t *testing.T) {
 		handler := &MockEventHandler{}
 		payload := &events.ScanFailedPayload{
@@ -338,7 +371,7 @@ func TestMockHandlerConcurrency(t *testing.T) {
 			go func(i int) {
 				defer wg.Done()
 
-				switch i % 5 {
+				switch i % 6 {
 				case 0:
 					_ = handler.HandleJobCreated(ctx, &events.JobCreatedPayload{JobID: "job"})
 				case 1:
@@ -346,8 +379,15 @@ func TestMockHandlerConcurrency(t *testing.T) {
 				case 2:
 					_ = handler.HandleExtractionFailed(ctx, &events.ExtractionFailedPayload{JobID: "job"})
 				case 3:
-					_ = handler.HandleScanCompleted(ctx, &events.ScanCompletedPayload{JobID: "job"})
+					_ = handler.HandleScanPageCompleted(ctx, &events.ScanPageCompletedPayload{
+						JobID:      "job",
+						PageID:     "page-1",
+						PageIndex:  1,
+						TotalPages: 1,
+					})
 				case 4:
+					_ = handler.HandleScanCompleted(ctx, &events.ScanCompletedPayload{JobID: "job"})
+				case 5:
 					_ = handler.HandleScanFailed(ctx, &events.ScanFailedPayload{JobID: "job"})
 				}
 			}(i)
@@ -358,6 +398,7 @@ func TestMockHandlerConcurrency(t *testing.T) {
 		total := len(handler.JobCreatedCalls) +
 			len(handler.ExtractionReadyCalls) +
 			len(handler.ExtractionFailedCalls) +
+			len(handler.ScanPageCalls) +
 			len(handler.ScanCompletedCalls) +
 			len(handler.ScanFailedCalls)
 
