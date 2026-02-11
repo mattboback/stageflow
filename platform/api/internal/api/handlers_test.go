@@ -311,9 +311,38 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 	}
 
 	reportKey := jobID + "/report.json"
+	results := buildStructuredScreenshotReport(jobID, time.Now().UTC())
+
+	reportBytes, err := json.Marshal(results)
+	if err != nil {
+		t.Fatalf("marshal report: %v", err)
+	}
+
+	uploadKey := fmt.Sprintf("%s::%s", storage.BucketArtifacts, reportKey)
+	objectStore.uploads[uploadKey] = reportBytes
+
+	if completeErr := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
+		JobID: jobID,
+		Artifacts: events.ArtifactLocations{
+			ReportJSON: reportKey,
+			ReportHTML: jobID + "/report.html",
+		},
+	}); completeErr != nil {
+		t.Fatalf("complete job: %v", completeErr)
+	}
+
+	job := assertJobStatusDone(t, server, jobID)
+	if job.Artifacts == nil {
+		t.Fatalf("expected artifacts in job status")
+	}
+
+	assertStructuredScreenshots(t, job.Artifacts.Screenshots)
+}
+
+func buildStructuredScreenshotReport(jobID string, now time.Time) report.UnifiedReportV2 {
 	infoCount := 0
-	now := time.Now().UTC()
-	results := report.UnifiedReportV2{
+
+	return report.UnifiedReportV2{
 		Version: "2.0.0",
 		Meta: report.ReportMeta{
 			JobId:       jobID,
@@ -376,58 +405,34 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 		},
 		Errors: []report.ReportError{},
 	}
+}
 
-	reportBytes, err := json.Marshal(results)
-	if err != nil {
-		t.Fatalf("marshal report: %v", err)
-	}
+func assertStructuredScreenshots(t *testing.T, screenshots []models.ScreenshotArtifact) {
+	t.Helper()
 
-	uploadKey := fmt.Sprintf("%s::%s", storage.BucketArtifacts, reportKey)
-	objectStore.uploads[uploadKey] = reportBytes
-
-	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: reportKey,
-			ReportHTML: jobID + "/report.html",
-		},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
-	}
-
-	job := assertJobStatusDone(t, server, jobID)
-	if job.Artifacts == nil {
-		t.Fatalf("expected artifacts in job status")
-	}
-
-	screenshots := job.Artifacts.Screenshots
 	if len(screenshots) != 3 {
 		t.Fatalf("expected 3 screenshots (2 violation + 1 overview), got %d", len(screenshots))
 	}
 
-	var hasPrimary, hasSecondary, hasOverview bool
+	var (
+		hasPrimary   bool
+		hasSecondary bool
+		hasOverview  bool
+	)
+
 	for _, shot := range screenshots {
 		switch {
 		case shot.Kind == models.ScreenshotKindViolation && shot.IssueID == "issue-abc":
-			if shot.ScannerID != "axe" || shot.PageID != "page-1" || shot.ArtifactID != "ss-issue-abc" {
-				t.Fatalf("unexpected primary screenshot payload: %+v", shot)
-			}
-			if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 0 {
-				t.Fatalf("expected primary occurrence_index=0, got %+v", shot.OccurrenceIndex)
-			}
+			assertPrimaryScreenshot(t, shot)
+
 			hasPrimary = true
 		case shot.Kind == models.ScreenshotKindViolation && shot.IssueID == "issue-abc--occ-2":
-			if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 1 {
-				t.Fatalf("expected secondary occurrence_index=1, got %+v", shot.OccurrenceIndex)
-			}
+			assertSecondaryScreenshot(t, shot)
+
 			hasSecondary = true
 		case shot.Kind == models.ScreenshotKindPageOverview:
-			if shot.ScannerID != "axe" || shot.PageID != "page-1" {
-				t.Fatalf("unexpected overview screenshot payload: %+v", shot)
-			}
-			if shot.ArtifactID != "page-overview:axe:page-1" {
-				t.Fatalf("unexpected overview artifact_id: %q", shot.ArtifactID)
-			}
+			assertOverviewScreenshot(t, shot)
+
 			hasOverview = true
 		}
 	}
@@ -439,6 +444,38 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 			hasSecondary,
 			hasOverview,
 		)
+	}
+}
+
+func assertPrimaryScreenshot(t *testing.T, shot models.ScreenshotArtifact) {
+	t.Helper()
+
+	if shot.ScannerID != "axe" || shot.PageID != "page-1" || shot.ArtifactID != "ss-issue-abc" {
+		t.Fatalf("unexpected primary screenshot payload: %+v", shot)
+	}
+
+	if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 0 {
+		t.Fatalf("expected primary occurrence_index=0, got %+v", shot.OccurrenceIndex)
+	}
+}
+
+func assertSecondaryScreenshot(t *testing.T, shot models.ScreenshotArtifact) {
+	t.Helper()
+
+	if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 1 {
+		t.Fatalf("expected secondary occurrence_index=1, got %+v", shot.OccurrenceIndex)
+	}
+}
+
+func assertOverviewScreenshot(t *testing.T, shot models.ScreenshotArtifact) {
+	t.Helper()
+
+	if shot.ScannerID != "axe" || shot.PageID != "page-1" {
+		t.Fatalf("unexpected overview screenshot payload: %+v", shot)
+	}
+
+	if shot.ArtifactID != "page-overview:axe:page-1" {
+		t.Fatalf("unexpected overview artifact_id: %q", shot.ArtifactID)
 	}
 }
 
@@ -800,9 +837,11 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePub
 		config: &ServerConfig{
 			Storage:         storage,
 			Publisher:       publisher,
+			StatusReader:    store,
 			ScannerRegistry: registry,
 		},
-		statusStore:     store,
+		statusReader:    store,
+		pendingJobs:     newPendingJobCache(),
 		sseHub:          sse.NewHub(),
 		scannerRegistry: registry,
 		ipResolver:      defaultSecurityTestResolver(t),

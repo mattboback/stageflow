@@ -43,7 +43,7 @@ func (d *Database) PruneJobEventsBefore(ctx context.Context, cutoff time.Time, b
 	var totalDeleted int64
 
 	for {
-		result, err := d.db.ExecContext(ctx, query, cutoff.UTC(), batchSize)
+		result, err := d.execContext(ctx, query, cutoff.UTC(), batchSize)
 		if err != nil {
 			return totalDeleted, fmt.Errorf("failed pruning job events: %w", err)
 		}

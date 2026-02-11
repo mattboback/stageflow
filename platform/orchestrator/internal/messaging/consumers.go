@@ -14,6 +14,7 @@ type EventHandler interface {
 	HandleJobCreated(ctx context.Context, payload *events.JobCreatedPayload) error
 	HandleExtractionReady(ctx context.Context, payload *events.ExtractionReadyPayload) error
 	HandleExtractionFailed(ctx context.Context, payload *events.ExtractionFailedPayload) error
+	HandleScanPageCompleted(ctx context.Context, payload *events.ScanPageCompletedPayload) error
 	HandleScanCompleted(ctx context.Context, payload *events.ScanCompletedPayload) error
 	HandleScanFailed(ctx context.Context, payload *events.ScanFailedPayload) error
 }
@@ -38,6 +39,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 		c.subscribeJobCreated,
 		c.subscribeExtractionReady,
 		c.subscribeExtractionFailed,
+		c.subscribeScanPageCompleted,
 		c.subscribeScanCompleted,
 		c.subscribeScanFailed,
 	}
@@ -86,6 +88,15 @@ func (c *Consumer) subscribeScanCompleted(ctx context.Context) error {
 		Subject: sharedmsg.SubjectScanCompleted,
 		Durable: "orchestrator-scan-completed",
 		Handler: c.handler.HandleScanCompleted,
+	})
+}
+
+func (c *Consumer) subscribeScanPageCompleted(ctx context.Context) error {
+	return sharedmsg.SubscribeTyped(ctx, c.natsClient, sharedmsg.Subscription[events.ScanPageCompletedPayload]{
+		Stream:  sharedmsg.StreamScan,
+		Subject: sharedmsg.SubjectScanPageCompleted,
+		Durable: "orchestrator-scan-page-completed",
+		Handler: c.handler.HandleScanPageCompleted,
 	})
 }
 

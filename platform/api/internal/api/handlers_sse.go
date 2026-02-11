@@ -80,29 +80,6 @@ func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool, error) {
 	return update, true, nil
 }
 
-func fetchJobRecord(
-	ctx context.Context,
-	store *status.Store,
-	w http.ResponseWriter,
-	jobID string,
-) (*status.JobRecord, bool) {
-	rec, err := store.GetJob(ctx, jobID)
-	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
-			http.Error(w, "Job not found", http.StatusNotFound)
-
-			return nil, false
-		}
-
-		logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
-
-		return nil, false
-	}
-
-	return rec, true
-}
-
 func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -251,8 +228,15 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, ok := fetchJobRecord(ctx, s.statusStore, w, jobID)
-	if !ok {
+	rec, err := s.loadJobRecord(ctx, jobID)
+	if err != nil {
+		if errors.Is(err, status.ErrJobNotFound) {
+			http.Error(w, "Job not found", http.StatusNotFound)
+		} else {
+			logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+		}
+
 		return
 	}
 
@@ -278,7 +262,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := writeSSEEvent(w, flusher, "done", done); err != nil {
+		if writeErr := writeSSEEvent(w, flusher, "done", done); writeErr != nil {
 			return
 		}
 

@@ -3,7 +3,11 @@ package test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,6 +17,8 @@ import (
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/orchestrator"
 )
+
+var e2eTestSchemaCounter uint64
 
 func seedScanResults(t *testing.T, store *memoryStorage, jobID, resultsPath string) {
 	t.Helper()
@@ -72,27 +78,59 @@ func setupE2ETest(
 ) (*orchestrator.Orchestrator, *db.Database, *mockPodmanClient, *mockPublisher, *memoryStorage) {
 	t.Helper()
 
-	database, err := db.NewDatabase(&db.Config{Path: ":memory:"})
+	var orch *orchestrator.Orchestrator
+
+	admin, err := sql.Open("pgx", testDatabaseURL)
+	if err != nil {
+		t.Fatalf("Failed to connect admin database: %v", err)
+	}
+
+	schema := fmt.Sprintf("t_%d_%d", time.Now().UnixNano(), atomic.AddUint64(&e2eTestSchemaCounter, 1))
+
+	createSchemaQuery := fmt.Sprintf("CREATE SCHEMA %s", quoteIdentifier(schema))
+	if _, execErr := admin.ExecContext(context.Background(), createSchemaQuery); execErr != nil {
+		t.Fatalf("Failed to create test schema: %v", execErr)
+	}
+
+	databaseURL := fmt.Sprintf("%s&search_path=%s", testDatabaseURL, schema)
+
+	database, err := db.NewDatabase(&db.Config{URL: databaseURL})
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
-
-	t.Cleanup(func() {
-		if closeErr := database.Close(); closeErr != nil {
-			t.Fatalf("Failed to close database: %v", closeErr)
-		}
-	})
 
 	podmanClient := newMockPodmanClient()
 	publisher := newMockPublisher()
 	mem := newMemoryStorage()
 
-	orch := orchestrator.NewOrchestrator(&orchestrator.Config{
+	orch = orchestrator.NewOrchestrator(&orchestrator.Config{
 		PodmanClient:   podmanClient,
 		Database:       database,
 		Publisher:      publisher,
 		Storage:        mem,
 		StagingStorage: mem,
+	})
+
+	t.Cleanup(func() {
+		if orch != nil {
+			orch.WaitForMonitors()
+		}
+
+		if closeErr := database.Close(); closeErr != nil {
+			t.Fatalf("Failed to close database: %v", closeErr)
+		}
+
+		dropSchemaQuery := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quoteIdentifier(schema))
+		if _, dropErr := admin.ExecContext(
+			context.Background(),
+			dropSchemaQuery,
+		); dropErr != nil {
+			t.Fatalf("Failed to drop test schema: %v", dropErr)
+		}
+
+		if closeErr := admin.Close(); closeErr != nil {
+			t.Fatalf("Failed to close admin database: %v", closeErr)
+		}
 	})
 
 	return orch, database, podmanClient, publisher, mem
@@ -115,4 +153,8 @@ func strPtr(value string) *string {
 	}
 
 	return &value
+}
+
+func quoteIdentifier(identifier string) string {
+	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
 }

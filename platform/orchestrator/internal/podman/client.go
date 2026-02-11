@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Client talks to Podman over a Unix socket via its HTTP API.
@@ -28,12 +29,24 @@ type Config struct {
 	// APIPrefix overrides the API prefix used for Libpod endpoints, e.g. "/v5.0.0/libpod".
 	// When empty, the client defaults to "/v4.0.0/libpod" and falls back between v4 and v5 on 404s.
 	APIPrefix string
+	// RequestTimeout sets a hard timeout for each Podman API call.
+	RequestTimeout time.Duration
+	// DialTimeout controls how long the Unix socket dial can block.
+	DialTimeout time.Duration
+	// ResponseHeaderTimeout limits time to first response header byte.
+	ResponseHeaderTimeout time.Duration
+	// IdleConnTimeout controls keepalive idle lifetime.
+	IdleConnTimeout time.Duration
 }
 
 // DefaultConfig returns the standard rootless Podman socket path.
 func DefaultConfig() *Config {
 	return &Config{
-		SocketPath: "/run/podman/podman.sock",
+		SocketPath:            "/run/podman/podman.sock",
+		RequestTimeout:        30 * time.Second,
+		DialTimeout:           5 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
 	}
 }
 
@@ -48,11 +61,37 @@ func NewClient(config *Config) (*Client, error) {
 		config = DefaultConfig()
 	}
 
+	if config.RequestTimeout <= 0 {
+		config.RequestTimeout = 30 * time.Second
+	}
+
+	if config.DialTimeout <= 0 {
+		config.DialTimeout = 5 * time.Second
+	}
+
+	if config.ResponseHeaderTimeout <= 0 {
+		config.ResponseHeaderTimeout = 10 * time.Second
+	}
+
+	if config.IdleConnTimeout <= 0 {
+		config.IdleConnTimeout = 90 * time.Second
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   config.DialTimeout,
+		KeepAlive: 30 * time.Second,
+	}
+
 	// Create HTTP client that connects to Unix socket
 	httpClient := &http.Client{
+		Timeout: config.RequestTimeout,
 		Transport: &http.Transport{
+			ResponseHeaderTimeout: config.ResponseHeaderTimeout,
+			IdleConnTimeout:       config.IdleConnTimeout,
+			MaxIdleConns:          20,
+			MaxIdleConnsPerHost:   10,
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return (&net.Dialer{}).DialContext(ctx, "unix", config.SocketPath)
+				return dialer.DialContext(ctx, "unix", config.SocketPath)
 			},
 		},
 	}

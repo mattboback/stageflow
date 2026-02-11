@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -17,7 +16,7 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/scannerregistry"
 	"github.com/mattboback/stageflow/platform/api/internal/api"
 	"github.com/mattboback/stageflow/platform/api/internal/messaging"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
+	"github.com/mattboback/stageflow/platform/api/internal/statussource"
 )
 
 func main() {
@@ -36,6 +35,7 @@ func run() error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
+
 	if err := api.ValidateSecurityConfig(); err != nil {
 		return fmt.Errorf("invalid security policy configuration: %w", err)
 	}
@@ -62,20 +62,13 @@ func run() error {
 
 	slog.Info("MinIO buckets initialized")
 
-	if err = os.MkdirAll(filepath.Dir(cfg.StatusDBPath), 0o750); err != nil {
-		return fmt.Errorf("failed to create status DB directory: %w", err)
-	}
-
-	statusStore, err := status.NewStore(&status.Config{Path: cfg.StatusDBPath})
+	statusReader, err := statussource.NewClient(&statussource.Config{
+		BaseURL: cfg.OrchestratorAPIURL,
+		Timeout: 5 * time.Second,
+	})
 	if err != nil {
-		return fmt.Errorf("failed to open status store: %w", err)
+		return fmt.Errorf("failed to initialize orchestrator status source: %w", err)
 	}
-
-	defer func() {
-		if cerr := statusStore.Close(); cerr != nil {
-			slog.Error("Failed to close status store", "error", cerr)
-		}
-	}()
 
 	msgService := messaging.NewService(natsClient)
 	scannerRegistry := loadScannerRegistry(slog.Default(), cfg.ScannerConfigPath)
@@ -84,15 +77,14 @@ func run() error {
 		Port:                cfg.Port,
 		Storage:             minioClient,
 		Publisher:           msgService,
-		StatusStore:         statusStore,
+		StatusReader:        statusReader,
 		ScannerRegistry:     scannerRegistry,
 		MinIOEndpoint:       cfg.MinIO.Endpoint,
 		MinIOPublicEndpoint: cfg.MinIO.PublicEndpoint,
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
 
-	// Wrap status store with SSE broadcast handler for real-time updates
-	sseHandler := messaging.NewSSEBroadcastHandler(statusStore, server.SSEHub())
+	sseHandler := messaging.NewSSEBroadcastHandler(server.SSEHub())
 	if subscribeErr := msgService.SubscribeToStatusEvents(ctx, sseHandler); subscribeErr != nil {
 		slog.Warn("Failed to subscribe to lifecycle events", "error", subscribeErr)
 	}

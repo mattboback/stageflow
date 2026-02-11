@@ -160,6 +160,22 @@ func (o *Orchestrator) completeJobWithAggregatedResults(ctx context.Context, job
 		slog.Warn("Failed to update job metrics", "job_id", job.ID, "error", updateMetricsErr)
 	}
 
+	if artifactsErr := o.database.UpdateJobCompletionArtifacts(
+		ctx,
+		job.ID,
+		reportJSONPath,
+		primaryReportPath,
+		primaryStageLogPath,
+		primaryRecipePath,
+		totalIssues,
+	); artifactsErr != nil {
+		slog.Warn("Failed to persist completion artifacts", "job_id", job.ID, "error", artifactsErr)
+	}
+
+	if progressErr := o.database.UpdateJobProgress(ctx, job.ID, pagesScanned, pagesScanned); progressErr != nil {
+		slog.Warn("Failed to persist final progress", "job_id", job.ID, "error", progressErr)
+	}
+
 	if completeErr := o.database.CompleteJob(ctx, job.ID); completeErr != nil {
 		return &completionError{Stage: "completing", Err: fmt.Errorf("complete job in database: %w", completeErr)}
 	}

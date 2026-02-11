@@ -47,13 +47,13 @@ func (o *Orchestrator) failJob(ctx context.Context, jobID, stage, errorMsg, erro
 		return nil
 	}
 
-	if failErr := o.database.FailJob(ctx, jobID, errorMsg); failErr != nil {
+	normalizedStage := normalizeJobFailStage(stage)
+
+	if failErr := o.database.FailJob(ctx, jobID, normalizedStage, errorMsg, errorDetails); failErr != nil {
 		return fmt.Errorf("failed to fail job in database: %w", failErr)
 	}
 
 	job.State = models.JobStateFailed
-
-	normalizedStage := normalizeJobFailStage(stage)
 
 	o.recordInternalEvent(ctx, jobID, "orchestrator.job.failed", map[string]any{
 		"stage":         normalizedStage,

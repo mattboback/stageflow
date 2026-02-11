@@ -96,9 +96,11 @@ func TestBuildViolationScreenshotArtifact(t *testing.T) {
 	if !ok {
 		t.Fatal("expected valid violation screenshot artifact")
 	}
+
 	if artifact.Kind != "violation" {
 		t.Fatalf("expected kind=violation, got %q", artifact.Kind)
 	}
+
 	if artifact.OccurrenceIndex == nil || *artifact.OccurrenceIndex != 1 {
 		t.Fatalf("expected occurrence index 1, got %+v", artifact.OccurrenceIndex)
 	}

@@ -6,65 +6,100 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/mattboback/stageflow/packages/shared-go/events"
+	"github.com/mattboback/stageflow/packages/shared-go/logging"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 )
 
-// watchDeadline fails a job if it stays in a given state longer than timeout.
-// It polls periodically and resets the clock whenever the job's updated_at advances
-// or the state moves forward. This acts like a heartbeat without extra messages.
-func (o *Orchestrator) watchDeadline(
-	ctx context.Context,
-	jobID string,
-	expectedState models.JobState,
-	timeout time.Duration,
-	stage string,
-) {
+func (o *Orchestrator) startDeadlineSweeper(ctx context.Context) {
 	ticker := time.NewTicker(o.deadlinePollInterval)
 	defer ticker.Stop()
 
-	var lastUpdate time.Time
-
-	start := time.Now()
-
 	for {
+		if err := o.runDeadlineSweep(ctx); err != nil {
+			slog.Warn("Deadline sweep failed", "error", err)
+		}
+
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
-
-		job, err := o.database.GetJob(ctx, jobID)
-		if err != nil {
-			slog.Warn("watchDeadline: failed to load job", "job_id", jobID, "error", err)
-
-			continue
-		}
-
-		if job.State == models.JobStateDone || job.State == models.JobStateFailed {
-			return
-		}
-		// If state moved forward beyond expected, stop watching.
-		if o.stateMachine.CanTransition(expectedState, job.State) {
-			return
-		}
-
-		if job.UpdatedAt.After(lastUpdate) {
-			lastUpdate = job.UpdatedAt
-			start = time.Now()
-
-			continue
-		}
-
-		if time.Since(start) >= timeout {
-			slog.Warn("watchDeadline: job exceeded timeout", "job_id", jobID, "stage", stage, "timeout", timeout)
-			o.failJobSafe(
-				backgroundWithCorrelation(ctx),
-				jobID,
-				stage,
-				fmt.Sprintf("%s timed out after %v", stage, timeout),
-			)
-
-			return
-		}
 	}
+}
+
+func (o *Orchestrator) runDeadlineSweep(ctx context.Context) error {
+	if err := o.failOverdueJobs(
+		ctx,
+		models.JobStateExtracting,
+		o.extractionTimeout,
+		events.JobFailStageExtraction,
+	); err != nil {
+		return err
+	}
+
+	if err := o.failOverdueJobs(
+		ctx,
+		models.JobStateScanning,
+		o.scanTimeout,
+		events.JobFailStageScanning,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *Orchestrator) failOverdueJobs(
+	ctx context.Context,
+	state models.JobState,
+	timeout time.Duration,
+	stage string,
+) error {
+	if timeout <= 0 {
+		return nil
+	}
+
+	jobs, err := o.database.ListJobsByState(ctx, state)
+	if err != nil {
+		return fmt.Errorf("list jobs by state %s: %w", state, err)
+	}
+
+	now := time.Now()
+
+	for _, job := range jobs {
+		if job == nil {
+			continue
+		}
+
+		lastUpdate := job.UpdatedAt
+		if lastUpdate.IsZero() {
+			lastUpdate = job.CreatedAt
+		}
+
+		if now.Sub(lastUpdate) < timeout {
+			continue
+		}
+
+		jobCtx := logging.WithJobID(backgroundWithCorrelation(ctx), job.ID)
+		message := fmt.Sprintf("%s timed out after %v", stage, timeout)
+
+		slog.Warn(
+			"Job exceeded timeout",
+			"job_id",
+			job.ID,
+			"state",
+			state,
+			"stage",
+			stage,
+			"timeout",
+			timeout,
+			"last_update",
+			lastUpdate,
+		)
+
+		o.failJobSafe(jobCtx, job.ID, stage, message)
+	}
+
+	return nil
 }

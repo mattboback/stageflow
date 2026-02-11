@@ -2,88 +2,37 @@ package db
 
 import (
 	"context"
-	"os"
 	"testing"
 )
 
 func TestNewDatabase(t *testing.T) {
-	// Use in-memory database for testing
-	config := &Config{
-		Path: ":memory:",
-	}
-
-	db, err := NewDatabase(config)
-	if err != nil {
-		t.Fatalf("Failed to create database: %v", err)
-	}
-
-	defer func() {
-		if closeErr := db.Close(); closeErr != nil {
-			t.Fatalf("Failed to close database: %v", closeErr)
-		}
-	}()
+	db := setupTestDB(t)
 
 	if db.DB() == nil {
 		t.Error("Expected database connection to be non-nil")
 	}
 }
 
-func TestNewDatabaseWithFile(t *testing.T) {
-	tmpFile := "./test-jobs.db"
-
-	defer func() {
-		if err := os.Remove(tmpFile); err != nil && !os.IsNotExist(err) {
-			t.Fatalf("Failed to remove tmp file: %v", err)
-		}
-	}()
-
-	config := &Config{
-		Path: tmpFile,
-	}
-
-	db, err := NewDatabase(config)
-	if err != nil {
-		t.Fatalf("Failed to create database: %v", err)
-	}
-
-	defer func() {
-		if closeErr := db.Close(); closeErr != nil {
-			t.Fatalf("Failed to close database: %v", closeErr)
-		}
-	}()
-
-	if _, statErr := os.Stat(tmpFile); os.IsNotExist(statErr) {
-		t.Error("Expected database file to exist")
-	}
-}
-
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
 
-	if config.Path != "./jobs.db" {
-		t.Errorf("Expected default path ./jobs.db, got %s", config.Path)
+	if config.URL == "" {
+		t.Fatal("Expected default database URL to be non-empty")
 	}
 }
 
 func TestInitSchema(t *testing.T) {
-	config := &Config{
-		Path: ":memory:",
-	}
-
-	db, err := NewDatabase(config)
-	if err != nil {
-		t.Fatalf("Failed to create database: %v", err)
-	}
-
-	defer func() {
-		if closeErr := db.Close(); closeErr != nil {
-			t.Fatalf("Failed to close database: %v", closeErr)
-		}
-	}()
+	db := setupTestDB(t)
 
 	tables := []string{"jobs", "job_events"}
+
 	for _, table := range tables {
-		query := "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+		query := `
+			SELECT table_name
+			FROM information_schema.tables
+			WHERE table_schema = current_schema()
+			  AND table_name = $1
+		`
 
 		var name string
 
@@ -95,14 +44,7 @@ func TestInitSchema(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	config := &Config{
-		Path: ":memory:",
-	}
-
-	db, err := NewDatabase(config)
-	if err != nil {
-		t.Fatalf("Failed to create database: %v", err)
-	}
+	db := setupTestDB(t)
 
 	if closeErr := db.Close(); closeErr != nil {
 		t.Errorf("Failed to close database: %v", closeErr)

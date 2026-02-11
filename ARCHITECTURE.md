@@ -31,7 +31,7 @@ StageFlow is a polyglot microservices platform built with:
 - **NATS JetStream** - Event messaging
 - **MinIO** - S3-compatible object storage
 - **Podman** - Container orchestration
-- **SQLite** - Lightweight persistence (WAL mode)
+- **PostgreSQL** - Durable relational persistence
 
 ### High-Level Architecture
 
@@ -105,9 +105,8 @@ platform/api/
     |   +-- handlers_scanners.go
     +-- messaging/
     |   +-- service.go       # NATS event publishing
-    +-- status/
-        +-- store.go         # SQLite projection store
-        +-- schema.sql       # Status DB schema
+    +-- statussource/
+        +-- client.go        # Orchestrator status source client
 ```
 
 **Key Responsibilities:**
@@ -148,7 +147,7 @@ platform/orchestrator/
     +-- messaging/
     |   +-- consumers.go     # NATS consumer setup
     +-- db/
-    |   +-- database.go      # Jobs SQLite store
+    |   +-- database.go      # Jobs PostgreSQL store
     |   +-- job_events.go    # Event audit log
     |   +-- schema.sql       # Orchestrator DB schema
     +-- fsm/
@@ -1344,7 +1343,7 @@ jq '.environment' scan-recipe.json
 
 ## Database Schema
 
-### Orchestrator Database (`jobs.db`)
+### Orchestrator Database (PostgreSQL)
 
 ```sql
 -- Jobs table: Core job tracking
@@ -1382,7 +1381,7 @@ CREATE INDEX idx_jobs_created_at ON jobs(created_at);
 
 -- Job events table: Audit log
 CREATE TABLE job_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     job_id TEXT NOT NULL REFERENCES jobs(id),
     event TEXT NOT NULL,
     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1405,48 +1404,23 @@ CREATE TABLE job_events (
 CREATE INDEX idx_job_events_job_id ON job_events(job_id);
 ```
 
-### Platform API Status Database (`platform_api_status.db`)
+### Platform API Status Source
 
-```sql
--- Projection store for fast status queries
-CREATE TABLE job_status (
-    job_id TEXT PRIMARY KEY,
-    state TEXT NOT NULL,
-    input_type TEXT NOT NULL DEFAULT '',
-    created_at TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP NOT NULL,
-    completed_at TIMESTAMP,
-    error TEXT,
-    total_pages INTEGER,
-    current_page INTEGER,
-    total_violations INTEGER DEFAULT 0,
-    report_json_key TEXT,                   -- MinIO key for JSON report
-    report_key TEXT,                        -- MinIO key for HTML report
-    scan_stage_log_key TEXT,
-    scan_recipe_key TEXT,
-    extraction_stage_log_key TEXT,
-    extraction_recipe_key TEXT,
-    provenance_key TEXT,
-    last_stage TEXT,
-    last_error_details TEXT,
-    scanner_artifacts TEXT                  -- JSON map per scanner
-);
-
-CREATE INDEX idx_job_status_state ON job_status(state);
-CREATE INDEX idx_job_status_created_at ON job_status(created_at);
-```
+`platform/api` is stateless for job status reads. It now fetches status snapshots directly from
+the orchestrator admin API (`GET /api/v1/jobs/{id}`) and keeps only a short-lived in-memory
+pending cache immediately after `job.created` publish.
 
 ### Entity Relationships
 
 ```
-+------------------+          +------------------+
-|      jobs        |          |   job_status     |
-+------------------+          +------------------+
-| id (PK)          |          | job_id (PK)      |
-| state            |   1:1    | state            |
-| input_type       | <------> | input_type       |
-| ...              |  (via    | ...              |
-+--------+---------+   NATS)  +------------------+
++------------------+
+|      jobs        |
++------------------+
+| id (PK)          |
+| state            |
+| input_type       |
+| ...              |
++--------+---------+
          |
          | 1:N
          v
@@ -1761,6 +1735,7 @@ stageflow_net (Podman network)
 +-- stageflow-pod (Production)
 |   +-- nats (nats:2.12.2-alpine)
 |   +-- minio (minio/minio:RELEASE.2025-09-07T16-13-09Z)
+|   +-- postgres (postgres:17-alpine)
 |   +-- grafana (grafana/grafana:12.2.0)
 |   +-- platform-api
 |   +-- orchestrator
@@ -1780,7 +1755,7 @@ stageflow_net (Podman network)
 |--------------------|----------------------------------|-------------|
 | `nats_data`        | JetStream persistence            | Read/Write  |
 | `minio_data`       | Object storage                   | Read/Write  |
-| `orchestrator_data`| SQLite databases                 | Read/Write  |
+| `postgres_data`    | Orchestrator PostgreSQL data     | Read/Write  |
 | `grafana_data`     | Dashboards, plugins              | Read/Write  |
 | `workspace-{job}`  | Extracted files / provenance     | Read-only*  |
 | `results-{job}`    | Scanner output                   | Read/Write  |
@@ -1795,6 +1770,7 @@ stageflow_net (Podman network)
 +-- stageflow.target          # Orchestrates all services
 +-- stageflow-nats.container
 +-- stageflow-minio.container
++-- stageflow-postgres.container
 +-- stageflow-orchestrator.container
 +-- stageflow-platform-api.container
 +-- stageflow-frontend.container
@@ -1807,7 +1783,8 @@ stageflow.target
 +-- stageflow-pod.service
 +-- stageflow-nats.service
 +-- stageflow-minio.service
-+-- stageflow-orchestrator.service (after: nats, minio)
++-- stageflow-postgres.service
++-- stageflow-orchestrator.service (after: nats, minio, postgres)
 +-- stageflow-platform-api.service (after: orchestrator)
 +-- stageflow-frontend.service (after: platform-api)
 +-- stageflow-grafana.service (after: orchestrator)

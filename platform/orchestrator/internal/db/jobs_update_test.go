@@ -117,7 +117,13 @@ func TestFailJob(t *testing.T) {
 
 	mustCreateJob(t, db, job)
 
-	err := db.FailJob(context.Background(), "job-123", "Test error message")
+	err := db.FailJob(
+		context.Background(),
+		"job-123",
+		"scanning",
+		"Test error message",
+		"Scanner crashed",
+	)
 	if err != nil {
 		t.Fatalf("Failed to fail job: %v", err)
 	}
@@ -133,6 +139,14 @@ func TestFailJob(t *testing.T) {
 
 	if retrieved.Error != "Test error message" {
 		t.Errorf("Expected error message, got %s", retrieved.Error)
+	}
+
+	if retrieved.LastStage != "scanning" {
+		t.Errorf("Expected stage scanning, got %s", retrieved.LastStage)
+	}
+
+	if retrieved.ErrorDetails != "Scanner crashed" {
+		t.Errorf("Expected error details, got %s", retrieved.ErrorDetails)
 	}
 
 	if retrieved.CompletedAt == nil {

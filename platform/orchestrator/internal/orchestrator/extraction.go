@@ -75,15 +75,6 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 		return fmt.Errorf("failed to start extraction worker: %w", workerErr)
 	}
 
-	// Watchdog: fail the job if extraction exceeds timeout.
-	go o.watchDeadline(
-		backgroundWithCorrelation(ctx),
-		job.ID,
-		models.JobStateExtracting,
-		o.extractionTimeout,
-		"extraction",
-	)
-
 	return nil
 }
 
@@ -183,7 +174,7 @@ func (o *Orchestrator) startExtractionWorker(ctx context.Context, job *models.Jo
 		"container_id": containerResp.ID,
 	})
 
-	go o.monitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "extraction")
+	o.spawnMonitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "extraction")
 
 	return nil
 }

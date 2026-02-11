@@ -218,6 +218,7 @@ func TestTerminalDonePayloadFromUpdate_RejectsInvalidTerminalState(t *testing.T)
 	if isTerminal {
 		t.Fatal("expected invalid terminal state payload to be rejected")
 	}
+
 	if parseErr == nil {
 		t.Fatal("expected parse error for invalid terminal state payload")
 	}
@@ -237,9 +238,11 @@ func TestTerminalDonePayloadFromUpdate_DerivesStateFromCompleteType(t *testing.T
 	if parseErr != nil {
 		t.Fatalf("unexpected parse error: %v", parseErr)
 	}
+
 	if !isTerminal {
 		t.Fatal("expected complete type to be terminal")
 	}
+
 	if done.State != models.JobStateDone {
 		t.Fatalf("expected DONE state, got %q", done.State)
 	}

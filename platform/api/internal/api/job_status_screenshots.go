@@ -104,6 +104,7 @@ func (s *Server) extractScreenshotsFromReport(
 		if overviewScanner == "" {
 			overviewScanner = resolveOverviewScannerV2(results.Issues, page.Id)
 		}
+
 		if overviewScanner == "" {
 			overviewScanner = scannerTypeAxe
 		}
@@ -170,98 +171,29 @@ func (s *Server) collectIssueScreenshots(
 	seen := make(map[string]struct{})
 
 	for _, issue := range issues {
-		scannerID := issue.Scanner
-		if scannerID == "" {
-			scannerID = defaultScanner
-		}
-
-		if scannerID == "" || issue.PageId == "" || issue.Id == "" {
+		scannerID, pageURL, ok := resolveIssueScannerAndPageURL(issue, pageByID, defaultScanner)
+		if !ok {
 			continue
-		}
-
-		page := pageByID[issue.PageId]
-		pageURL := page.Url
-		if pageURL == "" {
-			pageURL = issue.PageUrl
 		}
 
 		for occurrenceIndex, occurrence := range issue.Occurrences {
 			derivedIssueID := buildDerivedIssueID(issue.Id, occurrenceIndex)
 
 			for _, artifactID := range occurrence.ArtifactIds {
-				if artifactID == "" {
-					continue
-				}
-
-				artifactPath, ok := artifactPathByID[artifactID]
-				if !ok {
-					continue
-				}
-
-				dedupKey := fmt.Sprintf("%s|%d|%s", issue.Id, occurrenceIndex, artifactID)
-				if _, exists := seen[dedupKey]; exists {
-					continue
-				}
-				seen[dedupKey] = struct{}{}
-
-				screenshotKey, ok := jobScopedJoin(jobID, scannerID, issue.PageId, artifactPath)
-
-				if !ok {
-					logging.Warn(ctx, "Refusing to presign non-job-scoped screenshot key",
-						"job_id", jobID,
-						"scanner_id", scannerID,
-						"page_id", issue.PageId,
-						"artifact_path", artifactPath,
-					)
-
-					continue
-				}
-
-				screenshotURL, err := s.config.Storage.GetPresignedURL(
+				screenshot, valid := s.buildIssueScreenshotFromArtifact(
 					ctx,
-					storage.BucketArtifacts,
-					screenshotKey,
-					15*time.Minute,
-				)
-				if err != nil {
-					logging.Warn(
-						ctx,
-						"Failed to generate presigned URL for screenshot",
-						"error",
-						err,
-						"key",
-						screenshotKey,
-					)
-
-					continue
-				}
-
-				occurrenceIndexCopy := occurrenceIndex
-				screenshot, valid := buildViolationScreenshotArtifact(
-					derivedIssueID,
-					occurrenceIndexCopy,
-					artifactID,
+					jobID,
 					scannerID,
-					issue.PageId,
+					issue,
+					derivedIssueID,
+					occurrenceIndex,
+					artifactID,
 					pageURL,
-					screenshotURL,
+					artifactPathByID,
+					seen,
 				)
-				if !valid {
-					logging.Warn(
-						ctx,
-						"Dropping malformed violation screenshot artifact",
-						"job_id",
-						jobID,
-						"scanner_id",
-						scannerID,
-						"page_id",
-						issue.PageId,
-						"issue_id",
-						derivedIssueID,
-						"artifact_id",
-						artifactID,
-					)
 
+				if !valid {
 					continue
 				}
 
@@ -271,6 +203,120 @@ func (s *Server) collectIssueScreenshots(
 	}
 
 	return screenshots
+}
+
+func resolveIssueScannerAndPageURL(
+	issue report.IssueDetail,
+	pageByID map[string]report.PageSummary,
+	defaultScanner string,
+) (scannerID, pageURL string, ok bool) {
+	scannerID = issue.Scanner
+	if scannerID == "" {
+		scannerID = defaultScanner
+	}
+
+	if scannerID == "" || issue.PageId == "" || issue.Id == "" {
+		return "", "", false
+	}
+
+	page := pageByID[issue.PageId]
+
+	pageURL = page.Url
+	if pageURL == "" {
+		pageURL = issue.PageUrl
+	}
+
+	return scannerID, pageURL, true
+}
+
+func (s *Server) buildIssueScreenshotFromArtifact(
+	ctx context.Context,
+	jobID string,
+	scannerID string,
+	issue report.IssueDetail,
+	derivedIssueID string,
+	occurrenceIndex int,
+	artifactID string,
+	pageURL string,
+	artifactPathByID map[string]string,
+	seen map[string]struct{},
+) (models.ScreenshotArtifact, bool) {
+	if artifactID == "" {
+		return models.ScreenshotArtifact{}, false
+	}
+
+	artifactPath, ok := artifactPathByID[artifactID]
+	if !ok {
+		return models.ScreenshotArtifact{}, false
+	}
+
+	dedupKey := fmt.Sprintf("%s|%d|%s", issue.Id, occurrenceIndex, artifactID)
+	if _, exists := seen[dedupKey]; exists {
+		return models.ScreenshotArtifact{}, false
+	}
+
+	seen[dedupKey] = struct{}{}
+
+	screenshotKey, ok := jobScopedJoin(jobID, scannerID, issue.PageId, artifactPath)
+	if !ok {
+		logging.Warn(ctx, "Refusing to presign non-job-scoped screenshot key",
+			"job_id", jobID,
+			"scanner_id", scannerID,
+			"page_id", issue.PageId,
+			"artifact_path", artifactPath,
+		)
+
+		return models.ScreenshotArtifact{}, false
+	}
+
+	screenshotURL, err := s.config.Storage.GetPresignedURL(
+		ctx,
+		storage.BucketArtifacts,
+		screenshotKey,
+		15*time.Minute,
+	)
+	if err != nil {
+		logging.Warn(
+			ctx,
+			"Failed to generate presigned URL for screenshot",
+			"error",
+			err,
+			"key",
+			screenshotKey,
+		)
+
+		return models.ScreenshotArtifact{}, false
+	}
+
+	screenshot, valid := buildViolationScreenshotArtifact(
+		derivedIssueID,
+		occurrenceIndex,
+		artifactID,
+		scannerID,
+		issue.PageId,
+		pageURL,
+		screenshotURL,
+	)
+	if !valid {
+		logging.Warn(
+			ctx,
+			"Dropping malformed violation screenshot artifact",
+			"job_id",
+			jobID,
+			"scanner_id",
+			scannerID,
+			"page_id",
+			issue.PageId,
+			"issue_id",
+			derivedIssueID,
+			"artifact_id",
+			artifactID,
+		)
+
+		return models.ScreenshotArtifact{}, false
+	}
+
+	return screenshot, true
 }
 
 func buildViolationScreenshotArtifact(
