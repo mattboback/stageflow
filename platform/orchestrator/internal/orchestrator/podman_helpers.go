@@ -20,6 +20,16 @@ func (o *Orchestrator) ensureVolume(ctx context.Context, name string) (*podman.V
 	return o.podmanClient.InspectVolume(ctx, name)
 }
 
+func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, jobID, component string) {
+	o.monitorWG.Add(1)
+
+	go func() {
+		defer o.monitorWG.Done()
+
+		o.monitorContainer(ctx, containerID, jobID, component)
+	}()
+}
+
 func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID, component string) {
 	slog.Debug("Monitoring container", "component", component, "container_id", containerID, "job_id", jobID)
 

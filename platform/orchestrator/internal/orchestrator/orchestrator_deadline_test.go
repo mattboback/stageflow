@@ -8,7 +8,7 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 )
 
-func TestWatchDeadlineFailsStuckJob(t *testing.T) {
+func TestRunDeadlineSweepFailsStuckJob(t *testing.T) {
 	db := newInMemoryDB(t)
 	publisher := &mockPublisher{}
 	orch := NewOrchestrator(&Config{
@@ -16,6 +16,7 @@ func TestWatchDeadlineFailsStuckJob(t *testing.T) {
 		Database:             db,
 		Publisher:            publisher,
 		DeadlinePollInterval: 5 * time.Millisecond,
+		ExtractionTimeout:    15 * time.Millisecond,
 	})
 
 	job := &models.Job{
@@ -29,9 +30,9 @@ func TestWatchDeadlineFailsStuckJob(t *testing.T) {
 	}
 	insertJob(t, db, job)
 
-	go orch.watchDeadline(context.Background(), job.ID, models.JobStateExtracting, 15*time.Millisecond, "extraction")
-
-	time.Sleep(50 * time.Millisecond)
+	if err := orch.runDeadlineSweep(context.Background()); err != nil {
+		t.Fatalf("runDeadlineSweep failed: %v", err)
+	}
 
 	stored, err := db.GetJob(context.Background(), job.ID)
 	if err != nil {

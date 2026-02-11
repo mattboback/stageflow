@@ -288,9 +288,11 @@ func newTestServerForModules(t *testing.T) *Server {
 
 	return &Server{
 		config: &ServerConfig{
+			StatusReader:    store,
 			ScannerRegistry: registry,
 		},
-		statusStore:     store,
+		statusReader:    store,
+		pendingJobs:     newPendingJobCache(),
 		scannerRegistry: registry,
 	}
 }

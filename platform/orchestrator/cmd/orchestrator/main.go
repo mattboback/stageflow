@@ -69,7 +69,7 @@ func run() int {
 		}
 	}()
 
-	database, err := db.NewDatabase(&db.Config{Path: cfg.DBPath})
+	database, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL})
 	if err != nil {
 		logger.Error("Failed to create database", "error", err)
 
@@ -139,6 +139,8 @@ func run() int {
 
 		return 1
 	}
+
+	orch.Start(backgroundCtx)
 
 	apiServer := api.NewServer(&api.Config{
 		Database:     database,

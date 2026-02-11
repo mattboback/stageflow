@@ -7,7 +7,6 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/events"
 	sharedmsg "github.com/mattboback/stageflow/packages/shared-go/messaging"
 	"github.com/mattboback/stageflow/platform/api/internal/sse"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
 )
 
 // Service wraps messaging operations for the web server.
@@ -22,25 +21,31 @@ func NewService(natsClient *sharedmsg.Client) *Service {
 	}
 }
 
-// SSEBroadcastHandler wraps a status.EventHandler and broadcasts events to SSE clients.
+// EventHandler handles lifecycle updates from messaging subscriptions.
+type EventHandler interface {
+	HandleJobCreated(ctx context.Context, payload *events.JobCreatedPayload) error
+	HandleExtractionReady(ctx context.Context, payload *events.ExtractionReadyPayload) error
+	HandleExtractionFailed(ctx context.Context, payload *events.ExtractionFailedPayload) error
+	HandleScanPageCompleted(ctx context.Context, payload *events.ScanPageCompletedPayload) error
+	HandleScanCompleted(ctx context.Context, payload *events.ScanCompletedPayload) error
+	HandleScanFailed(ctx context.Context, payload *events.ScanFailedPayload) error
+	HandleJobCompleted(ctx context.Context, payload *events.JobCompletedPayload) error
+	HandleJobFailed(ctx context.Context, payload *events.JobFailedPayload) error
+}
+
+// SSEBroadcastHandler broadcasts lifecycle updates to SSE clients.
 type SSEBroadcastHandler struct {
-	store  status.EventHandler
 	sseHub *sse.Hub
 }
 
-// NewSSEBroadcastHandler creates a new handler that broadcasts to SSE after storing events.
-func NewSSEBroadcastHandler(store status.EventHandler, sseHub *sse.Hub) *SSEBroadcastHandler {
+// NewSSEBroadcastHandler creates a new handler that broadcasts to SSE clients.
+func NewSSEBroadcastHandler(sseHub *sse.Hub) *SSEBroadcastHandler {
 	return &SSEBroadcastHandler{
-		store:  store,
 		sseHub: sseHub,
 	}
 }
 
-func (h *SSEBroadcastHandler) HandleJobCreated(ctx context.Context, p *events.JobCreatedPayload) error {
-	if err := h.store.HandleJobCreated(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleJobCreated(_ context.Context, p *events.JobCreatedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":  "status",
 		"state": "PENDING",
@@ -49,11 +54,7 @@ func (h *SSEBroadcastHandler) HandleJobCreated(ctx context.Context, p *events.Jo
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleExtractionReady(ctx context.Context, p *events.ExtractionReadyPayload) error {
-	if err := h.store.HandleExtractionReady(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleExtractionReady(_ context.Context, p *events.ExtractionReadyPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":       "status",
 		"state":      "READY_TO_SCAN",
@@ -63,11 +64,7 @@ func (h *SSEBroadcastHandler) HandleExtractionReady(ctx context.Context, p *even
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleExtractionFailed(ctx context.Context, p *events.ExtractionFailedPayload) error {
-	if err := h.store.HandleExtractionFailed(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleExtractionFailed(_ context.Context, p *events.ExtractionFailedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":          "failed",
 		"state":         "FAILED",
@@ -79,11 +76,7 @@ func (h *SSEBroadcastHandler) HandleExtractionFailed(ctx context.Context, p *eve
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleScanPageCompleted(ctx context.Context, p *events.ScanPageCompletedPayload) error {
-	if err := h.store.HandleScanPageCompleted(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleScanPageCompleted(_ context.Context, p *events.ScanPageCompletedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":  "progress",
 		"state": "SCANNING",
@@ -96,11 +89,7 @@ func (h *SSEBroadcastHandler) HandleScanPageCompleted(ctx context.Context, p *ev
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleScanCompleted(ctx context.Context, p *events.ScanCompletedPayload) error {
-	if err := h.store.HandleScanCompleted(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleScanCompleted(_ context.Context, p *events.ScanCompletedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":  "status",
 		"state": "COMPLETING",
@@ -109,11 +98,7 @@ func (h *SSEBroadcastHandler) HandleScanCompleted(ctx context.Context, p *events
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleScanFailed(ctx context.Context, p *events.ScanFailedPayload) error {
-	if err := h.store.HandleScanFailed(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleScanFailed(_ context.Context, p *events.ScanFailedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":  "failed",
 		"state": "FAILED",
@@ -123,11 +108,7 @@ func (h *SSEBroadcastHandler) HandleScanFailed(ctx context.Context, p *events.Sc
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleJobCompleted(ctx context.Context, p *events.JobCompletedPayload) error {
-	if err := h.store.HandleJobCompleted(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleJobCompleted(_ context.Context, p *events.JobCompletedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":  "complete",
 		"state": "DONE",
@@ -136,11 +117,7 @@ func (h *SSEBroadcastHandler) HandleJobCompleted(ctx context.Context, p *events.
 	return nil
 }
 
-func (h *SSEBroadcastHandler) HandleJobFailed(ctx context.Context, p *events.JobFailedPayload) error {
-	if err := h.store.HandleJobFailed(ctx, p); err != nil {
-		return err
-	}
-
+func (h *SSEBroadcastHandler) HandleJobFailed(_ context.Context, p *events.JobFailedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
 		"type":  "failed",
 		"state": "FAILED",
@@ -156,7 +133,7 @@ func (s *Service) PublishJobCreated(ctx context.Context, envelope *events.Envelo
 }
 
 // SubscribeToStatusEvents wires all lifecycle subjects to the projection handler.
-func (s *Service) SubscribeToStatusEvents(ctx context.Context, handler status.EventHandler) error {
+func (s *Service) SubscribeToStatusEvents(ctx context.Context, handler EventHandler) error {
 	if err := sharedmsg.SubscribeTyped(ctx, s.natsClient, sharedmsg.Subscription[events.JobCreatedPayload]{
 		Stream: sharedmsg.StreamJobs, Subject: sharedmsg.SubjectJobCreated,
 		Durable: "platform-api-job-created", Handler: handler.HandleJobCreated,

@@ -130,13 +130,6 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	if persistErr := s.statusStore.HandleJobCreated(ctx, payload); persistErr != nil {
-		logging.Error(ctx, "Failed to persist job status", "error", persistErr)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to persist job")
-
-		return
-	}
-
 	envelope := events.NewEnvelope(events.EventJobCreated, jobID, "platform-api", payload)
 	envelope.RequestID = logging.RequestID(ctx)
 	envelope.RunID = logging.RunID(ctx)
@@ -147,6 +140,8 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	s.pendingJobs.putFromPayload(payload)
 
 	logging.Info(ctx, "Job created", "url_count", len(req.URLs), "input_type", "urls")
 

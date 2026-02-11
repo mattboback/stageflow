@@ -53,6 +53,12 @@ describe("WebServerFormatter", () => {
                     failureSummary: "Fix contrast",
                     selector: "#main a",
                   },
+                  {
+                    target: ["#footer a"],
+                    html: "<a>Footer Link</a>",
+                    failureSummary: "Fix contrast",
+                    selector: "#footer a",
+                  },
                 ],
               },
             },
@@ -103,7 +109,7 @@ describe("WebServerFormatter", () => {
     expect(issue.severityRaw).toBe("CRITICAL");
     expect(issue.wcagTags).toContain("wcag2aa");
     const occurrences = issue.occurrences ?? [];
-    expect(occurrences).toHaveLength(1);
+    expect(occurrences).toHaveLength(2);
 
     const artifacts = formatted.artifacts ?? [];
     expect(artifacts).toHaveLength(1);
@@ -112,6 +118,7 @@ describe("WebServerFormatter", () => {
     expect(artifact.path).toBe("screenshots/issue-1.png");
     expect(artifact.mime).toBe("image/png");
     expect(occurrences[0]!.artifactIds).toEqual([artifact.id]);
+    expect(occurrences[1]!.artifactIds).toEqual([artifact.id]);
 
     const formatted2 = new WebServerFormatter().format(provenance, results, metadata);
     expect(formatted2.issues[0]!.id).toBe(issue.id);

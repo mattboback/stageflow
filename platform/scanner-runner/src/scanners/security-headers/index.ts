@@ -95,14 +95,16 @@ export class SecurityHeadersScanner extends ScannerBase {
     const issues: Issue[] = [];
 
     try {
-      const response = await page.goto(pageEntry.url, {
-        waitUntil: "domcontentloaded",
-        timeout: 30000,
-      });
+      const currentPageURL = page.url();
+      const targetURL = currentPageURL.startsWith("http://") ||
+        currentPageURL.startsWith("https://")
+        ? currentPageURL
+        : pageEntry.url;
 
-      if (!response) {
-        return this.createErrorResult(pageEntry, startTime, "No response received");
-      }
+      const response = await page.request.fetch(targetURL, {
+        method: "GET",
+        timeout: 30_000,
+      });
 
       const headers = response.headers();
       const headerKeys = new Set(Object.keys(headers).map((k) => k.toLowerCase()));

@@ -97,7 +97,7 @@ func validTestConfig() *Config {
 			SecretKey: "password",
 		},
 		PodmanSocket:                  "/run/podman/podman.sock",
-		DBPath:                        "./jobs.db",
+		DatabaseURL:                   "postgres://stageflow:stageflow@localhost:5432/stageflow?sslmode=disable",
 		ExtractionImage:               "stageflow/extractor:latest",
 		ScannerImage:                  "stageflow/scanner-runner:latest",
 		APIPort:                       "8080",

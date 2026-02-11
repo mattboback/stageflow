@@ -96,6 +96,42 @@ export interface EnhancedScreenshotResult {
   elementBounds?: ElementBounds[]; // Bounding boxes relative to screenshot for overlay
 }
 
+export type ViolationCaptureStep =
+  | "semantic"
+  | "union"
+  | "single-target"
+  | "element"
+  | "viewport";
+
+export type ViolationCaptureFailureReason =
+  | "scroll_failed"
+  | "bounding_box_missing"
+  | "clip_invalid"
+  | "screenshot_failed"
+  | "overlay_failed";
+
+export interface ViolationCaptureFailure {
+  step: ViolationCaptureStep;
+  reason: ViolationCaptureFailureReason;
+  message?: string;
+}
+
+export type ViolationScreenshotCaptureResult =
+  | {
+      status: "captured";
+      screenshot: EnhancedScreenshotResult;
+      fallbacks: ViolationCaptureFailure[];
+    }
+  | {
+      status: "skipped";
+      reason: "disabled" | "policy_never";
+    }
+  | {
+      status: "failed";
+      failure: ViolationCaptureFailure;
+      fallbacks: ViolationCaptureFailure[];
+    };
+
 export type HighlightStyle = "solid" | "dashed";
 export type OutputFormat = "png" | "webp";
 export type OverlayMethod = "css-injection" | "sharp-composite";

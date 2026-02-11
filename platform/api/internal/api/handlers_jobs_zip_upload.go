@@ -376,10 +376,6 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 		},
 	}
 
-	if err := s.statusStore.HandleJobCreated(ctx, payload); err != nil {
-		return fmt.Errorf("failed to persist job status: %w", err)
-	}
-
 	envelope := events.NewEnvelope(events.EventJobCreated, req.jobID, "platform-api", payload)
 	envelope.RequestID = logging.RequestID(ctx)
 	envelope.RunID = logging.RunID(ctx)
@@ -387,6 +383,8 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 	if err := s.config.Publisher.PublishJobCreated(ctx, envelope); err != nil {
 		return fmt.Errorf("failed to publish job.created event: %w", err)
 	}
+
+	s.pendingJobs.putFromPayload(payload)
 
 	logging.Info(ctx, "Job created", "filename", filepath.Base(req.zipPath), "input_type", "zip")
 

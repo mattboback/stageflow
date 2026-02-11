@@ -40,6 +40,10 @@ func TestValidateTargetURLs_BlocksPrivateIPv4(t *testing.T) {
 		{"Private 192.168.x", "http://192.168.1.1"},
 		{"Private 172.16.x", "http://172.16.0.1"},
 		{"Private 172.31.x (edge)", "http://172.31.255.255"},
+		{"Carrier-grade NAT", "http://100.64.0.1"},
+		{"Benchmark range", "http://198.18.0.1"},
+		{"IPv4 multicast", "http://224.0.0.10"},
+		{"IPv4 reserved", "http://240.0.0.1"},
 		{"AWS metadata endpoint", "http://169.254.169.254"},
 		{"Link-local", "http://169.254.1.1"},
 	}
@@ -193,4 +197,22 @@ func TestValidateTargetURLs_PortHandling(t *testing.T) {
 			t.Errorf("Public domain with port should be allowed, got: %v", err)
 		}
 	})
+}
+
+func TestParseSecurityPolicyConfig_ReturnsErrorForInvalidCIDR(t *testing.T) {
+	t.Parallel()
+
+	_, err := parseSecurityPolicyConfig([]string{"not-a-cidr"}, []string{"169.254.169.254"})
+	if err == nil {
+		t.Fatal("expected invalid CIDR to return an error")
+	}
+}
+
+func TestParseSecurityPolicyConfig_ReturnsErrorForInvalidAddress(t *testing.T) {
+	t.Parallel()
+
+	_, err := parseSecurityPolicyConfig([]string{"10.0.0.0/8"}, []string{"not-an-ip"})
+	if err == nil {
+		t.Fatal("expected invalid address to return an error")
+	}
 }

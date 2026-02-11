@@ -204,6 +204,14 @@ func TestHandleMultipleScanners(t *testing.T) {
 		t.Errorf("Expected state DONE after all scanners complete, got %s", completedJob.State)
 	}
 
+	if completedJob.CurrentPage != 3 {
+		t.Errorf("Expected current page to remain per-job total (3), got %d", completedJob.CurrentPage)
+	}
+
+	if completedJob.TotalPages != 3 {
+		t.Errorf("Expected total pages to remain per-job total (3), got %d", completedJob.TotalPages)
+	}
+
 	// Verify job.completed event was published
 	if publisher.completedCount() != 1 {
 		t.Errorf("Expected 1 job.completed event, got %d", publisher.completedCount())

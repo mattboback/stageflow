@@ -128,9 +128,8 @@ export class WebServerFormatter {
             path: `screenshots/${issue.screenshot}`,
             mime: this.guessScreenshotMime(issue.screenshot),
           });
-          const firstOccurrence = occurrences[0];
-          if (firstOccurrence) {
-            firstOccurrence.artifactIds = [artifactId];
+          for (const occurrence of occurrences) {
+            occurrence.artifactIds = [artifactId];
           }
         }
 

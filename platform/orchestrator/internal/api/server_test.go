@@ -2,11 +2,14 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,6 +22,8 @@ type fakePodmanClient struct {
 	pods     []podman.PodInfo
 	podsByID map[string]podman.PodInfo
 }
+
+var apiTestSchemaCounter uint64
 
 func newFakePodmanClient() *fakePodmanClient {
 	pods := []podman.PodInfo{
@@ -50,15 +55,27 @@ func (f *fakePodmanClient) InspectPod(_ context.Context, podID string) (*podman.
 	return &pod, nil
 }
 
-// newTestDatabase creates a fresh SQLite database and seeds two jobs plus a single event.
-func newTestDatabase(t *testing.T) *db.Database {
+// newTestDatabase creates an isolated PostgreSQL schema and seeds two jobs plus a single event.
+func newTestDatabase(t *testing.T) (*db.Database, func()) {
 	t.Helper()
 
-	path := filepath.Join(t.TempDir(), "jobs.db")
-
-	database, err := db.NewDatabase(&db.Config{Path: path})
+	admin, err := sql.Open("pgx", testDatabaseURL)
 	if err != nil {
-		t.Fatalf("create database: %v", err)
+		t.Fatalf("connect admin database: %v", err)
+	}
+
+	schema := fmt.Sprintf("t_%d_%d", time.Now().UnixNano(), atomic.AddUint64(&apiTestSchemaCounter, 1))
+
+	createSchemaQuery := fmt.Sprintf("CREATE SCHEMA %s", quoteIdentifier(schema))
+	if _, execErr := admin.ExecContext(context.Background(), createSchemaQuery); execErr != nil {
+		t.Fatalf("create test schema: %v", execErr)
+	}
+
+	databaseURL := fmt.Sprintf("%s&search_path=%s", testDatabaseURL, schema)
+
+	database, err := db.NewDatabase(&db.Config{URL: databaseURL})
+	if err != nil {
+		t.Fatalf("create test database: %v", err)
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
@@ -98,14 +115,21 @@ func newTestDatabase(t *testing.T) *db.Database {
 		t.Fatalf("seed job event: %v", insertErr)
 	}
 
-	return database
+	cleanup := func() {
+		_ = database.Close()
+		dropSchemaQuery := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quoteIdentifier(schema))
+		_, _ = admin.ExecContext(context.Background(), dropSchemaQuery)
+		_ = admin.Close()
+	}
+
+	return database, cleanup
 }
 
 // newTestServer wires a Server with a temporary database and Podman test double.
 func newTestServer(t *testing.T) (*Server, func()) {
 	t.Helper()
 
-	dbase := newTestDatabase(t)
+	dbase, databaseCleanup := newTestDatabase(t)
 	podClient := newFakePodmanClient()
 
 	server := NewServer(&Config{
@@ -115,10 +139,14 @@ func newTestServer(t *testing.T) (*Server, func()) {
 	})
 
 	cleanup := func() {
-		_ = dbase.Close()
+		databaseCleanup()
 	}
 
 	return server, cleanup
+}
+
+func quoteIdentifier(identifier string) string {
+	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
 }
 
 func TestHandleListJobsFiltersAndPagination(t *testing.T) {

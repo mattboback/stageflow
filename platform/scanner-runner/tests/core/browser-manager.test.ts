@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PreScanAction, WaitStrategy } from "../../src/core/types";
 
 import { BrowserManager } from "../../src/core/browser-manager";
+import { validateRuntimeTargetURL } from "../../src/core/target-validation";
 
 // Mock Playwright and fs
 vi.mock("playwright", () => ({
@@ -24,6 +25,11 @@ vi.mock("node:fs", () => ({
     existsSync: vi.fn(),
     readdirSync: vi.fn(),
   },
+}));
+
+vi.mock("../../src/core/target-validation", () => ({
+  shouldEnforceRuntimeTargetValidation: vi.fn().mockReturnValue(true),
+  validateRuntimeTargetURL: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe("BrowserManager", () => {
@@ -195,6 +201,7 @@ describe("BrowserManager", () => {
     it("should navigate with default wait strategy", async () => {
       await browserManager.navigateToPage(mockPage, "https://example.com");
 
+      expect(validateRuntimeTargetURL).toHaveBeenCalledWith("https://example.com");
       expect(mockPage.goto).toHaveBeenCalledWith(
         "https://example.com",
         expect.objectContaining({
@@ -247,6 +254,17 @@ describe("BrowserManager", () => {
 
       expect(mockPage.goto).toHaveBeenCalled();
       expect(mockPage.waitForTimeout).toHaveBeenCalledWith(5000);
+    });
+
+    it("should fail before navigation when target validation fails", async () => {
+      vi.mocked(validateRuntimeTargetURL).mockRejectedValueOnce(
+        new Error("Blocked target URL"),
+      );
+
+      await expect(
+        browserManager.navigateToPage(mockPage, "https://127.0.0.1"),
+      ).rejects.toThrow("Blocked target URL");
+      expect(mockPage.goto).not.toHaveBeenCalled();
     });
   });
 

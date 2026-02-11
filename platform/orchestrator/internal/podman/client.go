@@ -12,14 +12,16 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Client talks to Podman over a Unix socket via its HTTP API.
 type Client struct {
-	httpClient *http.Client
-	baseURL    string
-	apiPrefix  string
-	apiMu      sync.RWMutex
+	httpClient         *http.Client
+	longPollHTTPClient *http.Client
+	baseURL            string
+	apiPrefix          string
+	apiMu              sync.RWMutex
 }
 
 // Config configures the Podman Unix socket path.
@@ -28,12 +30,26 @@ type Config struct {
 	// APIPrefix overrides the API prefix used for Libpod endpoints, e.g. "/v5.0.0/libpod".
 	// When empty, the client defaults to "/v4.0.0/libpod" and falls back between v4 and v5 on 404s.
 	APIPrefix string
+	// RequestTimeout sets a hard timeout for standard Podman API calls.
+	// Long-poll endpoints (for example container wait) intentionally bypass this timeout.
+	RequestTimeout time.Duration
+	// DialTimeout controls how long the Unix socket dial can block.
+	DialTimeout time.Duration
+	// ResponseHeaderTimeout limits time to first response header byte for standard requests.
+	// Long-poll endpoints intentionally bypass this timeout.
+	ResponseHeaderTimeout time.Duration
+	// IdleConnTimeout controls keepalive idle lifetime.
+	IdleConnTimeout time.Duration
 }
 
 // DefaultConfig returns the standard rootless Podman socket path.
 func DefaultConfig() *Config {
 	return &Config{
-		SocketPath: "/run/podman/podman.sock",
+		SocketPath:            "/run/podman/podman.sock",
+		RequestTimeout:        30 * time.Second,
+		DialTimeout:           5 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		IdleConnTimeout:       90 * time.Second,
 	}
 }
 
@@ -48,13 +64,49 @@ func NewClient(config *Config) (*Client, error) {
 		config = DefaultConfig()
 	}
 
-	// Create HTTP client that connects to Unix socket
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return (&net.Dialer{}).DialContext(ctx, "unix", config.SocketPath)
-			},
+	if config.RequestTimeout <= 0 {
+		config.RequestTimeout = 30 * time.Second
+	}
+
+	if config.DialTimeout <= 0 {
+		config.DialTimeout = 5 * time.Second
+	}
+
+	if config.ResponseHeaderTimeout <= 0 {
+		config.ResponseHeaderTimeout = 10 * time.Second
+	}
+
+	if config.IdleConnTimeout <= 0 {
+		config.IdleConnTimeout = 90 * time.Second
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   config.DialTimeout,
+		KeepAlive: 30 * time.Second,
+	}
+
+	defaultTransport := &http.Transport{
+		ResponseHeaderTimeout: config.ResponseHeaderTimeout,
+		IdleConnTimeout:       config.IdleConnTimeout,
+		MaxIdleConns:          20,
+		MaxIdleConnsPerHost:   10,
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "unix", config.SocketPath)
 		},
+	}
+
+	// Create HTTP clients that connect to the Unix socket.
+	// Wait/long-poll endpoints must not use hard HTTP-level timeouts.
+	httpClient := &http.Client{
+		Timeout:   config.RequestTimeout,
+		Transport: defaultTransport,
+	}
+
+	longPollTransport := defaultTransport.Clone()
+	longPollTransport.ResponseHeaderTimeout = 0
+
+	longPollHTTPClient := &http.Client{
+		Transport: longPollTransport,
 	}
 
 	apiPrefix := libpodV4Prefix
@@ -63,9 +115,10 @@ func NewClient(config *Config) (*Client, error) {
 	}
 
 	return &Client{
-		httpClient: httpClient,
-		baseURL:    "http://unix",
-		apiPrefix:  apiPrefix,
+		httpClient:         httpClient,
+		longPollHTTPClient: longPollHTTPClient,
+		baseURL:            "http://unix",
+		apiPrefix:          apiPrefix,
 	}, nil
 }
 
@@ -89,6 +142,25 @@ func (c *Client) setAPIPrefix(prefix string) {
 // doLibpodRequest sends a request to a Libpod endpoint, automatically falling back between v4 and v5
 // when the server returns a 404 for the chosen API prefix.
 func (c *Client) doLibpodRequest(ctx context.Context, method, suffix string, body any) (*http.Response, error) {
+	return c.doLibpodRequestWithOptions(ctx, method, suffix, body, requestOptions{})
+}
+
+// doLibpodLongPollRequest sends a request for long-poll endpoints (e.g. container wait) without
+// HTTP-level request/response-header timeouts that would prematurely terminate healthy waits.
+func (c *Client) doLibpodLongPollRequest(ctx context.Context, method, suffix string, body any) (*http.Response, error) {
+	return c.doLibpodRequestWithOptions(ctx, method, suffix, body, requestOptions{longPoll: true})
+}
+
+type requestOptions struct {
+	longPoll bool
+}
+
+func (c *Client) doLibpodRequestWithOptions(
+	ctx context.Context,
+	method, suffix string,
+	body any,
+	options requestOptions,
+) (*http.Response, error) {
 	if suffix == "" {
 		return nil, errors.New("libpod request suffix is required")
 	}
@@ -99,7 +171,7 @@ func (c *Client) doLibpodRequest(ctx context.Context, method, suffix string, bod
 
 	prefix := c.currentAPIPrefix()
 
-	resp, err := c.doRequest(ctx, method, prefix+suffix, body)
+	resp, err := c.doRequest(ctx, method, prefix+suffix, body, options)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +191,7 @@ func (c *Client) doLibpodRequest(ctx context.Context, method, suffix string, bod
 		if alt != "" {
 			_ = resp.Body.Close()
 
-			resp2, err2 := c.doRequest(ctx, method, alt+suffix, body)
+			resp2, err2 := c.doRequest(ctx, method, alt+suffix, body, options)
 			if err2 != nil {
 				return nil, err2
 			}
@@ -135,7 +207,12 @@ func (c *Client) doLibpodRequest(ctx context.Context, method, suffix string, bod
 	return resp, nil
 }
 
-func (c *Client) doRequest(ctx context.Context, method, path string, body any) (*http.Response, error) {
+func (c *Client) doRequest(
+	ctx context.Context,
+	method, path string,
+	body any,
+	options requestOptions,
+) (*http.Response, error) {
 	var reqBody io.Reader
 
 	if body != nil {
@@ -156,7 +233,12 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body any) (
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	resp, err := c.httpClient.Do(req)
+	httpClient := c.httpClient
+	if options.longPoll && c.longPollHTTPClient != nil {
+		httpClient = c.longPollHTTPClient
+	}
+
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}

@@ -11,68 +11,9 @@ import (
 	"github.com/mattboback/stageflow/platform/api/internal/sse"
 )
 
-type mockStatusStore struct {
-	called map[string]bool
-}
-
-func newMockStatusStore() *mockStatusStore {
-	return &mockStatusStore{
-		called: make(map[string]bool),
-	}
-}
-
-func (m *mockStatusStore) HandleJobCreated(_ context.Context, _ *events.JobCreatedPayload) error {
-	m.called["HandleJobCreated"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleExtractionReady(_ context.Context, _ *events.ExtractionReadyPayload) error {
-	m.called["HandleExtractionReady"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleExtractionFailed(_ context.Context, _ *events.ExtractionFailedPayload) error {
-	m.called["HandleExtractionFailed"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleScanPageCompleted(_ context.Context, _ *events.ScanPageCompletedPayload) error {
-	m.called["HandleScanPageCompleted"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleScanCompleted(_ context.Context, _ *events.ScanCompletedPayload) error {
-	m.called["HandleScanCompleted"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleScanFailed(_ context.Context, _ *events.ScanFailedPayload) error {
-	m.called["HandleScanFailed"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleJobCompleted(_ context.Context, _ *events.JobCompletedPayload) error {
-	m.called["HandleJobCompleted"] = true
-
-	return nil
-}
-
-func (m *mockStatusStore) HandleJobFailed(_ context.Context, _ *events.JobFailedPayload) error {
-	m.called["HandleJobFailed"] = true
-
-	return nil
-}
-
 func TestSSEBroadcastHandler_HandleJobCreated(t *testing.T) {
 	hub := sse.NewHub()
-	store := newMockStatusStore()
-	handler := messaging.NewSSEBroadcastHandler(store, hub)
+	handler := messaging.NewSSEBroadcastHandler(hub)
 
 	jobID := "job-123"
 	client := hub.Subscribe(jobID)
@@ -86,10 +27,6 @@ func TestSSEBroadcastHandler_HandleJobCreated(t *testing.T) {
 	err := handler.HandleJobCreated(context.Background(), payload)
 	if err != nil {
 		t.Fatalf("HandleJobCreated failed: %v", err)
-	}
-
-	if !store.called["HandleJobCreated"] {
-		t.Error("Store.HandleJobCreated was not called")
 	}
 
 	select {
@@ -109,8 +46,7 @@ func TestSSEBroadcastHandler_HandleJobCreated(t *testing.T) {
 
 func TestSSEBroadcastHandler_HandleExtractionReady(t *testing.T) {
 	hub := sse.NewHub()
-	store := newMockStatusStore()
-	handler := messaging.NewSSEBroadcastHandler(store, hub)
+	handler := messaging.NewSSEBroadcastHandler(hub)
 
 	jobID := "job-456"
 	client := hub.Subscribe(jobID)
@@ -125,10 +61,6 @@ func TestSSEBroadcastHandler_HandleExtractionReady(t *testing.T) {
 	err := handler.HandleExtractionReady(context.Background(), payload)
 	if err != nil {
 		t.Fatalf("HandleExtractionReady failed: %v", err)
-	}
-
-	if !store.called["HandleExtractionReady"] {
-		t.Error("Store.HandleExtractionReady was not called")
 	}
 
 	select {
@@ -152,8 +84,7 @@ func TestSSEBroadcastHandler_HandleExtractionReady(t *testing.T) {
 
 func TestSSEBroadcastHandler_HandleScanPageCompleted(t *testing.T) {
 	hub := sse.NewHub()
-	store := newMockStatusStore()
-	handler := messaging.NewSSEBroadcastHandler(store, hub)
+	handler := messaging.NewSSEBroadcastHandler(hub)
 
 	jobID := "job-789"
 	client := hub.Subscribe(jobID)
@@ -169,10 +100,6 @@ func TestSSEBroadcastHandler_HandleScanPageCompleted(t *testing.T) {
 	err := handler.HandleScanPageCompleted(context.Background(), payload)
 	if err != nil {
 		t.Fatalf("HandleScanPageCompleted failed: %v", err)
-	}
-
-	if !store.called["HandleScanPageCompleted"] {
-		t.Error("Store.HandleScanPageCompleted was not called")
 	}
 
 	select {

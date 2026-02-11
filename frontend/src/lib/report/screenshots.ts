@@ -1,27 +1,26 @@
 import type { ScreenshotArtifact } from '$lib/types/scan';
 
-const PAGE_OVERVIEW_ID = '__page_overview__';
-
 interface IssueScreenshotParams {
 	screenshots: ScreenshotArtifact[];
 	scannerId: string;
-	ruleId: string;
+	issueId: string;
 	pageId: string;
 }
 
 export function getIssueScreenshotUrl({
 	screenshots,
 	scannerId,
-	ruleId,
+	issueId,
 	pageId
 }: IssueScreenshotParams): string | null {
-	const match = screenshots.find(
+	const exactMatch = screenshots.find(
 		(shot) =>
-			shot.violation_id === ruleId &&
+			shot.kind === 'violation' &&
+			shot.issue_id === issueId &&
 			shot.page_id === pageId &&
-			(!shot.scanner_type || shot.scanner_type === scannerId)
+			shot.scanner_id === scannerId
 	);
-	return match?.url ?? null;
+	return exactMatch?.url ?? null;
 }
 
 export function getPageOverviewUrl(
@@ -30,14 +29,14 @@ export function getPageOverviewUrl(
 	preferredScannerOrder: string[] = ['axe']
 ): string | null {
 	const matches = screenshots.filter(
-		(shot) => shot.violation_id === PAGE_OVERVIEW_ID && shot.page_id === pageId
+		(shot) => shot.kind === 'page_overview' && shot.page_id === pageId
 	);
 	if (matches.length === 0) return null;
 
 	for (const scannerId of preferredScannerOrder) {
-		const preferred = matches.find((shot) => shot.scanner_type === scannerId);
+		const preferred = matches.find((shot) => shot.scanner_id === scannerId);
 		if (preferred) return preferred.url;
 	}
 
-	return matches.find((shot) => shot.scanner_type)?.url ?? matches[0].url;
+	return matches[0].url;
 }

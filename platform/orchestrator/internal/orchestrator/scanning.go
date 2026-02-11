@@ -74,9 +74,6 @@ func (o *Orchestrator) startScanning(ctx context.Context, job *models.Job) error
 		return fmt.Errorf("failed to start scanners: %w", err)
 	}
 
-	// Watchdog: fail the job if scanning exceeds timeout.
-	go o.watchDeadline(backgroundWithCorrelation(ctx), job.ID, models.JobStateScanning, o.scanTimeout, "scanning")
-
 	return nil
 }
 
@@ -282,7 +279,7 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 		"container_id": containerResp.ID,
 	})
 
-	go o.monitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "scanner-"+scannerType)
+	o.spawnMonitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "scanner-"+scannerType)
 
 	return nil
 }

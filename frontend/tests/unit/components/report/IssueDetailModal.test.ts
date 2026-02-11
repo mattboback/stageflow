@@ -48,14 +48,18 @@ const page = {
 
 const screenshots = [
 	{
-		scanner_type: 'axe',
-		violation_id: 'color-contrast',
+		kind: 'violation' as const,
+		issue_id: 'issue-1',
+		occurrence_index: 0,
+		artifact_id: 'ss-issue-1',
+		scanner_id: 'axe',
 		page_id: 'page-1',
 		url: 'http://example.com/issue.png'
 	},
 	{
-		scanner_type: 'axe',
-		violation_id: '__page_overview__',
+		kind: 'page_overview' as const,
+		artifact_id: 'page-overview:axe:page-1',
+		scanner_id: 'axe',
 		page_id: 'page-1',
 		url: 'http://example.com/overview.png'
 	}

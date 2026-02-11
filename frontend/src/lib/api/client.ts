@@ -19,6 +19,49 @@ interface SubmitJobResponse {
 	message?: string;
 }
 
+interface ApiErrorDetail {
+	code?: string;
+	message?: string;
+	details?: string;
+	suggestion?: string;
+	field?: string;
+}
+
+interface ApiErrorResponse {
+	message?: string;
+	error?: ApiErrorDetail;
+}
+
+function readApiErrorMessage(data: ApiErrorResponse | null): string | null {
+	if (!data) {
+		return null;
+	}
+
+	const topLevel = data.message?.trim();
+	if (topLevel) {
+		return topLevel;
+	}
+
+	const detail = data.error;
+	if (!detail) {
+		return null;
+	}
+
+	const message = detail.message?.trim();
+	const suggestion = detail.suggestion?.trim();
+	const details = detail.details?.trim();
+
+	if (!message) {
+		return null;
+	}
+
+	const extras = [suggestion, details].filter(
+		(value): value is string => Boolean(value && value.length > 0)
+	);
+
+	return extras.length > 0 ? `${message} ${extras.join(' ')}` : message;
+}
+
 export async function submitScanJob({
 	mode,
 	file,
@@ -75,21 +118,24 @@ export async function submitScanJob({
 		});
 	}
 
-	const data = (await response.json().catch(() => null)) as SubmitJobResponse | null;
+	const data = (await response.json().catch(() => null)) as
+		| (SubmitJobResponse & ApiErrorResponse)
+		| null;
+	const serverMessage = readApiErrorMessage(data);
 	if (!response.ok) {
 		if (response.status === 413) {
 			throw new Error('File too large. Maximum size is 100MB.');
 		}
 		if (response.status === 400) {
-			throw new Error(data?.message ?? 'Invalid request. Please check your input.');
+			throw new Error(serverMessage ?? 'Invalid request. Please check your input.');
 		}
 		if (response.status === 422) {
-			throw new Error(data?.message ?? 'Invalid scanner selection or URL format.');
+			throw new Error(serverMessage ?? 'Invalid scanner selection or URL format.');
 		}
 		if (response.status >= 500) {
-			throw new Error('Server error. Please try again in a moment.');
+			throw new Error(serverMessage ?? 'Server error. Please try again in a moment.');
 		}
-		throw new Error(data?.message ?? 'Scan failed. Please try again.');
+		throw new Error(serverMessage ?? 'Scan failed. Please try again.');
 	}
 	if (!data?.job_id) {
 		throw new Error('No job ID returned. Please try again.');

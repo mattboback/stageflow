@@ -125,7 +125,7 @@ func (d *Database) InsertJobEvent(ctx context.Context, e *JobEventInsert) error 
 		duration = *e.DurationMs
 	}
 
-	_, err := d.db.ExecContext(
+	_, err := d.execContext(
 		ctx,
 		query,
 		e.JobID,
@@ -178,17 +178,17 @@ func (d *Database) ListJobEvents(ctx context.Context, jobID string, opts ListJob
 	query := `
 		SELECT
 			id, job_id, event, timestamp, payload_json,
-			IFNULL(request_id, ''), IFNULL(run_id, ''), IFNULL(producer, ''),
-			IFNULL(nats_subject, ''), IFNULL(nats_stream, ''), IFNULL(nats_consumer, ''),
+			COALESCE(request_id, ''), COALESCE(run_id, ''), COALESCE(producer, ''),
+			COALESCE(nats_subject, ''), COALESCE(nats_stream, ''), COALESCE(nats_consumer, ''),
 			nats_stream_seq, nats_consumer_seq, nats_deliveries, nats_stored_at,
-			IFNULL(handler_status, ''), IFNULL(handler_error, ''), duration_ms
+			COALESCE(handler_status, ''), COALESCE(handler_error, ''), duration_ms
 		FROM job_events
 		WHERE job_id = ?
 		ORDER BY timestamp ASC
 		LIMIT ? OFFSET ?
 	`
 
-	rows, err := d.db.QueryContext(ctx, query, jobID, opts.Limit, opts.Offset)
+	rows, err := d.queryContext(ctx, query, jobID, opts.Limit, opts.Offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get job events: %w", err)
 	}

@@ -96,7 +96,7 @@
 		getIssueScreenshotUrl({
 			screenshots,
 			scannerId: issue.scanner,
-			ruleId: issue.ruleId,
+			issueId: issue.id,
 			pageId: issue.pageId
 		})
 	);
@@ -115,6 +115,10 @@
 	let fullPageEvidenceOverride = $state<boolean | null>(null);
 	const showFullPageEvidence = $derived(fullPageEvidenceOverride ?? !highlightedElementId);
 	const shouldShowPageOverview = $derived(showFullPageEvidence || !openedFromOverlay);
+	const pageOverviewRenderable = $derived(
+		!!page && !!pageOverviewUrl &&
+		(page.pageOverview?.pageWidth ?? 0) > 0 && (page.pageOverview?.pageHeight ?? 0) > 0
+	);
 
 	$effect(() => {
 		issue.id;
@@ -201,36 +205,6 @@
 						{primaryFix}
 					/>
 				{/if}
-
-				<!-- Brief Occurrences for PM -->
-				{#if isPM && issue.occurrences?.length}
-					<div>
-						<h3 class="text-ink mb-2 font-semibold">Affected Elements</h3>
-						<div class="space-y-3">
-							{#each issue.occurrences.slice(0, 2) as occurrence, idx (idx)}
-								{@const isHighlighted = activeHighlightId && occurrence.elementId === activeHighlightId}
-								<IssueOccurrenceCard
-									{occurrence}
-									index={idx}
-									{issue}
-									{page}
-									{pageOverviewUrl}
-									isHighlighted={!!isHighlighted}
-									showDetails={false}
-									onHighlight={() => {
-										localHighlightedElementId = occurrence.elementId ?? null;
-									}}
-								/>
-							{/each}
-							{#if issue.occurrences.length > 2}
-								<p class="text-ink-muted text-center text-sm">
-									+{issue.occurrences.length - 2} more occurrences (see details)
-								</p>
-							{/if}
-						</div>
-					</div>
-				{/if}
-
 				{#snippet descriptionBlock()}
 					<div>
 						<h3 class="text-ink mb-2 font-semibold">Description</h3>
@@ -302,6 +276,7 @@
 							{screenshotUrl}
 							{pageOverviewUrl}
 							showPageOverview={shouldShowPageOverview}
+							hideScreenshot={openedFromOverlay && shouldShowPageOverview && pageOverviewRenderable}
 							onElementClick={(elementId) => {
 								localHighlightedElementId = elementId;
 							}}
@@ -343,7 +318,7 @@
 
 				<!-- Shared Sections -->
 				{#if isPM}
-					<details class="border-line rounded-xl border p-4">
+					<details class="border-line rounded-xl border p-4" open>
 						<summary class="text-ink cursor-pointer font-semibold">Implementation details</summary>
 						<div class="mt-4 space-y-6">
 							{@render descriptionBlock()}
@@ -351,11 +326,11 @@
 							{@render howToFixBlock()}
 
 							{#if screenshotUrl || pageOverviewUrl}
-								<details class="border-line rounded-xl border p-4">
-									<summary class="text-ink cursor-pointer font-semibold">
+								<details class="border-line rounded-lg border p-3">
+									<summary class="text-ink cursor-pointer text-sm font-semibold">
 										Technical evidence (optional)
 									</summary>
-									<div class="mt-4 space-y-3">
+									<div class="mt-4">
 										{@render evidenceBlock()}
 									</div>
 								</details>

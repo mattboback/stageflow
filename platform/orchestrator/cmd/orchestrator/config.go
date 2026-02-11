@@ -12,7 +12,7 @@ type Config struct {
 	NATS                          config.NATSConfig
 	MinIO                         config.MinIOConfig
 	PodmanSocket                  string
-	DBPath                        string
+	DatabaseURL                   string
 	ExtractionImage               string
 	ScannerImage                  string
 	ScannerImageOverride          string
@@ -52,11 +52,16 @@ func loadConfig() *Config {
 		}
 	}
 
+	databaseURL := config.GetEnv(
+		"DATABASE_URL",
+		"postgres://stageflow:stageflow@localhost:5432/stageflow?sslmode=disable",
+	)
+
 	return &Config{
 		NATS:                          natsCfg,
 		MinIO:                         minioCfg,
 		PodmanSocket:                  config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
-		DBPath:                        config.GetEnv("DB_PATH", "./jobs.db"),
+		DatabaseURL:                   databaseURL,
 		ExtractionImage:               config.GetEnv("EXTRACTION_IMAGE", "stageflow/extractor:latest"),
 		ScannerImage:                  scannerImage,
 		ScannerImageOverride:          scannerImageEnv,
@@ -81,7 +86,7 @@ func (c *Config) Validate() error {
 		config.RequireNonEmpty("MINIO_ACCESS_KEY (or MINIO_ROOT_USER)", c.MinIO.AccessKey),
 		config.RequireNonEmpty("MINIO_SECRET_KEY (or MINIO_ROOT_PASSWORD)", c.MinIO.SecretKey),
 		config.RequireNonEmpty("PODMAN_SOCKET", c.PodmanSocket),
-		config.RequireNonEmpty("DB_PATH", c.DBPath),
+		config.RequireNonEmpty("DATABASE_URL", c.DatabaseURL),
 		config.RequireNonEmpty("EXTRACTION_IMAGE", c.ExtractionImage),
 		config.RequireNonEmpty("API_PORT", c.APIPort),
 		config.RequireNonEmpty("NATS_HOST", c.NatsHost),

@@ -3,9 +3,12 @@ package orchestrator
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +19,8 @@ import (
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
 )
+
+var orchestratorTestSchemaCounter uint64
 
 // mockPodmanClient is a mock Podman client for testing.
 type mockPodmanClient struct {
@@ -189,7 +194,25 @@ func (m *mockPublisher) firstCompleted() *events.JobCompletedPayload {
 func newInMemoryDB(t *testing.T) *db.Database {
 	t.Helper()
 
-	database, err := db.NewDatabase(&db.Config{Path: ":memory:"})
+	admin, err := sql.Open("pgx", testDatabaseURL)
+	if err != nil {
+		t.Fatalf("Failed to connect admin database: %v", err)
+	}
+
+	schema := fmt.Sprintf(
+		"t_%d_%d",
+		time.Now().UnixNano(),
+		atomic.AddUint64(&orchestratorTestSchemaCounter, 1),
+	)
+
+	createSchemaQuery := fmt.Sprintf("CREATE SCHEMA %s", quoteIdentifier(schema))
+	if _, execErr := admin.ExecContext(context.Background(), createSchemaQuery); execErr != nil {
+		t.Fatalf("Failed to create test schema: %v", execErr)
+	}
+
+	databaseURL := fmt.Sprintf("%s&search_path=%s", testDatabaseURL, schema)
+
+	database, err := db.NewDatabase(&db.Config{URL: databaseURL})
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
@@ -198,9 +221,25 @@ func newInMemoryDB(t *testing.T) *db.Database {
 		if closeErr := database.Close(); closeErr != nil {
 			t.Fatalf("Failed to close database: %v", closeErr)
 		}
+
+		dropSchemaQuery := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quoteIdentifier(schema))
+		if _, dropErr := admin.ExecContext(
+			context.Background(),
+			dropSchemaQuery,
+		); dropErr != nil {
+			t.Fatalf("Failed to drop test schema: %v", dropErr)
+		}
+
+		if closeErr := admin.Close(); closeErr != nil {
+			t.Fatalf("Failed to close admin database: %v", closeErr)
+		}
 	})
 
 	return database
+}
+
+func quoteIdentifier(identifier string) string {
+	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
 }
 
 func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPublisher, *memoryStorage) {

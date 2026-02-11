@@ -24,11 +24,6 @@ export class SEOScanner extends ScannerBase {
     const issues: Issue[] = [];
 
     try {
-      await page.goto(pageEntry.url, {
-        waitUntil: "domcontentloaded",
-        timeout: 30000,
-      });
-
       const seoData = await extractSEOData(page, pageEntry.url);
 
       for (const check of SEO_CHECKS) {

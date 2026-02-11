@@ -17,6 +17,7 @@ PublishPort=127.0.0.1:3101:3001
 # Network-scoped aliases for service discovery from job pods and other stacks
 NetworkAlias=nats
 NetworkAlias=minio
+NetworkAlias=postgres
 NetworkAlias=orchestrator
 NetworkAlias=platform-api
 NetworkAlias=frontend

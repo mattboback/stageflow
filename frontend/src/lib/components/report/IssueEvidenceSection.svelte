@@ -10,6 +10,7 @@
 		screenshotUrl: string | null;
 		pageOverviewUrl: string | null;
 		showPageOverview?: boolean;
+		hideScreenshot?: boolean;
 		onElementClick?: (elementId: string) => void;
 	}
 
@@ -19,6 +20,7 @@
 		screenshotUrl,
 		pageOverviewUrl,
 		showPageOverview = true,
+		hideScreenshot = false,
 		onElementClick
 	}: Props = $props();
 
@@ -34,7 +36,7 @@
 
 <div class="space-y-4">
 	<h3 class="text-ink font-semibold">Evidence</h3>
-	{#if screenshotUrl}
+	{#if screenshotUrl && !hideScreenshot}
 		<div>
 			<p class="text-ink-muted mb-2 text-sm">Scanner screenshot</p>
 			<Panel padding="none" rounded="lg" class="overflow-hidden">

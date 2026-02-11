@@ -3,6 +3,7 @@ package api
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -199,5 +200,50 @@ func assertHandlerDone(t *testing.T, done <-chan struct{}, timeout time.Duration
 	case <-done:
 	case <-time.After(timeout):
 		t.Fatalf("expected handler to return after done")
+	}
+}
+
+func TestTerminalDonePayloadFromUpdate_RejectsInvalidTerminalState(t *testing.T) {
+	t.Parallel()
+
+	payload, err := json.Marshal(map[string]string{
+		"type":  "complete",
+		"state": "SCANNING",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	_, isTerminal, parseErr := terminalDonePayloadFromUpdate(payload)
+	if isTerminal {
+		t.Fatal("expected invalid terminal state payload to be rejected")
+	}
+
+	if parseErr == nil {
+		t.Fatal("expected parse error for invalid terminal state payload")
+	}
+}
+
+func TestTerminalDonePayloadFromUpdate_DerivesStateFromCompleteType(t *testing.T) {
+	t.Parallel()
+
+	payload, err := json.Marshal(map[string]string{
+		"type": "complete",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	done, isTerminal, parseErr := terminalDonePayloadFromUpdate(payload)
+	if parseErr != nil {
+		t.Fatalf("unexpected parse error: %v", parseErr)
+	}
+
+	if !isTerminal {
+		t.Fatal("expected complete type to be terminal")
+	}
+
+	if done.State != models.JobStateDone {
+		t.Fatalf("expected DONE state, got %q", done.State)
 	}
 }

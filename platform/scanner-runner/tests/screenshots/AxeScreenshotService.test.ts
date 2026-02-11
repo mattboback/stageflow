@@ -42,10 +42,14 @@ vi.mock("../../src/screenshots/axe/config", () => ({
 
 vi.mock("../../src/screenshots/axe/violation-capture", () => ({
   captureViolationScreenshot: vi.fn().mockResolvedValue({
-    screenshot: "violation-test-uuid.png",
-    thumbnail: "violation-test-uuid-thumb.png",
-    locationInfo: { scrollY: 0, viewportHeight: 720, docHeight: 1500, position: 0.24 },
-    friendlyNode: { label: "Button", tagName: "button" },
+    status: "captured",
+    screenshot: {
+      screenshot: "violation-test-uuid.png",
+      thumbnail: "violation-test-uuid-thumb.png",
+      locationInfo: { scrollY: 0, viewportHeight: 720, docHeight: 1500, position: 0.24 },
+      friendlyNode: { label: "Button", tagName: "button" },
+    },
+    fallbacks: [],
   }),
 }));
 
@@ -156,8 +160,11 @@ describe("AxeScreenshotService", () => {
         resultsDir: "/tmp/results",
         cfg: expect.any(Object),
       });
-      expect(result).toBeDefined();
-      expect(result?.screenshot).toBe("violation-test-uuid.png");
+      expect(result.status).toBe("captured");
+      if (result.status !== "captured") {
+        throw new Error("expected captured result");
+      }
+      expect(result.screenshot.screenshot).toBe("violation-test-uuid.png");
     });
 
     it("returns result with screenshot and thumbnail", async () => {
@@ -175,7 +182,11 @@ describe("AxeScreenshotService", () => {
         "/tmp/results",
       );
 
-      expect(result).toMatchObject({
+      expect(result.status).toBe("captured");
+      if (result.status !== "captured") {
+        throw new Error("expected captured result");
+      }
+      expect(result.screenshot).toMatchObject({
         screenshot: expect.any(String),
         thumbnail: expect.any(String),
       });
@@ -196,7 +207,11 @@ describe("AxeScreenshotService", () => {
         "/tmp/results",
       );
 
-      expect(result?.locationInfo).toMatchObject({
+      expect(result.status).toBe("captured");
+      if (result.status !== "captured") {
+        throw new Error("expected captured result");
+      }
+      expect(result.screenshot.locationInfo).toMatchObject({
         scrollY: expect.any(Number),
         viewportHeight: expect.any(Number),
         docHeight: expect.any(Number),
@@ -219,7 +234,11 @@ describe("AxeScreenshotService", () => {
         "/tmp/results",
       );
 
-      expect(result?.friendlyNode).toBeDefined();
+      expect(result.status).toBe("captured");
+      if (result.status !== "captured") {
+        throw new Error("expected captured result");
+      }
+      expect(result.screenshot.friendlyNode).toBeDefined();
     });
 
     it("handles violation with no nodes", async () => {
@@ -237,7 +256,7 @@ describe("AxeScreenshotService", () => {
         "/tmp/results",
       );
 
-      expect(result).toBeDefined();
+      expect(result.status).toBe("captured");
     });
 
     it("handles violation with undefined nodes", async () => {
@@ -254,7 +273,7 @@ describe("AxeScreenshotService", () => {
         "/tmp/results",
       );
 
-      expect(result).toBeDefined();
+      expect(result.status).toBe("captured");
     });
   });
 

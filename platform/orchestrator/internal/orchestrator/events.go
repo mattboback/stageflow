@@ -31,8 +31,45 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 			UpdatedAt: time.Now(),
 		}
 
-		if err := o.database.CreateJob(ctx, job); err != nil {
+		created, err := o.database.CreateJobIfAbsent(ctx, job)
+		if err != nil {
 			return fmt.Errorf("failed to create job in database: %w", err)
+		}
+
+		if !created {
+			existing, getErr := o.database.GetJob(ctx, payload.JobID)
+			if getErr != nil {
+				return fmt.Errorf("failed to load existing job after duplicate create: %w", getErr)
+			}
+
+			switch existing.State {
+			case models.JobStatePending:
+				slog.Warn("Duplicate job.created for pending job; retrying orchestration", "job_id", payload.JobID)
+
+				job = existing
+			case models.JobStateExtracting, models.JobStateReady, models.JobStateScanning, models.JobStateCompleting:
+				slog.Debug(
+					"Duplicate job.created ignored for in-flight job",
+					"job_id",
+					payload.JobID,
+					"state",
+					existing.State,
+				)
+
+				return nil
+			case models.JobStateDone, models.JobStateFailed:
+				slog.Debug(
+					"Duplicate job.created ignored for terminal job",
+					"job_id",
+					payload.JobID,
+					"state",
+					existing.State,
+				)
+
+				return nil
+			default:
+				return fmt.Errorf("unsupported job state for duplicate job.created: %s", existing.State)
+			}
 		}
 
 		o.recordInternalEvent(ctx, job.ID, "orchestrator.job.persisted", map[string]any{
@@ -41,8 +78,8 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 
 		// URL jobs bypass extraction and proceed directly to scanning.
 		if payload.InputType == inputTypeURLs {
-			if err := o.handleURLJob(ctx, job); err != nil {
-				o.failJobSafe(ctx, job.ID, "setup", fmt.Sprintf("failed to setup URL job: %v", err))
+			if urlErr := o.handleURLJob(ctx, job); urlErr != nil {
+				o.failJobSafe(ctx, job.ID, "setup", fmt.Sprintf("failed to setup URL job: %v", urlErr))
 
 				return nil
 			}
@@ -51,8 +88,13 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 		}
 
 		// ZIP jobs require an extraction phase to populate the workspace volume.
-		if err := o.startExtraction(ctx, job); err != nil {
-			o.failJobSafe(ctx, job.ID, "extraction", fmt.Sprintf("failed to start extraction: %v", err))
+		if extractionErr := o.startExtraction(ctx, job); extractionErr != nil {
+			o.failJobSafe(
+				ctx,
+				job.ID,
+				"extraction",
+				fmt.Sprintf("failed to start extraction: %v", extractionErr),
+			)
 
 			return nil
 		}
@@ -62,8 +104,6 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 }
 
 // HandleExtractionReady handles extraction.ready events.
-//
-//nolint:gocognit // Event handler requires multiple state checks and error handling paths
 func (o *Orchestrator) HandleExtractionReady(ctx context.Context, payload *events.ExtractionReadyPayload) error {
 	return o.withInboundEvent(
 		ctx,
@@ -95,73 +135,15 @@ func (o *Orchestrator) HandleExtractionReady(ctx context.Context, payload *event
 				return fmt.Errorf("failed to get job: %w", err)
 			}
 
-			if payload.ProvenancePath != "" {
-				if provenanceErr := o.database.UpdateJobProvenance(
-					ctx,
-					payload.JobID,
-					payload.ProvenancePath,
-				); provenanceErr != nil {
-					slog.Warn("Failed to persist provenance path", "job_id", payload.JobID, "error", provenanceErr)
-				} else {
-					job.ProvenancePath = payload.ProvenancePath
-				}
+			o.persistExtractionReadyMetadata(ctx, payload, job)
+
+			shouldScan, ensureErr := o.ensureReadyForScanning(ctx, payload.JobID, job)
+			if ensureErr != nil {
+				return ensureErr
 			}
 
-			if payload.ProvenanceArtifactPath != "" {
-				if provenanceKeyErr := o.database.UpdateJobProvenanceKey(
-					ctx,
-					payload.JobID,
-					payload.ProvenanceArtifactPath,
-				); provenanceKeyErr != nil {
-					slog.Warn("Failed to persist provenance key", "job_id", payload.JobID, "error", provenanceKeyErr)
-				} else {
-					job.ProvenanceKey = payload.ProvenanceArtifactPath
-				}
-			}
-
-			//nolint:exhaustive // Early states (Pending, Extracting) handled by default case.
-			switch job.State {
-			case models.JobStateReady:
-				slog.Debug("Job already in READY state", "job_id", job.ID)
-			case models.JobStateScanning, models.JobStateCompleting, models.JobStateDone:
-				slog.Debug(
-					"Job already past READY, ignoring duplicate extraction.ready",
-					"job_id",
-					job.ID,
-					"state",
-					job.State,
-				)
-
+			if !shouldScan {
 				return nil
-			case models.JobStateFailed:
-				slog.Debug("Job already failed, ignoring extraction.ready", "job_id", job.ID)
-
-				return nil
-			default:
-				if !o.stateMachine.CanTransition(job.State, models.JobStateReady) {
-					msg := fmt.Sprintf("job %s cannot transition to READY from %s", job.ID, job.State)
-					slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
-					o.failJobSafeWithDetails(
-						ctx,
-						job.ID,
-						"extraction",
-						msg,
-						stateTransitionDetails(job.State, models.JobStateReady),
-					)
-
-					return fmt.Errorf("%s", msg)
-				}
-
-				if stateErr := o.database.UpdateJobState(ctx, payload.JobID, models.JobStateReady); stateErr != nil {
-					return fmt.Errorf("failed to update job state: %w", stateErr)
-				}
-
-				o.recordInternalEvent(ctx, job.ID, "orchestrator.state.transition", map[string]any{
-					"from": string(job.State),
-					"to":   string(models.JobStateReady),
-				})
-
-				job.State = models.JobStateReady
 			}
 
 			if scanStartErr := o.startScanning(ctx, job); scanStartErr != nil {
@@ -173,6 +155,116 @@ func (o *Orchestrator) HandleExtractionReady(ctx context.Context, payload *event
 			return nil
 		},
 	)
+}
+
+func (o *Orchestrator) persistExtractionReadyMetadata(
+	ctx context.Context,
+	payload *events.ExtractionReadyPayload,
+	job *models.Job,
+) {
+	if progressErr := o.database.UpdateJobProgress(ctx, payload.JobID, 0, payload.TotalPages); progressErr != nil {
+		slog.Warn("Failed to persist total pages from extraction.ready", "job_id", payload.JobID, "error", progressErr)
+	} else {
+		job.TotalPages = payload.TotalPages
+		job.CurrentPage = 0
+	}
+
+	if artifactsErr := o.database.UpdateJobExtractionArtifacts(
+		ctx,
+		payload.JobID,
+		payload.StageLogPath,
+		payload.RecipePath,
+	); artifactsErr != nil {
+		slog.Warn("Failed to persist extraction artifacts", "job_id", payload.JobID, "error", artifactsErr)
+	} else {
+		if payload.StageLogPath != "" {
+			job.ExtractionStageLogKey = payload.StageLogPath
+		}
+
+		if payload.RecipePath != "" {
+			job.ExtractionRecipeKey = payload.RecipePath
+		}
+	}
+
+	if payload.ProvenancePath != "" {
+		if provenanceErr := o.database.UpdateJobProvenance(
+			ctx,
+			payload.JobID,
+			payload.ProvenancePath,
+		); provenanceErr != nil {
+			slog.Warn("Failed to persist provenance path", "job_id", payload.JobID, "error", provenanceErr)
+		} else {
+			job.ProvenancePath = payload.ProvenancePath
+		}
+	}
+
+	if payload.ProvenanceArtifactPath == "" {
+		return
+	}
+
+	if provenanceKeyErr := o.database.UpdateJobProvenanceKey(
+		ctx,
+		payload.JobID,
+		payload.ProvenanceArtifactPath,
+	); provenanceKeyErr != nil {
+		slog.Warn("Failed to persist provenance key", "job_id", payload.JobID, "error", provenanceKeyErr)
+	} else {
+		job.ProvenanceKey = payload.ProvenanceArtifactPath
+	}
+}
+
+func (o *Orchestrator) ensureReadyForScanning(
+	ctx context.Context,
+	jobID string,
+	job *models.Job,
+) (bool, error) {
+	//nolint:exhaustive // Early states (Pending, Extracting) handled by default case.
+	switch job.State {
+	case models.JobStateReady:
+		slog.Debug("Job already in READY state", "job_id", job.ID)
+		return true, nil
+	case models.JobStateScanning, models.JobStateCompleting, models.JobStateDone:
+		slog.Debug(
+			"Job already past READY, ignoring duplicate extraction.ready",
+			"job_id",
+			job.ID,
+			"state",
+			job.State,
+		)
+
+		return false, nil
+	case models.JobStateFailed:
+		slog.Debug("Job already failed, ignoring extraction.ready", "job_id", job.ID)
+
+		return false, nil
+	default:
+		if !o.stateMachine.CanTransition(job.State, models.JobStateReady) {
+			msg := fmt.Sprintf("job %s cannot transition to READY from %s", job.ID, job.State)
+			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
+			o.failJobSafeWithDetails(
+				ctx,
+				job.ID,
+				"extraction",
+				msg,
+				stateTransitionDetails(job.State, models.JobStateReady),
+			)
+
+			return false, fmt.Errorf("%s", msg)
+		}
+
+		if stateErr := o.database.UpdateJobState(ctx, jobID, models.JobStateReady); stateErr != nil {
+			return false, fmt.Errorf("failed to update job state: %w", stateErr)
+		}
+
+		o.recordInternalEvent(ctx, job.ID, "orchestrator.state.transition", map[string]any{
+			"from": string(job.State),
+			"to":   string(models.JobStateReady),
+		})
+
+		job.State = models.JobStateReady
+
+		return true, nil
+	}
 }
 
 // HandleExtractionFailed handles extraction.failed events.
@@ -197,7 +289,55 @@ func (o *Orchestrator) HandleExtractionFailed(ctx context.Context, payload *even
 				)
 			}
 
+			if artifactsErr := o.database.UpdateJobExtractionArtifacts(
+				ctx,
+				payload.JobID,
+				payload.StageLogPath,
+				payload.RecipePath,
+			); artifactsErr != nil {
+				slog.Warn(
+					"Failed to persist extraction failure artifacts",
+					"job_id",
+					payload.JobID,
+					"error",
+					artifactsErr,
+				)
+			}
+
 			return o.failJob(ctx, payload.JobID, "extraction", payload.Error, payload.ErrorDetails)
+		},
+	)
+}
+
+// HandleScanPageCompleted persists scanner progress updates for job status reads.
+func (o *Orchestrator) HandleScanPageCompleted(ctx context.Context, payload *events.ScanPageCompletedPayload) error {
+	return o.withInboundEvent(
+		ctx,
+		events.EventScanPageCompleted,
+		payload.JobID,
+		payload,
+		func(ctx context.Context) error {
+			job, err := o.database.GetJob(ctx, payload.JobID)
+			if err != nil {
+				return fmt.Errorf("failed to get job: %w", err)
+			}
+
+			if job.State == models.JobStateDone || job.State == models.JobStateFailed {
+				slog.Debug("Ignoring scan.page.completed for terminal job", "job_id", payload.JobID, "state", job.State)
+
+				return nil
+			}
+
+			if updateErr := o.database.UpdateJobProgress(
+				ctx,
+				payload.JobID,
+				payload.PageIndex,
+				payload.TotalPages,
+			); updateErr != nil {
+				return fmt.Errorf("failed to persist scan progress: %w", updateErr)
+			}
+
+			return nil
 		},
 	)
 }
@@ -243,6 +383,15 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 
 		if payload.ResultsPath == "" {
 			return errors.New("scan completed payload missing results path")
+		}
+
+		if progressErr := o.database.UpdateJobProgress(
+			ctx,
+			payload.JobID,
+			payload.TotalPagesScanned,
+			payload.TotalPagesScanned,
+		); progressErr != nil {
+			slog.Warn("Failed to persist scan completion progress", "job_id", payload.JobID, "error", progressErr)
 		}
 
 		job, err := o.database.GetJob(ctx, payload.JobID)
@@ -369,6 +518,18 @@ func (o *Orchestrator) HandleScanFailed(ctx context.Context, payload *events.Sca
 			slog.Debug("Job already in terminal state, ignoring scan.failed", "job_id", job.ID, "state", job.State)
 
 			return nil
+		}
+
+		if artifactsErr := o.database.UpdateJobCompletionArtifacts(
+			ctx,
+			payload.JobID,
+			"",
+			"",
+			payload.StageLogPath,
+			payload.RecipePath,
+			0,
+		); artifactsErr != nil {
+			slog.Warn("Failed to persist scan failure artifacts", "job_id", payload.JobID, "error", artifactsErr)
 		}
 
 		allComplete, err := o.database.RecordScannerFailure(ctx, payload.JobID, scannerType, payload.Error)
