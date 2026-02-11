@@ -138,7 +138,7 @@
 		{#if logs.length === 0}
 			<div class="flex items-center gap-2 text-slate-500">
 				<Loader2 class="h-3 w-3 animate-spin" />
-				<span>Connecting to log stream...</span>
+				<span>Waiting for live scan events...</span>
 			</div>
 		{/if}
 		{#each logs as log, idx (log + '-' + idx)}
