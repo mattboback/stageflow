@@ -17,8 +17,8 @@
 		return cn(
 			base,
 			isSelected
-				? 'border-accent bg-accent/5 shadow-sm'
-				: 'border-line bg-surface hover:border-ink/20 hover:bg-surface-muted'
+				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
+				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
 		);
 	}
 </script>
@@ -36,14 +36,16 @@
 			type="button"
 			onclick={() => onScreenshotChange(!screenshot)}
 			class={selectableSurfaceClass(
-				'flex w-full items-center gap-3 rounded-xl border-2 p-4 text-left transition-all duration-200',
+				'group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-200',
 				screenshot
 			)}
 		>
 			<div
 				class={cn(
-					'flex h-10 w-10 items-center justify-center rounded-lg transition-colors',
-					screenshot ? 'bg-accent text-white' : 'bg-surface-muted text-ink-muted'
+					'flex h-10 w-10 items-center justify-center rounded-xl transition-colors',
+					screenshot
+						? 'bg-accent text-white'
+						: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
 				)}
 			>
 				<Camera class="h-5 w-5" />
@@ -54,7 +56,7 @@
 			</div>
 			<div
 				class={cn(
-					'flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all',
+					'flex h-5 w-5 items-center justify-center rounded-full border transition-all',
 					screenshot ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
 				)}
 			>
