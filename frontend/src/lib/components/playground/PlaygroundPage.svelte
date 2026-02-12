@@ -23,7 +23,7 @@
 		type ScannerPreset
 	} from '$lib/components/playground/scanner-presets';
 	import { Alert, Button, Chip, PageSection, Panel } from '$lib/components/ui';
-	import { AlertTriangle, CheckCircle2, Info, Loader2, Play, ScanSearch } from 'lucide-svelte';
+	import { AlertTriangle, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-svelte';
 
 	// Form state
 	let mode = $state<'url' | 'zip'>('url');
@@ -38,7 +38,6 @@
 	let isSubmitting = $state(false);
 	let isLoadingScanners = $state(true);
 	let error = $state<string | null>(null);
-	let info = $state<string | null>(null);
 	let invalidUrls = $state<Array<{ url: string; reason: string }>>([]);
 
 	// AI Navigator configuration
@@ -94,12 +93,10 @@
 		const { text, changed } = normalizeUrlListText(urls);
 		if (!changed) return;
 		urls = text;
-		info = "Added 'https://' to URLs that didn't include a scheme.";
 	}
 
 	function handleUrlsChange(newUrls: string) {
 		urls = newUrls;
-		info = null;
 		invalidUrls = [];
 	}
 
@@ -131,7 +128,6 @@
 
 		isSubmitting = true;
 		error = null;
-		info = null;
 		invalidUrls = [];
 
 		try {
@@ -167,24 +163,30 @@
 
 <PlaygroundHeroSection />
 
-<PageSection class="py-12">
-	<div class="container-width">
-		<div class="grid gap-8 lg:grid-cols-3">
-			<!-- Main Form -->
-			<div class="lg:col-span-2">
-				<Panel padding="none" rounded="xl" class="text-ink overflow-hidden">
-					<!-- Header -->
-					<div class="border-line border-b p-5">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3">
-								<div class="bg-accent/10 flex h-9 w-9 items-center justify-center rounded-lg">
-									<ScanSearch class="text-accent h-[18px] w-[18px]" />
+<PageSection class="playground-shell relative overflow-hidden py-10 lg:py-14">
+	<div
+		class="pointer-events-none absolute -top-24 left-1/2 h-72 w-[92vw] max-w-5xl -translate-x-1/2 rounded-[3rem] bg-gradient-to-r from-white/90 via-accent/8 to-orange-200/20 blur-3xl"
+	></div>
+
+	<div class="container-width relative">
+		<div class="grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_21rem]">
+			<div>
+				<Panel
+					padding="none"
+					rounded="2xl"
+					class="text-ink border-line/80 overflow-hidden shadow-[var(--shadow-md)]"
+				>
+					<div class="border-line/80 bg-surface-muted/70 border-b px-6 py-5">
+						<div class="flex flex-wrap items-center justify-between gap-3">
+							<div class="flex items-center gap-3.5">
+								<div class="bg-accent/10 flex h-10 w-10 items-center justify-center rounded-xl">
+									<Sparkles class="text-accent h-5 w-5" />
 								</div>
 								<div>
-									<h3 class="text-base leading-none font-semibold tracking-tight">
-										Configure Scan
-									</h3>
-									<p class="text-ink-muted mt-0.5 text-xs">Select input and scanners</p>
+									<h2 class="text-lg leading-none font-semibold tracking-tight">Configure Scan</h2>
+									<p class="text-ink-muted mt-1 text-sm">
+										Choose input, scanners, and run settings.
+									</p>
 								</div>
 							</div>
 							{#if hasValidInput && hasEnabledScanner && isAiConfigValid}
@@ -201,12 +203,9 @@
 						</div>
 					</div>
 
-					<!-- Form Content -->
-					<div class="space-y-8 p-6 pt-6">
-						<!-- Mode Toggle -->
+					<div class="space-y-7 p-6 lg:p-7">
 						<PlaygroundModeToggle {mode} onModeChange={(m) => (mode = m)} />
 
-						<!-- URL Input -->
 						{#if mode === 'url'}
 							<PlaygroundUrlInput
 								{urls}
@@ -215,7 +214,6 @@
 							/>
 						{/if}
 
-						<!-- ZIP Upload -->
 						{#if mode === 'zip'}
 							<PlaygroundZipUpload
 								{file}
@@ -224,7 +222,6 @@
 							/>
 						{/if}
 
-						<!-- Scanner Selection -->
 						<PlaygroundScannerGrid
 							{scanners}
 							isLoading={isLoadingScanners}
@@ -233,7 +230,6 @@
 							onToggle={handleScannerToggle}
 						/>
 
-						<!-- AI Navigator Configuration -->
 						{#if isAiNavigatorEnabled}
 							<PlaygroundAiConfig
 								objective={aiObjective}
@@ -252,7 +248,6 @@
 							/>
 						{/if}
 
-						<!-- Options -->
 						<PlaygroundOptions
 							{screenshot}
 							{highlightStyle}
@@ -260,17 +255,6 @@
 							onHighlightStyleChange={(v) => (highlightStyle = v)}
 						/>
 
-						<!-- Info Display -->
-						{#if info}
-							<Alert variant="info">
-								<div class="flex items-start gap-3">
-									<Info class="mt-0.5 h-5 w-5 shrink-0" />
-									<p>{info}</p>
-								</div>
-							</Alert>
-						{/if}
-
-						<!-- Error Display -->
 						{#if error}
 							<Alert variant="error">
 								<div class="flex items-start gap-3">
@@ -292,11 +276,10 @@
 							</Alert>
 						{/if}
 
-						<!-- Submit Button -->
 						<Button
 							variant="glow"
 							size="lg"
-							class="w-full gap-2 text-base font-semibold"
+							class="h-12 w-full gap-2 rounded-xl text-base font-semibold"
 							disabled={!canSubmit}
 							onclick={handleSubmit}
 						>
@@ -312,7 +295,6 @@
 				</Panel>
 			</div>
 
-			<!-- Sidebar Info -->
 			<PlaygroundSidebar />
 		</div>
 	</div>

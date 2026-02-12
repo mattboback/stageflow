@@ -69,11 +69,11 @@
 		onclick={() => fileInputRef?.click()}
 		onkeydown={(e) => e.key === 'Enter' && fileInputRef?.click()}
 		class={cn(
-			'group relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-200',
+			'group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-8 transition-all duration-200',
 			isDragOver && 'border-accent bg-accent/5 scale-[1.01]',
 			file
-				? 'border-accent/50 bg-accent/5'
-				: 'border-line hover:border-accent/50 hover:bg-surface-muted'
+				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
+				: 'border-line hover:border-accent/30 hover:bg-surface-muted'
 		)}
 	>
 		<input
@@ -84,7 +84,7 @@
 			class="hidden"
 		/>
 		{#if file}
-			<div class="bg-accent/10 mb-3 flex h-14 w-14 items-center justify-center rounded-xl">
+			<div class="bg-accent/10 mb-3 flex h-14 w-14 items-center justify-center rounded-2xl">
 				<FileUp class="text-accent h-7 w-7" />
 			</div>
 			<p class="text-ink font-semibold">{file.name}</p>
@@ -96,7 +96,7 @@
 			</Button>
 		{:else}
 			<div
-				class="bg-surface-muted group-hover:bg-accent/10 mb-3 flex h-14 w-14 items-center justify-center rounded-xl transition-colors"
+				class="bg-surface-muted group-hover:bg-accent/10 mb-3 flex h-14 w-14 items-center justify-center rounded-2xl transition-colors"
 			>
 				<Upload class="text-ink-faint group-hover:text-accent h-7 w-7 transition-colors" />
 			</div>

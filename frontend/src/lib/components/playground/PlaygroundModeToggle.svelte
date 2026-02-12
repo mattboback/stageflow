@@ -16,8 +16,8 @@
 		return cn(
 			base,
 			isSelected
-				? 'border-accent bg-accent/5 shadow-sm'
-				: 'border-line bg-surface hover:border-ink/20 hover:bg-surface-muted'
+				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
+				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
 		);
 	}
 </script>
@@ -29,7 +29,7 @@
 			type="button"
 			onclick={() => onModeChange('url')}
 			class={selectableSurfaceClass(
-				'relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200',
+				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all duration-200',
 				mode === 'url'
 			)}
 		>
@@ -40,8 +40,10 @@
 			{/if}
 			<div
 				class={cn(
-					'flex h-12 w-12 items-center justify-center rounded-xl transition-colors',
-					mode === 'url' ? 'bg-accent text-white' : 'bg-surface-muted text-ink-muted'
+					'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+					mode === 'url'
+						? 'bg-accent text-white'
+						: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
 				)}
 			>
 				<Globe class="h-6 w-6" />
@@ -55,7 +57,7 @@
 			type="button"
 			onclick={() => onModeChange('zip')}
 			class={selectableSurfaceClass(
-				'relative flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all duration-200',
+				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all duration-200',
 				mode === 'zip'
 			)}
 		>
@@ -66,8 +68,10 @@
 			{/if}
 			<div
 				class={cn(
-					'flex h-12 w-12 items-center justify-center rounded-xl transition-colors',
-					mode === 'zip' ? 'bg-accent text-white' : 'bg-surface-muted text-ink-muted'
+					'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+					mode === 'zip'
+						? 'bg-accent text-white'
+						: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
 				)}
 			>
 				<FileUp class="h-6 w-6" />
