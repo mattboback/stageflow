@@ -135,6 +135,18 @@
 		@apply py-16 lg:py-24;
 	}
 
+	.playground-hero {
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 252, 250, 0.9) 45%, transparent 100%),
+			var(--color-paper);
+	}
+
+	.playground-shell {
+		background:
+			radial-gradient(80rem 38rem at 50% -10%, rgba(220, 38, 38, 0.08), transparent 55%),
+			var(--color-paper);
+	}
+
 	.h1-display {
 		font-family: var(--font-display);
 		@apply text-ink text-4xl font-bold tracking-[-0.02em] sm:text-5xl lg:text-6xl;

@@ -189,6 +189,7 @@ func TestWaitContainer_UsesLongPollClient(t *testing.T) {
 
 	mock.handle("POST", "/v4.0.0/libpod/containers/container-123/wait", func(w http.ResponseWriter, _ *http.Request) {
 		resp := ContainerWaitResponse{StatusCode: 0}
+
 		w.Header().Set("Content-Type", "application/json")
 
 		if err := json.NewEncoder(w).Encode(resp); err != nil {

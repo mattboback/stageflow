@@ -135,13 +135,12 @@ func TestHandleMultipleScanners(t *testing.T) {
 	insertJob(t, database, job)
 
 	// Set expected scanners (this is normally done in startScanning)
-	if err := database.SetExpectedScanners(
-		context.Background(),
+	mustSetExpectedScanners(
+		t,
+		database.SetExpectedScanners,
 		"job-multi",
 		[]string{"axe", "lighthouse"},
-	); err != nil {
-		t.Fatalf("Failed to set expected scanners: %v", err)
-	}
+	)
 
 	// First scanner completes (axe)
 	axePayload := &events.ScanCompletedPayload{
@@ -152,31 +151,11 @@ func TestHandleMultipleScanners(t *testing.T) {
 		TotalPagesScanned: 3,
 	}
 
-	seedScanResults(t, mem, "job-multi", axePayload.ResultsPath)
-
-	err := orch.HandleScanCompleted(context.Background(), axePayload)
-	if err != nil {
-		t.Fatalf("HandleScanCompleted (axe) failed: %v", err)
-	}
+	mustHandleScannerCompletion(t, orch, mem, axePayload)
 
 	// Job should NOT be done yet - waiting for lighthouse
-	partialJob, err := database.GetJob(context.Background(), "job-multi")
-	if err != nil {
-		t.Fatalf("Failed to get job: %v", err)
-	}
-
-	if partialJob.State == models.JobStateDone {
-		t.Errorf("Expected job to NOT be DONE yet (waiting for lighthouse), got %s", partialJob.State)
-	}
-
-	if publisher.completedCount() != 0 {
-		t.Errorf("Expected 0 job.completed events (waiting for lighthouse), got %d", publisher.completedCount())
-	}
-
-	// Verify axe was recorded as completed
-	if len(partialJob.CompletedScanners) != 1 {
-		t.Errorf("Expected 1 completed scanner, got %d", len(partialJob.CompletedScanners))
-	}
+	partialJob := mustGetJob(t, database.GetJob, "job-multi")
+	assertWaitingForRemainingScanners(t, partialJob, publisher)
 
 	// Second scanner completes (lighthouse)
 	lighthousePayload := &events.ScanCompletedPayload{
@@ -187,18 +166,73 @@ func TestHandleMultipleScanners(t *testing.T) {
 		TotalPagesScanned: 3,
 	}
 
-	seedScanResults(t, mem, "job-multi", lighthousePayload.ResultsPath)
-
-	err = orch.HandleScanCompleted(context.Background(), lighthousePayload)
-	if err != nil {
-		t.Fatalf("HandleScanCompleted (lighthouse) failed: %v", err)
-	}
+	mustHandleScannerCompletion(t, orch, mem, lighthousePayload)
 
 	// NOW job should be done
-	completedJob, err := database.GetJob(context.Background(), "job-multi")
+	completedJob := mustGetJob(t, database.GetJob, "job-multi")
+	assertAllScannersCompleted(t, completedJob, publisher)
+}
+
+func mustSetExpectedScanners(
+	t *testing.T,
+	setExpected func(context.Context, string, []string) error,
+	jobID string,
+	scanners []string,
+) {
+	t.Helper()
+
+	if err := setExpected(context.Background(), jobID, scanners); err != nil {
+		t.Fatalf("Failed to set expected scanners: %v", err)
+	}
+}
+
+func mustHandleScannerCompletion(
+	t *testing.T,
+	orch *Orchestrator,
+	mem *memoryStorage,
+	payload *events.ScanCompletedPayload,
+) {
+	t.Helper()
+	seedScanResults(t, mem, payload.JobID, payload.ResultsPath)
+
+	if err := orch.HandleScanCompleted(context.Background(), payload); err != nil {
+		t.Fatalf("HandleScanCompleted (%s) failed: %v", payload.ScannerType, err)
+	}
+}
+
+func mustGetJob(
+	t *testing.T,
+	getJob func(context.Context, string) (*models.Job, error),
+	jobID string,
+) *models.Job {
+	t.Helper()
+
+	job, err := getJob(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("Failed to get job: %v", err)
 	}
+
+	return job
+}
+
+func assertWaitingForRemainingScanners(t *testing.T, partialJob *models.Job, publisher *mockPublisher) {
+	t.Helper()
+
+	if partialJob.State == models.JobStateDone {
+		t.Errorf("Expected job to NOT be DONE yet (waiting for lighthouse), got %s", partialJob.State)
+	}
+
+	if publisher.completedCount() != 0 {
+		t.Errorf("Expected 0 job.completed events (waiting for lighthouse), got %d", publisher.completedCount())
+	}
+
+	if len(partialJob.CompletedScanners) != 1 {
+		t.Errorf("Expected 1 completed scanner, got %d", len(partialJob.CompletedScanners))
+	}
+}
+
+func assertAllScannersCompleted(t *testing.T, completedJob *models.Job, publisher *mockPublisher) {
+	t.Helper()
 
 	if completedJob.State != models.JobStateDone {
 		t.Errorf("Expected state DONE after all scanners complete, got %s", completedJob.State)
@@ -212,12 +246,10 @@ func TestHandleMultipleScanners(t *testing.T) {
 		t.Errorf("Expected total pages to remain per-job total (3), got %d", completedJob.TotalPages)
 	}
 
-	// Verify job.completed event was published
 	if publisher.completedCount() != 1 {
 		t.Errorf("Expected 1 job.completed event, got %d", publisher.completedCount())
 	}
 
-	// Verify both scanner results are recorded
 	if len(completedJob.CompletedScanners) != 2 {
 		t.Errorf("Expected 2 completed scanners, got %d", len(completedJob.CompletedScanners))
 	}
@@ -226,12 +258,9 @@ func TestHandleMultipleScanners(t *testing.T) {
 		t.Errorf("Expected 2 scanner results, got %d", len(completedJob.ScannerResults))
 	}
 
-	// Verify the job.completed event includes scanner artifacts
-	if publisher.completedCount() == 1 {
-		completedPayload := publisher.firstCompleted()
-		if len(completedPayload.ScannerArtifacts) != 2 {
-			t.Errorf("Expected 2 scanner artifacts in event, got %d", len(completedPayload.ScannerArtifacts))
-		}
+	completedPayload := publisher.firstCompleted()
+	if len(completedPayload.ScannerArtifacts) != 2 {
+		t.Errorf("Expected 2 scanner artifacts in event, got %d", len(completedPayload.ScannerArtifacts))
 	}
 }
 

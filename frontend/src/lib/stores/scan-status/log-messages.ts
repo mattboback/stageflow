@@ -56,7 +56,7 @@ export function getLogMessage(normalizedState: string, data: StatusLike): string
 				}
 				return `[Playwright] Visiting page ${currentPage}/${totalPages}...`;
 			}
-			return null;
+			return '[Playwright] Scan is running. Waiting for page progress...';
 		}
 		case 'COMPLETING':
 			return 'Aggregation complete. Generating HTML reports...';

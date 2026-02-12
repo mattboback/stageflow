@@ -60,8 +60,8 @@
 		return cn(
 			base,
 			isSelected
-				? 'border-accent bg-accent/5 shadow-sm'
-				: 'border-line bg-surface hover:border-ink/20 hover:bg-surface-muted'
+				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
+				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
 		);
 	}
 </script>
@@ -83,7 +83,7 @@
 		{/if}
 	</div>
 	{#if !isLoading && scanners.length > 1}
-		<div class="border-line bg-surface-muted/40 mb-4 rounded-xl border p-3">
+		<div class="border-line/80 bg-surface-muted/55 mb-4 rounded-2xl border p-3">
 			<div class="flex flex-wrap gap-2">
 				<Chip
 					as="button"
@@ -146,13 +146,13 @@
 					aria-pressed={scanner.enabled}
 					onclick={() => onToggle(scanner.id)}
 					class={selectableSurfaceClass(
-						'group relative flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all duration-200',
+						'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200',
 						scanner.enabled
 					)}
 				>
 					<div
 						class={cn(
-							'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-all',
+							'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all',
 							scanner.enabled
 								? 'bg-accent text-white'
 								: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
@@ -176,7 +176,7 @@
 					</div>
 					<div
 						class={cn(
-							'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all',
+							'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
 							scanner.enabled
 								? 'border-accent bg-accent text-white'
 								: 'border-line bg-surface'

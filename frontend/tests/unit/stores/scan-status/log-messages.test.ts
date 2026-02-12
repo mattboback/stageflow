@@ -142,8 +142,9 @@ describe('log-messages', () => {
 			expect(message).toContain('3/8');
 		});
 
-		it('returns null for SCANNING without progress', () => {
-			expect(getLogMessage('SCANNING', emptyData)).toBeNull();
+		it('returns fallback message for SCANNING without progress', () => {
+			const message = getLogMessage('SCANNING', emptyData);
+			expect(message).toContain('Scan is running');
 		});
 
 		it('returns report generation message for COMPLETING', () => {

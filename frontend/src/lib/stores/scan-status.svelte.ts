@@ -135,8 +135,14 @@ export function createScanStatusStore(id: string) {
 	const startSSE = () => {
 		const url = buildApiUrl(`/api/v1/jobs/${id}/stream`);
 		eventSource = new EventSource(url);
+		addLog('Connecting to live status stream...');
 		let sseParseErrors = 0;
 		let sseReconnectAttempts = 0;
+
+		eventSource.onopen = () => {
+			reportedSSEError = false;
+			addLog('Live status stream connected.');
+		};
 
 		const handleSSEParseError = (eventType: string, err: unknown, rawData: string) => {
 			sseParseErrors++;

@@ -93,10 +93,12 @@
 	}
 </script>
 
-<div class="animate-fade-in space-y-5 rounded-xl border-2 border-purple-200 bg-purple-50/50 p-6">
+<div
+	class="animate-fade-in space-y-5 rounded-2xl border border-line/80 bg-surface-muted/55 p-6 shadow-[var(--shadow-xs)]"
+>
 	<div class="mb-4 flex items-center gap-3">
-		<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-			<Bot class="h-5 w-5 text-purple-600" />
+		<div class="bg-accent/10 flex h-10 w-10 items-center justify-center rounded-xl">
+			<Bot class="text-accent h-5 w-5" />
 		</div>
 		<div>
 			<h3 class="text-ink text-sm font-semibold">AI Navigator Configuration</h3>
@@ -122,7 +124,10 @@
 			oninput={(e) => onObjectiveChange(e.currentTarget.value)}
 			placeholder="Navigate to the contact page and fill out the inquiry form with the provided test data..."
 			rows={3}
-			class={cn('text-sm', !objective.trim() && 'border-amber-300 focus:border-amber-500')}
+			class={cn(
+				'rounded-xl text-sm',
+				!objective.trim() && 'border-amber-300 focus:border-amber-500'
+			)}
 		/>
 		<p class="text-ink-faint mt-1.5 flex items-start gap-1.5 text-xs">
 			<Info class="mt-0.5 h-3 w-3 shrink-0" />
@@ -161,7 +166,7 @@
 			Key-value pairs the AI can use to fill forms (e.g., email, name, message).
 		</p>
 		{#if inputValues.length === 0}
-			<div class="bg-surface border-line rounded-lg border py-4 text-center">
+			<div class="bg-surface border-line rounded-xl border py-4 text-center">
 				<p class="text-ink-muted text-xs">No input values defined</p>
 			</div>
 		{:else}
@@ -173,14 +178,14 @@
 							placeholder="Field name"
 							value={inputValue.key}
 							oninput={(e) => updateInputValue(index, 'key', e.currentTarget.value)}
-							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none"
+							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
 						/>
 						<input
 							type="text"
 							placeholder="Value"
 							value={inputValue.value}
 							oninput={(e) => updateInputValue(index, 'value', e.currentTarget.value)}
-							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none"
+							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
 						/>
 						<button
 							type="button"
@@ -199,7 +204,7 @@
 	<button
 		type="button"
 		onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
-		class="border-line bg-surface hover:bg-surface-muted flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors"
+		class="border-line bg-surface hover:bg-surface-muted flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors"
 	>
 		<span class="text-ink text-sm font-medium">Advanced Settings</span>
 		{#if showAdvancedSettings}
@@ -222,7 +227,7 @@
 						max="50"
 						value={maxSteps}
 						oninput={(e) => onMaxStepsChange(parseInt(e.currentTarget.value) || 10)}
-						class="border-line bg-surface text-ink focus:border-accent w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+						class="border-line bg-surface text-ink focus:border-accent w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none"
 					/>
 					<p class="text-ink-faint mt-1 text-xs">Maximum navigation actions</p>
 				</div>
@@ -235,7 +240,7 @@
 						max="300"
 						value={maxWallTimeMs / 1000}
 						oninput={(e) => onMaxWallTimeMsChange(parseInt(e.currentTarget.value) * 1000 || 120000)}
-						class="border-line bg-surface text-ink focus:border-accent w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+						class="border-line bg-surface text-ink focus:border-accent w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none"
 					/>
 					<p class="text-ink-faint mt-1 text-xs">Maximum wall clock time</p>
 				</div>
@@ -252,7 +257,7 @@
 				</div>
 				<p class="text-ink-faint mb-3 text-xs">Conditions to verify the goal was achieved.</p>
 				{#if successCriteria.length === 0}
-					<div class="bg-surface border-line rounded-lg border py-4 text-center">
+					<div class="bg-surface border-line rounded-xl border py-4 text-center">
 						<p class="text-ink-muted text-xs">
 							No success criteria defined (AI will determine completion)
 						</p>
@@ -277,7 +282,7 @@
 										: 'Value to match'}
 									value={criterion.value}
 									oninput={(e) => updateSuccessCriterion(index, 'value', e.currentTarget.value)}
-									class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none"
+									class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
 								/>
 								<button
 									type="button"
@@ -295,9 +300,9 @@
 	{/if}
 
 	<!-- AI Beta Notice -->
-	<div class="flex items-start gap-2 rounded-lg bg-purple-100/50 p-3">
-		<Sparkles class="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
-		<p class="text-xs text-purple-700">
+	<div class="bg-accent-soft/60 flex items-start gap-2 rounded-xl p-3">
+		<Sparkles class="text-accent mt-0.5 h-4 w-4 shrink-0" />
+		<p class="text-xs text-[color:var(--color-accent-ink)]">
 			<strong>Experimental:</strong> AI Navigator uses vision models to understand and interact with
 			your site. Results may vary based on page complexity.
 		</p>
