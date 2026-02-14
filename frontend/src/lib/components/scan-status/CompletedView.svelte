@@ -28,11 +28,11 @@
 			<CheckCircle2 class="h-6 w-6" />
 		</div>
 		<div class="min-w-0 flex-1">
-			<h3 class="text-lg font-semibold text-slate-900">Scan complete</h3>
-			<p class="mt-1 text-sm text-slate-600">
+			<h3 class="text-ink text-lg font-semibold">Scan complete</h3>
+			<p class="text-ink-muted mt-1 text-sm">
 				Scan artifacts are ready. Review logs and automation details in the sidebar.
 			</p>
-			<div class="mt-4 flex flex-wrap gap-3 text-sm text-slate-700">
+			<div class="text-ink-muted mt-4 flex flex-wrap gap-3 text-sm">
 				<span class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1">
 					<FileText class="text-accent h-4 w-4" />
 					{totalPages}

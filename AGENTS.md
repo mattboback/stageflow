@@ -1,102 +1,106 @@
-
-
-
-
-
 # AGENTS.md
 
----
+## Purpose
+
+This file defines how agents should work in the StageFlow repository.
+Follow these rules by default unless a user instruction explicitly overrides them.
 
 ## Prime Directives
 
-> These rules are non-negotiable. Violating them is a critical failure.
+These rules are non-negotiable. Violating them is a critical failure.
 
-| Rule                                | Rationale                                                                                |
-| ----------------------------------- | ---------------------------------------------------------------------------------------- |
-| **Never bypass lint/test failures** | Fix the issue. Never disable rules, skip tests, or hide errors.                          |
-| **No breadcrumbs**                  | No `# TODO: add X later`, no `summary.md`, no orphaned docs unless explicitly requested. |
+| Rule | Rationale |
+| --- | --- |
+| **Never bypass lint/test failures** | Fix the issue. Never disable rules, skip tests, or hide errors. |
+| **No breadcrumbs** | No `TODO` placeholders, ad-hoc status docs, or orphaned notes unless explicitly requested. |
+| **Validate before claiming success** | Run relevant checks and report the real outcome. |
 
----
+## Execution Defaults (StageFlow)
+
+- Use `just` from the repo root for standard workflows.
+- Prefer the smallest command that validates your change, then run broader checks when risk is high.
+- Preferred verification ladder:
+  1. Narrow checks for touched area (example: `bun run lint`, `bun run test` in the affected package)
+  2. Broader package/service checks
+  3. `just ci` for full-repo confidence when changes are cross-cutting
+
+### Common Commands
+
+- Setup: `just setup`
+- Local stack: `just dev up`, `just dev down`, `just dev logs`, `just dev init`
+- Build: `just build`, `just images`
+- Quality gate: `just ci`
+- Production (systemd user + Quadlets): `just prod up|down|restart|logs|health`
 
 ## Concurrency Model
 
 Assume other agents or humans may commit during your session.
 
-- Don't delete or revert changes just because you didn't make them.
-
-- If you see unexpected changes to the the working-tree don't panic. Your
-  changes have just been committed
-
-- Only worry about your task stop focusing on working tree changes that aren't
-  related to your task. The other agents will stay out of your way if you stay
-  out of their way
-
----
+- Do not delete or revert changes just because you did not make them.
+- If the working tree changes unexpectedly, continue focusing on files relevant to your task.
+- Ignore unrelated diffs. Coordinate only when there is a real overlap or conflict.
 
 ## Defensive Programming
 
-```
-Fail fast → Guard clauses → Validate at boundaries → Make illegal states unrepresentable
-```
+Apply this sequence:
 
-**Validate at trust boundaries:**
+`Fail fast -> Guard clauses -> Validate at boundaries -> Make illegal states unrepresentable`
+
+Validate all trust boundaries:
 
 - Incoming request payloads
-- Environment variables / config
-- Queue messages
-- Database rows
+- Environment variables and config
+- Queue messages and event envelopes
+- Database rows and persistence mappings
 - External API responses
+- Filesystem/archive inputs (size, path, format, limits)
 
----
-
-## Language-Specific
+## Language-Specific Rules
 
 ### TypeScript
 
-| Constraint       | Alternative                            |
-| ---------------- | -------------------------------------- |
-| No `any`         | `unknown` + narrowing                  |
-| Avoid `as` casts | Runtime checks; justify if unavoidable |
+| Constraint | Preferred Alternative |
+| --- | --- |
+| No `any` | `unknown` with narrowing |
+| Avoid `as` casts | Runtime checks or schema validation |
 
-- Prefer Bun APIs when running on Bun.
-- Assume modern browsers unless stated otherwise.
+- Prefer Bun-native APIs/runtime features when running on Bun.
+- Assume modern browsers unless requirements say otherwise.
 
 ### Python
 
-- **Package management:** `uv` + `pyproject.toml` only. No pip venvs, Poetry, or `requirements.txt`.
-- Type hints on all signatures. Validate with `mypy` if in CI.
-- Prefer Pydantic models or dataclasses over raw dicts.
+- Use `uv` with `pyproject.toml`.
+- Do not introduce Poetry, pipenv, or `requirements.txt` workflows.
+- Add type hints on all signatures.
+- Prefer Pydantic models or dataclasses over raw untyped dicts.
 
 ### Go
 
-- Always handle errors. Never `_ = err`.
-- Pass `ctx` through call chains.
-- Wrap errors: `fmt.Errorf("doing thing: %w", err)`
+- Always handle errors. Never ignore `err`.
+- Pass `context.Context` through call chains.
+- Wrap errors with context: `fmt.Errorf("doing thing: %w", err)`.
 
 ### Svelte 5
 
-> ⚠️ Training data for Svelte 5 is limited. **Always fetch current docs** via MCP or web.
+Svelte changes quickly. Verify current docs before implementing new patterns.
 
 - Use runes: `$state`, `$derived`, `$effect`
-- No stores in new code—runes replace them.
-
----
+- Do not introduce stores in new code where runes are appropriate.
 
 ## Anti-Patterns
 
-| Don't                      | Do Instead               |
-| -------------------------- | ------------------------ |
-| Disable lint rules to pass | Fix the underlying issue |
-| Assume docs are current    | Verify against code      |
-| Ignore test failures       | Investigate and fix      |
-
----
+| Avoid | Do Instead |
+| --- | --- |
+| Disabling lint rules to pass checks | Fix the underlying issue |
+| Assuming docs are current | Verify against current code and tooling |
+| Ignoring failing tests | Debug and resolve root cause |
+| Broad refactors during targeted fixes | Keep changes scoped and intentional |
 
 ## Deployment (VPS)
 
-StageFlow supports production deployments via **systemd --user + Quadlets** (Podman).
+StageFlow supports production deployments via systemd user services + Podman Quadlets.
 
-### Quick commands (from repo root)
+### Quick Commands (Repo Root)
 
 - Install units: `just prod install`
 - Start: `just prod up`
@@ -105,8 +109,6 @@ StageFlow supports production deployments via **systemd --user + Quadlets** (Pod
 - Logs: `just prod logs`
 - Health: `just prod health`
 
-### Reverse proxy note
+### Reverse Proxy Note
 
-If you already run a shared reverse proxy (Caddy/Nginx/Traefik), avoid deploying an additional
-StageFlow-managed Caddy instance that binds `80/443`. Prefer routing to StageFlow services on
-loopback (or within your Podman network) from your existing gateway.
+If you already operate a shared reverse proxy (Caddy/Nginx/Traefik), avoid deploying an additional StageFlow-managed proxy that binds `80/443`. Route traffic from your existing gateway to StageFlow services on loopback or the Podman network.

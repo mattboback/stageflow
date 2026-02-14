@@ -89,7 +89,7 @@
 			<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Scanner Results</h3>
 		</div>
 		<div class="p-4">
-			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{#each report.scanners as scanner (scanner.id)}
 					{@render scannerCard(scanner)}
 				{/each}
@@ -170,7 +170,7 @@
 				{/if}
 
 				{#if scannerIssues.length > 0}
-					<div class="grid gap-4 lg:grid-cols-2">
+					<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 						<Panel padding="sm" rounded="xl">
 							<p class="text-ink mb-2 text-sm font-semibold">Top findings</p>
 							<div class="space-y-2 text-sm">

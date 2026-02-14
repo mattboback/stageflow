@@ -32,6 +32,7 @@ const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
   deviceScaleFactor: 2,
   defaultTimeout: 30_000,
   pageLoadTimeout: 15_000,
+  bypassCSP: false,
 };
 
 /**
@@ -118,7 +119,7 @@ export class BrowserManager {
       viewport: vp,
       deviceScaleFactor: this.config.deviceScaleFactor,
       // We inject small amounts of CSS/JS for scanning + screenshots; some sites have strict CSP that would block it.
-      bypassCSP: true,
+      bypassCSP: this.config.bypassCSP ?? false,
     });
   }
 

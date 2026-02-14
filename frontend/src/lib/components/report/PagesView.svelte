@@ -87,7 +87,7 @@
 	</button>
 {/snippet}
 
-<div class="grid gap-6 lg:grid-cols-[280px,1fr]">
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-[280px,1fr]">
 	<Panel class="max-h-[720px] overflow-hidden shadow-sm" padding="none" rounded="2xl">
 		<div class="border-line border-b p-4">
 			<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Pages</h3>
