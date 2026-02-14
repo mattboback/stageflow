@@ -24,7 +24,7 @@
 	}
 </script>
 
-<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 	{#each categories as category (category.id)}
 		<Panel class="shadow-xs" padding="sm" rounded="2xl">
 			<p class="text-ink-muted text-xs font-semibold tracking-wide uppercase">

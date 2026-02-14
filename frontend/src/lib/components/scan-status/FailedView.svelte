@@ -21,20 +21,20 @@
 		<XCircle class="h-10 w-10" />
 	</div>
 	<div>
-		<h3 class="text-xl font-bold text-slate-900">Scan Failed</h3>
-		<p class="mt-2 max-w-md text-slate-500">
+		<h3 class="text-ink text-xl font-bold tracking-tight">Scan Failed</h3>
+		<p class="text-ink-muted mt-2 max-w-md">
 			{result?.error || 'The worker process was terminated unexpectedly. Please try again.'}
 		</p>
 		{#if result?.last_stage}
-			<p class="mt-2 text-xs font-semibold tracking-wide text-slate-400 uppercase">
+			<p class="text-ink-faint mt-2 text-xs font-semibold tracking-wide uppercase">
 				Stage: {result.last_stage}
 			</p>
 		{/if}
 		{#if result?.error_details}
 			<div
-				class="border-line bg-surface-muted mt-4 rounded-lg border p-3 text-left text-xs text-slate-700"
+				class="border-line bg-surface-muted text-ink mt-4 rounded-lg border p-3 text-left text-xs"
 			>
-				<div class="mb-2 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+				<div class="text-ink-faint mb-2 text-[10px] font-semibold tracking-wider uppercase">
 					Error details
 				</div>
 				<pre

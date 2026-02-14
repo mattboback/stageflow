@@ -28,10 +28,10 @@
 			<div
 				class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
 				class:bg-amber-100={!isNotFound}
-				class:bg-slate-100={isNotFound}
+				class:bg-surface-muted={isNotFound}
 			>
 				{#if isNotFound}
-					<FileSearch class="h-8 w-8 text-slate-500" />
+					<FileSearch class="text-ink-faint h-8 w-8" />
 				{:else}
 					<AlertTriangle class="h-8 w-8 text-amber-600" />
 				{/if}
