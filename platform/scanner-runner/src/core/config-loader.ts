@@ -76,63 +76,30 @@ function loadBrowserConfig(): BrowserConfig {
     deviceScaleFactor: getEnvNumber("DEVICE_SCALE_FACTOR", 2),
     defaultTimeout: getEnvInt("DEFAULT_TIMEOUT", 30_000),
     pageLoadTimeout: getEnvInt("PAGE_LOAD_TIMEOUT", 15_000),
+    bypassCSP: getEnvBool("BROWSER_BYPASS_CSP", false),
   };
 }
 
 function loadStorageConfig(): StorageConfig {
-  const isDev = process.env.NODE_ENV !== "production";
-
-  const endpoint = process.env.MINIO_ENDPOINT;
-  const accessKey = process.env.MINIO_ACCESS_KEY ?? process.env.MINIO_ROOT_USER;
-  const secretKey = process.env.MINIO_SECRET_KEY ?? process.env.MINIO_ROOT_PASSWORD;
-  const bucket = process.env.MINIO_ARTIFACT_BUCKET;
-
-  // In production, require all storage credentials
-  if (!isDev) {
-    if (!endpoint) {
-      throw new Error("MINIO_ENDPOINT is required in production");
-    }
-    if (!accessKey) {
-      throw new Error("MINIO_ACCESS_KEY is required in production");
-    }
-    if (!secretKey) {
-      throw new Error("MINIO_SECRET_KEY is required in production");
-    }
-    if (!bucket) {
-      throw new Error("MINIO_ARTIFACT_BUCKET is required in production");
-    }
-  }
-
-  // Development-only fallbacks with warning
-  if (isDev && (!endpoint || !accessKey || !secretKey)) {
-    console.warn(
-      "[config] Using development storage defaults. Set MINIO_* env vars for production.",
-    );
-  }
+  const endpoint = requireEnv("MINIO_ENDPOINT");
+  const accessKey = requireAnyEnv(["MINIO_ACCESS_KEY", "MINIO_ROOT_USER"]);
+  const secretKey = requireAnyEnv(["MINIO_SECRET_KEY", "MINIO_ROOT_PASSWORD"]);
+  const bucket = requireEnv("MINIO_ARTIFACT_BUCKET");
 
   return {
-    endpoint: endpoint ?? "localhost:9000",
-    accessKey: accessKey ?? "minioadmin",
-    secretKey: secretKey ?? "minioadmin",
+    endpoint,
+    accessKey,
+    secretKey,
     useSSL: getEnvBool("MINIO_USE_SSL", false),
-    bucket: bucket ?? "scanner-artifacts",
+    bucket,
   };
 }
 
 function loadMessagingConfig(): MessagingConfig {
-  const isDev = process.env.NODE_ENV !== "production";
-  const url = process.env.NATS_URL;
-
-  if (!isDev && !url) {
-    throw new Error("NATS_URL is required in production");
-  }
-
-  if (isDev && !url) {
-    console.warn("[config] Using development NATS URL. Set NATS_URL for production.");
-  }
+  const url = requireEnv("NATS_URL");
 
   return {
-    url: url ?? "nats://localhost:4222",
+    url,
     subjects: {
       pageCompleted:
         process.env.NATS_SUBJECT_PAGE_COMPLETED ?? "scan.events.page.completed",
@@ -148,6 +115,19 @@ function requireEnv(name: string): string {
     throw new Error(`Required environment variable ${name} is not set`);
   }
   return value;
+}
+
+function requireAnyEnv(names: readonly string[]): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) {
+      return value;
+    }
+  }
+
+  throw new Error(
+    `Required environment variable not set (expected one of: ${names.join(", ")})`,
+  );
 }
 
 function getEnvBool(name: string, defaultValue: boolean): boolean {

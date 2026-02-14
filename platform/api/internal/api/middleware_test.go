@@ -49,6 +49,25 @@ func TestCORSMiddleware(t *testing.T) {
 	}
 }
 
+func TestCORSMiddleware_NoConfiguredOrigins(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "")
+
+	handler := corsMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req.Header.Set("Origin", "https://example.com")
+
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected no Access-Control-Allow-Origin header, got %q", got)
+	}
+}
+
 func TestCORSMiddlewareOptions(t *testing.T) {
 	handler := corsMiddleware(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
