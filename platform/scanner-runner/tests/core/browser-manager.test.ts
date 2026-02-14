@@ -174,7 +174,7 @@ describe("BrowserManager", () => {
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 2,
-        bypassCSP: true,
+        bypassCSP: false,
       });
     });
 
@@ -185,6 +185,18 @@ describe("BrowserManager", () => {
       expect(context).toBe(mockContext);
       expect(mockBrowser.newContext).toHaveBeenCalledWith({
         viewport: customViewport,
+        deviceScaleFactor: 2,
+        bypassCSP: false,
+      });
+    });
+
+    it("should allow CSP bypass when explicitly configured", async () => {
+      const manager = new BrowserManager({ bypassCSP: true });
+      const context = await manager.createContext();
+
+      expect(context).toBe(mockContext);
+      expect(mockBrowser.newContext).toHaveBeenCalledWith({
+        viewport: { width: 1280, height: 720 },
         deviceScaleFactor: 2,
         bypassCSP: true,
       });

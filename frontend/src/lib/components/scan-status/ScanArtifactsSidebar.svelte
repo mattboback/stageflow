@@ -59,10 +59,10 @@
 				{isLockedOpen ? 'In Progress' : open ? 'Hide' : 'Show'}
 			</Button>
 		</div>
-		<p class="text-xs text-slate-500">Inspect logs and automation assets.</p>
+		<p class="text-ink-faint text-xs">Inspect logs and automation assets.</p>
 		{#if artifacts}
 			<div
-				class="bg-surface/70 mt-4 flex gap-2 rounded-full p-1 text-xs font-semibold text-slate-600"
+				class="bg-surface/70 text-ink-muted mt-4 flex gap-2 rounded-full p-1 text-xs font-semibold"
 			>
 				{#each TABS as tab (tab)}
 					<Chip
@@ -83,11 +83,11 @@
 	{#if open}
 		<div class="space-y-4 p-6 pt-6">
 			{#if !artifacts}
-				<div class="flex flex-col items-center justify-center py-8 text-center text-slate-500">
+				<div class="text-ink-faint flex flex-col items-center justify-center py-8 text-center">
 					<Loader2
 						class={cn(
 							'mb-2 h-8 w-8',
-							status === 'failed' ? 'hidden' : 'animate-spin text-slate-300'
+							status === 'failed' ? 'hidden' : 'animate-spin text-ink-faint'
 						)}
 					/>
 					<p class="text-sm">
@@ -114,6 +114,8 @@
 			{/if}
 		</div>
 	{:else}
-		<div class="px-6 pb-6 text-sm text-slate-500">Expand to view logs and automation snippets.</div>
+		<div class="text-ink-faint px-6 pb-6 text-sm">
+			Expand to view logs and automation snippets.
+		</div>
 	{/if}
 </Panel>

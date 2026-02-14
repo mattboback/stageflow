@@ -45,8 +45,8 @@
 						isCompleted
 							? 'border-accent bg-accent text-white shadow-md'
 							: isCurrent
-								? 'border-accent text-accent-ink scale-110 bg-white'
-								: 'border-line bg-white text-slate-300'
+								? 'border-accent bg-surface text-accent-ink scale-110'
+								: 'border-line bg-surface text-ink-faint'
 					)}
 				>
 					{#if isCompleted}
@@ -60,7 +60,7 @@
 				<span
 					class={cn(
 						'text-xs font-semibold tracking-wider uppercase',
-						isFuture ? 'text-slate-400' : 'text-slate-900'
+						isFuture ? 'text-ink-faint' : 'text-ink'
 					)}
 				>
 					{step.label}

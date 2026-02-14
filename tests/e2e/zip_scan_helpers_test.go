@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func httpClient() *http.Client {
 func waitForAPI(t *testing.T) {
 	t.Helper()
 
-	timeout := time.NewTimer(30 * time.Second)
+	timeout := time.NewTimer(apiReadyTimeout())
 	defer timeout.Stop()
 
 	ticker := time.NewTicker(1 * time.Second)
@@ -42,6 +43,18 @@ func waitForAPI(t *testing.T) {
 			}
 		}
 	}
+}
+
+func apiReadyTimeout() time.Duration {
+	const defaultTimeout = 120 * time.Second
+
+	if raw := os.Getenv("E2E_API_READY_TIMEOUT_SECONDS"); raw != "" {
+		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+			return time.Duration(seconds) * time.Second
+		}
+	}
+
+	return defaultTimeout
 }
 
 func isAPIReady(t *testing.T, client *http.Client) bool {

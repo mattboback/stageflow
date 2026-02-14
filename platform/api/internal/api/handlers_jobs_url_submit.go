@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -133,6 +134,16 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	envelope := events.NewEnvelope(events.EventJobCreated, jobID, "platform-api", payload)
 	envelope.RequestID = logging.RequestID(ctx)
 	envelope.RunID = logging.RunID(ctx)
+
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		if errors.Is(ctxErr, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+		} else {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+		}
+
+		return
+	}
 
 	if publishErr := s.config.Publisher.PublishJobCreated(ctx, envelope); publishErr != nil {
 		logging.Error(ctx, "Failed to publish job.created event", "error", publishErr)

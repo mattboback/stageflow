@@ -187,7 +187,7 @@
 						</button>
 					{/if}
 				</div>
-				<div class="grid gap-3 lg:grid-cols-[1.4fr,1fr]">
+				<div class="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr,1fr]">
 					<div class="relative">
 						<Search class="text-ink-faint absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 						<Input
@@ -233,7 +233,7 @@
 					</button>
 				</div>
 				{#if showMoreFilters || hasSecondaryFilters}
-					<div class="grid gap-3 sm:grid-cols-2">
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<label class="text-ink-muted text-xs">
 							Category
 							<Select

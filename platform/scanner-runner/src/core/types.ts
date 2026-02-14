@@ -135,6 +135,7 @@ export interface BrowserConfig {
   deviceScaleFactor: number;
   defaultTimeout: number;
   pageLoadTimeout: number;
+  bypassCSP?: boolean;
 }
 
 export interface StorageConfig {

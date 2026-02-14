@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -134,14 +135,6 @@ func parseAllowedOrigins(raw string) map[string]bool {
 
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		domain := strings.TrimSpace(os.Getenv("STAGEFLOW_PUBLIC_DOMAIN"))
-		if domain == "" {
-			domain = "example.com"
-		}
-
-		out["https://"+domain] = true
-		out["https://www."+domain] = true
-
 		return out
 	}
 
@@ -177,6 +170,12 @@ func timeoutMiddleware(timeout time.Duration, next http.HandlerFunc) http.Handle
 
 		select {
 		case <-done:
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				writeTimeoutJSON(w, r, timeout)
+
+				return
+			}
+
 			// Handler completed normally.
 			code, header, body := tw.snapshot()
 			for k, vv := range header {
@@ -191,20 +190,24 @@ func timeoutMiddleware(timeout time.Duration, next http.HandlerFunc) http.Handle
 		case <-ctx.Done():
 			// Timeout reached.
 			tw.markTimedOut()
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusServiceUnavailable)
-
-			if _, err := w.Write([]byte(`{"error":"request timeout","code":"REQUEST_TIMEOUT"}`)); err != nil {
-				slog.Warn("Failed to write timeout response", "error", err)
-			}
-
-			slog.Warn("Request timeout",
-				"method", r.Method,
-				"path", r.URL.Path,
-				"timeout", timeout.String(),
-			)
+			writeTimeoutJSON(w, r, timeout)
 		}
 	}
+}
+
+func writeTimeoutJSON(w http.ResponseWriter, r *http.Request, timeout time.Duration) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusServiceUnavailable)
+
+	if _, err := w.Write([]byte(`{"error":"request timeout","code":"REQUEST_TIMEOUT"}`)); err != nil {
+		slog.Warn("Failed to write timeout response", "error", err)
+	}
+
+	slog.Warn("Request timeout",
+		"method", r.Method,
+		"path", r.URL.Path,
+		"timeout", timeout.String(),
+	)
 }
 
 type timeoutResponseWriter struct {

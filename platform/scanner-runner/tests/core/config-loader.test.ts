@@ -8,14 +8,20 @@ const ORIGINAL_ENV = process.env;
 
 function resetEnv(): void {
   process.env = { ...ORIGINAL_ENV };
-  // Default to development mode for tests unless explicitly set
   delete process.env.NODE_ENV;
+}
+
+function setRequiredRuntimeEnv(): void {
+  process.env.MINIO_ENDPOINT = "minio.example.com:9000";
+  process.env.MINIO_ACCESS_KEY = "access";
+  process.env.MINIO_SECRET_KEY = "secret";
+  process.env.MINIO_ARTIFACT_BUCKET = "artifacts";
+  process.env.NATS_URL = "nats://nats.example.com:4222";
 }
 
 describe("config-loader", () => {
   beforeEach(() => {
     resetEnv();
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -31,6 +37,7 @@ describe("config-loader", () => {
   });
 
   it("parses scanner options from JSON and applies defaults", () => {
+    setRequiredRuntimeEnv();
     process.env.JOB_ID = "job-123";
     process.env.SCAN_CONCURRENCY = "2";
     process.env.MAX_RETRIES = "5";
@@ -48,50 +55,44 @@ describe("config-loader", () => {
     expect(config.concurrency).toBe(2);
     expect(config.maxRetries).toBe(5);
     expect(config.options).toEqual({ locale: "en-US" });
-    expect(config.storage.bucket).toBe("scanner-artifacts");
+    expect(config.storage.bucket).toBe("artifacts");
   });
 
-  describe("production environment validation", () => {
-    it("throws when MINIO_ENDPOINT is missing in production", () => {
-      process.env.NODE_ENV = "production";
+  describe("runtime environment validation", () => {
+    it("throws when MINIO_ENDPOINT is missing", () => {
       process.env.JOB_ID = "job-123";
+      setRequiredRuntimeEnv();
+      delete process.env.MINIO_ENDPOINT;
 
       expect(() => loadConfigFromEnv({ scannerName: "axe" })).toThrow(
-        "MINIO_ENDPOINT is required in production",
+        "Required environment variable MINIO_ENDPOINT is not set",
       );
     });
 
-    it("throws when MINIO_ACCESS_KEY is missing in production", () => {
-      process.env.NODE_ENV = "production";
+    it("throws when MINIO access key aliases are missing", () => {
       process.env.JOB_ID = "job-123";
-      process.env.MINIO_ENDPOINT = "minio.example.com:9000";
+      setRequiredRuntimeEnv();
+      delete process.env.MINIO_ACCESS_KEY;
+      delete process.env.MINIO_ROOT_USER;
 
       expect(() => loadConfigFromEnv({ scannerName: "axe" })).toThrow(
-        "MINIO_ACCESS_KEY is required in production",
+        "Required environment variable not set (expected one of: MINIO_ACCESS_KEY, MINIO_ROOT_USER)",
       );
     });
 
-    it("throws when NATS_URL is missing in production", () => {
-      process.env.NODE_ENV = "production";
+    it("throws when NATS_URL is missing", () => {
       process.env.JOB_ID = "job-123";
-      process.env.MINIO_ENDPOINT = "minio.example.com:9000";
-      process.env.MINIO_ACCESS_KEY = "access";
-      process.env.MINIO_SECRET_KEY = "secret";
-      process.env.MINIO_ARTIFACT_BUCKET = "artifacts";
+      setRequiredRuntimeEnv();
+      delete process.env.NATS_URL;
 
       expect(() => loadConfigFromEnv({ scannerName: "axe" })).toThrow(
-        "NATS_URL is required in production",
+        "Required environment variable NATS_URL is not set",
       );
     });
 
-    it("succeeds when all required env vars are set in production", () => {
-      process.env.NODE_ENV = "production";
+    it("succeeds when all required env vars are set", () => {
       process.env.JOB_ID = "job-123";
-      process.env.MINIO_ENDPOINT = "minio.example.com:9000";
-      process.env.MINIO_ACCESS_KEY = "access";
-      process.env.MINIO_SECRET_KEY = "secret";
-      process.env.MINIO_ARTIFACT_BUCKET = "artifacts";
-      process.env.NATS_URL = "nats://nats.example.com:4222";
+      setRequiredRuntimeEnv();
 
       const config = loadConfigFromEnv({ scannerName: "axe" });
 
@@ -101,31 +102,23 @@ describe("config-loader", () => {
     });
   });
 
-  describe("development environment defaults", () => {
-    it("uses development defaults and warns when storage env vars missing", () => {
+  describe("required aliases", () => {
+    it("accepts MINIO_ROOT_USER and MINIO_ROOT_PASSWORD aliases", () => {
       process.env.JOB_ID = "job-123";
+      process.env.MINIO_ENDPOINT = "minio.example.com:9000";
+      process.env.MINIO_ROOT_USER = "root-access";
+      process.env.MINIO_ROOT_PASSWORD = "root-secret";
+      process.env.MINIO_ARTIFACT_BUCKET = "artifacts";
+      process.env.NATS_URL = "nats://nats.example.com:4222";
 
       const config = loadConfigFromEnv({ scannerName: "axe" });
-
-      expect(config.storage.endpoint).toBe("localhost:9000");
-      expect(config.storage.accessKey).toBe("minioadmin");
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Using development storage defaults"),
-      );
-    });
-
-    it("warns when NATS_URL is missing in development", () => {
-      process.env.JOB_ID = "job-123";
-
-      loadConfigFromEnv({ scannerName: "axe" });
-
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining("Using development NATS URL"),
-      );
+      expect(config.storage.accessKey).toBe("root-access");
+      expect(config.storage.secretKey).toBe("root-secret");
     });
   });
 
   it("throws when scanner options JSON is invalid", () => {
+    setRequiredRuntimeEnv();
     process.env.JOB_ID = "job-123";
     process.env.SCANNER_OPTIONS = "{nope";
 
@@ -135,6 +128,7 @@ describe("config-loader", () => {
   });
 
   it("throws when scanner options are not an object", () => {
+    setRequiredRuntimeEnv();
     process.env.JOB_ID = "job-123";
     process.env.SCANNER_OPTIONS = JSON.stringify(["bad"]);
 

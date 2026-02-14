@@ -167,7 +167,8 @@ StageFlow is designed for self-hosting. All domain-specific configuration is dri
 
 ```bash
 # .env
-STAGEFLOW_PUBLIC_DOMAIN=your-domain.com    # Used by Caddy, CORS, presigned URLs
+STAGEFLOW_PUBLIC_DOMAIN=your-domain.com    # Used by Caddy and presigned URLs
+PLATFORM_API_CORS_ALLOW_ORIGINS=https://your-domain.com,https://www.your-domain.com
 VITE_API_URL=https://your-domain.com       # Frontend API endpoint
 VITE_SITE_URL=https://your-domain.com      # Frontend site URL
 ```

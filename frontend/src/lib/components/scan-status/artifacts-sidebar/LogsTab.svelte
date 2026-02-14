@@ -29,5 +29,5 @@
 		<OpenLinkButton label="Extraction Recipe" url={artifacts.extraction_recipe} />
 	</div>
 {:else}
-	<p class="text-sm text-slate-500">No logs were generated for this run.</p>
+	<p class="text-ink-faint text-sm">No logs were generated for this run.</p>
 {/if}

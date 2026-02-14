@@ -100,8 +100,29 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jobCtx := logging.WithJobID(r.Context(), jobReq.jobID)
+	if err := jobCtx.Err(); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+		} else {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+		}
+
+		return
+	}
 
 	if err := s.enqueueZipJob(jobCtx, jobReq); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+
+			return
+		}
+
+		if errors.Is(err, context.Canceled) {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+
+			return
+		}
+
 		logging.Error(jobCtx, "Failed to queue job", "error", err)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to persist job")
 
@@ -118,6 +139,18 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleZipParseError(ctx context.Context, w http.ResponseWriter, err error) bool {
 	if err == nil {
 		return false
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+
+		return true
+	}
+
+	if errors.Is(err, context.Canceled) {
+		httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+
+		return true
 	}
 
 	if isRequestTooLarge(err) {
@@ -272,6 +305,11 @@ func (s *Server) handleZipFilePart(
 	}
 
 	path := fmt.Sprintf("staging/%s/%s", jobID, filename)
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	if err := s.config.Storage.UploadFile(ctx, storage.BucketStaging, path, part, -1); err != nil {
 		logging.Error(ctx, "Failed to upload file to MinIO", "error", err)
 
@@ -379,6 +417,10 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 	envelope := events.NewEnvelope(events.EventJobCreated, req.jobID, "platform-api", payload)
 	envelope.RequestID = logging.RequestID(ctx)
 	envelope.RunID = logging.RunID(ctx)
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	if err := s.config.Publisher.PublishJobCreated(ctx, envelope); err != nil {
 		return fmt.Errorf("failed to publish job.created event: %w", err)

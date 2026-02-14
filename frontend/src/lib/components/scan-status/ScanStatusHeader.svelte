@@ -29,7 +29,7 @@
 	>
 		<div>
 			<div class="mb-2 flex items-center gap-3">
-				<h1 class="text-2xl font-bold text-slate-900">Scan Status</h1>
+				<h1 class="text-ink text-2xl font-bold tracking-tight">Scan Status</h1>
 				<Badge
 					class={cn(
 						'px-3 py-1',
@@ -43,14 +43,14 @@
 					{status.toUpperCase()}
 				</Badge>
 			</div>
-			<p class="font-mono text-xs text-slate-500">ID: {id}</p>
+			<p class="text-ink-faint font-mono text-xs">ID: {id}</p>
 		</div>
 		<div
-			class="border-line bg-surface-muted flex items-center gap-4 rounded-lg border px-4 py-2 text-sm text-slate-600"
+			class="border-line bg-surface-muted text-ink-muted flex items-center gap-4 rounded-lg border px-4 py-2 text-sm"
 		>
 			<Clock class="text-accent h-4 w-4" />
 			<span class="font-medium">Duration:</span>
-			<span class="font-mono">{formatTime(elapsed)}</span>
+			<span class="text-ink font-mono">{formatTime(elapsed)}</span>
 		</div>
 	</div>
 
@@ -58,7 +58,7 @@
 	{#if isProcessing}
 		<div class="border-line bg-surface rounded-xl border p-4">
 			<div class="mb-2 flex items-center justify-between text-sm">
-				<span class="font-medium text-slate-700">
+				<span class="text-ink-muted font-medium">
 					{#if progress}
 						{#if progress.current_page > 0}
 							Scanning page {progress.current_page} of {progress.total_pages}
@@ -69,7 +69,7 @@
 						Initializing scan...
 					{/if}
 				</span>
-				<span class="font-mono text-slate-500">{progressPercent}%</span>
+				<span class="text-ink-faint font-mono">{progressPercent}%</span>
 			</div>
 			<Progress value={progress ? progressPercent : status === 'pending' ? 0 : 10} class="h-3" />
 		</div>

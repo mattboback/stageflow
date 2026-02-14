@@ -22,7 +22,7 @@
 				href={SITE.githubUrl}
 				target="_blank"
 				rel="noopener noreferrer"
-				class="text-ink-faint hover:text-ink"
+				class="text-ink-faint hover:text-ink -m-2 rounded-md p-2"
 				aria-label="GitHub"
 			>
 				<GithubIcon class="h-4 w-4" />
