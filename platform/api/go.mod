@@ -13,7 +13,7 @@ require (
 	github.com/mattboback/stageflow/packages/contracts/report/generated/go v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/packages/shared-go v0.0.0-00010101000000-000000000000
 	github.com/mattn/go-sqlite3 v1.14.33
-	github.com/nats-io/nats-server/v2 v2.12.3
+	github.com/nats-io/nats-server/v2 v2.12.4
 )
 
 require (
