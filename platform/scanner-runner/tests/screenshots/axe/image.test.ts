@@ -5,6 +5,37 @@ import type { ElementBounds } from "../../../src/screenshots/axe/types";
 
 import { compositeOverlay } from "../../../src/screenshots/axe/image";
 
+async function decodeRawRgba(buffer: Buffer): Promise<{
+  data: Buffer;
+  width: number;
+  height: number;
+}> {
+  const { data, info } = await sharp(buffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height };
+}
+
+function getPixel(
+  data: Buffer,
+  width: number,
+  x: number,
+  y: number,
+): { r: number; g: number; b: number; a: number } {
+  const idx = (y * width + x) * 4;
+  return {
+    r: data[idx] ?? 0,
+    g: data[idx + 1] ?? 0,
+    b: data[idx + 2] ?? 0,
+    a: data[idx + 3] ?? 0,
+  };
+}
+
+function isNearlyWhite(pixel: { r: number; g: number; b: number; a: number }): boolean {
+  return pixel.a > 200 && pixel.r > 245 && pixel.g > 245 && pixel.b > 245;
+}
+
 describe("compositeOverlay", () => {
   // Helper to create a test image buffer
   async function createTestImage(width: number, height: number): Promise<Buffer> {
@@ -199,6 +230,58 @@ describe("compositeOverlay", () => {
       );
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("pixel positioning assertions", () => {
+    it("tints pixels inside bounds at DPR=1", async () => {
+      const buffer = await createTestImage(200, 200);
+      const bounds: ElementBounds[] = [
+        { x: 20, y: 30, width: 40, height: 50, selector: "#test" },
+      ];
+
+      const result = await compositeOverlay(
+        buffer,
+        bounds,
+        { highlightStyle: "solid" },
+        200,
+      );
+
+      const { data, width, height } = await decodeRawRgba(result);
+      expect(width).toBe(200);
+      expect(height).toBe(200);
+
+      const outside = getPixel(data, width, 5, 5);
+      expect(isNearlyWhite(outside)).toBe(true);
+
+      const inside = getPixel(data, width, 30, 40);
+      expect(isNearlyWhite(inside)).toBe(false);
+    });
+
+    it("scales bounds under DPR=2 (does not tint at unscaled CSS coordinates)", async () => {
+      const buffer = await createTestImage(400, 400);
+      const bounds: ElementBounds[] = [
+        { x: 20, y: 30, width: 40, height: 50, selector: "#test" },
+      ];
+
+      const result = await compositeOverlay(
+        buffer,
+        bounds,
+        { highlightStyle: "solid" },
+        200, // CSS width implies DPR=2 for a 400px-wide image
+      );
+
+      const { data, width, height } = await decodeRawRgba(result);
+      expect(width).toBe(400);
+      expect(height).toBe(400);
+
+      // Unscaled CSS coordinate should remain white.
+      const unscaled = getPixel(data, width, 30, 40);
+      expect(isNearlyWhite(unscaled)).toBe(true);
+
+      // Scaled coordinate should be tinted.
+      const scaled = getPixel(data, width, 20 * 2 + 10, 30 * 2 + 10);
+      expect(isNearlyWhite(scaled)).toBe(false);
     });
   });
 

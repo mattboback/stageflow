@@ -23,11 +23,39 @@ type minioObject interface {
 type minioAPI interface {
 	BucketExists(ctx context.Context, bucketName string) (bool, error)
 	MakeBucket(ctx context.Context, bucketName string, opts minio.MakeBucketOptions) error
-	PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error)
-	PresignedGetObject(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error)
-	GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (minioObject, error)
-	RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error
-	StatObject(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error)
+	PutObject(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		reader io.Reader,
+		objectSize int64,
+		opts minio.PutObjectOptions,
+	) (minio.UploadInfo, error)
+	PresignedGetObject(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		expires time.Duration,
+		reqParams url.Values,
+	) (*url.URL, error)
+	GetObject(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		opts minio.GetObjectOptions,
+	) (minioObject, error)
+	RemoveObject(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		opts minio.RemoveObjectOptions,
+	) error
+	StatObject(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		opts minio.StatObjectOptions,
+	) (minio.ObjectInfo, error)
 }
 
 type minioClientAdapter struct {
@@ -42,27 +70,56 @@ func (a *minioClientAdapter) MakeBucket(ctx context.Context, bucketName string, 
 	return a.client.MakeBucket(ctx, bucketName, opts)
 }
 
-func (a *minioClientAdapter) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+func (a *minioClientAdapter) PutObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	reader io.Reader,
+	objectSize int64,
+	opts minio.PutObjectOptions,
+) (minio.UploadInfo, error) {
 	return a.client.PutObject(ctx, bucketName, objectName, reader, objectSize, opts)
 }
 
-func (a *minioClientAdapter) PresignedGetObject(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error) {
+func (a *minioClientAdapter) PresignedGetObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	expires time.Duration,
+	reqParams url.Values,
+) (*url.URL, error) {
 	return a.client.PresignedGetObject(ctx, bucketName, objectName, expires, reqParams)
 }
 
-func (a *minioClientAdapter) GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (minioObject, error) {
+func (a *minioClientAdapter) GetObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	opts minio.GetObjectOptions,
+) (minioObject, error) {
 	obj, err := a.client.GetObject(ctx, bucketName, objectName, opts)
 	if err != nil {
 		return nil, err
 	}
+
 	return obj, nil
 }
 
-func (a *minioClientAdapter) RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error {
+func (a *minioClientAdapter) RemoveObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	opts minio.RemoveObjectOptions,
+) error {
 	return a.client.RemoveObject(ctx, bucketName, objectName, opts)
 }
 
-func (a *minioClientAdapter) StatObject(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error) {
+func (a *minioClientAdapter) StatObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	opts minio.StatObjectOptions,
+) (minio.ObjectInfo, error) {
 	return a.client.StatObject(ctx, bucketName, objectName, opts)
 }
 
@@ -97,11 +154,13 @@ func NewMinIOClient(cfg *MinIOConfig) (*MinIOClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MinIO client: %w", err)
 	}
+
 	client := &minioClientAdapter{client: internalRaw}
 
 	// Create public client once if public endpoint is configured
 	// This avoids creating a new client on every presigned URL request
 	var publicClient minioAPI
+
 	if cfg.PublicEndpoint != "" {
 		publicRaw, newErr := minio.New(cfg.PublicEndpoint, &minio.Options{
 			Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
@@ -111,6 +170,7 @@ func NewMinIOClient(cfg *MinIOConfig) (*MinIOClient, error) {
 		if newErr != nil {
 			return nil, fmt.Errorf("failed to create public MinIO client: %w", newErr)
 		}
+
 		publicClient = &minioClientAdapter{client: publicRaw}
 	}
 
@@ -143,7 +203,12 @@ func (c *MinIOClient) ensureBucket(ctx context.Context, bucket string) error {
 	return c.ensureBucketWithRetry(ctx, bucket, maxRetries, retryDelay)
 }
 
-func (c *MinIOClient) ensureBucketWithRetry(ctx context.Context, bucket string, maxRetries int, retryDelay time.Duration) error {
+func (c *MinIOClient) ensureBucketWithRetry(
+	ctx context.Context,
+	bucket string,
+	maxRetries int,
+	retryDelay time.Duration,
+) error {
 	var lastErr error
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {

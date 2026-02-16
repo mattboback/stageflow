@@ -23,11 +23,34 @@ type fakeMinioClient struct {
 
 	BucketExistsFn func(ctx context.Context, bucketName string) (bool, error)
 	MakeBucketFn   func(ctx context.Context, bucketName string, opts minio.MakeBucketOptions) error
-	PutObjectFn    func(ctx context.Context, bucketName, objectName string, reader *bytes.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error)
-	PresignFn      func(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error)
-	GetObjectFn    func(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (minioObject, error)
+	PutObjectFn    func(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		reader *bytes.Reader,
+		objectSize int64,
+		opts minio.PutObjectOptions,
+	) (minio.UploadInfo, error)
+	PresignFn func(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		expires time.Duration,
+		reqParams url.Values,
+	) (*url.URL, error)
+	GetObjectFn func(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		opts minio.GetObjectOptions,
+	) (minioObject, error)
 	RemoveObjectFn func(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error
-	StatObjectFn   func(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error)
+	StatObjectFn   func(
+		ctx context.Context,
+		bucketName string,
+		objectName string,
+		opts minio.StatObjectOptions,
+	) (minio.ObjectInfo, error)
 }
 
 func (f *fakeMinioClient) BucketExists(ctx context.Context, bucketName string) (bool, error) {
@@ -35,6 +58,7 @@ func (f *fakeMinioClient) BucketExists(ctx context.Context, bucketName string) (
 	if f.BucketExistsFn != nil {
 		return f.BucketExistsFn(ctx, bucketName)
 	}
+
 	return false, nil
 }
 
@@ -43,10 +67,18 @@ func (f *fakeMinioClient) MakeBucket(ctx context.Context, bucketName string, opt
 	if f.MakeBucketFn != nil {
 		return f.MakeBucketFn(ctx, bucketName, opts)
 	}
+
 	return nil
 }
 
-func (f *fakeMinioClient) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+func (f *fakeMinioClient) PutObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	reader io.Reader,
+	objectSize int64,
+	opts minio.PutObjectOptions,
+) (minio.UploadInfo, error) {
 	f.putObjectSizes = append(f.putObjectSizes, objectSize)
 
 	if r, ok := reader.(*bytes.Reader); ok && f.PutObjectFn != nil {
@@ -61,35 +93,60 @@ func (f *fakeMinioClient) PutObject(ctx context.Context, bucketName, objectName 
 	return minio.UploadInfo{Size: objectSize}, nil
 }
 
-func (f *fakeMinioClient) PresignedGetObject(ctx context.Context, bucketName, objectName string, expires time.Duration, reqParams url.Values) (*url.URL, error) {
-	f.presignCalls += 1
+func (f *fakeMinioClient) PresignedGetObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	expires time.Duration,
+	reqParams url.Values,
+) (*url.URL, error) {
+	f.presignCalls++
 	if f.PresignFn != nil {
 		return f.PresignFn(ctx, bucketName, objectName, expires, reqParams)
 	}
+
 	return nil, errors.New("no presign stub")
 }
 
-func (f *fakeMinioClient) GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (minioObject, error) {
-	f.getObjectCalls += 1
+func (f *fakeMinioClient) GetObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	opts minio.GetObjectOptions,
+) (minioObject, error) {
+	f.getObjectCalls++
 	if f.GetObjectFn != nil {
 		return f.GetObjectFn(ctx, bucketName, objectName, opts)
 	}
+
 	return nil, errors.New("no get object stub")
 }
 
-func (f *fakeMinioClient) RemoveObject(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error {
-	f.removeObjectCalls += 1
+func (f *fakeMinioClient) RemoveObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	opts minio.RemoveObjectOptions,
+) error {
+	f.removeObjectCalls++
 	if f.RemoveObjectFn != nil {
 		return f.RemoveObjectFn(ctx, bucketName, objectName, opts)
 	}
+
 	return nil
 }
 
-func (f *fakeMinioClient) StatObject(ctx context.Context, bucketName, objectName string, opts minio.StatObjectOptions) (minio.ObjectInfo, error) {
-	f.statObjectCalls += 1
+func (f *fakeMinioClient) StatObject(
+	ctx context.Context,
+	bucketName string,
+	objectName string,
+	opts minio.StatObjectOptions,
+) (minio.ObjectInfo, error) {
+	f.statObjectCalls++
 	if f.StatObjectFn != nil {
 		return f.StatObjectFn(ctx, bucketName, objectName, opts)
 	}
+
 	return minio.ObjectInfo{}, nil
 }
 
@@ -112,6 +169,7 @@ func (o *fakeObject) Stat() (minio.ObjectInfo, error) {
 	if o.statErr != nil {
 		return minio.ObjectInfo{}, o.statErr
 	}
+
 	return minio.ObjectInfo{}, nil
 }
 
@@ -120,6 +178,7 @@ func TestEnsureBuckets_DoesNotCreateWhenExists(t *testing.T) {
 		BucketExistsFn: func(_ context.Context, _ string) (bool, error) { return true, nil },
 		MakeBucketFn: func(_ context.Context, bucketName string, _ minio.MakeBucketOptions) error {
 			t.Fatalf("unexpected make bucket call: %s", bucketName)
+
 			return nil
 		},
 	}
@@ -132,6 +191,7 @@ func TestEnsureBuckets_DoesNotCreateWhenExists(t *testing.T) {
 	if got := len(fake.bucketExistsBuckets); got != 2 {
 		t.Fatalf("expected 2 BucketExists calls, got %d", got)
 	}
+
 	if len(fake.makeBucketBuckets) != 0 {
 		t.Fatalf("expected no MakeBucket calls, got %d", len(fake.makeBucketBuckets))
 	}
@@ -156,10 +216,11 @@ func TestEnsureBucketWithRetry_RetriesWithoutSleeping(t *testing.T) {
 	calls := 0
 	fake := &fakeMinioClient{
 		BucketExistsFn: func(_ context.Context, _ string) (bool, error) {
-			calls += 1
+			calls++
 			if calls < 3 {
 				return false, errors.New("temporary failure")
 			}
+
 			return true, nil
 		},
 	}
@@ -168,6 +229,7 @@ func TestEnsureBucketWithRetry_RetriesWithoutSleeping(t *testing.T) {
 	if err := client.ensureBucketWithRetry(context.Background(), "scanner-staging", 3, 0); err != nil {
 		t.Fatalf("ensureBucketWithRetry: %v", err)
 	}
+
 	if calls != 3 {
 		t.Fatalf("expected 3 BucketExists attempts, got %d", calls)
 	}
@@ -220,7 +282,8 @@ func TestGetPresignedURL_UsesPublicClientWhenConfigured(t *testing.T) {
 	internal := &fakeMinioClient{
 		PresignFn: func(_ context.Context, _, _ string, _ time.Duration, _ url.Values) (*url.URL, error) {
 			t.Fatalf("unexpected internal presign call")
-			return nil, nil
+
+			return nil, errors.New("unexpected internal presign call")
 		},
 	}
 
@@ -241,9 +304,11 @@ func TestGetPresignedURL_UsesPublicClientWhenConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetPresignedURL: %v", err)
 	}
+
 	if got != publicURL.String() {
 		t.Fatalf("expected %q, got %q", publicURL.String(), got)
 	}
+
 	if public.presignCalls != 1 {
 		t.Fatalf("expected 1 public presign call, got %d", public.presignCalls)
 	}
@@ -266,6 +331,7 @@ func TestGetPresignedURL_FallsBackToInternalClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetPresignedURL: %v", err)
 	}
+
 	if got != internalURL.String() {
 		t.Fatalf("expected %q, got %q", internalURL.String(), got)
 	}
@@ -284,6 +350,7 @@ func TestDownloadFile_ClosesObjectWhenStatFails(t *testing.T) {
 	if _, err := client.DownloadFile(context.Background(), "bucket", "path"); err == nil {
 		t.Fatalf("expected error")
 	}
+
 	if !obj.closed {
 		t.Fatalf("expected object to be closed on Stat failure")
 	}
@@ -310,10 +377,12 @@ func TestFileExists_HandlesNoSuchKey(t *testing.T) {
 	}
 
 	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
+
 	exists, err := client.FileExists(context.Background(), "bucket", "path")
 	if err != nil {
 		t.Fatalf("FileExists: %v", err)
 	}
+
 	if exists {
 		t.Fatalf("expected exists=false for NoSuchKey")
 	}

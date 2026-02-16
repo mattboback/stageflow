@@ -218,7 +218,6 @@ func (o *Orchestrator) ensureReadyForScanning(
 	jobID string,
 	job *models.Job,
 ) (bool, error) {
-	//nolint:exhaustive // Early states (Pending, Extracting) handled by default case.
 	switch job.State {
 	case models.JobStateReady:
 		slog.Debug("Job already in READY state", "job_id", job.ID)
@@ -237,34 +236,38 @@ func (o *Orchestrator) ensureReadyForScanning(
 		slog.Debug("Job already failed, ignoring extraction.ready", "job_id", job.ID)
 
 		return false, nil
+	case models.JobStatePending, models.JobStateExtracting:
+		// Continue to transition check.
 	default:
-		if !o.stateMachine.CanTransition(job.State, models.JobStateReady) {
-			msg := fmt.Sprintf("job %s cannot transition to READY from %s", job.ID, job.State)
-			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
-			o.failJobSafeWithDetails(
-				ctx,
-				job.ID,
-				"extraction",
-				msg,
-				stateTransitionDetails(job.State, models.JobStateReady),
-			)
-
-			return false, fmt.Errorf("%s", msg)
-		}
-
-		if stateErr := o.database.UpdateJobState(ctx, jobID, models.JobStateReady); stateErr != nil {
-			return false, fmt.Errorf("failed to update job state: %w", stateErr)
-		}
-
-		o.recordInternalEvent(ctx, job.ID, "orchestrator.state.transition", map[string]any{
-			"from": string(job.State),
-			"to":   string(models.JobStateReady),
-		})
-
-		job.State = models.JobStateReady
-
-		return true, nil
+		// Continue to transition check (unexpected state).
 	}
+
+	if !o.stateMachine.CanTransition(job.State, models.JobStateReady) {
+		msg := fmt.Sprintf("job %s cannot transition to READY from %s", job.ID, job.State)
+		slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
+		o.failJobSafeWithDetails(
+			ctx,
+			job.ID,
+			"extraction",
+			msg,
+			stateTransitionDetails(job.State, models.JobStateReady),
+		)
+
+		return false, fmt.Errorf("%s", msg)
+	}
+
+	if stateErr := o.database.UpdateJobState(ctx, jobID, models.JobStateReady); stateErr != nil {
+		return false, fmt.Errorf("failed to update job state: %w", stateErr)
+	}
+
+	o.recordInternalEvent(ctx, job.ID, "orchestrator.state.transition", map[string]any{
+		"from": string(job.State),
+		"to":   string(models.JobStateReady),
+	})
+
+	job.State = models.JobStateReady
+
+	return true, nil
 }
 
 // HandleExtractionFailed handles extraction.failed events.
@@ -399,7 +402,6 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 			return fmt.Errorf("failed to get job: %w", err)
 		}
 
-		//nolint:exhaustive // Only terminal states need early-exit; others proceed to recording.
 		switch job.State {
 		case models.JobStateDone:
 			slog.Debug("Job already marked DONE, ignoring scan.completed", "job_id", job.ID, "scanner", scannerType)
@@ -409,6 +411,14 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 			slog.Debug("Job already failed, ignoring scan.completed", "job_id", job.ID, "scanner", scannerType)
 
 			return nil
+		case models.JobStatePending,
+			models.JobStateExtracting,
+			models.JobStateReady,
+			models.JobStateScanning,
+			models.JobStateCompleting:
+			// Continue to recording.
+		default:
+			// Continue to recording (unexpected state).
 		}
 
 		// Record this scanner's completion with metrics
