@@ -4,6 +4,7 @@ import type { PageOverviewViolation } from "../../../src/screenshots/axe/types";
 
 import {
   collectPageOverviewTargets,
+  clipPageOverviewBounds,
   computeScreenshotScaleFactor,
   loadPageOverviewConfig,
 } from "../../../src/screenshots/axe/page-overview";
@@ -74,6 +75,43 @@ describe("computeScreenshotScaleFactor", () => {
     expect(yPercent).toBe(13.2);
     expect(widthPercent).toBe(3.91);
     expect(heightPercent).toBe(1.32);
+  });
+});
+
+describe("clipPageOverviewBounds", () => {
+  it("returns null for invalid max dimensions", () => {
+    expect(clipPageOverviewBounds({ x: 0, y: 0, width: 10, height: 10 }, 0, 100)).toBeNull();
+    expect(clipPageOverviewBounds({ x: 0, y: 0, width: 10, height: 10 }, 100, 0)).toBeNull();
+  });
+
+  it("returns null for non-finite or non-positive bounds", () => {
+    expect(
+      clipPageOverviewBounds({ x: Number.NaN, y: 0, width: 10, height: 10 }, 100, 100),
+    ).toBeNull();
+    expect(clipPageOverviewBounds({ x: 0, y: 0, width: 0, height: 10 }, 100, 100)).toBeNull();
+    expect(clipPageOverviewBounds({ x: 0, y: 0, width: 10, height: -1 }, 100, 100)).toBeNull();
+  });
+
+  it("returns null when bounds are entirely outside the image", () => {
+    expect(clipPageOverviewBounds({ x: 200, y: 0, width: 10, height: 10 }, 100, 100)).toBeNull();
+    expect(clipPageOverviewBounds({ x: 0, y: 200, width: 10, height: 10 }, 100, 100)).toBeNull();
+    expect(clipPageOverviewBounds({ x: -50, y: -50, width: 10, height: 10 }, 100, 100)).toBeNull();
+  });
+
+  it("clips bounds that extend beyond edges", () => {
+    expect(clipPageOverviewBounds({ x: -10, y: 5, width: 50, height: 10 }, 100, 100)).toEqual({
+      x: 0,
+      y: 5,
+      width: 40,
+      height: 10,
+    });
+
+    expect(clipPageOverviewBounds({ x: 90, y: 90, width: 20, height: 20 }, 100, 100)).toEqual({
+      x: 90,
+      y: 90,
+      width: 10,
+      height: 10,
+    });
   });
 });
 
