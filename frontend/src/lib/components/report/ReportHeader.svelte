@@ -24,34 +24,38 @@
 	const duration = $derived(formatDuration(report.meta.durationMs));
 </script>
 
-<Panel class="mb-8 shadow-sm" padding="lg" rounded="3xl">
-	<div class="flex flex-wrap items-start justify-between gap-6">
-		<div>
-			<p class="text-ink-muted text-sm font-semibold tracking-wide uppercase">Scan report</p>
+<Panel class="mb-6 shadow-sm ring-1 ring-line/70" padding="lg" rounded="3xl">
+	<div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+		<div class="min-w-0 flex-1">
+			<p class="text-ink-muted text-xs font-semibold tracking-[0.12em] uppercase">Scan report</p>
 			{#if report.meta.baseUrl}
-				<h1 class="text-ink mt-2 text-2xl font-bold">{report.meta.baseUrl}</h1>
+				<h1 class="text-ink mt-2 break-all text-2xl leading-tight font-bold sm:text-3xl">
+					{report.meta.baseUrl}
+				</h1>
 			{/if}
-			<div class="text-ink-muted mt-3 flex flex-wrap gap-4 text-xs">
+			<div class="mt-4 flex flex-wrap items-center gap-2 text-xs">
 				{#if scannedAt}
-					<span>Scanned {scannedAt}</span>
+					<span class="bg-surface-muted text-ink-muted rounded-md px-2.5 py-1">Scanned {scannedAt}</span>
 				{/if}
 				{#if completedAt}
-					<span>Completed {completedAt}</span>
+					<span class="bg-surface-muted text-ink-muted rounded-md px-2.5 py-1">
+						Completed {completedAt}
+					</span>
 				{/if}
 				{#if duration}
-					<span>Duration {duration}</span>
+					<span class="bg-surface-muted text-ink-muted rounded-md px-2.5 py-1">Duration {duration}</span>
 				{/if}
 				{#if job?.state}
-					<span>State {job.state}</span>
+					<span class="bg-surface-muted text-ink-muted rounded-md px-2.5 py-1">State {job.state}</span>
 				{/if}
 			</div>
-			<div class="mt-4 flex flex-wrap items-center gap-3">
+			<div class="mt-4 flex flex-wrap items-center gap-2.5">
 				{#if jsonUrl}
 					<a
 						href={jsonUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-accent inline-flex items-center gap-2 text-sm font-medium hover:underline"
+						class="border-line text-ink hover:border-accent hover:text-accent inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
 					>
 						JSON
 						<ExternalLink class="h-3 w-3" />
@@ -62,7 +66,7 @@
 						href={htmlUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-accent inline-flex items-center gap-2 text-sm font-medium hover:underline"
+						class="border-line text-ink hover:border-accent hover:text-accent inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
 					>
 						HTML report
 						<ExternalLink class="h-3 w-3" />
@@ -79,17 +83,18 @@
 		{#if report.summary.score !== undefined}
 			<div
 				class={cn(
-					'flex h-20 w-20 flex-col items-center justify-center rounded-full text-center text-xl font-bold',
+					'flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full border text-center font-bold shadow-sm',
 					report.summary.score >= 90
-						? 'bg-emerald-100 text-emerald-700'
+						? 'border-emerald-200 bg-emerald-100 text-emerald-700'
 						: report.summary.score >= 70
-							? 'bg-amber-100 text-amber-700'
-							: 'bg-red-100 text-red-700'
+							? 'border-amber-200 bg-amber-100 text-amber-700'
+							: 'border-red-200 bg-red-100 text-red-700'
 				)}
 			>
-				<span class="text-2xl">{report.summary.scoreGrade ?? Math.round(report.summary.score)}</span
-				>
-				<span class="text-xs font-semibold tracking-wide uppercase">Score</span>
+				<span class="text-[1.75rem] leading-none">
+					{report.summary.scoreGrade ?? Math.round(report.summary.score)}
+				</span>
+				<span class="mt-1 text-[0.6rem] font-semibold tracking-[0.14em] uppercase">Score</span>
 			</div>
 		{/if}
 	</div>

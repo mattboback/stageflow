@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
@@ -39,6 +40,10 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 		if !created {
 			existing, getErr := o.database.GetJob(ctx, payload.JobID)
 			if getErr != nil {
+				if shouldIgnoreMissingJob(events.EventJobCreated, payload.JobID, getErr) {
+					return nil
+				}
+
 				return fmt.Errorf("failed to load existing job after duplicate create: %w", getErr)
 			}
 
@@ -132,6 +137,10 @@ func (o *Orchestrator) HandleExtractionReady(ctx context.Context, payload *event
 
 			job, err := o.database.GetJob(ctx, payload.JobID)
 			if err != nil {
+				if shouldIgnoreMissingJob(events.EventExtractionReady, payload.JobID, err) {
+					return nil
+				}
+
 				return fmt.Errorf("failed to get job: %w", err)
 			}
 
@@ -322,6 +331,10 @@ func (o *Orchestrator) HandleScanPageCompleted(ctx context.Context, payload *eve
 		func(ctx context.Context) error {
 			job, err := o.database.GetJob(ctx, payload.JobID)
 			if err != nil {
+				if shouldIgnoreMissingJob(events.EventScanPageCompleted, payload.JobID, err) {
+					return nil
+				}
+
 				return fmt.Errorf("failed to get job: %w", err)
 			}
 
@@ -399,6 +412,10 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 
 		job, err := o.database.GetJob(ctx, payload.JobID)
 		if err != nil {
+			if shouldIgnoreMissingJob(events.EventScanCompleted, payload.JobID, err) {
+				return nil
+			}
+
 			return fmt.Errorf("failed to get job: %w", err)
 		}
 
@@ -493,6 +510,10 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 		// Reload job to include latest per-scanner results for aggregation.
 		job, err = o.database.GetJob(ctx, payload.JobID)
 		if err != nil {
+			if shouldIgnoreMissingJob(events.EventScanCompleted, payload.JobID, err) {
+				return nil
+			}
+
 			return fmt.Errorf("failed to refresh job: %w", err)
 		}
 
@@ -521,6 +542,10 @@ func (o *Orchestrator) HandleScanFailed(ctx context.Context, payload *events.Sca
 
 		job, err := o.database.GetJob(ctx, payload.JobID)
 		if err != nil {
+			if shouldIgnoreMissingJob(events.EventScanFailed, payload.JobID, err) {
+				return nil
+			}
+
 			return fmt.Errorf("failed to get job: %w", err)
 		}
 
@@ -553,6 +578,10 @@ func (o *Orchestrator) HandleScanFailed(ctx context.Context, payload *events.Sca
 		if allComplete {
 			refreshedJob, refreshErr := o.database.GetJob(ctx, payload.JobID)
 			if refreshErr != nil {
+				if shouldIgnoreMissingJob(events.EventScanFailed, payload.JobID, refreshErr) {
+					return nil
+				}
+
 				return fmt.Errorf("failed to refresh job: %w", refreshErr)
 			}
 
@@ -598,4 +627,18 @@ func (o *Orchestrator) HandleScanFailed(ctx context.Context, payload *events.Sca
 
 		return nil
 	})
+}
+
+func shouldIgnoreMissingJob(eventName, jobID string, err error) bool {
+	if err == nil {
+		return false
+	}
+
+	if !strings.Contains(err.Error(), "job not found:") {
+		return false
+	}
+
+	slog.Warn("Ignoring event for unknown job", "event", eventName, "job_id", jobID, "error", err)
+
+	return true
 }

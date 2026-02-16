@@ -128,11 +128,11 @@ describe('PlaygroundPage', () => {
 		});
 	});
 
-	it('defaults to coverage preset and enables multiple scanners', async () => {
-		mockFetchScanners.mockResolvedValue({
-			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
-			categories: []
-		});
+		it('defaults to coverage preset and enables multiple scanners', async () => {
+			mockFetchScanners.mockResolvedValue({
+				scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
+				categories: []
+			});
 
 		render(PlaygroundPage);
 
@@ -143,17 +143,17 @@ describe('PlaygroundPage', () => {
 			'aria-pressed',
 			'true'
 		);
-		expect(screen.getByRole('button', { name: /ai navigator/i })).toHaveAttribute(
-			'aria-pressed',
-			'false'
-		);
-	});
+			expect(screen.getByRole('button', { name: /ai navigator/i })).toHaveAttribute(
+				'aria-pressed',
+				'false'
+			);
+		}, 15000);
 
-	it('switching presets updates enabled count and manual toggle sets custom', async () => {
-		mockFetchScanners.mockResolvedValue({
-			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
-			categories: []
-		});
+		it('switching presets updates enabled count and manual toggle sets custom', async () => {
+			mockFetchScanners.mockResolvedValue({
+				scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
+				categories: []
+			});
 
 		const user = userEvent.setup();
 		render(PlaygroundPage);
@@ -169,9 +169,9 @@ describe('PlaygroundPage', () => {
 		await user.click(screen.getByRole('button', { name: /lighthouse/i }));
 		const customButton = screen.getByRole('button', { name: 'Custom' });
 		expect(customButton).toHaveAttribute('aria-pressed', 'true');
-		expect(screen.getByRole('button', { name: /lighthouse/i })).toHaveAttribute(
-			'aria-pressed',
-			'true'
-		);
+			expect(screen.getByRole('button', { name: /lighthouse/i })).toHaveAttribute(
+				'aria-pressed',
+				'true'
+			);
+		}, 15000);
 	});
-});

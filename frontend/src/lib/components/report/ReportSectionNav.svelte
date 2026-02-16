@@ -41,55 +41,59 @@
 	variant="muted"
 	padding="xs"
 	rounded="2xl"
-	class="mb-8 flex flex-wrap items-center justify-between gap-2"
+	class="mb-6 space-y-2.5"
 >
-	<div class="flex flex-wrap gap-2" role="tablist" aria-label="Report sections">
-		{#each sections as item (item.id)}
-			<button
-				onclick={() => onSectionChange(item.id)}
-				class={cn(
-					'flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition',
-					section === item.id
-						? 'bg-ink text-surface'
-						: 'text-ink-muted hover:bg-surface hover:text-ink'
-				)}
-				role="tab"
-				aria-selected={section === item.id}
-				aria-controls={`report-panel-${item.id}`}
-				id={`report-tab-${item.id}`}
-			>
-				<span>{item.label}</span>
-				{#if typeof item.count === 'number'}
-					<span
-						class={cn(
-							'rounded-full px-2 py-0.5 text-xs font-semibold',
-							section === item.id ? 'bg-surface/20 text-surface' : 'bg-surface text-ink-muted'
-						)}
-						aria-label={`${item.count} ${item.label.toLowerCase()}`}
-					>
-						{item.count}
-					</span>
-				{/if}
-			</button>
-		{/each}
-	</div>
-	{#if onAudienceChange}
-		<div class="flex items-center gap-2">
-			<span class="text-ink-faint text-xs font-semibold tracking-wide uppercase">View</span>
-			{#each audienceOptions as opt (opt.id)}
+	<div class="-mx-1 overflow-x-auto px-1">
+		<div class="flex min-w-max items-center gap-2" role="tablist" aria-label="Report sections">
+			{#each sections as item (item.id)}
 				<button
-					type="button"
-					onclick={() => onAudienceChange(opt.id)}
+					onclick={() => onSectionChange(item.id)}
 					class={cn(
-						'border-line text-ink-muted hover:bg-surface rounded-lg border px-2.5 py-1 text-xs font-semibold transition',
-						audience === opt.id && 'border-accent bg-accent/10 text-accent'
+						'flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold whitespace-nowrap transition',
+						section === item.id
+							? 'bg-ink text-surface'
+							: 'bg-surface text-ink-muted hover:text-ink'
 					)}
-					aria-pressed={audience === opt.id}
-					title={opt.hint}
+					role="tab"
+					aria-selected={section === item.id}
+					aria-controls={`report-panel-${item.id}`}
+					id={`report-tab-${item.id}`}
 				>
-					{opt.label}
+					<span>{item.label}</span>
+					{#if typeof item.count === 'number'}
+						<span
+							class={cn(
+								'rounded-full px-2 py-0.5 text-xs font-semibold',
+								section === item.id ? 'bg-surface/20 text-surface' : 'bg-paper text-ink-faint'
+							)}
+							aria-label={`${item.count} ${item.label.toLowerCase()}`}
+						>
+							{item.count}
+						</span>
+					{/if}
 				</button>
 			{/each}
+		</div>
+	</div>
+	{#if onAudienceChange}
+		<div class="border-line flex flex-wrap items-center justify-between gap-2 border-t px-1 pt-2">
+			<span class="text-ink-faint text-xs font-semibold tracking-wide uppercase">View</span>
+			<div class="flex items-center gap-1.5">
+				{#each audienceOptions as opt (opt.id)}
+					<button
+						type="button"
+						onclick={() => onAudienceChange(opt.id)}
+						class={cn(
+							'border-line text-ink-muted hover:bg-surface rounded-lg border px-2.5 py-1 text-xs font-semibold transition',
+							audience === opt.id && 'border-accent bg-accent/10 text-accent'
+						)}
+						aria-pressed={audience === opt.id}
+						title={opt.hint}
+					>
+						{opt.label}
+					</button>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </Panel>
