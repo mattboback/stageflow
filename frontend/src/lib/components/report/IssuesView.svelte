@@ -160,49 +160,52 @@
 			: sortedIssues
 	);
 	const offsetY = $derived(shouldVirtualize ? virtualWindow.offset : 0);
-
 </script>
 
-
-
-<div class="space-y-4">
+<div class="space-y-3">
 	<Tabs
 		tabs={scannerTabs}
 		value={activeScanner ?? 'all'}
 		onValueChange={(id) => onScannerChange(id === 'all' ? null : id)}
 	/>
 
-	<Panel class="shadow-sm" padding="none" rounded="2xl">
-		<div class="border-line border-b p-4">
-			<div class="flex flex-col gap-3">
-				<div class="flex items-center justify-between">
+	<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
+		<div class="border-line border-b p-4 sm:p-5">
+			<div class="flex flex-col gap-4">
+				<div class="flex items-center justify-between gap-3">
 					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
 						Issues ({filteredIssues.length}{filteredIssues.length !== report.issues.length
 							? ` / ${report.issues.length}`
 							: ''})
 					</h3>
 					{#if hasActiveFilters}
-						<button onclick={onClearFilters} class="text-accent text-sm hover:underline">
+						<button
+							onclick={onClearFilters}
+							class="text-accent text-xs font-semibold tracking-wide uppercase hover:underline"
+						>
 							Clear filters
 						</button>
 					{/if}
 				</div>
-				<div class="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr,1fr]">
+				<div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto]">
 					<div class="relative">
 						<Search class="text-ink-faint absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 						<Input
 							value={localSearchValue}
 							placeholder="Search issues"
-							class="pl-9"
+							class="h-10 pl-9"
 							oninput={(event) =>
 								handleSearchInput((event.currentTarget as HTMLInputElement).value)}
 						/>
 					</div>
-					<div class="flex flex-wrap items-center justify-end gap-3">
-						<label for="issue-sort" class="text-ink-muted text-xs">Sort</label>
+					<div class="flex items-center justify-start gap-2 md:justify-end">
+						<label for="issue-sort" class="text-ink-faint text-xs font-semibold tracking-wide uppercase">
+							Sort
+						</label>
 						<Select
 							id="issue-sort"
 							uiSize="sm"
+							class="min-w-40"
 							value={issueSort}
 							onchange={(event) => onSortChange((event.currentTarget as HTMLSelectElement).value)}
 						>
@@ -212,28 +215,32 @@
 						</Select>
 					</div>
 				</div>
-				<div class="flex flex-wrap items-center gap-2">
-					{#each severityOptions as severity (severity)}
+				<div class="bg-surface-muted/60 border-line rounded-xl border px-2 py-2.5">
+					<div class="flex flex-wrap items-center gap-2">
+						{#each severityOptions as severity (severity)}
+							<button
+								onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
+								class={getSeverityChipClass(
+									severity,
+									activeSeverity === null ? severity === 'all' : activeSeverity === severity
+								)}
+							>
+								{severity}
+							</button>
+						{/each}
 						<button
-							onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
-							class={getSeverityChipClass(
-								severity,
-								activeSeverity === null ? severity === 'all' : activeSeverity === severity
-							)}
+							type="button"
+							onclick={() => {
+								showMoreFilters = !showMoreFilters;
+							}}
+							class="text-ink-muted hover:text-ink ml-auto text-xs font-semibold transition"
 						>
-							{severity}
+							{showMoreFilters || hasSecondaryFilters ? 'Less filters' : 'More filters'}
 						</button>
-					{/each}
-					<button
-						type="button"
-						onclick={() => { showMoreFilters = !showMoreFilters; }}
-						class="text-ink-muted hover:text-ink ml-auto text-xs font-semibold transition"
-					>
-						{showMoreFilters || hasSecondaryFilters ? 'Less filters' : 'More filters'}
-					</button>
+					</div>
 				</div>
 				{#if showMoreFilters || hasSecondaryFilters}
-					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<div class="grid grid-cols-1 gap-3 border-t border-dashed border-line pt-3 sm:grid-cols-2">
 						<label class="text-ink-muted text-xs">
 							Category
 							<Select
@@ -272,7 +279,7 @@
 		</div>
 
 		{#if filteredIssues.length === 0}
-			<div class="flex flex-col items-center justify-center py-12 text-center">
+			<div class="bg-surface-muted/30 flex flex-col items-center justify-center py-14 text-center">
 				<p class="text-ink font-medium">No issues found</p>
 				<p class="text-ink-muted mt-1 text-sm">
 					{#if hasActiveFilters}
@@ -285,7 +292,10 @@
 		{:else}
 			<div
 				bind:this={listContainer}
-				class={cn('divide-line divide-y', shouldVirtualize && 'max-h-[720px] overflow-y-auto')}
+				class={cn(
+					'divide-line divide-y border-t border-line/70',
+					shouldVirtualize && 'max-h-[720px] overflow-y-auto'
+				)}
 				data-testid="issue-list"
 				onscroll={() => {
 					if (!listContainer) return;

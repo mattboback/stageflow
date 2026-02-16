@@ -115,10 +115,10 @@
 	const normalizedIssueSort = $derived(isIssueSortKey(issueSort) ? issueSort : 'severity');
 </script>
 
-<PageSection class="pt-16" containerClass="max-w-7xl xl:max-w-[1400px]">
+<PageSection class="pt-12 lg:pt-14" containerClass="max-w-7xl xl:max-w-[1400px]">
 	<a
 		href={`/scan/${jobId}`}
-		class="text-ink-muted hover:text-accent mb-6 inline-flex items-center gap-2 text-sm transition-colors"
+		class="text-ink-muted hover:text-accent mb-4 inline-flex items-center gap-2 text-sm font-medium transition-colors"
 	>
 		<ArrowLeft class="h-4 w-4" />
 		Back to scan status

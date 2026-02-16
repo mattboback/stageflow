@@ -85,16 +85,18 @@
 </script>
 
 {#snippet summaryCard(title: string, value: number | string, tone?: 'warn' | 'danger' | null)}
-	<Panel class="shadow-sm" padding="sm" rounded="2xl">
-		<p class="text-ink-muted text-sm">{title}</p>
-		<p
-			class={cn(
-				'text-2xl font-bold',
-				tone === 'danger' ? 'text-red-600' : tone === 'warn' ? 'text-amber-600' : 'text-ink'
-			)}
-		>
-			{value}
-		</p>
+	<Panel class="shadow-sm ring-1 ring-line/70" padding="sm" rounded="2xl">
+		<div class="flex min-h-24 flex-col justify-between gap-2">
+			<p class="text-ink-faint text-xs font-semibold tracking-wide uppercase">{title}</p>
+			<p
+				class={cn(
+					'text-3xl leading-none font-bold',
+					tone === 'danger' ? 'text-red-600' : tone === 'warn' ? 'text-amber-600' : 'text-ink'
+				)}
+			>
+				{value}
+			</p>
+		</div>
 	</Panel>
 {/snippet}
 
@@ -104,7 +106,7 @@
 	{@const issueCount = scanner.issueCount ?? report.summary.byScanner?.[scanner.id] ?? 0}
 	<button
 		onclick={() => onSelectScanner(scanner.id)}
-		class="border-line hover:border-accent/50 flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition"
+		class="border-line hover:border-accent/50 hover:bg-surface-muted flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition"
 	>
 		<div class="flex min-w-0 items-start gap-3">
 			<StatusIcon
@@ -135,14 +137,14 @@
 {/snippet}
 
 <div class="space-y-6">
-	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 		{@render summaryCard('Total Issues', report.summary.totalIssues, issueTone)}
 		{@render summaryCard('Pages Scanned', report.summary.pagesScanned)}
 		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
 		{@render summaryCard('Scanners Ran', report.scanners.length)}
 	</div>
 
-	<Panel class="shadow-sm" padding="none" rounded="2xl">
+	<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
 		<div class="border-line border-b p-4">
 			<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
 				Severity Breakdown
@@ -154,7 +156,7 @@
 	</Panel>
 
 	{#if report.summary.lighthouseCategories?.length}
-		<Panel class="shadow-sm" padding="none" rounded="2xl">
+		<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
 			<div class="border-line border-b p-4">
 				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
 					Lighthouse Averages
@@ -167,7 +169,7 @@
 	{/if}
 
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr,0.8fr]">
-		<Panel class="shadow-sm min-w-0" padding="none" rounded="2xl">
+		<Panel class="shadow-sm ring-1 ring-line/70 min-w-0" padding="none" rounded="2xl">
 			<div class="border-line border-b p-4">
 				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Scanner Status</h3>
 			</div>
@@ -181,14 +183,14 @@
 		</Panel>
 
 		<div class="space-y-4">
-			<Panel class="shadow-sm" padding="none" rounded="2xl">
+			<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
 				<div class="border-line border-b p-4">
 					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Top Pages</h3>
 				</div>
 				{#each topPages as page (page.id)}
 					<button
 						onclick={() => onSelectPage(page.id)}
-						class="border-line hover:bg-surface-muted flex w-full items-center justify-between border-b px-4 py-3 text-left text-sm transition"
+						class="border-line hover:bg-surface-muted flex w-full items-center justify-between border-b px-4 py-3 text-left text-sm transition last:border-b-0"
 					>
 						<span class="text-ink truncate font-medium">
 							{page.path ?? page.url}
@@ -198,7 +200,7 @@
 				{/each}
 			</Panel>
 
-			<Panel class="shadow-sm" padding="none" rounded="2xl">
+			<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
 				<div class="border-line border-b p-4">
 					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
 						Top Issue Rules

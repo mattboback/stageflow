@@ -70,30 +70,35 @@
 	type="button"
 	{onclick}
 	class={cn(
-		'hover:bg-surface-muted flex w-full items-start gap-4 text-left transition-colors',
-		showScreenshot ? 'min-h-[120px] p-4' : 'px-4 py-3',
+		'hover:bg-surface-muted/70 focus-visible:ring-accent/35 flex w-full items-start gap-3 text-left transition-colors focus-visible:ring-4 focus-visible:outline-none',
+		showScreenshot ? 'min-h-[120px] p-4 sm:px-5' : 'px-4 py-3',
 		isVirtualized && showScreenshot && 'h-[120px] overflow-hidden',
-		isSelected && 'bg-accent/5'
+		isSelected && 'bg-accent/5 ring-1 ring-accent/20'
 	)}
 	data-testid="issue-row"
 >
 	<span
 		class={cn(
-			'mt-0.5 rounded px-2 py-0.5 text-xs font-semibold uppercase',
+			'mt-0.5 shrink-0 rounded-md px-2 py-1 text-[10px] leading-none font-semibold tracking-wide uppercase',
 			getSeverityBadgeClass(issue.severity)
 		)}
 	>
 		{issue.severity}
 	</span>
 	<div class="min-w-0 flex-1">
-		<p class={cn('text-ink font-medium', isVirtualized && showScreenshot && 'line-clamp-1')}>
+		<p
+			class={cn(
+				'text-ink text-base leading-snug font-semibold',
+				isVirtualized && showScreenshot ? 'line-clamp-1' : 'line-clamp-2'
+			)}
+		>
 			{issue.title}
 		</p>
-		<p class="text-ink-muted mt-1 line-clamp-2 text-sm">
+		<p class="text-ink-muted mt-1.5 line-clamp-2 text-sm leading-relaxed">
 			{issue.description}
 		</p>
 		{#if showScreenshot}
-			<div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+			<div class="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
 				<span class="text-ink-faint">
 					{issue.scanner} &middot; {issue.elementCount} element{issue.elementCount !== 1
 						? 's'
@@ -101,7 +106,7 @@
 				</span>
 				{#if issue.wcagTags?.length}
 					{#each issue.wcagTags.slice(0, 3) as tag (tag)}
-						<span class="bg-surface-muted text-ink-muted rounded px-1.5 py-0.5">
+						<span class="bg-surface-muted text-ink-muted rounded-md px-1.5 py-0.5">
 							{tag}
 						</span>
 					{/each}
@@ -114,7 +119,7 @@
 	</div>
 	{#if showScreenshot}
 		{#if overviewUrl && overview && overviewViewBox}
-			<div class="bg-surface border-line h-16 w-24 shrink-0 overflow-hidden rounded border">
+			<div class="bg-surface border-line h-16 w-24 shrink-0 overflow-hidden rounded-md border shadow-xs">
 				<svg
 					class="bg-surface-muted h-full w-full"
 					viewBox={`${overviewViewBox.x} ${overviewViewBox.y} ${overviewViewBox.width} ${overviewViewBox.height}`}
@@ -143,7 +148,7 @@
 				</svg>
 			</div>
 		{:else if screenshotUrl}
-			<div class="h-16 w-24 shrink-0 overflow-hidden rounded border">
+			<div class="border-line h-16 w-24 shrink-0 overflow-hidden rounded-md border shadow-xs">
 				<img
 					src={screenshotUrl}
 					alt="Issue screenshot"
