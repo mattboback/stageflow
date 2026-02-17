@@ -358,3 +358,70 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 		t.Error("Expected lighthouse result to exist")
 	}
 }
+
+func TestHandleScanPageCompleted_IgnoresMissingJob(t *testing.T) {
+	orch, _, publisher, _ := setupTestOrchestrator(t)
+
+	payload := &events.ScanPageCompletedPayload{
+		JobID:      "missing-job",
+		PageIndex:  1,
+		TotalPages: 1,
+	}
+
+	if err := orch.HandleScanPageCompleted(t.Context(), payload); err != nil {
+		t.Fatalf("HandleScanPageCompleted() error = %v, want nil", err)
+	}
+
+	if publisher.completedCount() != 0 {
+		t.Errorf("publisher.completedCount() = %d, want 0", publisher.completedCount())
+	}
+
+	if publisher.failedCount() != 0 {
+		t.Errorf("publisher.failedCount() = %d, want 0", publisher.failedCount())
+	}
+}
+
+func TestHandleScanCompleted_IgnoresMissingJob(t *testing.T) {
+	orch, _, publisher, _ := setupTestOrchestrator(t)
+
+	payload := &events.ScanCompletedPayload{
+		JobID:             "missing-job",
+		ScannerType:       "axe",
+		ResultsPath:       "missing-job/axe/results.json",
+		TotalPagesScanned: 1,
+	}
+
+	if err := orch.HandleScanCompleted(t.Context(), payload); err != nil {
+		t.Fatalf("HandleScanCompleted() error = %v, want nil", err)
+	}
+
+	if publisher.completedCount() != 0 {
+		t.Errorf("publisher.completedCount() = %d, want 0", publisher.completedCount())
+	}
+
+	if publisher.failedCount() != 0 {
+		t.Errorf("publisher.failedCount() = %d, want 0", publisher.failedCount())
+	}
+}
+
+func TestHandleScanFailed_IgnoresMissingJob(t *testing.T) {
+	orch, _, publisher, _ := setupTestOrchestrator(t)
+
+	payload := &events.ScanFailedPayload{
+		JobID:       "missing-job",
+		ScannerType: "axe",
+		Error:       "scanner failed",
+	}
+
+	if err := orch.HandleScanFailed(t.Context(), payload); err != nil {
+		t.Fatalf("HandleScanFailed() error = %v, want nil", err)
+	}
+
+	if publisher.completedCount() != 0 {
+		t.Errorf("publisher.completedCount() = %d, want 0", publisher.completedCount())
+	}
+
+	if publisher.failedCount() != 0 {
+		t.Errorf("publisher.failedCount() = %d, want 0", publisher.failedCount())
+	}
+}

@@ -91,7 +91,11 @@ func TestCompleteJobWithAggregatedResults_NoSuccessfulScanners(t *testing.T) {
 	}
 
 	if err.Error() != "no successful scanner results found" {
-		t.Errorf("completeJobWithAggregatedResults error = %q, want %q", err.Error(), "no successful scanner results found")
+		t.Errorf(
+			"completeJobWithAggregatedResults error = %q, want %q",
+			err.Error(),
+			"no successful scanner results found",
+		)
 	}
 }
 

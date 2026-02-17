@@ -2,10 +2,13 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
 )
 
 func TestHandleJobCreated(t *testing.T) {
@@ -68,5 +71,86 @@ func TestHandleURLJobTransitionsToScanning(t *testing.T) {
 
 	if job.PodID == "" {
 		t.Fatalf("expected pod to be created for URL job")
+	}
+}
+
+func TestHandleJobCreated_DuplicatePendingRetriesThenIgnoresExtracting(t *testing.T) {
+	database := newInMemoryDB(t)
+	publisher := &mockPublisher{
+		publishedJobCompleted: make([]*events.JobCompletedPayload, 0),
+		publishedJobFailed:    make([]*events.JobFailedPayload, 0),
+	}
+	mem := newMemoryStorage()
+
+	createPodCalls := 0
+	podmanClient := &mockPodmanClient{
+		createPodFunc: func(_ context.Context, _ *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
+			createPodCalls++
+
+			return &podman.PodCreateResponse{ID: fmt.Sprintf("pod-%d", createPodCalls)}, nil
+		},
+	}
+
+	orch := NewOrchestrator(&Config{
+		PodmanClient:   podmanClient,
+		Database:       database,
+		Publisher:      publisher,
+		Storage:        mem,
+		StagingStorage: mem,
+	})
+
+	insertJob(t, database, &models.Job{
+		ID:        "job-dup",
+		State:     models.JobStatePending,
+		InputType: "zip",
+		InputPath: "staging/job-dup/test.zip",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	payload := &events.JobCreatedPayload{
+		JobID:     "job-dup",
+		InputType: "zip",
+		InputPath: "staging/job-dup/test.zip",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	if err := orch.HandleJobCreated(t.Context(), payload); err != nil {
+		t.Fatalf("HandleJobCreated() first duplicate call error = %v, want nil", err)
+	}
+
+	job, err := database.GetJob(t.Context(), "job-dup")
+	if err != nil {
+		t.Fatalf("GetJob() after first duplicate call error = %v", err)
+	}
+
+	if job.State != models.JobStateExtracting {
+		t.Errorf("job.State after first duplicate call = %s, want %s", job.State, models.JobStateExtracting)
+	}
+
+	if job.PodID != "pod-1" {
+		t.Errorf("job.PodID after first duplicate call = %q, want %q", job.PodID, "pod-1")
+	}
+
+	if err := orch.HandleJobCreated(t.Context(), payload); err != nil {
+		t.Fatalf("HandleJobCreated() second duplicate call error = %v, want nil", err)
+	}
+
+	job, err = database.GetJob(t.Context(), "job-dup")
+	if err != nil {
+		t.Fatalf("GetJob() after second duplicate call error = %v", err)
+	}
+
+	if job.PodID != "pod-1" {
+		t.Errorf("job.PodID after second duplicate call = %q, want %q", job.PodID, "pod-1")
+	}
+
+	if createPodCalls != 1 {
+		t.Errorf("createPodCalls = %d, want 1", createPodCalls)
 	}
 }

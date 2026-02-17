@@ -23,7 +23,7 @@
 </script>
 
 <div>
-	<Label class="mb-3 block text-sm font-semibold">Input Type</Label>
+	<Label class="mb-3 block text-sm font-bold">Input Type</Label>
 	<div class="grid grid-cols-2 gap-3">
 		<button
 			type="button"
@@ -49,7 +49,7 @@
 				<Globe class="h-6 w-6" />
 			</div>
 			<div class="text-center">
-				<span class="text-ink block text-sm font-semibold">Live URLs</span>
+				<span class="text-ink block text-sm font-bold">Live URLs</span>
 				<span class="text-ink-muted text-xs">Scan websites directly</span>
 			</div>
 		</button>
@@ -77,7 +77,7 @@
 				<FileUp class="h-6 w-6" />
 			</div>
 			<div class="text-center">
-				<span class="text-ink block text-sm font-semibold">ZIP Archive</span>
+				<span class="text-ink block text-sm font-bold">ZIP Archive</span>
 				<span class="text-ink-muted text-xs">Upload static site</span>
 			</div>
 		</button>

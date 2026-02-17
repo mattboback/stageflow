@@ -38,74 +38,101 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 		}
 
 		if !created {
-			existing, getErr := o.database.GetJob(ctx, payload.JobID)
-			if getErr != nil {
-				if shouldIgnoreMissingJob(events.EventJobCreated, payload.JobID, getErr) {
-					return nil
-				}
-
-				return fmt.Errorf("failed to load existing job after duplicate create: %w", getErr)
+			resolvedJob, handled, resolveErr := o.resolveDuplicateJobCreated(ctx, payload.JobID)
+			if resolveErr != nil {
+				return resolveErr
 			}
 
-			switch existing.State {
-			case models.JobStatePending:
-				slog.Warn("Duplicate job.created for pending job; retrying orchestration", "job_id", payload.JobID)
-
-				job = existing
-			case models.JobStateExtracting, models.JobStateReady, models.JobStateScanning, models.JobStateCompleting:
-				slog.Debug(
-					"Duplicate job.created ignored for in-flight job",
-					"job_id",
-					payload.JobID,
-					"state",
-					existing.State,
-				)
-
+			if handled {
 				return nil
-			case models.JobStateDone, models.JobStateFailed:
-				slog.Debug(
-					"Duplicate job.created ignored for terminal job",
-					"job_id",
-					payload.JobID,
-					"state",
-					existing.State,
-				)
-
-				return nil
-			default:
-				return fmt.Errorf("unsupported job state for duplicate job.created: %s", existing.State)
 			}
+
+			job = resolvedJob
 		}
 
 		o.recordInternalEvent(ctx, job.ID, "orchestrator.job.persisted", map[string]any{
 			"input_type": payload.InputType,
 		})
 
-		// URL jobs bypass extraction and proceed directly to scanning.
-		if payload.InputType == inputTypeURLs {
-			if urlErr := o.handleURLJob(ctx, job); urlErr != nil {
-				o.failJobSafe(ctx, job.ID, "setup", fmt.Sprintf("failed to setup URL job: %v", urlErr))
-
-				return nil
-			}
-
-			return nil
+		if dispatchErr := o.dispatchCreatedJobByInputType(ctx, payload, job); dispatchErr != nil {
+			return dispatchErr
 		}
 
-		// ZIP jobs require an extraction phase to populate the workspace volume.
-		if extractionErr := o.startExtraction(ctx, job); extractionErr != nil {
-			o.failJobSafe(
-				ctx,
-				job.ID,
-				"extraction",
-				fmt.Sprintf("failed to start extraction: %v", extractionErr),
-			)
+		return nil
+	})
+}
+
+func (o *Orchestrator) resolveDuplicateJobCreated(
+	ctx context.Context,
+	jobID string,
+) (*models.Job, bool, error) {
+	existing, getErr := o.database.GetJob(ctx, jobID)
+	if getErr != nil {
+		if shouldIgnoreMissingJob(events.EventJobCreated, jobID, getErr) {
+			return nil, true, nil
+		}
+
+		return nil, false, fmt.Errorf("failed to load existing job after duplicate create: %w", getErr)
+	}
+
+	switch existing.State {
+	case models.JobStatePending:
+		slog.Warn("Duplicate job.created for pending job; retrying orchestration", "job_id", jobID)
+		return existing, false, nil
+	case models.JobStateExtracting, models.JobStateReady, models.JobStateScanning, models.JobStateCompleting:
+		slog.Debug(
+			"Duplicate job.created ignored for in-flight job",
+			"job_id",
+			jobID,
+			"state",
+			existing.State,
+		)
+
+		return nil, true, nil
+	case models.JobStateDone, models.JobStateFailed:
+		slog.Debug(
+			"Duplicate job.created ignored for terminal job",
+			"job_id",
+			jobID,
+			"state",
+			existing.State,
+		)
+
+		return nil, true, nil
+	default:
+		return nil, false, fmt.Errorf("unsupported job state for duplicate job.created: %s", existing.State)
+	}
+}
+
+func (o *Orchestrator) dispatchCreatedJobByInputType(
+	ctx context.Context,
+	payload *events.JobCreatedPayload,
+	job *models.Job,
+) error {
+	// URL jobs bypass extraction and proceed directly to scanning.
+	if payload.InputType == inputTypeURLs {
+		if urlErr := o.handleURLJob(ctx, job); urlErr != nil {
+			o.failJobSafe(ctx, job.ID, "setup", fmt.Sprintf("failed to setup URL job: %v", urlErr))
 
 			return nil
 		}
 
 		return nil
-	})
+	}
+
+	// ZIP jobs require an extraction phase to populate the workspace volume.
+	if extractionErr := o.startExtraction(ctx, job); extractionErr != nil {
+		o.failJobSafe(
+			ctx,
+			job.ID,
+			"extraction",
+			fmt.Sprintf("failed to start extraction: %v", extractionErr),
+		)
+
+		return nil
+	}
+
+	return nil
 }
 
 // HandleExtractionReady handles extraction.ready events.

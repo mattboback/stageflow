@@ -31,7 +31,7 @@
 
 <div class="grid gap-4 sm:grid-cols-2">
 	<div>
-		<Label class="mb-3 block text-sm font-semibold">Screenshot Options</Label>
+		<Label class="mb-3 block text-sm font-bold">Screenshot Options</Label>
 		<button
 			type="button"
 			onclick={() => onScreenshotChange(!screenshot)}
@@ -51,7 +51,7 @@
 				<Camera class="h-5 w-5" />
 			</div>
 			<div class="flex-1">
-				<span class="text-ink block text-sm font-semibold">Capture Screenshots</span>
+				<span class="text-ink block text-sm font-bold">Capture Screenshots</span>
 				<span class="text-ink-muted text-xs">Visual evidence of issues</span>
 			</div>
 			<div
@@ -68,7 +68,7 @@
 	</div>
 
 	<div>
-		<Label for="highlight-style" class="mb-3 block text-sm font-semibold">Highlight Style</Label>
+		<Label for="highlight-style" class="mb-3 block text-sm font-bold">Highlight Style</Label>
 		<SelectField
 			id="highlight-style"
 			variant="prominent"
