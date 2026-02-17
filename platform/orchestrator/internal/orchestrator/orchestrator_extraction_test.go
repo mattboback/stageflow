@@ -57,6 +57,30 @@ func TestHandleExtractionReady(t *testing.T) {
 	}
 }
 
+func TestHandleExtractionReady_IgnoresMissingJob(t *testing.T) {
+	orch, _, publisher, _ := setupTestOrchestrator(t)
+
+	payload := &events.ExtractionReadyPayload{
+		JobID:                  "missing-job",
+		ProvenancePath:         "/workspace/provenance.json",
+		BaseURL:                "http://localhost:8080",
+		TotalPages:             1,
+		ProvenanceArtifactPath: "missing-job/provenance.json",
+	}
+
+	if err := orch.HandleExtractionReady(t.Context(), payload); err != nil {
+		t.Fatalf("HandleExtractionReady() error = %v, want nil", err)
+	}
+
+	if publisher.completedCount() != 0 {
+		t.Errorf("publisher.completedCount() = %d, want 0", publisher.completedCount())
+	}
+
+	if publisher.failedCount() != 0 {
+		t.Errorf("publisher.failedCount() = %d, want 0", publisher.failedCount())
+	}
+}
+
 func TestHandleExtractionFailed(t *testing.T) {
 	orch, database, publisher, _ := setupTestOrchestrator(t)
 

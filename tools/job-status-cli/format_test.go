@@ -1,55 +1,158 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestFormatDuration(t *testing.T) {
-	t.Parallel()
+func TestRunJobsCommand_FormatsDurationsAndTruncatesErrors(t *testing.T) {
+	now := time.Now().UTC()
+	createdAt := now.Add(-(2*time.Hour + 15*time.Minute))
+	completedAt := now.Add(-(25 * time.Minute))
+	longError := "This error message is intentionally very long and should be truncated in output"
 
-	cases := []struct {
-		name string
-		in   time.Duration
-		want string
-	}{
-		{name: "seconds", in: 45 * time.Second, want: "45s ago"},
-		{name: "minutes", in: 2*time.Minute + 5*time.Second, want: "2m ago"},
-		{name: "hours", in: 3*time.Hour + 11*time.Minute, want: "3h ago"},
-		{name: "days", in: 48 * time.Hour, want: "2d ago"},
+	body := fmt.Sprintf(
+		`{"jobs":[{"id":"job-1","state":"DONE","input_type":"urls","input_path":"","pod_id":"","created_at":"%s","updated_at":"%s","completed_at":"%s","error":"%s"}],"total":1,"limit":20,"offset":0}`,
+		createdAt.Format(time.RFC3339Nano),
+		now.Format(time.RFC3339Nano),
+		completedAt.Format(time.RFC3339Nano),
+		longError,
+	)
+
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodGet {
+				t.Fatalf("request method = %s, want %s", req.Method, http.MethodGet)
+			}
+
+			if req.URL.Path != "/api/v1/jobs" {
+				t.Fatalf("request path = %s, want %s", req.URL.Path, "/api/v1/jobs")
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Header:     make(http.Header),
+			}, nil
+		}),
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
 
-			if got := formatDuration(tc.in); got != tc.want {
-				t.Fatalf("formatDuration(%v): want %q, got %q", tc.in, tc.want, got)
+	exit := run(
+		[]string{"job-status-cli", "jobs"},
+		func(key string) string {
+			if key == "ORCHESTRATOR_ADMIN_URL" {
+				return "http://example.test"
 			}
-		})
+
+			return ""
+		},
+		client,
+		stdout,
+		stderr,
+	)
+
+	if exit != 0 {
+		t.Fatalf("run exit = %d, want %d (stderr=%q)", exit, 0, stderr.String())
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "Jobs (showing 1 of 1 total)") {
+		t.Fatalf("output missing jobs heading:\n%s", output)
+	}
+
+	if !strings.Contains(output, "2h ago") {
+		t.Fatalf("output missing created duration:\n%s", output)
+	}
+
+	if !strings.Contains(output, "25m ago") {
+		t.Fatalf("output missing completed duration:\n%s", output)
+	}
+
+	if strings.Contains(output, longError) {
+		t.Fatalf("output should not contain full error string:\n%s", output)
+	}
+
+	if !strings.Contains(output, "This error message is") || !strings.Contains(output, "...") {
+		t.Fatalf("output missing truncated error text:\n%s", output)
 	}
 }
 
-func TestAbbreviateAndTruncation(t *testing.T) {
-	t.Parallel()
+func TestRunPodsCommand_FormatsMissingJobFieldsAsDash(t *testing.T) {
+	body := `{"pods":[{"id":"0123456789abcdef","name":"scanner-pod","status":"running","job_id":null,"job_state":null}],"total":1}`
 
-	if got, want := abbreviate("", 8), "-"; got != want {
-		t.Fatalf("abbreviate(empty): want %q, got %q", want, got)
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodGet {
+				t.Fatalf("request method = %s, want %s", req.Method, http.MethodGet)
+			}
+
+			if req.URL.Path != "/api/v1/pods" {
+				t.Fatalf("request path = %s, want %s", req.URL.Path, "/api/v1/pods")
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Header:     make(http.Header),
+			}, nil
+		}),
 	}
 
-	if got, want := abbreviate("abc", 8), "abc"; got != want {
-		t.Fatalf("abbreviate(short): want %q, got %q", want, got)
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	exit := run(
+		[]string{"job-status-cli", "pods"},
+		func(key string) string {
+			if key == "ORCHESTRATOR_ADMIN_URL" {
+				return "http://example.test"
+			}
+
+			return ""
+		},
+		client,
+		stdout,
+		stderr,
+	)
+
+	if exit != 0 {
+		t.Fatalf("run exit = %d, want %d (stderr=%q)", exit, 0, stderr.String())
 	}
 
-	if got, want := abbreviate("abcdefghijk", 8), "abcdefgh..."; got != want {
-		t.Fatalf("abbreviate(long): want %q, got %q", want, got)
+	output := stdout.String()
+
+	podLine := func() string {
+		for _, line := range strings.Split(stdout.String(), "\n") {
+			if strings.Contains(line, "scanner-pod") {
+				return line
+			}
+		}
+
+		return ""
+	}()
+
+	if podLine == "" {
+		t.Fatalf("output missing pod row:\n%s", output)
 	}
 
-	if got, want := abbreviate("abcdefghijk", 0), "..."; got != want {
-		t.Fatalf("abbreviate(prefix=0): want %q, got %q", want, got)
+	fields := strings.Fields(podLine)
+	if len(fields) != 5 {
+		t.Fatalf("pod row field count = %d, want %d (row=%q)", len(fields), 5, podLine)
 	}
 
-	if got, want := truncateWithEllipsis("abcdefghijk", 8), "abcde..."; got != want {
-		t.Fatalf("truncateWithEllipsis(max=8): want %q, got %q", want, got)
+	if fields[0] != "0123456789ab" {
+		t.Fatalf("pod id column = %q, want %q", fields[0], "0123456789ab")
+	}
+
+	if fields[3] != "-" || fields[4] != "-" {
+		t.Fatalf("job columns = %q/%q, want -/-", fields[3], fields[4])
 	}
 }

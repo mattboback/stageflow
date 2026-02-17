@@ -19,7 +19,7 @@
 <div class="animate-fade-in">
 	<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
 		<div class="flex items-center gap-2">
-			<Label for="urls" class="text-sm font-semibold">URLs to Scan</Label>
+			<Label for="urls" class="text-sm font-bold">URLs to Scan</Label>
 		</div>
 		<div class="flex items-center gap-3">
 			{#if urlCount > 0}

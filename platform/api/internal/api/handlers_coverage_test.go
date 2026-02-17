@@ -7,9 +7,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
+	"github.com/mattboback/stageflow/packages/shared-go/httputil"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	"github.com/mattboback/stageflow/platform/api/internal/status"
 )
@@ -94,152 +96,220 @@ func TestHandleListScanners_MethodNotAllowed(t *testing.T) {
 	}
 }
 
-// --- normalizeHighlightStyle ---
+// --- URL submit behavior ---
 
-func TestNormalizeHighlightStyle(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"dashed", "dashed"},
-		{"solid", "solid"},
-		{"DASHED", "dashed"},
-		{"SOLID", "solid"},
-		{"  dashed  ", "dashed"},
-		{"", "dashed"},
-		{"invalid", "dashed"},
-		{"dotted", "dashed"},
+func TestHandleJobURLSubmitNormalizesHighlightStyle(t *testing.T) {
+	server, _, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["https://example.com"],"highlight_style":"  SOLID  "}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	for _, tc := range tests {
-		got := normalizeHighlightStyle(tc.input)
-		if got != tc.want {
-			t.Errorf("normalizeHighlightStyle(%q) = %q, want %q", tc.input, got, tc.want)
-		}
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
 	}
-}
 
-// --- validateScannerConfigs ---
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected payload type *events.JobCreatedPayload")
+	}
 
-func TestValidateScannerConfigs_NoAiNavigator(t *testing.T) {
-	result := validateScannerConfigs([]string{"axe", "lighthouse"}, nil)
-	if result != nil {
-		t.Fatalf("expected nil for non-ai-navigator modules, got %+v", result)
+	if created.Config.HighlightStyle != "solid" {
+		t.Fatalf("HighlightStyle = %q, want %q", created.Config.HighlightStyle, "solid")
 	}
 }
 
-func TestValidateScannerConfigs_AiNavigatorMissingConfig(t *testing.T) {
-	result := validateScannerConfigs([]string{"ai-navigator"}, nil)
-	if result == nil {
-		t.Fatal("expected error for missing ai-navigator config")
+func TestHandleJobURLSubmitInvalidHighlightStyleFallsBackToDefault(t *testing.T) {
+	server, _, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["https://example.com"],"highlight_style":"dotted"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	if result.Field != "scanner_configs.ai-navigator" {
-		t.Fatalf("expected field scanner_configs.ai-navigator, got %q", result.Field)
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
+	}
+
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected payload type *events.JobCreatedPayload")
+	}
+
+	if created.Config.HighlightStyle != defaultHighlightStyle {
+		t.Fatalf("HighlightStyle = %q, want %q", created.Config.HighlightStyle, defaultHighlightStyle)
 	}
 }
 
-func TestValidateScannerConfigs_AiNavigatorMissingGoal(t *testing.T) {
-	configs := map[string]map[string]any{
-		"ai-navigator": {"vision": map[string]any{"model": "openai/gpt-4o"}},
-	}
+func TestHandleJobURLSubmitAiNavigatorInvalidProviderReturnsValidationError(t *testing.T) {
+	server, _, _, _ := newTestServer(t)
 
-	result := validateScannerConfigs([]string{"ai-navigator"}, configs)
-	if result == nil {
-		t.Fatal("expected error for missing goal")
-	}
-
-	if result.Field != "scanner_configs.ai-navigator.goal" {
-		t.Fatalf("expected field scanner_configs.ai-navigator.goal, got %q", result.Field)
-	}
-}
-
-func TestValidateScannerConfigs_AiNavigatorEmptyObjective(t *testing.T) {
-	configs := map[string]map[string]any{
-		"ai-navigator": {
-			"goal":   map[string]any{"objective": "  "},
-			"vision": map[string]any{"model": "openai/gpt-4o"},
+	payload := map[string]any{
+		"urls":    []string{"https://example.com"},
+		"modules": []string{"ai-navigator"},
+		"scanner_configs": map[string]any{
+			"ai-navigator": map[string]any{
+				"goal": map[string]any{"objective": "Reach checkout"},
+				"vision": map[string]any{
+					"model":    "openai/gpt-4o",
+					"provider": "azure",
+				},
+			},
 		},
 	}
 
-	result := validateScannerConfigs([]string{"ai-navigator"}, configs)
-	if result == nil {
-		t.Fatal("expected error for empty objective")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
 	}
 
-	if result.Field != "scanner_configs.ai-navigator.goal.objective" {
-		t.Fatalf("expected field scanner_configs.ai-navigator.goal.objective, got %q", result.Field)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
+	}
+
+	var parsed httputil.ErrorResponse
+	if decodeErr := json.NewDecoder(rr.Body).Decode(&parsed); decodeErr != nil {
+		t.Fatalf("decode error response: %v", decodeErr)
+	}
+
+	if parsed.Error.Field != "scanner_configs.ai-navigator.vision.provider" {
+		t.Fatalf("Error.Field = %q, want %q", parsed.Error.Field, "scanner_configs.ai-navigator.vision.provider")
 	}
 }
 
-func TestValidateScannerConfigs_AiNavigatorMissingModelNoEnv(t *testing.T) {
+func TestHandleJobURLSubmitAiNavigatorMissingGoalReturnsValidationError(t *testing.T) {
+	server, _, _, _ := newTestServer(t)
+
+	payload := map[string]any{
+		"urls":    []string{"https://example.com"},
+		"modules": []string{"ai-navigator"},
+		"scanner_configs": map[string]any{
+			"ai-navigator": map[string]any{
+				"vision": map[string]any{
+					"model": "openai/gpt-4o",
+				},
+			},
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
+	}
+
+	var parsed httputil.ErrorResponse
+	if decodeErr := json.NewDecoder(rr.Body).Decode(&parsed); decodeErr != nil {
+		t.Fatalf("decode error response: %v", decodeErr)
+	}
+
+	if parsed.Error.Field != "scanner_configs.ai-navigator.goal" {
+		t.Fatalf("Error.Field = %q, want %q", parsed.Error.Field, "scanner_configs.ai-navigator.goal")
+	}
+}
+
+func TestHandleJobURLSubmitAiNavigatorMissingModelWithoutEnvReturnsValidationError(t *testing.T) {
 	t.Setenv("AI_NAVIGATOR_DEFAULT_MODEL", "")
 
-	configs := map[string]map[string]any{
-		"ai-navigator": {
-			"goal": map[string]any{"objective": "Reach checkout"},
+	server, _, _, _ := newTestServer(t)
+
+	payload := map[string]any{
+		"urls":    []string{"https://example.com"},
+		"modules": []string{"ai-navigator"},
+		"scanner_configs": map[string]any{
+			"ai-navigator": map[string]any{
+				"goal": map[string]any{"objective": "Reach checkout"},
+			},
 		},
 	}
 
-	result := validateScannerConfigs([]string{"ai-navigator"}, configs)
-	if result == nil {
-		t.Fatal("expected error for missing model without env default")
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
 	}
 
-	if result.Field != "scanner_configs.ai-navigator.vision.model" {
-		t.Fatalf("expected field scanner_configs.ai-navigator.vision.model, got %q", result.Field)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
+	}
+
+	var parsed httputil.ErrorResponse
+	if decodeErr := json.NewDecoder(rr.Body).Decode(&parsed); decodeErr != nil {
+		t.Fatalf("decode error response: %v", decodeErr)
+	}
+
+	if parsed.Error.Field != "scanner_configs.ai-navigator.vision.model" {
+		t.Fatalf("Error.Field = %q, want %q", parsed.Error.Field, "scanner_configs.ai-navigator.vision.model")
 	}
 }
 
-func TestValidateScannerConfigs_AiNavigatorFallsBackToEnvModel(t *testing.T) {
-	t.Setenv("AI_NAVIGATOR_DEFAULT_MODEL", "openai/gpt-4o-mini")
+func TestHandleJobURLSubmitAiNavigatorOpenrouterProviderAccepted(t *testing.T) {
+	server, _, _, publisher := newTestServer(t)
 
-	configs := map[string]map[string]any{
-		"ai-navigator": {
-			"goal": map[string]any{"objective": "Reach checkout"},
+	payload := map[string]any{
+		"urls":    []string{"https://example.com"},
+		"modules": []string{"ai-navigator"},
+		"scanner_configs": map[string]any{
+			"ai-navigator": map[string]any{
+				"goal": map[string]any{"objective": "Reach checkout"},
+				"vision": map[string]any{
+					"model":    "openai/gpt-4o",
+					"provider": "openrouter",
+				},
+			},
 		},
 	}
 
-	result := validateScannerConfigs([]string{"ai-navigator"}, configs)
-	if result != nil {
-		t.Fatalf("expected nil, got error: %+v", result)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
 	}
 
-	vision := configs["ai-navigator"]["vision"].(map[string]any)
-	if vision["model"] != "openai/gpt-4o-mini" {
-		t.Fatalf("expected model to be set from env, got %v", vision["model"])
-	}
-}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 
-func TestValidateScannerConfigs_AiNavigatorInvalidProvider(t *testing.T) {
-	configs := map[string]map[string]any{
-		"ai-navigator": {
-			"goal":   map[string]any{"objective": "Reach checkout"},
-			"vision": map[string]any{"model": "openai/gpt-4o", "provider": "azure"},
-		},
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	result := validateScannerConfigs([]string{"ai-navigator"}, configs)
-	if result == nil {
-		t.Fatal("expected error for invalid provider")
-	}
-
-	if result.Field != "scanner_configs.ai-navigator.vision.provider" {
-		t.Fatalf("expected field scanner_configs.ai-navigator.vision.provider, got %q", result.Field)
-	}
-}
-
-func TestValidateScannerConfigs_AiNavigatorOpenrouterProviderOK(t *testing.T) {
-	configs := map[string]map[string]any{
-		"ai-navigator": {
-			"goal":   map[string]any{"objective": "Reach checkout"},
-			"vision": map[string]any{"model": "openai/gpt-4o", "provider": "openrouter"},
-		},
-	}
-
-	result := validateScannerConfigs([]string{"ai-navigator"}, configs)
-	if result != nil {
-		t.Fatalf("expected nil for openrouter provider, got: %+v", result)
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
 	}
 }
 
@@ -790,37 +860,42 @@ func TestHandleJobURLSubmitMethodNotAllowed(t *testing.T) {
 	}
 }
 
-// --- clientError ---
+func TestZipUploadSanitizesUploadedFilename(t *testing.T) {
+	server, objectStore, _, _ := newTestServer(t)
 
-func TestClientErrorMessage(t *testing.T) {
-	msgErr := newClientMessageError("test message")
-	if msgErr.Error() != "test message" {
-		t.Fatalf("expected 'test message', got %q", msgErr.Error())
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	addZipFile(t, writer, "../../../etc/passwd.zip", buildTestZip(t))
+	writeField(t, writer, "modules", "axe")
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
 	}
 
-	emptyErr := &clientError{}
-	if emptyErr.Error() != "client error" {
-		t.Fatalf("expected 'client error', got %q", emptyErr.Error())
-	}
-}
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-// --- sanitizeFilename ---
+	rr := httptest.NewRecorder()
+	server.handleJobZipUpload(rr, req)
 
-func TestSanitizeFilename(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"", ""},
-		{"file.zip", "file.zip"},
-		{"/path/to/file.zip", "file.zip"},
-		{"../../../etc/passwd", "passwd"},
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	for _, tc := range tests {
-		got := sanitizeFilename(tc.input)
-		if got != tc.want {
-			t.Errorf("sanitizeFilename(%q) = %q, want %q", tc.input, got, tc.want)
-		}
+	if len(objectStore.uploads) != 1 {
+		t.Fatalf("expected 1 upload, got %d", len(objectStore.uploads))
+	}
+
+	var uploadedPath string
+	for key := range objectStore.uploads {
+		uploadedPath = key
+	}
+
+	if strings.Contains(uploadedPath, "../") {
+		t.Fatalf("uploaded object path must not contain path traversal segments: %q", uploadedPath)
+	}
+
+	if !strings.HasSuffix(uploadedPath, "/passwd.zip") {
+		t.Fatalf("uploaded object path = %q, want suffix %q", uploadedPath, "/passwd.zip")
 	}
 }

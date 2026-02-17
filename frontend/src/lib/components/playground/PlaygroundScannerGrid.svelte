@@ -4,7 +4,7 @@
 
 	import { Chip, Label } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import { Bot, Link2, Loader2, Search, Settings2, Shield, Zap } from 'lucide-svelte';
+	import { Bot, Link2, Loader2, Search, Settings2, Shield, ShieldCheck, Zap } from 'lucide-svelte';
 
 	interface Props {
 		scanners: ScannerSelection[];
@@ -17,43 +17,56 @@
 	const { scanners, isLoading, preset, onPresetChange, onToggle }: Props = $props();
 
 	const enabledScannerCount = $derived(scanners.filter((s) => s.enabled).length);
+	const enabledScanners = $derived(scanners.filter((s) => s.enabled));
 
 	// Scanner metadata for display
 	const scannerMeta: Record<
 		string,
-		{ icon: typeof Shield; description: string; color: string; requiresConfig?: boolean }
+		{ icon: typeof Shield; description: string; color: string; borderColor: string; requiresConfig?: boolean }
 	> = {
 		axe: {
 			icon: Shield,
 			description: 'WCAG accessibility testing with axe-core engine',
-			color: 'text-blue-600'
+			color: 'text-blue-600',
+			borderColor: 'border-l-blue-500'
 		},
 		lighthouse: {
 			icon: Zap,
 			description: 'Performance, SEO, and best practices audits',
-			color: 'text-amber-500'
+			color: 'text-amber-500',
+			borderColor: 'border-l-amber-500'
 		},
 		'link-checker': {
 			icon: Link2,
 			description: 'Detect broken links and redirect chains',
-			color: 'text-emerald-600'
+			color: 'text-emerald-600',
+			borderColor: 'border-l-emerald-600'
 		},
 		'security-headers': {
 			icon: Shield,
 			description: 'HTTP security header analysis and scoring',
-			color: 'text-violet-600'
+			color: 'text-violet-600',
+			borderColor: 'border-l-violet-600'
 		},
 		seo: {
 			icon: Search,
 			description: 'Meta tags, headings, and SEO optimization',
-			color: 'text-rose-500'
+			color: 'text-rose-500',
+			borderColor: 'border-l-rose-500'
 		},
 		'ai-navigator': {
 			icon: Bot,
 			description: 'LLM-powered agent that navigates toward a goal',
 			color: 'text-purple-600',
+			borderColor: 'border-l-purple-600',
 			requiresConfig: true
 		}
+	};
+
+	const presetDescriptions: Record<ScannerPreset, string> = {
+		coverage: 'All scanners except AI Navigator. Most thorough analysis.',
+		quick: 'Axe accessibility scan only. Fastest results.',
+		custom: 'Select individual scanners below.'
 	};
 
 	function selectableSurfaceClass(base: string, isSelected: boolean) {
@@ -92,7 +105,9 @@
 					interactive={true}
 					aria-pressed={preset === 'coverage'}
 					onclick={() => onPresetChange('coverage')}
+					class="gap-1.5"
 				>
+					<ShieldCheck class="h-3.5 w-3.5" />
 					Coverage
 				</Chip>
 				<Chip
@@ -102,7 +117,9 @@
 					interactive={true}
 					aria-pressed={preset === 'quick'}
 					onclick={() => onPresetChange('quick')}
+					class="gap-1.5"
 				>
+					<Zap class="h-3.5 w-3.5" />
 					Quick
 				</Chip>
 				<Chip
@@ -112,13 +129,29 @@
 					interactive={true}
 					aria-pressed={preset === 'custom'}
 					onclick={() => onPresetChange('custom')}
+					class="gap-1.5"
 				>
+					<Settings2 class="h-3.5 w-3.5" />
 					Custom
 				</Chip>
 			</div>
 			<p class="text-ink-muted mt-2 text-xs">
-				Coverage runs multiple scanners and may take longer.
+				{presetDescriptions[preset]}
 			</p>
+			{#if preset !== 'custom' && enabledScanners.length > 0}
+				<div class="mt-2 flex flex-wrap gap-1.5">
+					{#each enabledScanners as scanner (scanner.id)}
+						{@const meta = scannerMeta[scanner.id]}
+						{#if meta}
+							{@const MiniIcon = meta.icon}
+							<span class={cn('inline-flex items-center gap-1 rounded-full bg-surface px-2 py-0.5 text-[10px] font-medium', meta.color)}>
+								<MiniIcon class="h-2.5 w-2.5" />
+								{scanner.id.replace(/-/g, ' ')}
+							</span>
+						{/if}
+					{/each}
+				</div>
+			{/if}
 		</div>
 	{/if}
 	{#if isLoading}
@@ -138,7 +171,8 @@
 				{@const meta = scannerMeta[scanner.id] || {
 					icon: Shield,
 					description: 'Run scan checks',
-					color: 'text-ink-muted'
+					color: 'text-ink-muted',
+					borderColor: ''
 				}}
 				{@const Icon = meta.icon}
 				<button
@@ -146,7 +180,10 @@
 					aria-pressed={scanner.enabled}
 					onclick={() => onToggle(scanner.id)}
 					class={selectableSurfaceClass(
-						'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200',
+						cn(
+							'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200',
+							scanner.enabled && meta.borderColor ? `border-l-[3px] ${meta.borderColor}` : ''
+						),
 						scanner.enabled
 					)}
 				>
@@ -164,7 +201,7 @@
 						<span class="text-ink block text-sm font-semibold capitalize">
 							{scanner.id.replace(/-/g, ' ')}
 						</span>
-						<span class="text-ink-muted line-clamp-2 text-xs">
+						<span class="text-ink-muted text-xs">
 							{meta.description}
 						</span>
 						{#if meta.requiresConfig && scanner.enabled}

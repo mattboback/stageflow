@@ -29,12 +29,15 @@
 	--color-accent-hover: #b91c1c;
 	--color-accent-soft: #fef2f2;
 	--color-accent-ink: #7f1d1d;
+	--color-accent-mist: #fef8f8;
+	--color-accent-subtle: #fde8e8;
 
 	/* Shadows (neutral, subtle) */
 	--shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
 	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
 	--shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
 	--shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
+	--shadow-card-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.10), 0 2px 8px -4px rgba(0, 0, 0, 0.06);
 
 	/* Animation Timing */
 	--duration-fast: 150ms;
@@ -149,12 +152,41 @@
 
 	.h1-display {
 		font-family: var(--font-display);
-		@apply text-ink text-4xl font-bold tracking-[-0.02em] sm:text-5xl lg:text-6xl;
+		@apply text-ink text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem] lg:leading-[1.08];
 	}
 
 	.h2-display {
 		font-family: var(--font-display);
-		@apply text-ink text-3xl font-bold tracking-[-0.02em] sm:text-4xl;
+		@apply text-ink text-3xl font-bold tracking-[-0.02em] sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15];
+	}
+
+	.section-kicker {
+		@apply text-accent text-sm font-bold tracking-[0.14em] uppercase;
+	}
+
+	.section-divider {
+		height: 1px;
+		background: linear-gradient(90deg, transparent, var(--color-accent-subtle) 30%, var(--color-accent) 50%, var(--color-accent-subtle) 70%, transparent);
+		opacity: 0.5;
+	}
+
+	.landing-hero {
+		background:
+			radial-gradient(ellipse 80% 50% at 50% -10%, rgba(220, 38, 38, 0.06), transparent 70%),
+			linear-gradient(180deg, var(--color-accent-mist) 0%, var(--color-paper) 60%);
+	}
+
+	.scanner-card {
+		transition: box-shadow var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
+	}
+
+	.scanner-card:hover {
+		box-shadow: var(--shadow-card-hover);
+		transform: translateY(-1px);
+	}
+
+	.form-section-label {
+		@apply text-xs font-bold tracking-wide uppercase;
 	}
 
 	.h3-display {
