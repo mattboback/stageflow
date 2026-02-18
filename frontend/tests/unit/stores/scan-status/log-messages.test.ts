@@ -128,9 +128,11 @@ describe('log-messages', () => {
 
 		it('returns progress message for SCANNING with progress', () => {
 			const data: StatusLike = {
-				progress: { current_page: 5, total_pages: 10 }
+				progress: { current_page: 5, total_pages: 10 },
+				scanner_type: 'axe'
 			};
 			const message = getLogMessage('SCANNING', data);
+			expect(message).toContain('[axe]');
 			expect(message).toContain('5/10');
 		});
 
@@ -149,7 +151,13 @@ describe('log-messages', () => {
 
 		it('returns report generation message for COMPLETING', () => {
 			const message = getLogMessage('COMPLETING', emptyData);
-			expect(message).toContain('reports');
+			expect(message).toContain('Aggregating');
+		});
+
+		it('returns scanner completion message for COMPLETING with scanner context', () => {
+			const message = getLogMessage('COMPLETING', { scanner_type: 'lighthouse' });
+			expect(message).toContain('[lighthouse]');
+			expect(message).toContain('Scanner complete');
 		});
 
 		it('returns cleanup message for DONE', () => {

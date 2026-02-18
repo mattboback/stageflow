@@ -32,7 +32,7 @@
 			}
 		},
 		{
-			test: (log) => /\[playwright\]/i.test(log),
+			test: (log) => /^\[[^\]]+\]/i.test(log),
 			style: {
 				textClass: 'text-accent',
 				prefix: 'SCAN',

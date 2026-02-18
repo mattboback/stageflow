@@ -78,8 +78,9 @@ func (h *SSEBroadcastHandler) HandleExtractionFailed(_ context.Context, p *event
 
 func (h *SSEBroadcastHandler) HandleScanPageCompleted(_ context.Context, p *events.ScanPageCompletedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
-		"type":  "progress",
-		"state": "SCANNING",
+		"type":         "progress",
+		"state":        "SCANNING",
+		"scanner_type": p.ScannerType,
 		"progress": map[string]int{
 			"currentPage": p.PageIndex,
 			"totalPages":  p.TotalPages,
@@ -91,8 +92,9 @@ func (h *SSEBroadcastHandler) HandleScanPageCompleted(_ context.Context, p *even
 
 func (h *SSEBroadcastHandler) HandleScanCompleted(_ context.Context, p *events.ScanCompletedPayload) error {
 	h.sseHub.Broadcast(p.JobID, map[string]any{
-		"type":  "status",
-		"state": "COMPLETING",
+		"type":         "status",
+		"state":        "COMPLETING",
+		"scanner_type": p.ScannerType,
 	})
 
 	return nil

@@ -9,6 +9,7 @@ export interface StatusProgressLike {
 
 export interface StatusLike {
 	progress?: StatusProgressLike;
+	scanner_type?: string;
 	error?: string;
 	error_details?: string;
 }
@@ -50,16 +51,20 @@ export function getLogMessage(normalizedState: string, data: StatusLike): string
 		case 'SCANNING': {
 			const currentPage = data.progress?.current_page ?? data.progress?.currentPage;
 			const totalPages = data.progress?.total_pages ?? data.progress?.totalPages;
+			const scannerTag = data.scanner_type ? `[${data.scanner_type}]` : '[Scanner]';
 			if (currentPage !== undefined && totalPages !== undefined) {
 				if (currentPage <= 0 && totalPages > 0) {
-					return `[Playwright] Starting scan (1/${totalPages})...`;
+					return `${scannerTag} Starting scan (1/${totalPages})...`;
 				}
-				return `[Playwright] Visiting page ${currentPage}/${totalPages}...`;
+				return `${scannerTag} Visiting page ${currentPage}/${totalPages}...`;
 			}
-			return '[Playwright] Scan is running. Waiting for page progress...';
+			return `${scannerTag} Scan is running. Waiting for page progress...`;
 		}
 		case 'COMPLETING':
-			return 'Aggregation complete. Generating HTML reports...';
+			if (data.scanner_type) {
+				return `[${data.scanner_type}] Scanner complete. Waiting for remaining scanners and aggregation...`;
+			}
+			return 'Aggregating scanner outputs and generating reports...';
 		case 'DONE':
 			return 'Workflow complete. Cleaning up ephemeral resources.';
 		case 'FAILED': {

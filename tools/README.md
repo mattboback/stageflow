@@ -22,11 +22,11 @@ go build -o job-status-cli .
 
 ### Commands
 
-| Command  | Description |
-|----------|-------------|
-| `jobs`   | List jobs with optional state filtering and pagination |
+| Command | Description |
+| --- | --- |
+| `jobs` | List jobs with optional state filtering and pagination |
 | `events` | Show the event timeline for a specific job |
-| `pods`   | List all orchestrator-managed pods |
+| `pods` | List all orchestrator-managed pods |
 | `status` | Display system-wide job and pod metrics |
 
 ### Flags
@@ -45,7 +45,7 @@ go build -o job-status-cli .
 ### Environment Variables
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+| --- | --- | --- |
 | `ORCHESTRATOR_ADMIN_URL` | `http://localhost:8081` | Orchestrator admin API endpoint |
 
 ### Examples
@@ -71,7 +71,7 @@ go build -o job-status-cli .
 
 ## suite-runner
 
-Run accessibility compliance scans across multiple domains in parallel, evaluate results against thresholds, and generate a pass/fail report.
+Run accessibility scans across multiple domains, evaluate threshold compliance, and generate a pass/fail report.
 
 ### Usage
 
@@ -90,7 +90,7 @@ go build -o suite-runner .
 ### Flags
 
 | Flag | Default | Description |
-|------|---------|-------------|
+| --- | --- | --- |
 | `-suite <path>` | `suite.yml` | Path to YAML suite definition |
 | `-api <url>` | `http://localhost:8080` | Platform API base URL (or `PLATFORM_API_BASE_URL` env var) |
 
@@ -103,14 +103,14 @@ domains:
 
 modules:
   - axe
-  - keyboard
+  - lighthouse
 
 screenshot: false
 
 thresholds:
   max_critical: 0      # Max allowed critical violations
-  max_serious: 5        # Max allowed serious violations
-  max_total: 50         # Max allowed total violations
+  max_serious: 5       # Max allowed serious violations
+  max_total: 50        # Max allowed total violations
 
 timeout_seconds: 900    # Overall test timeout (default: 900)
 stream_retry_seconds: 3 # SSE reconnect delay (default: 3)

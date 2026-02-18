@@ -86,6 +86,7 @@ export class NatsEventPublisher implements ScanEventPublisher {
   ): Promise<void> {
     await this.publish(this.subjects.pageCompleted, "scan.page.completed", {
       job_id: this.jobId,
+      scanner_type: this.scannerName,
       page_id: result.pageId,
       page_index: index,
       total_pages: total,

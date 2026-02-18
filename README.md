@@ -1,69 +1,55 @@
 # StageFlow
 
-**Podman-native web accessibility scanning platform.**
+Podman-native web accessibility and quality scanning platform.
 
-StageFlow is a polyglot microservices platform that orchestrates web accessibility and quality scans. Submit a URL or upload a ZIP of static HTML, and StageFlow spins up containerized scanners — [axe-core](https://github.com/dequelabs/axe-core), [Lighthouse](https://github.com/GoogleChrome/lighthouse), SEO, security headers, link checking, and an optional AI-powered navigator — then aggregates results into a unified report delivered via Server-Sent Events.
+StageFlow runs multi-scanner audits against live URLs or static-site ZIP archives, then aggregates outputs into one normalized report stream. It is built for self-hosting, strict intake validation, and operational transparency.
 
-## Project Write-Up (Implementation Snapshot)
+## Why StageFlow
 
-I built StageFlow to run accessibility and quality scans in infrastructure I control, with clear runtime boundaries between API intake, orchestration, scanner execution, and reporting. In practice, the frontend submits jobs to a small Go API surface (`/api/v1/jobs/zip`, `/api/v1/jobs/urls`, `/api/v1/jobs/{id}`, `/api/v1/jobs/{id}/stream`, `/api/v1/scanners`) and then follows progress over SSE.
+- Run accessibility and quality scans in infrastructure you control.
+- Submit one job and run multiple scanner modules in parallel.
+- Track job progress in real time through SSE (`/api/v1/jobs/{id}/stream`).
+- Keep scanner execution isolated in per-job pods.
+- Produce one deduplicated report from heterogeneous scanner outputs.
 
-The intake path is intentionally strict. URL submissions are capped at 2 MB, limited to 100 URLs, and validate each target as `http`/`https` with host checks that block loopback, private, link-local, and metadata-address destinations. ZIP uploads are capped at 100 MB and support scanner module selection plus per-scanner config payloads. For ZIP jobs, files land in a staging bucket first; extraction is handled out-of-process by the extractor service.
+## At a Glance
 
-The extractor enforces defensive archive handling before any scan runs: entry-count limits, max expansion ratio (ZIP bomb protection), max uncompressed size limits, per-entry size limits, and path sanitization to reject traversal/absolute-path tricks. For URL jobs, the orchestrator skips extraction and starts scanners directly. For ZIP jobs, it creates a pod, runs extraction, waits for `extraction.ready`, then transitions into scanning.
-
-Scanning itself is plugin-driven. The scanner-runner discovers scanner manifests, loads the requested module, validates scanner identity against its manifest, and validates `SCANNER_OPTIONS` against the manifest schema. The orchestrator starts one container per selected scanner module and applies resource limits from scanner definitions (with defaults when not specified). Current built-ins are `axe`, `lighthouse`, `seo`, `security-headers`, `link-checker`, plus `ai-navigator` as an optional module.
-
-What made this project interesting was not just running tools, but normalizing their output into one coherent report. On completion, the orchestrator downloads scanner outputs, merges page and issue data, deduplicates overlapping rules across scanners (for example `axe`/`lighthouse`/`seo` overlap on some checks) using explicit scanner priority, recalculates severity totals, and publishes a unified report artifact set. On the frontend, the scan status store keeps live progress readable with SSE reconnect behavior and a fetch fallback, so users still get a trustworthy terminal state if streaming drops.
-
-### Implementation References
-
-- API routes and intake validation: `platform/api/internal/api/router.go`, `platform/api/internal/api/handlers_jobs_url_submit.go`, `platform/api/internal/api/handlers_jobs_zip_upload.go`
-- URL security policy (SSRF guardrails): `platform/api/internal/api/security.go`
-- ZIP validation and safe extraction: `platform/extractor/internal/extractor/extractor.go`
-- Job lifecycle and scanner startup: `platform/orchestrator/internal/orchestrator/events.go`, `platform/orchestrator/internal/orchestrator/extraction.go`, `platform/orchestrator/internal/orchestrator/scanning.go`
-- Aggregation and cross-scanner deduplication: `platform/orchestrator/internal/orchestrator/report_aggregator_aggregate.go`, `platform/orchestrator/internal/orchestrator/rule_deduplication.go`
-- Plugin loader and schema validation: `platform/scanner-runner/src/worker.ts`
-- Scanner manifests (capabilities/config schemas): `packages/shared-go/scannercatalog/manifests/*/manifest.json`
-- Frontend submit + live status flow: `frontend/src/lib/api/client.ts`, `frontend/src/lib/stores/scan-status.svelte.ts`
-
-## Docs
-
-- Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
-- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-- Security: [SECURITY.md](SECURITY.md)
-- Support: [SUPPORT.md](SUPPORT.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
-
-## Architecture
-
-```
- Client → SvelteKit SPA → Go API → NATS JetStream → Go Orchestrator
-                                                          ↓
-                                              Podman containers
-                                        ┌─────────┬─────────────┐
-                                        │Extractor│  Scanners   │
-                                        │  (Go)   │(TS/Bun/PW)  │
-                                        └─────────┴─────────────┘
-                                              ↓
-                                     MinIO (results) → Unified Report
+```text
+Client/UI -> Platform API -> NATS JetStream -> Orchestrator -> Podman job pod
+                                                      |            |- Extractor (ZIP jobs)
+                                                      |            `- Scanner runners
+                                                      `-> Status + artifacts -> MinIO -> unified report
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full system design, data flows, state machine, plugin system, and database schemas.
+- API validates intake, applies SSRF guardrails, and publishes job events.
+- Orchestrator owns the job FSM and scanner lifecycle.
+- Scanner runner loads plugins by manifest and validates scanner options.
+- Frontend receives live status with SSE and fallback refresh logic.
+
+Full design details: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Built-In Scanners
+
+| Scanner | Focus |
+| --- | --- |
+| `axe` | Accessibility (WCAG rule violations) |
+| `lighthouse` | Performance and quality audits |
+| `seo` | SEO best-practice checks |
+| `security-headers` | HTTP security header posture |
+| `link-checker` | Broken link detection |
+| `ai-navigator` | Goal-driven browser flow evaluation |
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Backend | Go 1.25 (API, Orchestrator, Extractor) |
-| Scanner Runtime | TypeScript / Bun / Playwright |
-| Frontend | SvelteKit 5 (runes, Tailwind v4) |
+| --- | --- |
+| Backend services | Go 1.25 |
+| Scanner runtime | TypeScript + Bun + Playwright |
+| Frontend | SvelteKit 5 + Tailwind v4 |
 | Messaging | NATS JetStream |
-| Object Storage | MinIO (S3-compatible) |
-| Containers | Podman (pods, volumes, networking) |
-| Database | PostgreSQL |
-| Reverse Proxy | Caddy (auto-HTTPS) |
+| Storage | MinIO (artifacts) + PostgreSQL (job state/events) |
+| Container runtime | Podman |
+| Edge/proxy | Caddy |
 | Monitoring | Grafana |
 
 ## Prerequisites
@@ -71,142 +57,120 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full system design, data flows, s
 - [Go 1.25+](https://go.dev/dl/)
 - [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) (with `podman compose`)
-- [just](https://github.com/casey/just) (command runner)
+- [just](https://github.com/casey/just)
 - [golangci-lint v2](https://golangci-lint.run/)
 
 ## Quick Start
 
 ```bash
-# Clone
 git clone https://github.com/mattboback/stageflow.git
 cd stageflow
 
-# Copy environment config
 cp .env.example .env
-# The defaults are local-dev friendly; you can use any non-empty values for local credentials.
 
-# Install dependencies and create Podman network
 just setup
-
-# Start the local stack (NATS, MinIO, Grafana, API, orchestrator, frontend)
 just dev up
-
-# Initialize MinIO buckets
 just dev init
-
-# Build dynamic job images (extractor + scanner-runner)
 just images
 ```
 
-Tip: `just demo` runs the full local setup + prints a ready-to-run URL scan command.
+After startup:
 
-### Local Demo (URL Scan)
+- Frontend: `http://localhost:3000`
+- API: `http://localhost:8080`
+- Orchestrator admin API: `http://localhost:8081`
 
-1. Open the UI: `http://localhost:3000`
-2. Or submit a URL job via API:
+Tip: `just demo` runs setup, starts the stack, initializes buckets, builds images, and prints a URL-scan command.
+
+## First URL Scan (API)
 
 ```bash
-job_id="$(
+job_id="$({
   curl -sS -X POST http://localhost:8080/api/v1/jobs/urls \
-  -H 'content-type: application/json' \
-  -d '{"urls":["https://example.com"]}' \
-  | jq -r .job_id
-)"
+    -H 'content-type: application/json' \
+    -d '{"urls":["https://example.com"]}'
+} | jq -r .job_id)"
 
-echo "$job_id"
-```
-
-3. Stream progress (SSE):
-
-```bash
 curl -N "http://localhost:8080/api/v1/jobs/$job_id/stream"
 ```
 
-Note: URL scans enforce SSRF protections and will reject loopback/private/metadata targets.
+SSRF protections reject loopback/private/link-local/metadata destinations for URL jobs.
 
-## Justfile Commands
+## Day-to-Day Commands
 
-StageFlow uses [just](https://github.com/casey/just) as its command runner. Run `just help` to see all available recipes.
+Run `just help` for the full recipe list.
 
-| Group | Command | Description |
-|-------|---------|-------------|
-| **setup** | `just setup` | One-time setup: Podman network, Go/Bun deps |
-| **dev** | `just dev [up\|down\|restart\|logs\|init]` | Local dev stack via compose |
-| **staging** | `just staging [up\|down\|restart\|logs\|init\|ps]` | Staging stack via compose |
-| **build** | `just build` | Build all artifacts (Go + frontend + runner) |
-| **build** | `just images` | Build container images |
-| **quality** | `just ci` | Run local CI: lint + typecheck + test |
-| **run** | `just run [frontend\|api\|orchestrator]` | Run a service locally |
-| **prod** | `just prod [install\|up\|down\|restart\|logs\|ps\|health]` | Manage production Quadlets |
-| **prod** | `just deploy [full\|quick]` | Deploy production |
-| **cleanup** | `just clean [all\|deep]` | Remove build artifacts |
+| Area | Command | Purpose |
+| --- | --- | --- |
+| Setup | `just setup` | Install deps, sync workspace, create network |
+| Local stack | `just dev up` / `just dev down` / `just dev logs` | Start, stop, or inspect local compose stack |
+| Staging stack | `just staging up` / `just staging down` | Manage staging compose environment |
+| Build | `just build` | Build Go services, frontend, scanner-runner |
+| Images | `just images` | Build container images |
+| Quality | `just ci` | Lint, typecheck, tests, audits |
+| Service run | `just run frontend` / `just run api` / `just run orchestrator` | Run one service locally |
+| Production | `just prod <cmd>` / `just deploy <mode>` | Quadlet and deploy workflows |
 
-## Scanner Plugins
+## Scanner Plugin System
 
-StageFlow uses a plugin system for scanners. Each scanner is a self-contained module discovered via a `manifest.json`:
+Scanners are discovered via manifest files and loaded dynamically by the scanner runtime.
 
-| Scanner | Category | Description |
-|---------|----------|-------------|
-| **axe** | Accessibility | axe-core WCAG 2.x violations |
-| **lighthouse** | Performance/Quality | Google Lighthouse audits |
-| **seo** | SEO | SEO best practices |
-| **security-headers** | Security | HTTP security header analysis |
-| **link-checker** | Quality | Broken link detection |
-| **ai-navigator** | Accessibility | LLM-powered page navigation |
+Discovery paths (in order):
 
-Custom scanners can be added by:
-1. Creating a directory with a `manifest.json` and scanner module
-2. Mounting it into the scanner container at `/plugins`
-3. Or placing it in `~/.stageflow/plugins`
+1. Built-in scanners in `platform/scanner-runner/src/scanners`
+2. Mounted `/plugins`
+3. User plugins at `~/.stageflow/plugins`
+4. Extra paths from `PLUGIN_PATHS`
 
-See [ARCHITECTURE.md § Scanner Plugin System](ARCHITECTURE.md#scanner-plugin-system) for the full manifest schema and lifecycle.
+To add a custom scanner:
 
-## Self-Hosting
+1. Implement a scanner module (extends `ScannerBase`).
+2. Add a valid `manifest.json` (schema-backed).
+3. Make the plugin available in a discovery path.
 
-StageFlow is designed for self-hosting. All domain-specific configuration is driven by environment variables:
+Reference docs:
 
-```bash
-# .env
-STAGEFLOW_PUBLIC_DOMAIN=your-domain.com    # Used by Caddy and presigned URLs
-PLATFORM_API_CORS_ALLOW_ORIGINS=https://your-domain.com,https://www.your-domain.com
-VITE_API_URL=https://your-domain.com       # Frontend API endpoint
-VITE_SITE_URL=https://your-domain.com      # Frontend site URL
-```
+- [ARCHITECTURE.md](ARCHITECTURE.md#scanner-plugin-system)
+- `packages/contracts/scanner-manifest/schema/README.md`
 
-**Deployment options:**
-- **Compose** (`just dev` / `just staging`) — for development and staging
-- **Quadlets** (`just prod`) — systemd-managed Podman containers for production
+## Security and Runtime Boundaries
 
-## Project Structure
+- URL intake blocks private/loopback/link-local/metadata targets.
+- ZIP extraction enforces archive safety limits and path sanitization.
+- Scanner execution is containerized per job.
+- API status streaming uses SSE with reconnect-safe behavior.
+- Edge rate limiting is expected at proxy/load-balancer/CDN layers.
 
-```
+See [SECURITY.md](SECURITY.md) and [ARCHITECTURE.md](ARCHITECTURE.md#security-and-trust-boundaries).
+
+## Repository Layout
+
+```text
 stageflow/
-├── frontend/              # SvelteKit 5 SPA
-├── platform/
-│   ├── api/               # Go REST API + SSE
-│   ├── orchestrator/      # Go job coordination + container management
-│   ├── extractor/         # Go ZIP extraction service
-│   └── scanner-runner/    # TypeScript/Bun scanner runtime
-├── packages/
-│   ├── contracts/         # Shared schemas (report, scanner-manifest, events)
-│   └── shared-go/         # Shared Go libraries
-├── infra/
-│   ├── compose/           # Podman Compose files
-│   ├── caddy/             # Reverse proxy config
-│   ├── quadlets/          # Systemd Quadlet templates
-│   ├── minio/             # Bucket initialization
-│   ├── grafana/           # Dashboards and datasources
-│   └── scanners/          # Scanner configuration overrides
-├── tools/
-│   ├── job-status-cli/    # CLI for inspecting jobs and system status
-│   └── suite-runner/      # Test suite runner for integration testing
-├── scripts/               # Build and deployment scripts
-└── tests/                 # E2E tests and fixtures
+|- platform/              # API, orchestrator, extractor, scanner-runner
+|- frontend/              # SvelteKit app
+|- packages/              # Contracts + shared Go modules
+|- infra/                 # Compose, Caddy, Quadlets, monitoring, scanner config
+|- tools/                 # job-status-cli, suite-runner
+|- tests/                 # End-to-end tests
+`- scripts/               # Build/deploy scripts
 ```
+
+## Documentation Map
+
+- [ARCHITECTURE.md](ARCHITECTURE.md): deep system design, flows, and constraints
+- [OPERATIONS.md](OPERATIONS.md): runbook for startup, health checks, and incident response
+- [CONFIGURATION.md](CONFIGURATION.md): environment and deployment configuration guide
+- [CONTRIBUTING.md](CONTRIBUTING.md): local workflow, standards, and PR checklist
+- [SECURITY.md](SECURITY.md): vulnerability reporting policy
+- [SUPPORT.md](SUPPORT.md): help channels and debugging checklist
+- [tools/README.md](tools/README.md): operational tooling (`job-status-cli`, `suite-runner`)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): community conduct standards
+- [CHANGELOG.md](CHANGELOG.md): release history
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
