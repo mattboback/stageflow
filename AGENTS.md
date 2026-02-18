@@ -1,114 +1,108 @@
 # AGENTS.md
 
-## Purpose
+## OVERVIEW
 
-This file defines how agents should work in the StageFlow repository.
-Follow these rules by default unless a user instruction explicitly overrides them.
+StageFlow: Podman-native web accessibility + quality scanning platform. URLs or ZIP archives → containerized scanners (axe, lighthouse, SEO, security-headers, link-checker, ai-navigator) → unified report via SSE. Polyglot monorepo: Go 1.25 (API/orchestrator/extractor) + TypeScript/Bun/Playwright (scanner-runner) + SvelteKit 5 (frontend). Messaging: NATS JetStream. Storage: MinIO + PostgreSQL. Containers: Podman.
 
-## Prime Directives
+## STRUCTURE
 
-These rules are non-negotiable. Violating them is a critical failure.
+```
+stageflow/
+├── platform/
+│   ├── api/            # Go REST API + SSE (public intake, SSRF validation)
+│   ├── orchestrator/   # Go job FSM + Podman pod management + report aggregation
+│   ├── extractor/      # Go ZIP extraction service (runs inside job pods)
+│   └── scanner-runner/ # TypeScript/Bun/Playwright scanner worker (plugin system)
+├── frontend/           # SvelteKit 5 SPA (runes, Tailwind v4)
+├── packages/
+│   ├── contracts/      # JSON Schema → generated Go+TS types (report, scanner-manifest)
+│   └── shared-go/      # Shared Go: models, events, messaging, storage, httputil, logging
+├── infra/              # Compose files, Caddy, Quadlet templates, Grafana
+├── tools/              # job-status-cli (ops), suite-runner (integration tests)
+├── tests/e2e/          # Go e2e tests against running stack
+└── scripts/            # build-images.sh, quadlet-install.sh
+```
 
-| Rule | Rationale |
-| --- | --- |
-| **Never bypass lint/test failures** | Fix the issue. Never disable rules, skip tests, or hide errors. |
-| **No breadcrumbs** | No `TODO` placeholders, ad-hoc status docs, or orphaned notes unless explicitly requested. |
-| **Validate before claiming success** | Run relevant checks and report the real outcome. |
+## WHERE TO LOOK
 
-## Execution Defaults (StageFlow)
+| Task | Location |
+|------|----------|
+| API route registration | `platform/api/internal/api/router.go` |
+| Job intake validation | `platform/api/internal/api/handlers_jobs_*.go` |
+| SSRF/URL security | `platform/api/internal/api/security.go` |
+| Job FSM transitions | `platform/orchestrator/internal/fsm/state.go` |
+| Orchestrator event handlers | `platform/orchestrator/internal/orchestrator/events.go` |
+| Scanner startup + limits | `platform/orchestrator/internal/orchestrator/scanning.go` |
+| Report aggregation + dedup | `platform/orchestrator/internal/orchestrator/report_aggregator_*.go` |
+| ZIP extraction safety | `platform/extractor/internal/extractor/extractor.go` |
+| Scanner plugin entry | `platform/scanner-runner/src/worker.ts` |
+| Scanner base lifecycle | `platform/scanner-runner/src/core/scanner-base.ts` |
+| Plugin discovery | `platform/scanner-runner/src/core/plugins/` |
+| Scanner manifests | `packages/shared-go/scannercatalog/manifests/*/manifest.json` |
+| Shared NATS event types | `packages/shared-go/events/types.go` |
+| NATS client wrapper | `packages/shared-go/messaging/nats.go` |
+| HTTP error helpers | `packages/shared-go/httputil/errors.go` |
+| Frontend SSE + scan store | `frontend/src/lib/stores/scan-status.svelte.ts` |
+| Frontend API client | `frontend/src/lib/api/client.ts` |
 
-- Use `just` from the repo root for standard workflows.
-- Prefer the smallest command that validates your change, then run broader checks when risk is high.
-- Preferred verification ladder:
-  1. Narrow checks for touched area (example: `bun run lint`, `bun run test` in the affected package)
-  2. Broader package/service checks
-  3. `just ci` for full-repo confidence when changes are cross-cutting
+## COMMANDS
 
-### Common Commands
+```bash
+just setup            # One-time: Podman network + go work sync + bun install (frozen)
+just dev up           # Local stack (NATS, MinIO, Postgres, services, frontend)
+just dev init         # Init MinIO buckets (run after dev up)
+just images           # Build all container images
+just ci               # Full CI: go build/lint/test + bun lint/typecheck/test:coverage
+just run api          # Run API service locally
+just run orchestrator # Run orchestrator locally
+just run frontend     # Run frontend dev server
+just deploy full      # Build images + restart prod Quadlets
+just prod health      # Check production service states
+```
 
-- Setup: `just setup`
-- Local stack: `just dev up`, `just dev down`, `just dev logs`, `just dev init`
-- Build: `just build`, `just images`
-- Quality gate: `just ci`
-- Production (systemd user + Quadlets): `just prod up|down|restart|logs|health`
+## CONVENTIONS
 
-## Concurrency Model
+### All
+- Use `just` from repo root for all workflows.
+- Assume other agents/humans may commit concurrently — ignore unrelated diffs.
+- `Fail fast → Guard clauses → Validate at boundaries → Make illegal states unrepresentable`
 
-Assume other agents or humans may commit during your session.
+### TypeScript (scanner-runner, frontend)
+- Extend `tsconfig.strict.json`; all strict flags enforced including `noUncheckedIndexedAccess`.
+- `unknown` + narrowing over `any`. Runtime validation (AJV/schema) over `as` casts.
+- scanner-runner: Bun-native APIs preferred. Build produces `dist/` via `tsc`.
+- scanner-runner: run `bun run prepare:contracts` before build/test.
 
-- Do not delete or revert changes just because you did not make them.
-- If the working tree changes unexpectedly, continue focusing on files relevant to your task.
-- Ignore unrelated diffs. Coordinate only when there is a real overlap or conflict.
+### Go (api, orchestrator, extractor, shared-go, tools, tests)
+- Always handle errors — never `_ = err`. Always pass `context.Context` through call chains.
+- Wrap with `fmt.Errorf("%s: %w", msg, err)`.
+- HTTP error responses via `httputil.RespondStructuredError` + `httputil.New*Error` constructors.
+- Timestamps always UTC.
+- `go.work` lists all modules; `just ci` iterates each.
 
-## Defensive Programming
+### Svelte 5 (frontend)
+- Runes only: `$state`, `$derived`, `$derived.by()`, `$effect`. No new Svelte writable stores.
+- Factory stores (`.svelte.ts`) for cross-component lifecycle + async state.
+- **Verify Svelte 5 docs before implementing new patterns** — API changes frequently.
 
-Apply this sequence:
+## ANTI-PATTERNS
 
-`Fail fast -> Guard clauses -> Validate at boundaries -> Make illegal states unrepresentable`
+- Never `_ = err` in Go. Never `any` or `as` casts in TypeScript.
+- Never disable lint rules to pass CI — fix root cause.
+- Never edit `packages/contracts/*/generated/**` directly — regenerate from schema (`make`).
+- Do not add Svelte writable stores where runes work.
+- `WriteTimeout = 0` on API HTTP server is **intentional** (SSE). Do not change.
+- Orchestrator mounts Podman socket — intentional for pod management. Do not remove.
 
-Validate all trust boundaries:
+## DEPLOYMENT
 
-- Incoming request payloads
-- Environment variables and config
-- Queue messages and event envelopes
-- Database rows and persistence mappings
-- External API responses
-- Filesystem/archive inputs (size, path, format, limits)
+Production: systemd user services + Podman Quadlets (`infra/quadlets/templates/`).
+If a shared reverse proxy exists, route to StageFlow services on loopback — do not bind a second proxy to 80/443.
 
-## Language-Specific Rules
+## NOTES
 
-### TypeScript
-
-| Constraint | Preferred Alternative |
-| --- | --- |
-| No `any` | `unknown` with narrowing |
-| Avoid `as` casts | Runtime checks or schema validation |
-
-- Prefer Bun-native APIs/runtime features when running on Bun.
-- Assume modern browsers unless requirements say otherwise.
-
-### Python
-
-- Use `uv` with `pyproject.toml`.
-- Do not introduce Poetry, pipenv, or `requirements.txt` workflows.
-- Add type hints on all signatures.
-- Prefer Pydantic models or dataclasses over raw untyped dicts.
-
-### Go
-
-- Always handle errors. Never ignore `err`.
-- Pass `context.Context` through call chains.
-- Wrap errors with context: `fmt.Errorf("doing thing: %w", err)`.
-
-### Svelte 5
-
-Svelte changes quickly. Verify current docs before implementing new patterns.
-
-- Use runes: `$state`, `$derived`, `$effect`
-- Do not introduce stores in new code where runes are appropriate.
-
-## Anti-Patterns
-
-| Avoid | Do Instead |
-| --- | --- |
-| Disabling lint rules to pass checks | Fix the underlying issue |
-| Assuming docs are current | Verify against current code and tooling |
-| Ignoring failing tests | Debug and resolve root cause |
-| Broad refactors during targeted fixes | Keep changes scoped and intentional |
-
-## Deployment (VPS)
-
-StageFlow supports production deployments via systemd user services + Podman Quadlets.
-
-### Quick Commands (Repo Root)
-
-- Install units: `just prod install`
-- Start: `just prod up`
-- Stop: `just prod down`
-- Restart: `just prod restart`
-- Logs: `just prod logs`
-- Health: `just prod health`
-
-### Reverse Proxy Note
-
-If you already operate a shared reverse proxy (Caddy/Nginx/Traefik), avoid deploying an additional StageFlow-managed proxy that binds `80/443`. Route traffic from your existing gateway to StageFlow services on loopback or the Podman network.
+- **SSRF**: URL submissions block loopback, private, link-local, metadata IPs.
+- **scanner-runner plugins**: `dist/scanners` → `/plugins` (volume) → `$HOME/.stageflow/plugins` → `PLUGIN_PATHS`. `SCANNER_OPTIONS` validated against manifest `configSchema` (strict in prod).
+- **SSE**: `WriteTimeout = 0` on API server. Per-handler timeouts in middleware.
+- **Coverage thresholds** (~50%) enforced by vitest in CI.
+- **Contracts regen**: `cd packages/contracts/<name> && make` regenerates Go+TS from JSON Schema.

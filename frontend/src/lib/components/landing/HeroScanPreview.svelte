@@ -1,38 +1,73 @@
 <script lang="ts">
 	import TerminalCardHeader from '$lib/components/ui/TerminalCardHeader.svelte';
+
+	const scannerRows = [
+		{
+			name: 'accessibility',
+			label: 'Axe',
+			pct: 100,
+			status: 'complete',
+			color: 'bg-blue-500'
+		},
+		{
+			name: 'performance',
+			label: 'Lighthouse',
+			pct: 84,
+			status: '84%',
+			color: 'bg-amber-500'
+		},
+		{
+			name: 'crawlability',
+			label: 'SEO',
+			pct: 66,
+			status: '66%',
+			color: 'bg-rose-500'
+		},
+		{
+			name: 'security',
+			label: 'Headers',
+			pct: 42,
+			status: '42%',
+			color: 'bg-violet-500'
+		}
+	] as const;
 </script>
 
-<div
-	class="hidden rotate-1 rounded-2xl border border-line bg-surface shadow-lg lg:block"
-	aria-hidden="true"
->
-	<TerminalCardHeader path="stageflow scan" />
-	<div class="space-y-3.5 px-5 py-4 font-mono text-xs leading-relaxed">
-		{#each [
-			{ name: 'axe', label: 'Accessibility', color: 'bg-blue-500', bg: 'bg-blue-100', pct: 100 },
-			{ name: 'lighthouse', label: 'Lighthouse', color: 'bg-amber-500', bg: 'bg-amber-100', pct: 85 },
-			{ name: 'seo', label: 'SEO', color: 'bg-rose-500', bg: 'bg-rose-100', pct: 65 },
-			{ name: 'security', label: 'Security', color: 'bg-violet-500', bg: 'bg-violet-100', pct: 40 }
-		] as scanner (scanner.name)}
-			<div class="flex items-center gap-3">
-				<span class="w-24 truncate text-ink-muted">{scanner.label}</span>
-				<div class="h-1.5 flex-1 overflow-hidden rounded-full {scanner.bg}">
+<div class="hero-preview hidden lg:block" aria-hidden="true">
+	<TerminalCardHeader path="stageflow scan --target https://stageflow.org" />
+	<div class="space-y-4 px-5 py-5 font-mono text-xs leading-relaxed">
+		{#each scannerRows as scanner (scanner.name)}
+			<div class="space-y-1.5">
+				<div class="flex items-center justify-between gap-4">
+					<span class="text-ink-muted text-[11px] font-medium tracking-[0.08em] uppercase">
+						{scanner.label}
+					</span>
+					<span class="text-ink-faint text-[11px]">
+						{#if scanner.pct === 100}
+							<span class="text-emerald-600">complete</span>
+						{:else}
+							{scanner.status}
+						{/if}
+					</span>
+				</div>
+				<div class="hero-preview-track">
 					<div
-						class="h-full rounded-full {scanner.color}"
+						class={['hero-preview-fill', scanner.color].join(' ')}
 						style="width: {scanner.pct}%"
 					></div>
 				</div>
-				<span class="text-ink-faint w-8 text-right">
-					{#if scanner.pct === 100}
-						<span class="text-emerald-600">done</span>
-					{:else}
-						{scanner.pct}%
-					{/if}
-				</span>
 			</div>
 		{/each}
-		<div class="mt-1 border-t border-line/50 pt-2 text-ink-faint">
-			<span class="text-accent">4</span> scanners running &middot; <span class="text-emerald-600">1</span> complete
+
+		<div class="border-line/60 grid grid-cols-2 gap-3 border-t pt-3">
+			<div>
+				<p class="hero-preview-legend">Events</p>
+				<p class="text-ink mt-1 text-sm font-semibold">248 streamed</p>
+			</div>
+			<div>
+				<p class="hero-preview-legend">Containers</p>
+				<p class="text-ink mt-1 text-sm font-semibold">4 active</p>
+			</div>
 		</div>
 	</div>
 </div>

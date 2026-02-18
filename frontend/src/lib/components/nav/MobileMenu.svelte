@@ -24,7 +24,7 @@
 	padding="none"
 	z={40}
 	size="full"
-	overlayClass="bg-paper pt-24 pb-6"
+	overlayClass="bg-paper/95 pt-24 pb-6 backdrop-blur-xl"
 	contentClass="container-width flex flex-1 flex-col justify-between"
 	closeOnBackdrop={false}
 >
@@ -36,10 +36,10 @@
 					aria-current={isActive(link.href) ? 'page' : undefined}
 					onclick={onClose}
 					class={cn(
-						'block rounded-xl px-4 py-4 text-lg font-medium',
+						'block rounded-2xl px-4 py-4 text-lg font-semibold tracking-[-0.01em]',
 						isActive(link.href)
-							? 'bg-accent-soft text-accent-ink'
-							: 'text-ink-muted hover:bg-surface-muted'
+							? 'border-line/70 bg-surface text-ink border shadow-[0_8px_20px_-14px_rgba(15,15,15,0.45)]'
+							: 'text-ink-muted hover:bg-surface/80 hover:text-ink'
 					)}
 				>
 					{link.label}
@@ -52,7 +52,7 @@
 		<a
 			href={SITE.githubUrl}
 			target="_blank"
-			class="border-line bg-surface text-ink-muted hover:bg-surface-muted hover:text-ink flex items-center justify-center gap-2 rounded-xl border py-3 font-medium"
+			class="border-line bg-surface text-ink-muted hover:bg-surface-muted hover:text-ink flex items-center justify-center gap-2 rounded-2xl border py-3 font-semibold"
 			rel="noreferrer"
 		>
 			<GithubIcon class="h-5 w-5" /> GitHub

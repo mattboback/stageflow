@@ -16,6 +16,110 @@
 		ShieldCheck,
 		Zap
 	} from 'lucide-svelte';
+
+	const metrics = [
+		{ value: '6', label: 'Scanners in one run' },
+		{ value: 'SSE', label: 'Live progress stream' },
+		{ value: '100%', label: 'Self-hosted control' }
+	] as const;
+
+	const poweredBy = [
+		{ icon: Box, label: 'Podman' },
+		{ icon: ShieldCheck, label: 'axe-core' },
+		{ icon: Gauge, label: 'Lighthouse' },
+		{ icon: Shield, label: 'WCAG 2.1' }
+	] as const;
+
+	const scanners = [
+		{
+			icon: Shield,
+			name: 'Axe',
+			desc: 'WCAG 2.1 AA/AAA checks with full node-level evidence and violation context.',
+			color: 'text-blue-600',
+			bg: 'bg-blue-50',
+			border: 'border-t-blue-500'
+		},
+		{
+			icon: Zap,
+			name: 'Lighthouse',
+			desc: 'Performance, SEO, and best-practices scoring from the same run pipeline.',
+			color: 'text-amber-600',
+			bg: 'bg-amber-50',
+			border: 'border-t-amber-500'
+		},
+		{
+			icon: Search,
+			name: 'SEO',
+			desc: 'Meta, headings, structured data, and crawlability checks surfaced in one report.',
+			color: 'text-rose-600',
+			bg: 'bg-rose-50',
+			border: 'border-t-rose-500'
+		},
+		{
+			icon: Shield,
+			name: 'Security Headers',
+			desc: 'CSP, HSTS, X-Frame-Options, and critical header posture scoring.',
+			color: 'text-violet-600',
+			bg: 'bg-violet-50',
+			border: 'border-t-violet-500'
+		},
+		{
+			icon: Link2,
+			name: 'Link Checker',
+			desc: 'Broken links, redirect chains, and dead-end paths caught before release.',
+			color: 'text-emerald-600',
+			bg: 'bg-emerald-50',
+			border: 'border-t-emerald-500'
+		},
+		{
+			icon: Bot,
+			name: 'AI Navigator',
+			desc: 'Goal-based journey simulation that catches experience breakpoints early.',
+			color: 'text-fuchsia-600',
+			bg: 'bg-fuchsia-50',
+			border: 'border-t-fuchsia-500'
+		}
+	] as const;
+
+	const workflowSteps = [
+		{
+			step: '01',
+			title: 'Configure the scope',
+			desc: 'Provide URLs or upload a ZIP archive, then choose the scanners needed for that release.',
+			signal: 'Boundary validation prevents invalid scan states before execution.'
+		},
+		{
+			step: '02',
+			title: 'Run isolated scanners',
+			desc: 'Every scanner runs in rootless containers while progress streams live over SSE.',
+			signal: 'Container isolation keeps scanner behavior reproducible and debuggable.'
+		},
+		{
+			step: '03',
+			title: 'Ship with one report',
+			desc: 'Review merged findings with severity, evidence, and WCAG mapping in a single view.',
+			signal: 'Unified output removes context switching across scanner tools.'
+		}
+	] as const;
+
+	const differentiators = [
+		{
+			title: 'Built for self-hosted teams',
+			desc: 'Run everything on your infrastructure. No third-party data relay required.'
+		},
+		{
+			title: 'Operationally transparent',
+			desc: 'Realtime logs and status events show exactly what scanner is running and why.'
+		},
+		{
+			title: 'Actionable remediation',
+			desc: 'Findings include fix guidance and references designed for fast implementation.'
+		},
+		{
+			title: 'One scanning workflow',
+			desc: 'Accessibility, SEO, security, and performance auditing in one execution path.'
+		}
+	] as const;
 </script>
 
 <svelte:head>
@@ -23,30 +127,32 @@
 	<meta name="description" content={SITE.tagline} />
 </svelte:head>
 
-<div class="bg-paper min-h-screen">
-	<!-- Hero -->
-	<section class="landing-hero pb-20 pt-28">
+<div class="landing-shell min-h-screen">
+	<section class="landing-hero pb-20 pt-32 sm:pt-36">
 		<div class="container-width">
-			<div class="grid items-center gap-12 lg:grid-cols-[1fr_auto]">
-				<div class="mx-auto max-w-3xl lg:mx-0">
-					<div class="mb-5 flex flex-wrap items-center gap-3">
+			<div class="landing-grid lg:grid-cols-[minmax(0,1fr)_420px]">
+				<div class="max-w-3xl">
+					<div class="mb-6 flex flex-wrap items-center gap-3">
 						<p class="section-kicker">Open-Source Scanning Platform</p>
-						<Chip tone="muted" size="sm" class="gap-1.5">
+						<Chip tone="muted" size="sm" class="landing-chip gap-1.5">
 							<GithubIcon class="h-3.5 w-3.5" />
 							Open Source
 						</Chip>
 					</div>
-					<h1 class="h1-display max-w-3xl">
-						Find accessibility, performance, and security issues
-						<span class="text-accent">before your users do.</span>
+
+					<h1 class="h1-display landing-headline">
+						Catch accessibility, performance, and security issues
+						<span class="text-accent">before release day.</span>
 					</h1>
-					<p class="text-ink-muted mt-6 max-w-xl text-lg leading-relaxed">
-						{SITE.tagline}. Six scanners, real-time progress, unified reports — self-hosted on your infrastructure.
+
+					<p class="landing-subhead mt-6">
+						{SITE.tagline}. StageFlow merges six scanners into one operational flow, so you can move from URL to remediation with less friction.
 					</p>
+
 					<div class="mt-8 flex flex-wrap gap-3">
 						<a
 							href="/playground"
-							class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 text-base px-7')}
+							class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 px-7 text-base')}
 						>
 							Start scanning
 							<ArrowRight class="h-4 w-4" />
@@ -55,60 +161,75 @@
 							href={SITE.githubUrl}
 							target="_blank"
 							rel="noopener noreferrer"
-							class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 text-base px-7')}
+							class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 px-7 text-base')}
 						>
 							<GithubIcon class="h-4 w-4" />
 							View source
 						</a>
 					</div>
-					<div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-ink-faint text-xs">
-						<span class="font-medium uppercase tracking-wider">Powered by</span>
-						<span class="flex items-center gap-1.5"><Box class="h-3.5 w-3.5" /> Podman</span>
-						<span class="flex items-center gap-1.5"><ShieldCheck class="h-3.5 w-3.5" /> axe-core</span>
-						<span class="flex items-center gap-1.5"><Gauge class="h-3.5 w-3.5" /> Lighthouse</span>
-						<span class="flex items-center gap-1.5"><Shield class="h-3.5 w-3.5" /> WCAG 2.1</span>
+
+					<div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">
+						<span class="hero-preview-legend font-semibold">Powered by</span>
+						{#each poweredBy as item (item.label)}
+							{@const PoweredIcon = item.icon}
+							<span class="hero-preview-legend flex items-center gap-1.5">
+								<PoweredIcon class="h-3.5 w-3.5" />
+								{item.label}
+							</span>
+						{/each}
+					</div>
+
+					<div class="metric-strip">
+						{#each metrics as item (item.label)}
+							<div class="metric-card">
+								<p class="metric-value">{item.value}</p>
+								<p class="metric-label">{item.label}</p>
+							</div>
+						{/each}
 					</div>
 				</div>
 
-				<HeroScanPreview />
+				<div class="space-y-4">
+					<HeroScanPreview />
+					<aside class="hero-summary-card hidden xl:block">
+						<p class="hero-summary-label">Latest run signal</p>
+						<p class="hero-summary-value">94 / 100</p>
+						<p class="text-ink-muted mt-2 text-sm leading-relaxed">
+							Accessibility and security passed baseline. SEO flags reduced by 37% from the previous sweep.
+						</p>
+					</aside>
+				</div>
 			</div>
 		</div>
 	</section>
 
 	<div class="section-divider"></div>
 
-	<!-- Scanners -->
-	<section class="py-20">
+	<section class="section-padding">
 		<div class="container-width">
-			<div class="mx-auto max-w-2xl">
-				<p class="section-kicker mb-2">Capabilities</p>
-				<h2 class="h2-display">Six scanners, one report</h2>
-				<p class="text-ink-muted mt-3 text-base">
-					Each scan runs the checks you select and merges results into a single, actionable report.
+			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+				<div class="max-w-3xl">
+					<p class="section-kicker mb-2">Capabilities</p>
+					<h2 class="h2-display">Six scanners. One operational report.</h2>
+				</div>
+				<p class="text-ink-muted text-sm leading-relaxed lg:text-right">
+					Choose scanners per run and keep output normalized in one report surface for engineers, PMs, and designers.
 				</p>
 			</div>
 
-			<div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{#each [
-					{ icon: Shield, name: 'Axe', desc: 'WCAG 2.1 AA/AAA accessibility testing with axe-core', color: 'text-blue-600', border: 'border-t-blue-500', bg: 'bg-blue-50' },
-					{ icon: Zap, name: 'Lighthouse', desc: 'Performance, SEO, and best practices audits by Google', color: 'text-amber-500', border: 'border-t-amber-500', bg: 'bg-amber-50' },
-					{ icon: Search, name: 'SEO', desc: 'Meta tags, headings, structured data, and crawlability', color: 'text-rose-500', border: 'border-t-rose-500', bg: 'bg-rose-50' },
-					{ icon: Shield, name: 'Security Headers', desc: 'CSP, HSTS, X-Frame-Options, and header scoring', color: 'text-violet-600', border: 'border-t-violet-600', bg: 'bg-violet-50' },
-					{ icon: Link2, name: 'Link Checker', desc: 'Broken links, redirect chains, and orphaned pages', color: 'text-emerald-600', border: 'border-t-emerald-600', bg: 'bg-emerald-50' },
-					{ icon: Bot, name: 'AI Navigator', desc: 'LLM-powered agent that tests goal-based user flows', color: 'text-purple-600', border: 'border-t-purple-600', bg: 'bg-purple-50' }
-				] as scanner (scanner.name)}
-					{@const ScanIcon = scanner.icon}
-					<div class={cn('scanner-card rounded-xl border border-line border-t-2 bg-surface p-6', scanner.border)}>
-						<div class="flex gap-4">
-							<div class={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', scanner.bg)}>
-								<ScanIcon class={cn('h-5 w-5', scanner.color)} />
+			<div class="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+				{#each scanners as scanner, index (scanner.name)}
+					{@const ScannerIcon = scanner.icon}
+					<article class={cn('editorial-card scanner-card border-t-2 p-6', scanner.border)}>
+						<div class="mb-5 flex items-start justify-between gap-4">
+							<div class={cn('flex h-11 w-11 items-center justify-center rounded-xl', scanner.bg)}>
+								<ScannerIcon class={cn('h-5 w-5', scanner.color)} />
 							</div>
-							<div>
-								<p class="text-ink text-sm font-bold">{scanner.name}</p>
-								<p class="text-ink-muted mt-1 text-sm leading-relaxed">{scanner.desc}</p>
-							</div>
+							<p class="hero-preview-legend">Scanner {index + 1}</p>
 						</div>
-					</div>
+						<h3 class="text-ink text-base font-semibold">{scanner.name}</h3>
+						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{scanner.desc}</p>
+					</article>
 				{/each}
 			</div>
 		</div>
@@ -116,30 +237,22 @@
 
 	<div class="section-divider"></div>
 
-	<!-- How it works -->
-	<section class="bg-accent-mist py-20">
+	<section class="workflow-band section-padding">
 		<div class="container-width">
-			<div class="mx-auto max-w-2xl">
+			<div class="mx-auto max-w-2xl text-center lg:text-left">
 				<p class="section-kicker mb-2">Workflow</p>
-				<h2 class="h2-display">From URL to report in seconds</h2>
+				<h2 class="h2-display">From target input to a release-ready report</h2>
 			</div>
-			<div class="relative mx-auto mt-12 grid max-w-3xl gap-8 sm:grid-cols-3">
-				<!-- Dashed connector between steps (sm+ only) -->
-				<div class="pointer-events-none absolute top-5 right-0 left-0 hidden sm:block">
-					<div class="mx-auto h-px w-2/3 border-t border-dashed border-accent/20"></div>
-				</div>
-				{#each [
-					{ step: '1', title: 'Configure', desc: 'Enter URLs or upload a ZIP archive. Select the scanners you need.' },
-					{ step: '2', title: 'Scan', desc: 'Watch real-time progress via SSE. Each scanner runs in an isolated container.' },
-					{ step: '3', title: 'Review', desc: 'Get a unified report with issues, screenshots, remediation tips, and WCAG references.' }
-				] as item (item.step)}
-					<div class="relative text-center sm:text-left">
-						<div class="bg-accent text-white mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full text-base font-bold sm:mx-0">
-							{item.step}
-						</div>
-						<h3 class="text-ink text-base font-semibold">{item.title}</h3>
+
+			<div class="relative mt-12 grid gap-5 lg:grid-cols-3">
+				<div class="workflow-line"></div>
+				{#each workflowSteps as item (item.step)}
+					<article class="workflow-step">
+						<p class="workflow-index">{item.step}</p>
+						<h3 class="text-ink mt-3 text-lg font-semibold">{item.title}</h3>
 						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{item.desc}</p>
-					</div>
+						<p class="text-accent-deep mt-4 text-xs font-medium leading-relaxed">{item.signal}</p>
+					</article>
 				{/each}
 			</div>
 		</div>
@@ -147,48 +260,49 @@
 
 	<div class="section-divider"></div>
 
-	<!-- Why -->
-	<section class="py-20">
+	<section class="section-padding">
 		<div class="container-width">
-			<div class="mx-auto max-w-2xl">
-				<p class="section-kicker mb-2">Why StageFlow</p>
-				<h2 class="h2-display">Built for teams that ship</h2>
-			</div>
-			<div class="mx-auto mt-12 grid max-w-3xl gap-6 sm:grid-cols-2">
-				{#each [
-					{ title: 'Self-hosted', desc: 'Runs on your infra with Podman. No data leaves your network.' },
-					{ title: 'Container-isolated', desc: 'Every scanner runs in its own rootless container. Clean, reproducible, secure.' },
-					{ title: 'Real-time streaming', desc: 'SSE-powered live progress. Know exactly what\u2019s happening and when.' },
-					{ title: 'Unified reports', desc: 'All scanner results merged into one report with severity, WCAG mapping, and fix guidance.' }
-				] as feature (feature.title)}
-					<div class="rounded-xl border border-line bg-surface p-5">
-						<div class="flex gap-3">
-							<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/10">
-								<CheckCircle class="text-accent h-4 w-4" />
+			<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+				<div class="max-w-2xl">
+					<p class="section-kicker mb-2">Why StageFlow</p>
+					<h2 class="h2-display">Built for teams that ship under real constraints</h2>
+					<p class="text-ink-muted mt-4 text-base leading-relaxed">
+						StageFlow was designed for operators who need fast confidence without handing infrastructure control to third parties.
+					</p>
+				</div>
+				<div class="grid gap-4">
+					{#each differentiators as item (item.title)}
+						<article class="editorial-card p-5">
+							<div class="flex gap-3">
+								<div class="bg-accent/10 text-accent mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+									<CheckCircle class="h-4 w-4" />
+								</div>
+								<div>
+									<h3 class="text-ink text-sm font-semibold">{item.title}</h3>
+									<p class="text-ink-muted mt-1 text-sm leading-relaxed">{item.desc}</p>
+								</div>
 							</div>
-							<div>
-								<p class="text-ink text-sm font-bold">{feature.title}</p>
-								<p class="text-ink-muted mt-1 text-sm leading-relaxed">{feature.desc}</p>
-							</div>
-						</div>
-					</div>
-				{/each}
+						</article>
+					{/each}
+				</div>
 			</div>
 		</div>
 	</section>
 
 	<div class="section-divider"></div>
 
-	<!-- CTA -->
-	<section class="py-16">
+	<section class="pb-24 pt-16">
 		<div class="container-width">
-			<div class="mx-auto max-w-3xl rounded-2xl bg-accent-soft px-8 py-12 text-center">
-				<h2 class="h3-display">Ready to scan your site?</h2>
-				<p class="text-ink-muted mt-2 text-sm">No account needed. Run your first scan in under a minute.</p>
-				<div class="mt-6">
+			<div class="cta-panel mx-auto max-w-4xl">
+				<p class="section-kicker mb-3">Ready to Run</p>
+				<h2 class="h2-display text-3xl sm:text-4xl">Audit your site with one scan pipeline</h2>
+				<p class="text-ink-muted mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base">
+					No account required. Open the playground, choose your scanners, and start a complete run in under a minute.
+				</p>
+				<div class="mt-7">
 					<a
 						href="/playground"
-						class={cn(buttonVariants({ variant: 'glow', size: 'lg' }), 'gap-2')}
+						class={cn(buttonVariants({ variant: 'glow', size: 'lg' }), 'gap-2 rounded-full px-7')}
 					>
 						Open Playground
 						<ArrowRight class="h-4 w-4" />

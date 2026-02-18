@@ -2,8 +2,8 @@
 Description=StageFlow Caddy Reverse Proxy
 PartOf=stageflow.target
 Wants=network-online.target
-After=network-online.target stageflow.pod
-Requires=stageflow.pod
+After=network-online.target stageflow-pod.service
+Requires=stageflow-pod.service
 
 [Service]
 Restart=always

@@ -58,6 +58,13 @@
 	}: Props = $props();
 
 	const severityOptions = ['all', 'critical', 'serious', 'moderate', 'minor', 'info'] as const;
+	const severityCounts = $derived(report.summary.bySeverity ?? {
+		critical: 0,
+		serious: 0,
+		moderate: 0,
+		minor: 0,
+		info: 0
+	});
 
 	const scannerTabs = $derived.by(() => {
 		const byScanner = report.summary.byScanner ?? {};
@@ -79,6 +86,9 @@
 	});
 
 	const pagesById = $derived(Object.fromEntries(report.pages.map((page) => [page.id, page])));
+	const activePageLabel = $derived(
+		activePage ? (pagesById[activePage]?.path ?? pagesById[activePage]?.url ?? activePage) : null
+	);
 	const filteredIssues = $derived(
 		filterIssues(report.issues, {
 			scannerId: activeScanner,
@@ -98,6 +108,13 @@
 	);
 
 	const hasSecondaryFilters = $derived(Boolean(activeCategory || activePage));
+	const activeFilterCount = $derived(
+		(activeScanner ? 1 : 0) +
+			(activePage ? 1 : 0) +
+			(activeSeverity ? 1 : 0) +
+			(activeCategory ? 1 : 0) +
+			(searchTerm.trim() ? 1 : 0)
+	);
 
 	// Debounced search: local state syncs immediately for responsive UI,
 	// but URL update is debounced to avoid expensive recalculations on each keystroke.
@@ -109,6 +126,8 @@
 	// eslint-disable-next-line svelte/prefer-writable-derived -- complex bidirectional sync with debounce
 	let localSearchValue = $state('');
 	let showMoreFilters = $state(false);
+	let previewMode = $state<'auto' | 'on' | 'off'>('auto');
+	let isCompactViewport = $state(false);
 
 	// Sync local value when searchTerm prop changes externally (e.g., clear filters, initial load)
 	$effect(() => {
@@ -138,10 +157,34 @@
 	}
 
 	let listContainer = $state<HTMLDivElement | null>(null);
+	let severityChipScroller = $state<HTMLDivElement | null>(null);
+	let severitySwipeHintVisible = $state(false);
 	let scrollTop = $state(0);
 	let viewportHeight = $state(600);
-	const rowHeight = 120;
-	const overscan = 6;
+	let scrollRaf = $state<number | null>(null);
+
+	function updateSeveritySwipeHint() {
+		if (!severityChipScroller || !isCompactViewport) {
+			severitySwipeHintVisible = false;
+			return;
+		}
+		const canScroll = severityChipScroller.scrollWidth - severityChipScroller.clientWidth > 8;
+		const atStart = severityChipScroller.scrollLeft < 8;
+		severitySwipeHintVisible = canScroll && atStart;
+	}
+
+	function handleSeverityChipScroll() {
+		updateSeveritySwipeHint();
+	}
+
+	const showPreviews = $derived.by(() => {
+		if (previewMode === 'on') return true;
+		if (previewMode === 'off') return false;
+		return !isCompactViewport;
+	});
+
+	const rowHeight = $derived(showPreviews ? 120 : 88);
+	const overscan = $derived(isCompactViewport ? 4 : 6);
 
 	const shouldVirtualize = $derived(sortedIssues.length > 200);
 	const totalHeight = $derived(sortedIssues.length * rowHeight);
@@ -160,6 +203,65 @@
 			: sortedIssues
 	);
 	const offsetY = $derived(shouldVirtualize ? virtualWindow.offset : 0);
+
+	function handleListScroll() {
+		if (!listContainer) return;
+		if (scrollRaf !== null) return;
+
+		scrollRaf = requestAnimationFrame(() => {
+			scrollRaf = null;
+			if (!listContainer) return;
+			scrollTop = listContainer.scrollTop;
+			viewportHeight = listContainer.clientHeight;
+		});
+	}
+
+	$effect(() => {
+		if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+			isCompactViewport = false;
+			return;
+		}
+		const media = window.matchMedia('(max-width: 640px)');
+		const update = (event?: MediaQueryListEvent) => {
+			isCompactViewport = event ? event.matches : media.matches;
+		};
+		update();
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
+	});
+
+	$effect(() => {
+		if (!severityChipScroller) return;
+		const frame = requestAnimationFrame(() => updateSeveritySwipeHint());
+		if (typeof ResizeObserver === 'undefined') {
+			return () => cancelAnimationFrame(frame);
+		}
+		const observer = new ResizeObserver(() => updateSeveritySwipeHint());
+		observer.observe(severityChipScroller);
+		return () => {
+			cancelAnimationFrame(frame);
+			observer.disconnect();
+		};
+	});
+
+	$effect(() => {
+		if (!listContainer || typeof ResizeObserver === 'undefined') return;
+		const observer = new ResizeObserver(() => {
+			if (!listContainer) return;
+			viewportHeight = listContainer.clientHeight;
+		});
+		observer.observe(listContainer);
+		viewportHeight = listContainer.clientHeight;
+		return () => observer.disconnect();
+	});
+
+	$effect(() => {
+		return () => {
+			if (scrollRaf !== null) {
+				cancelAnimationFrame(scrollRaf);
+			}
+		};
+	});
 </script>
 
 <div class="space-y-3">
@@ -183,10 +285,59 @@
 							onclick={onClearFilters}
 							class="text-accent text-xs font-semibold tracking-wide uppercase hover:underline"
 						>
-							Clear filters
+							Clear filters ({activeFilterCount})
 						</button>
 					{/if}
 				</div>
+				{#if hasActiveFilters}
+					<div class="flex flex-wrap items-center gap-1.5 text-xs">
+						{#if activeScanner}
+							<button
+								type="button"
+								onclick={() => onScannerChange(null)}
+								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+							>
+								scanner: {activeScanner} <span aria-hidden="true">x</span>
+							</button>
+						{/if}
+						{#if activeSeverity}
+							<button
+								type="button"
+								onclick={() => onSeverityChange(null)}
+								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+							>
+								severity: {activeSeverity} <span aria-hidden="true">x</span>
+							</button>
+						{/if}
+						{#if activeCategory}
+							<button
+								type="button"
+								onclick={() => onCategoryChange(null)}
+								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+							>
+								category: {activeCategory} <span aria-hidden="true">x</span>
+							</button>
+						{/if}
+						{#if activePage}
+							<button
+								type="button"
+								onclick={() => onPageChange(null)}
+								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+							>
+								page: {activePageLabel} <span aria-hidden="true">x</span>
+							</button>
+						{/if}
+						{#if searchTerm.trim()}
+							<button
+								type="button"
+								onclick={() => onSearchChange('')}
+								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+							>
+								search: "{searchTerm}" <span aria-hidden="true">x</span>
+							</button>
+						{/if}
+					</div>
+				{/if}
 				<div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto]">
 					<div class="relative">
 						<Search class="text-ink-faint absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -215,19 +366,77 @@
 						</Select>
 					</div>
 				</div>
+				<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/70 bg-surface px-2 py-2">
+					<div class="text-ink-muted text-xs">
+						{sortedIssues.length.toLocaleString()} visible results
+					</div>
+					<div class="inline-flex items-center gap-1 rounded-lg border border-line/70 bg-surface-muted p-1 text-xs">
+						<button
+							type="button"
+							onclick={() => (previewMode = 'auto')}
+							class={cn(
+								'rounded px-2 py-1 font-semibold transition',
+								previewMode === 'auto' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
+							)}
+						>
+							Previews auto
+						</button>
+						<button
+							type="button"
+							onclick={() => (previewMode = 'on')}
+							class={cn(
+								'rounded px-2 py-1 font-semibold transition',
+								previewMode === 'on' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
+							)}
+						>
+							On
+						</button>
+						<button
+							type="button"
+							onclick={() => (previewMode = 'off')}
+							class={cn(
+								'rounded px-2 py-1 font-semibold transition',
+								previewMode === 'off' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
+							)}
+						>
+							Off
+						</button>
+					</div>
+				</div>
 				<div class="bg-surface-muted/60 border-line rounded-xl border px-2 py-2.5">
-					<div class="flex flex-wrap items-center gap-2">
-						{#each severityOptions as severity (severity)}
-							<button
-								onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
-								class={getSeverityChipClass(
-									severity,
-									activeSeverity === null ? severity === 'all' : activeSeverity === severity
-								)}
-							>
-								{severity}
-							</button>
-						{/each}
+					<div class="relative">
+						<div
+							bind:this={severityChipScroller}
+							data-testid="severity-chip-scroller"
+							onscroll={handleSeverityChipScroll}
+							class="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+						>
+							<div class="flex min-w-max items-center gap-2 pr-5 sm:pr-0">
+							{#each severityOptions as severity (severity)}
+								{@const count = severity === 'all'
+									? report.issues.length
+									: severityCounts[severity] ?? 0}
+								<button
+									onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
+									disabled={severity !== 'all' && count === 0}
+									class={getSeverityChipClass(
+										severity,
+										activeSeverity === null ? severity === 'all' : activeSeverity === severity
+									)}
+								>
+									{severity} ({count.toLocaleString()})
+								</button>
+							{/each}
+							</div>
+						</div>
+						{#if severitySwipeHintVisible}
+							<div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface-muted to-transparent sm:hidden"></div>
+						{/if}
+					</div>
+					<div class="mt-1 flex items-center justify-between gap-2">
+						{#if severitySwipeHintVisible}
+							<span class="text-ink-faint text-[11px] font-medium sm:hidden">Swipe for more</span>
+						{/if}
 						<button
 							type="button"
 							onclick={() => {
@@ -294,27 +503,23 @@
 				bind:this={listContainer}
 				class={cn(
 					'divide-line divide-y border-t border-line/70',
-					shouldVirtualize && 'max-h-[720px] overflow-y-auto'
+					shouldVirtualize && 'max-h-[70vh] overflow-y-auto overscroll-contain'
 				)}
 				data-testid="issue-list"
-				onscroll={() => {
-					if (!listContainer) return;
-					scrollTop = listContainer.scrollTop;
-					viewportHeight = listContainer.clientHeight;
-				}}
+				onscroll={handleListScroll}
 			>
 				{#if shouldVirtualize}
 					<div style={`height: ${totalHeight}px; position: relative;`}>
 						<div style={`transform: translateY(${offsetY}px);`}>
 							{#each visibleIssues as issue (issue.id)}
 								<IssueRowCard
-									{issue}
-									page={pagesById[issue.pageId] ?? null}
-									{screenshots}
-									showScreenshot={true}
-									isVirtualized={true}
-									isSelected={selectedIssueId === issue.id}
-									onclick={() => onIssueSelect(issue)}
+								{issue}
+								page={pagesById[issue.pageId] ?? null}
+								{screenshots}
+								showScreenshot={showPreviews}
+								isVirtualized={true}
+								isSelected={selectedIssueId === issue.id}
+								onclick={() => onIssueSelect(issue)}
 								/>
 							{/each}
 						</div>
@@ -325,7 +530,7 @@
 							{issue}
 							page={pagesById[issue.pageId] ?? null}
 							{screenshots}
-							showScreenshot={true}
+							showScreenshot={showPreviews}
 							isVirtualized={false}
 							isSelected={selectedIssueId === issue.id}
 							onclick={() => onIssueSelect(issue)}

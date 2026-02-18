@@ -11,6 +11,7 @@
 	let scrolled = $state(false);
 
 	const pathname = $derived(page.url.pathname);
+	const isHome = $derived(pathname === '/');
 
 	$effect(() => {
 		const handleScroll = () => {
@@ -46,21 +47,23 @@
 
 <header
 	class={cn(
-		'fixed top-0 right-0 left-0 z-50 transition-[background-color,border-color,padding] duration-200',
+		'nav-shell fixed top-0 right-0 left-0 z-50 border-b',
 		scrolled || mobileMenuOpen
-			? 'border-line bg-surface/95 border-b backdrop-blur-sm'
-			: 'border-transparent bg-transparent'
+			? 'border-line/80 bg-paper/90 shadow-[0_14px_30px_-26px_rgba(15,15,15,0.55)] backdrop-blur-xl'
+			: isHome
+				? 'border-transparent bg-transparent'
+				: 'border-line/70 bg-paper/82 backdrop-blur-lg'
 	)}
 >
-	<div class="container-width flex h-14 items-center justify-between">
+	<div class="container-width flex h-16 items-center justify-between">
 		<!-- Logo -->
 		<a
 			href="/"
-			class="text-ink relative z-50 flex items-center gap-2"
+			class="text-ink relative z-50 flex items-center gap-2.5"
 			onclick={closeMobileMenu}
 		>
 			<LogoMark class="text-accent" size={24} />
-			<span class="text-[15px] font-semibold tracking-tight">StageFlow</span>
+			<span class="font-display text-[19px] leading-none font-semibold tracking-[-0.01em]">StageFlow</span>
 		</a>
 
 		<DesktopNav {isActive} />
@@ -69,7 +72,7 @@
 		<div class="flex items-center gap-4 md:hidden">
 			<button
 				onclick={toggleMobileMenu}
-				class="text-ink-muted hover:text-ink relative z-50 rounded-lg p-3"
+				class="text-ink-muted hover:text-ink hover:bg-surface/80 relative z-50 rounded-full p-3"
 				aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
 				aria-expanded={mobileMenuOpen}
 				aria-controls="mobile-menu"
@@ -82,6 +85,10 @@
 			</button>
 		</div>
 	</div>
+
+	{#if scrolled || mobileMenuOpen}
+		<div class="from-accent/0 via-accent/35 to-accent/0 h-px bg-gradient-to-r"></div>
+	{/if}
 </header>
 
 <MobileMenu isOpen={mobileMenuOpen} onClose={closeMobileMenu} {isActive} />
