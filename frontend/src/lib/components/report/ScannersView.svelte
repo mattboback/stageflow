@@ -25,7 +25,9 @@
 	const { report, job, activeScanner, onSelectScanner }: Props = $props();
 
 	const selectedScanner = $derived(
-		report.scanners.find((scanner) => scanner.id === activeScanner) ?? null
+		report.scanners.find((scanner) => scanner.id === activeScanner) ??
+			report.scanners[0] ??
+			null
 	);
 
 	const scannerArtifacts = $derived(job?.artifacts?.scanner_artifacts ?? {});

@@ -22,6 +22,42 @@
 		[...report.pages].sort((a, b) => b.issueCount - a.issueCount).slice(0, 5)
 	);
 
+	const issueDensity = $derived.by(() => {
+		if (report.summary.pagesScanned <= 0) return 0;
+		return report.summary.totalIssues / report.summary.pagesScanned;
+	});
+
+	const affectedRatio = $derived.by(() => {
+		if (report.summary.pagesScanned <= 0) return 0;
+		return report.summary.pagesWithIssues / report.summary.pagesScanned;
+	});
+
+	const criticalRatio = $derived.by(() => {
+		if (report.summary.totalIssues <= 0) return 0;
+		return (report.summary.bySeverity?.critical ?? 0) / report.summary.totalIssues;
+	});
+
+	const highSeverityCount = $derived(
+		(report.summary.bySeverity?.critical ?? 0) + (report.summary.bySeverity?.serious ?? 0)
+	);
+
+	const riskLabel = $derived.by(() => {
+		const critical = report.summary.bySeverity?.critical ?? 0;
+		const serious = report.summary.bySeverity?.serious ?? 0;
+		// "High risk" only when there are critical issues OR many serious issues
+		if (critical > 0 || serious >= 3) return 'High risk';
+		if (serious > 0) return 'Elevated risk';
+		if (report.summary.totalIssues > 0) return 'Moderate risk';
+		return 'Low risk';
+	});
+
+	const riskTone = $derived.by(() => {
+		if (riskLabel === 'High risk') return 'danger';
+		if (riskLabel === 'Elevated risk') return 'warn';
+		if (riskLabel === 'Moderate risk') return 'info';
+		return 'success';
+	});
+
 	const topRules = $derived.by(() => {
 		const counts: Record<
 			string,
@@ -53,6 +89,15 @@
 			.slice(0, 5);
 	});
 
+	const riskSummary = $derived.by(() => {
+		const critical = report.summary.bySeverity?.critical ?? 0;
+		const serious = report.summary.bySeverity?.serious ?? 0;
+		const base = `${report.summary.totalIssues.toLocaleString()} issue${report.summary.totalIssues !== 1 ? 's' : ''} across ${report.summary.pagesScanned.toLocaleString()} page${report.summary.pagesScanned !== 1 ? 's' : ''}.`;
+		if (critical > 0 || serious > 0) return `${base} Prioritize critical and serious findings first.`;
+		if (report.summary.totalIssues > 0) return `${base} All findings are moderate severity or below.`;
+		return 'No issues detected.';
+	});
+
 	const issueTone = $derived.by((): 'warn' | 'danger' | null => {
 		if (report.summary.totalIssues === 0) return null;
 		const critical = report.summary.bySeverity?.critical ?? 0;
@@ -65,9 +110,18 @@
 	const pagesWithIssuesTone = $derived.by((): 'warn' | 'danger' | null => {
 		if (report.summary.pagesScanned === 0) return null;
 		const ratio = report.summary.pagesWithIssues / report.summary.pagesScanned;
+		if (ratio <= 0.5) return null;
+		if (highSeverityCount === 0) return 'warn';
 		if (ratio > 0.75) return 'danger';
 		if (ratio > 0.5) return 'warn';
 		return null;
+	});
+
+	const coverageTone = $derived.by((): 'success' | 'warn' | 'danger' => {
+		if (affectedRatio <= 0.5) return 'success';
+		if (highSeverityCount === 0) return 'warn';
+		if (affectedRatio > 0.75) return 'danger';
+		return 'warn';
 	});
 
 	function getStatusIcon(status: string) {
@@ -80,6 +134,19 @@
 				return MinusCircle;
 			default:
 				return AlertTriangle;
+		}
+	}
+
+	function getRiskChipClass(tone: 'danger' | 'warn' | 'info' | 'success'): string {
+		switch (tone) {
+			case 'danger':
+				return 'border-red-200 bg-red-50 text-red-700';
+			case 'warn':
+				return 'border-amber-200 bg-amber-50 text-amber-700';
+			case 'info':
+				return 'border-blue-200 bg-blue-50 text-blue-700';
+			default:
+				return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 		}
 	}
 </script>
@@ -137,11 +204,50 @@
 {/snippet}
 
 <div class="space-y-6">
+	<Panel
+		class="relative overflow-hidden border border-line/70 bg-gradient-to-br from-surface via-surface to-accent-soft/20 shadow-sm"
+		padding="md"
+		rounded="2xl"
+	>
+		<div class="pointer-events-none absolute -top-18 -right-14 h-44 w-44 rounded-full bg-accent/12 blur-3xl"></div>
+		<div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+			<div>
+				<p class="text-ink-faint text-xs font-semibold tracking-[0.12em] uppercase">Risk snapshot</p>
+				<div class="mt-2 flex flex-wrap items-center gap-2">
+					<p class="text-ink text-2xl font-bold sm:text-3xl">{riskLabel}</p>
+					<span
+						class={cn(
+							'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide uppercase',
+							getRiskChipClass(riskTone)
+						)}
+					>
+						{Math.round(affectedRatio * 100)}% pages impacted
+					</span>
+				</div>
+				<p class="text-ink-muted mt-2 max-w-2xl text-sm">{riskSummary}</p>
+			</div>
+			<div class="grid grid-cols-3 gap-3 text-right lg:min-w-[380px]">
+				<div>
+					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.1em] uppercase">Critical share</p>
+					<p class="text-ink mt-1 text-2xl font-bold">{Math.round(criticalRatio * 100)}%</p>
+				</div>
+				<div>
+					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.1em] uppercase">Issue density</p>
+					<p class="text-ink mt-1 text-2xl font-bold">{issueDensity.toFixed(1)}</p>
+				</div>
+				<div>
+					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.1em] uppercase">Scanners</p>
+					<p class="text-ink mt-1 text-2xl font-bold">{report.scanners.length}</p>
+				</div>
+			</div>
+		</div>
+	</Panel>
+
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
 		{@render summaryCard('Total Issues', report.summary.totalIssues, issueTone)}
 		{@render summaryCard('Pages Scanned', report.summary.pagesScanned)}
 		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
-		{@render summaryCard('Scanners Ran', report.scanners.length)}
+		{@render summaryCard('Issue Density', issueDensity.toFixed(1))}
 	</div>
 
 	<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
@@ -218,6 +324,45 @@
 							</span>
 						</button>
 					{/each}
+				</div>
+			</Panel>
+
+			<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
+				<div class="border-line border-b p-4">
+					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Coverage Heat</h3>
+				</div>
+				<div class="space-y-3 p-4">
+					<div>
+						<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
+							<span>Pages with issues</span>
+							<span>{Math.round(affectedRatio * 100)}%</span>
+						</div>
+						<div class="bg-surface-muted h-2 w-full overflow-hidden rounded-full">
+							<div
+							class={cn(
+								'h-full transition-[width] duration-500',
+								coverageTone === 'danger'
+									? 'bg-red-500'
+									: coverageTone === 'warn'
+										? 'bg-amber-500'
+										: 'bg-emerald-500'
+							)}
+								style={`width: ${Math.round(affectedRatio * 100)}%`}
+							></div>
+						</div>
+					</div>
+					<div>
+						<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
+							<span>Critical concentration</span>
+							<span>{Math.round(criticalRatio * 100)}%</span>
+						</div>
+						<div class="bg-surface-muted h-2 w-full overflow-hidden rounded-full">
+							<div
+								class="h-full bg-red-500 transition-[width] duration-500"
+								style={`width: ${Math.round(criticalRatio * 100)}%`}
+							></div>
+						</div>
+					</div>
 				</div>
 			</Panel>
 		</div>

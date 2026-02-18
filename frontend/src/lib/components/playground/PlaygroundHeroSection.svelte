@@ -4,10 +4,10 @@
 
 <section class="playground-hero relative overflow-hidden border-b border-line/80">
 	<div
-		class="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-accent/12 via-orange-100/25 to-transparent"
+		class="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-accent/20 via-orange-100/40 to-transparent"
 	></div>
-	<div class="pointer-events-none absolute -top-16 right-6 h-48 w-48 rounded-full bg-accent/10 blur-3xl"></div>
-	<div class="pointer-events-none absolute top-16 -left-8 h-40 w-40 rounded-full bg-orange-200/35 blur-3xl"></div>
+	<div class="pointer-events-none absolute -top-16 right-6 h-56 w-56 rounded-full bg-accent/15 blur-2xl"></div>
+	<div class="pointer-events-none absolute top-16 -left-8 h-40 w-40 rounded-full bg-orange-200/50 blur-3xl"></div>
 
 	<div class="container-width relative pt-24 pb-12 lg:pb-14">
 		<div class="max-w-3xl">
@@ -20,15 +20,15 @@
 		</div>
 
 		<div class="mt-7 grid gap-3 sm:grid-cols-3">
-			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3">
+			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3.5">
 				<Radar class="text-accent h-4 w-4 shrink-0" />
-				<span class="text-sm font-medium"><span class="font-bold text-accent">6</span> Scanners</span>
+				<span class="text-sm font-medium"><span class="font-extrabold text-accent">6</span> Scanners</span>
 			</div>
-			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3">
+			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3.5">
 				<Clock class="text-accent h-4 w-4 shrink-0" />
-				<span class="text-sm font-medium"><span class="font-bold text-accent">&lt;30s</span> Results</span>
+				<span class="text-sm font-medium"><span class="font-extrabold text-accent">&lt;30s</span> Results</span>
 			</div>
-			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3">
+			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3.5">
 				<CheckCircle2 class="text-accent h-4 w-4 shrink-0" />
 				<span class="text-sm font-medium">No account needed</span>
 			</div>

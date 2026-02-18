@@ -154,6 +154,7 @@
 					alt="Issue screenshot"
 					class="h-full w-full object-cover"
 					loading="lazy"
+					decoding="async"
 				/>
 			</div>
 		{/if}
