@@ -146,6 +146,7 @@ describe("NatsEventPublisher", () => {
     expect(pageEnv.request_id).toBe("req-1");
     expect(pageEnv.run_id).toBe("run-2");
     expect(pageEnv.producer).toBe("axe");
+    expect(pageEnv.payload.scanner_type).toBe("axe");
     expect(pageEnv.payload.page_id).toBe("page-1");
 
     const completedEnv = published.find((m) => m.env.event === "scan.completed")!.env;

@@ -1,7 +1,6 @@
 import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
 import { buildApiUrl } from '$lib/api/utils';
-import { SvelteSet } from 'svelte/reactivity';
 
 import type { SSEUpdate } from './scan-status/types';
 
@@ -21,15 +20,10 @@ export function createScanStatusStore(id: string) {
 
 	let elapsedInterval: ReturnType<typeof setInterval> | null = null;
 	let eventSource: EventSource | null = null;
-	const logSet = new SvelteSet<string>();
 	let statusUpdated = false;
 	let reportedSSEError = false;
 
 	const addLog = (msg: string) => {
-		if (logSet.has(msg)) {
-			return;
-		}
-		logSet.add(msg);
 		logs = [...logs, msg].slice(-MAX_LOG_LINES);
 	};
 
@@ -53,10 +47,10 @@ export function createScanStatusStore(id: string) {
 
 		if (normalizedState === 'EXTRACTING') {
 			addLog('Verifying archive integrity...');
-		} else if (normalizedState === 'SCANNING' && data.progress) {
-			addLog('[axe-core] Injecting accessibility engine...');
+		} else if (normalizedState === 'SCANNING' && data.progress?.current_page === 0) {
+			addLog('Starting scanner execution...');
 		} else if (normalizedState === 'COMPLETING') {
-			addLog('Uploading artifacts to secure storage...');
+			addLog('Finalizing reports and uploading artifacts...');
 		}
 
 		result = data;

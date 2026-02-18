@@ -92,9 +92,10 @@ func TestSSEBroadcastHandler_HandleScanPageCompleted(t *testing.T) {
 	defer hub.Unsubscribe(client)
 
 	payload := &events.ScanPageCompletedPayload{
-		JobID:      jobID,
-		PageIndex:  1,
-		TotalPages: 2,
+		JobID:       jobID,
+		ScannerType: "axe",
+		PageIndex:   1,
+		TotalPages:  2,
 	}
 
 	err := handler.HandleScanPageCompleted(context.Background(), payload)
@@ -120,6 +121,10 @@ func TestSSEBroadcastHandler_HandleScanPageCompleted(t *testing.T) {
 
 		if cp, cpFound := progress["currentPage"].(float64); !cpFound || cp != 1 {
 			t.Errorf("Expected currentPage=1, got %v", progress["currentPage"])
+		}
+
+		if scanner, ok := evt["scanner_type"].(string); !ok || scanner != "axe" {
+			t.Errorf("Expected scanner_type=axe, got %v", evt["scanner_type"])
 		}
 	case <-time.After(time.Second):
 		t.Error("Timed out waiting for SSE message")

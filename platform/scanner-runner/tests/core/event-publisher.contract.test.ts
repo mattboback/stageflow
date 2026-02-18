@@ -25,7 +25,7 @@ function createCapturingPublisher(jobId: string, scannerName: string) {
 }
 
 describe("event contract (scanner-runner -> Go)", () => {
-  it("emits scan.page.completed with minimal payload and no envelope scanner field", async () => {
+  it("emits scan.page.completed with scanner context and no envelope scanner field", async () => {
     const { publisher, published } = createCapturingPublisher("job-123", "axe");
 
     const pageResult: PageScanResult = {
@@ -45,8 +45,10 @@ describe("event contract (scanner-runner -> Go)", () => {
     expect(msg.envelope.scanner).toBeUndefined();
 
     expect(Object.keys(msg.envelope.payload).sort()).toEqual(
-      ["job_id", "page_id", "page_index", "total_pages"].sort(),
+      ["job_id", "scanner_type", "page_id", "page_index", "total_pages"].sort(),
     );
+
+    expect(msg.envelope.payload.scanner_type).toBe("axe");
   });
 
   it("emits scan.completed with by_severity and snake_case timing keys", async () => {

@@ -134,10 +134,11 @@ func (p *ExtractionFailedPayload) Validate() error {
 }
 
 type ScanPageCompletedPayload struct {
-	JobID      string `json:"job_id"`
-	PageID     string `json:"page_id"`
-	PageIndex  int    `json:"page_index"` // 1-based
-	TotalPages int    `json:"total_pages"`
+	JobID       string `json:"job_id"`
+	ScannerType string `json:"scanner_type,omitempty"` // e.g., "axe", "lighthouse"
+	PageID      string `json:"page_id"`
+	PageIndex   int    `json:"page_index"` // 1-based
+	TotalPages  int    `json:"total_pages"`
 }
 
 func (p *ScanPageCompletedPayload) Validate() error {
