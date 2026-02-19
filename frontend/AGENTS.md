@@ -72,6 +72,8 @@ $effect(() => {
 
 ```bash
 bun run dev           # Dev server (or: just run frontend)
+bun run storybook     # Storybook dev server
+bun run test-storybook # Storybook interaction + a11y tests
 bun run ci            # lint + type-check + test:coverage
 bun run lint:fix      # Auto-fix lint issues
 bun run test:watch    # Vitest watch mode

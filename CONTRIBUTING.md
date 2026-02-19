@@ -100,6 +100,7 @@ go -C platform/api test -race ./...
 # Frontend
 bun --cwd frontend run test
 bun --cwd frontend run test:coverage
+bun --cwd frontend run test-storybook
 
 # Scanner-runner
 bun --cwd platform/scanner-runner run test

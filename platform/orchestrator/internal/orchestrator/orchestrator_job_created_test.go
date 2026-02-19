@@ -137,7 +137,8 @@ func TestHandleJobCreated_DuplicatePendingRetriesThenIgnoresExtracting(t *testin
 		t.Errorf("job.PodID after first duplicate call = %q, want %q", job.PodID, "pod-1")
 	}
 
-	if err := orch.HandleJobCreated(t.Context(), payload); err != nil {
+	err = orch.HandleJobCreated(t.Context(), payload)
+	if err != nil {
 		t.Fatalf("HandleJobCreated() second duplicate call error = %v, want nil", err)
 	}
 

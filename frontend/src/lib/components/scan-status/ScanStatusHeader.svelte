@@ -33,12 +33,12 @@
 				<Badge
 					class={cn(
 						'px-3 py-1',
-						status === 'complete'
-							? 'bg-emerald-100 text-emerald-700'
-							: status === 'failed' || status === 'error'
-								? 'bg-red-100 text-red-700'
-								: 'bg-blue-100 text-blue-600'
-					)}
+					status === 'complete'
+						? 'bg-emerald-100 text-emerald-700'
+						: status === 'failed' || status === 'error'
+							? 'bg-red-100 text-red-700'
+							: 'bg-blue-100 text-blue-700'
+				)}
 				>
 					{status.toUpperCase()}
 				</Badge>

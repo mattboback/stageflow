@@ -18,12 +18,12 @@ export default defineConfig({
 				'src/lib/components/ui/**/*.ts',
 				'src/lib/utils/**/*.ts'
 			],
-			exclude: ['**/*.svelte'],
+			exclude: ['**/*.svelte', '**/*.stories.ts', '**/story-harnesses/**', '**/index.ts'],
 			thresholds: {
-				statements: 50,
-				branches: 40,
-				functions: 50,
-				lines: 50
+				statements: 85,
+				branches: 80,
+				functions: 90,
+				lines: 85
 			}
 		}
 	}

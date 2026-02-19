@@ -1,4 +1,4 @@
-# Root .dockerignore for portfolio-backend build context
+# Root .dockerignore for StageFlow build contexts
 
 # Git
 .git
@@ -30,6 +30,8 @@ docs
 .env
 .env.*
 *.local
+.claude
+output
 
 # Logs
 *.log

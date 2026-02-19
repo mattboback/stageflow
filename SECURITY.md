@@ -26,3 +26,8 @@ If private reporting is not available, open an issue requesting a private channe
 
 We’ll acknowledge reports, triage severity, and coordinate a fix/release. Timing is best-effort.
 
+## Deployment Trust Boundary Notes
+
+- The orchestrator mounts the Podman socket to create/remove per-job pods and containers.
+- Treat orchestrator runtime access as privileged host access.
+- Only deploy on trusted hosts, limit who can modify orchestrator/container config, and keep Podman/rootless boundaries hardened.

@@ -7,6 +7,9 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/storybook-static
+/test-results
+/junit.xml
 
 # OS
 .DS_Store

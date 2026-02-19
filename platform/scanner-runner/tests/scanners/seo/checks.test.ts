@@ -198,6 +198,68 @@ describe("SEO checks", () => {
 
   // === HEADING CHECKS ===
   describe("heading checks", () => {
+    it("flags missing H1 headings", () => {
+      const result = getCheck("missing-h1").check(
+        baseData({
+          headings: [
+            { level: 2, text: "H2" },
+            { level: 3, text: "H3" },
+          ],
+        }),
+      );
+      expect(result).not.toBeNull();
+      expect(result?.passed).toBe(false);
+      expect(result?.message).toContain("missing an H1");
+    });
+
+    it("passes missing-h1 check when exactly one H1 exists", () => {
+      const result = getCheck("missing-h1").check(
+        baseData({
+          headings: [{ level: 1, text: "Main heading" }],
+        }),
+      );
+      expect(result).toBeNull();
+    });
+
+    it("flags multiple H1 headings and returns details", () => {
+      const result = getCheck("multiple-h1").check(
+        baseData({
+          headings: [
+            { level: 1, text: "Hero" },
+            { level: 1, text: "Article title" },
+          ],
+        }),
+      );
+      expect(result).not.toBeNull();
+      expect(result?.passed).toBe(false);
+      expect(result?.details?.h1s).toEqual(["Hero", "Article title"]);
+    });
+
+    it("passes multiple-h1 check with a single H1", () => {
+      const result = getCheck("multiple-h1").check(
+        baseData({
+          headings: [
+            { level: 1, text: "H1" },
+            { level: 2, text: "H2" },
+          ],
+        }),
+      );
+      expect(result).toBeNull();
+    });
+
+    it("passes heading hierarchy when levels are sequential", () => {
+      const result = getCheck("heading-hierarchy").check(
+        baseData({
+          headings: [
+            { level: 1, text: "H1" },
+            { level: 2, text: "H2" },
+            { level: 3, text: "H3" },
+          ],
+        }),
+      );
+      expect(result).toBeNull();
+    });
+
     it("flags heading level skips", () => {
       const result = getCheck("heading-hierarchy").check(
         baseData({

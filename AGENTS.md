@@ -56,6 +56,8 @@ just ci               # Full CI: go build/lint/test + bun lint/typecheck/test:co
 just run api          # Run API service locally
 just run orchestrator # Run orchestrator locally
 just run frontend     # Run frontend dev server
+just run storybook    # Run frontend Storybook dev server
+just storybook-test   # Run frontend Storybook interaction + a11y tests
 just deploy full      # Build images + restart prod Quadlets
 just prod health      # Check production service states
 ```
@@ -66,6 +68,13 @@ just prod health      # Check production service states
 - Use `just` from repo root for all workflows.
 - Assume other agents/humans may commit concurrently — ignore unrelated diffs.
 - `Fail fast → Guard clauses → Validate at boundaries → Make illegal states unrepresentable`
+
+### Execution Policy
+- After making any code change, run the highest relevant local verification command automatically (default: `just ci` from repo root).
+- Do not ask whether to run checks unless the command is destructive, needs external credentials, or was explicitly forbidden.
+- Do not end with "next steps" if the next step is executable now; execute it and report results.
+- If verification fails, fix failures caused by your changes in the same turn and clearly label unrelated pre-existing failures with command output.
+- End each completion message with `Short-term next steps` and `Long-term next steps`.
 
 ### TypeScript (scanner-runner, frontend)
 - Extend `tsconfig.strict.json`; all strict flags enforced including `noUncheckedIndexedAccess`.

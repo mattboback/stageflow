@@ -1,0 +1,40 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Introduction/Getting Started" />
+
+# StageFlow Storybook
+
+Storybook is the component workbench for the frontend package.
+
+## What is covered now
+
+- UI primitive stories with interaction tests (`play` functions).
+- Workflow stories for playground, scan status, and report components.
+- Accessibility assertions through the Storybook test runner + axe.
+- Autodocs pages for story metadata and controls.
+
+## Run locally
+
+From `frontend/`:
+
+```bash
+bun run storybook
+bun run test-storybook
+bun run test-storybook:watch
+```
+
+From repository root:
+
+```bash
+just run storybook
+just storybook-test
+just ci
+```
+
+`just ci` now includes the Storybook interaction + a11y suite as part of the frontend quality gate.
+
+## Conventions
+
+- Place stories next to components as `*.stories.ts`.
+- Prefer semantic queries in tests (`getByRole`, `getByLabelText`, `getByText`).
+- Keep stories deterministic and independent.

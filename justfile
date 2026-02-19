@@ -199,10 +199,14 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
             ;;
     esac
 
-[group('quality'), doc('Run local CI: lint + typecheck + test')]
+[group('quality'), doc('Run local CI: lint + typecheck + test + Storybook')]
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    echo "==> Ensuring Go lint tool..."
+    {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+    export PATH="$({{go}} env GOPATH)/bin:$PATH"
 
     echo "==> Go build..."
     while IFS= read -r dir; do
@@ -215,7 +219,7 @@ ci:
     while IFS= read -r dir; do
         [[ -n "$dir" ]] || continue
         echo "  -> $dir"
-        (cd "$dir" && golangci-lint run)
+        (cd "$dir" && golangci-lint run --allow-parallel-runners)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> Go test..."
@@ -227,6 +231,11 @@ ci:
 
     echo "==> Frontend CI..."
     (cd {{frontend_dir}} && {{bun}} run ci)
+
+    echo "==> Frontend Storybook browser setup..."
+    (cd {{frontend_dir}} && {{bun}} x playwright install chromium)
+    echo "==> Frontend Storybook tests..."
+    (cd {{frontend_dir}} && {{bun}} run test-storybook)
 
     echo "==> Frontend audit..."
     (cd {{frontend_dir}} && {{bun}} audit --audit-level=high)
@@ -335,7 +344,7 @@ deploy MODE='full':
             ;;
     esac
 
-[group('run'), doc('Run a service locally (SERVICE=frontend|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=frontend|storybook|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -361,6 +370,10 @@ run SERVICE MODE='dev':
                 (cd {{frontend_dir}} && {{bun}} run dev)
             fi
             ;;
+        storybook)
+            echo "==> Starting frontend Storybook..."
+            (cd {{frontend_dir}} && {{bun}} run storybook)
+            ;;
         api)
             echo "==> Starting platform-api..."
             (cd platform/api && {{go}} run ./cmd/server)
@@ -370,10 +383,17 @@ run SERVICE MODE='dev':
             (cd platform/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be frontend, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be frontend, storybook, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac
+
+[group('quality'), doc('Run frontend Storybook interaction + accessibility tests')]
+storybook-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd {{frontend_dir}} && {{bun}} x playwright install chromium)
+    (cd {{frontend_dir}} && {{bun}} run test-storybook)
 
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':
