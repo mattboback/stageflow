@@ -46,6 +46,8 @@ coverage.html
 .cache/
 .playwright-mcp/
 .tech-debt-audit/
+.claude/
+output/playwright/
 # Local-only Caddy snippets (secrets)
 infra/caddy/snippets/monitoring-basicauth*.caddy
 # Root-only local runtime data (avoid ignoring real source folders named "data")
@@ -74,3 +76,7 @@ tools/suite-runner/suite-runner
 
 # Deployment-specific scanner overrides (copy from infra/scanners/scanners.example.yaml)
 infra/scanners/scanners.yaml
+
+
+
+AGENTS.md/

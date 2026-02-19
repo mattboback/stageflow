@@ -1,5 +1,9 @@
 import { formatDuration, formatTimestamp } from '$lib/utils/date';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 describe('formatTimestamp', () => {
 	it('returns null for null input', () => {
@@ -22,6 +26,13 @@ describe('formatTimestamp', () => {
 		const result = formatTimestamp('2025-01-15T10:30:00Z');
 		expect(result).toBeTruthy();
 		expect(result).not.toBe('2025-01-15T10:30:00Z');
+	});
+
+	it('falls back to ISO string when locale formatting throws', () => {
+		vi.spyOn(Date.prototype, 'toLocaleString').mockImplementation(() => {
+			throw new Error('format failed');
+		});
+		expect(formatTimestamp('2025-01-15T10:30:00Z')).toBe('2025-01-15T10:30:00.000Z');
 	});
 });
 

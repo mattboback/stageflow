@@ -247,6 +247,7 @@ linters:
           - sqlclosecheck
 
 output:
+  sort-results: true
   formats:
     text:
       path: stdout

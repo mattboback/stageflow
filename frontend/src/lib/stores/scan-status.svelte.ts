@@ -1,14 +1,13 @@
 import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
+import { createSSEStream } from '$lib/api/sse';
 import { buildApiUrl } from '$lib/api/utils';
 
 import type { SSEUpdate } from './scan-status/types';
 
 import { scanHistoryStore } from './scan-history.svelte';
 import {
-	MAX_LOG_LINES,
-	MAX_SSE_PARSE_ERRORS,
-	MAX_SSE_RECONNECT_ATTEMPTS
+	MAX_LOG_LINES
 } from './scan-status/constants';
 import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 
@@ -19,9 +18,9 @@ export function createScanStatusStore(id: string) {
 	let logs = $state<string[]>([]);
 
 	let elapsedInterval: ReturnType<typeof setInterval> | null = null;
-	let eventSource: EventSource | null = null;
+	let sseStream: { close: () => void } | null = null;
 	let statusUpdated = false;
-	let reportedSSEError = false;
+	let started = false;
 
 	const addLog = (msg: string) => {
 		logs = [...logs, msg].slice(-MAX_LOG_LINES);
@@ -32,9 +31,9 @@ export function createScanStatusStore(id: string) {
 			clearInterval(elapsedInterval);
 			elapsedInterval = null;
 		}
-		if (eventSource) {
-			eventSource.close();
-			eventSource = null;
+		if (sseStream) {
+			sseStream.close();
+			sseStream = null;
 		}
 	};
 
@@ -68,7 +67,6 @@ export function createScanStatusStore(id: string) {
 	};
 
 	const handleSSEUpdate = (update: SSEUpdate) => {
-		reportedSSEError = false;
 		const normalizedState = (update.state || '').toUpperCase();
 		const logMsg = getLogMessage(normalizedState, update);
 		if (logMsg) {
@@ -127,98 +125,36 @@ export function createScanStatusStore(id: string) {
 	};
 
 	const startSSE = () => {
-		const url = buildApiUrl(`/api/v1/jobs/${id}/stream`);
-		eventSource = new EventSource(url);
-		addLog('Connecting to live status stream...');
-		let sseParseErrors = 0;
-		let sseReconnectAttempts = 0;
-
-		eventSource.onopen = () => {
-			reportedSSEError = false;
-			addLog('Live status stream connected.');
-		};
-
-		const handleSSEParseError = (eventType: string, err: unknown, rawData: string) => {
-			sseParseErrors++;
-			console.error(`[scan-status] Failed to parse SSE ${eventType} event:`, {
-				jobId: id,
-				parseErrors: sseParseErrors,
-				error: err,
-				rawData: rawData.slice(0, 200) // Truncate for logging
-			});
-
-			// If too many parse errors, stop: without valid SSE data we can't provide live updates.
-			if (sseParseErrors >= MAX_SSE_PARSE_ERRORS) {
-				console.warn('[scan-status] Too many SSE parse errors, stopping stream');
-				status = 'error';
-				addLog('ERROR: Live updates failed (invalid stream data). Refresh to retry.');
-				cleanup();
-			}
-		};
-
-		eventSource.addEventListener('status', (event) => {
-			try {
-				const data = JSON.parse(String(event.data)) as ScanResult;
-				sseParseErrors = 0; // Reset on successful parse
-				reportedSSEError = false;
-				handleStatusData(data);
-			} catch (err) {
-				handleSSEParseError('status', err, String(event.data));
-			}
-		});
-
-		eventSource.addEventListener('update', (event) => {
-			try {
-				const data = JSON.parse(String(event.data)) as SSEUpdate;
-				sseParseErrors = 0; // Reset on successful parse
-				handleSSEUpdate(data);
-			} catch (err) {
-				handleSSEParseError('update', err, String(event.data));
-			}
-		});
-
-		// Handle "done" event - server sends this before closing for completed jobs
-		eventSource.addEventListener('done', () => {
-			eventSource?.close();
-			eventSource = null;
-			// Don't reconnect - this is a terminal stream closure.
-		});
-
-		eventSource.onerror = (event) => {
-			// EventSource reconnects automatically on transient errors.
-			// But if the connection is fully closed (server gone, job done, etc.)
-			// we need to stop retrying and fall back to a one-time fetch.
-			if (eventSource?.readyState === EventSource.CLOSED) {
-				sseReconnectAttempts++;
-				if (sseReconnectAttempts >= MAX_SSE_RECONNECT_ATTEMPTS) {
-					console.warn('[scan-status] SSE connection closed after max reconnect attempts', {
-						jobId: id,
-						attempts: sseReconnectAttempts
-					});
-					addLog('WARN: Connection lost. Fetching latest status...');
-					cleanup();
-					void fetchStatus();
-					return;
+		sseStream = createSSEStream<ScanResult, SSEUpdate>(
+			id,
+			{
+				onStatus: handleStatusData,
+				onUpdate: handleSSEUpdate,
+				onDone: () => {
+					// Don't reconnect - this is a terminal stream closure.
+					sseStream = null;
+				},
+				onError: (err) => {
+					if (err.parseError) {
+						status = 'error';
+						cleanup();
+					} else if (err.terminal) {
+						cleanup();
+						void fetchStatus();
+					}
 				}
+			},
+			{
+				sourceName: 'scan-status',
+				onLog: addLog
 			}
-
-			// Log once per disconnect so we don't spam.
-			if (!statusUpdated && !reportedSSEError) {
-				reportedSSEError = true;
-				console.warn('[scan-status] SSE connection error, waiting for reconnect', {
-					jobId: id,
-					readyState: eventSource?.readyState,
-					reconnectAttempts: sseReconnectAttempts,
-					event
-				});
-				addLog('WARN: Lost connection to live updates. Reconnecting...');
-			}
-		};
+		);
 	};
 
 	const start = () => {
+		if (started) return;
+		started = true;
 		statusUpdated = false;
-		reportedSSEError = false;
 
 		elapsedInterval = setInterval(() => {
 			elapsed = elapsed + 1;

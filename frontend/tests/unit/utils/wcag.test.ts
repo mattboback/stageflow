@@ -2,10 +2,46 @@
  * WCAG Utility Tests
  */
 
-import { extractWcagCriteria, getIssueWcagConformanceLevel } from '$lib/utils/wcag';
+import {
+	extractWcagCriteria,
+	getIssueWcagConformanceLevel,
+	getWcagUnderstandingUrl,
+	normalizeWcagTag
+} from '$lib/utils/wcag';
 import { describe, expect, it } from 'vitest';
 
 describe('wcag', () => {
+	describe('normalizeWcagTag', () => {
+		it('normalizes compact wcag tags', () => {
+			expect(normalizeWcagTag('wcag111')).toBe('1.1.1');
+		});
+
+		it('normalizes dotted wcag tags', () => {
+			expect(normalizeWcagTag('wcag1.4.3')).toBe('1.4.3');
+		});
+
+		it('normalizes plain criteria values', () => {
+			expect(normalizeWcagTag('2.4.7')).toBe('2.4.7');
+		});
+
+		it('normalizes with trimming and casing', () => {
+			expect(normalizeWcagTag(' WCAG241 ')).toBe('2.4.1');
+		});
+
+		it('returns null for unsupported values', () => {
+			expect(normalizeWcagTag('wcag2a')).toBeNull();
+			expect(normalizeWcagTag('not-a-criterion')).toBeNull();
+		});
+	});
+
+	describe('getWcagUnderstandingUrl', () => {
+		it('builds WCAG understanding URL for a criterion', () => {
+			expect(getWcagUnderstandingUrl('1.4.3')).toBe(
+				'https://www.w3.org/WAI/WCAG22/Understanding/1.4.3.html'
+			);
+		});
+	});
+
 	describe('getIssueWcagConformanceLevel', () => {
 		it('extracts level A from wcag2a tag', () => {
 			expect(getIssueWcagConformanceLevel(['wcag2a'], undefined)).toBe('A');
@@ -42,6 +78,10 @@ describe('wcag', () => {
 
 		it('returns null for undefined tags', () => {
 			expect(getIssueWcagConformanceLevel(undefined, undefined)).toBeNull();
+		});
+
+		it('returns null when wcagRef does not contain level text', () => {
+			expect(getIssueWcagConformanceLevel([], 'WCAG 1.1.1')).toBeNull();
 		});
 
 		it('falls back to wcagRef when tags dont match', () => {

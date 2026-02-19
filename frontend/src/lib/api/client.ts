@@ -4,6 +4,81 @@ import { applyScannerPreset } from '$lib/components/playground/scanner-presets';
 
 import { buildApiUrl } from './utils';
 
+type AbortSignalAnyFn = (this: typeof AbortSignal, signals: AbortSignal[]) => AbortSignal;
+const noop = () => undefined;
+
+function buildCombinedSignal(
+	timeoutSignal: AbortSignal,
+	callerSignal?: AbortSignal | null
+): { signal: AbortSignal; cleanup: () => void } {
+	if (!callerSignal) {
+		return {
+			signal: timeoutSignal,
+			cleanup: noop
+		};
+	}
+
+	const abortSignalAny = Reflect.get(AbortSignal, 'any');
+	if (typeof abortSignalAny === 'function') {
+		const combineSignals = abortSignalAny as AbortSignalAnyFn;
+		return {
+			signal: combineSignals.call(AbortSignal, [callerSignal, timeoutSignal]),
+			cleanup: noop
+		};
+	}
+
+	const combinedController = new AbortController();
+	const abortCombined = () => {
+		if (!combinedController.signal.aborted) {
+			combinedController.abort();
+		}
+	};
+
+	const onCallerAbort = () => {
+		abortCombined();
+	};
+	const onTimeoutAbort = () => {
+		abortCombined();
+	};
+
+	if (callerSignal.aborted || timeoutSignal.aborted) {
+		abortCombined();
+		return {
+			signal: combinedController.signal,
+			cleanup: noop
+		};
+	}
+
+	callerSignal.addEventListener('abort', onCallerAbort, { once: true });
+	timeoutSignal.addEventListener('abort', onTimeoutAbort, { once: true });
+
+	return {
+		signal: combinedController.signal,
+		cleanup: () => {
+			callerSignal.removeEventListener('abort', onCallerAbort);
+			timeoutSignal.removeEventListener('abort', onTimeoutAbort);
+		}
+	};
+}
+
+export async function fetchWithTimeout(
+	url: string,
+	options: RequestInit = {},
+	timeoutMs = 30000
+): Promise<Response> {
+	const timeoutController = new AbortController();
+	const id = setTimeout(() => { timeoutController.abort(); }, timeoutMs);
+	const { signal, cleanup } = buildCombinedSignal(timeoutController.signal, options.signal);
+
+	try {
+		const response = await fetch(url, { ...options, signal });
+		return response;
+	} finally {
+		clearTimeout(id);
+		cleanup();
+	}
+}
+
 interface SubmitJobParams {
 	mode: 'zip' | 'url';
 	file: File | null;
@@ -95,16 +170,16 @@ export async function submitScanJob({
 			formData.append('scanner_configs', JSON.stringify(scannerConfigs));
 		}
 
-		response = await fetch(buildApiUrl('/api/v1/jobs/zip'), {
+		response = await fetchWithTimeout(buildApiUrl('/api/v1/jobs/zip'), {
 			method: 'POST',
 			body: formData,
 			signal
-		});
+		}, 60000);
 	} else {
 		if (urls.length === 0) {
 			throw new Error('Enter a URL');
 		}
-		response = await fetch(buildApiUrl('/api/v1/jobs/urls'), {
+		response = await fetchWithTimeout(buildApiUrl('/api/v1/jobs/urls'), {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -145,11 +220,11 @@ export async function submitScanJob({
 }
 
 export async function fetchScanners(signal?: AbortSignal): Promise<ScannersResponse> {
-	const response = await fetch(buildApiUrl('/api/v1/scanners'), {
+	const response = await fetchWithTimeout(buildApiUrl('/api/v1/scanners'), {
 		method: 'GET',
 		headers: { 'Content-Type': 'application/json' },
 		signal
-	});
+	}, 15000);
 
 	if (!response.ok) {
 		if (response.status >= 500) {

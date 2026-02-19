@@ -1,15 +1,14 @@
 import type { ScanResult, ScanStatus, ScreenshotArtifact } from '$lib/types/scan';
 import type { UnifiedReport } from '$lib/types/unified-report';
 
+import { createSSEStream } from '$lib/api/sse';
 import { buildApiUrl } from '$lib/api/utils';
 import { SvelteSet } from 'svelte/reactivity';
 
 import type { SSEUpdate } from './scan-status/types';
 
 import {
-	MAX_LOG_LINES,
-	MAX_SSE_PARSE_ERRORS,
-	MAX_SSE_RECONNECT_ATTEMPTS
+	MAX_LOG_LINES
 } from './scan-status/constants';
 import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 
@@ -21,10 +20,10 @@ export function createScanReportStore(id: string) {
 	let logs = $state<string[]>([]);
 	let error = $state<string | null>(null);
 
-	let eventSource: EventSource | null = null;
+	let sseStream: { close: () => void } | null = null;
 	const logSet = new SvelteSet<string>();
-	let reportedSSEError = false;
 	let fetchReportInFlight = false;
+	let started = false;
 	let reportRetryTimeout: ReturnType<typeof setTimeout> | null = null;
 	let reportRetryAttempts = 0;
 	let reportRetryDelayMs = 800;
@@ -81,13 +80,17 @@ export function createScanReportStore(id: string) {
 		}
 	};
 
+	const closeSSEStream = () => {
+		if (sseStream) {
+			sseStream.close();
+			sseStream = null;
+		}
+	};
+
 	const cleanup = () => {
 		clearReportRetry();
 		stopPolling();
-		if (eventSource) {
-			eventSource.close();
-			eventSource = null;
-		}
+		closeSSEStream();
 	};
 
 	const handleStatusData = (data: ScanResult) => {
@@ -115,7 +118,7 @@ export function createScanReportStore(id: string) {
 			stopPolling();
 		} else {
 			clearReportRetry();
-			if (!eventSource) {
+			if (!sseStream) {
 				startPolling();
 			}
 		}
@@ -189,7 +192,6 @@ export function createScanReportStore(id: string) {
 	};
 
 	const handleSSEUpdate = (update: SSEUpdate) => {
-		reportedSSEError = false;
 		const normalizedState = (update.state || '').toUpperCase();
 		const logMsg = getLogMessage(normalizedState, update);
 		if (logMsg) {
@@ -227,90 +229,43 @@ export function createScanReportStore(id: string) {
 	};
 
 	const startSSE = () => {
-		const url = buildApiUrl(`/api/v1/jobs/${id}/stream`);
-		eventSource = new EventSource(url);
-		let sseParseErrors = 0;
-		let sseReconnectAttempts = 0;
-
-		const handleSSEParseError = (eventType: string, err: unknown, rawData: string) => {
-			sseParseErrors++;
-			console.error(`[scan-report] Failed to parse SSE ${eventType} event:`, {
-				jobId: id,
-				parseErrors: sseParseErrors,
-				error: err,
-				rawData: rawData.slice(0, 200)
-			});
-
-			if (sseParseErrors >= MAX_SSE_PARSE_ERRORS) {
-				console.warn('[scan-report] Too many SSE parse errors, stopping stream');
-				status = 'error';
-				addLog('ERROR: Live updates failed (invalid stream data). Refresh to retry.');
-				cleanup();
-				startPolling();
-				void fetchStatus();
-			}
-		};
-
-		eventSource.addEventListener('status', (event) => {
-			try {
-				const data = JSON.parse(String(event.data)) as ScanResult;
-				sseParseErrors = 0;
-				reportedSSEError = false;
-				handleStatusData(data);
-			} catch (err) {
-				handleSSEParseError('status', err, String(event.data));
-			}
-		});
-
-		eventSource.addEventListener('update', (event) => {
-			try {
-				const data = JSON.parse(String(event.data)) as SSEUpdate;
-				sseParseErrors = 0;
-				handleSSEUpdate(data);
-			} catch (err) {
-				handleSSEParseError('update', err, String(event.data));
-			}
-		});
-
-		eventSource.addEventListener('done', () => {
-			eventSource?.close();
-			eventSource = null;
-		});
-
-		eventSource.onerror = (event) => {
-			// EventSource reconnects automatically on transient errors.
-			// But if the connection is fully closed (server gone, job done, etc.)
-			// we need to stop retrying and fall back to polling.
-			if (eventSource?.readyState === EventSource.CLOSED) {
-				sseReconnectAttempts++;
-				if (sseReconnectAttempts >= MAX_SSE_RECONNECT_ATTEMPTS) {
-					console.warn('[scan-report] SSE connection closed after max reconnect attempts', {
-						jobId: id,
-						attempts: sseReconnectAttempts
-					});
-					addLog('WARN: Connection lost. Switching to polling...');
-					cleanup();
-					startPolling();
-					void fetchStatus();
-					return;
+		sseStream = createSSEStream<ScanResult, SSEUpdate>(
+			id,
+			{
+				onStatus: (data) => {
+					stopPolling();
+					handleStatusData(data);
+				},
+				onUpdate: (data) => {
+					stopPolling();
+					handleSSEUpdate(data);
+				},
+				onDone: () => {
+					closeSSEStream();
+				},
+				onError: (err) => {
+					if (err.parseError) {
+						status = 'error';
+						cleanup();
+						startPolling();
+						void fetchStatus();
+					} else if (err.terminal) {
+						cleanup();
+						startPolling();
+						void fetchStatus();
+					} else {
+						// Do not rely on EventSource reconnect internals; switch to polling immediately.
+						closeSSEStream();
+						startPolling();
+						void fetchStatus();
+					}
 				}
+			},
+			{
+				sourceName: 'scan-report',
+				onLog: addLog
 			}
-
-			// Log once per disconnect so we don't spam.
-			if (!reportedSSEError) {
-				reportedSSEError = true;
-				console.warn('[scan-report] SSE connection error, waiting for reconnect', {
-					jobId: id,
-					readyState: eventSource?.readyState,
-					reconnectAttempts: sseReconnectAttempts,
-					event
-				});
-				addLog('WARN: Lost connection to live updates. Reconnecting...');
-				if (eventSource?.readyState === EventSource.CLOSED) {
-					startPolling();
-				}
-			}
-		};
+		);
 	};
 
 	const refreshArtifacts = async () => {
@@ -318,6 +273,8 @@ export function createScanReportStore(id: string) {
 	};
 
 	const start = () => {
+		if (started) return;
+		started = true;
 		status = 'loading';
 		report = null;
 		logs = [];

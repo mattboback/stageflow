@@ -5,11 +5,25 @@
  * The actual Lighthouse integration requires browser/CDP and is not unit-tested.
  */
 
-import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import { chromium, type BrowserContext, type Page } from "playwright";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type {
+  Issue,
+  PageEntry,
+  ScanContext,
+  ScannerConfig,
+  ScannerLogger,
+} from "../../../src/core/types";
+
+import { ScannerBase } from "../../../src/core/scanner-base";
 import { LighthouseScanner } from "../../../src/scanners/lighthouse";
+import * as playwrightUtils from "../../../src/utils/playwright";
 
 const scanner = new LighthouseScanner();
+const originalLighthouseChromePath = process.env.LIGHTHOUSE_CHROME_PATH;
+const originalChromePath = process.env.CHROME_PATH;
 
 // Helper to access private methods for testing
 function callPrivateMethod(
@@ -27,7 +41,93 @@ function callPrivateMethod(
   return method.apply(instance, args);
 }
 
+const createMockLogger = (): ScannerLogger => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+});
+
+const createScannerConfig = (options?: unknown): ScannerConfig => ({
+  jobId: "test-job",
+  provenancePath: "/tmp/provenance.json",
+  resultsDir: "/tmp/results",
+  scannerName: "lighthouse",
+  concurrency: 1,
+  maxRetries: 0,
+  browser: {
+    headless: true,
+    args: [],
+    defaultViewport: { width: 1280, height: 720 },
+    deviceScaleFactor: 1,
+    defaultTimeout: 30000,
+    pageLoadTimeout: 30000,
+  },
+  storage: {
+    endpoint: "localhost:9000",
+    accessKey: "test",
+    secretKey: "test",
+    useSSL: false,
+    bucket: "test",
+  },
+  messaging: {
+    url: "nats://localhost:4222",
+    subjects: {
+      pageCompleted: "scan.page.completed",
+      scanCompleted: "scan.completed",
+      scanFailed: "scan.failed",
+    },
+  },
+  ...(options !== undefined
+    ? { options: options as unknown as Record<string, unknown> }
+    : {}),
+});
+
+const createMockPage = (overrides: Partial<Page> = {}): Page =>
+  ({
+    goto: vi.fn().mockResolvedValue(null),
+    ...overrides,
+  }) as unknown as Page;
+
+const createMockContext = (overrides: Partial<ScanContext> = {}): ScanContext => {
+  const pageEntry: PageEntry = {
+    id: "page-1",
+    url: "https://example.com/page",
+    path: "/page",
+  };
+
+  return {
+    page: createMockPage(),
+    context: {} as BrowserContext,
+    pageEntry,
+    resultsDir: "/tmp/results",
+    config: createScannerConfig(),
+    logger: createMockLogger(),
+    ...overrides,
+  };
+};
+
 describe("LighthouseScanner", () => {
+  beforeEach(() => {
+    delete process.env.LIGHTHOUSE_CHROME_PATH;
+    delete process.env.CHROME_PATH;
+  });
+
+  afterEach(() => {
+    if (originalLighthouseChromePath === undefined) {
+      delete process.env.LIGHTHOUSE_CHROME_PATH;
+    } else {
+      process.env.LIGHTHOUSE_CHROME_PATH = originalLighthouseChromePath;
+    }
+    if (originalChromePath === undefined) {
+      delete process.env.CHROME_PATH;
+    } else {
+      process.env.CHROME_PATH = originalChromePath;
+    }
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   describe("metadata", () => {
     it("has correct scanner name", () => {
       expect(scanner.metadata.name).toBe("lighthouse");
@@ -832,6 +932,307 @@ describe("LighthouseScanner", () => {
         ancestorPath: "1,HTML,1,BODY,0,MAIN,3,A",
         failureSummary: "3 failing elements",
       });
+    });
+  });
+
+  describe("initialize option parsing", () => {
+    it("defaults categories when options are missing", async () => {
+      const testScanner = new LighthouseScanner();
+      const logger = createMockLogger();
+
+      vi.spyOn(
+        ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
+        "initialize",
+      ).mockResolvedValue(undefined);
+
+      (testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig();
+      (testScanner as unknown as { logger: ScannerLogger }).logger = logger;
+
+      await callPrivateMethod(testScanner, "initialize");
+
+      const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
+      expect(options.categories).toEqual(["accessibility", "best-practices", "seo"]);
+    });
+
+    it("falls back to defaults when category list has no valid values", async () => {
+      const testScanner = new LighthouseScanner();
+
+      vi.spyOn(
+        ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
+        "initialize",
+      ).mockResolvedValue(undefined);
+
+      (testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig({
+        categories: ["not-valid", 42],
+      });
+
+      await callPrivateMethod(testScanner, "initialize");
+
+      const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
+      expect(options.categories).toEqual(["accessibility", "best-practices", "seo"]);
+    });
+
+    it("retains only valid categories from mixed input", async () => {
+      const testScanner = new LighthouseScanner();
+
+      vi.spyOn(
+        ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
+        "initialize",
+      ).mockResolvedValue(undefined);
+
+      (testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig({
+        categories: ["performance", "seo", "invalid-category"],
+      });
+
+      await callPrivateMethod(testScanner, "initialize");
+
+      const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
+      expect(options.categories).toEqual(["performance", "seo"]);
+    });
+  });
+
+  describe("runSerialized", () => {
+    it("executes queued tasks sequentially", async () => {
+      const testScanner = new LighthouseScanner();
+      const callOrder: string[] = [];
+      let startFirst!: () => void;
+      let releaseFirst!: () => void;
+      const firstStarted = new Promise<void>((resolve) => {
+        startFirst = resolve;
+      });
+
+      const firstTask = callPrivateMethod(
+        testScanner,
+        "runSerialized",
+        async () => {
+          callOrder.push("first-start");
+          startFirst();
+          await new Promise<void>((resolve) => {
+            releaseFirst = resolve;
+          });
+          callOrder.push("first-end");
+          return "first";
+        },
+      ) as Promise<string>;
+
+      await firstStarted;
+
+      const secondTask = callPrivateMethod(
+        testScanner,
+        "runSerialized",
+        () => {
+          callOrder.push("second-start");
+          return Promise.resolve("second");
+        },
+      ) as Promise<string>;
+
+      await Promise.resolve();
+      expect(callOrder).toEqual(["first-start"]);
+
+      releaseFirst();
+
+      await expect(firstTask).resolves.toBe("first");
+      await expect(secondTask).resolves.toBe("second");
+      expect(callOrder).toEqual(["first-start", "first-end", "second-start"]);
+    });
+  });
+
+  describe("resolveChromePath", () => {
+    it("uses LIGHTHOUSE_CHROME_PATH when it exists", () => {
+      const testScanner = new LighthouseScanner();
+      process.env.LIGHTHOUSE_CHROME_PATH = "/custom/chrome";
+
+      const existsSyncSpy = vi
+        .spyOn(fs, "existsSync")
+        .mockImplementation((filePath) => filePath === "/custom/chrome");
+      const playwrightSpy = vi
+        .spyOn(chromium, "executablePath")
+        .mockReturnValue("/playwright/chrome");
+      const fallbackSpy = vi
+        .spyOn(playwrightUtils, "resolvePlaywrightImageChromiumExecutablePath")
+        .mockReturnValue("/fallback/chrome");
+
+      const resolvedPath = callPrivateMethod(testScanner, "resolveChromePath") as string;
+
+      expect(resolvedPath).toBe("/custom/chrome");
+      expect(existsSyncSpy).toHaveBeenCalledWith("/custom/chrome");
+      expect(playwrightSpy).not.toHaveBeenCalled();
+      expect(fallbackSpy).not.toHaveBeenCalled();
+    });
+
+    it("falls back to Playwright executable path when env path is absent", () => {
+      const testScanner = new LighthouseScanner();
+
+      vi.spyOn(fs, "existsSync").mockImplementation((filePath) => filePath === "/playwright/chrome");
+      vi.spyOn(chromium, "executablePath").mockReturnValue("/playwright/chrome");
+      vi.spyOn(playwrightUtils, "resolvePlaywrightImageChromiumExecutablePath").mockReturnValue(
+        "/fallback/chrome",
+      );
+
+      const resolvedPath = callPrivateMethod(testScanner, "resolveChromePath") as string;
+
+      expect(resolvedPath).toBe("/playwright/chrome");
+    });
+
+    it("falls back to Playwright image path when env and Playwright path are unavailable", () => {
+      const testScanner = new LighthouseScanner();
+
+      vi.spyOn(fs, "existsSync").mockReturnValue(false);
+      vi.spyOn(chromium, "executablePath").mockReturnValue("/playwright/chrome");
+      vi.spyOn(playwrightUtils, "resolvePlaywrightImageChromiumExecutablePath").mockReturnValue(
+        "/image/chrome",
+      );
+
+      const resolvedPath = callPrivateMethod(testScanner, "resolveChromePath") as string;
+      expect(resolvedPath).toBe("/image/chrome");
+    });
+
+    it("throws when no Chrome executable can be found", () => {
+      const testScanner = new LighthouseScanner();
+
+      vi.spyOn(fs, "existsSync").mockReturnValue(false);
+      vi.spyOn(chromium, "executablePath").mockReturnValue("");
+      vi.spyOn(playwrightUtils, "resolvePlaywrightImageChromiumExecutablePath").mockReturnValue(
+        null,
+      );
+
+      expect(() => callPrivateMethod(testScanner, "resolveChromePath")).toThrow(
+        "Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.",
+      );
+    });
+  });
+
+  describe("cleanup", () => {
+    it("invokes closeChrome before parent cleanup", async () => {
+      const testScanner = new LighthouseScanner();
+      const closeChromeSpy = vi
+        .spyOn(
+          testScanner as unknown as { closeChrome: () => Promise<void> },
+          "closeChrome",
+        )
+        .mockResolvedValue(undefined);
+      const baseCleanupSpy = vi
+        .spyOn(ScannerBase.prototype as unknown as { cleanup: () => Promise<void> }, "cleanup")
+        .mockResolvedValue(undefined);
+
+      await callPrivateMethod(testScanner, "cleanup");
+
+      expect(closeChromeSpy).toHaveBeenCalledTimes(1);
+      expect(baseCleanupSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns early when no Chrome instance exists", async () => {
+      const testScanner = new LighthouseScanner();
+      await callPrivateMethod(testScanner, "closeChrome");
+      expect((testScanner as unknown as { chrome: unknown }).chrome).toBeNull();
+    });
+
+    it("logs warning when Chrome close fails", async () => {
+      const testScanner = new LighthouseScanner();
+      const logger = createMockLogger();
+      (testScanner as unknown as { logger: ScannerLogger }).logger = logger;
+      (testScanner as unknown as {
+        chrome: { port: number; pid?: number; kill: () => Promise<void> };
+      }).chrome = {
+        port: 9222,
+        pid: 12345,
+        kill: vi.fn().mockRejectedValue(new Error("kill failed")),
+      };
+
+      await callPrivateMethod(testScanner, "closeChrome");
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Failed to close Lighthouse Chrome",
+        expect.objectContaining({ error: "kill failed" }),
+      );
+      expect((testScanner as unknown as { chrome: unknown }).chrome).toBeNull();
+    });
+  });
+
+  describe("scanPage resilience", () => {
+    it("continues when re-navigation, enrichment, and screenshot capture fail", async () => {
+      const testScanner = new LighthouseScanner();
+      const logger = createMockLogger();
+      (testScanner as unknown as { logger: ScannerLogger }).logger = logger;
+
+      const runLighthouseMock = vi.fn().mockResolvedValue({
+        requestedUrl: "https://example.com/page",
+        finalUrl: "https://example.com/page",
+        fetchTime: new Date().toISOString(),
+        categories: {},
+        audits: {},
+      });
+      const issues: Issue[] = [
+        {
+          id: "lh-issue",
+          scanner: "lighthouse",
+          severity: "moderate",
+          category: "accessibility",
+          title: "Example issue",
+          description: "Example description",
+          metadata: {
+            nodes: [{ target: [".target"] }],
+          },
+        },
+      ];
+
+      (testScanner as unknown as { runLighthouse: typeof runLighthouseMock }).runLighthouse =
+        runLighthouseMock;
+      (testScanner as unknown as { extractIssues: (result: unknown) => Issue[] }).extractIssues =
+        vi.fn().mockReturnValue(issues);
+      (testScanner as unknown as {
+        enrichIssuesWithContext: (page: Page, currentIssues: Issue[]) => Promise<void>;
+      }).enrichIssuesWithContext = vi.fn().mockRejectedValue(new Error("enrichment failed"));
+      (testScanner as unknown as {
+        screenshotService: {
+          capturePageOverview: (...args: unknown[]) => Promise<unknown>;
+        };
+      }).screenshotService = {
+        capturePageOverview: vi.fn().mockRejectedValue(new Error("screenshot failed")),
+      };
+
+      const page = createMockPage({
+        goto: vi.fn().mockRejectedValue(new Error("navigation failed")),
+      });
+      const context = createMockContext({ page, logger });
+
+      const result = await testScanner.scanPage(context);
+      const rawResults = result.rawResults as {
+        pageOverview: unknown;
+        finalUrl: string;
+      };
+
+      expect(result.success).toBe(true);
+      expect(result.issues).toHaveLength(1);
+      expect(result.artifacts).toEqual([]);
+      expect(rawResults.pageOverview).toBeNull();
+      expect(rawResults.finalUrl).toBe("https://example.com/page");
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Failed to re-navigate page after Lighthouse, continuing with stale page",
+        expect.objectContaining({ error: "navigation failed" }),
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Context enrichment failed or timed out, continuing without enrichment",
+        expect.objectContaining({ error: "enrichment failed" }),
+      );
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Screenshot capture failed or timed out, continuing without screenshot",
+        expect.objectContaining({ error: "screenshot failed" }),
+      );
+    });
+
+    it("returns an error result when Lighthouse execution fails", async () => {
+      const testScanner = new LighthouseScanner();
+      (testScanner as unknown as {
+        runLighthouse: (page: Page, url: string) => Promise<unknown>;
+      }).runLighthouse = vi.fn().mockRejectedValue(new Error("lighthouse failed"));
+
+      const context = createMockContext();
+      const result = await testScanner.scanPage(context);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("lighthouse failed");
+      expect(result.issues).toEqual([]);
     });
   });
 });

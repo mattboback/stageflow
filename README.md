@@ -1,5 +1,9 @@
 # StageFlow
 
+[![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
+
 Podman-native web accessibility and quality scanning platform.
 
 StageFlow runs multi-scanner audits against live URLs or static-site ZIP archives, then aggregates outputs into one normalized report stream. It is built for self-hosting, strict intake validation, and operational transparency.
@@ -68,6 +72,8 @@ cd stageflow
 
 cp .env.example .env
 
+# Keep .env files local and out of version control.
+
 just setup
 just dev up
 just dev init
@@ -108,8 +114,11 @@ Run `just help` for the full recipe list.
 | Build | `just build` | Build Go services, frontend, scanner-runner |
 | Images | `just images` | Build container images |
 | Quality | `just ci` | Lint, typecheck, tests, audits |
-| Service run | `just run frontend` / `just run api` / `just run orchestrator` | Run one service locally |
+| Service run | `just run frontend` / `just run storybook` / `just run api` / `just run orchestrator` | Run one service locally |
+| Component testing | `just storybook-test` | Run Storybook interaction + a11y tests |
 | Production | `just prod <cmd>` / `just deploy <mode>` | Quadlet and deploy workflows |
+
+Storybook testing conventions: `docs/testing/storybook-component-testing.md`.
 
 ## Scanner Plugin System
 

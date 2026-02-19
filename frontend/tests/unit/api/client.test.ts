@@ -1,6 +1,6 @@
 import type { ScannerSelection } from '$lib/types/scan';
 
-import { submitScanJob } from '$lib/api/client';
+import { fetchWithTimeout, submitScanJob } from '$lib/api/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const SCANNERS: ScannerSelection[] = [{ id: 'axe', enabled: true }];
@@ -98,5 +98,49 @@ describe('api/client submitScanJob', () => {
 				highlightStyle: 'dashed'
 			})
 		).rejects.toThrow('Server error. Please try again in a moment.');
+	});
+
+	it('preserves caller abort when AbortSignal.any is unavailable', async () => {
+		const originalAny = Reflect.get(AbortSignal, 'any');
+		Object.defineProperty(AbortSignal, 'any', {
+			value: undefined,
+			configurable: true,
+			writable: true
+		});
+
+		try {
+			vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) => {
+				return new Promise((_resolve, reject) => {
+					const signal = init?.signal;
+					if (!signal) {
+						reject(new Error('Missing request signal'));
+						return;
+					}
+					if (signal.aborted) {
+						reject(new DOMException('Aborted', 'AbortError'));
+						return;
+					}
+					signal.addEventListener(
+						'abort',
+						() => {
+							reject(new DOMException('Aborted', 'AbortError'));
+						},
+						{ once: true }
+					);
+				});
+			});
+
+			const callerController = new AbortController();
+			const request = fetchWithTimeout('/api/v1/jobs', { signal: callerController.signal }, 60_000);
+			callerController.abort();
+
+			await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+		} finally {
+			Object.defineProperty(AbortSignal, 'any', {
+				value: originalAny,
+				configurable: true,
+				writable: true
+			});
+		}
 	});
 });
