@@ -9,6 +9,7 @@
 		class?: string;
 		wrapperClass?: string;
 		value?: string;
+		error?: boolean;
 		children: Snippet;
 	}
 
@@ -17,23 +18,25 @@
 		class: className,
 		wrapperClass,
 		value = $bindable(),
+		error = false,
 		children,
 		...rest
 	}: Props = $props();
 
 	const selectClass = $derived(
 		cn(
-			'border-line text-ink w-full cursor-pointer appearance-none pr-10 transition-colors focus-visible:outline-none',
+			'border-line text-ink w-full cursor-pointer appearance-none pr-10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent focus-visible:ring-offset-paper',
 			variant === 'default'
-				? 'bg-surface-muted focus-visible:ring-accent focus-visible:ring-offset-paper rounded-lg border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2'
-				: 'bg-surface hover:border-ink/20 focus:border-accent rounded-xl border-2 px-4 py-3 text-sm font-medium focus:outline-none',
+				? 'bg-surface-muted rounded-lg border px-3 py-2 text-sm'
+				: 'bg-surface hover:border-ink/20 rounded-xl border-2 px-4 py-3 text-sm font-medium',
+			error && 'border-red-500 focus-visible:ring-red-500',
 			className
 		)
 	);
 </script>
 
 <div class={cn('relative', wrapperClass)}>
-	<select bind:value class={selectClass} {...rest}>
+	<select bind:value class={selectClass} aria-invalid={error} {...rest}>
 		{@render children()}
 	</select>
 	<div class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">
