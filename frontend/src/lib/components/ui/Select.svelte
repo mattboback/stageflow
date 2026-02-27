@@ -21,11 +21,12 @@
 <select
 	bind:value
 	class={cn(
-		'border-line focus:border-accent',
+		'border-line',
 		error && 'border-red-500 focus-visible:ring-red-500',
 		selectVariants({ size: uiSize }),
 		className
 	)}
+	aria-invalid={error}
 	{...rest}
 >
 	{@render children()}

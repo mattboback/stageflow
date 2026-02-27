@@ -4,36 +4,37 @@
 @theme {
 	/* Font families - using self-hosted variable fonts */
 	--font-display:
-		'Source Serif 4 Variable', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+		'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+		sans-serif;
 	--font-body:
-		'Source Sans 3 Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-		'Segoe UI', sans-serif;
+		'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+		sans-serif;
 	--font-mono:
 		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
 	/* Surfaces (light-only) */
-	--color-paper: #fafaf8;
+	--color-paper: #f8fafc; /* slate-50 */
 	--color-surface: #ffffff;
-	--color-surface-muted: #f5f5f2;
-	--color-paper-deep: #f3f1ec;
+	--color-surface-muted: #f1f5f9; /* slate-100 */
+	--color-paper-deep: #e2e8f0; /* slate-200 */
 
 	/* Text */
-	--color-ink-strong: #050505;
-	--color-ink: #0f0f0f;
-	--color-ink-muted: #52525b;
-	--color-ink-faint: #71717a;
+	--color-ink-strong: #020617; /* slate-950 */
+	--color-ink: #0f172a; /* slate-900 */
+	--color-ink-muted: #475569; /* slate-600 */
+	--color-ink-faint: #64748b; /* slate-500 */
 
 	/* Borders */
-	--color-line: #e4e4e7;
+	--color-line: #cbd5e1; /* slate-300 */
 
-	/* Accent — deeper coral-red, confident but not harsh */
-	--color-accent: #dc2626;
-	--color-accent-hover: #b91c1c;
-	--color-accent-soft: #fef2f2;
-	--color-accent-ink: #7f1d1d;
-	--color-accent-mist: #fef8f8;
-	--color-accent-subtle: #fde8e8;
-	--color-accent-deep: #991b1b;
+	/* Accent — Trustworthy Indigo */
+	--color-accent: #4f46e5; /* indigo-600 */
+	--color-accent-hover: #4338ca; /* indigo-700 */
+	--color-accent-soft: #e0e7ff; /* indigo-100 */
+	--color-accent-ink: #3730a3; /* indigo-800 */
+	--color-accent-mist: #eef2ff; /* indigo-50 */
+	--color-accent-subtle: #c7d2fe; /* indigo-200 */
+	--color-accent-deep: #312e81; /* indigo-900 */
 
 	/* Shadows (neutral, subtle) */
 	--shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -79,8 +80,8 @@
 		font-family: var(--font-body);
 		font-weight: 450;
 		background:
-			radial-gradient(circle at 10% -25%, rgba(220, 38, 38, 0.08), transparent 48%),
-			radial-gradient(circle at 90% 8%, rgba(127, 29, 29, 0.06), transparent 42%),
+			radial-gradient(circle at 10% -25%, rgba(79, 70, 229, 0.08), transparent 48%),
+			radial-gradient(circle at 90% 8%, rgba(55, 48, 163, 0.06), transparent 42%),
 			var(--color-paper);
 		@apply text-ink selection:bg-accent-soft selection:text-ink;
 	}
@@ -150,13 +151,13 @@
 
 	.playground-hero {
 		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 252, 250, 0.9) 45%, transparent 100%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 45%, transparent 100%),
 			var(--color-paper);
 	}
 
 	.playground-shell {
 		background:
-			radial-gradient(80rem 38rem at 50% -10%, rgba(220, 38, 38, 0.14), transparent 55%),
+			radial-gradient(80rem 38rem at 50% -10%, rgba(79, 70, 229, 0.14), transparent 55%),
 			var(--color-paper);
 	}
 
@@ -180,9 +181,9 @@
 		background: linear-gradient(
 			90deg,
 			transparent,
-			rgba(220, 38, 38, 0.08) 22%,
-			rgba(220, 38, 38, 0.5) 50%,
-			rgba(220, 38, 38, 0.08) 78%,
+			rgba(79, 70, 229, 0.08) 22%,
+			rgba(79, 70, 229, 0.5) 50%,
+			rgba(79, 70, 229, 0.08) 78%,
 			transparent
 		);
 		opacity: 0.5;
@@ -190,7 +191,7 @@
 
 	.landing-shell {
 		background:
-			linear-gradient(110deg, rgba(255, 255, 255, 0.78), rgba(250, 248, 244, 0.8)),
+			linear-gradient(110deg, rgba(255, 255, 255, 0.78), rgba(241, 245, 249, 0.8)),
 			repeating-linear-gradient(
 				90deg,
 				transparent 0,
@@ -202,9 +203,9 @@
 
 	.landing-hero {
 		background:
-			radial-gradient(120% 70% at 5% 5%, rgba(220, 38, 38, 0.13), transparent 63%),
-			radial-gradient(100% 65% at 94% -12%, rgba(127, 29, 29, 0.09), transparent 60%),
-			linear-gradient(180deg, rgba(255, 252, 250, 0.98) 0%, rgba(250, 248, 244, 0.84) 62%, transparent 100%);
+			radial-gradient(120% 70% at 5% 5%, rgba(79, 70, 229, 0.13), transparent 63%),
+			radial-gradient(100% 65% at 94% -12%, rgba(55, 48, 163, 0.09), transparent 60%),
+			linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.84) 62%, transparent 100%);
 	}
 
 	.landing-grid {
@@ -220,7 +221,7 @@
 	}
 
 	.landing-chip {
-		box-shadow: inset 0 0 0 1px rgba(127, 29, 29, 0.14);
+		box-shadow: inset 0 0 0 1px rgba(55, 48, 163, 0.14);
 	}
 
 	.metric-strip {
@@ -266,13 +267,13 @@
 
 	.workflow-band {
 		background:
-			linear-gradient(180deg, rgba(255, 249, 247, 0.84), rgba(255, 255, 255, 0.45)),
+			linear-gradient(180deg, rgba(248, 250, 252, 0.84), rgba(255, 255, 255, 0.45)),
 			repeating-linear-gradient(
 				0deg,
 				transparent 0,
 				transparent 54px,
-				rgba(220, 38, 38, 0.03) 54px,
-				rgba(220, 38, 38, 0.03) 55px
+				rgba(79, 70, 229, 0.03) 54px,
+				rgba(79, 70, 229, 0.03) 55px
 			);
 	}
 
@@ -286,14 +287,14 @@
 	}
 
 	.workflow-line {
-		background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.35), transparent);
+		background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.35), transparent);
 		@apply pointer-events-none absolute top-12 left-0 hidden h-px w-full lg:block;
 	}
 
 	.cta-panel {
 		box-shadow: var(--shadow-float);
 		background:
-			linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(254, 242, 242, 0.92)),
+			linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(238, 242, 255, 0.92)),
 			var(--color-surface);
 		@apply border-line/70 rounded-3xl border px-6 py-12 text-center sm:px-10;
 	}
@@ -308,7 +309,7 @@
 
 	.footer-shell {
 		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(245, 245, 242, 0.9) 100%),
+			linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(226, 232, 240, 0.9) 100%),
 			var(--color-paper-deep);
 	}
 
@@ -324,7 +325,7 @@
 
 	.hero-preview::after {
 		content: '';
-		background: linear-gradient(180deg, transparent 0%, rgba(220, 38, 38, 0.07) 100%);
+		background: linear-gradient(180deg, transparent 0%, rgba(79, 70, 229, 0.07) 100%);
 		@apply pointer-events-none absolute inset-0 rounded-2xl;
 	}
 

@@ -1,8 +1,7 @@
 <script lang="ts">
 	// Self-hosted fonts via fontsource
 	import '@fontsource-variable/jetbrains-mono';
-	import '@fontsource-variable/source-sans-3';
-	import '@fontsource-variable/source-serif-4';
+	import '@fontsource-variable/inter';
 
 	import '../app.css';
 	import { page } from '$app/state';
