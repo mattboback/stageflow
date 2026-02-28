@@ -7,9 +7,6 @@ run:
   go: "1.25"
   modules-from-go-work: true
 
-issues:
-  max-same-issues: 50
-
 formatters:
   enable:
     - gofmt
@@ -262,5 +259,14 @@ output:
 severity:
   default: warning
   rules:
-    - linters: [errcheck, govet, staticcheck, gosec, depguard, bodyclose, sqlclosecheck]
+    - linters:
+        [
+          errcheck,
+          govet,
+          staticcheck,
+          gosec,
+          depguard,
+          bodyclose,
+          sqlclosecheck,
+        ]
       severity: error

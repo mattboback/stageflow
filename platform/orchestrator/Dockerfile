@@ -10,7 +10,7 @@ COPY packages/shared-go/go.mod packages/shared-go/go.sum ./packages/shared-go/
 COPY platform/orchestrator/go.mod platform/orchestrator/go.sum ./platform/orchestrator/
 
 # Download dependencies (cached layer)
-RUN --mount=type=cache,target=/go/pkg/mod \
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     cd platform/orchestrator && go mod download
 
 # Copy source code
@@ -20,8 +20,9 @@ COPY packages/shared-go ./packages/shared-go
 COPY platform/orchestrator ./platform/orchestrator
 
 # Build with optimizations
-RUN --mount=type=cache,target=/go/pkg/mod \
-    --mount=type=cache,target=/root/.cache/go-build \
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    mkdir -p /go/pkg/mod /root/.cache/go-build && \
     cd platform/orchestrator && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o /out/orchestrator ./cmd/orchestrator
