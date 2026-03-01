@@ -20,13 +20,33 @@ type ipAddrResolver interface {
 	LookupIPAddr(ctx context.Context, host string) ([]net.IPAddr, error)
 }
 
+type targetValidationMode uint8
+
+const (
+	targetValidationModePublic targetValidationMode = iota
+	targetValidationModePrivate
+)
+
+type targetIPDecision uint8
+
+const (
+	targetIPDecisionAllow targetIPDecision = iota
+	targetIPDecisionAllowInPrivateMode
+	targetIPDecisionBlock
+)
+
 // validateTargetURLs enforces basic SSRF protections for URL-based jobs.
 // It rejects URLs with non-HTTP schemes and targets in private/loopback/metadata ranges.
 func validateTargetURLs(ctx context.Context, urls []string) error {
-	return validateTargetURLsWithResolver(ctx, net.DefaultResolver, urls)
+	return validateTargetURLsWithResolver(ctx, net.DefaultResolver, urls, targetValidationModePublic)
 }
 
-func validateTargetURLsWithResolver(ctx context.Context, resolver ipAddrResolver, urls []string) error {
+func validateTargetURLsWithResolver(
+	ctx context.Context,
+	resolver ipAddrResolver,
+	urls []string,
+	mode targetValidationMode,
+) error {
 	if resolver == nil {
 		resolver = net.DefaultResolver
 	}
@@ -37,7 +57,7 @@ func validateTargetURLsWithResolver(ctx context.Context, resolver ipAddrResolver
 			return parseErr
 		}
 
-		if hostErr := validateHost(ctx, resolver, target); hostErr != nil {
+		if hostErr := validateHost(ctx, resolver, target, mode); hostErr != nil {
 			return hostErr
 		}
 	}
@@ -77,22 +97,27 @@ func parseTargetURL(raw string) (*targetHost, error) {
 	}, nil
 }
 
-func validateHost(ctx context.Context, resolver ipAddrResolver, target *targetHost) error {
+func validateHost(ctx context.Context, resolver ipAddrResolver, target *targetHost, mode targetValidationMode) error {
 	if ip := net.ParseIP(target.host); ip != nil {
-		return ensureAllowedIP(target.raw, target.host, ip)
+		return ensureAllowedIP(target.raw, target.host, ip, mode)
 	}
 
-	return resolveAndValidate(ctx, resolver, target)
+	return resolveAndValidate(ctx, resolver, target, mode)
 }
 
-func resolveAndValidate(ctx context.Context, resolver ipAddrResolver, target *targetHost) error {
+func resolveAndValidate(
+	ctx context.Context,
+	resolver ipAddrResolver,
+	target *targetHost,
+	mode targetValidationMode,
+) error {
 	ips, err := resolver.LookupIPAddr(ctx, target.host)
 	if err != nil {
 		return fmt.Errorf("failed to resolve hostname %s: %w", target.host, err)
 	}
 
 	for _, resolved := range ips {
-		if isDisallowedIP(resolved.IP) {
+		if !isAllowedTargetIP(resolved.IP, mode) {
 			return fmt.Errorf("hostname %s resolves to disallowed address %s", target.host, resolved.IP.String())
 		}
 	}
@@ -100,31 +125,26 @@ func resolveAndValidate(ctx context.Context, resolver ipAddrResolver, target *ta
 	return nil
 }
 
-func ensureAllowedIP(raw, host string, ip net.IP) error {
-	if isDisallowedIP(ip) {
+func ensureAllowedIP(raw, host string, ip net.IP, mode targetValidationMode) error {
+	if !isAllowedTargetIP(ip, mode) {
 		return fmt.Errorf("URL host %s for %s resolves to a disallowed address", host, raw)
 	}
 
 	return nil
 }
 
-var disallowedIPPrefixValues = []string{
+var blockedIPPrefixValues = []string{
 	"0.0.0.0/8",
-	"10.0.0.0/8",
 	"100.64.0.0/10",
-	"127.0.0.0/8",
 	"169.254.0.0/16",
-	"172.16.0.0/12",
 	"192.0.0.0/24",
 	"192.0.2.0/24",
-	"192.168.0.0/16",
 	"198.18.0.0/15",
 	"198.51.100.0/24",
 	"203.0.113.0/24",
 	"224.0.0.0/4",
 	"240.0.0.0/4",
 	"::/128",
-	"::1/128",
 	"100::/64",
 	"2001:db8::/32",
 	"fc00::/7",
@@ -133,13 +153,22 @@ var disallowedIPPrefixValues = []string{
 	"ff00::/8",
 }
 
+var allowedPrivateIPPrefixValues = []string{
+	"10.0.0.0/8",
+	"127.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"::1/128",
+}
+
 var metadataServiceAddrValues = []string{
 	"169.254.169.254", // IPv4 metadata service
 }
 
 type securityPolicyConfig struct {
-	disallowedPrefixes []netip.Prefix
-	metadataAddrs      []netip.Addr
+	blockedPrefixes        []netip.Prefix
+	allowedPrivatePrefixes []netip.Prefix
+	metadataAddrs          []netip.Addr
 }
 
 var (
@@ -158,7 +187,8 @@ func ValidateSecurityConfig() error {
 func loadSecurityPolicyConfig() (securityPolicyConfig, error) {
 	securityPolicyOnce.Do(func() {
 		securityPolicyParsed, securityPolicyErr = parseSecurityPolicyConfig(
-			disallowedIPPrefixValues,
+			blockedIPPrefixValues,
+			allowedPrivateIPPrefixValues,
 			metadataServiceAddrValues,
 		)
 	})
@@ -171,17 +201,28 @@ func loadSecurityPolicyConfig() (securityPolicyConfig, error) {
 }
 
 func parseSecurityPolicyConfig(
-	prefixes []string,
+	blockedPrefixes []string,
+	allowedPrivatePrefixes []string,
 	metadataAddrs []string,
 ) (securityPolicyConfig, error) {
-	parsedPrefixes := make([]netip.Prefix, 0, len(prefixes))
-	for _, prefix := range prefixes {
+	parsedBlockedPrefixes := make([]netip.Prefix, 0, len(blockedPrefixes))
+	for _, prefix := range blockedPrefixes {
 		value, err := netip.ParsePrefix(prefix)
 		if err != nil {
 			return securityPolicyConfig{}, fmt.Errorf("invalid disallowed CIDR %q: %w", prefix, err)
 		}
 
-		parsedPrefixes = append(parsedPrefixes, value)
+		parsedBlockedPrefixes = append(parsedBlockedPrefixes, value)
+	}
+
+	parsedAllowedPrivatePrefixes := make([]netip.Prefix, 0, len(allowedPrivatePrefixes))
+	for _, prefix := range allowedPrivatePrefixes {
+		value, err := netip.ParsePrefix(prefix)
+		if err != nil {
+			return securityPolicyConfig{}, fmt.Errorf("invalid allowed private CIDR %q: %w", prefix, err)
+		}
+
+		parsedAllowedPrivatePrefixes = append(parsedAllowedPrivatePrefixes, value)
 	}
 
 	parsedMetadataAddrs := make([]netip.Addr, 0, len(metadataAddrs))
@@ -195,43 +236,66 @@ func parseSecurityPolicyConfig(
 	}
 
 	return securityPolicyConfig{
-		disallowedPrefixes: parsedPrefixes,
-		metadataAddrs:      parsedMetadataAddrs,
+		blockedPrefixes:        parsedBlockedPrefixes,
+		allowedPrivatePrefixes: parsedAllowedPrivatePrefixes,
+		metadataAddrs:          parsedMetadataAddrs,
 	}, nil
 }
 
 // isDisallowedIP returns true for IPs in non-public, loopback, link-local, or metadata ranges.
 func isDisallowedIP(ip net.IP) bool {
+	return !isAllowedTargetIP(ip, targetValidationModePublic)
+}
+
+func isAllowedTargetIP(ip net.IP, mode targetValidationMode) bool {
+	switch classifyTargetIP(ip) {
+	case targetIPDecisionAllow:
+		return true
+	case targetIPDecisionAllowInPrivateMode:
+		return mode == targetValidationModePrivate
+	case targetIPDecisionBlock:
+		return false
+	}
+
+	return false
+}
+
+func classifyTargetIP(ip net.IP) targetIPDecision {
 	policy, err := loadSecurityPolicyConfig()
 	if err != nil {
-		return true
+		return targetIPDecisionBlock
 	}
 
 	addr, ok := netip.AddrFromSlice(ip)
 	if !ok {
-		return true
+		return targetIPDecisionBlock
 	}
 
 	if addr.Is4In6() {
 		addr = addr.Unmap()
 	}
 
-	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() ||
-		addr.IsLinkLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() {
-		return true
+	if addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() {
+		return targetIPDecisionBlock
 	}
 
 	for _, metadataAddr := range policy.metadataAddrs {
 		if addr == metadataAddr {
-			return true
+			return targetIPDecisionBlock
 		}
 	}
 
-	for _, prefix := range policy.disallowedPrefixes {
+	for _, prefix := range policy.allowedPrivatePrefixes {
 		if prefix.Contains(addr) {
-			return true
+			return targetIPDecisionAllowInPrivateMode
 		}
 	}
 
-	return false
+	for _, prefix := range policy.blockedPrefixes {
+		if prefix.Contains(addr) {
+			return targetIPDecisionBlock
+		}
+	}
+
+	return targetIPDecisionAllow
 }

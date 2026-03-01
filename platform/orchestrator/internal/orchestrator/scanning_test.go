@@ -449,6 +449,42 @@ func TestStartSingleScanner_URLJobProvenance(t *testing.T) {
 	}
 }
 
+func TestStartSingleScanner_SetsAllowPrivateTargetsEnvVar(t *testing.T) {
+	orch, database, _, _ := setupTestOrchestrator(t)
+
+	var capturedEnv map[string]string
+
+	mockPodman := orch.podmanClient.(*mockPodmanClient)
+	mockPodman.createContainerFunc = func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+		capturedEnv = req.Env
+		return &podman.ContainerCreateResponse{ID: "container-123"}, nil
+	}
+
+	job := &models.Job{
+		ID:        "job-url-private",
+		State:     models.JobStateScanning,
+		InputType: inputTypeURLs,
+		URLs:      []string{"https://example.com"},
+		PodID:     "pod-123",
+		Config: models.JobConfig{
+			Modules:             []string{"axe"},
+			AllowPrivateTargets: true,
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	insertJob(t, database, job)
+
+	err := orch.startSingleScanner(context.Background(), job, "axe")
+	if err != nil {
+		t.Fatalf("startSingleScanner failed: %v", err)
+	}
+
+	if capturedEnv["ALLOW_PRIVATE_TARGETS"] != "true" {
+		t.Fatalf("expected ALLOW_PRIVATE_TARGETS=true, got %q", capturedEnv["ALLOW_PRIVATE_TARGETS"])
+	}
+}
+
 func TestStartSingleScanner_AINavigatorAPIKey(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 

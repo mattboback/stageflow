@@ -13,26 +13,32 @@ services:
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
         VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility scanning platform}
     ports:
-      - "3010:3000"
+      - "127.0.0.1:3010:3000"
 
   platform-api:
     environment:
+      PLATFORM_API_ALLOW_PRIVATE_TARGETS: "true"
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"
       MINIO_PUBLIC_USE_SSL: "false"
       MINIO_USE_PROXY_URLS: "false"
       PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:3010,http://localhost:3000,http://localhost:8080
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+
+  orchestrator:
+    environment:
+      POD_NETNS_MODE: "host"
+      POD_NETWORK: ""
 
   minio:
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
 
   grafana:
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
 
   nats:
     ports:
-      - "4222:4222"
+      - "127.0.0.1:4222:4222"

@@ -22,6 +22,15 @@ const (
 	maxURLLength         = 2048
 )
 
+type jobURLSubmitRequest struct {
+	URLs                []string                  `json:"urls"`
+	Modules             []string                  `json:"modules"`
+	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
+	Screenshot          bool                      `json:"screenshot"`
+	HighlightStyle      string                    `json:"highlight_style"`
+	AllowPrivateTargets bool                      `json:"allow_private_targets"`
+}
+
 func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -31,13 +40,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxURLSubmitBodySize)
 
-	var req struct {
-		URLs           []string                  `json:"urls"`
-		Modules        []string                  `json:"modules"`
-		ScannerConfigs map[string]map[string]any `json:"scanner_configs,omitempty"`
-		Screenshot     bool                      `json:"screenshot"`
-		HighlightStyle string                    `json:"highlight_style"`
-	}
+	var req jobURLSubmitRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		var maxErr *http.MaxBytesError
@@ -53,40 +56,20 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.URLs) == 0 {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
-			"urls",
-			"URLs list cannot be empty",
-			"Please provide at least one URL to scan. Example: ['https://example.com']",
-		))
+	if detail := validateURLSubmitRequest(req.URLs); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
 
 		return
 	}
 
-	if len(req.URLs) > maxURLCount {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
-			"urls",
-			fmt.Sprintf("Too many URLs (max %d)", maxURLCount),
-			fmt.Sprintf("Please provide at most %d URLs per job.", maxURLCount),
-		))
+	validationMode, detail := s.resolveTargetValidationMode(req.AllowPrivateTargets)
+	if detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
 
 		return
 	}
 
-	for _, raw := range req.URLs {
-		trimmed := strings.TrimSpace(raw)
-		if len(trimmed) > maxURLLength {
-			httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
-				"urls",
-				fmt.Sprintf("URL exceeds maximum length of %d characters", maxURLLength),
-				"Shorten the URL or split the job into smaller batches.",
-			))
-
-			return
-		}
-	}
-
-	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, req.URLs); err != nil {
+	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, req.URLs, validationMode); err != nil {
 		httputil.RespondError(w, http.StatusBadRequest, err.Error())
 
 		return
@@ -106,8 +89,8 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if detail := validateScannerConfigs(modules, req.ScannerConfigs); detail != nil {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+	if scannerConfigDetail := validateScannerConfigs(modules, req.ScannerConfigs); scannerConfigDetail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *scannerConfigDetail)
 
 		return
 	}
@@ -124,10 +107,11 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		InputType: "urls",
 		URLs:      req.URLs,
 		Config: models.JobConfig{
-			Modules:        modules,
-			ScannerConfigs: req.ScannerConfigs,
-			Screenshot:     req.Screenshot,
-			HighlightStyle: highlightStyle,
+			Modules:             modules,
+			ScannerConfigs:      req.ScannerConfigs,
+			Screenshot:          req.Screenshot,
+			HighlightStyle:      highlightStyle,
+			AllowPrivateTargets: req.AllowPrivateTargets,
 		},
 	}
 
@@ -161,4 +145,61 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		"status":  "pending",
 		"message": "Job created successfully",
 	})
+}
+
+func validateURLSubmitRequest(urls []string) *httputil.ErrorDetail {
+	if len(urls) == 0 {
+		detail := httputil.NewValidationError(
+			"urls",
+			"URLs list cannot be empty",
+			"Please provide at least one URL to scan. Example: ['https://example.com']",
+		)
+
+		return &detail
+	}
+
+	if len(urls) > maxURLCount {
+		detail := httputil.NewValidationError(
+			"urls",
+			fmt.Sprintf("Too many URLs (max %d)", maxURLCount),
+			fmt.Sprintf("Please provide at most %d URLs per job.", maxURLCount),
+		)
+
+		return &detail
+	}
+
+	for _, raw := range urls {
+		trimmed := strings.TrimSpace(raw)
+		if len(trimmed) > maxURLLength {
+			detail := httputil.NewValidationError(
+				"urls",
+				fmt.Sprintf("URL exceeds maximum length of %d characters", maxURLLength),
+				"Shorten the URL or split the job into smaller batches.",
+			)
+
+			return &detail
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) resolveTargetValidationMode(
+	allowPrivateTargets bool,
+) (targetValidationMode, *httputil.ErrorDetail) {
+	if !allowPrivateTargets {
+		return targetValidationModePublic, nil
+	}
+
+	if !s.config.AllowPrivateTargets {
+		detail := httputil.NewValidationError(
+			"allow_private_targets",
+			"This API instance does not permit private target scans",
+			"Retry without allow_private_targets or enable private target scans on this API instance.",
+		)
+
+		return targetValidationModePublic, &detail
+	}
+
+	return targetValidationModePrivate, nil
 }

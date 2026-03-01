@@ -15,7 +15,12 @@ import (
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
 )
 
-const inputTypeURLs = "urls"
+const (
+	inputTypeURLs = "urls"
+
+	podNetnsModeBridge = "bridge"
+	podNetnsModeHost   = "host"
+)
 
 // Publisher abstracts job completion/failure emissions for testability.
 type Publisher interface {
@@ -58,6 +63,7 @@ type Orchestrator struct {
 	extractionImage      string
 	scannerImage         string
 	podNetwork           string
+	podNetnsMode         string
 	podHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	pageLoadTimeout      int
 	scrollTimeout        int
@@ -85,6 +91,7 @@ type Config struct {
 	ExtractionImage      string
 	ScannerImage         string
 	PodNetwork           string
+	PodNetnsMode         string   // Pod network namespace mode for job pods (bridge|host). Host mode is local-only.
 	PodHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	PageLoadTimeout      int
 	ScrollTimeout        int
@@ -140,6 +147,11 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		deadlinePollInterval = 30 * time.Second
 	}
 
+	podNetnsMode := config.PodNetnsMode
+	if podNetnsMode == "" {
+		podNetnsMode = podNetnsModeBridge
+	}
+
 	// Resolve scanner registry; default to built‑ins when unset.
 	registry := config.ScannerRegistry
 	if registry == nil {
@@ -173,6 +185,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		extractionImage:      extractionImage,
 		scannerImage:         scannerImage,
 		podNetwork:           config.PodNetwork,
+		podNetnsMode:         podNetnsMode,
 		podHostMappings:      config.PodHostMappings,
 		pageLoadTimeout:      pageLoadTimeout,
 		scrollTimeout:        scrollTimeout,

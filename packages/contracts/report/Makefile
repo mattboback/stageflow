@@ -11,7 +11,10 @@
 SCHEMA_FILE := schema/unified-report.v2.schema.json
 TS_OUTPUT := generated/typescript/unified-report.v2.ts
 GO_OUTPUT := generated/go/report_schema.go
+GO_MOD_OUTPUT := generated/go/go.mod
 GO_PACKAGE := report
+GO_MODULE := github.com/mattboback/stageflow/packages/contracts/report/generated/go
+GO_VERSION := 1.25.4
 
 # Tool paths
 GO_JSONSCHEMA := $(shell which go-jsonschema 2>/dev/null || echo "$(HOME)/go/bin/go-jsonschema")
@@ -30,13 +33,18 @@ $(TS_OUTPUT): $(SCHEMA_FILE)
 	npx json2ts $(SCHEMA_FILE) -o $@ --unreachableDefinitions
 	@echo "✅ Generated TypeScript: $@"
 
-generate-go: $(GO_OUTPUT)
+generate-go: $(GO_OUTPUT) $(GO_MOD_OUTPUT)
 
 $(GO_OUTPUT): $(SCHEMA_FILE)
 	@mkdir -p $(dir $@)
 	$(GO_JSONSCHEMA) --package $(GO_PACKAGE) --tags json --struct-name-from-title $(SCHEMA_FILE) > $@
 	goimports -w $@
 	@echo "✅ Generated Go: $@"
+
+$(GO_MOD_OUTPUT): Makefile
+	@mkdir -p $(dir $@)
+	@printf "module %s\n\ngo %s\n" "$(GO_MODULE)" "$(GO_VERSION)" > $@
+	@echo "✅ Generated Go module: $@"
 
 validate:
 	@echo "Validating fixtures..."
@@ -45,7 +53,7 @@ validate:
 	@echo "✅ All fixtures valid"
 
 clean:
-	rm -rf generated/typescript/*.ts generated/go/*.go
+	rm -rf generated/typescript/*.ts generated/go/*.go generated/go/go.mod
 	@echo "✅ Cleaned generated files"
 
 install-tools:

@@ -21,7 +21,12 @@ func TestValidateTargetURLs_AllowsPublicURLs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateTargetURLsWithResolver(context.Background(), resolver, []string{tt.url})
+			err := validateTargetURLsWithResolver(
+				context.Background(),
+				resolver,
+				[]string{tt.url},
+				targetValidationModePublic,
+			)
 			if err != nil {
 				t.Errorf("Expected %s to be allowed, got error: %v", tt.url, err)
 			}
@@ -116,7 +121,12 @@ func TestValidateTargetURLs_RejectsEmptyURLs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateTargetURLsWithResolver(context.Background(), resolver, tt.urls)
+			err := validateTargetURLsWithResolver(
+				context.Background(),
+				resolver,
+				tt.urls,
+				targetValidationModePublic,
+			)
 			if err == nil {
 				t.Errorf("Expected empty/whitespace URL to be rejected")
 			}
@@ -154,7 +164,12 @@ func TestValidateTargetURLs_MultipleURLs(t *testing.T) {
 			"http://8.8.8.8",
 		}
 
-		err := validateTargetURLsWithResolver(context.Background(), resolver, urls)
+		err := validateTargetURLsWithResolver(
+			context.Background(),
+			resolver,
+			urls,
+			targetValidationModePublic,
+		)
 		if err != nil {
 			t.Errorf("Expected all valid URLs to be allowed, got error: %v", err)
 		}
@@ -167,7 +182,12 @@ func TestValidateTargetURLs_MultipleURLs(t *testing.T) {
 			"https://example.com",
 		}
 
-		err := validateTargetURLsWithResolver(context.Background(), resolver, urls)
+		err := validateTargetURLsWithResolver(
+			context.Background(),
+			resolver,
+			urls,
+			targetValidationModePublic,
+		)
 		if err == nil {
 			t.Error("Expected validation to fail when one URL is private")
 		}
@@ -192,26 +212,110 @@ func TestValidateTargetURLs_PortHandling(t *testing.T) {
 	})
 
 	t.Run("Domain with port", func(t *testing.T) {
-		err := validateTargetURLsWithResolver(context.Background(), resolver, []string{"https://example.com:8443"})
+		err := validateTargetURLsWithResolver(
+			context.Background(),
+			resolver,
+			[]string{"https://example.com:8443"},
+			targetValidationModePublic,
+		)
 		if err != nil {
 			t.Errorf("Public domain with port should be allowed, got: %v", err)
 		}
 	})
 }
 
+func TestValidateTargetURLs_PrivateModeAllowsNarrowLocalTargets(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"IPv4 loopback", "http://127.0.0.1"},
+		{"IPv6 loopback", "http://[::1]"},
+		{"RFC1918 10/8", "http://10.0.0.1"},
+		{"RFC1918 172.16/12", "http://172.16.0.1"},
+		{"RFC1918 192.168/16", "http://192.168.1.1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateTargetURLsWithResolver(
+				context.Background(),
+				nil,
+				[]string{tt.url},
+				targetValidationModePrivate,
+			)
+			if err != nil {
+				t.Errorf("Expected %s to be allowed in private mode, got error: %v", tt.url, err)
+			}
+		})
+	}
+}
+
+func TestValidateTargetURLs_PrivateModeStillBlocksUnsafeTargets(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{"Metadata service", "http://169.254.169.254"},
+		{"IPv4 link-local", "http://169.254.1.1"},
+		{"IPv4 unspecified", "http://0.0.0.0"},
+		{"IPv4 multicast", "http://224.0.0.10"},
+		{"IPv6 unspecified", "http://[::]"},
+		{"IPv6 link-local", "http://[fe80::1]"},
+		{"IPv6 unique local", "http://[fc00::1]"},
+		{"Invalid URL", "not-a-url"},
+		{"Invalid scheme", "ftp://example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateTargetURLsWithResolver(
+				context.Background(),
+				nil,
+				[]string{tt.url},
+				targetValidationModePrivate,
+			)
+			if err == nil {
+				t.Errorf("Expected %s to be blocked in private mode", tt.url)
+			}
+		})
+	}
+}
+
 func TestParseSecurityPolicyConfig_ReturnsErrorForInvalidCIDR(t *testing.T) {
 	t.Parallel()
 
-	_, err := parseSecurityPolicyConfig([]string{"not-a-cidr"}, []string{"169.254.169.254"})
+	_, err := parseSecurityPolicyConfig(
+		[]string{"not-a-cidr"},
+		allowedPrivateIPPrefixValues,
+		[]string{"169.254.169.254"},
+	)
 	if err == nil {
 		t.Fatal("expected invalid CIDR to return an error")
+	}
+}
+
+func TestParseSecurityPolicyConfig_ReturnsErrorForInvalidAllowedPrivateCIDR(t *testing.T) {
+	t.Parallel()
+
+	_, err := parseSecurityPolicyConfig(
+		blockedIPPrefixValues,
+		[]string{"not-a-cidr"},
+		[]string{"169.254.169.254"},
+	)
+	if err == nil {
+		t.Fatal("expected invalid allowed private CIDR to return an error")
 	}
 }
 
 func TestParseSecurityPolicyConfig_ReturnsErrorForInvalidAddress(t *testing.T) {
 	t.Parallel()
 
-	_, err := parseSecurityPolicyConfig([]string{"10.0.0.0/8"}, []string{"not-an-ip"})
+	_, err := parseSecurityPolicyConfig(
+		blockedIPPrefixValues,
+		allowedPrivateIPPrefixValues,
+		[]string{"not-an-ip"},
+	)
 	if err == nil {
 		t.Fatal("expected invalid address to return an error")
 	}

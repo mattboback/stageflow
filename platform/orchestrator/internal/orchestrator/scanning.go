@@ -117,6 +117,11 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 	natsURL := "nats://" + o.natsHost + ":4222"
 	minioEndpoint := o.minioHost + ":9000"
 
+	if o.podNetnsMode == podNetnsModeHost {
+		natsURL = "nats://127.0.0.1:4222"
+		minioEndpoint = "127.0.0.1:9000"
+	}
+
 	resultsDir := "/results/" + scannerType
 
 	provenancePath := "/workspace/provenance.json"
@@ -147,6 +152,10 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 	}
 
 	env["A11Y_HIGHLIGHT_STYLE"] = highlightStyle
+
+	if job.Config.AllowPrivateTargets {
+		env["ALLOW_PRIVATE_TARGETS"] = strconv.FormatBool(true)
+	}
 
 	if requestID := logging.RequestID(ctx); requestID != "" {
 		env["REQUEST_ID"] = requestID

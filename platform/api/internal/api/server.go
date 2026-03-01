@@ -38,6 +38,7 @@ type ServerConfig struct {
 	Publisher           JobPublisher
 	StatusReader        JobStatusReader
 	ScannerRegistry     *scannerregistry.Registry
+	AllowPrivateTargets bool
 	MinIOEndpoint       string // Internal MinIO endpoint (e.g., "minio:9000")
 	MinIOPublicEndpoint string // Public endpoint (e.g., "stageflow.org")
 	MinIOPublicUseSSL   bool   // Whether to use HTTPS for public URLs

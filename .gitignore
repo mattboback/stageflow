@@ -69,6 +69,10 @@ platform/orchestrator/orchestrator
 platform/extractor/extractor
 tools/job-status-cli/job-status-cli
 tools/suite-runner/suite-runner
+tools/stageflow-cli/stageflow
+tools/stageflow-cli/stageflow-cli
+/stageflow
+/stageflow-cli
 
 # Go build cache
 .gocache/
@@ -76,7 +80,6 @@ tools/suite-runner/suite-runner
 
 # Deployment-specific scanner overrides (copy from infra/scanners/scanners.example.yaml)
 infra/scanners/scanners.yaml
-
-
-
-AGENTS.md/
+.opencode/*
+.opencode/
+.opencode

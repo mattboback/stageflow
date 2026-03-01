@@ -65,7 +65,7 @@ func submitURLScan(t *testing.T, modules []string) string {
 	t.Helper()
 
 	payload := map[string]any{
-		"urls":    []string{"https://matthewboback.com"},
+		"urls":    []string{"https://example.com"},
 		"modules": modules,
 	}
 

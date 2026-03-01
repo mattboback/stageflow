@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/packages/shared-go
 
-go 1.25
+go 1.25.4
 
 replace github.com/mattboback/stageflow/packages/contracts/scanner-manifest => ../contracts/scanner-manifest
 

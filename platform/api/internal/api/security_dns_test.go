@@ -10,18 +10,70 @@ func TestValidateTargetURLs_DNSResolution(t *testing.T) {
 	resolver := defaultSecurityTestResolver(t)
 
 	t.Run("Localhost hostname", func(t *testing.T) {
-		err := validateTargetURLsWithResolver(context.Background(), resolver, []string{"http://localhost"})
+		err := validateTargetURLsWithResolver(
+			context.Background(),
+			resolver,
+			[]string{"http://localhost"},
+			targetValidationModePublic,
+		)
 		if err == nil {
 			t.Error("Expected localhost to be blocked via DNS resolution")
 		}
 	})
 
 	t.Run("Loopback hostname", func(t *testing.T) {
-		err := validateTargetURLsWithResolver(context.Background(), resolver, []string{"http://ip6-localhost"})
+		err := validateTargetURLsWithResolver(
+			context.Background(),
+			resolver,
+			[]string{"http://ip6-localhost"},
+			targetValidationModePublic,
+		)
 		if err == nil {
 			t.Error("Expected ip6-localhost to be blocked via DNS resolution")
 		}
 	})
+}
+
+func TestValidateTargetURLs_DNSResolutionPrivateMode(t *testing.T) {
+	resolver := newStaticResolver(t, map[string][]string{
+		"localhost":          {"127.0.0.1"},
+		"ip6-localhost":      {"::1"},
+		"internal-service":   {"192.168.1.10"},
+		"mixed-safe-targets": {"93.184.216.34", "127.0.0.1"},
+		"metadata.google":    {"169.254.169.254"},
+		"link-local-host":    {"169.254.1.1"},
+	})
+
+	tests := []struct {
+		name    string
+		url     string
+		wantErr bool
+	}{
+		{"Localhost allowed", "http://localhost", false},
+		{"IPv6 localhost allowed", "http://ip6-localhost", false},
+		{"RFC1918 hostname allowed", "http://internal-service", false},
+		{"Mixed public and allowed local IPs stay allowed", "http://mixed-safe-targets", false},
+		{"Metadata hostname stays blocked", "http://metadata.google", true},
+		{"Link-local hostname stays blocked", "http://link-local-host", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateTargetURLsWithResolver(
+				context.Background(),
+				resolver,
+				[]string{tt.url},
+				targetValidationModePrivate,
+			)
+			if tt.wantErr && err == nil {
+				t.Errorf("Expected %s to be blocked in private mode", tt.url)
+			}
+
+			if !tt.wantErr && err != nil {
+				t.Errorf("Expected %s to be allowed in private mode, got: %v", tt.url, err)
+			}
+		})
+	}
 }
 
 func TestIsDisallowedIP_Comprehensive(t *testing.T) {

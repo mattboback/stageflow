@@ -48,13 +48,13 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 			"managed_by": "orchestrator",
 			"job_id":     job.ID,
 		},
+		Netns:   podman.PodNetns{Nsmode: o.podNetnsMode},
 		HostAdd: o.podHostMappings,
 	}
-	if o.podNetwork != "" {
+	if o.podNetnsMode == podNetnsModeBridge && o.podNetwork != "" {
 		podReq.Networks = map[string]podman.PerNetworkOptions{
 			o.podNetwork: {},
 		}
-		podReq.Netns = podman.PodNetns{Nsmode: "bridge"}
 	}
 
 	podResp, err := o.podmanClient.CreatePod(ctx, podReq)
@@ -100,6 +100,11 @@ func (o *Orchestrator) startExtractionWorkerWithTimeout(ctx context.Context, job
 func (o *Orchestrator) startExtractionWorker(ctx context.Context, job *models.Job, podID string) error {
 	natsURL := "nats://" + o.natsHost + ":4222"
 	minioEndpoint := o.minioHost + ":9000"
+
+	if o.podNetnsMode == podNetnsModeHost {
+		natsURL = "nats://127.0.0.1:4222"
+		minioEndpoint = "127.0.0.1:9000"
+	}
 
 	env := map[string]string{
 		"JOB_ID":                job.ID,

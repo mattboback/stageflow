@@ -4,9 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
 
+**[Live Demo](https://stageflow.org)** | Try the scanning pipeline against any public URL
+
 Podman-native web accessibility and quality scanning platform.
 
 StageFlow runs multi-scanner audits against live URLs or static-site ZIP archives, then aggregates outputs into one normalized report stream. It is built for self-hosting, strict intake validation, and operational transparency.
+
+![StageFlow — live scan pipeline dashboard](docs/images/hero.png)
 
 ## Why StageFlow
 
@@ -30,7 +34,64 @@ Client/UI -> Platform API -> NATS JetStream -> Orchestrator -> Podman job pod
 - Scanner runner loads plugins by manifest and validates scanner options.
 - Frontend receives live status with SSE and fallback refresh logic.
 
-Full design details: [ARCHITECTURE.md](ARCHITECTURE.md).
+Full design details: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Screenshots
+
+### Playground
+
+Configure input type, target URLs, scanner selection, and run options from a single control surface.
+
+![Playground — configure scan input and scanners](docs/images/playground.png)
+
+### Scan Execution
+
+Real-time SSE event stream shows scanner progress, container status, and log output as the scan runs.
+
+<table>
+  <tr>
+    <td><img src="docs/images/scan-progress.png" alt="Live scan in progress with SSE event stream" /></td>
+    <td><img src="docs/images/scan-complete.png" alt="Scan complete with artifact links" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Live progress stream during execution</em></td>
+    <td align="center"><em>Completed scan with report and artifact links</em></td>
+  </tr>
+</table>
+
+### Report
+
+The unified report aggregates findings from all scanners into one view with severity breakdown, Lighthouse scores, and scanner status.
+
+![Report overview — risk snapshot, severity breakdown, Lighthouse scores, scanner status](docs/images/report-overview.png)
+
+<table>
+  <tr>
+    <td><img src="docs/images/report-issues.png" alt="Issues tab — all findings with severity and remediation" /></td>
+    <td><img src="docs/images/report-scanners.png" alt="Scans tab — per-scanner results and timing" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Issues tab — grouped findings with severity and fix guidance</em></td>
+    <td align="center"><em>Scans tab — per-scanner results and timing</em></td>
+  </tr>
+</table>
+
+### Page-Level Evidence
+
+The Pages tab renders an annotated screenshot of each scanned page with bounding boxes highlighting issue locations. Click any marker to open full remediation detail.
+
+<table>
+  <tr>
+    <td><img src="docs/images/report-pages.png" alt="Pages tab — annotated screenshot with bounding box overlays" /></td>
+    <td><img src="docs/images/report-pages-detail.png" alt="Issue detail — evidence crop, selector, and fix guidance" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Annotated page screenshot with bounding boxes</em></td>
+    <td align="center"><em>Issue detail with evidence crop, selector, and fix guidance</em></td>
+  </tr>
+</table>
+
+![Full report — complete scan output](docs/images/scan-report.png)
 
 ## Built-In Scanners
 
@@ -47,7 +108,7 @@ Full design details: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 | Layer | Technology |
 | --- | --- |
-| Backend services | Go 1.25 |
+| Backend services | Go 1.25.4 |
 | Scanner runtime | TypeScript + Bun + Playwright |
 | Frontend | SvelteKit 5 + Tailwind v4 |
 | Messaging | NATS JetStream |
@@ -56,9 +117,17 @@ Full design details: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Edge/proxy | Caddy |
 | Monitoring | Grafana |
 
+## Quality & Testing
+
+StageFlow is built to be production-ready and deeply tested across the stack:
+- **100% Type Safety**: Frontend and scanner-runner enforce strict TypeScript (`noUncheckedIndexedAccess`, zero `any` usage).
+- **Backend Quality**: Go codebase is fully linted (golangci-lint), race-tested, and audited via `govulncheck`.
+- **Frontend Testing**: 220+ unit tests with Vitest, comprehensive component testing with Storybook, and Playwright a11y interaction tests.
+- **Continuous Integration**: The entire CI pipeline enforces stringent quality gates on every commit.
+
 ## Prerequisites
 
-- [Go 1.25+](https://go.dev/dl/)
+- [Go 1.25.4](https://go.dev/dl/)
 - [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) (with `podman compose`)
 - [just](https://github.com/casey/just)
@@ -102,6 +171,47 @@ curl -N "http://localhost:8080/api/v1/jobs/$job_id/stream"
 
 SSRF protections reject loopback/private/link-local/metadata destinations for URL jobs.
 
+## Optional CLI Mode
+
+StageFlow also includes an optional CLI client (`tools/stageflow-cli/`) that talks to the existing Platform API. It submits URL jobs, waits for completion, and fetches the aggregated report JSON via `GET /api/v1/jobs/{id}/results`.
+
+Public URL scans:
+
+```bash
+go run ./tools/stageflow-cli run --url https://example.com
+```
+
+Or build a local binary:
+
+```bash
+cd tools/stageflow-cli
+go build -o stageflow .
+./stageflow scanners
+./stageflow run --url https://example.com --format summary
+```
+
+Local project mode (starts a dev server and scans `localhost`):
+
+- Run the local stack with the local-only overlay (enables private targets + host-network job pods):
+  - `just dev up local`
+  - `just dev init local`
+  - `just images`
+- In your web project repo, add `.stageflow/config.yaml` and then run `stageflow run` with no `--url` (optionally pass a project path as an arg).
+
+Environment variables:
+
+- `STAGEFLOW_API_URL` (default `http://localhost:8080`)
+- `STAGEFLOW_API_KEY` (optional, sent as `X-Api-Key`)
+
+Notes:
+
+- `localhost`/private targets are blocked by default unless:
+  - the request sets `allow_private_targets=true` (CLI: `--allow-private-targets`)
+  - the API instance is configured with `PLATFORM_API_ALLOW_PRIVATE_TARGETS=true`
+- The CLI refuses to submit loopback targets to a non-loopback `--api` URL to avoid accidentally scanning the server's own localhost.
+- Project mode executes commands from your repo config; only run it on trusted repos.
+- On macOS/Windows with Podman VM, `POD_NETNS_MODE=host` typically refers to the VM, not your host machine.
+
 ## Day-to-Day Commands
 
 Run `just help` for the full recipe list.
@@ -139,7 +249,7 @@ To add a custom scanner:
 
 Reference docs:
 
-- [ARCHITECTURE.md](ARCHITECTURE.md#scanner-plugin-system)
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md#scanner-plugin-system)
 - `packages/contracts/scanner-manifest/schema/README.md`
 
 ## Security and Runtime Boundaries
@@ -150,7 +260,7 @@ Reference docs:
 - API status streaming uses SSE with reconnect-safe behavior.
 - Edge rate limiting is expected at proxy/load-balancer/CDN layers.
 
-See [SECURITY.md](SECURITY.md) and [ARCHITECTURE.md](ARCHITECTURE.md#security-and-trust-boundaries).
+See [SECURITY.md](SECURITY.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md#security-and-trust-boundaries).
 
 ## Repository Layout
 
@@ -160,20 +270,21 @@ stageflow/
 |- frontend/              # SvelteKit app
 |- packages/              # Contracts + shared Go modules
 |- infra/                 # Compose, Caddy, Quadlets, monitoring, scanner config
-|- tools/                 # job-status-cli, suite-runner
+|- tools/                 # stageflow-cli, job-status-cli, suite-runner
 |- tests/                 # End-to-end tests
 `- scripts/               # Build/deploy scripts
 ```
 
 ## Documentation Map
 
-- [ARCHITECTURE.md](ARCHITECTURE.md): deep system design, flows, and constraints
-- [OPERATIONS.md](OPERATIONS.md): runbook for startup, health checks, and incident response
-- [CONFIGURATION.md](CONFIGURATION.md): environment and deployment configuration guide
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md): deep system design, flows, and constraints
+- [REPOMAP.md](docs/REPOMAP.md): service ownership map, API/event surfaces, and file-level index
+- [CONFIGURATION.md](docs/CONFIGURATION.md): environment and deployment configuration guide
+- [TOOLS.md](docs/TOOLS.md): CLI tooling and common workflows
 - [CONTRIBUTING.md](CONTRIBUTING.md): local workflow, standards, and PR checklist
 - [SECURITY.md](SECURITY.md): vulnerability reporting policy
 - [SUPPORT.md](SUPPORT.md): help channels and debugging checklist
-- [tools/README.md](tools/README.md): operational tooling (`job-status-cli`, `suite-runner`)
+- [tools/README.md](tools/README.md): operational tooling (`stageflow-cli`, `job-status-cli`, `suite-runner`)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): community conduct standards
 - [CHANGELOG.md](CHANGELOG.md): release history
 
@@ -183,4 +294,4 @@ Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE) © 2025 Matthew Boback
+[MIT](LICENSE) © 2025-2026 Matthew Boback

@@ -1,4 +1,4 @@
-go 1.25
+go 1.25.4
 
 use (
 	./packages/contracts/report/generated/go
@@ -9,5 +9,6 @@ use (
 	./platform/orchestrator
 	./tests/e2e
 	./tools/job-status-cli
+	./tools/stageflow-cli
 	./tools/suite-runner
 )

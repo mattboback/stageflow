@@ -40,21 +40,39 @@ const DISALLOWED_IPV6_SUBNETS: readonly { network: string; prefix: number }[] = 
   { network: "ff00::", prefix: 8 },
 ];
 
-function createDisallowedBlockList(): BlockList {
+const ALLOWED_PRIVATE_IPV4_SUBNETS = new Set<string>([
+  "10.0.0.0/8",
+  "127.0.0.0/8",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+]);
+
+const ALLOWED_PRIVATE_IPV6_SUBNETS = new Set<string>(["::1/128"]);
+
+function createDisallowedBlockList(allowPrivateTargets: boolean): BlockList {
   const blockList = new BlockList();
 
   for (const subnet of DISALLOWED_IPV4_SUBNETS) {
+    if (allowPrivateTargets && ALLOWED_PRIVATE_IPV4_SUBNETS.has(`${subnet.network}/${subnet.prefix}`)) {
+      continue;
+    }
+
     blockList.addSubnet(subnet.network, subnet.prefix, "ipv4");
   }
 
   for (const subnet of DISALLOWED_IPV6_SUBNETS) {
+    if (allowPrivateTargets && ALLOWED_PRIVATE_IPV6_SUBNETS.has(`${subnet.network}/${subnet.prefix}`)) {
+      continue;
+    }
+
     blockList.addSubnet(subnet.network, subnet.prefix, "ipv6");
   }
 
   return blockList;
 }
 
-const disallowedBlockList = createDisallowedBlockList();
+const disallowedBlockListPublic = createDisallowedBlockList(false);
+const disallowedBlockListPrivate = createDisallowedBlockList(true);
 
 export class BlockedTargetError extends Error {
   readonly targetURL: string;
@@ -82,7 +100,15 @@ function normalizeIPAddress(address: string): string {
   return trimmed;
 }
 
-function isDisallowedIPAddress(address: string): boolean {
+function shouldAllowPrivateTargets(): boolean {
+  return process.env.ALLOW_PRIVATE_TARGETS === "true";
+}
+
+function runtimeDisallowedBlockList(): BlockList {
+  return shouldAllowPrivateTargets() ? disallowedBlockListPrivate : disallowedBlockListPublic;
+}
+
+function isDisallowedIPAddress(address: string, blockList: BlockList): boolean {
   const normalized = normalizeIPAddress(address);
   const ipVersion = isIP(normalized);
   if (ipVersion === 0) {
@@ -90,10 +116,10 @@ function isDisallowedIPAddress(address: string): boolean {
   }
 
   if (ipVersion === 4) {
-    return disallowedBlockList.check(normalized, "ipv4");
+    return blockList.check(normalized, "ipv4");
   }
 
-  return disallowedBlockList.check(normalized, "ipv6");
+  return blockList.check(normalized, "ipv6");
 }
 
 function parseTargetURL(rawURL: string): URL {
@@ -126,9 +152,10 @@ export async function validateRuntimeTargetURL(
 ): Promise<void> {
   const target = parseTargetURL(rawURL);
   const host = target.hostname.replace(/^\[/, "").replace(/\]$/, "");
+  const blockList = runtimeDisallowedBlockList();
 
   if (isIP(host) !== 0) {
-    if (isDisallowedIPAddress(host)) {
+    if (isDisallowedIPAddress(host, blockList)) {
       throw new BlockedTargetError(rawURL, `IP ${host} is in a blocked network range`);
     }
 
@@ -148,7 +175,7 @@ export async function validateRuntimeTargetURL(
   }
 
   for (const address of addresses) {
-    if (isDisallowedIPAddress(address)) {
+    if (isDisallowedIPAddress(address, blockList)) {
       throw new BlockedTargetError(
         rawURL,
         `hostname "${host}" resolves to blocked address ${address}`,
