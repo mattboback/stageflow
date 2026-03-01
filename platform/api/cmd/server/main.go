@@ -79,6 +79,7 @@ func run() error {
 		Publisher:           msgService,
 		StatusReader:        statusReader,
 		ScannerRegistry:     scannerRegistry,
+		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		MinIOEndpoint:       cfg.MinIO.Endpoint,
 		MinIOPublicEndpoint: cfg.MinIO.PublicEndpoint,
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,

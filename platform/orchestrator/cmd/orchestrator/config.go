@@ -18,6 +18,7 @@ type Config struct {
 	ScannerImageOverride          string
 	APIPort                       string
 	PodNetwork                    string
+	PodNetnsMode                  string   // Pod network namespace mode (bridge|host). Host mode is local-only.
 	PodHostMappings               []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	NatsHost                      string
 	MinioHost                     string
@@ -67,6 +68,7 @@ func loadConfig() *Config {
 		ScannerImageOverride:          scannerImageEnv,
 		APIPort:                       config.GetEnv("API_PORT", "8080"),
 		PodNetwork:                    config.GetEnv("POD_NETWORK", ""),
+		PodNetnsMode:                  config.GetEnv("POD_NETNS_MODE", "bridge"),
 		PodHostMappings:               podHostMappings,
 		NatsHost:                      config.GetEnv("NATS_HOST", "nats"),
 		MinioHost:                     config.GetEnv("MINIO_HOST", "minio"),
@@ -91,6 +93,19 @@ func (c *Config) Validate() error {
 		config.RequireNonEmpty("API_PORT", c.APIPort),
 		config.RequireNonEmpty("NATS_HOST", c.NatsHost),
 		config.RequireNonEmpty("MINIO_HOST", c.MinioHost),
+	}
+
+	podNetnsMode := strings.TrimSpace(c.PodNetnsMode)
+	podNetwork := strings.TrimSpace(c.PodNetwork)
+
+	switch podNetnsMode {
+	case "", "bridge", "host":
+	default:
+		errs = append(errs, errors.New("POD_NETNS_MODE must be one of: bridge, host"))
+	}
+
+	if podNetnsMode != "" && podNetnsMode != "bridge" && podNetwork != "" {
+		errs = append(errs, errors.New("POD_NETNS_MODE must be bridge when POD_NETWORK is set"))
 	}
 
 	if c.PageLoadTimeout < 0 {

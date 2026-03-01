@@ -1,75 +1,10 @@
 # StageFlow Configuration
 
-Reference for environment configuration across StageFlow services.
+Reference for environment variables used by local, staging, and production StageFlow deployments.
 
-This document covers variable groups and deployment intent. Use `.env.example` and service config sources as canonical defaults.
+Use `.env.example` as the baseline. Keep secrets in your secret manager or host-level env, never in git.
 
-## Configuration Principles
-
-- Keep secrets out of source control.
-- Use separate env files per environment (`.env`, `.env.staging`, production secrets).
-- Prefer explicit values for domains, CORS origins, and storage endpoints.
-- Validate scanner/plugin settings before production rollout.
-
-## Environment Groups
-
-### Public and Domain Settings
-
-- `STAGEFLOW_PUBLIC_DOMAIN`: public domain used by edge/proxy and URL generation paths.
-- `VITE_API_URL`: frontend API base URL.
-- `VITE_SITE_URL`: frontend site URL.
-
-### API Service Settings
-
-- API token/auth settings (optional access control for API requests).
-- CORS allowlist settings, including production domains.
-- Upload and request limits used at intake boundaries.
-- SSE behavior and timeouts.
-
-### Orchestrator Settings
-
-- NATS connection and consumer behavior.
-- PostgreSQL connection and schema location.
-- MinIO bucket and artifact storage settings.
-- Podman runtime and scanner container lifecycle controls.
-
-### Extractor Settings
-
-- MinIO staging/artifact access settings.
-- ZIP extraction limits and validation controls.
-- Workspace/results path conventions.
-
-### Scanner Runner Settings
-
-- Scanner selection/module identity.
-- `SCANNER_OPTIONS` payload (validated against manifest schema).
-- Plugin discovery paths (`/plugins`, `~/.stageflow/plugins`, `PLUGIN_PATHS`).
-- Browser/runtime execution settings.
-
-### Infrastructure Service Settings
-
-- NATS service endpoint/credentials.
-- MinIO endpoint/access credentials and SSL mode.
-- PostgreSQL endpoint/credentials/database names.
-- Grafana/admin credentials and provisioning settings.
-
-## Required vs Optional Settings
-
-Required in most environments:
-
-- Service connectivity settings (NATS, MinIO, Postgres).
-- Public URLs/domain config for frontend/API routing.
-- CORS allow origins for browser clients.
-
-Usually optional or environment-dependent:
-
-- API auth token enforcement.
-- Extra plugin search paths.
-- Advanced scanner options and AI-specific scanner settings.
-
-## Local Development Defaults
-
-Recommended flow:
+## Quick Start
 
 ```bash
 cp .env.example .env
@@ -79,32 +14,83 @@ just dev init
 just images
 ```
 
-## Staging Overrides
+## Variable Reference
 
-- Start from `.env.staging.example` where available.
-- Ensure staging uses distinct domains, buckets, and credentials.
-- Verify `just staging` flows before promoting images.
+### MinIO
 
-## Production Guidance
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `MINIO_ROOT_USER` | yes | `minioadmin` | MinIO root user used by MinIO service bootstrap. |
+| `MINIO_ROOT_PASSWORD` | yes | `change-me` | MinIO root password. |
+| `MINIO_ACCESS_KEY` | yes | `stageflow` | App credential used by services to access MinIO. |
+| `MINIO_SECRET_KEY` | yes | `change-me` | Secret for `MINIO_ACCESS_KEY`. |
 
-- Inject secrets via your deployment secret manager.
-- Restrict CORS origins to production frontend domains.
-- Ensure edge rate limiting/WAF policy is configured.
-- Rotate credentials and audit access regularly.
+### PostgreSQL
 
-## Configuration Validation Checklist
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `POSTGRES_USER` | yes | `stageflow` | Postgres username. |
+| `POSTGRES_PASSWORD` | yes | `change-me` | Postgres password. |
+| `POSTGRES_DB` | yes | `stageflow` | Primary Postgres database name. |
+| `DATABASE_URL` | yes | `postgres://stageflow:change-me@postgres:5432/stageflow?sslmode=disable` | DSN used by API and orchestrator. |
 
-Before deployment:
+### Grafana
+
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `GF_SECURITY_ADMIN_USER` | yes | `admin` | Grafana admin user. |
+| `GF_SECURITY_ADMIN_PASSWORD` | yes | `change-me` | Grafana admin password. |
+| `GF_SERVER_ROOT_URL` | yes | `https://your-domain.com/monitoring` | External URL Grafana uses for redirects and links. |
+
+### Public Domain and CORS
+
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `STAGEFLOW_PUBLIC_DOMAIN` | yes | `your-domain.com` | Public domain used in generated URLs and edge config. |
+| `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes | `https://your-domain.com,https://www.your-domain.com` | Browser origin allowlist for API requests. |
+
+### Frontend
+
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `VITE_API_URL` | yes | `https://your-domain.com` | Frontend API base URL. |
+| `VITE_SITE_TITLE` | no | `StageFlow` | Site title shown in UI metadata. |
+| `VITE_SITE_URL` | yes | `https://your-domain.com` | Canonical site URL used for metadata/share cards. |
+| `VITE_GITHUB_URL` | no | `https://github.com/mattboback/stageflow` | Repository link shown in UI. |
+| `VITE_TAGLINE` | no | `Podman-native web accessibility scanning platform` | Marketing tagline in UI surfaces. |
+| `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no | `openai/gpt-4o-mini` | Default model shown for AI navigator flows. |
+
+### AI Navigator (Optional)
+
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `OPENROUTER_API_KEY` | only if AI navigator enabled | empty | API key for OpenRouter model calls. |
+| `OPENROUTER_APP_TITLE` | no | `StageFlow` | OpenRouter request attribution title. |
+| `OPENROUTER_APP_REFERER` | no | `https://your-domain.com` | OpenRouter request attribution referer. |
+| `AI_NAVIGATOR_DEFAULT_MODEL` | no | `openai/gpt-4o-mini` | Default backend model when scanner options do not override. |
+
+### Caddy (Edge)
+
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `CADDY_HTTP_PORT` | no | `80` | Host HTTP bind port for Caddy. |
+| `CADDY_HTTPS_PORT` | no | `443` | Host HTTPS bind port for Caddy. |
+
+## Environment Guidance
+
+- Use distinct credentials for local, staging, and production.
+- Keep domains and CORS origins environment-specific.
+- If you already run a shared Caddy on the host, route StageFlow through that existing process and avoid binding a second edge proxy.
+
+## Pre-Deploy Validation
 
 1. `just build` passes.
 2. `just ci` passes.
-3. Environment-specific stack boots cleanly.
-4. One URL job and one ZIP job complete successfully.
-5. SSE updates and final report retrieval both work.
+3. One URL scan and one ZIP scan complete successfully.
+4. SSE stream updates and final report retrieval both work.
 
 ## Related Docs
 
 - [README.md](README.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
-- [OPERATIONS.md](OPERATIONS.md)
 - [SECURITY.md](SECURITY.md)

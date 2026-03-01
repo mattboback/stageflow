@@ -2,6 +2,58 @@
 
 Developer and operations CLI utilities for StageFlow.
 
+## stageflow-cli
+
+Submit URL scan jobs to a StageFlow API, wait for completion, and render the unified report in shell-friendly formats.
+
+### Usage
+
+```bash
+cd tools/stageflow-cli
+go run . run --url https://example.com
+```
+
+Or build and run:
+
+```bash
+cd tools/stageflow-cli
+go build -o stageflow .
+./stageflow run --url https://example.com
+```
+
+### Commands
+
+| Command | Description |
+| --- | --- |
+| `run` | Submit a scan job, wait for completion (SSE by default), then print results |
+| `report` | Fetch and display results for an existing job ID |
+| `scanners` | List scanners available on the API |
+
+### Environment Variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `STAGEFLOW_API_URL` | `http://localhost:8080` | Platform API base URL |
+| `STAGEFLOW_API_KEY` | *(unset)* | Optional API key (sent as `X-Api-Key`) |
+
+### Examples
+
+```bash
+# Human-readable summary (default)
+./stageflow run --url https://example.com
+
+# JSON output for automation
+./stageflow run --url https://example.com --format json
+
+# Fail the command if any critical issues exist
+./stageflow run --url https://example.com --threshold-critical 0 --format quiet
+
+# List scanners
+./stageflow scanners
+```
+
+---
+
 ## job-status-cli
 
 Query the orchestrator admin API to inspect jobs, events, pods, and system metrics.

@@ -31,7 +31,7 @@ StageFlow is a self-hosted, Podman-native web accessibility and quality scanning
 | `packages/contracts/` | Stable | JSON Schema → generated types |
 | `infra/` | Stable | Compose, Quadlets, Caddy, Grafana |
 | `tests/e2e/` | Growing | Go e2e tests against live stack |
-| `docs/` | Needs work | Some gaps in OPERATIONS.md and CONFIGURATION.md |
+| `docs/` | Active | Architecture and configuration docs maintained for publish readiness |
 
 ## Contribution Guidelines
 

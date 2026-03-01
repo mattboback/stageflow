@@ -15,7 +15,7 @@ Highlights:
 
 ## Prerequisites
 
-- [Go 1.25+](https://go.dev/dl/)
+- [Go 1.25.4](https://go.dev/dl/)
 - [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) (with `podman compose`)
 - [just](https://github.com/casey/just)

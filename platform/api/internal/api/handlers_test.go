@@ -134,6 +134,89 @@ func TestHandleJobURLSubmitBodyTooLarge(t *testing.T) {
 	}
 }
 
+func TestHandleJobURLSubmitPrivateTargetWithoutOptInKeepsDefaultBlocking(t *testing.T) {
+	server, _, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
+	}
+
+	if len(publisher.envelopes) != 0 {
+		t.Fatalf("expected no job.created published, got %d", len(publisher.envelopes))
+	}
+}
+
+func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
+	server, _, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"],"allow_private_targets":true}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rr.Code)
+	}
+
+	if len(publisher.envelopes) != 0 {
+		t.Fatalf("expected no job.created published, got %d", len(publisher.envelopes))
+	}
+
+	var parsed httputil.ErrorResponse
+	if err := json.NewDecoder(rr.Body).Decode(&parsed); err != nil {
+		t.Fatalf("decode error response: %v", err)
+	}
+
+	if parsed.Error.Code != httputil.ErrCodeValidationFailed {
+		t.Fatalf("expected validation error code, got %q", parsed.Error.Code)
+	}
+
+	if parsed.Error.Field != "allow_private_targets" {
+		t.Fatalf("expected field allow_private_targets, got %q", parsed.Error.Field)
+	}
+}
+
+func TestHandleJobURLSubmitPrivateTargetSucceedsWhenBothOptInsEnabled(t *testing.T) {
+	server, _, _, publisher := newTestServer(t)
+	server.config.AllowPrivateTargets = true
+
+	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"],"allow_private_targets":true}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", rr.Code)
+	}
+
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 job.created published, got %d", len(publisher.envelopes))
+	}
+
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
+	}
+
+	if len(created.URLs) != 1 || created.URLs[0] != "http://127.0.0.1" {
+		t.Fatalf("expected local target to be preserved in payload, got %#v", created.URLs)
+	}
+}
+
 func TestHandleJobURLSubmitAiNavigatorRequiresScannerConfig(t *testing.T) {
 	server, _, _, _ := newTestServer(t)
 

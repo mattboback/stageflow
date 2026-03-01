@@ -4,20 +4,22 @@ import "github.com/mattboback/stageflow/packages/shared-go/config"
 
 // Config captures Platform API runtime configuration.
 type Config struct {
-	Port               int
-	OrchestratorAPIURL string
-	ScannerConfigPath  string
-	NATS               config.NATSConfig
-	MinIO              config.MinIOConfig
+	Port                int
+	OrchestratorAPIURL  string
+	ScannerConfigPath   string
+	AllowPrivateTargets bool
+	NATS                config.NATSConfig
+	MinIO               config.MinIOConfig
 }
 
 func loadConfig() *Config {
 	return &Config{
-		Port:               config.GetEnvInt("PORT", 8080),
-		OrchestratorAPIURL: config.GetEnv("ORCHESTRATOR_API_URL", "http://localhost:8081"),
-		ScannerConfigPath:  config.GetEnv("SCANNER_CONFIG_PATH", ""),
-		NATS:               config.LoadNATSConfig(),
-		MinIO:              config.LoadMinIOConfig(),
+		Port:                config.GetEnvInt("PORT", 8080),
+		OrchestratorAPIURL:  config.GetEnv("ORCHESTRATOR_API_URL", "http://localhost:8081"),
+		ScannerConfigPath:   config.GetEnv("SCANNER_CONFIG_PATH", ""),
+		AllowPrivateTargets: config.GetEnvBool("PLATFORM_API_ALLOW_PRIVATE_TARGETS", false),
+		NATS:                config.LoadNATSConfig(),
+		MinIO:               config.LoadMinIOConfig(),
 	}
 }
 

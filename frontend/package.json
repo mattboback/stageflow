@@ -33,7 +33,7 @@
 		"test-storybook:watch": "bun run build-storybook && start-server-and-test \"bun run storybook:serve-static\" http://127.0.0.1:6006 \"test-storybook --watch --url http://127.0.0.1:6006 --browsers chromium --skipTags skip-test\"",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "mkdir -p coverage/.tmp && vitest run --coverage"
+		"test:coverage": "mkdir -p coverage/.tmp && vitest run --coverage --no-file-parallelism"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.2",

@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/tests/e2e
 
-go 1.25
+go 1.25.4
 
 require github.com/mattboback/stageflow/packages/contracts/report/generated/go v0.0.0
 

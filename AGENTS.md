@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-StageFlow: Podman-native web accessibility + quality scanning platform. URLs or ZIP archives → containerized scanners (axe, lighthouse, SEO, security-headers, link-checker, ai-navigator) → unified report via SSE. Polyglot monorepo: Go 1.25 (API/orchestrator/extractor) + TypeScript/Bun/Playwright (scanner-runner) + SvelteKit 5 (frontend). Messaging: NATS JetStream. Storage: MinIO + PostgreSQL. Containers: Podman.
+StageFlow: Podman-native web accessibility + quality scanning platform. URLs or ZIP archives → containerized scanners (axe, lighthouse, SEO, security-headers, link-checker, ai-navigator) → unified report via SSE. Polyglot monorepo: Go 1.25.4 (API/orchestrator/extractor) + TypeScript/Bun/Playwright (scanner-runner) + SvelteKit 5 (frontend). Messaging: NATS JetStream. Storage: MinIO + PostgreSQL. Containers: Podman.
 
 ## STRUCTURE
 

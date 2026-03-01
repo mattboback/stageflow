@@ -103,10 +103,11 @@ type ScannerResult struct {
 
 // JobConfig contains configuration for a scan job.
 type JobConfig struct {
-	Modules        []string                  `json:"modules"` // e.g., ["axe", "keyboard"]
-	ScannerConfigs map[string]map[string]any `json:"scanner_configs,omitempty"`
-	Screenshot     bool                      `json:"screenshot"`
-	HighlightStyle string                    `json:"highlight_style,omitempty"`
+	Modules             []string                  `json:"modules"` // e.g., ["axe", "keyboard"]
+	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
+	Screenshot          bool                      `json:"screenshot"`
+	HighlightStyle      string                    `json:"highlight_style,omitempty"`
+	AllowPrivateTargets bool                      `json:"allow_private_targets,omitempty"`
 }
 
 // JobStatus is the response for job status queries.

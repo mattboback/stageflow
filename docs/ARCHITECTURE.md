@@ -450,10 +450,11 @@ Outcome: transition to `FAILED`; event timeline records failure reason.
 
 ### Useful tools
 
+- `tools/stageflow-cli`: submit URL scan jobs and fetch unified reports.
 - `tools/job-status-cli`: inspect jobs/events/pods/status.
 - `tools/suite-runner`: run threshold-based multi-domain validation.
 
-Tooling docs: `tools/README.md`.
+Tooling docs: `docs/TOOLS.md` and `tools/README.md`.
 
 ### Recommended debug path
 
