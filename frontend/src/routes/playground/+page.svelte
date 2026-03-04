@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Playground | Stageflow</title>
+	<title>Playground | StageFlow</title>
 	<meta name="description" content="Run accessibility scans on websites or static site archives" />
 </svelte:head>
 

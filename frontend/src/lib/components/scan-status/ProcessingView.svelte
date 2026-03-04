@@ -62,9 +62,37 @@
 		return `~${minutes} min remaining`;
 	}
 
+	function formatScannerName(scannerType: string): string {
+		switch (scannerType) {
+			case 'axe':
+				return 'axe-core';
+			case 'seo':
+				return 'SEO';
+			case 'ai-navigator':
+				return 'AI Navigator';
+			case 'link-checker':
+				return 'Link Checker';
+			case 'security-headers':
+				return 'Security Headers';
+			case 'lighthouse':
+				return 'Lighthouse';
+			default:
+				return scannerType
+					.split('-')
+					.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+					.join(' ');
+		}
+	}
+
 	const stageInfo = $derived(getStageInfo(result?.state, result?.progress));
-	const estimatedTime = $derived(estimateTimeRemaining(result?.progress));
+	const estimatedTime = $derived(
+		result?.remaining_scanners?.length === 1 && result.remaining_scanners[0] === 'lighthouse'
+			? 'Waiting on Lighthouse'
+			: estimateTimeRemaining(result?.progress)
+	);
 	const percentage = $derived(result?.progress?.percentage ?? 0);
+	const completedScanners = $derived(result?.completed_scanners ?? []);
+	const remainingScanners = $derived(result?.remaining_scanners ?? []);
 </script>
 
 <div class="space-y-8">
@@ -110,6 +138,49 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if completedScanners.length > 0 || remainingScanners.length > 0}
+		<div class="space-y-4">
+			<div class="flex items-center justify-between">
+				<h4 class="text-ink text-sm font-semibold">Scanner Activity</h4>
+				<div class="text-ink-muted text-xs font-medium">
+					{completedScanners.length} of {completedScanners.length + remainingScanners.length} finished
+				</div>
+			</div>
+			{#if remainingScanners.length > 0}
+				<div class="space-y-2">
+					<div class="text-ink-muted text-xs font-semibold tracking-[0.18em] uppercase">
+						Still running
+					</div>
+					<div class="flex flex-wrap gap-2">
+						{#each remainingScanners as scannerType (scannerType)}
+							<span
+								class="border-line bg-surface text-ink inline-flex rounded-full border px-3 py-1 text-xs font-medium"
+							>
+								{formatScannerName(scannerType)}
+							</span>
+						{/each}
+					</div>
+				</div>
+			{/if}
+			{#if completedScanners.length > 0}
+				<div class="space-y-2">
+					<div class="text-ink-muted text-xs font-semibold tracking-[0.18em] uppercase">
+						Completed
+					</div>
+					<div class="flex flex-wrap gap-2">
+						{#each completedScanners as scannerType (scannerType)}
+							<span
+								class="bg-accent-soft text-accent-ink inline-flex rounded-full px-3 py-1 text-xs font-medium"
+							>
+								{formatScannerName(scannerType)}
+							</span>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
 
 	<!-- Terminal -->
 	<ScanTerminal {logs} />

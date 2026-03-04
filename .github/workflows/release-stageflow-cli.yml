@@ -1,0 +1,105 @@
+name: Release stageflow CLI
+
+on:
+  push:
+    tags:
+      - "tools/stageflow-cli/v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build artifacts
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.4"
+          cache: true
+          cache-dependency-path: "**/*.sum"
+
+      - name: Build stageflow CLI
+        id: build
+        shell: bash
+        working-directory: tools/stageflow-cli
+        run: |
+          set -euo pipefail
+
+          tag="${GITHUB_REF_NAME}"
+          version="${tag##*/}" # vX.Y.Z (tag prefix is tools/stageflow-cli/)
+          goos="${{ matrix.goos }}"
+          goarch="${{ matrix.goarch }}"
+
+          bin="stageflow"
+          ext=""
+          if [[ "$goos" == "windows" ]]; then
+            ext=".exe"
+          fi
+
+          build_dir="dist"
+          mkdir -p "$build_dir"
+
+          out_bin="${bin}${ext}"
+          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ldflags="-s -w -X main.version=${version} -X main.commit=${GITHUB_SHA} -X main.date=${build_date}"
+
+          CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+            go build -trimpath -ldflags "$ldflags" -o "${build_dir}/${out_bin}" .
+
+          asset="${bin}_${version}_${goos}_${goarch}"
+          if [[ "$goos" == "windows" ]]; then
+            (cd "$build_dir" && zip -9 "../${asset}.zip" "${out_bin}")
+            rm -f "${build_dir}/${out_bin}"
+            echo "asset=${asset}.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar -C "$build_dir" -czf "${asset}.tar.gz" "${out_bin}"
+            rm -f "${build_dir}/${out_bin}"
+            echo "asset=${asset}.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.build.outputs.asset }}
+          path: tools/stageflow-cli/${{ steps.build.outputs.asset }}
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum * > checksums.txt
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+          generate_release_notes: true
+

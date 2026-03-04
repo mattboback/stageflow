@@ -112,13 +112,21 @@ describe("WebServerFormatter", () => {
     expect(occurrences).toHaveLength(2);
 
     const artifacts = formatted.artifacts ?? [];
-    expect(artifacts).toHaveLength(1);
-    const artifact = artifacts[0]!;
+    expect(artifacts).toHaveLength(2);
+    const artifact = artifacts.find((entry) => entry.type === "screenshot");
+    expect(artifact).toBeDefined();
+    if (!artifact) {
+      throw new Error("expected screenshot artifact");
+    }
     expect(artifact.type).toBe("screenshot");
     expect(artifact.path).toBe("screenshots/issue-1.png");
     expect(artifact.mime).toBe("image/png");
     expect(occurrences[0]!.artifactIds).toEqual([artifact.id]);
     expect(occurrences[1]!.artifactIds).toEqual([artifact.id]);
+
+    const overviewArtifact = artifacts.find((entry) => entry.type === "page-overview");
+    expect(overviewArtifact).toBeDefined();
+    expect(overviewArtifact?.path).toBe("screenshots/overview.png");
 
     const formatted2 = new WebServerFormatter().format(provenance, results, metadata);
     expect(formatted2.issues[0]!.id).toBe(issue.id);
@@ -182,5 +190,65 @@ describe("WebServerFormatter", () => {
     const artifacts = formatted.artifacts ?? [];
     expect(artifacts).toHaveLength(1);
     expect(artifacts[0]!.mime).toBe("image/webp");
+  });
+
+  it("adds a page overview artifact even when a page has no issues", () => {
+    const provenance: Provenance = {
+      version: "1.0.0",
+      job_id: "job-789",
+      base_url: "http://localhost:8080",
+      pages: [{ id: "page-1", url: "http://localhost:8080", path: "/" }],
+    };
+
+    const results: ScanResults = {
+      jobId: "job-789",
+      scanner: "axe",
+      version: "0.1.0",
+      totalPages: 1,
+      startedAt: "2025-12-22T00:00:00Z",
+      completedAt: "2025-12-22T00:00:01Z",
+      durationMs: 1000,
+      pages: [
+        {
+          pageId: "page-1",
+          url: "http://localhost:8080",
+          path: "/",
+          success: true,
+          durationMs: 1000,
+          startedAt: "2025-12-22T00:00:00Z",
+          finishedAt: "2025-12-22T00:00:01Z",
+          issues: [],
+          rawResults: {
+            pageOverview: {
+              screenshotFilename: "overview-clean.webp",
+              pageWidth: 1200,
+              pageHeight: 800,
+              elements: [],
+            },
+          },
+        },
+      ],
+      summary: {
+        totalIssues: 0,
+        bySeverity: { critical: 0, serious: 0, moderate: 0, minor: 0, info: 0 },
+        byCategory: {},
+        pagesScanned: 1,
+        pagesFailed: 0,
+        pagesWithIssues: 0,
+        avgDurationMs: 1000,
+      },
+    };
+
+    const metadata: ScannerMetadata = { name: "axe", version: "0.1.0" };
+    const formatted = new WebServerFormatter().format(provenance, results, metadata);
+
+    expect(formatted.artifacts).toEqual([
+      {
+        id: "page-overview-axe-page-1",
+        type: "page-overview",
+        path: "screenshots/overview-clean.webp",
+        mime: "image/webp",
+      },
+    ]);
   });
 });

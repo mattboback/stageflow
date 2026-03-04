@@ -38,7 +38,7 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 		}
 
 		if !created {
-			resolvedJob, handled, resolveErr := o.resolveDuplicateJobCreated(ctx, payload.JobID)
+			resolvedJob, handled, resolveErr := o.resolveDuplicateJobCreated(ctx, job)
 			if resolveErr != nil {
 				return resolveErr
 			}
@@ -64,15 +64,17 @@ func (o *Orchestrator) HandleJobCreated(ctx context.Context, payload *events.Job
 
 func (o *Orchestrator) resolveDuplicateJobCreated(
 	ctx context.Context,
-	jobID string,
+	fallbackJob *models.Job,
 ) (*models.Job, bool, error) {
+	jobID := fallbackJob.ID
+
 	existing, getErr := o.database.GetJob(ctx, jobID)
 	if getErr != nil {
-		if shouldIgnoreMissingJob(events.EventJobCreated, jobID, getErr) {
-			return nil, true, nil
+		if !strings.Contains(getErr.Error(), "job not found:") {
+			return nil, false, fmt.Errorf("failed to load existing job after duplicate create: %w", getErr)
 		}
 
-		return nil, false, fmt.Errorf("failed to load existing job after duplicate create: %w", getErr)
+		return o.recreateDuplicateMissingJob(ctx, fallbackJob)
 	}
 
 	switch existing.State {
@@ -102,6 +104,35 @@ func (o *Orchestrator) resolveDuplicateJobCreated(
 	default:
 		return nil, false, fmt.Errorf("unsupported job state for duplicate job.created: %s", existing.State)
 	}
+}
+
+func (o *Orchestrator) recreateDuplicateMissingJob(
+	ctx context.Context,
+	fallbackJob *models.Job,
+) (*models.Job, bool, error) {
+	jobID := fallbackJob.ID
+
+	slog.Warn(
+		"job.created conflict reported without an existing job; recreating job record",
+		"job_id",
+		jobID,
+	)
+
+	created, createErr := o.database.CreateJobIfAbsent(ctx, fallbackJob)
+	if createErr != nil {
+		return nil, false, fmt.Errorf("failed to recreate missing job after duplicate create: %w", createErr)
+	}
+
+	if created {
+		return fallbackJob, false, nil
+	}
+
+	existing, getErr := o.database.GetJob(ctx, jobID)
+	if getErr != nil {
+		return nil, false, fmt.Errorf("failed to load recreated job after duplicate create: %w", getErr)
+	}
+
+	return existing, false, nil
 }
 
 func (o *Orchestrator) dispatchCreatedJobByInputType(
@@ -496,10 +527,50 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 			return fmt.Errorf("failed to record scanner completion: %w", err)
 		}
 
-		slog.Info("Scanner completed", "scanner", scannerType, "job_id", payload.JobID, "all_complete", allComplete)
+		refreshedJob := job
+
+		if latestJob, refreshErr := o.database.GetJob(ctx, payload.JobID); refreshErr != nil {
+			slog.Warn(
+				"Failed to refresh job after scanner completion",
+				"job_id",
+				payload.JobID,
+				"error",
+				refreshErr,
+			)
+		} else {
+			refreshedJob = latestJob
+		}
+
+		remaining := remainingScannersForJob(refreshedJob)
+
+		logArgs := []any{
+			"scanner", scannerType,
+			"job_id", payload.JobID,
+			"all_complete", allComplete,
+			"pages_scanned", payload.TotalPagesScanned,
+			"violations", payload.Summary.TotalViolations,
+			"completed_scanner_count", len(refreshedJob.CompletedScanners),
+			"expected_scanner_count", len(refreshedJob.ExpectedScanners),
+			"remaining_scanners", strings.Join(remaining, ","),
+		}
+		if payload.Timing != nil {
+			logArgs = append(logArgs, "duration_ms", payload.Timing.TotalMs)
+		}
+
+		if len(remaining) == 1 && remaining[0] == "lighthouse" {
+			logArgs = append(logArgs, "long_pole_hint", "lighthouse")
+		}
+
+		slog.Info("Scanner completed", logArgs...)
 
 		if !allComplete {
-			slog.Debug("Waiting for remaining scanners", "job_id", payload.JobID)
+			slog.Debug(
+				"Waiting for remaining scanners",
+				"job_id",
+				payload.JobID,
+				"remaining_scanners",
+				strings.Join(remaining, ","),
+			)
 
 			return nil
 		}
@@ -553,6 +624,36 @@ func (o *Orchestrator) HandleScanCompleted(ctx context.Context, payload *events.
 
 		return nil
 	})
+}
+
+func remainingScannersForJob(job *models.Job) []string {
+	if job == nil || len(job.ExpectedScanners) == 0 {
+		return nil
+	}
+
+	completed := make(map[string]struct{}, len(job.CompletedScanners))
+	for _, scannerType := range job.CompletedScanners {
+		if scannerType == "" {
+			continue
+		}
+
+		completed[scannerType] = struct{}{}
+	}
+
+	remaining := make([]string, 0, len(job.ExpectedScanners))
+	for _, scannerType := range job.ExpectedScanners {
+		if scannerType == "" {
+			continue
+		}
+
+		if _, done := completed[scannerType]; done {
+			continue
+		}
+
+		remaining = append(remaining, scannerType)
+	}
+
+	return remaining
 }
 
 // HandleScanFailed handles scan.failed events.

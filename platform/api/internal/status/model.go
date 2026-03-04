@@ -28,6 +28,8 @@ type JobRecord struct {
 	ProvenanceKey         string
 	LastStage             string
 	LastErrorDetails      string
+	ExpectedScanners      []string
+	CompletedScanners     []string
 	ScannerArtifacts      map[string]*ScannerArtifactRecord // Per-scanner artifact keys
 }
 
@@ -43,14 +45,17 @@ type ScannerArtifactRecord struct {
 // ToModel converts the record into the API-friendly JobStatus payload.
 func (r *JobRecord) ToModel() *models.JobStatus {
 	job := &models.JobStatus{
-		ID:              r.JobID,
-		State:           r.State,
-		Error:           r.Error,
-		ErrorDetails:    r.LastErrorDetails,
-		LastStage:       r.LastStage,
-		TotalViolations: r.TotalViolations,
-		CreatedAt:       r.CreatedAt,
-		UpdatedAt:       r.UpdatedAt,
+		ID:                r.JobID,
+		State:             r.State,
+		Error:             r.Error,
+		ErrorDetails:      r.LastErrorDetails,
+		LastStage:         r.LastStage,
+		TotalViolations:   r.TotalViolations,
+		ExpectedScanners:  cloneStringSlice(r.ExpectedScanners),
+		CompletedScanners: cloneStringSlice(r.CompletedScanners),
+		RemainingScanners: remainingScanners(r.ExpectedScanners, r.CompletedScanners),
+		CreatedAt:         r.CreatedAt,
+		UpdatedAt:         r.UpdatedAt,
 	}
 
 	if r.TotalPages > 0 {
@@ -66,6 +71,51 @@ func (r *JobRecord) ToModel() *models.JobStatus {
 	}
 
 	return job
+}
+
+func cloneStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	cloned := make([]string, len(values))
+	copy(cloned, values)
+
+	return cloned
+}
+
+func remainingScanners(expected, completed []string) []string {
+	if len(expected) == 0 {
+		return nil
+	}
+
+	completedSet := make(map[string]struct{}, len(completed))
+	for _, scannerType := range completed {
+		if scannerType == "" {
+			continue
+		}
+
+		completedSet[scannerType] = struct{}{}
+	}
+
+	remaining := make([]string, 0, len(expected))
+	for _, scannerType := range expected {
+		if scannerType == "" {
+			continue
+		}
+
+		if _, done := completedSet[scannerType]; done {
+			continue
+		}
+
+		remaining = append(remaining, scannerType)
+	}
+
+	if len(remaining) == 0 {
+		return nil
+	}
+
+	return remaining
 }
 
 func clampPercentage(current, total int) int {

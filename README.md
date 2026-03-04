@@ -157,6 +157,27 @@ After startup:
 
 Tip: `just demo` runs setup, starts the stack, initializes buckets, builds images, and prints a URL-scan command.
 
+## Production on the shared VPS
+
+This repo does not own standalone production deployment on the shared VPS.
+
+Production operations for `stageflow.org` run from the shared root control
+plane at `/home/matt/Deployment`. Use the root `justfile` there when you need
+to operate the live stack:
+
+```bash
+cd /home/matt/Deployment
+just stageflow-deploy
+just stageflow-restart
+just stageflow-logs
+just stageflow-health
+just health
+```
+
+Repo-local `just prod ...` and `just deploy ...` intentionally stop and point
+back to `/home/matt/Deployment`. Keep local and staging work in this repo, but
+keep VPS production ownership at `/home/matt/Deployment`.
+
 ## First URL Scan (API)
 
 ```bash
@@ -173,21 +194,33 @@ SSRF protections reject loopback/private/link-local/metadata destinations for UR
 
 ## Optional CLI Mode
 
-StageFlow also includes an optional CLI client (`tools/stageflow-cli/`) that talks to the existing Platform API. It submits URL jobs, waits for completion, and fetches the aggregated report JSON via `GET /api/v1/jobs/{id}/results`.
+StageFlow also includes an optional CLI client (`tools/stageflow-cli/`) that
+talks to the existing Platform API. It submits URL jobs, waits for completion,
+and fetches the aggregated report via `GET /api/v1/jobs/{id}/results`.
 
 Public URL scans:
 
 ```bash
-go run ./tools/stageflow-cli run --url https://example.com
+go run ./tools/stageflow-cli scan https://example.com
 ```
 
-Or build a local binary:
+For a local install that avoids stale binaries:
+
+```bash
+just cli-install
+stageflow scanners
+stageflow scan https://example.com
+stageflow scan https://example.com --format json > report.json
+```
+
+Or build a local binary in place:
 
 ```bash
 cd tools/stageflow-cli
 go build -o stageflow .
 ./stageflow scanners
-./stageflow run --url https://example.com --format summary
+./stageflow scan https://example.com
+./stageflow scan https://example.com --format json > report.json
 ```
 
 Local project mode (starts a dev server and scans `localhost`):
@@ -196,7 +229,13 @@ Local project mode (starts a dev server and scans `localhost`):
   - `just dev up local`
   - `just dev init local`
   - `just images`
-- In your web project repo, add `.stageflow/config.yaml` and then run `stageflow run` with no `--url` (optionally pass a project path as an arg).
+- In your web project repo, run `stageflow project init` (optionally pass a
+  project path as an arg). This generates:
+  - `.stageflow/config.yaml`
+  - `.stageflow/README.md`
+- Run `stageflow project doctor` to validate config and local dev readiness
+  before scanning.
+- Run `stageflow project` to start dev, wait for readiness, and run scans.
 
 Environment variables:
 
@@ -205,12 +244,59 @@ Environment variables:
 
 Notes:
 
-- `localhost`/private targets are blocked by default unless:
-  - the request sets `allow_private_targets=true` (CLI: `--allow-private-targets`)
-  - the API instance is configured with `PLATFORM_API_ALLOW_PRIVATE_TARGETS=true`
-- The CLI refuses to submit loopback targets to a non-loopback `--api` URL to avoid accidentally scanning the server's own localhost.
+- Text output is the default. Use `--format json` for machine-readable output.
+- `--json` remains available for backward compatibility, but `--format json`
+  is the preferred form.
+- `localhost`/private target submissions require the API instance to allow
+  private scans (`PLATFORM_API_ALLOW_PRIVATE_TARGETS=true`), which is enabled
+  by `just dev up local`.
+- The CLI auto-enables `allow_private_targets=true` when targets are loopback
+  or private literals (`localhost`, `127.0.0.1`, RFC1918, IPv6 ULA).
+- The CLI refuses to submit private/loopback targets to a non-loopback `--api`
+  URL to avoid accidentally scanning the server's own localhost.
+- New project templates use a placeholder `dev.start.cmd`; `stageflow project`
+  exits with clear setup guidance until you replace it.
+- Use `stageflow project doctor --skip-dev` to validate config and scan
+  preflight only.
 - Project mode executes commands from your repo config; only run it on trusted repos.
 - On macOS/Windows with Podman VM, `POD_NETNS_MODE=host` typically refers to the VM, not your host machine.
+
+## Refreshing changed local services
+
+Use `just dev-refresh` when you change `platform-api`, `orchestrator`, or
+`frontend` and want to rebuild only those services in the local compose stack.
+The command uses the same compose overlays as `just dev`, rebuilds the selected
+services, and retries automatically if Podman hits the common container
+name-collision state.
+
+Refresh the default local trio:
+
+```bash
+just dev-refresh ENV=local SERVICES='platform-api orchestrator frontend'
+```
+
+Refresh only the API:
+
+```bash
+just dev-refresh ENV=local SERVICES='platform-api'
+```
+
+If Podman still refuses to recreate the service, run the manual fallback:
+
+```bash
+podman compose -p stageflow \
+  -f infra/compose/podman-compose.yml \
+  -f infra/compose/podman-compose.local.yml \
+  rm -sf platform-api orchestrator frontend
+
+podman compose -p stageflow \
+  -f infra/compose/podman-compose.yml \
+  -f infra/compose/podman-compose.local.yml \
+  up -d --build --force-recreate --no-deps platform-api orchestrator frontend
+```
+
+Refresh `platform-api` before `frontend`, or refresh both together, when the
+frontend depends on new live-status fields.
 
 ## Day-to-Day Commands
 
@@ -220,13 +306,14 @@ Run `just help` for the full recipe list.
 | --- | --- | --- |
 | Setup | `just setup` | Install deps, sync workspace, create network |
 | Local stack | `just dev up` / `just dev down` / `just dev logs` | Start, stop, or inspect local compose stack |
+| Local refresh | `just dev-refresh ENV=local SERVICES='platform-api orchestrator frontend'` | Rebuild and recreate selected local compose services |
 | Staging stack | `just staging up` / `just staging down` | Manage staging compose environment |
 | Build | `just build` | Build Go services, frontend, scanner-runner |
 | Images | `just images` | Build container images |
 | Quality | `just ci` | Lint, typecheck, tests, audits |
 | Service run | `just run frontend` / `just run storybook` / `just run api` / `just run orchestrator` | Run one service locally |
 | Component testing | `just storybook-test` | Run Storybook interaction + a11y tests |
-| Production | `just prod <cmd>` / `just deploy <mode>` | Quadlet and deploy workflows |
+| Production | `cd /home/matt/Deployment && just stageflow-deploy` | Shared VPS production control plane |
 
 Storybook testing conventions: `docs/testing/storybook-component-testing.md`.
 

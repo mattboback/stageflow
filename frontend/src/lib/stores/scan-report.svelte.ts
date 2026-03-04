@@ -7,10 +7,12 @@ import { SvelteSet } from 'svelte/reactivity';
 
 import type { SSEUpdate } from './scan-status/types';
 
-import {
-	MAX_LOG_LINES
-} from './scan-status/constants';
+import { MAX_LOG_LINES } from './scan-status/constants';
 import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
+import {
+	applyScannerCompletionUpdate,
+	normalizeScannerProgress
+} from './scan-status/scanner-progress';
 
 export function createScanReportStore(id: string) {
 	let status = $state<ScanStatus>('loading');
@@ -108,7 +110,7 @@ export function createScanReportStore(id: string) {
 			addLog('Uploading artifacts to secure storage...');
 		}
 
-		job = data;
+		job = normalizeScannerProgress(data);
 		status = normalizeStatus(data.state);
 		screenshots = data.artifacts?.screenshots ?? [];
 		if (status === 'complete') {
@@ -211,7 +213,7 @@ export function createScanReportStore(id: string) {
 						};
 					})()
 				: job.progress;
-			job = {
+			const nextJob = {
 				...job,
 				state: update.state,
 				progress: newProgress,
@@ -219,6 +221,7 @@ export function createScanReportStore(id: string) {
 				error_details: update.error_details ?? job.error_details,
 				last_stage: update.stage ?? job.last_stage
 			};
+			job = applyScannerCompletionUpdate(nextJob, update);
 		}
 
 		status = normalizeStatus(update.state);

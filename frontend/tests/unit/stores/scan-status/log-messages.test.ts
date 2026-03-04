@@ -149,6 +149,27 @@ describe('log-messages', () => {
 			expect(message).toContain('Scan is running');
 		});
 
+		it('returns per-scanner completion message for scanner_complete updates', () => {
+			const message = getLogMessage('SCANNING', {
+				type: 'scanner_complete',
+				scanner_type: 'lighthouse',
+				pages_scanned: 1,
+				violations: 3,
+				timing: {
+					total_ms: 2100,
+					page_iteration_ms: 1800,
+					write_results_ms: 100,
+					upload_artifacts_ms: 100,
+					publish_completed_ms: 100,
+					finalization_ms: 200
+				}
+			});
+			expect(message).toContain('[lighthouse]');
+			expect(message).toContain('Complete in 2.1s');
+			expect(message).toContain('1 page');
+			expect(message).toContain('3 issues');
+		});
+
 		it('returns report generation message for COMPLETING', () => {
 			const message = getLogMessage('COMPLETING', emptyData);
 			expect(message).toContain('Aggregating');

@@ -40,15 +40,3 @@ func requireBoolPtr(t *testing.T, got *bool, want bool, label string) {
 		t.Fatalf("%s = %v, want %v", label, *got, want)
 	}
 }
-
-func requireIntPtr(t *testing.T, got *int, want int, label string) {
-	t.Helper()
-
-	if got == nil {
-		t.Fatalf("%s = nil, want %d", label, want)
-	}
-
-	if *got != want {
-		t.Fatalf("%s = %d, want %d", label, *got, want)
-	}
-}

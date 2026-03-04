@@ -37,7 +37,7 @@ func loadConfig() *Config {
 
 	scannerImage := scannerImageEnv
 	if scannerImage == "" {
-		scannerImage = "stageflow/scanner-runner:latest"
+		scannerImage = "localhost/stageflow/scanner-runner:latest"
 	}
 
 	// Parse host mappings from comma-separated env var (e.g., "host1:ip1,host2:ip2")
@@ -63,7 +63,7 @@ func loadConfig() *Config {
 		MinIO:                         minioCfg,
 		PodmanSocket:                  config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
 		DatabaseURL:                   databaseURL,
-		ExtractionImage:               config.GetEnv("EXTRACTION_IMAGE", "stageflow/extractor:latest"),
+		ExtractionImage:               config.GetEnv("EXTRACTION_IMAGE", "localhost/stageflow/extractor:latest"),
 		ScannerImage:                  scannerImage,
 		ScannerImageOverride:          scannerImageEnv,
 		APIPort:                       config.GetEnv("API_PORT", "8080"),

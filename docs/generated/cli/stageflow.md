@@ -1,0 +1,27 @@
+## stageflow
+
+StageFlow CLI
+
+```
+stageflow [flags]
+```
+
+### Options
+
+```
+      --api string       API base URL (default "http://localhost:8080")
+      --api-key string   API key
+      --format string    Output format: text, markdown, or json (default "text")
+  -h, --help             help for stageflow
+```
+
+### SEE ALSO
+
+* [stageflow completion](stageflow_completion.md)	 - Generate shell completion scripts
+* [stageflow docs](stageflow_docs.md)	 - Generate CLI documentation (Markdown)
+* [stageflow project](stageflow_project.md)	 - Run project-mode scan using .stageflow/config.yaml
+* [stageflow report](stageflow_report.md)	 - Fetch and display results for an existing job
+* [stageflow scan](stageflow_scan.md)	 - Submit a scan job and wait for results
+* [stageflow scanners](stageflow_scanners.md)	 - List available scanners
+* [stageflow version](stageflow_version.md)	 - Print version information
+

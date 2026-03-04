@@ -1,0 +1,48 @@
+# ============================================================================
+# STANDALONE ONLY — DO NOT ENABLE ON THE SHARED VPS
+#
+# This template binds host ports 80/443, which conflicts with the shared
+# Caddy gateway at /home/matt/Deployment/gateway/Caddyfile.
+#
+# On the shared VPS, public ingress is owned by the root gateway. StageFlow
+# services bind to loopback-only ports and are reverse-proxied through it.
+#
+# This file exists only for standalone deployments of StageFlow outside the
+# shared VPS (e.g., a dedicated host or CI environment).
+#
+# See: /home/matt/Deployment/DEPLOYMENT_STRATEGY.md
+# ============================================================================
+
+[Unit]
+Description=StageFlow Caddy Reverse Proxy
+PartOf=stageflow.target
+Wants=network-online.target
+After=network-online.target stageflow-pod.service
+Requires=stageflow-pod.service
+
+[Service]
+Restart=always
+RestartSec=2s
+
+[Container]
+Image=docker.io/library/caddy:2-alpine
+Network=@NETWORK_NAME@
+PublishPort=80:80
+PublishPort=443:443
+PublishPort=443:443/udp
+
+Volume=@REPO_ROOT@/infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro,z
+Volume=caddy_data:/data:z
+Volume=caddy_config:/config:z
+
+Environment=STAGEFLOW_PUBLIC_DOMAIN=${STAGEFLOW_PUBLIC_DOMAIN}
+Environment=CADDY_EMAIL=${CADDY_EMAIL:-admin@${STAGEFLOW_PUBLIC_DOMAIN}}
+
+HealthCmd=wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
+HealthInterval=30s
+HealthTimeout=5s
+HealthRetries=3
+HealthStartPeriod=10s
+
+[Install]
+WantedBy=stageflow.target

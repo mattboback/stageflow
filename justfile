@@ -41,6 +41,13 @@ demo URL='https://example.com':
 
     url="{{URL}}"
     root_dir="{{repo_root}}"
+    current_host="$(hostname -f 2>/dev/null || hostname)"
+
+    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to start the repo-local StageFlow stack on the production VPS." >&2
+        echo "Use /home/matt/Deployment for live operations." >&2
+        exit 1
+    fi
 
     if [[ ! -f "$root_dir/.env" ]]; then
         echo "Missing .env: copy .env.example to .env first" >&2
@@ -77,6 +84,13 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
     env="{{ENV}}"
     endpoint="{{ENDPOINT}}"
     root_dir="{{repo_root}}"
+    current_host="$(hostname -f 2>/dev/null || hostname)"
+
+    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to run repo-local StageFlow dev stacks on the production VPS." >&2
+        echo "Use /home/matt/Deployment for live operations." >&2
+        exit 1
+    fi
 
     echo "==> Ensuring stageflow_net network exists..."
     {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
@@ -129,6 +143,72 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
             ;;
     esac
 
+[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES=\"platform-api orchestrator frontend\")')]
+dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    env="{{ENV}}"
+    services="{{SERVICES}}"
+    root_dir="{{repo_root}}"
+    current_host="$(hostname -f 2>/dev/null || hostname)"
+
+    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to run repo-local StageFlow dev refresh on the production VPS." >&2
+        echo "Use /home/matt/Deployment for live operations." >&2
+        exit 1
+    fi
+
+    if [[ -z "${services// }" ]]; then
+        echo "SERVICES must contain one or more compose service names" >&2
+        exit 2
+    fi
+
+    echo "==> Ensuring stageflow_net network exists..."
+    {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
+
+    project="{{compose_project}}"
+    env_args=()
+    [[ -f "$root_dir/.env" ]] && env_args=(--env-file "$root_dir/.env")
+
+    files=()
+    case "$env" in
+        dev)
+            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.test.yml")
+            ;;
+        local)
+            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.local.yml")
+            ;;
+        *)
+            echo "ENV must be dev or local (got: $env)" >&2
+            exit 2
+            ;;
+    esac
+
+    read -r -a service_list <<<"$services"
+
+    echo "==> Refreshing $env services: ${service_list[*]}"
+
+    set +e
+    refresh_output="$({{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d --build --force-recreate --no-deps "${service_list[@]}" 2>&1)"
+    refresh_status=$?
+    set -e
+
+    printf '%s\n' "$refresh_output"
+
+    if [[ $refresh_status -eq 0 ]]; then
+        exit 0
+    fi
+
+    if grep -Eqi 'dependent containers|already exists' <<<"$refresh_output"; then
+        echo "==> Podman reported container conflicts. Removing selected services and retrying..."
+        {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" rm -sf "${service_list[@]}"
+        {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d --build --force-recreate --no-deps "${service_list[@]}"
+        exit 0
+    fi
+
+    exit "$refresh_status"
+
 [group('staging'), doc('Staging stack via compose: up/down/restart/logs/init/ps')]
 staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='stageflow_staging_net' ENDPOINT='http://127.0.0.1:9300':
     #!/usr/bin/env bash
@@ -140,6 +220,13 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
     fallback_network="{{NETWORK}}"
     endpoint="{{ENDPOINT}}"
     root_dir="{{repo_root}}"
+    current_host="$(hostname -f 2>/dev/null || hostname)"
+
+    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to run repo-local StageFlow staging stacks on the production VPS." >&2
+        echo "Use /home/matt/Deployment for live operations." >&2
+        exit 1
+    fi
 
     if [[ "$env_file_input" = /* ]]; then
         env_file="$env_file_input"
@@ -229,6 +316,10 @@ ci:
         (cd "$dir" && {{go}} test -race ./...)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
+    echo "==> CLI docs..."
+    {{go}} run ./tools/stageflow-cli docs --out-dir docs/generated/cli
+    git diff --exit-code docs/generated/cli
+
     echo "==> Frontend CI..."
     (cd {{frontend_dir}} && {{bun}} run ci)
 
@@ -284,87 +375,42 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     trap 'rm -f "$tmp"' EXIT
 
     echo "==> Building StageFlow CLI..."
-    (cd tools/stageflow-cli && {{go}} build -o "$tmp" .)
+    version="$(git describe --tags --always --dirty 2>/dev/null || echo dev)"
+    commit="$(git rev-parse --short HEAD 2>/dev/null || echo "")"
+    build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${build_date}"
+    (cd tools/stageflow-cli && {{go}} build -trimpath -ldflags "$ldflags" -o "$tmp" .)
 
     echo "==> Installing: $dest"
     install -m 0755 "$tmp" "$dest"
 
     echo "==> Installed. Make sure '$bin_dir' is on your PATH."
+    "$dest" version
 
-[group('prod'), doc('Manage production Quadlets (CMD=install|up|down|restart|logs|ps|health)')]
+[group('prod'), doc('Production is owned by `/home/matt/Deployment`; this recipe intentionally stops old repo-local usage')]
 prod CMD='up':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    cmd="{{CMD}}"
+    echo "Production control for StageFlow lives at /home/matt/Deployment." >&2
+    echo "Use one of these commands instead:" >&2
+    echo "  cd /home/matt/Deployment && just stageflow-deploy" >&2
+    echo "  cd /home/matt/Deployment && just stageflow-restart" >&2
+    echo "  cd /home/matt/Deployment && just stageflow-logs" >&2
+    echo "  cd /home/matt/Deployment && just stageflow-health" >&2
+    exit 1
 
-    case "$cmd" in
-        install)
-            echo "==> Installing Quadlet units..."
-            ./scripts/quadlet-install.sh
-            ;;
-        up)
-            echo "==> Starting production stack..."
-            ./scripts/quadlet-install.sh
-            systemctl --user enable --now stageflow.target
-            ;;
-        down)
-            echo "==> Stopping production stack..."
-            systemctl --user stop stageflow.target
-            ;;
-        restart)
-            echo "==> Restarting production stack..."
-            systemctl --user restart stageflow.target
-            ;;
-        logs)
-            echo "==> Following production logs..."
-            journalctl --user -f \
-                -u stageflow-nats.service \
-                -u stageflow-minio.service \
-                -u stageflow-orchestrator.service \
-                -u stageflow-platform-api.service \
-                -u stageflow-frontend.service \
-                -u stageflow-grafana.service
-            ;;
-        ps)
-            {{podman}} ps --format 'table {{"{{"}}.Names{{"}}"}}\t{{"{{"}}.Status{{"}}"}}\t{{"{{"}}.Ports{{"}}"}}' | grep -E '^(systemd-)?stageflow-' || true
-            ;;
-        health)
-            echo "==> Checking service health..."
-            for unit in stageflow-nats.service stageflow-minio.service stageflow-orchestrator.service \
-                        stageflow-platform-api.service stageflow-frontend.service stageflow-grafana.service; do
-                state="$(systemctl --user is-active "$unit" 2>/dev/null || echo "unknown")"
-                echo "$unit: $state"
-            done
-            ;;
-        *)
-            echo "CMD must be install, up, down, restart, logs, ps, or health (got: $cmd)" >&2
-            exit 2
-            ;;
-    esac
-
-[group('prod'), doc('Deploy production (MODE=full|quick)')]
+[group('prod'), doc('Production deployment is owned by `/home/matt/Deployment`; this recipe intentionally stops old repo-local usage')]
 deploy MODE='full':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    mode="{{MODE}}"
-
-    case "$mode" in
-        full)
-            just images
-            just prod down
-            just prod up
-            ;;
-        quick)
-            just prod down
-            just prod up
-            ;;
-        *)
-            echo "MODE must be full or quick (got: $mode)" >&2
-            exit 2
-            ;;
-    esac
+    echo "Production deployment for StageFlow lives at /home/matt/Deployment." >&2
+    echo "Use one of these commands instead:" >&2
+    echo "  cd /home/matt/Deployment && just stageflow-deploy" >&2
+    echo "  cd /home/matt/Deployment && just stageflow-redeploy" >&2
+    echo "  cd /home/matt/Deployment && just deploy stageflow rebuild" >&2
+    exit 1
 
 [group('run'), doc('Run a service locally (SERVICE=frontend|storybook|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':

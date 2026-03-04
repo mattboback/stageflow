@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // SubmitJobRequest represents the payload for POST /api/v1/jobs/urls.
 type SubmitJobRequest struct {
@@ -19,11 +22,22 @@ type SubmitJobResponse struct {
 
 // JobStatus represents the subset of GET /api/v1/jobs/{id} used by the CLI.
 type JobStatus struct {
-	ID        string    `json:"id"`
-	State     string    `json:"state"`
-	Error     string    `json:"error,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                string          `json:"id"`
+	State             string          `json:"state"`
+	Error             string          `json:"error,omitempty"`
+	Progress          *JobProgress    `json:"progress,omitempty"`
+	ExpectedScanners  []string        `json:"expected_scanners,omitempty"`
+	CompletedScanners []string        `json:"completed_scanners,omitempty"`
+	RemainingScanners []string        `json:"remaining_scanners,omitempty"`
+	Artifacts         json.RawMessage `json:"artifacts,omitempty"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
+}
+
+type JobProgress struct {
+	CurrentPage int `json:"current_page"`
+	TotalPages  int `json:"total_pages"`
+	Percentage  int `json:"percentage"`
 }
 
 // ScannersResponse matches GET /api/v1/scanners.

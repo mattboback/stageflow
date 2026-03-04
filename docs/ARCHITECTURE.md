@@ -385,16 +385,23 @@ Command surface:
 
 Compose definitions live under `infra/compose`.
 
-### Production (Quadlets)
+### Production on the shared VPS
 
-Command surface:
+This repo does not own standalone production deployment on the shared VPS.
 
-- `just prod install|up|down|restart|logs|ps|health`
-- `just deploy full|quick`
+Use the shared root control plane at `/home/matt/Deployment` for live
+production operations:
 
-Quadlet templates:
+```bash
+cd /home/matt/Deployment
+just stageflow-deploy
+just stageflow-restart
+just stageflow-logs
+just stageflow-health
+```
 
-- `infra/quadlets/templates`
+The repo-local `just prod ...` and `just deploy ...` commands intentionally
+stop and point back to that shared root control plane.
 
 ### Build and Quality Gates
 
@@ -446,7 +453,7 @@ Outcome: transition to `FAILED`; event timeline records failure reason.
 - Job state transitions via API/SSE.
 - Orchestrator event history.
 - Scanner artifacts in object storage.
-- Service logs (`just dev logs` or `just prod logs`).
+- Service logs (`just dev logs` or `/home/matt/Deployment` root prod logs).
 
 ### Useful tools
 

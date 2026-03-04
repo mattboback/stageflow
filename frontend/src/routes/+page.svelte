@@ -120,11 +120,34 @@
 			desc: 'Accessibility, SEO, security, and performance auditing in one execution path.'
 		}
 	] as const;
+
+	const structuredData = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@graph': [
+			{
+				'@type': 'WebSite',
+				name: SITE.name,
+				url: SITE.siteUrl,
+				description: SITE.tagline
+			},
+			{
+				'@type': 'SoftwareApplication',
+				name: SITE.name,
+				url: SITE.siteUrl,
+				description: SITE.tagline,
+				applicationCategory: 'DeveloperApplication',
+				isAccessibleForFree: true,
+				operatingSystem: 'Linux, macOS, Windows',
+				sameAs: [SITE.githubUrl]
+			}
+		]
+	});
 </script>
 
 <svelte:head>
 	<title>{SITE.siteTitle}</title>
 	<meta name="description" content={SITE.tagline} />
+	{@html `<script type="application/ld+json">${structuredData}</script>`}
 </svelte:head>
 
 <div class="landing-shell min-h-screen">
@@ -191,13 +214,13 @@
 
 				<div class="space-y-4">
 					<HeroScanPreview />
-					<aside class="hero-summary-card hidden xl:block">
+					<div class="hero-summary-card hidden xl:block">
 						<p class="hero-summary-label">Latest run signal</p>
 						<p class="hero-summary-value">94 / 100</p>
 						<p class="text-ink-muted mt-2 text-sm leading-relaxed">
 							Accessibility and security passed baseline. SEO flags reduced by 37% from the previous sweep.
 						</p>
-					</aside>
+					</div>
 				</div>
 			</div>
 		</div>

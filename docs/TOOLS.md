@@ -16,7 +16,14 @@ The source lives in `tools/stageflow-cli/`, but the built binary is named
 
 ### Build
 
-Build the CLI by running:
+For the recommended local install loop, run:
+
+```bash
+just cli-install
+stageflow version
+```
+
+To build the CLI in place, run:
 
 ```bash
 cd tools/stageflow-cli
@@ -28,8 +35,11 @@ go build -o stageflow .
 Run a scan against a public URL by running:
 
 ```bash
-./stageflow run --url https://example.com
+./stageflow scan https://example.com
 ```
+
+By default, `stageflow` prints plain text. Add `--format json` for
+machine-readable output. `--json` remains available for backward compatibility.
 
 ### Environment variables
 
@@ -40,11 +50,17 @@ Configure the CLI using:
 
 ### Local project mode (EXPERIMENTAL)
 
-When you run `stageflow run` without `--url`, the CLI uses
-`.stageflow/config.yaml` to start a local dev server and scan `scan.urls`.
-Optionally pass a single positional argument to `stageflow run` to set the
-project path; if omitted, the CLI uses the git root of the current working
-directory.
+When you run `stageflow project`, the CLI uses `.stageflow/config.yaml` to
+start a local dev server and scan `scan.urls`. Optionally pass a single
+positional argument to set the project path; if omitted, the CLI uses the git
+root of the current working directory.
+
+Use these companion subcommands:
+
+- `stageflow project init [path]` to create `.stageflow/config.yaml` and
+  `.stageflow/README.md`.
+- `stageflow project doctor [path]` to validate config and preflight checks
+  without submitting a scan job.
 
 > **Warning:** Project mode can execute commands from your repo config. Only run
 > it on trusted repositories.
@@ -55,7 +71,8 @@ Localhost scans are only intended for local/self-hosted stacks.
 
 - The API must be configured to accept private targets (`PLATFORM_API_ALLOW_PRIVATE_TARGETS=true`).
 - The orchestrator must run job pods in the host network namespace on Linux (`POD_NETNS_MODE=host`) so scanners can reach `http://localhost:<port>`.
-- The CLI refuses to submit loopback targets (for example `localhost`, `127.0.0.1`) to a non-loopback `--api` base URL.
+- The CLI auto-enables `allow_private_targets=true` for private literal targets (for example `localhost`, `127.0.0.1`, RFC1918 ranges, and IPv6 ULA).
+- The CLI refuses to submit private/loopback targets to a non-loopback `--api` base URL.
 
 The repo includes a local-only compose override that sets these defaults:
 
@@ -71,31 +88,31 @@ version: 1
 
 stageflow:
   api_url: http://localhost:8080
-  api_key_env: STAGEFLOW_API_KEY
 
 scan:
   urls:
-    - http://localhost:1337
-  scanners: axe,lighthouse
+    - http://127.0.0.1:1337
+  scanners: axe,lighthouse,seo,security-headers
   allow_private_targets: true
-  timeout: 5m
-  format: summary
-  severity: minor
-  thresholds:
-    critical: 0
 
 dev:
-  up:
-    - ["bun", "install"]
   start:
-    cmd: ["bun", "run", "dev", "--port", "1337"]
+    cmd: ["__STAGEFLOW_SET_DEV_START_CMD__"] # replace this
+    cwd: .
   ready:
     url: http://localhost:1337
 ```
 
+> **Note:** `stageflow project` fails fast with setup guidance if
+> `dev.start.cmd` still uses the scaffold placeholder.
+
+> **Note:** `stageflow project doctor --skip-dev` validates config and scan
+> preflight only, without starting your dev process.
+
 #### Notes / limitations
 
 - `.stageflow/config.yaml` is parsed strictly; unknown keys will fail.
+- `.stageflow/README.md` includes first-run setup and troubleshooting.
 - `POD_NETNS_MODE=host` only works for Linux hosts. On macOS/Windows with a Podman VM, host networking refers to the VM, not your workstation.
 
 ## job-status-cli

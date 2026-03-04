@@ -117,12 +117,12 @@ func NewOrchestrator(config *Config) *Orchestrator {
 
 	extractionImage := config.ExtractionImage
 	if extractionImage == "" {
-		extractionImage = "stageflow/extractor:latest"
+		extractionImage = "localhost/stageflow/extractor:latest"
 	}
 
 	scannerImage := config.ScannerImage
 	if scannerImage == "" {
-		scannerImage = "stageflow/scanner-runner:latest"
+		scannerImage = "localhost/stageflow/scanner-runner:latest"
 	}
 
 	natsHost := config.NatsHost

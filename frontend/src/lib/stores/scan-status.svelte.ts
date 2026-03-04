@@ -6,10 +6,12 @@ import { buildApiUrl } from '$lib/api/utils';
 import type { SSEUpdate } from './scan-status/types';
 
 import { scanHistoryStore } from './scan-history.svelte';
-import {
-	MAX_LOG_LINES
-} from './scan-status/constants';
+import { MAX_LOG_LINES } from './scan-status/constants';
 import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
+import {
+	applyScannerCompletionUpdate,
+	normalizeScannerProgress
+} from './scan-status/scanner-progress';
 
 export function createScanStatusStore(id: string) {
 	let status = $state<ScanStatus>('loading');
@@ -52,7 +54,7 @@ export function createScanStatusStore(id: string) {
 			addLog('Finalizing reports and uploading artifacts...');
 		}
 
-		result = data;
+		result = normalizeScannerProgress(data);
 		const newStatus = normalizeStatus(data.state);
 		status = newStatus;
 
@@ -87,7 +89,7 @@ export function createScanStatusStore(id: string) {
 						};
 					})()
 				: result.progress;
-			result = {
+			const nextResult = {
 				...result,
 				state: update.state,
 				progress: newProgress,
@@ -95,6 +97,7 @@ export function createScanStatusStore(id: string) {
 				error_details: update.error_details ?? result.error_details,
 				last_stage: update.stage ?? result.last_stage
 			};
+			result = applyScannerCompletionUpdate(nextResult, update);
 		}
 
 		const newStatus = normalizeStatus(update.state);

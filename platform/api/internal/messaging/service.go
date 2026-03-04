@@ -91,11 +91,26 @@ func (h *SSEBroadcastHandler) HandleScanPageCompleted(_ context.Context, p *even
 }
 
 func (h *SSEBroadcastHandler) HandleScanCompleted(_ context.Context, p *events.ScanCompletedPayload) error {
-	h.sseHub.Broadcast(p.JobID, map[string]any{
-		"type":         "status",
-		"state":        "COMPLETING",
-		"scanner_type": p.ScannerType,
-	})
+	msg := map[string]any{
+		"type":          "scanner_complete",
+		"state":         "SCANNING",
+		"scanner_type":  p.ScannerType,
+		"pages_scanned": p.TotalPagesScanned,
+		"violations":    p.Summary.TotalViolations,
+	}
+
+	if p.Timing != nil {
+		msg["timing"] = map[string]int64{
+			"total_ms":             p.Timing.TotalMs,
+			"page_iteration_ms":    p.Timing.PageIterationMs,
+			"write_results_ms":     p.Timing.WriteResultsMs,
+			"upload_artifacts_ms":  p.Timing.UploadArtifactsMs,
+			"publish_completed_ms": p.Timing.PublishCompletedMs,
+			"finalization_ms":      p.Timing.FinalizationMs,
+		}
+	}
+
+	h.sseHub.Broadcast(p.JobID, msg)
 
 	return nil
 }

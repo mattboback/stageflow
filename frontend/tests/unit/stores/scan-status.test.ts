@@ -126,4 +126,56 @@ describe('Scan Status Store', () => {
 
 		store.cleanup();
 	});
+
+	it('tracks completed and remaining scanners from SSE status and updates', async () => {
+		class AvailableEventSource {}
+		vi.stubGlobal('EventSource', AvailableEventSource);
+
+		const createSSEStreamMock = vi.mocked(createSSEStream);
+		const close = vi.fn();
+		createSSEStreamMock.mockReturnValue({ close });
+
+		const store = createScanStatusStore('job-123');
+		store.start();
+
+		const handlers = createSSEStreamMock.mock.calls[0]?.[1];
+		if (!handlers) {
+			throw new Error('expected createSSEStream handlers');
+		}
+
+		handlers.onStatus?.({
+			id: 'job-123',
+			state: 'SCANNING',
+			progress: { current_page: 0, total_pages: 2, percentage: 0 },
+			expected_scanners: ['axe', 'lighthouse'],
+			completed_scanners: [],
+			remaining_scanners: ['axe', 'lighthouse'],
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString()
+		});
+
+		handlers.onUpdate?.({
+			type: 'scanner_complete',
+			state: 'SCANNING',
+			scanner_type: 'axe',
+			pages_scanned: 1,
+			violations: 3,
+			timing: {
+				total_ms: 2100,
+				page_iteration_ms: 1800,
+				write_results_ms: 100,
+				upload_artifacts_ms: 100,
+				publish_completed_ms: 100,
+				finalization_ms: 200
+			}
+		});
+
+		await flushPromises();
+
+		expect(store.result?.completed_scanners).toEqual(['axe']);
+		expect(store.result?.remaining_scanners).toEqual(['lighthouse']);
+		expect(store.logs.some((line) => line.includes('[axe] Complete in 2.1s'))).toBe(true);
+
+		store.cleanup();
+	});
 });

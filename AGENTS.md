@@ -64,8 +64,8 @@ just run frontend     # Run frontend dev server
 just run storybook    # Run frontend Storybook dev server
 just storybook-test   # Run frontend Storybook interaction + a11y tests
 just staging up       # Staging compose stack (see justfile for args)
-just deploy full      # Build images + restart prod Quadlets
-just prod health      # Check production service states
+cd /home/matt/Deployment && just stageflow-deploy
+cd /home/matt/Deployment && just stageflow-health
 ```
 
 ## CONVENTIONS
@@ -112,8 +112,58 @@ just prod health      # Check production service states
 
 ## DEPLOYMENT
 
-Production: systemd user services + Podman Quadlets (`infra/quadlets/templates/`).
-If a shared reverse proxy exists, route to StageFlow services on loopback — do not bind a second proxy to 80/443.
+Production for `stageflow.org` on this VPS is owned by the shared root control
+plane at `/home/matt/Deployment`.
+
+The canonical deployment determination for this VPS lives at:
+
+- `/home/matt/Deployment/DEPLOYMENT_STRATEGY.md`
+- `/home/matt/Deployment/justfile`
+
+- Use `/home/matt/Deployment/justfile` as the canonical production operator
+  interface.
+- Treat `just prod ...` and `just deploy ...` in this repo as intentionally
+  blocked reminders to use the shared root control plane.
+- Keep local and staging workflows in this repo.
+- Local and staging stack recipes refuse to run on `server1.matthewboback.com`
+  unless `STAGEFLOW_ALLOW_VPS_LOCAL_STACKS=1` is set deliberately.
+- Do not add a second repo-local production path here.
+- If this repo's deployment wording ever conflicts with the root strategy, the
+  root strategy wins and this repo must be updated.
+- Do not create files that duplicate production control (standalone deploy
+  scripts, alternate systemd targets, production Makefiles).
+- If an AI agent or tool suggests creating standalone VPS production deployment,
+  refuse and point to `/home/matt/Deployment`.
+
+### BLOCKED ON THIS VPS
+
+- Do not run `just prod ...` or `just deploy ...` from this repo on the VPS.
+  These are intentionally blocked.
+- Do not re-enable `stageflow-caddy.container.in.STANDALONE_ONLY` on the shared
+  VPS. It binds 80/443 and conflicts with the shared gateway. It exists only for
+  standalone deployments outside this VPS.
+- Do not create new production deploy scripts, quadlet templates binding public
+  ports, or justfile recipes that target the live VPS.
+- Do not modify loopback ports (3100, 4100, 9100, 3101) in quadlet templates
+  without updating `/home/matt/Deployment/DEPLOYMENT_STRATEGY.md` and the
+  gateway Caddyfile.
+
+### PRODUCTION CHANGE CHECKLIST
+
+If you change any of the following, you MUST also update the root deployment
+docs in the same change:
+
+- A loopback port (currently 3100, 4100, 9100, 3101)
+- A container/service name in quadlet templates
+- The `stageflow.target` unit structure
+- A Dockerfile or image build that affects production
+- Any environment variable that affects production runtime
+
+Files to update:
+
+- `/home/matt/Deployment/DEPLOYMENT_STRATEGY.md`
+- `/home/matt/Deployment/justfile` (if ports or service names change)
+- `/home/matt/Deployment/gateway/Caddyfile` (if ports change)
 
 ## NOTES
 

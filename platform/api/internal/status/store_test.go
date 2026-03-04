@@ -62,13 +62,15 @@ func TestClampPercentage(t *testing.T) {
 func TestJobRecordToModel(t *testing.T) {
 	now := time.Now().UTC()
 	rec := &JobRecord{
-		JobID:       "abc",
-		State:       models.JobStateScanning,
-		Error:       "oops",
-		TotalPages:  5,
-		CurrentPage: 2,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		JobID:             "abc",
+		State:             models.JobStateScanning,
+		Error:             "oops",
+		TotalPages:        5,
+		CurrentPage:       2,
+		ExpectedScanners:  []string{"axe", "lighthouse"},
+		CompletedScanners: []string{"axe"},
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 
 	model := rec.ToModel()
@@ -78,6 +80,10 @@ func TestJobRecordToModel(t *testing.T) {
 
 	if model.Progress == nil || model.Progress.Percentage != 40 {
 		t.Fatalf("expected progress at 40%%, got %#v", model.Progress)
+	}
+
+	if len(model.RemainingScanners) != 1 || model.RemainingScanners[0] != "lighthouse" {
+		t.Fatalf("expected remaining scanner lighthouse, got %#v", model.RemainingScanners)
 	}
 
 	rec.TotalPages = 0
@@ -128,6 +134,10 @@ func assertZipJobCreated(ctx context.Context, t *testing.T, store *Store, jobID 
 	if rec.State != models.JobStateExtracting {
 		t.Fatalf("expected initial state EXTRACTING for zip jobs, got %s", rec.State)
 	}
+
+	if len(rec.ExpectedScanners) != 1 || rec.ExpectedScanners[0] != "axe" {
+		t.Fatalf("expected requested scanners to be persisted, got %#v", rec.ExpectedScanners)
+	}
 }
 
 func assertExtractionReady(ctx context.Context, t *testing.T, store *Store, jobID string) {
@@ -175,6 +185,7 @@ func assertScanCompleted(ctx context.Context, t *testing.T, store *Store, jobID 
 
 	if err := store.HandleScanCompleted(ctx, &events.ScanCompletedPayload{
 		JobID:             jobID,
+		ScannerType:       "axe",
 		ResultsPath:       "results.json",
 		ReportPath:        "report.html",
 		StageLogPath:      "scan.log",
@@ -186,8 +197,12 @@ func assertScanCompleted(ctx context.Context, t *testing.T, store *Store, jobID 
 	}
 
 	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateCompleting || rec.TotalViolations != 7 || rec.CurrentPage != 5 {
+	if rec.State != models.JobStateScanning || rec.TotalViolations != 7 || rec.CurrentPage != 5 {
 		t.Fatalf("scan completion not applied: %#v", rec)
+	}
+
+	if len(rec.CompletedScanners) != 1 || rec.CompletedScanners[0] != "axe" {
+		t.Fatalf("expected completed scanner tracking, got %#v", rec.CompletedScanners)
 	}
 }
 
@@ -245,6 +260,10 @@ func TestHandleJobCreatedURLInitialState(t *testing.T) {
 
 	if rec.TotalPages != 2 || rec.CurrentPage != 0 {
 		t.Fatalf("expected initial progress (0/2), got current=%d total=%d", rec.CurrentPage, rec.TotalPages)
+	}
+
+	if len(rec.ExpectedScanners) != 1 || rec.ExpectedScanners[0] != "axe" {
+		t.Fatalf("expected requested scanners to be persisted, got %#v", rec.ExpectedScanners)
 	}
 }
 
