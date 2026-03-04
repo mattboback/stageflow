@@ -1,6 +1,6 @@
 # AGENTS.md — frontend
 
-SvelteKit 5 SPA. Runes-based reactivity. Tailwind v4. Static adapter (nginx/Caddy in prod).
+SvelteKit app using Svelte 5 runes. Runes-based reactivity. Tailwind v4. Static adapter (nginx/Caddy in prod).
 
 ## STRUCTURE
 

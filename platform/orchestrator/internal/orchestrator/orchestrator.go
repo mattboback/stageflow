@@ -20,6 +20,9 @@ const (
 
 	podNetnsModeBridge = "bridge"
 	podNetnsModeHost   = "host"
+
+	hostNetnsNATSURL       = "nats://127.0.0.1:4222"
+	hostNetnsMinioEndpoint = "127.0.0.1:9000"
 )
 
 // Publisher abstracts job completion/failure emissions for testability.

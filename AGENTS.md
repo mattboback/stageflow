@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-StageFlow: Podman-native web accessibility + quality scanning platform. URLs or ZIP archives → containerized scanners (axe, lighthouse, SEO, security-headers, link-checker, ai-navigator) → unified report via SSE. Polyglot monorepo: Go 1.25.4 (API/orchestrator/extractor) + TypeScript/Bun/Playwright (scanner-runner) + SvelteKit 5 (frontend). Messaging: NATS JetStream. Storage: MinIO + PostgreSQL. Containers: Podman.
+StageFlow: Podman-native web accessibility + quality scanning platform. URLs or ZIP archives → containerized scanners (axe, lighthouse, seo, security-headers, link-checker, ai-navigator) → unified report via SSE. Polyglot monorepo: Go 1.25.4 (services + shared-go + tools/tests) + TypeScript/Bun/Playwright (scanner-runner) + SvelteKit (Svelte 5 runes; frontend). Messaging: NATS JetStream. Storage: MinIO + PostgreSQL. Containers: Podman.
 
 ## STRUCTURE
 
@@ -13,14 +13,17 @@ stageflow/
 │   ├── orchestrator/   # Go job FSM + Podman pod management + report aggregation
 │   ├── extractor/      # Go ZIP extraction service (runs inside job pods)
 │   └── scanner-runner/ # TypeScript/Bun/Playwright scanner worker (plugin system)
-├── frontend/           # SvelteKit 5 SPA (runes, Tailwind v4)
+├── frontend/           # SvelteKit app (Svelte 5 runes, Tailwind v4)
 ├── packages/
 │   ├── contracts/      # JSON Schema → generated Go+TS types (report, scanner-manifest)
 │   └── shared-go/      # Shared Go: models, events, messaging, storage, httputil, logging
+├── docs/               # Architecture, configuration, and tooling docs
 ├── infra/              # Compose files, Caddy, Quadlet templates, Grafana
-├── tools/              # job-status-cli (ops), suite-runner (integration tests)
-├── tests/e2e/          # Go e2e tests against running stack
-└── scripts/            # build-images.sh, quadlet-install.sh
+├── tools/              # stageflow-cli, job-status-cli (ops), suite-runner (integration)
+├── tests/
+│   ├── e2e/             # Go e2e tests against running stack
+│   └── fixtures/        # Test fixtures (for example: simple-site)
+└── scripts/            # build-images.sh, quadlet-install.sh, misc helpers
 ```
 
 ## WHERE TO LOOK
@@ -51,13 +54,16 @@ stageflow/
 just setup            # One-time: Podman network + go work sync + bun install (frozen)
 just dev up           # Local stack (NATS, MinIO, Postgres, services, frontend)
 just dev init         # Init MinIO buckets (run after dev up)
+just dev up local     # Local-only overlay (private targets + host networking)
+just build            # Build Go + frontend + scanner-runner
 just images           # Build all container images
-just ci               # Full CI: go build/lint/test + bun lint/typecheck/test:coverage
+just ci               # Full CI: Go build/lint/test + frontend/runner CI + Storybook tests + bun audit
 just run api          # Run API service locally
 just run orchestrator # Run orchestrator locally
 just run frontend     # Run frontend dev server
 just run storybook    # Run frontend Storybook dev server
 just storybook-test   # Run frontend Storybook interaction + a11y tests
+just staging up       # Staging compose stack (see justfile for args)
 just deploy full      # Build images + restart prod Quadlets
 just prod health      # Check production service states
 ```
@@ -77,7 +83,8 @@ just prod health      # Check production service states
 - End each completion message with `Short-term next steps` and `Long-term next steps`.
 
 ### TypeScript (scanner-runner, frontend)
-- Extend `tsconfig.strict.json`; all strict flags enforced including `noUncheckedIndexedAccess`.
+- scanner-runner: extends `tsconfig.strict.json` (includes `noUncheckedIndexedAccess`).
+- frontend: type-check via `svelte-check` (`bun run type-check`) using SvelteKit-generated tsconfig.
 - `unknown` + narrowing over `any`. Runtime validation (AJV/schema) over `as` casts.
 - scanner-runner: Bun-native APIs preferred. Build produces `dist/` via `tsc`.
 - scanner-runner: run `bun run prepare:contracts` before build/test.
@@ -113,5 +120,5 @@ If a shared reverse proxy exists, route to StageFlow services on loopback — do
 - **SSRF**: URL submissions block loopback, private, link-local, metadata IPs.
 - **scanner-runner plugins**: `dist/scanners` → `/plugins` (volume) → `$HOME/.stageflow/plugins` → `PLUGIN_PATHS`. `SCANNER_OPTIONS` validated against manifest `configSchema` (strict in prod).
 - **SSE**: `WriteTimeout = 0` on API server. Per-handler timeouts in middleware.
-- **Coverage thresholds** (~50%) enforced by vitest in CI.
+- **Coverage thresholds** enforced by Vitest config (see `platform/scanner-runner/vitest.config.ts` and `frontend/vitest.config.ts`).
 - **Contracts regen**: `cd packages/contracts/<name> && make` regenerates Go+TS from JSON Schema.

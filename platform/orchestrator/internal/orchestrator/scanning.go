@@ -118,8 +118,8 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 	minioEndpoint := o.minioHost + ":9000"
 
 	if o.podNetnsMode == podNetnsModeHost {
-		natsURL = "nats://127.0.0.1:4222"
-		minioEndpoint = "127.0.0.1:9000"
+		natsURL = hostNetnsNATSURL
+		minioEndpoint = hostNetnsMinioEndpoint
 	}
 
 	resultsDir := "/results/" + scannerType

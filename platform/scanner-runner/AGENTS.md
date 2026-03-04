@@ -56,4 +56,4 @@ src/
 - `SCANNER_TYPE` env → plugin id or alias. `SCANNER_OPTIONS` JSON → validated against manifest `configSchema`.
 - ai-navigator requires `OPENROUTER_API_KEY` env. Never pass `vision.apiKey` inside `SCANNER_OPTIONS`.
 - Screenshot policies: `never`, `on-violation`, `always` — configured in `src/config/rule-behaviors.ts`.
-- Tests: `bun run test` (auto-runs prepare:contracts). Vitest, ~50% coverage threshold enforced.
+- Tests: `bun run test` (auto-runs prepare:contracts). Vitest; coverage thresholds enforced in `vitest.config.ts`.

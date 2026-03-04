@@ -147,25 +147,32 @@ export class LighthouseScanner extends ScannerBase {
 
       const lhResult = await this.runLighthouse(page, pageEntry.url);
 
-      // Lighthouse runs in its own Chrome instance. The Playwright page may have gone stale
-      // while waiting in the serialized queue (especially with concurrency > 1). Re-navigate
-      // to ensure we have a fresh, responsive page for context enrichment and screenshots.
-      // Use 'domcontentloaded' instead of 'networkidle' for speed - we just need the DOM ready.
-      try {
-        this.logger.debug("Re-navigating Playwright page after Lighthouse", {
-          url: pageEntry.url,
-        });
-        await page.goto(pageEntry.url, {
-          waitUntil: "domcontentloaded",
-          timeout: 15_000,
-        });
-      } catch (navError) {
-        // If re-navigation fails, log it but continue - we'll try enrichment/screenshots anyway
-        this.logger.warn("Failed to re-navigate page after Lighthouse, continuing with stale page", {
-          url: pageEntry.url,
-          error: navError instanceof Error ? navError.message : String(navError),
-        });
-      }
+       // Lighthouse runs in its own Chrome instance. The Playwright page may have gone stale
+       // while waiting in the serialized queue (especially with concurrency > 1). Re-navigate
+       // to ensure we have a fresh, responsive page for context enrichment and screenshots.
+       // Use 'domcontentloaded' instead of 'networkidle' for speed - we just need the DOM ready.
+       try {
+         this.logger.debug("Re-navigating Playwright page after Lighthouse", {
+           url: pageEntry.url,
+         });
+
+        // Prefer BrowserManager navigation to reuse runtime target validation.
+        const browserManager = this.browserManager;
+        if (browserManager) {
+          await browserManager.navigateToPage(page, pageEntry.url, { type: "domcontentloaded" });
+        } else {
+          await page.goto(pageEntry.url, {
+            waitUntil: "domcontentloaded",
+            timeout: 15_000,
+          });
+        }
+       } catch (navError) {
+         // If re-navigation fails, log it but continue - we'll try enrichment/screenshots anyway
+         this.logger.warn("Failed to re-navigate page after Lighthouse, continuing with stale page", {
+           url: pageEntry.url,
+           error: navError instanceof Error ? navError.message : String(navError),
+         });
+       }
 
       const issues = this.extractIssues(lhResult);
 

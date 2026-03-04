@@ -1234,5 +1234,53 @@ describe("LighthouseScanner", () => {
       expect(result.error).toBe("lighthouse failed");
       expect(result.issues).toEqual([]);
     });
+
+    it("uses BrowserManager.navigateToPage for re-navigation when available", async () => {
+      const testScanner = new LighthouseScanner();
+      const logger = createMockLogger();
+      (testScanner as unknown as { logger: ScannerLogger }).logger = logger;
+
+      (testScanner as unknown as {
+        runLighthouse: (page: Page, url: string) => Promise<unknown>;
+      }).runLighthouse = vi.fn().mockResolvedValue({
+        requestedUrl: "https://example.com/page",
+        finalUrl: "https://example.com/page",
+        fetchTime: new Date().toISOString(),
+        categories: {},
+        audits: {},
+      });
+
+      (testScanner as unknown as { extractIssues: (result: unknown) => Issue[] }).extractIssues =
+        vi.fn().mockReturnValue([]);
+
+      (testScanner as unknown as {
+        enrichIssuesWithContext: (page: Page, currentIssues: Issue[]) => Promise<void>;
+      }).enrichIssuesWithContext = vi.fn().mockResolvedValue(undefined);
+
+      (testScanner as unknown as {
+        screenshotService: {
+          capturePageOverview: (...args: unknown[]) => Promise<unknown>;
+        };
+      }).screenshotService = {
+        capturePageOverview: vi.fn().mockResolvedValue(null),
+      };
+
+      const navigateToPage = vi.fn().mockResolvedValue(undefined);
+      (testScanner as unknown as { browserManager: { navigateToPage: typeof navigateToPage } })
+        .browserManager = { navigateToPage };
+
+      const page = createMockPage();
+      const context = createMockContext({ page, logger });
+
+      const result = await testScanner.scanPage(context);
+
+      expect(result.success).toBe(true);
+      expect(navigateToPage).toHaveBeenCalledWith(
+        page,
+        context.pageEntry.url,
+        { type: "domcontentloaded" },
+      );
+      expect(page.goto).not.toHaveBeenCalled();
+    });
   });
 });
