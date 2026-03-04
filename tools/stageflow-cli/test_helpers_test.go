@@ -8,13 +8,6 @@ func stubEnv(string) string {
 	return ""
 }
 
-func sampleJobStatus(jobID, state string) JobStatus {
-	return JobStatus{
-		ID:    jobID,
-		State: state,
-	}
-}
-
 func sampleReport(jobID string) report.UnifiedReportV2 {
 	baseURL := "https://example.com"
 	duration := 47000.0
@@ -88,41 +81,6 @@ func sampleReport(jobID string) report.UnifiedReportV2 {
 				ElementCount: 1,
 			},
 		},
-	}
-}
-
-func sampleScannersResponse() ScannersResponse {
-	return ScannersResponse{
-		Scanners: []ScannerInfo{
-			{
-				ID:         "axe",
-				Name:       "Axe",
-				Version:    "1.2.3",
-				Categories: []string{"accessibility"},
-				Enabled:    true,
-				BuiltIn:    true,
-				Capabilities: ScannerCapabilities{
-					OutputFormats:       []string{"json", "html"},
-					SupportsScreenshots: true,
-					SupportsConcurrency: true,
-					RequiresBrowser:     true,
-				},
-			},
-			{
-				ID:         "seo",
-				Name:       "SEO",
-				Version:    "2.0.0",
-				Categories: []string{"quality"},
-				Enabled:    false,
-				BuiltIn:    true,
-				Capabilities: ScannerCapabilities{
-					OutputFormats: []string{"json"},
-				},
-			},
-		},
-		Total:      2,
-		Enabled:    1,
-		Categories: []string{"accessibility", "quality"},
 	}
 }
 

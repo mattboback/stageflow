@@ -59,6 +59,10 @@
 	let previousBodyOverflow: string | null = null;
 	let wasOpen = false;
 
+	function isHTMLElement(value: Element | null): value is HTMLElement {
+		return typeof HTMLElement !== 'undefined' && value instanceof HTMLElement;
+	}
+
 	function getFocusable(): HTMLElement[] {
 		if (!contentRef) return [];
 		return Array.from(
@@ -142,7 +146,7 @@
 
 			void (async () => {
 				await tick();
-				if (lastFocused instanceof HTMLElement) {
+				if (isHTMLElement(lastFocused)) {
 					lastFocused.focus();
 				}
 			})();
@@ -153,7 +157,7 @@
 		if (wasOpen && lockScroll) {
 			document.body.style.overflow = previousBodyOverflow ?? '';
 		}
-		if (lastFocused instanceof HTMLElement) {
+		if (isHTMLElement(lastFocused)) {
 			lastFocused.focus();
 		}
 	});

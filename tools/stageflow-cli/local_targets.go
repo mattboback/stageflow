@@ -4,12 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 )
 
 func validateLocalTargets(apiBaseURL string, targetURLs []string) error {
-	if !containsLoopbackTargets(targetURLs) {
+	if !containsPrivateTargets(targetURLs) {
 		return nil
 	}
 
@@ -20,7 +21,7 @@ func validateLocalTargets(apiBaseURL string, targetURLs []string) error {
 
 	if !isLocalAPI {
 		return fmt.Errorf(
-			"refusing to submit loopback targets to a non-local API (%s); run the StageFlow stack locally and set --api to http://localhost:8080",
+			"refusing to submit private/loopback targets to a non-local API (%s); run the StageFlow stack locally and set --api to http://localhost:8080",
 			apiBaseURL,
 		)
 	}
@@ -56,7 +57,7 @@ func isLoopbackHost(rawURL string) (bool, error) {
 	return false, nil
 }
 
-func containsLoopbackTargets(urls []string) bool {
+func containsPrivateTargets(urls []string) bool {
 	for _, raw := range urls {
 		trimmed := strings.TrimSpace(raw)
 		if trimmed == "" {
@@ -83,10 +84,31 @@ func containsLoopbackTargets(urls []string) bool {
 			return true
 		}
 
-		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		if ip := net.ParseIP(host); isPrivateLiteralIP(ip) {
 			return true
 		}
 	}
 
 	return false
+}
+
+func isPrivateLiteralIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return false
+	}
+
+	if addr.Is4In6() {
+		addr = addr.Unmap()
+	}
+
+	if addr.IsLoopback() {
+		return true
+	}
+
+	return addr.IsPrivate()
 }

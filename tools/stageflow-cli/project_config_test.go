@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,13 +35,6 @@ scan:
   screenshot: true
   allow_private_targets: true
   timeout: 2s
-  format: json
-  severity: serious
-  max_issues: 10
-  thresholds:
-    critical: 0
-    serious: 1
-    total: 2
 dev:
   start:
     cmd: ["npm", "run", "dev"]
@@ -69,12 +63,6 @@ dev:
 
 	requireBoolPtr(t, cfg.Scan.AllowPrivateTargets, true, "cfg.Scan.AllowPrivateTargets")
 
-	requireIntPtr(t, cfg.Scan.Thresholds.Critical, 0, "cfg.Scan.Thresholds.Critical")
-
-	requireIntPtr(t, cfg.Scan.Thresholds.Serious, 1, "cfg.Scan.Thresholds.Serious")
-
-	requireIntPtr(t, cfg.Scan.Thresholds.Total, 2, "cfg.Scan.Thresholds.Total")
-
 	requireDeepEqual(t, cfg.Dev.Start.Cmd, []string{"npm", "run", "dev"}, "cfg.Dev.Start.Cmd")
 
 	requireEqual(t, cfg.Dev.Ready.URL, "http://localhost:3000/health", "cfg.Dev.Ready.URL")
@@ -90,6 +78,83 @@ func TestLoadProjectConfig_MissingFile(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "no .stageflow/config.yaml") {
 		t.Fatalf("loadProjectConfig err = %q, want to contain %q", err.Error(), "no .stageflow/config.yaml")
+	}
+}
+
+func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
+	root := t.TempDir()
+
+	_, _, err := loadProjectConfig(root)
+	if err == nil {
+		t.Fatalf("loadProjectConfig err = nil, want non-nil")
+	}
+
+	var missingErr missingProjectConfigError
+	if !errors.As(err, &missingErr) {
+		t.Fatalf("loadProjectConfig err = %T, want missingProjectConfigError", err)
+	}
+
+	requireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
+}
+
+func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
+	root := t.TempDir()
+
+	configPath, err := scaffoldProjectConfig(root, "http://localhost:8080")
+	requireNoErr(t, err)
+
+	expectedPath := filepath.Join(root, ".stageflow", "config.yaml")
+	requireEqual(t, configPath, expectedPath, "config path")
+
+	data, err := os.ReadFile(configPath)
+	requireNoErr(t, err)
+
+	text := string(data)
+	if !strings.Contains(text, "version: 1") {
+		t.Fatalf("scaffolded config missing version field")
+	}
+
+	if !strings.Contains(text, "scanners: "+defaultScanScanners) {
+		t.Fatalf("scaffolded config missing default scanner list")
+	}
+
+	if !strings.Contains(text, "allow_private_targets: true") {
+		t.Fatalf("scaffolded config missing allow_private_targets default")
+	}
+
+	if !strings.Contains(text, scaffoldDevStartCommandPlaceholder) {
+		t.Fatalf("scaffolded config missing dev command placeholder")
+	}
+
+	cfg, gotPath, err := loadProjectConfig(root)
+	requireNoErr(t, err)
+	requireEqual(t, gotPath, configPath, "loaded config path")
+	requireEqual(t, cfg.Version, 1, "cfg.Version")
+}
+
+func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
+	root := t.TempDir()
+
+	guidePath, err := scaffoldProjectGuide(root)
+	requireNoErr(t, err)
+
+	expectedPath := filepath.Join(root, ".stageflow", "README.md")
+	requireEqual(t, guidePath, expectedPath, "guide path")
+
+	data, err := os.ReadFile(guidePath)
+	requireNoErr(t, err)
+
+	text := string(data)
+	if !strings.Contains(text, "StageFlow project setup") {
+		t.Fatalf("guide missing heading")
+	}
+
+	if !strings.Contains(text, "dev.start.cmd") {
+		t.Fatalf("guide missing dev.start.cmd guidance")
+	}
+
+	if !strings.Contains(text, "just dev up local") {
+		t.Fatalf("guide missing localhost setup guidance")
 	}
 }
 
@@ -161,6 +226,32 @@ dev:
     url: "http://localhost:1234"
 `,
 			errContains: "scan.urls contains an empty URL",
+		},
+		{
+			name: "scan.urls unsupported scheme",
+			yaml: `version: 1
+scan:
+  urls: ["ftp://example.com"]
+dev:
+  start:
+    cmd: ["true"]
+  ready:
+    url: "http://localhost:1234"
+`,
+			errContains: "unsupported scheme",
+		},
+		{
+			name: "scan.urls missing host",
+			yaml: `version: 1
+scan:
+  urls: ["http:///nope"]
+dev:
+  start:
+    cmd: ["true"]
+  ready:
+    url: "http://localhost:1234"
+`,
+			errContains: "missing host",
 		},
 		{
 			name: "dev.start.cmd missing/empty",

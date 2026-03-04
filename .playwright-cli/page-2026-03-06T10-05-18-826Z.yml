@@ -1,0 +1,251 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link "StageFlow" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - img [ref=e8]:
+          - generic [ref=e10]: SF
+        - generic [ref=e11]: StageFlow
+      - navigation "Main navigation" [ref=e12]:
+        - link "Home" [ref=e13] [cursor=pointer]:
+          - /url: /
+        - link "Playground" [ref=e14] [cursor=pointer]:
+          - /url: /playground
+        - link "GitHub" [ref=e16] [cursor=pointer]:
+          - /url: https://github.com/mattboback/stageflow
+          - img [ref=e17]
+        - link "Run scan" [ref=e19] [cursor=pointer]:
+          - /url: /playground
+  - main [ref=e20]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - paragraph [ref=e24]: Playground
+        - heading "Test your site's quality" [level=1] [ref=e25]
+        - paragraph [ref=e26]: Run accessibility, performance, security, and SEO scans from one control surface with actionable output.
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - img [ref=e29]
+          - generic [ref=e30]: 6 Scanners
+        - generic [ref=e31]:
+          - img [ref=e32]
+          - generic [ref=e33]: <30s Results
+        - generic [ref=e34]:
+          - img [ref=e35]
+          - generic [ref=e36]: No account needed
+    - generic [ref=e40]:
+      - generic [ref=e42]:
+        - generic [ref=e45]:
+          - img [ref=e47]
+          - generic [ref=e48]:
+            - heading "Configure Scan" [level=2] [ref=e49]
+            - paragraph [ref=e50]: Choose input, scanners, and run settings.
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]:
+              - generic [ref=e54]: "1"
+              - generic [ref=e55]: Input
+            - generic [ref=e56]:
+              - generic [ref=e57]: Input Type
+              - generic [ref=e58]:
+                - button "Live URLs Scan websites directly" [ref=e59]:
+                  - img [ref=e61]
+                  - img [ref=e63]
+                  - generic [ref=e64]:
+                    - generic [ref=e65]: Live URLs
+                    - text: Scan websites directly
+                - button "ZIP Archive Upload static site" [ref=e66]:
+                  - img [ref=e68]
+                  - generic [ref=e69]:
+                    - generic [ref=e70]: ZIP Archive
+                    - text: Upload static site
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - generic [ref=e73]: "2"
+              - generic [ref=e74]: Target
+            - generic [ref=e75]:
+              - generic [ref=e78]: URLs to Scan
+              - textbox "URLs to Scan" [ref=e79]:
+                - /placeholder: "example.com\nexample.com/about\nhttps://example.com/contact"
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: "3"
+              - generic [ref=e84]: Scanners
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e87]: Select Scanners
+                - generic [ref=e88]: 5 / 6 enabled
+              - generic [ref=e89]:
+                - generic [ref=e90]:
+                  - button "Coverage" [pressed] [ref=e91] [cursor=pointer]:
+                    - img [ref=e92]
+                    - text: Coverage
+                  - button "Quick" [ref=e93] [cursor=pointer]:
+                    - img [ref=e94]
+                    - text: Quick
+                  - button "Custom" [ref=e95] [cursor=pointer]:
+                    - img [ref=e96]
+                    - text: Custom
+                - paragraph [ref=e97]: All scanners except AI Navigator. Most thorough analysis.
+                - generic [ref=e98]:
+                  - generic [ref=e99]:
+                    - img [ref=e100]
+                    - text: axe
+                  - generic [ref=e101]:
+                    - img [ref=e102]
+                    - text: lighthouse
+                  - generic [ref=e103]:
+                    - img [ref=e104]
+                    - text: link checker
+                  - generic [ref=e105]:
+                    - img [ref=e106]
+                    - text: security headers
+                  - generic [ref=e107]:
+                    - img [ref=e108]
+                    - text: seo
+              - generic [ref=e109]:
+                - button "ai navigator LLM-powered agent that navigates toward a goal" [ref=e110]:
+                  - img [ref=e112]
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: ai navigator
+                    - text: LLM-powered agent that navigates toward a goal
+                - button "axe WCAG accessibility testing with axe-core engine" [pressed] [ref=e116]:
+                  - img [ref=e118]
+                  - generic [ref=e119]:
+                    - generic [ref=e120]: axe
+                    - text: WCAG accessibility testing with axe-core engine
+                  - img [ref=e122]
+                - button "lighthouse Performance, SEO, and best practices audits" [pressed] [ref=e124]:
+                  - img [ref=e126]
+                  - generic [ref=e127]:
+                    - generic [ref=e128]: lighthouse
+                    - text: Performance, SEO, and best practices audits
+                  - img [ref=e130]
+                - button "link checker Detect broken links and redirect chains" [pressed] [ref=e132]:
+                  - img [ref=e134]
+                  - generic [ref=e135]:
+                    - generic [ref=e136]: link checker
+                    - text: Detect broken links and redirect chains
+                  - img [ref=e138]
+                - button "security headers HTTP security header analysis and scoring" [pressed] [ref=e140]:
+                  - img [ref=e142]
+                  - generic [ref=e143]:
+                    - generic [ref=e144]: security headers
+                    - text: HTTP security header analysis and scoring
+                  - img [ref=e146]
+                - button "seo Meta tags, headings, and SEO optimization" [pressed] [ref=e148]:
+                  - img [ref=e150]
+                  - generic [ref=e151]:
+                    - generic [ref=e152]: seo
+                    - text: Meta tags, headings, and SEO optimization
+                  - img [ref=e154]
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - generic [ref=e159]: "4"
+              - generic [ref=e160]: Options
+            - generic [ref=e161]:
+              - generic [ref=e162]:
+                - generic [ref=e163]: Screenshot Options
+                - button "Capture Screenshots Visual evidence of issues" [ref=e164]:
+                  - img [ref=e166]
+                  - generic [ref=e167]:
+                    - generic [ref=e168]: Capture Screenshots
+                    - text: Visual evidence of issues
+                  - img [ref=e170]
+              - generic [ref=e172]:
+                - generic [ref=e173]: Highlight Style
+                - generic [ref=e174]:
+                  - combobox "Highlight Style" [ref=e175] [cursor=pointer]:
+                    - option "Solid Border" [selected]
+                    - option "Dashed Border"
+                  - generic:
+                    - img
+          - button "Start Scan" [disabled]:
+            - img
+            - text: Start Scan
+      - generic [ref=e176]:
+        - generic [ref=e177]:
+          - heading "How It Works" [level=3] [ref=e179]
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - generic [ref=e185]: "01"
+              - generic [ref=e186]:
+                - paragraph [ref=e187]: Configure input
+                - paragraph [ref=e188]: Enter URLs or upload a ZIP.
+            - generic [ref=e189]:
+              - generic [ref=e190]: "02"
+              - generic [ref=e191]:
+                - paragraph [ref=e192]: Select scanners
+                - paragraph [ref=e193]: Choose checks to run.
+            - generic [ref=e194]:
+              - generic [ref=e195]: "03"
+              - generic [ref=e196]:
+                - paragraph [ref=e197]: Run scan
+                - paragraph [ref=e198]: Watch scan progress in real time.
+            - generic [ref=e199]:
+              - generic [ref=e200]: "04"
+              - generic [ref=e201]:
+                - paragraph [ref=e202]: Review output
+                - paragraph [ref=e203]: Inspect findings and evidence.
+        - generic [ref=e204]:
+          - heading "What You'll Get" [level=3] [ref=e206]
+          - generic [ref=e207]:
+            - generic [ref=e208]:
+              - img [ref=e210]
+              - generic [ref=e211]: Unified issue report
+            - generic [ref=e212]:
+              - img [ref=e214]
+              - generic [ref=e215]: Annotated screenshots
+            - generic [ref=e216]:
+              - img [ref=e218]
+              - generic [ref=e219]: Remediation guidance
+            - generic [ref=e220]:
+              - img [ref=e222]
+              - generic [ref=e223]: Lighthouse scores
+        - generic [ref=e224]:
+          - heading "Included" [level=3] [ref=e226]
+          - list [ref=e228]:
+            - listitem [ref=e229]:
+              - img [ref=e230]
+              - generic [ref=e231]: WCAG 2.1 AA/AAA testing
+            - listitem [ref=e232]:
+              - img [ref=e233]
+              - generic [ref=e234]: Lighthouse performance audits
+            - listitem [ref=e235]:
+              - img [ref=e236]
+              - generic [ref=e237]: Broken link detection
+            - listitem [ref=e238]:
+              - img [ref=e239]
+              - generic [ref=e240]: Security header analysis
+            - listitem [ref=e241]:
+              - img [ref=e242]
+              - generic [ref=e243]: Screenshot with highlights
+            - listitem [ref=e244]:
+              - img [ref=e245]
+              - generic [ref=e246]: Remediation guidance
+            - listitem [ref=e247]:
+              - img [ref=e248]
+              - generic [ref=e249]: AI navigation testing
+        - generic [ref=e250]:
+          - img [ref=e251]
+          - generic [ref=e252]:
+            - paragraph [ref=e253]: Secure & Private
+            - paragraph [ref=e254]: Your data is never stored or shared
+  - contentinfo [ref=e255]:
+    - generic [ref=e256]:
+      - generic [ref=e257]:
+        - generic [ref=e258]:
+          - link "StageFlow" [ref=e259] [cursor=pointer]:
+            - /url: /
+            - img [ref=e260]:
+              - generic [ref=e262]: SF
+            - generic [ref=e263]: StageFlow
+          - paragraph [ref=e264]: Self-hosted web scanning for accessibility, performance, SEO, and security workflows.
+        - generic [ref=e265]:
+          - link "Playground" [ref=e266] [cursor=pointer]:
+            - /url: /playground
+          - link "GitHub" [ref=e267] [cursor=pointer]:
+            - /url: https://github.com/mattboback/stageflow
+            - img [ref=e268]
+      - generic [ref=e270]: © 2026 StageFlow. Open-source and operator-first.

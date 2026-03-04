@@ -10,7 +10,7 @@ Restart=always
 RestartSec=2s
 
 [Container]
-Image=stageflow/frontend:latest
+Image=localhost/stageflow/frontend:latest
 Pod=stageflow.pod
 
 [Install]

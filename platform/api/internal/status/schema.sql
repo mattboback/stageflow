@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS job_status (
     provenance_key TEXT,
     last_stage TEXT,
     last_error_details TEXT,
+    expected_scanners TEXT,
+    completed_scanners TEXT,
     scanner_artifacts TEXT
 );
 

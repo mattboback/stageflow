@@ -1,4 +1,5 @@
 import type { ScanStatus } from '$lib/types/scan';
+import type { ScannerTiming } from '$lib/types/scan';
 
 export interface StatusProgressLike {
 	current_page?: number;
@@ -8,10 +9,20 @@ export interface StatusProgressLike {
 }
 
 export interface StatusLike {
+	type?: string;
 	progress?: StatusProgressLike;
 	scanner_type?: string;
+	pages_scanned?: number;
+	violations?: number;
+	timing?: ScannerTiming;
 	error?: string;
 	error_details?: string;
+}
+
+function formatScannerTiming(timing?: ScannerTiming): string | null {
+	if (!timing || timing.total_ms <= 0) return null;
+
+	return `${(timing.total_ms / 1000).toFixed(1)}s`;
 }
 
 export function formatErrorDetails(details?: string): string | null {
@@ -49,6 +60,21 @@ export function getLogMessage(normalizedState: string, data: StatusLike): string
 		case 'READY_TO_SCAN':
 			return 'Extraction complete. Analyzing directory structure...';
 		case 'SCANNING': {
+			if (data.type === 'scanner_complete' && data.scanner_type) {
+				const timing = formatScannerTiming(data.timing);
+				const pages = data.pages_scanned;
+				const issues = data.violations;
+				const details = [
+					timing,
+					pages !== undefined ? `${pages} page${pages === 1 ? '' : 's'}` : null,
+					issues !== undefined ? `${issues} issue${issues === 1 ? '' : 's'}` : null
+				].filter(Boolean);
+				if (details.length > 0) {
+					return `[${data.scanner_type}] Complete in ${details.join(', ')}.`;
+				}
+				return `[${data.scanner_type}] Scanner complete. Waiting for remaining scanners...`;
+			}
+
 			const currentPage = data.progress?.current_page ?? data.progress?.currentPage;
 			const totalPages = data.progress?.total_pages ?? data.progress?.totalPages;
 			const scannerTag = data.scanner_type ? `[${data.scanner_type}]` : '[Scanner]';

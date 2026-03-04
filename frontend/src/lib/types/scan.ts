@@ -4,6 +4,15 @@ interface ScanProgress {
 	percentage: number;
 }
 
+export interface ScannerTiming {
+	total_ms: number;
+	page_iteration_ms: number;
+	write_results_ms: number;
+	upload_artifacts_ms: number;
+	publish_completed_ms: number;
+	finalization_ms: number;
+}
+
 interface BaseScreenshotArtifact {
 	artifact_id: string;
 	scanner_id: string;
@@ -55,6 +64,9 @@ export interface ScanResult {
 	last_stage?: string;
 	violations?: number;
 	progress?: ScanProgress;
+	expected_scanners?: string[];
+	completed_scanners?: string[];
+	remaining_scanners?: string[];
 	artifacts?: ScanArtifacts;
 	created_at: string;
 	updated_at: string;

@@ -57,58 +57,28 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 	}
 
 	jobID := "nats-integration-job"
-	jobCreated := &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: "zip",
-		InputPath: "staging/" + jobID + "/input.zip",
-		Config:    models.JobConfig{Modules: []string{"axe"}},
-	}
 
-	createdEnv := events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", jobCreated)
+	createdEnv := events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildJobCreated(jobID))
 	if publishErr := service.PublishJobCreated(ctx, createdEnv); publishErr != nil {
 		t.Fatalf("failed to publish job.created: %v", publishErr)
 	}
 
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
-		return rec.State == "EXTRACTING" && rec.InputType == "zip"
-	})
-
-	ready := &events.ExtractionReadyPayload{
-		JobID:      jobID,
-		BaseURL:    "http://localhost:8080",
-		TotalPages: 3,
-	}
-	publishEnvelope(ctx, t, client, sharedmsg.SubjectExtractionReady, events.EventExtractionReady, jobID, ready)
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
-		return rec.TotalPages == 3 && rec.State == "READY_TO_SCAN"
-	})
-
-	scanCompleted := &events.ScanCompletedPayload{
-		JobID:             jobID,
-		ScannerType:       "axe",
-		ResultsPath:       jobID + "/axe/results.json",
-		ReportPath:        jobID + "/axe/report.html",
-		TotalPagesScanned: 3,
-		Summary: events.ScanSummary{
-			TotalViolations: 1,
-			BySeverity:      map[string]int{"critical": 1},
-		},
-	}
-	publishEnvelope(ctx, t, client, sharedmsg.SubjectScanCompleted, events.EventScanCompleted, jobID, scanCompleted)
-
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
-		return rec.State == "COMPLETING" && rec.CurrentPage >= 0
-	})
-
-	jobCompleted := &events.JobCompletedPayload{
-		JobID:  jobID,
-		Status: "success",
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: jobID + "/report.json",
-			ReportHTML: jobID + "/report.html",
-		},
-	}
-	publishEnvelope(ctx, t, client, sharedmsg.SubjectJobCompleted, events.EventJobCompleted, jobID, jobCompleted)
+	assertExtractionLifecycle(ctx, t, client, store, jobID)
+	assertScanLifecycle(ctx, t, client, store, jobID)
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectJobCompleted,
+		events.NewEnvelope(events.EventJobCompleted, jobID, "integration-test", &events.JobCompletedPayload{
+			JobID:  jobID,
+			Status: "success",
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: jobID + "/report.json",
+				ReportHTML: jobID + "/report.html",
+			},
+		}),
+	)
 
 	final := waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "DONE" && rec.ReportJSONKey != "" && rec.ReportKey != ""
@@ -116,6 +86,131 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 
 	if final.ReportJSONKey == "" || final.ReportKey == "" {
 		t.Fatalf("expected artifacts to be set, got %+v", final)
+	}
+}
+
+func buildJobCreated(jobID string) *events.JobCreatedPayload {
+	return &events.JobCreatedPayload{
+		JobID:     jobID,
+		InputType: "zip",
+		InputPath: "staging/" + jobID + "/input.zip",
+		Config:    models.JobConfig{Modules: []string{"axe", "lighthouse"}},
+	}
+}
+
+func assertExtractionLifecycle(
+	ctx context.Context,
+	t *testing.T,
+	client *sharedmsg.Client,
+	store *status.Store,
+	jobID string,
+) {
+	t.Helper()
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "EXTRACTING" && rec.InputType == "zip" && len(rec.ExpectedScanners) == 2
+	})
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectExtractionReady,
+		events.NewEnvelope(events.EventExtractionReady, jobID, "integration-test", &events.ExtractionReadyPayload{
+			JobID:      jobID,
+			BaseURL:    "http://localhost:8080",
+			TotalPages: 3,
+		}),
+	)
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.TotalPages == 3 && rec.State == "READY_TO_SCAN"
+	})
+}
+
+func assertScanLifecycle(
+	ctx context.Context,
+	t *testing.T,
+	client *sharedmsg.Client,
+	store *status.Store,
+	jobID string,
+) {
+	t.Helper()
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectScanCompleted,
+		events.NewEnvelope(events.EventScanCompleted, jobID, "integration-test", &events.ScanCompletedPayload{
+			JobID:             jobID,
+			ScannerType:       "axe",
+			ResultsPath:       jobID + "/axe/results.json",
+			ReportPath:        jobID + "/axe/report.html",
+			TotalPagesScanned: 3,
+			Summary: events.ScanSummary{
+				TotalViolations: 1,
+				BySeverity:      map[string]int{"critical": 1},
+			},
+		}),
+	)
+
+	partial := waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "SCANNING" && rec.CurrentPage >= 0 && rec.TotalViolations == 1 &&
+			len(rec.CompletedScanners) == 1
+	})
+	assertPartialScannerState(t, partial)
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectScanPageCompleted,
+		events.NewEnvelope(events.EventScanPageCompleted, jobID, "integration-test", &events.ScanPageCompletedPayload{
+			JobID:       jobID,
+			ScannerType: "lighthouse",
+			PageID:      "page-2",
+			PageIndex:   2,
+			TotalPages:  3,
+		}),
+	)
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "SCANNING" && len(rec.CompletedScanners) == 1 && rec.CurrentPage >= 2
+	})
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectScanCompleted,
+		events.NewEnvelope(events.EventScanCompleted, jobID, "integration-test", &events.ScanCompletedPayload{
+			JobID:             jobID,
+			ScannerType:       "lighthouse",
+			ResultsPath:       jobID + "/lighthouse/results.json",
+			ReportPath:        jobID + "/lighthouse/report.html",
+			TotalPagesScanned: 3,
+			Summary: events.ScanSummary{
+				TotalViolations: 1,
+				BySeverity:      map[string]int{"critical": 1},
+			},
+		}),
+	)
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "SCANNING" && len(rec.CompletedScanners) == 2
+	})
+}
+
+func assertPartialScannerState(t *testing.T, rec *status.JobRecord) {
+	t.Helper()
+
+	if len(rec.CompletedScanners) != 1 || rec.CompletedScanners[0] != "axe" {
+		t.Fatalf("expected partial completion to record axe, got %+v", rec.CompletedScanners)
+	}
+
+	if len(rec.ExpectedScanners) != 2 {
+		t.Fatalf("expected scanner roster to stay intact, got %+v", rec.ExpectedScanners)
 	}
 }
 
@@ -135,7 +230,6 @@ func newStatusStore(t *testing.T) *status.Store {
 	return store
 }
 
-//nolint:unparam // jobID always receives the same value in tests, but keep for clarity.
 func waitForRecord(
 	t *testing.T,
 	store *status.Store,
@@ -168,12 +262,11 @@ func publishEnvelope(
 	ctx context.Context,
 	t *testing.T,
 	client *sharedmsg.Client,
-	subject, eventName, jobID string,
-	payload interface{},
+	subject string,
+	envelope *events.Envelope,
 ) {
 	t.Helper()
 
-	envelope := events.NewEnvelope(eventName, jobID, "integration-test", payload)
 	if err := client.PublishEvent(ctx, subject, envelope); err != nil {
 		t.Fatalf("failed to publish %s: %v", subject, err)
 	}

@@ -56,13 +56,15 @@ func (c *pendingJobCache) putFromPayload(payload *events.JobCreatedPayload) {
 	}
 
 	rec := &status.JobRecord{
-		JobID:       payload.JobID,
-		State:       state,
-		InputType:   payload.InputType,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-		CurrentPage: 0,
-		TotalPages:  totalPages,
+		JobID:             payload.JobID,
+		State:             state,
+		InputType:         payload.InputType,
+		CreatedAt:         now,
+		UpdatedAt:         now,
+		CurrentPage:       0,
+		TotalPages:        totalPages,
+		ExpectedScanners:  cloneStringSlice(payload.Config.Modules),
+		CompletedScanners: []string{},
 	}
 
 	c.mu.Lock()
@@ -157,6 +159,9 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 	}
 
 	cloned := *rec
+	cloned.ExpectedScanners = cloneStringSlice(rec.ExpectedScanners)
+	cloned.CompletedScanners = cloneStringSlice(rec.CompletedScanners)
+
 	if rec.ScannerArtifacts != nil {
 		cloned.ScannerArtifacts = make(map[string]*status.ScannerArtifactRecord, len(rec.ScannerArtifacts))
 		for scannerType, artifact := range rec.ScannerArtifacts {
@@ -170,4 +175,15 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 	}
 
 	return &cloned
+}
+
+func cloneStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	cloned := make([]string, len(values))
+	copy(cloned, values)
+
+	return cloned
 }

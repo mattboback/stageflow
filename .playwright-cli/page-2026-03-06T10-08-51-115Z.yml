@@ -1,0 +1,217 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - link "StageFlow" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]:
+            - generic [ref=e10]: SF
+          - generic [ref=e11]: StageFlow
+        - navigation "Main navigation" [ref=e12]:
+          - link "Home" [ref=e13] [cursor=pointer]:
+            - /url: /
+          - link "Playground" [ref=e14] [cursor=pointer]:
+            - /url: /playground
+          - link "GitHub" [ref=e16] [cursor=pointer]:
+            - /url: https://github.com/mattboback/stageflow
+            - img [ref=e17]
+          - link "Run scan" [ref=e19] [cursor=pointer]:
+            - /url: /playground
+    - main [ref=e20]:
+      - generic [ref=e482]:
+        - link "Back to scan status" [ref=e483] [cursor=pointer]:
+          - /url: /scan/2906e5f1-ca86-494b-9454-5671eb9eaba8
+          - img [ref=e484]
+          - text: Back to scan status
+        - generic [ref=e486]:
+          - generic [ref=e487]:
+            - paragraph [ref=e488]: Scan report
+            - generic [ref=e489]:
+              - generic [ref=e490]: 100% pages impacted
+              - generic [ref=e491]: 2 critical
+            - generic [ref=e492]:
+              - generic [ref=e493]: Scanned Mar 6, 2026, 10:08 AM
+              - generic [ref=e494]: Completed Mar 6, 2026, 10:08 AM
+              - generic [ref=e495]: Duration 22.4s
+            - generic [ref=e496]:
+              - link "JSON" [ref=e497] [cursor=pointer]:
+                - /url: https://stageflow.org/api/v1/jobs/2906e5f1-ca86-494b-9454-5671eb9eaba8/results
+                - text: JSON
+                - img [ref=e498]
+              - link "HTML report" [ref=e499] [cursor=pointer]:
+                - /url: https://stageflow.org/api/v1/jobs/2906e5f1-ca86-494b-9454-5671eb9eaba8/report
+                - text: HTML report
+                - img [ref=e500]
+              - button "Refresh" [ref=e501]:
+                - img [ref=e502]
+                - text: Refresh
+          - generic [ref=e503]:
+            - generic [ref=e504]: F
+            - generic [ref=e505]: Score
+        - generic [ref=e506]:
+          - tablist "Report sections" [ref=e508]:
+            - tab "Overview" [selected] [ref=e509]:
+              - generic [ref=e510]: Overview
+            - tab "Issues 24 issues" [ref=e511]:
+              - generic [ref=e512]: Issues
+              - generic "24 issues" [ref=e513]: "24"
+            - tab "Pages 2 pages" [ref=e514]:
+              - generic [ref=e515]: Pages
+              - generic "2 pages" [ref=e516]: "2"
+            - tab "Scans 5 scanners" [ref=e517]:
+              - generic [ref=e518]: Scans
+              - generic "5 scanners" [ref=e519]: "5"
+            - tab "Files" [ref=e520]:
+              - generic [ref=e521]: Files
+          - generic [ref=e522]:
+            - generic [ref=e523]: View
+            - generic [ref=e524]:
+              - button "PM" [pressed] [ref=e525]
+              - button "Engineer" [ref=e526]
+              - button "Designer" [ref=e527]
+        - generic [ref=e528]:
+          - generic [ref=e530]:
+            - generic [ref=e531]:
+              - paragraph [ref=e532]: Risk snapshot
+              - generic [ref=e533]:
+                - paragraph [ref=e534]: High risk
+                - generic [ref=e535]: 100% pages impacted
+              - paragraph [ref=e536]: 24 issues across 2 pages. Prioritize critical and serious findings first.
+            - generic [ref=e537]:
+              - generic [ref=e538]:
+                - paragraph [ref=e539]: Critical share
+                - paragraph [ref=e540]: 8%
+              - generic [ref=e541]:
+                - paragraph [ref=e542]: Issue density
+                - paragraph [ref=e543]: "12.0"
+              - generic [ref=e544]:
+                - paragraph [ref=e545]: Scanners
+                - paragraph [ref=e546]: "5"
+          - generic [ref=e547]:
+            - generic [ref=e549]:
+              - paragraph [ref=e550]: Total Issues
+              - paragraph [ref=e551]: "24"
+            - generic [ref=e553]:
+              - paragraph [ref=e554]: Pages Scanned
+              - paragraph [ref=e555]: "2"
+            - generic [ref=e557]:
+              - paragraph [ref=e558]: Pages With Issues
+              - paragraph [ref=e559]: "2"
+            - generic [ref=e561]:
+              - paragraph [ref=e562]: Issue Density
+              - paragraph [ref=e563]: "12.0"
+          - generic [ref=e564]:
+            - heading "Severity Breakdown" [level=3] [ref=e566]
+            - generic [ref=e569]:
+              - generic [ref=e570]: 2 critical
+              - generic [ref=e572]: 9 serious
+              - generic [ref=e574]: 7 moderate
+              - generic [ref=e576]: 2 minor
+              - generic [ref=e578]: 4 info
+          - generic [ref=e586]:
+            - heading "Lighthouse Averages" [level=3] [ref=e588]
+            - generic [ref=e590]:
+              - generic [ref=e591]:
+                - paragraph [ref=e592]: Accessibility
+                - generic [ref=e594]: "98"
+              - generic [ref=e597]:
+                - paragraph [ref=e598]: Best Practices
+                - generic [ref=e600]: "100"
+              - generic [ref=e603]:
+                - paragraph [ref=e604]: SEO
+                - generic [ref=e606]: "100"
+          - generic [ref=e609]:
+            - generic [ref=e610]:
+              - heading "Scanner Status" [level=3] [ref=e612]
+              - generic [ref=e614]:
+                - button "Axe Accessibility Scanner 4 issues Success" [ref=e615]:
+                  - generic [ref=e616]:
+                    - img [ref=e617]
+                    - generic [ref=e618]:
+                      - paragraph [ref=e619]: Axe Accessibility Scanner
+                      - paragraph [ref=e620]: 4 issues
+                  - generic [ref=e621]: Success
+                - button "Google Lighthouse 0 issues Success" [ref=e622]:
+                  - generic [ref=e623]:
+                    - img [ref=e624]
+                    - generic [ref=e625]:
+                      - paragraph [ref=e626]: Google Lighthouse
+                      - paragraph [ref=e627]: 0 issues
+                  - generic [ref=e628]: Success
+                - button "Link Checker Scanner 0 issues Success" [ref=e629]:
+                  - generic [ref=e630]:
+                    - img [ref=e631]
+                    - generic [ref=e632]:
+                      - paragraph [ref=e633]: Link Checker Scanner
+                      - paragraph [ref=e634]: 0 issues
+                  - generic [ref=e635]: Success
+                - button "Security Headers Scanner 6 issues Success" [ref=e636]:
+                  - generic [ref=e637]:
+                    - img [ref=e638]
+                    - generic [ref=e639]:
+                      - paragraph [ref=e640]: Security Headers Scanner
+                      - paragraph [ref=e641]: 6 issues
+                  - generic [ref=e642]: Success
+                - button "SEO Scanner 14 issues Success" [ref=e643]:
+                  - generic [ref=e644]:
+                    - img [ref=e645]
+                    - generic [ref=e646]:
+                      - paragraph [ref=e647]: SEO Scanner
+                      - paragraph [ref=e648]: 14 issues
+                  - generic [ref=e649]: Success
+            - generic [ref=e650]:
+              - generic [ref=e651]:
+                - heading "Top Pages" [level=3] [ref=e653]
+                - button "/playground 13 issues" [ref=e654]:
+                  - generic [ref=e655]: /playground
+                  - generic [ref=e656]: 13 issues
+                - button "/ 11 issues" [ref=e657]:
+                  - generic [ref=e658]: /
+                  - generic [ref=e659]: 11 issues
+              - generic [ref=e660]:
+                - heading "Top Issue Rules" [level=3] [ref=e662]
+                - generic [ref=e663]:
+                  - button "Elements must meet minimum color contrast ratio thresholds axe · 3 occurrences" [ref=e664]:
+                    - generic [ref=e665]: Elements must meet minimum color contrast ratio thresholds
+                    - generic [ref=e666]: axe · 3 occurrences
+                  - button "Missing Content Security Policy security-headers · 2 occurrences" [ref=e667]:
+                    - generic [ref=e668]: Missing Content Security Policy
+                    - generic [ref=e669]: security-headers · 2 occurrences
+                  - button "Missing Permissions Policy security-headers · 2 occurrences" [ref=e670]:
+                    - generic [ref=e671]: Missing Permissions Policy
+                    - generic [ref=e672]: security-headers · 2 occurrences
+                  - button "Missing X-XSS-Protection security-headers · 2 occurrences" [ref=e673]:
+                    - generic [ref=e674]: Missing X-XSS-Protection
+                    - generic [ref=e675]: security-headers · 2 occurrences
+                  - button "Missing Page Title seo · 2 occurrences" [ref=e676]:
+                    - generic [ref=e677]: Missing Page Title
+                    - generic [ref=e678]: seo · 2 occurrences
+              - generic [ref=e679]:
+                - heading "Coverage Heat" [level=3] [ref=e681]
+                - generic [ref=e682]:
+                  - generic [ref=e684]:
+                    - generic [ref=e685]: Pages with issues
+                    - generic [ref=e686]: 100%
+                  - generic [ref=e690]:
+                    - generic [ref=e691]: Critical concentration
+                    - generic [ref=e692]: 8%
+    - contentinfo [ref=e255]:
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e258]:
+            - link "StageFlow" [ref=e259] [cursor=pointer]:
+              - /url: /
+              - img [ref=e260]:
+                - generic [ref=e262]: SF
+              - generic [ref=e263]: StageFlow
+            - paragraph [ref=e264]: Self-hosted web scanning for accessibility, performance, SEO, and security workflows.
+          - generic [ref=e265]:
+            - link "Playground" [ref=e266] [cursor=pointer]:
+              - /url: /playground
+            - link "GitHub" [ref=e267] [cursor=pointer]:
+              - /url: https://github.com/mattboback/stageflow
+              - img [ref=e268]
+        - generic [ref=e270]: © 2026 StageFlow. Open-source and operator-first.
+  - generic [ref=e271]: Scan Report | StageFlow

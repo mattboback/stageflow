@@ -1,3 +1,18 @@
+# ============================================================================
+# STANDALONE ONLY — DO NOT ENABLE ON THE SHARED VPS
+#
+# This template binds host ports 80/443, which conflicts with the shared
+# Caddy gateway at /home/operator/Deployment/gateway/Caddyfile.
+#
+# On the shared VPS, public ingress is owned by the root gateway. StageFlow
+# services bind to loopback-only ports and are reverse-proxied through it.
+#
+# This file exists only for standalone deployments of StageFlow outside the
+# shared VPS (e.g., a dedicated host or CI environment).
+#
+# See: /home/operator/Deployment/DEPLOYMENT_STRATEGY.md
+# ============================================================================
+
 [Unit]
 Description=StageFlow Caddy Reverse Proxy
 PartOf=stageflow.target
@@ -10,7 +25,7 @@ Restart=always
 RestartSec=2s
 
 [Container]
-Image=caddy:2-alpine
+Image=docker.io/library/caddy:2-alpine
 Network=@NETWORK_NAME@
 PublishPort=80:80
 PublishPort=443:443

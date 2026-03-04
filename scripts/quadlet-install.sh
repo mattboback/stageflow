@@ -11,7 +11,6 @@ APP_ENV_FILE="${APP_ENV_FILE:-${ENV_FILE}}"
 NETWORK_NAME="${STAGEFLOW_NETWORK_NAME:-${NETWORK_NAME:-stageflow_net}}"
 SCANNER_OVERRIDES_EXAMPLE="${REPO_ROOT}/infra/scanners/scanners.example.yaml"
 SCANNER_OVERRIDES="${REPO_ROOT}/infra/scanners/scanners.yaml"
-INSTALL_CADDY="${STAGEFLOW_INSTALL_CADDY:-0}"
 
 if [[ ! -d "${TEMPLATE_DIR}" ]]; then
   echo "quadlet-install: missing templates directory: ${TEMPLATE_DIR}" >&2
@@ -52,11 +51,6 @@ NETWORK_NAME_ESC="$(escape_sed "${NETWORK_NAME}")"
 
 for template in "${TEMPLATE_DIR}"/*.in; do
   filename="$(basename "${template}")"
-
-  if [[ "${filename}" = "stageflow-caddy.container.in" && "${INSTALL_CADDY}" != "1" ]]; then
-    echo "Skipped ${filename} (STAGEFLOW_INSTALL_CADDY=1 to enable)"
-    continue
-  fi
 
   output_path="${OUTPUT_DIR}/${filename%.in}"
   sed \

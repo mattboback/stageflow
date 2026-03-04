@@ -12,6 +12,7 @@
 	const { children } = $props();
 	const pathname = $derived(page.url.pathname);
 	const canonicalUrl = $derived(buildSiteUrl(pathname));
+	const shareImageUrl = buildSiteUrl('/og-image.svg');
 </script>
 
 <svelte:head>
@@ -22,12 +23,14 @@
 	<meta property="og:title" content={SITE.siteTitle} />
 	<meta property="og:description" content={SITE.tagline} />
 	<meta property="og:url" content={canonicalUrl} />
-	<meta property="og:image" content="{canonicalUrl}/og-image.png" />
+	<meta property="og:image" content={shareImageUrl} />
+	<meta property="og:image:alt" content="StageFlow scan dashboard preview card" />
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content={SITE.name} />
 
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:image" content="{canonicalUrl}/og-image.png" />
+	<meta name="twitter:image" content={shareImageUrl} />
+	<meta name="twitter:image:alt" content="StageFlow scan dashboard preview card" />
 	<meta name="twitter:title" content={SITE.siteTitle} />
 	<meta name="twitter:description" content={SITE.tagline} />
 </svelte:head>

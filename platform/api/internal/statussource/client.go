@@ -135,6 +135,8 @@ func toJobRecord(job *models.Job) *status.JobRecord {
 		ExtractionStageLogKey: job.ExtractionStageLogKey,
 		ExtractionRecipeKey:   job.ExtractionRecipeKey,
 		ProvenanceKey:         job.ProvenanceKey,
+		ExpectedScanners:      cloneStrings(job.ExpectedScanners),
+		CompletedScanners:     cloneStrings(job.CompletedScanners),
 	}
 
 	if len(job.ScannerResults) > 0 {
@@ -155,4 +157,15 @@ func toJobRecord(job *models.Job) *status.JobRecord {
 	}
 
 	return rec
+}
+
+func cloneStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	cloned := make([]string, len(values))
+	copy(cloned, values)
+
+	return cloned
 }

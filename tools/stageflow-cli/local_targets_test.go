@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestContainsLoopbackTargets(t *testing.T) {
+func TestContainsPrivateTargets(t *testing.T) {
 	tests := []struct {
 		name string
 		urls []string
@@ -31,12 +31,22 @@ func TestContainsLoopbackTargets(t *testing.T) {
 			urls: []string{"https://example.com", "", "not-a-url"},
 			want: false,
 		},
+		{
+			name: "rfc1918 private ipv4",
+			urls: []string{"http://10.42.0.7:3000", "http://192.168.1.50"},
+			want: true,
+		},
+		{
+			name: "ipv6 ula",
+			urls: []string{"http://[fd12:3456:789a::1]:3000"},
+			want: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := containsLoopbackTargets(tt.urls); got != tt.want {
-				t.Fatalf("containsLoopbackTargets(%#v) = %v, want %v", tt.urls, got, tt.want)
+			if got := containsPrivateTargets(tt.urls); got != tt.want {
+				t.Fatalf("containsPrivateTargets(%#v) = %v, want %v", tt.urls, got, tt.want)
 			}
 		})
 	}
@@ -142,7 +152,14 @@ func TestValidateLocalTargets(t *testing.T) {
 			apiBaseURL:  "https://stageflow.org",
 			targetURLs:  []string{"http://localhost:3000"},
 			wantErr:     true,
-			errContains: "refusing to submit loopback targets",
+			errContains: "refusing to submit private/loopback targets",
+		},
+		{
+			name:        "non-local api + private targets",
+			apiBaseURL:  "https://stageflow.org",
+			targetURLs:  []string{"http://10.0.0.42:3000"},
+			wantErr:     true,
+			errContains: "refusing to submit private/loopback targets",
 		},
 		{
 			name:       "non-local api + public targets",

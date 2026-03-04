@@ -15,19 +15,21 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 build() {
-  local tag="$1"
-  local dockerfile="$2"
-  shift 2
+  local primary_tag="$1"
+  local compat_tag="$2"
+  local dockerfile="$3"
+  shift 3
 
-  "$PODMAN" build -t "$tag" -f "$dockerfile" "$REPO_ROOT" "$@"
+  "$PODMAN" build -t "$primary_tag" -f "$dockerfile" "$REPO_ROOT" "$@"
+  "$PODMAN" tag "$primary_tag" "$compat_tag"
 }
 
 echo "[images] Building Go services..."
-build stageflow/platform-api:latest platform/api/Dockerfile
-build stageflow/orchestrator:latest platform/orchestrator/Dockerfile
+build localhost/stageflow/platform-api:latest stageflow/platform-api:latest platform/api/Dockerfile
+build localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest platform/orchestrator/Dockerfile
 
 echo "[images] Building frontend (SvelteKit)..."
-build stageflow/frontend:latest frontend/Dockerfile \
+build localhost/stageflow/frontend:latest stageflow/frontend:latest frontend/Dockerfile \
   --build-arg VITE_API_URL="${VITE_API_URL:-https://example.com}" \
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-https://example.com}" \
@@ -36,11 +38,12 @@ build stageflow/frontend:latest frontend/Dockerfile \
   --build-arg VITE_AI_NAVIGATOR_DEFAULT_MODEL="${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}"
 
 echo "[images] Building job images..."
-build stageflow/extractor:latest platform/extractor/Dockerfile
+build localhost/stageflow/extractor:latest stageflow/extractor:latest platform/extractor/Dockerfile
 "$PODMAN" build \
   --ignorefile platform/scanner-runner/.dockerignore \
-  -t stageflow/scanner-runner:latest \
+  -t localhost/stageflow/scanner-runner:latest \
   -f platform/scanner-runner/Dockerfile \
   "$REPO_ROOT"
+"$PODMAN" tag localhost/stageflow/scanner-runner:latest stageflow/scanner-runner:latest
 
 echo "[images] Done."

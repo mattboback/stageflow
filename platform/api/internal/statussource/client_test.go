@@ -41,22 +41,24 @@ func TestClientGetJobMapsRecord(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"job": &models.Job{
-				ID:              "job-1",
-				State:           models.JobStateScanning,
-				InputType:       models.JobInputTypeURLs,
-				CreatedAt:       now,
-				UpdatedAt:       now,
-				Error:           "warning",
-				ErrorDetails:    "detail",
-				LastStage:       "scanning",
-				TotalPages:      12,
-				CurrentPage:     5,
-				TotalViolations: 7,
-				ReportJSONKey:   "job-1/report.json",
-				ReportKey:       "job-1/report.html",
-				ScanStageLogKey: "job-1/stage.log",
-				ScanRecipeKey:   "job-1/recipe.json",
-				ProvenanceKey:   "job-1/provenance.json",
+				ID:                "job-1",
+				State:             models.JobStateScanning,
+				InputType:         models.JobInputTypeURLs,
+				CreatedAt:         now,
+				UpdatedAt:         now,
+				Error:             "warning",
+				ErrorDetails:      "detail",
+				LastStage:         "scanning",
+				TotalPages:        12,
+				CurrentPage:       5,
+				TotalViolations:   7,
+				ReportJSONKey:     "job-1/report.json",
+				ReportKey:         "job-1/report.html",
+				ScanStageLogKey:   "job-1/stage.log",
+				ScanRecipeKey:     "job-1/recipe.json",
+				ProvenanceKey:     "job-1/provenance.json",
+				ExpectedScanners:  []string{"axe", "lighthouse"},
+				CompletedScanners: []string{"axe"},
 				ScannerResults: map[string]*models.ScannerResult{
 					"axe": {
 						ScannerType: "axe",
@@ -81,6 +83,14 @@ func TestClientGetJobMapsRecord(t *testing.T) {
 
 	if rec.JobID != "job-1" || rec.CurrentPage != 5 || rec.TotalPages != 12 {
 		t.Fatalf("unexpected record fields: %+v", rec)
+	}
+
+	if len(rec.ExpectedScanners) != 2 || rec.ExpectedScanners[1] != "lighthouse" {
+		t.Fatalf("expected scanner roster mapping, got %+v", rec.ExpectedScanners)
+	}
+
+	if len(rec.CompletedScanners) != 1 || rec.CompletedScanners[0] != "axe" {
+		t.Fatalf("expected completed scanners mapping, got %+v", rec.CompletedScanners)
 	}
 
 	axe := rec.ScannerArtifacts["axe"]

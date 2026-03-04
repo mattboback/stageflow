@@ -112,16 +112,19 @@ type JobConfig struct {
 
 // JobStatus is the response for job status queries.
 type JobStatus struct {
-	ID              string            `json:"id"`
-	State           JobState          `json:"state"`
-	Progress        *JobProgress      `json:"progress,omitempty"`
-	Artifacts       *ArtifactLocation `json:"artifacts,omitempty"`
-	Error           string            `json:"error,omitempty"`
-	ErrorDetails    string            `json:"error_details,omitempty"`
-	LastStage       string            `json:"last_stage,omitempty"`
-	TotalViolations int               `json:"violations,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"`
+	ID                string            `json:"id"`
+	State             JobState          `json:"state"`
+	Progress          *JobProgress      `json:"progress,omitempty"`
+	Artifacts         *ArtifactLocation `json:"artifacts,omitempty"`
+	Error             string            `json:"error,omitempty"`
+	ErrorDetails      string            `json:"error_details,omitempty"`
+	LastStage         string            `json:"last_stage,omitempty"`
+	TotalViolations   int               `json:"violations,omitempty"`
+	ExpectedScanners  []string          `json:"expected_scanners,omitempty"`
+	CompletedScanners []string          `json:"completed_scanners,omitempty"`
+	RemainingScanners []string          `json:"remaining_scanners,omitempty"`
+	CreatedAt         time.Time         `json:"created_at"`
+	UpdatedAt         time.Time         `json:"updated_at"`
 }
 
 // JobProgress tracks scan progress.

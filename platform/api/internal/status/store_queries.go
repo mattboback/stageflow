@@ -20,7 +20,8 @@ func (s *Store) GetJob(ctx context.Context, jobID string) (*JobRecord, error) {
 		       IFNULL(error, ''), IFNULL(total_pages, 0), IFNULL(current_page, 0), IFNULL(total_violations, 0),
 		       IFNULL(report_json_key, ''), IFNULL(report_key, ''), IFNULL(scan_stage_log_key, ''), IFNULL(scan_recipe_key, ''),
 		       IFNULL(extraction_stage_log_key, ''), IFNULL(extraction_recipe_key, ''), IFNULL(provenance_key, ''),
-		       IFNULL(last_stage, ''), IFNULL(last_error_details, ''), IFNULL(scanner_artifacts, '')
+		       IFNULL(last_stage, ''), IFNULL(last_error_details, ''), IFNULL(expected_scanners, ''),
+		       IFNULL(completed_scanners, ''), IFNULL(scanner_artifacts, '')
 		FROM job_status
 		WHERE job_id = ?
 	`, jobID)
@@ -28,6 +29,8 @@ func (s *Store) GetJob(ctx context.Context, jobID string) (*JobRecord, error) {
 	var (
 		rec                  JobRecord
 		completedAt          sql.NullTime
+		expectedScannersJSON string
+		completedJSON        string
 		scannerArtifactsJSON string
 	)
 	if err := row.Scan(
@@ -50,6 +53,8 @@ func (s *Store) GetJob(ctx context.Context, jobID string) (*JobRecord, error) {
 		&rec.ProvenanceKey,
 		&rec.LastStage,
 		&rec.LastErrorDetails,
+		&expectedScannersJSON,
+		&completedJSON,
 		&scannerArtifactsJSON,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -66,6 +71,18 @@ func (s *Store) GetJob(ctx context.Context, jobID string) (*JobRecord, error) {
 	if scannerArtifactsJSON != "" {
 		if err := json.Unmarshal([]byte(scannerArtifactsJSON), &rec.ScannerArtifacts); err != nil {
 			slog.Warn("Failed to unmarshal scanner artifacts", "error", err, "job_id", jobID)
+		}
+	}
+
+	if expectedScannersJSON != "" {
+		if err := json.Unmarshal([]byte(expectedScannersJSON), &rec.ExpectedScanners); err != nil {
+			slog.Warn("Failed to unmarshal expected scanners", "error", err, "job_id", jobID)
+		}
+	}
+
+	if completedJSON != "" {
+		if err := json.Unmarshal([]byte(completedJSON), &rec.CompletedScanners); err != nil {
+			slog.Warn("Failed to unmarshal completed scanners", "error", err, "job_id", jobID)
 		}
 	}
 

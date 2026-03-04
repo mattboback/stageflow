@@ -1,0 +1,310 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - link "StageFlow" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]:
+            - generic [ref=e10]: SF
+          - generic [ref=e11]: StageFlow
+        - navigation "Main navigation" [ref=e12]:
+          - link "Home" [ref=e13] [cursor=pointer]:
+            - /url: /
+          - link "Playground" [ref=e14] [cursor=pointer]:
+            - /url: /playground
+          - link "GitHub" [ref=e16] [cursor=pointer]:
+            - /url: https://github.com/mattboback/stageflow
+            - img [ref=e17]
+          - link "Run scan" [ref=e19] [cursor=pointer]:
+            - /url: /playground
+    - main [ref=e20]:
+      - generic [ref=e482]:
+        - link "Back to scan status" [ref=e483] [cursor=pointer]:
+          - /url: /scan/2906e5f1-ca86-494b-9454-5671eb9eaba8
+          - img [ref=e484]
+          - text: Back to scan status
+        - generic [ref=e486]:
+          - generic [ref=e487]:
+            - paragraph [ref=e488]: Scan report
+            - generic [ref=e489]:
+              - generic [ref=e490]: 100% pages impacted
+              - generic [ref=e491]: 2 critical
+            - generic [ref=e492]:
+              - generic [ref=e493]: Scanned Mar 6, 2026, 10:08 AM
+              - generic [ref=e494]: Completed Mar 6, 2026, 10:08 AM
+              - generic [ref=e495]: Duration 22.4s
+            - generic [ref=e496]:
+              - link "JSON" [ref=e497] [cursor=pointer]:
+                - /url: https://stageflow.org/api/v1/jobs/2906e5f1-ca86-494b-9454-5671eb9eaba8/results
+                - text: JSON
+                - img [ref=e498]
+              - link "HTML report" [ref=e499] [cursor=pointer]:
+                - /url: https://stageflow.org/api/v1/jobs/2906e5f1-ca86-494b-9454-5671eb9eaba8/report
+                - text: HTML report
+                - img [ref=e500]
+              - button "Refresh" [ref=e501]:
+                - img [ref=e502]
+                - text: Refresh
+          - generic [ref=e503]:
+            - generic [ref=e504]: F
+            - generic [ref=e505]: Score
+        - generic [ref=e506]:
+          - tablist "Report sections" [ref=e508]:
+            - tab "Overview" [ref=e509]:
+              - generic [ref=e510]: Overview
+            - tab "Issues 24 issues" [active] [selected] [ref=e511]:
+              - generic [ref=e512]: Issues
+              - generic "24 issues" [ref=e513]: "24"
+            - tab "Pages 2 pages" [ref=e514]:
+              - generic [ref=e515]: Pages
+              - generic "2 pages" [ref=e516]: "2"
+            - tab "Scans 5 scanners" [ref=e517]:
+              - generic [ref=e518]: Scans
+              - generic "5 scanners" [ref=e519]: "5"
+            - tab "Files" [ref=e520]:
+              - generic [ref=e521]: Files
+          - generic [ref=e522]:
+            - generic [ref=e523]: View
+            - generic [ref=e524]:
+              - button "PM" [pressed] [ref=e525]
+              - button "Engineer" [ref=e526]
+              - button "Designer" [ref=e527]
+        - generic [ref=e695]:
+          - generic [ref=e697]:
+            - button "All (24)" [ref=e698]
+            - button "Axe Accessibility Scanner (4)" [ref=e699]
+            - button "Google Lighthouse" [ref=e700]
+            - button "Link Checker Scanner" [ref=e701]
+            - button "Security Headers Scanner (6)" [ref=e702]
+            - button "SEO Scanner (14)" [ref=e703]
+          - generic [ref=e704]:
+            - generic [ref=e706]:
+              - heading "Issues (24)" [level=3] [ref=e708]
+              - generic [ref=e709]:
+                - generic [ref=e710]:
+                  - img [ref=e711]
+                  - textbox "Search issues" [ref=e712]
+                - generic [ref=e713]:
+                  - generic [ref=e714]: Sort
+                  - combobox "Sort" [ref=e715]:
+                    - option "By Severity" [selected]
+                    - option "By Page"
+                    - option "By Scanner"
+                    - option "By Element Count"
+                    - option "By Title"
+              - generic [ref=e716]:
+                - generic [ref=e717]: 24 visible results
+                - generic [ref=e718]:
+                  - button "Previews auto" [ref=e719]
+                  - button "On" [ref=e720]
+                  - button "Off" [ref=e721]
+              - generic [ref=e722]:
+                - generic [ref=e725]:
+                  - button "all (24)" [ref=e726] [cursor=pointer]
+                  - button "critical (2)" [ref=e727] [cursor=pointer]
+                  - button "serious (9)" [ref=e728] [cursor=pointer]
+                  - button "moderate (7)" [ref=e729] [cursor=pointer]
+                  - button "minor (2)" [ref=e730] [cursor=pointer]
+                  - button "info (4)" [ref=e731] [cursor=pointer]
+                - button "More filters" [ref=e733]
+            - generic [ref=e734]:
+              - button "critical Missing Page Title Page is missing a title tag. Title tags are crucial for SEO and user experience. seo · 1 element Page screenshot crop" [ref=e735]:
+                - generic [ref=e736]: critical
+                - generic [ref=e737]:
+                  - paragraph [ref=e738]: Missing Page Title
+                  - paragraph [ref=e739]: Page is missing a title tag. Title tags are crucial for SEO and user experience.
+                  - generic [ref=e741]: seo · 1 element
+                - img "Page screenshot crop" [ref=e743]
+              - button "critical Missing Page Title Page is missing a title tag. Title tags are crucial for SEO and user experience. seo · 1 element Page screenshot crop" [ref=e745]:
+                - generic [ref=e746]: critical
+                - generic [ref=e747]:
+                  - paragraph [ref=e748]: Missing Page Title
+                  - paragraph [ref=e749]: Page is missing a title tag. Title tags are crucial for SEO and user experience.
+                  - generic [ref=e751]: seo · 1 element
+                - img "Page screenshot crop" [ref=e753]
+              - button "serious Elements must meet minimum color contrast ratio thresholds Ensure text/background contrast meets WCAG AA ratios. axe · 1 element wcag2aa wcag143 WCAG 1.4.3 Page screenshot crop" [ref=e755]:
+                - generic [ref=e756]: serious
+                - generic [ref=e757]:
+                  - paragraph [ref=e758]: Elements must meet minimum color contrast ratio thresholds
+                  - paragraph [ref=e759]: Ensure text/background contrast meets WCAG AA ratios.
+                  - generic [ref=e760]:
+                    - generic [ref=e761]: axe · 1 element
+                    - generic [ref=e762]: wcag2aa
+                    - generic [ref=e763]: wcag143
+                    - generic [ref=e764]: WCAG 1.4.3
+                - img "Page screenshot crop" [ref=e766]
+              - button "serious Elements must meet minimum color contrast ratio thresholds Ensure text/background contrast meets WCAG AA ratios. axe · 1 element wcag2aa wcag143 WCAG 1.4.3 Page screenshot crop" [ref=e769]:
+                - generic [ref=e770]: serious
+                - generic [ref=e771]:
+                  - paragraph [ref=e772]: Elements must meet minimum color contrast ratio thresholds
+                  - paragraph [ref=e773]: Ensure text/background contrast meets WCAG AA ratios.
+                  - generic [ref=e774]:
+                    - generic [ref=e775]: axe · 1 element
+                    - generic [ref=e776]: wcag2aa
+                    - generic [ref=e777]: wcag143
+                    - generic [ref=e778]: WCAG 1.4.3
+                - img "Page screenshot crop" [ref=e780]
+              - button "serious Elements must meet minimum color contrast ratio thresholds Ensure text/background contrast meets WCAG AA ratios. axe · 1 element wcag2aa wcag143 WCAG 1.4.3 Page screenshot crop" [ref=e783]:
+                - generic [ref=e784]: serious
+                - generic [ref=e785]:
+                  - paragraph [ref=e786]: Elements must meet minimum color contrast ratio thresholds
+                  - paragraph [ref=e787]: Ensure text/background contrast meets WCAG AA ratios.
+                  - generic [ref=e788]:
+                    - generic [ref=e789]: axe · 1 element
+                    - generic [ref=e790]: wcag2aa
+                    - generic [ref=e791]: wcag143
+                    - generic [ref=e792]: WCAG 1.4.3
+                - img "Page screenshot crop" [ref=e794]
+              - button "serious Missing Content Security Policy CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks. security-headers · 1 element Page screenshot crop" [ref=e797]:
+                - generic [ref=e798]: serious
+                - generic [ref=e799]:
+                  - paragraph [ref=e800]: Missing Content Security Policy
+                  - paragraph [ref=e801]: CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks.
+                  - generic [ref=e803]: security-headers · 1 element
+                - img "Page screenshot crop" [ref=e805]
+              - button "serious Missing Content Security Policy CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks. security-headers · 1 element Page screenshot crop" [ref=e807]:
+                - generic [ref=e808]: serious
+                - generic [ref=e809]:
+                  - paragraph [ref=e810]: Missing Content Security Policy
+                  - paragraph [ref=e811]: CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks.
+                  - generic [ref=e813]: security-headers · 1 element
+                - img "Page screenshot crop" [ref=e815]
+              - button "serious Missing H1 Heading Page is missing an H1 heading. Every page should have exactly one H1. seo · 1 element Page screenshot crop" [ref=e817]:
+                - generic [ref=e818]: serious
+                - generic [ref=e819]:
+                  - paragraph [ref=e820]: Missing H1 Heading
+                  - paragraph [ref=e821]: Page is missing an H1 heading. Every page should have exactly one H1.
+                  - generic [ref=e823]: seo · 1 element
+                - img "Page screenshot crop" [ref=e825]
+              - button "serious Missing H1 Heading Page is missing an H1 heading. Every page should have exactly one H1. seo · 1 element Page screenshot crop" [ref=e827]:
+                - generic [ref=e828]: serious
+                - generic [ref=e829]:
+                  - paragraph [ref=e830]: Missing H1 Heading
+                  - paragraph [ref=e831]: Page is missing an H1 heading. Every page should have exactly one H1.
+                  - generic [ref=e833]: seo · 1 element
+                - img "Page screenshot crop" [ref=e835]
+              - button "serious Missing Meta Description Page is missing a meta description. This affects click-through rates from search results. seo · 1 element Page screenshot crop" [ref=e837]:
+                - generic [ref=e838]: serious
+                - generic [ref=e839]:
+                  - paragraph [ref=e840]: Missing Meta Description
+                  - paragraph [ref=e841]: Page is missing a meta description. This affects click-through rates from search results.
+                  - generic [ref=e843]: seo · 1 element
+                - img "Page screenshot crop" [ref=e845]
+              - button "serious Missing Meta Description Page is missing a meta description. This affects click-through rates from search results. seo · 1 element Page screenshot crop" [ref=e847]:
+                - generic [ref=e848]: serious
+                - generic [ref=e849]:
+                  - paragraph [ref=e850]: Missing Meta Description
+                  - paragraph [ref=e851]: Page is missing a meta description. This affects click-through rates from search results.
+                  - generic [ref=e853]: seo · 1 element
+                - img "Page screenshot crop" [ref=e855]
+              - button "moderate Aside should not be contained in another landmark Ensure the complementary landmark or aside is at top level axe · 1 element Page screenshot crop" [ref=e857]:
+                - generic [ref=e858]: moderate
+                - generic [ref=e859]:
+                  - paragraph [ref=e860]: Aside should not be contained in another landmark
+                  - paragraph [ref=e861]: Ensure the complementary landmark or aside is at top level
+                  - generic [ref=e863]: axe · 1 element
+                - img "Page screenshot crop" [ref=e865]
+              - button "moderate Missing Canonical URL Page is missing a canonical URL. This helps prevent duplicate content issues. seo · 1 element Page screenshot crop" [ref=e868]:
+                - generic [ref=e869]: moderate
+                - generic [ref=e870]:
+                  - paragraph [ref=e871]: Missing Canonical URL
+                  - paragraph [ref=e872]: Page is missing a canonical URL. This helps prevent duplicate content issues.
+                  - generic [ref=e874]: seo · 1 element
+                - img "Page screenshot crop" [ref=e876]
+              - button "moderate Missing Canonical URL Page is missing a canonical URL. This helps prevent duplicate content issues. seo · 1 element Page screenshot crop" [ref=e878]:
+                - generic [ref=e879]: moderate
+                - generic [ref=e880]:
+                  - paragraph [ref=e881]: Missing Canonical URL
+                  - paragraph [ref=e882]: Page is missing a canonical URL. This helps prevent duplicate content issues.
+                  - generic [ref=e884]: seo · 1 element
+                - img "Page screenshot crop" [ref=e886]
+              - 'button "moderate Missing Open Graph Tags Missing Open Graph tags: og:title, og:description, og:image. These improve social media sharing. seo · 1 element Page screenshot crop" [ref=e888]':
+                - generic [ref=e889]: moderate
+                - generic [ref=e890]:
+                  - paragraph [ref=e891]: Missing Open Graph Tags
+                  - paragraph [ref=e892]: "Missing Open Graph tags: og:title, og:description, og:image. These improve social media sharing."
+                  - generic [ref=e894]: seo · 1 element
+                - img "Page screenshot crop" [ref=e896]
+              - 'button "moderate Missing Open Graph Tags Missing Open Graph tags: og:title, og:description, og:image. These improve social media sharing. seo · 1 element Page screenshot crop" [ref=e898]':
+                - generic [ref=e899]: moderate
+                - generic [ref=e900]:
+                  - paragraph [ref=e901]: Missing Open Graph Tags
+                  - paragraph [ref=e902]: "Missing Open Graph tags: og:title, og:description, og:image. These improve social media sharing."
+                  - generic [ref=e904]: seo · 1 element
+                - img "Page screenshot crop" [ref=e906]
+              - button "moderate Thin Content Page has only 0 words. Pages with thin content may rank poorly. Consider adding more valuable content. seo · 1 element Page screenshot crop" [ref=e908]:
+                - generic [ref=e909]: moderate
+                - generic [ref=e910]:
+                  - paragraph [ref=e911]: Thin Content
+                  - paragraph [ref=e912]: Page has only 0 words. Pages with thin content may rank poorly. Consider adding more valuable content.
+                  - generic [ref=e914]: seo · 1 element
+                - img "Page screenshot crop" [ref=e916]
+              - button "moderate Thin Content Page has only 0 words. Pages with thin content may rank poorly. Consider adding more valuable content. seo · 1 element Page screenshot crop" [ref=e918]:
+                - generic [ref=e919]: moderate
+                - generic [ref=e920]:
+                  - paragraph [ref=e921]: Thin Content
+                  - paragraph [ref=e922]: Page has only 0 words. Pages with thin content may rank poorly. Consider adding more valuable content.
+                  - generic [ref=e924]: seo · 1 element
+                - img "Page screenshot crop" [ref=e926]
+              - button "minor Missing Permissions Policy Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page. security-headers · 1 element Page screenshot crop" [ref=e928]:
+                - generic [ref=e929]: minor
+                - generic [ref=e930]:
+                  - paragraph [ref=e931]: Missing Permissions Policy
+                  - paragraph [ref=e932]: Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.
+                  - generic [ref=e934]: security-headers · 1 element
+                - img "Page screenshot crop" [ref=e936]
+              - button "minor Missing Permissions Policy Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page. security-headers · 1 element Page screenshot crop" [ref=e938]:
+                - generic [ref=e939]: minor
+                - generic [ref=e940]:
+                  - paragraph [ref=e941]: Missing Permissions Policy
+                  - paragraph [ref=e942]: Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.
+                  - generic [ref=e944]: security-headers · 1 element
+                - img "Page screenshot crop" [ref=e946]
+              - button "info Missing Structured Data No structured data (JSON-LD) found. Structured data can improve rich snippets in search results. seo · 1 element Page screenshot crop" [ref=e948]:
+                - generic [ref=e949]: info
+                - generic [ref=e950]:
+                  - paragraph [ref=e951]: Missing Structured Data
+                  - paragraph [ref=e952]: No structured data (JSON-LD) found. Structured data can improve rich snippets in search results.
+                  - generic [ref=e954]: seo · 1 element
+                - img "Page screenshot crop" [ref=e956]
+              - button "info Missing Structured Data No structured data (JSON-LD) found. Structured data can improve rich snippets in search results. seo · 1 element Page screenshot crop" [ref=e958]:
+                - generic [ref=e959]: info
+                - generic [ref=e960]:
+                  - paragraph [ref=e961]: Missing Structured Data
+                  - paragraph [ref=e962]: No structured data (JSON-LD) found. Structured data can improve rich snippets in search results.
+                  - generic [ref=e964]: seo · 1 element
+                - img "Page screenshot crop" [ref=e966]
+              - button "info Missing X-XSS-Protection Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP. security-headers · 1 element Page screenshot crop" [ref=e968]:
+                - generic [ref=e969]: info
+                - generic [ref=e970]:
+                  - paragraph [ref=e971]: Missing X-XSS-Protection
+                  - paragraph [ref=e972]: Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP.
+                  - generic [ref=e974]: security-headers · 1 element
+                - img "Page screenshot crop" [ref=e976]
+              - button "info Missing X-XSS-Protection Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP. security-headers · 1 element Page screenshot crop" [ref=e978]:
+                - generic [ref=e979]: info
+                - generic [ref=e980]:
+                  - paragraph [ref=e981]: Missing X-XSS-Protection
+                  - paragraph [ref=e982]: Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP.
+                  - generic [ref=e984]: security-headers · 1 element
+                - img "Page screenshot crop" [ref=e986]
+    - contentinfo [ref=e255]:
+      - generic [ref=e256]:
+        - generic [ref=e257]:
+          - generic [ref=e258]:
+            - link "StageFlow" [ref=e259] [cursor=pointer]:
+              - /url: /
+              - img [ref=e260]:
+                - generic [ref=e262]: SF
+              - generic [ref=e263]: StageFlow
+            - paragraph [ref=e264]: Self-hosted web scanning for accessibility, performance, SEO, and security workflows.
+          - generic [ref=e265]:
+            - link "Playground" [ref=e266] [cursor=pointer]:
+              - /url: /playground
+            - link "GitHub" [ref=e267] [cursor=pointer]:
+              - /url: https://github.com/mattboback/stageflow
+              - img [ref=e268]
+        - generic [ref=e270]: © 2026 StageFlow. Open-source and operator-first.
+  - generic [ref=e271]: Scan Report | StageFlow

@@ -265,10 +265,6 @@ export async function capturePageOverviewRaw(
     return null;
   }
 
-  if (violations.length === 0) {
-    return null;
-  }
-
   const elementTargets = collectPageOverviewTargets(violations, overviewCfg.maxElements, {
     pageId,
     scanner: scannerId,

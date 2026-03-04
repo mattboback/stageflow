@@ -11,7 +11,7 @@ import (
 //go:embed schema.sql
 var schemaFS embed.FS
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 func sqliteHasTables(db *sql.DB) (bool, error) {
 	query := "SELECT name FROM sqlite_master WHERE type='table' LIMIT 1"

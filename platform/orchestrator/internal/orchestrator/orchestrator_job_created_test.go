@@ -155,3 +155,52 @@ func TestHandleJobCreated_DuplicatePendingRetriesThenIgnoresExtracting(t *testin
 		t.Errorf("createPodCalls = %d, want 1", createPodCalls)
 	}
 }
+
+func TestResolveDuplicateJobCreated_RecreatesMissingJob(t *testing.T) {
+	database := newInMemoryDB(t)
+	orch := NewOrchestrator(&Config{
+		PodmanClient:   &mockPodmanClient{},
+		Database:       database,
+		Publisher:      &mockPublisher{},
+		Storage:        newMemoryStorage(),
+		StagingStorage: newMemoryStorage(),
+	})
+
+	fallbackJob := &models.Job{
+		ID:        "job-missing",
+		State:     models.JobStatePending,
+		InputType: "urls",
+		URLs:      []string{"https://example.com"},
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	job, handled, err := orch.resolveDuplicateJobCreated(t.Context(), fallbackJob)
+	if err != nil {
+		t.Fatalf("resolveDuplicateJobCreated() error = %v", err)
+	}
+
+	if handled {
+		t.Fatalf("resolveDuplicateJobCreated() handled = true, want false")
+	}
+
+	if job == nil {
+		t.Fatal("resolveDuplicateJobCreated() returned nil job")
+	}
+
+	if job.ID != fallbackJob.ID {
+		t.Fatalf("resolveDuplicateJobCreated() job.ID = %q, want %q", job.ID, fallbackJob.ID)
+	}
+
+	storedJob, err := database.GetJob(t.Context(), fallbackJob.ID)
+	if err != nil {
+		t.Fatalf("database.GetJob() error = %v", err)
+	}
+
+	if storedJob.ID != fallbackJob.ID {
+		t.Fatalf("stored job ID = %q, want %q", storedJob.ID, fallbackJob.ID)
+	}
+}

@@ -64,6 +64,15 @@ export class WebServerFormatter {
       const pageSeverity: SeverityCounts = this.emptySeverityCounts();
       const rawResults = this.extractPageOverview(page);
 
+      if (rawResults?.pageOverview?.screenshotFilename) {
+        artifacts.push({
+          id: `page-overview-${scannerId}-${page.pageId}`,
+          type: "page-overview",
+          path: `screenshots/${rawResults.pageOverview.screenshotFilename}`,
+          mime: this.guessScreenshotMime(rawResults.pageOverview.screenshotFilename),
+        });
+      }
+
       for (const issue of page.issues) {
         const severity = normalizeSeverity(issue.severity, "info");
         pageSeverity[severity] += 1;

@@ -185,7 +185,7 @@ func ApplyOverrides(config *Config, overrides *Overrides) *Config {
 func InitializeRegistry(config *Config) (*Registry, error) {
 	defaultImage := config.DefaultImage
 	if defaultImage == "" {
-		defaultImage = "stageflow/scanner-runner:latest"
+		defaultImage = "localhost/stageflow/scanner-runner:latest"
 	}
 
 	registry := NewRegistry(defaultImage)
@@ -206,7 +206,7 @@ func DefaultConfig() *Config {
 	if err != nil {
 		// Return empty config rather than panic; caller handles nil/empty scanners.
 		return &Config{
-			DefaultImage: "stageflow/scanner-runner:latest",
+			DefaultImage: "localhost/stageflow/scanner-runner:latest",
 			Scanners:     make(map[string]*Definition),
 		}
 	}
@@ -255,7 +255,7 @@ func DefaultConfig() *Config {
 	}
 
 	return &Config{
-		DefaultImage: "stageflow/scanner-runner:latest",
+		DefaultImage: "localhost/stageflow/scanner-runner:latest",
 		Scanners:     scanners,
 	}
 }

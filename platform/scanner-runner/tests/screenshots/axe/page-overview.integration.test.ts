@@ -117,6 +117,64 @@ describe("capturePageOverviewRaw (integration)", () => {
   );
 
   it(
+    "captures a clean page overview screenshot even when there are no violations",
+    async () => {
+      const resultsDir = createTempDir("stageflow-page-overview-clean-");
+      const context = await browser.newContext({
+        viewport: { width: 400, height: 300 },
+        deviceScaleFactor: 1,
+      });
+      const page = await context.newPage();
+
+      try {
+        await page.setContent(`
+          <!doctype html>
+          <html>
+            <head>
+              <style>
+                html, body { margin: 0; padding: 0; width: 400px; height: 300px; background: #ffffff; }
+                main { display: grid; place-items: center; width: 100%; height: 100%; color: #111827; }
+              </style>
+            </head>
+            <body>
+              <main>Clean page</main>
+            </body>
+          </html>
+        `);
+
+        const screenshotCfg = loadAxeScreenshotConfig({
+          screenshotsEnabled: true,
+          outputFormat: "png",
+        });
+
+        const captured = await capturePageOverviewRaw(
+          page,
+          [],
+          resultsDir,
+          "clean-page",
+          "axe",
+          screenshotCfg,
+          { enabled: true, maxElements: 50, maxHeight: 5000 },
+        );
+
+        expect(captured).not.toBeNull();
+        if (!captured) {
+          throw new Error("expected clean page overview result");
+        }
+
+        expect(captured.screenshotFilename).toBe("page-overview-clean-page.png");
+        expect(captured.elements).toEqual([]);
+        expect(captured.pageWidth).toBeGreaterThan(0);
+        expect(captured.pageHeight).toBeGreaterThan(0);
+      } finally {
+        await context.close();
+        fs.rmSync(resultsDir, { recursive: true, force: true });
+      }
+    },
+    30_000,
+  );
+
+  it(
     "clips partially-visible elements and skips elements below the capture area",
     async () => {
       const resultsDir = createTempDir("stageflow-page-overview-");

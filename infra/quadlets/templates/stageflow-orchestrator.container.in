@@ -11,7 +11,7 @@ Restart=always
 RestartSec=2s
 
 [Container]
-Image=stageflow/orchestrator:latest
+Image=localhost/stageflow/orchestrator:latest
 EnvironmentFile=@APP_ENV_FILE@
 Pod=stageflow.pod
 SecurityLabelDisable=true
@@ -22,8 +22,8 @@ Environment=PODMAN_SOCKET=/run/podman/podman.sock
 Environment=SCANNER_CONFIG_PATH=/data/scanners.yaml
 Environment=MINIO_ENDPOINT=minio:9000
 Environment=MINIO_USE_SSL=false
-Environment=EXTRACTION_IMAGE=stageflow/extractor:latest
-Environment=SCANNER_IMAGE=stageflow/scanner-runner:latest
+Environment=EXTRACTION_IMAGE=localhost/stageflow/extractor:latest
+Environment=SCANNER_IMAGE=localhost/stageflow/scanner-runner:latest
 Environment=API_PORT=8081
 Environment=NATS_HOST=nats
 Environment=MINIO_HOST=minio
