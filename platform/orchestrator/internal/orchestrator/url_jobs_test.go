@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -59,6 +60,70 @@ func TestHandleURLJob_Success(t *testing.T) {
 
 	if job.PodID == "" {
 		t.Error("expected pod ID to be set")
+	}
+}
+
+func TestHandleURLJob_LoopbackTargetRequiresHostNetns(t *testing.T) {
+	orch, database, publisher, _ := setupTestOrchestrator(t)
+
+	loopbackURL := "http://127.0.0.1:3000"
+	msg := "loopback targets require POD_NETNS_MODE=host for job pods (local dev only)"
+
+	mockClient := &mockPodmanClient{
+		createPodFunc: func(_ context.Context, _ *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
+			t.Fatalf("unexpected CreatePod call; loopback guardrail should fail before pod creation")
+			return nil, errors.New("unreachable")
+		},
+	}
+
+	orch.podmanClient = mockClient
+
+	job := &models.Job{
+		ID:        "job-url-loopback",
+		State:     models.JobStatePending,
+		InputType: inputTypeURLs,
+		URLs:      []string{loopbackURL},
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := database.CreateJob(context.Background(), job); err != nil {
+		t.Fatalf("failed to create job: %v", err)
+	}
+
+	err := orch.handleURLJob(context.Background(), job)
+	if err == nil {
+		t.Fatalf("handleURLJob err = nil, want non-nil")
+	}
+
+	if !strings.Contains(err.Error(), "POD_NETNS_MODE=host") {
+		t.Fatalf("handleURLJob err = %q, want to contain %q", err.Error(), "POD_NETNS_MODE=host")
+	}
+
+	updated, err := database.GetJob(context.Background(), job.ID)
+	if err != nil {
+		t.Fatalf("failed to fetch job: %v", err)
+	}
+
+	if updated.State != models.JobStateFailed {
+		t.Fatalf("job.State = %s, want %s", updated.State, models.JobStateFailed)
+	}
+
+	if updated.Error != msg {
+		t.Fatalf("job.Error = %q, want %q", updated.Error, msg)
+	}
+
+	if updated.ErrorDetails != "pod_netns_mode=bridge" {
+		t.Fatalf("job.ErrorDetails = %q, want %q", updated.ErrorDetails, "pod_netns_mode=bridge")
+	}
+
+	if updated.LastStage != "scanning" {
+		t.Fatalf("job.LastStage = %q, want %q", updated.LastStage, "scanning")
+	}
+
+	if publisher.failedCount() != 1 {
+		t.Fatalf("publisher.failedCount() = %d, want 1", publisher.failedCount())
 	}
 }
 

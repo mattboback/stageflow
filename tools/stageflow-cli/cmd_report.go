@@ -8,6 +8,14 @@ import (
 	"io"
 )
 
+var reportValueFlags = map[string]bool{
+	"api":      true,
+	"api-key":  true,
+	"format":   true,
+	"max":      true,
+	"severity": true,
+}
+
 func runReportCommand(ctx context.Context, args []string, getenv getenvFunc, stdout, stderr io.Writer) int {
 	cmd := flag.NewFlagSet("report", flag.ContinueOnError)
 	cmd.SetOutput(stderr)
@@ -17,6 +25,8 @@ func runReportCommand(ctx context.Context, args []string, getenv getenvFunc, std
 	format := cmd.String("format", "summary", "Output format: summary, json, quiet")
 	maxIssues := cmd.Int("max", 0, "Max issues to output (0 = unlimited)")
 	severity := cmd.String("severity", "minor", "Minimum severity to include: critical, serious, moderate, minor, info")
+
+	args = reorderArgsForFlagParsing(args, reportValueFlags)
 
 	parseErr := cmd.Parse(args)
 	if parseErr != nil {

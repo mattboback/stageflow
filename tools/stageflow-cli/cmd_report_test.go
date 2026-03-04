@@ -154,4 +154,33 @@ func TestReportCommandDoneJobJSONOutput(t *testing.T) {
 	if strings.Contains(stderr.String(), "Failed") {
 		t.Fatalf("unexpected stderr: %s", stderr.String())
 	}
+
+	t.Run("accepts job id before flags", func(t *testing.T) {
+		stdout.Reset()
+		stderr.Reset()
+
+		exitCode2 := runReportCommand(context.Background(), []string{
+			jobID,
+			"--api", apiBaseURL,
+			"--format", "json",
+			"--severity", "info",
+		}, stubEnv, &stdout, &stderr)
+
+		if exitCode2 != 0 {
+			t.Fatalf("exitCode = %d, want 0; stderr=%s", exitCode2, stderr.String())
+		}
+
+		var payload2 struct {
+			JobID string `json:"job_id"`
+		}
+
+		unmarshalErr2 := json.Unmarshal(stdout.Bytes(), &payload2)
+		if unmarshalErr2 != nil {
+			t.Fatalf("unmarshal stdout: %v\n%s", unmarshalErr2, stdout.String())
+		}
+
+		if payload2.JobID != jobID {
+			t.Fatalf("payload.JobID = %q, want %q", payload2.JobID, jobID)
+		}
+	})
 }

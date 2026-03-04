@@ -269,6 +269,28 @@ images:
     @echo "==> Building container images..."
     ./scripts/build-images.sh
 
+[group('tools'), doc('Build and install stageflow CLI to ~/.local/bin (no stale binaries)')]
+cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    bin_dir="{{BIN_DIR}}"
+    bin_name="{{BIN_NAME}}"
+    dest="${bin_dir}/${bin_name}"
+
+    mkdir -p "$bin_dir"
+
+    tmp="$(mktemp -t stageflow-cli.XXXXXX)"
+    trap 'rm -f "$tmp"' EXIT
+
+    echo "==> Building StageFlow CLI..."
+    (cd tools/stageflow-cli && {{go}} build -o "$tmp" .)
+
+    echo "==> Installing: $dest"
+    install -m 0755 "$tmp" "$dest"
+
+    echo "==> Installed. Make sure '$bin_dir' is on your PATH."
+
 [group('prod'), doc('Manage production Quadlets (CMD=install|up|down|restart|logs|ps|health)')]
 prod CMD='up':
     #!/usr/bin/env bash

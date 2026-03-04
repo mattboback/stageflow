@@ -35,6 +35,21 @@ type runParseInfo struct {
 	setFlags    map[string]bool
 }
 
+var runValueFlags = map[string]bool{
+	"api":                true,
+	"api-key":            true,
+	"format":             true,
+	"max":                true,
+	"out":                true,
+	"scanners":           true,
+	"severity":           true,
+	"threshold-critical": true,
+	"threshold-serious":  true,
+	"threshold-total":    true,
+	"timeout":            true,
+	"url":                true,
+}
+
 func (i *stringSlice) String() string {
 	return strings.Join(*i, ", ")
 }
@@ -81,6 +96,8 @@ func parseRunOptions(args []string, getenv getenvFunc, stderr io.Writer) (runOpt
 	threshSerious := cmd.Int("threshold-serious", -1, "Fail if serious issues exceed N")
 	threshTotal := cmd.Int("threshold-total", -1, "Fail if total issues exceed N")
 	noStream := cmd.Bool("no-stream", false, "Poll instead of SSE")
+
+	args = reorderArgsForFlagParsing(args, runValueFlags)
 
 	parseErr := cmd.Parse(args)
 	if parseErr != nil {

@@ -125,3 +125,58 @@ func TestStartSingleScanner_URLJobUsesServiceNetworking(t *testing.T) {
 		t.Fatalf("expected MINIO_ENDPOINT %q, got %q", want, got)
 	}
 }
+
+func TestStartSingleScanner_URLJobHostNetnsUsesLoopbackServiceEndpoints(t *testing.T) {
+	orch, database, _, _ := setupTestOrchestrator(t)
+	orch.podNetnsMode = podNetnsModeHost
+
+	defer orch.WaitForMonitors()
+
+	var gotReq *podman.ContainerCreateRequest
+
+	mockClient := &mockPodmanClient{
+		inspectVolumeFunc: func(_ context.Context, name string) (*podman.VolumeInfo, error) {
+			return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
+		},
+		createContainerFunc: func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+			gotReq = req
+			return &podman.ContainerCreateResponse{ID: "c1"}, nil
+		},
+		startContainerFunc: func(_ context.Context, _ string) error { return nil },
+		waitContainerFunc: func(_ context.Context, _ string) (*podman.ContainerWaitResponse, error) {
+			return &podman.ContainerWaitResponse{StatusCode: 0}, nil
+		},
+	}
+
+	orch.podmanClient = mockClient
+
+	job := &models.Job{
+		ID:        "job-urls-hostnetns",
+		State:     models.JobStateReady,
+		InputType: inputTypeURLs,
+		URLs:      []string{"http://localhost:3000"},
+		PodID:     "pod-1",
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := database.CreateJob(context.Background(), job); err != nil {
+		t.Fatalf("failed to seed job: %v", err)
+	}
+
+	if err := orch.startSingleScanner(context.Background(), job, "axe"); err != nil {
+		t.Fatalf("startSingleScanner error: %v", err)
+	}
+
+	if gotReq == nil {
+		t.Fatalf("expected container create request")
+	}
+
+	if got, want := gotReq.Env["NATS_URL"], hostNetnsNATSURL; got != want {
+		t.Fatalf("expected NATS_URL %q, got %q", want, got)
+	}
+
+	if got, want := gotReq.Env["MINIO_ENDPOINT"], hostNetnsMinioEndpoint; got != want {
+		t.Fatalf("expected MINIO_ENDPOINT %q, got %q", want, got)
+	}
+}

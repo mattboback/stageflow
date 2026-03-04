@@ -4,7 +4,7 @@
  * Playwright browser management for scanner operations.
  */
 
-import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
+import { type Browser, type BrowserContext, chromium, type Page, type Route } from "playwright";
 
 import { createLogger } from "../utils/logger";
 import { resolvePlaywrightImageChromiumExecutablePath } from "../utils/playwright";
@@ -42,6 +42,8 @@ export class BrowserManager {
   private browser: Browser | null = null;
   private readonly config: BrowserConfig;
   private readonly logger: ScannerLogger;
+  private readonly runtimeValidationRoutes = new WeakSet<Page>();
+  private readonly blockedNavigationErrors = new WeakMap<Page, Error>();
 
   constructor(config?: Partial<BrowserConfig>, logger?: ScannerLogger) {
     this.config = { ...DEFAULT_BROWSER_CONFIG, ...config };
@@ -128,7 +130,10 @@ export class BrowserManager {
     url: string,
     waitStrategy?: WaitStrategy,
   ): Promise<void> {
-    if (shouldEnforceRuntimeTargetValidation()) {
+    const enforceRuntimeTargetValidation = shouldEnforceRuntimeTargetValidation();
+    if (enforceRuntimeTargetValidation) {
+      await this.ensureRuntimeTargetValidationRouting(page);
+      this.blockedNavigationErrors.delete(page);
       await validateRuntimeTargetURL(url);
     }
 
@@ -138,12 +143,68 @@ export class BrowserManager {
 
     const waitUntil = this.getPlaywrightWaitUntil(strategy);
 
-    await page.goto(url, {
-      waitUntil,
-      timeout: this.config.pageLoadTimeout,
-    });
+    try {
+      await page.goto(url, {
+        waitUntil,
+        timeout: this.config.pageLoadTimeout,
+      });
+    } catch (err) {
+      const blockedError = this.blockedNavigationErrors.get(page);
+      if (blockedError) {
+        this.blockedNavigationErrors.delete(page);
+        throw blockedError;
+      }
+
+      throw err;
+    }
+
+    if (enforceRuntimeTargetValidation) {
+      // Clear any stale route-captured errors from subframe navigations.
+      this.blockedNavigationErrors.delete(page);
+
+      // Validate the final navigated URL (after redirects) as a belt-and-suspenders check.
+      const finalURL = page.url();
+      if (finalURL && finalURL !== url) {
+        await validateRuntimeTargetURL(finalURL);
+      }
+    }
 
     await this.applyAdditionalWait(page, strategy);
+  }
+
+  private async ensureRuntimeTargetValidationRouting(page: Page): Promise<void> {
+    if (this.runtimeValidationRoutes.has(page)) {
+      return;
+    }
+
+    this.runtimeValidationRoutes.add(page);
+
+    await page.route("**/*", async (route: Route) => {
+      const request = route.request();
+
+      // Only validate navigation/document requests (includes redirects).
+      if (request.resourceType() !== "document" || !request.isNavigationRequest()) {
+        await route.continue();
+        return;
+      }
+
+      const requestURL = request.url();
+
+      try {
+        await validateRuntimeTargetURL(requestURL);
+        await route.continue();
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        this.blockedNavigationErrors.set(page, error);
+
+        this.logger.warn("Blocked navigation request", {
+          url: requestURL,
+          error: error.message,
+        });
+
+        await route.abort("blockedbyclient");
+      }
+    });
   }
 
   async executePreScanActions(page: Page, actions: PreScanAction[]): Promise<void> {

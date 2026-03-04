@@ -350,3 +350,41 @@ func TestRunCommandValidationErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestParseRunOptionsAcceptsProjectPathBeforeFlags(t *testing.T) {
+	projectPath := "/tmp/my-project"
+
+	var stderr bytes.Buffer
+
+	options, parseInfo, exitCode, ok := parseRunOptions([]string{
+		projectPath,
+		"--scanners",
+		"axe,lighthouse",
+		"--timeout",
+		"2m",
+	}, stubEnv, &stderr)
+
+	if !ok || exitCode != 0 {
+		t.Fatalf("parseRunOptions ok=%v exitCode=%d; stderr=%s", ok, exitCode, stderr.String())
+	}
+
+	if parseInfo.projectPath != projectPath {
+		t.Fatalf("projectPath = %q, want %q", parseInfo.projectPath, projectPath)
+	}
+
+	if got, want := strings.Join(options.modules, ","), "axe,lighthouse"; got != want {
+		t.Fatalf("modules = %q, want %q", got, want)
+	}
+
+	if options.timeout != 2*time.Minute {
+		t.Fatalf("timeout = %v, want %v", options.timeout, 2*time.Minute)
+	}
+
+	if !parseInfo.setFlags["scanners"] {
+		t.Fatalf("expected scanners to be marked as explicitly set")
+	}
+
+	if !parseInfo.setFlags["timeout"] {
+		t.Fatalf("expected timeout to be marked as explicitly set")
+	}
+}
