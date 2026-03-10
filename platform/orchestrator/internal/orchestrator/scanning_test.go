@@ -15,6 +15,7 @@ import (
 
 func TestStartScanning_StateTransitions(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	tests := []struct {
 		name         string
@@ -88,6 +89,7 @@ func TestStartScanning_StateTransitions(t *testing.T) {
 
 func TestStartScanning_SetExpectedScanners(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:        "job-123",
@@ -130,6 +132,8 @@ func TestStartScanning_SetExpectedScanners(t *testing.T) {
 
 func TestStartScanning_NoScannersResolved(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
+
 	orch.scannerRegistry = scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
 
 	job := &models.Job{
@@ -164,6 +168,7 @@ func TestStartScanning_WatchdogTimeout(t *testing.T) {
 	// We can't easily test the actual timeout without waiting, but we can verify
 	// that the function completes and the goroutine is spawned
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Set a very short timeout for testing
 	orch.scanTimeout = 100 * time.Millisecond
@@ -191,6 +196,7 @@ func TestStartScanning_WatchdogTimeout(t *testing.T) {
 
 func TestGetScannerTypes_ModuleResolution(t *testing.T) {
 	orch, _, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	tests := []struct {
 		name           string
@@ -246,6 +252,7 @@ func TestGetScannerTypes_ModuleResolution(t *testing.T) {
 
 func TestStartScannersWithTimeout_Timeout(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Override mock to delay container creation
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
@@ -287,6 +294,7 @@ func TestStartScannersWithTimeout_Timeout(t *testing.T) {
 
 func TestStartScannersWithTimeout_ConcurrentFailure(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Override mock to fail for specific scanner
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
@@ -323,6 +331,7 @@ func TestStartScannersWithTimeout_ConcurrentFailure(t *testing.T) {
 
 func TestStartSingleScanner_EnvironmentVariables(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Capture environment variables passed to container
 	var capturedEnv map[string]string
@@ -398,6 +407,7 @@ func TestStartSingleScanner_EnvironmentVariables(t *testing.T) {
 
 func TestStartSingleScanner_URLJobProvenance(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedEnv map[string]string
 
@@ -451,6 +461,7 @@ func TestStartSingleScanner_URLJobProvenance(t *testing.T) {
 
 func TestStartSingleScanner_SetsAllowPrivateTargetsEnvVar(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedEnv map[string]string
 
@@ -487,6 +498,7 @@ func TestStartSingleScanner_SetsAllowPrivateTargetsEnvVar(t *testing.T) {
 
 func TestStartSingleScanner_AINavigatorAPIKey(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Set the API key environment variable
 	os.Setenv("OPENROUTER_API_KEY", "test-api-key-123")
@@ -548,6 +560,7 @@ func TestStartSingleScanner_AINavigatorAPIKey(t *testing.T) {
 
 func TestStartSingleScanner_ScannerConfig(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedEnv map[string]string
 
@@ -601,6 +614,7 @@ func TestStartSingleScanner_ScannerConfig(t *testing.T) {
 
 func TestStartSingleScanner_VolumeMounts(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedMounts []podman.VolumeMount
 
@@ -655,6 +669,7 @@ func TestStartSingleScanner_VolumeMounts(t *testing.T) {
 
 func TestStartSingleScanner_ResourceLimits(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedLimits *podman.ResourceLimits
 
@@ -698,6 +713,7 @@ func TestStartSingleScanner_ResourceLimits(t *testing.T) {
 
 func TestStartSingleScanner_ContainerLabels(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedLabels map[string]string
 
@@ -743,6 +759,7 @@ func TestStartSingleScanner_ContainerLabels(t *testing.T) {
 
 func TestGetScannerImage_WithRegistry(t *testing.T) {
 	orch, _, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Default scanner image should be used
 	image := orch.getScannerImage("axe")
@@ -753,6 +770,7 @@ func TestGetScannerImage_WithRegistry(t *testing.T) {
 
 func TestGetScannerImage_WithoutRegistry(t *testing.T) {
 	orch, _, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Set registry to nil to test fallback
 	orch.scannerRegistry = nil
@@ -765,6 +783,7 @@ func TestGetScannerImage_WithoutRegistry(t *testing.T) {
 
 func TestStartSingleScanner_VolumeCreationFailure(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Override mock to fail volume inspection
 	mockPodman := orch.podmanClient.(*mockPodmanClient)
@@ -795,6 +814,7 @@ func TestStartSingleScanner_VolumeCreationFailure(t *testing.T) {
 
 func TestStartSingleScanner_ContainerStartFailure(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Override mock to fail container start
 	mockPodman := orch.podmanClient.(*mockPodmanClient)

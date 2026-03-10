@@ -13,6 +13,7 @@ import (
 
 func TestHandleJobCreated(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	payload := &events.JobCreatedPayload{
 		JobID:     "job-123",
@@ -46,6 +47,7 @@ func TestHandleJobCreated(t *testing.T) {
 
 func TestHandleURLJobTransitionsToScanning(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	payload := &events.JobCreatedPayload{
 		JobID:     "url-job",
@@ -98,6 +100,7 @@ func TestHandleJobCreated_DuplicatePendingRetriesThenIgnoresExtracting(t *testin
 		Storage:        mem,
 		StagingStorage: mem,
 	})
+	defer orch.WaitForMonitors()
 
 	insertJob(t, database, &models.Job{
 		ID:        "job-dup",
@@ -158,6 +161,7 @@ func TestHandleJobCreated_DuplicatePendingRetriesThenIgnoresExtracting(t *testin
 
 func TestResolveDuplicateJobCreated_RecreatesMissingJob(t *testing.T) {
 	database := newInMemoryDB(t)
+
 	orch := NewOrchestrator(&Config{
 		PodmanClient:   &mockPodmanClient{},
 		Database:       database,
@@ -165,6 +169,7 @@ func TestResolveDuplicateJobCreated_RecreatesMissingJob(t *testing.T) {
 		Storage:        newMemoryStorage(),
 		StagingStorage: newMemoryStorage(),
 	})
+	defer orch.WaitForMonitors()
 
 	fallbackJob := &models.Job{
 		ID:        "job-missing",

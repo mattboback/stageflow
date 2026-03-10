@@ -261,6 +261,10 @@ func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPubl
 		StagingStorage: mem,
 	})
 
+	// Wait for monitor goroutines before schema teardown to prevent deadlock.
+	// t.Cleanup runs LIFO, so this runs before the schema DROP in newInMemoryDB.
+	t.Cleanup(orchestrator.WaitForMonitors)
+
 	return orchestrator, database, publisher, mem
 }
 
