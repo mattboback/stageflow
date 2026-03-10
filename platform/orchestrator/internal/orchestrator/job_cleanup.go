@@ -4,100 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
-	"github.com/mattboback/stageflow/packages/shared-go/events"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	"github.com/mattboback/stageflow/packages/shared-go/storage"
 )
 
-func normalizeJobFailStage(stage string) string {
-	switch stage {
-	case events.JobFailStageExtraction, events.JobFailStageScanning, events.JobFailStageReporting:
-		return stage
-	case "":
-		return events.JobFailStageScanning
-	case "completing":
-		// "Completing" is orchestrator-specific; expose it as "reporting" externally.
-		return events.JobFailStageReporting
-	case "setup":
-		// Setup errors are currently pre-scan orchestration failures.
-		return events.JobFailStageScanning
-	}
-
-	if strings.HasPrefix(stage, "scanner-") {
-		return events.JobFailStageScanning
-	}
-
-	// Keep the public contract stable even if we add internal stage names.
-	return events.JobFailStageScanning
-}
-
 // failJob marks the job as failed and cleans up resources.
 func (o *Orchestrator) failJob(ctx context.Context, jobID, stage, errorMsg, errorDetails string) error {
-	job, err := o.database.GetJob(ctx, jobID)
-	if err != nil {
-		return fmt.Errorf("failed to get job for failure handling: %w", err)
-	}
-
-	if job.State == models.JobStateDone || job.State == models.JobStateFailed {
-		slog.Debug("Job already terminal, skipping fail transition", "job_id", job.ID, "state", job.State)
-
-		return nil
-	}
-
-	normalizedStage := normalizeJobFailStage(stage)
-
-	if failErr := o.database.FailJob(ctx, jobID, normalizedStage, errorMsg, errorDetails); failErr != nil {
-		return fmt.Errorf("failed to fail job in database: %w", failErr)
-	}
-
-	job.State = models.JobStateFailed
-
-	o.recordInternalEvent(ctx, jobID, "orchestrator.job.failed", map[string]any{
-		"stage":         normalizedStage,
-		"stage_raw":     stage,
-		"error":         errorMsg,
-		"error_details": errorDetails,
-	})
-
-	if job.PodID != "" {
-		if cleanupErr := o.cleanupPod(ctx, job.PodID); cleanupErr != nil {
-			slog.Warn("Failed to cleanup pod", "pod_id", job.PodID, "error", cleanupErr)
-		}
-	}
-
-	o.cleanupVolumes(ctx, jobID)
-	o.cleanupStaging(ctx, job)
-
-	payload := &events.JobFailedPayload{
-		JobID:        jobID,
-		Status:       "failed",
-		Stage:        normalizedStage,
-		Error:        errorMsg,
-		ErrorDetails: errorDetails,
-	}
-
-	if publishErr := o.publisher.PublishJobFailed(ctx, payload); publishErr != nil {
-		slog.Warn("Failed to publish job.failed event", "error", publishErr)
-		o.recordInternalEvent(ctx, jobID, "orchestrator.event.publish_failed", map[string]any{
-			"event": "job.failed",
-			"error": publishErr.Error(),
-		})
-	} else {
-		o.recordInternalEvent(ctx, jobID, "orchestrator.event.published", map[string]any{
-			"event": "job.failed",
-		})
-	}
-
-	if errorDetails != "" {
-		slog.Error("Job failed", "job_id", jobID, "stage", stage, "error", errorMsg, "details", errorDetails)
-	} else {
-		slog.Error("Job failed", "job_id", jobID, "stage", stage, "error", errorMsg)
-	}
-
-	return nil
+	return o.newService().FailJob(ctx, jobID, stage, errorMsg, errorDetails)
 }
 
 func (o *Orchestrator) cleanupPod(ctx context.Context, podID string) error {

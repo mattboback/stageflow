@@ -9,7 +9,7 @@ import (
 
 	"github.com/mattboback/stageflow/packages/shared-go/logging"
 	sharedmsg "github.com/mattboback/stageflow/packages/shared-go/messaging"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
 )
 
 func backgroundWithCorrelation(ctx context.Context) context.Context {

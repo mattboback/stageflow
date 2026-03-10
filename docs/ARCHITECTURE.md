@@ -98,11 +98,11 @@ Responsibilities:
 Important entry points:
 
 - Event handlers: `platform/orchestrator/internal/orchestrator/events.go`
-- Extraction orchestration: `platform/orchestrator/internal/orchestrator/extraction.go`
-- Scanner startup: `platform/orchestrator/internal/orchestrator/scanning.go`
-- Aggregation: `platform/orchestrator/internal/orchestrator/report_aggregator_aggregate.go`
-- Rule deduplication: `platform/orchestrator/internal/orchestrator/rule_deduplication.go`
-- FSM definition: `platform/orchestrator/internal/fsm/state.go`
+- Lifecycle workflows: `platform/orchestrator/internal/application/jobs`
+- Domain policies: `platform/orchestrator/internal/domain/jobs`
+- Runtime and persistence adapters: `platform/orchestrator/internal/adapters`
+- Aggregation: `platform/orchestrator/internal/adapters/storage`
+- Rule deduplication: `platform/orchestrator/internal/adapters/storage/rule_deduplication.go`
 
 ### Extractor (`platform/extractor`)
 
@@ -215,7 +215,7 @@ State intent:
 - `DONE`: successful terminal state.
 - `FAILED`: terminal failure state.
 
-FSM logic location: `platform/orchestrator/internal/fsm/state.go`.
+Transition and outcome policy location: `platform/orchestrator/internal/domain/jobs`.
 
 ---
 
@@ -321,6 +321,68 @@ Before execution, runner validates:
 - `link-checker`
 - `ai-navigator`
 
+### AI Navigator (`ai-navigator`)
+
+The AI Navigator is a vision-model-powered browser automation agent that uses LLMs to understand and navigate web pages based on user-defined goals.
+
+#### Provider
+
+All AI requests route through **OpenRouter** (`https://openrouter.ai/api/v1/chat/completions`). No direct AI SDK is used — the scanner makes raw HTTP calls. The API key is injected into scanner containers via environment variables by the orchestrator (`scanner_launch_planner.go`).
+
+#### Core Modules
+
+| Module | File | Responsibility |
+| --- | --- | --- |
+| Vision Client | `vision-client.ts` | OpenRouter API communication, image compression (Sharp), semaphore concurrency control, exponential backoff retry |
+| Page Analyzer | `page-analyzer.ts` | Extracts interactive elements, sends screenshot to vision model, returns page classification, description, suggested actions, and goal relevance score |
+| Action Decider | `action-decider.ts` | Determines next browser action from goal + history + screenshot; returns action with reasoning and confidence |
+| Goal Checker | `goal-checker.ts` | Evaluates success criteria: `url-contains`, `url-matches`, `element-visible`, `text-visible`, `custom` |
+| Decision Prompt | `decision-prompt.ts` | Constructs system prompts with goal, step history, available elements, and input constraints |
+| Action Parser | `action-decision-parser.ts` | Parses vision model JSON responses into executable actions (click, hover, scroll, keyboard, wait, fill, select, done, stuck) |
+| Loop Detector | `loop-detector.ts` | Detects navigation loops by checking if the same URL appears 3+ times in the last 6 steps |
+| Agent | `agent.ts` | Main execution loop: perception → decision → action → repeat; respects max steps, wall time, and token budgets; captures screenshots and generates trace output |
+| Options | `options.ts` | Validates and parses agent configuration (goal, vision settings, constraints) |
+
+All modules live under `platform/scanner-runner/src/scanners/ai-navigator/`.
+
+#### Agent Execution Flow
+
+```text
+Browser loads target URL
+  -> Loop (until goal met or limits exceeded):
+       1. Screenshot current page
+       2. Extract interactive elements (links, buttons, inputs, forms)
+       3. Send screenshot to vision model (Page Analyzer)
+          <- Returns: page type, description, suggested actions, goal relevance
+       4. Send screenshot + goal + history to vision model (Action Decider)
+          <- Returns: next action with reasoning and confidence
+       5. Execute browser action (click, fill, scroll, etc.)
+       6. Check success criteria (Goal Checker)
+       7. Check for navigation loops (Loop Detector)
+       8. Record step in trace
+  -> Output: AgentResult with success status, step trace, and screenshots
+```
+
+#### Backend Integration
+
+- **API validation** (`platform/api/internal/api/scanner_configs.go`): Validates AI Navigator config on job submission. Enforces that `goal.objective` is set and `vision.model` is specified (or falls back to `AI_NAVIGATOR_DEFAULT_MODEL`).
+- **Orchestrator** (`platform/orchestrator/internal/application/jobs/scanner_launch_planner.go`): Injects `OPENROUTER_API_KEY`, `OPENROUTER_APP_TITLE`, and `OPENROUTER_APP_REFERER` into scanner container environment. API key is restricted to environment variables only and cannot be set in scanner options.
+
+#### Frontend
+
+- **`PlaygroundAiConfig.svelte`**: Goal objective input, model dropdown, input values form (key-value pairs for form fills), advanced settings (max steps, timeout, success criteria).
+- **`playground-utils.ts`**: Builds scanner config JSON from form state.
+
+#### Environment Variables
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `OPENROUTER_API_KEY` | Yes (if AI Navigator used) | — | OpenRouter API authentication |
+| `OPENROUTER_APP_TITLE` | No | StageFlow | Request attribution metadata |
+| `OPENROUTER_APP_REFERER` | No | — | Request referer tracking |
+| `AI_NAVIGATOR_DEFAULT_MODEL` | No | `openai/gpt-4o-mini` | Backend fallback model |
+| `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | No | `openai/gpt-4o-mini` | Frontend default model selection |
+
 ---
 
 ## Unified Report Aggregation
@@ -338,7 +400,7 @@ Core steps:
 
 Deduplication logic source:
 
-- `platform/orchestrator/internal/orchestrator/rule_deduplication.go`
+- `platform/orchestrator/internal/adapters/storage/rule_deduplication.go`
 
 Report schema source:
 
@@ -359,7 +421,7 @@ Primary persisted entities:
 
 Schema source:
 
-- `platform/orchestrator/internal/db/schema.sql`
+- `platform/orchestrator/internal/adapters/repository/schema.sql`
 
 ### MinIO
 
@@ -482,14 +544,21 @@ Tooling docs: `docs/TOOLS.md` and `tools/README.md`.
 | SSRF checks | `platform/api/internal/api/security.go` |
 | SSE stream handler | `platform/api/internal/api/handlers_sse.go` |
 | Orchestrator events | `platform/orchestrator/internal/orchestrator/events.go` |
-| Extraction orchestration | `platform/orchestrator/internal/orchestrator/extraction.go` |
-| Scanner startup | `platform/orchestrator/internal/orchestrator/scanning.go` |
-| Report aggregation | `platform/orchestrator/internal/orchestrator/report_aggregator_aggregate.go` |
-| Rule deduplication | `platform/orchestrator/internal/orchestrator/rule_deduplication.go` |
-| FSM rules | `platform/orchestrator/internal/fsm/state.go` |
+| Lifecycle workflows | `platform/orchestrator/internal/application/jobs` |
+| Domain policies | `platform/orchestrator/internal/domain/jobs` |
+| Repository adapter | `platform/orchestrator/internal/adapters/repository` |
+| Runtime adapter | `platform/orchestrator/internal/adapters/runtime` |
+| Messaging adapter | `platform/orchestrator/internal/adapters/messaging` |
+| Report aggregation | `platform/orchestrator/internal/adapters/storage` |
+| Rule deduplication | `platform/orchestrator/internal/adapters/storage/rule_deduplication.go` |
 | Extractor safety logic | `platform/extractor/internal/extractor/extractor.go` |
 | Scanner runner entry | `platform/scanner-runner/src/worker.ts` |
 | Scanner base lifecycle | `platform/scanner-runner/src/core/scanner-base.ts` |
+| AI Navigator agent loop | `platform/scanner-runner/src/scanners/ai-navigator/agent.ts` |
+| AI Navigator vision client | `platform/scanner-runner/src/scanners/ai-navigator/vision-client.ts` |
+| AI Navigator page analyzer | `platform/scanner-runner/src/scanners/ai-navigator/page-analyzer.ts` |
+| AI Navigator action decider | `platform/scanner-runner/src/scanners/ai-navigator/action-decider.ts` |
+| AI Navigator config validation | `platform/api/internal/api/scanner_configs.go` |
 | Scanner manifests | `packages/shared-go/scannercatalog/manifests/*/manifest.json` |
 | Event type contracts | `packages/shared-go/events/types.go` |
 | Report schema | `packages/contracts/report/schema/unified-report.v2.schema.json` |

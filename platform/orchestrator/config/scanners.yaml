@@ -5,14 +5,29 @@
 #
 # Use this file for environment-specific tweaks (enable/disable, image overrides, resource caps).
 # For custom locations, point `SCANNER_CONFIG_PATH` at a YAML file with the same shape.
+defaultImage: localhost/stageflow/scanner-runner:latest
 
 scanners:
+  ai-navigator:
+    image: localhost/stageflow/scanner-runner:latest
+
+  axe:
+    image: localhost/stageflow/scanner-runner:latest
+
+  link-checker:
+    image: localhost/stageflow/scanner-runner:latest
+
+  seo:
+    image: localhost/stageflow/scanner-runner:latest
+
   # Disabled by default (enable explicitly when needed).
   security-headers:
     enabled: false
+    image: localhost/stageflow/scanner-runner:latest
 
   # Resource caps for smaller machines.
   lighthouse:
+    image: localhost/stageflow/scanner-runner:latest
     requirements:
       maxMemoryMB: 2048
       maxTimeoutMs: 60000

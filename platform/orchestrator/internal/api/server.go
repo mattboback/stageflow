@@ -14,8 +14,8 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/events"
 	"github.com/mattboback/stageflow/packages/shared-go/httputil"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 // Publisher provides NATS event publishing capabilities.

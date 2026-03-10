@@ -6,6 +6,7 @@ cd "$REPO_ROOT"
 
 PODMAN="${PODMAN:-podman}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
+PODMAN_BUILD_NETWORK="${PODMAN_BUILD_NETWORK:-host}"
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -20,7 +21,7 @@ build() {
   local dockerfile="$3"
   shift 3
 
-  "$PODMAN" build -t "$primary_tag" -f "$dockerfile" "$REPO_ROOT" "$@"
+  "$PODMAN" build --network "$PODMAN_BUILD_NETWORK" -t "$primary_tag" -f "$dockerfile" "$REPO_ROOT" "$@"
   "$PODMAN" tag "$primary_tag" "$compat_tag"
 }
 
@@ -40,6 +41,7 @@ build localhost/stageflow/frontend:latest stageflow/frontend:latest frontend/Doc
 echo "[images] Building job images..."
 build localhost/stageflow/extractor:latest stageflow/extractor:latest platform/extractor/Dockerfile
 "$PODMAN" build \
+  --network "$PODMAN_BUILD_NETWORK" \
   --ignorefile platform/scanner-runner/.dockerignore \
   -t localhost/stageflow/scanner-runner:latest \
   -f platform/scanner-runner/Dockerfile \

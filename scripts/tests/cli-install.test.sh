@@ -48,6 +48,23 @@ run_shadowed_path_case() {
 	assert_contains "${out_file}" "does not resolve to the installed binary" "cli-install should explain the PATH shadowing problem"
 }
 
+run_bin_dir_missing_from_path_case() {
+	local temp_dir="$1"
+	local out_file="${temp_dir}/missing-path.out"
+	local install_bin="${temp_dir}/off-path-bin"
+	local bin_name="stageflow-offpath-test"
+
+	mkdir -p "${install_bin}"
+
+	set +e
+	just cli-install "${install_bin}" "${bin_name}" >"${out_file}" 2>&1
+	local rc=$?
+	set -e
+
+	assert_exit_code "${rc}" 1 "cli-install should fail when the install directory is not on PATH"
+	assert_contains "${out_file}" "is not on PATH" "cli-install should explain how to fix a missing PATH entry"
+}
+
 main() {
 	local temp_dir
 	temp_dir="$(mktemp -d)"
@@ -55,6 +72,7 @@ main() {
 
 	cd "${REPO_ROOT}"
 	run_shadowed_path_case "${temp_dir}"
+	run_bin_dir_missing_from_path_case "${temp_dir}"
 
 	if [[ "${failures}" -ne 0 ]]; then
 		echo "cli-install tests failed: ${failures}" >&2

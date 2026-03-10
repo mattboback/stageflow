@@ -23,6 +23,12 @@ just cli-install
 stageflow version
 ```
 
+`just cli-install` installs the binary to `~/.local/bin` by default, then
+verifies that `stageflow` on your shell `PATH` resolves to that installed
+binary. If `~/.local/bin` is missing from `PATH`, or another `stageflow`
+earlier on `PATH` shadows it, the command exits with a fix-it message instead
+of silently leaving a stale CLI active.
+
 To build the CLI in place, run:
 
 ```bash

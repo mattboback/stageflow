@@ -10,7 +10,7 @@ import (
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	scanners "github.com/mattboback/stageflow/packages/shared-go/scannerregistry"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 func TestStartScanning_StateTransitions(t *testing.T) {
