@@ -12,11 +12,11 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/bootstrap"
 	"github.com/mattboback/stageflow/packages/shared-go/config"
 	scanners "github.com/mattboback/stageflow/packages/shared-go/scannerregistry"
+	"github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/messaging"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/api"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/messaging"
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/orchestrator"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
 )
 
 func main() {

@@ -8,21 +8,23 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
+	"github.com/mattboback/stageflow/packages/shared-go/models"
 	scanners "github.com/mattboback/stageflow/packages/shared-go/scannerregistry"
 	"github.com/mattboback/stageflow/packages/shared-go/storage"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/fsm"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
+	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
+	domainjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/domain/jobs"
 )
 
 const (
 	inputTypeURLs = "urls"
 
-	podNetnsModeBridge = "bridge"
-	podNetnsModeHost   = "host"
+	podNetnsModeBridge = appjobs.PodNetnsModeBridge
+	podNetnsModeHost   = appjobs.PodNetnsModeHost
 
-	hostNetnsNATSURL       = "nats://127.0.0.1:4222"
-	hostNetnsMinioEndpoint = "127.0.0.1:9000"
+	hostNetnsNATSURL       = appjobs.HostNetnsNATSURL
+	hostNetnsMinioEndpoint = appjobs.HostNetnsMinioEndpoint
 )
 
 // Publisher abstracts job completion/failure emissions for testability.
@@ -50,7 +52,6 @@ type PodmanClient interface {
 type Orchestrator struct {
 	podmanClient         PodmanClient
 	database             *db.Database
-	stateMachine         *fsm.StateMachine
 	publisher            Publisher
 	scannerRegistry      *scanners.Registry
 	monitorWG            sync.WaitGroup
@@ -173,7 +174,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 	return &Orchestrator{
 		podmanClient:         config.PodmanClient,
 		database:             config.Database,
-		stateMachine:         fsm.NewStateMachine(),
 		publisher:            config.Publisher,
 		scannerRegistry:      registry,
 		natsURL:              config.NatsURL,
@@ -196,6 +196,10 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,
 	}
+}
+
+func (o *Orchestrator) canTransition(from, to models.JobState) bool {
+	return domainjobs.CanTransitionTo(from, to)
 }
 
 // Start launches background maintenance loops.

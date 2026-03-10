@@ -16,8 +16,8 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/events"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	"github.com/mattboback/stageflow/packages/shared-go/storage"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 var orchestratorTestSchemaCounter uint64
@@ -281,7 +281,7 @@ func seedScanResults(t *testing.T, store *memoryStorage, jobID, resultsPath stri
 
 	now := time.Now().UTC()
 	results := report.UnifiedReportV2{
-		Version: reportVersion,
+		Version: testReportVersion,
 		Meta: report.ReportMeta{
 			JobId:       jobID,
 			ScannedAt:   &now,
@@ -303,7 +303,7 @@ func seedScanResults(t *testing.T, store *memoryStorage, jobID, resultsPath stri
 			{
 				Id:         "page-1",
 				Url:        "https://example.com/" + jobID,
-				Path:       stringPtr("/"),
+				Path:       testStringPtr("/"),
 				IssueCount: 0,
 				DurationMs: 0,
 				StartedAt:  &now,

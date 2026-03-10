@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const testReportVersion = "2.0.0"
+
 type memoryStorage struct {
 	objects map[string][]byte
 }
@@ -52,4 +54,8 @@ func (m *memoryStorage) FileExists(_ context.Context, bucket, path string) (bool
 
 func (m *memoryStorage) key(bucket, path string) string {
 	return fmt.Sprintf("%s::%s", bucket, path)
+}
+
+func testStringPtr(value string) *string {
+	return &value
 }

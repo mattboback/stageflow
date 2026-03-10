@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 func (o *Orchestrator) ensureVolume(ctx context.Context, name string) (*podman.VolumeInfo, error) {

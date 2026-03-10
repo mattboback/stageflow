@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 func TestHandleURLJob_Success(t *testing.T) {

@@ -14,7 +14,7 @@ import (
 	report "github.com/mattboback/stageflow/packages/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	"github.com/mattboback/stageflow/packages/shared-go/storage"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
 	"github.com/mattboback/stageflow/platform/orchestrator/internal/orchestrator"
 )
 

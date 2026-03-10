@@ -45,8 +45,10 @@ coverage.html
 *.tmp
 .cache/
 .playwright-mcp/
+.playwright-cli/
 .tech-debt-audit/
 .claude/
+.github/skills/
 output/playwright/
 # Local-only Caddy snippets (secrets)
 infra/caddy/snippets/monitoring-basicauth*.caddy

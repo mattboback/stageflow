@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 func (o *Orchestrator) handleURLJob(ctx context.Context, job *models.Job) error {
@@ -117,7 +117,7 @@ func (o *Orchestrator) ensureURLJobReady(ctx context.Context, job *models.Job) e
 		return nil
 	}
 
-	if !o.stateMachine.CanTransition(job.State, models.JobStateReady) {
+	if !o.canTransition(job.State, models.JobStateReady) {
 		msg := fmt.Sprintf("job %s not ready for READY transition from %s", job.ID, job.State)
 		slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
 		o.failJobSafeWithDetails(ctx, job.ID, "setup", msg, stateTransitionDetails(job.State, models.JobStateReady))

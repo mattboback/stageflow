@@ -7,7 +7,7 @@ import (
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/db"
+	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
 )
 
 // TestE2E_JobEventsLogging tests that all events are properly logged.

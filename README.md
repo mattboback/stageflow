@@ -135,6 +135,31 @@ The `stageflow` CLI submits scans, lists scanners, and fetches reports from the 
 | `link-checker` | Broken link detection |
 | `ai-navigator` | Goal-driven browser flow evaluation |
 
+## AI Navigator
+
+The `ai-navigator` scanner is a vision-model-powered browser automation agent that navigates websites to achieve user-defined goals. It uses OpenRouter as the AI provider gateway, routing requests to models from OpenAI, Anthropic, and Google.
+
+### How It Works
+
+1. User defines a navigation goal (e.g., "find the pricing page and verify it loads"), selects a model, and sets constraints (max steps, timeout, success criteria).
+2. The agent runs an iterative loop: **screenshot page → send to vision model for analysis → decide next action → execute action → repeat**.
+3. Available actions include click, fill, scroll, hover, select, keyboard input, and wait.
+4. The loop ends when success criteria are met, max steps are reached, or the timeout expires.
+
+### Supported Models (via OpenRouter)
+
+| Provider | Models |
+| --- | --- |
+| OpenAI | `gpt-4o`, `gpt-4o-mini` |
+| Anthropic | `claude-3.5-sonnet`, `claude-3-haiku` |
+| Google | `gemini-pro-vision` |
+
+### Configuration
+
+The AI Navigator requires an OpenRouter API key set via the `OPENROUTER_API_KEY` environment variable. See [CONFIGURATION.md](docs/CONFIGURATION.md) for the full list of AI-related environment variables.
+
+From the Playground UI, users can configure the goal objective, model selection, input values for form fills, max steps, timeout, and success criteria.
+
 ## Tech Stack
 
 | Layer | Technology |

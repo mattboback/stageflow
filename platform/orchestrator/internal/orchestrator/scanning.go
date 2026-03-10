@@ -2,16 +2,14 @@ package orchestrator
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"strconv"
 
-	"github.com/mattboback/stageflow/packages/shared-go/logging"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
-	"github.com/mattboback/stageflow/packages/shared-go/storage"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
+	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
 )
 
 // startScanning starts the scanner containers in the pod (one per scanner type).
@@ -23,7 +21,7 @@ func (o *Orchestrator) startScanning(ctx context.Context, job *models.Job) error
 	}
 
 	if job.State != models.JobStateScanning {
-		if !o.stateMachine.CanTransition(job.State, models.JobStateScanning) {
+		if !o.canTransition(job.State, models.JobStateScanning) {
 			msg := fmt.Sprintf("job %s cannot transition to SCANNING from %s", job.ID, job.State)
 			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
 			o.failJobSafeWithDetails(
@@ -112,158 +110,46 @@ func (o *Orchestrator) startScannersWithTimeout(ctx context.Context, job *models
 	return firstErr
 }
 
-//nolint:gocognit,gocyclo // Scanner startup requires multiple configuration and validation steps
 func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, scannerType string) error {
-	natsURL := "nats://" + o.natsHost + ":4222"
-	minioEndpoint := o.minioHost + ":9000"
-
-	if o.podNetnsMode == podNetnsModeHost {
-		natsURL = hostNetnsNATSURL
-		minioEndpoint = hostNetnsMinioEndpoint
-	}
-
-	resultsDir := "/results/" + scannerType
-
-	provenancePath := "/workspace/provenance.json"
-	if job.InputType == inputTypeURLs {
-		// URL jobs need a writable provenance path; workspace is mounted read-only.
-		provenancePath = resultsDir + "/provenance.json"
-	}
-
-	env := map[string]string{
-		"JOB_ID":                job.ID,
-		"SCANNER_TYPE":          scannerType,
-		"NATS_URL":              natsURL,
-		"MINIO_ENDPOINT":        minioEndpoint,
-		"MINIO_ACCESS_KEY":      o.minioAccessKey,
-		"MINIO_SECRET_KEY":      o.minioSecretKey,
-		"MINIO_USE_SSL":         strconv.FormatBool(o.minioUseSSL),
-		"MINIO_ARTIFACT_BUCKET": storage.BucketArtifacts,
-		"PROVENANCE_PATH":       provenancePath,
-		"RESULTS_DIR":           resultsDir,
-		"PAGE_LOAD_TIMEOUT":     strconv.Itoa(o.pageLoadTimeout),
-		"A11Y_SCROLL_TIMEOUT":   strconv.Itoa(o.scrollTimeout),
-		"A11Y_SHOT_ENABLED":     strconv.FormatBool(job.Config.Screenshot),
-	}
-
-	highlightStyle := job.Config.HighlightStyle
-	if highlightStyle == "" {
-		highlightStyle = "dashed"
-	}
-
-	env["A11Y_HIGHLIGHT_STYLE"] = highlightStyle
-
-	if job.Config.AllowPrivateTargets {
-		env["ALLOW_PRIVATE_TARGETS"] = strconv.FormatBool(true)
-	}
-
-	if requestID := logging.RequestID(ctx); requestID != "" {
-		env["REQUEST_ID"] = requestID
-	}
-
-	if runID := logging.RunID(ctx); runID != "" {
-		env["RUN_ID"] = runID
-	}
-
-	if scannerType == "ai-navigator" {
-		if apiKey := os.Getenv("OPENROUTER_API_KEY"); apiKey != "" {
-			env["OPENROUTER_API_KEY"] = apiKey
-		}
-
-		if appTitle := os.Getenv("OPENROUTER_APP_TITLE"); appTitle != "" {
-			env["OPENROUTER_APP_TITLE"] = appTitle
-		}
-
-		if appReferer := os.Getenv("OPENROUTER_APP_REFERER"); appReferer != "" {
-			env["OPENROUTER_APP_REFERER"] = appReferer
-		}
-	}
-
-	// For URL jobs, pass URLs directly so scanner can create provenance file
-	if job.InputType == inputTypeURLs && len(job.URLs) > 0 {
-		urlsJSON, err := json.Marshal(job.URLs)
-		if err != nil {
-			return fmt.Errorf("failed to marshal URLs: %w", err)
-		}
-
-		env["SCAN_URLS"] = string(urlsJSON)
-	}
-
-	//nolint:nestif // Scanner config validation requires multiple nested checks
-	if len(job.Config.ScannerConfigs) > 0 {
-		if scannerConfig, ok := job.Config.ScannerConfigs[scannerType]; ok {
-			if len(scannerConfig) > 0 {
-				configJSON, err := json.Marshal(scannerConfig)
-				if err != nil {
-					return fmt.Errorf("failed to marshal scanner config for %s: %w", scannerType, err)
-				}
-
-				env["SCANNER_OPTIONS"] = string(configJSON)
-			}
-		}
-	}
-
-	// Use same workspace volume as extraction worker
-	workspaceVolume := "workspace-" + job.ID
-	resultsVolume := "results-" + job.ID
-
-	workspaceVolumeInfo, err := o.ensureVolume(ctx, workspaceVolume)
+	plan, err := o.newScannerLaunchPlanner().Plan(ctx, job, scannerType)
 	if err != nil {
-		return fmt.Errorf("failed to prepare workspace volume: %w", err)
+		return fmt.Errorf("plan scanner launch for %s: %w", scannerType, err)
 	}
 
-	resultsVolumeInfo, err := o.ensureVolume(ctx, resultsVolume)
+	return o.startPlannedScanner(ctx, job, plan)
+}
+
+func (o *Orchestrator) startPlannedScanner(
+	ctx context.Context,
+	job *models.Job,
+	plan *appjobs.ScannerLaunchPlan,
+) error {
+	if plan == nil {
+		return errors.New("scanner launch plan is required")
+	}
+
+	scannerType := plan.Labels["scanner_type"]
+
+	mounts, err := o.resolveScannerMounts(ctx, plan.Volumes)
 	if err != nil {
-		return fmt.Errorf("failed to prepare results volume: %w", err)
-	}
-
-	image := o.getScannerImage(scannerType)
-
-	// Get resource limits from scanner definition
-	var resourceLimits *podman.ResourceLimits
-	if def, ok := o.scannerRegistry.Get(scannerType); ok && def.Requirements.MaxMemoryMB > 0 {
-		resourceLimits = &podman.ResourceLimits{
-			MemoryLimitMB: int64(def.Requirements.MaxMemoryMB),
-			MemorySwapMB:  int64(def.Requirements.MaxMemoryMB), // Same as memory to disable swap
-		}
-	}
-
-	// Apply default limits for scanners without explicit config
-	if resourceLimits == nil {
-		resourceLimits = &podman.ResourceLimits{
-			MemoryLimitMB: 2048, // 2GB default
-			MemorySwapMB:  2048,
-		}
+		return err
 	}
 
 	containerReq := &podman.ContainerCreateRequest{
-		Name:  fmt.Sprintf("scanner-%s-%s", scannerType, job.ID),
-		Image: image,
-		Pod:   job.PodID,
-		// Rootless Podman volumes are owned by the host UID; run as container root to write /results.
-		User: "0",
-		Env:  env,
-		Mounts: []podman.VolumeMount{
-			{
-				Type:        "bind",
-				Source:      workspaceVolumeInfo.Mountpoint,
-				Destination: "/workspace",
-				ReadOnly:    true, // Scanner only reads provenance
-			},
-			{
-				Type:        "bind",
-				Source:      resultsVolumeInfo.Mountpoint,
-				Destination: "/results",
-			},
+		Name:   plan.Name,
+		Image:  plan.Image,
+		Pod:    job.PodID,
+		User:   plan.User,
+		Env:    plan.Env,
+		Mounts: mounts,
+		Labels: plan.Labels,
+		ResourceLimits: &podman.ResourceLimits{
+			MemoryLimitMB: plan.ResourceLimits.MemoryLimitMB,
+			MemorySwapMB:  plan.ResourceLimits.MemorySwapMB,
 		},
-		Labels: map[string]string{
-			"managed_by":   "orchestrator",
-			"job_id":       job.ID,
-			"component":    "scanner",
-			"scanner_type": scannerType,
-		},
-		ResourceLimits: resourceLimits,
 	}
+
+	slog.Info("Launching scanner container", "scanner", scannerType, "image", plan.Image, "job_id", job.ID)
 
 	containerResp, err := o.podmanClient.CreateContainer(ctx, containerReq)
 	if err != nil {
@@ -291,6 +177,53 @@ func (o *Orchestrator) startSingleScanner(ctx context.Context, job *models.Job, 
 	o.spawnMonitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "scanner-"+scannerType)
 
 	return nil
+}
+
+func (o *Orchestrator) resolveScannerMounts(
+	ctx context.Context,
+	volumes []appjobs.VolumeRequirement,
+) ([]podman.VolumeMount, error) {
+	mounts := make([]podman.VolumeMount, 0, len(volumes))
+
+	for _, volume := range volumes {
+		volumeInfo, err := o.ensureVolume(ctx, volume.Name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare %s volume: %w", volume.Name, err)
+		}
+
+		mounts = append(mounts, podman.VolumeMount{
+			Type:        "bind",
+			Source:      volumeInfo.Mountpoint,
+			Destination: volume.Destination,
+			ReadOnly:    volume.ReadOnly,
+		})
+	}
+
+	return mounts, nil
+}
+
+func (o *Orchestrator) newScannerLaunchPlanner() *appjobs.ScannerLaunchPlanner {
+	defaultScannerImage := o.scannerImage
+	if defaultScannerImage == "" {
+		defaultScannerImage = "localhost/stageflow/scanner-runner:latest"
+	}
+
+	return appjobs.NewScannerLaunchPlanner(appjobs.ScannerLaunchPlannerConfig{
+		ScannerRegistry:      o.scannerRegistry,
+		DefaultScannerImage:  defaultScannerImage,
+		NatsHost:             o.natsHost,
+		MinioHost:            o.minioHost,
+		MinioAccessKey:       o.minioAccessKey,
+		MinioSecretKey:       o.minioSecretKey,
+		MinioUseSSL:          o.minioUseSSL,
+		PageLoadTimeout:      o.pageLoadTimeout,
+		ScrollTimeout:        o.scrollTimeout,
+		PodNetnsMode:         o.podNetnsMode,
+		DefaultScannerUser:   "0",
+		OpenRouterAPIKey:     os.Getenv("OPENROUTER_API_KEY"),
+		OpenRouterAppTitle:   os.Getenv("OPENROUTER_APP_TITLE"),
+		OpenRouterAppReferer: os.Getenv("OPENROUTER_APP_REFERER"),
+	})
 }
 
 // getScannerImage returns the container image to use for a scanner type.

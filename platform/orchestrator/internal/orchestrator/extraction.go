@@ -9,14 +9,14 @@ import (
 	"github.com/mattboback/stageflow/packages/shared-go/logging"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	"github.com/mattboback/stageflow/packages/shared-go/storage"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) error {
 	if job.State == models.JobStateExtracting {
 		slog.Debug("Job already extracting", "job_id", job.ID)
 	} else {
-		if !o.stateMachine.CanTransition(job.State, models.JobStateExtracting) {
+		if !o.canTransition(job.State, models.JobStateExtracting) {
 			msg := fmt.Sprintf("job %s cannot transition to EXTRACTING from %s", job.ID, job.State)
 			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
 			o.failJobSafeWithDetails(

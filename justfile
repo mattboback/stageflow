@@ -320,6 +320,9 @@ ci:
     {{go}} run ./tools/stageflow-cli docs --out-dir docs/generated/cli
     git diff --exit-code docs/generated/cli
 
+    echo "==> Shell regression tests..."
+    bash scripts/tests/cli-install.test.sh
+
     echo "==> Frontend CI..."
     (cd {{frontend_dir}} && {{bun}} run ci)
 
@@ -332,6 +335,7 @@ ci:
     (cd {{frontend_dir}} && {{bun}} audit --audit-level=high)
 
     echo "==> Scanner-runner CI..."
+    (cd {{scanner_dir}} && {{bun}} x playwright install chromium)
     (cd {{scanner_dir}} && {{bun}} run ci)
 
     echo "==> Scanner-runner audit..."
@@ -472,6 +476,12 @@ storybook-test:
     set -euo pipefail
     (cd {{frontend_dir}} && {{bun}} x playwright install chromium)
     (cd {{frontend_dir}} && {{bun}} run test-storybook)
+
+[group('quality'), doc('Run repo shell regression tests')]
+shell-tests:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash scripts/tests/cli-install.test.sh
 
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':

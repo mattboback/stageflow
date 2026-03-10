@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/podman"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
 // mockPodmanClient implements orchestrator.PodmanClient interface for testing.
