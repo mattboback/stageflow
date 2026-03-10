@@ -11,6 +11,7 @@ import (
 
 func TestHandleExtractionReady(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Create a job first
 	job := &models.Job{
@@ -59,6 +60,7 @@ func TestHandleExtractionReady(t *testing.T) {
 
 func TestHandleExtractionReady_IgnoresMissingJob(t *testing.T) {
 	orch, _, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	payload := &events.ExtractionReadyPayload{
 		JobID:                  "missing-job",
@@ -83,6 +85,7 @@ func TestHandleExtractionReady_IgnoresMissingJob(t *testing.T) {
 
 func TestHandleExtractionFailed(t *testing.T) {
 	orch, database, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Create a job first
 	job := &models.Job{

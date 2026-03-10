@@ -14,6 +14,7 @@ import (
 
 func TestHandleURLJob_Success(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	mockClient := &mockPodmanClient{
 		createPodFunc: func(_ context.Context, _ *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
@@ -65,6 +66,7 @@ func TestHandleURLJob_Success(t *testing.T) {
 
 func TestHandleURLJob_LoopbackTargetRequiresHostNetns(t *testing.T) {
 	orch, database, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	loopbackURL := "http://127.0.0.1:3000"
 	msg := "loopback targets require POD_NETNS_MODE=host for job pods (local dev only)"
@@ -129,6 +131,7 @@ func TestHandleURLJob_LoopbackTargetRequiresHostNetns(t *testing.T) {
 
 func TestHandleURLJob_CreatesNewPod(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	var capturedPodReq *podman.PodCreateRequest
 
@@ -192,6 +195,7 @@ func TestHandleURLJob_CreatesNewPod(t *testing.T) {
 
 func TestHandleURLJob_ReusesExistingPod(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	podCreateCalls := 0
 
@@ -248,6 +252,7 @@ func TestHandleURLJob_ReusesExistingPod(t *testing.T) {
 
 func TestHandleURLJob_IgnoresTerminalStates(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	terminalStates := []models.JobState{
 		models.JobStateDone,
@@ -284,6 +289,7 @@ func TestHandleURLJob_IgnoresTerminalStates(t *testing.T) {
 
 func TestHandleURLJob_SkipsInProgressStates(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	inProgressStates := []models.JobState{
 		models.JobStateScanning,
@@ -320,6 +326,8 @@ func TestHandleURLJob_SkipsInProgressStates(t *testing.T) {
 
 func TestHandleURLJob_WithPodNetwork(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
+
 	orch.podNetwork = "stageflow-network"
 
 	var capturedPodReq *podman.PodCreateRequest
@@ -379,6 +387,7 @@ func TestHandleURLJob_WithPodNetwork(t *testing.T) {
 
 func TestHandleURLJob_PodCreationFailure(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	mockClient := &mockPodmanClient{
 		createPodFunc: func(_ context.Context, _ *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {

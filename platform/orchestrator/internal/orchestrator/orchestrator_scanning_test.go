@@ -11,6 +11,7 @@ import (
 
 func TestHandleScanCompleted(t *testing.T) {
 	orch, database, publisher, mem := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Create a job first
 	job := &models.Job{
@@ -71,6 +72,7 @@ func TestHandleScanCompleted(t *testing.T) {
 
 func TestHandleScanFailed(t *testing.T) {
 	orch, database, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Create a job first
 	job := &models.Job{
@@ -120,6 +122,7 @@ func TestHandleScanFailed(t *testing.T) {
 
 func TestHandleMultipleScanners(t *testing.T) {
 	orch, database, publisher, mem := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Create a job with multiple scanner types
 	job := &models.Job{
@@ -266,6 +269,7 @@ func assertAllScannersCompleted(t *testing.T, completedJob *models.Job, publishe
 
 func TestHandlePartialScannerSuccess(t *testing.T) {
 	orch, database, publisher, mem := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	// Create a job with multiple scanner types
 	job := &models.Job{
@@ -361,6 +365,7 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 
 func TestHandleScanPageCompleted_IgnoresMissingJob(t *testing.T) {
 	orch, _, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	payload := &events.ScanPageCompletedPayload{
 		JobID:      "missing-job",
@@ -383,6 +388,7 @@ func TestHandleScanPageCompleted_IgnoresMissingJob(t *testing.T) {
 
 func TestHandleScanCompleted_IgnoresMissingJob(t *testing.T) {
 	orch, _, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	payload := &events.ScanCompletedPayload{
 		JobID:             "missing-job",
@@ -406,6 +412,7 @@ func TestHandleScanCompleted_IgnoresMissingJob(t *testing.T) {
 
 func TestHandleScanFailed_IgnoresMissingJob(t *testing.T) {
 	orch, _, publisher, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	payload := &events.ScanFailedPayload{
 		JobID:       "missing-job",

@@ -9,6 +9,7 @@ import (
 
 func TestCompleteJobWithAggregatedResults_AlreadyDone(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:    "job-already-done",
@@ -37,6 +38,7 @@ func TestCompleteJobWithAggregatedResults_AlreadyDone(t *testing.T) {
 
 func TestCompleteJobWithAggregatedResults_AlreadyFailed(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:    "job-already-failed",
@@ -65,6 +67,7 @@ func TestCompleteJobWithAggregatedResults_AlreadyFailed(t *testing.T) {
 
 func TestCompleteJobWithAggregatedResults_NoSuccessfulScanners(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:    "job-no-success",
@@ -101,6 +104,7 @@ func TestCompleteJobWithAggregatedResults_NoSuccessfulScanners(t *testing.T) {
 
 func TestCompleteJobWithAggregatedResults_PrimaryArtifactsFollowExpectedScannerOrder(t *testing.T) {
 	orch, database, publisher, mem := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:               "job-primary-expected-order",
@@ -164,6 +168,7 @@ func TestCompleteJobWithAggregatedResults_PrimaryArtifactsFollowExpectedScannerO
 
 func TestCompleteJobWithAggregatedResults_PrimaryArtifactsFallbackToAlphabetical(t *testing.T) {
 	orch, database, publisher, mem := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:               "job-primary-fallback-alphabetical",
