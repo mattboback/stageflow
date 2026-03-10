@@ -38,11 +38,27 @@ Full design details: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Screenshots
 
+### Scanners
+
+Six built-in scanner modules run in parallel inside isolated containers. Choose scanners per run and get one normalized report.
+
+![Six scanners — Axe, Lighthouse, SEO, Security Headers, Link Checker, AI Navigator](docs/images/landing-scanners.png)
+
+### Workflow
+
+Submit a target, run isolated scanners, and ship one unified report.
+
+![Workflow — configure scope, run scanners, ship report](docs/images/landing-workflow.png)
+
 ### Playground
 
 Configure input type, target URLs, scanner selection, and run options from a single control surface.
 
 ![Playground — configure scan input and scanners](docs/images/playground.png)
+
+Scanner presets (Coverage, Quick, Custom) let you select modules with one click. Each scanner card shows its focus area and current state.
+
+![Playground — scanner selection with presets and module cards](docs/images/playground-scanners.png)
 
 ### Scan Execution
 
@@ -92,6 +108,21 @@ The Pages tab renders an annotated screenshot of each scanned page with bounding
 </table>
 
 ![Full report — complete scan output](docs/images/scan-report.png)
+
+### CLI
+
+The `stageflow` CLI submits scans, lists scanners, and fetches reports from the terminal.
+
+<table>
+  <tr>
+    <td><img src="docs/images/cli-help.png" alt="stageflow --help output" /></td>
+    <td><img src="docs/images/cli-scanners.png" alt="stageflow scanners output" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>CLI commands and flags</em></td>
+    <td align="center"><em>Available scanners with categories and versions</em></td>
+  </tr>
+</table>
 
 ## Built-In Scanners
 
