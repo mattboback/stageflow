@@ -66,8 +66,8 @@ Real-time SSE event stream shows scanner progress, container status, and log out
 
 <table>
   <tr>
-    <td><img src="docs/images/scan-progress.png" alt="Live scan in progress with SSE event stream" /></td>
-    <td><img src="docs/images/scan-complete.png" alt="Scan complete with artifact links" /></td>
+    <td><img src="docs/images/scan-in-progress.png" alt="Live scan in progress — SCANNING state with progress pipeline and scanner activity" /></td>
+    <td><img src="docs/images/scan-complete.png" alt="Scan complete — all pipeline stages green with report and artifact links" /></td>
   </tr>
   <tr>
     <td align="center"><em>Live progress stream during execution</em></td>

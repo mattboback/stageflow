@@ -384,8 +384,18 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     echo "==> Installing: $dest"
     install -m 0755 "$tmp" "$dest"
 
-    echo "==> Installed. Make sure '$bin_dir' is on your PATH."
-    "$dest" version
+    resolved="$(command -v "$bin_name" || true)"
+    if [[ -z "$resolved" ]]; then
+        echo "Installed '$dest', but '$bin_dir' is not on PATH. Add it to PATH, then run '${bin_name} version'." >&2
+        exit 1
+    fi
+    if [[ "$resolved" != "$dest" ]]; then
+        echo "Installed '$dest', but '$bin_name' does not resolve to the installed binary (got '$resolved'). Reorder PATH or remove the stale binary, then run '${bin_name} version'." >&2
+        exit 1
+    fi
+
+    echo "==> Installed and available on PATH as '$bin_name'."
+    "$resolved" version
 
 [group('prod'), doc('Production is owned by `/home/matt/Deployment`; this recipe intentionally stops old repo-local usage')]
 prod CMD='up':
