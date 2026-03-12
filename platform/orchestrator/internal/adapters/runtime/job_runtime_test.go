@@ -108,7 +108,7 @@ func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 	}
 }
 
-func TestJobRuntimeStartExtractionWorkerBuildsContainerRequest(t *testing.T) {
+func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspectMiss(t *testing.T) {
 	var (
 		missingVolumeErr  = errors.New("missing volume")
 		createVolumeCalls []string
@@ -211,21 +211,27 @@ func TestJobRuntimeStartExtractionWorkerBuildsContainerRequest(t *testing.T) {
 	}
 }
 
-func TestJobRuntimeStartExtractionWorkerReusesExistingWorkspaceVolume(t *testing.T) {
+func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSucceeds(t *testing.T) {
 	var (
 		createVolumeCalls  []string
 		inspectVolumeCalls []string
+		gotReq             *ContainerCreateRequest
 	)
 
 	runtime := NewJobRuntime(JobRuntimeConfig{
 		Client: &fakeJobRuntimeClient{
 			createVolumeFunc: func(_ context.Context, name string) error {
 				createVolumeCalls = append(createVolumeCalls, name)
-				return errors.New("volume already exists")
+				t.Fatalf("CreateVolume should not be called when InspectVolume succeeds for %q", name)
+				return nil
 			},
 			inspectVolumeFunc: func(_ context.Context, name string) (*VolumeInfo, error) {
 				inspectVolumeCalls = append(inspectVolumeCalls, name)
-				return &VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
+				return &VolumeInfo{Name: name, Mountpoint: "/existing/" + name}, nil
+			},
+			createContainerFunc: func(_ context.Context, req *ContainerCreateRequest) (*ContainerCreateResponse, error) {
+				gotReq = req
+				return &ContainerCreateResponse{ID: "container-123"}, nil
 			},
 		},
 		ExtractionImage: "extractor:latest",
@@ -251,6 +257,18 @@ func TestJobRuntimeStartExtractionWorkerReusesExistingWorkspaceVolume(t *testing
 
 	if len(createVolumeCalls) != 0 {
 		t.Fatalf("createVolume calls = %#v, want none", createVolumeCalls)
+	}
+
+	if gotReq == nil {
+		t.Fatal("expected container create request")
+	}
+
+	if len(gotReq.Mounts) != 1 {
+		t.Fatalf("mount count = %d, want 1", len(gotReq.Mounts))
+	}
+
+	if mount := gotReq.Mounts[0]; mount.Source != "/existing/workspace-job-123" || mount.Destination != "/workspace" {
+		t.Fatalf("unexpected workspace mount: %#v", mount)
 	}
 }
 
