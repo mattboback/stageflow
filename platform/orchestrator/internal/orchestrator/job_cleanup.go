@@ -63,10 +63,6 @@ func (o *Orchestrator) failJobSafe(ctx context.Context, jobID, stage, message st
 	o.failJobSafeWithDetails(ctx, jobID, stage, message, "")
 }
 
-func stateTransitionDetails(from, to models.JobState) string {
-	return fmt.Sprintf("current_state=%s target_state=%s", from, to)
-}
-
 func (o *Orchestrator) failJobSafeWithDetails(ctx context.Context, jobID, stage, message, details string) {
 	if err := o.failJob(ctx, jobID, stage, message, details); err != nil {
 		slog.Warn("Failed to mark job as failed", "job_id", jobID, "error", err)

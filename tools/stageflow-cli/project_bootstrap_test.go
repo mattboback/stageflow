@@ -65,7 +65,7 @@ func TestDefaultProjectConfigTemplate_UsesBootstrapSuggestion(t *testing.T) {
 		URL:           "http://127.0.0.1:5173",
 	})
 
-	if !strings.Contains(template, `cmd: ["just run frontend"]`) {
+	if !strings.Contains(template, `cmd: ["just", "run", "frontend"]`) {
 		t.Fatalf("template missing inferred command: %q", template)
 	}
 

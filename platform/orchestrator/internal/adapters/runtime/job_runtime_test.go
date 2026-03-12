@@ -65,10 +65,13 @@ func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 	var gotReq *PodCreateRequest
 
 	runtime := NewJobRuntime(JobRuntimeConfig{
-		Client: &fakeJobRuntimeClient{createPodFunc: func(_ context.Context, req *PodCreateRequest) (*PodCreateResponse, error) {
-			gotReq = req
-			return &PodCreateResponse{ID: "pod-abc"}, nil
-		}},
+		Client: &fakeJobRuntimeClient{
+			createPodFunc: func(_ context.Context, req *PodCreateRequest) (*PodCreateResponse, error) {
+				gotReq = req
+
+				return &PodCreateResponse{ID: "pod-abc"}, nil
+			},
+		},
 		PodNetnsMode:    appjobs.PodNetnsModeBridge,
 		PodNetwork:      "job-network",
 		PodHostMappings: []string{"app.local:169.254.1.2"},
@@ -108,6 +111,7 @@ func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 	}
 }
 
+//nolint:gocyclo
 func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspectMiss(t *testing.T) {
 	var (
 		missingVolumeErr  = errors.New("missing volume")
@@ -223,10 +227,12 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 			createVolumeFunc: func(_ context.Context, name string) error {
 				createVolumeCalls = append(createVolumeCalls, name)
 				t.Fatalf("CreateVolume should not be called when InspectVolume succeeds for %q", name)
+
 				return nil
 			},
 			inspectVolumeFunc: func(_ context.Context, name string) (*VolumeInfo, error) {
 				inspectVolumeCalls = append(inspectVolumeCalls, name)
+
 				return &VolumeInfo{Name: name, Mountpoint: "/existing/" + name}, nil
 			},
 			createContainerFunc: func(_ context.Context, req *ContainerCreateRequest) (*ContainerCreateResponse, error) {
@@ -272,6 +278,7 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 	}
 }
 
+//nolint:gocyclo
 func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 	missingVolumeErr := errors.New("missing volume")
 
@@ -350,16 +357,22 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 	}
 
 	workspaceMount := gotReq.Mounts[0]
-	if workspaceMount.Source != "/volumes/workspace-job-123" || workspaceMount.Destination != "/workspace" || !workspaceMount.ReadOnly {
+	if workspaceMount.Source != "/volumes/workspace-job-123" ||
+		workspaceMount.Destination != "/workspace" ||
+		!workspaceMount.ReadOnly {
 		t.Fatalf("unexpected workspace mount: %#v", workspaceMount)
 	}
 
 	resultsMount := gotReq.Mounts[1]
-	if resultsMount.Source != "/volumes/results-job-123" || resultsMount.Destination != "/results" || resultsMount.ReadOnly {
+	if resultsMount.Source != "/volumes/results-job-123" ||
+		resultsMount.Destination != "/results" ||
+		resultsMount.ReadOnly {
 		t.Fatalf("unexpected results mount: %#v", resultsMount)
 	}
 
-	if gotReq.ResourceLimits == nil || gotReq.ResourceLimits.MemoryLimitMB != 512 || gotReq.ResourceLimits.MemorySwapMB != 512 {
+	if gotReq.ResourceLimits == nil ||
+		gotReq.ResourceLimits.MemoryLimitMB != 512 ||
+		gotReq.ResourceLimits.MemorySwapMB != 512 {
 		t.Fatalf("unexpected resource limits: %#v", gotReq.ResourceLimits)
 	}
 }

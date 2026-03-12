@@ -212,6 +212,7 @@ func runProjectInitCommand(
 	return nil
 }
 
+//nolint:gocyclo
 func runProjectDoctorCommand(
 	cmd *cobra.Command,
 	args []string,
@@ -253,9 +254,11 @@ func runProjectDoctorCommand(
 
 	fmt.Fprintf(cmd.ErrOrStderr(), "Using project config: %s\n", cfgPath)
 
-	configReadyErr := ensureProjectConfigReady(projectRoot, cfgPath, cfg)
-	if configReadyErr != nil {
-		return exitCodeError{Code: 2, Err: configReadyErr}
+	if !opts.SkipDev {
+		configReadyErr := ensureProjectConfigReady(projectRoot, cfgPath, cfg)
+		if configReadyErr != nil {
+			return exitCodeError{Code: 2, Err: configReadyErr}
+		}
 	}
 
 	apiURL, _ := resolveProjectStageflow(cmd, root, cfg, getenv)

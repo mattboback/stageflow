@@ -12,13 +12,17 @@ import (
 	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
 )
 
+const defaultLocalScannerImage = "localhost/stageflow/scanner-runner:latest"
+
 func (o *Orchestrator) newService() *appjobs.Service {
 	defaultScannerImage := o.scannerImageOverride
+
 	if defaultScannerImage == "" && o.scannerRegistry == nil {
 		defaultScannerImage = o.scannerImage
 	}
+
 	if defaultScannerImage == "" && o.scannerRegistry == nil {
-		defaultScannerImage = "localhost/stageflow/scanner-runner:latest"
+		defaultScannerImage = defaultLocalScannerImage
 	}
 
 	return appjobs.NewService(
@@ -223,7 +227,13 @@ func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *mod
 	select {
 	case started := <-resultChan:
 		if started.result != nil && started.result.ContainerID != "" {
-			slog.Info("Created extraction worker container", "container_id", started.result.ContainerID, "job_id", job.ID)
+			slog.Info(
+				"Created extraction worker container",
+				"container_id",
+				started.result.ContainerID,
+				"job_id",
+				job.ID,
+			)
 			r.orchestrator.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
 				"component":    "extraction-worker",
 				"container_id": started.result.ContainerID,
@@ -234,7 +244,13 @@ func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *mod
 			return started.err
 		}
 
-		slog.Info("Started extraction worker container", "container_id", started.result.ContainerID, "job_id", job.ID)
+		slog.Info(
+			"Started extraction worker container",
+			"container_id",
+			started.result.ContainerID,
+			"job_id",
+			job.ID,
+		)
 		r.orchestrator.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
 			"component":    "extraction-worker",
 			"container_id": started.result.ContainerID,

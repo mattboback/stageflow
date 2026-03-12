@@ -4,23 +4,17 @@ stageflow:
   api_url: "http://localhost:8080"
 
 scan:
-  # TODO: update this URL to your local dev server.
+  # Set this to the page URL your dev server serves.
   urls:
-    - http://127.0.0.1:3000
-  scanners: axe,lighthouse,seo,security-headers
+    - http://127.0.0.1:5173
+  scanners: axe,lighthouse,seo,link-checker
   allow_private_targets: true
-  timeout: 10m
 
 dev:
   start:
-    # TODO: replace with your local dev start command.
-    cmd: ["npm", "run", "dev"]
+    # best guess from Justfile recipe `run frontend`
+    cmd: ["just", "run", "frontend"]
     cwd: .
   ready:
-    # TODO: match this to the URL your dev server serves.
-    url: http://127.0.0.1:3000
-    timeout: 2m
-    interval: 1s
-  stop:
-    signal: SIGINT
-    timeout: 20s
+    # Match this to your dev server URL.
+    url: http://127.0.0.1:5173

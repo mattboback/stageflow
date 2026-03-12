@@ -18,8 +18,6 @@ import (
 )
 
 const (
-	inputTypeURLs = "urls"
-
 	podNetnsModeBridge = appjobs.PodNetnsModeBridge
 	podNetnsModeHost   = appjobs.PodNetnsModeHost
 

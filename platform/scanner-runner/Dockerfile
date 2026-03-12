@@ -30,7 +30,7 @@ COPY platform/scanner-runner/tsconfig.json ./tsconfig.json
 COPY platform/scanner-runner/tsconfig.build.json ./tsconfig.build.json
 COPY platform/scanner-runner/src ./src
 COPY platform/scanner-runner/scripts ./scripts
-COPY packages/shared-go/scannercatalog/manifests /repo/packages/shared-go/scannercatalog/manifests
+COPY packages/shared-go/scannercatalog/manifests /packages/shared-go/scannercatalog/manifests
 COPY packages/contracts/scanner-manifest/generated /repo/packages/contracts/scanner-manifest/generated
 COPY packages/contracts/scanner-manifest/schema /repo/packages/contracts/scanner-manifest/schema
 RUN bun run build

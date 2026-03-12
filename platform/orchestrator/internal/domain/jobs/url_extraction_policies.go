@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -54,6 +55,9 @@ func DecideExtractionStart(state models.JobState) (ExtractionStartAction, error)
 		return ExtractionStartAdvance, nil
 	case models.JobStateExtracting:
 		return ExtractionStartAlreadyExtracting, nil
+	case models.JobStateReady, models.JobStateScanning, models.JobStateCompleting,
+		models.JobStateDone, models.JobStateFailed:
+		return "", fmt.Errorf("job cannot transition to EXTRACTING from %s", state)
 	default:
 		return "", fmt.Errorf("job cannot transition to EXTRACTING from %s", state)
 	}
@@ -64,7 +68,7 @@ func ValidateURLTargets(urls []string, allowsLoopbackTargets bool) error {
 		return nil
 	}
 
-	return fmt.Errorf("loopback targets require POD_NETNS_MODE=host for job pods (local dev only)")
+	return errors.New("loopback targets require POD_NETNS_MODE=host for job pods (local dev only)")
 }
 
 func containsLoopbackTargets(urls []string) bool {

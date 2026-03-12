@@ -41,10 +41,10 @@
 	let invalidUrls = $state<Array<{ url: string; reason: string }>>([]);
 
 	// AI Navigator configuration
+	// AI Navigator configuration
 	let aiObjective = $state('');
-	let aiModel = $state('openai/gpt-4o-mini');
+	let aiModel = $state(import.meta.env.VITE_AI_NAVIGATOR_DEFAULT_MODEL || 'openai/gpt-4o-mini');
 	let aiMaxSteps = $state(10);
-	let aiMaxWallTimeMs = $state(120000);
 	let aiInputValues = $state<Array<{ key: string; value: string }>>([]);
 	let aiSuccessCriteria = $state<Array<{ type: string; value: string }>>([]);
 

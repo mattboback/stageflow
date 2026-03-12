@@ -106,7 +106,8 @@ func TestSelectPrimaryScanner(t *testing.T) {
 		}
 
 		if successfulScanners[0] != "axe" || successfulScanners[1] != "pa11y" {
-			t.Fatalf("SelectPrimaryScanner() left successfulScanners = %v, want %v", successfulScanners, []string{"axe", "pa11y"})
+			t.Fatalf("SelectPrimaryScanner() left successfulScanners = %v, want %v",
+				successfulScanners, []string{"axe", "pa11y"})
 		}
 	})
 }

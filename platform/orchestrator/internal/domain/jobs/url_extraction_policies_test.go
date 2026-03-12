@@ -19,6 +19,7 @@ func TestURLExtractionPoliciesUseDomainTransitionHelper(t *testing.T) {
 	}
 
 	sourcePath := filepath.Join(filepath.Dir(testFile), "url_extraction_policies.go")
+
 	source, err := os.ReadFile(sourcePath)
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)

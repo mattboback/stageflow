@@ -88,7 +88,7 @@ export class AiNavigatorScanner extends ScannerBase {
     const finishedAt = new Date().toISOString();
     const durationMs = Date.now() - startedMs;
 
-    const issues = agentResult.success ? [] : [this.buildFailureIssue(agentResult)];
+    const issues = agentResult.success ? [this.buildSuccessIssue(agentResult)] : [this.buildFailureIssue(agentResult)];
 
     return {
       pageId: context.pageEntry.id,
@@ -121,6 +121,24 @@ export class AiNavigatorScanner extends ScannerBase {
     });
   }
 
+  private buildSuccessIssue(result: AgentResult): Issue {
+    return {
+      id: "flow-goal-achieved",
+      scanner: this.metadata.name,
+      severity: "info",
+      category: "flow",
+      title: "Flow goal achieved",
+      description: "Agent successfully completed the objective",
+      metadata: {
+        objective: result.goal.objective,
+        totalSteps: result.totalSteps,
+        startUrl: result.startUrl,
+        finalUrl: result.finalUrl,
+        trace: result,
+      },
+    };
+  }
+
   private buildFailureIssue(result: AgentResult): Issue {
     return {
       id: "flow-goal-not-achieved",
@@ -134,6 +152,7 @@ export class AiNavigatorScanner extends ScannerBase {
         totalSteps: result.totalSteps,
         startUrl: result.startUrl,
         finalUrl: result.finalUrl,
+        trace: result,
       },
     };
   }

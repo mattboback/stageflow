@@ -3,6 +3,12 @@ package config
 import "testing"
 
 func TestLoadNATSConfig(t *testing.T) {
+	// Clear env vars that might be set by just/.env
+	t.Setenv("NATS_URL", "")
+	t.Setenv("NATS_MAX_RECONNECTS", "")
+	t.Setenv("NATS_RECONNECT_WAIT", "")
+	t.Setenv("NATS_CONNECT_TIMEOUT", "")
+
 	// Test defaults
 	cfg := LoadNATSConfig()
 
@@ -25,6 +31,14 @@ func TestLoadNATSConfig(t *testing.T) {
 }
 
 func TestLoadMinIOConfig(t *testing.T) {
+	// Clear env vars that might be set by just/.env
+	t.Setenv("MINIO_PUBLIC_ENDPOINT", "")
+	t.Setenv("STAGEFLOW_PUBLIC_DOMAIN", "")
+	t.Setenv("MINIO_ACCESS_KEY", "")
+	t.Setenv("MINIO_ROOT_USER", "")
+	t.Setenv("MINIO_SECRET_KEY", "")
+	t.Setenv("MINIO_ROOT_PASSWORD", "")
+
 	// Test defaults
 	cfg := LoadMinIOConfig()
 

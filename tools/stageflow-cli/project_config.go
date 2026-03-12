@@ -190,6 +190,21 @@ func defaultProjectConfigTemplate(apiURL string, suggestion projectBootstrapSugg
 		devCommand = scaffoldDevStartCommandPlaceholder
 	}
 
+	parts := strings.Fields(devCommand)
+
+	var quotedParts []string
+
+	for _, part := range parts {
+		quotedParts = append(quotedParts, strconv.Quote(part))
+	}
+
+	devCommandFormatted := strings.Join(quotedParts, ", ")
+
+	devCwd := strings.TrimSpace(suggestion.Cwd)
+	if devCwd == "" {
+		devCwd = "."
+	}
+
 	commandComment := "Replace this placeholder with your real dev command."
 	if source := strings.TrimSpace(suggestion.CommandSource); source != "" {
 		commandComment = source
@@ -204,7 +219,7 @@ stageflow:
 scan:
   # Set this to the page URL your dev server serves.
   urls:
-    - http://127.0.0.1:3000
+    - %s
   scanners: %s
   allow_private_targets: true
 
@@ -212,11 +227,11 @@ dev:
   start:
     # %s
     cmd: [%s]
-    cwd: .
+    cwd: %s
   ready:
     # Match this to your dev server URL.
     url: %s
-`, strconv.Quote(baseAPI), defaultScanScanners, commandComment, strconv.Quote(devCommand), devURL)) + "\n"
+`, strconv.Quote(baseAPI), devURL, defaultScanScanners, commandComment, devCommandFormatted, devCwd, devURL)) + "\n"
 }
 
 func defaultProjectGuideTemplate() string {
@@ -253,6 +268,8 @@ For local targets like `+"`localhost`"+` and `+"`127.0.0.1`"+`:
 
 - If you see "ENOENT" for your dev command, verify `+"`dev.start.cmd`"+` and `+"`dev.start.cwd`"+`.
 - If readiness times out, verify `+"`dev.ready.url`"+` responds while your app is running.
+
+For full documentation, see the [Project Mode Guide](https://github.com/mattboback/stageflow/blob/main/docs/PROJECT_MODE.md).
 `) + "\n"
 }
 

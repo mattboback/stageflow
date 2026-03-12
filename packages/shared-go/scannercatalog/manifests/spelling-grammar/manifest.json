@@ -1,0 +1,22 @@
+{
+  "id": "spelling-grammar",
+  "name": "Spelling and Grammar Scanner",
+  "version": "1.0.0",
+  "description": "Content quality analysis checking for spelling and grammar issues",
+  "aliases": ["content-quality", "spellcheck"],
+  "author": "Stageflow",
+  "capabilities": {
+    "categories": ["quality"],
+    "outputFormats": ["json"],
+    "supportsScreenshots": false,
+    "supportsConcurrency": true,
+    "requiresBrowser": true,
+    "supportsOffline": false,
+    "maxConcurrency": 5,
+    "estimatedTimePerPage": 5000
+  },
+  "entry": {
+    "module": "./index.js",
+    "exportName": "SpellingGrammarScanner"
+  }
+}

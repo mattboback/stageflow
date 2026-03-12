@@ -227,6 +227,7 @@ func (f *fakeJobStore) RecordExtractionComplete(_ context.Context, _ string) err
 func (f *fakeJobStore) RecordExtractionStart(_ context.Context, _ string) error {
 	f.recordExtractionStartCalls++
 	f.recordOperation("store.RecordExtractionStart")
+
 	return nil
 }
 
@@ -258,6 +259,7 @@ func (f *fakeJobStore) UpdateJobProvenance(_ context.Context, _, _ string) error
 func (f *fakeJobStore) UpdateJobProvenanceKey(_ context.Context, _, _ string) error {
 	f.updateJobProvenanceKeyCalls++
 	f.recordOperation("store.UpdateJobProvenanceKey")
+
 	return nil
 }
 
@@ -265,6 +267,7 @@ func (f *fakeJobStore) UpdateJobPodID(_ context.Context, _, podID string) error 
 	f.updateJobPodIDCalls++
 	f.lastPodID = podID
 	f.recordOperation("store.UpdateJobPodID")
+
 	return nil
 }
 
@@ -357,15 +360,18 @@ func (f *fakeRuntime) PodNetnsMode() string {
 func (f *fakeRuntime) CreateJobPod(_ context.Context, _ *models.Job) (string, error) {
 	f.createJobPodCalls++
 	f.recordOperation("runtime.CreateJobPod")
+
 	if f.createJobPodID == "" {
 		return "pod-123", nil
 	}
+
 	return f.createJobPodID, nil
 }
 
 func (f *fakeRuntime) StartExtractionWorker(_ context.Context, _ *models.Job) error {
 	f.startExtractionWorkerCalls++
 	f.recordOperation("runtime.StartExtractionWorker")
+
 	return nil
 }
 
@@ -418,8 +424,10 @@ func assertOperationOrder(t *testing.T, operations []string, ordered ...string) 
 	t.Helper()
 
 	lastIndex := -1
+
 	for _, op := range ordered {
 		index := -1
+
 		for i, candidate := range operations {
 			if candidate == op {
 				index = i

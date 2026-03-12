@@ -22,10 +22,11 @@ func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPaylo
 		InputPath: payload.InputPath,
 		URLs:      payload.URLs,
 		Config: models.JobConfig{
-			Modules:        payload.Config.Modules,
-			ScannerConfigs: payload.Config.ScannerConfigs,
-			Screenshot:     payload.Config.Screenshot,
-			HighlightStyle: payload.Config.HighlightStyle,
+			Modules:             payload.Config.Modules,
+			ScannerConfigs:      payload.Config.ScannerConfigs,
+			Screenshot:          payload.Config.Screenshot,
+			HighlightStyle:      payload.Config.HighlightStyle,
+			AllowPrivateTargets: payload.Config.AllowPrivateTargets,
 		},
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -83,8 +84,8 @@ func (s *Service) RunURLJob(ctx context.Context, job *models.Job) error {
 		return nil
 	}
 
-	if err := s.prepareURLJob(ctx, job); err != nil {
-		return err
+	if prepErr := s.prepareURLJob(ctx, job); prepErr != nil {
+		return prepErr
 	}
 
 	return s.StartScanning(ctx, job)
@@ -111,27 +112,33 @@ func (s *Service) prepareURLJob(ctx context.Context, job *models.Job) error {
 	switch action {
 	case domainjobs.URLJobPreparationIgnore:
 		return nil
+	case domainjobs.URLJobPreparationAlreadyReady, domainjobs.URLJobPreparationAdvanceToReady:
+		// Do nothing, proceed
+	default:
+		return fmt.Errorf("unsupported URL job preparation action: %s", action)
 	}
 
-	if err := s.ensureJobPod(ctx, job); err != nil {
-		return err
+	if podErr := s.ensureJobPod(ctx, job); podErr != nil {
+		return podErr
 	}
 
 	switch action {
 	case domainjobs.URLJobPreparationAlreadyReady:
 	case domainjobs.URLJobPreparationAdvanceToReady:
-		if err := s.store.UpdateJobState(ctx, job.ID, models.JobStateReady); err != nil {
-			return fmt.Errorf("failed to update job state to ready: %w", err)
+		if updateErr := s.store.UpdateJobState(ctx, job.ID, models.JobStateReady); updateErr != nil {
+			return fmt.Errorf("failed to update job state to ready: %w", updateErr)
 		}
 
 		job.State = models.JobStateReady
+	case domainjobs.URLJobPreparationIgnore:
+		return nil
 	default:
 		return fmt.Errorf("unsupported URL job preparation action: %s", action)
 	}
 
 	provenanceKey := job.ID + "/provenance.json"
-	if err := s.store.UpdateJobProvenanceKey(ctx, job.ID, provenanceKey); err != nil {
-		slog.Warn("Failed to persist provenance key for URL job", "job_id", job.ID, "error", err)
+	if updateErr := s.store.UpdateJobProvenanceKey(ctx, job.ID, provenanceKey); updateErr != nil {
+		slog.Warn("Failed to persist provenance key for URL job", "job_id", job.ID, "error", updateErr)
 	} else {
 		job.ProvenanceKey = provenanceKey
 	}
@@ -161,26 +168,26 @@ func (s *Service) startExtraction(ctx context.Context, job *models.Job) error {
 		return fmt.Errorf("unsupported extraction start action: %s", action)
 	}
 
-	if err := s.ensureJobPod(ctx, job); err != nil {
-		return err
+	if podErr := s.ensureJobPod(ctx, job); podErr != nil {
+		return podErr
 	}
 
 	switch action {
 	case domainjobs.ExtractionStartAlreadyExtracting:
 	case domainjobs.ExtractionStartAdvance:
-		if err := s.store.UpdateJobState(ctx, job.ID, models.JobStateExtracting); err != nil {
-			return fmt.Errorf("failed to update job state to extracting: %w", err)
+		if updateErr := s.store.UpdateJobState(ctx, job.ID, models.JobStateExtracting); updateErr != nil {
+			return fmt.Errorf("failed to update job state to extracting: %w", updateErr)
 		}
 
 		job.State = models.JobStateExtracting
 
-		if err := s.store.RecordExtractionStart(ctx, job.ID); err != nil {
-			slog.Warn("Failed to record extraction start", "job_id", job.ID, "error", err)
+		if recordErr := s.store.RecordExtractionStart(ctx, job.ID); recordErr != nil {
+			slog.Warn("Failed to record extraction start", "job_id", job.ID, "error", recordErr)
 		}
 	}
 
-	if err := s.runtime.StartExtractionWorker(ctx, job); err != nil {
-		return fmt.Errorf("failed to start extraction worker: %w", err)
+	if workerErr := s.runtime.StartExtractionWorker(ctx, job); workerErr != nil {
+		return fmt.Errorf("failed to start extraction worker: %w", workerErr)
 	}
 
 	return nil
@@ -196,8 +203,8 @@ func (s *Service) ensureJobPod(ctx context.Context, job *models.Job) error {
 		return err
 	}
 
-	if err := s.store.UpdateJobPodID(ctx, job.ID, podID); err != nil {
-		return fmt.Errorf("failed to update job pod ID: %w", err)
+	if updateErr := s.store.UpdateJobPodID(ctx, job.ID, podID); updateErr != nil {
+		return fmt.Errorf("failed to update job pod ID: %w", updateErr)
 	}
 
 	job.PodID = podID

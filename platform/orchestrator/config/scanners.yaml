@@ -31,3 +31,11 @@ scanners:
     requirements:
       maxMemoryMB: 2048
       maxTimeoutMs: 60000
+
+  open-graph:
+    image: localhost/stageflow/scanner-runner:latest
+    enabled: true
+
+  spelling-grammar:
+    image: localhost/stageflow/scanner-runner:latest
+    enabled: true

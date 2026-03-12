@@ -169,7 +169,7 @@ func writeRenderedReport(
 	case outputFormatText:
 		return writeSummaryReport(out, apiBaseURL, status, doc, filters, opts.MaxOccurrences, opts.SummaryOnly)
 	case outputFormatJSON:
-		return writeJSONReport(out, apiBaseURL, status, doc, filters)
+		return writeJSONReport(out, apiBaseURL, status, doc, filters, opts.SummaryOnly)
 	case outputFormatMarkdown:
 		return writeMarkdownReport(out, apiBaseURL, status, doc, filters, markdownRenderOptions{
 			MaxOccurrences: opts.MaxOccurrences,
@@ -187,7 +187,12 @@ func writeJSONReport(
 	status JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
+	summaryOnly bool,
 ) error {
+	if summaryOnly {
+		doc.Issues = nil
+	}
+
 	payload, err := buildReportEnvelope(apiBaseURL, status, doc, filters)
 	if err != nil {
 		return err
@@ -352,10 +357,7 @@ func writeSummaryReport(
 	maxOccurrences int,
 	summaryOnly bool,
 ) error {
-	lines, err := buildSummaryLines(apiBaseURL, status, doc, filters)
-	if err != nil {
-		return err
-	}
+	lines := buildSummaryLines(apiBaseURL, status, doc, filters)
 
 	for _, line := range lines {
 		if _, writeErr := fmt.Fprintln(out, line); writeErr != nil {
@@ -370,27 +372,19 @@ func writeSummaryReport(
 	return writeSummaryIssues(out, doc, maxOccurrences)
 }
 
+//nolint:gocyclo
 func buildSummaryLines(
-	apiBaseURL string,
+	_ string,
 	status JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
-) ([]string, error) {
-	jobLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(status.ID)))
-	if err != nil {
-		return nil, err
-	}
-
-	resultsLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(status.ID)))
-	if err != nil {
-		return nil, err
-	}
-
+) []string {
 	lines := []string{
-		"Job ID: " + status.ID,
-		"State: " + status.State,
-		"Job URL: " + jobLink,
-		"Results URL: " + resultsLink,
+		"Job: " + status.ID,
+	}
+
+	if status.State != jobStateDone {
+		lines = append(lines, "State: "+status.State)
 	}
 
 	urls := collectReportURLs(doc)
@@ -414,15 +408,34 @@ func buildSummaryLines(
 		doc.Summary.PagesWithIssues,
 	))
 
-	lines = append(lines, fmt.Sprintf(
-		"Severity Totals: critical=%d serious=%d moderate=%d minor=%d info=%d total=%d",
-		doc.Summary.BySeverity.Critical,
-		doc.Summary.BySeverity.Serious,
-		doc.Summary.BySeverity.Moderate,
-		doc.Summary.BySeverity.Minor,
-		infoCount(doc.Summary.BySeverity),
-		doc.Summary.TotalIssues,
-	))
+	bySev := doc.Summary.BySeverity
+
+	var severityParts []string
+
+	if bySev.Critical > 0 {
+		severityParts = append(severityParts, fmt.Sprintf("critical=%d", bySev.Critical))
+	}
+
+	if bySev.Serious > 0 {
+		severityParts = append(severityParts, fmt.Sprintf("serious=%d", bySev.Serious))
+	}
+
+	if bySev.Moderate > 0 {
+		severityParts = append(severityParts, fmt.Sprintf("moderate=%d", bySev.Moderate))
+	}
+
+	if bySev.Minor > 0 {
+		severityParts = append(severityParts, fmt.Sprintf("minor=%d", bySev.Minor))
+	}
+
+	if infoCount(bySev) > 0 {
+		severityParts = append(severityParts, fmt.Sprintf("info=%d", infoCount(bySev)))
+	}
+
+	if len(severityParts) > 0 {
+		severityParts = append(severityParts, fmt.Sprintf("total=%d", doc.Summary.TotalIssues))
+		lines = append(lines, "Severity: "+strings.Join(severityParts, " "))
+	}
 
 	if lh := doc.Summary.LighthouseCategories; len(lh) > 0 {
 		var parts []string
@@ -441,11 +454,7 @@ func buildSummaryLines(
 			filters.MaxIssues,
 		))
 	} else {
-		lines = append(lines, fmt.Sprintf(
-			"Issues: %d returned (max=%d)",
-			filters.IssuesReturned,
-			filters.MaxIssues,
-		))
+		lines = append(lines, fmt.Sprintf("Issues: %d", filters.IssuesReturned))
 	}
 
 	if len(filters.Severities) > 0 {
@@ -460,7 +469,7 @@ func buildSummaryLines(
 		lines = append(lines, fmt.Sprintf("Report Errors: %d", len(doc.Errors)))
 	}
 
-	return lines, nil
+	return lines
 }
 
 func writeSummaryIssues(out io.Writer, doc report.UnifiedReportV2, maxOccurrences int) error {
@@ -473,7 +482,11 @@ func writeSummaryIssues(out io.Writer, doc report.UnifiedReportV2, maxOccurrence
 		return err
 	}
 
-	for _, issue := range doc.Issues {
+	for i, issue := range doc.Issues {
+		if i > 0 {
+			fmt.Fprintln(out)
+		}
+
 		if err := writeSummaryIssue(out, issue, maxOccurrences); err != nil {
 			return err
 		}
@@ -514,10 +527,23 @@ func writeSummaryIssue(out io.Writer, issue report.IssueDetail, maxOccurrences i
 		}
 	}
 
-	return writeTextOccurrences(out, issue.Occurrences, maxOccurrences)
+	if len(issue.ScannerData) > 0 {
+		if dataBytes, err := json.Marshal(issue.ScannerData); err == nil && string(dataBytes) != "{}" {
+			if _, printErr := fmt.Fprintf(out, "  Details: %s\n", string(dataBytes)); printErr != nil {
+				return printErr
+			}
+		}
+	}
+
+	return writeTextOccurrences(out, issue.Occurrences, maxOccurrences, stringValue(issue.HowToFix))
 }
 
-func writeTextOccurrences(out io.Writer, occurrences []report.IssueOccurrence, maxOccurrences int) error {
+func writeTextOccurrences(
+	out io.Writer,
+	occurrences []report.IssueOccurrence,
+	maxOccurrences int,
+	issueHowToFix string,
+) error {
 	if len(occurrences) == 0 {
 		return nil
 	}
@@ -539,7 +565,7 @@ func writeTextOccurrences(out io.Writer, occurrences []report.IssueOccurrence, m
 			return err
 		}
 
-		if fs := stringValue(occ.FailureSummary); fs != "" {
+		if fs := stringValue(occ.FailureSummary); fs != "" && fs != issueHowToFix {
 			if _, err := fmt.Fprintf(out, "       %s\n", fs); err != nil {
 				return err
 			}
@@ -602,7 +628,7 @@ func formatDuration(doc report.UnifiedReportV2) string {
 		return ""
 	}
 
-	return fmt.Sprintf("%dms", *ms)
+	return formatDurationMs(*ms)
 }
 
 func durationMS(value *float64) *int64 {
