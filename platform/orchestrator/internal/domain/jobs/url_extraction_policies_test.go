@@ -1,10 +1,33 @@
 package jobs
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 )
+
+func TestURLExtractionPoliciesUseDomainTransitionHelper(t *testing.T) {
+	t.Parallel()
+
+	_, testFile, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("expected caller information")
+	}
+
+	sourcePath := filepath.Join(filepath.Dir(testFile), "url_extraction_policies.go")
+	source, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+
+	if strings.Contains(string(source), "sharedjob.CanTransition(") {
+		t.Fatal("expected URL extraction policies to use CanTransitionTo instead of sharedjob.CanTransition")
+	}
+}
 
 func TestDecideURLJobPreparation(t *testing.T) {
 	t.Parallel()
