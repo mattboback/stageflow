@@ -131,10 +131,10 @@ func TestStartScanning_SetExpectedScanners(t *testing.T) {
 }
 
 func TestStartScanning_NoScannersResolved(t *testing.T) {
-	orch, database, _, _ := setupTestOrchestrator(t)
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.ScannerRegistry = scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
+	})
 	defer orch.WaitForMonitors()
-
-	orch.scannerRegistry = scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
 
 	job := &models.Job{
 		ID:        "job-no-scanners",

@@ -243,6 +243,13 @@ func quoteIdentifier(identifier string) string {
 }
 
 func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPublisher, *memoryStorage) {
+	return setupTestOrchestratorWithConfig(t, func(*Config) {})
+}
+
+func setupTestOrchestratorWithConfig(
+	t *testing.T,
+	configure func(*Config),
+) (*Orchestrator, *db.Database, *mockPublisher, *memoryStorage) {
 	t.Helper()
 	database := newInMemoryDB(t)
 
@@ -253,13 +260,16 @@ func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPubl
 
 	mem := newMemoryStorage()
 
-	orchestrator := NewOrchestrator(&Config{
+	config := &Config{
 		PodmanClient:   &mockPodmanClient{},
 		Database:       database,
 		Publisher:      publisher,
 		Storage:        mem,
 		StagingStorage: mem,
-	})
+	}
+	configure(config)
+
+	orchestrator := NewOrchestrator(config)
 
 	// Wait for monitor goroutines before schema teardown to prevent deadlock.
 	// t.Cleanup runs LIFO, so this runs before the schema DROP in newInMemoryDB.

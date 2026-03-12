@@ -10,11 +10,6 @@ import (
 )
 
 func TestStartExtractionWorker_HostNetnsUsesLoopbackServiceEndpoints(t *testing.T) {
-	orch, database, _, _ := setupTestOrchestrator(t)
-	orch.podNetnsMode = podNetnsModeHost
-
-	defer orch.WaitForMonitors()
-
 	var gotReq *podman.ContainerCreateRequest
 
 	mockClient := &mockPodmanClient{
@@ -32,7 +27,11 @@ func TestStartExtractionWorker_HostNetnsUsesLoopbackServiceEndpoints(t *testing.
 		},
 	}
 
-	orch.podmanClient = mockClient
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.PodmanClient = mockClient
+		config.PodNetnsMode = podNetnsModeHost
+	})
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:        "job-extraction-hostnetns",
