@@ -29,7 +29,7 @@ func TestServiceCreateJobDuplicatePendingRetriesWorkflow(t *testing.T) {
 	}
 	runtime := &fakeRuntime{}
 
-	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{}, ScannerLaunchPlannerConfig{})
 	payload := &events.JobCreatedPayload{
 		JobID:     "job-dup",
 		InputType: string(models.JobInputTypeZip),
@@ -64,7 +64,7 @@ func TestServiceHandleScanPageCompletedPersistsProgress(t *testing.T) {
 		},
 	}
 
-	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{})
+	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{}, ScannerLaunchPlannerConfig{})
 	payload := &events.ScanPageCompletedPayload{
 		JobID:      "job-page",
 		PageIndex:  2,

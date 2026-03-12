@@ -14,6 +14,7 @@ func (o *Orchestrator) newService() *appjobs.Service {
 		orchestratorRuntime{orchestrator: o},
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
+		o.scannerLaunchPlannerConfig(),
 	)
 }
 
