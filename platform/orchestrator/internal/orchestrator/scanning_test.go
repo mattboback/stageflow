@@ -781,6 +781,83 @@ func TestGetScannerImage_WithoutRegistry(t *testing.T) {
 	}
 }
 
+func TestNewScannerLaunchPlannerUsesRegistryDefaultImageWhenNoOverride(t *testing.T) {
+	t.Parallel()
+
+	registry := scanners.NewRegistry("registry/default:latest")
+	if err := registry.Register(&scanners.Definition{
+		ID:      "axe",
+		Name:    "axe",
+		Enabled: true,
+	}); err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	orch := NewOrchestrator(&Config{
+		PodmanClient:    &mockPodmanClient{},
+		Database:        newInMemoryDB(t),
+		Publisher:       &mockPublisher{},
+		ScannerRegistry: registry,
+		ScannerImage:    "localhost/stageflow/scanner-runner:latest",
+	})
+
+	job := &models.Job{
+		ID:        "job-registry-default-image",
+		InputType: models.JobInputTypeZip,
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	plan, err := orch.newScannerLaunchPlanner().Plan(context.Background(), job, "axe")
+	if err != nil {
+		t.Fatalf("Plan() error = %v", err)
+	}
+
+	if got, want := plan.Image, "registry/default:latest"; got != want {
+		t.Fatalf("plan.Image = %q, want %q", got, want)
+	}
+}
+
+func TestNewScannerLaunchPlannerUsesExplicitScannerImageOverride(t *testing.T) {
+	t.Parallel()
+
+	registry := scanners.NewRegistry("registry/default:latest")
+	if err := registry.Register(&scanners.Definition{
+		ID:      "axe",
+		Name:    "axe",
+		Enabled: true,
+	}); err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	orch := NewOrchestrator(&Config{
+		PodmanClient:         &mockPodmanClient{},
+		Database:             newInMemoryDB(t),
+		Publisher:            &mockPublisher{},
+		ScannerRegistry:      registry,
+		ScannerImage:         "explicit/override:latest",
+		ScannerImageOverride: "explicit/override:latest",
+	})
+
+	job := &models.Job{
+		ID:        "job-scanner-image-override",
+		InputType: models.JobInputTypeZip,
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	plan, err := orch.newScannerLaunchPlanner().Plan(context.Background(), job, "axe")
+	if err != nil {
+		t.Fatalf("Plan() error = %v", err)
+	}
+
+	if got, want := plan.Image, "explicit/override:latest"; got != want {
+		t.Fatalf("plan.Image = %q, want %q", got, want)
+	}
+}
+
 func TestStartSingleScanner_VolumeCreationFailure(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestrator(t)
 	defer orch.WaitForMonitors()

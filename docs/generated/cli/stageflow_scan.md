@@ -13,7 +13,7 @@ stageflow scan <url> [url...]
       --fail-on string          Exit 1 if any displayed issue is at or above this severity (critical,serious,moderate,minor,info)
   -h, --help                    help for scan
       --max-issues int          Max issues to include in output (0 = unlimited) (default 200)
-      --scanners string         Comma-separated scanner modules (default "axe,lighthouse,seo,security-headers,link-checker")
+      --scanners string         Comma-separated scanner modules (default "axe,lighthouse,seo,link-checker")
       --screenshot              Capture screenshots
       --timeout duration        Max wait time (default 5m0s)
 ```

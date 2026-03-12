@@ -61,6 +61,30 @@ func TestCLIDocsSmoke(t *testing.T) {
 	}
 }
 
+func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
+	repoRoot := mustFindRepoRoot(t)
+	docPath := filepath.Join(repoRoot, "docs", "generated", "cli", "stageflow_scan.md")
+
+	data, err := os.ReadFile(docPath)
+	requireNoErr(t, err)
+
+	if !strings.Contains(string(data), defaultScanScanners) {
+		t.Fatalf("expected %s to contain current default scanner list %q", docPath, defaultScanScanners)
+	}
+}
+
+func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
+	repoRoot := mustFindRepoRoot(t)
+	readmePath := filepath.Join(repoRoot, "tools", "README.md")
+
+	data, err := os.ReadFile(readmePath)
+	requireNoErr(t, err)
+
+	if !strings.Contains(string(data), "scanners: "+defaultScanScanners) {
+		t.Fatalf("expected %s to contain current default scanner list %q", readmePath, defaultScanScanners)
+	}
+}
+
 func TestCLIProjectCommandsSmoke(t *testing.T) {
 	root := t.TempDir()
 
@@ -192,6 +216,22 @@ func withWorkingDir(t *testing.T, dir string) func() {
 			t.Fatalf("restore wd %s: %v", wd, restoreErr)
 		}
 	}
+}
+
+func mustFindRepoRoot(t *testing.T) string {
+	t.Helper()
+
+	wd, err := os.Getwd()
+	requireNoErr(t, err)
+
+	root, ok, err := findGitRoot(wd)
+	requireNoErr(t, err)
+
+	if !ok {
+		t.Fatalf("expected to find git root from %s", wd)
+	}
+
+	return root
 }
 
 func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {

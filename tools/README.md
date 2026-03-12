@@ -121,7 +121,7 @@ scan:
   urls:
     - http://127.0.0.1:5173/
     - http://127.0.0.1:5173/login
-  scanners: axe,lighthouse,seo,security-headers,link-checker
+  scanners: axe,lighthouse,seo,link-checker
   screenshot: true
   allow_private_targets: true
 ```
