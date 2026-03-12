@@ -21,13 +21,13 @@ type Service struct {
 	planner   *ScannerLaunchPlanner
 }
 
-func NewService(store JobStore, runtime Runtime, artifacts Artifacts, publisher Publisher) *Service {
+func NewService(store JobStore, runtime Runtime, artifacts Artifacts, publisher Publisher, plannerConfig ScannerLaunchPlannerConfig) *Service {
 	return &Service{
 		store:     store,
 		runtime:   runtime,
 		artifacts: artifacts,
 		publisher: publisher,
-		planner:   NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{}),
+		planner:   NewScannerLaunchPlanner(plannerConfig),
 	}
 }
 

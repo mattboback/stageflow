@@ -202,13 +202,13 @@ func (o *Orchestrator) resolveScannerMounts(
 	return mounts, nil
 }
 
-func (o *Orchestrator) newScannerLaunchPlanner() *appjobs.ScannerLaunchPlanner {
+func (o *Orchestrator) scannerLaunchPlannerConfig() appjobs.ScannerLaunchPlannerConfig {
 	defaultScannerImage := o.scannerImage
 	if defaultScannerImage == "" {
 		defaultScannerImage = "localhost/stageflow/scanner-runner:latest"
 	}
 
-	return appjobs.NewScannerLaunchPlanner(appjobs.ScannerLaunchPlannerConfig{
+	return appjobs.ScannerLaunchPlannerConfig{
 		ScannerRegistry:      o.scannerRegistry,
 		DefaultScannerImage:  defaultScannerImage,
 		NatsHost:             o.natsHost,
@@ -223,7 +223,11 @@ func (o *Orchestrator) newScannerLaunchPlanner() *appjobs.ScannerLaunchPlanner {
 		OpenRouterAPIKey:     os.Getenv("OPENROUTER_API_KEY"),
 		OpenRouterAppTitle:   os.Getenv("OPENROUTER_APP_TITLE"),
 		OpenRouterAppReferer: os.Getenv("OPENROUTER_APP_REFERER"),
-	})
+	}
+}
+
+func (o *Orchestrator) newScannerLaunchPlanner() *appjobs.ScannerLaunchPlanner {
+	return appjobs.NewScannerLaunchPlanner(o.scannerLaunchPlannerConfig())
 }
 
 // getScannerImage returns the container image to use for a scanner type.
