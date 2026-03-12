@@ -110,7 +110,9 @@ func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 
 func TestJobRuntimeStartExtractionWorkerBuildsContainerRequest(t *testing.T) {
 	var (
+		missingVolumeErr  = errors.New("missing volume")
 		createVolumeCalls []string
+		inspectCalls      = map[string]int{}
 		gotReq            *ContainerCreateRequest
 		startedID         string
 	)
@@ -122,6 +124,11 @@ func TestJobRuntimeStartExtractionWorkerBuildsContainerRequest(t *testing.T) {
 				return nil
 			},
 			inspectVolumeFunc: func(_ context.Context, name string) (*VolumeInfo, error) {
+				inspectCalls[name]++
+				if inspectCalls[name] == 1 {
+					return nil, missingVolumeErr
+				}
+
 				return &VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
 			},
 			createContainerFunc: func(_ context.Context, req *ContainerCreateRequest) (*ContainerCreateResponse, error) {
@@ -156,6 +163,10 @@ func TestJobRuntimeStartExtractionWorkerBuildsContainerRequest(t *testing.T) {
 
 	if !reflect.DeepEqual(createVolumeCalls, []string{"workspace-job-123"}) {
 		t.Fatalf("createVolume calls = %#v", createVolumeCalls)
+	}
+
+	if inspectCalls["workspace-job-123"] != 2 {
+		t.Fatalf("inspectVolume call count = %d, want 2", inspectCalls["workspace-job-123"])
 	}
 
 	if startedID != "ctr-extract" {
@@ -197,6 +208,49 @@ func TestJobRuntimeStartExtractionWorkerBuildsContainerRequest(t *testing.T) {
 	mount := gotReq.Mounts[0]
 	if mount.Source != "/volumes/workspace-job-123" || mount.Destination != "/workspace" || mount.Type != "bind" {
 		t.Fatalf("unexpected workspace mount: %#v", mount)
+	}
+}
+
+func TestJobRuntimeStartExtractionWorkerReusesExistingWorkspaceVolume(t *testing.T) {
+	var (
+		createVolumeCalls  []string
+		inspectVolumeCalls []string
+	)
+
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			createVolumeFunc: func(_ context.Context, name string) error {
+				createVolumeCalls = append(createVolumeCalls, name)
+				return errors.New("volume already exists")
+			},
+			inspectVolumeFunc: func(_ context.Context, name string) (*VolumeInfo, error) {
+				inspectVolumeCalls = append(inspectVolumeCalls, name)
+				return &VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
+			},
+		},
+		ExtractionImage: "extractor:latest",
+		NatsHost:        "nats.internal",
+		MinioHost:       "minio.internal",
+	})
+
+	result, err := runtime.StartExtractionWorker(context.Background(), &models.Job{
+		ID:        "job-123",
+		InputPath: "uploads/input.zip",
+	}, "pod-1")
+	if err != nil {
+		t.Fatalf("StartExtractionWorker error: %v", err)
+	}
+
+	if result == nil || result.ContainerID != "container-123" || !result.Started {
+		t.Fatalf("unexpected result: %#v", result)
+	}
+
+	if !reflect.DeepEqual(inspectVolumeCalls, []string{"workspace-job-123"}) {
+		t.Fatalf("inspectVolume calls = %#v", inspectVolumeCalls)
+	}
+
+	if len(createVolumeCalls) != 0 {
+		t.Fatalf("createVolume calls = %#v, want none", createVolumeCalls)
 	}
 }
 
