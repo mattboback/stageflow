@@ -69,6 +69,10 @@ func (s orchestratorJobStore) UpdateJobProvenanceKey(ctx context.Context, jobID,
 	return s.orchestrator.database.UpdateJobProvenanceKey(ctx, jobID, provenanceKey)
 }
 
+func (s orchestratorJobStore) UpdateJobPodID(ctx context.Context, jobID, podID string) error {
+	return s.orchestrator.database.UpdateJobPodID(ctx, jobID, podID)
+}
+
 func (s orchestratorJobStore) UpdateJobCompletionArtifacts(
 	ctx context.Context,
 	jobID, reportJSONPath, reportHTMLPath, stageLogPath, recipePath string,
@@ -141,26 +145,20 @@ type orchestratorRuntime struct {
 	orchestrator *Orchestrator
 }
 
-func (r orchestratorRuntime) StartExtraction(ctx context.Context, job *models.Job) error {
-	return r.orchestrator.startExtraction(ctx, job)
+func (r orchestratorRuntime) PodNetnsMode() string {
+	return r.orchestrator.podNetnsMode
 }
 
-func (r orchestratorRuntime) PrepareURLJob(ctx context.Context, job *models.Job) error {
-	if err := r.orchestrator.validateURLJobTargets(ctx, job); err != nil {
-		return err
-	}
+func (r orchestratorRuntime) AllowsLoopbackTargets() bool {
+	return r.orchestrator.podNetnsMode == podNetnsModeHost
+}
 
-	if err := r.orchestrator.ensureURLJobPod(ctx, job); err != nil {
-		return err
-	}
+func (r orchestratorRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string, error) {
+	return r.orchestrator.createJobPod(ctx, job)
+}
 
-	if err := r.orchestrator.ensureURLJobReady(ctx, job); err != nil {
-		return err
-	}
-
-	r.orchestrator.persistURLJobProvenanceKey(ctx, job)
-
-	return nil
+func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *models.Job) error {
+	return r.orchestrator.startExtractionWorkerWithTimeout(ctx, job, job.PodID)
 }
 
 func (r orchestratorRuntime) ResolveScannerTypes(modules []string) []string {

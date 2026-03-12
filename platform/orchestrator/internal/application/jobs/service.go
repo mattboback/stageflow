@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
-	"time"
 
 	"github.com/mattboback/stageflow/packages/shared-go/events"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
@@ -433,59 +431,4 @@ func buildScannerArtifacts(job *models.Job) map[string]events.ScannerArtifacts {
 	}
 
 	return scannerArtifacts
-}
-
-func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPayload) error {
-	now := time.Now()
-	job := &models.Job{
-		ID:        payload.JobID,
-		State:     models.JobStatePending,
-		InputType: payload.InputType,
-		InputPath: payload.InputPath,
-		URLs:      payload.URLs,
-		Config: models.JobConfig{
-			Modules:        payload.Config.Modules,
-			ScannerConfigs: payload.Config.ScannerConfigs,
-			Screenshot:     payload.Config.Screenshot,
-			HighlightStyle: payload.Config.HighlightStyle,
-		},
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-
-	created, err := s.store.CreateJobIfAbsent(ctx, job)
-	if err != nil {
-		return fmt.Errorf("failed to create job in database: %w", err)
-	}
-
-	if !created {
-		existing, getErr := s.store.GetJob(ctx, job.ID)
-		if getErr != nil {
-			return fmt.Errorf("failed to load duplicate job: %w", getErr)
-		}
-
-		action, actionErr := domainjobs.DecideDuplicateJobCreated(existing.State)
-		if actionErr != nil {
-			return actionErr
-		}
-
-		switch action {
-		case domainjobs.DuplicateJobCreatedIgnore:
-			return nil
-		case domainjobs.DuplicateJobCreatedRetryOrchestration:
-			job = existing
-		default:
-			return fmt.Errorf("unsupported duplicate action: %s", action)
-		}
-	}
-
-	if strings.EqualFold(payload.InputType, "urls") {
-		if prepareErr := s.runtime.PrepareURLJob(ctx, job); prepareErr != nil {
-			return prepareErr
-		}
-
-		return s.StartScanning(ctx, job)
-	}
-
-	return s.runtime.StartExtraction(ctx, job)
 }

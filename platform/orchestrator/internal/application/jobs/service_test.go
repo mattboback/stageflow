@@ -174,6 +174,7 @@ type fakeJobStore struct {
 	updateJobExtractionArtifactsCalls  int
 	updateJobProvenanceCalls           int
 	updateJobProvenanceKeyCalls        int
+	updateJobPodIDCalls                int
 	updateJobCompletionArtifactsCalls  int
 	updateJobMetricsCalls              int
 	setExpectedScannersCalls           int
@@ -186,6 +187,7 @@ type fakeJobStore struct {
 	recordInternalEventCalls           int
 	lastExpectedScanners               []string
 	lastStateUpdates                   []models.JobState
+	lastPodID                          string
 }
 
 func (f *fakeJobStore) CreateJobIfAbsent(_ context.Context, _ *models.Job) (bool, error) {
@@ -255,6 +257,12 @@ func (f *fakeJobStore) UpdateJobProvenanceKey(_ context.Context, _, _ string) er
 	return nil
 }
 
+func (f *fakeJobStore) UpdateJobPodID(_ context.Context, _, podID string) error {
+	f.updateJobPodIDCalls++
+	f.lastPodID = podID
+	return nil
+}
+
 func (f *fakeJobStore) UpdateJobCompletionArtifacts(
 	_ context.Context,
 	_,
@@ -311,20 +319,37 @@ func (f *fakeJobStore) RecordInternalEvent(_ context.Context, _ string, _ string
 }
 
 type fakeRuntime struct {
-	resolvedScannerTypes []string
-	prepareURLJobCalls   int
-	startExtractionCalls int
-	startScannerCalls    int
-	cleanupJobCalls      int
+	resolvedScannerTypes       []string
+	allowLoopbackTargets       bool
+	createJobPodID             string
+	createJobPodCalls          int
+	startExtractionWorkerCalls int
+	startScannerCalls          int
+	cleanupJobCalls            int
 }
 
-func (f *fakeRuntime) PrepareURLJob(_ context.Context, _ *models.Job) error {
-	f.prepareURLJobCalls++
-	return nil
+func (f *fakeRuntime) AllowsLoopbackTargets() bool {
+	return f.allowLoopbackTargets
 }
 
-func (f *fakeRuntime) StartExtraction(_ context.Context, _ *models.Job) error {
-	f.startExtractionCalls++
+func (f *fakeRuntime) PodNetnsMode() string {
+	if f.allowLoopbackTargets {
+		return PodNetnsModeHost
+	}
+
+	return PodNetnsModeBridge
+}
+
+func (f *fakeRuntime) CreateJobPod(_ context.Context, _ *models.Job) (string, error) {
+	f.createJobPodCalls++
+	if f.createJobPodID == "" {
+		return "pod-123", nil
+	}
+	return f.createJobPodID, nil
+}
+
+func (f *fakeRuntime) StartExtractionWorker(_ context.Context, _ *models.Job) error {
+	f.startExtractionWorkerCalls++
 	return nil
 }
 

@@ -12,36 +12,7 @@ import (
 	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
 
-func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) error {
-	if job.State == models.JobStateExtracting {
-		slog.Debug("Job already extracting", "job_id", job.ID)
-	} else {
-		if !o.canTransition(job.State, models.JobStateExtracting) {
-			msg := fmt.Sprintf("job %s cannot transition to EXTRACTING from %s", job.ID, job.State)
-			slog.Warn(msg, "job_id", job.ID, "from_state", job.State)
-			o.failJobSafeWithDetails(
-				ctx,
-				job.ID,
-				"extraction",
-				msg,
-				stateTransitionDetails(job.State, models.JobStateExtracting),
-			)
-
-			return fmt.Errorf("%s", msg)
-		}
-
-		if err := o.database.UpdateJobState(ctx, job.ID, models.JobStateExtracting); err != nil {
-			return fmt.Errorf("failed to update job state: %w", err)
-		}
-
-		job.State = models.JobStateExtracting
-
-		// Record extraction start time for metrics
-		if err := o.database.RecordExtractionStart(ctx, job.ID); err != nil {
-			slog.Warn("Failed to record extraction start", "job_id", job.ID, "error", err)
-		}
-	}
-
+func (o *Orchestrator) createJobPod(ctx context.Context, job *models.Job) (string, error) {
 	podReq := &podman.PodCreateRequest{
 		Name: "job-" + job.ID,
 		Labels: map[string]string{
@@ -59,11 +30,7 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 
 	podResp, err := o.podmanClient.CreatePod(ctx, podReq)
 	if err != nil {
-		return fmt.Errorf("failed to create pod: %w", err)
-	}
-
-	if podUpdateErr := o.database.UpdateJobPodID(ctx, job.ID, podResp.ID); podUpdateErr != nil {
-		return fmt.Errorf("failed to update job pod ID: %w", podUpdateErr)
+		return "", fmt.Errorf("failed to create pod: %w", err)
 	}
 
 	slog.Info("Created pod for job", "pod_id", podResp.ID, "job_id", job.ID)
@@ -71,11 +38,7 @@ func (o *Orchestrator) startExtraction(ctx context.Context, job *models.Job) err
 		"pod_id": podResp.ID,
 	})
 
-	if workerErr := o.startExtractionWorkerWithTimeout(ctx, job, podResp.ID); workerErr != nil {
-		return fmt.Errorf("failed to start extraction worker: %w", workerErr)
-	}
-
-	return nil
+	return podResp.ID, nil
 }
 
 // startExtractionWorkerWithTimeout starts the extraction worker and enforces a hard startup budget.
