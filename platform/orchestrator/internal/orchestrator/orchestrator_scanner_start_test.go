@@ -13,8 +13,6 @@ import (
 )
 
 func TestStartScannerReusesExistingWorkspaceVolume(t *testing.T) {
-	orch, database, _, _ := setupTestOrchestrator(t)
-
 	createCalls := 0
 	inspectCounts := map[string]int{}
 
@@ -48,7 +46,9 @@ func TestStartScannerReusesExistingWorkspaceVolume(t *testing.T) {
 		},
 	}
 
-	orch.podmanClient = mockClient
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.PodmanClient = mockClient
+	})
 
 	job := &models.Job{
 		ID:        "job-999",
@@ -75,8 +75,6 @@ func TestStartScannerReusesExistingWorkspaceVolume(t *testing.T) {
 }
 
 func TestStartSingleScanner_URLJobUsesServiceNetworking(t *testing.T) {
-	orch, database, _, _ := setupTestOrchestrator(t)
-
 	var gotReq *podman.ContainerCreateRequest
 
 	mockClient := &mockPodmanClient{
@@ -93,7 +91,9 @@ func TestStartSingleScanner_URLJobUsesServiceNetworking(t *testing.T) {
 		},
 	}
 
-	orch.podmanClient = mockClient
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.PodmanClient = mockClient
+	})
 
 	job := &models.Job{
 		ID:        "job-urls",
@@ -127,11 +127,6 @@ func TestStartSingleScanner_URLJobUsesServiceNetworking(t *testing.T) {
 }
 
 func TestStartSingleScanner_URLJobHostNetnsUsesLoopbackServiceEndpoints(t *testing.T) {
-	orch, database, _, _ := setupTestOrchestrator(t)
-	orch.podNetnsMode = podNetnsModeHost
-
-	defer orch.WaitForMonitors()
-
 	var gotReq *podman.ContainerCreateRequest
 
 	mockClient := &mockPodmanClient{
@@ -148,7 +143,11 @@ func TestStartSingleScanner_URLJobHostNetnsUsesLoopbackServiceEndpoints(t *testi
 		},
 	}
 
-	orch.podmanClient = mockClient
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.PodmanClient = mockClient
+		config.PodNetnsMode = podNetnsModeHost
+	})
+	defer orch.WaitForMonitors()
 
 	job := &models.Job{
 		ID:        "job-urls-hostnetns",

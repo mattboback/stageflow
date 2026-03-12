@@ -52,7 +52,6 @@ type PodmanClient interface {
 type Orchestrator struct {
 	podmanClient         PodmanClient
 	jobRuntime           *podman.JobRuntime
-	jobRuntimeState      runtimeAdapterState
 	database             *db.Database
 	publisher            Publisher
 	scannerRegistry      *scanners.Registry
