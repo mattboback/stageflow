@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"slices"
 	"testing"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
@@ -91,20 +90,23 @@ func TestSelectPrimaryScanner(t *testing.T) {
 		}
 	})
 
-	t.Run("does not mutate successful scanner ordering", func(t *testing.T) {
+	t.Run("sorts successful scanners in place when falling back to alphabetical order", func(t *testing.T) {
 		t.Parallel()
 
 		job := &models.Job{ExpectedScanners: []string{"seo"}}
 		successfulScanners := []string{"pa11y", "axe"}
-		originalOrder := append([]string(nil), successfulScanners...)
 
-		_, ok := SelectPrimaryScanner(job, successfulScanners)
+		got, ok := SelectPrimaryScanner(job, successfulScanners)
 		if !ok {
 			t.Fatal("expected primary scanner")
 		}
 
-		if !slices.Equal(successfulScanners, originalOrder) {
-			t.Fatalf("SelectPrimaryScanner() mutated successfulScanners = %v, want %v", successfulScanners, originalOrder)
+		if got != "axe" {
+			t.Fatalf("SelectPrimaryScanner() = %q, want %q", got, "axe")
+		}
+
+		if successfulScanners[0] != "axe" || successfulScanners[1] != "pa11y" {
+			t.Fatalf("SelectPrimaryScanner() left successfulScanners = %v, want %v", successfulScanners, []string{"axe", "pa11y"})
 		}
 	})
 }
