@@ -122,3 +122,124 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 		t.Fatalf("OPENROUTER_API_KEY = %q, want %q", got, want)
 	}
 }
+
+func TestHandleExtractionReadyUsesRegistryDefaultScannerImageWhenNoOverride(t *testing.T) {
+	registry := scanners.NewRegistry("registry/default:latest")
+	if err := registry.Register(&scanners.Definition{ID: "axe", Name: "axe", Enabled: true}); err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	var gotReq *podman.ContainerCreateRequest
+
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.ScannerRegistry = registry
+		config.ScannerImage = "localhost/stageflow/scanner-runner:latest"
+		config.PodmanClient = &mockPodmanClient{
+			inspectVolumeFunc: func(_ context.Context, name string) (*podman.VolumeInfo, error) {
+				return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
+			},
+			createContainerFunc: func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+				gotReq = req
+				return &podman.ContainerCreateResponse{ID: "scanner-ctr"}, nil
+			},
+			startContainerFunc: func(_ context.Context, _ string) error { return nil },
+			waitContainerFunc: func(_ context.Context, _ string) (*podman.ContainerWaitResponse, error) {
+				return &podman.ContainerWaitResponse{StatusCode: 0}, nil
+			},
+		}
+	})
+	defer orch.WaitForMonitors()
+
+	job := &models.Job{
+		ID:        "job-registry-default-image",
+		State:     models.JobStateExtracting,
+		InputType: models.JobInputTypeZip,
+		InputPath: "staging/job-registry-default-image/site.zip",
+		PodID:     "pod-123",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	insertJob(t, database, job)
+
+	err := orch.HandleExtractionReady(context.Background(), &events.ExtractionReadyPayload{
+		JobID:                  job.ID,
+		TotalPages:             1,
+		ProvenancePath:         "/workspace/provenance.json",
+		ProvenanceArtifactPath: job.ID + "/provenance.json",
+	})
+	if err != nil {
+		t.Fatalf("HandleExtractionReady() error = %v", err)
+	}
+
+	if gotReq == nil {
+		t.Fatal("expected scanner container create request")
+	}
+
+	if got, want := gotReq.Image, "registry/default:latest"; got != want {
+		t.Fatalf("scanner image = %q, want %q", got, want)
+	}
+}
+
+func TestHandleExtractionReadyUsesExplicitScannerImageOverride(t *testing.T) {
+	registry := scanners.NewRegistry("registry/default:latest")
+	if err := registry.Register(&scanners.Definition{ID: "axe", Name: "axe", Enabled: true}); err != nil {
+		t.Fatalf("Register() error = %v", err)
+	}
+
+	var gotReq *podman.ContainerCreateRequest
+
+	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
+		config.ScannerRegistry = registry
+		config.ScannerImage = "explicit/override:latest"
+		config.ScannerImageOverride = "explicit/override:latest"
+		config.PodmanClient = &mockPodmanClient{
+			inspectVolumeFunc: func(_ context.Context, name string) (*podman.VolumeInfo, error) {
+				return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
+			},
+			createContainerFunc: func(_ context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error) {
+				gotReq = req
+				return &podman.ContainerCreateResponse{ID: "scanner-ctr"}, nil
+			},
+			startContainerFunc: func(_ context.Context, _ string) error { return nil },
+			waitContainerFunc: func(_ context.Context, _ string) (*podman.ContainerWaitResponse, error) {
+				return &podman.ContainerWaitResponse{StatusCode: 0}, nil
+			},
+		}
+	})
+	defer orch.WaitForMonitors()
+
+	job := &models.Job{
+		ID:        "job-scanner-image-override",
+		State:     models.JobStateExtracting,
+		InputType: models.JobInputTypeZip,
+		InputPath: "staging/job-scanner-image-override/site.zip",
+		PodID:     "pod-123",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	insertJob(t, database, job)
+
+	err := orch.HandleExtractionReady(context.Background(), &events.ExtractionReadyPayload{
+		JobID:                  job.ID,
+		TotalPages:             1,
+		ProvenancePath:         "/workspace/provenance.json",
+		ProvenanceArtifactPath: job.ID + "/provenance.json",
+	})
+	if err != nil {
+		t.Fatalf("HandleExtractionReady() error = %v", err)
+	}
+
+	if gotReq == nil {
+		t.Fatal("expected scanner container create request")
+	}
+
+	if got, want := gotReq.Image, "explicit/override:latest"; got != want {
+		t.Fatalf("scanner image = %q, want %q", got, want)
+	}
+}
