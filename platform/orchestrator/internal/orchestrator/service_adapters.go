@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
@@ -15,7 +17,7 @@ func (o *Orchestrator) newService() *appjobs.Service {
 		orchestratorRuntime{orchestrator: o},
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
-		o.scannerLaunchPlannerConfig(),
+		appjobs.WithScannerLaunchPlanner(appjobs.NewScannerLaunchPlanner(o.scannerLaunchPlannerConfig())),
 	)
 }
 
@@ -175,15 +177,59 @@ func (r orchestratorRuntime) AllowsLoopbackTargets() bool {
 }
 
 func (r orchestratorRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string, error) {
-	return r.orchestrator.createJobPod(ctx, job)
+	return r.orchestrator.runtimeAdapter().CreateJobPod(ctx, job)
 }
 
 func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *models.Job) error {
-	return r.orchestrator.startExtractionWorkerWithTimeout(ctx, job, job.PodID)
+	timeoutCtx, cancel := context.WithTimeout(ctx, r.orchestrator.extractionTimeout)
+	defer cancel()
+
+	type extractionStartResult struct {
+		result *podman.ContainerLaunchResult
+		err    error
+	}
+
+	resultChan := make(chan extractionStartResult, 1)
+
+	go func() {
+		result, err := r.orchestrator.runtimeAdapter().StartExtractionWorker(timeoutCtx, job, job.PodID)
+		resultChan <- extractionStartResult{result: result, err: err}
+	}()
+
+	select {
+	case started := <-resultChan:
+		if started.result != nil && started.result.ContainerID != "" {
+			slog.Info("Created extraction worker container", "container_id", started.result.ContainerID, "job_id", job.ID)
+			r.orchestrator.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
+				"component":    "extraction-worker",
+				"container_id": started.result.ContainerID,
+			})
+		}
+
+		if started.err != nil {
+			return started.err
+		}
+
+		slog.Info("Started extraction worker container", "container_id", started.result.ContainerID, "job_id", job.ID)
+		r.orchestrator.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
+			"component":    "extraction-worker",
+			"container_id": started.result.ContainerID,
+		})
+		r.orchestrator.spawnMonitorContainer(
+			backgroundWithCorrelation(ctx),
+			started.result.ContainerID,
+			job.ID,
+			"extraction",
+		)
+
+		return nil
+	case <-timeoutCtx.Done():
+		return fmt.Errorf("extraction worker start timed out after %v", r.orchestrator.extractionTimeout)
+	}
 }
 
 func (r orchestratorRuntime) ResolveScannerTypes(modules []string) []string {
-	return r.orchestrator.getScannerTypes(modules)
+	return r.orchestrator.runtimeAdapter().ResolveScannerTypes(modules)
 }
 
 func (r orchestratorRuntime) StartScanner(

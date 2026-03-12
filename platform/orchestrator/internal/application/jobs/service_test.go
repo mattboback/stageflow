@@ -29,7 +29,7 @@ func TestServicePrepareExtractedJobStartsScanning(t *testing.T) {
 	}
 	runtime := &fakeRuntime{resolvedScannerTypes: []string{"axe"}}
 
-	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{}, ScannerLaunchPlannerConfig{})
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
 	payload := &events.ExtractionReadyPayload{
 		JobID:                  "job-123",
 		StageLogPath:           "job-123/extraction/stage.log",
@@ -99,7 +99,7 @@ func TestServiceRecordScannerFailureCompletesWithPartialResults(t *testing.T) {
 	artifacts := &fakeArtifacts{reportPath: "job-fail/report.json"}
 	publisher := &fakePublisher{}
 
-	service := NewService(store, &fakeRuntime{}, artifacts, publisher, ScannerLaunchPlannerConfig{})
+	service := NewService(store, &fakeRuntime{}, artifacts, publisher)
 	payload := &events.ScanFailedPayload{
 		JobID:       "job-fail",
 		ScannerType: "lighthouse",
@@ -135,7 +135,7 @@ func TestServiceRecordScannerCompletionWaitsForRemainingScanners(t *testing.T) {
 		recordScannerCompletionAllComplete: false,
 	}
 
-	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{}, ScannerLaunchPlannerConfig{})
+	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{})
 	payload := &events.ScanCompletedPayload{
 		JobID:             "job-scan",
 		ScannerType:       "axe",
