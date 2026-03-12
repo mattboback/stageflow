@@ -59,11 +59,16 @@ func TestServiceCreateJobDuplicatePendingRetriesWorkflow(t *testing.T) {
 func TestServiceCreateJobURLPreparesLifecycleBeforeStartingScanners(t *testing.T) {
 	t.Parallel()
 
-	store := &fakeJobStore{createJobIfAbsentCreated: true}
+	var operationLog []string
+	store := &fakeJobStore{
+		createJobIfAbsentCreated: true,
+		operationLog:             &operationLog,
+	}
 	runtime := &fakeRuntime{
 		createJobPodID:       "pod-url-123",
 		resolvedScannerTypes: []string{"axe"},
 		allowLoopbackTargets: true,
+		operationLog:         &operationLog,
 	}
 
 	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
@@ -95,6 +100,14 @@ func TestServiceCreateJobURLPreparesLifecycleBeforeStartingScanners(t *testing.T
 		t.Fatalf("UpdateJobPodID() calls = %d, want 1", store.updateJobPodIDCalls)
 	}
 
+	assertOperationOrder(
+		t,
+		operationLog,
+		"runtime.CreateJobPod",
+		"store.UpdateJobPodID",
+		"store.UpdateJobState:"+string(models.JobStateReady),
+	)
+
 	if store.updateJobProvenanceKeyCalls != 1 {
 		t.Fatalf("UpdateJobProvenanceKey() calls = %d, want 1", store.updateJobProvenanceKeyCalls)
 	}
@@ -106,6 +119,41 @@ func TestServiceCreateJobURLPreparesLifecycleBeforeStartingScanners(t *testing.T
 	if runtime.startScannerCalls != 1 {
 		t.Fatalf("StartScanner() calls = %d, want 1", runtime.startScannerCalls)
 	}
+}
+
+func TestServiceCreateJobZipAllocatesPodBeforePersistingExtracting(t *testing.T) {
+	t.Parallel()
+
+	var operationLog []string
+	store := &fakeJobStore{
+		createJobIfAbsentCreated: true,
+		operationLog:             &operationLog,
+	}
+	runtime := &fakeRuntime{operationLog: &operationLog}
+
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
+	payload := &events.JobCreatedPayload{
+		JobID:     "job-zip",
+		InputType: string(models.JobInputTypeZip),
+		InputPath: "staging/job-zip/site.zip",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	if err := service.CreateJob(t.Context(), payload); err != nil {
+		t.Fatalf("CreateJob() error = %v", err)
+	}
+
+	assertOperationOrder(
+		t,
+		operationLog,
+		"runtime.CreateJobPod",
+		"store.UpdateJobPodID",
+		"store.UpdateJobState:EXTRACTING",
+		"store.RecordExtractionStart",
+		"runtime.StartExtractionWorker",
+	)
 }
 
 func TestServiceCreateJobURLFailsWhenLoopbackTargetsNeedHostNetworking(t *testing.T) {

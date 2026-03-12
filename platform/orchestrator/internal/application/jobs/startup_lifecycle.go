@@ -111,6 +111,13 @@ func (s *Service) prepareURLJob(ctx context.Context, job *models.Job) error {
 	switch action {
 	case domainjobs.URLJobPreparationIgnore:
 		return nil
+	}
+
+	if err := s.ensureJobPod(ctx, job); err != nil {
+		return err
+	}
+
+	switch action {
 	case domainjobs.URLJobPreparationAlreadyReady:
 	case domainjobs.URLJobPreparationAdvanceToReady:
 		if err := s.store.UpdateJobState(ctx, job.ID, models.JobStateReady); err != nil {
@@ -120,10 +127,6 @@ func (s *Service) prepareURLJob(ctx context.Context, job *models.Job) error {
 		job.State = models.JobStateReady
 	default:
 		return fmt.Errorf("unsupported URL job preparation action: %s", action)
-	}
-
-	if err := s.ensureJobPod(ctx, job); err != nil {
-		return err
 	}
 
 	provenanceKey := job.ID + "/provenance.json"
@@ -154,6 +157,17 @@ func (s *Service) startExtraction(ctx context.Context, job *models.Job) error {
 	switch action {
 	case domainjobs.ExtractionStartAlreadyExtracting:
 	case domainjobs.ExtractionStartAdvance:
+	default:
+		return fmt.Errorf("unsupported extraction start action: %s", action)
+	}
+
+	if err := s.ensureJobPod(ctx, job); err != nil {
+		return err
+	}
+
+	switch action {
+	case domainjobs.ExtractionStartAlreadyExtracting:
+	case domainjobs.ExtractionStartAdvance:
 		if err := s.store.UpdateJobState(ctx, job.ID, models.JobStateExtracting); err != nil {
 			return fmt.Errorf("failed to update job state to extracting: %w", err)
 		}
@@ -163,12 +177,6 @@ func (s *Service) startExtraction(ctx context.Context, job *models.Job) error {
 		if err := s.store.RecordExtractionStart(ctx, job.ID); err != nil {
 			slog.Warn("Failed to record extraction start", "job_id", job.ID, "error", err)
 		}
-	default:
-		return fmt.Errorf("unsupported extraction start action: %s", action)
-	}
-
-	if err := s.ensureJobPod(ctx, job); err != nil {
-		return err
 	}
 
 	if err := s.runtime.StartExtractionWorker(ctx, job); err != nil {

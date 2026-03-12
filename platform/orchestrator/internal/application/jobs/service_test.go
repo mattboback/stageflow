@@ -188,6 +188,7 @@ type fakeJobStore struct {
 	lastExpectedScanners               []string
 	lastStateUpdates                   []models.JobState
 	lastPodID                          string
+	operationLog                       *[]string
 }
 
 func (f *fakeJobStore) CreateJobIfAbsent(_ context.Context, _ *models.Job) (bool, error) {
@@ -213,6 +214,7 @@ func (f *fakeJobStore) GetJob(_ context.Context, _ string) (*models.Job, error) 
 func (f *fakeJobStore) UpdateJobState(_ context.Context, _ string, state models.JobState) error {
 	f.updateJobStateCalls++
 	f.lastStateUpdates = append(f.lastStateUpdates, state)
+	f.recordOperation("store.UpdateJobState:" + string(state))
 
 	return nil
 }
@@ -224,6 +226,7 @@ func (f *fakeJobStore) RecordExtractionComplete(_ context.Context, _ string) err
 
 func (f *fakeJobStore) RecordExtractionStart(_ context.Context, _ string) error {
 	f.recordExtractionStartCalls++
+	f.recordOperation("store.RecordExtractionStart")
 	return nil
 }
 
@@ -254,12 +257,14 @@ func (f *fakeJobStore) UpdateJobProvenance(_ context.Context, _, _ string) error
 
 func (f *fakeJobStore) UpdateJobProvenanceKey(_ context.Context, _, _ string) error {
 	f.updateJobProvenanceKeyCalls++
+	f.recordOperation("store.UpdateJobProvenanceKey")
 	return nil
 }
 
 func (f *fakeJobStore) UpdateJobPodID(_ context.Context, _, podID string) error {
 	f.updateJobPodIDCalls++
 	f.lastPodID = podID
+	f.recordOperation("store.UpdateJobPodID")
 	return nil
 }
 
@@ -318,6 +323,14 @@ func (f *fakeJobStore) RecordInternalEvent(_ context.Context, _ string, _ string
 	return nil
 }
 
+func (f *fakeJobStore) recordOperation(op string) {
+	if f.operationLog == nil {
+		return
+	}
+
+	*f.operationLog = append(*f.operationLog, op)
+}
+
 type fakeRuntime struct {
 	resolvedScannerTypes       []string
 	allowLoopbackTargets       bool
@@ -326,6 +339,7 @@ type fakeRuntime struct {
 	startExtractionWorkerCalls int
 	startScannerCalls          int
 	cleanupJobCalls            int
+	operationLog               *[]string
 }
 
 func (f *fakeRuntime) AllowsLoopbackTargets() bool {
@@ -342,6 +356,7 @@ func (f *fakeRuntime) PodNetnsMode() string {
 
 func (f *fakeRuntime) CreateJobPod(_ context.Context, _ *models.Job) (string, error) {
 	f.createJobPodCalls++
+	f.recordOperation("runtime.CreateJobPod")
 	if f.createJobPodID == "" {
 		return "pod-123", nil
 	}
@@ -350,6 +365,7 @@ func (f *fakeRuntime) CreateJobPod(_ context.Context, _ *models.Job) (string, er
 
 func (f *fakeRuntime) StartExtractionWorker(_ context.Context, _ *models.Job) error {
 	f.startExtractionWorkerCalls++
+	f.recordOperation("runtime.StartExtractionWorker")
 	return nil
 }
 
@@ -365,6 +381,14 @@ func (f *fakeRuntime) StartScanner(_ context.Context, _ *models.Job, _ *ScannerL
 func (f *fakeRuntime) CleanupJob(_ context.Context, _ *models.Job) error {
 	f.cleanupJobCalls++
 	return nil
+}
+
+func (f *fakeRuntime) recordOperation(op string) {
+	if f.operationLog == nil {
+		return
+	}
+
+	*f.operationLog = append(*f.operationLog, op)
 }
 
 type fakeArtifacts struct {
@@ -388,4 +412,29 @@ func (f *fakePublisher) PublishJobCompleted(_ context.Context, _ *events.JobComp
 func (f *fakePublisher) PublishJobFailed(_ context.Context, _ *events.JobFailedPayload) error {
 	f.failedCalls++
 	return nil
+}
+
+func assertOperationOrder(t *testing.T, operations []string, ordered ...string) {
+	t.Helper()
+
+	lastIndex := -1
+	for _, op := range ordered {
+		index := -1
+		for i, candidate := range operations {
+			if candidate == op {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			t.Fatalf("operation %q missing from log %v", op, operations)
+		}
+
+		if index <= lastIndex {
+			t.Fatalf("operation order %v violated by log %v", ordered, operations)
+		}
+
+		lastIndex = index
+	}
 }
