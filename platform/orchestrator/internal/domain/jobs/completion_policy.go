@@ -50,8 +50,7 @@ func SelectPrimaryScanner(job *models.Job, successfulScanners []string) (string,
 		}
 	}
 
-	sortedSuccessfulScanners := append([]string(nil), successfulScanners...)
-	sort.Strings(sortedSuccessfulScanners)
+	sort.Strings(successfulScanners)
 
-	return sortedSuccessfulScanners[0], true
+	return successfulScanners[0], true
 }
