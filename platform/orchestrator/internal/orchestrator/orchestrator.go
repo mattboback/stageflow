@@ -51,6 +51,8 @@ type PodmanClient interface {
 // Orchestrator owns the job FSM, Podman pod/container lifecycle, and final aggregation.
 type Orchestrator struct {
 	podmanClient         PodmanClient
+	jobRuntime           *podman.JobRuntime
+	jobRuntimeState      runtimeAdapterState
 	database             *db.Database
 	publisher            Publisher
 	scannerRegistry      *scanners.Registry
@@ -173,7 +175,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		}
 	}
 
-	return &Orchestrator{
+	orch := &Orchestrator{
 		podmanClient:         config.PodmanClient,
 		database:             config.Database,
 		publisher:            config.Publisher,
@@ -199,6 +201,10 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,
 	}
+
+	orch.refreshJobRuntime()
+
+	return orch
 }
 
 func (o *Orchestrator) canTransition(from, to models.JobState) bool {

@@ -2,11 +2,27 @@ package orchestrator
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
+	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 	adapterstorage "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/storage"
 	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
 )
+
+type runtimeAdapterState struct {
+	client          PodmanClient
+	scannerRegistry any
+	extractionImage string
+	podNetwork      string
+	podNetnsMode    string
+	podHostMappings []string
+	natsHost        string
+	minioHost       string
+	minioAccessKey  string
+	minioSecretKey  string
+	minioUseSSL     bool
+}
 
 func (o *Orchestrator) newService() *appjobs.Service {
 	return appjobs.NewService(
@@ -16,6 +32,48 @@ func (o *Orchestrator) newService() *appjobs.Service {
 		o.publisher,
 		o.scannerLaunchPlannerConfig(),
 	)
+}
+
+func (o *Orchestrator) runtimeAdapter() *podman.JobRuntime {
+	if o.jobRuntime == nil || !reflect.DeepEqual(o.jobRuntimeState, o.currentRuntimeAdapterState()) {
+		o.refreshJobRuntime()
+	}
+
+	return o.jobRuntime
+}
+
+func (o *Orchestrator) currentRuntimeAdapterState() runtimeAdapterState {
+	return runtimeAdapterState{
+		client:          o.podmanClient,
+		scannerRegistry: o.scannerRegistry,
+		extractionImage: o.extractionImage,
+		podNetwork:      o.podNetwork,
+		podNetnsMode:    o.podNetnsMode,
+		podHostMappings: append([]string(nil), o.podHostMappings...),
+		natsHost:        o.natsHost,
+		minioHost:       o.minioHost,
+		minioAccessKey:  o.minioAccessKey,
+		minioSecretKey:  o.minioSecretKey,
+		minioUseSSL:     o.minioUseSSL,
+	}
+}
+
+func (o *Orchestrator) refreshJobRuntime() {
+	state := o.currentRuntimeAdapterState()
+	o.jobRuntime = podman.NewJobRuntime(podman.JobRuntimeConfig{
+		Client:          state.client,
+		ScannerRegistry: o.scannerRegistry,
+		ExtractionImage: state.extractionImage,
+		PodNetwork:      state.podNetwork,
+		PodNetnsMode:    state.podNetnsMode,
+		PodHostMappings: state.podHostMappings,
+		NatsHost:        state.natsHost,
+		MinioHost:       state.minioHost,
+		MinioAccessKey:  state.minioAccessKey,
+		MinioSecretKey:  state.minioSecretKey,
+		MinioUseSSL:     state.minioUseSSL,
+	})
+	o.jobRuntimeState = state
 }
 
 type orchestratorJobStore struct {
@@ -146,11 +204,11 @@ type orchestratorRuntime struct {
 }
 
 func (r orchestratorRuntime) PodNetnsMode() string {
-	return r.orchestrator.podNetnsMode
+	return r.orchestrator.runtimeAdapter().PodNetnsMode()
 }
 
 func (r orchestratorRuntime) AllowsLoopbackTargets() bool {
-	return r.orchestrator.podNetnsMode == podNetnsModeHost
+	return r.orchestrator.runtimeAdapter().AllowsLoopbackTargets()
 }
 
 func (r orchestratorRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string, error) {

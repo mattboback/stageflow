@@ -4,21 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-
-	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 )
-
-func (o *Orchestrator) ensureVolume(ctx context.Context, name string) (*podman.VolumeInfo, error) {
-	if info, err := o.podmanClient.InspectVolume(ctx, name); err == nil {
-		return info, nil
-	}
-
-	if err := o.podmanClient.CreateVolume(ctx, name); err != nil {
-		return nil, err
-	}
-
-	return o.podmanClient.InspectVolume(ctx, name)
-}
 
 func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, jobID, component string) {
 	o.monitorWG.Add(1)

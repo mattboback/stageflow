@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
-	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
 	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
 )
 
@@ -78,7 +77,7 @@ func (o *Orchestrator) startScanning(ctx context.Context, job *models.Job) error
 // getScannerTypes returns the list of scanner types to run based on modules config.
 // It uses the scanner registry to resolve module names/aliases to scanner IDs.
 func (o *Orchestrator) getScannerTypes(modules []string) []string {
-	return o.scannerRegistry.ResolveModules(modules)
+	return o.runtimeAdapter().ResolveScannerTypes(modules)
 }
 
 func (o *Orchestrator) startScannersWithTimeout(ctx context.Context, job *models.Job, scannerTypes []string) error {
@@ -129,77 +128,30 @@ func (o *Orchestrator) startPlannedScanner(
 	}
 
 	scannerType := plan.Labels["scanner_type"]
+	result, err := o.runtimeAdapter().StartScanner(ctx, job, plan)
+	if result != nil && result.ContainerID != "" {
+		slog.Info("Created scanner container", "scanner", scannerType, "container_id", result.ContainerID, "job_id", job.ID)
+		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
+			"component":    "scanner",
+			"scanner_type": scannerType,
+			"container_id": result.ContainerID,
+		})
+	}
 
-	mounts, err := o.resolveScannerMounts(ctx, plan.Volumes)
 	if err != nil {
 		return err
 	}
 
-	containerReq := &podman.ContainerCreateRequest{
-		Name:   plan.Name,
-		Image:  plan.Image,
-		Pod:    job.PodID,
-		User:   plan.User,
-		Env:    plan.Env,
-		Mounts: mounts,
-		Labels: plan.Labels,
-		ResourceLimits: &podman.ResourceLimits{
-			MemoryLimitMB: plan.ResourceLimits.MemoryLimitMB,
-			MemorySwapMB:  plan.ResourceLimits.MemorySwapMB,
-		},
-	}
-
-	slog.Info("Launching scanner container", "scanner", scannerType, "image", plan.Image, "job_id", job.ID)
-
-	containerResp, err := o.podmanClient.CreateContainer(ctx, containerReq)
-	if err != nil {
-		return fmt.Errorf("failed to create %s scanner container: %w", scannerType, err)
-	}
-
-	slog.Info("Created scanner container", "scanner", scannerType, "container_id", containerResp.ID, "job_id", job.ID)
-	o.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
-		"component":    "scanner",
-		"scanner_type": scannerType,
-		"container_id": containerResp.ID,
-	})
-
-	if startErr := o.podmanClient.StartContainer(ctx, containerResp.ID); startErr != nil {
-		return fmt.Errorf("failed to start %s scanner container: %w", scannerType, startErr)
-	}
-
-	slog.Info("Started scanner container", "scanner", scannerType, "container_id", containerResp.ID, "job_id", job.ID)
+	slog.Info("Started scanner container", "scanner", scannerType, "container_id", result.ContainerID, "job_id", job.ID)
 	o.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
 		"component":    "scanner",
 		"scanner_type": scannerType,
-		"container_id": containerResp.ID,
+		"container_id": result.ContainerID,
 	})
 
-	o.spawnMonitorContainer(backgroundWithCorrelation(ctx), containerResp.ID, job.ID, "scanner-"+scannerType)
+	o.spawnMonitorContainer(backgroundWithCorrelation(ctx), result.ContainerID, job.ID, "scanner-"+scannerType)
 
 	return nil
-}
-
-func (o *Orchestrator) resolveScannerMounts(
-	ctx context.Context,
-	volumes []appjobs.VolumeRequirement,
-) ([]podman.VolumeMount, error) {
-	mounts := make([]podman.VolumeMount, 0, len(volumes))
-
-	for _, volume := range volumes {
-		volumeInfo, err := o.ensureVolume(ctx, volume.Name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to prepare %s volume: %w", volume.Name, err)
-		}
-
-		mounts = append(mounts, podman.VolumeMount{
-			Type:        "bind",
-			Source:      volumeInfo.Mountpoint,
-			Destination: volume.Destination,
-			ReadOnly:    volume.ReadOnly,
-		})
-	}
-
-	return mounts, nil
 }
 
 func (o *Orchestrator) scannerLaunchPlannerConfig() appjobs.ScannerLaunchPlannerConfig {
