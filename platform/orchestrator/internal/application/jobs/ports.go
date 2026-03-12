@@ -19,6 +19,7 @@ type JobStore interface {
 	UpdateJobExtractionArtifacts(ctx context.Context, jobID, stageLogPath, recipePath string) error
 	UpdateJobProvenance(ctx context.Context, jobID, provenancePath string) error
 	UpdateJobProvenanceKey(ctx context.Context, jobID, provenanceKey string) error
+	UpdateJobPodID(ctx context.Context, jobID, podID string) error
 	UpdateJobCompletionArtifacts(
 		ctx context.Context,
 		jobID, reportJSONPath, reportHTMLPath, stageLogPath, recipePath string,
@@ -38,8 +39,10 @@ type JobStore interface {
 }
 
 type Runtime interface {
-	StartExtraction(ctx context.Context, job *models.Job) error
-	PrepareURLJob(ctx context.Context, job *models.Job) error
+	PodNetnsMode() string
+	AllowsLoopbackTargets() bool
+	CreateJobPod(ctx context.Context, job *models.Job) (string, error)
+	StartExtractionWorker(ctx context.Context, job *models.Job) error
 	ResolveScannerTypes(modules []string) []string
 	StartScanner(ctx context.Context, job *models.Job, plan *ScannerLaunchPlan) error
 	CleanupJob(ctx context.Context, job *models.Job) error
