@@ -203,8 +203,11 @@ func (o *Orchestrator) resolveScannerMounts(
 }
 
 func (o *Orchestrator) scannerLaunchPlannerConfig() appjobs.ScannerLaunchPlannerConfig {
-	defaultScannerImage := o.scannerImage
-	if defaultScannerImage == "" {
+	defaultScannerImage := o.scannerImageOverride
+	if defaultScannerImage == "" && o.scannerRegistry == nil {
+		defaultScannerImage = o.scannerImage
+	}
+	if defaultScannerImage == "" && o.scannerRegistry == nil {
 		defaultScannerImage = "localhost/stageflow/scanner-runner:latest"
 	}
 

@@ -66,6 +66,7 @@ type Orchestrator struct {
 	scanTimeout          time.Duration
 	extractionImage      string
 	scannerImage         string
+	scannerImageOverride string
 	podNetwork           string
 	podNetnsMode         string
 	podHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
@@ -94,6 +95,7 @@ type Config struct {
 	ScanTimeout          time.Duration
 	ExtractionImage      string
 	ScannerImage         string
+	ScannerImageOverride string
 	PodNetwork           string
 	PodNetnsMode         string   // Pod network namespace mode for job pods (bridge|host). Host mode is local-only.
 	PodHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
@@ -187,6 +189,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		scanTimeout:          scanTimeout,
 		extractionImage:      extractionImage,
 		scannerImage:         scannerImage,
+		scannerImageOverride: config.ScannerImageOverride,
 		podNetwork:           config.PodNetwork,
 		podNetnsMode:         podNetnsMode,
 		podHostMappings:      config.PodHostMappings,
