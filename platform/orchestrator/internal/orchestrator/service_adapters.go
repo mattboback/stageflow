@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
@@ -12,12 +13,35 @@ import (
 )
 
 func (o *Orchestrator) newService() *appjobs.Service {
+	defaultScannerImage := o.scannerImageOverride
+	if defaultScannerImage == "" && o.scannerRegistry == nil {
+		defaultScannerImage = o.scannerImage
+	}
+	if defaultScannerImage == "" && o.scannerRegistry == nil {
+		defaultScannerImage = "localhost/stageflow/scanner-runner:latest"
+	}
+
 	return appjobs.NewService(
 		orchestratorJobStore{orchestrator: o},
 		orchestratorRuntime{orchestrator: o},
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
-		appjobs.WithScannerLaunchPlanner(appjobs.NewScannerLaunchPlanner(o.scannerLaunchPlannerConfig())),
+		appjobs.WithScannerLaunchPlanner(appjobs.NewScannerLaunchPlanner(appjobs.ScannerLaunchPlannerConfig{
+			ScannerRegistry:      o.scannerRegistry,
+			DefaultScannerImage:  defaultScannerImage,
+			NatsHost:             o.natsHost,
+			MinioHost:            o.minioHost,
+			MinioAccessKey:       o.minioAccessKey,
+			MinioSecretKey:       o.minioSecretKey,
+			MinioUseSSL:          o.minioUseSSL,
+			PageLoadTimeout:      o.pageLoadTimeout,
+			ScrollTimeout:        o.scrollTimeout,
+			PodNetnsMode:         o.podNetnsMode,
+			DefaultScannerUser:   "0",
+			OpenRouterAPIKey:     os.Getenv("OPENROUTER_API_KEY"),
+			OpenRouterAppTitle:   os.Getenv("OPENROUTER_APP_TITLE"),
+			OpenRouterAppReferer: os.Getenv("OPENROUTER_APP_REFERER"),
+		})),
 	)
 }
 
