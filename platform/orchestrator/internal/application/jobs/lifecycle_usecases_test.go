@@ -60,6 +60,7 @@ func TestServiceCreateJobURLPreparesLifecycleBeforeStartingScanners(t *testing.T
 	t.Parallel()
 
 	var operationLog []string
+
 	store := &fakeJobStore{
 		createJobIfAbsentCreated: true,
 		operationLog:             &operationLog,
@@ -125,6 +126,7 @@ func TestServiceCreateJobZipAllocatesPodBeforePersistingExtracting(t *testing.T)
 	t.Parallel()
 
 	var operationLog []string
+
 	store := &fakeJobStore{
 		createJobIfAbsentCreated: true,
 		operationLog:             &operationLog,
@@ -269,6 +271,8 @@ func TestServiceRunURLJobIgnoresTerminalStates(t *testing.T) {
 
 	for _, state := range []models.JobState{models.JobStateDone, models.JobStateFailed} {
 		t.Run(string(state), func(t *testing.T) {
+			t.Parallel()
+
 			store := &fakeJobStore{}
 			runtime := &fakeRuntime{resolvedScannerTypes: []string{"axe"}}
 

@@ -43,9 +43,9 @@ demo URL='https://example.com':
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
-    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
         echo "Refusing to start the repo-local StageFlow stack on the production VPS." >&2
-        echo "Use /home/matt/Deployment for live operations." >&2
+        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} for live operations." >&2
         exit 1
     fi
 
@@ -86,9 +86,9 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
-    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
         echo "Refusing to run repo-local StageFlow dev stacks on the production VPS." >&2
-        echo "Use /home/matt/Deployment for live operations." >&2
+        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} for live operations." >&2
         exit 1
     fi
 
@@ -153,9 +153,9 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend':
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
-    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
         echo "Refusing to run repo-local StageFlow dev refresh on the production VPS." >&2
-        echo "Use /home/matt/Deployment for live operations." >&2
+        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} for live operations." >&2
         exit 1
     fi
 
@@ -222,9 +222,9 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
-    if [[ "$current_host" == "server1.matthewboback.com" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
         echo "Refusing to run repo-local StageFlow staging stacks on the production VPS." >&2
-        echo "Use /home/matt/Deployment for live operations." >&2
+        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} for live operations." >&2
         exit 1
     fi
 
@@ -401,29 +401,28 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     echo "==> Installed and available on PATH as '$bin_name'."
     "$resolved" version
 
-[group('prod'), doc('Production is owned by `/home/matt/Deployment`; this recipe intentionally stops old repo-local usage')]
+[group('prod'), doc('Production is owned by external control plane; this recipe intentionally stops old repo-local usage')]
 prod CMD='up':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    echo "Production control for StageFlow lives at /home/matt/Deployment." >&2
+    echo "Production control for StageFlow lives at ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}." >&2
     echo "Use one of these commands instead:" >&2
-    echo "  cd /home/matt/Deployment && just stageflow-deploy" >&2
-    echo "  cd /home/matt/Deployment && just stageflow-restart" >&2
-    echo "  cd /home/matt/Deployment && just stageflow-logs" >&2
-    echo "  cd /home/matt/Deployment && just stageflow-health" >&2
+    echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just deploy stageflow" >&2
+    echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just restart stageflow" >&2
+    echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just logs stageflow" >&2
+    echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just stop stageflow" >&2
+    echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just health" >&2
     exit 1
 
-[group('prod'), doc('Production deployment is owned by `/home/matt/Deployment`; this recipe intentionally stops old repo-local usage')]
+[group('prod'), doc('Production deployment is owned by external control plane; this recipe intentionally stops old repo-local usage')]
 deploy MODE='full':
     #!/usr/bin/env bash
     set -euo pipefail
 
-    echo "Production deployment for StageFlow lives at /home/matt/Deployment." >&2
+    echo "Production deployment for StageFlow lives at ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}." >&2
     echo "Use one of these commands instead:" >&2
-    echo "  cd /home/matt/Deployment && just stageflow-deploy" >&2
-    echo "  cd /home/matt/Deployment && just stageflow-redeploy" >&2
-    echo "  cd /home/matt/Deployment && just deploy stageflow rebuild" >&2
+    echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just deploy stageflow" >&2
     exit 1
 
 [group('run'), doc('Run a service locally (SERVICE=frontend|storybook|api|orchestrator MODE=dev|preview)')]

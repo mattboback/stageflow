@@ -14,6 +14,7 @@ import (
 
 type projectBootstrapSuggestion struct {
 	Command            string
+	Cwd                string
 	CommandSource      string
 	Cleanup            string
 	CleanupSource      string
@@ -48,13 +49,14 @@ func detectProjectBootstrapSuggestion(projectRoot string) (projectBootstrapSugge
 		URL: guessProjectDevURL(projectRoot),
 	}
 
-	command, source, dedicated, found, err := detectProjectBootstrapCommand(projectRoot)
+	command, cwd, source, dedicated, found, err := detectProjectBootstrapCommand(projectRoot)
 	if err != nil {
 		return projectBootstrapSuggestion{}, err
 	}
 
 	if found {
 		suggestion.Command = command
+		suggestion.Cwd = cwd
 		suggestion.CommandSource = source
 		suggestion.IsDedicatedCommand = dedicated
 	}
@@ -84,7 +86,7 @@ func detectProjectBootstrapSuggestion(projectRoot string) (projectBootstrapSugge
 	return suggestion, nil
 }
 
-func detectProjectBootstrapCommand(projectRoot string) (string, string, bool, bool, error) {
+func detectProjectBootstrapCommand(projectRoot string) (string, string, string, bool, bool, error) {
 	candidates := []bootstrapCommandCandidate{
 		{
 			recipe:  "run",
@@ -123,55 +125,55 @@ func detectProjectBootstrapCommand(projectRoot string) (string, string, bool, bo
 	}
 
 	for _, candidate := range candidates {
-		command, found, err := detectBootstrapCommandCandidate(projectRoot, candidate)
+		command, cwd, found, err := detectBootstrapCommandCandidate(projectRoot, candidate)
 		if err != nil {
-			return "", "", false, false, err
+			return "", "", "", false, false, err
 		}
 
 		if found {
-			return command, candidate.source, candidate.dedicated, true, nil
+			return command, cwd, candidate.source, candidate.dedicated, true, nil
 		}
 	}
 
-	return "", "", false, false, nil
+	return "", "", "", false, false, nil
 }
 
 func detectBootstrapCommandCandidate(
 	projectRoot string,
 	candidate bootstrapCommandCandidate,
-) (string, bool, error) {
+) (string, string, bool, error) {
 	if candidate.recipe == "run" {
 		command, found, err := detectJustRunFrontend(projectRoot)
 		if err != nil || !found {
-			return "", false, err
+			return "", "", false, err
 		}
 
-		return command, true, nil
+		return command, ".", true, nil
 	}
 
 	if candidate.recipe != "" {
 		hasRecipe, err := repoHasJustRecipe(projectRoot, candidate.recipe)
 		if err != nil {
-			return "", false, err
+			return "", "", false, err
 		}
 
 		if hasRecipe {
-			return candidate.command, true, nil
+			return candidate.command, ".", true, nil
 		}
 
-		return "", false, nil
+		return "", "", false, nil
 	}
 
 	if candidate.script == "" {
-		return "", false, nil
+		return "", "", false, nil
 	}
 
-	command, found, err := detectPackageScriptCommand(projectRoot, candidate.script)
+	command, cwd, found, err := detectPackageScriptCommand(projectRoot, candidate.script)
 	if err != nil || !found {
-		return "", false, err
+		return "", "", false, err
 	}
 
-	return command, true, nil
+	return command, cwd, true, nil
 }
 
 func detectProjectBootstrapCleanup(projectRoot string) (string, string, bool, error) {
@@ -184,7 +186,7 @@ func detectProjectBootstrapCleanup(projectRoot string) (string, string, bool, er
 		return "just stageflow-down", "detected Justfile recipe `stageflow-down`", true, nil
 	}
 
-	command, found, err := detectPackageScriptCommand(projectRoot, "stageflow:down")
+	command, _, found, err := detectPackageScriptCommand(projectRoot, "stageflow:down")
 	if err != nil {
 		return "", "", false, err
 	}
@@ -274,19 +276,29 @@ func detectJustRunFrontend(projectRoot string) (string, bool, error) {
 	return "just run frontend", true, nil
 }
 
-func detectPackageScriptCommand(projectRoot string, script string) (string, bool, error) {
-	packageJSON, ok, err := loadProjectPackageJSON(projectRoot)
-	if err != nil || !ok {
-		return "", false, err
+func detectPackageScriptCommand(projectRoot string, script string) (string, string, bool, error) {
+	for _, subdir := range []string{".", "frontend", "client", "web", "app"} {
+		targetDir := projectRoot
+		if subdir != "." {
+			targetDir = filepath.Join(projectRoot, subdir)
+		}
+
+		packageJSON, ok, err := loadProjectPackageJSON(targetDir)
+		if err != nil {
+			return "", "", false, err
+		}
+
+		if !ok {
+			continue
+		}
+
+		if _, exists := packageJSON.Scripts[script]; exists {
+			runner := detectProjectPackageRunner(targetDir, packageJSON)
+			return formatPackageScriptCommand(runner, script), subdir, true, nil
+		}
 	}
 
-	if _, exists := packageJSON.Scripts[script]; !exists {
-		return "", false, nil
-	}
-
-	runner := detectProjectPackageRunner(projectRoot, packageJSON)
-
-	return formatPackageScriptCommand(runner, script), true, nil
+	return "", "", false, nil
 }
 
 func loadProjectPackageJSON(projectRoot string) (projectPackageJSON, bool, error) {

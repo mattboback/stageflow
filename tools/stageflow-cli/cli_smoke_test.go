@@ -117,7 +117,7 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 	requireNoErr(t, err)
 
 	contents := string(data)
-	if !strings.Contains(contents, `cmd: ["just run frontend"]`) {
+	if !strings.Contains(contents, `cmd: ["just", "run", "frontend"]`) {
 		t.Fatalf("expected inferred command in config: %q", contents)
 	}
 
@@ -127,7 +127,16 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 }
 
 func TestCLIProjectDoctorRepoSmoke(t *testing.T) {
-	cleanup := withWorkingDir(t, "/home/matt/Deployment/stageflow")
+	repoDir := os.Getenv("STAGEFLOW_TEST_REPO_DIR")
+	if repoDir == "" {
+		repoDir = "/home/matt/Deployment/stageflow"
+	}
+
+	if _, err := os.Stat(repoDir); err != nil {
+		t.Skipf("skipping: %s not found", repoDir)
+	}
+
+	cleanup := withWorkingDir(t, repoDir)
 	defer cleanup()
 
 	stdout, stderr, exitCode := runCLI(t, "stageflow", "project", "doctor", "--skip-dev")
@@ -158,7 +167,7 @@ func TestCLIApiCommandsSmoke(t *testing.T) {
 		t.Fatalf("exitCode=%d stderr=%q", exitCode, stderr)
 	}
 
-	if !strings.Contains(stdout, "Job ID: "+jobID) {
+	if !strings.Contains(stdout, "Job: "+jobID) {
 		t.Fatalf("unexpected report output: %q", stdout)
 	}
 
@@ -180,7 +189,7 @@ func TestCLIApiCommandsSmoke(t *testing.T) {
 		t.Fatalf("unexpected scan stderr: %q", stderr)
 	}
 
-	if !strings.Contains(stdout, "Job ID: "+jobID) {
+	if !strings.Contains(stdout, "Job: "+jobID) {
 		t.Fatalf("unexpected scan output: %q", stdout)
 	}
 }

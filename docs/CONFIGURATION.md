@@ -42,6 +42,13 @@ just images
 | `GF_SECURITY_ADMIN_PASSWORD` | yes | `change-me` | Grafana admin password. |
 | `GF_SERVER_ROOT_URL` | yes | `https://your-domain.com/monitoring` | External URL Grafana uses for redirects and links. |
 
+### Platform API
+
+| Variable | Required | Default in `.env.example` | Purpose |
+| --- | --- | --- | --- |
+| `PLATFORM_API_TOKEN` | no | empty | Used for API authentication. |
+| `PLATFORM_API_ALLOW_PRIVATE_TARGETS` | no | `false` | Controls whether the API accepts private/local targets. |
+
 ### Public Domain and CORS
 
 | Variable | Required | Default in `.env.example` | Purpose |
@@ -73,8 +80,22 @@ just images
 
 | Variable | Required | Default in `.env.example` | Purpose |
 | --- | --- | --- | --- |
-| `CADDY_HTTP_PORT` | no | `80` | Host HTTP bind port for Caddy. |
-| `CADDY_HTTPS_PORT` | no | `443` | Host HTTPS bind port for Caddy. |
+| `CADDY_EMAIL` | no | `admin@your-domain.com` | Email address used for Let's Encrypt TLS registration. |
+
+### Advanced / Internal Overrides
+
+These variables are primarily used internally or for advanced infrastructure setups. They typically do not need modification by standard operators.
+
+| Variable | Purpose |
+| --- | --- |
+| `MINIO_ENDPOINT` | Internal host/port for MinIO API. |
+| `MINIO_USE_SSL` | Whether internal MinIO connections use SSL. |
+| `MINIO_USE_PROXY_URLS` | Whether to use proxy URLs for MinIO presigned URLs. |
+| `MINIO_REGION` | MinIO region configuration. |
+| `MINIO_ARTIFACT_BUCKET` | Name of the bucket used for storing artifacts. |
+| `GF_AUTH_ANONYMOUS_ENABLED` | Enables anonymous access to Grafana dashboards. |
+| `GF_SERVER_HTTP_PORT` | Internal HTTP port for Grafana. |
+| `GF_SERVER_SERVE_FROM_SUB_PATH` | Whether Grafana serves from a sub-path. |
 
 ## Environment Guidance
 

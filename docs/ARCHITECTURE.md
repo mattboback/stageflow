@@ -320,6 +320,8 @@ Before execution, runner validates:
 - `security-headers`
 - `link-checker`
 - `ai-navigator`
+- `open-graph` (Validates social sharing metadata and rich previews)
+- `spelling-grammar` (AI-powered content quality and grammar checks)
 
 ### AI Navigator (`ai-navigator`)
 
@@ -447,15 +449,15 @@ Command surface:
 
 Compose definitions live under `infra/compose`.
 
-### Production on the shared VPS
+### Production Deployment
 
 This repo does not own standalone production deployment on the shared VPS.
 
-Use the shared root control plane at `/home/matt/Deployment` for live
+Use the shared root control plane (configured via `STAGEFLOW_PROD_DEPLOY_DIR`, defaults to `/home/matt/Deployment`) for live
 production operations:
 
 ```bash
-cd /home/matt/Deployment
+cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
 just stageflow-deploy
 just stageflow-restart
 just stageflow-logs
@@ -515,7 +517,7 @@ Outcome: transition to `FAILED`; event timeline records failure reason.
 - Job state transitions via API/SSE.
 - Orchestrator event history.
 - Scanner artifacts in object storage.
-- Service logs (`just dev logs` or `/home/matt/Deployment` root prod logs).
+- Service logs (`just dev logs` or root prod logs via `STAGEFLOW_PROD_DEPLOY_DIR`).
 
 ### Useful tools
 

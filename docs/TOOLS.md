@@ -47,6 +47,19 @@ Run a scan against a public URL by running:
 By default, `stageflow` prints plain text. Add `--format json` for
 machine-readable output. `--json` remains available for backward compatibility.
 
+### Run an AI Navigator session
+
+Run the AI Navigator against a project with natural language objectives:
+
+```bash
+./stageflow ai https://example.com "Navigate to the contact page and submit the form"
+```
+
+Supported flags for the `ai` command:
+- `--expand-provenance`: Wait for the scan to finish and expand the step-by-step trace in the output.
+- `--allow-private-targets`: Allow scanning private or local network targets.
+- `--timeout`: Maximum time to wait for the job to complete (default `5m`).
+
 ### Environment variables
 
 Configure the CLI using:
@@ -98,7 +111,7 @@ stageflow:
 scan:
   urls:
     - http://127.0.0.1:1337
-  scanners: axe,lighthouse,seo,security-headers
+  scanners: axe,lighthouse,seo,security-headers,open-graph,spelling-grammar
   allow_private_targets: true
 
 dev:

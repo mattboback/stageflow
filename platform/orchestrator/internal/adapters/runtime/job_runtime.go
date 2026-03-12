@@ -167,7 +167,12 @@ func (r *JobRuntime) StartExtractionWorker(
 		},
 	}
 
-	return r.createAndStartContainer(ctx, req, "failed to create extraction worker container", "failed to start extraction worker container")
+	return r.createAndStartContainer(
+		ctx,
+		req,
+		"failed to create extraction worker container",
+		"failed to start extraction worker container",
+	)
 }
 
 func (r *JobRuntime) StartScanner(
@@ -184,6 +189,7 @@ func (r *JobRuntime) StartScanner(
 	}
 
 	scannerType := plan.Labels["scanner_type"]
+
 	mounts, err := r.resolveVolumeMounts(ctx, plan.Volumes)
 	if err != nil {
 		return nil, err
@@ -291,8 +297,8 @@ func (r *JobRuntime) createAndStartContainer(
 	}
 
 	result := &ContainerLaunchResult{ContainerID: containerResp.ID}
-	if err := r.client.StartContainer(ctx, containerResp.ID); err != nil {
-		return result, fmt.Errorf("%s: %w", startErrMessage, err)
+	if startErr := r.client.StartContainer(ctx, containerResp.ID); startErr != nil {
+		return result, fmt.Errorf("%s: %w", startErrMessage, startErr)
 	}
 
 	result.Started = true

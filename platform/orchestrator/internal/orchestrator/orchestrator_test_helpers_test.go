@@ -243,6 +243,7 @@ func quoteIdentifier(identifier string) string {
 }
 
 func setupTestOrchestrator(t *testing.T) (*Orchestrator, *db.Database, *mockPublisher, *memoryStorage) {
+	t.Helper()
 	return setupTestOrchestratorWithConfig(t, func(*Config) {})
 }
 

@@ -35,6 +35,7 @@ go build -o stageflow .
 | --- | --- |
 | `scan` | Submit a scan job, wait for completion (SSE by default), then print results |
 | `project` | Run a project-mode scan using `.stageflow/config.yaml` |
+| `ai` | Run the AI Navigator against a project with natural language objectives |
 | `report` | Fetch and display results for an existing job ID |
 | `scanners` | List scanners available on the API |
 | `version` | Print version information |
@@ -88,6 +89,9 @@ Use `stageflow project init` for explicit bootstrap and
 
 # Project-mode scan in Markdown
 ./stageflow project --format markdown
+
+# Run an AI Navigator session
+./stageflow ai https://example.com "Navigate to the contact page and submit the form" --expand-provenance
 
 # Review an existing job in Markdown
 ./stageflow report <job-id> --format markdown

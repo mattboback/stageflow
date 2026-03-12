@@ -1,8 +1,0 @@
-# Default ownership
-* @mattboback
-
-# Security- and release-critical surfaces
-.github/workflows/* @mattboback
-infra/** @mattboback
-platform/api/internal/api/security.go @mattboback
-SECURITY.md @mattboback

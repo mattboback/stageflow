@@ -17,6 +17,7 @@ stageflow [flags]
 
 ### SEE ALSO
 
+* [stageflow ai](stageflow_ai.md)	 - Run the AI navigator against a project with natural language objectives
 * [stageflow completion](stageflow_completion.md)	 - Generate shell completion scripts
 * [stageflow docs](stageflow_docs.md)	 - Generate CLI documentation (Markdown)
 * [stageflow project](stageflow_project.md)	 - Run project-mode scan using .stageflow/config.yaml

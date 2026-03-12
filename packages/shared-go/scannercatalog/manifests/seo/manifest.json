@@ -3,7 +3,7 @@
   "name": "SEO Scanner",
   "version": "1.0.0",
   "description": "Analyzes pages for SEO best practices including meta tags, headings, structured data, and other ranking factors",
-  "aliases": ["meta-tags", "structured-data", "open-graph"],
+  "aliases": ["meta-tags", "structured-data"],
   "author": "Stageflow",
   "capabilities": {
     "categories": ["seo"],

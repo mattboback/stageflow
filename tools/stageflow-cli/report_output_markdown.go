@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -400,6 +401,7 @@ func writeMarkdownFindingsGrouped(
 	return nil
 }
 
+//nolint:gocognit,gocyclo
 func writeMarkdownFinding(out io.Writer, issue report.IssueDetail, maxOccurrences int) error {
 	category := ""
 	if issue.Category != nil && *issue.Category != "" {
@@ -440,6 +442,14 @@ func writeMarkdownFinding(out io.Writer, issue report.IssueDetail, maxOccurrence
 	if issue.HelpUrl != nil && *issue.HelpUrl != "" {
 		if _, err := fmt.Fprintf(out, "  Help: %s\n", *issue.HelpUrl); err != nil {
 			return err
+		}
+	}
+
+	if len(issue.ScannerData) > 0 {
+		if dataBytes, err := json.Marshal(issue.ScannerData); err == nil && string(dataBytes) != "{}" {
+			if _, printErr := fmt.Fprintf(out, "  Details: `%s`\n", string(dataBytes)); printErr != nil {
+				return printErr
+			}
 		}
 	}
 

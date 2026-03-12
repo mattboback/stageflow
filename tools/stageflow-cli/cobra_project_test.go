@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -161,7 +160,7 @@ dev:
 	}
 }
 
-func TestRunProjectDoctorCommand_PlaceholderPreflight(t *testing.T) {
+func TestRunProjectDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 	root := t.TempDir()
 
 	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
@@ -170,8 +169,10 @@ func TestRunProjectDoctorCommand_PlaceholderPreflight(t *testing.T) {
 	_, err = scaffoldProjectGuide(root)
 	requireNoErr(t, err)
 
+	var stdout bytes.Buffer
+
 	cmd := &cobra.Command{}
-	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetOut(&stdout)
 	cmd.SetErr(&bytes.Buffer{})
 
 	err = runProjectDoctorCommand(
@@ -184,16 +185,9 @@ func TestRunProjectDoctorCommand_PlaceholderPreflight(t *testing.T) {
 			SkipDev: true,
 		},
 	)
-	if err == nil {
-		t.Fatalf("runProjectDoctorCommand err = nil, want non-nil")
-	}
+	requireNoErr(t, err)
 
-	var exitErr exitCodeError
-	if !errors.As(err, &exitErr) {
-		t.Fatalf("runProjectDoctorCommand err = %T, want exitCodeError", err)
-	}
-
-	if !strings.Contains(err.Error(), "project config is not set up yet") {
-		t.Fatalf("runProjectDoctorCommand err = %q, want setup guidance", err.Error())
+	if !strings.Contains(stdout.String(), "Doctor checks passed") {
+		t.Fatalf("expected doctor success output, got: %q", stdout.String())
 	}
 }

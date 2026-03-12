@@ -57,7 +57,11 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 	t.Setenv("OPENROUTER_APP_REFERER", "https://example.com")
 
 	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
-	if err := registry.Register(&scanners.Definition{ID: "ai-navigator", Name: "AI Navigator", Enabled: true}); err != nil {
+	if err := registry.Register(&scanners.Definition{
+		ID:      "ai-navigator",
+		Name:    "AI Navigator",
+		Enabled: true,
+	}); err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
 
@@ -125,7 +129,11 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 
 func TestHandleExtractionReadyUsesRegistryDefaultScannerImageWhenNoOverride(t *testing.T) {
 	registry := scanners.NewRegistry("registry/default:latest")
-	if err := registry.Register(&scanners.Definition{ID: "axe", Name: "axe", Enabled: true}); err != nil {
+	if err := registry.Register(&scanners.Definition{
+		ID:      "axe",
+		Name:    "axe",
+		Enabled: true,
+	}); err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
 
@@ -185,7 +193,11 @@ func TestHandleExtractionReadyUsesRegistryDefaultScannerImageWhenNoOverride(t *t
 
 func TestHandleExtractionReadyUsesExplicitScannerImageOverride(t *testing.T) {
 	registry := scanners.NewRegistry("registry/default:latest")
-	if err := registry.Register(&scanners.Definition{ID: "axe", Name: "axe", Enabled: true}); err != nil {
+	if err := registry.Register(&scanners.Definition{
+		ID:      "axe",
+		Name:    "axe",
+		Enabled: true,
+	}); err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
 

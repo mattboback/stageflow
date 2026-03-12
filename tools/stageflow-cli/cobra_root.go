@@ -54,6 +54,7 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	cobra.CheckErr(rootCmd.PersistentFlags().MarkDeprecated("json", "use --format=json instead"))
 
 	rootCmd.AddCommand(newScanCmd(opts))
+	rootCmd.AddCommand(newAICmd(opts))
 	rootCmd.AddCommand(newProjectCmd(opts, getenv))
 	rootCmd.AddCommand(newReportCmd(opts))
 	rootCmd.AddCommand(newScannersCmd(opts))

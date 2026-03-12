@@ -40,7 +40,7 @@ Full design details: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### Scanners
 
-Six built-in scanner modules run in parallel inside isolated containers. Choose scanners per run and get one normalized report.
+Eight powerful built-in scanner modules run in parallel inside isolated containers. Choose scanners per run and get one normalized report.
 
 ![Six scanners — Axe, Lighthouse, SEO, Security Headers, Link Checker, AI Navigator](docs/images/landing-scanners.png)
 
@@ -134,6 +134,15 @@ The `stageflow` CLI submits scans, lists scanners, and fetches reports from the 
 | `security-headers` | HTTP security header posture |
 | `link-checker` | Broken link detection |
 | `ai-navigator` | Goal-driven browser flow evaluation |
+| `open-graph` | Social sharing metadata and rich preview validation |
+| `spelling-grammar` | AI-powered content quality, spelling, and grammar analysis |
+
+### New Advanced Scanners
+
+Take your quality checks to the next level with our newest additions:
+
+- **Open Graph Scanner (`open-graph`)**: Never ship a broken social preview again! This scanner digs deep into your metadata, validating Twitter cards, OG tags, and rich preview data to guarantee your links look absolutely flawless when shared on social media and messaging platforms.
+- **Spelling & Grammar Scanner (`spelling-grammar`)**: Supercharge your content quality! Our intelligent text analysis thoroughly checks your pages for embarrassing typos and grammatical errors, ensuring your copy is polished, professional, and perfectly readable.
 
 ## AI Navigator
 
@@ -181,6 +190,21 @@ StageFlow is built to be production-ready and deeply tested across the stack:
 - **Frontend Testing**: 220+ unit tests with Vitest, comprehensive component testing with Storybook, and Playwright a11y interaction tests.
 - **Continuous Integration**: The entire CI pipeline enforces stringent quality gates on every commit.
 
+### Running Tests Locally
+
+You can run the full test suite locally using the `just ci` command, which includes linting, typechecking, go tests, shell regression tests, and Storybook tests.
+
+```bash
+# Run the entire CI suite locally
+just ci
+
+# Run only frontend Storybook interaction + accessibility tests
+just storybook-test
+
+# Run repo shell regression tests
+just shell-tests
+```
+
 ## Prerequisites
 
 - [Go 1.25.4](https://go.dev/dl/)
@@ -213,26 +237,27 @@ After startup:
 
 Tip: `just demo` runs setup, starts the stack, initializes buckets, builds images, and prints a URL-scan command.
 
-## Production on the shared VPS
+## Production Deployment
 
 This repo does not own standalone production deployment on the shared VPS.
 
-Production operations for `stageflow.org` run from the shared root control
-plane at `/home/matt/Deployment`. Use the root `justfile` there when you need
+Production operations for `stageflow.org` run from a shared root control
+plane (configured via `STAGEFLOW_PROD_DEPLOY_DIR`, defaults to `/home/matt/Deployment`). Use the root `justfile` there when you need
 to operate the live stack:
 
 ```bash
-cd /home/matt/Deployment
-just stageflow-deploy
-just stageflow-restart
-just stageflow-logs
-just stageflow-health
+cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
+just deploy stageflow
+just restart stageflow
+just logs stageflow
+just stop stageflow
 just health
+just status
 ```
 
 Repo-local `just prod ...` and `just deploy ...` intentionally stop and point
-back to `/home/matt/Deployment`. Keep local and staging work in this repo, but
-keep VPS production ownership at `/home/matt/Deployment`.
+back to the external control plane. Keep local and staging work in this repo, but
+keep VPS production ownership at the control plane directory.
 
 ## First URL Scan (API)
 
@@ -280,6 +305,8 @@ go build -o stageflow .
 ```
 
 Local project mode (starts a dev server and scans `localhost`):
+
+See the full [Project Mode Guide](docs/PROJECT_MODE.md) for detailed setup instructions and configuration references.
 
 - Run the local stack with the local-only overlay (enables private targets + host-network job pods):
   - `just dev up local`
@@ -369,7 +396,7 @@ Run `just help` for the full recipe list.
 | Quality | `just ci` | Lint, typecheck, tests, audits |
 | Service run | `just run frontend` / `just run storybook` / `just run api` / `just run orchestrator` | Run one service locally |
 | Component testing | `just storybook-test` | Run Storybook interaction + a11y tests |
-| Production | `cd /home/matt/Deployment && just stageflow-deploy` | Shared VPS production control plane |
+| Production | `cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just deploy stageflow` | Shared VPS production control plane |
 
 Storybook testing conventions: `docs/testing/storybook-component-testing.md`.
 
@@ -424,6 +451,7 @@ stageflow/
 - [REPOMAP.md](docs/REPOMAP.md): service ownership map, API/event surfaces, and file-level index
 - [CONFIGURATION.md](docs/CONFIGURATION.md): environment and deployment configuration guide
 - [TOOLS.md](docs/TOOLS.md): CLI tooling and common workflows
+- [PROJECT_MODE.md](docs/PROJECT_MODE.md): guide to setting up and using the local development project scanner
 - [CONTRIBUTING.md](CONTRIBUTING.md): local workflow, standards, and PR checklist
 - [SECURITY.md](SECURITY.md): vulnerability reporting policy
 - [SUPPORT.md](SUPPORT.md): help channels and debugging checklist

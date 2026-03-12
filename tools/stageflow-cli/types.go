@@ -7,10 +7,11 @@ import (
 
 // SubmitJobRequest represents the payload for POST /api/v1/jobs/urls.
 type SubmitJobRequest struct {
-	URLs                []string `json:"urls"`
-	Modules             []string `json:"modules,omitempty"`
-	Screenshot          bool     `json:"screenshot"`
-	AllowPrivateTargets bool     `json:"allow_private_targets,omitempty"`
+	URLs                []string                  `json:"urls"`
+	Modules             []string                  `json:"modules,omitempty"`
+	Screenshot          bool                      `json:"screenshot"`
+	AllowPrivateTargets bool                      `json:"allow_private_targets,omitempty"`
+	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
 }
 
 // SubmitJobResponse represents the response from POST /api/v1/jobs/urls.
