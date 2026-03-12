@@ -29,7 +29,7 @@ func TestServiceCreateJobDuplicatePendingRetriesWorkflow(t *testing.T) {
 	}
 	runtime := &fakeRuntime{}
 
-	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{}, ScannerLaunchPlannerConfig{})
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
 	payload := &events.JobCreatedPayload{
 		JobID:     "job-dup",
 		InputType: string(models.JobInputTypeZip),
@@ -213,7 +213,7 @@ func TestServiceHandleScanPageCompletedPersistsProgress(t *testing.T) {
 		},
 	}
 
-	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{}, ScannerLaunchPlannerConfig{})
+	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{})
 	payload := &events.ScanPageCompletedPayload{
 		JobID:      "job-page",
 		PageIndex:  2,
@@ -226,5 +226,105 @@ func TestServiceHandleScanPageCompletedPersistsProgress(t *testing.T) {
 
 	if store.updateJobProgressCalls != 1 {
 		t.Fatalf("UpdateJobProgress() calls = %d, want 1", store.updateJobProgressCalls)
+	}
+}
+
+func TestServiceRunURLJobReusesExistingPod(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{}
+	runtime := &fakeRuntime{resolvedScannerTypes: []string{"axe"}}
+
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
+	job := &models.Job{
+		ID:        "job-url-existing-pod",
+		State:     models.JobStatePending,
+		InputType: models.JobInputTypeURLs,
+		URLs:      []string{"https://example.com"},
+		PodID:     "pod-existing",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	if err := service.RunURLJob(t.Context(), job); err != nil {
+		t.Fatalf("RunURLJob() error = %v", err)
+	}
+
+	if runtime.createJobPodCalls != 0 {
+		t.Fatalf("CreateJobPod() calls = %d, want 0", runtime.createJobPodCalls)
+	}
+
+	if store.updateJobPodIDCalls != 0 {
+		t.Fatalf("UpdateJobPodID() calls = %d, want 0", store.updateJobPodIDCalls)
+	}
+
+	if runtime.startScannerCalls != 1 {
+		t.Fatalf("StartScanner() calls = %d, want 1", runtime.startScannerCalls)
+	}
+}
+
+func TestServiceRunURLJobIgnoresTerminalStates(t *testing.T) {
+	t.Parallel()
+
+	for _, state := range []models.JobState{models.JobStateDone, models.JobStateFailed} {
+		t.Run(string(state), func(t *testing.T) {
+			store := &fakeJobStore{}
+			runtime := &fakeRuntime{resolvedScannerTypes: []string{"axe"}}
+
+			service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
+			job := &models.Job{
+				ID:        "job-terminal-" + string(state),
+				State:     state,
+				InputType: models.JobInputTypeURLs,
+				URLs:      []string{"https://example.com"},
+				Config: models.JobConfig{
+					Modules: []string{"axe"},
+				},
+			}
+
+			if err := service.RunURLJob(t.Context(), job); err != nil {
+				t.Fatalf("RunURLJob() error = %v", err)
+			}
+
+			if runtime.createJobPodCalls != 0 {
+				t.Fatalf("CreateJobPod() calls = %d, want 0", runtime.createJobPodCalls)
+			}
+
+			if runtime.startScannerCalls != 0 {
+				t.Fatalf("StartScanner() calls = %d, want 0", runtime.startScannerCalls)
+			}
+		})
+	}
+}
+
+func TestServiceStartScanningRejectsInvalidTransition(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{}
+	runtime := &fakeRuntime{resolvedScannerTypes: []string{"axe"}}
+
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
+	job := &models.Job{
+		ID:        "job-invalid-scan",
+		State:     models.JobStateDone,
+		InputType: models.JobInputTypeZip,
+		InputPath: "staging/job-invalid-scan/site.zip",
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	err := service.StartScanning(t.Context(), job)
+	if err == nil {
+		t.Fatal("StartScanning() error = nil, want non-nil")
+	}
+
+	if store.setExpectedScannersCalls != 0 {
+		t.Fatalf("SetExpectedScanners() calls = %d, want 0", store.setExpectedScannersCalls)
+	}
+
+	if runtime.startScannerCalls != 0 {
+		t.Fatalf("StartScanner() calls = %d, want 0", runtime.startScannerCalls)
 	}
 }

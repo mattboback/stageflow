@@ -19,14 +19,36 @@ type Service struct {
 	planner   *ScannerLaunchPlanner
 }
 
-func NewService(store JobStore, runtime Runtime, artifacts Artifacts, publisher Publisher, plannerConfig ScannerLaunchPlannerConfig) *Service {
-	return &Service{
+type ServiceOption func(*Service)
+
+func WithScannerLaunchPlanner(planner *ScannerLaunchPlanner) ServiceOption {
+	return func(service *Service) {
+		if planner != nil {
+			service.planner = planner
+		}
+	}
+}
+
+func NewService(
+	store JobStore,
+	runtime Runtime,
+	artifacts Artifacts,
+	publisher Publisher,
+	opts ...ServiceOption,
+) *Service {
+	service := &Service{
 		store:     store,
 		runtime:   runtime,
 		artifacts: artifacts,
 		publisher: publisher,
-		planner:   NewScannerLaunchPlanner(plannerConfig),
+		planner:   NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{}),
 	}
+
+	for _, opt := range opts {
+		opt(service)
+	}
+
+	return service
 }
 
 func (s *Service) PrepareExtractedJob(ctx context.Context, payload *events.ExtractionReadyPayload) error {
