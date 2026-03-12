@@ -143,7 +143,7 @@ func (r *JobRuntime) StartExtractionWorker(
 		return nil, errors.New("job is nil")
 	}
 
-	workspaceVolume, err := r.createAndInspectVolume(ctx, "workspace-"+job.ID)
+	workspaceVolume, err := r.ensureVolume(ctx, "workspace-"+job.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare workspace volume: %w", err)
 	}
@@ -243,14 +243,6 @@ func (r *JobRuntime) serviceEndpoints() (string, string) {
 	}
 
 	return "nats://" + r.natsHost + ":4222", r.minioHost + ":9000"
-}
-
-func (r *JobRuntime) createAndInspectVolume(ctx context.Context, name string) (*VolumeInfo, error) {
-	if err := r.client.CreateVolume(ctx, name); err != nil {
-		return nil, err
-	}
-
-	return r.client.InspectVolume(ctx, name)
 }
 
 func (r *JobRuntime) ensureVolume(ctx context.Context, name string) (*VolumeInfo, error) {
