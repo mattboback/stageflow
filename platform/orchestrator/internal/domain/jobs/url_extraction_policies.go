@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strings"
 
-	sharedjob "github.com/mattboback/stageflow/packages/shared-go/domain/job"
 	"github.com/mattboback/stageflow/packages/shared-go/models"
 )
 
@@ -28,7 +27,7 @@ func DecideURLJobPreparation(state models.JobState) (URLJobPreparationAction, er
 		models.JobStateFailed:
 		return URLJobPreparationIgnore, nil
 	case models.JobStatePending, models.JobStateExtracting:
-		if !sharedjob.CanTransition(state, models.JobStateReady) {
+		if !CanTransitionTo(state, models.JobStateReady) {
 			return "", fmt.Errorf("job cannot transition to READY from %s", state)
 		}
 
@@ -48,7 +47,7 @@ const (
 func DecideExtractionStart(state models.JobState) (ExtractionStartAction, error) {
 	switch state {
 	case models.JobStatePending:
-		if !sharedjob.CanTransition(state, models.JobStateExtracting) {
+		if !CanTransitionTo(state, models.JobStateExtracting) {
 			return "", fmt.Errorf("job cannot transition to EXTRACTING from %s", state)
 		}
 
