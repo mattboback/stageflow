@@ -1,28 +1,86 @@
-export const SpellingGrammarScanner = {
-  id: "spelling-grammar",
-  run: async (url: string, page: any) => {
-    // Basic implementation that extracts text and checks spelling
-    const textContent = await page.evaluate(() => document.body.innerText);
+import type { Issue, PageScanResult, ScanContext } from "../../core/types";
 
-    // Placeholder for actual spelling/grammar checking logic.
-    // In a real implementation, this would likely interface with an external API
-    // or use a library like nspell.
-    const issues = [];
-    if (textContent.includes("teh")) {
-      issues.push({
-        type: "spelling",
-        message: "Found potential misspelling: 'teh'",
-        severity: "low"
+import { ScannerBase } from "../../core/scanner-base";
+
+const COMMON_MISSPELLINGS = [
+  { pattern: /\bteh\b/gi, replacement: "the" },
+  { pattern: /\badn\b/gi, replacement: "and" },
+];
+
+export class SpellingGrammarScanner extends ScannerBase {
+  readonly metadata = {
+    name: "spelling-grammar",
+    version: "1.0.0",
+    description: "Content quality analysis for simple spelling and grammar issues",
+  };
+
+  async scanPage(context: ScanContext): Promise<PageScanResult> {
+    const { page, pageEntry, logger } = context;
+    const startTime = Date.now();
+
+    try {
+      const textContent = await page.evaluate(() => document.body.innerText ?? "");
+      const issues: Issue[] = [];
+
+      for (const rule of COMMON_MISSPELLINGS) {
+        const matches = [...textContent.matchAll(rule.pattern)];
+        if (matches.length === 0) {
+          continue;
+        }
+
+        issues.push({
+          id: `${this.metadata.name}-${rule.replacement}`,
+          scanner: this.metadata.name,
+          severity: "minor",
+          category: "content-quality",
+          title: `Potential spelling issue: ${matches[0]?.[0] ?? rule.replacement}`,
+          description:
+            `Found ${matches.length} potential occurrence(s) that may need review. Suggested replacement: ${rule.replacement}.`,
+          metadata: {
+            matchCount: matches.length,
+            suggestion: rule.replacement,
+            sample: matches.slice(0, 5).map((match) => match[0]),
+          },
+        });
+      }
+
+      logger.info("Spelling and grammar scan complete", {
+        url: pageEntry.url,
+        issues: issues.length,
+        wordCount: textContent.split(/\s+/).filter(Boolean).length,
       });
-    }
 
-    return {
-      success: true,
-      data: {
-        wordCount: textContent.split(/\\s+/).length,
-        issuesFound: issues.length
-      },
-      issues
-    };
+      return {
+        pageId: pageEntry.id,
+        url: pageEntry.url,
+        path: pageEntry.path,
+        success: true,
+        issues,
+        durationMs: Date.now() - startTime,
+        startedAt: new Date(startTime).toISOString(),
+        finishedAt: new Date().toISOString(),
+        rawResults: {
+          wordCount: textContent.split(/\s+/).filter(Boolean).length,
+          issuesFound: issues.length,
+        },
+      };
+    } catch (error) {
+      logger.error("Spelling and grammar scan failed", {
+        url: pageEntry.url,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      return {
+        pageId: pageEntry.id,
+        url: pageEntry.url,
+        path: pageEntry.path,
+        success: false,
+        issues: [],
+        durationMs: Date.now() - startTime,
+        startedAt: new Date(startTime).toISOString(),
+        finishedAt: new Date().toISOString(),
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
-};
+}

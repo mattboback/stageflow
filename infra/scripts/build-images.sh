@@ -1,12 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 PODMAN="${PODMAN:-podman}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
 PODMAN_BUILD_NETWORK="${PODMAN_BUILD_NETWORK:-host}"
+
+if [[ ! -f "$REPO_ROOT/justfile" ]]; then
+  echo "[images] repo root resolution failed: expected $REPO_ROOT/justfile" >&2
+  exit 1
+fi
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
