@@ -20,7 +20,7 @@ import type {
 } from "./types";
 
 import { createLogger } from "../utils/logger";
-import { resultsPath as artifactResultsPath } from "./artifact-paths";
+import { resultsPath as artifactResultsPath, reportPath as artifactReportPath } from "./artifact-paths";
 import { BrowserManager } from "./browser-manager";
 import { NatsEventPublisher, NoOpEventPublisher } from "./event-publisher";
 import { PageIterator } from "./page-iterator";
@@ -90,8 +90,9 @@ export abstract class ScannerBase {
         total_issues: results.summary.totalIssues,
       });
 
-      const { durationMs: writeResultsMs } = await this.runPhase("writeResults", () =>
-        this.writeResults(provenance, results),
+      const { durationMs: writeResultsMs } = await this.runPhase(
+        "writeResults",
+        () => this.writeResults(provenance, results),
       );
 
       const { durationMs: uploadArtifactsMs } = await this.runPhase(
@@ -113,6 +114,7 @@ export abstract class ScannerBase {
         pageIterationMs,
         writeResultsMs,
         uploadArtifactsMs,
+        reportPath: artifactReportPath(this.config.jobId, this.metadata.name),
       });
 
       await this.hooks.onScanEnd?.(results);
@@ -169,6 +171,7 @@ export abstract class ScannerBase {
       pageIterationMs: number;
       writeResultsMs: number;
       uploadArtifactsMs: number;
+      reportPath: string;
     },
   ): Promise<{ publishCompletedMs: number }> {
     const timingForEvent = {
@@ -186,6 +189,7 @@ export abstract class ScannerBase {
         this.eventPublisher.publishScanCompleted(results, timingForEvent, {
           stageLogPath: this.scanStageLogPath || undefined,
           recipePath: this.scanRecipePath || undefined,
+          reportPath: timing.reportPath,
         }),
     );
 
@@ -397,7 +401,7 @@ export abstract class ScannerBase {
   protected async writeResults(
     provenance: Provenance,
     results: ScanResults,
-  ): Promise<void> {
+  ): Promise<{ reportPath: string }> {
     const webServerFormat = new WebServerFormatter().format(
       provenance,
       results,
@@ -407,6 +411,12 @@ export abstract class ScannerBase {
     const resultsPath = join(this.config.resultsDir, "results.json");
     await fs.writeJSON(resultsPath, webServerFormat, { spaces: 2 });
     this.logger.info("Wrote results file", { path: resultsPath });
+
+    const reportPath = join(this.config.resultsDir, "report.html");
+    await fs.writeFile(reportPath, this.buildStandaloneReportHTML(results), "utf8");
+    this.logger.info("Wrote standalone report file", { path: reportPath });
+
+    return { reportPath };
   }
 
   protected async uploadArtifacts(): Promise<void> {
@@ -420,7 +430,15 @@ export abstract class ScannerBase {
       join(this.config.resultsDir, "results.json"),
     );
 
-    let uploadedCount = 1;
+    const reportKey = artifactReportPath(this.config.jobId, this.metadata.name);
+    await this.storageProvider.upload(
+      bucket,
+      reportKey,
+      join(this.config.resultsDir, "report.html"),
+      "text/html; charset=utf-8",
+    );
+
+    let uploadedCount = 2;
 
     try {
       const entries = await fs.readdir(this.config.resultsDir, { withFileTypes: true });
@@ -560,6 +578,183 @@ export abstract class ScannerBase {
     }
 
     return uploadedCount;
+  }
+
+  private buildStandaloneReportHTML(results: ScanResults): string {
+    const escape = (value: string): string =>
+      value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+
+    const severityRows = Object.entries(results.summary.bySeverity)
+      .map(
+        ([severity, count]) =>
+          `<tr><th scope="row">${escape(severity)}</th><td>${count}</td></tr>`,
+      )
+      .join("");
+
+    const pageRows = results.pages
+      .map(
+        (page) => `
+          <tr>
+            <td>${escape(page.pageId)}</td>
+            <td><a href="${escape(page.url)}">${escape(page.url)}</a></td>
+            <td>${page.issues.length}</td>
+            <td>${page.success ? "success" : "failed"}</td>
+          </tr>`,
+      )
+      .join("");
+
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>StageFlow ${escape(this.metadata.name)} report</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --ink: #0f172a;
+        --muted: #475569;
+        --accent: #0f766e;
+        --border: #dbe4ee;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, #eff6ff 0%%, var(--bg) 45%%);
+        color: var(--ink);
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      .hero, .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      }
+      .hero {
+        padding: 28px;
+        margin-bottom: 20px;
+      }
+      .eyebrow {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #ccfbf1;
+        color: #115e59;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1 {
+        margin: 14px 0 10px;
+        font-size: clamp(28px, 5vw, 42px);
+        line-height: 1.05;
+      }
+      p { color: var(--muted); }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .metric {
+        padding: 16px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+      }
+      .metric strong {
+        display: block;
+        font-size: 28px;
+        margin-bottom: 4px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1.4fr;
+        gap: 20px;
+      }
+      .card {
+        padding: 24px;
+      }
+      table {
+        width: 100%%;
+        border-collapse: collapse;
+      }
+      th, td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      th {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      td a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      td a:hover {
+        text-decoration: underline;
+      }
+      @media (max-width: 800px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <span class="eyebrow">Scanner report</span>
+        <h1>${escape(this.metadata.name)} findings for job ${escape(results.jobId)}</h1>
+        <p>Generated by StageFlow scanner-runner ${escape(this.metadata.version)}.</p>
+        <div class="summary">
+          <div class="metric"><strong>${results.summary.totalIssues}</strong><span>Total issues</span></div>
+          <div class="metric"><strong>${results.summary.pagesScanned}</strong><span>Pages scanned</span></div>
+          <div class="metric"><strong>${results.summary.pagesWithIssues}</strong><span>Pages with issues</span></div>
+          <div class="metric"><strong>${results.durationMs} ms</strong><span>Duration</span></div>
+        </div>
+      </section>
+      <section class="grid">
+        <article class="card">
+          <h2>Severity breakdown</h2>
+          <table>
+            <tbody>${severityRows}</tbody>
+          </table>
+        </article>
+        <article class="card">
+          <h2>Pages</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Page ID</th>
+                <th>URL</th>
+                <th>Issues</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>${pageRows}</tbody>
+          </table>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>`;
   }
 
   private async uploadProvenanceArtifactIfNeeded(): Promise<void> {
