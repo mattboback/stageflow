@@ -270,7 +270,7 @@ export interface ScanEventPublisher {
   publishScanCompleted(
     results: ScanResults,
     timing?: ScanTiming,
-    artifacts?: { stageLogPath?: string; recipePath?: string },
+    artifacts?: { stageLogPath?: string; recipePath?: string; reportPath?: string },
   ): Promise<void>;
   publishScanFailed(
     error: string,

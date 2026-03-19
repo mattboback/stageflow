@@ -123,7 +123,11 @@ http {
             try_files $uri $uri/ $uri.html /200.html;
         }
 
-        location = /favicon.ico { access_log off; log_not_found off; }
+        location = /favicon.ico {
+            access_log off;
+            log_not_found off;
+            return 302 /favicon.svg;
+        }
         location = /robots.txt  { access_log off; log_not_found off; }
     }
 }
