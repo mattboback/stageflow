@@ -50,7 +50,12 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 	suggestion, err := detectProjectBootstrapSuggestion(root)
 	requireNoErr(t, err)
 
-	requireEqual(t, suggestion.Command, "just run frontend", "suggestion.Command") // stale-vocab-ok: tests generic fallback
+	requireEqual(
+		t,
+		suggestion.Command,
+		"just run frontend", // stale-vocab-ok: tests generic fallback
+		"suggestion.Command",
+	) // stale-vocab-ok: tests generic fallback
 	requireEqual(t, suggestion.URL, "http://127.0.0.1:5173", "suggestion.URL")
 
 	if suggestion.IsPlaceholder {

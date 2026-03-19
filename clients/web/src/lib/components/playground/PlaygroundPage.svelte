@@ -45,6 +45,7 @@
 	let aiObjective = $state('');
 	let aiModel = $state(import.meta.env.VITE_AI_NAVIGATOR_DEFAULT_MODEL || 'openai/gpt-4o-mini');
 	let aiMaxSteps = $state(10);
+	let aiMaxWallTimeMs = $state(120000);
 	let aiInputValues = $state<Array<{ key: string; value: string }>>([]);
 	let aiSuccessCriteria = $state<Array<{ type: string; value: string }>>([]);
 
@@ -165,7 +166,7 @@
 
 <PageSection class="playground-shell relative overflow-hidden py-10 lg:py-14">
 	<div
-		class="pointer-events-none absolute -top-24 left-1/2 h-72 w-[92vw] max-w-5xl -translate-x-1/2 rounded-[3rem] bg-gradient-to-r from-white/90 via-accent/8 to-orange-200/20 blur-3xl"
+		class="via-accent/8 pointer-events-none absolute -top-24 left-1/2 h-72 w-[92vw] max-w-5xl -translate-x-1/2 rounded-[3rem] bg-gradient-to-r from-white/90 to-orange-200/20 blur-3xl"
 	></div>
 
 	<div class="container-width relative">
@@ -183,7 +184,9 @@
 									<Sparkles class="text-accent h-5 w-5" />
 								</div>
 								<div>
-									<h2 class="font-display text-lg leading-none font-bold tracking-tight">Configure Scan</h2>
+									<h2 class="font-display text-lg leading-none font-bold tracking-tight">
+										Configure Scan
+									</h2>
 									<p class="text-ink-muted mt-1 text-sm">
 										Choose input, scanners, and run settings.
 									</p>
@@ -206,7 +209,10 @@
 					<div class="space-y-7 p-6 lg:p-7">
 						<div>
 							<div class="mb-2 flex items-center gap-2">
-								<span class="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">1</span>
+								<span
+									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+									>1</span
+								>
 								<span class="form-section-label text-ink-muted">Input</span>
 							</div>
 							<PlaygroundModeToggle {mode} onModeChange={(m) => (mode = m)} />
@@ -214,7 +220,10 @@
 
 						<div>
 							<div class="mb-2 flex items-center gap-2">
-								<span class="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">2</span>
+								<span
+									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+									>2</span
+								>
 								<span class="form-section-label text-ink-muted">Target</span>
 							</div>
 							{#if mode === 'url'}
@@ -238,7 +247,10 @@
 
 						<div>
 							<div class="mb-2 flex items-center gap-2">
-								<span class="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">3</span>
+								<span
+									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+									>3</span
+								>
 								<span class="form-section-label text-ink-muted">Scanners</span>
 							</div>
 							<PlaygroundScannerGrid
@@ -272,7 +284,10 @@
 
 						<div>
 							<div class="mb-2 flex items-center gap-2">
-								<span class="flex h-5 w-5 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">4</span>
+								<span
+									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+									>4</span
+								>
 								<span class="form-section-label text-ink-muted">Options</span>
 							</div>
 							<PlaygroundOptions

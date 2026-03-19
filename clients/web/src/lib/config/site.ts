@@ -8,10 +8,14 @@ export const SITE: {
 	tagline: string;
 } = {
 	name: 'StageFlow',
-	siteTitle: env.VITE_SITE_TITLE ?? 'StageFlow',
+	siteTitle: env.VITE_SITE_TITLE ?? 'StageFlow | Podman-Native Web Accessibility QA Scanner',
 	siteUrl: env.VITE_SITE_URL ?? 'https://stageflow.org',
-	githubUrl: env.VITE_GITHUB_URL ?? 'https://github.com/mattboback/stageflow',
-	tagline: env.VITE_TAGLINE ?? 'Podman-native web accessibility scanning platform'
+	// NOTE: Keep this pointing to a publicly accessible URL while the repository is private,
+	// otherwise link-checker reports a broken-link finding on the production homepage.
+	githubUrl: env.VITE_GITHUB_URL ?? 'https://github.com/mattboback',
+	tagline:
+		env.VITE_TAGLINE ??
+		'Podman-native platform for accessibility, SEO, performance, and security web scanning.'
 };
 
 export function buildSiteUrl(path = '/'): string {
