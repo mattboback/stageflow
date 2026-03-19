@@ -1,14 +1,24 @@
-go 1.25.4
+go 1.26.1
 
 use (
-	./packages/contracts/report/generated/go
-	./packages/contracts/scanner-manifest
-	./packages/shared-go
-	./platform/api
-	./platform/extractor
-	./platform/orchestrator
-	./tests/e2e
-	./tools/job-status-cli
-	./tools/stageflow-cli
-	./tools/suite-runner
+	./clients/cli/stageflow
+	./devtools/ops/job-status-cli
+	./devtools/qa/suite-runner
+	./libs/contracts/report/generated/go
+	./libs/contracts/scanner-manifest
+	./libs/go/bootstrap
+	./libs/go/config
+	./libs/go/domain
+	./libs/go/events
+	./libs/go/httputil
+	./libs/go/logging
+	./libs/go/messaging
+	./libs/go/models
+	./libs/go/scannercatalog
+	./libs/go/scannerregistry
+	./libs/go/storage
+	./qa/e2e
+	./services/archive-extractor
+	./services/orchestrator
+	./services/platform-api
 )

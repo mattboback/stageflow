@@ -1,0 +1,328 @@
+package integration
+
+import (
+	"context"
+	"errors"
+	"net"
+	"path/filepath"
+	"syscall"
+	"testing"
+	"time"
+
+	natsserver "github.com/nats-io/nats-server/v2/server"
+
+	"github.com/mattboback/stageflow/libs/go/events"
+	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
+	"github.com/mattboback/stageflow/libs/go/models"
+	platformmsg "github.com/mattboback/stageflow/platform/api/internal/messaging"
+	"github.com/mattboback/stageflow/platform/api/internal/status"
+)
+
+func TestServiceIntegrationWithNATS(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	natsURL := startNATSServer(t)
+
+	client, err := sharedmsg.NewClient(&sharedmsg.Config{
+		URL:            natsURL,
+		MaxReconnects:  5,
+		ReconnectWait:  500 * time.Millisecond,
+		ConnectTimeout: 10 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("failed to create NATS client: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
+
+	if ensureErr := ensureStreamsWithRetry(ctx, client, 20, 250*time.Millisecond); ensureErr != nil {
+		t.Fatalf("failed to ensure streams: %v", ensureErr)
+	}
+
+	store := newStatusStore(t)
+	service := platformmsg.NewService(client)
+
+	subCtx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
+	if subscribeErr := service.SubscribeToStatusEvents(subCtx, store); subscribeErr != nil {
+		t.Fatalf("failed to subscribe to events: %v", subscribeErr)
+	}
+
+	jobID := "nats-integration-job"
+
+	createdEnv := events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildJobCreated(jobID))
+	if publishErr := service.PublishJobCreated(ctx, createdEnv); publishErr != nil {
+		t.Fatalf("failed to publish job.created: %v", publishErr)
+	}
+
+	assertExtractionLifecycle(ctx, t, client, store, jobID)
+	assertScanLifecycle(ctx, t, client, store, jobID)
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectJobCompleted,
+		events.NewEnvelope(events.EventJobCompleted, jobID, "integration-test", &events.JobCompletedPayload{
+			JobID:  jobID,
+			Status: "success",
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: jobID + "/report.json",
+				ReportHTML: jobID + "/report.html",
+			},
+		}),
+	)
+
+	final := waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "DONE" && rec.ReportJSONKey != "" && rec.ReportKey != ""
+	})
+
+	if final.ReportJSONKey == "" || final.ReportKey == "" {
+		t.Fatalf("expected artifacts to be set, got %+v", final)
+	}
+}
+
+func buildJobCreated(jobID string) *events.JobCreatedPayload {
+	return &events.JobCreatedPayload{
+		JobID:     jobID,
+		InputType: "zip",
+		InputPath: "staging/" + jobID + "/input.zip",
+		Config:    models.JobConfig{Modules: []string{"axe", "lighthouse"}},
+	}
+}
+
+func assertExtractionLifecycle(
+	ctx context.Context,
+	t *testing.T,
+	client *sharedmsg.Client,
+	store *status.Store,
+	jobID string,
+) {
+	t.Helper()
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "EXTRACTING" && rec.InputType == "zip" && len(rec.ExpectedScanners) == 2
+	})
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectExtractionReady,
+		events.NewEnvelope(events.EventExtractionReady, jobID, "integration-test", &events.ExtractionReadyPayload{
+			JobID:      jobID,
+			BaseURL:    "http://localhost:8080",
+			TotalPages: 3,
+		}),
+	)
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.TotalPages == 3 && rec.State == "READY_TO_SCAN"
+	})
+}
+
+func assertScanLifecycle(
+	ctx context.Context,
+	t *testing.T,
+	client *sharedmsg.Client,
+	store *status.Store,
+	jobID string,
+) {
+	t.Helper()
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectScanCompleted,
+		events.NewEnvelope(events.EventScanCompleted, jobID, "integration-test", &events.ScanCompletedPayload{
+			JobID:             jobID,
+			ScannerType:       "axe",
+			ResultsPath:       jobID + "/axe/results.json",
+			ReportPath:        jobID + "/axe/report.html",
+			TotalPagesScanned: 3,
+			Summary: events.ScanSummary{
+				TotalViolations: 1,
+				BySeverity:      map[string]int{"critical": 1},
+			},
+		}),
+	)
+
+	partial := waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "SCANNING" && rec.CurrentPage >= 0 && rec.TotalViolations == 1 &&
+			len(rec.CompletedScanners) == 1
+	})
+	assertPartialScannerState(t, partial)
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectScanPageCompleted,
+		events.NewEnvelope(events.EventScanPageCompleted, jobID, "integration-test", &events.ScanPageCompletedPayload{
+			JobID:       jobID,
+			ScannerType: "lighthouse",
+			PageID:      "page-2",
+			PageIndex:   2,
+			TotalPages:  3,
+		}),
+	)
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "SCANNING" && len(rec.CompletedScanners) == 1 && rec.CurrentPage >= 2
+	})
+
+	publishEnvelope(
+		ctx,
+		t,
+		client,
+		sharedmsg.SubjectScanCompleted,
+		events.NewEnvelope(events.EventScanCompleted, jobID, "integration-test", &events.ScanCompletedPayload{
+			JobID:             jobID,
+			ScannerType:       "lighthouse",
+			ResultsPath:       jobID + "/lighthouse/results.json",
+			ReportPath:        jobID + "/lighthouse/report.html",
+			TotalPagesScanned: 3,
+			Summary: events.ScanSummary{
+				TotalViolations: 1,
+				BySeverity:      map[string]int{"critical": 1},
+			},
+		}),
+	)
+
+	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == "SCANNING" && len(rec.CompletedScanners) == 2
+	})
+}
+
+func assertPartialScannerState(t *testing.T, rec *status.JobRecord) {
+	t.Helper()
+
+	if len(rec.CompletedScanners) != 1 || rec.CompletedScanners[0] != "axe" {
+		t.Fatalf("expected partial completion to record axe, got %+v", rec.CompletedScanners)
+	}
+
+	if len(rec.ExpectedScanners) != 2 {
+		t.Fatalf("expected scanner roster to stay intact, got %+v", rec.ExpectedScanners)
+	}
+}
+
+func newStatusStore(t *testing.T) *status.Store {
+	t.Helper()
+	dbPath := filepath.Join(t.TempDir(), "status.db")
+
+	store, err := status.NewStore(&status.Config{Path: dbPath})
+	if err != nil {
+		t.Fatalf("failed to create status store: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_ = store.Close()
+	})
+
+	return store
+}
+
+func waitForRecord(
+	t *testing.T,
+	store *status.Store,
+	jobID string,
+	condition func(*status.JobRecord) bool,
+) *status.JobRecord {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		rec, err := store.GetJob(context.Background(), jobID)
+		if err == nil && condition(rec) {
+			return rec
+		}
+
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	rec, err := store.GetJob(context.Background(), jobID)
+	if err != nil {
+		t.Fatalf("job %s not found: %v", jobID, err)
+	}
+
+	t.Fatalf("condition not met for job %s, record: %+v", jobID, rec)
+
+	return nil
+}
+
+func publishEnvelope(
+	ctx context.Context,
+	t *testing.T,
+	client *sharedmsg.Client,
+	subject string,
+	envelope *events.Envelope,
+) {
+	t.Helper()
+
+	if err := client.PublishEvent(ctx, subject, envelope); err != nil {
+		t.Fatalf("failed to publish %s: %v", subject, err)
+	}
+}
+
+func ensureStreamsWithRetry(ctx context.Context, client *sharedmsg.Client, attempts int, delay time.Duration) error {
+	var err error
+	for range attempts {
+		if err = client.EnsureStreams(ctx); err == nil {
+			return nil
+		}
+
+		time.Sleep(delay)
+	}
+
+	return err
+}
+
+func startNATSServer(tb testing.TB) string {
+	tb.Helper()
+
+	// In restricted sandboxes, binding to TCP ports may be disallowed. Skip instead of failing.
+	listenCfg := &net.ListenConfig{}
+
+	l, err := listenCfg.Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		if errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) {
+			tb.Skipf("skipping NATS integration test: cannot bind to local TCP port in this environment: %v", err)
+		}
+
+		tb.Fatalf("failed to probe TCP listen support: %v", err)
+	}
+
+	_ = l.Close()
+
+	opts := &natsserver.Options{
+		Host:      "127.0.0.1",
+		Port:      -1,
+		JetStream: true,
+		StoreDir:  tb.TempDir(),
+		NoLog:     true,
+		NoSigs:    true,
+	}
+
+	srv, err := natsserver.NewServer(opts)
+	if err != nil {
+		tb.Fatalf("failed to create NATS server: %v", err)
+	}
+
+	go srv.Start()
+
+	if !srv.ReadyForConnections(10 * time.Second) {
+		tb.Fatalf("timed out waiting for NATS to accept connections")
+	}
+
+	tb.Cleanup(srv.Shutdown)
+
+	return srv.ClientURL()
+}
