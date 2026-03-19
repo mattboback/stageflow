@@ -1,36 +1,47 @@
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import {
+	copyFile,
+	mkdir,
+	mkdtemp,
+	readFile,
+	rm,
+	stat,
+	writeFile,
+} from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
 
-import { PluginLoader } from '../../../src/core/plugins/loader';
+import { PluginLoader } from "../../../src/core/plugins/loader";
 
 const BUILTIN_MANIFEST_IDS = [
-	'ai-navigator',
-	'axe',
-	'lighthouse',
-	'link-checker',
-	'open-graph',
-	'security-headers',
-	'seo',
-	'spelling-grammar'
+	"ai-navigator",
+	"axe",
+	"lighthouse",
+	"link-checker",
+	"open-graph",
+	"security-headers",
+	"seo",
+	"spelling-grammar",
 ] as const;
 
 function escapeRegExp(value: string): string {
-	return value.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return value.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-describe('Built-in manifests (drift guard)', () => {
-	it('discovers and validates the shared built-in manifests', async () => {
-		const manifestsRoot = path.resolve(process.cwd(), '../../libs/go/scannercatalog/manifests');
+describe("Built-in manifests (drift guard)", () => {
+	it("discovers and validates the shared built-in manifests", async () => {
+		const manifestsRoot = path.resolve(
+			process.cwd(),
+			"../../libs/go/scannercatalog/manifests",
+		);
 
 		await expect(stat(manifestsRoot)).resolves.toBeTruthy();
 
 		const loader = new PluginLoader({
 			searchPaths: [manifestsRoot],
-			manifestPatterns: ['manifest.json'],
+			manifestPatterns: ["manifest.json"],
 			strictValidation: true,
-			verbose: false
+			verbose: false,
 		});
 
 		const discovery = await loader.discover();
@@ -40,15 +51,18 @@ describe('Built-in manifests (drift guard)', () => {
 		expect(discoveredIds).toEqual([...BUILTIN_MANIFEST_IDS].sort());
 	});
 
-	it('keeps manifest entrypoints aligned with scanner-runner source exports', async () => {
-		const repoRoot = path.resolve(process.cwd(), '../..');
-		const manifestsRoot = path.join(repoRoot, 'libs/go/scannercatalog/manifests');
+	it("keeps manifest entrypoints aligned with scanner-runner source exports", async () => {
+		const repoRoot = path.resolve(process.cwd(), "../..");
+		const manifestsRoot = path.join(
+			repoRoot,
+			"libs/go/scannercatalog/manifests",
+		);
 
 		const loader = new PluginLoader({
 			searchPaths: [manifestsRoot],
-			manifestPatterns: ['manifest.json'],
+			manifestPatterns: ["manifest.json"],
 			strictValidation: true,
-			verbose: false
+			verbose: false,
 		});
 
 		const discovery = await loader.discover();
@@ -62,44 +76,57 @@ describe('Built-in manifests (drift guard)', () => {
 
 			const { manifest } = plugin!;
 
-			expect(manifest.entry.module).toBe('./index.js');
+			expect(manifest.entry.module).toBe("./index.js");
 			const expectedSourcePath = path.join(
 				repoRoot,
-				`services/scanner-runner/src/scanners/${id}/index.ts`
+				`services/scanner-runner/src/scanners/${id}/index.ts`,
 			);
 
 			await expect(stat(expectedSourcePath)).resolves.toBeTruthy();
 
 			const exportName = manifest.entry.exportName;
-			if (typeof exportName !== 'string' || exportName.trim().length === 0) {
-				throw new Error(`Expected manifest entry exportName to be set for ${id}`);
+			if (typeof exportName !== "string" || exportName.trim().length === 0) {
+				throw new Error(
+					`Expected manifest entry exportName to be set for ${id}`,
+				);
 			}
 
-			const content = await readFile(expectedSourcePath, 'utf8');
-			const exportRegex = new RegExp(`export\\s+class\\s+${escapeRegExp(exportName)}\\b`, 'm');
+			const content = await readFile(expectedSourcePath, "utf8");
+			const exportRegex = new RegExp(
+				`export\\s+class\\s+${escapeRegExp(exportName)}\\b`,
+				"m",
+			);
 			expect(content).toMatch(exportRegex);
 		}
 	});
 
-	it('loads the built-in manifests and resolves every alias (stub runtime)', async () => {
-		const repoRoot = path.resolve(process.cwd(), '../..');
-		const manifestsRoot = path.join(repoRoot, 'libs/go/scannercatalog/manifests');
+	it("loads the built-in manifests and resolves every alias (stub runtime)", async () => {
+		const repoRoot = path.resolve(process.cwd(), "../..");
+		const manifestsRoot = path.join(
+			repoRoot,
+			"libs/go/scannercatalog/manifests",
+		);
 
 		const sourceLoader = new PluginLoader({
 			searchPaths: [manifestsRoot],
-			manifestPatterns: ['manifest.json'],
+			manifestPatterns: ["manifest.json"],
 			strictValidation: true,
-			verbose: false
+			verbose: false,
 		});
 
 		const sourceDiscovery = await sourceLoader.discover();
 		expect(sourceDiscovery.errors).toEqual([]);
 
-		const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'stageflow-builtin-'));
+		const tempRoot = await mkdtemp(
+			path.join(os.tmpdir(), "stageflow-builtin-"),
+		);
 
 		try {
 			for (const plugin of sourceDiscovery.plugins) {
-				const relativeManifestPath = path.relative(manifestsRoot, plugin.manifestPath);
+				const relativeManifestPath = path.relative(
+					manifestsRoot,
+					plugin.manifestPath,
+				);
 				const destManifestPath = path.join(tempRoot, relativeManifestPath);
 
 				await mkdir(path.dirname(destManifestPath), { recursive: true });
@@ -110,7 +137,7 @@ describe('Built-in manifests (drift guard)', () => {
 
 				const entryPath = path.resolve(
 					path.dirname(destManifestPath),
-					plugin.manifest.entry.module
+					plugin.manifest.entry.module,
 				);
 
 				await mkdir(path.dirname(entryPath), { recursive: true });
@@ -118,27 +145,27 @@ describe('Built-in manifests (drift guard)', () => {
 					entryPath,
 					[
 						`class ${exportName!} {`,
-						'  constructor() {',
+						"  constructor() {",
 						`    this.metadata = { name: ${JSON.stringify(plugin.manifest.id)}, version: ${JSON.stringify(
-							plugin.manifest.version
+							plugin.manifest.version,
 						)} };`,
-						'  }',
-						'  scanPage() {',
-						'    return {};',
-						'  }',
-						'}',
+						"  }",
+						"  scanPage() {",
+						"    return {};",
+						"  }",
+						"}",
 						`exports.${exportName!} = ${exportName!};`,
-						''
-					].join('\n'),
-					'utf8'
+						"",
+					].join("\n"),
+					"utf8",
 				);
 			}
 
 			const loader = new PluginLoader({
 				searchPaths: [tempRoot],
-				manifestPatterns: ['manifest.json'],
+				manifestPatterns: ["manifest.json"],
 				strictValidation: true,
-				verbose: false
+				verbose: false,
 			});
 
 			const discovery = await loader.discover();

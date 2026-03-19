@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Chip } from '$lib/components/ui';
+import { Chip } from "$lib/components/ui";
 </script>
 
 <div>

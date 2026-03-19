@@ -1,18 +1,18 @@
 <script lang="ts">
-	// Self-hosted fonts via fontsource
-	import '@fontsource-variable/jetbrains-mono';
-	import '@fontsource-variable/inter';
+// Self-hosted fonts via fontsource
+import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/inter";
 
-	import '../app.css';
-	import { page } from '$app/state';
-	import Footer from '$lib/components/Footer.svelte';
-	import { Navigation } from '$lib/components/nav';
-	import { buildSiteUrl, SITE } from '$lib/config/site';
+import "../app.css";
+import { page } from "$app/state";
+import Footer from "$lib/components/Footer.svelte";
+import { Navigation } from "$lib/components/nav";
+import { SITE, buildSiteUrl } from "$lib/config/site";
 
-	const { children } = $props();
-	const pathname = $derived(page.url.pathname);
-	const canonicalUrl = $derived(buildSiteUrl(pathname));
-	const shareImageUrl = buildSiteUrl('/og-image.svg');
+const { children } = $props();
+const pathname = $derived(page.url.pathname);
+const canonicalUrl = $derived(buildSiteUrl(pathname));
+const shareImageUrl = buildSiteUrl("/og-image.svg");
 </script>
 
 <svelte:head>

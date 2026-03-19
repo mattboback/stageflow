@@ -1,28 +1,30 @@
 <script lang="ts">
-	import { cn } from '$lib/utils';
-	import { CheckCircle2, Loader2 } from 'lucide-svelte';
+import { cn } from "$lib/utils";
+import { CheckCircle2, Loader2 } from "lucide-svelte";
 
-	interface Props {
-		currentStatus: string;
-	}
+interface Props {
+	currentStatus: string;
+}
 
-	const SCAN_STEPS = [
-		{ id: 'pending', label: 'Queued' },
-		{ id: 'extracting', label: 'Preparing' },
-		{ id: 'scanning', label: 'Scanning' },
-		{ id: 'completing', label: 'Finalizing' },
-		{ id: 'complete', label: 'Ready' }
-	];
+const SCAN_STEPS = [
+	{ id: "pending", label: "Queued" },
+	{ id: "extracting", label: "Preparing" },
+	{ id: "scanning", label: "Scanning" },
+	{ id: "completing", label: "Finalizing" },
+	{ id: "complete", label: "Ready" },
+];
 
-	const { currentStatus }: Props = $props();
+const { currentStatus }: Props = $props();
 
-	const currentIndex = $derived(SCAN_STEPS.findIndex((s) => s.id === currentStatus));
-	const effectiveIndex = $derived(
-		currentIndex === -1 ? (currentStatus === 'failed' ? -1 : 0) : currentIndex
-	);
-	const progressWidth = $derived(
-		effectiveIndex === -1 ? 0 : (effectiveIndex / (SCAN_STEPS.length - 1)) * 100
-	);
+const currentIndex = $derived(
+	SCAN_STEPS.findIndex((s) => s.id === currentStatus),
+);
+const effectiveIndex = $derived(
+	currentIndex === -1 ? (currentStatus === "failed" ? -1 : 0) : currentIndex,
+);
+const progressWidth = $derived(
+	effectiveIndex === -1 ? 0 : (effectiveIndex / (SCAN_STEPS.length - 1)) * 100,
+);
 </script>
 
 <div class="relative mx-auto w-full max-w-3xl px-4">

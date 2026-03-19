@@ -1,35 +1,35 @@
 {
-  "event": "scan.completed",
-  "job_id": "job-123",
-  "timestamp": "2025-12-22T00:00:00Z",
-  "producer": "axe",
-  "payload": {
-    "job_id": "job-123",
-    "scanner_type": "axe",
-    "results_path": "job-123/axe/results.json",
-    "report_path": "job-123/axe/report.html",
-    "total_pages_scanned": 3,
-    "summary": {
-      "total_violations": 7,
-      "by_severity": {
-        "critical": 2,
-        "serious": 3,
-        "moderate": 1,
-        "minor": 1
-      },
-      "pages_scanned": 3,
-      "critical_issues": 2,
-      "serious_issues": 3,
-      "moderate_issues": 1,
-      "minor_issues": 1
-    },
-    "timing": {
-      "total_ms": 1000,
-      "page_iteration_ms": 600,
-      "write_results_ms": 150,
-      "upload_artifacts_ms": 200,
-      "publish_completed_ms": 25,
-      "finalization_ms": 25
-    }
-  }
+	"event": "scan.completed",
+	"job_id": "job-123",
+	"timestamp": "2025-12-22T00:00:00Z",
+	"producer": "axe",
+	"payload": {
+		"job_id": "job-123",
+		"scanner_type": "axe",
+		"results_path": "job-123/axe/results.json",
+		"report_path": "job-123/axe/report.html",
+		"total_pages_scanned": 3,
+		"summary": {
+			"total_violations": 7,
+			"by_severity": {
+				"critical": 2,
+				"serious": 3,
+				"moderate": 1,
+				"minor": 1
+			},
+			"pages_scanned": 3,
+			"critical_issues": 2,
+			"serious_issues": 3,
+			"moderate_issues": 1,
+			"minor_issues": 1
+		},
+		"timing": {
+			"total_ms": 1000,
+			"page_iteration_ms": 600,
+			"write_results_ms": 150,
+			"upload_artifacts_ms": 200,
+			"publish_completed_ms": 25,
+			"finalization_ms": 25
+		}
+	}
 }

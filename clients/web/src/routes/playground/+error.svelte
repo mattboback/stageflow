@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { Button, Container, Panel } from '$lib/components/ui';
-	import { SITE } from '$lib/config/site';
-	import { AlertTriangle, ArrowLeft, Play, RotateCcw } from 'lucide-svelte';
+import { page } from "$app/state";
+import { Button, Container, Panel } from "$lib/components/ui";
+import { SITE } from "$lib/config/site";
+import { AlertTriangle, ArrowLeft, Play, RotateCcw } from "lucide-svelte";
 
-	const status = $derived(page.status);
-	const message = $derived(page.error?.message ?? 'An unexpected error occurred');
+const status = $derived(page.status);
+const message = $derived(page.error?.message ?? "An unexpected error occurred");
 </script>
 
 <svelte:head>

@@ -1,4 +1,4 @@
-import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
+import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
 
 export interface RuleSummary {
 	ruleId: string;
@@ -21,7 +21,7 @@ export function summarizeIssuesByRule(issues: IssueDetail[]): RuleSummary[] {
 			counts[issue.ruleId] = {
 				ruleId: issue.ruleId,
 				title: issue.title,
-				count: 1
+				count: 1,
 			};
 		}
 	}
@@ -31,7 +31,7 @@ export function summarizeIssuesByRule(issues: IssueDetail[]): RuleSummary[] {
 
 export function summarizeIssuesByPage(
 	issues: IssueDetail[],
-	pagesById: Record<string, PageSummary>
+	pagesById: Record<string, PageSummary>,
 ): PageSummaryCount[] {
 	const counts: Record<string, PageSummaryCount> = {};
 	for (const issue of issues) {
@@ -42,7 +42,7 @@ export function summarizeIssuesByPage(
 			counts[issue.pageId] = {
 				pageId: issue.pageId,
 				label: page.path ?? page.url,
-				count: 1
+				count: 1,
 			};
 		}
 	}

@@ -1,154 +1,167 @@
 <script lang="ts">
-	import type { UnifiedReport } from '$lib/types/unified-report';
+import type { UnifiedReport } from "$lib/types/unified-report";
 
-	import { chipVariants, Panel } from '$lib/components/ui';
-	import { formatScannerStatus, getScannerStatusTone } from '$lib/report';
-	import { cn } from '$lib/utils';
-	import { AlertTriangle, CheckCircle2, MinusCircle, XCircle } from 'lucide-svelte';
+import { Panel, chipVariants } from "$lib/components/ui";
+import { formatScannerStatus, getScannerStatusTone } from "$lib/report";
+import { cn } from "$lib/utils";
+import {
+	AlertTriangle,
+	CheckCircle2,
+	MinusCircle,
+	XCircle,
+} from "lucide-svelte";
 
-	import LighthouseSummary from './LighthouseSummary.svelte';
-	import SeverityBreakdown from './SeverityBreakdown.svelte';
+import LighthouseSummary from "./LighthouseSummary.svelte";
+import SeverityBreakdown from "./SeverityBreakdown.svelte";
 
-	interface Props {
-		report: UnifiedReport;
-		onSelectPage: (pageId: string) => void;
-		onSelectScanner: (scannerId: string) => void;
-		onSearchIssues: (query: string, scannerId?: string) => void;
-	}
+interface Props {
+	report: UnifiedReport;
+	onSelectPage: (pageId: string) => void;
+	onSelectScanner: (scannerId: string) => void;
+	onSearchIssues: (query: string, scannerId?: string) => void;
+}
 
-	const { report, onSelectPage, onSelectScanner, onSearchIssues }: Props = $props();
+const { report, onSelectPage, onSelectScanner, onSearchIssues }: Props =
+	$props();
 
-	const topPages = $derived(
-		[...report.pages].sort((a, b) => b.issueCount - a.issueCount).slice(0, 5)
+const topPages = $derived(
+	[...report.pages].sort((a, b) => b.issueCount - a.issueCount).slice(0, 5),
+);
+
+const issueDensity = $derived.by(() => {
+	if (report.summary.pagesScanned <= 0) return 0;
+	return report.summary.totalIssues / report.summary.pagesScanned;
+});
+
+const affectedRatio = $derived.by(() => {
+	if (report.summary.pagesScanned <= 0) return 0;
+	return report.summary.pagesWithIssues / report.summary.pagesScanned;
+});
+
+const criticalRatio = $derived.by(() => {
+	if (report.summary.totalIssues <= 0) return 0;
+	return (
+		(report.summary.bySeverity?.critical ?? 0) / report.summary.totalIssues
 	);
+});
 
-	const issueDensity = $derived.by(() => {
-		if (report.summary.pagesScanned <= 0) return 0;
-		return report.summary.totalIssues / report.summary.pagesScanned;
-	});
+const highSeverityCount = $derived(
+	(report.summary.bySeverity?.critical ?? 0) +
+		(report.summary.bySeverity?.serious ?? 0),
+);
 
-	const affectedRatio = $derived.by(() => {
-		if (report.summary.pagesScanned <= 0) return 0;
-		return report.summary.pagesWithIssues / report.summary.pagesScanned;
-	});
+const riskLabel = $derived.by(() => {
+	const critical = report.summary.bySeverity?.critical ?? 0;
+	const serious = report.summary.bySeverity?.serious ?? 0;
+	// "High risk" only when there are critical issues OR many serious issues
+	if (critical > 0 || serious >= 3) return "High risk";
+	if (serious > 0) return "Elevated risk";
+	if (report.summary.totalIssues > 0) return "Moderate risk";
+	return "Low risk";
+});
 
-	const criticalRatio = $derived.by(() => {
-		if (report.summary.totalIssues <= 0) return 0;
-		return (report.summary.bySeverity?.critical ?? 0) / report.summary.totalIssues;
-	});
+const riskTone = $derived.by(() => {
+	if (riskLabel === "High risk") return "danger";
+	if (riskLabel === "Elevated risk") return "warn";
+	if (riskLabel === "Moderate risk") return "info";
+	return "success";
+});
 
-	const highSeverityCount = $derived(
-		(report.summary.bySeverity?.critical ?? 0) + (report.summary.bySeverity?.serious ?? 0)
-	);
-
-	const riskLabel = $derived.by(() => {
-		const critical = report.summary.bySeverity?.critical ?? 0;
-		const serious = report.summary.bySeverity?.serious ?? 0;
-		// "High risk" only when there are critical issues OR many serious issues
-		if (critical > 0 || serious >= 3) return 'High risk';
-		if (serious > 0) return 'Elevated risk';
-		if (report.summary.totalIssues > 0) return 'Moderate risk';
-		return 'Low risk';
-	});
-
-	const riskTone = $derived.by(() => {
-		if (riskLabel === 'High risk') return 'danger';
-		if (riskLabel === 'Elevated risk') return 'warn';
-		if (riskLabel === 'Moderate risk') return 'info';
-		return 'success';
-	});
-
-	const topRules = $derived.by(() => {
-		const counts: Record<
-			string,
-			{ count: number; title: string; scanner: string; ruleId: string }
-		> = {};
-		for (const issue of report.issues) {
-			const key = `${issue.scanner}::${issue.ruleId}`;
-			const existing = counts[key];
-			if (existing) {
-				existing.count += 1;
-			} else {
-				counts[key] = {
-					count: 1,
-					title: issue.title ?? issue.ruleId,
-					scanner: issue.scanner,
-					ruleId: issue.ruleId
-				};
-			}
-		}
-		return Object.entries(counts)
-			.map(([key, meta]) => ({
-				key,
-				count: meta.count,
-				title: meta.title,
-				scanner: meta.scanner,
-				ruleId: meta.ruleId
-			}))
-			.sort((a, b) => b.count - a.count)
-			.slice(0, 5);
-	});
-
-	const riskSummary = $derived.by(() => {
-		const critical = report.summary.bySeverity?.critical ?? 0;
-		const serious = report.summary.bySeverity?.serious ?? 0;
-		const base = `${report.summary.totalIssues.toLocaleString()} issue${report.summary.totalIssues !== 1 ? 's' : ''} across ${report.summary.pagesScanned.toLocaleString()} page${report.summary.pagesScanned !== 1 ? 's' : ''}.`;
-		if (critical > 0 || serious > 0) return `${base} Prioritize critical and serious findings first.`;
-		if (report.summary.totalIssues > 0) return `${base} All findings are moderate severity or below.`;
-		return 'No issues detected.';
-	});
-
-	const issueTone = $derived.by((): 'warn' | 'danger' | null => {
-		if (report.summary.totalIssues === 0) return null;
-		const critical = report.summary.bySeverity?.critical ?? 0;
-		if (critical > 0) return 'danger';
-		const serious = report.summary.bySeverity?.serious ?? 0;
-		if (serious > 5) return 'warn';
-		return null;
-	});
-
-	const pagesWithIssuesTone = $derived.by((): 'warn' | 'danger' | null => {
-		if (report.summary.pagesScanned === 0) return null;
-		const ratio = report.summary.pagesWithIssues / report.summary.pagesScanned;
-		if (ratio <= 0.5) return null;
-		if (highSeverityCount === 0) return 'warn';
-		if (ratio > 0.75) return 'danger';
-		if (ratio > 0.5) return 'warn';
-		return null;
-	});
-
-	const coverageTone = $derived.by((): 'success' | 'warn' | 'danger' => {
-		if (affectedRatio <= 0.5) return 'success';
-		if (highSeverityCount === 0) return 'warn';
-		if (affectedRatio > 0.75) return 'danger';
-		return 'warn';
-	});
-
-	function getStatusIcon(status: string) {
-		switch (status) {
-			case 'success':
-				return CheckCircle2;
-			case 'failed':
-				return XCircle;
-			case 'skipped':
-				return MinusCircle;
-			default:
-				return AlertTriangle;
+const topRules = $derived.by(() => {
+	const counts: Record<
+		string,
+		{ count: number; title: string; scanner: string; ruleId: string }
+	> = {};
+	for (const issue of report.issues) {
+		const key = `${issue.scanner}::${issue.ruleId}`;
+		const existing = counts[key];
+		if (existing) {
+			existing.count += 1;
+		} else {
+			counts[key] = {
+				count: 1,
+				title: issue.title ?? issue.ruleId,
+				scanner: issue.scanner,
+				ruleId: issue.ruleId,
+			};
 		}
 	}
+	return Object.entries(counts)
+		.map(([key, meta]) => ({
+			key,
+			count: meta.count,
+			title: meta.title,
+			scanner: meta.scanner,
+			ruleId: meta.ruleId,
+		}))
+		.sort((a, b) => b.count - a.count)
+		.slice(0, 5);
+});
 
-	function getRiskChipClass(tone: 'danger' | 'warn' | 'info' | 'success'): string {
-		switch (tone) {
-			case 'danger':
-				return 'border-red-200 bg-red-50 text-red-700';
-			case 'warn':
-				return 'border-amber-200 bg-amber-50 text-amber-700';
-			case 'info':
-				return 'border-blue-200 bg-blue-50 text-blue-700';
-			default:
-				return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-		}
+const riskSummary = $derived.by(() => {
+	const critical = report.summary.bySeverity?.critical ?? 0;
+	const serious = report.summary.bySeverity?.serious ?? 0;
+	const base = `${report.summary.totalIssues.toLocaleString()} issue${report.summary.totalIssues !== 1 ? "s" : ""} across ${report.summary.pagesScanned.toLocaleString()} page${report.summary.pagesScanned !== 1 ? "s" : ""}.`;
+	if (critical > 0 || serious > 0)
+		return `${base} Prioritize critical and serious findings first.`;
+	if (report.summary.totalIssues > 0)
+		return `${base} All findings are moderate severity or below.`;
+	return "No issues detected.";
+});
+
+const issueTone = $derived.by((): "warn" | "danger" | null => {
+	if (report.summary.totalIssues === 0) return null;
+	const critical = report.summary.bySeverity?.critical ?? 0;
+	if (critical > 0) return "danger";
+	const serious = report.summary.bySeverity?.serious ?? 0;
+	if (serious > 5) return "warn";
+	return null;
+});
+
+const pagesWithIssuesTone = $derived.by((): "warn" | "danger" | null => {
+	if (report.summary.pagesScanned === 0) return null;
+	const ratio = report.summary.pagesWithIssues / report.summary.pagesScanned;
+	if (ratio <= 0.5) return null;
+	if (highSeverityCount === 0) return "warn";
+	if (ratio > 0.75) return "danger";
+	if (ratio > 0.5) return "warn";
+	return null;
+});
+
+const coverageTone = $derived.by((): "success" | "warn" | "danger" => {
+	if (affectedRatio <= 0.5) return "success";
+	if (highSeverityCount === 0) return "warn";
+	if (affectedRatio > 0.75) return "danger";
+	return "warn";
+});
+
+function getStatusIcon(status: string) {
+	switch (status) {
+		case "success":
+			return CheckCircle2;
+		case "failed":
+			return XCircle;
+		case "skipped":
+			return MinusCircle;
+		default:
+			return AlertTriangle;
 	}
+}
+
+function getRiskChipClass(
+	tone: "danger" | "warn" | "info" | "success",
+): string {
+	switch (tone) {
+		case "danger":
+			return "border-red-200 bg-red-50 text-red-700";
+		case "warn":
+			return "border-amber-200 bg-amber-50 text-amber-700";
+		case "info":
+			return "border-blue-200 bg-blue-50 text-blue-700";
+		default:
+			return "border-emerald-200 bg-emerald-50 text-emerald-700";
+	}
+}
 </script>
 
 {#snippet summaryCard(title: string, value: number | string, tone?: 'warn' | 'danger' | null)}

@@ -1,37 +1,50 @@
 <script lang="ts">
-	import type { ScanResult } from '$lib/types/scan';
+import type { ScanResult } from "$lib/types/scan";
 
-	import { buildApiUrl } from '$lib/api/utils';
-	import { Button, Panel } from '$lib/components/ui';
-	import { formatTimestamp } from '$lib/utils';
-	import { ExternalLink, RefreshCw } from 'lucide-svelte';
+import { buildApiUrl } from "$lib/api/utils";
+import { Button, Panel } from "$lib/components/ui";
+import { formatTimestamp } from "$lib/utils";
+import { ExternalLink, RefreshCw } from "lucide-svelte";
 
-	interface Props {
-		jobId: string;
-		job: ScanResult | null;
-		onRefreshArtifacts?: () => void;
-	}
+interface Props {
+	jobId: string;
+	job: ScanResult | null;
+	onRefreshArtifacts?: () => void;
+}
 
-	const { jobId, job, onRefreshArtifacts }: Props = $props();
+const { jobId, job, onRefreshArtifacts }: Props = $props();
 
-	const aggregatedJsonUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null);
-	const aggregatedHtmlUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null);
-	const artifacts = $derived(job?.artifacts ?? null);
-	const updatedLabel = $derived(formatTimestamp(job?.updated_at));
+const aggregatedJsonUrl = $derived(
+	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null,
+);
+const aggregatedHtmlUrl = $derived(
+	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null,
+);
+const artifacts = $derived(job?.artifacts ?? null);
+const updatedLabel = $derived(formatTimestamp(job?.updated_at));
 
-	const aggregatedLinks = $derived.by(() => {
-		const links: { href: string; label: string }[] = [];
-		if (aggregatedJsonUrl) links.push({ href: aggregatedJsonUrl, label: 'Aggregated JSON' });
-		if (aggregatedHtmlUrl) links.push({ href: aggregatedHtmlUrl, label: 'Primary HTML report' });
-		if (artifacts?.scan_stage_log)
-			links.push({ href: artifacts.scan_stage_log, label: 'Scan stage log' });
-		if (artifacts?.scan_recipe) links.push({ href: artifacts.scan_recipe, label: 'Scan recipe' });
-		if (artifacts?.extraction_stage_log)
-			links.push({ href: artifacts.extraction_stage_log, label: 'Extraction log' });
-		if (artifacts?.extraction_recipe)
-			links.push({ href: artifacts.extraction_recipe, label: 'Extraction recipe' });
-		return links;
-	});
+const aggregatedLinks = $derived.by(() => {
+	const links: { href: string; label: string }[] = [];
+	if (aggregatedJsonUrl)
+		links.push({ href: aggregatedJsonUrl, label: "Aggregated JSON" });
+	if (aggregatedHtmlUrl)
+		links.push({ href: aggregatedHtmlUrl, label: "Primary HTML report" });
+	if (artifacts?.scan_stage_log)
+		links.push({ href: artifacts.scan_stage_log, label: "Scan stage log" });
+	if (artifacts?.scan_recipe)
+		links.push({ href: artifacts.scan_recipe, label: "Scan recipe" });
+	if (artifacts?.extraction_stage_log)
+		links.push({
+			href: artifacts.extraction_stage_log,
+			label: "Extraction log",
+		});
+	if (artifacts?.extraction_recipe)
+		links.push({
+			href: artifacts.extraction_recipe,
+			label: "Extraction recipe",
+		});
+	return links;
+});
 </script>
 
 {#snippet artifactLink(href: string, label: string)}

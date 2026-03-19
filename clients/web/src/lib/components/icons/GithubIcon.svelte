@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { SVGAttributes } from 'svelte/elements';
+import type { SVGAttributes } from "svelte/elements";
 
-	interface Props extends SVGAttributes<SVGSVGElement> {
-		class?: string;
-	}
+interface Props extends SVGAttributes<SVGSVGElement> {
+	class?: string;
+}
 
-	const { class: className, ...rest }: Props = $props();
+const { class: className, ...rest }: Props = $props();
 </script>
 
 <svg viewBox="0 0 24 24" fill="currentColor" class={className} {...rest}>

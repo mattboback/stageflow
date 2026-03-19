@@ -1,6 +1,6 @@
 # StageFlow Project Mode
 
-Project Mode is a powerful feature of the `stageflow` CLI that integrates web accessibility and quality scanning directly into your local development workflow. 
+Project Mode is a powerful feature of the `stageflow` CLI that integrates web accessibility and quality scanning directly into your local development workflow.
 
 Instead of manually starting your app and running scans against public URLs, Project Mode automates the entire lifecycle: it starts your local dev server, waits for it to become ready, runs the StageFlow scanners against your local environment, streams the results, and then gracefully shuts down the dev server.
 

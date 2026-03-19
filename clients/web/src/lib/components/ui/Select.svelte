@@ -1,21 +1,27 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import type { HTMLSelectAttributes } from 'svelte/elements';
+import type { Snippet } from "svelte";
+import type { HTMLSelectAttributes } from "svelte/elements";
 
-	import { cn } from '$lib/utils';
+import { cn } from "$lib/utils";
 
-	import { selectVariants, type SelectSize } from './select';
+import { type SelectSize, selectVariants } from "./select";
 
-	interface Props extends HTMLSelectAttributes {
-		value?: string | number;
-		uiSize?: SelectSize;
-		class?: string;
-		error?: boolean;
-		children: Snippet;
-	}
+interface Props extends HTMLSelectAttributes {
+	value?: string | number;
+	uiSize?: SelectSize;
+	class?: string;
+	error?: boolean;
+	children: Snippet;
+}
 
-	let { value = $bindable(''), uiSize, class: className, error = false, children, ...rest }: Props =
-		$props();
+const {
+	value = $bindable(""),
+	uiSize,
+	class: className,
+	error = false,
+	children,
+	...rest
+}: Props = $props();
 </script>
 
 <select

@@ -1,14 +1,14 @@
 {
-  "event": "scan.failed",
-  "job_id": "job-123",
-  "timestamp": "2025-12-22T00:00:00Z",
-  "producer": "axe",
-  "payload": {
-    "job_id": "job-123",
-    "scanner_type": "axe",
-    "error": "scan failed",
-    "error_details": "details",
-    "stage_log_path": "job-123/stages/scan.axe.log.json",
-    "recipe_path": "job-123/recipes/scan.axe.json"
-  }
+	"event": "scan.failed",
+	"job_id": "job-123",
+	"timestamp": "2025-12-22T00:00:00Z",
+	"producer": "axe",
+	"payload": {
+		"job_id": "job-123",
+		"scanner_type": "axe",
+		"error": "scan failed",
+		"error_details": "details",
+		"stage_log_path": "job-123/stages/scan.axe.log.json",
+		"recipe_path": "job-123/recipes/scan.axe.json"
+	}
 }

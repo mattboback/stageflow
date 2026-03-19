@@ -7,7 +7,10 @@ export function formatTimestamp(value?: string | null): string | null {
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return value;
 	try {
-		return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+		return date.toLocaleString(undefined, {
+			dateStyle: "medium",
+			timeStyle: "short",
+		});
 	} catch {
 		return date.toISOString();
 	}

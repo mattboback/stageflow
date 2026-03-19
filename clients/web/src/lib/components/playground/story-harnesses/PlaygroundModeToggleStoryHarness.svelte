@@ -1,21 +1,21 @@
 <script lang="ts">
-	import PlaygroundModeToggle from '../PlaygroundModeToggle.svelte';
+import PlaygroundModeToggle from "../PlaygroundModeToggle.svelte";
 
-	type Mode = 'url' | 'zip';
+type Mode = "url" | "zip";
 
-	interface Props {
-		initialMode?: Mode;
-		onModeChange?: (mode: Mode) => void;
-	}
+interface Props {
+	initialMode?: Mode;
+	onModeChange?: (mode: Mode) => void;
+}
 
-	const { initialMode = 'url', onModeChange }: Props = $props();
+const { initialMode = "url", onModeChange }: Props = $props();
 
-	let mode = $derived<Mode>(initialMode);
+let mode = $derived<Mode>(initialMode);
 
-	function handleModeChange(nextMode: Mode) {
-		mode = nextMode;
-		onModeChange?.(nextMode);
-	}
+function handleModeChange(nextMode: Mode) {
+	mode = nextMode;
+	onModeChange?.(nextMode);
+}
 </script>
 
 <div class="space-y-4">

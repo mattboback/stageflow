@@ -1,9 +1,9 @@
-import type { ScannerSelection } from '$lib/types/scan';
+import type { ScannerSelection } from "$lib/types/scan";
 
-export type ScannerPreset = 'coverage' | 'quick' | 'custom';
+export type ScannerPreset = "coverage" | "quick" | "custom";
 
-const aiNavigatorId = 'ai-navigator';
-const axeId = 'axe';
+const aiNavigatorId = "ai-navigator";
+const axeId = "axe";
 
 function getQuickScannerId(scanners: ScannerSelection[]): string | undefined {
 	if (scanners.length === 0) {
@@ -23,67 +23,69 @@ function hasNonAiScanner(scanners: ScannerSelection[]): boolean {
 
 export function applyScannerPreset(
 	scanners: ScannerSelection[],
-	preset: ScannerPreset
+	preset: ScannerPreset,
 ): ScannerSelection[] {
-	if (preset === 'custom' || scanners.length === 0) {
+	if (preset === "custom" || scanners.length === 0) {
 		return scanners;
 	}
 
-	if (preset === 'quick') {
+	if (preset === "quick") {
 		const targetId = getQuickScannerId(scanners);
 		return scanners.map((scanner) => ({
 			...scanner,
-			enabled: scanner.id === targetId
+			enabled: scanner.id === targetId,
 		}));
 	}
 
 	const allowNonAiOnly = hasNonAiScanner(scanners);
 	let updated = scanners.map((scanner) => ({
 		...scanner,
-		enabled: allowNonAiOnly ? scanner.id !== aiNavigatorId : false
+		enabled: allowNonAiOnly ? scanner.id !== aiNavigatorId : false,
 	}));
 
 	if (!updated.some((scanner) => scanner.enabled)) {
 		const fallbackId = scanners[0]?.id;
 		updated = scanners.map((scanner) => ({
 			...scanner,
-			enabled: scanner.id === fallbackId
+			enabled: scanner.id === fallbackId,
 		}));
 	}
 
 	return updated;
 }
 
-export function detectScannerPreset(scanners: ScannerSelection[]): ScannerPreset {
+export function detectScannerPreset(
+	scanners: ScannerSelection[],
+): ScannerPreset {
 	if (scanners.length === 0) {
-		return 'custom';
+		return "custom";
 	}
 
 	const quickId = getQuickScannerId(scanners);
 	const quickMatch = scanners.every(
-		(scanner) => scanner.enabled === (scanner.id === quickId)
+		(scanner) => scanner.enabled === (scanner.id === quickId),
 	);
 	if (quickMatch) {
-		return 'quick';
+		return "quick";
 	}
 
 	const allowNonAiOnly = hasNonAiScanner(scanners);
 	if (allowNonAiOnly) {
 		const coverageMatch = scanners.every(
-			(scanner) => scanner.enabled === (scanner.id !== aiNavigatorId)
+			(scanner) => scanner.enabled === (scanner.id !== aiNavigatorId),
 		);
 		if (coverageMatch) {
-			return 'coverage';
+			return "coverage";
 		}
 	} else {
 		const fallbackId = scanners[0]?.id;
 		const fallbackMatch = scanners.every(
-			(scanner) => scanner.enabled === (scanner.id === fallbackId)
+			(scanner) => scanner.enabled === (scanner.id === fallbackId),
 		);
 		if (fallbackMatch) {
-			return 'coverage';
+			return "coverage";
 		}
 	}
 
-	return 'custom';
+	return "custom";
 }

@@ -10,7 +10,10 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"exactOptionalPropertyTypes": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true
 	},
 	"include": [
 		".svelte-kit/ambient.d.ts",
@@ -26,6 +29,4 @@
 		"tests/**/*.ts",
 		"tests/**/*.svelte"
 	]
-	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
-	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 }

@@ -1,47 +1,47 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import type { HTMLAttributes } from 'svelte/elements';
+import type { Snippet } from "svelte";
+import type { HTMLAttributes } from "svelte/elements";
 
-	import { cn } from '$lib/utils';
+import { cn } from "$lib/utils";
 
-	import {
-		chipVariants,
-		type ChipCaps,
-		type ChipInteractive,
-		type ChipSize,
-		type ChipTone
-	} from './chip';
+import {
+	type ChipCaps,
+	type ChipInteractive,
+	type ChipSize,
+	type ChipTone,
+	chipVariants,
+} from "./chip";
 
-	type ChipTag = 'span' | 'button' | 'a';
+type ChipTag = "span" | "button" | "a";
 
-	interface Props extends HTMLAttributes<HTMLElement> {
-		as?: ChipTag;
-		tone?: ChipTone;
-		size?: ChipSize;
-		caps?: ChipCaps;
-		interactive?: ChipInteractive;
-		class?: string;
-		href?: string;
-		target?: string;
-		rel?: string;
-		type?: 'button' | 'submit' | 'reset';
-		children: Snippet;
-	}
+interface Props extends HTMLAttributes<HTMLElement> {
+	as?: ChipTag;
+	tone?: ChipTone;
+	size?: ChipSize;
+	caps?: ChipCaps;
+	interactive?: ChipInteractive;
+	class?: string;
+	href?: string;
+	target?: string;
+	rel?: string;
+	type?: "button" | "submit" | "reset";
+	children: Snippet;
+}
 
-	const {
-		as = 'span',
-		tone,
-		size,
-		caps,
-		interactive,
-		class: className,
-		href,
-		target,
-		rel,
-		type,
-		children,
-		...rest
-	}: Props = $props();
+const {
+	as = "span",
+	tone,
+	size,
+	caps,
+	interactive,
+	class: className,
+	href,
+	target,
+	rel,
+	type,
+	children,
+	...rest
+}: Props = $props();
 </script>
 
 <svelte:element

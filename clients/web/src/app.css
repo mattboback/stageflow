@@ -1,16 +1,14 @@
 /* Fonts are self-hosted via @fontsource packages imported in +layout.svelte */
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
 	/* Font families - using self-hosted variable fonts */
-	--font-display:
-		'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-		sans-serif;
-	--font-body:
-		'Inter Variable', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
-		sans-serif;
-	--font-mono:
-		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+	--font-display: "Inter Variable", ui-sans-serif, system-ui, -apple-system,
+		BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-body: "Inter Variable", ui-sans-serif, system-ui, -apple-system,
+		BlinkMacSystemFont, "Segoe UI", sans-serif;
+	--font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
+		Monaco, Consolas, monospace;
 
 	/* Surfaces (light-only) */
 	--color-paper: #f8fafc; /* slate-50 */
@@ -39,11 +37,16 @@
 	/* Shadows (neutral, subtle) */
 	--shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
 	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-	--shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-	--shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
-	--shadow-xl: 0 20px 40px -12px rgba(0, 0, 0, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.08);
-	--shadow-card-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.10), 0 2px 8px -4px rgba(0, 0, 0, 0.06);
-	--shadow-float: 0 18px 36px -22px rgba(15, 15, 15, 0.38), 0 8px 18px -16px rgba(15, 15, 15, 0.28);
+	--shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px
+		rgba(0, 0, 0, 0.04);
+	--shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.12), 0 4px 8px -4px
+		rgba(0, 0, 0, 0.06);
+	--shadow-xl: 0 20px 40px -12px rgba(0, 0, 0, 0.15), 0 8px 16px -8px
+		rgba(0, 0, 0, 0.08);
+	--shadow-card-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.1), 0 2px 8px -4px
+		rgba(0, 0, 0, 0.06);
+	--shadow-float: 0 18px 36px -22px rgba(15, 15, 15, 0.38), 0 8px 18px -16px
+		rgba(15, 15, 15, 0.28);
 
 	/* Animation Timing */
 	--duration-fast: 150ms;
@@ -79,10 +82,16 @@
 	body {
 		font-family: var(--font-body);
 		font-weight: 450;
-		background:
-			radial-gradient(circle at 10% -25%, rgba(79, 70, 229, 0.08), transparent 48%),
-			radial-gradient(circle at 90% 8%, rgba(55, 48, 163, 0.06), transparent 42%),
-			var(--color-paper);
+		background: radial-gradient(
+				circle at 10% -25%,
+				rgba(79, 70, 229, 0.08),
+				transparent 48%
+			),
+			radial-gradient(
+				circle at 90% 8%,
+				rgba(55, 48, 163, 0.06),
+				transparent 42%
+			), var(--color-paper);
 		@apply text-ink selection:bg-accent-soft selection:text-ink;
 	}
 
@@ -112,9 +121,7 @@
 		color: #fff;
 		font-weight: 700;
 		box-shadow: var(--shadow-lg);
-		transition:
-			top 0.2s ease,
-			box-shadow 0.2s ease;
+		transition: top 0.2s ease, box-shadow 0.2s ease;
 		text-decoration: none;
 	}
 
@@ -150,15 +157,20 @@
 	}
 
 	.playground-hero {
-		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 45%, transparent 100%),
-			var(--color-paper);
+		background: linear-gradient(
+				180deg,
+				rgba(255, 255, 255, 0.95) 0%,
+				rgba(248, 250, 252, 0.9) 45%,
+				transparent 100%
+			), var(--color-paper);
 	}
 
 	.playground-shell {
-		background:
-			radial-gradient(80rem 38rem at 50% -10%, rgba(79, 70, 229, 0.14), transparent 55%),
-			var(--color-paper);
+		background: radial-gradient(
+				80rem 38rem at 50% -10%,
+				rgba(79, 70, 229, 0.14),
+				transparent 55%
+			), var(--color-paper);
 	}
 
 	.h1-display {
@@ -190,8 +202,11 @@
 	}
 
 	.landing-shell {
-		background:
-			linear-gradient(110deg, rgba(255, 255, 255, 0.78), rgba(241, 245, 249, 0.8)),
+		background: linear-gradient(
+				110deg,
+				rgba(255, 255, 255, 0.78),
+				rgba(241, 245, 249, 0.8)
+			),
 			repeating-linear-gradient(
 				90deg,
 				transparent 0,
@@ -202,10 +217,22 @@
 	}
 
 	.landing-hero {
-		background:
-			radial-gradient(120% 70% at 5% 5%, rgba(79, 70, 229, 0.13), transparent 63%),
-			radial-gradient(100% 65% at 94% -12%, rgba(55, 48, 163, 0.09), transparent 60%),
-			linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.84) 62%, transparent 100%);
+		background: radial-gradient(
+				120% 70% at 5% 5%,
+				rgba(79, 70, 229, 0.13),
+				transparent 63%
+			),
+			radial-gradient(
+				100% 65% at 94% -12%,
+				rgba(55, 48, 163, 0.09),
+				transparent 60%
+			),
+			linear-gradient(
+				180deg,
+				rgba(248, 250, 252, 0.98) 0%,
+				rgba(241, 245, 249, 0.84) 62%,
+				transparent 100%
+			);
 	}
 
 	.landing-grid {
@@ -266,8 +293,11 @@
 	}
 
 	.workflow-band {
-		background:
-			linear-gradient(180deg, rgba(248, 250, 252, 0.84), rgba(255, 255, 255, 0.45)),
+		background: linear-gradient(
+				180deg,
+				rgba(248, 250, 252, 0.84),
+				rgba(255, 255, 255, 0.45)
+			),
 			repeating-linear-gradient(
 				0deg,
 				transparent 0,
@@ -287,15 +317,22 @@
 	}
 
 	.workflow-line {
-		background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.35), transparent);
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgba(79, 70, 229, 0.35),
+			transparent
+		);
 		@apply pointer-events-none absolute top-12 left-0 hidden h-px w-full lg:block;
 	}
 
 	.cta-panel {
 		box-shadow: var(--shadow-float);
-		background:
-			linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(238, 242, 255, 0.92)),
-			var(--color-surface);
+		background: linear-gradient(
+				135deg,
+				rgba(255, 255, 255, 0.94),
+				rgba(238, 242, 255, 0.92)
+			), var(--color-surface);
 		@apply border-line/70 rounded-3xl border px-6 py-12 text-center sm:px-10;
 	}
 
@@ -308,9 +345,11 @@
 	}
 
 	.footer-shell {
-		background:
-			linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(226, 232, 240, 0.9) 100%),
-			var(--color-paper-deep);
+		background: linear-gradient(
+				180deg,
+				rgba(255, 255, 255, 0.42) 0%,
+				rgba(226, 232, 240, 0.9) 100%
+			), var(--color-paper-deep);
 	}
 
 	.footer-title {
@@ -324,8 +363,12 @@
 	}
 
 	.hero-preview::after {
-		content: '';
-		background: linear-gradient(180deg, transparent 0%, rgba(79, 70, 229, 0.07) 100%);
+		content: "";
+		background: linear-gradient(
+			180deg,
+			transparent 0%,
+			rgba(79, 70, 229, 0.07) 100%
+		);
 		@apply pointer-events-none absolute inset-0 rounded-2xl;
 	}
 
@@ -342,7 +385,8 @@
 	}
 
 	.scanner-card {
-		transition: box-shadow var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
+		transition: box-shadow var(--duration-normal) var(--ease-out), transform
+			var(--duration-normal) var(--ease-out);
 	}
 
 	.scanner-card:hover {
@@ -521,9 +565,8 @@
 
 	/* Interactive panel hover */
 	.hover-glow {
-		transition:
-			border-color var(--duration-fast) var(--ease-out),
-			box-shadow var(--duration-fast) var(--ease-out);
+		transition: border-color var(--duration-fast) var(--ease-out), box-shadow
+			var(--duration-fast) var(--ease-out);
 	}
 
 	.hover-glow:hover {

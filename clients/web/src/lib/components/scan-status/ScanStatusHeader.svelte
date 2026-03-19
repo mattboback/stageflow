@@ -1,26 +1,28 @@
 <script lang="ts">
-	import type { ScanResult, ScanStatus } from '$lib/types/scan';
+import type { ScanResult, ScanStatus } from "$lib/types/scan";
 
-	import { Badge, Progress } from '$lib/components/ui';
-	import { cn } from '$lib/utils';
-	import { Clock } from 'lucide-svelte';
+import { Badge, Progress } from "$lib/components/ui";
+import { cn } from "$lib/utils";
+import { Clock } from "lucide-svelte";
 
-	interface Props {
-		id: string;
-		status: ScanStatus;
-		elapsed: number;
-		result?: ScanResult | null;
-	}
+interface Props {
+	id: string;
+	status: ScanStatus;
+	elapsed: number;
+	result?: ScanResult | null;
+}
 
-	const { id, status, elapsed, result }: Props = $props();
+const { id, status, elapsed, result }: Props = $props();
 
-	function formatTime(s: number) {
-		return `${Math.floor(s / 60)}m ${s % 60}s`;
-	}
+function formatTime(s: number) {
+	return `${Math.floor(s / 60)}m ${s % 60}s`;
+}
 
-	const isProcessing = $derived(!['complete', 'failed', 'error'].includes(status));
-	const progress = $derived(result?.progress);
-	const progressPercent = $derived(progress?.percentage ?? 0);
+const isProcessing = $derived(
+	!["complete", "failed", "error"].includes(status),
+);
+const progress = $derived(result?.progress);
+const progressPercent = $derived(progress?.percentage ?? 0);
 </script>
 
 <div class="mb-8 space-y-4">

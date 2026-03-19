@@ -26,4 +26,3 @@ stageflow ai <url> <objective> [flags]
 ### SEE ALSO
 
 * [stageflow](stageflow.md)	 - StageFlow CLI
-

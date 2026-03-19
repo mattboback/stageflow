@@ -1,35 +1,46 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+import type { Snippet } from "svelte";
 
-	import { cn } from '$lib/utils';
+import { cn } from "$lib/utils";
 
-	export interface Tab {
-		id: string;
-		label: string;
-		content?: Snippet;
+export interface Tab {
+	id: string;
+	label: string;
+	content?: Snippet;
+}
+
+interface Props {
+	tabs: Tab[];
+	defaultTab?: string;
+	value?: string;
+	onValueChange?: (_tabId: string) => void;
+	class?: string;
+	panel?: Snippet<[string]>;
+}
+
+const {
+	tabs,
+	defaultTab,
+	value,
+	onValueChange,
+	class: className,
+	panel,
+}: Props = $props();
+
+let internalValue = $state<string | null>(null);
+const activeTab = $derived(
+	value ?? internalValue ?? defaultTab ?? tabs[0]?.id ?? "",
+);
+const activeTabContent = $derived(
+	tabs.find((tab) => tab.id === activeTab)?.content,
+);
+
+function handleTabChange(tabId: string) {
+	onValueChange?.(tabId);
+	if (value === undefined) {
+		internalValue = tabId;
 	}
-
-	interface Props {
-		tabs: Tab[];
-		defaultTab?: string;
-		value?: string;
-		onValueChange?: (_tabId: string) => void;
-		class?: string;
-		panel?: Snippet<[string]>;
-	}
-
-	const { tabs, defaultTab, value, onValueChange, class: className, panel }: Props = $props();
-
-	let internalValue = $state<string | null>(null);
-	const activeTab = $derived(value ?? internalValue ?? defaultTab ?? tabs[0]?.id ?? '');
-	const activeTabContent = $derived(tabs.find((tab) => tab.id === activeTab)?.content);
-
-	function handleTabChange(tabId: string) {
-		onValueChange?.(tabId);
-		if (value === undefined) {
-			internalValue = tabId;
-		}
-	}
+}
 </script>
 
 <div class={cn('w-full', className)}>

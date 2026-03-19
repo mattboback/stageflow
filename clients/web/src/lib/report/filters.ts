@@ -1,4 +1,4 @@
-import type { IssueDetail } from '$lib/types/unified-report';
+import type { IssueDetail } from "$lib/types/unified-report";
 
 export interface IssueFilterOptions {
 	scannerId?: string | null;
@@ -10,7 +10,7 @@ export interface IssueFilterOptions {
 
 export function filterIssues(
 	issues: IssueDetail[],
-	{ scannerId, pageId, severity, category, query }: IssueFilterOptions
+	{ scannerId, pageId, severity, category, query }: IssueFilterOptions,
 ): IssueDetail[] {
 	let filtered = issues;
 
@@ -38,7 +38,8 @@ export function filterIssues(
 				issue.pageUrl.toLowerCase().includes(needle) ||
 				issue.scanner.toLowerCase().includes(needle) ||
 				(issue.category?.toLowerCase().includes(needle) ?? false) ||
-				(issue.wcagTags?.some((tag) => tag.toLowerCase().includes(needle)) ?? false)
+				(issue.wcagTags?.some((tag) => tag.toLowerCase().includes(needle)) ??
+					false)
 			);
 		});
 	}

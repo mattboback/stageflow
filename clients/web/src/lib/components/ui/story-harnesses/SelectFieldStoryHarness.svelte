@@ -1,22 +1,27 @@
 <script lang="ts">
-	import SelectField from '../SelectField.svelte';
+import SelectField from "../SelectField.svelte";
 
-	type SelectFieldVariant = 'default' | 'prominent';
+type SelectFieldVariant = "default" | "prominent";
 
-	interface Props {
-		label?: string;
-		value?: string;
-		variant?: SelectFieldVariant;
-		onChange?: (value: string) => void;
-	}
+interface Props {
+	label?: string;
+	value?: string;
+	variant?: SelectFieldVariant;
+	onChange?: (value: string) => void;
+}
 
-	let { label = 'Scanner', value = $bindable('axe'), variant = 'default', onChange }: Props = $props();
+const {
+	label = "Scanner",
+	value = $bindable("axe"),
+	variant = "default",
+	onChange,
+}: Props = $props();
 
-	function handleChange(event: Event) {
-		const currentTarget = event.currentTarget;
-		if (!(currentTarget instanceof HTMLSelectElement)) return;
-		onChange?.(currentTarget.value);
-	}
+function handleChange(event: Event) {
+	const currentTarget = event.currentTarget;
+	if (!(currentTarget instanceof HTMLSelectElement)) return;
+	onChange?.(currentTarget.value);
+}
 </script>
 
 <div class="w-[min(92vw,28rem)] space-y-2">

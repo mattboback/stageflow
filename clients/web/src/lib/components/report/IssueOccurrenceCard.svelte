@@ -1,77 +1,82 @@
 <script lang="ts">
-	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
+import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
 
-	import { Panel } from '$lib/components/ui';
-	import { getCroppedViewBox, getSeverityStrokeColor } from '$lib/report';
-	import { cn } from '$lib/utils';
-	import { extractPrimaryFailureDetail } from '$lib/utils/failure-summary';
-	import { Copy } from 'lucide-svelte';
+import { Panel } from "$lib/components/ui";
+import { getCroppedViewBox, getSeverityStrokeColor } from "$lib/report";
+import { cn } from "$lib/utils";
+import { extractPrimaryFailureDetail } from "$lib/utils/failure-summary";
+import { Copy } from "lucide-svelte";
 
-	interface Props {
-		occurrence: NonNullable<IssueDetail['occurrences']>[number];
-		index: number;
-		issue: IssueDetail;
-		page: PageSummary | null;
-		pageOverviewUrl: string | null;
-		isHighlighted: boolean;
-		showDetails: boolean;
-		onHighlight?: () => void;
-	}
+interface Props {
+	occurrence: NonNullable<IssueDetail["occurrences"]>[number];
+	index: number;
+	issue: IssueDetail;
+	page: PageSummary | null;
+	pageOverviewUrl: string | null;
+	isHighlighted: boolean;
+	showDetails: boolean;
+	onHighlight?: () => void;
+}
 
-	const {
-		occurrence,
-		index,
-		issue,
-		page,
-		pageOverviewUrl,
-		isHighlighted,
-		showDetails,
-		onHighlight
-	}: Props = $props();
+const {
+	occurrence,
+	index,
+	issue,
+	page,
+	pageOverviewUrl,
+	isHighlighted,
+	showDetails,
+	onHighlight,
+}: Props = $props();
 
-	const overviewEl = $derived.by(() => {
-		const overview = page?.pageOverview;
-		if (!overview) return null;
-		const elements = overview.elements ?? [];
-		return elements.find((el) => el.issueId === issue.id && el.nodeIndex === index) ?? null;
-	});
+const overviewEl = $derived.by(() => {
+	const overview = page?.pageOverview;
+	if (!overview) return null;
+	const elements = overview.elements ?? [];
+	return (
+		elements.find((el) => el.issueId === issue.id && el.nodeIndex === index) ??
+		null
+	);
+});
 
-	const viewBox = $derived.by(() => {
-		const overview = page?.pageOverview;
-		if (!overview || !overviewEl) return null;
-		return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl);
-	});
+const viewBox = $derived.by(() => {
+	const overview = page?.pageOverview;
+	if (!overview || !overviewEl) return null;
+	return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl);
+});
 
-	async function copyToClipboard(text: string) {
+async function copyToClipboard(text: string) {
+	try {
+		await navigator.clipboard.writeText(text);
+	} catch {
+		const ta = document.createElement("textarea");
+		ta.value = text;
+		ta.style.position = "fixed";
+		ta.style.left = "-9999px";
+		document.body.appendChild(ta);
+		ta.select();
 		try {
-			await navigator.clipboard.writeText(text);
-		} catch {
-			const ta = document.createElement('textarea');
-			ta.value = text;
-			ta.style.position = 'fixed';
-			ta.style.left = '-9999px';
-			document.body.appendChild(ta);
-			ta.select();
-			try {
-				document.execCommand('copy');
-			} finally {
-				document.body.removeChild(ta);
-			}
+			document.execCommand("copy");
+		} finally {
+			document.body.removeChild(ta);
 		}
 	}
+}
 
-	function getOccurrenceSnippet(): string | null {
-		const parts: string[] = [];
-		if (occurrence.ancestorPath) parts.push(`Location: ${occurrence.ancestorPath}`);
-		if (occurrence.selector) parts.push(`Selector: ${occurrence.selector}`);
-		if (occurrence.contextHtml) {
-			parts.push(`Context HTML:\n${occurrence.contextHtml}`);
-		} else if (occurrence.html) {
-			parts.push(`HTML: ${occurrence.html}`);
-		}
-		if (occurrence.failureSummary) parts.push(`Fix: ${occurrence.failureSummary}`);
-		return parts.length ? parts.join('\n\n') : null;
+function getOccurrenceSnippet(): string | null {
+	const parts: string[] = [];
+	if (occurrence.ancestorPath)
+		parts.push(`Location: ${occurrence.ancestorPath}`);
+	if (occurrence.selector) parts.push(`Selector: ${occurrence.selector}`);
+	if (occurrence.contextHtml) {
+		parts.push(`Context HTML:\n${occurrence.contextHtml}`);
+	} else if (occurrence.html) {
+		parts.push(`HTML: ${occurrence.html}`);
 	}
+	if (occurrence.failureSummary)
+		parts.push(`Fix: ${occurrence.failureSummary}`);
+	return parts.length ? parts.join("\n\n") : null;
+}
 </script>
 
 <Panel

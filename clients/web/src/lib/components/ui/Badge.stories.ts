@@ -1,10 +1,10 @@
-import type { Meta, StoryObj } from '@storybook/svelte';
+import type { Meta, StoryObj } from "@storybook/svelte";
 
-import { expect, within } from '@storybook/test';
+import { expect, within } from "@storybook/test";
 
-import type { BadgeVariant } from './badge';
+import type { BadgeVariant } from "./badge";
 
-import BadgeStoryHarness from './story-harnesses/BadgeStoryHarness.svelte';
+import BadgeStoryHarness from "./story-harnesses/BadgeStoryHarness.svelte";
 
 interface BadgeStoryArgs {
 	variant: BadgeVariant;
@@ -12,19 +12,27 @@ interface BadgeStoryArgs {
 }
 
 const meta = {
-	title: 'UI/Badge',
+	title: "UI/Badge",
 	component: BadgeStoryHarness,
-	tags: ['autodocs'],
+	tags: ["autodocs"],
 	args: {
-		variant: 'default',
-		label: 'Live'
+		variant: "default",
+		label: "Live",
 	},
 	argTypes: {
 		variant: {
-			control: 'select',
-			options: ['default', 'secondary', 'destructive', 'outline', 'status', 'terminal', 'live']
-		}
-	}
+			control: "select",
+			options: [
+				"default",
+				"secondary",
+				"destructive",
+				"outline",
+				"status",
+				"terminal",
+				"live",
+			],
+		},
+	},
 } satisfies Meta<BadgeStoryArgs>;
 
 export default meta;
@@ -33,23 +41,23 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		const badge = canvas.getByTestId('badge');
+		const badge = canvas.getByTestId("badge");
 
 		await expect(badge).toBeVisible();
-		await expect(badge).toHaveTextContent('Live');
-	}
+		await expect(badge).toHaveTextContent("Live");
+	},
 };
 
 export const TerminalVariant: Story = {
 	args: {
-		variant: 'terminal',
-		label: 'terminal'
+		variant: "terminal",
+		label: "terminal",
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		const badge = canvas.getByTestId('badge');
+		const badge = canvas.getByTestId("badge");
 
-		await expect(badge).toHaveClass('font-mono');
-		await expect(badge).toHaveClass('text-accent-ink');
-	}
+		await expect(badge).toHaveClass("font-mono");
+		await expect(badge).toHaveClass("text-accent-ink");
+	},
 };

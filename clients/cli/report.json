@@ -1,224 +1,222 @@
 {
-  "schema": "stageflow-cli/report@v1",
-  "cli": {
-    "version": "dev"
-  },
-  "api": {
-    "base_url": "http://localhost:8080"
-  },
-  "job": {
-    "id": "a7885228-b9df-44a4-8ddf-760cde5fe22c",
-    "state": "DONE",
-    "created_at": "2026-03-16T20:50:42Z",
-    "updated_at": "2026-03-16T20:51:07Z"
-  },
-  "links": {
-    "job": "http://localhost:8080/api/v1/jobs/a7885228-b9df-44a4-8ddf-760cde5fe22c",
-    "results": "http://localhost:8080/api/v1/jobs/a7885228-b9df-44a4-8ddf-760cde5fe22c/results"
-  },
-  "urls": [
-    "http://localhost:3010"
-  ],
-  "filters": {
-    "max_issues": 200,
-    "issues_returned": 3,
-    "issues_total": 3,
-    "truncated": false,
-    "sort": "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
-  },
-  "report": {
-    "issues": [
-      {
-        "category": "links",
-        "description": "Found 1 link(s) returning HTTP 404. Broken links hurt user experience and SEO.",
-        "elementCount": 1,
-        "elementsTruncated": true,
-        "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
-        "id": "34e65a2672da",
-        "pageId": "url-1",
-        "pageUrl": "http://localhost:3010",
-        "ruleId": "link-checker-broken-404",
-        "scanner": "link-checker",
-        "scannerData": {
-          "links": [
-            {
-              "error": null,
-              "url": "https://github.com/mattboback/stageflow"
-            }
-          ],
-          "totalCount": 1
-        },
-        "severity": "serious",
-        "title": "Broken Links (HTTP 404)"
-      },
-      {
-        "category": "meta",
-        "description": "Meta description is too short (49 characters). Recommended: 120-160 characters.",
-        "elementCount": 1,
-        "elementsTruncated": true,
-        "helpUrl": "https://moz.com/learn/seo/meta-description",
-        "id": "476002d4e20a",
-        "pageId": "url-1",
-        "pageUrl": "http://localhost:3010",
-        "ruleId": "seo-description-length",
-        "scanner": "seo",
-        "scannerData": {
-          "length": 49,
-          "recommended": "120-160"
-        },
-        "severity": "moderate",
-        "title": "Meta Description Length"
-      },
-      {
-        "category": "meta",
-        "description": "Title is too short (9 characters). Recommended: 50-60 characters.",
-        "elementCount": 1,
-        "elementsTruncated": true,
-        "helpUrl": "https://moz.com/learn/seo/title-tag",
-        "id": "3b59f9b8af9b",
-        "pageId": "url-1",
-        "pageUrl": "http://localhost:3010",
-        "ruleId": "seo-title-length",
-        "scanner": "seo",
-        "scannerData": {
-          "length": 9,
-          "recommended": "50-60"
-        },
-        "severity": "moderate",
-        "title": "Title Tag Length"
-      }
-    ],
-    "meta": {
-      "completedAt": "2026-03-16T20:51:06.931Z",
-      "durationMs": 22590,
-      "jobId": "a7885228-b9df-44a4-8ddf-760cde5fe22c",
-      "scannedAt": "2026-03-16T20:50:44.341Z"
-    },
-    "pages": [
-      {
-        "bySeverity": {
-          "critical": 0,
-          "minor": 0,
-          "moderate": 2,
-          "serious": 1
-        },
-        "durationMs": 27385.820000000003,
-        "finishedAt": "2026-03-16T20:51:06.914Z",
-        "id": "url-1",
-        "issueCount": 3,
-        "path": "/",
-        "startedAt": "2026-03-16T20:50:45.426Z",
-        "url": "http://localhost:3010"
-      }
-    ],
-    "scanners": [
-      {
-        "completedAt": "2026-03-16T20:50:48.267Z",
-        "durationMs": 3926,
-        "id": "axe",
-        "issueCount": 0,
-        "name": "Axe Accessibility Scanner",
-        "reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/axe/results.json",
-        "resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/axe/results.json",
-        "severity": {
-          "critical": 0,
-          "minor": 0,
-          "moderate": 0,
-          "serious": 0
-        },
-        "startedAt": "2026-03-16T20:50:44.341Z",
-        "status": "success",
-        "toolVersion": "1.0.0"
-      },
-      {
-        "completedAt": "2026-03-16T20:51:06.931Z",
-        "durationMs": 22532,
-        "id": "lighthouse",
-        "issueCount": 0,
-        "name": "Google Lighthouse",
-        "reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/lighthouse/results.json",
-        "resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/lighthouse/results.json",
-        "severity": {
-          "critical": 0,
-          "minor": 0,
-          "moderate": 0,
-          "serious": 0
-        },
-        "startedAt": "2026-03-16T20:50:44.399Z",
-        "status": "success",
-        "toolVersion": "1.0.0"
-      },
-      {
-        "completedAt": "2026-03-16T20:50:47.363Z",
-        "durationMs": 3005,
-        "id": "link-checker",
-        "issueCount": 1,
-        "name": "Link Checker Scanner",
-        "reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/link-checker/results.json",
-        "resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/link-checker/results.json",
-        "severity": {
-          "critical": 0,
-          "minor": 0,
-          "moderate": 0,
-          "serious": 1
-        },
-        "startedAt": "2026-03-16T20:50:44.358Z",
-        "status": "success",
-        "toolVersion": "1.0.0"
-      },
-      {
-        "completedAt": "2026-03-16T20:50:47.258Z",
-        "durationMs": 2479,
-        "id": "seo",
-        "issueCount": 2,
-        "name": "SEO Scanner",
-        "reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/seo/results.json",
-        "resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/seo/results.json",
-        "severity": {
-          "critical": 0,
-          "minor": 0,
-          "moderate": 2,
-          "serious": 0
-        },
-        "startedAt": "2026-03-16T20:50:44.779Z",
-        "status": "success",
-        "toolVersion": "1.0.0"
-      }
-    ],
-    "summary": {
-      "byScanner": {
-        "link-checker": 1,
-        "seo": 2
-      },
-      "bySeverity": {
-        "critical": 0,
-        "minor": 0,
-        "moderate": 2,
-        "serious": 1
-      },
-      "lighthouseCategories": [
-        {
-          "avgScore": 1,
-          "id": "accessibility",
-          "title": "Accessibility"
-        },
-        {
-          "avgScore": 1,
-          "id": "best-practices",
-          "title": "Best Practices"
-        },
-        {
-          "avgScore": 1,
-          "id": "seo",
-          "title": "SEO"
-        }
-      ],
-      "pagesScanned": 1,
-      "pagesWithIssues": 1,
-      "score": 77,
-      "scoreGrade": "C+",
-      "totalIssues": 3
-    },
-    "version": "2.0.0"
-  }
+	"schema": "stageflow-cli/report@v1",
+	"cli": {
+		"version": "dev"
+	},
+	"api": {
+		"base_url": "http://localhost:8080"
+	},
+	"job": {
+		"id": "a7885228-b9df-44a4-8ddf-760cde5fe22c",
+		"state": "DONE",
+		"created_at": "2026-03-16T20:50:42Z",
+		"updated_at": "2026-03-16T20:51:07Z"
+	},
+	"links": {
+		"job": "http://localhost:8080/api/v1/jobs/a7885228-b9df-44a4-8ddf-760cde5fe22c",
+		"results": "http://localhost:8080/api/v1/jobs/a7885228-b9df-44a4-8ddf-760cde5fe22c/results"
+	},
+	"urls": ["http://localhost:3010"],
+	"filters": {
+		"max_issues": 200,
+		"issues_returned": 3,
+		"issues_total": 3,
+		"truncated": false,
+		"sort": "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
+	},
+	"report": {
+		"issues": [
+			{
+				"category": "links",
+				"description": "Found 1 link(s) returning HTTP 404. Broken links hurt user experience and SEO.",
+				"elementCount": 1,
+				"elementsTruncated": true,
+				"helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
+				"id": "34e65a2672da",
+				"pageId": "url-1",
+				"pageUrl": "http://localhost:3010",
+				"ruleId": "link-checker-broken-404",
+				"scanner": "link-checker",
+				"scannerData": {
+					"links": [
+						{
+							"error": null,
+							"url": "https://github.com/mattboback/stageflow"
+						}
+					],
+					"totalCount": 1
+				},
+				"severity": "serious",
+				"title": "Broken Links (HTTP 404)"
+			},
+			{
+				"category": "meta",
+				"description": "Meta description is too short (49 characters). Recommended: 120-160 characters.",
+				"elementCount": 1,
+				"elementsTruncated": true,
+				"helpUrl": "https://moz.com/learn/seo/meta-description",
+				"id": "476002d4e20a",
+				"pageId": "url-1",
+				"pageUrl": "http://localhost:3010",
+				"ruleId": "seo-description-length",
+				"scanner": "seo",
+				"scannerData": {
+					"length": 49,
+					"recommended": "120-160"
+				},
+				"severity": "moderate",
+				"title": "Meta Description Length"
+			},
+			{
+				"category": "meta",
+				"description": "Title is too short (9 characters). Recommended: 50-60 characters.",
+				"elementCount": 1,
+				"elementsTruncated": true,
+				"helpUrl": "https://moz.com/learn/seo/title-tag",
+				"id": "3b59f9b8af9b",
+				"pageId": "url-1",
+				"pageUrl": "http://localhost:3010",
+				"ruleId": "seo-title-length",
+				"scanner": "seo",
+				"scannerData": {
+					"length": 9,
+					"recommended": "50-60"
+				},
+				"severity": "moderate",
+				"title": "Title Tag Length"
+			}
+		],
+		"meta": {
+			"completedAt": "2026-03-16T20:51:06.931Z",
+			"durationMs": 22590,
+			"jobId": "a7885228-b9df-44a4-8ddf-760cde5fe22c",
+			"scannedAt": "2026-03-16T20:50:44.341Z"
+		},
+		"pages": [
+			{
+				"bySeverity": {
+					"critical": 0,
+					"minor": 0,
+					"moderate": 2,
+					"serious": 1
+				},
+				"durationMs": 27385.820000000003,
+				"finishedAt": "2026-03-16T20:51:06.914Z",
+				"id": "url-1",
+				"issueCount": 3,
+				"path": "/",
+				"startedAt": "2026-03-16T20:50:45.426Z",
+				"url": "http://localhost:3010"
+			}
+		],
+		"scanners": [
+			{
+				"completedAt": "2026-03-16T20:50:48.267Z",
+				"durationMs": 3926,
+				"id": "axe",
+				"issueCount": 0,
+				"name": "Axe Accessibility Scanner",
+				"reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/axe/results.json",
+				"resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/axe/results.json",
+				"severity": {
+					"critical": 0,
+					"minor": 0,
+					"moderate": 0,
+					"serious": 0
+				},
+				"startedAt": "2026-03-16T20:50:44.341Z",
+				"status": "success",
+				"toolVersion": "1.0.0"
+			},
+			{
+				"completedAt": "2026-03-16T20:51:06.931Z",
+				"durationMs": 22532,
+				"id": "lighthouse",
+				"issueCount": 0,
+				"name": "Google Lighthouse",
+				"reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/lighthouse/results.json",
+				"resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/lighthouse/results.json",
+				"severity": {
+					"critical": 0,
+					"minor": 0,
+					"moderate": 0,
+					"serious": 0
+				},
+				"startedAt": "2026-03-16T20:50:44.399Z",
+				"status": "success",
+				"toolVersion": "1.0.0"
+			},
+			{
+				"completedAt": "2026-03-16T20:50:47.363Z",
+				"durationMs": 3005,
+				"id": "link-checker",
+				"issueCount": 1,
+				"name": "Link Checker Scanner",
+				"reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/link-checker/results.json",
+				"resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/link-checker/results.json",
+				"severity": {
+					"critical": 0,
+					"minor": 0,
+					"moderate": 0,
+					"serious": 1
+				},
+				"startedAt": "2026-03-16T20:50:44.358Z",
+				"status": "success",
+				"toolVersion": "1.0.0"
+			},
+			{
+				"completedAt": "2026-03-16T20:50:47.258Z",
+				"durationMs": 2479,
+				"id": "seo",
+				"issueCount": 2,
+				"name": "SEO Scanner",
+				"reportPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/seo/results.json",
+				"resultsPath": "a7885228-b9df-44a4-8ddf-760cde5fe22c/seo/results.json",
+				"severity": {
+					"critical": 0,
+					"minor": 0,
+					"moderate": 2,
+					"serious": 0
+				},
+				"startedAt": "2026-03-16T20:50:44.779Z",
+				"status": "success",
+				"toolVersion": "1.0.0"
+			}
+		],
+		"summary": {
+			"byScanner": {
+				"link-checker": 1,
+				"seo": 2
+			},
+			"bySeverity": {
+				"critical": 0,
+				"minor": 0,
+				"moderate": 2,
+				"serious": 1
+			},
+			"lighthouseCategories": [
+				{
+					"avgScore": 1,
+					"id": "accessibility",
+					"title": "Accessibility"
+				},
+				{
+					"avgScore": 1,
+					"id": "best-practices",
+					"title": "Best Practices"
+				},
+				{
+					"avgScore": 1,
+					"id": "seo",
+					"title": "SEO"
+				}
+			],
+			"pagesScanned": 1,
+			"pagesWithIssues": 1,
+			"score": 77,
+			"scoreGrade": "C+",
+			"totalIssues": 3
+		},
+		"version": "2.0.0"
+	}
 }

@@ -14,12 +14,24 @@ export type ScannerStatus = "success" | "failed" | "skipped";
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "IssueSeverity".
  */
-export type IssueSeverity = "critical" | "serious" | "moderate" | "minor" | "info";
+export type IssueSeverity =
+	| "critical"
+	| "serious"
+	| "moderate"
+	| "minor"
+	| "info";
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "UserGroup".
  */
-export type UserGroup = "blind" | "low-vision" | "motor" | "cognitive" | "deaf" | "vestibular" | "all";
+export type UserGroup =
+	| "blind"
+	| "low-vision"
+	| "motor"
+	| "cognitive"
+	| "deaf"
+	| "vestibular"
+	| "all";
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "UserImpactSeverity".
@@ -35,242 +47,242 @@ export type ErrorScope = "scanner" | "page" | "global";
  * Unified accessibility and quality scan report schema aggregating results from multiple scanners
  */
 export interface UnifiedReportV2 {
-  /**
-   * Schema version (semver format, major version 2)
-   */
-  version: string;
-  meta: ReportMeta;
-  summary: ReportSummary;
-  scanners: ScannerSummary[];
-  pages: PageSummary[];
-  issues: IssueDetail[];
-  artifacts?: ReportArtifact[];
-  errors?: ReportError[];
+	/**
+	 * Schema version (semver format, major version 2)
+	 */
+	version: string;
+	meta: ReportMeta;
+	summary: ReportSummary;
+	scanners: ScannerSummary[];
+	pages: PageSummary[];
+	issues: IssueDetail[];
+	artifacts?: ReportArtifact[];
+	errors?: ReportError[];
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ReportMeta".
  */
 export interface ReportMeta {
-  jobId: string;
-  baseUrl?: string;
-  scannedAt?: string;
-  completedAt?: string;
-  durationMs?: number;
+	jobId: string;
+	baseUrl?: string;
+	scannedAt?: string;
+	completedAt?: string;
+	durationMs?: number;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ReportSummary".
  */
 export interface ReportSummary {
-  score?: number;
-  scoreGrade?: string;
-  totalIssues: number;
-  bySeverity: SeverityCounts;
-  byScanner?: {
-    [k: string]: number;
-  };
-  pagesScanned: number;
-  pagesWithIssues: number;
-  lighthouseCategories?: LighthouseCategorySummary[];
+	score?: number;
+	scoreGrade?: string;
+	totalIssues: number;
+	bySeverity: SeverityCounts;
+	byScanner?: {
+		[k: string]: number;
+	};
+	pagesScanned: number;
+	pagesWithIssues: number;
+	lighthouseCategories?: LighthouseCategorySummary[];
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "SeverityCounts".
  */
 export interface SeverityCounts {
-  critical: number;
-  serious: number;
-  moderate: number;
-  minor: number;
-  info?: number;
+	critical: number;
+	serious: number;
+	moderate: number;
+	minor: number;
+	info?: number;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "LighthouseCategorySummary".
  */
 export interface LighthouseCategorySummary {
-  id: "performance" | "accessibility" | "best-practices" | "seo" | "pwa";
-  title: string;
-  avgScore: number;
+	id: "performance" | "accessibility" | "best-practices" | "seo" | "pwa";
+	title: string;
+	avgScore: number;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ScannerSummary".
  */
 export interface ScannerSummary {
-  id: string;
-  name?: string;
-  status: ScannerStatus;
-  error?: string;
-  issueCount?: number;
-  severity?: SeverityCounts;
-  toolVersion?: string;
-  startedAt?: string;
-  completedAt?: string;
-  durationMs?: number;
-  resultsPath?: string;
-  reportPath?: string;
+	id: string;
+	name?: string;
+	status: ScannerStatus;
+	error?: string;
+	issueCount?: number;
+	severity?: SeverityCounts;
+	toolVersion?: string;
+	startedAt?: string;
+	completedAt?: string;
+	durationMs?: number;
+	resultsPath?: string;
+	reportPath?: string;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "PageSummary".
  */
 export interface PageSummary {
-  id: string;
-  url: string;
-  path?: string;
-  issueCount: number;
-  bySeverity?: SeverityCounts;
-  durationMs: number;
-  startedAt?: string;
-  finishedAt?: string;
-  pageOverview?: PageOverview;
+	id: string;
+	url: string;
+	path?: string;
+	issueCount: number;
+	bySeverity?: SeverityCounts;
+	durationMs: number;
+	startedAt?: string;
+	finishedAt?: string;
+	pageOverview?: PageOverview;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "PageOverview".
  */
 export interface PageOverview {
-  screenshotFilename: string;
-  pageWidth: number;
-  pageHeight: number;
-  elements: PageOverviewElement[];
+	screenshotFilename: string;
+	pageWidth: number;
+	pageHeight: number;
+	elements: PageOverviewElement[];
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "PageOverviewElement".
  */
 export interface PageOverviewElement {
-  issueId: string;
-  ruleId: string;
-  severity: IssueSeverity;
-  selector: string;
-  nodeIndex: number;
-  xPercent: number;
-  yPercent: number;
-  widthPercent: number;
-  heightPercent: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+	issueId: string;
+	ruleId: string;
+	severity: IssueSeverity;
+	selector: string;
+	nodeIndex: number;
+	xPercent: number;
+	yPercent: number;
+	widthPercent: number;
+	heightPercent: number;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "IssueDetail".
  */
 export interface IssueDetail {
-  id: string;
-  scanner: string;
-  ruleId: string;
-  severity: IssueSeverity;
-  severityRaw?: string;
-  title: string;
-  description: string;
-  helpUrl?: string;
-  wcagTags?: string[];
-  pageId: string;
-  pageUrl: string;
-  elementCount: number;
-  elementsTruncated?: boolean;
-  occurrences?: IssueOccurrence[];
-  category?: string;
-  friendlyNode?: FriendlyNodeInfo;
-  locationInfo?: LocationInfo;
-  userImpact?: UserImpact;
-  howToFix?: string;
-  scannerData?: {
-    [k: string]: unknown;
-  };
+	id: string;
+	scanner: string;
+	ruleId: string;
+	severity: IssueSeverity;
+	severityRaw?: string;
+	title: string;
+	description: string;
+	helpUrl?: string;
+	wcagTags?: string[];
+	pageId: string;
+	pageUrl: string;
+	elementCount: number;
+	elementsTruncated?: boolean;
+	occurrences?: IssueOccurrence[];
+	category?: string;
+	friendlyNode?: FriendlyNodeInfo;
+	locationInfo?: LocationInfo;
+	userImpact?: UserImpact;
+	howToFix?: string;
+	scannerData?: {
+		[k: string]: unknown;
+	};
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "IssueOccurrence".
  */
 export interface IssueOccurrence {
-  target?: string[];
-  selector?: string;
-  html?: string;
-  /**
-   * HTML snippet with ancestor chain and siblings for debugging context (bounded size)
-   */
-  contextHtml?: string;
-  /**
-   * Breadcrumb path of ancestor elements (e.g., 'html > body > main > div.container')
-   */
-  ancestorPath?: string;
-  failureSummary?: string;
-  textSnippet?: string;
-  boundingBox?: BoundingBox;
-  elementId?: string;
-  pageId?: string;
-  label?: string;
-  artifactIds?: string[];
+	target?: string[];
+	selector?: string;
+	html?: string;
+	/**
+	 * HTML snippet with ancestor chain and siblings for debugging context (bounded size)
+	 */
+	contextHtml?: string;
+	/**
+	 * Breadcrumb path of ancestor elements (e.g., 'html > body > main > div.container')
+	 */
+	ancestorPath?: string;
+	failureSummary?: string;
+	textSnippet?: string;
+	boundingBox?: BoundingBox;
+	elementId?: string;
+	pageId?: string;
+	label?: string;
+	artifactIds?: string[];
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "BoundingBox".
  */
 export interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "FriendlyNodeInfo".
  */
 export interface FriendlyNodeInfo {
-  label?: string;
-  tagName?: string;
-  role?: string;
-  name?: string;
-  region?: string;
-  textSnippet?: string;
-  selector?: string;
+	label?: string;
+	tagName?: string;
+	role?: string;
+	name?: string;
+	region?: string;
+	textSnippet?: string;
+	selector?: string;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "LocationInfo".
  */
 export interface LocationInfo {
-  scrollY?: number;
-  viewportHeight?: number;
-  docHeight?: number;
-  position?: number;
+	scrollY?: number;
+	viewportHeight?: number;
+	docHeight?: number;
+	position?: number;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "UserImpact".
  */
 export interface UserImpact {
-  statement?: string;
-  affectedGroups?: UserGroup[];
-  severity?: UserImpactSeverity;
-  userStory?: string;
+	statement?: string;
+	affectedGroups?: UserGroup[];
+	severity?: UserImpactSeverity;
+	userStory?: string;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ReportArtifact".
  */
 export interface ReportArtifact {
-  id: string;
-  type: string;
-  path?: string;
-  mime?: string;
-  dataUri?: string;
+	id: string;
+	type: string;
+	path?: string;
+	mime?: string;
+	dataUri?: string;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ReportError".
  */
 export interface ReportError {
-  scope: ErrorScope;
-  scannerId?: string;
-  pageId?: string;
-  code: string;
-  message: string;
-  retryable: boolean;
+	scope: ErrorScope;
+	scannerId?: string;
+	pageId?: string;
+	code: string;
+	message: string;
+	retryable: boolean;
 }

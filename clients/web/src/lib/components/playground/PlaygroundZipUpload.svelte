@@ -1,61 +1,61 @@
 <script lang="ts">
-	import { isZipFilename } from '$lib/components/playground/playground-utils';
-	import { Button, Label } from '$lib/components/ui';
-	import { cn } from '$lib/utils';
-	import { FileUp, Upload } from 'lucide-svelte';
+import { isZipFilename } from "$lib/components/playground/playground-utils";
+import { Button, Label } from "$lib/components/ui";
+import { cn } from "$lib/utils";
+import { FileUp, Upload } from "lucide-svelte";
 
-	interface Props {
-		file: File | null;
-		onFileChange: (file: File | null) => void;
-		onError: (error: string) => void;
-	}
+interface Props {
+	file: File | null;
+	onFileChange: (file: File | null) => void;
+	onError: (error: string) => void;
+}
 
-	const { file, onFileChange, onError }: Props = $props();
+const { file, onFileChange, onError }: Props = $props();
 
-	let fileInputRef = $state<HTMLInputElement | null>(null);
-	let isDragOver = $state(false);
+const fileInputRef = $state<HTMLInputElement | null>(null);
+let isDragOver = $state(false);
 
-	function handleFileChange(event: Event) {
-		const target = event.target as HTMLInputElement;
-		const selectedFile = target.files?.[0];
-		if (selectedFile) {
-			if (!isZipFilename(selectedFile.name)) {
-				onError('Please select a ZIP file');
-				onFileChange(null);
-				return;
-			}
-			onFileChange(selectedFile);
+function handleFileChange(event: Event) {
+	const target = event.target as HTMLInputElement;
+	const selectedFile = target.files?.[0];
+	if (selectedFile) {
+		if (!isZipFilename(selectedFile.name)) {
+			onError("Please select a ZIP file");
+			onFileChange(null);
+			return;
 		}
+		onFileChange(selectedFile);
 	}
+}
 
-	function handleDragOver(event: DragEvent) {
-		event.preventDefault();
-		isDragOver = true;
-	}
+function handleDragOver(event: DragEvent) {
+	event.preventDefault();
+	isDragOver = true;
+}
 
-	function handleDragLeave() {
-		isDragOver = false;
-	}
+function handleDragLeave() {
+	isDragOver = false;
+}
 
-	function handleDrop(event: DragEvent) {
-		event.preventDefault();
-		isDragOver = false;
-		const droppedFile = event.dataTransfer?.files?.[0];
-		if (droppedFile) {
-			if (!isZipFilename(droppedFile.name)) {
-				onError('Please select a ZIP file');
-				onFileChange(null);
-				return;
-			}
-			onFileChange(droppedFile);
+function handleDrop(event: DragEvent) {
+	event.preventDefault();
+	isDragOver = false;
+	const droppedFile = event.dataTransfer?.files?.[0];
+	if (droppedFile) {
+		if (!isZipFilename(droppedFile.name)) {
+			onError("Please select a ZIP file");
+			onFileChange(null);
+			return;
 		}
+		onFileChange(droppedFile);
 	}
+}
 
-	function clearFile(e: MouseEvent) {
-		e.stopPropagation();
-		onFileChange(null);
-		if (fileInputRef) fileInputRef.value = '';
-	}
+function clearFile(e: MouseEvent) {
+	e.stopPropagation();
+	onFileChange(null);
+	if (fileInputRef) fileInputRef.value = "";
+}
 </script>
 
 <div class="animate-fade-in">

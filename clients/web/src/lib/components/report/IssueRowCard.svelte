@@ -1,69 +1,80 @@
 <script lang="ts">
-	import type { ScreenshotArtifact } from '$lib/types/scan';
-	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
+import type { ScreenshotArtifact } from "$lib/types/scan";
+import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
 
-	import {
-		getCroppedViewBox,
-		getIssueScreenshotUrl,
-		getPageOverviewUrl,
-		getSeverityBadgeClass,
-		getSeverityStrokeColor
-	} from '$lib/report';
-	import { cn } from '$lib/utils';
+import {
+	getCroppedViewBox,
+	getIssueScreenshotUrl,
+	getPageOverviewUrl,
+	getSeverityBadgeClass,
+	getSeverityStrokeColor,
+} from "$lib/report";
+import { cn } from "$lib/utils";
 
-	interface Props {
-		issue: IssueDetail;
-		page: PageSummary | null;
-		screenshots: ScreenshotArtifact[];
-		showScreenshot?: boolean;
-		isVirtualized?: boolean;
-		isSelected?: boolean;
-		onclick?: () => void;
-	}
+interface Props {
+	issue: IssueDetail;
+	page: PageSummary | null;
+	screenshots: ScreenshotArtifact[];
+	showScreenshot?: boolean;
+	isVirtualized?: boolean;
+	isSelected?: boolean;
+	onclick?: () => void;
+}
 
-	const {
-		issue,
-		page = null,
-		screenshots,
-		showScreenshot = true,
-		isVirtualized = false,
-		isSelected = false,
-		onclick
-	}: Props = $props();
+const {
+	issue,
+	page = null,
+	screenshots,
+	showScreenshot = true,
+	isVirtualized = false,
+	isSelected = false,
+	onclick,
+}: Props = $props();
 
-	const overview = $derived(page?.pageOverview ?? null);
-	const overviewEl = $derived(overview?.elements?.find((el) => el.issueId === issue.id) ?? null);
-	const overviewUrl = $derived(
-		showScreenshot && page
-			? getPageOverviewUrl(screenshots, page.id, issue.scanner ? [issue.scanner, 'axe'] : ['axe'])
-			: null
-	);
-	const overviewViewBox = $derived.by(() => {
-		if (!overview) return null;
-		if (overviewEl) {
-			return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl, {
+const overview = $derived(page?.pageOverview ?? null);
+const overviewEl = $derived(
+	overview?.elements?.find((el) => el.issueId === issue.id) ?? null,
+);
+const overviewUrl = $derived(
+	showScreenshot && page
+		? getPageOverviewUrl(
+				screenshots,
+				page.id,
+				issue.scanner ? [issue.scanner, "axe"] : ["axe"],
+			)
+		: null,
+);
+const overviewViewBox = $derived.by(() => {
+	if (!overview) return null;
+	if (overviewEl) {
+		return getCroppedViewBox(
+			overview.pageWidth,
+			overview.pageHeight,
+			overviewEl,
+			{
 				minWidth: 360,
 				minHeight: 220,
-				padding: 64
-			});
-		}
-		return {
-			x: 0,
-			y: 0,
-			width: Math.min(overview.pageWidth, 360),
-			height: Math.min(overview.pageHeight, 220)
-		};
-	});
-	const screenshotUrl = $derived(
-		showScreenshot
-			? getIssueScreenshotUrl({
-					screenshots,
-					scannerId: issue.scanner,
-					issueId: issue.id,
-					pageId: issue.pageId
-				})
-			: null
-	);
+				padding: 64,
+			},
+		);
+	}
+	return {
+		x: 0,
+		y: 0,
+		width: Math.min(overview.pageWidth, 360),
+		height: Math.min(overview.pageHeight, 220),
+	};
+});
+const screenshotUrl = $derived(
+	showScreenshot
+		? getIssueScreenshotUrl({
+				screenshots,
+				scannerId: issue.scanner,
+				issueId: issue.id,
+				pageId: issue.pageId,
+			})
+		: null,
+);
 </script>
 
 <button

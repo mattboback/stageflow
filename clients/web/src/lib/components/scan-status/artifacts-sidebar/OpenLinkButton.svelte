@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui';
-	import { ExternalLink } from 'lucide-svelte';
+import { Button } from "$lib/components/ui";
+import { ExternalLink } from "lucide-svelte";
 
-	interface Props {
-		label: string;
-		url: string | null | undefined;
-	}
+interface Props {
+	label: string;
+	url: string | null | undefined;
+}
 
-	const { label, url }: Props = $props();
+const { label, url }: Props = $props();
 
-	function open() {
-		if (!url) return;
-		const opened = window.open(url, '_blank', 'noopener,noreferrer');
-		if (opened) opened.opener = null;
-	}
+function open() {
+	if (!url) return;
+	const opened = window.open(url, "_blank", "noopener,noreferrer");
+	if (opened) opened.opener = null;
+}
 </script>
 
 {#if url}

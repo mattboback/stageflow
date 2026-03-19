@@ -1,0 +1,6 @@
+if ! command -v pre-commit >/dev/null 2>&1; then
+  echo "pre-commit is required but not installed. Install it (for example: pipx install pre-commit)."
+  exit 1
+fi
+
+pre-commit run --hook-stage commit-msg --commit-msg-filename "$1"

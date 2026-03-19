@@ -2,43 +2,43 @@ import type { ScannerManifest } from "../manifest";
 import type { ScannerBase } from "../scanner-base";
 
 export interface ScannerPlugin {
-  manifest: ScannerManifest;
-  factory: () => ScannerBase;
-  path: string;
+	manifest: ScannerManifest;
+	factory: () => ScannerBase;
+	path: string;
 }
 
 export interface PluginLoaderConfig {
-  searchPaths: string[];
-  manifestPatterns: string[];
-  strictValidation: boolean;
-  verbose: boolean;
+	searchPaths: string[];
+	manifestPatterns: string[];
+	strictValidation: boolean;
+	verbose: boolean;
 }
 
 export interface PluginInfo {
-  manifestPath: string;
-  manifest: ScannerManifest;
+	manifestPath: string;
+	manifest: ScannerManifest;
 }
 
 export interface PluginDiscoveryResult {
-  plugins: PluginInfo[];
-  errors: PluginDiscoveryError[];
+	plugins: PluginInfo[];
+	errors: PluginDiscoveryError[];
 }
 
 export interface PluginDiscoveryError {
-  path: string;
-  error: string;
-  details?: string;
+	path: string;
+	error: string;
+	details?: string;
 }
 
 export interface PluginLoadResult {
-  success: boolean;
-  plugin?: ScannerPlugin;
-  error?: string;
+	success: boolean;
+	plugin?: ScannerPlugin;
+	error?: string;
 }
 
 export const DEFAULT_PLUGIN_LOADER_CONFIG: PluginLoaderConfig = {
-  searchPaths: [],
-  manifestPatterns: ["manifest.json", "scanner.json"],
-  strictValidation: true,
-  verbose: false,
+	searchPaths: [],
+	manifestPatterns: ["manifest.json", "scanner.json"],
+	strictValidation: true,
+	verbose: false,
 };

@@ -1,323 +1,294 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://stageflow.dev/schemas/scanner-manifest.json",
-  "title": "ScannerManifest",
-  "description": "Schema for defining Stageflow scanner plugins",
-  "type": "object",
-  "required": [
-    "id",
-    "name",
-    "version",
-    "capabilities",
-    "entry"
-  ],
-  "additionalProperties": false,
-  "properties": {
-    "id": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "minLength": 2,
-      "maxLength": 64,
-      "description": "Unique scanner identifier"
-    },
-    "name": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "description": "Human-readable scanner name"
-    },
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
-      "description": "Semantic version"
-    },
-    "description": {
-      "type": "string",
-      "maxLength": 500
-    },
-    "author": {
-      "type": "string",
-      "maxLength": 128
-    },
-    "license": {
-      "type": "string",
-      "maxLength": 64
-    },
-    "homepage": {
-      "type": "string",
-      "maxLength": 256,
-      "format": "uri"
-    },
-    "repository": {
-      "type": "string",
-      "maxLength": 256,
-      "format": "uri"
-    },
-    "aliases": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 64
-      },
-      "uniqueItems": true,
-      "description": "Optional alternative identifiers/keywords for scanner resolution"
-    },
-    "capabilities": {
-      "$ref": "#/definitions/ManifestCapabilities"
-    },
-    "configSchema": {
-      "$ref": "#/definitions/ManifestConfigSchema"
-    },
-    "requirements": {
-      "$ref": "#/definitions/ManifestRequirements"
-    },
-    "entry": {
-      "$ref": "#/definitions/ManifestEntry"
-    },
-    "output": {
-      "$ref": "#/definitions/ManifestOutput"
-    }
-  },
-  "definitions": {
-    "ScannerCategory": {
-      "type": "string",
-      "enum": [
-        "accessibility",
-        "performance",
-        "security",
-        "seo",
-        "quality",
-        "custom"
-      ]
-    },
-    "OutputFormat": {
-      "type": "string",
-      "enum": [
-        "json",
-        "html",
-        "csv"
-      ]
-    },
-    "IssueSeverity": {
-      "type": "string",
-      "enum": [
-        "critical",
-        "serious",
-        "moderate",
-        "minor",
-        "info"
-      ]
-    },
-    "ManifestCapabilities": {
-      "type": "object",
-      "required": [
-        "categories",
-        "outputFormats",
-        "supportsScreenshots",
-        "supportsConcurrency",
-        "requiresBrowser"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "categories": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ScannerCategory"
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "outputFormats": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/OutputFormat"
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        "supportsScreenshots": {
-          "type": "boolean"
-        },
-        "supportsConcurrency": {
-          "type": "boolean"
-        },
-        "requiresBrowser": {
-          "type": "boolean"
-        },
-        "supportsOffline": {
-          "type": "boolean"
-        },
-        "maxConcurrency": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "estimatedTimePerPage": {
-          "type": "integer",
-          "minimum": 0
-        }
-      }
-    },
-    "ManifestConfigSchema": {
-      "description": "JSON Schema for SCANNER_OPTIONS validation",
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "object",
-          "additionalProperties": true
-        }
-      ]
-    },
-    "ManifestRequirements": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "browser": {
-          "$ref": "#/definitions/BrowserRequirement"
-        },
-        "nodeVersion": {
-          "type": "string"
-        },
-        "externalTools": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/ExternalTool"
-          }
-        },
-        "network": {
-          "$ref": "#/definitions/NetworkRequirement"
-        },
-        "resources": {
-          "$ref": "#/definitions/ResourceRequirement"
-        }
-      }
-    },
-    "BrowserRequirement": {
-      "type": "object",
-      "required": [
-        "type"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "chromium",
-            "firefox",
-            "webkit"
-          ]
-        },
-        "headless": {
-          "type": "boolean"
-        },
-        "args": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "ExternalTool": {
-      "type": "object",
-      "required": [
-        "name",
-        "command"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "command": {
-          "type": "string",
-          "minLength": 1
-        },
-        "version": {
-          "type": "string"
-        },
-        "optional": {
-          "type": "boolean"
-        }
-      }
-    },
-    "NetworkRequirement": {
-      "type": "object",
-      "required": [
-        "requiresInternet"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "requiresInternet": {
-          "type": "boolean"
-        },
-        "allowedHosts": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "ResourceRequirement": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "maxMemoryMB": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "maxTimeoutMs": {
-          "type": "integer",
-          "minimum": 1
-        }
-      }
-    },
-    "ManifestEntry": {
-      "type": "object",
-      "required": [
-        "module"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "module": {
-          "type": "string",
-          "minLength": 1
-        },
-        "exportName": {
-          "type": "string",
-          "minLength": 1
-        },
-        "factoryName": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "ManifestOutput": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "severityMapping": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/IssueSeverity"
-          }
-        },
-        "categoryPrefix": {
-          "type": "string",
-          "minLength": 1
-        },
-        "includeRawResults": {
-          "type": "boolean"
-        },
-        "reportTemplate": {
-          "type": "string"
-        }
-      }
-    }
-  }
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://stageflow.dev/schemas/scanner-manifest.json",
+	"title": "ScannerManifest",
+	"description": "Schema for defining Stageflow scanner plugins",
+	"type": "object",
+	"required": ["id", "name", "version", "capabilities", "entry"],
+	"additionalProperties": false,
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"minLength": 2,
+			"maxLength": 64,
+			"description": "Unique scanner identifier"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"maxLength": 128,
+			"description": "Human-readable scanner name"
+		},
+		"version": {
+			"type": "string",
+			"pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$",
+			"description": "Semantic version"
+		},
+		"description": {
+			"type": "string",
+			"maxLength": 500
+		},
+		"author": {
+			"type": "string",
+			"maxLength": 128
+		},
+		"license": {
+			"type": "string",
+			"maxLength": 64
+		},
+		"homepage": {
+			"type": "string",
+			"maxLength": 256,
+			"format": "uri"
+		},
+		"repository": {
+			"type": "string",
+			"maxLength": 256,
+			"format": "uri"
+		},
+		"aliases": {
+			"type": "array",
+			"items": {
+				"type": "string",
+				"minLength": 1,
+				"maxLength": 64
+			},
+			"uniqueItems": true,
+			"description": "Optional alternative identifiers/keywords for scanner resolution"
+		},
+		"capabilities": {
+			"$ref": "#/definitions/ManifestCapabilities"
+		},
+		"configSchema": {
+			"$ref": "#/definitions/ManifestConfigSchema"
+		},
+		"requirements": {
+			"$ref": "#/definitions/ManifestRequirements"
+		},
+		"entry": {
+			"$ref": "#/definitions/ManifestEntry"
+		},
+		"output": {
+			"$ref": "#/definitions/ManifestOutput"
+		}
+	},
+	"definitions": {
+		"ScannerCategory": {
+			"type": "string",
+			"enum": [
+				"accessibility",
+				"performance",
+				"security",
+				"seo",
+				"quality",
+				"custom"
+			]
+		},
+		"OutputFormat": {
+			"type": "string",
+			"enum": ["json", "html", "csv"]
+		},
+		"IssueSeverity": {
+			"type": "string",
+			"enum": ["critical", "serious", "moderate", "minor", "info"]
+		},
+		"ManifestCapabilities": {
+			"type": "object",
+			"required": [
+				"categories",
+				"outputFormats",
+				"supportsScreenshots",
+				"supportsConcurrency",
+				"requiresBrowser"
+			],
+			"additionalProperties": false,
+			"properties": {
+				"categories": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/ScannerCategory"
+					},
+					"minItems": 1,
+					"uniqueItems": true
+				},
+				"outputFormats": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/OutputFormat"
+					},
+					"minItems": 1,
+					"uniqueItems": true
+				},
+				"supportsScreenshots": {
+					"type": "boolean"
+				},
+				"supportsConcurrency": {
+					"type": "boolean"
+				},
+				"requiresBrowser": {
+					"type": "boolean"
+				},
+				"supportsOffline": {
+					"type": "boolean"
+				},
+				"maxConcurrency": {
+					"type": "integer",
+					"minimum": 1
+				},
+				"estimatedTimePerPage": {
+					"type": "integer",
+					"minimum": 0
+				}
+			}
+		},
+		"ManifestConfigSchema": {
+			"description": "JSON Schema for SCANNER_OPTIONS validation",
+			"anyOf": [
+				{
+					"type": "boolean"
+				},
+				{
+					"type": "object",
+					"additionalProperties": true
+				}
+			]
+		},
+		"ManifestRequirements": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"browser": {
+					"$ref": "#/definitions/BrowserRequirement"
+				},
+				"nodeVersion": {
+					"type": "string"
+				},
+				"externalTools": {
+					"type": "array",
+					"items": {
+						"$ref": "#/definitions/ExternalTool"
+					}
+				},
+				"network": {
+					"$ref": "#/definitions/NetworkRequirement"
+				},
+				"resources": {
+					"$ref": "#/definitions/ResourceRequirement"
+				}
+			}
+		},
+		"BrowserRequirement": {
+			"type": "object",
+			"required": ["type"],
+			"additionalProperties": false,
+			"properties": {
+				"type": {
+					"type": "string",
+					"enum": ["chromium", "firefox", "webkit"]
+				},
+				"headless": {
+					"type": "boolean"
+				},
+				"args": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"ExternalTool": {
+			"type": "object",
+			"required": ["name", "command"],
+			"additionalProperties": false,
+			"properties": {
+				"name": {
+					"type": "string",
+					"minLength": 1
+				},
+				"command": {
+					"type": "string",
+					"minLength": 1
+				},
+				"version": {
+					"type": "string"
+				},
+				"optional": {
+					"type": "boolean"
+				}
+			}
+		},
+		"NetworkRequirement": {
+			"type": "object",
+			"required": ["requiresInternet"],
+			"additionalProperties": false,
+			"properties": {
+				"requiresInternet": {
+					"type": "boolean"
+				},
+				"allowedHosts": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			}
+		},
+		"ResourceRequirement": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"maxMemoryMB": {
+					"type": "integer",
+					"minimum": 1
+				},
+				"maxTimeoutMs": {
+					"type": "integer",
+					"minimum": 1
+				}
+			}
+		},
+		"ManifestEntry": {
+			"type": "object",
+			"required": ["module"],
+			"additionalProperties": false,
+			"properties": {
+				"module": {
+					"type": "string",
+					"minLength": 1
+				},
+				"exportName": {
+					"type": "string",
+					"minLength": 1
+				},
+				"factoryName": {
+					"type": "string",
+					"minLength": 1
+				}
+			}
+		},
+		"ManifestOutput": {
+			"type": "object",
+			"additionalProperties": false,
+			"properties": {
+				"severityMapping": {
+					"type": "object",
+					"additionalProperties": {
+						"$ref": "#/definitions/IssueSeverity"
+					}
+				},
+				"categoryPrefix": {
+					"type": "string",
+					"minLength": 1
+				},
+				"includeRawResults": {
+					"type": "boolean"
+				},
+				"reportTemplate": {
+					"type": "string"
+				}
+			}
+		}
+	}
 }

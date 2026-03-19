@@ -1,25 +1,25 @@
 <script lang="ts">
-	import Tabs, { type Tab } from '../Tabs.svelte';
+import Tabs, { type Tab } from "../Tabs.svelte";
 
-	interface Props {
-		defaultTab?: string;
-		onValueChange?: (tabId: string) => void;
-	}
+interface Props {
+	defaultTab?: string;
+	onValueChange?: (tabId: string) => void;
+}
 
-	const { defaultTab = 'overview', onValueChange }: Props = $props();
+const { defaultTab = "overview", onValueChange }: Props = $props();
 
-	const tabs: Tab[] = [
-		{ id: 'overview', label: 'Overview' },
-		{ id: 'accessibility', label: 'Accessibility' },
-		{ id: 'security', label: 'Security' }
-	];
+const tabs: Tab[] = [
+	{ id: "overview", label: "Overview" },
+	{ id: "accessibility", label: "Accessibility" },
+	{ id: "security", label: "Security" },
+];
 
-	let lastSelection = $derived(defaultTab);
+let lastSelection = $derived(defaultTab);
 
-	function handleValueChange(tabId: string) {
-		lastSelection = tabId;
-		onValueChange?.(tabId);
-	}
+function handleValueChange(tabId: string) {
+	lastSelection = tabId;
+	onValueChange?.(tabId);
+}
 </script>
 
 <div class="w-[min(92vw,42rem)] space-y-3 text-black">

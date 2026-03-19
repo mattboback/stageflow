@@ -45,4 +45,3 @@ stageflow completion [bash|zsh|fish|powershell]
 ### SEE ALSO
 
 * [stageflow](stageflow.md)	 - StageFlow CLI
-

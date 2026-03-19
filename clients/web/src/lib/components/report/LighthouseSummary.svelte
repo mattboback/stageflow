@@ -1,27 +1,27 @@
 <script lang="ts">
-	import type { LighthouseCategorySummary } from '$lib/types/unified-report';
+import type { LighthouseCategorySummary } from "$lib/types/unified-report";
 
-	import { Panel } from '$lib/components/ui';
+import { Panel } from "$lib/components/ui";
 
-	interface Props {
-		categories: LighthouseCategorySummary[];
-	}
+interface Props {
+	categories: LighthouseCategorySummary[];
+}
 
-	const { categories }: Props = $props();
+const { categories }: Props = $props();
 
-	function getScoreColor(score: number): string {
-		const pct = score * 100;
-		if (pct >= 90) return 'bg-emerald-500';
-		if (pct >= 50) return 'bg-amber-500';
-		return 'bg-red-500';
-	}
+function getScoreColor(score: number): string {
+	const pct = score * 100;
+	if (pct >= 90) return "bg-emerald-500";
+	if (pct >= 50) return "bg-amber-500";
+	return "bg-red-500";
+}
 
-	function getScoreTextColor(score: number): string {
-		const pct = score * 100;
-		if (pct >= 90) return 'text-emerald-700';
-		if (pct >= 50) return 'text-amber-700';
-		return 'text-red-700';
-	}
+function getScoreTextColor(score: number): string {
+	const pct = score * 100;
+	if (pct >= 90) return "text-emerald-700";
+	if (pct >= 50) return "text-amber-700";
+	return "text-red-700";
+}
 </script>
 
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

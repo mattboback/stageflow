@@ -9,7 +9,13 @@
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ScannerCategory".
  */
-export type ScannerCategory = "accessibility" | "performance" | "security" | "seo" | "quality" | "custom";
+export type ScannerCategory =
+	| "accessibility"
+	| "performance"
+	| "security"
+	| "seo"
+	| "quality"
+	| "custom";
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "OutputFormat".
@@ -22,131 +28,136 @@ export type OutputFormat = "json" | "html" | "csv";
  * via the `definition` "ManifestConfigSchema".
  */
 export type ManifestConfigSchema =
-  | boolean
-  | {
-      [k: string]: unknown;
-    };
+	| boolean
+	| {
+			[k: string]: unknown;
+	  };
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "IssueSeverity".
  */
-export type IssueSeverity = "critical" | "serious" | "moderate" | "minor" | "info";
+export type IssueSeverity =
+	| "critical"
+	| "serious"
+	| "moderate"
+	| "minor"
+	| "info";
 
 /**
  * Schema for defining Stageflow scanner plugins
  */
 export interface ScannerManifest {
-  /**
-   * Unique scanner identifier
-   */
-  id: string;
-  /**
-   * Human-readable scanner name
-   */
-  name: string;
-  /**
-   * Semantic version
-   */
-  version: string;
-  description?: string;
-  author?: string;
-  license?: string;
-  homepage?: string;
-  repository?: string;
-  /**
-   * Optional alternative identifiers/keywords for scanner resolution
-   */
-  aliases?: string[];
-  capabilities: ManifestCapabilities;
-  configSchema?: ManifestConfigSchema;
-  requirements?: ManifestRequirements;
-  entry: ManifestEntry;
-  output?: ManifestOutput;
+	/**
+	 * Unique scanner identifier
+	 */
+	id: string;
+	/**
+	 * Human-readable scanner name
+	 */
+	name: string;
+	/**
+	 * Semantic version
+	 */
+	version: string;
+	description?: string;
+	author?: string;
+	license?: string;
+	homepage?: string;
+	repository?: string;
+	/**
+	 * Optional alternative identifiers/keywords for scanner resolution
+	 */
+	aliases?: string[];
+	capabilities: ManifestCapabilities;
+	configSchema?: ManifestConfigSchema;
+	requirements?: ManifestRequirements;
+	entry: ManifestEntry;
+	output?: ManifestOutput;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ManifestCapabilities".
  */
 export interface ManifestCapabilities {
-  /**
-   * @minItems 1
-   */
-  categories: [ScannerCategory, ...ScannerCategory[]];
-  /**
-   * @minItems 1
-   */
-  outputFormats: [OutputFormat, ...OutputFormat[]];
-  supportsScreenshots: boolean;
-  supportsConcurrency: boolean;
-  requiresBrowser: boolean;
-  supportsOffline?: boolean;
-  maxConcurrency?: number;
-  estimatedTimePerPage?: number;
+	/**
+	 * @minItems 1
+	 */
+	categories: [ScannerCategory, ...ScannerCategory[]];
+	/**
+	 * @minItems 1
+	 */
+	outputFormats: [OutputFormat, ...OutputFormat[]];
+	supportsScreenshots: boolean;
+	supportsConcurrency: boolean;
+	requiresBrowser: boolean;
+	supportsOffline?: boolean;
+	maxConcurrency?: number;
+	estimatedTimePerPage?: number;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ManifestRequirements".
  */
 export interface ManifestRequirements {
-  browser?: BrowserRequirement;
-  nodeVersion?: string;
-  externalTools?: ExternalTool[];
-  network?: NetworkRequirement;
-  resources?: ResourceRequirement;
+	browser?: BrowserRequirement;
+	nodeVersion?: string;
+	externalTools?: ExternalTool[];
+	network?: NetworkRequirement;
+	resources?: ResourceRequirement;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "BrowserRequirement".
  */
 export interface BrowserRequirement {
-  type: "chromium" | "firefox" | "webkit";
-  headless?: boolean;
-  args?: string[];
+	type: "chromium" | "firefox" | "webkit";
+	headless?: boolean;
+	args?: string[];
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ExternalTool".
  */
 export interface ExternalTool {
-  name: string;
-  command: string;
-  version?: string;
-  optional?: boolean;
+	name: string;
+	command: string;
+	version?: string;
+	optional?: boolean;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "NetworkRequirement".
  */
 export interface NetworkRequirement {
-  requiresInternet: boolean;
-  allowedHosts?: string[];
+	requiresInternet: boolean;
+	allowedHosts?: string[];
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ResourceRequirement".
  */
 export interface ResourceRequirement {
-  maxMemoryMB?: number;
-  maxTimeoutMs?: number;
+	maxMemoryMB?: number;
+	maxTimeoutMs?: number;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ManifestEntry".
  */
 export interface ManifestEntry {
-  module: string;
-  exportName?: string;
-  factoryName?: string;
+	module: string;
+	exportName?: string;
+	factoryName?: string;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
  * via the `definition` "ManifestOutput".
  */
 export interface ManifestOutput {
-  severityMapping?: {
-    [k: string]: IssueSeverity;
-  };
-  categoryPrefix?: string;
-  includeRawResults?: boolean;
-  reportTemplate?: string;
+	severityMapping?: {
+		[k: string]: IssueSeverity;
+	};
+	categoryPrefix?: string;
+	includeRawResults?: boolean;
+	reportTemplate?: string;
 }

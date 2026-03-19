@@ -79,7 +79,7 @@ constraints.
 
 ## Local development
 
-See `README.md` and `justfile` for full details. 
+See `README.md` and `justfile` for full details.
 
 ```bash
 just setup

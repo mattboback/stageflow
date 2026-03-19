@@ -1,32 +1,37 @@
 <script lang="ts">
-	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
+import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
 
-	import { Panel } from '$lib/components/ui';
-	import { getCroppedViewBox, getSeverityBadgeClass } from '$lib/report';
-	import { cn } from '$lib/utils';
+import { Panel } from "$lib/components/ui";
+import { getCroppedViewBox, getSeverityBadgeClass } from "$lib/report";
+import { cn } from "$lib/utils";
 
-	interface Props {
-		issue: IssueDetail;
-		page: PageSummary | null;
-		pageOverviewUrl: string | null;
-		suggestedOwner: string;
-		primaryFix: string | null;
-	}
+interface Props {
+	issue: IssueDetail;
+	page: PageSummary | null;
+	pageOverviewUrl: string | null;
+	suggestedOwner: string;
+	primaryFix: string | null;
+}
 
-	const { issue, page, pageOverviewUrl, suggestedOwner, primaryFix }: Props = $props();
+const { issue, page, pageOverviewUrl, suggestedOwner, primaryFix }: Props =
+	$props();
 
-	const triageOverviewCrop = $derived.by(() => {
-		if (!page?.pageOverview) return null;
-		const overview = page.pageOverview;
-		const elements = overview.elements ?? [];
-		const element = elements.find((el) => el.issueId === issue.id) ?? null;
-		if (!element) return null;
+const triageOverviewCrop = $derived.by(() => {
+	if (!page?.pageOverview) return null;
+	const overview = page.pageOverview;
+	const elements = overview.elements ?? [];
+	const element = elements.find((el) => el.issueId === issue.id) ?? null;
+	if (!element) return null;
 
-		const viewBox = getCroppedViewBox(overview.pageWidth, overview.pageHeight, element);
-		if (!viewBox) return null;
+	const viewBox = getCroppedViewBox(
+		overview.pageWidth,
+		overview.pageHeight,
+		element,
+	);
+	if (!viewBox) return null;
 
-		return { overview, element, viewBox };
-	});
+	return { overview, element, viewBox };
+});
 </script>
 
 <Panel padding="lg" rounded="2xl" class="bg-surface-muted">
