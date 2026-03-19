@@ -11,20 +11,20 @@
  */
 
 import type {
-	IssueSeverity,
 	IssueDetail,
+	IssueSeverity,
 	LighthouseCategorySummary,
 	PageOverviewElement,
 	PageSummary,
-	SeverityCounts,
 	ReportArtifact,
 	ReportError,
 	ReportMeta,
 	ReportSummary,
 	ScannerStatus,
 	ScannerSummary,
-	UnifiedReportV2
-} from '../../../../../libs/contracts/report/generated/typescript/unified-report.v2';
+	SeverityCounts,
+	UnifiedReportV2,
+} from "../../../../../libs/contracts/report/generated/typescript/unified-report.v2";
 
 export type {
 	IssueSeverity,
@@ -39,7 +39,7 @@ export type {
 	ReportSummary,
 	ScannerStatus,
 	ScannerSummary,
-	UnifiedReportV2
+	UnifiedReportV2,
 };
 
 export type UnifiedReport = UnifiedReportV2;

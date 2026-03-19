@@ -5,200 +5,210 @@
  * DO NOT MODIFY - regenerate types with `bun run generate:ts`
  */
 
-import Ajv, { type ErrorObject } from 'ajv';
-import addFormats from 'ajv-formats';
-import type { UnifiedReportV2 } from './unified-report.v2';
+import Ajv, { type ErrorObject } from "ajv";
+import addFormats from "ajv-formats";
+import type { UnifiedReportV2 } from "./unified-report.v2";
 
 // Import schema - consumers must have ajv installed
-import schema from '../../schema/unified-report.v2.schema.json';
+import schema from "../../schema/unified-report.v2.schema.json";
 
 /**
  * Validation error details
  */
 export interface ValidationError {
-  path: string;
-  message: string;
-  keyword: string;
-  params?: Record<string, unknown>;
+	path: string;
+	message: string;
+	keyword: string;
+	params?: Record<string, unknown>;
 }
 
 /**
  * Data integrity error (business logic validation)
  */
 export interface IntegrityError {
-  field: string;
-  expected: string | number;
-  actual: string | number;
-  message: string;
+	field: string;
+	expected: string | number;
+	actual: string | number;
+	message: string;
 }
 
 /**
  * Result of validation
  */
 export interface ValidationResult {
-  valid: boolean;
-  errors: ValidationError[];
-  integrityErrors: IntegrityError[];
+	valid: boolean;
+	errors: ValidationError[];
+	integrityErrors: IntegrityError[];
 }
 
 // Singleton Ajv instance
 let ajvInstance: Ajv | null = null;
-let compiledValidator: ReturnType<Ajv['compile']> | null = null;
+let compiledValidator: ReturnType<Ajv["compile"]> | null = null;
 
 /**
  * Get or create the Ajv validator instance
  */
-function getValidator(): ReturnType<Ajv['compile']> {
-  if (!compiledValidator) {
-    ajvInstance = new Ajv({
-      strict: false,
-      allErrors: true,
-      verbose: true,
-    });
-    addFormats(ajvInstance);
-    compiledValidator = ajvInstance.compile(schema);
-  }
-  return compiledValidator;
+function getValidator(): ReturnType<Ajv["compile"]> {
+	if (!compiledValidator) {
+		ajvInstance = new Ajv({
+			strict: false,
+			allErrors: true,
+			verbose: true,
+		});
+		addFormats(ajvInstance);
+		compiledValidator = ajvInstance.compile(schema);
+	}
+	return compiledValidator;
 }
 
 /**
  * Convert Ajv errors to our ValidationError format
  */
-function formatErrors(ajvErrors: ErrorObject[] | null | undefined): ValidationError[] {
-  if (!ajvErrors) return [];
+function formatErrors(
+	ajvErrors: ErrorObject[] | null | undefined,
+): ValidationError[] {
+	if (!ajvErrors) return [];
 
-  return ajvErrors.map((err) => ({
-    path: err.instancePath || 'root',
-    message: err.message || 'Unknown error',
-    keyword: err.keyword,
-    params: err.params as Record<string, unknown>,
-  }));
+	return ajvErrors.map((err) => ({
+		path: err.instancePath || "root",
+		message: err.message || "Unknown error",
+		keyword: err.keyword,
+		params: err.params as Record<string, unknown>,
+	}));
 }
 
 /**
  * Check data integrity constraints that can't be expressed in JSON Schema
  */
 function checkDataIntegrity(report: UnifiedReportV2): IntegrityError[] {
-  const errors: IntegrityError[] = [];
+	const errors: IntegrityError[] = [];
 
-  // Check totalIssues matches issues.length
-  if (report.summary.totalIssues !== report.issues.length) {
-    errors.push({
-      field: 'summary.totalIssues',
-      expected: report.issues.length,
-      actual: report.summary.totalIssues,
-      message: `summary.totalIssues (${report.summary.totalIssues}) does not match issues.length (${report.issues.length})`,
-    });
-  }
+	// Check totalIssues matches issues.length
+	if (report.summary.totalIssues !== report.issues.length) {
+		errors.push({
+			field: "summary.totalIssues",
+			expected: report.issues.length,
+			actual: report.summary.totalIssues,
+			message: `summary.totalIssues (${report.summary.totalIssues}) does not match issues.length (${report.issues.length})`,
+		});
+	}
 
-  // Check severity counts match actual issues
-  const actualSeverity = {
-    critical: 0,
-    serious: 0,
-    moderate: 0,
-    minor: 0,
-    info: 0,
-  };
+	// Check severity counts match actual issues
+	const actualSeverity = {
+		critical: 0,
+		serious: 0,
+		moderate: 0,
+		minor: 0,
+		info: 0,
+	};
 
-  for (const issue of report.issues) {
-    actualSeverity[issue.severity]++;
-  }
+	for (const issue of report.issues) {
+		actualSeverity[issue.severity]++;
+	}
 
-  const reportedSeverity = report.summary.bySeverity;
-  for (const severity of ['critical', 'serious', 'moderate', 'minor'] as const) {
-    if (reportedSeverity[severity] !== actualSeverity[severity]) {
-      errors.push({
-        field: `summary.bySeverity.${severity}`,
-        expected: actualSeverity[severity],
-        actual: reportedSeverity[severity],
-        message: `summary.bySeverity.${severity} (${reportedSeverity[severity]}) does not match actual count (${actualSeverity[severity]})`,
-      });
-    }
-  }
+	const reportedSeverity = report.summary.bySeverity;
+	for (const severity of [
+		"critical",
+		"serious",
+		"moderate",
+		"minor",
+	] as const) {
+		if (reportedSeverity[severity] !== actualSeverity[severity]) {
+			errors.push({
+				field: `summary.bySeverity.${severity}`,
+				expected: actualSeverity[severity],
+				actual: reportedSeverity[severity],
+				message: `summary.bySeverity.${severity} (${reportedSeverity[severity]}) does not match actual count (${actualSeverity[severity]})`,
+			});
+		}
+	}
 
-  if (reportedSeverity.info !== undefined && reportedSeverity.info !== actualSeverity.info) {
-    errors.push({
-      field: 'summary.bySeverity.info',
-      expected: actualSeverity.info,
-      actual: reportedSeverity.info,
-      message: `summary.bySeverity.info (${reportedSeverity.info}) does not match actual count (${actualSeverity.info})`,
-    });
-  }
+	if (
+		reportedSeverity.info !== undefined &&
+		reportedSeverity.info !== actualSeverity.info
+	) {
+		errors.push({
+			field: "summary.bySeverity.info",
+			expected: actualSeverity.info,
+			actual: reportedSeverity.info,
+			message: `summary.bySeverity.info (${reportedSeverity.info}) does not match actual count (${actualSeverity.info})`,
+		});
+	}
 
-  // Check pagesScanned matches pages.length
-  if (report.summary.pagesScanned !== report.pages.length) {
-    errors.push({
-      field: 'summary.pagesScanned',
-      expected: report.pages.length,
-      actual: report.summary.pagesScanned,
-      message: `summary.pagesScanned (${report.summary.pagesScanned}) does not match pages.length (${report.pages.length})`,
-    });
-  }
+	// Check pagesScanned matches pages.length
+	if (report.summary.pagesScanned !== report.pages.length) {
+		errors.push({
+			field: "summary.pagesScanned",
+			expected: report.pages.length,
+			actual: report.summary.pagesScanned,
+			message: `summary.pagesScanned (${report.summary.pagesScanned}) does not match pages.length (${report.pages.length})`,
+		});
+	}
 
-  // Check scanner IDs referenced in issues exist in scanners array
-  const scannerIds = new Set(report.scanners.map((s) => s.id));
-  const issueScannersNotFound = new Set<string>();
+	// Check scanner IDs referenced in issues exist in scanners array
+	const scannerIds = new Set(report.scanners.map((s) => s.id));
+	const issueScannersNotFound = new Set<string>();
 
-  for (const issue of report.issues) {
-    if (!scannerIds.has(issue.scanner)) {
-      issueScannersNotFound.add(issue.scanner);
-    }
-  }
+	for (const issue of report.issues) {
+		if (!scannerIds.has(issue.scanner)) {
+			issueScannersNotFound.add(issue.scanner);
+		}
+	}
 
-  if (issueScannersNotFound.size > 0) {
-    errors.push({
-      field: 'issues[].scanner',
-      expected: `one of [${Array.from(scannerIds).join(', ')}]`,
-      actual: Array.from(issueScannersNotFound).join(', '),
-      message: `Issues reference non-existent scanner IDs: ${Array.from(issueScannersNotFound).join(', ')}`,
-    });
-  }
+	if (issueScannersNotFound.size > 0) {
+		errors.push({
+			field: "issues[].scanner",
+			expected: `one of [${Array.from(scannerIds).join(", ")}]`,
+			actual: Array.from(issueScannersNotFound).join(", "),
+			message: `Issues reference non-existent scanner IDs: ${Array.from(issueScannersNotFound).join(", ")}`,
+		});
+	}
 
-  // Check page IDs referenced in issues exist in pages array
-  const pageIds = new Set(report.pages.map((p) => p.id));
-  const issuePageIdsNotFound = new Set<string>();
+	// Check page IDs referenced in issues exist in pages array
+	const pageIds = new Set(report.pages.map((p) => p.id));
+	const issuePageIdsNotFound = new Set<string>();
 
-  for (const issue of report.issues) {
-    if (!pageIds.has(issue.pageId)) {
-      issuePageIdsNotFound.add(issue.pageId);
-    }
-  }
+	for (const issue of report.issues) {
+		if (!pageIds.has(issue.pageId)) {
+			issuePageIdsNotFound.add(issue.pageId);
+		}
+	}
 
-  if (issuePageIdsNotFound.size > 0) {
-    errors.push({
-      field: 'issues[].pageId',
-      expected: `one of [${Array.from(pageIds).join(', ')}]`,
-      actual: Array.from(issuePageIdsNotFound).join(', '),
-      message: `Issues reference non-existent page IDs: ${Array.from(issuePageIdsNotFound).join(', ')}`,
-    });
-  }
+	if (issuePageIdsNotFound.size > 0) {
+		errors.push({
+			field: "issues[].pageId",
+			expected: `one of [${Array.from(pageIds).join(", ")}]`,
+			actual: Array.from(issuePageIdsNotFound).join(", "),
+			message: `Issues reference non-existent page IDs: ${Array.from(issuePageIdsNotFound).join(", ")}`,
+		});
+	}
 
-  // Check artifact IDs referenced in occurrences exist in artifacts array
-  if (report.artifacts && report.artifacts.length > 0) {
-    const artifactIds = new Set(report.artifacts.map((a) => a.id));
-    const missingArtifactIds = new Set<string>();
+	// Check artifact IDs referenced in occurrences exist in artifacts array
+	if (report.artifacts && report.artifacts.length > 0) {
+		const artifactIds = new Set(report.artifacts.map((a) => a.id));
+		const missingArtifactIds = new Set<string>();
 
-    for (const issue of report.issues) {
-      for (const occ of issue.occurrences || []) {
-        for (const artId of occ.artifactIds || []) {
-          if (!artifactIds.has(artId)) {
-            missingArtifactIds.add(artId);
-          }
-        }
-      }
-    }
+		for (const issue of report.issues) {
+			for (const occ of issue.occurrences || []) {
+				for (const artId of occ.artifactIds || []) {
+					if (!artifactIds.has(artId)) {
+						missingArtifactIds.add(artId);
+					}
+				}
+			}
+		}
 
-    if (missingArtifactIds.size > 0) {
-      errors.push({
-        field: 'issues[].occurrences[].artifactIds',
-        expected: `one of [${Array.from(artifactIds).join(', ')}]`,
-        actual: Array.from(missingArtifactIds).join(', '),
-        message: `Occurrences reference non-existent artifact IDs: ${Array.from(missingArtifactIds).join(', ')}`,
-      });
-    }
-  }
+		if (missingArtifactIds.size > 0) {
+			errors.push({
+				field: "issues[].occurrences[].artifactIds",
+				expected: `one of [${Array.from(artifactIds).join(", ")}]`,
+				actual: Array.from(missingArtifactIds).join(", "),
+				message: `Occurrences reference non-existent artifact IDs: ${Array.from(missingArtifactIds).join(", ")}`,
+			});
+		}
+	}
 
-  return errors;
+	return errors;
 }
 
 /**
@@ -220,27 +230,27 @@ function checkDataIntegrity(report: UnifiedReportV2): IntegrityError[] {
  * ```
  */
 export function validateReport(
-  data: unknown,
-  options: { checkIntegrity?: boolean } = { checkIntegrity: true }
+	data: unknown,
+	options: { checkIntegrity?: boolean } = { checkIntegrity: true },
 ): ValidationResult {
-  const validate = getValidator();
-  const schemaValid = validate(data) as boolean;
+	const validate = getValidator();
+	const schemaValid = validate(data) as boolean;
 
-  const result: ValidationResult = {
-    valid: schemaValid,
-    errors: formatErrors(validate.errors),
-    integrityErrors: [],
-  };
+	const result: ValidationResult = {
+		valid: schemaValid,
+		errors: formatErrors(validate.errors),
+		integrityErrors: [],
+	};
 
-  // Only check integrity if schema is valid
-  if (schemaValid && options.checkIntegrity !== false) {
-    result.integrityErrors = checkDataIntegrity(data as UnifiedReportV2);
-    if (result.integrityErrors.length > 0) {
-      result.valid = false;
-    }
-  }
+	// Only check integrity if schema is valid
+	if (schemaValid && options.checkIntegrity !== false) {
+		result.integrityErrors = checkDataIntegrity(data as UnifiedReportV2);
+		if (result.integrityErrors.length > 0) {
+			result.valid = false;
+		}
+	}
 
-  return result;
+	return result;
 }
 
 /**
@@ -259,7 +269,7 @@ export function validateReport(
  * ```
  */
 export function isValidReport(data: unknown): data is UnifiedReportV2 {
-  return validateReport(data).valid;
+	return validateReport(data).valid;
 }
 
 /**
@@ -280,17 +290,17 @@ export function isValidReport(data: unknown): data is UnifiedReportV2 {
  * ```
  */
 export function assertValidReport(data: unknown): UnifiedReportV2 {
-  const result = validateReport(data);
+	const result = validateReport(data);
 
-  if (!result.valid) {
-    const allErrors = [
-      ...result.errors.map((e) => `${e.path}: ${e.message}`),
-      ...result.integrityErrors.map((e) => e.message),
-    ];
-    throw new Error(`Invalid UnifiedReportV2:\n  ${allErrors.join('\n  ')}`);
-  }
+	if (!result.valid) {
+		const allErrors = [
+			...result.errors.map((e) => `${e.path}: ${e.message}`),
+			...result.integrityErrors.map((e) => e.message),
+		];
+		throw new Error(`Invalid UnifiedReportV2:\n  ${allErrors.join("\n  ")}`);
+	}
 
-  return data as UnifiedReportV2;
+	return data as UnifiedReportV2;
 }
 
 /**
@@ -307,27 +317,29 @@ export function assertValidReport(data: unknown): UnifiedReportV2 {
  * }
  * ```
  */
-export function parseReport(json: string): ValidationResult & { data?: UnifiedReportV2 } {
-  let data: unknown;
-  try {
-    data = JSON.parse(json);
-  } catch (e) {
-    return {
-      valid: false,
-      errors: [
-        {
-          path: 'root',
-          message: `JSON parse error: ${e instanceof Error ? e.message : 'Unknown error'}`,
-          keyword: 'parse',
-        },
-      ],
-      integrityErrors: [],
-    };
-  }
+export function parseReport(
+	json: string,
+): ValidationResult & { data?: UnifiedReportV2 } {
+	let data: unknown;
+	try {
+		data = JSON.parse(json);
+	} catch (e) {
+		return {
+			valid: false,
+			errors: [
+				{
+					path: "root",
+					message: `JSON parse error: ${e instanceof Error ? e.message : "Unknown error"}`,
+					keyword: "parse",
+				},
+			],
+			integrityErrors: [],
+		};
+	}
 
-  const result = validateReport(data);
-  return {
-    ...result,
-    data: result.valid ? (data as UnifiedReportV2) : undefined,
-  };
+	const result = validateReport(data);
+	return {
+		...result,
+		data: result.valid ? (data as UnifiedReportV2) : undefined,
+	};
 }

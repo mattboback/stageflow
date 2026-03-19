@@ -1,47 +1,55 @@
 <script lang="ts">
-	import { normalizeUrlListText, parseUrlList, validateHttpUrls } from '$lib/components/playground/playground-utils';
-	import { Label, Textarea } from '$lib/components/ui';
-	import { CheckCircle2, AlertCircle, Info } from 'lucide-svelte';
+import {
+	normalizeUrlListText,
+	parseUrlList,
+	validateHttpUrls,
+} from "$lib/components/playground/playground-utils";
+import { Label, Textarea } from "$lib/components/ui";
+import { AlertCircle, CheckCircle2, Info } from "lucide-svelte";
 
-	interface Props {
-		urls: string;
-		onUrlsChange: (urls: string) => void;
-		onNormalize: () => void;
+interface Props {
+	urls: string;
+	onUrlsChange: (urls: string) => void;
+	onNormalize: () => void;
+}
+
+const { urls, onUrlsChange, onNormalize }: Props = $props();
+
+let hasInteracted = $state(false);
+let wasAutoNormalized = $state(false);
+
+const parsedUrls = $derived(parseUrlList(urls));
+const urlCount = $derived(parsedUrls.length);
+const validation = $derived(
+	urlCount > 0 ? validateHttpUrls(parsedUrls) : { valid: [], invalid: [] },
+);
+const isAllValid = $derived(urlCount > 0 && validation.invalid.length === 0);
+const hasErrors = $derived(hasInteracted && validation.invalid.length > 0);
+
+const placeholder = [
+	"example.com",
+	"example.com/about",
+	"https://example.com/contact",
+].join("\n");
+
+function handleBlur() {
+	hasInteracted = true;
+	const { changed } = normalizeUrlListText(urls);
+	if (changed) {
+		wasAutoNormalized = true;
+		// Reset notice after a few seconds
+		setTimeout(() => {
+			wasAutoNormalized = false;
+		}, 4000);
 	}
+	onNormalize();
+}
 
-	const { urls, onUrlsChange, onNormalize }: Props = $props();
-
-	let hasInteracted = $state(false);
-	let wasAutoNormalized = $state(false);
-
-	const parsedUrls = $derived(parseUrlList(urls));
-	const urlCount = $derived(parsedUrls.length);
-	const validation = $derived(urlCount > 0 ? validateHttpUrls(parsedUrls) : { valid: [], invalid: [] });
-	const isAllValid = $derived(urlCount > 0 && validation.invalid.length === 0);
-	const hasErrors = $derived(hasInteracted && validation.invalid.length > 0);
-
-	const placeholder = ['example.com', 'example.com/about', 'https://example.com/contact'].join(
-		'\n'
-	);
-
-	function handleBlur() {
-		hasInteracted = true;
-		const { changed } = normalizeUrlListText(urls);
-		if (changed) {
-			wasAutoNormalized = true;
-			// Reset notice after a few seconds
-			setTimeout(() => {
-				wasAutoNormalized = false;
-			}, 4000);
-		}
-		onNormalize();
-	}
-
-	function handleInput(e: Event & { currentTarget: HTMLTextAreaElement }) {
-		hasInteracted = true;
-		wasAutoNormalized = false;
-		onUrlsChange(e.currentTarget.value);
-	}
+function handleInput(e: Event & { currentTarget: HTMLTextAreaElement }) {
+	hasInteracted = true;
+	wasAutoNormalized = false;
+	onUrlsChange(e.currentTarget.value);
+}
 </script>
 
 <div class="animate-fade-in">
@@ -70,12 +78,12 @@
 		error={hasErrors}
 		class="font-mono rounded-xl text-sm"
 	/>
-	
+
 	{#if hasErrors}
 		<div class="mt-2 flex items-start gap-1.5 text-xs text-red-500">
 			<AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>
-				{validation.invalid.length} invalid {validation.invalid.length === 1 ? 'URL' : 'URLs'}. 
+				{validation.invalid.length} invalid {validation.invalid.length === 1 ? 'URL' : 'URLs'}.
 				First error: {validation.invalid[0].reason}
 			</span>
 		</div>

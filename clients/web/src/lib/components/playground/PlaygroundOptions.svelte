@@ -1,26 +1,30 @@
 <script lang="ts">
-	import { Label, SelectField } from '$lib/components/ui';
-	import { cn } from '$lib/utils';
-	import { Camera } from 'lucide-svelte';
+import { Label, SelectField } from "$lib/components/ui";
+import { cn } from "$lib/utils";
+import { Camera } from "lucide-svelte";
 
-	interface Props {
-		screenshot: boolean;
-		highlightStyle: 'solid' | 'dashed';
-		onScreenshotChange: (value: boolean) => void;
-		onHighlightStyleChange: (value: 'solid' | 'dashed') => void;
-	}
+interface Props {
+	screenshot: boolean;
+	highlightStyle: "solid" | "dashed";
+	onScreenshotChange: (value: boolean) => void;
+	onHighlightStyleChange: (value: "solid" | "dashed") => void;
+}
 
-	const { screenshot, highlightStyle, onScreenshotChange, onHighlightStyleChange }: Props =
-		$props();
+const {
+	screenshot,
+	highlightStyle,
+	onScreenshotChange,
+	onHighlightStyleChange,
+}: Props = $props();
 
-	function selectableSurfaceClass(base: string, isSelected: boolean) {
-		return cn(
-			base,
-			isSelected
-				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
-				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
-		);
-	}
+function selectableSurfaceClass(base: string, isSelected: boolean) {
+	return cn(
+		base,
+		isSelected
+			? "border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]"
+			: "border-line bg-surface hover:border-accent/30 hover:bg-surface-muted",
+	);
+}
 </script>
 
 {#snippet checkMarkSvg()}

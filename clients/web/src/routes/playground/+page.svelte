@@ -1,5 +1,5 @@
 <script lang="ts">
-	import PlaygroundPage from '$lib/components/playground/PlaygroundPage.svelte';
+import PlaygroundPage from "$lib/components/playground/PlaygroundPage.svelte";
 </script>
 
 <svelte:head>

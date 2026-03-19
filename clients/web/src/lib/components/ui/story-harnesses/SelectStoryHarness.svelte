@@ -1,42 +1,42 @@
 <script lang="ts">
-	import type { SelectSize } from '../select';
+import type { SelectSize } from "../select";
 
-	import Select from '../Select.svelte';
+import Select from "../Select.svelte";
 
-	type SelectOption = {
-		label: string;
-		value: string;
-	};
+type SelectOption = {
+	label: string;
+	value: string;
+};
 
-	interface Props {
-		label?: string;
-		options?: SelectOption[];
-		value?: string;
-		uiSize?: SelectSize;
-		error?: boolean;
-		disabled?: boolean;
-		onChange?: (value: string) => void;
-	}
+interface Props {
+	label?: string;
+	options?: SelectOption[];
+	value?: string;
+	uiSize?: SelectSize;
+	error?: boolean;
+	disabled?: boolean;
+	onChange?: (value: string) => void;
+}
 
-	let {
-		label = 'Scanner',
-		options = [
-			{ label: 'Axe', value: 'axe' },
-			{ label: 'Lighthouse', value: 'lighthouse' },
-			{ label: 'SEO', value: 'seo' }
-		],
-		value = $bindable('axe'),
-		uiSize = 'md',
-		error = false,
-		disabled = false,
-		onChange
-	}: Props = $props();
+const {
+	label = "Scanner",
+	options = [
+		{ label: "Axe", value: "axe" },
+		{ label: "Lighthouse", value: "lighthouse" },
+		{ label: "SEO", value: "seo" },
+	],
+	value = $bindable("axe"),
+	uiSize = "md",
+	error = false,
+	disabled = false,
+	onChange,
+}: Props = $props();
 
-	function handleChange(event: Event) {
-		const currentTarget = event.currentTarget;
-		if (!(currentTarget instanceof HTMLSelectElement)) return;
-		onChange?.(currentTarget.value);
-	}
+function handleChange(event: Event) {
+	const currentTarget = event.currentTarget;
+	if (!(currentTarget instanceof HTMLSelectElement)) return;
+	onChange?.(currentTarget.value);
+}
 </script>
 
 <div class="w-[min(92vw,28rem)] space-y-2">

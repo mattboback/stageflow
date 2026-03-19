@@ -26,9 +26,14 @@ export function getCroppedViewBox(
 	pageWidth: number,
 	pageHeight: number,
 	element: Rect,
-	options: CropOptions = {}
+	options: CropOptions = {},
 ): ViewBox | null {
-	if (!Number.isFinite(pageWidth) || !Number.isFinite(pageHeight) || pageWidth <= 0 || pageHeight <= 0) {
+	if (
+		!Number.isFinite(pageWidth) ||
+		!Number.isFinite(pageHeight) ||
+		pageWidth <= 0 ||
+		pageHeight <= 0
+	) {
 		return null;
 	}
 

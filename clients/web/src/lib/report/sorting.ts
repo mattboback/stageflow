@@ -1,40 +1,48 @@
-import type { IssueDetail } from '$lib/types/unified-report';
+import type { IssueDetail } from "$lib/types/unified-report";
 
-import { compareSeverity } from './severity';
+import { compareSeverity } from "./severity";
 
-export type IssueSortKey = 'severity' | 'page' | 'scanner' | 'count' | 'title';
+export type IssueSortKey = "severity" | "page" | "scanner" | "count" | "title";
 
-export const ISSUE_SORTS: IssueSortKey[] = ['severity', 'page', 'scanner', 'count', 'title'];
+export const ISSUE_SORTS: IssueSortKey[] = [
+	"severity",
+	"page",
+	"scanner",
+	"count",
+	"title",
+];
 
 export const ISSUE_SORT_LABELS: Record<IssueSortKey, string> = {
-	severity: 'By Severity',
-	page: 'By Page',
-	scanner: 'By Scanner',
-	count: 'By Element Count',
-	title: 'By Title'
+	severity: "By Severity",
+	page: "By Page",
+	scanner: "By Scanner",
+	count: "By Element Count",
+	title: "By Title",
 };
 
 export function isIssueSortKey(value?: string | null): value is IssueSortKey {
-	return ISSUE_SORTS.includes((value ?? 'severity') as IssueSortKey);
+	return ISSUE_SORTS.includes((value ?? "severity") as IssueSortKey);
 }
 
-export function sortIssues(issues: IssueDetail[], sortKey: IssueSortKey): IssueDetail[] {
+export function sortIssues(
+	issues: IssueDetail[],
+	sortKey: IssueSortKey,
+): IssueDetail[] {
 	const sorted = [...issues];
 
 	switch (sortKey) {
-		case 'page':
+		case "page":
 			sorted.sort((a, b) => a.pageUrl.localeCompare(b.pageUrl));
 			break;
-		case 'scanner':
+		case "scanner":
 			sorted.sort((a, b) => a.scanner.localeCompare(b.scanner));
 			break;
-		case 'count':
+		case "count":
 			sorted.sort((a, b) => b.elementCount - a.elementCount);
 			break;
-		case 'title':
+		case "title":
 			sorted.sort((a, b) => a.title.localeCompare(b.title));
 			break;
-		case 'severity':
 		default:
 			sorted.sort((a, b) => {
 				const severityOrder = compareSeverity(a.severity, b.severity);

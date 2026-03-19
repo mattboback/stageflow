@@ -1,47 +1,47 @@
 {
-  "name": "@stageflow/contracts-scanner-manifest",
-  "version": "1.0.0",
-  "packageManager": "bun@1.3.5",
-  "description": "Scanner manifest schema and types for Stageflow",
-  "private": true,
-  "main": "dist/generated/typescript/index.js",
-  "types": "dist/generated/typescript/index.d.ts",
-  "scripts": {
-    "generate": "bun run generate:ts && bun run generate:go",
-    "generate:ts": "json2ts schema/scanner-manifest.schema.json -o generated/typescript/scanner-manifest.ts --unreachableDefinitions",
-    "generate:go": "go run github.com/atombender/go-jsonschema@v0.20.0 --package scannermanifest --tags json --struct-name-from-title schema/scanner-manifest.schema.json > scanner_manifest.go",
-    "validate": "node schema/validate.js",
-    "validate:fixtures": "node schema/validate.js fixtures/scanner-manifest.min.json && node schema/validate.js fixtures/scanner-manifest.full.json",
-    "build": "bun run generate && bun run validate:fixtures && tsc",
-    "typecheck": "tsc --noEmit"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/generated/typescript/index.d.ts",
-      "import": "./dist/generated/typescript/index.js",
-      "require": "./dist/generated/typescript/index.js"
-    },
-    "./schema": {
-      "import": "./schema/scanner-manifest.schema.json",
-      "require": "./schema/scanner-manifest.schema.json"
-    },
-    "./validator-cli": {
-      "import": "./schema/validate.js",
-      "require": "./schema/validate.js"
-    }
-  },
-  "files": [
-    "dist/**/*",
-    "schema/*.json",
-    "schema/validate.js",
-    "fixtures/*.json"
-  ],
-  "dependencies": {
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1"
-  },
-  "devDependencies": {
-    "json-schema-to-typescript": "^15.0.4",
-    "typescript": "^5.7.2"
-  }
+	"name": "@stageflow/contracts-scanner-manifest",
+	"version": "1.0.0",
+	"packageManager": "bun@1.3.5",
+	"description": "Scanner manifest schema and types for Stageflow",
+	"private": true,
+	"main": "dist/generated/typescript/index.js",
+	"types": "dist/generated/typescript/index.d.ts",
+	"scripts": {
+		"generate": "bun run generate:ts && bun run generate:go",
+		"generate:ts": "json2ts schema/scanner-manifest.schema.json -o generated/typescript/scanner-manifest.ts --unreachableDefinitions",
+		"generate:go": "go run github.com/atombender/go-jsonschema@v0.20.0 --package scannermanifest --tags json --struct-name-from-title schema/scanner-manifest.schema.json > scanner_manifest.go",
+		"validate": "node schema/validate.js",
+		"validate:fixtures": "node schema/validate.js fixtures/scanner-manifest.min.json && node schema/validate.js fixtures/scanner-manifest.full.json",
+		"build": "bun run generate && bun run validate:fixtures && tsc",
+		"typecheck": "tsc --noEmit"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/generated/typescript/index.d.ts",
+			"import": "./dist/generated/typescript/index.js",
+			"require": "./dist/generated/typescript/index.js"
+		},
+		"./schema": {
+			"import": "./schema/scanner-manifest.schema.json",
+			"require": "./schema/scanner-manifest.schema.json"
+		},
+		"./validator-cli": {
+			"import": "./schema/validate.js",
+			"require": "./schema/validate.js"
+		}
+	},
+	"files": [
+		"dist/**/*",
+		"schema/*.json",
+		"schema/validate.js",
+		"fixtures/*.json"
+	],
+	"dependencies": {
+		"ajv": "^8.17.1",
+		"ajv-formats": "^3.0.1"
+	},
+	"devDependencies": {
+		"json-schema-to-typescript": "^15.0.4",
+		"typescript": "^5.7.2"
+	}
 }

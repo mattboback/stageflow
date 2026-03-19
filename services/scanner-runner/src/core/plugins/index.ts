@@ -5,12 +5,12 @@
  */
 
 export {
-  createPluginLoader,
-  type PluginDiscoveryError,
-  type PluginDiscoveryResult,
-  type PluginInfo,
-  PluginLoader,
-  type PluginLoaderConfig,
-  type PluginLoadResult,
-  type ScannerPlugin,
+	createPluginLoader,
+	type PluginDiscoveryError,
+	type PluginDiscoveryResult,
+	type PluginInfo,
+	PluginLoader,
+	type PluginLoaderConfig,
+	type PluginLoadResult,
+	type ScannerPlugin,
 } from "./loader";

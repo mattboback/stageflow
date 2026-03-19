@@ -8,10 +8,10 @@ import { SOCIAL_CHECKS } from "./social";
 import { TECHNICAL_CHECKS } from "./technical";
 
 export const SEO_CHECKS: SEOCheck[] = [
-  ...META_CHECKS,
-  ...HEADING_CHECKS,
-  ...IMAGE_CHECKS,
-  ...SOCIAL_CHECKS,
-  ...TECHNICAL_CHECKS,
-  ...CONTENT_CHECKS,
+	...META_CHECKS,
+	...HEADING_CHECKS,
+	...IMAGE_CHECKS,
+	...SOCIAL_CHECKS,
+	...TECHNICAL_CHECKS,
+	...CONTENT_CHECKS,
 ];

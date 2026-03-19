@@ -1,163 +1,165 @@
 <script lang="ts">
-	import GithubIcon from '$lib/components/icons/GithubIcon.svelte';
-	import HeroScanPreview from '$lib/components/landing/HeroScanPreview.svelte';
-	import { buttonVariants, Chip } from '$lib/components/ui';
-	import { SITE } from '$lib/config/site';
-	import { cn } from '$lib/utils';
-	import {
-		ArrowRight,
-		Bot,
-		Box,
-		CheckCircle,
-		Gauge,
-		Link2,
-		Search,
-		Shield,
-		ShieldCheck,
-		Zap
-	} from 'lucide-svelte';
+import GithubIcon from "$lib/components/icons/GithubIcon.svelte";
+import HeroScanPreview from "$lib/components/landing/HeroScanPreview.svelte";
+import { Chip, buttonVariants } from "$lib/components/ui";
+import { SITE } from "$lib/config/site";
+import { cn } from "$lib/utils";
+import {
+	ArrowRight,
+	Bot,
+	Box,
+	CheckCircle,
+	Gauge,
+	Link2,
+	Search,
+	Shield,
+	ShieldCheck,
+	Zap,
+} from "lucide-svelte";
 
-	const metrics = [
-		{ value: '8', label: 'Scanners in one run' },
-		{ value: 'SSE', label: 'Live progress stream' },
-		{ value: '100%', label: 'Self-hosted control' }
-	] as const;
+const metrics = [
+	{ value: "8", label: "Scanners in one run" },
+	{ value: "SSE", label: "Live progress stream" },
+	{ value: "100%", label: "Self-hosted control" },
+] as const;
 
-	const poweredBy = [
-		{ icon: Box, label: 'Podman' },
-		{ icon: ShieldCheck, label: 'axe-core' },
-		{ icon: Gauge, label: 'Lighthouse' },
-		{ icon: Shield, label: 'WCAG 2.1' }
-	] as const;
+const poweredBy = [
+	{ icon: Box, label: "Podman" },
+	{ icon: ShieldCheck, label: "axe-core" },
+	{ icon: Gauge, label: "Lighthouse" },
+	{ icon: Shield, label: "WCAG 2.1" },
+] as const;
 
-	const scanners = [
-		{
-			icon: Shield,
-			name: 'Axe',
-			desc: 'WCAG 2.1 AA/AAA checks with full node-level evidence and violation context.',
-			color: 'text-blue-600',
-			bg: 'bg-blue-50',
-			border: 'border-t-blue-500'
-		},
-		{
-			icon: Zap,
-			name: 'Lighthouse',
-			desc: 'Performance, SEO, and best-practices scoring from the same run pipeline.',
-			color: 'text-amber-600',
-			bg: 'bg-amber-50',
-			border: 'border-t-amber-500'
-		},
-		{
-			icon: Search,
-			name: 'SEO',
-			desc: 'Meta, headings, structured data, and crawlability checks surfaced in one report.',
-			color: 'text-rose-600',
-			bg: 'bg-rose-50',
-			border: 'border-t-rose-500'
-		},
-		{
-			icon: Shield,
-			name: 'Security Headers',
-			desc: 'CSP, HSTS, X-Frame-Options, and critical header posture scoring.',
-			color: 'text-violet-600',
-			bg: 'bg-violet-50',
-			border: 'border-t-violet-500'
-		},
-		{
-			icon: Link2,
-			name: 'Link Checker',
-			desc: 'Broken links, redirect chains, and dead-end paths caught before release.',
-			color: 'text-emerald-600',
-			bg: 'bg-emerald-50',
-			border: 'border-t-emerald-500'
-		},
-		{
-			icon: Bot,
-			name: 'AI Navigator',
-			desc: 'Goal-based journey simulation that catches experience breakpoints early.',
-			color: 'text-fuchsia-600',
-			bg: 'bg-fuchsia-50',
-			border: 'border-t-fuchsia-500'
-		},
-		{
-			icon: Search,
-			name: 'Open Graph',
-			desc: 'Social preview metadata validation for Open Graph tags, Twitter cards, and share readiness.',
-			color: 'text-cyan-600',
-			bg: 'bg-cyan-50',
-			border: 'border-t-cyan-500'
-		},
-		{
-			icon: CheckCircle,
-			name: 'Spelling & Grammar',
-			desc: 'AI-powered spelling, grammar, and content quality checks for polished publication-ready copy.',
-			color: 'text-lime-700',
-			bg: 'bg-lime-50',
-			border: 'border-t-lime-500'
-		}
-	] as const;
+const scanners = [
+	{
+		icon: Shield,
+		name: "Axe",
+		desc: "WCAG 2.1 AA/AAA checks with full node-level evidence and violation context.",
+		color: "text-blue-600",
+		bg: "bg-blue-50",
+		border: "border-t-blue-500",
+	},
+	{
+		icon: Zap,
+		name: "Lighthouse",
+		desc: "Performance, SEO, and best-practices scoring from the same run pipeline.",
+		color: "text-amber-600",
+		bg: "bg-amber-50",
+		border: "border-t-amber-500",
+	},
+	{
+		icon: Search,
+		name: "SEO",
+		desc: "Meta, headings, structured data, and crawlability checks surfaced in one report.",
+		color: "text-rose-600",
+		bg: "bg-rose-50",
+		border: "border-t-rose-500",
+	},
+	{
+		icon: Shield,
+		name: "Security Headers",
+		desc: "CSP, HSTS, X-Frame-Options, and critical header posture scoring.",
+		color: "text-violet-600",
+		bg: "bg-violet-50",
+		border: "border-t-violet-500",
+	},
+	{
+		icon: Link2,
+		name: "Link Checker",
+		desc: "Broken links, redirect chains, and dead-end paths caught before release.",
+		color: "text-emerald-600",
+		bg: "bg-emerald-50",
+		border: "border-t-emerald-500",
+	},
+	{
+		icon: Bot,
+		name: "AI Navigator",
+		desc: "Goal-based journey simulation that catches experience breakpoints early.",
+		color: "text-fuchsia-600",
+		bg: "bg-fuchsia-50",
+		border: "border-t-fuchsia-500",
+	},
+	{
+		icon: Search,
+		name: "Open Graph",
+		desc: "Social preview metadata validation for Open Graph tags, Twitter cards, and share readiness.",
+		color: "text-cyan-600",
+		bg: "bg-cyan-50",
+		border: "border-t-cyan-500",
+	},
+	{
+		icon: CheckCircle,
+		name: "Spelling & Grammar",
+		desc: "AI-powered spelling, grammar, and content quality checks for polished publication-ready copy.",
+		color: "text-lime-700",
+		bg: "bg-lime-50",
+		border: "border-t-lime-500",
+	},
+] as const;
 
-	const workflowSteps = [
-		{
-			step: '01',
-			title: 'Configure the scope',
-			desc: 'Provide URLs or upload a ZIP archive, then choose the scanners needed for that release.',
-			signal: 'Boundary validation prevents invalid scan states before execution.'
-		},
-		{
-			step: '02',
-			title: 'Run isolated scanners',
-			desc: 'Every scanner runs in rootless containers while progress streams live over SSE.',
-			signal: 'Container isolation keeps scanner behavior reproducible and debuggable.'
-		},
-		{
-			step: '03',
-			title: 'Ship with one report',
-			desc: 'Review merged findings with severity, evidence, and WCAG mapping in a single view.',
-			signal: 'Unified output removes context switching across scanner tools.'
-		}
-	] as const;
+const workflowSteps = [
+	{
+		step: "01",
+		title: "Configure the scope",
+		desc: "Provide URLs or upload a ZIP archive, then choose the scanners needed for that release.",
+		signal:
+			"Boundary validation prevents invalid scan states before execution.",
+	},
+	{
+		step: "02",
+		title: "Run isolated scanners",
+		desc: "Every scanner runs in rootless containers while progress streams live over SSE.",
+		signal:
+			"Container isolation keeps scanner behavior reproducible and debuggable.",
+	},
+	{
+		step: "03",
+		title: "Ship with one report",
+		desc: "Review merged findings with severity, evidence, and WCAG mapping in a single view.",
+		signal: "Unified output removes context switching across scanner tools.",
+	},
+] as const;
 
-	const differentiators = [
-		{
-			title: 'Built for self-hosted teams',
-			desc: 'Run everything on your infrastructure. No third-party data relay required.'
-		},
-		{
-			title: 'Operationally transparent',
-			desc: 'Realtime logs and status events show exactly what scanner is running and why.'
-		},
-		{
-			title: 'Actionable remediation',
-			desc: 'Findings include fix guidance and references designed for fast implementation.'
-		},
-		{
-			title: 'One scanning workflow',
-			desc: 'Accessibility, SEO, security, and performance auditing in one execution path.'
-		}
-	] as const;
+const differentiators = [
+	{
+		title: "Built for self-hosted teams",
+		desc: "Run everything on your infrastructure. No third-party data relay required.",
+	},
+	{
+		title: "Operationally transparent",
+		desc: "Realtime logs and status events show exactly what scanner is running and why.",
+	},
+	{
+		title: "Actionable remediation",
+		desc: "Findings include fix guidance and references designed for fast implementation.",
+	},
+	{
+		title: "One scanning workflow",
+		desc: "Accessibility, SEO, security, and performance auditing in one execution path.",
+	},
+] as const;
 
-	const structuredData = JSON.stringify({
-		'@context': 'https://schema.org',
-		'@graph': [
-			{
-				'@type': 'WebSite',
-				name: SITE.name,
-				url: SITE.siteUrl,
-				description: SITE.tagline
-			},
-			{
-				'@type': 'SoftwareApplication',
-				name: SITE.name,
-				url: SITE.siteUrl,
-				description: SITE.tagline,
-				applicationCategory: 'DeveloperApplication',
-				isAccessibleForFree: true,
-				operatingSystem: 'Linux, macOS, Windows',
-				sameAs: [SITE.githubUrl]
-			}
-		]
-	});
+const structuredData = JSON.stringify({
+	"@context": "https://schema.org",
+	"@graph": [
+		{
+			"@type": "WebSite",
+			name: SITE.name,
+			url: SITE.siteUrl,
+			description: SITE.tagline,
+		},
+		{
+			"@type": "SoftwareApplication",
+			name: SITE.name,
+			url: SITE.siteUrl,
+			description: SITE.tagline,
+			applicationCategory: "DeveloperApplication",
+			isAccessibleForFree: true,
+			operatingSystem: "Linux, macOS, Windows",
+			sameAs: [SITE.githubUrl],
+		},
+	],
+});
 </script>
 
 <svelte:head>

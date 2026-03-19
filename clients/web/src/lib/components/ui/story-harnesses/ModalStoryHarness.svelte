@@ -1,40 +1,40 @@
 <script lang="ts">
-	import Modal from '../Modal.svelte';
+import Modal from "../Modal.svelte";
 
-	interface Props {
-		title?: string;
-		openLabel?: string;
-		closeLabel?: string;
-		closeOnBackdrop?: boolean;
-		closeOnEscape?: boolean;
-		trapFocus?: boolean;
-		onClose?: () => void;
-	}
+interface Props {
+	title?: string;
+	openLabel?: string;
+	closeLabel?: string;
+	closeOnBackdrop?: boolean;
+	closeOnEscape?: boolean;
+	trapFocus?: boolean;
+	onClose?: () => void;
+}
 
-	const {
-		title = 'Scanner details',
-		openLabel = 'Open modal',
-		closeLabel = 'Close modal',
-		closeOnBackdrop = true,
-		closeOnEscape = true,
-		trapFocus = true,
-		onClose
-	}: Props = $props();
+const {
+	title = "Scanner details",
+	openLabel = "Open modal",
+	closeLabel = "Close modal",
+	closeOnBackdrop = true,
+	closeOnEscape = true,
+	trapFocus = true,
+	onClose,
+}: Props = $props();
 
-	let open = $state(false);
+let open = $state(false);
 
-	function handleOpen() {
-		open = true;
-	}
+function handleOpen() {
+	open = true;
+}
 
-	function handleClose() {
-		open = false;
-		onClose?.();
-	}
+function handleClose() {
+	open = false;
+	onClose?.();
+}
 
-	function preventNavigate(event: MouseEvent) {
-		event.preventDefault();
-	}
+function preventNavigate(event: MouseEvent) {
+	event.preventDefault();
+}
 </script>
 
 <div class="w-[min(92vw,38rem)] space-y-3">

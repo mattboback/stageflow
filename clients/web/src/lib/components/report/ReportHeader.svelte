@@ -1,34 +1,38 @@
 <script lang="ts">
-	import type { ScanResult } from '$lib/types/scan';
-	import type { UnifiedReport } from '$lib/types/unified-report';
+import type { ScanResult } from "$lib/types/scan";
+import type { UnifiedReport } from "$lib/types/unified-report";
 
-	import { buildApiUrl } from '$lib/api/utils';
-	import { Button, Panel } from '$lib/components/ui';
-	import { cn, formatDuration, formatTimestamp } from '$lib/utils';
-	import { ExternalLink, RefreshCw } from 'lucide-svelte';
+import { buildApiUrl } from "$lib/api/utils";
+import { Button, Panel } from "$lib/components/ui";
+import { cn, formatDuration, formatTimestamp } from "$lib/utils";
+import { ExternalLink, RefreshCw } from "lucide-svelte";
 
-	interface Props {
-		jobId: string;
-		report: UnifiedReport;
-		job: ScanResult | null;
-		onRefreshArtifacts?: () => void;
-	}
+interface Props {
+	jobId: string;
+	report: UnifiedReport;
+	job: ScanResult | null;
+	onRefreshArtifacts?: () => void;
+}
 
-	const { jobId, report, job: _job, onRefreshArtifacts }: Props = $props();
+const { jobId, report, job: _job, onRefreshArtifacts }: Props = $props();
 
-	const jsonUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null);
-	const htmlUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null);
+const jsonUrl = $derived(
+	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null,
+);
+const htmlUrl = $derived(
+	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null,
+);
 
-	const scannedAt = $derived(formatTimestamp(report.meta.scannedAt));
-	const completedAt = $derived(formatTimestamp(report.meta.completedAt));
-	const duration = $derived(formatDuration(report.meta.durationMs));
-	const pagesScanned = $derived(report.summary.pagesScanned ?? 0);
-	const pagesWithIssues = $derived(report.summary.pagesWithIssues ?? 0);
-	const criticalCount = $derived(report.summary.bySeverity?.critical ?? 0);
-	const affectedRatio = $derived.by(() => {
-		if (pagesScanned <= 0) return 0;
-		return Math.round((pagesWithIssues / pagesScanned) * 100);
-	});
+const scannedAt = $derived(formatTimestamp(report.meta.scannedAt));
+const completedAt = $derived(formatTimestamp(report.meta.completedAt));
+const duration = $derived(formatDuration(report.meta.durationMs));
+const pagesScanned = $derived(report.summary.pagesScanned ?? 0);
+const pagesWithIssues = $derived(report.summary.pagesWithIssues ?? 0);
+const criticalCount = $derived(report.summary.bySeverity?.critical ?? 0);
+const affectedRatio = $derived.by(() => {
+	if (pagesScanned <= 0) return 0;
+	return Math.round((pagesWithIssues / pagesScanned) * 100);
+});
 </script>
 
 <Panel

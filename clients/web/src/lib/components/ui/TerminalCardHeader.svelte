@@ -1,24 +1,24 @@
 <script lang="ts">
-	import type { HTMLAttributes } from 'svelte/elements';
+import type { HTMLAttributes } from "svelte/elements";
 
-	import { cn } from '$lib/utils';
+import { cn } from "$lib/utils";
 
-	import type { BadgeVariant } from './badge';
+import type { BadgeVariant } from "./badge";
 
-	import Badge from './Badge.svelte';
+import Badge from "./Badge.svelte";
 
-	interface TerminalBadge {
-		label: string;
-		variant?: BadgeVariant;
-	}
+interface TerminalBadge {
+	label: string;
+	variant?: BadgeVariant;
+}
 
-	interface Props extends HTMLAttributes<HTMLDivElement> {
-		path: string;
-		badges?: TerminalBadge[];
-		class?: string;
-	}
+interface Props extends HTMLAttributes<HTMLDivElement> {
+	path: string;
+	badges?: TerminalBadge[];
+	class?: string;
+}
 
-	const { path, badges = [], class: className, ...rest }: Props = $props();
+const { path, badges = [], class: className, ...rest }: Props = $props();
 </script>
 
 <div

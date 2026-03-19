@@ -1,1 +1,1 @@
-export * from './scanner-manifest';
+export * from "./scanner-manifest";

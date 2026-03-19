@@ -1,53 +1,73 @@
 <script lang="ts">
-	import type { ScanResult } from '$lib/types/scan';
-	import type { UnifiedReport } from '$lib/types/unified-report';
+import type { ScanResult } from "$lib/types/scan";
+import type { UnifiedReport } from "$lib/types/unified-report";
 
-	import { chipVariants, Panel } from '$lib/components/ui';
-	import {
-		formatScannerStatus,
-		getScannerStatusTone,
-		summarizeIssuesByPage,
-		summarizeIssuesByRule
-	} from '$lib/report';
-	import { cn, formatDuration } from '$lib/utils';
-	import { ExternalLink } from 'lucide-svelte';
+import { Panel, chipVariants } from "$lib/components/ui";
+import {
+	formatScannerStatus,
+	getScannerStatusTone,
+	summarizeIssuesByPage,
+	summarizeIssuesByRule,
+} from "$lib/report";
+import { cn, formatDuration } from "$lib/utils";
+import { ExternalLink } from "lucide-svelte";
 
-	import LighthouseSummary from './LighthouseSummary.svelte';
-	import SeverityBreakdown from './SeverityBreakdown.svelte';
+import LighthouseSummary from "./LighthouseSummary.svelte";
+import SeverityBreakdown from "./SeverityBreakdown.svelte";
 
-	interface Props {
-		report: UnifiedReport;
-		job: ScanResult | null;
-		activeScanner: string | null;
-		onSelectScanner: (scannerId: string) => void;
-	}
+interface Props {
+	report: UnifiedReport;
+	job: ScanResult | null;
+	activeScanner: string | null;
+	onSelectScanner: (scannerId: string) => void;
+}
 
-	const { report, job, activeScanner, onSelectScanner }: Props = $props();
+const { report, job, activeScanner, onSelectScanner }: Props = $props();
 
-	const selectedScanner = $derived(
-		report.scanners.find((scanner) => scanner.id === activeScanner) ??
-			report.scanners[0] ??
-			null
-	);
+const selectedScanner = $derived(
+	report.scanners.find((scanner) => scanner.id === activeScanner) ??
+		report.scanners[0] ??
+		null,
+);
 
-	const scannerArtifacts = $derived(job?.artifacts?.scanner_artifacts ?? {});
+const scannerArtifacts = $derived(job?.artifacts?.scanner_artifacts ?? {});
 
-	const scannerIssues = $derived.by(() => {
-		if (!selectedScanner) return [];
-		return report.issues.filter((issue) => issue.scanner === selectedScanner.id);
-	});
+const scannerIssues = $derived.by(() => {
+	if (!selectedScanner) return [];
+	return report.issues.filter((issue) => issue.scanner === selectedScanner.id);
+});
 
-	const pagesById = $derived.by(() =>
-		Object.fromEntries(report.pages.map((page) => [page.id, page]))
-	);
-	const issuesByPage = $derived.by(() => summarizeIssuesByPage(scannerIssues, pagesById));
-	const issuesByRule = $derived.by(() => summarizeIssuesByRule(scannerIssues));
+const pagesById = $derived.by(() =>
+	Object.fromEntries(report.pages.map((page) => [page.id, page])),
+);
+const issuesByPage = $derived.by(() =>
+	summarizeIssuesByPage(scannerIssues, pagesById),
+);
+const issuesByRule = $derived.by(() => summarizeIssuesByRule(scannerIssues));
 
-	const scannerDetailSections = $derived.by(() => [
-		{ id: 'security-headers', title: 'Header gaps', items: issuesByRule.slice(0, 10).map(i => ({ key: i.ruleId, label: i.ruleId, count: i.count })) },
-		{ id: 'seo', title: 'SEO topics', items: issuesByRule.slice(0, 10).map(i => ({ key: i.ruleId, label: i.ruleId, count: i.count })) },
-		{ id: 'link-checker', title: 'Broken links by page', items: issuesByPage.slice(0, 12).map(i => ({ key: i.pageId, label: i.label, count: i.count })) }
-	]);
+const scannerDetailSections = $derived.by(() => [
+	{
+		id: "security-headers",
+		title: "Header gaps",
+		items: issuesByRule
+			.slice(0, 10)
+			.map((i) => ({ key: i.ruleId, label: i.ruleId, count: i.count })),
+	},
+	{
+		id: "seo",
+		title: "SEO topics",
+		items: issuesByRule
+			.slice(0, 10)
+			.map((i) => ({ key: i.ruleId, label: i.ruleId, count: i.count })),
+	},
+	{
+		id: "link-checker",
+		title: "Broken links by page",
+		items: issuesByPage
+			.slice(0, 12)
+			.map((i) => ({ key: i.pageId, label: i.label, count: i.count })),
+	},
+]);
 </script>
 
 {#snippet scannerCard(scanner: UnifiedReport['scanners'][number])}

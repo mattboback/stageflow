@@ -1,37 +1,37 @@
 <script lang="ts">
-	import { buildApiUrl } from '$lib/api/utils';
-	import { buildSiteUrl } from '$lib/config/site';
+import { buildApiUrl } from "$lib/api/utils";
+import { buildSiteUrl } from "$lib/config/site";
 
-	interface Props {
-		jobId: string | null;
-	}
+interface Props {
+	jobId: string | null;
+}
 
-	const { jobId }: Props = $props();
+const { jobId }: Props = $props();
 
-	const snippet = $derived(
-		jobId
-			? `curl -s ${buildApiUrl(`/api/v1/jobs/${jobId}`)} | jq '.state, .violations'`
-			: `suite-runner -suite suite.yml -api ${buildSiteUrl('/')}`
-	);
-	const artifactSnippet = $derived(
-		jobId
-			? `npx playwright test --config=scan.config.ts --job ${jobId}`
-			: `# Upload a suite config, then trigger StageFlow via API`
-	);
+const snippet = $derived(
+	jobId
+		? `curl -s ${buildApiUrl(`/api/v1/jobs/${jobId}`)} | jq '.state, .violations'`
+		: `suite-runner -suite suite.yml -api ${buildSiteUrl("/")}`,
+);
+const artifactSnippet = $derived(
+	jobId
+		? `npx playwright test --config=scan.config.ts --job ${jobId}`
+		: "# Upload a suite config, then trigger StageFlow via API",
+);
 
-	let copiedSnippet = $state<string | null>(null);
+let copiedSnippet = $state<string | null>(null);
 
-	async function copySnippet(code: string, label: string) {
-		try {
-			await navigator.clipboard?.writeText(code);
-			copiedSnippet = label;
-			setTimeout(() => {
-				copiedSnippet = null;
-			}, 2000);
-		} catch {
+async function copySnippet(code: string, label: string) {
+	try {
+		await navigator.clipboard?.writeText(code);
+		copiedSnippet = label;
+		setTimeout(() => {
 			copiedSnippet = null;
-		}
+		}, 2000);
+	} catch {
+		copiedSnippet = null;
 	}
+}
 </script>
 
 <div class="space-y-3">

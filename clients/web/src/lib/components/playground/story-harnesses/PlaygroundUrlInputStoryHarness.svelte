@@ -1,24 +1,24 @@
 <script lang="ts">
-	import PlaygroundUrlInput from '../PlaygroundUrlInput.svelte';
+import PlaygroundUrlInput from "../PlaygroundUrlInput.svelte";
 
-	interface Props {
-		initialUrls?: string;
-		onUrlsChange?: (urls: string) => void;
-		onNormalize?: () => void;
-	}
+interface Props {
+	initialUrls?: string;
+	onUrlsChange?: (urls: string) => void;
+	onNormalize?: () => void;
+}
 
-	const { initialUrls = '', onUrlsChange, onNormalize }: Props = $props();
+const { initialUrls = "", onUrlsChange, onNormalize }: Props = $props();
 
-	let urls = $derived(initialUrls);
+let urls = $derived(initialUrls);
 
-	function handleUrlsChange(nextUrls: string) {
-		urls = nextUrls;
-		onUrlsChange?.(nextUrls);
-	}
+function handleUrlsChange(nextUrls: string) {
+	urls = nextUrls;
+	onUrlsChange?.(nextUrls);
+}
 
-	function handleNormalize() {
-		onNormalize?.();
-	}
+function handleNormalize() {
+	onNormalize?.();
+}
 </script>
 
 <PlaygroundUrlInput urls={urls} onUrlsChange={handleUrlsChange} onNormalize={handleNormalize} />

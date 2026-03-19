@@ -1,109 +1,110 @@
 <script lang="ts">
-	import { Modal } from '$lib/components/ui';
-	import { cn } from '$lib/utils';
-	import { onMount } from 'svelte';
+import { Modal } from "$lib/components/ui";
+import { cn } from "$lib/utils";
+import { onMount } from "svelte";
 
-	interface Props {
-		chart: string;
-		class?: string;
-	}
+interface Props {
+	chart: string;
+	class?: string;
+}
 
-	const { chart, class: className = '' }: Props = $props();
+const { chart, class: className = "" }: Props = $props();
 
-	let containerRef = $state<HTMLDivElement | null>(null);
-	let svg = $state('');
-	const svgDataUrl = $derived.by(() => {
-		if (!svg) return '';
-		return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+const containerRef = $state<HTMLDivElement | null>(null);
+let svg = $state("");
+const svgDataUrl = $derived.by(() => {
+	if (!svg) return "";
+	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+});
+let error = $state("");
+let isLoading = $state(true);
+let isFullscreen = $state(false);
+let renderCount = 0;
+
+async function renderDiagram(chartData: string, diagramId: string) {
+	const mermaid = (await import("mermaid")).default;
+
+	mermaid.initialize({
+		startOnLoad: false,
+		theme: "base",
+		themeVariables: {
+			primaryColor: "#FDE8E4",
+			primaryTextColor: "#111111",
+			primaryBorderColor: "#E23D28",
+			lineColor: "#4B5563",
+			secondaryColor: "#FBFAF7",
+			tertiaryColor: "#FFF3E0",
+			background: "#FFFFFF",
+			mainBkg: "#FFFFFF",
+			secondBkg: "#FBFAF7",
+			clusterBkg: "#FBFAF7",
+			clusterBorder: "#E6E2D8",
+			fontSize: "15px",
+			fontFamily:
+				'"Source Sans 3 Variable", ui-sans-serif, system-ui, -apple-system, sans-serif',
+			edgeLabelBackground: "#FFFFFF",
+			tertiaryTextColor: "#111111",
+			textColor: "#111111",
+			nodeBorder: "#E6E2D8",
+			titleColor: "#111111",
+		},
+		flowchart: {
+			curve: "basis",
+			padding: 24,
+			nodeSpacing: 60,
+			rankSpacing: 60,
+			diagramPadding: 16,
+			useMaxWidth: true,
+		},
+		sequence: {
+			diagramMarginX: 24,
+			diagramMarginY: 24,
+			actorMargin: 80,
+			width: 200,
+			height: 70,
+			boxMargin: 12,
+			boxTextMargin: 8,
+			noteMargin: 12,
+			messageMargin: 50,
+			useMaxWidth: true,
+		},
 	});
-	let error = $state('');
-	let isLoading = $state(true);
-	let isFullscreen = $state(false);
-	let renderCount = 0;
 
-	async function renderDiagram(chartData: string, diagramId: string) {
-		const mermaid = (await import('mermaid')).default;
-
-		mermaid.initialize({
-			startOnLoad: false,
-			theme: 'base',
-			themeVariables: {
-				primaryColor: '#FDE8E4',
-				primaryTextColor: '#111111',
-				primaryBorderColor: '#E23D28',
-				lineColor: '#4B5563',
-				secondaryColor: '#FBFAF7',
-				tertiaryColor: '#FFF3E0',
-				background: '#FFFFFF',
-				mainBkg: '#FFFFFF',
-				secondBkg: '#FBFAF7',
-				clusterBkg: '#FBFAF7',
-				clusterBorder: '#E6E2D8',
-				fontSize: '15px',
-				fontFamily: '"Source Sans 3 Variable", ui-sans-serif, system-ui, -apple-system, sans-serif',
-				edgeLabelBackground: '#FFFFFF',
-				tertiaryTextColor: '#111111',
-				textColor: '#111111',
-				nodeBorder: '#E6E2D8',
-				titleColor: '#111111'
-			},
-			flowchart: {
-				curve: 'basis',
-				padding: 24,
-				nodeSpacing: 60,
-				rankSpacing: 60,
-				diagramPadding: 16,
-				useMaxWidth: true
-			},
-			sequence: {
-				diagramMarginX: 24,
-				diagramMarginY: 24,
-				actorMargin: 80,
-				width: 200,
-				height: 70,
-				boxMargin: 12,
-				boxTextMargin: 8,
-				noteMargin: 12,
-				messageMargin: 50,
-				useMaxWidth: true
-			}
-		});
-
-		try {
-			const { svg: renderedSvg } = await mermaid.render(diagramId, chartData);
-			return { svg: renderedSvg, error: '' };
-		} catch (err) {
-			console.error('Mermaid rendering error:', err);
-			return {
-				svg: '',
-				error: err instanceof Error ? err.message : 'Failed to render diagram'
-			};
-		}
+	try {
+		const { svg: renderedSvg } = await mermaid.render(diagramId, chartData);
+		return { svg: renderedSvg, error: "" };
+	} catch (err) {
+		console.error("Mermaid rendering error:", err);
+		return {
+			svg: "",
+			error: err instanceof Error ? err.message : "Failed to render diagram",
+		};
 	}
+}
 
-	onMount(() => {
-		if (chart) {
-			renderCount += 1;
-			const id = `mermaid-${renderCount}-${Date.now()}`;
+onMount(() => {
+	if (chart) {
+		renderCount += 1;
+		const id = `mermaid-${renderCount}-${Date.now()}`;
 
-			void renderDiagram(chart, id).then((result) => {
-				svg = result.svg;
-				error = result.error;
-				isLoading = false;
-			});
-		} else {
+		void renderDiagram(chart, id).then((result) => {
+			svg = result.svg;
+			error = result.error;
 			isLoading = false;
-			error = 'No chart data provided';
-		}
-	});
-
-	function openFullscreen() {
-		isFullscreen = true;
+		});
+	} else {
+		isLoading = false;
+		error = "No chart data provided";
 	}
+});
 
-	function closeFullscreen() {
-		isFullscreen = false;
-	}
+function openFullscreen() {
+	isFullscreen = true;
+}
+
+function closeFullscreen() {
+	isFullscreen = false;
+}
 </script>
 
 <svelte:boundary onerror={(e) => console.error('Mermaid diagram render error:', e)}>

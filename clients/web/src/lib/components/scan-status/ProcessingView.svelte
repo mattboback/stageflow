@@ -1,98 +1,122 @@
 <script lang="ts">
-	import type { ScanResult } from '$lib/types/scan';
+import type { ScanResult } from "$lib/types/scan";
 
-	import { Progress } from '$lib/components/ui';
-	import { Clock, FileSearch, Loader2, Server } from 'lucide-svelte';
+import { Progress } from "$lib/components/ui";
+import { Clock, FileSearch, Loader2, Server } from "lucide-svelte";
 
-	import ScanTerminal from './ScanTerminal.svelte';
+import ScanTerminal from "./ScanTerminal.svelte";
 
-	interface Props {
-		result: ScanResult | null;
-		logs: string[];
-	}
+interface Props {
+	result: ScanResult | null;
+	logs: string[];
+}
 
-	const { result, logs }: Props = $props();
+const { result, logs }: Props = $props();
 
-	function getStageInfo(
-		state?: string,
-		progress?: { current_page: number; total_pages: number }
-	): { stage: string; icon: typeof Clock; description: string } {
-		const normalizedState = (state || '').toUpperCase();
+function getStageInfo(
+	state?: string,
+	progress?: { current_page: number; total_pages: number },
+): { stage: string; icon: typeof Clock; description: string } {
+	const normalizedState = (state || "").toUpperCase();
 
-		switch (normalizedState) {
-			case 'PENDING':
-				return { stage: 'Queued', icon: Clock, description: 'Waiting for available worker...' };
-			case 'EXTRACTING':
-				return { stage: 'Extracting', icon: Server, description: 'Processing uploaded content...' };
-			case 'READY_TO_SCAN':
-				return { stage: 'Preparing', icon: FileSearch, description: 'Analyzing site structure...' };
-			case 'SCANNING':
-				if (progress) {
-					return {
-						stage: 'Scanning',
-						icon: Loader2,
-						description: `Auditing page ${progress.current_page} of ${progress.total_pages}`
-					};
-				}
-				return { stage: 'Scanning', icon: Loader2, description: 'Running accessibility checks...' };
-			case 'COMPLETING':
-				return { stage: 'Finalizing', icon: FileSearch, description: 'Generating reports...' };
-			default:
+	switch (normalizedState) {
+		case "PENDING":
+			return {
+				stage: "Queued",
+				icon: Clock,
+				description: "Waiting for available worker...",
+			};
+		case "EXTRACTING":
+			return {
+				stage: "Extracting",
+				icon: Server,
+				description: "Processing uploaded content...",
+			};
+		case "READY_TO_SCAN":
+			return {
+				stage: "Preparing",
+				icon: FileSearch,
+				description: "Analyzing site structure...",
+			};
+		case "SCANNING":
+			if (progress) {
 				return {
-					stage: 'Processing',
+					stage: "Scanning",
 					icon: Loader2,
-					description: 'Initializing scan environment...'
+					description: `Auditing page ${progress.current_page} of ${progress.total_pages}`,
 				};
-		}
+			}
+			return {
+				stage: "Scanning",
+				icon: Loader2,
+				description: "Running accessibility checks...",
+			};
+		case "COMPLETING":
+			return {
+				stage: "Finalizing",
+				icon: FileSearch,
+				description: "Generating reports...",
+			};
+		default:
+			return {
+				stage: "Processing",
+				icon: Loader2,
+				description: "Initializing scan environment...",
+			};
+	}
+}
+
+function estimateTimeRemaining(progress?: {
+	current_page: number;
+	total_pages: number;
+}): string {
+	if (!progress || progress.current_page === 0) {
+		return "Calculating...";
 	}
 
-	function estimateTimeRemaining(progress?: { current_page: number; total_pages: number }): string {
-		if (!progress || progress.current_page === 0) {
-			return 'Calculating...';
-		}
+	const avgSecondsPerPage = 8;
+	const remainingPages = progress.total_pages - progress.current_page;
+	const remainingSeconds = remainingPages * avgSecondsPerPage;
 
-		const avgSecondsPerPage = 8;
-		const remainingPages = progress.total_pages - progress.current_page;
-		const remainingSeconds = remainingPages * avgSecondsPerPage;
-
-		if (remainingSeconds < 60) {
-			return `~${remainingSeconds}s remaining`;
-		}
-		const minutes = Math.ceil(remainingSeconds / 60);
-		return `~${minutes} min remaining`;
+	if (remainingSeconds < 60) {
+		return `~${remainingSeconds}s remaining`;
 	}
+	const minutes = Math.ceil(remainingSeconds / 60);
+	return `~${minutes} min remaining`;
+}
 
-	function formatScannerName(scannerType: string): string {
-		switch (scannerType) {
-			case 'axe':
-				return 'axe-core';
-			case 'seo':
-				return 'SEO';
-			case 'ai-navigator':
-				return 'AI Navigator';
-			case 'link-checker':
-				return 'Link Checker';
-			case 'security-headers':
-				return 'Security Headers';
-			case 'lighthouse':
-				return 'Lighthouse';
-			default:
-				return scannerType
-					.split('-')
-					.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-					.join(' ');
-		}
+function formatScannerName(scannerType: string): string {
+	switch (scannerType) {
+		case "axe":
+			return "axe-core";
+		case "seo":
+			return "SEO";
+		case "ai-navigator":
+			return "AI Navigator";
+		case "link-checker":
+			return "Link Checker";
+		case "security-headers":
+			return "Security Headers";
+		case "lighthouse":
+			return "Lighthouse";
+		default:
+			return scannerType
+				.split("-")
+				.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+				.join(" ");
 	}
+}
 
-	const stageInfo = $derived(getStageInfo(result?.state, result?.progress));
-	const estimatedTime = $derived(
-		result?.remaining_scanners?.length === 1 && result.remaining_scanners[0] === 'lighthouse'
-			? 'Waiting on Lighthouse'
-			: estimateTimeRemaining(result?.progress)
-	);
-	const percentage = $derived(result?.progress?.percentage ?? 0);
-	const completedScanners = $derived(result?.completed_scanners ?? []);
-	const remainingScanners = $derived(result?.remaining_scanners ?? []);
+const stageInfo = $derived(getStageInfo(result?.state, result?.progress));
+const estimatedTime = $derived(
+	result?.remaining_scanners?.length === 1 &&
+		result.remaining_scanners[0] === "lighthouse"
+		? "Waiting on Lighthouse"
+		: estimateTimeRemaining(result?.progress),
+);
+const percentage = $derived(result?.progress?.percentage ?? 0);
+const completedScanners = $derived(result?.completed_scanners ?? []);
+const remainingScanners = $derived(result?.remaining_scanners ?? []);
 </script>
 
 <div class="space-y-8">

@@ -5,28 +5,28 @@
  */
 
 import {
-	connect as connectNats,
 	type JetStreamClient,
 	type NatsConnection,
-	StringCodec
-} from 'nats';
+	StringCodec,
+	connect as connectNats,
+} from "nats";
 
 import type {
 	MessagingConfig,
 	PageScanResult,
 	ScanEventPublisher,
-	ScannerLogger,
 	ScanResults,
-	ScanTiming
-} from './types';
+	ScanTiming,
+	ScannerLogger,
+} from "./types";
 
-import { createLogger } from '../utils/logger';
-import { reportPath, resultsPath } from './artifact-paths';
+import { createLogger } from "../utils/logger";
+import { reportPath, resultsPath } from "./artifact-paths";
 
 const DEFAULT_SUBJECTS = {
-	pageCompleted: 'scan.events.page.completed',
-	scanCompleted: 'scan.events.completed',
-	scanFailed: 'scan.events.failed'
+	pageCompleted: "scan.events.page.completed",
+	scanCompleted: "scan.events.completed",
+	scanFailed: "scan.events.failed",
 };
 
 export interface EventEnvelope<T = unknown> {
@@ -47,26 +47,26 @@ export class NatsEventPublisher implements ScanEventPublisher {
 	private readonly requestId?: string;
 	private readonly runId?: string;
 	private readonly scannerName: string;
-	private readonly subjects: MessagingConfig['subjects'];
+	private readonly subjects: MessagingConfig["subjects"];
 	private readonly logger: ScannerLogger;
 
 	constructor(
 		jobId: string,
 		scannerName: string,
-		subjects?: Partial<MessagingConfig['subjects']>,
+		subjects?: Partial<MessagingConfig["subjects"]>,
 		logger?: ScannerLogger,
-		correlation?: { requestId?: string; runId?: string }
+		correlation?: { requestId?: string; runId?: string },
 	) {
 		this.jobId = jobId;
 		this.scannerName = scannerName;
 		this.subjects = { ...DEFAULT_SUBJECTS, ...subjects };
-		this.logger = logger ?? createLogger('EventPublisher');
+		this.logger = logger ?? createLogger("EventPublisher");
 		this.requestId = correlation?.requestId;
 		this.runId = correlation?.runId;
 	}
 
 	async connect(url: string): Promise<void> {
-		this.logger.info('Connecting to NATS', { url });
+		this.logger.info("Connecting to NATS", { url });
 		this.connection = await connectNats({
 			servers: url,
 			name: `scanner-${this.scannerName}-${this.jobId}`,
@@ -74,32 +74,41 @@ export class NatsEventPublisher implements ScanEventPublisher {
 			maxReconnectAttempts: -1,
 			reconnectTimeWait: 1000,
 			pingInterval: 20_000,
-			maxPingOut: 5
+			maxPingOut: 5,
 		});
 		this.jetstream = this.connection.jetstream();
-		this.logger.info('Connected to NATS');
+		this.logger.info("Connected to NATS");
 	}
 
-	async publishPageCompleted(result: PageScanResult, index: number, total: number): Promise<void> {
-		await this.publish(this.subjects.pageCompleted, 'scan.page.completed', {
+	async publishPageCompleted(
+		result: PageScanResult,
+		index: number,
+		total: number,
+	): Promise<void> {
+		await this.publish(this.subjects.pageCompleted, "scan.page.completed", {
 			job_id: this.jobId,
 			scanner_type: this.scannerName,
 			page_id: result.pageId,
 			page_index: index,
-			total_pages: total
+			total_pages: total,
 		});
 	}
 
 	async publishScanCompleted(
 		results: ScanResults,
 		timing?: ScanTiming,
-		artifacts?: { stageLogPath?: string; recipePath?: string; reportPath?: string }
+		artifacts?: {
+			stageLogPath?: string;
+			recipePath?: string;
+			reportPath?: string;
+		},
 	): Promise<void> {
-		await this.publish(this.subjects.scanCompleted, 'scan.completed', {
+		await this.publish(this.subjects.scanCompleted, "scan.completed", {
 			job_id: this.jobId,
 			scanner_type: this.scannerName,
 			results_path: resultsPath(this.jobId, this.scannerName),
-			report_path: artifacts?.reportPath ?? reportPath(this.jobId, this.scannerName),
+			report_path:
+				artifacts?.reportPath ?? reportPath(this.jobId, this.scannerName),
 			stage_log_path: artifacts?.stageLogPath,
 			recipe_path: artifacts?.recipePath,
 			total_pages_scanned: results.pages.length,
@@ -110,7 +119,7 @@ export class NatsEventPublisher implements ScanEventPublisher {
 				critical_issues: results.summary.bySeverity.critical,
 				serious_issues: results.summary.bySeverity.serious,
 				moderate_issues: results.summary.bySeverity.moderate,
-				minor_issues: results.summary.bySeverity.minor
+				minor_issues: results.summary.bySeverity.minor,
 			},
 			timing: timing
 				? {
@@ -119,29 +128,29 @@ export class NatsEventPublisher implements ScanEventPublisher {
 						write_results_ms: timing.writeResultsMs,
 						upload_artifacts_ms: timing.uploadArtifactsMs,
 						publish_completed_ms: timing.publishCompletedMs,
-						finalization_ms: timing.finalizationMs
+						finalization_ms: timing.finalizationMs,
 					}
-				: undefined
+				: undefined,
 		});
 	}
 
 	async publishScanFailed(
 		error: string,
 		details?: string,
-		artifacts?: { stageLogPath?: string; recipePath?: string }
+		artifacts?: { stageLogPath?: string; recipePath?: string },
 	): Promise<void> {
 		await this.publish(
 			this.subjects.scanFailed,
-			'scan.failed',
+			"scan.failed",
 			{
 				job_id: this.jobId,
 				scanner_type: this.scannerName,
 				error,
 				error_details: details,
 				stage_log_path: artifacts?.stageLogPath,
-				recipe_path: artifacts?.recipePath
+				recipe_path: artifacts?.recipePath,
 			},
-			true
+			true,
 		);
 	}
 
@@ -152,10 +161,10 @@ export class NatsEventPublisher implements ScanEventPublisher {
 
 		try {
 			await this.connection.drain();
-			this.logger.info('NATS connection drained');
+			this.logger.info("NATS connection drained");
 		} catch (err) {
-			this.logger.warn('Failed to drain NATS connection', {
-				error: err instanceof Error ? err.message : String(err)
+			this.logger.warn("Failed to drain NATS connection", {
+				error: err instanceof Error ? err.message : String(err),
 			});
 			try {
 				await this.connection.close();
@@ -172,14 +181,14 @@ export class NatsEventPublisher implements ScanEventPublisher {
 		subject: string,
 		event: string,
 		payload: unknown,
-		suppressErrors = false
+		suppressErrors = false,
 	): Promise<void> {
 		if (!this.jetstream) {
 			if (suppressErrors) {
-				this.logger.warn('Cannot publish - not connected to NATS', { event });
+				this.logger.warn("Cannot publish - not connected to NATS", { event });
 				return;
 			}
-			throw new Error('Not connected to NATS');
+			throw new Error("Not connected to NATS");
 		}
 
 		const envelope: EventEnvelope = {
@@ -189,17 +198,20 @@ export class NatsEventPublisher implements ScanEventPublisher {
 			run_id: this.runId,
 			timestamp: new Date().toISOString(),
 			producer: this.scannerName,
-			payload
+			payload,
 		};
 
 		try {
-			await this.jetstream.publish(subject, this.codec.encode(JSON.stringify(envelope)));
-			this.logger.debug('Published event', { subject, event });
+			await this.jetstream.publish(
+				subject,
+				this.codec.encode(JSON.stringify(envelope)),
+			);
+			this.logger.debug("Published event", { subject, event });
 		} catch (err) {
-			this.logger.error('Failed to publish event', {
+			this.logger.error("Failed to publish event", {
 				subject,
 				event,
-				error: err instanceof Error ? err.message : String(err)
+				error: err instanceof Error ? err.message : String(err),
 			});
 			if (!suppressErrors) {
 				throw err;
@@ -216,7 +228,11 @@ export class NoOpEventPublisher implements ScanEventPublisher {
 	async publishScanCompleted(
 		_results: ScanResults,
 		_timing?: ScanTiming,
-		_artifacts?: { stageLogPath?: string; recipePath?: string; reportPath?: string }
+		_artifacts?: {
+			stageLogPath?: string;
+			recipePath?: string;
+			reportPath?: string;
+		},
 	): Promise<void> {
 		return Promise.resolve();
 	}
@@ -224,7 +240,7 @@ export class NoOpEventPublisher implements ScanEventPublisher {
 	async publishScanFailed(
 		_error?: string,
 		_details?: string,
-		_artifacts?: { stageLogPath?: string; recipePath?: string }
+		_artifacts?: { stageLogPath?: string; recipePath?: string },
 	): Promise<void> {
 		return Promise.resolve();
 	}

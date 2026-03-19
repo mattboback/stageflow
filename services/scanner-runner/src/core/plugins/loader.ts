@@ -6,10 +6,10 @@
 
 export { createPluginLoader, PluginLoader } from "./plugin-loader";
 export type {
-  PluginDiscoveryError,
-  PluginDiscoveryResult,
-  PluginInfo,
-  PluginLoaderConfig,
-  PluginLoadResult,
-  ScannerPlugin,
+	PluginDiscoveryError,
+	PluginDiscoveryResult,
+	PluginInfo,
+	PluginLoaderConfig,
+	PluginLoadResult,
+	ScannerPlugin,
 } from "./plugin-loader-types";

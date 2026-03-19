@@ -1,17 +1,17 @@
 <script lang="ts">
-	import { GithubIcon } from '$lib/components/icons';
-	import { Modal } from '$lib/components/ui';
-	import { navLinks } from '$lib/config/nav';
-	import { SITE } from '$lib/config/site';
-	import { cn } from '$lib/utils';
+import { GithubIcon } from "$lib/components/icons";
+import { Modal } from "$lib/components/ui";
+import { navLinks } from "$lib/config/nav";
+import { SITE } from "$lib/config/site";
+import { cn } from "$lib/utils";
 
-	interface Props {
-		isOpen: boolean;
-		onClose: () => void;
-		isActive: (href: string) => boolean;
-	}
+interface Props {
+	isOpen: boolean;
+	onClose: () => void;
+	isActive: (href: string) => boolean;
+}
 
-	const { isOpen, onClose, isActive }: Props = $props();
+const { isOpen, onClose, isActive }: Props = $props();
 </script>
 
 <Modal

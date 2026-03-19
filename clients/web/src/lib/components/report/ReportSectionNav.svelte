@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { ReportAudience } from '$lib/types/report-audience';
-	import type { UnifiedReport } from '$lib/types/unified-report';
+import type { ReportAudience } from "$lib/types/report-audience";
+import type { UnifiedReport } from "$lib/types/unified-report";
 
-	import { Panel } from '$lib/components/ui';
-	import { cn } from '$lib/utils';
+import { Panel } from "$lib/components/ui";
+import { cn } from "$lib/utils";
 
 interface Section {
 	id: string;
@@ -12,34 +12,62 @@ interface Section {
 	count?: number;
 }
 
-	interface Props {
-		section: string;
-		report: UnifiedReport;
-		audience?: ReportAudience;
-		onSectionChange: (sectionId: string) => void;
-		onAudienceChange?: (audience: ReportAudience) => void;
-	}
+interface Props {
+	section: string;
+	report: UnifiedReport;
+	audience?: ReportAudience;
+	onSectionChange: (sectionId: string) => void;
+	onAudienceChange?: (audience: ReportAudience) => void;
+}
 
-	const { section, report, audience = 'pm', onSectionChange, onAudienceChange }: Props = $props();
+const {
+	section,
+	report,
+	audience = "pm",
+	onSectionChange,
+	onAudienceChange,
+}: Props = $props();
 
-	const sections = $derived<Section[]>([
-		{ id: 'overview', label: 'Overview', shortLabel: 'Overview' },
-		{ id: 'issues', label: 'Issues', shortLabel: 'Issues', count: report.issues.length },
-		{ id: 'pages', label: 'Pages', shortLabel: 'Pages', count: report.pages.length },
-		{ id: 'scanners', label: 'Scanners', shortLabel: 'Scans', count: report.scanners.length },
-		{ id: 'artifacts', label: 'Artifacts', shortLabel: 'Files' },
-		{ id: 'errors', label: 'Errors', shortLabel: 'Errors', count: report.errors?.length ?? 0 }
+const sections = $derived<Section[]>(
+	[
+		{ id: "overview", label: "Overview", shortLabel: "Overview" },
+		{
+			id: "issues",
+			label: "Issues",
+			shortLabel: "Issues",
+			count: report.issues.length,
+		},
+		{
+			id: "pages",
+			label: "Pages",
+			shortLabel: "Pages",
+			count: report.pages.length,
+		},
+		{
+			id: "scanners",
+			label: "Scanners",
+			shortLabel: "Scans",
+			count: report.scanners.length,
+		},
+		{ id: "artifacts", label: "Artifacts", shortLabel: "Files" },
+		{
+			id: "errors",
+			label: "Errors",
+			shortLabel: "Errors",
+			count: report.errors?.length ?? 0,
+		},
 	].filter((item) => {
-		if (item.id !== 'errors') return true;
-		if (section === 'errors') return true;
+		if (item.id !== "errors") return true;
+		if (section === "errors") return true;
 		return (item.count ?? 0) > 0;
-	}));
+	}),
+);
 
-	const audienceOptions: { id: ReportAudience; label: string; hint: string }[] = [
-		{ id: 'pm', label: 'PM', hint: 'Screenshots + impact' },
-		{ id: 'engineer', label: 'Engineer', hint: 'Rules + code details' },
-		{ id: 'designer', label: 'Designer', hint: 'Visual context' }
-	];
+const audienceOptions: { id: ReportAudience; label: string; hint: string }[] = [
+	{ id: "pm", label: "PM", hint: "Screenshots + impact" },
+	{ id: "engineer", label: "Engineer", hint: "Rules + code details" },
+	{ id: "designer", label: "Designer", hint: "Visual context" },
+];
 </script>
 
 <Panel

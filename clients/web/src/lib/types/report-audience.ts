@@ -1,12 +1,14 @@
-export type ReportAudience = 'pm' | 'engineer' | 'designer';
+export type ReportAudience = "pm" | "engineer" | "designer";
 
-export function parseReportAudience(value: string | null | undefined): ReportAudience {
+export function parseReportAudience(
+	value: string | null | undefined,
+): ReportAudience {
 	switch (value) {
-		case 'pm':
-		case 'engineer':
-		case 'designer':
+		case "pm":
+		case "engineer":
+		case "designer":
 			return value;
 		default:
-			return 'pm';
+			return "pm";
 	}
 }

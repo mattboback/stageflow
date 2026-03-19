@@ -1,53 +1,63 @@
 <script lang="ts">
-	import type { ScreenshotArtifact } from '$lib/types/scan';
-	import type { IssueDetail, UnifiedReport } from '$lib/types/unified-report';
+import type { ScreenshotArtifact } from "$lib/types/scan";
+import type { IssueDetail, UnifiedReport } from "$lib/types/unified-report";
 
-	import { Panel } from '$lib/components/ui';
-	import { getPageOverviewUrl, getSeverityBadgeClass } from '$lib/report';
-	import { cn } from '$lib/utils';
+import { Panel } from "$lib/components/ui";
+import { getPageOverviewUrl, getSeverityBadgeClass } from "$lib/report";
+import { cn } from "$lib/utils";
 
-	import PageOverviewViewer from './PageOverviewViewer.svelte';
+import PageOverviewViewer from "./PageOverviewViewer.svelte";
 
-	interface Props {
-		report: UnifiedReport;
-		screenshots: ScreenshotArtifact[];
-		activeScanner: string | null;
-		activePage: string | null;
-		onSelectPage: (pageId: string) => void;
-		onIssueSelect: (issue: IssueDetail, highlightedElementId?: string) => void;
-	}
+interface Props {
+	report: UnifiedReport;
+	screenshots: ScreenshotArtifact[];
+	activeScanner: string | null;
+	activePage: string | null;
+	onSelectPage: (pageId: string) => void;
+	onIssueSelect: (issue: IssueDetail, highlightedElementId?: string) => void;
+}
 
-	const { report, screenshots, activeScanner, activePage, onSelectPage, onIssueSelect }: Props =
-		$props();
+const {
+	report,
+	screenshots,
+	activeScanner,
+	activePage,
+	onSelectPage,
+	onIssueSelect,
+}: Props = $props();
 
-	const selectedPage = $derived(
-		report.pages.find((page) => page.id === activePage) ?? report.pages[0] ?? null
-	);
+const selectedPage = $derived(
+	report.pages.find((page) => page.id === activePage) ??
+		report.pages[0] ??
+		null,
+);
 
-	const issuesByPage = $derived.by(() => {
-		const map: Record<string, IssueDetail[]> = {};
-		for (const issue of report.issues) {
-			if (activeScanner && issue.scanner !== activeScanner) {
-				continue;
-			}
-			const list = map[issue.pageId] ?? [];
-			list.push(issue);
-			map[issue.pageId] = list;
+const issuesByPage = $derived.by(() => {
+	const map: Record<string, IssueDetail[]> = {};
+	for (const issue of report.issues) {
+		if (activeScanner && issue.scanner !== activeScanner) {
+			continue;
 		}
-		return map;
-	});
+		const list = map[issue.pageId] ?? [];
+		list.push(issue);
+		map[issue.pageId] = list;
+	}
+	return map;
+});
 
-	const selectedIssues = $derived(selectedPage ? (issuesByPage[selectedPage.id] ?? []) : []);
+const selectedIssues = $derived(
+	selectedPage ? (issuesByPage[selectedPage.id] ?? []) : [],
+);
 
-	const overviewUrl = $derived(
-		selectedPage
-			? getPageOverviewUrl(
-					screenshots,
-					selectedPage.id,
-					activeScanner ? [activeScanner, 'axe'] : ['axe']
-				)
-			: null
-	);
+const overviewUrl = $derived(
+	selectedPage
+		? getPageOverviewUrl(
+				screenshots,
+				selectedPage.id,
+				activeScanner ? [activeScanner, "axe"] : ["axe"],
+			)
+		: null,
+);
 </script>
 
 {#snippet pageRow(page: UnifiedReport['pages'][number])}

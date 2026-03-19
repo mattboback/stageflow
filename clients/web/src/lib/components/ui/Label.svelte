@@ -1,16 +1,21 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import type { HTMLLabelAttributes } from 'svelte/elements';
+import type { Snippet } from "svelte";
+import type { HTMLLabelAttributes } from "svelte/elements";
 
-	import { cn } from '$lib/utils';
+import { cn } from "$lib/utils";
 
-	interface Props extends HTMLLabelAttributes {
-		class?: string;
-		required?: boolean;
-		children: Snippet;
-	}
+interface Props extends HTMLLabelAttributes {
+	class?: string;
+	required?: boolean;
+	children: Snippet;
+}
 
-	const { class: className, required = false, children, ...rest }: Props = $props();
+const {
+	class: className,
+	required = false,
+	children,
+	...rest
+}: Props = $props();
 </script>
 
 <label class={cn('text-ink-muted mb-1 block text-sm font-medium', className)} {...rest}>

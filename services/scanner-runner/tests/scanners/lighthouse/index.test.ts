@@ -5,21 +5,21 @@
  * The actual Lighthouse integration requires browser/CDP and is not unit-tested.
  */
 
-import fs from 'node:fs';
-import { chromium, type BrowserContext, type Page } from 'playwright';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from "node:fs";
+import { type BrowserContext, type Page, chromium } from "playwright";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
 	Issue,
 	PageEntry,
 	ScanContext,
 	ScannerConfig,
-	ScannerLogger
-} from '../../../src/core/types';
+	ScannerLogger,
+} from "../../../src/core/types";
 
-import { ScannerBase } from '../../../src/core/scanner-base';
-import { LighthouseScanner } from '../../../src/scanners/lighthouse';
-import * as playwrightUtils from '../../../src/utils/playwright';
+import { ScannerBase } from "../../../src/core/scanner-base";
+import { LighthouseScanner } from "../../../src/scanners/lighthouse";
+import * as playwrightUtils from "../../../src/utils/playwright";
 
 const scanner = new LighthouseScanner();
 const originalLighthouseChromePath = process.env.LIGHTHOUSE_CHROME_PATH;
@@ -32,9 +32,9 @@ function callPrivateMethod(
 	methodName: string,
 	...args: unknown[]
 ): unknown {
-	const method = (instance as unknown as Record<string, (...args: unknown[]) => unknown>)[
-		methodName
-	];
+	const method = (
+		instance as unknown as Record<string, (...args: unknown[]) => unknown>
+	)[methodName];
 	if (!method) {
 		throw new Error(`Unknown method: ${methodName}`);
 	}
@@ -46,14 +46,14 @@ const createMockLogger = (): ScannerLogger => ({
 	info: vi.fn(),
 	warn: vi.fn(),
 	error: vi.fn(),
-	debug: vi.fn()
+	debug: vi.fn(),
 });
 
 const createScannerConfig = (options?: unknown): ScannerConfig => ({
-	jobId: 'test-job',
-	provenancePath: '/tmp/provenance.json',
-	resultsDir: '/tmp/results',
-	scannerName: 'lighthouse',
+	jobId: "test-job",
+	provenancePath: "/tmp/provenance.json",
+	resultsDir: "/tmp/results",
+	scannerName: "lighthouse",
 	concurrency: 1,
 	maxRetries: 0,
 	browser: {
@@ -62,51 +62,55 @@ const createScannerConfig = (options?: unknown): ScannerConfig => ({
 		defaultViewport: { width: 1280, height: 720 },
 		deviceScaleFactor: 1,
 		defaultTimeout: 30000,
-		pageLoadTimeout: 30000
+		pageLoadTimeout: 30000,
 	},
 	storage: {
-		endpoint: 'localhost:9000',
-		accessKey: 'test',
-		secretKey: 'test',
+		endpoint: "localhost:9000",
+		accessKey: "test",
+		secretKey: "test",
 		useSSL: false,
-		bucket: 'test'
+		bucket: "test",
 	},
 	messaging: {
-		url: 'nats://localhost:4222',
+		url: "nats://localhost:4222",
 		subjects: {
-			pageCompleted: 'scan.page.completed',
-			scanCompleted: 'scan.completed',
-			scanFailed: 'scan.failed'
-		}
+			pageCompleted: "scan.page.completed",
+			scanCompleted: "scan.completed",
+			scanFailed: "scan.failed",
+		},
 	},
-	...(options !== undefined ? { options: options as unknown as Record<string, unknown> } : {})
+	...(options !== undefined
+		? { options: options as unknown as Record<string, unknown> }
+		: {}),
 });
 
 const createMockPage = (overrides: Partial<Page> = {}): Page =>
 	({
 		goto: vi.fn().mockResolvedValue(null),
-		...overrides
+		...overrides,
 	}) as unknown as Page;
 
-const createMockContext = (overrides: Partial<ScanContext> = {}): ScanContext => {
+const createMockContext = (
+	overrides: Partial<ScanContext> = {},
+): ScanContext => {
 	const pageEntry: PageEntry = {
-		id: 'page-1',
-		url: 'https://example.com/page',
-		path: '/page'
+		id: "page-1",
+		url: "https://example.com/page",
+		path: "/page",
 	};
 
 	return {
 		page: createMockPage(),
 		context: {} as BrowserContext,
 		pageEntry,
-		resultsDir: '/tmp/results',
+		resultsDir: "/tmp/results",
 		config: createScannerConfig(),
 		logger: createMockLogger(),
-		...overrides
+		...overrides,
 	};
 };
 
-describe('LighthouseScanner', () => {
+describe("LighthouseScanner", () => {
 	beforeEach(() => {
 		delete process.env.LIGHTHOUSE_CHROME_PATH;
 		delete process.env.CHROME_PATH;
@@ -132,176 +136,225 @@ describe('LighthouseScanner', () => {
 		vi.restoreAllMocks();
 	});
 
-	describe('metadata', () => {
-		it('has correct scanner name', () => {
-			expect(scanner.metadata.name).toBe('lighthouse');
+	describe("metadata", () => {
+		it("has correct scanner name", () => {
+			expect(scanner.metadata.name).toBe("lighthouse");
 		});
 
-		it('has version', () => {
+		it("has version", () => {
 			expect(scanner.metadata.version).toBeDefined();
 		});
 
-		it('has description', () => {
-			expect(scanner.metadata.description).toContain('Lighthouse');
+		it("has description", () => {
+			expect(scanner.metadata.description).toContain("Lighthouse");
 		});
 	});
 
-	describe('mapScoreToSeverity', () => {
+	describe("mapScoreToSeverity", () => {
 		it("returns 'info' for null score", () => {
-			const result = callPrivateMethod(scanner, 'mapScoreToSeverity', null) as string;
-			expect(result).toBe('info');
+			const result = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				null,
+			) as string;
+			expect(result).toBe("info");
 		});
 
 		it("returns 'critical' for score of 0", () => {
-			const result = callPrivateMethod(scanner, 'mapScoreToSeverity', 0) as string;
-			expect(result).toBe('critical');
+			const result = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0,
+			) as string;
+			expect(result).toBe("critical");
 		});
 
 		it("returns 'serious' for score below 0.5", () => {
-			const result = callPrivateMethod(scanner, 'mapScoreToSeverity', 0.3) as string;
-			expect(result).toBe('serious');
+			const result = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0.3,
+			) as string;
+			expect(result).toBe("serious");
 
-			const result2 = callPrivateMethod(scanner, 'mapScoreToSeverity', 0.49) as string;
-			expect(result2).toBe('serious');
+			const result2 = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0.49,
+			) as string;
+			expect(result2).toBe("serious");
 		});
 
 		it("returns 'moderate' for score between 0.5 and 0.9", () => {
-			const result = callPrivateMethod(scanner, 'mapScoreToSeverity', 0.5) as string;
-			expect(result).toBe('moderate');
+			const result = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0.5,
+			) as string;
+			expect(result).toBe("moderate");
 
-			const result2 = callPrivateMethod(scanner, 'mapScoreToSeverity', 0.89) as string;
-			expect(result2).toBe('moderate');
+			const result2 = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0.89,
+			) as string;
+			expect(result2).toBe("moderate");
 		});
 
 		it("returns 'minor' for score 0.9 or above", () => {
-			const result = callPrivateMethod(scanner, 'mapScoreToSeverity', 0.9) as string;
-			expect(result).toBe('minor');
+			const result = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0.9,
+			) as string;
+			expect(result).toBe("minor");
 
-			const result2 = callPrivateMethod(scanner, 'mapScoreToSeverity', 0.95) as string;
-			expect(result2).toBe('minor');
+			const result2 = callPrivateMethod(
+				scanner,
+				"mapScoreToSeverity",
+				0.95,
+			) as string;
+			expect(result2).toBe("minor");
 		});
 	});
 
-	describe('getAuditCategory', () => {
+	describe("getAuditCategory", () => {
 		const mockCategories = {
 			accessibility: {
-				id: 'accessibility',
-				title: 'Accessibility',
+				id: "accessibility",
+				title: "Accessibility",
 				score: 0.9,
 				auditRefs: [
-					{ id: 'color-contrast', weight: 3 },
-					{ id: 'image-alt', weight: 2 }
-				]
+					{ id: "color-contrast", weight: 3 },
+					{ id: "image-alt", weight: 2 },
+				],
 			},
 			performance: {
-				id: 'performance',
-				title: 'Performance',
+				id: "performance",
+				title: "Performance",
 				score: 0.8,
 				auditRefs: [
-					{ id: 'first-contentful-paint', weight: 10 },
-					{ id: 'speed-index', weight: 10 }
-				]
+					{ id: "first-contentful-paint", weight: 10 },
+					{ id: "speed-index", weight: 10 },
+				],
 			},
 			seo: {
-				id: 'seo',
-				title: 'SEO',
+				id: "seo",
+				title: "SEO",
 				score: 0.85,
-				auditRefs: [{ id: 'document-title', weight: 2 }]
-			}
+				auditRefs: [{ id: "document-title", weight: 2 }],
+			},
 		};
 
-		it('returns correct category for accessibility audit', () => {
+		it("returns correct category for accessibility audit", () => {
 			const result = callPrivateMethod(
 				scanner,
-				'getAuditCategory',
-				'color-contrast',
-				mockCategories
+				"getAuditCategory",
+				"color-contrast",
+				mockCategories,
 			) as string | null;
-			expect(result).toBe('accessibility');
+			expect(result).toBe("accessibility");
 		});
 
-		it('returns correct category for performance audit', () => {
+		it("returns correct category for performance audit", () => {
 			const result = callPrivateMethod(
 				scanner,
-				'getAuditCategory',
-				'first-contentful-paint',
-				mockCategories
+				"getAuditCategory",
+				"first-contentful-paint",
+				mockCategories,
 			) as string | null;
-			expect(result).toBe('performance');
+			expect(result).toBe("performance");
 		});
 
-		it('returns correct category for SEO audit', () => {
+		it("returns correct category for SEO audit", () => {
 			const result = callPrivateMethod(
 				scanner,
-				'getAuditCategory',
-				'document-title',
-				mockCategories
+				"getAuditCategory",
+				"document-title",
+				mockCategories,
 			) as string | null;
-			expect(result).toBe('seo');
+			expect(result).toBe("seo");
 		});
 
-		it('returns null for unknown audit', () => {
+		it("returns null for unknown audit", () => {
 			const result = callPrivateMethod(
 				scanner,
-				'getAuditCategory',
-				'unknown-audit',
-				mockCategories
+				"getAuditCategory",
+				"unknown-audit",
+				mockCategories,
 			) as string | null;
 			expect(result).toBeNull();
 		});
 	});
 
-	describe('getHelpUrl', () => {
-		it('returns specific URL for known accessibility audits', () => {
-			const result = callPrivateMethod(scanner, 'getHelpUrl', 'color-contrast') as string;
-			expect(result).toContain('color-contrast');
-			expect(result).toContain('developer.chrome.com');
+	describe("getHelpUrl", () => {
+		it("returns specific URL for known accessibility audits", () => {
+			const result = callPrivateMethod(
+				scanner,
+				"getHelpUrl",
+				"color-contrast",
+			) as string;
+			expect(result).toContain("color-contrast");
+			expect(result).toContain("developer.chrome.com");
 		});
 
-		it('returns specific URL for image-alt audit', () => {
-			const result = callPrivateMethod(scanner, 'getHelpUrl', 'image-alt') as string;
-			expect(result).toContain('image-alt');
+		it("returns specific URL for image-alt audit", () => {
+			const result = callPrivateMethod(
+				scanner,
+				"getHelpUrl",
+				"image-alt",
+			) as string;
+			expect(result).toContain("image-alt");
 		});
 
-		it('returns specific URL for button-name audit', () => {
-			const result = callPrivateMethod(scanner, 'getHelpUrl', 'button-name') as string;
-			expect(result).toContain('button-name');
+		it("returns specific URL for button-name audit", () => {
+			const result = callPrivateMethod(
+				scanner,
+				"getHelpUrl",
+				"button-name",
+			) as string;
+			expect(result).toContain("button-name");
 		});
 
-		it('returns overview URL for unknown audits', () => {
-			const result = callPrivateMethod(scanner, 'getHelpUrl', 'unknown-audit') as string;
-			expect(result).toContain('overview');
+		it("returns overview URL for unknown audits", () => {
+			const result = callPrivateMethod(
+				scanner,
+				"getHelpUrl",
+				"unknown-audit",
+			) as string;
+			expect(result).toContain("overview");
 		});
 	});
 
-	describe('extractIssues', () => {
+	describe("extractIssues", () => {
 		const createMockLighthouseResult = (audits: Record<string, unknown>) => ({
-			requestedUrl: 'https://example.com',
-			finalUrl: 'https://example.com',
+			requestedUrl: "https://example.com",
+			finalUrl: "https://example.com",
 			fetchTime: new Date().toISOString(),
 			categories: {
 				accessibility: {
-					id: 'accessibility',
-					title: 'Accessibility',
+					id: "accessibility",
+					title: "Accessibility",
 					score: 0.8,
-					auditRefs: Object.keys(audits).map((id) => ({ id, weight: 1 }))
-				}
+					auditRefs: Object.keys(audits).map((id) => ({ id, weight: 1 })),
+				},
 			},
-			audits
+			audits,
 		});
 
-		it('extracts issues from failing audits', () => {
+		it("extracts issues from failing audits", () => {
 			const lhResult = createMockLighthouseResult({
-				'color-contrast': {
-					id: 'color-contrast',
-					title: 'Background and foreground colors have sufficient contrast ratio',
-					description: 'Low-contrast text is difficult to read.',
+				"color-contrast": {
+					id: "color-contrast",
+					title:
+						"Background and foreground colors have sufficient contrast ratio",
+					description: "Low-contrast text is difficult to read.",
 					score: 0.5,
-					scoreDisplayMode: 'numeric'
-				}
+					scoreDisplayMode: "numeric",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as {
+			const issues = callPrivateMethod(scanner, "extractIssues", lhResult) as {
 				id: string;
 				title: string;
 				severity: string;
@@ -309,177 +362,197 @@ describe('LighthouseScanner', () => {
 			}[];
 
 			expect(issues).toHaveLength(1);
-			expect(issues[0]!.id).toBe('color-contrast');
-			expect(issues[0]!.title).toContain('contrast');
-			expect(issues[0]!.severity).toBe('moderate');
-			expect(issues[0]!.category).toBe('accessibility');
+			expect(issues[0]!.id).toBe("color-contrast");
+			expect(issues[0]!.title).toContain("contrast");
+			expect(issues[0]!.severity).toBe("moderate");
+			expect(issues[0]!.category).toBe("accessibility");
 		});
 
-		it('skips passing audits (score === 1)', () => {
+		it("skips passing audits (score === 1)", () => {
 			const lhResult = createMockLighthouseResult({
-				'image-alt': {
-					id: 'image-alt',
-					title: 'Image elements have alt attributes',
-					description: 'Images need alt text.',
+				"image-alt": {
+					id: "image-alt",
+					title: "Image elements have alt attributes",
+					description: "Images need alt text.",
 					score: 1,
-					scoreDisplayMode: 'binary'
-				}
+					scoreDisplayMode: "binary",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as unknown[];
+			const issues = callPrivateMethod(
+				scanner,
+				"extractIssues",
+				lhResult,
+			) as unknown[];
 			expect(issues).toHaveLength(0);
 		});
 
-		it('skips audits with null score', () => {
+		it("skips audits with null score", () => {
 			const lhResult = createMockLighthouseResult({
-				'skip-link': {
-					id: 'skip-link',
-					title: 'Skip link',
-					description: 'Page has a skip link.',
+				"skip-link": {
+					id: "skip-link",
+					title: "Skip link",
+					description: "Page has a skip link.",
 					score: null,
-					scoreDisplayMode: 'notApplicable'
-				}
+					scoreDisplayMode: "notApplicable",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as unknown[];
+			const issues = callPrivateMethod(
+				scanner,
+				"extractIssues",
+				lhResult,
+			) as unknown[];
 			expect(issues).toHaveLength(0);
 		});
 
-		it('skips informative audits', () => {
+		it("skips informative audits", () => {
 			const lhResult = createMockLighthouseResult({
-				'total-byte-weight': {
-					id: 'total-byte-weight',
-					title: 'Avoids enormous network payloads',
-					description: 'Network size info.',
+				"total-byte-weight": {
+					id: "total-byte-weight",
+					title: "Avoids enormous network payloads",
+					description: "Network size info.",
 					score: 0.5,
-					scoreDisplayMode: 'informative'
-				}
+					scoreDisplayMode: "informative",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as unknown[];
+			const issues = callPrivateMethod(
+				scanner,
+				"extractIssues",
+				lhResult,
+			) as unknown[];
 			expect(issues).toHaveLength(0);
 		});
 
-		it('skips manual audits', () => {
+		it("skips manual audits", () => {
 			const lhResult = createMockLighthouseResult({
-				'focus-traps': {
-					id: 'focus-traps',
-					title: 'Focus is not trapped in an interactive element',
-					description: 'Manual check required.',
+				"focus-traps": {
+					id: "focus-traps",
+					title: "Focus is not trapped in an interactive element",
+					description: "Manual check required.",
 					score: 0.5,
-					scoreDisplayMode: 'manual'
-				}
+					scoreDisplayMode: "manual",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as unknown[];
+			const issues = callPrivateMethod(
+				scanner,
+				"extractIssues",
+				lhResult,
+			) as unknown[];
 			expect(issues).toHaveLength(0);
 		});
 
-		it('maps critical score (0) to critical severity', () => {
+		it("maps critical score (0) to critical severity", () => {
 			const lhResult = createMockLighthouseResult({
-				'html-has-lang': {
-					id: 'html-has-lang',
-					title: 'HTML element has a lang attribute',
-					description: 'No lang attribute found.',
+				"html-has-lang": {
+					id: "html-has-lang",
+					title: "HTML element has a lang attribute",
+					description: "No lang attribute found.",
 					score: 0,
-					scoreDisplayMode: 'binary'
-				}
+					scoreDisplayMode: "binary",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as {
+			const issues = callPrivateMethod(scanner, "extractIssues", lhResult) as {
 				severity: string;
 			}[];
 
 			expect(issues).toHaveLength(1);
-			expect(issues[0]!.severity).toBe('critical');
+			expect(issues[0]!.severity).toBe("critical");
 		});
 
-		it('includes metadata from audit details', () => {
+		it("includes metadata from audit details", () => {
 			const lhResult = createMockLighthouseResult({
-				'color-contrast': {
-					id: 'color-contrast',
-					title: 'Color contrast',
-					description: 'Low contrast.',
+				"color-contrast": {
+					id: "color-contrast",
+					title: "Color contrast",
+					description: "Low contrast.",
 					score: 0.3,
-					scoreDisplayMode: 'numeric',
-					displayValue: '5 failing elements',
+					scoreDisplayMode: "numeric",
+					displayValue: "5 failing elements",
 					numericValue: 5,
 					details: {
-						type: 'table',
-						items: [{ element: '<p>Low contrast</p>' }]
-					}
-				}
+						type: "table",
+						items: [{ element: "<p>Low contrast</p>" }],
+					},
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as {
+			const issues = callPrivateMethod(scanner, "extractIssues", lhResult) as {
 				metadata: Record<string, unknown>;
 			}[];
 
 			expect(issues).toHaveLength(1);
 			expect(issues[0]!.metadata.score).toBe(0.3);
-			expect(issues[0]!.metadata.displayValue).toBe('5 failing elements');
+			expect(issues[0]!.metadata.displayValue).toBe("5 failing elements");
 			expect(issues[0]!.metadata.numericValue).toBe(5);
 			expect(issues[0]!.metadata.details).toBeDefined();
 		});
 
 		it("uses 'general' category when audit not in any category", () => {
 			const lhResult = {
-				requestedUrl: 'https://example.com',
-				finalUrl: 'https://example.com',
+				requestedUrl: "https://example.com",
+				finalUrl: "https://example.com",
 				fetchTime: new Date().toISOString(),
 				categories: {},
 				audits: {
-					'orphan-audit': {
-						id: 'orphan-audit',
-						title: 'Orphan audit',
-						description: 'Not in any category.',
+					"orphan-audit": {
+						id: "orphan-audit",
+						title: "Orphan audit",
+						description: "Not in any category.",
 						score: 0.5,
-						scoreDisplayMode: 'numeric'
-					}
-				}
+						scoreDisplayMode: "numeric",
+					},
+				},
 			};
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as {
+			const issues = callPrivateMethod(scanner, "extractIssues", lhResult) as {
 				category: string;
 			}[];
 
 			expect(issues).toHaveLength(1);
-			expect(issues[0]!.category).toBe('general');
+			expect(issues[0]!.category).toBe("general");
 		});
 
-		it('handles multiple failing audits', () => {
+		it("handles multiple failing audits", () => {
 			const lhResult = createMockLighthouseResult({
-				'color-contrast': {
-					id: 'color-contrast',
-					title: 'Color contrast',
-					description: 'Low contrast.',
+				"color-contrast": {
+					id: "color-contrast",
+					title: "Color contrast",
+					description: "Low contrast.",
 					score: 0.5,
-					scoreDisplayMode: 'numeric'
+					scoreDisplayMode: "numeric",
 				},
-				'image-alt': {
-					id: 'image-alt',
-					title: 'Image alt',
-					description: 'Missing alt.',
+				"image-alt": {
+					id: "image-alt",
+					title: "Image alt",
+					description: "Missing alt.",
 					score: 0.3,
-					scoreDisplayMode: 'binary'
+					scoreDisplayMode: "binary",
 				},
-				'button-name': {
-					id: 'button-name',
-					title: 'Button name',
-					description: 'Missing name.',
+				"button-name": {
+					id: "button-name",
+					title: "Button name",
+					description: "Missing name.",
 					score: 0,
-					scoreDisplayMode: 'binary'
-				}
+					scoreDisplayMode: "binary",
+				},
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as unknown[];
+			const issues = callPrivateMethod(
+				scanner,
+				"extractIssues",
+				lhResult,
+			) as unknown[];
 			expect(issues).toHaveLength(3);
 		});
 	});
 
-	describe('extractAuditNodes', () => {
+	describe("extractAuditNodes", () => {
 		const createMockAudit = (
-			items: Record<string, unknown>[]
+			items: Record<string, unknown>[],
 		): {
 			id: string;
 			title: string;
@@ -489,44 +562,52 @@ describe('LighthouseScanner', () => {
 			displayValue?: string;
 			details?: { type: string; items: Record<string, unknown>[] };
 		} => ({
-			id: 'test-audit',
-			title: 'Test Audit',
-			description: 'Test description',
+			id: "test-audit",
+			title: "Test Audit",
+			description: "Test description",
 			score: 0.5,
-			scoreDisplayMode: 'numeric',
-			details: { type: 'table', items }
+			scoreDisplayMode: "numeric",
+			details: { type: "table", items },
 		});
 
-		it('returns empty array when no items in details', () => {
+		it("returns empty array when no items in details", () => {
 			const audit = createMockAudit([]);
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as unknown[];
+			const nodes = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit,
+			) as unknown[];
 			expect(nodes).toEqual([]);
 		});
 
-		it('returns empty array when details is undefined', () => {
+		it("returns empty array when details is undefined", () => {
 			const audit = {
-				id: 'test-audit',
-				title: 'Test Audit',
-				description: 'Test',
+				id: "test-audit",
+				title: "Test Audit",
+				description: "Test",
 				score: 0.5,
-				scoreDisplayMode: 'numeric'
+				scoreDisplayMode: "numeric",
 			};
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as unknown[];
+			const nodes = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit,
+			) as unknown[];
 			expect(nodes).toEqual([]);
 		});
 
-		it('extracts selector from item.node.selector (accessibility audit format)', () => {
+		it("extracts selector from item.node.selector (accessibility audit format)", () => {
 			const audit = createMockAudit([
 				{
 					node: {
-						selector: 'button.submit-btn',
+						selector: "button.submit-btn",
 						snippet: '<button class="submit-btn">Submit</button>',
-						path: '1,HTML,1,BODY,3,MAIN,1,FORM,2,BUTTON'
-					}
-				}
+						path: "1,HTML,1,BODY,3,MAIN,1,FORM,2,BUTTON",
+					},
+				},
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 				target: string[];
 				html?: string;
@@ -534,61 +615,63 @@ describe('LighthouseScanner', () => {
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('button.submit-btn');
-			expect(nodes[0]!.target).toEqual(['button.submit-btn']);
+			expect(nodes[0]!.selector).toBe("button.submit-btn");
+			expect(nodes[0]!.target).toEqual(["button.submit-btn"]);
 			expect(nodes[0]!.html).toBe('<button class="submit-btn">Submit</button>');
-			expect(nodes[0]!.ancestorPath).toBe('1,HTML,1,BODY,3,MAIN,1,FORM,2,BUTTON');
+			expect(nodes[0]!.ancestorPath).toBe(
+				"1,HTML,1,BODY,3,MAIN,1,FORM,2,BUTTON",
+			);
 		});
 
-		it('extracts selector from item.selector (direct selector format)', () => {
+		it("extracts selector from item.selector (direct selector format)", () => {
 			const audit = createMockAudit([
 				{
-					selector: '#main-content',
-					snippet: '<div id="main-content"></div>'
-				}
+					selector: "#main-content",
+					snippet: '<div id="main-content"></div>',
+				},
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 				target: string[];
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('#main-content');
-			expect(nodes[0]!.target).toEqual(['#main-content']);
+			expect(nodes[0]!.selector).toBe("#main-content");
+			expect(nodes[0]!.target).toEqual(["#main-content"]);
 		});
 
-		it('extracts selector from item.element.selector', () => {
+		it("extracts selector from item.element.selector", () => {
 			const audit = createMockAudit([
 				{
 					element: {
-						selector: 'img.hero-image',
-						snippet: '<img class="hero-image" src="hero.jpg">'
-					}
-				}
+						selector: "img.hero-image",
+						snippet: '<img class="hero-image" src="hero.jpg">',
+					},
+				},
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 				html?: string;
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('img.hero-image');
+			expect(nodes[0]!.selector).toBe("img.hero-image");
 			expect(nodes[0]!.html).toBe('<img class="hero-image" src="hero.jpg">');
 		});
 
-		it('extracts selector from item.source.selector', () => {
+		it("extracts selector from item.source.selector", () => {
 			const audit = createMockAudit([
 				{
 					source: {
 						selector: "link[rel='stylesheet']",
-						snippet: '<link rel="stylesheet" href="styles.css">'
-					}
-				}
+						snippet: '<link rel="stylesheet" href="styles.css">',
+					},
+				},
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
@@ -596,17 +679,17 @@ describe('LighthouseScanner', () => {
 			expect(nodes[0]!.selector).toBe("link[rel='stylesheet']");
 		});
 
-		it('extracts selector from item.relatedNode.selector', () => {
+		it("extracts selector from item.relatedNode.selector", () => {
 			const audit = createMockAudit([
 				{
 					relatedNode: {
 						selector: "label[for='email']",
-						snippet: '<label for="email">Email</label>'
-					}
-				}
+						snippet: '<label for="email">Email</label>',
+					},
+				},
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
@@ -614,295 +697,355 @@ describe('LighthouseScanner', () => {
 			expect(nodes[0]!.selector).toBe("label[for='email']");
 		});
 
-		it('prioritizes node.selector over other selector locations', () => {
+		it("prioritizes node.selector over other selector locations", () => {
 			const audit = createMockAudit([
 				{
-					node: { selector: 'node-selector' },
-					selector: 'direct-selector',
-					element: { selector: 'element-selector' },
-					source: { selector: 'source-selector' },
-					relatedNode: { selector: 'related-selector' }
-				}
+					node: { selector: "node-selector" },
+					selector: "direct-selector",
+					element: { selector: "element-selector" },
+					source: { selector: "source-selector" },
+					relatedNode: { selector: "related-selector" },
+				},
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('node-selector');
+			expect(nodes[0]!.selector).toBe("node-selector");
 		});
 
-		it('falls back through selector priority chain correctly', () => {
+		it("falls back through selector priority chain correctly", () => {
 			// Test fallback to direct selector when node.selector is missing
 			const audit1 = createMockAudit([
 				{
 					node: {}, // no selector
-					selector: 'direct-selector',
-					element: { selector: 'element-selector' }
-				}
+					selector: "direct-selector",
+					element: { selector: "element-selector" },
+				},
 			]);
-			const nodes1 = callPrivateMethod(scanner, 'extractAuditNodes', audit1) as {
+			const nodes1 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit1,
+			) as {
 				selector: string;
 			}[];
-			expect(nodes1[0]!.selector).toBe('direct-selector');
+			expect(nodes1[0]!.selector).toBe("direct-selector");
 
 			// Test fallback to element.selector when node and direct are missing
 			const audit2 = createMockAudit([
 				{
-					element: { selector: 'element-selector' },
-					source: { selector: 'source-selector' }
-				}
+					element: { selector: "element-selector" },
+					source: { selector: "source-selector" },
+				},
 			]);
-			const nodes2 = callPrivateMethod(scanner, 'extractAuditNodes', audit2) as {
+			const nodes2 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit2,
+			) as {
 				selector: string;
 			}[];
-			expect(nodes2[0]!.selector).toBe('element-selector');
+			expect(nodes2[0]!.selector).toBe("element-selector");
 
 			// Test fallback to source.selector
 			const audit3 = createMockAudit([
 				{
-					source: { selector: 'source-selector' },
-					relatedNode: { selector: 'related-selector' }
-				}
+					source: { selector: "source-selector" },
+					relatedNode: { selector: "related-selector" },
+				},
 			]);
-			const nodes3 = callPrivateMethod(scanner, 'extractAuditNodes', audit3) as {
+			const nodes3 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit3,
+			) as {
 				selector: string;
 			}[];
-			expect(nodes3[0]!.selector).toBe('source-selector');
+			expect(nodes3[0]!.selector).toBe("source-selector");
 
 			// Test fallback to relatedNode.selector
 			const audit4 = createMockAudit([
 				{
-					relatedNode: { selector: 'related-selector' }
-				}
+					relatedNode: { selector: "related-selector" },
+				},
 			]);
-			const nodes4 = callPrivateMethod(scanner, 'extractAuditNodes', audit4) as {
+			const nodes4 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit4,
+			) as {
 				selector: string;
 			}[];
-			expect(nodes4[0]!.selector).toBe('related-selector');
+			expect(nodes4[0]!.selector).toBe("related-selector");
 		});
 
-		it('skips items with no selector in any location', () => {
+		it("skips items with no selector in any location", () => {
 			const audit = createMockAudit([
 				{ node: {}, element: {}, source: {} }, // no selectors
-				{ description: 'Some other field' }, // no selectors
-				{ node: { selector: 'valid-selector' } } // has selector
+				{ description: "Some other field" }, // no selectors
+				{ node: { selector: "valid-selector" } }, // has selector
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('valid-selector');
+			expect(nodes[0]!.selector).toBe("valid-selector");
 		});
 
-		it('skips items with empty or whitespace-only selectors', () => {
+		it("skips items with empty or whitespace-only selectors", () => {
 			const audit = createMockAudit([
-				{ node: { selector: '' } },
-				{ node: { selector: '   ' } },
-				{ selector: '' },
-				{ element: { selector: '   \n\t  ' } },
-				{ node: { selector: 'valid-selector' } }
+				{ node: { selector: "" } },
+				{ node: { selector: "   " } },
+				{ selector: "" },
+				{ element: { selector: "   \n\t  " } },
+				{ node: { selector: "valid-selector" } },
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('valid-selector');
+			expect(nodes[0]!.selector).toBe("valid-selector");
 		});
 
-		it('trims whitespace from selectors', () => {
-			const audit = createMockAudit([{ node: { selector: '  .padded-selector  ' } }]);
-
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
-				selector: string;
-			}[];
-
-			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('.padded-selector');
-		});
-
-		it('deduplicates items with the same selector', () => {
+		it("trims whitespace from selectors", () => {
 			const audit = createMockAudit([
-				{ node: { selector: '#duplicate' } },
-				{ node: { selector: '#duplicate' } },
-				{ selector: '#duplicate' },
-				{ node: { selector: '#unique' } }
+				{ node: { selector: "  .padded-selector  " } },
 			]);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
+				selector: string;
+			}[];
+
+			expect(nodes).toHaveLength(1);
+			expect(nodes[0]!.selector).toBe(".padded-selector");
+		});
+
+		it("deduplicates items with the same selector", () => {
+			const audit = createMockAudit([
+				{ node: { selector: "#duplicate" } },
+				{ node: { selector: "#duplicate" } },
+				{ selector: "#duplicate" },
+				{ node: { selector: "#unique" } },
+			]);
+
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
 			expect(nodes).toHaveLength(2);
-			expect(nodes[0]!.selector).toBe('#duplicate');
-			expect(nodes[1]!.selector).toBe('#unique');
+			expect(nodes[0]!.selector).toBe("#duplicate");
+			expect(nodes[1]!.selector).toBe("#unique");
 		});
 
-		it('limits results to 5 nodes maximum', () => {
+		it("limits results to 5 nodes maximum", () => {
 			const items = Array.from({ length: 10 }, (_, i) => ({
-				node: { selector: `#element-${i}` }
+				node: { selector: `#element-${i}` },
 			}));
 			const audit = createMockAudit(items);
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
 			expect(nodes).toHaveLength(5);
-			expect(nodes[4]!.selector).toBe('#element-4');
+			expect(nodes[4]!.selector).toBe("#element-4");
 		});
 
-		it('extracts HTML snippet from multiple locations', () => {
+		it("extracts HTML snippet from multiple locations", () => {
 			// From node.snippet
 			const audit1 = createMockAudit([
-				{ node: { selector: '#a', snippet: '<div>Node snippet</div>' } }
+				{ node: { selector: "#a", snippet: "<div>Node snippet</div>" } },
 			]);
-			const nodes1 = callPrivateMethod(scanner, 'extractAuditNodes', audit1) as {
+			const nodes1 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit1,
+			) as {
 				html?: string;
 			}[];
-			expect(nodes1[0]!.html).toBe('<div>Node snippet</div>');
+			expect(nodes1[0]!.html).toBe("<div>Node snippet</div>");
 
 			// From item.snippet when node.snippet is missing
 			const audit2 = createMockAudit([
-				{ node: { selector: '#b' }, snippet: '<div>Item snippet</div>' }
+				{ node: { selector: "#b" }, snippet: "<div>Item snippet</div>" },
 			]);
-			const nodes2 = callPrivateMethod(scanner, 'extractAuditNodes', audit2) as {
+			const nodes2 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit2,
+			) as {
 				html?: string;
 			}[];
-			expect(nodes2[0]!.html).toBe('<div>Item snippet</div>');
+			expect(nodes2[0]!.html).toBe("<div>Item snippet</div>");
 
 			// From element.snippet as fallback
 			const audit3 = createMockAudit([
 				{
-					selector: '#c',
-					element: { snippet: '<div>Element snippet</div>' }
-				}
+					selector: "#c",
+					element: { snippet: "<div>Element snippet</div>" },
+				},
 			]);
-			const nodes3 = callPrivateMethod(scanner, 'extractAuditNodes', audit3) as {
+			const nodes3 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit3,
+			) as {
 				html?: string;
 			}[];
-			expect(nodes3[0]!.html).toBe('<div>Element snippet</div>');
+			expect(nodes3[0]!.html).toBe("<div>Element snippet</div>");
 		});
 
-		it('extracts ancestor path from node.path or item.path', () => {
+		it("extracts ancestor path from node.path or item.path", () => {
 			// From node.path
-			const audit1 = createMockAudit([{ node: { selector: '#a', path: '1,HTML,1,BODY,0,DIV' } }]);
-			const nodes1 = callPrivateMethod(scanner, 'extractAuditNodes', audit1) as {
+			const audit1 = createMockAudit([
+				{ node: { selector: "#a", path: "1,HTML,1,BODY,0,DIV" } },
+			]);
+			const nodes1 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit1,
+			) as {
 				ancestorPath?: string;
 			}[];
-			expect(nodes1[0]!.ancestorPath).toBe('1,HTML,1,BODY,0,DIV');
+			expect(nodes1[0]!.ancestorPath).toBe("1,HTML,1,BODY,0,DIV");
 
 			// From item.path when node.path is missing
-			const audit2 = createMockAudit([{ node: { selector: '#b' }, path: '1,HTML,1,BODY,1,MAIN' }]);
-			const nodes2 = callPrivateMethod(scanner, 'extractAuditNodes', audit2) as {
+			const audit2 = createMockAudit([
+				{ node: { selector: "#b" }, path: "1,HTML,1,BODY,1,MAIN" },
+			]);
+			const nodes2 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit2,
+			) as {
 				ancestorPath?: string;
 			}[];
-			expect(nodes2[0]!.ancestorPath).toBe('1,HTML,1,BODY,1,MAIN');
+			expect(nodes2[0]!.ancestorPath).toBe("1,HTML,1,BODY,1,MAIN");
 		});
 
-		it('extracts failure summary from item.explanation or item.displayValue', () => {
+		it("extracts failure summary from item.explanation or item.displayValue", () => {
 			// From item.explanation
 			const audit1 = createMockAudit([
 				{
-					node: { selector: '#a' },
-					explanation: 'Element has insufficient contrast ratio'
-				}
+					node: { selector: "#a" },
+					explanation: "Element has insufficient contrast ratio",
+				},
 			]);
-			const nodes1 = callPrivateMethod(scanner, 'extractAuditNodes', audit1) as {
+			const nodes1 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit1,
+			) as {
 				failureSummary?: string;
 			}[];
-			expect(nodes1[0]!.failureSummary).toBe('Element has insufficient contrast ratio');
+			expect(nodes1[0]!.failureSummary).toBe(
+				"Element has insufficient contrast ratio",
+			);
 
 			// From item.displayValue when explanation is missing
 			const audit2 = createMockAudit([
 				{
-					node: { selector: '#b' },
-					displayValue: 'Contrast ratio: 2.5:1'
-				}
+					node: { selector: "#b" },
+					displayValue: "Contrast ratio: 2.5:1",
+				},
 			]);
-			const nodes2 = callPrivateMethod(scanner, 'extractAuditNodes', audit2) as {
+			const nodes2 = callPrivateMethod(
+				scanner,
+				"extractAuditNodes",
+				audit2,
+			) as {
 				failureSummary?: string;
 			}[];
-			expect(nodes2[0]!.failureSummary).toBe('Contrast ratio: 2.5:1');
+			expect(nodes2[0]!.failureSummary).toBe("Contrast ratio: 2.5:1");
 		});
 
-		it('falls back to audit.displayValue for failure summary', () => {
+		it("falls back to audit.displayValue for failure summary", () => {
 			const audit = {
-				id: 'test-audit',
-				title: 'Test Audit',
-				description: 'Test description',
+				id: "test-audit",
+				title: "Test Audit",
+				description: "Test description",
 				score: 0.5,
-				scoreDisplayMode: 'numeric',
-				displayValue: '5 elements fail this audit',
+				scoreDisplayMode: "numeric",
+				displayValue: "5 elements fail this audit",
 				details: {
-					type: 'table',
-					items: [{ node: { selector: '#a' } }]
-				}
+					type: "table",
+					items: [{ node: { selector: "#a" } }],
+				},
 			};
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				failureSummary?: string;
 			}[];
 
-			expect(nodes[0]!.failureSummary).toBe('5 elements fail this audit');
+			expect(nodes[0]!.failureSummary).toBe("5 elements fail this audit");
 		});
 
-		it('skips null or non-object items', () => {
+		it("skips null or non-object items", () => {
 			const audit = {
-				id: 'test-audit',
-				title: 'Test Audit',
-				description: 'Test description',
+				id: "test-audit",
+				title: "Test Audit",
+				description: "Test description",
 				score: 0.5,
-				scoreDisplayMode: 'numeric',
+				scoreDisplayMode: "numeric",
 				details: {
-					type: 'table',
-					items: [null, undefined, 'string-item', 123, true, { node: { selector: 'valid' } }]
-				}
+					type: "table",
+					items: [
+						null,
+						undefined,
+						"string-item",
+						123,
+						true,
+						{ node: { selector: "valid" } },
+					],
+				},
 			};
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 			}[];
 
 			expect(nodes).toHaveLength(1);
-			expect(nodes[0]!.selector).toBe('valid');
+			expect(nodes[0]!.selector).toBe("valid");
 		});
 
-		it('handles real-world Lighthouse accessibility audit structure', () => {
+		it("handles real-world Lighthouse accessibility audit structure", () => {
 			const audit = {
-				id: 'color-contrast',
-				title: 'Background and foreground colors have sufficient contrast ratio',
-				description: 'Low-contrast text is difficult to read',
+				id: "color-contrast",
+				title:
+					"Background and foreground colors have sufficient contrast ratio",
+				description: "Low-contrast text is difficult to read",
 				score: 0.5,
-				scoreDisplayMode: 'numeric',
-				displayValue: '3 failing elements',
+				scoreDisplayMode: "numeric",
+				displayValue: "3 failing elements",
 				details: {
-					type: 'table',
+					type: "table",
 					items: [
 						{
 							node: {
-								selector: '.low-contrast-text',
+								selector: ".low-contrast-text",
 								snippet: '<p class="low-contrast-text">Hard to read</p>',
-								path: '1,HTML,1,BODY,0,MAIN,2,P'
-							}
+								path: "1,HTML,1,BODY,0,MAIN,2,P",
+							},
 						},
 						{
 							node: {
-								selector: '.faded-link',
+								selector: ".faded-link",
 								snippet: '<a class="faded-link" href="/">Link</a>',
-								path: '1,HTML,1,BODY,0,MAIN,3,A'
-							}
-						}
-					]
-				}
+								path: "1,HTML,1,BODY,0,MAIN,3,A",
+							},
+						},
+					],
+				},
 			};
 
-			const nodes = callPrivateMethod(scanner, 'extractAuditNodes', audit) as {
+			const nodes = callPrivateMethod(scanner, "extractAuditNodes", audit) as {
 				selector: string;
 				target: string[];
 				html?: string;
@@ -912,99 +1055,120 @@ describe('LighthouseScanner', () => {
 
 			expect(nodes).toHaveLength(2);
 			expect(nodes[0]).toEqual({
-				selector: '.low-contrast-text',
-				target: ['.low-contrast-text'],
+				selector: ".low-contrast-text",
+				target: [".low-contrast-text"],
 				html: '<p class="low-contrast-text">Hard to read</p>',
-				ancestorPath: '1,HTML,1,BODY,0,MAIN,2,P',
-				failureSummary: '3 failing elements'
+				ancestorPath: "1,HTML,1,BODY,0,MAIN,2,P",
+				failureSummary: "3 failing elements",
 			});
 			expect(nodes[1]).toEqual({
-				selector: '.faded-link',
-				target: ['.faded-link'],
+				selector: ".faded-link",
+				target: [".faded-link"],
 				html: '<a class="faded-link" href="/">Link</a>',
-				ancestorPath: '1,HTML,1,BODY,0,MAIN,3,A',
-				failureSummary: '3 failing elements'
+				ancestorPath: "1,HTML,1,BODY,0,MAIN,3,A",
+				failureSummary: "3 failing elements",
 			});
 		});
 	});
 
-	describe('initialize option parsing', () => {
-		it('defaults categories when options are missing', async () => {
+	describe("initialize option parsing", () => {
+		it("defaults categories when options are missing", async () => {
 			const testScanner = new LighthouseScanner();
 			const logger = createMockLogger();
 
 			vi.spyOn(
 				ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
-				'initialize'
+				"initialize",
 			).mockResolvedValue(undefined);
 
-			(testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig();
+			(testScanner as unknown as { config: ScannerConfig }).config =
+				createScannerConfig();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
 
-			await callPrivateMethod(testScanner, 'initialize');
+			await callPrivateMethod(testScanner, "initialize");
 
-			const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
-			expect(options.categories).toEqual(['accessibility', 'best-practices', 'seo']);
+			const options = (
+				testScanner as unknown as { options: { categories?: string[] } }
+			).options;
+			expect(options.categories).toEqual([
+				"accessibility",
+				"best-practices",
+				"seo",
+			]);
 		});
 
-		it('falls back to defaults when category list has no valid values', async () => {
+		it("falls back to defaults when category list has no valid values", async () => {
 			const testScanner = new LighthouseScanner();
 
 			vi.spyOn(
 				ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
-				'initialize'
+				"initialize",
 			).mockResolvedValue(undefined);
 
-			(testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig({
-				categories: ['not-valid', 42]
-			});
+			(testScanner as unknown as { config: ScannerConfig }).config =
+				createScannerConfig({
+					categories: ["not-valid", 42],
+				});
 
-			await callPrivateMethod(testScanner, 'initialize');
+			await callPrivateMethod(testScanner, "initialize");
 
-			const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
-			expect(options.categories).toEqual(['accessibility', 'best-practices', 'seo']);
+			const options = (
+				testScanner as unknown as { options: { categories?: string[] } }
+			).options;
+			expect(options.categories).toEqual([
+				"accessibility",
+				"best-practices",
+				"seo",
+			]);
 		});
 
-		it('retains only valid categories from mixed input', async () => {
+		it("retains only valid categories from mixed input", async () => {
 			const testScanner = new LighthouseScanner();
 
 			vi.spyOn(
 				ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
-				'initialize'
+				"initialize",
 			).mockResolvedValue(undefined);
 
-			(testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig({
-				categories: ['performance', 'seo', 'invalid-category']
-			});
+			(testScanner as unknown as { config: ScannerConfig }).config =
+				createScannerConfig({
+					categories: ["performance", "seo", "invalid-category"],
+				});
 
-			await callPrivateMethod(testScanner, 'initialize');
+			await callPrivateMethod(testScanner, "initialize");
 
-			const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
-			expect(options.categories).toEqual(['performance', 'seo']);
+			const options = (
+				testScanner as unknown as { options: { categories?: string[] } }
+			).options;
+			expect(options.categories).toEqual(["performance", "seo"]);
 		});
 
-		it('prewarms Lighthouse runtime when LIGHTHOUSE_PREWARM is enabled', async () => {
+		it("prewarms Lighthouse runtime when LIGHTHOUSE_PREWARM is enabled", async () => {
 			const testScanner = new LighthouseScanner();
-			process.env.LIGHTHOUSE_PREWARM = 'true';
+			process.env.LIGHTHOUSE_PREWARM = "true";
 
-				vi.spyOn(
-					ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
-					'initialize'
-				).mockResolvedValue(undefined);
-				const prewarmSpy = vi
-					.spyOn(testScanner as unknown as { prewarmRuntime: () => void }, 'prewarmRuntime')
-					.mockImplementation(() => undefined);
+			vi.spyOn(
+				ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
+				"initialize",
+			).mockResolvedValue(undefined);
+			const prewarmSpy = vi
+				.spyOn(
+					testScanner as unknown as { prewarmRuntime: () => void },
+					"prewarmRuntime",
+				)
+				.mockImplementation(() => undefined);
 
-				(testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig();
+			(testScanner as unknown as { config: ScannerConfig }).config =
+				createScannerConfig();
 
-				await callPrivateMethod(testScanner, 'initialize');
+			await callPrivateMethod(testScanner, "initialize");
 
 			expect(prewarmSpy).toHaveBeenCalledTimes(1);
 		});
 	});
 
-	describe('runSerialized', () => {
-		it('executes queued tasks sequentially', async () => {
+	describe("runSerialized", () => {
+		it("executes queued tasks sequentially", async () => {
 			const testScanner = new LighthouseScanner();
 			const callOrder: string[] = [];
 			let startFirst!: () => void;
@@ -1013,124 +1177,150 @@ describe('LighthouseScanner', () => {
 				startFirst = resolve;
 			});
 
-			const firstTask = callPrivateMethod(testScanner, 'runSerialized', async () => {
-				callOrder.push('first-start');
-				startFirst();
-				await new Promise<void>((resolve) => {
-					releaseFirst = resolve;
-				});
-				callOrder.push('first-end');
-				return 'first';
-			}) as Promise<string>;
+			const firstTask = callPrivateMethod(
+				testScanner,
+				"runSerialized",
+				async () => {
+					callOrder.push("first-start");
+					startFirst();
+					await new Promise<void>((resolve) => {
+						releaseFirst = resolve;
+					});
+					callOrder.push("first-end");
+					return "first";
+				},
+			) as Promise<string>;
 
 			await firstStarted;
 
-			const secondTask = callPrivateMethod(testScanner, 'runSerialized', () => {
-				callOrder.push('second-start');
-				return Promise.resolve('second');
+			const secondTask = callPrivateMethod(testScanner, "runSerialized", () => {
+				callOrder.push("second-start");
+				return Promise.resolve("second");
 			}) as Promise<string>;
 
 			await Promise.resolve();
-			expect(callOrder).toEqual(['first-start']);
+			expect(callOrder).toEqual(["first-start"]);
 
 			releaseFirst();
 
-			await expect(firstTask).resolves.toBe('first');
-			await expect(secondTask).resolves.toBe('second');
-			expect(callOrder).toEqual(['first-start', 'first-end', 'second-start']);
+			await expect(firstTask).resolves.toBe("first");
+			await expect(secondTask).resolves.toBe("second");
+			expect(callOrder).toEqual(["first-start", "first-end", "second-start"]);
 		});
 	});
 
-	describe('resolveChromePath', () => {
-		it('uses LIGHTHOUSE_CHROME_PATH when it exists', () => {
+	describe("resolveChromePath", () => {
+		it("uses LIGHTHOUSE_CHROME_PATH when it exists", () => {
 			const testScanner = new LighthouseScanner();
-			process.env.LIGHTHOUSE_CHROME_PATH = '/custom/chrome';
+			process.env.LIGHTHOUSE_CHROME_PATH = "/custom/chrome";
 
 			const existsSyncSpy = vi
-				.spyOn(fs, 'existsSync')
-				.mockImplementation((filePath) => filePath === '/custom/chrome');
+				.spyOn(fs, "existsSync")
+				.mockImplementation((filePath) => filePath === "/custom/chrome");
 			const playwrightSpy = vi
-				.spyOn(chromium, 'executablePath')
-				.mockReturnValue('/playwright/chrome');
+				.spyOn(chromium, "executablePath")
+				.mockReturnValue("/playwright/chrome");
 			const fallbackSpy = vi
-				.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath')
-				.mockReturnValue('/fallback/chrome');
+				.spyOn(playwrightUtils, "resolvePlaywrightImageChromiumExecutablePath")
+				.mockReturnValue("/fallback/chrome");
 
-			const resolvedPath = callPrivateMethod(testScanner, 'resolveChromePath') as string;
+			const resolvedPath = callPrivateMethod(
+				testScanner,
+				"resolveChromePath",
+			) as string;
 
-			expect(resolvedPath).toBe('/custom/chrome');
-			expect(existsSyncSpy).toHaveBeenCalledWith('/custom/chrome');
+			expect(resolvedPath).toBe("/custom/chrome");
+			expect(existsSyncSpy).toHaveBeenCalledWith("/custom/chrome");
 			expect(playwrightSpy).not.toHaveBeenCalled();
 			expect(fallbackSpy).not.toHaveBeenCalled();
 		});
 
-		it('falls back to Playwright executable path when env path is absent', () => {
+		it("falls back to Playwright executable path when env path is absent", () => {
 			const testScanner = new LighthouseScanner();
 
-			vi.spyOn(fs, 'existsSync').mockImplementation(
-				(filePath) => filePath === '/playwright/chrome'
+			vi.spyOn(fs, "existsSync").mockImplementation(
+				(filePath) => filePath === "/playwright/chrome",
 			);
-			vi.spyOn(chromium, 'executablePath').mockReturnValue('/playwright/chrome');
-			vi.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath').mockReturnValue(
-				'/fallback/chrome'
+			vi.spyOn(chromium, "executablePath").mockReturnValue(
+				"/playwright/chrome",
 			);
+			vi.spyOn(
+				playwrightUtils,
+				"resolvePlaywrightImageChromiumExecutablePath",
+			).mockReturnValue("/fallback/chrome");
 
-			const resolvedPath = callPrivateMethod(testScanner, 'resolveChromePath') as string;
+			const resolvedPath = callPrivateMethod(
+				testScanner,
+				"resolveChromePath",
+			) as string;
 
-			expect(resolvedPath).toBe('/playwright/chrome');
+			expect(resolvedPath).toBe("/playwright/chrome");
 		});
 
-		it('falls back to Playwright image path when env and Playwright path are unavailable', () => {
+		it("falls back to Playwright image path when env and Playwright path are unavailable", () => {
 			const testScanner = new LighthouseScanner();
 
-			vi.spyOn(fs, 'existsSync').mockReturnValue(false);
-			vi.spyOn(chromium, 'executablePath').mockReturnValue('/playwright/chrome');
-			vi.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath').mockReturnValue(
-				'/image/chrome'
+			vi.spyOn(fs, "existsSync").mockReturnValue(false);
+			vi.spyOn(chromium, "executablePath").mockReturnValue(
+				"/playwright/chrome",
 			);
+			vi.spyOn(
+				playwrightUtils,
+				"resolvePlaywrightImageChromiumExecutablePath",
+			).mockReturnValue("/image/chrome");
 
-			const resolvedPath = callPrivateMethod(testScanner, 'resolveChromePath') as string;
-			expect(resolvedPath).toBe('/image/chrome');
+			const resolvedPath = callPrivateMethod(
+				testScanner,
+				"resolveChromePath",
+			) as string;
+			expect(resolvedPath).toBe("/image/chrome");
 		});
 
-		it('throws when no Chrome executable can be found', () => {
+		it("throws when no Chrome executable can be found", () => {
 			const testScanner = new LighthouseScanner();
 
-			vi.spyOn(fs, 'existsSync').mockReturnValue(false);
-			vi.spyOn(chromium, 'executablePath').mockReturnValue('');
-			vi.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath').mockReturnValue(
-				null
-			);
+			vi.spyOn(fs, "existsSync").mockReturnValue(false);
+			vi.spyOn(chromium, "executablePath").mockReturnValue("");
+			vi.spyOn(
+				playwrightUtils,
+				"resolvePlaywrightImageChromiumExecutablePath",
+			).mockReturnValue(null);
 
-			expect(() => callPrivateMethod(testScanner, 'resolveChromePath')).toThrow(
-				'Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.'
+			expect(() => callPrivateMethod(testScanner, "resolveChromePath")).toThrow(
+				"Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.",
 			);
 		});
 	});
 
-	describe('cleanup', () => {
-		it('invokes closeChrome before parent cleanup', async () => {
+	describe("cleanup", () => {
+		it("invokes closeChrome before parent cleanup", async () => {
 			const testScanner = new LighthouseScanner();
 			const closeChromeSpy = vi
-				.spyOn(testScanner as unknown as { closeChrome: () => Promise<void> }, 'closeChrome')
+				.spyOn(
+					testScanner as unknown as { closeChrome: () => Promise<void> },
+					"closeChrome",
+				)
 				.mockResolvedValue(undefined);
 			const baseCleanupSpy = vi
-				.spyOn(ScannerBase.prototype as unknown as { cleanup: () => Promise<void> }, 'cleanup')
+				.spyOn(
+					ScannerBase.prototype as unknown as { cleanup: () => Promise<void> },
+					"cleanup",
+				)
 				.mockResolvedValue(undefined);
 
-			await callPrivateMethod(testScanner, 'cleanup');
+			await callPrivateMethod(testScanner, "cleanup");
 
 			expect(closeChromeSpy).toHaveBeenCalledTimes(1);
 			expect(baseCleanupSpy).toHaveBeenCalledTimes(1);
 		});
 
-		it('returns early when no Chrome instance exists', async () => {
+		it("returns early when no Chrome instance exists", async () => {
 			const testScanner = new LighthouseScanner();
-			await callPrivateMethod(testScanner, 'closeChrome');
+			await callPrivateMethod(testScanner, "closeChrome");
 			expect((testScanner as unknown as { chrome: unknown }).chrome).toBeNull();
 		});
 
-		it('logs warning when Chrome close fails', async () => {
+		it("logs warning when Chrome close fails", async () => {
 			const testScanner = new LighthouseScanner();
 			const logger = createMockLogger();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
@@ -1141,56 +1331,64 @@ describe('LighthouseScanner', () => {
 			).chrome = {
 				port: 9222,
 				pid: 12345,
-				kill: vi.fn().mockRejectedValue(new Error('kill failed'))
+				kill: vi.fn().mockRejectedValue(new Error("kill failed")),
 			};
 
-			await callPrivateMethod(testScanner, 'closeChrome');
+			await callPrivateMethod(testScanner, "closeChrome");
 
 			expect(logger.warn).toHaveBeenCalledWith(
-				'Failed to close Lighthouse Chrome',
-				expect.objectContaining({ error: 'kill failed' })
+				"Failed to close Lighthouse Chrome",
+				expect.objectContaining({ error: "kill failed" }),
 			);
 			expect((testScanner as unknown as { chrome: unknown }).chrome).toBeNull();
 		});
 	});
 
-	describe('scanPage resilience', () => {
-		it('continues when re-navigation, enrichment, and screenshot capture fail', async () => {
+	describe("scanPage resilience", () => {
+		it("continues when re-navigation, enrichment, and screenshot capture fail", async () => {
 			const testScanner = new LighthouseScanner();
 			const logger = createMockLogger();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
 
 			const runLighthouseMock = vi.fn().mockResolvedValue({
-				requestedUrl: 'https://example.com/page',
-				finalUrl: 'https://example.com/page',
+				requestedUrl: "https://example.com/page",
+				finalUrl: "https://example.com/page",
 				fetchTime: new Date().toISOString(),
 				categories: {},
-				audits: {}
+				audits: {},
 			});
 			const issues: Issue[] = [
 				{
-					id: 'lh-issue',
-					scanner: 'lighthouse',
-					severity: 'moderate',
-					category: 'accessibility',
-					title: 'Example issue',
-					description: 'Example description',
+					id: "lh-issue",
+					scanner: "lighthouse",
+					severity: "moderate",
+					category: "accessibility",
+					title: "Example issue",
+					description: "Example description",
 					metadata: {
-						nodes: [{ target: ['.target'] }]
-					}
-				}
+						nodes: [{ target: [".target"] }],
+					},
+				},
 			];
 
-			(testScanner as unknown as { runLighthouse: typeof runLighthouseMock }).runLighthouse =
-				runLighthouseMock;
-			(testScanner as unknown as { extractIssues: (result: unknown) => Issue[] }).extractIssues = vi
-				.fn()
-				.mockReturnValue(issues);
+			(
+				testScanner as unknown as { runLighthouse: typeof runLighthouseMock }
+			).runLighthouse = runLighthouseMock;
 			(
 				testScanner as unknown as {
-					enrichIssuesWithContext: (page: Page, currentIssues: Issue[]) => Promise<void>;
+					extractIssues: (result: unknown) => Issue[];
 				}
-			).enrichIssuesWithContext = vi.fn().mockRejectedValue(new Error('enrichment failed'));
+			).extractIssues = vi.fn().mockReturnValue(issues);
+			(
+				testScanner as unknown as {
+					enrichIssuesWithContext: (
+						page: Page,
+						currentIssues: Issue[],
+					) => Promise<void>;
+				}
+			).enrichIssuesWithContext = vi
+				.fn()
+				.mockRejectedValue(new Error("enrichment failed"));
 			(
 				testScanner as unknown as {
 					screenshotService: {
@@ -1198,11 +1396,13 @@ describe('LighthouseScanner', () => {
 					};
 				}
 			).screenshotService = {
-				capturePageOverview: vi.fn().mockRejectedValue(new Error('screenshot failed'))
+				capturePageOverview: vi
+					.fn()
+					.mockRejectedValue(new Error("screenshot failed")),
 			};
 
 			const page = createMockPage({
-				goto: vi.fn().mockRejectedValue(new Error('navigation failed'))
+				goto: vi.fn().mockRejectedValue(new Error("navigation failed")),
 			});
 			const context = createMockContext({ page, logger });
 
@@ -1216,38 +1416,40 @@ describe('LighthouseScanner', () => {
 			expect(result.issues).toHaveLength(1);
 			expect(result.artifacts).toEqual([]);
 			expect(rawResults.pageOverview).toBeNull();
-			expect(rawResults.finalUrl).toBe('https://example.com/page');
+			expect(rawResults.finalUrl).toBe("https://example.com/page");
 			expect(logger.warn).toHaveBeenCalledWith(
-				'Failed to re-navigate page after Lighthouse, continuing with stale page',
-				expect.objectContaining({ error: 'navigation failed' })
+				"Failed to re-navigate page after Lighthouse, continuing with stale page",
+				expect.objectContaining({ error: "navigation failed" }),
 			);
 			expect(logger.warn).toHaveBeenCalledWith(
-				'Context enrichment failed or timed out, continuing without enrichment',
-				expect.objectContaining({ error: 'enrichment failed' })
+				"Context enrichment failed or timed out, continuing without enrichment",
+				expect.objectContaining({ error: "enrichment failed" }),
 			);
 			expect(logger.warn).toHaveBeenCalledWith(
-				'Screenshot capture failed or timed out, continuing without screenshot',
-				expect.objectContaining({ error: 'screenshot failed' })
+				"Screenshot capture failed or timed out, continuing without screenshot",
+				expect.objectContaining({ error: "screenshot failed" }),
 			);
 		});
 
-		it('returns an error result when Lighthouse execution fails', async () => {
+		it("returns an error result when Lighthouse execution fails", async () => {
 			const testScanner = new LighthouseScanner();
 			(
 				testScanner as unknown as {
 					runLighthouse: (page: Page, url: string) => Promise<unknown>;
 				}
-			).runLighthouse = vi.fn().mockRejectedValue(new Error('lighthouse failed'));
+			).runLighthouse = vi
+				.fn()
+				.mockRejectedValue(new Error("lighthouse failed"));
 
 			const context = createMockContext();
 			const result = await testScanner.scanPage(context);
 
 			expect(result.success).toBe(false);
-			expect(result.error).toBe('lighthouse failed');
+			expect(result.error).toBe("lighthouse failed");
 			expect(result.issues).toEqual([]);
 		});
 
-		it('uses BrowserManager.navigateToPage for re-navigation when available', async () => {
+		it("uses BrowserManager.navigateToPage for re-navigation when available", async () => {
 			const testScanner = new LighthouseScanner();
 			const logger = createMockLogger();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
@@ -1257,20 +1459,25 @@ describe('LighthouseScanner', () => {
 					runLighthouse: (page: Page, url: string) => Promise<unknown>;
 				}
 			).runLighthouse = vi.fn().mockResolvedValue({
-				requestedUrl: 'https://example.com/page',
-				finalUrl: 'https://example.com/page',
+				requestedUrl: "https://example.com/page",
+				finalUrl: "https://example.com/page",
 				fetchTime: new Date().toISOString(),
 				categories: {},
-				audits: {}
+				audits: {},
 			});
-
-			(testScanner as unknown as { extractIssues: (result: unknown) => Issue[] }).extractIssues = vi
-				.fn()
-				.mockReturnValue([]);
 
 			(
 				testScanner as unknown as {
-					enrichIssuesWithContext: (page: Page, currentIssues: Issue[]) => Promise<void>;
+					extractIssues: (result: unknown) => Issue[];
+				}
+			).extractIssues = vi.fn().mockReturnValue([]);
+
+			(
+				testScanner as unknown as {
+					enrichIssuesWithContext: (
+						page: Page,
+						currentIssues: Issue[],
+					) => Promise<void>;
 				}
 			).enrichIssuesWithContext = vi.fn().mockResolvedValue(undefined);
 
@@ -1281,12 +1488,14 @@ describe('LighthouseScanner', () => {
 					};
 				}
 			).screenshotService = {
-				capturePageOverview: vi.fn().mockResolvedValue(null)
+				capturePageOverview: vi.fn().mockResolvedValue(null),
 			};
 
 			const navigateToPage = vi.fn().mockResolvedValue(undefined);
 			(
-				testScanner as unknown as { browserManager: { navigateToPage: typeof navigateToPage } }
+				testScanner as unknown as {
+					browserManager: { navigateToPage: typeof navigateToPage };
+				}
 			).browserManager = { navigateToPage };
 
 			const page = createMockPage();
@@ -1296,7 +1505,7 @@ describe('LighthouseScanner', () => {
 
 			expect(result.success).toBe(true);
 			expect(navigateToPage).toHaveBeenCalledWith(page, context.pageEntry.url, {
-				type: 'domcontentloaded'
+				type: "domcontentloaded",
 			});
 			expect(page.goto).not.toHaveBeenCalled();
 		});

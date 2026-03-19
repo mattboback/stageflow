@@ -1,19 +1,19 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { Button, Container, Panel } from '$lib/components/ui';
-	import { SITE } from '$lib/config/site';
-	import { AlertTriangle, Home, RotateCcw } from 'lucide-svelte';
+import { page } from "$app/state";
+import { Button, Container, Panel } from "$lib/components/ui";
+import { SITE } from "$lib/config/site";
+import { AlertTriangle, Home, RotateCcw } from "lucide-svelte";
 
-	const status = $derived(page.status);
-	const message = $derived(page.error?.message ?? 'An unexpected error occurred');
+const status = $derived(page.status);
+const message = $derived(page.error?.message ?? "An unexpected error occurred");
 
-	const isNotFound = $derived(status === 404);
-	const title = $derived(isNotFound ? 'Page Not Found' : 'Something Went Wrong');
-	const description = $derived(
-		isNotFound
-			? "The page you're looking for doesn't exist or has been moved."
-			: 'We encountered an error while processing your request.'
-	);
+const isNotFound = $derived(status === 404);
+const title = $derived(isNotFound ? "Page Not Found" : "Something Went Wrong");
+const description = $derived(
+	isNotFound
+		? "The page you're looking for doesn't exist or has been moved."
+		: "We encountered an error while processing your request.",
+);
 </script>
 
 <svelte:head>

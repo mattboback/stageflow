@@ -1,48 +1,48 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { LogoMark } from '$lib/components/icons';
-	import { cn } from '$lib/utils';
-	import { Menu, X } from 'lucide-svelte';
+import { page } from "$app/state";
+import { LogoMark } from "$lib/components/icons";
+import { cn } from "$lib/utils";
+import { Menu, X } from "lucide-svelte";
 
-	import DesktopNav from './DesktopNav.svelte';
-	import MobileMenu from './MobileMenu.svelte';
+import DesktopNav from "./DesktopNav.svelte";
+import MobileMenu from "./MobileMenu.svelte";
 
-	let mobileMenuOpen = $state(false);
-	let scrolled = $state(false);
+let mobileMenuOpen = $state(false);
+let scrolled = $state(false);
 
-	const pathname = $derived(page.url.pathname);
-	const isHome = $derived(pathname === '/');
+const pathname = $derived(page.url.pathname);
+const isHome = $derived(pathname === "/");
 
-	$effect(() => {
-		const handleScroll = () => {
-			scrolled = window.scrollY > 20;
-		};
-		window.addEventListener('scroll', handleScroll);
-		return () => window.removeEventListener('scroll', handleScroll);
-	});
+$effect(() => {
+	const handleScroll = () => {
+		scrolled = window.scrollY > 20;
+	};
+	window.addEventListener("scroll", handleScroll);
+	return () => window.removeEventListener("scroll", handleScroll);
+});
 
-	$effect(() => {
-		if (mobileMenuOpen) {
-			document.body.style.overflow = 'hidden';
-		} else {
-			document.body.style.overflow = 'unset';
-		}
-	});
-
-	function isActive(href: string): boolean {
-		if (href === '/') {
-			return pathname === '/';
-		}
-		return pathname?.startsWith(href) || false;
+$effect(() => {
+	if (mobileMenuOpen) {
+		document.body.style.overflow = "hidden";
+	} else {
+		document.body.style.overflow = "unset";
 	}
+});
 
-	function closeMobileMenu() {
-		mobileMenuOpen = false;
+function isActive(href: string): boolean {
+	if (href === "/") {
+		return pathname === "/";
 	}
+	return pathname?.startsWith(href) || false;
+}
 
-	function toggleMobileMenu() {
-		mobileMenuOpen = !mobileMenuOpen;
-	}
+function closeMobileMenu() {
+	mobileMenuOpen = false;
+}
+
+function toggleMobileMenu() {
+	mobileMenuOpen = !mobileMenuOpen;
+}
 </script>
 
 <header

@@ -1,15 +1,15 @@
 <script lang="ts">
-	import { GithubIcon } from '$lib/components/icons';
-	import { buttonVariants } from '$lib/components/ui';
-	import { navLinks } from '$lib/config/nav';
-	import { SITE } from '$lib/config/site';
-	import { cn } from '$lib/utils';
+import { GithubIcon } from "$lib/components/icons";
+import { buttonVariants } from "$lib/components/ui";
+import { navLinks } from "$lib/config/nav";
+import { SITE } from "$lib/config/site";
+import { cn } from "$lib/utils";
 
-	interface Props {
-		isActive: (href: string) => boolean;
-	}
+interface Props {
+	isActive: (href: string) => boolean;
+}
 
-	const { isActive }: Props = $props();
+const { isActive }: Props = $props();
 </script>
 
 <nav class="hidden items-center gap-1.5 md:flex" aria-label="Main navigation">

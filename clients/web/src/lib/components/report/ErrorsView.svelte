@@ -1,15 +1,15 @@
 <script lang="ts">
-	import type { ReportError } from '$lib/types/unified-report';
+import type { ReportError } from "$lib/types/unified-report";
 
-	import { Panel } from '$lib/components/ui';
+import { Panel } from "$lib/components/ui";
 
-	interface Props {
-		errors: ReportError[] | undefined;
-	}
+interface Props {
+	errors: ReportError[] | undefined;
+}
 
-	const { errors }: Props = $props();
+const { errors }: Props = $props();
 
-	const list = $derived(errors ?? []);
+const list = $derived(errors ?? []);
 </script>
 
 <Panel class="shadow-sm" padding="none" rounded="2xl">

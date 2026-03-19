@@ -1,153 +1,168 @@
 <script lang="ts">
-	import type { ReportAudience } from '$lib/types/report-audience';
-	import type { ScreenshotArtifact } from '$lib/types/scan';
-	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
+import type { ReportAudience } from "$lib/types/report-audience";
+import type { ScreenshotArtifact } from "$lib/types/scan";
+import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
 
-	import { Chip, Modal, panelVariants } from '$lib/components/ui';
-	import {
-		getIssueScreenshotUrl,
-		getPageOverviewUrl,
-		getSeverityBadgeClass,
-		getSeverityBorderClass
-	} from '$lib/report';
-	import { cn, getWcagUnderstandingUrl, normalizeWcagTag } from '$lib/utils';
-	import { extractPrimaryFailureDetail } from '$lib/utils/failure-summary';
-	import { ExternalLink, FileText, XCircle } from 'lucide-svelte';
-	import { tick } from 'svelte';
+import { Chip, Modal, panelVariants } from "$lib/components/ui";
+import {
+	getIssueScreenshotUrl,
+	getPageOverviewUrl,
+	getSeverityBadgeClass,
+	getSeverityBorderClass,
+} from "$lib/report";
+import { cn, getWcagUnderstandingUrl, normalizeWcagTag } from "$lib/utils";
+import { extractPrimaryFailureDetail } from "$lib/utils/failure-summary";
+import { ExternalLink, FileText, XCircle } from "lucide-svelte";
+import { tick } from "svelte";
 
-	import IssueEvidenceSection from './IssueEvidenceSection.svelte';
-	import IssueOccurrenceCard from './IssueOccurrenceCard.svelte';
-	import IssueTriageCard from './IssueTriageCard.svelte';
+import IssueEvidenceSection from "./IssueEvidenceSection.svelte";
+import IssueOccurrenceCard from "./IssueOccurrenceCard.svelte";
+import IssueTriageCard from "./IssueTriageCard.svelte";
 
-	interface Props {
-		issue: IssueDetail;
-		page?: PageSummary | null;
-		audience?: ReportAudience;
-		screenshots: ScreenshotArtifact[];
-		highlightedElementId?: string;
-		onClose: () => void;
+interface Props {
+	issue: IssueDetail;
+	page?: PageSummary | null;
+	audience?: ReportAudience;
+	screenshots: ScreenshotArtifact[];
+	highlightedElementId?: string;
+	onClose: () => void;
+}
+
+const {
+	issue,
+	page = null,
+	audience = "pm",
+	screenshots,
+	highlightedElementId,
+	onClose,
+}: Props = $props();
+
+const isEngineer = $derived(audience === "engineer");
+const isPM = $derived(audience === "pm");
+
+const primaryOccurrence = $derived(issue.occurrences?.[0] ?? null);
+const primaryFix = $derived.by(() => {
+	if (issue.howToFix) {
+		const trimmed = issue.howToFix.trim();
+		const firstLine = trimmed
+			.split("\n")
+			.map((line) => line.trim())
+			.find(Boolean);
+		if (!firstLine) return null;
+		return firstLine.length > 220 ? `${firstLine.slice(0, 217)}...` : firstLine;
+	}
+	if (primaryOccurrence?.failureSummary) {
+		const detail =
+			extractPrimaryFailureDetail(primaryOccurrence.failureSummary) ??
+			primaryOccurrence.failureSummary;
+		const trimmed = detail.trim();
+		if (!trimmed) return null;
+		return trimmed.length > 220 ? `${trimmed.slice(0, 217)}...` : trimmed;
+	}
+	return null;
+});
+
+const suggestedOwner = $derived.by(() => {
+	const ruleId = (issue.ruleId ?? "").toLowerCase();
+	const category = (issue.category ?? "").toLowerCase();
+	const tags = (issue.wcagTags ?? []).map((t) => t.toLowerCase());
+
+	if (
+		ruleId.includes("image-alt") ||
+		ruleId.includes("document-title") ||
+		ruleId.includes("meta-description") ||
+		category.includes("seo")
+	) {
+		return "Content";
 	}
 
-	const {
-		issue,
-		page = null,
-		audience = 'pm',
+	if (
+		ruleId.includes("color-contrast") ||
+		ruleId.includes("contrast") ||
+		ruleId.includes("focus") ||
+		tags.some((t) => t.includes("1.4.3") || t.includes("1.4.11"))
+	) {
+		return "Design";
+	}
+
+	return "Engineering";
+});
+
+const alsoDetectedBy = $derived.by(() => {
+	const raw = issue.scannerData?.alsoDetectedBy;
+	return Array.isArray(raw)
+		? raw.filter((v): v is string => typeof v === "string" && v !== "")
+		: [];
+});
+
+const screenshotUrl = $derived(
+	getIssueScreenshotUrl({
 		screenshots,
-		highlightedElementId,
-		onClose
-	}: Props = $props();
+		scannerId: issue.scanner,
+		issueId: issue.id,
+		pageId: issue.pageId,
+	}),
+);
 
-	const isEngineer = $derived(audience === 'engineer');
-	const isPM = $derived(audience === 'pm');
+const pageOverviewUrl = $derived(
+	page
+		? getPageOverviewUrl(
+				screenshots,
+				page.id,
+				issue.scanner ? [issue.scanner, "axe"] : ["axe"],
+			)
+		: null,
+);
 
-	const primaryOccurrence = $derived(issue.occurrences?.[0] ?? null);
-	const primaryFix = $derived.by(() => {
-		if (issue.howToFix) {
-			const trimmed = issue.howToFix.trim();
-			const firstLine = trimmed
-				.split('\n')
-				.map((line) => line.trim())
-				.find(Boolean);
-			if (!firstLine) return null;
-			return firstLine.length > 220 ? `${firstLine.slice(0, 217)}...` : firstLine;
+const modalRef = $state<HTMLDivElement | null>(null);
+const localHighlightedElementId = $state<string | null>(null);
+
+const activeHighlightId = $derived(
+	localHighlightedElementId ?? highlightedElementId ?? null,
+);
+const openedFromOverlay = $derived(Boolean(highlightedElementId));
+let fullPageEvidenceOverride = $state<boolean | null>(null);
+const showFullPageEvidence = $derived(
+	fullPageEvidenceOverride ?? !highlightedElementId,
+);
+const shouldShowPageOverview = $derived(
+	showFullPageEvidence || !openedFromOverlay,
+);
+const pageOverviewRenderable = $derived(
+	!!page &&
+		!!pageOverviewUrl &&
+		(page.pageOverview?.pageWidth ?? 0) > 0 &&
+		(page.pageOverview?.pageHeight ?? 0) > 0,
+);
+
+$effect(() => {
+	issue.id;
+	highlightedElementId;
+	fullPageEvidenceOverride = null;
+});
+
+// Scroll to highlighted element when it changes
+$effect(() => {
+	if (!activeHighlightId || !modalRef) return;
+
+	let cancelled = false;
+
+	void (async () => {
+		await tick();
+		// Bail if effect re-ran before tick completed
+		if (cancelled) return;
+		const node = modalRef?.querySelector<HTMLElement>(
+			`[data-occurrence-id="${CSS.escape(activeHighlightId)}"]`,
+		);
+		if (typeof node?.scrollIntoView === "function") {
+			node.scrollIntoView({ block: "center" });
 		}
-		if (primaryOccurrence?.failureSummary) {
-			const detail =
-				extractPrimaryFailureDetail(primaryOccurrence.failureSummary) ?? primaryOccurrence.failureSummary;
-			const trimmed = detail.trim();
-			if (!trimmed) return null;
-			return trimmed.length > 220 ? `${trimmed.slice(0, 217)}...` : trimmed;
-		}
-		return null;
-	});
+	})();
 
-	const suggestedOwner = $derived.by(() => {
-		const ruleId = (issue.ruleId ?? '').toLowerCase();
-		const category = (issue.category ?? '').toLowerCase();
-		const tags = (issue.wcagTags ?? []).map((t) => t.toLowerCase());
-
-		if (
-			ruleId.includes('image-alt') ||
-			ruleId.includes('document-title') ||
-			ruleId.includes('meta-description') ||
-			category.includes('seo')
-		) {
-			return 'Content';
-		}
-
-		if (
-			ruleId.includes('color-contrast') ||
-			ruleId.includes('contrast') ||
-			ruleId.includes('focus') ||
-			tags.some((t) => t.includes('1.4.3') || t.includes('1.4.11'))
-		) {
-			return 'Design';
-		}
-
-		return 'Engineering';
-	});
-
-	const alsoDetectedBy = $derived.by(() => {
-		const raw = issue.scannerData?.alsoDetectedBy;
-		return Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string' && v !== '') : [];
-	});
-
-	const screenshotUrl = $derived(
-		getIssueScreenshotUrl({
-			screenshots,
-			scannerId: issue.scanner,
-			issueId: issue.id,
-			pageId: issue.pageId
-		})
-	);
-
-	const pageOverviewUrl = $derived(
-		page
-			? getPageOverviewUrl(screenshots, page.id, issue.scanner ? [issue.scanner, 'axe'] : ['axe'])
-			: null
-	);
-
-	let modalRef = $state<HTMLDivElement | null>(null);
-	let localHighlightedElementId = $state<string | null>(null);
-
-	const activeHighlightId = $derived(localHighlightedElementId ?? highlightedElementId ?? null);
-	const openedFromOverlay = $derived(Boolean(highlightedElementId));
-	let fullPageEvidenceOverride = $state<boolean | null>(null);
-	const showFullPageEvidence = $derived(fullPageEvidenceOverride ?? !highlightedElementId);
-	const shouldShowPageOverview = $derived(showFullPageEvidence || !openedFromOverlay);
-	const pageOverviewRenderable = $derived(
-		!!page && !!pageOverviewUrl &&
-		(page.pageOverview?.pageWidth ?? 0) > 0 && (page.pageOverview?.pageHeight ?? 0) > 0
-	);
-
-	$effect(() => {
-		issue.id;
-		highlightedElementId;
-		fullPageEvidenceOverride = null;
-	});
-
-	// Scroll to highlighted element when it changes
-	$effect(() => {
-		if (!activeHighlightId || !modalRef) return;
-
-		let cancelled = false;
-
-		void (async () => {
-			await tick();
-			// Bail if effect re-ran before tick completed
-			if (cancelled) return;
-			const node = modalRef?.querySelector<HTMLElement>(
-				`[data-occurrence-id="${CSS.escape(activeHighlightId)}"]`
-			);
-			if (typeof node?.scrollIntoView === 'function') {
-				node.scrollIntoView({ block: 'center' });
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	});
+	return () => {
+		cancelled = true;
+	};
+});
 </script>
 
 <Modal

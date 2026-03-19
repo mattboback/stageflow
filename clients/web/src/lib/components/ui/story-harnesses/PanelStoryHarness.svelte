@@ -1,25 +1,30 @@
 <script lang="ts">
-	import type { PanelInteractive, PanelPadding, PanelRounded, PanelVariant } from '../panel';
+import type {
+	PanelInteractive,
+	PanelPadding,
+	PanelRounded,
+	PanelVariant,
+} from "../panel";
 
-	import Panel from '../Panel.svelte';
+import Panel from "../Panel.svelte";
 
-	interface Props {
-		variant?: PanelVariant;
-		padding?: PanelPadding;
-		rounded?: PanelRounded;
-		interactive?: PanelInteractive;
-		title?: string;
-		body?: string;
-	}
+interface Props {
+	variant?: PanelVariant;
+	padding?: PanelPadding;
+	rounded?: PanelRounded;
+	interactive?: PanelInteractive;
+	title?: string;
+	body?: string;
+}
 
-	const {
-		variant = 'default',
-		padding = 'md',
-		rounded = 'lg',
-		interactive = false,
-		title = 'Panel title',
-		body = 'Panel body content'
-	}: Props = $props();
+const {
+	variant = "default",
+	padding = "md",
+	rounded = "lg",
+	interactive = false,
+	title = "Panel title",
+	body = "Panel body content",
+}: Props = $props();
 </script>
 
 <Panel {variant} {padding} {rounded} {interactive} class="w-[min(92vw,34rem)]" data-testid="panel">

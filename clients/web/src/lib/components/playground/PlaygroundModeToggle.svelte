@@ -1,26 +1,26 @@
 <script lang="ts">
-	import { Label } from '$lib/components/ui';
-	import { cn } from '$lib/utils';
-	import { CheckCircle2, FileUp, Globe } from 'lucide-svelte';
+import { Label } from "$lib/components/ui";
+import { cn } from "$lib/utils";
+import { CheckCircle2, FileUp, Globe } from "lucide-svelte";
 
-	type Mode = 'url' | 'zip';
+type Mode = "url" | "zip";
 
-	interface Props {
-		mode: Mode;
-		onModeChange: (mode: Mode) => void;
-	}
+interface Props {
+	mode: Mode;
+	onModeChange: (mode: Mode) => void;
+}
 
-	const { mode, onModeChange }: Props = $props();
+const { mode, onModeChange }: Props = $props();
 
-	function selectableSurfaceClass(base: string, isSelected: boolean) {
-		return cn(
-			base,
-			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
-			isSelected
-				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
-				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
-		);
-	}
+function selectableSurfaceClass(base: string, isSelected: boolean) {
+	return cn(
+		base,
+		"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+		isSelected
+			? "border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]"
+			: "border-line bg-surface hover:border-accent/30 hover:bg-surface-muted",
+	);
+}
 </script>
 
 <div>

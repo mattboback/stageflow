@@ -1,7 +1,7 @@
 export function resultsPath(jobId: string, scanner: string): string {
-  return `${jobId}/${scanner}/results.json`;
+	return `${jobId}/${scanner}/results.json`;
 }
 
 export function reportPath(jobId: string, scanner: string): string {
-  return `${jobId}/${scanner}/report.html`;
+	return `${jobId}/${scanner}/report.html`;
 }

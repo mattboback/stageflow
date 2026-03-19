@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCircle2, Clock, Radar } from 'lucide-svelte';
+import { CheckCircle2, Clock, Radar } from "lucide-svelte";
 </script>
 
 <section class="playground-hero relative overflow-hidden border-b border-line/80">

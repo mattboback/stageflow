@@ -18,7 +18,7 @@ export function normalizeUrlInput(input: string): string | null {
 	}
 
 	// Support protocol-relative URLs (e.g. //example.com).
-	if (trimmed.startsWith('//')) {
+	if (trimmed.startsWith("//")) {
 		return `https:${trimmed}`;
 	}
 
@@ -26,25 +26,28 @@ export function normalizeUrlInput(input: string): string | null {
 	return `https://${trimmed}`;
 }
 
-export function normalizeUrlListText(input: string): { text: string; changed: boolean } {
+export function normalizeUrlListText(input: string): {
+	text: string;
+	changed: boolean;
+} {
 	const normalized = input
-		.split('\n')
+		.split("\n")
 		.map((line) => normalizeUrlInput(line))
 		.filter((line): line is string => Boolean(line))
-		.join('\n');
+		.join("\n");
 
 	const originalNormalized = input
-		.split('\n')
+		.split("\n")
 		.map((line) => line.trim())
 		.filter(Boolean)
-		.join('\n');
+		.join("\n");
 
 	return { text: normalized, changed: normalized !== originalNormalized };
 }
 
 export function parseUrlList(input: string): string[] {
 	return input
-		.split('\n')
+		.split("\n")
 		.map((line) => normalizeUrlInput(line))
 		.filter((line): line is string => Boolean(line));
 }
@@ -60,17 +63,20 @@ export function validateHttpUrls(urls: string[]): {
 		try {
 			const parsed = new URL(url);
 			const protocol = parsed.protocol.toLowerCase();
-			if (protocol !== 'http:' && protocol !== 'https:') {
-				invalid.push({ url, reason: 'URL must start with http:// or https://.' });
+			if (protocol !== "http:" && protocol !== "https:") {
+				invalid.push({
+					url,
+					reason: "URL must start with http:// or https://.",
+				});
 				continue;
 			}
 			if (!parsed.hostname) {
-				invalid.push({ url, reason: 'Missing hostname.' });
+				invalid.push({ url, reason: "Missing hostname." });
 				continue;
 			}
 			valid.push(url);
 		} catch {
-			invalid.push({ url, reason: 'Invalid URL.' });
+			invalid.push({ url, reason: "Invalid URL." });
 		}
 	}
 
@@ -78,7 +84,7 @@ export function validateHttpUrls(urls: string[]): {
 }
 
 export function isZipFilename(name: string): boolean {
-	return name.trim().toLowerCase().endsWith('.zip');
+	return name.trim().toLowerCase().endsWith(".zip");
 }
 
 export function buildAiNavigatorConfig(params: {
@@ -93,12 +99,12 @@ export function buildAiNavigatorConfig(params: {
 		goal: {
 			objective: params.objective.trim(),
 			maxSteps: params.maxSteps,
-			maxWallTimeMs: params.maxWallTimeMs
+			maxWallTimeMs: params.maxWallTimeMs,
 		},
 		vision: {
-			provider: 'openrouter',
-			model: params.model
-		}
+			provider: "openrouter",
+			model: params.model,
+		},
 	};
 
 	const inputValuesObj = params.inputValues

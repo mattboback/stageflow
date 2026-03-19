@@ -1,22 +1,22 @@
 {
-  "id": "open-graph",
-  "name": "Open Graph Scanner",
-  "version": "1.0.0",
-  "description": "Validates social sharing metadata like Twitter cards and OG tags",
-  "aliases": ["social-preview", "og-tags"],
-  "author": "Stageflow",
-  "capabilities": {
-    "categories": ["seo"],
-    "outputFormats": ["json"],
-    "supportsScreenshots": false,
-    "supportsConcurrency": true,
-    "requiresBrowser": true,
-    "supportsOffline": false,
-    "maxConcurrency": 10,
-    "estimatedTimePerPage": 2000
-  },
-  "entry": {
-    "module": "./index.js",
-    "exportName": "OpenGraphScanner"
-  }
+	"id": "open-graph",
+	"name": "Open Graph Scanner",
+	"version": "1.0.0",
+	"description": "Validates social sharing metadata like Twitter cards and OG tags",
+	"aliases": ["social-preview", "og-tags"],
+	"author": "Stageflow",
+	"capabilities": {
+		"categories": ["seo"],
+		"outputFormats": ["json"],
+		"supportsScreenshots": false,
+		"supportsConcurrency": true,
+		"requiresBrowser": true,
+		"supportsOffline": false,
+		"maxConcurrency": 10,
+		"estimatedTimePerPage": 2000
+	},
+	"entry": {
+		"module": "./index.js",
+		"exportName": "OpenGraphScanner"
+	}
 }

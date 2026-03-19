@@ -1,85 +1,89 @@
 <script lang="ts">
-	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
+import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
 
-	import { Chip, Panel } from '$lib/components/ui';
-	import { getSeverityFillColor, getSeverityStrokeColor } from '$lib/report';
+import { Chip, Panel } from "$lib/components/ui";
+import { getSeverityFillColor, getSeverityStrokeColor } from "$lib/report";
 
-	interface Props {
-		page: PageSummary;
-		issues: IssueDetail[];
-		screenshotUrl: string | null;
-		onSelectIssue: (issue: IssueDetail, highlightedElementId?: string) => void;
-	}
+interface Props {
+	page: PageSummary;
+	issues: IssueDetail[];
+	screenshotUrl: string | null;
+	onSelectIssue: (issue: IssueDetail, highlightedElementId?: string) => void;
+}
 
-	const { page, issues, screenshotUrl, onSelectIssue }: Props = $props();
+const { page, issues, screenshotUrl, onSelectIssue }: Props = $props();
 
-	const issueMap = $derived.by(
-		() =>
-			Object.fromEntries(issues.map((issue) => [issue.id, issue])) as Record<string, IssueDetail>
-	);
+const issueMap = $derived.by(
+	() =>
+		Object.fromEntries(issues.map((issue) => [issue.id, issue])) as Record<
+			string,
+			IssueDetail
+		>,
+);
 
-	const elements = $derived(page.pageOverview?.elements ?? []);
-	const pageWidth = $derived(page.pageOverview?.pageWidth ?? 0);
-	const pageHeight = $derived(page.pageOverview?.pageHeight ?? 0);
+const elements = $derived(page.pageOverview?.elements ?? []);
+const pageWidth = $derived(page.pageOverview?.pageWidth ?? 0);
+const pageHeight = $derived(page.pageOverview?.pageHeight ?? 0);
 
-	let zoom = $state(1);
+let zoom = $state(1);
 
-	function clampZoom(value: number) {
-		return Math.max(0.5, Math.min(3, value));
-	}
+function clampZoom(value: number) {
+	return Math.max(0.5, Math.min(3, value));
+}
 
-	function adjustZoom(delta: number) {
-		zoom = clampZoom(Math.round((zoom + delta) * 10) / 10);
-	}
+function adjustZoom(delta: number) {
+	zoom = clampZoom(Math.round((zoom + delta) * 10) / 10);
+}
 
-	function resetZoom() {
-		zoom = 1;
-	}
+function resetZoom() {
+	zoom = 1;
+}
 
-	let severityFilters = $state({
-		critical: true,
-		serious: true,
-		moderate: true,
-		minor: true,
-		info: true
-	});
+let severityFilters = $state({
+	critical: true,
+	serious: true,
+	moderate: true,
+	minor: true,
+	info: true,
+});
 
-	function toggleSeverity(key: keyof typeof severityFilters) {
-		severityFilters = { ...severityFilters, [key]: !severityFilters[key] };
-	}
+function toggleSeverity(key: keyof typeof severityFilters) {
+	severityFilters = { ...severityFilters, [key]: !severityFilters[key] };
+}
 
-	const filteredElements = $derived(
-		elements.filter((el) => {
+const filteredElements = $derived(
+	elements.filter((el) => {
+		const issue = issueMap[el.issueId];
+		if (!issue) return false;
+		const severity = issue.severity as keyof typeof severityFilters;
+		return severityFilters[severity] ?? true;
+	}),
+);
+
+// Track focused element for keyboard accessibility
+let focusedIndex = $state(-1);
+
+function handleKeydown(e: KeyboardEvent) {
+	if (filteredElements.length === 0) return;
+
+	if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+		e.preventDefault();
+		focusedIndex = (focusedIndex + 1) % filteredElements.length;
+	} else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+		e.preventDefault();
+		focusedIndex =
+			focusedIndex <= 0 ? filteredElements.length - 1 : focusedIndex - 1;
+	} else if (e.key === "Enter" || e.key === " ") {
+		e.preventDefault();
+		const el = filteredElements[focusedIndex];
+		if (el) {
 			const issue = issueMap[el.issueId];
-			if (!issue) return false;
-			const severity = issue.severity as keyof typeof severityFilters;
-			return severityFilters[severity] ?? true;
-		})
-	);
-
-	// Track focused element for keyboard accessibility
-	let focusedIndex = $state(-1);
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (filteredElements.length === 0) return;
-
-		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-			e.preventDefault();
-			focusedIndex = (focusedIndex + 1) % filteredElements.length;
-		} else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-			e.preventDefault();
-			focusedIndex = focusedIndex <= 0 ? filteredElements.length - 1 : focusedIndex - 1;
-		} else if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			const el = filteredElements[focusedIndex];
-			if (el) {
-				const issue = issueMap[el.issueId];
-				if (issue) {
-					onSelectIssue(issue, `${issue.id}-el-${el.nodeIndex}`);
-				}
+			if (issue) {
+				onSelectIssue(issue, `${issue.id}-el-${el.nodeIndex}`);
 			}
 		}
 	}
+}
 </script>
 
 <div class="space-y-3">

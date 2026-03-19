@@ -1,46 +1,42 @@
 {
-  "name": "@stageflow/contracts-report",
-  "version": "2.0.0",
-  "packageManager": "bun@1.3.5",
-  "description": "Unified Report schema and types for Stageflow",
-  "main": "dist/generated/typescript/index.js",
-  "types": "dist/generated/typescript/index.d.ts",
-  "scripts": {
-    "generate": "bun run generate:ts && bun run generate:go",
-    "generate:ts": "json2ts schema/unified-report.v2.schema.json -o generated/typescript/unified-report.v2.ts --unreachableDefinitions",
-    "generate:go": "go run github.com/atombender/go-jsonschema@v0.20.0 --package report --tags json --struct-name-from-title schema/unified-report.v2.schema.json > generated/go/report_schema.go",
-    "validate": "node schema/validate.js",
-    "validate:fixtures": "node schema/validate.js fixtures/unified-report.v2.json && node schema/validate.js fixtures/unified-report.v2.all-scans.json",
-    "build": "bun run generate && bun run validate:fixtures && tsc",
-    "typecheck": "tsc --noEmit",
-    "check": "./scripts/pre-commit-check.sh"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/generated/typescript/index.d.ts",
-      "import": "./dist/generated/typescript/index.js",
-      "require": "./dist/generated/typescript/index.js"
-    },
-    "./schema": {
-      "import": "./schema/unified-report.v2.schema.json",
-      "require": "./schema/unified-report.v2.schema.json"
-    },
-    "./validator-cli": {
-      "import": "./schema/validate.js",
-      "require": "./schema/validate.js"
-    }
-  },
-  "files": [
-    "dist/**/*",
-    "schema/*.json",
-    "schema/validate.js"
-  ],
-  "dependencies": {
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1"
-  },
-  "devDependencies": {
-    "json-schema-to-typescript": "^15.0.4",
-    "typescript": "^5.7.2"
-  }
+	"name": "@stageflow/contracts-report",
+	"version": "2.0.0",
+	"packageManager": "bun@1.3.5",
+	"description": "Unified Report schema and types for Stageflow",
+	"main": "dist/generated/typescript/index.js",
+	"types": "dist/generated/typescript/index.d.ts",
+	"scripts": {
+		"generate": "bun run generate:ts && bun run generate:go",
+		"generate:ts": "json2ts schema/unified-report.v2.schema.json -o generated/typescript/unified-report.v2.ts --unreachableDefinitions",
+		"generate:go": "go run github.com/atombender/go-jsonschema@v0.20.0 --package report --tags json --struct-name-from-title schema/unified-report.v2.schema.json > generated/go/report_schema.go",
+		"validate": "node schema/validate.js",
+		"validate:fixtures": "node schema/validate.js fixtures/unified-report.v2.json && node schema/validate.js fixtures/unified-report.v2.all-scans.json",
+		"build": "bun run generate && bun run validate:fixtures && tsc",
+		"typecheck": "tsc --noEmit",
+		"check": "./scripts/pre-commit-check.sh"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/generated/typescript/index.d.ts",
+			"import": "./dist/generated/typescript/index.js",
+			"require": "./dist/generated/typescript/index.js"
+		},
+		"./schema": {
+			"import": "./schema/unified-report.v2.schema.json",
+			"require": "./schema/unified-report.v2.schema.json"
+		},
+		"./validator-cli": {
+			"import": "./schema/validate.js",
+			"require": "./schema/validate.js"
+		}
+	},
+	"files": ["dist/**/*", "schema/*.json", "schema/validate.js"],
+	"dependencies": {
+		"ajv": "^8.17.1",
+		"ajv-formats": "^3.0.1"
+	},
+	"devDependencies": {
+		"json-schema-to-typescript": "^15.0.4",
+		"typescript": "^5.7.2"
+	}
 }

@@ -1,22 +1,22 @@
 {
-  "id": "seo",
-  "name": "SEO Scanner",
-  "version": "1.0.0",
-  "description": "Analyzes pages for SEO best practices including meta tags, headings, structured data, and other ranking factors",
-  "aliases": ["meta-tags", "structured-data"],
-  "author": "Stageflow",
-  "capabilities": {
-    "categories": ["seo"],
-    "outputFormats": ["json", "html"],
-    "supportsScreenshots": false,
-    "supportsConcurrency": true,
-    "requiresBrowser": true,
-    "supportsOffline": false,
-    "maxConcurrency": 10,
-    "estimatedTimePerPage": 3000
-  },
-  "entry": {
-    "module": "./index.js",
-    "exportName": "SEOScanner"
-  }
+	"id": "seo",
+	"name": "SEO Scanner",
+	"version": "1.0.0",
+	"description": "Analyzes pages for SEO best practices including meta tags, headings, structured data, and other ranking factors",
+	"aliases": ["meta-tags", "structured-data"],
+	"author": "Stageflow",
+	"capabilities": {
+		"categories": ["seo"],
+		"outputFormats": ["json", "html"],
+		"supportsScreenshots": false,
+		"supportsConcurrency": true,
+		"requiresBrowser": true,
+		"supportsOffline": false,
+		"maxConcurrency": 10,
+		"estimatedTimePerPage": 3000
+	},
+	"entry": {
+		"module": "./index.js",
+		"exportName": "SEOScanner"
+	}
 }

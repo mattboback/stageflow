@@ -1,6 +1,13 @@
 <script lang="ts">
-	import { Panel } from '$lib/components/ui';
-	import { Camera, ChartBar, CheckCircle2, FileText, Shield, Wrench } from 'lucide-svelte';
+import { Panel } from "$lib/components/ui";
+import {
+	Camera,
+	ChartBar,
+	CheckCircle2,
+	FileText,
+	Shield,
+	Wrench,
+} from "lucide-svelte";
 </script>
 
 <div class="space-y-4 xl:sticky xl:top-24">
