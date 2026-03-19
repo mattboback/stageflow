@@ -54,7 +54,7 @@ jobs:
             (cd "$dir" && govulncheck ./...)
           done
 
-  frontend:
+  clients/web:
     name: Frontend (lint, typecheck, test)
     runs-on: ubuntu-latest
     steps:
@@ -67,17 +67,17 @@ jobs:
 
       - name: Install
         run: bun install --frozen-lockfile
-        working-directory: frontend
+        working-directory: clients/web
 
       - name: Audit (high)
         run: bun audit --audit-level=high
-        working-directory: frontend
+        working-directory: clients/web
 
       - name: CI
         run: bun run ci
-        working-directory: frontend
+        working-directory: clients/web
 
-  frontend-storybook:
+  clients/web-storybook:
     name: Frontend Storybook (interaction + a11y)
     runs-on: ubuntu-latest
     steps:
@@ -90,29 +90,29 @@ jobs:
 
       - name: Install
         run: bun install --frozen-lockfile
-        working-directory: frontend
+        working-directory: clients/web
 
       - name: Install Playwright browser
         run: bunx playwright install --with-deps chromium
-        working-directory: frontend
+        working-directory: clients/web
 
       - name: Build Storybook
         run: bun run build-storybook
-        working-directory: frontend
+        working-directory: clients/web
 
       - name: Storybook tests
         run: bun run test-storybook:ci
-        working-directory: frontend
+        working-directory: clients/web
 
       - name: Upload Storybook test artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-storybook-artifacts
+          name: clients/web-storybook-artifacts
           path: |
-            frontend/junit.xml
-            frontend/test-results
-            frontend/storybook-static
+            clients/web/junit.xml
+            clients/web/test-results
+            clients/web/storybook-static
           if-no-files-found: ignore
 
   scanner-runner:

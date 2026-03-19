@@ -9,8 +9,8 @@ compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow')
 repo_root := justfile_directory()
 
 # Paths
-frontend_dir := 'frontend'
-scanner_dir := 'platform/scanner-runner'
+clients/web_dir := 'clients/web'
+scanner_dir := 'services/scanner-runner'
 go_work := 'go.work'
 
 [group('meta'), doc('Show available recipes')]
@@ -28,8 +28,8 @@ setup:
     echo "==> Syncing Go workspace..."
     {{go}} work sync
 
-    echo "==> Installing frontend dependencies..."
-    (cd {{frontend_dir}} && {{bun}} install --frozen-lockfile)
+    echo "==> Installing clients/web dependencies..."
+    (cd {{clients/web_dir}} && {{bun}} install --frozen-lockfile)
 
     echo "==> Installing scanner-runner dependencies..."
     (cd {{scanner_dir}} && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 {{bun}} install --frozen-lockfile)
@@ -143,8 +143,8 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
             ;;
     esac
 
-[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES=\"platform-api orchestrator frontend\")')]
-dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend':
+[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES=\"platform-api orchestrator clients/web\")')]
+dev-refresh ENV='local' SERVICES='platform-api orchestrator clients/web':
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -317,22 +317,22 @@ ci:
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> CLI docs..."
-    {{go}} run ./tools/stageflow-cli docs --out-dir docs/generated/cli
-    git diff --exit-code docs/generated/cli
+    {{go}} run ./clients/cli/stageflow docs --out-dir docs/reference/cli/stageflow
+    git diff --exit-code docs/reference/cli/stageflow
 
     echo "==> Shell regression tests..."
-    bash scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/cli-install.test.sh
 
     echo "==> Frontend CI..."
-    (cd {{frontend_dir}} && {{bun}} run ci)
+    (cd {{clients/web_dir}} && {{bun}} run ci)
 
     echo "==> Frontend Storybook browser setup..."
-    (cd {{frontend_dir}} && {{bun}} x playwright install chromium)
+    (cd {{clients/web_dir}} && {{bun}} x playwright install chromium)
     echo "==> Frontend Storybook tests..."
-    (cd {{frontend_dir}} && {{bun}} run test-storybook)
+    (cd {{clients/web_dir}} && {{bun}} run test-storybook)
 
     echo "==> Frontend audit..."
-    (cd {{frontend_dir}} && {{bun}} audit --audit-level=high)
+    (cd {{clients/web_dir}} && {{bun}} audit --audit-level=high)
 
     echo "==> Scanner-runner CI..."
     (cd {{scanner_dir}} && {{bun}} x playwright install chromium)
@@ -341,7 +341,7 @@ ci:
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
 
-[group('build'), doc('Build all artifacts (Go + frontend + runner)')]
+[group('build'), doc('Build all artifacts (Go + clients/web + runner)')]
 build:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -353,8 +353,8 @@ build:
         (cd "$dir" && {{go}} build ./...)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
-    echo "==> Building frontend..."
-    (cd {{frontend_dir}} && {{bun}} run build)
+    echo "==> Building clients/web..."
+    (cd {{clients/web_dir}} && {{bun}} run build)
 
     echo "==> Building scanner-runner..."
     (cd {{scanner_dir}} && {{bun}} run build)
@@ -362,7 +362,7 @@ build:
 [group('build'), doc('Build container images')]
 images:
     @echo "==> Building container images..."
-    ./scripts/build-images.sh
+    ./infra/scripts/build-images.sh
 
 [group('tools'), doc('Build and install stageflow CLI to ~/.local/bin (no stale binaries)')]
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
@@ -383,7 +383,7 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     commit="$(git rev-parse --short HEAD 2>/dev/null || echo "")"
     build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${build_date}"
-    (cd tools/stageflow-cli && {{go}} build -trimpath -ldflags "$ldflags" -o "$tmp" .)
+    (cd clients/cli/stageflow && {{go}} build -trimpath -ldflags "$ldflags" -o "$tmp" .)
 
     echo "==> Installing: $dest"
     install -m 0755 "$tmp" "$dest"
@@ -425,7 +425,7 @@ deploy MODE='full':
     echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just deploy stageflow" >&2
     exit 1
 
-[group('run'), doc('Run a service locally (SERVICE=frontend|storybook|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=clients/web|storybook|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -442,45 +442,45 @@ run SERVICE MODE='dev':
     fi
 
     case "$service" in
-        frontend)
+        clients/web)
             if [[ "$mode" == "preview" ]]; then
-                echo "==> Starting frontend preview server..."
-                (cd {{frontend_dir}} && {{bun}} run preview)
+                echo "==> Starting clients/web preview server..."
+                (cd {{clients/web_dir}} && {{bun}} run preview)
             else
-                echo "==> Starting frontend dev server..."
-                (cd {{frontend_dir}} && {{bun}} run dev)
+                echo "==> Starting clients/web dev server..."
+                (cd {{clients/web_dir}} && {{bun}} run dev)
             fi
             ;;
         storybook)
-            echo "==> Starting frontend Storybook..."
-            (cd {{frontend_dir}} && {{bun}} run storybook)
+            echo "==> Starting clients/web Storybook..."
+            (cd {{clients/web_dir}} && {{bun}} run storybook)
             ;;
         api)
             echo "==> Starting platform-api..."
-            (cd platform/api && {{go}} run ./cmd/server)
+            (cd services/platform-api && {{go}} run ./cmd/server)
             ;;
         orchestrator)
             echo "==> Starting orchestrator..."
-            (cd platform/orchestrator && {{go}} run ./cmd/orchestrator)
+            (cd services/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be frontend, storybook, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be clients/web, storybook, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac
 
-[group('quality'), doc('Run frontend Storybook interaction + accessibility tests')]
+[group('quality'), doc('Run clients/web Storybook interaction + accessibility tests')]
 storybook-test:
     #!/usr/bin/env bash
     set -euo pipefail
-    (cd {{frontend_dir}} && {{bun}} x playwright install chromium)
-    (cd {{frontend_dir}} && {{bun}} run test-storybook)
+    (cd {{clients/web_dir}} && {{bun}} x playwright install chromium)
+    (cd {{clients/web_dir}} && {{bun}} run test-storybook)
 
 [group('quality'), doc('Run repo shell regression tests')]
 shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
-    bash scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/cli-install.test.sh
 
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':
@@ -491,7 +491,7 @@ clean MODE='all':
     echo "==> Cleaning artifacts..."
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
     find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".svelte-kit" -o -name ".gocache" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
-    rm -f tools/job-status-cli/job-status-cli tools/suite-runner/suite-runner
+    rm -f devtools/ops/job-status-cli/job-status-cli devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then
         echo "==> Removing node_modules..."
