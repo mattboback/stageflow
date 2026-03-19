@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/platform/extractor/internal/discovery"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/discovery"
 )
 
 func TestGenerate_Integration(t *testing.T) {

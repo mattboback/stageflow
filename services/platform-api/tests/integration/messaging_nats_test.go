@@ -14,8 +14,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	platformmsg "github.com/mattboback/stageflow/platform/api/internal/messaging"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
+	platformmsg "github.com/mattboback/stageflow/services/platform-api/internal/messaging"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func TestServiceIntegrationWithNATS(t *testing.T) {

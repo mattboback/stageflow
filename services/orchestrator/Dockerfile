@@ -3,27 +3,30 @@
 FROM docker.io/library/golang:1.25 AS builder
 WORKDIR /src
 
-# Copy go.mod/go.sum first for better layer caching
-COPY packages/contracts/report/generated/go/go.mod ./packages/contracts/report/generated/go/
-COPY packages/contracts/scanner-manifest/go.mod packages/contracts/scanner-manifest/go.sum ./packages/contracts/scanner-manifest/
-COPY packages/shared-go/go.mod packages/shared-go/go.sum ./packages/shared-go/
-COPY platform/orchestrator/go.mod platform/orchestrator/go.sum ./platform/orchestrator/
+# Copy go.work and go.work.sum for workspace resolution
+COPY go.work go.work.sum ./
+
+# Copy module definitions first for better layer caching
+COPY libs/contracts/report/generated/go/go.mod ./libs/contracts/report/generated/go/
+COPY libs/contracts/scanner-manifest/go.mod libs/contracts/scanner-manifest/go.sum ./libs/contracts/scanner-manifest/
+COPY libs/go ./libs/go/
+COPY services/orchestrator/go.mod services/orchestrator/go.sum ./services/orchestrator/
 
 # Download dependencies (cached layer)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
-    cd platform/orchestrator && go mod download
+    cd services/orchestrator && go mod download
 
 # Copy source code
-COPY packages/contracts/report/generated/go ./packages/contracts/report/generated/go
-COPY packages/contracts/scanner-manifest ./packages/contracts/scanner-manifest
-COPY packages/shared-go ./packages/shared-go
-COPY platform/orchestrator ./platform/orchestrator
+COPY libs/contracts/report/generated/go ./libs/contracts/report/generated/go
+COPY libs/contracts/scanner-manifest ./libs/contracts/scanner-manifest
+COPY libs/go ./libs/go
+COPY services/orchestrator ./services/orchestrator
 
 # Build with optimizations
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
-    cd platform/orchestrator && \
+    cd services/orchestrator && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o /out/orchestrator ./cmd/orchestrator
 

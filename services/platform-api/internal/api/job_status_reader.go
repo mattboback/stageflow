@@ -8,7 +8,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 type pendingJobCache struct {

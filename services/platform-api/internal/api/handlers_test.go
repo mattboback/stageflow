@@ -21,8 +21,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/platform/api/internal/sse"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/sse"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func TestHandleHealth(t *testing.T) {

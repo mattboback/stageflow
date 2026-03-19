@@ -14,9 +14,9 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/platform/api/internal/api"
-	"github.com/mattboback/stageflow/platform/api/internal/messaging"
-	"github.com/mattboback/stageflow/platform/api/internal/statussource"
+	"github.com/mattboback/stageflow/services/platform-api/internal/api"
+	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
+	"github.com/mattboback/stageflow/services/platform-api/internal/statussource"
 )
 
 func main() {

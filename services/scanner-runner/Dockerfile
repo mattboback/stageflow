@@ -13,32 +13,32 @@ ENV PATH="/root/.bun/bin:$PATH"
 COPY tsconfig.strict.json /repo/tsconfig.strict.json
 
 # --- Build contracts package first (types only, already generated) ---
-WORKDIR /repo/packages/contracts/report
-COPY packages/contracts/report/package.json packages/contracts/report/bun.lock* ./
+WORKDIR /repo/libs/contracts/report
+COPY libs/contracts/report/package.json libs/contracts/report/bun.lock* ./
 RUN bun install --frozen-lockfile --ignore-scripts || bun install --ignore-scripts
-COPY packages/contracts/report/tsconfig.json ./tsconfig.json
-COPY packages/contracts/report/generated ./generated
-COPY packages/contracts/report/schema ./schema
+COPY libs/contracts/report/tsconfig.json ./tsconfig.json
+COPY libs/contracts/report/generated ./generated
+COPY libs/contracts/report/schema ./schema
 RUN bunx tsc
 
 # --- Build scanner-runner ---
-WORKDIR /repo/platform/scanner-runner
-COPY packages/contracts/scanner-manifest /repo/packages/contracts/scanner-manifest
-COPY platform/scanner-runner/package.json platform/scanner-runner/bun.lock ./
+WORKDIR /repo/services/scanner-runner
+COPY libs/contracts/scanner-manifest /repo/libs/contracts/scanner-manifest
+COPY services/scanner-runner/package.json services/scanner-runner/bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
-COPY platform/scanner-runner/tsconfig.json ./tsconfig.json
-COPY platform/scanner-runner/tsconfig.build.json ./tsconfig.build.json
-COPY platform/scanner-runner/src ./src
-COPY platform/scanner-runner/scripts ./scripts
-COPY packages/shared-go/scannercatalog/manifests /packages/shared-go/scannercatalog/manifests
-COPY packages/contracts/scanner-manifest/generated /repo/packages/contracts/scanner-manifest/generated
-COPY packages/contracts/scanner-manifest/schema /repo/packages/contracts/scanner-manifest/schema
+COPY services/scanner-runner/tsconfig.json ./tsconfig.json
+COPY services/scanner-runner/tsconfig.build.json ./tsconfig.build.json
+COPY services/scanner-runner/src ./src
+COPY services/scanner-runner/scripts ./scripts
+COPY libs/go/scannercatalog/manifests /libs/go/scannercatalog/manifests
+COPY libs/contracts/scanner-manifest/generated /repo/libs/contracts/scanner-manifest/generated
+COPY libs/contracts/scanner-manifest/schema /repo/libs/contracts/scanner-manifest/schema
 RUN bun run build
 RUN rm -rf node_modules \
   && bun install --frozen-lockfile --production --ignore-scripts \
   && rm -rf node_modules/@stageflow/contracts-scanner-manifest \
   && mkdir -p node_modules/@stageflow \
-  && cp -R /repo/packages/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest
+  && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest
 
 # Runtime stage
 FROM mcr.microsoft.com/playwright:v1.57.0-jammy
@@ -52,9 +52,9 @@ ENV NODE_ENV=production \
 RUN mkdir -p /data && chown pwuser:pwuser /data
 
 # Copy only production dependencies and built code
-COPY --from=builder --chown=pwuser:pwuser /repo/platform/scanner-runner/node_modules ./node_modules
-COPY --from=builder --chown=pwuser:pwuser /repo/platform/scanner-runner/dist ./dist
-COPY --from=builder --chown=pwuser:pwuser /repo/platform/scanner-runner/package.json ./
+COPY --from=builder --chown=pwuser:pwuser /repo/services/scanner-runner/node_modules ./node_modules
+COPY --from=builder --chown=pwuser:pwuser /repo/services/scanner-runner/dist ./dist
+COPY --from=builder --chown=pwuser:pwuser /repo/services/scanner-runner/package.json ./
 
 USER pwuser
 

@@ -10,7 +10,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
+	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
 
 type jobRuntimeClient interface {

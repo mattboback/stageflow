@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const fixturePath = path.resolve(
 	__dirname,
-	'../../../../packages/contracts/report/fixtures/unified-report.v2.all-scans.json'
+	'../../../../libs/contracts/report/fixtures/unified-report.v2.all-scans.json'
 );
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as {
 	issues: IssueDetail[];

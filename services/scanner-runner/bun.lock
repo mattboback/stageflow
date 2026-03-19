@@ -6,7 +6,7 @@
       "name": "scanner-runner",
       "dependencies": {
         "@axe-core/playwright": "^4.9.0",
-        "@stageflow/contracts-scanner-manifest": "file:../../packages/contracts/scanner-manifest",
+        "@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
         "ajv": "^8.17.1",
         "ajv-formats": "^3.0.1",
         "fast-glob": "^3.3.2",
@@ -388,7 +388,7 @@
 
     "@sentry/opentelemetry": ["@sentry/opentelemetry@9.47.1", "", { "dependencies": { "@sentry/core": "9.47.1" }, "peerDependencies": { "@opentelemetry/api": "^1.9.0", "@opentelemetry/context-async-hooks": "^1.30.1 || ^2.0.0", "@opentelemetry/core": "^1.30.1 || ^2.0.0", "@opentelemetry/sdk-trace-base": "^1.30.1 || ^2.0.0", "@opentelemetry/semantic-conventions": "^1.34.0" } }, "sha512-STtFpjF7lwzeoedDJV+5XA6P89BfmFwFftmHSGSe3UTI8z8IoiR5yB6X2vCjSPvXlfeOs13qCNNCEZyznxM8Xw=="],
 
-    "@stageflow/contracts-scanner-manifest": ["@stageflow/contracts-scanner-manifest@file:../../packages/contracts/scanner-manifest", { "dependencies": { "ajv": "^8.17.1", "ajv-formats": "^3.0.1" }, "devDependencies": { "json-schema-to-typescript": "^15.0.4", "typescript": "^5.7.2" } }],
+    "@stageflow/contracts-scanner-manifest": ["@stageflow/contracts-scanner-manifest@file:../../libs/contracts/scanner-manifest", { "dependencies": { "ajv": "^8.17.1", "ajv-formats": "^3.0.1" }, "devDependencies": { "json-schema-to-typescript": "^15.0.4", "typescript": "^5.7.2" } }],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 

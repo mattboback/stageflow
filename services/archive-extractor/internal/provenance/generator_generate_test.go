@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mattboback/stageflow/platform/extractor/internal/discovery"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/discovery"
 )
 
 func TestGenerate_Basic(t *testing.T) {

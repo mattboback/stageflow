@@ -2,8 +2,8 @@
  * Canonical aggregated report types.
  *
  * Source of truth:
- * - JSON Schema: `packages/contracts/report/schema/unified-report.v2.schema.json`
- * - Generated TS: `packages/contracts/report/generated/typescript/unified-report.v2.ts`
+ * - JSON Schema: `libs/contracts/report/schema/unified-report.v2.schema.json`
+ * - Generated TS: `libs/contracts/report/generated/typescript/unified-report.v2.ts`
  *
  * IMPORTANT:
  * - This is the *aggregated job report* (`{jobId}/report.json`).
@@ -24,7 +24,7 @@ import type {
 	ScannerStatus,
 	ScannerSummary,
 	UnifiedReportV2
-} from '../../../../packages/contracts/report/generated/typescript/unified-report.v2';
+} from '../../../../libs/contracts/report/generated/typescript/unified-report.v2';
 
 export type {
 	IssueSeverity,

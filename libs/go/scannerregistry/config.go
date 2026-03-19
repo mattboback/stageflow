@@ -17,7 +17,7 @@ type Config struct {
 }
 
 // Overrides describes partial scanner overrides loaded from YAML.
-// Built-in scanner metadata comes from the embedded manifests in packages/shared-go/scannercatalog.
+// Built-in scanner metadata comes from the embedded manifests in libs/go/scannercatalog.
 type Overrides struct {
 	DefaultImage string                    `yaml:"defaultImage"`
 	Scanners     map[string]*ScannerConfig `yaml:"scanners"`

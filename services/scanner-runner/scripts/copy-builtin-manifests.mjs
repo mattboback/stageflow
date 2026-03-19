@@ -10,8 +10,8 @@ const sourceDir = path.resolve(
   "..",
   "..",
   "..",
-  "packages",
-  "shared-go",
+  "libs",
+  "go",
   "scannercatalog",
   "manifests",
 );

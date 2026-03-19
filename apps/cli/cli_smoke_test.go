@@ -63,7 +63,7 @@ func TestCLIDocsSmoke(t *testing.T) {
 
 func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
 	repoRoot := mustFindRepoRoot(t)
-	docPath := filepath.Join(repoRoot, "docs", "generated", "cli", "stageflow_scan.md")
+	docPath := filepath.Join(repoRoot, "docs", "reference", "cli", "stageflow", "stageflow_scan.md")
 
 	data, err := os.ReadFile(docPath)
 	requireNoErr(t, err)
@@ -75,7 +75,7 @@ func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
 
 func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 	repoRoot := mustFindRepoRoot(t)
-	readmePath := filepath.Join(repoRoot, "tools", "README.md")
+	readmePath := filepath.Join(repoRoot, "clients", "cli", "stageflow", "README.md")
 
 	data, err := os.ReadFile(readmePath)
 	requireNoErr(t, err)

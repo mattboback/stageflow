@@ -10,7 +10,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	domainjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/domain/jobs"
+	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
 )
 
 func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPayload) error {

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/platform/extractor/internal/discovery"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/discovery"
 )
 
 // Generator produces provenance.json for scanners and UIs.

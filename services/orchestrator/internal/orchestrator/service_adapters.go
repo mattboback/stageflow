@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
-	adapterstorage "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/storage"
-	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
+	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
+	adapterstorage "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/storage"
+	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
 
 const defaultLocalScannerImage = "localhost/stageflow/scanner-runner:latest"

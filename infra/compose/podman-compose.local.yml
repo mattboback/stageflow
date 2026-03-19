@@ -5,7 +5,7 @@ services:
   frontend:
     build:
       context: ../..
-      dockerfile: clients/web/Dockerfile
+      dockerfile: apps/web/Dockerfile
       args:
         VITE_API_URL: http://localhost:8080
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}

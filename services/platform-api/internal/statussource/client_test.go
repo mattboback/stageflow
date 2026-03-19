@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func TestClientGetJobNotFound(t *testing.T) {

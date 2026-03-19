@@ -1,9 +1,9 @@
 go 1.26.1
 
 use (
-	./clients/cli/stageflow
-	./devtools/ops/job-status-cli
-	./devtools/qa/suite-runner
+	./apps/cli
+	./tools/job-status-cli
+	./qa/suite-runner
 	./libs/contracts/report/generated/go
 	./libs/contracts/scanner-manifest
 	./libs/go/bootstrap

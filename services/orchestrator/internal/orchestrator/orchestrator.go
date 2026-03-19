@@ -11,10 +11,10 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
-	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
-	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
-	domainjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/domain/jobs"
+	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
+	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
+	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
+	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
 )
 
 const (
