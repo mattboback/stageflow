@@ -50,7 +50,7 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 	suggestion, err := detectProjectBootstrapSuggestion(root)
 	requireNoErr(t, err)
 
-	requireEqual(t, suggestion.Command, "just run frontend", "suggestion.Command")
+	requireEqual(t, suggestion.Command, "just run frontend", "suggestion.Command") // stale-vocab-ok: tests generic fallback
 	requireEqual(t, suggestion.URL, "http://127.0.0.1:5173", "suggestion.URL")
 
 	if suggestion.IsPlaceholder {
@@ -60,16 +60,16 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 
 func TestDefaultProjectConfigTemplate_UsesBootstrapSuggestion(t *testing.T) {
 	template := defaultProjectConfigTemplate("http://localhost:8080", projectBootstrapSuggestion{
-		Command:       "just run frontend",
-		CommandSource: "best guess from Justfile recipe `run frontend`",
+		Command:       "just run clients/web",
+		CommandSource: "best guess from Justfile recipe `run`",
 		URL:           "http://127.0.0.1:5173",
 	})
 
-	if !strings.Contains(template, `cmd: ["just", "run", "frontend"]`) {
+	if !strings.Contains(template, `cmd: ["just", "run", "clients/web"]`) {
 		t.Fatalf("template missing inferred command: %q", template)
 	}
 
-	if !strings.Contains(template, "best guess from Justfile recipe `run frontend`") {
+	if !strings.Contains(template, "best guess from Justfile recipe `run`") {
 		t.Fatalf("template missing command source comment: %q", template)
 	}
 

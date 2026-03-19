@@ -90,8 +90,8 @@ func detectProjectBootstrapCommand(projectRoot string) (string, string, string, 
 	candidates := []bootstrapCommandCandidate{
 		{
 			recipe:  "run",
-			command: "just run frontend",
-			source:  "best guess from Justfile recipe `run frontend`",
+			command: "just run clients/web",
+			source:  "best guess from Justfile recipe `run`",
 		},
 		{
 			recipe:    "stageflow-dev",
@@ -262,18 +262,34 @@ func detectJustRunFrontend(projectRoot string) (string, bool, error) {
 		return "", false, err
 	}
 
-	frontendRoot := filepath.Join(projectRoot, "frontend")
-
-	packageJSON, ok, err := loadProjectPackageJSON(frontendRoot)
-	if err != nil || !ok {
-		return "", false, err
+	// Check common frontend directory locations. "clients/web" is the
+	// StageFlow monorepo convention; "frontend" is a common generic pattern.
+	frontendCandidates := []struct {
+		dir     string
+		command string
+	}{
+		{"clients/web", "just run clients/web"},
+		{"frontend", "just run frontend"}, // stale-vocab-ok: generic fallback for non-StageFlow projects
 	}
 
-	if _, exists := packageJSON.Scripts["dev"]; !exists {
-		return "", false, nil
+	for _, c := range frontendCandidates {
+		root := filepath.Join(projectRoot, c.dir)
+
+		packageJSON, ok, loadErr := loadProjectPackageJSON(root)
+		if loadErr != nil {
+			return "", false, loadErr
+		}
+
+		if !ok {
+			continue
+		}
+
+		if _, exists := packageJSON.Scripts["dev"]; exists {
+			return c.command, true, nil
+		}
 	}
 
-	return "just run frontend", true, nil
+	return "", false, nil
 }
 
 func detectPackageScriptCommand(projectRoot string, script string) (string, string, bool, error) {
@@ -370,9 +386,11 @@ func formatPackageScriptCommand(runner string, script string) string {
 }
 
 func guessProjectDevURL(projectRoot string) string {
-	frontendRoot := filepath.Join(projectRoot, "frontend")
-	if projectRoot != frontendRoot && repoLooksLikeViteProject(frontendRoot) {
-		return "http://127.0.0.1:5173"
+	for _, subdir := range []string{"clients/web", "frontend"} {
+		candidate := filepath.Join(projectRoot, subdir)
+		if candidate != projectRoot && repoLooksLikeViteProject(candidate) {
+			return "http://127.0.0.1:5173"
+		}
 	}
 
 	if repoLooksLikeViteProject(projectRoot) {

@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/qa/e2e
 
-go 1.25.4
+go 1.26.1
 
 replace github.com/mattboback/stageflow/libs/go/bootstrap => ../../libs/go/bootstrap
 
