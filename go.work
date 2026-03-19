@@ -2,6 +2,8 @@ go 1.26.1
 
 use (
 	./clients/cli
+	./devtools/ops/job-status-cli
+	./devtools/qa/suite-runner
 	./libs/contracts/report/generated/go
 	./libs/contracts/scanner-manifest
 	./libs/go/bootstrap
@@ -16,9 +18,7 @@ use (
 	./libs/go/scannerregistry
 	./libs/go/storage
 	./qa/e2e
-	./qa/suite-runner
 	./services/archive-extractor
 	./services/orchestrator
 	./services/platform-api
-	./tools/job-status-cli
 )

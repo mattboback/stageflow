@@ -75,7 +75,7 @@ func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
 
 func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 	repoRoot := mustFindRepoRoot(t)
-	readmePath := filepath.Join(repoRoot, "clients", "cli", "stageflow", "README.md")
+	readmePath := filepath.Join(repoRoot, "clients", "cli", "README.md")
 
 	data, err := os.ReadFile(readmePath)
 	requireNoErr(t, err)

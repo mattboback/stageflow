@@ -34,7 +34,7 @@ Client/UI -> Platform API -> NATS JetStream -> Orchestrator -> Podman job pod
 - Scanner runner loads plugins by manifest and validates scanner options.
 - Frontend receives live status with SSE and fallback refresh logic.
 
-Full design details: [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Full design details: [Architecture](docs/architecture/system.md).
 
 ## Screenshots
 
@@ -275,14 +275,14 @@ SSRF protections reject loopback/private/link-local/metadata destinations for UR
 
 ## Optional CLI Mode
 
-StageFlow also includes an optional CLI client (`apps/cli/`) that
+StageFlow also includes an optional CLI client (`clients/cli/`) that
 talks to the existing Platform API. It submits URL jobs, waits for completion,
 and fetches the aggregated report via `GET /api/v1/jobs/{id}/results`.
 
 Public URL scans:
 
 ```bash
-go run ./apps/cli scan https://example.com
+go run ./clients/cli scan https://example.com
 ```
 
 For a local install that avoids stale binaries:
@@ -297,7 +297,7 @@ stageflow scan https://example.com --format json > report.json
 Or build a local binary in place:
 
 ```bash
-cd apps/cli
+cd clients/cli
 go build -o stageflow .
 ./stageflow scanners
 ./stageflow scan https://example.com
@@ -419,7 +419,7 @@ To add a custom scanner:
 
 Reference docs:
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md#scanner-plugin-system)
+- [Architecture](docs/architecture/system.md#scanner-plugin-system)
 - `libs/contracts/scanner-manifest/schema/README.md`
 
 ## Security and Runtime Boundaries
@@ -430,31 +430,29 @@ Reference docs:
 - API status streaming uses SSE with reconnect-safe behavior.
 - Edge rate limiting is expected at proxy/load-balancer/CDN layers.
 
-See [SECURITY.md](SECURITY.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md#security-and-trust-boundaries).
+See [SECURITY.md](SECURITY.md) and [Architecture](docs/architecture/system.md#security-and-trust-boundaries).
 
 ## Repository Layout
 
 ```text
 stageflow/
-|- apps/                  # Web frontend, CLI
+|- clients/               # Web frontend, CLI
 |- services/              # API, orchestrator, extractor, scanner-runner
 |- libs/                  # Contracts + shared Go modules
 |- infra/                 # Compose, Caddy, Quadlets, monitoring, scanner config
-|- tools/                 # job-status-cli, scripts
-|- qa/                    # End-to-end tests, suite-runner
+|- devtools/              # job-status-cli, suite-runner, scripts
+|- qa/                    # End-to-end tests
 ```
 
 ## Documentation Map
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md): deep system design, flows, and constraints
-- [REPOMAP.md](docs/REPOMAP.md): service ownership map, API/event surfaces, and file-level index
-- [CONFIGURATION.md](docs/CONFIGURATION.md): environment and deployment configuration guide
-- [TOOLS.md](docs/TOOLS.md): CLI tooling and common workflows
+- [Architecture](docs/architecture/system.md): deep system design, flows, and constraints
+- [Configuration](docs/reference/configuration.md): environment and deployment configuration guide
+- [CLI Tools](docs/operations/devtools.md): CLI tooling and common workflows
 - [PROJECT_MODE.md](docs/PROJECT_MODE.md): guide to setting up and using the local development project scanner
 - [CONTRIBUTING.md](CONTRIBUTING.md): local workflow, standards, and PR checklist
 - [SECURITY.md](SECURITY.md): vulnerability reporting policy
 - [SUPPORT.md](SUPPORT.md): help channels and debugging checklist
-- [tools/README.md](tools/README.md): operational tooling (`job-status-cli`)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): community conduct standards
 - [CHANGELOG.md](CHANGELOG.md): release history
 
