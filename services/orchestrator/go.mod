@@ -1,4 +1,4 @@
-module github.com/mattboback/stageflow/platform/orchestrator
+module github.com/mattboback/stageflow/services/orchestrator
 
 go 1.26.1
 

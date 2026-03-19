@@ -3,27 +3,29 @@
 FROM docker.io/library/golang:1.25 AS builder
 WORKDIR /src
 
-# Copy go.mod/go.sum first for better layer caching
-COPY packages/contracts/report/generated/go/go.mod ./packages/contracts/report/generated/go/
-COPY packages/contracts/scanner-manifest/go.mod packages/contracts/scanner-manifest/go.sum ./packages/contracts/scanner-manifest/
-COPY packages/shared-go/go.mod packages/shared-go/go.sum ./packages/shared-go/
-COPY platform/api/go.mod platform/api/go.sum ./platform/api/
+COPY go.work go.work.sum ./
+
+# Copy module definitions first for better layer caching
+COPY libs/contracts/report/generated/go/go.mod ./libs/contracts/report/generated/go/
+COPY libs/contracts/scanner-manifest/go.mod libs/contracts/scanner-manifest/go.sum ./libs/contracts/scanner-manifest/
+COPY libs/go ./libs/go/
+COPY services/platform-api/go.mod services/platform-api/go.sum ./services/platform-api/
 
 # Download dependencies (cached layer)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
-    cd platform/api && go mod download
+    cd services/platform-api && go mod download
 
 # Copy source code
-COPY packages/contracts/report/generated/go ./packages/contracts/report/generated/go
-COPY packages/contracts/scanner-manifest ./packages/contracts/scanner-manifest
-COPY packages/shared-go ./packages/shared-go
-COPY platform/api ./platform/api
+COPY libs/contracts/report/generated/go ./libs/contracts/report/generated/go
+COPY libs/contracts/scanner-manifest ./libs/contracts/scanner-manifest
+COPY libs/go ./libs/go
+COPY services/platform-api ./services/platform-api
 
 # Build with optimizations
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
-    cd platform/api && \
+    cd services/platform-api && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" -o /out/platform-api ./cmd/server && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \

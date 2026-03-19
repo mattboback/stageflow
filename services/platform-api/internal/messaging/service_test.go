@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
-	"github.com/mattboback/stageflow/platform/api/internal/messaging"
-	"github.com/mattboback/stageflow/platform/api/internal/sse"
+	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
+	"github.com/mattboback/stageflow/services/platform-api/internal/sse"
 )
 
 func TestSSEBroadcastHandler_HandleJobCreated(t *testing.T) {

@@ -1,4 +1,4 @@
-module github.com/mattboback/stageflow/platform/extractor
+module github.com/mattboback/stageflow/services/archive-extractor
 
 go 1.26.1
 

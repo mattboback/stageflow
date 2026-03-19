@@ -6,15 +6,15 @@ FROM docker.io/oven/bun:1.3.0-alpine AS builder
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY frontend/package.json frontend/bun.lock ./
+COPY apps/web/package.json apps/web/bun.lock ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile
 
 # Copy SvelteKit source code
-COPY frontend/svelte.config.js frontend/vite.config.ts frontend/tsconfig.json ./
-COPY frontend/src ./src
-COPY frontend/static ./static
+COPY apps/web/svelte.config.js apps/web/vite.config.ts apps/web/tsconfig.json ./
+COPY apps/web/src ./src
+COPY apps/web/static ./static
 
 # Build arguments for environment variables.
 # These are baked into the static build at image build-time.

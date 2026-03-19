@@ -6,7 +6,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
-	"github.com/mattboback/stageflow/platform/api/internal/sse"
+	"github.com/mattboback/stageflow/services/platform-api/internal/sse"
 )
 
 // Service wraps messaging operations for the web server.

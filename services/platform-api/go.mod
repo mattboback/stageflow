@@ -1,4 +1,4 @@
-module github.com/mattboback/stageflow/platform/api
+module github.com/mattboback/stageflow/services/platform-api
 
 go 1.26.1
 

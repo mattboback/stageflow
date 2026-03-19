@@ -6,15 +6,15 @@ use this guide for external consumers or new code.
 
 ## Current Source of Truth
 
-- JSON Schema: `packages/contracts/report/schema/unified-report.v2.schema.json`
-- Generated TypeScript: `packages/contracts/report/generated/typescript/`
-- Generated Go: `packages/contracts/report/generated/go/`
+- JSON Schema: `libs/contracts/report/schema/unified-report.v2.schema.json`
+- Generated TypeScript: `libs/contracts/report/generated/typescript/`
+- Generated Go: `libs/contracts/report/generated/go/`
 
 ### Repo Status (Jan 2026)
 
-- `packages/shared-go/models/results.go` has been removed.
+- `libs/go/models/results.go` has been removed.
 - Services now import generated Go types from
-  `github.com/mattboback/stageflow/packages/contracts/report/generated/go`.
+  `github.com/mattboback/stageflow/libs/contracts/report/generated/go`.
 - TypeScript consumers use `@stageflow/contracts-report` (or local generated
   files where bundlers do not load workspace packages directly).
 
@@ -32,13 +32,13 @@ When working inside this repo, `platform/scanner-runner` uses a build step to
 copy generated types into `node_modules/@stageflow/contracts-report`:
 
 ```
-platform/scanner-runner/scripts/prepare-contracts-report-types.mjs
+services/scanner-runner/scripts/prepare-contracts-report-types.mjs
 ```
 
 The StageFlow frontend currently imports directly from the generated file:
 
 ```
-packages/contracts/report/generated/typescript/unified-report.v2.ts
+libs/contracts/report/generated/typescript/unified-report.v2.ts
 ```
 
 ### Validation
@@ -63,7 +63,7 @@ if (!result.valid) {
 ## Go Usage
 
 ```go
-import report "github.com/mattboback/stageflow/packages/contracts/report/generated/go"
+import report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 ```
 
 ### Differences (Old vs Generated)
@@ -109,8 +109,8 @@ if err := json.Unmarshal(data, &report); err != nil {
 ### Schema CLI
 
 ```bash
-node packages/contracts/report/schema/validate.js <file.json>
-cd packages/contracts/report && bun run validate:fixtures
+node libs/contracts/report/schema/validate.js <file.json>
+cd libs/contracts/report && bun run validate:fixtures
 ```
 
 ---

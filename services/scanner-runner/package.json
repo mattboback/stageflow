@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@axe-core/playwright": "^4.9.0",
-    "@stageflow/contracts-scanner-manifest": "file:../../packages/contracts/scanner-manifest",
+    "@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "fast-glob": "^3.3.2",

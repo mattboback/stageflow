@@ -30,7 +30,7 @@ describe("Built-in manifests (drift guard)", () => {
   it("discovers and validates the shared built-in manifests", async () => {
     const manifestsRoot = path.resolve(
       process.cwd(),
-      "../../packages/shared-go/scannercatalog/manifests",
+      "../../libs/go/scannercatalog/manifests",
     );
 
     await expect(stat(manifestsRoot)).resolves.toBeTruthy();
@@ -53,7 +53,7 @@ describe("Built-in manifests (drift guard)", () => {
     const repoRoot = path.resolve(process.cwd(), "../..");
     const manifestsRoot = path.join(
       repoRoot,
-      "packages/shared-go/scannercatalog/manifests",
+      "libs/go/scannercatalog/manifests",
     );
 
     const loader = new PluginLoader({
@@ -77,7 +77,7 @@ describe("Built-in manifests (drift guard)", () => {
       expect(manifest.entry.module).toBe("./index.js");
       const expectedSourcePath = path.join(
         repoRoot,
-        `platform/scanner-runner/src/scanners/${id}/index.ts`,
+        `services/scanner-runner/src/scanners/${id}/index.ts`,
       );
 
       await expect(stat(expectedSourcePath)).resolves.toBeTruthy();
@@ -100,7 +100,7 @@ describe("Built-in manifests (drift guard)", () => {
     const repoRoot = path.resolve(process.cwd(), "../..");
     const manifestsRoot = path.join(
       repoRoot,
-      "packages/shared-go/scannercatalog/manifests",
+      "libs/go/scannercatalog/manifests",
     );
 
     const sourceLoader = new PluginLoader({

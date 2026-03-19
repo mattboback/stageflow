@@ -8,7 +8,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
+	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
 func TestHandleJobCreated(t *testing.T) {

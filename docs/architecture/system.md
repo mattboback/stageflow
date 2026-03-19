@@ -55,18 +55,18 @@ Artifacts/status
 
 Primary repository areas:
 
-- `platform/api`: intake, validation, status APIs, SSE.
-- `platform/orchestrator`: FSM, container lifecycle, aggregation.
-- `platform/extractor`: secure archive extraction and provenance generation.
-- `platform/scanner-runner`: plugin discovery and scanner execution runtime.
-- `frontend`: submission UX and live status/report views.
-- `packages/contracts`: JSON Schemas and generated contracts.
+- `services/api`: intake, validation, status APIs, SSE.
+- `services/orchestrator`: FSM, container lifecycle, aggregation.
+- `services/extractor`: secure archive extraction and provenance generation.
+- `services/scanner-runner`: plugin discovery and scanner execution runtime.
+- `apps/web`: submission UX and live status/report views.
+- `libs/contracts`: JSON Schemas and generated contracts.
 
 ---
 
 ## Core Services and Responsibilities
 
-### Platform API (`platform/api`)
+### Platform API (`services/api`)
 
 Responsibilities:
 
@@ -78,13 +78,13 @@ Responsibilities:
 
 Important entry points:
 
-- Router: `platform/api/internal/api/router.go`
-- URL intake: `platform/api/internal/api/handlers_jobs_url_submit.go`
-- ZIP intake: `platform/api/internal/api/handlers_jobs_zip_upload.go`
-- SSE: `platform/api/internal/api/handlers_sse.go`
-- SSRF validation: `platform/api/internal/api/security.go`
+- Router: `services/platform-api/internal/api/router.go`
+- URL intake: `services/platform-api/internal/api/handlers_jobs_url_submit.go`
+- ZIP intake: `services/platform-api/internal/api/handlers_jobs_zip_upload.go`
+- SSE: `services/platform-api/internal/api/handlers_sse.go`
+- SSRF validation: `services/platform-api/internal/api/security.go`
 
-### Orchestrator (`platform/orchestrator`)
+### Orchestrator (`services/orchestrator`)
 
 Responsibilities:
 
@@ -97,14 +97,14 @@ Responsibilities:
 
 Important entry points:
 
-- Event handlers: `platform/orchestrator/internal/orchestrator/events.go`
-- Lifecycle workflows: `platform/orchestrator/internal/application/jobs`
-- Domain policies: `platform/orchestrator/internal/domain/jobs`
-- Runtime and persistence adapters: `platform/orchestrator/internal/adapters`
-- Aggregation: `platform/orchestrator/internal/adapters/storage`
-- Rule deduplication: `platform/orchestrator/internal/adapters/storage/rule_deduplication.go`
+- Event handlers: `services/orchestrator/internal/orchestrator/events.go`
+- Lifecycle workflows: `services/orchestrator/internal/application/jobs`
+- Domain policies: `services/orchestrator/internal/domain/jobs`
+- Runtime and persistence adapters: `services/orchestrator/internal/adapters`
+- Aggregation: `services/orchestrator/internal/adapters/storage`
+- Rule deduplication: `services/orchestrator/internal/adapters/storage/rule_deduplication.go`
 
-### Extractor (`platform/extractor`)
+### Extractor (`services/extractor`)
 
 Responsibilities:
 
@@ -116,9 +116,9 @@ Responsibilities:
 
 Important entry point:
 
-- `platform/extractor/internal/extractor/extractor.go`
+- `services/archive-extractor/internal/extractor/extractor.go`
 
-### Scanner Runner (`platform/scanner-runner`)
+### Scanner Runner (`services/scanner-runner`)
 
 Responsibilities:
 
@@ -130,11 +130,11 @@ Responsibilities:
 
 Important entry points:
 
-- Runtime worker: `platform/scanner-runner/src/worker.ts`
-- Base lifecycle: `platform/scanner-runner/src/core/scanner-base.ts`
-- Plugin discovery/loader: `platform/scanner-runner/src/core/plugins`
+- Runtime worker: `services/scanner-runner/src/worker.ts`
+- Base lifecycle: `services/scanner-runner/src/core/scanner-base.ts`
+- Plugin discovery/loader: `services/scanner-runner/src/core/plugins`
 
-### Frontend (`frontend`)
+### Frontend (`apps/web`)
 
 Responsibilities:
 
@@ -144,8 +144,8 @@ Responsibilities:
 
 Important entry points:
 
-- API client: `frontend/src/lib/api/client.ts`
-- Scan status store: `frontend/src/lib/stores/scan-status.svelte.ts`
+- API client: `apps/web/src/lib/api/client.ts`
+- Scan status store: `apps/web/src/lib/stores/scan-status.svelte.ts`
 
 ---
 
@@ -215,7 +215,7 @@ State intent:
 - `DONE`: successful terminal state.
 - `FAILED`: terminal failure state.
 
-Transition and outcome policy location: `platform/orchestrator/internal/domain/jobs`.
+Transition and outcome policy location: `services/orchestrator/internal/domain/jobs`.
 
 ---
 
@@ -255,7 +255,7 @@ Client opens /api/v1/jobs/{id}/stream
   -> Terminal state emits done event
 ```
 
-SSE handler: `platform/api/internal/api/handlers_sse.go`.
+SSE handler: `services/platform-api/internal/api/handlers_sse.go`.
 
 ---
 
@@ -276,7 +276,7 @@ Operational properties:
 - Retry/redelivery when handlers fail.
 - Decoupling between intake, orchestration, and scanner runtimes.
 
-Shared event type definitions: `packages/shared-go/events/types.go`.
+Shared event type definitions: `libs/go/events/types.go`.
 
 ---
 
@@ -286,7 +286,7 @@ Scanners are runtime-discovered plugins with manifest-defined capabilities and v
 
 ### Discovery Order
 
-1. Built-ins in `platform/scanner-runner/src/scanners`
+1. Built-ins in `services/scanner-runner/src/scanners`
 2. Mounted `/plugins`
 3. `~/.stageflow/plugins`
 4. Additional `PLUGIN_PATHS`
@@ -301,8 +301,8 @@ Each plugin supplies:
 
 Manifest schema references:
 
-- `packages/contracts/scanner-manifest/schema/scanner-manifest.schema.json`
-- `packages/contracts/scanner-manifest/schema/README.md`
+- `libs/contracts/scanner-manifest/schema/scanner-manifest.schema.json`
+- `libs/contracts/scanner-manifest/schema/README.md`
 
 ### Runtime Validation
 
@@ -345,7 +345,7 @@ All AI requests route through **OpenRouter** (`https://openrouter.ai/api/v1/chat
 | Agent | `agent.ts` | Main execution loop: perception → decision → action → repeat; respects max steps, wall time, and token budgets; captures screenshots and generates trace output |
 | Options | `options.ts` | Validates and parses agent configuration (goal, vision settings, constraints) |
 
-All modules live under `platform/scanner-runner/src/scanners/ai-navigator/`.
+All modules live under `services/scanner-runner/src/scanners/ai-navigator/`.
 
 #### Agent Execution Flow
 
@@ -367,8 +367,8 @@ Browser loads target URL
 
 #### Backend Integration
 
-- **API validation** (`platform/api/internal/api/scanner_configs.go`): Validates AI Navigator config on job submission. Enforces that `goal.objective` is set and `vision.model` is specified (or falls back to `AI_NAVIGATOR_DEFAULT_MODEL`).
-- **Orchestrator** (`platform/orchestrator/internal/application/jobs/scanner_launch_planner.go`): Injects `OPENROUTER_API_KEY`, `OPENROUTER_APP_TITLE`, and `OPENROUTER_APP_REFERER` into scanner container environment. API key is restricted to environment variables only and cannot be set in scanner options.
+- **API validation** (`services/platform-api/internal/api/scanner_configs.go`): Validates AI Navigator config on job submission. Enforces that `goal.objective` is set and `vision.model` is specified (or falls back to `AI_NAVIGATOR_DEFAULT_MODEL`).
+- **Orchestrator** (`services/orchestrator/internal/application/jobs/scanner_launch_planner.go`): Injects `OPENROUTER_API_KEY`, `OPENROUTER_APP_TITLE`, and `OPENROUTER_APP_REFERER` into scanner container environment. API key is restricted to environment variables only and cannot be set in scanner options.
 
 #### Frontend
 
@@ -402,11 +402,11 @@ Core steps:
 
 Deduplication logic source:
 
-- `platform/orchestrator/internal/adapters/storage/rule_deduplication.go`
+- `services/orchestrator/internal/adapters/storage/rule_deduplication.go`
 
 Report schema source:
 
-- `packages/contracts/report/schema/unified-report.v2.schema.json`
+- `libs/contracts/report/schema/unified-report.v2.schema.json`
 
 ---
 
@@ -423,7 +423,7 @@ Primary persisted entities:
 
 Schema source:
 
-- `platform/orchestrator/internal/adapters/repository/schema.sql`
+- `services/orchestrator/internal/adapters/repository/schema.sql`
 
 ### MinIO
 
@@ -521,7 +521,7 @@ Outcome: transition to `FAILED`; event timeline records failure reason.
 
 ### Useful tools
 
-- `tools/stageflow-cli`: submit URL scan jobs and fetch unified reports.
+- `apps/cli`: submit URL scan jobs and fetch unified reports.
 - `tools/job-status-cli`: inspect jobs/events/pods/status.
 - `tools/suite-runner`: run threshold-based multi-domain validation.
 
@@ -540,29 +540,29 @@ Tooling docs: `docs/TOOLS.md` and `tools/README.md`.
 
 | Area | File |
 | --- | --- |
-| API route registration | `platform/api/internal/api/router.go` |
-| URL intake validation | `platform/api/internal/api/handlers_jobs_url_submit.go` |
-| ZIP intake handler | `platform/api/internal/api/handlers_jobs_zip_upload.go` |
-| SSRF checks | `platform/api/internal/api/security.go` |
-| SSE stream handler | `platform/api/internal/api/handlers_sse.go` |
-| Orchestrator events | `platform/orchestrator/internal/orchestrator/events.go` |
-| Lifecycle workflows | `platform/orchestrator/internal/application/jobs` |
-| Domain policies | `platform/orchestrator/internal/domain/jobs` |
-| Repository adapter | `platform/orchestrator/internal/adapters/repository` |
-| Runtime adapter | `platform/orchestrator/internal/adapters/runtime` |
-| Messaging adapter | `platform/orchestrator/internal/adapters/messaging` |
-| Report aggregation | `platform/orchestrator/internal/adapters/storage` |
-| Rule deduplication | `platform/orchestrator/internal/adapters/storage/rule_deduplication.go` |
-| Extractor safety logic | `platform/extractor/internal/extractor/extractor.go` |
-| Scanner runner entry | `platform/scanner-runner/src/worker.ts` |
-| Scanner base lifecycle | `platform/scanner-runner/src/core/scanner-base.ts` |
-| AI Navigator agent loop | `platform/scanner-runner/src/scanners/ai-navigator/agent.ts` |
-| AI Navigator vision client | `platform/scanner-runner/src/scanners/ai-navigator/vision-client.ts` |
-| AI Navigator page analyzer | `platform/scanner-runner/src/scanners/ai-navigator/page-analyzer.ts` |
-| AI Navigator action decider | `platform/scanner-runner/src/scanners/ai-navigator/action-decider.ts` |
-| AI Navigator config validation | `platform/api/internal/api/scanner_configs.go` |
-| Scanner manifests | `packages/shared-go/scannercatalog/manifests/*/manifest.json` |
-| Event type contracts | `packages/shared-go/events/types.go` |
-| Report schema | `packages/contracts/report/schema/unified-report.v2.schema.json` |
-| Scanner manifest schema | `packages/contracts/scanner-manifest/schema/scanner-manifest.schema.json` |
+| API route registration | `services/platform-api/internal/api/router.go` |
+| URL intake validation | `services/platform-api/internal/api/handlers_jobs_url_submit.go` |
+| ZIP intake handler | `services/platform-api/internal/api/handlers_jobs_zip_upload.go` |
+| SSRF checks | `services/platform-api/internal/api/security.go` |
+| SSE stream handler | `services/platform-api/internal/api/handlers_sse.go` |
+| Orchestrator events | `services/orchestrator/internal/orchestrator/events.go` |
+| Lifecycle workflows | `services/orchestrator/internal/application/jobs` |
+| Domain policies | `services/orchestrator/internal/domain/jobs` |
+| Repository adapter | `services/orchestrator/internal/adapters/repository` |
+| Runtime adapter | `services/orchestrator/internal/adapters/runtime` |
+| Messaging adapter | `services/orchestrator/internal/adapters/messaging` |
+| Report aggregation | `services/orchestrator/internal/adapters/storage` |
+| Rule deduplication | `services/orchestrator/internal/adapters/storage/rule_deduplication.go` |
+| Extractor safety logic | `services/archive-extractor/internal/extractor/extractor.go` |
+| Scanner runner entry | `services/scanner-runner/src/worker.ts` |
+| Scanner base lifecycle | `services/scanner-runner/src/core/scanner-base.ts` |
+| AI Navigator agent loop | `services/scanner-runner/src/scanners/ai-navigator/agent.ts` |
+| AI Navigator vision client | `services/scanner-runner/src/scanners/ai-navigator/vision-client.ts` |
+| AI Navigator page analyzer | `services/scanner-runner/src/scanners/ai-navigator/page-analyzer.ts` |
+| AI Navigator action decider | `services/scanner-runner/src/scanners/ai-navigator/action-decider.ts` |
+| AI Navigator config validation | `services/platform-api/internal/api/scanner_configs.go` |
+| Scanner manifests | `libs/go/scannercatalog/manifests/*/manifest.json` |
+| Event type contracts | `libs/go/events/types.go` |
+| Report schema | `libs/contracts/report/schema/unified-report.v2.schema.json` |
+| Scanner manifest schema | `libs/contracts/scanner-manifest/schema/scanner-manifest.schema.json` |
 | Just command surface | `justfile` |

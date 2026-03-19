@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	appjobs "github.com/mattboback/stageflow/platform/orchestrator/internal/application/jobs"
+	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
 
 type fakeJobRuntimeClient struct {

@@ -1,4 +1,4 @@
-module github.com/mattboback/stageflow/tests/e2e
+module github.com/mattboback/stageflow/qa/e2e
 
 go 1.25.4
 

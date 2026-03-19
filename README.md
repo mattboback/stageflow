@@ -275,14 +275,14 @@ SSRF protections reject loopback/private/link-local/metadata destinations for UR
 
 ## Optional CLI Mode
 
-StageFlow also includes an optional CLI client (`tools/stageflow-cli/`) that
+StageFlow also includes an optional CLI client (`apps/cli/`) that
 talks to the existing Platform API. It submits URL jobs, waits for completion,
 and fetches the aggregated report via `GET /api/v1/jobs/{id}/results`.
 
 Public URL scans:
 
 ```bash
-go run ./tools/stageflow-cli scan https://example.com
+go run ./apps/cli scan https://example.com
 ```
 
 For a local install that avoids stale binaries:
@@ -297,7 +297,7 @@ stageflow scan https://example.com --format json > report.json
 Or build a local binary in place:
 
 ```bash
-cd tools/stageflow-cli
+cd apps/cli
 go build -o stageflow .
 ./stageflow scanners
 ./stageflow scan https://example.com
@@ -406,7 +406,7 @@ Scanners are discovered via manifest files and loaded dynamically by the scanner
 
 Discovery paths (in order):
 
-1. Built-in scanners in `platform/scanner-runner/src/scanners`
+1. Built-in scanners in `services/scanner-runner/src/scanners`
 2. Mounted `/plugins`
 3. User plugins at `~/.stageflow/plugins`
 4. Extra paths from `PLUGIN_PATHS`
@@ -420,7 +420,7 @@ To add a custom scanner:
 Reference docs:
 
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md#scanner-plugin-system)
-- `packages/contracts/scanner-manifest/schema/README.md`
+- `libs/contracts/scanner-manifest/schema/README.md`
 
 ## Security and Runtime Boundaries
 
@@ -436,13 +436,12 @@ See [SECURITY.md](SECURITY.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md#securi
 
 ```text
 stageflow/
-|- platform/              # API, orchestrator, extractor, scanner-runner
-|- frontend/              # SvelteKit app
-|- packages/              # Contracts + shared Go modules
+|- apps/                  # Web frontend, CLI
+|- services/              # API, orchestrator, extractor, scanner-runner
+|- libs/                  # Contracts + shared Go modules
 |- infra/                 # Compose, Caddy, Quadlets, monitoring, scanner config
-|- tools/                 # stageflow-cli, job-status-cli, suite-runner
-|- tests/                 # End-to-end tests
-`- scripts/               # Build/deploy scripts
+|- tools/                 # job-status-cli, scripts
+|- qa/                    # End-to-end tests, suite-runner
 ```
 
 ## Documentation Map
@@ -455,7 +454,7 @@ stageflow/
 - [CONTRIBUTING.md](CONTRIBUTING.md): local workflow, standards, and PR checklist
 - [SECURITY.md](SECURITY.md): vulnerability reporting policy
 - [SUPPORT.md](SUPPORT.md): help channels and debugging checklist
-- [tools/README.md](tools/README.md): operational tooling (`stageflow-cli`, `job-status-cli`, `suite-runner`)
+- [tools/README.md](tools/README.md): operational tooling (`job-status-cli`)
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): community conduct standards
 - [CHANGELOG.md](CHANGELOG.md): release history
 

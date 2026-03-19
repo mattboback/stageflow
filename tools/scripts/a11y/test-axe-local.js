@@ -4,7 +4,7 @@ const path = require("node:path");
 const { createRequire } = require("node:module");
 
 const requireFromRunner = createRequire(
-  path.resolve(__dirname, "../../platform/scanner-runner/package.json")
+  path.resolve(__dirname, "../../services/scanner-runner/package.json")
 );
 
 let chromium;
@@ -14,7 +14,7 @@ try {
   AxeBuilder = requireFromRunner("@axe-core/playwright").default;
 } catch (err) {
   console.error(
-    "[test-axe-local] Missing scanner-runner deps. Run: (cd platform/scanner-runner && bun install --frozen-lockfile)"
+    "[test-axe-local] Missing scanner-runner deps. Run: (cd services/scanner-runner && bun install --frozen-lockfile)"
   );
   console.error(err);
   process.exit(1);

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/platform/api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func TestSplitCSV(t *testing.T) {

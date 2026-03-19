@@ -13,7 +13,7 @@ TS_OUTPUT := generated/typescript/unified-report.v2.ts
 GO_OUTPUT := generated/go/report_schema.go
 GO_MOD_OUTPUT := generated/go/go.mod
 GO_PACKAGE := report
-GO_MODULE := github.com/mattboback/stageflow/packages/contracts/report/generated/go
+GO_MODULE := github.com/mattboback/stageflow/libs/contracts/report/generated/go
 GO_VERSION := 1.25.4
 
 # Tool paths
@@ -70,4 +70,4 @@ check-freshness:
 # Diff generated Go vs existing types (TypeScript migration complete)
 diff-go:
 	@echo "=== Go differences (models/results.go vs generated) ==="
-	@diff -u ../../packages/shared-go/models/results.go $(GO_OUTPUT) || true
+	@diff -u ../../libs/go/models/results.go $(GO_OUTPUT) || true

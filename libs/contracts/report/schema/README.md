@@ -193,7 +193,7 @@ Represents aggregated Lighthouse category scores:
 # Generate TypeScript types
 bun run generate:ts
 
-# Output: packages/contracts/report/generated/typescript/unified-report.v2.ts
+# Output: libs/contracts/report/generated/typescript/unified-report.v2.ts
 ```
 
 Generated types use:
@@ -207,7 +207,7 @@ Generated types use:
 # Generate Go structs
 make generate-schema-go
 
-# Output: packages/contracts/report/generated/go/report_schema.go
+# Output: libs/contracts/report/generated/go/report_schema.go
 ```
 
 Generated code uses:
@@ -268,8 +268,8 @@ Add to your CI pipeline:
 - name: Validate Schema
   run: |
     bun add -d ajv-cli ajv-formats
-    node packages/contracts/report/schema/validate.js \
-      packages/contracts/report/fixtures/*.json
+    node libs/contracts/report/schema/validate.js \
+      libs/contracts/report/fixtures/*.json
 ```
 
 ## Best Practices
@@ -304,7 +304,7 @@ Please report via:
 ### Questions
 
 Check existing documentation:
-- Main README: `packages/contracts/README.md`
+- Main README: `libs/contracts/README.md`
 - Type definitions: See generated code comments
 
 ## License

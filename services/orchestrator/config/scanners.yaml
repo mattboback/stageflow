@@ -1,7 +1,7 @@
 # Scanner overrides for the orchestrator (optional).
 #
 # Built-in scanner metadata comes from the embedded manifests:
-# `packages/shared-go/scannercatalog/manifests/*/manifest.json`
+# `libs/go/scannercatalog/manifests/*/manifest.json`
 #
 # Use this file for environment-specific tweaks (enable/disable, image overrides, resource caps).
 # For custom locations, point `SCANNER_CONFIG_PATH` at a YAML file with the same shape.

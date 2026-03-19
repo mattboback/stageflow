@@ -16,8 +16,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
-	podman "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/runtime"
+	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
+	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
 var orchestratorTestSchemaCounter uint64

@@ -14,8 +14,8 @@ import (
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	db "github.com/mattboback/stageflow/platform/orchestrator/internal/adapters/repository"
-	"github.com/mattboback/stageflow/platform/orchestrator/internal/orchestrator"
+	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
 )
 
 var e2eTestSchemaCounter uint64

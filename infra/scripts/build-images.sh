@@ -30,7 +30,7 @@ build localhost/stageflow/platform-api:latest stageflow/platform-api:latest serv
 build localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest services/orchestrator/Dockerfile
 
 echo "[images] Building frontend (SvelteKit)..."
-build localhost/stageflow/frontend:latest stageflow/frontend:latest clients/web/Dockerfile \
+build localhost/stageflow/frontend:latest stageflow/frontend:latest apps/web/Dockerfile \
   --build-arg VITE_API_URL="${VITE_API_URL:-https://example.com}" \
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-https://example.com}" \

@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/platform/extractor/internal/discovery"
-	"github.com/mattboback/stageflow/platform/extractor/internal/extractor"
-	"github.com/mattboback/stageflow/platform/extractor/internal/provenance"
-	"github.com/mattboback/stageflow/platform/extractor/internal/server"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/discovery"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/extractor"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/provenance"
+	"github.com/mattboback/stageflow/services/archive-extractor/internal/server"
 )
 
 func TestIntegration_EndToEnd(t *testing.T) {
