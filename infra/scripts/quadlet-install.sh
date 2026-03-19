@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 TEMPLATE_DIR="${REPO_ROOT}/infra/quadlets/templates"
 OUTPUT_DIR="${QUADLET_DIR:-${HOME}/.config/containers/systemd}"
 
@@ -11,6 +11,11 @@ APP_ENV_FILE="${APP_ENV_FILE:-${ENV_FILE}}"
 NETWORK_NAME="${STAGEFLOW_NETWORK_NAME:-${NETWORK_NAME:-stageflow_net}}"
 SCANNER_OVERRIDES_EXAMPLE="${REPO_ROOT}/infra/scanners/scanners.example.yaml"
 SCANNER_OVERRIDES="${REPO_ROOT}/infra/scanners/scanners.yaml"
+
+if [[ ! -f "${REPO_ROOT}/justfile" ]]; then
+  echo "quadlet-install: repo root resolution failed: expected ${REPO_ROOT}/justfile" >&2
+  exit 1
+fi
 
 if [[ ! -d "${TEMPLATE_DIR}" ]]; then
   echo "quadlet-install: missing templates directory: ${TEMPLATE_DIR}" >&2

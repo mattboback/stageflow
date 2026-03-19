@@ -3,9 +3,6 @@
 FROM docker.io/library/golang:1.26 AS builder
 WORKDIR /src
 
-# Copy go.work and go.work.sum for workspace resolution
-COPY go.work go.work.sum ./
-
 # Copy module definitions first for better layer caching
 COPY libs/contracts/report/generated/go/go.mod ./libs/contracts/report/generated/go/
 COPY libs/contracts/scanner-manifest/go.mod libs/contracts/scanner-manifest/go.sum ./libs/contracts/scanner-manifest/
@@ -14,7 +11,7 @@ COPY services/orchestrator/go.mod services/orchestrator/go.sum ./services/orches
 
 # Download dependencies (cached layer)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
-    cd services/orchestrator && go mod download
+    cd services/orchestrator && GOWORK=off go mod download
 
 # Copy source code
 COPY libs/contracts/report/generated/go ./libs/contracts/report/generated/go
@@ -28,7 +25,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
     cd services/orchestrator && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o /out/orchestrator ./cmd/orchestrator
+    GOWORK=off go build -ldflags="-s -w" -o /out/orchestrator ./cmd/orchestrator
 
 # Runtime stage - distroless with debug for troubleshooting
 FROM gcr.io/distroless/base-debian12:debug

@@ -3,8 +3,6 @@
 FROM docker.io/library/golang:1.26 AS builder
 WORKDIR /src
 
-COPY go.work go.work.sum ./
-
 # Copy module definitions first for better layer caching
 COPY libs/contracts/report/generated/go/go.mod ./libs/contracts/report/generated/go/
 COPY libs/contracts/scanner-manifest/go.mod libs/contracts/scanner-manifest/go.sum ./libs/contracts/scanner-manifest/
@@ -13,7 +11,7 @@ COPY services/platform-api/go.mod services/platform-api/go.sum ./services/platfo
 
 # Download dependencies (cached layer)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
-    cd services/platform-api && go mod download
+    cd services/platform-api && GOWORK=off go mod download
 
 # Copy source code
 COPY libs/contracts/report/generated/go ./libs/contracts/report/generated/go
@@ -27,9 +25,9 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
     cd services/platform-api && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o /out/platform-api ./cmd/server && \
+    GOWORK=off go build -ldflags="-s -w" -o /out/platform-api ./cmd/server && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -ldflags="-s -w" -o /out/platform-api-healthcheck ./cmd/healthcheck
+    GOWORK=off go build -ldflags="-s -w" -o /out/platform-api-healthcheck ./cmd/healthcheck
 
 # Prep stage - create directories with correct ownership
 FROM docker.io/library/debian:bookworm-slim AS prep

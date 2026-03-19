@@ -18,7 +18,7 @@
 	} from 'lucide-svelte';
 
 	const metrics = [
-		{ value: '6', label: 'Scanners in one run' },
+		{ value: '8', label: 'Scanners in one run' },
 		{ value: 'SSE', label: 'Live progress stream' },
 		{ value: '100%', label: 'Self-hosted control' }
 	] as const;
@@ -78,6 +78,22 @@
 			color: 'text-fuchsia-600',
 			bg: 'bg-fuchsia-50',
 			border: 'border-t-fuchsia-500'
+		},
+		{
+			icon: Search,
+			name: 'Open Graph',
+			desc: 'Social preview metadata validation for Open Graph tags, Twitter cards, and share readiness.',
+			color: 'text-cyan-600',
+			bg: 'bg-cyan-50',
+			border: 'border-t-cyan-500'
+		},
+		{
+			icon: CheckCircle,
+			name: 'Spelling & Grammar',
+			desc: 'AI-powered spelling, grammar, and content quality checks for polished publication-ready copy.',
+			color: 'text-lime-700',
+			bg: 'bg-lime-50',
+			border: 'border-t-lime-500'
 		}
 	] as const;
 
@@ -169,7 +185,7 @@
 					</h1>
 
 					<p class="landing-subhead mt-6">
-						{SITE.tagline}. StageFlow merges six scanners into one operational flow, so you can move from URL to remediation with less friction.
+						{SITE.tagline}. StageFlow merges eight scanners into one operational flow, so you can move from URL to remediation with less friction.
 					</p>
 
 					<div class="mt-8 flex flex-wrap gap-3">
@@ -233,7 +249,7 @@
 			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
 				<div class="max-w-3xl">
 					<p class="section-kicker mb-2">Capabilities</p>
-					<h2 class="h2-display">Six scanners. One operational report.</h2>
+					<h2 class="h2-display">Eight scanners. One operational report.</h2>
 				</div>
 				<p class="text-ink-muted text-sm leading-relaxed lg:text-right">
 					Choose scanners per run and keep output normalized in one report surface for engineers, PMs, and designers.

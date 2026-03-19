@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, jobID, component string) {
@@ -92,9 +93,29 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 }
 
 func truncateLogs(logs string, n int) string {
-	if len(logs) <= n {
-		return logs
+	cleaned := sanitizeLogText(logs)
+	if len(cleaned) <= n {
+		return cleaned
 	}
 
-	return "..." + logs[len(logs)-n:]
+	return "..." + cleaned[len(cleaned)-n:]
+}
+
+func sanitizeLogText(logs string) string {
+	valid := strings.ToValidUTF8(logs, "")
+
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '\n', '\r', '\t':
+			return r
+		case 0:
+			return -1
+		}
+
+		if r < 0x20 || r == 0x7f {
+			return -1
+		}
+
+		return r
+	}, valid)
 }

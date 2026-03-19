@@ -82,6 +82,15 @@ async function getScanner(
   }
 
   const availableFromPlugins = pluginLoader.listDiscovered();
+  const loadError = loadResult.error?.trim();
+
+  if (loadError) {
+    throw new Error(
+      `Failed to load scanner type "${scannerType}": ${loadError}. Available scanners: ${
+        availableFromPlugins.join(", ") || "none"
+      }`,
+    );
+  }
 
   throw new Error(
     `Unknown scanner type: "${scannerType}". Available scanners: ${
@@ -98,7 +107,7 @@ export async function runWorkerMode(): Promise<void> {
     nodeEnv: process.env.NODE_ENV,
   });
 
-  let pluginLoader: PluginLoader;
+  let pluginLoader: PluginLoader | undefined;
   try {
     pluginLoader = await initializePlugins();
   } catch (err) {
@@ -108,8 +117,12 @@ export async function runWorkerMode(): Promise<void> {
     process.exit(1);
   }
 
-  let scanner: ScannerBase;
-  let manifestId: string;
+  if (!pluginLoader) {
+    return;
+  }
+
+  let scanner: ScannerBase | undefined;
+  let manifestId = "";
   let manifestConfigSchema: ManifestConfigSchema | undefined;
   try {
     const resolved = await getScanner(scannerType, pluginLoader);
@@ -122,6 +135,10 @@ export async function runWorkerMode(): Promise<void> {
       error: err instanceof Error ? err.message : String(err),
     });
     process.exit(1);
+  }
+
+  if (!scanner) {
+    return;
   }
 
   const config = loadConfigFromEnv({
