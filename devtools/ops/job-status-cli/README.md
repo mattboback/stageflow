@@ -5,7 +5,7 @@ Query the orchestrator admin API to inspect jobs, events, pods, and system metri
 ### Usage
 
 ```bash
-cd tools/job-status-cli
+cd devtools/ops/job-status-cli
 go run . <command> [flags]
 ```
 

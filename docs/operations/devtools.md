@@ -4,8 +4,6 @@ StageFlow includes a small set of command-line tools for local development and
 operations. These tools talk to the running StageFlow services (API and
 orchestrator); they don't replace the web UI.
 
-For the full command surface, see `tools/README.md`.
-
 ## stageflow
 
 `stageflow` submits URL scan jobs to the Platform API, waits for completion, and
@@ -142,7 +140,7 @@ pods, and system metrics.
 Build the CLI by running:
 
 ```bash
-cd tools/job-status-cli
+cd devtools/ops/job-status-cli
 go build -o job-status-cli .
 ```
 
@@ -157,7 +155,7 @@ compliance, and exits non-zero when any domain fails.
 Build the CLI by running:
 
 ```bash
-cd qa/suite-runner
+cd devtools/qa/suite-runner
 go build -o suite-runner .
 ```
 

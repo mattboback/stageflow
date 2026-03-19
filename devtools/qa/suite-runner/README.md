@@ -5,7 +5,7 @@ Run accessibility scans across multiple domains, evaluate threshold compliance, 
 ### Usage
 
 ```bash
-cd qa/suite-runner
+cd devtools/qa/suite-runner
 go run . [flags]
 ```
 

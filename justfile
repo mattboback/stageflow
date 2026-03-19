@@ -321,7 +321,7 @@ ci:
     git diff --exit-code docs/reference/cli/stageflow
 
     echo "==> Shell regression tests..."
-    bash tools/scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/cli-install.test.sh
 
     echo "==> Frontend CI..."
     (cd {{web_dir}} && {{bun}} run ci)
@@ -480,7 +480,7 @@ storybook-test:
 shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
-    bash tools/scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/cli-install.test.sh
 
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':
@@ -491,7 +491,7 @@ clean MODE='all':
     echo "==> Cleaning artifacts..."
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
     find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".svelte-kit" -o -name ".gocache" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
-    rm -f tools/job-status-cli/job-status-cli qa/suite-runner/suite-runner
+    rm -f devtools/ops/job-status-cli/job-status-cli devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then
         echo "==> Removing node_modules..."

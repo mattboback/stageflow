@@ -5,9 +5,9 @@ Thank you for using StageFlow! If you need help, have a question, or want to rep
 ## Where to get help
 
 1. **Read the Documentation:**
-   - [Architecture & Design](docs/ARCHITECTURE.md)
-   - [CLI Tooling](docs/TOOLS.md)
-   - [Configuration Guide](docs/CONFIGURATION.md)
+   - [Architecture & Design](docs/architecture/system.md)
+   - [CLI Tooling](docs/operations/devtools.md)
+   - [Configuration Guide](docs/reference/configuration.md)
 
 2. **Search Existing Issues:**
    Before creating a new issue, please search the [GitHub Issues](https://github.com/mattboback/stageflow/issues) to see if someone else has already reported your problem or asked your question.

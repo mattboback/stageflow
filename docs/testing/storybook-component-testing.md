@@ -5,9 +5,9 @@ This document defines the monorepo standard for Storybook-driven component testi
 ## Current Scope
 
 - Foundation: monorepo conventions and CI pattern.
-- Active implementation: `apps/web/` only.
+- Active implementation: `clients/web/` only.
 - Storybook version baseline: `8.6.x`.
-- Story docs landing page: `apps/web/src/stories/Introduction.mdx`.
+- Story docs landing page: `clients/web/src/stories/Introduction.mdx`.
 - Coverage baseline:
   - UI primitives (`src/lib/components/ui/*.stories.ts`).
   - Workflow components for playground, scan status, and report surfaces.
@@ -45,7 +45,7 @@ This document defines the monorepo standard for Storybook-driven component testi
 
 ## Frontend Commands
 
-Run from `apps/web/`:
+Run from `clients/web/`:
 
 ```bash
 bun run storybook
@@ -57,7 +57,7 @@ bun run test-storybook:watch
 
 ## CI Pattern
 
-- Storybook runs in a dedicated `apps-web-storybook` CI job.
+- Storybook runs in a dedicated `clients/web-storybook` CI job.
 - The Storybook job is a required gate for pull requests to `main`.
 - Failed runs upload `junit.xml`, `test-results`, and `storybook-static` artifacts.
 

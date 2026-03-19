@@ -55,18 +55,18 @@ Artifacts/status
 
 Primary repository areas:
 
-- `services/api`: intake, validation, status APIs, SSE.
+- `services/platform-api`: intake, validation, status APIs, SSE.
 - `services/orchestrator`: FSM, container lifecycle, aggregation.
-- `services/extractor`: secure archive extraction and provenance generation.
+- `services/archive-extractor`: secure archive extraction and provenance generation.
 - `services/scanner-runner`: plugin discovery and scanner execution runtime.
-- `apps/web`: submission UX and live status/report views.
+- `clients/web`: submission UX and live status/report views.
 - `libs/contracts`: JSON Schemas and generated contracts.
 
 ---
 
 ## Core Services and Responsibilities
 
-### Platform API (`services/api`)
+### Platform API (`services/platform-api`)
 
 Responsibilities:
 
@@ -104,7 +104,7 @@ Important entry points:
 - Aggregation: `services/orchestrator/internal/adapters/storage`
 - Rule deduplication: `services/orchestrator/internal/adapters/storage/rule_deduplication.go`
 
-### Extractor (`services/extractor`)
+### Extractor (`services/archive-extractor`)
 
 Responsibilities:
 
@@ -134,7 +134,7 @@ Important entry points:
 - Base lifecycle: `services/scanner-runner/src/core/scanner-base.ts`
 - Plugin discovery/loader: `services/scanner-runner/src/core/plugins`
 
-### Frontend (`apps/web`)
+### Frontend (`clients/web`)
 
 Responsibilities:
 
@@ -144,8 +144,8 @@ Responsibilities:
 
 Important entry points:
 
-- API client: `apps/web/src/lib/api/client.ts`
-- Scan status store: `apps/web/src/lib/stores/scan-status.svelte.ts`
+- API client: `clients/web/src/lib/api/client.ts`
+- Scan status store: `clients/web/src/lib/stores/scan-status.svelte.ts`
 
 ---
 
@@ -521,11 +521,11 @@ Outcome: transition to `FAILED`; event timeline records failure reason.
 
 ### Useful tools
 
-- `apps/cli`: submit URL scan jobs and fetch unified reports.
-- `tools/job-status-cli`: inspect jobs/events/pods/status.
-- `tools/suite-runner`: run threshold-based multi-domain validation.
+- `clients/cli`: submit URL scan jobs and fetch unified reports.
+- `devtools/ops/job-status-cli`: inspect jobs/events/pods/status.
+- `devtools/qa/suite-runner`: run threshold-based multi-domain validation.
 
-Tooling docs: `docs/TOOLS.md` and `tools/README.md`.
+Tooling docs: `docs/operations/devtools.md`.
 
 ### Recommended debug path
 

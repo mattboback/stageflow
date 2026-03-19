@@ -112,6 +112,6 @@ These variables are primarily used internally or for advanced infrastructure set
 
 ## Related Docs
 
-- [README.md](README.md)
-- [ARCHITECTURE.md](ARCHITECTURE.md)
-- [SECURITY.md](SECURITY.md)
+- [README](../../README.md)
+- [Architecture](../architecture/system.md)
+- [Security](../../SECURITY.md)
