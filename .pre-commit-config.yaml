@@ -39,7 +39,7 @@ repos:
         exclude: ^(clients/web/\.svelte-kit/|libs/contracts/report/generated/|libs/contracts/scanner-manifest/generated/)
       - id: stageflow-precommit
         name: stageflow-precommit
-        entry: node tools/precommit/run.mjs
+        entry: node devtools/scripts/precommit/run.mjs
         language: system
         files: ^libs/contracts/report/
         require_serial: true
