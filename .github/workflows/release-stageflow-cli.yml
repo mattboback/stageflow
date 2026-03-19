@@ -3,7 +3,7 @@ name: Release stageflow CLI
 on:
   push:
     tags:
-      - "apps/cli/v*"
+      - "clients/cli/v*"
   workflow_dispatch: {}
 
 permissions:
@@ -34,12 +34,12 @@ jobs:
       - name: Build stageflow CLI
         id: build
         shell: bash
-        working-directory: apps/cli
+        working-directory: clients/cli
         run: |
           set -euo pipefail
 
           tag="${GITHUB_REF_NAME}"
-          version="${tag##*/}" # vX.Y.Z (tag prefix is apps/cli/)
+          version="${tag##*/}" # vX.Y.Z (tag prefix is clients/cli/)
           goos="${{ matrix.goos }}"
           goarch="${{ matrix.goarch }}"
 
@@ -74,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.build.outputs.asset }}
-          path: apps/cli/${{ steps.build.outputs.asset }}
+          path: clients/cli/${{ steps.build.outputs.asset }}
           if-no-files-found: error
 
   release:

@@ -6,7 +6,7 @@
 #   ./scripts/pre-commit-check.sh
 #
 # To install as git hook:
-#   ln -sf ../../packages/contracts/report/scripts/pre-commit-check.sh .git/hooks/pre-commit
+#   ln -sf ../../libs/contracts/report/scripts/pre-commit-check.sh .git/hooks/pre-commit
 #
 # This script checks if:
 #   1. The schema files have been modified

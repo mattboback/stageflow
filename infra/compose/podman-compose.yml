@@ -241,7 +241,7 @@ services:
   frontend:
     build:
       context: ../..
-      dockerfile: apps/web/Dockerfile
+      dockerfile: clients/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://stageflow.org}
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
