@@ -27,3 +27,4 @@ stageflow project [path]
 * [stageflow](stageflow.md)	 - StageFlow CLI
 * [stageflow project doctor](stageflow_project_doctor.md)	 - Validate project config and dev readiness without scanning
 * [stageflow project init](stageflow_project_init.md)	 - Create .stageflow config and setup guide
+

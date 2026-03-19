@@ -1,49 +1,144 @@
 # Support
 
-Thank you for using StageFlow! If you need help, have a question, or want to report an issue, here are the ways you can get support.
+Thank you for using StageFlow. This document points you to the right docs, the right issue path, and the fastest local debugging checks.
 
-## Where to get help
+## Start with the docs
 
-1. **Read the Documentation:**
-   - [Architecture & Design](docs/architecture/system.md)
-   - [CLI Tooling](docs/operations/devtools.md)
-   - [Configuration Guide](docs/reference/configuration.md)
+Use the source that matches your question:
 
-2. **Search Existing Issues:**
-   Before creating a new issue, please search the [GitHub Issues](https://github.com/mattboback/stageflow/issues) to see if someone else has already reported your problem or asked your question.
+- Product overview and local quick start: `README.md`
+- Architecture and service boundaries: `docs/architecture/system.md`
+- Configuration and environment variables: `docs/reference/configuration.md`
+- CLI and developer tooling: `docs/operations/devtools.md`
+- Project mode: `docs/PROJECT_MODE.md`
 
-3. **Open a New Issue:**
-   If you can't find an answer, feel free to open an issue:
-   - **Bug Reports:** Use the bug report template if something is broken.
-   - **Feature Requests:** Use the feature request template if you have an idea for a new scanner or platform capability.
-   - **Questions:** You can open an issue for general questions or usage help.
+## Before opening an issue
 
-## Debugging Checklist
+1. Search existing issues: <https://github.com/mattboback/stageflow/issues>
+2. Confirm whether the problem is local-only, staging-only, or production-only.
+3. Gather the exact command, target URL, and error output that reproduces the problem.
 
-If you are experiencing issues running StageFlow locally or in production, please check the following before opening an issue:
+## Opening the right issue
 
-- **Check Container Status:**
-  ```bash
-  just dev ps  # or podman ps
-  ```
-  Ensure all core containers (`nats`, `minio`, `postgres`, `platform-api`, `orchestrator`, `frontend`) are running and healthy.
+Open a GitHub issue when you have:
 
-- **Check Service Logs:**
-  ```bash
-  just dev logs
-  ```
-  Look for error messages, particularly in the `orchestrator` or `platform-api` logs.
+- a reproducible bug
+- a feature request for the platform, scanners, or CLI
+- a docs gap that blocks setup or usage
 
-- **Verify Environment Variables:**
-  Ensure your `.env` file is properly configured based on `.env.example`. Specifically check database credentials and NATS/MinIO endpoints.
+For security reports, do not open a public issue. Follow `SECURITY.md` instead.
 
-- **Network Conflicts:**
-  StageFlow uses Podman networks. If containers fail to communicate, try pruning unused networks or restarting the stack:
-  ```bash
-  just dev down
-  just dev up
-  ```
+## Local troubleshooting checklist
 
-## Security Issues
+### 1. Confirm the right stack is running
 
-If you believe you have found a security vulnerability, please do **not** open a public issue. Instead, follow the instructions in our [Security Policy](SECURITY.md).
+For normal local development:
+
+```bash
+just dev up
+just dev init
+```
+
+For localhost or private-target scans:
+
+```bash
+just dev up local
+just dev init local
+```
+
+If you need to inspect running containers directly:
+
+```bash
+podman ps --format '{{.Names}}\t{{.Status}}'
+```
+
+### 2. Check service logs
+
+```bash
+just dev logs
+```
+
+Use the local overlay form when you are debugging private-target scans:
+
+```bash
+just dev logs local
+```
+
+### 3. Check health endpoints
+
+```bash
+curl -fsS http://localhost:8080/healthz
+curl -fsS http://localhost:8081/healthz
+```
+
+- `http://localhost:8080/healthz` checks the Platform API
+- `http://localhost:8081/healthz` checks the Orchestrator admin API
+
+### 4. Verify local configuration
+
+- Confirm `.env` exists and is based on `.env.example`.
+- Rebuild images after dependency or runtime changes:
+
+```bash
+just images
+```
+
+### 5. Reinstall the CLI if the wrong binary is on your `PATH`
+
+```bash
+just cli-install
+stageflow version
+```
+
+### 6. Debug project mode separately
+
+If `stageflow project` fails, validate the generated config and readiness flow first:
+
+```bash
+stageflow project doctor
+stageflow project doctor --skip-dev
+```
+
+## Common problem patterns
+
+### Private or localhost targets are rejected
+
+Use the local overlay:
+
+```bash
+just dev up local
+just dev init local
+just images
+```
+
+This enables private-target scanning in the local stack and configures job pods so scanners can reach loopback targets.
+
+### A service starts but scans still fail
+
+Check logs first, then restart the stack:
+
+```bash
+just dev down
+just dev up
+just dev init
+```
+
+For the local overlay:
+
+```bash
+just dev down local
+just dev up local
+just dev init local
+```
+
+### Docs or command examples look wrong
+
+Please open a docs issue and include:
+
+- the page or file path
+- the incorrect command or example
+- the expected behavior
+
+## Production support boundary
+
+This repository documents the app and local workflows, but live production operations for `stageflow.org` are intentionally managed from the external deployment workspace. If your question is about live production operations, use the external control plane described in `AGENTS.md`.

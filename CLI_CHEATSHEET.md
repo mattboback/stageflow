@@ -1,111 +1,166 @@
 # StageFlow CLI Cheatsheet
 
-## 1. Setup & Build
+Quick reference for the `stageflow` CLI. For full command docs, see `clients/cli/README.md`, `docs/operations/devtools.md`, and `docs/PROJECT_MODE.md`.
 
-### Prerequisites
-Make sure you have Go installed, as well as the local dev stack running for full functionality.
+## 1. Setup
 
-### Start the Local Dev Stack
+### Start the local stack
+
+Use the local overlay when you want to scan private targets such as `localhost` or `127.0.0.1`:
+
 ```bash
+cp .env.example .env
 just setup
 just dev up local
+just dev init local
+just images
 ```
-*(Note: `dev up local` enables full internal component communication needed for local scanning).*
 
-### Build the CLI Binary
+### Install the CLI
+
+Recommended install loop:
+
+```bash
+just cli-install
+stageflow version
+```
+
+Build in place instead:
+
 ```bash
 cd clients/cli
-go build -o stageflow
-```
-
----
-
-## 2. Basic Commands
-
-### Help & Version
-```bash
-./stageflow --help
+go build -o stageflow .
 ./stageflow version
 ```
 
-### List Scanners
-View all available built-in scanners (e.g., a11y, seo, link-checker):
+## 2. Basic commands
+
+### Help and version
+
 ```bash
-./stageflow scanners
+stageflow --help
+stageflow version
 ```
 
----
+### List scanners
 
-## 3. Ad-Hoc Scanning (`scan`)
-
-Run a one-off scan against any publicly accessible URL or local target.
-
-### Scan a Public URL
 ```bash
-./stageflow scan https://example.com
+stageflow scanners
+stageflow scanners --format markdown
+stageflow scanners --format json
 ```
 
-### Scan a Local Target
-To scan a local instance (e.g., `localhost`), you must pass the `--allow-private-targets` flag:
+## 3. Run scans
+
+### Scan a public URL
+
 ```bash
-./stageflow scan http://localhost:5173 --allow-private-targets
+stageflow scan https://example.com
 ```
 
-### Output Formats
-Change the output format to JSON or Markdown using the `--format` flag:
+### Scan multiple URLs in one job
+
 ```bash
-./stageflow scan https://example.com --format json > report.json
-./stageflow scan https://example.com --format markdown > report.md
+stageflow scan https://example.com https://example.com/login --format markdown
 ```
 
----
+### Scan a local target
 
-## 4. Project Mode (`project`)
-
-Project mode integrates StageFlow into your repository. It automatically manages your dev server lifecycle (starts it, waits for readiness, scans, and shuts it down).
-
-### Initialize a Project
-Run this in the root of your Git repository:
 ```bash
-./stageflow project
+stageflow scan http://127.0.0.1:5173 --allow-private-targets
 ```
-*If this is the first time, it will automatically bootstrap a `.stageflow/config.yaml` file by detecting your package manager and framework.*
+
+### Output formats
+
+```bash
+stageflow scan https://example.com --format text
+stageflow scan https://example.com --format markdown
+stageflow scan https://example.com --format json > report.json
+```
+
+## 4. AI Navigator
+
+```bash
+stageflow ai https://example.com "Navigate to the pricing page and confirm it loads"
+stageflow ai https://example.com "Submit the contact form" --expand-provenance
+```
+
+Useful flags:
+
+- `--expand-provenance`
+- `--allow-private-targets`
+- `--timeout 5m`
+
+## 5. Project mode
+
+Project mode starts your local app, waits for readiness, runs the scan, and shuts the app down when finished.
+
+### Initialize project mode files
+
+```bash
+stageflow project init
+```
+
+This scaffolds:
+
+- `.stageflow/config.yaml`
+- `.stageflow/README.md`
 
 ### Example `.stageflow/config.yaml`
+
 ```yaml
-api: http://localhost:8080
+version: 1
+
+stageflow:
+  api_url: http://localhost:8080
+
 scan:
   urls:
     - http://127.0.0.1:5173
-  scanners:
-    - a11y
-    - seo
-    - link-checker
-    - open-graph
-    - spelling-grammar
+  scanners: axe,lighthouse,seo,link-checker
+  allow_private_targets: true
+
 dev:
-  cwd: frontend
-  cmd:
-    - npm
-    - run
-    - dev
+  start:
+    cmd: ["bun", "run", "dev"]
+    cwd: .
   ready:
     url: http://127.0.0.1:5173
-    timeout: 30s
 ```
 
-### Run a Project Scan
-Once configured, simply run:
+### Validate before scanning
+
 ```bash
-./stageflow project
+stageflow project doctor
+stageflow project doctor --skip-dev
 ```
-*StageFlow will start the dev server defined in `cmd`, wait for `ready.url` to be accessible, run the scan against `scan.urls`, and gracefully terminate the dev server when finished.*
 
----
+### Run a project scan
 
-## 5. Fetching Reports (`report`)
-
-If you have an existing Job ID, you can fetch its report without re-scanning:
 ```bash
-./stageflow report <job-id> --format markdown
+stageflow project
+stageflow project --format markdown
 ```
+
+## 6. Reports
+
+### Fetch an existing report
+
+```bash
+stageflow report <job-id>
+stageflow report <job-id> --format markdown
+stageflow report <job-id> --format json
+```
+
+## 7. Environment variables
+
+- `STAGEFLOW_API_URL` (default `http://localhost:8080`)
+- `STAGEFLOW_API_KEY` (optional, sent as `X-Api-Key`)
+
+## 8. Troubleshooting quick hits
+
+- Private or loopback targets require the local overlay: `just dev up local`
+- If `stageflow` resolves to the wrong binary, rerun `just cli-install`
+- Use `stageflow project doctor` to debug project-mode readiness problems
+- Use `just dev logs` to inspect local stack logs
+

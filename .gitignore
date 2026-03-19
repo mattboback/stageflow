@@ -12,12 +12,12 @@ build/
 out/
 *.tsbuildinfo
 
-# Legacy frontend generated artifacts
-/frontend/.svelte-kit/
-/frontend/build/
-/frontend/storybook-static/
-/frontend/coverage/
-/frontend/junit.xml
+# clients/web generated artifacts
+/clients/web/.svelte-kit/
+/clients/web/build/
+/clients/web/storybook-static/
+/clients/web/coverage/
+/clients/web/junit.xml
 
 # Environment files
 .env
@@ -69,6 +69,18 @@ flattened_repo*.json
 pipeline_logs.txt
 log.duff
 
+# Generated root-level showcase/demo artifacts
+/cli
+/job-status-cli
+/suite-runner
+/scan_result.json
+/stageflow-home*.yaml
+/stageflow-report*.yaml
+
+# Generated local CLI artifacts
+/clients/cli/cli
+/clients/cli/report.json
+
 # Go build artifacts
 bin/
 services/platform-api/platform-api
@@ -79,10 +91,6 @@ devtools/ops/job-status-cli/job-status-cli
 devtools/qa/suite-runner/suite-runner
 clients/cli/stageflow
 clients/cli/stageflow-cli
-tools/job-status-cli/job-status-cli
-tools/stageflow-cli/stageflow
-tools/stageflow-cli/stageflow-cli
-tools/suite-runner/suite-runner
 /.local/
 /platform/
 services/scanner-runner/dist/

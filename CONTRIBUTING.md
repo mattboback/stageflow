@@ -1,37 +1,162 @@
 # Contributing to StageFlow
 
-First off, thank you for considering contributing to StageFlow! It's people like you that make StageFlow such a great tool.
+Thanks for contributing to StageFlow. This repository contains the application source, local development workflows, and staging tooling for the StageFlow platform.
 
-## Where do I go from here?
+Before you start, read these docs to understand the repo shape and operating model:
 
-If you've noticed a bug or have a feature request, make sure to check our [Issues](https://github.com/mattboback/stageflow/issues) first. If it doesn't exist, go ahead and create a new one!
+- `README.md` for the product overview and local quick start
+- `docs/architecture/system.md` for service boundaries and data flow
+- `docs/reference/configuration.md` for environment and runtime configuration
+- `docs/operations/devtools.md` for CLI and developer tooling
 
-## Fork & create a branch
+## What lives where
 
-If this is something you think you can fix, then fork StageFlow and create a branch with a descriptive name.
+Use this map to find the right entry point:
 
-## Get the test suite running
+- `clients/web` — SvelteKit frontend
+- `clients/cli` — `stageflow` CLI
+- `services/platform-api` — intake API, SSE stream, report APIs
+- `services/orchestrator` — job lifecycle and scanner orchestration
+- `services/scanner-runner` — scanner runtime and Playwright-based scanners
+- `libs/contracts` — shared schemas and generated contracts
+- `devtools` — internal ops, QA, and contributor tooling
+- `qa` — end-to-end and integration-style verification assets
 
-Make sure your changes don't break anything. Before submitting a pull request, please ensure you have set up your local environment and run the test suite.
+## Development prerequisites
 
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
+Install the same core tools used by the repo:
 
-2. Run the test suite:
-   ```bash
-   just ci
-   ```
+- Go 1.26.1
+- Bun
+- Podman with `podman compose`
+- `just`
+- `golangci-lint`
 
-Please make sure all tests pass and your code is properly formatted before submitting a Pull Request.
+Then create your local environment file:
 
-## Pull Request Process
+```bash
+cp .env.example .env
+```
 
-1. Ensure any install or build dependencies are removed before the end of the layer when doing a build.
-2. Update the README.md with details of changes to the interface, if applicable.
-3. You may merge the Pull Request in once you have the sign-off of other developers, or if you do not have permission to do that, you may request the reviewer to merge it for you.
+## Local setup
+
+For a normal local development stack:
+
+```bash
+just setup
+just dev up
+just dev init
+just images
+```
+
+For localhost or other private-target scans, use the local overlay instead:
+
+```bash
+just setup
+just dev up local
+just dev init local
+just images
+```
+
+After startup:
+
+- Frontend: `http://localhost:3000`
+- Platform API: `http://localhost:8080`
+- Orchestrator admin API: `http://localhost:8081`
+
+## Common workflows
+
+### Run the full quality gate
+
+Before opening a pull request, run the same broad validation flow used for local CI:
+
+```bash
+just ci
+```
+
+### Run targeted checks
+
+Use these when iterating on a specific area:
+
+```bash
+just storybook-test
+just shell-tests
+```
+
+### Run individual services
+
+These commands are useful when you only need one surface locally:
+
+```bash
+just run clients/web
+just run storybook
+just run api
+just run orchestrator
+```
+
+### Inspect the local stack
+
+```bash
+just dev logs
+just dev down
+just dev restart
+```
+
+Use the same commands with the `local` environment when you are working with private-target scans:
+
+```bash
+just dev logs local
+just dev down local
+just dev restart local
+```
+
+## Choosing a place to work
+
+- Work in `clients/web` for UI, UX, Storybook, and frontend tests.
+- Work in `clients/cli` for CLI behavior, project mode, and report rendering.
+- Work in `services/platform-api` for intake validation, job submission, and streaming/report APIs.
+- Work in `services/orchestrator` for job state transitions and runner coordination.
+- Work in `services/scanner-runner` for scanner execution and browser automation behavior.
+- Work in `libs/contracts` when API and report schemas change.
+
+If a change crosses boundaries, update the relevant docs and contracts in the same pull request.
+
+## Pull request expectations
+
+A change is ready for review when all of the following are true:
+
+- the relevant local commands succeed
+- new behavior is covered by tests or clearly justified manual verification
+- user-facing docs are updated when behavior changes
+- screenshots are included for meaningful UI changes
+- CLI output examples are refreshed when command behavior changes
+
+When you open a pull request, include:
+
+- a short summary of what changed
+- the areas touched (`clients/web`, `clients/cli`, `services/*`, `libs/contracts`, docs)
+- validation steps you ran
+- follow-up work or known limitations
+
+## Pre-commit hooks
+
+This repo includes a `.pre-commit-config.yaml` with formatting, secrets, and commit-message checks. If you use `pre-commit`, install the hooks locally:
+
+```bash
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+## Reporting bugs or asking questions
+
+- Search existing issues first: <https://github.com/mattboback/stageflow/issues>
+- Use `SUPPORT.md` when you need troubleshooting or doc links
+- Follow `SECURITY.md` for private security disclosures
+
+## Production boundary
+
+Do not add or depend on repo-local production deployment commands for the live VPS. Production operations for `stageflow.org` are intentionally managed from the external deployment workspace described in `AGENTS.md` and the root deployment strategy.
 
 ## Code of Conduct
 
-Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by its terms. See `CODE_OF_CONDUCT.md` for more information.
+By participating in this project, you agree to follow `CODE_OF_CONDUCT.md`.
