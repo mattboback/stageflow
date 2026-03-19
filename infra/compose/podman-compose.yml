@@ -133,7 +133,7 @@ services:
   platform-api:
     build:
       context: ../..
-      dockerfile: platform/api/Dockerfile
+      dockerfile: services/platform-api/Dockerfile
     image: localhost/stageflow/platform-api:latest
     environment:
       PORT: "8080"
@@ -183,7 +183,7 @@ services:
   orchestrator:
     build:
       context: ../..
-      dockerfile: platform/orchestrator/Dockerfile
+      dockerfile: services/orchestrator/Dockerfile
     image: localhost/stageflow/orchestrator:latest
     security_opt:
       - label=disable
@@ -241,7 +241,7 @@ services:
   frontend:
     build:
       context: ../..
-      dockerfile: frontend/Dockerfile
+      dockerfile: clients/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-https://stageflow.org}
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}

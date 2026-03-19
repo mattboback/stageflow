@@ -10,7 +10,7 @@ const repoRoot = path.resolve(scannerRunnerRoot, "../..");
 
 const sourceSchemaPath = path.join(
   repoRoot,
-  "packages",
+  "libs",
   "contracts",
   "scanner-manifest",
   "schema",
@@ -19,7 +19,7 @@ const sourceSchemaPath = path.join(
 
 const sourceTypesDir = path.join(
   repoRoot,
-  "packages",
+  "libs",
   "contracts",
   "scanner-manifest",
   "generated",
@@ -47,7 +47,7 @@ async function pathExists(targetPath) {
 
 if (!(await pathExists(sourceSchemaPath))) {
   throw new Error(
-    `Missing scanner manifest schema at ${sourceSchemaPath}. Ensure packages/contracts/scanner-manifest is present.`,
+    `Missing scanner manifest schema at ${sourceSchemaPath}. Ensure libs/contracts/scanner-manifest is present.`,
   );
 }
 

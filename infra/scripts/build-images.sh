@@ -26,11 +26,11 @@ build() {
 }
 
 echo "[images] Building Go services..."
-build localhost/stageflow/platform-api:latest stageflow/platform-api:latest platform/api/Dockerfile
-build localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest platform/orchestrator/Dockerfile
+build localhost/stageflow/platform-api:latest stageflow/platform-api:latest services/platform-api/Dockerfile
+build localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest services/orchestrator/Dockerfile
 
 echo "[images] Building frontend (SvelteKit)..."
-build localhost/stageflow/frontend:latest stageflow/frontend:latest frontend/Dockerfile \
+build localhost/stageflow/frontend:latest stageflow/frontend:latest clients/web/Dockerfile \
   --build-arg VITE_API_URL="${VITE_API_URL:-https://example.com}" \
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-https://example.com}" \
@@ -39,12 +39,12 @@ build localhost/stageflow/frontend:latest stageflow/frontend:latest frontend/Doc
   --build-arg VITE_AI_NAVIGATOR_DEFAULT_MODEL="${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}"
 
 echo "[images] Building job images..."
-build localhost/stageflow/extractor:latest stageflow/extractor:latest platform/extractor/Dockerfile
+build localhost/stageflow/extractor:latest stageflow/extractor:latest services/archive-extractor/Dockerfile
 "$PODMAN" build \
   --network "$PODMAN_BUILD_NETWORK" \
-  --ignorefile platform/scanner-runner/.dockerignore \
+  --ignorefile services/scanner-runner/.dockerignore \
   -t localhost/stageflow/scanner-runner:latest \
-  -f platform/scanner-runner/Dockerfile \
+  -f services/scanner-runner/Dockerfile \
   "$REPO_ROOT"
 "$PODMAN" tag localhost/stageflow/scanner-runner:latest stageflow/scanner-runner:latest
 
