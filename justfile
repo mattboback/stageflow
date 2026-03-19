@@ -9,7 +9,7 @@ compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow')
 repo_root := justfile_directory()
 
 # Paths
-web_dir := 'apps/web'
+web_dir := 'clients/web'
 scanner_dir := 'services/scanner-runner'
 go_work := 'go.work'
 
@@ -28,7 +28,7 @@ setup:
     echo "==> Syncing Go workspace..."
     {{go}} work sync
 
-    echo "==> Installing apps/web dependencies..."
+    echo "==> Installing clients/web dependencies..."
     (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
 
     echo "==> Installing scanner-runner dependencies..."
@@ -317,7 +317,7 @@ ci:
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> CLI docs..."
-    {{go}} run ./apps/cli docs --out-dir docs/reference/cli/stageflow
+    {{go}} run ./clients/cli docs --out-dir docs/reference/cli/stageflow
     git diff --exit-code docs/reference/cli/stageflow
 
     echo "==> Shell regression tests..."
@@ -341,7 +341,7 @@ ci:
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
 
-[group('build'), doc('Build all artifacts (Go + apps/web + runner)')]
+[group('build'), doc('Build all artifacts (clients/web + Go + runner)')]
 build:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -353,7 +353,7 @@ build:
         (cd "$dir" && {{go}} build ./...)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
-    echo "==> Building apps/web..."
+    echo "==> Building clients/web..."
     (cd {{web_dir}} && {{bun}} run build)
 
     echo "==> Building scanner-runner..."
@@ -383,7 +383,7 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     commit="$(git rev-parse --short HEAD 2>/dev/null || echo "")"
     build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
     ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${build_date}"
-    (cd apps/cli && {{go}} build -trimpath -ldflags "$ldflags" -o "$tmp" .)
+    (cd clients/cli && {{go}} build -trimpath -ldflags "$ldflags" -o "$tmp" .)
 
     echo "==> Installing: $dest"
     install -m 0755 "$tmp" "$dest"
@@ -425,7 +425,7 @@ deploy MODE='full':
     echo "  cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just deploy stageflow" >&2
     exit 1
 
-[group('run'), doc('Run a service locally (SERVICE=apps/web|storybook|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=clients/web|storybook|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -442,17 +442,17 @@ run SERVICE MODE='dev':
     fi
 
     case "$service" in
-        apps/web)
+        clients/web)
             if [[ "$mode" == "preview" ]]; then
-                echo "==> Starting apps/web preview server..."
+                echo "==> Starting clients/web preview server..."
                 (cd {{web_dir}} && {{bun}} run preview)
             else
-                echo "==> Starting apps/web dev server..."
+                echo "==> Starting clients/web dev server..."
                 (cd {{web_dir}} && {{bun}} run dev)
             fi
             ;;
         storybook)
-            echo "==> Starting apps/web Storybook..."
+            echo "==> Starting clients/web Storybook..."
             (cd {{web_dir}} && {{bun}} run storybook)
             ;;
         api)
@@ -464,12 +464,12 @@ run SERVICE MODE='dev':
             (cd services/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be apps/web, storybook, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be clients/web, storybook, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac
 
-[group('quality'), doc('Run apps/web Storybook interaction + accessibility tests')]
+[group('quality'), doc('Run clients/web Storybook interaction + accessibility tests')]
 storybook-test:
     #!/usr/bin/env bash
     set -euo pipefail

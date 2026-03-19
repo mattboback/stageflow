@@ -62,17 +62,16 @@ flattened_repo*.json
 pipeline_logs.txt
 log.duff
 
-# Allow frontend source data
 # Go build artifacts
 bin/
-platform/api/platform-api
-platform/api/platform-api-healthcheck
-platform/orchestrator/orchestrator
-platform/extractor/extractor
+services/platform-api/platform-api
+services/platform-api/platform-api-healthcheck
+services/orchestrator/orchestrator
+services/archive-extractor/extractor
 tools/job-status-cli/job-status-cli
-tools/suite-runner/suite-runner
-tools/stageflow-cli/stageflow
-tools/stageflow-cli/stageflow-cli
+qa/suite-runner/suite-runner
+clients/cli/stageflow
+clients/cli/stageflow-cli
 /stageflow
 /stageflow-cli
 

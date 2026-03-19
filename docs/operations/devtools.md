@@ -11,7 +11,7 @@ For the full command surface, see `tools/README.md`.
 `stageflow` submits URL scan jobs to the Platform API, waits for completion, and
 prints the unified report.
 
-The source lives in `tools/stageflow-cli/`, but the built binary is named
+The source lives in `clients/cli/`, but the built binary is named
 `stageflow`.
 
 ### Build
@@ -32,7 +32,7 @@ of silently leaving a stale CLI active.
 To build the CLI in place, run:
 
 ```bash
-cd tools/stageflow-cli
+cd clients/cli
 go build -o stageflow .
 ```
 
@@ -157,7 +157,7 @@ compliance, and exits non-zero when any domain fails.
 Build the CLI by running:
 
 ```bash
-cd tools/suite-runner
+cd qa/suite-runner
 go build -o suite-runner .
 ```
 

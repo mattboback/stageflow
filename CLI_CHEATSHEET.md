@@ -14,7 +14,7 @@ just dev up local
 
 ### Build the CLI Binary
 ```bash
-cd tools/stageflow-cli
+cd clients/cli
 go build -o stageflow
 ```
 

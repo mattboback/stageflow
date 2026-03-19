@@ -3,7 +3,7 @@ title = "StageFlow gitleaks config"
 [allowlist]
 description = "False positive: Podman libpod API prefix identifiers are not API keys."
 paths = [
-  '''platform/orchestrator/internal/podman/client\.go''',
+  '''services/orchestrator/internal/adapters/runtime/client\.go''',
 ]
 regexes = [
   '''apiPrefix\\s*:=\\s*libpodV[0-9]+Prefix''',

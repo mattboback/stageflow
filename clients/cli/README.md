@@ -6,7 +6,7 @@ unified report in shell-friendly formats.
 ### Usage
 
 ```bash
-cd clients/cli/stageflow
+cd clients/cli
 go run . scan https://example.com
 ```
 
@@ -20,7 +20,7 @@ stageflow scan https://example.com
 Or build and run in place:
 
 ```bash
-cd clients/cli/stageflow
+cd clients/cli
 go build -o stageflow .
 ./stageflow scan https://example.com
 ```

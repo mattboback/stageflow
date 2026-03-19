@@ -28,7 +28,7 @@ use this guide for external consumers or new code.
 import type { UnifiedReportV2, IssueDetail } from "@stageflow/contracts-report";
 ```
 
-When working inside this repo, `platform/scanner-runner` uses a build step to
+When working inside this repo, `services/scanner-runner` uses a build step to
 copy generated types into `node_modules/@stageflow/contracts-report`:
 
 ```
