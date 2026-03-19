@@ -32,7 +32,7 @@ repos:
     hooks:
       - id: biome-check-local
         name: biome-check
-        entry: bunx --bun @biomejs/biome@1.9.4 check --write --files-ignore-unknown=true --no-errors-on-unmatched
+        entry: bunx --bun @biomejs/biome@1.9.4 check --files-ignore-unknown=true --no-errors-on-unmatched
         language: system
         types: [text]
         files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?|css|svelte|vue|astro|graphql|gql)$"
@@ -42,3 +42,4 @@ repos:
         entry: node tools/precommit/run.mjs
         language: system
         files: ^libs/contracts/report/
+        require_serial: true

@@ -52,9 +52,19 @@ echo "✅ Fixtures valid"
 # Check if generated code is fresh
 echo "Checking generated code freshness..."
 
-# Save current state
-cp "$GEN_TS" /tmp/ts-check.ts
-cp "$GEN_GO" /tmp/go-check.go
+# Save current state in an isolated temp dir to avoid collisions between
+# parallel hook invocations.
+TMP_DIR="$(mktemp -d)"
+cleanup() {
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
+
+TS_SNAPSHOT="$TMP_DIR/ts-check.ts"
+GO_SNAPSHOT="$TMP_DIR/go-check.go"
+
+cp "$GEN_TS" "$TS_SNAPSHOT"
+cp "$GEN_GO" "$GO_SNAPSHOT"
 
 # Regenerate (suppress output)
 bun run generate > /dev/null 2>&1
@@ -63,29 +73,26 @@ bun run generate > /dev/null 2>&1
 TS_DIFF=0
 GO_DIFF=0
 
-if ! diff -q "$GEN_TS" /tmp/ts-check.ts > /dev/null 2>&1; then
+if ! diff -q "$GEN_TS" "$TS_SNAPSHOT" > /dev/null 2>&1; then
     TS_DIFF=1
 fi
 
-if ! diff -q "$GEN_GO" /tmp/go-check.go > /dev/null 2>&1; then
+if ! diff -q "$GEN_GO" "$GO_SNAPSHOT" > /dev/null 2>&1; then
     GO_DIFF=1
 fi
 
 # Restore original files if they were different (don't auto-fix)
 if [[ $TS_DIFF -eq 1 ]]; then
-    cp /tmp/ts-check.ts "$GEN_TS"
+    cp "$TS_SNAPSHOT" "$GEN_TS"
     echo "❌ TypeScript types are out of date."
     echo "   Run: bun run generate:ts"
 fi
 
 if [[ $GO_DIFF -eq 1 ]]; then
-    cp /tmp/go-check.go "$GEN_GO"
+    cp "$GO_SNAPSHOT" "$GEN_GO"
     echo "❌ Go types are out of date."
     echo "   Run: bun run generate:go"
 fi
-
-# Clean up
-rm -f /tmp/ts-check.ts /tmp/go-check.go
 
 if [[ $TS_DIFF -eq 1 ]] || [[ $GO_DIFF -eq 1 ]]; then
     exit 1
