@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/devtools/ops/job-status-cli
 
-go 1.25.4
+go 1.26.1
 
 replace github.com/mattboback/stageflow/libs/go/bootstrap => ../../../libs/go/bootstrap
 

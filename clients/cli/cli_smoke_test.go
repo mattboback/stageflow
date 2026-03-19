@@ -91,17 +91,17 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 	err := os.WriteFile(filepath.Join(root, "justfile"), []byte("run SERVICE:\n\t@true\n"), 0o600)
 	requireNoErr(t, err)
 
-	err = os.MkdirAll(filepath.Join(root, "frontend"), 0o750)
+	err = os.MkdirAll(filepath.Join(root, "clients", "web"), 0o750)
 	requireNoErr(t, err)
 
 	err = os.WriteFile(
-		filepath.Join(root, "frontend", "package.json"),
+		filepath.Join(root, "clients", "web", "package.json"),
 		[]byte(`{"scripts":{"dev":"vite dev"}}`),
 		0o600,
 	)
 	requireNoErr(t, err)
 
-	err = os.WriteFile(filepath.Join(root, "frontend", "vite.config.ts"), []byte("export default {}\n"), 0o600)
+	err = os.WriteFile(filepath.Join(root, "clients", "web", "vite.config.ts"), []byte("export default {}\n"), 0o600)
 	requireNoErr(t, err)
 
 	stdout, stderr, exitCode := runCLI(t, "stageflow", "project", "init", root)
@@ -117,7 +117,7 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 	requireNoErr(t, err)
 
 	contents := string(data)
-	if !strings.Contains(contents, `cmd: ["just", "run", "frontend"]`) {
+	if !strings.Contains(contents, `cmd: ["just", "run", "clients/web"]`) {
 		t.Fatalf("expected inferred command in config: %q", contents)
 	}
 

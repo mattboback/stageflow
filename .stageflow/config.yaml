@@ -12,8 +12,8 @@ scan:
 
 dev:
   start:
-    # best guess from Justfile recipe `run frontend`
-    cmd: ["just", "run", "frontend"]
+    # best guess from Justfile recipe `run`
+    cmd: ["just", "run", "clients/web"]
     cwd: .
   ready:
     # Match this to your dev server URL.

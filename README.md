@@ -165,7 +165,7 @@ The `ai-navigator` scanner is a vision-model-powered browser automation agent th
 
 ### Configuration
 
-The AI Navigator requires an OpenRouter API key set via the `OPENROUTER_API_KEY` environment variable. See [CONFIGURATION.md](docs/CONFIGURATION.md) for the full list of AI-related environment variables.
+The AI Navigator requires an OpenRouter API key set via the `OPENROUTER_API_KEY` environment variable. See [CONFIGURATION.md](docs/reference/configuration.md) for the full list of AI-related environment variables.
 
 From the Playground UI, users can configure the goal objective, model selection, input values for form fills, max steps, timeout, and success criteria.
 
@@ -173,7 +173,7 @@ From the Playground UI, users can configure the goal objective, model selection,
 
 | Layer | Technology |
 | --- | --- |
-| Backend services | Go 1.25.4 |
+| Backend services | Go 1.26.1 |
 | Scanner runtime | TypeScript + Bun + Playwright |
 | Frontend | SvelteKit 5 + Tailwind v4 |
 | Messaging | NATS JetStream |
@@ -207,7 +207,7 @@ just shell-tests
 
 ## Prerequisites
 
-- [Go 1.25.4](https://go.dev/dl/)
+- [Go 1.26.1](https://go.dev/dl/)
 - [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) (with `podman compose`)
 - [just](https://github.com/casey/just)
@@ -394,7 +394,7 @@ Run `just help` for the full recipe list.
 | Build | `just build` | Build Go services, frontend, scanner-runner |
 | Images | `just images` | Build container images |
 | Quality | `just ci` | Lint, typecheck, tests, audits |
-| Service run | `just run frontend` / `just run storybook` / `just run api` / `just run orchestrator` | Run one service locally |
+| Service run | `just run clients/web` / `just run storybook` / `just run api` / `just run orchestrator` | Run one service locally |
 | Component testing | `just storybook-test` | Run Storybook interaction + a11y tests |
 | Production | `cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment} && just deploy stageflow` | Shared VPS production control plane |
 
@@ -443,6 +443,8 @@ stageflow/
 |- devtools/              # job-status-cli, suite-runner, scripts
 |- qa/                    # End-to-end tests
 ```
+
+> **Naming convention:** The web frontend source lives at `clients/web` and is referenced as `clients/web` in `justfile` recipes (e.g. `just run clients/web`), CI, and build scripts. The name `frontend` is used only as a Compose service name, container image tag, and systemd/quadlet unit name. These are intentionally separate: `clients/web` is the repo-level identity, `frontend` is the runtime identity.
 
 ## Documentation Map
 

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/library/golang:1.25 AS builder
+FROM docker.io/library/golang:1.26 AS builder
 WORKDIR /src
 
 # Copy go.work and go.work.sum for workspace resolution

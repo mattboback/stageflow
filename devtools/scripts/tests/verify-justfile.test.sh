@@ -78,7 +78,7 @@ run_success_case() {
 
 	assert_exit_code "${rc}" 0 "verify script should succeed when all dry runs pass"
 	assert_contains "${out_file}" "Results: 10 passed, 0 failed" "success case should report all commands passing"
-	assert_contains "${out_file}" "✓ just run frontend" "success case should execute run command with frontend arg"
+	assert_contains "${out_file}" "✓ just run clients/web" "success case should execute run command with clients/web arg"
 }
 
 run_failure_case() {
