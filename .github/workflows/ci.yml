@@ -128,14 +128,14 @@ jobs:
 
       - name: Install
         run: bun install --frozen-lockfile
-        working-directory: platform/scanner-runner
+        working-directory: services/scanner-runner
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
 
       - name: Audit (high)
         run: bun audit --audit-level=high
-        working-directory: platform/scanner-runner
+        working-directory: services/scanner-runner
 
       - name: CI
         run: bun run ci
-        working-directory: platform/scanner-runner
+        working-directory: services/scanner-runner

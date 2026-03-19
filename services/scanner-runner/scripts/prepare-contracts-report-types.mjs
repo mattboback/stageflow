@@ -10,7 +10,7 @@ const repoRoot = path.resolve(scannerRunnerRoot, "../..");
 
 const sourceTypesDir = path.join(
   repoRoot,
-  "packages",
+  "libs",
   "contracts",
   "report",
   "generated",

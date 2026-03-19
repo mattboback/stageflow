@@ -9,7 +9,7 @@ compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow')
 repo_root := justfile_directory()
 
 # Paths
-clients/web_dir := 'clients/web'
+web_dir := 'clients/web'
 scanner_dir := 'services/scanner-runner'
 go_work := 'go.work'
 
@@ -29,7 +29,7 @@ setup:
     {{go}} work sync
 
     echo "==> Installing clients/web dependencies..."
-    (cd {{clients/web_dir}} && {{bun}} install --frozen-lockfile)
+    (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
 
     echo "==> Installing scanner-runner dependencies..."
     (cd {{scanner_dir}} && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 {{bun}} install --frozen-lockfile)
@@ -324,15 +324,15 @@ ci:
     bash devtools/scripts/tests/cli-install.test.sh
 
     echo "==> Frontend CI..."
-    (cd {{clients/web_dir}} && {{bun}} run ci)
+    (cd {{web_dir}} && {{bun}} run ci)
 
     echo "==> Frontend Storybook browser setup..."
-    (cd {{clients/web_dir}} && {{bun}} x playwright install chromium)
+    (cd {{web_dir}} && {{bun}} x playwright install chromium)
     echo "==> Frontend Storybook tests..."
-    (cd {{clients/web_dir}} && {{bun}} run test-storybook)
+    (cd {{web_dir}} && {{bun}} run test-storybook)
 
     echo "==> Frontend audit..."
-    (cd {{clients/web_dir}} && {{bun}} audit --audit-level=high)
+    (cd {{web_dir}} && {{bun}} audit --audit-level=high)
 
     echo "==> Scanner-runner CI..."
     (cd {{scanner_dir}} && {{bun}} x playwright install chromium)
@@ -354,7 +354,7 @@ build:
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> Building clients/web..."
-    (cd {{clients/web_dir}} && {{bun}} run build)
+    (cd {{web_dir}} && {{bun}} run build)
 
     echo "==> Building scanner-runner..."
     (cd {{scanner_dir}} && {{bun}} run build)
@@ -445,15 +445,15 @@ run SERVICE MODE='dev':
         clients/web)
             if [[ "$mode" == "preview" ]]; then
                 echo "==> Starting clients/web preview server..."
-                (cd {{clients/web_dir}} && {{bun}} run preview)
+                (cd {{web_dir}} && {{bun}} run preview)
             else
                 echo "==> Starting clients/web dev server..."
-                (cd {{clients/web_dir}} && {{bun}} run dev)
+                (cd {{web_dir}} && {{bun}} run dev)
             fi
             ;;
         storybook)
             echo "==> Starting clients/web Storybook..."
-            (cd {{clients/web_dir}} && {{bun}} run storybook)
+            (cd {{web_dir}} && {{bun}} run storybook)
             ;;
         api)
             echo "==> Starting platform-api..."
@@ -473,8 +473,8 @@ run SERVICE MODE='dev':
 storybook-test:
     #!/usr/bin/env bash
     set -euo pipefail
-    (cd {{clients/web_dir}} && {{bun}} x playwright install chromium)
-    (cd {{clients/web_dir}} && {{bun}} run test-storybook)
+    (cd {{web_dir}} && {{bun}} x playwright install chromium)
+    (cd {{web_dir}} && {{bun}} run test-storybook)
 
 [group('quality'), doc('Run repo shell regression tests')]
 shell-tests:
