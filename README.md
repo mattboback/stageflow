@@ -269,7 +269,8 @@ The live site at `stageflow.org` is real, but production operations are intentio
 Use the external control plane for live operations:
 
 ```bash
-cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
+# Set STAGEFLOW_PROD_DEPLOY_DIR to your deployment workspace root first
+cd $STAGEFLOW_PROD_DEPLOY_DIR
 just deploy stageflow
 just restart stageflow
 just logs stageflow

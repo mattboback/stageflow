@@ -7,7 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - Initial Release
+### Added
+- `open-graph` scanner: social preview and metadata validation (og:title, og:image, Twitter cards)
+- `spelling-grammar` scanner: AI-assisted content quality analysis
+- Standalone HTML report generation in scanner runtime (self-contained, portable output)
+
+### Changed
+- Svelte 5 runes migration: state and props use `$state`, `$derived`, `$effect` throughout
+- Monorepo orchestration consolidated; import paths and module boundaries clarified
+
+### Chore
+- Pre-commit framework replaces lint-staged/Husky for formatting and secret scanning
+
+## [0.1.0] - 2026-02-03
 - Initial open-source release of StageFlow
 - Implementation of axe, lighthouse, seo, security-headers, link-checker, and ai-navigator scanners
 - Full Svelte 5 frontend with realtime SSE integration

@@ -453,11 +453,11 @@ Compose definitions live under `infra/compose`.
 
 This repo does not own standalone production deployment on the shared VPS.
 
-Use the shared root control plane (configured via `STAGEFLOW_PROD_DEPLOY_DIR`, defaults to `/home/matt/Deployment`) for live
+Use the shared root control plane (set `STAGEFLOW_PROD_DEPLOY_DIR` to your deployment workspace root) for live
 production operations:
 
 ```bash
-cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
+cd $STAGEFLOW_PROD_DEPLOY_DIR
 just deploy stageflow
 just restart stageflow
 just logs stageflow

@@ -7,16 +7,17 @@ This repo contains StageFlow (`stageflow.org`), a Podman-native web accessibilit
 ## Production deployment
 
 Production for this site is **not** managed from this repo. It is managed
-from a separate root deployment workspace (configured via `STAGEFLOW_PROD_DEPLOY_DIR`, defaults to `/home/matt/Deployment`).
+from a separate root deployment workspace. Set `STAGEFLOW_PROD_DEPLOY_DIR` to
+the path of that workspace before running any production commands.
 
-Read `${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}/DEPLOYMENT_STRATEGY.md` before making any
+Read `$STAGEFLOW_PROD_DEPLOY_DIR/DEPLOYMENT_STRATEGY.md` before making any
 deployment, routing, or topology changes. The root
-`${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}/justfile` is the canonical operator interface.
+`$STAGEFLOW_PROD_DEPLOY_DIR/justfile` is the canonical operator interface.
 
 ### How to deploy
 
 ```bash
-cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
+cd $STAGEFLOW_PROD_DEPLOY_DIR
 just deploy stageflow
 ```
 
@@ -37,7 +38,7 @@ systemctl --user restart stageflow.target
 ### Other operator commands
 
 ```bash
-cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
+cd $STAGEFLOW_PROD_DEPLOY_DIR
 
 just status                 # Show running state of all services
 just health                 # Health check all services
@@ -55,7 +56,7 @@ just stop stageflow         # Stop service
 | Pod name | `stageflow` |
 | Quadlets | `infra/quadlets/templates/` |
 | Network | Shared `ingress.network` |
-| Gateway | Shared Caddy at `${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}/gateway/Caddyfile` |
+| Gateway | Shared Caddy at `$STAGEFLOW_PROD_DEPLOY_DIR/gateway/Caddyfile` |
 | Public API routes | `/api/v1/*` passthrough, `/api/healthz` rewrite to internal `/healthz` |
 
 ### Runtime stack
@@ -75,7 +76,7 @@ constraints.
 - Do not bind the app to public interfaces. The app listens on the
   container's internal port and Caddy handles public ingress.
 - Route all production deployment work through
-  `${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}/justfile`.
+  `$STAGEFLOW_PROD_DEPLOY_DIR/justfile`.
 
 ## Local development
 
@@ -91,6 +92,6 @@ just dev up
 If deployment instructions in this repo conflict with the root deployment
 workspace:
 
-1. `${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}/DEPLOYMENT_STRATEGY.md` wins.
-2. `${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}/justfile` is the canonical operator interface.
+1. `$STAGEFLOW_PROD_DEPLOY_DIR/DEPLOYMENT_STRATEGY.md` wins.
+2. `$STAGEFLOW_PROD_DEPLOY_DIR/justfile` is the canonical operator interface.
 3. This file is subordinate and must be updated to match.
