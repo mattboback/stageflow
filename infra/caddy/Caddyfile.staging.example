@@ -1,4 +1,5 @@
-# Example staging host block.
+# Example staging host block (for staging/self-hosted environments only).
+# Do NOT use this for the live stageflow.org production boundary.
 # Add this to the Caddy instance that serves your public domains.
 #
 # Uses the staging compose overlay loopback ports:

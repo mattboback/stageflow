@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Scanner Manifest schema defines the metadata and capabilities for Stageflow
+The Scanner Manifest schema defines the metadata and capabilities for StageFlow
 scanner plugins. It is the single source of truth for manifest shape validation
 across Go and TypeScript.
 

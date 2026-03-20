@@ -26,7 +26,7 @@ Open a GitHub issue when you have:
 - a feature request for the platform, scanners, or CLI
 - a docs gap that blocks setup or usage
 
-For security reports, do not open a public issue. Follow `SECURITY.md` instead.
+For security reports, do not open a public issue. Follow [SECURITY.md](SECURITY.md) instead.
 
 ## Local troubleshooting checklist
 
@@ -74,9 +74,10 @@ curl -fsS http://localhost:8081/healthz
 - `http://localhost:8080/healthz` checks the Platform API
 - `http://localhost:8081/healthz` checks the Orchestrator admin API
 
-### 4. Verify local configuration
+### 4. Verify local configuration and mode
 
 - Confirm `.env` exists and is based on `.env.example`.
+- Ensure you are using the correct port for your environment mode (e.g., Frontend is `:3000` in `dev` mode, `:3010` in `local` overlay).
 - Rebuild images after dependency or runtime changes:
 
 ```bash

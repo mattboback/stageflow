@@ -58,11 +58,13 @@ just dev init local
 just images
 ```
 
-After startup:
+After startup, the endpoints depend on your environment mode:
 
-- Frontend: `http://localhost:3000`
-- Platform API: `http://localhost:8080`
-- Orchestrator admin API: `http://localhost:8081`
+| Service | `dev` mode (default) | `local` overlay mode |
+| --- | --- | --- |
+| Frontend | `http://localhost:3000` | `http://localhost:3010` |
+| Platform API | `http://localhost:8080` | `http://localhost:8080` |
+| Orchestrator Admin API | `http://localhost:8081` | `http://localhost:8081` |
 
 ## Common workflows
 
@@ -140,7 +142,9 @@ When you open a pull request, include:
 
 ## Pre-commit hooks
 
-This repo includes a `.pre-commit-config.yaml` with formatting, secrets, and commit-message checks. If you use `pre-commit`, install the hooks locally:
+This repo uses `pre-commit` (the Python-based framework) as the canonical hook workflow to ensure formatting, secrets, and commit-message checks run before push. Do not use Husky or other JS-based hook managers.
+
+If you use `pre-commit`, install the hooks locally:
 
 ```bash
 pre-commit install
@@ -150,13 +154,13 @@ pre-commit install --hook-type commit-msg
 ## Reporting bugs or asking questions
 
 - Search existing issues first: <https://github.com/mattboback/stageflow/issues>
-- Use `SUPPORT.md` when you need troubleshooting or doc links
-- Follow `SECURITY.md` for private security disclosures
+- Use [SUPPORT.md](SUPPORT.md) when you need troubleshooting or doc links
+- Follow [SECURITY.md](SECURITY.md) for private security disclosures
 
 ## Production boundary
 
-Do not add or depend on repo-local production deployment commands for the live VPS. Production operations for `stageflow.org` are intentionally managed from the external deployment workspace described in `AGENTS.md` and the root deployment strategy.
+Do not add or depend on repo-local production deployment commands for the live VPS. Production operations for `stageflow.org` are intentionally managed from the external deployment workspace described in `../AGENTS.md` and the root deployment strategy.
 
 ## Code of Conduct
 
-By participating in this project, you agree to follow `CODE_OF_CONDUCT.md`.
+By participating in this project, you agree to follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).

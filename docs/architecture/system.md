@@ -458,10 +458,10 @@ production operations:
 
 ```bash
 cd ${STAGEFLOW_PROD_DEPLOY_DIR:-/home/matt/Deployment}
-just stageflow-deploy
-just stageflow-restart
-just stageflow-logs
-just stageflow-health
+just deploy stageflow
+just restart stageflow
+just logs stageflow
+just health
 ```
 
 The repo-local `just prod ...` and `just deploy ...` commands intentionally

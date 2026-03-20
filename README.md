@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](SECURITY.md)
+[![Security Policy](https://img.shields.io/badge/security-policy-blue.svg)](.github/SECURITY.md)
 
 **Live demo:** [stageflow.org](https://stageflow.org)  
 **Run locally:** `cp .env.example .env && just setup && just dev up && just dev init && just images`
@@ -153,11 +153,13 @@ just dev init
 just images
 ```
 
-After startup:
+After startup, the endpoints depend on your environment mode:
 
-- Frontend: `http://localhost:3000`
-- Platform API: `http://localhost:8080`
-- Orchestrator admin API: `http://localhost:8081`
+| Service | `dev` mode (default) | `local` overlay mode |
+| --- | --- | --- |
+| Frontend | `http://localhost:3000` | `http://localhost:3010` |
+| Platform API | `http://localhost:8080` | `http://localhost:8080` |
+| Orchestrator Admin API | `http://localhost:8081` | `http://localhost:8081` |
 
 ### Run a first scan
 
@@ -198,6 +200,14 @@ If you want a quick portfolio walkthrough, start with these:
 3. Open the unified report and inspect findings, screenshots, and per-scanner status.
 4. Run the same platform through the CLI with `stageflow scan` or `stageflow project`.
 
+## Release model
+
+StageFlow follows two release streams:
+- **Application stack**: Continuous deployment from the `main` branch. Commits to `main` are considered production-ready for the control plane.
+- **CLI (`stageflow`)**: Tagged releases (e.g., `clients/cli/v0.1.0`). GitHub Actions automatically cross-compiles and attaches binary assets to GitHub Releases when a tag is pushed.
+
+See [CHANGELOG.md](CHANGELOG.md) for the history of notable changes.
+
 ## Quality and testing
 
 StageFlow keeps the quality story visible and reproducible:
@@ -222,10 +232,11 @@ Use the shortest path to the detail you need:
 - [Architecture](docs/architecture/system.md)
 - [Configuration reference](docs/reference/configuration.md)
 - [CLI and developer tooling](docs/operations/devtools.md)
+- [CLI cheatsheet](docs/operations/cli_cheatsheet.md)
 - [Project mode](docs/PROJECT_MODE.md)
 - [CLI README](clients/cli/README.md)
-- [Contributing](CONTRIBUTING.md)
-- [Support](SUPPORT.md)
+- [Contributing](.github/CONTRIBUTING.md)
+- [Support](.github/SUPPORT.md)
 
 ## Operating modes
 
@@ -270,4 +281,4 @@ This repository remains the source of truth for the application code, local deve
 
 ## Contributing
 
-If you want to work on StageFlow, start with [CONTRIBUTING.md](CONTRIBUTING.md). For support and troubleshooting, see [SUPPORT.md](SUPPORT.md).
+If you want to work on StageFlow, start with the [Contributing guide](.github/CONTRIBUTING.md). For support and troubleshooting, see the [Support guide](.github/SUPPORT.md).

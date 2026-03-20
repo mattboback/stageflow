@@ -16,7 +16,7 @@ We take the security of StageFlow seriously. If you discover a security vulnerab
 
 ### How to Report
 
-Please send an email to **[INSERT CONTACT EMAIL]** with the following details:
+Please send an email to **security@stageflow.org** with the following details:
 
 - A description of the vulnerability and its potential impact.
 - Steps to reproduce the issue (including any necessary configuration or payloads).

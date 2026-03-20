@@ -1,7 +1,7 @@
 # Migration Guide: Unified Report Schema v2
 
 This document tracks the move from hand-maintained report types to generated
-types from the JSON Schema. The Stageflow repo has completed this migration;
+types from the JSON Schema. The StageFlow repo has completed this migration;
 use this guide for external consumers or new code.
 
 ## Current Source of Truth

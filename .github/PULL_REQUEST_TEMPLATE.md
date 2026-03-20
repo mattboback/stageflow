@@ -15,18 +15,16 @@ Please delete options that are not relevant.
 
 ## How Has This Been Tested?
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce.
+Please describe the manual or end-to-end tests that you ran to verify your changes. Provide instructions so we can reproduce.
 
-- [ ] Unit tests
-- [ ] End-to-end tests
-- [ ] Local manual testing
+- [ ] Local manual testing (UI or CLI)
+- [ ] End-to-end job submission (URL or ZIP)
+- [ ] Local Storybook interaction
 
 ## Checklist:
 
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have verified that `just ci` passes without errors
+- [ ] I have verified that `just storybook-test` passes (if UI/component changes)
+- [ ] I have verified that `just shell-tests` passes (if CLI/setup changes)
 - [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings (run `just ci`)
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+- [ ] My code follows the style guidelines of this project

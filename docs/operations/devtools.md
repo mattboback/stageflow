@@ -65,7 +65,7 @@ Configure the CLI using:
 - `STAGEFLOW_API_URL` (default `http://localhost:8080`)
 - `STAGEFLOW_API_KEY` (optional, sent as `X-Api-Key`)
 
-### Local project mode (EXPERIMENTAL)
+### Local project mode
 
 When you run `stageflow project`, the CLI uses `.stageflow/config.yaml` to
 start a local dev server and scan `scan.urls`. Optionally pass a single

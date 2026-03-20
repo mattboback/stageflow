@@ -114,4 +114,4 @@ These variables are primarily used internally or for advanced infrastructure set
 
 - [README](../../README.md)
 - [Architecture](../architecture/system.md)
-- [Security](../../SECURITY.md)
+- [Security](../../.github/SECURITY.md)

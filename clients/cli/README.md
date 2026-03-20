@@ -60,7 +60,7 @@ Use `stageflow project init` for explicit bootstrap and
 
 ### Output formats
 
-`stageflow-cli` supports `text`, `markdown`, and `json` output.
+`stageflow` supports `text`, `markdown`, and `json` output.
 
 - Use `--format markdown` when you want stable section headings and
   agent-friendly semantic output.
