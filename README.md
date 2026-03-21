@@ -30,6 +30,7 @@ StageFlow is a strong showcase project because it combines:
 - Scan public URLs, static-site ZIPs, and local projects through CLI project mode.
 - Keep scanner execution isolated from the main app runtime.
 - Review one unified report with findings, evidence, and per-scanner results.
+- Use structured JSON output and exit codes as an automated quality gate in CI or agentic coding workflows.
 
 ## Architecture at a glance
 
@@ -104,7 +105,9 @@ For the full system design, see [docs/architecture/system.md](docs/architecture/
   </tr>
 </table>
 
-### CLI
+## CLI
+
+The `stageflow` CLI submits scan jobs, streams live progress, and renders unified reports in text, markdown, or JSON. It also supports project mode for local dev server scanning.
 
 <table>
   <tr>
@@ -117,18 +120,95 @@ For the full system design, see [docs/architecture/system.md](docs/architecture/
   </tr>
 </table>
 
+### Scan a URL
+
+```bash
+# Default text output
+stageflow scan https://example.com --api https://stageflow.org
+
+# Choose specific scanners
+stageflow scan https://example.com --scanners axe,seo,open-graph --api https://stageflow.org
+
+# JSON for automation
+stageflow scan https://example.com --scanners axe --format json --api https://stageflow.org
+```
+
+### Exit codes and quality gates
+
+The `--fail-on` flag sets a severity threshold. The CLI exits 1 if any issue meets or exceeds it, exit 0 otherwise — no output parsing required.
+
+```bash
+# Pass: only moderate issues exist, threshold is serious
+stageflow scan https://example.com --scanners axe --fail-on serious  # exit 0
+
+# Fail: moderate issues exist, threshold is moderate
+stageflow scan https://example.com --scanners axe --fail-on moderate # exit 1
+```
+
+Severity levels from highest to lowest: `critical`, `serious`, `moderate`, `minor`, `info`.
+
+### JSON output structure
+
+The `--format json` envelope (`stageflow-cli/report@v1`) is designed for programmatic consumption:
+
+```jsonc
+{
+  "schema": "stageflow-cli/report@v1",
+  "job":    { "id": "...", "state": "DONE" },
+  "report": {
+    "summary": {
+      "score": 85,
+      "scoreGrade": "B",
+      "totalIssues": 2,
+      "bySeverity": { "critical": 0, "serious": 0, "moderate": 2, "minor": 0 },
+      "byScanner":  { "axe": 2 }
+    },
+    "issues": [
+      {
+        "id": "672859f7e59a",           // stable content-based hash
+        "ruleId": "landmark-one-main",  // axe rule identifier
+        "scanner": "axe",
+        "severity": "moderate",
+        "title": "Document should have one main landmark",
+        "howToFix": "Fix all of the following: ...",
+        "wcagTags": ["WCAG 1.3.1"],
+        "occurrences": [
+          { "selector": "html", "html": "<html lang=\"en\">", "target": ["html"] }
+        ]
+      }
+    ],
+    "scanners": [ { "id": "axe", "status": "success", "issueCount": 2 } ],
+    "pages":    [ { "url": "https://example.com", "issueCount": 2 } ]
+  }
+}
+```
+
+Each issue includes a CSS selector, HTML snippet, and remediation guidance — enough for automated tooling to locate and fix violations.
+
+### Project mode
+
+Project mode integrates scanning into local development. It starts your dev server, waits for readiness, runs the scan, and shuts down the server.
+
+```bash
+stageflow project init          # scaffold .stageflow/config.yaml
+stageflow project doctor        # validate config without scanning
+stageflow project               # full lifecycle: start → scan → stop
+```
+
+See [Project Mode docs](docs/PROJECT_MODE.md) for configuration reference.
+
 ## Built-in scanners
 
-| Scanner | Focus |
-| --- | --- |
-| `axe` | Accessibility and WCAG rule violations |
-| `lighthouse` | Performance and quality audits |
-| `seo` | Search and metadata best practices |
-| `security-headers` | HTTP security header posture |
-| `link-checker` | Broken link detection |
-| `ai-navigator` | Goal-driven browser flow evaluation |
-| `open-graph` | Social preview and metadata validation |
-| `spelling-grammar` | AI-assisted content quality analysis |
+| Scanner | Categories | Focus |
+| --- | --- | --- |
+| `axe` | accessibility | WCAG violations — landmarks, ARIA, color contrast, alt text, keyboard nav |
+| `lighthouse` | performance, accessibility, seo, quality | Google Lighthouse audits — Core Web Vitals, best practices, scores |
+| `seo` | seo | Meta tags, canonical URLs, structured data, content depth, title length |
+| `security-headers` | security | HTTP header posture — CSP, HSTS, X-Frame-Options, Permissions-Policy |
+| `link-checker` | quality | Broken links, redirect chains, link quality |
+| `open-graph` | seo | Open Graph and Twitter Card metadata validation |
+| `spelling-grammar` | quality | AI-assisted spelling and grammar analysis |
+| `ai-navigator` | custom | LLM-powered Playwright agent — goal-driven browser flow evaluation |
 
 ## Quick start
 
@@ -162,6 +242,15 @@ After startup, the endpoints depend on your environment mode:
 | Orchestrator Admin API | `http://localhost:8081` | `http://localhost:8081` |
 
 ### Run a first scan
+
+With the CLI:
+
+```bash
+just cli-install
+stageflow scan https://example.com
+```
+
+Or with curl:
 
 ```bash
 job_id="$({

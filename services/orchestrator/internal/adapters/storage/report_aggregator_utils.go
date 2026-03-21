@@ -265,7 +265,7 @@ func addSeverityCounts(base, add *report.SeverityCounts) *report.SeverityCounts 
 func calculateAccessibilityScore(counts report.SeverityCounts) (score int, grade string) {
 	penalty := float64(counts.Critical*10 + counts.Serious*5 + counts.Moderate*2 + counts.Minor)
 	if penalty <= 0 {
-		return 100, "Excellent"
+		return 100, "A+"
 	}
 
 	scaled := 20*math.Log10(penalty+1) + penalty*0.3

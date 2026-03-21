@@ -1,122 +1,171 @@
 # StageFlow CLI
 
 Submit URL scan jobs to a StageFlow API, wait for completion, and render the
-unified report in shell-friendly formats.
+unified report in shell-friendly formats. Supports severity-based exit codes
+for CI gating, structured JSON output for automation, and project mode for
+local dev server scanning.
 
-### Usage
-
-```bash
-cd clients/cli
-go run . scan https://example.com
-```
-
-For the recommended local install loop:
+## Install
 
 ```bash
 just cli-install
-stageflow scan https://example.com
+stageflow version
 ```
 
-Or build and run in place:
+Or build in place:
 
 ```bash
 cd clients/cli
 go build -o stageflow .
-./stageflow scan https://example.com
+./stageflow version
 ```
 
-### Commands
+## Commands
 
 | Command | Description |
 | --- | --- |
-| `scan` | Submit a scan job, wait for completion (SSE by default), then print results |
+| `scan` | Submit a scan job, wait for completion, print results |
 | `project` | Run a project-mode scan using `.stageflow/config.yaml` |
-| `ai` | Run the AI Navigator against a project with natural language objectives |
+| `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
+| `project doctor` | Validate project config and dev readiness without scanning |
+| `ai` | Run the AI Navigator with natural language objectives |
 | `report` | Fetch and display results for an existing job ID |
 | `scanners` | List scanners available on the API |
 | `version` | Print version information |
 | `completion` | Generate shell completion scripts |
-| `docs` | Generate Markdown docs for the CLI |
+| `docs` | Generate Markdown reference docs |
 
-If `.stageflow/config.yaml` is missing, `stageflow project` creates:
-
-- `.stageflow/config.yaml`
-- `.stageflow/README.md`
-
-It then prints setup instructions and exits.
-
-Starter configs include a placeholder `dev.start.cmd`; `stageflow project`
-fails fast with setup guidance until you replace it.
-
-Use `stageflow project init` for explicit bootstrap and
-`stageflow project doctor` to validate setup before scanning.
-
-### Environment Variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `STAGEFLOW_API_URL` | `http://localhost:8080` | Platform API base URL |
-| `STAGEFLOW_API_KEY` | *(unset)* | Optional API key (sent as `X-Api-Key`) |
-
-### Output formats
-
-`stageflow` supports `text`, `markdown`, and `json` output.
-
-- Use `--format markdown` when you want stable section headings and
-  agent-friendly semantic output.
-- Use `--format json` when you need a machine-readable envelope.
-- Use `--json` only for backward compatibility. It behaves the same as
-  `--format json`.
-
-### Examples
+## Scan examples
 
 ```bash
-# Plain-text output (default)
-./stageflow scan https://example.com
+# Scan a public URL (text output, default scanners)
+stageflow scan https://example.com --api https://stageflow.org
 
-# Markdown output for human and agent review
-./stageflow scan https://example.com --format markdown
-
-# JSON output for automation
-./stageflow scan https://example.com --format json > report.json
-
-# Project-mode scan (uses .stageflow/config.yaml)
-./stageflow project
-
-# Project-mode scan in Markdown
-./stageflow project --format markdown
-
-# Run an AI Navigator session
-./stageflow ai https://example.com "Navigate to the contact page and submit the form" --expand-provenance
-
-# Review an existing job in Markdown
-./stageflow report <job-id> --format markdown
+# Pick scanners and output format
+stageflow scan https://example.com --scanners axe,seo --format json --api https://stageflow.org
 
 # Scan multiple routes in one job
-./stageflow scan https://example.com https://example.com/login --format markdown
+stageflow scan https://example.com https://example.com/about --format markdown
 
-# Explicitly scaffold project mode files
-./stageflow project init
+# Scan a local dev server
+stageflow scan http://127.0.0.1:5173 --allow-private-targets
 
-# Validate config and readiness without scanning
-./stageflow project doctor
-
-# List scanners (plain text default)
-./stageflow scanners
-
-# List scanners in Markdown
-./stageflow scanners --format markdown
-
-# List scanners in JSON
-./stageflow scanners --format json
+# Save JSON report to file
+stageflow scan https://example.com --format json > report.json
 ```
 
-### Project-mode route coverage
+## Output formats
 
-Project mode is most useful when `scan.urls` covers the public routes you care
-about. Start with a short curated list instead of only scanning `/`.
+| Format | Flag | Best for |
+| --- | --- | --- |
+| Text | `--format text` (default) | Terminal review — human-readable, compact |
+| Markdown | `--format markdown` | PR comments, agent-friendly structured sections |
+| JSON | `--format json` | Automation — full report envelope with metadata |
+
+## Quality gates
+
+### Exit codes
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Scan completed, no issues at or above `--fail-on` threshold |
+| 1 | Issues meet or exceed `--fail-on` severity threshold |
+| 2 | CLI or API error |
+
+### `--fail-on` severity gate
+
+```bash
+# Pass — only moderate issues, threshold is serious
+stageflow scan https://example.com --scanners axe --fail-on serious   # exit 0
+
+# Fail — moderate issues exist, threshold is moderate
+stageflow scan https://example.com --scanners axe --fail-on moderate  # exit 1
+```
+
+Severity hierarchy (highest to lowest): `critical` > `serious` > `moderate` > `minor` > `info`.
+
+### Filtering flags
+
+| Flag | Effect |
+| --- | --- |
+| `--fail-on <sev>` | Exit 1 if any displayed issue meets this severity |
+| `--severity <csv>` | Only show issues matching these severities |
+| `--category <csv>` | Only show issues matching these categories |
+| `--max-issues <n>` | Cap returned issues (default 200, 0 = unlimited) |
+| `--summary-only` | Summary counts only, skip individual findings |
+| `--group-by <mode>` | Group by `category`, `scanner`, or `none` |
+
+## JSON report envelope
+
+`--format json` outputs a versioned envelope (`stageflow-cli/report@v1`):
+
+```jsonc
+{
+  "schema": "stageflow-cli/report@v1",
+  "cli":    { "version": "...", "commit": "...", "date": "..." },
+  "api":    { "base_url": "https://stageflow.org" },
+  "job":    { "id": "...", "state": "DONE" },
+  "links":  { "job": "https://...", "results": "https://..." },
+  "urls":   ["https://example.com"],
+  "filters": {
+    "max_issues": 200,
+    "issues_returned": 2,
+    "issues_total": 2,
+    "truncated": false
+  },
+  "report": {
+    "summary": {
+      "score": 85,
+      "scoreGrade": "B",
+      "totalIssues": 2,
+      "bySeverity": { "critical": 0, "serious": 0, "moderate": 2, "minor": 0 },
+      "byScanner":  { "axe": 2 }
+    },
+    "issues": [{
+      "id": "672859f7e59a",           // stable content-based hash
+      "ruleId": "landmark-one-main",
+      "scanner": "axe",
+      "severity": "moderate",
+      "title": "Document should have one main landmark",
+      "description": "Each page should contain exactly one <main> landmark.",
+      "howToFix": "Fix all of the following: ...",
+      "wcagTags": ["WCAG 1.3.1"],
+      "helpUrl": "https://dequeuniversity.com/rules/axe/...",
+      "occurrences": [{
+        "selector": "html",
+        "html": "<html lang=\"en\">",
+        "target": ["html"],
+        "contextHtml": "...",
+        "ancestorPath": "html"
+      }]
+    }],
+    "scanners": [{ "id": "axe", "status": "success", "issueCount": 2, "durationMs": 1788 }],
+    "pages":    [{ "url": "https://example.com", "issueCount": 2, "durationMs": 1500 }]
+  }
+}
+```
+
+Issue `id` fields are content-based hashes — the same violation on the same page produces the same `id` across runs, making them reliable for regression diffing.
+
+## Project mode
+
+Project mode automates the full scan lifecycle for local development:
+start dev server, wait for readiness, submit scan, stream results, stop server.
+
+```bash
+stageflow project init          # scaffold config
+stageflow project doctor        # validate config without scanning
+stageflow project               # full lifecycle
+```
+
+### Example config (`.stageflow/config.yaml`)
 
 ```yaml
+version: 1
+
+stageflow:
+  api_url: "http://localhost:8080"
+
 scan:
   urls:
     - http://127.0.0.1:5173/
@@ -124,4 +173,23 @@ scan:
   scanners: axe,lighthouse,seo,link-checker
   screenshot: true
   allow_private_targets: true
+
+dev:
+  start:
+    cmd: ["bun", "run", "dev"]
+    cwd: .
+  ready:
+    url: http://127.0.0.1:5173
 ```
+
+Cover the routes you care about in `scan.urls` — scanning only `/` misses
+route-specific regressions.
+
+See [Project Mode docs](../../docs/PROJECT_MODE.md) for the full configuration reference.
+
+## Environment variables
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `STAGEFLOW_API_URL` | `http://localhost:8080` | Platform API base URL (overridden by `--api`) |
+| `STAGEFLOW_API_KEY` | *(unset)* | API key (sent as `X-Api-Key`, overridden by `--api-key`) |

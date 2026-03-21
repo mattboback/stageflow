@@ -7,17 +7,18 @@ This document explains StageFlow job flow, trust boundaries, and service respons
 1. [System Goals](#system-goals)
 2. [Platform Shape](#platform-shape)
 3. [Core Services and Responsibilities](#core-services-and-responsibilities)
-4. [Security and Trust Boundaries](#security-and-trust-boundaries)
-5. [Job Lifecycle and State Machine](#job-lifecycle-and-state-machine)
-6. [Data Flows](#data-flows)
-7. [Eventing Model (NATS JetStream)](#eventing-model-nats-jetstream)
-8. [Scanner Plugin System](#scanner-plugin-system)
-9. [Unified Report Aggregation](#unified-report-aggregation)
-10. [Storage Model](#storage-model)
-11. [Runtime Operations and Deployment](#runtime-operations-and-deployment)
-12. [Failure Modes and Recovery](#failure-modes-and-recovery)
-13. [Observability and Debugging](#observability-and-debugging)
-14. [Code Reference Map](#code-reference-map)
+4. [CLI Report Contract](#cli-report-contract)
+5. [Security and Trust Boundaries](#security-and-trust-boundaries)
+6. [Job Lifecycle and State Machine](#job-lifecycle-and-state-machine)
+7. [Data Flows](#data-flows)
+8. [Eventing Model (NATS JetStream)](#eventing-model-nats-jetstream)
+9. [Scanner Plugin System](#scanner-plugin-system)
+10. [Unified Report Aggregation](#unified-report-aggregation)
+11. [Storage Model](#storage-model)
+12. [Runtime Operations and Deployment](#runtime-operations-and-deployment)
+13. [Failure Modes and Recovery](#failure-modes-and-recovery)
+14. [Observability and Debugging](#observability-and-debugging)
+15. [Code Reference Map](#code-reference-map)
 
 ---
 
@@ -60,6 +61,7 @@ Primary repository areas:
 - `services/archive-extractor`: secure archive extraction and provenance generation.
 - `services/scanner-runner`: plugin discovery and scanner execution runtime.
 - `clients/web`: submission UX and live status/report views.
+- `clients/cli`: Go CLI — scan submission, SSE streaming, report rendering, project mode.
 - `libs/contracts`: JSON Schemas and generated contracts.
 
 ---
@@ -146,6 +148,104 @@ Important entry points:
 
 - API client: `clients/web/src/lib/api/client.ts`
 - Scan status store: `clients/web/src/lib/stores/scan-status.svelte.ts`
+
+### CLI (`clients/cli`)
+
+Responsibilities:
+
+- Submit URL scan jobs via the Platform API.
+- Stream live job progress over SSE with reconnect.
+- Fetch and render unified reports in text, markdown, and JSON formats.
+- Filter, sort, and truncate issues client-side (by severity, category, max count).
+- Enforce severity-based exit codes for CI/automation gating (`--fail-on`).
+- Manage project mode lifecycle: start dev server, poll readiness, submit scan, stop server.
+- Discover available scanners from the API.
+
+Important entry points:
+
+- Command surface: `clients/cli/cobra_scan.go`, `cobra_project.go`, `cobra_report.go`
+- SSE streaming: `clients/cli/sse.go`
+- Report rendering: `clients/cli/report_output.go`, `report_output_markdown.go`
+- Issue filtering/sorting: `clients/cli/filter.go`, `report_output.go:selectIssues`
+- Project config: `clients/cli/project_config.go`
+- Dev server lifecycle: `clients/cli/dev_stack.go`
+
+---
+
+## CLI Report Contract
+
+The CLI wraps the unified report in a versioned envelope (`stageflow-cli/report@v1`) designed for both human review and machine consumption.
+
+### Envelope Structure
+
+```text
+reportEnvelope
+├── schema          "stageflow-cli/report@v1"
+├── cli             { version, commit, date }
+├── api             { base_url }
+├── job             { id, state, created_at, updated_at }
+├── links           { job, results }          — API URLs for the raw job and results
+├── urls            [scanned URLs]
+├── filters         { max_issues, issues_returned, issues_total, truncated, sort }
+└── report          UnifiedReportV2
+    ├── summary     { score, scoreGrade, totalIssues, bySeverity, byScanner }
+    ├── issues[]    IssueDetail (sorted by severity desc, scanner asc, rule asc)
+    ├── scanners[]  per-scanner status, timing, severity counts
+    ├── pages[]     per-page issue counts and timing
+    └── meta        { jobId, scannedAt, completedAt, durationMs }
+```
+
+### Issue Identity
+
+Each issue has an `id` field that is a content-based hash derived from the rule, page, and element context. The same violation on the same page produces the same `id` across runs, making it suitable for diffing scan results to detect regressions.
+
+### Issue Detail Fields
+
+Every issue carries enough context for automated remediation:
+
+| Field | Purpose |
+| --- | --- |
+| `id` | Stable content hash — usable for deduplication and diffing |
+| `ruleId` | Scanner-specific rule identifier (e.g., `landmark-one-main`) |
+| `scanner` | Which scanner produced the finding |
+| `severity` | Normalized: `critical`, `serious`, `moderate`, `minor`, `info` |
+| `title` | Human-readable summary |
+| `description` | What the rule checks |
+| `howToFix` | Remediation guidance |
+| `wcagTags` | WCAG references (axe issues) |
+| `helpUrl` | Link to full rule documentation |
+| `occurrences[].selector` | CSS selector to locate the element |
+| `occurrences[].html` | HTML snippet of the violating element |
+| `occurrences[].target` | DOM target path array |
+| `occurrences[].contextHtml` | Surrounding HTML for context |
+| `scannerData` | Scanner-specific structured data (e.g., SEO word counts, missing OG tags) |
+
+### Exit Code Contract
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Scan completed successfully, no issues at or above `--fail-on` threshold |
+| 1 | Scan completed but issues meet or exceed `--fail-on` severity threshold |
+| 2 | CLI or API error (network failure, invalid arguments, malformed response) |
+
+### Output Formats
+
+| Format | Flag | Use case |
+| --- | --- | --- |
+| Text | `--format text` (default) | Human review in terminal |
+| Markdown | `--format markdown` | Structured sections with headings, suitable for PR comments or agent parsing |
+| JSON | `--format json` | Machine consumption — full envelope with all metadata |
+
+### Filtering Flags
+
+| Flag | Effect |
+| --- | --- |
+| `--fail-on <severity>` | Exit 1 if any displayed issue is at or above this severity |
+| `--severity <csv>` | Only display issues matching these severities |
+| `--category <csv>` | Only display issues matching these categories |
+| `--max-issues <n>` | Cap returned issues (default 200, 0 = unlimited) |
+| `--summary-only` | Print summary counts only, skip individual findings |
+| `--group-by <mode>` | Group findings by `category`, `scanner`, or `none` |
 
 ---
 
@@ -244,6 +344,32 @@ Client -> API /api/v1/jobs/zip
   -> Scanner artifacts uploaded
   -> Orchestrator aggregates report -> DONE
   -> API serves status/SSE updates to client
+```
+
+### CLI Scan Flow
+
+```text
+stageflow scan <url> --scanners axe,seo --format json --fail-on serious
+  -> POST /api/v1/jobs/urls { urls, modules }
+  -> CLI opens SSE stream /api/v1/jobs/{id}/stream
+  -> Prints scanner progress to stderr as events arrive
+  -> On terminal state (DONE/FAILED):
+       -> GET /api/v1/jobs/{id}/results
+       -> Filter, sort, truncate issues client-side
+       -> Render report envelope to stdout
+       -> Check --fail-on threshold: exit 0 (pass) or 1 (fail)
+```
+
+### CLI Project Mode Flow
+
+```text
+stageflow project [path]
+  -> Read .stageflow/config.yaml
+  -> Start dev server (dev.start.cmd)
+  -> Poll dev.ready.url until HTTP 2xx/3xx
+  -> Submit scan job to configured API
+  -> Stream progress and render report (same as scan flow)
+  -> Send interrupt to dev server, wait for graceful shutdown
 ```
 
 ### SSE Progress Flow
@@ -521,7 +647,7 @@ Outcome: transition to `FAILED`; event timeline records failure reason.
 
 ### Useful tools
 
-- `clients/cli`: submit URL scan jobs and fetch unified reports.
+- `clients/cli`: submit scans, render reports, enforce severity gates via `--fail-on`.
 - `devtools/ops/job-status-cli`: inspect jobs/events/pods/status.
 - `devtools/qa/suite-runner`: run threshold-based multi-domain validation.
 
@@ -565,4 +691,12 @@ Tooling docs: `docs/operations/devtools.md`.
 | Event type contracts | `libs/go/events/types.go` |
 | Report schema | `libs/contracts/report/schema/unified-report.v2.schema.json` |
 | Scanner manifest schema | `libs/contracts/scanner-manifest/schema/scanner-manifest.schema.json` |
+| CLI scan command | `clients/cli/cobra_scan.go` |
+| CLI project mode | `clients/cli/cobra_project.go` |
+| CLI report rendering | `clients/cli/report_output.go` |
+| CLI SSE streaming | `clients/cli/sse.go` |
+| CLI issue filtering | `clients/cli/filter.go` |
+| CLI dev server lifecycle | `clients/cli/dev_stack.go` |
+| CLI project config | `clients/cli/project_config.go` |
+| CLI types (API contracts) | `clients/cli/types.go` |
 | Just command surface | `justfile` |

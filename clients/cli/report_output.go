@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -82,15 +83,32 @@ func fetchJobStatus(ctx context.Context, client *Client, jobID string) (JobStatu
 }
 
 func fetchReport(ctx context.Context, client *Client, jobID string) (report.UnifiedReportV2, error) {
-	var doc report.UnifiedReportV2
-
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(jobID))
-	if err := client.getJSON(ctx, apiPath, &doc); err != nil {
+
+	var raw json.RawMessage
+	if err := client.getJSON(ctx, apiPath, &raw); err != nil {
 		return report.UnifiedReportV2{}, err
+	}
+
+	raw = sanitizeScoreGrade(raw)
+
+	var doc report.UnifiedReportV2
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return report.UnifiedReportV2{}, fmt.Errorf("failed to decode report: %w", err)
 	}
 
 	return doc, nil
 }
+
+// sanitizeScoreGrade fixes scoreGrade values that don't match the schema
+// pattern ^[A-F][+-]?$. Older API versions returned "Excellent" for
+// perfect scores; the CLI must tolerate these to avoid crashing on
+// existing reports.
+func sanitizeScoreGrade(raw json.RawMessage) json.RawMessage {
+	return scoreGradeReplacer.ReplaceAll(raw, []byte(`"scoreGrade":"A+"`))
+}
+
+var scoreGradeReplacer = regexp.MustCompile(`"scoreGrade"\s*:\s*"(?:Excellent)"`)
 
 func renderUnifiedReport(
 	out io.Writer,

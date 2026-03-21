@@ -24,8 +24,10 @@ just deploy stageflow
 This command:
 
 1. Compiles Go/Node artifacts and triggers building all required container images.
-2. Installs quadlet unit files from `stageflow/infra/quadlets/templates/` into `~/.config/containers/systemd/`.
+2. Installs quadlet unit files from `$STAGEFLOW_PROD_DEPLOY_DIR/stageflow-quadlets/templates/` into `~/.config/containers/systemd/`.
 3. Restarts the systemd user service target (`stageflow.target`).
+
+Quadlet templates live in the deployment workspace, not in this app repo.
 
 **Important:** `systemctl --user start` is a no-op if the service is
 already running. If you rebuild the image and need the container to pick
@@ -54,7 +56,7 @@ just stop stageflow         # Stop service
 | --- | --- |
 | Public hostname | `stageflow.org` |
 | Pod name | `stageflow` |
-| Quadlets | `infra/quadlets/templates/` |
+| Quadlets | `$STAGEFLOW_PROD_DEPLOY_DIR/stageflow-quadlets/templates/` |
 | Network | Shared `ingress.network` |
 | Gateway | Shared Caddy at `$STAGEFLOW_PROD_DEPLOY_DIR/gateway/Caddyfile` |
 | Public API routes | `/api/v1/*` passthrough, `/api/healthz` rewrite to internal `/healthz` |
