@@ -7,7 +7,7 @@ interface Props {
 	url: string | null | undefined;
 }
 
-const { label, url }: Props = $props();
+let { label, url }: Props = $props();
 
 function open() {
 	if (!url) return;

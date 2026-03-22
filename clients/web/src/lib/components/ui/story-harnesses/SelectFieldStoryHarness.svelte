@@ -10,7 +10,7 @@ interface Props {
 	onChange?: (value: string) => void;
 }
 
-const {
+let {
 	label = "Scanner",
 	value = $bindable("axe"),
 	variant = "default",

@@ -72,6 +72,7 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	doctorCmd.Flags().BoolVar(&doctorOpts.SkipDev, "skip-dev", false, "Skip starting dev server and readiness checks")
 
 	cmd.AddCommand(initCmd, doctorCmd)
+	cmd.AddCommand(newProjectRemoteCmd(root)...)
 
 	return cmd
 }

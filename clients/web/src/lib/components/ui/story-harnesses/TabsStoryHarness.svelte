@@ -6,7 +6,7 @@ interface Props {
 	onValueChange?: (tabId: string) => void;
 }
 
-const { defaultTab = "overview", onValueChange }: Props = $props();
+let { defaultTab = "overview", onValueChange }: Props = $props();
 
 const tabs: Tab[] = [
 	{ id: "overview", label: "Overview" },

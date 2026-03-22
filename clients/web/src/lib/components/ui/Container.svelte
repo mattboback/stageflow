@@ -9,7 +9,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	children: Snippet;
 }
 
-const { class: className, children, ...rest }: Props = $props();
+let { class: className, children, ...rest }: Props = $props();
 </script>
 
 <div class={cn('container-width', className)} {...rest}>

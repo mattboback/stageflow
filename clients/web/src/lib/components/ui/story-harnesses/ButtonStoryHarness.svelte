@@ -11,7 +11,7 @@ interface Props {
 	onClick?: () => void;
 }
 
-const {
+let {
 	label = "Run scan",
 	variant = "default",
 	size = "default",

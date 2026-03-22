@@ -7,7 +7,7 @@ interface Props {
 	onNormalize?: () => void;
 }
 
-const { initialUrls = "", onUrlsChange, onNormalize }: Props = $props();
+let { initialUrls = "", onUrlsChange, onNormalize }: Props = $props();
 
 let urls = $derived(initialUrls);
 

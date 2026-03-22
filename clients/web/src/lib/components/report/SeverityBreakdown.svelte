@@ -8,7 +8,7 @@ interface Props {
 	bySeverity: SeverityCounts;
 }
 
-const { bySeverity }: Props = $props();
+let { bySeverity }: Props = $props();
 
 const total = $derived(
 	bySeverity.critical +

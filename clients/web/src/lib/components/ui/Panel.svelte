@@ -21,7 +21,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	children: Snippet;
 }
 
-const {
+let {
 	variant,
 	padding,
 	rounded,

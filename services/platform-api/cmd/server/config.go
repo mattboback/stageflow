@@ -8,6 +8,7 @@ type Config struct {
 	OrchestratorAPIURL  string
 	ScannerConfigPath   string
 	AllowPrivateTargets bool
+	ProjectDBPath       string
 	NATS                config.NATSConfig
 	MinIO               config.MinIOConfig
 }
@@ -18,6 +19,7 @@ func loadConfig() *Config {
 		OrchestratorAPIURL:  config.GetEnv("ORCHESTRATOR_API_URL", "http://localhost:8081"),
 		ScannerConfigPath:   config.GetEnv("SCANNER_CONFIG_PATH", ""),
 		AllowPrivateTargets: config.GetEnvBool("PLATFORM_API_ALLOW_PRIVATE_TARGETS", false),
+		ProjectDBPath:       config.GetEnv("PROJECT_DB_PATH", "./projects.db"),
 		NATS:                config.LoadNATSConfig(),
 		MinIO:               config.LoadMinIOConfig(),
 	}

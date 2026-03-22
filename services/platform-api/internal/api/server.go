@@ -7,6 +7,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
+	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/sse"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
@@ -25,6 +26,7 @@ type JobStatusReader interface {
 type Server struct {
 	config          *ServerConfig
 	statusReader    JobStatusReader
+	projectStore    *project.Store
 	pendingJobs     *pendingJobCache
 	sseHub          *sse.Hub
 	scannerRegistry *scannerregistry.Registry
@@ -37,6 +39,7 @@ type ServerConfig struct {
 	Storage             storage.Client
 	Publisher           JobPublisher
 	StatusReader        JobStatusReader
+	ProjectStore        *project.Store
 	ScannerRegistry     *scannerregistry.Registry
 	AllowPrivateTargets bool
 	MinIOEndpoint       string // Internal MinIO endpoint (e.g., "minio:9000")
@@ -49,6 +52,7 @@ func NewServer(config *ServerConfig) *Server {
 	return &Server{
 		config:          config,
 		statusReader:    config.StatusReader,
+		projectStore:    config.ProjectStore,
 		pendingJobs:     newPendingJobCache(),
 		sseHub:          sse.NewHub(),
 		scannerRegistry: config.ScannerRegistry,

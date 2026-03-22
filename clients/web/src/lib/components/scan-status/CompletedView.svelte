@@ -10,7 +10,7 @@ interface Props {
 	result: ScanResult | null;
 }
 
-const { result }: Props = $props();
+let { result }: Props = $props();
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
 	return count === 1 ? singular : plural;

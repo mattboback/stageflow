@@ -28,7 +28,7 @@ interface Props extends HTMLAttributes<HTMLElement> {
 	children: Snippet;
 }
 
-const {
+let {
 	as = "span",
 	tone,
 	size,

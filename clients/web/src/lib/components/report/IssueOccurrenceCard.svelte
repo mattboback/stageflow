@@ -18,7 +18,7 @@ interface Props {
 	onHighlight?: () => void;
 }
 
-const {
+let {
 	occurrence,
 	index,
 	issue,

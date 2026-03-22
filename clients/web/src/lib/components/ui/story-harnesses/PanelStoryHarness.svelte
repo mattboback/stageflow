@@ -17,7 +17,7 @@ interface Props {
 	body?: string;
 }
 
-const {
+let {
 	variant = "default",
 	padding = "md",
 	rounded = "lg",

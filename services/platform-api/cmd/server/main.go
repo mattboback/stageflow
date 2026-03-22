@@ -16,6 +16,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
+	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/statussource"
 )
 
@@ -70,6 +71,19 @@ func run() error {
 		return fmt.Errorf("failed to initialize orchestrator status source: %w", err)
 	}
 
+	projectStore, err := project.NewStore(cfg.ProjectDBPath)
+	if err != nil {
+		return fmt.Errorf("failed to initialize project store: %w", err)
+	}
+
+	defer func() {
+		if cerr := projectStore.Close(); cerr != nil {
+			slog.Error("Failed to close project store", "error", cerr)
+		}
+	}()
+
+	slog.Info("Project store initialized", "path", cfg.ProjectDBPath)
+
 	msgService := messaging.NewService(natsClient)
 	scannerRegistry := loadScannerRegistry(slog.Default(), cfg.ScannerConfigPath)
 
@@ -78,6 +92,7 @@ func run() error {
 		Storage:             minioClient,
 		Publisher:           msgService,
 		StatusReader:        statusReader,
+		ProjectStore:        projectStore,
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		MinIOEndpoint:       cfg.MinIO.Endpoint,

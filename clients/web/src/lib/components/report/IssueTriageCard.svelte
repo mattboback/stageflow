@@ -13,8 +13,7 @@ interface Props {
 	primaryFix: string | null;
 }
 
-const { issue, page, pageOverviewUrl, suggestedOwner, primaryFix }: Props =
-	$props();
+let { issue, page, pageOverviewUrl, suggestedOwner, primaryFix }: Props = $props();
 
 const triageOverviewCrop = $derived.by(() => {
 	if (!page?.pageOverview) return null;

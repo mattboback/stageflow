@@ -17,10 +17,10 @@ interface Props {
 type ArtifactTab = "logs" | "automation";
 const TABS: ArtifactTab[] = ["logs", "automation"];
 
-const { status, result }: Props = $props();
+let { status, result }: Props = $props();
 
 let userOpen = $state(true);
-const activeTab = $state<ArtifactTab>("logs");
+let activeTab = $state<ArtifactTab>("logs");
 
 const artifacts = $derived(resolveArtifacts(status, result));
 const isLockedOpen = $derived(status !== "complete");

@@ -1,0 +1,84 @@
+{
+  "schema": "stageflow-cli/report@v1",
+  "cli": {
+    "version": "NORMALIZED",
+    "commit": "NORMALIZED",
+    "date": "NORMALIZED"
+  },
+  "api": {
+    "base_url": "https://stageflow.org"
+  },
+  "job": {
+    "id": "NORMALIZED",
+    "state": "DONE",
+    "created_at": "2000-01-01T00:00:00Z",
+    "updated_at": "2000-01-01T00:00:00Z"
+  },
+  "links": {
+    "job": "NORMALIZED",
+    "results": "NORMALIZED"
+  },
+  "urls": [
+    "https://stageflow.org/qa/baseline.html"
+  ],
+  "filters": {
+    "max_issues": 200,
+    "issues_returned": 0,
+    "issues_total": 0,
+    "truncated": false,
+    "sort": "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
+  },
+  "report": {
+    "issues": [],
+    "meta": {
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "jobId": "NORMALIZED",
+      "scannedAt": "2000-01-01T00:00:00.000Z",
+      "startedAt": "2000-01-01T00:00:00.000Z"
+    },
+    "pages": [
+      {
+        "durationMs": 0,
+        "finishedAt": "2000-01-01T00:00:00.000Z",
+        "id": "url-1",
+        "issueCount": 0,
+        "path": "/qa/baseline.html",
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "url": "https://stageflow.org/qa/baseline.html"
+      }
+    ],
+    "scanners": [
+      {
+        "completedAt": "2000-01-01T00:00:00.000Z",
+        "durationMs": 0,
+        "id": "axe",
+        "issueCount": 0,
+        "name": "Axe Accessibility Scanner",
+        "reportPath": "NORMALIZED",
+        "resultsPath": "NORMALIZED",
+        "severity": {
+          "critical": 0,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 0
+        },
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "status": "success",
+        "toolVersion": "1.0.0"
+      }
+    ],
+    "summary": {
+      "bySeverity": {
+        "critical": 0,
+        "minor": 0,
+        "moderate": 0,
+        "serious": 0
+      },
+      "pagesScanned": 1,
+      "pagesWithIssues": 0,
+      "totalIssues": 0
+    },
+    "version": "2.0.0"
+  }
+}

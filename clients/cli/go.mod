@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/mattboback/stageflow/libs/contracts/report/generated/go v0.0.0-00010101000000-000000000000
+	github.com/mattboback/stageflow/libs/go/diff v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/models v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -23,6 +24,8 @@ require (
 replace github.com/mattboback/stageflow/libs/go/bootstrap => ../../libs/go/bootstrap
 
 replace github.com/mattboback/stageflow/libs/go/config => ../../libs/go/config
+
+replace github.com/mattboback/stageflow/libs/go/diff => ../../libs/go/diff
 
 replace github.com/mattboback/stageflow/libs/go/domain => ../../libs/go/domain
 

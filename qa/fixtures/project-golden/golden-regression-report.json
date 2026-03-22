@@ -1,0 +1,138 @@
+{
+  "schema": "stageflow-cli/report@v1",
+  "cli": {
+    "version": "NORMALIZED",
+    "commit": "NORMALIZED",
+    "date": "NORMALIZED"
+  },
+  "api": {
+    "base_url": "https://stageflow.org"
+  },
+  "job": {
+    "id": "NORMALIZED",
+    "state": "DONE",
+    "created_at": "2000-01-01T00:00:00Z",
+    "updated_at": "2000-01-01T00:00:00Z"
+  },
+  "links": {
+    "job": "NORMALIZED",
+    "results": "NORMALIZED"
+  },
+  "urls": [
+    "https://stageflow.org/qa/regression.html"
+  ],
+  "filters": {
+    "max_issues": 200,
+    "issues_returned": 1,
+    "issues_total": 1,
+    "truncated": false,
+    "sort": "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
+  },
+  "report": {
+    "issues": [
+      {
+        "category": "wcag2a",
+        "description": "Images must have alternative text describing their content.",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/image-alt?application=playwright",
+        "howToFix": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+        "id": "589b73d3a7fa",
+        "occurrences": [
+          {
+            "ancestorPath": "html > body > main > img",
+            "contextHtml": "<main>\n  <!-- ... -->\n  <img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E\" alt=\"Placeholder\">\n  <img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'/%3E\"> <!-- TARGET -->\n</main>",
+            "elementId": "589b73d3a7fa-el-0",
+            "failureSummary": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+            "html": "<img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'/%3E\">",
+            "selector": "img:nth-child(4)",
+            "target": [
+              "img:nth-child(4)"
+            ]
+          }
+        ],
+        "pageId": "url-1",
+        "pageUrl": "https://stageflow.org/qa/regression.html",
+        "ruleId": "image-alt",
+        "scanner": "axe",
+        "severity": "critical",
+        "severityRaw": "critical",
+        "title": "Images must have alternative text",
+        "userImpact": {
+          "affectedGroups": [
+            "blind"
+          ],
+          "severity": "blocking",
+          "statement": "Screen reader users cannot understand what this image shows or represents.",
+          "userStory": "When I navigate to this image, my screen reader just says 'image' or reads the filename, leaving me confused about what content I'm missing."
+        },
+        "wcagTags": [
+          "wcag2a",
+          "wcag111",
+          "WCAG 1.1.1"
+        ]
+      }
+    ],
+    "meta": {
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "jobId": "NORMALIZED",
+      "scannedAt": "2000-01-01T00:00:00.000Z",
+      "startedAt": "2000-01-01T00:00:00.000Z"
+    },
+    "pages": [
+      {
+        "bySeverity": {
+          "critical": 1,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 0
+        },
+        "durationMs": 0,
+        "finishedAt": "2000-01-01T00:00:00.000Z",
+        "id": "url-1",
+        "issueCount": 1,
+        "path": "/qa/regression.html",
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "url": "https://stageflow.org/qa/regression.html"
+      }
+    ],
+    "scanners": [
+      {
+        "completedAt": "2000-01-01T00:00:00.000Z",
+        "durationMs": 0,
+        "id": "axe",
+        "issueCount": 1,
+        "name": "Axe Accessibility Scanner",
+        "reportPath": "NORMALIZED",
+        "resultsPath": "NORMALIZED",
+        "severity": {
+          "critical": 1,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 0
+        },
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "status": "success",
+        "toolVersion": "1.0.0"
+      }
+    ],
+    "summary": {
+      "byScanner": {
+        "axe": 1
+      },
+      "bySeverity": {
+        "critical": 1,
+        "minor": 0,
+        "moderate": 0,
+        "serious": 0
+      },
+      "pagesScanned": 1,
+      "pagesWithIssues": 1,
+      "score": 76,
+      "scoreGrade": "C",
+      "totalIssues": 1
+    },
+    "version": "2.0.0"
+  }
+}

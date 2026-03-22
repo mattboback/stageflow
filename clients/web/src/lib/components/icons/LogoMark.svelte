@@ -4,7 +4,7 @@ interface Props {
 	size?: number;
 }
 
-const { class: className, size = 20 }: Props = $props();
+let { class: className, size = 20 }: Props = $props();
 </script>
 
 <svg

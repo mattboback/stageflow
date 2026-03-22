@@ -8,7 +8,7 @@ interface Props {
 	class?: string;
 }
 
-const { email, class: className = "" }: Props = $props();
+let { email, class: className = "" }: Props = $props();
 
 let copied = $state(false);
 

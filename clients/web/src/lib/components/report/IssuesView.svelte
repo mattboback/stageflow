@@ -37,7 +37,7 @@ interface Props {
 	onClearFilters: () => void;
 }
 
-const {
+let {
 	report,
 	screenshots,
 	activeScanner,
@@ -147,8 +147,8 @@ const activeFilterCount = $derived(
 const SEARCH_DEBOUNCE_MS = 250;
 // eslint-disable-next-line svelte/prefer-writable-derived -- complex bidirectional sync with debounce
 let localSearchValue = $state("");
-const showMoreFilters = $state(false);
-const previewMode = $state<"auto" | "on" | "off">("auto");
+let showMoreFilters = $state(false);
+let previewMode = $state<"auto" | "on" | "off">("auto");
 let isCompactViewport = $state(false);
 
 // Sync local value when searchTerm prop changes externally (e.g., clear filters, initial load)
@@ -178,8 +178,8 @@ function handleSearchInput(value: string) {
 	localSearchValue = value;
 }
 
-const listContainer = $state<HTMLDivElement | null>(null);
-const severityChipScroller = $state<HTMLDivElement | null>(null);
+let listContainer = $state<HTMLDivElement | null>(null);
+let severityChipScroller = $state<HTMLDivElement | null>(null);
 let severitySwipeHintVisible = $state(false);
 let scrollTop = $state(0);
 let viewportHeight = $state(600);

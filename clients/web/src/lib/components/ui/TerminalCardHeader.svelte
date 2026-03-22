@@ -18,7 +18,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	class?: string;
 }
 
-const { path, badges = [], class: className, ...rest }: Props = $props();
+let { path, badges = [], class: className, ...rest }: Props = $props();
 </script>
 
 <div

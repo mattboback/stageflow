@@ -14,7 +14,7 @@ interface Props {
 	onElementClick?: (elementId: string) => void;
 }
 
-const {
+let {
 	issue,
 	page,
 	screenshotUrl,

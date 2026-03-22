@@ -13,7 +13,7 @@ interface Props extends HTMLButtonAttributes {
 	children: Snippet;
 }
 
-const { variant, size, class: className, children, ...rest }: Props = $props();
+let { variant, size, class: className, children, ...rest }: Props = $props();
 </script>
 
 <button class={cn(buttonVariants({ variant, size }), className)} {...rest}>

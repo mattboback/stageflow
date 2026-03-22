@@ -10,7 +10,7 @@ interface Props extends HTMLLabelAttributes {
 	children: Snippet;
 }
 
-const {
+let {
 	class: className,
 	required = false,
 	children,

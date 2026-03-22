@@ -36,7 +36,7 @@ interface Props {
 	onRefreshArtifacts?: () => void;
 }
 
-const {
+let {
 	jobId,
 	status,
 	report,

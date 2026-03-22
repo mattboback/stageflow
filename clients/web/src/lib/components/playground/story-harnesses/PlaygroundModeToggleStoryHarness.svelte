@@ -8,7 +8,7 @@ interface Props {
 	onModeChange?: (mode: Mode) => void;
 }
 
-const { initialMode = "url", onModeChange }: Props = $props();
+let { initialMode = "url", onModeChange }: Props = $props();
 
 let mode = $derived<Mode>(initialMode);
 

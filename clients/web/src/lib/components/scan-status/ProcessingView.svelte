@@ -11,7 +11,7 @@ interface Props {
 	logs: string[];
 }
 
-const { result, logs }: Props = $props();
+let { result, logs }: Props = $props();
 
 function getStageInfo(
 	state?: string,

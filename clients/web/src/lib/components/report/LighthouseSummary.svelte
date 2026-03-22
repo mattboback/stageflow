@@ -7,7 +7,7 @@ interface Props {
 	categories: LighthouseCategorySummary[];
 }
 
-const { categories }: Props = $props();
+let { categories }: Props = $props();
 
 function getScoreColor(score: number): string {
 	const pct = score * 100;

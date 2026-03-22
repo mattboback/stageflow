@@ -10,7 +10,7 @@ interface Props {
 	onModeChange: (mode: Mode) => void;
 }
 
-const { mode, onModeChange }: Props = $props();
+let { mode, onModeChange }: Props = $props();
 
 function selectableSurfaceClass(base: string, isSelected: boolean) {
 	return cn(

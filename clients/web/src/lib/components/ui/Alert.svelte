@@ -12,7 +12,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	children: Snippet;
 }
 
-const {
+let {
 	variant = "info",
 	class: className,
 	children,

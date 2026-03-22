@@ -21,8 +21,7 @@ interface Props {
 	onSearchIssues: (query: string, scannerId?: string) => void;
 }
 
-const { report, onSelectPage, onSelectScanner, onSearchIssues }: Props =
-	$props();
+let { report, onSelectPage, onSelectScanner, onSearchIssues }: Props = $props();
 
 const topPages = $derived(
 	[...report.pages].sort((a, b) => b.issueCount - a.issueCount).slice(0, 5),

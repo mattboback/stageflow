@@ -7,7 +7,7 @@ interface Props {
 	errors: ReportError[] | undefined;
 }
 
-const { errors }: Props = $props();
+let { errors }: Props = $props();
 
 const list = $derived(errors ?? []);
 </script>

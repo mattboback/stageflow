@@ -14,7 +14,7 @@ interface Props extends HTMLSelectAttributes {
 	children: Snippet;
 }
 
-const {
+let {
 	value = $bindable(""),
 	uiSize,
 	class: className,

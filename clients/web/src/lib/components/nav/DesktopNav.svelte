@@ -9,7 +9,7 @@ interface Props {
 	isActive: (href: string) => boolean;
 }
 
-const { isActive }: Props = $props();
+let { isActive }: Props = $props();
 </script>
 
 <nav class="hidden items-center gap-1.5 md:flex" aria-label="Main navigation">

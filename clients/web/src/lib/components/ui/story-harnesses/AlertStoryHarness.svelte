@@ -8,8 +8,7 @@ interface Props {
 	message?: string;
 }
 
-const { variant = "info", message = "Scan started successfully." }: Props =
-	$props();
+let { variant = "info", message = "Scan started successfully." }: Props = $props();
 </script>
 
 <Alert {variant} data-testid="alert">

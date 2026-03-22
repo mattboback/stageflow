@@ -14,7 +14,7 @@ interface Props {
 	logs: string[];
 }
 
-const { status, result, logs }: Props = $props();
+let { status, result, logs }: Props = $props();
 
 const isComplete = $derived(status === "complete");
 const isFailed = $derived(status === "failed" || status === "error");

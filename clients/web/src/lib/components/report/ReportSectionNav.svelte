@@ -20,7 +20,7 @@ interface Props {
 	onAudienceChange?: (audience: ReportAudience) => void;
 }
 
-const {
+let {
 	section,
 	report,
 	audience = "pm",

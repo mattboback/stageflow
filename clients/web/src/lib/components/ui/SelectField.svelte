@@ -13,7 +13,7 @@ interface Props extends HTMLSelectAttributes {
 	children: Snippet;
 }
 
-const {
+let {
 	variant = "default",
 	class: className,
 	wrapperClass,

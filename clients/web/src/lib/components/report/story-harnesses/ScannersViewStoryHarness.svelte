@@ -11,7 +11,7 @@ interface Props {
 	onSelectScanner?: (scannerId: string) => void;
 }
 
-const { report, job, initialScanner, onSelectScanner }: Props = $props();
+let { report, job, initialScanner, onSelectScanner }: Props = $props();
 
 let activeScanner = $derived<string | null>(
 	initialScanner ?? report.scanners[0]?.id ?? null,

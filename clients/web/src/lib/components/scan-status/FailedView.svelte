@@ -9,7 +9,7 @@ interface Props {
 	result: ScanResult | null;
 }
 
-const { result }: Props = $props();
+let { result }: Props = $props();
 
 function handleRetry() {
 	window.location.reload();

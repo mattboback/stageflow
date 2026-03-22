@@ -15,20 +15,29 @@ import (
 
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
-		rawScanners  string
-		screenshot   bool
+		rawScanners string
+		screenshot  bool
 		allowPrivate bool
-		timeout      time.Duration
-		noStream     bool
-		reportOpts   reportCommandOptions
+		timeout     time.Duration
+		noStream    bool
+		projectSlug string
+		reportOpts  reportCommandOptions
 	)
 
 	cmd := &cobra.Command{
-		Use:                   "scan <url> [url...]",
+		Use:                   "scan [url...] [--project <slug>]",
 		Short:                 "Submit a scan job and wait for results",
 		DisableFlagsInUseLine: true,
-		Args:                  cobra.MinimumNArgs(1),
+		Args:                  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if projectSlug != "" {
+				return runRemoteProjectScan(cmd, root, projectSlug, timeout, noStream, reportOpts)
+			}
+
+			if len(args) == 0 {
+				return exitCodeError{Code: 2, Err: errors.New("at least one URL is required (or use --project)")}
+			}
+
 			if reportOpts.maxIssues < 0 {
 				return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 			}
@@ -97,11 +106,93 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		"Allow private/loopback targets (requires API instance to permit it)",
 	)
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time")
+	cmd.Flags().StringVar(&projectSlug, "project", "", "Scan using a registered project's URLs and config")
 	bindReportFlags(cmd, &reportOpts, true)
 	cmd.Flags().BoolVar(&noStream, "no-stream", false, "Poll instead of SSE")
 	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
 	return cmd
+}
+
+func runRemoteProjectScan(cmd *cobra.Command, root *rootOptions, slug string, timeout time.Duration, noStream bool, reportOpts reportCommandOptions) error {
+	client := NewClient(root.apiURL, root.apiKey, nil)
+
+	opCtx, cancel := context.WithTimeout(cmd.Context(), timeout)
+	defer cancel()
+
+	resp, err := client.projectScan(opCtx, slug)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
+	}
+
+	jobID := resp.JobID
+	if jobID == "" {
+		return exitCodeError{Code: 2, Err: errors.New("submit project scan: missing job_id in response")}
+	}
+
+	fmt.Fprintf(cmd.ErrOrStderr(), "Project scan submitted: %s (job %s)\nWaiting for completion...\n", slug, jobID)
+
+	if err := waitJobState(opCtx, client, jobID, cmd.ErrOrStderr(), noStream); err != nil {
+		return exitCodeError{Code: 2, Err: fmt.Errorf("wait for completion: %w", err)}
+	}
+
+	status, err := fetchJobStatus(opCtx, client, jobID)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch job status: %w", err)}
+	}
+
+	if status.State != jobStateDone {
+		if status.State == jobStateFailed {
+			return exitCodeError{Code: 2, Err: fmt.Errorf("job failed: %s", status.Error)}
+		}
+
+		return exitCodeError{Code: 2, Err: fmt.Errorf("job finished with non-DONE state: %s", status.State)}
+	}
+
+	doc, err := fetchReport(opCtx, client, jobID)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch report: %w", err)}
+	}
+
+	format, err := root.outputFormat()
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	if renderErr := renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format)); renderErr != nil {
+		return wrapRenderError(renderErr)
+	}
+
+	diffResult, diffErr := client.fetchJobDiff(opCtx, jobID)
+	if diffErr != nil {
+		if strings.Contains(diffErr.Error(), "404") || strings.Contains(diffErr.Error(), "No baseline") {
+			fmt.Fprintf(cmd.ErrOrStderr(), "\nNo baseline set for project %q.\n", slug)
+			fmt.Fprintf(cmd.ErrOrStderr(), "Promote this scan: stageflow project promote %s --job-id %s\n", slug, jobID)
+
+			return nil
+		}
+
+		if strings.Contains(diffErr.Error(), "Cannot diff against self") {
+			fmt.Fprintf(cmd.ErrOrStderr(), "\nThis scan is the current baseline. Run a new scan to see a diff.\n")
+
+			return nil
+		}
+
+		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch diff: %w", diffErr)}
+	}
+
+	fmt.Fprintln(cmd.OutOrStdout())
+
+	d := diffFromResult(diffResult, "", "")
+	if err := renderDiff(cmd.OutOrStdout(), d, format); err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	if (diffResult.Delta.ScoreDelta != nil && *diffResult.Delta.ScoreDelta < 0) || diffResult.Delta.NewIssues > 0 {
+		return exitCodeError{Code: 1}
+	}
+
+	return nil
 }
 
 func runScanJob(
