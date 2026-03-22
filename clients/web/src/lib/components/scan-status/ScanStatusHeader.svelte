@@ -12,7 +12,7 @@ interface Props {
 	result?: ScanResult | null;
 }
 
-const { id, status, elapsed, result }: Props = $props();
+let { id, status, elapsed, result }: Props = $props();
 
 function formatTime(s: number) {
 	return `${Math.floor(s / 60)}m ${s % 60}s`;

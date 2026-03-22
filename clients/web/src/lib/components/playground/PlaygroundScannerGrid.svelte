@@ -23,8 +23,7 @@ interface Props {
 	onToggle: (scannerId: string) => void;
 }
 
-const { scanners, isLoading, preset, onPresetChange, onToggle }: Props =
-	$props();
+let { scanners, isLoading, preset, onPresetChange, onToggle }: Props = $props();
 
 const enabledScannerCount = $derived(scanners.filter((s) => s.enabled).length);
 const enabledScanners = $derived(scanners.filter((s) => s.enabled));

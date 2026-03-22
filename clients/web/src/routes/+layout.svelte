@@ -9,7 +9,7 @@ import Footer from "$lib/components/Footer.svelte";
 import { Navigation } from "$lib/components/nav";
 import { SITE, buildSiteUrl } from "$lib/config/site";
 
-const { children } = $props();
+let { children } = $props();
 const pathname = $derived(page.url.pathname);
 const canonicalUrl = $derived(buildSiteUrl(pathname));
 const shareImageUrl = buildSiteUrl("/og-image.svg");

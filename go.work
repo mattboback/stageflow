@@ -8,6 +8,7 @@ use (
 	./libs/contracts/scanner-manifest
 	./libs/go/bootstrap
 	./libs/go/config
+	./libs/go/diff
 	./libs/go/domain
 	./libs/go/events
 	./libs/go/httputil

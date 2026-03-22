@@ -10,9 +10,9 @@ interface Props {
 	onError: (error: string) => void;
 }
 
-const { file, onFileChange, onError }: Props = $props();
+let { file, onFileChange, onError }: Props = $props();
 
-const fileInputRef = $state<HTMLInputElement | null>(null);
+let fileInputRef = $state<HTMLInputElement | null>(null);
 let isDragOver = $state(false);
 
 function handleFileChange(event: Event) {

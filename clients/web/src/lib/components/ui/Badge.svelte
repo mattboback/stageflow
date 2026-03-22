@@ -12,7 +12,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	children: Snippet;
 }
 
-const { variant, class: className, children, ...rest }: Props = $props();
+let { variant, class: className, children, ...rest }: Props = $props();
 </script>
 
 <div class={cn(badgeVariants({ variant }), className)} {...rest}>

@@ -28,7 +28,7 @@ interface Props {
 	onClose: () => void;
 }
 
-const {
+let {
 	issue,
 	page = null,
 	audience = "pm",
@@ -114,8 +114,8 @@ const pageOverviewUrl = $derived(
 		: null,
 );
 
-const modalRef = $state<HTMLDivElement | null>(null);
-const localHighlightedElementId = $state<string | null>(null);
+let modalRef = $state<HTMLDivElement | null>(null);
+let localHighlightedElementId = $state<string | null>(null);
 
 const activeHighlightId = $derived(
 	localHighlightedElementId ?? highlightedElementId ?? null,

@@ -28,6 +28,7 @@ StageFlow is a strong showcase project because it combines:
 - Submit one job and run multiple scanners in parallel.
 - Track live progress through SSE at `/api/v1/jobs/{id}/stream`.
 - Scan public URLs, static-site ZIPs, and local projects through CLI project mode.
+- Track projects with baselines and detect regressions across scans via automatic diffing.
 - Keep scanner execution isolated from the main app runtime.
 - Review one unified report with findings, evidence, and per-scanner results.
 - Use structured JSON output and exit codes as an automated quality gate in CI or agentic coding workflows.
@@ -185,9 +186,34 @@ The `--format json` envelope (`stageflow-cli/report@v1`) is designed for program
 
 Each issue includes a CSS selector, HTML snippet, and remediation guidance — enough for automated tooling to locate and fix violations.
 
-### Project mode
+### Remote project management
 
-Project mode integrates scanning into local development. It starts your dev server, waits for readiness, runs the scan, and shuts down the server.
+Projects are named entities on the platform that track target URLs, scanner configuration, and a baseline scan for regression detection.
+
+```bash
+# Create a project
+stageflow project create my-app --url https://example.com --scanner axe
+
+# Scan the project (compares against baseline if one is set)
+stageflow scan --project my-app --format json
+
+# Promote a scan as the baseline for future comparisons
+stageflow project promote my-app --job-id <job-id>
+
+# Update project configuration
+stageflow project update my-app --url https://example.com/v2
+
+# Other CRUD
+stageflow project list
+stageflow project show my-app
+stageflow project delete my-app
+```
+
+When a baseline is set, `stageflow scan --project` outputs two JSON documents: the scan report followed by a diff showing new, fixed, and unchanged issues. The CLI exits 1 if regressions are detected, making it a drop-in CI quality gate.
+
+### Local project mode
+
+Local project mode integrates scanning into local development. It starts your dev server, waits for readiness, runs the scan, and shuts down the server.
 
 ```bash
 stageflow project init          # scaffold .stageflow/config.yaml
@@ -304,6 +330,7 @@ StageFlow keeps the quality story visible and reproducible:
 - strict TypeScript in the frontend and scanner runtime
 - Go build, lint, race-test, and vulnerability checks
 - Vitest coverage plus Storybook interaction and accessibility testing
+- golden E2E test for the project scan → baseline → diff pipeline
 - repo-level CI that runs the major quality gates together
 
 Run the main validation flows locally with:
@@ -313,6 +340,20 @@ just ci
 just storybook-test
 just shell-tests
 ```
+
+### Golden E2E test
+
+`qa/e2e/project-scan-golden.sh` exercises the full project lifecycle against a live stack: create project, scan a clean page, promote baseline, swap to a page with a known violation, rescan, and verify the diff output matches committed golden files.
+
+```bash
+# Run against prod (default)
+bash qa/e2e/project-scan-golden.sh
+
+# Run against a local stack
+STAGEFLOW_API_URL=http://localhost:8080 bash qa/e2e/project-scan-golden.sh
+```
+
+Golden files live in `qa/fixtures/project-golden/`. On first run the script auto-creates them from actual output; subsequent runs compare against them with `diff -u`.
 
 ## Docs map
 

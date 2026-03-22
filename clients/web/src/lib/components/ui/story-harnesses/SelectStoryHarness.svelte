@@ -18,7 +18,7 @@ interface Props {
 	onChange?: (value: string) => void;
 }
 
-const {
+let {
 	label = "Scanner",
 	options = [
 		{ label: "Axe", value: "axe" },

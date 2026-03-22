@@ -9,7 +9,7 @@ interface Props {
 	containerClass?: string;
 }
 
-const {
+let {
 	padding = "default",
 	disableContainer = false,
 	containerClass,

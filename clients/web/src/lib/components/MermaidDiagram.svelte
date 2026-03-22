@@ -8,9 +8,9 @@ interface Props {
 	class?: string;
 }
 
-const { chart, class: className = "" }: Props = $props();
+let { chart, class: className = "" }: Props = $props();
 
-const containerRef = $state<HTMLDivElement | null>(null);
+let containerRef = $state<HTMLDivElement | null>(null);
 let svg = $state("");
 const svgDataUrl = $derived.by(() => {
 	if (!svg) return "";

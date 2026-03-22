@@ -6,7 +6,7 @@ interface Props {
 	jobId: string | null;
 }
 
-const { jobId }: Props = $props();
+let { jobId }: Props = $props();
 
 const snippet = $derived(
 	jobId

@@ -10,7 +10,7 @@ interface Props {
 	onHighlightStyleChange: (value: "solid" | "dashed") => void;
 }
 
-const {
+let {
 	screenshot,
 	highlightStyle,
 	onScreenshotChange,

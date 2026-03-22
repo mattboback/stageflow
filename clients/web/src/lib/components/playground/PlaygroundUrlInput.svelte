@@ -13,7 +13,7 @@ interface Props {
 	onNormalize: () => void;
 }
 
-const { urls, onUrlsChange, onNormalize }: Props = $props();
+let { urls, onUrlsChange, onNormalize }: Props = $props();
 
 let hasInteracted = $state(false);
 let wasAutoNormalized = $state(false);

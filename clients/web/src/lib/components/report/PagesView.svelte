@@ -17,7 +17,7 @@ interface Props {
 	onIssueSelect: (issue: IssueDetail, highlightedElementId?: string) => void;
 }
 
-const {
+let {
 	report,
 	screenshots,
 	activeScanner,

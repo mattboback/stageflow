@@ -10,7 +10,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	class?: string;
 }
 
-const {
+let {
 	value = 0,
 	max = 100,
 	indicatorClass,

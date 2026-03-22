@@ -9,7 +9,7 @@ interface Props {
 	artifacts: Artifacts;
 }
 
-const { artifacts }: Props = $props();
+let { artifacts }: Props = $props();
 
 const hasLogs = $derived(
 	Boolean(

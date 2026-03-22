@@ -5,7 +5,7 @@ interface Props extends SVGAttributes<SVGSVGElement> {
 	class?: string;
 }
 
-const { class: className, ...rest }: Props = $props();
+let { class: className, ...rest }: Props = $props();
 </script>
 
 <svg viewBox="0 0 24 24" fill="currentColor" class={className} {...rest}>

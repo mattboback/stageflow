@@ -36,13 +36,13 @@ import {
 } from "lucide-svelte";
 
 // Form state
-const mode = $state<"url" | "zip">("url");
+let mode = $state<"url" | "zip">("url");
 let urls = $state("");
 let file = $state<File | null>(null);
 let scanners = $state<ScannerSelection[]>([]);
 let scannerPreset = $state<ScannerPreset>("coverage");
-const screenshot = $state(true);
-const highlightStyle = $state<"solid" | "dashed">("solid");
+let screenshot = $state(true);
+let highlightStyle = $state<"solid" | "dashed">("solid");
 
 // UI state
 let isSubmitting = $state(false);
@@ -51,14 +51,14 @@ let error = $state<string | null>(null);
 let invalidUrls = $state<Array<{ url: string; reason: string }>>([]);
 
 // AI Navigator configuration
-const aiObjective = $state("");
-const aiModel = $state(
+let aiObjective = $state("");
+let aiModel = $state(
 	import.meta.env.VITE_AI_NAVIGATOR_DEFAULT_MODEL || "openai/gpt-4o-mini",
 );
-const aiMaxSteps = $state(10);
-const aiMaxWallTimeMs = $state(120000);
-const aiInputValues = $state<Array<{ key: string; value: string }>>([]);
-const aiSuccessCriteria = $state<Array<{ type: string; value: string }>>([]);
+let aiMaxSteps = $state(10);
+let aiMaxWallTimeMs = $state(120000);
+let aiInputValues = $state<Array<{ key: string; value: string }>>([]);
+let aiSuccessCriteria = $state<Array<{ type: string; value: string }>>([]);
 
 // Derived state
 const hasValidInput = $derived(

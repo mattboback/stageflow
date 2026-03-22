@@ -91,9 +91,9 @@ function formatTimestamp(
 	return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 }
 
-const { logs, startTime }: Props = $props();
+let { logs, startTime }: Props = $props();
 
-const containerRef = $state<HTMLDivElement | null>(null);
+let containerRef = $state<HTMLDivElement | null>(null);
 // Capture the time when the component was first created as a fallback
 const fallbackStartTime = Date.now();
 const effectiveStartTime = $derived(startTime ?? fallbackStartTime);

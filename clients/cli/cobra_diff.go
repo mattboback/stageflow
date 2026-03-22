@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/libs/go/diff"
 )
 
 type diffEnvelope struct {
@@ -109,20 +110,21 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 				currentEnv = loaded
 			}
 
-			diff := computeDiff(baselinePath, baselineEnv.Report, currentJobID, currentFile, currentEnv.Report)
+			result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
+			d := diffFromResult(result, baselinePath, currentFile)
 
 			regressed := false
 			if failOnRegression {
-				if (diff.Delta.ScoreDelta != nil && *diff.Delta.ScoreDelta < 0) || diff.Delta.NewIssues > 0 {
+				if (d.Delta.ScoreDelta != nil && *d.Delta.ScoreDelta < 0) || d.Delta.NewIssues > 0 {
 					regressed = true
 				}
 			}
 
-			if failOnNew != "" && len(diff.New) > 0 {
+			if failOnNew != "" && len(d.New) > 0 {
 				if failOnNew == "any" {
 					regressed = true
 				} else {
-					hasSeverity, err := hasIssuesAtOrAbove(diff.New, failOnNew)
+					hasSeverity, err := hasIssuesAtOrAbove(d.New, failOnNew)
 					if err != nil {
 						return exitCodeError{Code: 2, Err: err}
 					}
@@ -132,14 +134,14 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 				}
 			}
 
-			diff.Regressed = regressed
+			d.Regressed = regressed
 
 			format, err := root.outputFormat()
 			if err != nil {
 				return exitCodeError{Code: 2, Err: err}
 			}
 
-			if err := renderDiff(cmd.OutOrStdout(), diff, format); err != nil {
+			if err := renderDiff(cmd.OutOrStdout(), d, format); err != nil {
 				return exitCodeError{Code: 2, Err: err}
 			}
 
@@ -161,65 +163,28 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func computeDiff(
-	baselineFile string, baseline report.UnifiedReportV2,
-	currentJobID, currentFile string, current report.UnifiedReportV2,
-) diffEnvelope {
-	baselineMap := make(map[string]report.IssueDetail)
-	for _, issue := range baseline.Issues {
-		baselineMap[issue.Id] = issue
-	}
-
-	currentMap := make(map[string]report.IssueDetail)
-	for _, issue := range current.Issues {
-		currentMap[issue.Id] = issue
-	}
-
-	newIssues := make([]report.IssueDetail, 0)
-	fixedIssues := make([]report.IssueDetail, 0)
-	var unchangedCount int
-
-	for id, issue := range currentMap {
-		if _, exists := baselineMap[id]; !exists {
-			newIssues = append(newIssues, issue)
-		} else {
-			unchangedCount++
-		}
-	}
-
-	for id, issue := range baselineMap {
-		if _, exists := currentMap[id]; !exists {
-			fixedIssues = append(fixedIssues, issue)
-		}
-	}
-
-	var scoreDelta *int
-	if baseline.Summary.Score != nil && current.Summary.Score != nil {
-		delta := *current.Summary.Score - *baseline.Summary.Score
-		scoreDelta = &delta
-	}
-
+func diffFromResult(r diff.Result, baselineFile, currentFile string) diffEnvelope {
 	return diffEnvelope{
-		Schema: "stageflow-cli/diff@v1",
+		Schema: r.Schema,
 		Baseline: diffBaselineMeta{
 			File:        baselineFile,
-			Score:       baseline.Summary.Score,
-			TotalIssues: baseline.Summary.TotalIssues,
+			Score:       r.Baseline.Score,
+			TotalIssues: r.Baseline.TotalIssues,
 		},
 		Current: diffCurrentMeta{
-			JobID:       currentJobID,
+			JobID:       r.Current.JobID,
 			File:        currentFile,
-			Score:       current.Summary.Score,
-			TotalIssues: current.Summary.TotalIssues,
+			Score:       r.Current.Score,
+			TotalIssues: r.Current.TotalIssues,
 		},
 		Delta: diffDelta{
-			ScoreDelta:      scoreDelta,
-			NewIssues:       len(newIssues),
-			FixedIssues:     len(fixedIssues),
-			UnchangedIssues: unchangedCount,
+			ScoreDelta:      r.Delta.ScoreDelta,
+			NewIssues:       r.Delta.NewIssues,
+			FixedIssues:     r.Delta.FixedIssues,
+			UnchangedIssues: r.Delta.UnchangedIssues,
 		},
-		New:   newIssues,
-		Fixed: fixedIssues,
+		New:   r.New,
+		Fixed: r.Fixed,
 	}
 }
 

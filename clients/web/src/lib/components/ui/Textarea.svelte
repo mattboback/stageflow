@@ -8,7 +8,7 @@ interface Props extends HTMLTextareaAttributes {
 	error?: boolean;
 }
 
-const { class: className, error = false, ...rest }: Props = $props();
+let { class: className, error = false, ...rest }: Props = $props();
 </script>
 
 <textarea

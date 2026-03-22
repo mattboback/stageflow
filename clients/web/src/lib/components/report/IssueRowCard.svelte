@@ -21,7 +21,7 @@ interface Props {
 	onclick?: () => void;
 }
 
-const {
+let {
 	issue,
 	page = null,
 	screenshots,

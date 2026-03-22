@@ -11,7 +11,7 @@ interface Props {
 	onClose?: () => void;
 }
 
-const {
+let {
 	title = "Scanner details",
 	openLabel = "Open modal",
 	closeLabel = "Close modal",

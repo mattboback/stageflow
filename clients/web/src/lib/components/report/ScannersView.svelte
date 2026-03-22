@@ -22,7 +22,7 @@ interface Props {
 	onSelectScanner: (scannerId: string) => void;
 }
 
-const { report, job, activeScanner, onSelectScanner }: Props = $props();
+let { report, job, activeScanner, onSelectScanner }: Props = $props();
 
 const selectedScanner = $derived(
 	report.scanners.find((scanner) => scanner.id === activeScanner) ??

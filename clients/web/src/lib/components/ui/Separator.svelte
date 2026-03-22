@@ -8,7 +8,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 	class?: string;
 }
 
-const {
+let {
 	orientation = "horizontal",
 	class: className,
 	...rest

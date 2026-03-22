@@ -13,6 +13,8 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/api/v1/jobs/zip", s.withUploadMiddleware(s.handleJobZipUpload))
 	mux.HandleFunc("/api/v1/jobs/urls", s.withMiddleware(s.handleJobURLSubmit))
 	mux.HandleFunc("/api/v1/jobs/", s.handleJobsRoute)
+	mux.HandleFunc("/api/v1/projects", s.withMiddleware(s.handleProjects))
+	mux.HandleFunc("/api/v1/projects/", s.withMiddleware(s.handleProjects))
 	mux.HandleFunc("/api/v1/scanners", s.withMiddleware(s.handleListScanners))
 	mux.HandleFunc("/healthz", s.handleHealth)
 

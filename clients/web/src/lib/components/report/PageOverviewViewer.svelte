@@ -11,7 +11,7 @@ interface Props {
 	onSelectIssue: (issue: IssueDetail, highlightedElementId?: string) => void;
 }
 
-const { page, issues, screenshotUrl, onSelectIssue }: Props = $props();
+let { page, issues, screenshotUrl, onSelectIssue }: Props = $props();
 
 const issueMap = $derived.by(
 	() =>

@@ -18,7 +18,7 @@ interface Props {
 	panel?: Snippet<[string]>;
 }
 
-const {
+let {
 	tabs,
 	defaultTab,
 	value,

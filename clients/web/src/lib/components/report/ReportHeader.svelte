@@ -14,7 +14,7 @@ interface Props {
 	onRefreshArtifacts?: () => void;
 }
 
-const { jobId, report, job: _job, onRefreshArtifacts }: Props = $props();
+let { jobId, report, job: _job, onRefreshArtifacts }: Props = $props();
 
 const jsonUrl = $derived(
 	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null,

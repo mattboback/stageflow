@@ -37,7 +37,7 @@ interface Props {
 	) => void;
 }
 
-const {
+let {
 	objective,
 	model,
 	maxSteps,
@@ -53,7 +53,7 @@ const {
 	onSuccessCriteriaChange,
 }: Props = $props();
 
-const showAdvancedSettings = $state(false);
+let showAdvancedSettings = $state(false);
 
 // Available AI models
 const aiModels = [

@@ -11,7 +11,7 @@ interface Props {
 	isActive: (href: string) => boolean;
 }
 
-const { isOpen, onClose, isActive }: Props = $props();
+let { isOpen, onClose, isActive }: Props = $props();
 </script>
 
 <Modal

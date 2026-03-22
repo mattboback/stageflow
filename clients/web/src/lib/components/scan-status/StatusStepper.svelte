@@ -14,7 +14,7 @@ const SCAN_STEPS = [
 	{ id: "complete", label: "Ready" },
 ];
 
-const { currentStatus }: Props = $props();
+let { currentStatus }: Props = $props();
 
 const currentIndex = $derived(
 	SCAN_STEPS.findIndex((s) => s.id === currentStatus),

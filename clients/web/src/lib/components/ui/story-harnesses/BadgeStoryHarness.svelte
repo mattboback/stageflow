@@ -8,7 +8,7 @@ interface Props {
 	label?: string;
 }
 
-const { variant = "default", label = "Live" }: Props = $props();
+let { variant = "default", label = "Live" }: Props = $props();
 </script>
 
 <Badge {variant} data-testid="badge">

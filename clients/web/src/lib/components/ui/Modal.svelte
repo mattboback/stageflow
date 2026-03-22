@@ -34,7 +34,7 @@ interface Props {
 	children: Snippet;
 }
 
-const {
+let {
 	open,
 	onClose,
 	id,
@@ -54,7 +54,7 @@ const {
 	children,
 }: Props = $props();
 
-const contentRef = $state<HTMLDivElement | null>(null);
+let contentRef = $state<HTMLDivElement | null>(null);
 let lastFocused: Element | null = null;
 let previousBodyOverflow: string | null = null;
 let wasOpen = false;

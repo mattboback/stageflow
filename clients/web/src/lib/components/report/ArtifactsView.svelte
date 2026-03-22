@@ -12,7 +12,7 @@ interface Props {
 	onRefreshArtifacts?: () => void;
 }
 
-const { jobId, job, onRefreshArtifacts }: Props = $props();
+let { jobId, job, onRefreshArtifacts }: Props = $props();
 
 const aggregatedJsonUrl = $derived(
 	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null,

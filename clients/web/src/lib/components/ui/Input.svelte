@@ -9,7 +9,7 @@ interface Props extends HTMLInputAttributes {
 	error?: boolean;
 }
 
-const {
+let {
 	value = $bindable(""),
 	class: className,
 	error = false,

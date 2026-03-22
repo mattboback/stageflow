@@ -18,7 +18,8 @@ This document explains StageFlow job flow, trust boundaries, and service respons
 12. [Runtime Operations and Deployment](#runtime-operations-and-deployment)
 13. [Failure Modes and Recovery](#failure-modes-and-recovery)
 14. [Observability and Debugging](#observability-and-debugging)
-15. [Code Reference Map](#code-reference-map)
+15. [End-to-End Testing](#end-to-end-testing)
+16. [Code Reference Map](#code-reference-map)
 
 ---
 
@@ -77,6 +78,8 @@ Responsibilities:
 - Apply SSRF protections for URL jobs.
 - Publish job creation events.
 - Serve REST status and SSE updates.
+- Manage project entities (CRUD, baseline promotion, job-to-project mapping).
+- Compute on-demand diffs between a project's baseline and current scan.
 
 Important entry points:
 
@@ -85,6 +88,9 @@ Important entry points:
 - ZIP intake: `services/platform-api/internal/api/handlers_jobs_zip_upload.go`
 - SSE: `services/platform-api/internal/api/handlers_sse.go`
 - SSRF validation: `services/platform-api/internal/api/security.go`
+- Project CRUD: `services/platform-api/internal/api/handlers_projects.go`
+- Project store: `services/platform-api/internal/project/store.go`
+- Diff engine: `services/platform-api/internal/api/handlers_diff.go`
 
 ### Orchestrator (`services/orchestrator`)
 
@@ -158,12 +164,17 @@ Responsibilities:
 - Fetch and render unified reports in text, markdown, and JSON formats.
 - Filter, sort, and truncate issues client-side (by severity, category, max count).
 - Enforce severity-based exit codes for CI/automation gating (`--fail-on`).
-- Manage project mode lifecycle: start dev server, poll readiness, submit scan, stop server.
+- Manage local project mode lifecycle: start dev server, poll readiness, submit scan, stop server.
+- Manage remote projects: create, list, show, update, delete, promote baseline.
+- Scan against remote projects with automatic baseline diffing (`--project`).
 - Discover available scanners from the API.
 
 Important entry points:
 
 - Command surface: `clients/cli/cobra_scan.go`, `cobra_project.go`, `cobra_report.go`
+- Remote project commands: `clients/cli/cobra_project_remote.go`, `cobra_project_update.go`
+- Remote project API client: `clients/cli/client_projects.go`
+- Diff rendering: `clients/cli/cobra_diff.go`
 - SSE streaming: `clients/cli/sse.go`
 - Report rendering: `clients/cli/report_output.go`, `report_output_markdown.go`
 - Issue filtering/sorting: `clients/cli/filter.go`, `report_output.go:selectIssues`
@@ -371,6 +382,35 @@ stageflow project [path]
   -> Stream progress and render report (same as scan flow)
   -> Send interrupt to dev server, wait for graceful shutdown
 ```
+
+### Remote Project Scan Flow
+
+```text
+stageflow scan --project my-app --format json
+  -> GET /api/v1/projects/my-app  (resolve URLs, scanners, baseline job ID)
+  -> POST /api/v1/jobs/urls { urls, modules, project_slug }
+  -> CLI opens SSE stream /api/v1/jobs/{id}/stream
+  -> On terminal state (DONE):
+       -> GET /api/v1/jobs/{id}/results  (scan report)
+       -> Render report envelope to stdout
+       -> If project has a baseline:
+            -> GET /api/v1/projects/my-app/diff?job_id={id}
+            -> Render diff envelope to stdout (separated by blank line)
+            -> Exit 1 if regressions detected (newIssues > 0)
+```
+
+### Baseline Diff
+
+The diff endpoint compares two scan reports issue-by-issue using the stable content-hash `id` on each issue. It returns:
+
+- `delta` — counts: `newIssues`, `fixedIssues`, `unchangedIssues`
+- `new[]` — issues in the current scan not present in the baseline
+- `fixed[]` — issues in the baseline not present in the current scan
+- `baseline` / `current` — metadata (job ID, scanned-at timestamp)
+
+The diff is computed on-demand by the Platform API, not stored. The project store tracks only which job ID is the current baseline.
+
+Project store: SQLite at `./projects.db` in the platform-api working directory. Schema covers projects, project-to-job mappings, scanner lists, and baseline pointers. Tests in `services/platform-api/internal/project/store_test.go`.
 
 ### SSE Progress Flow
 
@@ -662,6 +702,28 @@ Tooling docs: `docs/operations/devtools.md`.
 
 ---
 
+## End-to-End Testing
+
+### Golden E2E Test (`qa/e2e/project-scan-golden.sh`)
+
+The golden test exercises the full project scan → diff pipeline against a live stack:
+
+1. Create a project pointing at a clean HTML fixture (`/qa/baseline.html`, 0 axe violations).
+2. Run a scan with `--scanner axe`.
+3. Promote the scan as the project baseline.
+4. Update the project URL to a regression fixture (`/qa/regression.html`, 1 `image-alt` violation).
+5. Rescan — expect exit code 1 (regressions detected).
+6. Normalize non-deterministic fields (job IDs, timestamps, durations, paths) via jq.
+7. Compare normalized JSON against committed golden files with `diff -u`.
+8. Assert structural properties: 1 new issue, `ruleId=image-alt`, `severity=critical`, 0 fixed.
+9. Clean up the project.
+
+Fixture pages are static HTML served from `clients/web/static/qa/`. Golden files live in `qa/fixtures/project-golden/` and are auto-created on first run.
+
+The test requires `stageflow`, `jq`, `python3`, and `curl` on PATH, plus a reachable API at `STAGEFLOW_API_URL` (defaults to `https://stageflow.org`).
+
+---
+
 ## Code Reference Map
 
 | Area | File |
@@ -691,12 +753,23 @@ Tooling docs: `docs/operations/devtools.md`.
 | Event type contracts | `libs/go/events/types.go` |
 | Report schema | `libs/contracts/report/schema/unified-report.v2.schema.json` |
 | Scanner manifest schema | `libs/contracts/scanner-manifest/schema/scanner-manifest.schema.json` |
+| Project CRUD handlers | `services/platform-api/internal/api/handlers_projects.go` |
+| Project store (SQLite) | `services/platform-api/internal/project/store.go` |
+| Project store tests | `services/platform-api/internal/project/store_test.go` |
+| Diff endpoint | `services/platform-api/internal/api/handlers_diff.go` |
 | CLI scan command | `clients/cli/cobra_scan.go` |
-| CLI project mode | `clients/cli/cobra_project.go` |
+| CLI local project mode | `clients/cli/cobra_project.go` |
+| CLI remote project commands | `clients/cli/cobra_project_remote.go` |
+| CLI project update | `clients/cli/cobra_project_update.go` |
+| CLI project API client | `clients/cli/client_projects.go` |
+| CLI diff rendering | `clients/cli/cobra_diff.go` |
 | CLI report rendering | `clients/cli/report_output.go` |
 | CLI SSE streaming | `clients/cli/sse.go` |
 | CLI issue filtering | `clients/cli/filter.go` |
 | CLI dev server lifecycle | `clients/cli/dev_stack.go` |
 | CLI project config | `clients/cli/project_config.go` |
 | CLI types (API contracts) | `clients/cli/types.go` |
+| Golden E2E test | `qa/e2e/project-scan-golden.sh` |
+| QA fixture pages | `clients/web/static/qa/` |
+| Golden test fixtures | `qa/fixtures/project-golden/` |
 | Just command surface | `justfile` |

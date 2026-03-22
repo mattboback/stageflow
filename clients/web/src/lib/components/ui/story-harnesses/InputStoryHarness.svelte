@@ -10,7 +10,7 @@ interface Props {
 	onInput?: (value: string) => void;
 }
 
-const {
+let {
 	label = "Email",
 	placeholder = "name@example.com",
 	value = $bindable(""),
