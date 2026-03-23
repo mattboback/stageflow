@@ -52,6 +52,7 @@ async function getScanner(
 	scanner: ScannerBase;
 	manifestId: string;
 	manifestConfigSchema?: ManifestConfigSchema;
+	manifestMaxConcurrency?: number;
 }> {
 	const loadResult = await pluginLoader.load(scannerType);
 
@@ -78,6 +79,7 @@ async function getScanner(
 			scanner,
 			manifestId,
 			manifestConfigSchema: loadResult.plugin.manifest.configSchema,
+			manifestMaxConcurrency: loadResult.plugin.manifest.capabilities?.maxConcurrency,
 		};
 	}
 
@@ -120,11 +122,13 @@ export async function runWorkerMode(): Promise<void> {
 	let scanner: ScannerBase;
 	let manifestId = "";
 	let manifestConfigSchema: ManifestConfigSchema | undefined;
+	let manifestMaxConcurrency: number | undefined;
 	try {
 		const resolved = await getScanner(scannerType, pluginLoader);
 		scanner = resolved.scanner;
 		manifestId = resolved.manifestId;
 		manifestConfigSchema = resolved.manifestConfigSchema;
+		manifestMaxConcurrency = resolved.manifestMaxConcurrency;
 	} catch (err) {
 		logger.error("Failed to get scanner", {
 			type: scannerType,
@@ -135,6 +139,9 @@ export async function runWorkerMode(): Promise<void> {
 
 	const config = loadConfigFromEnv({
 		scannerName: scanner.metadata.name,
+		defaults: manifestMaxConcurrency !== undefined
+			? { concurrency: manifestMaxConcurrency }
+			: undefined,
 	});
 
 	try {
