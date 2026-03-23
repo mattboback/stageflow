@@ -23,8 +23,8 @@ import type {
 	ScannerStatus,
 	ScannerSummary,
 	SeverityCounts,
-	UnifiedReportV2,
-} from "../../../../../libs/contracts/report/generated/typescript/unified-report.v2";
+	UnifiedReportV2
+} from '../../../../../libs/contracts/report/generated/typescript/unified-report.v2';
 
 export type {
 	IssueSeverity,
@@ -39,7 +39,7 @@ export type {
 	ReportSummary,
 	ScannerStatus,
 	ScannerSummary,
-	UnifiedReportV2,
+	UnifiedReportV2
 };
 
 export type UnifiedReport = UnifiedReportV2;

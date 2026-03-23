@@ -1,19 +1,19 @@
 <script lang="ts">
-import type { ScanResult } from "$lib/types/scan";
+	import type { ScanResult } from '$lib/types/scan';
 
-import { Button, buttonVariants } from "$lib/components/ui";
-import { cn } from "$lib/utils";
-import { ArrowLeft, RefreshCw, XCircle } from "lucide-svelte";
+	import { Button, buttonVariants } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
+	import { ArrowLeft, RefreshCw, XCircle } from 'lucide-svelte';
 
-interface Props {
-	result: ScanResult | null;
-}
+	interface Props {
+		result: ScanResult | null;
+	}
 
-let { result }: Props = $props();
+	let { result }: Props = $props();
 
-function handleRetry() {
-	window.location.reload();
-}
+	function handleRetry() {
+		window.location.reload();
+	}
 </script>
 
 <div class="flex flex-col items-center justify-center space-y-6 py-12 text-center">

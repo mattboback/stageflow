@@ -1,8 +1,8 @@
-import type { Page } from "playwright";
+import type { Page } from 'playwright';
 
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { v4 as uuidv4 } from "uuid";
+import { existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { v4 as uuidv4 } from 'uuid';
 
 import type {
 	AxeScreenshotConfig,
@@ -14,21 +14,17 @@ import type {
 	ViolationCaptureFailure,
 	ViolationCaptureFailureReason,
 	ViolationCaptureStep,
-	ViolationScreenshotCaptureResult,
-} from "./types";
+	ViolationScreenshotCaptureResult
+} from './types';
 
-import { getScreenshotPolicy } from "../../config/rule-behaviors";
-import {
-	computeElementClip,
-	computeSingleTargetClip,
-	computeUnionClip,
-} from "./clip";
-import { buildFriendlyNodeInfo } from "./friendly-node";
-import { injectHighlightCSS, removeHighlightCSS } from "./highlight-css";
-import { compositeOverlay, generateThumbnail, saveScreenshot } from "./image";
-import { captureLocationInfo } from "./location";
-import { captureSemanticOverlayScreenshot } from "./semantic-overlay";
-import { extractAxeViolationTargets } from "./targets";
+import { getScreenshotPolicy } from '../../config/rule-behaviors';
+import { computeElementClip, computeSingleTargetClip, computeUnionClip } from './clip';
+import { buildFriendlyNodeInfo } from './friendly-node';
+import { injectHighlightCSS, removeHighlightCSS } from './highlight-css';
+import { compositeOverlay, generateThumbnail, saveScreenshot } from './image';
+import { captureLocationInfo } from './location';
+import { captureSemanticOverlayScreenshot } from './semantic-overlay';
+import { extractAxeViolationTargets } from './targets';
 
 export async function captureViolationScreenshot(input: {
 	page: Page;
@@ -37,47 +33,47 @@ export async function captureViolationScreenshot(input: {
 	cfg: AxeScreenshotConfig;
 }): Promise<ViolationScreenshotCaptureResult> {
 	if (!input.cfg.screenshotsEnabled) {
-		return { status: "skipped", reason: "disabled" };
+		return { status: 'skipped', reason: 'disabled' };
 	}
 
 	const policy = getScreenshotPolicy(input.violation.id);
-	if (policy === "semantic") {
+	if (policy === 'semantic') {
 		try {
 			const semanticResult = await captureSemanticOverlayScreenshot(input);
 			if (!semanticResult) {
 				return {
-					status: "failed",
+					status: 'failed',
 					failure: buildFailure(
-						"semantic",
-						"screenshot_failed",
-						"semantic overlay strategy returned no screenshot",
+						'semantic',
+						'screenshot_failed',
+						'semantic overlay strategy returned no screenshot'
 					),
-					fallbacks: [],
+					fallbacks: []
 				};
 			}
 
 			return {
-				status: "captured",
+				status: 'captured',
 				screenshot: semanticResult,
-				fallbacks: [],
+				fallbacks: []
 			};
 		} catch (error) {
 			return {
-				status: "failed",
-				failure: buildFailure("semantic", "screenshot_failed", error),
-				fallbacks: [],
+				status: 'failed',
+				failure: buildFailure('semantic', 'screenshot_failed', error),
+				fallbacks: []
 			};
 		}
 	}
 
-	if (policy === "never") {
-		return { status: "skipped", reason: "policy_never" };
+	if (policy === 'never') {
+		return { status: 'skipped', reason: 'policy_never' };
 	}
 
 	const { targets, selector } = extractAxeViolationTargets(input.violation);
 
-	const ext = input.cfg.outputFormat === "webp" ? ".webp" : ".png";
-	const screenshotFilename = `violation-${input.violation.id ?? "unknown"}-${uuidv4()}${ext}`;
+	const ext = input.cfg.outputFormat === 'webp' ? '.webp' : '.png';
+	const screenshotFilename = `violation-${input.violation.id ?? 'unknown'}-${uuidv4()}${ext}`;
 	const screenshotPath = join(input.resultsDir, screenshotFilename);
 
 	if (!existsSync(input.resultsDir)) {
@@ -88,18 +84,26 @@ export async function captureViolationScreenshot(input: {
 	const vw = viewport.width;
 	const vh = viewport.height;
 
-	const useCSSInjection = input.cfg.overlayMethod === "css-injection";
+	const useCSSInjection = input.cfg.overlayMethod === 'css-injection';
 	const fallbacks: ViolationCaptureFailure[] = [];
 
 	let locationInfo: PageLocationInfo | undefined;
 	let friendlyNode: FriendlyNodeInfo | undefined;
+	const buildCaptureContext = () => ({
+		screenshotPath,
+		screenshotFilename,
+		resultsDir: input.resultsDir,
+		cfg: input.cfg,
+		...(locationInfo !== undefined ? { locationInfo } : {}),
+		...(friendlyNode !== undefined ? { friendlyNode } : {})
+	});
 
 	try {
 		if (useCSSInjection && input.cfg.injectHighlight && targets.length > 0) {
 			try {
 				await injectHighlightCSS(input.page, targets, input.cfg);
 			} catch (error) {
-				fallbacks.push(buildFailure("union", "overlay_failed", error));
+				fallbacks.push(buildFailure('union', 'overlay_failed', error));
 			}
 		}
 
@@ -125,24 +129,19 @@ export async function captureViolationScreenshot(input: {
 				vh,
 				screenshotPath,
 				cfg: input.cfg,
-				returnBuffer: !useCSSInjection,
+				returnBuffer: !useCSSInjection
 			});
 			const unionResult = await finalizeStrategyCapture({
-				step: "union",
+				step: 'union',
 				useCSSInjection,
 				attempt: unionAttempt,
-				screenshotPath,
-				screenshotFilename,
-				resultsDir: input.resultsDir,
-				cfg: input.cfg,
-				locationInfo,
-				friendlyNode,
+				...buildCaptureContext()
 			});
-			if (unionResult.status === "captured") {
+			if (unionResult.status === 'captured') {
 				return {
-					status: "captured",
+					status: 'captured',
 					screenshot: unionResult.screenshot,
-					fallbacks,
+					fallbacks
 				};
 			}
 
@@ -157,24 +156,19 @@ export async function captureViolationScreenshot(input: {
 				vh,
 				screenshotPath,
 				cfg: input.cfg,
-				returnBuffer: !useCSSInjection && input.cfg.injectHighlight,
+				returnBuffer: !useCSSInjection && input.cfg.injectHighlight
 			});
 			const singleResult = await finalizeStrategyCapture({
-				step: "single-target",
+				step: 'single-target',
 				useCSSInjection,
 				attempt: singleAttempt,
-				screenshotPath,
-				screenshotFilename,
-				resultsDir: input.resultsDir,
-				cfg: input.cfg,
-				locationInfo,
-				friendlyNode,
+				...buildCaptureContext()
 			});
-			if (singleResult.status === "captured") {
+			if (singleResult.status === 'captured') {
 				return {
-					status: "captured",
+					status: 'captured',
 					screenshot: singleResult.screenshot,
-					fallbacks,
+					fallbacks
 				};
 			}
 
@@ -187,24 +181,19 @@ export async function captureViolationScreenshot(input: {
 				vh,
 				screenshotPath,
 				cfg: input.cfg,
-				returnBuffer: !useCSSInjection && input.cfg.injectHighlight,
+				returnBuffer: !useCSSInjection && input.cfg.injectHighlight
 			});
 			const elementResult = await finalizeStrategyCapture({
-				step: "element",
+				step: 'element',
 				useCSSInjection,
 				attempt: elementAttempt,
-				screenshotPath,
-				screenshotFilename,
-				resultsDir: input.resultsDir,
-				cfg: input.cfg,
-				locationInfo,
-				friendlyNode,
+				...buildCaptureContext()
 			});
-			if (elementResult.status === "captured") {
+			if (elementResult.status === 'captured') {
 				return {
-					status: "captured",
+					status: 'captured',
 					screenshot: elementResult.screenshot,
-					fallbacks,
+					fallbacks
 				};
 			}
 
@@ -214,15 +203,15 @@ export async function captureViolationScreenshot(input: {
 		const viewportResult = await tryViewportScreenshot({
 			page: input.page,
 			screenshotPath,
-			cfg: input.cfg,
+			cfg: input.cfg
 		});
 		if (!viewportResult.success) {
 			fallbacks.push(viewportResult.failure);
 
 			return {
-				status: "failed",
+				status: 'failed',
 				failure: viewportResult.failure,
-				fallbacks,
+				fallbacks
 			};
 		}
 
@@ -231,23 +220,23 @@ export async function captureViolationScreenshot(input: {
 			screenshotPath,
 			resultsDir: input.resultsDir,
 			cfg: input.cfg,
-			locationInfo,
-			friendlyNode,
+			...(locationInfo !== undefined ? { locationInfo } : {}),
+			...(friendlyNode !== undefined ? { friendlyNode } : {})
 		});
 
 		return {
-			status: "captured",
+			status: 'captured',
 			screenshot: finalized,
-			fallbacks,
+			fallbacks
 		};
 	} catch (error) {
-		const failure = buildFailure("viewport", "screenshot_failed", error);
+		const failure = buildFailure('viewport', 'screenshot_failed', error);
 		fallbacks.push(failure);
 
 		return {
-			status: "failed",
+			status: 'failed',
 			failure,
-			fallbacks,
+			fallbacks
 		};
 	} finally {
 		if (useCSSInjection) {
@@ -271,24 +260,26 @@ async function finalizeStrategyCapture(input: {
 	locationInfo?: PageLocationInfo;
 	friendlyNode?: FriendlyNodeInfo;
 }): Promise<
-	| { status: "captured"; screenshot: EnhancedScreenshotResult }
-	| { status: "failed"; failure: ViolationCaptureFailure }
+	| { status: 'captured'; screenshot: EnhancedScreenshotResult }
+	| { status: 'failed'; failure: ViolationCaptureFailure }
 > {
 	if (!input.attempt.success) {
-		return { status: "failed", failure: input.attempt.failure };
+		return { status: 'failed', failure: input.attempt.failure };
 	}
 
 	const overlayResult = await applyOverlayIfNeeded({
 		step: input.step,
 		useCSSInjection: input.useCSSInjection,
-		buffer: input.attempt.buffer,
-		elementBounds: input.attempt.elementBounds,
-		clipWidth: input.attempt.clipWidth,
 		screenshotPath: input.screenshotPath,
 		cfg: input.cfg,
+		...(input.attempt.buffer !== undefined ? { buffer: input.attempt.buffer } : {}),
+		...(input.attempt.elementBounds !== undefined
+			? { elementBounds: input.attempt.elementBounds }
+			: {}),
+		...(input.attempt.clipWidth !== undefined ? { clipWidth: input.attempt.clipWidth } : {})
 	});
 	if (!overlayResult.success) {
-		return { status: "failed", failure: overlayResult.failure };
+		return { status: 'failed', failure: overlayResult.failure };
 	}
 
 	try {
@@ -297,16 +288,18 @@ async function finalizeStrategyCapture(input: {
 			screenshotPath: input.screenshotPath,
 			resultsDir: input.resultsDir,
 			cfg: input.cfg,
-			locationInfo: input.locationInfo,
-			friendlyNode: input.friendlyNode,
-			elementBounds: input.attempt.elementBounds,
+			...(input.locationInfo !== undefined ? { locationInfo: input.locationInfo } : {}),
+			...(input.friendlyNode !== undefined ? { friendlyNode: input.friendlyNode } : {}),
+			...(input.attempt.elementBounds !== undefined
+				? { elementBounds: input.attempt.elementBounds }
+				: {})
 		});
 
-		return { status: "captured", screenshot };
+		return { status: 'captured', screenshot };
 	} catch (error) {
 		return {
-			status: "failed",
-			failure: buildFailure(input.step, "screenshot_failed", error),
+			status: 'failed',
+			failure: buildFailure(input.step, 'screenshot_failed', error)
 		};
 	}
 }
@@ -328,17 +321,18 @@ type StrategyAttemptResult = StrategyAttemptSuccess | StrategyAttemptFailure;
 function buildFailure(
 	step: ViolationCaptureStep,
 	reason: ViolationCaptureFailureReason,
-	error?: unknown,
+	error?: unknown
 ): ViolationCaptureFailure {
+	const message = errorToMessage(error);
 	return {
 		step,
 		reason,
-		message: errorToMessage(error),
+		...(message !== undefined ? { message } : {})
 	};
 }
 
 function errorToMessage(error: unknown): string | undefined {
-	if (typeof error === "string") {
+	if (typeof error === 'string') {
 		return error;
 	}
 
@@ -362,7 +356,7 @@ async function tryViewportScreenshot(input: {
 	} catch (error) {
 		return {
 			success: false,
-			failure: buildFailure("viewport", "screenshot_failed", error),
+			failure: buildFailure('viewport', 'screenshot_failed', error)
 		};
 	}
 }
@@ -376,18 +370,14 @@ async function finalizeViolationCapture(input: {
 	friendlyNode?: FriendlyNodeInfo;
 	elementBounds?: ElementBounds[];
 }): Promise<EnhancedScreenshotResult> {
-	const thumbnail = await generateThumbnail(
-		input.screenshotPath,
-		input.resultsDir,
-		input.cfg,
-	);
+	const thumbnail = await generateThumbnail(input.screenshotPath, input.resultsDir, input.cfg);
 
 	return {
 		screenshot: input.screenshotFilename,
 		thumbnail,
-		locationInfo: input.locationInfo,
-		friendlyNode: input.friendlyNode,
-		elementBounds: input.elementBounds,
+		...(input.locationInfo !== undefined ? { locationInfo: input.locationInfo } : {}),
+		...(input.friendlyNode !== undefined ? { friendlyNode: input.friendlyNode } : {}),
+		...(input.elementBounds !== undefined ? { elementBounds: input.elementBounds } : {})
 	};
 }
 
@@ -399,15 +389,8 @@ async function applyOverlayIfNeeded(input: {
 	clipWidth?: number;
 	screenshotPath: string;
 	cfg: AxeScreenshotConfig;
-}): Promise<
-	{ success: true } | { success: false; failure: ViolationCaptureFailure }
-> {
-	if (
-		input.useCSSInjection ||
-		!input.buffer ||
-		!input.elementBounds ||
-		!input.clipWidth
-	) {
+}): Promise<{ success: true } | { success: false; failure: ViolationCaptureFailure }> {
+	if (input.useCSSInjection || !input.buffer || !input.elementBounds || !input.clipWidth) {
 		return { success: true };
 	}
 
@@ -416,7 +399,7 @@ async function applyOverlayIfNeeded(input: {
 			input.buffer,
 			input.elementBounds,
 			input.cfg,
-			input.clipWidth,
+			input.clipWidth
 		);
 		await saveScreenshot(overlaidBuffer, input.screenshotPath, input.cfg);
 
@@ -424,7 +407,7 @@ async function applyOverlayIfNeeded(input: {
 	} catch (error) {
 		return {
 			success: false,
-			failure: buildFailure(input.step, "overlay_failed", error),
+			failure: buildFailure(input.step, 'overlay_failed', error)
 		};
 	}
 }
@@ -442,11 +425,7 @@ async function tryUnionBoundingBoxScreenshot(input: {
 	if (targetSelectors.length === 0) {
 		return {
 			success: false,
-			failure: buildFailure(
-				"union",
-				"clip_invalid",
-				"no target selectors available",
-			),
+			failure: buildFailure('union', 'clip_invalid', 'no target selectors available')
 		};
 	}
 
@@ -463,7 +442,7 @@ async function tryUnionBoundingBoxScreenshot(input: {
 		try {
 			const locator = input.page.locator(anchorSelector).first();
 			await locator.scrollIntoViewIfNeeded({
-				timeout: input.cfg.scrollTimeout,
+				timeout: input.cfg.scrollTimeout
 			});
 		} catch {
 			hadScrollError = true;
@@ -475,14 +454,14 @@ async function tryUnionBoundingBoxScreenshot(input: {
 		} catch (error) {
 			return {
 				success: false,
-				failure: buildFailure("union", "screenshot_failed", error),
+				failure: buildFailure('union', 'screenshot_failed', error)
 			};
 		}
 
 		const candidateBoxes = await collectVisibleTargetBoxes({
 			page: input.page,
 			targetSelectors,
-			vh: input.vh,
+			vh: input.vh
 		});
 		if (candidateBoxes.length > bestCapturedBoxes.length) {
 			bestCapturedBoxes = candidateBoxes;
@@ -497,38 +476,26 @@ async function tryUnionBoundingBoxScreenshot(input: {
 		return {
 			success: false,
 			failure: hadScrollError
-				? buildFailure(
-						"union",
-						"scroll_failed",
-						"failed to scroll to any target",
-					)
-				: buildFailure(
-						"union",
-						"bounding_box_missing",
-						"no visible target bounding boxes",
-					),
+				? buildFailure('union', 'scroll_failed', 'failed to scroll to any target')
+				: buildFailure('union', 'bounding_box_missing', 'no visible target bounding boxes')
 		};
 	}
 
 	const computed = computeUnionClip(
 		bestCapturedBoxes,
 		{ width: input.vw, height: input.vh },
-		input.cfg,
+		input.cfg
 	);
 	if (!computed) {
 		return {
 			success: false,
-			failure: buildFailure(
-				"union",
-				"clip_invalid",
-				"unable to compute union clip",
-			),
+			failure: buildFailure('union', 'clip_invalid', 'unable to compute union clip')
 		};
 	}
 
 	try {
 		const screenshotBuffer = await input.page.screenshot({
-			clip: computed.clip,
+			clip: computed.clip
 		});
 		const bufferData = Buffer.from(screenshotBuffer);
 
@@ -537,7 +504,7 @@ async function tryUnionBoundingBoxScreenshot(input: {
 				success: true,
 				elementBounds: computed.elementBounds,
 				buffer: bufferData,
-				clipWidth: computed.clip.width,
+				clipWidth: computed.clip.width
 			};
 		}
 
@@ -546,12 +513,12 @@ async function tryUnionBoundingBoxScreenshot(input: {
 		return {
 			success: true,
 			elementBounds: computed.elementBounds,
-			clipWidth: computed.clip.width,
+			clipWidth: computed.clip.width
 		};
 	} catch (error) {
 		return {
 			success: false,
-			failure: buildFailure("union", "screenshot_failed", error),
+			failure: buildFailure('union', 'screenshot_failed', error)
 		};
 	}
 }
@@ -621,34 +588,30 @@ async function trySingleTargetViewportScreenshot(input: {
 			if (scrollError) {
 				return {
 					success: false,
-					failure: buildFailure("single-target", "scroll_failed", scrollError),
+					failure: buildFailure('single-target', 'scroll_failed', scrollError)
 				};
 			}
 
 			return {
 				success: false,
 				failure: buildFailure(
-					"single-target",
-					"bounding_box_missing",
-					"target element has no bounding box",
-				),
+					'single-target',
+					'bounding_box_missing',
+					'target element has no bounding box'
+				)
 			};
 		}
 
-		const clip = computeSingleTargetClip(
-			box,
-			{ width: input.vw, height: input.vh },
-			input.cfg,
-		);
+		const clip = computeSingleTargetClip(box, { width: input.vw, height: input.vh }, input.cfg);
 		if (!clip) {
 			return {
 				success: false,
-				failure: buildFailure("single-target", "clip_invalid"),
+				failure: buildFailure('single-target', 'clip_invalid')
 			};
 		}
 
 		const buffer = await input.page.screenshot({
-			clip,
+			clip
 		});
 
 		const bufferData = Buffer.from(buffer);
@@ -658,8 +621,8 @@ async function trySingleTargetViewportScreenshot(input: {
 				y: Math.max(0, Math.round(box.y - clip.y)),
 				width: Math.round(box.width),
 				height: Math.round(box.height),
-				selector: input.selector,
-			},
+				selector: input.selector
+			}
 		];
 
 		if (input.returnBuffer) {
@@ -667,7 +630,7 @@ async function trySingleTargetViewportScreenshot(input: {
 				success: true,
 				elementBounds,
 				buffer: bufferData,
-				clipWidth: clip.width,
+				clipWidth: clip.width
 			};
 		}
 
@@ -677,7 +640,7 @@ async function trySingleTargetViewportScreenshot(input: {
 	} catch (error) {
 		return {
 			success: false,
-			failure: buildFailure("single-target", "screenshot_failed", error),
+			failure: buildFailure('single-target', 'screenshot_failed', error)
 		};
 	}
 }
@@ -697,19 +660,15 @@ async function tryElementScreenshot(input: {
 		if (!box) {
 			return {
 				success: false,
-				failure: buildFailure("element", "bounding_box_missing"),
+				failure: buildFailure('element', 'bounding_box_missing')
 			};
 		}
 
-		const clip = computeElementClip(
-			box,
-			{ width: input.vw, height: input.vh },
-			input.cfg,
-		);
+		const clip = computeElementClip(box, { width: input.vw, height: input.vh }, input.cfg);
 		if (!clip) {
 			return {
 				success: false,
-				failure: buildFailure("element", "clip_invalid"),
+				failure: buildFailure('element', 'clip_invalid')
 			};
 		}
 
@@ -722,8 +681,8 @@ async function tryElementScreenshot(input: {
 				y: Math.max(0, Math.round(box.y - clip.y)),
 				width: Math.round(box.width),
 				height: Math.round(box.height),
-				selector: input.selector,
-			},
+				selector: input.selector
+			}
 		];
 
 		if (input.returnBuffer) {
@@ -731,7 +690,7 @@ async function tryElementScreenshot(input: {
 				success: true,
 				elementBounds,
 				buffer: bufferData,
-				clipWidth: clip.width,
+				clipWidth: clip.width
 			};
 		}
 
@@ -741,7 +700,7 @@ async function tryElementScreenshot(input: {
 	} catch (error) {
 		return {
 			success: false,
-			failure: buildFailure("element", "screenshot_failed", error),
+			failure: buildFailure('element', 'screenshot_failed', error)
 		};
 	}
 }

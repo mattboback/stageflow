@@ -1,8 +1,4 @@
-export function getNextFocusIndex(
-	length: number,
-	activeIndex: number,
-	shiftKey: boolean,
-): number {
+export function getNextFocusIndex(length: number, activeIndex: number, shiftKey: boolean): number {
 	if (length <= 0) return -1;
 	if (activeIndex < 0 || activeIndex >= length) {
 		return shiftKey ? length - 1 : 0;

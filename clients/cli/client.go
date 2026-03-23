@@ -30,7 +30,7 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 	}
 }
 
-func (c *Client) buildURL(apiPath string, query url.Values) (*url.URL, error) {
+func (c *Client) buildURL(apiPath string) (*url.URL, error) {
 	parsedBase, err := url.Parse(c.BaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid API URL %q: %w", c.BaseURL, err)
@@ -41,12 +41,7 @@ func (c *Client) buildURL(apiPath string, query url.Values) (*url.URL, error) {
 		return nil, fmt.Errorf("invalid path %q: %w", apiPath, err)
 	}
 
-	resolved := parsedBase.ResolveReference(pathURL)
-	if query != nil {
-		resolved.RawQuery = query.Encode()
-	}
-
-	return resolved, nil
+	return parsedBase.ResolveReference(pathURL), nil
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
@@ -58,7 +53,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 }
 
 func (c *Client) getJSON(ctx context.Context, apiPath string, dest any) error {
-	reqURL, err := c.buildURL(apiPath, nil)
+	reqURL, err := c.buildURL(apiPath)
 	if err != nil {
 		return err
 	}
@@ -92,24 +87,52 @@ func (c *Client) getJSON(ctx context.Context, apiPath string, dest any) error {
 	return nil
 }
 
-func (c *Client) postJSON(ctx context.Context, apiPath string, body any, dest any) error {
-	reqURL, err := c.buildURL(apiPath, nil)
+func marshalRequestBody(body any) (io.Reader, error) {
+	if body == nil {
+		return http.NoBody, nil
+	}
+
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	return bytes.NewReader(payload), nil
+}
+
+func decodeJSONResponse(resp *http.Response, dest any) error {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		bodyBytes, err := readResponseBody(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	if dest == nil {
+		return nil
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(dest); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) sendJSON(ctx context.Context, method, apiPath string, body any, dest any) error {
+	reqURL, err := c.buildURL(apiPath)
 	if err != nil {
 		return err
 	}
 
-	var reqBody io.Reader
-
-	if body != nil {
-		payload, marshalErr := json.Marshal(body)
-		if marshalErr != nil {
-			return fmt.Errorf("failed to marshal request body: %w", marshalErr)
-		}
-
-		reqBody = bytes.NewReader(payload)
+	reqBody, err := marshalRequestBody(body)
+	if err != nil {
+		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL.String(), reqBody)
+	req, err := http.NewRequestWithContext(ctx, method, reqURL.String(), reqBody)
 	if err != nil {
 		return err
 	}
@@ -123,77 +146,19 @@ func (c *Client) postJSON(ctx context.Context, apiPath string, body any, dest an
 
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		bodyBytes, readErr := readResponseBody(resp.Body)
-		if readErr != nil {
-			return readErr
-		}
+	return decodeJSONResponse(resp, dest)
+}
 
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	if dest != nil {
-		decodeErr := json.NewDecoder(resp.Body).Decode(dest)
-		if decodeErr != nil {
-			return fmt.Errorf("failed to decode response: %w", decodeErr)
-		}
-	}
-
-	return nil
+func (c *Client) postJSON(ctx context.Context, apiPath string, body any, dest any) error {
+	return c.sendJSON(ctx, http.MethodPost, apiPath, body, dest)
 }
 
 func (c *Client) patchJSON(ctx context.Context, apiPath string, body any, dest any) error {
-	reqURL, err := c.buildURL(apiPath, nil)
-	if err != nil {
-		return err
-	}
-
-	var reqBody io.Reader
-
-	if body != nil {
-		payload, marshalErr := json.Marshal(body)
-		if marshalErr != nil {
-			return fmt.Errorf("failed to marshal request body: %w", marshalErr)
-		}
-
-		reqBody = bytes.NewReader(payload)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, reqURL.String(), reqBody)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
-	}
-
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		bodyBytes, readErr := readResponseBody(resp.Body)
-		if readErr != nil {
-			return readErr
-		}
-
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	if dest != nil {
-		decodeErr := json.NewDecoder(resp.Body).Decode(dest)
-		if decodeErr != nil {
-			return fmt.Errorf("failed to decode response: %w", decodeErr)
-		}
-	}
-
-	return nil
+	return c.sendJSON(ctx, http.MethodPatch, apiPath, body, dest)
 }
 
 func (c *Client) deleteJSON(ctx context.Context, apiPath string) error {
-	reqURL, err := c.buildURL(apiPath, nil)
+	reqURL, err := c.buildURL(apiPath)
 	if err != nil {
 		return err
 	}

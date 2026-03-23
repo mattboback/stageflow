@@ -1,21 +1,21 @@
-import path from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import path from 'node:path';
 
-import type { ScannerBase } from "../scanner-base";
-import type { ScannerLogger } from "../types";
+import type { ScannerBase } from '../scanner-base';
+import type { ScannerLogger } from '../types';
 import type {
 	PluginInfo,
 	PluginLoadResult,
 	PluginLoaderConfig,
-	ScannerPlugin,
-} from "./plugin-loader-types";
+	ScannerPlugin
+} from './plugin-loader-types';
 
-import { resolveEntryPath } from "../manifest";
+import { resolveEntryPath } from '../manifest';
 
 export async function loadPluginFromManifest(
 	info: PluginInfo,
 	config: PluginLoaderConfig,
-	logger: ScannerLogger,
+	logger: ScannerLogger
 ): Promise<PluginLoadResult> {
 	try {
 		const manifestDir = path.dirname(info.manifestPath);
@@ -24,19 +24,16 @@ export async function loadPluginFromManifest(
 		if (!(await fs.pathExists(entryPath))) {
 			return {
 				success: false,
-				error: `Entry point not found: ${entryPath}`,
+				error: `Entry point not found: ${entryPath}`
 			};
 		}
 
-		const module: Record<string, unknown> = (await import(entryPath)) as Record<
-			string,
-			unknown
-		>;
+		const module: Record<string, unknown> = (await import(entryPath)) as Record<string, unknown>;
 		const factoryResult = resolveFactory(module, info);
 		if (!factoryResult.ok) {
 			return {
 				success: false,
-				error: factoryResult.error,
+				error: factoryResult.error
 			};
 		}
 
@@ -45,21 +42,21 @@ export async function loadPluginFromManifest(
 		if (validationError) {
 			return {
 				success: false,
-				error: validationError,
+				error: validationError
 			};
 		}
 
 		const plugin: ScannerPlugin = {
 			manifest: info.manifest,
 			factory,
-			path: manifestDir,
+			path: manifestDir
 		};
 
 		if (config.verbose) {
-			logger.info("Plugin loaded", {
+			logger.info('Plugin loaded', {
 				id: info.manifest.id,
 				version: info.manifest.version,
-				path: manifestDir,
+				path: manifestDir
 			});
 		}
 
@@ -67,53 +64,47 @@ export async function loadPluginFromManifest(
 	} catch (err) {
 		return {
 			success: false,
-			error: err instanceof Error ? err.message : String(err),
+			error: err instanceof Error ? err.message : String(err)
 		};
 	}
 }
 
-type FactoryResolution =
-	| { ok: true; factory: () => ScannerBase }
-	| { ok: false; error: string };
+type FactoryResolution = { ok: true; factory: () => ScannerBase } | { ok: false; error: string };
 
-function resolveFactory(
-	module: Record<string, unknown>,
-	info: PluginInfo,
-): FactoryResolution {
+function resolveFactory(module: Record<string, unknown>, info: PluginInfo): FactoryResolution {
 	if (info.manifest.entry.factoryName) {
 		const factoryFn = module[info.manifest.entry.factoryName];
-		if (typeof factoryFn !== "function") {
+		if (typeof factoryFn !== 'function') {
 			return {
 				ok: false,
-				error: `Factory function not found: ${info.manifest.entry.factoryName}`,
+				error: `Factory function not found: ${info.manifest.entry.factoryName}`
 			};
 		}
 
 		return { ok: true, factory: factoryFn as () => ScannerBase };
 	}
 
-	const exportName = info.manifest.entry.exportName?.trim() ?? "default";
-	const ScannerClass =
-		exportName === "default" ? module.default : module[exportName];
+	const exportName = info.manifest.entry.exportName?.trim() ?? 'default';
+	const ScannerClass = exportName === 'default' ? module.default : module[exportName];
 
 	if (!ScannerClass) {
 		return {
 			ok: false,
-			error: `Export not found: ${exportName}`,
+			error: `Export not found: ${exportName}`
 		};
 	}
 
-	if (typeof ScannerClass !== "function") {
+	if (typeof ScannerClass !== 'function') {
 		return {
 			ok: false,
-			error: "Export is not a class or constructor",
+			error: 'Export is not a class or constructor'
 		};
 	}
 
 	type ScannerConstructor = new () => ScannerBase;
 	return {
 		ok: true,
-		factory: () => new (ScannerClass as ScannerConstructor)(),
+		factory: () => new (ScannerClass as ScannerConstructor)()
 	};
 }
 
@@ -121,8 +112,8 @@ function validateFactory(factory: () => ScannerBase): string | undefined {
 	try {
 		const testInstance = factory();
 		// metadata is abstract on ScannerBase so must be implemented by subclasses
-		if (typeof testInstance.scanPage !== "function") {
-			return "Scanner does not implement required interface (scanPage method)";
+		if (typeof testInstance.scanPage !== 'function') {
+			return 'Scanner does not implement required interface (scanPage method)';
 		}
 	} catch (err) {
 		return `Failed to instantiate scanner: ${err instanceof Error ? err.message : String(err)}`;

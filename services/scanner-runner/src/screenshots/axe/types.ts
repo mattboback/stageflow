@@ -1,4 +1,4 @@
-import type { IssueSeverity } from "../../core/types";
+import type { IssueSeverity } from '../../core/types';
 
 export interface AxeViolation {
 	id?: string;
@@ -101,19 +101,14 @@ export interface EnhancedScreenshotResult {
 	elementBounds?: ElementBounds[]; // Bounding boxes relative to screenshot for overlay
 }
 
-export type ViolationCaptureStep =
-	| "semantic"
-	| "union"
-	| "single-target"
-	| "element"
-	| "viewport";
+export type ViolationCaptureStep = 'semantic' | 'union' | 'single-target' | 'element' | 'viewport';
 
 export type ViolationCaptureFailureReason =
-	| "scroll_failed"
-	| "bounding_box_missing"
-	| "clip_invalid"
-	| "screenshot_failed"
-	| "overlay_failed";
+	| 'scroll_failed'
+	| 'bounding_box_missing'
+	| 'clip_invalid'
+	| 'screenshot_failed'
+	| 'overlay_failed';
 
 export interface ViolationCaptureFailure {
 	step: ViolationCaptureStep;
@@ -123,23 +118,23 @@ export interface ViolationCaptureFailure {
 
 export type ViolationScreenshotCaptureResult =
 	| {
-			status: "captured";
+			status: 'captured';
 			screenshot: EnhancedScreenshotResult;
 			fallbacks: ViolationCaptureFailure[];
 	  }
 	| {
-			status: "skipped";
-			reason: "disabled" | "policy_never";
+			status: 'skipped';
+			reason: 'disabled' | 'policy_never';
 	  }
 	| {
-			status: "failed";
+			status: 'failed';
 			failure: ViolationCaptureFailure;
 			fallbacks: ViolationCaptureFailure[];
 	  };
 
-export type HighlightStyle = "solid" | "dashed";
-export type OutputFormat = "png" | "webp";
-export type OverlayMethod = "css-injection" | "sharp-composite";
+export type HighlightStyle = 'solid' | 'dashed';
+export type OutputFormat = 'png' | 'webp';
+export type OverlayMethod = 'css-injection' | 'sharp-composite';
 
 export interface AxeScreenshotConfig {
 	screenshotsEnabled: boolean;

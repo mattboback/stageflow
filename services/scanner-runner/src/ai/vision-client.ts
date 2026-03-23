@@ -1,11 +1,11 @@
-import { setTimeout as delay } from "node:timers/promises";
-import sharp from "sharp";
+import { setTimeout as delay } from 'node:timers/promises';
+import sharp from 'sharp';
 
-import type { VisionConfig, VisionMessage, VisionResponse } from "./types";
+import type { VisionConfig, VisionMessage, VisionResponse } from './types';
 
-import { isPlainObject } from "./json";
+import { isPlainObject } from './json';
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 interface RetryConfig {
 	maxAttempts: number;
@@ -56,7 +56,7 @@ export class VisionClient {
 		const retryConfig = config.retry;
 		this.retry = {
 			maxAttempts: retryConfig?.maxAttempts ?? 1,
-			baseDelayMs: retryConfig?.baseDelayMs ?? 500,
+			baseDelayMs: retryConfig?.baseDelayMs ?? 500
 		};
 	}
 
@@ -65,12 +65,12 @@ export class VisionClient {
 
 		const messages: VisionMessage[] = [
 			{
-				role: "user",
+				role: 'user',
 				content: [
-					{ type: "text", text: prompt },
-					{ type: "image_url", image_url: { url: dataUrl } },
-				],
-			},
+					{ type: 'text', text: prompt },
+					{ type: 'image_url', image_url: { url: dataUrl } }
+				]
+			}
 		];
 
 		return this.chat(messages);
@@ -85,9 +85,7 @@ export class VisionClient {
 		}
 	}
 
-	private async chatWithRetry(
-		messages: VisionMessage[],
-	): Promise<VisionResponse> {
+	private async chatWithRetry(messages: VisionMessage[]): Promise<VisionResponse> {
 		const attempts = Math.max(1, this.retry.maxAttempts);
 
 		for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -107,7 +105,7 @@ export class VisionClient {
 			}
 		}
 
-		throw new Error("unreachable");
+		throw new Error('unreachable');
 	}
 
 	private async chatOnce(messages: VisionMessage[]): Promise<VisionResponse> {
@@ -119,31 +117,27 @@ export class VisionClient {
 
 		try {
 			const response = await fetch(OPENROUTER_API_URL, {
-				method: "POST",
+				method: 'POST',
 				headers: this.buildHeaders(),
 				body: JSON.stringify({
 					model: this.config.model,
 					messages,
-					max_tokens: this.config.maxTokens,
+					max_tokens: this.config.maxTokens
 				}),
-				signal: controller.signal,
+				signal: controller.signal
 			});
 
 			const responseText = await response.text();
 			const parsed = safeJsonParse(responseText);
 
 			if (!response.ok) {
-				const details = isPlainObject(parsed)
-					? JSON.stringify(parsed)
-					: responseText;
-				throw new Error(
-					`OpenRouter request failed (${response.status}): ${details}`,
-				);
+				const details = isPlainObject(parsed) ? JSON.stringify(parsed) : responseText;
+				throw new Error(`OpenRouter request failed (${response.status}): ${details}`);
 			}
 
 			const content = extractContent(parsed);
 			if (!content) {
-				throw new Error("OpenRouter response missing assistant content");
+				throw new Error('OpenRouter response missing assistant content');
 			}
 
 			const usage = extractUsage(parsed);
@@ -156,42 +150,40 @@ export class VisionClient {
 	private buildHeaders(): Record<string, string> {
 		const headers: Record<string, string> = {
 			Authorization: `Bearer ${this.config.apiKey}`,
-			"Content-Type": "application/json",
-			Accept: "application/json",
+			'Content-Type': 'application/json',
+			Accept: 'application/json'
 		};
 
 		if (this.config.appReferer) {
-			headers["HTTP-Referer"] = this.config.appReferer;
+			headers['HTTP-Referer'] = this.config.appReferer;
 		}
 
 		if (this.config.appTitle) {
-			headers["X-Title"] = this.config.appTitle;
+			headers['X-Title'] = this.config.appTitle;
 		}
 
 		return headers;
 	}
 
-	private async prepareImageDataUrl(
-		image: Buffer,
-	): Promise<{ mimeType: string; dataUrl: string }> {
+	private async prepareImageDataUrl(image: Buffer): Promise<{ mimeType: string; dataUrl: string }> {
 		const maxBytes = this.config.maxImageBytes;
 		if (!maxBytes || image.byteLength <= maxBytes) {
 			return {
-				mimeType: "image/png",
-				dataUrl: `data:image/png;base64,${image.toString("base64")}`,
+				mimeType: 'image/png',
+				dataUrl: `data:image/png;base64,${image.toString('base64')}`
 			};
 		}
 
 		const prepared = await this.compressToMaxBytes(image, maxBytes);
 		return {
 			mimeType: prepared.mimeType,
-			dataUrl: `data:${prepared.mimeType};base64,${prepared.buffer.toString("base64")}`,
+			dataUrl: `data:${prepared.mimeType};base64,${prepared.buffer.toString('base64')}`
 		};
 	}
 
 	private async compressToMaxBytes(
 		input: Buffer,
-		maxBytes: number,
+		maxBytes: number
 	): Promise<{ buffer: Buffer; mimeType: string }> {
 		let buffer = input;
 
@@ -199,7 +191,7 @@ export class VisionClient {
 			const quality = Math.max(30, 80 - pass * 10);
 			const jpeg = await sharp(buffer).jpeg({ quality }).toBuffer();
 			if (jpeg.byteLength <= maxBytes) {
-				return { buffer: jpeg, mimeType: "image/jpeg" };
+				return { buffer: jpeg, mimeType: 'image/jpeg' };
 			}
 
 			const metadata = await sharp(jpeg).metadata();
@@ -215,13 +207,13 @@ export class VisionClient {
 				.toBuffer();
 
 			if (resized.byteLength <= maxBytes) {
-				return { buffer: resized, mimeType: "image/jpeg" };
+				return { buffer: resized, mimeType: 'image/jpeg' };
 			}
 
 			buffer = resized;
 		}
 
-		return { buffer, mimeType: "image/jpeg" };
+		return { buffer, mimeType: 'image/jpeg' };
 	}
 }
 
@@ -259,14 +251,14 @@ function extractContent(response: unknown): string | undefined {
 	}
 
 	const content = message.content;
-	if (typeof content !== "string") {
+	if (typeof content !== 'string') {
 		return undefined;
 	}
 
 	return content;
 }
 
-function extractUsage(response: unknown): VisionResponse["usage"] | undefined {
+function extractUsage(response: unknown): VisionResponse['usage'] | undefined {
 	if (!isPlainObject(response)) {
 		return undefined;
 	}
@@ -281,9 +273,9 @@ function extractUsage(response: unknown): VisionResponse["usage"] | undefined {
 	const totalTokens = usage.total_tokens;
 
 	if (
-		typeof promptTokens !== "number" ||
-		typeof completionTokens !== "number" ||
-		typeof totalTokens !== "number"
+		typeof promptTokens !== 'number' ||
+		typeof completionTokens !== 'number' ||
+		typeof totalTokens !== 'number'
 	) {
 		return undefined;
 	}
@@ -298,11 +290,11 @@ function isRetryableError(err: unknown): boolean {
 
 	const message = err.message.toLowerCase();
 	return (
-		message.includes("429") ||
-		message.includes("rate") ||
-		message.includes("timeout") ||
-		message.includes("econnreset") ||
-		message.includes("socket") ||
-		message.includes("aborterror")
+		message.includes('429') ||
+		message.includes('rate') ||
+		message.includes('timeout') ||
+		message.includes('econnreset') ||
+		message.includes('socket') ||
+		message.includes('aborterror')
 	);
 }

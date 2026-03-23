@@ -1,14 +1,14 @@
-import path from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import path from 'node:path';
 
-import type { ScannerLogger, StorageProvider } from "../../core/types";
+import type { ScannerLogger, StorageProvider } from '../../core/types';
 
 export async function uploadAiNavigatorTraces({
 	storageProvider,
 	bucket,
 	prefix,
 	resultsDir,
-	logger,
+	logger
 }: {
 	storageProvider: StorageProvider;
 	bucket: string;
@@ -23,20 +23,16 @@ export async function uploadAiNavigatorTraces({
 				continue;
 			}
 
-			const tracePath = path.join(resultsDir, entry.name, "ai-trace.json");
+			const tracePath = path.join(resultsDir, entry.name, 'ai-trace.json');
 			if (!(await fs.pathExists(tracePath))) {
 				continue;
 			}
 
-			await storageProvider.upload(
-				bucket,
-				`${prefix}/${entry.name}/ai-trace.json`,
-				tracePath,
-			);
+			await storageProvider.upload(bucket, `${prefix}/${entry.name}/ai-trace.json`, tracePath);
 		}
 	} catch (err) {
-		logger.warn("Failed to upload ai-navigator traces", {
-			error: err instanceof Error ? err.message : String(err),
+		logger.warn('Failed to upload ai-navigator traces', {
+			error: err instanceof Error ? err.message : String(err)
 		});
 	}
 }

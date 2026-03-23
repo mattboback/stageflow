@@ -4,15 +4,15 @@
  * Minimal screenshot utilities used by scanners (full-page + highlighted capture).
  */
 
-import type { Page } from "playwright";
+import type { Page } from 'playwright';
 
-import sharp from "sharp";
+import sharp from 'sharp';
 
-import type { ScannerLogger } from "./types";
+import type { ScannerLogger } from './types';
 
-import { createLogger } from "../utils/logger";
+import { createLogger } from '../utils/logger';
 
-type ImageFormat = "png" | "jpeg" | "webp";
+type ImageFormat = 'png' | 'jpeg' | 'webp';
 
 interface ScreenshotResult {
 	buffer: Buffer;
@@ -48,7 +48,7 @@ interface FullPageCaptureOptions {
 interface HighlightStyle {
 	borderColor?: string;
 	borderWidth?: number;
-	borderStyle?: "solid" | "dashed" | "dotted";
+	borderStyle?: 'solid' | 'dashed' | 'dotted';
 	backgroundColor?: string;
 	opacity?: number;
 }
@@ -67,16 +67,16 @@ export interface ScreenshotService {
 	captureFullPage(
 		page: Page,
 		options?: {
-			format?: "png" | "jpeg" | "webp";
+			format?: 'png' | 'jpeg' | 'webp';
 			quality?: number;
 			scale?: number;
 			timeout?: number;
-		},
+		}
 	): Promise<{
 		buffer: Buffer;
 		width: number;
 		height: number;
-		format: "png" | "jpeg" | "webp";
+		format: 'png' | 'jpeg' | 'webp';
 	}>;
 	captureWithHighlights(
 		page: Page,
@@ -85,30 +85,30 @@ export interface ScreenshotService {
 			style?: {
 				borderColor?: string;
 				borderWidth?: number;
-				borderStyle?: "solid" | "dashed" | "dotted";
+				borderStyle?: 'solid' | 'dashed' | 'dotted';
 				backgroundColor?: string;
 				opacity?: number;
 			};
 		}[],
 		options?: {
-			format?: "png" | "jpeg" | "webp";
+			format?: 'png' | 'jpeg' | 'webp';
 			quality?: number;
 			scale?: number;
 			timeout?: number;
 			defaultStyle?: {
 				borderColor?: string;
 				borderWidth?: number;
-				borderStyle?: "solid" | "dashed" | "dotted";
+				borderStyle?: 'solid' | 'dashed' | 'dotted';
 				backgroundColor?: string;
 				opacity?: number;
 			};
 			maxTargets?: number;
-		},
+		}
 	): Promise<{
 		buffer: Buffer;
 		width: number;
 		height: number;
-		format: "png" | "jpeg" | "webp";
+		format: 'png' | 'jpeg' | 'webp';
 		highlightedElements: {
 			selector: string;
 			bounds: { x: number; y: number; width: number; height: number };
@@ -118,37 +118,40 @@ export interface ScreenshotService {
 }
 
 const DEFAULT_HIGHLIGHT_STYLE: HighlightStyle = {
-	borderColor: "#ff0000",
+	borderColor: '#ff0000',
 	borderWidth: 3,
-	borderStyle: "solid",
-	backgroundColor: "rgba(255, 0, 0, 0.1)",
-	opacity: 1,
+	borderStyle: 'solid',
+	backgroundColor: 'rgba(255, 0, 0, 0.1)',
+	opacity: 1
 };
 
 class DefaultScreenshotService implements ScreenshotService {
 	private readonly logger: ScannerLogger;
 
 	constructor(logger?: ScannerLogger) {
-		this.logger = logger ?? createLogger("ScreenshotService");
+		this.logger = logger ?? createLogger('ScreenshotService');
 	}
 
 	async captureFullPage(
 		page: Page,
-		options: FullPageCaptureOptions = {},
+		options: FullPageCaptureOptions = {}
 	): Promise<ScreenshotResult> {
-		const { format = "png", quality, scale = 1, timeout = 30_000 } = options;
+		const { format = 'png', quality, scale = 1, timeout = 30_000 } = options;
 
 		try {
-			const buffer = await page.screenshot({
+			const screenshotOptions = {
 				fullPage: true,
-				type: format === "webp" ? "png" : format,
-				quality: format === "jpeg" ? quality : undefined,
+				type: format === 'webp' ? 'png' : format,
 				timeout,
-				scale: scale === 1 ? "device" : "css",
+				scale: scale === 1 ? 'device' : 'css',
+				...(format === 'jpeg' && quality !== undefined ? { quality } : {})
+			} as const;
+			const buffer = await page.screenshot({
+				...screenshotOptions
 			});
 
 			const finalBuffer =
-				format === "webp"
+				format === 'webp'
 					? await sharp(buffer)
 							.webp({ quality: quality ?? 80 })
 							.toBuffer()
@@ -160,11 +163,11 @@ class DefaultScreenshotService implements ScreenshotService {
 				buffer: finalBuffer,
 				width: metadata.width,
 				height: metadata.height,
-				format,
+				format
 			};
 		} catch (err) {
-			this.logger.error("Failed to capture full page screenshot", {
-				error: err instanceof Error ? err.message : String(err),
+			this.logger.error('Failed to capture full page screenshot', {
+				error: err instanceof Error ? err.message : String(err)
 			});
 			throw err;
 		}
@@ -173,14 +176,14 @@ class DefaultScreenshotService implements ScreenshotService {
 	async captureWithHighlights(
 		page: Page,
 		targets: HighlightTarget[],
-		options: HighlightCaptureOptions = {},
+		options: HighlightCaptureOptions = {}
 	): Promise<HighlightedScreenshotResult> {
 		const {
-			format = "png",
+			format = 'png',
 			quality,
 			timeout = 30_000,
 			defaultStyle = DEFAULT_HIGHLIGHT_STYLE,
-			maxTargets = 50,
+			maxTargets = 50
 		} = options;
 
 		const limitedTargets = targets.slice(0, maxTargets);
@@ -189,7 +192,7 @@ class DefaultScreenshotService implements ScreenshotService {
 
 		try {
 			await page.addStyleTag({
-				content: this.generateHighlightCSS(styleId, defaultStyle),
+				content: this.generateHighlightCSS(styleId, defaultStyle)
 			});
 
 			for (const target of limitedTargets) {
@@ -215,35 +218,35 @@ class DefaultScreenshotService implements ScreenshotService {
 									`${style.borderWidth}px ${style.borderStyle} ${style.borderColor}`;
 							}
 							if (style.backgroundColor) {
-								(el as HTMLElement).style.backgroundColor =
-									style.backgroundColor;
+								(el as HTMLElement).style.backgroundColor = style.backgroundColor;
 							}
-							if (typeof style.opacity === "number") {
+							if (typeof style.opacity === 'number') {
 								(el as HTMLElement).style.opacity = String(style.opacity);
 							}
 						},
-						{ styleId, style },
+						{ styleId, style }
 					);
 
 					highlightedElements.push({
 						selector: target.selector,
 						bounds: box ?? { x: 0, y: 0, width: 0, height: 0 },
-						visible: Boolean(box),
+						visible: Boolean(box)
 					});
 				} catch {
 					// Ignore elements that vanish or error during highlight pass.
 				}
 			}
 
-			const buffer = await page.screenshot({
+			const screenshotOptions = {
 				fullPage: true,
-				type: format === "webp" ? "png" : format,
-				quality: format === "jpeg" ? quality : undefined,
+				type: format === 'webp' ? 'png' : format,
 				timeout,
-			});
+				...(format === 'jpeg' && quality !== undefined ? { quality } : {})
+			} as const;
+			const buffer = await page.screenshot(screenshotOptions);
 
 			const finalBuffer =
-				format === "webp"
+				format === 'webp'
 					? await sharp(buffer)
 							.webp({ quality: quality ?? 80 })
 							.toBuffer()
@@ -256,12 +259,12 @@ class DefaultScreenshotService implements ScreenshotService {
 				width: metadata.width,
 				height: metadata.height,
 				format,
-				highlightedElements,
+				highlightedElements
 			};
 		} catch (err) {
-			this.logger.error("Failed to capture highlighted screenshot", {
+			this.logger.error('Failed to capture highlighted screenshot', {
 				targetCount: targets.length,
-				error: err instanceof Error ? err.message : String(err),
+				error: err instanceof Error ? err.message : String(err)
 			});
 			throw err;
 		} finally {
@@ -269,9 +272,9 @@ class DefaultScreenshotService implements ScreenshotService {
 				.evaluate((cleanupId) => {
 					for (const el of document.querySelectorAll(`.${cleanupId}`)) {
 						el.classList.remove(cleanupId);
-						(el as HTMLElement).style.outline = "";
-						(el as HTMLElement).style.backgroundColor = "";
-						(el as HTMLElement).style.opacity = "";
+						(el as HTMLElement).style.outline = '';
+						(el as HTMLElement).style.backgroundColor = '';
+						(el as HTMLElement).style.opacity = '';
 					}
 				}, styleId)
 				.catch(() => undefined);
@@ -289,8 +292,6 @@ class DefaultScreenshotService implements ScreenshotService {
 	}
 }
 
-export function createScreenshotService(
-	logger?: ScannerLogger,
-): ScreenshotService {
+export function createScreenshotService(logger?: ScannerLogger): ScreenshotService {
 	return new DefaultScreenshotService(logger);
 }

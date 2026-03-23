@@ -5,40 +5,40 @@
  * Uses the plugin system (manifests) for scanner resolution.
  */
 
-import type { ManifestConfigSchema } from "@stageflow/contracts-scanner-manifest";
+import type { ManifestConfigSchema } from '@stageflow/contracts-scanner-manifest';
 
-import { type ScannerBase, loadConfigFromEnv, validateConfig } from "./core";
-import { type PluginLoader, createPluginLoader } from "./core/plugins";
-import { createLogger } from "./utils/logger";
+import { type ScannerBase, loadConfigFromEnv, validateConfig } from './core';
+import { type PluginLoader, createPluginLoader } from './core/plugins';
+import { createLogger } from './utils/logger';
 import {
 	assertScannerIdMatchesManifest,
-	assertScannerOptionsMatchSchema,
-} from "./worker/worker-validation";
+	assertScannerOptionsMatchSchema
+} from './worker/worker-validation';
 
-const logger = createLogger("Worker");
+const logger = createLogger('Worker');
 
 async function initializePlugins(): Promise<PluginLoader> {
 	const loader = createPluginLoader();
-	logger.info("Initializing plugin loader", {
-		searchPaths: loader.getConfig().searchPaths,
+	logger.info('Initializing plugin loader', {
+		searchPaths: loader.getConfig().searchPaths
 	});
 
 	const discovery = await loader.discover();
 
 	if (discovery.errors.length > 0) {
-		logger.warn("Plugin discovery errors", {
+		logger.warn('Plugin discovery errors', {
 			errorCount: discovery.errors.length,
-			errors: discovery.errors.map((e) => ({ path: e.path, error: e.error })),
+			errors: discovery.errors.map((e) => ({ path: e.path, error: e.error }))
 		});
 	}
 
 	if (discovery.plugins.length > 0) {
-		logger.info("Plugins discovered", {
+		logger.info('Plugins discovered', {
 			count: discovery.plugins.length,
 			plugins: discovery.plugins.map((p) => ({
 				id: p.manifest.id,
-				version: p.manifest.version,
-			})),
+				version: p.manifest.version
+			}))
 		});
 	}
 
@@ -47,7 +47,7 @@ async function initializePlugins(): Promise<PluginLoader> {
 
 async function getScanner(
 	scannerType: string,
-	pluginLoader: PluginLoader,
+	pluginLoader: PluginLoader
 ): Promise<{
 	scanner: ScannerBase;
 	manifestId: string;
@@ -59,10 +59,10 @@ async function getScanner(
 	if (loadResult.success && loadResult.plugin) {
 		const strict = pluginLoader.getConfig().strictValidation;
 
-		logger.info("Using plugin scanner", {
+		logger.info('Using plugin scanner', {
 			id: loadResult.plugin.manifest.id,
 			version: loadResult.plugin.manifest.version,
-			path: loadResult.plugin.path,
+			path: loadResult.plugin.path
 		});
 
 		const scanner = loadResult.plugin.factory();
@@ -72,14 +72,18 @@ async function getScanner(
 			manifestId,
 			scannerId: scanner.metadata.name,
 			strict,
-			logger,
+			logger
 		});
 
 		return {
 			scanner,
 			manifestId,
-			manifestConfigSchema: loadResult.plugin.manifest.configSchema,
-			manifestMaxConcurrency: loadResult.plugin.manifest.capabilities?.maxConcurrency,
+			...(loadResult.plugin.manifest.configSchema !== undefined
+				? { manifestConfigSchema: loadResult.plugin.manifest.configSchema }
+				: {}),
+			...(loadResult.plugin.manifest.capabilities.maxConcurrency !== undefined
+				? { manifestMaxConcurrency: loadResult.plugin.manifest.capabilities.maxConcurrency }
+				: {})
 		};
 	}
 
@@ -89,38 +93,38 @@ async function getScanner(
 	if (loadError) {
 		throw new Error(
 			`Failed to load scanner type "${scannerType}": ${loadError}. Available scanners: ${
-				availableFromPlugins.join(", ") || "none"
-			}`,
+				availableFromPlugins.join(', ') || 'none'
+			}`
 		);
 	}
 
 	throw new Error(
 		`Unknown scanner type: "${scannerType}". Available scanners: ${
-			availableFromPlugins.join(", ") || "none"
-		}`,
+			availableFromPlugins.join(', ') || 'none'
+		}`
 	);
 }
 
 export async function runWorkerMode(): Promise<void> {
-	const scannerType = process.env.SCANNER_TYPE?.trim() ?? "axe";
+	const scannerType = process.env.SCANNER_TYPE?.trim() ?? 'axe';
 
-	logger.info("Starting worker", {
+	logger.info('Starting worker', {
 		scannerType,
-		nodeEnv: process.env.NODE_ENV,
+		nodeEnv: process.env.NODE_ENV
 	});
 
 	let pluginLoader: PluginLoader;
 	try {
 		pluginLoader = await initializePlugins();
 	} catch (err) {
-		logger.error("Failed to initialize plugin system", {
-			error: err instanceof Error ? err.message : String(err),
+		logger.error('Failed to initialize plugin system', {
+			error: err instanceof Error ? err.message : String(err)
 		});
 		process.exit(1);
 	}
 
 	let scanner: ScannerBase;
-	let manifestId = "";
+	let manifestId = '';
 	let manifestConfigSchema: ManifestConfigSchema | undefined;
 	let manifestMaxConcurrency: number | undefined;
 	try {
@@ -130,25 +134,25 @@ export async function runWorkerMode(): Promise<void> {
 		manifestConfigSchema = resolved.manifestConfigSchema;
 		manifestMaxConcurrency = resolved.manifestMaxConcurrency;
 	} catch (err) {
-		logger.error("Failed to get scanner", {
+		logger.error('Failed to get scanner', {
 			type: scannerType,
-			error: err instanceof Error ? err.message : String(err),
+			error: err instanceof Error ? err.message : String(err)
 		});
 		process.exit(1);
 	}
 
 	const config = loadConfigFromEnv({
 		scannerName: scanner.metadata.name,
-		defaults: manifestMaxConcurrency !== undefined
-			? { concurrency: manifestMaxConcurrency }
-			: undefined,
+		...(manifestMaxConcurrency !== undefined
+			? { defaults: { concurrency: manifestMaxConcurrency } }
+			: {})
 	});
 
 	try {
 		validateConfig(config);
 	} catch (err) {
-		logger.error("Invalid configuration", {
-			error: err instanceof Error ? err.message : String(err),
+		logger.error('Invalid configuration', {
+			error: err instanceof Error ? err.message : String(err)
 		});
 		process.exit(1);
 	}
@@ -161,16 +165,13 @@ export async function runWorkerMode(): Promise<void> {
 				schema: manifestConfigSchema,
 				options: config.options,
 				strict,
-				logger,
+				logger
 			});
 		} catch (err) {
-			logger.error(
-				"Failed to validate SCANNER_OPTIONS against manifest configSchema",
-				{
-					scanner: manifestId,
-					error: err instanceof Error ? err.message : String(err),
-				},
-			);
+			logger.error('Failed to validate SCANNER_OPTIONS against manifest configSchema', {
+				scanner: manifestId,
+				error: err instanceof Error ? err.message : String(err)
+			});
 
 			if (pluginLoader.getConfig().strictValidation) {
 				process.exit(1);
@@ -178,33 +179,33 @@ export async function runWorkerMode(): Promise<void> {
 		}
 	}
 
-	logger.info("Configuration loaded", {
+	logger.info('Configuration loaded', {
 		jobId: config.jobId,
 		scanner: scanner.metadata.name,
 		version: scanner.metadata.version,
 		concurrency: config.concurrency,
 		provenancePath: config.provenancePath,
-		resultsDir: config.resultsDir,
+		resultsDir: config.resultsDir
 	});
 
 	try {
 		const results = await scanner.run(config);
 
-		logger.info("Scan completed successfully", {
+		logger.info('Scan completed successfully', {
 			jobId: config.jobId,
 			pagesScanned: results.pages.length,
 			pagesFailed: results.summary.pagesFailed,
 			totalIssues: results.summary.totalIssues,
 			durationMs: results.durationMs,
-			bySeverity: results.summary.bySeverity,
+			bySeverity: results.summary.bySeverity
 		});
 
 		process.exit(0);
 	} catch (err) {
-		logger.error("Scan failed", {
+		logger.error('Scan failed', {
 			jobId: config.jobId,
 			error: err instanceof Error ? err.message : String(err),
-			stack: err instanceof Error ? err.stack : undefined,
+			stack: err instanceof Error ? err.stack : undefined
 		});
 		process.exit(1);
 	}

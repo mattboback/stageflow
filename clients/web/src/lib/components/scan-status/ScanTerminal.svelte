@@ -1,125 +1,118 @@
 <script lang="ts">
-import { cn } from "$lib/utils";
-import { Loader2, Terminal } from "lucide-svelte";
-import { onMount } from "svelte";
+	import { cn } from '$lib/utils';
+	import { Loader2, Terminal } from 'lucide-svelte';
+	import { onMount } from 'svelte';
 
-interface Props {
-	logs: string[];
-	startTime?: number;
-}
-
-interface LogStyle {
-	textClass: string;
-	prefix?: string;
-	prefixClass?: string;
-}
-
-const LOG_PATTERNS: { test: (_log: string) => boolean; style: LogStyle }[] = [
-	{
-		test: (log) => /error|critical|fail/i.test(log),
-		style: {
-			textClass: "text-red-400",
-			prefix: "ERROR",
-			prefixClass: "bg-red-500/20 text-red-400",
-		},
-	},
-	{
-		test: (log) => /complete|done|success/i.test(log),
-		style: {
-			textClass: "text-green-400",
-			prefix: "OK",
-			prefixClass: "bg-green-500/20 text-green-400",
-		},
-	},
-	{
-		test: (log) => /^\[[^\]]+\]/i.test(log),
-		style: {
-			textClass: "text-accent",
-			prefix: "SCAN",
-			prefixClass: "bg-accent/20 text-accent",
-		},
-	},
-	{
-		test: (log) => /\[axe-core\]|axe/i.test(log),
-		style: {
-			textClass: "text-blue-400",
-			prefix: "AXE",
-			prefixClass: "bg-blue-500/20 text-blue-400",
-		},
-	},
-	{
-		test: (log) => /extract|verify/i.test(log),
-		style: {
-			textClass: "text-amber-400",
-			prefix: "PREP",
-			prefixClass: "bg-amber-500/20 text-amber-400",
-		},
-	},
-	{
-		test: (log) => /upload|storage/i.test(log),
-		style: {
-			textClass: "text-orange-400",
-			prefix: "I/O",
-			prefixClass: "bg-orange-500/20 text-orange-400",
-		},
-	},
-	{
-		test: (log) => /queue|waiting|allocat/i.test(log),
-		style: {
-			textClass: "text-slate-400",
-			prefix: "SYS",
-			prefixClass: "bg-slate-500/20 text-slate-400",
-		},
-	},
-];
-
-const DEFAULT_STYLE: LogStyle = { textClass: "text-slate-300" };
-
-function getLogStyle(log: string): LogStyle {
-	return LOG_PATTERNS.find((p) => p.test(log))?.style ?? DEFAULT_STYLE;
-}
-
-function formatTimestamp(
-	startTime: number,
-	index: number,
-	now: number,
-): string {
-	const elapsedSeconds = Math.floor((now - startTime) / 1000) - (10 - index);
-	const seconds = Math.max(0, elapsedSeconds);
-	const mins = Math.floor(seconds / 60);
-	const secs = seconds % 60;
-	return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-}
-
-let { logs, startTime }: Props = $props();
-
-let containerRef = $state<HTMLDivElement | null>(null);
-// Capture the time when the component was first created as a fallback
-const fallbackStartTime = Date.now();
-const effectiveStartTime = $derived(startTime ?? fallbackStartTime);
-let now = $state(Date.now());
-
-onMount(() => {
-	const interval = setInterval(() => {
-		now = Date.now();
-	}, 1000);
-	return () => clearInterval(interval);
-});
-
-$effect(() => {
-	// Access logs to track dependency
-	if (logs.length === 0 || !containerRef) return;
-
-	// Only auto-scroll if user is near bottom (within 100px)
-	const isNearBottom =
-		containerRef.scrollHeight -
-			containerRef.scrollTop -
-			containerRef.clientHeight <
-		100;
-	if (isNearBottom) {
-		containerRef.scrollTop = containerRef.scrollHeight;
+	interface Props {
+		logs: string[];
+		startTime?: number;
 	}
-});
+
+	interface LogStyle {
+		textClass: string;
+		prefix?: string;
+		prefixClass?: string;
+	}
+
+	const LOG_PATTERNS: { test: (_log: string) => boolean; style: LogStyle }[] = [
+		{
+			test: (log) => /error|critical|fail/i.test(log),
+			style: {
+				textClass: 'text-red-400',
+				prefix: 'ERROR',
+				prefixClass: 'bg-red-500/20 text-red-400'
+			}
+		},
+		{
+			test: (log) => /complete|done|success/i.test(log),
+			style: {
+				textClass: 'text-green-400',
+				prefix: 'OK',
+				prefixClass: 'bg-green-500/20 text-green-400'
+			}
+		},
+		{
+			test: (log) => /^\[[^\]]+\]/i.test(log),
+			style: {
+				textClass: 'text-accent',
+				prefix: 'SCAN',
+				prefixClass: 'bg-accent/20 text-accent'
+			}
+		},
+		{
+			test: (log) => /\[axe-core\]|axe/i.test(log),
+			style: {
+				textClass: 'text-blue-400',
+				prefix: 'AXE',
+				prefixClass: 'bg-blue-500/20 text-blue-400'
+			}
+		},
+		{
+			test: (log) => /extract|verify/i.test(log),
+			style: {
+				textClass: 'text-amber-400',
+				prefix: 'PREP',
+				prefixClass: 'bg-amber-500/20 text-amber-400'
+			}
+		},
+		{
+			test: (log) => /upload|storage/i.test(log),
+			style: {
+				textClass: 'text-orange-400',
+				prefix: 'I/O',
+				prefixClass: 'bg-orange-500/20 text-orange-400'
+			}
+		},
+		{
+			test: (log) => /queue|waiting|allocat/i.test(log),
+			style: {
+				textClass: 'text-slate-400',
+				prefix: 'SYS',
+				prefixClass: 'bg-slate-500/20 text-slate-400'
+			}
+		}
+	];
+
+	const DEFAULT_STYLE: LogStyle = { textClass: 'text-slate-300' };
+
+	function getLogStyle(log: string): LogStyle {
+		return LOG_PATTERNS.find((p) => p.test(log))?.style ?? DEFAULT_STYLE;
+	}
+
+	function formatTimestamp(startTime: number, index: number, now: number): string {
+		const elapsedSeconds = Math.floor((now - startTime) / 1000) - (10 - index);
+		const seconds = Math.max(0, elapsedSeconds);
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+	}
+
+	let { logs, startTime }: Props = $props();
+
+	let containerRef = $state<HTMLDivElement | null>(null);
+	// Capture the time when the component was first created as a fallback
+	const fallbackStartTime = Date.now();
+	const effectiveStartTime = $derived(startTime ?? fallbackStartTime);
+	let now = $state(Date.now());
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			now = Date.now();
+		}, 1000);
+		return () => clearInterval(interval);
+	});
+
+	$effect(() => {
+		// Access logs to track dependency
+		if (logs.length === 0 || !containerRef) return;
+
+		// Only auto-scroll if user is near bottom (within 100px)
+		const isNearBottom =
+			containerRef.scrollHeight - containerRef.scrollTop - containerRef.clientHeight < 100;
+		if (isNearBottom) {
+			containerRef.scrollTop = containerRef.scrollHeight;
+		}
+	});
 </script>
 
 <div

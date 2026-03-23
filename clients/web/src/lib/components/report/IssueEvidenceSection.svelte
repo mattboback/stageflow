@@ -1,37 +1,37 @@
 <script lang="ts">
-import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
+	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
 
-import { Panel } from "$lib/components/ui";
-import { getSeverityStrokeColor } from "$lib/report";
+	import { Panel } from '$lib/components/ui';
+	import { getSeverityStrokeColor } from '$lib/report';
 
-interface Props {
-	issue: IssueDetail;
-	page: PageSummary | null;
-	screenshotUrl: string | null;
-	pageOverviewUrl: string | null;
-	showPageOverview?: boolean;
-	hideScreenshot?: boolean;
-	onElementClick?: (elementId: string) => void;
-}
+	interface Props {
+		issue: IssueDetail;
+		page: PageSummary | null;
+		screenshotUrl: string | null;
+		pageOverviewUrl: string | null;
+		showPageOverview?: boolean;
+		hideScreenshot?: boolean;
+		onElementClick?: (elementId: string) => void;
+	}
 
-let {
-	issue,
-	page,
-	screenshotUrl,
-	pageOverviewUrl,
-	showPageOverview = true,
-	hideScreenshot = false,
-	onElementClick,
-}: Props = $props();
+	let {
+		issue,
+		page,
+		screenshotUrl,
+		pageOverviewUrl,
+		showPageOverview = true,
+		hideScreenshot = false,
+		onElementClick
+	}: Props = $props();
 
-const pageOverviewElements = $derived.by(() => {
-	const elements = page?.pageOverview?.elements ?? [];
-	return elements.filter((el) => el.issueId === issue.id);
-});
+	const pageOverviewElements = $derived.by(() => {
+		const elements = page?.pageOverview?.elements ?? [];
+		return elements.filter((el) => el.issueId === issue.id);
+	});
 
-const pageWidth = $derived(page?.pageOverview?.pageWidth ?? 0);
-const pageHeight = $derived(page?.pageOverview?.pageHeight ?? 0);
-const strokeColor = $derived(getSeverityStrokeColor(issue.severity));
+	const pageWidth = $derived(page?.pageOverview?.pageWidth ?? 0);
+	const pageHeight = $derived(page?.pageOverview?.pageHeight ?? 0);
+	const strokeColor = $derived(getSeverityStrokeColor(issue.severity));
 </script>
 
 <div class="space-y-4">
@@ -57,13 +57,7 @@ const strokeColor = $derived(getSeverityStrokeColor(issue.severity));
 						role="img"
 						aria-label={`Page overview showing ${pageOverviewElements.length} highlighted element${pageOverviewElements.length === 1 ? '' : 's'}`}
 					>
-						<image
-							href={pageOverviewUrl}
-							x="0"
-							y="0"
-							width={pageWidth}
-							height={pageHeight}
-						/>
+						<image href={pageOverviewUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
 						{#each pageOverviewElements as element (`${element.issueId}:${element.nodeIndex}`)}
 							<rect
 								x={element.x}

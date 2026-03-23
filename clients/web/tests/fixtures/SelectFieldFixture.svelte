@@ -1,5 +1,5 @@
 <script lang="ts">
-import { SelectField } from "$lib/components/ui";
+	import { SelectField } from '$lib/components/ui';
 </script>
 
 <div>

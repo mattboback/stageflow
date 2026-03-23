@@ -1,20 +1,20 @@
-import type { ScanResult, ScanStatus } from "$lib/types/scan";
+import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
-import { createSSEStream } from "$lib/api/sse";
-import { buildApiUrl } from "$lib/api/utils";
+import { createSSEStream } from '$lib/api/sse';
+import { buildApiUrl } from '$lib/api/utils';
 
-import type { SSEUpdate } from "./scan-status/types";
+import type { SSEUpdate } from './scan-status/types';
 
-import { scanHistoryStore } from "./scan-history.svelte";
-import { MAX_LOG_LINES } from "./scan-status/constants";
-import { getLogMessage, normalizeStatus } from "./scan-status/log-messages";
+import { scanHistoryStore } from './scan-history.svelte';
+import { MAX_LOG_LINES } from './scan-status/constants';
+import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 import {
 	applyScannerCompletionUpdate,
-	normalizeScannerProgress,
-} from "./scan-status/scanner-progress";
+	normalizeScannerProgress
+} from './scan-status/scanner-progress';
 
 export function createScanStatusStore(id: string) {
-	let status = $state<ScanStatus>("loading");
+	let status = $state<ScanStatus>('loading');
 	let result = $state<ScanResult | null>(null);
 	let elapsed = $state(0);
 	let logs = $state<string[]>([]);
@@ -40,21 +40,18 @@ export function createScanStatusStore(id: string) {
 	};
 
 	const handleStatusData = (data: ScanResult): boolean => {
-		const normalizedState = (data.state || "").toUpperCase();
+		const normalizedState = (data.state || '').toUpperCase();
 		const logMsg = getLogMessage(normalizedState, data);
 		if (logMsg) {
 			addLog(logMsg);
 		}
 
-		if (normalizedState === "EXTRACTING") {
-			addLog("Verifying archive integrity...");
-		} else if (
-			normalizedState === "SCANNING" &&
-			data.progress?.current_page === 0
-		) {
-			addLog("Starting scanner execution...");
-		} else if (normalizedState === "COMPLETING") {
-			addLog("Finalizing reports and uploading artifacts...");
+		if (normalizedState === 'EXTRACTING') {
+			addLog('Verifying archive integrity...');
+		} else if (normalizedState === 'SCANNING' && data.progress?.current_page === 0) {
+			addLog('Starting scanner execution...');
+		} else if (normalizedState === 'COMPLETING') {
+			addLog('Finalizing reports and uploading artifacts...');
 		}
 
 		result = normalizeScannerProgress(data);
@@ -62,12 +59,9 @@ export function createScanStatusStore(id: string) {
 		status = newStatus;
 
 		// Update history if done or failed (only once)
-		if (["complete", "failed"].includes(newStatus) && !statusUpdated) {
+		if (['complete', 'failed'].includes(newStatus) && !statusUpdated) {
 			statusUpdated = true;
-			scanHistoryStore.updateStatus(
-				id,
-				newStatus === "complete" ? "complete" : "failed",
-			);
+			scanHistoryStore.updateStatus(id, newStatus === 'complete' ? 'complete' : 'failed');
 			cleanup();
 			return true;
 		}
@@ -75,7 +69,7 @@ export function createScanStatusStore(id: string) {
 	};
 
 	const handleSSEUpdate = (update: SSEUpdate) => {
-		const normalizedState = (update.state || "").toUpperCase();
+		const normalizedState = (update.state || '').toUpperCase();
 		const logMsg = getLogMessage(normalizedState, update);
 		if (logMsg) {
 			addLog(logMsg);
@@ -87,12 +81,11 @@ export function createScanStatusStore(id: string) {
 				? (() => {
 						const currentPage = update.progress.currentPage;
 						const totalPages = update.progress.totalPages;
-						const rawPercentage =
-							totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
+						const rawPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
 						return {
 							current_page: currentPage,
 							total_pages: totalPages,
-							percentage: Math.max(0, Math.min(100, Math.round(rawPercentage))),
+							percentage: Math.max(0, Math.min(100, Math.round(rawPercentage)))
 						};
 					})()
 				: result.progress;
@@ -101,10 +94,8 @@ export function createScanStatusStore(id: string) {
 				state: update.state,
 				...(newProgress !== undefined ? { progress: newProgress } : {}),
 				...(update.error !== undefined ? { error: update.error } : {}),
-				...(update.error_details !== undefined
-					? { error_details: update.error_details }
-					: {}),
-				...(update.stage !== undefined ? { last_stage: update.stage } : {}),
+				...(update.error_details !== undefined ? { error_details: update.error_details } : {}),
+				...(update.stage !== undefined ? { last_stage: update.stage } : {})
 			};
 			result = applyScannerCompletionUpdate(nextResult, update);
 		}
@@ -113,7 +104,7 @@ export function createScanStatusStore(id: string) {
 		status = newStatus;
 
 		// If complete or failed, fetch full status for artifacts
-		if (update.type === "complete" || update.type === "failed") {
+		if (update.type === 'complete' || update.type === 'failed') {
 			void fetchStatus();
 		}
 	};
@@ -122,19 +113,19 @@ export function createScanStatusStore(id: string) {
 		try {
 			const res = await fetch(buildApiUrl(`/api/v1/jobs/${id}`));
 			if (!res.ok) {
-				throw new Error(res.status === 404 ? "Job not found" : "Network error");
+				throw new Error(res.status === 404 ? 'Job not found' : 'Network error');
 			}
 			const data = (await res.json()) as ScanResult;
 			handleStatusData(data);
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : String(err);
-			console.error("[scan-status] Failed to fetch job status:", {
+			console.error('[scan-status] Failed to fetch job status:', {
 				jobId: id,
-				error: err,
+				error: err
 			});
 			addLog(`ERROR: ${errorMessage}. Refresh to retry.`);
-			if (status === "loading") {
-				status = "error";
+			if (status === 'loading') {
+				status = 'error';
 			}
 		}
 	};
@@ -151,18 +142,18 @@ export function createScanStatusStore(id: string) {
 				},
 				onError: (err) => {
 					if (err.parseError) {
-						status = "error";
+						status = 'error';
 						cleanup();
 					} else if (err.terminal) {
 						cleanup();
 						void fetchStatus();
 					}
-				},
+				}
 			},
 			{
-				sourceName: "scan-status",
-				onLog: addLog,
-			},
+				sourceName: 'scan-status',
+				onLog: addLog
+			}
 		);
 	};
 
@@ -175,10 +166,10 @@ export function createScanStatusStore(id: string) {
 			elapsed = elapsed + 1;
 		}, 1000);
 
-		if (typeof EventSource !== "undefined") {
+		if (typeof EventSource !== 'undefined') {
 			startSSE();
 		} else {
-			addLog("ERROR: Your browser does not support live updates (SSE).");
+			addLog('ERROR: Your browser does not support live updates (SSE).');
 			void fetchStatus();
 		}
 	};
@@ -197,6 +188,6 @@ export function createScanStatusStore(id: string) {
 			return logs;
 		},
 		start,
-		cleanup,
+		cleanup
 	};
 }

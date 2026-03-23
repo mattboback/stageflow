@@ -1,8 +1,10 @@
-# User Story 2: Multi-Site Quality Monitoring for Freelancers and Small Teams
+# Case Study: Multi-Site Quality Monitoring for Freelancers and Small Teams
 
-## Decision Summary
+This case study evaluates StageFlow as a continuous quality monitoring service for teams managing several sites at once. It captures the tradeoffs between StageFlow, commercial SEO tooling, and DIY scanner pipelines when the goal is to detect regressions across multiple properties without turning maintenance into a second job.
 
-As a developer managing multiple client or project sites, I am evaluating whether to use StageFlow as a continuous quality monitoring service that watches all my sites and tells me when something regresses — without it becoming a second job.
+## Use-case summary
+
+A developer managing multiple client or project sites wants one system that watches every property, compares each scan against a known-good baseline, and flags regressions without creating another fragile monitoring stack to maintain.
 
 ## Goal
 

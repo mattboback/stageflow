@@ -5,17 +5,17 @@
  * structured data, and other ranking factors.
  */
 
-import type { Issue, PageScanResult, ScanContext } from "../../core/types";
+import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
-import { ScannerBase } from "../../core/scanner-base";
-import { SEO_CHECKS } from "./checks";
-import { extractSEOData } from "./extract";
+import { ScannerBase } from '../../core/scanner-base';
+import { SEO_CHECKS } from './checks';
+import { extractSEOData } from './extract';
 
 export class SEOScanner extends ScannerBase {
 	readonly metadata = {
-		name: "seo",
-		version: "1.0.0",
-		description: "SEO best practices analysis",
+		name: 'seo',
+		version: '1.0.0',
+		description: 'SEO best practices analysis'
 	};
 
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
@@ -37,20 +37,20 @@ export class SEOScanner extends ScannerBase {
 							category: check.category,
 							title: check.title,
 							description: result.message,
-							helpUrl: check.helpUrl,
-							metadata: result.details,
+							...(check.helpUrl !== undefined ? { helpUrl: check.helpUrl } : {}),
+							...(result.details !== undefined ? { metadata: result.details } : {})
 						});
 					}
 				} catch (err) {
 					logger.warn(`SEO check failed: ${check.id}`, {
-						error: err instanceof Error ? err.message : String(err),
+						error: err instanceof Error ? err.message : String(err)
 					});
 				}
 			}
 
-			logger.info("SEO scan complete", {
+			logger.info('SEO scan complete', {
 				url: pageEntry.url,
-				issues: issues.length,
+				issues: issues.length
 			});
 
 			return {
@@ -71,13 +71,13 @@ export class SEOScanner extends ScannerBase {
 					imagesWithoutAlt: seoData.images.filter((i) => !i.alt).length,
 					wordCount: seoData.wordCount,
 					hasStructuredData: seoData.structuredData.length > 0,
-					ogTags: Object.keys(seoData.ogTags),
-				},
+					ogTags: Object.keys(seoData.ogTags)
+				}
 			};
 		} catch (error) {
-			logger.error("SEO scan failed", {
+			logger.error('SEO scan failed', {
 				url: pageEntry.url,
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? error.message : String(error)
 			});
 
 			return {
@@ -89,7 +89,7 @@ export class SEOScanner extends ScannerBase {
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),
 				finishedAt: new Date().toISOString(),
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? error.message : String(error)
 			};
 		}
 	}

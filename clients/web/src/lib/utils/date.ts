@@ -8,8 +8,8 @@ export function formatTimestamp(value?: string | null): string | null {
 	if (Number.isNaN(date.getTime())) return value;
 	try {
 		return date.toLocaleString(undefined, {
-			dateStyle: "medium",
-			timeStyle: "short",
+			dateStyle: 'medium',
+			timeStyle: 'short'
 		});
 	} catch {
 		return date.toISOString();

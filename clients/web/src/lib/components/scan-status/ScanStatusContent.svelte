@@ -1,23 +1,23 @@
 <script lang="ts">
-import type { ScanResult, ScanStatus } from "$lib/types/scan";
+	import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
-import { Panel } from "$lib/components/ui";
+	import { Panel } from '$lib/components/ui';
 
-import CompletedView from "./CompletedView.svelte";
-import FailedView from "./FailedView.svelte";
-import ProcessingView from "./ProcessingView.svelte";
-import StatusStepper from "./StatusStepper.svelte";
+	import CompletedView from './CompletedView.svelte';
+	import FailedView from './FailedView.svelte';
+	import ProcessingView from './ProcessingView.svelte';
+	import StatusStepper from './StatusStepper.svelte';
 
-interface Props {
-	status: ScanStatus;
-	result: ScanResult | null;
-	logs: string[];
-}
+	interface Props {
+		status: ScanStatus;
+		result: ScanResult | null;
+		logs: string[];
+	}
 
-let { status, result, logs }: Props = $props();
+	let { status, result, logs }: Props = $props();
 
-const isComplete = $derived(status === "complete");
-const isFailed = $derived(status === "failed" || status === "error");
+	const isComplete = $derived(status === 'complete');
+	const isFailed = $derived(status === 'failed' || status === 'error');
 </script>
 
 <Panel padding="none" rounded="xl" class="text-ink overflow-hidden shadow-sm">

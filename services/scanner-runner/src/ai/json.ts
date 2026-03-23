@@ -1,11 +1,9 @@
-export function isPlainObject(
-	value: unknown,
-): value is Record<string, unknown> {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
 	if (!value) {
 		return false;
 	}
 
-	if (typeof value !== "object") {
+	if (typeof value !== 'object') {
 		return false;
 	}
 
@@ -16,9 +14,7 @@ export function isPlainObject(
 	return true;
 }
 
-export function parseFirstJsonObject(
-	text: string,
-): Record<string, unknown> | undefined {
+export function parseFirstJsonObject(text: string): Record<string, unknown> | undefined {
 	const trimmed = text.trim();
 	if (!trimmed) {
 		return undefined;
@@ -69,12 +65,12 @@ function extractFencedBlock(text: string): string | undefined {
 }
 
 function extractBraceCandidate(text: string): string | undefined {
-	const first = text.indexOf("{");
+	const first = text.indexOf('{');
 	if (first < 0) {
 		return undefined;
 	}
 
-	const last = text.lastIndexOf("}");
+	const last = text.lastIndexOf('}');
 	if (last <= first) {
 		return undefined;
 	}

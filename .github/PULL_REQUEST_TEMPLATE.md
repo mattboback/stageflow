@@ -1,30 +1,34 @@
-## Description
+## Summary
 
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+Describe the change, the motivation behind it, and any context a reviewer should know.
 
 Fixes # (issue)
 
-## Type of change
+## Areas touched
 
-Please delete options that are not relevant.
+- [ ] `clients/web`
+- [ ] `clients/cli`
+- [ ] `services/platform-api`
+- [ ] `services/scanner-runner`
+- [ ] Docs / repo metadata
+- [ ] Devtools / infrastructure
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
+## Validation
 
-## How Has This Been Tested?
+List the commands you ran and any manual verification performed.
 
-Please describe the manual or end-to-end tests that you ran to verify your changes. Provide instructions so we can reproduce.
+- [ ] `just ci`
+- [ ] `just storybook-test` (if UI or component behavior changed)
+- [ ] `just shell-tests` (if CLI or setup behavior changed)
+- [ ] Local manual verification (UI or CLI)
+- [ ] Deployment or runtime follow-up noted below
 
-- [ ] Local manual testing (UI or CLI)
-- [ ] End-to-end job submission (URL or ZIP)
-- [ ] Local Storybook interaction
+## Screenshots / docs
 
-## Checklist:
+Attach screenshots, terminal output snippets, or note why they were not needed.
 
-- [ ] I have verified that `just ci` passes without errors
-- [ ] I have verified that `just storybook-test` passes (if UI/component changes)
-- [ ] I have verified that `just shell-tests` passes (if CLI/setup changes)
-- [ ] I have made corresponding changes to the documentation
-- [ ] My code follows the style guidelines of this project
+## Checklist
+
+- [ ] Docs, screenshots, or configuration references were updated when needed
+- [ ] New env vars, operational steps, or migration notes were documented
+- [ ] I verified the change at the surface it affects

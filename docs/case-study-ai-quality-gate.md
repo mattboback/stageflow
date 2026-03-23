@@ -1,8 +1,10 @@
-# User Story 1: AI Coding Agent Quality Gate
+# Case Study: AI Coding Agent Quality Gates
 
-## Decision Summary
+This case study evaluates StageFlow as an automated quality gate for AI-assisted development workflows. It captures the tradeoffs between StageFlow, direct `axe-core` checks, and Lighthouse-style score gates when the goal is to catch regressions before they reach production.
 
-As a solo developer using AI coding agents, I am evaluating whether to integrate StageFlow as an automated quality gate that catches accessibility, SEO, and link regressions introduced by AI-generated code changes before they reach production.
+## Use-case summary
+
+A solo developer using AI coding agents wants an automated way to catch accessibility, SEO, and link regressions introduced by fast-moving code changes before they reach production.
 
 ## Goal
 

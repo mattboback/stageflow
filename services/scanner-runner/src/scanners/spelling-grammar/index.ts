@@ -1,18 +1,17 @@
-import type { Issue, PageScanResult, ScanContext } from "../../core/types";
+import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
-import { ScannerBase } from "../../core/scanner-base";
+import { ScannerBase } from '../../core/scanner-base';
 
 const COMMON_MISSPELLINGS = [
-	{ pattern: /\bteh\b/gi, replacement: "the" },
-	{ pattern: /\badn\b/gi, replacement: "and" },
+	{ pattern: /\bteh\b/gi, replacement: 'the' },
+	{ pattern: /\badn\b/gi, replacement: 'and' }
 ];
 
 export class SpellingGrammarScanner extends ScannerBase {
 	readonly metadata = {
-		name: "spelling-grammar",
-		version: "1.0.0",
-		description:
-			"Content quality analysis for simple spelling and grammar issues",
+		name: 'spelling-grammar',
+		version: '1.0.0',
+		description: 'Content quality analysis for simple spelling and grammar issues'
 	};
 
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
@@ -32,22 +31,22 @@ export class SpellingGrammarScanner extends ScannerBase {
 				issues.push({
 					id: `${this.metadata.name}-${rule.replacement}`,
 					scanner: this.metadata.name,
-					severity: "minor",
-					category: "content-quality",
+					severity: 'minor',
+					category: 'content-quality',
 					title: `Potential spelling issue: ${matches[0]?.[0] ?? rule.replacement}`,
 					description: `Found ${matches.length} potential occurrence(s) that may need review. Suggested replacement: ${rule.replacement}.`,
 					metadata: {
 						matchCount: matches.length,
 						suggestion: rule.replacement,
-						sample: matches.slice(0, 5).map((match) => match[0]),
-					},
+						sample: matches.slice(0, 5).map((match) => match[0])
+					}
 				});
 			}
 
-			logger.info("Spelling and grammar scan complete", {
+			logger.info('Spelling and grammar scan complete', {
 				url: pageEntry.url,
 				issues: issues.length,
-				wordCount: textContent.split(/\s+/).filter(Boolean).length,
+				wordCount: textContent.split(/\s+/).filter(Boolean).length
 			});
 
 			return {
@@ -61,13 +60,13 @@ export class SpellingGrammarScanner extends ScannerBase {
 				finishedAt: new Date().toISOString(),
 				rawResults: {
 					wordCount: textContent.split(/\s+/).filter(Boolean).length,
-					issuesFound: issues.length,
-				},
+					issuesFound: issues.length
+				}
 			};
 		} catch (error) {
-			logger.error("Spelling and grammar scan failed", {
+			logger.error('Spelling and grammar scan failed', {
 				url: pageEntry.url,
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? error.message : String(error)
 			});
 
 			return {
@@ -79,7 +78,7 @@ export class SpellingGrammarScanner extends ScannerBase {
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),
 				finishedAt: new Date().toISOString(),
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? error.message : String(error)
 			};
 		}
 	}

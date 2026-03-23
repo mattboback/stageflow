@@ -1,11 +1,11 @@
 export function escapeHtml(value?: string | number | null): string {
 	if (value === undefined || value === null) {
-		return "";
+		return '';
 	}
 	return String(value)
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#39;");
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
 }

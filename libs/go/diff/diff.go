@@ -33,9 +33,14 @@ type Delta struct {
 }
 
 // ComputeDiff compares two reports by stable issue ID and returns the diff.
-// Issues present in current but not baseline are "new."
-// Issues present in baseline but not current are "fixed."
-func ComputeDiff(baselineJobID string, baseline report.UnifiedReportV2, currentJobID string, current report.UnifiedReportV2) Result {
+// Issues present in current but not baseline are new.
+// Issues present in baseline but not current are fixed.
+func ComputeDiff(
+	baselineJobID string,
+	baseline report.UnifiedReportV2,
+	currentJobID string,
+	current report.UnifiedReportV2,
+) Result {
 	baselineMap := make(map[string]report.IssueDetail, len(baseline.Issues))
 	for _, issue := range baseline.Issues {
 		baselineMap[issue.Id] = issue
@@ -48,6 +53,7 @@ func ComputeDiff(baselineJobID string, baseline report.UnifiedReportV2, currentJ
 
 	newIssues := make([]report.IssueDetail, 0)
 	fixedIssues := make([]report.IssueDetail, 0)
+
 	var unchangedCount int
 
 	for id, issue := range currentMap {
@@ -69,6 +75,7 @@ func ComputeDiff(baselineJobID string, baseline report.UnifiedReportV2, currentJ
 	sort.Slice(fixedIssues, func(i, j int) bool { return fixedIssues[i].Id < fixedIssues[j].Id })
 
 	var scoreDelta *int
+
 	if baseline.Summary.Score != nil && current.Summary.Score != nil {
 		delta := *current.Summary.Score - *baseline.Summary.Score
 		scoreDelta = &delta

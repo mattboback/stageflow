@@ -4,11 +4,11 @@ import type {
 	PageOverviewElement,
 	ScannerSummary,
 	SeverityCounts,
-	UnifiedReport,
-} from "$lib/types/unified-report";
+	UnifiedReport
+} from '$lib/types/unified-report';
 
-const OCCURRENCE_ID_DELIMITER = "--occ-";
-type IssueOccurrence = NonNullable<IssueDetail["occurrences"]>[number];
+const OCCURRENCE_ID_DELIMITER = '--occ-';
+type IssueOccurrence = NonNullable<IssueDetail['occurrences']>[number];
 
 function createEmptySeverityCounts(): SeverityCounts {
 	return {
@@ -16,14 +16,11 @@ function createEmptySeverityCounts(): SeverityCounts {
 		serious: 0,
 		moderate: 0,
 		minor: 0,
-		info: 0,
+		info: 0
 	};
 }
 
-function incrementSeverity(
-	counts: SeverityCounts,
-	severity: IssueSeverity,
-): void {
+function incrementSeverity(counts: SeverityCounts, severity: IssueSeverity): void {
 	counts[severity] += 1;
 }
 
@@ -37,12 +34,12 @@ function cloneSeverityCounts(counts?: SeverityCounts): SeverityCounts {
 		serious: counts.serious,
 		moderate: counts.moderate,
 		minor: counts.minor,
-		info: counts.info ?? 0,
+		info: counts.info ?? 0
 	};
 }
 
 function asOptionalString(value: unknown): string | undefined {
-	return typeof value === "string" ? value : undefined;
+	return typeof value === 'string' ? value : undefined;
 }
 
 function asOptionalStringArray(value: unknown): string[] | undefined {
@@ -50,29 +47,27 @@ function asOptionalStringArray(value: unknown): string[] | undefined {
 		return undefined;
 	}
 
-	const stringValues = value.filter(
-		(entry): entry is string => typeof entry === "string",
-	);
+	const stringValues = value.filter((entry): entry is string => typeof entry === 'string');
 	return stringValues.length > 0 ? stringValues : undefined;
 }
 
-function asOptionalBoundingBox(value: unknown): IssueOccurrence["boundingBox"] {
-	if (typeof value !== "object" || value === null) {
+function asOptionalBoundingBox(value: unknown): IssueOccurrence['boundingBox'] {
+	if (typeof value !== 'object' || value === null) {
 		return undefined;
 	}
 
 	const maybe = value as Record<string, unknown>;
 	if (
-		typeof maybe.x === "number" &&
-		typeof maybe.y === "number" &&
-		typeof maybe.width === "number" &&
-		typeof maybe.height === "number"
+		typeof maybe.x === 'number' &&
+		typeof maybe.y === 'number' &&
+		typeof maybe.width === 'number' &&
+		typeof maybe.height === 'number'
 	) {
 		return {
 			x: maybe.x,
 			y: maybe.y,
 			width: maybe.width,
-			height: maybe.height,
+			height: maybe.height
 		};
 	}
 
@@ -82,10 +77,10 @@ function asOptionalBoundingBox(value: unknown): IssueOccurrence["boundingBox"] {
 function normalizeOccurrence(
 	occurrence: unknown,
 	derivedIssueId: string,
-	pageId: string,
+	pageId: string
 ): IssueOccurrence {
 	const source =
-		typeof occurrence === "object" && occurrence !== null
+		typeof occurrence === 'object' && occurrence !== null
 			? (occurrence as Record<string, unknown>)
 			: {};
 
@@ -112,14 +107,11 @@ function normalizeOccurrence(
 		...(label !== undefined ? { label } : {}),
 		...(artifactIds !== undefined ? { artifactIds } : {}),
 		elementId: `${derivedIssueId}-el-0`,
-		pageId: elementPageId,
+		pageId: elementPageId
 	};
 }
 
-function buildDerivedIssueId(
-	baseIssueId: string,
-	occurrenceIndex: number,
-): string {
+function buildDerivedIssueId(baseIssueId: string, occurrenceIndex: number): string {
 	if (occurrenceIndex === 0) {
 		return baseIssueId;
 	}
@@ -137,9 +129,7 @@ function expandIssuesByOccurrence(issues: IssueDetail[]): ExpandedIssues {
 	const derivedIdsByIssueId = new Map<string, string[]>();
 
 	for (const issue of issues) {
-		const occurrences = Array.isArray(issue.occurrences)
-			? issue.occurrences
-			: [];
+		const occurrences = Array.isArray(issue.occurrences) ? issue.occurrences : [];
 		if (occurrences.length === 0) {
 			expanded.push({ ...issue });
 			derivedIdsByIssueId.set(issue.id, [issue.id]);
@@ -147,25 +137,17 @@ function expandIssuesByOccurrence(issues: IssueDetail[]): ExpandedIssues {
 		}
 
 		const derivedIds: string[] = [];
-		for (
-			let occurrenceIndex = 0;
-			occurrenceIndex < occurrences.length;
-			occurrenceIndex += 1
-		) {
+		for (let occurrenceIndex = 0; occurrenceIndex < occurrences.length; occurrenceIndex += 1) {
 			const occurrence = occurrences[occurrenceIndex];
 			const derivedIssueId = buildDerivedIssueId(issue.id, occurrenceIndex);
-			const normalizedOccurrence = normalizeOccurrence(
-				occurrence,
-				derivedIssueId,
-				issue.pageId,
-			);
+			const normalizedOccurrence = normalizeOccurrence(occurrence, derivedIssueId, issue.pageId);
 
 			expanded.push({
 				...issue,
 				id: derivedIssueId,
 				elementCount: 1,
 				elementsTruncated: false,
-				occurrences: [normalizedOccurrence],
+				occurrences: [normalizedOccurrence]
 			});
 
 			derivedIds.push(derivedIssueId);
@@ -179,7 +161,7 @@ function expandIssuesByOccurrence(issues: IssueDetail[]): ExpandedIssues {
 
 function remapPageOverviewElements(
 	elements: PageOverviewElement[],
-	derivedIdsByIssueId: Map<string, string[]>,
+	derivedIdsByIssueId: Map<string, string[]>
 ): PageOverviewElement[] {
 	return elements.map((element) => {
 		const derivedIssueIds = derivedIdsByIssueId.get(element.issueId);
@@ -187,20 +169,19 @@ function remapPageOverviewElements(
 			return element;
 		}
 
-		const remappedIssueId =
-			derivedIssueIds[element.nodeIndex] ?? derivedIssueIds[0];
+		const remappedIssueId = derivedIssueIds[element.nodeIndex] ?? derivedIssueIds[0];
 
 		return {
 			...element,
 			issueId: remappedIssueId,
-			nodeIndex: 0,
+			nodeIndex: 0
 		};
 	});
 }
 
 function buildScannerSummaries(
 	scanners: ScannerSummary[],
-	issues: IssueDetail[],
+	issues: IssueDetail[]
 ): { scanners: ScannerSummary[]; byScanner: Record<string, number> } {
 	const severityByScanner = new Map<string, SeverityCounts>();
 	const countByScanner = new Map<string, number>();
@@ -209,8 +190,7 @@ function buildScannerSummaries(
 		const currentCount = countByScanner.get(issue.scanner) ?? 0;
 		countByScanner.set(issue.scanner, currentCount + 1);
 
-		const currentSeverity =
-			severityByScanner.get(issue.scanner) ?? createEmptySeverityCounts();
+		const currentSeverity = severityByScanner.get(issue.scanner) ?? createEmptySeverityCounts();
 		incrementSeverity(currentSeverity, issue.severity);
 		severityByScanner.set(issue.scanner, currentSeverity);
 	}
@@ -218,7 +198,7 @@ function buildScannerSummaries(
 	const nextScanners = scanners.map((scanner) => ({
 		...scanner,
 		issueCount: countByScanner.get(scanner.id) ?? 0,
-		severity: cloneSeverityCounts(severityByScanner.get(scanner.id)),
+		severity: cloneSeverityCounts(severityByScanner.get(scanner.id))
 	}));
 
 	const byScanner: Record<string, number> = {};
@@ -232,11 +212,8 @@ function buildScannerSummaries(
 	return { scanners: nextScanners, byScanner };
 }
 
-export function buildOccurrenceModeReport(
-	report: UnifiedReport,
-): UnifiedReport {
-	const { issues: occurrenceIssues, derivedIdsByIssueId } =
-		expandIssuesByOccurrence(report.issues);
+export function buildOccurrenceModeReport(report: UnifiedReport): UnifiedReport {
+	const { issues: occurrenceIssues, derivedIdsByIssueId } = expandIssuesByOccurrence(report.issues);
 
 	const issuesByPageId = new Map<string, IssueDetail[]>();
 	const summaryBySeverity = createEmptySeverityCounts();
@@ -258,26 +235,18 @@ export function buildOccurrenceModeReport(
 		const updatedPageOverview = page.pageOverview
 			? {
 					...page.pageOverview,
-					elements: remapPageOverviewElements(
-						page.pageOverview.elements,
-						derivedIdsByIssueId,
-					),
+					elements: remapPageOverviewElements(page.pageOverview.elements, derivedIdsByIssueId)
 				}
 			: undefined;
 		return {
 			...page,
 			issueCount: pageIssues.length,
 			bySeverity: pageBySeverity,
-			...(updatedPageOverview !== undefined
-				? { pageOverview: updatedPageOverview }
-				: {}),
+			...(updatedPageOverview !== undefined ? { pageOverview: updatedPageOverview } : {})
 		};
 	});
 
-	const { scanners, byScanner } = buildScannerSummaries(
-		report.scanners,
-		occurrenceIssues,
-	);
+	const { scanners, byScanner } = buildScannerSummaries(report.scanners, occurrenceIssues);
 	const pagesWithIssues = pages.filter((page) => page.issueCount > 0).length;
 
 	return {
@@ -288,10 +257,10 @@ export function buildOccurrenceModeReport(
 			bySeverity: summaryBySeverity,
 			byScanner,
 			pagesScanned: pages.length,
-			pagesWithIssues,
+			pagesWithIssues
 		},
 		scanners,
 		pages,
-		issues: occurrenceIssues,
+		issues: occurrenceIssues
 	};
 }

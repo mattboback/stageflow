@@ -1,24 +1,18 @@
-import type { IssueSeverity } from "../core/types";
+import type { IssueSeverity } from '../core/types';
 
-export const SEVERITY_LEVELS = [
-	"critical",
-	"serious",
-	"moderate",
-	"minor",
-	"info",
-] as const;
+export const SEVERITY_LEVELS = ['critical', 'serious', 'moderate', 'minor', 'info'] as const;
 
 const SEVERITY_RANK: Record<IssueSeverity, number> = {
 	critical: 4,
 	serious: 3,
 	moderate: 2,
 	minor: 1,
-	info: 0,
+	info: 0
 };
 
 export function normalizeSeverity(
 	value: string | undefined | null,
-	fallback: IssueSeverity = "info",
+	fallback: IssueSeverity = 'info'
 ): IssueSeverity {
 	if (!value) {
 		return fallback;
@@ -37,10 +31,10 @@ export function severityRank(severity: IssueSeverity): number {
 }
 
 export function incrementSeverityCount(
-	counts: Record<Exclude<IssueSeverity, "info">, number>,
-	severity: IssueSeverity,
+	counts: Record<Exclude<IssueSeverity, 'info'>, number>,
+	severity: IssueSeverity
 ): void {
-	if (severity === "info") {
+	if (severity === 'info') {
 		return;
 	}
 	counts[severity] += 1;

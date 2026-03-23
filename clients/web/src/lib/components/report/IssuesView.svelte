@@ -1,293 +1,269 @@
 <script lang="ts">
-import type { ScreenshotArtifact } from "$lib/types/scan";
-import type { IssueDetail, UnifiedReport } from "$lib/types/unified-report";
+	import type { ScreenshotArtifact } from '$lib/types/scan';
+	import type { IssueDetail, UnifiedReport } from '$lib/types/unified-report';
 
-import { Input, Panel, Select, Tabs } from "$lib/components/ui";
-import {
-	ISSUE_SORTS,
-	ISSUE_SORT_LABELS,
-	filterIssues,
-	getSeverityChipClass,
-	getVirtualWindow,
-	isIssueSortKey,
-	sortIssues,
-} from "$lib/report";
-import { cn } from "$lib/utils";
-import { Search } from "lucide-svelte";
+	import { Input, Panel, Select, Tabs } from '$lib/components/ui';
+	import {
+		ISSUE_SORTS,
+		ISSUE_SORT_LABELS,
+		filterIssues,
+		getSeverityChipClass,
+		getVirtualWindow,
+		isIssueSortKey,
+		sortIssues
+	} from '$lib/report';
+	import { cn } from '$lib/utils';
+	import { Search } from 'lucide-svelte';
 
-import IssueRowCard from "./IssueRowCard.svelte";
+	import IssueRowCard from './IssueRowCard.svelte';
 
-interface Props {
-	report: UnifiedReport;
-	screenshots: ScreenshotArtifact[];
-	activeScanner: string | null;
-	activePage: string | null;
-	activeSeverity: string | null;
-	activeCategory: string | null;
-	searchTerm: string;
-	issueSort: string;
-	selectedIssueId: string | null;
-	onScannerChange: (scannerId: string | null) => void;
-	onPageChange: (pageId: string | null) => void;
-	onSeverityChange: (severity: string | null) => void;
-	onCategoryChange: (category: string | null) => void;
-	onSearchChange: (query: string) => void;
-	onSortChange: (sort: string) => void;
-	onIssueSelect: (issue: IssueDetail) => void;
-	onClearFilters: () => void;
-}
-
-let {
-	report,
-	screenshots,
-	activeScanner,
-	activePage,
-	activeSeverity,
-	activeCategory,
-	searchTerm,
-	issueSort,
-	selectedIssueId,
-	onScannerChange,
-	onPageChange,
-	onSeverityChange,
-	onCategoryChange,
-	onSearchChange,
-	onSortChange,
-	onIssueSelect,
-	onClearFilters,
-}: Props = $props();
-
-const severityOptions = [
-	"all",
-	"critical",
-	"serious",
-	"moderate",
-	"minor",
-	"info",
-] as const;
-const severityCounts = $derived(
-	report.summary.bySeverity ?? {
-		critical: 0,
-		serious: 0,
-		moderate: 0,
-		minor: 0,
-		info: 0,
-	},
-);
-
-const scannerTabs = $derived.by(() => {
-	const byScanner = report.summary.byScanner ?? {};
-	return [
-		{ id: "all", label: `All (${report.issues.length.toLocaleString()})` },
-		...report.scanners.map((scanner) => ({
-			id: scanner.id,
-			label: `${scanner.name ?? scanner.id}${byScanner[scanner.id] ? ` (${byScanner[scanner.id].toLocaleString()})` : ""}`,
-		})),
-	];
-});
-
-const categories = $derived.by(() => {
-	const seen: Record<string, true> = {};
-	for (const issue of report.issues) {
-		if (issue.category) seen[issue.category] = true;
+	interface Props {
+		report: UnifiedReport;
+		screenshots: ScreenshotArtifact[];
+		activeScanner: string | null;
+		activePage: string | null;
+		activeSeverity: string | null;
+		activeCategory: string | null;
+		searchTerm: string;
+		issueSort: string;
+		selectedIssueId: string | null;
+		onScannerChange: (scannerId: string | null) => void;
+		onPageChange: (pageId: string | null) => void;
+		onSeverityChange: (severity: string | null) => void;
+		onCategoryChange: (category: string | null) => void;
+		onSearchChange: (query: string) => void;
+		onSortChange: (sort: string) => void;
+		onIssueSelect: (issue: IssueDetail) => void;
+		onClearFilters: () => void;
 	}
-	return Object.keys(seen).sort();
-});
 
-const pagesById = $derived(
-	Object.fromEntries(report.pages.map((page) => [page.id, page])),
-);
-const activePageLabel = $derived(
-	activePage
-		? (pagesById[activePage]?.path ?? pagesById[activePage]?.url ?? activePage)
-		: null,
-);
-const filteredIssues = $derived(
-	filterIssues(report.issues, {
-		scannerId: activeScanner,
-		pageId: activePage,
-		severity: activeSeverity,
-		category: activeCategory,
-		query: searchTerm,
-	}),
-);
+	let {
+		report,
+		screenshots,
+		activeScanner,
+		activePage,
+		activeSeverity,
+		activeCategory,
+		searchTerm,
+		issueSort,
+		selectedIssueId,
+		onScannerChange,
+		onPageChange,
+		onSeverityChange,
+		onCategoryChange,
+		onSearchChange,
+		onSortChange,
+		onIssueSelect,
+		onClearFilters
+	}: Props = $props();
 
-const sortedIssues = $derived(
-	sortIssues(
-		filteredIssues,
-		isIssueSortKey(issueSort) ? issueSort : "severity",
-	),
-);
-
-const hasActiveFilters = $derived(
-	Boolean(
-		activeScanner ||
-			activePage ||
-			activeSeverity ||
-			activeCategory ||
-			searchTerm.trim(),
-	),
-);
-
-const hasSecondaryFilters = $derived(Boolean(activeCategory || activePage));
-const activeFilterCount = $derived(
-	(activeScanner ? 1 : 0) +
-		(activePage ? 1 : 0) +
-		(activeSeverity ? 1 : 0) +
-		(activeCategory ? 1 : 0) +
-		(searchTerm.trim() ? 1 : 0),
-);
-
-// Debounced search: local state syncs immediately for responsive UI,
-// but URL update is debounced to avoid expensive recalculations on each keystroke.
-// We use $state here instead of writable $derived because:
-// 1. We need to sync from prop (searchTerm) when it changes externally
-// 2. We need to allow local mutations from user input
-// 3. We need to debounce before calling the callback
-const SEARCH_DEBOUNCE_MS = 250;
-// eslint-disable-next-line svelte/prefer-writable-derived -- complex bidirectional sync with debounce
-let localSearchValue = $state("");
-let showMoreFilters = $state(false);
-let previewMode = $state<"auto" | "on" | "off">("auto");
-let isCompactViewport = $state(false);
-
-// Sync local value when searchTerm prop changes externally (e.g., clear filters, initial load)
-$effect(() => {
-	localSearchValue = searchTerm;
-});
-
-// Debounce the URL update when local value changes
-$effect(() => {
-	// Capture the current value for the closure
-	const currentValue = localSearchValue;
-	// Read searchTerm inside the effect so it's tracked as a dependency
-	const propValue = searchTerm;
-
-	// Skip if already in sync with prop
-	if (currentValue === propValue) return;
-
-	const timer = setTimeout(() => {
-		onSearchChange(currentValue.trim());
-	}, SEARCH_DEBOUNCE_MS);
-
-	// Cleanup: cancel pending timeout if effect re-runs or component unmounts
-	return () => clearTimeout(timer);
-});
-
-function handleSearchInput(value: string) {
-	localSearchValue = value;
-}
-
-let listContainer = $state<HTMLDivElement | null>(null);
-let severityChipScroller = $state<HTMLDivElement | null>(null);
-let severitySwipeHintVisible = $state(false);
-let scrollTop = $state(0);
-let viewportHeight = $state(600);
-let scrollRaf = $state<number | null>(null);
-
-function updateSeveritySwipeHint() {
-	if (!severityChipScroller || !isCompactViewport) {
-		severitySwipeHintVisible = false;
-		return;
-	}
-	const canScroll =
-		severityChipScroller.scrollWidth - severityChipScroller.clientWidth > 8;
-	const atStart = severityChipScroller.scrollLeft < 8;
-	severitySwipeHintVisible = canScroll && atStart;
-}
-
-function handleSeverityChipScroll() {
-	updateSeveritySwipeHint();
-}
-
-const showPreviews = $derived.by(() => {
-	if (previewMode === "on") return true;
-	if (previewMode === "off") return false;
-	return !isCompactViewport;
-});
-
-const rowHeight = $derived(showPreviews ? 120 : 88);
-const overscan = $derived(isCompactViewport ? 4 : 6);
-
-const shouldVirtualize = $derived(sortedIssues.length > 200);
-const totalHeight = $derived(sortedIssues.length * rowHeight);
-const virtualWindow = $derived.by(() =>
-	getVirtualWindow({
-		scrollTop,
-		viewportHeight,
-		rowHeight,
-		totalItems: sortedIssues.length,
-		overScan: overscan,
-	}),
-);
-const visibleIssues = $derived(
-	shouldVirtualize
-		? sortedIssues.slice(virtualWindow.startIndex, virtualWindow.endIndex)
-		: sortedIssues,
-);
-const offsetY = $derived(shouldVirtualize ? virtualWindow.offset : 0);
-
-function handleListScroll() {
-	if (!listContainer) return;
-	if (scrollRaf !== null) return;
-
-	scrollRaf = requestAnimationFrame(() => {
-		scrollRaf = null;
-		if (!listContainer) return;
-		scrollTop = listContainer.scrollTop;
-		viewportHeight = listContainer.clientHeight;
-	});
-}
-
-$effect(() => {
-	if (
-		typeof window === "undefined" ||
-		typeof window.matchMedia !== "function"
-	) {
-		isCompactViewport = false;
-		return;
-	}
-	const media = window.matchMedia("(max-width: 640px)");
-	const update = (event?: MediaQueryListEvent) => {
-		isCompactViewport = event ? event.matches : media.matches;
-	};
-	update();
-	media.addEventListener("change", update);
-	return () => media.removeEventListener("change", update);
-});
-
-$effect(() => {
-	if (!severityChipScroller) return;
-	const frame = requestAnimationFrame(() => updateSeveritySwipeHint());
-	if (typeof ResizeObserver === "undefined") {
-		return () => cancelAnimationFrame(frame);
-	}
-	const observer = new ResizeObserver(() => updateSeveritySwipeHint());
-	observer.observe(severityChipScroller);
-	return () => {
-		cancelAnimationFrame(frame);
-		observer.disconnect();
-	};
-});
-
-$effect(() => {
-	if (!listContainer || typeof ResizeObserver === "undefined") return;
-	const observer = new ResizeObserver(() => {
-		if (!listContainer) return;
-		viewportHeight = listContainer.clientHeight;
-	});
-	observer.observe(listContainer);
-	viewportHeight = listContainer.clientHeight;
-	return () => observer.disconnect();
-});
-
-$effect(() => {
-	return () => {
-		if (scrollRaf !== null) {
-			cancelAnimationFrame(scrollRaf);
+	const severityOptions = ['all', 'critical', 'serious', 'moderate', 'minor', 'info'] as const;
+	const severityCounts = $derived(
+		report.summary.bySeverity ?? {
+			critical: 0,
+			serious: 0,
+			moderate: 0,
+			minor: 0,
+			info: 0
 		}
-	};
-});
+	);
+
+	const scannerTabs = $derived.by(() => {
+		const byScanner = report.summary.byScanner ?? {};
+		return [
+			{ id: 'all', label: `All (${report.issues.length.toLocaleString()})` },
+			...report.scanners.map((scanner) => ({
+				id: scanner.id,
+				label: `${scanner.name ?? scanner.id}${byScanner[scanner.id] ? ` (${byScanner[scanner.id].toLocaleString()})` : ''}`
+			}))
+		];
+	});
+
+	const categories = $derived.by(() => {
+		const seen: Record<string, true> = {};
+		for (const issue of report.issues) {
+			if (issue.category) seen[issue.category] = true;
+		}
+		return Object.keys(seen).sort();
+	});
+
+	const pagesById = $derived(Object.fromEntries(report.pages.map((page) => [page.id, page])));
+	const activePageLabel = $derived(
+		activePage ? (pagesById[activePage]?.path ?? pagesById[activePage]?.url ?? activePage) : null
+	);
+	const filteredIssues = $derived(
+		filterIssues(report.issues, {
+			scannerId: activeScanner,
+			pageId: activePage,
+			severity: activeSeverity,
+			category: activeCategory,
+			query: searchTerm
+		})
+	);
+
+	const sortedIssues = $derived(
+		sortIssues(filteredIssues, isIssueSortKey(issueSort) ? issueSort : 'severity')
+	);
+
+	const hasActiveFilters = $derived(
+		Boolean(activeScanner || activePage || activeSeverity || activeCategory || searchTerm.trim())
+	);
+
+	const hasSecondaryFilters = $derived(Boolean(activeCategory || activePage));
+	const activeFilterCount = $derived(
+		(activeScanner ? 1 : 0) +
+			(activePage ? 1 : 0) +
+			(activeSeverity ? 1 : 0) +
+			(activeCategory ? 1 : 0) +
+			(searchTerm.trim() ? 1 : 0)
+	);
+
+	// Debounced search: local state syncs immediately for responsive UI,
+	// but URL update is debounced to avoid expensive recalculations on each keystroke.
+	// We use $state here instead of writable $derived because:
+	// 1. We need to sync from prop (searchTerm) when it changes externally
+	// 2. We need to allow local mutations from user input
+	// 3. We need to debounce before calling the callback
+	const SEARCH_DEBOUNCE_MS = 250;
+	// eslint-disable-next-line svelte/prefer-writable-derived -- complex bidirectional sync with debounce
+	let localSearchValue = $state('');
+	let showMoreFilters = $state(false);
+	let previewMode = $state<'auto' | 'on' | 'off'>('auto');
+	let isCompactViewport = $state(false);
+
+	// Sync local value when searchTerm prop changes externally (e.g., clear filters, initial load)
+	$effect(() => {
+		localSearchValue = searchTerm;
+	});
+
+	// Debounce the URL update when local value changes
+	$effect(() => {
+		// Capture the current value for the closure
+		const currentValue = localSearchValue;
+		// Read searchTerm inside the effect so it's tracked as a dependency
+		const propValue = searchTerm;
+
+		// Skip if already in sync with prop
+		if (currentValue === propValue) return;
+
+		const timer = setTimeout(() => {
+			onSearchChange(currentValue.trim());
+		}, SEARCH_DEBOUNCE_MS);
+
+		// Cleanup: cancel pending timeout if effect re-runs or component unmounts
+		return () => clearTimeout(timer);
+	});
+
+	function handleSearchInput(value: string) {
+		localSearchValue = value;
+	}
+
+	let listContainer = $state<HTMLDivElement | null>(null);
+	let severityChipScroller = $state<HTMLDivElement | null>(null);
+	let severitySwipeHintVisible = $state(false);
+	let scrollTop = $state(0);
+	let viewportHeight = $state(600);
+	let scrollRaf = $state<number | null>(null);
+
+	function updateSeveritySwipeHint() {
+		if (!severityChipScroller || !isCompactViewport) {
+			severitySwipeHintVisible = false;
+			return;
+		}
+		const canScroll = severityChipScroller.scrollWidth - severityChipScroller.clientWidth > 8;
+		const atStart = severityChipScroller.scrollLeft < 8;
+		severitySwipeHintVisible = canScroll && atStart;
+	}
+
+	function handleSeverityChipScroll() {
+		updateSeveritySwipeHint();
+	}
+
+	const showPreviews = $derived.by(() => {
+		if (previewMode === 'on') return true;
+		if (previewMode === 'off') return false;
+		return !isCompactViewport;
+	});
+
+	const rowHeight = $derived(showPreviews ? 120 : 88);
+	const overscan = $derived(isCompactViewport ? 4 : 6);
+
+	const shouldVirtualize = $derived(sortedIssues.length > 200);
+	const totalHeight = $derived(sortedIssues.length * rowHeight);
+	const virtualWindow = $derived.by(() =>
+		getVirtualWindow({
+			scrollTop,
+			viewportHeight,
+			rowHeight,
+			totalItems: sortedIssues.length,
+			overScan: overscan
+		})
+	);
+	const visibleIssues = $derived(
+		shouldVirtualize
+			? sortedIssues.slice(virtualWindow.startIndex, virtualWindow.endIndex)
+			: sortedIssues
+	);
+	const offsetY = $derived(shouldVirtualize ? virtualWindow.offset : 0);
+
+	function handleListScroll() {
+		if (!listContainer) return;
+		if (scrollRaf !== null) return;
+
+		scrollRaf = requestAnimationFrame(() => {
+			scrollRaf = null;
+			if (!listContainer) return;
+			scrollTop = listContainer.scrollTop;
+			viewportHeight = listContainer.clientHeight;
+		});
+	}
+
+	$effect(() => {
+		if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+			isCompactViewport = false;
+			return;
+		}
+		const media = window.matchMedia('(max-width: 640px)');
+		const update = (event?: MediaQueryListEvent) => {
+			isCompactViewport = event ? event.matches : media.matches;
+		};
+		update();
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
+	});
+
+	$effect(() => {
+		if (!severityChipScroller) return;
+		const frame = requestAnimationFrame(() => updateSeveritySwipeHint());
+		if (typeof ResizeObserver === 'undefined') {
+			return () => cancelAnimationFrame(frame);
+		}
+		const observer = new ResizeObserver(() => updateSeveritySwipeHint());
+		observer.observe(severityChipScroller);
+		return () => {
+			cancelAnimationFrame(frame);
+			observer.disconnect();
+		};
+	});
+
+	$effect(() => {
+		if (!listContainer || typeof ResizeObserver === 'undefined') return;
+		const observer = new ResizeObserver(() => {
+			if (!listContainer) return;
+			viewportHeight = listContainer.clientHeight;
+		});
+		observer.observe(listContainer);
+		viewportHeight = listContainer.clientHeight;
+		return () => observer.disconnect();
+	});
+
+	$effect(() => {
+		return () => {
+			if (scrollRaf !== null) {
+				cancelAnimationFrame(scrollRaf);
+			}
+		};
+	});
 </script>
 
 <div class="space-y-3">
@@ -297,7 +273,7 @@ $effect(() => {
 		onValueChange={(id) => onScannerChange(id === 'all' ? null : id)}
 	/>
 
-	<Panel class="shadow-sm ring-1 ring-line/70" padding="none" rounded="2xl">
+	<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
 		<div class="border-line border-b p-4 sm:p-5">
 			<div class="flex flex-col gap-4">
 				<div class="flex items-center justify-between gap-3">
@@ -376,7 +352,10 @@ $effect(() => {
 						/>
 					</div>
 					<div class="flex items-center justify-start gap-2 md:justify-end">
-						<label for="issue-sort" class="text-ink-faint text-xs font-semibold tracking-wide uppercase">
+						<label
+							for="issue-sort"
+							class="text-ink-faint text-xs font-semibold tracking-wide uppercase"
+						>
 							Sort
 						</label>
 						<Select
@@ -392,11 +371,15 @@ $effect(() => {
 						</Select>
 					</div>
 				</div>
-				<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line/70 bg-surface px-2 py-2">
+				<div
+					class="border-line/70 bg-surface flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2 py-2"
+				>
 					<div class="text-ink-muted text-xs">
 						{sortedIssues.length.toLocaleString()} visible results
 					</div>
-					<div class="inline-flex items-center gap-1 rounded-lg border border-line/70 bg-surface-muted p-1 text-xs">
+					<div
+						class="border-line/70 bg-surface-muted inline-flex items-center gap-1 rounded-lg border p-1 text-xs"
+					>
 						<button
 							type="button"
 							onclick={() => (previewMode = 'auto')}
@@ -438,25 +421,26 @@ $effect(() => {
 							class="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
 						>
 							<div class="flex min-w-max items-center gap-2 pr-5 sm:pr-0">
-							{#each severityOptions as severity (severity)}
-								{@const count = severity === 'all'
-									? report.issues.length
-									: severityCounts[severity] ?? 0}
-								<button
-									onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
-									disabled={severity !== 'all' && count === 0}
-									class={getSeverityChipClass(
-										severity,
-										activeSeverity === null ? severity === 'all' : activeSeverity === severity
-									)}
-								>
-									{severity} ({count.toLocaleString()})
-								</button>
-							{/each}
+								{#each severityOptions as severity (severity)}
+									{@const count =
+										severity === 'all' ? report.issues.length : (severityCounts[severity] ?? 0)}
+									<button
+										onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
+										disabled={severity !== 'all' && count === 0}
+										class={getSeverityChipClass(
+											severity,
+											activeSeverity === null ? severity === 'all' : activeSeverity === severity
+										)}
+									>
+										{severity} ({count.toLocaleString()})
+									</button>
+								{/each}
 							</div>
 						</div>
 						{#if severitySwipeHintVisible}
-							<div class="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-surface-muted to-transparent sm:hidden"></div>
+							<div
+								class="from-surface-muted pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l to-transparent sm:hidden"
+							></div>
 						{/if}
 					</div>
 					<div class="mt-1 flex items-center justify-between gap-2">
@@ -475,7 +459,9 @@ $effect(() => {
 					</div>
 				</div>
 				{#if showMoreFilters || hasSecondaryFilters}
-					<div class="grid grid-cols-1 gap-3 border-t border-dashed border-line pt-3 sm:grid-cols-2">
+					<div
+						class="border-line grid grid-cols-1 gap-3 border-t border-dashed pt-3 sm:grid-cols-2"
+					>
 						<label class="text-ink-muted text-xs">
 							Category
 							<Select
@@ -528,7 +514,7 @@ $effect(() => {
 			<div
 				bind:this={listContainer}
 				class={cn(
-					'divide-line divide-y border-t border-line/70',
+					'divide-line border-line/70 divide-y border-t',
 					shouldVirtualize && 'max-h-[70vh] overflow-y-auto overscroll-contain'
 				)}
 				data-testid="issue-list"
@@ -539,13 +525,13 @@ $effect(() => {
 						<div style={`transform: translateY(${offsetY}px);`}>
 							{#each visibleIssues as issue (issue.id)}
 								<IssueRowCard
-								{issue}
-								page={pagesById[issue.pageId] ?? null}
-								{screenshots}
-								showScreenshot={showPreviews}
-								isVirtualized={true}
-								isSelected={selectedIssueId === issue.id}
-								onclick={() => onIssueSelect(issue)}
+									{issue}
+									page={pagesById[issue.pageId] ?? null}
+									{screenshots}
+									showScreenshot={showPreviews}
+									isVirtualized={true}
+									isSelected={selectedIssueId === issue.id}
+									onclick={() => onIssueSelect(issue)}
 								/>
 							{/each}
 						</div>

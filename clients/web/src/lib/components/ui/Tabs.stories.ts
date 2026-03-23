@@ -1,8 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/svelte";
+import type { Meta, StoryObj } from '@storybook/svelte';
 
-import { expect, fn, userEvent, within } from "@storybook/test";
+import { expect, fn, userEvent, within } from '@storybook/test';
 
-import TabsStoryHarness from "./story-harnesses/TabsStoryHarness.svelte";
+import TabsStoryHarness from './story-harnesses/TabsStoryHarness.svelte';
 
 interface TabsStoryArgs {
 	defaultTab: string;
@@ -10,13 +10,13 @@ interface TabsStoryArgs {
 }
 
 const meta = {
-	title: "UI/Tabs",
+	title: 'UI/Tabs',
 	component: TabsStoryHarness,
-	tags: ["autodocs", "skip-test"],
+	tags: ['autodocs', 'skip-test'],
 	args: {
-		defaultTab: "overview",
-		onValueChange: fn(),
-	},
+		defaultTab: 'overview',
+		onValueChange: fn()
+	}
 } satisfies Meta<TabsStoryArgs>;
 
 export default meta;
@@ -26,30 +26,26 @@ export const SwitchTabs: Story = {
 	play: async ({ args, canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		await expect(canvas.getByTestId("active-panel")).toHaveTextContent(
-			"Active panel: overview",
-		);
+		await expect(canvas.getByTestId('active-panel')).toHaveTextContent('Active panel: overview');
 
-		await userEvent.click(canvas.getByRole("button", { name: "Security" }));
-		await expect(canvas.getByTestId("active-panel")).toHaveTextContent(
-			"Active panel: security",
+		await userEvent.click(canvas.getByRole('button', { name: 'Security' }));
+		await expect(canvas.getByTestId('active-panel')).toHaveTextContent('Active panel: security');
+		await expect(canvas.getByTestId('last-selection')).toHaveTextContent(
+			'Last selection: security'
 		);
-		await expect(canvas.getByTestId("last-selection")).toHaveTextContent(
-			"Last selection: security",
-		);
-		await expect(args.onValueChange).toHaveBeenCalledWith("security");
-	},
+		await expect(args.onValueChange).toHaveBeenCalledWith('security');
+	}
 };
 
 export const StartsOnAccessibility: Story = {
 	args: {
-		defaultTab: "accessibility",
+		defaultTab: 'accessibility'
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		await expect(canvas.getByTestId("active-panel")).toHaveTextContent(
-			"Active panel: accessibility",
+		await expect(canvas.getByTestId('active-panel')).toHaveTextContent(
+			'Active panel: accessibility'
 		);
-	},
+	}
 };

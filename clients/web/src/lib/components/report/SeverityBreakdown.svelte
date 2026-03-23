@@ -1,55 +1,55 @@
 <script lang="ts">
-import type { SeverityCounts } from "$lib/types/unified-report";
+	import type { SeverityCounts } from '$lib/types/unified-report';
 
-import { Chip } from "$lib/components/ui";
-import { cn } from "$lib/utils";
+	import { Chip } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
 
-interface Props {
-	bySeverity: SeverityCounts;
-}
+	interface Props {
+		bySeverity: SeverityCounts;
+	}
 
-let { bySeverity }: Props = $props();
+	let { bySeverity }: Props = $props();
 
-const total = $derived(
-	bySeverity.critical +
-		bySeverity.serious +
-		bySeverity.moderate +
-		bySeverity.minor +
-		(bySeverity.info ?? 0),
-);
+	const total = $derived(
+		bySeverity.critical +
+			bySeverity.serious +
+			bySeverity.moderate +
+			bySeverity.minor +
+			(bySeverity.info ?? 0)
+	);
 
-const severityItems = $derived([
-	{
-		id: "critical",
-		label: "Critical",
-		count: bySeverity.critical,
-		class: "bg-red-500",
-	},
-	{
-		id: "serious",
-		label: "Serious",
-		count: bySeverity.serious,
-		class: "bg-orange-500",
-	},
-	{
-		id: "moderate",
-		label: "Moderate",
-		count: bySeverity.moderate,
-		class: "bg-amber-500",
-	},
-	{
-		id: "minor",
-		label: "Minor",
-		count: bySeverity.minor,
-		class: "bg-blue-500",
-	},
-	{
-		id: "info",
-		label: "Info",
-		count: bySeverity.info ?? 0,
-		class: "bg-purple-500",
-	},
-]);
+	const severityItems = $derived([
+		{
+			id: 'critical',
+			label: 'Critical',
+			count: bySeverity.critical,
+			class: 'bg-red-500'
+		},
+		{
+			id: 'serious',
+			label: 'Serious',
+			count: bySeverity.serious,
+			class: 'bg-orange-500'
+		},
+		{
+			id: 'moderate',
+			label: 'Moderate',
+			count: bySeverity.moderate,
+			class: 'bg-amber-500'
+		},
+		{
+			id: 'minor',
+			label: 'Minor',
+			count: bySeverity.minor,
+			class: 'bg-blue-500'
+		},
+		{
+			id: 'info',
+			label: 'Info',
+			count: bySeverity.info ?? 0,
+			class: 'bg-purple-500'
+		}
+	]);
 </script>
 
 <div class="space-y-3">

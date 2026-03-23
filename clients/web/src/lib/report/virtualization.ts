@@ -18,7 +18,7 @@ export function getVirtualWindow({
 	viewportHeight,
 	rowHeight,
 	totalItems,
-	overScan = 6,
+	overScan = 6
 }: VirtualizationParams): VirtualWindow {
 	if (totalItems <= 0 || rowHeight <= 0 || viewportHeight <= 0) {
 		return { startIndex: 0, endIndex: 0, offset: 0, visibleCount: 0 };
@@ -31,6 +31,6 @@ export function getVirtualWindow({
 		startIndex: start,
 		endIndex: end,
 		offset: start * rowHeight,
-		visibleCount: visible,
+		visibleCount: visible
 	};
 }

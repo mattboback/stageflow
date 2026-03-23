@@ -1,7 +1,7 @@
-import type { PreScanAction } from "../core/types";
+import type { PreScanAction } from '../core/types';
 
 export interface VisionConfig {
-	provider: "openrouter";
+	provider: 'openrouter';
 	apiKey: string;
 	model: string;
 	appReferer?: string;
@@ -14,13 +14,13 @@ export interface VisionConfig {
 }
 
 export interface VisionMessage {
-	role: "user" | "assistant" | "system";
+	role: 'user' | 'assistant' | 'system';
 	content: VisionContent[];
 }
 
 export type VisionContent =
-	| { type: "text"; text: string }
-	| { type: "image_url"; image_url: { url: string } };
+	| { type: 'text'; text: string }
+	| { type: 'image_url'; image_url: { url: string } };
 
 export interface VisionResponse {
 	content: string;
@@ -69,12 +69,7 @@ export interface AgentGoal {
 }
 
 export interface SuccessCriterion {
-	type:
-		| "url-contains"
-		| "url-matches"
-		| "element-visible"
-		| "text-visible"
-		| "custom";
+	type: 'url-contains' | 'url-matches' | 'element-visible' | 'text-visible' | 'custom';
 	value: string;
 }
 
@@ -84,10 +79,7 @@ export interface GoalStatus {
 	reason: string;
 }
 
-export type AgentAction =
-	| PreScanAction
-	| { type: "done" }
-	| { type: "stuck"; reason: string };
+export type AgentAction = PreScanAction | { type: 'done' } | { type: 'stuck'; reason: string };
 
 export interface ActionDecision {
 	action: AgentAction;

@@ -1,31 +1,31 @@
 <script lang="ts">
-import { page } from "$app/state";
-import {
-	ScanArtifactsSidebar,
-	ScanStatusContent,
-	ScanStatusHeader,
-} from "$lib/components/scan-status";
-import { PageSection } from "$lib/components/ui";
-import { SITE } from "$lib/config/site";
-import { createScanStatusStore } from "$lib/stores/scan-status.svelte";
+	import { page } from '$app/state';
+	import {
+		ScanArtifactsSidebar,
+		ScanStatusContent,
+		ScanStatusHeader
+	} from '$lib/components/scan-status';
+	import { PageSection } from '$lib/components/ui';
+	import { SITE } from '$lib/config/site';
+	import { createScanStatusStore } from '$lib/stores/scan-status.svelte';
 
-const scanId = $derived(page.params.id ?? "");
-let scanStore = $state<ReturnType<typeof createScanStatusStore> | null>(null);
+	const scanId = $derived(page.params.id ?? '');
+	let scanStore = $state<ReturnType<typeof createScanStatusStore> | null>(null);
 
-$effect(() => {
-	if (!scanId) return;
+	$effect(() => {
+		if (!scanId) return;
 
-	const store = createScanStatusStore(scanId);
-	scanStore = store;
-	store.start();
+		const store = createScanStatusStore(scanId);
+		scanStore = store;
+		store.start();
 
-	return () => store.cleanup();
-});
+		return () => store.cleanup();
+	});
 
-const status = $derived(scanStore?.status ?? "loading");
-const result = $derived(scanStore?.result ?? null);
-const elapsed = $derived(scanStore?.elapsed ?? 0);
-const logs = $derived(scanStore?.logs ?? []);
+	const status = $derived(scanStore?.status ?? 'loading');
+	const result = $derived(scanStore?.result ?? null);
+	const elapsed = $derived(scanStore?.elapsed ?? 0);
+	const logs = $derived(scanStore?.logs ?? []);
 </script>
 
 <svelte:head>

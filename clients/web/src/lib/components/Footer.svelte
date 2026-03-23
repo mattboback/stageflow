@@ -1,8 +1,8 @@
 <script lang="ts">
-import { GithubIcon, LogoMark } from "$lib/components/icons";
-import { SITE } from "$lib/config/site";
+	import { GithubIcon, LogoMark } from '$lib/components/icons';
+	import { SITE } from '$lib/config/site';
 
-const year = new Date().getFullYear();
+	const year = new Date().getFullYear();
 </script>
 
 <footer class="footer-shell border-line/70 border-t">

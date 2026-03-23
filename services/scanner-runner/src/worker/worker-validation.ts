@@ -1,6 +1,6 @@
-import type { ManifestConfigSchema } from "@stageflow/contracts-scanner-manifest";
+import type { ManifestConfigSchema } from '@stageflow/contracts-scanner-manifest';
 
-import { validateOptionsAgainstSchema } from "../core/manifest";
+import { validateOptionsAgainstSchema } from '../core/manifest';
 
 export function assertScannerIdMatchesManifest(input: {
 	manifestId: string;
@@ -19,7 +19,7 @@ export function assertScannerIdMatchesManifest(input: {
 
 	input.logger?.warn(message, {
 		manifestId: input.manifestId,
-		scannerId: input.scannerId,
+		scannerId: input.scannerId
 	});
 }
 
@@ -34,16 +34,13 @@ export function assertScannerOptionsMatchSchema(input: {
 	// Treat "missing" options as an empty object so object schemas validate successfully.
 	const optionsForValidation = input.options === undefined ? {} : input.options;
 
-	const validation = validateOptionsAgainstSchema(
-		input.schema,
-		optionsForValidation,
-	);
+	const validation = validateOptionsAgainstSchema(input.schema, optionsForValidation);
 	if (validation.valid) {
 		return;
 	}
 
 	const message = `SCANNER_OPTIONS did not match manifest.configSchema for '${input.manifestId}': ${validation.errors.join(
-		"; ",
+		'; '
 	)}`;
 
 	if (input.strict) {
@@ -52,6 +49,6 @@ export function assertScannerOptionsMatchSchema(input: {
 
 	input.logger?.warn(message, {
 		manifestId: input.manifestId,
-		errorCount: validation.errors.length,
+		errorCount: validation.errors.length
 	});
 }

@@ -1,26 +1,18 @@
 <script lang="ts">
-import type { HTMLAttributes } from "svelte/elements";
+	import type { HTMLAttributes } from 'svelte/elements';
 
-import { cn } from "$lib/utils";
+	import { cn } from '$lib/utils';
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
-	value?: number;
-	max?: number;
-	indicatorClass?: string;
-	class?: string;
-}
+	interface Props extends HTMLAttributes<HTMLDivElement> {
+		value?: number;
+		max?: number;
+		indicatorClass?: string;
+		class?: string;
+	}
 
-let {
-	value = 0,
-	max = 100,
-	indicatorClass,
-	class: className,
-	...rest
-}: Props = $props();
+	let { value = 0, max = 100, indicatorClass, class: className, ...rest }: Props = $props();
 
-const percentage = $derived(
-	Math.min(Math.max(0, ((value || 0) / max) * 100), 100),
-);
+	const percentage = $derived(Math.min(Math.max(0, ((value || 0) / max) * 100), 100));
 </script>
 
 <div

@@ -1,44 +1,49 @@
 <script lang="ts">
-import Modal from "../Modal.svelte";
+	import Modal from '../Modal.svelte';
 
-interface Props {
-	title?: string;
-	openLabel?: string;
-	closeLabel?: string;
-	closeOnBackdrop?: boolean;
-	closeOnEscape?: boolean;
-	trapFocus?: boolean;
-	onClose?: () => void;
-}
+	interface Props {
+		title?: string;
+		openLabel?: string;
+		closeLabel?: string;
+		closeOnBackdrop?: boolean;
+		closeOnEscape?: boolean;
+		trapFocus?: boolean;
+		onClose?: () => void;
+	}
 
-let {
-	title = "Scanner details",
-	openLabel = "Open modal",
-	closeLabel = "Close modal",
-	closeOnBackdrop = true,
-	closeOnEscape = true,
-	trapFocus = true,
-	onClose,
-}: Props = $props();
+	let {
+		title = 'Scanner details',
+		openLabel = 'Open modal',
+		closeLabel = 'Close modal',
+		closeOnBackdrop = true,
+		closeOnEscape = true,
+		trapFocus = true,
+		onClose
+	}: Props = $props();
 
-let open = $state(false);
+	let open = $state(false);
 
-function handleOpen() {
-	open = true;
-}
+	function handleOpen() {
+		open = true;
+	}
 
-function handleClose() {
-	open = false;
-	onClose?.();
-}
+	function handleClose() {
+		open = false;
+		onClose?.();
+	}
 
-function preventNavigate(event: MouseEvent) {
-	event.preventDefault();
-}
+	function preventNavigate(event: MouseEvent) {
+		event.preventDefault();
+	}
 </script>
 
 <div class="w-[min(92vw,38rem)] space-y-3">
-	<button data-testid="open-modal" class="rounded-md border px-3 py-2" onclick={handleOpen} type="button">
+	<button
+		data-testid="open-modal"
+		class="rounded-md border px-3 py-2"
+		onclick={handleOpen}
+		type="button"
+	>
 		{openLabel}
 	</button>
 
@@ -78,5 +83,5 @@ function preventNavigate(event: MouseEvent) {
 		</div>
 	</Modal>
 
-	<p data-testid="modal-state" class="text-sm text-ink-muted">state: {open ? 'open' : 'closed'}</p>
+	<p data-testid="modal-state" class="text-ink-muted text-sm">state: {open ? 'open' : 'closed'}</p>
 </div>

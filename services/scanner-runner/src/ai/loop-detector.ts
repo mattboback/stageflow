@@ -1,4 +1,4 @@
-import type { AgentStep } from "./types";
+import type { AgentStep } from './types';
 
 export function detectLoop(history: AgentStep[]): boolean {
 	if (history.length < 6) {

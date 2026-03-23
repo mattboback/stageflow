@@ -1,22 +1,22 @@
-import type { Page } from "playwright";
+import type { Page } from 'playwright';
 
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import sharp from "sharp";
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import sharp from 'sharp';
 
-import type { IssueSeverity } from "../../core/types";
+import type { IssueSeverity } from '../../core/types';
 import type {
 	AxeScreenshotConfig,
 	PageOverviewDiagnostics,
 	PageOverviewElement,
 	PageOverviewResult,
-	PageOverviewViolation,
-} from "./types";
+	PageOverviewViolation
+} from './types';
 
-import { getEnvBool, getEnvInt } from "../../utils/env";
+import { getEnvBool, getEnvInt } from '../../utils/env';
 
-const DEBUG_SCREENSHOTS = getEnvBool("A11Y_DEBUG_SCREENSHOTS", false);
+const DEBUG_SCREENSHOTS = getEnvBool('A11Y_DEBUG_SCREENSHOTS', false);
 
 function debugLog(message: string, data?: unknown): void {
 	if (!DEBUG_SCREENSHOTS) {
@@ -28,7 +28,7 @@ function debugLog(message: string, data?: unknown): void {
 		console.log(`[PageOverview] ${message}`);
 	}
 }
-import { normalizeSeverity } from "../../utils/severity";
+import { normalizeSeverity } from '../../utils/severity';
 
 /**
  * Generate the same issue fingerprint used by WebServerFormatter.
@@ -38,10 +38,10 @@ function generateIssueFingerprint(
 	scanner: string,
 	ruleId: string,
 	pageId: string,
-	selector: string,
+	selector: string
 ): string {
 	const data = `${scanner}|${ruleId}|${pageId}|${selector}`.toLowerCase();
-	return createHash("sha256").update(data).digest("hex").slice(0, 12);
+	return createHash('sha256').update(data).digest('hex').slice(0, 12);
 }
 
 export function loadPageOverviewConfig(
@@ -49,17 +49,17 @@ export function loadPageOverviewConfig(
 		enabled: boolean;
 		maxElements: number;
 		maxHeight: number;
-	}>,
+	}>
 ): {
 	enabled: boolean;
 	maxElements: number;
 	maxHeight: number;
 } {
 	return {
-		enabled: getEnvBool("A11Y_PAGE_OVERVIEW_ENABLED", true),
-		maxElements: Math.max(0, getEnvInt("A11Y_PAGE_OVERVIEW_MAX_ELEMENTS", 50)),
-		maxHeight: Math.max(0, getEnvInt("A11Y_PAGE_OVERVIEW_MAX_HEIGHT", 5000)),
-		...overrides,
+		enabled: getEnvBool('A11Y_PAGE_OVERVIEW_ENABLED', true),
+		maxElements: Math.max(0, getEnvInt('A11Y_PAGE_OVERVIEW_MAX_ELEMENTS', 50)),
+		maxHeight: Math.max(0, getEnvInt('A11Y_PAGE_OVERVIEW_MAX_HEIGHT', 5000)),
+		...overrides
 	};
 }
 
@@ -76,7 +76,7 @@ async function freezePageForScreenshot(page: Page): Promise<void> {
           animation: none !important;
           scroll-behavior: auto !important;
         }
-      `,
+      `
 		});
 	} catch {
 		// Ignore CSP/style injection failures.
@@ -97,10 +97,7 @@ async function freezePageForScreenshot(page: Page): Promise<void> {
 	}
 }
 
-export function computeScreenshotScaleFactor(
-	actualPixels: number,
-	cssPixels: number,
-): number {
+export function computeScreenshotScaleFactor(actualPixels: number, cssPixels: number): number {
 	if (actualPixels <= 0 || cssPixels <= 0) {
 		return 1;
 	}
@@ -123,7 +120,7 @@ interface BoundingBox {
 export function clipPageOverviewBounds(
 	bounds: BoundingBox,
 	maxWidth: number,
-	maxHeight: number,
+	maxHeight: number
 ): BoundingBox | null {
 	if (maxWidth <= 0 || maxHeight <= 0) {
 		return null;
@@ -183,7 +180,7 @@ function roundPercent(value: number): number {
 export function collectPageOverviewTargets(
 	violations: PageOverviewViolation[],
 	maxElements: number,
-	options?: { pageId?: string; scanner?: string },
+	options?: { pageId?: string; scanner?: string }
 ): {
 	issueId: string;
 	ruleId: string;
@@ -191,7 +188,7 @@ export function collectPageOverviewTargets(
 	selector: string;
 	nodeIndex: number;
 }[] {
-	const { pageId = "page", scanner = "axe" } = options ?? {};
+	const { pageId = 'page', scanner = 'axe' } = options ?? {};
 	const targets: {
 		issueId: string;
 		ruleId: string;
@@ -207,22 +204,16 @@ export function collectPageOverviewTargets(
 	let elementCount = 0;
 
 	for (const violation of violations) {
-		const ruleId = violation.id || "unknown";
-		const severity = normalizeSeverity(violation.impact, "minor");
+		const ruleId = violation.id || 'unknown';
+		const severity = normalizeSeverity(violation.impact, 'minor');
 		const nodes = violation.nodes ?? [];
 
 		const primarySelectorRaw = nodes[0]?.target?.[0];
-		const primarySelector =
-			typeof primarySelectorRaw === "string" ? primarySelectorRaw : "";
+		const primarySelector = typeof primarySelectorRaw === 'string' ? primarySelectorRaw : '';
 
 		// WebServerFormatter generates issue IDs using the FIRST node selector/target.
 		// Keep all overlay elements for the same rule mapped to that single issue.
-		const issueId = generateIssueFingerprint(
-			scanner,
-			ruleId,
-			pageId,
-			primarySelector,
-		);
+		const issueId = generateIssueFingerprint(scanner, ruleId, pageId, primarySelector);
 
 		for (
 			let nodeIndex = 0;
@@ -235,7 +226,7 @@ export function collectPageOverviewTargets(
 
 			const node = nodes[nodeIndex];
 			const selector = (node?.target ?? [])
-				.map((t) => (typeof t === "string" ? t.trim() : String(t).trim()))
+				.map((t) => (typeof t === 'string' ? t.trim() : String(t).trim()))
 				.find((t) => t.length > 0);
 
 			if (!selector) {
@@ -247,7 +238,7 @@ export function collectPageOverviewTargets(
 				ruleId,
 				severity,
 				selector,
-				nodeIndex,
+				nodeIndex
 			});
 			elementCount += 1;
 		}
@@ -270,26 +261,22 @@ export async function capturePageOverviewRaw(
 		skipLargeElements?: boolean;
 		largeElementWidthRatio?: number;
 		largeElementHeightRatio?: number;
-	},
+	}
 ): Promise<(PageOverviewResult & { buffer: Buffer }) | null> {
 	if (!overviewCfg.enabled || !screenshotCfg.screenshotsEnabled) {
 		return null;
 	}
 
-	const elementTargets = collectPageOverviewTargets(
-		violations,
-		overviewCfg.maxElements,
-		{
-			pageId,
-			scanner: scannerId,
-		},
-	);
+	const elementTargets = collectPageOverviewTargets(violations, overviewCfg.maxElements, {
+		pageId,
+		scanner: scannerId
+	});
 
 	if (!existsSync(resultsDir)) {
 		mkdirSync(resultsDir, { recursive: true });
 	}
 
-	const ext = screenshotCfg.outputFormat === "webp" ? ".webp" : ".png";
+	const ext = screenshotCfg.outputFormat === 'webp' ? '.webp' : '.png';
 	const screenshotFilename = `page-overview-${pageId}${ext}`;
 	const screenshotPath = join(resultsDir, screenshotFilename);
 
@@ -304,7 +291,7 @@ export async function capturePageOverviewRaw(
 		devicePixelRatio: 1,
 		captureHeight: 0,
 		elementCount: elementTargets.length,
-		elements: [],
+		elements: []
 	};
 
 	try {
@@ -324,7 +311,7 @@ export async function capturePageOverviewRaw(
 			return {
 				width: Math.max(doc.scrollWidth, doc.clientWidth),
 				height: Math.max(doc.scrollHeight, doc.clientHeight),
-				devicePixelRatio: window.devicePixelRatio || 1,
+				devicePixelRatio: window.devicePixelRatio || 1
 			};
 		});
 
@@ -335,11 +322,11 @@ export async function capturePageOverviewRaw(
 		diagnostics.captureHeight = captureHeight;
 		diagnostics.devicePixelRatio = pageInfo.devicePixelRatio;
 
-		debugLog("Page dimensions", {
+		debugLog('Page dimensions', {
 			cssWidth: pageInfo.width,
 			cssHeight: pageInfo.height,
 			captureHeight,
-			devicePixelRatio: pageInfo.devicePixelRatio,
+			devicePixelRatio: pageInfo.devicePixelRatio
 		});
 
 		// Step 4: CRITICAL - Collect ALL bounding boxes BEFORE taking screenshot
@@ -355,12 +342,10 @@ export async function capturePageOverviewRaw(
 				if (DEBUG_SCREENSHOTS) {
 					diagnostics.elements.push({
 						selector: target.selector,
-						rawBox: box
-							? { x: box.x, y: box.y, width: box.width, height: box.height }
-							: null,
+						rawBox: box ? { x: box.x, y: box.y, width: box.width, height: box.height } : null,
 						scaledBox: null,
 						percentBounds: null,
-						skipped: false,
+						skipped: false
 					});
 				}
 			} catch {
@@ -372,23 +357,22 @@ export async function capturePageOverviewRaw(
 						scaledBox: null,
 						percentBounds: null,
 						skipped: true,
-						skipReason: "locator_error",
+						skipReason: 'locator_error'
 					});
 				}
 			}
 		}
 
-		debugLog(
-			`Collected ${rawBoundingBoxes.size} bounding boxes BEFORE screenshot`,
-		);
+		debugLog(`Collected ${rawBoundingBoxes.size} bounding boxes BEFORE screenshot`);
 
 		// Step 5: Take the screenshot (after bounding boxes are captured)
+		const clip =
+			captureHeight < pageInfo.height
+				? { x: 0, y: 0, width: pageInfo.width, height: captureHeight }
+				: undefined;
 		const screenshotBuffer = await page.screenshot({
 			fullPage: true,
-			clip:
-				captureHeight < pageInfo.height
-					? { x: 0, y: 0, width: pageInfo.width, height: captureHeight }
-					: undefined,
+			...(clip !== undefined ? { clip } : {})
 		});
 
 		// Step 6: Get screenshot actual dimensions
@@ -396,26 +380,20 @@ export async function capturePageOverviewRaw(
 		const screenshotWidth = metadata.width || pageInfo.width;
 		const screenshotHeight = metadata.height || captureHeight;
 
-		const scaleX = computeScreenshotScaleFactor(
-			screenshotWidth,
-			pageInfo.width,
-		);
-		const scaleY = computeScreenshotScaleFactor(
-			screenshotHeight,
-			captureHeight,
-		);
+		const scaleX = computeScreenshotScaleFactor(screenshotWidth, pageInfo.width);
+		const scaleY = computeScreenshotScaleFactor(screenshotHeight, captureHeight);
 
 		diagnostics.screenshotWidth = screenshotWidth;
 		diagnostics.screenshotHeight = screenshotHeight;
 		diagnostics.scaleX = scaleX;
 		diagnostics.scaleY = scaleY;
 
-		debugLog("Screenshot captured", {
+		debugLog('Screenshot captured', {
 			screenshotWidth,
 			screenshotHeight,
 			scaleX,
 			scaleY,
-			expectedScaleFromDPR: pageInfo.devicePixelRatio,
+			expectedScaleFromDPR: pageInfo.devicePixelRatio
 		});
 
 		// Step 7: Convert pre-captured bounding boxes to screenshot coordinates
@@ -428,8 +406,7 @@ export async function capturePageOverviewRaw(
 				const diagnosticElement = diagnostics.elements[i];
 				if (DEBUG_SCREENSHOTS && diagnosticElement) {
 					diagnosticElement.skipped = true;
-					diagnosticElement.skipReason =
-						diagnosticElement.skipReason ?? "no_box";
+					diagnosticElement.skipReason = diagnosticElement.skipReason ?? 'no_box';
 				}
 				continue;
 			}
@@ -438,7 +415,7 @@ export async function capturePageOverviewRaw(
 				const diagnosticElement = diagnostics.elements[i];
 				if (DEBUG_SCREENSHOTS && diagnosticElement) {
 					diagnosticElement.skipped = true;
-					diagnosticElement.skipReason = "below_capture_area";
+					diagnosticElement.skipReason = 'below_capture_area';
 				}
 				continue;
 			}
@@ -448,33 +425,25 @@ export async function capturePageOverviewRaw(
 				x: box.x * scaleX,
 				y: box.y * scaleY,
 				width: box.width * scaleX,
-				height: box.height * scaleY,
+				height: box.height * scaleY
 			};
 
-			const clippedBox = clipPageOverviewBounds(
-				scaledBox,
-				screenshotWidth,
-				screenshotHeight,
-			);
+			const clippedBox = clipPageOverviewBounds(scaledBox, screenshotWidth, screenshotHeight);
 
 			if (!clippedBox) {
 				const diagnosticElement = diagnostics.elements[i];
 				if (DEBUG_SCREENSHOTS && diagnosticElement) {
 					diagnosticElement.scaledBox = scaledBox;
 					diagnosticElement.skipped = true;
-					diagnosticElement.skipReason = "clipped_out";
+					diagnosticElement.skipReason = 'clipped_out';
 				}
 				continue;
 			}
 
 			const xPercent = clampPercent((clippedBox.x / screenshotWidth) * 100);
 			const yPercent = clampPercent((clippedBox.y / screenshotHeight) * 100);
-			const widthPercent = clampPercent(
-				(clippedBox.width / screenshotWidth) * 100,
-			);
-			const heightPercent = clampPercent(
-				(clippedBox.height / screenshotHeight) * 100,
-			);
+			const widthPercent = clampPercent((clippedBox.width / screenshotWidth) * 100);
+			const heightPercent = clampPercent((clippedBox.height / screenshotHeight) * 100);
 
 			{
 				const diagnosticElement = diagnostics.elements[i];
@@ -484,7 +453,7 @@ export async function capturePageOverviewRaw(
 						x: roundPercent(xPercent),
 						y: roundPercent(yPercent),
 						width: roundPercent(widthPercent),
-						height: roundPercent(heightPercent),
+						height: roundPercent(heightPercent)
 					};
 				}
 			}
@@ -502,16 +471,14 @@ export async function capturePageOverviewRaw(
 				x: Math.max(0, Math.round(clippedBox.x)),
 				y: Math.max(0, Math.round(clippedBox.y)),
 				width: Math.max(0, Math.round(clippedBox.width)),
-				height: Math.max(0, Math.round(clippedBox.height)),
+				height: Math.max(0, Math.round(clippedBox.height))
 			});
 		}
 
-		debugLog(
-			`Final elements with bounds: ${elementsWithBounds.length}/${elementTargets.length}`,
-		);
+		debugLog(`Final elements with bounds: ${elementsWithBounds.length}/${elementTargets.length}`);
 
 		if (DEBUG_SCREENSHOTS) {
-			debugLog("Full diagnostics", diagnostics);
+			debugLog('Full diagnostics', diagnostics);
 		}
 
 		return {
@@ -520,10 +487,10 @@ export async function capturePageOverviewRaw(
 			pageWidth: screenshotWidth,
 			pageHeight: screenshotHeight,
 			elements: elementsWithBounds,
-			buffer: Buffer.from(screenshotBuffer),
+			buffer: Buffer.from(screenshotBuffer)
 		};
 	} catch (error) {
-		debugLog("Capture failed", { error: String(error) });
+		debugLog('Capture failed', { error: String(error) });
 		return null;
 	}
 }

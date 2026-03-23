@@ -1,28 +1,25 @@
-import type { Page } from "playwright";
+import type { Page } from 'playwright';
 
 import type {
 	AxeScreenshotConfig,
 	AxeViolation,
 	PageOverviewResult,
 	PageOverviewViolation,
-	ViolationScreenshotCaptureResult,
-} from "./axe/types";
+	ViolationScreenshotCaptureResult
+} from './axe/types';
 
-import { loadAxeScreenshotConfig } from "./axe/config";
-import { saveScreenshot } from "./axe/image";
-import {
-	capturePageOverviewRaw,
-	loadPageOverviewConfig,
-} from "./axe/page-overview";
-import { captureViolationScreenshot } from "./axe/violation-capture";
+import { loadAxeScreenshotConfig } from './axe/config';
+import { saveScreenshot } from './axe/image';
+import { capturePageOverviewRaw, loadPageOverviewConfig } from './axe/page-overview';
+import { captureViolationScreenshot } from './axe/violation-capture';
 
 export type {
 	AxeViolation,
 	EnhancedScreenshotResult,
 	PageOverviewViolation,
 	ViolationCaptureFailure,
-	ViolationScreenshotCaptureResult,
-} from "./axe/types";
+	ViolationScreenshotCaptureResult
+} from './axe/types';
 
 /**
  * AxeScreenshotService encapsulates the screenshot strategy used for
@@ -49,13 +46,13 @@ export class AxeScreenshotService {
 	async captureViolationScreenshot(
 		page: Page,
 		violation: AxeViolation,
-		resultsDir: string,
+		resultsDir: string
 	): Promise<ViolationScreenshotCaptureResult> {
 		return captureViolationScreenshot({
 			page,
 			violation,
 			resultsDir,
-			cfg: this.cfg,
+			cfg: this.cfg
 		});
 	}
 
@@ -73,9 +70,9 @@ export class AxeScreenshotService {
 		violations: PageOverviewViolation[],
 		resultsDir: string,
 		pageId: string,
-		options?: { scannerId?: string },
+		options?: { scannerId?: string }
 	): Promise<PageOverviewResult | null> {
-		const scannerId = options?.scannerId ?? "axe";
+		const scannerId = options?.scannerId ?? 'axe';
 		const overviewCfg = loadPageOverviewConfig();
 		const captured = await capturePageOverviewRaw(
 			page,
@@ -84,7 +81,7 @@ export class AxeScreenshotService {
 			pageId,
 			scannerId,
 			this.cfg,
-			overviewCfg,
+			overviewCfg
 		);
 
 		if (!captured) {
@@ -98,7 +95,7 @@ export class AxeScreenshotService {
 			screenshotFilename: captured.screenshotFilename,
 			pageWidth: captured.pageWidth,
 			pageHeight: captured.pageHeight,
-			elements: captured.elements,
+			elements: captured.elements
 		};
 	}
 }

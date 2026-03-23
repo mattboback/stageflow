@@ -12,5 +12,5 @@ export {
 	PluginLoader,
 	type PluginLoaderConfig,
 	type PluginLoadResult,
-	type ScannerPlugin,
-} from "./loader";
+	type ScannerPlugin
+} from './loader';

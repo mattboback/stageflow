@@ -1,90 +1,83 @@
 <script lang="ts">
-import type { IssueDetail, PageSummary } from "$lib/types/unified-report";
+	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
 
-import { Panel } from "$lib/components/ui";
-import { getCroppedViewBox, getSeverityStrokeColor } from "$lib/report";
-import { cn } from "$lib/utils";
-import { extractPrimaryFailureDetail } from "$lib/utils/failure-summary";
-import { Copy } from "lucide-svelte";
+	import { Panel } from '$lib/components/ui';
+	import { getCroppedViewBox, getSeverityStrokeColor } from '$lib/report';
+	import { cn } from '$lib/utils';
+	import { extractPrimaryFailureDetail } from '$lib/utils/failure-summary';
+	import { Copy } from 'lucide-svelte';
 
-interface Props {
-	occurrence: NonNullable<IssueDetail["occurrences"]>[number];
-	index: number;
-	issue: IssueDetail;
-	page: PageSummary | null;
-	pageOverviewUrl: string | null;
-	isHighlighted: boolean;
-	showDetails: boolean;
-	onHighlight?: () => void;
-}
+	interface Props {
+		occurrence: NonNullable<IssueDetail['occurrences']>[number];
+		index: number;
+		issue: IssueDetail;
+		page: PageSummary | null;
+		pageOverviewUrl: string | null;
+		isHighlighted: boolean;
+		showDetails: boolean;
+		onHighlight?: () => void;
+	}
 
-let {
-	occurrence,
-	index,
-	issue,
-	page,
-	pageOverviewUrl,
-	isHighlighted,
-	showDetails,
-	onHighlight,
-}: Props = $props();
+	let {
+		occurrence,
+		index,
+		issue,
+		page,
+		pageOverviewUrl,
+		isHighlighted,
+		showDetails,
+		onHighlight
+	}: Props = $props();
 
-const overviewEl = $derived.by(() => {
-	const overview = page?.pageOverview;
-	if (!overview) return null;
-	const elements = overview.elements ?? [];
-	return (
-		elements.find((el) => el.issueId === issue.id && el.nodeIndex === index) ??
-		null
-	);
-});
+	const overviewEl = $derived.by(() => {
+		const overview = page?.pageOverview;
+		if (!overview) return null;
+		const elements = overview.elements ?? [];
+		return elements.find((el) => el.issueId === issue.id && el.nodeIndex === index) ?? null;
+	});
 
-const viewBox = $derived.by(() => {
-	const overview = page?.pageOverview;
-	if (!overview || !overviewEl) return null;
-	return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl);
-});
+	const viewBox = $derived.by(() => {
+		const overview = page?.pageOverview;
+		if (!overview || !overviewEl) return null;
+		return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl);
+	});
 
-async function copyToClipboard(text: string) {
-	try {
-		await navigator.clipboard.writeText(text);
-	} catch {
-		const ta = document.createElement("textarea");
-		ta.value = text;
-		ta.style.position = "fixed";
-		ta.style.left = "-9999px";
-		document.body.appendChild(ta);
-		ta.select();
+	async function copyToClipboard(text: string) {
 		try {
-			document.execCommand("copy");
-		} finally {
-			document.body.removeChild(ta);
+			await navigator.clipboard.writeText(text);
+		} catch {
+			const ta = document.createElement('textarea');
+			ta.value = text;
+			ta.style.position = 'fixed';
+			ta.style.left = '-9999px';
+			document.body.appendChild(ta);
+			ta.select();
+			try {
+				document.execCommand('copy');
+			} finally {
+				document.body.removeChild(ta);
+			}
 		}
 	}
-}
 
-function getOccurrenceSnippet(): string | null {
-	const parts: string[] = [];
-	if (occurrence.ancestorPath)
-		parts.push(`Location: ${occurrence.ancestorPath}`);
-	if (occurrence.selector) parts.push(`Selector: ${occurrence.selector}`);
-	if (occurrence.contextHtml) {
-		parts.push(`Context HTML:\n${occurrence.contextHtml}`);
-	} else if (occurrence.html) {
-		parts.push(`HTML: ${occurrence.html}`);
+	function getOccurrenceSnippet(): string | null {
+		const parts: string[] = [];
+		if (occurrence.ancestorPath) parts.push(`Location: ${occurrence.ancestorPath}`);
+		if (occurrence.selector) parts.push(`Selector: ${occurrence.selector}`);
+		if (occurrence.contextHtml) {
+			parts.push(`Context HTML:\n${occurrence.contextHtml}`);
+		} else if (occurrence.html) {
+			parts.push(`HTML: ${occurrence.html}`);
+		}
+		if (occurrence.failureSummary) parts.push(`Fix: ${occurrence.failureSummary}`);
+		return parts.length ? parts.join('\n\n') : null;
 	}
-	if (occurrence.failureSummary)
-		parts.push(`Fix: ${occurrence.failureSummary}`);
-	return parts.length ? parts.join("\n\n") : null;
-}
 </script>
 
 <Panel
 	padding="sm"
 	rounded="lg"
-	class={cn(
-		isHighlighted ? 'border-accent bg-accent/5 ring-accent/30 ring-2' : 'bg-surface-muted'
-	)}
+	class={cn(isHighlighted ? 'border-accent bg-accent/5 ring-accent/30 ring-2' : 'bg-surface-muted')}
 	data-occurrence-id={occurrence.elementId ?? undefined}
 >
 	<div class={cn('grid gap-3', viewBox && pageOverviewUrl ? 'md:grid-cols-[220px,1fr]' : '')}>
@@ -137,7 +130,7 @@ function getOccurrenceSnippet(): string | null {
 
 			{#if showDetails && occurrence.selector}
 				<div class="flex items-start justify-between gap-2">
-					<p class="text-ink-muted mb-1 flex-1 break-all font-mono text-xs">
+					<p class="text-ink-muted mb-1 flex-1 font-mono text-xs break-all">
 						{occurrence.selector}
 					</p>
 					<button
@@ -152,7 +145,7 @@ function getOccurrenceSnippet(): string | null {
 			{/if}
 
 			{#if !showDetails && occurrence.label}
-				<p class="text-ink mt-2 text-sm font-medium line-clamp-1">{occurrence.label}</p>
+				<p class="text-ink mt-2 line-clamp-1 text-sm font-medium">{occurrence.label}</p>
 			{/if}
 
 			{#if occurrence.failureSummary}
@@ -163,7 +156,7 @@ function getOccurrenceSnippet(): string | null {
 						showDetails ? 'whitespace-pre-wrap' : 'line-clamp-3'
 					)}
 				>
-					{showDetails ? occurrence.failureSummary : primaryFailure ?? occurrence.failureSummary}
+					{showDetails ? occurrence.failureSummary : (primaryFailure ?? occurrence.failureSummary)}
 				</p>
 			{:else if !showDetails && occurrence.textSnippet}
 				<p class="text-ink-muted mt-2 text-sm">"{occurrence.textSnippet}"</p>
@@ -225,7 +218,8 @@ function getOccurrenceSnippet(): string | null {
 					</button>
 					{#if occurrence.failureSummary}
 						<button
-							onclick={() => occurrence.failureSummary && copyToClipboard(occurrence.failureSummary)}
+							onclick={() =>
+								occurrence.failureSummary && copyToClipboard(occurrence.failureSummary)}
 							class="text-ink-muted inline-flex items-center gap-2 text-sm hover:underline"
 							type="button"
 							aria-label="Copy fix guidance"

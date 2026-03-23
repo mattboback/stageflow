@@ -4,14 +4,14 @@
  * Iterates through provenance pages and executes scan callbacks.
  */
 
-import type { BrowserContext, Page } from "playwright";
+import type { BrowserContext, Page } from 'playwright';
 
-import { dirname, join } from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import { dirname, join } from 'node:path';
 
-import type { BrowserManager } from "./browser-manager";
+import type { BrowserManager } from './browser-manager';
 
-import { createLogger } from "../utils/logger";
+import { createLogger } from '../utils/logger';
 import {
 	DEFAULT_WAIT_STRATEGY,
 	type PageEntry,
@@ -20,29 +20,15 @@ import {
 	type ScanContext,
 	type ScannerConfig,
 	type ScannerLogger,
-	type WaitStrategy,
-} from "./types";
+	type WaitStrategy
+} from './types';
 
-export type PageScanCallback = (
-	context: ScanContext,
-) => Promise<PageScanResult>;
+export type PageScanCallback = (context: ScanContext) => Promise<PageScanResult>;
 
 export interface PageIteratorCallbacks {
-	onPageStart?: (
-		pageEntry: PageEntry,
-		index: number,
-		total: number,
-	) => Promise<void>;
-	onPageComplete?: (
-		result: PageScanResult,
-		index: number,
-		total: number,
-	) => Promise<void>;
-	onPageError?: (
-		error: Error,
-		pageEntry: PageEntry,
-		attempt: number,
-	) => Promise<void>;
+	onPageStart?: (pageEntry: PageEntry, index: number, total: number) => Promise<void>;
+	onPageComplete?: (result: PageScanResult, index: number, total: number) => Promise<void>;
+	onPageError?: (error: Error, pageEntry: PageEntry, attempt: number) => Promise<void>;
 }
 
 export class PageIterator {
@@ -50,14 +36,10 @@ export class PageIterator {
 	private readonly config: ScannerConfig;
 	private readonly logger: ScannerLogger;
 
-	constructor(
-		browserManager: BrowserManager,
-		config: ScannerConfig,
-		logger?: ScannerLogger,
-	) {
+	constructor(browserManager: BrowserManager, config: ScannerConfig, logger?: ScannerLogger) {
 		this.browserManager = browserManager;
 		this.config = config;
-		this.logger = logger ?? createLogger("PageIterator");
+		this.logger = logger ?? createLogger('PageIterator');
 	}
 
 	async loadProvenance(): Promise<Provenance> {
@@ -69,26 +51,24 @@ export class PageIterator {
 				throw new Error(`Provenance file not found at ${provenancePath}`);
 			}
 
-			this.logger.info(
-				"Creating provenance from SCAN_URLS environment variable",
-			);
+			this.logger.info('Creating provenance from SCAN_URLS environment variable');
 
 			const urls = parseScanUrls(scanUrls);
 
 			const provenance: Provenance = {
-				version: "1.0.0",
+				version: '1.0.0',
 				job_id: this.config.jobId,
-				base_url: "",
-				mode: "live",
+				base_url: '',
+				mode: 'live',
 				// Use domcontentloaded for faster page loads. networkidle can hang on sites
 				// with WebSockets, long-polling, or analytics pings. The scanner's own
 				// waitForLoadState('networkidle') in scanPage provides SPA hydration time.
-				default_wait_for: { type: "domcontentloaded" as const },
+				default_wait_for: { type: 'domcontentloaded' as const },
 				pages: urls.map((url, index) => ({
 					id: `url-${index + 1}`,
-					path: "",
-					url: normalizeUrl(url),
-				})),
+					path: '',
+					url: normalizeUrl(url)
+				}))
 			};
 
 			await fs.ensureDir(dirname(provenancePath));
@@ -103,18 +83,16 @@ export class PageIterator {
 	async iteratePages(
 		provenance: Provenance,
 		scanCallback: PageScanCallback,
-		callbacks?: PageIteratorCallbacks,
+		callbacks?: PageIteratorCallbacks
 	): Promise<PageScanResult[]> {
 		const pages = provenance.pages.filter((p) => !p.skip);
 		const results: PageScanResult[] = [];
 		const activePromises = new Set<Promise<void>>();
-		const context = await this.browserManager.createContext(
-			provenance.default_viewport,
-		);
+		const context = await this.browserManager.createContext(provenance.default_viewport);
 
-		this.logger.info("Starting page iteration", {
+		this.logger.info('Starting page iteration', {
 			totalPages: pages.length,
-			concurrency: this.config.concurrency,
+			concurrency: this.config.concurrency
 		});
 
 		try {
@@ -126,7 +104,7 @@ export class PageIterator {
 					pages.length,
 					provenance,
 					scanCallback,
-					callbacks,
+					callbacks
 				).then((result) => {
 					results.push(result);
 					activePromises.delete(promise);
@@ -140,16 +118,16 @@ export class PageIterator {
 			}
 
 			await Promise.all(activePromises);
-			this.logger.info("All pages processed", { resultCount: results.length });
+			this.logger.info('All pages processed', { resultCount: results.length });
 		} finally {
-			this.logger.info("Closing browser context");
+			this.logger.info('Closing browser context');
 			await closeWithTimeout({
 				close: () => context.close(),
-				label: "browser context",
+				label: 'browser context',
 				timeoutMs: 10_000,
-				logger: this.logger,
+				logger: this.logger
 			});
-			this.logger.info("Browser context closed");
+			this.logger.info('Browser context closed');
 		}
 
 		// Create index map for O(1) lookups instead of O(n) findIndex per comparison
@@ -164,15 +142,20 @@ export class PageIterator {
 	}
 
 	private normalizeProvenance(provenance: Provenance): Provenance {
-		const normalizedPages = provenance.pages.map((page) => ({
-			...page,
-			url: this.resolvePageUrl(provenance.base_url, page),
-			wait_for: page.wait_for ?? provenance.default_wait_for,
-		}));
+		const normalizedPages = provenance.pages.map((page) => {
+			const { wait_for: _pageWaitFor, ...pageWithoutWaitFor } = page;
+			const waitFor = page.wait_for ?? provenance.default_wait_for;
+
+			return {
+				...pageWithoutWaitFor,
+				url: this.resolvePageUrl(provenance.base_url, page),
+				...(waitFor !== undefined ? { wait_for: waitFor } : {})
+			};
+		});
 
 		return {
 			...provenance,
-			pages: normalizedPages,
+			pages: normalizedPages
 		};
 	}
 
@@ -185,14 +168,14 @@ export class PageIterator {
 
 		if (baseUrl) {
 			try {
-				const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-				return new URL(pagePath ?? "", normalizedBase).toString();
+				const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+				return new URL(pagePath ?? '', normalizedBase).toString();
 			} catch {
-				return normalizeUrl(pagePath ?? "");
+				return normalizeUrl(pagePath ?? '');
 			}
 		}
 
-		return normalizeUrl(pagePath ?? "");
+		return normalizeUrl(pagePath ?? '');
 	}
 
 	private async processPage(
@@ -202,14 +185,14 @@ export class PageIterator {
 		total: number,
 		provenance: Provenance,
 		scanCallback: PageScanCallback,
-		callbacks?: PageIteratorCallbacks,
+		callbacks?: PageIteratorCallbacks
 	): Promise<PageScanResult> {
 		const startedAt = new Date().toISOString();
 		const hrStart = process.hrtime.bigint();
 
 		this.logger.info(`Scanning page ${index + 1}/${total}`, {
 			pageId: pageEntry.id,
-			url: pageEntry.url,
+			url: pageEntry.url
 		});
 
 		if (callbacks?.onPageStart) {
@@ -230,21 +213,12 @@ export class PageIterator {
 				}
 
 				const waitStrategy: WaitStrategy =
-					pageEntry.wait_for ??
-					provenance.default_wait_for ??
-					DEFAULT_WAIT_STRATEGY;
+					pageEntry.wait_for ?? provenance.default_wait_for ?? DEFAULT_WAIT_STRATEGY;
 
-				await this.browserManager.navigateToPage(
-					page,
-					pageEntry.url,
-					waitStrategy,
-				);
+				await this.browserManager.navigateToPage(page, pageEntry.url, waitStrategy);
 
 				if (pageEntry.pre_scan_actions?.length) {
-					await this.browserManager.executePreScanActions(
-						page,
-						pageEntry.pre_scan_actions,
-					);
+					await this.browserManager.executePreScanActions(page, pageEntry.pre_scan_actions);
 				}
 
 				const pageResultsDir = join(this.config.resultsDir, pageEntry.id);
@@ -256,16 +230,14 @@ export class PageIterator {
 					pageEntry,
 					resultsDir: pageResultsDir,
 					config: this.config,
-					logger: this.logger,
+					logger: this.logger
 				};
 
 				result = await scanCallback(scanContext);
 
 				if (!result.success) {
-					const retryable =
-						result.retryable !== false && attempt < this.config.maxRetries;
-					const errorMessage =
-						result.error ?? "Scan returned unsuccessful result";
+					const retryable = result.retryable !== false && attempt < this.config.maxRetries;
+					const errorMessage = result.error ?? 'Scan returned unsuccessful result';
 					lastError = new Error(errorMessage);
 
 					this.logger.warn(
@@ -273,8 +245,8 @@ export class PageIterator {
 						{
 							pageId: pageEntry.id,
 							error: errorMessage,
-							retryable,
-						},
+							retryable
+						}
 					);
 
 					if (callbacks?.onPageError) {
@@ -291,35 +263,29 @@ export class PageIterator {
 			} catch (err) {
 				lastError = err instanceof Error ? err : new Error(String(err));
 
-				this.logger.warn(
-					`Page scan failed (attempt ${attempt}/${this.config.maxRetries})`,
-					{
-						pageId: pageEntry.id,
-						error: lastError.message,
-					},
-				);
+				this.logger.warn(`Page scan failed (attempt ${attempt}/${this.config.maxRetries})`, {
+					pageId: pageEntry.id,
+					error: lastError.message
+				});
 
 				if (callbacks?.onPageError) {
 					await callbacks.onPageError(lastError, pageEntry, attempt);
 				}
 
 				if (attempt === this.config.maxRetries) {
-					this.logger.error(
-						`Giving up on page after ${this.config.maxRetries} attempts`,
-						{
-							pageId: pageEntry.id,
-						},
-					);
+					this.logger.error(`Giving up on page after ${this.config.maxRetries} attempts`, {
+						pageId: pageEntry.id
+					});
 				}
 			} finally {
 				const pageToClose = page;
 				if (pageToClose) {
 					await closeWithTimeout({
 						close: () => pageToClose.close(),
-						label: "page",
+						label: 'page',
 						timeoutMs: 5_000,
 						logger: this.logger,
-						meta: { pageId: pageEntry.id },
+						meta: { pageId: pageEntry.id }
 					});
 				}
 			}
@@ -343,7 +309,7 @@ export class PageIterator {
 				durationMs: Math.round(durationMs * 100) / 100,
 				startedAt,
 				finishedAt,
-				error: lastError?.message ?? "Unknown error",
+				error: lastError?.message ?? 'Unknown error'
 			};
 		}
 
@@ -355,7 +321,7 @@ export class PageIterator {
 			pageId: pageEntry.id,
 			success: result.success,
 			issues: result.issues.length,
-			durationMs: result.durationMs,
+			durationMs: result.durationMs
 		});
 
 		return result;
@@ -374,28 +340,25 @@ async function closeWithTimeout(opts: {
 	const closePromise = close().catch((err: unknown) => {
 		logger.warn(`Failed to close ${label} gracefully`, {
 			...meta,
-			error: err instanceof Error ? err.message : String(err),
+			error: err instanceof Error ? err.message : String(err)
 		});
 	});
 
 	let timeoutHandle!: ReturnType<typeof setTimeout>;
-	const timeoutPromise = new Promise<"timeout">((resolve) => {
+	const timeoutPromise = new Promise<'timeout'>((resolve) => {
 		timeoutHandle = setTimeout(() => {
-			resolve("timeout");
+			resolve('timeout');
 		}, timeoutMs);
 	});
 
-	const winner = await Promise.race([
-		closePromise.then(() => "closed" as const),
-		timeoutPromise,
-	]);
+	const winner = await Promise.race([closePromise.then(() => 'closed' as const), timeoutPromise]);
 
 	clearTimeout(timeoutHandle);
 
-	if (winner === "timeout") {
+	if (winner === 'timeout') {
 		logger.warn(`Timed out closing ${label}`, {
 			...meta,
-			timeoutMs,
+			timeoutMs
 		});
 	}
 }
@@ -422,11 +385,8 @@ function parseScanUrls(raw: string): string[] {
 		throw new Error(`Failed to create provenance from SCAN_URLS: ${message}`);
 	}
 
-	if (
-		!Array.isArray(parsed) ||
-		parsed.some((value) => typeof value !== "string")
-	) {
-		throw new Error("SCAN_URLS must be a JSON array of URLs (strings)");
+	if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== 'string')) {
+		throw new Error('SCAN_URLS must be a JSON array of URLs (strings)');
 	}
 
 	return parsed as string[];

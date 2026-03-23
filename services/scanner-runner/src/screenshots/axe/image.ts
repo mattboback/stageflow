@@ -1,7 +1,7 @@
-import { join } from "node:path";
-import sharp from "sharp";
+import { join } from 'node:path';
+import sharp from 'sharp';
 
-import type { AxeScreenshotConfig, ElementBounds } from "./types";
+import type { AxeScreenshotConfig, ElementBounds } from './types';
 
 /**
  * Save a screenshot buffer to disk in the configured format (WebP or PNG).
@@ -10,15 +10,15 @@ import type { AxeScreenshotConfig, ElementBounds } from "./types";
 export async function saveScreenshot(
 	buffer: Buffer,
 	outputPath: string,
-	cfg: Pick<AxeScreenshotConfig, "outputFormat" | "webpQuality">,
+	cfg: Pick<AxeScreenshotConfig, 'outputFormat' | 'webpQuality'>
 ): Promise<string> {
-	if (cfg.outputFormat === "webp") {
+	if (cfg.outputFormat === 'webp') {
 		await sharp(buffer).webp({ quality: cfg.webpQuality }).toFile(outputPath);
 	} else {
 		await sharp(buffer).png({ compressionLevel: 8 }).toFile(outputPath);
 	}
 
-	return outputPath.split("/").pop() ?? outputPath;
+	return outputPath.split('/').pop() ?? outputPath;
 }
 
 /**
@@ -30,8 +30,8 @@ export async function saveScreenshot(
 export async function compositeOverlay(
 	screenshotBuffer: Buffer,
 	elementBounds: ElementBounds[],
-	cfg: Pick<AxeScreenshotConfig, "highlightStyle">,
-	clipCssWidth?: number,
+	cfg: Pick<AxeScreenshotConfig, 'highlightStyle'>,
+	clipCssWidth?: number
 ): Promise<Buffer> {
 	if (elementBounds.length === 0) {
 		return screenshotBuffer;
@@ -52,17 +52,12 @@ export async function compositeOverlay(
 	const outerStrokeWidth = Math.round(10 * dpr);
 
 	// High-contrast outlines that remain visible on both light and dark backgrounds.
-	const strokeColor = cfg.highlightStyle === "dashed" ? "#ff2d55" : "#ff0000";
-	const outerStrokeColor = "rgba(0,0,0,0.85)";
+	const strokeColor = cfg.highlightStyle === 'dashed' ? '#ff2d55' : '#ff0000';
+	const outerStrokeColor = 'rgba(0,0,0,0.85)';
 
-	const fillColor =
-		cfg.highlightStyle === "dashed"
-			? "rgba(255,45,85,0.12)"
-			: "rgba(255,0,0,0.12)";
+	const fillColor = cfg.highlightStyle === 'dashed' ? 'rgba(255,45,85,0.12)' : 'rgba(255,0,0,0.12)';
 	const dashArray =
-		cfg.highlightStyle === "dashed"
-			? `stroke-dasharray="${10 * dpr},${5 * dpr}"`
-			: "";
+		cfg.highlightStyle === 'dashed' ? `stroke-dasharray="${10 * dpr},${5 * dpr}"` : '';
 
 	// Scale element bounds from CSS pixels to actual pixels.
 	// We render a thicker dark outer stroke behind the colored stroke.
@@ -94,7 +89,7 @@ export async function compositeOverlay(
           ${dashArray}
         />`;
 		})
-		.join("\n");
+		.join('\n');
 
 	const svgOverlay = Buffer.from(`
       <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -118,33 +113,29 @@ export async function generateThumbnail(
 	resultsDir: string,
 	cfg: Pick<
 		AxeScreenshotConfig,
-		"generateThumbnails" | "thumbnailSize" | "outputFormat" | "webpQuality"
-	>,
+		'generateThumbnails' | 'thumbnailSize' | 'outputFormat' | 'webpQuality'
+	>
 ): Promise<string | null> {
 	if (!cfg.generateThumbnails) {
 		return null;
 	}
 
 	try {
-		const filename = screenshotPath.split("/").pop();
+		const filename = screenshotPath.split('/').pop();
 		if (!filename) {
 			return null;
 		}
 
-		const ext = cfg.outputFormat === "webp" ? ".webp" : ".png";
+		const ext = cfg.outputFormat === 'webp' ? '.webp' : '.png';
 		const thumbnailFilename = filename.replace(/\.(png|webp)$/, `-thumb${ext}`);
 		const thumbnailPath = join(resultsDir, thumbnailFilename);
 
-		const pipeline = sharp(screenshotPath).resize(
-			cfg.thumbnailSize,
-			cfg.thumbnailSize,
-			{
-				fit: "inside",
-				withoutEnlargement: true,
-			},
-		);
+		const pipeline = sharp(screenshotPath).resize(cfg.thumbnailSize, cfg.thumbnailSize, {
+			fit: 'inside',
+			withoutEnlargement: true
+		});
 
-		if (cfg.outputFormat === "webp") {
+		if (cfg.outputFormat === 'webp') {
 			await pipeline.webp({ quality: cfg.webpQuality }).toFile(thumbnailPath);
 		} else {
 			await pipeline.png({ compressionLevel: 8 }).toFile(thumbnailPath);

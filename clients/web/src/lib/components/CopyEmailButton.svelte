@@ -1,29 +1,29 @@
 <script lang="ts">
-import { buttonVariants } from "$lib/components/ui";
-import { cn } from "$lib/utils";
-import { Check, Copy, Send } from "lucide-svelte";
+	import { buttonVariants } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
+	import { Check, Copy, Send } from 'lucide-svelte';
 
-interface Props {
-	email: string;
-	class?: string;
-}
-
-let { email, class: className = "" }: Props = $props();
-
-let copied = $state(false);
-
-async function handleCopy(e: MouseEvent) {
-	e.preventDefault();
-	try {
-		await navigator.clipboard.writeText(email);
-		copied = true;
-		setTimeout(() => {
-			copied = false;
-		}, 2000);
-	} catch (err) {
-		console.error("Failed to copy text: ", err);
+	interface Props {
+		email: string;
+		class?: string;
 	}
-}
+
+	let { email, class: className = '' }: Props = $props();
+
+	let copied = $state(false);
+
+	async function handleCopy(e: MouseEvent) {
+		e.preventDefault();
+		try {
+			await navigator.clipboard.writeText(email);
+			copied = true;
+			setTimeout(() => {
+				copied = false;
+			}, 2000);
+		} catch (err) {
+			console.error('Failed to copy text: ', err);
+		}
+	}
 </script>
 
 <div class={cn('flex flex-col gap-3 sm:flex-row', className)}>

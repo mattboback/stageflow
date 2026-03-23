@@ -1,14 +1,14 @@
-import type { IssueSeverity } from "$lib/types/unified-report";
+import type { IssueSeverity } from '$lib/types/unified-report';
 
-import { chipVariants } from "$lib/components/ui";
-import { cn } from "$lib/utils";
+import { chipVariants } from '$lib/components/ui';
+import { cn } from '$lib/utils';
 
 export const SEVERITY_LEVELS = [
-	"critical",
-	"serious",
-	"moderate",
-	"minor",
-	"info",
+	'critical',
+	'serious',
+	'moderate',
+	'minor',
+	'info'
 ] as const satisfies IssueSeverity[];
 
 export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
@@ -18,14 +18,12 @@ const SEVERITY_RANK: Record<SeverityLevel, number> = {
 	serious: 1,
 	moderate: 2,
 	minor: 3,
-	info: 4,
+	info: 4
 };
 
 export function normalizeSeverity(value?: string | null): SeverityLevel | null {
 	if (!value) return null;
-	return (SEVERITY_LEVELS as readonly string[]).includes(value)
-		? (value as SeverityLevel)
-		: null;
+	return (SEVERITY_LEVELS as readonly string[]).includes(value) ? (value as SeverityLevel) : null;
 }
 
 export function severityRank(value?: string | null): number {
@@ -34,9 +32,7 @@ export function severityRank(value?: string | null): number {
 	return SEVERITY_RANK[normalized];
 }
 
-export function getWorstSeverity(
-	values: (string | null | undefined)[],
-): SeverityLevel | null {
+export function getWorstSeverity(values: (string | null | undefined)[]): SeverityLevel | null {
 	let worst: SeverityLevel | null = null;
 	for (const value of values) {
 		const normalized = normalizeSeverity(value);
@@ -57,18 +53,18 @@ export function compareSeverity(a?: string | null, b?: string | null): number {
  */
 export function getSeverityBadgeClass(severity?: string | null): string {
 	switch (severity) {
-		case "critical":
-			return "bg-red-600 text-white";
-		case "serious":
-			return "bg-orange-500 text-white";
-		case "moderate":
-			return "bg-amber-500 text-white";
-		case "minor":
-			return "bg-blue-500 text-white";
-		case "info":
-			return "bg-purple-500 text-white";
+		case 'critical':
+			return 'bg-red-600 text-white';
+		case 'serious':
+			return 'bg-orange-500 text-white';
+		case 'moderate':
+			return 'bg-amber-500 text-white';
+		case 'minor':
+			return 'bg-blue-500 text-white';
+		case 'info':
+			return 'bg-purple-500 text-white';
 		default:
-			return "bg-slate-400 text-white";
+			return 'bg-slate-400 text-white';
 	}
 }
 
@@ -77,18 +73,18 @@ export function getSeverityBadgeClass(severity?: string | null): string {
  */
 export function getSeverityBorderClass(severity?: string | null): string {
 	switch (severity) {
-		case "critical":
-			return "border-red-200 bg-red-50";
-		case "serious":
-			return "border-orange-200 bg-orange-50";
-		case "moderate":
-			return "border-amber-200 bg-amber-50";
-		case "minor":
-			return "border-blue-200 bg-blue-50";
-		case "info":
-			return "border-purple-200 bg-purple-50";
+		case 'critical':
+			return 'border-red-200 bg-red-50';
+		case 'serious':
+			return 'border-orange-200 bg-orange-50';
+		case 'moderate':
+			return 'border-amber-200 bg-amber-50';
+		case 'minor':
+			return 'border-blue-200 bg-blue-50';
+		case 'info':
+			return 'border-purple-200 bg-purple-50';
 		default:
-			return "border-slate-200 bg-slate-50";
+			return 'border-slate-200 bg-slate-50';
 	}
 }
 
@@ -97,18 +93,18 @@ export function getSeverityBorderClass(severity?: string | null): string {
  */
 export function getSeverityOverlayClass(severity?: string | null): string {
 	switch (severity) {
-		case "critical":
-			return "border-red-500 bg-red-500/10";
-		case "serious":
-			return "border-orange-500 bg-orange-500/10";
-		case "moderate":
-			return "border-amber-500 bg-amber-500/10";
-		case "minor":
-			return "border-blue-500 bg-blue-500/10";
-		case "info":
-			return "border-purple-500 bg-purple-500/10";
+		case 'critical':
+			return 'border-red-500 bg-red-500/10';
+		case 'serious':
+			return 'border-orange-500 bg-orange-500/10';
+		case 'moderate':
+			return 'border-amber-500 bg-amber-500/10';
+		case 'minor':
+			return 'border-blue-500 bg-blue-500/10';
+		case 'info':
+			return 'border-purple-500 bg-purple-500/10';
 		default:
-			return "border-slate-400 bg-slate-200/30";
+			return 'border-slate-400 bg-slate-200/30';
 	}
 }
 
@@ -118,18 +114,18 @@ export function getSeverityOverlayClass(severity?: string | null): string {
  */
 export function getSeverityStrokeColor(severity?: string | null): string {
 	switch (severity) {
-		case "critical":
-			return "rgba(239, 68, 68, 0.95)"; // red-500
-		case "serious":
-			return "rgba(249, 115, 22, 0.95)"; // orange-500
-		case "moderate":
-			return "rgba(245, 158, 11, 0.95)"; // amber-500
-		case "minor":
-			return "rgba(59, 130, 246, 0.95)"; // blue-500
-		case "info":
-			return "rgba(168, 85, 247, 0.95)"; // purple-500
+		case 'critical':
+			return 'rgba(239, 68, 68, 0.95)'; // red-500
+		case 'serious':
+			return 'rgba(249, 115, 22, 0.95)'; // orange-500
+		case 'moderate':
+			return 'rgba(245, 158, 11, 0.95)'; // amber-500
+		case 'minor':
+			return 'rgba(59, 130, 246, 0.95)'; // blue-500
+		case 'info':
+			return 'rgba(168, 85, 247, 0.95)'; // purple-500
 		default:
-			return "rgba(148, 163, 184, 0.95)"; // slate-400
+			return 'rgba(148, 163, 184, 0.95)'; // slate-400
 	}
 }
 
@@ -139,18 +135,18 @@ export function getSeverityStrokeColor(severity?: string | null): string {
  */
 export function getSeverityFillColor(severity?: string | null): string {
 	switch (severity) {
-		case "critical":
-			return "rgba(239, 68, 68, 0.15)"; // red-500 @ 15%
-		case "serious":
-			return "rgba(249, 115, 22, 0.15)"; // orange-500 @ 15%
-		case "moderate":
-			return "rgba(245, 158, 11, 0.15)"; // amber-500 @ 15%
-		case "minor":
-			return "rgba(59, 130, 246, 0.15)"; // blue-500 @ 15%
-		case "info":
-			return "rgba(168, 85, 247, 0.15)"; // purple-500 @ 15%
+		case 'critical':
+			return 'rgba(239, 68, 68, 0.15)'; // red-500 @ 15%
+		case 'serious':
+			return 'rgba(249, 115, 22, 0.15)'; // orange-500 @ 15%
+		case 'moderate':
+			return 'rgba(245, 158, 11, 0.15)'; // amber-500 @ 15%
+		case 'minor':
+			return 'rgba(59, 130, 246, 0.15)'; // blue-500 @ 15%
+		case 'info':
+			return 'rgba(168, 85, 247, 0.15)'; // purple-500 @ 15%
 		default:
-			return "rgba(148, 163, 184, 0.15)"; // slate-400 @ 15%
+			return 'rgba(148, 163, 184, 0.15)'; // slate-400 @ 15%
 	}
 }
 
@@ -161,56 +157,56 @@ export function getSeverityFillColor(severity?: string | null): string {
 export function getSeverityChipClass(
 	severity: string,
 	isActive: boolean,
-	size: "sm" | "md" = "sm",
+	size: 'sm' | 'md' = 'sm'
 ): string {
 	const base = chipVariants({ caps: true, interactive: true, size });
 
-	if (severity === "all") {
+	if (severity === 'all') {
 		return cn(
 			base,
 			isActive
-				? "border-ink bg-ink text-surface"
-				: "border-line text-ink-muted hover:bg-surface-muted",
+				? 'border-ink bg-ink text-surface'
+				: 'border-line text-ink-muted hover:bg-surface-muted'
 		);
 	}
 
 	switch (severity) {
-		case "critical":
+		case 'critical':
 			return cn(
 				base,
 				isActive
-					? "border-red-600 bg-red-600 text-white"
-					: "border-red-200 text-red-600 hover:bg-red-50",
+					? 'border-red-600 bg-red-600 text-white'
+					: 'border-red-200 text-red-600 hover:bg-red-50'
 			);
-		case "serious":
+		case 'serious':
 			return cn(
 				base,
 				isActive
-					? "border-orange-500 bg-orange-500 text-white"
-					: "border-orange-200 text-orange-600 hover:bg-orange-50",
+					? 'border-orange-500 bg-orange-500 text-white'
+					: 'border-orange-200 text-orange-600 hover:bg-orange-50'
 			);
-		case "moderate":
+		case 'moderate':
 			return cn(
 				base,
 				isActive
-					? "border-amber-500 bg-amber-500 text-white"
-					: "border-amber-200 text-amber-600 hover:bg-amber-50",
+					? 'border-amber-500 bg-amber-500 text-white'
+					: 'border-amber-200 text-amber-600 hover:bg-amber-50'
 			);
-		case "minor":
+		case 'minor':
 			return cn(
 				base,
 				isActive
-					? "border-blue-500 bg-blue-500 text-white"
-					: "border-blue-200 text-blue-600 hover:bg-blue-50",
+					? 'border-blue-500 bg-blue-500 text-white'
+					: 'border-blue-200 text-blue-600 hover:bg-blue-50'
 			);
-		case "info":
+		case 'info':
 			return cn(
 				base,
 				isActive
-					? "border-purple-500 bg-purple-500 text-white"
-					: "border-purple-200 text-purple-600 hover:bg-purple-50",
+					? 'border-purple-500 bg-purple-500 text-white'
+					: 'border-purple-200 text-purple-600 hover:bg-purple-50'
 			);
 		default:
-			return cn(base, "border-line text-ink-muted hover:bg-surface-muted");
+			return cn(base, 'border-line text-ink-muted hover:bg-surface-muted');
 	}
 }

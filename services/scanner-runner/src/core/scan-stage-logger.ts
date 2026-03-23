@@ -1,13 +1,13 @@
-import { createHash } from "node:crypto";
-import { dirname, join } from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
 
-import type { ScannerConfig, StorageProvider } from "./types";
+import type { ScannerConfig, StorageProvider } from './types';
 
-const scanStageSchema = "stageflow.stages.scan.v1";
-const scanRecipeSchema = "stageflow.recipes.scan.v1";
+const scanStageSchema = 'stageflow.stages.scan.v1';
+const scanRecipeSchema = 'stageflow.recipes.scan.v1';
 
-type ScanStageStatus = "succeeded" | "failed";
+type ScanStageStatus = 'succeeded' | 'failed';
 
 interface ScanStageEvent {
 	ts: string;
@@ -29,7 +29,7 @@ interface ScanStageArtifacts {
 interface ScanRecipe {
 	schema: string;
 	job_id: string;
-	stage: "scan";
+	stage: 'scan';
 	scanner_type: string;
 	generated_at: string;
 	input: {
@@ -55,7 +55,7 @@ interface ScanStageFailure {
 interface ScanStageLog {
 	schema: string;
 	job_id: string;
-	stage: "scan";
+	stage: 'scan';
 	scanner_type: string;
 	attempt: number;
 	status: ScanStageStatus;
@@ -80,16 +80,12 @@ export class ScanStageLogger {
 	private readonly recipeLocalPath: string;
 	private readonly stageLogLocalPath: string;
 
-	private recipeHash = "";
+	private recipeHash = '';
 	private events: ScanStageEvent[] = [];
 	private metrics: ScanStageMetrics = {};
 	private artifacts: ScanStageArtifacts = {};
 
-	constructor(
-		config: ScannerConfig,
-		storage: StorageProvider,
-		options?: { bucket?: string },
-	) {
+	constructor(config: ScannerConfig, storage: StorageProvider, options?: { bucket?: string }) {
 		this.config = config;
 		this.bucket = options?.bucket ?? config.storage.bucket;
 		this.storage = storage;
@@ -99,8 +95,8 @@ export class ScanStageLogger {
 		this.recipeObjectPath = `${config.jobId}/recipes/scan.${config.scannerName}.json`;
 		this.stageLogObjectPath = `${config.jobId}/stages/scan.${config.scannerName}.log.json`;
 
-		this.recipeLocalPath = join(config.resultsDir, "recipes", "scan.json");
-		this.stageLogLocalPath = join(config.resultsDir, "stages", "scan.log.json");
+		this.recipeLocalPath = join(config.resultsDir, 'recipes', 'scan.json');
+		this.stageLogLocalPath = join(config.resultsDir, 'stages', 'scan.log.json');
 	}
 
 	async start(): Promise<{ recipePath: string }> {
@@ -110,39 +106,39 @@ export class ScanStageLogger {
 		const recipe: ScanRecipe = {
 			schema: scanRecipeSchema,
 			job_id: this.config.jobId,
-			stage: "scan",
+			stage: 'scan',
 			scanner_type: this.config.scannerName,
 			generated_at: new Date().toISOString(),
 			input: {
 				provenance_path: this.config.provenancePath,
-				scan_urls: Boolean(process.env.SCAN_URLS),
+				scan_urls: Boolean(process.env.SCAN_URLS)
 			},
 			results_dir: this.config.resultsDir,
 			environment: {
 				nats_url: this.config.messaging.url,
 				minio_endpoint: this.config.storage.endpoint,
 				minio_use_ssl: this.config.storage.useSSL,
-				artifacts_bucket: this.bucket,
-			},
+				artifacts_bucket: this.bucket
+			}
 		};
 
 		const json = JSON.stringify(recipe, null, 2);
 		this.recipeHash = sha256Hex(json);
 		await fs.writeFile(this.recipeLocalPath, json, {
-			encoding: "utf8",
-			mode: 0o600,
+			encoding: 'utf8',
+			mode: 0o600
 		});
 
 		await this.storage.upload(
 			this.bucket,
 			this.recipeObjectPath,
 			this.recipeLocalPath,
-			"application/json",
+			'application/json'
 		);
 
 		this.events.push({
 			ts: this.startedAt.toISOString(),
-			type: "stage_started",
+			type: 'stage_started'
 		});
 
 		return { recipePath: this.recipeObjectPath };
@@ -152,7 +148,7 @@ export class ScanStageLogger {
 		this.events.push({
 			ts: new Date().toISOString(),
 			type,
-			details,
+			...(details !== undefined ? { details } : {})
 		});
 	}
 
@@ -165,35 +161,34 @@ export class ScanStageLogger {
 	}
 
 	async finalizeSuccess(): Promise<{ stageLogPath: string }> {
-		return this.finalize("succeeded");
+		return this.finalize('succeeded');
 	}
 
-	async finalizeFailure(
-		failure: ScanStageFailure,
-	): Promise<{ stageLogPath: string }> {
-		return this.finalize("failed", failure);
+	async finalizeFailure(failure: ScanStageFailure): Promise<{ stageLogPath: string }> {
+		return this.finalize('failed', failure);
 	}
 
 	private async finalize(
 		status: ScanStageStatus,
-		failure?: ScanStageFailure,
+		failure?: ScanStageFailure
 	): Promise<{ stageLogPath: string }> {
 		const completedAt = new Date();
 
 		this.events = this.events.filter(
-			(e) => e.type !== "stage_completed" && e.type !== "stage_failed",
+			(e) => e.type !== 'stage_completed' && e.type !== 'stage_failed'
 		);
 
+		const completionDetails = failure?.message ? { message: failure.message } : undefined;
 		this.events.push({
 			ts: completedAt.toISOString(),
-			type: status === "failed" ? "stage_failed" : "stage_completed",
-			details: failure?.message ? { message: failure.message } : undefined,
+			type: status === 'failed' ? 'stage_failed' : 'stage_completed',
+			...(completionDetails !== undefined ? { details: completionDetails } : {})
 		});
 
 		const log: ScanStageLog = {
 			schema: scanStageSchema,
 			job_id: this.config.jobId,
-			stage: "scan",
+			stage: 'scan',
 			scanner_type: this.config.scannerName,
 			attempt: 1,
 			status,
@@ -203,25 +198,25 @@ export class ScanStageLogger {
 			recipe_ref: {
 				bucket: this.bucket,
 				path: this.recipeObjectPath,
-				sha256: this.recipeHash,
+				sha256: this.recipeHash
 			},
 			metrics: this.metrics,
 			events: this.events,
 			artifacts: this.artifacts,
-			failure: failure && status === "failed" ? failure : undefined,
+			...(failure && status === 'failed' ? { failure } : {})
 		};
 
 		const json = JSON.stringify(log, null, 2);
 		await fs.writeFile(this.stageLogLocalPath, json, {
-			encoding: "utf8",
-			mode: 0o600,
+			encoding: 'utf8',
+			mode: 0o600
 		});
 
 		await this.storage.upload(
 			this.bucket,
 			this.stageLogObjectPath,
 			this.stageLogLocalPath,
-			"application/json",
+			'application/json'
 		);
 
 		return { stageLogPath: this.stageLogObjectPath };
@@ -229,5 +224,5 @@ export class ScanStageLogger {
 }
 
 function sha256Hex(text: string): string {
-	return createHash("sha256").update(text).digest("hex");
+	return createHash('sha256').update(text).digest('hex');
 }

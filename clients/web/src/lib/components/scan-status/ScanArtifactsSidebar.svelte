@@ -1,47 +1,45 @@
 <script lang="ts">
-import type { ScanResult, ScanStatus } from "$lib/types/scan";
+	import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
-import { Button, Chip, Panel } from "$lib/components/ui";
-import { cn } from "$lib/utils";
-import { Clock, FileText, Loader2 } from "lucide-svelte";
+	import { Button, Chip, Panel } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
+	import { Clock, FileText, Loader2 } from 'lucide-svelte';
 
-import AutomationTab from "./artifacts-sidebar/AutomationTab.svelte";
-import LogsTab from "./artifacts-sidebar/LogsTab.svelte";
-import { buildExpirationLabel } from "./artifacts-sidebar/expiration";
+	import AutomationTab from './artifacts-sidebar/AutomationTab.svelte';
+	import LogsTab from './artifacts-sidebar/LogsTab.svelte';
+	import { buildExpirationLabel } from './artifacts-sidebar/expiration';
 
-interface Props {
-	status: ScanStatus;
-	result: ScanResult | null;
-}
+	interface Props {
+		status: ScanStatus;
+		result: ScanResult | null;
+	}
 
-type ArtifactTab = "logs" | "automation";
-const TABS: ArtifactTab[] = ["logs", "automation"];
+	type ArtifactTab = 'logs' | 'automation';
+	const TABS: ArtifactTab[] = ['logs', 'automation'];
 
-let { status, result }: Props = $props();
+	let { status, result }: Props = $props();
 
-let userOpen = $state(true);
-let activeTab = $state<ArtifactTab>("logs");
+	let userOpen = $state(true);
+	let activeTab = $state<ArtifactTab>('logs');
 
-const artifacts = $derived(resolveArtifacts(status, result));
-const isLockedOpen = $derived(status !== "complete");
-const open = $derived(isLockedOpen ? true : userOpen);
-const expirationLabel = $derived(
-	buildExpirationLabel(result?.updated_at ?? null),
-);
+	const artifacts = $derived(resolveArtifacts(status, result));
+	const isLockedOpen = $derived(status !== 'complete');
+	const open = $derived(isLockedOpen ? true : userOpen);
+	const expirationLabel = $derived(buildExpirationLabel(result?.updated_at ?? null));
 
-function toggleOpen() {
-	if (isLockedOpen) return;
-	userOpen = !userOpen;
-}
+	function toggleOpen() {
+		if (isLockedOpen) return;
+		userOpen = !userOpen;
+	}
 
-function resolveArtifacts(
-	status: ScanStatus,
-	result: ScanResult | null,
-): ScanResult["artifacts"] | null {
-	if (!result?.artifacts) return null;
-	if (status === "loading") return null;
-	return result.artifacts;
-}
+	function resolveArtifacts(
+		status: ScanStatus,
+		result: ScanResult | null
+	): ScanResult['artifacts'] | null {
+		if (!result?.artifacts) return null;
+		if (status === 'loading') return null;
+		return result.artifacts;
+	}
 </script>
 
 <Panel padding="none" rounded="xl" class="text-ink shadow-sm lg:sticky lg:top-28">
@@ -89,7 +87,7 @@ function resolveArtifacts(
 					<Loader2
 						class={cn(
 							'mb-2 h-8 w-8',
-							status === 'failed' ? 'hidden' : 'animate-spin text-ink-faint'
+							status === 'failed' ? 'hidden' : 'text-ink-faint animate-spin'
 						)}
 					/>
 					<p class="text-sm">
@@ -116,8 +114,6 @@ function resolveArtifacts(
 			{/if}
 		</div>
 	{:else}
-		<div class="text-ink-faint px-6 pb-6 text-sm">
-			Expand to view logs and automation snippets.
-		</div>
+		<div class="text-ink-faint px-6 pb-6 text-sm">Expand to view logs and automation snippets.</div>
 	{/if}
 </Panel>

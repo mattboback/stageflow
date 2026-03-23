@@ -468,7 +468,9 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 	}
 
 	var rpt report.UnifiedReportV2
-	if err := json.Unmarshal(data, &rpt); err != nil {
+
+	err = json.Unmarshal(data, &rpt)
+	if err != nil {
 		return report.UnifiedReportV2{}, fmt.Errorf("parse report for %s: %w", jobID, err)
 	}
 
