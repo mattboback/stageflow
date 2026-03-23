@@ -35,7 +35,10 @@ func newProjectUpdateCmd(root *rootOptions) *cobra.Command {
 			}
 
 			if len(body) == 0 {
-				return exitCodeError{Code: 2, Err: errors.New("at least one flag (--name, --url, --scanner) is required")}
+				return exitCodeError{
+					Code: 2,
+					Err:  errors.New("at least one flag (--name, --url, --scanner) is required"),
+				}
 			}
 
 			client := NewClient(root.apiURL, root.apiKey, nil)

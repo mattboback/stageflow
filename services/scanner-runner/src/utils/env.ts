@@ -14,10 +14,10 @@ export function getEnvBool(name: string, defaultValue: boolean): boolean {
 	}
 
 	const normalized = raw.trim().toLowerCase();
-	if (["0", "false", "no", "off"].includes(normalized)) {
+	if (['0', 'false', 'no', 'off'].includes(normalized)) {
 		return false;
 	}
-	if (["1", "true", "yes", "on"].includes(normalized)) {
+	if (['1', 'true', 'yes', 'on'].includes(normalized)) {
 		return true;
 	}
 

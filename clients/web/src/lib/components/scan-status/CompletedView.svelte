@@ -1,27 +1,25 @@
 <script lang="ts">
-import type { ScanResult } from "$lib/types/scan";
+	import type { ScanResult } from '$lib/types/scan';
 
-import { buildApiUrl } from "$lib/api/utils";
-import { buttonVariants } from "$lib/components/ui";
-import { cn } from "$lib/utils";
-import { CheckCircle2, ClipboardList, FileText } from "lucide-svelte";
+	import { buildApiUrl } from '$lib/api/utils';
+	import { buttonVariants } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
+	import { CheckCircle2, ClipboardList, FileText } from 'lucide-svelte';
 
-interface Props {
-	result: ScanResult | null;
-}
+	interface Props {
+		result: ScanResult | null;
+	}
 
-let { result }: Props = $props();
+	let { result }: Props = $props();
 
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-	return count === 1 ? singular : plural;
-}
+	function pluralize(count: number, singular: string, plural = `${singular}s`) {
+		return count === 1 ? singular : plural;
+	}
 
-const totalViolations = $derived(result?.violations ?? 0);
-const totalPages = $derived(result?.progress?.total_pages ?? 0);
-const jobId = $derived(result?.id ?? "");
-const jsonUrl = $derived(
-	jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null,
-);
+	const totalViolations = $derived(result?.violations ?? 0);
+	const totalPages = $derived(result?.progress?.total_pages ?? 0);
+	const jobId = $derived(result?.id ?? '');
+	const jsonUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null);
 </script>
 
 <div class="space-y-8">

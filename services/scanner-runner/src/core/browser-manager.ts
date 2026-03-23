@@ -4,41 +4,30 @@
  * Playwright browser management for scanner operations.
  */
 
-import {
-	type Browser,
-	type BrowserContext,
-	type Page,
-	type Route,
-	chromium,
-} from "playwright";
+import { type Browser, type BrowserContext, type Page, type Route, chromium } from 'playwright';
 
-import { createLogger } from "../utils/logger";
-import { resolvePlaywrightImageChromiumExecutablePath } from "../utils/playwright";
+import { createLogger } from '../utils/logger';
+import { resolvePlaywrightImageChromiumExecutablePath } from '../utils/playwright';
 import {
 	shouldEnforceRuntimeTargetValidation,
-	validateRuntimeTargetURL,
-} from "./target-validation";
+	validateRuntimeTargetURL
+} from './target-validation';
 import {
 	type BrowserConfig,
 	DEFAULT_WAIT_STRATEGY,
 	type PreScanAction,
 	type ScannerLogger,
-	type WaitStrategy,
-} from "./types";
+	type WaitStrategy
+} from './types';
 
 const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
 	headless: true,
-	args: [
-		"--no-sandbox",
-		"--disable-setuid-sandbox",
-		"--disable-dev-shm-usage",
-		"--disable-gpu",
-	],
+	args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
 	defaultViewport: { width: 1280, height: 720 },
 	deviceScaleFactor: 2,
 	defaultTimeout: 30_000,
 	pageLoadTimeout: 15_000,
-	bypassCSP: false,
+	bypassCSP: false
 };
 
 /**
@@ -53,7 +42,7 @@ export class BrowserManager {
 
 	constructor(config?: Partial<BrowserConfig>, logger?: ScannerLogger) {
 		this.config = { ...DEFAULT_BROWSER_CONFIG, ...config };
-		this.logger = logger ?? createLogger("BrowserManager");
+		this.logger = logger ?? createLogger('BrowserManager');
 	}
 
 	async launch(): Promise<Browser> {
@@ -64,17 +53,15 @@ export class BrowserManager {
 		const fallbackExecutable = resolvePlaywrightImageChromiumExecutablePath();
 
 		const launchAttempts = [
-			{ name: "default", opts: {} },
+			{ name: 'default', opts: {} },
 			{
-				name: "fallback-chrome",
-				opts: fallbackExecutable
-					? { executablePath: fallbackExecutable }
-					: null,
+				name: 'fallback-chrome',
+				opts: fallbackExecutable ? { executablePath: fallbackExecutable } : null
 			},
 			{
-				name: "single-process",
-				opts: { args: [...this.config.args, "--single-process"] },
-			},
+				name: 'single-process',
+				opts: { args: [...this.config.args, '--single-process'] }
+			}
 		].filter((attempt) => attempt.opts !== null) as {
 			name: string;
 			opts: Record<string, unknown>;
@@ -86,30 +73,32 @@ export class BrowserManager {
 				const attemptArgs = Array.isArray(attempt.opts.args)
 					? (attempt.opts.args as string[])
 					: this.config.args;
+				const executablePath =
+					typeof attempt.opts.executablePath === 'string' ? attempt.opts.executablePath : undefined;
 
-				this.logger.info("Launching browser", {
+				this.logger.info('Launching browser', {
 					attempt: attempt.name,
 					headless: this.config.headless,
-					args: attempt.opts.args ?? this.config.args,
+					args: attempt.opts.args ?? this.config.args
 				});
 
 				this.browser = await chromium.launch({
 					headless: this.config.headless,
 					args: attemptArgs,
-					executablePath: attempt.opts.executablePath as string | undefined,
 					chromiumSandbox: false,
 					env: {
 						...process.env,
-						DBUS_SESSION_BUS_ADDRESS: "disabled",
+						DBUS_SESSION_BUS_ADDRESS: 'disabled'
 					},
+					...(executablePath !== undefined ? { executablePath } : {})
 				});
 
 				return this.browser;
 			} catch (err) {
 				lastError = err;
-				this.logger.warn("Browser launch attempt failed", {
+				this.logger.warn('Browser launch attempt failed', {
 					attempt: attempt.name,
-					error: err instanceof Error ? err.message : String(err),
+					error: err instanceof Error ? err.message : String(err)
 				});
 			}
 		}
@@ -117,10 +106,7 @@ export class BrowserManager {
 		throw lastError instanceof Error ? lastError : new Error(String(lastError));
 	}
 
-	async createContext(viewport?: {
-		width: number;
-		height: number;
-	}): Promise<BrowserContext> {
+	async createContext(viewport?: { width: number; height: number }): Promise<BrowserContext> {
 		const browser = await this.launch();
 
 		const vp = viewport ?? this.config.defaultViewport;
@@ -129,17 +115,12 @@ export class BrowserManager {
 			viewport: vp,
 			deviceScaleFactor: this.config.deviceScaleFactor,
 			// We inject small amounts of CSS/JS for scanning + screenshots; some sites have strict CSP that would block it.
-			bypassCSP: this.config.bypassCSP ?? false,
+			bypassCSP: this.config.bypassCSP ?? false
 		});
 	}
 
-	async navigateToPage(
-		page: Page,
-		url: string,
-		waitStrategy?: WaitStrategy,
-	): Promise<void> {
-		const enforceRuntimeTargetValidation =
-			shouldEnforceRuntimeTargetValidation();
+	async navigateToPage(page: Page, url: string, waitStrategy?: WaitStrategy): Promise<void> {
+		const enforceRuntimeTargetValidation = shouldEnforceRuntimeTargetValidation();
 		if (enforceRuntimeTargetValidation) {
 			await this.ensureRuntimeTargetValidationRouting(page);
 			this.blockedNavigationErrors.delete(page);
@@ -148,9 +129,9 @@ export class BrowserManager {
 
 		const strategy = waitStrategy ?? DEFAULT_WAIT_STRATEGY;
 
-		this.logger.debug("Navigating to page", {
+		this.logger.debug('Navigating to page', {
 			url,
-			waitStrategy: strategy.type,
+			waitStrategy: strategy.type
 		});
 
 		const waitUntil = this.getPlaywrightWaitUntil(strategy);
@@ -158,7 +139,7 @@ export class BrowserManager {
 		try {
 			await page.goto(url, {
 				waitUntil,
-				timeout: this.config.pageLoadTimeout,
+				timeout: this.config.pageLoadTimeout
 			});
 		} catch (err) {
 			const blockedError = this.blockedNavigationErrors.get(page);
@@ -184,23 +165,18 @@ export class BrowserManager {
 		await this.applyAdditionalWait(page, strategy);
 	}
 
-	private async ensureRuntimeTargetValidationRouting(
-		page: Page,
-	): Promise<void> {
+	private async ensureRuntimeTargetValidationRouting(page: Page): Promise<void> {
 		if (this.runtimeValidationRoutes.has(page)) {
 			return;
 		}
 
 		this.runtimeValidationRoutes.add(page);
 
-		await page.route("**/*", async (route: Route) => {
+		await page.route('**/*', async (route: Route) => {
 			const request = route.request();
 
 			// Only validate navigation/document requests (includes redirects).
-			if (
-				request.resourceType() !== "document" ||
-				!request.isNavigationRequest()
-			) {
+			if (request.resourceType() !== 'document' || !request.isNavigationRequest()) {
 				await route.continue();
 				return;
 			}
@@ -214,57 +190,51 @@ export class BrowserManager {
 				const error = err instanceof Error ? err : new Error(String(err));
 				this.blockedNavigationErrors.set(page, error);
 
-				this.logger.warn("Blocked navigation request", {
+				this.logger.warn('Blocked navigation request', {
 					url: requestURL,
-					error: error.message,
+					error: error.message
 				});
 
-				await route.abort("blockedbyclient");
+				await route.abort('blockedbyclient');
 			}
 		});
 	}
 
-	async executePreScanActions(
-		page: Page,
-		actions: PreScanAction[],
-	): Promise<void> {
+	async executePreScanActions(page: Page, actions: PreScanAction[]): Promise<void> {
 		if (actions.length === 0) {
 			return;
 		}
 
-		this.logger.debug("Executing pre-scan actions", { count: actions.length });
+		this.logger.debug('Executing pre-scan actions', { count: actions.length });
 
 		for (const action of actions) {
 			await this.executeAction(page, action);
 		}
 	}
 
-	private async executeAction(
-		page: Page,
-		action: PreScanAction,
-	): Promise<void> {
+	private async executeAction(page: Page, action: PreScanAction): Promise<void> {
 		const timeout =
-			"timeout" in action && typeof action.timeout === "number"
+			'timeout' in action && typeof action.timeout === 'number'
 				? action.timeout
 				: this.config.defaultTimeout;
 
 		switch (action.type) {
-			case "click":
+			case 'click':
 				await page.click(action.selector, { timeout });
 				return;
-			case "fill":
+			case 'fill':
 				await page.fill(action.selector, action.value, { timeout });
 				return;
-			case "select":
+			case 'select':
 				await page.selectOption(action.selector, action.value, { timeout });
 				return;
-			case "hover":
+			case 'hover':
 				await page.hover(action.selector, { timeout });
 				return;
-			case "wait":
+			case 'wait':
 				await page.waitForTimeout(action.ms);
 				return;
-			case "scroll":
+			case 'scroll':
 				if (action.selector) {
 					const element = page.locator(action.selector);
 					await element.scrollIntoViewIfNeeded({ timeout });
@@ -275,61 +245,55 @@ export class BrowserManager {
 					(scrollY) => {
 						window.scrollBy(0, scrollY);
 					},
-					(action.direction === "up" ? -1 : 1) * (action.pixels ?? 500),
+					(action.direction === 'up' ? -1 : 1) * (action.pixels ?? 500)
 				);
 				return;
-			case "keyboard":
+			case 'keyboard':
 				await page.keyboard.press(action.key);
 				return;
 			default:
-				this.logger.warn("Unknown action type", { action });
+				this.logger.warn('Unknown action type', { action });
 				return;
 		}
 	}
 
 	private getPlaywrightWaitUntil(
-		strategy: WaitStrategy,
-	): "load" | "domcontentloaded" | "networkidle" {
+		strategy: WaitStrategy
+	): 'load' | 'domcontentloaded' | 'networkidle' {
 		switch (strategy.type) {
-			case "load":
-			case "selector":
-			case "timeout":
-				return "load";
-			case "domcontentloaded":
-				return "domcontentloaded";
-			case "networkidle":
-				return "networkidle";
+			case 'load':
+			case 'selector':
+			case 'timeout':
+				return 'load';
+			case 'domcontentloaded':
+				return 'domcontentloaded';
+			case 'networkidle':
+				return 'networkidle';
 			default:
-				this.logger.warn(
-					"Unknown wait strategy for navigation. Falling back to load.",
-					{
-						strategy,
-					},
-				);
-				return "load";
+				this.logger.warn('Unknown wait strategy for navigation. Falling back to load.', {
+					strategy
+				});
+				return 'load';
 		}
 	}
 
-	private async applyAdditionalWait(
-		page: Page,
-		strategy: WaitStrategy,
-	): Promise<void> {
+	private async applyAdditionalWait(page: Page, strategy: WaitStrategy): Promise<void> {
 		switch (strategy.type) {
-			case "load":
-			case "domcontentloaded":
-			case "networkidle":
+			case 'load':
+			case 'domcontentloaded':
+			case 'networkidle':
 				return;
-			case "selector":
+			case 'selector':
 				await page.waitForSelector(strategy.selector, {
-					timeout: strategy.timeout ?? this.config.defaultTimeout,
+					timeout: strategy.timeout ?? this.config.defaultTimeout
 				});
 				return;
-			case "timeout":
+			case 'timeout':
 				await page.waitForTimeout(strategy.ms);
 				return;
 			default:
-				this.logger.warn("Unknown wait strategy for post-navigation wait.", {
-					strategy,
+				this.logger.warn('Unknown wait strategy for post-navigation wait.', {
+					strategy
 				});
 				return;
 		}
@@ -340,7 +304,7 @@ export class BrowserManager {
 			return;
 		}
 
-		this.logger.info("Closing browser");
+		this.logger.info('Closing browser');
 		await this.browser.close();
 		this.browser = null;
 	}

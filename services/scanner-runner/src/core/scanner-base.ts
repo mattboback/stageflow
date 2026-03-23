@@ -1,7 +1,7 @@
-import type { Stats } from "node:fs";
+import type { Stats } from 'node:fs';
 
-import { join, relative, resolve } from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import { join, relative, resolve } from 'node:path';
 
 import type {
 	IssueSeverity,
@@ -16,22 +16,22 @@ import type {
 	ScannerLifecycleHooks,
 	ScannerLogger,
 	ScannerMetadata,
-	StorageProvider,
-} from "./types";
+	StorageProvider
+} from './types';
 
-import { createLogger } from "../utils/logger";
+import { createLogger } from '../utils/logger';
 import {
 	reportPath as artifactReportPath,
-	resultsPath as artifactResultsPath,
-} from "./artifact-paths";
-import { BrowserManager } from "./browser-manager";
-import { NatsEventPublisher, NoOpEventPublisher } from "./event-publisher";
-import { PageIterator } from "./page-iterator";
-import { ScanStageLogger } from "./scan-stage-logger";
-import { MinioStorageProvider } from "./storage-provider";
-import { WebServerFormatter } from "./web-server-formatter";
+	resultsPath as artifactResultsPath
+} from './artifact-paths';
+import { BrowserManager } from './browser-manager';
+import { NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
+import { PageIterator } from './page-iterator';
+import { ScanStageLogger } from './scan-stage-logger';
+import { MinioStorageProvider } from './storage-provider';
+import { WebServerFormatter } from './web-server-formatter';
 
-export type { ScannerMetadata } from "./types";
+export type { ScannerMetadata } from './types';
 
 export abstract class ScannerBase {
 	protected config!: ScannerConfig;
@@ -45,10 +45,10 @@ export abstract class ScannerBase {
 	private runStartedAt!: number;
 	private providedLogger: boolean;
 	protected scanStageLogger: ScanStageLogger | null = null;
-	private scanStageLogPath = "";
-	private scanRecipePath = "";
-	private provenanceArtifactKey = "";
-	private static readonly extraArtifactsManifest = ".stageflow-artifacts.json";
+	private scanStageLogPath = '';
+	private scanRecipePath = '';
+	private provenanceArtifactKey = '';
+	private static readonly extraArtifactsManifest = '.stageflow-artifacts.json';
 
 	abstract readonly metadata: ScannerMetadata;
 	abstract scanPage(context: ScanContext): Promise<PageScanResult>;
@@ -56,7 +56,7 @@ export abstract class ScannerBase {
 	constructor(hooks?: ScannerLifecycleHooks, logger?: ScannerLogger) {
 		this.hooks = hooks ?? {};
 		this.providedLogger = Boolean(logger);
-		this.logger = logger ?? createLogger("Scanner");
+		this.logger = logger ?? createLogger('Scanner');
 	}
 
 	async run(config: ScannerConfig): Promise<ScanResults> {
@@ -67,7 +67,7 @@ export abstract class ScannerBase {
 
 		this.logger.info(`Starting ${this.metadata.name} scanner`, {
 			jobId: config.jobId,
-			version: this.metadata.version,
+			version: this.metadata.version
 		});
 
 		try {
@@ -76,42 +76,38 @@ export abstract class ScannerBase {
 
 			const provenance = await this.pageIterator.loadProvenance();
 			this.validateProvenance(provenance);
-			this.scanStageLogger?.recordEvent("provenance_loaded", {
-				pages: provenance.pages.filter((p) => !p.skip).length,
+			this.scanStageLogger?.recordEvent('provenance_loaded', {
+				pages: provenance.pages.filter((p) => !p.skip).length
 			});
 			this.scanStageLogger?.setMetrics({
-				pages_total: provenance.pages.filter((p) => !p.skip).length,
+				pages_total: provenance.pages.filter((p) => !p.skip).length
 			});
 
 			await this.uploadProvenanceArtifactIfNeeded();
 
-			const { pageResults, pageIterationMs } =
-				await this.iteratePages(provenance);
+			const { pageResults, pageIterationMs } = await this.iteratePages(provenance);
 
 			const results = this.buildResults(provenance, pageResults);
 			this.scanStageLogger?.setMetrics({
 				pages_scanned: results.pages.length,
-				total_issues: results.summary.totalIssues,
+				total_issues: results.summary.totalIssues
 			});
 
-			const { durationMs: writeResultsMs } = await this.runPhase(
-				"writeResults",
-				() => this.writeResults(provenance, results),
+			const { durationMs: writeResultsMs } = await this.runPhase('writeResults', () =>
+				this.writeResults(provenance, results)
 			);
 
-			const { durationMs: uploadArtifactsMs } = await this.runPhase(
-				"uploadArtifacts",
-				() => this.uploadArtifacts(),
+			const { durationMs: uploadArtifactsMs } = await this.runPhase('uploadArtifacts', () =>
+				this.uploadArtifacts()
 			);
 
 			if (this.scanStageLogger) {
-				this.scanStageLogger.setArtifacts({
-					provenance_key: this.provenanceArtifactKey || undefined,
-					results_key: artifactResultsPath(
-						this.config.jobId,
-						this.metadata.name,
-					),
-				});
+				const artifacts = {
+					results_key: artifactResultsPath(this.config.jobId, this.metadata.name),
+					...(this.provenanceArtifactKey ? { provenance_key: this.provenanceArtifactKey } : {})
+				};
+
+				this.scanStageLogger.setArtifacts(artifacts);
 
 				const { stageLogPath } = await this.scanStageLogger.finalizeSuccess();
 				this.scanStageLogPath = stageLogPath;
@@ -121,7 +117,7 @@ export abstract class ScannerBase {
 				pageIterationMs,
 				writeResultsMs,
 				uploadArtifactsMs,
-				reportPath: artifactReportPath(this.config.jobId, this.metadata.name),
+				reportPath: artifactReportPath(this.config.jobId, this.metadata.name)
 			});
 
 			await this.hooks.onScanEnd?.(results);
@@ -130,7 +126,7 @@ export abstract class ScannerBase {
 				jobId: config.jobId,
 				pagesScanned: results.pages.length,
 				totalIssues: results.summary.totalIssues,
-				durationMs: results.durationMs,
+				durationMs: results.durationMs
 			});
 
 			return results;
@@ -149,33 +145,38 @@ export abstract class ScannerBase {
 	}
 
 	private async iteratePages(
-		provenance: Provenance,
+		provenance: Provenance
 	): Promise<{ pageResults: PageScanResult[]; pageIterationMs: number }> {
 		const hooks = this.hooks;
-		const { value: pageResults, durationMs: pageIterationMs } =
-			await this.runPhase("pageIteration", () =>
+		const pageIteratorCallbacks = {
+			onPageComplete: async (result: PageScanResult, index: number, total: number) => {
+				await this.eventPublisher.publishPageCompleted(result, index + 1, total);
+				await hooks.onPageEnd?.(result);
+			},
+			...(hooks.onPageStart
+				? {
+						onPageStart: async (pageEntry: Provenance['pages'][number]) => {
+							await hooks.onPageStart?.(pageEntry);
+						}
+					}
+				: {}),
+			...(hooks.onError
+				? {
+						onPageError: async (error: Error, pageEntry: Provenance['pages'][number]) => {
+							await hooks.onError?.(error, { pageEntry });
+						}
+					}
+				: {})
+		};
+		const { value: pageResults, durationMs: pageIterationMs } = await this.runPhase(
+			'pageIteration',
+			() =>
 				this.pageIterator.iteratePages(
 					provenance,
 					(context) => this.scanPage(context),
-					{
-						onPageStart: hooks.onPageStart
-							? async (pageEntry) => hooks.onPageStart?.(pageEntry)
-							: undefined,
-						onPageComplete: async (result, index, total) => {
-							await this.eventPublisher.publishPageCompleted(
-								result,
-								index + 1,
-								total,
-							);
-							await hooks.onPageEnd?.(result);
-						},
-						onPageError: hooks.onError
-							? async (error, pageEntry) =>
-									hooks.onError?.(error, { pageEntry })
-							: undefined,
-					},
-				),
-			);
+					pageIteratorCallbacks
+				)
+		);
 
 		return { pageResults, pageIterationMs };
 	}
@@ -187,7 +188,7 @@ export abstract class ScannerBase {
 			writeResultsMs: number;
 			uploadArtifactsMs: number;
 			reportPath: string;
-		},
+		}
 	): Promise<{ publishCompletedMs: number }> {
 		const timingForEvent = {
 			totalMs: Date.now() - this.runStartedAt,
@@ -195,23 +196,21 @@ export abstract class ScannerBase {
 			writeResultsMs: timing.writeResultsMs,
 			uploadArtifactsMs: timing.uploadArtifactsMs,
 			publishCompletedMs: 0,
-			finalizationMs: timing.writeResultsMs + timing.uploadArtifactsMs,
+			finalizationMs: timing.writeResultsMs + timing.uploadArtifactsMs
 		};
 
-		const { durationMs: publishCompletedMs } = await this.runPhase(
-			"publishScanCompleted",
-			() =>
-				this.eventPublisher.publishScanCompleted(results, timingForEvent, {
-					stageLogPath: this.scanStageLogPath || undefined,
-					recipePath: this.scanRecipePath || undefined,
-					reportPath: timing.reportPath,
-				}),
+		const { durationMs: publishCompletedMs } = await this.runPhase('publishScanCompleted', () =>
+			this.eventPublisher.publishScanCompleted(results, timingForEvent, {
+				reportPath: timing.reportPath,
+				...(this.scanStageLogPath ? { stageLogPath: this.scanStageLogPath } : {}),
+				...(this.scanRecipePath ? { recipePath: this.scanRecipePath } : {})
+			})
 		);
 
 		this.logPipelineTiming({
 			...timingForEvent,
 			publishCompletedMs,
-			finalizationMs: timingForEvent.finalizationMs + publishCompletedMs,
+			finalizationMs: timingForEvent.finalizationMs + publishCompletedMs
 		});
 
 		return { publishCompletedMs };
@@ -219,23 +218,23 @@ export abstract class ScannerBase {
 
 	private async handleRunError(error: unknown): Promise<void> {
 		const errorMessage = error instanceof Error ? error.message : String(error);
-		this.logger.error("Scanner failed", { error: errorMessage });
+		this.logger.error('Scanner failed', { error: errorMessage });
 
 		if (this.scanStageLogger) {
 			try {
-				this.scanStageLogger.recordEvent("scan_failed", {
-					error: errorMessage,
+				this.scanStageLogger.recordEvent('scan_failed', {
+					error: errorMessage
 				});
-				const { stageLogPath } = await this.scanStageLogger.finalizeFailure({
-					stage: "scan",
+				const failure = {
+					stage: 'scan',
 					message: errorMessage,
-					details: error instanceof Error ? error.stack : undefined,
-				});
+					...(error instanceof Error && error.stack !== undefined ? { details: error.stack } : {})
+				};
+				const { stageLogPath } = await this.scanStageLogger.finalizeFailure(failure);
 				this.scanStageLogPath = stageLogPath;
 			} catch (stageErr) {
-				this.logger.warn("Failed to finalize scan stage log", {
-					error:
-						stageErr instanceof Error ? stageErr.message : String(stageErr),
+				this.logger.warn('Failed to finalize scan stage log', {
+					error: stageErr instanceof Error ? stageErr.message : String(stageErr)
 				});
 			}
 		}
@@ -244,15 +243,13 @@ export abstract class ScannerBase {
 			errorMessage,
 			error instanceof Error ? error.stack : undefined,
 			{
-				stageLogPath: this.scanStageLogPath || undefined,
-				recipePath: this.scanRecipePath || undefined,
-			},
+				...(this.scanStageLogPath ? { stageLogPath: this.scanStageLogPath } : {}),
+				...(this.scanRecipePath ? { recipePath: this.scanRecipePath } : {})
+			}
 		);
 
 		if (this.hooks.onError) {
-			await this.hooks.onError(
-				error instanceof Error ? error : new Error(errorMessage),
-			);
+			await this.hooks.onError(error instanceof Error ? error : new Error(errorMessage));
 		}
 	}
 
@@ -262,22 +259,12 @@ export abstract class ScannerBase {
 		const browserManager = new BrowserManager(this.config.browser, this.logger);
 		this.browserManager = browserManager;
 
-		this.pageIterator = new PageIterator(
-			browserManager,
-			this.config,
-			this.logger,
-		);
+		this.pageIterator = new PageIterator(browserManager, this.config, this.logger);
 
-		this.storageProvider = new MinioStorageProvider(
-			this.config.storage,
-			this.logger,
-		);
+		this.storageProvider = new MinioStorageProvider(this.config.storage, this.logger);
 		await this.storageProvider.ensureBucket(this.config.storage.bucket);
 
-		this.scanStageLogger = new ScanStageLogger(
-			this.config,
-			this.storageProvider,
-		);
+		this.scanStageLogger = new ScanStageLogger(this.config, this.storageProvider);
 		const { recipePath } = await this.scanStageLogger.start();
 		this.scanRecipePath = recipePath;
 
@@ -287,7 +274,10 @@ export abstract class ScannerBase {
 				this.metadata.name,
 				this.config.messaging.subjects,
 				this.logger,
-				{ requestId: this.config.requestId, runId: this.config.runId },
+				{
+					...(this.config.requestId !== undefined ? { requestId: this.config.requestId } : {}),
+					...(this.config.runId !== undefined ? { runId: this.config.runId } : {})
+				}
 			);
 			await publisher.connect(this.config.messaging.url);
 			this.eventPublisher = publisher;
@@ -296,29 +286,24 @@ export abstract class ScannerBase {
 
 	protected validateProvenance(provenance: Provenance): void {
 		if (!provenance.version) {
-			throw new Error("Provenance version is required");
+			throw new Error('Provenance version is required');
 		}
 		if (!provenance.job_id) {
-			throw new Error("Provenance job_id is required");
+			throw new Error('Provenance job_id is required');
 		}
 		if (!Array.isArray(provenance.pages) || provenance.pages.length === 0) {
-			throw new Error("Provenance does not contain any pages to scan");
+			throw new Error('Provenance does not contain any pages to scan');
 		}
 		// base_url is only required if pages don't have full URLs
 		const allPagesHaveUrls = provenance.pages.every(
-			(page) => page.url && /^https?:\/\//i.test(page.url),
+			(page) => page.url && /^https?:\/\//i.test(page.url)
 		);
 		if (!provenance.base_url && !allPagesHaveUrls) {
-			throw new Error(
-				"Provenance base_url is required when pages don't have full URLs",
-			);
+			throw new Error("Provenance base_url is required when pages don't have full URLs");
 		}
 	}
 
-	protected buildResults(
-		provenance: Provenance,
-		pageResults: PageScanResult[],
-	): ScanResults {
+	protected buildResults(provenance: Provenance, pageResults: PageScanResult[]): ScanResults {
 		const completedAt = new Date().toISOString();
 		const startTime = new Date(this.scanStartedAt).getTime();
 		const endTime = new Date(completedAt).getTime();
@@ -334,7 +319,7 @@ export abstract class ScannerBase {
 			summary,
 			startedAt: this.scanStartedAt,
 			completedAt,
-			durationMs: endTime - startTime,
+			durationMs: endTime - startTime
 		};
 	}
 
@@ -347,7 +332,7 @@ export abstract class ScannerBase {
 			serious: 0,
 			moderate: 0,
 			minor: 0,
-			info: 0,
+			info: 0
 		};
 
 		const byCategory: Record<string, number> = {};
@@ -359,9 +344,7 @@ export abstract class ScannerBase {
 
 		const durations = successfulPages.map((p) => p.durationMs);
 		const avgDurationMs =
-			durations.length > 0
-				? durations.reduce((a, b) => a + b, 0) / durations.length
-				: 0;
+			durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
 
 		const lighthouseCategories = this.extractLighthouseCategories(pageResults);
 
@@ -373,12 +356,12 @@ export abstract class ScannerBase {
 			pagesFailed: pageResults.filter((p) => !p.success).length,
 			pagesWithIssues: pageResults.filter((p) => p.issues.length > 0).length,
 			avgDurationMs,
-			lighthouseCategories,
+			...(lighthouseCategories !== undefined ? { lighthouseCategories } : {})
 		};
 	}
 
 	protected extractLighthouseCategories(
-		pageResults: PageScanResult[],
+		pageResults: PageScanResult[]
 	): LighthouseCategorySummary[] | undefined {
 		interface LHCategory {
 			id: string;
@@ -419,40 +402,32 @@ export abstract class ScannerBase {
 		}
 
 		const entries = Object.entries(lhCategories).filter(
-			(entry): entry is [string, CategoryAggregate] => Boolean(entry[1]),
+			(entry): entry is [string, CategoryAggregate] => Boolean(entry[1])
 		);
 		if (entries.length === 0) {
 			return undefined;
 		}
 
 		return entries.map(([id, { title, sum, count }]) => ({
-			id: id as LighthouseCategorySummary["id"],
+			id: id as LighthouseCategorySummary['id'],
 			title,
-			avgScore: Math.round((sum / count) * 100) / 100,
+			avgScore: Math.round((sum / count) * 100) / 100
 		}));
 	}
 
 	protected async writeResults(
 		provenance: Provenance,
-		results: ScanResults,
+		results: ScanResults
 	): Promise<{ reportPath: string }> {
-		const webServerFormat = new WebServerFormatter().format(
-			provenance,
-			results,
-			this.metadata,
-		);
+		const webServerFormat = new WebServerFormatter().format(provenance, results, this.metadata);
 
-		const resultsPath = join(this.config.resultsDir, "results.json");
+		const resultsPath = join(this.config.resultsDir, 'results.json');
 		await fs.writeJSON(resultsPath, webServerFormat, { spaces: 2 });
-		this.logger.info("Wrote results file", { path: resultsPath });
+		this.logger.info('Wrote results file', { path: resultsPath });
 
-		const reportPath = join(this.config.resultsDir, "report.html");
-		await fs.writeFile(
-			reportPath,
-			this.buildStandaloneReportHTML(results),
-			"utf8",
-		);
-		this.logger.info("Wrote standalone report file", { path: reportPath });
+		const reportPath = join(this.config.resultsDir, 'report.html');
+		await fs.writeFile(reportPath, this.buildStandaloneReportHTML(results), 'utf8');
+		this.logger.info('Wrote standalone report file', { path: reportPath });
 
 		return { reportPath };
 	}
@@ -461,40 +436,33 @@ export abstract class ScannerBase {
 		const bucket = this.config.storage.bucket;
 		const prefix = `${this.config.jobId}/${this.metadata.name}`;
 
-		const resultsKey = artifactResultsPath(
-			this.config.jobId,
-			this.metadata.name,
-		);
+		const resultsKey = artifactResultsPath(this.config.jobId, this.metadata.name);
 		await this.storageProvider.upload(
 			bucket,
 			resultsKey,
-			join(this.config.resultsDir, "results.json"),
+			join(this.config.resultsDir, 'results.json')
 		);
 
 		const reportKey = artifactReportPath(this.config.jobId, this.metadata.name);
 		await this.storageProvider.upload(
 			bucket,
 			reportKey,
-			join(this.config.resultsDir, "report.html"),
-			"text/html; charset=utf-8",
+			join(this.config.resultsDir, 'report.html'),
+			'text/html; charset=utf-8'
 		);
 
 		let uploadedCount = 2;
 
 		try {
 			const entries = await fs.readdir(this.config.resultsDir, {
-				withFileTypes: true,
+				withFileTypes: true
 			});
 			for (const entry of entries) {
 				if (!entry.isDirectory()) {
 					continue;
 				}
 
-				const screenshotsDir = join(
-					this.config.resultsDir,
-					entry.name,
-					"screenshots",
-				);
+				const screenshotsDir = join(this.config.resultsDir, entry.name, 'screenshots');
 				if (!(await fs.pathExists(screenshotsDir))) {
 					continue;
 				}
@@ -502,7 +470,7 @@ export abstract class ScannerBase {
 				uploadedCount += await this.storageProvider.uploadDirectory(
 					bucket,
 					`${prefix}/${entry.name}/screenshots`,
-					screenshotsDir,
+					screenshotsDir
 				);
 			}
 		} catch {
@@ -511,21 +479,15 @@ export abstract class ScannerBase {
 
 		uploadedCount += await this.uploadExtraArtifacts(bucket, prefix);
 
-		this.logger.info("Uploaded artifacts", {
+		this.logger.info('Uploaded artifacts', {
 			bucket,
 			prefix,
-			fileCount: uploadedCount,
+			fileCount: uploadedCount
 		});
 	}
 
-	private async uploadExtraArtifacts(
-		bucket: string,
-		prefix: string,
-	): Promise<number> {
-		const manifestPath = join(
-			this.config.resultsDir,
-			ScannerBase.extraArtifactsManifest,
-		);
+	private async uploadExtraArtifacts(bucket: string, prefix: string): Promise<number> {
+		const manifestPath = join(this.config.resultsDir, ScannerBase.extraArtifactsManifest);
 
 		if (!(await fs.pathExists(manifestPath))) {
 			return 0;
@@ -535,27 +497,25 @@ export abstract class ScannerBase {
 		try {
 			manifest = await fs.readJSON(manifestPath);
 		} catch (err) {
-			this.logger.warn("Failed to read extra artifacts manifest", {
+			this.logger.warn('Failed to read extra artifacts manifest', {
 				path: manifestPath,
-				error: err instanceof Error ? err.message : String(err),
+				error: err instanceof Error ? err.message : String(err)
 			});
 			return 0;
 		}
 
 		const manifestObj =
-			manifest && typeof manifest === "object"
-				? (manifest as Record<string, unknown>)
-				: {};
+			manifest && typeof manifest === 'object' ? (manifest as Record<string, unknown>) : {};
 
 		const paths = [
 			...normalizeStringArray(manifestObj.paths),
 			...normalizeStringArray(manifestObj.files),
-			...normalizeStringArray(manifestObj.directories),
+			...normalizeStringArray(manifestObj.directories)
 		];
 
 		if (paths.length === 0) {
-			this.logger.warn("Extra artifacts manifest did not contain any paths", {
-				path: manifestPath,
+			this.logger.warn('Extra artifacts manifest did not contain any paths', {
+				path: manifestPath
 			});
 			return 0;
 		}
@@ -567,15 +527,15 @@ export abstract class ScannerBase {
 			const absolutePath = resolve(this.config.resultsDir, relPath);
 			const relativePath = relative(this.config.resultsDir, absolutePath);
 
-			if (!relativePath || relativePath.startsWith("..")) {
-				this.logger.warn("Skipping extra artifact outside results directory", {
-					relPath,
+			if (!relativePath || relativePath.startsWith('..')) {
+				this.logger.warn('Skipping extra artifact outside results directory', {
+					relPath
 				});
 				continue;
 			}
 
 			if (!(await fs.pathExists(absolutePath))) {
-				this.logger.warn("Extra artifact path does not exist", { relPath });
+				this.logger.warn('Extra artifact path does not exist', { relPath });
 				continue;
 			}
 
@@ -583,14 +543,14 @@ export abstract class ScannerBase {
 			try {
 				stats = await fs.stat(absolutePath);
 			} catch (err) {
-				this.logger.warn("Failed to stat extra artifact path", {
+				this.logger.warn('Failed to stat extra artifact path', {
 					relPath,
-					error: err instanceof Error ? err.message : String(err),
+					error: err instanceof Error ? err.message : String(err)
 				});
 				continue;
 			}
 
-			const normalizedPath = relativePath.split("\\").join("/");
+			const normalizedPath = relativePath.split('\\').join('/');
 			const objectKey = `${prefix}/${normalizedPath}`;
 
 			if (stats.isDirectory()) {
@@ -598,19 +558,19 @@ export abstract class ScannerBase {
 					uploadedCount += await this.storageProvider.uploadDirectory(
 						bucket,
 						objectKey,
-						absolutePath,
+						absolutePath
 					);
 				} catch (err) {
-					this.logger.warn("Failed to upload extra artifact directory", {
+					this.logger.warn('Failed to upload extra artifact directory', {
 						relPath,
-						error: err instanceof Error ? err.message : String(err),
+						error: err instanceof Error ? err.message : String(err)
 					});
 				}
 				continue;
 			}
 
 			if (!stats.isFile()) {
-				this.logger.warn("Skipping non-file extra artifact path", { relPath });
+				this.logger.warn('Skipping non-file extra artifact path', { relPath });
 				continue;
 			}
 
@@ -623,9 +583,9 @@ export abstract class ScannerBase {
 				uploadedKeys.add(objectKey);
 				uploadedCount += 1;
 			} catch (err) {
-				this.logger.warn("Failed to upload extra artifact file", {
+				this.logger.warn('Failed to upload extra artifact file', {
 					relPath,
-					error: err instanceof Error ? err.message : String(err),
+					error: err instanceof Error ? err.message : String(err)
 				});
 			}
 		}
@@ -636,18 +596,17 @@ export abstract class ScannerBase {
 	private buildStandaloneReportHTML(results: ScanResults): string {
 		const escape = (value: string): string =>
 			value
-				.replaceAll("&", "&amp;")
-				.replaceAll("<", "&lt;")
-				.replaceAll(">", "&gt;")
-				.replaceAll('"', "&quot;")
-				.replaceAll("'", "&#39;");
+				.replaceAll('&', '&amp;')
+				.replaceAll('<', '&lt;')
+				.replaceAll('>', '&gt;')
+				.replaceAll('"', '&quot;')
+				.replaceAll("'", '&#39;');
 
 		const severityRows = Object.entries(results.summary.bySeverity)
 			.map(
-				([severity, count]) =>
-					`<tr><th scope="row">${escape(severity)}</th><td>${count}</td></tr>`,
+				([severity, count]) => `<tr><th scope="row">${escape(severity)}</th><td>${count}</td></tr>`
 			)
-			.join("");
+			.join('');
 
 		const pageRows = results.pages
 			.map(
@@ -656,10 +615,10 @@ export abstract class ScannerBase {
             <td>${escape(page.pageId)}</td>
             <td><a href="${escape(page.url)}">${escape(page.url)}</a></td>
             <td>${page.issues.length}</td>
-            <td>${page.success ? "success" : "failed"}</td>
-          </tr>`,
+            <td>${page.success ? 'success' : 'failed'}</td>
+          </tr>`
 			)
-			.join("");
+			.join('');
 
 		return `<!doctype html>
 <html lang="en">
@@ -818,14 +777,9 @@ export abstract class ScannerBase {
 		const bucket = this.config.storage.bucket;
 		const key = `${this.config.jobId}/provenance.json`;
 
-		await this.storageProvider.upload(
-			bucket,
-			key,
-			this.config.provenancePath,
-			"application/json",
-		);
+		await this.storageProvider.upload(bucket, key, this.config.provenancePath, 'application/json');
 		this.provenanceArtifactKey = key;
-		this.scanStageLogger?.recordEvent("provenance_uploaded", { key });
+		this.scanStageLogger?.recordEvent('provenance_uploaded', { key });
 	}
 
 	protected async cleanup(): Promise<void> {
@@ -844,29 +798,29 @@ export abstract class ScannerBase {
 		publishCompletedMs: number;
 		finalizationMs: number;
 	}): void {
-		this.logger.info("Scan timing summary", {
+		this.logger.info('Scan timing summary', {
 			jobId: this.config.jobId,
 			totalMs: phases.totalMs,
 			pageIterationMs: phases.pageIterationMs,
 			finalizationMs: phases.finalizationMs,
 			writeResultsMs: phases.writeResultsMs,
 			uploadArtifactsMs: phases.uploadArtifactsMs,
-			publishCompletedMs: phases.publishCompletedMs,
+			publishCompletedMs: phases.publishCompletedMs
 		});
 	}
 
 	private async runPhase<T>(
 		phase: string,
-		fn: () => Promise<T>,
+		fn: () => Promise<T>
 	): Promise<{ value: T; durationMs: number }> {
 		const startedAt = Date.now();
 		const value = await fn();
 		const durationMs = Date.now() - startedAt;
 
-		this.logger.info("Phase complete", {
+		this.logger.info('Phase complete', {
 			phase,
 			durationMs,
-			jobId: this.config.jobId,
+			jobId: this.config.jobId
 		});
 
 		return { value, durationMs };
@@ -879,7 +833,7 @@ function normalizeStringArray(value: unknown): string[] {
 	}
 
 	return value
-		.filter((item): item is string => typeof item === "string")
+		.filter((item): item is string => typeof item === 'string')
 		.map((item) => item.trim())
 		.filter((item) => item.length > 0);
 }

@@ -105,7 +105,7 @@ func checkPolledJobStatus(
 func sseJobState(ctx context.Context, c *Client, jobID string, out io.Writer) error {
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s/stream", jobID)
 
-	reqURL, err := c.buildURL(apiPath, nil)
+	reqURL, err := c.buildURL(apiPath)
 	if err != nil {
 		return err
 	}

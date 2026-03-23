@@ -1,7 +1,7 @@
-import fs from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import { chromium } from "playwright";
+import fs from 'node:fs';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { chromium } from 'playwright';
 
 import {
 	type Issue,
@@ -9,16 +9,16 @@ import {
 	type PageScanResult,
 	type ScanContext,
 	ScannerBase,
-	type ScannerMetadata,
-} from "../../core";
+	type ScannerMetadata
+} from '../../core';
+import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
 import {
 	AxeScreenshotService,
-	type PageOverviewViolation,
-} from "../../screenshots/AxeScreenshotService";
-import { extractContextSnippet } from "../../screenshots/axe/context-snippet";
-import { resolvePlaywrightImageChromiumExecutablePath } from "../../utils/playwright";
+	type PageOverviewViolation
+} from '../../screenshots/AxeScreenshotService';
+import { resolvePlaywrightImageChromiumExecutablePath } from '../../utils/playwright';
 
-const PACKAGE_VERSION = process.env.npm_package_version?.trim() ?? "1.0.0";
+const PACKAGE_VERSION = process.env.npm_package_version?.trim() ?? '1.0.0';
 
 interface LaunchedChrome {
 	port: number;
@@ -77,17 +77,8 @@ interface LighthouseIssueNode {
 
 // Default categories: skip performance by default since it's expensive (~2 min overhead).
 // Performance can be enabled via SCANNER_OPTIONS: { "categories": ["accessibility", "best-practices", "seo", "performance"] }
-const DEFAULT_LIGHTHOUSE_CATEGORIES = [
-	"accessibility",
-	"best-practices",
-	"seo",
-];
-const VALID_LIGHTHOUSE_CATEGORIES = [
-	"accessibility",
-	"best-practices",
-	"seo",
-	"performance",
-];
+const DEFAULT_LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices', 'seo'];
+const VALID_LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices', 'seo', 'performance'];
 
 export interface LighthouseOptions {
 	/**
@@ -101,12 +92,12 @@ interface LighthouseModule {
 	default: (
 		url: string,
 		flags: Record<string, unknown>,
-		config: Record<string, unknown>,
+		config: Record<string, unknown>
 	) => Promise<{ lhr?: unknown; report?: unknown } | null | undefined>;
 }
 
 function parseLighthouseOptions(raw: unknown): LighthouseOptions {
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
 		return { categories: DEFAULT_LIGHTHOUSE_CATEGORIES };
 	}
 
@@ -119,7 +110,7 @@ function parseLighthouseOptions(raw: unknown): LighthouseOptions {
 
 	// Filter to valid categories only
 	const validCategories = categories
-		.filter((c): c is string => typeof c === "string")
+		.filter((c): c is string => typeof c === 'string')
 		.filter((c) => VALID_LIGHTHOUSE_CATEGORIES.includes(c));
 
 	if (validCategories.length === 0) {
@@ -131,9 +122,9 @@ function parseLighthouseOptions(raw: unknown): LighthouseOptions {
 
 export class LighthouseScanner extends ScannerBase {
 	readonly metadata: ScannerMetadata = {
-		name: "lighthouse",
+		name: 'lighthouse',
 		version: PACKAGE_VERSION,
-		description: "Web quality scanner powered by Google Lighthouse",
+		description: 'Web quality scanner powered by Google Lighthouse'
 	};
 
 	private chrome: LaunchedChrome | null = null;
@@ -142,7 +133,7 @@ export class LighthouseScanner extends ScannerBase {
 	private lighthouseQueue: Promise<void> = Promise.resolve();
 	private screenshotService: AxeScreenshotService;
 	private options: LighthouseOptions = {
-		categories: DEFAULT_LIGHTHOUSE_CATEGORIES,
+		categories: DEFAULT_LIGHTHOUSE_CATEGORIES
 	};
 
 	constructor() {
@@ -153,8 +144,8 @@ export class LighthouseScanner extends ScannerBase {
 	protected override async initialize(): Promise<void> {
 		await super.initialize();
 		this.options = parseLighthouseOptions(this.config.options);
-		this.logger.info("Lighthouse options", {
-			categories: this.options.categories,
+		this.logger.info('Lighthouse options', {
+			categories: this.options.categories
 		});
 
 		if (isLighthousePrewarmEnabled()) {
@@ -169,7 +160,7 @@ export class LighthouseScanner extends ScannerBase {
 
 		try {
 			await mkdir(resultsDir, { recursive: true });
-			const screenshotsDir = join(resultsDir, "screenshots");
+			const screenshotsDir = join(resultsDir, 'screenshots');
 			await mkdir(screenshotsDir, { recursive: true });
 
 			const lhResult = await this.runLighthouse(page, pageEntry.url);
@@ -179,31 +170,30 @@ export class LighthouseScanner extends ScannerBase {
 			// to ensure we have a fresh, responsive page for context enrichment and screenshots.
 			// Use 'domcontentloaded' instead of 'networkidle' for speed - we just need the DOM ready.
 			try {
-				this.logger.debug("Re-navigating Playwright page after Lighthouse", {
-					url: pageEntry.url,
+				this.logger.debug('Re-navigating Playwright page after Lighthouse', {
+					url: pageEntry.url
 				});
 
 				// Prefer BrowserManager navigation to reuse runtime target validation.
 				const browserManager = this.browserManager;
 				if (browserManager) {
 					await browserManager.navigateToPage(page, pageEntry.url, {
-						type: "domcontentloaded",
+						type: 'domcontentloaded'
 					});
 				} else {
 					await page.goto(pageEntry.url, {
-						waitUntil: "domcontentloaded",
-						timeout: 15_000,
+						waitUntil: 'domcontentloaded',
+						timeout: 15_000
 					});
 				}
 			} catch (navError) {
 				// If re-navigation fails, log it but continue - we'll try enrichment/screenshots anyway
 				this.logger.warn(
-					"Failed to re-navigate page after Lighthouse, continuing with stale page",
+					'Failed to re-navigate page after Lighthouse, continuing with stale page',
 					{
 						url: pageEntry.url,
-						error:
-							navError instanceof Error ? navError.message : String(navError),
-					},
+						error: navError instanceof Error ? navError.message : String(navError)
+					}
 				);
 			}
 
@@ -217,38 +207,33 @@ export class LighthouseScanner extends ScannerBase {
 					this.enrichIssuesWithContext(page, issues),
 					new Promise<never>((_, reject) =>
 						setTimeout(() => {
-							reject(new Error("Context enrichment timed out"));
-						}, enrichmentTimeout),
-					),
+							reject(new Error('Context enrichment timed out'));
+						}, enrichmentTimeout)
+					)
 				]);
 			} catch (enrichError) {
-				this.logger.warn(
-					"Context enrichment failed or timed out, continuing without enrichment",
-					{
-						error:
-							enrichError instanceof Error
-								? enrichError.message
-								: String(enrichError),
-					},
-				);
+				this.logger.warn('Context enrichment failed or timed out, continuing without enrichment', {
+					error: enrichError instanceof Error ? enrichError.message : String(enrichError)
+				});
 			}
 
-			const pageOverviewViolations: PageOverviewViolation[] = issues.map(
-				(issue) => ({
+			const pageOverviewViolations: PageOverviewViolation[] = issues.map((issue) => {
+				const issueNodes = (issue.metadata?.nodes as LighthouseIssueNode[] | undefined)?.map(
+					(n) => ({
+						...(n.target !== undefined ? { target: n.target } : {})
+					})
+				);
+
+				return {
 					id: issue.id,
 					impact: issue.severity,
-					nodes: (
-						issue.metadata?.nodes as LighthouseIssueNode[] | undefined
-					)?.map((n) => ({
-						target: n.target,
-					})),
-				}),
-			);
+					...(issueNodes !== undefined ? { nodes: issueNodes } : {})
+				};
+			});
 
 			const screenshotTimeout = 30_000; // Reduced from 60s
-			let pageOverview: Awaited<
-				ReturnType<typeof this.screenshotService.capturePageOverview>
-			> = null;
+			let pageOverview: Awaited<ReturnType<typeof this.screenshotService.capturePageOverview>> =
+				null;
 			try {
 				pageOverview = await Promise.race([
 					this.screenshotService.capturePageOverview(
@@ -256,24 +241,19 @@ export class LighthouseScanner extends ScannerBase {
 						pageOverviewViolations,
 						screenshotsDir,
 						pageEntry.id,
-						{ scannerId: this.metadata.name },
+						{ scannerId: this.metadata.name }
 					),
 					new Promise<never>((_, reject) =>
 						setTimeout(() => {
-							reject(new Error("Screenshot capture timed out"));
-						}, screenshotTimeout),
-					),
+							reject(new Error('Screenshot capture timed out'));
+						}, screenshotTimeout)
+					)
 				]);
 			} catch (screenshotError) {
-				this.logger.warn(
-					"Screenshot capture failed or timed out, continuing without screenshot",
-					{
-						error:
-							screenshotError instanceof Error
-								? screenshotError.message
-								: String(screenshotError),
-					},
-				);
+				this.logger.warn('Screenshot capture failed or timed out, continuing without screenshot', {
+					error:
+						screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
+				});
 			}
 
 			const finishedAt = new Date().toISOString();
@@ -297,10 +277,10 @@ export class LighthouseScanner extends ScannerBase {
 								screenshotFilename: pageOverview.screenshotFilename,
 								pageWidth: pageOverview.pageWidth,
 								pageHeight: pageOverview.pageHeight,
-								elements: pageOverview.elements,
+								elements: pageOverview.elements
 							}
-						: null,
-				},
+						: null
+				}
 			};
 		} catch (error) {
 			const finishedAt = new Date().toISOString();
@@ -316,14 +296,14 @@ export class LighthouseScanner extends ScannerBase {
 				durationMs: Math.round(durationMs * 100) / 100,
 				startedAt,
 				finishedAt,
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? error.message : String(error)
 			};
 		}
 	}
 
 	private async runLighthouse(
-		_page: import("playwright").Page,
-		url: string,
+		_page: import('playwright').Page,
+		url: string
 	): Promise<LighthouseResult> {
 		const lighthouseModule = await this.loadLighthouseModule();
 		const lighthouse = lighthouseModule.default;
@@ -332,76 +312,75 @@ export class LighthouseScanner extends ScannerBase {
 			const chrome = await this.ensureChrome();
 			const port = chrome.port;
 
-			const categories =
-				this.options.categories ?? DEFAULT_LIGHTHOUSE_CATEGORIES;
+			const categories = this.options.categories ?? DEFAULT_LIGHTHOUSE_CATEGORIES;
 
-			this.logger.info("Running Lighthouse", {
+			this.logger.info('Running Lighthouse', {
 				url,
 				port,
-				categories,
+				categories
 			});
 
 			// Record diagnostic info to stage log for debugging
-			this.scanStageLogger?.recordEvent("lighthouse_start", {
+			this.scanStageLogger?.recordEvent('lighthouse_start', {
 				url,
 				port,
-				categories,
+				categories
 			});
 
 			const flags = {
 				port,
-				output: "json" as const,
+				output: 'json' as const,
 				onlyCategories: categories,
 				// Disable throttling for container environments
 				throttling: {
 					cpuSlowdownMultiplier: 1,
 					rttMs: 0,
-					throughputKbps: 0,
+					throughputKbps: 0
 				},
 				// Allow Lighthouse to reset storage between runs when reusing Chrome.
 				disableStorageReset: false,
-				formFactor: "desktop" as const,
+				formFactor: 'desktop' as const,
 				screenEmulation: {
 					mobile: false,
 					width: 1280,
 					height: 720,
 					deviceScaleFactor: 1,
-					disabled: false,
-				},
+					disabled: false
+				}
 			};
 
 			const config = {
-				extends: "lighthouse:default",
+				extends: 'lighthouse:default',
 				settings: {
 					onlyCategories: categories,
-					formFactor: "desktop" as const,
+					formFactor: 'desktop' as const,
 					throttling: {
-						cpuSlowdownMultiplier: 1,
+						cpuSlowdownMultiplier: 1
 					},
 					screenEmulation: {
 						mobile: false,
 						width: 1280,
 						height: 720,
 						deviceScaleFactor: 1,
-						disabled: false,
-					},
-				},
+						disabled: false
+					}
+				}
 			};
 
 			try {
 				const runnerResult = await lighthouse(url, flags, config);
 
 				if (!runnerResult) {
-					this.logger.error("Lighthouse returned null/undefined");
-					throw new Error("Lighthouse did not return any result");
+					this.logger.error('Lighthouse returned null/undefined');
+					throw new Error('Lighthouse did not return any result');
 				}
 
 				if (!runnerResult.lhr) {
-					this.logger.error("Lighthouse result missing lhr", {
+					this.logger.error('Lighthouse result missing lhr', {
 						hasReport: !!runnerResult.report,
-						resultKeys: Object.keys(runnerResult),
+						resultKeys: Object.keys(runnerResult)
 					});
-					throw new Error("Lighthouse did not return LHR (Lighthouse Report)");
+					throw new Error('Lighthouse did not return LHR (Lighthouse Report)');
 				}
 
 				const lhr = runnerResult.lhr as unknown as LighthouseResult;
@@ -410,21 +389,21 @@ export class LighthouseScanner extends ScannerBase {
 				const categoriesCount = Object.keys(lhr.categories ?? {}).length;
 				const categoryIds = Object.keys(lhr.categories ?? {});
 
-				this.logger.info("Lighthouse completed", {
+				this.logger.info('Lighthouse completed', {
 					finalUrl: lhr.finalUrl,
 					requestedUrl: lhr.requestedUrl,
 					auditsCount,
 					categoriesCount,
-					categoryIds,
+					categoryIds
 				});
 
 				// Record to stage log for debugging
-				this.scanStageLogger?.recordEvent("lighthouse_completed", {
+				this.scanStageLogger?.recordEvent('lighthouse_completed', {
 					finalUrl: lhr.finalUrl,
 					requestedUrl: lhr.requestedUrl,
 					auditsCount,
 					categoriesCount,
-					categoryIds,
+					categoryIds
 				});
 
 				// Log a sample of audit results for debugging
@@ -436,28 +415,27 @@ export class LighthouseScanner extends ScannerBase {
 						return {
 							id: audit?.id,
 							score: audit?.score,
-							scoreDisplayMode: audit?.scoreDisplayMode,
+							scoreDisplayMode: audit?.scoreDisplayMode
 						};
 					});
-					this.logger.info("Sample audits", { sampleAudits });
-					this.scanStageLogger?.recordEvent("lighthouse_sample_audits", {
-						sampleAudits,
+					this.logger.info('Sample audits', { sampleAudits });
+					this.scanStageLogger?.recordEvent('lighthouse_sample_audits', {
+						sampleAudits
 					});
 				} else {
-					this.logger.warn("No audits returned from Lighthouse");
-					this.scanStageLogger?.recordEvent("lighthouse_no_audits", {});
+					this.logger.warn('No audits returned from Lighthouse');
+					this.scanStageLogger?.recordEvent('lighthouse_no_audits', {});
 				}
 
 				return lhr;
 			} catch (error) {
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
-				this.logger.error("Lighthouse execution failed", {
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				this.logger.error('Lighthouse execution failed', {
 					error: errorMessage,
-					stack: error instanceof Error ? error.stack : undefined,
+					stack: error instanceof Error ? error.stack : undefined
 				});
-				this.scanStageLogger?.recordEvent("lighthouse_error", {
-					error: errorMessage,
+				this.scanStageLogger?.recordEvent('lighthouse_error', {
+					error: errorMessage
 				});
 				throw error;
 			}
@@ -487,9 +465,7 @@ export class LighthouseScanner extends ScannerBase {
 
 	private resolveChromePath(): string {
 		const envPath =
-			process.env.LIGHTHOUSE_CHROME_PATH?.trim() ??
-			process.env.CHROME_PATH?.trim() ??
-			"";
+			process.env.LIGHTHOUSE_CHROME_PATH?.trim() ?? process.env.CHROME_PATH?.trim() ?? '';
 		if (envPath && fs.existsSync(envPath)) {
 			return envPath;
 		}
@@ -505,7 +481,7 @@ export class LighthouseScanner extends ScannerBase {
 		}
 
 		throw new Error(
-			"Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.",
+			'Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.'
 		);
 	}
 
@@ -532,72 +508,67 @@ export class LighthouseScanner extends ScannerBase {
 	}
 
 	private async launchChrome(): Promise<LaunchedChrome> {
-		const chromeLauncherModule = (await import(
-			"chrome-launcher"
-		)) as unknown as {
+		const chromeLauncherModule = (await import('chrome-launcher')) as unknown as {
 			launch?: (opts: Record<string, unknown>) => Promise<LaunchedChrome>;
 			default?: {
 				launch?: (opts: Record<string, unknown>) => Promise<LaunchedChrome>;
 			};
 		};
 
-		const launch =
-			chromeLauncherModule.launch ?? chromeLauncherModule.default?.launch;
-		if (typeof launch !== "function") {
-			throw new Error("chrome-launcher launch() not available");
+		const launch = chromeLauncherModule.launch ?? chromeLauncherModule.default?.launch;
+		if (typeof launch !== 'function') {
+			throw new Error('chrome-launcher launch() not available');
 		}
 
 		const chromePath = this.resolveChromePath();
 
-		this.logger.info("Launching Chrome for Lighthouse", { chromePath });
-		this.scanStageLogger?.recordEvent("lighthouse_chrome_launch", {
-			chromePath,
+		this.logger.info('Launching Chrome for Lighthouse', { chromePath });
+		this.scanStageLogger?.recordEvent('lighthouse_chrome_launch', {
+			chromePath
 		});
 
 		const chrome = await launch({
 			chromePath,
 			// Use a dedicated, headless Chrome process for Lighthouse.
 			chromeFlags: [
-				"--headless=new",
-				"--no-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-dev-shm-usage",
-				"--disable-gpu",
-				"--no-first-run",
-				"--no-default-browser-check",
-				"--disable-background-networking",
-				"--disable-background-timer-throttling",
-				"--disable-renderer-backgrounding",
-				"--disable-default-apps",
-				"--disable-extensions",
-				"--disable-sync",
-				"--metrics-recording-only",
-				"--mute-audio",
-			],
+				'--headless=new',
+				'--no-sandbox',
+				'--disable-setuid-sandbox',
+				'--disable-dev-shm-usage',
+				'--disable-gpu',
+				'--no-first-run',
+				'--no-default-browser-check',
+				'--disable-background-networking',
+				'--disable-background-timer-throttling',
+				'--disable-renderer-backgrounding',
+				'--disable-default-apps',
+				'--disable-extensions',
+				'--disable-sync',
+				'--metrics-recording-only',
+				'--mute-audio'
+			]
 		});
 
-		this.scanStageLogger?.recordEvent("lighthouse_chrome_ready", {
+		this.scanStageLogger?.recordEvent('lighthouse_chrome_ready', {
 			port: chrome.port,
-			pid: chrome.pid ?? null,
+			pid: chrome.pid ?? null
 		});
 
 		return chrome;
 	}
 
 	private loadLighthouseModule(): Promise<LighthouseModule> {
-		this.lighthouseModulePromise ??= import(
-			"lighthouse"
-		) as Promise<LighthouseModule>;
+		this.lighthouseModulePromise ??= import('lighthouse') as Promise<LighthouseModule>;
 
 		return this.lighthouseModulePromise;
 	}
 
 	private prewarmRuntime(): void {
-		this.logger.info("Prewarming Lighthouse runtime");
+		this.logger.info('Prewarming Lighthouse runtime');
 		void this.loadLighthouseModule();
 		void this.ensureChrome().catch((error: unknown) => {
-			this.logger.warn("Failed to prewarm Lighthouse runtime", {
-				error: error instanceof Error ? error.message : String(error),
+			this.logger.warn('Failed to prewarm Lighthouse runtime', {
+				error: error instanceof Error ? error.message : String(error)
 			});
 		});
 	}
@@ -613,13 +584,13 @@ export class LighthouseScanner extends ScannerBase {
 
 		try {
 			await chrome.kill();
-			this.scanStageLogger?.recordEvent("lighthouse_chrome_closed", {
+			this.scanStageLogger?.recordEvent('lighthouse_chrome_closed', {
 				port: chrome.port,
-				pid: chrome.pid ?? null,
+				pid: chrome.pid ?? null
 			});
 		} catch (error) {
-			this.logger.warn("Failed to close Lighthouse Chrome", {
-				error: error instanceof Error ? error.message : String(error),
+			this.logger.warn('Failed to close Lighthouse Chrome', {
+				error: error instanceof Error ? error.message : String(error)
 			});
 		}
 	}
@@ -628,13 +599,13 @@ export class LighthouseScanner extends ScannerBase {
 		const issues: Issue[] = [];
 
 		const auditEntries = Object.entries(lhResult.audits ?? {});
-		this.logger.info("Lighthouse audit extraction", {
+		this.logger.info('Lighthouse audit extraction', {
 			totalAudits: auditEntries.length,
-			categories: Object.keys(lhResult.categories ?? {}),
+			categories: Object.keys(lhResult.categories ?? {})
 		});
 
 		if (auditEntries.length === 0) {
-			this.logger.warn("Lighthouse returned no audits");
+			this.logger.warn('Lighthouse returned no audits');
 			return issues;
 		}
 
@@ -649,23 +620,20 @@ export class LighthouseScanner extends ScannerBase {
 				skippedPassed++;
 				continue;
 			}
-			if (audit.score === null || audit.scoreDisplayMode === "notApplicable") {
+			if (audit.score === null || audit.scoreDisplayMode === 'notApplicable') {
 				skippedNotApplicable++;
 				continue;
 			}
-			if (audit.scoreDisplayMode === "informative") {
+			if (audit.scoreDisplayMode === 'informative') {
 				skippedInformative++;
 				continue;
 			}
-			if (audit.scoreDisplayMode === "manual") {
+			if (audit.scoreDisplayMode === 'manual') {
 				skippedManual++;
 				continue;
 			}
 
-			const category = this.getAuditCategory(
-				auditId,
-				lhResult.categories ?? {},
-			);
+			const category = this.getAuditCategory(auditId, lhResult.categories ?? {});
 
 			const severity = this.mapScoreToSeverity(audit.score);
 
@@ -676,7 +644,7 @@ export class LighthouseScanner extends ScannerBase {
 				id: auditId,
 				scanner: this.metadata.name,
 				severity,
-				category: category ?? "general",
+				category: category ?? 'general',
 				title: audit.title,
 				description: audit.description,
 				helpUrl: this.getHelpUrl(auditId),
@@ -687,29 +655,29 @@ export class LighthouseScanner extends ScannerBase {
 					numericUnit: audit.numericUnit,
 					details: audit.details,
 					nodeCount,
-					nodes: nodes.slice(0, 5),
-				},
+					nodes: nodes.slice(0, 5)
+				}
 			};
 
 			issues.push(issue);
 		}
 
-		this.logger.info("Lighthouse issue extraction complete", {
+		this.logger.info('Lighthouse issue extraction complete', {
 			issuesFound: issues.length,
 			skippedPassed,
 			skippedNotApplicable,
 			skippedInformative,
-			skippedManual,
+			skippedManual
 		});
 
 		// Record extraction stats to stage log
-		this.scanStageLogger?.recordEvent("lighthouse_extraction", {
+		this.scanStageLogger?.recordEvent('lighthouse_extraction', {
 			issuesFound: issues.length,
 			skippedPassed,
 			skippedNotApplicable,
 			skippedInformative,
 			skippedManual,
-			totalProcessed: auditEntries.length,
+			totalProcessed: auditEntries.length
 		});
 
 		return issues;
@@ -734,7 +702,7 @@ export class LighthouseScanner extends ScannerBase {
 	}
 
 	private getTrimmedString(value: unknown): string | undefined {
-		if (typeof value !== "string") {
+		if (typeof value !== 'string') {
 			return undefined;
 		}
 
@@ -743,7 +711,7 @@ export class LighthouseScanner extends ScannerBase {
 	}
 
 	private getDetailNode(value: unknown): LighthouseDetailNode | undefined {
-		if (!value || typeof value !== "object") {
+		if (!value || typeof value !== 'object') {
 			return undefined;
 		}
 
@@ -762,7 +730,7 @@ export class LighthouseScanner extends ScannerBase {
 			this.getTrimmedString(input.item.selector),
 			this.getTrimmedString(input.element?.selector),
 			this.getTrimmedString(input.source?.selector),
-			this.getTrimmedString(input.relatedNode?.selector),
+			this.getTrimmedString(input.relatedNode?.selector)
 		]);
 	}
 
@@ -776,7 +744,7 @@ export class LighthouseScanner extends ScannerBase {
 			this.getTrimmedString(input.node?.snippet),
 			this.getTrimmedString(input.item.snippet),
 			this.getTrimmedString(input.element?.snippet),
-			this.getTrimmedString(input.auditDisplayValue),
+			this.getTrimmedString(input.auditDisplayValue)
 		]);
 	}
 
@@ -786,7 +754,7 @@ export class LighthouseScanner extends ScannerBase {
 	}): string | undefined {
 		return this.firstDefined([
 			this.getTrimmedString(input.node?.path),
-			this.getTrimmedString(input.item.path),
+			this.getTrimmedString(input.item.path)
 		]);
 	}
 
@@ -797,7 +765,7 @@ export class LighthouseScanner extends ScannerBase {
 		return this.firstDefined([
 			this.getTrimmedString(input.item.explanation),
 			this.getTrimmedString(input.item.displayValue),
-			this.getTrimmedString(input.auditDisplayValue),
+			this.getTrimmedString(input.auditDisplayValue)
 		]);
 	}
 
@@ -813,7 +781,7 @@ export class LighthouseScanner extends ScannerBase {
 		const rawItems: unknown[] = items;
 
 		for (const rawItem of rawItems) {
-			if (!rawItem || typeof rawItem !== "object") {
+			if (!rawItem || typeof rawItem !== 'object') {
 				continue;
 			}
 
@@ -827,10 +795,10 @@ export class LighthouseScanner extends ScannerBase {
 
 			const selector = this.extractAuditSelector({
 				item,
-				node,
-				element,
-				source,
-				relatedNode,
+				...(node !== undefined ? { node } : {}),
+				...(element !== undefined ? { element } : {}),
+				...(source !== undefined ? { source } : {}),
+				...(relatedNode !== undefined ? { relatedNode } : {})
 			});
 
 			if (!selector) {
@@ -845,22 +813,25 @@ export class LighthouseScanner extends ScannerBase {
 			const html = this.extractAuditHtmlSnippet({
 				auditDisplayValue,
 				item,
-				node,
-				element,
+				...(node !== undefined ? { node } : {}),
+				...(element !== undefined ? { element } : {})
 			});
 
-			const ancestorPath = this.extractAuditAncestorPath({ item, node });
+			const ancestorPath = this.extractAuditAncestorPath({
+				item,
+				...(node !== undefined ? { node } : {})
+			});
 			const failureSummary = this.extractFailureSummary({
 				auditDisplayValue,
-				item,
+				item
 			});
 
 			nodes.push({
 				selector,
 				target: [selector],
-				html,
-				ancestorPath,
-				failureSummary,
+				...(html !== undefined ? { html } : {}),
+				...(ancestorPath !== undefined ? { ancestorPath } : {}),
+				...(failureSummary !== undefined ? { failureSummary } : {})
 			});
 
 			if (nodes.length >= 5) {
@@ -872,8 +843,8 @@ export class LighthouseScanner extends ScannerBase {
 	}
 
 	private async enrichNodesWithContext(
-		page: import("playwright").Page,
-		nodes: LighthouseIssueNode[],
+		page: import('playwright').Page,
+		nodes: LighthouseIssueNode[]
 	): Promise<LighthouseIssueNode[]> {
 		const enriched: LighthouseIssueNode[] = [];
 
@@ -886,10 +857,13 @@ export class LighthouseScanner extends ScannerBase {
 
 			try {
 				const ctx = await extractContextSnippet(page, selector);
+				const contextHtml = ctx?.contextHtml ?? node.contextHtml;
+				const ancestorPath = ctx?.ancestorPath ?? node.ancestorPath;
+
 				enriched.push({
 					...node,
-					contextHtml: ctx?.contextHtml ?? node.contextHtml,
-					ancestorPath: ctx?.ancestorPath ?? node.ancestorPath,
+					...(contextHtml !== undefined ? { contextHtml } : {}),
+					...(ancestorPath !== undefined ? { ancestorPath } : {})
 				});
 			} catch {
 				enriched.push({ ...node });
@@ -900,8 +874,8 @@ export class LighthouseScanner extends ScannerBase {
 	}
 
 	private async enrichIssuesWithContext(
-		page: import("playwright").Page,
-		issues: Issue[],
+		page: import('playwright').Page,
+		issues: Issue[]
 	): Promise<void> {
 		const BATCH_SIZE = 10;
 		const NODE_TIMEOUT = 2_000;
@@ -910,11 +884,7 @@ export class LighthouseScanner extends ScannerBase {
 		const tasks: { issue: Issue; node: LighthouseIssueNode }[] = [];
 		for (const issue of issues) {
 			const metadata = issue.metadata;
-			if (
-				!metadata ||
-				typeof metadata !== "object" ||
-				Array.isArray(metadata)
-			) {
+			if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
 				continue;
 			}
 
@@ -946,7 +916,7 @@ export class LighthouseScanner extends ScannerBase {
 								setTimeout(() => {
 									resolve(undefined);
 								}, NODE_TIMEOUT);
-							}),
+							})
 						]);
 						if (ctx) {
 							node.contextHtml = ctx.contextHtml;
@@ -955,14 +925,14 @@ export class LighthouseScanner extends ScannerBase {
 					} catch {
 						/* ignore individual failures */
 					}
-				}),
+				})
 			);
 		}
 	}
 
 	private getAuditCategory(
 		auditId: string,
-		categories: Record<string, LighthouseCategory>,
+		categories: Record<string, LighthouseCategory>
 	): string | null {
 		for (const [categoryId, category] of Object.entries(categories)) {
 			if (category.auditRefs.some((ref) => ref.id === auditId)) {
@@ -974,54 +944,54 @@ export class LighthouseScanner extends ScannerBase {
 
 	private mapScoreToSeverity(score: number | null): IssueSeverity {
 		if (score === null) {
-			return "info";
+			return 'info';
 		}
 		if (score === 0) {
-			return "critical";
+			return 'critical';
 		}
 		if (score < 0.5) {
-			return "serious";
+			return 'serious';
 		}
 		if (score < 0.9) {
-			return "moderate";
+			return 'moderate';
 		}
-		return "minor";
+		return 'minor';
 	}
 
 	private getHelpUrl(auditId: string): string {
-		const docsBase = "https://developer.chrome.com/docs/lighthouse";
+		const docsBase = 'https://developer.chrome.com/docs/lighthouse';
 		const accessibilityAudits: Record<string, string> = {
 			accesskeys: `${docsBase}/accessibility/accesskeys/`,
-			"aria-allowed-attr": `${docsBase}/accessibility/aria-allowed-attr/`,
-			"aria-hidden-body": `${docsBase}/accessibility/aria-hidden-body/`,
-			"aria-hidden-focus": `${docsBase}/accessibility/aria-hidden-focus/`,
-			"aria-required-attr": `${docsBase}/accessibility/aria-required-attr/`,
-			"aria-roles": `${docsBase}/accessibility/aria-roles/`,
-			"aria-valid-attr-value": `${docsBase}/accessibility/aria-valid-attr-value/`,
-			"aria-valid-attr": `${docsBase}/accessibility/aria-valid-attr/`,
-			"button-name": `${docsBase}/accessibility/button-name/`,
+			'aria-allowed-attr': `${docsBase}/accessibility/aria-allowed-attr/`,
+			'aria-hidden-body': `${docsBase}/accessibility/aria-hidden-body/`,
+			'aria-hidden-focus': `${docsBase}/accessibility/aria-hidden-focus/`,
+			'aria-required-attr': `${docsBase}/accessibility/aria-required-attr/`,
+			'aria-roles': `${docsBase}/accessibility/aria-roles/`,
+			'aria-valid-attr-value': `${docsBase}/accessibility/aria-valid-attr-value/`,
+			'aria-valid-attr': `${docsBase}/accessibility/aria-valid-attr/`,
+			'button-name': `${docsBase}/accessibility/button-name/`,
 			bypass: `${docsBase}/accessibility/bypass/`,
-			"color-contrast": `${docsBase}/accessibility/color-contrast/`,
-			"document-title": `${docsBase}/accessibility/document-title/`,
-			"duplicate-id-aria": `${docsBase}/accessibility/duplicate-id-aria/`,
-			"form-field-multiple-labels": `${docsBase}/accessibility/form-field-multiple-labels/`,
-			"frame-title": `${docsBase}/accessibility/frame-title/`,
-			"heading-order": `${docsBase}/accessibility/heading-order/`,
-			"html-has-lang": `${docsBase}/accessibility/html-has-lang/`,
-			"html-lang-valid": `${docsBase}/accessibility/html-lang-valid/`,
-			"image-alt": `${docsBase}/accessibility/image-alt/`,
-			"input-image-alt": `${docsBase}/accessibility/input-image-alt/`,
+			'color-contrast': `${docsBase}/accessibility/color-contrast/`,
+			'document-title': `${docsBase}/accessibility/document-title/`,
+			'duplicate-id-aria': `${docsBase}/accessibility/duplicate-id-aria/`,
+			'form-field-multiple-labels': `${docsBase}/accessibility/form-field-multiple-labels/`,
+			'frame-title': `${docsBase}/accessibility/frame-title/`,
+			'heading-order': `${docsBase}/accessibility/heading-order/`,
+			'html-has-lang': `${docsBase}/accessibility/html-has-lang/`,
+			'html-lang-valid': `${docsBase}/accessibility/html-lang-valid/`,
+			'image-alt': `${docsBase}/accessibility/image-alt/`,
+			'input-image-alt': `${docsBase}/accessibility/input-image-alt/`,
 			label: `${docsBase}/accessibility/label/`,
-			"link-name": `${docsBase}/accessibility/link-name/`,
+			'link-name': `${docsBase}/accessibility/link-name/`,
 			list: `${docsBase}/accessibility/list/`,
 			listitem: `${docsBase}/accessibility/listitem/`,
-			"meta-viewport": `${docsBase}/accessibility/meta-viewport/`,
-			"object-alt": `${docsBase}/accessibility/object-alt/`,
+			'meta-viewport': `${docsBase}/accessibility/meta-viewport/`,
+			'object-alt': `${docsBase}/accessibility/object-alt/`,
 			tabindex: `${docsBase}/accessibility/tabindex/`,
-			"td-headers-attr": `${docsBase}/accessibility/td-headers-attr/`,
-			"th-has-data-cells": `${docsBase}/accessibility/th-has-data-cells/`,
-			"valid-lang": `${docsBase}/accessibility/valid-lang/`,
-			"video-caption": `${docsBase}/accessibility/video-caption/`,
+			'td-headers-attr': `${docsBase}/accessibility/td-headers-attr/`,
+			'th-has-data-cells': `${docsBase}/accessibility/th-has-data-cells/`,
+			'valid-lang': `${docsBase}/accessibility/valid-lang/`,
+			'video-caption': `${docsBase}/accessibility/video-caption/`
 		};
 
 		return accessibilityAudits[auditId] ?? `${docsBase}/overview/`;
@@ -1030,5 +1000,5 @@ export class LighthouseScanner extends ScannerBase {
 
 function isLighthousePrewarmEnabled(): boolean {
 	const raw = process.env.LIGHTHOUSE_PREWARM?.trim().toLowerCase();
-	return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
+	return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on';
 }

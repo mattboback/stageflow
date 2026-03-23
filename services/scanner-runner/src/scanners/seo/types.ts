@@ -1,4 +1,4 @@
-import type { IssueSeverity } from "../../core/types";
+import type { IssueSeverity } from '../../core/types';
 
 export interface SEOCheck {
 	id: string;

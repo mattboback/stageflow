@@ -1,24 +1,20 @@
-import type { Page } from "playwright";
+import type { Page } from 'playwright';
 
-import { existsSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
-import { v4 as uuidv4 } from "uuid";
+import { existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { v4 as uuidv4 } from 'uuid';
 
-import type {
-	AxeScreenshotConfig,
-	AxeViolation,
-	EnhancedScreenshotResult,
-} from "./types";
+import type { AxeScreenshotConfig, AxeViolation, EnhancedScreenshotResult } from './types';
 
-import { generateThumbnail, saveScreenshot } from "./image";
-import { extractAxeViolationTargets } from "./targets";
+import { generateThumbnail, saveScreenshot } from './image';
+import { extractAxeViolationTargets } from './targets';
 
-const HEADING_OVERLAY_RULES = new Set(["heading-order", "empty-heading"]);
+const HEADING_OVERLAY_RULES = new Set(['heading-order', 'empty-heading']);
 const TARGET_OVERLAY_RULES = new Set([
-	"link-name",
-	"button-name",
-	"label",
-	"form-field-multiple-labels",
+	'link-name',
+	'button-name',
+	'label',
+	'form-field-multiple-labels'
 ]);
 
 export async function captureSemanticOverlayScreenshot(input: {
@@ -31,7 +27,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 		return null;
 	}
 
-	const ruleId = input.violation.id ?? "";
+	const ruleId = input.violation.id ?? '';
 	const overlayId = `sf-semantic-${uuidv4()}`;
 
 	let overlayCount = 0;
@@ -40,7 +36,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 			overlayId,
 			maxHeadings: input.cfg.semanticOverlayMaxHeadings,
 			maxLabelLength: input.cfg.semanticOverlayMaxLabelLength,
-			legendEnabled: input.cfg.semanticOverlayLegendEnabled,
+			legendEnabled: input.cfg.semanticOverlayLegendEnabled
 		});
 	} else if (TARGET_OVERLAY_RULES.has(ruleId)) {
 		const { targets } = extractAxeViolationTargets(input.violation);
@@ -50,7 +46,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 			maxTargets: input.cfg.semanticOverlayMaxHeadings,
 			maxLabelLength: input.cfg.semanticOverlayMaxLabelLength,
 			legendEnabled: input.cfg.semanticOverlayLegendEnabled,
-			ruleLabel: toRuleLabel(ruleId),
+			ruleLabel: toRuleLabel(ruleId)
 		});
 	} else {
 		return null;
@@ -60,8 +56,8 @@ export async function captureSemanticOverlayScreenshot(input: {
 		mkdirSync(input.resultsDir, { recursive: true });
 	}
 
-	const ext = input.cfg.outputFormat === "webp" ? ".webp" : ".png";
-	const screenshotFilename = `semantic-${ruleId || "unknown"}-${uuidv4()}${ext}`;
+	const ext = input.cfg.outputFormat === 'webp' ? '.webp' : '.png';
+	const screenshotFilename = `semantic-${ruleId || 'unknown'}-${uuidv4()}${ext}`;
 	const screenshotPath = join(input.resultsDir, screenshotFilename);
 
 	try {
@@ -78,11 +74,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 		await removeSemanticOverlay(input.page, overlayId);
 	}
 
-	const thumbnail = await generateThumbnail(
-		screenshotPath,
-		input.resultsDir,
-		input.cfg,
-	);
+	const thumbnail = await generateThumbnail(screenshotPath, input.resultsDir, input.cfg);
 	return { screenshot: screenshotFilename, thumbnail };
 }
 
@@ -204,56 +196,53 @@ async function injectHeadingOverlay(
 		maxHeadings: number;
 		maxLabelLength: number;
 		legendEnabled: boolean;
-	},
+	}
 ): Promise<number> {
 	const css = buildHeadingOverlayCss(options.overlayId);
 	return page.evaluate(
 		({ overlayId, cssText, maxHeadings, maxLabelLength, legendEnabled }) => {
-			const overlayAttr = "data-sf-heading-overlay";
-			const labelAttr = "data-sf-heading";
+			const overlayAttr = 'data-sf-heading-overlay';
+			const labelAttr = 'data-sf-heading';
 			const styleId = `${overlayId}-style`;
 
-			const styleEl = document.createElement("style");
+			const styleEl = document.createElement('style');
 			styleEl.id = styleId;
 			styleEl.textContent = cssText;
 			document.head.appendChild(styleEl);
 
-			const headings = Array.from(
-				document.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-			);
+			const headings = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 			const limited = headings.slice(0, Math.max(0, maxHeadings));
 
-			const normalizeText = (value: string): string =>
-				value.replace(/\\s+/g, " ").trim();
+			const normalizeText = (value: string): string => value.replace(/\\s+/g, ' ').trim();
 
 			limited.forEach((heading, index) => {
 				const level = heading.tagName.toUpperCase();
-				const rawText = normalizeText(heading.textContent || "");
+				const rawText = normalizeText(heading.textContent || '');
 				const clipped =
 					maxLabelLength > 0 && rawText.length > maxLabelLength
 						? `${rawText.slice(0, maxLabelLength)}...`
 						: rawText;
-				const label = `${level} #${index + 1}${clipped ? `: ${clipped}` : ""}`;
+				const label = `${level} #${index + 1}${clipped ? `: ${clipped}` : ''}`;
 				heading.setAttribute(labelAttr, label);
 				heading.setAttribute(overlayAttr, overlayId);
 			});
 
 			if (legendEnabled && limited.length > 0) {
-				const legend = document.createElement("div");
-				legend.className = "sf-heading-legend";
+				const legend = document.createElement('div');
+				legend.className = 'sf-heading-legend';
 				legend.setAttribute(overlayAttr, overlayId);
 
 				limited.forEach((heading, index) => {
-					const row = document.createElement("div");
-					row.className = "sf-heading-legend-row";
+					const row = document.createElement('div');
+					row.className = 'sf-heading-legend-row';
 
-					const pill = document.createElement("span");
-					pill.className = "sf-heading-legend-pill";
+					const pill = document.createElement('span');
+					pill.className = 'sf-heading-legend-pill';
 					pill.textContent = `${heading.tagName.toUpperCase()} #${index + 1}`;
 
-					const text = document.createElement("span");
-					const content = normalizeText(heading.textContent || "");
-					text.textContent = content.length > 0 ? content : "(empty)";
+					const text = document.createElement('span');
+					const content = normalizeText(heading.textContent || '');
+					text.textContent = content.length > 0 ? content : '(empty)';
 
 					row.appendChild(pill);
 					row.appendChild(text);
@@ -274,8 +263,8 @@ async function injectHeadingOverlay(
 			cssText: css,
 			maxHeadings: options.maxHeadings,
 			maxLabelLength: options.maxLabelLength,
-			legendEnabled: options.legendEnabled,
-		},
+			legendEnabled: options.legendEnabled
+		}
 	);
 }
 
@@ -288,60 +277,51 @@ async function injectTargetOverlay(
 		maxLabelLength: number;
 		legendEnabled: boolean;
 		ruleLabel: string;
-	},
+	}
 ): Promise<number> {
 	const css = buildTargetOverlayCss(options.overlayId);
 	return page.evaluate(
-		({
-			overlayId,
-			cssText,
-			targets,
-			maxTargets,
-			maxLabelLength,
-			legendEnabled,
-			ruleLabel,
-		}) => {
-			const overlayAttr = "data-sf-violation-overlay";
+		({ overlayId, cssText, targets, maxTargets, maxLabelLength, legendEnabled, ruleLabel }) => {
+			const overlayAttr = 'data-sf-violation-overlay';
 			const styleId = `${overlayId}-style`;
 
-			const styleEl = document.createElement("style");
+			const styleEl = document.createElement('style');
 			styleEl.id = styleId;
 			styleEl.textContent = cssText;
 			document.head.appendChild(styleEl);
 
-			const normalizeText = (value: string): string =>
-				value.replace(/\s+/g, " ").trim();
+			const normalizeText = (value: string): string => value.replace(/\s+/g, ' ').trim();
 
 			const getElementLabel = (el: Element): string => {
-				const ariaLabel = el.getAttribute("aria-label");
+				const ariaLabel = el.getAttribute('aria-label');
 				if (ariaLabel) {
 					return normalizeText(ariaLabel);
 				}
 
-				const labelledBy = el.getAttribute("aria-labelledby");
+				const labelledBy = el.getAttribute('aria-labelledby');
 				if (labelledBy) {
 					const pieces = labelledBy
 						.split(/\s+/)
 						.map((id) => document.getElementById(id))
 						.filter((node): node is HTMLElement => Boolean(node))
-						.map((node) => normalizeText(node.textContent || ""))
+						.map((node) => normalizeText(node.textContent || ''))
 						.filter((text) => text.length > 0);
 					if (pieces.length > 0) {
-						return pieces.join(" ");
+						return pieces.join(' ');
 					}
 				}
 
-				const alt = el.getAttribute("alt");
+				const alt = el.getAttribute('alt');
 				if (alt) {
 					return normalizeText(alt);
 				}
 
-				const title = el.getAttribute("title");
+				const title = el.getAttribute('title');
 				if (title) {
 					return normalizeText(title);
 				}
 
-				return normalizeText(el.textContent || "");
+				return normalizeText(el.textContent || '');
 			};
 
 			const unique = new Set<Element>();
@@ -357,7 +337,7 @@ async function injectTargetOverlay(
 					continue;
 				}
 				const tagName = element.tagName.toUpperCase();
-				if (tagName === "HTML" || tagName === "BODY") {
+				if (tagName === 'HTML' || tagName === 'BODY') {
 					continue;
 				}
 				if (unique.has(element)) {
@@ -369,30 +349,30 @@ async function injectTargetOverlay(
 			}
 
 			if (legendEnabled && elements.length > 0) {
-				const legend = document.createElement("div");
-				legend.className = "sf-violation-legend";
+				const legend = document.createElement('div');
+				legend.className = 'sf-violation-legend';
 				legend.setAttribute(overlayAttr, overlayId);
 
-				const title = document.createElement("div");
-				title.className = "sf-violation-legend-title";
+				const title = document.createElement('div');
+				title.className = 'sf-violation-legend-title';
 				title.textContent = `Semantic overlay • ${ruleLabel}`;
 				legend.appendChild(title);
 
 				elements.forEach((el, index) => {
-					const row = document.createElement("div");
-					row.className = "sf-violation-legend-row";
+					const row = document.createElement('div');
+					row.className = 'sf-violation-legend-row';
 
-					const pill = document.createElement("span");
-					pill.className = "sf-violation-legend-pill";
+					const pill = document.createElement('span');
+					pill.className = 'sf-violation-legend-pill';
 					pill.textContent = `#${index + 1}`;
 
-					const text = document.createElement("span");
+					const text = document.createElement('span');
 					const content = getElementLabel(el);
 					let clipped = content;
 					if (maxLabelLength > 0 && clipped.length > maxLabelLength) {
 						clipped = `${clipped.slice(0, maxLabelLength)}...`;
 					}
-					text.textContent = clipped.length > 0 ? clipped : "(no text)";
+					text.textContent = clipped.length > 0 ? clipped : '(no text)';
 
 					row.appendChild(pill);
 					row.appendChild(text);
@@ -415,38 +395,33 @@ async function injectTargetOverlay(
 			maxTargets: options.maxTargets,
 			maxLabelLength: options.maxLabelLength,
 			legendEnabled: options.legendEnabled,
-			ruleLabel: options.ruleLabel,
-		},
+			ruleLabel: options.ruleLabel
+		}
 	);
 }
 
-async function removeSemanticOverlay(
-	page: Page,
-	overlayId: string,
-): Promise<void> {
+async function removeSemanticOverlay(page: Page, overlayId: string): Promise<void> {
 	await page.evaluate(
 		({ overlayId }) => {
-			const overlayAttr = "data-sf-heading-overlay";
-			const labelAttr = "data-sf-heading";
+			const overlayAttr = 'data-sf-heading-overlay';
+			const labelAttr = 'data-sf-heading';
 			const selector = `[${overlayAttr}="${overlayId}"]`;
 
 			document.querySelectorAll(selector).forEach((el) => {
 				el.removeAttribute(labelAttr);
 				el.removeAttribute(overlayAttr);
-				if (el.classList.contains("sf-heading-legend")) {
+				if (el.classList.contains('sf-heading-legend')) {
 					el.remove();
 				}
 			});
 
-			const targetOverlayAttr = "data-sf-violation-overlay";
-			document
-				.querySelectorAll(`[${targetOverlayAttr}="${overlayId}"]`)
-				.forEach((el) => {
-					el.removeAttribute(targetOverlayAttr);
-					if (el.classList.contains("sf-violation-legend")) {
-						el.remove();
-					}
-				});
+			const targetOverlayAttr = 'data-sf-violation-overlay';
+			document.querySelectorAll(`[${targetOverlayAttr}="${overlayId}"]`).forEach((el) => {
+				el.removeAttribute(targetOverlayAttr);
+				if (el.classList.contains('sf-violation-legend')) {
+					el.remove();
+				}
+			});
 
 			const styleEl = document.getElementById(`${overlayId}-style`);
 			if (styleEl) {
@@ -454,11 +429,11 @@ async function removeSemanticOverlay(
 			}
 		},
 		{
-			overlayId,
-		},
+			overlayId
+		}
 	);
 }
 
 function toRuleLabel(ruleId: string): string {
-	return ruleId.replace(/-/g, " ");
+	return ruleId.replace(/-/g, ' ');
 }

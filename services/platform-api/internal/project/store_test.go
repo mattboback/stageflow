@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 )
@@ -140,7 +141,7 @@ func TestDeleteProject(t *testing.T) {
 	}
 
 	_, err := s.GetProjectBySlug(ctx, "del")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -149,7 +150,7 @@ func TestDeleteNotFound(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
 
-	if err := s.DeleteProject(ctx, "nonexistent"); err != ErrNotFound {
+	if err := s.DeleteProject(ctx, "nonexistent"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -199,7 +200,7 @@ func TestGetProjectForJobNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := s.GetProjectForJob(ctx, "unknown-job")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -233,7 +234,7 @@ func TestDeleteProjectCascadesJobs(t *testing.T) {
 	_ = s.DeleteProject(ctx, p.ID)
 
 	_, err := s.GetProjectForJob(ctx, "job-cas")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected cascade delete, got %v", err)
 	}
 }

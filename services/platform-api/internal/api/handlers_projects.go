@@ -197,24 +197,34 @@ func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request, slu
 	}
 
 	var req updateProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
 		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
 
 		return
 	}
 
-	if err := s.projectStore.UpdateProject(r.Context(), p.ID, project.Update{
+	err = s.projectStore.UpdateProject(r.Context(), p.ID, project.Update{
 		Name:     req.Name,
 		URLs:     req.URLs,
 		Scanners: req.Scanners,
-	}); err != nil {
+	})
+	if err != nil {
 		logging.Error(r.Context(), "Failed to update project", "error", err)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to update project")
 
 		return
 	}
 
-	updated, _ := s.projectStore.GetProjectByID(r.Context(), p.ID)
+	updated, err := s.projectStore.GetProjectByID(r.Context(), p.ID)
+	if err != nil {
+		logging.Error(r.Context(), "Failed to reload project", "error", err)
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to reload updated project")
+
+		return
+	}
+
 	httputil.RespondOK(w, updated)
 }
 
@@ -233,7 +243,8 @@ func (s *Server) handleDeleteProject(w http.ResponseWriter, r *http.Request, slu
 		return
 	}
 
-	if err := s.projectStore.DeleteProject(r.Context(), p.ID); err != nil {
+	err = s.projectStore.DeleteProject(r.Context(), p.ID)
+	if err != nil {
 		logging.Error(r.Context(), "Failed to delete project", "error", err)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete project")
 
@@ -272,7 +283,8 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		return
 	}
 
-	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, p.URLs, validationMode); err != nil {
+	err = validateTargetURLsWithResolver(r.Context(), s.ipResolver, p.URLs, validationMode)
+	if err != nil {
 		httputil.RespondError(w, http.StatusBadRequest, err.Error())
 
 		return
@@ -349,7 +361,9 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 	}
 
 	var req promoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
 		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
 
 		return
@@ -390,7 +404,8 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 		return
 	}
 
-	if err := s.projectStore.SetBaseline(r.Context(), p.ID, req.JobID); err != nil {
+	err = s.projectStore.SetBaseline(r.Context(), p.ID, req.JobID)
+	if err != nil {
 		logging.Error(r.Context(), "Failed to set baseline", "error", err)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to set baseline")
 

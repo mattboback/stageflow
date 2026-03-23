@@ -1,43 +1,43 @@
-import { cleanup, render } from "@testing-library/svelte";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render } from '@testing-library/svelte';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import PageSectionFixture from "../../../fixtures/PageSectionFixture.svelte";
+import PageSectionFixture from '../../../fixtures/PageSectionFixture.svelte';
 
-describe("PageSection", () => {
+describe('PageSection', () => {
 	afterEach(() => {
 		cleanup();
 	});
 
-	it("applies default padding", () => {
+	it('applies default padding', () => {
 		const { getByTestId } = render(PageSectionFixture);
-		const section = getByTestId("page-section");
+		const section = getByTestId('page-section');
 
-		expect(section).toHaveClass("pt-24");
-		expect(section).toHaveClass("pb-20");
+		expect(section).toHaveClass('pt-24');
+		expect(section).toHaveClass('pb-20');
 	});
 
-	it("applies page padding", () => {
+	it('applies page padding', () => {
 		const { getByTestId } = render(PageSectionFixture, {
-			props: { padding: "page" },
+			props: { padding: 'page' }
 		});
-		const section = getByTestId("page-section");
+		const section = getByTestId('page-section');
 
-		expect(section).toHaveClass("pt-28");
-		expect(section).toHaveClass("pb-24");
+		expect(section).toHaveClass('pt-28');
+		expect(section).toHaveClass('pb-24');
 	});
 
-	it("renders container wrapper by default", () => {
+	it('renders container wrapper by default', () => {
 		const { container, getByTestId } = render(PageSectionFixture);
 
-		expect(getByTestId("page-section-child")).toBeInTheDocument();
-		expect(container.querySelector(".container-width")).toBeInTheDocument();
+		expect(getByTestId('page-section-child')).toBeInTheDocument();
+		expect(container.querySelector('.container-width')).toBeInTheDocument();
 	});
 
-	it("can disable the container wrapper", () => {
+	it('can disable the container wrapper', () => {
 		const { container } = render(PageSectionFixture, {
-			props: { disableContainer: true },
+			props: { disableContainer: true }
 		});
 
-		expect(container.querySelector(".container-width")).toBeNull();
+		expect(container.querySelector('.container-width')).toBeNull();
 	});
 });

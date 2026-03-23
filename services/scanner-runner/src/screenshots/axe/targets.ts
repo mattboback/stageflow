@@ -1,10 +1,8 @@
-import type { AxeViolation } from "./types";
+import type { AxeViolation } from './types';
 
 export function normalizeSelectors(values: unknown[]): string[] {
 	return values
-		.map((value) =>
-			typeof value === "string" ? value.trim() : String(value).trim(),
-		)
+		.map((value) => (typeof value === 'string' ? value.trim() : String(value).trim()))
 		.filter((value) => value.length > 0);
 }
 
@@ -28,5 +26,8 @@ export function extractAxeViolationTargets(violation: AxeViolation): {
 		}
 	}
 
-	return { targets, selector: targets[0] };
+	return {
+		targets,
+		...(targets[0] !== undefined ? { selector: targets[0] } : {})
+	};
 }

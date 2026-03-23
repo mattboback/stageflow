@@ -5,23 +5,23 @@
  * Supports built-in scanners, filesystem plugins, and volume-mounted plugins.
  */
 
-import path from "node:path";
+import path from 'node:path';
 
-import type { ScannerLogger } from "../types";
+import type { ScannerLogger } from '../types';
 
-import { createLogger } from "../../utils/logger";
-import { discoverPluginManifests } from "./plugin-discovery";
-import { loadPluginFromManifest } from "./plugin-load";
+import { createLogger } from '../../utils/logger';
+import { discoverPluginManifests } from './plugin-discovery';
+import { loadPluginFromManifest } from './plugin-load';
 import {
 	DEFAULT_PLUGIN_LOADER_CONFIG,
 	type PluginDiscoveryResult,
 	type PluginInfo,
 	type PluginLoadResult,
 	type PluginLoaderConfig,
-	type ScannerPlugin,
-} from "./plugin-loader-types";
+	type ScannerPlugin
+} from './plugin-loader-types';
 
-const logger = createLogger("PluginLoader");
+const logger = createLogger('PluginLoader');
 
 export class PluginLoader {
 	private config: PluginLoaderConfig;
@@ -36,17 +36,19 @@ export class PluginLoader {
 	}
 
 	async discover(): Promise<PluginDiscoveryResult> {
-		const { plugins, errors, manifestsById, aliasByToken } =
-			await discoverPluginManifests(this.config, this.logger);
+		const { plugins, errors, manifestsById, aliasByToken } = await discoverPluginManifests(
+			this.config,
+			this.logger
+		);
 
 		this.discoveredManifests = manifestsById;
 		this.aliasMap = aliasByToken;
 
 		if (this.config.verbose) {
-			this.logger.info("Plugin discovery complete", {
+			this.logger.info('Plugin discovery complete', {
 				found: plugins.length,
 				errors: errors.length,
-				plugins: plugins.map((p) => p.manifest.id),
+				plugins: plugins.map((p) => p.manifest.id)
 			});
 		}
 
@@ -58,7 +60,7 @@ export class PluginLoader {
 		if (!cleaned) {
 			return {
 				success: false,
-				error: "Plugin ID is required",
+				error: 'Plugin ID is required'
 			};
 		}
 
@@ -69,14 +71,22 @@ export class PluginLoader {
 		if (!pluginId) {
 			return {
 				success: false,
-				error: `Plugin not found: ${cleaned}. Run discover() first or check plugin ID.`,
+				error: `Plugin not found: ${cleaned}. Run discover() first or check plugin ID.`
 			};
 		}
 
 		if (this.loadedPlugins.has(pluginId)) {
+			const plugin = this.loadedPlugins.get(pluginId);
+			if (plugin) {
+				return {
+					success: true,
+					plugin
+				};
+			}
+
 			return {
-				success: true,
-				plugin: this.loadedPlugins.get(pluginId),
+				success: false,
+				error: `Plugin not found: ${pluginId}. Run discover() first or check plugin ID.`
 			};
 		}
 
@@ -84,7 +94,7 @@ export class PluginLoader {
 		if (!info) {
 			return {
 				success: false,
-				error: `Plugin not found: ${pluginId}. Run discover() first or check plugin ID.`,
+				error: `Plugin not found: ${pluginId}. Run discover() first or check plugin ID.`
 			};
 		}
 
@@ -168,29 +178,29 @@ export class PluginLoader {
 
 export function createPluginLoader(
 	additionalPaths: string[] = [],
-	config: Partial<PluginLoaderConfig> = {},
+	config: Partial<PluginLoaderConfig> = {}
 ): PluginLoader {
 	const defaultPaths = [
 		// Built-in scanners
-		path.join(__dirname, "..", "..", "scanners"),
+		path.join(__dirname, '..', '..', 'scanners'),
 		// Volume-mounted plugins
-		"/plugins",
+		'/plugins'
 	];
 
 	// Add home directory plugins for development
 	if (process.env.HOME) {
-		defaultPaths.push(path.join(process.env.HOME, ".stageflow", "plugins"));
+		defaultPaths.push(path.join(process.env.HOME, '.stageflow', 'plugins'));
 	}
 
 	// Add environment-specified paths
 	if (process.env.PLUGIN_PATHS) {
-		defaultPaths.push(...process.env.PLUGIN_PATHS.split(":").filter(Boolean));
+		defaultPaths.push(...process.env.PLUGIN_PATHS.split(':').filter(Boolean));
 	}
 
 	return new PluginLoader({
 		searchPaths: [...defaultPaths, ...additionalPaths],
-		strictValidation: process.env.NODE_ENV === "production",
-		verbose: process.env.PLUGIN_VERBOSE === "true",
-		...config,
+		strictValidation: process.env.NODE_ENV === 'production',
+		verbose: process.env.PLUGIN_VERBOSE === 'true',
+		...config
 	});
 }

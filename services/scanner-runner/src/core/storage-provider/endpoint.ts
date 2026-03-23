@@ -1,11 +1,11 @@
 export function parseMinioEndpoint(
 	endpoint: string,
-	useSSL: boolean,
+	useSSL: boolean
 ): { endPoint: string; port: number } {
-	let host = endpoint.replace(/^https?:\/\//, "");
+	let host = endpoint.replace(/^https?:\/\//, '');
 	let port = useSSL ? 443 : 9000;
 
-	const colonIndex = host.lastIndexOf(":");
+	const colonIndex = host.lastIndexOf(':');
 	if (colonIndex !== -1) {
 		const portStr = host.substring(colonIndex + 1);
 		const parsedPort = Number.parseInt(portStr, 10);

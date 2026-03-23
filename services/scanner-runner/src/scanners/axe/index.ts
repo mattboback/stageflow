@@ -1,27 +1,27 @@
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import AxeBuilder from "@axe-core/playwright";
+import AxeBuilder from '@axe-core/playwright';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
-import { getRuleBehavior } from "../../config/rule-behaviors";
-import { getUserImpact } from "../../config/user-impact";
+import { getRuleBehavior } from '../../config/rule-behaviors';
+import { getUserImpact } from '../../config/user-impact';
 import {
 	type Issue,
 	type PageScanResult,
 	type ScanContext,
 	ScannerBase,
-	type ScannerMetadata,
-} from "../../core";
+	type ScannerMetadata
+} from '../../core';
+import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
 import {
 	AxeScreenshotService,
 	type AxeViolation,
 	type EnhancedScreenshotResult,
 	type PageOverviewViolation,
-	type ViolationCaptureFailure,
-} from "../../screenshots/AxeScreenshotService";
-import { extractContextSnippet } from "../../screenshots/axe/context-snippet";
-import { normalizeSeverity } from "../../utils/severity";
+	type ViolationCaptureFailure
+} from '../../screenshots/AxeScreenshotService';
+import { normalizeSeverity } from '../../utils/severity';
 
-const PACKAGE_VERSION = process.env.npm_package_version?.trim() ?? "1.0.0";
+const PACKAGE_VERSION = process.env.npm_package_version?.trim() ?? '1.0.0';
 
 /**
  * Default milliseconds to wait after load for dynamic content to render.
@@ -81,7 +81,7 @@ export interface AxeOptions {
 }
 
 function parseAxeOptions(raw: unknown): AxeOptions {
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
 		return { dynamicContentWaitMs: DEFAULT_DYNAMIC_CONTENT_WAIT_MS };
 	}
 
@@ -90,7 +90,7 @@ function parseAxeOptions(raw: unknown): AxeOptions {
 
 	// Parse dynamicContentWaitMs
 	const waitMs = record.dynamicContentWaitMs;
-	if (typeof waitMs === "number" && waitMs >= 0) {
+	if (typeof waitMs === 'number' && waitMs >= 0) {
 		options.dynamicContentWaitMs = waitMs;
 	} else {
 		options.dynamicContentWaitMs = DEFAULT_DYNAMIC_CONTENT_WAIT_MS;
@@ -100,7 +100,7 @@ function parseAxeOptions(raw: unknown): AxeOptions {
 	const disabledRules = record.disabledRules;
 	if (Array.isArray(disabledRules)) {
 		options.disabledRules = disabledRules.filter(
-			(r): r is string => typeof r === "string" && r.length > 0,
+			(r): r is string => typeof r === 'string' && r.length > 0
 		);
 	}
 
@@ -108,7 +108,7 @@ function parseAxeOptions(raw: unknown): AxeOptions {
 	const runOnlyTags = record.runOnlyTags;
 	if (Array.isArray(runOnlyTags)) {
 		options.runOnlyTags = runOnlyTags.filter(
-			(t): t is string => typeof t === "string" && t.length > 0,
+			(t): t is string => typeof t === 'string' && t.length > 0
 		);
 	}
 
@@ -117,14 +117,14 @@ function parseAxeOptions(raw: unknown): AxeOptions {
 
 export class AxeScanner extends ScannerBase {
 	readonly metadata: ScannerMetadata = {
-		name: "axe",
+		name: 'axe',
 		version: PACKAGE_VERSION,
-		description: "Accessibility scanner powered by axe-core",
+		description: 'Accessibility scanner powered by axe-core'
 	};
 
 	private screenshotService: AxeScreenshotService;
 	private options: AxeOptions = {
-		dynamicContentWaitMs: DEFAULT_DYNAMIC_CONTENT_WAIT_MS,
+		dynamicContentWaitMs: DEFAULT_DYNAMIC_CONTENT_WAIT_MS
 	};
 
 	constructor() {
@@ -135,10 +135,10 @@ export class AxeScanner extends ScannerBase {
 	protected override async initialize(): Promise<void> {
 		await super.initialize();
 		this.options = parseAxeOptions(this.config.options);
-		this.logger.info("Axe options", {
+		this.logger.info('Axe options', {
 			dynamicContentWaitMs: this.options.dynamicContentWaitMs,
 			disabledRules: this.options.disabledRules,
-			runOnlyTags: this.options.runOnlyTags,
+			runOnlyTags: this.options.runOnlyTags
 		});
 	}
 
@@ -152,28 +152,25 @@ export class AxeScanner extends ScannerBase {
 			// If timeout is reached, proceed anyway - the page is likely ready enough for scanning.
 			try {
 				await Promise.race([
-					page.waitForLoadState("networkidle"),
-					new Promise<void>((resolve) =>
-						setTimeout(resolve, NETWORKIDLE_TIMEOUT_MS),
-					),
+					page.waitForLoadState('networkidle'),
+					new Promise<void>((resolve) => setTimeout(resolve, NETWORKIDLE_TIMEOUT_MS))
 				]);
 			} catch {
 				// Ignore networkidle timeout - page may still be scannable
-				logger.debug("Networkidle wait timed out, proceeding with scan", {
+				logger.debug('Networkidle wait timed out, proceeding with scan', {
 					url: pageEntry.url,
-					timeoutMs: NETWORKIDLE_TIMEOUT_MS,
+					timeoutMs: NETWORKIDLE_TIMEOUT_MS
 				});
 			}
 
-			const waitMs =
-				this.options.dynamicContentWaitMs ?? DEFAULT_DYNAMIC_CONTENT_WAIT_MS;
+			const waitMs = this.options.dynamicContentWaitMs ?? DEFAULT_DYNAMIC_CONTENT_WAIT_MS;
 			if (waitMs > 0) {
 				await page.waitForTimeout(waitMs);
 			}
 
-			logger.debug("Running axe-core analysis", {
+			logger.debug('Running axe-core analysis', {
 				url: pageEntry.url,
-				dynamicContentWaitMs: waitMs,
+				dynamicContentWaitMs: waitMs
 			});
 
 			let axe = new AxeBuilder({ page });
@@ -190,28 +187,28 @@ export class AxeScanner extends ScannerBase {
 
 			const axeResults = await axe.analyze();
 
-			logger.info("Axe analysis complete", {
+			logger.info('Axe analysis complete', {
 				url: pageEntry.url,
 				violations: axeResults.violations.length,
 				passes: axeResults.passes.length,
 				incomplete: axeResults.incomplete.length,
-				inapplicable: axeResults.inapplicable.length,
+				inapplicable: axeResults.inapplicable.length
 			});
 
 			if (axeResults.violations.length > 0) {
-				logger.info("Axe violations found", {
+				logger.info('Axe violations found', {
 					violationIds: axeResults.violations.map((v) => ({
 						id: v.id,
 						impact: v.impact,
-						nodes: v.nodes.length,
-					})),
+						nodes: v.nodes.length
+					}))
 				});
 			}
 
 			const violations = axeResults.violations as AxeViolationResult[];
 
 			await mkdir(resultsDir, { recursive: true });
-			const screenshotsDir = join(resultsDir, "screenshots");
+			const screenshotsDir = join(resultsDir, 'screenshots');
 			await mkdir(screenshotsDir, { recursive: true });
 
 			const issues: Issue[] = [];
@@ -224,16 +221,12 @@ export class AxeScanner extends ScannerBase {
 			const processViolation = async (violation: AxeViolationResult) => {
 				const [screenshotResult, enrichedNodes] = await Promise.all([
 					Promise.race([
-						this.captureViolationScreenshot(
-							page,
-							violation as AxeViolation,
-							screenshotsDir,
-						),
+						this.captureViolationScreenshot(page, violation as AxeViolation, screenshotsDir),
 						new Promise<null>((resolve) => {
 							setTimeout(() => {
 								resolve(null);
 							}, SCREENSHOT_TIMEOUT);
-						}),
+						})
 					]),
 					Promise.race([
 						this.enrichNodesWithContext(page, violation.nodes ?? []),
@@ -241,8 +234,8 @@ export class AxeScanner extends ScannerBase {
 							setTimeout(() => {
 								resolve([...(violation.nodes ?? [])]);
 							}, ENRICHMENT_TIMEOUT);
-						}),
-					]),
+						})
+					])
 				]);
 				return { violation, screenshotResult, enrichedNodes };
 			};
@@ -253,33 +246,27 @@ export class AxeScanner extends ScannerBase {
 				const results = await Promise.allSettled(batch.map(processViolation));
 
 				for (const result of results) {
-					if (result.status === "fulfilled") {
+					if (result.status === 'fulfilled') {
 						const { violation, screenshotResult, enrichedNodes } = result.value;
-						const issue = this.mapViolationToIssue(
-							violation,
-							screenshotResult,
-							enrichedNodes,
-						);
+						const issue = this.mapViolationToIssue(violation, screenshotResult, enrichedNodes);
 						issues.push(issue);
 					}
 				}
 			}
 
 			// Capture page overview screenshot with all violations highlighted
-			const pageOverviewViolations: PageOverviewViolation[] = violations.map(
-				(v) => ({
-					id: v.id ?? "unknown",
-					impact: v.impact,
-					nodes: v.nodes,
-				}),
-			);
+			const pageOverviewViolations: PageOverviewViolation[] = violations.map((v) => ({
+				id: v.id ?? 'unknown',
+				...(v.impact !== undefined ? { impact: v.impact } : {}),
+				...(v.nodes !== undefined ? { nodes: v.nodes } : {})
+			}));
 
 			const pageOverview = await this.screenshotService.capturePageOverview(
 				page,
 				pageOverviewViolations,
 				screenshotsDir,
 				pageEntry.id,
-				{ scannerId: this.metadata.name },
+				{ scannerId: this.metadata.name }
 			);
 
 			const finishedAt = new Date().toISOString();
@@ -303,10 +290,10 @@ export class AxeScanner extends ScannerBase {
 								screenshotFilename: pageOverview.screenshotFilename,
 								pageWidth: pageOverview.pageWidth,
 								pageHeight: pageOverview.pageHeight,
-								elements: pageOverview.elements,
+								elements: pageOverview.elements
 							}
-						: null,
-				},
+						: null
+				}
 			};
 		} catch (error) {
 			const finishedAt = new Date().toISOString();
@@ -322,49 +309,49 @@ export class AxeScanner extends ScannerBase {
 				durationMs: Math.round(durationMs * 100) / 100,
 				startedAt,
 				finishedAt,
-				error: error instanceof Error ? error.message : String(error),
+				error: error instanceof Error ? error.message : String(error)
 			};
 		}
 	}
 
 	private async captureViolationScreenshot(
-		page: import("playwright").Page,
+		page: import('playwright').Page,
 		violation: AxeViolation,
-		screenshotsDir: string,
+		screenshotsDir: string
 	): Promise<EnhancedScreenshotResult | null> {
 		try {
 			const outcome = await this.screenshotService.captureViolationScreenshot(
 				page,
 				violation,
-				screenshotsDir,
+				screenshotsDir
 			);
-			if (outcome.status === "captured") {
+			if (outcome.status === 'captured') {
 				this.logScreenshotFallbacks(violation.id, outcome.fallbacks);
 
 				return outcome.screenshot;
 			}
 
-			if (outcome.status === "failed") {
+			if (outcome.status === 'failed') {
 				this.logScreenshotFallbacks(violation.id, outcome.fallbacks);
-				this.logger.debug("Screenshot capture failed", {
+				this.logger.debug('Screenshot capture failed', {
 					ruleId: violation.id,
 					step: outcome.failure.step,
 					reason: outcome.failure.reason,
-					message: outcome.failure.message,
+					message: outcome.failure.message
 				});
 
 				return null;
 			}
 
-			this.logger.debug("Screenshot capture skipped", {
+			this.logger.debug('Screenshot capture skipped', {
 				ruleId: violation.id,
-				reason: outcome.reason,
+				reason: outcome.reason
 			});
 
 			return null;
 		} catch {
-			this.logger.debug("Screenshot capture threw unexpected error", {
-				ruleId: violation.id,
+			this.logger.debug('Screenshot capture threw unexpected error', {
+				ruleId: violation.id
 			});
 
 			return null;
@@ -373,14 +360,14 @@ export class AxeScanner extends ScannerBase {
 
 	private logScreenshotFallbacks(
 		ruleID: string | undefined,
-		fallbacks: ViolationCaptureFailure[],
+		fallbacks: ViolationCaptureFailure[]
 	): void {
 		for (const fallback of fallbacks) {
-			this.logger.debug("Screenshot strategy fallback", {
+			this.logger.debug('Screenshot strategy fallback', {
 				ruleId: ruleID,
 				step: fallback.step,
 				reason: fallback.reason,
-				message: fallback.message,
+				message: fallback.message
 			});
 		}
 	}
@@ -390,8 +377,8 @@ export class AxeScanner extends ScannerBase {
 	 * Extracts contextHtml and ancestorPath for each node (up to 5).
 	 */
 	private async enrichNodesWithContext(
-		page: import("playwright").Page,
-		nodes: AxeNode[],
+		page: import('playwright').Page,
+		nodes: AxeNode[]
 	): Promise<AxeNode[]> {
 		const enrichedNodes: AxeNode[] = [];
 
@@ -410,8 +397,12 @@ export class AxeScanner extends ScannerBase {
 				const contextResult = await extractContextSnippet(page, selector);
 				enrichedNodes.push({
 					...node,
-					contextHtml: contextResult?.contextHtml,
-					ancestorPath: contextResult?.ancestorPath,
+					...(contextResult?.contextHtml !== undefined
+						? { contextHtml: contextResult.contextHtml }
+						: {}),
+					...(contextResult?.ancestorPath !== undefined
+						? { ancestorPath: contextResult.ancestorPath }
+						: {})
 				});
 			} catch {
 				// Failed to extract context, keep original node
@@ -425,9 +416,9 @@ export class AxeScanner extends ScannerBase {
 	private mapViolationToIssue(
 		violation: AxeViolationResult,
 		screenshotResult: EnhancedScreenshotResult | null | undefined,
-		enrichedNodes: AxeNode[],
+		enrichedNodes: AxeNode[]
 	): Issue {
-		const severity = normalizeSeverity(violation.impact, "info");
+		const severity = normalizeSeverity(violation.impact, 'info');
 		const behavior = getRuleBehavior(violation.id);
 		const userImpact = getUserImpact(violation.id);
 		const nodes = violation.nodes ?? [];
@@ -437,19 +428,23 @@ export class AxeScanner extends ScannerBase {
 
 		const category = this.extractCategory(violation.tags);
 
+		const location = {
+			...(selector !== undefined ? { selector } : {}),
+			...(primaryNode?.html !== undefined ? { html: primaryNode.html } : {})
+		};
+
 		return {
-			id: violation.id ?? "unknown",
+			id: violation.id ?? 'unknown',
 			scanner: this.metadata.name,
 			severity,
 			category,
-			title: violation.help ?? violation.id ?? "Accessibility Issue",
-			description: behavior.summary ?? violation.description ?? "",
-			helpUrl: violation.helpUrl,
-			location: {
-				selector,
-				html: primaryNode?.html,
-			},
-			screenshot: screenshotResult?.screenshot,
+			title: violation.help ?? violation.id ?? 'Accessibility Issue',
+			description: behavior.summary ?? violation.description ?? '',
+			...(Object.keys(location).length > 0 ? { location } : {}),
+			...(violation.helpUrl !== undefined ? { helpUrl: violation.helpUrl } : {}),
+			...(screenshotResult?.screenshot !== undefined
+				? { screenshot: screenshotResult.screenshot }
+				: {}),
 			metadata: {
 				impact: violation.impact,
 				tags: violation.tags,
@@ -459,7 +454,7 @@ export class AxeScanner extends ScannerBase {
 					html: node.html,
 					failureSummary: node.failureSummary,
 					contextHtml: node.contextHtml,
-					ancestorPath: node.ancestorPath,
+					ancestorPath: node.ancestorPath
 				})),
 				ruleBehavior: behavior,
 				friendlyNode: screenshotResult?.friendlyNode,
@@ -471,47 +466,47 @@ export class AxeScanner extends ScannerBase {
 					statement: userImpact.statement,
 					affectedGroups: userImpact.affectedGroups,
 					severity: userImpact.severity,
-					userStory: userImpact.userStory,
-				},
-			},
+					userStory: userImpact.userStory
+				}
+			}
 		};
 	}
 
 	private extractCategory(tags?: string[]): string {
 		if (!tags || tags.length === 0) {
-			return "accessibility";
+			return 'accessibility';
 		}
 
-		const wcagTag = tags.find((t) => t.startsWith("wcag"));
+		const wcagTag = tags.find((t) => t.startsWith('wcag'));
 		if (wcagTag) {
 			return wcagTag;
 		}
 
-		if (tags.includes("best-practice")) {
-			return "best-practice";
+		if (tags.includes('best-practice')) {
+			return 'best-practice';
 		}
 
 		const categoryTags = [
-			"cat.color",
-			"cat.forms",
-			"cat.keyboard",
-			"cat.language",
-			"cat.name-role-value",
-			"cat.parsing",
-			"cat.semantics",
-			"cat.sensory-and-visual-cues",
-			"cat.structure",
-			"cat.tables",
-			"cat.text-alternatives",
-			"cat.time-and-media",
+			'cat.color',
+			'cat.forms',
+			'cat.keyboard',
+			'cat.language',
+			'cat.name-role-value',
+			'cat.parsing',
+			'cat.semantics',
+			'cat.sensory-and-visual-cues',
+			'cat.structure',
+			'cat.tables',
+			'cat.text-alternatives',
+			'cat.time-and-media'
 		];
 
 		for (const tag of tags) {
 			if (categoryTags.includes(tag)) {
-				return tag.replace("cat.", "");
+				return tag.replace('cat.', '');
 			}
 		}
 
-		return "accessibility";
+		return 'accessibility';
 	}
 }

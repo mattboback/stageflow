@@ -58,109 +58,185 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			baselinePath := args[0]
-			currentTarget := args[1]
-
-			baselineEnv, err := loadReportFile(baselinePath)
-			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("baseline: %w", err)}
-			}
-
-			var currentEnv reportEnvelope
-			var currentJobID string
-			var currentFile string
-
-			if strings.HasPrefix(currentTarget, "http://") || strings.HasPrefix(currentTarget, "https://") {
-				client := NewClient(root.apiURL, root.apiKey, nil)
-
-				var modules []string
-				for _, sc := range baselineEnv.Report.Scanners {
-					modules = append(modules, sc.Id)
-				}
-
-				req := SubmitJobRequest{
-					URLs:                []string{currentTarget},
-					Modules:             modules,
-					AllowPrivateTargets: containsPrivateTargets([]string{currentTarget}),
-				}
-
-				status, doc, err := runScanJob(
-					cmd.Context(),
-					client,
-					req,
-					timeout,
-					cmd.ErrOrStderr(),
-					noStream,
-				)
-				if err != nil {
-					return exitCodeError{Code: 2, Err: err}
-				}
-
-				currentEnv = reportEnvelope{
-					Job:    jobMeta{ID: status.ID},
-					Report: doc,
-				}
-				currentJobID = status.ID
-			} else {
-				currentFile = currentTarget
-				loaded, err := loadReportFile(currentTarget)
-				if err != nil {
-					return exitCodeError{Code: 2, Err: fmt.Errorf("current: %w", err)}
-				}
-				currentEnv = loaded
-			}
-
-			result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
-			d := diffFromResult(result, baselinePath, currentFile)
-
-			regressed := false
-			if failOnRegression {
-				if (d.Delta.ScoreDelta != nil && *d.Delta.ScoreDelta < 0) || d.Delta.NewIssues > 0 {
-					regressed = true
-				}
-			}
-
-			if failOnNew != "" && len(d.New) > 0 {
-				if failOnNew == "any" {
-					regressed = true
-				} else {
-					hasSeverity, err := hasIssuesAtOrAbove(d.New, failOnNew)
-					if err != nil {
-						return exitCodeError{Code: 2, Err: err}
-					}
-					if hasSeverity {
-						regressed = true
-					}
-				}
-			}
-
-			d.Regressed = regressed
-
-			format, err := root.outputFormat()
-			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
-			}
-
-			if err := renderDiff(cmd.OutOrStdout(), d, format); err != nil {
-				return exitCodeError{Code: 2, Err: err}
-			}
-
-			if regressed {
-				return exitCodeError{Code: 1}
-			}
-
-			return nil
+			return runDiffCommand(
+				cmd,
+				root,
+				args[0],
+				args[1],
+				timeout,
+				noStream,
+				failOnNew,
+				failOnRegression,
+			)
 		},
 	}
 
-	cmd.Flags().StringVar(&failOnNew, "fail-on-new", "", "Exit 1 if any NEW issue meets threshold (critical, serious, moderate, minor, info) or 'any'")
+	cmd.Flags().StringVar(
+		&failOnNew,
+		"fail-on-new",
+		"",
+		"Exit 1 if any NEW issue meets threshold "+
+			"(critical, serious, moderate, minor, info) or 'any'",
+	)
 	cmd.Flags().Lookup("fail-on-new").NoOptDefVal = "any"
-	cmd.Flags().BoolVar(&failOnRegression, "fail-on-regression", false, "Exit 1 if score dropped or new issues appeared")
+	cmd.Flags().BoolVar(
+		&failOnRegression,
+		"fail-on-regression",
+		false,
+		"Exit 1 if score dropped or new issues appeared",
+	)
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time for live scan")
 	cmd.Flags().BoolVar(&noStream, "no-stream", false, "Poll instead of SSE for live scan")
 	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
 	return cmd
+}
+
+func runDiffCommand(
+	cmd *cobra.Command,
+	root *rootOptions,
+	baselinePath, currentTarget string,
+	timeout time.Duration,
+	noStream bool,
+	failOnNew string,
+	failOnRegression bool,
+) error {
+	baselineEnv, err := loadReportFile(baselinePath)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: fmt.Errorf("baseline: %w", err)}
+	}
+
+	currentEnv, currentJobID, currentFile, err := loadCurrentDiffTarget(
+		cmd,
+		root,
+		baselineEnv,
+		currentTarget,
+		timeout,
+		noStream,
+	)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
+	d := diffFromResult(result, baselinePath, currentFile)
+
+	regressed, err := evaluateDiffRegression(d, failOnRegression, failOnNew)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	d.Regressed = regressed
+
+	format, err := root.outputFormat()
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	err = renderDiff(cmd.OutOrStdout(), d, format)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	if regressed {
+		return exitCodeError{Code: 1}
+	}
+
+	return nil
+}
+
+func loadCurrentDiffTarget(
+	cmd *cobra.Command,
+	root *rootOptions,
+	baselineEnv reportEnvelope,
+	currentTarget string,
+	timeout time.Duration,
+	noStream bool,
+) (reportEnvelope, string, string, error) {
+	if !isRemoteDiffTarget(currentTarget) {
+		currentEnv, err := loadReportFile(currentTarget)
+		if err != nil {
+			return reportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
+		}
+
+		return currentEnv, "", currentTarget, nil
+	}
+
+	currentEnv, jobID, err := runLiveDiffScan(cmd, root, baselineEnv, currentTarget, timeout, noStream)
+	if err != nil {
+		return reportEnvelope{}, "", "", err
+	}
+
+	return currentEnv, jobID, "", nil
+}
+
+func isRemoteDiffTarget(target string) bool {
+	return strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://")
+}
+
+func runLiveDiffScan(
+	cmd *cobra.Command,
+	root *rootOptions,
+	baselineEnv reportEnvelope,
+	currentTarget string,
+	timeout time.Duration,
+	noStream bool,
+) (reportEnvelope, string, error) {
+	client := NewClient(root.apiURL, root.apiKey, nil)
+	req := SubmitJobRequest{
+		URLs:                []string{currentTarget},
+		Modules:             diffScanModules(baselineEnv),
+		AllowPrivateTargets: containsPrivateTargets([]string{currentTarget}),
+	}
+
+	status, doc, err := runScanJob(
+		cmd.Context(),
+		client,
+		req,
+		timeout,
+		cmd.ErrOrStderr(),
+		noStream,
+	)
+	if err != nil {
+		return reportEnvelope{}, "", err
+	}
+
+	return reportEnvelope{
+		Job:    jobMeta{ID: status.ID},
+		Report: doc,
+	}, status.ID, nil
+}
+
+func diffScanModules(env reportEnvelope) []string {
+	modules := make([]string, 0, len(env.Report.Scanners))
+	for _, scanner := range env.Report.Scanners {
+		modules = append(modules, scanner.Id)
+	}
+
+	return modules
+}
+
+func evaluateDiffRegression(d diffEnvelope, failOnRegression bool, failOnNew string) (bool, error) {
+	regressed := failOnRegression && isDiffRegressed(d)
+
+	if failOnNew == "" || len(d.New) == 0 {
+		return regressed, nil
+	}
+
+	if failOnNew == "any" {
+		return true, nil
+	}
+
+	hasSeverity, err := hasIssuesAtOrAbove(d.New, failOnNew)
+	if err != nil {
+		return false, err
+	}
+
+	return regressed || hasSeverity, nil
+}
+
+func isDiffRegressed(d diffEnvelope) bool {
+	return (d.Delta.ScoreDelta != nil && *d.Delta.ScoreDelta < 0) || d.Delta.NewIssues > 0
 }
 
 func diffFromResult(r diff.Result, baselineFile, currentFile string) diffEnvelope {
@@ -191,10 +267,7 @@ func diffFromResult(r diff.Result, baselineFile, currentFile string) diffEnvelop
 func renderDiff(out io.Writer, diff diffEnvelope, format outputFormat) error {
 	switch format {
 	case outputFormatJSON:
-		encoder := json.NewEncoder(out)
-		encoder.SetIndent("", "  ")
-		encoder.SetEscapeHTML(false)
-		return encoder.Encode(diff)
+		return writeJSONDiff(out, diff)
 	case outputFormatText, outputFormatMarkdown:
 		return writeTextDiff(out, diff, format == outputFormatMarkdown)
 	default:
@@ -202,68 +275,192 @@ func renderDiff(out io.Writer, diff diffEnvelope, format outputFormat) error {
 	}
 }
 
+func writeJSONDiff(out io.Writer, diff diffEnvelope) error {
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
+
+	return encoder.Encode(diff)
+}
+
 func writeTextDiff(out io.Writer, diff diffEnvelope, isMarkdown bool) error {
+	err := writeDiffHeading(out, isMarkdown)
+	if err != nil {
+		return err
+	}
+
+	err = writeDiffSummary(out, diff, isMarkdown)
+	if err != nil {
+		return err
+	}
+
+	return writeNewIssueSection(out, diff.New, isMarkdown)
+}
+
+func writeDiffHeading(out io.Writer, isMarkdown bool) error {
+	if !isMarkdown {
+		return nil
+	}
+
+	_, err := fmt.Fprintln(out, "## Regression Diff")
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(out)
+
+	return err
+}
+
+func writeDiffSummary(out io.Writer, diff diffEnvelope, isMarkdown bool) error {
+	scoreStr := formatDiffScore(diff)
+
 	if isMarkdown {
-		fmt.Fprintln(out, "## Regression Diff")
-		fmt.Fprintln(out)
+		_, err := fmt.Fprintf(
+			out,
+			"- **Score**: %s\n- **New issues**: %d\n- **Fixed issues**: %d\n- **Unchanged**: %d\n\n",
+			scoreStr,
+			diff.Delta.NewIssues,
+			diff.Delta.FixedIssues,
+			diff.Delta.UnchangedIssues,
+		)
+
+		return err
 	}
 
-	scoreStr := "N/A"
-	if diff.Baseline.Score != nil && diff.Current.Score != nil {
-		delta := *diff.Current.Score - *diff.Baseline.Score
-		sign := ""
-		if delta > 0 {
-			sign = "+"
-		}
-		scoreStr = fmt.Sprintf("%d \u2192 %d (%s%d)", *diff.Baseline.Score, *diff.Current.Score, sign, delta)
+	_, err := fmt.Fprintf(
+		out,
+		"Score: %s\nNew issues: %d\nFixed issues: %d\nUnchanged: %d\n\n",
+		scoreStr,
+		diff.Delta.NewIssues,
+		diff.Delta.FixedIssues,
+		diff.Delta.UnchangedIssues,
+	)
+
+	return err
+}
+
+func formatDiffScore(diff diffEnvelope) string {
+	if diff.Baseline.Score == nil || diff.Current.Score == nil {
+		return "N/A"
 	}
 
-	if isMarkdown {
-		fmt.Fprintf(out, "- **Score**: %s\n", scoreStr)
-		fmt.Fprintf(out, "- **New issues**: %d\n", diff.Delta.NewIssues)
-		fmt.Fprintf(out, "- **Fixed issues**: %d\n", diff.Delta.FixedIssues)
-		fmt.Fprintf(out, "- **Unchanged**: %d\n\n", diff.Delta.UnchangedIssues)
-	} else {
-		fmt.Fprintf(out, "Score: %s\n", scoreStr)
-		fmt.Fprintf(out, "New issues: %d\n", diff.Delta.NewIssues)
-		fmt.Fprintf(out, "Fixed issues: %d\n", diff.Delta.FixedIssues)
-		fmt.Fprintf(out, "Unchanged: %d\n\n", diff.Delta.UnchangedIssues)
+	delta := *diff.Current.Score - *diff.Baseline.Score
+	sign := ""
+
+	if delta > 0 {
+		sign = "+"
 	}
 
-	if len(diff.New) > 0 {
-		if isMarkdown {
-			fmt.Fprintln(out, "### New Issues (Regressions)")
-			fmt.Fprintln(out)
-		} else {
-			fmt.Fprintln(out, "New Issues (Regressions):")
-		}
+	return fmt.Sprintf("%d → %d (%s%d)", *diff.Baseline.Score, *diff.Current.Score, sign, delta)
+}
 
-		for _, issue := range diff.New {
-			if isMarkdown {
-				fmt.Fprintf(out, "- [%s] %s | scanner=%s | rule=%s | page=%s\n",
-					issue.Severity, issue.Title, issue.Scanner, issue.RuleId, issue.PageUrl)
-				if len(issue.Occurrences) > 0 {
-					occ := issue.Occurrences[0]
-					if occ.Selector != nil && *occ.Selector != "" {
-						fmt.Fprintf(out, "  - Selector: `%s`\n", *occ.Selector)
-					}
-				}
-			} else {
-				fmt.Fprintf(out, "- [%s] %s (%s/%s)\n  %s\n",
-					issue.Severity, issue.Title, issue.Scanner, issue.RuleId, issue.PageUrl)
-				if len(issue.Occurrences) > 0 {
-					occ := issue.Occurrences[0]
-					if occ.Selector != nil && *occ.Selector != "" {
-						fmt.Fprintf(out, "  Selector: %s\n", *occ.Selector)
-					}
-				}
-			}
+func writeNewIssueSection(out io.Writer, issues []report.IssueDetail, isMarkdown bool) error {
+	if len(issues) == 0 {
+		_, err := fmt.Fprintln(out, "No new issues detected.")
+
+		return err
+	}
+
+	err := writeNewIssueHeader(out, isMarkdown)
+	if err != nil {
+		return err
+	}
+
+	for _, issue := range issues {
+		err = writeDiffIssue(out, issue, isMarkdown)
+		if err != nil {
+			return err
 		}
-	} else {
-		fmt.Fprintln(out, "No new issues detected.")
 	}
 
 	return nil
+}
+
+func writeNewIssueHeader(out io.Writer, isMarkdown bool) error {
+	if !isMarkdown {
+		_, err := fmt.Fprintln(out, "New Issues (Regressions):")
+
+		return err
+	}
+
+	_, err := fmt.Fprintln(out, "### New Issues (Regressions)")
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(out)
+
+	return err
+}
+
+func writeDiffIssue(out io.Writer, issue report.IssueDetail, isMarkdown bool) error {
+	if isMarkdown {
+		return writeMarkdownDiffIssue(out, issue)
+	}
+
+	return writePlainDiffIssue(out, issue)
+}
+
+func writeMarkdownDiffIssue(out io.Writer, issue report.IssueDetail) error {
+	_, err := fmt.Fprintf(
+		out,
+		"- [%s] %s | scanner=%s | rule=%s | page=%s\n",
+		issue.Severity,
+		issue.Title,
+		issue.Scanner,
+		issue.RuleId,
+		issue.PageUrl,
+	)
+	if err != nil {
+		return err
+	}
+
+	selector := firstIssueSelector(issue)
+	if selector == "" {
+		return nil
+	}
+
+	_, err = fmt.Fprintf(out, "  - Selector: `%s`\n", selector)
+
+	return err
+}
+
+func writePlainDiffIssue(out io.Writer, issue report.IssueDetail) error {
+	_, err := fmt.Fprintf(
+		out,
+		"- [%s] %s (%s/%s)\n  %s\n",
+		issue.Severity,
+		issue.Title,
+		issue.Scanner,
+		issue.RuleId,
+		issue.PageUrl,
+	)
+	if err != nil {
+		return err
+	}
+
+	selector := firstIssueSelector(issue)
+	if selector == "" {
+		return nil
+	}
+
+	_, err = fmt.Fprintf(out, "  Selector: %s\n", selector)
+
+	return err
+}
+
+func firstIssueSelector(issue report.IssueDetail) string {
+	if len(issue.Occurrences) == 0 {
+		return ""
+	}
+
+	selector := issue.Occurrences[0].Selector
+	if selector == nil {
+		return ""
+	}
+
+	return *selector
 }
 
 func loadReportFile(path string) (reportEnvelope, error) {
@@ -275,7 +472,9 @@ func loadReportFile(path string) (reportEnvelope, error) {
 	data = sanitizeScoreGrade(data)
 
 	var env reportEnvelope
-	if err := json.Unmarshal(data, &env); err != nil {
+
+	err = json.Unmarshal(data, &env)
+	if err != nil {
 		return reportEnvelope{}, fmt.Errorf("parse %s: %w", path, err)
 	}
 

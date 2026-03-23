@@ -2,26 +2,26 @@
  * Location Capture Tests
  */
 
-import type { Page } from "playwright";
+import type { Page } from 'playwright';
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from 'vitest';
 
-import { captureLocationInfo } from "../../../src/screenshots/axe/location";
+import { captureLocationInfo } from '../../../src/screenshots/axe/location';
 
 const createMockPage = (evaluateResult: unknown): Page => {
 	return {
-		evaluate: vi.fn().mockResolvedValue(evaluateResult),
+		evaluate: vi.fn().mockResolvedValue(evaluateResult)
 	} as unknown as Page;
 };
 
-describe("captureLocationInfo", () => {
-	describe("successful capture", () => {
-		it("captures scrollY, viewportHeight, and docHeight correctly", async () => {
+describe('captureLocationInfo', () => {
+	describe('successful capture', () => {
+		it('captures scrollY, viewportHeight, and docHeight correctly', async () => {
 			const mockPage = createMockPage({
 				scrollY: 500,
 				viewportHeight: 720,
 				docHeight: 2000,
-				position: 0.43,
+				position: 0.43
 			});
 
 			const result = await captureLocationInfo(mockPage);
@@ -30,16 +30,16 @@ describe("captureLocationInfo", () => {
 				scrollY: 500,
 				viewportHeight: 720,
 				docHeight: 2000,
-				position: 0.43,
+				position: 0.43
 			});
 		});
 
-		it("captures page at top (scrollY = 0)", async () => {
+		it('captures page at top (scrollY = 0)', async () => {
 			const mockPage = createMockPage({
 				scrollY: 0,
 				viewportHeight: 720,
 				docHeight: 1500,
-				position: 0.24,
+				position: 0.24
 			});
 
 			const result = await captureLocationInfo(mockPage);
@@ -48,12 +48,12 @@ describe("captureLocationInfo", () => {
 			expect(result?.position).toBeGreaterThanOrEqual(0);
 		});
 
-		it("captures page at bottom (position near 1)", async () => {
+		it('captures page at bottom (position near 1)', async () => {
 			const mockPage = createMockPage({
 				scrollY: 1280,
 				viewportHeight: 720,
 				docHeight: 2000,
-				position: 0.82,
+				position: 0.82
 			});
 
 			const result = await captureLocationInfo(mockPage);
@@ -62,12 +62,12 @@ describe("captureLocationInfo", () => {
 			expect(result?.position).toBeLessThanOrEqual(1);
 		});
 
-		it("handles short pages (docHeight <= viewportHeight)", async () => {
+		it('handles short pages (docHeight <= viewportHeight)', async () => {
 			const mockPage = createMockPage({
 				scrollY: 0,
 				viewportHeight: 720,
 				docHeight: 500,
-				position: 0.72,
+				position: 0.72
 			});
 
 			const result = await captureLocationInfo(mockPage);
@@ -77,13 +77,13 @@ describe("captureLocationInfo", () => {
 		});
 	});
 
-	describe("position calculation", () => {
-		it("position is clamped between 0 and 1", async () => {
+	describe('position calculation', () => {
+		it('position is clamped between 0 and 1', async () => {
 			const mockPage = createMockPage({
 				scrollY: 2000,
 				viewportHeight: 720,
 				docHeight: 2000,
-				position: 1,
+				position: 1
 			});
 
 			const result = await captureLocationInfo(mockPage);
@@ -93,10 +93,10 @@ describe("captureLocationInfo", () => {
 		});
 	});
 
-	describe("error handling", () => {
-		it("returns undefined when page.evaluate throws", async () => {
+	describe('error handling', () => {
+		it('returns undefined when page.evaluate throws', async () => {
 			const mockPage = {
-				evaluate: vi.fn().mockRejectedValue(new Error("Page crashed")),
+				evaluate: vi.fn().mockRejectedValue(new Error('Page crashed'))
 			} as unknown as Page;
 
 			const result = await captureLocationInfo(mockPage);
@@ -104,11 +104,9 @@ describe("captureLocationInfo", () => {
 			expect(result).toBeUndefined();
 		});
 
-		it("handles navigation errors gracefully", async () => {
+		it('handles navigation errors gracefully', async () => {
 			const mockPage = {
-				evaluate: vi
-					.fn()
-					.mockRejectedValue(new Error("Navigation interrupted")),
+				evaluate: vi.fn().mockRejectedValue(new Error('Navigation interrupted'))
 			} as unknown as Page;
 
 			const result = await captureLocationInfo(mockPage);
@@ -117,13 +115,13 @@ describe("captureLocationInfo", () => {
 		});
 	});
 
-	describe("evaluate function call", () => {
-		it("calls page.evaluate with a function", async () => {
+	describe('evaluate function call', () => {
+		it('calls page.evaluate with a function', async () => {
 			const mockEvaluate = vi.fn().mockResolvedValue({
 				scrollY: 0,
 				viewportHeight: 720,
 				docHeight: 1000,
-				position: 0.36,
+				position: 0.36
 			});
 
 			const mockPage = { evaluate: mockEvaluate } as unknown as Page;
@@ -135,13 +133,13 @@ describe("captureLocationInfo", () => {
 		});
 	});
 
-	describe("edge cases", () => {
-		it("handles zero document height", async () => {
+	describe('edge cases', () => {
+		it('handles zero document height', async () => {
 			const mockPage = createMockPage({
 				scrollY: 0,
 				viewportHeight: 720,
 				docHeight: 0,
-				position: 0,
+				position: 0
 			});
 
 			const result = await captureLocationInfo(mockPage);
@@ -150,12 +148,12 @@ describe("captureLocationInfo", () => {
 			expect(result?.docHeight).toBe(0);
 		});
 
-		it("handles fractional scroll values", async () => {
+		it('handles fractional scroll values', async () => {
 			const mockPage = createMockPage({
 				scrollY: 123.5,
 				viewportHeight: 720,
 				docHeight: 1500.75,
-				position: 0.322,
+				position: 0.322
 			});
 
 			const result = await captureLocationInfo(mockPage);

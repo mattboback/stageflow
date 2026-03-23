@@ -10,8 +10,8 @@ export function buildExpirationLabel(updatedAt: string | null): string | null {
 function formatExpirationLabel(date: Date) {
 	try {
 		return date.toLocaleString(undefined, {
-			dateStyle: "medium",
-			timeStyle: "short",
+			dateStyle: 'medium',
+			timeStyle: 'short'
 		});
 	} catch {
 		return date.toISOString();

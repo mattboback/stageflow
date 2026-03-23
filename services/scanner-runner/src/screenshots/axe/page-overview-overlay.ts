@@ -1,17 +1,14 @@
-import sharp from "sharp";
+import sharp from 'sharp';
 
-import type { IssueSeverity } from "../../core/types";
-import type { PageOverviewElement } from "./types";
+import type { IssueSeverity } from '../../core/types';
+import type { PageOverviewElement } from './types';
 
-export const SEVERITY_COLORS: Record<
-	IssueSeverity,
-	{ stroke: string; fill: string }
-> = {
-	critical: { stroke: "#ef4444", fill: "rgba(239, 68, 68, 0.15)" },
-	serious: { stroke: "#f97316", fill: "rgba(249, 115, 22, 0.15)" },
-	moderate: { stroke: "#3b82f6", fill: "rgba(59, 130, 246, 0.15)" },
-	minor: { stroke: "#6b7280", fill: "rgba(107, 114, 128, 0.15)" },
-	info: { stroke: "#94a3b8", fill: "rgba(148, 163, 184, 0.12)" },
+export const SEVERITY_COLORS: Record<IssueSeverity, { stroke: string; fill: string }> = {
+	critical: { stroke: '#ef4444', fill: 'rgba(239, 68, 68, 0.15)' },
+	serious: { stroke: '#f97316', fill: 'rgba(249, 115, 22, 0.15)' },
+	moderate: { stroke: '#3b82f6', fill: 'rgba(59, 130, 246, 0.15)' },
+	minor: { stroke: '#6b7280', fill: 'rgba(107, 114, 128, 0.15)' },
+	info: { stroke: '#94a3b8', fill: 'rgba(148, 163, 184, 0.12)' }
 };
 
 export interface OverlayOptions {
@@ -23,7 +20,7 @@ export function buildPageOverviewOverlaySvg(
 	elements: PageOverviewElement[],
 	width: number,
 	height: number,
-	options: OverlayOptions = {},
+	options: OverlayOptions = {}
 ): Buffer {
 	const { showLabels = true, labelFontSize = 32 } = options;
 	const strokeWidth = 4;
@@ -73,7 +70,7 @@ export function buildPageOverviewOverlaySvg(
 
 			return rect + badge;
 		})
-		.join("\n");
+		.join('\n');
 
 	return Buffer.from(`
       <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -86,7 +83,7 @@ export async function compositePageOverviewOverlay(
 	screenshotBuffer: Buffer,
 	elements: PageOverviewElement[],
 	width: number,
-	height: number,
+	height: number
 ): Promise<Buffer> {
 	if (elements.length === 0) {
 		return screenshotBuffer;

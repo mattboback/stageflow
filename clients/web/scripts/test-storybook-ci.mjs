@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process";
-import { createServer } from "node:net";
-import process from "node:process";
-import { setTimeout as sleep } from "node:timers/promises";
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import process from 'node:process';
+import { setTimeout as sleep } from 'node:timers/promises';
 
-const HOST = "127.0.0.1";
+const HOST = '127.0.0.1';
 const SERVER_POLL_INTERVAL_MS = 200;
 const SERVER_READY_TIMEOUT_MS = 30_000;
 const SERVER_STOP_TIMEOUT_MS = 5_000;
@@ -12,12 +12,12 @@ function getFreePort(host) {
 	return new Promise((resolve, reject) => {
 		const probe = createServer();
 
-		probe.once("error", reject);
+		probe.once('error', reject);
 		probe.listen(0, host, () => {
 			const address = probe.address();
-			if (address === null || typeof address === "string") {
+			if (address === null || typeof address === 'string') {
 				probe.close(() => {
-					reject(new Error("Failed to determine a free localhost port"));
+					reject(new Error('Failed to determine a free localhost port'));
 				});
 				return;
 			}
@@ -37,12 +37,12 @@ function getFreePort(host) {
 function spawnProcess(command, args, env = {}) {
 	return spawn(command, args, {
 		env: { ...process.env, ...env },
-		stdio: "inherit",
+		stdio: 'inherit'
 	});
 }
 
 function spawnBun(args, env = {}) {
-	return spawnProcess("bun", args, env);
+	return spawnProcess('bun', args, env);
 }
 
 async function waitForServer(url, serverProcess) {
@@ -51,7 +51,7 @@ async function waitForServer(url, serverProcess) {
 	while (Date.now() < deadline) {
 		if (serverProcess.exitCode !== null) {
 			throw new Error(
-				`Storybook server exited before becoming ready (exit code ${serverProcess.exitCode})`,
+				`Storybook server exited before becoming ready (exit code ${serverProcess.exitCode})`
 			);
 		}
 
@@ -72,8 +72,8 @@ async function waitForServer(url, serverProcess) {
 
 function waitForExit(processHandle) {
 	return new Promise((resolve, reject) => {
-		processHandle.once("error", reject);
-		processHandle.once("exit", (code, signal) => {
+		processHandle.once('error', reject);
+		processHandle.once('exit', (code, signal) => {
 			resolve({ code: code ?? 1, signal });
 		});
 	});
@@ -93,11 +93,11 @@ async function stopServer(serverProcess) {
 		return;
 	}
 
-	serverProcess.kill("SIGTERM");
+	serverProcess.kill('SIGTERM');
 
 	const forceKillTimer = setTimeout(() => {
 		if (serverProcess.exitCode === null) {
-			serverProcess.kill("SIGKILL");
+			serverProcess.kill('SIGKILL');
 		}
 	}, SERVER_STOP_TIMEOUT_MS);
 
@@ -110,26 +110,20 @@ async function main() {
 	const storybookUrl = `http://${HOST}:${port}`;
 	console.log(`Using Storybook test URL: ${storybookUrl}`);
 
-	const serverProcess = spawnProcess(
-		"node",
-		["./scripts/serve-storybook-static.mjs"],
-		{
-			PORT: String(port),
-		},
-	);
+	const serverProcess = spawnProcess('node', ['./scripts/serve-storybook-static.mjs'], {
+		PORT: String(port)
+	});
 
 	try {
 		await waitForServer(storybookUrl, serverProcess);
 		const runnerCode = await runProcess(
-			spawnBun(["run", "test-storybook:runner:ci"], {
-				STORYBOOK_URL: storybookUrl,
-			}),
+			spawnBun(['run', 'test-storybook:runner:ci'], {
+				STORYBOOK_URL: storybookUrl
+			})
 		);
 
 		if (runnerCode !== 0) {
-			throw new Error(
-				`Storybook test runner failed with exit code ${runnerCode}`,
-			);
+			throw new Error(`Storybook test runner failed with exit code ${runnerCode}`);
 		}
 	} finally {
 		await stopServer(serverProcess);

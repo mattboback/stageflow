@@ -1,11 +1,11 @@
-import fs from "node:fs";
-import path from "node:path";
+import fs from 'node:fs';
+import path from 'node:path';
 
-const DEFAULT_PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright";
+const DEFAULT_PLAYWRIGHT_BROWSERS_PATH = '/ms-playwright';
 
 function sortChromiumDirsDesc(a: string, b: string): number {
-	const aNum = Number.parseInt(a.replace("chromium-", ""), 10);
-	const bNum = Number.parseInt(b.replace("chromium-", ""), 10);
+	const aNum = Number.parseInt(a.replace('chromium-', ''), 10);
+	const bNum = Number.parseInt(b.replace('chromium-', ''), 10);
 
 	if (Number.isFinite(aNum) && Number.isFinite(bNum)) {
 		return bNum - aNum;
@@ -26,8 +26,8 @@ export function resolvePlaywrightImageChromiumExecutablePath(): string | null {
 	const configured = process.env.PLAYWRIGHT_BROWSERS_PATH?.trim();
 
 	const roots = [
-		configured && configured !== "0" ? configured : null,
-		DEFAULT_PLAYWRIGHT_BROWSERS_PATH,
+		configured && configured !== '0' ? configured : null,
+		DEFAULT_PLAYWRIGHT_BROWSERS_PATH
 	].filter(Boolean) as string[];
 
 	for (const root of roots) {
@@ -46,12 +46,12 @@ export function resolvePlaywrightImageChromiumExecutablePath(): string | null {
 		chromiumDirs.sort(sortChromiumDirsDesc);
 
 		for (const dir of chromiumDirs) {
-			const candidate = path.join(root, dir, "chrome-linux", "chrome");
+			const candidate = path.join(root, dir, 'chrome-linux', 'chrome');
 			if (fs.existsSync(candidate)) {
 				return candidate;
 			}
 
-			const candidate64 = path.join(root, dir, "chrome-linux64", "chrome");
+			const candidate64 = path.join(root, dir, 'chrome-linux64', 'chrome');
 			if (fs.existsSync(candidate64)) {
 				return candidate64;
 			}

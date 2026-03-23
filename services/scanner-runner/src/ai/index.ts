@@ -1,5 +1,5 @@
-export { ActionDecider } from "./action-decider";
-export { PageAnalyzer } from "./page-analyzer";
+export { ActionDecider } from './action-decider';
+export { PageAnalyzer } from './page-analyzer';
 export type {
 	ActionDecision,
 	AgentAction,
@@ -14,6 +14,6 @@ export type {
 	VisionConfig,
 	VisionContent,
 	VisionMessage,
-	VisionResponse,
-} from "./types";
-export { VisionClient } from "./vision-client";
+	VisionResponse
+} from './types';
+export { VisionClient } from './vision-client';

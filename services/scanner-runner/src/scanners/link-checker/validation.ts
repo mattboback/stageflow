@@ -4,27 +4,27 @@
  * Pure functions for link checking and result processing.
  */
 
-import type { IssueSeverity } from "../../core/types";
-import type { LinkCheckResult } from "./types";
+import type { IssueSeverity } from '../../core/types';
+import type { LinkCheckResult } from './types';
 
 import {
 	BlockedTargetError,
 	shouldEnforceRuntimeTargetValidation,
-	validateRuntimeTargetURL,
-} from "../../core/target-validation";
+	validateRuntimeTargetURL
+} from '../../core/target-validation';
 
 const REQUEST_TIMEOUT = 10000;
-const USER_AGENT = "Stageflow-LinkChecker/1.0";
+const USER_AGENT = 'Stageflow-LinkChecker/1.0';
 const MAX_REDIRECTS = 10;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 async function fetchWithValidatedRedirects(
 	url: string,
-	method: "HEAD" | "GET",
-	signal: AbortSignal,
+	method: 'HEAD' | 'GET',
+	signal: AbortSignal
 ): Promise<{ response: Response; redirects: string[] }> {
 	let currentURL = url;
-	let currentMethod: "HEAD" | "GET" = method;
+	let currentMethod: 'HEAD' | 'GET' = method;
 	const redirects: string[] = [];
 
 	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
@@ -34,11 +34,11 @@ async function fetchWithValidatedRedirects(
 
 		const response = await fetch(currentURL, {
 			method: currentMethod,
-			redirect: "manual",
+			redirect: 'manual',
 			signal,
 			headers: {
-				"User-Agent": USER_AGENT,
-			},
+				'User-Agent': USER_AGENT
+			}
 		});
 
 		if (!REDIRECT_STATUSES.has(response.status)) {
@@ -47,7 +47,7 @@ async function fetchWithValidatedRedirects(
 
 		let locationHeader: string | null = null;
 		try {
-			locationHeader = response.headers.get("location");
+			locationHeader = response.headers.get('location');
 		} catch {
 			locationHeader = null;
 		}
@@ -59,8 +59,8 @@ async function fetchWithValidatedRedirects(
 		redirects.push(nextURL);
 		currentURL = nextURL;
 
-		if (response.status === 303 && currentMethod !== "GET") {
-			currentMethod = "GET";
+		if (response.status === 303 && currentMethod !== 'GET') {
+			currentMethod = 'GET';
 		}
 	}
 
@@ -70,9 +70,7 @@ async function fetchWithValidatedRedirects(
 /**
  * Groups link check results by HTTP status code.
  */
-export function groupByStatus(
-	links: LinkCheckResult[],
-): Record<string, LinkCheckResult[]> {
+export function groupByStatus(links: LinkCheckResult[]): Record<string, LinkCheckResult[]> {
 	const grouped: Record<string, LinkCheckResult[]> = {};
 	for (const link of links) {
 		const status = String(link.status ?? 0);
@@ -87,18 +85,18 @@ export function groupByStatus(
  */
 export function getSeverityForStatus(status: number): IssueSeverity {
 	if (status === 0) {
-		return "serious";
+		return 'serious';
 	}
 	if (status === 404) {
-		return "serious";
+		return 'serious';
 	}
 	if (status >= 500) {
-		return "critical";
+		return 'critical';
 	}
 	if (status >= 400) {
-		return "moderate";
+		return 'moderate';
 	}
-	return "minor";
+	return 'minor';
 }
 
 /**
@@ -115,8 +113,8 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 		try {
 			const { response, redirects } = await fetchWithValidatedRedirects(
 				url,
-				"HEAD",
-				controller.signal,
+				'HEAD',
+				controller.signal
 			);
 
 			return {
@@ -124,7 +122,7 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 				status: response.status,
 				error: null,
 				redirects,
-				responseTime: Date.now() - startTime,
+				responseTime: Date.now() - startTime
 			};
 		} finally {
 			clearTimeout(timeoutId);
@@ -136,7 +134,7 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 				status: null,
 				error: headError.message,
 				redirects: [],
-				responseTime: Date.now() - startTime,
+				responseTime: Date.now() - startTime
 			};
 		}
 
@@ -149,8 +147,8 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 			try {
 				const { response, redirects } = await fetchWithValidatedRedirects(
 					url,
-					"GET",
-					controller.signal,
+					'GET',
+					controller.signal
 				);
 
 				return {
@@ -158,7 +156,7 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 					status: response.status,
 					error: null,
 					redirects,
-					responseTime: Date.now() - startTime,
+					responseTime: Date.now() - startTime
 				};
 			} finally {
 				clearTimeout(timeoutId);
@@ -167,10 +165,9 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 			return {
 				url,
 				status: null,
-				error:
-					getError instanceof Error ? getError.message : "Connection failed",
+				error: getError instanceof Error ? getError.message : 'Connection failed',
 				redirects: [],
-				responseTime: Date.now() - startTime,
+				responseTime: Date.now() - startTime
 			};
 		}
 	}

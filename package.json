@@ -1,7 +1,8 @@
 {
-	"name": "stageflow-precommit-tooling",
+	"name": "stageflow-workspace",
 	"private": true,
 	"version": "0.0.0",
+	"description": "Workspace-level scripts for the StageFlow monorepo",
 	"packageManager": "bun@1.3.8",
 	"scripts": {
 		"precommit:web": "cd clients/web && bun run check && bun run test",

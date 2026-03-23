@@ -15,13 +15,13 @@ import (
 
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
-		rawScanners string
-		screenshot  bool
+		rawScanners  string
+		screenshot   bool
 		allowPrivate bool
-		timeout     time.Duration
-		noStream    bool
-		projectSlug string
-		reportOpts  reportCommandOptions
+		timeout      time.Duration
+		noStream     bool
+		projectSlug  string
+		reportOpts   reportCommandOptions
 	)
 
 	cmd := &cobra.Command{
@@ -114,7 +114,14 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func runRemoteProjectScan(cmd *cobra.Command, root *rootOptions, slug string, timeout time.Duration, noStream bool, reportOpts reportCommandOptions) error {
+func runRemoteProjectScan(
+	cmd *cobra.Command,
+	root *rootOptions,
+	slug string,
+	timeout time.Duration,
+	noStream bool,
+	reportOpts reportCommandOptions,
+) error {
 	client := NewClient(root.apiURL, root.apiKey, nil)
 
 	opCtx, cancel := context.WithTimeout(cmd.Context(), timeout)
@@ -132,26 +139,9 @@ func runRemoteProjectScan(cmd *cobra.Command, root *rootOptions, slug string, ti
 
 	fmt.Fprintf(cmd.ErrOrStderr(), "Project scan submitted: %s (job %s)\nWaiting for completion...\n", slug, jobID)
 
-	if err := waitJobState(opCtx, client, jobID, cmd.ErrOrStderr(), noStream); err != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("wait for completion: %w", err)}
-	}
-
-	status, err := fetchJobStatus(opCtx, client, jobID)
+	status, doc, err := waitForCompletedJobReport(opCtx, client, jobID, cmd.ErrOrStderr(), noStream)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch job status: %w", err)}
-	}
-
-	if status.State != jobStateDone {
-		if status.State == jobStateFailed {
-			return exitCodeError{Code: 2, Err: fmt.Errorf("job failed: %s", status.Error)}
-		}
-
-		return exitCodeError{Code: 2, Err: fmt.Errorf("job finished with non-DONE state: %s", status.State)}
-	}
-
-	doc, err := fetchReport(opCtx, client, jobID)
-	if err != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch report: %w", err)}
+		return exitCodeError{Code: 2, Err: err}
 	}
 
 	format, err := root.outputFormat()
@@ -159,40 +149,93 @@ func runRemoteProjectScan(cmd *cobra.Command, root *rootOptions, slug string, ti
 		return exitCodeError{Code: 2, Err: err}
 	}
 
-	if renderErr := renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format)); renderErr != nil {
-		return wrapRenderError(renderErr)
+	err = renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format))
+	if err != nil {
+		return wrapRenderError(err)
 	}
 
-	diffResult, diffErr := client.fetchJobDiff(opCtx, jobID)
-	if diffErr != nil {
-		if strings.Contains(diffErr.Error(), "404") || strings.Contains(diffErr.Error(), "No baseline") {
-			fmt.Fprintf(cmd.ErrOrStderr(), "\nNo baseline set for project %q.\n", slug)
-			fmt.Fprintf(cmd.ErrOrStderr(), "Promote this scan: stageflow project promote %s --job-id %s\n", slug, jobID)
+	return renderProjectDiff(opCtx, cmd, client, slug, jobID, format)
+}
 
-			return nil
+func waitForCompletedJobReport(
+	ctx context.Context,
+	client *Client,
+	jobID string,
+	progressOut io.Writer,
+	noStream bool,
+) (JobStatus, report.UnifiedReportV2, error) {
+	err := waitJobState(ctx, client, jobID, progressOut, noStream)
+	if err != nil {
+		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("wait for completion: %w", err)
+	}
+
+	status, err := fetchJobStatus(ctx, client, jobID)
+	if err != nil {
+		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch job status: %w", err)
+	}
+
+	if status.State != jobStateDone {
+		if status.State == jobStateFailed {
+			return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
 		}
 
-		if strings.Contains(diffErr.Error(), "Cannot diff against self") {
-			fmt.Fprintf(cmd.ErrOrStderr(), "\nThis scan is the current baseline. Run a new scan to see a diff.\n")
+		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job finished with non-DONE state: %s", status.State)
+	}
 
-			return nil
-		}
+	doc, err := fetchReport(ctx, client, jobID)
+	if err != nil {
+		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch report: %w", err)
+	}
 
-		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch diff: %w", diffErr)}
+	return status, doc, nil
+}
+
+func renderProjectDiff(
+	ctx context.Context,
+	cmd *cobra.Command,
+	client *Client,
+	slug, jobID string,
+	format outputFormat,
+) error {
+	diffResult, err := client.fetchJobDiff(ctx, jobID)
+	if err != nil {
+		return handleProjectDiffError(cmd.ErrOrStderr(), slug, jobID, err)
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout())
 
 	d := diffFromResult(diffResult, "", "")
-	if err := renderDiff(cmd.OutOrStdout(), d, format); err != nil {
+
+	err = renderDiff(cmd.OutOrStdout(), d, format)
+	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
 	}
 
-	if (diffResult.Delta.ScoreDelta != nil && *diffResult.Delta.ScoreDelta < 0) || diffResult.Delta.NewIssues > 0 {
+	if isDiffRegressed(d) {
 		return exitCodeError{Code: 1}
 	}
 
 	return nil
+}
+
+func handleProjectDiffError(out io.Writer, slug, jobID string, err error) error {
+	msg := err.Error()
+
+	switch {
+	case strings.Contains(msg, "404"), strings.Contains(msg, "No baseline"):
+		fmt.Fprintln(out)
+		fmt.Fprintf(out, "No baseline set for project %q.\n", slug)
+		fmt.Fprintf(out, "Promote this scan: stageflow project promote %s --job-id %s\n", slug, jobID)
+
+		return nil
+	case strings.Contains(msg, "Cannot diff against self"):
+		fmt.Fprintln(out)
+		fmt.Fprintln(out, "This scan is the current baseline. Run a new scan to see a diff.")
+
+		return nil
+	default:
+		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch diff: %w", err)}
+	}
 }
 
 func runScanJob(
@@ -219,29 +262,7 @@ func runScanJob(
 
 	fmt.Fprintf(progressOut, "Job submitted: %s\nWaiting for completion...\n", jobID)
 
-	if err := waitJobState(opCtx, client, jobID, progressOut, noStream); err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("wait for completion: %w", err)
-	}
-
-	status, err := fetchJobStatus(opCtx, client, jobID)
-	if err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch job status: %w", err)
-	}
-
-	if status.State != jobStateDone {
-		if status.State == jobStateFailed {
-			return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
-		}
-
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job finished with non-DONE state: %s", status.State)
-	}
-
-	doc, err := fetchReport(opCtx, client, jobID)
-	if err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch report: %w", err)
-	}
-
-	return status, doc, nil
+	return waitForCompletedJobReport(opCtx, client, jobID, progressOut, noStream)
 }
 
 func enhanceSubmitJobError(err error, req SubmitJobRequest) error {

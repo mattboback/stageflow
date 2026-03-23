@@ -4,12 +4,12 @@ import "time"
 
 // Project represents a registered scan target with baseline tracking.
 type Project struct {
-	ID            string   `json:"id"`
-	Slug          string   `json:"slug"`
-	Name          string   `json:"name"`
-	URLs          []string `json:"urls"`
-	Scanners      []string `json:"scanners,omitempty"`
-	BaselineJobID string   `json:"baseline_job_id,omitempty"`
+	ID            string    `json:"id"`
+	Slug          string    `json:"slug"`
+	Name          string    `json:"name"`
+	URLs          []string  `json:"urls"`
+	Scanners      []string  `json:"scanners,omitempty"`
+	BaselineJobID string    `json:"baseline_job_id,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }

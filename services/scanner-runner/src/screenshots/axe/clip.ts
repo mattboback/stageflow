@@ -1,4 +1,4 @@
-import type { AxeScreenshotConfig, ElementBounds } from "./types";
+import type { AxeScreenshotConfig, ElementBounds } from './types';
 
 export function computeUnionClip(
 	capturedBoxes: {
@@ -6,7 +6,7 @@ export function computeUnionClip(
 		selector: string;
 	}[],
 	viewport: { width: number; height: number },
-	cfg: AxeScreenshotConfig,
+	cfg: AxeScreenshotConfig
 ): {
 	clip: { x: number; y: number; width: number; height: number };
 	elementBounds: ElementBounds[];
@@ -52,39 +52,31 @@ export function computeUnionClip(
 
 	const clipX = Math.max(0, minX - pad - contextX);
 	const clipY = Math.max(0, minY - pad - contextY);
-	const clipW = Math.min(
-		viewport.width - clipX,
-		unionWidth + (pad + contextX) * 2,
-	);
-	const clipH = Math.min(
-		viewport.height - clipY,
-		unionHeight + (pad + contextY) * 2,
-	);
+	const clipW = Math.min(viewport.width - clipX, unionWidth + (pad + contextX) * 2);
+	const clipH = Math.min(viewport.height - clipY, unionHeight + (pad + contextY) * 2);
 
 	if (clipW <= 2 || clipH <= 2) {
 		return null;
 	}
 
-	const elementBounds: ElementBounds[] = capturedBoxes.map(
-		({ box, selector }) => ({
-			x: Math.round(box.x - clipX),
-			y: Math.round(box.y - clipY),
-			width: Math.round(box.width),
-			height: Math.round(box.height),
-			selector,
-		}),
-	);
+	const elementBounds: ElementBounds[] = capturedBoxes.map(({ box, selector }) => ({
+		x: Math.round(box.x - clipX),
+		y: Math.round(box.y - clipY),
+		width: Math.round(box.width),
+		height: Math.round(box.height),
+		selector
+	}));
 
 	return {
 		clip: { x: clipX, y: clipY, width: clipW, height: clipH },
-		elementBounds,
+		elementBounds
 	};
 }
 
 export function computeSingleTargetClip(
 	box: { x: number; y: number; width: number; height: number },
 	viewport: { width: number; height: number },
-	cfg: AxeScreenshotConfig,
+	cfg: AxeScreenshotConfig
 ): { x: number; y: number; width: number; height: number } | null {
 	// Use most of the viewport for better context.
 	const maxViewportRatio = 0.92;
@@ -98,10 +90,7 @@ export function computeSingleTargetClip(
 
 	// Clamp to a large fraction of the viewport to ensure page context is visible.
 	const width = Math.min(desiredW + expandW, viewport.width * maxViewportRatio);
-	const height = Math.min(
-		desiredH + expandH,
-		viewport.height * maxViewportRatio,
-	);
+	const height = Math.min(desiredH + expandH, viewport.height * maxViewportRatio);
 	if (width <= 2 || height <= 2) {
 		return null;
 	}
@@ -118,11 +107,8 @@ export function computeSingleTargetClip(
 export function computeElementClip(
 	box: { x: number; y: number; width: number; height: number },
 	viewport: { width: number; height: number },
-	cfg: Pick<
-		AxeScreenshotConfig,
-		"elementContextMultiplier" | "elementContextMinSize"
-	>,
-	borderPadding = 20,
+	cfg: Pick<AxeScreenshotConfig, 'elementContextMultiplier' | 'elementContextMinSize'>,
+	borderPadding = 20
 ): { x: number; y: number; width: number; height: number } | null {
 	// Keep a small border around the highlighted element.
 	const pad = Math.max(0, borderPadding);
@@ -140,9 +126,7 @@ export function computeElementClip(
 	const desiredHeight = Math.max(minSize, box.height * multiplier + pad * 2);
 
 	const width = Math.round(Math.min(desiredWidth, maxWidth || viewport.width));
-	const height = Math.round(
-		Math.min(desiredHeight, maxHeight || viewport.height),
-	);
+	const height = Math.round(Math.min(desiredHeight, maxHeight || viewport.height));
 
 	if (width <= 2 || height <= 2) {
 		return null;
@@ -152,14 +136,8 @@ export function computeElementClip(
 	const cx = box.x + box.width / 2;
 	const cy = box.y + box.height / 2;
 
-	const x = Math.max(
-		0,
-		Math.min(Math.round(cx - width / 2), viewport.width - width),
-	);
-	const y = Math.max(
-		0,
-		Math.min(Math.round(cy - height / 2), viewport.height - height),
-	);
+	const x = Math.max(0, Math.min(Math.round(cx - width / 2), viewport.width - width));
+	const y = Math.max(0, Math.min(Math.round(cy - height / 2), viewport.height - height));
 
 	return { x, y, width, height };
 }

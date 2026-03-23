@@ -1,8 +1,8 @@
-declare module "lighthouse" {
+declare module 'lighthouse' {
 	export type ReportOutput = string | string[];
 
 	export interface LighthouseFlags {
-		logLevel?: "silent" | "error" | "warn" | "info" | "verbose";
+		logLevel?: 'silent' | 'error' | 'warn' | 'info' | 'verbose';
 		output?: ReportOutput;
 		port?: number;
 		onlyCategories?: string[] | string;
@@ -43,7 +43,7 @@ declare module "lighthouse" {
 	const lighthouse: (
 		url: string,
 		flags?: LighthouseFlags,
-		config?: LighthouseConfig,
+		config?: LighthouseConfig
 	) => Promise<RunnerResult>;
 
 	export = lighthouse;

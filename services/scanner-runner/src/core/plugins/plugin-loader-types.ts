@@ -1,5 +1,5 @@
-import type { ScannerManifest } from "../manifest";
-import type { ScannerBase } from "../scanner-base";
+import type { ScannerManifest } from '../manifest';
+import type { ScannerBase } from '../scanner-base';
 
 export interface ScannerPlugin {
 	manifest: ScannerManifest;
@@ -38,7 +38,7 @@ export interface PluginLoadResult {
 
 export const DEFAULT_PLUGIN_LOADER_CONFIG: PluginLoaderConfig = {
 	searchPaths: [],
-	manifestPatterns: ["manifest.json", "scanner.json"],
+	manifestPatterns: ['manifest.json', 'scanner.json'],
 	strictValidation: true,
-	verbose: false,
+	verbose: false
 };

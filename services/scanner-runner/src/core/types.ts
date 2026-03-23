@@ -2,35 +2,30 @@
  * Core type definitions for the scan worker (scanner-runner).
  */
 
-import type { BrowserContext, Page } from "playwright";
+import type { BrowserContext, Page } from 'playwright';
 
-export type WaitStrategyType =
-	| "load"
-	| "domcontentloaded"
-	| "networkidle"
-	| "selector"
-	| "timeout";
+export type WaitStrategyType = 'load' | 'domcontentloaded' | 'networkidle' | 'selector' | 'timeout';
 
 export interface WaitStrategyLoad {
-	type: "load";
+	type: 'load';
 }
 
 export interface WaitStrategyDOMContentLoaded {
-	type: "domcontentloaded";
+	type: 'domcontentloaded';
 }
 
 export interface WaitStrategyNetworkIdle {
-	type: "networkidle";
+	type: 'networkidle';
 }
 
 export interface WaitStrategySelector {
-	type: "selector";
+	type: 'selector';
 	selector: string;
 	timeout?: number;
 }
 
 export interface WaitStrategyTimeout {
-	type: "timeout";
+	type: 'timeout';
 	ms: number;
 }
 
@@ -41,57 +36,50 @@ export type WaitStrategy =
 	| WaitStrategySelector
 	| WaitStrategyTimeout;
 
-export const DEFAULT_WAIT_STRATEGY: WaitStrategy = { type: "load" };
+export const DEFAULT_WAIT_STRATEGY: WaitStrategy = { type: 'load' };
 
-export type ActionType =
-	| "click"
-	| "fill"
-	| "select"
-	| "hover"
-	| "wait"
-	| "scroll"
-	| "keyboard";
+export type ActionType = 'click' | 'fill' | 'select' | 'hover' | 'wait' | 'scroll' | 'keyboard';
 
 export interface ActionClick {
-	type: "click";
+	type: 'click';
 	selector: string;
 	timeout?: number;
 }
 
 export interface ActionFill {
-	type: "fill";
+	type: 'fill';
 	selector: string;
 	value: string;
 	timeout?: number;
 }
 
 export interface ActionSelect {
-	type: "select";
+	type: 'select';
 	selector: string;
 	value: string;
 	timeout?: number;
 }
 
 export interface ActionHover {
-	type: "hover";
+	type: 'hover';
 	selector: string;
 	timeout?: number;
 }
 
 export interface ActionWait {
-	type: "wait";
+	type: 'wait';
 	ms: number;
 }
 
 export interface ActionScroll {
-	type: "scroll";
+	type: 'scroll';
 	selector?: string;
-	direction?: "up" | "down";
+	direction?: 'up' | 'down';
 	pixels?: number;
 }
 
 export interface ActionKeyboard {
-	type: "keyboard";
+	type: 'keyboard';
 	key: string;
 }
 
@@ -104,7 +92,7 @@ export type PreScanAction =
 	| ActionScroll
 	| ActionKeyboard;
 
-export type ProvenanceMode = "static" | "spa" | "live";
+export type ProvenanceMode = 'static' | 'spa' | 'live';
 
 export interface PageEntry {
 	id: string;
@@ -170,12 +158,7 @@ export interface ScannerConfig {
 	options?: Record<string, unknown>;
 }
 
-export type IssueSeverity =
-	| "critical"
-	| "serious"
-	| "moderate"
-	| "minor"
-	| "info";
+export type IssueSeverity = 'critical' | 'serious' | 'moderate' | 'minor' | 'info';
 
 export interface IssueLocation {
 	selector?: string;
@@ -214,7 +197,7 @@ export interface PageScanResult {
 }
 
 export interface LighthouseCategorySummary {
-	id: "performance" | "accessibility" | "best-practices" | "seo" | "pwa";
+	id: 'performance' | 'accessibility' | 'best-practices' | 'seo' | 'pwa';
 	title: string;
 	avgScore: number;
 }
@@ -267,11 +250,7 @@ export interface ScannerLogger {
 }
 
 export interface ScanEventPublisher {
-	publishPageCompleted(
-		result: PageScanResult,
-		index: number,
-		total: number,
-	): Promise<void>;
+	publishPageCompleted(result: PageScanResult, index: number, total: number): Promise<void>;
 	publishScanCompleted(
 		results: ScanResults,
 		timing?: ScanTiming,
@@ -279,12 +258,12 @@ export interface ScanEventPublisher {
 			stageLogPath?: string;
 			recipePath?: string;
 			reportPath?: string;
-		},
+		}
 	): Promise<void>;
 	publishScanFailed(
 		error: string,
 		details?: string,
-		artifacts?: { stageLogPath?: string; recipePath?: string },
+		artifacts?: { stageLogPath?: string; recipePath?: string }
 	): Promise<void>;
 	close(): Promise<void>;
 }
@@ -300,23 +279,9 @@ export interface ScanTiming {
 
 export interface StorageProvider {
 	ensureBucket(bucket: string): Promise<void>;
-	upload(
-		bucket: string,
-		key: string,
-		filePath: string,
-		contentType?: string,
-	): Promise<void>;
-	uploadBuffer(
-		bucket: string,
-		key: string,
-		data: Buffer,
-		contentType?: string,
-	): Promise<void>;
-	uploadDirectory(
-		bucket: string,
-		prefix: string,
-		localDir: string,
-	): Promise<number>;
+	upload(bucket: string, key: string, filePath: string, contentType?: string): Promise<void>;
+	uploadBuffer(bucket: string, key: string, data: Buffer, contentType?: string): Promise<void>;
+	uploadDirectory(bucket: string, prefix: string, localDir: string): Promise<number>;
 	download(bucket: string, key: string, destPath: string): Promise<void>;
 	exists(bucket: string, key: string): Promise<boolean>;
 }
@@ -328,11 +293,11 @@ export interface ScannerMetadata {
 }
 
 export type ScannerCategory =
-	| "accessibility"
-	| "performance"
-	| "security"
-	| "seo"
-	| "quality"
-	| "custom";
+	| 'accessibility'
+	| 'performance'
+	| 'security'
+	| 'seo'
+	| 'quality'
+	| 'custom';
 
-export type OutputFormat = "json" | "html" | "csv";
+export type OutputFormat = 'json' | 'html' | 'csv';

@@ -1,26 +1,20 @@
 <script lang="ts">
-import { page } from "$app/state";
-import { Button, Container, Panel } from "$lib/components/ui";
-import { SITE } from "$lib/config/site";
-import {
-	AlertTriangle,
-	ArrowLeft,
-	FileSearch,
-	Play,
-	RotateCcw,
-} from "lucide-svelte";
+	import { page } from '$app/state';
+	import { Button, Container, Panel } from '$lib/components/ui';
+	import { SITE } from '$lib/config/site';
+	import { AlertTriangle, ArrowLeft, FileSearch, Play, RotateCcw } from 'lucide-svelte';
 
-const status = $derived(page.status);
-const message = $derived(page.error?.message ?? "An unexpected error occurred");
-const scanId = $derived(page.params.id ?? "unknown");
+	const status = $derived(page.status);
+	const message = $derived(page.error?.message ?? 'An unexpected error occurred');
+	const scanId = $derived(page.params.id ?? 'unknown');
 
-const isNotFound = $derived(status === 404);
-const title = $derived(isNotFound ? "Scan Not Found" : "Scan Error");
-const description = $derived(
-	isNotFound
-		? `We couldn't find a scan with ID "${scanId}". It may have expired or never existed.`
-		: "Something went wrong while loading your scan results.",
-);
+	const isNotFound = $derived(status === 404);
+	const title = $derived(isNotFound ? 'Scan Not Found' : 'Scan Error');
+	const description = $derived(
+		isNotFound
+			? `We couldn't find a scan with ID "${scanId}". It may have expired or never existed.`
+			: 'Something went wrong while loading your scan results.'
+	);
 </script>
 
 <svelte:head>

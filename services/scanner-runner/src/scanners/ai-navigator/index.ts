@@ -1,31 +1,28 @@
-import path from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import path from 'node:path';
 
-import type { Issue, PageScanResult, ScanContext } from "../../core/types";
+import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
 import {
 	ActionDecider,
 	type AgentResult,
 	PageAnalyzer,
 	VisionClient,
-	type VisionConfig,
-} from "../../ai";
-import { ScannerBase } from "../../core/scanner-base";
-import {
-	type ScreenshotService,
-	createScreenshotService,
-} from "../../core/screenshots";
-import { runAiNavigatorAgent } from "./agent";
-import { type AiNavigatorOptions, parseAiNavigatorOptions } from "./options";
-import { uploadAiNavigatorTraces } from "./trace-uploader";
+	type VisionConfig
+} from '../../ai';
+import { ScannerBase } from '../../core/scanner-base';
+import { type ScreenshotService, createScreenshotService } from '../../core/screenshots';
+import { runAiNavigatorAgent } from './agent';
+import { type AiNavigatorOptions, parseAiNavigatorOptions } from './options';
+import { uploadAiNavigatorTraces } from './trace-uploader';
 
-const SCANNER_VERSION = "1.0.0";
+const SCANNER_VERSION = '1.0.0';
 
 export class AiNavigatorScanner extends ScannerBase {
 	readonly metadata = {
-		name: "ai-navigator",
+		name: 'ai-navigator',
 		version: SCANNER_VERSION,
-		description: "AI-powered navigation agent using vision models",
+		description: 'AI-powered navigation agent using vision models'
 	};
 
 	private screenshotService!: ScreenshotService;
@@ -42,7 +39,7 @@ export class AiNavigatorScanner extends ScannerBase {
 
 		const apiKey = process.env.OPENROUTER_API_KEY;
 		if (!apiKey) {
-			throw new Error("OPENROUTER_API_KEY must be set for ai-navigator");
+			throw new Error('OPENROUTER_API_KEY must be set for ai-navigator');
 		}
 
 		const appTitle = process.env.OPENROUTER_APP_TITLE?.trim();
@@ -50,10 +47,10 @@ export class AiNavigatorScanner extends ScannerBase {
 
 		const visionConfig: VisionConfig = {
 			...options.vision,
-			provider: "openrouter",
+			provider: 'openrouter',
 			apiKey,
-			appTitle: appTitle ?? undefined,
-			appReferer: appReferer ?? undefined,
+			...(appTitle !== undefined ? { appTitle } : {}),
+			...(appReferer !== undefined ? { appReferer } : {})
 		};
 
 		this.visionClient = new VisionClient(visionConfig);
@@ -66,15 +63,15 @@ export class AiNavigatorScanner extends ScannerBase {
 		const startedAt = new Date().toISOString();
 		const startedMs = Date.now();
 
-		const tracePath = path.join(context.resultsDir, "ai-trace.json");
-		const screenshotsDir = path.join(context.resultsDir, "screenshots");
+		const tracePath = path.join(context.resultsDir, 'ai-trace.json');
+		const screenshotsDir = path.join(context.resultsDir, 'screenshots');
 		await fs.ensureDir(screenshotsDir);
 
 		const goal = this.options.goal;
 
 		const browserManager = this.browserManager;
 		if (!browserManager) {
-			throw new Error("Browser manager not initialized");
+			throw new Error('Browser manager not initialized');
 		}
 
 		const agentResult = await runAiNavigatorAgent(context.page, goal, {
@@ -83,7 +80,7 @@ export class AiNavigatorScanner extends ScannerBase {
 			actionDecider: this.actionDecider,
 			screenshotService: this.screenshotService,
 			logger: this.logger,
-			preScanExecutor: browserManager,
+			preScanExecutor: browserManager
 		});
 
 		await fs.writeJSON(tracePath, agentResult, { spaces: 2 });
@@ -104,10 +101,8 @@ export class AiNavigatorScanner extends ScannerBase {
 			durationMs,
 			startedAt,
 			finishedAt,
-			error: agentResult.success
-				? undefined
-				: (agentResult.stuckReason ?? "Goal not achieved"),
 			rawResults: agentResult,
+			...(!agentResult.success ? { error: agentResult.stuckReason ?? 'Goal not achieved' } : {})
 		};
 	}
 
@@ -122,43 +117,43 @@ export class AiNavigatorScanner extends ScannerBase {
 			bucket,
 			prefix,
 			resultsDir: this.config.resultsDir,
-			logger: this.logger,
+			logger: this.logger
 		});
 	}
 
 	private buildSuccessIssue(result: AgentResult): Issue {
 		return {
-			id: "flow-goal-achieved",
+			id: 'flow-goal-achieved',
 			scanner: this.metadata.name,
-			severity: "info",
-			category: "flow",
-			title: "Flow goal achieved",
-			description: "Agent successfully completed the objective",
+			severity: 'info',
+			category: 'flow',
+			title: 'Flow goal achieved',
+			description: 'Agent successfully completed the objective',
 			metadata: {
 				objective: result.goal.objective,
 				totalSteps: result.totalSteps,
 				startUrl: result.startUrl,
 				finalUrl: result.finalUrl,
-				trace: result,
-			},
+				trace: result
+			}
 		};
 	}
 
 	private buildFailureIssue(result: AgentResult): Issue {
 		return {
-			id: "flow-goal-not-achieved",
+			id: 'flow-goal-not-achieved',
 			scanner: this.metadata.name,
-			severity: "critical",
-			category: "flow",
-			title: "Flow goal not achieved",
-			description: result.stuckReason ?? "Agent reported failure",
+			severity: 'critical',
+			category: 'flow',
+			title: 'Flow goal not achieved',
+			description: result.stuckReason ?? 'Agent reported failure',
 			metadata: {
 				objective: result.goal.objective,
 				totalSteps: result.totalSteps,
 				startUrl: result.startUrl,
 				finalUrl: result.finalUrl,
-				trace: result,
-			},
+				trace: result
+			}
 		};
 	}
 }

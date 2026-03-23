@@ -1,18 +1,14 @@
 <script lang="ts">
-import type { HTMLAttributes } from "svelte/elements";
+	import type { HTMLAttributes } from 'svelte/elements';
 
-import { cn } from "$lib/utils";
+	import { cn } from '$lib/utils';
 
-interface Props extends HTMLAttributes<HTMLDivElement> {
-	orientation?: "horizontal" | "vertical";
-	class?: string;
-}
+	interface Props extends HTMLAttributes<HTMLDivElement> {
+		orientation?: 'horizontal' | 'vertical';
+		class?: string;
+	}
 
-let {
-	orientation = "horizontal",
-	class: className,
-	...rest
-}: Props = $props();
+	let { orientation = 'horizontal', class: className, ...rest }: Props = $props();
 </script>
 
 <div

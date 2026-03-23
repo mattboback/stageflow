@@ -1,19 +1,19 @@
 <script lang="ts">
-import { page } from "$app/state";
-import { Button, Container, Panel } from "$lib/components/ui";
-import { SITE } from "$lib/config/site";
-import { AlertTriangle, Home, RotateCcw } from "lucide-svelte";
+	import { page } from '$app/state';
+	import { Button, Container, Panel } from '$lib/components/ui';
+	import { SITE } from '$lib/config/site';
+	import { AlertTriangle, Home, RotateCcw } from 'lucide-svelte';
 
-const status = $derived(page.status);
-const message = $derived(page.error?.message ?? "An unexpected error occurred");
+	const status = $derived(page.status);
+	const message = $derived(page.error?.message ?? 'An unexpected error occurred');
 
-const isNotFound = $derived(status === 404);
-const title = $derived(isNotFound ? "Page Not Found" : "Something Went Wrong");
-const description = $derived(
-	isNotFound
-		? "The page you're looking for doesn't exist or has been moved."
-		: "We encountered an error while processing your request.",
-);
+	const isNotFound = $derived(status === 404);
+	const title = $derived(isNotFound ? 'Page Not Found' : 'Something Went Wrong');
+	const description = $derived(
+		isNotFound
+			? "The page you're looking for doesn't exist or has been moved."
+			: 'We encountered an error while processing your request.'
+	);
 </script>
 
 <svelte:head>
@@ -24,7 +24,9 @@ const description = $derived(
 <div class="bg-paper flex min-h-screen items-center justify-center py-16">
 	<Container class="max-w-lg text-center">
 		<Panel padding="xl" rounded="xl" class="shadow-md">
-			<div class="bg-accent/10 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full">
+			<div
+				class="bg-accent/10 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+			>
 				<AlertTriangle class="text-accent h-8 w-8" />
 			</div>
 

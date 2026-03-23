@@ -1,24 +1,24 @@
 <script lang="ts">
-import type { ScanResult } from "$lib/types/scan";
+	import type { ScanResult } from '$lib/types/scan';
 
-import OpenLinkButton from "./OpenLinkButton.svelte";
+	import OpenLinkButton from './OpenLinkButton.svelte';
 
-type Artifacts = NonNullable<ScanResult["artifacts"]>;
+	type Artifacts = NonNullable<ScanResult['artifacts']>;
 
-interface Props {
-	artifacts: Artifacts;
-}
+	interface Props {
+		artifacts: Artifacts;
+	}
 
-let { artifacts }: Props = $props();
+	let { artifacts }: Props = $props();
 
-const hasLogs = $derived(
-	Boolean(
-		artifacts.scan_stage_log ||
+	const hasLogs = $derived(
+		Boolean(
+			artifacts.scan_stage_log ||
 			artifacts.scan_recipe ||
 			artifacts.extraction_stage_log ||
-			artifacts.extraction_recipe,
-	),
-);
+			artifacts.extraction_recipe
+		)
+	);
 </script>
 
 {#if hasLogs}

@@ -1,4 +1,4 @@
-export type WcagConformanceLevel = "A" | "AA" | "AAA" | null;
+export type WcagConformanceLevel = 'A' | 'AA' | 'AAA' | null;
 
 /**
  * Normalize various wcag tag formats to a criterion number (e.g. "1.4.3").
@@ -33,7 +33,7 @@ export function getWcagUnderstandingUrl(criterion: string): string {
 
 export function extractWcagCriteria(
 	tags: string[] | undefined,
-	wcagRef: string | undefined,
+	wcagRef: string | undefined
 ): string[] {
 	const criteria: string[] = [];
 	const addCriterion = (criterion: string) => {
@@ -73,7 +73,7 @@ function parseLevelFromWcagRef(wcagRef: string): WcagConformanceLevel {
 	const match = wcagRef.match(/\blevel\s*(AAA|AA|A)\b/i);
 	if (!match) return null;
 	const normalized = match[1].toUpperCase();
-	if (normalized === "A" || normalized === "AA" || normalized === "AAA") {
+	if (normalized === 'A' || normalized === 'AA' || normalized === 'AAA') {
 		return normalized;
 	}
 	return null;
@@ -82,23 +82,16 @@ function parseLevelFromWcagRef(wcagRef: string): WcagConformanceLevel {
 function parseLevelFromTags(tags: string[]): WcagConformanceLevel {
 	const tagSet = new Set(tags.map((tag) => tag.toLowerCase()));
 
-	if (
-		tagSet.has("wcag2aaa") ||
-		tagSet.has("wcag21aaa") ||
-		tagSet.has("wcag22aaa")
-	)
-		return "AAA";
-	if (tagSet.has("wcag2aa") || tagSet.has("wcag21aa") || tagSet.has("wcag22aa"))
-		return "AA";
-	if (tagSet.has("wcag2a") || tagSet.has("wcag21a") || tagSet.has("wcag22a"))
-		return "A";
+	if (tagSet.has('wcag2aaa') || tagSet.has('wcag21aaa') || tagSet.has('wcag22aaa')) return 'AAA';
+	if (tagSet.has('wcag2aa') || tagSet.has('wcag21aa') || tagSet.has('wcag22aa')) return 'AA';
+	if (tagSet.has('wcag2a') || tagSet.has('wcag21a') || tagSet.has('wcag22a')) return 'A';
 
 	return null;
 }
 
 export function getIssueWcagConformanceLevel(
 	tags: string[] | undefined,
-	wcagRef: string | undefined,
+	wcagRef: string | undefined
 ): WcagConformanceLevel {
 	const fromTags = parseLevelFromTags(tags ?? []);
 	if (fromTags) return fromTags;

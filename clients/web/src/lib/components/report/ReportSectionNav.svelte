@@ -1,91 +1,87 @@
 <script lang="ts">
-import type { ReportAudience } from "$lib/types/report-audience";
-import type { UnifiedReport } from "$lib/types/unified-report";
+	import type { ReportAudience } from '$lib/types/report-audience';
+	import type { UnifiedReport } from '$lib/types/unified-report';
 
-import { Panel } from "$lib/components/ui";
-import { cn } from "$lib/utils";
+	import { Panel } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
 
-interface Section {
-	id: string;
-	label: string;
-	shortLabel?: string;
-	count?: number;
-}
+	interface Section {
+		id: string;
+		label: string;
+		shortLabel?: string;
+		count?: number;
+	}
 
-interface Props {
-	section: string;
-	report: UnifiedReport;
-	audience?: ReportAudience;
-	onSectionChange: (sectionId: string) => void;
-	onAudienceChange?: (audience: ReportAudience) => void;
-}
+	interface Props {
+		section: string;
+		report: UnifiedReport;
+		audience?: ReportAudience;
+		onSectionChange: (sectionId: string) => void;
+		onAudienceChange?: (audience: ReportAudience) => void;
+	}
 
-let {
-	section,
-	report,
-	audience = "pm",
-	onSectionChange,
-	onAudienceChange,
-}: Props = $props();
+	let { section, report, audience = 'pm', onSectionChange, onAudienceChange }: Props = $props();
 
-const sections = $derived<Section[]>(
-	[
-		{ id: "overview", label: "Overview", shortLabel: "Overview" },
-		{
-			id: "issues",
-			label: "Issues",
-			shortLabel: "Issues",
-			count: report.issues.length,
-		},
-		{
-			id: "pages",
-			label: "Pages",
-			shortLabel: "Pages",
-			count: report.pages.length,
-		},
-		{
-			id: "scanners",
-			label: "Scanners",
-			shortLabel: "Scans",
-			count: report.scanners.length,
-		},
-		{ id: "artifacts", label: "Artifacts", shortLabel: "Files" },
-		{
-			id: "errors",
-			label: "Errors",
-			shortLabel: "Errors",
-			count: report.errors?.length ?? 0,
-		},
-	].filter((item) => {
-		if (item.id !== "errors") return true;
-		if (section === "errors") return true;
-		return (item.count ?? 0) > 0;
-	}),
-);
+	const sections = $derived<Section[]>(
+		[
+			{ id: 'overview', label: 'Overview', shortLabel: 'Overview' },
+			{
+				id: 'issues',
+				label: 'Issues',
+				shortLabel: 'Issues',
+				count: report.issues.length
+			},
+			{
+				id: 'pages',
+				label: 'Pages',
+				shortLabel: 'Pages',
+				count: report.pages.length
+			},
+			{
+				id: 'scanners',
+				label: 'Scanners',
+				shortLabel: 'Scans',
+				count: report.scanners.length
+			},
+			{ id: 'artifacts', label: 'Artifacts', shortLabel: 'Files' },
+			{
+				id: 'errors',
+				label: 'Errors',
+				shortLabel: 'Errors',
+				count: report.errors?.length ?? 0
+			}
+		].filter((item) => {
+			if (item.id !== 'errors') return true;
+			if (section === 'errors') return true;
+			return (item.count ?? 0) > 0;
+		})
+	);
 
-const audienceOptions: { id: ReportAudience; label: string; hint: string }[] = [
-	{ id: "pm", label: "PM", hint: "Screenshots + impact" },
-	{ id: "engineer", label: "Engineer", hint: "Rules + code details" },
-	{ id: "designer", label: "Designer", hint: "Visual context" },
-];
+	const audienceOptions: { id: ReportAudience; label: string; hint: string }[] = [
+		{ id: 'pm', label: 'PM', hint: 'Screenshots + impact' },
+		{ id: 'engineer', label: 'Engineer', hint: 'Rules + code details' },
+		{ id: 'designer', label: 'Designer', hint: 'Visual context' }
+	];
 </script>
 
 <Panel
 	variant="muted"
 	padding="xs"
 	rounded="2xl"
-	class="sticky top-3 z-20 mb-6 space-y-2.5 border border-line/70 bg-surface/90 shadow-sm backdrop-blur"
+	class="border-line/70 bg-surface/90 sticky top-3 z-20 mb-6 space-y-2.5 border shadow-sm backdrop-blur"
 >
 	<div class="relative -mx-1 overflow-x-auto px-1">
-		<div class="flex min-w-max items-center gap-1.5 sm:gap-2" role="tablist" aria-label="Report sections">
+		<div
+			class="flex min-w-max items-center gap-1.5 sm:gap-2"
+			role="tablist"
+			aria-label="Report sections"
+		>
 			{#each sections as item (item.id)}
 				<button
 					onclick={() => onSectionChange(item.id)}
 					class={cn(
 						'flex items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold whitespace-nowrap transition sm:px-3 sm:text-sm',
-						section === item.id
-							? 'bg-ink text-surface'
-							: 'bg-surface text-ink-muted hover:text-ink'
+						section === item.id ? 'bg-ink text-surface' : 'bg-surface text-ink-muted hover:text-ink'
 					)}
 					role="tab"
 					aria-selected={section === item.id}
@@ -107,8 +103,12 @@ const audienceOptions: { id: ReportAudience; label: string; hint: string }[] = [
 				</button>
 			{/each}
 		</div>
-		<div class="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-surface/90 to-transparent"></div>
-		<div class="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-surface/90 to-transparent"></div>
+		<div
+			class="from-surface/90 pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r to-transparent"
+		></div>
+		<div
+			class="from-surface/90 pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l to-transparent"
+		></div>
 	</div>
 	{#if onAudienceChange}
 		<div class="border-line flex flex-wrap items-center justify-between gap-2 border-t px-1 pt-2">

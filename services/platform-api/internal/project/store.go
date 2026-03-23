@@ -7,11 +7,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3" // Register the SQLite driver.
 )
 
 //go:embed schema.sql
@@ -53,7 +52,9 @@ func NewStore(path string) (*Store, error) {
 	db.SetMaxIdleConns(1)
 
 	s := &Store{db: db}
-	if err := s.initSchema(); err != nil {
+
+	err = s.initSchema()
+	if err != nil {
 		_ = db.Close()
 
 		return nil, err
@@ -149,9 +150,9 @@ func (s *Store) ListProjects(ctx context.Context) ([]Project, error) {
 	var projects []Project
 
 	for rows.Next() {
-		p, err := scanProjectRow(rows)
-		if err != nil {
-			return nil, err
+		p, rowErr := scanProjectRow(rows)
+		if rowErr != nil {
+			return nil, rowErr
 		}
 
 		projects = append(projects, *p)
@@ -178,29 +179,33 @@ func (s *Store) UpdateProject(ctx context.Context, id string, u Update) error {
 			return fmt.Errorf("marshal urls: %w", err)
 		}
 
-		if _, err := s.db.ExecContext(ctx,
+		_, err = s.db.ExecContext(ctx,
 			`UPDATE projects SET urls = ?, updated_at = ? WHERE id = ?`,
 			string(urlsJSON), now, id,
-		); err != nil {
+		)
+		if err != nil {
 			return err
 		}
 	}
 
 	if u.Scanners != nil {
 		var scannersJSON []byte
+
 		if len(u.Scanners) > 0 {
-			var err error
-			scannersJSON, err = json.Marshal(u.Scanners)
+			marshaledScanners, err := json.Marshal(u.Scanners)
 			if err != nil {
 				return fmt.Errorf("marshal scanners: %w", err)
 			}
+
+			scannersJSON = marshaledScanners
 		}
 
-		if _, err := s.db.ExecContext(ctx,
+		_, execErr := s.db.ExecContext(ctx,
 			`UPDATE projects SET scanners = ?, updated_at = ? WHERE id = ?`,
 			nullString(scannersJSON), now, id,
-		); err != nil {
-			return err
+		)
+		if execErr != nil {
+			return execErr
 		}
 	}
 
@@ -213,7 +218,11 @@ func (s *Store) DeleteProject(ctx context.Context, id string) error {
 		return err
 	}
 
-	n, _ := result.RowsAffected()
+	n, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
 	if n == 0 {
 		return ErrNotFound
 	}
@@ -269,10 +278,12 @@ type scanner interface {
 }
 
 func scanProject(row scanner) (*Project, error) {
-	var p Project
-	var urlsJSON string
-	var scannersJSON sql.NullString
-	var baselineJobID sql.NullString
+	var (
+		p             Project
+		urlsJSON      string
+		scannersJSON  sql.NullString
+		baselineJobID sql.NullString
+	)
 
 	err := row.Scan(
 		&p.ID, &p.Slug, &p.Name, &urlsJSON, &scannersJSON, &baselineJobID,
@@ -286,12 +297,14 @@ func scanProject(row scanner) (*Project, error) {
 		return nil, err
 	}
 
-	if err := json.Unmarshal([]byte(urlsJSON), &p.URLs); err != nil {
+	err = json.Unmarshal([]byte(urlsJSON), &p.URLs)
+	if err != nil {
 		return nil, fmt.Errorf("unmarshal urls: %w", err)
 	}
 
 	if scannersJSON.Valid {
-		if err := json.Unmarshal([]byte(scannersJSON.String), &p.Scanners); err != nil {
+		err = json.Unmarshal([]byte(scannersJSON.String), &p.Scanners)
+		if err != nil {
 			return nil, fmt.Errorf("unmarshal scanners: %w", err)
 		}
 	}
@@ -313,14 +326,4 @@ func nullString(b []byte) sql.NullString {
 	}
 
 	return sql.NullString{String: string(b), Valid: true}
-}
-
-func closeDB(db *sql.DB) {
-	if db == nil {
-		return
-	}
-
-	if err := db.Close(); err != nil {
-		slog.Error("Failed to close project DB", "error", err)
-	}
 }

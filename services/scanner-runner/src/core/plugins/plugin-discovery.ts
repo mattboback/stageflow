@@ -1,23 +1,19 @@
-import path from "node:path";
-import fs from "fs-extra";
+import fs from 'fs-extra';
+import path from 'node:path';
 
-import type { ScannerLogger } from "../types";
+import type { ScannerLogger } from '../types';
 import type {
 	PluginDiscoveryError,
 	PluginDiscoveryResult,
 	PluginInfo,
-	PluginLoaderConfig,
-} from "./plugin-loader-types";
+	PluginLoaderConfig
+} from './plugin-loader-types';
 
-import {
-	type ScannerManifest,
-	loadManifest,
-	validateManifest,
-} from "../manifest";
+import { type ScannerManifest, loadManifest, validateManifest } from '../manifest';
 
 export async function discoverPluginManifests(
 	config: PluginLoaderConfig,
-	logger: ScannerLogger,
+	logger: ScannerLogger
 ): Promise<
 	PluginDiscoveryResult & {
 		manifestsById: Map<string, PluginInfo>;
@@ -35,8 +31,8 @@ export async function discoverPluginManifests(
 		} catch (err) {
 			errors.push({
 				path: searchPath,
-				error: "Failed to search path",
-				details: err instanceof Error ? err.message : String(err),
+				error: 'Failed to search path',
+				details: err instanceof Error ? err.message : String(err)
 			});
 		}
 	}
@@ -50,7 +46,7 @@ export async function discoverPluginManifests(
 		if (manifestsById.has(id)) {
 			errors.push({
 				path: plugin.manifestPath,
-				error: `Duplicate plugin id: ${id}`,
+				error: `Duplicate plugin id: ${id}`
 			});
 			continue;
 		}
@@ -63,7 +59,7 @@ export async function discoverPluginManifests(
 			if (!cleaned) {
 				errors.push({
 					path: plugin.manifestPath,
-					error: `Empty alias declared for plugin id: ${id}`,
+					error: `Empty alias declared for plugin id: ${id}`
 				});
 				continue;
 			}
@@ -78,14 +74,14 @@ export async function discoverPluginManifests(
 async function discoverInPath(
 	searchPath: string,
 	config: PluginLoaderConfig,
-	logger: ScannerLogger,
+	logger: ScannerLogger
 ): Promise<PluginDiscoveryResult> {
 	const plugins: PluginInfo[] = [];
 	const errors: PluginDiscoveryError[] = [];
 
 	if (!(await fs.pathExists(searchPath))) {
 		if (config.verbose) {
-			logger.debug("Search path does not exist", { path: searchPath });
+			logger.debug('Search path does not exist', { path: searchPath });
 		}
 
 		return { plugins, errors };
@@ -147,7 +143,7 @@ async function discoverInPath(
 async function tryLoadManifest(
 	manifestPath: string,
 	config: PluginLoaderConfig,
-	logger: ScannerLogger,
+	logger: ScannerLogger
 ): Promise<{ success: boolean; info?: PluginInfo; error?: string }> {
 	try {
 		const manifest = await loadManifest(manifestPath);
@@ -155,7 +151,7 @@ async function tryLoadManifest(
 	} catch (err) {
 		return {
 			success: false,
-			error: err instanceof Error ? err.message : String(err),
+			error: err instanceof Error ? err.message : String(err)
 		};
 	}
 }
@@ -164,27 +160,27 @@ function validateAndReturn(
 	manifestPath: string,
 	manifest: ScannerManifest,
 	config: PluginLoaderConfig,
-	logger: ScannerLogger,
+	logger: ScannerLogger
 ): { success: boolean; info?: PluginInfo; error?: string } {
 	const validation = validateManifest(manifest);
 
 	if (!validation.valid && config.strictValidation) {
 		return {
 			success: false,
-			error: `Validation failed: ${validation.errors.map((e) => e.message).join(", ")}`,
+			error: `Validation failed: ${validation.errors.map((e) => e.message).join(', ')}`
 		};
 	}
 
 	if (validation.warnings.length > 0 && config.verbose) {
-		logger.warn("Manifest warnings", {
+		logger.warn('Manifest warnings', {
 			path: manifestPath,
-			warnings: validation.warnings,
+			warnings: validation.warnings
 		});
 	}
 
 	return {
 		success: true,
-		info: { manifestPath, manifest },
+		info: { manifestPath, manifest }
 	};
 }
 
@@ -193,14 +189,14 @@ function addAlias(
 	errors: PluginDiscoveryError[],
 	manifestPath: string,
 	token: string,
-	pluginId: string,
+	pluginId: string
 ): void {
 	const key = token.toLowerCase();
 	const existing = aliasByToken.get(key);
 	if (existing && existing !== pluginId) {
 		errors.push({
 			path: manifestPath,
-			error: `Alias '${token.trim()}' already used by plugin '${existing}'`,
+			error: `Alias '${token.trim()}' already used by plugin '${existing}'`
 		});
 		return;
 	}

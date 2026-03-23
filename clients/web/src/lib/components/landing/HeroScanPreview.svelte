@@ -1,36 +1,36 @@
 <script lang="ts">
-import TerminalCardHeader from "$lib/components/ui/TerminalCardHeader.svelte";
+	import TerminalCardHeader from '$lib/components/ui/TerminalCardHeader.svelte';
 
-const scannerRows = [
-	{
-		name: "accessibility",
-		label: "Axe",
-		pct: 100,
-		status: "complete",
-		color: "bg-blue-500",
-	},
-	{
-		name: "performance",
-		label: "Lighthouse",
-		pct: 84,
-		status: "84%",
-		color: "bg-amber-500",
-	},
-	{
-		name: "crawlability",
-		label: "SEO",
-		pct: 66,
-		status: "66%",
-		color: "bg-rose-500",
-	},
-	{
-		name: "security",
-		label: "Headers",
-		pct: 42,
-		status: "42%",
-		color: "bg-violet-500",
-	},
-] as const;
+	const scannerRows = [
+		{
+			name: 'accessibility',
+			label: 'Axe',
+			pct: 100,
+			status: 'complete',
+			color: 'bg-blue-500'
+		},
+		{
+			name: 'performance',
+			label: 'Lighthouse',
+			pct: 84,
+			status: '84%',
+			color: 'bg-amber-500'
+		},
+		{
+			name: 'crawlability',
+			label: 'SEO',
+			pct: 66,
+			status: '66%',
+			color: 'bg-rose-500'
+		},
+		{
+			name: 'security',
+			label: 'Headers',
+			pct: 42,
+			status: '42%',
+			color: 'bg-violet-500'
+		}
+	] as const;
 </script>
 
 <div class="hero-preview hidden lg:block" aria-hidden="true">

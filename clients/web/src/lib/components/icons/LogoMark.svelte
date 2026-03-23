@@ -1,10 +1,10 @@
 <script lang="ts">
-interface Props {
-	class?: string;
-	size?: number;
-}
+	interface Props {
+		class?: string;
+		size?: number;
+	}
 
-let { class: className, size = 20 }: Props = $props();
+	let { class: className, size = 20 }: Props = $props();
 </script>
 
 <svg
@@ -24,6 +24,6 @@ let { class: className, size = 20 }: Props = $props();
 		font-family="system-ui, -apple-system, sans-serif"
 		font-weight="800"
 		letter-spacing="-2"
-		fill="#ffffff"
-	>SF</text>
+		fill="#ffffff">SF</text
+	>
 </svg>

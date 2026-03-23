@@ -1,5 +1,5 @@
-import { createSSEStream } from "$lib/api/sse";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createSSEStream } from '$lib/api/sse';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type EventListenerFn = (event: Event) => void;
 
@@ -31,42 +31,31 @@ class MockEventSource {
 		MockEventSource.instances = [];
 	}
 
-	addEventListener(
-		type: string,
-		listener: EventListenerOrEventListenerObject | null,
-	) {
+	addEventListener(type: string, listener: EventListenerOrEventListenerObject | null) {
 		if (!listener) {
 			return;
 		}
 		const normalizedListener: EventListenerFn =
-			typeof listener === "function"
+			typeof listener === 'function'
 				? listener
 				: (event: Event) => {
 						listener.handleEvent(event);
 					};
-		this.listeners[type] = [
-			...(this.listeners[type] ?? []),
-			normalizedListener,
-		];
+		this.listeners[type] = [...(this.listeners[type] ?? []), normalizedListener];
 	}
 
-	removeEventListener(
-		type: string,
-		listener: EventListenerOrEventListenerObject | null,
-	) {
+	removeEventListener(type: string, listener: EventListenerOrEventListenerObject | null) {
 		if (!listener) {
 			return;
 		}
 		const handlers = this.listeners[type] ?? [];
 		const normalizedListener: EventListenerFn =
-			typeof listener === "function"
+			typeof listener === 'function'
 				? listener
 				: (event: Event) => {
 						listener.handleEvent(event);
 					};
-		this.listeners[type] = handlers.filter(
-			(handler) => handler !== normalizedListener,
-		);
+		this.listeners[type] = handlers.filter((handler) => handler !== normalizedListener);
 	}
 
 	dispatchEvent(event: Event): boolean {
@@ -85,30 +74,30 @@ class MockEventSource {
 	}
 
 	emitStatusRaw(data: string) {
-		this.dispatchEvent(new MessageEvent("status", { data }));
+		this.dispatchEvent(new MessageEvent('status', { data }));
 	}
 
 	emitDone() {
-		this.dispatchEvent(new Event("done"));
+		this.dispatchEvent(new Event('done'));
 	}
 
 	emitError() {
-		this.onerror?.(new Event("error"));
+		this.onerror?.(new Event('error'));
 	}
 }
 
 const firstInstance = (): MockEventSource => {
 	const instance = MockEventSource.instances.at(0);
 	if (instance === undefined) {
-		throw new Error("Expected EventSource instance");
+		throw new Error('Expected EventSource instance');
 	}
 	return instance;
 };
 
-describe("SSE Stream", () => {
+describe('SSE Stream', () => {
 	beforeEach(() => {
 		MockEventSource.reset();
-		vi.stubGlobal("EventSource", MockEventSource);
+		vi.stubGlobal('EventSource', MockEventSource);
 	});
 
 	afterEach(() => {
@@ -116,79 +105,79 @@ describe("SSE Stream", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("initializes EventSource with correct URL", () => {
-		createSSEStream("job-123", {
+	it('initializes EventSource with correct URL', () => {
+		createSSEStream('job-123', {
 			onStatus: vi.fn(),
 			onUpdate: vi.fn(),
 			onDone: vi.fn(),
-			onError: vi.fn(),
+			onError: vi.fn()
 		});
 
-		expect(firstInstance().url).toContain("/api/v1/jobs/job-123/stream");
+		expect(firstInstance().url).toContain('/api/v1/jobs/job-123/stream');
 	});
 
-	it("registers status/update/done listeners", () => {
-		createSSEStream("job-123", {
+	it('registers status/update/done listeners', () => {
+		createSSEStream('job-123', {
 			onStatus: vi.fn(),
 			onUpdate: vi.fn(),
 			onDone: vi.fn(),
-			onError: vi.fn(),
+			onError: vi.fn()
 		});
 
 		const instance = firstInstance();
-		expect(instance.listenerCount("status")).toBe(1);
-		expect(instance.listenerCount("update")).toBe(1);
-		expect(instance.listenerCount("done")).toBe(1);
+		expect(instance.listenerCount('status')).toBe(1);
+		expect(instance.listenerCount('update')).toBe(1);
+		expect(instance.listenerCount('done')).toBe(1);
 	});
 
-	it("handles valid status events", () => {
+	it('handles valid status events', () => {
 		const onStatus = vi.fn();
-		createSSEStream("job-123", {
+		createSSEStream('job-123', {
 			onStatus,
 			onUpdate: vi.fn(),
 			onDone: vi.fn(),
-			onError: vi.fn(),
+			onError: vi.fn()
 		});
 
 		const instance = firstInstance();
-		instance.emitStatusRaw(JSON.stringify({ state: "running" }));
+		instance.emitStatusRaw(JSON.stringify({ state: 'running' }));
 
-		expect(onStatus).toHaveBeenCalledWith({ state: "running" });
+		expect(onStatus).toHaveBeenCalledWith({ state: 'running' });
 	});
 
-	it("handles parse errors and closes stream after threshold", () => {
+	it('handles parse errors and closes stream after threshold', () => {
 		const onError = vi.fn();
 		createSSEStream(
-			"job-123",
+			'job-123',
 			{
 				onStatus: vi.fn(),
 				onUpdate: vi.fn(),
 				onDone: vi.fn(),
-				onError,
+				onError
 			},
-			{ onLog: vi.fn() },
+			{ onLog: vi.fn() }
 		);
 
 		const instance = firstInstance();
-		instance.emitStatusRaw("invalid json");
-		instance.emitStatusRaw("invalid json");
-		instance.emitStatusRaw("invalid json");
+		instance.emitStatusRaw('invalid json');
+		instance.emitStatusRaw('invalid json');
+		instance.emitStatusRaw('invalid json');
 
 		expect(onError).toHaveBeenCalledWith({
-			message: "Too many parse errors",
+			message: 'Too many parse errors',
 			parseError: true,
-			terminal: true,
+			terminal: true
 		});
 		expect(instance.readyState).toBe(MockEventSource.CLOSED);
 	});
 
-	it("calls close on done event", () => {
+	it('calls close on done event', () => {
 		const onDone = vi.fn();
-		createSSEStream("job-123", {
+		createSSEStream('job-123', {
 			onStatus: vi.fn(),
 			onUpdate: vi.fn(),
 			onDone,
-			onError: vi.fn(),
+			onError: vi.fn()
 		});
 
 		const instance = firstInstance();
@@ -198,13 +187,13 @@ describe("SSE Stream", () => {
 		expect(instance.readyState).toBe(MockEventSource.CLOSED);
 	});
 
-	it("handles non-terminal connection errors", () => {
+	it('handles non-terminal connection errors', () => {
 		const onError = vi.fn();
-		createSSEStream("job-123", {
+		createSSEStream('job-123', {
 			onStatus: vi.fn(),
 			onUpdate: vi.fn(),
 			onDone: vi.fn(),
-			onError,
+			onError
 		});
 
 		const instance = firstInstance();
@@ -212,8 +201,8 @@ describe("SSE Stream", () => {
 		instance.emitError();
 
 		expect(onError).toHaveBeenCalledWith({
-			message: "Connection error",
-			terminal: false,
+			message: 'Connection error',
+			terminal: false
 		});
 	});
 });

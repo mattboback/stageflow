@@ -1,14 +1,10 @@
-import type { JetStreamClient } from "nats";
+import type { JetStreamClient } from 'nats';
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from 'vitest';
 
-import type {
-	PageScanResult,
-	ScanResults,
-	ScanTiming,
-} from "../../src/core/types";
+import type { PageScanResult, ScanResults, ScanTiming } from '../../src/core/types';
 
-import { NatsEventPublisher } from "../../src/core/event-publisher";
+import { NatsEventPublisher } from '../../src/core/event-publisher';
 
 function createCapturingPublisher(jobId: string, scannerName: string) {
 	const publisher = new NatsEventPublisher(jobId, scannerName);
@@ -20,7 +16,7 @@ function createCapturingPublisher(jobId: string, scannerName: string) {
 			const raw = new TextDecoder().decode(data);
 			published.push({ subject, envelope: JSON.parse(raw) });
 			return Promise.resolve({} as any);
-		},
+		}
 	};
 
 	(publisher as any).jetstream = jetstreamStub;
@@ -28,18 +24,18 @@ function createCapturingPublisher(jobId: string, scannerName: string) {
 	return { publisher, published };
 }
 
-describe("event contract (scanner-runner -> Go)", () => {
-	it("emits scan.page.completed with scanner context and no envelope scanner field", async () => {
-		const { publisher, published } = createCapturingPublisher("job-123", "axe");
+describe('event contract (scanner-runner -> Go)', () => {
+	it('emits scan.page.completed with scanner context and no envelope scanner field', async () => {
+		const { publisher, published } = createCapturingPublisher('job-123', 'axe');
 
 		const pageResult: PageScanResult = {
-			pageId: "page-1",
-			url: "http://localhost:8080/index.html",
+			pageId: 'page-1',
+			url: 'http://localhost:8080/index.html',
 			success: true,
 			issues: [],
 			durationMs: 10,
 			startedAt: new Date().toISOString(),
-			finishedAt: new Date().toISOString(),
+			finishedAt: new Date().toISOString()
 		};
 
 		await publisher.publishPageCompleted(pageResult, 1, 3);
@@ -49,30 +45,30 @@ describe("event contract (scanner-runner -> Go)", () => {
 		expect(msg.envelope.scanner).toBeUndefined();
 
 		expect(Object.keys(msg.envelope.payload).sort()).toEqual(
-			["job_id", "scanner_type", "page_id", "page_index", "total_pages"].sort(),
+			['job_id', 'scanner_type', 'page_id', 'page_index', 'total_pages'].sort()
 		);
 
-		expect(msg.envelope.payload.scanner_type).toBe("axe");
+		expect(msg.envelope.payload.scanner_type).toBe('axe');
 	});
 
-	it("emits scan.completed with by_severity and snake_case timing keys", async () => {
-		const { publisher, published } = createCapturingPublisher("job-123", "axe");
+	it('emits scan.completed with by_severity and snake_case timing keys', async () => {
+		const { publisher, published } = createCapturingPublisher('job-123', 'axe');
 
 		const results: ScanResults = {
-			jobId: "job-123",
-			scanner: "axe",
-			version: "0.1.0",
+			jobId: 'job-123',
+			scanner: 'axe',
+			version: '0.1.0',
 			totalPages: 1,
 			pages: [
 				{
-					pageId: "page-1",
-					url: "http://localhost:8080/index.html",
+					pageId: 'page-1',
+					url: 'http://localhost:8080/index.html',
 					success: true,
 					issues: [],
 					durationMs: 10,
 					startedAt: new Date().toISOString(),
-					finishedAt: new Date().toISOString(),
-				},
+					finishedAt: new Date().toISOString()
+				}
 			],
 			summary: {
 				totalIssues: 7,
@@ -81,11 +77,11 @@ describe("event contract (scanner-runner -> Go)", () => {
 				pagesScanned: 1,
 				pagesFailed: 0,
 				pagesWithIssues: 1,
-				avgDurationMs: 10,
+				avgDurationMs: 10
 			},
 			startedAt: new Date().toISOString(),
 			completedAt: new Date().toISOString(),
-			durationMs: 10,
+			durationMs: 10
 		};
 
 		const timing: ScanTiming = {
@@ -94,7 +90,7 @@ describe("event contract (scanner-runner -> Go)", () => {
 			writeResultsMs: 150,
 			uploadArtifactsMs: 200,
 			publishCompletedMs: 25,
-			finalizationMs: 25,
+			finalizationMs: 25
 		};
 
 		await publisher.publishScanCompleted(results, timing);
@@ -109,13 +105,13 @@ describe("event contract (scanner-runner -> Go)", () => {
 
 		expect(Object.keys(payload.timing).sort()).toEqual(
 			[
-				"finalization_ms",
-				"page_iteration_ms",
-				"publish_completed_ms",
-				"total_ms",
-				"upload_artifacts_ms",
-				"write_results_ms",
-			].sort(),
+				'finalization_ms',
+				'page_iteration_ms',
+				'publish_completed_ms',
+				'total_ms',
+				'upload_artifacts_ms',
+				'write_results_ms'
+			].sort()
 		);
 	});
 });

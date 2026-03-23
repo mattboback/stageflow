@@ -1,31 +1,31 @@
-import TerminalCardHeader from "$lib/components/ui/TerminalCardHeader.svelte";
-import { cleanup, render } from "@testing-library/svelte";
-import { afterEach, describe, expect, it } from "vitest";
+import TerminalCardHeader from '$lib/components/ui/TerminalCardHeader.svelte';
+import { cleanup, render } from '@testing-library/svelte';
+import { afterEach, describe, expect, it } from 'vitest';
 
-describe("TerminalCardHeader", () => {
+describe('TerminalCardHeader', () => {
 	afterEach(() => {
 		cleanup();
 	});
 
-	it("renders the path", () => {
+	it('renders the path', () => {
 		const { getByText } = render(TerminalCardHeader, {
-			props: { path: "/scan/demo" },
+			props: { path: '/scan/demo' }
 		});
-		expect(getByText("/scan/demo")).toBeInTheDocument();
+		expect(getByText('/scan/demo')).toBeInTheDocument();
 	});
 
-	it("renders badges when provided", () => {
+	it('renders badges when provided', () => {
 		const { getByText } = render(TerminalCardHeader, {
 			props: {
-				path: "/scan/demo",
+				path: '/scan/demo',
 				badges: [
-					{ label: "Scan", variant: "terminal" },
-					{ label: "Complete", variant: "status" },
-				],
-			},
+					{ label: 'Scan', variant: 'terminal' },
+					{ label: 'Complete', variant: 'status' }
+				]
+			}
 		});
 
-		expect(getByText("Scan")).toBeInTheDocument();
-		expect(getByText("Complete")).toBeInTheDocument();
+		expect(getByText('Scan')).toBeInTheDocument();
+		expect(getByText('Complete')).toBeInTheDocument();
 	});
 });

@@ -1,4 +1,4 @@
-import { runWorkerMode } from "./worker";
+import { runWorkerMode } from './worker';
 
 async function main() {
 	// The scan worker (scanner-runner) now only runs in worker mode.
@@ -8,6 +8,6 @@ async function main() {
 
 main().catch((err: unknown) => {
 	const error = err instanceof Error ? err : new Error(String(err));
-	console.error("scan worker (scanner-runner) encountered an error:", error);
+	console.error('scan worker (scanner-runner) encountered an error:', error);
 	process.exit(1);
 });

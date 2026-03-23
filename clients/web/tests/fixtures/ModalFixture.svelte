@@ -1,15 +1,15 @@
 <script lang="ts">
-import { Modal } from "$lib/components/ui";
+	import { Modal } from '$lib/components/ui';
 
-let open = $state(false);
+	let open = $state(false);
 
-function openModal() {
-	open = true;
-}
+	function openModal() {
+		open = true;
+	}
 
-function closeModal() {
-	open = false;
-}
+	function closeModal() {
+		open = false;
+	}
 </script>
 
 <button data-testid="open-button" onclick={openModal} type="button">Open modal</button>

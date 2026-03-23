@@ -1,124 +1,100 @@
 <script lang="ts">
-import {
-	Button,
-	Chip,
-	Label,
-	Select,
-	SelectField,
-	Textarea,
-} from "$lib/components/ui";
-import { cn } from "$lib/utils";
-import {
-	AlertTriangle,
-	Bot,
-	ChevronDown,
-	ChevronUp,
-	Info,
-	Plus,
-	Sparkles,
-	Trash2,
-} from "lucide-svelte";
+	import { Button, Chip, Label, Select, SelectField, Textarea } from '$lib/components/ui';
+	import { cn } from '$lib/utils';
+	import {
+		AlertTriangle,
+		Bot,
+		ChevronDown,
+		ChevronUp,
+		Info,
+		Plus,
+		Sparkles,
+		Trash2
+	} from 'lucide-svelte';
 
-interface Props {
-	objective: string;
-	model: string;
-	maxSteps: number;
-	maxWallTimeMs: number;
-	inputValues: Array<{ key: string; value: string }>;
-	successCriteria: Array<{ type: string; value: string }>;
-	isValid: boolean;
-	onObjectiveChange: (value: string) => void;
-	onModelChange: (value: string) => void;
-	onMaxStepsChange: (value: number) => void;
-	onMaxWallTimeMsChange: (value: number) => void;
-	onInputValuesChange: (values: Array<{ key: string; value: string }>) => void;
-	onSuccessCriteriaChange: (
-		criteria: Array<{ type: string; value: string }>,
-	) => void;
-}
+	interface Props {
+		objective: string;
+		model: string;
+		maxSteps: number;
+		maxWallTimeMs: number;
+		inputValues: Array<{ key: string; value: string }>;
+		successCriteria: Array<{ type: string; value: string }>;
+		isValid: boolean;
+		onObjectiveChange: (value: string) => void;
+		onModelChange: (value: string) => void;
+		onMaxStepsChange: (value: number) => void;
+		onMaxWallTimeMsChange: (value: number) => void;
+		onInputValuesChange: (values: Array<{ key: string; value: string }>) => void;
+		onSuccessCriteriaChange: (criteria: Array<{ type: string; value: string }>) => void;
+	}
 
-let {
-	objective,
-	model,
-	maxSteps,
-	maxWallTimeMs,
-	inputValues,
-	successCriteria,
-	isValid,
-	onObjectiveChange,
-	onModelChange,
-	onMaxStepsChange,
-	onMaxWallTimeMsChange,
-	onInputValuesChange,
-	onSuccessCriteriaChange,
-}: Props = $props();
+	let {
+		objective,
+		model,
+		maxSteps,
+		maxWallTimeMs,
+		inputValues,
+		successCriteria,
+		isValid,
+		onObjectiveChange,
+		onModelChange,
+		onMaxStepsChange,
+		onMaxWallTimeMsChange,
+		onInputValuesChange,
+		onSuccessCriteriaChange
+	}: Props = $props();
 
-let showAdvancedSettings = $state(false);
+	let showAdvancedSettings = $state(false);
 
-// Available AI models
-const aiModels = [
-	{ value: "openai/gpt-4o-mini", label: "GPT-4o Mini (Fast & Affordable)" },
-	{ value: "openai/gpt-4o", label: "GPT-4o (Best Quality)" },
-	{ value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet" },
-	{ value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku (Fast)" },
-	{ value: "google/gemini-pro-vision", label: "Gemini Pro Vision" },
-];
+	// Available AI models
+	const aiModels = [
+		{ value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini (Fast & Affordable)' },
+		{ value: 'openai/gpt-4o', label: 'GPT-4o (Best Quality)' },
+		{ value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+		{ value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku (Fast)' },
+		{ value: 'google/gemini-pro-vision', label: 'Gemini Pro Vision' }
+	];
 
-// Success criteria types
-const successCriteriaTypes = [
-	{ value: "url-contains", label: "URL Contains" },
-	{ value: "url-matches", label: "URL Matches (Regex)" },
-	{ value: "element-visible", label: "Element Visible (Selector)" },
-	{ value: "text-visible", label: "Text Visible" },
-	{ value: "custom", label: "Custom Condition" },
-];
+	// Success criteria types
+	const successCriteriaTypes = [
+		{ value: 'url-contains', label: 'URL Contains' },
+		{ value: 'url-matches', label: 'URL Matches (Regex)' },
+		{ value: 'element-visible', label: 'Element Visible (Selector)' },
+		{ value: 'text-visible', label: 'Text Visible' },
+		{ value: 'custom', label: 'Custom Condition' }
+	];
 
-function addInputValue() {
-	onInputValuesChange([...inputValues, { key: "", value: "" }]);
-}
+	function addInputValue() {
+		onInputValuesChange([...inputValues, { key: '', value: '' }]);
+	}
 
-function removeInputValue(index: number) {
-	onInputValuesChange(inputValues.filter((_, i) => i !== index));
-}
+	function removeInputValue(index: number) {
+		onInputValuesChange(inputValues.filter((_, i) => i !== index));
+	}
 
-function updateInputValue(
-	index: number,
-	field: "key" | "value",
-	newValue: string,
-) {
-	onInputValuesChange(
-		inputValues.map((item, i) =>
-			i === index ? { ...item, [field]: newValue } : item,
-		),
-	);
-}
+	function updateInputValue(index: number, field: 'key' | 'value', newValue: string) {
+		onInputValuesChange(
+			inputValues.map((item, i) => (i === index ? { ...item, [field]: newValue } : item))
+		);
+	}
 
-function addSuccessCriterion() {
-	onSuccessCriteriaChange([
-		...successCriteria,
-		{ type: "url-contains", value: "" },
-	]);
-}
+	function addSuccessCriterion() {
+		onSuccessCriteriaChange([...successCriteria, { type: 'url-contains', value: '' }]);
+	}
 
-function removeSuccessCriterion(index: number) {
-	onSuccessCriteriaChange(successCriteria.filter((_, i) => i !== index));
-}
+	function removeSuccessCriterion(index: number) {
+		onSuccessCriteriaChange(successCriteria.filter((_, i) => i !== index));
+	}
 
-function updateSuccessCriterion(
-	index: number,
-	field: "type" | "value",
-	newValue: string,
-) {
-	onSuccessCriteriaChange(
-		successCriteria.map((item, i) =>
-			i === index ? { ...item, [field]: newValue } : item,
-		),
-	);
-}
+	function updateSuccessCriterion(index: number, field: 'type' | 'value', newValue: string) {
+		onSuccessCriteriaChange(
+			successCriteria.map((item, i) => (i === index ? { ...item, [field]: newValue } : item))
+		);
+	}
 </script>
 
 <div
-	class="animate-fade-in space-y-5 rounded-2xl border border-line/80 bg-surface-muted/55 p-6 shadow-[var(--shadow-xs)]"
+	class="animate-fade-in border-line/80 bg-surface-muted/55 space-y-5 rounded-2xl border p-6 shadow-[var(--shadow-xs)]"
 >
 	<div class="mb-4 flex items-center gap-3">
 		<div class="bg-accent/10 flex h-10 w-10 items-center justify-center rounded-xl">
@@ -327,8 +303,8 @@ function updateSuccessCriterion(
 	<div class="bg-accent-soft/60 flex items-start gap-2 rounded-xl p-3">
 		<Sparkles class="text-accent mt-0.5 h-4 w-4 shrink-0" />
 		<p class="text-xs text-[color:var(--color-accent-ink)]">
-			<strong>Experimental:</strong> AI Navigator uses vision models to understand and interact with
-			your site. Results may vary based on page complexity.
+			<strong>Experimental:</strong> AI Navigator uses vision models to understand and interact with your
+			site. Results may vary based on page complexity.
 		</p>
 	</div>
 </div>

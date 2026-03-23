@@ -1,10 +1,6 @@
-import type { ScannerLogger } from "../types";
+import type { ScannerLogger } from '../types';
 
-import {
-	describeMinioError,
-	isRetryableMinioError,
-	wrapMinioError,
-} from "./minio-errors";
+import { describeMinioError, isRetryableMinioError, wrapMinioError } from './minio-errors';
 
 const DEFAULT_RETRY_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 500;
@@ -12,7 +8,7 @@ const DEFAULT_RETRY_DELAY_MS = 500;
 export async function withTimeout<T>(
 	promise: Promise<T>,
 	ms: number,
-	errorMessage: string,
+	errorMessage: string
 ): Promise<T> {
 	let timeoutHandle: NodeJS.Timeout | undefined;
 	const timeoutPromise = new Promise<never>((_, reject) => {
@@ -37,7 +33,7 @@ export async function withRetry<T>({
 	connection,
 	context = {},
 	attempts = DEFAULT_RETRY_ATTEMPTS,
-	baseDelayMs = DEFAULT_RETRY_DELAY_MS,
+	baseDelayMs = DEFAULT_RETRY_DELAY_MS
 }: {
 	action: string;
 	fn: () => Promise<T>;
@@ -59,7 +55,7 @@ export async function withRetry<T>({
 			}
 
 			const delayMs = baseDelayMs * 2 ** (attempt - 1);
-			logger.warn("MinIO request failed, retrying", {
+			logger.warn('MinIO request failed, retrying', {
 				action,
 				attempt,
 				maxAttempts: attempts,
@@ -68,7 +64,7 @@ export async function withRetry<T>({
 				endpoint: connection.endpoint,
 				port: connection.port,
 				useSSL: connection.useSSL,
-				error: describeMinioError(err),
+				error: describeMinioError(err)
 			});
 			await new Promise((resolve) => setTimeout(resolve, delayMs));
 		}

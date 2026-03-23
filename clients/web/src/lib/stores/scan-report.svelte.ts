@@ -1,25 +1,21 @@
-import type {
-	ScanResult,
-	ScanStatus,
-	ScreenshotArtifact,
-} from "$lib/types/scan";
-import type { UnifiedReport } from "$lib/types/unified-report";
+import type { ScanResult, ScanStatus, ScreenshotArtifact } from '$lib/types/scan';
+import type { UnifiedReport } from '$lib/types/unified-report';
 
-import { createSSEStream } from "$lib/api/sse";
-import { buildApiUrl } from "$lib/api/utils";
-import { SvelteSet } from "svelte/reactivity";
+import { createSSEStream } from '$lib/api/sse';
+import { buildApiUrl } from '$lib/api/utils';
+import { SvelteSet } from 'svelte/reactivity';
 
-import type { SSEUpdate } from "./scan-status/types";
+import type { SSEUpdate } from './scan-status/types';
 
-import { MAX_LOG_LINES } from "./scan-status/constants";
-import { getLogMessage, normalizeStatus } from "./scan-status/log-messages";
+import { MAX_LOG_LINES } from './scan-status/constants';
+import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 import {
 	applyScannerCompletionUpdate,
-	normalizeScannerProgress,
-} from "./scan-status/scanner-progress";
+	normalizeScannerProgress
+} from './scan-status/scanner-progress';
 
 export function createScanReportStore(id: string) {
-	let status = $state<ScanStatus>("loading");
+	let status = $state<ScanStatus>('loading');
 	let job = $state<ScanResult | null>(null);
 	let report = $state<UnifiedReport | null>(null);
 	let screenshots = $state<ScreenshotArtifact[]>([]);
@@ -55,27 +51,23 @@ export function createScanReportStore(id: string) {
 
 	const scheduleReportRetry = () => {
 		if (report) return;
-		if (status !== "complete") return;
+		if (status !== 'complete') return;
 		if (reportRetryTimeout) return;
 
 		if (reportRetryAttempts >= MAX_REPORT_RETRY_ATTEMPTS) {
-			const message =
-				"Aggregated report is taking longer than expected. Refresh to retry.";
+			const message = 'Aggregated report is taking longer than expected. Refresh to retry.';
 			addLog(`WARN: ${message}`);
 			error = message;
 			return;
 		}
 
 		if (reportRetryAttempts === 0) {
-			addLog("Scan complete. Generating aggregated report…");
+			addLog('Scan complete. Generating aggregated report…');
 		}
 
 		const delayMs = reportRetryDelayMs;
 		reportRetryAttempts += 1;
-		reportRetryDelayMs = Math.min(
-			MAX_REPORT_RETRY_DELAY_MS,
-			Math.round(reportRetryDelayMs * 1.7),
-		);
+		reportRetryDelayMs = Math.min(MAX_REPORT_RETRY_DELAY_MS, Math.round(reportRetryDelayMs * 1.7));
 
 		reportRetryTimeout = setTimeout(() => {
 			reportRetryTimeout = null;
@@ -104,27 +96,27 @@ export function createScanReportStore(id: string) {
 	};
 
 	const handleStatusData = (data: ScanResult) => {
-		const normalizedState = (data.state || "").toUpperCase();
+		const normalizedState = (data.state || '').toUpperCase();
 		const logMsg = getLogMessage(normalizedState, data);
 		if (logMsg) {
 			addLog(logMsg);
 		}
 
-		if (normalizedState === "EXTRACTING") {
-			addLog("Verifying archive integrity...");
-		} else if (normalizedState === "SCANNING" && data.progress) {
-			addLog("[axe-core] Injecting accessibility engine...");
-		} else if (normalizedState === "COMPLETING") {
-			addLog("Uploading artifacts to secure storage...");
+		if (normalizedState === 'EXTRACTING') {
+			addLog('Verifying archive integrity...');
+		} else if (normalizedState === 'SCANNING' && data.progress) {
+			addLog('[axe-core] Injecting accessibility engine...');
+		} else if (normalizedState === 'COMPLETING') {
+			addLog('Uploading artifacts to secure storage...');
 		}
 
 		job = normalizeScannerProgress(data);
 		status = normalizeStatus(data.state);
 		screenshots = data.artifacts?.screenshots ?? [];
-		if (status === "complete") {
+		if (status === 'complete') {
 			stopPolling();
 			void fetchReport();
-		} else if (status === "failed") {
+		} else if (status === 'failed') {
 			stopPolling();
 		} else {
 			clearReportRetry();
@@ -138,27 +130,24 @@ export function createScanReportStore(id: string) {
 		try {
 			const res = await fetch(buildApiUrl(`/api/v1/jobs/${id}`));
 			if (!res.ok) {
-				throw new Error(
-					res.status === 404 ? "Job not found" : "Failed to fetch job status",
-				);
+				throw new Error(res.status === 404 ? 'Job not found' : 'Failed to fetch job status');
 			}
 			const data = (await res.json()) as ScanResult;
 			error = null;
 			handleStatusData(data);
-			if (status === "failed") {
+			if (status === 'failed') {
 				report = null;
 			}
 		} catch (err) {
-			const message =
-				err instanceof Error ? err.message : "Failed to fetch job status";
-			console.error("[scan-report] Failed to fetch job status:", {
+			const message = err instanceof Error ? err.message : 'Failed to fetch job status';
+			console.error('[scan-report] Failed to fetch job status:', {
 				jobId: id,
-				error: err,
+				error: err
 			});
 			addLog(`ERROR: ${message}. Refresh to retry.`);
 			error = message;
-			if (status === "loading") {
-				status = "error";
+			if (status === 'loading') {
+				status = 'error';
 			}
 		}
 	};
@@ -166,7 +155,7 @@ export function createScanReportStore(id: string) {
 	const startPolling = () => {
 		if (pollingInterval) return;
 		pollingInterval = setInterval(() => {
-			if (status === "complete" || status === "failed") {
+			if (status === 'complete' || status === 'failed') {
 				stopPolling();
 				return;
 			}
@@ -179,7 +168,7 @@ export function createScanReportStore(id: string) {
 		fetchReportInFlight = true;
 		try {
 			const res = await fetch(buildApiUrl(`/api/v1/jobs/${id}/results`), {
-				redirect: "follow",
+				redirect: 'follow'
 			});
 			if (!res.ok) {
 				if (isReportPendingStatus(res.status)) {
@@ -190,19 +179,16 @@ export function createScanReportStore(id: string) {
 			}
 			const data = (await res.json()) as UnifiedReport;
 			if (!data.meta.jobId || !data.version) {
-				throw new Error(
-					"Report JSON did not match the expected aggregated schema.",
-				);
+				throw new Error('Report JSON did not match the expected aggregated schema.');
 			}
 			report = data;
 			error = null;
 			clearReportRetry();
 		} catch (err) {
-			const message =
-				err instanceof Error ? err.message : "Failed to load report";
-			console.error("[scan-report] Failed to fetch aggregated report:", {
+			const message = err instanceof Error ? err.message : 'Failed to load report';
+			console.error('[scan-report] Failed to fetch aggregated report:', {
 				jobId: id,
-				error: err,
+				error: err
 			});
 			error = message;
 		} finally {
@@ -211,7 +197,7 @@ export function createScanReportStore(id: string) {
 	};
 
 	const handleSSEUpdate = (update: SSEUpdate) => {
-		const normalizedState = (update.state || "").toUpperCase();
+		const normalizedState = (update.state || '').toUpperCase();
 		const logMsg = getLogMessage(normalizedState, update);
 		if (logMsg) {
 			addLog(logMsg);
@@ -222,12 +208,11 @@ export function createScanReportStore(id: string) {
 				? (() => {
 						const currentPage = update.progress.currentPage;
 						const totalPages = update.progress.totalPages;
-						const rawPercentage =
-							totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
+						const rawPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
 						return {
 							current_page: currentPage,
 							total_pages: totalPages,
-							percentage: Math.max(0, Math.min(100, Math.round(rawPercentage))),
+							percentage: Math.max(0, Math.min(100, Math.round(rawPercentage)))
 						};
 					})()
 				: job.progress;
@@ -236,17 +221,15 @@ export function createScanReportStore(id: string) {
 				state: update.state,
 				...(newProgress !== undefined ? { progress: newProgress } : {}),
 				...(update.error !== undefined ? { error: update.error } : {}),
-				...(update.error_details !== undefined
-					? { error_details: update.error_details }
-					: {}),
-				...(update.stage !== undefined ? { last_stage: update.stage } : {}),
+				...(update.error_details !== undefined ? { error_details: update.error_details } : {}),
+				...(update.stage !== undefined ? { last_stage: update.stage } : {})
 			};
 			job = applyScannerCompletionUpdate(nextJob, update);
 		}
 
 		status = normalizeStatus(update.state);
 
-		if (update.type === "complete" || update.type === "failed") {
+		if (update.type === 'complete' || update.type === 'failed') {
 			void fetchStatus();
 		}
 	};
@@ -268,7 +251,7 @@ export function createScanReportStore(id: string) {
 				},
 				onError: (err) => {
 					if (err.parseError) {
-						status = "error";
+						status = 'error';
 						cleanup();
 						startPolling();
 						void fetchStatus();
@@ -282,12 +265,12 @@ export function createScanReportStore(id: string) {
 						startPolling();
 						void fetchStatus();
 					}
-				},
+				}
 			},
 			{
-				sourceName: "scan-report",
-				onLog: addLog,
-			},
+				sourceName: 'scan-report',
+				onLog: addLog
+			}
 		);
 	};
 
@@ -298,7 +281,7 @@ export function createScanReportStore(id: string) {
 	const start = () => {
 		if (started) return;
 		started = true;
-		status = "loading";
+		status = 'loading';
 		report = null;
 		logs = [];
 		logSet.clear();
@@ -307,7 +290,7 @@ export function createScanReportStore(id: string) {
 		reportRetryAttempts = 0;
 		reportRetryDelayMs = 800;
 		void fetchStatus();
-		if (typeof EventSource !== "undefined") {
+		if (typeof EventSource !== 'undefined') {
 			startSSE();
 		} else {
 			startPolling();
@@ -335,6 +318,6 @@ export function createScanReportStore(id: string) {
 		},
 		start,
 		cleanup,
-		refreshArtifacts,
+		refreshArtifacts
 	};
 }
