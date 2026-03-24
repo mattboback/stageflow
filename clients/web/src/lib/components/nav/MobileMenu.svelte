@@ -24,7 +24,7 @@
 	padding="none"
 	z={40}
 	size="full"
-	overlayClass="bg-paper/95 pt-24 pb-6 backdrop-blur-xl"
+	overlayClass="bg-paper pt-24 pb-6"
 	contentClass="container-width flex flex-1 flex-col justify-between"
 	closeOnBackdrop={false}
 >

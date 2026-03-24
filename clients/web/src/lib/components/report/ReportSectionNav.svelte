@@ -68,7 +68,7 @@
 	variant="muted"
 	padding="xs"
 	rounded="2xl"
-	class="border-line/70 bg-surface/90 sticky top-3 z-20 mb-6 space-y-2.5 border shadow-sm backdrop-blur"
+	class="border-line bg-surface sticky top-3 z-20 mb-6 space-y-2.5 border shadow-sm"
 >
 	<div class="relative -mx-1 overflow-x-auto px-1">
 		<div

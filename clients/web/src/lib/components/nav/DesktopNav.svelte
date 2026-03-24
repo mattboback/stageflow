@@ -32,7 +32,7 @@
 		href={SITE.githubUrl}
 		target="_blank"
 		rel="noopener noreferrer"
-		class="text-ink-faint hover:text-ink border-line/70 bg-surface/70 hover:bg-surface rounded-full border p-2"
+		class="text-ink-faint hover:text-ink border-line bg-surface hover:bg-surface-muted rounded-md border p-2"
 		aria-label="GitHub"
 	>
 		<GithubIcon class="h-4 w-4" />
@@ -41,7 +41,7 @@
 		href="/playground"
 		class={cn(
 			buttonVariants({ variant: 'default', size: 'sm' }),
-			'ml-0.5 h-9 gap-1.5 rounded-full px-4 text-[12px] font-semibold tracking-[0.06em] uppercase'
+			'ml-0.5 h-9 gap-1.5 rounded-md px-4 text-[13px] font-medium'
 		)}
 	>
 		Run scan

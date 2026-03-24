@@ -5,7 +5,7 @@
 	const year = new Date().getFullYear();
 </script>
 
-<footer class="footer-shell border-line/70 border-t">
+<footer class="footer-shell border-line border-t">
 	<div class="container-width py-10">
 		<div class="grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
 			<div class="max-w-xl">
@@ -26,7 +26,7 @@
 					href={SITE.githubUrl}
 					target="_blank"
 					rel="noopener noreferrer"
-					class="text-ink-faint hover:text-ink border-line/70 bg-surface/70 hover:bg-surface rounded-full border p-2 transition-colors"
+					class="text-ink-faint hover:text-ink border-line bg-surface hover:bg-surface-muted rounded-md border p-2 transition-colors"
 					aria-label="GitHub"
 				>
 					<GithubIcon class="h-4 w-4" />
@@ -34,7 +34,7 @@
 			</div>
 		</div>
 
-		<div class="text-ink-faint border-line/70 mt-8 border-t pt-4 text-xs">
+		<div class="text-ink-faint border-line mt-8 border-t pt-4 text-xs">
 			&copy; {year} StageFlow. Open-source and operator-first.
 		</div>
 	</div>

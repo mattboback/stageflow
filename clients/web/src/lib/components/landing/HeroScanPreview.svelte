@@ -39,7 +39,7 @@
 		{#each scannerRows as scanner (scanner.name)}
 			<div class="space-y-1.5">
 				<div class="flex items-center justify-between gap-4">
-					<span class="text-ink-muted text-[11px] font-medium tracking-[0.08em] uppercase">
+					<span class="text-ink-muted text-[11px] font-medium">
 						{scanner.label}
 					</span>
 					<span class="text-ink-faint text-[11px]">

@@ -339,16 +339,21 @@
 	<section class="pt-16 pb-24">
 		<div class="container-width">
 			<div class="cta-panel mx-auto max-w-4xl">
-				<p class="section-kicker mb-3">Ready to Run</p>
-				<h2 class="h2-display text-3xl sm:text-4xl">Audit your site with one scan pipeline</h2>
-				<p class="text-ink-muted mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base">
+				<p class="section-kicker text-accent-subtle mb-3">Ready to scan</p>
+				<h2 class="h2-display text-surface text-3xl sm:text-4xl">
+					Audit your site with one pipeline
+				</h2>
+				<p class="text-surface/70 mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base">
 					No account required. Open the playground, choose your scanners, and start a complete run
 					in under a minute.
 				</p>
 				<div class="mt-7">
 					<a
 						href="/playground"
-						class={cn(buttonVariants({ variant: 'glow', size: 'lg' }), 'gap-2 rounded-full px-7')}
+						class={cn(
+							buttonVariants({ variant: 'outline', size: 'lg' }),
+							'gap-2 rounded-md border-surface/30 px-7 text-surface hover:bg-surface/10'
+						)}
 					>
 						Open Playground
 						<ArrowRight class="h-4 w-4" />

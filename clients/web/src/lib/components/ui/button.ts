@@ -1,7 +1,7 @@
 import { type VariantProps, cva } from 'class-variance-authority';
 
 export const buttonVariants = cva(
-	'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:pointer-events-none disabled:opacity-50 transition-colors',
+	'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:pointer-events-none disabled:opacity-50 transition-colors',
 	{
 		variants: {
 			variant: {
@@ -11,7 +11,7 @@ export const buttonVariants = cva(
 				secondary: 'bg-surface-muted text-ink hover:bg-line',
 				ghost: 'text-ink-muted hover:bg-surface-muted hover:text-ink',
 				link: 'text-accent underline-offset-4 hover:underline',
-				glow: 'bg-accent text-white hover:bg-accent-hover shadow-sm shadow-[0_0_24px_rgba(220,38,38,0.35)] hover:shadow-[0_0_32px_rgba(220,38,38,0.45)] transition-shadow'
+				glow: 'bg-accent text-white hover:bg-accent-hover shadow-[0_0_20px_rgba(13,92,99,0.3)] hover:shadow-[0_0_28px_rgba(13,92,99,0.4)] transition-shadow'
 			},
 			size: {
 				default: 'h-9 px-4 py-2',
