@@ -164,10 +164,6 @@
 <PlaygroundHeroSection />
 
 <PageSection class="playground-shell relative overflow-hidden py-10 lg:py-14">
-	<div
-		class="via-accent/8 pointer-events-none absolute -top-24 left-1/2 h-72 w-[92vw] max-w-5xl -translate-x-1/2 rounded-[3rem] bg-gradient-to-r from-white/90 to-orange-200/20 blur-3xl"
-	></div>
-
 	<div class="container-width relative">
 		<div class="grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_21rem]">
 			<div>

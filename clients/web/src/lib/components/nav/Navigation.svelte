@@ -49,10 +49,10 @@
 	class={cn(
 		'nav-shell fixed top-0 right-0 left-0 z-50 border-b',
 		scrolled || mobileMenuOpen
-			? 'border-line/80 bg-paper/90 shadow-[0_14px_30px_-26px_rgba(15,15,15,0.55)] backdrop-blur-xl'
+			? 'border-line bg-paper shadow-sm'
 			: isHome
 				? 'border-transparent bg-transparent'
-				: 'border-line/70 bg-paper/82 backdrop-blur-lg'
+				: 'border-line bg-paper'
 	)}
 >
 	<div class="container-width flex h-16 items-center justify-between">
@@ -85,7 +85,7 @@
 	</div>
 
 	{#if scrolled || mobileMenuOpen}
-		<div class="from-accent/0 via-accent/35 to-accent/0 h-px bg-gradient-to-r"></div>
+		<div class="bg-line h-px"></div>
 	{/if}
 </header>
 

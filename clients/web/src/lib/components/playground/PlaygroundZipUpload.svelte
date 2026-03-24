@@ -72,7 +72,7 @@
 			'group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed p-8 transition-all duration-200',
 			isDragOver && 'border-accent bg-accent/5 scale-[1.01]',
 			file
-				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
+				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(13,92,99,0.18)]'
 				: 'border-line hover:border-accent/30 hover:bg-surface-muted'
 		)}
 	>

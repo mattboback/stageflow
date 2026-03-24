@@ -2,17 +2,7 @@
 	import { CheckCircle2, Clock, Radar } from 'lucide-svelte';
 </script>
 
-<section class="playground-hero border-line/80 relative overflow-hidden border-b">
-	<div
-		class="from-accent/20 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b via-orange-100/40 to-transparent"
-	></div>
-	<div
-		class="bg-accent/15 pointer-events-none absolute -top-16 right-6 h-56 w-56 rounded-full blur-2xl"
-	></div>
-	<div
-		class="pointer-events-none absolute top-16 -left-8 h-40 w-40 rounded-full bg-orange-200/50 blur-3xl"
-	></div>
-
+<section class="playground-hero border-line relative overflow-hidden border-b">
 	<div class="container-width relative pt-24 pb-12 lg:pb-14">
 		<div class="max-w-3xl">
 			<p class="section-kicker mb-4">Playground</p>
@@ -27,7 +17,7 @@
 			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3.5">
 				<Radar class="text-accent h-4 w-4 shrink-0" />
 				<span class="text-sm font-medium"
-					><span class="text-accent font-extrabold">6</span> Scanners</span
+					><span class="text-accent font-extrabold">8</span> Scanners</span
 				>
 			</div>
 			<div class="glass-panel flex items-center gap-2.5 rounded-xl px-4 py-3.5">

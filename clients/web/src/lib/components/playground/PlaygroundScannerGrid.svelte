@@ -4,7 +4,18 @@
 
 	import { Chip, Label } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import { Bot, Link2, Loader2, Search, Settings2, Shield, ShieldCheck, Zap } from 'lucide-svelte';
+	import {
+		Bot,
+		CheckCircle,
+		Globe,
+		Link2,
+		Loader2,
+		Search,
+		Settings2,
+		Shield,
+		ShieldCheck,
+		Zap
+	} from 'lucide-svelte';
 
 	interface Props {
 		scanners: ScannerSelection[];
@@ -66,6 +77,18 @@
 			color: 'text-purple-600',
 			borderColor: 'border-l-purple-600',
 			requiresConfig: true
+		},
+		'open-graph': {
+			icon: Globe,
+			description: 'Social preview metadata validation for OG tags and Twitter cards',
+			color: 'text-cyan-600',
+			borderColor: 'border-l-cyan-500'
+		},
+		'spelling-grammar': {
+			icon: CheckCircle,
+			description: 'AI-powered spelling, grammar, and content quality checks',
+			color: 'text-lime-700',
+			borderColor: 'border-l-lime-500'
 		}
 	};
 
@@ -80,7 +103,7 @@
 			base,
 			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
 			isSelected
-				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(220,38,38,0.18)]'
+				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(13,92,99,0.18)]'
 				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
 		);
 	}

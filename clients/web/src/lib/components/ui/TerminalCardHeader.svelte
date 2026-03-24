@@ -29,10 +29,10 @@
 	{...rest}
 >
 	<div class="flex items-center gap-2">
-		<div class="flex gap-1">
-			<div class="bg-ink/10 h-2 w-2 rounded-full"></div>
-			<div class="bg-ink/10 h-2 w-2 rounded-full"></div>
-			<div class="bg-accent/40 h-2 w-2 rounded-full"></div>
+		<div class="flex gap-1.5">
+			<div class="h-2.5 w-2.5 rounded-full bg-red-400"></div>
+			<div class="h-2.5 w-2.5 rounded-full bg-amber-400"></div>
+			<div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>
 		</div>
 		<span class="text-ink-faint font-mono text-[10px]">{path}</span>
 	</div>

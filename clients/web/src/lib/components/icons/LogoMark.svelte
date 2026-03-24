@@ -15,15 +15,7 @@
 	fill="none"
 	aria-hidden="true"
 >
-	<rect width="64" height="64" rx="14" fill="currentColor" />
-	<text
-		x="32"
-		y="44"
-		text-anchor="middle"
-		font-size="30"
-		font-family="system-ui, -apple-system, sans-serif"
-		font-weight="800"
-		letter-spacing="-2"
-		fill="#ffffff">SF</text
-	>
+	<rect x="8" y="14" width="28" height="8" rx="2" fill="currentColor" opacity="0.4" />
+	<rect x="16" y="28" width="32" height="8" rx="2" fill="currentColor" opacity="0.7" />
+	<rect x="24" y="42" width="32" height="8" rx="2" fill="currentColor" />
 </svg>
