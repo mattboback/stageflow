@@ -1,6 +1,12 @@
 # StageFlow CLI Cheatsheet
 
-Quick reference for the `stageflow` CLI. For full command docs, see `clients/cli/README.md`, `docs/operations/devtools.md`, and `docs/PROJECT_MODE.md`.
+Quick reference for the day-to-day `stageflow` CLI.
+
+For navigation, start with the [docs landing page](../README.md). For the
+fuller CLI narrative, see the [CLI README](../../clients/cli/README.md). For
+local dev-server scanning, see [Project Mode](../PROJECT_MODE.md). For
+repo-local helpers such as `job-status-cli` and `suite-runner`, see
+[Devtools](devtools.md).
 
 ## 1. Setup
 
@@ -15,6 +21,8 @@ just dev up local
 just dev init local
 just images
 ```
+
+`just images` builds the scanner images the stack uses during scans. The first run is the slowest.
 
 ### Install the CLI
 
@@ -101,7 +109,7 @@ Project mode starts your local app, waits for readiness, runs the scan, and shut
 stageflow project init
 ```
 
-This scaffolds:
+This creates:
 
 - `.stageflow/config.yaml`
 - `.stageflow/README.md`
@@ -142,7 +150,23 @@ stageflow project
 stageflow project --format markdown
 ```
 
-## 6. Reports
+These commands use a local `.stageflow/config.yaml`. They are different from the remote project-management commands below.
+
+## 6. Remote projects
+
+Remote projects are named records stored on a StageFlow API. Use them when you want saved targets, baselines, and regression tracking.
+
+```bash
+stageflow project create my-app --url https://example.com --scanner axe
+stageflow project list
+stageflow project show my-app
+stageflow project update my-app --url https://example.com/v2
+stageflow scan --project my-app --format json
+stageflow project promote my-app --job-id <job-id>
+stageflow project delete my-app
+```
+
+## 7. Reports
 
 ### Fetch an existing report
 
@@ -152,15 +176,21 @@ stageflow report <job-id> --format markdown
 stageflow report <job-id> --format json
 ```
 
-## 7. Environment variables
+## 8. Compare scans
+
+```bash
+stageflow diff baseline.json current.json
+stageflow diff baseline.json https://example.com --api https://stageflow.org
+```
+
+## 9. Environment variables
 
 - `STAGEFLOW_API_URL` (default `http://localhost:8080`)
 - `STAGEFLOW_API_KEY` (optional, sent as `X-Api-Key`)
 
-## 8. Troubleshooting quick hits
+## 10. Troubleshooting quick hits
 
 - Private or loopback targets require the local overlay: `just dev up local`
 - If `stageflow` resolves to the wrong binary, rerun `just cli-install`
 - Use `stageflow project doctor` to debug project-mode readiness problems
 - Use `just dev logs` to inspect local stack logs
-

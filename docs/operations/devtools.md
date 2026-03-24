@@ -1,8 +1,10 @@
-# StageFlow CLI tools
+# StageFlow CLI and operational tools
 
-StageFlow includes a small set of command-line tools for local development and
-operations. These tools talk to the running StageFlow services (API and
-orchestrator); they don't replace the web UI.
+StageFlow ships one primary public CLI, `stageflow`, plus a couple of repo-local
+helpers for operations and QA. These tools talk to running StageFlow services;
+they complement the web UI rather than replace it.
+
+If you need the broader docs map first, start with the [docs landing page](../README.md). For everyday CLI usage, pair this page with the [CLI cheatsheet](cli_cheatsheet.md) and the [CLI README](../../clients/cli/README.md).
 
 ## stageflow
 
@@ -32,6 +34,7 @@ To build the CLI in place, run:
 ```bash
 cd clients/cli
 go build -o stageflow .
+./stageflow version
 ```
 
 ### Run a URL scan
@@ -39,24 +42,36 @@ go build -o stageflow .
 Run a scan against a public URL by running:
 
 ```bash
-./stageflow scan https://example.com
+stageflow scan https://example.com --api https://stageflow.org
 ```
 
 By default, `stageflow` prints plain text. Add `--format json` for
 machine-readable output. `--json` remains available for backward compatibility.
+
+If you built the binary in place instead of installing it, use `./stageflow ...` from `clients/cli/`.
 
 ### Run an AI Navigator session
 
 Run the AI Navigator against a project with natural language objectives:
 
 ```bash
-./stageflow ai https://example.com "Navigate to the contact page and submit the form"
+stageflow ai https://example.com "Navigate to the contact page and submit the form" --api https://stageflow.org
 ```
 
 Supported flags for the `ai` command:
 - `--expand-provenance`: Wait for the scan to finish and expand the step-by-step trace in the output.
 - `--allow-private-targets`: Allow scanning private or local network targets.
 - `--timeout`: Maximum time to wait for the job to complete (default `5m`).
+
+### Compare against a saved baseline
+
+Use a saved JSON report as the baseline for either another report file or a
+live URL:
+
+```bash
+stageflow diff baseline.json current.json
+stageflow diff baseline.json https://example.com --api https://stageflow.org
+```
 
 ### Environment variables
 
@@ -96,6 +111,7 @@ The repo includes a local-only compose override that sets these defaults:
 ```bash
 just dev up local
 just dev init local
+just images
 ```
 
 #### Example `.stageflow/config.yaml`
@@ -108,20 +124,21 @@ stageflow:
 
 scan:
   urls:
-    - http://127.0.0.1:1337
-  scanners: axe,lighthouse,seo,security-headers,open-graph,spelling-grammar
+    - http://127.0.0.1:5173
+  scanners: axe,lighthouse,seo,link-checker
   allow_private_targets: true
 
 dev:
   start:
-    cmd: ["__STAGEFLOW_SET_DEV_START_CMD__"] # replace this
+    cmd: ["bun", "run", "dev"]
     cwd: .
   ready:
-    url: http://localhost:1337
+    url: http://127.0.0.1:5173
 ```
 
-> **Note:** `stageflow project` fails fast with setup guidance if
-> `dev.start.cmd` still uses the scaffold placeholder.
+> **Note:** If `stageflow project init` cannot infer your dev command, it leaves
+> a placeholder in the generated config. Replace that placeholder before running
+> `stageflow project`.
 
 > **Note:** `stageflow project doctor --skip-dev` validates config and scan
 > preflight only, without starting your dev process.
@@ -132,7 +149,12 @@ dev:
 - `.stageflow/README.md` includes first-run setup and troubleshooting.
 - `POD_NETNS_MODE=host` only works for Linux hosts. On macOS/Windows with a Podman VM, host networking refers to the VM, not your workstation.
 
-## job-status-cli
+## Repo-local helpers
+
+These helpers are mainly for maintainers working against a local StageFlow
+stack.
+
+### job-status-cli
 
 `job-status-cli` queries the orchestrator admin API to inspect jobs, events,
 pods, and system metrics.
@@ -147,7 +169,7 @@ go build -o job-status-cli .
 Set `ORCHESTRATOR_ADMIN_URL` to point at the admin API (default
 `http://localhost:8081`).
 
-## suite-runner
+### suite-runner
 
 `suite-runner` runs scans across multiple domains, evaluates threshold
 compliance, and exits non-zero when any domain fails.

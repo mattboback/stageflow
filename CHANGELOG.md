@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Svelte 5 runes migration: state and props use `$state`, `$derived`, `$effect` throughout
 - Monorepo orchestration consolidated; import paths and module boundaries clarified
+- Public-facing docs tightened around CLI setup, project mode, and operational references
 
 ### Chore
 - Pre-commit framework replaces lint-staged/Husky for formatting and secret scanning

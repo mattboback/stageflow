@@ -5,6 +5,8 @@ unified report in shell-friendly formats. Supports severity-based exit codes
 for CI gating, structured JSON output for automation, and project mode for
 local dev server scanning.
 
+Need the broader docs map first? Start with [`docs/README.md`](../../docs/README.md).
+
 ## Install
 
 ```bash
@@ -29,6 +31,7 @@ go build -o stageflow .
 | `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
 | `project doctor` | Validate project config and dev readiness without scanning |
 | `ai` | Run the AI Navigator with natural language objectives |
+| `diff` | Compare a saved baseline against another report or a live URL |
 | `report` | Fetch and display results for an existing job ID |
 | `scanners` | List scanners available on the API |
 | `version` | Print version information |
@@ -95,6 +98,22 @@ Severity hierarchy (highest to lowest): `critical` > `serious` > `moderate` > `m
 | `--summary-only` | Summary counts only, skip individual findings |
 | `--group-by <mode>` | Group by `category`, `scanner`, or `none` |
 
+## Compare against a baseline
+
+`stageflow diff` compares a saved JSON report against either another saved
+report or a live URL.
+
+```bash
+# Compare two saved reports
+stageflow diff baseline.json current.json
+
+# Compare a saved baseline against a live URL
+stageflow diff baseline.json https://example.com --api https://stageflow.org
+```
+
+Use `--fail-on-new` to gate on newly introduced issues and
+`--fail-on-regression` to fail when scores drop or new issues appear.
+
 ## JSON report envelope
 
 `--format json` outputs a versioned envelope (`stageflow-cli/report@v1`):
@@ -148,6 +167,8 @@ Severity hierarchy (highest to lowest): `critical` > `serious` > `moderate` > `m
 Issue `id` fields are content-based hashes — the same violation on the same page produces the same `id` across runs, making them reliable for regression diffing.
 
 ## Project mode
+
+`stageflow project` (without remote CRUD subcommands) is the local dev-server workflow. The remote commands such as `stageflow project create`, `list`, `show`, `update`, `delete`, and `promote` manage named project records on a StageFlow API instead.
 
 Project mode automates the full scan lifecycle for local development:
 start dev server, wait for readiness, submit scan, stream results, stop server.

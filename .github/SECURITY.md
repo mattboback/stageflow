@@ -1,37 +1,63 @@
 # Security Policy
 
-## Supported Versions
+Thanks for helping keep StageFlow safe.
 
-StageFlow is currently in early active development. We apply security patches to the `main` branch and the latest tagged release.
+## Supported versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| `main`  | :white_check_mark: |
-| Latest release | :white_check_mark: |
-| Older releases | :x:                |
+StageFlow is still moving quickly. Security fixes land on `main` first and, when applicable, in the latest tagged release. Older releases are not maintained.
 
-## Reporting a Vulnerability
+| Version        | Supported |
+| -------------- | --------- |
+| `main`         | ✅        |
+| Latest release | ✅        |
+| Older releases | ❌        |
 
-We take the security of StageFlow seriously. If you discover a security vulnerability, please report it privately rather than opening a public issue.
+## Reporting a vulnerability
 
-### How to Report
+Please report suspected vulnerabilities privately by emailing **security@stageflow.org**.
 
-Please send an email to **security@stageflow.org** with the following details:
+Do **not** open a public GitHub issue for an unpatched vulnerability.
 
-- A description of the vulnerability and its potential impact.
-- Steps to reproduce the issue (including any necessary configuration or payloads).
-- The version(s) of StageFlow affected.
-- Any potential mitigation or remediation steps you are aware of.
+Include as much of the following as you can:
 
-### Response Timeline
+- what the issue is and why it matters
+- clear reproduction steps, payloads, or proof-of-concept details
+- the affected commit, branch, or release if known
+- whether the issue affects local-only setups, self-hosted deployments, or the public demo
+- any mitigation ideas or relevant logs
 
-We aim to respond to all security reports within 48 hours. After initial triage, we will keep you updated on the progress of our investigation and the timeline for releasing a fix.
+If you encrypt sensitive material, mention that in the email so we can coordinate a safe reply path.
 
-## Security Features
+## What to expect
 
-StageFlow is designed with several security boundaries:
-- Strict SSRF protections for URL intake.
-- Safe archive extraction limits to prevent zip bombs and directory traversal.
-- Isolated container execution for scanner plugins.
+- We will acknowledge receipt as soon as we can.
+- If you have not heard back within 3 business days, please send a follow-up.
+- After triage, we will let you know whether we could reproduce the issue and how we plan to handle disclosure.
 
-If you find a bypass to any of these boundaries, please report it immediately.
+StageFlow does not currently run a public bug bounty program.
+
+## What belongs here
+
+Please use the private security channel for issues such as:
+
+- SSRF or network-boundary bypasses
+- sandbox, container, or scanner-isolation escapes
+- unsafe file handling, archive extraction, or path traversal
+- authentication, authorization, or secret exposure issues
+- remote code execution or privilege-escalation bugs
+
+For non-sensitive defects, scanner false positives, and general feature requests, use the public issue tracker instead.
+
+## Current security boundaries
+
+These are important design boundaries today:
+
+- strict URL intake validation and SSRF guardrails in the Platform API
+- archive extraction limits to reduce zip-bomb and path-traversal risk
+- per-job pod or container isolation for scanner execution
+
+If you find a bypass to one of these boundaries, please report it privately.
+
+## Responsible testing
+
+Please avoid testing against systems you do not own or have explicit permission to assess. If a report involves the public `stageflow.org` deployment, keep testing minimal and non-destructive.

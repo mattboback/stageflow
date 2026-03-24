@@ -1,8 +1,35 @@
-# StageFlow Project Mode
+# StageFlow project mode
 
-Project Mode is a powerful feature of the `stageflow` CLI that integrates web accessibility and quality scanning directly into your local development workflow.
+Project mode integrates StageFlow scans directly into your local development
+workflow.
 
-Instead of manually starting your app and running scans against public URLs, Project Mode automates the entire lifecycle: it starts your local dev server, waits for it to become ready, runs the StageFlow scanners against your local environment, streams the results, and then gracefully shuts down the dev server.
+Instead of manually starting your app and then running scans, project mode
+automates the full lifecycle: start the dev server, wait for readiness, run the
+StageFlow scanners, stream the results, and shut the dev server down when the
+scan finishes.
+
+If you need the bigger picture first, start with the [docs landing page](README.md), the [CLI README](../clients/cli/README.md), or the [CLI cheatsheet](operations/cli_cheatsheet.md).
+
+## Local project mode vs. remote projects
+
+This document covers **local project mode**:
+
+- `stageflow project`
+- `stageflow project init`
+- `stageflow project doctor`
+
+These commands use a local `.stageflow/config.yaml` to start your dev server, scan it, and stop it again.
+
+The StageFlow CLI also supports **remote project management**:
+
+- `stageflow project create`
+- `stageflow project list`
+- `stageflow project show`
+- `stageflow project update`
+- `stageflow project delete`
+- `stageflow project promote`
+
+Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same workflow.
 
 ## Prerequisites
 
@@ -20,6 +47,8 @@ just images
 
 *Note: The `local` environment flag is crucial. It tells the Platform API to permit scanning private loopback targets and configures the job pods to use the host network.*
 
+`just images` builds the scanner images used by local runs. On a fresh setup it can take a while, so treat it as part of environment setup rather than a per-scan command.
+
 ## Initialization
 
 To set up Project Mode for your web application, navigate to your project's root directory and run:
@@ -28,9 +57,17 @@ To set up Project Mode for your web application, navigate to your project's root
 stageflow project init
 ```
 
-This command inspects your project (looking for `package.json`, `Justfile`, etc.) and scaffolds a configuration directory containing:
+This command inspects your project (looking for `package.json`, `Justfile`,
+etc.) and creates a configuration directory containing:
 - `.stageflow/config.yaml` (The main configuration file)
 - `.stageflow/README.md` (A quick-start guide)
+
+If StageFlow cannot infer a startup command, the generated config keeps a
+placeholder for `dev.start.cmd`. Replace it before running `stageflow project`.
+
+If you run the command from a subdirectory, StageFlow resolves the git root first and creates `.stageflow/` there so the config stays attached to the repository instead of one nested folder.
+
+If you only need copy/paste command examples, the [CLI cheatsheet](operations/cli_cheatsheet.md#5-project-mode) is the shortest companion doc.
 
 ## Configuration (`.stageflow/config.yaml`)
 
@@ -104,13 +141,15 @@ When you run this command, StageFlow will:
 
 ## Troubleshooting and Validation
 
-If you are unsure whether your configuration is correct, you can use the `doctor` command:
+If you are unsure whether your configuration is correct, use the `doctor`
+command:
 
 ```bash
 stageflow project doctor
+stageflow project doctor --skip-dev
 ```
 
-The doctor command will:
+`stageflow project doctor` will:
 - Validate your `config.yaml` syntax and structure.
 - Verify that the StageFlow API is reachable.
 - Start your dev server, wait for the readiness URL to respond, and then shut it down **without** actually running a scan.

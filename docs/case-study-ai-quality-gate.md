@@ -2,6 +2,9 @@
 
 This case study evaluates StageFlow as an automated quality gate for AI-assisted development workflows. It captures the tradeoffs between StageFlow, direct `axe-core` checks, and Lighthouse-style score gates when the goal is to catch regressions before they reach production.
 
+> [!NOTE]
+> **Status note:** This is an evaluation and roadmap-oriented case study. StageFlow already supports multi-scanner scans, remote project records, baseline promotion, diffing, and CLI quality gates today. Auto-promotion and tighter deploy-hook workflows described below are future polish, not shipped guarantees.
+
 ## Use-case summary
 
 A solo developer using AI coding agents wants an automated way to catch accessibility, SEO, and link regressions introduced by fast-moving code changes before they reach production.
@@ -22,8 +25,8 @@ So that the agent can self-correct before committing, and I stop discovering reg
 
 ## Options
 
-**Option 1: StageFlow with project baseline tracking.**
-Register a project on the hosted API. Every scan auto-diffs against the stored baseline. The CLI returns the diff inline — new issues, fixed issues, score delta. Wire into a post-deploy hook or Claude Code hook. Agent reads the diff and self-corrects.
+**Option 1: StageFlow with remote projects and baseline tracking.**
+Register a project on a running StageFlow API, promote a baseline, and use `stageflow scan --project ...` to diff against it. Wire the CLI into a post-deploy hook or agent loop. The diff output already highlights new, fixed, and unchanged issues.
 
 **Option 2: axe-core in Playwright test suite.**
 Add `@axe-core/playwright` to existing E2E tests. Catches WCAG violations on routes the test suite already visits. No external service, runs in-process.
@@ -53,7 +56,7 @@ Add `@axe-core/playwright` to existing E2E tests. Catches WCAG violations on rou
 - Stable content-based issue IDs let the diff tell me exactly which violations are new vs. pre-existing. This is the critical primitive — "did this change make things worse?" requires it.
 - JSON output with CSS selectors, HTML snippets, WCAG references, and fix guidance is directly consumable by an AI agent for self-correction.
 - `--fail-on` exit codes work as a CI gate with zero output parsing.
-- Project baseline on the server means I don't manage local JSON files — the API knows what "normal" looks like for my site.
+- Project baseline on the server means I don't manage local JSON files — the API already knows what "normal" looks like for my site once I promote a baseline.
 
 **Cons:**
 - External service dependency. If stageflow.org is down, the gate is broken.
@@ -102,15 +105,15 @@ High. The integration is a CLI call in CI config. Removing it means deleting one
 
 ## Recommendation
 
-**Build the project + baseline layer in StageFlow.** The scanning and diffing primitives already exist. The missing piece is server-side state: "this is my project, here's the baseline, diff every new scan against it automatically." That turns the CLI from a manual tool into an automated gate.
+**Use the current remote-project flow now, then tighten the automation around it.** The scanning, baseline promotion, and diff primitives already exist. The highest-value next step is a smoother preview/deploy loop around those capabilities, not inventing the project layer from scratch.
 
 The ideal agent workflow:
 1. Agent makes code changes
 2. Deploy to preview URL
-3. `stageflow scan --project mysite` → API runs scan, diffs against baseline, returns result
+3. `stageflow scan --project mysite` → API runs scan, diffs against the promoted baseline, returns the result
 4. If regressions: agent reads the diff (selectors + fix guidance), self-corrects, redeploys
 5. If clean: baseline auto-promotes, agent commits
 
 ## Next Step
 
-Design the project entity and baseline promotion API. The scanning, diffing, and rendering are done. The product gap is the stateful wrapper.
+Make the current flow easier to adopt in CI and agent loops: clearer project bootstrapping, easier baseline promotion in deploy workflows, and stronger examples for feeding diffs back into automated remediation.

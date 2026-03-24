@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Support and troubleshooting
+    url: https://github.com/mattboback/stageflow/blob/main/.github/SUPPORT.md
+    about: Local setup help, troubleshooting steps, and docs pointers.
+  - name: Security policy
+    url: https://github.com/mattboback/stageflow/blob/main/.github/SECURITY.md
+    about: Report vulnerabilities privately and review the current policy.

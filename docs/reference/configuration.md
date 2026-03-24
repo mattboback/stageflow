@@ -4,6 +4,8 @@ Reference for environment variables used by local, staging, and production Stage
 
 Use `.env.example` as the baseline. Keep secrets in your secret manager or host-level env, never in git.
 
+If you are orienting yourself for the first time, start with the [repository README](../../README.md) for the quick start and the [docs landing page](../README.md) for the full docs map. This page is the detailed configuration reference once you know which environment you are setting up.
+
 ## Quick Start
 
 ```bash
@@ -13,6 +15,8 @@ just dev up
 just dev init
 just images
 ```
+
+`just images` builds the scanner images used by local runs. The first build is the longest; after that you usually rerun it only when scanner/runtime dependencies change.
 
 ## Variable Reference
 
@@ -64,7 +68,7 @@ just images
 | `VITE_SITE_TITLE` | no | `StageFlow` | Site title shown in UI metadata. |
 | `VITE_SITE_URL` | yes | `https://your-domain.com` | Canonical site URL used for metadata/share cards. |
 | `VITE_GITHUB_URL` | no | `https://github.com/mattboback/stageflow` | Repository link shown in UI. |
-| `VITE_TAGLINE` | no | `Podman-native web accessibility scanning platform` | Marketing tagline in UI surfaces. |
+| `VITE_TAGLINE` | no | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces. |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no | `openai/gpt-4o-mini` | Default model shown for AI navigator flows. |
 
 ### AI Navigator (Optional)
@@ -82,9 +86,9 @@ just images
 | --- | --- | --- | --- |
 | `CADDY_EMAIL` | no | `admin@your-domain.com` | Email address used for Let's Encrypt TLS registration. |
 
-### Advanced / Internal Overrides
+### Advanced infrastructure overrides
 
-These variables are primarily used internally or for advanced infrastructure setups. They typically do not need modification by standard operators.
+Most first-time local setups can ignore this section. These variables are mainly for custom or advanced self-hosted infrastructure layouts.
 
 | Variable | Purpose |
 | --- | --- |
@@ -112,6 +116,7 @@ These variables are primarily used internally or for advanced infrastructure set
 
 ## Related Docs
 
+- [Docs landing page](../README.md)
 - [README](../../README.md)
 - [Architecture](../architecture/system.md)
 - [Security](../../.github/SECURITY.md)

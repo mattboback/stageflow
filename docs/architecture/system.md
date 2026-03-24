@@ -2,6 +2,8 @@
 
 This document explains StageFlow job flow, trust boundaries, and service responsibilities.
 
+If you are still orienting yourself, start with the [docs landing page](../README.md). For the fastest product overview and local setup path, see the [repository README](../../README.md).
+
 ## Table of Contents
 
 1. [System Goals](#system-goals)

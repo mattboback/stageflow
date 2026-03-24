@@ -1,15 +1,17 @@
 ## Summary
 
-Describe the change, the motivation behind it, and any context a reviewer should know.
+Describe what changed, why it changed, and any context a reviewer should have.
 
-Fixes # (issue)
+Fixes #
 
 ## Areas touched
 
 - [ ] `clients/web`
 - [ ] `clients/cli`
 - [ ] `services/platform-api`
+- [ ] `services/orchestrator`
 - [ ] `services/scanner-runner`
+- [ ] `libs/contracts`
 - [ ] Docs / repo metadata
 - [ ] Devtools / infrastructure
 
@@ -21,14 +23,16 @@ List the commands you ran and any manual verification performed.
 - [ ] `just storybook-test` (if UI or component behavior changed)
 - [ ] `just shell-tests` (if CLI or setup behavior changed)
 - [ ] Local manual verification (UI or CLI)
-- [ ] Deployment or runtime follow-up noted below
+- [ ] Follow-up or runtime notes added below when needed
 
-## Screenshots / docs
+## Reviewer notes
 
-Attach screenshots, terminal output snippets, or note why they were not needed.
+Call out anything that would help a reviewer evaluate risk quickly:
 
-## Checklist
+- config, schema, or env var changes
+- screenshots or terminal output worth comparing
+- known limitations or follow-up work
 
-- [ ] Docs, screenshots, or configuration references were updated when needed
-- [ ] New env vars, operational steps, or migration notes were documented
-- [ ] I verified the change at the surface it affects
+## Artifacts
+
+Attach screenshots, recordings, or terminal snippets when they make the change easier to review. If none were needed, say so.

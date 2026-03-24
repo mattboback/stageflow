@@ -2,6 +2,9 @@
 
 This case study evaluates StageFlow as a continuous quality monitoring service for teams managing several sites at once. It captures the tradeoffs between StageFlow, commercial SEO tooling, and DIY scanner pipelines when the goal is to detect regressions across multiple properties without turning maintenance into a second job.
 
+> [!NOTE]
+> **Status note:** This document mixes current capability with forward-looking product evaluation. StageFlow already supports remote project records, baseline promotion, unified reports, and diffing. Scheduled scans, webhook alerts, and a multi-site dashboard are proposed next steps, not current features.
+
 ## Use-case summary
 
 A developer managing multiple client or project sites wants one system that watches every property, compares each scan against a known-good baseline, and flags regressions without creating another fragile monitoring stack to maintain.
@@ -22,8 +25,8 @@ So that I catch problems within hours instead of discovering them weeks later fr
 
 ## Options
 
-**Option 1: StageFlow with project registry and scheduled scans.**
-Each site is a registered project with a baseline. The platform scans on a schedule (daily/weekly), diffs against baseline, and sends a webhook or notification on regression. One dashboard shows all projects and their status.
+**Option 1: StageFlow with remote projects today, plus scheduled scans as the next layer.**
+Each site can already be represented as a named project with a baseline. The missing operational layer is scheduled execution, alerting, and a dashboard that rolls multiple projects up into one monitoring view.
 
 **Option 2: Ahrefs Site Audit + manual Lighthouse.**
 Ahrefs covers SEO and broken links with scheduling built in. Lighthouse covers performance and basic accessibility manually. Security headers, OG tags need separate tools. Each costs separately, results live in different places.
@@ -57,7 +60,7 @@ Open source, run from a VPS cron job or GitHub Actions. Full control. The integr
 - Webhook on regression: I find out when it happens, not when I remember to check.
 
 **Cons:**
-- The project registry, scheduling, and webhook features don't exist yet. They're the logical next step but require development.
+- Project records and baseline promotion already exist, but scheduled scans, webhooks, and a multi-site dashboard still require development.
 - Platform is v0.1.0. No uptime SLA, no public status page.
 - No multi-site dashboard yet. Today each scan is independent.
 - Cost model undocumented. Free access may be temporary.
@@ -96,7 +99,7 @@ The core tradeoff is **capability versus infrastructure maturity**.
 
 StageFlow's scanner combination and stable ID diffing is the right primitive for multi-site monitoring. Nothing else in this evaluation gives me "scan 8 sites weekly, tell me exactly what changed" without building it myself.
 
-But the operational layer — scheduling, project registry, dashboard, alerting — is the gap. Today StageFlow is a scanner I have to operate. The product I want is a monitor that operates itself.
+But the operational layer — scheduling, dashboard, and alerting — is still the gap. Today StageFlow is closer to an operator-driven scanner with remote project state than a monitor that operates itself.
 
 Ahrefs fills the operational gap (scheduling, dashboard, alerts) but drops scanner quality and costs $1,500+/year. The DIY approach fills every gap in theory but creates a maintenance burden that compounds.
 
@@ -122,23 +125,24 @@ High. The integration is CLI calls and JSON files. No SDK dependency, no databas
 
 ## Recommendation
 
-**Build the project + scheduled scan + webhook layer in StageFlow.** This is the minimum viable product that turns StageFlow from a scanner into a monitoring service.
+**Build scheduled scans, alerting, and the multi-site view on top of the current project/baseline flow.** That is the minimum next layer that turns StageFlow from a scanner into a monitoring service.
 
 The four primitives needed:
 
-1. **Project entity** — id, name, URLs, scanner config, current baseline job ID.
-2. **Baseline management** — server stores which scan is the baseline. Auto-promotes on clean scans or manual promotion via API.
-3. **Scheduled scanning** — cron-style triggers per project. Daily or weekly.
-4. **Webhook on regression** — POST to a configured URL when a diff shows new issues above a severity threshold. Payload includes the diff summary and new issue details.
+1. **Scheduled scanning** — cron-style triggers per project. Daily or weekly.
+2. **Webhook on regression** — POST to a configured URL when a diff shows new issues above a severity threshold. Payload includes the diff summary and new issue details.
+3. **Portfolio-level dashboard** — one screen that shows current status across multiple remote projects.
+4. **Operator ergonomics** — easier bulk setup, baseline promotion workflows, and retention policies.
 
-Everything else — the scanning pipeline, report aggregation, issue ID stability, diff logic — already exists. The product gap is the stateful wrapper and the trigger mechanism.
+Everything else — the scanning pipeline, report aggregation, issue ID stability, project records, and diff logic — already exists. The product gap is the trigger and monitoring layer.
 
 ## Next Step
 
-1. Design the `projects` table schema: id, name, urls, scanners, baseline_job_id, scan_schedule, webhook_url, created_at.
-2. Add `POST /api/v1/projects`, `GET /api/v1/projects/{id}`, `POST /api/v1/projects/{id}/scan` endpoints.
-3. Wire the scan endpoint to run a normal job, then diff against the stored baseline and include the diff in the response.
-4. Add a cron runner that triggers project scans on schedule.
-5. Add webhook dispatch on regression detection.
+Build on the current project and diff flow instead of replacing it:
 
-The CLI grows one command: `stageflow project scan --remote mysite` (or the existing `stageflow scan` gains a `--project` flag). The rest is server-side.
+1. Add a scheduler that triggers scans for existing remote projects on a daily or weekly cadence.
+2. Add webhook dispatch when a project diff shows new issues above a configured threshold.
+3. Add a portfolio-level view that summarizes multiple remote projects in one screen.
+4. Improve bulk setup and baseline-promotion ergonomics for operators managing several sites.
+
+The CLI surface can stay mostly the same: `stageflow scan --project mysite` remains the scan entry point while the scheduling and alerting layer stays server-side.

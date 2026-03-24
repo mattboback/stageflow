@@ -1,11 +1,21 @@
 # Support
 
-Thank you for using StageFlow. This document points you to the right docs, the right issue path, and the fastest local debugging checks.
+StageFlow support currently happens through this repository. There is not a separate public help desk or discussion forum today, so the best route depends on the kind of problem you are hitting.
 
-## Start with the docs
+## Where to go
 
-Use the source that matches your question:
+- **Reproducible bug** — open a GitHub issue with steps, logs, and the affected surface
+- **Feature idea or product gap** — open a feature request issue
+- **Docs problem or unclear setup step** — open an issue and point to the file or command that needs work
+- **Security issue** — do **not** open a public issue; follow [SECURITY.md](SECURITY.md)
 
+Before filing anything, search existing issues: <https://github.com/mattboback/stageflow/issues>
+
+## Useful docs
+
+Start with the source that matches your question:
+
+- Docs landing page and path finder: `docs/README.md`
 - Product overview and local quick start: `README.md`
 - Architecture and service boundaries: `docs/architecture/system.md`
 - Configuration and environment variables: `docs/reference/configuration.md`
@@ -14,19 +24,12 @@ Use the source that matches your question:
 
 ## Before opening an issue
 
-1. Search existing issues: <https://github.com/mattboback/stageflow/issues>
-2. Confirm whether the problem is local-only, staging-only, or production-only.
-3. Gather the exact command, target URL, and error output that reproduces the problem.
+Capture the details that make a report actionable:
 
-## Opening the right issue
-
-Open a GitHub issue when you have:
-
-- a reproducible bug
-- a feature request for the platform, scanners, or CLI
-- a docs gap that blocks setup or usage
-
-For security reports, do not open a public issue. Follow [SECURITY.md](SECURITY.md) instead.
+1. Confirm whether the problem is local-only, staging-only, or specific to the public demo.
+2. Note the exact command, target URL or ZIP, scanner list, and commit or release you tested.
+3. Save the relevant logs, screenshots, or terminal output.
+4. If the issue is local, rerun with the checklist below so the report includes what you already tried.
 
 ## Local troubleshooting checklist
 
@@ -58,7 +61,7 @@ podman ps --format '{{.Names}}\t{{.Status}}'
 just dev logs
 ```
 
-Use the local overlay form when you are debugging private-target scans:
+Use the local overlay form when debugging private-target scans:
 
 ```bash
 just dev logs local
@@ -76,8 +79,8 @@ curl -fsS http://localhost:8081/healthz
 
 ### 4. Verify local configuration and mode
 
-- Confirm `.env` exists and is based on `.env.example`.
-- Ensure you are using the correct port for your environment mode (e.g., Frontend is `:3000` in `dev` mode, `:3010` in `local` overlay).
+- Confirm `.env` exists and is based on `.env.example`
+- Ensure you are using the correct port for your environment mode (`:3000` in `dev`, `:3010` in `local`)
 - Rebuild images after dependency or runtime changes:
 
 ```bash
@@ -99,6 +102,16 @@ If `stageflow project` fails, validate the generated config and readiness flow f
 stageflow project doctor
 stageflow project doctor --skip-dev
 ```
+
+## What to include in an issue
+
+The most useful reports include:
+
+- the exact command or UI flow that failed
+- the target being scanned (public URL, localhost target, ZIP upload, or project mode)
+- the scanners involved
+- the expected result versus the actual result
+- job IDs, logs, screenshots, or terminal output when available
 
 ## Common problem patterns
 
@@ -142,4 +155,4 @@ Please open a docs issue and include:
 
 ## Production support boundary
 
-This repository documents the app and local workflows, but live production operations for `stageflow.org` are intentionally managed from the external deployment workspace. If your question is about live production operations, use the external control plane described in `AGENTS.md`.
+This repository documents the app and local workflows, but live production operations for `stageflow.org` are managed from an external deployment workspace. If you are reporting a public demo problem, describe the public symptom clearly, but avoid assuming access to production internals.
