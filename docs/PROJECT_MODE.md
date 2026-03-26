@@ -40,14 +40,17 @@ Before using Project Mode, you need:
 To start the local stack with the necessary permissions, run the following commands from the StageFlow repository:
 
 ```bash
+just setup
+just images
 just dev up local
 just dev init local
-just images
 ```
 
 *Note: The `local` environment flag is crucial. It tells the Platform API to permit scanning private loopback targets and configures the job pods to use the host network.*
 
 `just images` builds the scanner images used by local runs. On a fresh setup it can take a while, so treat it as part of environment setup rather than a per-scan command.
+
+This repository already ships a working `.stageflow/config.yaml` and a repo-specific `.stageflow/README.md`, so you can run `stageflow project doctor .` here immediately after the local overlay is up.
 
 ## Initialization
 

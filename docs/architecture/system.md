@@ -722,7 +722,7 @@ The golden test exercises the full project scan → diff pipeline against a live
 
 Fixture pages are static HTML served from `clients/web/static/qa/`. Golden files live in `qa/fixtures/project-golden/` and are auto-created on first run.
 
-The test requires `stageflow`, `jq`, `python3`, and `curl` on PATH, plus a reachable API at `STAGEFLOW_API_URL` (defaults to `https://stageflow.org`).
+The test requires `stageflow`, `jq`, `python3`, and `curl` on PATH, plus a reachable API at `STAGEFLOW_API_URL` (defaults to `http://localhost:8080`) and fixture pages at `STAGEFLOW_FIXTURE_BASE_URL` (defaults to `http://localhost:3010` when the API is local). The intended repo-local path is `just setup && just images && just dev up local && just dev init local`.
 
 ---
 

@@ -6,11 +6,25 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 FIXTURE_DIR="${REPO_ROOT}/qa/fixtures/project-golden"
 
 # --- Configuration ---
-API_URL="${STAGEFLOW_API_URL:-https://stageflow.org}"
+API_URL="${STAGEFLOW_API_URL:-http://localhost:8080}"
 API_KEY="${STAGEFLOW_API_KEY:-}"
+FIXTURE_BASE_URL="${STAGEFLOW_FIXTURE_BASE_URL:-}"
 PROJECT_SLUG="qa-golden-$(date +%s)"
-BASELINE_URL="${API_URL}/qa/baseline.html"
-REGRESSION_URL="${API_URL}/qa/regression.html"
+
+if [[ -z "${FIXTURE_BASE_URL}" ]]; then
+  case "${API_URL}" in
+    http://localhost:*|http://127.0.0.1:*)
+      FIXTURE_BASE_URL="http://localhost:3010"
+      ;;
+    *)
+      FIXTURE_BASE_URL="${API_URL}"
+      ;;
+  esac
+fi
+
+FIXTURE_BASE_URL="${FIXTURE_BASE_URL%/}"
+BASELINE_URL="${STAGEFLOW_BASELINE_URL:-${FIXTURE_BASE_URL}/qa/baseline.html}"
+REGRESSION_URL="${STAGEFLOW_REGRESSION_URL:-${FIXTURE_BASE_URL}/qa/regression.html}"
 
 # --- Helpers ---
 failures=0
@@ -142,13 +156,19 @@ done
 
 if ! curl -sf "${API_URL}/healthz" >/dev/null 2>&1; then
   echo "FATAL: API not reachable at ${API_URL}/healthz" >&2
+  echo "Start the repo-local acceptance stack first:" >&2
+  echo "  just setup" >&2
+  echo "  just images" >&2
+  echo "  just dev up local" >&2
+  echo "  just dev init local" >&2
   exit 2
 fi
 
 for page in "${BASELINE_URL}" "${REGRESSION_URL}"; do
   if ! curl -sf --head "${page}" >/dev/null 2>&1; then
     echo "FATAL: Fixture page not accessible: ${page}" >&2
-    echo "Deploy the frontend with qa/ static fixtures first." >&2
+    echo "The repo-local default expects the local overlay frontend at http://localhost:3010." >&2
+    echo "If your fixtures are served somewhere else, set STAGEFLOW_FIXTURE_BASE_URL." >&2
     exit 2
   fi
 done
@@ -160,6 +180,7 @@ trap 'rm -rf "${WORK_DIR:-}"; cleanup_project 2>/dev/null || true' EXIT
 echo "==> Work dir: ${WORK_DIR}"
 echo "==> Project:  ${PROJECT_SLUG}"
 echo "==> API:      ${API_URL}"
+echo "==> Fixtures: ${FIXTURE_BASE_URL}"
 echo ""
 
 # --- Step 1: Create project ---

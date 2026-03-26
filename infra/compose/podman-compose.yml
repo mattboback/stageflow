@@ -243,9 +243,9 @@ services:
       context: ../..
       dockerfile: clients/web/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://stageflow.org}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
-        VITE_SITE_URL: ${VITE_SITE_URL:-https://stageflow.org}
+        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3000}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
         VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility scanning platform}
     image: localhost/stageflow/frontend:latest

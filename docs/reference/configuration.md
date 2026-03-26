@@ -2,7 +2,7 @@
 
 Reference for environment variables used by local, staging, and production StageFlow deployments.
 
-Use `.env.example` as the baseline. Keep secrets in your secret manager or host-level env, never in git.
+Use `.env.example` as the local baseline. It now favors localhost-friendly defaults, so override the domain-facing values before staging or production use. Keep secrets in your secret manager or host-level env, never in git.
 
 If you are orienting yourself for the first time, start with the [repository README](../../README.md) for the quick start and the [docs landing page](../README.md) for the full docs map. This page is the detailed configuration reference once you know which environment you are setting up.
 
@@ -10,13 +10,11 @@ If you are orienting yourself for the first time, start with the [repository REA
 
 ```bash
 cp .env.example .env
-just setup
-just dev up
-just dev init
-just images
+just diagnose
+just demo
 ```
 
-`just images` builds the scanner images used by local runs. The first build is the longest; after that you usually rerun it only when scanner/runtime dependencies change.
+`just demo` is the fastest end-to-end smoke test. For the individual bootstrap steps behind it, run `just setup && just images && just dev up && just dev init`.
 
 ## Variable Reference
 
@@ -44,7 +42,7 @@ just images
 | ---------------------------- | -------- | ------------------------------------ | -------------------------------------------------- |
 | `GF_SECURITY_ADMIN_USER`     | yes      | `admin`                              | Grafana admin user.                                |
 | `GF_SECURITY_ADMIN_PASSWORD` | yes      | `change-me`                          | Grafana admin password.                            |
-| `GF_SERVER_ROOT_URL`         | yes      | `https://your-domain.com/monitoring` | External URL Grafana uses for redirects and links. |
+| `GF_SERVER_ROOT_URL`         | yes      | `http://localhost:3001` | External URL Grafana uses for redirects and links. |
 
 ### Platform API
 
@@ -57,16 +55,16 @@ just images
 
 | Variable                          | Required | Default in `.env.example`                             | Purpose                                               |
 | --------------------------------- | -------- | ----------------------------------------------------- | ----------------------------------------------------- |
-| `STAGEFLOW_PUBLIC_DOMAIN`         | yes      | `your-domain.com`                                     | Public domain used in generated URLs and edge config. |
-| `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes      | `https://your-domain.com,https://www.your-domain.com` | Browser origin allowlist for API requests.            |
+| `STAGEFLOW_PUBLIC_DOMAIN`         | yes      | `localhost`                                                           | Public domain used in generated URLs and edge config. |
+| `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes      | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:3010,http://localhost:8080` | Browser origin allowlist for API requests.            |
 
 ### Frontend
 
 | Variable                          | Required | Default in `.env.example`                                       | Purpose                                           |
 | --------------------------------- | -------- | --------------------------------------------------------------- | ------------------------------------------------- |
-| `VITE_API_URL`                    | yes      | `https://your-domain.com`                                       | Frontend API base URL.                            |
+| `VITE_API_URL`                    | yes      | `http://localhost:8080`                                       | Frontend API base URL.                            |
 | `VITE_SITE_TITLE`                 | no       | `StageFlow`                                                     | Site title shown in UI metadata.                  |
-| `VITE_SITE_URL`                   | yes      | `https://your-domain.com`                                       | Canonical site URL used for metadata/share cards. |
+| `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                       | Canonical site URL used for metadata/share cards. |
 | `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | Repository link shown in UI.                      |
 | `VITE_TAGLINE`                    | no       | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces.                 |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
@@ -77,14 +75,14 @@ just images
 | ---------------------------- | ---------------------------- | ------------------------- | ----------------------------------------------------------- |
 | `OPENROUTER_API_KEY`         | only if AI navigator enabled | empty                     | API key for OpenRouter model calls.                         |
 | `OPENROUTER_APP_TITLE`       | no                           | `StageFlow`               | OpenRouter request attribution title.                       |
-| `OPENROUTER_APP_REFERER`     | no                           | `https://your-domain.com` | OpenRouter request attribution referer.                     |
+| `OPENROUTER_APP_REFERER`     | no                           | `http://localhost:3000` | OpenRouter request attribution referer.                     |
 | `AI_NAVIGATOR_DEFAULT_MODEL` | no                           | `openai/gpt-4o-mini`      | Default backend model when scanner options do not override. |
 
 ### Caddy (Edge)
 
 | Variable      | Required | Default in `.env.example` | Purpose                                                |
 | ------------- | -------- | ------------------------- | ------------------------------------------------------ |
-| `CADDY_EMAIL` | no       | `admin@your-domain.com`   | Email address used for Let's Encrypt TLS registration. |
+| `CADDY_EMAIL` | no       | not set                   | Email address used for Let's Encrypt TLS registration. |
 
 ### Advanced infrastructure overrides
 

@@ -1,32 +1,25 @@
-# StageFlow project setup
+# StageFlow self-scan for this repo
 
-This folder configures `stageflow project` for this repository.
+This config is already wired for `clients/web`.
 
-## Quick setup
+- It starts the frontend with `just run clients/web`.
+- It overrides `VITE_API_URL` so the dev server talks to the local StageFlow API.
+- It waits for `http://127.0.0.1:5173`.
+- It scans that local app with `axe,lighthouse,seo,link-checker`.
 
-1. Open `config.yaml` in this folder.
-2. Set `dev.start.cmd` to the command that starts your app.
-3. Set `dev.ready.url` to the URL that returns HTTP 2xx or 3xx when your app is ready.
-4. Set `scan.urls` to the page URLs you want scanned.
-5. Run `stageflow project` again.
+## Quick path
 
-## Example dev commands
+```bash
+cp .env.example .env
+just setup
+just images
+just dev up local
+just dev init local
+just cli-install
+stageflow project doctor .
+stageflow project .
+```
 
-- npm: `cmd: ["npm", "run", "dev"]`
-- bun: `cmd: ["bun", "run", "dev"]`
-- pnpm: `cmd: ["pnpm", "dev"]`
-- yarn: `cmd: ["yarn", "dev"]`
+Use `stageflow project doctor .` first if you only want to verify the dev-server wiring without running a scan yet.
 
-## Localhost/private scans
-
-For local targets like `localhost` and `127.0.0.1`:
-
-1. Start the StageFlow local overlay:
-   - `just dev up local`
-   - `just dev init local`
-2. Re-run `stageflow project`.
-
-## Troubleshooting
-
-- If you see "ENOENT" for your dev command, verify `dev.start.cmd` and `dev.start.cwd`.
-- If readiness times out, verify `dev.ready.url` responds while your app is running.
+For the general project-mode reference, see [`docs/PROJECT_MODE.md`](../docs/PROJECT_MODE.md).

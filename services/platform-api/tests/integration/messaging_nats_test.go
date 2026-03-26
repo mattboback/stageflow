@@ -18,57 +18,28 @@ import (
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
+type integrationFixture struct {
+	ctx    context.Context
+	client *sharedmsg.Client
+	store  *status.Store
+}
+
 func TestServiceIntegrationWithNATS(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test in short mode")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-	defer cancel()
-
-	natsURL := startNATSServer(t)
-
-	client, err := sharedmsg.NewClient(&sharedmsg.Config{
-		URL:            natsURL,
-		MaxReconnects:  5,
-		ReconnectWait:  500 * time.Millisecond,
-		ConnectTimeout: 10 * time.Second,
-	})
-	if err != nil {
-		t.Fatalf("failed to create NATS client: %v", err)
-	}
-
-	t.Cleanup(func() {
-		_ = client.Close()
-	})
-
-	if ensureErr := ensureStreamsWithRetry(ctx, client, 20, 250*time.Millisecond); ensureErr != nil {
-		t.Fatalf("failed to ensure streams: %v", ensureErr)
-	}
-
-	store := newStatusStore(t)
-	service := platformmsg.NewService(client)
-
-	subCtx, cancel := context.WithCancel(ctx)
-	t.Cleanup(cancel)
-
-	if subscribeErr := service.SubscribeToStatusEvents(subCtx, store); subscribeErr != nil {
-		t.Fatalf("failed to subscribe to events: %v", subscribeErr)
-	}
+	fixture := newIntegrationFixture(t)
 
 	jobID := "nats-integration-job"
 
 	createdEnv := events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildJobCreated(jobID))
-	if publishErr := service.PublishJobCreated(ctx, createdEnv); publishErr != nil {
+	if publishErr := platformmsg.NewService(fixture.client).PublishJobCreated(fixture.ctx, createdEnv); publishErr != nil {
 		t.Fatalf("failed to publish job.created: %v", publishErr)
 	}
 
-	assertExtractionLifecycle(ctx, t, client, store, jobID)
-	assertScanLifecycle(ctx, t, client, store, jobID)
+	assertExtractionLifecycle(fixture.ctx, t, fixture.client, fixture.store, jobID)
+	assertScanLifecycle(fixture.ctx, t, fixture.client, fixture.store, jobID)
 	publishEnvelope(
-		ctx,
+		fixture.ctx,
 		t,
-		client,
+		fixture.client,
 		sharedmsg.SubjectJobCompleted,
 		events.NewEnvelope(events.EventJobCompleted, jobID, "integration-test", &events.JobCompletedPayload{
 			JobID:  jobID,
@@ -80,12 +51,186 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 		}),
 	)
 
-	final := waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+	final := waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "DONE" && rec.ReportJSONKey != "" && rec.ReportKey != ""
 	})
 
 	if final.ReportJSONKey == "" || final.ReportKey == "" {
 		t.Fatalf("expected artifacts to be set, got %+v", final)
+	}
+}
+
+func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
+	fixture := newIntegrationFixture(t)
+
+	jobID := "nats-url-job"
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectJobCreated,
+		events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildURLJobCreated(jobID)),
+	)
+
+	waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == models.JobStateScanning &&
+			rec.InputType == events.InputTypeURLs &&
+			rec.TotalPages == 2 &&
+			rec.CurrentPage == 0 &&
+			len(rec.ExpectedScanners) == 1 &&
+			rec.ExpectedScanners[0] == "axe"
+	})
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectScanPageCompleted,
+		events.NewEnvelope(events.EventScanPageCompleted, jobID, "integration-test", &events.ScanPageCompletedPayload{
+			JobID:       jobID,
+			ScannerType: "axe",
+			PageID:      "page-1",
+			PageIndex:   1,
+			TotalPages:  2,
+		}),
+	)
+
+	waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == models.JobStateScanning && rec.CurrentPage >= 1 && rec.TotalPages == 2
+	})
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectScanCompleted,
+		events.NewEnvelope(events.EventScanCompleted, jobID, "integration-test", &events.ScanCompletedPayload{
+			JobID:             jobID,
+			ScannerType:       "axe",
+			ResultsPath:       jobID + "/axe/results.json",
+			ReportPath:        jobID + "/axe/report.html",
+			TotalPagesScanned: 2,
+			Summary: events.ScanSummary{
+				TotalViolations: 0,
+				BySeverity:      map[string]int{"critical": 0},
+			},
+		}),
+	)
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectJobCompleted,
+		events.NewEnvelope(events.EventJobCompleted, jobID, "integration-test", &events.JobCompletedPayload{
+			JobID:  jobID,
+			Status: "success",
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: jobID + "/report.json",
+				ReportHTML: jobID + "/report.html",
+			},
+			ScannerArtifacts: map[string]events.ScannerArtifacts{
+				"axe": {
+					ScannerType: "axe",
+					ResultsPath: jobID + "/axe/results.json",
+					ReportPath:  jobID + "/axe/report.html",
+				},
+			},
+		}),
+	)
+
+	final := waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == models.JobStateDone &&
+			rec.ReportJSONKey != "" &&
+			len(rec.CompletedScanners) == 1 &&
+			rec.CompletedScanners[0] == "axe"
+	})
+
+	artifact := final.ScannerArtifacts["axe"]
+	if artifact == nil {
+		t.Fatalf("expected axe scanner artifacts, got %#v", final.ScannerArtifacts)
+	}
+
+	if artifact.ResultsKey != jobID+"/axe/results.json" || artifact.ReportKey != jobID+"/axe/report.html" {
+		t.Fatalf("unexpected axe scanner artifact keys: %#v", artifact)
+	}
+}
+
+func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
+	fixture := newIntegrationFixture(t)
+
+	jobID := "nats-failed-job"
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectJobCreated,
+		events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildURLJobCreated(jobID)),
+	)
+
+	waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == models.JobStateScanning
+	})
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectScanFailed,
+		events.NewEnvelope(events.EventScanFailed, jobID, "integration-test", &events.ScanFailedPayload{
+			JobID:        jobID,
+			ScannerType:  "axe",
+			Error:        "browser crashed",
+			ErrorDetails: "playwright lost connection",
+			StageLogPath: jobID + "/axe/stage.log",
+			RecipePath:   jobID + "/axe/recipe.json",
+		}),
+	)
+
+	failed := waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+		return rec.State == models.JobStateFailed &&
+			rec.Error == "browser crashed" &&
+			rec.LastStage == "scanning"
+	})
+
+	if failed.CompletedAt == nil {
+		t.Fatalf("expected completed_at to be set for failed job")
+	}
+
+	publishEnvelope(
+		fixture.ctx,
+		t,
+		fixture.client,
+		sharedmsg.SubjectJobCompleted,
+		events.NewEnvelope(events.EventJobCompleted, jobID, "integration-test", &events.JobCompletedPayload{
+			JobID:  jobID,
+			Status: "success",
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: jobID + "/late/report.json",
+				ReportHTML: jobID + "/late/report.html",
+			},
+		}),
+	)
+
+	time.Sleep(250 * time.Millisecond)
+
+	final, err := fixture.store.GetJob(context.Background(), jobID)
+	if err != nil {
+		t.Fatalf("failed to reload failed record: %v", err)
+	}
+
+	if final.State != models.JobStateFailed {
+		t.Fatalf("late success should not override failure state, got %+v", final)
+	}
+
+	if final.ReportJSONKey != "" || final.ReportKey != "" {
+		t.Fatalf("late success should not backfill success artifacts onto failed job, got %+v", final)
+	}
+
+	if final.Error != "browser crashed" || final.LastErrorDetails != "playwright lost connection" {
+		t.Fatalf("expected failure details to remain intact, got %+v", final)
 	}
 }
 
@@ -95,6 +240,18 @@ func buildJobCreated(jobID string) *events.JobCreatedPayload {
 		InputType: "zip",
 		InputPath: "staging/" + jobID + "/input.zip",
 		Config:    models.JobConfig{Modules: []string{"axe", "lighthouse"}},
+	}
+}
+
+func buildURLJobCreated(jobID string) *events.JobCreatedPayload {
+	return &events.JobCreatedPayload{
+		JobID:     jobID,
+		InputType: events.InputTypeURLs,
+		URLs: []string{
+			"http://127.0.0.1:5173",
+			"http://127.0.0.1:5173/about",
+		},
+		Config: models.JobConfig{Modules: []string{"axe"}},
 	}
 }
 
@@ -283,6 +440,53 @@ func ensureStreamsWithRetry(ctx context.Context, client *sharedmsg.Client, attem
 	}
 
 	return err
+}
+
+func newIntegrationFixture(t *testing.T) *integrationFixture {
+	t.Helper()
+
+	if testing.Short() {
+		t.Skip("skipping integration test in short mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	t.Cleanup(cancel)
+
+	natsURL := startNATSServer(t)
+
+	client, err := sharedmsg.NewClient(&sharedmsg.Config{
+		URL:            natsURL,
+		MaxReconnects:  5,
+		ReconnectWait:  500 * time.Millisecond,
+		ConnectTimeout: 10 * time.Second,
+	})
+	if err != nil {
+		t.Fatalf("failed to create NATS client: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
+
+	if ensureErr := ensureStreamsWithRetry(ctx, client, 20, 250*time.Millisecond); ensureErr != nil {
+		t.Fatalf("failed to ensure streams: %v", ensureErr)
+	}
+
+	store := newStatusStore(t)
+	service := platformmsg.NewService(client)
+
+	subCtx, subCancel := context.WithCancel(ctx)
+	t.Cleanup(subCancel)
+
+	if subscribeErr := service.SubscribeToStatusEvents(subCtx, store); subscribeErr != nil {
+		t.Fatalf("failed to subscribe to events: %v", subscribeErr)
+	}
+
+	return &integrationFixture{
+		ctx:    ctx,
+		client: client,
+		store:  store,
+	}
 }
 
 func startNATSServer(tb testing.TB) string {
