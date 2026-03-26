@@ -3,11 +3,9 @@
 
 @theme {
 	/* Font families - self-hosted variable fonts */
-	--font-display:
-		'Source Serif 4 Variable', Georgia, Cambria, 'Times New Roman', serif;
+	--font-display: 'Source Serif 4 Variable', Georgia, Cambria, 'Times New Roman', serif;
 	--font-body:
-		'Source Sans 3 Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue',
-		sans-serif;
+		'Source Sans 3 Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
 	--font-mono:
 		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -158,11 +156,7 @@
 	}
 
 	.playground-hero {
-		background: linear-gradient(
-			180deg,
-			var(--color-surface) 0%,
-			var(--color-paper) 100%
-		);
+		background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-paper) 100%);
 	}
 
 	.playground-shell {
@@ -198,11 +192,7 @@
 	}
 
 	.landing-hero {
-		background: linear-gradient(
-			180deg,
-			var(--color-surface) 0%,
-			var(--color-paper) 100%
-		);
+		background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-paper) 100%);
 	}
 
 	.landing-grid {

@@ -30,7 +30,9 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 	jobID := "nats-integration-job"
 
 	createdEnv := events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildJobCreated(jobID))
-	if publishErr := platformmsg.NewService(fixture.client).PublishJobCreated(fixture.ctx, createdEnv); publishErr != nil {
+	svc := platformmsg.NewService(fixture.client)
+
+	if publishErr := svc.PublishJobCreated(fixture.ctx, createdEnv); publishErr != nil {
 		t.Fatalf("failed to publish job.created: %v", publishErr)
 	}
 

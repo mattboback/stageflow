@@ -352,7 +352,7 @@
 						href="/playground"
 						class={cn(
 							buttonVariants({ variant: 'outline', size: 'lg' }),
-							'gap-2 rounded-md border-surface/30 px-7 text-surface hover:bg-surface/10'
+							'border-surface/30 text-surface hover:bg-surface/10 gap-2 rounded-md px-7'
 						)}
 					>
 						Open Playground
