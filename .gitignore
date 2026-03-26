@@ -64,6 +64,7 @@ infra/caddy/snippets/monitoring-basicauth*.caddy
 .go/
 .direnv/
 repo-context.md
+plans/
 flattened_repo*.md
 flattened_repo*.json
 pipeline_logs.txt

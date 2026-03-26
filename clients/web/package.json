@@ -2,6 +2,12 @@
 	"name": "stageflow-frontend",
 	"private": true,
 	"version": "0.0.1",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mattboback/stageflow.git",
+		"directory": "clients/web"
+	},
 	"packageManager": "bun@1.3.8",
 	"type": "module",
 	"scripts": {
