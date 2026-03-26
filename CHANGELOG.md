@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `spelling-grammar` scanner: AI-assisted content quality analysis
 - Standalone HTML report generation in scanner runtime (self-contained, portable output)
 - `docs/evaluators-guide.md`: structured guide for hiring managers and code reviewers
-- `docs/open-source-plan.md`: phased open-source readiness plan
 - README: "What this project demonstrates" and "Hosted demo and self-hosting" sections
 
 ### Changed
