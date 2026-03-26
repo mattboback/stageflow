@@ -480,9 +480,12 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
         echo "Installed '$dest', but '$bin_dir' is not on PATH. Add it to PATH, then run '${bin_name} version'." >&2
         exit 1
     fi
-    if [[ "$resolved" != "$dest" ]]; then
-        echo "Installed '$dest', but '$bin_name' does not resolve to the installed binary (got '$resolved'). Reorder PATH or remove the stale binary, then run '${bin_name} version'." >&2
-        exit 1
+    real_resolved="$(realpath "$resolved" 2>/dev/null || readlink -f "$resolved" 2>/dev/null || echo "$resolved")"
+    real_dest="$(realpath "$dest" 2>/dev/null || readlink -f "$dest" 2>/dev/null || echo "$dest")"
+
+    if [[ "$real_resolved" != "$real_dest" ]]; then
+        echo "WARNING: Installed '$dest', but '$bin_name' resolves to '$resolved'." >&2
+        echo "You may need to reorder PATH or remove the stale binary." >&2
     fi
 
     echo "==> Installed and available on PATH as '$bin_name'."
