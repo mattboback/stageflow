@@ -13,15 +13,13 @@ StageFlow runs multi-scanner audits against live URLs or static-site ZIP archive
 
 ![StageFlow — live scan pipeline dashboard](docs/images/hero.png)
 
-## Why this project is interesting
+## Engineering highlights
 
-StageFlow is a strong showcase project because it combines:
-
-- a real multi-service architecture
-- real-time SSE job streaming
-- isolated scanner execution in per-job pods
-- contract-driven report normalization across multiple scanners
-- both a web UI and CLI surface for the same backend platform
+- Multi-service Go/TypeScript architecture coordinated through NATS JetStream
+- Real-time SSE streaming from orchestrator through API to browser and CLI
+- Per-job Podman pod isolation for scanner execution
+- Contract-driven report normalization across 8 heterogeneous scanners
+- Dual-surface API: same backend drives both a SvelteKit web UI and a Go CLI
 
 ## What you can do with it
 
@@ -65,7 +63,7 @@ For the full system design, see [docs/architecture/system.md](docs/architecture/
 
 ### Scanner selection
 
-![Six scanners — Axe, Lighthouse, SEO, Security Headers, Link Checker, AI Navigator](docs/images/landing-scanners.png)
+![Eight scanners — Axe, Lighthouse, SEO, Security Headers, Link Checker, AI Navigator, Open Graph, Spelling & Grammar](docs/images/landing-scanners.png)
 
 ### Live scan execution
 
@@ -308,7 +306,7 @@ stageflow scan https://example.com
 
 ## Demo flows
 
-If you want a quick portfolio walkthrough, start with these:
+Quickest way to see the system end-to-end:
 
 1. Submit a public URL scan from the web UI.
 2. Watch live progress over SSE while scanners run.
@@ -359,7 +357,8 @@ Golden files live in `qa/fixtures/project-golden/`. On first run the script auto
 
 Use the shortest path to the detail you need:
 
-- [Architecture](docs/architecture/system.md)
+- [Architecture overview](ARCHITECTURE.md)
+- [Architecture deep-dive](docs/architecture/system.md)
 - [Configuration reference](docs/reference/configuration.md)
 - [CLI and developer tooling](docs/operations/devtools.md)
 - [CLI cheatsheet](docs/operations/cli_cheatsheet.md)
@@ -370,45 +369,9 @@ Use the shortest path to the detail you need:
 
 ## Operating modes
 
-### Local development
+**Local development:** `just setup && just dev up && just dev init && just images` (see [Quick start](#quick-start))
 
-Use this repo directly for local development and iteration:
-
-```bash
-just setup
-just dev up
-just dev init
-just images
-```
-
-### Staging verification
-
-Use the staging recipes when you need a repo-managed verification stack:
-
-```bash
-just staging up
-just staging init
-just staging ps
-just staging logs
-```
-
-### Production boundary
-
-The live site at `stageflow.org` is real, but production operations are intentionally managed from an external deployment workspace, not from this repo.
-
-Use the external control plane for live operations:
-
-```bash
-# Set STAGEFLOW_PROD_DEPLOY_DIR to your deployment workspace root first
-cd $STAGEFLOW_PROD_DEPLOY_DIR
-just deploy stageflow
-just restart stageflow
-just logs stageflow
-just health
-just status
-```
-
-This repository remains the source of truth for the application code, local development flow, staging configuration, and documentation.
+**Staging:** `just staging up && just staging init && just staging ps`
 
 ## Contributing
 
