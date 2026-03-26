@@ -3,7 +3,7 @@
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Live demo:** [stageflow.org](https://stageflow.org) | **Run locally:** `cp .env.example .env && just setup && just dev up && just dev init && just images`
+**Live demo:** [stageflow.org](https://stageflow.org) | **Run locally:** `cp .env.example .env && just diagnose && just demo`
 
 Podman-native web accessibility and quality scanning platform.
 
@@ -110,6 +110,7 @@ The `stageflow` CLI submits scan jobs, streams live progress, and renders unifie
 </table>
 
 ```bash
+stageflow scan https://example.com
 stageflow scan https://example.com --api https://stageflow.org
 stageflow scan https://example.com --scanners axe,seo --format json
 stageflow scan https://example.com --fail-on serious   # exit 1 on regressions
@@ -138,17 +139,26 @@ stageflow scan https://example.com --fail-on serious   # exit 1 on regressions
 - [just](https://github.com/casey/just)
 - [golangci-lint v2](https://golangci-lint.run/)
 
-### Start the local stack
+### Fastest local smoke test
 
 ```bash
 git clone https://github.com/mattboback/stageflow.git
 cd stageflow
 cp .env.example .env
 
+just diagnose
+just demo
+```
+
+`just demo` runs the local prerequisite checks, builds the images, restarts the stack, waits for the health endpoints, initializes MinIO, and prints the next scan commands.
+
+### Manual bootstrap
+
+```bash
 just setup
+just images
 just dev up
 just dev init
-just images
 ```
 
 | Service                | `dev` mode (default)    | `local` overlay mode    |
@@ -164,7 +174,9 @@ just cli-install
 stageflow scan https://example.com
 ```
 
-To scan `localhost` or private targets, use the local overlay: `just dev up local && just dev init local && just images`.
+To scan `localhost` or private targets, use the local overlay: `just setup && just images && just dev up local && just dev init local`.
+
+This repo already includes a working `.stageflow/config.yaml`, so after the local overlay is up you can dogfood StageFlow against `clients/web` with `stageflow project doctor .` and `stageflow project .`.
 
 ### Validation
 
@@ -172,6 +184,7 @@ To scan `localhost` or private targets, use the local overlay: `just dev up loca
 just ci              # full quality gate (Go + frontend + Storybook + scanner-runner)
 just storybook-test  # Storybook interaction + accessibility tests
 just shell-tests     # shell regression tests
+just project-golden  # baseline -> promote -> regression -> diff against the local overlay
 ```
 
 ## What this project demonstrates

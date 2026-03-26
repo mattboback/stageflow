@@ -85,6 +85,26 @@ func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 	}
 }
 
+func TestCheckedInProjectConfigUsesLocalSelfScanOverrides(t *testing.T) {
+	repoRoot := mustFindRepoRoot(t)
+	configPath := filepath.Join(repoRoot, ".stageflow", "config.yaml")
+
+	data, err := os.ReadFile(configPath)
+	requireNoErr(t, err)
+
+	contents := string(data)
+	for _, expected := range []string{
+		`cmd: ["just", "run", "clients/web"]`,
+		`VITE_API_URL: http://localhost:8080`,
+		`VITE_SITE_URL: http://127.0.0.1:5173`,
+		`url: http://127.0.0.1:5173`,
+	} {
+		if !strings.Contains(contents, expected) {
+			t.Fatalf("expected %s to contain %q", configPath, expected)
+		}
+	}
+}
+
 func TestCLIProjectCommandsSmoke(t *testing.T) {
 	root := t.TempDir()
 

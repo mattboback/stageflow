@@ -15,6 +15,9 @@ dev:
     # best guess from Justfile recipe `run`
     cmd: ["just", "run", "clients/web"]
     cwd: .
+    env:
+      VITE_API_URL: http://localhost:8080
+      VITE_SITE_URL: http://127.0.0.1:5173
   ready:
     # Match this to your dev server URL.
     url: http://127.0.0.1:5173

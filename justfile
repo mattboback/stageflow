@@ -34,7 +34,11 @@ setup:
     echo "==> Installing scanner-runner dependencies..."
     (cd {{scanner_dir}} && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 {{bun}} install --frozen-lockfile)
 
-[group('demo'), doc('Bring up the local stack and print a URL-scan demo command')]
+[group('setup'), doc('Check local prerequisites and local-first env hints')]
+diagnose:
+    @./infra/scripts/diagnose-local-env.sh
+
+[group('demo'), doc('Bootstrap the local stack and print the quickest next steps')]
 demo URL='https://example.com':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -42,6 +46,30 @@ demo URL='https://example.com':
     url="{{URL}}"
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
+    demo_vite_api_url="${STAGEFLOW_DEMO_VITE_API_URL:-http://localhost:8080}"
+    demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-http://localhost:3000}"
+    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080}"
+    demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-localhost}"
+    demo_grafana_url="${STAGEFLOW_DEMO_GF_SERVER_ROOT_URL:-http://localhost:3001}"
+
+    wait_for_http() {
+        local url="$1"
+        local label="$2"
+        local timeout="${3:-120}"
+        local started_at
+
+        started_at="$(date +%s)"
+
+        until curl -fsS "$url" >/dev/null 2>&1; do
+            if (( $(date +%s) - started_at >= timeout )); then
+                echo "Timed out waiting for ${label} at ${url}" >&2
+                exit 1
+            fi
+            sleep 2
+        done
+
+        echo "==> ${label} ready (${url})"
+    }
 
     if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
         echo "Refusing to start the repo-local StageFlow stack on the production VPS." >&2
@@ -54,23 +82,47 @@ demo URL='https://example.com':
         exit 1
     fi
 
+    echo "==> Diagnosing local prerequisites..."
+    just diagnose
+
     echo "==> Setup..."
     just setup
 
-    echo "==> Starting stack..."
-    just dev up
+    echo "==> Building images..."
+    VITE_API_URL="$demo_vite_api_url" \
+    VITE_SITE_URL="$demo_site_url" \
+    STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
+    PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
+    GF_SERVER_ROOT_URL="$demo_grafana_url" \
+    just images
+
+    echo "==> Restarting stack..."
+    VITE_API_URL="$demo_vite_api_url" \
+    VITE_SITE_URL="$demo_site_url" \
+    STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
+    PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
+    GF_SERVER_ROOT_URL="$demo_grafana_url" \
+    just dev restart
+
+    wait_for_http "http://127.0.0.1:9000/minio/health/live" "MinIO" 120
+    wait_for_http "http://127.0.0.1:8080/healthz" "Platform API" 120
 
     echo "==> Initializing MinIO buckets..."
     just dev init
 
-    echo "==> Building images..."
-    just images
+    wait_for_http "http://127.0.0.1:3000/" "Frontend" 120
 
     echo ""
     echo "==> Demo ready"
-    echo "UI: http://localhost:3000"
+    echo "UI:      http://localhost:3000"
+    echo "API:     http://localhost:8080"
+    echo "Grafana: http://localhost:3001"
     echo ""
-    echo "Submit a URL scan:"
+    echo "Try the web UI, or run:"
+    echo "  just cli-install"
+    echo "  stageflow scan $url"
+    echo ""
+    echo "Raw API:"
     echo "curl -sS -X POST http://localhost:8080/api/v1/jobs/urls \\"
     echo "  -H 'content-type: application/json' \\"
     echo "  -d '{\"urls\":[\"$url\"]}'"
@@ -492,6 +544,12 @@ shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
+
+[group('quality'), doc('Run the project baseline->promote->diff golden flow against the local overlay')]
+project-golden:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    bash qa/e2e/project-scan-golden.sh
 
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':

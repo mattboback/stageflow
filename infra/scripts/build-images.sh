@@ -21,30 +21,34 @@ if [[ -f "$ENV_FILE" ]]; then
 fi
 
 build() {
-  local primary_tag="$1"
-  local compat_tag="$2"
-  local dockerfile="$3"
-  shift 3
+  local label="$1"
+  local primary_tag="$2"
+  local compat_tag="$3"
+  local dockerfile="$4"
+  shift 4
 
+  echo "[images] -> $label ($dockerfile)"
   "$PODMAN" build --network "$PODMAN_BUILD_NETWORK" -t "$primary_tag" -f "$dockerfile" "$REPO_ROOT" "$@"
   "$PODMAN" tag "$primary_tag" "$compat_tag"
 }
 
 echo "[images] Building Go services..."
-build localhost/stageflow/platform-api:latest stageflow/platform-api:latest services/platform-api/Dockerfile
-build localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest services/orchestrator/Dockerfile
+build platform-api localhost/stageflow/platform-api:latest stageflow/platform-api:latest services/platform-api/Dockerfile
+build orchestrator localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest services/orchestrator/Dockerfile
 
 echo "[images] Building frontend (SvelteKit)..."
-build localhost/stageflow/frontend:latest stageflow/frontend:latest clients/web/Dockerfile \
-  --build-arg VITE_API_URL="${VITE_API_URL:-https://example.com}" \
+build frontend localhost/stageflow/frontend:latest stageflow/frontend:latest clients/web/Dockerfile \
+  --build-arg VITE_API_URL="${VITE_API_URL:-http://localhost:8080}" \
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
-  --build-arg VITE_SITE_URL="${VITE_SITE_URL:-https://example.com}" \
-  --build-arg VITE_GITHUB_URL="${VITE_GITHUB_URL:-https://github.com/your-handle}" \
+  --build-arg VITE_SITE_URL="${VITE_SITE_URL:-http://localhost:3000}" \
+  --build-arg VITE_GITHUB_URL="${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}" \
   --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Podman-native web accessibility scanning platform}" \
   --build-arg VITE_AI_NAVIGATOR_DEFAULT_MODEL="${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}"
 
 echo "[images] Building job images..."
-build localhost/stageflow/extractor:latest stageflow/extractor:latest services/archive-extractor/Dockerfile
+build archive-extractor localhost/stageflow/extractor:latest stageflow/extractor:latest services/archive-extractor/Dockerfile
+echo "[images] -> scanner-runner (services/scanner-runner/Dockerfile)"
+echo "[images]    first-time builds download Playwright Chromium and take the longest"
 "$PODMAN" build \
   --network "$PODMAN_BUILD_NETWORK" \
   --ignorefile services/scanner-runner/.dockerignore \
