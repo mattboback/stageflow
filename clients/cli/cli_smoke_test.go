@@ -129,7 +129,7 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 func TestCLIProjectDoctorRepoSmoke(t *testing.T) {
 	repoDir := os.Getenv("STAGEFLOW_TEST_REPO_DIR")
 	if repoDir == "" {
-		repoDir = "/home/matt/Deployment/stageflow"
+		t.Skip("skipping: set STAGEFLOW_TEST_REPO_DIR to the repo root")
 	}
 
 	if _, err := os.Stat(repoDir); err != nil {
