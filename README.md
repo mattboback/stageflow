@@ -187,9 +187,9 @@ just shell-tests     # shell regression tests
 just project-golden  # baseline -> promote -> regression -> diff against the local overlay
 ```
 
-## What this project demonstrates
+## Built for evaluation
 
-StageFlow is a portfolio project that covers a broad surface of backend, frontend, infrastructure, and developer tooling work:
+StageFlow is a portfolio project built to demonstrate a broad surface of backend, frontend, infrastructure, and developer tooling work.
 
 - **Distributed system design** — multi-service Go/TypeScript architecture coordinated through NATS JetStream, with explicit service boundaries, a documented job FSM, and Podman pod isolation.
 - **Contract-driven development** — JSON Schema as the single source of truth for the report format, with generated TypeScript and Go types used by all consumers.
