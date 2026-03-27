@@ -12,13 +12,14 @@ import (
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
-func jobIDFromJobStreamPath(path string) (string, bool) {
+func jobIDFromJobPath(path, suffix string) (string, bool) {
 	path = strings.TrimPrefix(path, "/api/v1/jobs/")
 	parts := strings.Split(path, "/")
 
-	if len(parts) < 2 || parts[1] != "stream" || parts[0] == "" {
+	if len(parts) < 2 || parts[1] != suffix || parts[0] == "" {
 		return "", false
 	}
 
@@ -85,6 +86,92 @@ func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
+}
+
+func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
+	snapshot := change.Snapshot
+	if snapshot == nil {
+		return map[string]any{}
+	}
+
+	switch change.Signal.Kind {
+	case jobstatus.SignalScanPageCompleted:
+		payload := map[string]any{
+			"type":  "progress",
+			"state": snapshot.State,
+			"progress": map[string]int{
+				"currentPage": snapshot.CurrentPage,
+				"totalPages":  snapshot.TotalPages,
+			},
+		}
+
+		if change.Signal.ScanPageCompleted != nil && change.Signal.ScanPageCompleted.ScannerType != "" {
+			payload["scanner_type"] = change.Signal.ScanPageCompleted.ScannerType
+		}
+
+		return payload
+	case jobstatus.SignalScanCompleted:
+		payload := map[string]any{
+			"type":          "scanner_complete",
+			"state":         snapshot.State,
+			"pages_scanned": snapshot.CurrentPage,
+			"violations":    snapshot.TotalViolations,
+		}
+
+		if change.Signal.ScanCompleted != nil {
+			if change.Signal.ScanCompleted.ScannerType != "" {
+				payload["scanner_type"] = change.Signal.ScanCompleted.ScannerType
+			}
+
+			if change.Signal.ScanCompleted.Timing != nil {
+				payload["timing"] = map[string]int64{
+					"total_ms":             change.Signal.ScanCompleted.Timing.TotalMs,
+					"page_iteration_ms":    change.Signal.ScanCompleted.Timing.PageIterationMs,
+					"write_results_ms":     change.Signal.ScanCompleted.Timing.WriteResultsMs,
+					"upload_artifacts_ms":  change.Signal.ScanCompleted.Timing.UploadArtifactsMs,
+					"publish_completed_ms": change.Signal.ScanCompleted.Timing.PublishCompletedMs,
+					"finalization_ms":      change.Signal.ScanCompleted.Timing.FinalizationMs,
+				}
+			}
+		}
+
+		return payload
+	case jobstatus.SignalExtractionReady:
+		payload := map[string]any{
+			"type":  "status",
+			"state": "READY_TO_SCAN",
+		}
+
+		if snapshot.TotalPages > 0 {
+			payload["totalPages"] = snapshot.TotalPages
+		}
+
+		return payload
+	case jobstatus.SignalExtractionFailed:
+		return map[string]any{
+			"type":          "failed",
+			"state":         snapshot.State,
+			"error":         snapshot.Error,
+			"error_details": snapshot.LastErrorDetails,
+			"stage":         snapshot.LastStage,
+		}
+	case jobstatus.SignalScanFailed, jobstatus.SignalJobFailed:
+		return map[string]any{
+			"type":  "failed",
+			"state": snapshot.State,
+			"error": snapshot.Error,
+		}
+	case jobstatus.SignalJobCompleted:
+		return map[string]any{
+			"type":  "complete",
+			"state": snapshot.State,
+		}
+	default:
+		return map[string]any{
+			"type":  "status",
+			"state": snapshot.State,
+		}
+	}
 }
 
 func getFlusher(w http.ResponseWriter) (http.Flusher, bool) {
@@ -166,51 +253,6 @@ func (s *Server) handleJobStreamUpdate(
 	return true, true
 }
 
-func (s *Server) streamJobEvents(
-	ctx context.Context,
-	w http.ResponseWriter,
-	r *http.Request,
-	flusher http.Flusher,
-	clientEvents <-chan []byte,
-) {
-	heartbeat := time.NewTicker(15 * time.Second)
-	defer heartbeat.Stop()
-
-	for {
-		select {
-		case <-r.Context().Done():
-			logging.Debug(ctx, "SSE stream closed by client disconnect")
-
-			return
-		case <-heartbeat.C:
-			if err := writeSSEKeepalive(w, flusher); err != nil {
-				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", err)
-
-				return
-			}
-		case data, ok := <-clientEvents:
-			if !ok {
-				logging.Debug(ctx, "SSE hub closed client channel; closing stream")
-
-				return
-			}
-
-			shouldClose, ok := s.handleJobStreamUpdate(ctx, w, flusher, data)
-			if !ok {
-				logging.Debug(ctx, "SSE update write failed; closing stream")
-
-				return
-			}
-
-			if shouldClose {
-				logging.Debug(ctx, "SSE stream closing after terminal update")
-
-				return
-			}
-		}
-	}
-}
-
 // handleJobStream provides Server-Sent Events for real-time job status updates.
 func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -219,7 +261,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, ok := jobIDFromJobStreamPath(r.URL.Path)
+	jobID, ok := jobIDFromJobPath(r.URL.Path, "stream")
 	if !ok {
 		http.Error(w, "Invalid path", http.StatusBadRequest)
 
@@ -228,7 +270,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, err := s.loadJobRecord(ctx, jobID)
+	rec, sub, err := s.jobStatus.Watch(ctx, jobID, jobstatus.WatchOptions{})
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			http.Error(w, "Job not found", http.StatusNotFound)
@@ -239,6 +281,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+	defer sub.Close()
 
 	setSSEHeaders(w)
 
@@ -246,9 +289,6 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-
-	client := s.sseHub.Subscribe(jobID)
-	defer s.sseHub.Unsubscribe(client)
 
 	if !s.sendInitialStatus(ctx, w, flusher, rec) {
 		return
@@ -269,5 +309,47 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.streamJobEvents(ctx, w, r, flusher, client.Events)
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			logging.Debug(ctx, "SSE stream closed by client disconnect")
+
+			return
+		case <-heartbeat.C:
+			if err := writeSSEKeepalive(w, flusher); err != nil {
+				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", err)
+
+				return
+			}
+		case change, ok := <-sub.Updates():
+			if !ok {
+				logging.Debug(ctx, "status pipeline closed watcher; closing stream")
+
+				return
+			}
+
+			payload, marshalErr := json.Marshal(mapChangeToSSEPayload(change))
+			if marshalErr != nil {
+				logging.Error(ctx, "Failed to marshal SSE update payload", "error", marshalErr)
+
+				return
+			}
+
+			shouldClose, ok := s.handleJobStreamUpdate(ctx, w, flusher, payload)
+			if !ok {
+				logging.Debug(ctx, "SSE update write failed; closing stream")
+
+				return
+			}
+
+			if shouldClose {
+				logging.Debug(ctx, "SSE stream closing after terminal update")
+
+				return
+			}
+		}
+	}
 }

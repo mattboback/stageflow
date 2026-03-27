@@ -128,6 +128,15 @@ func (s *Service) StartScanning(ctx context.Context, job *models.Job) error {
 		}
 
 		if startErr := s.runtime.StartScanner(ctx, job, plan); startErr != nil {
+			message := fmt.Sprintf("failed to start scanner %s", scannerType)
+			s.failJobSafe(
+				ctx,
+				job.ID,
+				"scanning",
+				message,
+				fmt.Sprintf("scanner=%s error=%v", scannerType, startErr),
+			)
+
 			return fmt.Errorf("start scanner %s: %w", scannerType, startErr)
 		}
 	}

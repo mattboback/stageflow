@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -157,6 +158,61 @@ func TestServiceRecordScannerCompletionWaitsForRemainingScanners(t *testing.T) {
 
 	if store.completeJobCalls != 0 {
 		t.Fatalf("CompleteJob() calls = %d, want 0", store.completeJobCalls)
+	}
+}
+
+func TestServiceStartScanningFailsJobWhenScannerLaunchFails(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{
+		getJobResults: []*models.Job{
+			{
+				ID:        "job-launch-fail",
+				State:     models.JobStateScanning,
+				InputType: models.JobInputTypeURLs,
+				URLs:      []string{"https://example.com"},
+				Config: models.JobConfig{
+					Modules: []string{"axe"},
+				},
+			},
+		},
+	}
+	runtime := &fakeRuntime{
+		resolvedScannerTypes: []string{"axe"},
+		startScannerErr:      errors.New("image not known"),
+	}
+	publisher := &fakePublisher{}
+
+	service := NewService(store, runtime, &fakeArtifacts{}, publisher)
+	job := &models.Job{
+		ID:        "job-launch-fail",
+		State:     models.JobStateReady,
+		InputType: models.JobInputTypeURLs,
+		URLs:      []string{"https://example.com"},
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
+	err := service.StartScanning(t.Context(), job)
+	if err == nil {
+		t.Fatal("StartScanning() error = nil, want non-nil")
+	}
+
+	if store.failJobCalls != 1 {
+		t.Fatalf("FailJob() calls = %d, want 1", store.failJobCalls)
+	}
+
+	if publisher.failedCalls != 1 {
+		t.Fatalf("PublishJobFailed() calls = %d, want 1", publisher.failedCalls)
+	}
+
+	if runtime.cleanupJobCalls != 1 {
+		t.Fatalf("CleanupJob() calls = %d, want 1", runtime.cleanupJobCalls)
+	}
+
+	if runtime.startScannerCalls != 1 {
+		t.Fatalf("StartScanner() calls = %d, want 1", runtime.startScannerCalls)
 	}
 }
 
@@ -338,6 +394,7 @@ type fakeRuntime struct {
 	resolvedScannerTypes       []string
 	allowLoopbackTargets       bool
 	createJobPodID             string
+	startScannerErr            error
 	createJobPodCalls          int
 	startExtractionWorkerCalls int
 	startScannerCalls          int
@@ -381,7 +438,7 @@ func (f *fakeRuntime) ResolveScannerTypes(_ []string) []string {
 
 func (f *fakeRuntime) StartScanner(_ context.Context, _ *models.Job, _ *ScannerLaunchPlan) error {
 	f.startScannerCalls++
-	return nil
+	return f.startScannerErr
 }
 
 func (f *fakeRuntime) CleanupJob(_ context.Context, _ *models.Job) error {

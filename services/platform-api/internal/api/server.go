@@ -7,8 +7,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/project"
-	"github.com/mattboback/stageflow/services/platform-api/internal/sse"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
@@ -25,10 +25,8 @@ type JobStatusReader interface {
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
 type Server struct {
 	config          *ServerConfig
-	statusReader    JobStatusReader
+	jobStatus       *jobstatus.Pipeline
 	projectStore    *project.Store
-	pendingJobs     *pendingJobCache
-	sseHub          *sse.Hub
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
 }
@@ -51,16 +49,13 @@ type ServerConfig struct {
 func NewServer(config *ServerConfig) *Server {
 	return &Server{
 		config:          config,
-		statusReader:    config.StatusReader,
+		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: config.StatusReader}),
 		projectStore:    config.ProjectStore,
-		pendingJobs:     newPendingJobCache(),
-		sseHub:          sse.NewHub(),
 		scannerRegistry: config.ScannerRegistry,
 		ipResolver:      net.DefaultResolver,
 	}
 }
 
-// SSEHub returns the server's SSE hub for wiring to event handlers.
-func (s *Server) SSEHub() *sse.Hub {
-	return s.sseHub
+func (s *Server) JobStatus() *jobstatus.Pipeline {
+	return s.jobStatus
 }

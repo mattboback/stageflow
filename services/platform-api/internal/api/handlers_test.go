@@ -21,7 +21,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/sse"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
@@ -357,13 +357,13 @@ func TestHandleJobURLSubmitAiNavigatorUsesDefaultModel(t *testing.T) {
 }
 
 func TestZipUploadToArtifactFlow(t *testing.T) {
-	server, storage, store, publisher := newTestServer(t)
+	server, storage, _, publisher := newTestServer(t)
 
 	jobID := uploadZipAndGetJobID(t, server, buildTestZip(t), scannerTypeAxe)
 
 	assertUploadCount(t, storage, 1)
 
-	completeJobWithArtifacts(t, store, jobID, events.ArtifactLocations{
+	completeJobWithArtifacts(t, server.jobStatus, jobID, events.ArtifactLocations{
 		ReportJSON: jobID + "/report.json",
 		ReportHTML: jobID + "/report.html",
 	})
@@ -382,13 +382,17 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 }
 
 func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
-	server, objectStore, store, _ := newTestServer(t)
+	server, objectStore, _, _ := newTestServer(t)
 
 	jobID := "job-structured-screenshots"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
+	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCreated,
+		ObservedAt: time.Now().UTC(),
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
 	}); err != nil {
 		t.Fatalf("create job: %v", err)
 	}
@@ -404,11 +408,15 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 	uploadKey := fmt.Sprintf("%s::%s", storage.BucketArtifacts, reportKey)
 	objectStore.uploads[uploadKey] = reportBytes
 
-	if completeErr := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: reportKey,
-			ReportHTML: jobID + "/report.html",
+	if _, completeErr := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCompleted,
+		ObservedAt: time.Now().UTC(),
+		JobCompleted: &events.JobCompletedPayload{
+			JobID: jobID,
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: reportKey,
+				ReportHTML: jobID + "/report.html",
+			},
 		},
 	}); completeErr != nil {
 		t.Fatalf("complete job: %v", completeErr)
@@ -624,14 +632,17 @@ func assertUploadCount(t *testing.T, storage *fakeStorage, expected int) {
 	}
 }
 
-func completeJobWithArtifacts(t *testing.T, store *status.Store, jobID string, artifacts events.ArtifactLocations) {
+func completeJobWithArtifacts(t *testing.T, pipeline jobstatus.JobStatusPipeline, jobID string, artifacts events.ArtifactLocations) {
 	t.Helper()
 
-	payload := &events.JobCompletedPayload{
-		JobID:     jobID,
-		Artifacts: artifacts,
-	}
-	if err := store.HandleJobCompleted(context.Background(), payload); err != nil {
+	if _, err := pipeline.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCompleted,
+		ObservedAt: time.Now().UTC(),
+		JobCompleted: &events.JobCompletedPayload{
+			JobID:     jobID,
+			Artifacts: artifacts,
+		},
+	}); err != nil {
 		t.Fatalf("complete job: %v", err)
 	}
 }
@@ -684,23 +695,31 @@ func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
 }
 
 func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-report-fallback"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
+	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCreated,
+		ObservedAt: time.Now().UTC(),
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
 	}); err != nil {
 		t.Fatalf("create job: %v", err)
 	}
 
 	// Mark the job complete with an aggregated JSON report, but no HTML report artifact.
-	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: jobID + "/report.json",
-			ReportHTML: "",
+	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCompleted,
+		ObservedAt: time.Now().UTC(),
+		JobCompleted: &events.JobCompletedPayload{
+			JobID: jobID,
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: jobID + "/report.json",
+				ReportHTML: "",
+			},
 		},
 	}); err != nil {
 		t.Fatalf("complete job: %v", err)
@@ -923,9 +942,7 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePub
 			StatusReader:    store,
 			ScannerRegistry: registry,
 		},
-		statusReader:    store,
-		pendingJobs:     newPendingJobCache(),
-		sseHub:          sse.NewHub(),
+		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: store}),
 		scannerRegistry: registry,
 		ipResolver:      defaultSecurityTestResolver(t),
 	}

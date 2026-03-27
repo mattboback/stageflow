@@ -9,8 +9,6 @@ import (
 
 	// Import sqlite3 driver for its side effects.
 	_ "github.com/mattn/go-sqlite3"
-
-	"github.com/mattboback/stageflow/libs/go/events"
 )
 
 // ErrJobNotFound is returned when a job is missing from the projection store.
@@ -25,20 +23,6 @@ type Config struct {
 type Store struct {
 	db   *sql.DB
 	path string
-}
-
-var _ EventHandler = (*Store)(nil)
-
-// EventHandler describes the lifecycle event handlers required for projections.
-type EventHandler interface {
-	HandleJobCreated(context.Context, *events.JobCreatedPayload) error
-	HandleExtractionReady(context.Context, *events.ExtractionReadyPayload) error
-	HandleExtractionFailed(context.Context, *events.ExtractionFailedPayload) error
-	HandleScanPageCompleted(context.Context, *events.ScanPageCompletedPayload) error
-	HandleScanCompleted(context.Context, *events.ScanCompletedPayload) error
-	HandleScanFailed(context.Context, *events.ScanFailedPayload) error
-	HandleJobCompleted(context.Context, *events.JobCompletedPayload) error
-	HandleJobFailed(context.Context, *events.JobFailedPayload) error
 }
 
 // NewStore opens (or creates) the projection store at the given path.

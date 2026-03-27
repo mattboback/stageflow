@@ -14,7 +14,16 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
+
+func applyTestSignal(t *testing.T, server *Server, signal jobstatus.Signal) {
+	t.Helper()
+
+	if _, err := server.jobStatus.Apply(context.Background(), signal); err != nil {
+		t.Fatalf("apply signal: %v", err)
+	}
+}
 
 // --- handleListScanners ---
 
@@ -461,16 +470,10 @@ func TestHandleJobZipUploadMethodNotAllowed(t *testing.T) {
 // --- handleJobStatus success + method not allowed ---
 
 func TestHandleJobStatusFound(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-status-found"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, http.NoBody)
 	rr := httptest.NewRecorder()
@@ -507,16 +510,10 @@ func TestHandleJobStatusMethodNotAllowed(t *testing.T) {
 // --- handleJobReport ---
 
 func TestHandleJobReportNotCompleted(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-report-pending"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -542,26 +539,11 @@ func TestHandleJobReportNotFound(t *testing.T) {
 }
 
 func TestHandleJobReportRedirect(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-report-redirect"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
-
-	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportHTML: jobID + "/report.html",
-			ReportJSON: jobID + "/report.json",
-		},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{ReportHTML: jobID + "/report.html", ReportJSON: jobID + "/report.json"}}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -581,16 +563,10 @@ func TestHandleJobReportRedirect(t *testing.T) {
 // --- handleJobResults ---
 
 func TestHandleJobResultsNotCompleted(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-results-pending"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -616,23 +592,11 @@ func TestHandleJobResultsNotFound(t *testing.T) {
 }
 
 func TestHandleJobResultsCompletedNoReport(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-results-no-report"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
-
-	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID:     jobID,
-		Artifacts: events.ArtifactLocations{},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{}}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -645,25 +609,11 @@ func TestHandleJobResultsCompletedNoReport(t *testing.T) {
 }
 
 func TestHandleJobResultsRedirect(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-results-redirect"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
-
-	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: jobID + "/report.json",
-		},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{ReportJSON: jobID + "/report.json"}}})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -683,28 +633,13 @@ func TestHandleJobResultsRedirect(t *testing.T) {
 // --- buildJobStatusResponse ---
 
 func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-response-done"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{ReportJSON: jobID + "/report.json", ReportHTML: jobID + "/report.html"}}})
 
-	if err := store.HandleJobCompleted(context.Background(), &events.JobCompletedPayload{
-		JobID: jobID,
-		Artifacts: events.ArtifactLocations{
-			ReportJSON: jobID + "/report.json",
-			ReportHTML: jobID + "/report.html",
-		},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
-	}
-
-	rec, err := store.GetJob(context.Background(), jobID)
+	rec, err := server.jobStatus.Current(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("get job: %v", err)
 	}
@@ -728,18 +663,12 @@ func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 }
 
 func TestBuildJobStatusResponse_Pending(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
 	jobID := "job-response-pending"
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com"},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
 
-	rec, err := store.GetJob(context.Background(), jobID)
+	rec, err := server.jobStatus.Current(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("get job: %v", err)
 	}

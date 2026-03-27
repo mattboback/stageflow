@@ -16,6 +16,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/services/platform-api/internal/project"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$`)
@@ -325,7 +326,9 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		return
 	}
 
-	s.pendingJobs.putFromPayload(payload)
+	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{Payload: payload, ObservedAt: envelope.Timestamp}); beginErr != nil {
+		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
+	}
 
 	if recordErr := s.projectStore.RecordProjectJob(r.Context(), p.ID, jobID); recordErr != nil {
 		logging.Error(ctx, "Failed to record project job mapping", "error", recordErr)
@@ -390,7 +393,7 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 		return
 	}
 
-	rec, err := s.loadJobRecord(r.Context(), req.JobID)
+	rec, err := s.jobStatus.Current(r.Context(), req.JobID)
 	if err != nil {
 		httputil.RespondError(w, http.StatusBadRequest, fmt.Sprintf("Job %s not found", req.JobID))
 

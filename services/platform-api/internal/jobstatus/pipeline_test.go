@@ -1,0 +1,295 @@
+package jobstatus
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/mattboback/stageflow/libs/go/events"
+	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
+)
+
+type fakeReader struct {
+	records map[string]*status.JobRecord
+	err     error
+}
+
+func (f *fakeReader) GetJob(_ context.Context, jobID string) (*status.JobRecord, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+
+	rec, ok := f.records[jobID]
+	if !ok {
+		return nil, status.ErrJobNotFound
+	}
+
+	return cloneJobRecord(rec), nil
+}
+
+func TestPipelineBeginSeedsImmediateStatus(t *testing.T) {
+	t.Parallel()
+
+	pipeline := New(&Config{})
+	now := time.Now().UTC()
+
+	rec, err := pipeline.Begin(context.Background(), BeginJob{
+		ObservedAt: now,
+		Payload: &events.JobCreatedPayload{
+			JobID:     "job-begin",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com", "https://example.com/about"},
+			Config: models.JobConfig{
+				Modules: []string{"axe"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Begin() error = %v", err)
+	}
+
+	if rec.State != models.JobStateScanning {
+		t.Fatalf("State = %q, want %q", rec.State, models.JobStateScanning)
+	}
+
+	if rec.TotalPages != 2 || rec.CurrentPage != 0 {
+		t.Fatalf("unexpected progress: %+v", rec)
+	}
+
+	if len(rec.ExpectedScanners) != 1 || rec.ExpectedScanners[0] != "axe" {
+		t.Fatalf("unexpected scanners: %+v", rec.ExpectedScanners)
+	}
+
+	loaded, err := pipeline.Current(context.Background(), "job-begin")
+	if err != nil {
+		t.Fatalf("Current() error = %v", err)
+	}
+
+	if loaded.State != models.JobStateScanning {
+		t.Fatalf("Current().State = %q, want %q", loaded.State, models.JobStateScanning)
+	}
+}
+
+func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
+	t.Parallel()
+
+	pipeline := New(&Config{})
+	now := time.Now().UTC()
+
+	if _, err := pipeline.Begin(context.Background(), BeginJob{
+		ObservedAt: now,
+		Payload: &events.JobCreatedPayload{
+			JobID:     "job-watch",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
+		},
+	}); err != nil {
+		t.Fatalf("Begin() error = %v", err)
+	}
+
+	_, sub, err := pipeline.Watch(context.Background(), "job-watch", WatchOptions{})
+	if err != nil {
+		t.Fatalf("Watch() error = %v", err)
+	}
+	defer sub.Close()
+
+	if _, err := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalScanCompleted,
+		ObservedAt: now.Add(time.Second),
+		ScanCompleted: &events.ScanCompletedPayload{
+			JobID:             "job-watch",
+			ScannerType:       "axe",
+			ResultsPath:       "job-watch/axe/results.json",
+			ReportPath:        "job-watch/axe/report.html",
+			TotalPagesScanned: 1,
+			Summary: events.ScanSummary{
+				TotalViolations: 3,
+				BySeverity:      map[string]int{"critical": 1},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+
+	select {
+	case change := <-sub.Updates():
+		if change.Signal.Kind != SignalScanCompleted {
+			t.Fatalf("Signal.Kind = %q, want %q", change.Signal.Kind, SignalScanCompleted)
+		}
+
+		if change.Snapshot.TotalViolations != 3 {
+			t.Fatalf("TotalViolations = %d, want 3", change.Snapshot.TotalViolations)
+		}
+
+		if len(change.Snapshot.CompletedScanners) != 1 || change.Snapshot.CompletedScanners[0] != "axe" {
+			t.Fatalf("unexpected completed scanners: %+v", change.Snapshot.CompletedScanners)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for watch update")
+	}
+}
+
+func TestPipelineApplyKeepsFailureStickyAgainstLateSuccess(t *testing.T) {
+	t.Parallel()
+
+	pipeline := New(&Config{
+		CurrentReader: &fakeReader{
+			records: map[string]*status.JobRecord{
+				"job-sticky": {
+					JobID:     "job-sticky",
+					State:     models.JobStateFailed,
+					CreatedAt: time.Now().UTC().Add(-time.Minute),
+					UpdatedAt: time.Now().UTC().Add(-time.Second),
+					CompletedAt: func() *time.Time {
+						ts := time.Now().UTC().Add(-time.Second)
+						return &ts
+					}(),
+					Error:            "browser crashed",
+					LastStage:        events.JobFailStageScanning,
+					LastErrorDetails: "playwright lost connection",
+				},
+			},
+		},
+	})
+
+	_, sub, err := pipeline.Watch(context.Background(), "job-sticky", WatchOptions{})
+	if err != nil {
+		t.Fatalf("Watch() error = %v", err)
+	}
+	defer sub.Close()
+
+	rec, err := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalJobCompleted,
+		ObservedAt: time.Now().UTC(),
+		JobCompleted: &events.JobCompletedPayload{
+			JobID:  "job-sticky",
+			Status: events.JobStatusSuccess,
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: "job-sticky/report.json",
+				ReportHTML: "job-sticky/report.html",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+
+	if rec.State != models.JobStateFailed {
+		t.Fatalf("State = %q, want %q", rec.State, models.JobStateFailed)
+	}
+
+	select {
+	case change := <-sub.Updates():
+		t.Fatalf("unexpected watch update: %+v", change)
+	case <-time.After(250 * time.Millisecond):
+	}
+}
+
+func TestPipelineCurrentFallsBackToReader(t *testing.T) {
+	t.Parallel()
+
+	pipeline := New(&Config{
+		CurrentReader: &fakeReader{
+			records: map[string]*status.JobRecord{
+				"job-reader": {
+					JobID:     "job-reader",
+					State:     models.JobStateDone,
+					CreatedAt: time.Now().UTC().Add(-time.Minute),
+					UpdatedAt: time.Now().UTC(),
+				},
+			},
+		},
+	})
+
+	rec, err := pipeline.Current(context.Background(), "job-reader")
+	if err != nil {
+		t.Fatalf("Current() error = %v", err)
+	}
+
+	if rec.State != models.JobStateDone {
+		t.Fatalf("State = %q, want %q", rec.State, models.JobStateDone)
+	}
+}
+
+func TestPipelineCurrentPropagatesReaderErrors(t *testing.T) {
+	t.Parallel()
+
+	wantErr := errors.New("reader boom")
+	pipeline := New(&Config{CurrentReader: &fakeReader{err: wantErr}})
+
+	_, err := pipeline.Current(context.Background(), "job-reader")
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("Current() error = %v, want %v", err, wantErr)
+	}
+}
+
+func TestPipelineWatchDeliversInitialReaderSnapshot(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	pipeline := New(&Config{
+		CurrentReader: &fakeReader{
+			records: map[string]*status.JobRecord{
+				"job-watch-reader": {
+					JobID:      "job-watch-reader",
+					State:      models.JobStateReady,
+					TotalPages: 4,
+					CreatedAt:  now.Add(-time.Minute),
+					UpdatedAt:  now,
+				},
+			},
+		},
+	})
+
+	rec, sub, err := pipeline.Watch(context.Background(), "job-watch-reader", WatchOptions{})
+	if err != nil {
+		t.Fatalf("Watch() error = %v", err)
+	}
+	defer sub.Close()
+
+	if rec.State != models.JobStateReady {
+		t.Fatalf("initial snapshot state = %q, want %q", rec.State, models.JobStateReady)
+	}
+
+	select {
+	case <-sub.Updates():
+		t.Fatal("did not expect immediate update event for initial snapshot")
+	case <-time.After(150 * time.Millisecond):
+	}
+}
+
+func TestPipelineWatchClosesWhenContextCanceled(t *testing.T) {
+	t.Parallel()
+
+	pipeline := New(&Config{})
+	if _, err := pipeline.Begin(context.Background(), BeginJob{
+		ObservedAt: time.Now().UTC(),
+		Payload: &events.JobCreatedPayload{
+			JobID:     "job-watch-cancel",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	}); err != nil {
+		t.Fatalf("Begin() error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	_, sub, err := pipeline.Watch(ctx, "job-watch-cancel", WatchOptions{})
+	if err != nil {
+		t.Fatalf("Watch() error = %v", err)
+	}
+
+	cancel()
+
+	select {
+	case _, ok := <-sub.Updates():
+		if ok {
+			t.Fatal("expected closed updates channel after cancel")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for watcher close")
+	}
+}

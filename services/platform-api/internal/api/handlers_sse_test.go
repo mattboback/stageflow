@@ -14,6 +14,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 type sseEvent struct {
@@ -78,14 +79,18 @@ func readNextSSEEvent(r *bufio.Reader) (eventType, data string, err error) {
 }
 
 func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
-	server, _, store, _ := newTestServer(t)
+	server, _, _, _ := newTestServer(t)
 
-	if err := store.HandleJobCreated(context.Background(), &events.JobCreatedPayload{
-		JobID:     sseTestJobID,
-		InputType: events.InputTypeURLs,
-		URLs:      []string{"https://example.com"},
-		Config: models.JobConfig{
-			Modules: []string{scannerTypeAxe},
+	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCreated,
+		ObservedAt: time.Now().UTC(),
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     sseTestJobID,
+			InputType: events.InputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config: models.JobConfig{
+				Modules: []string{scannerTypeAxe},
+			},
 		},
 	}); err != nil {
 		t.Fatalf("create job: %v", err)
@@ -95,10 +100,20 @@ func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
 
 	waitForSSEEvent(t, eventsCh, "status", 2*time.Second)
 
-	server.sseHub.Broadcast(sseTestJobID, map[string]any{
-		"type":  "complete",
-		"state": "DONE",
-	})
+	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+		Kind:       jobstatus.SignalJobCompleted,
+		ObservedAt: time.Now().UTC(),
+		JobCompleted: &events.JobCompletedPayload{
+			JobID:  sseTestJobID,
+			Status: events.JobStatusSuccess,
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: sseTestJobID + "/report.json",
+				ReportHTML: sseTestJobID + "/report.html",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
 
 	waitForSSEEvent(t, eventsCh, "update", 2*time.Second)
 	waitForSSEEvent(t, eventsCh, "done", 2*time.Second)
