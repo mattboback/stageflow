@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -104,195 +103,143 @@ func TestNewStoreRequiresPath(t *testing.T) {
 	}
 }
 
-func TestStoreLifecycleUpdates(t *testing.T) {
+func TestGetJobDecodesPersistedJSONFields(t *testing.T) {
 	store, cleanup := newTestStore(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	jobID := "job-42"
+	now := time.Now().UTC()
+	completedAt := now.Add(time.Minute)
 
-	assertZipJobCreated(ctx, t, store, jobID)
-	assertExtractionReady(ctx, t, store, jobID)
-	assertScanPageCompleted(ctx, t, store, jobID)
-	assertScanCompleted(ctx, t, store, jobID)
-	assertJobCompleted(ctx, t, store, jobID)
-}
-
-func assertZipJobCreated(ctx context.Context, t *testing.T, store *Store, jobID string) {
-	t.Helper()
-
-	if err := store.HandleJobCreated(ctx, &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeZip,
-		InputPath: "/tmp/archive.zip",
-		Config:    models.JobConfig{Modules: []string{"axe"}, Screenshot: true},
-	}); err != nil {
-		t.Fatalf("job created: %v", err)
+	_, err := store.db.ExecContext(ctx, `
+		INSERT INTO job_status (
+			job_id, state, input_type, created_at, updated_at, completed_at,
+			error, total_pages, current_page, total_violations,
+			report_json_key, report_key, scan_stage_log_key, scan_recipe_key,
+			extraction_stage_log_key, extraction_recipe_key, provenance_key,
+			last_stage, last_error_details, expected_scanners, completed_scanners, scanner_artifacts
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`,
+		"job-1",
+		models.JobStateDone,
+		models.JobInputTypeURLs,
+		now,
+		now,
+		completedAt,
+		"",
+		2,
+		2,
+		7,
+		"job-1/report.json",
+		"job-1/report.html",
+		"job-1/scan.log",
+		"job-1/scan-recipe.json",
+		"job-1/extract.log",
+		"job-1/extract-recipe.json",
+		"job-1/prov.json",
+		"",
+		"",
+		`["axe","lighthouse"]`,
+		`["axe"]`,
+		`{"axe":{"scanner_type":"axe","results_key":"job-1/axe/results.json","report_key":"job-1/axe/report.html"}}`,
+	)
+	if err != nil {
+		t.Fatalf("insert job row: %v", err)
 	}
 
-	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateExtracting {
-		t.Fatalf("expected initial state EXTRACTING for zip jobs, got %s", rec.State)
+	rec := mustGet(ctx, t, store, "job-1")
+	if rec.State != models.JobStateDone || rec.TotalViolations != 7 {
+		t.Fatalf("unexpected base record: %+v", rec)
 	}
 
-	if len(rec.ExpectedScanners) != 1 || rec.ExpectedScanners[0] != "axe" {
-		t.Fatalf("expected requested scanners to be persisted, got %#v", rec.ExpectedScanners)
-	}
-}
-
-func assertExtractionReady(ctx context.Context, t *testing.T, store *Store, jobID string) {
-	t.Helper()
-
-	if err := store.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{
-		JobID:                  jobID,
-		TotalPages:             5,
-		StageLogPath:           "extract.log",
-		RecipePath:             "extract-recipe.json",
-		ProvenanceArtifactPath: "prov.json",
-	}); err != nil {
-		t.Fatalf("extraction ready: %v", err)
-	}
-
-	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateReady {
-		t.Fatalf("expected state READY_TO_SCAN, got %s", rec.State)
-	}
-
-	if rec.TotalPages != 5 || rec.ExtractionStageLogKey != "extract.log" || rec.ProvenanceKey != "prov.json" {
-		t.Fatalf("extraction fields not persisted: %#v", rec)
-	}
-}
-
-func assertScanPageCompleted(ctx context.Context, t *testing.T, store *Store, jobID string) {
-	t.Helper()
-
-	if err := store.HandleScanPageCompleted(ctx, &events.ScanPageCompletedPayload{
-		JobID:      jobID,
-		PageIndex:  3,
-		TotalPages: 5,
-	}); err != nil {
-		t.Fatalf("scan page completed: %v", err)
-	}
-
-	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateScanning || rec.CurrentPage != 3 {
-		t.Fatalf("scan progress not updated: %#v", rec)
-	}
-}
-
-func assertScanCompleted(ctx context.Context, t *testing.T, store *Store, jobID string) {
-	t.Helper()
-
-	if err := store.HandleScanCompleted(ctx, &events.ScanCompletedPayload{
-		JobID:             jobID,
-		ScannerType:       "axe",
-		ResultsPath:       "results.json",
-		ReportPath:        "report.html",
-		StageLogPath:      "scan.log",
-		RecipePath:        "scan-recipe.json",
-		TotalPagesScanned: 5,
-		Summary:           events.ScanSummary{TotalViolations: 7},
-	}); err != nil {
-		t.Fatalf("scan completed: %v", err)
-	}
-
-	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateScanning || rec.TotalViolations != 7 || rec.CurrentPage != 5 {
-		t.Fatalf("scan completion not applied: %#v", rec)
+	if len(rec.ExpectedScanners) != 2 || rec.ExpectedScanners[1] != "lighthouse" {
+		t.Fatalf("expected expected scanners decoded, got %+v", rec.ExpectedScanners)
 	}
 
 	if len(rec.CompletedScanners) != 1 || rec.CompletedScanners[0] != "axe" {
-		t.Fatalf("expected completed scanner tracking, got %#v", rec.CompletedScanners)
+		t.Fatalf("expected completed scanners decoded, got %+v", rec.CompletedScanners)
+	}
+
+	if rec.ScannerArtifacts["axe"] == nil || rec.ScannerArtifacts["axe"].ResultsKey != "job-1/axe/results.json" {
+		t.Fatalf("expected scanner artifacts decoded, got %+v", rec.ScannerArtifacts)
+	}
+
+	if rec.CompletedAt == nil || !rec.CompletedAt.Equal(completedAt) {
+		t.Fatalf("expected completed_at decoded, got %+v", rec.CompletedAt)
 	}
 }
 
-func assertJobCompleted(ctx context.Context, t *testing.T, store *Store, jobID string) {
-	t.Helper()
-
-	if err := store.HandleJobCompleted(ctx, &events.JobCompletedPayload{
-		JobID:  jobID,
-		Status: "success",
-		Artifacts: events.ArtifactLocations{
-			ReportJSON:     "report.json",
-			ReportHTML:     "report.html",
-			ScanStageLog:   "scan.log",
-			ScanRecipe:     "scan-recipe.json",
-			ProvenanceJSON: "prov.json",
-		},
-	}); err != nil {
-		t.Fatalf("job completed: %v", err)
-	}
-
-	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateDone || rec.CompletedAt == nil {
-		t.Fatalf("job not marked done: %#v", rec)
-	}
-
-	if rec.ReportJSONKey == "" || rec.ReportKey == "" || rec.ScanStageLogKey == "" || rec.ProvenanceKey == "" {
-		t.Fatalf("artifact keys missing: %#v", rec)
-	}
-
-	if rec.Error != "" || rec.LastStage != "" || rec.LastErrorDetails != "" {
-		t.Fatalf("error fields should be cleared after success: %#v", rec)
-	}
-}
-
-func TestHandleJobCreatedURLInitialState(t *testing.T) {
+func TestEnsureJobRowCreatesPendingRecord(t *testing.T) {
 	store, cleanup := newTestStore(t)
 	defer cleanup()
 
 	ctx := context.Background()
-	jobID := "job-urls"
+	now := time.Now().UTC()
 
-	if err := store.HandleJobCreated(ctx, &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: models.JobInputTypeURLs,
-		URLs:      []string{"https://example.com", "https://example.com/about"},
-		Config:    models.JobConfig{Modules: []string{"axe"}, Screenshot: true},
-	}); err != nil {
-		t.Fatalf("job created: %v", err)
+	if err := store.ensureJobRow(ctx, "job-ensure", now); err != nil {
+		t.Fatalf("ensureJobRow: %v", err)
 	}
 
-	rec := mustGet(ctx, t, store, jobID)
-	if rec.State != models.JobStateScanning {
-		t.Fatalf("expected initial state SCANNING for URL jobs, got %s", rec.State)
+	rec := mustGet(ctx, t, store, "job-ensure")
+	if rec.State != models.JobStatePending {
+		t.Fatalf("expected PENDING, got %s", rec.State)
 	}
 
-	if rec.TotalPages != 2 || rec.CurrentPage != 0 {
-		t.Fatalf("expected initial progress (0/2), got current=%d total=%d", rec.CurrentPage, rec.TotalPages)
-	}
-
-	if len(rec.ExpectedScanners) != 1 || rec.ExpectedScanners[0] != "axe" {
-		t.Fatalf("expected requested scanners to be persisted, got %#v", rec.ExpectedScanners)
+	if rec.CreatedAt.IsZero() || rec.UpdatedAt.IsZero() {
+		t.Fatalf("expected timestamps to be set: %+v", rec)
 	}
 }
 
-func TestHandleJobFailedCreatesProjection(t *testing.T) {
+func TestAdvanceStateDoesNotOverrideTerminalStates(t *testing.T) {
 	store, cleanup := newTestStore(t)
 	defer cleanup()
 
 	ctx := context.Background()
+	now := time.Now().UTC()
 
-	payload := &events.JobFailedPayload{
-		JobID:        "missing",
-		Stage:        "scanning",
-		Error:        "boom",
-		ErrorDetails: "stacktrace",
-	}
-	if err := store.HandleJobFailed(ctx, payload); err != nil {
-		t.Fatalf("job failed: %v", err)
+	_, err := store.db.ExecContext(ctx, `
+		INSERT INTO job_status (job_id, state, input_type, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?)
+	`, "job-terminal", models.JobStateFailed, models.JobInputTypeURLs, now, now)
+	if err != nil {
+		t.Fatalf("insert job row: %v", err)
 	}
 
-	rec := mustGet(ctx, t, store, payload.JobID)
+	if err := store.advanceState(ctx, "job-terminal", models.JobStateScanning, now.Add(time.Minute)); err != nil {
+		t.Fatalf("advanceState: %v", err)
+	}
+
+	rec := mustGet(ctx, t, store, "job-terminal")
 	if rec.State != models.JobStateFailed {
-		t.Fatalf("expected FAILED state, got %s", rec.State)
+		t.Fatalf("expected terminal FAILED state to remain, got %s", rec.State)
+	}
+}
+
+func TestSetFailureMarksJobFailed(t *testing.T) {
+	store, cleanup := newTestStore(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	if err := store.ensureJobRow(ctx, "job-failure", now); err != nil {
+		t.Fatalf("ensureJobRow: %v", err)
 	}
 
-	if rec.Error != payload.Error || rec.LastStage != payload.Stage || rec.LastErrorDetails != payload.ErrorDetails {
-		t.Fatalf("failure details not stored: %#v", rec)
+	if err := store.setFailure(ctx, "job-failure", "scanning", "boom", "stacktrace", now.Add(time.Minute)); err != nil {
+		t.Fatalf("setFailure: %v", err)
+	}
+
+	rec := mustGet(ctx, t, store, "job-failure")
+	if rec.State != models.JobStateFailed {
+		t.Fatalf("expected FAILED, got %s", rec.State)
+	}
+
+	if rec.Error != "boom" || rec.LastStage != "scanning" || rec.LastErrorDetails != "stacktrace" {
+		t.Fatalf("failure details not stored: %+v", rec)
 	}
 
 	if rec.CompletedAt == nil {
-		t.Fatalf("expected completed_at to be set on failure")
+		t.Fatal("expected completed_at to be set")
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 const (
@@ -136,7 +137,9 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.pendingJobs.putFromPayload(payload)
+	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{Payload: payload, ObservedAt: envelope.Timestamp}); beginErr != nil {
+		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
+	}
 
 	logging.Info(ctx, "Job created", "url_count", len(req.URLs), "input_type", "urls")
 

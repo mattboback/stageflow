@@ -17,6 +17,7 @@ import (
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 	"github.com/mattboback/stageflow/services/platform-api/internal/project"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/statussource"
 )
 
@@ -100,8 +101,8 @@ func run() error {
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
 
-	sseHandler := messaging.NewSSEBroadcastHandler(server.SSEHub())
-	if subscribeErr := msgService.SubscribeToStatusEvents(ctx, sseHandler); subscribeErr != nil {
+	pipelineHandler := jobstatus.NewEventHandler(server.JobStatus())
+	if subscribeErr := msgService.SubscribeToStatusEvents(ctx, pipelineHandler); subscribeErr != nil {
 		slog.Warn("Failed to subscribe to lifecycle events", "error", subscribeErr)
 	}
 

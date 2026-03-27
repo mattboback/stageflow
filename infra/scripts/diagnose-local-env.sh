@@ -51,6 +51,16 @@ require_command() {
 	fail "Missing $label ($command_name)."
 }
 
+check_image() {
+	local image_name="$1"
+
+	if "$PODMAN_BIN" image exists "$image_name"; then
+		pass "Container image present: $image_name"
+	else
+		warn "Container image missing: $image_name. Run \`just images\` before starting the stack."
+	fi
+}
+
 read_env_value() {
 	local key="$1"
 	local line
@@ -117,6 +127,9 @@ if command -v "$PODMAN_BIN" >/dev/null 2>&1; then
 	else
 		warn "Podman network \`stageflow_net\` is missing. \`just setup\` will create it."
 	fi
+
+	check_image "localhost/stageflow/extractor:latest"
+	check_image "localhost/stageflow/scanner-runner:latest"
 fi
 
 if [[ -f "$ENV_FILE" ]]; then

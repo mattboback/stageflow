@@ -16,12 +16,13 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	platformmsg "github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 type integrationFixture struct {
 	ctx    context.Context
 	client *sharedmsg.Client
-	store  *status.Store
+	pipe   jobstatus.JobStatusPipeline
 }
 
 func TestServiceIntegrationWithNATS(t *testing.T) {
@@ -36,8 +37,8 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 		t.Fatalf("failed to publish job.created: %v", publishErr)
 	}
 
-	assertExtractionLifecycle(fixture.ctx, t, fixture.client, fixture.store, jobID)
-	assertScanLifecycle(fixture.ctx, t, fixture.client, fixture.store, jobID)
+	assertExtractionLifecycle(fixture.ctx, t, fixture.client, fixture.pipe, jobID)
+	assertScanLifecycle(fixture.ctx, t, fixture.client, fixture.pipe, jobID)
 	publishEnvelope(
 		fixture.ctx,
 		t,
@@ -53,7 +54,7 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 		}),
 	)
 
-	final := waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+	final := waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "DONE" && rec.ReportJSONKey != "" && rec.ReportKey != ""
 	})
 
@@ -75,7 +76,7 @@ func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
 		events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildURLJobCreated(jobID)),
 	)
 
-	waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == models.JobStateScanning &&
 			rec.InputType == events.InputTypeURLs &&
 			rec.TotalPages == 2 &&
@@ -98,7 +99,7 @@ func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
 		}),
 	)
 
-	waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == models.JobStateScanning && rec.CurrentPage >= 1 && rec.TotalPages == 2
 	})
 
@@ -142,7 +143,7 @@ func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
 		}),
 	)
 
-	final := waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+	final := waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == models.JobStateDone &&
 			rec.ReportJSONKey != "" &&
 			len(rec.CompletedScanners) == 1 &&
@@ -172,7 +173,7 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 		events.NewEnvelope(events.EventJobCreated, jobID, "integration-test", buildURLJobCreated(jobID)),
 	)
 
-	waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == models.JobStateScanning
 	})
 
@@ -191,7 +192,7 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 		}),
 	)
 
-	failed := waitForRecord(t, fixture.store, jobID, func(rec *status.JobRecord) bool {
+	failed := waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == models.JobStateFailed &&
 			rec.Error == "browser crashed" &&
 			rec.LastStage == "scanning"
@@ -218,7 +219,7 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 
 	time.Sleep(250 * time.Millisecond)
 
-	final, err := fixture.store.GetJob(context.Background(), jobID)
+	final, err := fixture.pipe.Current(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("failed to reload failed record: %v", err)
 	}
@@ -261,12 +262,12 @@ func assertExtractionLifecycle(
 	ctx context.Context,
 	t *testing.T,
 	client *sharedmsg.Client,
-	store *status.Store,
+	pipe jobstatus.JobStatusPipeline,
 	jobID string,
 ) {
 	t.Helper()
 
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "EXTRACTING" && rec.InputType == "zip" && len(rec.ExpectedScanners) == 2
 	})
 
@@ -282,7 +283,7 @@ func assertExtractionLifecycle(
 		}),
 	)
 
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.TotalPages == 3 && rec.State == "READY_TO_SCAN"
 	})
 }
@@ -291,7 +292,7 @@ func assertScanLifecycle(
 	ctx context.Context,
 	t *testing.T,
 	client *sharedmsg.Client,
-	store *status.Store,
+	pipe jobstatus.JobStatusPipeline,
 	jobID string,
 ) {
 	t.Helper()
@@ -314,7 +315,7 @@ func assertScanLifecycle(
 		}),
 	)
 
-	partial := waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+	partial := waitForRecord(t, pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "SCANNING" && rec.CurrentPage >= 0 && rec.TotalViolations == 1 &&
 			len(rec.CompletedScanners) == 1
 	})
@@ -334,7 +335,7 @@ func assertScanLifecycle(
 		}),
 	)
 
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "SCANNING" && len(rec.CompletedScanners) == 1 && rec.CurrentPage >= 2
 	})
 
@@ -356,7 +357,7 @@ func assertScanLifecycle(
 		}),
 	)
 
-	waitForRecord(t, store, jobID, func(rec *status.JobRecord) bool {
+	waitForRecord(t, pipe, jobID, func(rec *status.JobRecord) bool {
 		return rec.State == "SCANNING" && len(rec.CompletedScanners) == 2
 	})
 }
@@ -391,7 +392,7 @@ func newStatusStore(t *testing.T) *status.Store {
 
 func waitForRecord(
 	t *testing.T,
-	store *status.Store,
+	pipe jobstatus.JobStatusPipeline,
 	jobID string,
 	condition func(*status.JobRecord) bool,
 ) *status.JobRecord {
@@ -399,7 +400,7 @@ func waitForRecord(
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		rec, err := store.GetJob(context.Background(), jobID)
+		rec, err := pipe.Current(context.Background(), jobID)
 		if err == nil && condition(rec) {
 			return rec
 		}
@@ -407,7 +408,7 @@ func waitForRecord(
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	rec, err := store.GetJob(context.Background(), jobID)
+	rec, err := pipe.Current(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("job %s not found: %v", jobID, err)
 	}
@@ -474,21 +475,18 @@ func newIntegrationFixture(t *testing.T) *integrationFixture {
 		t.Fatalf("failed to ensure streams: %v", ensureErr)
 	}
 
-	store := newStatusStore(t)
 	service := platformmsg.NewService(client)
+	pipeline := jobstatus.New(&jobstatus.Config{})
+	handler := jobstatus.NewEventHandler(pipeline)
 
 	subCtx, subCancel := context.WithCancel(ctx)
 	t.Cleanup(subCancel)
 
-	if subscribeErr := service.SubscribeToStatusEvents(subCtx, store); subscribeErr != nil {
+	if subscribeErr := service.SubscribeToStatusEvents(subCtx, handler); subscribeErr != nil {
 		t.Fatalf("failed to subscribe to events: %v", subscribeErr)
 	}
 
-	return &integrationFixture{
-		ctx:    ctx,
-		client: client,
-		store:  store,
-	}
+	return &integrationFixture{ctx: ctx, client: client, pipe: pipeline}
 }
 
 func startNATSServer(tb testing.TB) string {

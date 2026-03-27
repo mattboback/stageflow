@@ -87,12 +87,12 @@
 			</span>
 		</div>
 	{:else if wasAutoNormalized}
-		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-blue-500">
+		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-blue-700">
 			<Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>URLs were automatically formatted (e.g. adding https://).</span>
 		</div>
 	{:else if urlCount > 0 && !hasErrors}
-		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-green-600">
+		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-green-700">
 			<CheckCircle2 class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>All {urlCount} {urlCount === 1 ? 'URL is' : 'URLs are'} valid.</span>
 		</div>

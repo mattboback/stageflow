@@ -18,6 +18,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 const maxUploadSize = 100 * 1024 * 1024
@@ -426,7 +427,9 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 		return fmt.Errorf("failed to publish job.created event: %w", err)
 	}
 
-	s.pendingJobs.putFromPayload(payload)
+	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{Payload: payload, ObservedAt: envelope.Timestamp}); beginErr != nil {
+		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
+	}
 
 	logging.Info(ctx, "Job created", "filename", filepath.Base(req.zipPath), "input_type", "zip")
 

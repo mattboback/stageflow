@@ -165,8 +165,32 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
             ;;
     esac
 
+    require_job_images() {
+        local missing=()
+        local image
+
+        for image in \
+            "localhost/stageflow/extractor:latest" \
+            "localhost/stageflow/scanner-runner:latest"
+        do
+            if ! {{podman}} image exists "$image"; then
+                missing+=("$image")
+            fi
+        done
+
+        if (( ${#missing[@]} == 0 )); then
+            return 0
+        fi
+
+        echo "Missing required StageFlow job image(s):" >&2
+        printf '  - %s\n' "${missing[@]}" >&2
+        echo "Run 'just images' before 'just dev $cmd'." >&2
+        exit 1
+    }
+
     case "$cmd" in
         up)
+            require_job_images
             echo "==> Starting $env stack..."
             {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d
             ;;
@@ -175,6 +199,7 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
             {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" down
             ;;
         restart)
+            require_job_images
             echo "==> Restarting $env stack..."
             {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" down
             {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d
@@ -484,8 +509,9 @@ cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     real_dest="$(realpath "$dest" 2>/dev/null || readlink -f "$dest" 2>/dev/null || echo "$dest")"
 
     if [[ "$real_resolved" != "$real_dest" ]]; then
-        echo "WARNING: Installed '$dest', but '$bin_name' resolves to '$resolved'." >&2
+        echo "ERROR: Installed '$dest', but '$bin_name' does not resolve to the installed binary (resolves to '$resolved')." >&2
         echo "You may need to reorder PATH or remove the stale binary." >&2
+        exit 1
     fi
 
     echo "==> Installed and available on PATH as '$bin_name'."

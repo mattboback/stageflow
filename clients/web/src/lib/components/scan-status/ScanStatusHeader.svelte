@@ -43,7 +43,7 @@
 					{status.toUpperCase()}
 				</Badge>
 			</div>
-			<p class="text-ink-faint font-mono text-xs">ID: {id}</p>
+			<p class="text-ink-muted font-mono text-xs">ID: {id}</p>
 		</div>
 		<div
 			class="border-line bg-surface-muted text-ink-muted flex items-center gap-4 rounded-lg border px-4 py-2 text-sm"
@@ -69,7 +69,7 @@
 						Initializing scan...
 					{/if}
 				</span>
-				<span class="text-ink-faint font-mono">{progressPercent}%</span>
+				<span class="text-ink-muted font-mono">{progressPercent}%</span>
 			</div>
 			<Progress value={progress ? progressPercent : status === 'pending' ? 0 : 10} class="h-3" />
 		</div>
