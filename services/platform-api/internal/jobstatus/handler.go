@@ -9,10 +9,10 @@ import (
 )
 
 type EventHandler struct {
-	pipeline JobStatusPipeline
+	pipeline StatusPipeline
 }
 
-func NewEventHandler(pipeline JobStatusPipeline) *EventHandler {
+func NewEventHandler(pipeline StatusPipeline) *EventHandler {
 	return &EventHandler{pipeline: pipeline}
 }
 

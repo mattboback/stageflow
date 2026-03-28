@@ -17,7 +17,7 @@ type Config struct {
 	CacheTTL      time.Duration
 }
 
-type JobStatusPipeline interface {
+type StatusPipeline interface {
 	Begin(ctx context.Context, cmd BeginJob) (*status.JobRecord, error)
 	Apply(ctx context.Context, signal Signal) (*status.JobRecord, error)
 	Current(ctx context.Context, jobID string) (*status.JobRecord, error)

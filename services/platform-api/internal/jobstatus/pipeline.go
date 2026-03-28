@@ -104,6 +104,7 @@ func (p *Pipeline) Watch(ctx context.Context, jobID string, _ WatchOptions) (*st
 	if done := ctx.Done(); done != nil {
 		go func() {
 			<-done
+
 			_ = sub.Close()
 		}()
 	}
@@ -118,7 +119,11 @@ func (p *Pipeline) Watch(ctx context.Context, jobID string, _ WatchOptions) (*st
 	return rec, sub, nil
 }
 
-func (p *Pipeline) loadBaseSnapshot(ctx context.Context, jobID string, observedAt time.Time) (*status.JobRecord, error) {
+func (p *Pipeline) loadBaseSnapshot(
+	ctx context.Context,
+	jobID string,
+	observedAt time.Time,
+) (*status.JobRecord, error) {
 	if rec, ok := p.cache.get(jobID); ok {
 		return rec, nil
 	}

@@ -96,7 +96,7 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 	}
 	defer sub.Close()
 
-	if _, err := pipeline.Apply(context.Background(), Signal{
+	if _, applyErr := pipeline.Apply(context.Background(), Signal{
 		Kind:       SignalScanCompleted,
 		ObservedAt: now.Add(time.Second),
 		ScanCompleted: &events.ScanCompletedPayload{
@@ -110,8 +110,8 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 				BySeverity:      map[string]int{"critical": 1},
 			},
 		},
-	}); err != nil {
-		t.Fatalf("Apply() error = %v", err)
+	}); applyErr != nil {
+		t.Fatalf("Apply() error = %v", applyErr)
 	}
 
 	select {
@@ -277,6 +277,7 @@ func TestPipelineWatchClosesWhenContextCanceled(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+
 	_, sub, err := pipeline.Watch(ctx, "job-watch-cancel", WatchOptions{})
 	if err != nil {
 		t.Fatalf("Watch() error = %v", err)

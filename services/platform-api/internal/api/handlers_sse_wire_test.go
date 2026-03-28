@@ -128,9 +128,11 @@ func assertSSEPayloadGolden(t *testing.T, name string, payload map[string]any) {
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
+
 	got = append(got, '\n')
 
 	goldenPath := filepath.Join("testdata", "sse_payloads", name+".golden.json")
+
 	want, err := os.ReadFile(goldenPath)
 	if err != nil {
 		t.Fatalf("read golden %s: %v", goldenPath, err)

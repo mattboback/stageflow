@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net"
-	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
@@ -14,15 +13,15 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	platformmsg "github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 type integrationFixture struct {
 	ctx    context.Context
 	client *sharedmsg.Client
-	pipe   jobstatus.JobStatusPipeline
+	pipe   jobstatus.StatusPipeline
 }
 
 func TestServiceIntegrationWithNATS(t *testing.T) {
@@ -262,7 +261,7 @@ func assertExtractionLifecycle(
 	ctx context.Context,
 	t *testing.T,
 	client *sharedmsg.Client,
-	pipe jobstatus.JobStatusPipeline,
+	pipe jobstatus.StatusPipeline,
 	jobID string,
 ) {
 	t.Helper()
@@ -292,7 +291,7 @@ func assertScanLifecycle(
 	ctx context.Context,
 	t *testing.T,
 	client *sharedmsg.Client,
-	pipe jobstatus.JobStatusPipeline,
+	pipe jobstatus.StatusPipeline,
 	jobID string,
 ) {
 	t.Helper()
@@ -374,25 +373,9 @@ func assertPartialScannerState(t *testing.T, rec *status.JobRecord) {
 	}
 }
 
-func newStatusStore(t *testing.T) *status.Store {
-	t.Helper()
-	dbPath := filepath.Join(t.TempDir(), "status.db")
-
-	store, err := status.NewStore(&status.Config{Path: dbPath})
-	if err != nil {
-		t.Fatalf("failed to create status store: %v", err)
-	}
-
-	t.Cleanup(func() {
-		_ = store.Close()
-	})
-
-	return store
-}
-
 func waitForRecord(
 	t *testing.T,
-	pipe jobstatus.JobStatusPipeline,
+	pipe jobstatus.StatusPipeline,
 	jobID string,
 	condition func(*status.JobRecord) bool,
 ) *status.JobRecord {

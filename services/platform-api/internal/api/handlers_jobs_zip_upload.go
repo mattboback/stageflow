@@ -427,7 +427,10 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 		return fmt.Errorf("failed to publish job.created event: %w", err)
 	}
 
-	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{Payload: payload, ObservedAt: envelope.Timestamp}); beginErr != nil {
+	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{
+		Payload:    payload,
+		ObservedAt: envelope.Timestamp,
+	}); beginErr != nil {
 		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
 	}
 

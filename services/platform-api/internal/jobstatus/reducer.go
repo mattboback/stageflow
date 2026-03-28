@@ -1,6 +1,7 @@
 package jobstatus
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 func beginSnapshot(cmd BeginJob) (*status.JobRecord, error) {
 	if cmd.Payload == nil {
-		return nil, fmt.Errorf("jobstatus: begin payload is required")
+		return nil, errors.New("jobstatus: begin payload is required")
 	}
 
 	observedAt := normalizeObservedAt(cmd.ObservedAt)
@@ -58,60 +59,152 @@ func reduceSnapshot(base *status.JobRecord, signal Signal) (*status.JobRecord, b
 		next.CreatedAt = observedAt
 	}
 
-	switch signal.Kind {
-	case SignalJobCreated:
-		if signal.JobCreated == nil {
-			return nil, false, fmt.Errorf("jobstatus: job.created payload is required")
-		}
-
-		applyJobCreated(next, signal.JobCreated, observedAt)
-	case SignalExtractionReady:
-		if signal.ExtractionReady == nil {
-			return nil, false, fmt.Errorf("jobstatus: extraction.ready payload is required")
-		}
-
-		applyExtractionReady(next, signal.ExtractionReady, observedAt)
-	case SignalExtractionFailed:
-		if signal.ExtractionFailed == nil {
-			return nil, false, fmt.Errorf("jobstatus: extraction.failed payload is required")
-		}
-
-		applyExtractionFailed(next, signal.ExtractionFailed, observedAt)
-	case SignalScanPageCompleted:
-		if signal.ScanPageCompleted == nil {
-			return nil, false, fmt.Errorf("jobstatus: scan.page.completed payload is required")
-		}
-
-		applyScanPageCompleted(next, signal.ScanPageCompleted, observedAt)
-	case SignalScanCompleted:
-		if signal.ScanCompleted == nil {
-			return nil, false, fmt.Errorf("jobstatus: scan.completed payload is required")
-		}
-
-		applyScanCompleted(next, signal.ScanCompleted, observedAt)
-	case SignalScanFailed:
-		if signal.ScanFailed == nil {
-			return nil, false, fmt.Errorf("jobstatus: scan.failed payload is required")
-		}
-
-		applyFailure(next, events.JobFailStageScanning, signal.ScanFailed.Error, signal.ScanFailed.ErrorDetails, observedAt)
-	case SignalJobCompleted:
-		if signal.JobCompleted == nil {
-			return nil, false, fmt.Errorf("jobstatus: job.completed payload is required")
-		}
-
-		applyJobCompleted(next, signal.JobCompleted, observedAt)
-	case SignalJobFailed:
-		if signal.JobFailed == nil {
-			return nil, false, fmt.Errorf("jobstatus: job.failed payload is required")
-		}
-
-		applyFailure(next, signal.JobFailed.Stage, signal.JobFailed.Error, signal.JobFailed.ErrorDetails, observedAt)
-	default:
-		return nil, false, fmt.Errorf("jobstatus: unsupported signal kind %q", signal.Kind)
+	if err := applySignal(next, signal, observedAt); err != nil {
+		return nil, false, err
 	}
 
 	return next, !reflect.DeepEqual(before, next), nil
+}
+
+func applySignal(rec *status.JobRecord, signal Signal, observedAt time.Time) error {
+	switch signal.Kind {
+	case SignalJobCreated:
+		return applyJobCreatedSignal(rec, signal.JobCreated, observedAt)
+	case SignalExtractionReady:
+		return applyExtractionReadySignal(rec, signal.ExtractionReady, observedAt)
+	case SignalExtractionFailed:
+		return applyExtractionFailedSignal(rec, signal.ExtractionFailed, observedAt)
+	case SignalScanPageCompleted:
+		return applyScanPageCompletedSignal(rec, signal.ScanPageCompleted, observedAt)
+	case SignalScanCompleted:
+		return applyScanCompletedSignal(rec, signal.ScanCompleted, observedAt)
+	case SignalScanFailed:
+		return applyScanFailedSignal(rec, signal.ScanFailed, observedAt)
+	case SignalJobCompleted:
+		return applyJobCompletedSignal(rec, signal.JobCompleted, observedAt)
+	case SignalJobFailed:
+		return applyJobFailedSignal(rec, signal.JobFailed, observedAt)
+	default:
+		return fmt.Errorf("jobstatus: unsupported signal kind %q", signal.Kind)
+	}
+}
+
+func applyJobCreatedSignal(
+	rec *status.JobRecord,
+	payload *events.JobCreatedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: job.created payload is required")
+	}
+
+	applyJobCreated(rec, payload, observedAt)
+
+	return nil
+}
+
+func applyExtractionReadySignal(
+	rec *status.JobRecord,
+	payload *events.ExtractionReadyPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: extraction.ready payload is required")
+	}
+
+	applyExtractionReady(rec, payload, observedAt)
+
+	return nil
+}
+
+func applyExtractionFailedSignal(
+	rec *status.JobRecord,
+	payload *events.ExtractionFailedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: extraction.failed payload is required")
+	}
+
+	applyExtractionFailed(rec, payload, observedAt)
+
+	return nil
+}
+
+func applyScanPageCompletedSignal(
+	rec *status.JobRecord,
+	payload *events.ScanPageCompletedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: scan.page.completed payload is required")
+	}
+
+	applyScanPageCompleted(rec, payload, observedAt)
+
+	return nil
+}
+
+func applyScanCompletedSignal(
+	rec *status.JobRecord,
+	payload *events.ScanCompletedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: scan.completed payload is required")
+	}
+
+	applyScanCompleted(rec, payload, observedAt)
+
+	return nil
+}
+
+func applyScanFailedSignal(
+	rec *status.JobRecord,
+	payload *events.ScanFailedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: scan.failed payload is required")
+	}
+
+	applyFailure(
+		rec,
+		events.JobFailStageScanning,
+		payload.Error,
+		payload.ErrorDetails,
+		observedAt,
+	)
+
+	return nil
+}
+
+func applyJobCompletedSignal(
+	rec *status.JobRecord,
+	payload *events.JobCompletedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: job.completed payload is required")
+	}
+
+	applyJobCompleted(rec, payload, observedAt)
+
+	return nil
+}
+
+func applyJobFailedSignal(
+	rec *status.JobRecord,
+	payload *events.JobFailedPayload,
+	observedAt time.Time,
+) error {
+	if payload == nil {
+		return errors.New("jobstatus: job.failed payload is required")
+	}
+
+	applyFailure(rec, payload.Stage, payload.Error, payload.ErrorDetails, observedAt)
+
+	return nil
 }
 
 func applyJobCreated(rec *status.JobRecord, payload *events.JobCreatedPayload, observedAt time.Time) {
@@ -128,6 +221,7 @@ func applyJobCreated(rec *status.JobRecord, payload *events.JobCreatedPayload, o
 	case models.JobInputTypeURLs:
 		advanceState(rec, models.JobStateScanning)
 		rec.TotalPages = maxInt(rec.TotalPages, len(payload.URLs))
+
 		if rec.CurrentPage < 0 {
 			rec.CurrentPage = 0
 		}
@@ -141,9 +235,11 @@ func applyExtractionReady(rec *status.JobRecord, payload *events.ExtractionReady
 	rec.ExtractionStageLogKey = coalesceString(payload.StageLogPath, rec.ExtractionStageLogKey)
 	rec.ExtractionRecipeKey = coalesceString(payload.RecipePath, rec.ExtractionRecipeKey)
 	rec.ProvenanceKey = coalesceString(payload.ProvenanceArtifactPath, rec.ProvenanceKey)
+
 	if rec.CurrentPage < 0 {
 		rec.CurrentPage = 0
 	}
+
 	rec.UpdatedAt = observedAt
 	advanceState(rec, models.JobStateReady)
 }
@@ -189,7 +285,9 @@ func applyJobCompleted(rec *status.JobRecord, payload *events.JobCompletedPayloa
 	rec.Error = ""
 	rec.LastStage = ""
 	rec.LastErrorDetails = ""
+
 	rec.UpdatedAt = observedAt
+
 	if rec.CompletedAt == nil {
 		completedAt := observedAt
 		rec.CompletedAt = &completedAt
@@ -218,7 +316,9 @@ func applyFailure(rec *status.JobRecord, stage, message, details string, observe
 	rec.Error = message
 	rec.LastStage = stage
 	rec.LastErrorDetails = details
+
 	rec.UpdatedAt = observedAt
+
 	if rec.CompletedAt == nil {
 		completedAt := observedAt
 		rec.CompletedAt = &completedAt
@@ -238,40 +338,88 @@ func advanceState(rec *status.JobRecord, target models.JobState) {
 func signalJobID(signal Signal) string {
 	switch signal.Kind {
 	case SignalJobCreated:
-		if signal.JobCreated != nil {
-			return signal.JobCreated.JobID
-		}
+		return jobCreatedJobID(signal.JobCreated)
 	case SignalExtractionReady:
-		if signal.ExtractionReady != nil {
-			return signal.ExtractionReady.JobID
-		}
+		return extractionReadyJobID(signal.ExtractionReady)
 	case SignalExtractionFailed:
-		if signal.ExtractionFailed != nil {
-			return signal.ExtractionFailed.JobID
-		}
+		return extractionFailedJobID(signal.ExtractionFailed)
 	case SignalScanPageCompleted:
-		if signal.ScanPageCompleted != nil {
-			return signal.ScanPageCompleted.JobID
-		}
+		return scanPageCompletedJobID(signal.ScanPageCompleted)
 	case SignalScanCompleted:
-		if signal.ScanCompleted != nil {
-			return signal.ScanCompleted.JobID
-		}
+		return scanCompletedJobID(signal.ScanCompleted)
 	case SignalScanFailed:
-		if signal.ScanFailed != nil {
-			return signal.ScanFailed.JobID
-		}
+		return scanFailedJobID(signal.ScanFailed)
 	case SignalJobCompleted:
-		if signal.JobCompleted != nil {
-			return signal.JobCompleted.JobID
-		}
+		return jobCompletedJobID(signal.JobCompleted)
 	case SignalJobFailed:
-		if signal.JobFailed != nil {
-			return signal.JobFailed.JobID
-		}
+		return jobFailedJobID(signal.JobFailed)
 	}
 
 	return ""
+}
+
+func jobCreatedJobID(payload *events.JobCreatedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func extractionReadyJobID(payload *events.ExtractionReadyPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func extractionFailedJobID(payload *events.ExtractionFailedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func scanPageCompletedJobID(payload *events.ScanPageCompletedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func scanCompletedJobID(payload *events.ScanCompletedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func scanFailedJobID(payload *events.ScanFailedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func jobCompletedJobID(payload *events.JobCompletedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
+}
+
+func jobFailedJobID(payload *events.JobFailedPayload) string {
+	if payload == nil {
+		return ""
+	}
+
+	return payload.JobID
 }
 
 func normalizeObservedAt(observedAt time.Time) time.Time {

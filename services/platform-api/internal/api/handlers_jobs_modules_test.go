@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func TestSplitCSV(t *testing.T) {
@@ -292,7 +292,7 @@ func newTestServerForModules(t *testing.T) *Server {
 			StatusReader:    store,
 			ScannerRegistry: registry,
 		},
-		jobStatus:  jobstatus.New(&jobstatus.Config{CurrentReader: store}),
+		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: store}),
 		scannerRegistry: registry,
 	}
 }
