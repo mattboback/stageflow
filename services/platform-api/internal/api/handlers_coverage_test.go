@@ -13,8 +13,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func applyTestSignal(t *testing.T, server *Server, signal jobstatus.Signal) {
@@ -28,7 +28,7 @@ func applyTestSignal(t *testing.T, server *Server, signal jobstatus.Signal) {
 // --- handleListScanners ---
 
 func TestHandleListScanners_WithRegistry(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/scanners", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -93,7 +93,7 @@ func TestHandleListScanners_NilRegistry(t *testing.T) {
 }
 
 func TestHandleListScanners_MethodNotAllowed(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/scanners", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -108,7 +108,7 @@ func TestHandleListScanners_MethodNotAllowed(t *testing.T) {
 // --- URL submit behavior ---
 
 func TestHandleJobURLSubmitNormalizesHighlightStyle(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["https://example.com"],"highlight_style":"  SOLID  "}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -136,7 +136,7 @@ func TestHandleJobURLSubmitNormalizesHighlightStyle(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitInvalidHighlightStyleFallsBackToDefault(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["https://example.com"],"highlight_style":"dotted"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -164,7 +164,7 @@ func TestHandleJobURLSubmitInvalidHighlightStyleFallsBackToDefault(t *testing.T)
 }
 
 func TestHandleJobURLSubmitAiNavigatorInvalidProviderReturnsValidationError(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -206,7 +206,7 @@ func TestHandleJobURLSubmitAiNavigatorInvalidProviderReturnsValidationError(t *t
 }
 
 func TestHandleJobURLSubmitAiNavigatorMissingGoalReturnsValidationError(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -248,7 +248,7 @@ func TestHandleJobURLSubmitAiNavigatorMissingGoalReturnsValidationError(t *testi
 func TestHandleJobURLSubmitAiNavigatorMissingModelWithoutEnvReturnsValidationError(t *testing.T) {
 	t.Setenv("AI_NAVIGATOR_DEFAULT_MODEL", "")
 
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -286,7 +286,7 @@ func TestHandleJobURLSubmitAiNavigatorMissingModelWithoutEnvReturnsValidationErr
 }
 
 func TestHandleJobURLSubmitAiNavigatorOpenrouterProviderAccepted(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -346,7 +346,7 @@ func addZipFile(t *testing.T, w *multipart.Writer, filename string, data []byte)
 }
 
 func TestZipUploadWithScannerConfigsField(t *testing.T) {
-	server, store, _, publisher := newTestServer(t)
+	server, store, publisher := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -395,7 +395,7 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 }
 
 func TestZipUploadInvalidScannerConfigsJSON(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -416,7 +416,7 @@ func TestZipUploadInvalidScannerConfigsJSON(t *testing.T) {
 }
 
 func TestZipUploadMissingFile(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -435,7 +435,7 @@ func TestZipUploadMissingFile(t *testing.T) {
 }
 
 func TestZipUploadNonZipFile(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -455,7 +455,7 @@ func TestZipUploadNonZipFile(t *testing.T) {
 }
 
 func TestHandleJobZipUploadMethodNotAllowed(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/zip", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -470,10 +470,17 @@ func TestHandleJobZipUploadMethodNotAllowed(t *testing.T) {
 // --- handleJobStatus success + method not allowed ---
 
 func TestHandleJobStatusFound(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-status-found"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, http.NoBody)
 	rr := httptest.NewRecorder()
@@ -495,7 +502,7 @@ func TestHandleJobStatusFound(t *testing.T) {
 }
 
 func TestHandleJobStatusMethodNotAllowed(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/test", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -510,10 +517,17 @@ func TestHandleJobStatusMethodNotAllowed(t *testing.T) {
 // --- handleJobReport ---
 
 func TestHandleJobReportNotCompleted(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-report-pending"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -526,7 +540,7 @@ func TestHandleJobReportNotCompleted(t *testing.T) {
 }
 
 func TestHandleJobReportNotFound(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing/report", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -539,11 +553,27 @@ func TestHandleJobReportNotFound(t *testing.T) {
 }
 
 func TestHandleJobReportRedirect(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-report-redirect"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{ReportHTML: jobID + "/report.html", ReportJSON: jobID + "/report.json"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCompleted,
+		JobCompleted: &events.JobCompletedPayload{
+			JobID: jobID,
+			Artifacts: events.ArtifactLocations{
+				ReportHTML: jobID + "/report.html",
+				ReportJSON: jobID + "/report.json",
+			},
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -563,10 +593,17 @@ func TestHandleJobReportRedirect(t *testing.T) {
 // --- handleJobResults ---
 
 func TestHandleJobResultsNotCompleted(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-results-pending"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -579,7 +616,7 @@ func TestHandleJobResultsNotCompleted(t *testing.T) {
 }
 
 func TestHandleJobResultsNotFound(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -592,11 +629,21 @@ func TestHandleJobResultsNotFound(t *testing.T) {
 }
 
 func TestHandleJobResultsCompletedNoReport(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-results-no-report"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind:         jobstatus.SignalJobCompleted,
+		JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{}},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -609,11 +656,24 @@ func TestHandleJobResultsCompletedNoReport(t *testing.T) {
 }
 
 func TestHandleJobResultsRedirect(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-results-redirect"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{ReportJSON: jobID + "/report.json"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCompleted,
+		JobCompleted: &events.JobCompletedPayload{
+			JobID:     jobID,
+			Artifacts: events.ArtifactLocations{ReportJSON: jobID + "/report.json"},
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -633,11 +693,27 @@ func TestHandleJobResultsRedirect(t *testing.T) {
 // --- buildJobStatusResponse ---
 
 func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-response-done"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCompleted, JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{ReportJSON: jobID + "/report.json", ReportHTML: jobID + "/report.html"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCompleted,
+		JobCompleted: &events.JobCompletedPayload{
+			JobID: jobID,
+			Artifacts: events.ArtifactLocations{
+				ReportJSON: jobID + "/report.json",
+				ReportHTML: jobID + "/report.html",
+			},
+		},
+	})
 
 	rec, err := server.jobStatus.Current(context.Background(), jobID)
 	if err != nil {
@@ -663,10 +739,17 @@ func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 }
 
 func TestBuildJobStatusResponse_Pending(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-response-pending"
-	applyTestSignal(t, server, jobstatus.Signal{Kind: jobstatus.SignalJobCreated, JobCreated: &events.JobCreatedPayload{JobID: jobID, InputType: models.JobInputTypeURLs, URLs: []string{"https://example.com"}}})
+	applyTestSignal(t, server, jobstatus.Signal{
+		Kind: jobstatus.SignalJobCreated,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     jobID,
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+		},
+	})
 
 	rec, err := server.jobStatus.Current(context.Background(), jobID)
 	if err != nil {
@@ -684,7 +767,7 @@ func TestBuildJobStatusResponse_Pending(t *testing.T) {
 }
 
 func TestBuildPerScannerArtifacts(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	rec := &status.JobRecord{
 		JobID: "test-per-scanner",
@@ -722,7 +805,7 @@ func TestBuildPerScannerArtifacts(t *testing.T) {
 // --- handleJobURLSubmit success + edge cases ---
 
 func TestHandleJobURLSubmitSuccess(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -763,7 +846,7 @@ func TestHandleJobURLSubmitSuccess(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitInvalidJSON(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewBufferString("not json"))
 	req.Header.Set("Content-Type", "application/json")
@@ -777,7 +860,7 @@ func TestHandleJobURLSubmitInvalidJSON(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitMethodNotAllowed(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/urls", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -790,7 +873,7 @@ func TestHandleJobURLSubmitMethodNotAllowed(t *testing.T) {
 }
 
 func TestZipUploadSanitizesUploadedFilename(t *testing.T) {
-	server, objectStore, _, _ := newTestServer(t)
+	server, objectStore, _ := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)

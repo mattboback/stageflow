@@ -11,8 +11,8 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func jobIDFromJobPath(path, suffix string) (string, bool) {
@@ -88,6 +88,13 @@ func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
 }
 
+func statusPayload(snapshot *status.JobRecord) map[string]any {
+	return map[string]any{
+		"type":  "status",
+		"state": snapshot.State,
+	}
+}
+
 func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
 	snapshot := change.Snapshot
 	if snapshot == nil {
@@ -95,6 +102,8 @@ func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
 	}
 
 	switch change.Signal.Kind {
+	case jobstatus.SignalJobCreated:
+		return statusPayload(snapshot)
 	case jobstatus.SignalScanPageCompleted:
 		payload := map[string]any{
 			"type":  "progress",
@@ -167,10 +176,7 @@ func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
 			"state": snapshot.State,
 		}
 	default:
-		return map[string]any{
-			"type":  "status",
-			"state": snapshot.State,
-		}
+		return statusPayload(snapshot)
 	}
 }
 
@@ -253,6 +259,111 @@ func (s *Server) handleJobStreamUpdate(
 	return true, true
 }
 
+func (s *Server) watchJobStream(
+	ctx context.Context,
+	w http.ResponseWriter,
+	jobID string,
+) (*status.JobRecord, jobstatus.Subscription, bool) {
+	rec, sub, err := s.jobStatus.Watch(ctx, jobID, jobstatus.WatchOptions{})
+	if err != nil {
+		if errors.Is(err, status.ErrJobNotFound) {
+			http.Error(w, "Job not found", http.StatusNotFound)
+		} else {
+			logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+		}
+
+		return nil, nil, false
+	}
+
+	return rec, sub, true
+}
+
+func (s *Server) writeTerminalStatus(
+	ctx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	rec *status.JobRecord,
+) bool {
+	if !rec.State.IsTerminal() {
+		return false
+	}
+
+	done, marshalErr := json.Marshal(jobStreamUpdate{State: rec.State})
+	if marshalErr != nil {
+		logging.Error(ctx, "Failed to marshal done payload for SSE", "error", marshalErr)
+
+		return true
+	}
+
+	if writeErr := writeSSEEvent(w, flusher, "done", done); writeErr != nil {
+		return true
+	}
+
+	return true
+}
+
+func (s *Server) handleJobStreamChange(
+	ctx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	change jobstatus.Change,
+) (shouldClose, ok bool) {
+	payload, marshalErr := json.Marshal(mapChangeToSSEPayload(change))
+	if marshalErr != nil {
+		logging.Error(ctx, "Failed to marshal SSE update payload", "error", marshalErr)
+
+		return false, false
+	}
+
+	return s.handleJobStreamUpdate(ctx, w, flusher, payload)
+}
+
+func (s *Server) streamJobUpdates(
+	ctx context.Context,
+	requestCtx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	sub jobstatus.Subscription,
+) {
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-requestCtx.Done():
+			logging.Debug(ctx, "SSE stream closed by client disconnect")
+
+			return
+		case <-heartbeat.C:
+			if keepaliveErr := writeSSEKeepalive(w, flusher); keepaliveErr != nil {
+				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", keepaliveErr)
+
+				return
+			}
+		case change, updatesOpen := <-sub.Updates():
+			if !updatesOpen {
+				logging.Debug(ctx, "status pipeline closed watcher; closing stream")
+
+				return
+			}
+
+			shouldClose, streamOK := s.handleJobStreamChange(ctx, w, flusher, change)
+			if !streamOK {
+				logging.Debug(ctx, "SSE update write failed; closing stream")
+
+				return
+			}
+
+			if shouldClose {
+				logging.Debug(ctx, "SSE stream closing after terminal update")
+
+				return
+			}
+		}
+	}
+}
+
 // handleJobStream provides Server-Sent Events for real-time job status updates.
 func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -270,15 +381,8 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, sub, err := s.jobStatus.Watch(ctx, jobID, jobstatus.WatchOptions{})
-	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
-			http.Error(w, "Job not found", http.StatusNotFound)
-		} else {
-			logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
-			http.Error(w, "Internal error", http.StatusInternalServerError)
-		}
-
+	rec, sub, ok := s.watchJobStream(ctx, w, jobID)
+	if !ok {
 		return
 	}
 	defer sub.Close()
@@ -294,62 +398,9 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rec.State.IsTerminal() {
-		done, marshalErr := json.Marshal(jobStreamUpdate{State: rec.State})
-		if marshalErr != nil {
-			logging.Error(ctx, "Failed to marshal done payload for SSE", "error", marshalErr)
-
-			return
-		}
-
-		if writeErr := writeSSEEvent(w, flusher, "done", done); writeErr != nil {
-			return
-		}
-
+	if s.writeTerminalStatus(ctx, w, flusher, rec) {
 		return
 	}
 
-	heartbeat := time.NewTicker(15 * time.Second)
-	defer heartbeat.Stop()
-
-	for {
-		select {
-		case <-r.Context().Done():
-			logging.Debug(ctx, "SSE stream closed by client disconnect")
-
-			return
-		case <-heartbeat.C:
-			if err := writeSSEKeepalive(w, flusher); err != nil {
-				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", err)
-
-				return
-			}
-		case change, ok := <-sub.Updates():
-			if !ok {
-				logging.Debug(ctx, "status pipeline closed watcher; closing stream")
-
-				return
-			}
-
-			payload, marshalErr := json.Marshal(mapChangeToSSEPayload(change))
-			if marshalErr != nil {
-				logging.Error(ctx, "Failed to marshal SSE update payload", "error", marshalErr)
-
-				return
-			}
-
-			shouldClose, ok := s.handleJobStreamUpdate(ctx, w, flusher, payload)
-			if !ok {
-				logging.Debug(ctx, "SSE update write failed; closing stream")
-
-				return
-			}
-
-			if shouldClose {
-				logging.Debug(ctx, "SSE stream closing after terminal update")
-
-				return
-			}
-		}
-	}
+	s.streamJobUpdates(ctx, r.Context(), w, flusher, sub)
 }

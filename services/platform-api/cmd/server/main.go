@@ -15,9 +15,9 @@ import (
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 	"github.com/mattboback/stageflow/services/platform-api/internal/project"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/statussource"
 )
 

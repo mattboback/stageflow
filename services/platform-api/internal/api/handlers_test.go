@@ -41,7 +41,7 @@ func TestHandleHealth(t *testing.T) {
 }
 
 func TestHandleJobStatusNotFound(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -54,7 +54,7 @@ func TestHandleJobStatusNotFound(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitEmpty(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":[]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -70,7 +70,7 @@ func TestHandleJobURLSubmitEmpty(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitTooManyURLs(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	urls := make([]string, maxURLCount+1)
 	for i := range urls {
@@ -95,7 +95,7 @@ func TestHandleJobURLSubmitTooManyURLs(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitURLTooLong(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	longURL := strings.Repeat("a", maxURLLength+1)
 
@@ -117,7 +117,7 @@ func TestHandleJobURLSubmitURLTooLong(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitBodyTooLarge(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	payload := strings.Repeat("a", maxURLSubmitBodySize)
 	body := fmt.Sprintf(`{"urls":["https://example.com/%s"]}`, payload)
@@ -135,7 +135,7 @@ func TestHandleJobURLSubmitBodyTooLarge(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitPrivateTargetWithoutOptInKeepsDefaultBlocking(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -155,7 +155,7 @@ func TestHandleJobURLSubmitPrivateTargetWithoutOptInKeepsDefaultBlocking(t *test
 }
 
 func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"],"allow_private_targets":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -188,7 +188,7 @@ func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitPrivateTargetSucceedsWhenBothOptInsEnabled(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 	server.config.AllowPrivateTargets = true
 
 	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"],"allow_private_targets":true}`)
@@ -218,7 +218,7 @@ func TestHandleJobURLSubmitPrivateTargetSucceedsWhenBothOptInsEnabled(t *testing
 }
 
 func TestHandleJobURLSubmitAiNavigatorRequiresScannerConfig(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["https://example.com"],"modules":["ai-navigator"]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -243,7 +243,7 @@ func TestHandleJobURLSubmitAiNavigatorRequiresScannerConfig(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitAiNavigatorAcceptsScannerConfig(t *testing.T) {
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -301,7 +301,7 @@ func TestHandleJobURLSubmitAiNavigatorAcceptsScannerConfig(t *testing.T) {
 func TestHandleJobURLSubmitAiNavigatorUsesDefaultModel(t *testing.T) {
 	t.Setenv("AI_NAVIGATOR_DEFAULT_MODEL", "openai/gpt-4o-mini")
 
-	server, _, _, publisher := newTestServer(t)
+	server, _, publisher := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -357,7 +357,7 @@ func TestHandleJobURLSubmitAiNavigatorUsesDefaultModel(t *testing.T) {
 }
 
 func TestZipUploadToArtifactFlow(t *testing.T) {
-	server, storage, _, publisher := newTestServer(t)
+	server, storage, publisher := newTestServer(t)
 
 	jobID := uploadZipAndGetJobID(t, server, buildTestZip(t), scannerTypeAxe)
 
@@ -382,7 +382,7 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 }
 
 func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
-	server, objectStore, _, _ := newTestServer(t)
+	server, objectStore, _ := newTestServer(t)
 
 	jobID := "job-structured-screenshots"
 	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
@@ -632,7 +632,12 @@ func assertUploadCount(t *testing.T, storage *fakeStorage, expected int) {
 	}
 }
 
-func completeJobWithArtifacts(t *testing.T, pipeline jobstatus.JobStatusPipeline, jobID string, artifacts events.ArtifactLocations) {
+func completeJobWithArtifacts(
+	t *testing.T,
+	pipeline jobstatus.StatusPipeline,
+	jobID string,
+	artifacts events.ArtifactLocations,
+) {
 	t.Helper()
 
 	if _, err := pipeline.Apply(context.Background(), jobstatus.Signal{
@@ -695,7 +700,7 @@ func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
 }
 
 func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	jobID := "job-report-fallback"
 	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
@@ -744,7 +749,7 @@ func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
 }
 
 func TestZipUploadAiNavigatorRequiresScannerConfig(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	zipBytes := buildTestZip(t)
 	body := &bytes.Buffer{}
@@ -789,7 +794,7 @@ func TestZipUploadAiNavigatorRequiresScannerConfig(t *testing.T) {
 }
 
 func TestZipUploadBodyTooLarge(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	rr := httptest.NewRecorder()
 	handled := server.handleZipParseError(context.Background(), rr, &http.MaxBytesError{Limit: maxUploadSize})
@@ -912,7 +917,7 @@ func (f *fakePublisher) PublishJobCreated(_ context.Context, envelope *events.En
 	return nil
 }
 
-func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePublisher) {
+func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 	t.Helper()
 	dir := t.TempDir()
 
@@ -947,7 +952,7 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *status.Store, *fakePub
 		ipResolver:      defaultSecurityTestResolver(t),
 	}
 
-	return server, storage, store, publisher
+	return server, storage, publisher
 }
 
 func buildTestZip(t *testing.T) []byte {

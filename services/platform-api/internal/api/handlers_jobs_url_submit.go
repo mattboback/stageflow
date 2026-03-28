@@ -137,7 +137,10 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{Payload: payload, ObservedAt: envelope.Timestamp}); beginErr != nil {
+	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{
+		Payload:    payload,
+		ObservedAt: envelope.Timestamp,
+	}); beginErr != nil {
 		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
 	}
 

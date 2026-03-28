@@ -205,8 +205,13 @@ func TestAdvanceStateDoesNotOverrideTerminalStates(t *testing.T) {
 		t.Fatalf("insert job row: %v", err)
 	}
 
-	if err := store.advanceState(ctx, "job-terminal", models.JobStateScanning, now.Add(time.Minute)); err != nil {
-		t.Fatalf("advanceState: %v", err)
+	if advanceErr := store.advanceState(
+		ctx,
+		"job-terminal",
+		models.JobStateScanning,
+		now.Add(time.Minute),
+	); advanceErr != nil {
+		t.Fatalf("advanceState: %v", advanceErr)
 	}
 
 	rec := mustGet(ctx, t, store, "job-terminal")

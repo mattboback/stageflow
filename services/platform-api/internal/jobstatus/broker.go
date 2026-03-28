@@ -62,6 +62,7 @@ func (b *watcherBroker) unsubscribe(sub *watchSubscription) {
 
 	if subs, ok := b.watchers[sub.jobID]; ok {
 		delete(subs, sub)
+
 		if len(subs) == 0 {
 			delete(b.watchers, sub.jobID)
 		}

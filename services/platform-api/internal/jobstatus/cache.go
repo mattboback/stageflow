@@ -68,16 +68,6 @@ func (c *snapshotCache) put(record *status.JobRecord) {
 	c.mu.Unlock()
 }
 
-func (c *snapshotCache) delete(jobID string) {
-	if c == nil || jobID == "" {
-		return
-	}
-
-	c.mu.Lock()
-	delete(c.jobs, jobID)
-	c.mu.Unlock()
-}
-
 func (c *snapshotCache) sweepExpiredLocked(now time.Time) {
 	if c == nil {
 		return

@@ -15,8 +15,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$`)
@@ -326,7 +326,10 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		return
 	}
 
-	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{Payload: payload, ObservedAt: envelope.Timestamp}); beginErr != nil {
+	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{
+		Payload:    payload,
+		ObservedAt: envelope.Timestamp,
+	}); beginErr != nil {
 		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
 	}
 

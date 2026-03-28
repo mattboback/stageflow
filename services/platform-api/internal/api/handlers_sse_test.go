@@ -79,7 +79,7 @@ func readNextSSEEvent(r *bufio.Reader) (eventType, data string, err error) {
 }
 
 func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
-	server, _, _, _ := newTestServer(t)
+	server, _, _ := newTestServer(t)
 
 	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
 		Kind:       jobstatus.SignalJobCreated,
