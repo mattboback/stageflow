@@ -61,8 +61,9 @@ for bucket in "${BUCKETS[@]}"; do
 	run_mc mb "${MINIO_ALIAS}/${bucket}"
 done
 
-echo "[minio] Ensuring anonymous access is disabled on buckets"
-run_mc anonymous set none "${MINIO_ALIAS}/scanner-artifacts"
+echo "[minio] Setting anonymous download on scanner-artifacts (served via Caddy proxy)"
+run_mc anonymous set download "${MINIO_ALIAS}/scanner-artifacts"
+echo "[minio] Ensuring anonymous access is disabled on scanner-staging"
 run_mc anonymous set none "${MINIO_ALIAS}/scanner-staging"
 
 if [[ -n "${MINIO_ACCESS_KEY}" && -n "${MINIO_SECRET_KEY}" ]]; then

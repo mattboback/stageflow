@@ -145,7 +145,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_USE_SSL: "false"
       MINIO_PUBLIC_USE_SSL: "true"
-      MINIO_USE_PROXY_URLS: "false"
+      MINIO_USE_PROXY_URLS: "true"
       PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-https://${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org},https://www.${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org}}
       ORCHESTRATOR_API_URL: "http://orchestrator:8081"
     volumes:
