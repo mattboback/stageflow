@@ -47,6 +47,14 @@ jobs:
             (cd "$dir" && go test -race ./...)
           done
 
+      - name: CLI docs stay generated
+        run: |
+          go run ./clients/cli docs --out-dir docs/reference/cli/stageflow
+          git diff --exit-code docs/reference/cli/stageflow
+
+      - name: Shell regression tests
+        run: bash devtools/scripts/tests/cli-install.test.sh
+
       - name: Go vulncheck
         run: |
           for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
@@ -55,7 +63,7 @@ jobs:
           done
 
   clients/web:
-    name: Frontend (lint, typecheck, test)
+    name: Web App (lint, typecheck, test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -78,7 +86,7 @@ jobs:
         working-directory: clients/web
 
   clients/web-storybook:
-    name: Frontend Storybook (interaction + a11y)
+    name: Web App Storybook (interaction + a11y)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

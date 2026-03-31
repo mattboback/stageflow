@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -20,6 +21,8 @@ import (
 )
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*[a-z0-9]$`)
+
+const maxProjectRequestBodySize = 1 * 1024 * 1024 // 1 MiB
 
 func validSlug(s string) bool {
 	if len(s) < 2 || len(s) > 64 {
@@ -96,8 +99,8 @@ type createProjectRequest struct {
 
 func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 	var req createProjectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
+	if err := decodeProjectRequestBody(w, r, &req); err != nil {
+		handleProjectRequestDecodeError(w, err)
 
 		return
 	}
@@ -199,9 +202,9 @@ func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request, slu
 
 	var req updateProjectRequest
 
-	err = json.NewDecoder(r.Body).Decode(&req)
+	err = decodeProjectRequestBody(w, r, &req)
 	if err != nil {
-		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
+		handleProjectRequestDecodeError(w, err)
 
 		return
 	}
@@ -368,9 +371,9 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 
 	var req promoteRequest
 
-	err = json.NewDecoder(r.Body).Decode(&req)
+	err = decodeProjectRequestBody(w, r, &req)
 	if err != nil {
-		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
+		handleProjectRequestDecodeError(w, err)
 
 		return
 	}
@@ -423,4 +426,33 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 		"baseline_job_id": req.JobID,
 		"message":         "Baseline updated",
 	})
+}
+
+func decodeProjectRequestBody(w http.ResponseWriter, r *http.Request, dst any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxProjectRequestBodySize)
+	return json.NewDecoder(r.Body).Decode(dst)
+}
+
+func handleProjectRequestDecodeError(w http.ResponseWriter, err error) {
+	var maxErr *http.MaxBytesError
+	if errors.As(err, &maxErr) {
+		httputil.RespondStructuredError(
+			w,
+			http.StatusRequestEntityTooLarge,
+			httputil.NewPayloadTooLargeError(strconv.Itoa(maxProjectRequestBodySize)),
+		)
+		return
+	}
+
+	msg := err.Error()
+	if strings.Contains(msg, "request body too large") {
+		httputil.RespondStructuredError(
+			w,
+			http.StatusRequestEntityTooLarge,
+			httputil.NewPayloadTooLargeError(strconv.Itoa(maxProjectRequestBodySize)),
+		)
+		return
+	}
+
+	httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
 }

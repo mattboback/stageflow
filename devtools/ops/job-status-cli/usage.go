@@ -31,6 +31,7 @@ Events Options:
 
 Environment Variables:
   ORCHESTRATOR_ADMIN_URL  Admin API URL (default: http://localhost:8081)
+  ORCHESTRATOR_API_TOKEN  Admin API token (required when orchestrator auth is enabled)
 
 Examples:
   job-status-cli jobs

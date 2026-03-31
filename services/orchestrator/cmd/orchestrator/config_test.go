@@ -101,6 +101,7 @@ func validTestConfig() *Config {
 		ExtractionImage:               "localhost/stageflow/extractor:latest",
 		ScannerImage:                  "localhost/stageflow/scanner-runner:latest",
 		APIPort:                       "8080",
+		APIToken:                      "test-token",
 		NatsHost:                      "nats",
 		MinioHost:                     "minio",
 		PageLoadTimeout:               15000,

@@ -269,7 +269,7 @@ For local targets like `+"`localhost`"+` and `+"`127.0.0.1`"+`:
 - If you see "ENOENT" for your dev command, verify `+"`dev.start.cmd`"+` and `+"`dev.start.cwd`"+`.
 - If readiness times out, verify `+"`dev.ready.url`"+` responds while your app is running.
 
-For full documentation, see the [Project Mode Guide](https://github.com/mattboback/stageflow/blob/main/docs/PROJECT_MODE.md).
+For full documentation, see the [Project Mode guide](https://github.com/mattboback/stageflow/blob/main/docs/PROJECT_MODE.md).
 `) + "\n"
 }
 

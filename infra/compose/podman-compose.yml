@@ -148,6 +148,7 @@ services:
       MINIO_USE_PROXY_URLS: "true"
       PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-https://${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org},https://www.${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org}}
       ORCHESTRATOR_API_URL: "http://orchestrator:8081"
+      ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
     volumes:
       - web_server_data:/data
       - ../../infra/scanners/scanners.yaml:/data/scanners.yaml:ro
@@ -202,6 +203,7 @@ services:
       EXTRACTION_IMAGE: "localhost/stageflow/extractor:latest"
       SCANNER_IMAGE: "localhost/stageflow/scanner-runner:latest"
       API_PORT: "8081"
+      ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
       NATS_HOST: "nats"
       MINIO_HOST: "minio"
       POD_NETWORK: ${STAGEFLOW_NETWORK_NAME:-stageflow_net}

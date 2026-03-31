@@ -699,7 +699,7 @@ func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
 	}
 }
 
-func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
+func TestJobReportReturnsNotFoundWhenHTMLMissing(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-report-fallback"
@@ -735,16 +735,16 @@ func TestJobReportFallbackWhenHTMLMissing(t *testing.T) {
 
 	server.handleJobReport(rr, req, jobID)
 
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rr.Code)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rr.Code)
 	}
 
-	if ct := rr.Header().Get("Content-Type"); ct == "" || !strings.HasPrefix(ct, "text/html") {
-		t.Fatalf("expected text/html content-type, got %q", ct)
+	var parsed httputil.ErrorResponse
+	if err := json.NewDecoder(rr.Body).Decode(&parsed); err != nil {
+		t.Fatalf("decode response: %v", err)
 	}
-
-	if body := rr.Body.String(); !strings.Contains(body, "/api/v1/jobs/"+jobID+"/results") {
-		t.Fatalf("expected results link in fallback HTML")
+	if parsed.Error.Code != httputil.ErrCodeNotFound {
+		t.Fatalf("expected NOT_FOUND code, got %q", parsed.Error.Code)
 	}
 }
 
@@ -802,6 +802,22 @@ func TestZipUploadBodyTooLarge(t *testing.T) {
 	if !handled {
 		t.Fatalf("expected oversized body error to be handled")
 	}
+
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d", rr.Code)
+	}
+}
+
+func TestCreateProjectBodyTooLarge(t *testing.T) {
+	server, _, _ := newTestServer(t)
+
+	oversized := strings.Repeat("a", maxProjectRequestBodySize+1024)
+	body := strings.NewReader(`{"slug":"oversized-project","name":"` + oversized + `","urls":["https://example.com"]}`)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", body)
+	rr := httptest.NewRecorder()
+
+	server.handleCreateProject(rr, req)
 
 	if rr.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("expected 413, got %d", rr.Code)

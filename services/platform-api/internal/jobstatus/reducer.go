@@ -26,7 +26,7 @@ func beginSnapshot(cmd BeginJob) (*status.JobRecord, error) {
 		InputType:         payload.InputType,
 		CreatedAt:         observedAt,
 		UpdatedAt:         observedAt,
-		ExpectedScanners:  cloneStrings(payload.Config.Modules),
+		ExpectedScanners:  status.CloneStrings(payload.Config.Modules),
 		CompletedScanners: nil,
 	}
 
@@ -212,7 +212,7 @@ func applyJobCreated(rec *status.JobRecord, payload *events.JobCreatedPayload, o
 	rec.UpdatedAt = observedAt
 
 	if len(payload.Config.Modules) > 0 {
-		rec.ExpectedScanners = cloneStrings(payload.Config.Modules)
+		rec.ExpectedScanners = status.CloneStrings(payload.Config.Modules)
 	}
 
 	switch payload.InputType {
@@ -436,8 +436,8 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 	}
 
 	cloned := *rec
-	cloned.ExpectedScanners = cloneStrings(rec.ExpectedScanners)
-	cloned.CompletedScanners = cloneStrings(rec.CompletedScanners)
+	cloned.ExpectedScanners = status.CloneStrings(rec.ExpectedScanners)
+	cloned.CompletedScanners = status.CloneStrings(rec.CompletedScanners)
 
 	if rec.CompletedAt != nil {
 		completedAt := *rec.CompletedAt
@@ -457,17 +457,6 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 	}
 
 	return &cloned
-}
-
-func cloneStrings(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	cloned := make([]string, len(values))
-	copy(cloned, values)
-
-	return cloned
 }
 
 func uniqueStringsPreserveOrder(values []string) []string {

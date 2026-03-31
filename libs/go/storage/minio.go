@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/url"
 	"time"
 
@@ -219,13 +219,13 @@ func (c *MinIOClient) ensureBucketWithRetry(
 		exists, err := c.client.BucketExists(ctx, bucket)
 		if err != nil {
 			lastErr = err
-			log.Printf(
-				"Failed to check/create bucket %s (attempt %d/%d): %v. Retrying in %v...",
-				bucket,
-				attempt,
-				maxRetries,
-				lastErr,
-				retryDelay,
+			slog.Warn(
+				"Failed to check/create bucket; retrying",
+				"bucket", bucket,
+				"attempt", attempt,
+				"max_retries", maxRetries,
+				"error", lastErr,
+				"retry_delay", retryDelay.String(),
 			)
 
 			if retryErr := waitForRetry(ctx, retryDelay); retryErr != nil {
@@ -241,13 +241,13 @@ func (c *MinIOClient) ensureBucketWithRetry(
 
 		if makeBucketErr := c.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); makeBucketErr != nil {
 			lastErr = makeBucketErr
-			log.Printf(
-				"Failed to check/create bucket %s (attempt %d/%d): %v. Retrying in %v...",
-				bucket,
-				attempt,
-				maxRetries,
-				lastErr,
-				retryDelay,
+			slog.Warn(
+				"Failed to check/create bucket; retrying",
+				"bucket", bucket,
+				"attempt", attempt,
+				"max_retries", maxRetries,
+				"error", lastErr,
+				"retry_delay", retryDelay.String(),
 			)
 
 			if retryErr := waitForRetry(ctx, retryDelay); retryErr != nil {
@@ -257,7 +257,7 @@ func (c *MinIOClient) ensureBucketWithRetry(
 			continue
 		}
 
-		log.Printf("Created MinIO bucket: %s", bucket)
+		slog.Info("Created MinIO bucket", "bucket", bucket)
 
 		return nil
 	}
@@ -295,7 +295,7 @@ func (c *MinIOClient) UploadFile(ctx context.Context, bucket, path string, reade
 		return fmt.Errorf("failed to upload file to %s/%s: %w", bucket, path, err)
 	}
 
-	log.Printf("Uploaded file to MinIO: %s/%s (%d bytes)", bucket, path, info.Size)
+	slog.Info("Uploaded file to MinIO", "bucket", bucket, "path", path, "bytes", info.Size)
 
 	return nil
 }
@@ -362,7 +362,7 @@ func (c *MinIOClient) DeleteFile(ctx context.Context, bucket, path string) error
 		return fmt.Errorf("failed to delete file %s/%s: %w", bucket, path, err)
 	}
 
-	log.Printf("Deleted file from MinIO: %s/%s", bucket, path)
+	slog.Info("Deleted file from MinIO", "bucket", bucket, "path", path)
 
 	return nil
 }

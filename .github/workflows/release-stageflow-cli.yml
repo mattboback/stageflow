@@ -1,4 +1,4 @@
-name: Release stageflow CLI
+name: Release StageFlow CLI
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           cache: true
           cache-dependency-path: "**/*.sum"
 
-      - name: Build stageflow CLI
+      - name: Build StageFlow CLI
         id: build
         shell: bash
         working-directory: clients/cli

@@ -53,7 +53,10 @@ func NewService(
 
 func (s *Service) PrepareExtractedJob(ctx context.Context, payload *events.ExtractionReadyPayload) error {
 	if err := s.store.RecordExtractionComplete(ctx, payload.JobID); err != nil {
-		slog.Warn("Failed to record extraction complete", "job_id", payload.JobID, "error", err)
+		if shouldIgnoreMissingJob(events.EventExtractionReady, payload.JobID, err) {
+			return nil
+		}
+		return fmt.Errorf("failed to record extraction complete: %w", err)
 	}
 
 	job, err := s.store.GetJob(ctx, payload.JobID)
@@ -65,7 +68,9 @@ func (s *Service) PrepareExtractedJob(ctx context.Context, payload *events.Extra
 		return fmt.Errorf("failed to get job: %w", err)
 	}
 
-	s.persistExtractionReadyMetadata(ctx, payload, job)
+	if err := s.persistExtractionReadyMetadata(ctx, payload, job); err != nil {
+		return err
+	}
 
 	if job.State != models.JobStateReady {
 		action, actionErr := domainjobs.DecideExtractionReady(job.State)
@@ -109,7 +114,7 @@ func (s *Service) StartScanning(ctx context.Context, job *models.Job) error {
 		job.State = models.JobStateScanning
 
 		if err := s.store.RecordScanStart(ctx, job.ID); err != nil {
-			slog.Warn("Failed to record scan start", "job_id", job.ID, "error", err)
+			return fmt.Errorf("failed to record scan start: %w", err)
 		}
 	}
 
@@ -172,7 +177,7 @@ func (s *Service) RecordScannerFailure(ctx context.Context, payload *events.Scan
 		payload.RecipePath,
 		0,
 	); artifactsErr != nil {
-		slog.Warn("Failed to persist scan failure artifacts", "job_id", payload.JobID, "error", artifactsErr)
+		return fmt.Errorf("failed to persist scan failure artifacts: %w", artifactsErr)
 	}
 
 	allComplete, err := s.store.RecordScannerFailure(ctx, payload.JobID, scannerType, payload.Error)
@@ -223,7 +228,10 @@ func (s *Service) RecordScannerCompletion(ctx context.Context, payload *events.S
 		payload.TotalPagesScanned,
 		payload.TotalPagesScanned,
 	); err != nil {
-		slog.Warn("Failed to persist scan completion progress", "job_id", payload.JobID, "error", err)
+		if shouldIgnoreMissingJob(events.EventScanCompleted, payload.JobID, err) {
+			return nil
+		}
+		return fmt.Errorf("failed to persist scan completion progress: %w", err)
 	}
 
 	job, err := s.store.GetJob(ctx, payload.JobID)
@@ -296,7 +304,7 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 	}
 
 	if recordErr := s.store.RecordScanComplete(ctx, job.ID); recordErr != nil {
-		slog.Warn("Failed to record scan complete", "job_id", job.ID, "error", recordErr)
+		return fmt.Errorf("failed to record scan complete: %w", recordErr)
 	}
 
 	primaryReportPath, primaryStageLogPath, primaryRecipePath, totalIssues := summarizeSuccessfulScannerArtifacts(job)
@@ -311,7 +319,7 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 		primaryRecipePath,
 		totalIssues,
 	); artifactsErr != nil {
-		slog.Warn("Failed to persist completion artifacts", "job_id", job.ID, "error", artifactsErr)
+		return fmt.Errorf("failed to persist completion artifacts: %w", artifactsErr)
 	}
 
 	if completeErr := s.store.CompleteJob(ctx, job.ID); completeErr != nil {
@@ -373,9 +381,9 @@ func (s *Service) persistExtractionReadyMetadata(
 	ctx context.Context,
 	payload *events.ExtractionReadyPayload,
 	job *models.Job,
-) {
+) error {
 	if err := s.store.UpdateJobProgress(ctx, payload.JobID, 0, payload.TotalPages); err != nil {
-		slog.Warn("Failed to persist total pages from extraction.ready", "job_id", payload.JobID, "error", err)
+		return fmt.Errorf("failed to persist total pages from extraction.ready: %w", err)
 	} else {
 		job.TotalPages = payload.TotalPages
 		job.CurrentPage = 0
@@ -387,7 +395,7 @@ func (s *Service) persistExtractionReadyMetadata(
 		payload.StageLogPath,
 		payload.RecipePath,
 	); err != nil {
-		slog.Warn("Failed to persist extraction artifacts", "job_id", payload.JobID, "error", err)
+		return fmt.Errorf("failed to persist extraction artifacts: %w", err)
 	} else {
 		job.ExtractionStageLogKey = payload.StageLogPath
 		job.ExtractionRecipeKey = payload.RecipePath
@@ -395,7 +403,7 @@ func (s *Service) persistExtractionReadyMetadata(
 
 	if payload.ProvenancePath != "" {
 		if err := s.store.UpdateJobProvenance(ctx, payload.JobID, payload.ProvenancePath); err != nil {
-			slog.Warn("Failed to persist provenance path", "job_id", payload.JobID, "error", err)
+			return fmt.Errorf("failed to persist provenance path: %w", err)
 		} else {
 			job.ProvenancePath = payload.ProvenancePath
 		}
@@ -403,11 +411,13 @@ func (s *Service) persistExtractionReadyMetadata(
 
 	if payload.ProvenanceArtifactPath != "" {
 		if err := s.store.UpdateJobProvenanceKey(ctx, payload.JobID, payload.ProvenanceArtifactPath); err != nil {
-			slog.Warn("Failed to persist provenance key", "job_id", payload.JobID, "error", err)
+			return fmt.Errorf("failed to persist provenance key: %w", err)
 		} else {
 			job.ProvenanceKey = payload.ProvenanceArtifactPath
 		}
 	}
+
+	return nil
 }
 
 func summarizeSuccessfulScannerArtifacts(job *models.Job) (string, string, string, int) {

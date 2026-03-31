@@ -5,14 +5,17 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 
+	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 )
 
@@ -23,7 +26,94 @@ const (
 
 	// uploadRequestTimeout is extended for file upload endpoints.
 	uploadRequestTimeout = 5 * time.Minute
+
+	defaultRateLimitRequestsPerMinute = 120
+	rateLimitWindow                   = time.Minute
 )
+
+type rateWindow struct {
+	start time.Time
+	count int
+}
+
+type inMemoryRateLimiter struct {
+	mu      sync.Mutex
+	windows map[string]rateWindow
+	limit   int
+}
+
+func newInMemoryRateLimiter(limit int) *inMemoryRateLimiter {
+	return &inMemoryRateLimiter{
+		windows: make(map[string]rateWindow),
+		limit:   limit,
+	}
+}
+
+func (l *inMemoryRateLimiter) allow(key string, now time.Time) (bool, int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	window := l.windows[key]
+	if window.start.IsZero() || now.Sub(window.start) >= rateLimitWindow {
+		window = rateWindow{start: now, count: 0}
+	}
+
+	if window.count >= l.limit {
+		retryAfter := int(rateLimitWindow.Seconds()) - int(now.Sub(window.start).Seconds())
+		if retryAfter < 1 {
+			retryAfter = 1
+		}
+		l.windows[key] = window
+		return false, retryAfter
+	}
+
+	window.count++
+	l.windows[key] = window
+	return true, 0
+}
+
+var apiRateLimiter = newInMemoryRateLimiter(defaultRateLimitRequestsPerMinute)
+
+func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key := rateLimitKey(r)
+		allowed, retryAfter := apiRateLimiter.allow(key, time.Now().UTC())
+		if !allowed {
+			detail := httputil.NewRateLimitError(
+				retryAfter,
+				strconv.Itoa(defaultRateLimitRequestsPerMinute),
+				"1 minute",
+			)
+			httputil.RespondStructuredError(w, http.StatusTooManyRequests, detail)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+func rateLimitKey(r *http.Request) string {
+	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		if len(parts) > 0 {
+			candidate := strings.TrimSpace(parts[0])
+			if candidate != "" {
+				return candidate
+			}
+		}
+	}
+
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err == nil && host != "" {
+		return host
+	}
+
+	if strings.TrimSpace(r.RemoteAddr) != "" {
+		return strings.TrimSpace(r.RemoteAddr)
+	}
+
+	return "unknown"
+}
 
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,13 @@
 {
 	"name": "scanner-runner",
 	"version": "0.1.0",
+	"description": "StageFlow scanner execution runtime",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mattboback/stageflow.git",
+		"directory": "services/scanner-runner"
+	},
 	"packageManager": "bun@1.3.8",
 	"private": true,
 	"main": "dist/index.js",

@@ -1,5 +1,5 @@
 /**
- * Core type definitions for the scan worker (scanner-runner).
+ * Core type definitions for the Scanner Runner (scanner-runner).
  */
 
 import type { BrowserContext, Page } from 'playwright';

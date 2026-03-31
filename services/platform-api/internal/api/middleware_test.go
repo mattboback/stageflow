@@ -182,6 +182,34 @@ func TestAPIKeyMiddleware_WithToken_AllowsMatchingKey(t *testing.T) {
 	}
 }
 
+func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
+	original := apiRateLimiter
+	apiRateLimiter = newInMemoryRateLimiter(1)
+	t.Cleanup(func() {
+		apiRateLimiter = original
+	})
+
+	handler := rateLimitMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req1.RemoteAddr = "127.0.0.1:1234"
+	rr1 := httptest.NewRecorder()
+	handler(rr1, req1)
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("expected first request 200, got %d", rr1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req2.RemoteAddr = "127.0.0.1:1234"
+	rr2 := httptest.NewRecorder()
+	handler(rr2, req2)
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second request 429, got %d", rr2.Code)
+	}
+}
+
 func TestTimeoutMiddleware_AllowsFastHandler(t *testing.T) {
 	handler := timeoutMiddleware(50*time.Millisecond, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

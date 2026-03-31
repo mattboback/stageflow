@@ -147,7 +147,7 @@ func run() int {
 	apiServer := api.NewServer(&api.Config{
 		Database:     database,
 		PodmanClient: podmanClient,
-		Publisher:    publisher,
+		APIToken:     cfg.APIToken,
 		Port:         cfg.APIPort,
 	})
 

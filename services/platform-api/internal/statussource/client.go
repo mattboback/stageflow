@@ -19,11 +19,13 @@ import (
 type Config struct {
 	BaseURL string
 	Timeout time.Duration
+	Token   string
 }
 
 // Client fetches job status snapshots from orchestrator's admin API.
 type Client struct {
 	baseURL    string
+	token      string
 	httpClient *http.Client
 }
 
@@ -49,6 +51,7 @@ func NewClient(cfg *Config) (*Client, error) {
 
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
+		token:   strings.TrimSpace(cfg.Token),
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
@@ -67,6 +70,9 @@ func (c *Client) GetJob(ctx context.Context, jobID string) (*status.JobRecord, e
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("create orchestrator status request: %w", err)
+	}
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -135,8 +141,8 @@ func toJobRecord(job *models.Job) *status.JobRecord {
 		ExtractionStageLogKey: job.ExtractionStageLogKey,
 		ExtractionRecipeKey:   job.ExtractionRecipeKey,
 		ProvenanceKey:         job.ProvenanceKey,
-		ExpectedScanners:      cloneStrings(job.ExpectedScanners),
-		CompletedScanners:     cloneStrings(job.CompletedScanners),
+		ExpectedScanners:      status.CloneStrings(job.ExpectedScanners),
+		CompletedScanners:     status.CloneStrings(job.CompletedScanners),
 	}
 
 	if len(job.ScannerResults) > 0 {
@@ -157,15 +163,4 @@ func toJobRecord(job *models.Job) *status.JobRecord {
 	}
 
 	return rec
-}
-
-func cloneStrings(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	cloned := make([]string, len(values))
-	copy(cloned, values)
-
-	return cloned
 }

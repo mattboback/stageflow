@@ -138,7 +138,7 @@ func (s *Service) prepareURLJob(ctx context.Context, job *models.Job) error {
 
 	provenanceKey := job.ID + "/provenance.json"
 	if updateErr := s.store.UpdateJobProvenanceKey(ctx, job.ID, provenanceKey); updateErr != nil {
-		slog.Warn("Failed to persist provenance key for URL job", "job_id", job.ID, "error", updateErr)
+		return fmt.Errorf("failed to persist provenance key for URL job: %w", updateErr)
 	} else {
 		job.ProvenanceKey = provenanceKey
 	}
@@ -182,7 +182,7 @@ func (s *Service) startExtraction(ctx context.Context, job *models.Job) error {
 		job.State = models.JobStateExtracting
 
 		if recordErr := s.store.RecordExtractionStart(ctx, job.ID); recordErr != nil {
-			slog.Warn("Failed to record extraction start", "job_id", job.ID, "error", recordErr)
+			return fmt.Errorf("failed to record extraction start: %w", recordErr)
 		}
 	}
 
