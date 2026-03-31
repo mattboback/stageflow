@@ -163,72 +163,84 @@
 				</Panel>
 			{/snippet}
 			{#if section === 'overview'}
-				<OverviewDashboard
-					report={displayReport}
-					onSelectPage={(pageId) =>
-						updateQueryParams({ section: 'pages', page: pageId }, { replaceState: false })}
-					onSelectScanner={(scannerId) =>
-						updateQueryParams({ section: 'scanners', scanner: scannerId }, { replaceState: false })}
-					onSearchIssues={(query, scannerId) =>
-						updateQueryParams(
-							{
-								section: 'issues',
-								q: query,
-								scanner: scannerId ?? null,
+				<section id="report-panel-overview" aria-labelledby="report-tab-overview">
+					<OverviewDashboard
+						report={displayReport}
+						onSelectPage={(pageId) =>
+							updateQueryParams({ section: 'pages', page: pageId }, { replaceState: false })}
+						onSelectScanner={(scannerId) =>
+							updateQueryParams({ section: 'scanners', scanner: scannerId }, { replaceState: false })}
+						onSearchIssues={(query, scannerId) =>
+							updateQueryParams(
+								{
+									section: 'issues',
+									q: query,
+									scanner: scannerId ?? null,
+									page: null,
+									severity: null,
+									category: null
+								},
+								{ replaceState: false }
+							)}
+					/>
+				</section>
+			{:else if section === 'issues'}
+				<section id="report-panel-issues" aria-labelledby="report-tab-issues">
+					<IssuesView
+						report={displayReport}
+						{screenshots}
+						{activeScanner}
+						{activePage}
+						{activeSeverity}
+						{activeCategory}
+						{searchTerm}
+						issueSort={normalizedIssueSort}
+						selectedIssueId={activeIssueId}
+						onScannerChange={(value) => updateQueryParams({ scanner: value })}
+						onPageChange={(value) => updateQueryParams({ page: value })}
+						onSeverityChange={(value) => updateQueryParams({ severity: value })}
+						onCategoryChange={(value) => updateQueryParams({ category: value })}
+						onSearchChange={(value) => updateQueryParams({ q: value || null })}
+						onSortChange={(value) => updateQueryParams({ sort: value === 'severity' ? null : value })}
+						onIssueSelect={handleIssueSelect}
+						onClearFilters={() =>
+							updateQueryParams({
+								scanner: null,
 								page: null,
 								severity: null,
-								category: null
-							},
-							{ replaceState: false }
-						)}
-				/>
-			{:else if section === 'issues'}
-				<IssuesView
-					report={displayReport}
-					{screenshots}
-					{activeScanner}
-					{activePage}
-					{activeSeverity}
-					{activeCategory}
-					{searchTerm}
-					issueSort={normalizedIssueSort}
-					selectedIssueId={activeIssueId}
-					onScannerChange={(value) => updateQueryParams({ scanner: value })}
-					onPageChange={(value) => updateQueryParams({ page: value })}
-					onSeverityChange={(value) => updateQueryParams({ severity: value })}
-					onCategoryChange={(value) => updateQueryParams({ category: value })}
-					onSearchChange={(value) => updateQueryParams({ q: value || null })}
-					onSortChange={(value) => updateQueryParams({ sort: value === 'severity' ? null : value })}
-					onIssueSelect={handleIssueSelect}
-					onClearFilters={() =>
-						updateQueryParams({
-							scanner: null,
-							page: null,
-							severity: null,
-							category: null,
-							q: null
-						})}
-				/>
+								category: null,
+								q: null
+							})}
+					/>
+				</section>
 			{:else if section === 'pages'}
-				<PagesView
-					report={displayReport}
-					{screenshots}
-					{activeScanner}
-					{activePage}
-					onSelectPage={(pageId) => updateQueryParams({ page: pageId })}
-					onIssueSelect={handleIssueSelect}
-				/>
+				<section id="report-panel-pages" aria-labelledby="report-tab-pages">
+					<PagesView
+						report={displayReport}
+						{screenshots}
+						{activeScanner}
+						{activePage}
+						onSelectPage={(pageId) => updateQueryParams({ page: pageId })}
+						onIssueSelect={handleIssueSelect}
+					/>
+				</section>
 			{:else if section === 'scanners'}
-				<ScannersView
-					report={displayReport}
-					{job}
-					{activeScanner}
-					onSelectScanner={(scannerId) => updateQueryParams({ scanner: scannerId })}
-				/>
+				<section id="report-panel-scanners" aria-labelledby="report-tab-scanners">
+					<ScannersView
+						report={displayReport}
+						{job}
+						{activeScanner}
+						onSelectScanner={(scannerId) => updateQueryParams({ scanner: scannerId })}
+					/>
+				</section>
 			{:else if section === 'artifacts'}
-				<ArtifactsView {jobId} {job} {...onRefreshArtifacts ? { onRefreshArtifacts } : {}} />
+				<section id="report-panel-artifacts" aria-labelledby="report-tab-artifacts">
+					<ArtifactsView {jobId} {job} {...onRefreshArtifacts ? { onRefreshArtifacts } : {}} />
+				</section>
 			{:else if section === 'errors'}
-				<ErrorsView errors={displayReport.errors} />
+				<section id="report-panel-errors" aria-labelledby="report-tab-errors">
+					<ErrorsView errors={displayReport.errors} />
+				</section>
 			{/if}
 		</svelte:boundary>
 	{:else if status === 'failed' || status === 'error'}

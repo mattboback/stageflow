@@ -1,6 +1,6 @@
 const env = import.meta.env as Record<string, string | undefined>;
 
-const DEFAULT_GITHUB_URL = 'https://github.com/mattboback/stageflow';
+const DEFAULT_GITHUB_URL = 'https://github.com/mattboback';
 const DEFAULT_TAGLINE =
 	'Podman-native platform for accessibility, SEO, performance, and security web scanning';
 
@@ -13,7 +13,7 @@ function normalizeGithubUrl(value: string | undefined): string {
 		const url = new URL(value);
 		if (url.hostname === 'github.com') {
 			const pathname = url.pathname.replace(/\/+$/, '');
-			if (pathname === '' || pathname === '/mattboback') {
+			if (pathname === '' || pathname === '/mattboback' || pathname === '/mattboback/stageflow') {
 				return DEFAULT_GITHUB_URL;
 			}
 		}

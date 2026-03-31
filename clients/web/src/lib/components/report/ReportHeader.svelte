@@ -42,11 +42,9 @@
 	<div class="flex flex-row items-start justify-between gap-4">
 		<div class="min-w-0 flex-1">
 			<p class="text-ink-muted text-xs font-semibold tracking-[0.12em] uppercase">Scan report</p>
-			{#if report.meta.baseUrl}
-				<h1 class="text-ink mt-2 text-2xl leading-tight font-bold break-all sm:text-3xl">
-					{report.meta.baseUrl}
-				</h1>
-			{/if}
+			<h1 class="text-ink mt-2 text-2xl leading-tight font-bold break-all sm:text-3xl">
+				{report.meta.baseUrl ?? `Scan ${jobId}`}
+			</h1>
 			<div class="mt-3 flex flex-wrap items-center gap-2">
 				<span
 					class="border-line bg-surface text-ink-muted rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase"

@@ -65,7 +65,7 @@ just demo
 | `VITE_API_URL`                    | yes      | `http://localhost:8080`                                       | Web app API base URL.                             |
 | `VITE_SITE_TITLE`                 | no       | `StageFlow`                                                     | Site title shown in UI metadata.                  |
 | `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                       | Canonical site URL used for metadata/share cards. |
-| `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | Repository link shown in UI.                      |
+| `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback`                                 | GitHub link shown in UI.                          |
 | `VITE_TAGLINE`                    | no       | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces.                 |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
 
