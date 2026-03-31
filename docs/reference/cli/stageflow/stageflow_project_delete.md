@@ -22,5 +22,5 @@ stageflow project delete <slug> [flags]
 
 ### SEE ALSO
 
-* [stageflow project](stageflow_project.md)	 - Run project-mode scan using .stageflow/config.yaml
+* [stageflow project](stageflow_project.md)	 - Run Project Mode scan using .stageflow/config.yaml
 

@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,17 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
-
-// Publisher provides NATS event publishing capabilities.
-type Publisher interface {
-	PublishJobCreated(ctx context.Context, payload *events.JobCreatedPayload) error
-}
 
 const (
 	defaultJobsListLimit    = 50
@@ -35,7 +30,7 @@ const (
 type Server struct {
 	database     *db.Database
 	podmanClient PodmanClient
-	publisher    Publisher
+	apiToken     string
 	port         string
 	server       *http.Server
 }
@@ -73,7 +68,7 @@ func parsePaginationParams(query url.Values, defaultLimit, maxLimit int) (limit,
 type Config struct {
 	Database     *db.Database
 	PodmanClient PodmanClient
-	Publisher    Publisher
+	APIToken     string
 	Port         string // Default: "8081"
 }
 
@@ -86,23 +81,18 @@ func NewServer(cfg *Config) *Server {
 	s := &Server{
 		database:     cfg.Database,
 		podmanClient: cfg.PodmanClient,
-		publisher:    cfg.Publisher,
+		apiToken:     strings.TrimSpace(cfg.APIToken),
 		port:         cfg.Port,
 	}
 
 	mux := http.NewServeMux()
 
 	// Admin endpoints only (public API is platform-api).
-	mux.HandleFunc("/api/v1/jobs", s.handleListJobs)
-	mux.HandleFunc("/api/v1/jobs/", s.handleJobRoutes)
-
-	// Test endpoints for direct job creation
-	mux.HandleFunc("/api/v1/test/jobs", s.handleCreateTestJob)
-
-	mux.HandleFunc("/api/v1/pods", s.handleListPods)
-	mux.HandleFunc("/api/v1/pods/", s.handlePodDetails)
-
-	mux.HandleFunc("/api/v1/status", s.handleSystemStatus)
+	mux.HandleFunc("/api/v1/jobs", s.requireAuth(s.handleListJobs))
+	mux.HandleFunc("/api/v1/jobs/", s.requireAuth(s.handleJobRoutes))
+	mux.HandleFunc("/api/v1/pods", s.requireAuth(s.handleListPods))
+	mux.HandleFunc("/api/v1/pods/", s.requireAuth(s.handlePodDetails))
+	mux.HandleFunc("/api/v1/status", s.requireAuth(s.handleSystemStatus))
 
 	mux.HandleFunc("/healthz", s.handleHealth)
 
@@ -113,6 +103,25 @@ func NewServer(cfg *Config) *Server {
 	}
 
 	return s
+}
+
+func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		provided := strings.TrimSpace(r.Header.Get("X-Api-Key"))
+		if provided == "" {
+			auth := strings.TrimSpace(r.Header.Get("Authorization"))
+			if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+				provided = strings.TrimSpace(auth[len("bearer "):])
+			}
+		}
+
+		if subtle.ConstantTimeCompare([]byte(provided), []byte(s.apiToken)) != 1 {
+			httputil.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
 }
 
 // handleJobRoutes handles job subroutes:

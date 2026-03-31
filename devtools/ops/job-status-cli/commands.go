@@ -25,7 +25,7 @@ type jobEventsOptions struct {
 	showPayload bool
 }
 
-func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL string, opts jobsOptions) error {
+func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL, apiToken string, opts jobsOptions) error {
 	query := url.Values{
 		"limit":  {strconv.Itoa(opts.limit)},
 		"offset": {strconv.Itoa(opts.offset)},
@@ -40,7 +40,7 @@ func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 	}
 
 	var response ListJobsResponse
-	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, apiToken, &response); decodeErr != nil {
 		return decodeErr
 	}
 
@@ -100,7 +100,7 @@ func showJobEvents(
 	ctx context.Context,
 	client *http.Client,
 	out io.Writer,
-	apiURL, jobID string,
+	apiURL, apiToken, jobID string,
 	opts jobEventsOptions,
 ) error {
 	if jobID == "" {
@@ -115,7 +115,7 @@ func showJobEvents(
 	}
 
 	var response ListJobEventsResponse
-	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, apiToken, &response); decodeErr != nil {
 		return decodeErr
 	}
 
@@ -256,14 +256,14 @@ func truncateOrEmpty(value string, maxLen int) string {
 	return truncateWithEllipsis(value, maxLen)
 }
 
-func listPods(ctx context.Context, client *http.Client, out io.Writer, apiURL string) error {
+func listPods(ctx context.Context, client *http.Client, out io.Writer, apiURL, apiToken string) error {
 	requestURL, err := buildAPIURL(apiURL, "/api/v1/pods", nil)
 	if err != nil {
 		return err
 	}
 
 	var response ListPodsResponse
-	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, apiToken, &response); decodeErr != nil {
 		return decodeErr
 	}
 
@@ -304,14 +304,14 @@ func listPods(ctx context.Context, client *http.Client, out io.Writer, apiURL st
 	return w.Flush()
 }
 
-func showSystemStatus(ctx context.Context, client *http.Client, out io.Writer, apiURL string) error {
+func showSystemStatus(ctx context.Context, client *http.Client, out io.Writer, apiURL, apiToken string) error {
 	requestURL, err := buildAPIURL(apiURL, "/api/v1/status", nil)
 	if err != nil {
 		return err
 	}
 
 	var response SystemStatusResponse
-	if decodeErr := decodeOKJSON(ctx, client, requestURL, &response); decodeErr != nil {
+	if decodeErr := decodeOKJSON(ctx, client, requestURL, apiToken, &response); decodeErr != nil {
 		return decodeErr
 	}
 

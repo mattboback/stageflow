@@ -2,10 +2,10 @@
 
 Submit URL scan jobs to a StageFlow API, wait for completion, and render the
 unified report in shell-friendly formats. Supports severity-based exit codes
-for CI gating, structured JSON output for automation, and project mode for
+for CI gating, structured JSON output for automation, and Project Mode for
 local dev server scanning.
 
-Need the broader docs map first? Start with [`docs/README.md`](../../docs/README.md).
+Need the broader product overview first? Start with the [repository README](../../README.md).
 
 ## Install
 
@@ -27,7 +27,7 @@ go build -o stageflow .
 | Command | Description |
 | --- | --- |
 | `scan` | Submit a scan job, wait for completion, print results |
-| `project` | Run a project-mode scan using `.stageflow/config.yaml` |
+| `project` | Run a Project Mode scan using `.stageflow/config.yaml` |
 | `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
 | `project doctor` | Validate project config and dev readiness without scanning |
 | `ai` | Run the AI Navigator with natural language objectives |
@@ -166,11 +166,11 @@ Use `--fail-on-new` to gate on newly introduced issues and
 
 Issue `id` fields are content-based hashes — the same violation on the same page produces the same `id` across runs, making them reliable for regression diffing.
 
-## Project mode
+## Project Mode
 
-`stageflow project` (without remote CRUD subcommands) is the local dev-server workflow. The remote commands such as `stageflow project create`, `list`, `show`, `update`, `delete`, and `promote` manage named project records on a StageFlow API instead.
+`stageflow project` (without remote CRUD subcommands) is the local Project Mode workflow. The remote commands such as `stageflow project create`, `list`, `show`, `update`, `delete`, and `promote` manage named project records on a StageFlow API instead.
 
-Project mode automates the full scan lifecycle for local development:
+Project Mode automates the full scan lifecycle for local development:
 start dev server, wait for readiness, submit scan, stream results, stop server.
 
 ```bash

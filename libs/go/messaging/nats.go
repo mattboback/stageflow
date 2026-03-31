@@ -65,6 +65,7 @@ const (
 	defaultStreamMaxAge       = 72 * time.Hour
 	defaultConsumerAckWait    = 10 * time.Minute
 	defaultConsumerMaxDeliver = 10
+	defaultConsumerNAKDelay   = 5 * time.Second
 )
 
 const (
@@ -322,6 +323,14 @@ func (c *Client) Subscribe(
 				"consumer", consumerName,
 				"error", handleErr,
 			)
+			if nakErr := msg.NakWithDelay(defaultConsumerNAKDelay); nakErr != nil {
+				slog.Warn("Failed to NAK message",
+					"stream", stream,
+					"subject", subject,
+					"consumer", consumerName,
+					"error", nakErr,
+				)
+			}
 
 			return
 		}
@@ -386,6 +395,14 @@ func (c *Client) SubscribeWithContext(
 				"consumer", consumerName,
 				"error", handleErr,
 			)
+			if nakErr := msg.NakWithDelay(defaultConsumerNAKDelay); nakErr != nil {
+				slog.Warn("Failed to NAK message",
+					"stream", stream,
+					"subject", subject,
+					"consumer", consumerName,
+					"error", nakErr,
+				)
+			}
 
 			return
 		}

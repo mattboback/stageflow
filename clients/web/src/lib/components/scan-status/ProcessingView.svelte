@@ -83,25 +83,10 @@
 	}
 
 	function formatScannerName(scannerType: string): string {
-		switch (scannerType) {
-			case 'axe':
-				return 'axe-core';
-			case 'seo':
-				return 'SEO';
-			case 'ai-navigator':
-				return 'AI Navigator';
-			case 'link-checker':
-				return 'Link Checker';
-			case 'security-headers':
-				return 'Security Headers';
-			case 'lighthouse':
-				return 'Lighthouse';
-			default:
-				return scannerType
-					.split('-')
-					.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-					.join(' ');
-		}
+		return scannerType
+			.split('-')
+			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+			.join(' ');
 	}
 
 	const stageInfo = $derived(getStageInfo(result?.state, result?.progress));

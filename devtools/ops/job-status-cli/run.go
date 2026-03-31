@@ -25,10 +25,11 @@ func run(args []string, getenv getenvFunc, client *http.Client, stdout, stderr i
 	if apiURL == "" {
 		apiURL = defaultAPIURL
 	}
+	apiToken := getenv("ORCHESTRATOR_API_TOKEN")
 
 	ctx := context.Background()
 
-	return runCommand(ctx, args[1], args[2:], apiURL, client, stdout, stderr)
+	return runCommand(ctx, args[1], args[2:], apiURL, apiToken, client, stdout, stderr)
 }
 
 func runCommand(
@@ -36,19 +37,20 @@ func runCommand(
 	command string,
 	commandArgs []string,
 	apiURL string,
+	apiToken string,
 	client *http.Client,
 	stdout io.Writer,
 	stderr io.Writer,
 ) int {
 	switch command {
 	case "jobs":
-		return runJobsCommand(ctx, commandArgs, apiURL, client, stdout, stderr)
+		return runJobsCommand(ctx, commandArgs, apiURL, apiToken, client, stdout, stderr)
 	case "events":
-		return runEventsCommand(ctx, commandArgs, apiURL, client, stdout, stderr)
+		return runEventsCommand(ctx, commandArgs, apiURL, apiToken, client, stdout, stderr)
 	case "pods":
-		return runPodsCommand(ctx, commandArgs, apiURL, client, stdout, stderr)
+		return runPodsCommand(ctx, commandArgs, apiURL, apiToken, client, stdout, stderr)
 	case "status":
-		return runStatusCommand(ctx, commandArgs, apiURL, client, stdout, stderr)
+		return runStatusCommand(ctx, commandArgs, apiURL, apiToken, client, stdout, stderr)
 	case "help", "-h", "--help":
 		if err := printUsage(stdout); err != nil {
 			_, _ = fmt.Fprintf(stderr, "Failed to write usage: %v\n", err)
@@ -69,6 +71,7 @@ func runEventsCommand(
 	ctx context.Context,
 	args []string,
 	apiURL string,
+	apiToken string,
 	client *http.Client,
 	stdout io.Writer,
 	stderr io.Writer,
@@ -96,7 +99,7 @@ func runEventsCommand(
 		return 1
 	}
 
-	if err := showJobEvents(ctx, client, stdout, apiURL, rest[0], jobEventsOptions{
+	if err := showJobEvents(ctx, client, stdout, apiURL, apiToken, rest[0], jobEventsOptions{
 		limit:       *limit,
 		offset:      *offset,
 		showPayload: *showPayload,
@@ -113,6 +116,7 @@ func runJobsCommand(
 	ctx context.Context,
 	args []string,
 	apiURL string,
+	apiToken string,
 	client *http.Client,
 	stdout io.Writer,
 	stderr io.Writer,
@@ -134,7 +138,7 @@ func runJobsCommand(
 		return 1
 	}
 
-	if err := listJobs(ctx, client, stdout, apiURL, jobsOptions{
+	if err := listJobs(ctx, client, stdout, apiURL, apiToken, jobsOptions{
 		state:  *state,
 		limit:  *limit,
 		offset: *offset,
@@ -151,6 +155,7 @@ func runPodsCommand(
 	ctx context.Context,
 	args []string,
 	apiURL string,
+	apiToken string,
 	client *http.Client,
 	stdout io.Writer,
 	stderr io.Writer,
@@ -164,7 +169,7 @@ func runPodsCommand(
 		return 1
 	}
 
-	if err := listPods(ctx, client, stdout, apiURL); err != nil {
+	if err := listPods(ctx, client, stdout, apiURL, apiToken); err != nil {
 		_, _ = fmt.Fprintf(stderr, "Error: %v\n", err)
 
 		return 1
@@ -177,6 +182,7 @@ func runStatusCommand(
 	ctx context.Context,
 	args []string,
 	apiURL string,
+	apiToken string,
 	client *http.Client,
 	stdout io.Writer,
 	stderr io.Writer,
@@ -190,7 +196,7 @@ func runStatusCommand(
 		return 1
 	}
 
-	if err := showSystemStatus(ctx, client, stdout, apiURL); err != nil {
+	if err := showSystemStatus(ctx, client, stdout, apiURL, apiToken); err != nil {
 		_, _ = fmt.Fprintf(stderr, "Error: %v\n", err)
 
 		return 1

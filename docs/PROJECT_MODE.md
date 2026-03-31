@@ -1,18 +1,18 @@
-# StageFlow project mode
+# StageFlow Project Mode
 
-Project mode integrates StageFlow scans directly into your local development
+Project Mode integrates StageFlow scans directly into your local development
 workflow.
 
-Instead of manually starting your app and then running scans, project mode
+Instead of manually starting your app and then running scans, Project Mode
 automates the full lifecycle: start the dev server, wait for readiness, run the
 StageFlow scanners, stream the results, and shut the dev server down when the
 scan finishes.
 
-If you need the bigger picture first, start with the [docs landing page](README.md), the [CLI README](../clients/cli/README.md), or the [CLI cheatsheet](operations/cli_cheatsheet.md).
+If you need the bigger picture first, start with the [repository README](../README.md), the [CLI README](../clients/cli/README.md), or the [CLI cheatsheet](operations/cli_cheatsheet.md).
 
-## Local project mode vs. remote projects
+## Local Project Mode vs. remote projects
 
-This document covers **local project mode**:
+This document covers **local Project Mode**:
 
 - `stageflow project`
 - `stageflow project init`
@@ -54,7 +54,7 @@ This repository already ships a working `.stageflow/config.yaml` and a repo-spec
 
 ## Initialization
 
-To set up Project Mode for your web application, navigate to your project's root directory and run:
+To set up Project Mode for your web app, navigate to your project's root directory and run:
 
 ```bash
 stageflow project init

@@ -36,13 +36,13 @@ func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return loggingMiddleware(corsMiddleware(apiKeyMiddleware(timeoutMiddleware(defaultRequestTimeout, next))))
+	return loggingMiddleware(corsMiddleware(apiKeyMiddleware(rateLimitMiddleware(timeoutMiddleware(defaultRequestTimeout, next)))))
 }
 
 func (s *Server) withUploadMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return loggingMiddleware(corsMiddleware(apiKeyMiddleware(timeoutMiddleware(uploadRequestTimeout, next))))
+	return loggingMiddleware(corsMiddleware(apiKeyMiddleware(rateLimitMiddleware(timeoutMiddleware(uploadRequestTimeout, next)))))
 }
 
 func (s *Server) withStreamMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return loggingMiddleware(corsMiddleware(apiKeyMiddleware(next)))
+	return loggingMiddleware(corsMiddleware(apiKeyMiddleware(rateLimitMiddleware(next))))
 }

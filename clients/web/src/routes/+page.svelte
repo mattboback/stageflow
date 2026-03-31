@@ -158,12 +158,18 @@
 			}
 		]
 	});
+	const safeStructuredData = structuredData
+		.replace(/</g, '\\u003c')
+		.replace(/>/g, '\\u003e')
+		.replace(/&/g, '\\u0026')
+		.replace(/\u2028/g, '\\u2028')
+		.replace(/\u2029/g, '\\u2029');
 </script>
 
 <svelte:head>
 	<title>{SITE.siteTitle}</title>
 	<meta name="description" content={SITE.tagline} />
-	{@html `<script type="application/ld+json">${structuredData}</script>`}
+	<script type="application/ld+json">{safeStructuredData}</script>
 </svelte:head>
 
 <div class="landing-shell min-h-screen">

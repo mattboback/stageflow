@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,6 +25,8 @@ type fakePodmanClient struct {
 }
 
 var apiTestSchemaCounter uint64
+
+const testAPIToken = "test-token"
 
 func newFakePodmanClient() *fakePodmanClient {
 	pods := []podman.PodInfo{
@@ -135,6 +138,7 @@ func newTestServer(t *testing.T) (*Server, func()) {
 	server := NewServer(&Config{
 		Database:     dbase,
 		PodmanClient: podClient,
+		APIToken:     testAPIToken,
 		Port:         "0",
 	})
 
@@ -149,11 +153,17 @@ func quoteIdentifier(identifier string) string {
 	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
 }
 
+func newAuthedRequest(method, target string, body io.Reader) *http.Request {
+	req := httptest.NewRequest(method, target, body)
+	req.Header.Set("X-Api-Key", testAPIToken)
+	return req
+}
+
 func TestHandleListJobsFiltersAndPagination(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs?state=PENDING&limit=1&offset=0", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs?state=PENDING&limit=1&offset=0", nil)
 	rec := httptest.NewRecorder()
 
 	srv.server.Handler.ServeHTTP(rec, req)
@@ -189,7 +199,7 @@ func TestHandleJobRoutes_GetJob(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/123", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs/123", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -213,7 +223,7 @@ func TestHandleJobRoutes_GetJobEvents(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/123/events?limit=10&offset=0", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs/123/events?limit=10&offset=0", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -248,7 +258,7 @@ func TestHandleJobRoutes_JobNotFound(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs/missing", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -261,7 +271,7 @@ func TestHandleListPodsEnrichesJobState(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/pods", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/pods", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -295,7 +305,7 @@ func TestHandlePodDetails(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/pods/pod-1", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/pods/pod-1", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -317,7 +327,7 @@ func TestHandleSystemStatusAggregatesCounts(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
+	req := newAuthedRequest(http.MethodGet, "/api/v1/status", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -384,7 +394,7 @@ func TestHandleListJobsRejectsWrongMethod(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs", nil)
+	req := newAuthedRequest(http.MethodPost, "/api/v1/jobs", nil)
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 

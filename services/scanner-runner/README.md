@@ -1,6 +1,6 @@
-# Scan Worker (`scanner-runner`)
+# Scanner Runner (`scanner-runner`)
 
-This service is the **scan worker runtime** that runs *inside per-job pods*.
+This service is the **Scanner Runner** runtime that runs *inside per-job pods*.
 
 It is responsible for:
 - Loading job provenance (the list of pages/URLs to scan) from the shared job workspace.

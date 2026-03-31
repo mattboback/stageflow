@@ -17,6 +17,7 @@ type Config struct {
 	ScannerImage                  string
 	ScannerImageOverride          string
 	APIPort                       string
+	APIToken                      string
 	PodNetwork                    string
 	PodNetnsMode                  string   // Pod network namespace mode (bridge|host). Host mode is local-only.
 	PodHostMappings               []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
@@ -67,6 +68,7 @@ func loadConfig() *Config {
 		ScannerImage:                  scannerImage,
 		ScannerImageOverride:          scannerImageEnv,
 		APIPort:                       config.GetEnv("API_PORT", "8080"),
+		APIToken:                      strings.TrimSpace(config.GetEnv("ORCHESTRATOR_API_TOKEN", "")),
 		PodNetwork:                    config.GetEnv("POD_NETWORK", ""),
 		PodNetnsMode:                  config.GetEnv("POD_NETNS_MODE", "bridge"),
 		PodHostMappings:               podHostMappings,
@@ -91,6 +93,7 @@ func (c *Config) Validate() error {
 		config.RequireNonEmpty("DATABASE_URL", c.DatabaseURL),
 		config.RequireNonEmpty("EXTRACTION_IMAGE", c.ExtractionImage),
 		config.RequireNonEmpty("API_PORT", c.APIPort),
+		config.RequireNonEmpty("ORCHESTRATOR_API_TOKEN", c.APIToken),
 		config.RequireNonEmpty("NATS_HOST", c.NatsHost),
 		config.RequireNonEmpty("MINIO_HOST", c.MinioHost),
 	}

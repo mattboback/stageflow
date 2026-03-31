@@ -2,7 +2,7 @@ package httputil
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -12,7 +12,7 @@ func RespondJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("Failed to encode JSON response: %v", err)
+		slog.Warn("Failed to encode JSON response", "error", err)
 	}
 }
 

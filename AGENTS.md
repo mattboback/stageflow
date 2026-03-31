@@ -21,11 +21,11 @@ just images
 
 | Area | Location |
 | --- | --- |
-| Frontend | `clients/web` (SvelteKit) |
+| Web app | `clients/web` (SvelteKit) |
 | CLI | `clients/cli` (Go) |
 | Platform API | `services/platform-api` (Go) |
 | Orchestrator | `services/orchestrator` (Go) |
-| Scanner runtime | `services/scanner-runner` (TypeScript/Bun) |
+| Scanner Runner | `services/scanner-runner` (TypeScript/Bun) |
 | Shared Go libs | `libs/go/*` |
 | Contracts/schemas | `libs/contracts` |
 | Compose files | `infra/compose` |

@@ -4,7 +4,7 @@ Reference for environment variables used by local, staging, and production Stage
 
 Use `.env.example` as the local baseline. It now favors localhost-friendly defaults, so override the domain-facing values before staging or production use. Keep secrets in your secret manager or host-level env, never in git.
 
-If you are orienting yourself for the first time, start with the [repository README](../../README.md) for the quick start and the [docs landing page](../README.md) for the full docs map. This page is the detailed configuration reference once you know which environment you are setting up.
+If you are orienting yourself for the first time, start with the [repository README](../../README.md) for the quick start. This page is the detailed configuration reference once you know which environment you are setting up.
 
 ## Quick Start
 
@@ -58,11 +58,11 @@ just demo
 | `STAGEFLOW_PUBLIC_DOMAIN`         | yes      | `localhost`                                                           | Public domain used in generated URLs and edge config. |
 | `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes      | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:3010,http://localhost:8080` | Browser origin allowlist for API requests.            |
 
-### Frontend
+### Web App
 
 | Variable                          | Required | Default in `.env.example`                                       | Purpose                                           |
 | --------------------------------- | -------- | --------------------------------------------------------------- | ------------------------------------------------- |
-| `VITE_API_URL`                    | yes      | `http://localhost:8080`                                       | Frontend API base URL.                            |
+| `VITE_API_URL`                    | yes      | `http://localhost:8080`                                       | Web app API base URL.                             |
 | `VITE_SITE_TITLE`                 | no       | `StageFlow`                                                     | Site title shown in UI metadata.                  |
 | `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                       | Canonical site URL used for metadata/share cards. |
 | `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | Repository link shown in UI.                      |
@@ -114,6 +114,5 @@ Most first-time local setups can ignore this section. These variables are mainly
 
 ## Related Docs
 
-- [Docs landing page](../README.md)
 - [README](../../README.md)
 - [Architecture](../architecture/system.md)

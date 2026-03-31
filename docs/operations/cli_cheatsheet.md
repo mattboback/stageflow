@@ -2,7 +2,7 @@
 
 Quick reference for the day-to-day `stageflow` CLI.
 
-For navigation, start with the [docs landing page](../README.md). For the
+For the broader product overview, start with the [repository README](../../README.md). For the
 fuller CLI narrative, see the [CLI README](../../clients/cli/README.md). For
 local dev-server scanning, see [Project Mode](../PROJECT_MODE.md). For
 repo-local helpers such as `job-status-cli` and `suite-runner`, see
@@ -99,11 +99,11 @@ Useful flags:
 - `--allow-private-targets`
 - `--timeout 5m`
 
-## 5. Project mode
+## 5. Project Mode
 
-Project mode starts your local app, waits for readiness, runs the scan, and shuts the app down when finished.
+Project Mode starts your local app, waits for readiness, runs the scan, and shuts the app down when finished.
 
-### Initialize project mode files
+### Initialize Project Mode files
 
 ```bash
 stageflow project init
@@ -192,5 +192,5 @@ stageflow diff baseline.json https://example.com --api https://stageflow.org
 
 - Private or loopback targets require the local overlay: `just dev up local`
 - If `stageflow` resolves to the wrong binary, rerun `just cli-install`
-- Use `stageflow project doctor` to debug project-mode readiness problems
+- Use `stageflow project doctor` to debug Project Mode readiness problems
 - Use `just dev logs` to inspect local stack logs

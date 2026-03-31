@@ -10,10 +10,13 @@ import (
 	"strings"
 )
 
-func performGET(ctx context.Context, client *http.Client, requestURL *url.URL) (*http.Response, error) {
+func performGET(ctx context.Context, client *http.Client, requestURL *url.URL, apiToken string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL.String(), http.NoBody)
 	if err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(apiToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiToken))
 	}
 
 	// #nosec G107 -- URL is validated by buildAPIURL and limited to http/https schemes.
@@ -43,8 +46,8 @@ func buildAPIURL(base, apiPath string, query url.Values) (*url.URL, error) {
 	return resolved, nil
 }
 
-func decodeOKJSON(ctx context.Context, client *http.Client, requestURL *url.URL, dest any) error {
-	resp, err := performGET(ctx, client, requestURL)
+func decodeOKJSON(ctx context.Context, client *http.Client, requestURL *url.URL, apiToken string, dest any) error {
+	resp, err := performGET(ctx, client, requestURL, apiToken)
 	if err != nil {
 		return fmt.Errorf("failed to connect to API: %w", err)
 	}

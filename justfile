@@ -363,14 +363,14 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
             ;;
     esac
 
-[group('quality'), doc('Run local CI: lint + typecheck + test + Storybook')]
+[group('quality'), doc('Run local CI: lint + test + vuln + Storybook')]
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    echo "==> Stale-vocabulary check..."
-    # Fail if banned legacy paths/commands reappear in docs, config, or help text.
-    # This protects the repo structure from drifting back after the reorg.
+    echo "==> Stale-vocabulary and naming drift check..."
+    # Fail if banned legacy paths, commands, or retired public labels reappear in docs, config, or help text.
+    # This protects both the repo structure and the public naming surface from drifting back after cleanup.
     stale_found=0
     while IFS=: read -r file lineno text; do
         echo "  STALE: ${file}:${lineno}: ${text}" >&2
@@ -382,7 +382,7 @@ ci:
             --include='*.toml' --include='*.json' \
             --exclude-dir='.git' --exclude-dir='node_modules' \
             --exclude-dir='vendor' --exclude-dir='.storybook' \
-            -E '(^|[^a-zA-Z0-9_/.-])(apps/|tools/[a-z]|docs/CONFIGURATION\.md|just run frontend)' \
+            -E '(^|[^a-zA-Z0-9_/.-])(apps/|tools/[a-z]|docs/CONFIGURATION\.md|just run frontend|Scan Worker \(|Release stageflow CLI|project-mode scan using \.stageflow/config\.yaml)' \
             . \
         | grep -v 'bun\.lock' \
         | grep -v 'golang\.org/x/tools' \
@@ -403,8 +403,9 @@ ci:
     fi
     echo "  No stale vocabulary found."
 
-    echo "==> Ensuring Go lint tool..."
+    echo "==> Ensuring Go lint and vuln tools..."
     {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+    {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     export PATH="$({{go}} env GOPATH)/bin:$PATH"
 
     echo "==> Go build..."
@@ -426,6 +427,13 @@ ci:
         [[ -n "$dir" ]] || continue
         echo "  -> $dir"
         (cd "$dir" && {{go}} test -race ./...)
+    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+
+    echo "==> Go vulncheck..."
+    while IFS= read -r dir; do
+        [[ -n "$dir" ]] || continue
+        echo "  -> $dir"
+        (cd "$dir" && govulncheck ./...)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> CLI docs..."

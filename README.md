@@ -31,8 +31,8 @@ Client/UI -> Platform API -> NATS JetStream -> Orchestrator -> Podman job pod
 - `services/platform-api` — intake validation, SSRF guardrails, SSE streaming, scan/report APIs
 - `services/orchestrator` — job state machine, Podman pod lifecycle, report aggregation
 - `services/scanner-runner` — scanner plugin runtime, Playwright-based browser execution
-- `clients/web` — SvelteKit frontend with live status, report views, and submission workflows
-- `clients/cli` — Go CLI with streaming progress, project mode, and structured JSON output
+- `clients/web` — SvelteKit web app with live status, report views, and submission workflows
+- `clients/cli` — Go CLI with streaming progress, Project Mode, and structured JSON output
 
 For the full system design, see [docs/architecture/system.md](docs/architecture/system.md).
 
@@ -40,11 +40,11 @@ For the full system design, see [docs/architecture/system.md](docs/architecture/
 
 | Directory                 | Contents                                       |
 | ------------------------- | ---------------------------------------------- |
-| `clients/web`             | SvelteKit frontend                             |
+| `clients/web`             | SvelteKit web app                              |
 | `clients/cli`             | `stageflow` CLI                                |
 | `services/platform-api`   | Intake API, SSE stream, report APIs            |
 | `services/orchestrator`   | Job FSM and scanner orchestration              |
-| `services/scanner-runner` | Scanner runtime and Playwright-based execution |
+| `services/scanner-runner` | Scanner Runner and Playwright-based execution  |
 | `libs/contracts`          | Shared schemas and generated contracts         |
 | `devtools`                | Internal ops and QA helpers                    |
 | `qa`                      | End-to-end and verification assets             |
@@ -163,7 +163,7 @@ just dev init
 
 | Service                | `dev` mode (default)    | `local` overlay mode    |
 | ---------------------- | ----------------------- | ----------------------- |
-| Frontend               | `http://localhost:3000` | `http://localhost:3010` |
+| Web App                | `http://localhost:3000` | `http://localhost:3010` |
 | Platform API           | `http://localhost:8080` | `http://localhost:8080` |
 | Orchestrator Admin API | `http://localhost:8081` | `http://localhost:8081` |
 
@@ -181,7 +181,7 @@ This repo already includes a working `.stageflow/config.yaml`, so after the loca
 ### Validation
 
 ```bash
-just ci              # full quality gate (Go + frontend + Storybook + scanner-runner)
+just ci              # full quality gate (Go + web app + Storybook + Scanner Runner)
 just storybook-test  # Storybook interaction + accessibility tests
 just shell-tests     # shell regression tests
 just project-golden  # baseline -> promote -> regression -> diff against the local overlay
@@ -189,12 +189,12 @@ just project-golden  # baseline -> promote -> regression -> diff against the loc
 
 ## Built for evaluation
 
-StageFlow is a portfolio project built to demonstrate a broad surface of backend, frontend, infrastructure, and developer tooling work.
+StageFlow is a portfolio project built to demonstrate a broad surface of backend, web app, infrastructure, and developer tooling work.
 
 - **Distributed system design** — multi-service Go/TypeScript architecture coordinated through NATS JetStream, with explicit service boundaries, a documented job FSM, and Podman pod isolation.
 - **Contract-driven development** — JSON Schema as the single source of truth for the report format, with generated TypeScript and Go types used by all consumers.
 - **Testing at every layer** — Go race tests and `golangci-lint` across modules; Vitest unit tests; Storybook interaction and axe-based accessibility tests; orchestrator E2E with a mock Podman adapter; and a golden shell test for the full project scan → baseline → diff pipeline.
-- **Developer experience** — a Go CLI with streaming SSE, project mode, JSON output, and `--fail-on` severity gating; a `just`-based task runner; pre-commit hooks; and generated CLI reference docs that stay in sync with the code.
+- **Developer experience** — a Go CLI with streaming SSE, Project Mode, JSON output, and `--fail-on` severity gating; a `just`-based task runner; pre-commit hooks; and generated CLI reference docs that stay in sync with the code.
 - **Security and operational discipline** — SSRF guardrails, archive extraction limits, API key middleware, `govulncheck` in CI, and clear separation of credentials per environment.
 
 See the [Evaluator guide](docs/evaluators-guide.md) for a structured path through the codebase aimed at reviewers and hiring managers.
@@ -204,7 +204,6 @@ See the [Evaluator guide](docs/evaluators-guide.md) for a structured path throug
 - [Architecture deep-dive](docs/architecture/system.md)
 - [Configuration reference](docs/reference/configuration.md)
 - [CLI README](clients/cli/README.md)
-- [Full docs index](docs/README.md)
 
 ## License
 

@@ -67,6 +67,7 @@ func run() error {
 	statusReader, err := statussource.NewClient(&statussource.Config{
 		BaseURL: cfg.OrchestratorAPIURL,
 		Timeout: 5 * time.Second,
+		Token:   cfg.OrchestratorAPIToken,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to initialize orchestrator status source: %w", err)

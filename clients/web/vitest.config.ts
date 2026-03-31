@@ -14,8 +14,14 @@ export default defineConfig({
 		coverage: {
 			provider: 'v8',
 			reporter: ['text', 'lcov', 'json-summary'],
-			include: ['src/lib/components/ui/**/*.ts', 'src/lib/utils/**/*.ts'],
-			exclude: ['**/*.svelte', '**/*.stories.ts', '**/story-harnesses/**', '**/index.ts'],
+			include: [
+				'src/lib/components/ui/**/*.{ts,svelte}',
+				'src/lib/components/nav/**/*.{ts,svelte}',
+				'src/lib/components/report/**/*.{ts,svelte}',
+				'src/lib/components/scan-status/**/*.{ts,svelte}',
+				'src/lib/utils/**/*.ts'
+			],
+			exclude: ['**/*.stories.ts', '**/story-harnesses/**', '**/index.ts'],
 			thresholds: {
 				statements: 85,
 				branches: 80,

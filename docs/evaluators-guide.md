@@ -29,14 +29,14 @@ Depending on your focus, you can dive into different parts of the system.
 
 - Entry points:
   - `clients/cli` — Go CLI implementation.
-  - `clients/cli/README.md` — concepts, examples, JSON envelope, and project mode.
+  - `clients/cli/README.md` — concepts, examples, JSON envelope, and Project Mode.
   - `docs/reference/cli/stageflow/*.md` — generated reference for each subcommand.
 
 Highlights:
 
 - Streaming scan status over SSE and structured JSON output for automation.
 - Support for project baselines and regression diffing.
-- Local project mode that drives a dev server lifecycle from the CLI.
+- Local Project Mode that drives a dev server lifecycle from the CLI.
 
 ### 2.2 Orchestrator and Job Lifecycle
 
@@ -52,7 +52,7 @@ Highlights:
 - Use of NATS JetStream for job events and coordination.
 - Test coverage that exercises end-to-end flows without relying on a real Podman or Postgres.
 
-### 2.3 Scanner Runtime and Contracts
+### 2.3 Scanner Runner and Contracts
 
 - Entry points:
   - `services/scanner-runner` — TypeScript/Bun runtime and Playwright-driven scanners.
@@ -66,10 +66,10 @@ Highlights:
 - Use of Playwright for browser automation and screenshot evidence.
 - Optional AI-powered scanners with clear boundaries around configuration (for example `OPENROUTER_API_KEY`).
 
-### 2.4 Frontend and Accessibility Testing
+### 2.4 Web App and Accessibility Testing
 
 - Entry points:
-  - `clients/web` — SvelteKit 5 frontend.
+  - `clients/web` — SvelteKit 5 web app.
   - `clients/web/tests/unit` — Vitest unit tests for stores, utilities, and components.
     Highlights:
 
@@ -81,14 +81,14 @@ Highlights:
 ## 3. Testing and Quality Gates
 
 - CI workflows:
-  - `.github/workflows/ci.yml` — combined Go, frontend, Storybook, and scanner-runner jobs.
+  - `.github/workflows/ci.yml` — combined Go, web app, Storybook, and Scanner Runner jobs.
   - `.github/workflows/release-stageflow-cli.yml` — multi-platform CLI release pipeline.
 
 - Go quality gates:
   - `go test -race ./...` and `golangci-lint` across modules.
   - `govulncheck ./...` for vulnerability scanning.
 
-- Frontend and scanner runtime:
+- Web app and Scanner Runner:
   - `bun run ci` in `clients/web` and `services/scanner-runner` (typecheck, lint, tests).
   - Storybook interaction + axe-based a11y tests.
 
@@ -133,7 +133,7 @@ Server-sent events are unidirectional, work through most proxies and CDNs withou
 
 ### Contract-driven report normalization
 
-All eight scanners produce findings that conform to one JSON Schema (`libs/contracts/report`). Generated Go and TypeScript types are the only types either side uses. The frontend, CLI, and diff engine never contain scanner-specific branches. Adding a new scanner is safe: it cannot break existing consumers.
+All eight scanners produce findings that conform to one JSON Schema (`libs/contracts/report`). Generated Go and TypeScript types are the only types either side uses. The web app, CLI, and diff engine never contain scanner-specific branches. Adding a new scanner is safe: it cannot break existing consumers.
 
 ### Stable content-based issue IDs
 
@@ -147,15 +147,15 @@ The same platform API drives both the SvelteKit web UI and the Go CLI. The CLI a
 
 ## 6. How This Project Represents My Work
 
-This is a solo-authored project. Everything in the repo — system design, Go services, TypeScript runtime, SvelteKit frontend, CLI, infra, tests, and docs — was built and maintained by one person.
+This is a solo-authored project. Everything in the repo — system design, Go services, TypeScript runtime, SvelteKit web app, CLI, infra, tests, and docs — was built and maintained by one person.
 
 The most interesting parts to look at for engineering depth:
 
 1. `services/orchestrator` — explicit job FSM, NATS-driven state transitions, E2E test harness with mock Podman.
 2. `services/scanner-runner` — abstract `ScannerBase`, plugin system, Playwright integration, AI scanner boundaries.
 3. `libs/contracts` — schema-first design, codegen for two languages, migration docs.
-4. `clients/cli` — SSE streaming, project mode lifecycle, structured JSON output, `--fail-on` quality gate.
+4. `clients/cli` — SSE streaming, Project Mode lifecycle, structured JSON output, `--fail-on` quality gate.
 5. `qa/e2e/project-scan-golden.sh` — golden regression test for the full scan → baseline → diff pipeline.
-6. `.github/workflows/ci.yml` — layered CI across Go, frontend, scanner runtime, and Storybook.
+6. `.github/workflows/ci.yml` — layered CI across Go, web app, Scanner Runner, and Storybook.
 
 If you have questions about any part of the system, open an issue with the `question` label or reach out via the contact on my GitHub profile.

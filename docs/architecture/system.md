@@ -2,26 +2,7 @@
 
 This document explains StageFlow job flow, trust boundaries, and service responsibilities.
 
-If you are still orienting yourself, start with the [docs landing page](../README.md). For the fastest product overview and local setup path, see the [repository README](../../README.md).
-
-## Table of Contents
-
-1. [System Goals](#system-goals)
-2. [Platform Shape](#platform-shape)
-3. [Core Services and Responsibilities](#core-services-and-responsibilities)
-4. [CLI Report Contract](#cli-report-contract)
-5. [Security and Trust Boundaries](#security-and-trust-boundaries)
-6. [Job Lifecycle and State Machine](#job-lifecycle-and-state-machine)
-7. [Data Flows](#data-flows)
-8. [Eventing Model (NATS JetStream)](#eventing-model-nats-jetstream)
-9. [Scanner Plugin System](#scanner-plugin-system)
-10. [Unified Report Aggregation](#unified-report-aggregation)
-11. [Storage Model](#storage-model)
-12. [Runtime Operations and Deployment](#runtime-operations-and-deployment)
-13. [Failure Modes and Recovery](#failure-modes-and-recovery)
-14. [Observability and Debugging](#observability-and-debugging)
-15. [End-to-End Testing](#end-to-end-testing)
-16. [Code Reference Map](#code-reference-map)
+If you are still orienting yourself, start with the [repository README](../../README.md) for the product overview and fastest local setup path.
 
 ---
 
@@ -144,7 +125,7 @@ Important entry points:
 - Base lifecycle: `services/scanner-runner/src/core/scanner-base.ts`
 - Plugin discovery/loader: `services/scanner-runner/src/core/plugins`
 
-### Frontend (`clients/web`)
+### Web App (`clients/web`)
 
 Responsibilities:
 
@@ -166,7 +147,7 @@ Responsibilities:
 - Fetch and render unified reports in text, markdown, and JSON formats.
 - Filter, sort, and truncate issues client-side (by severity, category, max count).
 - Enforce severity-based exit codes for CI/automation gating (`--fail-on`).
-- Manage local project mode lifecycle: start dev server, poll readiness, submit scan, stop server.
+- Manage local Project Mode lifecycle: start dev server, poll readiness, submit scan, stop server.
 - Manage remote projects: create, list, show, update, delete, promote baseline.
 - Scan against remote projects with automatic baseline diffing (`--project`).
 - Discover available scanners from the API.
@@ -538,7 +519,7 @@ Browser loads target URL
 - **API validation** (`services/platform-api/internal/api/scanner_configs.go`): Validates AI Navigator config on job submission. Enforces that `goal.objective` is set and `vision.model` is specified (or falls back to `AI_NAVIGATOR_DEFAULT_MODEL`).
 - **Orchestrator** (`services/orchestrator/internal/application/jobs/scanner_launch_planner.go`): Injects `OPENROUTER_API_KEY`, `OPENROUTER_APP_TITLE`, and `OPENROUTER_APP_REFERER` into scanner container environment. API key is restricted to environment variables only and cannot be set in scanner options.
 
-#### Frontend
+#### Web App
 
 - **`PlaygroundAiConfig.svelte`**: Goal objective input, model dropdown, input values form (key-value pairs for form fills), advanced settings (max steps, timeout, success criteria).
 - **`playground-utils.ts`**: Builds scanner config JSON from form state.
@@ -551,7 +532,7 @@ Browser loads target URL
 | `OPENROUTER_APP_TITLE` | No | StageFlow | Request attribution metadata |
 | `OPENROUTER_APP_REFERER` | No | — | Request referer tracking |
 | `AI_NAVIGATOR_DEFAULT_MODEL` | No | `openai/gpt-4o-mini` | Backend fallback model |
-| `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | No | `openai/gpt-4o-mini` | Frontend default model selection |
+| `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | No | `openai/gpt-4o-mini` | Web App default model selection |
 
 ---
 
@@ -637,7 +618,7 @@ stop and point back to that shared root control plane.
 
 ### Build and Quality Gates
 
-- `just build`: service and frontend builds.
+- `just build`: service and web app builds.
 - `just images`: container images.
 - `just ci`: local CI pipeline (build/lint/test/typecheck/audit).
 
@@ -663,7 +644,7 @@ Outcome: job transitions to `FAILED` with extraction-stage error context.
 
 ### Scanner failures
 
-- Scanner runtime crash or timeout.
+- Scanner Runner crash or timeout.
 - Plugin load/validation mismatch.
 - External page/runtime instability.
 

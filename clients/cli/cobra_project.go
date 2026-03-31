@@ -26,7 +26,7 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:                   "project [path]",
-		Short:                 "Run project-mode scan using .stageflow/config.yaml",
+		Short:                 "Run Project Mode scan using .stageflow/config.yaml",
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

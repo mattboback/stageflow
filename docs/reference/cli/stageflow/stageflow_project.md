@@ -1,6 +1,6 @@
 ## stageflow project
 
-Run project-mode scan using .stageflow/config.yaml
+Run Project Mode scan using .stageflow/config.yaml
 
 ```
 stageflow project [path]

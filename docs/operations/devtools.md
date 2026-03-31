@@ -4,7 +4,7 @@ StageFlow ships one primary public CLI, `stageflow`, plus a couple of repo-local
 helpers for operations and QA. These tools talk to running StageFlow services;
 they complement the web UI rather than replace it.
 
-If you need the broader docs map first, start with the [docs landing page](../README.md). For everyday CLI usage, pair this page with the [CLI cheatsheet](cli_cheatsheet.md) and the [CLI README](../../clients/cli/README.md).
+If you need the broader product overview first, start with the [repository README](../../README.md). For everyday CLI usage, pair this page with the [CLI cheatsheet](cli_cheatsheet.md) and the [CLI README](../../clients/cli/README.md).
 
 ## stageflow
 
@@ -80,7 +80,7 @@ Configure the CLI using:
 - `STAGEFLOW_API_URL` (default `http://localhost:8080`)
 - `STAGEFLOW_API_KEY` (optional, sent as `X-Api-Key`)
 
-### Local project mode
+### Local Project Mode
 
 When you run `stageflow project`, the CLI uses `.stageflow/config.yaml` to
 start a local dev server and scan `scan.urls`. Optionally pass a single
@@ -94,7 +94,7 @@ Use these companion subcommands:
 - `stageflow project doctor [path]` to validate config and preflight checks
   without submitting a scan job.
 
-> **Warning:** Project mode can execute commands from your repo config. Only run
+> **Warning:** Project Mode can execute commands from your repo config. Only run
 > it on trusted repositories.
 
 #### Prerequisites for scanning `localhost`
