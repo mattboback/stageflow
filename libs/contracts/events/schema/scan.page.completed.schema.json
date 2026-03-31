@@ -1,0 +1,22 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "scan.page.completed event",
+	"type": "object",
+	"required": ["event", "job_id", "timestamp", "producer", "payload"],
+	"properties": {
+		"event": { "type": "string", "const": "scan.page.completed" },
+		"job_id": { "type": "string", "minLength": 1 },
+		"timestamp": { "type": "string", "minLength": 1 },
+		"producer": { "type": "string", "minLength": 1 },
+		"payload": {
+			"type": "object",
+			"required": ["job_id", "page_id", "page_index", "total_pages"],
+			"properties": {
+				"job_id": { "type": "string", "minLength": 1 },
+				"page_id": { "type": "string", "minLength": 1 },
+				"page_index": { "type": "integer", "minimum": 0 },
+				"total_pages": { "type": "integer", "minimum": 0 }
+			}
+		}
+	}
+}

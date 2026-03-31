@@ -44,7 +44,9 @@ For the full system design, see [docs/architecture/system.md](docs/architecture/
 | `clients/cli`             | `stageflow` CLI                                |
 | `services/platform-api`   | Intake API, SSE stream, report APIs            |
 | `services/orchestrator`   | Job FSM and scanner orchestration              |
+| `services/archive-extractor` | ZIP extraction and safe archive unpacking   |
 | `services/scanner-runner` | Scanner Runner and Playwright-based execution  |
+| `libs/go/*`               | Shared Go domain, messaging, storage, and HTTP libs |
 | `libs/contracts`          | Shared schemas and generated contracts         |
 | `devtools`                | Internal ops and QA helpers                    |
 | `qa`                      | End-to-end and verification assets             |

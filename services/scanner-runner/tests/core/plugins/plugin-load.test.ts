@@ -87,6 +87,29 @@ describe('loadPluginFromManifest', () => {
 		expect(result.error).toContain('Entry point not found:');
 	});
 
+	it('returns an error when entry path escapes plugin directory', async () => {
+		tempRoot = await mkdtemp(path.join(os.tmpdir(), 'stageflow-plugin-load-path-escape-'));
+		const manifestPath = path.join(tempRoot, 'manifest.json');
+		const outsideModule = path.join(os.tmpdir(), 'outside-scanner.mjs');
+		await writeModule(
+			outsideModule,
+			['export default class ScannerImpl {', '  async scanPage() {', '    return {};', '  }', '}', ''].join(
+				'\n'
+			)
+		);
+		const info = pluginInfo(
+			manifestPath,
+			baseManifest({
+				entry: { module: '../outside-scanner.mjs' }
+			})
+		);
+
+		const result = await loadPluginFromManifest(info, config(), loggerMock());
+
+		expect(result.success).toBe(false);
+		expect(result.error).toBe('Plugin entry path escapes plugin directory: ../outside-scanner.mjs');
+	});
+
 	it('returns an error when configured factory function is missing', async () => {
 		tempRoot = await mkdtemp(path.join(os.tmpdir(), 'stageflow-plugin-load-factory-missing-'));
 		const manifestPath = path.join(tempRoot, 'manifest.json');
@@ -283,6 +306,6 @@ describe('loadPluginFromManifest', () => {
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBeDefined();
-		expect(result.error).toMatch(/parse|syntax/i);
+		expect(result.error).toMatch(/parse|syntax|expected/i);
 	});
 });

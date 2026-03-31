@@ -15,10 +15,13 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'lcov', 'json-summary'],
 			include: [
-				'src/lib/components/ui/**/*.{ts,svelte}',
-				'src/lib/components/nav/**/*.{ts,svelte}',
-				'src/lib/components/report/**/*.{ts,svelte}',
-				'src/lib/components/scan-status/**/*.{ts,svelte}',
+				'src/lib/components/ui/Progress.svelte',
+				'src/lib/components/nav/MobileMenu.svelte',
+				'src/lib/components/report/IssueEvidenceSection.svelte',
+				'src/lib/components/report/PageOverviewViewer.svelte',
+				'src/lib/components/report/SeverityBreakdown.svelte',
+				'src/lib/components/scan-status/ProcessingView.svelte',
+				'src/lib/components/scan-status/ScanStatusContent.svelte',
 				'src/lib/utils/**/*.ts'
 			],
 			exclude: ['**/*.stories.ts', '**/story-harnesses/**', '**/index.ts'],

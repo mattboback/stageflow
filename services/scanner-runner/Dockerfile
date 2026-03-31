@@ -1,13 +1,13 @@
 # Scanner Runner - TypeScript/Playwright based scanner
 # Uses multi-stage build for smaller runtime image
 
+FROM docker.io/oven/bun:1.3.8 AS bun-bin
+
 FROM mcr.microsoft.com/playwright:v1.57.0-jammy AS builder
 WORKDIR /repo
 
-# Install bun (pinned)
-RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.0"
-ENV PATH="/root/.bun/bin:$PATH"
+# Install bun from pinned image stage (no curl|bash installer)
+COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 
 # Shared TypeScript base config used by all packages
 COPY tsconfig.strict.json /repo/tsconfig.strict.json
@@ -19,7 +19,7 @@ RUN bun install --frozen-lockfile --ignore-scripts || bun install --ignore-scrip
 COPY libs/contracts/report/tsconfig.json ./tsconfig.json
 COPY libs/contracts/report/generated ./generated
 COPY libs/contracts/report/schema ./schema
-RUN bunx tsc
+RUN bun x tsc
 
 # --- Build scanner-runner ---
 WORKDIR /repo/services/scanner-runner
@@ -60,5 +60,6 @@ USER pwuser
 
 VOLUME ["/data"]
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "import('./dist/index.js').then(() => process.exit(0)).catch(() => process.exit(1))"
 
 CMD ["node", "dist/index.js"]

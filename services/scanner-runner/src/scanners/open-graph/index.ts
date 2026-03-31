@@ -1,6 +1,7 @@
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import { SCANNER_VERSION } from '../version';
 
 const REQUIRED_TAGS = ['og:title', 'og:description', 'og:image'];
 const OPEN_GRAPH_HELP_URL = 'https://ogp.me/';
@@ -8,7 +9,7 @@ const OPEN_GRAPH_HELP_URL = 'https://ogp.me/';
 export class OpenGraphScanner extends ScannerBase {
 	readonly metadata = {
 		name: 'open-graph',
-		version: '1.0.0',
+		version: SCANNER_VERSION,
 		description: 'Open Graph and social sharing metadata analysis'
 	};
 

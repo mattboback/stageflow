@@ -39,7 +39,49 @@ describe('ScanStatusContent', () => {
 		});
 
 		expect(getByText('Scanner Activity')).toBeInTheDocument();
-		expect(getByText('axe-core')).toBeInTheDocument();
+		expect(getByText('Axe')).toBeInTheDocument();
 		expect(getByText('Waiting on Lighthouse')).toBeInTheDocument();
+	});
+
+	it('renders completed and failed terminal views', () => {
+		const completed = render(ScanStatusContent, {
+			props: {
+				status: 'complete',
+				logs: [],
+				result: {
+					id: 'job-999',
+					state: 'DONE',
+					progress: {
+						current_page: 2,
+						total_pages: 2,
+						percentage: 100
+					},
+					violations: 4,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString()
+				}
+			}
+		});
+
+		expect(completed.getByText('Scan complete')).toBeInTheDocument();
+		completed.unmount();
+
+		const failed = render(ScanStatusContent, {
+			props: {
+				status: 'failed',
+				logs: [],
+				result: {
+					id: 'job-998',
+					state: 'FAILED',
+					error: 'scanner crashed',
+					last_stage: 'scanning',
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString()
+				}
+			}
+		});
+
+		expect(failed.getByText('Scan Failed')).toBeInTheDocument();
+		expect(failed.getByText('scanner crashed')).toBeInTheDocument();
 	});
 });

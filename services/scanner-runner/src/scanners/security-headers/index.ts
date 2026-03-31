@@ -9,6 +9,7 @@ import type { Page } from 'playwright';
 import type { Issue, IssueSeverity, PageScanResult, ScanContext } from '../../core/types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import { SCANNER_VERSION } from '../version';
 
 interface SecurityHeader {
 	name: string;
@@ -82,7 +83,7 @@ const SECURITY_HEADERS: SecurityHeader[] = [
 export class SecurityHeadersScanner extends ScannerBase {
 	readonly metadata = {
 		name: 'security-headers',
-		version: '1.0.0',
+		version: SCANNER_VERSION,
 		description: 'HTTP security headers analysis'
 	};
 

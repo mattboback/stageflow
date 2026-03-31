@@ -7,6 +7,7 @@ import type { SSEUpdate } from './scan-status/types';
 
 import { scanHistoryStore } from './scan-history.svelte';
 import { MAX_LOG_LINES } from './scan-status/constants';
+import { applySseUpdate } from './scan-status/event-update';
 import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 import {
 	applyScannerCompletionUpdate,
@@ -77,27 +78,7 @@ export function createScanStatusStore(id: string) {
 
 		// Update result with progress info
 		if (result) {
-			const newProgress = update.progress
-				? (() => {
-						const currentPage = update.progress.currentPage;
-						const totalPages = update.progress.totalPages;
-						const rawPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
-						return {
-							current_page: currentPage,
-							total_pages: totalPages,
-							percentage: Math.max(0, Math.min(100, Math.round(rawPercentage)))
-						};
-					})()
-				: result.progress;
-			const nextResult = {
-				...result,
-				state: update.state,
-				...(newProgress !== undefined ? { progress: newProgress } : {}),
-				...(update.error !== undefined ? { error: update.error } : {}),
-				...(update.error_details !== undefined ? { error_details: update.error_details } : {}),
-				...(update.stage !== undefined ? { last_stage: update.stage } : {})
-			};
-			result = applyScannerCompletionUpdate(nextResult, update);
+			result = applyScannerCompletionUpdate(applySseUpdate(result, update), update);
 		}
 
 		const newStatus = normalizeStatus(update.state);

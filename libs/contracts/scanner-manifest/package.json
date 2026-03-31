@@ -1,7 +1,7 @@
 {
 	"name": "@stageflow/contracts-scanner-manifest",
 	"version": "1.0.0",
-	"packageManager": "bun@1.3.5",
+	"packageManager": "bun@1.3.8",
 	"description": "Scanner manifest schema and types for StageFlow",
 	"private": true,
 	"main": "dist/generated/typescript/index.js",
@@ -42,6 +42,6 @@
 	},
 	"devDependencies": {
 		"json-schema-to-typescript": "^15.0.4",
-		"typescript": "^5.7.2"
+		"typescript": "^5.9.3"
 	}
 }

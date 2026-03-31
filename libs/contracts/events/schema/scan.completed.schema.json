@@ -1,0 +1,71 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "scan.completed event",
+	"type": "object",
+	"required": ["event", "job_id", "timestamp", "producer", "payload"],
+	"properties": {
+		"event": { "type": "string", "const": "scan.completed" },
+		"job_id": { "type": "string", "minLength": 1 },
+		"timestamp": { "type": "string", "minLength": 1 },
+		"producer": { "type": "string", "minLength": 1 },
+		"payload": {
+			"type": "object",
+			"required": [
+				"job_id",
+				"scanner_type",
+				"results_path",
+				"report_path",
+				"total_pages_scanned",
+				"summary",
+				"timing"
+			],
+			"properties": {
+				"job_id": { "type": "string", "minLength": 1 },
+				"scanner_type": { "type": "string", "minLength": 1 },
+				"results_path": { "type": "string", "minLength": 1 },
+				"report_path": { "type": "string", "minLength": 1 },
+				"total_pages_scanned": { "type": "integer", "minimum": 0 },
+				"summary": {
+					"type": "object",
+					"required": [
+						"total_violations",
+						"by_severity",
+						"pages_scanned",
+						"critical_issues",
+						"serious_issues",
+						"moderate_issues",
+						"minor_issues"
+					],
+					"properties": {
+						"total_violations": { "type": "integer", "minimum": 0 },
+						"by_severity": { "type": "object" },
+						"pages_scanned": { "type": "integer", "minimum": 0 },
+						"critical_issues": { "type": "integer", "minimum": 0 },
+						"serious_issues": { "type": "integer", "minimum": 0 },
+						"moderate_issues": { "type": "integer", "minimum": 0 },
+						"minor_issues": { "type": "integer", "minimum": 0 }
+					}
+				},
+				"timing": {
+					"type": "object",
+					"required": [
+						"total_ms",
+						"page_iteration_ms",
+						"write_results_ms",
+						"upload_artifacts_ms",
+						"publish_completed_ms",
+						"finalization_ms"
+					],
+					"properties": {
+						"total_ms": { "type": "integer", "minimum": 0 },
+						"page_iteration_ms": { "type": "integer", "minimum": 0 },
+						"write_results_ms": { "type": "integer", "minimum": 0 },
+						"upload_artifacts_ms": { "type": "integer", "minimum": 0 },
+						"publish_completed_ms": { "type": "integer", "minimum": 0 },
+						"finalization_ms": { "type": "integer", "minimum": 0 }
+					}
+				}
+			}
+		}
+	}
+}
