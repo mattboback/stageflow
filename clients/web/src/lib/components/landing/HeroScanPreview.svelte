@@ -44,7 +44,7 @@
 					</span>
 					<span class="text-ink-faint text-[11px]">
 						{#if scanner.pct === 100}
-							<span class="text-emerald-600">complete</span>
+							<span class="text-emerald-700">complete</span>
 						{:else}
 							{scanner.status}
 						{/if}

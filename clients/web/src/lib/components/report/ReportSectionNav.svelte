@@ -71,11 +71,7 @@
 	class="border-line bg-surface sticky top-3 z-20 mb-6 space-y-2.5 border shadow-sm"
 >
 	<div class="relative -mx-1 overflow-x-auto px-1">
-		<div
-			class="flex min-w-max items-center gap-1.5 sm:gap-2"
-			role="tablist"
-			aria-label="Report sections"
-		>
+		<div class="flex min-w-max items-center gap-1.5 sm:gap-2" role="toolbar" aria-label="Report sections">
 			{#each sections as item (item.id)}
 				<button
 					onclick={() => onSectionChange(item.id)}
@@ -83,9 +79,7 @@
 						'flex items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold whitespace-nowrap transition sm:px-3 sm:text-sm',
 						section === item.id ? 'bg-ink text-surface' : 'bg-surface text-ink-muted hover:text-ink'
 					)}
-					role="tab"
-					aria-selected={section === item.id}
-					aria-controls={`report-panel-${item.id}`}
+					aria-pressed={section === item.id}
 					id={`report-tab-${item.id}`}
 				>
 					<span>{item.shortLabel ?? item.label}</span>
