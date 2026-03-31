@@ -12,11 +12,10 @@ import {
 } from '../../ai';
 import { ScannerBase } from '../../core/scanner-base';
 import { type ScreenshotService, createScreenshotService } from '../../core/screenshots';
+import { SCANNER_VERSION } from '../version';
 import { runAiNavigatorAgent } from './agent';
 import { type AiNavigatorOptions, parseAiNavigatorOptions } from './options';
 import { uploadAiNavigatorTraces } from './trace-uploader';
-
-const SCANNER_VERSION = '1.0.0';
 
 export class AiNavigatorScanner extends ScannerBase {
 	readonly metadata = {

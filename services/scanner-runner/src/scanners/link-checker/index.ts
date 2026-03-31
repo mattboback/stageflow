@@ -11,6 +11,7 @@ import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 import type { LinkCheckResult, LinkInfo } from './types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import { SCANNER_VERSION } from '../version';
 import { checkSingleLink, getSeverityForStatus, groupByStatus } from './validation';
 
 export type { LinkCheckResult, LinkInfo } from './types';
@@ -20,7 +21,7 @@ export { checkSingleLink, getSeverityForStatus, groupByStatus } from './validati
 export class LinkCheckerScanner extends ScannerBase {
 	readonly metadata = {
 		name: 'link-checker',
-		version: '1.0.0',
+		version: SCANNER_VERSION,
 		description: 'Link validation and broken link detection'
 	};
 

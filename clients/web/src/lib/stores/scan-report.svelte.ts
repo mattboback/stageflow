@@ -8,6 +8,7 @@ import { SvelteSet } from 'svelte/reactivity';
 import type { SSEUpdate } from './scan-status/types';
 
 import { MAX_LOG_LINES } from './scan-status/constants';
+import { applySseUpdate } from './scan-status/event-update';
 import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 import {
 	applyScannerCompletionUpdate,
@@ -204,27 +205,7 @@ export function createScanReportStore(id: string) {
 		}
 
 		if (job) {
-			const newProgress = update.progress
-				? (() => {
-						const currentPage = update.progress.currentPage;
-						const totalPages = update.progress.totalPages;
-						const rawPercentage = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
-						return {
-							current_page: currentPage,
-							total_pages: totalPages,
-							percentage: Math.max(0, Math.min(100, Math.round(rawPercentage)))
-						};
-					})()
-				: job.progress;
-			const nextJob = {
-				...job,
-				state: update.state,
-				...(newProgress !== undefined ? { progress: newProgress } : {}),
-				...(update.error !== undefined ? { error: update.error } : {}),
-				...(update.error_details !== undefined ? { error_details: update.error_details } : {}),
-				...(update.stage !== undefined ? { last_stage: update.stage } : {})
-			};
-			job = applyScannerCompletionUpdate(nextJob, update);
+			job = applyScannerCompletionUpdate(applySseUpdate(job, update), update);
 		}
 
 		status = normalizeStatus(update.state);

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "stageflow-precommit-tooling",
+      "name": "stageflow-workspace",
       "devDependencies": {
         "husky": "^9.1.7",
         "lint-staged": "^16.4.0",

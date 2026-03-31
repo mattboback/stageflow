@@ -26,6 +26,9 @@ jobs:
           go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
+      - name: Validate event contract fixtures
+        run: node libs/contracts/events/schema/validate.mjs
+
       - name: Go build
         run: |
           for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
@@ -147,3 +150,24 @@ jobs:
       - name: CI
         run: bun run ci
         working-directory: services/scanner-runner
+
+  images:
+    name: Container Images (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build platform-api image
+        run: docker build -f services/platform-api/Dockerfile -t stageflow/platform-api:ci .
+
+      - name: Build orchestrator image
+        run: docker build -f services/orchestrator/Dockerfile -t stageflow/orchestrator:ci .
+
+      - name: Build archive-extractor image
+        run: docker build -f services/archive-extractor/Dockerfile -t stageflow/extractor:ci .
+
+      - name: Build scanner-runner image
+        run: docker build -f services/scanner-runner/Dockerfile -t stageflow/scanner-runner:ci .
+
+      - name: Build frontend image
+        run: docker build -f clients/web/Dockerfile -t stageflow/frontend:ci .

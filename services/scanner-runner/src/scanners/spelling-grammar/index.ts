@@ -1,6 +1,7 @@
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import { SCANNER_VERSION } from '../version';
 
 const COMMON_MISSPELLINGS = [
 	{ pattern: /\bteh\b/gi, replacement: 'the' },
@@ -10,7 +11,7 @@ const COMMON_MISSPELLINGS = [
 export class SpellingGrammarScanner extends ScannerBase {
 	readonly metadata = {
 		name: 'spelling-grammar',
-		version: '1.0.0',
+		version: SCANNER_VERSION,
 		description: 'Content quality analysis for simple spelling and grammar issues'
 	};
 

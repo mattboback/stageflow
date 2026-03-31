@@ -8,13 +8,14 @@
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import { SCANNER_VERSION } from '../version';
 import { SEO_CHECKS } from './checks';
 import { extractSEOData } from './extract';
 
 export class SEOScanner extends ScannerBase {
 	readonly metadata = {
 		name: 'seo',
-		version: '1.0.0',
+		version: SCANNER_VERSION,
 		description: 'SEO best practices analysis'
 	};
 

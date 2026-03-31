@@ -20,8 +20,7 @@ import {
 	type ViolationCaptureFailure
 } from '../../screenshots/AxeScreenshotService';
 import { normalizeSeverity } from '../../utils/severity';
-
-const PACKAGE_VERSION = process.env.npm_package_version?.trim() ?? '1.0.0';
+import { SCANNER_VERSION } from '../version';
 
 /**
  * Default milliseconds to wait after load for dynamic content to render.
@@ -118,7 +117,7 @@ function parseAxeOptions(raw: unknown): AxeOptions {
 export class AxeScanner extends ScannerBase {
 	readonly metadata: ScannerMetadata = {
 		name: 'axe',
-		version: PACKAGE_VERSION,
+		version: SCANNER_VERSION,
 		description: 'Accessibility scanner powered by axe-core'
 	};
 

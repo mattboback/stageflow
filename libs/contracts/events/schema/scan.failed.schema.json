@@ -1,0 +1,24 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "scan.failed event",
+	"type": "object",
+	"required": ["event", "job_id", "timestamp", "producer", "payload"],
+	"properties": {
+		"event": { "type": "string", "const": "scan.failed" },
+		"job_id": { "type": "string", "minLength": 1 },
+		"timestamp": { "type": "string", "minLength": 1 },
+		"producer": { "type": "string", "minLength": 1 },
+		"payload": {
+			"type": "object",
+			"required": ["job_id", "scanner_type", "error", "error_details"],
+			"properties": {
+				"job_id": { "type": "string", "minLength": 1 },
+				"scanner_type": { "type": "string", "minLength": 1 },
+				"error": { "type": "string", "minLength": 1 },
+				"error_details": { "type": "string", "minLength": 1 },
+				"stage_log_path": { "type": "string" },
+				"recipe_path": { "type": "string" }
+			}
+		}
+	}
+}

@@ -17,8 +17,7 @@ import {
 	type PageOverviewViolation
 } from '../../screenshots/AxeScreenshotService';
 import { resolvePlaywrightImageChromiumExecutablePath } from '../../utils/playwright';
-
-const PACKAGE_VERSION = process.env.npm_package_version?.trim() ?? '1.0.0';
+import { SCANNER_VERSION } from '../version';
 
 interface LaunchedChrome {
 	port: number;
@@ -123,7 +122,7 @@ function parseLighthouseOptions(raw: unknown): LighthouseOptions {
 export class LighthouseScanner extends ScannerBase {
 	readonly metadata: ScannerMetadata = {
 		name: 'lighthouse',
-		version: PACKAGE_VERSION,
+		version: SCANNER_VERSION,
 		description: 'Web quality scanner powered by Google Lighthouse'
 	};
 

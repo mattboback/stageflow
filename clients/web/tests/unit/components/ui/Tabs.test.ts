@@ -26,4 +26,3 @@ describe('Tabs', () => {
 		expect(onValueChange).toHaveBeenCalledWith('two');
 	});
 });
-

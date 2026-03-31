@@ -106,7 +106,21 @@ export function validateManifest(manifest: ScannerManifest): ManifestValidationR
 }
 
 export function resolveEntryPath(manifest: ScannerManifest, manifestDir: string): string {
-	return path.resolve(manifestDir, manifest.entry.module);
+	const entryModule = manifest.entry.module.trim();
+	if (!entryModule) {
+		throw new Error('Manifest entry.module must not be empty');
+	}
+	if (path.isAbsolute(entryModule)) {
+		throw new Error(`Absolute plugin entry paths are not allowed: ${entryModule}`);
+	}
+
+	const resolvedPath = path.resolve(manifestDir, entryModule);
+	const relativePath = path.relative(manifestDir, resolvedPath);
+	if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+		throw new Error(`Plugin entry path escapes plugin directory: ${entryModule}`);
+	}
+
+	return resolvedPath;
 }
 
 export function validateOptionsAgainstSchema(
