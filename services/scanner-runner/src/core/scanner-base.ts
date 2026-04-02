@@ -474,11 +474,23 @@ export abstract class ScannerBase {
 					screenshotsDir
 				);
 			} catch (err) {
-				this.logger.warn('Failed to upload screenshots directory', {
+				const isFilesystemError =
+					err instanceof Error &&
+					'code' in err &&
+					typeof (err as NodeJS.ErrnoException).code === 'string' &&
+					['ENOENT', 'EACCES', 'EPERM', 'ENOTDIR'].includes((err as NodeJS.ErrnoException).code!);
+
+				const detail = {
 					scanId: entry.name,
 					path: screenshotsDir,
 					error: err instanceof Error ? err.message : String(err)
-				});
+				};
+
+				if (isFilesystemError) {
+					this.logger.warn('Screenshots directory unavailable, skipping', detail);
+				} else {
+					this.logger.error('Failed to upload screenshots directory', detail);
+				}
 			}
 		}
 
