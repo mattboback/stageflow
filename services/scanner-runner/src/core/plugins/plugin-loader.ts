@@ -166,8 +166,12 @@ export class PluginLoader {
 	}
 
 	addSearchPath(searchPath: string): void {
-		if (!this.config.searchPaths.includes(searchPath)) {
-			this.config.searchPaths.push(searchPath);
+		const resolved = path.resolve(searchPath);
+		if (!path.isAbsolute(resolved)) {
+			throw new Error(`Search path must be absolute: ${searchPath}`);
+		}
+		if (!this.config.searchPaths.includes(resolved)) {
+			this.config.searchPaths.push(resolved);
 		}
 	}
 
@@ -198,7 +202,7 @@ export function createPluginLoader(
 	}
 
 	return new PluginLoader({
-		searchPaths: [...defaultPaths, ...additionalPaths],
+		searchPaths: [...defaultPaths, ...additionalPaths].map((p) => path.resolve(p)),
 		strictValidation: process.env.NODE_ENV === 'production',
 		verbose: process.env.PLUGIN_VERBOSE === 'true',
 		...config

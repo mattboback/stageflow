@@ -19,6 +19,26 @@ export async function loadPluginFromManifest(
 ): Promise<PluginLoadResult> {
 	try {
 		const manifestDir = path.dirname(info.manifestPath);
+
+		// Security: verify the manifest lives inside a configured search path.
+		// This prevents loading plugins from arbitrary filesystem locations.
+		const resolvedManifestDir = path.resolve(manifestDir);
+		const insideSearchPath = config.searchPaths.some((sp) => {
+			const resolvedSp = path.resolve(sp);
+			return (
+				resolvedManifestDir === resolvedSp || resolvedManifestDir.startsWith(resolvedSp + path.sep)
+			);
+		});
+		if (!insideSearchPath) {
+			return {
+				success: false,
+				error: `Plugin manifest is outside configured search paths: ${info.manifestPath}`
+			};
+		}
+
+		// Security: resolveEntryPath rejects absolute paths and paths that escape
+		// the plugin directory via ".." traversal, so the import() below is
+		// constrained to files within the plugin's own directory tree.
 		const entryPath = resolveEntryPath(info.manifest, manifestDir);
 
 		if (!(await fs.pathExists(entryPath))) {
