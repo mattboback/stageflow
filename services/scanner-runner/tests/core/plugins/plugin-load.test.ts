@@ -81,7 +81,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toContain('Entry point not found:');
@@ -93,9 +97,14 @@ describe('loadPluginFromManifest', () => {
 		const outsideModule = path.join(os.tmpdir(), 'outside-scanner.mjs');
 		await writeModule(
 			outsideModule,
-			['export default class ScannerImpl {', '  async scanPage() {', '    return {};', '  }', '}', ''].join(
-				'\n'
-			)
+			[
+				'export default class ScannerImpl {',
+				'  async scanPage() {',
+				'    return {};',
+				'  }',
+				'}',
+				''
+			].join('\n')
 		);
 		const info = pluginInfo(
 			manifestPath,
@@ -104,7 +113,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBe('Plugin entry path escapes plugin directory: ../outside-scanner.mjs');
@@ -132,7 +145,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBe('Factory function not found: createScanner');
@@ -163,7 +180,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBe('Scanner does not implement required interface (scanPage method)');
@@ -191,7 +212,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBe('Failed to instantiate scanner: factory boom');
@@ -224,7 +249,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBe('Export not found: MissingScanner');
@@ -249,7 +278,11 @@ describe('loadPluginFromManifest', () => {
 			})
 		);
 
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBe('Export is not a class or constructor');
@@ -278,7 +311,11 @@ describe('loadPluginFromManifest', () => {
 
 		const info = pluginInfo(manifestPath, baseManifest());
 
-		const result = await loadPluginFromManifest(info, config({ verbose: true }), logger);
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot], verbose: true }),
+			logger
+		);
 
 		expect(result.success).toBe(true);
 		expect(result.plugin?.manifest.id).toBe('test-plugin');
@@ -302,7 +339,11 @@ describe('loadPluginFromManifest', () => {
 		await writeModule(modulePath, 'export default class BrokenScanner {');
 
 		const info = pluginInfo(manifestPath, baseManifest());
-		const result = await loadPluginFromManifest(info, config(), loggerMock());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
 
 		expect(result.success).toBe(false);
 		expect(result.error).toBeDefined();

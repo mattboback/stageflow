@@ -19,4 +19,3 @@ describe('MobileMenu', () => {
 		expect(onClose).toHaveBeenCalledTimes(1);
 	});
 });
-

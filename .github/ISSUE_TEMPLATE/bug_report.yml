@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible problem in StageFlow.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What broke, and what did you expect instead?
+      placeholder: StageFlow failed to...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Share the exact commands, config, or URLs needed to reproduce the problem.
+      placeholder: |
+        1. Copy `.env.example` to `.env`
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, Go/Bun/Podman versions, and whether this is local, staging, or shared-hosted.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or screenshots
+      description: Paste the most relevant output, stack trace, or screenshot.
+      render: shell

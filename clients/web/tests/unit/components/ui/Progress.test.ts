@@ -19,4 +19,3 @@ describe('Progress', () => {
 		expect(progressbar).toHaveAttribute('aria-valuenow', '25');
 	});
 });
-

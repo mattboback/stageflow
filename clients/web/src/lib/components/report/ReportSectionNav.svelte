@@ -71,7 +71,11 @@
 	class="border-line bg-surface sticky top-3 z-20 mb-6 space-y-2.5 border shadow-sm"
 >
 	<div class="relative -mx-1 overflow-x-auto px-1">
-		<div class="flex min-w-max items-center gap-1.5 sm:gap-2" role="toolbar" aria-label="Report sections">
+		<div
+			class="flex min-w-max items-center gap-1.5 sm:gap-2"
+			role="toolbar"
+			aria-label="Report sections"
+		>
 			{#each sections as item (item.id)}
 				<button
 					onclick={() => onSectionChange(item.id)}

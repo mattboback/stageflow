@@ -164,12 +164,14 @@
 		.replace(/&/g, '\\u0026')
 		.replace(/\u2028/g, '\\u2028')
 		.replace(/\u2029/g, '\\u2029');
+	const structuredDataTag =
+		`<script type="application/ld+json">${safeStructuredData}<` + '/script>';
 </script>
 
 <svelte:head>
 	<title>{SITE.siteTitle}</title>
 	<meta name="description" content={SITE.tagline} />
-	<script type="application/ld+json">{safeStructuredData}</script>
+	{@html structuredDataTag}
 </svelte:head>
 
 <div class="landing-shell min-h-screen">

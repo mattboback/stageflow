@@ -1,8 +1,7 @@
 const env = import.meta.env as Record<string, string | undefined>;
 
-const DEFAULT_GITHUB_URL = 'https://github.com/mattboback';
-const DEFAULT_TAGLINE =
-	'Podman-native platform for accessibility, SEO, performance, and security web scanning';
+const DEFAULT_GITHUB_URL = 'https://github.com/mattboback/stageflow';
+const DEFAULT_TAGLINE = 'Podman-native web accessibility and quality scanning platform';
 
 function normalizeGithubUrl(value: string | undefined): string {
 	if (!value) {

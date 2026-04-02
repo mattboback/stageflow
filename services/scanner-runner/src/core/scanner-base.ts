@@ -474,11 +474,13 @@ export abstract class ScannerBase {
 					screenshotsDir
 				);
 			} catch (err) {
+				const errorCode =
+					err instanceof Error && 'code' in err && typeof err.code === 'string'
+						? err.code
+						: undefined;
 				const isFilesystemError =
-					err instanceof Error &&
-					'code' in err &&
-					typeof (err as NodeJS.ErrnoException).code === 'string' &&
-					['ENOENT', 'EACCES', 'EPERM', 'ENOTDIR'].includes((err as NodeJS.ErrnoException).code!);
+					typeof errorCode === 'string' &&
+					['ENOENT', 'EACCES', 'EPERM', 'ENOTDIR'].includes(errorCode);
 
 				const detail = {
 					scanId: entry.name,
