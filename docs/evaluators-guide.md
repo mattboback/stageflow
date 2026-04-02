@@ -157,4 +157,4 @@ The most interesting parts to look at for engineering depth:
 5. `qa/e2e/project-scan-golden.sh` — golden regression test for the full scan → baseline → diff pipeline.
 6. `.github/workflows/ci.yml` — layered CI across Go, web app, Scanner Runner, and Storybook.
 
-If you have questions about any part of the system, open an issue with the `question` label or reach out via the contact on my GitHub profile.
+If you have questions about any part of the system, use the repository question template or reach out via the contact on my GitHub profile.

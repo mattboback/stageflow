@@ -9,7 +9,7 @@ Podman-native web accessibility and quality scanning platform.
 
 StageFlow runs multi-scanner audits against live URLs or static-site ZIP archives, streams job progress in real time, and merges heterogeneous scanner outputs into one normalized report. Everything needed to run StageFlow is in this repo — the hosted demo and a self-hosted instance use identical code.
 
-This repository is public and intended for both evaluation and self-hosting. The live `stageflow.org` deployment uses this codebase, but local development and self-hosted installs should start from `.env.example` and replace all `change-me` values before exposing anything outside localhost.
+This repository is set up for self-hosting and code review from the same source tree. The live `stageflow.org` deployment uses this codebase, but local development and self-hosted installs should start from `.env.example`, replace all `change-me` values before exposing anything outside localhost, and treat `stageflow.org` references as project examples rather than defaults to reuse unchanged.
 
 ![StageFlow — live scan pipeline dashboard](docs/images/hero.png)
 
@@ -198,9 +198,9 @@ just shell-tests     # shell regression tests
 just project-golden  # baseline -> promote -> regression -> diff against the local overlay
 ```
 
-## Built for evaluation
+## For Reviewers
 
-StageFlow is a portfolio project built to demonstrate a broad surface of backend, web app, infrastructure, and developer tooling work.
+StageFlow is a solo-built portfolio project designed to be runnable as open source while still making the engineering depth easy to evaluate.
 
 - **Distributed system design** — multi-service Go/TypeScript architecture coordinated through NATS JetStream, with explicit service boundaries, a documented job FSM, and Podman pod isolation.
 - **Contract-driven development** — JSON Schema as the single source of truth for the report format, with generated TypeScript and Go types used by all consumers.
@@ -215,6 +215,11 @@ See the [Evaluator guide](docs/evaluators-guide.md) for a structured path throug
 - [Architecture deep-dive](docs/architecture/system.md)
 - [Configuration reference](docs/reference/configuration.md)
 - [CLI README](clients/cli/README.md)
+
+## Support
+
+- Use the repository issue templates for bug reports and setup questions.
+- Use [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 
 ## License
 

@@ -38,11 +38,11 @@ just demo
 
 ### Grafana
 
-| Variable                     | Required | Default in `.env.example`            | Purpose                                            |
-| ---------------------------- | -------- | ------------------------------------ | -------------------------------------------------- |
-| `GF_SECURITY_ADMIN_USER`     | yes      | `admin`                              | Grafana admin user.                                |
-| `GF_SECURITY_ADMIN_PASSWORD` | yes      | `change-me`                          | Grafana admin password.                            |
-| `GF_SERVER_ROOT_URL`         | yes      | `http://localhost:3001` | External URL Grafana uses for redirects and links. |
+| Variable                     | Required | Default in `.env.example` | Purpose                                            |
+| ---------------------------- | -------- | ------------------------- | -------------------------------------------------- |
+| `GF_SECURITY_ADMIN_USER`     | yes      | `admin`                   | Grafana admin user.                                |
+| `GF_SECURITY_ADMIN_PASSWORD` | yes      | `change-me`               | Grafana admin password.                            |
+| `GF_SERVER_ROOT_URL`         | yes      | `http://localhost:3001`   | External URL Grafana uses for redirects and links. |
 
 ### Platform API
 
@@ -53,19 +53,19 @@ just demo
 
 ### Public Domain and CORS
 
-| Variable                          | Required | Default in `.env.example`                             | Purpose                                               |
-| --------------------------------- | -------- | ----------------------------------------------------- | ----------------------------------------------------- |
-| `STAGEFLOW_PUBLIC_DOMAIN`         | yes      | `localhost`                                                           | Public domain used in generated URLs and edge config. |
+| Variable                          | Required | Default in `.env.example`                                                                 | Purpose                                               |
+| --------------------------------- | -------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `STAGEFLOW_PUBLIC_DOMAIN`         | yes      | `localhost`                                                                               | Public domain used in generated URLs and edge config. |
 | `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes      | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:3010,http://localhost:8080` | Browser origin allowlist for API requests.            |
 
 ### Web App
 
 | Variable                          | Required | Default in `.env.example`                                       | Purpose                                           |
 | --------------------------------- | -------- | --------------------------------------------------------------- | ------------------------------------------------- |
-| `VITE_API_URL`                    | yes      | `http://localhost:8080`                                       | Web app API base URL.                             |
+| `VITE_API_URL`                    | yes      | `http://localhost:8080`                                         | Web app API base URL.                             |
 | `VITE_SITE_TITLE`                 | no       | `StageFlow`                                                     | Site title shown in UI metadata.                  |
-| `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                       | Canonical site URL used for metadata/share cards. |
-| `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback`                                 | GitHub link shown in UI.                          |
+| `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                         | Canonical site URL used for metadata/share cards. |
+| `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | GitHub link shown in UI.                          |
 | `VITE_TAGLINE`                    | no       | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces.                 |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
 
@@ -75,7 +75,7 @@ just demo
 | ---------------------------- | ---------------------------- | ------------------------- | ----------------------------------------------------------- |
 | `OPENROUTER_API_KEY`         | only if AI navigator enabled | empty                     | API key for OpenRouter model calls.                         |
 | `OPENROUTER_APP_TITLE`       | no                           | `StageFlow`               | OpenRouter request attribution title.                       |
-| `OPENROUTER_APP_REFERER`     | no                           | `http://localhost:3000` | OpenRouter request attribution referer.                     |
+| `OPENROUTER_APP_REFERER`     | no                           | `http://localhost:3000`   | OpenRouter request attribution referer.                     |
 | `AI_NAVIGATOR_DEFAULT_MODEL` | no                           | `openai/gpt-4o-mini`      | Default backend model when scanner options do not override. |
 
 ### Caddy (Edge)

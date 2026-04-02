@@ -10,7 +10,9 @@ export function buildStandaloneReportHTML(results: ScanResults, metadata: Scanne
 			.replaceAll("'", '&#39;');
 
 	const severityRows = Object.entries(results.summary.bySeverity)
-		.map(([severity, count]) => `<tr><th scope="row">${escape(severity)}</th><td>${count}</td></tr>`)
+		.map(
+			([severity, count]) => `<tr><th scope="row">${escape(severity)}</th><td>${count}</td></tr>`
+		)
 		.join('');
 
 	const pageRows = results.pages

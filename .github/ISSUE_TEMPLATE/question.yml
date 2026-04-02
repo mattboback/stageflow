@@ -1,0 +1,29 @@
+name: Question
+description: Ask for setup help or clarification about the repo.
+title: "[Question]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for setup questions, usage clarification, or repo-orientation help.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to do, and where are you getting stuck?
+      placeholder: I'm trying to run...
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include the command, doc, or code path you're working with.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Optional, but helpful for setup questions.
+      placeholder: Fedora 41, Podman 5.x, Bun 1.3.x...

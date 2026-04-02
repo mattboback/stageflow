@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/mattboback/stageflow/security/policy
+    about: Report vulnerabilities privately using the security policy.
+  - name: StageFlow docs
+    url: https://github.com/mattboback/stageflow/blob/main/README.md
+    about: Start with the README, architecture guide, and contributing guide before opening an issue.

@@ -16,6 +16,11 @@ Run checks directly from each workspace before opening a PR.
 - `bun run ci` in `services/scanner-runner`
 - `bash devtools/scripts/tests/cli-install.test.sh`
 
+## Getting Help
+
+- Use the bug report or question issue templates for public support requests.
+- Use [SECURITY.md](SECURITY.md) for vulnerabilities or anything sensitive.
+
 ## Pull Requests
 
 - Keep PRs focused and small.

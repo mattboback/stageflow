@@ -11,7 +11,14 @@
 		class?: string;
 	}
 
-	let { value = 0, max = 100, ariaLabel = 'Progress', indicatorClass, class: className, ...rest }: Props = $props();
+	let {
+		value = 0,
+		max = 100,
+		ariaLabel = 'Progress',
+		indicatorClass,
+		class: className,
+		...rest
+	}: Props = $props();
 
 	const percentage = $derived(Math.min(Math.max(0, ((value || 0) / max) * 100), 100));
 </script>
