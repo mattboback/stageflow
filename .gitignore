@@ -102,8 +102,11 @@ services/scanner-runner/dist/
 .gocache/
 **/.gocache/
 
-# StageFlow baseline state (per-session, not for commit)
-.stageflow/baseline
+# StageFlow project config (generated per-repo by `stageflow project init`)
+.stageflow/
+
+# AI agent instructions (local-only)
+AGENTS.md
 
 # Deployment-specific scanner overrides (copy from infra/scanners/scanners.example.yaml)
 infra/scanners/scanners.yaml

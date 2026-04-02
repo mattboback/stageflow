@@ -187,7 +187,7 @@ stageflow scan https://example.com
 
 To scan `localhost` or private targets, use the local overlay: `just setup && just images && just dev up local && just dev init local`.
 
-This repo already includes a working `.stageflow/config.yaml`, so after the local overlay is up you can dogfood StageFlow against `clients/web` with `stageflow project doctor .` and `stageflow project .`.
+After the local overlay is up you can dogfood StageFlow against `clients/web` with `stageflow project init && stageflow project doctor . && stageflow project .`.
 
 ### Validation
 
