@@ -169,7 +169,10 @@
 						onSelectPage={(pageId) =>
 							updateQueryParams({ section: 'pages', page: pageId }, { replaceState: false })}
 						onSelectScanner={(scannerId) =>
-							updateQueryParams({ section: 'scanners', scanner: scannerId }, { replaceState: false })}
+							updateQueryParams(
+								{ section: 'scanners', scanner: scannerId },
+								{ replaceState: false }
+							)}
 						onSearchIssues={(query, scannerId) =>
 							updateQueryParams(
 								{
@@ -188,6 +191,7 @@
 				<section id="report-panel-issues" aria-labelledby="report-tab-issues">
 					<IssuesView
 						report={displayReport}
+						{audience}
 						{screenshots}
 						{activeScanner}
 						{activePage}
@@ -201,7 +205,8 @@
 						onSeverityChange={(value) => updateQueryParams({ severity: value })}
 						onCategoryChange={(value) => updateQueryParams({ category: value })}
 						onSearchChange={(value) => updateQueryParams({ q: value || null })}
-						onSortChange={(value) => updateQueryParams({ sort: value === 'severity' ? null : value })}
+						onSortChange={(value) =>
+							updateQueryParams({ sort: value === 'severity' ? null : value })}
 						onIssueSelect={handleIssueSelect}
 						onClearFilters={() =>
 							updateQueryParams({

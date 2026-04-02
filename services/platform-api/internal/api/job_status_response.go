@@ -17,6 +17,15 @@ func (s *Server) buildJobStatusResponse(ctx context.Context, rec *status.JobReco
 		return job, nil
 	}
 
+	if rec.ReportJSONKey != "" {
+		report, err := s.downloadReport(ctx, rec.JobID, rec.ReportJSONKey)
+		if err != nil {
+			logging.Warn(ctx, "Failed to normalize completed job issue count from aggregated report", "error", err)
+		} else {
+			job.TotalViolations = report.Summary.TotalIssues
+		}
+	}
+
 	artifacts, artifactSet, err := s.buildArtifactsForDoneJob(ctx, rec)
 	if err != nil {
 		return nil, err
