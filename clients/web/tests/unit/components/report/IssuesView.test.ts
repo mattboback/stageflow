@@ -65,6 +65,7 @@ describe('IssuesView', () => {
 		const { container } = render(IssuesView, {
 			props: {
 				report,
+				audience: 'pm',
 				screenshots: [],
 				activeScanner: null,
 				activePage: null,
@@ -99,6 +100,7 @@ describe('IssuesView', () => {
 		const { getByPlaceholderText } = render(IssuesView, {
 			props: {
 				report,
+				audience: 'pm',
 				screenshots: [],
 				activeScanner: null,
 				activePage: null,
@@ -131,5 +133,36 @@ describe('IssuesView', () => {
 		expect(onSearchChange).toHaveBeenCalledWith('abc');
 
 		vi.useRealTimers();
+	});
+
+	it('shows an audience-specific summary for engineer view', () => {
+		const report = buildReport(4);
+		const { getByTestId } = render(IssuesView, {
+			props: {
+				report,
+				audience: 'engineer',
+				screenshots: [],
+				activeScanner: null,
+				activePage: null,
+				activeSeverity: null,
+				activeCategory: null,
+				searchTerm: '',
+				issueSort: 'severity',
+				selectedIssueId: null,
+				onScannerChange: () => undefined,
+				onPageChange: () => undefined,
+				onSeverityChange: () => undefined,
+				onCategoryChange: () => undefined,
+				onSearchChange: () => undefined,
+				onSortChange: () => undefined,
+				onIssueSelect: () => undefined,
+				onClearFilters: () => undefined
+			}
+		});
+
+		expect(getByTestId('audience-summary')).toHaveTextContent('Engineer view');
+		expect(getByTestId('audience-summary')).toHaveTextContent(
+			'Rules, selectors, and implementation-oriented issue context are prioritized.'
+		);
 	});
 });

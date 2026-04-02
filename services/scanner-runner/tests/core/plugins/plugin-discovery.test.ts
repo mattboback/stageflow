@@ -192,8 +192,8 @@ describe('discoverPluginManifests', () => {
 					error: 'Empty alias declared for plugin id: one'
 				}),
 				expect.objectContaining({
-					path: secondManifest,
-					error: "Alias 'shared' already used by plugin 'one'"
+					path: firstManifest,
+					error: "Alias 'shared' already used by plugin 'two'"
 				})
 			])
 		);
@@ -213,7 +213,7 @@ describe('discoverPluginManifests', () => {
 		expect(result.errors).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
-					path: duplicateManifest,
+					path: firstManifest,
 					error: 'Duplicate plugin id: duplicate'
 				})
 			])

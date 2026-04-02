@@ -170,6 +170,31 @@ describe('ReportShell', () => {
 		});
 	});
 
+	it('shows score legend context in the report header', () => {
+		const report = createBaseReport();
+		const { getByText } = render(ReportShell, {
+			props: {
+				jobId: 'job-1',
+				status: 'complete',
+				report: {
+					...report,
+					summary: {
+						...report.summary,
+						score: 77,
+						scoreGrade: 'C+'
+					}
+				},
+				job: null,
+				logs: [],
+				screenshots: [],
+				error: null
+			}
+		});
+
+		expect(getByText('Needs work')).toBeInTheDocument();
+		expect(getByText('A: 90+, B: 80-89, C: 70-79, D: 60-69, F: <60')).toBeInTheDocument();
+	});
+
 	it('opens the derived occurrence issue when clicking a non-first overlay marker', async () => {
 		mockPage.url = new URL('http://localhost/scan/job-1/report?section=pages&page=page-1');
 

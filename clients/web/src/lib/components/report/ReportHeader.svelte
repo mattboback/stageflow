@@ -25,6 +25,21 @@
 	const pagesScanned = $derived(report.summary.pagesScanned ?? 0);
 	const pagesWithIssues = $derived(report.summary.pagesWithIssues ?? 0);
 	const criticalCount = $derived(report.summary.bySeverity?.critical ?? 0);
+	const score = $derived(report.summary.score ?? null);
+	const scoreGrade = $derived(
+		report.summary.scoreGrade ?? (score !== null ? String(Math.round(score)) : null)
+	);
+	const scoreBand = $derived.by(() => {
+		if (score === null) return null;
+		if (score >= 90) return { label: 'Strong', detail: 'A-range: release confidence is high.' };
+		if (score >= 80)
+			return { label: 'Watch', detail: 'B-range: review notable issues before shipping.' };
+		if (score >= 70)
+			return { label: 'Needs work', detail: 'C-range: multiple findings still affect quality.' };
+		if (score >= 60)
+			return { label: 'High risk', detail: 'D-range: remediation should precede release.' };
+		return { label: 'Failing', detail: 'F-range: major quality risk remains.' };
+	});
 	const affectedRatio = $derived.by(() => {
 		if (pagesScanned <= 0) return 0;
 		return Math.round((pagesWithIssues / pagesScanned) * 100);
@@ -107,21 +122,34 @@
 				{/if}
 			</div>
 		</div>
-		{#if report.summary.score !== undefined}
-			<div
-				class={cn(
-					'flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full border text-center font-bold shadow-sm ring-4 ring-white/60',
-					report.summary.score >= 90
-						? 'border-emerald-200 bg-emerald-100 text-emerald-700'
-						: report.summary.score >= 70
-							? 'border-amber-200 bg-amber-100 text-amber-700'
-							: 'border-red-200 bg-red-100 text-red-700'
-				)}
-			>
-				<span class="text-[1.75rem] leading-none">
-					{report.summary.scoreGrade ?? Math.round(report.summary.score)}
-				</span>
-				<span class="mt-1 text-[0.6rem] font-semibold tracking-[0.14em] uppercase">Score</span>
+		{#if score !== null}
+			<div class="flex shrink-0 flex-col items-end gap-3">
+				<div
+					class={cn(
+						'flex h-24 w-24 flex-col items-center justify-center rounded-full border text-center font-bold shadow-sm ring-4 ring-white/60',
+						score >= 90
+							? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+							: score >= 70
+								? 'border-amber-200 bg-amber-100 text-amber-700'
+								: 'border-red-200 bg-red-100 text-red-700'
+					)}
+				>
+					<span class="text-[1.75rem] leading-none">{scoreGrade}</span>
+					<span class="mt-1 text-[0.6rem] font-semibold tracking-[0.14em] uppercase">Score</span>
+				</div>
+				{#if scoreBand}
+					<div
+						class="bg-surface/80 border-line max-w-[15rem] rounded-2xl border px-3 py-2 text-right shadow-sm"
+					>
+						<p class="text-ink text-xs font-semibold tracking-[0.12em] uppercase">
+							{scoreBand.label}
+						</p>
+						<p class="text-ink-muted mt-1 text-xs leading-relaxed">{scoreBand.detail}</p>
+						<p class="text-ink-faint mt-2 text-[11px]">
+							A: 90+, B: 80-89, C: 70-79, D: 60-69, F: &lt;60
+						</p>
+					</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

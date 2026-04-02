@@ -64,6 +64,9 @@
 				{/if}
 			</div>
 		</button>
+		<p class="text-ink-muted mt-2 text-xs leading-relaxed">
+			Artifacts, logs, and screenshots expire automatically within 24 hours of a completed scan.
+		</p>
 	</div>
 
 	<div>

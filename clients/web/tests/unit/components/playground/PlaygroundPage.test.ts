@@ -70,6 +70,11 @@ describe('PlaygroundPage', () => {
 		expect(screen.getByText('Configure Scan')).toBeInTheDocument();
 		expect(await screen.findByText('No scanners available')).toBeInTheDocument();
 		expect(screen.getByText('Start Scan')).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				'Artifacts, logs, and screenshots expire automatically within 24 hours of a completed scan.'
+			)
+		).toBeInTheDocument();
 	});
 
 	it('uses multiline placeholder and removes auto-https helper text', async () => {

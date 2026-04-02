@@ -9,6 +9,8 @@ Podman-native web accessibility and quality scanning platform.
 
 StageFlow runs multi-scanner audits against live URLs or static-site ZIP archives, streams job progress in real time, and merges heterogeneous scanner outputs into one normalized report. Everything needed to run StageFlow is in this repo — the hosted demo and a self-hosted instance use identical code.
 
+This repository is public and intended for both evaluation and self-hosting. The live `stageflow.org` deployment uses this codebase, but local development and self-hosted installs should start from `.env.example` and replace all `change-me` values before exposing anything outside localhost.
+
 ![StageFlow — live scan pipeline dashboard](docs/images/hero.png)
 
 ## Engineering highlights
@@ -38,18 +40,18 @@ For the full system design, see [docs/architecture/system.md](docs/architecture/
 
 ## Repo map
 
-| Directory                 | Contents                                       |
-| ------------------------- | ---------------------------------------------- |
-| `clients/web`             | SvelteKit web app                              |
-| `clients/cli`             | `stageflow` CLI                                |
-| `services/platform-api`   | Intake API, SSE stream, report APIs            |
-| `services/orchestrator`   | Job FSM and scanner orchestration              |
-| `services/archive-extractor` | ZIP extraction and safe archive unpacking   |
-| `services/scanner-runner` | Scanner Runner and Playwright-based execution  |
-| `libs/go/*`               | Shared Go domain, messaging, storage, and HTTP libs |
-| `libs/contracts`          | Shared schemas and generated contracts         |
-| `devtools`                | Internal ops and QA helpers                    |
-| `qa`                      | End-to-end and verification assets             |
+| Directory                    | Contents                                            |
+| ---------------------------- | --------------------------------------------------- |
+| `clients/web`                | SvelteKit web app                                   |
+| `clients/cli`                | `stageflow` CLI                                     |
+| `services/platform-api`      | Intake API, SSE stream, report APIs                 |
+| `services/orchestrator`      | Job FSM and scanner orchestration                   |
+| `services/archive-extractor` | ZIP extraction and safe archive unpacking           |
+| `services/scanner-runner`    | Scanner Runner and Playwright-based execution       |
+| `libs/go/*`                  | Shared Go domain, messaging, storage, and HTTP libs |
+| `libs/contracts`             | Shared schemas and generated contracts              |
+| `devtools`                   | Internal ops and QA helpers                         |
+| `qa`                         | End-to-end and verification assets                  |
 
 ## Screenshots
 
@@ -153,6 +155,13 @@ just demo
 ```
 
 `just demo` runs the local prerequisite checks, builds the images, restarts the stack, waits for the health endpoints, initializes MinIO, and prints the next scan commands.
+
+### Self-hosting notes
+
+- Start from `.env.example`; do not commit `.env`, `.env.staging`, or any real credentials.
+- Replace every `change-me` value before using a public domain or shared environment.
+- Set `STAGEFLOW_PUBLIC_DOMAIN`, `PLATFORM_API_CORS_ALLOW_ORIGINS`, `GF_SERVER_ROOT_URL`, and the frontend `VITE_*` URLs for your deployment.
+- The repository includes `stageflow.org` references for the hosted demo, docs, and regression fixtures; treat them as project examples, not values to reuse unchanged.
 
 ### Manual bootstrap
 

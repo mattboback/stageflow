@@ -4,15 +4,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
+	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
@@ -735,6 +739,75 @@ func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 
 	if job.Artifacts.ReportHTML == "" {
 		t.Fatal("expected report HTML URL")
+	}
+}
+
+func TestBuildJobStatusResponse_DoneUsesAggregatedReportIssueCount(t *testing.T) {
+	server, storage, _ := newTestServer(t)
+
+	jobID := "job-response-report-count"
+	reportKey := jobID + "/report.json"
+	now := time.Now().UTC()
+	infoCount := 2
+	axeCount := 1
+	seoCount := 4
+	reportDoc := report.UnifiedReportV2{
+		Version: "2.0.0",
+		Meta: report.ReportMeta{
+			JobId:       jobID,
+			ScannedAt:   &now,
+			CompletedAt: &now,
+		},
+		Summary: report.ReportSummary{
+			TotalIssues: 5,
+			BySeverity: report.SeverityCounts{
+				Critical: 0,
+				Serious:  1,
+				Moderate: 2,
+				Minor:    0,
+				Info:     &infoCount,
+			},
+			ByScanner:       map[string]int{"axe": 1, "seo": 4},
+			PagesScanned:    1,
+			PagesWithIssues: 1,
+		},
+		Scanners: []report.ScannerSummary{
+			{Id: "axe", Status: report.ScannerStatusSuccess, IssueCount: &axeCount},
+			{Id: "seo", Status: report.ScannerStatusSuccess, IssueCount: &seoCount},
+		},
+		Pages: []report.PageSummary{{
+			Id:         "page-1",
+			Url:        "https://example.com",
+			IssueCount: 5,
+			StartedAt:  &now,
+			FinishedAt: &now,
+		}},
+		Issues:    []report.IssueDetail{},
+		Artifacts: []report.ReportArtifact{},
+		Errors:    []report.ReportError{},
+	}
+
+	reportBytes, err := json.Marshal(reportDoc)
+	if err != nil {
+		t.Fatalf("marshal report: %v", err)
+	}
+	storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, reportKey)] = reportBytes
+
+	rec := &status.JobRecord{
+		JobID:           jobID,
+		State:           models.JobStateDone,
+		TotalViolations: 6,
+		ReportJSONKey:   reportKey,
+		ReportKey:       jobID + "/report.html",
+	}
+
+	job, err := server.buildJobStatusResponse(context.Background(), rec)
+	if err != nil {
+		t.Fatalf("build response: %v", err)
+	}
+
+	if job.TotalViolations != 5 {
+		t.Fatalf("expected normalized violations count 5, got %d", job.TotalViolations)
 	}
 }
 
