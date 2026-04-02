@@ -34,6 +34,7 @@ Those commands manage named project records on a running StageFlow API for basel
 ## Prerequisites
 
 Before using Project Mode, you need:
+
 1. The `stageflow` CLI installed.
 2. A running local StageFlow stack configured to allow private target scans (like `127.0.0.1` or `localhost`).
 
@@ -46,11 +47,11 @@ just dev up local
 just dev init local
 ```
 
-*Note: The `local` environment flag is crucial. It tells the Platform API to permit scanning private loopback targets and configures the job pods to use the host network.*
+_Note: The `local` environment flag is crucial. It tells the Platform API to permit scanning private loopback targets and configures the job pods to use the host network._
 
 `just images` builds the scanner images used by local runs. On a fresh setup it can take a while, so treat it as part of environment setup rather than a per-scan command.
 
-This repository already ships a working `.stageflow/config.yaml` and a repo-specific `.stageflow/README.md`, so you can run `stageflow project doctor .` here immediately after the local overlay is up.
+After the local overlay is up, run `stageflow project init` to scaffold a `.stageflow/config.yaml`, then `stageflow project doctor .` to verify wiring before running a scan.
 
 ## Initialization
 
@@ -62,6 +63,7 @@ stageflow project init
 
 This command inspects your project (looking for `package.json`, `Justfile`,
 etc.) and creates a configuration directory containing:
+
 - `.stageflow/config.yaml` (The main configuration file)
 - `.stageflow/README.md` (A quick-start guide)
 
@@ -104,10 +106,12 @@ dev:
 ### Configuration Reference
 
 #### `stageflow`
+
 - `api_url`: The URL of your StageFlow Platform API (defaults to `http://localhost:8080`).
 - `api_key_env`: (Optional) The name of the environment variable containing your StageFlow API key, if authentication is required.
 
 #### `scan`
+
 - `urls`: A list of URLs to scan. These should point to your local dev server (e.g., `http://127.0.0.1:5173`).
 - `scanners`: A comma-separated list of scanners to run (e.g., `axe,lighthouse,seo,link-checker`).
 - `screenshot`: (Optional) Boolean indicating whether to capture screenshots during the scan.
@@ -115,6 +119,7 @@ dev:
 - `timeout`: (Optional) The maximum duration for the scan (e.g., `5m`).
 
 #### `dev`
+
 - `up`: (Optional) A list of commands to run before starting the dev server (e.g., `[["docker-compose", "up", "-d"]]`).
 - `start.cmd`: The command array used to start your application (e.g., `["npm", "run", "dev"]`). **Ensure this is split into an array of strings.**
 - `start.cwd`: The working directory from which to run the start command (defaults to `.`).
@@ -135,6 +140,7 @@ stageflow project
 ```
 
 When you run this command, StageFlow will:
+
 1. Read `.stageflow/config.yaml`.
 2. Execute your `dev.start.cmd` in the background.
 3. Poll the `dev.ready.url` until your app responds.
@@ -153,6 +159,7 @@ stageflow project doctor --skip-dev
 ```
 
 `stageflow project doctor` will:
+
 - Validate your `config.yaml` syntax and structure.
 - Verify that the StageFlow API is reachable.
 - Start your dev server, wait for the readiness URL to respond, and then shut it down **without** actually running a scan.

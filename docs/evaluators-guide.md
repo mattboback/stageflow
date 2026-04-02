@@ -107,7 +107,6 @@ What to look for:
 - Operations and tooling:
   - `justfile` — main dev and CI helper commands.
   - `docs/operations/devtools.md` — CLI and repo-local tooling (job-status CLI, QA suite-runner).
-  - `AGENTS.md` — notes about the separate production deployment workspace.
 
 What to look for:
 
