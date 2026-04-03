@@ -19,7 +19,14 @@ function approxEqual(actual: number, expected: number, tolerance: number): boole
 }
 
 describe('capturePageOverviewRaw (integration)', () => {
-	let browser: Browser;
+	let browser: Browser | null = null;
+
+	function getBrowser(): Browser {
+		if (!browser) {
+			throw new Error('browser was not initialized');
+		}
+		return browser;
+	}
 
 	beforeAll(async () => {
 		browser = await chromium.launch({
@@ -29,12 +36,13 @@ describe('capturePageOverviewRaw (integration)', () => {
 	});
 
 	afterAll(async () => {
-		await browser.close();
+		await browser?.close();
+		browser = null;
 	});
 
 	it('maps element bounds at DPR=1 with no clipping', async () => {
 		const resultsDir = createTempDir('stageflow-page-overview-');
-		const context = await browser.newContext({
+		const context = await getBrowser().newContext({
 			viewport: { width: 400, height: 300 },
 			deviceScaleFactor: 1
 		});
@@ -114,7 +122,7 @@ describe('capturePageOverviewRaw (integration)', () => {
 
 	it('captures a clean page overview screenshot even when there are no violations', async () => {
 		const resultsDir = createTempDir('stageflow-page-overview-clean-');
-		const context = await browser.newContext({
+		const context = await getBrowser().newContext({
 			viewport: { width: 400, height: 300 },
 			deviceScaleFactor: 1
 		});
@@ -168,7 +176,7 @@ describe('capturePageOverviewRaw (integration)', () => {
 
 	it('clips partially-visible elements and skips elements below the capture area', async () => {
 		const resultsDir = createTempDir('stageflow-page-overview-');
-		const context = await browser.newContext({
+		const context = await getBrowser().newContext({
 			viewport: { width: 400, height: 300 },
 			deviceScaleFactor: 1
 		});
@@ -245,7 +253,7 @@ describe('capturePageOverviewRaw (integration)', () => {
 
 	it('maps element bounds under DPR=2 with clipping', async () => {
 		const resultsDir = createTempDir('stageflow-page-overview-');
-		const context = await browser.newContext({
+		const context = await getBrowser().newContext({
 			viewport: { width: 400, height: 300 },
 			deviceScaleFactor: 2
 		});
