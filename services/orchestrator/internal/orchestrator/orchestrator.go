@@ -160,15 +160,19 @@ func NewOrchestrator(config *Config) *Orchestrator {
 	// Resolve scanner registry; default to built‑ins when unset.
 	registry := config.ScannerRegistry
 	if registry == nil {
-		defaultConfig := scanners.DefaultConfig()
-
-		var err error
-
-		registry, err = scanners.InitializeRegistry(defaultConfig)
-		if err != nil {
-			slog.Error("Failed to initialize default scanner registry", "error", err)
+		defaultConfig, cfgErr := scanners.DefaultConfig()
+		if cfgErr != nil {
+			slog.Error("Failed to load default scanner config", "error", cfgErr)
 			// Fallback to empty registry so jobs fail deterministically instead of crashing.
 			registry = scanners.NewRegistry(scannerImage)
+		} else {
+			var err error
+
+			registry, err = scanners.InitializeRegistry(defaultConfig)
+			if err != nil {
+				slog.Error("Failed to initialize default scanner registry", "error", err)
+				registry = scanners.NewRegistry(scannerImage)
+			}
 		}
 	}
 

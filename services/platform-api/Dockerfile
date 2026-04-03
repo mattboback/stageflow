@@ -33,11 +33,8 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 FROM docker.io/library/debian:bookworm-slim AS prep
 RUN mkdir -p /data && chown 65532:65532 /data
 
-# Runtime stage - distroless with static busybox for healthcheck shell support
+# Runtime stage - distroless
 FROM gcr.io/distroless/base-debian12:nonroot
-
-# Copy busybox for shell support (needed for podman-compose healthchecks)
-COPY --from=docker.io/library/busybox:1.36-musl /bin/busybox /bin/sh
 
 # Copy binaries
 COPY --from=builder /out/platform-api /usr/local/bin/platform-api

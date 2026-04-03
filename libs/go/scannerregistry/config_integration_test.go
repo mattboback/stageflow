@@ -68,10 +68,13 @@ func TestDefaultConfigMatchesBuiltinCatalog(t *testing.T) {
 		t.Fatalf("BuiltinManifests() error: %v", err)
 	}
 
-	cfg := DefaultConfig()
+	cfg, err := DefaultConfig()
+	if err != nil {
+		t.Fatalf("DefaultConfig() error: %v", err)
+	}
 	assertConfigMatchesManifests(t, cfg, manifests)
 
-	registry, err := InitializeRegistry(DefaultConfig())
+	registry, err := InitializeRegistry(cfg)
 	if err != nil {
 		t.Fatalf("InitializeRegistry() error: %v", err)
 	}

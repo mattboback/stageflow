@@ -25,14 +25,17 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
     cd services/orchestrator && \
     CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-    GOWORK=off go build -ldflags="-s -w" -o /out/orchestrator ./cmd/orchestrator
+    GOWORK=off go build -ldflags="-s -w" -o /out/orchestrator ./cmd/orchestrator && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    GOWORK=off go build -ldflags="-s -w" -o /out/orchestrator-healthcheck ./cmd/healthcheck
 
-# Runtime stage - distroless with debug for troubleshooting
-FROM gcr.io/distroless/base-debian12:debug
+# Runtime stage - distroless
+FROM gcr.io/distroless/base-debian12:nonroot
+
 COPY --from=builder /out/orchestrator /usr/local/bin/orchestrator
+COPY --from=builder /out/orchestrator-healthcheck /usr/local/bin/orchestrator-healthcheck
 
-# Create /bin/sh symlink for healthchecks
-RUN ["/busybox/ln", "-s", "/busybox/sh", "/bin/sh"]
+USER 65532:65532
 
 # Note: Podman socket is bind-mounted at runtime via Quadlet
 ENTRYPOINT ["/usr/local/bin/orchestrator"]

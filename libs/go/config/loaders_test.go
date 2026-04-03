@@ -54,8 +54,8 @@ func TestLoadMinIOConfig(t *testing.T) {
 		t.Errorf("expected default SecretKey to be empty, got %q", cfg.SecretKey)
 	}
 
-	if cfg.PublicEndpoint != "example.com" {
-		t.Errorf("expected default PublicEndpoint example.com, got %q", cfg.PublicEndpoint)
+	if cfg.PublicEndpoint != "" {
+		t.Errorf("expected default PublicEndpoint to be empty, got %q", cfg.PublicEndpoint)
 	}
 
 	if cfg.UseSSL {
