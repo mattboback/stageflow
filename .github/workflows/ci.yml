@@ -108,6 +108,11 @@ jobs:
           go run ./clients/cli docs --out-dir docs/reference/cli/stageflow
           git diff --exit-code docs/reference/cli/stageflow
 
+      - name: Install just
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y just
+
       - name: Shell regression tests
         run: bash devtools/scripts/tests/cli-install.test.sh
 
