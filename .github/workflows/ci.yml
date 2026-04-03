@@ -78,6 +78,8 @@ jobs:
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
           go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Validate event contract fixtures
         run: node libs/contracts/events/schema/validate.mjs
