@@ -25,7 +25,13 @@ type jobEventsOptions struct {
 	showPayload bool
 }
 
-func listJobs(ctx context.Context, client *http.Client, out io.Writer, apiURL, apiToken string, opts jobsOptions) error {
+func listJobs(
+	ctx context.Context,
+	client *http.Client,
+	out io.Writer,
+	apiURL, apiToken string,
+	opts jobsOptions,
+) error {
 	query := url.Values{
 		"limit":  {strconv.Itoa(opts.limit)},
 		"offset": {strconv.Itoa(opts.offset)},

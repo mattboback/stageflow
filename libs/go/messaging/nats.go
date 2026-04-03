@@ -323,6 +323,7 @@ func (c *Client) Subscribe(
 				"consumer", consumerName,
 				"error", handleErr,
 			)
+
 			if nakErr := msg.NakWithDelay(defaultConsumerNAKDelay); nakErr != nil {
 				slog.Warn("Failed to NAK message",
 					"stream", stream,
@@ -395,6 +396,7 @@ func (c *Client) SubscribeWithContext(
 				"consumer", consumerName,
 				"error", handleErr,
 			)
+
 			if nakErr := msg.NakWithDelay(defaultConsumerNAKDelay); nakErr != nil {
 				slog.Warn("Failed to NAK message",
 					"stream", stream,

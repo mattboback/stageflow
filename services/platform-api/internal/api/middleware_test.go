@@ -185,6 +185,7 @@ func TestAPIKeyMiddleware_WithToken_AllowsMatchingKey(t *testing.T) {
 func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 	original := apiRateLimiter
 	apiRateLimiter = newInMemoryRateLimiter(1)
+
 	t.Cleanup(func() {
 		apiRateLimiter = original
 	})
@@ -197,6 +198,7 @@ func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 	req1.RemoteAddr = "127.0.0.1:1234"
 	rr1 := httptest.NewRecorder()
 	handler(rr1, req1)
+
 	if rr1.Code != http.StatusOK {
 		t.Fatalf("expected first request 200, got %d", rr1.Code)
 	}
@@ -205,6 +207,7 @@ func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 	req2.RemoteAddr = "127.0.0.1:1234"
 	rr2 := httptest.NewRecorder()
 	handler(rr2, req2)
+
 	if rr2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected second request 429, got %d", rr2.Code)
 	}

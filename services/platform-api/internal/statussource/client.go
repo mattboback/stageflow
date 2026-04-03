@@ -71,6 +71,7 @@ func (c *Client) GetJob(ctx context.Context, jobID string) (*status.JobRecord, e
 	if err != nil {
 		return nil, fmt.Errorf("create orchestrator status request: %w", err)
 	}
+
 	if c.token != "" {
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}

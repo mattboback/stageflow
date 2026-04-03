@@ -29,6 +29,7 @@ const (
 
 	defaultRateLimitRequestsPerMinute = 120
 	rateLimitWindow                   = time.Minute
+	unknownRateLimitKey               = "unknown"
 )
 
 type rateWindow struct {
@@ -63,12 +64,15 @@ func (l *inMemoryRateLimiter) allow(key string, now time.Time) (bool, int) {
 		if retryAfter < 1 {
 			retryAfter = 1
 		}
+
 		l.windows[key] = window
+
 		return false, retryAfter
 	}
 
 	window.count++
 	l.windows[key] = window
+
 	return true, 0
 }
 
@@ -77,6 +81,7 @@ var apiRateLimiter = newInMemoryRateLimiter(defaultRateLimitRequestsPerMinute)
 func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key := rateLimitKey(r)
+
 		allowed, retryAfter := apiRateLimiter.allow(key, time.Now().UTC())
 		if !allowed {
 			detail := httputil.NewRateLimitError(
@@ -85,6 +90,7 @@ func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 				"1 minute",
 			)
 			httputil.RespondStructuredError(w, http.StatusTooManyRequests, detail)
+
 			return
 		}
 
@@ -112,7 +118,7 @@ func rateLimitKey(r *http.Request) string {
 		return strings.TrimSpace(r.RemoteAddr)
 	}
 
-	return "unknown"
+	return unknownRateLimitKey
 }
 
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {

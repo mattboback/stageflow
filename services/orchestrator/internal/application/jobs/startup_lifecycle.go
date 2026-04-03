@@ -139,9 +139,9 @@ func (s *Service) prepareURLJob(ctx context.Context, job *models.Job) error {
 	provenanceKey := job.ID + "/provenance.json"
 	if updateErr := s.store.UpdateJobProvenanceKey(ctx, job.ID, provenanceKey); updateErr != nil {
 		return fmt.Errorf("failed to persist provenance key for URL job: %w", updateErr)
-	} else {
-		job.ProvenanceKey = provenanceKey
 	}
+
+	job.ProvenanceKey = provenanceKey
 
 	return nil
 }

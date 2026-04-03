@@ -44,21 +44,21 @@ jobs:
 
       - name: Go build
         run: |
-          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
+          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
             echo "==> Building $dir"
             (cd "$dir" && go build ./...)
           done
 
       - name: Go lint
         run: |
-          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
+          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
             echo "==> Linting $dir"
             (cd "$dir" && golangci-lint run)
           done
 
       - name: Go test
         run: |
-          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
+          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
             echo "==> Testing $dir"
             (cd "$dir" && go test -race ./...)
           done
@@ -73,12 +73,12 @@ jobs:
 
       - name: Go vulncheck
         run: |
-          for dir in $(awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work); do
+          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
             echo "==> Vulncheck $dir"
             (cd "$dir" && govulncheck ./...)
           done
 
-  clients/web:
+  clients_web:
     name: Web App (lint, typecheck, test)
     runs-on: ubuntu-latest
     steps:
@@ -101,7 +101,7 @@ jobs:
         run: bun run ci
         working-directory: clients/web
 
-  clients/web-storybook:
+  clients_web_storybook:
     name: Web App Storybook (interaction + a11y)
     runs-on: ubuntu-latest
     steps:

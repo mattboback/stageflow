@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for SvelteKit Frontend
-# Optimized for production with nginx
+# Optimized for production with Caddy
 
 # Stage 1: Build
 FROM docker.io/oven/bun:1.3.0-alpine AS builder
@@ -41,100 +41,16 @@ RUN bunx --no-install svelte-kit sync
 RUN bun run build
 
 # Stage 2: Production server
-FROM docker.io/library/nginx:alpine AS runner
+FROM docker.io/library/caddy:2.10-alpine AS runner
 
-# Remove default nginx content
-RUN rm -rf /usr/share/nginx/html/*
+# Remove default Caddy content and config
+RUN rm -rf /usr/share/caddy/* /etc/caddy/Caddyfile
 
-# Install nginx config inline so the image does not depend on repo-local
-# serving config churn, while still preserving prerendered route output.
-RUN cat <<'EOF' >/etc/nginx/nginx.conf
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /tmp/nginx.pid;
-
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
-                    '$status $body_bytes_sent "$http_referer" '
-                    '"$http_user_agent" "$http_x_forwarded_for"';
-
-    access_log /var/log/nginx/access.log main;
-
-    sendfile on;
-    tcp_nopush on;
-    tcp_nodelay on;
-    keepalive_timeout 65;
-    types_hash_max_size 2048;
-
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_proxied any;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml;
-
-    server {
-        listen 3000;
-        listen [::]:3000;
-        server_name _;
-
-        root /usr/share/nginx/html;
-        index index.html;
-
-        client_max_body_size 100M;
-
-        location /api/ {
-            proxy_pass http://platform-api:8080;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_http_version 1.1;
-            proxy_set_header Connection "";
-
-            proxy_connect_timeout 600s;
-            proxy_send_timeout 600s;
-            proxy_read_timeout 600s;
-        }
-
-        location ~* ^/_app/.*\.(js|css|woff2|woff|ttf|eot)$ {
-            add_header Cache-Control "public, max-age=31536000, immutable" always;
-            try_files $uri =404;
-        }
-
-        location ~* \.(js|css|woff2|woff|ttf|eot)$ {
-            add_header Cache-Control "public, max-age=31536000, immutable" always;
-            try_files $uri =404;
-        }
-
-        location ~* \.(jpg|jpeg|png|gif|ico|svg|webp)$ {
-            add_header Cache-Control "public, max-age=31536000" always;
-            try_files $uri =404;
-        }
-
-        location / {
-            add_header Cache-Control "public, max-age=0, must-revalidate" always;
-            try_files $uri $uri/ $uri.html /200.html;
-        }
-
-        location = /favicon.ico {
-            access_log off;
-            log_not_found off;
-            return 302 /favicon.svg;
-        }
-        location = /robots.txt  { access_log off; log_not_found off; }
-    }
-}
-EOF
+# Copy the repo-owned Caddy config so Docker and Podman follow the same path.
+COPY clients/web/Caddyfile /etc/caddy/Caddyfile
 
 # Copy built assets from builder (SvelteKit adapter-static outputs to build/)
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/build /srv
 
 # Expose port
 EXPOSE 3000
@@ -143,5 +59,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start Caddy
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

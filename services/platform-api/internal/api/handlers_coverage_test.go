@@ -791,6 +791,7 @@ func TestBuildJobStatusResponse_DoneUsesAggregatedReportIssueCount(t *testing.T)
 	if err != nil {
 		t.Fatalf("marshal report: %v", err)
 	}
+
 	storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, reportKey)] = reportBytes
 
 	rec := &status.JobRecord{

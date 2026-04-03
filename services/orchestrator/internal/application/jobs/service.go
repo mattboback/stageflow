@@ -56,6 +56,7 @@ func (s *Service) PrepareExtractedJob(ctx context.Context, payload *events.Extra
 		if shouldIgnoreMissingJob(events.EventExtractionReady, payload.JobID, err) {
 			return nil
 		}
+
 		return fmt.Errorf("failed to record extraction complete: %w", err)
 	}
 
@@ -68,8 +69,8 @@ func (s *Service) PrepareExtractedJob(ctx context.Context, payload *events.Extra
 		return fmt.Errorf("failed to get job: %w", err)
 	}
 
-	if err := s.persistExtractionReadyMetadata(ctx, payload, job); err != nil {
-		return err
+	if metadataErr := s.persistExtractionReadyMetadata(ctx, payload, job); metadataErr != nil {
+		return metadataErr
 	}
 
 	if job.State != models.JobStateReady {
@@ -231,6 +232,7 @@ func (s *Service) RecordScannerCompletion(ctx context.Context, payload *events.S
 		if shouldIgnoreMissingJob(events.EventScanCompleted, payload.JobID, err) {
 			return nil
 		}
+
 		return fmt.Errorf("failed to persist scan completion progress: %w", err)
 	}
 
@@ -384,10 +386,10 @@ func (s *Service) persistExtractionReadyMetadata(
 ) error {
 	if err := s.store.UpdateJobProgress(ctx, payload.JobID, 0, payload.TotalPages); err != nil {
 		return fmt.Errorf("failed to persist total pages from extraction.ready: %w", err)
-	} else {
-		job.TotalPages = payload.TotalPages
-		job.CurrentPage = 0
 	}
+
+	job.TotalPages = payload.TotalPages
+	job.CurrentPage = 0
 
 	if err := s.store.UpdateJobExtractionArtifacts(
 		ctx,
@@ -396,25 +398,25 @@ func (s *Service) persistExtractionReadyMetadata(
 		payload.RecipePath,
 	); err != nil {
 		return fmt.Errorf("failed to persist extraction artifacts: %w", err)
-	} else {
-		job.ExtractionStageLogKey = payload.StageLogPath
-		job.ExtractionRecipeKey = payload.RecipePath
 	}
+
+	job.ExtractionStageLogKey = payload.StageLogPath
+	job.ExtractionRecipeKey = payload.RecipePath
 
 	if payload.ProvenancePath != "" {
 		if err := s.store.UpdateJobProvenance(ctx, payload.JobID, payload.ProvenancePath); err != nil {
 			return fmt.Errorf("failed to persist provenance path: %w", err)
-		} else {
-			job.ProvenancePath = payload.ProvenancePath
 		}
+
+		job.ProvenancePath = payload.ProvenancePath
 	}
 
 	if payload.ProvenanceArtifactPath != "" {
 		if err := s.store.UpdateJobProvenanceKey(ctx, payload.JobID, payload.ProvenanceArtifactPath); err != nil {
 			return fmt.Errorf("failed to persist provenance key: %w", err)
-		} else {
-			job.ProvenanceKey = payload.ProvenanceArtifactPath
 		}
+
+		job.ProvenanceKey = payload.ProvenanceArtifactPath
 	}
 
 	return nil
