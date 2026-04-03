@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "github.com/mattn/go-sqlite3" // Register the SQLite driver.
+
+	"github.com/mattboback/stageflow/services/platform-api/internal/sqlite"
 )
 
 //go:embed schema.sql
@@ -29,33 +30,16 @@ func NewStore(path string) (*Store, error) {
 		return nil, errors.New("project store path is required")
 	}
 
-	db, err := sql.Open("sqlite3", path)
+	db, err := sqlite.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open project store: %w", err)
 	}
-
-	ctx := context.Background()
-
-	for _, pragma := range []string{
-		"PRAGMA journal_mode=WAL",
-		"PRAGMA busy_timeout=5000",
-		"PRAGMA foreign_keys=ON",
-	} {
-		if _, pErr := db.ExecContext(ctx, pragma); pErr != nil {
-			_ = db.Close()
-
-			return nil, fmt.Errorf("%s: %w", pragma, pErr)
-		}
-	}
-
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
 
 	s := &Store{db: db}
 
 	err = s.initSchema()
 	if err != nil {
-		_ = db.Close()
+		sqlite.Close(db)
 
 		return nil, err
 	}
@@ -64,11 +48,7 @@ func NewStore(path string) (*Store, error) {
 }
 
 func (s *Store) Close() error {
-	if s.db != nil {
-		return s.db.Close()
-	}
-
-	return nil
+	return sqlite.Close(s.db)
 }
 
 func (s *Store) initSchema() error {

@@ -67,7 +67,7 @@ func loadConfig() *Config {
 		ExtractionImage:               config.GetEnv("EXTRACTION_IMAGE", "localhost/stageflow/extractor:latest"),
 		ScannerImage:                  scannerImage,
 		ScannerImageOverride:          scannerImageEnv,
-		APIPort:                       config.GetEnv("API_PORT", "8080"),
+		APIPort:                       config.GetEnv("API_PORT", "8081"),
 		APIToken:                      strings.TrimSpace(config.GetEnv("ORCHESTRATOR_API_TOKEN", "")),
 		PodNetwork:                    config.GetEnv("POD_NETWORK", ""),
 		PodNetnsMode:                  config.GetEnv("POD_NETNS_MODE", "bridge"),

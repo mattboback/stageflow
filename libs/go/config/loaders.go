@@ -36,7 +36,7 @@ type MinIOConfig struct {
 func LoadMinIOConfig() MinIOConfig {
 	publicEndpoint := GetEnv("MINIO_PUBLIC_ENDPOINT", "")
 	if publicEndpoint == "" {
-		publicEndpoint = GetEnv("STAGEFLOW_PUBLIC_DOMAIN", "example.com")
+		publicEndpoint = GetEnv("STAGEFLOW_PUBLIC_DOMAIN", "")
 	}
 
 	accessKey := GetEnv("MINIO_ACCESS_KEY", "")
