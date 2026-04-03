@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -88,8 +89,9 @@ func run() error {
 
 	msgService := messaging.NewService(natsClient)
 	scannerRegistry := loadScannerRegistry(slog.Default(), cfg.ScannerConfigPath)
+
 	if scannerRegistry == nil {
-		return fmt.Errorf("failed to initialize scanner registry")
+		return errors.New("failed to initialize scanner registry")
 	}
 
 	server := api.NewServer(&api.ServerConfig{

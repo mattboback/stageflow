@@ -4,6 +4,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -14,7 +15,7 @@ import (
 // WAL mode, busy_timeout=5000, foreign_keys=ON, and single-connection mode.
 func Open(path string) (*sql.DB, error) {
 	if path == "" {
-		return nil, fmt.Errorf("sqlite: path is required")
+		return nil, errors.New("sqlite: path is required")
 	}
 
 	db, err := sql.Open("sqlite3", path)

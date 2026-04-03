@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/mattboback/stageflow/services/platform-api/internal/sqlite"
 )
@@ -47,14 +46,4 @@ func NewStore(cfg *Config) (*Store, error) {
 // Close shuts down the store.
 func (s *Store) Close() error {
 	return sqlite.Close(s.db)
-}
-
-func closeStatusDB(db *sql.DB) {
-	if db == nil {
-		return
-	}
-
-	if err := db.Close(); err != nil {
-		slog.Error("Failed to close status DB", "error", err)
-	}
 }
