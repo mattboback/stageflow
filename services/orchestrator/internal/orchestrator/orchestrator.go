@@ -171,6 +171,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 			registry, err = scanners.InitializeRegistry(defaultConfig)
 			if err != nil {
 				slog.Error("Failed to initialize default scanner registry", "error", err)
+
 				registry = scanners.NewRegistry(scannerImage)
 			}
 		}
