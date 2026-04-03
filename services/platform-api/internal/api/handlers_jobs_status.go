@@ -113,16 +113,19 @@ func (s *Server) handleJobReport(w http.ResponseWriter, r *http.Request, jobID s
 	if rec.ReportKey == "" {
 		details := "No standalone HTML report artifact is available for this job."
 		suggestion := "Use GET /api/v1/jobs/" + jobID + "/results or open /scan/" + jobID + "/report."
+
 		if rec.ReportJSONKey == "" {
 			details = "No report artifacts have been generated for this job."
 			suggestion = "This job may have failed report generation. Check GET /api/v1/jobs/" + jobID + "."
 		}
+
 		httputil.RespondStructuredError(w, http.StatusNotFound, httputil.ErrorDetail{
 			Code:       httputil.ErrCodeNotFound,
 			Message:    "Report not found",
 			Details:    details,
 			Suggestion: suggestion,
 		})
+
 		return
 	}
 

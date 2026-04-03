@@ -132,6 +132,7 @@ Responsibilities:
 - Submit jobs and scanner selections.
 - Render job progress and report outputs.
 - Subscribe to job SSE stream with reconnect behavior.
+- Build to static assets that are served by the frontend container's Caddy runtime.
 
 Important entry points:
 
@@ -281,6 +282,8 @@ Controls include:
 ### Boundary 4: edge proxy -> public access
 
 Rate limiting, WAF policy, and perimeter controls are deployment concerns at edge/proxy/CDN layers.
+
+For self-hosting, this outer boundary is represented by `infra/caddy/Caddyfile`. It is separate from the frontend container, which also uses Caddy internally to serve the static web build on port `3000`.
 
 ---
 

@@ -69,6 +69,8 @@ just demo
 | `VITE_TAGLINE`                    | no       | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces.                 |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
 
+The frontend container builds the SvelteKit app to static files and serves them with Caddy on port `3000`.
+
 ### AI Navigator (Optional)
 
 | Variable                     | Required                     | Default in `.env.example` | Purpose                                                     |
@@ -83,6 +85,8 @@ just demo
 | Variable      | Required | Default in `.env.example` | Purpose                                                |
 | ------------- | -------- | ------------------------- | ------------------------------------------------------ |
 | `CADDY_EMAIL` | no       | not set                   | Email address used for Let's Encrypt TLS registration. |
+
+This section refers to the optional host-level edge proxy under `infra/caddy/`, not the frontend container's internal Caddy runtime.
 
 ### Advanced infrastructure overrides
 

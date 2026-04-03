@@ -25,6 +25,7 @@ func run(args []string, getenv getenvFunc, client *http.Client, stdout, stderr i
 	if apiURL == "" {
 		apiURL = defaultAPIURL
 	}
+
 	apiToken := getenv("ORCHESTRATOR_API_TOKEN")
 
 	ctx := context.Background()

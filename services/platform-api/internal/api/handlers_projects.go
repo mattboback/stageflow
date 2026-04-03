@@ -441,6 +441,7 @@ func handleProjectRequestDecodeError(w http.ResponseWriter, err error) {
 			http.StatusRequestEntityTooLarge,
 			httputil.NewPayloadTooLargeError(strconv.Itoa(maxProjectRequestBodySize)),
 		)
+
 		return
 	}
 
@@ -451,6 +452,7 @@ func handleProjectRequestDecodeError(w http.ResponseWriter, err error) {
 			http.StatusRequestEntityTooLarge,
 			httputil.NewPayloadTooLargeError(strconv.Itoa(maxProjectRequestBodySize)),
 		)
+
 		return
 	}
 

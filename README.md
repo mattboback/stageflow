@@ -33,7 +33,7 @@ Client/UI -> Platform API -> NATS JetStream -> Orchestrator -> Podman job pod
 - `services/platform-api` — intake validation, SSRF guardrails, SSE streaming, scan/report APIs
 - `services/orchestrator` — job state machine, Podman pod lifecycle, report aggregation
 - `services/scanner-runner` — scanner plugin runtime, Playwright-based browser execution
-- `clients/web` — SvelteKit web app with live status, report views, and submission workflows
+- `clients/web` — SvelteKit web app, built to static assets and served by Caddy in the frontend container
 - `clients/cli` — Go CLI with streaming progress, Project Mode, and structured JSON output
 
 For the full system design, see [docs/architecture/system.md](docs/architecture/system.md).
@@ -161,6 +161,7 @@ just demo
 - Start from `.env.example`; do not commit `.env`, `.env.staging`, or any real credentials.
 - Replace every `change-me` value before using a public domain or shared environment.
 - Set `STAGEFLOW_PUBLIC_DOMAIN`, `PLATFORM_API_CORS_ALLOW_ORIGINS`, `GF_SERVER_ROOT_URL`, and the frontend `VITE_*` URLs for your deployment.
+- The frontend container serves the built SvelteKit app with Caddy on port `3000`; `infra/caddy/Caddyfile` is the separate optional edge proxy for public domains and TLS.
 - The repository includes `stageflow.org` references for the hosted demo, docs, and regression fixtures; treat them as project examples, not values to reuse unchanged.
 
 ### Manual bootstrap

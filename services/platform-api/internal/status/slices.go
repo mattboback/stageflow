@@ -8,5 +8,6 @@ func CloneStrings(values []string) []string {
 
 	cloned := make([]string, len(values))
 	copy(cloned, values)
+
 	return cloned
 }

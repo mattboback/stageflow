@@ -743,6 +743,7 @@ func TestJobReportReturnsNotFoundWhenHTMLMissing(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&parsed); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
+
 	if parsed.Error.Code != httputil.ErrCodeNotFound {
 		t.Fatalf("expected NOT_FOUND code, got %q", parsed.Error.Code)
 	}
