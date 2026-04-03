@@ -35,23 +35,26 @@ func TestPipelineBeginSeedsImmediateStatus(t *testing.T) {
 	pipeline := New(&Config{})
 	now := time.Now().UTC()
 
+	payload := &events.JobCreatedPayload{
+		JobID:     "job-begin",
+		InputType: models.JobInputTypeURLs,
+		URLs:      []string{"https://example.com", "https://example.com/about"},
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+		},
+	}
+
 	rec, err := pipeline.Begin(context.Background(), BeginJob{
 		ObservedAt: now,
-		Payload: &events.JobCreatedPayload{
-			JobID:     "job-begin",
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com", "https://example.com/about"},
-			Config: models.JobConfig{
-				Modules: []string{"axe"},
-			},
-		},
+		Payload:    payload,
 	})
 	if err != nil {
 		t.Fatalf("Begin() error = %v", err)
 	}
 
-	if rec.State != models.JobStateScanning {
-		t.Fatalf("State = %q, want %q", rec.State, models.JobStateScanning)
+	// Begin seeds a PENDING record (state advancement is deferred to Apply).
+	if rec.State != models.JobStatePending {
+		t.Fatalf("State = %q, want %q", rec.State, models.JobStatePending)
 	}
 
 	if rec.TotalPages != 2 || rec.CurrentPage != 0 {
@@ -60,6 +63,20 @@ func TestPipelineBeginSeedsImmediateStatus(t *testing.T) {
 
 	if len(rec.ExpectedScanners) != 1 || rec.ExpectedScanners[0] != "axe" {
 		t.Fatalf("unexpected scanners: %+v", rec.ExpectedScanners)
+	}
+
+	// Apply with SignalJobCreated advances the state to SCANNING.
+	applied, err := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalJobCreated,
+		ObservedAt: now,
+		JobCreated: payload,
+	})
+	if err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+
+	if applied.State != models.JobStateScanning {
+		t.Fatalf("State after Apply = %q, want %q", applied.State, models.JobStateScanning)
 	}
 
 	loaded, err := pipeline.Current(context.Background(), "job-begin")
@@ -95,6 +112,33 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 		t.Fatalf("Watch() error = %v", err)
 	}
 	defer sub.Close()
+
+	// Apply with SignalJobCreated must publish to watchers (advances PENDING → SCANNING).
+	if _, applyErr := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalJobCreated,
+		ObservedAt: now,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     "job-watch",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
+		},
+	}); applyErr != nil {
+		t.Fatalf("Apply(JobCreated) error = %v", applyErr)
+	}
+
+	select {
+	case change := <-sub.Updates():
+		if change.Signal.Kind != SignalJobCreated {
+			t.Fatalf("Signal.Kind = %q, want %q", change.Signal.Kind, SignalJobCreated)
+		}
+
+		if change.Snapshot.State != models.JobStateScanning {
+			t.Fatalf("State = %q, want %q", change.Snapshot.State, models.JobStateScanning)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for watch update from job.created")
+	}
 
 	if _, applyErr := pipeline.Apply(context.Background(), Signal{
 		Kind:       SignalScanCompleted,
@@ -211,6 +255,60 @@ func TestPipelineCurrentFallsBackToReader(t *testing.T) {
 
 	if rec.State != models.JobStateDone {
 		t.Fatalf("State = %q, want %q", rec.State, models.JobStateDone)
+	}
+}
+
+func TestPipelineCurrentPrefersCacheOverReader(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC()
+	pipeline := New(&Config{
+		CurrentReader: &fakeReader{
+			records: map[string]*status.JobRecord{
+				"job-cache-wins": {
+					JobID:     "job-cache-wins",
+					State:     models.JobStatePending, // Orchestrator still shows PENDING
+					CreatedAt: now.Add(-time.Minute),
+					UpdatedAt: now,
+				},
+			},
+		},
+	})
+
+	// Seed cache via Begin + Apply (simulates NATS consumer running first).
+	if _, err := pipeline.Begin(context.Background(), BeginJob{
+		ObservedAt: now,
+		Payload: &events.JobCreatedPayload{
+			JobID:     "job-cache-wins",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
+		},
+	}); err != nil {
+		t.Fatalf("Begin() error = %v", err)
+	}
+
+	if _, err := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalJobCreated,
+		ObservedAt: now,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     "job-cache-wins",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
+		},
+	}); err != nil {
+		t.Fatalf("Apply() error = %v", err)
+	}
+
+	// Current must return the cache's SCANNING state, not the reader's PENDING.
+	rec, err := pipeline.Current(context.Background(), "job-cache-wins")
+	if err != nil {
+		t.Fatalf("Current() error = %v", err)
+	}
+
+	if rec.State != models.JobStateScanning {
+		t.Fatalf("State = %q, want %q (cache should take priority over reader)", rec.State, models.JobStateScanning)
 	}
 }
 

@@ -12,6 +12,9 @@ import (
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
+// beginSnapshot seeds the cache with a PENDING record. It does NOT advance the
+// state; that is the job of Apply + applyJobCreated so the broker detects a
+// change and publishes to SSE watchers.
 func beginSnapshot(cmd BeginJob) (*status.JobRecord, error) {
 	if cmd.Payload == nil {
 		return nil, errors.New("jobstatus: begin payload is required")
@@ -30,11 +33,7 @@ func beginSnapshot(cmd BeginJob) (*status.JobRecord, error) {
 		CompletedScanners: nil,
 	}
 
-	switch payload.InputType {
-	case models.JobInputTypeZip:
-		rec.State = models.JobStateExtracting
-	case models.JobInputTypeURLs:
-		rec.State = models.JobStateScanning
+	if payload.InputType == models.JobInputTypeURLs {
 		rec.TotalPages = len(payload.URLs)
 		rec.CurrentPage = 0
 	}

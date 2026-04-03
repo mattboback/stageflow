@@ -79,7 +79,17 @@ func (p *Pipeline) Apply(ctx context.Context, signal Signal) (*status.JobRecord,
 	return cloneJobRecord(next), nil
 }
 
+// Current returns the most recent projection for a job. It checks the
+// in-process cache first (which tracks real-time NATS event projections),
+// falling back to the currentReader (orchestrator HTTP API) for cold-start
+// or cache-miss scenarios. This ordering is consistent with loadBaseSnapshot
+// and ensures SSE initial status reflects the latest projected state rather
+// than a potentially stale orchestrator snapshot.
 func (p *Pipeline) Current(ctx context.Context, jobID string) (*status.JobRecord, error) {
+	if rec, ok := p.cache.get(jobID); ok {
+		return rec, nil
+	}
+
 	if p.currentReader != nil {
 		rec, err := p.currentReader.GetJob(ctx, jobID)
 		if err == nil {
@@ -89,10 +99,6 @@ func (p *Pipeline) Current(ctx context.Context, jobID string) (*status.JobRecord
 		if !errors.Is(err, status.ErrJobNotFound) {
 			return nil, err
 		}
-	}
-
-	if rec, ok := p.cache.get(jobID); ok {
-		return rec, nil
 	}
 
 	return nil, status.ErrJobNotFound
