@@ -36,9 +36,12 @@ jobs:
           (cd services/scanner-runner && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile)
 
       - name: Prepare environment
+        env:
+          ORCHESTRATOR_API_TOKEN: ${{ secrets.GOLDEN_REGRESSION_TOKEN }}
         run: |
           cp .env.example .env
-          echo "ORCHESTRATOR_API_TOKEN=golden-regression-token" >> .env
+          test -n "$ORCHESTRATOR_API_TOKEN"
+          printf 'ORCHESTRATOR_API_TOKEN=%s\n' "$ORCHESTRATOR_API_TOKEN" >> .env
 
       - name: Build stageflow CLI
         run: |
@@ -73,4 +76,3 @@ jobs:
             -f infra/compose/podman-compose.yml \
             -f infra/compose/podman-compose.local.yml \
             --env-file .env down
-

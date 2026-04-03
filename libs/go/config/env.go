@@ -2,8 +2,8 @@
 package config
 
 import (
-	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -19,8 +19,7 @@ func GetEnv(key, defaultValue string) string {
 // GetEnvInt parses an integer env var and falls back on parse failures to keep startup resilient.
 func GetEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
-		var i int
-		if _, err := fmt.Sscanf(value, "%d", &i); err == nil {
+		if i, err := strconv.Atoi(value); err == nil {
 			return i
 		}
 	}

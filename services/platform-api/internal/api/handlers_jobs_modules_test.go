@@ -282,7 +282,12 @@ func newTestServerForModules(t *testing.T) *Server {
 		}
 	})
 
-	registry, err := scannerregistry.InitializeRegistry(scannerregistry.DefaultConfig())
+	defaultConfig, err := scannerregistry.DefaultConfig()
+	if err != nil {
+		t.Fatalf("load default config: %v", err)
+	}
+
+	registry, err := scannerregistry.InitializeRegistry(defaultConfig)
 	if err != nil {
 		t.Fatalf("init scanner registry: %v", err)
 	}

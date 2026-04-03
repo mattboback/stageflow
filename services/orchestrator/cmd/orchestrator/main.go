@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -35,7 +36,12 @@ func run() int {
 		return 1
 	}
 
-	scannerRegistry := loadScannerRegistry(logger, cfg.ScannerImageOverride)
+	scannerRegistry, err := loadScannerRegistry(logger, cfg.ScannerImageOverride)
+	if err != nil {
+		logger.Error("Failed to load scanner registry", "error", err)
+
+		return 1
+	}
 
 	ctx := context.Background()
 	backgroundCtx, stopBackground := context.WithCancel(context.Background())
@@ -184,10 +190,13 @@ func run() int {
 // 1. SCANNER_CONFIG_PATH environment variable
 // 2. ./config/scanners.yaml (relative to working directory)
 // 3. Default built-in configuration.
-func loadScannerRegistry(logger *slog.Logger, defaultImage string) *scanners.Registry {
+func loadScannerRegistry(logger *slog.Logger, defaultImage string) (*scanners.Registry, error) {
 	configPath := config.GetEnv("SCANNER_CONFIG_PATH", "")
 
-	registryConfig := scanners.DefaultConfig()
+	registryConfig, cfgErr := scanners.DefaultConfig()
+	if cfgErr != nil {
+		return nil, fmt.Errorf("load default scanner config: %w", cfgErr)
+	}
 
 	var scannerOverrides *scanners.Overrides
 
@@ -229,14 +238,12 @@ func loadScannerRegistry(logger *slog.Logger, defaultImage string) *scanners.Reg
 
 	registry, err := scanners.InitializeRegistry(registryConfig)
 	if err != nil {
-		logger.Error("Failed to initialize scanner registry", "error", err)
-		// Create minimal registry as fallback
-		registry = scanners.NewRegistry(defaultImage)
+		return nil, fmt.Errorf("initialize scanner registry: %w", err)
 	}
 
 	logger.Info("Scanner registry initialized",
 		"scanner_count", registry.Count(),
 		"enabled_count", registry.CountEnabled())
 
-	return registry
+	return registry, nil
 }

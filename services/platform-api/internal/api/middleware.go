@@ -30,6 +30,7 @@ const (
 	defaultRateLimitRequestsPerMinute = 120
 	rateLimitWindow                   = time.Minute
 	unknownRateLimitKey               = "unknown"
+	rateLimiterMaxEntries             = 10000
 )
 
 type rateWindow struct {
@@ -54,8 +55,14 @@ func (l *inMemoryRateLimiter) allow(key string, now time.Time) (bool, int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	l.evictStaleLocked(now)
+
 	window := l.windows[key]
 	if window.start.IsZero() || now.Sub(window.start) >= rateLimitWindow {
+		if len(l.windows) >= rateLimiterMaxEntries {
+			return true, 0
+		}
+
 		window = rateWindow{start: now, count: 0}
 	}
 
@@ -74,6 +81,14 @@ func (l *inMemoryRateLimiter) allow(key string, now time.Time) (bool, int) {
 	l.windows[key] = window
 
 	return true, 0
+}
+
+func (l *inMemoryRateLimiter) evictStaleLocked(now time.Time) {
+	for key, window := range l.windows {
+		if now.Sub(window.start) >= rateLimitWindow {
+			delete(l.windows, key)
+		}
+	}
 }
 
 var apiRateLimiter = newInMemoryRateLimiter(defaultRateLimitRequestsPerMinute)

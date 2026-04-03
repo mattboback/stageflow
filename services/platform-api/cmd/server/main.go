@@ -88,6 +88,9 @@ func run() error {
 
 	msgService := messaging.NewService(natsClient)
 	scannerRegistry := loadScannerRegistry(slog.Default(), cfg.ScannerConfigPath)
+	if scannerRegistry == nil {
+		return fmt.Errorf("failed to initialize scanner registry")
+	}
 
 	server := api.NewServer(&api.ServerConfig{
 		Port:                cfg.Port,
@@ -151,7 +154,11 @@ func newHTTPServer(port int, handler http.Handler) *http.Server {
 }
 
 func loadScannerRegistry(logger *slog.Logger, configPath string) *scannerregistry.Registry {
-	registryConfig := scannerregistry.DefaultConfig()
+	registryConfig, err := scannerregistry.DefaultConfig()
+	if err != nil {
+		logger.Error("Failed to load default scanner config", "error", err)
+		return nil
+	}
 
 	scannerOverrides := loadScannerOverrides(logger, configPath)
 
@@ -162,14 +169,8 @@ func loadScannerRegistry(logger *slog.Logger, configPath string) *scannerregistr
 
 	registry, err := scannerregistry.InitializeRegistry(registryConfig)
 	if err != nil {
-		logger.Error("Failed to initialize scanner registry; falling back to defaults", "error", err)
-
-		registry, err = scannerregistry.InitializeRegistry(scannerregistry.DefaultConfig())
-		if err != nil {
-			logger.Error("Failed to initialize default scanner registry", "error", err)
-
-			return nil
-		}
+		logger.Error("Failed to initialize scanner registry", "error", err)
+		return nil
 	}
 
 	if registry != nil {

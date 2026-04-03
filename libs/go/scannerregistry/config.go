@@ -45,7 +45,8 @@ type RequirementsOverride struct {
 
 // LoadOverrides loads scanner overrides from a YAML file.
 func LoadOverrides(configPath string) (*Overrides, error) {
-	data, err := os.ReadFile(configPath)
+	cleanPath := filepath.Clean(configPath)
+	data, err := os.ReadFile(cleanPath) // #nosec G304 -- path comes from explicit user/service config, cleaned before read
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
@@ -200,15 +201,10 @@ func InitializeRegistry(config *Config) (*Registry, error) {
 }
 
 // DefaultConfig returns the built-in scanner configuration.
-// It returns an empty config if builtin manifests cannot be loaded.
-func DefaultConfig() *Config {
+func DefaultConfig() (*Config, error) {
 	manifests, err := scannercatalog.BuiltinManifests()
 	if err != nil {
-		// Return empty config rather than panic; caller handles nil/empty scanners.
-		return &Config{
-			DefaultImage: "localhost/stageflow/scanner-runner:latest",
-			Scanners:     make(map[string]*Definition),
-		}
+		return nil, fmt.Errorf("load builtin manifests: %w", err)
 	}
 
 	scanners := make(map[string]*Definition, len(manifests))
@@ -257,5 +253,5 @@ func DefaultConfig() *Config {
 	return &Config{
 		DefaultImage: "localhost/stageflow/scanner-runner:latest",
 		Scanners:     scanners,
-	}
+	}, nil
 }

@@ -295,7 +295,7 @@ func (c *MinIOClient) UploadFile(ctx context.Context, bucket, path string, reade
 		return fmt.Errorf("failed to upload file to %s/%s: %w", bucket, path, err)
 	}
 
-	slog.Info("Uploaded file to MinIO", "bucket", bucket, "path", path, "bytes", info.Size)
+	slog.Debug("Uploaded file to MinIO", "bucket", bucket, "path", path, "bytes", info.Size)
 
 	return nil
 }
@@ -304,7 +304,7 @@ func (c *MinIOClient) UploadFile(ctx context.Context, bucket, path string, reade
 // If UseProxyURLs is set, returns a simple public URL for Caddy proxy instead of a presigned URL.
 func (c *MinIOClient) GetPresignedURL(ctx context.Context, bucket, path string, expiry time.Duration) (string, error) {
 	if c.config.UseProxyURLs {
-		return c.buildPublicProxyURL(bucket, path), nil
+		return c.buildPublicProxyURL(bucket, path)
 	}
 
 	// Use cached public client if available (created once in NewMinIOClient)
@@ -323,7 +323,7 @@ func (c *MinIOClient) GetPresignedURL(ctx context.Context, bucket, path string, 
 
 // buildPublicProxyURL builds a simple public URL for Caddy proxy access.
 // Caddy is configured to proxy /{bucket}/* to MinIO.
-func (c *MinIOClient) buildPublicProxyURL(bucket, path string) string {
+func (c *MinIOClient) buildPublicProxyURL(bucket, path string) (string, error) {
 	scheme := "http://"
 	if c.config.PublicUseSSL {
 		scheme = "https://"
@@ -331,10 +331,10 @@ func (c *MinIOClient) buildPublicProxyURL(bucket, path string) string {
 
 	endpoint := c.config.PublicEndpoint
 	if endpoint == "" {
-		endpoint = c.config.Endpoint
+		return "", errors.New("public endpoint is required when MINIO_USE_PROXY_URLS is enabled")
 	}
 
-	return fmt.Sprintf("%s%s/%s/%s", scheme, endpoint, bucket, path)
+	return fmt.Sprintf("%s%s/%s/%s", scheme, endpoint, bucket, path), nil
 }
 
 // DownloadFile retrieves an object reader from MinIO.
@@ -362,7 +362,7 @@ func (c *MinIOClient) DeleteFile(ctx context.Context, bucket, path string) error
 		return fmt.Errorf("failed to delete file %s/%s: %w", bucket, path, err)
 	}
 
-	slog.Info("Deleted file from MinIO", "bucket", bucket, "path", path)
+	slog.Debug("Deleted file from MinIO", "bucket", bucket, "path", path)
 
 	return nil
 }

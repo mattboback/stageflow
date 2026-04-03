@@ -11,6 +11,7 @@ func TestBuildPublicProxyURL(t *testing.T) {
 		bucket   string
 		path     string
 		expected string
+		wantErr  string
 	}{
 		{
 			name: "HTTPS with public endpoint",
@@ -37,16 +38,16 @@ func TestBuildPublicProxyURL(t *testing.T) {
 			expected: "http://localhost:8080/scanner-staging/uploads/file.zip",
 		},
 		{
-			name: "Falls back to internal endpoint when no public endpoint",
+			name: "Fails when no public endpoint is configured",
 			config: &MinIOConfig{
 				Endpoint:       "minio:9000",
 				PublicEndpoint: "",
 				PublicUseSSL:   false,
 				UseProxyURLs:   true,
 			},
-			bucket:   "scanner-artifacts",
-			path:     "test/file.json",
-			expected: "http://minio:9000/scanner-artifacts/test/file.json",
+			bucket:  "scanner-artifacts",
+			path:    "test/file.json",
+			wantErr: "public endpoint is required when MINIO_USE_PROXY_URLS is enabled",
 		},
 	}
 
@@ -54,7 +55,19 @@ func TestBuildPublicProxyURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := &MinIOClient{config: tt.config}
 
-			result := client.buildPublicProxyURL(tt.bucket, tt.path)
+			result, err := client.buildPublicProxyURL(tt.bucket, tt.path)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Fatalf("expected error %q, got %v", tt.wantErr, err)
+				}
+
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("buildPublicProxyURL() error: %v", err)
+			}
+
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
 			}

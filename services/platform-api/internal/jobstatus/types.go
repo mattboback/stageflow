@@ -62,6 +62,8 @@ type Change struct {
 	ObservedAt time.Time
 }
 
+// WatchOptions configures pipeline watch behavior. Reserved for future use
+// (e.g., replay-from, filter-by-state). Currently unused; pass empty struct.
 type WatchOptions struct{}
 
 type Subscription interface {
