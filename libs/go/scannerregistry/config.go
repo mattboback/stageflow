@@ -46,7 +46,8 @@ type RequirementsOverride struct {
 // LoadOverrides loads scanner overrides from a YAML file.
 func LoadOverrides(configPath string) (*Overrides, error) {
 	cleanPath := filepath.Clean(configPath)
-	data, err := os.ReadFile(cleanPath) // #nosec G304 -- path comes from explicit user/service config, cleaned before read
+	// #nosec G304 -- config path is user-supplied; we clean it before reading.
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
