@@ -265,6 +265,7 @@ func TestLoadScannerRegistry_FallbackToDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load default config: %v", err)
 	}
+
 	if registry.Count() != len(defaultConfig.Scanners) {
 		t.Errorf("expected %d scanners from defaults, got %d", len(defaultConfig.Scanners), registry.Count())
 	}
