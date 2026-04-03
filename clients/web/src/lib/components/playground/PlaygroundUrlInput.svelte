@@ -87,7 +87,7 @@
 			</span>
 		</div>
 	{:else if wasAutoNormalized}
-		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-blue-700">
+		<div class="animate-fade-in text-ink-muted mt-2 flex items-start gap-1.5 text-xs">
 			<Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>URLs were automatically formatted (e.g. adding https://).</span>
 		</div>

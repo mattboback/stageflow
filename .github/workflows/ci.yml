@@ -83,24 +83,24 @@ jobs:
 
       - name: Go build
         run: |
-          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
+          while IFS= read -r dir; do
             echo "==> Building $dir"
             (cd "$dir" && go build ./...)
-          done
+          done < <(bash devtools/scripts/go/go-work-dirs.sh)
 
       - name: Go lint
         run: |
-          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
+          while IFS= read -r dir; do
             echo "==> Linting $dir"
             (cd "$dir" && golangci-lint run)
-          done
+          done < <(bash devtools/scripts/go/go-work-dirs.sh)
 
       - name: Go test
         run: |
-          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
+          while IFS= read -r dir; do
             echo "==> Testing $dir"
             (cd "$dir" && go test -race ./...)
-          done
+          done < <(bash devtools/scripts/go/go-work-dirs.sh)
 
       - name: CLI docs stay generated
         run: |
@@ -112,10 +112,10 @@ jobs:
 
       - name: Go vulncheck
         run: |
-          awk '/^[[:space:]]+\\.\\//{gsub(/^[[:space:]]+/, ""); print}' go.work | while IFS= read -r dir; do
+          while IFS= read -r dir; do
             echo "==> Vulncheck $dir"
             (cd "$dir" && govulncheck ./...)
-          done
+          done < <(bash devtools/scripts/go/go-work-dirs.sh)
 
   clients_web:
     name: Web App (lint, typecheck, test)
@@ -175,7 +175,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: clients/web-storybook-artifacts
+          name: clients-web-storybook-artifacts
           path: |
             clients/web/junit.xml
             clients/web/test-results
@@ -204,6 +204,10 @@ jobs:
 
       - name: Audit (high)
         run: bun audit --audit-level=high
+        working-directory: services/scanner-runner
+
+      - name: Install Playwright browser
+        run: bunx playwright install --with-deps chromium
         working-directory: services/scanner-runner
 
       - name: CI
