@@ -75,7 +75,7 @@ export class NatsEventPublisher implements ScanEventPublisher {
 			servers: url,
 			name: `scanner-${this.scannerName}-${this.jobId}`,
 			reconnect: true,
-			maxReconnectAttempts: -1,
+			maxReconnectAttempts: 20,
 			reconnectTimeWait: 1000,
 			pingInterval: 20_000,
 			maxPingOut: 5

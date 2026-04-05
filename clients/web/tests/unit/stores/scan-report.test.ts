@@ -103,4 +103,74 @@ describe('Scan Report Store', () => {
 
 		store.cleanup();
 	});
+
+	it('refreshes completed job artifacts after the report becomes available', async () => {
+		const store = createScanReportStore('job-123');
+
+		fetchMock.mockImplementation((input) => {
+			const url = String(input);
+
+			if (url === '/api/v1/jobs/job-123') {
+				const callCount = fetchMock.mock.calls.filter(([requested]) => requested === url).length;
+				if (callCount === 1) {
+					return Promise.resolve(
+						jsonResponse({
+							state: 'DONE',
+							artifacts: {
+								report_json: '/scanner-artifacts/job-123/report.json'
+							}
+						})
+					);
+				}
+
+				return Promise.resolve(
+					jsonResponse({
+						state: 'DONE',
+						artifacts: {
+							report_json: '/scanner-artifacts/job-123/report.json',
+							screenshots: [
+								{
+									kind: 'page_overview',
+									artifact_id: 'page-overview:axe:url-1',
+									scanner_id: 'axe',
+									page_id: 'url-1',
+									url: '/scanner-artifacts/job-123/axe/url-1/screenshots/page-overview.webp'
+								}
+							]
+						}
+					})
+				);
+			}
+
+			if (url === '/api/v1/jobs/job-123/results') {
+				return Promise.resolve(
+					jsonResponse({
+						version: '2.0.0',
+						meta: { jobId: 'job-123' },
+						issues: [],
+						pages: [],
+						scanners: [],
+						summary: { totalIssues: 0 }
+					})
+				);
+			}
+
+			return Promise.reject(new Error(`unexpected fetch: ${url}`));
+		});
+
+		store.start();
+		await vi.waitFor(() => {
+			expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([
+				'/api/v1/jobs/job-123',
+				'/api/v1/jobs/job-123/results',
+				'/api/v1/jobs/job-123'
+			]);
+			expect(store.status).toBe('complete');
+			expect(store.report?.meta.jobId).toBe('job-123');
+			expect(store.screenshots).toHaveLength(1);
+			expect(store.screenshots[0]?.kind).toBe('page_overview');
+		});
+
+		store.cleanup();
+	});
 });

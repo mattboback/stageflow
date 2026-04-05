@@ -116,7 +116,9 @@ export function createScanReportStore(id: string) {
 		screenshots = data.artifacts?.screenshots ?? [];
 		if (status === 'complete') {
 			stopPolling();
-			void fetchReport();
+			if (!report) {
+				void fetchReport();
+			}
 		} else if (status === 'failed') {
 			stopPolling();
 		} else {
@@ -185,6 +187,13 @@ export function createScanReportStore(id: string) {
 			report = data;
 			error = null;
 			clearReportRetry();
+
+			// Completion artifacts can lag slightly behind the aggregated report redirect.
+			// Refresh the final job payload once the report is ready so page screenshots
+			// and overlay metadata render without a manual refresh.
+			if (status === 'complete' && screenshots.length === 0) {
+				await fetchStatus();
+			}
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to load report';
 			console.error('[scan-report] Failed to fetch aggregated report:', {
