@@ -6,6 +6,7 @@
 2. Run `just setup`.
 3. Run `just images`.
 4. Run `just dev up` and `just dev init`.
+5. Run `pre-commit install --hook-type pre-commit --hook-type commit-msg` if you want the repo hooks locally.
 
 ## Quality Gates
 

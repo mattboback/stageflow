@@ -1,18 +1,16 @@
 import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
-import { createSSEStream } from '$lib/api/sse';
-import { buildApiUrl } from '$lib/api/utils';
-
 import type { SSEUpdate } from './scan-status/types';
 
 import { scanHistoryStore } from './scan-history.svelte';
-import { MAX_LOG_LINES } from './scan-status/constants';
-import { applySseUpdate } from './scan-status/event-update';
-import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
 import {
-	applyScannerCompletionUpdate,
-	normalizeScannerProgress
-} from './scan-status/scanner-progress';
+	addLifecycleLog,
+	applyStatusData,
+	applyStatusUpdate,
+	createScanJobStream,
+	fetchScanJobStatus
+} from './scan-status/job-stream';
+import { MAX_LOG_LINES } from './scan-status/constants';
 
 export function createScanStatusStore(id: string) {
 	let status = $state<ScanStatus>('loading');
@@ -29,6 +27,43 @@ export function createScanStatusStore(id: string) {
 		logs = [...logs, msg].slice(-MAX_LOG_LINES);
 	};
 
+	const controller = {
+		getJob: () => result,
+		setJob: (job: ScanResult) => {
+			result = job;
+		},
+		setStatus: (nextStatus: ScanStatus) => {
+			status = nextStatus;
+		},
+		addLog,
+		fetchErrorPrefix: 'scan-status',
+		fallbackFetchErrorMessage: 'Network error',
+		initialFetchErrorStatus: 'error' as const,
+		onStatusData: (_data: ScanResult, nextStatus: ScanStatus, normalizedState: string) => {
+			addLifecycleLog(
+				addLog,
+				normalizedState,
+				{
+					EXTRACTING: 'Verifying archive integrity...',
+					SCANNING: 'Starting scanner execution...',
+					COMPLETING: 'Finalizing reports and uploading artifacts...'
+				},
+				normalizedState !== 'SCANNING' || result?.progress?.current_page === 0
+			);
+
+			if (['complete', 'failed'].includes(nextStatus) && !statusUpdated) {
+				statusUpdated = true;
+				scanHistoryStore.updateStatus(id, nextStatus === 'complete' ? 'complete' : 'failed');
+				cleanup();
+			}
+		},
+		onUpdate: (update: SSEUpdate) => {
+			if (update.type === 'complete' || update.type === 'failed') {
+				void fetchStatus();
+			}
+		}
+	};
+
 	const cleanup = () => {
 		if (elapsedInterval) {
 			clearInterval(elapsedInterval);
@@ -40,102 +75,27 @@ export function createScanStatusStore(id: string) {
 		}
 	};
 
-	const handleStatusData = (data: ScanResult): boolean => {
-		const normalizedState = (data.state || '').toUpperCase();
-		const logMsg = getLogMessage(normalizedState, data);
-		if (logMsg) {
-			addLog(logMsg);
-		}
-
-		if (normalizedState === 'EXTRACTING') {
-			addLog('Verifying archive integrity...');
-		} else if (normalizedState === 'SCANNING' && data.progress?.current_page === 0) {
-			addLog('Starting scanner execution...');
-		} else if (normalizedState === 'COMPLETING') {
-			addLog('Finalizing reports and uploading artifacts...');
-		}
-
-		result = normalizeScannerProgress(data);
-		const newStatus = normalizeStatus(data.state);
-		status = newStatus;
-
-		// Update history if done or failed (only once)
-		if (['complete', 'failed'].includes(newStatus) && !statusUpdated) {
-			statusUpdated = true;
-			scanHistoryStore.updateStatus(id, newStatus === 'complete' ? 'complete' : 'failed');
-			cleanup();
-			return true;
-		}
-		return false;
-	};
-
-	const handleSSEUpdate = (update: SSEUpdate) => {
-		const normalizedState = (update.state || '').toUpperCase();
-		const logMsg = getLogMessage(normalizedState, update);
-		if (logMsg) {
-			addLog(logMsg);
-		}
-
-		// Update result with progress info
-		if (result) {
-			result = applyScannerCompletionUpdate(applySseUpdate(result, update), update);
-		}
-
-		const newStatus = normalizeStatus(update.state);
-		status = newStatus;
-
-		// If complete or failed, fetch full status for artifacts
-		if (update.type === 'complete' || update.type === 'failed') {
-			void fetchStatus();
-		}
-	};
-
 	const fetchStatus = async () => {
-		try {
-			const res = await fetch(buildApiUrl(`/api/v1/jobs/${id}`));
-			if (!res.ok) {
-				throw new Error(res.status === 404 ? 'Job not found' : 'Network error');
-			}
-			const data = (await res.json()) as ScanResult;
-			handleStatusData(data);
-		} catch (err) {
-			const errorMessage = err instanceof Error ? err.message : String(err);
-			console.error('[scan-status] Failed to fetch job status:', {
-				jobId: id,
-				error: err
-			});
-			addLog(`ERROR: ${errorMessage}. Refresh to retry.`);
-			if (status === 'loading') {
-				status = 'error';
-			}
-		}
+		await fetchScanJobStatus(id, controller);
 	};
 
 	const startSSE = () => {
-		sseStream = createSSEStream<ScanResult, SSEUpdate>(
-			id,
-			{
-				onStatus: handleStatusData,
-				onUpdate: handleSSEUpdate,
-				onDone: () => {
-					// Don't reconnect - this is a terminal stream closure.
-					sseStream = null;
-				},
-				onError: (err) => {
-					if (err.parseError) {
-						status = 'error';
-						cleanup();
-					} else if (err.terminal) {
-						cleanup();
-						void fetchStatus();
-					}
-				}
+		sseStream = createScanJobStream(controller, {
+			jobId: id,
+			sourceName: 'scan-status',
+			onDone: () => {
+				sseStream = null;
 			},
-			{
-				sourceName: 'scan-status',
-				onLog: addLog
+			onError: (err) => {
+				if (err.parseError) {
+					status = 'error';
+					cleanup();
+				} else if (err.terminal) {
+					cleanup();
+					void fetchStatus();
+				}
 			}
-		);
+		});
 	};
 
 	const start = () => {

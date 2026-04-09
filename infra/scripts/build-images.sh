@@ -7,6 +7,7 @@ cd "$REPO_ROOT"
 PODMAN="${PODMAN:-podman}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
 PODMAN_BUILD_NETWORK="${PODMAN_BUILD_NETWORK:-host}"
+PODMAN_BUILD_FORMAT="${PODMAN_BUILD_FORMAT:-docker}"
 
 if [[ ! -f "$REPO_ROOT/justfile" ]]; then
   echo "[images] repo root resolution failed: expected $REPO_ROOT/justfile" >&2
@@ -28,7 +29,7 @@ build() {
   shift 4
 
   echo "[images] -> $label ($dockerfile)"
-  "$PODMAN" build --network "$PODMAN_BUILD_NETWORK" -t "$primary_tag" -f "$dockerfile" "$REPO_ROOT" "$@"
+  "$PODMAN" build --format "$PODMAN_BUILD_FORMAT" --network "$PODMAN_BUILD_NETWORK" -t "$primary_tag" -f "$dockerfile" "$REPO_ROOT" "$@"
   "$PODMAN" tag "$primary_tag" "$compat_tag"
 }
 
@@ -50,6 +51,7 @@ build archive-extractor localhost/stageflow/extractor:latest stageflow/extractor
 echo "[images] -> scanner-runner (services/scanner-runner/Dockerfile)"
 echo "[images]    first-time builds download Playwright Chromium and take the longest"
 "$PODMAN" build \
+  --format "$PODMAN_BUILD_FORMAT" \
   --network "$PODMAN_BUILD_NETWORK" \
   --ignorefile services/scanner-runner/.dockerignore \
   -t localhost/stageflow/scanner-runner:latest \

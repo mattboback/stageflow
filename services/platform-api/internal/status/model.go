@@ -51,8 +51,8 @@ func (r *JobRecord) ToModel() *models.JobStatus {
 		ErrorDetails:      r.LastErrorDetails,
 		LastStage:         r.LastStage,
 		TotalViolations:   r.TotalViolations,
-		ExpectedScanners:  cloneStringSlice(r.ExpectedScanners),
-		CompletedScanners: cloneStringSlice(r.CompletedScanners),
+		ExpectedScanners:  CloneStrings(r.ExpectedScanners),
+		CompletedScanners: CloneStrings(r.CompletedScanners),
 		RemainingScanners: remainingScanners(r.ExpectedScanners, r.CompletedScanners),
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
@@ -71,17 +71,6 @@ func (r *JobRecord) ToModel() *models.JobStatus {
 	}
 
 	return job
-}
-
-func cloneStringSlice(values []string) []string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	cloned := make([]string, len(values))
-	copy(cloned, values)
-
-	return cloned
 }
 
 func remainingScanners(expected, completed []string) []string {
