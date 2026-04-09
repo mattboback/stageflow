@@ -838,7 +838,7 @@ StageFlow is a solo-built portfolio project designed to be runnable as open sour
 - **Distributed system design** — multi-service Go/TypeScript architecture coordinated through NATS JetStream, with explicit service boundaries, a documented job FSM, and Podman pod isolation
 - **Contract-driven development** — JSON Schema as the single source of truth for the report format, with generated TypeScript and Go types used by all consumers
 - **Testing at every layer** — Go race tests and `golangci-lint` across modules; Vitest unit tests; Storybook interaction and axe-based accessibility tests; orchestrator E2E with a mock Podman adapter; and a golden shell test for the full project scan → baseline → diff pipeline
-- **Developer experience** — a Go CLI with streaming SSE, Project Mode, JSON output, and `--fail-on` severity gating; a `just`-based task runner; pre-commit hooks; and generated CLI reference docs that stay in sync with the code
+- **Developer experience** — a Go CLI with streaming SSE, Project Mode, JSON output, and `--fail-on` severity gating; a `just`-based task runner; pre-commit-based repo hooks; and generated CLI reference docs that stay in sync with the code
 - **Security and operational discipline** — SSRF guardrails, archive extraction limits, API key middleware, `govulncheck` in CI, and clear separation of credentials per environment
 
 See the [Evaluator guide](docs/evaluators-guide.md) for a structured path through the codebase aimed at reviewers and hiring managers.

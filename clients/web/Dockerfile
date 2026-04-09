@@ -8,8 +8,9 @@ WORKDIR /app
 # Copy package files first for better caching
 COPY clients/web/package.json clients/web/bun.lock ./
 
-# Install dependencies
-RUN bun install --frozen-lockfile
+# Install dependencies without lifecycle scripts. `prepare` runs `svelte-kit sync`,
+# but the config file is copied in a later layer for better cache reuse.
+RUN bun install --frozen-lockfile --ignore-scripts
 
 # Copy SvelteKit source code
 COPY clients/web/svelte.config.js clients/web/vite.config.ts clients/web/tsconfig.json ./

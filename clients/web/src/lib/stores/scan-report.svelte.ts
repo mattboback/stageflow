@@ -1,19 +1,13 @@
 import type { ScanResult, ScanStatus, ScreenshotArtifact } from '$lib/types/scan';
 import type { UnifiedReport } from '$lib/types/unified-report';
 
-import { createSSEStream } from '$lib/api/sse';
 import { buildApiUrl } from '$lib/api/utils';
 import { SvelteSet } from 'svelte/reactivity';
 
 import type { SSEUpdate } from './scan-status/types';
 
 import { MAX_LOG_LINES } from './scan-status/constants';
-import { applySseUpdate } from './scan-status/event-update';
-import { getLogMessage, normalizeStatus } from './scan-status/log-messages';
-import {
-	applyScannerCompletionUpdate,
-	normalizeScannerProgress
-} from './scan-status/scanner-progress';
+import { addLifecycleLog, createScanJobStream, fetchScanJobStatus } from './scan-status/job-stream';
 
 export function createScanReportStore(id: string) {
 	let status = $state<ScanStatus>('loading');
@@ -90,68 +84,68 @@ export function createScanReportStore(id: string) {
 		}
 	};
 
+	const controller = {
+		getJob: () => job,
+		setJob: (nextJob: ScanResult) => {
+			job = nextJob;
+		},
+		setStatus: (nextStatus: ScanStatus) => {
+			status = nextStatus;
+		},
+		addLog,
+		fetchErrorPrefix: 'scan-report',
+		fallbackFetchErrorMessage: 'Failed to fetch job status',
+		initialFetchErrorStatus: 'error' as const,
+		onStatusData: (data: ScanResult, nextStatus: ScanStatus, normalizedState: string) => {
+			addLifecycleLog(
+				addLog,
+				normalizedState,
+				{
+					EXTRACTING: 'Verifying archive integrity...',
+					SCANNING: '[axe-core] Injecting accessibility engine...',
+					COMPLETING: 'Uploading artifacts to secure storage...'
+				},
+				normalizedState !== 'SCANNING' || Boolean(data.progress)
+			);
+
+			screenshots = data.artifacts?.screenshots ?? [];
+			if (nextStatus === 'complete') {
+				stopPolling();
+				if (!report) {
+					void fetchReport();
+				}
+			} else if (nextStatus === 'failed') {
+				stopPolling();
+			} else {
+				clearReportRetry();
+				if (!sseStream) {
+					startPolling();
+				}
+			}
+		},
+		onStatusFetchSuccess: () => {
+			error = null;
+		},
+		onStatusFetchError: (message: string) => {
+			error = message;
+		},
+		onUpdate: (update: SSEUpdate) => {
+			if (update.type === 'complete' || update.type === 'failed') {
+				void fetchStatus();
+			}
+		}
+	};
+
 	const cleanup = () => {
 		clearReportRetry();
 		stopPolling();
 		closeSSEStream();
 	};
 
-	const handleStatusData = (data: ScanResult) => {
-		const normalizedState = (data.state || '').toUpperCase();
-		const logMsg = getLogMessage(normalizedState, data);
-		if (logMsg) {
-			addLog(logMsg);
-		}
-
-		if (normalizedState === 'EXTRACTING') {
-			addLog('Verifying archive integrity...');
-		} else if (normalizedState === 'SCANNING' && data.progress) {
-			addLog('[axe-core] Injecting accessibility engine...');
-		} else if (normalizedState === 'COMPLETING') {
-			addLog('Uploading artifacts to secure storage...');
-		}
-
-		job = normalizeScannerProgress(data);
-		status = normalizeStatus(data.state);
-		screenshots = data.artifacts?.screenshots ?? [];
-		if (status === 'complete') {
-			stopPolling();
-			if (!report) {
-				void fetchReport();
-			}
-		} else if (status === 'failed') {
-			stopPolling();
-		} else {
-			clearReportRetry();
-			if (!sseStream) {
-				startPolling();
-			}
-		}
-	};
-
 	const fetchStatus = async () => {
-		try {
-			const res = await fetch(buildApiUrl(`/api/v1/jobs/${id}`));
-			if (!res.ok) {
-				throw new Error(res.status === 404 ? 'Job not found' : 'Failed to fetch job status');
-			}
-			const data = (await res.json()) as ScanResult;
-			error = null;
-			handleStatusData(data);
-			if (status === 'failed') {
-				report = null;
-			}
-		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Failed to fetch job status';
-			console.error('[scan-report] Failed to fetch job status:', {
-				jobId: id,
-				error: err
-			});
-			addLog(`ERROR: ${message}. Refresh to retry.`);
-			error = message;
-			if (status === 'loading') {
-				status = 'error';
-			}
+		await fetchScanJobStatus(id, controller);
+		if (status === 'failed') {
+			report = null;
 		}
 	};
 
@@ -206,62 +200,30 @@ export function createScanReportStore(id: string) {
 		}
 	};
 
-	const handleSSEUpdate = (update: SSEUpdate) => {
-		const normalizedState = (update.state || '').toUpperCase();
-		const logMsg = getLogMessage(normalizedState, update);
-		if (logMsg) {
-			addLog(logMsg);
-		}
-
-		if (job) {
-			job = applyScannerCompletionUpdate(applySseUpdate(job, update), update);
-		}
-
-		status = normalizeStatus(update.state);
-
-		if (update.type === 'complete' || update.type === 'failed') {
-			void fetchStatus();
-		}
-	};
-
 	const startSSE = () => {
-		sseStream = createSSEStream<ScanResult, SSEUpdate>(
-			id,
-			{
-				onStatus: (data) => {
-					stopPolling();
-					handleStatusData(data);
-				},
-				onUpdate: (data) => {
-					stopPolling();
-					handleSSEUpdate(data);
-				},
-				onDone: () => {
-					closeSSEStream();
-				},
-				onError: (err) => {
-					if (err.parseError) {
-						status = 'error';
-						cleanup();
-						startPolling();
-						void fetchStatus();
-					} else if (err.terminal) {
-						cleanup();
-						startPolling();
-						void fetchStatus();
-					} else {
-						// Do not rely on EventSource reconnect internals; switch to polling immediately.
-						closeSSEStream();
-						startPolling();
-						void fetchStatus();
-					}
-				}
+		sseStream = createScanJobStream(controller, {
+			jobId: id,
+			sourceName: 'scan-report',
+			onDone: () => {
+				closeSSEStream();
 			},
-			{
-				sourceName: 'scan-report',
-				onLog: addLog
+			onError: (err) => {
+				if (err.parseError) {
+					status = 'error';
+					cleanup();
+					startPolling();
+					void fetchStatus();
+				} else if (err.terminal) {
+					cleanup();
+					startPolling();
+					void fetchStatus();
+				} else {
+					closeSSEStream();
+					startPolling();
+					void fetchStatus();
+				}
 			}
-		);
+		});
 	};
 
 	const refreshArtifacts = async () => {
