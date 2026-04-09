@@ -170,6 +170,35 @@ describe('ReportShell', () => {
 		});
 	});
 
+	it('uses triage actions in the report header to jump to issues and pages', async () => {
+		const user = userEvent.setup();
+		const { getAllByRole, getByRole } = render(ReportShell, {
+			props: {
+				jobId: 'job-1',
+				status: 'complete',
+				report: createBaseReport(),
+				job: null,
+				logs: [],
+				screenshots: [],
+				error: null
+			}
+		});
+
+		await user.click(getAllByRole('button', { name: /^review issues$/i })[0]);
+		expect(mockGoto).toHaveBeenCalledWith('/scan/job-1/report?section=issues', {
+			replaceState: false,
+			noScroll: true,
+			keepFocus: true
+		});
+
+		await user.click(getAllByRole('button', { name: /check top pages/i })[0]);
+		expect(mockGoto).toHaveBeenCalledWith('/scan/job-1/report?section=pages', {
+			replaceState: false,
+			noScroll: true,
+			keepFocus: true
+		});
+	});
+
 	it('shows score legend context in the report header', () => {
 		const report = createBaseReport();
 		const { getByText } = render(ReportShell, {

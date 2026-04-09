@@ -521,6 +521,7 @@ describe('PageOverviewViewer', () => {
 
 			const rect = container.querySelector('svg rect[data-testid="page-overview-marker"]');
 			expect(rect?.getAttribute('role')).toBe('button');
+			expect(rect?.getAttribute('tabindex')).toBe('0');
 			expect(rect?.getAttribute('aria-label')).toContain('Low contrast');
 			expect(rect?.getAttribute('aria-label')).toContain('critical');
 		});

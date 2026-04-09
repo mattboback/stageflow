@@ -68,8 +68,14 @@
 	variant="muted"
 	padding="xs"
 	rounded="2xl"
-	class="border-line bg-surface sticky top-3 z-20 mb-6 space-y-2.5 border shadow-sm"
+	class="border-line bg-surface sticky top-3 z-20 mb-6 space-y-2 border shadow-sm"
 >
+	<div class="flex items-center justify-between gap-3 px-2 pt-1">
+		<div>
+			<p class="text-ink text-sm font-semibold">Report sections</p>
+			<p class="text-ink-faint text-xs">Jump directly to the area you need for triage.</p>
+		</div>
+	</div>
 	<div class="relative -mx-1 overflow-x-auto px-1">
 		<div
 			class="flex min-w-max items-center gap-1.5 sm:gap-2"
@@ -109,8 +115,11 @@
 		></div>
 	</div>
 	{#if onAudienceChange}
-		<div class="border-line flex flex-wrap items-center justify-between gap-2 border-t px-1 pt-2">
-			<span class="text-ink-faint text-xs font-semibold tracking-wide uppercase">View</span>
+		<div class="border-line flex flex-wrap items-center justify-between gap-2 border-t px-2 pt-2">
+			<div>
+				<span class="text-ink-faint text-xs font-semibold tracking-wide uppercase">Audience</span>
+				<p class="text-ink-faint text-[11px]">Adjust issue detail depth without changing report data.</p>
+			</div>
 			<div class="flex items-center gap-1.5">
 				{#each audienceOptions as opt (opt.id)}
 					<button

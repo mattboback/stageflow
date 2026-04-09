@@ -26,9 +26,11 @@
 	const isAllValid = $derived(urlCount > 0 && validation.invalid.length === 0);
 	const hasErrors = $derived(hasInteracted && validation.invalid.length > 0);
 
-	const placeholder = ['example.com', 'example.com/about', 'https://example.com/contact'].join(
-		'\n'
-	);
+	const placeholder = [
+		'https://example.com',
+		'example.com/pricing',
+		'example.com/contact'
+	].join('\n');
 
 	function handleBlur() {
 		hasInteracted = true;
@@ -78,23 +80,29 @@
 		class="rounded-xl font-mono text-sm"
 	/>
 
+	<p class="text-ink-muted mt-2 text-xs leading-relaxed">
+		Enter one URL per line. Bare domains are okay and will be normalized to `https://` when
+		possible.
+	</p>
+
 	{#if hasErrors}
 		<div class="mt-2 flex items-start gap-1.5 text-xs text-red-500">
 			<AlertCircle class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>
-				{validation.invalid.length} invalid {validation.invalid.length === 1 ? 'URL' : 'URLs'}.
-				First error: {validation.invalid[0].reason}
+				Fix {validation.invalid.length} invalid
+				{validation.invalid.length === 1 ? 'URL' : 'URLs'} to continue. First error:
+				{validation.invalid[0].reason}
 			</span>
 		</div>
 	{:else if wasAutoNormalized}
 		<div class="text-ink mt-2 flex items-start gap-1.5 text-xs">
 			<Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-			<span>URLs were automatically formatted (e.g. adding https://).</span>
+			<span>We formatted your entries automatically, including adding `https://` where needed.</span>
 		</div>
 	{:else if urlCount > 0 && !hasErrors}
 		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-green-700">
 			<CheckCircle2 class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-			<span>All {urlCount} {urlCount === 1 ? 'URL is' : 'URLs are'} valid.</span>
+			<span>All {urlCount} {urlCount === 1 ? 'target is ready' : 'targets are ready'}.</span>
 		</div>
 	{/if}
 </div>

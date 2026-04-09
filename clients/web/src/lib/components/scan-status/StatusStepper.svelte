@@ -28,7 +28,7 @@
 <div class="relative mx-auto w-full max-w-3xl px-4">
 	<div class="bg-surface-muted absolute top-5 left-0 h-0.5 w-full -translate-y-1/2">
 		<div
-			class="bg-accent h-full transition-all duration-500 ease-in-out"
+			class="bg-accent h-full transition-[width] duration-500 ease-in-out"
 			style="width: {progressWidth}%"
 		></div>
 	</div>
@@ -41,7 +41,7 @@
 			<div class="flex flex-col items-center gap-3">
 				<div
 					class={cn(
-						'relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300',
+						'relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-[background-color,border-color,color,transform,box-shadow] duration-300',
 						isCompleted
 							? 'border-accent bg-accent text-white shadow-md'
 							: isCurrent

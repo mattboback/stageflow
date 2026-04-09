@@ -5,16 +5,19 @@
 	import { buildApiUrl } from '$lib/api/utils';
 	import { Button, Panel } from '$lib/components/ui';
 	import { cn, formatDuration, formatTimestamp } from '$lib/utils';
-	import { ExternalLink, RefreshCw } from 'lucide-svelte';
+	import { AlertTriangle, ExternalLink, FileSearch, Layers3, RefreshCw } from 'lucide-svelte';
 
 	interface Props {
 		jobId: string;
 		report: UnifiedReport;
 		job: ScanResult | null;
+		onJumpToIssues?: () => void;
+		onJumpToPages?: () => void;
 		onRefreshArtifacts?: () => void;
 	}
 
-	let { jobId, report, job: _job, onRefreshArtifacts }: Props = $props();
+	let { jobId, report, job: _job, onJumpToIssues, onJumpToPages, onRefreshArtifacts }: Props =
+		$props();
 
 	const jsonUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null);
 	const htmlUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null);
@@ -43,6 +46,13 @@
 	const affectedRatio = $derived.by(() => {
 		if (pagesScanned <= 0) return 0;
 		return Math.round((pagesWithIssues / pagesScanned) * 100);
+	});
+	const seriousCount = $derived(report.summary.bySeverity?.serious ?? 0);
+	const triageHeadline = $derived.by(() => {
+		if (criticalCount > 0) return `Start with ${criticalCount} critical issue${criticalCount === 1 ? '' : 's'}.`;
+		if (seriousCount > 0) return `Prioritize ${seriousCount} serious issue${seriousCount === 1 ? '' : 's'} next.`;
+		if (report.summary.totalIssues > 0) return 'Review the issue list to work through moderate findings.';
+		return 'No issues detected. Spot-check pages and artifacts to confirm release readiness.';
 	});
 </script>
 
@@ -92,6 +102,18 @@
 				{/if}
 			</div>
 			<div class="mt-4 flex flex-wrap items-center gap-2.5">
+				{#if onJumpToIssues}
+					<Button variant="default" size="sm" onclick={onJumpToIssues} class="gap-2">
+						<FileSearch class="h-4 w-4" />
+						Review issues
+					</Button>
+				{/if}
+				{#if onJumpToPages}
+					<Button variant="outline" size="sm" onclick={onJumpToPages} class="gap-2">
+						<Layers3 class="h-4 w-4" />
+						Check top pages
+					</Button>
+				{/if}
 				{#if jsonUrl}
 					<a
 						href={jsonUrl}
@@ -120,6 +142,17 @@
 						Refresh
 					</Button>
 				{/if}
+			</div>
+			<div class="border-line/70 bg-surface/70 mt-4 rounded-2xl border px-4 py-3">
+				<div class="flex items-start gap-3">
+					<div class="bg-surface-muted text-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+						<AlertTriangle class="h-4 w-4" />
+					</div>
+					<div>
+						<p class="text-ink text-sm font-semibold">Triage first</p>
+						<p class="text-ink-muted mt-1 text-sm">{triageHeadline}</p>
+					</div>
+				</div>
 			</div>
 		</div>
 		{#if score !== null}

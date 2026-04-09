@@ -122,7 +122,8 @@
 			id="ai-objective"
 			value={objective}
 			oninput={(e) => onObjectiveChange(e.currentTarget.value)}
-			placeholder="Navigate to the contact page and fill out the inquiry form with the provided test data..."
+			placeholder="Navigate to the contact page and fill out the inquiry form with the provided test data…"
+			name="aiObjective"
 			rows={3}
 			class={cn(
 				'rounded-xl text-sm',
@@ -146,6 +147,7 @@
 			variant="prominent"
 			value={model}
 			onchange={(e) => onModelChange(e.currentTarget.value)}
+			name="aiModel"
 		>
 			{#each aiModels as aiModel (aiModel.value)}
 				<option value={aiModel.value}>{aiModel.label}</option>
@@ -172,25 +174,42 @@
 		{:else}
 			<div class="space-y-2">
 				{#each inputValues as inputValue, index (index)}
-					<div class="flex items-center gap-2">
-						<input
-							type="text"
-							placeholder="Field name"
-							value={inputValue.key}
-							oninput={(e) => updateInputValue(index, 'key', e.currentTarget.value)}
-							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
-						/>
-						<input
-							type="text"
-							placeholder="Value"
-							value={inputValue.value}
-							oninput={(e) => updateInputValue(index, 'value', e.currentTarget.value)}
-							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
-						/>
+					<div class="flex items-start gap-2">
+						<div class="flex-1">
+							<Label for={`ai-input-key-${index}`} class="sr-only">
+								Input field name {index + 1}
+							</Label>
+							<input
+								id={`ai-input-key-${index}`}
+								type="text"
+								name={`aiInputValues[${index}].key`}
+								autocomplete="off"
+								placeholder="Field name…"
+								value={inputValue.key}
+								oninput={(e) => updateInputValue(index, 'key', e.currentTarget.value)}
+								class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
+							/>
+						</div>
+						<div class="flex-1">
+							<Label for={`ai-input-value-${index}`} class="sr-only">
+								Input field value {index + 1}
+							</Label>
+							<input
+								id={`ai-input-value-${index}`}
+								type="text"
+								name={`aiInputValues[${index}].value`}
+								autocomplete="off"
+								placeholder="Value…"
+								value={inputValue.value}
+								oninput={(e) => updateInputValue(index, 'value', e.currentTarget.value)}
+								class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
+							/>
+						</div>
 						<button
 							type="button"
 							onclick={() => removeInputValue(index)}
 							class="text-ink-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
+							aria-label={`Remove input field ${index + 1}`}
 						>
 							<Trash2 class="h-4 w-4" />
 						</button>
@@ -205,6 +224,8 @@
 		type="button"
 		onclick={() => (showAdvancedSettings = !showAdvancedSettings)}
 		class="border-line bg-surface hover:bg-surface-muted flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors"
+		aria-expanded={showAdvancedSettings}
+		aria-controls="ai-advanced-settings"
 	>
 		<span class="text-ink text-sm font-medium">Advanced Settings</span>
 		{#if showAdvancedSettings}
@@ -215,7 +236,7 @@
 	</button>
 
 	{#if showAdvancedSettings}
-		<div class="animate-fade-in space-y-5 pt-2">
+		<div id="ai-advanced-settings" class="animate-fade-in space-y-5 pt-2">
 			<!-- Max Steps & Timeout -->
 			<div class="grid gap-4 sm:grid-cols-2">
 				<div>
@@ -223,6 +244,7 @@
 					<input
 						id="ai-max-steps"
 						type="number"
+						name="aiMaxSteps"
 						min="1"
 						max="50"
 						value={maxSteps}
@@ -236,6 +258,7 @@
 					<input
 						id="ai-timeout"
 						type="number"
+						name="aiTimeoutSeconds"
 						min="10"
 						max="300"
 						value={maxWallTimeMs / 1000}
@@ -265,29 +288,40 @@
 				{:else}
 					<div class="space-y-2">
 						{#each successCriteria as criterion, index (index)}
-							<div class="flex items-center gap-2">
+							<div class="flex items-start gap-2">
 								<Select
+									aria-label={`Success criterion type ${index + 1}`}
 									value={criterion.type}
 									onchange={(e) => updateSuccessCriterion(index, 'type', e.currentTarget.value)}
 									class="w-40 shrink-0"
+									name={`aiSuccessCriteria[${index}].type`}
 								>
 									{#each successCriteriaTypes as type (type.value)}
 										<option value={type.value}>{type.label}</option>
 									{/each}
 								</Select>
-								<input
-									type="text"
-									placeholder={criterion.type === 'element-visible'
-										? 'CSS selector'
-										: 'Value to match'}
-									value={criterion.value}
-									oninput={(e) => updateSuccessCriterion(index, 'value', e.currentTarget.value)}
-									class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
-								/>
+								<div class="flex-1">
+									<Label for={`ai-success-criterion-${index}`} class="sr-only">
+										Success criterion value {index + 1}
+									</Label>
+									<input
+										id={`ai-success-criterion-${index}`}
+										type="text"
+										name={`aiSuccessCriteria[${index}].value`}
+										autocomplete="off"
+										placeholder={criterion.type === 'element-visible'
+											? 'CSS selector…'
+											: 'Value to match…'}
+										value={criterion.value}
+										oninput={(e) => updateSuccessCriterion(index, 'value', e.currentTarget.value)}
+										class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent flex-1 rounded-xl border px-3 py-2 text-sm focus:outline-none"
+									/>
+								</div>
 								<button
 									type="button"
 									onclick={() => removeSuccessCriterion(index)}
 									class="text-ink-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-red-50 hover:text-red-500"
+									aria-label={`Remove success criterion ${index + 1}`}
 								>
 									<Trash2 class="h-4 w-4" />
 								</button>

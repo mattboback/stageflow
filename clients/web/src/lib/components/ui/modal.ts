@@ -1,6 +1,6 @@
 import { type VariantProps, cva } from 'class-variance-authority';
 
-export const modalOverlayVariants = cva('fixed inset-0', {
+export const modalOverlayVariants = cva('fixed inset-0 overscroll-contain', {
 	variants: {
 		backdrop: {
 			dim: 'bg-black/50',
@@ -31,7 +31,7 @@ export const modalOverlayVariants = cva('fixed inset-0', {
 	}
 });
 
-export const modalContentVariants = cva('focus:outline-none', {
+export const modalContentVariants = cva('focus:outline-none overscroll-contain', {
 	variants: {
 		size: {
 			sm: 'w-full max-w-sm',

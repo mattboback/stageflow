@@ -4,7 +4,7 @@
 	import { buildApiUrl } from '$lib/api/utils';
 	import { buttonVariants } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import { CheckCircle2, ClipboardList, FileText } from 'lucide-svelte';
+	import { ArrowRight, CheckCircle2, ClipboardList, FileText } from 'lucide-svelte';
 
 	interface Props {
 		result: ScanResult | null;
@@ -30,7 +30,7 @@
 		<div class="min-w-0 flex-1">
 			<h3 class="text-ink text-lg font-semibold">Scan complete</h3>
 			<p class="text-ink-muted mt-1 text-sm">
-				Scan artifacts are ready. Review logs and automation details in the sidebar.
+				The unified report is ready. Start there to triage the most important findings, then use the sidebar for raw logs and artifacts if you need deeper diagnostics.
 			</p>
 			<div class="text-ink-muted mt-4 flex flex-wrap gap-3 text-sm">
 				<span class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1">
@@ -53,7 +53,8 @@
 						class={cn(buttonVariants({ variant: 'default' }), 'inline-flex gap-2')}
 					>
 						<ClipboardList class="h-4 w-4" />
-						View Full Report
+						Open Unified Report
+						<ArrowRight class="h-4 w-4" />
 					</a>
 					{#if jsonUrl}
 						<a

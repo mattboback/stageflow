@@ -30,7 +30,7 @@
 			type="button"
 			onclick={() => onModeChange('url')}
 			class={selectableSurfaceClass(
-				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all duration-200',
+				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-[background-color,border-color,box-shadow,transform] duration-200',
 				mode === 'url'
 			)}
 		>
@@ -58,7 +58,7 @@
 			type="button"
 			onclick={() => onModeChange('zip')}
 			class={selectableSurfaceClass(
-				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-all duration-200',
+				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-[background-color,border-color,box-shadow,transform] duration-200',
 				mode === 'zip'
 			)}
 		>
