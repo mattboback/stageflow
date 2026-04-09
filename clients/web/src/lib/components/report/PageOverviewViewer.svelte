@@ -163,10 +163,10 @@
 										fill={isFocused ? fillColor : 'transparent'}
 										stroke={strokeColor}
 										stroke-width={isFocused ? 6 : 4}
-										class="cursor-pointer motion-safe:transition-all"
+										class="cursor-pointer motion-safe:transition-[fill,stroke-width]"
 										style={`--hover-fill: ${fillColor}`}
 										role="button"
-										tabindex="-1"
+										tabindex="0"
 										aria-label={`${issue.title} (${issue.severity})`}
 										onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
 										onkeydown={(e) => {

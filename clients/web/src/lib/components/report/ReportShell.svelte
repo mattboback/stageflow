@@ -129,6 +129,10 @@
 			{jobId}
 			report={displayReport}
 			{job}
+			onJumpToIssues={() =>
+				updateQueryParams({ section: 'issues', q: null, scanner: null, page: null }, { replaceState: false })}
+			onJumpToPages={() =>
+				updateQueryParams({ section: 'pages', q: null, scanner: null, page: null }, { replaceState: false })}
 			{...onRefreshArtifacts ? { onRefreshArtifacts } : {}}
 		/>
 		<ReportSectionNav
@@ -267,7 +271,7 @@
 			<div class="space-y-6">
 				<div class="flex flex-col items-center justify-center gap-4">
 					<Loader2 class="text-accent h-10 w-10 animate-spin" />
-					<p class="text-ink-muted text-lg">Preparing report...</p>
+					<p class="text-ink-muted text-lg">Preparing report…</p>
 					{#if status === 'complete'}
 						<p class="text-ink-muted text-sm">Scan complete. Generating aggregated report…</p>
 					{/if}

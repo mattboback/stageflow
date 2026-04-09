@@ -34,7 +34,7 @@
 >
 	<div
 		class={cn(
-			'bg-accent h-full w-full flex-1 transition-all duration-500 ease-in-out',
+			'bg-accent h-full w-full flex-1 transition-transform duration-500 ease-in-out',
 			indicatorClass
 		)}
 		style="transform: translateX(-{100 - percentage}%)"

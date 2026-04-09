@@ -125,6 +125,8 @@
 		if (affectedRatio > 0.75) return 'danger';
 		return 'warn';
 	});
+	const topPage = $derived(topPages[0] ?? null);
+	const topRule = $derived(topRules[0] ?? null);
 
 	function getStatusIcon(status: string) {
 		switch (status) {
@@ -206,6 +208,55 @@
 {/snippet}
 
 <div class="space-y-6">
+	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
+		<div class="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+			<div class="rounded-2xl border border-red-100 bg-red-50/70 p-4">
+				<p class="text-[11px] font-semibold tracking-[0.14em] text-red-700 uppercase">Priority path</p>
+				<p class="mt-2 text-sm font-semibold text-red-900">{riskSummary}</p>
+				<div class="mt-4 flex flex-wrap gap-2">
+					<button
+						onclick={() => onSearchIssues('', undefined)}
+						class="rounded-xl bg-red-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800"
+					>
+						Open issue list
+					</button>
+					{#if topPage}
+						<button
+							onclick={() => onSelectPage(topPage.id)}
+							class="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-900 transition hover:bg-red-50"
+						>
+							Inspect worst page
+						</button>
+					{/if}
+				</div>
+			</div>
+			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+				{#if topRule}
+					<button
+						onclick={() => onSearchIssues(topRule.ruleId, topRule.scanner)}
+						class="border-line hover:border-accent/40 hover:bg-surface-muted rounded-2xl border p-4 text-left transition"
+					>
+						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Top recurring rule</p>
+						<p class="text-ink mt-2 text-sm font-semibold">{topRule.title}</p>
+						<p class="text-ink-muted mt-1 text-xs">
+							{topRule.scanner} · {topRule.count} occurrences
+						</p>
+					</button>
+				{/if}
+				{#if topPage}
+					<button
+						onclick={() => onSelectPage(topPage.id)}
+						class="border-line hover:border-accent/40 hover:bg-surface-muted rounded-2xl border p-4 text-left transition"
+					>
+						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Most impacted page</p>
+						<p class="text-ink mt-2 truncate text-sm font-semibold">{topPage.path ?? topPage.url}</p>
+						<p class="text-ink-muted mt-1 text-xs">{topPage.issueCount} issues</p>
+					</button>
+				{/if}
+			</div>
+		</div>
+	</Panel>
+
 	<Panel
 		class="border-line/70 from-surface via-surface to-accent-soft/20 relative overflow-hidden border bg-gradient-to-br shadow-sm"
 		padding="md"

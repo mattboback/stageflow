@@ -24,7 +24,7 @@ export const panelVariants = cva('border-line bg-surface border', {
 			'3xl': 'rounded-3xl'
 		},
 		interactive: {
-			true: 'hover-glow hover:border-ink/20 transition-all',
+			true: 'hover-glow hover:border-ink/20 transition-[background-color,border-color,box-shadow,transform]',
 			false: ''
 		}
 	},

@@ -49,7 +49,7 @@
 				.map((line) => line.trim())
 				.find(Boolean);
 			if (!firstLine) return null;
-			return firstLine.length > 220 ? `${firstLine.slice(0, 217)}...` : firstLine;
+				return firstLine.length > 220 ? `${firstLine.slice(0, 217)}…` : firstLine;
 		}
 		if (primaryOccurrence?.failureSummary) {
 			const detail =
@@ -57,7 +57,7 @@
 				primaryOccurrence.failureSummary;
 			const trimmed = detail.trim();
 			if (!trimmed) return null;
-			return trimmed.length > 220 ? `${trimmed.slice(0, 217)}...` : trimmed;
+				return trimmed.length > 220 ? `${trimmed.slice(0, 217)}…` : trimmed;
 		}
 		return null;
 	});

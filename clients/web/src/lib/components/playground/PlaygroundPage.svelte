@@ -52,12 +52,28 @@
 	const hasValidInput = $derived(mode === 'url' ? urls.trim().length > 0 : file !== null);
 	const hasEnabledScanner = $derived(scanners.some((s) => s.enabled));
 	const isAiNavigatorEnabled = $derived(scanners.some((s) => s.id === 'ai-navigator' && s.enabled));
+	const enabledScannerCount = $derived(scanners.filter((s) => s.enabled).length);
 	const isAiConfigValid = $derived(
 		!isAiNavigatorEnabled || (aiObjective.trim().length > 0 && aiModel.trim().length > 0)
 	);
 	const canSubmit = $derived(
 		hasValidInput && hasEnabledScanner && isAiConfigValid && !isSubmitting
 	);
+	const missingRequirements = $derived.by(() => {
+		const requirements: string[] = [];
+		if (!hasValidInput) {
+			requirements.push(
+				mode === 'url' ? 'Add at least one URL or switch to ZIP mode.' : 'Upload a ZIP archive.'
+			);
+		}
+		if (!hasEnabledScanner) {
+			requirements.push('Enable at least one scanner.');
+		}
+		if (isAiNavigatorEnabled && !isAiConfigValid) {
+			requirements.push('Add an AI Navigator objective before running.');
+		}
+		return requirements;
+	});
 
 	// Load scanners on mount
 	$effect(() => {
@@ -165,7 +181,7 @@
 
 <PageSection class="playground-shell relative overflow-hidden py-10 lg:py-14">
 	<div class="container-width relative">
-		<div class="grid items-start gap-7 xl:grid-cols-[minmax(0,1fr)_21rem]">
+		<div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
 			<div>
 				<Panel
 					padding="none"
@@ -183,7 +199,7 @@
 										Configure Scan
 									</h2>
 									<p class="text-ink-muted mt-1 text-sm">
-										Choose input, scanners, and run settings.
+										Set a target, choose scanners, and launch with confidence.
 									</p>
 								</div>
 							</div>
@@ -192,16 +208,16 @@
 									<CheckCircle2 class="h-3.5 w-3.5" />
 									Ready to scan
 								</Chip>
-							{:else if isAiNavigatorEnabled && !isAiConfigValid}
+							{:else if missingRequirements.length > 0}
 								<Chip tone="warning" class="gap-1.5 font-medium">
 									<AlertTriangle class="h-3.5 w-3.5" />
-									Configure AI
+									{missingRequirements.length} step{missingRequirements.length === 1 ? '' : 's'} left
 								</Chip>
 							{/if}
 						</div>
 					</div>
 
-					<div class="space-y-7 p-6 lg:p-7">
+					<div class="space-y-6 p-6 lg:p-7">
 						<div>
 							<div class="mb-2 flex items-center gap-2">
 								<span
@@ -304,15 +320,48 @@
 												{#each invalidUrls.slice(0, 6) as item (item.url)}
 													<li class="font-mono">{item.url} — {item.reason}</li>
 												{/each}
-												{#if invalidUrls.length > 6}
-													<li class="text-ink-muted">...and {invalidUrls.length - 6} more</li>
-												{/if}
+													{#if invalidUrls.length > 6}
+														<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
+													{/if}
 											</ul>
 										{/if}
 									</div>
 								</div>
 							</Alert>
 						{/if}
+
+						<div class="border-line/80 bg-surface-muted/45 rounded-2xl border px-4 py-4">
+							<div class="flex flex-wrap items-start justify-between gap-3">
+								<div>
+									<p class="text-ink text-sm font-semibold">Run readiness</p>
+									{#if canSubmit}
+										<p class="text-ink-muted mt-1 text-sm">
+											{mode === 'url' ? 'URL target ready.' : 'ZIP upload ready.'}
+											{enabledScannerCount} scanner{enabledScannerCount === 1 ? '' : 's'} selected
+											{screenshot ? ' with screenshots enabled.' : '.'}
+										</p>
+									{:else}
+										<p class="text-ink-muted mt-1 text-sm">
+											Finish the remaining setup steps below, then start the scan.
+										</p>
+									{/if}
+								</div>
+								<Chip tone={canSubmit ? 'success' : 'muted'} size="sm">
+									{canSubmit ? 'Ready now' : 'In progress'}
+								</Chip>
+							</div>
+
+							{#if !canSubmit}
+								<ul class="mt-3 space-y-2 text-sm">
+									{#each missingRequirements as requirement (requirement)}
+										<li class="flex items-start gap-2">
+											<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+											<span>{requirement}</span>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</div>
 
 						<Button
 							variant="glow"
@@ -321,9 +370,9 @@
 							disabled={!canSubmit}
 							onclick={handleSubmit}
 						>
-							{#if isSubmitting}
-								<Loader2 class="h-5 w-5 animate-spin" />
-								Starting Scan...
+								{#if isSubmitting}
+									<Loader2 class="h-5 w-5 animate-spin" />
+									Starting Scan…
 							{:else}
 								<Play class="h-5 w-5" />
 								Start Scan
@@ -333,7 +382,16 @@
 				</Panel>
 			</div>
 
-			<PlaygroundSidebar />
+			<PlaygroundSidebar
+				{mode}
+				{scanners}
+				{screenshot}
+				{highlightStyle}
+				{canSubmit}
+				{isAiNavigatorEnabled}
+				{isAiConfigValid}
+				{missingRequirements}
+			/>
 		</div>
 	</div>
 </PageSection>

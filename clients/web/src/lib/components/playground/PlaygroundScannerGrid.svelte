@@ -93,9 +93,10 @@
 	};
 
 	const presetDescriptions: Record<ScannerPreset, string> = {
-		coverage: 'All scanners except AI Navigator. Most thorough analysis.',
-		quick: 'Axe accessibility scan only. Fastest results.',
-		custom: 'Select individual scanners below.'
+		coverage:
+			'Recommended. Enables the full standard scanner set for the clearest release readout.',
+		quick: 'Fastest pass. Runs axe only when you need a quick accessibility signal.',
+		custom: 'Pick exactly which scanners to run for this target.'
 	};
 
 	function selectableSurfaceClass(base: string, isSelected: boolean) {
@@ -127,6 +128,7 @@
 	</div>
 	{#if !isLoading && scanners.length > 1}
 		<div class="border-line/80 bg-surface-muted/55 mb-4 rounded-2xl border p-3">
+			<p class="text-ink mb-2 text-xs font-semibold tracking-[0.12em] uppercase">Preset</p>
 			<div class="flex flex-wrap gap-2">
 				<Chip
 					as="button"
@@ -194,7 +196,7 @@
 			class="text-ink-muted bg-surface-muted flex items-center justify-center gap-2 rounded-xl py-8"
 		>
 			<Loader2 class="text-accent h-5 w-5 animate-spin" />
-			<span class="text-sm">Loading available scanners...</span>
+			<span class="text-sm">Loading available scanners…</span>
 		</div>
 	{:else if scanners.length === 0}
 		<p class="text-ink-muted bg-surface-muted rounded-xl py-8 text-center text-sm">
@@ -216,7 +218,7 @@
 					onclick={() => onToggle(scanner.id)}
 					class={selectableSurfaceClass(
 						cn(
-							'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200',
+							'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
 							scanner.enabled && meta.borderColor ? `border-l-[3px] ${meta.borderColor}` : ''
 						),
 						scanner.enabled
@@ -224,7 +226,7 @@
 				>
 					<div
 						class={cn(
-							'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all',
+							'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform] duration-200',
 							scanner.enabled
 								? 'bg-accent text-white'
 								: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
@@ -248,7 +250,7 @@
 					</div>
 					<div
 						class={cn(
-							'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border transition-all',
+							'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
 							scanner.enabled ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
 						)}
 					>

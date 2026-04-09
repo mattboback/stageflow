@@ -35,7 +35,7 @@
 			type="button"
 			onclick={() => onScreenshotChange(!screenshot)}
 			class={selectableSurfaceClass(
-				'group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all duration-200',
+				'group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
 				screenshot
 			)}
 		>
@@ -55,7 +55,7 @@
 			</div>
 			<div
 				class={cn(
-					'flex h-5 w-5 items-center justify-center rounded-full border transition-all',
+					'flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
 					screenshot ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
 				)}
 			>

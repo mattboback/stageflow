@@ -70,14 +70,11 @@ describe('PlaygroundPage', () => {
 		expect(screen.getByText('Configure Scan')).toBeInTheDocument();
 		expect(await screen.findByText('No scanners available')).toBeInTheDocument();
 		expect(screen.getByText('Start Scan')).toBeInTheDocument();
-		expect(
-			screen.getByText(
-				'Artifacts, logs, and screenshots expire automatically within 24 hours of a completed scan.'
-			)
-		).toBeInTheDocument();
+		expect(screen.getByText('What happens next')).toBeInTheDocument();
+		expect(screen.getByText(/live scan status/i)).toBeInTheDocument();
 	});
 
-	it('uses multiline placeholder and removes auto-https helper text', async () => {
+	it('uses multiline placeholder and shows normalization guidance', async () => {
 		mockFetchScanners.mockResolvedValue({
 			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
 			categories: []
@@ -87,10 +84,10 @@ describe('PlaygroundPage', () => {
 
 		const textarea = expectTextarea(await screen.findByLabelText('URLs to Scan'));
 		expect(textarea.placeholder).toBe(
-			'example.com\nexample.com/about\nhttps://example.com/contact'
+			'https://example.com\nexample.com/pricing\nexample.com/contact'
 		);
-		expect(screen.queryByText(/Enter one URL per line/i)).not.toBeInTheDocument();
-		expect(screen.queryByText(/auto-https/i)).not.toBeInTheDocument();
+		expect(screen.getByText(/enter one URL per line/i)).toBeInTheDocument();
+		expect(screen.getByText(/normalized to `https:\/\/`/i)).toBeInTheDocument();
 	});
 
 	it('normalizes scheme-less input on blur', async () => {
@@ -183,4 +180,58 @@ describe('PlaygroundPage', () => {
 			'true'
 		);
 	}, 15000);
+
+	it('adds accessible labels to AI navigator dynamic fields', async () => {
+		mockFetchScanners.mockResolvedValue({
+			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
+			categories: []
+		});
+
+		const user = userEvent.setup();
+		render(PlaygroundPage);
+
+		await screen.findByRole('button', { name: 'Coverage' });
+		await user.click(screen.getByRole('button', { name: /ai navigator/i }));
+		await user.click(screen.getByRole('button', { name: 'Add Field' }));
+
+		expect(screen.getByLabelText('Input field name 1')).toHaveAttribute(
+			'name',
+			'aiInputValues[0].key'
+		);
+		expect(screen.getByLabelText('Input field value 1')).toHaveAttribute(
+			'name',
+			'aiInputValues[0].value'
+		);
+		expect(screen.getByRole('button', { name: 'Remove input field 1' })).toBeInTheDocument();
+
+		await user.click(screen.getByRole('button', { name: 'Advanced Settings' }));
+		await user.click(screen.getByRole('button', { name: 'Add Criterion' }));
+		expect(screen.getByLabelText('Success criterion type 1')).toHaveAttribute(
+			'name',
+			'aiSuccessCriteria[0].type'
+		);
+		expect(screen.getByLabelText('Success criterion value 1')).toHaveAttribute(
+			'name',
+			'aiSuccessCriteria[0].value'
+		);
+		expect(screen.getByRole('button', { name: 'Remove success criterion 1' })).toBeInTheDocument();
+	});
+
+	it('renders ZIP upload as a native button surface', async () => {
+		mockFetchScanners.mockResolvedValue({
+			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
+			categories: []
+		});
+
+		const user = userEvent.setup();
+		const { container } = render(PlaygroundPage);
+
+		await screen.findByRole('button', { name: 'Coverage' });
+		await user.click(screen.getByRole('button', { name: /zip archive/i }));
+
+		const uploadButton = screen.getByRole('button', { name: 'Choose a ZIP file to upload' });
+		expect(uploadButton).toBeInTheDocument();
+		expect(uploadButton.tagName.toLowerCase()).toBe('button');
+		expect(container.querySelector('input[type="file"]')).toHaveAttribute('name', 'staticSiteArchive');
+	});
 });

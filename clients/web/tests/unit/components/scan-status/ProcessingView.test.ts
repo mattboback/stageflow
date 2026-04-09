@@ -1,4 +1,4 @@
-import { render } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 import ProcessingView from '$lib/components/scan-status/ProcessingView.svelte';
@@ -22,5 +22,23 @@ describe('ProcessingView', () => {
 
 		expect(getByText('Ai Navigator')).toBeInTheDocument();
 		expect(getByText('Axe')).toBeInTheDocument();
+	});
+
+	it('shows a waiting summary when scanner activity has not reported yet', () => {
+		render(ProcessingView, {
+			props: {
+				result: {
+					id: 'job-2',
+					state: 'PENDING',
+					created_at: '2026-01-01T00:00:00Z',
+					updated_at: '2026-01-01T00:00:00Z'
+				},
+				logs: []
+			}
+		});
+
+		expect(screen.getAllByText("What's happening now").length).toBeGreaterThan(0);
+		expect(screen.getByText('Waiting for scanner activity')).toBeInTheDocument();
+		expect(screen.getByText('Queued for execution')).toBeInTheDocument();
 	});
 });

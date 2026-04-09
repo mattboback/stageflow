@@ -73,4 +73,15 @@ describe('Modal', () => {
 		await user.tab({ shift: true });
 		expect(document.activeElement).toBe(lastButton);
 	});
+
+	it('applies overscroll containment to the dialog surface', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getByTestId } = render(ModalFixture);
+
+		await user.click(getByTestId('open-button'));
+
+		const dialog = getByRole('dialog');
+		expect(dialog.className).toContain('overscroll-contain');
+		expect(getByRole('document').className).toContain('overscroll-contain');
+	});
 });

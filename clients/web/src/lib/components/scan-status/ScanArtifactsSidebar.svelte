@@ -3,7 +3,7 @@
 
 	import { Button, Chip, Panel } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import { Clock, FileText, Loader2 } from 'lucide-svelte';
+	import { ArrowRight, Clock, FileText, Loader2 } from 'lucide-svelte';
 
 	import AutomationTab from './artifacts-sidebar/AutomationTab.svelte';
 	import LogsTab from './artifacts-sidebar/LogsTab.svelte';
@@ -26,6 +26,7 @@
 	const isLockedOpen = $derived(status !== 'complete');
 	const open = $derived(isLockedOpen ? true : userOpen);
 	const expirationLabel = $derived(buildExpirationLabel(result?.updated_at ?? null));
+	const reportUrl = $derived(result?.id ? `/scan/${result.id}/report` : null);
 
 	function toggleOpen() {
 		if (isLockedOpen) return;
@@ -47,7 +48,7 @@
 	<div class="bg-surface-muted flex flex-col space-y-1.5 p-6">
 		<div class="flex items-center justify-between gap-3">
 			<h3 class="flex items-center gap-2 text-lg leading-none font-semibold tracking-tight">
-				<FileText class="text-accent h-5 w-5" /> Artifacts
+				<FileText class="text-accent h-5 w-5" /> Logs &amp; Artifacts
 			</h3>
 			<Button
 				variant="ghost"
@@ -59,7 +60,20 @@
 				{isLockedOpen ? 'In Progress' : open ? 'Hide' : 'Show'}
 			</Button>
 		</div>
-		<p class="text-ink-faint text-xs">Inspect logs and automation assets.</p>
+		<p class="text-ink-faint text-xs">
+			{status === 'complete'
+				? 'Use this rail for diagnostics after reviewing the report.'
+				: 'Inspect live logs and automation assets while the scan runs.'}
+		</p>
+		{#if status === 'complete' && reportUrl}
+			<a
+				href={reportUrl}
+				class="border-line bg-surface text-ink hover:border-accent hover:text-accent mt-3 inline-flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+			>
+				<span>Review unified report first</span>
+				<ArrowRight class="h-4 w-4" />
+			</a>
+		{/if}
 		{#if artifacts}
 			<div
 				class="bg-surface/70 text-ink-muted mt-4 flex gap-2 rounded-full p-1 text-xs font-semibold"
@@ -91,7 +105,11 @@
 						)}
 					/>
 					<p class="text-sm">
-						{status === 'failed' ? 'No artifacts generated' : 'Generating artifacts...'}
+							{status === 'failed'
+								? 'No artifacts generated'
+								: status === 'complete'
+									? 'Artifacts are still being attached'
+									: 'Generating artifacts…'}
 					</p>
 				</div>
 			{:else}
