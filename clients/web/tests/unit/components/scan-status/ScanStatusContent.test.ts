@@ -1,10 +1,10 @@
 import ScanStatusContent from '$lib/components/scan-status/ScanStatusContent.svelte';
-import { render } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 describe('ScanStatusContent', () => {
 	it('renders processing view for non-terminal states', () => {
-		const { getByText } = render(ScanStatusContent, {
+		render(ScanStatusContent, {
 			props: {
 				status: 'loading',
 				result: null,
@@ -12,8 +12,11 @@ describe('ScanStatusContent', () => {
 			}
 		});
 
-		expect(getByText('Processing')).toBeInTheDocument();
-		expect(getByText('Initializing scan environment...')).toBeInTheDocument();
+		expect(screen.getAllByText("What's happening now").length).toBeGreaterThan(0);
+		expect(screen.getAllByText('Processing').length).toBeGreaterThan(0);
+		expect(
+			screen.getByText('Initializing the first scanner and preparing live progress.')
+		).toBeInTheDocument();
 	});
 
 	it('renders scanner activity and the Lighthouse long-pole hint', () => {

@@ -10,6 +10,6 @@ describe('ScanTerminal', () => {
 			}
 		});
 
-		expect(getByText('Waiting for live scan events...')).toBeInTheDocument();
+		expect(getByText('Waiting for live scan events…')).toBeInTheDocument();
 	});
 });
