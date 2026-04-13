@@ -17,6 +17,14 @@ go_work := 'go.work'
 help:
     @just --list
 
+[group('meta'), doc('Production deployment instruction (fails immediately)')]
+deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Production deployment for stageflow.org on the shared VPS lives at /home/matt/Deployment." >&2
+    echo "Run: cd /home/matt/Deployment && just deploy stageflow" >&2
+    exit 1
+
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
 setup:
     #!/usr/bin/env bash
