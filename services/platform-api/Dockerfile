@@ -33,8 +33,10 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 FROM docker.io/library/debian:bookworm-slim AS prep
 RUN mkdir -p /data && chown 65532:65532 /data
 
-# Runtime stage - distroless
-FROM gcr.io/distroless/base-debian12:nonroot
+# Runtime stage
+# Use debian-slim instead of distroless because podman-compose materializes
+# healthchecks through /bin/sh -c, and distroless images do not provide /bin/sh.
+FROM docker.io/library/debian:bookworm-slim
 
 # Copy binaries
 COPY --from=builder /out/platform-api /usr/local/bin/platform-api

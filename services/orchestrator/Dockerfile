@@ -29,8 +29,10 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     GOWORK=off go build -ldflags="-s -w" -o /out/orchestrator-healthcheck ./cmd/healthcheck
 
-# Runtime stage - distroless
-FROM gcr.io/distroless/base-debian12:nonroot
+# Runtime stage
+# Use debian-slim instead of distroless because podman-compose materializes
+# healthchecks through /bin/sh -c, and distroless images do not provide /bin/sh.
+FROM docker.io/library/debian:bookworm-slim
 
 COPY --from=builder /out/orchestrator /usr/local/bin/orchestrator
 COPY --from=builder /out/orchestrator-healthcheck /usr/local/bin/orchestrator-healthcheck

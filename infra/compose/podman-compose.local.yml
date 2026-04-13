@@ -26,6 +26,7 @@ services:
       - "127.0.0.1:8080:8080"
 
   orchestrator:
+    user: "1000:1000"
     environment:
       POD_NETNS_MODE: "host"
       POD_NETWORK: ""
