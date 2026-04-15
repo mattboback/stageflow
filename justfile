@@ -21,8 +21,8 @@ help:
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Production deployment for stageflow.org on the shared VPS lives at /home/matt/Deployment." >&2
-    echo "Run: cd /home/matt/Deployment && just deploy stageflow" >&2
+    echo "Production deployment for the hosted stageflow.org demo is intentionally outside this repository." >&2
+    echo "Use the self-hosting docs here for repo-managed environments; the live demo control plane is maintained separately." >&2
     exit 1
 
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]

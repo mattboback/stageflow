@@ -8,12 +8,13 @@ If you have 5–15 minutes, follow the paths below. Each one points to concrete 
 
 ## 1. Product and Architecture at a Glance
 
-- Start with the root README for the high-level picture:
-  - `README.md` — screenshots, quick local setup, and a short architecture sketch.
+- Start with the root README for the high-level picture and environment/topology summary:
+  - `README.md` — quick local setup, reviewer links, screenshots, and the top-level architecture story.
 - For system design and boundaries:
   - `docs/architecture/system.md` — service map, job lifecycle, contracts, and trust boundaries.
-
-What to look for:
+- For deployment/topology details:
+  - `docs/reference/configuration.md` — compose overlays, self-hosting edge notes, and environment-specific port/layout guidance.
+    What to look for:
 
 - Clear separation between the client surfaces (web UI and CLI) and the backend services.
 - Use of contracts (`libs/contracts/*`) to keep scanners and consumers decoupled.
@@ -38,7 +39,20 @@ Highlights:
 - Support for project baselines and regression diffing.
 - Local Project Mode that drives a dev server lifecycle from the CLI.
 
-### 2.2 Orchestrator and Job Lifecycle
+### 2.2 Platform API and intake boundary
+
+- Entry points:
+  - `services/platform-api/README.md` — HTTP boundary, routes, middleware, and dependency map.
+  - `services/platform-api/cmd/server/main.go` — process wiring and dependency construction.
+  - `services/platform-api/internal/api` — route handlers, middleware, SSRF checks, SSE, and artifact redirects.
+
+Highlights:
+
+- URL/ZIP intake with explicit validation and SSRF protections.
+- SSE job progress streaming without WebSocket complexity.
+- Project CRUD, baseline promotion, and scanner discovery from one public API surface.
+
+### 2.3 Orchestrator and Job Lifecycle
 
 - Entry points:
   - `services/orchestrator/internal/domain/jobs` — job model and state machine.
@@ -52,10 +66,10 @@ Highlights:
 - Use of NATS JetStream for job events and coordination.
 - Test coverage that exercises end-to-end flows without relying on a real Podman or Postgres.
 
-### 2.3 Scanner Runner and Contracts
+### 2.4 Scanner Runner and Contracts
 
 - Entry points:
-  - `services/scanner-runner` — TypeScript/Bun runtime and Playwright-driven scanners.
+  - `services/scanner-runner/README.md` — runtime responsibilities, plugin resolution, and outputs.
   - `services/scanner-runner/tests` — tests for scanner pipeline, runtime contracts, and integrations.
   - `libs/contracts/report` — unified report schema and generated types.
   - `libs/contracts/scanner-manifest` — scanner manifest schema.
@@ -66,13 +80,13 @@ Highlights:
 - Use of Playwright for browser automation and screenshot evidence.
 - Optional AI-powered scanners with clear boundaries around configuration (for example `OPENROUTER_API_KEY`).
 
-### 2.4 Web App and Accessibility Testing
+### 2.5 Web App and Accessibility Testing
 
 - Entry points:
+  - `clients/web/README.md` — frontend architecture, local commands, routes, and test entrypoints.
   - `clients/web` — SvelteKit 5 web app.
   - `clients/web/tests/unit` — Vitest unit tests for stores, utilities, and components.
     Highlights:
-
 - Focus on report UX, evidence visualization, and live job status.
 - Storybook-based interaction and accessibility tests in CI.
 

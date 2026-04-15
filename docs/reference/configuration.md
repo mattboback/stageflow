@@ -16,6 +16,24 @@ just demo
 
 `just demo` is the fastest end-to-end smoke test. For the individual bootstrap steps behind it, run `just setup && just images && just dev up && just dev init`.
 
+## Environment Topology
+
+> The repo contains more than one valid deployment layout. Keep the compose overlay, public URLs, and edge proxy config aligned for the environment you are actually running.
+
+| Mode                                  | When to use it                                        | Web                     | API                     | Grafana                 | Primary files                                                                |
+| ------------------------------------- | ----------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- | ---------------------------------------------------------------------------- |
+| `dev` via `just demo` / `just dev up` | Fastest local smoke test                              | `http://localhost:3000` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.yml` + `infra/compose/podman-compose.test.yml` |
+| `local` overlay                       | Localhost/private-target scans during development     | `http://localhost:3010` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.local.yml`                                     |
+| repo-managed staging overlay          | Domain-like staging on alternate loopback ports       | `http://127.0.0.1:3300` | `http://127.0.0.1:8300` | `http://127.0.0.1:3301` | `infra/compose/podman-compose.staging.yml`                                   |
+| optional self-hosted edge             | Public-domain routing and TLS for your own deployment | proxied by host Caddy   | proxied by host Caddy   | proxied by host Caddy   | `infra/caddy/Caddyfile`                                                      |
+| hosted `stageflow.org` production     | Shared VPS deployment for the live demo               | gateway-managed         | gateway-managed         | gateway-managed         | separate deployment workspace (Quadlets + ingress network)                   |
+
+The repo-managed staging overlay, the optional self-hosted Caddy edge, and the hosted `stageflow.org` deployment intentionally use different topologies. `podman-compose.staging.yml` binds `3300/3301/8300/9300`, while the live demo runs behind a separate gateway + Quadlet-managed ingress network rather than repo-managed host port bindings. Use one topology per environment rather than mixing them.
+
+The hosted `stageflow.org` demo uses the same application code, but this repository should be treated as the source for local development and self-hosted layouts rather than as the authoritative deployment automation for that public instance.
+
+The optional Caddy edge expects a separate host-level loopback layout where the app is already exposed on `127.0.0.1:3100` (frontend), `127.0.0.1:3101` (Grafana), `127.0.0.1:8100` (API), and `127.0.0.1:9100` (MinIO). Those are not the same ports used by the local (`3000/3010/8080/3001`) or staging (`3300/8300/3301/9300`) compose overlays.
+
 ## Variable Reference
 
 ### MinIO
@@ -86,7 +104,7 @@ The frontend container builds the SvelteKit app to static files and serves them 
 | ------------- | -------- | ------------------------- | ------------------------------------------------------ |
 | `CADDY_EMAIL` | no       | not set                   | Email address used for Let's Encrypt TLS registration. |
 
-This section refers to the optional host-level edge proxy under `infra/caddy/`, not the frontend container's internal Caddy runtime.
+This section refers to the optional host-level edge proxy example under `infra/caddy/` for self-hosted installs. The hosted `stageflow.org` production gateway is managed from a separate deployment workspace rather than from this repository.
 
 ### Advanced infrastructure overrides
 
@@ -107,7 +125,8 @@ Most first-time local setups can ignore this section. These variables are mainly
 
 - Use distinct credentials for local, staging, and production.
 - Keep domains and CORS origins environment-specific.
-- If you already run a shared Caddy on the host, route StageFlow through that existing process and avoid binding a second edge proxy.
+- For self-hosted public domains, either route StageFlow through an existing host-level gateway or use `infra/caddy/Caddyfile` as the starting point for your own edge config.
+- The hosted `stageflow.org` demo runs on a separate Quadlet-managed ingress topology; do not expect the repo-local compose overlays to mirror that production host layout 1:1.
 
 ## Pre-Deploy Validation
 

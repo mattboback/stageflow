@@ -1,5 +1,6 @@
 # For staging/self-hosted environments only.
-# Do NOT use this for the live stageflow.org production boundary (see AGENTS.md).
+# Do NOT use this file as the live stageflow.org production boundary; it is a self-hosting/staging reference only.
+# It assumes upstream services are already reachable on 127.0.0.1:3100 (frontend), 3101 (Grafana), 8100 (API), and 9100 (MinIO).
 {
     # Set to your email for ACME registration (Let's Encrypt).
     # Example: email you@example.com
