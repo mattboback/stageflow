@@ -17,7 +17,12 @@
 <Modal {open} onClose={closeModal} ariaLabel="Test modal" contentClass="bg-surface p-4">
 	<div data-testid="modal-content">
 		<div data-testid="modal-body">
-			<button data-modal-initial-focus data-testid="close-button" onclick={closeModal} type="button">
+			<button
+				data-modal-initial-focus
+				data-testid="close-button"
+				onclick={closeModal}
+				type="button"
+			>
 				Close
 			</button>
 			<a data-testid="help-link" href="https://example.com"> Help </a>

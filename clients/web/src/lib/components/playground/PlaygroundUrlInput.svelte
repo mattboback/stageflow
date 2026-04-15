@@ -26,11 +26,9 @@
 	const isAllValid = $derived(urlCount > 0 && validation.invalid.length === 0);
 	const hasErrors = $derived(hasInteracted && validation.invalid.length > 0);
 
-	const placeholder = [
-		'https://example.com',
-		'example.com/pricing',
-		'example.com/contact'
-	].join('\n');
+	const placeholder = ['https://example.com', 'example.com/pricing', 'example.com/contact'].join(
+		'\n'
+	);
 
 	function handleBlur() {
 		hasInteracted = true;
@@ -97,7 +95,8 @@
 	{:else if wasAutoNormalized}
 		<div class="text-ink mt-2 flex items-start gap-1.5 text-xs">
 			<Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-			<span>We formatted your entries automatically, including adding `https://` where needed.</span>
+			<span>We formatted your entries automatically, including adding `https://` where needed.</span
+			>
 		</div>
 	{:else if urlCount > 0 && !hasErrors}
 		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-green-700">

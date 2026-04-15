@@ -118,7 +118,9 @@
 		<div class="border-line flex flex-wrap items-center justify-between gap-2 border-t px-2 pt-2">
 			<div>
 				<span class="text-ink-faint text-xs font-semibold tracking-wide uppercase">Audience</span>
-				<p class="text-ink-faint text-[11px]">Adjust issue detail depth without changing report data.</p>
+				<p class="text-ink-faint text-[11px]">
+					Adjust issue detail depth without changing report data.
+				</p>
 			</div>
 			<div class="flex items-center gap-1.5">
 				{#each audienceOptions as opt (opt.id)}

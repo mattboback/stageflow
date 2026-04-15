@@ -55,6 +55,7 @@ func waitJobState(ctx context.Context, c *Client, jobID string, out io.Writer, n
 	}
 
 	fmt.Fprintf(out, "stream lost, falling back to polling...\n")
+
 	return pollJobState(ctx, c, jobID, out)
 }
 

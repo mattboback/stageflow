@@ -73,7 +73,7 @@
 	{#if file}
 		<div
 			aria-describedby="zip-upload-help"
-			class="group relative flex flex-col items-center justify-center rounded-2xl border border-dashed border-accent/60 bg-accent/5 p-8 shadow-[0_0_0_1px_rgba(13,92,99,0.18)]"
+			class="group border-accent/60 bg-accent/5 relative flex flex-col items-center justify-center rounded-2xl border border-dashed p-8 shadow-[0_0_0_1px_rgba(13,92,99,0.18)]"
 		>
 			<div class="bg-accent/10 mb-3 flex h-14 w-14 items-center justify-center rounded-2xl">
 				<FileUp class="text-accent h-7 w-7" />

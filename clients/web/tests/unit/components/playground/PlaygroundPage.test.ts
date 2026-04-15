@@ -232,6 +232,9 @@ describe('PlaygroundPage', () => {
 		const uploadButton = screen.getByRole('button', { name: 'Choose a ZIP file to upload' });
 		expect(uploadButton).toBeInTheDocument();
 		expect(uploadButton.tagName.toLowerCase()).toBe('button');
-		expect(container.querySelector('input[type="file"]')).toHaveAttribute('name', 'staticSiteArchive');
+		expect(container.querySelector('input[type="file"]')).toHaveAttribute(
+			'name',
+			'staticSiteArchive'
+		);
 	});
 });
