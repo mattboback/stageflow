@@ -1,19 +1,24 @@
 import { buildApiUrl } from '$lib/api/utils';
-import {
-	MAX_SSE_PARSE_ERRORS,
-	MAX_SSE_RECONNECT_ATTEMPTS
-} from '$lib/stores/scan-status/constants';
+
+const MAX_SSE_PARSE_ERRORS = 3;
+const MAX_SSE_RECONNECT_ATTEMPTS = 5;
+
+export interface SSEError {
+	message: string;
+	kind: 'parse' | 'transient' | 'closed' | 'exhausted';
+}
 
 export interface SSECallbacks<TStatus, TUpdate> {
 	onStatus: (data: TStatus) => void;
 	onUpdate: (data: TUpdate) => void;
 	onDone: () => void;
-	onError: (err: { message: string; parseError?: boolean; terminal?: boolean }) => void;
+	onError: (err: SSEError) => void;
 }
 
 export interface SSEOptions {
 	sourceName?: string;
 	onLog?: (msg: string) => void;
+	onOpen?: () => void;
 }
 
 export function createSSEStream<TStatus, TUpdate>(
@@ -42,8 +47,7 @@ export function createSSEStream<TStatus, TUpdate>(
 			options?.onLog?.('ERROR: Live updates failed (invalid stream data). Refresh to retry.');
 			callbacks.onError({
 				message: 'Too many parse errors',
-				parseError: true,
-				terminal: true
+				kind: 'parse'
 			});
 			close();
 		}
@@ -52,9 +56,7 @@ export function createSSEStream<TStatus, TUpdate>(
 	eventSource.onopen = () => {
 		reportedSSEError = false;
 		sseReconnectAttempts = 0;
-		if (sourceName === 'scan-status') {
-			options?.onLog?.('Live status stream connected.');
-		}
+		options?.onOpen?.();
 	};
 
 	eventSource.addEventListener('status', (event) => {
@@ -96,7 +98,7 @@ export function createSSEStream<TStatus, TUpdate>(
 			);
 			callbacks.onError({
 				message: 'Connection closed permanently',
-				terminal: true
+				kind: 'closed'
 			});
 			close();
 			return;
@@ -115,7 +117,7 @@ export function createSSEStream<TStatus, TUpdate>(
 			);
 			callbacks.onError({
 				message: 'Max reconnect attempts reached',
-				terminal: true
+				kind: 'exhausted'
 			});
 			close();
 			return;
@@ -130,7 +132,7 @@ export function createSSEStream<TStatus, TUpdate>(
 				event
 			});
 			options?.onLog?.('WARN: Lost connection to live updates. Reconnecting...');
-			callbacks.onError({ message: 'Connection error', terminal: false });
+			callbacks.onError({ message: 'Connection error', kind: 'transient' });
 		}
 	};
 

@@ -165,10 +165,28 @@ describe('SSE Stream', () => {
 
 		expect(onError).toHaveBeenCalledWith({
 			message: 'Too many parse errors',
-			parseError: true,
-			terminal: true
+			kind: 'parse'
 		});
 		expect(instance.readyState).toBe(MockEventSource.CLOSED);
+	});
+
+	it('calls onOpen when the stream connects', () => {
+		const onOpen = vi.fn();
+		createSSEStream(
+			'job-123',
+			{
+				onStatus: vi.fn(),
+				onUpdate: vi.fn(),
+				onDone: vi.fn(),
+				onError: vi.fn()
+			},
+			{ onOpen }
+		);
+
+		const instance = firstInstance();
+		instance.onopen?.(new Event('open'));
+
+		expect(onOpen).toHaveBeenCalledTimes(1);
 	});
 
 	it('calls close on done event', () => {
@@ -202,7 +220,26 @@ describe('SSE Stream', () => {
 
 		expect(onError).toHaveBeenCalledWith({
 			message: 'Connection error',
-			terminal: false
+			kind: 'transient'
+		});
+	});
+
+	it('reports permanently closed streams with a closed error kind', () => {
+		const onError = vi.fn();
+		createSSEStream('job-123', {
+			onStatus: vi.fn(),
+			onUpdate: vi.fn(),
+			onDone: vi.fn(),
+			onError
+		});
+
+		const instance = firstInstance();
+		instance.readyState = MockEventSource.CLOSED;
+		instance.emitError();
+
+		expect(onError).toHaveBeenCalledWith({
+			message: 'Connection closed permanently',
+			kind: 'closed'
 		});
 	});
 });
