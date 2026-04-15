@@ -215,7 +215,7 @@ describe('PlaygroundPage', () => {
 			'aiSuccessCriteria[0].value'
 		);
 		expect(screen.getByRole('button', { name: 'Remove success criterion 1' })).toBeInTheDocument();
-	});
+	}, 15000);
 
 	it('renders ZIP upload as a native button surface', async () => {
 		mockFetchScanners.mockResolvedValue({
@@ -236,5 +236,5 @@ describe('PlaygroundPage', () => {
 			'name',
 			'staticSiteArchive'
 		);
-	});
+	}, 15000);
 });

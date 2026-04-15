@@ -4,8 +4,6 @@ import { compareSeverity, getWorstSeverity } from './severity';
 
 export type IssueGroupKey = 'none' | 'rule' | 'page' | 'scanner' | 'category';
 
-
-
 export interface IssueGroup {
 	id: string;
 	label: string;
@@ -18,7 +16,6 @@ interface GroupOptions {
 	pagesById?: Record<string, PageSummary>;
 	scannersById?: Record<string, ScannerSummary>;
 }
-
 
 export function groupIssues(
 	issues: IssueDetail[],
