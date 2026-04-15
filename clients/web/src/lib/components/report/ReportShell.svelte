@@ -130,9 +130,15 @@
 			report={displayReport}
 			{job}
 			onJumpToIssues={() =>
-				updateQueryParams({ section: 'issues', q: null, scanner: null, page: null }, { replaceState: false })}
+				updateQueryParams(
+					{ section: 'issues', q: null, scanner: null, page: null },
+					{ replaceState: false }
+				)}
 			onJumpToPages={() =>
-				updateQueryParams({ section: 'pages', q: null, scanner: null, page: null }, { replaceState: false })}
+				updateQueryParams(
+					{ section: 'pages', q: null, scanner: null, page: null },
+					{ replaceState: false }
+				)}
 			{...onRefreshArtifacts ? { onRefreshArtifacts } : {}}
 		/>
 		<ReportSectionNav

@@ -320,9 +320,9 @@
 												{#each invalidUrls.slice(0, 6) as item (item.url)}
 													<li class="font-mono">{item.url} — {item.reason}</li>
 												{/each}
-													{#if invalidUrls.length > 6}
-														<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
-													{/if}
+												{#if invalidUrls.length > 6}
+													<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
+												{/if}
 											</ul>
 										{/if}
 									</div>
@@ -370,9 +370,9 @@
 							disabled={!canSubmit}
 							onclick={handleSubmit}
 						>
-								{#if isSubmitting}
-									<Loader2 class="h-5 w-5 animate-spin" />
-									Starting Scan…
+							{#if isSubmitting}
+								<Loader2 class="h-5 w-5 animate-spin" />
+								Starting Scan…
 							{:else}
 								<Play class="h-5 w-5" />
 								Start Scan

@@ -199,10 +199,12 @@ func (c *Client) Close() error {
 	}
 
 	c.mu.Lock()
+
 	for key, consumeCtx := range c.consumeContexts {
 		consumeCtx.Stop()
 		delete(c.consumeContexts, key)
 	}
+
 	c.mu.Unlock()
 
 	if c.nc != nil {

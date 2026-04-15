@@ -4,15 +4,7 @@ import { compareSeverity, getWorstSeverity } from './severity';
 
 export type IssueGroupKey = 'none' | 'rule' | 'page' | 'scanner' | 'category';
 
-export const ISSUE_GROUPS: IssueGroupKey[] = ['none', 'rule', 'page', 'scanner', 'category'];
 
-export const ISSUE_GROUP_LABELS: Record<IssueGroupKey, string> = {
-	none: 'No grouping',
-	rule: 'By Issue Type',
-	page: 'By Page',
-	scanner: 'By Scanner',
-	category: 'By Category'
-};
 
 export interface IssueGroup {
 	id: string;
@@ -27,9 +19,6 @@ interface GroupOptions {
 	scannersById?: Record<string, ScannerSummary>;
 }
 
-export function isIssueGroupKey(value?: string | null): value is IssueGroupKey {
-	return ISSUE_GROUPS.includes((value ?? 'none') as IssueGroupKey);
-}
 
 export function groupIssues(
 	issues: IssueDetail[],

@@ -79,18 +79,3 @@ export function buildPageOverviewOverlaySvg(
     `);
 }
 
-export async function compositePageOverviewOverlay(
-	screenshotBuffer: Buffer,
-	elements: PageOverviewElement[],
-	width: number,
-	height: number
-): Promise<Buffer> {
-	if (elements.length === 0) {
-		return screenshotBuffer;
-	}
-
-	const svgOverlay = buildPageOverviewOverlaySvg(elements, width, height);
-	return sharp(screenshotBuffer)
-		.composite([{ input: svgOverlay, top: 0, left: 0 }])
-		.toBuffer();
-}

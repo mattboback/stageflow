@@ -16,8 +16,14 @@
 		onRefreshArtifacts?: () => void;
 	}
 
-	let { jobId, report, job: _job, onJumpToIssues, onJumpToPages, onRefreshArtifacts }: Props =
-		$props();
+	let {
+		jobId,
+		report,
+		job: _job,
+		onJumpToIssues,
+		onJumpToPages,
+		onRefreshArtifacts
+	}: Props = $props();
 
 	const jsonUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null);
 	const htmlUrl = $derived(jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null);
@@ -49,9 +55,12 @@
 	});
 	const seriousCount = $derived(report.summary.bySeverity?.serious ?? 0);
 	const triageHeadline = $derived.by(() => {
-		if (criticalCount > 0) return `Start with ${criticalCount} critical issue${criticalCount === 1 ? '' : 's'}.`;
-		if (seriousCount > 0) return `Prioritize ${seriousCount} serious issue${seriousCount === 1 ? '' : 's'} next.`;
-		if (report.summary.totalIssues > 0) return 'Review the issue list to work through moderate findings.';
+		if (criticalCount > 0)
+			return `Start with ${criticalCount} critical issue${criticalCount === 1 ? '' : 's'}.`;
+		if (seriousCount > 0)
+			return `Prioritize ${seriousCount} serious issue${seriousCount === 1 ? '' : 's'} next.`;
+		if (report.summary.totalIssues > 0)
+			return 'Review the issue list to work through moderate findings.';
 		return 'No issues detected. Spot-check pages and artifacts to confirm release readiness.';
 	});
 </script>
@@ -145,7 +154,9 @@
 			</div>
 			<div class="border-line/70 bg-surface/70 mt-4 rounded-2xl border px-4 py-3">
 				<div class="flex items-start gap-3">
-					<div class="bg-surface-muted text-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+					<div
+						class="bg-surface-muted text-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+					>
 						<AlertTriangle class="h-4 w-4" />
 					</div>
 					<div>

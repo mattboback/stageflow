@@ -3,14 +3,7 @@
 
 	import { Chip, Panel } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import {
-		CheckCircle2,
-		Lock,
-		Play,
-		Sparkles,
-		Target,
-		WandSparkles
-	} from 'lucide-svelte';
+	import { CheckCircle2, Lock, Play, Sparkles, Target, WandSparkles } from 'lucide-svelte';
 
 	interface Props {
 		mode: 'url' | 'zip';
@@ -59,14 +52,18 @@
 			<div class="space-y-4">
 				<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
 					<div class="bg-surface-muted/60 rounded-2xl px-4 py-3">
-						<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+						<div
+							class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+						>
 							<Target class="h-3.5 w-3.5" />
 							Target
 						</div>
 						<p class="mt-2 text-sm font-medium">{mode === 'url' ? 'Live URLs' : 'ZIP archive'}</p>
 					</div>
 					<div class="bg-surface-muted/60 rounded-2xl px-4 py-3">
-						<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+						<div
+							class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+						>
 							<Sparkles class="h-3.5 w-3.5" />
 							Scanners
 						</div>
@@ -91,7 +88,9 @@
 								</span>
 							{/each}
 							{#if enabledScanners.length > previewScanners.length}
-								<span class="text-ink-muted inline-flex rounded-full bg-surface px-2.5 py-1 text-xs font-medium">
+								<span
+									class="text-ink-muted bg-surface inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+								>
 									+{enabledScanners.length - previewScanners.length} more
 								</span>
 							{/if}
@@ -115,7 +114,9 @@
 						{#if isAiNavigatorEnabled}
 							<div class="flex items-center justify-between gap-3">
 								<span class="text-ink-muted">AI Navigator</span>
-								<span class={cn('font-medium', isAiConfigValid ? 'text-emerald-700' : 'text-amber-700')}>
+								<span
+									class={cn('font-medium', isAiConfigValid ? 'text-emerald-700' : 'text-amber-700')}
+								>
 									{isAiConfigValid ? 'Configured' : 'Needs objective'}
 								</span>
 							</div>
@@ -123,9 +124,19 @@
 					</div>
 				</div>
 
-				<div class={cn('rounded-2xl border px-4 py-3', canSubmit ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70')}>
+				<div
+					class={cn(
+						'rounded-2xl border px-4 py-3',
+						canSubmit ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'
+					)}
+				>
 					<div class="flex items-start gap-2.5">
-						<div class={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full', canSubmit ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')}>
+						<div
+							class={cn(
+								'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+								canSubmit ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+							)}
+						>
 							{#if canSubmit}
 								<Play class="h-4 w-4" />
 							{:else}
@@ -164,7 +175,8 @@
 		<div>
 			<p class="text-sm font-medium">What happens next</p>
 			<p class="text-ink-muted text-xs">
-				You&apos;ll go straight to live scan status, then into the unified report with screenshots and remediation details.
+				You&apos;ll go straight to live scan status, then into the unified report with screenshots
+				and remediation details.
 			</p>
 		</div>
 	</div>

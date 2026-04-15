@@ -105,11 +105,11 @@
 						)}
 					/>
 					<p class="text-sm">
-							{status === 'failed'
-								? 'No artifacts generated'
-								: status === 'complete'
-									? 'Artifacts are still being attached'
-									: 'Generating artifacts…'}
+						{status === 'failed'
+							? 'No artifacts generated'
+							: status === 'complete'
+								? 'Artifacts are still being attached'
+								: 'Generating artifacts…'}
 					</p>
 				</div>
 			{:else}

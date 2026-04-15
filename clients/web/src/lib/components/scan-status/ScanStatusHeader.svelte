@@ -59,21 +59,21 @@
 	>
 		<div class="flex w-full flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
 			<div class="min-w-0">
-			<div class="mb-2 flex items-center gap-3">
-				<h1 class="text-ink text-2xl font-bold tracking-tight">Scan Status</h1>
-				<Badge
-					class={cn(
-						'px-3 py-1',
-						status === 'complete'
-							? 'bg-emerald-100 text-emerald-700'
-							: status === 'failed' || status === 'error'
-								? 'bg-red-100 text-red-700'
-								: 'bg-blue-100 text-blue-700'
-					)}
-				>
-					{status.toUpperCase()}
-				</Badge>
-			</div>
+				<div class="mb-2 flex items-center gap-3">
+					<h1 class="text-ink text-2xl font-bold tracking-tight">Scan Status</h1>
+					<Badge
+						class={cn(
+							'px-3 py-1',
+							status === 'complete'
+								? 'bg-emerald-100 text-emerald-700'
+								: status === 'failed' || status === 'error'
+									? 'bg-red-100 text-red-700'
+									: 'bg-blue-100 text-blue-700'
+						)}
+					>
+						{status.toUpperCase()}
+					</Badge>
+				</div>
 				<p class="text-ink mt-2 max-w-3xl text-sm leading-relaxed">{summaryText}</p>
 				<p class="text-ink-faint mt-3 font-mono text-[11px]">Job {id}</p>
 			</div>
@@ -91,7 +91,9 @@
 
 		<div class="grid w-full gap-3 sm:grid-cols-3">
 			<div class="bg-surface-muted/65 rounded-2xl px-4 py-3">
-				<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+				<div
+					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+				>
 					<FileSearch class="h-3.5 w-3.5" />
 					Pages
 				</div>
@@ -104,16 +106,22 @@
 				</p>
 			</div>
 			<div class="bg-surface-muted/65 rounded-2xl px-4 py-3">
-				<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+				<div
+					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+				>
 					<ShieldCheck class="h-3.5 w-3.5" />
 					Scanners
 				</div>
 				<p class="mt-2 text-sm font-semibold">
-					{completedScanners} complete{#if expectedScanners > 0}<span class="text-ink-muted"> of {expectedScanners}</span>{/if}
+					{completedScanners} complete{#if expectedScanners > 0}<span class="text-ink-muted">
+							of {expectedScanners}</span
+						>{/if}
 				</p>
 			</div>
 			<div class="bg-surface-muted/65 rounded-2xl px-4 py-3">
-				<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+				<div
+					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+				>
 					<Link2 class="h-3.5 w-3.5" />
 					Next step
 				</div>

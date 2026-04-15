@@ -47,6 +47,7 @@
 		"@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
 		"ajv": "^8.17.1",
 		"ajv-formats": "^3.0.1",
+		"chrome-launcher": "^1.2.1",
 		"fast-glob": "^3.3.2",
 		"fs-extra": "^11.2.0",
 		"lighthouse": "^12.8.2",
@@ -62,16 +63,17 @@
 		"@types/fs-extra": "^11.0.4",
 		"@types/node": "24.10.1",
 		"@vitest/coverage-v8": "4.0.13",
+		"@vitest/eslint-plugin": "^1.3.20",
 		"eslint": "^9.39.1",
 		"eslint-plugin-perfectionist": "^5.2.0",
+		"globals": "^17.5.0",
 		"knip": "^5.79.0",
 		"prettier": "^3.6.2",
 		"ts-node": "^10.9.2",
 		"tsr": "^1.3.4",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.47.0",
-		"vitest": "4.0.13",
-		"@vitest/eslint-plugin": "^1.3.20"
+		"vitest": "4.0.13"
 	},
 	"overrides": {
 		"esbuild": "0.27.0",

@@ -30,7 +30,8 @@
 		<div class="min-w-0 flex-1">
 			<h3 class="text-ink text-lg font-semibold">Scan complete</h3>
 			<p class="text-ink-muted mt-1 text-sm">
-				The unified report is ready. Start there to triage the most important findings, then use the sidebar for raw logs and artifacts if you need deeper diagnostics.
+				The unified report is ready. Start there to triage the most important findings, then use the
+				sidebar for raw logs and artifacts if you need deeper diagnostics.
 			</p>
 			<div class="text-ink-muted mt-4 flex flex-wrap gap-3 text-sm">
 				<span class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1">

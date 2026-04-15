@@ -21,23 +21,23 @@
 
 		switch (normalizedState) {
 			case 'PENDING':
-					return {
-						stage: 'Queued',
-						icon: Clock,
-						description: 'Waiting for available worker…'
-					};
+				return {
+					stage: 'Queued',
+					icon: Clock,
+					description: 'Waiting for available worker…'
+				};
 			case 'EXTRACTING':
-					return {
-						stage: 'Extracting',
-						icon: Server,
-						description: 'Processing uploaded content…'
-					};
+				return {
+					stage: 'Extracting',
+					icon: Server,
+					description: 'Processing uploaded content…'
+				};
 			case 'READY_TO_SCAN':
-					return {
-						stage: 'Preparing',
-						icon: FileSearch,
-						description: 'Analyzing site structure…'
-					};
+				return {
+					stage: 'Preparing',
+					icon: FileSearch,
+					description: 'Analyzing site structure…'
+				};
 			case 'SCANNING':
 				if (progress) {
 					return {
@@ -46,23 +46,23 @@
 						description: `Auditing page ${progress.current_page} of ${progress.total_pages}`
 					};
 				}
-					return {
-						stage: 'Scanning',
-						icon: Loader2,
-						description: 'Running accessibility checks…'
-					};
+				return {
+					stage: 'Scanning',
+					icon: Loader2,
+					description: 'Running accessibility checks…'
+				};
 			case 'COMPLETING':
-					return {
-						stage: 'Finalizing',
-						icon: FileSearch,
-						description: 'Generating reports…'
-					};
+				return {
+					stage: 'Finalizing',
+					icon: FileSearch,
+					description: 'Generating reports…'
+				};
 			default:
-					return {
-						stage: 'Processing',
-						icon: Loader2,
-						description: 'Initializing scan environment…'
-					};
+				return {
+					stage: 'Processing',
+					icon: Loader2,
+					description: 'Initializing scan environment…'
+				};
 		}
 	}
 
@@ -107,7 +107,9 @@
 			return `Running ${remainingScanners
 				.slice(0, 2)
 				.map((scannerType) => formatScannerName(scannerType))
-				.join(', ')}${remainingScanners.length > 2 ? ` and ${remainingScanners.length - 2} more` : ''}.`;
+				.join(
+					', '
+				)}${remainingScanners.length > 2 ? ` and ${remainingScanners.length - 2} more` : ''}.`;
 		}
 		if (completedScanners.length > 0) {
 			return 'Waiting for the next scanner update.';
@@ -172,7 +174,9 @@
 
 		<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
 			<div class="bg-surface rounded-2xl border border-[var(--color-line)] px-4 py-3">
-				<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+				<div
+					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+				>
 					<FileSearch class="h-3.5 w-3.5" />
 					Pages
 				</div>
@@ -185,16 +189,24 @@
 				</p>
 			</div>
 			<div class="bg-surface rounded-2xl border border-[var(--color-line)] px-4 py-3">
-				<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+				<div
+					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+				>
 					<ShieldCheck class="h-3.5 w-3.5" />
 					Scanners
 				</div>
 				<p class="mt-2 text-sm font-semibold">
-					{completedScanners.length} complete{#if expectedScannerCount > 0}<span class="text-ink-muted"> of {expectedScannerCount}</span>{/if}
+					{completedScanners.length} complete{#if expectedScannerCount > 0}<span
+							class="text-ink-muted"
+						>
+							of {expectedScannerCount}</span
+						>{/if}
 				</p>
 			</div>
 			<div class="bg-surface rounded-2xl border border-[var(--color-line)] px-4 py-3">
-				<div class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
+				<div
+					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+				>
 					<Clock class="h-3.5 w-3.5" />
 					Handoff
 				</div>
@@ -248,7 +260,8 @@
 		<div class="border-line bg-surface-muted/55 rounded-2xl border p-4">
 			<p class="text-ink text-sm font-semibold">Waiting for scanner activity</p>
 			<p class="text-ink-muted mt-1 text-sm">
-				The scan has started, but no scanner progress has been reported yet. Logs below will update first if the pipeline is still warming up.
+				The scan has started, but no scanner progress has been reported yet. Logs below will update
+				first if the pipeline is still warming up.
 			</p>
 		</div>
 	{/if}
@@ -260,7 +273,9 @@
 					<TerminalSquare class="h-4 w-4" />
 					Live logs
 				</h4>
-				<p class="text-ink-muted text-xs">Use logs for detailed diagnostics when the summary above is not enough.</p>
+				<p class="text-ink-muted text-xs">
+					Use logs for detailed diagnostics when the summary above is not enough.
+				</p>
 			</div>
 		</div>
 		<ScanTerminal {logs} />

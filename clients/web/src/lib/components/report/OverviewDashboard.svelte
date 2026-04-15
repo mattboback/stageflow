@@ -211,7 +211,9 @@
 	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
 		<div class="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
 			<div class="rounded-2xl border border-red-100 bg-red-50/70 p-4">
-				<p class="text-[11px] font-semibold tracking-[0.14em] text-red-700 uppercase">Priority path</p>
+				<p class="text-[11px] font-semibold tracking-[0.14em] text-red-700 uppercase">
+					Priority path
+				</p>
 				<p class="mt-2 text-sm font-semibold text-red-900">{riskSummary}</p>
 				<div class="mt-4 flex flex-wrap gap-2">
 					<button
@@ -236,7 +238,9 @@
 						onclick={() => onSearchIssues(topRule.ruleId, topRule.scanner)}
 						class="border-line hover:border-accent/40 hover:bg-surface-muted rounded-2xl border p-4 text-left transition"
 					>
-						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Top recurring rule</p>
+						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">
+							Top recurring rule
+						</p>
 						<p class="text-ink mt-2 text-sm font-semibold">{topRule.title}</p>
 						<p class="text-ink-muted mt-1 text-xs">
 							{topRule.scanner} · {topRule.count} occurrences
@@ -248,8 +252,12 @@
 						onclick={() => onSelectPage(topPage.id)}
 						class="border-line hover:border-accent/40 hover:bg-surface-muted rounded-2xl border p-4 text-left transition"
 					>
-						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Most impacted page</p>
-						<p class="text-ink mt-2 truncate text-sm font-semibold">{topPage.path ?? topPage.url}</p>
+						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">
+							Most impacted page
+						</p>
+						<p class="text-ink mt-2 truncate text-sm font-semibold">
+							{topPage.path ?? topPage.url}
+						</p>
 						<p class="text-ink-muted mt-1 text-xs">{topPage.issueCount} issues</p>
 					</button>
 				{/if}
