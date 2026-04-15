@@ -27,6 +27,7 @@ services:
 
   orchestrator:
     user: "1000:1000"
+    userns_mode: "keep-id"
     environment:
       POD_NETNS_MODE: "host"
       POD_NETWORK: ""
