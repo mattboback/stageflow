@@ -21,7 +21,7 @@
 		type ScannerPreset,
 		applyScannerPreset,
 		detectScannerPreset
-	} from '$lib/components/playground/scanner-presets';
+	} from '$lib/domain/scanners/presets';
 	import { Alert, Button, Chip, PageSection, Panel } from '$lib/components/ui';
 	import { AlertTriangle, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-svelte';
 
