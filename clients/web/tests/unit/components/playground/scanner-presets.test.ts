@@ -1,9 +1,6 @@
 import type { ScannerSelection } from '$lib/types/scan';
 
-import {
-	applyScannerPreset,
-	detectScannerPreset
-} from '$lib/components/playground/scanner-presets';
+import { applyScannerPreset, detectScannerPreset } from '$lib/domain/scanners/presets';
 import { describe, expect, it } from 'vitest';
 
 describe('scanner presets', () => {

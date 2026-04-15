@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ScannerPreset } from '$lib/components/playground/scanner-presets';
+	import type { ScannerPreset } from '$lib/domain/scanners/presets';
 	import type { ScannerSelection } from '$lib/types/scan';
 
 	import { Chip, Label } from '$lib/components/ui';

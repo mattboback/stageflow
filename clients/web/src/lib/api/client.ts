@@ -1,6 +1,6 @@
 import type { ScannerDefinition, ScannerSelection, ScannersResponse } from '$lib/types/scan';
 
-import { applyScannerPreset } from '$lib/components/playground/scanner-presets';
+import { applyScannerPreset } from '$lib/domain/scanners/presets';
 
 import { buildApiUrl } from './utils';
 
