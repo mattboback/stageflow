@@ -34,7 +34,7 @@
 			</div>
 		</div>
 
-		<div class="text-ink-faint border-line mt-8 border-t pt-4 text-xs">
+		<div class="text-ink-muted border-line mt-8 border-t pt-4 text-xs">
 			&copy; {year} StageFlow. Open-source and operator-first.
 		</div>
 	</div>
