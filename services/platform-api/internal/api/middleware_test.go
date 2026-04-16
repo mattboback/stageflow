@@ -182,6 +182,52 @@ func TestAPIKeyMiddleware_WithToken_AllowsMatchingKey(t *testing.T) {
 	}
 }
 
+func TestAPIKeyMiddleware_WithToken_RejectsWrongKey(t *testing.T) {
+	t.Setenv("PLATFORM_API_TOKEN", "secret")
+
+	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req.Header.Set("X-Api-Key", "wrong")
+
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rr.Code)
+	}
+}
+
+func TestValidateAuthConfig_MissingTokenFails(t *testing.T) {
+	t.Setenv("PLATFORM_API_TOKEN", "")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
+
+	if err := ValidateAuthConfig(); err == nil {
+		t.Fatalf("expected error when PLATFORM_API_TOKEN is unset")
+	}
+}
+
+func TestValidateAuthConfig_ExplicitDisableAllowed(t *testing.T) {
+	t.Setenv("PLATFORM_API_TOKEN", "")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "true")
+
+	if err := ValidateAuthConfig(); err != nil {
+		t.Fatalf("expected nil error with PLATFORM_API_AUTH_DISABLED=true, got %v", err)
+	}
+}
+
+func TestValidateAuthConfig_TokenSet(t *testing.T) {
+	t.Setenv("PLATFORM_API_TOKEN", "secret")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
+
+	if err := ValidateAuthConfig(); err != nil {
+		t.Fatalf("expected nil error with token set, got %v", err)
+	}
+}
+
 func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 	original := apiRateLimiter
 	apiRateLimiter = newInMemoryRateLimiter(1)
