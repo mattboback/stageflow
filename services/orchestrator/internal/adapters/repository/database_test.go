@@ -13,11 +13,13 @@ func TestNewDatabase(t *testing.T) {
 	}
 }
 
-func TestDefaultConfig(t *testing.T) {
-	config := DefaultConfig()
+func TestNewDatabase_RequiresURL(t *testing.T) {
+	if _, err := NewDatabase(nil); err == nil {
+		t.Fatal("expected error when config is nil")
+	}
 
-	if config.URL == "" {
-		t.Fatal("Expected default database URL to be non-empty")
+	if _, err := NewDatabase(&Config{URL: ""}); err == nil {
+		t.Fatal("expected error when URL is empty")
 	}
 }
 

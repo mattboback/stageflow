@@ -112,3 +112,7 @@ services/scanner-runner/dist/
 # Deployment-specific scanner overrides (copy from infra/scanners/scanners.example.yaml)
 infra/scanners/scanners.yaml
 .opencode/
+
+# Local-only OSS-readiness plan
+plan/
+

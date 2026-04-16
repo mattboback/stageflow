@@ -216,7 +216,17 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 		}),
 	)
 
-	time.Sleep(250 * time.Millisecond)
+	// Assert the failed state is stable across the window in which a late
+	// success event could conceivably override it. requireStableRecord polls
+	// rather than sleeping blindly so a slow CI still gets a deterministic
+	// answer.
+	requireStableRecord(t, fixture.pipe, jobID, 500*time.Millisecond, func(rec *status.JobRecord) bool {
+		return rec.State == models.JobStateFailed &&
+			rec.ReportJSONKey == "" &&
+			rec.ReportKey == "" &&
+			rec.Error == "browser crashed" &&
+			rec.LastErrorDetails == "playwright lost connection"
+	})
 
 	final, err := fixture.pipe.Current(context.Background(), jobID)
 	if err != nil {
@@ -388,6 +398,7 @@ func waitForRecord(
 			return rec
 		}
 
+		// Polling interval for waitForRecord; not a flaky sleep.
 		time.Sleep(50 * time.Millisecond)
 	}
 
@@ -399,6 +410,34 @@ func waitForRecord(
 	t.Fatalf("condition not met for job %s, record: %+v", jobID, rec)
 
 	return nil
+}
+
+// requireStableRecord polls until the deadline, failing the test as soon as
+// condition returns false. Use this to assert a negative: that some late
+// event did not mutate state it should have ignored.
+func requireStableRecord(
+	t *testing.T,
+	pipe jobstatus.StatusPipeline,
+	jobID string,
+	window time.Duration,
+	condition func(*status.JobRecord) bool,
+) {
+	t.Helper()
+
+	deadline := time.Now().Add(window)
+	for time.Now().Before(deadline) {
+		rec, err := pipe.Current(context.Background(), jobID)
+		if err != nil {
+			t.Fatalf("job %s not found: %v", jobID, err)
+		}
+
+		if !condition(rec) {
+			t.Fatalf("invariant broken for job %s before %s elapsed: %+v", jobID, window, rec)
+		}
+
+		// Polling interval; not a flaky sleep.
+		time.Sleep(25 * time.Millisecond)
+	}
 }
 
 func publishEnvelope(
@@ -422,6 +461,7 @@ func ensureStreamsWithRetry(ctx context.Context, client *sharedmsg.Client, attem
 			return nil
 		}
 
+		// Backoff between NATS connection attempts; not a flaky sleep.
 		time.Sleep(delay)
 	}
 

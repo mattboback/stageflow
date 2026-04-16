@@ -216,8 +216,14 @@ func (j *ManifestCapabilities) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
-// JSON Schema for SCANNER_OPTIONS validation
-type ManifestConfigSchema interface{}
+// JSON Schema for SCANNER_OPTIONS validation.
+//
+// This holds an embedded JSON Schema document whose shape is intentionally
+// open (anyOf: boolean | object with additionalProperties). Go does not
+// introspect it — scanner-runner validates SCANNER_OPTIONS against it at
+// runtime via Ajv. Carried as json.RawMessage so round-trips preserve the
+// original bytes without lossy re-encoding through map[string]interface{}.
+type ManifestConfigSchema = json.RawMessage
 
 type ManifestEntry struct {
 	// ExportName corresponds to the JSON schema field "exportName".
@@ -468,7 +474,10 @@ type ScannerManifest struct {
 	Version string `json:"version"`
 }
 
-type ScannerManifestConfigSchema interface{}
+// Embedded JSON Schema for the scanner's `configSchema` field. Like
+// ManifestConfigSchema above, Go does not introspect this structure; it is
+// forwarded as-is to the scanner-runner's runtime validator.
+type ScannerManifestConfigSchema = json.RawMessage
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *ScannerManifest) UnmarshalJSON(value []byte) error {

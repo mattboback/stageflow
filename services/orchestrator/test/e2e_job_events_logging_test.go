@@ -26,32 +26,34 @@ func TestE2E_JobEventsLogging(t *testing.T) {
 		t.Fatalf("HandleJobCreated failed: %v", err)
 	}
 
+	// Use explicit, monotonically increasing timestamps so the chronological
+	// assertion below is deterministic regardless of clock resolution or
+	// scheduler jitter. Previously the test relied on time.Sleep between
+	// inserts, which was flaky under load.
+	base := time.Now().UTC()
+
 	if err := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
 		JobID:     jobID,
 		Event:     "job.created",
-		Timestamp: time.Now().UTC(),
+		Timestamp: base,
 		Payload:   `{"input_type":"zip"}`,
 	}); err != nil {
 		t.Fatalf("Failed to insert job.created: %v", err)
 	}
 
-	time.Sleep(10 * time.Millisecond)
-
 	if err := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
 		JobID:     jobID,
 		Event:     "extraction.ready",
-		Timestamp: time.Now().UTC(),
+		Timestamp: base.Add(10 * time.Millisecond),
 		Payload:   `{"total_pages":3}`,
 	}); err != nil {
 		t.Fatalf("Failed to insert extraction.ready: %v", err)
 	}
 
-	time.Sleep(10 * time.Millisecond)
-
 	if err := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
 		JobID:     jobID,
 		Event:     "scan.completed",
-		Timestamp: time.Now().UTC(),
+		Timestamp: base.Add(20 * time.Millisecond),
 		Payload:   `{"violations":5}`,
 	}); err != nil {
 		t.Fatalf("Failed to insert scan.completed: %v", err)

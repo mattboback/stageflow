@@ -228,6 +228,90 @@ func TestValidateAuthConfig_TokenSet(t *testing.T) {
 	}
 }
 
+func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
+	original := apiRateLimiter
+	apiRateLimiter = newInMemoryRateLimiter(1)
+
+	t.Cleanup(func() {
+		apiRateLimiter = original
+		resetTrustedProxiesForTest()
+	})
+
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "")
+	resetTrustedProxiesForTest()
+
+	handler := rateLimitMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// First request from RemoteAddr fills the bucket.
+	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req1.RemoteAddr = "10.0.0.1:1234"
+	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+	rr1 := httptest.NewRecorder()
+
+	handler(rr1, req1)
+
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d", rr1.Code)
+	}
+
+	// Second request tries to escape the bucket via a spoofed XFF header.
+	// Because 10.0.0.1 is not trusted, XFF must be ignored and the key
+	// must remain 10.0.0.1.
+	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req2.RemoteAddr = "10.0.0.1:1234"
+	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+	rr2 := httptest.NewRecorder()
+
+	handler(rr2, req2)
+
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request with spoofed XFF: expected 429, got %d", rr2.Code)
+	}
+}
+
+func TestRateLimit_XForwardedFor_TrustedHonored(t *testing.T) {
+	original := apiRateLimiter
+	apiRateLimiter = newInMemoryRateLimiter(1)
+
+	t.Cleanup(func() {
+		apiRateLimiter = original
+		resetTrustedProxiesForTest()
+	})
+
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "10.0.0.0/8")
+	resetTrustedProxiesForTest()
+
+	handler := rateLimitMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	// Two requests from different upstream IPs via a trusted proxy should
+	// each get their own bucket.
+	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req1.RemoteAddr = "10.0.0.1:1234"
+	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+	rr1 := httptest.NewRecorder()
+
+	handler(rr1, req1)
+
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("first request: expected 200, got %d", rr1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	req2.RemoteAddr = "10.0.0.1:1234"
+	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+	rr2 := httptest.NewRecorder()
+
+	handler(rr2, req2)
+
+	if rr2.Code != http.StatusOK {
+		t.Fatalf("second request with distinct trusted XFF: expected 200, got %d", rr2.Code)
+	}
+}
+
 func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 	original := apiRateLimiter
 	apiRateLimiter = newInMemoryRateLimiter(1)
