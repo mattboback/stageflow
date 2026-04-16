@@ -352,8 +352,14 @@ func publishExtractionReady(
 	envelope.RunID = cfg.RunID
 
 	if publishErr := natsClient.PublishEvent(ctx, sharedmsg.SubjectExtractionReady, envelope); publishErr != nil {
-		log.Printf("Warning: Failed to publish extraction.ready event: %v", publishErr)
-		// Continue anyway - scanner might still work
+		publishFailureAndExit(
+			ctx,
+			cfg,
+			natsClient,
+			stageLog,
+			"extraction_ready_publish",
+			fmt.Sprintf("Failed to publish extraction.ready event: %v", publishErr),
+		)
 	}
 }
 
