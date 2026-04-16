@@ -1,0 +1,162 @@
+package diffrender
+
+import (
+	"bytes"
+	"errors"
+	"strings"
+	"testing"
+
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+)
+
+func intPtr(i int) *int { return &i }
+
+func TestIsRegressed(t *testing.T) {
+	drop := intPtr(-5)
+	up := intPtr(2)
+
+	cases := []struct {
+		name string
+		env  Envelope
+		want bool
+	}{
+		{"score drop", Envelope{Delta: Delta{ScoreDelta: drop}}, true},
+		{"new issues", Envelope{Delta: Delta{NewIssues: 1}}, true},
+		{"score up no new", Envelope{Delta: Delta{ScoreDelta: up}}, false},
+		{"no change", Envelope{Delta: Delta{}}, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsRegressed(tc.env); got != tc.want {
+				t.Fatalf("IsRegressed = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsRemoteTarget(t *testing.T) {
+	if !IsRemoteTarget("http://example.com") || !IsRemoteTarget("https://x/y") {
+		t.Fatal("expected http/https to be remote")
+	}
+
+	if IsRemoteTarget("/path/to/file.json") || IsRemoteTarget("file.json") {
+		t.Fatal("expected local paths to be non-remote")
+	}
+}
+
+func TestEvaluateRegression(t *testing.T) {
+	oneNew := Envelope{New: []report.IssueDetail{{Severity: "critical"}}, Delta: Delta{NewIssues: 1}}
+
+	t.Run("fail-on-new any with new issues", func(t *testing.T) {
+		got, err := EvaluateRegression(oneNew, false, "any", nil)
+		if err != nil || !got {
+			t.Fatalf("got %v, err %v", got, err)
+		}
+	})
+
+	t.Run("no flags, no fail", func(t *testing.T) {
+		got, err := EvaluateRegression(oneNew, false, "", nil)
+		if err != nil || got {
+			t.Fatalf("got %v, err %v", got, err)
+		}
+	})
+
+	t.Run("fail-on-regression with regression", func(t *testing.T) {
+		got, err := EvaluateRegression(Envelope{Delta: Delta{NewIssues: 1}}, true, "", nil)
+		if err != nil || !got {
+			t.Fatalf("got %v err %v", got, err)
+		}
+	})
+
+	t.Run("fail-on-new severity via checker", func(t *testing.T) {
+		called := false
+		checker := func(_ []report.IssueDetail, min string) (bool, error) {
+			called = true
+			if min != "serious" {
+				t.Fatalf("min = %q", min)
+			}
+
+			return true, nil
+		}
+
+		got, err := EvaluateRegression(oneNew, false, "serious", checker)
+		if err != nil || !got || !called {
+			t.Fatalf("got %v err %v called=%v", got, err, called)
+		}
+	})
+
+	t.Run("fail-on-new severity without checker errors", func(t *testing.T) {
+		_, err := EvaluateRegression(oneNew, false, "serious", nil)
+		if err == nil {
+			t.Fatal("expected error when checker is nil")
+		}
+	})
+
+	t.Run("fail-on-new severity checker error propagates", func(t *testing.T) {
+		checker := func(_ []report.IssueDetail, _ string) (bool, error) {
+			return false, errors.New("bad severity")
+		}
+
+		if _, err := EvaluateRegression(oneNew, false, "bogus", checker); err == nil {
+			t.Fatal("expected propagated error")
+		}
+	})
+}
+
+func TestRender_JSONAndText(t *testing.T) {
+	env := Envelope{
+		Schema: "x",
+		Delta:  Delta{NewIssues: 1, FixedIssues: 0, UnchangedIssues: 2},
+		New:    []report.IssueDetail{{Severity: "critical", Title: "T", Scanner: "axe", RuleId: "r1", PageUrl: "http://a"}},
+	}
+
+	var buf bytes.Buffer
+	if err := Render(&buf, env, FormatJSON); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), `"schema": "x"`) {
+		t.Fatalf("json output missing schema: %s", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := Render(&buf, env, FormatText); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), "New issues: 1") {
+		t.Fatalf("text missing summary: %s", buf.String())
+	}
+
+	if !strings.Contains(buf.String(), "New Issues (Regressions):") {
+		t.Fatalf("text missing section header: %s", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := Render(&buf, env, FormatMarkdown); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), "## Regression Diff") {
+		t.Fatalf("markdown missing heading: %s", buf.String())
+	}
+}
+
+func TestRender_ScoreFormat(t *testing.T) {
+	env := Envelope{
+		Baseline: BaselineMeta{Score: intPtr(90)},
+		Current:  CurrentMeta{Score: intPtr(85)},
+	}
+
+	var buf bytes.Buffer
+	if err := Render(&buf, env, FormatText); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), "90 → 85 (-5)") {
+		t.Fatalf("missing score format: %s", buf.String())
+	}
+}

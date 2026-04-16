@@ -28,7 +28,6 @@ describe('api/utils resolveApiBase', () => {
 		try {
 			expect(() => resolveApiBase(undefined, false)).toThrow(/VITE_API_URL is required/);
 		} finally {
-			// @ts-expect-error - restoring original location
 			globalThis.location = originalLocation;
 		}
 	});

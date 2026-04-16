@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
@@ -40,7 +41,7 @@ func newAICmd(root *rootOptions) *cobra.Command {
 		Short: "Run the AI navigator against a project with natural language objectives",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			urlStrs, err := normalizeTargetURLs([]string{args[0]})
+			urlStrs, err := urlcheck.NormalizeTargets([]string{args[0]})
 			if err != nil {
 				return exitCodeError{Code: 2, Err: err}
 			}
@@ -48,14 +49,14 @@ func newAICmd(root *rootOptions) *cobra.Command {
 			urlStr := urlStrs[0]
 			objective := args[1]
 
-			validateErr := validateLocalTargets(root.apiURL, []string{urlStr})
+			validateErr := urlcheck.ValidateLocalTargets(root.apiURL, []string{urlStr})
 			if validateErr != nil {
 				return exitCodeError{Code: 2, Err: validateErr}
 			}
 
 			effectiveAllowPrivate := allowPrivate
 
-			if !cobraFlagChanged(cmd, "allow-private-targets") && containsPrivateTargets([]string{urlStr}) {
+			if !cobraFlagChanged(cmd, "allow-private-targets") && urlcheck.ContainsPrivateTargets([]string{urlStr}) {
 				effectiveAllowPrivate = true
 
 				fmt.Fprintln(

@@ -5,44 +5,18 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
-	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/clients/cli/internal/diffrender"
+	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
 
-type diffEnvelope struct {
-	Schema    string               `json:"schema"`
-	Baseline  diffBaselineMeta     `json:"baseline"`
-	Current   diffCurrentMeta      `json:"current"`
-	Delta     diffDelta            `json:"delta"`
-	New       []report.IssueDetail `json:"new"`
-	Fixed     []report.IssueDetail `json:"fixed"`
-	Regressed bool                 `json:"regressed"`
-}
-
-type diffBaselineMeta struct {
-	File        string `json:"file"`
-	Score       *int   `json:"score,omitempty"`
-	TotalIssues int    `json:"totalIssues"`
-}
-
-type diffCurrentMeta struct {
-	JobID       string `json:"jobId,omitempty"`
-	File        string `json:"file,omitempty"`
-	Score       *int   `json:"score,omitempty"`
-	TotalIssues int    `json:"totalIssues"`
-}
-
-type diffDelta struct {
-	ScoreDelta      *int `json:"scoreDelta,omitempty"`
-	NewIssues       int  `json:"newIssues"`
-	FixedIssues     int  `json:"fixedIssues"`
-	UnchangedIssues int  `json:"unchangedIssues"`
-}
+// diffEnvelope is re-exported from internal/diffrender so the rest of the
+// main package (notably cobra_scan.go) can continue to reference it unchanged.
+type diffEnvelope = diffrender.Envelope
 
 func newDiffCmd(root *rootOptions) *cobra.Command {
 	var (
@@ -153,7 +127,7 @@ func loadCurrentDiffTarget(
 	timeout time.Duration,
 	noStream bool,
 ) (reportEnvelope, string, string, error) {
-	if !isRemoteDiffTarget(currentTarget) {
+	if !diffrender.IsRemoteTarget(currentTarget) {
 		currentEnv, err := loadReportFile(currentTarget)
 		if err != nil {
 			return reportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
@@ -170,10 +144,6 @@ func loadCurrentDiffTarget(
 	return currentEnv, jobID, "", nil
 }
 
-func isRemoteDiffTarget(target string) bool {
-	return strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://")
-}
-
 func runLiveDiffScan(
 	cmd *cobra.Command,
 	root *rootOptions,
@@ -186,7 +156,7 @@ func runLiveDiffScan(
 	req := SubmitJobRequest{
 		URLs:                []string{currentTarget},
 		Modules:             diffScanModules(baselineEnv),
-		AllowPrivateTargets: containsPrivateTargets([]string{currentTarget}),
+		AllowPrivateTargets: urlcheck.ContainsPrivateTargets([]string{currentTarget}),
 	}
 
 	status, doc, err := runScanJob(
@@ -217,250 +187,37 @@ func diffScanModules(env reportEnvelope) []string {
 }
 
 func evaluateDiffRegression(d diffEnvelope, failOnRegression bool, failOnNew string) (bool, error) {
-	regressed := failOnRegression && isDiffRegressed(d)
-
-	if failOnNew == "" || len(d.New) == 0 {
-		return regressed, nil
-	}
-
-	if failOnNew == "any" {
-		return true, nil
-	}
-
-	hasSeverity, err := hasIssuesAtOrAbove(d.New, failOnNew)
-	if err != nil {
-		return false, err
-	}
-
-	return regressed || hasSeverity, nil
+	return diffrender.EvaluateRegression(d, failOnRegression, failOnNew, hasIssuesAtOrAbove)
 }
 
 func isDiffRegressed(d diffEnvelope) bool {
-	return (d.Delta.ScoreDelta != nil && *d.Delta.ScoreDelta < 0) || d.Delta.NewIssues > 0
+	return diffrender.IsRegressed(d)
 }
 
 func diffFromResult(r diff.Result, baselineFile, currentFile string) diffEnvelope {
-	return diffEnvelope{
-		Schema: r.Schema,
-		Baseline: diffBaselineMeta{
-			File:        baselineFile,
-			Score:       r.Baseline.Score,
-			TotalIssues: r.Baseline.TotalIssues,
-		},
-		Current: diffCurrentMeta{
-			JobID:       r.Current.JobID,
-			File:        currentFile,
-			Score:       r.Current.Score,
-			TotalIssues: r.Current.TotalIssues,
-		},
-		Delta: diffDelta{
-			ScoreDelta:      r.Delta.ScoreDelta,
-			NewIssues:       r.Delta.NewIssues,
-			FixedIssues:     r.Delta.FixedIssues,
-			UnchangedIssues: r.Delta.UnchangedIssues,
-		},
-		New:   r.New,
-		Fixed: r.Fixed,
-	}
+	return diffrender.FromResult(r, baselineFile, currentFile)
 }
 
-func renderDiff(out io.Writer, diff diffEnvelope, format outputFormat) error {
+func renderDiff(out io.Writer, d diffEnvelope, format outputFormat) error {
+	f, err := diffRenderFormat(format)
+	if err != nil {
+		return err
+	}
+
+	return diffrender.Render(out, d, f)
+}
+
+func diffRenderFormat(format outputFormat) (diffrender.Format, error) {
 	switch format {
 	case outputFormatJSON:
-		return writeJSONDiff(out, diff)
-	case outputFormatText, outputFormatMarkdown:
-		return writeTextDiff(out, diff, format == outputFormatMarkdown)
+		return diffrender.FormatJSON, nil
+	case outputFormatText:
+		return diffrender.FormatText, nil
+	case outputFormatMarkdown:
+		return diffrender.FormatMarkdown, nil
 	default:
-		return fmt.Errorf("unsupported output format %q", format)
+		return 0, fmt.Errorf("unsupported output format %q", format)
 	}
-}
-
-func writeJSONDiff(out io.Writer, diff diffEnvelope) error {
-	encoder := json.NewEncoder(out)
-	encoder.SetIndent("", "  ")
-	encoder.SetEscapeHTML(false)
-
-	return encoder.Encode(diff)
-}
-
-func writeTextDiff(out io.Writer, diff diffEnvelope, isMarkdown bool) error {
-	err := writeDiffHeading(out, isMarkdown)
-	if err != nil {
-		return err
-	}
-
-	err = writeDiffSummary(out, diff, isMarkdown)
-	if err != nil {
-		return err
-	}
-
-	return writeNewIssueSection(out, diff.New, isMarkdown)
-}
-
-func writeDiffHeading(out io.Writer, isMarkdown bool) error {
-	if !isMarkdown {
-		return nil
-	}
-
-	_, err := fmt.Fprintln(out, "## Regression Diff")
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintln(out)
-
-	return err
-}
-
-func writeDiffSummary(out io.Writer, diff diffEnvelope, isMarkdown bool) error {
-	scoreStr := formatDiffScore(diff)
-
-	if isMarkdown {
-		_, err := fmt.Fprintf(
-			out,
-			"- **Score**: %s\n- **New issues**: %d\n- **Fixed issues**: %d\n- **Unchanged**: %d\n\n",
-			scoreStr,
-			diff.Delta.NewIssues,
-			diff.Delta.FixedIssues,
-			diff.Delta.UnchangedIssues,
-		)
-
-		return err
-	}
-
-	_, err := fmt.Fprintf(
-		out,
-		"Score: %s\nNew issues: %d\nFixed issues: %d\nUnchanged: %d\n\n",
-		scoreStr,
-		diff.Delta.NewIssues,
-		diff.Delta.FixedIssues,
-		diff.Delta.UnchangedIssues,
-	)
-
-	return err
-}
-
-func formatDiffScore(diff diffEnvelope) string {
-	if diff.Baseline.Score == nil || diff.Current.Score == nil {
-		return "N/A"
-	}
-
-	delta := *diff.Current.Score - *diff.Baseline.Score
-	sign := ""
-
-	if delta > 0 {
-		sign = "+"
-	}
-
-	return fmt.Sprintf("%d → %d (%s%d)", *diff.Baseline.Score, *diff.Current.Score, sign, delta)
-}
-
-func writeNewIssueSection(out io.Writer, issues []report.IssueDetail, isMarkdown bool) error {
-	if len(issues) == 0 {
-		_, err := fmt.Fprintln(out, "No new issues detected.")
-
-		return err
-	}
-
-	err := writeNewIssueHeader(out, isMarkdown)
-	if err != nil {
-		return err
-	}
-
-	for _, issue := range issues {
-		err = writeDiffIssue(out, issue, isMarkdown)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func writeNewIssueHeader(out io.Writer, isMarkdown bool) error {
-	if !isMarkdown {
-		_, err := fmt.Fprintln(out, "New Issues (Regressions):")
-
-		return err
-	}
-
-	_, err := fmt.Fprintln(out, "### New Issues (Regressions)")
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintln(out)
-
-	return err
-}
-
-func writeDiffIssue(out io.Writer, issue report.IssueDetail, isMarkdown bool) error {
-	if isMarkdown {
-		return writeMarkdownDiffIssue(out, issue)
-	}
-
-	return writePlainDiffIssue(out, issue)
-}
-
-func writeMarkdownDiffIssue(out io.Writer, issue report.IssueDetail) error {
-	_, err := fmt.Fprintf(
-		out,
-		"- [%s] %s | scanner=%s | rule=%s | page=%s\n",
-		issue.Severity,
-		issue.Title,
-		issue.Scanner,
-		issue.RuleId,
-		issue.PageUrl,
-	)
-	if err != nil {
-		return err
-	}
-
-	selector := firstIssueSelector(issue)
-	if selector == "" {
-		return nil
-	}
-
-	_, err = fmt.Fprintf(out, "  - Selector: `%s`\n", selector)
-
-	return err
-}
-
-func writePlainDiffIssue(out io.Writer, issue report.IssueDetail) error {
-	_, err := fmt.Fprintf(
-		out,
-		"- [%s] %s (%s/%s)\n  %s\n",
-		issue.Severity,
-		issue.Title,
-		issue.Scanner,
-		issue.RuleId,
-		issue.PageUrl,
-	)
-	if err != nil {
-		return err
-	}
-
-	selector := firstIssueSelector(issue)
-	if selector == "" {
-		return nil
-	}
-
-	_, err = fmt.Fprintf(out, "  Selector: %s\n", selector)
-
-	return err
-}
-
-func firstIssueSelector(issue report.IssueDetail) string {
-	if len(issue.Occurrences) == 0 {
-		return ""
-	}
-
-	selector := issue.Occurrences[0].Selector
-	if selector == nil {
-		return ""
-	}
-
-	return *selector
 }
 
 func loadReportFile(path string) (reportEnvelope, error) {
