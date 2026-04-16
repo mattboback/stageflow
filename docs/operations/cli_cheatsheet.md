@@ -121,6 +121,8 @@ version: 1
 
 stageflow:
   api_url: http://localhost:8080
+  remote_project: my-app # Optional hosted project slug for follow-up remote scans
+  remote_api_url: https://stageflow.org # Optional hosted API for the remote project
 
 scan:
   urls:
@@ -150,7 +152,20 @@ stageflow project
 stageflow project --format markdown
 ```
 
-These commands use a local `.stageflow/config.yaml`. They are different from the remote project-management commands below.
+These commands use a local `.stageflow/config.yaml`. The optional
+`stageflow.remote_project` / `stageflow.remote_api_url` link records which
+hosted project to use next, but the local run is still separate from the hosted
+regression-memory step.
+
+### Follow with hosted regression memory
+
+```bash
+stageflow project --format json
+stageflow scan --project my-app --api https://stageflow.org --format json
+```
+
+Use the first command for the fast local edit-check loop. Use the second when
+you want the hosted baseline/diff memory for the associated project.
 
 ## 6. Remote projects
 
@@ -165,6 +180,9 @@ stageflow scan --project my-app --format json
 stageflow project promote my-app --job-id <job-id>
 stageflow project delete my-app
 ```
+
+If your local `.stageflow/config.yaml` already declares `stageflow.remote_project:
+my-app`, reuse that slug after the local Project Mode run.
 
 ## 7. Reports
 

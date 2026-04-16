@@ -20,6 +20,10 @@ This document covers **local Project Mode**:
 
 These commands use a local `.stageflow/config.yaml` to start your dev server, scan it, and stop it again.
 
+That same config can now also declare an optional hosted project association so
+the local loop knows which remote project to use for the later baseline-memory
+step.
+
 The StageFlow CLI also supports **remote project management**:
 
 - `stageflow project create`
@@ -29,7 +33,7 @@ The StageFlow CLI also supports **remote project management**:
 - `stageflow project delete`
 - `stageflow project promote`
 
-Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same workflow.
+Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same execution context: `stageflow project` is still local dev-server scanning, while `stageflow scan --project ...` is still the hosted baseline/regression-memory step.
 
 ## Prerequisites
 
@@ -53,12 +57,17 @@ _Note: The `local` environment flag is crucial. It tells the Platform API to per
 
 After the local overlay is up, run `stageflow project init` to scaffold a `.stageflow/config.yaml`, then `stageflow project doctor .` to verify wiring before running a scan.
 
+If you are integrating StageFlow into an automated agent workflow, both commands
+also support `--format json` so setup and readiness checks can be consumed as
+structured terminal output instead of scraped from text.
+
 ## Initialization
 
 To set up Project Mode for your web app, navigate to your project's root directory and run:
 
 ```bash
 stageflow project init
+stageflow project init --format json
 ```
 
 This command inspects your project (looking for `package.json`, `Justfile`,
@@ -69,6 +78,12 @@ etc.) and creates a configuration directory containing:
 
 If StageFlow cannot infer a startup command, the generated config keeps a
 placeholder for `dev.start.cmd`. Replace it before running `stageflow project`.
+
+If you already have a hosted project registered on a StageFlow API, keep its
+slug in the generated config as the optional `stageflow.remote_project`
+association. Add `stageflow.remote_api_url` when the hosted project lives on a
+different API base URL. That link is there for the follow-up hosted scan step
+and surfaces in `stageflow project doctor --format json`.
 
 If you run the command from a subdirectory, StageFlow resolves the git root first and creates `.stageflow/` there so the config stays attached to the repository instead of one nested folder.
 
@@ -85,6 +100,8 @@ version: 1
 
 stageflow:
   api_url: "http://localhost:8080"
+  remote_project: "my-frontend" # Optional hosted project slug for follow-up remote scans
+  remote_api_url: "https://stageflow.org" # Optional hosted API for the remote project
 
 scan:
   # Set this to the page URLs your dev server serves.
@@ -109,6 +126,8 @@ dev:
 
 - `api_url`: The URL of your StageFlow Platform API (defaults to `http://localhost:8080`).
 - `api_key_env`: (Optional) The name of the environment variable containing your StageFlow API key, if authentication is required.
+- `remote_project`: (Optional) Hosted project slug associated with this local repo. This does not change `stageflow project` into a remote scan; it simply records which hosted project to use for the follow-up `stageflow scan --project ...` regression-memory step.
+- `remote_api_url`: (Optional) Hosted API base URL for that remote project when it differs from the local Project Mode API.
 
 #### `scan`
 
@@ -148,6 +167,23 @@ When you run this command, StageFlow will:
 5. Stream the live progress and results back to your terminal.
 6. Automatically send an interrupt signal to cleanly shut down your dev server when the scan finishes.
 
+Recommended terminal-first loop:
+
+```bash
+# Local edit / validate / scan loop
+stageflow project doctor --format json
+stageflow project --format json
+
+# Follow-up hosted baseline-memory step
+stageflow scan --project my-frontend --api https://stageflow.org --format json
+```
+
+If `.stageflow/config.yaml` includes `stageflow.remote_project`, use that slug
+for the hosted step, and append `--api <url>` when `stageflow.remote_api_url`
+is set. The local and hosted runs remain separate on purpose: the first is fast
+local validation against your dev server, the second asks the hosted API for
+baseline and regression memory.
+
 ## Troubleshooting and Validation
 
 If you are unsure whether your configuration is correct, use the `doctor`
@@ -156,6 +192,7 @@ command:
 ```bash
 stageflow project doctor
 stageflow project doctor --skip-dev
+stageflow project doctor --format json
 ```
 
 `stageflow project doctor` will:
@@ -163,6 +200,10 @@ stageflow project doctor --skip-dev
 - Validate your `config.yaml` syntax and structure.
 - Verify that the StageFlow API is reachable.
 - Start your dev server, wait for the readiness URL to respond, and then shut it down **without** actually running a scan.
+
+With `--format json`, doctor also reports the hosted project association when
+one is configured, which makes it easier for agents to carry the local result
+into the follow-up `stageflow scan --project ...` step.
 
 This is the best way to debug issues with your `dev.start.cmd` or `dev.ready.url`.
 

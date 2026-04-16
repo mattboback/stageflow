@@ -28,6 +28,8 @@ func TestLoadProjectConfig_Success(t *testing.T) {
 stageflow:
   api_url: http://localhost:8080
   api_key_env: STAGEFLOW_API_KEY
+  remote_project: hosted-demo
+  remote_api_url: https://hosted.stageflow.example
 scan:
   urls:
     - http://localhost:3000
@@ -66,6 +68,8 @@ dev:
 	requireDeepEqual(t, cfg.Dev.Start.Cmd, []string{"npm", "run", "dev"}, "cfg.Dev.Start.Cmd")
 
 	requireEqual(t, cfg.Dev.Ready.URL, "http://localhost:3000/health", "cfg.Dev.Ready.URL")
+	requireEqual(t, cfg.Stageflow.RemoteProject, "hosted-demo", "cfg.Stageflow.RemoteProject")
+	requireEqual(t, cfg.Stageflow.RemoteAPIURL, "https://hosted.stageflow.example", "cfg.Stageflow.RemoteAPIURL")
 }
 
 func TestLoadProjectConfig_MissingFile(t *testing.T) {
@@ -126,6 +130,14 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 		t.Fatalf("scaffolded config missing dev command placeholder")
 	}
 
+	if !strings.Contains(text, "remote_project") {
+		t.Fatalf("scaffolded config missing remote_project guidance")
+	}
+
+	if !strings.Contains(text, "remote_api_url") {
+		t.Fatalf("scaffolded config missing remote_api_url guidance")
+	}
+
 	cfg, gotPath, err := loadProjectConfig(root)
 	requireNoErr(t, err)
 	requireEqual(t, gotPath, configPath, "loaded config path")
@@ -155,6 +167,14 @@ func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 
 	if !strings.Contains(text, "just dev up local") {
 		t.Fatalf("guide missing localhost setup guidance")
+	}
+
+	if !strings.Contains(text, "stageflow.remote_project") {
+		t.Fatalf("guide missing hosted memory guidance")
+	}
+
+	if !strings.Contains(text, "stageflow project doctor --format json") {
+		t.Fatalf("guide missing doctor json guidance")
 	}
 }
 
@@ -278,6 +298,36 @@ dev:
     url: ""
 `,
 			errContains: "dev.ready.url is required",
+		},
+		{
+			name: "stageflow.remote_api_url unsupported scheme",
+			yaml: `version: 1
+stageflow:
+  remote_api_url: ftp://example.com
+scan:
+  urls: ["https://example.com"]
+dev:
+  start:
+    cmd: ["true"]
+  ready:
+    url: "http://localhost:1234"
+`,
+			errContains: "stageflow.remote_api_url has unsupported scheme",
+		},
+		{
+			name: "stageflow.remote_api_url missing host",
+			yaml: `version: 1
+stageflow:
+  remote_api_url: https:///missing-host
+scan:
+  urls: ["https://example.com"]
+dev:
+  start:
+    cmd: ["true"]
+  ready:
+    url: "http://localhost:1234"
+`,
+			errContains: "stageflow.remote_api_url is invalid: missing host",
 		},
 	}
 
