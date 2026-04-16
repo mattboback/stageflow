@@ -109,8 +109,3 @@ func (d *Database) Close() error {
 
 	return nil
 }
-
-// DB returns the underlying sql.DB for direct access if needed.
-func (d *Database) DB() *sql.DB {
-	return d.db
-}

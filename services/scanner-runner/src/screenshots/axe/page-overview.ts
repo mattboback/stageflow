@@ -15,17 +15,19 @@ import type {
 } from './types';
 
 import { getEnvBool, getEnvInt } from '../../utils/env';
+import { createLogger } from '../../utils/logger';
 
 const DEBUG_SCREENSHOTS = getEnvBool('A11Y_DEBUG_SCREENSHOTS', false);
+const log = createLogger('PageOverview');
 
 function debugLog(message: string, data?: unknown): void {
 	if (!DEBUG_SCREENSHOTS) {
 		return;
 	}
 	if (data !== undefined) {
-		console.log(`[PageOverview] ${message}`, JSON.stringify(data, null, 2));
+		log.info(message, { data });
 	} else {
-		console.log(`[PageOverview] ${message}`);
+		log.info(message);
 	}
 }
 import { normalizeSeverity } from '../../utils/severity';

@@ -507,9 +507,10 @@
 					<div
 						class="border-line grid grid-cols-1 gap-3 border-t border-dashed pt-3 sm:grid-cols-2"
 					>
-						<label class="text-ink-muted text-xs">
+						<label class="text-ink-muted text-xs" for="issue-category-filter">
 							Category
 							<Select
+								id="issue-category-filter"
 								class="mt-1"
 								value={activeCategory ?? 'all'}
 								onchange={(event) => {
@@ -523,9 +524,10 @@
 								{/each}
 							</Select>
 						</label>
-						<label class="text-ink-muted text-xs">
+						<label class="text-ink-muted text-xs" for="issue-page-filter">
 							Page
 							<Select
+								id="issue-page-filter"
 								class="mt-1"
 								value={activePage ?? 'all'}
 								onchange={(event) => {

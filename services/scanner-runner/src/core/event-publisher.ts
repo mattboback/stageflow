@@ -84,6 +84,15 @@ export class NatsEventPublisher implements ScanEventPublisher {
 		this.logger.info('Connected to NATS');
 	}
 
+	/**
+	 * Test hook: inject a JetStreamClient stub without opening a real NATS
+	 * connection. Not part of the runtime contract and must not be used from
+	 * production code paths.
+	 */
+	setJetStreamForTesting(client: JetStreamClient): void {
+		this.jetstream = client;
+	}
+
 	async publishPageCompleted(result: PageScanResult, index: number, total: number): Promise<void> {
 		await this.publish(this.subjects.pageCompleted, 'scan.page.completed', {
 			job_id: this.jobId,

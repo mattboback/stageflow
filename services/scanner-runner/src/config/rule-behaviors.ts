@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('RuleBehavior');
+
 const DATA_DIR = process.env.SCANNER_DATA_DIR ?? path.join(process.cwd(), 'data');
 
 export type ScreenshotPolicy = 'auto' | 'never' | 'always' | 'semantic';
@@ -427,7 +431,10 @@ function loadBehaviorFile(filePath: string | undefined): RuleBehaviorFile | null
 		const parsed = JSON.parse(raw) as RuleBehaviorFile;
 		return parsed;
 	} catch (err) {
-		console.warn(`[RuleBehavior] Failed to load config from ${filePath}:`, err);
+		log.warn('Failed to load config', {
+			filePath,
+			error: err instanceof Error ? err.message : String(err)
+		});
 		return null;
 	}
 }

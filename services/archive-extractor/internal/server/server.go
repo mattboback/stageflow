@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -103,7 +103,7 @@ func (s *StaticServer) Start(ctx context.Context) error {
 		s.done <- serveErr
 	}()
 
-	log.Printf("Static server started on %s serving %s", listener.Addr().String(), s.siteDir)
+	slog.Info("Static server started", "addr", listener.Addr().String(), "site_dir", s.siteDir)
 
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -36,12 +36,12 @@ func (e *Extractor) Extract(ctx context.Context, bucket, objectPath, destDir str
 
 	defer func() {
 		if cerr := os.Remove(tmpFile.Name()); cerr != nil {
-			log.Printf("failed to remove temp file %s: %v", tmpFile.Name(), cerr)
+			slog.Warn("failed to remove temp file", "path", tmpFile.Name(), "error", cerr)
 		}
 	}()
 	defer func() {
 		if cerr := tmpFile.Close(); cerr != nil {
-			log.Printf("failed to close temp file: %v", cerr)
+			slog.Warn("failed to close temp file", "error", cerr)
 		}
 	}()
 
@@ -52,7 +52,7 @@ func (e *Extractor) Extract(ctx context.Context, bucket, objectPath, destDir str
 
 	defer func() {
 		if cerr := obj.Close(); cerr != nil {
-			log.Printf("failed to close MinIO object: %v", cerr)
+			slog.Warn("failed to close MinIO object", "error", cerr)
 		}
 	}()
 
@@ -105,7 +105,7 @@ func validateZIP(zipPath string, fileSize int64) error {
 
 	defer func() {
 		if cerr := r.Close(); cerr != nil {
-			log.Printf("failed to close validation reader: %v", cerr)
+			slog.Warn("failed to close validation reader", "error", cerr)
 		}
 	}()
 
@@ -198,7 +198,7 @@ func extractZIP(zipPath, destDir string) error {
 
 	defer func() {
 		if cerr := r.Close(); cerr != nil {
-			log.Printf("failed to close ZIP reader: %v", cerr)
+			slog.Warn("failed to close ZIP reader", "error", cerr)
 		}
 	}()
 
@@ -267,7 +267,7 @@ func extractFile(file *zip.File, destPath string) error {
 
 	defer func() {
 		if cerr := rc.Close(); cerr != nil {
-			log.Printf("failed to close zip entry reader: %v", cerr)
+			slog.Warn("failed to close zip entry reader", "error", cerr)
 		}
 	}()
 
@@ -285,7 +285,7 @@ func extractFile(file *zip.File, destPath string) error {
 
 	defer func() {
 		if cerr := outFile.Close(); cerr != nil {
-			log.Printf("failed to close extracted file: %v", cerr)
+			slog.Warn("failed to close extracted file", "error", cerr)
 		}
 	}()
 
