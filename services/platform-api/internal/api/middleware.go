@@ -3,7 +3,9 @@ package api
 import (
 	"bytes"
 	"context"
+	"crypto/subtle"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -204,11 +206,31 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// ValidateAuthConfig enforces that PLATFORM_API_TOKEN is set at process
+// startup. Operators can opt out explicitly by setting
+// PLATFORM_API_AUTH_DISABLED=true, which makes the misconfiguration visible
+// in logs rather than silently disabling authentication.
+func ValidateAuthConfig() error {
+	token := strings.TrimSpace(os.Getenv("PLATFORM_API_TOKEN"))
+	disabled := strings.EqualFold(strings.TrimSpace(os.Getenv("PLATFORM_API_AUTH_DISABLED")), "true")
+
+	if token == "" && !disabled {
+		return fmt.Errorf("PLATFORM_API_TOKEN is required (set PLATFORM_API_AUTH_DISABLED=true to run without authentication)")
+	}
+
+	if disabled {
+		slog.Warn("Platform API authentication is disabled via PLATFORM_API_AUTH_DISABLED=true; do not use in production")
+	}
+
+	return nil
+}
+
 func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	expected := strings.TrimSpace(os.Getenv("PLATFORM_API_TOKEN"))
 	if expected == "" {
 		return next
 	}
+	expectedBytes := []byte(expected)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Let CORS middleware short-circuit OPTIONS without requiring auth.
@@ -226,7 +248,7 @@ func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 
-		if provided == "" || provided != expected {
+		if provided == "" || subtle.ConstantTimeCompare([]byte(provided), expectedBytes) != 1 {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 
