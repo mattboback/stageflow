@@ -11,15 +11,15 @@ function createCapturingPublisher(jobId: string, scannerName: string) {
 
 	const published: { subject: string; envelope: any }[] = [];
 
-	const jetstreamStub: Partial<JetStreamClient> = {
+	const jetstreamStub: JetStreamClient = {
 		publish: (subject: string, data: Uint8Array) => {
 			const raw = new TextDecoder().decode(data);
 			published.push({ subject, envelope: JSON.parse(raw) });
 			return Promise.resolve({} as any);
 		}
-	};
+	} as unknown as JetStreamClient;
 
-	(publisher as any).jetstream = jetstreamStub;
+	publisher.setJetStreamForTesting(jetstreamStub);
 
 	return { publisher, published };
 }

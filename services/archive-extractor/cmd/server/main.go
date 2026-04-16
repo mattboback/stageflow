@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -24,12 +24,13 @@ import (
 )
 
 func main() {
-	log.Println("Starting Static Server...")
+	slog.Info("Starting Static Server")
 
 	cfg := loadConfig()
 
 	if err := cfg.Validate(); err != nil {
-		log.Fatalf("Invalid configuration: %v", err)
+		slog.Error("Invalid configuration", "error", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -42,7 +43,7 @@ func runExtraction(ctx context.Context, cfg *Config) {
 	natsClient := mustNATSClient(ctx, cfg)
 	defer closeNATSClient(natsClient)
 
-	log.Printf("Job %s: Starting extraction and site preparation", cfg.JobID)
+	slog.Info("Starting extraction and site preparation", "job_id", cfg.JobID)
 
 	minioClient := mustMinIOClient(ctx, cfg, natsClient)
 
@@ -61,10 +62,10 @@ func runExtraction(ctx context.Context, cfg *Config) {
 
 	publishExtractionReady(ctx, cfg, natsClient, stageLog, prov, baseURL, provenancePath, provenanceArtifactPath)
 
-	log.Printf("Job %s: Static server ready and waiting for scanner...", cfg.JobID)
+	slog.Info("Static server ready and waiting for scanner", "job_id", cfg.JobID)
 	waitForShutdown(ctx, cfg, siteServer, natsClient, stageLog)
 
-	log.Printf("Job %s: Static server stopped", cfg.JobID)
+	slog.Info("Static server stopped", "job_id", cfg.JobID)
 }
 
 func mustNATSClient(ctx context.Context, cfg *Config) *sharedmsg.Client {
@@ -78,7 +79,7 @@ func mustNATSClient(ctx context.Context, cfg *Config) *sharedmsg.Client {
 
 func closeNATSClient(natsClient *sharedmsg.Client) {
 	if err := natsClient.Close(); err != nil {
-		log.Printf("Failed to close NATS client: %v", err)
+		slog.Error("Failed to close NATS client", "error", err)
 	}
 }
 
@@ -126,7 +127,7 @@ func mustExtractZIP(
 	stageLog *stageLogger,
 	minioClient *storage.MinIOClient,
 ) string {
-	log.Printf("Job %s: Extracting ZIP from MinIO: %s", cfg.JobID, cfg.InputPath)
+	slog.Info("Extracting ZIP from MinIO", "job_id", cfg.JobID, "input_path", cfg.InputPath)
 
 	ext := extractor.NewExtractor(minioClient)
 
@@ -145,10 +146,10 @@ func mustExtractZIP(
 	stageLog.recordEvent("zip_extracted", map[string]any{"workspace": siteDir})
 
 	if err := ensureSitePermissions(siteDir); err != nil {
-		log.Printf("Warning: Failed to ensure site permissions: %v", err)
+		slog.Warn("Failed to ensure site permissions", "error", err)
 	}
 
-	log.Printf("Job %s: ZIP extracted to %s", cfg.JobID, siteDir)
+	slog.Info("ZIP extracted", "job_id", cfg.JobID, "site_dir", siteDir)
 
 	return siteDir
 }
@@ -176,7 +177,7 @@ func mustDiscoverPages(
 	stageLog *stageLogger,
 	siteDir string,
 ) []discovery.HTMLPage {
-	log.Printf("Job %s: Discovering HTML pages in %s", cfg.JobID, siteDir)
+	slog.Info("Discovering HTML pages", "job_id", cfg.JobID, "site_dir", siteDir)
 
 	pages, err := discovery.DiscoverHTML(siteDir)
 	if err != nil {
@@ -190,7 +191,7 @@ func mustDiscoverPages(
 		)
 	}
 
-	log.Printf("Job %s: Discovered %d HTML pages", cfg.JobID, len(pages))
+	slog.Info("Discovered HTML pages", "job_id", cfg.JobID, "page_count", len(pages))
 	stageLog.setPagesDiscovered(len(pages))
 	stageLog.recordEvent("discovery_completed", map[string]any{"pages": len(pages)})
 
@@ -204,7 +205,7 @@ func mustGenerateProvenance(
 	stageLog *stageLogger,
 	pages []discovery.HTMLPage,
 ) (prov *models.Provenance, baseURL, provenancePath string) {
-	log.Printf("Job %s: Generating provenance.json", cfg.JobID)
+	slog.Info("Generating provenance.json", "job_id", cfg.JobID)
 
 	provenanceGen := provenance.NewGenerator()
 	baseURL = "http://localhost:" + cfg.Port
@@ -222,7 +223,7 @@ func mustGenerateProvenance(
 		)
 	}
 
-	log.Printf("Job %s: Provenance generated with %d pages", cfg.JobID, len(prov.Pages))
+	slog.Info("Provenance generated", "job_id", cfg.JobID, "page_count", len(prov.Pages))
 	stageLog.setArtifacts(provenancePath, baseURL)
 	stageLog.recordEvent("provenance_generated", map[string]any{"pages": len(prov.Pages)})
 
@@ -238,7 +239,7 @@ func mustUploadProvenance(
 	provenancePath string,
 ) string {
 	provenanceArtifactPath := cfg.JobID + "/provenance.json"
-	log.Printf("Job %s: Uploading provenance to MinIO: %s", cfg.JobID, provenanceArtifactPath)
+	slog.Info("Uploading provenance to MinIO", "job_id", cfg.JobID, "artifact_path", provenanceArtifactPath)
 
 	provFile, err := os.Open(provenancePath)
 	if err != nil {
@@ -290,7 +291,7 @@ func mustStartStaticServer(
 	stageLog *stageLogger,
 	siteDir string,
 ) *server.StaticServer {
-	log.Printf("Job %s: Starting static server on port %s", cfg.JobID, cfg.Port)
+	slog.Info("Starting static server", "job_id", cfg.JobID, "port", cfg.Port)
 	siteServer := server.NewStaticServer(&server.Config{
 		SiteDir: siteDir,
 		Port:    cfg.Port,
@@ -312,7 +313,7 @@ func mustStartStaticServer(
 
 func stopStaticServer(ctx context.Context, siteServer *server.StaticServer) {
 	if err := siteServer.Stop(ctx); err != nil {
-		log.Printf("Failed to stop static server: %v", err)
+		slog.Error("Failed to stop static server", "error", err)
 	}
 }
 
@@ -324,10 +325,10 @@ func publishExtractionReady(
 	prov *models.Provenance,
 	baseURL, provenancePath, provenanceArtifactPath string,
 ) {
-	log.Printf("Job %s: Static server started, site available at %s", cfg.JobID, baseURL)
+	slog.Info("Static server started", "job_id", cfg.JobID, "base_url", baseURL)
 	stageLog.recordEvent("server_started", map[string]any{"port": cfg.Port})
 
-	log.Printf("Job %s: Publishing extraction.ready event", cfg.JobID)
+	slog.Info("Publishing extraction.ready event", "job_id", cfg.JobID)
 	payload := &events.ExtractionReadyPayload{
 		JobID:                  cfg.JobID,
 		ProvenancePath:         provenancePath,
@@ -340,7 +341,7 @@ func publishExtractionReady(
 
 	stageLogPath, err := stageLog.finalizeSuccess()
 	if err != nil {
-		log.Printf("Warning: Failed to finalize extraction stage log: %v", err)
+		slog.Warn("Failed to finalize extraction stage log", "error", err)
 	}
 
 	recipeObject := stageLog.recipeObject()
@@ -447,10 +448,10 @@ func waitForShutdown(
 
 	select {
 	case sig := <-stop:
-		log.Printf("Job %s: Received signal %v, shutting down...", cfg.JobID, sig)
+		slog.Info("Received signal, shutting down", "job_id", cfg.JobID, "signal", sig)
 	case err := <-serverDone:
 		if err != nil {
-			log.Printf("Job %s: Static server exited with error: %v", cfg.JobID, err)
+			slog.Error("Static server exited with error", "job_id", cfg.JobID, "error", err)
 			publishFailureAndExit(
 				ctx,
 				cfg,
@@ -461,7 +462,7 @@ func waitForShutdown(
 			)
 		}
 
-		log.Printf("Job %s: Static server exited normally", cfg.JobID)
+		slog.Info("Static server exited normally", "job_id", cfg.JobID)
 	}
 }
 
@@ -483,7 +484,7 @@ func publishFailureAndExit(
 		runID = cfg.RunID
 	}
 
-	log.Printf("Job %s: FAILED at stage %s: %s", jobID, stage, errorMsg)
+	slog.Error("Job FAILED", "job_id", jobID, "stage", stage, "error_message", errorMsg)
 
 	stageLogPath := ""
 	recipePath := ""
@@ -493,7 +494,7 @@ func publishFailureAndExit(
 
 		stageLogPath, err = stageLog.finalizeFailure(stage, errorMsg, errorMsg)
 		if err != nil {
-			log.Printf("Warning: failed to finalize extraction stage log: %v", err)
+			slog.Warn("Failed to finalize extraction stage log", "error", err)
 		}
 
 		recipePath = stageLog.recipeObject()
@@ -513,7 +514,7 @@ func publishFailureAndExit(
 		envelope.RunID = runID
 
 		if err := natsClient.PublishEvent(ctx, sharedmsg.SubjectExtractionFailed, envelope); err != nil {
-			log.Printf("Warning: Failed to publish extraction.failed event: %v", err)
+			slog.Warn("Failed to publish extraction.failed event", "error", err)
 		}
 	}
 

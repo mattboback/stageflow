@@ -8,7 +8,7 @@ import (
 func TestNewDatabase(t *testing.T) {
 	db := setupTestDB(t)
 
-	if db.DB() == nil {
+	if db.db == nil {
 		t.Error("Expected database connection to be non-nil")
 	}
 }
@@ -38,7 +38,7 @@ func TestInitSchema(t *testing.T) {
 
 		var name string
 
-		scanErr := db.DB().QueryRowContext(context.Background(), query, table).Scan(&name)
+		scanErr := db.db.QueryRowContext(context.Background(), query, table).Scan(&name)
 		if scanErr != nil {
 			t.Errorf("Expected table %s to exist: %v", table, scanErr)
 		}

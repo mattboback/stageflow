@@ -20,4 +20,16 @@ describe('api/utils resolveApiBase', () => {
 	it('falls back to the browser origin outside dev mode when VITE_API_URL is unset', () => {
 		expect(resolveApiBase(undefined, false, 'https://stageflow.org')).toBe('https://stageflow.org');
 	});
+
+	it('throws outside dev mode when no configured base and no origin are available', () => {
+		const originalLocation = globalThis.location;
+		// @ts-expect-error - deliberately clearing location to simulate SSR
+		delete globalThis.location;
+		try {
+			expect(() => resolveApiBase(undefined, false)).toThrow(/VITE_API_URL is required/);
+		} finally {
+			// @ts-expect-error - restoring original location
+			globalThis.location = originalLocation;
+		}
+	});
 });

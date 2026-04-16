@@ -3,6 +3,10 @@ import sharp from 'sharp';
 
 import type { AxeScreenshotConfig, ElementBounds } from './types';
 
+import { createLogger } from '../../utils/logger';
+
+const log = createLogger('AxeImage');
+
 /**
  * Save a screenshot buffer to disk in the configured format (WebP or PNG).
  * Returns the filename portion of the saved file.
@@ -144,7 +148,10 @@ export async function generateThumbnail(
 		return thumbnailFilename;
 	} catch (error) {
 		// Thumbnail generation is best-effort, don't fail the whole screenshot.
-		console.warn(`Failed to generate thumbnail for ${screenshotPath}:`, error);
+		log.warn('Failed to generate thumbnail', {
+			screenshotPath,
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return null;
 	}
 }
