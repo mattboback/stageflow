@@ -34,6 +34,15 @@ generate-go: $(GO_OUTPUT)
 
 $(GO_OUTPUT): $(SCHEMA_FILE)
 	$(GO_JSONSCHEMA) --package $(GO_PACKAGE) --tags json --struct-name-from-title $(SCHEMA_FILE) > $@
+	# go-jsonschema emits `interface{}` for the embedded JSON Schema definitions
+	# used by configSchema. Rewrite those aliases to json.RawMessage so the Go
+	# type carries the original bytes instead of an untyped blob. See the
+	# accompanying comments in the generated file for context.
+	@sed -i.bak \
+		-e 's|^type ManifestConfigSchema interface{}$$|// JSON Schema for SCANNER_OPTIONS validation (see ManifestConfigSchema definition\n// in schema/scanner-manifest.schema.json). Carried as json.RawMessage so the\n// Go side can forward the original bytes to the runtime validator.\ntype ManifestConfigSchema = json.RawMessage|' \
+		-e 's|^type ScannerManifestConfigSchema interface{}$$|// Embedded JSON Schema for the scanner-level configSchema field. Same\n// rationale as ManifestConfigSchema: round-tripped as raw JSON.\ntype ScannerManifestConfigSchema = json.RawMessage|' \
+		$@
+	@rm -f $@.bak
 	$(GOIMPORTS) -w $@
 	@echo "✅ Generated Go: $@"
 

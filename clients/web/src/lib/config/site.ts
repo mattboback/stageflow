@@ -10,13 +10,6 @@ function normalizeGithubUrl(value: string | undefined): string {
 
 	try {
 		const url = new URL(value);
-		if (url.hostname === 'github.com') {
-			const pathname = url.pathname.replace(/\/+$/, '');
-			if (pathname === '' || pathname === '/mattboback' || pathname === '/mattboback/stageflow') {
-				return DEFAULT_GITHUB_URL;
-			}
-		}
-
 		return url.toString();
 	} catch {
 		return DEFAULT_GITHUB_URL;

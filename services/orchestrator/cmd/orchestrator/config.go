@@ -54,10 +54,7 @@ func loadConfig() *Config {
 		}
 	}
 
-	databaseURL := config.GetEnv(
-		"DATABASE_URL",
-		"postgres://stageflow:stageflow@localhost:5432/stageflow?sslmode=disable",
-	)
+	databaseURL := strings.TrimSpace(config.GetEnv("DATABASE_URL", ""))
 
 	return &Config{
 		NATS:                          natsCfg,

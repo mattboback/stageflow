@@ -17,7 +17,6 @@ import (
 var schemaFS embed.FS
 
 const (
-	defaultDatabaseURL  = "postgres://stageflow:stageflow@localhost:5432/stageflow?sslmode=disable"
 	defaultMaxOpenConns = 20
 	defaultMaxIdleConns = 5
 	defaultConnLifetime = 30 * time.Minute
@@ -34,20 +33,11 @@ type Config struct {
 	URL string
 }
 
-// DefaultConfig returns default database configuration.
-func DefaultConfig() *Config {
-	return &Config{
-		URL: defaultDatabaseURL,
-	}
-}
-
-// NewDatabase creates a new database connection.
+// NewDatabase creates a new database connection. The caller is responsible for
+// supplying a non-empty URL; there is intentionally no default DSN because a
+// hardcoded credential would be a deployment footgun.
 func NewDatabase(config *Config) (*Database, error) {
-	if config == nil {
-		config = DefaultConfig()
-	}
-
-	if config.URL == "" {
+	if config == nil || config.URL == "" {
 		return nil, errors.New("database URL is required")
 	}
 

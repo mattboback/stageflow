@@ -77,6 +77,19 @@ Security-sensitive behavior worth inspecting:
 - `internal/api/scanner_configs.go` validates per-scanner config payloads against the registry
 - `internal/api/object_keys.go` and the job artifact handlers only presign job-scoped object keys
 
+### Trusted proxies and `X-Forwarded-For`
+
+The rate limiter keys off `X-Forwarded-For` **only** when the immediate
+connection (`RemoteAddr`) originates from a CIDR listed in
+`PLATFORM_API_TRUSTED_PROXIES`. Set this to the IP range of your reverse
+proxy (Caddy, nginx, a load balancer, etc.) — for example
+`PLATFORM_API_TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12`. When the variable
+is empty, `X-Forwarded-For` is always ignored and the rate-limit key falls
+back to `RemoteAddr`. This prevents unauthenticated clients from spoofing
+the header to obtain a fresh bucket. Authentication also requires
+`PLATFORM_API_TOKEN`; set `PLATFORM_API_AUTH_DISABLED=true` explicitly for
+local development.
+
 ## Key internal packages
 
 | Path                     | Responsibility                                                  |

@@ -115,13 +115,99 @@ func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// trustedProxies caches the parsed PLATFORM_API_TRUSTED_PROXIES list. It is
+// populated lazily on first use so t.Setenv in tests can change the value
+// before the rate limiter reads it. Call resetTrustedProxiesForTest to force
+// a reload.
+var (
+	trustedProxiesOnce sync.Once
+	trustedProxiesVal  []*net.IPNet
+)
+
+func trustedProxies() []*net.IPNet {
+	trustedProxiesOnce.Do(func() {
+		trustedProxiesVal = loadTrustedProxies()
+	})
+
+	return trustedProxiesVal
+}
+
+func resetTrustedProxiesForTest() {
+	trustedProxiesOnce = sync.Once{}
+	trustedProxiesVal = nil
+}
+
+func loadTrustedProxies() []*net.IPNet {
+	raw := strings.TrimSpace(os.Getenv("PLATFORM_API_TRUSTED_PROXIES"))
+	if raw == "" {
+		return nil
+	}
+
+	var nets []*net.IPNet
+
+	for _, part := range strings.Split(raw, ",") {
+		cidr := strings.TrimSpace(part)
+		if cidr == "" {
+			continue
+		}
+
+		if !strings.Contains(cidr, "/") {
+			if ip := net.ParseIP(cidr); ip != nil {
+				if ip.To4() != nil {
+					cidr += "/32"
+				} else {
+					cidr += "/128"
+				}
+			}
+		}
+
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			slog.Warn("Ignoring invalid CIDR in PLATFORM_API_TRUSTED_PROXIES", "value", cidr, "error", err)
+
+			continue
+		}
+
+		nets = append(nets, ipNet)
+	}
+
+	return nets
+}
+
+func remoteAddrIsTrusted(remoteAddr string) bool {
+	nets := trustedProxies()
+	if len(nets) == 0 {
+		return false
+	}
+
+	host, _, err := net.SplitHostPort(strings.TrimSpace(remoteAddr))
+	if err != nil || host == "" {
+		host = strings.TrimSpace(remoteAddr)
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+
+	for _, n := range nets {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func rateLimitKey(r *http.Request) string {
-	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
-		parts := strings.Split(forwarded, ",")
-		if len(parts) > 0 {
-			candidate := strings.TrimSpace(parts[0])
-			if candidate != "" {
-				return candidate
+	if remoteAddrIsTrusted(r.RemoteAddr) {
+		if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
+			parts := strings.Split(forwarded, ",")
+			if len(parts) > 0 {
+				candidate := strings.TrimSpace(parts[0])
+				if candidate != "" {
+					return candidate
+				}
 			}
 		}
 	}
