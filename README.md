@@ -5,9 +5,9 @@
 
 **Live demo:** [stageflow.org](https://stageflow.org) | **Run locally:** `cp .env.example .env && just diagnose && just demo`
 
-Open-source, self-hosted web quality scanning platform for accessibility, SEO, security, performance, and content checks.
+Open-source, self-hosted frontend quality gate for accessibility, SEO, security, performance, and content checks, designed to give developers and AI agents fast regression-aware feedback.
 
-StageFlow accepts live URLs or static-site ZIP archives, runs eight scanners, streams execution over Server-Sent Events, and merges heterogeneous results into one normalized report for both the web UI and the Go CLI.
+StageFlow accepts live URLs or static-site ZIP archives, runs eight scanners, streams execution over Server-Sent Events, and merges heterogeneous results into one normalized report for both the web UI and the Go CLI. The long-term product center is the CLI: run StageFlow after a frontend edit, get structured terminal output, and use hosted project baselines and diffs to decide whether the change regressed quality.
 
 This repository is designed to be both runnable and reviewable. Start from `.env.example`, replace every `change-me` value before using a public domain, and treat `stageflow.org` references as project examples rather than defaults to reuse unchanged.
 
@@ -30,7 +30,11 @@ This repository is designed to be both runnable and reviewable. Start from `.env
 
 ## What StageFlow Does
 
-StageFlow solves the problem of **running multiple web quality scanners against a site and presenting the results in one actionable report**.
+StageFlow solves the problem of **gating frontend changes with one regression-aware quality check**.
+
+It is meant to answer a practical question after an edit:
+
+> Did this change make accessibility, performance, SEO, security, or content quality worse?
 
 It supports two input modes:
 
@@ -44,6 +48,13 @@ The system normalizes scanner output into one contract-driven report with:
 - page-level evidence including screenshots
 - scanner summaries and per-page rollups
 - streaming job progress for the browser and CLI
+
+The most important product loop is:
+
+1. Make a frontend change locally.
+2. Run StageFlow from the terminal.
+3. Compare against a baseline or promoted project state.
+4. Let the CLI tell you whether the edit passed, regressed, or needs review.
 
 ## Architecture at a Glance
 
@@ -124,6 +135,13 @@ stageflow project doctor .
 stageflow project .
 ```
 
+`.stageflow/config.yaml` still drives a local Project Mode run, but it can now
+also carry the hosted project link you use for baseline memory via
+`stageflow.remote_project` and `stageflow.remote_api_url`. That keeps the
+terminal loop as: edit locally, run `stageflow project`, then follow with
+`stageflow scan --project <slug> --api https://stageflow.org` when you want the
+hosted regression-memory step.
+
 ### Self-hosting notes
 
 - Start from `.env.example`; never commit `.env`, `.env.staging`, or real credentials
@@ -163,6 +181,15 @@ The project uses layered verification rather than a single happy-path build:
 - **Web app:** `bun run ci` in `clients/web` for typecheck, lint, unit tests, and Storybook checks
 - **Scanner Runner:** `bun run ci` in `services/scanner-runner`
 - **End-to-end:** golden project-mode regression flow under `qa/e2e/project-scan-golden.sh`
+
+## Agent-facing workflow
+
+StageFlow is increasingly optimized for **terminal-first quality gating**:
+
+- **Local loop:** `stageflow project init`, `stageflow project doctor`, then `stageflow project --format json` to run a local dev-server scan with structured output. `.stageflow/config.yaml` can optionally record the hosted project slug for the follow-up regression-memory step.
+- **Setup loop:** `stageflow project init --format json` and `stageflow project doctor --format json` let agents bootstrap and validate project wiring with parseable terminal output, including the hosted project association when one is configured.
+- **Hosted regression memory:** hosted baselines still run in a separate StageFlow API context. After the local loop, run `stageflow scan --project <slug> --format json --api https://stageflow.org` against the associated hosted project to get one parseable envelope with the current report plus baseline diff metadata.
+- **Automation decision:** agents can inspect exit codes for pass/fail and parse JSON output to decide whether to stop, retry, or escalate.
 
 ## Where Reviewers Should Look First
 

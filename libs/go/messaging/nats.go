@@ -351,8 +351,13 @@ func (c *Client) createOrRefreshConsumer(
 			"consumer_num_pending", consumerInfo.NumPending,
 		)
 
-		if err := streamHandle.DeleteConsumer(ctx, consumerName); err != nil {
-			return nil, fmt.Errorf("failed to delete stale consumer %s on stream %s: %w", consumerName, stream, err)
+		if deleteErr := streamHandle.DeleteConsumer(ctx, consumerName); deleteErr != nil {
+			return nil, fmt.Errorf(
+				"failed to delete stale consumer %s on stream %s: %w",
+				consumerName,
+				stream,
+				deleteErr,
+			)
 		}
 
 		cons, err = c.js.CreateOrUpdateConsumer(ctx, stream, cfg)

@@ -2,30 +2,43 @@ package main
 
 import (
 	"errors"
-	"strings"
 	"testing"
 )
 
-func TestEnhanceSubmitJobError_PrivateTargetHint(t *testing.T) {
-	baseErr := errors.New(
-		"API request failed with status 400: " +
-			"{\"error\":\"hostname localhost resolves to disallowed address ::1\"}",
+func TestInterpretProjectDiffError_MissingBaseline(t *testing.T) {
+	state, matched := interpretProjectDiffError(
+		"demo-site",
+		"job-123",
+		errors.New(`API request failed with status 404: {"error":"No baseline set for project"}`),
 	)
-
-	err := enhanceSubmitJobError(baseErr, SubmitJobRequest{AllowPrivateTargets: false})
-	if !strings.Contains(err.Error(), "--allow-private-targets") {
-		t.Fatalf("expected private target hint, got %q", err.Error())
+	if !matched {
+		t.Fatalf("expected missing-baseline error to match")
 	}
+
+	requireEqual(t, state.baseline.Status, projectBaselineStatusMissing, "state.baseline.Status")
+	requireEqual(
+		t,
+		state.baseline.PromoteCommand,
+		"Promote this scan: stageflow project promote demo-site --job-id job-123",
+		"state.baseline.PromoteCommand",
+	)
 }
 
-func TestEnhanceSubmitJobError_LocalStackHint(t *testing.T) {
-	baseErr := errors.New(
-		"API request failed with status 400: " +
-			"{\"error\":{\"field\":\"allow_private_targets\"}}",
+func TestInterpretProjectDiffError_CurrentBaseline(t *testing.T) {
+	state, matched := interpretProjectDiffError(
+		"demo-site",
+		"job-123",
+		errors.New(`API request failed with status 400: {"error":"Cannot diff against self"}`),
 	)
-
-	err := enhanceSubmitJobError(baseErr, SubmitJobRequest{AllowPrivateTargets: true})
-	if !strings.Contains(err.Error(), "just dev up local") {
-		t.Fatalf("expected local stack hint, got %q", err.Error())
+	if !matched {
+		t.Fatalf("expected current-baseline error to match")
 	}
+
+	requireEqual(t, state.baseline.Status, projectBaselineStatusCurrent, "state.baseline.Status")
+	requireEqual(
+		t,
+		state.baseline.Message,
+		"This scan is the current baseline. Run a new scan to see a diff.",
+		"state.baseline.Message",
+	)
 }

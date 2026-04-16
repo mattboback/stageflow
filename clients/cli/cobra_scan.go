@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,43 @@ import (
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
+
+const (
+	projectBaselineStatusAvailable = "available"
+	projectBaselineStatusMissing   = "missing"
+	projectBaselineStatusCurrent   = "current"
+)
+
+type projectScanEnvelope struct {
+	Schema   string              `json:"schema"`
+	Project  projectScanMeta     `json:"project"`
+	Decision projectScanDecision `json:"decision"`
+	Report   reportEnvelope      `json:"report"`
+	Diff     *diffEnvelope       `json:"diff,omitempty"`
+}
+
+type projectScanMeta struct {
+	Slug     string              `json:"slug"`
+	Baseline projectScanBaseline `json:"baseline"`
+}
+
+type projectScanBaseline struct {
+	Status         string `json:"status"`
+	Message        string `json:"message,omitempty"`
+	PromoteCommand string `json:"promoteCommand,omitempty"`
+}
+
+type projectScanDecision struct {
+	Passed         bool `json:"passed"`
+	SeverityFailed bool `json:"severityFailed"`
+	Regressed      bool `json:"regressed"`
+}
+
+type projectDiffState struct {
+	baseline  projectScanBaseline
+	diff      *diffEnvelope
+	regressed bool
+}
 
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
@@ -149,12 +187,32 @@ func runRemoteProjectScan(
 		return exitCodeError{Code: 2, Err: err}
 	}
 
-	err = renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format))
-	if err != nil {
-		return wrapRenderError(err)
+	if format == outputFormatJSON {
+		return runRemoteProjectScanJSON(cmd, root.apiURL, slug, status, doc, client, jobID, reportOpts)
 	}
 
-	return renderProjectDiff(opCtx, cmd, client, slug, jobID, format)
+	severityFailed := false
+
+	err = renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format))
+	if err != nil {
+		var exitErr exitCodeError
+		if errors.As(err, &exitErr) && exitErr.Code == 1 {
+			severityFailed = true
+		} else {
+			return wrapRenderError(err)
+		}
+	}
+
+	regressed, err := renderProjectDiff(opCtx, cmd, client, slug, jobID, format)
+	if err != nil {
+		return err
+	}
+
+	if severityFailed || regressed {
+		return exitCodeError{Code: 1}
+	}
+
+	return nil
 }
 
 func waitForCompletedJobReport(
@@ -190,51 +248,150 @@ func waitForCompletedJobReport(
 	return status, doc, nil
 }
 
-func renderProjectDiff(
-	ctx context.Context,
+func runRemoteProjectScanJSON(
 	cmd *cobra.Command,
+	apiBaseURL, slug string,
+	status JobStatus,
+	doc report.UnifiedReportV2,
 	client *Client,
-	slug, jobID string,
-	format outputFormat,
+	jobID string,
+	reportOpts reportCommandOptions,
 ) error {
-	diffResult, err := client.fetchJobDiff(ctx, jobID)
-	if err != nil {
-		return handleProjectDiffError(cmd.ErrOrStderr(), slug, jobID, err)
-	}
-
-	fmt.Fprintln(cmd.OutOrStdout())
-
-	d := diffFromResult(diffResult, "", "")
-
-	err = renderDiff(cmd.OutOrStdout(), d, format)
+	renderOpts := reportOpts.renderOptions(outputFormatJSON)
+	selectedIssues, filters, err := validatedIssueSelection(doc.Issues, renderOpts)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
 	}
 
-	if isDiffRegressed(d) {
+	filteredDoc := doc
+	filteredDoc.Issues = selectedIssues
+
+	if renderOpts.SummaryOnly {
+		filteredDoc.Issues = nil
+	}
+
+	reportPayload, err := buildReportEnvelope(apiBaseURL, status, filteredDoc, filters)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	severityFailed, err := shouldFailForSeverity(selectedIssues, renderOpts.FailSeverity)
+	if err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	diffState, err := resolveProjectDiffState(cmd.Context(), client, slug, jobID)
+	if err != nil {
+		return err
+	}
+
+	payload := projectScanEnvelope{
+		Schema: "stageflow-cli/project-scan@v1",
+		Project: projectScanMeta{
+			Slug:     slug,
+			Baseline: diffState.baseline,
+		},
+		Decision: projectScanDecision{
+			Passed:         !(severityFailed || diffState.regressed),
+			SeverityFailed: severityFailed,
+			Regressed:      diffState.regressed,
+		},
+		Report: reportPayload,
+		Diff:   diffState.diff,
+	}
+
+	encoder := json.NewEncoder(cmd.OutOrStdout())
+	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
+
+	if err := encoder.Encode(payload); err != nil {
+		return exitCodeError{Code: 2, Err: err}
+	}
+
+	if severityFailed || diffState.regressed {
 		return exitCodeError{Code: 1}
 	}
 
 	return nil
 }
 
-func handleProjectDiffError(out io.Writer, slug, jobID string, err error) error {
+func renderProjectDiff(
+	ctx context.Context,
+	cmd *cobra.Command,
+	client *Client,
+	slug, jobID string,
+	format outputFormat,
+) (bool, error) {
+	diffState, err := resolveProjectDiffState(ctx, client, slug, jobID)
+	if err != nil {
+		return false, err
+	}
+
+	fmt.Fprintln(cmd.OutOrStdout())
+
+	if diffState.diff == nil {
+		fmt.Fprintln(cmd.ErrOrStderr(), diffState.baseline.Message)
+		if diffState.baseline.PromoteCommand != "" {
+			fmt.Fprintln(cmd.ErrOrStderr(), diffState.baseline.PromoteCommand)
+		}
+
+		return false, nil
+	}
+
+	err = renderDiff(cmd.OutOrStdout(), *diffState.diff, format)
+	if err != nil {
+		return false, exitCodeError{Code: 2, Err: err}
+	}
+
+	return diffState.regressed, nil
+}
+
+func resolveProjectDiffState(
+	ctx context.Context,
+	client *Client,
+	slug, jobID string,
+) (projectDiffState, error) {
+	diffResult, err := client.fetchJobDiff(ctx, jobID)
+	if err == nil {
+		d := diffFromResult(diffResult, "", "")
+
+		return projectDiffState{
+			baseline: projectScanBaseline{
+				Status: projectBaselineStatusAvailable,
+			},
+			diff:      &d,
+			regressed: isDiffRegressed(d),
+		}, nil
+	}
+
+	if state, matched := interpretProjectDiffError(slug, jobID, err); matched {
+		return state, nil
+	}
+
+	return projectDiffState{}, exitCodeError{Code: 2, Err: fmt.Errorf("fetch diff: %w", err)}
+}
+
+func interpretProjectDiffError(slug, jobID string, err error) (projectDiffState, bool) {
 	msg := err.Error()
 
 	switch {
 	case strings.Contains(msg, "404"), strings.Contains(msg, "No baseline"):
-		fmt.Fprintln(out)
-		fmt.Fprintf(out, "No baseline set for project %q.\n", slug)
-		fmt.Fprintf(out, "Promote this scan: stageflow project promote %s --job-id %s\n", slug, jobID)
-
-		return nil
+		return projectDiffState{
+			baseline: projectScanBaseline{
+				Status:         projectBaselineStatusMissing,
+				Message:        fmt.Sprintf("No baseline set for project %q.", slug),
+				PromoteCommand: fmt.Sprintf("Promote this scan: stageflow project promote %s --job-id %s", slug, jobID),
+			},
+		}, true
 	case strings.Contains(msg, "Cannot diff against self"):
-		fmt.Fprintln(out)
-		fmt.Fprintln(out, "This scan is the current baseline. Run a new scan to see a diff.")
-
-		return nil
+		return projectDiffState{
+			baseline: projectScanBaseline{
+				Status:  projectBaselineStatusCurrent,
+				Message: "This scan is the current baseline. Run a new scan to see a diff.",
+			},
+		}, true
 	default:
-		return exitCodeError{Code: 2, Err: fmt.Errorf("fetch diff: %w", err)}
+		return projectDiffState{}, false
 	}
 }
 

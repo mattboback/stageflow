@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,6 +96,32 @@ func TestRunProjectInitCommand_ScaffoldsFiles(t *testing.T) {
 	}
 }
 
+func TestRunProjectInitCommand_JSON(t *testing.T) {
+	root := t.TempDir()
+
+	var stdout bytes.Buffer
+
+	cmd := &cobra.Command{}
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stdout)
+
+	err := runProjectInitCommand(
+		cmd,
+		[]string{root},
+		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
+	)
+	requireNoErr(t, err)
+
+	var payload projectInitEnvelope
+	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	requireEqual(t, payload.Schema, "stageflow-cli/project-init@v1", "payload.Schema")
+	requireEqual(t, payload.ProjectRoot, root, "payload.ProjectRoot")
+	requireEqual(t, payload.Created, true, "payload.Created")
+	if len(payload.NextSteps) == 0 {
+		t.Fatalf("expected next steps in init payload")
+	}
+}
+
 func TestRunProjectDoctorCommand_MissingConfigShowsInitHint(t *testing.T) {
 	root := t.TempDir()
 
@@ -158,6 +185,109 @@ dev:
 	if !strings.Contains(stdout.String(), "Doctor checks passed") {
 		t.Fatalf("expected doctor success output, got: %q", stdout.String())
 	}
+}
+
+func TestRunProjectDoctorCommand_SkipDevJSON(t *testing.T) {
+	root := t.TempDir()
+
+	writeProjectConfig(t, root, `version: 1
+stageflow:
+  api_url: http://localhost:8080
+scan:
+  urls:
+    - http://127.0.0.1:5173
+  scanners: axe
+dev:
+  start:
+    cmd: ["echo", "dev"]
+  ready:
+    url: http://127.0.0.1:5173
+`)
+
+	var stdout bytes.Buffer
+
+	cmd := &cobra.Command{}
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&bytes.Buffer{})
+
+	err := runProjectDoctorCommand(
+		cmd,
+		[]string{root},
+		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
+		func(string) string { return "" },
+		&projectDoctorCmdOptions{
+			Timeout: time.Minute,
+			SkipDev: true,
+		},
+	)
+	requireNoErr(t, err)
+
+	var payload projectDoctorEnvelope
+	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	requireEqual(t, payload.Schema, "stageflow-cli/project-doctor@v1", "payload.Schema")
+	requireEqual(t, payload.Passed, true, "payload.Passed")
+	requireEqual(t, payload.AutoAllowPrivateTargets, true, "payload.AutoAllowPrivateTargets")
+	requireEqual(t, payload.HostedMemory.Configured, false, "payload.HostedMemory.Configured")
+	if len(payload.Checks) != 3 {
+		t.Fatalf("expected 3 checks, got %d", len(payload.Checks))
+	}
+	requireEqual(t, payload.Checks[2].Status, "skipped", "payload.Checks[2].Status")
+}
+
+func TestRunProjectDoctorCommand_SkipDevJSONHostedMemory(t *testing.T) {
+	root := t.TempDir()
+
+	writeProjectConfig(t, root, `version: 1
+stageflow:
+  api_url: http://localhost:8080
+  remote_project: hosted-demo
+  remote_api_url: https://hosted.stageflow.example
+scan:
+  urls:
+    - https://example.com
+  scanners: axe
+dev:
+  start:
+    cmd: ["echo", "dev"]
+  ready:
+    url: http://127.0.0.1:5173
+`)
+
+	var stdout bytes.Buffer
+
+	cmd := &cobra.Command{}
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&bytes.Buffer{})
+
+	err := runProjectDoctorCommand(
+		cmd,
+		[]string{root},
+		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
+		func(string) string { return "" },
+		&projectDoctorCmdOptions{
+			Timeout: time.Minute,
+			SkipDev: true,
+		},
+	)
+	requireNoErr(t, err)
+
+	var payload projectDoctorEnvelope
+	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	requireEqual(t, payload.HostedMemory.Configured, true, "payload.HostedMemory.Configured")
+	requireEqual(t, payload.HostedMemory.ProjectSlug, "hosted-demo", "payload.HostedMemory.ProjectSlug")
+	requireEqual(t, payload.HostedMemory.APIURL, "https://hosted.stageflow.example", "payload.HostedMemory.APIURL")
+	requireEqual(
+		t,
+		payload.HostedMemory.RecommendedScanCommand,
+		`stageflow scan --project hosted-demo --format json --api https://hosted.stageflow.example`,
+		"payload.HostedMemory.RecommendedScanCommand",
+	)
+	requireEqual(
+		t,
+		payload.HostedMemory.PromoteCommandTemplate,
+		`stageflow project promote hosted-demo --job-id <job-id> --api https://hosted.stageflow.example`,
+		"payload.HostedMemory.PromoteCommandTemplate",
+	)
 }
 
 func TestRunProjectDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {

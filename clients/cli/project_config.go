@@ -22,8 +22,10 @@ type projectConfig struct {
 }
 
 type projectStageflowCfg struct {
-	APIURL    string `yaml:"api_url"`
-	APIKeyEnv string `yaml:"api_key_env"`
+	APIURL        string `yaml:"api_url"`
+	APIKeyEnv     string `yaml:"api_key_env"`
+	RemoteProject string `yaml:"remote_project"`
+	RemoteAPIURL  string `yaml:"remote_api_url"`
 }
 
 type projectScanCfg struct {
@@ -215,6 +217,9 @@ version: 1
 
 stageflow:
   api_url: %s
+  # Optional: link this local project loop to a hosted StageFlow project for regression memory.
+  # remote_project: your-hosted-project-slug
+  # remote_api_url: https://api.stageflow.example
 
 scan:
   # Set this to the page URL your dev server serves.
@@ -246,7 +251,8 @@ This folder configures `+"`stageflow project`"+` for this repository.
 2. Set `+"`dev.start.cmd`"+` to the command that starts your app.
 3. Set `+"`dev.ready.url`"+` to the URL that returns HTTP 2xx or 3xx when your app is ready.
 4. Set `+"`scan.urls`"+` to the page URLs you want scanned.
-5. Run `+"`stageflow project`"+` again.
+5. Optional: set `+"`stageflow.remote_project`"+` (and `+"`stageflow.remote_api_url`"+` if needed) to link hosted regression memory.
+6. Run `+"`stageflow project`"+` again.
 
 ## Example dev commands
 
@@ -263,6 +269,14 @@ For local targets like `+"`localhost`"+` and `+"`127.0.0.1`"+`:
    - `+"`just dev up local`"+`
    - `+"`just dev init local`"+`
 2. Re-run `+"`stageflow project`"+`.
+
+## Hosted regression memory (optional)
+
+After your local localhost loop passes, you can follow up against a hosted project baseline:
+
+- Set `+"`stageflow.remote_project`"+` to the hosted project slug.
+- Set `+"`stageflow.remote_api_url`"+` if the hosted project uses a different API base URL.
+- Run `+"`stageflow project doctor --format json`"+` to discover the exact hosted follow-up command agents should run next.
 
 ## Troubleshooting
 
@@ -312,6 +326,32 @@ func validateProjectConfig(cfg projectConfig) error {
 
 	if strings.TrimSpace(cfg.Dev.Ready.URL) == "" {
 		return errors.New("dev.ready.url is required")
+	}
+
+	if err := validateOptionalHTTPURL("stageflow.remote_api_url", cfg.Stageflow.RemoteAPIURL); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateOptionalHTTPURL(fieldName string, raw string) error {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil
+	}
+
+	u, err := url.Parse(trimmed)
+	if err != nil {
+		return fmt.Errorf("%s is invalid: %w", fieldName, err)
+	}
+
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("%s has unsupported scheme %q (expected http or https)", fieldName, u.Scheme)
+	}
+
+	if u.Host == "" {
+		return fmt.Errorf("%s is invalid: missing host", fieldName)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,41 @@ import (
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
+
+type projectInitEnvelope struct {
+	Schema      string   `json:"schema"`
+	ProjectRoot string   `json:"projectRoot"`
+	ConfigPath  string   `json:"configPath"`
+	GuidePath   string   `json:"guidePath"`
+	Created     bool     `json:"created"`
+	NextSteps   []string `json:"nextSteps"`
+}
+
+type projectDoctorEnvelope struct {
+	Schema                  string               `json:"schema"`
+	ProjectRoot             string               `json:"projectRoot"`
+	ConfigPath              string               `json:"configPath"`
+	Passed                  bool                 `json:"passed"`
+	APIURL                  string               `json:"apiUrl"`
+	URLs                    []string             `json:"urls"`
+	AutoAllowPrivateTargets bool                 `json:"autoAllowPrivateTargets"`
+	HostedMemory            projectHostedMemory  `json:"hostedMemory"`
+	Checks                  []projectDoctorCheck `json:"checks"`
+}
+
+type projectHostedMemory struct {
+	Configured             bool   `json:"configured"`
+	ProjectSlug            string `json:"projectSlug,omitempty"`
+	APIURL                 string `json:"apiUrl,omitempty"`
+	RecommendedScanCommand string `json:"recommendedScanCommand,omitempty"`
+	PromoteCommandTemplate string `json:"promoteCommandTemplate,omitempty"`
+}
+
+type projectDoctorCheck struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+}
 
 func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	runOpts := &projectCmdOptions{
@@ -201,11 +237,29 @@ func runProjectInitCommand(
 	}
 
 	if !created {
+		format, formatErr := root.outputFormat()
+		if formatErr != nil {
+			return exitCodeError{Code: 2, Err: formatErr}
+		}
+
+		if format == outputFormatJSON {
+			return writeProjectInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, false)
+		}
+
 		fmt.Fprintln(cmd.OutOrStdout(), "StageFlow project bootstrap already exists:")
 		fmt.Fprintf(cmd.OutOrStdout(), "- %s\n", configPath)
 		fmt.Fprintf(cmd.OutOrStdout(), "- %s\n", guidePath)
 
 		return nil
+	}
+
+	format, formatErr := root.outputFormat()
+	if formatErr != nil {
+		return exitCodeError{Code: 2, Err: formatErr}
+	}
+
+	if format == outputFormatJSON {
+		return writeProjectInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, true)
 	}
 
 	printProjectBootstrapHelp(cmd.OutOrStdout(), projectRoot, configPath, guidePath)
@@ -274,14 +328,35 @@ func runProjectDoctorCommand(
 		return exitCodeError{Code: 2, Err: validateErr}
 	}
 
-	if cfg.Scan.AllowPrivateTargets == nil && containsPrivateTargets(urls) {
+	autoAllowPrivateTargets := cfg.Scan.AllowPrivateTargets == nil && containsPrivateTargets(urls)
+	if autoAllowPrivateTargets {
 		fmt.Fprintln(
 			cmd.ErrOrStderr(),
 			"Detected private/loopback targets; project scans will auto-enable allow_private_targets=true.",
 		)
 	}
 
+	checks := []projectDoctorCheck{
+		{Name: "config", Status: "passed", Message: "Loaded and validated project config."},
+		{Name: "scan-preflight", Status: "passed", Message: "Validated scan targets and scanner configuration."},
+	}
+
 	if opts.SkipDev {
+		checks = append(checks, projectDoctorCheck{
+			Name:    "dev-readiness",
+			Status:  "skipped",
+			Message: "Skipped by --skip-dev.",
+		})
+
+		format, formatErr := root.outputFormat()
+		if formatErr != nil {
+			return exitCodeError{Code: 2, Err: formatErr}
+		}
+
+		if format == outputFormatJSON {
+			return writeProjectDoctorJSON(cmd.OutOrStdout(), projectRoot, cfgPath, apiURL, urls, cfg.Stageflow, autoAllowPrivateTargets, checks)
+		}
+
 		fmt.Fprintln(cmd.OutOrStdout(), "Doctor checks passed (config + scan preflight).")
 
 		return nil
@@ -299,6 +374,21 @@ func runProjectDoctorCommand(
 	readyErr := waitForReady(doctorCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
 	if readyErr != nil {
 		return exitCodeError{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
+	}
+
+	checks = append(checks, projectDoctorCheck{
+		Name:    "dev-readiness",
+		Status:  "passed",
+		Message: "Started the dev command and observed a ready HTTP response.",
+	})
+
+	format, formatErr := root.outputFormat()
+	if formatErr != nil {
+		return exitCodeError{Code: 2, Err: formatErr}
+	}
+
+	if format == outputFormatJSON {
+		return writeProjectDoctorJSON(cmd.OutOrStdout(), projectRoot, cfgPath, apiURL, urls, cfg.Stageflow, autoAllowPrivateTargets, checks)
 	}
 
 	fmt.Fprintln(cmd.OutOrStdout(), "Doctor checks passed (config + scan preflight + dev readiness).")
@@ -559,6 +649,98 @@ func buildProjectSubmitJobRequest(cfg projectScanCfg) (SubmitJobRequest, []strin
 		Screenshot:          screenshot,
 		AllowPrivateTargets: allowPrivate,
 	}, urls, nil
+}
+
+func writeProjectInitJSON(
+	out io.Writer,
+	projectRoot, configPath, guidePath string,
+	created bool,
+) error {
+	payload := projectInitEnvelope{
+		Schema:      "stageflow-cli/project-init@v1",
+		ProjectRoot: projectRoot,
+		ConfigPath:  configPath,
+		GuidePath:   guidePath,
+		Created:     created,
+		NextSteps: []string{
+			"Read .stageflow/README.md.",
+			"Update dev.start.cmd, dev.ready.url, and scan.urls in .stageflow/config.yaml.",
+			"Optional: set stageflow.remote_project and stageflow.remote_api_url for the hosted regression-memory step.",
+			"For localhost/private scans, start the local StageFlow stack with just dev up local and just dev init local.",
+			"Run stageflow project doctor, then stageflow project.",
+		},
+	}
+
+	return writeJSONEnvelope(out, payload)
+}
+
+func writeProjectDoctorJSON(
+	out io.Writer,
+	projectRoot, configPath, apiURL string,
+	urls []string,
+	stageflowCfg projectStageflowCfg,
+	autoAllowPrivateTargets bool,
+	checks []projectDoctorCheck,
+) error {
+	payload := projectDoctorEnvelope{
+		Schema:                  "stageflow-cli/project-doctor@v1",
+		ProjectRoot:             projectRoot,
+		ConfigPath:              configPath,
+		Passed:                  true,
+		APIURL:                  apiURL,
+		URLs:                    urls,
+		AutoAllowPrivateTargets: autoAllowPrivateTargets,
+		HostedMemory:            buildProjectHostedMemory(stageflowCfg),
+		Checks:                  checks,
+	}
+
+	return writeJSONEnvelope(out, payload)
+}
+
+func buildProjectHostedMemory(cfg projectStageflowCfg) projectHostedMemory {
+	projectSlug := strings.TrimSpace(cfg.RemoteProject)
+	apiURL := strings.TrimSpace(cfg.RemoteAPIURL)
+	configured := projectSlug != ""
+
+	hosted := projectHostedMemory{
+		Configured:  configured,
+		ProjectSlug: projectSlug,
+		APIURL:      apiURL,
+	}
+	if !configured {
+		return hosted
+	}
+
+	hosted.RecommendedScanCommand = buildHostedProjectScanCommand(projectSlug, apiURL)
+	hosted.PromoteCommandTemplate = buildHostedProjectPromoteCommand(projectSlug, apiURL)
+
+	return hosted
+}
+
+func buildHostedProjectScanCommand(projectSlug string, apiURL string) string {
+	command := fmt.Sprintf("stageflow scan --project %s --format json", projectSlug)
+	if trimmedAPIURL := strings.TrimSpace(apiURL); trimmedAPIURL != "" {
+		command += fmt.Sprintf(" --api %s", trimmedAPIURL)
+	}
+
+	return command
+}
+
+func buildHostedProjectPromoteCommand(projectSlug string, apiURL string) string {
+	command := fmt.Sprintf("stageflow project promote %s --job-id <job-id>", projectSlug)
+	if trimmedAPIURL := strings.TrimSpace(apiURL); trimmedAPIURL != "" {
+		command += fmt.Sprintf(" --api %s", trimmedAPIURL)
+	}
+
+	return command
+}
+
+func writeJSONEnvelope(out io.Writer, payload any) error {
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	encoder.SetEscapeHTML(false)
+
+	return encoder.Encode(payload)
 }
 
 func cobraFlagChanged(cmd *cobra.Command, name string) bool {

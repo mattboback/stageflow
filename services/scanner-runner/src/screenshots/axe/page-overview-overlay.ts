@@ -1,5 +1,3 @@
-import sharp from 'sharp';
-
 import type { IssueSeverity } from '../../core/types';
 import type { PageOverviewElement } from './types';
 
@@ -78,4 +76,3 @@ export function buildPageOverviewOverlaySvg(
       </svg>
     `);
 }
-
