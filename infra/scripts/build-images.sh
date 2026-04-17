@@ -59,4 +59,6 @@ echo "[images]    first-time builds download Playwright Chromium and take the lo
   "$REPO_ROOT"
 "$PODMAN" tag localhost/stageflow/scanner-runner:latest stageflow/scanner-runner:latest
 
+./infra/scripts/verify-image-inventory.sh
+
 echo "[images] Done."
