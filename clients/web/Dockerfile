@@ -2,7 +2,7 @@
 # Optimized for production with Caddy
 
 # Stage 1: Build
-FROM docker.io/oven/bun:1.3.0-alpine AS builder
+FROM docker.io/oven/bun:1.3.0-alpine@sha256:37e6b1cbe053939bccf6ae4507977ed957eaa6e7f275670b72ad6348e0d2c11f AS builder
 WORKDIR /app
 
 # Copy package files first for better caching
@@ -42,7 +42,7 @@ RUN bunx --no-install svelte-kit sync
 RUN bun run build
 
 # Stage 2: Production server
-FROM docker.io/library/caddy:2.10-alpine AS runner
+FROM docker.io/library/caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d AS runner
 
 # Remove default Caddy content and config
 RUN rm -rf /usr/share/caddy/* /etc/caddy/Caddyfile

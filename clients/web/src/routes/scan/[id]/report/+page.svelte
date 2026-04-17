@@ -8,7 +8,7 @@
 	const canonicalUrl = $derived(buildSiteUrl(page.url.pathname));
 	const pageTitle = $derived(`Scan Report | ${SITE.name}`);
 	const pageDescription = 'Multi-scanner report view with issue evidence and remediation guidance.';
-	const shareImageUrl = buildSiteUrl('/og-image.svg');
+	const shareImageUrl = buildSiteUrl('/og-image.png');
 
 	let reportStore = $state<ReturnType<typeof createScanReportStore> | null>(null);
 

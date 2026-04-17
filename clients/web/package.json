@@ -31,6 +31,7 @@
 		"find-dead-code": "knip --cache --cache-location ../../.cache/knip-frontend",
 		"storybook": "storybook dev -p 6006 --ci --no-open",
 		"build-storybook": "storybook build",
+		"check:asset-budget": "node ./scripts/check-asset-budget.mjs",
 		"storybook:serve-static": "node ./scripts/serve-storybook-static.mjs",
 		"test-storybook": "bun run build-storybook && bun run test-storybook:ci",
 		"test-storybook:runner": "test-storybook --url ${STORYBOOK_URL:-http://127.0.0.1:6006} --browsers chromium --failOnConsole --skipTags skip-test",

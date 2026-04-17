@@ -1,9 +1,9 @@
 # Scanner Runner - TypeScript/Playwright based scanner
 # Uses multi-stage build for smaller runtime image
 
-FROM docker.io/oven/bun:1.3.8 AS bun-bin
+FROM docker.io/oven/bun:1.3.8@sha256:371d30538b69303ced927bb5915697ac7e2fa8cb409ee332c66009de64de5aa3 AS bun-bin
 
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy AS builder
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831 AS builder
 WORKDIR /repo
 
 # Install bun from pinned image stage (no curl|bash installer)
@@ -41,7 +41,7 @@ RUN rm -rf node_modules \
   && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest
 
 # Runtime stage
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831
 WORKDIR /app
 
 ENV NODE_ENV=production \

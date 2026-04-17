@@ -36,7 +36,7 @@
     <g transform="translate(44 318)">
       <rect width="200" height="110" rx="18" fill="#fffdf9" stroke="#e3d8c2" />
       <text x="24" y="34" fill="#8a785c" font-family="system-ui, sans-serif" font-size="18" font-weight="700">Scanners</text>
-      <text x="24" y="82" fill="#18120b" font-family="system-ui, sans-serif" font-size="46" font-weight="800">6</text>
+      <text x="24" y="82" fill="#18120b" font-family="system-ui, sans-serif" font-size="46" font-weight="800">8</text>
 
       <rect x="224" width="260" height="110" rx="18" fill="#fffdf9" stroke="#e3d8c2" />
       <text x="248" y="34" fill="#8a785c" font-family="system-ui, sans-serif" font-size="18" font-weight="700">Realtime status</text>

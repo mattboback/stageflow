@@ -13,7 +13,7 @@
 	let { children } = $props();
 	const pathname = $derived(page.url.pathname);
 	const canonicalUrl = $derived(buildSiteUrl(pathname));
-	const shareImageUrl = buildSiteUrl('/og-image.svg');
+	const shareImageUrl = buildSiteUrl('/og-image.png');
 </script>
 
 <svelte:head>
