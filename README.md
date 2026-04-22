@@ -84,9 +84,13 @@ The design decisions worth inspecting first are:
 | `local` overlay                       | Scan localhost/private targets during development     | `http://localhost:3010`   | `http://localhost:8080`   | `http://localhost:3001`   | `infra/compose/podman-compose.local.yml`                                     |
 | repo-managed staging overlay          | Domain-like staging on alternate loopback ports       | `http://127.0.0.1:3300`   | `http://127.0.0.1:8300`   | `http://127.0.0.1:3301`   | `infra/compose/podman-compose.staging.yml`                                   |
 | optional self-hosted edge             | Public-domain routing and TLS for your own deployment | proxied by host Caddy     | proxied by host Caddy     | proxied by host Caddy     | `infra/caddy/Caddyfile`                                                      |
-| hosted `stageflow.org` production     | Shared public demo                                    | managed outside this repo | managed outside this repo | managed outside this repo | separate deployment control plane                                            |
+| hosted `stageflow.org` production     | Shared public demo                                    | managed outside this repo | managed outside this repo | managed outside this repo | `/home/matt/Deployment` control plane and launch runbook                     |
 
 These modes intentionally use different port layouts. The self-hosted Caddy edge proxies to bridge-bound service ports (`3100` frontend, `8100` API, `3101` Grafana, `9100` MinIO), while the local and staging overlays expose different loopback ports for developer convenience. Use one topology per environment rather than mixing configs across them.
+
+The hosted `stageflow.org` demo is operated from `/home/matt/Deployment`.
+Use `/home/matt/Deployment/docs/stageflow-launch-runbook.md` for production
+release, verification, monitoring, and rollback steps.
 
 ## Quick Start
 
