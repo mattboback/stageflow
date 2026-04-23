@@ -3,7 +3,6 @@ import { join } from 'node:path';
 
 import {
 	type Issue,
-	type IssueSeverity,
 	type PageScanResult,
 	type ScanContext,
 	ScannerBase,
@@ -21,9 +20,7 @@ import {
 } from './chrome-lifecycle';
 import {
 	enrichIssuesWithContext as enrichIssuesWithContextFn,
-	enrichNodesWithContext as enrichNodesWithContextFn,
-	extractIssuesFromResult,
-	getHelpUrl as getHelpUrlFn
+	extractIssuesFromResult
 } from './issue-mapper';
 import {
 	loadLighthouseModule as loadLighthouseModuleFn,
@@ -31,16 +28,8 @@ import {
 } from './lighthouse-invoker';
 import { isLighthousePrewarmEnabled } from './prewarm';
 import {
-	extractAuditNodes as extractAuditNodesFn,
-	getAuditCategory as getAuditCategoryFn,
-	getAuditNodeCount as getAuditNodeCountFn,
-	mapScoreToSeverity as mapScoreToSeverityFn
-} from './result-parser';
-import {
 	DEFAULT_LIGHTHOUSE_CATEGORIES,
 	type LaunchedChrome,
-	type LighthouseAudit,
-	type LighthouseCategory,
 	type LighthouseIssueNode,
 	type LighthouseModule,
 	type LighthouseOptions,
@@ -94,101 +83,20 @@ export class LighthouseScanner extends ScannerBase {
 			await mkdir(screenshotsDir, { recursive: true });
 
 			const lhResult = await this.runLighthouse(page, pageEntry.url);
-
-			// Lighthouse runs in its own Chrome instance. The Playwright page may have gone stale
-			// while waiting in the serialized queue (especially with concurrency > 1). Re-navigate
-			// to ensure we have a fresh, responsive page for context enrichment and screenshots.
-			// Use 'domcontentloaded' instead of 'networkidle' for speed - we just need the DOM ready.
-			try {
-				this.logger.debug('Re-navigating Playwright page after Lighthouse', {
-					url: pageEntry.url
-				});
-
-				// Prefer BrowserManager navigation to reuse runtime target validation.
-				const browserManager = this.browserManager;
-				if (browserManager) {
-					await browserManager.navigateToPage(page, pageEntry.url, {
-						type: 'domcontentloaded'
-					});
-				} else {
-					await page.goto(pageEntry.url, {
-						waitUntil: 'domcontentloaded',
-						timeout: 15_000
-					});
-				}
-			} catch (navError) {
-				// If re-navigation fails, log it but continue - we'll try enrichment/screenshots anyway
-				this.logger.warn(
-					'Failed to re-navigate page after Lighthouse, continuing with stale page',
-					{
-						url: pageEntry.url,
-						error: navError instanceof Error ? navError.message : String(navError)
-					}
-				);
-			}
+			await this.renavigateAfterLighthouse(page, pageEntry.url);
 
 			const issues = this.extractIssues(lhResult);
+			await this.enrichWithTimeout(page, issues);
 
-			// Context enrichment and screenshots use Playwright page operations that can hang
-			// if the page is unresponsive. Wrap with timeouts as a safety net.
-			const enrichmentTimeout = 15_000; // Reduced from 30s
-			try {
-				await Promise.race([
-					this.enrichIssuesWithContext(page, issues),
-					new Promise<never>((_, reject) =>
-						setTimeout(() => {
-							reject(new Error('Context enrichment timed out'));
-						}, enrichmentTimeout)
-					)
-				]);
-			} catch (enrichError) {
-				this.logger.warn('Context enrichment failed or timed out, continuing without enrichment', {
-					error: enrichError instanceof Error ? enrichError.message : String(enrichError)
-				});
-			}
-
-			const pageOverviewViolations: PageOverviewViolation[] = issues.map((issue) => {
-				const issueNodes = (issue.metadata?.nodes as LighthouseIssueNode[] | undefined)?.map(
-					(n) => ({
-						...(n.target !== undefined ? { target: n.target } : {})
-					})
-				);
-
-				return {
-					id: issue.id,
-					impact: issue.severity,
-					...(issueNodes !== undefined ? { nodes: issueNodes } : {})
-				};
-			});
-
-			const screenshotTimeout = 30_000; // Reduced from 60s
-			let pageOverview: Awaited<ReturnType<typeof this.screenshotService.capturePageOverview>> =
-				null;
-			try {
-				pageOverview = await Promise.race([
-					this.screenshotService.capturePageOverview(
-						page,
-						pageOverviewViolations,
-						screenshotsDir,
-						pageEntry.id,
-						{ scannerId: this.metadata.name }
-					),
-					new Promise<never>((_, reject) =>
-						setTimeout(() => {
-							reject(new Error('Screenshot capture timed out'));
-						}, screenshotTimeout)
-					)
-				]);
-			} catch (screenshotError) {
-				this.logger.warn('Screenshot capture failed or timed out, continuing without screenshot', {
-					error:
-						screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
-				});
-			}
+			const pageOverview = await this.captureScreenshotWithTimeout(
+				page,
+				issues,
+				screenshotsDir,
+				pageEntry.id
+			);
 
 			const finishedAt = new Date().toISOString();
-			const durationNs = process.hrtime.bigint() - hrStart;
-			const durationMs = Number(durationNs) / 1e6;
+			const durationMs = Number(process.hrtime.bigint() - hrStart) / 1e6;
 
 			return {
 				pageId: pageEntry.id,
@@ -214,8 +122,7 @@ export class LighthouseScanner extends ScannerBase {
 			};
 		} catch (error) {
 			const finishedAt = new Date().toISOString();
-			const durationNs = process.hrtime.bigint() - hrStart;
-			const durationMs = Number(durationNs) / 1e6;
+			const durationMs = Number(process.hrtime.bigint() - hrStart) / 1e6;
 
 			return {
 				pageId: pageEntry.id,
@@ -230,6 +137,88 @@ export class LighthouseScanner extends ScannerBase {
 			};
 		}
 	}
+
+	// --- scanPage helpers ---
+
+	private async renavigateAfterLighthouse(
+		page: import('playwright').Page,
+		url: string
+	): Promise<void> {
+		try {
+			this.logger.debug('Re-navigating Playwright page after Lighthouse', { url });
+			const browserManager = this.browserManager;
+			if (browserManager) {
+				await browserManager.navigateToPage(page, url, { type: 'domcontentloaded' });
+			} else {
+				await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+			}
+		} catch (navError) {
+			this.logger.warn(
+				'Failed to re-navigate page after Lighthouse, continuing with stale page',
+				{
+					url,
+					error: navError instanceof Error ? navError.message : String(navError)
+				}
+			);
+		}
+	}
+
+	private async enrichWithTimeout(
+		page: import('playwright').Page,
+		issues: Issue[]
+	): Promise<void> {
+		try {
+			await Promise.race([
+				enrichIssuesWithContextFn(page, issues),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error('Context enrichment timed out')), 15_000)
+				)
+			]);
+		} catch (enrichError) {
+			this.logger.warn('Context enrichment failed or timed out, continuing without enrichment', {
+				error: enrichError instanceof Error ? enrichError.message : String(enrichError)
+			});
+		}
+	}
+
+	private async captureScreenshotWithTimeout(
+		page: import('playwright').Page,
+		issues: Issue[],
+		screenshotsDir: string,
+		pageId: string
+	): Promise<Awaited<ReturnType<typeof this.screenshotService.capturePageOverview>> | null> {
+		const violations: PageOverviewViolation[] = issues.map((issue) => {
+			const issueNodes = (issue.metadata?.nodes as LighthouseIssueNode[] | undefined)?.map(
+				(n) => ({
+					...(n.target !== undefined ? { target: n.target } : {})
+				})
+			);
+			return {
+				id: issue.id,
+				impact: issue.severity,
+				...(issueNodes !== undefined ? { nodes: issueNodes } : {})
+			};
+		});
+
+		try {
+			return await Promise.race([
+				this.screenshotService.capturePageOverview(page, violations, screenshotsDir, pageId, {
+					scannerId: this.metadata.name
+				}),
+				new Promise<never>((_, reject) =>
+					setTimeout(() => reject(new Error('Screenshot capture timed out')), 30_000)
+				)
+			]);
+		} catch (screenshotError) {
+			this.logger.warn('Screenshot capture failed or timed out, continuing without screenshot', {
+				error:
+					screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
+			});
+			return null;
+		}
+	}
+
+	// --- Chrome and Lighthouse lifecycle ---
 
 	private async runLighthouse(
 		_page: import('playwright').Page,
@@ -350,40 +339,10 @@ export class LighthouseScanner extends ScannerBase {
 		});
 	}
 
-	private getAuditNodeCount(audit: LighthouseAudit): number {
-		return getAuditNodeCountFn(audit);
-	}
-
-	private extractAuditNodes(audit: LighthouseAudit): LighthouseIssueNode[] {
-		return extractAuditNodesFn(audit);
-	}
-
-	private async enrichNodesWithContext(
-		page: import('playwright').Page,
-		nodes: LighthouseIssueNode[]
-	): Promise<LighthouseIssueNode[]> {
-		return enrichNodesWithContextFn(page, nodes);
-	}
-
 	private async enrichIssuesWithContext(
 		page: import('playwright').Page,
 		issues: Issue[]
 	): Promise<void> {
 		return enrichIssuesWithContextFn(page, issues);
-	}
-
-	private getAuditCategory(
-		auditId: string,
-		categories: Record<string, LighthouseCategory>
-	): string | null {
-		return getAuditCategoryFn(auditId, categories);
-	}
-
-	private mapScoreToSeverity(score: number | null): IssueSeverity {
-		return mapScoreToSeverityFn(score);
-	}
-
-	private getHelpUrl(auditId: string): string {
-		return getHelpUrlFn(auditId);
 	}
 }

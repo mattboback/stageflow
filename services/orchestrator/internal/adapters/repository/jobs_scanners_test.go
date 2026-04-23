@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,77 +12,83 @@ import (
 func TestRecordScannerCompletionConcurrency(t *testing.T) {
 	db := setupTestDBFile(t)
 
-	job := &models.Job{
-		ID:        "job-concurrent",
-		State:     models.JobStateScanning,
-		InputType: "zip",
-		InputPath: "test.zip",
-		Config:    models.JobConfig{Modules: []string{"axe", "lighthouse"}},
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+	// Run multiple iterations to increase the chance of hitting the race window.
+	const iterations = 10
 
-	mustCreateJob(t, db, job)
+	for i := range iterations {
+		jobID := fmt.Sprintf("job-concurrent-%d", i)
 
-	if err := db.SetExpectedScanners(context.Background(), job.ID, []string{"axe", "lighthouse"}); err != nil {
-		t.Fatalf("failed to set expected scanners: %v", err)
-	}
+		job := &models.Job{
+			ID:        jobID,
+			State:     models.JobStateScanning,
+			InputType: "zip",
+			InputPath: "test.zip",
+			Config:    models.JobConfig{Modules: []string{"axe", "lighthouse"}},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
 
-	start := make(chan struct{})
+		mustCreateJob(t, db, job)
 
-	type result struct {
-		allComplete bool
-		err         error
-	}
+		if err := db.SetExpectedScanners(context.Background(), jobID, []string{"axe", "lighthouse"}); err != nil {
+			t.Fatalf("iter %d: failed to set expected scanners: %v", i, err)
+		}
 
-	results := make(chan result, 2)
+		start := make(chan struct{})
 
-	run := func(scanner string) {
-		<-start
+		type result struct {
+			allComplete bool
+			err         error
+		}
 
-		allComplete, err := db.RecordScannerCompletion(context.Background(), job.ID, &models.ScannerResult{
-			ScannerType: scanner,
-			ResultsPath: "path/" + scanner + ".json",
-			Success:     true,
-		})
-		results <- result{allComplete: allComplete, err: err}
-	}
+		results := make(chan result, 2)
 
-	go run("axe")
-	go run("lighthouse")
+		run := func(scanner string) {
+			<-start
 
-	close(start)
+			allComplete, err := db.RecordScannerCompletion(context.Background(), jobID, &models.ScannerResult{
+				ScannerType: scanner,
+				ResultsPath: "path/" + scanner + ".json",
+				Success:     true,
+			})
+			results <- result{allComplete: allComplete, err: err}
+		}
 
-	res1 := <-results
-	res2 := <-results
+		go run("axe")
+		go run("lighthouse")
 
-	if res1.err != nil {
-		t.Fatalf("scanner1 error: %v", res1.err)
-	}
+		close(start)
 
-	if res2.err != nil {
-		t.Fatalf("scanner2 error: %v", res2.err)
-	}
+		res1 := <-results
+		res2 := <-results
 
-	// Exactly one of them should report completion (the second finisher).
-	if (res1.allComplete && res2.allComplete) || (!res1.allComplete && !res2.allComplete) {
-		t.Fatalf(
-			"expected exactly one completion signal, got res1=%v res2=%v",
-			res1.allComplete,
-			res2.allComplete,
-		)
-	}
+		if res1.err != nil {
+			t.Fatalf("iter %d: scanner1 error: %v", i, res1.err)
+		}
 
-	stored, err := db.GetJob(context.Background(), job.ID)
-	if err != nil {
-		t.Fatalf("failed to get job: %v", err)
-	}
+		if res2.err != nil {
+			t.Fatalf("iter %d: scanner2 error: %v", i, res2.err)
+		}
 
-	if len(stored.CompletedScanners) != 2 {
-		t.Fatalf("expected 2 completed scanners, got %d", len(stored.CompletedScanners))
-	}
+		// Exactly one of them should report completion (the second finisher).
+		if (res1.allComplete && res2.allComplete) || (!res1.allComplete && !res2.allComplete) {
+			t.Fatalf(
+				"iter %d: expected exactly one completion signal, got res1=%v res2=%v",
+				i, res1.allComplete, res2.allComplete,
+			)
+		}
 
-	if len(stored.ScannerResults) != 2 {
-		t.Fatalf("expected 2 scanner results, got %d", len(stored.ScannerResults))
+		stored, err := db.GetJob(context.Background(), jobID)
+		if err != nil {
+			t.Fatalf("iter %d: failed to get job: %v", i, err)
+		}
+
+		if len(stored.CompletedScanners) != 2 {
+			t.Fatalf("iter %d: expected 2 completed scanners, got %d", i, len(stored.CompletedScanners))
+		}
+
+		if len(stored.ScannerResults) != 2 {
+			t.Fatalf("iter %d: expected 2 scanner results, got %d", i, len(stored.ScannerResults))
+		}
 	}
 }

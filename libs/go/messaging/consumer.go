@@ -12,6 +12,11 @@ func (c *Client) createOrRefreshConsumer(
 	ctx context.Context,
 	stream, subject, consumerName string,
 ) (jetstream.Consumer, error) {
+	js, err := c.snapshot()
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := jetstream.ConsumerConfig{
 		Durable:       consumerName,
 		FilterSubject: subject,
@@ -20,12 +25,12 @@ func (c *Client) createOrRefreshConsumer(
 		AckWait:       defaultConsumerAckWait,
 	}
 
-	cons, err := c.js.CreateOrUpdateConsumer(ctx, stream, cfg)
+	cons, err := js.CreateOrUpdateConsumer(ctx, stream, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	streamHandle, err := c.js.Stream(ctx, stream)
+	streamHandle, err := js.Stream(ctx, stream)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load stream %s: %w", stream, err)
 	}
@@ -67,7 +72,7 @@ func (c *Client) createOrRefreshConsumer(
 			)
 		}
 
-		cons, err = c.js.CreateOrUpdateConsumer(ctx, stream, cfg)
+		cons, err = js.CreateOrUpdateConsumer(ctx, stream, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to recreate consumer %s on stream %s: %w", consumerName, stream, err)
 		}

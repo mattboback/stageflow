@@ -122,7 +122,8 @@
 		!!page &&
 			!!pageOverviewUrl &&
 			(page.pageOverview?.pageWidth ?? 0) > 0 &&
-			(page.pageOverview?.pageHeight ?? 0) > 0
+			(page.pageOverview?.pageHeight ?? 0) > 0 &&
+			(page.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
 	);
 
 	$effect(() => {
@@ -254,7 +255,7 @@
 			{/snippet}
 
 			{#snippet evidenceBlock()}
-				{#if screenshotUrl || pageOverviewUrl}
+				{#if screenshotUrl || (pageOverviewUrl && pageOverviewRenderable)}
 					{#if openedFromOverlay}
 						<div
 							class="border-line bg-surface-muted/40 flex items-center justify-between rounded-lg border border-dashed px-3 py-2"
@@ -303,6 +304,7 @@
 									{pageOverviewUrl}
 									isHighlighted={!!isHighlighted}
 									{showDetails}
+									hideThumbnail={shouldShowPageOverview && pageOverviewRenderable}
 									onHighlight={() => {
 										localHighlightedElementId = occurrence.elementId ?? null;
 									}}
@@ -327,7 +329,7 @@
 						{@render wcagBlock()}
 						{@render howToFixBlock()}
 
-						{#if screenshotUrl || pageOverviewUrl}
+						{#if screenshotUrl || (pageOverviewUrl && pageOverviewRenderable)}
 							<details class="border-line rounded-lg border p-3">
 								<summary class="text-ink cursor-pointer text-sm font-semibold">
 									Technical evidence (optional)

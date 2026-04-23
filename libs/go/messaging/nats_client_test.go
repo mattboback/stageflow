@@ -75,7 +75,7 @@ func TestNewClient_InvalidURL(t *testing.T) {
 	}
 }
 
-func TestClient_EnsureReady(t *testing.T) {
+func TestClient_Snapshot(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -94,8 +94,8 @@ func TestClient_EnsureReady(t *testing.T) {
 			expectErr: ErrNotConnected,
 		},
 		{
-			name:      "nil JetStream context",
-			client:    &Client{nc: nil, js: nil},
+			name:      "closed client",
+			client:    &Client{closed: true},
 			expectErr: ErrNotConnected,
 		},
 	}
@@ -104,7 +104,7 @@ func TestClient_EnsureReady(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := tt.client.ensureReady()
+			_, err := tt.client.snapshot()
 			if !errors.Is(err, tt.expectErr) {
 				t.Fatalf("expected error %v, got %v", tt.expectErr, err)
 			}
