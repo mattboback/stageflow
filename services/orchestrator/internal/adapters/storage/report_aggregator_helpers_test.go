@@ -214,3 +214,56 @@ func TestMergeAggregatedPageAggregatesCountsAndTiming(t *testing.T) {
 		t.Fatalf("FinishedAt: want %v, got %v", end2, agg.page.FinishedAt)
 	}
 }
+
+func TestCalculateAccessibilityScore(t *testing.T) {
+	tests := []struct {
+		name      string
+		counts    report.SeverityCounts
+		wantScore int
+		wantGrade string
+	}{
+		{
+			name:      "zero issues",
+			counts:    report.SeverityCounts{},
+			wantScore: 100,
+			wantGrade: "A+",
+		},
+		{
+			name:      "one critical issue",
+			counts:    report.SeverityCounts{Critical: 1},
+			wantScore: 76, // penalty=10 → scaled≈20*log10(11)+3 ≈ 23.8
+			wantGrade: "C+",
+		},
+		{
+			name:      "five critical issues",
+			counts:    report.SeverityCounts{Critical: 5},
+			wantScore: 51,
+			wantGrade: "F",
+		},
+		{
+			name:      "100 minor issues worse than 0 but better than 5 critical",
+			counts:    report.SeverityCounts{Minor: 100},
+			wantScore: 30, // penalty=100 → scaled≈20*log10(101)+30 ≈ 70.1
+			wantGrade: "F",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score, grade := calculateAccessibilityScore(tt.counts)
+			if score != tt.wantScore {
+				t.Errorf("score = %d, want %d", score, tt.wantScore)
+			}
+			if grade != tt.wantGrade {
+				t.Errorf("grade = %q, want %q", grade, tt.wantGrade)
+			}
+		})
+	}
+
+	// Verify ordering: 100 minor issues should score higher than 5 critical issues.
+	minorScore, _ := calculateAccessibilityScore(report.SeverityCounts{Minor: 100})
+	criticalScore, _ := calculateAccessibilityScore(report.SeverityCounts{Critical: 5})
+	if minorScore <= criticalScore {
+		t.Errorf("100 minor (%d) should score higher than 5 critical (%d)", minorScore, criticalScore)
+	}
+}

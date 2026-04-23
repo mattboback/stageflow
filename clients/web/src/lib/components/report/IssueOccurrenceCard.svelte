@@ -15,6 +15,7 @@
 		pageOverviewUrl: string | null;
 		isHighlighted: boolean;
 		showDetails: boolean;
+		hideThumbnail?: boolean;
 		onHighlight?: () => void;
 	}
 
@@ -26,6 +27,7 @@
 		pageOverviewUrl,
 		isHighlighted,
 		showDetails,
+		hideThumbnail = false,
 		onHighlight
 	}: Props = $props();
 
@@ -80,8 +82,13 @@
 	class={cn(isHighlighted ? 'border-accent bg-accent/5 ring-accent/30 ring-2' : 'bg-surface-muted')}
 	data-occurrence-id={occurrence.elementId ?? undefined}
 >
-	<div class={cn('grid gap-3', viewBox && pageOverviewUrl ? 'md:grid-cols-[220px,1fr]' : '')}>
-		{#if viewBox && pageOverviewUrl && overviewEl && page?.pageOverview}
+	<div
+		class={cn(
+			'grid gap-3',
+			!hideThumbnail && viewBox && pageOverviewUrl ? 'md:grid-cols-[220px,1fr]' : ''
+		)}
+	>
+		{#if !hideThumbnail && viewBox && pageOverviewUrl && overviewEl && page?.pageOverview}
 			<button
 				type="button"
 				class="group border-line bg-surface relative overflow-hidden rounded-md border shadow-sm"

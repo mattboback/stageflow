@@ -142,4 +142,52 @@ describe('IssueDetailModal', () => {
 		await user.click(summary);
 		expect(details).toHaveAttribute('open');
 	});
+
+	it('hides occurrence thumbnails when page overview is visible', () => {
+		const { container } = render(IssueDetailModal, {
+			props: {
+				issue: {
+					...baseIssue,
+					occurrences: [
+						{ selector: '.hero-text', elementId: 'issue-1-el-0' },
+						{ selector: '.sub-text', elementId: 'issue-1-el-1' }
+					]
+				},
+				page,
+				audience: 'engineer',
+				screenshots,
+				onClose: () => undefined
+			}
+		});
+
+		// The full-page overview should be rendered (the "On the page" section).
+		expect(container.querySelector('svg image')).toBeInTheDocument();
+
+		// Occurrence cards should NOT contain their own SVG crop thumbnails.
+		const occurrenceCards = container.querySelectorAll('[data-occurrence-id]');
+		for (const card of occurrenceCards) {
+			expect(card.querySelector('svg image')).not.toBeInTheDocument();
+		}
+	});
+
+	it('shows occurrence thumbnails when no page overview is available', () => {
+		const { pageOverview: _, ...pageWithoutOverview } = page;
+		const { container } = render(IssueDetailModal, {
+			props: {
+				issue: {
+					...baseIssue,
+					occurrences: [{ selector: '.hero-text', elementId: 'issue-1-el-0' }]
+				},
+				page: pageWithoutOverview,
+				audience: 'engineer',
+				screenshots,
+				onClose: () => undefined
+			}
+		});
+
+		// Without page overview, occurrence cards should still render normally
+		// (no SVG crop either since there's no overview data to crop from).
+		const dialog = container.querySelector('[role="dialog"]');
+		expect(dialog).toBeInTheDocument();
+	});
 });

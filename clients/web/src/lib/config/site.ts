@@ -6,16 +6,8 @@ const DEFAULT_TAGLINE =
 const DEFAULT_SITE_TITLE = 'StageFlow — Podman-Native Accessibility Scanning Platform';
 
 function normalizeGithubUrl(value: string | undefined): string {
-	if (!value) {
-		return DEFAULT_GITHUB_URL;
-	}
-
-	try {
-		const url = new URL(value);
-		return url.toString();
-	} catch {
-		return DEFAULT_GITHUB_URL;
-	}
+	const trimmed = value?.trim();
+	return trimmed || DEFAULT_GITHUB_URL;
 }
 
 function normalizeTagline(value: string | undefined): string {

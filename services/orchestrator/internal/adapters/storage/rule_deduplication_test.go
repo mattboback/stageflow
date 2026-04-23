@@ -149,3 +149,48 @@ func TestGetScannerPriority(t *testing.T) {
 	assert.Equal(t, 60, getScannerPriority("seo"))
 	assert.Equal(t, 50, getScannerPriority("unknown-scanner"))
 }
+
+func TestDeduplicateIssues_AriaRuleDuplicates(t *testing.T) {
+	issues := []report.IssueDetail{
+		{
+			Id:       "1",
+			Scanner:  "axe",
+			RuleId:   "aria-required-attr",
+			PageId:   "page1",
+			Severity: report.IssueSeverityCritical,
+			Title:    "ARIA attributes must conform to valid names",
+		},
+		{
+			Id:       "2",
+			Scanner:  "lighthouse",
+			RuleId:   "aria-required-attr",
+			PageId:   "page1",
+			Severity: report.IssueSeveritySerious,
+			Title:    "Elements with ARIA roles have required attributes",
+		},
+	}
+
+	result := deduplicateIssues(issues)
+
+	require.Len(t, result, 1)
+	assert.Equal(t, "axe", result[0].Scanner)
+
+	alsoDetectedBy, ok := result[0].ScannerData["alsoDetectedBy"].([]string)
+	require.True(t, ok)
+	assert.Equal(t, []string{"lighthouse"}, alsoDetectedBy)
+}
+
+func TestAllEquivalencesHaveCounterpart(t *testing.T) {
+	// Every canonical ID in the equivalences map should have at least two
+	// scanner-prefixed entries. A single entry means the mapping is useless.
+	canonicalCounts := make(map[string]int)
+	for _, canonicalID := range ruleEquivalences {
+		canonicalCounts[canonicalID]++
+	}
+
+	for canonicalID, count := range canonicalCounts {
+		if count < 2 {
+			t.Errorf("canonical rule %q has only %d entry — needs at least 2 for dedup to work", canonicalID, count)
+		}
+	}
+}

@@ -41,7 +41,8 @@ func (c *Client) EnsureStreams(ctx context.Context) error {
 		return ErrNilContext
 	}
 
-	if err := c.ensureReady(); err != nil {
+	js, err := c.snapshot()
+	if err != nil {
 		return err
 	}
 
@@ -75,7 +76,7 @@ func (c *Client) EnsureStreams(ctx context.Context) error {
 	}
 
 	for _, s := range streams {
-		_, err := c.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 			Name:      s.name,
 			Subjects:  s.subjects,
 			Retention: jetstream.LimitsPolicy,

@@ -136,6 +136,9 @@ func run() int {
 		PodHostMappings: cfg.PodHostMappings,
 		PageLoadTimeout: cfg.PageLoadTimeout,
 		ScrollTimeout:   cfg.ScrollTimeout,
+		OpenRouterAPIKey:     cfg.OpenRouterAPIKey,
+		OpenRouterAppTitle:   cfg.OpenRouterAppTitle,
+		OpenRouterAppReferer: cfg.OpenRouterAppReferer,
 		StagingStorage:  minioClient,
 		Storage:         minioClient,
 	})

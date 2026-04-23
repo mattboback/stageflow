@@ -22,6 +22,10 @@ var scannerPriority = map[string]int{
 
 // ruleEquivalences maps canonical rule IDs to their cross-scanner equivalents.
 // Format: "scanner:ruleId" -> canonicalID.
+//
+// Maintenance: when adding a scanner that overlaps with axe or lighthouse
+// accessibility audits, add entries here. The canonical ID should match the
+// axe-core rule ID where possible.
 var ruleEquivalences = map[string]string{
 	// Image alt text issues
 	"axe:image-alt":          "image-alt",
@@ -35,6 +39,14 @@ var ruleEquivalences = map[string]string{
 	// Document language
 	"axe:html-has-lang":        "html-has-lang",
 	"lighthouse:html-has-lang": "html-has-lang",
+
+	// Language validity
+	"axe:html-lang-valid":        "html-lang-valid",
+	"lighthouse:html-lang-valid": "html-lang-valid",
+
+	// Valid lang attribute
+	"axe:valid-lang":        "valid-lang",
+	"lighthouse:valid-lang": "valid-lang",
 
 	// Link text issues
 	"axe:link-name":        "link-name",
@@ -75,6 +87,67 @@ var ruleEquivalences = map[string]string{
 	"axe:duplicate-id-active": "duplicate-id",
 	"axe:duplicate-id-aria":   "duplicate-id",
 	"lighthouse:duplicate-id": "duplicate-id",
+
+	// ARIA attribute rules
+	"axe:aria-allowed-attr":        "aria-allowed-attr",
+	"lighthouse:aria-allowed-attr": "aria-allowed-attr",
+
+	"axe:aria-hidden-body":        "aria-hidden-body",
+	"lighthouse:aria-hidden-body": "aria-hidden-body",
+
+	"axe:aria-hidden-focus":        "aria-hidden-focus",
+	"lighthouse:aria-hidden-focus": "aria-hidden-focus",
+
+	"axe:aria-required-attr":        "aria-required-attr",
+	"lighthouse:aria-required-attr": "aria-required-attr",
+
+	"axe:aria-roles":        "aria-roles",
+	"lighthouse:aria-roles": "aria-roles",
+
+	"axe:aria-valid-attr-value":        "aria-valid-attr-value",
+	"lighthouse:aria-valid-attr-value": "aria-valid-attr-value",
+
+	"axe:aria-valid-attr":        "aria-valid-attr",
+	"lighthouse:aria-valid-attr": "aria-valid-attr",
+
+	// Navigation and structure
+	"axe:bypass":        "bypass",
+	"lighthouse:bypass": "bypass",
+
+	// Form and input rules
+	"axe:input-image-alt":        "input-image-alt",
+	"lighthouse:input-image-alt": "input-image-alt",
+
+	"axe:form-field-multiple-labels":        "form-field-multiple-labels",
+	"lighthouse:form-field-multiple-labels": "form-field-multiple-labels",
+
+	// List structure
+	"axe:list":        "list",
+	"lighthouse:list": "list",
+
+	"axe:listitem":        "listitem",
+	"lighthouse:listitem": "listitem",
+
+	// Media and objects
+	"axe:object-alt":        "object-alt",
+	"lighthouse:object-alt": "object-alt",
+
+	"axe:video-caption":        "video-caption",
+	"lighthouse:video-caption": "video-caption",
+
+	// Keyboard and focus
+	"axe:tabindex":        "tabindex",
+	"lighthouse:tabindex": "tabindex",
+
+	"axe:accesskeys":        "accesskeys",
+	"lighthouse:accesskeys": "accesskeys",
+
+	// Table structure
+	"axe:td-headers-attr":        "td-headers-attr",
+	"lighthouse:td-headers-attr": "td-headers-attr",
+
+	"axe:th-has-data-cells":        "th-has-data-cells",
+	"lighthouse:th-has-data-cells": "th-has-data-cells",
 }
 
 // deduplicateIssues removes duplicate issues that are flagged by multiple scanners.

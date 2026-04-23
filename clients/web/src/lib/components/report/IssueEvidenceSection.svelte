@@ -45,7 +45,7 @@
 		</div>
 	{/if}
 
-	{#if showPageOverview && page && pageOverviewUrl && pageWidth > 0 && pageHeight > 0}
+	{#if showPageOverview && page && pageOverviewUrl && pageWidth > 0 && pageHeight > 0 && pageOverviewElements.length > 0}
 		<div>
 			<p class="text-ink-muted mb-2 text-sm">On the page</p>
 			<Panel padding="none" rounded="lg" class="relative overflow-hidden">

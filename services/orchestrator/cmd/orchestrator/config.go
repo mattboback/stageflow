@@ -25,6 +25,9 @@ type Config struct {
 	MinioHost                     string
 	PageLoadTimeout               int
 	ScrollTimeout                 int
+	OpenRouterAPIKey              string
+	OpenRouterAppTitle            string
+	OpenRouterAppReferer          string
 	JobEventsRetentionDays        int
 	JobEventsPruneIntervalMinutes int
 	JobEventsPruneBatchSize       int
@@ -73,6 +76,9 @@ func loadConfig() *Config {
 		MinioHost:                     config.GetEnv("MINIO_HOST", "minio"),
 		PageLoadTimeout:               config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
 		ScrollTimeout:                 config.GetEnvInt("A11Y_SCROLL_TIMEOUT", 300),
+		OpenRouterAPIKey:              config.GetEnv("OPENROUTER_API_KEY", ""),
+		OpenRouterAppTitle:            config.GetEnv("OPENROUTER_APP_TITLE", ""),
+		OpenRouterAppReferer:          config.GetEnv("OPENROUTER_APP_REFERER", ""),
 		JobEventsRetentionDays:        config.GetEnvInt("JOB_EVENTS_RETENTION_DAYS", 30),
 		JobEventsPruneIntervalMinutes: config.GetEnvInt("JOB_EVENTS_PRUNE_INTERVAL_MINUTES", 60),
 		JobEventsPruneBatchSize:       config.GetEnvInt("JOB_EVENTS_PRUNE_BATCH_SIZE", 1000),

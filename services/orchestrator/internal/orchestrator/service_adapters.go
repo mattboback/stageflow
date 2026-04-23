@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/mattboback/stageflow/libs/go/models"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
@@ -42,9 +41,9 @@ func (o *Orchestrator) newService() *appjobs.Service {
 			ScrollTimeout:        o.scrollTimeout,
 			PodNetnsMode:         o.podNetnsMode,
 			DefaultScannerUser:   "0",
-			OpenRouterAPIKey:     os.Getenv("OPENROUTER_API_KEY"),
-			OpenRouterAppTitle:   os.Getenv("OPENROUTER_APP_TITLE"),
-			OpenRouterAppReferer: os.Getenv("OPENROUTER_APP_REFERER"),
+			OpenRouterAPIKey:     o.openRouterAPIKey,
+			OpenRouterAppTitle:   o.openRouterAppTitle,
+			OpenRouterAppReferer: o.openRouterAppReferer,
 		})),
 	)
 }

@@ -63,6 +63,7 @@ func (d *Database) RecordScannerCompletion(
 		SELECT expected_scanners, completed_scanners, scanner_results
 		FROM jobs
 		WHERE id = ?
+		FOR UPDATE
 	`), jobID)
 
 	rowScanErr := row.Scan(&expectedJSON, &completedJSON, &resultsJSON)

@@ -262,13 +262,49 @@ func addSeverityCounts(base, add *report.SeverityCounts) *report.SeverityCounts 
 	return base
 }
 
+// Severity penalty weights for the accessibility score heuristic.
+// These reflect relative WCAG impact: a critical issue (e.g., missing alt text
+// on a primary navigation image) has roughly 10× the user impact of a minor
+// issue (e.g., redundant ARIA attribute).
+const (
+	scorePenaltyCritical = 10
+	scorePenaltySerious  = 5
+	scorePenaltyModerate = 2
+	scorePenaltyMinor    = 1
+)
+
+// Score curve coefficients. The logarithmic term compresses high issue counts
+// so that 100 minor issues don't dominate the score, while the linear term
+// ensures each additional issue still has visible impact.
+const (
+	scoreLogCoefficient    = 20.0
+	scoreLinearCoefficient = 0.3
+)
+
+// calculateAccessibilityScore computes a 0–100 score and letter grade from
+// severity counts. This is a heuristic, not a WCAG-defined metric.
+//
+// The formula applies a weighted penalty per severity tier, then maps the
+// total through a logarithmic curve to produce a score where:
+//   - 0 issues → 100 (A+)
+//   - A few critical issues drop the score sharply
+//   - Many minor issues have diminishing marginal impact
+//
+// Grade thresholds use standard academic grading (97+ = A+, 93+ = A, etc.).
+//
+// See https://www.w3.org/WAI/WCAG22/Understanding/ for WCAG severity context.
 func calculateAccessibilityScore(counts report.SeverityCounts) (score int, grade string) {
-	penalty := float64(counts.Critical*10 + counts.Serious*5 + counts.Moderate*2 + counts.Minor)
+	penalty := float64(
+		counts.Critical*scorePenaltyCritical +
+			counts.Serious*scorePenaltySerious +
+			counts.Moderate*scorePenaltyModerate +
+			counts.Minor*scorePenaltyMinor,
+	)
 	if penalty <= 0 {
 		return 100, "A+"
 	}
 
-	scaled := 20*math.Log10(penalty+1) + penalty*0.3
+	scaled := scoreLogCoefficient*math.Log10(penalty+1) + penalty*scoreLinearCoefficient
 	if scaled > 100 {
 		scaled = 100
 	}

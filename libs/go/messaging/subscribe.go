@@ -20,7 +20,7 @@ func (c *Client) Subscribe(
 	stream, subject, consumerName string,
 	handler func([]byte) error,
 ) error {
-	if err := c.ensureReady(); err != nil {
+	if _, err := c.snapshot(); err != nil {
 		return err
 	}
 
@@ -90,7 +90,7 @@ func (c *Client) SubscribeWithContext(
 	stream, subject, consumerName string,
 	handler func(context.Context, jetstream.Msg) error,
 ) error {
-	if err := c.ensureReady(); err != nil {
+	if _, err := c.snapshot(); err != nil {
 		return err
 	}
 

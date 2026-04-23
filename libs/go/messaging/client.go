@@ -14,10 +14,10 @@ import (
 )
 
 type Client struct {
-	nc *nats.Conn
-	js jetstream.JetStream
-
 	mu              sync.Mutex
+	nc              *nats.Conn
+	js              jetstream.JetStream
+	closed          bool
 	consumeContexts map[string]jetstream.ConsumeContext
 }
 
@@ -110,20 +110,29 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) ensureReady() error {
+// snapshot returns a safe copy of the JetStream handle under the mutex.
+// Callers must use the returned handle instead of accessing c.js directly.
+func (c *Client) snapshot() (jetstream.JetStream, error) {
 	if c == nil {
-		return ErrNilClient
+		return nil, ErrNilClient
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.closed {
+		return nil, ErrNotConnected
 	}
 
 	if c.nc == nil || c.nc.IsClosed() {
-		return ErrNotConnected
+		return nil, ErrNotConnected
 	}
 
 	if c.js == nil {
-		return ErrNotConnected
+		return nil, ErrNotConnected
 	}
 
-	return nil
+	return c.js, nil
 }
 
 func (c *Client) Close() error {
@@ -133,19 +142,29 @@ func (c *Client) Close() error {
 
 	c.mu.Lock()
 
-	for key, consumeCtx := range c.consumeContexts {
-		consumeCtx.Stop()
-		delete(c.consumeContexts, key)
+	c.closed = true
+
+	// Copy state under lock, then release before blocking I/O.
+	contexts := make(map[string]jetstream.ConsumeContext, len(c.consumeContexts))
+	for k, v := range c.consumeContexts {
+		contexts[k] = v
 	}
+
+	c.consumeContexts = nil
+
+	nc := c.nc
+	c.nc = nil
+	c.js = nil
 
 	c.mu.Unlock()
 
-	if c.nc != nil {
-		c.nc.Close()
+	for _, consumeCtx := range contexts {
+		consumeCtx.Stop()
 	}
 
-	c.nc = nil
-	c.js = nil
+	if nc != nil {
+		nc.Close()
+	}
 
 	return nil
 }
