@@ -52,10 +52,6 @@ func TestOrchestratorRuntimeCreateJobPodDelegatesWithoutRecordingInternalEvents(
 }
 
 func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
-	t.Setenv("OPENROUTER_API_KEY", "test-openrouter-key")
-	t.Setenv("OPENROUTER_APP_TITLE", "StageFlow Test")
-	t.Setenv("OPENROUTER_APP_REFERER", "https://example.com")
-
 	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
 	if err := registry.Register(&scanners.Definition{
 		ID:      "ai-navigator",
@@ -70,6 +66,9 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
 		config.PodNetnsMode = podNetnsModeHost
 		config.ScannerRegistry = registry
+		config.OpenRouterAPIKey = "test-openrouter-key"
+		config.OpenRouterAppTitle = "StageFlow Test"
+		config.OpenRouterAppReferer = "https://example.com"
 		config.PodmanClient = &mockPodmanClient{
 			inspectVolumeFunc: func(_ context.Context, name string) (*podman.VolumeInfo, error) {
 				return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil

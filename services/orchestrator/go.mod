@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/services/orchestrator
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/fergusstrange/embedded-postgres v1.33.0

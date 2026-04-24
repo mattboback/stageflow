@@ -234,6 +234,7 @@ func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
 
 	t.Cleanup(func() {
 		apiRateLimiter = original
+
 		resetTrustedProxiesForTest()
 	})
 
@@ -248,6 +249,7 @@ func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
 	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	req1.RemoteAddr = "10.0.0.1:1234"
 	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+
 	rr1 := httptest.NewRecorder()
 
 	handler(rr1, req1)
@@ -262,6 +264,7 @@ func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
 	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	req2.RemoteAddr = "10.0.0.1:1234"
 	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+
 	rr2 := httptest.NewRecorder()
 
 	handler(rr2, req2)
@@ -277,6 +280,7 @@ func TestRateLimit_XForwardedFor_TrustedHonored(t *testing.T) {
 
 	t.Cleanup(func() {
 		apiRateLimiter = original
+
 		resetTrustedProxiesForTest()
 	})
 
@@ -292,6 +296,7 @@ func TestRateLimit_XForwardedFor_TrustedHonored(t *testing.T) {
 	req1 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	req1.RemoteAddr = "10.0.0.1:1234"
 	req1.Header.Set("X-Forwarded-For", "1.1.1.1")
+
 	rr1 := httptest.NewRecorder()
 
 	handler(rr1, req1)
@@ -303,6 +308,7 @@ func TestRateLimit_XForwardedFor_TrustedHonored(t *testing.T) {
 	req2 := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	req2.RemoteAddr = "10.0.0.1:1234"
 	req2.Header.Set("X-Forwarded-For", "2.2.2.2")
+
 	rr2 := httptest.NewRecorder()
 
 	handler(rr2, req2)

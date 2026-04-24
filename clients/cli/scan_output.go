@@ -20,6 +20,7 @@ func runRemoteProjectScanJSON(
 	reportOpts reportCommandOptions,
 ) error {
 	renderOpts := reportOpts.renderOptions(outputFormatJSON)
+
 	selectedIssues, filters, err := validatedIssueSelection(doc.Issues, renderOpts)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
@@ -54,7 +55,7 @@ func runRemoteProjectScanJSON(
 			Baseline: diffState.baseline,
 		},
 		Decision: projectScanDecision{
-			Passed:         !(severityFailed || diffState.regressed),
+			Passed:         !severityFailed && !diffState.regressed,
 			SeverityFailed: severityFailed,
 			Regressed:      diffState.regressed,
 		},
@@ -66,8 +67,8 @@ func runRemoteProjectScanJSON(
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
 
-	if err := encoder.Encode(payload); err != nil {
-		return exitCodeError{Code: 2, Err: err}
+	if encodeErr := encoder.Encode(payload); encodeErr != nil {
+		return exitCodeError{Code: 2, Err: encodeErr}
 	}
 
 	if severityFailed || diffState.regressed {
@@ -93,6 +94,7 @@ func renderProjectDiff(
 
 	if diffState.diff == nil {
 		fmt.Fprintln(cmd.ErrOrStderr(), diffState.baseline.Message)
+
 		if diffState.baseline.PromoteCommand != "" {
 			fmt.Fprintln(cmd.ErrOrStderr(), diffState.baseline.PromoteCommand)
 		}

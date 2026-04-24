@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/clients/cli
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/mattboback/stageflow/libs/contracts/report/generated/go v0.0.0-00010101000000-000000000000

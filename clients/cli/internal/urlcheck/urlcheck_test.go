@@ -136,10 +136,26 @@ func TestNormalizeTargets(t *testing.T) {
 		want        []string
 		errContains string
 	}{
-		{name: "schemeless localhost gets http", raw: []string{"localhost:8000"}, want: []string{"http://localhost:8000"}},
-		{name: "schemeless host with path gets http", raw: []string{"example.com/docs"}, want: []string{"http://example.com/docs"}},
-		{name: "explicit https unchanged", raw: []string{"https://localhost:8443"}, want: []string{"https://localhost:8443"}},
-		{name: "unsupported scheme still rejected", raw: []string{"ftp://example.com"}, errContains: "unsupported URL scheme"},
+		{
+			name: "schemeless localhost gets http",
+			raw:  []string{"localhost:8000"},
+			want: []string{"http://localhost:8000"},
+		},
+		{
+			name: "schemeless host with path gets http",
+			raw:  []string{"example.com/docs"},
+			want: []string{"http://example.com/docs"},
+		},
+		{
+			name: "explicit https unchanged",
+			raw:  []string{"https://localhost:8443"},
+			want: []string{"https://localhost:8443"},
+		},
+		{
+			name:        "unsupported scheme still rejected",
+			raw:         []string{"ftp://example.com"},
+			errContains: "unsupported URL scheme",
+		},
 		{name: "empty list rejected", raw: []string{}, errContains: "at least one URL is required"},
 	}
 
@@ -171,11 +187,17 @@ func TestParseModules(t *testing.T) {
 		t.Fatalf("ParseModules happy = %v %v", got, err)
 	}
 
-	if _, err := ParseModules("a,,b"); err == nil {
+	_, emptyEntryErr := ParseModules("a,,b")
+	if emptyEntryErr == nil {
 		t.Fatalf("ParseModules empty entry should error")
 	}
 
-	if got, _ := ParseModules(""); got != nil {
-		t.Fatalf("ParseModules empty should be nil, got %v", got)
+	emptyModules, emptyModulesErr := ParseModules("")
+	if emptyModulesErr != nil {
+		t.Fatalf("ParseModules empty err = %v", emptyModulesErr)
+	}
+
+	if emptyModules != nil {
+		t.Fatalf("ParseModules empty should be nil, got %v", emptyModules)
 	}
 }

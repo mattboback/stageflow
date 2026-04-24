@@ -1,4 +1,4 @@
-package main
+package apiclient
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) *Client {
 	}
 }
 
-func (c *Client) buildURL(apiPath string) (*url.URL, error) {
+func (c *Client) BuildURL(apiPath string) (*url.URL, error) {
 	parsedBase, err := url.Parse(c.BaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid API URL %q: %w", c.BaseURL, err)
@@ -52,8 +52,8 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 	return c.HTTPClient.Do(req)
 }
 
-func (c *Client) getJSON(ctx context.Context, apiPath string, dest any) error {
-	reqURL, err := c.buildURL(apiPath)
+func (c *Client) GetJSON(ctx context.Context, apiPath string, dest any) error {
+	reqURL, err := c.BuildURL(apiPath)
 	if err != nil {
 		return err
 	}
@@ -121,8 +121,8 @@ func decodeJSONResponse(resp *http.Response, dest any) error {
 	return nil
 }
 
-func (c *Client) sendJSON(ctx context.Context, method, apiPath string, body any, dest any) error {
-	reqURL, err := c.buildURL(apiPath)
+func (c *Client) SendJSON(ctx context.Context, method, apiPath string, body any, dest any) error {
+	reqURL, err := c.BuildURL(apiPath)
 	if err != nil {
 		return err
 	}
@@ -149,16 +149,16 @@ func (c *Client) sendJSON(ctx context.Context, method, apiPath string, body any,
 	return decodeJSONResponse(resp, dest)
 }
 
-func (c *Client) postJSON(ctx context.Context, apiPath string, body any, dest any) error {
-	return c.sendJSON(ctx, http.MethodPost, apiPath, body, dest)
+func (c *Client) PostJSON(ctx context.Context, apiPath string, body any, dest any) error {
+	return c.SendJSON(ctx, http.MethodPost, apiPath, body, dest)
 }
 
-func (c *Client) patchJSON(ctx context.Context, apiPath string, body any, dest any) error {
-	return c.sendJSON(ctx, http.MethodPatch, apiPath, body, dest)
+func (c *Client) PatchJSON(ctx context.Context, apiPath string, body any, dest any) error {
+	return c.SendJSON(ctx, http.MethodPatch, apiPath, body, dest)
 }
 
-func (c *Client) deleteJSON(ctx context.Context, apiPath string) error {
-	reqURL, err := c.buildURL(apiPath)
+func (c *Client) DeleteJSON(ctx context.Context, apiPath string) error {
+	reqURL, err := c.BuildURL(apiPath)
 	if err != nil {
 		return err
 	}

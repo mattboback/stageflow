@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func resolveProjectRoot(projectArg string) (string, error) {
+func ResolveProjectRoot(projectArg string) (string, error) {
 	startDir := projectArg
 	if startDir == "" {
 		wd, err := os.Getwd()
@@ -32,7 +32,7 @@ func resolveProjectRoot(projectArg string) (string, error) {
 		return "", fmt.Errorf("project path is not a directory: %s", absStart)
 	}
 
-	gitRoot, ok, err := findGitRoot(absStart)
+	gitRoot, ok, err := FindGitRoot(absStart)
 	if err != nil {
 		return "", err
 	}
@@ -48,7 +48,7 @@ func resolveProjectRoot(projectArg string) (string, error) {
 	return absStart, nil
 }
 
-func findGitRoot(startDir string) (string, bool, error) {
+func FindGitRoot(startDir string) (string, bool, error) {
 	dir := startDir
 
 	for {

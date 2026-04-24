@@ -103,10 +103,7 @@ function extractAuditAncestorPath(input: {
 	item: Record<string, unknown>;
 	node?: LighthouseDetailNode;
 }): string | undefined {
-	return firstDefined([
-		getTrimmedString(input.node?.path),
-		getTrimmedString(input.item.path)
-	]);
+	return firstDefined([getTrimmedString(input.node?.path), getTrimmedString(input.item.path)]);
 }
 
 function extractFailureSummary(input: {

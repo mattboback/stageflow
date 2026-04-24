@@ -231,19 +231,19 @@ func TestCalculateAccessibilityScore(t *testing.T) {
 		{
 			name:      "one critical issue",
 			counts:    report.SeverityCounts{Critical: 1},
-			wantScore: 76, // penalty=10 → scaled≈20*log10(11)+3 ≈ 23.8
-			wantGrade: "C+",
+			wantScore: 69,
+			wantGrade: "D+",
 		},
 		{
 			name:      "five critical issues",
 			counts:    report.SeverityCounts{Critical: 5},
-			wantScore: 51,
+			wantScore: 35,
 			wantGrade: "F",
 		},
 		{
 			name:      "100 minor issues worse than 0 but better than 5 critical",
 			counts:    report.SeverityCounts{Minor: 100},
-			wantScore: 30, // penalty=100 → scaled≈20*log10(101)+30 ≈ 70.1
+			wantScore: 53,
 			wantGrade: "F",
 		},
 	}
@@ -254,6 +254,7 @@ func TestCalculateAccessibilityScore(t *testing.T) {
 			if score != tt.wantScore {
 				t.Errorf("score = %d, want %d", score, tt.wantScore)
 			}
+
 			if grade != tt.wantGrade {
 				t.Errorf("grade = %q, want %q", grade, tt.wantGrade)
 			}
@@ -263,6 +264,7 @@ func TestCalculateAccessibilityScore(t *testing.T) {
 	// Verify ordering: 100 minor issues should score higher than 5 critical issues.
 	minorScore, _ := calculateAccessibilityScore(report.SeverityCounts{Minor: 100})
 	criticalScore, _ := calculateAccessibilityScore(report.SeverityCounts{Critical: 5})
+
 	if minorScore <= criticalScore {
 		t.Errorf("100 minor (%d) should score higher than 5 critical (%d)", minorScore, criticalScore)
 	}

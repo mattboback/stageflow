@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -200,16 +199,8 @@ func remoteAddrIsTrusted(remoteAddr string) bool {
 }
 
 func rateLimitKey(r *http.Request) string {
-	if remoteAddrIsTrusted(r.RemoteAddr) {
-		if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
-			parts := strings.Split(forwarded, ",")
-			if len(parts) > 0 {
-				candidate := strings.TrimSpace(parts[0])
-				if candidate != "" {
-					return candidate
-				}
-			}
-		}
+	if forwardedKey := trustedForwardedRateLimitKey(r); forwardedKey != "" {
+		return forwardedKey
 	}
 
 	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
@@ -222,6 +213,24 @@ func rateLimitKey(r *http.Request) string {
 	}
 
 	return unknownRateLimitKey
+}
+
+func trustedForwardedRateLimitKey(r *http.Request) string {
+	if !remoteAddrIsTrusted(r.RemoteAddr) {
+		return ""
+	}
+
+	forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
+	if forwarded == "" {
+		return ""
+	}
+
+	parts := strings.Split(forwarded, ",")
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.TrimSpace(parts[0])
 }
 
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -301,11 +310,15 @@ func ValidateAuthConfig() error {
 	disabled := strings.EqualFold(strings.TrimSpace(os.Getenv("PLATFORM_API_AUTH_DISABLED")), "true")
 
 	if token == "" && !disabled {
-		return fmt.Errorf("PLATFORM_API_TOKEN is required (set PLATFORM_API_AUTH_DISABLED=true to run without authentication)")
+		return errors.New(
+			"PLATFORM_API_TOKEN is required (set PLATFORM_API_AUTH_DISABLED=true to run without authentication)",
+		)
 	}
 
 	if disabled {
-		slog.Warn("Platform API authentication is disabled via PLATFORM_API_AUTH_DISABLED=true; do not use in production")
+		slog.Warn(
+			"Platform API authentication is disabled via PLATFORM_API_AUTH_DISABLED=true; do not use in production",
+		)
 	}
 
 	return nil
@@ -316,6 +329,7 @@ func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	if expected == "" {
 		return next
 	}
+
 	expectedBytes := []byte(expected)
 
 	return func(w http.ResponseWriter, r *http.Request) {

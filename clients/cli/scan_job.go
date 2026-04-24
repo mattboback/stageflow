@@ -88,7 +88,7 @@ func resolveProjectDiffState(
 	client *Client,
 	slug, jobID string,
 ) (projectDiffState, error) {
-	diffResult, err := client.fetchJobDiff(ctx, jobID)
+	diffResult, err := client.FetchJobDiff(ctx, jobID)
 	if err == nil {
 		d := diffFromResult(diffResult, "", "")
 
@@ -145,7 +145,7 @@ func runScanJob(
 
 	var resp SubmitJobResponse
 
-	if err := client.postJSON(opCtx, "/api/v1/jobs/urls", req, &resp); err != nil {
+	if err := client.PostJSON(opCtx, "/api/v1/jobs/urls", req, &resp); err != nil {
 		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("submit job: %w", enhanceSubmitJobError(err, req))
 	}
 
@@ -193,7 +193,7 @@ func runRemoteProjectScan(
 	opCtx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()
 
-	resp, err := client.projectScan(opCtx, slug)
+	resp, err := client.ProjectScan(opCtx, slug)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
 	}

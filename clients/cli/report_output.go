@@ -75,7 +75,7 @@ func fetchJobStatus(ctx context.Context, client *Client, jobID string) (JobStatu
 	var status JobStatus
 
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
-	if err := client.getJSON(ctx, apiPath, &status); err != nil {
+	if err := client.GetJSON(ctx, apiPath, &status); err != nil {
 		return JobStatus{}, err
 	}
 
@@ -86,7 +86,7 @@ func fetchReport(ctx context.Context, client *Client, jobID string) (report.Unif
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(jobID))
 
 	var raw json.RawMessage
-	if err := client.getJSON(ctx, apiPath, &raw); err != nil {
+	if err := client.GetJSON(ctx, apiPath, &raw); err != nil {
 		return report.UnifiedReportV2{}, err
 	}
 
@@ -647,6 +647,10 @@ func formatDuration(doc report.UnifiedReportV2) string {
 	}
 
 	return formatDurationMs(*ms)
+}
+
+func formatDurationMs(durationMs int64) string {
+	return fmt.Sprintf("%.1fs", float64(durationMs)/1000)
 }
 
 func durationMS(value *float64) *int64 {

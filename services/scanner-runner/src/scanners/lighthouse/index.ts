@@ -153,26 +153,22 @@ export class LighthouseScanner extends ScannerBase {
 				await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 });
 			}
 		} catch (navError) {
-			this.logger.warn(
-				'Failed to re-navigate page after Lighthouse, continuing with stale page',
-				{
-					url,
-					error: navError instanceof Error ? navError.message : String(navError)
-				}
-			);
+			this.logger.warn('Failed to re-navigate page after Lighthouse, continuing with stale page', {
+				url,
+				error: navError instanceof Error ? navError.message : String(navError)
+			});
 		}
 	}
 
-	private async enrichWithTimeout(
-		page: import('playwright').Page,
-		issues: Issue[]
-	): Promise<void> {
+	private async enrichWithTimeout(page: import('playwright').Page, issues: Issue[]): Promise<void> {
 		try {
 			await Promise.race([
 				enrichIssuesWithContextFn(page, issues),
-				new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error('Context enrichment timed out')), 15_000)
-				)
+				new Promise<never>((_, reject) => {
+					setTimeout(() => {
+						reject(new Error('Context enrichment timed out'));
+					}, 15_000);
+				})
 			]);
 		} catch (enrichError) {
 			this.logger.warn('Context enrichment failed or timed out, continuing without enrichment', {
@@ -188,11 +184,9 @@ export class LighthouseScanner extends ScannerBase {
 		pageId: string
 	): Promise<Awaited<ReturnType<typeof this.screenshotService.capturePageOverview>> | null> {
 		const violations: PageOverviewViolation[] = issues.map((issue) => {
-			const issueNodes = (issue.metadata?.nodes as LighthouseIssueNode[] | undefined)?.map(
-				(n) => ({
-					...(n.target !== undefined ? { target: n.target } : {})
-				})
-			);
+			const issueNodes = (issue.metadata?.nodes as LighthouseIssueNode[] | undefined)?.map((n) => ({
+				...(n.target !== undefined ? { target: n.target } : {})
+			}));
 			return {
 				id: issue.id,
 				impact: issue.severity,
@@ -205,14 +199,15 @@ export class LighthouseScanner extends ScannerBase {
 				this.screenshotService.capturePageOverview(page, violations, screenshotsDir, pageId, {
 					scannerId: this.metadata.name
 				}),
-				new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error('Screenshot capture timed out')), 30_000)
-				)
+				new Promise<never>((_, reject) => {
+					setTimeout(() => {
+						reject(new Error('Screenshot capture timed out'));
+					}, 30_000);
+				})
 			]);
 		} catch (screenshotError) {
 			this.logger.warn('Screenshot capture failed or timed out, continuing without screenshot', {
-				error:
-					screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
+				error: screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
 			});
 			return null;
 		}
