@@ -1,8 +1,10 @@
-package main
+package jobstream
 
 import (
 	"bytes"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func TestHandleSSEEvent_PrintsScannerCompletionSummary(t *testing.T) {
@@ -49,7 +51,7 @@ func TestEmitScannerCompletionsFromStatus_PrintsNewlyCompletedScannersOnce(t *te
 	state := newStreamState()
 	out := &bytes.Buffer{}
 
-	status := &JobStatus{
+	status := &apiclient.JobStatus{
 		State:             "SCANNING",
 		ExpectedScanners:  []string{"axe", "lighthouse"},
 		CompletedScanners: []string{"axe"},

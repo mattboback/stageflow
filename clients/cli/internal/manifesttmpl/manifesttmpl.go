@@ -23,9 +23,9 @@ type Suggestion struct {
 
 // ConfigParams carries the inputs that drive ConfigYAML rendering.
 type ConfigParams struct {
-	APIURL      string
-	Scanners    string
-	Suggestion  Suggestion
+	APIURL     string
+	Scanners   string
+	Suggestion Suggestion
 }
 
 // ConfigYAML returns the contents of .stageflow/config.yaml for a freshly

@@ -76,15 +76,15 @@ func (c *Client) EnsureStreams(ctx context.Context) error {
 	}
 
 	for _, s := range streams {
-		_, err := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		_, streamErr := js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
 			Name:      s.name,
 			Subjects:  s.subjects,
 			Retention: jetstream.LimitsPolicy,
 			MaxAge:    defaultStreamMaxAge,
 			Storage:   jetstream.FileStorage,
 		})
-		if err != nil {
-			return fmt.Errorf("failed to create stream %s: %w", s.name, err)
+		if streamErr != nil {
+			return fmt.Errorf("failed to create stream %s: %w", s.name, streamErr)
 		}
 	}
 

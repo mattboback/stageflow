@@ -1,4 +1,4 @@
-package main
+package jobstream
 
 import (
 	"bufio"
@@ -9,6 +9,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+)
+
+const (
+	jobStateDone   = "DONE"
+	jobStateFailed = "FAILED"
 )
 
 type scanTiming struct {
@@ -44,7 +51,7 @@ func newStreamState() *streamState {
 
 // waitJobState waits for the job to reach a terminal state.
 // If noStream is true, it polls the API instead of using Server-Sent Events.
-func waitJobState(ctx context.Context, c *Client, jobID string, out io.Writer, noStream bool) error {
+func WaitJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer, noStream bool) error {
 	if noStream {
 		return pollJobState(ctx, c, jobID, out)
 	}
@@ -59,7 +66,7 @@ func waitJobState(ctx context.Context, c *Client, jobID string, out io.Writer, n
 	return pollJobState(ctx, c, jobID, out)
 }
 
-func pollJobState(ctx context.Context, c *Client, jobID string, out io.Writer) error {
+func pollJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s", jobID)
 
 	ticker := time.NewTicker(2 * time.Second)
@@ -95,24 +102,24 @@ func pollJobState(ctx context.Context, c *Client, jobID string, out io.Writer) e
 
 func checkPolledJobStatus(
 	ctx context.Context,
-	c *Client,
+	c *apiclient.Client,
 	apiPath string,
 	out io.Writer,
 	state *streamState,
 ) (bool, error) {
-	var status JobStatus
+	var status apiclient.JobStatus
 
-	if err := c.getJSON(ctx, apiPath, &status); err != nil {
+	if err := c.GetJSON(ctx, apiPath, &status); err != nil {
 		return false, fmt.Errorf("poll failed: %w", err)
 	}
 
 	return emitStatusSnapshot(out, state, &status)
 }
 
-func sseJobState(ctx context.Context, c *Client, jobID string, out io.Writer) error {
+func sseJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s/stream", jobID)
 
-	reqURL, err := c.buildURL(apiPath)
+	reqURL, err := c.BuildURL(apiPath)
 	if err != nil {
 		return err
 	}
@@ -237,11 +244,11 @@ func parseJobStreamUpdate(data string) (jobStreamUpdate, bool) {
 	return update, true
 }
 
-func parseJobStatus(data string) (JobStatus, bool) {
-	var status JobStatus
+func parseJobStatus(data string) (apiclient.JobStatus, bool) {
+	var status apiclient.JobStatus
 
 	if err := json.Unmarshal([]byte(data), &status); err != nil {
-		return JobStatus{}, false
+		return apiclient.JobStatus{}, false
 	}
 
 	return status, true
@@ -269,7 +276,7 @@ func handleUpdateEvent(data string, out io.Writer, state *streamState) (bool, er
 	return isTerminalState(update.State) || isTerminalEvent(update.Type), nil
 }
 
-func emitStatusSnapshot(out io.Writer, state *streamState, status *JobStatus) (bool, error) {
+func emitStatusSnapshot(out io.Writer, state *streamState, status *apiclient.JobStatus) (bool, error) {
 	if err := emitScannerCompletionsFromStatus(out, state, status); err != nil {
 		return false, err
 	}
@@ -305,7 +312,7 @@ func emitStateTransition(out io.Writer, state *streamState, nextState string) er
 	return err
 }
 
-func emitScannerCompletionsFromStatus(out io.Writer, state *streamState, status *JobStatus) error {
+func emitScannerCompletionsFromStatus(out io.Writer, state *streamState, status *apiclient.JobStatus) error {
 	if status == nil {
 		return nil
 	}

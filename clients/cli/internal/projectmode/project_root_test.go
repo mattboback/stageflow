@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"os"
@@ -19,26 +19,26 @@ func TestResolveProjectRoot_GitRootFromNestedDir(t *testing.T) {
 		t.Fatalf("mkdir nested: %v", err)
 	}
 
-	got, err := resolveProjectRoot(nested)
+	got, err := ResolveProjectRoot(nested)
 	if err != nil {
-		t.Fatalf("resolveProjectRoot error: %v", err)
+		t.Fatalf("ResolveProjectRoot error: %v", err)
 	}
 
 	if got != root {
-		t.Fatalf("resolveProjectRoot(%q) = %q, want %q", nested, got, root)
+		t.Fatalf("ResolveProjectRoot(%q) = %q, want %q", nested, got, root)
 	}
 }
 
 func TestResolveProjectRoot_NoGitReturnsExplicitDir(t *testing.T) {
 	root := t.TempDir()
 
-	got, err := resolveProjectRoot(root)
+	got, err := ResolveProjectRoot(root)
 	if err != nil {
-		t.Fatalf("resolveProjectRoot error: %v", err)
+		t.Fatalf("ResolveProjectRoot error: %v", err)
 	}
 
 	if got != root {
-		t.Fatalf("resolveProjectRoot(%q) = %q, want %q", root, got, root)
+		t.Fatalf("ResolveProjectRoot(%q) = %q, want %q", root, got, root)
 	}
 }
 
@@ -50,12 +50,12 @@ func TestResolveProjectRoot_FilePathReturnsError(t *testing.T) {
 		t.Fatalf("write file: %v", err)
 	}
 
-	_, err := resolveProjectRoot(filePath)
+	_, err := ResolveProjectRoot(filePath)
 	if err == nil {
-		t.Fatalf("resolveProjectRoot err = nil, want non-nil")
+		t.Fatalf("ResolveProjectRoot err = nil, want non-nil")
 	}
 
 	if !strings.Contains(err.Error(), "not a directory") {
-		t.Fatalf("resolveProjectRoot err = %q, want to contain %q", err.Error(), "not a directory")
+		t.Fatalf("ResolveProjectRoot err = %q, want to contain %q", err.Error(), "not a directory")
 	}
 }

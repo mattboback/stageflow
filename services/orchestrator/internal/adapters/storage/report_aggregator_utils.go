@@ -263,22 +263,20 @@ func addSeverityCounts(base, add *report.SeverityCounts) *report.SeverityCounts 
 }
 
 // Severity penalty weights for the accessibility score heuristic.
-// These reflect relative WCAG impact: a critical issue (e.g., missing alt text
-// on a primary navigation image) has roughly 10× the user impact of a minor
-// issue (e.g., redundant ARIA attribute).
+// These reflect relative user impact: critical issues must dominate large
+// counts of minor issues because they are more likely to block a user outright.
 const (
-	scorePenaltyCritical = 10
-	scorePenaltySerious  = 5
-	scorePenaltyModerate = 2
-	scorePenaltyMinor    = 1
+	scorePenaltyCritical = 20.0
+	scorePenaltySerious  = 6.0
+	scorePenaltyModerate = 2.0
+	scorePenaltyMinor    = 0.5
 )
 
 // Score curve coefficients. The logarithmic term compresses high issue counts
-// so that 100 minor issues don't dominate the score, while the linear term
-// ensures each additional issue still has visible impact.
+// while the linear term ensures each additional issue still has visible impact.
 const (
 	scoreLogCoefficient    = 20.0
-	scoreLinearCoefficient = 0.3
+	scoreLinearCoefficient = 0.25
 )
 
 // calculateAccessibilityScore computes a 0–100 score and letter grade from
@@ -288,18 +286,18 @@ const (
 // total through a logarithmic curve to produce a score where:
 //   - 0 issues → 100 (A+)
 //   - A few critical issues drop the score sharply
-//   - Many minor issues have diminishing marginal impact
+//   - Many minor issues have diminishing marginal impact and do not outweigh
+//     multiple critical issues
 //
 // Grade thresholds use standard academic grading (97+ = A+, 93+ = A, etc.).
 //
 // See https://www.w3.org/WAI/WCAG22/Understanding/ for WCAG severity context.
 func calculateAccessibilityScore(counts report.SeverityCounts) (score int, grade string) {
-	penalty := float64(
-		counts.Critical*scorePenaltyCritical +
-			counts.Serious*scorePenaltySerious +
-			counts.Moderate*scorePenaltyModerate +
-			counts.Minor*scorePenaltyMinor,
-	)
+	penalty := float64(counts.Critical)*scorePenaltyCritical +
+		float64(counts.Serious)*scorePenaltySerious +
+		float64(counts.Moderate)*scorePenaltyModerate +
+		float64(counts.Minor)*scorePenaltyMinor
+
 	if penalty <= 0 {
 		return 100, "A+"
 	}

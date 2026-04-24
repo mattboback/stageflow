@@ -134,7 +134,7 @@ func Render(out io.Writer, env Envelope, format Format) error {
 	case FormatText, FormatMarkdown:
 		return writeText(out, env, format == FormatMarkdown)
 	default:
-		return fmt.Errorf("unsupported output format")
+		return errors.New("unsupported output format")
 	}
 }
 

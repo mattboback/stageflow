@@ -47,7 +47,8 @@ export const Processing: Story = {
 		const canvas = within(canvasElement);
 
 		await expect(canvas.getByText('SCANNING')).toBeVisible();
-		await expect(canvas.getByText('Scanning page 2 of 5')).toBeVisible();
+		await expect(canvas.getByText('Currently scanning page 2 of 5.')).toBeVisible();
+		await expect(canvas.getByText('2 of 5')).toBeVisible();
 	}
 };
 

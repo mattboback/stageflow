@@ -8,8 +8,9 @@ import (
 	"io"
 	"strings"
 
-	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
 type projectDoctorEnvelope struct {
@@ -107,7 +108,53 @@ func writeJSONEnvelope(out io.Writer, payload any) error {
 	return encoder.Encode(payload)
 }
 
-//nolint:gocyclo
+func loadProjectDoctorConfig(projectRoot, projectArg string) (projectConfig, string, error) {
+	cfg, cfgPath, err := loadProjectConfig(projectRoot)
+	if err == nil {
+		return cfg, cfgPath, nil
+	}
+
+	var missingErr missingProjectConfigError
+	if !errors.As(err, &missingErr) {
+		return projectConfig{}, "", err
+	}
+
+	hint := "stageflow project init"
+	if projectArg != "" {
+		hint = fmt.Sprintf("stageflow project init %s", projectArg)
+	}
+
+	return projectConfig{}, "", fmt.Errorf("project config not found under %s; run `%s`", projectRoot, hint)
+}
+
+func writeProjectDoctorResult(
+	out io.Writer,
+	projectRoot, cfgPath, apiURL string,
+	urls []string,
+	stageflowCfg projectStageflowCfg,
+	autoAllowPrivateTargets bool,
+	checks []projectDoctorCheck,
+	format outputFormat,
+	message string,
+) error {
+	if format == outputFormatJSON {
+		return writeProjectDoctorJSON(
+			out,
+			projectRoot,
+			cfgPath,
+			apiURL,
+			urls,
+			stageflowCfg,
+			autoAllowPrivateTargets,
+			checks,
+		)
+	}
+
+	fmt.Fprintln(out, message)
+
+	return nil
+}
+
 func runProjectDoctorCommand(
 	cmd *cobra.Command,
 	args []string,
@@ -129,21 +176,8 @@ func runProjectDoctorCommand(
 		return exitCodeError{Code: 2, Err: err}
 	}
 
-	cfg, cfgPath, err := loadProjectConfig(projectRoot)
+	cfg, cfgPath, err := loadProjectDoctorConfig(projectRoot, projectArg)
 	if err != nil {
-		var missingErr missingProjectConfigError
-		if errors.As(err, &missingErr) {
-			hint := "stageflow project init"
-			if projectArg != "" {
-				hint = fmt.Sprintf("stageflow project init %s", projectArg)
-			}
-
-			return exitCodeError{
-				Code: 2,
-				Err:  fmt.Errorf("project config not found under %s; run `%s`", projectRoot, hint),
-			}
-		}
-
 		return exitCodeError{Code: 2, Err: err}
 	}
 
@@ -193,13 +227,18 @@ func runProjectDoctorCommand(
 			Message: "Skipped by --skip-dev.",
 		})
 
-		if format == outputFormatJSON {
-			return writeProjectDoctorJSON(cmd.OutOrStdout(), projectRoot, cfgPath, apiURL, urls, cfg.Stageflow, autoAllowPrivateTargets, checks)
-		}
-
-		fmt.Fprintln(cmd.OutOrStdout(), "Doctor checks passed (config + scan preflight).")
-
-		return nil
+		return writeProjectDoctorResult(
+			cmd.OutOrStdout(),
+			projectRoot,
+			cfgPath,
+			apiURL,
+			urls,
+			cfg.Stageflow,
+			autoAllowPrivateTargets,
+			checks,
+			format,
+			"Doctor checks passed (config + scan preflight).",
+		)
 	}
 
 	doctorCtx, cancel := context.WithTimeout(cmd.Context(), opts.Timeout)
@@ -222,11 +261,16 @@ func runProjectDoctorCommand(
 		Message: "Started the dev command and observed a ready HTTP response.",
 	})
 
-	if format == outputFormatJSON {
-		return writeProjectDoctorJSON(cmd.OutOrStdout(), projectRoot, cfgPath, apiURL, urls, cfg.Stageflow, autoAllowPrivateTargets, checks)
-	}
-
-	fmt.Fprintln(cmd.OutOrStdout(), "Doctor checks passed (config + scan preflight + dev readiness).")
-
-	return nil
+	return writeProjectDoctorResult(
+		cmd.OutOrStdout(),
+		projectRoot,
+		cfgPath,
+		apiURL,
+		urls,
+		cfg.Stageflow,
+		autoAllowPrivateTargets,
+		checks,
+		format,
+		"Doctor checks passed (config + scan preflight + dev readiness).",
+	)
 }

@@ -4,7 +4,7 @@ run:
   timeout: 5m
   tests: true
   modules-download-mode: readonly
-  go: "1.25"
+  go: "1.26.2"
   modules-from-go-work: true
 
 formatters:

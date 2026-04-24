@@ -117,6 +117,7 @@ func TestRunProjectInitCommand_JSON(t *testing.T) {
 	requireEqual(t, payload.Schema, "stageflow-cli/project-init@v1", "payload.Schema")
 	requireEqual(t, payload.ProjectRoot, root, "payload.ProjectRoot")
 	requireEqual(t, payload.Created, true, "payload.Created")
+
 	if len(payload.NextSteps) == 0 {
 		t.Fatalf("expected next steps in init payload")
 	}
@@ -228,9 +229,11 @@ dev:
 	requireEqual(t, payload.Passed, true, "payload.Passed")
 	requireEqual(t, payload.AutoAllowPrivateTargets, true, "payload.AutoAllowPrivateTargets")
 	requireEqual(t, payload.HostedMemory.Configured, false, "payload.HostedMemory.Configured")
+
 	if len(payload.Checks) != 3 {
 		t.Fatalf("expected 3 checks, got %d", len(payload.Checks))
 	}
+
 	requireEqual(t, payload.Checks[2].Status, "skipped", "payload.Checks[2].Status")
 }
 

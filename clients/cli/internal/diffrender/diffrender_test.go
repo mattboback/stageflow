@@ -71,10 +71,11 @@ func TestEvaluateRegression(t *testing.T) {
 
 	t.Run("fail-on-new severity via checker", func(t *testing.T) {
 		called := false
-		checker := func(_ []report.IssueDetail, min string) (bool, error) {
+		checker := func(_ []report.IssueDetail, minSeverity string) (bool, error) {
 			called = true
-			if min != "serious" {
-				t.Fatalf("min = %q", min)
+
+			if minSeverity != "serious" {
+				t.Fatalf("min = %q", minSeverity)
 			}
 
 			return true, nil
@@ -108,7 +109,9 @@ func TestRender_JSONAndText(t *testing.T) {
 	env := Envelope{
 		Schema: "x",
 		Delta:  Delta{NewIssues: 1, FixedIssues: 0, UnchangedIssues: 2},
-		New:    []report.IssueDetail{{Severity: "critical", Title: "T", Scanner: "axe", RuleId: "r1", PageUrl: "http://a"}},
+		New: []report.IssueDetail{
+			{Severity: "critical", Title: "T", Scanner: "axe", RuleId: "r1", PageUrl: "http://a"},
+		},
 	}
 
 	var buf bytes.Buffer

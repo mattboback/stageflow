@@ -16,7 +16,7 @@ func newScannersCmd(root *rootOptions) *cobra.Command {
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
 			var response ScannersResponse
-			if err := client.getJSON(cmd.Context(), "/api/v1/scanners", &response); err != nil {
+			if err := client.GetJSON(cmd.Context(), "/api/v1/scanners", &response); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("fetch scanners: %w", err)}
 			}
 

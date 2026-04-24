@@ -43,7 +43,7 @@ func newProjectUpdateCmd(root *rootOptions) *cobra.Command {
 
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
-			p, err := client.updateProject(cmd.Context(), slug, body)
+			p, err := client.UpdateProject(cmd.Context(), slug, body)
 			if err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("update project: %w", err)}
 			}

@@ -43,7 +43,7 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
-			p, err := client.createProject(cmd.Context(), slug, name, urls, scanners)
+			p, err := client.CreateProject(cmd.Context(), slug, name, urls, scanners)
 			if err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("create project: %w", err)}
 			}
@@ -72,7 +72,7 @@ func newProjectListCmd(root *rootOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
-			projects, err := client.listProjects(cmd.Context())
+			projects, err := client.ListProjects(cmd.Context())
 			if err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("list projects: %w", err)}
 			}
@@ -118,7 +118,7 @@ func newProjectShowCmd(root *rootOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
-			p, err := client.getProject(cmd.Context(), args[0])
+			p, err := client.GetProject(cmd.Context(), args[0])
 			if err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("get project: %w", err)}
 			}
@@ -141,7 +141,7 @@ func newProjectDeleteCmd(root *rootOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
-			if err := client.deleteProject(cmd.Context(), args[0]); err != nil {
+			if err := client.DeleteProject(cmd.Context(), args[0]); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("delete project: %w", err)}
 			}
 
@@ -166,7 +166,7 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 
 			client := NewClient(root.apiURL, root.apiKey, nil)
 
-			if err := client.promoteBaseline(cmd.Context(), args[0], jobID); err != nil {
+			if err := client.PromoteBaseline(cmd.Context(), args[0], jobID); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("promote baseline: %w", err)}
 			}
 
@@ -181,7 +181,7 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func printProject(cmd *cobra.Command, p remoteProject, format outputFormat) error {
+func printProject(cmd *cobra.Command, p RemoteProject, format outputFormat) error {
 	if format == outputFormatJSON {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")

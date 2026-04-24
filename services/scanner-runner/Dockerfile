@@ -60,6 +60,6 @@ USER pwuser
 
 VOLUME ["/data"]
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node -e "import('./dist/index.js').then(() => process.exit(0)).catch(() => process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD node dist/healthcheck.js
 
 CMD ["node", "dist/index.js"]

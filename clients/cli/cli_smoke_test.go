@@ -255,6 +255,7 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 	requireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
 	requireEqual(t, payload.Decision.Passed, false, "payload.Decision.Passed")
 	requireEqual(t, payload.Report.Schema, "stageflow-cli/report@v1", "payload.Report.Schema")
+
 	if payload.Diff == nil {
 		t.Fatalf("expected diff payload")
 	}

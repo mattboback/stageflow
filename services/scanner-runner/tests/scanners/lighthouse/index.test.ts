@@ -19,6 +19,12 @@ import type {
 
 import { ScannerBase } from '../../../src/core/scanner-base';
 import { LighthouseScanner } from '../../../src/scanners/lighthouse';
+import { getHelpUrl } from '../../../src/scanners/lighthouse/issue-mapper';
+import {
+	extractAuditNodes,
+	getAuditCategory,
+	mapScoreToSeverity
+} from '../../../src/scanners/lighthouse/result-parser';
 import * as playwrightUtils from '../../../src/utils/playwright';
 
 const scanner = new LighthouseScanner();
@@ -32,6 +38,18 @@ function callPrivateMethod(
 	methodName: string,
 	...args: unknown[]
 ): unknown {
+	const extractedHelpers: Record<string, (...args: never[]) => unknown> = {
+		extractAuditNodes: extractAuditNodes as (...args: never[]) => unknown,
+		getAuditCategory: getAuditCategory as (...args: never[]) => unknown,
+		getHelpUrl: getHelpUrl as (...args: never[]) => unknown,
+		mapScoreToSeverity: mapScoreToSeverity as (...args: never[]) => unknown
+	};
+
+	const extracted = extractedHelpers[methodName];
+	if (extracted) {
+		return extracted(...(args as never[]));
+	}
+
 	const method = (instance as unknown as Record<string, (...args: unknown[]) => unknown>)[
 		methodName
 	];
@@ -1155,7 +1173,7 @@ describe('LighthouseScanner', () => {
 	});
 
 	describe('scanPage resilience', () => {
-		it('continues when re-navigation, enrichment, and screenshot capture fail', async () => {
+		it('continues when re-navigation and screenshot capture fail', async () => {
 			const testScanner = new LighthouseScanner();
 			const logger = createMockLogger();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
@@ -1190,11 +1208,6 @@ describe('LighthouseScanner', () => {
 			).extractIssues = vi.fn().mockReturnValue(issues);
 			(
 				testScanner as unknown as {
-					enrichIssuesWithContext: (page: Page, currentIssues: Issue[]) => Promise<void>;
-				}
-			).enrichIssuesWithContext = vi.fn().mockRejectedValue(new Error('enrichment failed'));
-			(
-				testScanner as unknown as {
 					screenshotService: {
 						capturePageOverview: (...args: unknown[]) => Promise<unknown>;
 					};
@@ -1222,10 +1235,6 @@ describe('LighthouseScanner', () => {
 			expect(logger.warn).toHaveBeenCalledWith(
 				'Failed to re-navigate page after Lighthouse, continuing with stale page',
 				expect.objectContaining({ error: 'navigation failed' })
-			);
-			expect(logger.warn).toHaveBeenCalledWith(
-				'Context enrichment failed or timed out, continuing without enrichment',
-				expect.objectContaining({ error: 'enrichment failed' })
 			);
 			expect(logger.warn).toHaveBeenCalledWith(
 				'Screenshot capture failed or timed out, continuing without screenshot',

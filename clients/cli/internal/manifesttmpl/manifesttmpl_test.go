@@ -24,6 +24,7 @@ func TestConfigYAML_HappyPath(t *testing.T) {
 	mustContain(t, out, `cwd: clients/web`)
 	mustContain(t, out, `url: http://127.0.0.1:5173`)
 	mustContain(t, out, "# detected package.json script")
+
 	if !strings.HasSuffix(out, "\n") {
 		t.Fatalf("expected trailing newline")
 	}
@@ -49,6 +50,7 @@ func TestGuideMarkdown_HasKeySections(t *testing.T) {
 
 func mustContain(t *testing.T, out, sub string) {
 	t.Helper()
+
 	if !strings.Contains(out, sub) {
 		t.Fatalf("output missing %q:\n%s", sub, out)
 	}
