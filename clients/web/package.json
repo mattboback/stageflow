@@ -9,6 +9,9 @@
 		"directory": "clients/web"
 	},
 	"packageManager": "bun@1.3.8",
+	"engines": {
+		"node": "22.x"
+	},
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -56,7 +59,7 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/svelte": "^5.3.1",
 		"@testing-library/user-event": "^14.6.1",
-		"@types/node": "^25.0.3",
+		"@types/node": "22",
 		"@vitest/coverage-v8": "^4.0.13",
 		"@vitest/eslint-plugin": "^1.3.20",
 		"axe-playwright": "^2.2.2",
