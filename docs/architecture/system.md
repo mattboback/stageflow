@@ -1215,12 +1215,14 @@ The Platform API (`security.go`) implements comprehensive SSRF protection:
 
 **Config validation at startup:** `ValidateSecurityConfig()` parses all CIDR ranges at startup, failing fast on invalid entries.
 
+Scanner Runner applies the same target policy at browser runtime for URL jobs: initial targets, redirects, final URLs, and HTTP(S) subresources are validated when `SCAN_URLS` is set. Hosted and self-hosted public deployments should also enforce a container or host egress policy; see [infra/security/egress-policy.example.md](../../infra/security/egress-policy.example.md).
+
 ### Additional Security Measures
 
 | Measure                       | Implementation                                                                                       |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **Dependency scanning**       | `gitleaks` on every commit + CI, `govulncheck` across all Go modules, `bun audit --audit-level=high` |
-| **Container security**        | `no-new-privileges:true`, resource limits, logging limits (`max-size`/`max-file`)                    |
+| **Container security**        | Rootless Podman job pods, `no-new-privileges:true`, resource limits, logging limits (`max-size`/`max-file`) |
 | **Credential aliasing**       | `MINIO_ACCESS_KEY` ↔ `MINIO_ROOT_USER`, `MINIO_SECRET_KEY` ↔ `MINIO_ROOT_PASSWORD`                   |
 | **VPS deployment guardrails** | Protected hostname check prevents accidental production disruption                                   |
 | **API key auth**              | `X-Api-Key` header on all API endpoints (except health/scanners)                                     |
@@ -1789,14 +1791,14 @@ qa/e2e/project-scan-golden.sh (316 lines)
 8. Cleanup (delete test project)
 ```
 
-Golden fixtures auto-create on first run (with warning).
+Golden fixtures fail when missing or different. Regenerate intentionally with `UPDATE_GOLDENS=1 qa/e2e/project-scan-golden.sh`.
 
 ### CI/CD Workflows
 
 | Workflow              | Trigger                 | Duration | Key Gates                                                                |
 | --------------------- | ----------------------- | -------- | ------------------------------------------------------------------------ |
 | **CI**                | Push/PR to `main`       | ~30m     | workflow_lint → secrets → Go → web → Storybook → scanner-runner → images |
-| **Golden Regression** | Manual + daily 6 AM UTC | ~90m     | Full stack bootstrap → golden test → teardown                            |
+| **Golden Regression** | Manual + daily 08:23 UTC | ~90m     | Full stack bootstrap → golden test → teardown                            |
 | **CLI Release**       | Tags `clients/cli/v*`   | ~15m     | Matrix build (5 OS/arch) → GitHub Release                                |
 
 ### Local Quality Gate

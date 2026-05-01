@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
@@ -306,7 +308,7 @@ func mustFindRepoRoot(t *testing.T) string {
 	wd, err := os.Getwd()
 	requireNoErr(t, err)
 
-	root, ok, err := findGitRoot(wd)
+	root, ok, err := projectmode.FindGitRoot(wd)
 	requireNoErr(t, err)
 
 	if !ok {
@@ -325,9 +327,9 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/jobs/urls":
-			writeJSONResponse(t, w, http.StatusAccepted, SubmitJobResponse{JobID: jobID, Status: "accepted"})
+			writeJSONResponse(t, w, http.StatusAccepted, apiclient.SubmitJobResponse{JobID: jobID, Status: "accepted"})
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
-			writeJSONResponse(t, w, http.StatusOK, JobStatus{
+			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
 				ID:                jobID,
 				State:             jobStateDone,
 				ExpectedScanners:  []string{"axe", "lighthouse"},
@@ -338,10 +340,10 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID+"/results":
 			writeJSONResponse(t, w, http.StatusOK, reportDoc)
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/scanners":
-			writeJSONResponse(t, w, http.StatusOK, ScannersResponse{
+			writeJSONResponse(t, w, http.StatusOK, apiclient.ScannersResponse{
 				Total:   2,
 				Enabled: 1,
-				Scanners: []ScannerInfo{
+				Scanners: []apiclient.ScannerInfo{
 					{
 						ID:         "axe",
 						Name:       "Axe",
@@ -383,9 +385,9 @@ func newCLIProjectScanAPIServer(t *testing.T) (*httptest.Server, string) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/projects/demo-site/scan":
-			writeJSONResponse(t, w, http.StatusAccepted, SubmitJobResponse{JobID: jobID, Status: "accepted"})
+			writeJSONResponse(t, w, http.StatusAccepted, apiclient.SubmitJobResponse{JobID: jobID, Status: "accepted"})
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
-			writeJSONResponse(t, w, http.StatusOK, JobStatus{
+			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
 				ID:                jobID,
 				State:             jobStateDone,
 				ExpectedScanners:  []string{"axe"},

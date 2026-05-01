@@ -205,6 +205,9 @@ export class AxeScanner extends ScannerBase {
 			}
 
 			const violations = axeResults.violations as AxeViolationResult[];
+			const reportableIncompleteResults = this.getReportableIncompleteResults(
+				axeResults.incomplete as AxeViolationResult[]
+			);
 
 			await mkdir(resultsDir, { recursive: true });
 			const screenshotsDir = join(resultsDir, 'screenshots');
@@ -253,8 +256,20 @@ export class AxeScanner extends ScannerBase {
 				}
 			}
 
+			const incompleteIssues = this.mapIncompleteResultsToIssues(reportableIncompleteResults);
+			if (incompleteIssues.length > 0) {
+				logger.info('Axe incomplete results promoted to review issues', {
+					issueCount: incompleteIssues.length,
+					ruleIds: [...new Set(incompleteIssues.map((issue) => issue.id))]
+				});
+				issues.push(...incompleteIssues);
+			}
+
 			// Capture page overview screenshot with all violations highlighted
-			const pageOverviewViolations: PageOverviewViolation[] = violations.map((v) => ({
+			const pageOverviewViolations: PageOverviewViolation[] = [
+				...violations,
+				...reportableIncompleteResults
+			].map((v) => ({
 				id: v.id ?? 'unknown',
 				...(v.impact !== undefined ? { impact: v.impact } : {}),
 				...(v.nodes !== undefined ? { nodes: v.nodes } : {})
@@ -355,6 +370,75 @@ export class AxeScanner extends ScannerBase {
 
 			return null;
 		}
+	}
+
+	private getReportableIncompleteResults(
+		incompleteResults: AxeViolationResult[]
+	): AxeViolationResult[] {
+		return incompleteResults.filter(
+			(result) => this.shouldReportIncompleteResult(result) && (result.nodes?.length ?? 0) > 0
+		);
+	}
+
+	private shouldReportIncompleteResult(result: AxeViolationResult): boolean {
+		return result.id === 'color-contrast' || result.id === 'color-contrast-enhanced';
+	}
+
+	private mapIncompleteResultsToIssues(incompleteResults: AxeViolationResult[]): Issue[] {
+		return incompleteResults.flatMap((result) => {
+			const nodes = result.nodes ?? [];
+			return nodes.map((node, index) => this.mapIncompleteNodeToIssue(result, node, index));
+		});
+	}
+
+	private mapIncompleteNodeToIssue(
+		result: AxeViolationResult,
+		node: AxeNode,
+		nodeIndex: number
+	): Issue {
+		const ruleId = result.id ?? 'unknown';
+		const behavior = getRuleBehavior(ruleId);
+		const userImpact = getUserImpact(ruleId);
+		const selector = node.target?.[0];
+		const category = this.extractCategory(result.tags);
+
+		const location = {
+			...(selector !== undefined ? { selector } : {}),
+			...(node.html !== undefined ? { html: node.html } : {})
+		};
+
+		return {
+			id: ruleId,
+			scanner: this.metadata.name,
+			severity: normalizeSeverity(result.impact, 'moderate'),
+			category,
+			title: 'Color contrast needs manual verification',
+			description:
+				'axe-core could not determine the background color for this text, so StageFlow cannot treat it as a pass. Review the actual foreground and background contrast.',
+			...(Object.keys(location).length > 0 ? { location } : {}),
+			...(result.helpUrl !== undefined ? { helpUrl: result.helpUrl } : {}),
+			metadata: {
+				impact: result.impact,
+				tags: result.tags,
+				nodeCount: 1,
+				nodes: [
+					{
+						target: node.target,
+						html: node.html,
+						failureSummary: node.failureSummary
+					}
+				],
+				axeIncomplete: true,
+				incompleteNodeIndex: nodeIndex,
+				ruleBehavior: behavior,
+				userImpact: {
+					statement: userImpact.statement,
+					affectedGroups: userImpact.affectedGroups,
+					severity: userImpact.severity,
+					userStory: userImpact.userStory
+				}
+			}
+		};
 	}
 
 	private logScreenshotFallbacks(

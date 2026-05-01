@@ -199,34 +199,3 @@ export async function enrichIssuesWithContext(
 		);
 	}
 }
-
-export async function enrichNodesWithContext(
-	page: import('playwright').Page,
-	nodes: LighthouseIssueNode[]
-): Promise<LighthouseIssueNode[]> {
-	const enriched: LighthouseIssueNode[] = [];
-
-	for (const node of nodes.slice(0, 5)) {
-		const selector = node.selector ?? node.target?.[0];
-		if (!selector) {
-			enriched.push({ ...node });
-			continue;
-		}
-
-		try {
-			const ctx = await extractContextSnippet(page, selector);
-			const contextHtml = ctx?.contextHtml ?? node.contextHtml;
-			const ancestorPath = ctx?.ancestorPath ?? node.ancestorPath;
-
-			enriched.push({
-				...node,
-				...(contextHtml !== undefined ? { contextHtml } : {}),
-				...(ancestorPath !== undefined ? { ancestorPath } : {})
-			});
-		} catch {
-			enriched.push({ ...node });
-		}
-	}
-
-	return enriched;
-}

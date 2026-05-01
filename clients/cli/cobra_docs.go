@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
@@ -69,7 +70,7 @@ func resolveDocsOutDir(outDir string) (string, error) {
 		return "", fmt.Errorf("resolve working directory: %w", err)
 	}
 
-	gitRoot, ok, err := findGitRoot(wd)
+	gitRoot, ok, err := projectmode.FindGitRoot(wd)
 	if err != nil {
 		return "", err
 	}

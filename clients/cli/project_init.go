@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/spf13/cobra"
 )
 
@@ -184,7 +185,7 @@ func runProjectInitCommand(
 		projectArg = args[0]
 	}
 
-	projectRoot, err := resolveProjectRoot(projectArg)
+	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
 	}

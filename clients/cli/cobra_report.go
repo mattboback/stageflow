@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,7 @@ func newReportCmd(root *rootOptions) *cobra.Command {
 				return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 			jobID := args[0]
 
 			status, err := fetchJobStatus(cmd.Context(), client, jobID)

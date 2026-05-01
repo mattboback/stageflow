@@ -323,6 +323,103 @@ describe('BrowserManager', () => {
 			expect(validateRuntimeTargetURL).toHaveBeenCalledWith('https://example.com/redirected');
 		});
 
+		it('should validate allowed subresource requests via Playwright route handler', async () => {
+			let routeHandler:
+				| ((route: {
+						request: () => {
+							resourceType: () => string;
+							isNavigationRequest: () => boolean;
+							url: () => string;
+						};
+						continue: () => Promise<void>;
+						abort: (reason?: string) => Promise<void>;
+				  }) => Promise<void>)
+				| undefined;
+
+			const mockRoute = vi.fn().mockImplementation((_pattern, handler) => {
+				routeHandler = handler;
+			});
+
+			vi.mocked(validateRuntimeTargetURL).mockResolvedValue(undefined);
+
+			const page = {
+				...mockPage,
+				route: mockRoute,
+				url: vi.fn().mockReturnValue('https://example.com')
+			} as unknown as Page;
+
+			await browserManager.navigateToPage(page, 'https://example.com');
+
+			expect(routeHandler).toBeDefined();
+
+			const continueRequest = vi.fn().mockResolvedValue(undefined);
+			const abort = vi.fn().mockResolvedValue(undefined);
+
+			await routeHandler?.({
+				request: () => ({
+					resourceType: () => 'image',
+					isNavigationRequest: () => false,
+					url: () => 'https://cdn.example.com/logo.png'
+				}),
+				continue: continueRequest,
+				abort
+			});
+
+			expect(validateRuntimeTargetURL).toHaveBeenCalledWith('https://cdn.example.com/logo.png');
+			expect(continueRequest).toHaveBeenCalled();
+			expect(abort).not.toHaveBeenCalled();
+		});
+
+		it('should abort blocked subresource requests without failing the page navigation', async () => {
+			let routeHandler:
+				| ((route: {
+						request: () => {
+							resourceType: () => string;
+							isNavigationRequest: () => boolean;
+							url: () => string;
+						};
+						continue: () => Promise<void>;
+						abort: (reason?: string) => Promise<void>;
+				  }) => Promise<void>)
+				| undefined;
+
+			const mockRoute = vi.fn().mockImplementation((_pattern, handler) => {
+				routeHandler = handler;
+			});
+
+			vi.mocked(validateRuntimeTargetURL).mockResolvedValue(undefined);
+
+			const page = {
+				...mockPage,
+				route: mockRoute,
+				url: vi.fn().mockReturnValue('https://example.com')
+			} as unknown as Page;
+
+			await expect(
+				browserManager.navigateToPage(page, 'https://example.com')
+			).resolves.toBeUndefined();
+
+			expect(routeHandler).toBeDefined();
+
+			vi.mocked(validateRuntimeTargetURL).mockRejectedValueOnce(new Error('Blocked subresource'));
+
+			const continueRequest = vi.fn().mockResolvedValue(undefined);
+			const abort = vi.fn().mockResolvedValue(undefined);
+
+			await routeHandler?.({
+				request: () => ({
+					resourceType: () => 'image',
+					isNavigationRequest: () => false,
+					url: () => 'http://169.254.169.254/latest/meta-data'
+				}),
+				continue: continueRequest,
+				abort
+			});
+
+			expect(continueRequest).not.toHaveBeenCalled();
+			expect(abort).toHaveBeenCalledWith('blockedbyclient');
+		});
+
 		it('should abort and surface blocked navigation from route handler', async () => {
 			let routeHandler:
 				| ((route: {

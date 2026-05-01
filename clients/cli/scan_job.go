@@ -10,6 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/jobstream"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -52,32 +54,32 @@ type projectDiffState struct {
 
 func waitForCompletedJobReport(
 	ctx context.Context,
-	client *Client,
+	client *apiclient.Client,
 	jobID string,
 	progressOut io.Writer,
 	noStream bool,
-) (JobStatus, report.UnifiedReportV2, error) {
-	err := waitJobState(ctx, client, jobID, progressOut, noStream)
+) (apiclient.JobStatus, report.UnifiedReportV2, error) {
+	err := jobstream.WaitJobState(ctx, client, jobID, progressOut, noStream)
 	if err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("wait for completion: %w", err)
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("wait for completion: %w", err)
 	}
 
 	status, err := fetchJobStatus(ctx, client, jobID)
 	if err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch job status: %w", err)
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch job status: %w", err)
 	}
 
 	if status.State != jobStateDone {
 		if status.State == jobStateFailed {
-			return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
+			return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
 		}
 
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job finished with non-DONE state: %s", status.State)
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job finished with non-DONE state: %s", status.State)
 	}
 
 	doc, err := fetchReport(ctx, client, jobID)
 	if err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch report: %w", err)
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch report: %w", err)
 	}
 
 	return status, doc, nil
@@ -85,7 +87,7 @@ func waitForCompletedJobReport(
 
 func resolveProjectDiffState(
 	ctx context.Context,
-	client *Client,
+	client *apiclient.Client,
 	slug, jobID string,
 ) (projectDiffState, error) {
 	diffResult, err := client.FetchJobDiff(ctx, jobID)
@@ -134,24 +136,24 @@ func interpretProjectDiffError(slug, jobID string, err error) (projectDiffState,
 
 func runScanJob(
 	ctx context.Context,
-	client *Client,
-	req SubmitJobRequest,
+	client *apiclient.Client,
+	req apiclient.SubmitJobRequest,
 	timeout time.Duration,
 	progressOut io.Writer,
 	noStream bool,
-) (JobStatus, report.UnifiedReportV2, error) {
+) (apiclient.JobStatus, report.UnifiedReportV2, error) {
 	opCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	var resp SubmitJobResponse
+	var resp apiclient.SubmitJobResponse
 
 	if err := client.PostJSON(opCtx, "/api/v1/jobs/urls", req, &resp); err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("submit job: %w", enhanceSubmitJobError(err, req))
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("submit job: %w", enhanceSubmitJobError(err, req))
 	}
 
 	jobID := resp.JobID
 	if jobID == "" {
-		return JobStatus{}, report.UnifiedReportV2{}, errors.New("submit job: missing job_id in response")
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, errors.New("submit job: missing job_id in response")
 	}
 
 	fmt.Fprintf(progressOut, "Job submitted: %s\nWaiting for completion...\n", jobID)
@@ -159,7 +161,7 @@ func runScanJob(
 	return waitForCompletedJobReport(opCtx, client, jobID, progressOut, noStream)
 }
 
-func enhanceSubmitJobError(err error, req SubmitJobRequest) error {
+func enhanceSubmitJobError(err error, req apiclient.SubmitJobRequest) error {
 	msg := strings.ToLower(err.Error())
 	if !strings.Contains(msg, "allow_private_targets") &&
 		!strings.Contains(msg, "disallowed address") &&
@@ -188,7 +190,7 @@ func runRemoteProjectScan(
 	noStream bool,
 	reportOpts reportCommandOptions,
 ) error {
-	client := NewClient(root.apiURL, root.apiKey, nil)
+	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 	opCtx, cancel := context.WithTimeout(cmd.Context(), timeout)
 	defer cancel()

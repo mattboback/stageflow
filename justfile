@@ -22,8 +22,7 @@ deploy:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Production deployment for the hosted stageflow.org demo is intentionally outside this repository." >&2
-    echo "For the live demo, use: cd /home/matt/Deployment && just deploy stageflow" >&2
-    echo "Use the self-hosting docs here only for repo-managed environments." >&2
+    echo "Use docs/operations/deployment.md for repo-managed local, staging, and self-hosted environments." >&2
     exit 1
 
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
@@ -553,6 +552,16 @@ shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
+
+[group('quality'), doc('Run dead-code analysis for TypeScript workspaces')]
+dead-code:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    status=0
+    (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
+    (cd {{scanner_dir}} && {{bun}} run find-dead-code) || status=$?
+    (cd {{scanner_dir}} && {{bun}} run analyze:dead) || status=$?
+    exit "$status"
 
 [group('quality'), doc('Run the project baseline->promote->diff golden flow against the local overlay')]
 project-golden:

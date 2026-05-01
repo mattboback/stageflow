@@ -43,7 +43,7 @@
 		"find-dead-code": "knip --cache --cache-location ../../.cache/knip-scanner",
 		"test": "bun run prepare:contracts && vitest run",
 		"test:coverage": "bun run prepare:contracts && vitest run --coverage",
-		"analyze:dead": "tsr --project tsconfig.json 'src/index\\.ts$' 'src/lib\\.ts$' 'src/scanners/[^/]+/index\\.ts$' 'tests/.*\\.(test|spec)\\.ts$'"
+		"analyze:dead": "tsr --project tsconfig.dead-code.json 'src/index\\.ts$' 'src/lib\\.ts$' 'src/healthcheck\\.ts$' 'src/scanners/[^/]+/index\\.ts$' 'tests/.*\\.(test|spec)\\.ts$'"
 	},
 	"dependencies": {
 		"@axe-core/playwright": "^4.11.3",

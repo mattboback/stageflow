@@ -17,8 +17,7 @@ export type {
 	AxeViolation,
 	EnhancedScreenshotResult,
 	PageOverviewViolation,
-	ViolationCaptureFailure,
-	ViolationScreenshotCaptureResult
+	ViolationCaptureFailure
 } from './axe/types';
 
 /**

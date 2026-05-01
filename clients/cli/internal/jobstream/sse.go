@@ -49,7 +49,7 @@ func newStreamState() *streamState {
 	}
 }
 
-// waitJobState waits for the job to reach a terminal state.
+// WaitJobState waits for the job to reach a terminal state.
 // If noStream is true, it polls the API instead of using Server-Sent Events.
 func WaitJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer, noStream bool) error {
 	if noStream {

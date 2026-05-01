@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
@@ -64,12 +65,12 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 				)
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			status, doc, err := runScanJob(
 				cmd.Context(),
 				client,
-				SubmitJobRequest{
+				apiclient.SubmitJobRequest{
 					URLs:                urls,
 					Modules:             modules,
 					Screenshot:          screenshot,

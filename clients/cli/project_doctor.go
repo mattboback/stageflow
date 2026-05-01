@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
@@ -171,7 +172,7 @@ func runProjectDoctorCommand(
 		projectArg = args[0]
 	}
 
-	projectRoot, err := resolveProjectRoot(projectArg)
+	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
 	}

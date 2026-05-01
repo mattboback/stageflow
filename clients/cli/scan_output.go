@@ -7,15 +7,16 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
 func runRemoteProjectScanJSON(
 	cmd *cobra.Command,
 	apiBaseURL, slug string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	client *Client,
+	client *apiclient.Client,
 	jobID string,
 	reportOpts reportCommandOptions,
 ) error {
@@ -81,7 +82,7 @@ func runRemoteProjectScanJSON(
 func renderProjectDiff(
 	ctx context.Context,
 	cmd *cobra.Command,
-	client *Client,
+	client *apiclient.Client,
 	slug, jobID string,
 	format outputFormat,
 ) (bool, error) {

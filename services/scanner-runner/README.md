@@ -13,6 +13,12 @@ It is **not** responsible for:
 - Pod/container orchestration (handled by the Orchestrator service).
 - Aggregating multi-scanner output into a job-level report (handled by the Orchestrator).
 
+## Runtime security notes
+
+For URL jobs, the worker validates browser network requests when `SCAN_URLS` is set. Initial targets, redirects, final navigated URLs, and HTTP(S) subresources are checked against the same blocked-network policy. `ALLOW_PRIVATE_TARGETS=true` is reserved for local/private scanning and still does not allow link-local metadata targets.
+
+Chromium currently launches with `--no-sandbox`, `--disable-setuid-sandbox`, and `chromiumSandbox: false`. This is acceptable only inside the intended StageFlow job boundary: rootless Podman job pods, `no-new-privileges`, per-job containers, constrained resources, and host/container egress controls for hosted or self-hosted public deployments. Enabling Chromium sandboxing in the runtime image is a future hardening task; do not treat the browser process as the primary isolation boundary.
+
 ## Scanner resolution (plugin loader)
 
 On startup the worker discovers plugin manifests and then loads the scanner selected by `SCANNER_TYPE`.
