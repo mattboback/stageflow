@@ -214,6 +214,8 @@ if [[ -f "$ENV_FILE" ]]; then
 	vite_api_url="$(read_env_value VITE_API_URL || true)"
 	vite_site_url="$(read_env_value VITE_SITE_URL || true)"
 	public_domain="$(read_env_value STAGEFLOW_PUBLIC_DOMAIN || true)"
+	minio_root_user="$(read_env_value MINIO_ROOT_USER || true)"
+	minio_access_key="$(read_env_value MINIO_ACCESS_KEY || true)"
 
 	if [[ -n "$vite_api_url" && ! "$vite_api_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then
 		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. \`just demo\` overrides this for the containerized demo, but \`just run clients/web\` and \`stageflow project\` expect http://localhost:8080 for repo-local work."
@@ -225,6 +227,10 @@ if [[ -f "$ENV_FILE" ]]; then
 
 	if [[ -n "$public_domain" && "$public_domain" != "localhost" ]]; then
 		warn "$(basename "$ENV_FILE") still uses STAGEFLOW_PUBLIC_DOMAIN=$public_domain. For repo-local work, prefer localhost."
+	fi
+
+	if [[ -n "$minio_root_user" && -n "$minio_access_key" && "$minio_root_user" == "$minio_access_key" ]]; then
+		fail "$(basename "$ENV_FILE") sets MINIO_ACCESS_KEY equal to MINIO_ROOT_USER. Use separate app-user credentials before running \`just dev init\`."
 	fi
 else
 	fail "Missing $(basename "$ENV_FILE"). Copy .env.example to .env before starting the stack."

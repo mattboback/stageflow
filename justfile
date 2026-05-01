@@ -17,13 +17,24 @@ go_work := 'go.work'
 help:
     @just --list
 
-[group('meta'), doc('Production deployment instruction (fails immediately)')]
+[group('meta'), doc('Deploy the hosted StageFlow demo through the optional VPS control plane')]
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Production deployment for the hosted stageflow.org demo is intentionally outside this repository." >&2
-    echo "Use docs/operations/deployment.md for repo-managed local, staging, and self-hosted environments." >&2
-    exit 1
+
+    control_plane="${STAGEFLOW_DEPLOY_CONTROL_PLANE:-/home/matt/Deployment}"
+    control_justfile="${control_plane}/justfile"
+    just_bin="${JUST:-just}"
+
+    if [[ ! -f "$control_justfile" ]]; then
+        echo "Hosted stageflow.org deployment is managed by an external control plane." >&2
+        echo "No control-plane justfile found at: $control_justfile" >&2
+        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local, staging, and self-hosted environments." >&2
+        exit 1
+    fi
+
+    echo "Running: just deploy stageflow" >&2
+    exec "$just_bin" --justfile "$control_justfile" deploy stageflow
 
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
 setup:
@@ -217,9 +228,21 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
             ;;
         init)
             echo "==> Initializing MinIO buckets ($endpoint)..."
+            declare -A env_overrides=()
+            for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
+                if [[ -v "$name" ]]; then
+                    env_overrides["$name"]="${!name}"
+                fi
+            done
+
             set -a
             [[ -f "$root_dir/.env" ]] && . "$root_dir/.env"
             set +a
+
+            for name in "${!env_overrides[@]}"; do
+                export "$name=${env_overrides[$name]}"
+            done
+
             MINIO_ENDPOINT="$endpoint" ./infra/minio/init-buckets.sh
             ;;
         *)
@@ -306,6 +329,13 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
     endpoint="{{ENDPOINT}}"
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
+    declare -A env_overrides=()
+
+    for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
+        if [[ -v "$name" ]]; then
+            env_overrides["$name"]="${!name}"
+        fi
+    done
 
     if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
         echo "Refusing to run repo-local StageFlow staging stacks on the production VPS." >&2
@@ -360,6 +390,11 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
             # shellcheck disable=SC1090
             source "$env_file"
             set +a
+
+            for name in "${!env_overrides[@]}"; do
+                export "$name=${env_overrides[$name]}"
+            done
+
             MINIO_ENDPOINT="$endpoint" ./infra/minio/init-buckets.sh
             ;;
         ps)
