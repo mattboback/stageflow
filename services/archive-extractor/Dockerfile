@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/library/golang:1.26-alpine@sha256:80fbb8f9b2fa541a7d34378f1ad10f4f1c433817c4ed39ddb3e2f3ec3e961271 AS builder
+FROM docker.io/library/golang:1.26-alpine AS builder
 WORKDIR /src
 
 # Copy module definitions first for better layer caching
@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     GOWORK=off go build -ldflags="-s -w" -o /out/extractor ./cmd/server
 
 # Runtime stage
-FROM docker.io/library/alpine:3.20@sha256:a4f4213abb84c497377b8544c81b3564f313746700372ec4fe84653e4fb03805
+FROM docker.io/library/alpine:3.22
 RUN apk add --no-cache ca-certificates
 RUN addgroup -S extractor && adduser -S extractor -G extractor
 COPY --from=builder /out/extractor /usr/local/bin/extractor

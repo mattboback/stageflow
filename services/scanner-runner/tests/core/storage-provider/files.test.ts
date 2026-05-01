@@ -25,7 +25,7 @@ describe('waitForFileReady', () => {
 	it('returns true when file exists and has content', async () => {
 		vi.mocked(stat).mockResolvedValue({ size: 1000 } as any);
 
-		const result = await waitForFileReady('/path/to/file.txt', mockLogger as any);
+		const result = await waitForFileReady('/path/to/file.txt', mockLogger);
 
 		expect(result).toBe(true);
 		expect(stat).toHaveBeenCalledWith('/path/to/file.txt');
@@ -34,7 +34,7 @@ describe('waitForFileReady', () => {
 	it('returns false after max retries when file is empty', async () => {
 		vi.mocked(stat).mockResolvedValue({ size: 0 } as any);
 
-		const promise = waitForFileReady('/path/to/empty.txt', mockLogger as any, 3);
+		const promise = waitForFileReady('/path/to/empty.txt', mockLogger, 3);
 
 		// Fast-forward through all retries
 		await vi.runAllTimersAsync();
@@ -52,7 +52,7 @@ describe('waitForFileReady', () => {
 	it('returns false after max retries when file does not exist', async () => {
 		vi.mocked(stat).mockRejectedValue(new Error('ENOENT: no such file'));
 
-		const promise = waitForFileReady('/path/to/missing.txt', mockLogger as any, 3);
+		const promise = waitForFileReady('/path/to/missing.txt', mockLogger, 3);
 
 		await vi.runAllTimersAsync();
 
@@ -75,7 +75,7 @@ describe('waitForFileReady', () => {
 			.mockRejectedValueOnce(new Error('not ready'))
 			.mockResolvedValue({ size: 500 } as any);
 
-		const promise = waitForFileReady('/path/to/file.txt', mockLogger as any);
+		const promise = waitForFileReady('/path/to/file.txt', mockLogger);
 
 		// First attempt fails immediately
 		await vi.advanceTimersByTimeAsync(0);
@@ -96,7 +96,7 @@ describe('waitForFileReady', () => {
 	it('uses default maxRetries of 5', async () => {
 		vi.mocked(stat).mockRejectedValue(new Error('always fails'));
 
-		const promise = waitForFileReady('/path/to/file.txt', mockLogger as any);
+		const promise = waitForFileReady('/path/to/file.txt', mockLogger);
 
 		await vi.runAllTimersAsync();
 
@@ -108,7 +108,7 @@ describe('waitForFileReady', () => {
 	it('returns true immediately when file is ready on first try', async () => {
 		vi.mocked(stat).mockResolvedValue({ size: 100 } as any);
 
-		const result = await waitForFileReady('/path/to/ready.txt', mockLogger as any);
+		const result = await waitForFileReady('/path/to/ready.txt', mockLogger);
 
 		expect(result).toBe(true);
 		expect(stat).toHaveBeenCalledTimes(1);
@@ -117,7 +117,7 @@ describe('waitForFileReady', () => {
 	it('handles non-Error exceptions', async () => {
 		vi.mocked(stat).mockRejectedValue('string error');
 
-		const promise = waitForFileReady('/path/to/file.txt', mockLogger as any, 1);
+		const promise = waitForFileReady('/path/to/file.txt', mockLogger, 1);
 
 		await vi.runAllTimersAsync();
 

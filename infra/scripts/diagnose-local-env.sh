@@ -8,7 +8,7 @@ PODMAN_BIN="${PODMAN:-podman}"
 JUST_BIN="${JUST:-just}"
 CURL_BIN="${CURL:-curl}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
-EXPECTED_GO_MIN="1.26.1"
+EXPECTED_GO_MIN="1.26.2"
 EXPECTED_BUN_MIN="1.3.8"
 
 fatal_count=0

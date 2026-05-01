@@ -39,10 +39,10 @@ function callPrivateMethod(
 	...args: unknown[]
 ): unknown {
 	const extractedHelpers: Record<string, (...args: never[]) => unknown> = {
-		extractAuditNodes: extractAuditNodes as (...args: never[]) => unknown,
-		getAuditCategory: getAuditCategory as (...args: never[]) => unknown,
-		getHelpUrl: getHelpUrl as (...args: never[]) => unknown,
-		mapScoreToSeverity: mapScoreToSeverity as (...args: never[]) => unknown
+		extractAuditNodes: extractAuditNodes,
+		getAuditCategory: getAuditCategory,
+		getHelpUrl: getHelpUrl,
+		mapScoreToSeverity: mapScoreToSeverity
 	};
 
 	const extracted = extractedHelpers[methodName];

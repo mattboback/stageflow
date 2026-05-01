@@ -66,7 +66,7 @@ function getDetailNode(value: unknown): LighthouseDetailNode | undefined {
 		return undefined;
 	}
 
-	return value as LighthouseDetailNode;
+	return value;
 }
 
 function extractAuditSelector(input: {

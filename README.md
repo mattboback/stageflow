@@ -96,7 +96,7 @@ outside this public repository.
 
 ### Prerequisites
 
-- [Go 1.26.1](https://go.dev/dl/)
+- [Go 1.26.2](https://go.dev/dl/)
 - [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) with `podman compose`
 - [just](https://github.com/casey/just)

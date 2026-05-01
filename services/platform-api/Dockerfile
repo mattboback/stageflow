@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/library/golang:1.26@sha256:5f3787b7f902c07c7ec4f3aa91a301a3eda8133aa32661a3b3a3a86ab3a68a36 AS builder
+FROM docker.io/library/golang:1.26 AS builder
 WORKDIR /src
 
 # Copy module definitions first for better layer caching
@@ -30,13 +30,13 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     GOWORK=off go build -ldflags="-s -w" -o /out/platform-api-healthcheck ./cmd/healthcheck
 
 # Prep stage - create directories with correct ownership
-FROM docker.io/library/debian:bookworm-slim@sha256:13cb01d584d2c23f475c088c168a48f9a08f033a10460572fbfd10912ec5ba7c AS prep
+FROM docker.io/library/debian:bookworm-slim AS prep
 RUN mkdir -p /data && chown 65532:65532 /data
 
 # Runtime stage
 # Use debian-slim instead of distroless because podman-compose materializes
 # healthchecks through /bin/sh -c, and distroless images do not provide /bin/sh.
-FROM docker.io/library/debian:bookworm-slim@sha256:13cb01d584d2c23f475c088c168a48f9a08f033a10460572fbfd10912ec5ba7c
+FROM docker.io/library/debian:bookworm-slim
 
 # Copy binaries
 COPY --from=builder /out/platform-api /usr/local/bin/platform-api

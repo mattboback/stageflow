@@ -90,7 +90,7 @@ export class PageAnalyzer {
 					seen.add(el);
 
 					const rect = (el as HTMLElement).getBoundingClientRect();
-					const style = window.getComputedStyle(el as HTMLElement);
+					const style = window.getComputedStyle(el);
 					const isVisible =
 						rect.width > 0 &&
 						rect.height > 0 &&
