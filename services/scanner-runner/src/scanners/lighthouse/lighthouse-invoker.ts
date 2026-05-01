@@ -3,7 +3,7 @@ import type { ScannerLogger } from '../../core/types';
 import type { LighthouseModule, LighthouseResult } from './types';
 
 export function loadLighthouseModule(): Promise<LighthouseModule> {
-	return import('lighthouse') as Promise<LighthouseModule>;
+	return import('lighthouse');
 }
 
 export async function runLighthouseInvocation(deps: {

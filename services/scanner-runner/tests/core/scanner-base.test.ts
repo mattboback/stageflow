@@ -311,7 +311,7 @@ describe('ScannerBase', () => {
 				...validProvenance,
 				base_url: '',
 				pages: [{ id: 'page-1', path: '/index.html', url: '/index.html' }]
-			} as unknown as Provenance);
+			});
 		}).toThrow("Provenance base_url is required when pages don't have full URLs");
 
 		expect(() => {
@@ -319,7 +319,7 @@ describe('ScannerBase', () => {
 				...validProvenance,
 				base_url: '',
 				pages: [{ id: 'page-1', path: '/index.html', url: 'https://example.com' }]
-			} as unknown as Provenance);
+			});
 		}).not.toThrow();
 	});
 

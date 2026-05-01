@@ -1,8 +1,8 @@
 # Multi-stage Dockerfile for SvelteKit Frontend
-# Optimized for production with Caddy
+# Optimized for production with nginx
 
 # Stage 1: Build
-FROM docker.io/oven/bun:1.3.0-alpine@sha256:37e6b1cbe053939bccf6ae4507977ed957eaa6e7f275670b72ad6348e0d2c11f AS builder
+FROM docker.io/oven/bun:1.3.8-alpine AS builder
 WORKDIR /app
 
 # Copy package files first for better caching
@@ -42,16 +42,16 @@ RUN bunx --no-install svelte-kit sync
 RUN bun run build
 
 # Stage 2: Production server
-FROM docker.io/library/caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d AS runner
+FROM docker.io/library/nginx:1.29-alpine AS runner
 
-# Remove default Caddy content and config
-RUN rm -rf /usr/share/caddy/* /etc/caddy/Caddyfile
+# Remove default nginx content and config
+RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
 
-# Copy the repo-owned Caddy config so Docker and Podman follow the same path.
-COPY clients/web/Caddyfile /etc/caddy/Caddyfile
+# Copy the repo-owned nginx config so Docker and Podman follow the same path.
+COPY clients/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from builder (SvelteKit adapter-static outputs to build/)
-COPY --from=builder /app/build /srv
+COPY --from=builder /app/build /usr/share/nginx/html
 
 # Expose port
 EXPOSE 3000
@@ -60,5 +60,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
 
-# Start Caddy
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

@@ -207,10 +207,7 @@ class DefaultScreenshotService implements ScreenshotService {
 
 					await element.evaluate(
 						(el, params) => {
-							const { styleId, style } = params as {
-								styleId: string;
-								style: HighlightStyle;
-							};
+							const { styleId, style } = params;
 
 							el.classList.add(styleId);
 							if (style.borderColor) {

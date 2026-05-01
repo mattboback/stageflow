@@ -3,7 +3,7 @@
 
 FROM docker.io/oven/bun:1.3.8@sha256:371d30538b69303ced927bb5915697ac7e2fa8cb409ee332c66009de64de5aa3 AS bun-bin
 
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831 AS builder
+FROM mcr.microsoft.com/playwright:v1.57.0-noble AS builder
 WORKDIR /repo
 
 # Install bun from pinned image stage (no curl|bash installer)
@@ -41,12 +41,19 @@ RUN rm -rf node_modules \
   && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest
 
 # Runtime stage
-FROM mcr.microsoft.com/playwright:v1.57.0-jammy@sha256:6aca677c27a967caf7673d108ac67ffaf8fed134f27e17b27a05464ca0ace831
+FROM mcr.microsoft.com/playwright:v1.57.0-noble
 WORKDIR /app
 
 ENV NODE_ENV=production \
     PORT=8080 \
     SCANNER_DATA_DIR=/data
+
+RUN apt-get update \
+  && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+  && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove \
+    gstreamer1.0-plugins-bad \
+    libgstreamer-plugins-bad1.0-0 \
+  && rm -rf /var/lib/apt/lists/* /usr/lib/node_modules/npm /usr/bin/npm /usr/bin/npx
 
 # Create data directory with proper permissions
 RUN mkdir -p /data && chown pwuser:pwuser /data
