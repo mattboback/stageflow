@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 failures=0
 
@@ -40,7 +40,7 @@ run_shadowed_path_case() {
 	chmod +x "${fake_bin}/stageflow"
 
 	set +e
-	PATH="${fake_bin}:${install_bin}:${PATH}" just cli-install "${install_bin}" >"${out_file}" 2>&1
+	PATH="${fake_bin}:${install_bin}:${PATH}" "${REPO_ROOT}/devtools/scripts/install-cli.sh" "${install_bin}" >"${out_file}" 2>&1
 	local rc=$?
 	set -e
 
@@ -57,7 +57,7 @@ run_bin_dir_missing_from_path_case() {
 	mkdir -p "${install_bin}"
 
 	set +e
-	just cli-install "${install_bin}" "${bin_name}" >"${out_file}" 2>&1
+	"${REPO_ROOT}/devtools/scripts/install-cli.sh" "${install_bin}" "${bin_name}" >"${out_file}" 2>&1
 	local rc=$?
 	set -e
 
