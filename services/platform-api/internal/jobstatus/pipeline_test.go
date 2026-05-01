@@ -174,6 +174,65 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for watch update")
 	}
+
+	if _, applyErr := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalScanCompleted,
+		ObservedAt: now.Add(2 * time.Second),
+		ScanCompleted: &events.ScanCompletedPayload{
+			JobID:             "job-watch",
+			ScannerType:       "lighthouse",
+			ResultsPath:       "job-watch/lighthouse/results.json",
+			ReportPath:        "job-watch/lighthouse/report.html",
+			TotalPagesScanned: 1,
+			Summary: events.ScanSummary{
+				TotalViolations: 2,
+				BySeverity:      map[string]int{"serious": 2},
+			},
+		},
+	}); applyErr != nil {
+		t.Fatalf("Apply() error = %v", applyErr)
+	}
+
+	select {
+	case change := <-sub.Updates():
+		if change.Snapshot.TotalViolations != 5 {
+			t.Fatalf("TotalViolations = %d, want 5", change.Snapshot.TotalViolations)
+		}
+
+		if len(change.Snapshot.CompletedScanners) != 2 ||
+			change.Snapshot.CompletedScanners[0] != "axe" ||
+			change.Snapshot.CompletedScanners[1] != "lighthouse" {
+			t.Fatalf("unexpected completed scanners: %+v", change.Snapshot.CompletedScanners)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for second watch update")
+	}
+
+	if _, applyErr := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalScanCompleted,
+		ObservedAt: now.Add(3 * time.Second),
+		ScanCompleted: &events.ScanCompletedPayload{
+			JobID:             "job-watch",
+			ScannerType:       "axe",
+			ResultsPath:       "job-watch/axe/results.json",
+			ReportPath:        "job-watch/axe/report.html",
+			TotalPagesScanned: 1,
+			Summary: events.ScanSummary{
+				TotalViolations: 3,
+			},
+		},
+	}); applyErr != nil {
+		t.Fatalf("Apply() error = %v", applyErr)
+	}
+
+	select {
+	case change := <-sub.Updates():
+		if change.Snapshot.TotalViolations != 5 {
+			t.Fatalf("TotalViolations = %d, want duplicate scanner completion to stay 5", change.Snapshot.TotalViolations)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for duplicate scanner watch update")
+	}
 }
 
 func TestPipelineApplyKeepsFailureStickyAgainstLateSuccess(t *testing.T) {

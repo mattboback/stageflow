@@ -80,16 +80,39 @@ export function extractIssuesFromResult(deps: {
 			skippedPassed++;
 			continue;
 		}
-		if (audit.score === null || audit.scoreDisplayMode === 'notApplicable') {
-			skippedNotApplicable++;
-			continue;
-		}
 		if (audit.scoreDisplayMode === 'informative') {
 			skippedInformative++;
 			continue;
 		}
 		if (audit.scoreDisplayMode === 'manual') {
-			skippedManual++;
+			const category = getAuditCategory(auditId, lhResult.categories ?? {});
+			const nodeCount = getAuditNodeCount(audit);
+			const nodes = extractAuditNodes(audit);
+
+			issues.push({
+				id: auditId,
+				scanner: scannerName,
+				severity: 'info',
+				category: category ?? 'manual-review',
+				title: audit.title,
+				description: `Manual verification required: ${audit.description}`,
+				helpUrl: getHelpUrl(auditId),
+				metadata: {
+					score: audit.score,
+					scoreDisplayMode: audit.scoreDisplayMode,
+					displayValue: audit.displayValue,
+					numericValue: audit.numericValue,
+					numericUnit: audit.numericUnit,
+					details: audit.details,
+					nodeCount,
+					nodes: nodes.slice(0, 5),
+					lighthouseManual: true
+				}
+			});
+			continue;
+		}
+		if (audit.score === null || audit.scoreDisplayMode === 'notApplicable') {
+			skippedNotApplicable++;
 			continue;
 		}
 
@@ -110,6 +133,7 @@ export function extractIssuesFromResult(deps: {
 			helpUrl: getHelpUrl(auditId),
 			metadata: {
 				score: audit.score,
+				scoreDisplayMode: audit.scoreDisplayMode,
 				displayValue: audit.displayValue,
 				numericValue: audit.numericValue,
 				numericUnit: audit.numericUnit,

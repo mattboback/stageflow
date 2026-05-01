@@ -17,6 +17,7 @@ This repository is designed to be both runnable and reviewable. Start from `.env
 
 - **Fastest smoke test:** `cp .env.example .env && just diagnose && just demo`
 - **Reviewer path (5–15 minutes):** [docs/evaluators-guide.md](docs/evaluators-guide.md)
+- **Contributor setup:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **System design entrypoint:** [ARCHITECTURE.md](ARCHITECTURE.md)
 - **System design deep dive:** [docs/architecture/system.md](docs/architecture/system.md)
 - **High-signal code entrypoints:** [Web app](clients/web/README.md), [Platform API](services/platform-api/README.md), [Scanner Runner](services/scanner-runner/README.md), [CLI](clients/cli/README.md)
@@ -224,7 +225,7 @@ For a guided 5–15 minute walkthrough, use [docs/evaluators-guide.md](docs/eval
 | Document                                                               | Description                                                               |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | [docs/evaluators-guide.md](docs/evaluators-guide.md)                   | Structured review path for hiring managers and senior engineers           |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                                      | Short root entrypoint to the architecture material                         |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                     | Short root entrypoint to the architecture material                        |
 | [docs/architecture/system.md](docs/architecture/system.md)             | Full system design, service boundaries, event flow, and threat model      |
 | [docs/reference/configuration.md](docs/reference/configuration.md)     | Environment variables, compose overlays, and topology guidance            |
 | [docs/operations/deployment.md](docs/operations/deployment.md)         | Local, self-hosted, and hosted-demo deployment boundaries                 |

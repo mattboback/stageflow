@@ -122,6 +122,7 @@ func (a *reportAggregation) aggregateScanner(ctx context.Context, scannerID stri
 	addSeverityTotals(&a.totalSeverity, scannerSeverity)
 
 	a.absorbArtifacts(doc.Artifacts)
+	a.absorbErrors(scannerID, doc.Errors)
 }
 
 func (a *reportAggregation) recordScannerFailure(
@@ -168,6 +169,9 @@ func (a *reportAggregation) absorbScannerMetadata(
 		stat.StartedAt = s.StartedAt
 		stat.CompletedAt = s.CompletedAt
 		stat.DurationMs = s.DurationMs
+		if s.Status != "" {
+			stat.Status = s.Status
+		}
 
 		return
 	}
@@ -223,6 +227,16 @@ func (a *reportAggregation) absorbArtifacts(artifacts []report.ReportArtifact) {
 		}
 
 		a.artifactsByID[artifact.Id] = artifact
+	}
+}
+
+func (a *reportAggregation) absorbErrors(scannerID string, errors []report.ReportError) {
+	for _, reportError := range errors {
+		if reportError.ScannerId == nil || *reportError.ScannerId == "" {
+			reportError.ScannerId = stringPtr(scannerID)
+		}
+
+		a.errors = append(a.errors, reportError)
 	}
 }
 

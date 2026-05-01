@@ -6,6 +6,8 @@ export function getScannerStatusTone(status?: ScannerStatus | null): ScannerStat
 	switch (status) {
 		case 'success':
 			return 'success';
+		case 'partial':
+			return 'warning';
 		case 'failed':
 			return 'danger';
 		case 'skipped':
@@ -19,6 +21,8 @@ export function formatScannerStatus(status?: ScannerStatus | null): string {
 	switch (status) {
 		case 'success':
 			return 'Success';
+		case 'partial':
+			return 'Partial';
 		case 'failed':
 			return 'Failed';
 		case 'skipped':

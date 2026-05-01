@@ -1,6 +1,7 @@
 {
   "pages_scanned": 3,
   "scanner_type": "lighthouse",
+  "scanner_violations": 7,
   "state": "SCANNING",
   "timing": {
     "finalization_ms": 0,
@@ -11,5 +12,5 @@
     "write_results_ms": 0
   },
   "type": "scanner_complete",
-  "violations": 7
+  "violations": 9
 }

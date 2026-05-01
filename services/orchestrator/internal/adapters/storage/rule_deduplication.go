@@ -1,6 +1,10 @@
 package storage
 
-import report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+import (
+	"strings"
+
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+)
 
 // RuleEquivalence defines equivalent rules across different scanners.
 // When multiple scanners flag the same underlying issue, we keep only
@@ -158,10 +162,12 @@ func deduplicateIssues(issues []report.IssueDetail) []report.IssueDetail {
 		return issues
 	}
 
-	// Group issues by (pageId, canonicalRuleId)
+	// Group cross-scanner equivalents by page, rule, and element occurrence. Rule-only
+	// grouping hides multiple instances of the same accessibility failure on a page.
 	type issueKey struct {
-		pageID      string
-		canonicalID string
+		pageID        string
+		canonicalID   string
+		occurrenceKey string
 	}
 
 	groups := make(map[issueKey][]report.IssueDetail)
@@ -178,7 +184,18 @@ func deduplicateIssues(issues []report.IssueDetail) []report.IssueDetail {
 			continue
 		}
 
-		key := issueKey{pageID: issue.PageId, canonicalID: canonicalID}
+		occurrenceKey, hasOccurrence := issueOccurrenceKey(issue)
+		if !hasOccurrence {
+			standalone = append(standalone, issue)
+
+			continue
+		}
+
+		key := issueKey{
+			pageID:        issue.PageId,
+			canonicalID:   canonicalID,
+			occurrenceKey: occurrenceKey,
+		}
 		groups[key] = append(groups[key], issue)
 	}
 
@@ -189,6 +206,12 @@ func deduplicateIssues(issues []report.IssueDetail) []report.IssueDetail {
 	for _, group := range groups {
 		if len(group) == 1 {
 			result = append(result, group[0])
+
+			continue
+		}
+
+		if hasSameScannerDuplicate(group) {
+			result = append(result, group...)
 
 			continue
 		}
@@ -231,4 +254,54 @@ func getScannerPriority(scanner string) int {
 	}
 
 	return 50 // Default priority for unknown scanners
+}
+
+func issueOccurrenceKey(issue report.IssueDetail) (string, bool) {
+	if len(issue.Occurrences) == 0 {
+		return "", false
+	}
+
+	occurrence := issue.Occurrences[0]
+	if key, ok := normalizeOccurrencePart(occurrence.Selector); ok {
+		return key, true
+	}
+
+	for _, target := range occurrence.Target {
+		if key, ok := normalizeOccurrencePart(&target); ok {
+			return key, true
+		}
+	}
+
+	if key, ok := normalizeOccurrencePart(occurrence.ElementId); ok {
+		return key, true
+	}
+
+	return "", false
+}
+
+func normalizeOccurrencePart(value *string) (string, bool) {
+	if value == nil {
+		return "", false
+	}
+
+	normalized := strings.ToLower(strings.Join(strings.Fields(*value), " "))
+	if normalized == "" {
+		return "", false
+	}
+
+	return normalized, true
+}
+
+func hasSameScannerDuplicate(group []report.IssueDetail) bool {
+	seen := make(map[string]struct{}, len(group))
+
+	for _, issue := range group {
+		if _, ok := seen[issue.Scanner]; ok {
+			return true
+		}
+
+		seen[issue.Scanner] = struct{}{}
+	}
+
+	return false
 }
