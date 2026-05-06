@@ -14,7 +14,7 @@ import (
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
 		rawScanners  string
-		screenshot   bool
+		screenshot   = true
 		allowPrivate bool
 		timeout      time.Duration
 		noStream     bool
@@ -96,7 +96,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&rawScanners, "scanners", defaultScanScanners, "Comma-separated scanner modules")
-	cmd.Flags().BoolVar(&screenshot, "screenshot", false, "Capture screenshots")
+	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
 	cmd.Flags().BoolVar(
 		&allowPrivate,
 		"allow-private-targets",

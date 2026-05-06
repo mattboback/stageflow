@@ -100,7 +100,7 @@ func newProjectListCmd(root *rootOptions) *cobra.Command {
 			for _, p := range projects {
 				baseline := "-"
 				if p.BaselineJobID != "" {
-					baseline = p.BaselineJobID[:8]
+					baseline = abbreviateID(p.BaselineJobID, 8)
 				}
 
 				fmt.Fprintf(cmd.OutOrStdout(), "%-20s %-30s baseline=%s  urls=%d\n",
@@ -205,4 +205,12 @@ func printProject(cmd *cobra.Command, p apiclient.RemoteProject, format outputFo
 	}
 
 	return nil
+}
+
+func abbreviateID(id string, maxLen int) string {
+	if maxLen <= 0 || len(id) <= maxLen {
+		return id
+	}
+
+	return id[:maxLen]
 }

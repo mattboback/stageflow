@@ -8,10 +8,7 @@ import { type Browser, type BrowserContext, type Page, type Route, chromium } fr
 
 import { createLogger } from '../utils/logger';
 import { resolvePlaywrightImageChromiumExecutablePath } from '../utils/playwright';
-import {
-	shouldEnforceRuntimeTargetValidation,
-	validateRuntimeTargetURL
-} from './target-validation';
+import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';
 import {
 	type BrowserConfig,
 	DEFAULT_WAIT_STRATEGY,
@@ -128,13 +125,15 @@ export class BrowserManager {
 		});
 	}
 
-	async navigateToPage(page: Page, url: string, waitStrategy?: WaitStrategy): Promise<void> {
-		const enforceRuntimeTargetValidation = shouldEnforceRuntimeTargetValidation();
-		if (enforceRuntimeTargetValidation) {
-			await this.ensureRuntimeTargetValidationRouting(page);
-			this.blockedNavigationErrors.delete(page);
-			await validateRuntimeTargetURL(url);
-		}
+	async navigateToPage(
+		page: Page,
+		url: string,
+		waitStrategy?: WaitStrategy,
+		targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
+	): Promise<void> {
+		await this.ensureRuntimeTargetValidationRouting(page, targetValidationPolicy);
+		this.blockedNavigationErrors.delete(page);
+		await validateTargetURLForPolicy(url, targetValidationPolicy);
 
 		const strategy = waitStrategy ?? DEFAULT_WAIT_STRATEGY;
 
@@ -160,21 +159,22 @@ export class BrowserManager {
 			throw err;
 		}
 
-		if (enforceRuntimeTargetValidation) {
-			// Clear any stale route-captured errors from subframe navigations.
-			this.blockedNavigationErrors.delete(page);
+		// Clear any stale route-captured errors from subframe navigations.
+		this.blockedNavigationErrors.delete(page);
 
-			// Validate the final navigated URL (after redirects) as a belt-and-suspenders check.
-			const finalURL = page.url();
-			if (finalURL && finalURL !== url) {
-				await validateRuntimeTargetURL(finalURL);
-			}
+		// Validate the final navigated URL (after redirects) as a belt-and-suspenders check.
+		const finalURL = page.url();
+		if (finalURL && finalURL !== url) {
+			await validateTargetURLForPolicy(finalURL, targetValidationPolicy);
 		}
 
 		await this.applyAdditionalWait(page, strategy);
 	}
 
-	private async ensureRuntimeTargetValidationRouting(page: Page): Promise<void> {
+	private async ensureRuntimeTargetValidationRouting(
+		page: Page,
+		targetValidationPolicy: TargetValidationPolicy
+	): Promise<void> {
 		if (this.runtimeValidationRoutes.has(page)) {
 			return;
 		}
@@ -192,7 +192,7 @@ export class BrowserManager {
 			}
 
 			try {
-				await validateRuntimeTargetURL(requestURL);
+				await validateTargetURLForPolicy(requestURL, targetValidationPolicy);
 				await route.continue();
 			} catch (err) {
 				const error = err instanceof Error ? err : new Error(String(err));

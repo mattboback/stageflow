@@ -92,14 +92,15 @@
 		"tailwind-merge": "^3.4.0"
 	},
 	"overrides": {
-		"axios": "1.15.0",
+		"axios": "1.16.0",
 		"devalue": "5.6.2",
+		"follow-redirects": "1.16.0",
 		"flatted": "3.4.2",
 		"lodash": "4.18.1",
 		"lodash-es": "4.18.1",
 		"minimatch": "10.2.3",
-		"rollup": "4.59.0",
 		"picomatch": "^2.3.2",
+		"rollup": "4.59.0",
 		"vite": "7.3.2"
 	},
 	"resolutions": {

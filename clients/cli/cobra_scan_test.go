@@ -5,6 +5,16 @@ import (
 	"testing"
 )
 
+func TestNewScanCmd_DefaultsScreenshotCaptureOn(t *testing.T) {
+	cmd := newScanCmd(&rootOptions{})
+	flag := cmd.Flags().Lookup("screenshot")
+	if flag == nil {
+		t.Fatal("missing --screenshot flag")
+	}
+
+	requireEqual(t, flag.DefValue, "true", "screenshot default")
+}
+
 func TestInterpretProjectDiffError_MissingBaseline(t *testing.T) {
 	state, matched := interpretProjectDiffError(
 		"demo-site",

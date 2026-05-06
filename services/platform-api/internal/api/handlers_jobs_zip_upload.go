@@ -81,7 +81,7 @@ type zipUploadState struct {
 	fileUploaded   bool
 	modulesValues  []string
 	highlightStyle string
-	screenshot     bool
+	screenshot     *bool
 	zipPath        string
 	scannerConfigs map[string]map[string]any
 }
@@ -243,6 +243,10 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRe
 	}
 
 	style := normalizeHighlightStyle(state.highlightStyle)
+	screenshot := defaultScreenshot
+	if state.screenshot != nil {
+		screenshot = *state.screenshot
+	}
 
 	if detail := validateScannerConfigs(modules, state.scannerConfigs); detail != nil {
 		return nil, newClientDetailError(*detail)
@@ -254,7 +258,7 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRe
 		zipPath:        state.zipPath,
 		modules:        modules,
 		scannerConfigs: state.scannerConfigs,
-		screenshot:     state.screenshot,
+		screenshot:     screenshot,
 		highlightStyle: style,
 	}, nil
 }
@@ -387,7 +391,8 @@ func handleScreenshotPart(ctx context.Context, part *multipart.Part, state *zipU
 		return newClientMessageError("Failed to read screenshot field")
 	}
 
-	state.screenshot = strings.EqualFold(strings.TrimSpace(value), "true")
+	enabled := strings.EqualFold(strings.TrimSpace(value), "true")
+	state.screenshot = &enabled
 
 	return nil
 }

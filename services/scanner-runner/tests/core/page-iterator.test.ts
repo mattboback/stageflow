@@ -256,6 +256,37 @@ describe('PageIterator', () => {
 			expect(mockContext.close).toHaveBeenCalled();
 		});
 
+		it('should pass target validation policy to navigation and scanners', async () => {
+			const localStaticProvenance: Provenance = {
+				...mockProvenance,
+				base_url: 'http://localhost:4173',
+				mode: 'static',
+				pages: [
+					{
+						id: 'page-1',
+						path: '/index.html',
+						url: 'http://localhost:4173/index.html'
+					}
+				]
+			};
+
+			const callback = vi.fn<PageScanCallback>().mockResolvedValue(makeResult());
+
+			await pageIterator.iteratePages(localStaticProvenance, callback);
+
+			expect(mockBrowserManager.navigateToPage).toHaveBeenCalledWith(
+				mockPage,
+				'http://localhost:4173/index.html',
+				{ type: 'load' },
+				{ allowedOrigins: ['http://localhost:4173'] }
+			);
+			expect(callback).toHaveBeenCalledWith(
+				expect.objectContaining({
+					targetValidationPolicy: { allowedOrigins: ['http://localhost:4173'] }
+				})
+			);
+		});
+
 		it('should skip pages marked with skip flag', async () => {
 			const provenanceWithSkip: Provenance = {
 				...mockProvenance,

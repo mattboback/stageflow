@@ -158,7 +158,7 @@ func TestValidateZIP_ExpansionRatio(t *testing.T) {
 }
 
 func TestValidateZIP_MaxEntries(t *testing.T) {
-	const limit = 5000
+	const limit = maxZipEntries
 
 	zipPath := createZIPWithNEntries(t, limit+1, func(i int) string {
 		return fmt.Sprintf("f%d.html", i)
@@ -184,6 +184,22 @@ func TestValidateZIP_MaxEntries(t *testing.T) {
 
 	if validateErr := validateZIP(zipPath2, info2.Size()); validateErr != nil {
 		t.Fatalf("expected under-limit zip to pass, got %v", validateErr)
+	}
+}
+
+func TestExtractZIP_AggregateActualBytesLimit(t *testing.T) {
+	zipPath := createTestZIP(t, map[string]string{
+		"one.html": strings.Repeat("a", 8),
+		"two.html": strings.Repeat("b", 8),
+	})
+
+	err := extractZIPWithLimits(zipPath, t.TempDir(), 12, maxZipEntryUncompressedSize)
+	if err == nil {
+		t.Fatal("expected aggregate extraction limit error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "ZIP too large during extraction") {
+		t.Fatalf("expected aggregate extraction limit error, got %v", err)
 	}
 }
 

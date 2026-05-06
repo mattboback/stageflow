@@ -52,7 +52,7 @@ func writeProjectDoctorJSON(
 		Schema:                  "stageflow-cli/project-doctor@v1",
 		ProjectRoot:             projectRoot,
 		ConfigPath:              configPath,
-		Passed:                  true,
+		Passed:                  allProjectDoctorChecksPassed(checks),
 		APIURL:                  apiURL,
 		URLs:                    urls,
 		AutoAllowPrivateTargets: autoAllowPrivateTargets,
@@ -61,6 +61,19 @@ func writeProjectDoctorJSON(
 	}
 
 	return writeJSONEnvelope(out, payload)
+}
+
+func allProjectDoctorChecksPassed(checks []projectDoctorCheck) bool {
+	for _, check := range checks {
+		switch check.Status {
+		case "passed", "skipped":
+			continue
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 func buildProjectHostedMemory(cfg projectStageflowCfg) projectHostedMemory {

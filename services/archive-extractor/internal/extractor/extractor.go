@@ -4,6 +4,7 @@ package extractor
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,6 +14,14 @@ import (
 	"strings"
 
 	"github.com/mattboback/stageflow/libs/go/storage"
+)
+
+const (
+	maxZipEntries               = 5000                   // protect against tiny-file floods
+	maxZipExpansionRatio        = 100                    // 100x expansion max
+	maxZipUncompressedSize      = 1 * 1024 * 1024 * 1024 // 1 GiB
+	maxZipEntryUncompressedSize = 250 * 1024 * 1024      // 250 MiB
+	maxZipNameLen               = 4096
 )
 
 // Extractor downloads job ZIPs from staging and extracts them safely.
@@ -109,22 +118,14 @@ func validateZIP(zipPath string, fileSize int64) error {
 		}
 	}()
 
-	const (
-		maxEntries               = 5000                   // protect against tiny-file floods
-		maxExpansionRatio        = 100                    // 100x expansion max
-		maxUncompressedSize      = 1 * 1024 * 1024 * 1024 // 1 GiB
-		maxEntryUncompressedSize = 250 * 1024 * 1024      // 250 MiB
-		maxNameLen               = 4096
-	)
-
-	if len(r.File) > maxEntries {
-		return fmt.Errorf("ZIP has too many files (%d > %d)", len(r.File), maxEntries)
+	if len(r.File) > maxZipEntries {
+		return fmt.Errorf("ZIP has too many files (%d > %d)", len(r.File), maxZipEntries)
 	}
 
 	var totalUncompressed uint64
 
 	for _, file := range r.File {
-		if file.Name == "" || len(file.Name) > maxNameLen {
+		if file.Name == "" || len(file.Name) > maxZipNameLen {
 			return fmt.Errorf("invalid entry name length (%d)", len(file.Name))
 		}
 
@@ -136,12 +137,12 @@ func validateZIP(zipPath string, fileSize int64) error {
 			return sanitizeErr
 		}
 
-		if file.UncompressedSize64 > maxEntryUncompressedSize {
+		if file.UncompressedSize64 > maxZipEntryUncompressedSize {
 			return fmt.Errorf(
 				"ZIP entry too large (%s: %d bytes > %d)",
 				file.Name,
 				file.UncompressedSize64,
-				maxEntryUncompressedSize,
+				maxZipEntryUncompressedSize,
 			)
 		}
 
@@ -150,12 +151,12 @@ func validateZIP(zipPath string, fileSize int64) error {
 
 	if fileSize > 0 {
 		ratio := float64(totalUncompressed) / float64(fileSize)
-		if ratio > maxExpansionRatio {
+		if ratio > maxZipExpansionRatio {
 			return fmt.Errorf("ZIP bomb detected: compression ratio %.1fx exceeds limit", ratio)
 		}
 	}
 
-	if totalUncompressed > maxUncompressedSize {
+	if totalUncompressed > maxZipUncompressedSize {
 		return fmt.Errorf("ZIP too large: %d bytes uncompressed exceeds 1GB limit", totalUncompressed)
 	}
 
@@ -191,6 +192,14 @@ func sanitizeZipEntryName(name string) (string, error) {
 }
 
 func extractZIP(zipPath, destDir string) error {
+	return extractZIPWithLimits(zipPath, destDir, maxZipUncompressedSize, maxZipEntryUncompressedSize)
+}
+
+func extractZIPWithLimits(zipPath, destDir string, maxAggregateBytes, maxEntryBytes int64) error {
+	if err := validateExtractionLimits(maxAggregateBytes, maxEntryBytes); err != nil {
+		return err
+	}
+
 	r, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return err
@@ -206,37 +215,81 @@ func extractZIP(zipPath, destDir string) error {
 		return fmt.Errorf("failed to create destination directory: %w", mkdirErr)
 	}
 
+	var totalExtracted int64
+
 	for _, file := range r.File {
-		cleanName, sanitizeErr := sanitizeZipEntryName(file.Name)
-		if sanitizeErr != nil {
-			return sanitizeErr
+		n, extractErr := extractZipEntry(file, destDir, maxEntryBytes)
+		if extractErr != nil {
+			return extractErr
 		}
 
-		// #nosec G305 -- file path is validated below before use.
-		fpath := filepath.Join(destDir, filepath.FromSlash(cleanName))
-		if !isWithinBaseDir(destDir, fpath) {
-			return fmt.Errorf("illegal file path: %s", file.Name)
-		}
-
-		isDir := file.FileInfo().IsDir() || strings.HasSuffix(strings.ReplaceAll(file.Name, "\\", "/"), "/")
-		if isDir {
-			if mkErr := os.MkdirAll(fpath, 0o750); mkErr != nil {
-				return fmt.Errorf("failed to create directory %s: %w", fpath, mkErr)
-			}
-
-			continue
-		}
-
-		if parentErr := os.MkdirAll(filepath.Dir(fpath), 0o750); parentErr != nil {
-			return fmt.Errorf("failed to create parent directory for %s: %w", fpath, parentErr)
-		}
-
-		if extractErr := extractFile(file, fpath); extractErr != nil {
-			return fmt.Errorf("failed to extract %s: %w", file.Name, extractErr)
+		totalExtracted += n
+		if sizeErr := enforceAggregateExtractionLimit(totalExtracted, maxAggregateBytes); sizeErr != nil {
+			return sizeErr
 		}
 	}
 
 	return nil
+}
+
+func validateExtractionLimits(maxAggregateBytes, maxEntryBytes int64) error {
+	if maxAggregateBytes < 1 {
+		return errors.New("max aggregate bytes must be positive")
+	}
+
+	if maxEntryBytes < 1 {
+		return errors.New("max entry bytes must be positive")
+	}
+
+	return nil
+}
+
+func extractZipEntry(file *zip.File, destDir string, maxEntryBytes int64) (int64, error) {
+	cleanName, sanitizeErr := sanitizeZipEntryName(file.Name)
+	if sanitizeErr != nil {
+		return 0, sanitizeErr
+	}
+
+	// #nosec G305 -- file path is validated below before use.
+	fpath := filepath.Join(destDir, filepath.FromSlash(cleanName))
+	if !isWithinBaseDir(destDir, fpath) {
+		return 0, fmt.Errorf("illegal file path: %s", file.Name)
+	}
+
+	if zipEntryIsDir(file) {
+		if mkErr := os.MkdirAll(fpath, 0o750); mkErr != nil {
+			return 0, fmt.Errorf("failed to create directory %s: %w", fpath, mkErr)
+		}
+
+		return 0, nil
+	}
+
+	if parentErr := os.MkdirAll(filepath.Dir(fpath), 0o750); parentErr != nil {
+		return 0, fmt.Errorf("failed to create parent directory for %s: %w", fpath, parentErr)
+	}
+
+	n, extractErr := extractFile(file, fpath, maxEntryBytes)
+	if extractErr != nil {
+		return 0, fmt.Errorf("failed to extract %s: %w", file.Name, extractErr)
+	}
+
+	return n, nil
+}
+
+func zipEntryIsDir(file *zip.File) bool {
+	return file.FileInfo().IsDir() || strings.HasSuffix(strings.ReplaceAll(file.Name, "\\", "/"), "/")
+}
+
+func enforceAggregateExtractionLimit(totalExtracted, maxAggregateBytes int64) error {
+	if totalExtracted <= maxAggregateBytes {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"ZIP too large during extraction: %d bytes exceeds %d byte limit",
+		totalExtracted,
+		maxAggregateBytes,
+	)
 }
 
 func isWithinBaseDir(baseDir, targetPath string) bool {
@@ -259,10 +312,10 @@ func isWithinBaseDir(baseDir, targetPath string) bool {
 	return true
 }
 
-func extractFile(file *zip.File, destPath string) error {
+func extractFile(file *zip.File, destPath string, maxEntryBytes int64) (int64, error) {
 	rc, err := file.Open()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	defer func() {
@@ -280,7 +333,7 @@ func extractFile(file *zip.File, destPath string) error {
 		perm,
 	) // #nosec G304 -- destPath validated earlier
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	defer func() {
@@ -289,17 +342,15 @@ func extractFile(file *zip.File, destPath string) error {
 		}
 	}()
 
-	const maxEntryBytes = int64(250 * 1024 * 1024) // 250 MiB
-
 	// #nosec G110 -- ZIP payload validated before extraction
 	n, err := io.Copy(outFile, io.LimitReader(rc, maxEntryBytes+1))
 	if err != nil {
-		return err
+		return n, err
 	}
 
 	if n > maxEntryBytes {
-		return fmt.Errorf("ZIP entry too large during extraction: %s", file.Name)
+		return n, fmt.Errorf("ZIP entry too large during extraction: %s", file.Name)
 	}
 
-	return nil
+	return n, nil
 }

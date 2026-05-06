@@ -9,8 +9,8 @@ import type { LinkCheckResult } from './types';
 
 import {
 	BlockedTargetError,
-	shouldEnforceRuntimeTargetValidation,
-	validateRuntimeTargetURL
+	type TargetValidationPolicy,
+	validateTargetURLForPolicy
 } from '../../core/target-validation';
 
 const REQUEST_TIMEOUT = 10000;
@@ -21,16 +21,15 @@ const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 async function fetchWithValidatedRedirects(
 	url: string,
 	method: 'HEAD' | 'GET',
-	signal: AbortSignal
+	signal: AbortSignal,
+	targetValidationPolicy: TargetValidationPolicy
 ): Promise<{ response: Response; redirects: string[] }> {
 	let currentURL = url;
 	let currentMethod: 'HEAD' | 'GET' = method;
 	const redirects: string[] = [];
 
 	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
-		if (shouldEnforceRuntimeTargetValidation()) {
-			await validateRuntimeTargetURL(currentURL);
-		}
+		await validateTargetURLForPolicy(currentURL, targetValidationPolicy);
 
 		const response = await fetch(currentURL, {
 			method: currentMethod,
@@ -102,7 +101,10 @@ export function getSeverityForStatus(status: number): IssueSeverity {
 /**
  * Checks a single URL for availability, using HEAD with GET fallback.
  */
-export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
+export async function checkSingleLink(
+	url: string,
+	targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
+): Promise<LinkCheckResult> {
 	const startTime = Date.now();
 
 	try {
@@ -114,7 +116,8 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 			const { response, redirects } = await fetchWithValidatedRedirects(
 				url,
 				'HEAD',
-				controller.signal
+				controller.signal,
+				targetValidationPolicy
 			);
 
 			return {
@@ -148,7 +151,8 @@ export async function checkSingleLink(url: string): Promise<LinkCheckResult> {
 				const { response, redirects } = await fetchWithValidatedRedirects(
 					url,
 					'GET',
-					controller.signal
+					controller.signal,
+					targetValidationPolicy
 				);
 
 				return {

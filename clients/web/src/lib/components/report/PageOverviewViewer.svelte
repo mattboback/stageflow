@@ -148,7 +148,7 @@
 							aria-label={`Page overview for ${page.path ?? page.url} with ${filteredElements.length} highlighted issues`}
 						>
 							<image href={screenshotUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
-							{#each filteredElements as element, idx (`${element.issueId}:${element.nodeIndex}`)}
+							{#each filteredElements as element, idx (`${element.issueId}:${element.nodeIndex}:${idx}`)}
 								{@const issue = issueMap[element.issueId]}
 								{#if issue}
 									{@const strokeColor = getSeverityStrokeColor(issue.severity)}

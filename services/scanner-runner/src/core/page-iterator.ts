@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 import type { BrowserManager } from './browser-manager';
 
 import { createLogger } from '../utils/logger';
+import { buildTargetValidationPolicy } from './target-validation';
 import {
 	DEFAULT_WAIT_STRATEGY,
 	type PageEntry,
@@ -89,10 +90,12 @@ export class PageIterator {
 		const results: PageScanResult[] = [];
 		const activePromises = new Set<Promise<void>>();
 		const context = await this.browserManager.createContext(provenance.default_viewport);
+		const targetValidationPolicy = buildTargetValidationPolicy(provenance);
 
 		this.logger.info('Starting page iteration', {
 			totalPages: pages.length,
-			concurrency: this.config.concurrency
+			concurrency: this.config.concurrency,
+			allowedTargetOrigins: targetValidationPolicy.allowedOrigins
 		});
 
 		try {
@@ -103,6 +106,7 @@ export class PageIterator {
 					i,
 					pages.length,
 					provenance,
+					targetValidationPolicy,
 					scanCallback,
 					callbacks
 				).then((result) => {
@@ -184,6 +188,7 @@ export class PageIterator {
 		index: number,
 		total: number,
 		provenance: Provenance,
+		targetValidationPolicy: ReturnType<typeof buildTargetValidationPolicy>,
 		scanCallback: PageScanCallback,
 		callbacks?: PageIteratorCallbacks
 	): Promise<PageScanResult> {
@@ -215,7 +220,12 @@ export class PageIterator {
 				const waitStrategy: WaitStrategy =
 					pageEntry.wait_for ?? provenance.default_wait_for ?? DEFAULT_WAIT_STRATEGY;
 
-				await this.browserManager.navigateToPage(page, pageEntry.url, waitStrategy);
+				await this.browserManager.navigateToPage(
+					page,
+					pageEntry.url,
+					waitStrategy,
+					targetValidationPolicy
+				);
 
 				if (pageEntry.pre_scan_actions?.length) {
 					await this.browserManager.executePreScanActions(page, pageEntry.pre_scan_actions);
@@ -230,7 +240,8 @@ export class PageIterator {
 					pageEntry,
 					resultsDir: pageResultsDir,
 					config: this.config,
-					logger: this.logger
+					logger: this.logger,
+					targetValidationPolicy
 				};
 
 				result = await scanCallback(scanContext);

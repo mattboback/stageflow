@@ -132,7 +132,7 @@ func buildProjectSubmitJobRequest(cfg projectScanCfg) (apiclient.SubmitJobReques
 		return apiclient.SubmitJobRequest{}, nil, err
 	}
 
-	screenshot := false
+	screenshot := true
 	if cfg.Screenshot != nil {
 		screenshot = *cfg.Screenshot
 	}
@@ -235,7 +235,7 @@ func runProjectCommand(
 		MaxIssues: opts.MaxIssues,
 	})
 	if renderErr != nil {
-		return exitCodeError{Code: 2, Err: renderErr}
+		return wrapRenderError(renderErr)
 	}
 
 	return nil

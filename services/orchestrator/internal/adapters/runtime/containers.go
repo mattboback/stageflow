@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -262,9 +261,13 @@ func (c *Client) WaitContainer(ctx context.Context, containerID string) (*Contai
 		_ = resp.Body.Close()
 	}()
 
-	body, err := io.ReadAll(resp.Body)
+	body, truncated, err := readBoundedPodmanBody(resp.Body, maxPodmanDiagnosticBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read wait response: %w", err)
+	}
+
+	if truncated {
+		return nil, fmt.Errorf("failed to read wait response: response exceeded %d bytes", maxPodmanDiagnosticBytes)
 	}
 
 	if resp.StatusCode >= 400 {
@@ -303,14 +306,18 @@ func (c *Client) GetContainerLogs(ctx context.Context, containerID string, stdou
 		_ = resp.Body.Close()
 	}()
 
-	logs, err := io.ReadAll(resp.Body)
+	logs, truncated, err := readPodmanTail(resp.Body, maxPodmanDiagnosticBytes)
 	if err != nil {
 		return "", fmt.Errorf("failed to read logs: %w", err)
 	}
 
-	if resp.StatusCode >= 400 {
-		return "", fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(logs))
+	if truncated {
+		logs = "[truncated] " + logs
 	}
 
-	return string(logs), nil
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("API error (status %d): %s", resp.StatusCode, logs)
+	}
+
+	return logs, nil
 }
