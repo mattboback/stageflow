@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func newReportCmd(root *rootOptions) *cobra.Command {

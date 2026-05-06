@@ -74,7 +74,10 @@ func waitForCompletedJobReport(
 			return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
 		}
 
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job finished with non-DONE state: %s", status.State)
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf(
+			"job finished with non-DONE state: %s",
+			status.State,
+		)
 	}
 
 	doc, err := fetchReport(ctx, client, jobID)
@@ -148,7 +151,10 @@ func runScanJob(
 	var resp apiclient.SubmitJobResponse
 
 	if err := client.PostJSON(opCtx, "/api/v1/jobs/urls", req, &resp); err != nil {
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("submit job: %w", enhanceSubmitJobError(err, req))
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf(
+			"submit job: %w",
+			enhanceSubmitJobError(err, req),
+		)
 	}
 
 	jobID := resp.JobID

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func newProjectRemoteCmd(root *rootOptions) []*cobra.Command {

@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 )
 
 func newDocsCmd() *cobra.Command {

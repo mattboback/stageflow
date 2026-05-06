@@ -259,10 +259,12 @@ func applyScanPageCompleted(rec *status.JobRecord, payload *events.ScanPageCompl
 func applyScanCompleted(rec *status.JobRecord, payload *events.ScanCompletedPayload, observedAt time.Time) {
 	rec.TotalPages = maxInt(rec.TotalPages, payload.TotalPagesScanned)
 	rec.CurrentPage = maxInt(rec.CurrentPage, payload.TotalPagesScanned)
+
 	alreadyCompleted := containsString(rec.CompletedScanners, payload.ScannerType)
 	if !alreadyCompleted {
 		rec.TotalViolations += payload.Summary.TotalViolations
 	}
+
 	rec.UpdatedAt = observedAt
 
 	if len(rec.ExpectedScanners) == 0 && payload.ScannerType != "" {

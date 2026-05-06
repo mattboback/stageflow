@@ -72,7 +72,7 @@ export function extractIssuesFromResult(deps: {
 	let skippedPassed = 0;
 	let skippedNotApplicable = 0;
 	let skippedInformative = 0;
-	let skippedManual = 0;
+	const skippedManual = 0;
 
 	for (const [auditId, audit] of auditEntries) {
 		// Skip passed audits, informational, or not applicable

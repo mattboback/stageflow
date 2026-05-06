@@ -3,8 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func newScannersCmd(root *rootOptions) *cobra.Command {

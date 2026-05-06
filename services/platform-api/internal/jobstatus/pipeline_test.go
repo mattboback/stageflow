@@ -89,56 +89,33 @@ func TestPipelineBeginSeedsImmediateStatus(t *testing.T) {
 	}
 }
 
-func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
+func TestPipelineApplyPublishesJobCreatedWatchUpdate(t *testing.T) {
 	t.Parallel()
 
-	pipeline := New(&Config{})
-	now := time.Now().UTC()
-
-	if _, err := pipeline.Begin(context.Background(), BeginJob{
-		ObservedAt: now,
-		Payload: &events.JobCreatedPayload{
-			JobID:     "job-watch",
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-			Config:    models.JobConfig{Modules: []string{"axe"}},
-		},
-	}); err != nil {
-		t.Fatalf("Begin() error = %v", err)
-	}
-
-	_, sub, err := pipeline.Watch(context.Background(), "job-watch", WatchOptions{})
-	if err != nil {
-		t.Fatalf("Watch() error = %v", err)
-	}
+	pipeline, sub, now := newWatchedPipeline(t)
 	defer sub.Close()
 
 	// Apply with SignalJobCreated must publish to watchers (advances PENDING → SCANNING).
-	if _, applyErr := pipeline.Apply(context.Background(), Signal{
-		Kind:       SignalJobCreated,
-		ObservedAt: now,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     "job-watch",
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-			Config:    models.JobConfig{Modules: []string{"axe"}},
-		},
-	}); applyErr != nil {
-		t.Fatalf("Apply(JobCreated) error = %v", applyErr)
+	applyJobCreatedToPipeline(t, pipeline, now)
+
+	change := waitWatchUpdate(t, sub, "job.created")
+	if change.Signal.Kind != SignalJobCreated {
+		t.Fatalf("Signal.Kind = %q, want %q", change.Signal.Kind, SignalJobCreated)
 	}
 
-	select {
-	case change := <-sub.Updates():
-		if change.Signal.Kind != SignalJobCreated {
-			t.Fatalf("Signal.Kind = %q, want %q", change.Signal.Kind, SignalJobCreated)
-		}
-
-		if change.Snapshot.State != models.JobStateScanning {
-			t.Fatalf("State = %q, want %q", change.Snapshot.State, models.JobStateScanning)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for watch update from job.created")
+	if change.Snapshot.State != models.JobStateScanning {
+		t.Fatalf("State = %q, want %q", change.Snapshot.State, models.JobStateScanning)
 	}
+}
+
+func TestPipelineApplyAccumulatesScannerCompletionViolations(t *testing.T) {
+	t.Parallel()
+
+	pipeline, sub, now := newWatchedPipeline(t)
+	defer sub.Close()
+
+	applyJobCreatedToPipeline(t, pipeline, now)
+	_ = waitWatchUpdate(t, sub, "job.created")
 
 	if _, applyErr := pipeline.Apply(context.Background(), Signal{
 		Kind:       SignalScanCompleted,
@@ -158,21 +135,17 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 		t.Fatalf("Apply() error = %v", applyErr)
 	}
 
-	select {
-	case change := <-sub.Updates():
-		if change.Signal.Kind != SignalScanCompleted {
-			t.Fatalf("Signal.Kind = %q, want %q", change.Signal.Kind, SignalScanCompleted)
-		}
+	change := waitWatchUpdate(t, sub, "first scanner completion")
+	if change.Signal.Kind != SignalScanCompleted {
+		t.Fatalf("Signal.Kind = %q, want %q", change.Signal.Kind, SignalScanCompleted)
+	}
 
-		if change.Snapshot.TotalViolations != 3 {
-			t.Fatalf("TotalViolations = %d, want 3", change.Snapshot.TotalViolations)
-		}
+	if change.Snapshot.TotalViolations != 3 {
+		t.Fatalf("TotalViolations = %d, want 3", change.Snapshot.TotalViolations)
+	}
 
-		if len(change.Snapshot.CompletedScanners) != 1 || change.Snapshot.CompletedScanners[0] != "axe" {
-			t.Fatalf("unexpected completed scanners: %+v", change.Snapshot.CompletedScanners)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for watch update")
+	if len(change.Snapshot.CompletedScanners) != 1 || change.Snapshot.CompletedScanners[0] != "axe" {
+		t.Fatalf("unexpected completed scanners: %+v", change.Snapshot.CompletedScanners)
 	}
 
 	if _, applyErr := pipeline.Apply(context.Background(), Signal{
@@ -193,19 +166,15 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 		t.Fatalf("Apply() error = %v", applyErr)
 	}
 
-	select {
-	case change := <-sub.Updates():
-		if change.Snapshot.TotalViolations != 5 {
-			t.Fatalf("TotalViolations = %d, want 5", change.Snapshot.TotalViolations)
-		}
+	change = waitWatchUpdate(t, sub, "second scanner completion")
+	if change.Snapshot.TotalViolations != 5 {
+		t.Fatalf("TotalViolations = %d, want 5", change.Snapshot.TotalViolations)
+	}
 
-		if len(change.Snapshot.CompletedScanners) != 2 ||
-			change.Snapshot.CompletedScanners[0] != "axe" ||
-			change.Snapshot.CompletedScanners[1] != "lighthouse" {
-			t.Fatalf("unexpected completed scanners: %+v", change.Snapshot.CompletedScanners)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for second watch update")
+	if len(change.Snapshot.CompletedScanners) != 2 ||
+		change.Snapshot.CompletedScanners[0] != "axe" ||
+		change.Snapshot.CompletedScanners[1] != "lighthouse" {
+		t.Fatalf("unexpected completed scanners: %+v", change.Snapshot.CompletedScanners)
 	}
 
 	if _, applyErr := pipeline.Apply(context.Background(), Signal{
@@ -225,14 +194,69 @@ func TestPipelineApplyPublishesWatchUpdates(t *testing.T) {
 		t.Fatalf("Apply() error = %v", applyErr)
 	}
 
+	change = waitWatchUpdate(t, sub, "duplicate scanner completion")
+	if change.Snapshot.TotalViolations != 5 {
+		t.Fatalf(
+			"TotalViolations = %d, want duplicate scanner completion to stay 5",
+			change.Snapshot.TotalViolations,
+		)
+	}
+}
+
+func newWatchedPipeline(t *testing.T) (*Pipeline, Subscription, time.Time) {
+	t.Helper()
+
+	pipeline := New(&Config{})
+	now := time.Now().UTC()
+
+	if _, err := pipeline.Begin(context.Background(), BeginJob{
+		ObservedAt: now,
+		Payload: &events.JobCreatedPayload{
+			JobID:     "job-watch",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
+		},
+	}); err != nil {
+		t.Fatalf("Begin() error = %v", err)
+	}
+
+	_, sub, err := pipeline.Watch(context.Background(), "job-watch", WatchOptions{})
+	if err != nil {
+		t.Fatalf("Watch() error = %v", err)
+	}
+
+	return pipeline, sub, now
+}
+
+func applyJobCreatedToPipeline(t *testing.T, pipeline *Pipeline, observedAt time.Time) {
+	t.Helper()
+
+	if _, applyErr := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalJobCreated,
+		ObservedAt: observedAt,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     "job-watch",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
+		},
+	}); applyErr != nil {
+		t.Fatalf("Apply(JobCreated) error = %v", applyErr)
+	}
+}
+
+func waitWatchUpdate(t *testing.T, sub Subscription, label string) Change {
+	t.Helper()
+
 	select {
 	case change := <-sub.Updates():
-		if change.Snapshot.TotalViolations != 5 {
-			t.Fatalf("TotalViolations = %d, want duplicate scanner completion to stay 5", change.Snapshot.TotalViolations)
-		}
+		return change
 	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for duplicate scanner watch update")
+		t.Fatalf("timed out waiting for watch update from %s", label)
 	}
+
+	return Change{}
 }
 
 func TestPipelineApplyKeepsFailureStickyAgainstLateSuccess(t *testing.T) {

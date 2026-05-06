@@ -169,6 +169,7 @@ func (a *reportAggregation) absorbScannerMetadata(
 		stat.StartedAt = s.StartedAt
 		stat.CompletedAt = s.CompletedAt
 		stat.DurationMs = s.DurationMs
+
 		if s.Status != "" {
 			stat.Status = s.Status
 		}
