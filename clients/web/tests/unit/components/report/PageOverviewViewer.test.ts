@@ -151,8 +151,8 @@ describe('PageOverviewViewer', () => {
 			expect(container.querySelector('svg')).not.toBeInTheDocument();
 		});
 
-		it('shows empty state when no elements in pageOverview', () => {
-			const { getByText } = render(PageOverviewViewer, {
+		it('renders a screenshot without markers when no elements are in pageOverview', () => {
+			const { container, getByText } = render(PageOverviewViewer, {
 				props: {
 					page: createPage({
 						pageOverview: {
@@ -168,7 +168,10 @@ describe('PageOverviewViewer', () => {
 				}
 			});
 
-			expect(getByText(/no overlay metadata available/i)).toBeInTheDocument();
+			expect(getByText(/no overlay markers were produced/i)).toBeInTheDocument();
+			expect(container.querySelector("[data-testid='page-overview']")).toBeInTheDocument();
+			expect(container.querySelector('svg image')).toBeInTheDocument();
+			expect(container.querySelectorAll("[data-testid='page-overview-marker']")).toHaveLength(0);
 		});
 
 		it('shows empty state when pageOverview dimensions are invalid', () => {

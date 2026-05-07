@@ -21,6 +21,8 @@
 	const elements = $derived(page.pageOverview?.elements ?? []);
 	const pageWidth = $derived(page.pageOverview?.pageWidth ?? 0);
 	const pageHeight = $derived(page.pageOverview?.pageHeight ?? 0);
+	const canRenderOverview = $derived(Boolean(screenshotUrl) && pageWidth > 0 && pageHeight > 0);
+	const hasOverlayElements = $derived(elements.length > 0);
 
 	let zoom = $state(1);
 
@@ -83,46 +85,54 @@
 </script>
 
 <div class="space-y-3">
-	<div class="text-ink-muted flex flex-wrap items-center justify-between gap-3 text-xs">
-		<div class="flex flex-wrap items-center gap-2">
-			<span class="font-semibold tracking-wide uppercase">Overlay filters</span>
-			{#each Object.entries(severityFilters) as [key, enabled] (key)}
+	{#if canRenderOverview}
+		<div class="text-ink-muted flex flex-wrap items-center justify-between gap-3 text-xs">
+			{#if hasOverlayElements}
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="font-semibold tracking-wide uppercase">Overlay filters</span>
+					{#each Object.entries(severityFilters) as [key, enabled] (key)}
+						<Chip
+							as="button"
+							type="button"
+							caps
+							interactive
+							tone={enabled ? 'active' : 'default'}
+							onclick={() => toggleSeverity(key as keyof typeof severityFilters)}
+						>
+							{key}
+						</Chip>
+					{/each}
+				</div>
+			{:else}
+				<p class="text-ink-muted text-xs">No overlay markers were produced for this page.</p>
+			{/if}
+
+			<div class="flex items-center gap-2">
 				<Chip
 					as="button"
 					type="button"
-					caps
 					interactive
-					tone={enabled ? 'active' : 'default'}
-					onclick={() => toggleSeverity(key as keyof typeof severityFilters)}
+					onclick={() => adjustZoom(-0.2)}
+					title="Zoom out"
 				>
-					{key}
+					-
 				</Chip>
-			{/each}
+				<span class="text-ink-muted tabular-nums">{Math.round(zoom * 100)}%</span>
+				<Chip as="button" type="button" interactive onclick={() => adjustZoom(0.2)} title="Zoom in">
+					+
+				</Chip>
+				<Chip as="button" type="button" interactive onclick={resetZoom} title="Reset zoom">
+					Reset
+				</Chip>
+			</div>
 		</div>
-
-		<div class="flex items-center gap-2">
-			<Chip as="button" type="button" interactive onclick={() => adjustZoom(-0.2)} title="Zoom out">
-				-
-			</Chip>
-			<span class="text-ink-muted tabular-nums">{Math.round(zoom * 100)}%</span>
-			<Chip as="button" type="button" interactive onclick={() => adjustZoom(0.2)} title="Zoom in">
-				+
-			</Chip>
-			<Chip as="button" type="button" interactive onclick={resetZoom} title="Reset zoom">
-				Reset
-			</Chip>
-		</div>
-	</div>
+	{/if}
 
 	{#if !screenshotUrl}
 		<Panel variant="muted" padding="lg" rounded="2xl" class="text-ink-muted text-center text-sm">
 			No page overview screenshot available for this scan.
 		</Panel>
-	{:else if elements.length === 0}
-		<Panel variant="muted" padding="lg" rounded="2xl" class="text-ink-muted text-center text-sm">
-			No overlay metadata available for this page.
-		</Panel>
-	{:else if pageWidth > 0 && pageHeight > 0}
+	{:else if canRenderOverview}
 		<Panel
 			padding="none"
 			rounded="2xl"
