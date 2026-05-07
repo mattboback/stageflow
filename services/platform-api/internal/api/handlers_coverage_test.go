@@ -922,6 +922,7 @@ func TestHandleJobURLSubmitSuccess(t *testing.T) {
 	if !ok {
 		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
 	}
+
 	if !published.Config.Screenshot {
 		t.Fatal("expected omitted screenshot field to default to true")
 	}
@@ -959,6 +960,7 @@ func TestHandleJobURLSubmitExplicitScreenshotFalse(t *testing.T) {
 	if !ok {
 		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
 	}
+
 	if published.Config.Screenshot {
 		t.Fatal("expected explicit screenshot=false to be honored")
 	}
@@ -1061,6 +1063,7 @@ func TestZipUploadDefaultsScreenshotCaptureOn(t *testing.T) {
 	if !ok {
 		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
 	}
+
 	if !published.Config.Screenshot {
 		t.Fatal("expected omitted multipart screenshot field to default to true")
 	}

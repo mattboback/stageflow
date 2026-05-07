@@ -244,6 +244,7 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRe
 
 	style := normalizeHighlightStyle(state.highlightStyle)
 	screenshot := defaultScreenshot
+
 	if state.screenshot != nil {
 		screenshot = *state.screenshot
 	}

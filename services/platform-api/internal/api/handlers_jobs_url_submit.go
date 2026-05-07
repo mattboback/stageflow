@@ -99,6 +99,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 
 	highlightStyle := normalizeHighlightStyle(req.HighlightStyle)
 	screenshot := defaultScreenshot
+
 	if req.Screenshot != nil {
 		screenshot = *req.Screenshot
 	}
