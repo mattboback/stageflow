@@ -1,6 +1,6 @@
 <script lang="ts">
 	import GithubIcon from '$lib/components/icons/GithubIcon.svelte';
-	import HeroScanPreview from '$lib/components/landing/HeroScanPreview.svelte';
+	import NexusDashboardHero from '$lib/components/landing/NexusDashboardHero.svelte';
 	import { Chip, buttonVariants } from '$lib/components/ui';
 	import { SITE } from '$lib/config/site';
 	import { cn } from '$lib/utils';
@@ -16,12 +16,6 @@
 		ShieldCheck,
 		Zap
 	} from 'lucide-svelte';
-
-	const metrics = [
-		{ value: '8', label: 'Scanners in one run' },
-		{ value: 'SSE', label: 'Live progress stream' },
-		{ value: '100%', label: 'Self-hosted control' }
-	] as const;
 
 	const poweredBy = [
 		{ icon: Box, label: 'Podman' },
@@ -175,79 +169,62 @@
 </svelte:head>
 
 <div class="landing-shell min-h-screen">
-	<section class="landing-hero pt-32 pb-20 sm:pt-36">
+	<section class="landing-hero pt-28 pb-8 sm:pt-32">
 		<div class="container-width">
-			<div class="landing-grid lg:grid-cols-[minmax(0,1fr)_420px]">
-				<div class="max-w-3xl">
-					<div class="mb-6 flex flex-wrap items-center gap-3">
-						<p class="section-kicker">Open-Source Scanning Platform</p>
-						<Chip tone="muted" size="sm" class="landing-chip gap-1.5">
-							<GithubIcon class="h-3.5 w-3.5" />
-							Open Source
-						</Chip>
-					</div>
-
-					<h1 class="h1-display landing-headline">
-						Catch accessibility, performance, and security issues
-						<span class="text-accent">before release day.</span>
-					</h1>
-
-					<p class="landing-subhead mt-6">
-						{SITE.tagline}. StageFlow merges eight scanners into one operational flow, so you can
-						move from URL to remediation with less friction.
-					</p>
-
-					<div class="mt-8 flex flex-wrap gap-3">
-						<a
-							href="/playground"
-							class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 px-7 text-base')}
-						>
-							Start scanning
-							<ArrowRight class="h-4 w-4" />
-						</a>
-						<a
-							href={SITE.githubUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 px-7 text-base')}
-						>
-							<GithubIcon class="h-4 w-4" />
-							View source
-						</a>
-					</div>
-
-					<div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2">
-						<span class="hero-preview-legend font-semibold">Powered by</span>
-						{#each poweredBy as item (item.label)}
-							{@const PoweredIcon = item.icon}
-							<span class="hero-preview-legend flex items-center gap-1.5">
-								<PoweredIcon class="h-3.5 w-3.5" />
-								{item.label}
-							</span>
-						{/each}
-					</div>
-
-					<div class="metric-strip">
-						{#each metrics as item (item.label)}
-							<div class="metric-card">
-								<p class="metric-value">{item.value}</p>
-								<p class="metric-label">{item.label}</p>
-							</div>
-						{/each}
-					</div>
+			<!-- Centered headline + CTAs -->
+			<div class="mx-auto max-w-3xl text-center">
+				<div class="mb-5 flex flex-wrap items-center justify-center gap-3">
+					<p class="section-kicker">Open-Source Scanning Platform</p>
+					<Chip tone="muted" size="sm" class="landing-chip gap-1.5">
+						<GithubIcon class="h-3.5 w-3.5" />
+						Open Source
+					</Chip>
 				</div>
 
-				<div class="space-y-4">
-					<HeroScanPreview />
-					<div class="hero-summary-card hidden xl:block">
-						<p class="hero-summary-label">Latest run signal</p>
-						<p class="hero-summary-value">94 / 100</p>
-						<p class="text-ink-muted mt-2 text-sm leading-relaxed">
-							Accessibility and security passed baseline. SEO flags reduced by 37% from the previous
-							sweep.
-						</p>
-					</div>
+				<h1 class="h1-display landing-headline">
+					Catch accessibility, performance, and security issues
+					<span class="text-accent">before release day.</span>
+				</h1>
+
+				<p class="landing-subhead mx-auto mt-5">
+					{SITE.tagline}. StageFlow merges eight scanners into one operational flow, so you can
+					move from URL to remediation with less friction.
+				</p>
+
+				<div class="mt-7 flex flex-wrap justify-center gap-3">
+					<a
+						href="/playground"
+						class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 px-7 text-base')}
+					>
+						Start scanning
+						<ArrowRight class="h-4 w-4" />
+					</a>
+					<a
+						href={SITE.githubUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 px-7 text-base')}
+					>
+						<GithubIcon class="h-4 w-4" />
+						View source
+					</a>
 				</div>
+
+				<div class="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+					<span class="hero-preview-legend font-semibold">Powered by</span>
+					{#each poweredBy as item (item.label)}
+						{@const PoweredIcon = item.icon}
+						<span class="hero-preview-legend flex items-center gap-1.5">
+							<PoweredIcon class="h-3.5 w-3.5" />
+							{item.label}
+						</span>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Full-width Nexus bento dashboard card -->
+			<div class="mt-12">
+				<NexusDashboardHero />
 			</div>
 		</div>
 	</section>
