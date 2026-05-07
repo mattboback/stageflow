@@ -9,17 +9,29 @@
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ScannerStatus".
  */
-export type ScannerStatus = "success" | "failed" | "skipped";
+export type ScannerStatus = "success" | "partial" | "failed" | "skipped";
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "IssueSeverity".
  */
-export type IssueSeverity = "critical" | "serious" | "moderate" | "minor" | "info";
+export type IssueSeverity =
+  | "critical"
+  | "serious"
+  | "moderate"
+  | "minor"
+  | "info";
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "UserGroup".
  */
-export type UserGroup = "blind" | "low-vision" | "motor" | "cognitive" | "deaf" | "vestibular" | "all";
+export type UserGroup =
+  | "blind"
+  | "low-vision"
+  | "motor"
+  | "cognitive"
+  | "deaf"
+  | "vestibular"
+  | "all";
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "UserImpactSeverity".

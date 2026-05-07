@@ -39,7 +39,10 @@ export class LinkCheckerScanner extends ScannerBase {
 				url: pageEntry.url
 			});
 
-			const results = await this.checkLinks(links);
+			const results = await this.checkLinks(
+				links,
+				context.targetValidationPolicy ?? { allowedOrigins: [] }
+			);
 
 			const brokenLinks: LinkCheckResult[] = [];
 			const redirectChains: LinkCheckResult[] = [];
@@ -254,12 +257,17 @@ export class LinkCheckerScanner extends ScannerBase {
 		}, baseUrl);
 	}
 
-	private async checkLinks(links: LinkInfo[]): Promise<LinkCheckResult[]> {
+	private async checkLinks(
+		links: LinkInfo[],
+		targetValidationPolicy: NonNullable<ScanContext['targetValidationPolicy']>
+	): Promise<LinkCheckResult[]> {
 		const results: LinkCheckResult[] = [];
 
 		for (let i = 0; i < links.length; i += this.maxConcurrentRequests) {
 			const batch = links.slice(i, i + this.maxConcurrentRequests);
-			const batchResults = await Promise.all(batch.map((link) => checkSingleLink(link.href)));
+			const batchResults = await Promise.all(
+				batch.map((link) => checkSingleLink(link.href, targetValidationPolicy))
+			);
 			results.push(...batchResults);
 
 			if (i + this.maxConcurrentRequests < links.length) {

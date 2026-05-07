@@ -24,7 +24,7 @@ export const DEFAULT_CONTEXT_CONFIG: ContextSnippetConfig = {
 /**
  * Result of context snippet extraction.
  */
-export interface ContextSnippetResult {
+interface ContextSnippetResult {
 	/** The element's outer HTML with surrounding context */
 	contextHtml: string;
 	/** Breadcrumb path of ancestors (e.g., "html > body > main > div.container") */

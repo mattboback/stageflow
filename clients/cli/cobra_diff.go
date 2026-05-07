@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/diffrender"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	"github.com/mattboback/stageflow/libs/go/diff"
@@ -152,8 +153,8 @@ func runLiveDiffScan(
 	timeout time.Duration,
 	noStream bool,
 ) (reportEnvelope, string, error) {
-	client := NewClient(root.apiURL, root.apiKey, nil)
-	req := SubmitJobRequest{
+	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
+	req := apiclient.SubmitJobRequest{
 		URLs:                []string{currentTarget},
 		Modules:             diffScanModules(baselineEnv),
 		AllowPrivateTargets: urlcheck.ContainsPrivateTargets([]string{currentTarget}),

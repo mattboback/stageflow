@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func TestRenderScanners_DefaultTextOutput(t *testing.T) {
-	response := ScannersResponse{
-		Scanners: []ScannerInfo{
+	response := apiclient.ScannersResponse{
+		Scanners: []apiclient.ScannerInfo{
 			{ID: "seo", Name: "SEO Scanner", Enabled: true, Categories: []string{"seo"}, Version: "1.0.0"},
 		},
 		Total:   1,
@@ -31,8 +33,8 @@ func TestRenderScanners_DefaultTextOutput(t *testing.T) {
 }
 
 func TestRenderScanners_JSONOutput(t *testing.T) {
-	response := ScannersResponse{
-		Scanners: []ScannerInfo{
+	response := apiclient.ScannersResponse{
+		Scanners: []apiclient.ScannerInfo{
 			{ID: "axe", Name: "Axe Accessibility Scanner", Enabled: true},
 		},
 		Total:   1,
@@ -55,8 +57,8 @@ func TestRenderScanners_JSONOutput(t *testing.T) {
 }
 
 func TestRenderScanners_MarkdownOutput(t *testing.T) {
-	response := ScannersResponse{
-		Scanners: []ScannerInfo{
+	response := apiclient.ScannersResponse{
+		Scanners: []apiclient.ScannerInfo{
 			{
 				ID:         "link-checker",
 				Name:       "Link Checker",

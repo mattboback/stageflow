@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func newProjectRemoteCmd(root *rootOptions) []*cobra.Command {
@@ -41,7 +43,7 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 				return exitCodeError{Code: 2, Err: errors.New("at least one --url is required")}
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			p, err := client.CreateProject(cmd.Context(), slug, name, urls, scanners)
 			if err != nil {
@@ -70,7 +72,7 @@ func newProjectListCmd(root *rootOptions) *cobra.Command {
 		Short: "List remote projects",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			projects, err := client.ListProjects(cmd.Context())
 			if err != nil {
@@ -98,7 +100,7 @@ func newProjectListCmd(root *rootOptions) *cobra.Command {
 			for _, p := range projects {
 				baseline := "-"
 				if p.BaselineJobID != "" {
-					baseline = p.BaselineJobID[:8]
+					baseline = abbreviateID(p.BaselineJobID, 8)
 				}
 
 				fmt.Fprintf(cmd.OutOrStdout(), "%-20s %-30s baseline=%s  urls=%d\n",
@@ -116,7 +118,7 @@ func newProjectShowCmd(root *rootOptions) *cobra.Command {
 		Short: "Show remote project details",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			p, err := client.GetProject(cmd.Context(), args[0])
 			if err != nil {
@@ -139,7 +141,7 @@ func newProjectDeleteCmd(root *rootOptions) *cobra.Command {
 		Short: "Delete a remote project",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			if err := client.DeleteProject(cmd.Context(), args[0]); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("delete project: %w", err)}
@@ -164,7 +166,7 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 				return exitCodeError{Code: 2, Err: errors.New("--job-id is required")}
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			if err := client.PromoteBaseline(cmd.Context(), args[0], jobID); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("promote baseline: %w", err)}
@@ -181,7 +183,7 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func printProject(cmd *cobra.Command, p RemoteProject, format outputFormat) error {
+func printProject(cmd *cobra.Command, p apiclient.RemoteProject, format outputFormat) error {
 	if format == outputFormatJSON {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
@@ -203,4 +205,12 @@ func printProject(cmd *cobra.Command, p RemoteProject, format outputFormat) erro
 	}
 
 	return nil
+}
+
+func abbreviateID(id string, maxLen int) string {
+	if maxLen <= 0 || len(id) <= maxLen {
+		return id
+	}
+
+	return id[:maxLen]
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -49,7 +50,7 @@ func newStreamState() *streamState {
 	}
 }
 
-// waitJobState waits for the job to reach a terminal state.
+// WaitJobState waits for the job to reach a terminal state.
 // If noStream is true, it polls the API instead of using Server-Sent Events.
 func WaitJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer, noStream bool) error {
 	if noStream {
@@ -67,7 +68,7 @@ func WaitJobState(ctx context.Context, c *apiclient.Client, jobID string, out io
 }
 
 func pollJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {
-	apiPath := fmt.Sprintf("/api/v1/jobs/%s", jobID)
+	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -117,7 +118,7 @@ func checkPolledJobStatus(
 }
 
 func sseJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {
-	apiPath := fmt.Sprintf("/api/v1/jobs/%s/stream", jobID)
+	apiPath := fmt.Sprintf("/api/v1/jobs/%s/stream", url.PathEscape(jobID))
 
 	reqURL, err := c.BuildURL(apiPath)
 	if err != nil {
@@ -137,13 +138,7 @@ func sseJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.
 	}
 
 	defer func() {
-		_, copyErr := io.Copy(io.Discard, resp.Body)
-		if copyErr != nil {
-			return
-		}
-
-		closeErr := resp.Body.Close()
-		if closeErr != nil {
+		if drainErr := drainAndCloseResponseBody(resp.Body); drainErr != nil {
 			return
 		}
 	}()
@@ -155,6 +150,17 @@ func sseJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.
 	reader := bufio.NewReaderSize(resp.Body, 1024*1024)
 
 	return consumeSSEUpdates(ctx, reader, out)
+}
+
+func drainAndCloseResponseBody(body io.ReadCloser) error {
+	_, copyErr := io.Copy(io.Discard, body)
+	closeErr := body.Close()
+
+	if copyErr != nil {
+		return copyErr
+	}
+
+	return closeErr
 }
 
 func readNextSSEEvent(r *bufio.Reader) (eventType, data string, err error) {

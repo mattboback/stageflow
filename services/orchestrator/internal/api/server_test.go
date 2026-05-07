@@ -159,6 +159,52 @@ func newAuthedRequest(method, target string) *http.Request {
 	return req
 }
 
+func TestRequireAuthRejectsEmptyConfiguredToken(t *testing.T) {
+	srv := NewServer(&Config{APIToken: "", Port: "0"})
+	called := false
+	handler := srv.requireAuth(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	requests := []*http.Request{
+		httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil),
+		httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil),
+		httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil),
+	}
+	requests[1].Header.Set("Authorization", "Bearer ")
+	requests[2].Header.Set("X-Api-Key", "anything")
+
+	for _, req := range requests {
+		called = false
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("expected status 401, got %d", rec.Code)
+		}
+
+		if called {
+			t.Fatal("handler was called with empty configured API token")
+		}
+	}
+}
+
+func TestRequireAuthAllowsValidToken(t *testing.T) {
+	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	handler := srv.requireAuth(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, newAuthedRequest(http.MethodGet, "/api/v1/jobs"))
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d", rec.Code)
+	}
+}
+
 func TestHandleListJobsFiltersAndPagination(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()

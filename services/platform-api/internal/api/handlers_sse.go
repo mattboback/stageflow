@@ -128,6 +128,8 @@ func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
 		}
 
 		if change.Signal.ScanCompleted != nil {
+			payload["scanner_violations"] = change.Signal.ScanCompleted.Summary.TotalViolations
+
 			if change.Signal.ScanCompleted.ScannerType != "" {
 				payload["scanner_type"] = change.Signal.ScanCompleted.ScannerType
 			}

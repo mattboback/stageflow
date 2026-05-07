@@ -4,6 +4,8 @@
 
 import type { BrowserContext, Page } from 'playwright';
 
+import type { TargetValidationPolicy } from './target-validation';
+
 export type WaitStrategyType = 'load' | 'domcontentloaded' | 'networkidle' | 'selector' | 'timeout';
 
 export interface WaitStrategyLoad {
@@ -232,6 +234,7 @@ export interface ScanContext {
 	resultsDir: string;
 	config: ScannerConfig;
 	logger: ScannerLogger;
+	targetValidationPolicy?: TargetValidationPolicy;
 }
 
 export interface ScannerLifecycleHooks {

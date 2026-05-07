@@ -228,7 +228,6 @@ describe('LinkCheckerScanner', () => {
 		});
 
 		it('blocks non-public link targets during URL jobs', async () => {
-			process.env.SCAN_URLS = '["https://example.com"]';
 			const mockFetch = vi.fn();
 			globalThis.fetch = mockFetch;
 
@@ -239,6 +238,26 @@ describe('LinkCheckerScanner', () => {
 			expect(result.status).toBeNull();
 			expect(result.error).toContain('Blocked target URL');
 			expect(mockFetch).not.toHaveBeenCalled();
+		});
+
+		it('allows links on the exact static local origin from policy', async () => {
+			const mockFetch = vi.fn().mockResolvedValue({
+				status: 200,
+				redirected: false,
+				url: 'http://localhost:4173/page'
+			});
+			globalThis.fetch = mockFetch;
+
+			const resultPromise = checkSingleLink('http://localhost:4173/page', {
+				allowedOrigins: ['http://localhost:4173']
+			});
+
+			await vi.advanceTimersByTimeAsync(0);
+			const result = await resultPromise;
+
+			expect(result.status).toBe(200);
+			expect(result.error).toBeNull();
+			expect(mockFetch).toHaveBeenCalled();
 		});
 	});
 

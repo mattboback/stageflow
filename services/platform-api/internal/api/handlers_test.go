@@ -916,6 +916,26 @@ func (f *fakeStorage) FileExists(_ context.Context, bucket, path string) (bool, 
 	return ok, nil
 }
 
+func TestReadLimitedReportJSON(t *testing.T) {
+	data, err := readLimitedReportJSON(strings.NewReader("12345"), 5)
+	if err != nil {
+		t.Fatalf("readLimitedReportJSON exact limit: %v", err)
+	}
+
+	if string(data) != "12345" {
+		t.Fatalf("data = %q", data)
+	}
+
+	_, err = readLimitedReportJSON(strings.NewReader("123456"), 5)
+	if err == nil {
+		t.Fatal("expected over-limit error")
+	}
+
+	if !strings.Contains(err.Error(), "exceeds 5 byte limit") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func strPtr(value string) *string {
 	if value == "" {
 		return nil

@@ -4,12 +4,14 @@ set -Eeuo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GO_BIN="${GO:-go}"
 BUN_BIN="${BUN:-bun}"
+NODE_BIN="${NODE:-node}"
 PODMAN_BIN="${PODMAN:-podman}"
 JUST_BIN="${JUST:-just}"
 CURL_BIN="${CURL:-curl}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
 EXPECTED_GO_MIN="1.26.2"
 EXPECTED_BUN_MIN="1.3.8"
+EXPECTED_NODE_MAJOR="22"
 
 fatal_count=0
 warn_count=0
@@ -70,10 +72,65 @@ read_env_value() {
 	printf '%s' "${line#*=}"
 }
 
+port_in_use() {
+	local port="$1"
+	local socket
+
+	if command -v ss >/dev/null 2>&1; then
+		while IFS= read -r socket; do
+			[[ "$socket" == *":$port" ]] && return 0
+		done < <(ss -H -ltn 2>/dev/null | awk '{print $4}')
+		return 1
+	fi
+
+	if command -v lsof >/dev/null 2>&1; then
+		lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
+		return
+	fi
+
+	return 2
+}
+
+check_default_ports() {
+	local conflicts=0
+	local entry
+	local label
+	local port
+	local required_ports=(
+		"3000:frontend demo"
+		"3001:Grafana"
+		"3010:local frontend overlay"
+		"4222:NATS"
+		"8080:Platform API"
+		"9000:MinIO API"
+		"9001:MinIO console"
+	)
+
+	if ! command -v ss >/dev/null 2>&1 && ! command -v lsof >/dev/null 2>&1; then
+		warn "Cannot inspect local port listeners because neither \`ss\` nor \`lsof\` is installed."
+		return
+	fi
+
+	for entry in "${required_ports[@]}"; do
+		port="${entry%%:*}"
+		label="${entry#*:}"
+
+		if port_in_use "$port"; then
+			warn "Port $port is already listening ($label). Stop the conflicting service before \`just demo\` or \`just dev up\`; otherwise setup may reach the wrong local service."
+			conflicts=$((conflicts + 1))
+		fi
+	done
+
+	if (( conflicts == 0 )); then
+		pass "Default local stack ports are free"
+	fi
+}
+
 say "==> StageFlow local diagnose"
 
 require_command "$GO_BIN" "Go"
 require_command "$BUN_BIN" "Bun"
+require_command "$NODE_BIN" "Node.js"
 require_command "$PODMAN_BIN" "Podman"
 require_command "$JUST_BIN" "just"
 require_command "$CURL_BIN" "curl"
@@ -93,6 +150,17 @@ if command -v "$BUN_BIN" >/dev/null 2>&1; then
 		pass "Bun version $bun_version (need >= $EXPECTED_BUN_MIN)"
 	else
 		fail "Bun version $bun_version is too old (need >= $EXPECTED_BUN_MIN)."
+	fi
+fi
+
+if command -v "$NODE_BIN" >/dev/null 2>&1; then
+	node_version="$("$NODE_BIN" --version)"
+	node_major="${node_version#v}"
+	node_major="${node_major%%.*}"
+	if [[ "$node_major" == "$EXPECTED_NODE_MAJOR" ]]; then
+		pass "Node.js version $node_version (need $EXPECTED_NODE_MAJOR.x)"
+	else
+		fail "Node.js version $node_version does not match required major $EXPECTED_NODE_MAJOR.x. Use the version in .node-version or set NODE=/path/to/node."
 	fi
 fi
 
@@ -122,6 +190,12 @@ if command -v "$PODMAN_BIN" >/dev/null 2>&1; then
 		fail "Podman socket missing at $socket_path. Start it with \`systemctl --user start podman.socket\`."
 	fi
 
+	if [[ -c /dev/net/tun ]]; then
+		pass "/dev/net/tun is available for rootless Podman networking"
+	else
+		warn "/dev/net/tun is missing. Rootless Podman networking can fail with \`Failed to open() /dev/net/tun\` when using pasta or slirp4netns."
+	fi
+
 	if "$PODMAN_BIN" network inspect stageflow_net >/dev/null 2>&1; then
 		pass "Podman network \`stageflow_net\` already exists"
 	else
@@ -132,12 +206,16 @@ if command -v "$PODMAN_BIN" >/dev/null 2>&1; then
 	check_image "localhost/stageflow/scanner-runner:latest"
 fi
 
+check_default_ports
+
 if [[ -f "$ENV_FILE" ]]; then
 	pass "Found $(basename "$ENV_FILE")"
 
 	vite_api_url="$(read_env_value VITE_API_URL || true)"
 	vite_site_url="$(read_env_value VITE_SITE_URL || true)"
 	public_domain="$(read_env_value STAGEFLOW_PUBLIC_DOMAIN || true)"
+	minio_root_user="$(read_env_value MINIO_ROOT_USER || true)"
+	minio_access_key="$(read_env_value MINIO_ACCESS_KEY || true)"
 
 	if [[ -n "$vite_api_url" && ! "$vite_api_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then
 		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. \`just demo\` overrides this for the containerized demo, but \`just run clients/web\` and \`stageflow project\` expect http://localhost:8080 for repo-local work."
@@ -149,6 +227,10 @@ if [[ -f "$ENV_FILE" ]]; then
 
 	if [[ -n "$public_domain" && "$public_domain" != "localhost" ]]; then
 		warn "$(basename "$ENV_FILE") still uses STAGEFLOW_PUBLIC_DOMAIN=$public_domain. For repo-local work, prefer localhost."
+	fi
+
+	if [[ -n "$minio_root_user" && -n "$minio_access_key" && "$minio_root_user" == "$minio_access_key" ]]; then
+		fail "$(basename "$ENV_FILE") sets MINIO_ACCESS_KEY equal to MINIO_ROOT_USER. Use separate app-user credentials before running \`just dev init\`."
 	fi
 else
 	fail "Missing $(basename "$ENV_FILE"). Copy .env.example to .env before starting the stack."

@@ -237,6 +237,40 @@ dev:
 	requireEqual(t, payload.Checks[2].Status, "skipped", "payload.Checks[2].Status")
 }
 
+func TestWriteProjectDoctorJSONComputesPassedFromChecks(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+
+	err := writeProjectDoctorJSON(
+		&stdout,
+		"/project",
+		"/project/.stageflow/config.yaml",
+		"http://localhost:8080",
+		[]string{"https://example.com"},
+		projectStageflowCfg{},
+		false,
+		[]projectDoctorCheck{
+			{Name: "config", Status: "passed"},
+			{Name: "dev-readiness", Status: "failed", Message: "not ready"},
+		},
+	)
+	requireNoErr(t, err)
+
+	var payload projectDoctorEnvelope
+	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	requireEqual(t, payload.Passed, false, "payload.Passed")
+}
+
+func TestAbbreviateIDHandlesShortIDs(t *testing.T) {
+	t.Parallel()
+
+	requireEqual(t, abbreviateID("", 8), "", "empty id")
+	requireEqual(t, abbreviateID("short", 8), "short", "short id")
+	requireEqual(t, abbreviateID("123456789", 8), "12345678", "long id")
+	requireEqual(t, abbreviateID("short", 0), "short", "zero max")
+}
+
 func TestRunProjectDoctorCommand_SkipDevJSONHostedMemory(t *testing.T) {
 	root := t.TempDir()
 

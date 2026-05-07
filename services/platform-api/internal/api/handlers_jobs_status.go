@@ -20,6 +20,8 @@ import (
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
+const maxReportJSONBytes = 64 * 1024 * 1024
+
 func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -317,7 +319,7 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 	}
 	defer reader.Close()
 
-	data, err := io.ReadAll(reader)
+	data, err := readLimitedReportJSON(reader, maxReportJSONBytes)
 	if err != nil {
 		return report.UnifiedReportV2{}, fmt.Errorf("read report for %s: %w", jobID, err)
 	}
@@ -330,4 +332,21 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 	}
 
 	return rpt, nil
+}
+
+func readLimitedReportJSON(reader io.Reader, limit int64) ([]byte, error) {
+	if limit < 1 {
+		return nil, errors.New("report size limit must be positive")
+	}
+
+	data, err := io.ReadAll(io.LimitReader(reader, limit+1))
+	if err != nil {
+		return nil, err
+	}
+
+	if int64(len(data)) > limit {
+		return nil, fmt.Errorf("report JSON exceeds %d byte limit", limit)
+	}
+
+	return data, nil
 }

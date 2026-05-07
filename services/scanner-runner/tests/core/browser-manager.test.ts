@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PreScanAction, WaitStrategy } from '../../src/core/types';
 
 import { BrowserManager } from '../../src/core/browser-manager';
-import { validateRuntimeTargetURL } from '../../src/core/target-validation';
+import { validateTargetURLForPolicy } from '../../src/core/target-validation';
 
 // Mock Playwright and fs
 vi.mock('playwright', () => ({
@@ -29,7 +29,7 @@ vi.mock('node:fs', () => ({
 
 vi.mock('../../src/core/target-validation', () => ({
 	shouldEnforceRuntimeTargetValidation: vi.fn().mockReturnValue(true),
-	validateRuntimeTargetURL: vi.fn().mockResolvedValue(undefined)
+	validateTargetURLForPolicy: vi.fn().mockResolvedValue(undefined)
 }));
 
 describe('BrowserManager', () => {
@@ -215,7 +215,9 @@ describe('BrowserManager', () => {
 		it('should navigate with default wait strategy', async () => {
 			await browserManager.navigateToPage(mockPage, 'https://example.com');
 
-			expect(validateRuntimeTargetURL).toHaveBeenCalledWith('https://example.com');
+			expect(validateTargetURLForPolicy).toHaveBeenCalledWith('https://example.com', {
+				allowedOrigins: []
+			});
 			expect(mockPage.route).toHaveBeenCalled();
 			expect(mockPage.goto).toHaveBeenCalledWith(
 				'https://example.com',
@@ -272,7 +274,7 @@ describe('BrowserManager', () => {
 		});
 
 		it('should fail before navigation when target validation fails', async () => {
-			vi.mocked(validateRuntimeTargetURL).mockRejectedValueOnce(new Error('Blocked target URL'));
+			vi.mocked(validateTargetURLForPolicy).mockRejectedValueOnce(new Error('Blocked target URL'));
 
 			await expect(browserManager.navigateToPage(mockPage, 'https://127.0.0.1')).rejects.toThrow(
 				'Blocked target URL'
@@ -298,7 +300,7 @@ describe('BrowserManager', () => {
 			});
 
 			// Make the initial URL pass validation.
-			vi.mocked(validateRuntimeTargetURL).mockResolvedValue(undefined);
+			vi.mocked(validateTargetURLForPolicy).mockResolvedValue(undefined);
 
 			const page = {
 				...mockPage,
@@ -320,7 +322,108 @@ describe('BrowserManager', () => {
 				abort: vi.fn().mockResolvedValue(undefined)
 			});
 
-			expect(validateRuntimeTargetURL).toHaveBeenCalledWith('https://example.com/redirected');
+			expect(validateTargetURLForPolicy).toHaveBeenCalledWith('https://example.com/redirected', {
+				allowedOrigins: []
+			});
+		});
+
+		it('should validate allowed subresource requests via Playwright route handler', async () => {
+			let routeHandler:
+				| ((route: {
+						request: () => {
+							resourceType: () => string;
+							isNavigationRequest: () => boolean;
+							url: () => string;
+						};
+						continue: () => Promise<void>;
+						abort: (reason?: string) => Promise<void>;
+				  }) => Promise<void>)
+				| undefined;
+
+			const mockRoute = vi.fn().mockImplementation((_pattern, handler) => {
+				routeHandler = handler;
+			});
+
+			vi.mocked(validateTargetURLForPolicy).mockResolvedValue(undefined);
+
+			const page = {
+				...mockPage,
+				route: mockRoute,
+				url: vi.fn().mockReturnValue('https://example.com')
+			} as unknown as Page;
+
+			await browserManager.navigateToPage(page, 'https://example.com');
+
+			expect(routeHandler).toBeDefined();
+
+			const continueRequest = vi.fn().mockResolvedValue(undefined);
+			const abort = vi.fn().mockResolvedValue(undefined);
+
+			await routeHandler?.({
+				request: () => ({
+					resourceType: () => 'image',
+					isNavigationRequest: () => false,
+					url: () => 'https://cdn.example.com/logo.png'
+				}),
+				continue: continueRequest,
+				abort
+			});
+
+			expect(validateTargetURLForPolicy).toHaveBeenCalledWith('https://cdn.example.com/logo.png', {
+				allowedOrigins: []
+			});
+			expect(continueRequest).toHaveBeenCalled();
+			expect(abort).not.toHaveBeenCalled();
+		});
+
+		it('should abort blocked subresource requests without failing the page navigation', async () => {
+			let routeHandler:
+				| ((route: {
+						request: () => {
+							resourceType: () => string;
+							isNavigationRequest: () => boolean;
+							url: () => string;
+						};
+						continue: () => Promise<void>;
+						abort: (reason?: string) => Promise<void>;
+				  }) => Promise<void>)
+				| undefined;
+
+			const mockRoute = vi.fn().mockImplementation((_pattern, handler) => {
+				routeHandler = handler;
+			});
+
+			vi.mocked(validateTargetURLForPolicy).mockResolvedValue(undefined);
+
+			const page = {
+				...mockPage,
+				route: mockRoute,
+				url: vi.fn().mockReturnValue('https://example.com')
+			} as unknown as Page;
+
+			await expect(
+				browserManager.navigateToPage(page, 'https://example.com')
+			).resolves.toBeUndefined();
+
+			expect(routeHandler).toBeDefined();
+
+			vi.mocked(validateTargetURLForPolicy).mockRejectedValueOnce(new Error('Blocked subresource'));
+
+			const continueRequest = vi.fn().mockResolvedValue(undefined);
+			const abort = vi.fn().mockResolvedValue(undefined);
+
+			await routeHandler?.({
+				request: () => ({
+					resourceType: () => 'image',
+					isNavigationRequest: () => false,
+					url: () => 'http://169.254.169.254/latest/meta-data'
+				}),
+				continue: continueRequest,
+				abort
+			});
+
+			expect(continueRequest).not.toHaveBeenCalled();
+			expect(abort).toHaveBeenCalledWith('blockedbyclient');
 		});
 
 		it('should abort and surface blocked navigation from route handler', async () => {
@@ -340,9 +443,9 @@ describe('BrowserManager', () => {
 				routeHandler = handler;
 			});
 
-			// First call is for the initial explicit validateRuntimeTargetURL(url) in navigateToPage.
+			// First call is for the initial explicit validateTargetURLForPolicy(url) in navigateToPage.
 			// We'll trigger the blocked redirect via the route handler after that completes.
-			vi.mocked(validateRuntimeTargetURL).mockResolvedValueOnce(undefined);
+			vi.mocked(validateTargetURLForPolicy).mockResolvedValueOnce(undefined);
 
 			// Keep navigation pending until we simulate the redirect via the route handler.
 			let gotoReject: ((err: Error) => void) | undefined;
@@ -366,7 +469,7 @@ describe('BrowserManager', () => {
 			await Promise.resolve();
 
 			// Route handler sees a blocked redirect target.
-			vi.mocked(validateRuntimeTargetURL).mockRejectedValueOnce(new Error('Blocked redirect'));
+			vi.mocked(validateTargetURLForPolicy).mockRejectedValueOnce(new Error('Blocked redirect'));
 
 			const abort = vi.fn().mockResolvedValue(undefined);
 			await routeHandler?.({

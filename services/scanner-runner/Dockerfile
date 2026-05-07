@@ -2,12 +2,16 @@
 # Uses multi-stage build for smaller runtime image
 
 FROM docker.io/oven/bun:1.3.8@sha256:371d30538b69303ced927bb5915697ac7e2fa8cb409ee332c66009de64de5aa3 AS bun-bin
+FROM docker.io/library/node:22.22.2-bookworm-slim AS node-bin
 
 FROM mcr.microsoft.com/playwright:v1.57.0-noble AS builder
 WORKDIR /repo
 
 # Install bun from pinned image stage (no curl|bash installer)
 COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
+# Keep the scanner runtime on the same Node major declared in package metadata.
+COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
+RUN test "$(command -v node)" = "/usr/local/bin/node" && node --version | grep -E '^v22\.'
 
 # Shared TypeScript base config used by all packages
 COPY tsconfig.strict.json /repo/tsconfig.strict.json
@@ -53,7 +57,11 @@ RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove \
     gstreamer1.0-plugins-bad \
     libgstreamer-plugins-bad1.0-0 \
-  && rm -rf /var/lib/apt/lists/* /usr/lib/node_modules/npm /usr/bin/npm /usr/bin/npx
+  && rm -rf /var/lib/apt/lists/* /usr/lib/node_modules/npm /usr/bin/node /usr/bin/npm /usr/bin/npx
+
+COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
+
+RUN test "$(command -v node)" = "/usr/local/bin/node" && node --version | grep -E '^v22\.'
 
 # Create data directory with proper permissions
 RUN mkdir -p /data && chown pwuser:pwuser /data

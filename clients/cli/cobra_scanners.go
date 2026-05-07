@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func newScannersCmd(root *rootOptions) *cobra.Command {
@@ -13,9 +15,9 @@ func newScannersCmd(root *rootOptions) *cobra.Command {
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
-			var response ScannersResponse
+			var response apiclient.ScannersResponse
 			if err := client.GetJSON(cmd.Context(), "/api/v1/scanners", &response); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("fetch scanners: %w", err)}
 			}

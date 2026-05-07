@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -15,7 +16,7 @@ func TestRenderUnifiedReport_JSONEnvelope(t *testing.T) {
 	createdAt := time.Date(2026, 3, 4, 12, 0, 0, 0, time.FixedZone("X", -5*60*60))
 	updatedAt := createdAt.Add(90 * time.Second)
 
-	status := JobStatus{
+	status := apiclient.JobStatus{
 		ID:        "job-123",
 		State:     jobStateDone,
 		CreatedAt: createdAt,
@@ -57,7 +58,7 @@ func TestRenderUnifiedReport_JSONEnvelope(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_Markdown(t *testing.T) {
-	status := JobStatus{
+	status := apiclient.JobStatus{
 		ID:        "job-123",
 		State:     jobStateDone,
 		CreatedAt: time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC),
@@ -105,7 +106,7 @@ func TestRenderUnifiedReport_Markdown(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MarkdownNoFindingsNoArtifacts(t *testing.T) {
-	status := JobStatus{ID: "job-456", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-456", State: jobStateDone}
 	doc := sampleReport(status.ID)
 	doc.Issues = []report.IssueDetail{}
 	doc.Artifacts = nil
@@ -133,7 +134,7 @@ func TestRenderUnifiedReport_MarkdownNoFindingsNoArtifacts(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
-	status := JobStatus{ID: "job-occ", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-occ", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	selector1 := "#main > p.intro"
@@ -193,7 +194,7 @@ func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
-	status := JobStatus{ID: "job-text-occ", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-text-occ", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	selector := "#main > p"
@@ -245,7 +246,7 @@ func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
-	status := JobStatus{ID: "job-text-summary-only", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-text-summary-only", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	failureSummary := "Element has no accessible name"
@@ -283,7 +284,7 @@ func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MarkdownOccurrences_FailureSummaryOnly(t *testing.T) {
-	status := JobStatus{ID: "job-md-summary-only", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-md-summary-only", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	failureSummary := "Landmark region is missing a label"
@@ -321,7 +322,7 @@ func TestRenderUnifiedReport_MarkdownOccurrences_FailureSummaryOnly(t *testing.T
 }
 
 func TestRenderUnifiedReport_LighthouseScoresMarkdown(t *testing.T) {
-	status := JobStatus{ID: "job-lh", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-lh", State: jobStateDone}
 	doc := sampleReport(status.ID)
 	doc.Summary.LighthouseCategories = []report.LighthouseCategorySummary{
 		{Id: "performance", Title: "Performance", AvgScore: 0.85},
@@ -349,7 +350,7 @@ func TestRenderUnifiedReport_LighthouseScoresMarkdown(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_LighthouseScoresText(t *testing.T) {
-	status := JobStatus{ID: "job-lh-text", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-lh-text", State: jobStateDone}
 	doc := sampleReport(status.ID)
 	doc.Summary.LighthouseCategories = []report.LighthouseCategorySummary{
 		{Id: "performance", Title: "Performance", AvgScore: 0.85},
@@ -371,7 +372,7 @@ func TestRenderUnifiedReport_LighthouseScoresText(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_SummaryOnly(t *testing.T) {
-	status := JobStatus{ID: "job-summ", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-summ", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	var buf bytes.Buffer
@@ -398,7 +399,7 @@ func TestRenderUnifiedReport_SummaryOnly(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_SummaryOnlyText(t *testing.T) {
-	status := JobStatus{ID: "job-summ-text", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-summ-text", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	var buf bytes.Buffer
@@ -421,7 +422,7 @@ func TestRenderUnifiedReport_SummaryOnlyText(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_GroupByCategory(t *testing.T) {
-	status := JobStatus{ID: "job-group", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-group", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	a11y := "accessibility"
@@ -487,7 +488,7 @@ func TestRenderUnifiedReport_GroupByCategory(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_GroupByScanner(t *testing.T) {
-	status := JobStatus{ID: "job-group-scan", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-group-scan", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	doc.Issues = []report.IssueDetail{
@@ -529,7 +530,7 @@ func TestRenderUnifiedReport_GroupByScanner(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_GroupByNone(t *testing.T) {
-	status := JobStatus{ID: "job-group-none", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-group-none", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	var buf bytes.Buffer
@@ -548,7 +549,7 @@ func TestRenderUnifiedReport_GroupByNone(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_FailSeverity(t *testing.T) {
-	status := JobStatus{ID: "job-fail", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-fail", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	var buf bytes.Buffer
@@ -568,7 +569,7 @@ func TestRenderUnifiedReport_FailSeverity(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_FailSeverity_NoMatch(t *testing.T) {
-	status := JobStatus{ID: "job-fail-no", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-fail-no", State: jobStateDone}
 	doc := sampleReport(status.ID)
 	doc.Issues = []report.IssueDetail{
 		{Id: "a", Severity: report.IssueSeverityMinor},
@@ -585,7 +586,7 @@ func TestRenderUnifiedReport_FailSeverity_NoMatch(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_FailSeverity_UsesFilteredIssues(t *testing.T) {
-	status := JobStatus{ID: "job-fail-filtered", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-fail-filtered", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	a11y := "accessibility"
@@ -623,7 +624,7 @@ func TestRenderUnifiedReport_FailSeverity_UsesFilteredIssues(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_FailSeverity_Invalid(t *testing.T) {
-	status := JobStatus{ID: "job-fail-invalid", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-fail-invalid", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	var buf bytes.Buffer
@@ -639,7 +640,7 @@ func TestRenderUnifiedReport_FailSeverity_Invalid(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_SeverityFilter(t *testing.T) {
-	status := JobStatus{ID: "job-sev-filter", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-sev-filter", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	var buf bytes.Buffer
@@ -666,7 +667,7 @@ func TestRenderUnifiedReport_SeverityFilter(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_CategoryFilter(t *testing.T) {
-	status := JobStatus{ID: "job-cat-filter", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-cat-filter", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	a11y := "accessibility"
@@ -712,7 +713,7 @@ func TestRenderUnifiedReport_CategoryFilter(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MaxOccurrencesTruncates(t *testing.T) {
-	status := JobStatus{ID: "job-max-occ", State: jobStateDone}
+	status := apiclient.JobStatus{ID: "job-max-occ", State: jobStateDone}
 	doc := sampleReport(status.ID)
 
 	sel1 := ".a"
