@@ -3,26 +3,27 @@
 
 @theme {
 	/* Font families - self-hosted variable fonts */
-	--font-display: 'Source Serif 4 Variable', Georgia, Cambria, 'Times New Roman', serif;
+	--font-display:
+		'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
 	--font-body:
-		'Source Sans 3 Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+		'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
 	--font-mono:
 		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-	/* Surfaces — warm stone */
-	--color-paper: #faf9f7;
+	/* Surfaces — cool slate */
+	--color-paper: #f8fafc;
 	--color-surface: #ffffff;
-	--color-surface-muted: #f5f3ef;
-	--color-paper-deep: #e8e4dd;
+	--color-surface-muted: #f1f5f9;
+	--color-paper-deep: #e2e8f0;
 
-	/* Text — warm charcoal */
-	--color-ink-strong: #1a1a17;
-	--color-ink: #2d2d28;
-	--color-ink-muted: #5c5a52;
-	--color-ink-faint: #6f6d65;
+	/* Text — cool slate */
+	--color-ink-strong: #0f172a;
+	--color-ink: #1e293b;
+	--color-ink-muted: #475569;
+	--color-ink-faint: #64748b;
 
 	/* Borders */
-	--color-line: #d4d0c8;
+	--color-line: #e2e8f0;
 
 	/* Accent — Deep Teal */
 	--color-accent: #0d5c63;
@@ -33,14 +34,14 @@
 	--color-accent-subtle: #b2dfdb;
 	--color-accent-deep: #052e32;
 
-	/* Shadows (neutral, subtle) */
-	--shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-	--shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-	--shadow-lg: 0 12px 24px -8px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
-	--shadow-xl: 0 20px 40px -12px rgba(0, 0, 0, 0.15), 0 8px 16px -8px rgba(0, 0, 0, 0.08);
-	--shadow-card-hover: 0 8px 24px -8px rgba(0, 0, 0, 0.1), 0 2px 8px -4px rgba(0, 0, 0, 0.06);
-	--shadow-float: 0 18px 36px -22px rgba(15, 15, 15, 0.38), 0 8px 18px -16px rgba(15, 15, 15, 0.28);
+	/* Shadows (Nexus ultra-subtle — cards float, not cast) */
+	--shadow-xs: 0 2px 8px rgb(0, 0, 0, 0.04);
+	--shadow-sm: 0 4px 16px rgb(0, 0, 0, 0.03);
+	--shadow-md: 0 8px 30px rgb(0, 0, 0, 0.04);
+	--shadow-lg: 0 16px 40px rgb(0, 0, 0, 0.06);
+	--shadow-xl: 0 24px 56px rgb(0, 0, 0, 0.08);
+	--shadow-card-hover: 0 8px 32px rgb(0, 0, 0, 0.08);
+	--shadow-float: 0 20px 48px rgb(0, 0, 0, 0.10), 0 8px 16px rgb(0, 0, 0, 0.06);
 
 	/* Animation Timing */
 	--duration-fast: 150ms;
@@ -75,7 +76,7 @@
 
 	body {
 		font-family: var(--font-body);
-		font-weight: 420;
+		font-weight: 400;
 		background: var(--color-paper);
 		@apply text-ink selection:bg-accent-soft selection:text-ink;
 	}
@@ -86,7 +87,7 @@
 		inset: 0;
 		z-index: 9999;
 		pointer-events: none;
-		opacity: 0.025;
+		opacity: 0.008;
 		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 		background-repeat: repeat;
 		background-size: 256px 256px;
@@ -166,18 +167,17 @@
 	.h1-display {
 		font-family: var(--font-display);
 		color: var(--color-ink-strong);
-		@apply text-4xl font-bold tracking-[-0.01em] sm:text-5xl lg:text-[3.75rem] lg:leading-[1.08];
+		@apply text-4xl font-bold tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem] lg:leading-[1.08];
 	}
 
 	.h2-display {
 		font-family: var(--font-display);
-		@apply text-ink text-3xl font-bold tracking-[-0.01em] sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15];
+		@apply text-ink text-3xl font-bold tracking-[-0.02em] sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15];
 	}
 
 	.section-kicker {
-		font-family: var(--font-display);
-		font-style: italic;
-		@apply text-accent text-sm font-normal tracking-normal;
+		font-family: var(--font-body);
+		@apply text-accent text-xs font-semibold tracking-[0.08em] uppercase;
 	}
 
 	.section-divider {
@@ -192,18 +192,18 @@
 	}
 
 	.landing-hero {
-		background: linear-gradient(175deg, var(--color-surface) 0%, var(--color-paper) 60%);
+		background: linear-gradient(170deg, var(--color-surface) 0%, var(--color-paper) 55%);
 		position: relative;
 		overflow: hidden;
 	}
 	.landing-hero::before {
 		content: '';
 		position: absolute;
-		top: -15%;
-		right: -8%;
-		width: 700px;
-		height: 700px;
-		background: radial-gradient(circle, rgba(13, 92, 99, 0.07) 0%, transparent 65%);
+		top: -20%;
+		right: -5%;
+		width: 600px;
+		height: 600px;
+		background: radial-gradient(circle, rgba(13, 92, 99, 0.06) 0%, transparent 60%);
 		pointer-events: none;
 		z-index: 0;
 	}
@@ -234,11 +234,10 @@
 
 	.metric-card {
 		box-shadow: var(--shadow-sm);
-		@apply border-line/80 bg-surface rounded-2xl border px-5 py-4;
+		@apply border-line bg-surface rounded-2xl border px-5 py-4;
 	}
 
 	.metric-value {
-		font-family: var(--font-display);
 		@apply text-ink-strong text-3xl leading-none font-bold tracking-[-0.03em];
 	}
 
@@ -248,7 +247,7 @@
 
 	.editorial-card {
 		box-shadow: var(--shadow-sm);
-		@apply border-line/80 bg-surface rounded-2xl border;
+		@apply border-line bg-surface rounded-2xl border;
 		transition: box-shadow var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
 	}
 
@@ -259,16 +258,15 @@
 
 	.hero-summary-card {
 		box-shadow: var(--shadow-sm);
-		@apply border-line bg-surface rounded-lg border p-5;
+		@apply border-line bg-surface rounded-xl border p-5;
 	}
 
 	.hero-summary-label {
-		@apply text-ink-faint text-xs font-medium;
+		@apply text-ink-faint text-xs font-medium tracking-[0.06em] uppercase;
 	}
 
 	.hero-summary-value {
-		font-family: var(--font-display);
-		@apply text-ink mt-1 text-3xl leading-none font-semibold tracking-[-0.03em];
+		@apply text-ink mt-1 text-3xl leading-none font-bold tracking-[-0.03em];
 	}
 
 	.workflow-band {
@@ -276,7 +274,8 @@
 	}
 
 	.workflow-step {
-		@apply border-line/60 bg-surface relative rounded-2xl border px-6 py-7 shadow-sm;
+		@apply border-line bg-surface relative rounded-2xl border px-6 py-7;
+		box-shadow: var(--shadow-sm);
 	}
 
 	.workflow-index {
@@ -326,18 +325,18 @@
 
 	.footer-shell {
 		background: var(--color-ink-strong);
-		color: var(--color-paper);
+		color: var(--color-surface);
 	}
 
 	.footer-link {
-		color: rgba(250, 249, 247, 0.55);
+		color: rgba(255, 255, 255, 0.5);
 		@apply text-sm font-medium transition-colors;
 	}
 	.footer-link:hover {
-		color: var(--color-paper);
+		color: rgba(255, 255, 255, 0.9);
 	}
 	.footer-category {
-		color: rgba(250, 249, 247, 0.35);
+		color: rgba(255, 255, 255, 0.3);
 		@apply text-[11px] font-semibold tracking-[0.1em] uppercase mb-3;
 	}
 
@@ -378,7 +377,7 @@
 
 	.h3-display {
 		font-family: var(--font-display);
-		@apply text-ink text-xl font-semibold tracking-normal sm:text-2xl;
+		@apply text-ink text-xl font-semibold tracking-[-0.01em] sm:text-2xl;
 	}
 
 	.nav-link {
