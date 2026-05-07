@@ -172,27 +172,29 @@
 			<div class="flex shrink-0 flex-col items-end gap-3">
 				<div
 					class={cn(
-						'flex h-24 w-24 flex-col items-center justify-center rounded-full border text-center font-bold shadow-sm ring-4 ring-white/60',
+						'flex h-28 w-28 flex-col items-center justify-center rounded-full border-2 text-center font-bold shadow-md',
 						score >= 90
-							? 'border-emerald-200 bg-emerald-100 text-emerald-700'
+							? 'border-emerald-200 bg-emerald-50 text-emerald-700'
 							: score >= 70
-								? 'border-amber-200 bg-amber-100 text-amber-700'
-								: 'border-red-200 bg-red-100 text-red-700'
+								? 'border-amber-200 bg-amber-50 text-amber-700'
+								: 'border-red-200 bg-red-50 text-red-700'
 					)}
 				>
-					<span class="text-[1.75rem] leading-none">{scoreGrade}</span>
-					<span class="mt-1 text-[0.6rem] font-semibold tracking-[0.14em] uppercase">Score</span>
+					<span class="text-[2.25rem] leading-none font-bold">{scoreGrade}</span>
+					<span class="mt-1.5 text-[0.6rem] font-bold tracking-[0.18em] uppercase opacity-70"
+						>Score</span
+					>
 				</div>
 				{#if scoreBand}
 					<div
-						class="bg-surface/80 border-line max-w-[15rem] rounded-2xl border px-3 py-2 text-right shadow-sm"
+						class="bg-surface/85 border-line max-w-[14rem] rounded-2xl border px-3 py-2.5 text-right shadow-sm"
 					>
-						<p class="text-ink text-xs font-semibold tracking-[0.12em] uppercase">
+						<p class="text-ink text-xs font-bold tracking-[0.1em] uppercase">
 							{scoreBand.label}
 						</p>
 						<p class="text-ink-muted mt-1 text-xs leading-relaxed">{scoreBand.detail}</p>
-						<p class="text-ink-faint mt-2 text-[11px]">
-							A: 90+, B: 80-89, C: 70-79, D: 60-69, F: &lt;60
+						<p class="text-ink-faint mt-2 text-[10px]">
+							A: 90+ · B: 80-89 · C: 70-79 · D: 60+
 						</p>
 					</div>
 				{/if}

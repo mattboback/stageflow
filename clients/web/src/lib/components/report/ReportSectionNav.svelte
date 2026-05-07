@@ -71,15 +71,9 @@
 	rounded="2xl"
 	class="border-line bg-surface sticky top-3 z-20 mb-6 space-y-2 border shadow-sm"
 >
-	<div class="flex items-center justify-between gap-3 px-2 pt-1">
-		<div>
-			<p class="text-ink text-sm font-semibold">Report sections</p>
-			<p class="text-ink-faint text-xs">Jump directly to the area you need for triage.</p>
-		</div>
-	</div>
-	<div class="relative -mx-1 overflow-x-auto px-1">
+	<div class="relative -mx-1 overflow-x-auto px-1 pt-1">
 		<div
-			class="flex min-w-max items-center gap-1.5 sm:gap-2"
+			class="flex min-w-max items-center gap-1 sm:gap-1.5"
 			role="toolbar"
 			aria-label="Report sections"
 		>
@@ -87,8 +81,10 @@
 				<button
 					onclick={() => onSectionChange(item.id)}
 					class={cn(
-						'flex items-center gap-2 rounded-xl px-2.5 py-2 text-[13px] font-semibold whitespace-nowrap transition sm:px-3 sm:text-sm',
-						section === item.id ? 'bg-ink text-surface' : 'bg-surface text-ink-muted hover:text-ink'
+						'flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold whitespace-nowrap transition sm:px-3.5 sm:text-sm',
+						section === item.id
+							? 'bg-accent text-surface shadow-sm'
+							: 'text-ink-muted hover:bg-surface-muted hover:text-ink'
 					)}
 					aria-pressed={section === item.id}
 					id={`report-tab-${item.id}`}
@@ -97,8 +93,10 @@
 					{#if typeof item.count === 'number'}
 						<span
 							class={cn(
-								'hidden rounded-full px-2 py-0.5 text-xs font-semibold sm:inline-flex',
-								section === item.id ? 'bg-surface/20 text-surface' : 'bg-paper text-ink-faint'
+								'hidden rounded-full px-1.5 py-0.5 text-[11px] font-semibold sm:inline-flex',
+								section === item.id
+									? 'bg-white/20 text-surface'
+									: 'bg-surface-muted text-ink-faint'
 							)}
 							aria-label={`${item.count} ${item.label.toLowerCase()}`}
 						>
