@@ -271,13 +271,15 @@
 				{#each scanners as scanner, index (scanner.name)}
 					{@const ScannerIcon = scanner.icon}
 					<article class={cn('editorial-card scanner-card border-t-2 p-6', scanner.border)}>
-						<div class="mb-5 flex items-start justify-between gap-4">
-							<div class={cn('flex h-11 w-11 items-center justify-center rounded-xl', scanner.bg)}>
-								<ScannerIcon class={cn('h-5 w-5', scanner.color)} />
+						<div class="mb-4 flex items-start justify-between gap-4">
+							<div class={cn('flex h-12 w-12 items-center justify-center rounded-xl shadow-sm', scanner.bg)}>
+								<ScannerIcon class={cn('h-5.5 w-5.5', scanner.color)} />
 							</div>
-							<p class="hero-preview-legend">Scanner {index + 1}</p>
+							<span class={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums', scanner.bg, scanner.color)}>
+								{String(index + 1).padStart(2, '0')}
+							</span>
 						</div>
-						<h3 class="text-ink text-base font-semibold">{scanner.name}</h3>
+						<h3 class="text-ink-strong text-base font-semibold tracking-[-0.01em]">{scanner.name}</h3>
 						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{scanner.desc}</p>
 					</article>
 				{/each}
@@ -298,7 +300,10 @@
 				<div class="workflow-line"></div>
 				{#each workflowSteps as item (item.step)}
 					<article class="workflow-step">
-						<p class="workflow-index">{item.step}</p>
+						<div class="mb-5 flex items-center gap-2">
+						<span class="bg-accent/10 text-accent font-mono inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold">{item.step}</span>
+						<div class="bg-line h-px flex-1 opacity-60"></div>
+					</div>
 						<h3 class="text-ink mt-3 text-lg font-semibold">{item.title}</h3>
 						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{item.desc}</p>
 						<p class="text-accent-deep mt-4 text-xs leading-relaxed font-medium">{item.signal}</p>
@@ -323,16 +328,16 @@
 				</div>
 				<div class="grid gap-4">
 					{#each differentiators as item (item.title)}
-						<article class="editorial-card p-5">
-							<div class="flex gap-3">
+						<article class="editorial-card p-6">
+							<div class="flex gap-4">
 								<div
-									class="bg-accent/10 text-accent mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+									class="bg-accent/12 text-accent mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
 								>
-									<CheckCircle class="h-4 w-4" />
+									<CheckCircle class="h-4.5 w-4.5" />
 								</div>
 								<div>
-									<h3 class="text-ink text-sm font-semibold">{item.title}</h3>
-									<p class="text-ink-muted mt-1 text-sm leading-relaxed">{item.desc}</p>
+									<h3 class="text-ink-strong text-sm font-semibold tracking-[-0.01em]">{item.title}</h3>
+									<p class="text-ink-muted mt-1.5 text-sm leading-relaxed">{item.desc}</p>
 								</div>
 							</div>
 						</article>
@@ -360,7 +365,7 @@
 						href="/playground"
 						class={cn(
 							buttonVariants({ variant: 'outline', size: 'lg' }),
-							'border-surface/30 text-surface hover:bg-surface/10 gap-2 rounded-md px-7'
+							'border-surface/40 text-surface hover:bg-surface/15 gap-2.5 rounded-xl px-8 text-base font-semibold'
 						)}
 					>
 						Open Playground

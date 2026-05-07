@@ -192,7 +192,24 @@
 	}
 
 	.landing-hero {
-		background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-paper) 100%);
+		background: linear-gradient(175deg, var(--color-surface) 0%, var(--color-paper) 60%);
+		position: relative;
+		overflow: hidden;
+	}
+	.landing-hero::before {
+		content: '';
+		position: absolute;
+		top: -15%;
+		right: -8%;
+		width: 700px;
+		height: 700px;
+		background: radial-gradient(circle, rgba(13, 92, 99, 0.07) 0%, transparent 65%);
+		pointer-events: none;
+		z-index: 0;
+	}
+	.landing-hero > * {
+		position: relative;
+		z-index: 1;
 	}
 
 	.landing-grid {
@@ -217,25 +234,27 @@
 
 	.metric-card {
 		box-shadow: var(--shadow-sm);
-		@apply border-line bg-surface rounded-xl border px-4 py-3;
+		@apply border-line/80 bg-surface rounded-2xl border px-5 py-4;
 	}
 
 	.metric-value {
 		font-family: var(--font-display);
-		@apply text-ink text-2xl leading-none font-semibold tracking-[-0.02em];
+		@apply text-ink-strong text-3xl leading-none font-bold tracking-[-0.03em];
 	}
 
 	.metric-label {
-		@apply text-ink-faint mt-1 text-xs font-medium;
+		@apply text-ink-muted mt-1.5 text-xs font-medium leading-snug;
 	}
 
 	.editorial-card {
-		box-shadow: var(--shadow-xs);
-		@apply border-line bg-surface rounded-lg border;
+		box-shadow: var(--shadow-sm);
+		@apply border-line/80 bg-surface rounded-2xl border;
+		transition: box-shadow var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
 	}
 
 	.editorial-card:hover {
-		box-shadow: var(--shadow-sm);
+		box-shadow: var(--shadow-card-hover);
+		transform: translateY(-2px);
 	}
 
 	.hero-summary-card {
@@ -253,11 +272,11 @@
 	}
 
 	.workflow-band {
-		background: var(--color-surface-muted);
+		background: linear-gradient(180deg, var(--color-surface-muted) 0%, var(--color-paper) 100%);
 	}
 
 	.workflow-step {
-		@apply border-line/70 bg-surface/92 relative rounded-2xl border px-5 py-6;
+		@apply border-line/60 bg-surface relative rounded-2xl border px-6 py-7 shadow-sm;
 	}
 
 	.workflow-index {
@@ -271,8 +290,30 @@
 	}
 
 	.cta-panel {
-		background: var(--color-ink);
-		@apply rounded-2xl px-6 py-12 text-center sm:px-10;
+		background: linear-gradient(135deg, var(--color-accent-deep) 0%, #0a1a1a 100%);
+		position: relative;
+		overflow: hidden;
+		@apply rounded-3xl px-8 py-14 text-center sm:px-12;
+	}
+	.cta-panel::before {
+		content: '';
+		position: absolute;
+		top: -40%;
+		right: -10%;
+		width: 500px;
+		height: 500px;
+		background: radial-gradient(circle, rgba(13, 92, 99, 0.3) 0%, transparent 65%);
+		pointer-events: none;
+	}
+	.cta-panel::after {
+		content: '';
+		position: absolute;
+		bottom: -30%;
+		left: -5%;
+		width: 400px;
+		height: 400px;
+		background: radial-gradient(circle, rgba(13, 92, 99, 0.2) 0%, transparent 65%);
+		pointer-events: none;
 	}
 
 	.nav-shell {
@@ -284,17 +325,25 @@
 	}
 
 	.footer-shell {
-		background: var(--color-paper-deep);
+		background: var(--color-ink-strong);
+		color: var(--color-paper);
 	}
 
-	.footer-title {
-		font-family: var(--font-display);
-		@apply text-ink text-lg leading-tight font-semibold;
+	.footer-link {
+		color: rgba(250, 249, 247, 0.55);
+		@apply text-sm font-medium transition-colors;
+	}
+	.footer-link:hover {
+		color: var(--color-paper);
+	}
+	.footer-category {
+		color: rgba(250, 249, 247, 0.35);
+		@apply text-[11px] font-semibold tracking-[0.1em] uppercase mb-3;
 	}
 
 	.hero-preview {
-		box-shadow: var(--shadow-lg);
-		@apply border-line bg-surface relative rounded-lg border;
+		box-shadow: var(--shadow-float);
+		@apply border-line bg-surface relative rounded-xl border;
 	}
 
 	.hero-preview-track {
@@ -310,14 +359,17 @@
 	}
 
 	.scanner-card {
-		transition:
-			box-shadow var(--duration-normal) var(--ease-out),
-			transform var(--duration-normal) var(--ease-out);
+		position: relative;
+		overflow: hidden;
 	}
-
-	.scanner-card:hover {
-		box-shadow: var(--shadow-md);
-		transform: translateY(-2px);
+	.scanner-card::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: linear-gradient(90deg, transparent, var(--color-line), transparent);
 	}
 
 	.form-section-label {
