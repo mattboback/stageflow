@@ -18,6 +18,26 @@ function approxEqual(actual: number, expected: number, tolerance: number): boole
 	return Math.abs(actual - expected) <= tolerance;
 }
 
+async function readPixel(
+	buffer: Buffer,
+	x: number,
+	y: number
+): Promise<{ r: number; g: number; b: number; a: number }> {
+	const { data, info } = await sharp(buffer)
+		.ensureAlpha()
+		.raw()
+		.toBuffer({ resolveWithObject: true });
+	const clampedX = Math.max(0, Math.min(info.width - 1, Math.round(x)));
+	const clampedY = Math.max(0, Math.min(info.height - 1, Math.round(y)));
+	const offset = (clampedY * info.width + clampedX) * info.channels;
+	return {
+		r: data[offset] ?? 0,
+		g: data[offset + 1] ?? 0,
+		b: data[offset + 2] ?? 0,
+		a: data[offset + 3] ?? 0
+	};
+}
+
 describe('capturePageOverviewRaw (integration)', () => {
 	let browser: Browser | null = null;
 
@@ -174,7 +194,285 @@ describe('capturePageOverviewRaw (integration)', () => {
 		}
 	}, 30_000);
 
-	it('clips partially-visible elements and skips elements below the capture area', async () => {
+	it('pre-scrolls the page so IntersectionObserver reveal content is visible before capture', async () => {
+		const resultsDir = createTempDir('stageflow-page-overview-reveal-');
+		const context = await getBrowser().newContext({
+			viewport: { width: 400, height: 300 },
+			deviceScaleFactor: 1
+		});
+		const page = await context.newPage();
+
+		try {
+			await page.setContent(`
+          <!doctype html>
+          <html>
+            <head>
+              <style>
+                html, body { margin: 0; padding: 0; background: #ffffff; }
+                #spacer { height: 1500px; width: 1px; }
+                #revealed {
+                  position: absolute;
+                  left: 60px;
+                  top: 1120px;
+                  width: 180px;
+                  height: 100px;
+                  background: rgb(238, 32, 48);
+                  opacity: 0;
+                  transform: translateY(40px);
+                  transition: opacity 120ms linear, transform 120ms linear;
+                }
+                #revealed.visible {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              </style>
+            </head>
+            <body>
+              <div id="spacer"></div>
+              <div id="revealed"></div>
+              <script>
+                const target = document.querySelector('#revealed');
+                const observer = new IntersectionObserver((entries) => {
+                  if (entries.some((entry) => entry.isIntersecting)) {
+                    target.classList.add('visible');
+                  }
+                });
+                observer.observe(target);
+              </script>
+            </body>
+          </html>
+        `);
+
+			const violations: PageOverviewViolation[] = [
+				{
+					id: 'revealed-rule',
+					impact: 'serious',
+					nodes: [{ target: ['#revealed'] }]
+				}
+			];
+
+			const screenshotCfg = loadAxeScreenshotConfig({
+				screenshotsEnabled: true,
+				outputFormat: 'png'
+			});
+
+			const captured = await capturePageOverviewRaw(
+				page,
+				violations,
+				resultsDir,
+				'reveal-page',
+				'axe',
+				screenshotCfg,
+				{
+					enabled: true,
+					maxElements: 50,
+					maxHeight: 0,
+					scrollPauseMs: 30,
+					scrollSettleMs: 150,
+					scrollStepPx: 250
+				}
+			);
+
+			expect(captured).not.toBeNull();
+			if (!captured) {
+				throw new Error('expected reveal capture result');
+			}
+
+			const revealed = captured.elements.find((el) => el.selector === '#revealed');
+			expect(revealed).toBeDefined();
+			if (!revealed) {
+				throw new Error('expected revealed element');
+			}
+
+			const pixel = await readPixel(
+				captured.buffer,
+				revealed.x + revealed.width / 2,
+				revealed.y + revealed.height / 2
+			);
+			expect(pixel.r).toBeGreaterThan(200);
+			expect(pixel.g).toBeLessThan(80);
+			expect(pixel.b).toBeLessThan(90);
+		} finally {
+			await context.close();
+			fs.rmSync(resultsDir, { recursive: true, force: true });
+		}
+	}, 30_000);
+
+	it('forces content-visibility auto content to paint in the overview screenshot', async () => {
+		const resultsDir = createTempDir('stageflow-page-overview-content-visibility-');
+		const context = await getBrowser().newContext({
+			viewport: { width: 400, height: 300 },
+			deviceScaleFactor: 1
+		});
+		const page = await context.newPage();
+
+		try {
+			await page.setContent(`
+          <!doctype html>
+          <html>
+            <head>
+              <style>
+                html, body { margin: 0; padding: 0; background: #ffffff; }
+                #spacer { height: 1300px; width: 1px; }
+                #auto-section {
+                  content-visibility: auto;
+                  contain-intrinsic-size: 220px;
+                  position: absolute;
+                  left: 40px;
+                  top: 920px;
+                  width: 260px;
+                  height: 180px;
+                }
+                #inside-auto {
+                  width: 180px;
+                  height: 90px;
+                  background: rgb(22, 163, 74);
+                }
+              </style>
+            </head>
+            <body>
+              <div id="spacer"></div>
+              <section id="auto-section">
+                <div id="inside-auto"></div>
+              </section>
+            </body>
+          </html>
+        `);
+
+			const violations: PageOverviewViolation[] = [
+				{
+					id: 'content-visibility-rule',
+					impact: 'moderate',
+					nodes: [{ target: ['#inside-auto'] }]
+				}
+			];
+
+			const screenshotCfg = loadAxeScreenshotConfig({
+				screenshotsEnabled: true,
+				outputFormat: 'png'
+			});
+
+			const captured = await capturePageOverviewRaw(
+				page,
+				violations,
+				resultsDir,
+				'content-visibility-page',
+				'axe',
+				screenshotCfg,
+				{ enabled: true, maxElements: 50, maxHeight: 0 }
+			);
+
+			expect(captured).not.toBeNull();
+			if (!captured) {
+				throw new Error('expected content visibility capture result');
+			}
+
+			const insideAuto = captured.elements.find((el) => el.selector === '#inside-auto');
+			expect(insideAuto).toBeDefined();
+			if (!insideAuto) {
+				throw new Error('expected content-visibility element');
+			}
+
+			const pixel = await readPixel(
+				captured.buffer,
+				insideAuto.x + insideAuto.width / 2,
+				insideAuto.y + insideAuto.height / 2
+			);
+			expect(pixel.r).toBeLessThan(80);
+			expect(pixel.g).toBeGreaterThan(120);
+			expect(pixel.b).toBeLessThan(110);
+		} finally {
+			await context.close();
+			fs.rmSync(resultsDir, { recursive: true, force: true });
+		}
+	}, 30_000);
+
+	it('finishes finite opacity animations instead of freezing them hidden', async () => {
+		const resultsDir = createTempDir('stageflow-page-overview-animation-');
+		const context = await getBrowser().newContext({
+			viewport: { width: 400, height: 300 },
+			deviceScaleFactor: 1
+		});
+		const page = await context.newPage();
+
+		try {
+			await page.setContent(`
+          <!doctype html>
+          <html>
+            <head>
+              <style>
+                html, body { margin: 0; padding: 0; background: #ffffff; }
+                @keyframes fade-in {
+                  from { opacity: 0; }
+                  to { opacity: 1; }
+                }
+                #animated {
+                  position: absolute;
+                  left: 70px;
+                  top: 80px;
+                  width: 160px;
+                  height: 90px;
+                  background: rgb(37, 99, 235);
+                  opacity: 0;
+                  animation: fade-in 10s linear forwards;
+                }
+              </style>
+            </head>
+            <body>
+              <div id="animated"></div>
+            </body>
+          </html>
+        `);
+
+			const violations: PageOverviewViolation[] = [
+				{
+					id: 'animated-rule',
+					impact: 'minor',
+					nodes: [{ target: ['#animated'] }]
+				}
+			];
+
+			const screenshotCfg = loadAxeScreenshotConfig({
+				screenshotsEnabled: true,
+				outputFormat: 'png'
+			});
+
+			const captured = await capturePageOverviewRaw(
+				page,
+				violations,
+				resultsDir,
+				'animation-page',
+				'axe',
+				screenshotCfg,
+				{ enabled: true, maxElements: 50, maxHeight: 0 }
+			);
+
+			expect(captured).not.toBeNull();
+			if (!captured) {
+				throw new Error('expected animated capture result');
+			}
+
+			const animated = captured.elements.find((el) => el.selector === '#animated');
+			expect(animated).toBeDefined();
+			if (!animated) {
+				throw new Error('expected animated element');
+			}
+
+			const pixel = await readPixel(
+				captured.buffer,
+				animated.x + animated.width / 2,
+				animated.y + animated.height / 2
+			);
+			expect(pixel.r).toBeLessThan(90);
+			expect(pixel.g).toBeLessThan(130);
+			expect(pixel.b).toBeGreaterThan(180);
+		} finally {
+			await context.close();
+			fs.rmSync(resultsDir, { recursive: true, force: true });
+		}
+	}, 30_000);
+
+	it('clips partially-visible elements and skips elements below an explicit capture height', async () => {
 		const resultsDir = createTempDir('stageflow-page-overview-');
 		const context = await getBrowser().newContext({
 			viewport: { width: 400, height: 300 },

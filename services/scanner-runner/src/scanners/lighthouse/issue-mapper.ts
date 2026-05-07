@@ -72,7 +72,7 @@ export function extractIssuesFromResult(deps: {
 	let skippedPassed = 0;
 	let skippedNotApplicable = 0;
 	let skippedInformative = 0;
-	let skippedManual = 0;
+	const skippedManual = 0;
 
 	for (const [auditId, audit] of auditEntries) {
 		// Skip passed audits, informational, or not applicable
@@ -80,16 +80,39 @@ export function extractIssuesFromResult(deps: {
 			skippedPassed++;
 			continue;
 		}
-		if (audit.score === null || audit.scoreDisplayMode === 'notApplicable') {
-			skippedNotApplicable++;
-			continue;
-		}
 		if (audit.scoreDisplayMode === 'informative') {
 			skippedInformative++;
 			continue;
 		}
 		if (audit.scoreDisplayMode === 'manual') {
-			skippedManual++;
+			const category = getAuditCategory(auditId, lhResult.categories ?? {});
+			const nodeCount = getAuditNodeCount(audit);
+			const nodes = extractAuditNodes(audit);
+
+			issues.push({
+				id: auditId,
+				scanner: scannerName,
+				severity: 'info',
+				category: category ?? 'manual-review',
+				title: audit.title,
+				description: `Manual verification required: ${audit.description}`,
+				helpUrl: getHelpUrl(auditId),
+				metadata: {
+					score: audit.score,
+					scoreDisplayMode: audit.scoreDisplayMode,
+					displayValue: audit.displayValue,
+					numericValue: audit.numericValue,
+					numericUnit: audit.numericUnit,
+					details: audit.details,
+					nodeCount,
+					nodes: nodes.slice(0, 5),
+					lighthouseManual: true
+				}
+			});
+			continue;
+		}
+		if (audit.score === null || audit.scoreDisplayMode === 'notApplicable') {
+			skippedNotApplicable++;
 			continue;
 		}
 
@@ -110,6 +133,7 @@ export function extractIssuesFromResult(deps: {
 			helpUrl: getHelpUrl(auditId),
 			metadata: {
 				score: audit.score,
+				scoreDisplayMode: audit.scoreDisplayMode,
 				displayValue: audit.displayValue,
 				numericValue: audit.numericValue,
 				numericUnit: audit.numericUnit,
@@ -198,35 +222,4 @@ export async function enrichIssuesWithContext(
 			})
 		);
 	}
-}
-
-export async function enrichNodesWithContext(
-	page: import('playwright').Page,
-	nodes: LighthouseIssueNode[]
-): Promise<LighthouseIssueNode[]> {
-	const enriched: LighthouseIssueNode[] = [];
-
-	for (const node of nodes.slice(0, 5)) {
-		const selector = node.selector ?? node.target?.[0];
-		if (!selector) {
-			enriched.push({ ...node });
-			continue;
-		}
-
-		try {
-			const ctx = await extractContextSnippet(page, selector);
-			const contextHtml = ctx?.contextHtml ?? node.contextHtml;
-			const ancestorPath = ctx?.ancestorPath ?? node.ancestorPath;
-
-			enriched.push({
-				...node,
-				...(contextHtml !== undefined ? { contextHtml } : {}),
-				...(ancestorPath !== undefined ? { ancestorPath } : {})
-			});
-		} catch {
-			enriched.push({ ...node });
-		}
-	}
-
-	return enriched;
 }

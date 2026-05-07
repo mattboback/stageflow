@@ -2,10 +2,30 @@ package jobstream
 
 import (
 	"bytes"
+	"context"
+	"io"
+	"net/http"
 	"testing"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+type closeTrackingBody struct {
+	io.Reader
+	closed bool
+}
+
+func (b *closeTrackingBody) Close() error {
+	b.closed = true
+
+	return nil
+}
 
 func TestHandleSSEEvent_PrintsScannerCompletionSummary(t *testing.T) {
 	t.Parallel()
@@ -72,5 +92,66 @@ func TestEmitScannerCompletionsFromStatus_PrintsNewlyCompletedScannersOnce(t *te
 
 	if got := out.String(); got != "scanner: axe complete; remaining: lighthouse\n" {
 		t.Fatalf("expected duplicate status snapshot to be suppressed, got %q", got)
+	}
+}
+
+func TestPollJobStateEscapesJobIDPathSegment(t *testing.T) {
+	t.Parallel()
+
+	client := apiclient.NewClient(
+		"http://stageflow.test",
+		"",
+		&http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.EscapedPath() != "/api/v1/jobs/job%2Fwith%3Freserved" {
+					t.Fatalf("unexpected request path: %s", req.URL.EscapedPath())
+				}
+
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header:     make(http.Header),
+					Body: io.NopCloser(
+						bytes.NewBufferString(`{"id":"job/with?reserved","state":"DONE"}`),
+					),
+				}, nil
+			}),
+		},
+	)
+
+	var out bytes.Buffer
+	if err := pollJobState(context.Background(), client, "job/with?reserved", &out); err != nil {
+		t.Fatalf("pollJobState: %v", err)
+	}
+}
+
+func TestSSEJobStateEscapesJobIDAndClosesBodyAfterStatusError(t *testing.T) {
+	t.Parallel()
+
+	body := &closeTrackingBody{Reader: bytes.NewBufferString("diagnostic")}
+	client := apiclient.NewClient(
+		"http://stageflow.test",
+		"",
+		&http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				if req.URL.EscapedPath() != "/api/v1/jobs/job%2Fwith%3Freserved/stream" {
+					t.Fatalf("unexpected request path: %s", req.URL.EscapedPath())
+				}
+
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Header:     make(http.Header),
+					Body:       body,
+				}, nil
+			}),
+		},
+	)
+
+	var out bytes.Buffer
+	if err := sseJobState(context.Background(), client, "job/with?reserved", &out); err == nil {
+		t.Fatal("expected stream status error, got nil")
+	}
+
+	if !body.closed {
+		t.Fatal("expected SSE response body to be closed")
 	}
 }

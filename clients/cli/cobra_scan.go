@@ -7,13 +7,14 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
 		rawScanners  string
-		screenshot   bool
+		screenshot   = true
 		allowPrivate bool
 		timeout      time.Duration
 		noStream     bool
@@ -64,12 +65,12 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 				)
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			status, doc, err := runScanJob(
 				cmd.Context(),
 				client,
-				SubmitJobRequest{
+				apiclient.SubmitJobRequest{
 					URLs:                urls,
 					Modules:             modules,
 					Screenshot:          screenshot,
@@ -95,7 +96,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&rawScanners, "scanners", defaultScanScanners, "Comma-separated scanner modules")
-	cmd.Flags().BoolVar(&screenshot, "screenshot", false, "Capture screenshots")
+	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
 	cmd.Flags().BoolVar(
 		&allowPrivate,
 		"allow-private-targets",

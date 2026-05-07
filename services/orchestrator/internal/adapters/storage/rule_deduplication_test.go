@@ -29,6 +29,9 @@ func TestDeduplicateIssues_ImageAltDuplicates(t *testing.T) {
 			PageId:   "page1",
 			Severity: report.IssueSeverityCritical,
 			Title:    "Images must have alternative text",
+			Occurrences: []report.IssueOccurrence{
+				{Selector: stringPtr("img.logo")},
+			},
 		},
 		{
 			Id:       "2",
@@ -37,6 +40,9 @@ func TestDeduplicateIssues_ImageAltDuplicates(t *testing.T) {
 			PageId:   "page1",
 			Severity: report.IssueSeveritySerious,
 			Title:    "Images Missing Alt Text",
+			Occurrences: []report.IssueOccurrence{
+				{Selector: stringPtr("IMG.LOGO")},
+			},
 		},
 		{
 			Id:       "3",
@@ -45,6 +51,9 @@ func TestDeduplicateIssues_ImageAltDuplicates(t *testing.T) {
 			PageId:   "page1",
 			Severity: report.IssueSeveritySerious,
 			Title:    "Image elements have alt attributes",
+			Occurrences: []report.IssueOccurrence{
+				{Target: []string{" img.logo "}},
+			},
 		},
 	}
 
@@ -78,13 +87,21 @@ func TestDeduplicateIssues_DifferentPages(t *testing.T) {
 func TestDeduplicateIssues_ColorContrastDuplicates(t *testing.T) {
 	issues := []report.IssueDetail{
 		{
-			Id:       "1",
-			Scanner:  "lighthouse",
-			RuleId:   "color-contrast",
-			PageId:   "page1",
-			Severity: report.IssueSeveritySerious,
+			Id:          "1",
+			Scanner:     "lighthouse",
+			RuleId:      "color-contrast",
+			PageId:      "page1",
+			Severity:    report.IssueSeveritySerious,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr(".muted-copy")}},
 		},
-		{Id: "2", Scanner: "axe", RuleId: "color-contrast", PageId: "page1", Severity: report.IssueSeverityCritical},
+		{
+			Id:          "2",
+			Scanner:     "axe",
+			RuleId:      "color-contrast",
+			PageId:      "page1",
+			Severity:    report.IssueSeverityCritical,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr(".muted-copy")}},
+		},
 	}
 
 	result := deduplicateIssues(issues)
@@ -95,11 +112,75 @@ func TestDeduplicateIssues_ColorContrastDuplicates(t *testing.T) {
 	assert.Equal(t, report.IssueSeverityCritical, result[0].Severity)
 }
 
+func TestDeduplicateIssues_ColorContrastDifferentOccurrences(t *testing.T) {
+	issues := []report.IssueDetail{
+		{
+			Id:          "1",
+			Scanner:     "lighthouse",
+			RuleId:      "color-contrast",
+			PageId:      "page1",
+			Severity:    report.IssueSeveritySerious,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr(".hero-copy")}},
+		},
+		{
+			Id:          "2",
+			Scanner:     "axe",
+			RuleId:      "color-contrast",
+			PageId:      "page1",
+			Severity:    report.IssueSeverityCritical,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr(".footer-copy")}},
+		},
+	}
+
+	result := deduplicateIssues(issues)
+
+	assert.Len(t, result, 2)
+}
+
+func TestDeduplicateIssues_SameScannerDuplicatesArePreserved(t *testing.T) {
+	issues := []report.IssueDetail{
+		{
+			Id:          "1",
+			Scanner:     "axe",
+			RuleId:      "color-contrast",
+			PageId:      "page1",
+			Severity:    report.IssueSeverityCritical,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr(".muted-copy")}},
+		},
+		{
+			Id:          "2",
+			Scanner:     "axe",
+			RuleId:      "color-contrast",
+			PageId:      "page1",
+			Severity:    report.IssueSeverityCritical,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr(".muted-copy")}},
+		},
+	}
+
+	result := deduplicateIssues(issues)
+
+	assert.Len(t, result, 2)
+}
+
 func TestDeduplicateIssues_MixedDuplicatesAndUnique(t *testing.T) {
 	issues := []report.IssueDetail{
 		// Duplicate: image-alt
-		{Id: "1", Scanner: "axe", RuleId: "image-alt", PageId: "page1", Severity: report.IssueSeverityCritical},
-		{Id: "2", Scanner: "seo", RuleId: "images-missing-alt", PageId: "page1", Severity: report.IssueSeveritySerious},
+		{
+			Id:          "1",
+			Scanner:     "axe",
+			RuleId:      "image-alt",
+			PageId:      "page1",
+			Severity:    report.IssueSeverityCritical,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr("img.hero")}},
+		},
+		{
+			Id:          "2",
+			Scanner:     "seo",
+			RuleId:      "images-missing-alt",
+			PageId:      "page1",
+			Severity:    report.IssueSeveritySerious,
+			Occurrences: []report.IssueOccurrence{{Selector: stringPtr("img.hero")}},
+		},
 		// Unique: security header
 		{
 			Id:       "3",
@@ -159,6 +240,9 @@ func TestDeduplicateIssues_AriaRuleDuplicates(t *testing.T) {
 			PageId:   "page1",
 			Severity: report.IssueSeverityCritical,
 			Title:    "ARIA attributes must conform to valid names",
+			Occurrences: []report.IssueOccurrence{
+				{Selector: stringPtr("[role='checkbox']")},
+			},
 		},
 		{
 			Id:       "2",
@@ -167,6 +251,9 @@ func TestDeduplicateIssues_AriaRuleDuplicates(t *testing.T) {
 			PageId:   "page1",
 			Severity: report.IssueSeveritySerious,
 			Title:    "Elements with ARIA roles have required attributes",
+			Occurrences: []report.IssueOccurrence{
+				{Selector: stringPtr("[role='checkbox']")},
+			},
 		},
 	}
 

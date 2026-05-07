@@ -9,7 +9,7 @@ export const SEVERITY_COLORS: Record<IssueSeverity, { stroke: string; fill: stri
 	info: { stroke: '#94a3b8', fill: 'rgba(148, 163, 184, 0.12)' }
 };
 
-export interface OverlayOptions {
+interface OverlayOptions {
 	showLabels?: boolean;
 	labelFontSize?: number;
 }

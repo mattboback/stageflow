@@ -304,7 +304,8 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		InputType: "urls",
 		URLs:      p.URLs,
 		Config: models.JobConfig{
-			Modules: modules,
+			Modules:    modules,
+			Screenshot: defaultScreenshot,
 		},
 	}
 

@@ -1,8 +1,14 @@
 import { lookup } from 'node:dns/promises';
 import { BlockList, isIP } from 'node:net';
 
+import type { Provenance } from './types';
+
 export interface TargetAddressResolver {
 	resolve(hostname: string): Promise<string[]>;
+}
+
+export interface TargetValidationPolicy {
+	allowedOrigins: readonly string[];
 }
 
 const defaultResolver: TargetAddressResolver = {
@@ -150,6 +156,80 @@ function parseTargetURL(rawURL: string): URL {
 
 export function shouldEnforceRuntimeTargetValidation(): boolean {
 	return Boolean(process.env.SCAN_URLS);
+}
+
+function normalizeOrigin(rawURL: string): string | null {
+	try {
+		const target = parseTargetURL(rawURL);
+		return target.origin;
+	} catch {
+		return null;
+	}
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+	const host = hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+	if (host === 'localhost' || host.endsWith('.localhost')) {
+		return true;
+	}
+
+	if (host === '::1') {
+		return true;
+	}
+
+	if (host.startsWith('127.')) {
+		return true;
+	}
+
+	return false;
+}
+
+function allowedStaticOrigin(provenance: Provenance): string | null {
+	if (provenance.mode !== 'static' && provenance.mode !== 'spa') {
+		return null;
+	}
+
+	if (!provenance.base_url) {
+		return null;
+	}
+
+	let baseURL: URL;
+	try {
+		baseURL = parseTargetURL(provenance.base_url);
+	} catch {
+		return null;
+	}
+
+	if (!isLoopbackHostname(baseURL.hostname)) {
+		return null;
+	}
+
+	return baseURL.origin;
+}
+
+export function buildTargetValidationPolicy(provenance: Provenance): TargetValidationPolicy {
+	const origins = new Set<string>();
+	const staticOrigin = allowedStaticOrigin(provenance);
+	if (staticOrigin !== null) {
+		origins.add(staticOrigin);
+	}
+
+	return {
+		allowedOrigins: [...origins].sort()
+	};
+}
+
+export async function validateTargetURLForPolicy(
+	rawURL: string,
+	policy: TargetValidationPolicy,
+	resolver: TargetAddressResolver = defaultResolver
+): Promise<void> {
+	const origin = normalizeOrigin(rawURL);
+	if (origin !== null && policy.allowedOrigins.includes(origin)) {
+		return;
+	}
+
+	await validateRuntimeTargetURL(rawURL, resolver);
 }
 
 export async function validateRuntimeTargetURL(

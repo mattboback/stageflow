@@ -5,6 +5,7 @@ set -euo pipefail
 
 PODMAN=${PODMAN:-podman}
 MC_IMAGE=${MC_IMAGE:-docker.io/minio/mc}
+MC_NETWORK=${MC_NETWORK:-host}
 MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://127.0.0.1:9000}
 MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
 MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-password}
@@ -44,7 +45,7 @@ run_mc() {
 		volume_args=(-v "$MC_VOLUME")
 	fi
 
-	$PODMAN run --rm --network host \
+	$PODMAN run --rm --network "$MC_NETWORK" \
 		"${volume_args[@]}" \
 		-e MC_HOST_"${MINIO_ALIAS}"="${MC_HOST_VALUE}" \
 		"$MC_IMAGE" "$@"

@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
 	BlockedTargetError,
 	type TargetAddressResolver,
+	buildTargetValidationPolicy,
 	shouldEnforceRuntimeTargetValidation,
+	validateTargetURLForPolicy,
 	validateRuntimeTargetURL
 } from '../../src/core/target-validation';
 
@@ -131,6 +133,53 @@ describe('target validation', () => {
 		await expect(validateRuntimeTargetURL('https://[2001:db8::1]')).rejects.toBeInstanceOf(
 			BlockedTargetError
 		);
+	});
+
+	it('allows only the exact local static origin from provenance policy', async () => {
+		delete process.env.ALLOW_PRIVATE_TARGETS;
+
+		const policy = buildTargetValidationPolicy({
+			version: '1.0.0',
+			job_id: 'job-1',
+			base_url: 'http://localhost:8080',
+			mode: 'static',
+			pages: []
+		});
+
+		expect(policy.allowedOrigins).toEqual(['http://localhost:8080']);
+		await expect(
+			validateTargetURLForPolicy('http://localhost:8080/index.html', policy)
+		).resolves.toBeUndefined();
+
+		await expect(
+			validateTargetURLForPolicy('http://localhost:9999/private', policy)
+		).rejects.toBeInstanceOf(BlockedTargetError);
+		await expect(
+			validateTargetURLForPolicy('http://169.254.169.254/latest/meta-data', policy)
+		).rejects.toBeInstanceOf(BlockedTargetError);
+	});
+
+	it('does not allow private live provenance origins without allow_private_targets', async () => {
+		delete process.env.ALLOW_PRIVATE_TARGETS;
+
+		const policy = buildTargetValidationPolicy({
+			version: '1.0.0',
+			job_id: 'job-1',
+			base_url: 'http://localhost:8080',
+			mode: 'live',
+			pages: []
+		});
+
+		expect(policy.allowedOrigins).toEqual([]);
+		await expect(
+			validateTargetURLForPolicy(
+				'http://localhost:8080/index.html',
+				policy,
+				staticResolver({
+					localhost: ['127.0.0.1']
+				})
+			)
+		).rejects.toBeInstanceOf(BlockedTargetError);
 	});
 
 	it('enforces validation only for URL jobs', () => {

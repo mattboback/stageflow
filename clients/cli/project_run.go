@@ -9,6 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
@@ -92,10 +94,10 @@ func runProjectScan(
 	timeout time.Duration,
 	stderr io.Writer,
 	noStream bool,
-) (JobStatus, report.UnifiedReportV2, error) {
+) (apiclient.JobStatus, report.UnifiedReportV2, error) {
 	scanReq, urls, err := buildProjectSubmitJobRequest(cfg)
 	if err != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, err
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, err
 	}
 
 	if cfg.AllowPrivateTargets == nil && urlcheck.ContainsPrivateTargets(urls) {
@@ -106,15 +108,15 @@ func runProjectScan(
 
 	validateErr := urlcheck.ValidateLocalTargets(apiURL, urls)
 	if validateErr != nil {
-		return JobStatus{}, report.UnifiedReportV2{}, validateErr
+		return apiclient.JobStatus{}, report.UnifiedReportV2{}, validateErr
 	}
 
-	client := NewClient(apiURL, apiKey, nil)
+	client := apiclient.NewClient(apiURL, apiKey, nil)
 
 	return runScanJob(ctx, client, scanReq, timeout, stderr, noStream)
 }
 
-func buildProjectSubmitJobRequest(cfg projectScanCfg) (SubmitJobRequest, []string, error) {
+func buildProjectSubmitJobRequest(cfg projectScanCfg) (apiclient.SubmitJobRequest, []string, error) {
 	scanners := cfg.Scanners
 	if scanners == "" {
 		scanners = defaultScanScanners
@@ -122,15 +124,15 @@ func buildProjectSubmitJobRequest(cfg projectScanCfg) (SubmitJobRequest, []strin
 
 	modules, err := urlcheck.ParseModules(scanners)
 	if err != nil {
-		return SubmitJobRequest{}, nil, fmt.Errorf("invalid scan.scanners: %w", err)
+		return apiclient.SubmitJobRequest{}, nil, fmt.Errorf("invalid scan.scanners: %w", err)
 	}
 
 	urls, err := urlcheck.NormalizeTargets(cfg.URLs)
 	if err != nil {
-		return SubmitJobRequest{}, nil, err
+		return apiclient.SubmitJobRequest{}, nil, err
 	}
 
-	screenshot := false
+	screenshot := true
 	if cfg.Screenshot != nil {
 		screenshot = *cfg.Screenshot
 	}
@@ -140,7 +142,7 @@ func buildProjectSubmitJobRequest(cfg projectScanCfg) (SubmitJobRequest, []strin
 		allowPrivate = *cfg.AllowPrivateTargets
 	}
 
-	return SubmitJobRequest{
+	return apiclient.SubmitJobRequest{
 		URLs:                urls,
 		Modules:             modules,
 		Screenshot:          screenshot,
@@ -163,7 +165,7 @@ func runProjectCommand(
 		projectArg = args[0]
 	}
 
-	projectRoot, err := resolveProjectRoot(projectArg)
+	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
 	}
@@ -233,7 +235,7 @@ func runProjectCommand(
 		MaxIssues: opts.MaxIssues,
 	})
 	if renderErr != nil {
-		return exitCodeError{Code: 2, Err: renderErr}
+		return wrapRenderError(renderErr)
 	}
 
 	return nil

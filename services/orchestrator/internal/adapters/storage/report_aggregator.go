@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	reportVersion = "2.0.0"
+	reportVersion = "2.1.0"
 )
 
 type Aggregator struct {

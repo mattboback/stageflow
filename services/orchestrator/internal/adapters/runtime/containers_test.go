@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -244,5 +245,63 @@ func TestGetContainerLogs(t *testing.T) {
 
 	if logs != "container log output\n" {
 		t.Errorf("Expected log output, got: %s", logs)
+	}
+}
+
+func TestGetContainerLogsReturnsBoundedTail(t *testing.T) {
+	mock := newMockPodmanServer()
+	defer mock.Close()
+
+	mock.handle("GET", "/v4.0.0/libpod/containers/container-123/logs", func(w http.ResponseWriter, _ *http.Request) {
+		if _, err := w.Write([]byte(strings.Repeat("a", maxPodmanDiagnosticBytes+32) + "tail")); err != nil {
+			t.Fatalf("Failed to write logs: %v", err)
+		}
+	})
+
+	client := mock.newClient()
+
+	logs, err := client.GetContainerLogs(context.Background(), "container-123", true, true)
+	if err != nil {
+		t.Fatalf("Failed to get container logs: %v", err)
+	}
+
+	if !strings.HasPrefix(logs, "[truncated] ") {
+		t.Fatalf("expected truncated marker, got %q", logs[:min(len(logs), 20)])
+	}
+
+	if !strings.HasSuffix(logs, "tail") {
+		t.Fatal("expected tail to be retained")
+	}
+
+	if len(logs) > maxPodmanDiagnosticBytes+len("[truncated] ") {
+		t.Fatalf("logs length = %d, want <= %d", len(logs), maxPodmanDiagnosticBytes+len("[truncated] "))
+	}
+}
+
+func TestGetContainerLogsBoundsErrorBody(t *testing.T) {
+	mock := newMockPodmanServer()
+	defer mock.Close()
+
+	mock.handle("GET", "/v4.0.0/libpod/containers/container-123/logs", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+
+		if _, err := w.Write([]byte(strings.Repeat("x", maxPodmanDiagnosticBytes+16) + "errtail")); err != nil {
+			t.Fatalf("Failed to write logs: %v", err)
+		}
+	})
+
+	client := mock.newClient()
+
+	_, err := client.GetContainerLogs(context.Background(), "container-123", true, true)
+	if err == nil {
+		t.Fatal("expected API error")
+	}
+
+	if !strings.Contains(err.Error(), "[truncated] ") {
+		t.Fatalf("expected truncated marker in error, got %v", err)
+	}
+
+	if !strings.Contains(err.Error(), "errtail") {
+		t.Fatalf("expected tail in error, got %v", err)
 	}
 }

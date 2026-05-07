@@ -107,6 +107,11 @@ func NewServer(cfg *Config) *Server {
 
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if s.apiToken == "" {
+			httputil.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+			return
+		}
+
 		provided := strings.TrimSpace(r.Header.Get("X-Api-Key"))
 		if provided == "" {
 			auth := strings.TrimSpace(r.Header.Get("Authorization"))

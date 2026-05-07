@@ -9,6 +9,7 @@ FIXTURE_DIR="${REPO_ROOT}/qa/fixtures/project-golden"
 API_URL="${STAGEFLOW_API_URL:-http://localhost:8080}"
 API_KEY="${STAGEFLOW_API_KEY:-}"
 FIXTURE_BASE_URL="${STAGEFLOW_FIXTURE_BASE_URL:-}"
+ARTIFACT_DIR="${PROJECT_GOLDEN_ARTIFACT_DIR:-}"
 PROJECT_SLUG="qa-golden-$(date +%s)"
 
 if [[ -z "${FIXTURE_BASE_URL}" ]]; then
@@ -125,18 +126,30 @@ compare_golden() {
   local label="$3"
 
   if [[ ! -f "${golden}" ]]; then
-    echo "WARN: Golden file missing: ${golden}" >&2
-    echo "      Creating from actual output. Review and commit." >&2
-    cp "${actual}" "${golden}"
+    if [[ "${UPDATE_GOLDENS:-0}" == "1" ]]; then
+      echo "UPDATE: Golden file missing: ${golden}" >&2
+      echo "        Creating from actual output." >&2
+      cp "${actual}" "${golden}"
+      return
+    fi
+
+    fail "${label}: golden file is missing (${golden})"
+    echo "To create intentionally: UPDATE_GOLDENS=1 $0" >&2
     return
   fi
 
   if ! diff -u "${golden}" "${actual}" > "${WORK_DIR}/diff-${label}.patch" 2>&1; then
+    if [[ "${UPDATE_GOLDENS:-0}" == "1" ]]; then
+      echo "UPDATE: ${label}: refreshing golden file ${golden}" >&2
+      cp "${actual}" "${golden}"
+      return
+    fi
+
     fail "${label}: output differs from golden file"
     echo "--- Diff (${label}) ---" >&2
     cat "${WORK_DIR}/diff-${label}.patch" >&2
     echo "--- End diff ---" >&2
-    echo "To update: cp ${actual} ${golden}" >&2
+    echo "To update intentionally: UPDATE_GOLDENS=1 $0" >&2
   fi
 }
 
@@ -175,7 +188,22 @@ done
 
 # --- Setup ---
 WORK_DIR="$(mktemp -d)"
-trap 'rm -rf "${WORK_DIR:-}"; cleanup_project 2>/dev/null || true' EXIT
+
+on_exit() {
+  local status=$?
+
+  if [[ -n "${ARTIFACT_DIR}" && -n "${WORK_DIR:-}" && -d "${WORK_DIR}" ]]; then
+    mkdir -p "${ARTIFACT_DIR}"
+    cp -a "${WORK_DIR}/." "${ARTIFACT_DIR}/"
+  fi
+
+  rm -rf "${WORK_DIR:-}"
+  cleanup_project 2>/dev/null || true
+
+  exit "${status}"
+}
+
+trap on_exit EXIT
 
 echo "==> Work dir: ${WORK_DIR}"
 echo "==> Project:  ${PROJECT_SLUG}"

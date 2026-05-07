@@ -17,6 +17,8 @@ This repository is designed to be both runnable and reviewable. Start from `.env
 
 - **Fastest smoke test:** `cp .env.example .env && just diagnose && just demo`
 - **Reviewer path (5–15 minutes):** [docs/evaluators-guide.md](docs/evaluators-guide.md)
+- **Contributor setup:** [CONTRIBUTING.md](CONTRIBUTING.md)
+- **System design entrypoint:** [ARCHITECTURE.md](ARCHITECTURE.md)
 - **System design deep dive:** [docs/architecture/system.md](docs/architecture/system.md)
 - **High-signal code entrypoints:** [Web app](clients/web/README.md), [Platform API](services/platform-api/README.md), [Scanner Runner](services/scanner-runner/README.md), [CLI](clients/cli/README.md)
 
@@ -72,6 +74,7 @@ The design decisions worth inspecting first are:
 
 - **SSE over WebSocket** for simple, proxy-friendly job progress streaming
 - **NATS JetStream** for durable orchestration events and replay after restarts
+- **Typed event envelopes** with lenient envelope parsing, strict payload parsing, event metadata propagation, and explicit ACK/NAK behavior
 - **Podman per-job isolation** instead of long-lived shared worker containers
 - **Schema-first contracts** so scanners, API, CLI, and web UI all share the same report shape
 - **Stable content-based issue IDs** so baseline diffing works across reruns
@@ -153,9 +156,10 @@ hosted regression-memory step.
 - Replace every `change-me` value before using a public domain or shared environment
 - Set `STAGEFLOW_PUBLIC_DOMAIN`, `PLATFORM_API_CORS_ALLOW_ORIGINS`, `GF_SERVER_ROOT_URL`, and the frontend `VITE_*` URLs for your deployment
 - `infra/caddy/Caddyfile` is an optional host-level edge example for self-hosted public domains and TLS
+- Public self-hosted scanner deployments should pair runtime URL validation with host/container egress controls; see [infra/security/egress-policy.example.md](infra/security/egress-policy.example.md)
 - The hosted `stageflow.org` demo uses the same application code, but its production control plane is intentionally managed outside this repository
 
-For detailed environment variables and overlay-specific notes, see [docs/reference/configuration.md](docs/reference/configuration.md).
+For detailed environment variables and overlay-specific notes, see [docs/reference/configuration.md](docs/reference/configuration.md) and [docs/operations/deployment.md](docs/operations/deployment.md).
 
 ## Screenshots
 
@@ -182,10 +186,17 @@ For detailed environment variables and overlay-specific notes, see [docs/referen
 
 The project uses layered verification rather than a single happy-path build:
 
+CI-backed checks:
+
 - **Go services:** `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...`
 - **Web app:** `bun run ci` in `clients/web` for typecheck, lint, unit tests, and Storybook checks
 - **Scanner Runner:** `bun run ci` in `services/scanner-runner`
-- **End-to-end:** golden project-mode regression flow under `qa/e2e/project-scan-golden.sh`
+- **Containers/security:** image builds, SBOM generation, Trivy scanning, and gitleaks
+- **Dead code:** web and scanner-runner dead-code analysis currently runs as a non-blocking CI job
+
+Acceptance checks:
+
+- **Golden regression flow:** `qa/e2e/project-scan-golden.sh` runs baseline, promote, regression diff, and exit-code assertions. It is wired to scheduled/manual GitHub Actions and is available locally with `just project-golden`.
 
 ## Agent-facing workflow
 
@@ -214,8 +225,10 @@ For a guided 5–15 minute walkthrough, use [docs/evaluators-guide.md](docs/eval
 | Document                                                               | Description                                                               |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | [docs/evaluators-guide.md](docs/evaluators-guide.md)                   | Structured review path for hiring managers and senior engineers           |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                     | Short root entrypoint to the architecture material                        |
 | [docs/architecture/system.md](docs/architecture/system.md)             | Full system design, service boundaries, event flow, and threat model      |
 | [docs/reference/configuration.md](docs/reference/configuration.md)     | Environment variables, compose overlays, and topology guidance            |
+| [docs/operations/deployment.md](docs/operations/deployment.md)         | Local, self-hosted, and hosted-demo deployment boundaries                 |
 | [clients/web/README.md](clients/web/README.md)                         | Frontend routes, architecture, commands, and tests                        |
 | [services/platform-api/README.md](services/platform-api/README.md)     | Intake API boundary, routes, middleware, and local verification           |
 | [services/scanner-runner/README.md](services/scanner-runner/README.md) | Scanner runtime responsibilities, plugin loading, outputs, and validation |

@@ -93,7 +93,7 @@ describe('WebServerFormatter', () => {
 		const formatter = new WebServerFormatter();
 		const formatted = formatter.format(provenance, results, metadata);
 
-		expect(formatted.version).toBe('2.0.0');
+		expect(formatted.version).toBe('2.1.0');
 		expect(formatted.meta.jobId).toBe('job-123');
 		expect(formatted.meta.baseUrl).toBe('http://localhost:8080');
 
@@ -134,6 +134,73 @@ describe('WebServerFormatter', () => {
 
 		const formatted2 = new WebServerFormatter().format(provenance, results, metadata);
 		expect(formatted2.issues[0]!.id).toBe(issue.id);
+	});
+
+	it('reports page scan failures and marks mixed scanner results as partial', () => {
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'job-partial',
+			base_url: 'http://localhost:8080',
+			pages: []
+		};
+
+		const results: ScanResults = {
+			jobId: 'job-partial',
+			scanner: 'axe',
+			version: '0.1.0',
+			totalPages: 2,
+			startedAt: '2025-12-22T00:00:00Z',
+			completedAt: '2025-12-22T00:00:01Z',
+			durationMs: 1000,
+			pages: [
+				{
+					pageId: 'page-ok',
+					url: 'http://localhost:8080/ok',
+					success: true,
+					durationMs: 500,
+					startedAt: '2025-12-22T00:00:00Z',
+					finishedAt: '2025-12-22T00:00:00.500Z',
+					issues: []
+				},
+				{
+					pageId: 'page-failed',
+					url: 'http://localhost:8080/failed',
+					success: false,
+					durationMs: 500,
+					startedAt: '2025-12-22T00:00:00.500Z',
+					finishedAt: '2025-12-22T00:00:01Z',
+					issues: [],
+					error: 'Navigation timeout',
+					retryable: true
+				}
+			],
+			summary: {
+				totalIssues: 0,
+				bySeverity: { critical: 0, serious: 0, moderate: 0, minor: 0, info: 0 },
+				byCategory: {},
+				pagesScanned: 2,
+				pagesFailed: 1,
+				pagesWithIssues: 0,
+				avgDurationMs: 500
+			}
+		};
+
+		const formatted = new WebServerFormatter().format(provenance, results, {
+			name: 'axe',
+			version: '0.1.0'
+		});
+
+		expect(formatted.scanners[0]!.status).toBe('partial');
+		expect(formatted.errors).toEqual([
+			{
+				scope: 'page',
+				scannerId: 'axe',
+				pageId: 'page-failed',
+				code: 'page_scan_failed',
+				message: 'Navigation timeout',
+				retryable: true
+			}
+		]);
 	});
 
 	it('sets screenshot mime based on file extension', () => {

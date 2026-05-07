@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -21,7 +22,7 @@ type markdownRenderOptions struct {
 func writeMarkdownReport(
 	out io.Writer,
 	apiBaseURL string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 	opts markdownRenderOptions,
@@ -83,7 +84,7 @@ func writeMarkdownReport(
 
 func writeMarkdownSummary(
 	out io.Writer,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 	jobLink string,

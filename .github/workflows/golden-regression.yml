@@ -2,6 +2,8 @@ name: Golden Regression
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "23 8 * * *"
 
 permissions:
   contents: read
@@ -56,12 +58,12 @@ jobs:
           (cd services/scanner-runner && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile)
 
       - name: Prepare environment
-        env:
-          ORCHESTRATOR_API_TOKEN: ${{ secrets.GOLDEN_REGRESSION_TOKEN }}
         run: |
           cp .env.example .env
-          test -n "$ORCHESTRATOR_API_TOKEN"
-          printf 'ORCHESTRATOR_API_TOKEN=%s\n' "$ORCHESTRATOR_API_TOKEN" >> .env
+          {
+            printf 'ORCHESTRATOR_API_TOKEN=ci-orchestrator-token\n'
+            printf 'PLATFORM_API_TOKEN=ci-platform-api-token\n'
+          } >> .env
 
       - name: Build stageflow CLI
         run: |
@@ -79,6 +81,23 @@ jobs:
             -f infra/compose/podman-compose.local.yml \
             --env-file .env up -d
 
+      - name: Wait for stack
+        run: |
+          for url in \
+            http://127.0.0.1:9000/minio/health/live \
+            http://127.0.0.1:8080/healthz \
+            http://127.0.0.1:3010/
+          do
+            echo "Waiting for ${url}"
+            for _ in {1..60}; do
+              if curl -fsS "${url}" >/dev/null; then
+                break
+              fi
+              sleep 2
+            done
+            curl -fsS "${url}" >/dev/null
+          done
+
       - name: Initialize MinIO buckets
         run: |
           set -a
@@ -88,6 +107,27 @@ jobs:
 
       - name: Run golden regression script
         run: bash qa/e2e/project-scan-golden.sh
+        env:
+          PROJECT_GOLDEN_ARTIFACT_DIR: artifacts/project-golden
+          STAGEFLOW_API_KEY: ci-platform-api-token
+
+      - name: Capture stack logs
+        if: failure()
+        run: |
+          mkdir -p artifacts/project-golden
+          podman compose -p stageflow \
+            -f infra/compose/podman-compose.yml \
+            -f infra/compose/podman-compose.local.yml \
+            --env-file .env logs --no-color > artifacts/project-golden/compose.log || true
+
+      - name: Upload golden artifacts
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: golden-regression-artifacts
+          path: artifacts/project-golden
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Stop stack
         if: always()

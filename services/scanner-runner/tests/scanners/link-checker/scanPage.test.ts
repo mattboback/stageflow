@@ -78,6 +78,7 @@ const createMockContext = (overrides: Partial<ScanContext> = {}): ScanContext =>
 		resultsDir: '/tmp/results',
 		config,
 		logger: createMockLogger(),
+		targetValidationPolicy: { allowedOrigins: ['https://example.com'] },
 		...overrides
 	};
 };

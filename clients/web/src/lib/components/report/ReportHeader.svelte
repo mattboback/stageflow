@@ -61,6 +61,8 @@
 			return `Prioritize ${seriousCount} serious issue${seriousCount === 1 ? '' : 's'} next.`;
 		if (report.summary.totalIssues > 0)
 			return 'Review the issue list to work through moderate findings.';
+		if ((report.errors?.length ?? 0) > 0)
+			return 'No issues detected, but scan errors need review before treating this as clean.';
 		return 'No issues detected. Spot-check pages and artifacts to confirm release readiness.';
 	});
 </script>

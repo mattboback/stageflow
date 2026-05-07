@@ -1,6 +1,7 @@
 {
 	"$schema": "node_modules/knip/schema.json",
-	"project": ["src/**/*.ts"],
+	"entry": ["src/healthcheck.ts", "src/scanners/**/index.ts", "tests/**/*.ts"],
+	"project": ["src/**/*.ts", "tests/**/*.ts"],
 	"ignoreExportsUsedInFile": true,
 	"ignoreDependencies": ["@stageflow/contracts-report"]
 }

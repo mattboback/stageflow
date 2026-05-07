@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
@@ -51,7 +52,7 @@ func writeProjectDoctorJSON(
 		Schema:                  "stageflow-cli/project-doctor@v1",
 		ProjectRoot:             projectRoot,
 		ConfigPath:              configPath,
-		Passed:                  true,
+		Passed:                  allProjectDoctorChecksPassed(checks),
 		APIURL:                  apiURL,
 		URLs:                    urls,
 		AutoAllowPrivateTargets: autoAllowPrivateTargets,
@@ -60,6 +61,19 @@ func writeProjectDoctorJSON(
 	}
 
 	return writeJSONEnvelope(out, payload)
+}
+
+func allProjectDoctorChecksPassed(checks []projectDoctorCheck) bool {
+	for _, check := range checks {
+		switch check.Status {
+		case "passed", "skipped":
+			continue
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 func buildProjectHostedMemory(cfg projectStageflowCfg) projectHostedMemory {
@@ -171,7 +185,7 @@ func runProjectDoctorCommand(
 		projectArg = args[0]
 	}
 
-	projectRoot, err := resolveProjectRoot(projectArg)
+	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
 		return exitCodeError{Code: 2, Err: err}
 	}

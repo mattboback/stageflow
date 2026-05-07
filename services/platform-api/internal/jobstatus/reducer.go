@@ -259,7 +259,12 @@ func applyScanPageCompleted(rec *status.JobRecord, payload *events.ScanPageCompl
 func applyScanCompleted(rec *status.JobRecord, payload *events.ScanCompletedPayload, observedAt time.Time) {
 	rec.TotalPages = maxInt(rec.TotalPages, payload.TotalPagesScanned)
 	rec.CurrentPage = maxInt(rec.CurrentPage, payload.TotalPagesScanned)
-	rec.TotalViolations = payload.Summary.TotalViolations
+
+	alreadyCompleted := containsString(rec.CompletedScanners, payload.ScannerType)
+	if !alreadyCompleted {
+		rec.TotalViolations += payload.Summary.TotalViolations
+	}
+
 	rec.UpdatedAt = observedAt
 
 	if len(rec.ExpectedScanners) == 0 && payload.ScannerType != "" {
@@ -484,6 +489,20 @@ func uniqueStringsPreserveOrder(values []string) []string {
 	}
 
 	return unique
+}
+
+func containsString(values []string, needle string) bool {
+	if needle == "" {
+		return false
+	}
+
+	for _, value := range values {
+		if value == needle {
+			return true
+		}
+	}
+
+	return false
 }
 
 func coalesceString(value, fallback string) string {

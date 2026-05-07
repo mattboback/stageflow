@@ -72,12 +72,7 @@ export interface LighthouseOptions {
 // Default categories: skip performance by default since it's expensive (~2 min overhead).
 // Performance can be enabled via SCANNER_OPTIONS: { "categories": ["accessibility", "best-practices", "seo", "performance"] }
 export const DEFAULT_LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices', 'seo'];
-export const VALID_LIGHTHOUSE_CATEGORIES = [
-	'accessibility',
-	'best-practices',
-	'seo',
-	'performance'
-];
+const VALID_LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices', 'seo', 'performance'];
 
 export function parseLighthouseOptions(raw: unknown): LighthouseOptions {
 	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -71,18 +72,18 @@ type reportEnvelope struct {
 	Report  report.UnifiedReportV2 `json:"report"`
 }
 
-func fetchJobStatus(ctx context.Context, client *Client, jobID string) (JobStatus, error) {
-	var status JobStatus
+func fetchJobStatus(ctx context.Context, client *apiclient.Client, jobID string) (apiclient.JobStatus, error) {
+	var status apiclient.JobStatus
 
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
 	if err := client.GetJSON(ctx, apiPath, &status); err != nil {
-		return JobStatus{}, err
+		return apiclient.JobStatus{}, err
 	}
 
 	return status, nil
 }
 
-func fetchReport(ctx context.Context, client *Client, jobID string) (report.UnifiedReportV2, error) {
+func fetchReport(ctx context.Context, client *apiclient.Client, jobID string) (report.UnifiedReportV2, error) {
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(jobID))
 
 	var raw json.RawMessage
@@ -113,7 +114,7 @@ var scoreGradeReplacer = regexp.MustCompile(`"scoreGrade"\s*:\s*"(?:Excellent)"`
 func renderUnifiedReport(
 	out io.Writer,
 	apiBaseURL string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	opts reportRenderOptions,
 ) error {
@@ -178,7 +179,7 @@ func validatedIssueSelection(
 func writeRenderedReport(
 	out io.Writer,
 	apiBaseURL string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 	opts reportRenderOptions,
@@ -202,7 +203,7 @@ func writeRenderedReport(
 func writeJSONReport(
 	out io.Writer,
 	apiBaseURL string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 	summaryOnly bool,
@@ -233,7 +234,7 @@ func shouldFailForSeverity(issues []report.IssueDetail, threshold string) (bool,
 
 func buildReportEnvelope(
 	apiBaseURL string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 ) (reportEnvelope, error) {
@@ -369,7 +370,7 @@ func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDet
 func writeSummaryReport(
 	out io.Writer,
 	apiBaseURL string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 	maxOccurrences int,
@@ -393,7 +394,7 @@ func writeSummaryReport(
 //nolint:gocyclo
 func buildSummaryLines(
 	_ string,
-	status JobStatus,
+	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters issueFilters,
 ) []string {

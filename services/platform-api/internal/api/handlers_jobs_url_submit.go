@@ -21,13 +21,14 @@ const (
 	maxURLSubmitBodySize = 2 * 1024 * 1024 // 2 MB
 	maxURLCount          = 100
 	maxURLLength         = 2048
+	defaultScreenshot    = true
 )
 
 type jobURLSubmitRequest struct {
 	URLs                []string                  `json:"urls"`
 	Modules             []string                  `json:"modules"`
 	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
-	Screenshot          bool                      `json:"screenshot"`
+	Screenshot          *bool                     `json:"screenshot"`
 	HighlightStyle      string                    `json:"highlight_style"`
 	AllowPrivateTargets bool                      `json:"allow_private_targets"`
 }
@@ -97,6 +98,11 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	highlightStyle := normalizeHighlightStyle(req.HighlightStyle)
+	screenshot := defaultScreenshot
+
+	if req.Screenshot != nil {
+		screenshot = *req.Screenshot
+	}
 
 	jobID := uuid.New().String()
 	ctx := logging.WithJobID(r.Context(), jobID)
@@ -110,7 +116,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		Config: models.JobConfig{
 			Modules:             modules,
 			ScannerConfigs:      req.ScannerConfigs,
-			Screenshot:          req.Screenshot,
+			Screenshot:          screenshot,
 			HighlightStyle:      highlightStyle,
 			AllowPrivateTargets: req.AllowPrivateTargets,
 		},

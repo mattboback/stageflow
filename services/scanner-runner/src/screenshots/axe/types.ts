@@ -62,8 +62,15 @@ export interface PageOverviewResult {
 
 /** Diagnostic info for debugging screenshot coordinate alignment */
 export interface PageOverviewDiagnostics {
+	animationFinishedCount: number;
+	animationPausedCount: number;
+	assetWaitStatus: 'completed' | 'failed' | 'skipped' | 'timed_out';
+	contentVisibilityElementCount: number;
+	contentVisibilityForced: boolean;
 	cssPageWidth: number;
 	cssPageHeight: number;
+	fontWaitStatus: 'completed' | 'failed' | 'not_supported' | 'timed_out';
+	lazyMediaCount: number;
 	screenshotWidth: number;
 	screenshotHeight: number;
 	scaleX: number;
@@ -71,6 +78,11 @@ export interface PageOverviewDiagnostics {
 	devicePixelRatio: number;
 	captureHeight: number;
 	elementCount: number;
+	preScrollAfterHeight: number;
+	preScrollBeforeHeight: number;
+	preScrollCompleted: boolean;
+	preScrollSteps: number;
+	wasClipped: boolean;
 	elements: {
 		selector: string;
 		rawBox: { x: number; y: number; width: number; height: number } | null;

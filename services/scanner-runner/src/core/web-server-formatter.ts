@@ -49,6 +49,7 @@ export class WebServerFormatter {
 		const pages: UnifiedReportV2['pages'] = [];
 		const issues: UnifiedReportV2['issues'] = [];
 		const artifacts: NonNullable<UnifiedReportV2['artifacts']> = [];
+		const errors: NonNullable<UnifiedReportV2['errors']> = [];
 
 		const severityTotals: SeverityCounts = this.emptySeverityCounts();
 		const baseUrl =
@@ -185,10 +186,28 @@ export class WebServerFormatter {
 				...(page.path !== undefined ? { path: page.path } : {}),
 				...(pageOverview !== undefined ? { pageOverview } : {})
 			});
+
+			if (!page.success) {
+				errors.push({
+					scope: 'page',
+					scannerId,
+					pageId: page.pageId,
+					code: 'page_scan_failed',
+					message: page.error ?? 'Page scan failed',
+					retryable: page.retryable ?? false
+				});
+			}
 		}
 
+		const scannerStatus =
+			results.summary.pagesFailed === 0
+				? 'success'
+				: results.summary.pagesFailed >= results.pages.length
+					? 'failed'
+					: 'partial';
+
 		return {
-			version: '2.0.0',
+			version: '2.1.0',
 			meta: {
 				jobId: results.jobId,
 				scannedAt: results.startedAt,
@@ -210,7 +229,7 @@ export class WebServerFormatter {
 				{
 					id: scannerId,
 					name: scannerId,
-					status: 'success',
+					status: scannerStatus,
 					issueCount: results.summary.totalIssues,
 					severity: severityTotals,
 					toolVersion: results.version,
@@ -223,7 +242,7 @@ export class WebServerFormatter {
 			pages,
 			issues,
 			artifacts,
-			errors: []
+			errors
 		};
 	}
 

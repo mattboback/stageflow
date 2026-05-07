@@ -76,6 +76,9 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 				PageId:       "page-1",
 				PageUrl:      "https://example.com/",
 				ElementCount: 1,
+				Occurrences: []report.IssueOccurrence{
+					{Selector: stringPtr("img.hero")},
+				},
 			},
 		},
 		Scanners: []report.ScannerSummary{
@@ -311,6 +314,9 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 				PageId:       "page-1",
 				PageUrl:      "https://example.com/",
 				ElementCount: 1,
+				Occurrences: []report.IssueOccurrence{
+					{Selector: stringPtr("img.hero")},
+				},
 			},
 		},
 		Scanners: []report.ScannerSummary{
@@ -360,6 +366,9 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 				PageId:       "page-1",
 				PageUrl:      "https://example.com/",
 				ElementCount: 1,
+				Occurrences: []report.IssueOccurrence{
+					{Selector: stringPtr("img.hero")},
+				},
 			},
 		},
 		Scanners: []report.ScannerSummary{

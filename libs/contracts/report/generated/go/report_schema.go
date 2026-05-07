@@ -901,11 +901,13 @@ func (j *ReportSummary) UnmarshalJSON(value []byte) error {
 type ScannerStatus string
 
 const ScannerStatusFailed ScannerStatus = "failed"
+const ScannerStatusPartial ScannerStatus = "partial"
 const ScannerStatusSkipped ScannerStatus = "skipped"
 const ScannerStatusSuccess ScannerStatus = "success"
 
 var enumValues_ScannerStatus = []interface{}{
 	"success",
+	"partial",
 	"failed",
 	"skipped",
 }

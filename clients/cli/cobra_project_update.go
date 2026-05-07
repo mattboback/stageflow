@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
 func newProjectUpdateCmd(root *rootOptions) *cobra.Command {
@@ -41,7 +43,7 @@ func newProjectUpdateCmd(root *rootOptions) *cobra.Command {
 				}
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 			p, err := client.UpdateProject(cmd.Context(), slug, body)
 			if err != nil {

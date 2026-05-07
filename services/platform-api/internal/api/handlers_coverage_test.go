@@ -917,6 +917,53 @@ func TestHandleJobURLSubmitSuccess(t *testing.T) {
 	if len(publisher.envelopes) != 1 {
 		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
 	}
+
+	published, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok {
+		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
+	}
+
+	if !published.Config.Screenshot {
+		t.Fatal("expected omitted screenshot field to default to true")
+	}
+}
+
+func TestHandleJobURLSubmitExplicitScreenshotFalse(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	payload := map[string]any{
+		"urls":       []string{"https://example.com"},
+		"modules":    []string{"axe"},
+		"screenshot": false,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
+	}
+
+	published, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok {
+		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
+	}
+
+	if published.Config.Screenshot {
+		t.Fatal("expected explicit screenshot=false to be honored")
+	}
 }
 
 func TestHandleJobURLSubmitInvalidJSON(t *testing.T) {
@@ -983,5 +1030,41 @@ func TestZipUploadSanitizesUploadedFilename(t *testing.T) {
 
 	if !strings.HasSuffix(uploadedPath, "/passwd.zip") {
 		t.Fatalf("uploaded object path = %q, want suffix %q", uploadedPath, "/passwd.zip")
+	}
+}
+
+func TestZipUploadDefaultsScreenshotCaptureOn(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	addZipFile(t, writer, "site.zip", buildTestZip(t))
+	writeField(t, writer, "modules", "axe")
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rr := httptest.NewRecorder()
+	server.handleJobZipUpload(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
+	}
+
+	published, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok {
+		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
+	}
+
+	if !published.Config.Screenshot {
+		t.Fatal("expected omitted multipart screenshot field to default to true")
 	}
 }

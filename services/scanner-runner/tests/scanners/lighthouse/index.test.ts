@@ -378,19 +378,23 @@ describe('LighthouseScanner', () => {
 			expect(issues).toHaveLength(0);
 		});
 
-		it('skips manual audits', () => {
+		it('surfaces manual audits as info findings', () => {
 			const lhResult = createMockLighthouseResult({
 				'focus-traps': {
 					id: 'focus-traps',
 					title: 'Focus is not trapped in an interactive element',
 					description: 'Manual check required.',
-					score: 0.5,
+					score: null,
 					scoreDisplayMode: 'manual'
 				}
 			});
 
-			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as unknown[];
-			expect(issues).toHaveLength(0);
+			const issues = callPrivateMethod(scanner, 'extractIssues', lhResult) as Issue[];
+			expect(issues).toHaveLength(1);
+			expect(issues[0]!.id).toBe('focus-traps');
+			expect(issues[0]!.severity).toBe('info');
+			expect(issues[0]!.metadata?.lighthouseManual).toBe(true);
+			expect(issues[0]!.description).toContain('Manual verification required');
 		});
 
 		it('maps critical score (0) to critical severity', () => {

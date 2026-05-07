@@ -7,9 +7,11 @@ import (
 	"slices"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
-func renderScanners(out io.Writer, response ScannersResponse, format outputFormat) error {
+func renderScanners(out io.Writer, response apiclient.ScannersResponse, format outputFormat) error {
 	if format == outputFormatJSON {
 		encoder := json.NewEncoder(out)
 		encoder.SetIndent("", "  ")
@@ -25,8 +27,8 @@ func renderScanners(out io.Writer, response ScannersResponse, format outputForma
 	return writeScannersSummary(out, response)
 }
 
-func writeScannersSummary(out io.Writer, response ScannersResponse) error {
-	slices.SortFunc(response.Scanners, func(a, b ScannerInfo) int {
+func writeScannersSummary(out io.Writer, response apiclient.ScannersResponse) error {
+	slices.SortFunc(response.Scanners, func(a, b apiclient.ScannerInfo) int {
 		return strings.Compare(a.ID, b.ID)
 	})
 
@@ -62,8 +64,8 @@ func writeScannersSummary(out io.Writer, response ScannersResponse) error {
 	return w.Flush()
 }
 
-func writeScannersMarkdown(out io.Writer, response ScannersResponse) error {
-	slices.SortFunc(response.Scanners, func(a, b ScannerInfo) int {
+func writeScannersMarkdown(out io.Writer, response apiclient.ScannersResponse) error {
+	slices.SortFunc(response.Scanners, func(a, b apiclient.ScannerInfo) int {
 		return strings.Compare(a.ID, b.ID)
 	})
 

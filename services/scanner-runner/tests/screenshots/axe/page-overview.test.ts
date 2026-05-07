@@ -135,14 +135,28 @@ describe('loadPageOverviewConfig', () => {
 
 	it('returns default values when no environment variables are set', () => {
 		process.env.A11Y_PAGE_OVERVIEW_ENABLED = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_FINISH_ANIMATIONS = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_FORCE_CONTENT_VISIBILITY = undefined;
 		process.env.A11Y_PAGE_OVERVIEW_MAX_ELEMENTS = undefined;
 		process.env.A11Y_PAGE_OVERVIEW_MAX_HEIGHT = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_MAX_SCROLL_STEPS = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_PRE_SCROLL = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_SCROLL_PAUSE_MS = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_SCROLL_SETTLE_MS = undefined;
+		process.env.A11Y_PAGE_OVERVIEW_SCROLL_STEP_PX = undefined;
 
 		const config = loadPageOverviewConfig();
 
 		expect(config.enabled).toBe(true);
+		expect(config.finishAnimations).toBe(true);
+		expect(config.forceContentVisibility).toBe(true);
 		expect(config.maxElements).toBe(50);
-		expect(config.maxHeight).toBe(5000);
+		expect(config.maxHeight).toBe(0);
+		expect(config.maxScrollSteps).toBe(80);
+		expect(config.preScroll).toBe(true);
+		expect(config.scrollPauseMs).toBe(75);
+		expect(config.scrollSettleMs).toBe(150);
+		expect(config.scrollStepPx).toBe(800);
 	});
 
 	it('reads enabled from A11Y_PAGE_OVERVIEW_ENABLED env var', () => {
@@ -175,6 +189,29 @@ describe('loadPageOverviewConfig', () => {
 	it('reads maxHeight from A11Y_PAGE_OVERVIEW_MAX_HEIGHT env var', () => {
 		process.env.A11Y_PAGE_OVERVIEW_MAX_HEIGHT = '10000';
 		expect(loadPageOverviewConfig().maxHeight).toBe(10000);
+
+		process.env.A11Y_PAGE_OVERVIEW_MAX_HEIGHT = '0';
+		expect(loadPageOverviewConfig().maxHeight).toBe(0);
+	});
+
+	it('reads page preparation env vars', () => {
+		process.env.A11Y_PAGE_OVERVIEW_PRE_SCROLL = 'false';
+		process.env.A11Y_PAGE_OVERVIEW_FORCE_CONTENT_VISIBILITY = 'false';
+		process.env.A11Y_PAGE_OVERVIEW_FINISH_ANIMATIONS = 'false';
+		process.env.A11Y_PAGE_OVERVIEW_SCROLL_STEP_PX = '1200';
+		process.env.A11Y_PAGE_OVERVIEW_SCROLL_PAUSE_MS = '25';
+		process.env.A11Y_PAGE_OVERVIEW_SCROLL_SETTLE_MS = '40';
+		process.env.A11Y_PAGE_OVERVIEW_MAX_SCROLL_STEPS = '12';
+
+		const config = loadPageOverviewConfig();
+
+		expect(config.preScroll).toBe(false);
+		expect(config.forceContentVisibility).toBe(false);
+		expect(config.finishAnimations).toBe(false);
+		expect(config.scrollStepPx).toBe(1200);
+		expect(config.scrollPauseMs).toBe(25);
+		expect(config.scrollSettleMs).toBe(40);
+		expect(config.maxScrollSteps).toBe(12);
 	});
 
 	it('allows overrides to take precedence over environment variables', () => {
@@ -189,7 +226,7 @@ describe('loadPageOverviewConfig', () => {
 		expect(config.enabled).toBe(false);
 		expect(config.maxElements).toBe(25);
 		// Non-overridden values should still come from env
-		expect(config.maxHeight).toBe(5000); // default, not in env
+		expect(config.maxHeight).toBe(0); // default, not in env
 	});
 
 	it('handles partial overrides correctly', () => {
@@ -199,6 +236,6 @@ describe('loadPageOverviewConfig', () => {
 
 		expect(config.enabled).toBe(true); // default
 		expect(config.maxElements).toBe(10); // override
-		expect(config.maxHeight).toBe(5000); // default
+		expect(config.maxHeight).toBe(0); // default
 	});
 });

@@ -51,7 +51,7 @@ func TestMapChangeToSSEPayload_Golden(t *testing.T) {
 				Snapshot: &status.JobRecord{
 					State:           models.JobStateScanning,
 					CurrentPage:     3,
-					TotalViolations: 7,
+					TotalViolations: 9,
 				},
 			},
 		},

@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -65,9 +66,9 @@ func newAICmd(root *rootOptions) *cobra.Command {
 				)
 			}
 
-			client := NewClient(root.apiURL, root.apiKey, nil)
+			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
-			req := SubmitJobRequest{
+			req := apiclient.SubmitJobRequest{
 				URLs:                []string{urlStr},
 				Modules:             []string{"ai-navigator"},
 				Screenshot:          false,
@@ -145,7 +146,7 @@ func determineSuccess(reportDoc report.UnifiedReportV2) bool {
 }
 
 //nolint:gocognit,gocyclo
-func fetchProvenance(ctx context.Context, status JobStatus) ([]any, []CompressedProv) {
+func fetchProvenance(ctx context.Context, status apiclient.JobStatus) ([]any, []CompressedProv) {
 	var fullProv []any
 
 	var compressedProv []CompressedProv

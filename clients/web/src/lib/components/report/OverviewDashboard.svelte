@@ -97,6 +97,8 @@
 			return `${base} Prioritize critical and serious findings first.`;
 		if (report.summary.totalIssues > 0)
 			return `${base} All findings are moderate severity or below.`;
+		if ((report.errors?.length ?? 0) > 0)
+			return 'No issues detected, but scan errors need review before treating this as clean.';
 		return 'No issues detected.';
 	});
 

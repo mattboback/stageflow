@@ -44,6 +44,9 @@ RUN bun run build
 # Stage 2: Production server
 FROM docker.io/library/nginx:1.29-alpine AS runner
 
+# Patch CVE-2026-27135: upgrade nghttp2-libs to >=1.68.1
+RUN apk upgrade --no-cache nghttp2-libs
+
 # Remove default nginx content and config
 RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
 
