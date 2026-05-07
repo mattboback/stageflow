@@ -46,7 +46,16 @@
 		return map;
 	});
 
-	const pageIssues = $derived(selectedPage ? (issuesByPage[selectedPage.id] ?? []) : []);
+	const pageIssues = $derived.by(() => {
+		const issues = selectedPage ? (issuesByPage[selectedPage.id] ?? []) : [];
+		const seen = new Set<string>();
+		return issues.filter((issue, i) => {
+			const key = issue.id || String(i);
+			if (seen.has(key)) return false;
+			seen.add(key);
+			return true;
+		});
+	});
 
 	const issueMap = $derived(
 		Object.fromEntries(pageIssues.map((issue) => [issue.id, issue])) as Record<
@@ -301,7 +310,7 @@
 								: ''}"
 						>
 							<image href={overviewUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
-							{#each overlayElements as element (`${element.issueId}:${element.nodeIndex}`)}
+							{#each overlayElements as element, elIdx (elIdx)}
 								{@const issue = issueMap[element.issueId]}
 								{#if issue}
 									{@const strokeColor = getSeverityStrokeColor(issue.severity)}
