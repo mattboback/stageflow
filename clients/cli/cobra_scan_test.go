@@ -8,6 +8,7 @@ import (
 func TestNewScanCmd_DefaultsScreenshotCaptureOn(t *testing.T) {
 	cmd := newScanCmd(&rootOptions{})
 	flag := cmd.Flags().Lookup("screenshot")
+
 	if flag == nil {
 		t.Fatal("missing --screenshot flag")
 	}
