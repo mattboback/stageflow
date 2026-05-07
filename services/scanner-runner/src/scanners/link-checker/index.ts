@@ -221,6 +221,8 @@ export class LinkCheckerScanner extends ScannerBase {
 					!href ||
 					href === '#' ||
 					href.startsWith('javascript:') ||
+					href.startsWith('data:') ||
+					href.startsWith('vbscript:') ||
 					href.startsWith('mailto:') ||
 					href.startsWith('tel:')
 				) {
