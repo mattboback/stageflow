@@ -15,7 +15,7 @@ stageflow scan [url...] [--project <slug>]
       --max-issues int          Max issues to include in output (0 = unlimited) (default 200)
       --project string          Scan using a registered project's URLs and config
       --scanners string         Comma-separated scanner modules (default "axe,lighthouse,seo,link-checker")
-      --screenshot              Capture screenshots
+      --screenshot              Capture screenshots (default true)
       --timeout duration        Max wait time (default 5m0s)
 ```
 
