@@ -20,6 +20,7 @@
 	import ReportHeader from './ReportHeader.svelte';
 	import ReportSectionNav from './ReportSectionNav.svelte';
 	import ScannersView from './ScannersView.svelte';
+	import VisualReviewPanel from './VisualReviewPanel.svelte';
 
 	interface Props {
 		jobId: string;
@@ -37,7 +38,9 @@
 
 	const section = $derived.by(() => {
 		const value = page.url.searchParams.get('section') ?? 'overview';
-		return ['overview', 'issues', 'pages', 'scanners', 'artifacts', 'errors'].includes(value)
+		return ['overview', 'issues', 'pages', 'scanners', 'visual', 'artifacts', 'errors'].includes(
+			value
+		)
 			? value
 			: 'overview';
 	});
@@ -246,6 +249,17 @@
 						{job}
 						{activeScanner}
 						onSelectScanner={(scannerId) => updateQueryParams({ scanner: scannerId })}
+					/>
+				</section>
+			{:else if section === 'visual'}
+				<section id="report-panel-visual" aria-labelledby="report-tab-visual">
+					<VisualReviewPanel
+						report={displayReport}
+						{screenshots}
+						{activeScanner}
+						{activePage}
+						onSelectPage={(pageId) => updateQueryParams({ page: pageId })}
+						onIssueSelect={handleIssueSelect}
 					/>
 				</section>
 			{:else if section === 'artifacts'}

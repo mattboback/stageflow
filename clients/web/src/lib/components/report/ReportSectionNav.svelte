@@ -43,6 +43,7 @@
 				shortLabel: 'Scans',
 				count: report.scanners.length
 			},
+			{ id: 'visual', label: 'Visual Review', shortLabel: 'Visual' },
 			{ id: 'artifacts', label: 'Artifacts', shortLabel: 'Files' },
 			{
 				id: 'errors',
