@@ -185,3 +185,46 @@ func TestParseResponse_JSON(t *testing.T) {
 		t.Errorf("Expected id test-123, got %s", result["id"])
 	}
 }
+
+func TestReadBoundedPodmanBodyTruncatesOversizedBody(t *testing.T) {
+	t.Parallel()
+
+	body := strings.NewReader(strings.Repeat("x", maxPodmanDiagnosticBytes) + "overflow")
+
+	got, truncated, err := readBoundedPodmanBody(body, maxPodmanDiagnosticBytes)
+	if err != nil {
+		t.Fatalf("readBoundedPodmanBody: %v", err)
+	}
+
+	if !truncated {
+		t.Fatal("expected oversized body to be marked truncated")
+	}
+
+	if len(got) != maxPodmanDiagnosticBytes {
+		t.Fatalf("body length = %d, want %d", len(got), maxPodmanDiagnosticBytes)
+	}
+
+	if string(got) != strings.Repeat("x", maxPodmanDiagnosticBytes) {
+		t.Fatal("expected bounded body to contain the leading diagnostic bytes")
+	}
+}
+
+func TestReadPodmanTailKeepsOnlyFinalLinesWhenOversized(t *testing.T) {
+	t.Parallel()
+
+	want := "keep-1\nkeep-2\n"
+	body := strings.NewReader("drop-1\ndrop-2\n" + want)
+
+	got, truncated, err := readPodmanTail(body, int64(len(want)))
+	if err != nil {
+		t.Fatalf("readPodmanTail: %v", err)
+	}
+
+	if !truncated {
+		t.Fatal("expected oversized log body to be marked truncated")
+	}
+
+	if got != want {
+		t.Fatalf("tail = %q, want %q", got, want)
+	}
+}
