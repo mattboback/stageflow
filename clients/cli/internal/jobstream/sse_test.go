@@ -3,6 +3,7 @@ package jobstream
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -25,6 +26,37 @@ func (b *closeTrackingBody) Close() error {
 	b.closed = true
 
 	return nil
+}
+
+type readErrorBody struct {
+	err    error
+	closed bool
+}
+
+func (b *readErrorBody) Read(_ []byte) (int, error) {
+	return 0, b.err
+}
+
+func (b *readErrorBody) Close() error {
+	b.closed = true
+
+	return nil
+}
+
+func TestDrainAndCloseResponseBodyClosesAfterDrainError(t *testing.T) {
+	t.Parallel()
+
+	readErr := errors.New("drain failed")
+	body := &readErrorBody{err: readErr}
+
+	err := drainAndCloseResponseBody(body)
+	if !errors.Is(err, readErr) {
+		t.Fatalf("expected drain error %v, got %v", readErr, err)
+	}
+
+	if !body.closed {
+		t.Fatal("expected response body to be closed after drain error")
+	}
 }
 
 func TestHandleSSEEvent_PrintsScannerCompletionSummary(t *testing.T) {
