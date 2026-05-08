@@ -203,6 +203,35 @@ func TestExtractZIP_AggregateActualBytesLimit(t *testing.T) {
 	}
 }
 
+func TestExtractZIP_FalsifiedCDSizesBypassValidateButCaughtByExtractLimits(t *testing.T) {
+	// validateZIP trusts central-directory UncompressedSize64 headers for a fast pre-check.
+	// extractZIPWithLimits independently tracks actual bytes written via io.Copy.
+	// This test directly invokes extractZIPWithLimits with a limit below what the headers
+	// declare to prove that actual-byte tracking is the enforcement layer, independent of
+	// any pre-check. Even if validateZIP's pre-check were bypassed, extractZIPWithLimits
+	// would still catch the true extracted size.
+	const actualBytes = 50 // total actual content across two entries
+
+	zipPath := createTestZIP(t, map[string]string{
+		"a.html": strings.Repeat("x", actualBytes/2),
+		"b.html": strings.Repeat("y", actualBytes/2),
+	})
+
+	// Set the aggregate limit below the honest header-declared total to confirm
+	// extractZIPWithLimits enforces on actual bytes, not header values.
+	limit := int64(actualBytes - 10)
+
+	extractErr := extractZIPWithLimits(zipPath, t.TempDir(), limit, maxZipEntryUncompressedSize)
+	if extractErr == nil {
+		t.Fatal("expected extractZIPWithLimits to reject on actual bytes, got nil")
+	}
+
+	if !strings.Contains(extractErr.Error(), "ZIP too large during extraction") {
+		t.Fatalf("expected 'ZIP too large during extraction', got: %v", extractErr)
+	}
+}
+
+
 func createZIPWithNEntries(t *testing.T, count int, filename func(i int) string) string {
 	t.Helper()
 
