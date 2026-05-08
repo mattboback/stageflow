@@ -182,6 +182,30 @@ describe('target validation', () => {
 		).rejects.toBeInstanceOf(BlockedTargetError);
 	});
 
+	it.each([
+		['RFC1918 10/8', 'http://10.0.0.1/admin'],
+		['RFC1918 172.16/12', 'http://172.16.0.1/admin'],
+		['RFC1918 192.168/16', 'http://192.168.0.1/admin'],
+		['link-local IPv4', 'http://169.254.169.254/latest/meta-data'],
+		['ULA IPv6 fc00::/7', 'http://[fc00::1]/admin'],
+		['ULA IPv6 fd00::/7', 'http://[fd00::1]/admin']
+	])('blocks %s for live provenance without allow_private_targets', async (_label, targetURL) => {
+		delete process.env.ALLOW_PRIVATE_TARGETS;
+
+		const policy = buildTargetValidationPolicy({
+			version: '1.0.0',
+			job_id: 'job-1',
+			base_url: 'https://example.com',
+			mode: 'live',
+			pages: []
+		});
+
+		expect(policy.allowedOrigins).toEqual([]);
+		await expect(validateTargetURLForPolicy(targetURL, policy)).rejects.toBeInstanceOf(
+			BlockedTargetError
+		);
+	});
+
 	it('enforces validation only for URL jobs', () => {
 		process.env.SCAN_URLS = '["https://example.com"]';
 		expect(shouldEnforceRuntimeTargetValidation()).toBe(true);
