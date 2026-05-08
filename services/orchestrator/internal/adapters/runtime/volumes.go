@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 )
@@ -30,7 +29,7 @@ func (c *Client) CreateVolume(ctx context.Context, name string) error {
 	}()
 
 	if resp.StatusCode >= 400 {
-		data, readErr := io.ReadAll(resp.Body)
+		data, _, readErr := readBoundedPodmanBody(resp.Body, maxPodmanDiagnosticBytes)
 		if readErr != nil {
 			return fmt.Errorf("API error (status %d): failed to read response body: %w", resp.StatusCode, readErr)
 		}
