@@ -3,6 +3,18 @@ import type { ActionDecision, AgentGoal } from './types';
 
 import { isPlainObject, parseFirstJsonObject } from './json';
 
+const MAX_MODEL_SELECTOR_LENGTH = 512;
+const DISALLOWED_SELECTOR_PREFIXES = [
+	'//',
+	'xpath=',
+	'javascript:',
+	'data:',
+	'file:',
+	'http:',
+	'https:'
+];
+const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
+
 export function parseActionDecision(content: string, goal: AgentGoal): ActionDecision | undefined {
 	const parsed = parseFirstJsonObject(content);
 	if (!parsed) {
@@ -64,8 +76,8 @@ function parseSelectorAction(
 	type: 'click' | 'hover',
 	raw: Record<string, unknown>
 ): PreScanAction | undefined {
-	const selector = raw.selector;
-	if (typeof selector !== 'string' || !selector.trim()) {
+	const selector = parseModelSelector(raw.selector);
+	if (!selector) {
 		return undefined;
 	}
 
@@ -90,10 +102,10 @@ function parseKeyboardAction(raw: Record<string, unknown>): PreScanAction | unde
 	return { type: 'keyboard', key };
 }
 
-function parseScrollAction(raw: Record<string, unknown>): PreScanAction {
+function parseScrollAction(raw: Record<string, unknown>): ActionDecision['action'] {
 	const direction = raw.direction;
 	const pixels = raw.pixels;
-	const selector = raw.selector;
+	const selector = parseModelSelector(raw.selector);
 
 	const action: PreScanAction = { type: 'scroll' };
 
@@ -105,7 +117,11 @@ function parseScrollAction(raw: Record<string, unknown>): PreScanAction {
 		action.pixels = pixels;
 	}
 
-	if (typeof selector === 'string' && selector.trim()) {
+	if (raw.selector !== undefined && !selector) {
+		return { type: 'stuck', reason: 'Scroll selector failed validation' };
+	}
+
+	if (selector) {
 		action.selector = selector;
 	}
 
@@ -117,8 +133,8 @@ function parseInputAction(
 	raw: Record<string, unknown>,
 	goal: AgentGoal
 ): ActionDecision['action'] {
-	const selector = raw.selector;
-	if (typeof selector !== 'string' || !selector.trim()) {
+	const selector = parseModelSelector(raw.selector);
+	if (!selector) {
 		return { type: 'stuck', reason: 'Fill/select requires selector' };
 	}
 
@@ -143,4 +159,26 @@ function parseInputAction(
 	return type === 'fill'
 		? { type: 'fill', selector, value: resolved }
 		: { type: 'select', selector, value: resolved };
+}
+
+function parseModelSelector(raw: unknown): string | undefined {
+	if (typeof raw !== 'string') {
+		return undefined;
+	}
+
+	const selector = raw.trim();
+	if (!selector || selector.length > MAX_MODEL_SELECTOR_LENGTH) {
+		return undefined;
+	}
+
+	if (CONTROL_CHARACTER_PATTERN.test(selector)) {
+		return undefined;
+	}
+
+	const lower = selector.toLowerCase();
+	if (DISALLOWED_SELECTOR_PREFIXES.some((prefix) => lower.startsWith(prefix))) {
+		return undefined;
+	}
+
+	return selector;
 }
