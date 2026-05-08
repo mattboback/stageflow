@@ -37,6 +37,16 @@ The following areas are in scope for security reports:
 - **Secret handling** (credential exposure in logs, config, or artifacts)
 - **Dependency vulnerabilities** in Go modules or npm packages
 
+## Residual DNS Rebinding Risk
+
+StageFlow validates scan targets for SSRF policy at submission time and in scanner-runner runtime policy checks, but the headless browser resolves hostnames independently when it loads a page or follows browser-level network activity. StageFlow does not currently pin DNS TTLs or intercept browser connections to force every request through a connection-level private-network check.
+
+For deployments that scan untrusted live URLs with `allow_private_targets=false`, treat DNS rebinding as a residual risk and apply defense in depth:
+
+- Isolate scanner pods in a private network namespace, for example with `POD_NETNS_MODE`, so scanner egress cannot reach sensitive host or cluster networks by default.
+- Use an internal DNS resolver that blocks public names from resolving to RFC1918, loopback, link-local, ULA, and other reserved internal ranges.
+- Keep scan job lifetimes short so DNS rebinding windows remain small.
+
 Out of scope:
 
 - The hosted demo at `stageflow.org` (report infrastructure issues separately)
