@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import vitest from '@vitest/eslint-plugin';
+import { defineConfig } from 'eslint/config';
 import perfectionist from 'eslint-plugin-perfectionist';
 import svelte from 'eslint-plugin-svelte';
 import globals from 'globals';
@@ -94,7 +95,7 @@ const commonTypeRules = {
 	'no-duplicate-imports': 'error'
 };
 
-export default tseslint.config(
+export default defineConfig(
 	{
 		ignores: [
 			'build/**',
@@ -108,7 +109,8 @@ export default tseslint.config(
 
 	{
 		linterOptions: {
-			reportUnusedDisableDirectives: 'error'
+			reportUnusedDisableDirectives: 'error',
+			reportUnusedInlineConfigs: 'error'
 		}
 	},
 

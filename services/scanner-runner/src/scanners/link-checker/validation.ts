@@ -44,11 +44,11 @@ async function fetchWithValidatedRedirects(
 			return { response, redirects };
 		}
 
-		let locationHeader: string | null = null;
+		let locationHeader: string | null;
 		try {
 			locationHeader = response.headers.get('location');
 		} catch {
-			locationHeader = null;
+			return { response, redirects };
 		}
 		if (!locationHeader) {
 			return { response, redirects };

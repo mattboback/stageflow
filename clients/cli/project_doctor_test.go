@@ -61,7 +61,16 @@ func TestWriteProjectDoctorJSON_PassedTrueWhenAllChecksPass(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := writeProjectDoctorJSON(&out, "/repo", "/repo/.stageflow/config.yaml", "http://api", []string{"https://example.com"}, projectStageflowCfg{}, false, checks); err != nil {
+	if err := writeProjectDoctorJSON(
+		&out,
+		"/repo",
+		"/repo/.stageflow/config.yaml",
+		"http://api",
+		[]string{"https://example.com"},
+		projectStageflowCfg{},
+		false,
+		checks,
+	); err != nil {
 		t.Fatalf("writeProjectDoctorJSON: %v", err)
 	}
 
@@ -81,7 +90,16 @@ func TestWriteProjectDoctorJSON_PassedFalseWhenCheckFails(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := writeProjectDoctorJSON(&out, "/repo", "/repo/.stageflow/config.yaml", "http://api", []string{"https://example.com"}, projectStageflowCfg{}, false, checks); err != nil {
+	if err := writeProjectDoctorJSON(
+		&out,
+		"/repo",
+		"/repo/.stageflow/config.yaml",
+		"http://api",
+		[]string{"https://example.com"},
+		projectStageflowCfg{},
+		false,
+		checks,
+	); err != nil {
 		t.Fatalf("writeProjectDoctorJSON: %v", err)
 	}
 
@@ -97,7 +115,16 @@ func TestWriteProjectDoctorJSON_PassedFalseWhenCheckFails(t *testing.T) {
 
 func TestWriteProjectDoctorJSON_SchemaIsSet(t *testing.T) {
 	var out bytes.Buffer
-	if err := writeProjectDoctorJSON(&out, "/repo", "/repo/.stageflow/config.yaml", "http://api", nil, projectStageflowCfg{}, false, nil); err != nil {
+	if err := writeProjectDoctorJSON(
+		&out,
+		"/repo",
+		"/repo/.stageflow/config.yaml",
+		"http://api",
+		nil,
+		projectStageflowCfg{},
+		false,
+		nil,
+	); err != nil {
 		t.Fatalf("writeProjectDoctorJSON: %v", err)
 	}
 

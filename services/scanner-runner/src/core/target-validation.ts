@@ -140,7 +140,7 @@ function parseTargetURL(rawURL: string): URL {
 		target = new URL(rawURL);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Invalid target URL "${rawURL}": ${message}`);
+		throw new Error(`Invalid target URL "${rawURL}": ${message}`, { cause: err });
 	}
 
 	if (target.protocol !== 'http:' && target.protocol !== 'https:') {
@@ -253,7 +253,7 @@ export async function validateRuntimeTargetURL(
 		addresses = await resolver.resolve(host);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to resolve host "${host}": ${message}`);
+		throw new Error(`Failed to resolve host "${host}": ${message}`, { cause: err });
 	}
 
 	if (addresses.length === 0) {

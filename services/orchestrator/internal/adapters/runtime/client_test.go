@@ -191,7 +191,7 @@ func TestReadBoundedPodmanBodyTruncatesOversizedBody(t *testing.T) {
 
 	body := strings.NewReader(strings.Repeat("x", maxPodmanDiagnosticBytes) + "overflow")
 
-	got, truncated, err := readBoundedPodmanBody(body, maxPodmanDiagnosticBytes)
+	got, truncated, err := readBoundedPodmanBody(body)
 	if err != nil {
 		t.Fatalf("readBoundedPodmanBody: %v", err)
 	}

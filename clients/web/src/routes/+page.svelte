@@ -187,8 +187,8 @@
 				</h1>
 
 				<p class="landing-subhead mx-auto mt-5">
-					{SITE.tagline}. StageFlow merges eight scanners into one operational flow, so you can
-					move from URL to remediation with less friction.
+					{SITE.tagline}. StageFlow merges eight scanners into one operational flow, so you can move
+					from URL to remediation with less friction.
 				</p>
 
 				<div class="mt-7 flex flex-wrap justify-center gap-3">
@@ -249,14 +249,27 @@
 					{@const ScannerIcon = scanner.icon}
 					<article class={cn('editorial-card scanner-card border-t-2 p-6', scanner.border)}>
 						<div class="mb-4 flex items-start justify-between gap-4">
-							<div class={cn('flex h-12 w-12 items-center justify-center rounded-xl shadow-sm', scanner.bg)}>
+							<div
+								class={cn(
+									'flex h-12 w-12 items-center justify-center rounded-xl shadow-sm',
+									scanner.bg
+								)}
+							>
 								<ScannerIcon class={cn('h-5.5 w-5.5', scanner.color)} />
 							</div>
-							<span class={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums', scanner.bg, scanner.color)}>
+							<span
+								class={cn(
+									'rounded-full px-2 py-0.5 text-[10px] font-semibold tabular-nums',
+									scanner.bg,
+									scanner.color
+								)}
+							>
 								{String(index + 1).padStart(2, '0')}
 							</span>
 						</div>
-						<h3 class="text-ink-strong text-base font-semibold tracking-[-0.01em]">{scanner.name}</h3>
+						<h3 class="text-ink-strong text-base font-semibold tracking-[-0.01em]">
+							{scanner.name}
+						</h3>
 						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{scanner.desc}</p>
 					</article>
 				{/each}
@@ -278,9 +291,12 @@
 				{#each workflowSteps as item (item.step)}
 					<article class="workflow-step">
 						<div class="mb-5 flex items-center gap-2">
-						<span class="bg-accent/10 text-accent font-mono inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold">{item.step}</span>
-						<div class="bg-line h-px flex-1 opacity-60"></div>
-					</div>
+							<span
+								class="bg-accent/10 text-accent inline-flex h-7 w-7 items-center justify-center rounded-lg font-mono text-xs font-semibold"
+								>{item.step}</span
+							>
+							<div class="bg-line h-px flex-1 opacity-60"></div>
+						</div>
 						<h3 class="text-ink mt-3 text-lg font-semibold">{item.title}</h3>
 						<p class="text-ink-muted mt-2 text-sm leading-relaxed">{item.desc}</p>
 						<p class="text-accent-deep mt-4 text-xs leading-relaxed font-medium">{item.signal}</p>
@@ -313,7 +329,9 @@
 									<CheckCircle class="h-4.5 w-4.5" />
 								</div>
 								<div>
-									<h3 class="text-ink-strong text-sm font-semibold tracking-[-0.01em]">{item.title}</h3>
+									<h3 class="text-ink-strong text-sm font-semibold tracking-[-0.01em]">
+										{item.title}
+									</h3>
 									<p class="text-ink-muted mt-1.5 text-sm leading-relaxed">{item.desc}</p>
 								</div>
 							</div>

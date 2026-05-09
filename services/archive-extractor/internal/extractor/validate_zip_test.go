@@ -231,7 +231,6 @@ func TestExtractZIP_FalsifiedCDSizesBypassValidateButCaughtByExtractLimits(t *te
 	}
 }
 
-
 func createZIPWithNEntries(t *testing.T, count int, filename func(i int) string) string {
 	t.Helper()
 

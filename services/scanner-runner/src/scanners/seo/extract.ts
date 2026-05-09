@@ -33,7 +33,7 @@ export async function extractSEOData(page: Page, url: string): Promise<PageSEODa
 		const currentHost = new URL(pageUrl).host;
 		for (const el of document.querySelectorAll('a[href]')) {
 			const href = el.getAttribute('href') ?? '';
-			let isInternal = false;
+			let isInternal: boolean;
 			try {
 				const linkUrl = new URL(href, pageUrl);
 				isInternal = linkUrl.host === currentHost;

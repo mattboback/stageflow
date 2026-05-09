@@ -166,6 +166,7 @@ func ensureSitePermissions(siteDir string) error {
 			return os.Chmod(path, 0o750)
 		}
 
+		//nolint:gosec // ZIP entries are sanitized before extraction; this only normalizes permissions.
 		return os.Chmod(path, 0o600)
 	})
 }

@@ -20,7 +20,7 @@
 
 	<!-- Scanner progress -->
 	<div
-		class="space-y-3 border-b border-[var(--color-line)] px-5 pb-3 pt-5 font-mono text-xs leading-relaxed"
+		class="space-y-3 border-b border-[var(--color-line)] px-5 pt-5 pb-3 font-mono text-xs leading-relaxed"
 	>
 		{#each scannerRows as scanner (scanner.name)}
 			<div class="space-y-1.5">
@@ -28,7 +28,7 @@
 					<span class="text-ink-muted text-[11px] font-medium">{scanner.label}</span>
 					<span class="text-[11px]">
 						{#if scanner.pct === 100}
-							<span class="text-emerald-600 font-semibold">✓ done</span>
+							<span class="font-semibold text-emerald-600">✓ done</span>
 						{:else}
 							<span class="text-ink-faint">{scanner.status}</span>
 						{/if}

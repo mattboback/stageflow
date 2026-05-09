@@ -58,10 +58,7 @@
 	});
 
 	const issueMap = $derived(
-		Object.fromEntries(pageIssues.map((issue) => [issue.id, issue])) as Record<
-			string,
-			IssueDetail
-		>
+		Object.fromEntries(pageIssues.map((issue) => [issue.id, issue])) as Record<string, IssueDetail>
 	);
 
 	// ─── Screenshot / overlay ─────────────────────────────────────────────────
@@ -112,9 +109,7 @@
 	});
 
 	// Issues that have at least one overlay element on the current page
-	const issuesWithMarkers = $derived(
-		new Set(overlayElements.map((el) => el.issueId))
-	);
+	const issuesWithMarkers = $derived(new Set(overlayElements.map((el) => el.issueId)));
 
 	// ─── Right-panel scroll sync ──────────────────────────────────────────────
 
@@ -205,10 +200,8 @@
 					<span class="block max-w-[140px] truncate">{p.path ?? p.url}</span>
 					{#if count > 0}
 						<span
-							class={cn(
-								'text-[10px]',
-								selectedPage?.id === p.id ? 'opacity-60' : 'text-ink-faint'
-							)}>{count} issues</span
+							class={cn('text-[10px]', selectedPage?.id === p.id ? 'opacity-60' : 'text-ink-faint')}
+							>{count} issues</span
 						>
 					{/if}
 				</button>
@@ -227,7 +220,7 @@
 </div>
 
 <!-- ── Two-column layout ──────────────────────────────────────────────────── -->
-<div class="items-start gap-4 print:hidden lg:grid lg:grid-cols-[1fr,380px]">
+<div class="items-start gap-4 lg:grid lg:grid-cols-[1fr,380px] print:hidden">
 	<!-- LEFT: Screenshot + overlay -->
 	<Panel class="overflow-hidden shadow-sm" padding="none" rounded="2xl">
 		<!-- Controls bar -->
@@ -357,8 +350,8 @@
 		{#if overlayElements.length > 0}
 			<div class="border-line border-t px-3 py-2">
 				<p class="text-ink-faint text-xs">
-					{overlayElements.length} element{overlayElements.length !== 1 ? 's' : ''} marked · click
-					a box to highlight the issue in the list →
+					{overlayElements.length} element{overlayElements.length !== 1 ? 's' : ''} marked · click a box
+					to highlight the issue in the list →
 				</p>
 			</div>
 		{/if}
@@ -433,7 +426,7 @@
 
 									<!-- Title + meta -->
 									<div class="min-w-0 flex-1">
-										<p class="text-ink line-clamp-2 text-sm font-medium leading-snug">
+										<p class="text-ink line-clamp-2 text-sm leading-snug font-medium">
 											{issue.title}
 										</p>
 										<p class="text-ink-faint mt-0.5 text-xs">
@@ -512,14 +505,10 @@
 				<table class="w-full border-collapse text-xs">
 					<thead>
 						<tr class="bg-gray-100">
-							<th class="border border-gray-200 px-2 py-1.5 text-left font-semibold"
-								>Severity</th
-							>
+							<th class="border border-gray-200 px-2 py-1.5 text-left font-semibold">Severity</th>
 							<th class="border border-gray-200 px-2 py-1.5 text-left font-semibold">Issue</th>
 							<th class="border border-gray-200 px-2 py-1.5 text-left font-semibold">Scanner</th>
-							<th class="border border-gray-200 px-2 py-1.5 text-center font-semibold"
-								>Elements</th
-							>
+							<th class="border border-gray-200 px-2 py-1.5 text-center font-semibold">Elements</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -530,9 +519,7 @@
 								</td>
 								<td class="border border-gray-200 px-2 py-1.5">{issue.title}</td>
 								<td class="border border-gray-200 px-2 py-1.5">{issue.scanner}</td>
-								<td class="border border-gray-200 px-2 py-1.5 text-center"
-									>{issue.elementCount}</td
-								>
+								<td class="border border-gray-200 px-2 py-1.5 text-center">{issue.elementCount}</td>
 							</tr>
 						{/each}
 					</tbody>

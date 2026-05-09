@@ -1821,7 +1821,7 @@ just ci
 | --------------- | ----------------------------------------------------------- |
 | **Correctness** | errcheck, govet, staticcheck, nilerr, bodyclose, exhaustive |
 | **Security**    | gosec, asciicheck, bidichk, depguard                        |
-| **Quality**     | gocritic, revive, gocyclo, gocognit, dupl, goconst          |
+| **Quality**     | gocritic, revive, gocyclo, gocognit, dupl                   |
 | **Tests**       | testifylint, thelper, tparallel                             |
 
 Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_test.go`.
