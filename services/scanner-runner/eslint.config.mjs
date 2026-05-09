@@ -1,6 +1,7 @@
 // @ts-check
 import eslint from "@eslint/js";
 import vitest from "@vitest/eslint-plugin";
+import { defineConfig } from "eslint/config";
 import perfectionist from "eslint-plugin-perfectionist";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -104,7 +105,7 @@ const commonTypeRules = {
 	"max-nested-callbacks": ["warn", 4],
 };
 
-export default tseslint.config(
+export default defineConfig(
 	{
 		ignores: ["dist/**", "node_modules/**", "coverage/**"],
 	},
@@ -112,6 +113,7 @@ export default tseslint.config(
 	{
 		linterOptions: {
 			reportUnusedDisableDirectives: "error",
+			reportUnusedInlineConfigs: "error",
 		},
 	},
 
@@ -124,17 +126,17 @@ export default tseslint.config(
 			globals: {
 				...globals.node,
 			},
+			parserOptions: {
+				projectService: {
+					allowDefaultProject: ["eslint.config.mjs", "vitest.config.ts"],
+				},
+				tsconfigRootDir: import.meta.dirname,
+			},
 		},
 	},
 
 	{
 		files: typedFiles,
-		languageOptions: {
-			parserOptions: {
-				project: "./tsconfig.eslint.json",
-				tsconfigRootDir: import.meta.dirname,
-			},
-		},
 		plugins: {
 			"@typescript-eslint": tseslint.plugin,
 			perfectionist,
@@ -143,14 +145,6 @@ export default tseslint.config(
 	},
 	{
 		files: ["eslint.config.mjs"],
-		languageOptions: {
-			parserOptions: {
-				projectService: {
-					allowDefaultProject: ["eslint.config.mjs"],
-				},
-				tsconfigRootDir: import.meta.dirname,
-			},
-		},
 		rules: {
 			"@typescript-eslint/no-deprecated": "off",
 		},

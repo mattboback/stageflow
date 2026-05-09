@@ -230,7 +230,7 @@ export class LinkCheckerScanner extends ScannerBase {
 				}
 
 				let absoluteUrl: string;
-				let isInternal = false;
+				let isInternal: boolean;
 
 				try {
 					const parsed = new URL(href, base);

@@ -30,7 +30,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 	const ruleId = input.violation.id ?? '';
 	const overlayId = `sf-semantic-${uuidv4()}`;
 
-	let overlayCount = 0;
+	let overlayCount: number;
 	if (HEADING_OVERLAY_RULES.has(ruleId)) {
 		overlayCount = await injectHeadingOverlay(input.page, {
 			overlayId,
@@ -327,11 +327,11 @@ async function injectTargetOverlay(
 			const unique = new Set<Element>();
 			const elements: Element[] = [];
 			for (const target of targets.slice(0, Math.max(0, maxTargets))) {
-				let element: Element | null = null;
+				let element: Element | null;
 				try {
 					element = document.querySelector(target);
 				} catch {
-					element = null;
+					continue;
 				}
 				if (!element) {
 					continue;

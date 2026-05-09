@@ -72,10 +72,7 @@
 							<div class="nf-cat-row">
 								<span class="nf-cat-label">{cat.label}</span>
 								<div class="nf-cat-track">
-									<div
-										class="nf-cat-fill"
-										style="width:{cat.score}%; background:{cat.color}"
-									></div>
+									<div class="nf-cat-fill" style="width:{cat.score}%; background:{cat.color}"></div>
 								</div>
 								<span class="nf-cat-num">{cat.score}</span>
 							</div>
@@ -123,9 +120,7 @@
 					{#each findings as f (f.label)}
 						<div class="nf-finding-row">
 							<div class="nf-finding-avatar" style="background:{f.bg}">
-								<span style="color:{f.color}; font-size:9px; font-weight:800"
-									>{f.label[0]}</span
-								>
+								<span style="color:{f.color}; font-size:9px; font-weight:800">{f.label[0]}</span>
 							</div>
 							<span class="nf-finding-label">{f.label}</span>
 							<span class="nf-finding-count" style="color:{f.color}">{f.count} found</span>
@@ -167,7 +162,11 @@
 				</div>
 				<div class="nf-barchart">
 					{#each trendBars as h, i (i)}
-						<div class="nf-bar" class:nf-bar-current={i === trendBars.length - 1} style="height:{h}%"></div>
+						<div
+							class="nf-bar"
+							class:nf-bar-current={i === trendBars.length - 1}
+							style="height:{h}%"
+						></div>
 					{/each}
 				</div>
 			</div>

@@ -122,6 +122,7 @@ func scrubCobraDocFooters(dir string) error {
 			normalized += "\n"
 		}
 
+		// #nosec G703 -- path comes from os.ReadDir on the docs output directory.
 		writeErr := os.WriteFile(path, []byte(normalized), 0o600)
 		if writeErr != nil {
 			return fmt.Errorf("write %s: %w", path, writeErr)

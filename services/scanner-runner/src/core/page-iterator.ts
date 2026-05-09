@@ -393,7 +393,7 @@ function parseScanUrls(raw: string): string[] {
 		parsed = JSON.parse(raw);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to create provenance from SCAN_URLS: ${message}`);
+		throw new Error(`Failed to create provenance from SCAN_URLS: ${message}`, { cause: err });
 	}
 
 	if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== 'string')) {

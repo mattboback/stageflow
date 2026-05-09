@@ -261,7 +261,7 @@ func (c *Client) WaitContainer(ctx context.Context, containerID string) (*Contai
 		_ = resp.Body.Close()
 	}()
 
-	body, truncated, err := readBoundedPodmanBody(resp.Body, maxPodmanDiagnosticBytes)
+	body, truncated, err := readBoundedPodmanBody(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read wait response: %w", err)
 	}

@@ -62,12 +62,7 @@
 						{#each col.links as link (link.label)}
 							<li>
 								{#if link.external}
-									<a
-										href={link.href}
-										class="footer-link"
-										target="_blank"
-										rel="noopener noreferrer"
-									>
+									<a href={link.href} class="footer-link" target="_blank" rel="noopener noreferrer">
 										{link.label}
 									</a>
 								{:else}

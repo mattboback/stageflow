@@ -5,8 +5,7 @@
 	/* Font families - self-hosted variable fonts */
 	--font-display:
 		'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
-	--font-body:
-		'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+	--font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
 	--font-mono:
 		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
@@ -41,7 +40,7 @@
 	--shadow-lg: 0 16px 40px rgb(0, 0, 0, 0.06);
 	--shadow-xl: 0 24px 56px rgb(0, 0, 0, 0.08);
 	--shadow-card-hover: 0 8px 32px rgb(0, 0, 0, 0.08);
-	--shadow-float: 0 20px 48px rgb(0, 0, 0, 0.10), 0 8px 16px rgb(0, 0, 0, 0.06);
+	--shadow-float: 0 20px 48px rgb(0, 0, 0, 0.1), 0 8px 16px rgb(0, 0, 0, 0.06);
 
 	/* Animation Timing */
 	--duration-fast: 150ms;
@@ -242,13 +241,15 @@
 	}
 
 	.metric-label {
-		@apply text-ink-muted mt-1.5 text-xs font-medium leading-snug;
+		@apply text-ink-muted mt-1.5 text-xs leading-snug font-medium;
 	}
 
 	.editorial-card {
 		box-shadow: var(--shadow-sm);
 		@apply border-line bg-surface rounded-2xl border;
-		transition: box-shadow var(--duration-normal) var(--ease-out), transform var(--duration-normal) var(--ease-out);
+		transition:
+			box-shadow var(--duration-normal) var(--ease-out),
+			transform var(--duration-normal) var(--ease-out);
 	}
 
 	.editorial-card:hover {
@@ -337,7 +338,7 @@
 	}
 	.footer-category {
 		color: rgba(255, 255, 255, 0.3);
-		@apply text-[11px] font-semibold tracking-[0.1em] uppercase mb-3;
+		@apply mb-3 text-[11px] font-semibold tracking-[0.1em] uppercase;
 	}
 
 	.hero-preview {

@@ -166,7 +166,7 @@ function loadScannerOptionsFromEnv(): Record<string, unknown> | undefined {
 		parsed = JSON.parse(raw);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse SCANNER_OPTIONS as JSON: ${message}`);
+		throw new Error(`Failed to parse SCANNER_OPTIONS as JSON: ${message}`, { cause: err });
 	}
 
 	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {

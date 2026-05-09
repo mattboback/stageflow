@@ -13,8 +13,6 @@ const DISALLOWED_SELECTOR_PREFIXES = [
 	'http:',
 	'https:'
 ];
-const CONTROL_CHARACTER_PATTERN = /[\u0000-\u001F\u007F]/;
-
 export function parseActionDecision(content: string, goal: AgentGoal): ActionDecision | undefined {
 	const parsed = parseFirstJsonObject(content);
 	if (!parsed) {
@@ -171,7 +169,7 @@ function parseModelSelector(raw: unknown): string | undefined {
 		return undefined;
 	}
 
-	if (CONTROL_CHARACTER_PATTERN.test(selector)) {
+	if (containsControlCharacter(selector)) {
 		return undefined;
 	}
 
@@ -181,4 +179,15 @@ function parseModelSelector(raw: unknown): string | undefined {
 	}
 
 	return selector;
+}
+
+function containsControlCharacter(value: string): boolean {
+	for (let index = 0; index < value.length; index += 1) {
+		const code = value.charCodeAt(index);
+		if (code <= 0x1f || code === 0x7f) {
+			return true;
+		}
+	}
+
+	return false;
 }

@@ -94,9 +94,7 @@
 						<span
 							class={cn(
 								'hidden rounded-full px-1.5 py-0.5 text-[11px] font-semibold sm:inline-flex',
-								section === item.id
-									? 'bg-white/20 text-surface'
-									: 'bg-surface-muted text-ink-faint'
+								section === item.id ? 'text-surface bg-white/20' : 'bg-surface-muted text-ink-faint'
 							)}
 							aria-label={`${item.count} ${item.label.toLowerCase()}`}
 						>

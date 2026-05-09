@@ -447,7 +447,7 @@ ci:
     echo "  No stale vocabulary found."
 
     echo "==> Ensuring Go lint and vuln tools..."
-    {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.8.0
+    {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
     {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     export PATH="$({{go}} env GOPATH)/bin:$PATH"
 

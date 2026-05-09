@@ -250,7 +250,7 @@ func (c *Client) doRequest(
 
 func parseResponse(resp *http.Response, target any) error {
 	if resp.StatusCode >= 400 {
-		body, truncated, readErr := readBoundedPodmanBody(resp.Body, maxPodmanDiagnosticBytes)
+		body, truncated, readErr := readBoundedPodmanBody(resp.Body)
 		if readErr != nil {
 			return fmt.Errorf("API error (status %d): failed to read response body: %w", resp.StatusCode, readErr)
 		}
@@ -271,10 +271,8 @@ func parseResponse(resp *http.Response, target any) error {
 	return nil
 }
 
-func readBoundedPodmanBody(r io.Reader, limit int64) ([]byte, bool, error) {
-	if limit < 1 {
-		return nil, false, errors.New("podman response limit must be positive")
-	}
+func readBoundedPodmanBody(r io.Reader) ([]byte, bool, error) {
+	const limit = int64(maxPodmanDiagnosticBytes)
 
 	body, err := io.ReadAll(io.LimitReader(r, limit+1))
 	if err != nil {

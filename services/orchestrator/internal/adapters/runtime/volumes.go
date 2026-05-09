@@ -29,7 +29,7 @@ func (c *Client) CreateVolume(ctx context.Context, name string) error {
 	}()
 
 	if resp.StatusCode >= 400 {
-		data, _, readErr := readBoundedPodmanBody(resp.Body, maxPodmanDiagnosticBytes)
+		data, _, readErr := readBoundedPodmanBody(resp.Body)
 		if readErr != nil {
 			return fmt.Errorf("API error (status %d): failed to read response body: %w", resp.StatusCode, readErr)
 		}
