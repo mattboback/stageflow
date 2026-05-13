@@ -55,7 +55,7 @@
 		<div class="flex items-center gap-2">
 			<Label for="urls" class="text-sm font-bold">URLs to Scan</Label>
 			{#if isAllValid}
-				<CheckCircle2 class="h-4 w-4 text-green-500" />
+				<CheckCircle2 class="h-4 w-4 text-emerald-600" />
 			{/if}
 		</div>
 		<div class="flex items-center gap-3">
@@ -99,7 +99,7 @@
 			>
 		</div>
 	{:else if urlCount > 0 && !hasErrors}
-		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-green-700">
+		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-emerald-700">
 			<CheckCircle2 class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>All {urlCount} {urlCount === 1 ? 'target is ready' : 'targets are ready'}.</span>
 		</div>

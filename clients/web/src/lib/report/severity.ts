@@ -49,6 +49,47 @@ export function compareSeverity(a?: string | null, b?: string | null): number {
 }
 
 /**
+ * Returns Tailwind classes for a softened severity container (Nexus variant).
+ * Uses pastel bg + subtle border — saturation reserved for dots/icons.
+ */
+export function getSeverityContainerClass(severity?: string | null): string {
+	switch (severity) {
+		case 'critical':
+			return 'bg-red-50 border-red-100';
+		case 'serious':
+			return 'bg-orange-50 border-orange-100';
+		case 'moderate':
+			return 'bg-amber-50 border-amber-100';
+		case 'minor':
+			return 'bg-blue-50 border-blue-100';
+		case 'info':
+			return 'bg-purple-50 border-purple-100';
+		default:
+			return 'bg-slate-50 border-slate-100';
+	}
+}
+
+/**
+ * Returns Tailwind class for a small saturated severity dot/badge.
+ */
+export function getSeverityDotClass(severity?: string | null): string {
+	switch (severity) {
+		case 'critical':
+			return 'bg-red-500';
+		case 'serious':
+			return 'bg-orange-500';
+		case 'moderate':
+			return 'bg-amber-500';
+		case 'minor':
+			return 'bg-blue-500';
+		case 'info':
+			return 'bg-purple-500';
+		default:
+			return 'bg-slate-400';
+	}
+}
+
+/**
  * Returns Tailwind classes for a severity badge (solid background).
  */
 export function getSeverityBadgeClass(severity?: string | null): string {

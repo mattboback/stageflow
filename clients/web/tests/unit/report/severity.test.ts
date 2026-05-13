@@ -4,6 +4,8 @@ import {
 	getSeverityBadgeClass,
 	getSeverityBorderClass,
 	getSeverityChipClass,
+	getSeverityContainerClass,
+	getSeverityDotClass,
 	getSeverityOverlayClass,
 	getSeverityStrokeColor,
 	getWorstSeverity,
@@ -194,6 +196,38 @@ describe('severity utilities', () => {
 			expect(getSeverityChipClass('moderate', true)).toContain('bg-amber');
 			expect(getSeverityChipClass('minor', true)).toContain('bg-blue');
 			expect(getSeverityChipClass('info', true)).toContain('bg-purple');
+		});
+	});
+
+	describe('getSeverityContainerClass', () => {
+		it('returns soft tint bg + subtle border for each severity', () => {
+			expect(getSeverityContainerClass('critical')).toBe('bg-red-50 border-red-100');
+			expect(getSeverityContainerClass('serious')).toBe('bg-orange-50 border-orange-100');
+			expect(getSeverityContainerClass('moderate')).toBe('bg-amber-50 border-amber-100');
+			expect(getSeverityContainerClass('minor')).toBe('bg-blue-50 border-blue-100');
+			expect(getSeverityContainerClass('info')).toBe('bg-purple-50 border-purple-100');
+		});
+
+		it('returns slate for unknown severity', () => {
+			expect(getSeverityContainerClass('unknown')).toBe('bg-slate-50 border-slate-100');
+			expect(getSeverityContainerClass(null)).toBe('bg-slate-50 border-slate-100');
+			expect(getSeverityContainerClass(undefined)).toBe('bg-slate-50 border-slate-100');
+		});
+	});
+
+	describe('getSeverityDotClass', () => {
+		it('returns saturated dot color for each severity', () => {
+			expect(getSeverityDotClass('critical')).toBe('bg-red-500');
+			expect(getSeverityDotClass('serious')).toBe('bg-orange-500');
+			expect(getSeverityDotClass('moderate')).toBe('bg-amber-500');
+			expect(getSeverityDotClass('minor')).toBe('bg-blue-500');
+			expect(getSeverityDotClass('info')).toBe('bg-purple-500');
+		});
+
+		it('returns slate for unknown severity', () => {
+			expect(getSeverityDotClass('unknown')).toBe('bg-slate-400');
+			expect(getSeverityDotClass(null)).toBe('bg-slate-400');
+			expect(getSeverityDotClass(undefined)).toBe('bg-slate-400');
 		});
 	});
 });
