@@ -6,7 +6,8 @@
 		getCroppedViewBox,
 		getIssueScreenshotUrl,
 		getPageOverviewUrl,
-		getSeverityBadgeClass,
+		getSeverityContainerClass,
+		getSeverityDotClass,
 		getSeverityStrokeColor
 	} from '$lib/report';
 	import { cn } from '$lib/utils';
@@ -79,10 +80,11 @@
 >
 	<span
 		class={cn(
-			'mt-0.5 shrink-0 rounded-md px-2 py-1 text-[10px] leading-none font-semibold tracking-wide uppercase',
-			getSeverityBadgeClass(issue.severity)
+			'mt-0.5 inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] leading-none font-semibold tracking-wide uppercase',
+			getSeverityContainerClass(issue.severity)
 		)}
 	>
+		<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}></span>
 		{issue.severity}
 	</span>
 	<div class="min-w-0 flex-1">

@@ -7,8 +7,8 @@
 	import {
 		getIssueScreenshotUrl,
 		getPageOverviewUrl,
-		getSeverityBadgeClass,
-		getSeverityBorderClass
+		getSeverityContainerClass,
+		getSeverityDotClass
 	} from '$lib/report';
 	import { cn, getWcagUnderstandingUrl, normalizeWcagTag } from '$lib/utils';
 	import { extractPrimaryFailureDetail } from '$lib/utils/failure-summary';
@@ -167,15 +167,16 @@
 	)}
 >
 	<div bind:this={modalRef} class="contents">
-		<div class={cn('border-b p-6', getSeverityBorderClass(issue.severity))}>
+		<div class={cn('border-b border p-6', getSeverityContainerClass(issue.severity))}>
 			<div class="flex items-start justify-between gap-4">
 				<div>
 					<span
 						class={cn(
-							'mb-2 inline-block rounded px-2 py-0.5 text-xs font-semibold uppercase',
-							getSeverityBadgeClass(issue.severity)
+							'mb-2 inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-semibold uppercase',
+							getSeverityContainerClass(issue.severity)
 						)}
 					>
+						<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}></span>
 						{issue.severity}
 					</span>
 					<h2 class="text-ink text-xl font-bold">{issue.title}</h2>

@@ -7,6 +7,7 @@
 	import PlaygroundHeroSection from '$lib/components/playground/PlaygroundHeroSection.svelte';
 	import PlaygroundModeToggle from '$lib/components/playground/PlaygroundModeToggle.svelte';
 	import PlaygroundOptions from '$lib/components/playground/PlaygroundOptions.svelte';
+	import PlaygroundReadinessBento from '$lib/components/playground/PlaygroundReadinessBento.svelte';
 	import PlaygroundScannerGrid from '$lib/components/playground/PlaygroundScannerGrid.svelte';
 	import PlaygroundSidebar from '$lib/components/playground/PlaygroundSidebar.svelte';
 	import PlaygroundUrlInput from '$lib/components/playground/PlaygroundUrlInput.svelte';
@@ -22,8 +23,8 @@
 		applyScannerPreset,
 		detectScannerPreset
 	} from '$lib/domain/scanners/presets';
-	import { Alert, Button, Chip, PageSection, Panel } from '$lib/components/ui';
-	import { AlertTriangle, CheckCircle2, Loader2, Play, Sparkles } from 'lucide-svelte';
+	import { Alert, Button, PageSection } from '$lib/components/ui';
+	import { AlertTriangle, Loader2, Play } from 'lucide-svelte';
 
 	// Form state
 	let mode = $state<'url' | 'zip'>('url');
@@ -183,84 +184,115 @@
 	<div class="container-width relative">
 		<div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
 			<div>
-				<Panel
-					padding="none"
-					rounded="2xl"
-					class="text-ink border-line/80 overflow-hidden shadow-[var(--shadow-md)]"
+				<PlaygroundReadinessBento
+					navLabel="Configure Scan"
+					readyLabel={canSubmit ? 'Ready' : `${missingRequirements.length} step${missingRequirements.length === 1 ? '' : 's'} left`}
+					isReady={canSubmit}
+					scannerCount={enabledScannerCount}
 				>
-					<div class="border-line/80 bg-surface-muted/70 border-b px-6 py-5">
-						<div class="flex flex-wrap items-center justify-between gap-3">
-							<div class="flex items-center gap-3.5">
-								<div class="bg-accent/10 flex h-10 w-10 items-center justify-center rounded-xl">
-									<Sparkles class="text-accent h-5 w-5" />
+					{#snippet leftPanel()}
+						<div class="space-y-6">
+							<div>
+								<div class="mb-2 flex items-center gap-2">
+									<span
+										class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+										>1</span
+									>
+									<span class="form-section-label text-ink-muted">Input</span>
 								</div>
-								<div>
-									<h2 class="font-display text-lg leading-none font-bold tracking-tight">
-										Configure Scan
-									</h2>
-									<p class="text-ink-muted mt-1 text-sm">
-										Set a target, choose scanners, and launch with confidence.
-									</p>
+								<PlaygroundModeToggle {mode} onModeChange={(m) => (mode = m)} />
+							</div>
+
+							<div>
+								<div class="mb-2 flex items-center gap-2">
+									<span
+										class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+										>2</span
+									>
+									<span class="form-section-label text-ink-muted">Target</span>
 								</div>
-							</div>
-							{#if hasValidInput && hasEnabledScanner && isAiConfigValid}
-								<Chip tone="success" class="gap-1.5 font-medium">
-									<CheckCircle2 class="h-3.5 w-3.5" />
-									Ready to scan
-								</Chip>
-							{:else if missingRequirements.length > 0}
-								<Chip tone="warning" class="gap-1.5 font-medium">
-									<AlertTriangle class="h-3.5 w-3.5" />
-									{missingRequirements.length} step{missingRequirements.length === 1 ? '' : 's'} left
-								</Chip>
-							{/if}
-						</div>
-					</div>
+								{#if mode === 'url'}
+									<PlaygroundUrlInput
+										{urls}
+										onUrlsChange={handleUrlsChange}
+										onNormalize={normalizeUrlsIfNeeded}
+									/>
+								{/if}
 
-					<div class="space-y-6 p-6 lg:p-7">
-						<div>
-							<div class="mb-2 flex items-center gap-2">
-								<span
-									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-									>1</span
-								>
-								<span class="form-section-label text-ink-muted">Input</span>
+								{#if mode === 'zip'}
+									<PlaygroundZipUpload
+										{file}
+										onFileChange={handleFileChange}
+										onError={handleFileError}
+									/>
+								{/if}
 							</div>
-							<PlaygroundModeToggle {mode} onModeChange={(m) => (mode = m)} />
-						</div>
 
-						<div>
-							<div class="mb-2 flex items-center gap-2">
-								<span
-									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-									>2</span
-								>
-								<span class="form-section-label text-ink-muted">Target</span>
+							<div class="section-divider"></div>
+
+							<div>
+								<div class="mb-2 flex items-center gap-2">
+									<span
+										class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+										>3</span
+									>
+									<span class="form-section-label text-ink-muted">Options</span>
+								</div>
+								<PlaygroundOptions
+									{screenshot}
+									{highlightStyle}
+									onScreenshotChange={(v) => (screenshot = v)}
+									onHighlightStyleChange={(v) => (highlightStyle = v)}
+								/>
 							</div>
-							{#if mode === 'url'}
-								<PlaygroundUrlInput
-									{urls}
-									onUrlsChange={handleUrlsChange}
-									onNormalize={normalizeUrlsIfNeeded}
+
+							{#if isAiNavigatorEnabled}
+								<PlaygroundAiConfig
+									objective={aiObjective}
+									model={aiModel}
+									maxSteps={aiMaxSteps}
+									maxWallTimeMs={aiMaxWallTimeMs}
+									inputValues={aiInputValues}
+									successCriteria={aiSuccessCriteria}
+									isValid={isAiConfigValid}
+									onObjectiveChange={(v) => (aiObjective = v)}
+									onModelChange={(v) => (aiModel = v)}
+									onMaxStepsChange={(v) => (aiMaxSteps = v)}
+									onMaxWallTimeMsChange={(v) => (aiMaxWallTimeMs = v)}
+									onInputValuesChange={(v) => (aiInputValues = v)}
+									onSuccessCriteriaChange={(v) => (aiSuccessCriteria = v)}
 								/>
 							{/if}
 
-							{#if mode === 'zip'}
-								<PlaygroundZipUpload
-									{file}
-									onFileChange={handleFileChange}
-									onError={handleFileError}
-								/>
+							{#if error}
+								<Alert variant="error">
+									<div class="flex items-start gap-3">
+										<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
+										<div class="min-w-0">
+											<p>{error}</p>
+											{#if invalidUrls.length > 0}
+												<ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
+													{#each invalidUrls.slice(0, 6) as item (item.url)}
+														<li class="font-mono">{item.url} — {item.reason}</li>
+													{/each}
+													{#if invalidUrls.length > 6}
+														<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
+													{/if}
+												</ul>
+											{/if}
+										</div>
+									</div>
+								</Alert>
 							{/if}
 						</div>
+					{/snippet}
 
-						<div class="section-divider"></div>
-
+					{#snippet rightPanel()}
 						<div>
 							<div class="mb-2 flex items-center gap-2">
 								<span
 									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-									>3</span
+									>4</span
 								>
 								<span class="form-section-label text-ink-muted">Scanners</span>
 							</div>
@@ -272,114 +304,68 @@
 								onToggle={handleScannerToggle}
 							/>
 						</div>
+					{/snippet}
 
-						{#if isAiNavigatorEnabled}
-							<PlaygroundAiConfig
-								objective={aiObjective}
-								model={aiModel}
-								maxSteps={aiMaxSteps}
-								maxWallTimeMs={aiMaxWallTimeMs}
-								inputValues={aiInputValues}
-								successCriteria={aiSuccessCriteria}
-								isValid={isAiConfigValid}
-								onObjectiveChange={(v) => (aiObjective = v)}
-								onModelChange={(v) => (aiModel = v)}
-								onMaxStepsChange={(v) => (aiMaxSteps = v)}
-								onMaxWallTimeMsChange={(v) => (aiMaxWallTimeMs = v)}
-								onInputValuesChange={(v) => (aiInputValues = v)}
-								onSuccessCriteriaChange={(v) => (aiSuccessCriteria = v)}
-							/>
-						{/if}
-
-						<div class="section-divider"></div>
-
+					{#snippet bottomLeft()}
 						<div>
-							<div class="mb-2 flex items-center gap-2">
-								<span
-									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-									>4</span
-								>
-								<span class="form-section-label text-ink-muted">Options</span>
-							</div>
-							<PlaygroundOptions
-								{screenshot}
-								{highlightStyle}
-								onScreenshotChange={(v) => (screenshot = v)}
-								onHighlightStyleChange={(v) => (highlightStyle = v)}
-							/>
-						</div>
-
-						{#if error}
-							<Alert variant="error">
-								<div class="flex items-start gap-3">
-									<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
-									<div class="min-w-0">
-										<p>{error}</p>
-										{#if invalidUrls.length > 0}
-											<ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
-												{#each invalidUrls.slice(0, 6) as item (item.url)}
-													<li class="font-mono">{item.url} — {item.reason}</li>
-												{/each}
-												{#if invalidUrls.length > 6}
-													<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
-												{/if}
-											</ul>
-										{/if}
-									</div>
-								</div>
-							</Alert>
-						{/if}
-
-						<div class="border-line/80 bg-surface-muted/45 rounded-2xl border px-4 py-4">
-							<div class="flex flex-wrap items-start justify-between gap-3">
-								<div>
-									<p class="text-ink text-sm font-semibold">Run readiness</p>
-									{#if canSubmit}
-										<p class="text-ink-muted mt-1 text-sm">
-											{mode === 'url' ? 'URL target ready.' : 'ZIP upload ready.'}
-											{enabledScannerCount} scanner{enabledScannerCount === 1 ? '' : 's'} selected
-											{screenshot ? ' with screenshots enabled.' : '.'}
-										</p>
-									{:else}
-										<p class="text-ink-muted mt-1 text-sm">
-											Finish the remaining setup steps below, then start the scan.
-										</p>
-									{/if}
-								</div>
-								<Chip tone={canSubmit ? 'success' : 'muted'} size="sm">
-									{canSubmit ? 'Ready now' : 'In progress'}
-								</Chip>
-							</div>
-
-							{#if !canSubmit}
-								<ul class="mt-3 space-y-2 text-sm">
+							<p class="bento-panel-title">Run readiness</p>
+							{#if canSubmit}
+								<p class="text-ink-muted mt-1 text-xs">
+									{mode === 'url' ? 'URL target ready.' : 'ZIP upload ready.'}
+									{enabledScannerCount} scanner{enabledScannerCount === 1 ? '' : 's'} selected.
+								</p>
+							{:else}
+								<ul class="mt-2 space-y-1.5 text-xs">
 									{#each missingRequirements as requirement (requirement)}
 										<li class="flex items-start gap-2">
-											<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+											<AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
 											<span>{requirement}</span>
 										</li>
 									{/each}
 								</ul>
 							{/if}
 						</div>
+					{/snippet}
 
+					{#snippet bottomCenter()}
+						<div class="flex items-center gap-3">
+							<div class="text-center">
+								<span class="stat-mono text-ink-strong text-xl font-bold">{enabledScannerCount}</span>
+								<p class="text-ink-muted text-[10px] font-medium">Scanners</p>
+							</div>
+							<div class="bg-line h-8 w-px"></div>
+							<div class="text-center">
+								<span class="stat-mono text-ink-strong text-xl font-bold">{screenshot ? '✓' : '—'}</span>
+								<p class="text-ink-muted text-[10px] font-medium">Screenshots</p>
+							</div>
+							{#if isAiNavigatorEnabled}
+								<div class="bg-line h-8 w-px"></div>
+								<div class="text-center">
+									<span class="stat-mono text-xl font-bold" class:text-emerald-700={isAiConfigValid} class:text-amber-700={!isAiConfigValid}>{isAiConfigValid ? '✓' : '!'}</span>
+									<p class="text-ink-muted text-[10px] font-medium">AI Nav</p>
+								</div>
+							{/if}
+						</div>
+					{/snippet}
+
+					{#snippet bottomRight()}
 						<Button
 							variant="glow"
 							size="lg"
-							class="h-12 w-full gap-2 rounded-xl text-base font-semibold"
+							class="h-11 w-full gap-2 rounded-xl text-sm font-semibold"
 							disabled={!canSubmit}
 							onclick={handleSubmit}
 						>
 							{#if isSubmitting}
-								<Loader2 class="h-5 w-5 animate-spin" />
-								Starting Scan…
+								<Loader2 class="h-4 w-4 animate-spin" />
+								Starting…
 							{:else}
-								<Play class="h-5 w-5" />
+								<Play class="h-4 w-4" />
 								Start Scan
 							{/if}
 						</Button>
-					</div>
-				</Panel>
+					{/snippet}
+				</PlaygroundReadinessBento>
 			</div>
 
 			<PlaygroundSidebar

@@ -5,6 +5,7 @@
 		ScanStatusContent,
 		ScanStatusHeader
 	} from '$lib/components/scan-status';
+	import ScanStatusLiveBento from '$lib/components/scan-status/ScanStatusLiveBento.svelte';
 	import { PageSection } from '$lib/components/ui';
 	import { SITE } from '$lib/config/site';
 	import { createScanStatusStore } from '$lib/stores/scan-status.svelte';
@@ -26,6 +27,13 @@
 	const result = $derived(scanStore?.result ?? null);
 	const elapsed = $derived(scanStore?.elapsed ?? 0);
 	const logs = $derived(scanStore?.logs ?? []);
+	const scannerCount = $derived(
+		result?.expected_scanners?.length ??
+			Math.max(
+				(result?.completed_scanners?.length ?? 0) + (result?.remaining_scanners?.length ?? 0),
+				result?.completed_scanners?.length ?? 0
+			)
+	);
 </script>
 
 <svelte:head>
@@ -35,9 +43,15 @@
 </svelte:head>
 
 <PageSection containerClass="max-w-7xl xl:max-w-[1400px]">
-	<ScanStatusHeader id={scanId} {status} {elapsed} {result} />
-	<div class="grid gap-6 lg:grid-cols-[1fr,380px] lg:items-start">
-		<ScanStatusContent {status} {result} {logs} />
-		<ScanArtifactsSidebar {status} {result} />
-	</div>
+	<ScanStatusLiveBento {status} {elapsed} {scannerCount}>
+		{#snippet headerContent()}
+			<ScanStatusHeader id={scanId} {status} {elapsed} {result} />
+		{/snippet}
+		{#snippet mainContent()}
+			<ScanStatusContent {status} {result} {logs} />
+		{/snippet}
+		{#snippet sidebarContent()}
+			<ScanArtifactsSidebar {status} {result} />
+		{/snippet}
+	</ScanStatusLiveBento>
 </PageSection>

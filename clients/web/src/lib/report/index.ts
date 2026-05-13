@@ -4,6 +4,7 @@ export * from './sorting';
 export * from './screenshots';
 export * from './scanner-summary';
 export * from './scanner-status';
+export * from './scanner-identity';
 export * from './virtualization';
 export * from './severity';
 export * from './screenshot-crop';
