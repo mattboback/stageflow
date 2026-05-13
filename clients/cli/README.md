@@ -31,6 +31,7 @@ go build -o stageflow .
 | `project` | Run a Project Mode scan using `.stageflow/config.yaml` |
 | `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
 | `project doctor` | Validate project config and dev readiness without scanning |
+| `project hosted` | Run the configured hosted project scan without starting local dev |
 | `ai` | Run the AI Navigator with natural language objectives |
 | `diff` | Compare a saved baseline against another report or a live URL |
 | `report` | Fetch and display results for an existing job ID |
@@ -69,14 +70,13 @@ stageflow project doctor --format json > project-doctor.json
 stageflow project --format json > local-scan.json
 
 # Follow-up hosted regression loop
-stageflow scan --project my-frontend --api https://stageflow.org --format json > hosted-scan.json
+stageflow project hosted --format json > hosted-scan.json
 ```
 
 Use the local Project Mode loop when you want fast feedback against a dev
-server. Use the remote project scan when you want hosted baseline memory and
-regression diffs for a project already registered on a StageFlow API. The
-optional hosted-project link in `.stageflow/config.yaml` keeps those two steps
-connected without turning them into the same execution context.
+server. Use `stageflow project hosted` when you want hosted baseline memory and
+regression diffs for a project already registered on a StageFlow API, without
+starting the local dev server.
 
 `project init` and `project doctor` also support JSON output so agents can
 bootstrap and validate the local loop without scraping human-oriented text.
@@ -208,6 +208,7 @@ start dev server, wait for readiness, submit scan, stream results, stop server.
 stageflow project init          # scaffold config
 stageflow project doctor        # validate config without scanning
 stageflow project               # full lifecycle
+stageflow project hosted        # hosted scan from remote_project
 ```
 
 ### Example config (`.stageflow/config.yaml`)
@@ -239,10 +240,10 @@ dev:
 Cover the routes you care about in `scan.urls` — scanning only `/` misses
 route-specific regressions.
 
-`stageflow.remote_project` is optional. `stageflow project` still starts and scans your
-local dev server; the hosted project slug is there so scaffolded config,
-`project doctor --format json`, and your follow-up `stageflow scan --project ...`
-step can all point at the same hosted baseline-memory record.
+`stageflow.remote_project` is optional for local runs, but required by
+`stageflow project hosted`. Hosted mode reads only the repository config needed
+to find the remote project and API, then delegates to the same baseline/diff
+flow used by `stageflow scan --project ...`.
 
 See [Project Mode docs](../../docs/PROJECT_MODE.md) for the full configuration reference.
 
@@ -253,14 +254,15 @@ Remote project commands manage the hosted regression-memory layer:
 ```bash
 stageflow project create my-frontend --url https://staging.example.com --api https://stageflow.org
 stageflow scan --project my-frontend --api https://stageflow.org
+stageflow project hosted --format json
 stageflow project promote my-frontend --job-id <job-id> --api https://stageflow.org
 ```
 
 That flow is what lets StageFlow answer "did this frontend change regress from
 the last known-good baseline?" rather than only "what issues exist right now?"
 If `.stageflow/config.yaml` already records `stageflow.remote_project: my-frontend`,
-reuse that slug after your local `stageflow project` loop instead of inventing a
-separate workflow.
+run `stageflow project hosted` from the repo instead of repeating the slug and
+API URL at the shell.
 
 ## Environment variables
 

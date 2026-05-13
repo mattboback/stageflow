@@ -161,11 +161,12 @@ regression-memory step.
 
 ```bash
 stageflow project --format json
-stageflow scan --project my-app --api https://stageflow.org --format json
+stageflow project hosted --format json
 ```
 
 Use the first command for the fast local edit-check loop. Use the second when
-you want the hosted baseline/diff memory for the associated project.
+you want the hosted baseline/diff memory for the associated project without
+starting the local dev server.
 
 ## 6. Remote projects
 
@@ -177,12 +178,14 @@ stageflow project list
 stageflow project show my-app
 stageflow project update my-app --url https://example.com/v2
 stageflow scan --project my-app --format json
+stageflow project hosted --format json
 stageflow project promote my-app --job-id <job-id>
 stageflow project delete my-app
 ```
 
 If your local `.stageflow/config.yaml` already declares `stageflow.remote_project:
-my-app`, reuse that slug after the local Project Mode run.
+my-app`, run `stageflow project hosted` from the repo instead of repeating the
+slug at the shell.
 
 ## 7. Reports
 

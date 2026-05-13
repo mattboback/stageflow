@@ -28,6 +28,7 @@ stageflow project [path]
 * [stageflow project create](stageflow_project_create.md)	 - Create a remote project
 * [stageflow project delete](stageflow_project_delete.md)	 - Delete a remote project
 * [stageflow project doctor](stageflow_project_doctor.md)	 - Validate project config and dev readiness without scanning
+* [stageflow project hosted](stageflow_project_hosted.md)	 - Run hosted project scan from .stageflow config
 * [stageflow project init](stageflow_project_init.md)	 - Create .stageflow config and setup guide
 * [stageflow project list](stageflow_project_list.md)	 - List remote projects
 * [stageflow project promote](stageflow_project_promote.md)	 - Set a job as the project baseline

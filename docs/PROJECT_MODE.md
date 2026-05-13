@@ -82,8 +82,8 @@ placeholder for `dev.start.cmd`. Replace it before running `stageflow project`.
 If you already have a hosted project registered on a StageFlow API, keep its
 slug in the generated config as the optional `stageflow.remote_project`
 association. Add `stageflow.remote_api_url` when the hosted project lives on a
-different API base URL. That link is there for the follow-up hosted scan step
-and surfaces in `stageflow project doctor --format json`.
+different API base URL. That link powers `stageflow project hosted` and surfaces
+in `stageflow project doctor --format json`.
 
 If you run the command from a subdirectory, StageFlow resolves the git root first and creates `.stageflow/` there so the config stays attached to the repository instead of one nested folder.
 
@@ -126,7 +126,7 @@ dev:
 
 - `api_url`: The URL of your StageFlow Platform API (defaults to `http://localhost:8080`).
 - `api_key_env`: (Optional) The name of the environment variable containing your StageFlow API key, if authentication is required.
-- `remote_project`: (Optional) Hosted project slug associated with this local repo. This does not change `stageflow project` into a remote scan; it simply records which hosted project to use for the follow-up `stageflow scan --project ...` regression-memory step.
+- `remote_project`: (Optional for local mode, required for hosted mode) Hosted project slug associated with this repo. `stageflow project hosted` uses it to run the registered project against the configured remote API.
 - `remote_api_url`: (Optional) Hosted API base URL for that remote project when it differs from the local Project Mode API.
 
 #### `scan`
@@ -175,14 +175,15 @@ stageflow project doctor --format json
 stageflow project --format json
 
 # Follow-up hosted baseline-memory step
-stageflow scan --project my-frontend --api https://stageflow.org --format json
+stageflow project hosted --format json
 ```
 
-If `.stageflow/config.yaml` includes `stageflow.remote_project`, use that slug
-for the hosted step, and append `--api <url>` when `stageflow.remote_api_url`
-is set. The local and hosted runs remain separate on purpose: the first is fast
-local validation against your dev server, the second asks the hosted API for
-baseline and regression memory.
+If `.stageflow/config.yaml` includes `stageflow.remote_project`,
+`stageflow project hosted` skips the dev-server lifecycle and scans the hosted
+project through `stageflow.remote_api_url` or `stageflow.api_url`. The local and
+hosted runs remain separate on purpose: the first is fast local validation
+against your dev server, the second asks the hosted API for baseline and
+regression memory.
 
 ## Troubleshooting and Validation
 

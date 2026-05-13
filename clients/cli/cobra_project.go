@@ -14,6 +14,9 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	doctorOpts := &projectDoctorCmdOptions{
 		Timeout: 2 * time.Minute,
 	}
+	hostedOpts := &projectHostedCmdOptions{
+		Timeout: 5 * time.Minute,
+	}
 
 	cmd := &cobra.Command{
 		Use:                   "project [path]",
@@ -62,7 +65,22 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	)
 	doctorCmd.Flags().BoolVar(&doctorOpts.SkipDev, "skip-dev", false, "Skip starting dev server and readiness checks")
 
+	hostedCmd := &cobra.Command{
+		Use:                   "hosted [path]",
+		Short:                 "Run hosted project scan from .stageflow config",
+		DisableFlagsInUseLine: true,
+		Args:                  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runProjectHostedCommand(cmd, args, root, getenv, hostedOpts)
+		},
+	}
+	hostedCmd.Flags().DurationVar(&hostedOpts.Timeout, "timeout", hostedOpts.Timeout, "Max wait time")
+	bindReportFlags(hostedCmd, &hostedOpts.Report, false)
+	hostedCmd.Flags().BoolVar(&hostedOpts.NoStream, "no-stream", false, "Poll instead of SSE")
+	cobra.CheckErr(hostedCmd.Flags().MarkHidden("no-stream"))
+
 	cmd.AddCommand(initCmd, doctorCmd)
+	cmd.AddCommand(hostedCmd)
 	cmd.AddCommand(newProjectRemoteCmd(root)...)
 
 	return cmd
@@ -77,4 +95,10 @@ type projectCmdOptions struct {
 type projectDoctorCmdOptions struct {
 	Timeout time.Duration
 	SkipDev bool
+}
+
+type projectHostedCmdOptions struct {
+	Timeout  time.Duration
+	NoStream bool
+	Report   reportCommandOptions
 }
