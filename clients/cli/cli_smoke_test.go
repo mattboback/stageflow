@@ -269,6 +269,57 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 	requireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
 }
 
+func TestCLIProjectHostedJSONEnvelope(t *testing.T) {
+	server, jobID := newCLIProjectScanAPIServer(t)
+	defer server.Close()
+
+	root := t.TempDir()
+	writeProjectConfig(t, root, `version: 1
+stageflow:
+  remote_project: demo-site
+  remote_api_url: https://hosted.stageflow.example
+`)
+
+	stdout, stderr, exitCode := runCLI(
+		t,
+		"stageflow",
+		"--api",
+		server.URL,
+		"--format",
+		"json",
+		"project",
+		"hosted",
+		"--no-stream",
+		"--summary-only",
+		root,
+	)
+	if exitCode != 1 {
+		t.Fatalf("exitCode=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
+	}
+
+	if !strings.Contains(stderr, "Using project config:") {
+		t.Fatalf("unexpected hosted stderr: %q", stderr)
+	}
+
+	if !strings.Contains(stderr, "Waiting for completion") {
+		t.Fatalf("unexpected hosted stderr: %q", stderr)
+	}
+
+	decoder := json.NewDecoder(strings.NewReader(stdout))
+
+	var payload projectScanEnvelope
+	requireNoErr(t, decoder.Decode(&payload))
+
+	requireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
+	requireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
+	requireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
+	requireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
+
+	if payload.Diff == nil {
+		t.Fatalf("expected diff payload")
+	}
+}
+
 func runCLI(t *testing.T, args ...string) (string, string, int) {
 	t.Helper()
 

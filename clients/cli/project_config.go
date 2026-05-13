@@ -72,7 +72,7 @@ func (e missingProjectConfigError) Error() string {
 	return fmt.Sprintf("no .stageflow/config.yaml found under %s", e.ProjectRoot)
 }
 
-func loadProjectConfig(projectRoot string) (projectConfig, string, error) {
+func readProjectConfig(projectRoot string) (projectConfig, string, error) {
 	configDir := filepath.Join(projectRoot, ".stageflow")
 
 	candidates := []string{
@@ -119,6 +119,15 @@ func loadProjectConfig(projectRoot string) (projectConfig, string, error) {
 
 	if err := decoder.Decode(&cfg); err != nil {
 		return projectConfig{}, "", fmt.Errorf("failed to parse %s: %w", cfgPath, err)
+	}
+
+	return cfg, cfgPath, nil
+}
+
+func loadProjectConfig(projectRoot string) (projectConfig, string, error) {
+	cfg, cfgPath, err := readProjectConfig(projectRoot)
+	if err != nil {
+		return projectConfig{}, "", err
 	}
 
 	if err := validateProjectConfig(cfg); err != nil {

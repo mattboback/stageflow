@@ -13,12 +13,16 @@ import { saveScreenshot } from './axe/image';
 import { capturePageOverviewRaw, loadPageOverviewConfig } from './axe/page-overview';
 import { captureViolationScreenshot } from './axe/violation-capture';
 
+import { createLogger } from '../utils/logger';
+
 export type {
 	AxeViolation,
 	EnhancedScreenshotResult,
 	PageOverviewViolation,
 	ViolationCaptureFailure
 } from './axe/types';
+
+const log = createLogger('AxeScreenshotService');
 
 /**
  * AxeScreenshotService encapsulates the screenshot strategy used for
@@ -87,7 +91,17 @@ export class AxeScreenshotService {
 			return null;
 		}
 
-		await saveScreenshot(captured.buffer, captured.screenshotPath, this.cfg);
+		try {
+			await saveScreenshot(captured.buffer, captured.screenshotPath, this.cfg);
+		} catch (error) {
+			log.warn('Failed to save page overview screenshot', {
+				pageId,
+				screenshotPath: captured.screenshotPath,
+				error: error instanceof Error ? error.message : String(error)
+			});
+
+			return null;
+		}
 
 		return {
 			screenshotPath: captured.screenshotPath,

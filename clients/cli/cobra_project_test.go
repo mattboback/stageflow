@@ -358,3 +358,45 @@ func TestRunProjectDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 		t.Fatalf("expected doctor success output, got: %q", stdout.String())
 	}
 }
+
+func TestResolveProjectHostedStageflowPrefersRemoteAPIURL(t *testing.T) {
+	cmd := &cobra.Command{}
+
+	apiURL, apiKey := resolveProjectHostedStageflow(
+		cmd,
+		&rootOptions{apiURL: "http://localhost:8080"},
+		projectConfig{
+			Stageflow: projectStageflowCfg{
+				RemoteAPIURL: "https://hosted.stageflow.example",
+				APIKeyEnv:    "HOSTED_STAGEFLOW_KEY",
+			},
+		},
+		func(name string) string {
+			requireEqual(t, name, "HOSTED_STAGEFLOW_KEY", "env name")
+
+			return "secret-token"
+		},
+	)
+
+	requireEqual(t, apiURL, "https://hosted.stageflow.example", "apiURL")
+	requireEqual(t, apiKey, "secret-token", "apiKey")
+}
+
+func TestResolveProjectHostedStageflowExplicitAPIWins(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.Flags().String("api", "", "")
+	requireNoErr(t, cmd.Flags().Set("api", "https://explicit.stageflow.example"))
+
+	apiURL, _ := resolveProjectHostedStageflow(
+		cmd,
+		&rootOptions{apiURL: "https://explicit.stageflow.example"},
+		projectConfig{
+			Stageflow: projectStageflowCfg{
+				RemoteAPIURL: "https://hosted.stageflow.example",
+			},
+		},
+		func(string) string { return "" },
+	)
+
+	requireEqual(t, apiURL, "https://explicit.stageflow.example", "apiURL")
+}

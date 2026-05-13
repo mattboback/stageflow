@@ -101,6 +101,42 @@ func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
 	requireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
 }
 
+func TestLoadProjectHostedConfig_Minimal(t *testing.T) {
+	root := t.TempDir()
+
+	configPath := writeProjectConfig(t, root, `version: 1
+stageflow:
+  remote_project: hosted-demo
+  remote_api_url: https://hosted.stageflow.example
+`)
+
+	cfg, gotPath, err := loadProjectHostedConfig(root, "")
+	requireNoErr(t, err)
+
+	requireEqual(t, gotPath, configPath, "config path")
+	requireEqual(t, cfg.Version, 1, "cfg.Version")
+	requireEqual(t, cfg.Stageflow.RemoteProject, "hosted-demo", "cfg.Stageflow.RemoteProject")
+	requireEqual(t, cfg.Stageflow.RemoteAPIURL, "https://hosted.stageflow.example", "cfg.Stageflow.RemoteAPIURL")
+}
+
+func TestLoadProjectHostedConfig_RequiresRemoteProject(t *testing.T) {
+	root := t.TempDir()
+
+	writeProjectConfig(t, root, `version: 1
+stageflow:
+  remote_api_url: https://hosted.stageflow.example
+`)
+
+	_, _, err := loadProjectHostedConfig(root, "")
+	if err == nil {
+		t.Fatalf("loadProjectHostedConfig err = nil, want non-nil")
+	}
+
+	if !strings.Contains(err.Error(), "stageflow.remote_project is required") {
+		t.Fatalf("loadProjectHostedConfig err = %q, want remote_project guidance", err.Error())
+	}
+}
+
 func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 	root := t.TempDir()
 

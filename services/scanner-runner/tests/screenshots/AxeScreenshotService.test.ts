@@ -339,6 +339,20 @@ describe('AxeScreenshotService', () => {
 			expect(result).toBeNull();
 		});
 
+		it('returns null when saving the overview screenshot fails', async () => {
+			const { saveScreenshot } = await import('../../src/screenshots/axe/image');
+			(saveScreenshot as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+				new Error('Processed image is too large for the WebP format')
+			);
+
+			const service = new AxeScreenshotService();
+			const mockPage = createMockPage();
+
+			const result = await service.capturePageOverview(mockPage, [], '/tmp/results', 'page-large');
+
+			expect(result).toBeNull();
+		});
+
 		it('handles empty violations array', async () => {
 			const service = new AxeScreenshotService();
 			const mockPage = createMockPage();

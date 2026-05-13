@@ -70,7 +70,7 @@ version: 1
 
 stageflow:
   api_url: %s
-  # Optional: link this local project loop to a hosted StageFlow project for regression memory.
+  # Optional: link this repo to a hosted StageFlow project for regression memory.
   # remote_project: your-hosted-project-slug
   # remote_api_url: https://api.stageflow.example
 
@@ -131,7 +131,8 @@ After your local localhost loop passes, you can follow up against a hosted proje
 
 - Set `+"`stageflow.remote_project`"+` to the hosted project slug.
 - Set `+"`stageflow.remote_api_url`"+` if the hosted project uses a different API base URL.
-- Run `+"`stageflow project doctor --format json`"+` to discover the exact hosted follow-up command agents should run next.
+- Run `+"`stageflow project hosted --format json`"+` to scan the hosted project without starting local dev.
+- Run `+"`stageflow project doctor --format json`"+` when agents need structured setup/readiness details.
 
 ## Troubleshooting
 
