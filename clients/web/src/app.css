@@ -552,4 +552,111 @@
 		@apply border-ink/20;
 		box-shadow: var(--shadow-sm);
 	}
+
+	/* Bento layout system — reusable across PlaygroundReadinessBento, ScanStatusLiveBento, ReportOverviewBento */
+	.bento-frame {
+		background: #d1d9e0;
+		border-radius: 1.5rem;
+		padding: 0.875rem 0.875rem 0;
+		box-shadow: var(--shadow-float);
+		overflow: hidden;
+	}
+
+	.bento-chrome {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding-bottom: 0.75rem;
+	}
+
+	.bento-chrome-dots {
+		display: flex;
+		gap: 5px;
+		flex-shrink: 0;
+	}
+
+	.bento-chrome-dot {
+		display: block;
+		width: 11px;
+		height: 11px;
+		border-radius: 50%;
+	}
+
+	.bento-chrome-url {
+		flex: 1;
+		background: rgba(255, 255, 255, 0.45);
+		border-radius: 6px;
+		padding: 4px 12px;
+		font-size: 11px;
+		color: #475569;
+		font-family: var(--font-mono);
+		text-align: center;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+	}
+
+	.bento-card {
+		background: #ffffff;
+		border-radius: 1rem 1rem 0 0;
+		overflow: hidden;
+	}
+
+	.bento-nav {
+		display: flex;
+		align-items: center;
+		gap: 1.5rem;
+		padding: 0.75rem 1.25rem;
+		border-bottom: 1px solid var(--color-line);
+	}
+
+	.bento-grid-main {
+		display: grid;
+		grid-template-columns: 7fr 5fr;
+		border-bottom: 1px solid var(--color-line);
+		min-height: 0;
+	}
+
+	.bento-grid-main > :first-child {
+		border-right: 1px solid var(--color-line);
+	}
+
+	.bento-grid-bottom {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		border-top: 1px solid var(--color-line);
+	}
+
+	.bento-grid-bottom > :not(:last-child) {
+		border-right: 1px solid var(--color-line);
+	}
+
+	.bento-panel {
+		padding: 1.25rem 1.5rem;
+	}
+
+	.bento-panel-title {
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--color-ink-strong);
+	}
+
+	@media (max-width: 768px) {
+		.bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.bento-grid-main > :last-child {
+			display: none;
+		}
+		.bento-grid-main > :first-child {
+			border-right: none;
+		}
+		.bento-grid-bottom {
+			grid-template-columns: 1fr;
+		}
+		.bento-grid-bottom > :not(:first-child) {
+			display: none;
+		}
+		.bento-grid-bottom > :not(:last-child) {
+			border-right: none;
+		}
+	}
 }

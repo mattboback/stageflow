@@ -5,7 +5,8 @@
 	import { Panel } from '$lib/components/ui';
 	import {
 		getPageOverviewUrl,
-		getSeverityBadgeClass,
+		getSeverityContainerClass,
+		getSeverityDotClass,
 		getSeverityFillColor,
 		getSeverityStrokeColor
 	} from '$lib/report';
@@ -234,7 +235,7 @@
 						class={cn(
 							'rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase transition',
 							enabled
-								? getSeverityBadgeClass(key)
+								? getSeverityContainerClass(key)
 								: 'border-line text-ink-muted hover:bg-surface-muted'
 						)}
 					>
@@ -417,10 +418,11 @@
 									<!-- Severity badge -->
 									<span
 										class={cn(
-											'mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
-											getSeverityBadgeClass(issue.severity)
+											'mt-0.5 inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
+											getSeverityContainerClass(issue.severity)
 										)}
 									>
+										<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}></span>
 										{issue.severity}
 									</span>
 

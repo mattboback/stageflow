@@ -3,19 +3,9 @@
 	import type { ScannerSelection } from '$lib/types/scan';
 
 	import { Chip, Label } from '$lib/components/ui';
+	import { getScannerIconClass, getScannerTileClass, SCANNER_META } from '$lib/report';
 	import { cn } from '$lib/utils';
-	import {
-		Bot,
-		CheckCircle,
-		Globe,
-		Link2,
-		Loader2,
-		Search,
-		Settings2,
-		Shield,
-		ShieldCheck,
-		Zap
-	} from 'lucide-svelte';
+	import { Loader2, Settings2, Shield, ShieldCheck, Zap } from 'lucide-svelte';
 
 	interface Props {
 		scanners: ScannerSelection[];
@@ -30,84 +20,12 @@
 	const enabledScannerCount = $derived(scanners.filter((s) => s.enabled).length);
 	const enabledScanners = $derived(scanners.filter((s) => s.enabled));
 
-	// Scanner metadata for display
-	const scannerMeta: Record<
-		string,
-		{
-			icon: typeof Shield;
-			description: string;
-			color: string;
-			borderColor: string;
-			requiresConfig?: boolean;
-		}
-	> = {
-		axe: {
-			icon: Shield,
-			description: 'WCAG accessibility testing with axe-core engine',
-			color: 'text-blue-600',
-			borderColor: 'border-l-blue-500'
-		},
-		lighthouse: {
-			icon: Zap,
-			description: 'Performance, SEO, and best practices audits',
-			color: 'text-amber-500',
-			borderColor: 'border-l-amber-500'
-		},
-		'link-checker': {
-			icon: Link2,
-			description: 'Detect broken links and redirect chains',
-			color: 'text-emerald-600',
-			borderColor: 'border-l-emerald-600'
-		},
-		'security-headers': {
-			icon: Shield,
-			description: 'HTTP security header analysis and scoring',
-			color: 'text-violet-600',
-			borderColor: 'border-l-violet-600'
-		},
-		seo: {
-			icon: Search,
-			description: 'Meta tags, headings, and SEO optimization',
-			color: 'text-rose-500',
-			borderColor: 'border-l-rose-500'
-		},
-		'ai-navigator': {
-			icon: Bot,
-			description: 'LLM-powered agent that navigates toward a goal',
-			color: 'text-purple-600',
-			borderColor: 'border-l-purple-600',
-			requiresConfig: true
-		},
-		'open-graph': {
-			icon: Globe,
-			description: 'Social preview metadata validation for OG tags and Twitter cards',
-			color: 'text-cyan-600',
-			borderColor: 'border-l-cyan-500'
-		},
-		'spelling-grammar': {
-			icon: CheckCircle,
-			description: 'AI-powered spelling, grammar, and content quality checks',
-			color: 'text-lime-700',
-			borderColor: 'border-l-lime-500'
-		}
-	};
-
 	const presetDescriptions: Record<ScannerPreset, string> = {
 		coverage:
 			'Recommended. Enables the full standard scanner set for the clearest release readout.',
 		quick: 'Fastest pass. Runs axe only when you need a quick accessibility signal.',
 		custom: 'Pick exactly which scanners to run for this target.'
 	};
-
-	function selectableSurfaceClass(base: string, isSelected: boolean) {
-		return cn(
-			base,
-			'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
-			isSelected
-				? 'border-accent/60 bg-accent/5 shadow-[0_0_0_1px_rgba(13,92,99,0.18)]'
-				: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted'
-		);
-	}
 </script>
 
 {#snippet checkMarkSvg()}
@@ -173,17 +91,14 @@
 			{#if preset !== 'custom' && enabledScanners.length > 0}
 				<div class="mt-2 flex flex-wrap gap-1.5">
 					{#each enabledScanners as scanner (scanner.id)}
-						{@const meta = scannerMeta[scanner.id]}
+						{@const meta = SCANNER_META[scanner.id]}
 						{#if meta}
 							{@const MiniIcon = meta.icon}
 							<span
-								class={cn(
-									'bg-surface inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium',
-									meta.color
-								)}
+								class="bg-surface text-ink-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
 							>
 								<MiniIcon class="h-2.5 w-2.5" />
-								{scanner.id.replace(/-/g, ' ')}
+								{meta.label}
 							</span>
 						{/if}
 					{/each}
@@ -205,43 +120,38 @@
 	{:else}
 		<div class="grid gap-3 sm:grid-cols-2">
 			{#each scanners as scanner (scanner.id)}
-				{@const meta = scannerMeta[scanner.id] || {
+				{@const meta = SCANNER_META[scanner.id] || {
 					icon: Shield,
-					description: 'Run scan checks',
-					color: 'text-ink-muted',
-					borderColor: ''
+					label: scanner.id.replace(/-/g, ' '),
+					description: 'Run scan checks'
 				}}
 				{@const Icon = meta.icon}
 				<button
 					type="button"
 					aria-pressed={scanner.enabled}
 					onclick={() => onToggle(scanner.id)}
-					class={selectableSurfaceClass(
-						cn(
-							'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
-							scanner.enabled && meta.borderColor ? `border-l-[3px] ${meta.borderColor}` : ''
-						),
-						scanner.enabled
+					class={cn(
+						'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
+						'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
+						getScannerTileClass(scanner.enabled)
 					)}
 				>
 					<div
 						class={cn(
 							'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform] duration-200',
-							scanner.enabled
-								? 'bg-accent text-white'
-								: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
+							getScannerIconClass(scanner.enabled)
 						)}
 					>
 						<Icon class="h-5 w-5" />
 					</div>
 					<div class="min-w-0 flex-1">
 						<span class="text-ink block text-sm font-semibold capitalize">
-							{scanner.id.replace(/-/g, ' ')}
+							{meta.label}
 						</span>
 						<span class="text-ink-muted text-xs">
 							{meta.description}
 						</span>
-						{#if meta.requiresConfig && scanner.enabled}
+						{#if scanner.id === 'ai-navigator' && scanner.enabled}
 							<span class="mt-1 inline-flex items-center gap-1 text-xs text-amber-600">
 								<Settings2 class="h-3 w-3" />
 								Configure below

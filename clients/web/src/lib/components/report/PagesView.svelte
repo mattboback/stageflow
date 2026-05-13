@@ -3,7 +3,7 @@
 	import type { IssueDetail, UnifiedReport } from '$lib/types/unified-report';
 
 	import { Panel } from '$lib/components/ui';
-	import { getPageOverviewUrl, getSeverityBadgeClass } from '$lib/report';
+	import { getPageOverviewUrl, getSeverityContainerClass, getSeverityDotClass } from '$lib/report';
 	import { cn } from '$lib/utils';
 
 	import PageOverviewViewer from './PageOverviewViewer.svelte';
@@ -74,10 +74,11 @@
 	>
 		<span
 			class={cn(
-				'mt-0.5 rounded px-2 py-0.5 text-xs font-semibold uppercase',
-				getSeverityBadgeClass(issue.severity)
+				'mt-0.5 inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs font-semibold uppercase',
+				getSeverityContainerClass(issue.severity)
 			)}
 		>
+			<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}></span>
 			{issue.severity}
 		</span>
 		<div class="min-w-0">

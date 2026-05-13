@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { Button, Container, Panel } from '$lib/components/ui';
 	import { SITE } from '$lib/config/site';
-	import { AlertTriangle, Home, RotateCcw } from 'lucide-svelte';
+	import { AlertTriangle, FileSearch, Home, RotateCcw } from 'lucide-svelte';
 
 	const status = $derived(page.status);
 	const message = $derived(page.error?.message ?? 'An unexpected error occurred');
@@ -25,9 +25,15 @@
 	<Container class="max-w-lg text-center">
 		<Panel padding="xl" rounded="xl" class="shadow-md">
 			<div
-				class="bg-accent/10 mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+				class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full"
+				class:bg-amber-100={!isNotFound}
+				class:bg-surface-muted={isNotFound}
 			>
-				<AlertTriangle class="text-accent h-8 w-8" />
+				{#if isNotFound}
+					<FileSearch class="text-ink-faint h-8 w-8" />
+				{:else}
+					<AlertTriangle class="h-8 w-8 text-amber-600" />
+				{/if}
 			</div>
 
 			<p class="text-accent mb-2 font-mono text-sm font-semibold">{status}</p>
