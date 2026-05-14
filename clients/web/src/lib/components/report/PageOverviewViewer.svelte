@@ -61,6 +61,7 @@
 
 	// Track focused element for keyboard accessibility
 	let focusedIndex = $state(-1);
+	let hoveredIndex = $state<number | null>(null);
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (filteredElements.length === 0) return;
@@ -133,69 +134,116 @@
 			No page overview screenshot available for this scan.
 		</Panel>
 	{:else if canRenderOverview}
-		<Panel
-			padding="none"
-			rounded="2xl"
-			class="relative overflow-hidden"
-			data-testid="page-overview"
-		>
-			<div class="overflow-auto">
-				<div
-					class="relative"
-					style={`transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%;`}
-				>
-					<button
-						type="button"
-						data-testid="page-overview-keyboard"
-						class="block w-full bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
-						onkeydown={handleKeydown}
+		<div class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr,260px]">
+			<Panel
+				padding="none"
+				rounded="2xl"
+				class="relative overflow-hidden"
+				data-testid="page-overview"
+			>
+				<div class="overflow-auto">
+					<div
+						class="relative"
+						style={`transform: scale(${zoom}); transform-origin: top left; width: ${100 / zoom}%;`}
 					>
-						<svg
-							class="block w-full"
-							viewBox={`0 0 ${pageWidth} ${pageHeight}`}
-							preserveAspectRatio="xMinYMin meet"
-							role="img"
-							aria-label={`Page overview for ${page.path ?? page.url} with ${filteredElements.length} highlighted issues`}
+						<button
+							type="button"
+							data-testid="page-overview-keyboard"
+							class="block w-full bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
+							onkeydown={handleKeydown}
 						>
-							<image href={screenshotUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
-							{#each filteredElements as element, idx (`${element.issueId}:${element.nodeIndex}:${idx}`)}
-								{@const issue = issueMap[element.issueId]}
-								{#if issue}
-									{@const strokeColor = getSeverityStrokeColor(issue.severity)}
-									{@const fillColor = getSeverityFillColor(issue.severity)}
-									{@const isFocused = focusedIndex === idx}
-									<!-- Clickable overlay rect for each issue element -->
-									<rect
-										x={element.x}
-										y={element.y}
-										width={element.width}
-										height={element.height}
-										fill={isFocused ? fillColor : 'transparent'}
-										stroke={strokeColor}
-										stroke-width={isFocused ? 6 : 4}
-										class="cursor-pointer motion-safe:transition-[fill,stroke-width]"
-										style={`--hover-fill: ${fillColor}`}
-										role="button"
-										tabindex="0"
-										aria-label={`${issue.title} (${issue.severity})`}
-										onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
-										onkeydown={(e) => {
-											if (e.key === 'Enter' || e.key === ' ') {
-												e.preventDefault();
-												onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`);
-											}
-										}}
-										data-testid="page-overview-marker"
-									>
-										<title>{issue.title} ({issue.severity})</title>
-									</rect>
-								{/if}
-							{/each}
-						</svg>
-					</button>
+							<svg
+								class="block w-full"
+								viewBox={`0 0 ${pageWidth} ${pageHeight}`}
+								preserveAspectRatio="xMinYMin meet"
+								role="img"
+								aria-label={`Page overview for ${page.path ?? page.url} with ${filteredElements.length} highlighted issues`}
+							>
+								<image href={screenshotUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
+								{#each filteredElements as element, idx (`${element.issueId}:${element.nodeIndex}:${idx}`)}
+									{@const issue = issueMap[element.issueId]}
+									{#if issue}
+										{@const strokeColor = getSeverityStrokeColor(issue.severity)}
+										{@const fillColor = getSeverityFillColor(issue.severity)}
+										{@const isFocused = focusedIndex === idx || hoveredIndex === idx}
+										<rect
+											x={element.x}
+											y={element.y}
+											width={element.width}
+											height={element.height}
+											fill={isFocused ? fillColor : 'transparent'}
+											stroke={strokeColor}
+											stroke-width={isFocused ? 6 : 4}
+											class="cursor-pointer motion-safe:transition-[fill,stroke-width]"
+											style={`--hover-fill: ${fillColor}`}
+											role="button"
+											tabindex="0"
+											aria-label={`${issue.title} (${issue.severity})`}
+											onmouseenter={() => (hoveredIndex = idx)}
+											onmouseleave={() => (hoveredIndex = null)}
+											onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
+											onkeydown={(e) => {
+												if (e.key === 'Enter' || e.key === ' ') {
+													e.preventDefault();
+													onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`);
+												}
+											}}
+											data-testid="page-overview-marker"
+										>
+											<title>{issue.title} ({issue.severity})</title>
+										</rect>
+									{/if}
+								{/each}
+							</svg>
+						</button>
+					</div>
 				</div>
-			</div>
-		</Panel>
+			</Panel>
+
+			<aside
+				class="border-line bg-surface flex max-h-[72vh] flex-col overflow-hidden rounded-2xl border shadow-sm"
+				aria-label="Highlighted elements"
+				data-testid="page-overview-element-sidebar"
+			>
+				<div class="border-line border-b px-3 py-2">
+					<h4 class="text-ink text-xs font-semibold tracking-wide uppercase">
+						Elements ({filteredElements.length})
+					</h4>
+					<p class="text-ink-muted mt-0.5 text-[11px]">Hover or click to highlight on page</p>
+				</div>
+				<ul class="divide-line/70 divide-y overflow-y-auto text-sm">
+					{#each filteredElements as element, idx (`${element.issueId}:${element.nodeIndex}:${idx}`)}
+						{@const issue = issueMap[element.issueId]}
+						{#if issue}
+							{@const isActive = focusedIndex === idx || hoveredIndex === idx}
+							<li>
+								<button
+									type="button"
+									onmouseenter={() => (hoveredIndex = idx)}
+									onmouseleave={() => (hoveredIndex = null)}
+									onfocus={() => (focusedIndex = idx)}
+									onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
+									class={`hover:bg-surface-muted/60 flex w-full items-start gap-2 px-3 py-2 text-left transition ${isActive ? 'bg-surface-muted' : ''}`}
+									data-testid="page-overview-element-row"
+								>
+									<span class="text-ink-faint mt-0.5 shrink-0 font-mono text-[11px]">
+										#{idx + 1}
+									</span>
+									<span class="min-w-0 flex-1">
+										<span class="text-ink block truncate text-xs font-semibold">
+											{issue.title}
+										</span>
+										<span class="text-ink-faint mt-0.5 block text-[11px] capitalize">
+											{issue.severity}
+										</span>
+									</span>
+								</button>
+							</li>
+						{/if}
+					{/each}
+				</ul>
+			</aside>
+		</div>
 	{:else}
 		<Panel variant="muted" padding="lg" rounded="2xl" class="text-ink-muted text-center text-sm">
 			Page overview dimensions not available.
