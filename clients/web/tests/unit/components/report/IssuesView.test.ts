@@ -60,22 +60,23 @@ describe('IssuesView', () => {
 		cleanup();
 	});
 
-	it('virtualizes when issue count is high', () => {
+	it('virtualizes when issue count is high in flat mode', async () => {
 		const report = buildReport(260);
-		const { container } = render(IssuesView, {
+		const user = userEvent.setup();
+		const { container, getByRole } = render(IssuesView, {
 			props: {
 				report,
 				screenshots: [],
-				activeScanner: null,
+				activeScanners: [],
 				activePage: null,
-				activeSeverity: null,
+				activeSeverities: [],
 				activeCategory: null,
 				searchTerm: '',
 				issueSort: 'severity',
 				selectedIssueId: null,
-				onScannerChange: () => undefined,
+				onScannersChange: () => undefined,
 				onPageChange: () => undefined,
-				onSeverityChange: () => undefined,
+				onSeveritiesChange: () => undefined,
 				onCategoryChange: () => undefined,
 				onSearchChange: () => undefined,
 				onSortChange: () => undefined,
@@ -83,6 +84,8 @@ describe('IssuesView', () => {
 				onClearFilters: () => undefined
 			}
 		});
+
+		await user.click(getByRole('tab', { name: /flat list/i }));
 
 		const list = container.querySelector("[data-testid='issue-list']");
 		expect(list).toBeInTheDocument();
@@ -100,16 +103,16 @@ describe('IssuesView', () => {
 			props: {
 				report,
 				screenshots: [],
-				activeScanner: null,
+				activeScanners: [],
 				activePage: null,
-				activeSeverity: null,
+				activeSeverities: [],
 				activeCategory: null,
 				searchTerm: '',
 				issueSort: 'severity',
 				selectedIssueId: null,
-				onScannerChange: () => undefined,
+				onScannersChange: () => undefined,
 				onPageChange: () => undefined,
-				onSeverityChange: () => undefined,
+				onSeveritiesChange: () => undefined,
 				onCategoryChange: () => undefined,
 				onSearchChange,
 				onSortChange: () => undefined,
@@ -139,16 +142,16 @@ describe('IssuesView', () => {
 			props: {
 				report,
 				screenshots: [],
-				activeScanner: null,
+				activeScanners: [],
 				activePage: null,
-				activeSeverity: null,
+				activeSeverities: [],
 				activeCategory: null,
 				searchTerm: '',
 				issueSort: 'severity',
 				selectedIssueId: null,
-				onScannerChange: () => undefined,
+				onScannersChange: () => undefined,
 				onPageChange: () => undefined,
-				onSeverityChange: () => undefined,
+				onSeveritiesChange: () => undefined,
 				onCategoryChange: () => undefined,
 				onSearchChange: () => undefined,
 				onSortChange: () => undefined,
