@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { ScreenshotArtifact } from '$lib/types/scan';
-	import type { ReportAudience } from '$lib/types/report-audience';
 	import type { IssueDetail, UnifiedReport } from '$lib/types/unified-report';
 
 	import { Input, Panel, Select, Tabs } from '$lib/components/ui';
@@ -20,7 +19,6 @@
 
 	interface Props {
 		report: UnifiedReport;
-		audience: ReportAudience;
 		screenshots: ScreenshotArtifact[];
 		activeScanner: string | null;
 		activePage: string | null;
@@ -41,7 +39,6 @@
 
 	let {
 		report,
-		audience,
 		screenshots,
 		activeScanner,
 		activePage,
@@ -188,35 +185,7 @@
 		return !isCompactViewport;
 	});
 
-	const audienceSummary = $derived.by(() => {
-		switch (audience) {
-			case 'engineer':
-				return {
-					label: 'Engineer view',
-					description:
-						'Rules, selectors, and implementation-oriented issue context are prioritized.'
-				};
-			case 'designer':
-				return {
-					label: 'Designer view',
-					description:
-						'Visual previews stay emphasized so layout and contrast issues are easier to scan.'
-				};
-			default:
-				return {
-					label: 'PM view',
-					description: 'Severity, impact, and triage-friendly summaries stay front and center.'
-				};
-		}
-	});
-
-	const showAudiencePreviews = $derived.by(() => {
-		if (previewMode === 'on') return true;
-		if (previewMode === 'off') return false;
-		return audience !== 'engineer' || !isCompactViewport;
-	});
-
-	const rowHeight = $derived(showAudiencePreviews ? 120 : 88);
+	const rowHeight = $derived(showPreviews ? 120 : 88);
 	const overscan = $derived(isCompactViewport ? 4 : 6);
 
 	const shouldVirtualize = $derived(sortedIssues.length > 200);
@@ -444,20 +413,9 @@
 					</div>
 				</div>
 				<div
-					class="border-line/70 bg-surface-muted/45 rounded-xl border px-3 py-2.5"
-					data-testid="audience-summary"
+					class="bg-surface-muted/60 border-line rounded-xl border px-2 py-2.5"
+					data-testid="audience-summary-removed"
 				>
-					<div class="flex flex-wrap items-center justify-between gap-2">
-						<p class="text-ink text-xs font-semibold tracking-wide uppercase">
-							{audienceSummary.label}
-						</p>
-						<span class="text-ink-faint text-[11px] font-medium">
-							{showAudiencePreviews ? 'Visual previews emphasized' : 'Compact text-first rows'}
-						</span>
-					</div>
-					<p class="text-ink-muted mt-1 text-sm leading-relaxed">{audienceSummary.description}</p>
-				</div>
-				<div class="bg-surface-muted/60 border-line rounded-xl border px-2 py-2.5">
 					<div class="relative">
 						<div
 							bind:this={severityChipScroller}
@@ -575,7 +533,7 @@
 									{issue}
 									page={pagesById[issue.pageId] ?? null}
 									{screenshots}
-									showScreenshot={showAudiencePreviews}
+									showScreenshot={showPreviews}
 									isVirtualized={true}
 									isSelected={selectedIssueId === issue.id}
 									onclick={() => onIssueSelect(issue)}
@@ -589,7 +547,7 @@
 							{issue}
 							page={pagesById[issue.pageId] ?? null}
 							{screenshots}
-							showScreenshot={showAudiencePreviews}
+							showScreenshot={showPreviews}
 							isVirtualized={false}
 							isSelected={selectedIssueId === issue.id}
 							onclick={() => onIssueSelect(issue)}

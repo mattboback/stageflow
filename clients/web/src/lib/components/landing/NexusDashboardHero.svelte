@@ -1,13 +1,15 @@
 <script lang="ts">
-	const navTabs = ['Overview', 'Scanners', 'Issues', 'Visual'];
+	const navTabs = ['Overview', 'Issues', 'Pages', 'Scanners'];
 
 	const scanners = [
 		{ name: 'Axe', score: 100, status: 'done', color: '#3b82f6', bg: '#eff6ff' },
 		{ name: 'Lighthouse', score: 89, status: 'done', color: '#f59e0b', bg: '#fffbeb' },
 		{ name: 'Security Headers', score: 94, status: 'done', color: '#8b5cf6', bg: '#f5f3ff' },
-		{ name: 'SEO', score: 82, status: 'live', color: '#f43f5e', bg: '#fff1f2' },
+		{ name: 'SEO', score: 82, status: 'done', color: '#f43f5e', bg: '#fff1f2' },
 		{ name: 'Link Checker', score: 71, status: 'live', color: '#10b981', bg: '#f0fdf4' },
-		{ name: 'Open Graph', score: 65, status: 'queued', color: '#06b6d4', bg: '#ecfeff' }
+		{ name: 'AI Navigator', score: 78, status: 'live', color: '#d946ef', bg: '#fdf4ff' },
+		{ name: 'Open Graph', score: 65, status: 'queued', color: '#06b6d4', bg: '#ecfeff' },
+		{ name: 'Spelling & Grammar', score: 88, status: 'queued', color: '#65a30d', bg: '#f7fee7' }
 	] as const;
 
 	const categoryScores = [
@@ -22,6 +24,13 @@
 		{ label: 'Serious', count: 8, color: '#ea580c', bg: '#fff7ed' },
 		{ label: 'Moderate', count: 14, color: '#d97706', bg: '#fffbeb' }
 	] as const;
+
+	// Proportional severity distribution segments (out of total 25)
+	const severityTotal = findings.reduce((sum, f) => sum + f.count, 0);
+	const severitySegments = findings.map((f) => ({
+		...f,
+		width: (f.count / severityTotal) * 100
+	}));
 
 	const trendBars = [38, 44, 52, 48, 61, 68, 72, 70, 79, 84, 88, 94] as const;
 </script>
@@ -63,9 +72,21 @@
 				</div>
 				<div class="nf-score-area">
 					<div class="nf-score-left">
-						<div class="nf-grade">A</div>
+						<span class="nf-status-pill">
+							<span class="nf-status-dot"></span>
+							Strong
+						</span>
 						<div class="nf-score-num">94<span class="nf-score-denom">/100</span></div>
 						<p class="nf-score-desc">staging.example.com · 3 pages · 2m 18s</p>
+						<div class="nf-sev-bar" aria-label="Severity distribution">
+							{#each severitySegments as seg (seg.label)}
+								<span
+									class="nf-sev-seg"
+									style="width:{seg.width}%; background:{seg.color}"
+									title={`${seg.count} ${seg.label}`}
+								></span>
+							{/each}
+						</div>
 					</div>
 					<div class="nf-score-chart">
 						{#each categoryScores as cat (cat.label)}
@@ -132,9 +153,9 @@
 
 			<!-- CTA card (teal-tinted, like Nexus lavender "Upgrade to Pro") -->
 			<div class="nf-bottom-panel nf-cta-card">
-				<p class="nf-cta-title">8 Scanners</p>
+				<p class="nf-cta-title">One run. All scanners.</p>
 				<p class="nf-cta-desc">
-					No account required. Run accessibility, performance, SEO, and security in one flow.
+					No account required. Accessibility, performance, SEO, and security in one execution path.
 				</p>
 				<a href="/playground" class="nf-cta-btn">Start scanning →</a>
 			</div>
@@ -342,26 +363,38 @@
 		flex-direction: column;
 	}
 
-	.nf-grade {
+	.nf-status-pill {
 		display: inline-flex;
 		align-items: center;
-		justify-content: center;
-		width: 34px;
-		height: 34px;
+		gap: 6px;
+		padding: 3px 10px;
+		font-size: 10px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 		background: #d1fae5;
 		color: #065f46;
-		font-size: 15px;
-		font-weight: 800;
-		border-radius: 50%;
+		border: 1px solid #a7f3d0;
+		border-radius: 9999px;
 		margin-bottom: 0.5rem;
+		width: max-content;
+	}
+
+	.nf-status-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #10b981;
 	}
 
 	.nf-score-num {
 		font-size: 52px;
-		font-weight: 800;
+		font-weight: 700;
 		color: #0f172a;
 		line-height: 1;
 		letter-spacing: -0.04em;
+		font-family: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.nf-score-denom {
@@ -369,6 +402,22 @@
 		font-weight: 500;
 		color: #94a3b8;
 		letter-spacing: 0;
+		font-family: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
+	}
+
+	.nf-sev-bar {
+		display: flex;
+		height: 6px;
+		width: 100%;
+		max-width: 220px;
+		margin-top: 0.6rem;
+		background: #f1f5f9;
+		border-radius: 9999px;
+		overflow: hidden;
+	}
+
+	.nf-sev-seg {
+		height: 100%;
 	}
 
 	.nf-score-desc {
@@ -494,6 +543,7 @@
 		color: #0f172a;
 		text-align: right;
 		font-variant-numeric: tabular-nums;
+		font-family: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
 	}
 
 	/* Bottom bento row */
@@ -608,11 +658,12 @@
 
 	.nf-trend-num {
 		font-size: 20px;
-		font-weight: 800;
+		font-weight: 700;
 		color: #0f172a;
 		line-height: 1;
 		letter-spacing: -0.02em;
 		font-variant-numeric: tabular-nums;
+		font-family: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
 	}
 
 	.nf-trend-lbl {

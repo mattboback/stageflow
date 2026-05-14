@@ -191,7 +191,7 @@ describe('ReportShell', () => {
 			keepFocus: true
 		});
 
-		await user.click(getAllByRole('button', { name: /check top pages/i })[0]);
+		await user.click(getAllByRole('button', { name: /check pages/i })[0]);
 		expect(mockGoto).toHaveBeenCalledWith('/scan/job-1/report?section=pages', {
 			replaceState: false,
 			noScroll: true,
@@ -199,7 +199,7 @@ describe('ReportShell', () => {
 		});
 	});
 
-	it('shows score legend context in the report header', () => {
+	it('renders the score band label in the report header', () => {
 		const report = createBaseReport();
 		const { getByText } = render(ReportShell, {
 			props: {
@@ -209,8 +209,7 @@ describe('ReportShell', () => {
 					...report,
 					summary: {
 						...report.summary,
-						score: 77,
-						scoreGrade: 'C+'
+						score: 77
 					}
 				},
 				job: null,
@@ -221,7 +220,6 @@ describe('ReportShell', () => {
 		});
 
 		expect(getByText('Needs work')).toBeInTheDocument();
-		expect(getByText('A: 90+, B: 80-89, C: 70-79, D: 60-69, F: <60')).toBeInTheDocument();
 	});
 
 	it('opens the derived occurrence issue when clicking a non-first overlay marker', async () => {

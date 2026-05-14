@@ -8,7 +8,6 @@
 	import ProcessingView from '$lib/components/scan-status/ProcessingView.svelte';
 	import { Alert, PageSection, Panel } from '$lib/components/ui';
 	import { buildOccurrenceModeReport, isIssueSortKey } from '$lib/report';
-	import { parseReportAudience } from '$lib/types/report-audience';
 	import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-svelte';
 
 	import ArtifactsView from './ArtifactsView.svelte';
@@ -69,8 +68,24 @@
 	const activeIssueId = $derived.by(() => page.url.searchParams.get('issueId'));
 	const activeElementId = $derived.by(() => page.url.searchParams.get('elementId'));
 	const issueSort = $derived.by(() => page.url.searchParams.get('sort') ?? 'severity');
-	const audience = $derived(parseReportAudience(page.url.searchParams.get('aud')));
 	const displayReport = $derived(report ? buildOccurrenceModeReport(report) : null);
+
+	const modalIssueList = $derived.by(() => {
+		if (!displayReport) return [];
+		const filtered = displayReport.issues.filter((issue) => {
+			if (activeScanner && issue.scanner !== activeScanner) return false;
+			if (activePage && issue.pageId !== activePage) return false;
+			if (activeSeverity && issue.severity !== activeSeverity) return false;
+			if (activeCategory && issue.category !== activeCategory) return false;
+			if (searchTerm) {
+				const haystack =
+					`${issue.title} ${issue.description} ${issue.ruleId}`.toLowerCase();
+				if (!haystack.includes(searchTerm.toLowerCase())) return false;
+			}
+			return true;
+		});
+		return filtered;
+	});
 
 	const selectedIssue = $derived.by(() => {
 		if (!displayReport || !activeIssueId) return null;
@@ -147,9 +162,7 @@
 		<ReportSectionNav
 			report={displayReport}
 			{section}
-			{audience}
 			onSectionChange={setSection}
-			onAudienceChange={(value) => updateQueryParams({ aud: value === 'pm' ? null : value })}
 		/>
 
 		<svelte:boundary onerror={(e) => console.error('Report section render error:', e)}>
@@ -204,7 +217,6 @@
 				<section id="report-panel-issues" aria-labelledby="report-tab-issues">
 					<IssuesView
 						report={displayReport}
-						{audience}
 						{screenshots}
 						{activeScanner}
 						{activePage}
@@ -308,9 +320,10 @@
 	<IssueDetailModal
 		issue={selectedIssue}
 		page={displayReport.pages.find((p) => p.id === selectedIssue.pageId) ?? null}
-		{audience}
+		issues={modalIssueList}
 		{screenshots}
 		{...activeElementId ? { highlightedElementId: activeElementId } : {}}
 		onClose={closeIssueModal}
+		onNavigate={(issueId) => updateQueryParams({ issueId, elementId: null })}
 	/>
 {/if}
