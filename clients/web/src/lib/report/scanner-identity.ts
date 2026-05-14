@@ -1,12 +1,4 @@
-import {
-	Bot,
-	CheckCircle,
-	Globe,
-	Link2,
-	Search,
-	Shield,
-	Zap
-} from 'lucide-svelte';
+import { Bot, CheckCircle, Globe, Link2, Search, Shield, Zap } from 'lucide-svelte';
 
 export interface ScannerMeta {
 	icon: typeof Shield;

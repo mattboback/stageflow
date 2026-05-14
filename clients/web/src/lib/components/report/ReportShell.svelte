@@ -82,8 +82,7 @@
 			if (activeSeverities.length && !activeSeverities.includes(issue.severity)) return false;
 			if (activeCategory && issue.category !== activeCategory) return false;
 			if (searchTerm) {
-				const haystack =
-					`${issue.title} ${issue.description} ${issue.ruleId}`.toLowerCase();
+				const haystack = `${issue.title} ${issue.description} ${issue.ruleId}`.toLowerCase();
 				if (!haystack.includes(searchTerm.toLowerCase())) return false;
 			}
 			return true;
@@ -163,11 +162,7 @@
 				)}
 			{...onRefreshArtifacts ? { onRefreshArtifacts } : {}}
 		/>
-		<ReportSectionNav
-			report={displayReport}
-			{section}
-			onSectionChange={setSection}
-		/>
+		<ReportSectionNav report={displayReport} {section} onSectionChange={setSection} />
 
 		<svelte:boundary onerror={(e) => console.error('Report section render error:', e)}>
 			{#snippet failed(error, reset)}

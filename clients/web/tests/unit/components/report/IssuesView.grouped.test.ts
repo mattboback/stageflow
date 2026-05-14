@@ -30,7 +30,9 @@ function buildReport(issues: IssueDetail[]): UnifiedReport {
 			pagesWithIssues: 1
 		},
 		scanners: [{ id: 'axe', status: 'success', issueCount: issues.length }],
-		pages: [{ id: 'page-1', url: 'http://example.com', issueCount: issues.length, durationMs: 100 }],
+		pages: [
+			{ id: 'page-1', url: 'http://example.com', issueCount: issues.length, durationMs: 100 }
+		],
 		issues
 	};
 }

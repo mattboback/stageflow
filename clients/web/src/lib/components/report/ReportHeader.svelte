@@ -6,13 +6,7 @@
 	import { Button, Panel, Score, SeverityBar } from '$lib/components/ui';
 	import { scoreBandFor } from '$lib/report/score-band';
 	import { cn, formatDuration, formatTimestamp } from '$lib/utils';
-	import {
-		AlertTriangle,
-		ExternalLink,
-		FileSearch,
-		Layers3,
-		RefreshCw
-	} from 'lucide-svelte';
+	import { AlertTriangle, ExternalLink, FileSearch, Layers3, RefreshCw } from 'lucide-svelte';
 
 	interface Props {
 		jobId: string;
@@ -80,7 +74,7 @@
 					Scan report
 				</p>
 				<h1
-					class="text-ink mt-1 break-all text-xl font-bold leading-tight sm:text-2xl"
+					class="text-ink mt-1 text-xl leading-tight font-bold break-all sm:text-2xl"
 					data-testid="report-header-title"
 				>
 					{report.meta.baseUrl ?? `Scan ${jobId}`}
@@ -141,11 +135,11 @@
 			</div>
 
 			<!-- Severity distribution -->
-			<div class="min-w-0 flex flex-col gap-1.5">
+			<div class="flex min-w-0 flex-col gap-1.5">
 				<div
 					class="text-ink-faint flex items-baseline justify-between gap-2 font-mono text-[11px] tabular-nums"
 				>
-					<span class="uppercase tracking-wide">Severity distribution</span>
+					<span class="tracking-wide uppercase">Severity distribution</span>
 					<span class="text-ink-muted"
 						>{(report.summary.totalIssues ?? 0).toLocaleString()} issue{report.summary
 							.totalIssues === 1
@@ -164,12 +158,12 @@
 					<span class="text-ink font-semibold">{pagesWithIssues}</span>
 					<span class="text-ink-faint">/</span>
 					<span class="text-ink font-semibold">{pagesScanned}</span>
-					<span class="text-ink-faint ml-1 uppercase tracking-wide">pages</span>
+					<span class="text-ink-faint ml-1 tracking-wide uppercase">pages</span>
 				</span>
 				{#if duration}
 					<span class="text-ink-muted">
 						<span class="text-ink font-semibold">{duration}</span>
-						<span class="text-ink-faint ml-1 uppercase tracking-wide">elapsed</span>
+						<span class="text-ink-faint ml-1 tracking-wide uppercase">elapsed</span>
 					</span>
 				{/if}
 			</div>

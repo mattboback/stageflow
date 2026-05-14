@@ -42,14 +42,12 @@ export function generateContextualFix(
 
 	if (ruleId.includes('color-contrast') || ruleId === 'contrast') {
 		const raw = occurrence as (IssueOccurrence & { scannerData?: unknown }) | null;
-		const data = (raw?.scannerData ?? null) as
-			| {
-					fgColor?: string;
-					bgColor?: string;
-					contrastRatio?: number | string;
-					expectedContrastRatio?: number | string;
-			  }
-			| null;
+		const data = (raw?.scannerData ?? null) as {
+			fgColor?: string;
+			bgColor?: string;
+			contrastRatio?: number | string;
+			expectedContrastRatio?: number | string;
+		} | null;
 		if (data?.contrastRatio && data?.expectedContrastRatio) {
 			const fg = data.fgColor ? ` (foreground ${data.fgColor})` : '';
 			const bg = data.bgColor ? ` against ${data.bgColor}` : '';

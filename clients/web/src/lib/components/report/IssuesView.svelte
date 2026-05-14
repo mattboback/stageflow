@@ -244,8 +244,8 @@
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between gap-3">
 						<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
-							Issues (<span class="font-mono">{filteredIssues.length.toLocaleString()}</span>{filteredIssues.length !==
-							report.issues.length
+							Issues (<span class="font-mono">{filteredIssues.length.toLocaleString()}</span
+							>{filteredIssues.length !== report.issues.length
 								? ` / ${report.issues.length.toLocaleString()}`
 								: ''})
 						</h3>
@@ -327,9 +327,7 @@
 								onclick={() => (viewMode = 'grouped')}
 								class={cn(
 									'rounded px-2 py-1 font-semibold transition',
-									viewMode === 'grouped'
-										? 'bg-surface text-ink shadow-xs'
-										: 'text-ink-muted'
+									viewMode === 'grouped' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
 								)}
 							>
 								Group by rule
@@ -341,9 +339,7 @@
 								onclick={() => (viewMode = 'flat')}
 								class={cn(
 									'rounded px-2 py-1 font-semibold transition',
-									viewMode === 'flat'
-										? 'bg-surface text-ink shadow-xs'
-										: 'text-ink-muted'
+									viewMode === 'flat' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
 								)}
 							>
 								Flat list
@@ -361,8 +357,7 @@
 								uiSize="sm"
 								class="min-w-40"
 								value={issueSort}
-								onchange={(event) =>
-									onSortChange((event.currentTarget as HTMLSelectElement).value)}
+								onchange={(event) => onSortChange((event.currentTarget as HTMLSelectElement).value)}
 							>
 								{#each ISSUE_SORTS as sort (sort)}
 									<option value={sort}>{ISSUE_SORT_LABELS[sort]}</option>
@@ -390,9 +385,7 @@
 								onclick={() => (previewMode = 'auto')}
 								class={cn(
 									'rounded px-2 py-1 font-semibold transition',
-									previewMode === 'auto'
-										? 'bg-surface text-ink shadow-xs'
-										: 'text-ink-muted'
+									previewMode === 'auto' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
 								)}
 							>
 								Previews auto
@@ -423,7 +416,9 @@
 			</div>
 
 			{#if filteredIssues.length === 0}
-				<div class="bg-surface-muted/30 flex flex-col items-center justify-center py-14 text-center">
+				<div
+					class="bg-surface-muted/30 flex flex-col items-center justify-center py-14 text-center"
+				>
 					<p class="text-ink font-medium">No issues found</p>
 					<p class="text-ink-muted mt-1 text-sm">
 						{#if hasActiveFilters}
@@ -434,20 +429,17 @@
 					</p>
 				</div>
 			{:else if viewMode === 'grouped'}
-				<div
-					class="border-line/70 border-t"
-					data-testid="issue-group-list"
-				>
+				<div class="border-line/70 border-t" data-testid="issue-group-list">
 					{#each groups as group (group.fingerprint)}
 						<IssueGroupRow
 							{group}
 							{pagesById}
 							{screenshots}
-							showPreviews={showPreviews}
+							{showPreviews}
 							expanded={!!expandedGroups[group.fingerprint]}
 							{selectedIssueId}
 							onToggle={() => toggleGroup(group.fingerprint)}
-							onIssueSelect={onIssueSelect}
+							{onIssueSelect}
 						/>
 					{/each}
 				</div>

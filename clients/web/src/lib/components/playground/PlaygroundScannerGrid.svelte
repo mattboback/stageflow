@@ -132,7 +132,7 @@
 					onclick={() => onToggle(scanner.id)}
 					class={cn(
 						'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
-						'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
+						'focus-visible:ring-accent focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 						getScannerTileClass(scanner.enabled)
 					)}
 				>

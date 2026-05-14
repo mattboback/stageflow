@@ -11,13 +11,7 @@
 		getSeverityDotClass
 	} from '$lib/report';
 	import { cn, getWcagUnderstandingUrl, normalizeWcagTag } from '$lib/utils';
-	import {
-		ChevronLeft,
-		ChevronRight,
-		ExternalLink,
-		FileText,
-		XCircle
-	} from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, ExternalLink, FileText, XCircle } from 'lucide-svelte';
 	import { tick } from 'svelte';
 
 	import IssueEvidenceSection from './IssueEvidenceSection.svelte';
@@ -166,26 +160,25 @@
 	)}
 >
 	<div bind:this={modalRef} class="contents">
-		<div class={cn('border-b border p-6', getSeverityContainerClass(issue.severity))}>
+		<div class={cn('border border-b p-6', getSeverityContainerClass(issue.severity))}>
 			<div class="flex items-start justify-between gap-4">
 				<div class="min-w-0">
 					<div class="mb-2 flex flex-wrap items-center gap-2">
 						<span
 							class={cn(
-								'inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide',
+								'inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide uppercase',
 								getSeverityContainerClass(issue.severity)
 							)}
 						>
-							<span
-								class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
+							<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
 							></span>
 							{issue.severity}
 						</span>
-						<span class="text-ink-faint font-mono text-[11px] uppercase tracking-wide">
+						<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
 							{issue.scanner} · {issue.ruleId}
 						</span>
 					</div>
-					<h2 class="text-ink text-xl font-bold leading-tight">{issue.title}</h2>
+					<h2 class="text-ink text-xl leading-tight font-bold">{issue.title}</h2>
 					{#if alsoDetectedBy.length}
 						<p class="text-ink-muted mt-1 text-sm">
 							Also detected by: {alsoDetectedBy.join(', ')}
@@ -334,21 +327,21 @@
 				{/if}
 				<div class="grid gap-3 sm:grid-cols-2">
 					<div>
-						<p class="text-ink-faint font-mono text-[11px] uppercase tracking-wide">Scanner</p>
+						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Scanner</p>
 						<p class="text-ink mt-0.5 font-mono text-sm">{issue.scanner}</p>
 					</div>
 					<div>
-						<p class="text-ink-faint font-mono text-[11px] uppercase tracking-wide">Rule ID</p>
+						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Rule ID</p>
 						<p class="text-ink mt-0.5 font-mono text-sm">{issue.ruleId}</p>
 					</div>
 					{#if issue.category}
 						<div>
-							<p class="text-ink-faint font-mono text-[11px] uppercase tracking-wide">Category</p>
+							<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Category</p>
 							<p class="text-ink mt-0.5 text-sm">{issue.category}</p>
 						</div>
 					{/if}
 					<div>
-						<p class="text-ink-faint font-mono text-[11px] uppercase tracking-wide">Severity</p>
+						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Severity</p>
 						<p class="text-ink mt-0.5 text-sm capitalize">{issue.severity}</p>
 					</div>
 				</div>
