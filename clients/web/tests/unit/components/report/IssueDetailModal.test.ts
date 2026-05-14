@@ -1,7 +1,7 @@
 import IssueDetailModal from '$lib/components/report/IssueDetailModal.svelte';
-import { render } from '@testing-library/svelte';
+import { cleanup, render } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const baseIssue = {
 	id: 'issue-1',
@@ -66,6 +66,10 @@ const screenshots = [
 ];
 
 describe('IssueDetailModal', () => {
+	afterEach(() => {
+		cleanup();
+	});
+
 	it('traps focus within modal', async () => {
 		const user = userEvent.setup();
 		render(IssueDetailModal, {
@@ -94,7 +98,25 @@ describe('IssueDetailModal', () => {
 		}
 	});
 
-	it('hides page overview evidence by default when opened from a page highlight', async () => {
+	it('switches to the Evidence tab and shows the page overview when not opened from a highlight', async () => {
+		const user = userEvent.setup();
+		const { getByRole, getByText } = render(IssueDetailModal, {
+			props: {
+				issue: {
+					...baseIssue,
+					occurrences: [{ selector: '.hero-text', elementId: 'issue-1-el-0' }]
+				},
+				page,
+				screenshots,
+				onClose: () => undefined
+			}
+		});
+
+		await user.click(getByRole('tab', { name: /evidence/i }));
+		expect(getByText('On the page')).toBeInTheDocument();
+	});
+
+	it('hides the page overview by default when opened from a page highlight, until full context is requested', async () => {
 		const user = userEvent.setup();
 		const { getByRole, queryByText, getByText } = render(IssueDetailModal, {
 			props: {
@@ -103,48 +125,21 @@ describe('IssueDetailModal', () => {
 					occurrences: [{ selector: '.hero-text', elementId: 'issue-1-el-0' }]
 				},
 				page,
-				audience: 'engineer',
 				screenshots,
 				highlightedElementId: 'issue-1-el-0',
 				onClose: () => undefined
 			}
 		});
 
+		await user.click(getByRole('tab', { name: /evidence/i }));
 		expect(queryByText('On the page')).not.toBeInTheDocument();
-		expect(getByText('Scanner screenshot')).toBeInTheDocument();
-
 		await user.click(getByRole('button', { name: /show full page context/i }));
 		expect(getByText('On the page')).toBeInTheDocument();
-		expect(getByRole('button', { name: /hide full page context/i })).toBeInTheDocument();
 	});
 
-	it('keeps technical evidence collapsed by default for PM audience', async () => {
+	it('hides occurrence thumbnails when page overview is visible', async () => {
 		const user = userEvent.setup();
-		const { getByText } = render(IssueDetailModal, {
-			props: {
-				issue: {
-					...baseIssue,
-					occurrences: [{ selector: '.hero-text', elementId: 'issue-1-el-0' }]
-				},
-				page,
-				audience: 'pm',
-				screenshots,
-				onClose: () => undefined
-			}
-		});
-
-		const summary = getByText('Technical evidence (optional)');
-		const details = summary.closest('details');
-		expect(summary).toBeInTheDocument();
-		expect(details).toBeInTheDocument();
-		expect(details).not.toHaveAttribute('open');
-
-		await user.click(summary);
-		expect(details).toHaveAttribute('open');
-	});
-
-	it('hides occurrence thumbnails when page overview is visible', () => {
-		const { container } = render(IssueDetailModal, {
+		const { container, getByRole } = render(IssueDetailModal, {
 			props: {
 				issue: {
 					...baseIssue,
@@ -154,17 +149,15 @@ describe('IssueDetailModal', () => {
 					]
 				},
 				page,
-				audience: 'engineer',
 				screenshots,
 				onClose: () => undefined
 			}
 		});
 
-		// The full-page overview should be rendered (the "On the page" section).
-		expect(container.querySelector('svg image')).toBeInTheDocument();
+		await user.click(getByRole('tab', { name: /occurrences/i }));
 
-		// Occurrence cards should NOT contain their own SVG crop thumbnails.
 		const occurrenceCards = container.querySelectorAll('[data-occurrence-id]');
+		expect(occurrenceCards.length).toBeGreaterThan(0);
 		for (const card of occurrenceCards) {
 			expect(card.querySelector('svg image')).not.toBeInTheDocument();
 		}
@@ -179,7 +172,6 @@ describe('IssueDetailModal', () => {
 					occurrences: [{ selector: '.hero-text', elementId: 'issue-1-el-0' }]
 				},
 				page: pageWithoutOverview,
-				audience: 'engineer',
 				screenshots,
 				onClose: () => undefined
 			}

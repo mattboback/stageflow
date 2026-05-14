@@ -9,3 +9,5 @@ export * from './virtualization';
 export * from './severity';
 export * from './screenshot-crop';
 export * from './occurrence-mode';
+export * from './score-band';
+export * from './contextual-fix';

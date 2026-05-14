@@ -65,7 +65,6 @@ describe('IssuesView', () => {
 		const { container } = render(IssuesView, {
 			props: {
 				report,
-				audience: 'pm',
 				screenshots: [],
 				activeScanner: null,
 				activePage: null,
@@ -100,7 +99,6 @@ describe('IssuesView', () => {
 		const { getByPlaceholderText } = render(IssuesView, {
 			props: {
 				report,
-				audience: 'pm',
 				screenshots: [],
 				activeScanner: null,
 				activePage: null,
@@ -135,12 +133,11 @@ describe('IssuesView', () => {
 		vi.useRealTimers();
 	});
 
-	it('shows an audience-specific summary for engineer view', () => {
+	it('renders the issue search input', () => {
 		const report = buildReport(4);
-		const { getByTestId } = render(IssuesView, {
+		const { getByPlaceholderText } = render(IssuesView, {
 			props: {
 				report,
-				audience: 'engineer',
 				screenshots: [],
 				activeScanner: null,
 				activePage: null,
@@ -160,9 +157,6 @@ describe('IssuesView', () => {
 			}
 		});
 
-		expect(getByTestId('audience-summary')).toHaveTextContent('Engineer view');
-		expect(getByTestId('audience-summary')).toHaveTextContent(
-			'Rules, selectors, and implementation-oriented issue context are prioritized.'
-		);
+		expect(getByPlaceholderText('Search issues')).toBeInTheDocument();
 	});
 });
