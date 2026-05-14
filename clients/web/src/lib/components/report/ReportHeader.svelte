@@ -193,7 +193,7 @@
 							{scoreBand.label}
 						</p>
 						<p class="text-ink-muted mt-1 text-xs leading-relaxed">{scoreBand.detail}</p>
-						<p class="text-ink-faint mt-2 text-[10px]">A: 90+ · B: 80-89 · C: 70-79 · D: 60+</p>
+						<p class="text-ink-faint mt-2 text-[10px]">A: 90+, B: 80-89, C: 70-79, D: 60-69, F: &lt;60</p>
 					</div>
 				{/if}
 			</div>

@@ -26,16 +26,16 @@ require (
 	github.com/mattboback/stageflow/libs/go/config v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/events v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/logging v0.0.0-00010101000000-000000000000
-	github.com/nats-io/nats.go v1.49.0
+	github.com/nats-io/nats.go v1.52.0
 )
 
 require (
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/mattboback/stageflow/libs/go/models v0.0.0-00010101000000-000000000000 // indirect
-	github.com/nats-io/nkeys v0.4.12 // indirect
+	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 )
 
 replace github.com/mattboback/stageflow/libs/go/messaging => ../../../libs/go/messaging
