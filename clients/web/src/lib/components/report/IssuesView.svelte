@@ -1,35 +1,36 @@
 <script lang="ts">
 	import type { ScreenshotArtifact } from '$lib/types/scan';
-	import type { IssueDetail, UnifiedReport } from '$lib/types/unified-report';
+	import type { IssueDetail, IssueGroup, UnifiedReport } from '$lib/types/unified-report';
 
-	import { Input, Panel, Select, Tabs } from '$lib/components/ui';
+	import { Panel, Select } from '$lib/components/ui';
 	import {
 		ISSUE_SORTS,
 		ISSUE_SORT_LABELS,
-		filterIssues,
-		getSeverityChipClass,
 		getVirtualWindow,
+		groupIssuesByRule,
 		isIssueSortKey,
 		sortIssues
 	} from '$lib/report';
 	import { cn } from '$lib/utils';
-	import { Search } from 'lucide-svelte';
+	import { Filter, X } from 'lucide-svelte';
 
+	import IssueFilterSidebar from './IssueFilterSidebar.svelte';
+	import IssueGroupRow from './IssueGroupRow.svelte';
 	import IssueRowCard from './IssueRowCard.svelte';
 
 	interface Props {
 		report: UnifiedReport;
 		screenshots: ScreenshotArtifact[];
-		activeScanner: string | null;
+		activeScanners: string[];
 		activePage: string | null;
-		activeSeverity: string | null;
+		activeSeverities: string[];
 		activeCategory: string | null;
 		searchTerm: string;
 		issueSort: string;
 		selectedIssueId: string | null;
-		onScannerChange: (scannerId: string | null) => void;
+		onScannersChange: (values: string[]) => void;
 		onPageChange: (pageId: string | null) => void;
-		onSeverityChange: (severity: string | null) => void;
+		onSeveritiesChange: (values: string[]) => void;
 		onCategoryChange: (category: string | null) => void;
 		onSearchChange: (query: string) => void;
 		onSortChange: (sort: string) => void;
@@ -40,16 +41,16 @@
 	let {
 		report,
 		screenshots,
-		activeScanner,
+		activeScanners,
 		activePage,
-		activeSeverity,
+		activeSeverities,
 		activeCategory,
 		searchTerm,
 		issueSort,
 		selectedIssueId,
-		onScannerChange,
+		onScannersChange,
 		onPageChange,
-		onSeverityChange,
+		onSeveritiesChange,
 		onCategoryChange,
 		onSearchChange,
 		onSortChange,
@@ -57,127 +58,53 @@
 		onClearFilters
 	}: Props = $props();
 
-	const severityOptions = ['all', 'critical', 'serious', 'moderate', 'minor', 'info'] as const;
-	const severityCounts = $derived(
-		report.summary.bySeverity ?? {
-			critical: 0,
-			serious: 0,
-			moderate: 0,
-			minor: 0,
-			info: 0
-		}
-	);
-
-	const scannerTabs = $derived.by(() => {
-		const byScanner = report.summary.byScanner ?? {};
-		return [
-			{ id: 'all', label: `All (${report.issues.length.toLocaleString()})` },
-			...report.scanners.map((scanner) => ({
-				id: scanner.id,
-				label: `${scanner.name ?? scanner.id}${byScanner[scanner.id] ? ` (${byScanner[scanner.id].toLocaleString()})` : ''}`
-			}))
-		];
-	});
-
-	const categories = $derived.by(() => {
-		const seen: Record<string, true> = {};
-		for (const issue of report.issues) {
-			if (issue.category) seen[issue.category] = true;
-		}
-		return Object.keys(seen).sort();
-	});
-
 	const pagesById = $derived(Object.fromEntries(report.pages.map((page) => [page.id, page])));
 	const activePageLabel = $derived(
 		activePage ? (pagesById[activePage]?.path ?? pagesById[activePage]?.url ?? activePage) : null
 	);
-	const filteredIssues = $derived(
-		filterIssues(report.issues, {
-			scannerId: activeScanner,
-			pageId: activePage,
-			severity: activeSeverity,
-			category: activeCategory,
-			query: searchTerm
-		})
-	);
+
+	const filteredIssues = $derived.by(() => {
+		const q = searchTerm.trim().toLowerCase();
+		return report.issues.filter((issue) => {
+			if (activeScanners.length && !activeScanners.includes(issue.scanner)) return false;
+			if (activePage && issue.pageId !== activePage) return false;
+			if (activeSeverities.length && !activeSeverities.includes(issue.severity)) return false;
+			if (activeCategory && issue.category !== activeCategory) return false;
+			if (q) {
+				const haystack = `${issue.title} ${issue.description} ${issue.ruleId}`.toLowerCase();
+				if (!haystack.includes(q)) return false;
+			}
+			return true;
+		});
+	});
 
 	const sortedIssues = $derived(
 		sortIssues(filteredIssues, isIssueSortKey(issueSort) ? issueSort : 'severity')
 	);
 
+	const groups = $derived<IssueGroup[]>(groupIssuesByRule(filteredIssues));
+
 	const hasActiveFilters = $derived(
-		Boolean(activeScanner || activePage || activeSeverity || activeCategory || searchTerm.trim())
+		activeScanners.length > 0 ||
+			activeSeverities.length > 0 ||
+			activePage !== null ||
+			activeCategory !== null ||
+			searchTerm.trim().length > 0
 	);
 
-	const hasSecondaryFilters = $derived(Boolean(activeCategory || activePage));
 	const activeFilterCount = $derived(
-		(activeScanner ? 1 : 0) +
+		activeScanners.length +
+			activeSeverities.length +
 			(activePage ? 1 : 0) +
-			(activeSeverity ? 1 : 0) +
 			(activeCategory ? 1 : 0) +
 			(searchTerm.trim() ? 1 : 0)
 	);
 
-	// Debounced search: local state syncs immediately for responsive UI,
-	// but URL update is debounced to avoid expensive recalculations on each keystroke.
-	// We use $state here instead of writable $derived because:
-	// 1. We need to sync from prop (searchTerm) when it changes externally
-	// 2. We need to allow local mutations from user input
-	// 3. We need to debounce before calling the callback
-	const SEARCH_DEBOUNCE_MS = 250;
-	// eslint-disable-next-line svelte/prefer-writable-derived -- complex bidirectional sync with debounce
-	let localSearchValue = $state('');
-	let showMoreFilters = $state(false);
+	let viewMode = $state<'grouped' | 'flat'>('grouped');
 	let previewMode = $state<'auto' | 'on' | 'off'>('auto');
 	let isCompactViewport = $state(false);
-
-	// Sync local value when searchTerm prop changes externally (e.g., clear filters, initial load)
-	$effect(() => {
-		localSearchValue = searchTerm;
-	});
-
-	// Debounce the URL update when local value changes
-	$effect(() => {
-		// Capture the current value for the closure
-		const currentValue = localSearchValue;
-		// Read searchTerm inside the effect so it's tracked as a dependency
-		const propValue = searchTerm;
-
-		// Skip if already in sync with prop
-		if (currentValue === propValue) return;
-
-		const timer = setTimeout(() => {
-			onSearchChange(currentValue.trim());
-		}, SEARCH_DEBOUNCE_MS);
-
-		// Cleanup: cancel pending timeout if effect re-runs or component unmounts
-		return () => clearTimeout(timer);
-	});
-
-	function handleSearchInput(value: string) {
-		localSearchValue = value;
-	}
-
-	let listContainer = $state<HTMLDivElement | null>(null);
-	let severityChipScroller = $state<HTMLDivElement | null>(null);
-	let severitySwipeHintVisible = $state(false);
-	let scrollTop = $state(0);
-	let viewportHeight = $state(600);
-	let scrollRaf = $state<number | null>(null);
-
-	function updateSeveritySwipeHint() {
-		if (!severityChipScroller || !isCompactViewport) {
-			severitySwipeHintVisible = false;
-			return;
-		}
-		const canScroll = severityChipScroller.scrollWidth - severityChipScroller.clientWidth > 8;
-		const atStart = severityChipScroller.scrollLeft < 8;
-		severitySwipeHintVisible = canScroll && atStart;
-	}
-
-	function handleSeverityChipScroll() {
-		updateSeveritySwipeHint();
-	}
+	let mobileFiltersOpen = $state(false);
+	let expandedGroups = $state<Record<string, boolean>>({});
 
 	const showPreviews = $derived.by(() => {
 		if (previewMode === 'on') return true;
@@ -185,10 +112,15 @@
 		return !isCompactViewport;
 	});
 
+	let listContainer = $state<HTMLDivElement | null>(null);
+	let scrollTop = $state(0);
+	let viewportHeight = $state(600);
+	let scrollRaf = $state<number | null>(null);
+
 	const rowHeight = $derived(showPreviews ? 120 : 88);
 	const overscan = $derived(isCompactViewport ? 4 : 6);
 
-	const shouldVirtualize = $derived(sortedIssues.length > 200);
+	const shouldVirtualize = $derived(viewMode === 'flat' && sortedIssues.length > 200);
 	const totalHeight = $derived(sortedIssues.length * rowHeight);
 	const virtualWindow = $derived.by(() =>
 		getVirtualWindow({
@@ -209,7 +141,6 @@
 	function handleListScroll() {
 		if (!listContainer) return;
 		if (scrollRaf !== null) return;
-
 		scrollRaf = requestAnimationFrame(() => {
 			scrollRaf = null;
 			if (!listContainer) return;
@@ -223,27 +154,13 @@
 			isCompactViewport = false;
 			return;
 		}
-		const media = window.matchMedia('(max-width: 640px)');
+		const media = window.matchMedia('(max-width: 1023px)');
 		const update = (event?: MediaQueryListEvent) => {
 			isCompactViewport = event ? event.matches : media.matches;
 		};
 		update();
 		media.addEventListener('change', update);
 		return () => media.removeEventListener('change', update);
-	});
-
-	$effect(() => {
-		if (!severityChipScroller) return;
-		const frame = requestAnimationFrame(() => updateSeveritySwipeHint());
-		if (typeof ResizeObserver === 'undefined') {
-			return () => cancelAnimationFrame(frame);
-		}
-		const observer = new ResizeObserver(() => updateSeveritySwipeHint());
-		observer.observe(severityChipScroller);
-		return () => {
-			cancelAnimationFrame(frame);
-			observer.disconnect();
-		};
 	});
 
 	$effect(() => {
@@ -259,302 +176,322 @@
 
 	$effect(() => {
 		return () => {
-			if (scrollRaf !== null) {
-				cancelAnimationFrame(scrollRaf);
-			}
+			if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
 		};
 	});
+
+	function toggleGroup(fingerprint: string) {
+		expandedGroups = {
+			...expandedGroups,
+			[fingerprint]: !expandedGroups[fingerprint]
+		};
+	}
 </script>
 
-<div class="space-y-3">
-	<Tabs
-		tabs={scannerTabs}
-		value={activeScanner ?? 'all'}
-		onValueChange={(id) => onScannerChange(id === 'all' ? null : id)}
-	/>
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-[260px,1fr]">
+	<div class="hidden lg:block">
+		<IssueFilterSidebar
+			{report}
+			{activeScanners}
+			{activeSeverities}
+			{activePage}
+			{activeCategory}
+			{searchTerm}
+			{onScannersChange}
+			{onSeveritiesChange}
+			{onPageChange}
+			{onCategoryChange}
+			{onSearchChange}
+			onClearAll={onClearFilters}
+		/>
+	</div>
 
-	<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
-		<div class="border-line border-b p-4 sm:p-5">
-			<div class="flex flex-col gap-4">
-				<div class="flex items-center justify-between gap-3">
-					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
-						Issues ({filteredIssues.length}{filteredIssues.length !== report.issues.length
-							? ` / ${report.issues.length}`
-							: ''})
-					</h3>
+	<div class="space-y-3">
+		<div class="flex flex-wrap items-center gap-2 lg:hidden">
+			<button
+				type="button"
+				onclick={() => (mobileFiltersOpen = !mobileFiltersOpen)}
+				class="border-line bg-surface text-ink inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold"
+				data-testid="open-mobile-filters"
+			>
+				<Filter class="h-3.5 w-3.5" /> Filters{activeFilterCount > 0
+					? ` (${activeFilterCount})`
+					: ''}
+			</button>
+		</div>
+
+		{#if mobileFiltersOpen}
+			<div class="lg:hidden">
+				<IssueFilterSidebar
+					{report}
+					{activeScanners}
+					{activeSeverities}
+					{activePage}
+					{activeCategory}
+					{searchTerm}
+					{onScannersChange}
+					{onSeveritiesChange}
+					{onPageChange}
+					{onCategoryChange}
+					{onSearchChange}
+					onClearAll={onClearFilters}
+				/>
+			</div>
+		{/if}
+
+		<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
+			<div class="border-line border-b p-4 sm:p-5">
+				<div class="flex flex-col gap-3">
+					<div class="flex items-center justify-between gap-3">
+						<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
+							Issues (<span class="font-mono">{filteredIssues.length.toLocaleString()}</span>{filteredIssues.length !==
+							report.issues.length
+								? ` / ${report.issues.length.toLocaleString()}`
+								: ''})
+						</h3>
+						{#if hasActiveFilters}
+							<button
+								onclick={onClearFilters}
+								class="text-accent text-xs font-semibold tracking-wide uppercase hover:underline"
+							>
+								Clear filters ({activeFilterCount})
+							</button>
+						{/if}
+					</div>
+
 					{#if hasActiveFilters}
-						<button
-							onclick={onClearFilters}
-							class="text-accent text-xs font-semibold tracking-wide uppercase hover:underline"
-						>
-							Clear filters ({activeFilterCount})
-						</button>
-					{/if}
-				</div>
-				{#if hasActiveFilters}
-					<div class="flex flex-wrap items-center gap-1.5 text-xs">
-						{#if activeScanner}
-							<button
-								type="button"
-								onclick={() => onScannerChange(null)}
-								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
-							>
-								scanner: {activeScanner} <span aria-hidden="true">x</span>
-							</button>
-						{/if}
-						{#if activeSeverity}
-							<button
-								type="button"
-								onclick={() => onSeverityChange(null)}
-								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
-							>
-								severity: {activeSeverity} <span aria-hidden="true">x</span>
-							</button>
-						{/if}
-						{#if activeCategory}
-							<button
-								type="button"
-								onclick={() => onCategoryChange(null)}
-								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
-							>
-								category: {activeCategory} <span aria-hidden="true">x</span>
-							</button>
-						{/if}
-						{#if activePage}
-							<button
-								type="button"
-								onclick={() => onPageChange(null)}
-								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
-							>
-								page: {activePageLabel} <span aria-hidden="true">x</span>
-							</button>
-						{/if}
-						{#if searchTerm.trim()}
-							<button
-								type="button"
-								onclick={() => onSearchChange('')}
-								class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
-							>
-								search: "{searchTerm}" <span aria-hidden="true">x</span>
-							</button>
-						{/if}
-					</div>
-				{/if}
-				<div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr,auto]">
-					<div class="relative">
-						<Search class="text-ink-faint absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-						<Input
-							value={localSearchValue}
-							placeholder="Search issues"
-							class="h-10 pl-9"
-							oninput={(event) =>
-								handleSearchInput((event.currentTarget as HTMLInputElement).value)}
-						/>
-					</div>
-					<div class="flex items-center justify-start gap-2 md:justify-end">
-						<label
-							for="issue-sort"
-							class="text-ink-faint text-xs font-semibold tracking-wide uppercase"
-						>
-							Sort
-						</label>
-						<Select
-							id="issue-sort"
-							uiSize="sm"
-							class="min-w-40"
-							value={issueSort}
-							onchange={(event) => onSortChange((event.currentTarget as HTMLSelectElement).value)}
-						>
-							{#each ISSUE_SORTS as sort (sort)}
-								<option value={sort}>{ISSUE_SORT_LABELS[sort]}</option>
+						<div class="flex flex-wrap items-center gap-1.5 text-xs">
+							{#each activeScanners as scannerId (scannerId)}
+								<button
+									type="button"
+									onclick={() => onScannersChange(activeScanners.filter((s) => s !== scannerId))}
+									class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+								>
+									scanner: {scannerId}
+									<X class="h-3 w-3" aria-hidden="true" />
+								</button>
 							{/each}
-						</Select>
-					</div>
-				</div>
-				<div
-					class="border-line/70 bg-surface flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2 py-2"
-				>
-					<div class="text-ink-muted text-xs">
-						{sortedIssues.length.toLocaleString()} visible results
-					</div>
-					<div
-						class="border-line/70 bg-surface-muted inline-flex items-center gap-1 rounded-lg border p-1 text-xs"
-					>
-						<button
-							type="button"
-							onclick={() => (previewMode = 'auto')}
-							class={cn(
-								'rounded px-2 py-1 font-semibold transition',
-								previewMode === 'auto' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
-							)}
-						>
-							Previews auto
-						</button>
-						<button
-							type="button"
-							onclick={() => (previewMode = 'on')}
-							class={cn(
-								'rounded px-2 py-1 font-semibold transition',
-								previewMode === 'on' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
-							)}
-						>
-							On
-						</button>
-						<button
-							type="button"
-							onclick={() => (previewMode = 'off')}
-							class={cn(
-								'rounded px-2 py-1 font-semibold transition',
-								previewMode === 'off' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
-							)}
-						>
-							Off
-						</button>
-					</div>
-				</div>
-				<div
-					class="bg-surface-muted/60 border-line rounded-xl border px-2 py-2.5"
-					data-testid="audience-summary-removed"
-				>
-					<div class="relative">
+							{#each activeSeverities as severity (severity)}
+								<button
+									type="button"
+									onclick={() => onSeveritiesChange(activeSeverities.filter((s) => s !== severity))}
+									class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+								>
+									severity: {severity}
+									<X class="h-3 w-3" aria-hidden="true" />
+								</button>
+							{/each}
+							{#if activeCategory}
+								<button
+									type="button"
+									onclick={() => onCategoryChange(null)}
+									class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+								>
+									category: {activeCategory}
+									<X class="h-3 w-3" aria-hidden="true" />
+								</button>
+							{/if}
+							{#if activePage}
+								<button
+									type="button"
+									onclick={() => onPageChange(null)}
+									class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+								>
+									page: {activePageLabel}
+									<X class="h-3 w-3" aria-hidden="true" />
+								</button>
+							{/if}
+							{#if searchTerm.trim()}
+								<button
+									type="button"
+									onclick={() => onSearchChange('')}
+									class="border-line bg-surface-muted text-ink-muted hover:text-ink inline-flex items-center gap-1 rounded-full border px-2 py-1"
+								>
+									search: "{searchTerm}"
+									<X class="h-3 w-3" aria-hidden="true" />
+								</button>
+							{/if}
+						</div>
+					{/if}
+
+					<div class="flex flex-wrap items-center justify-between gap-3">
 						<div
-							bind:this={severityChipScroller}
-							data-testid="severity-chip-scroller"
-							onscroll={handleSeverityChipScroll}
-							class="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+							class="border-line/70 bg-surface-muted inline-flex items-center gap-1 rounded-lg border p-1 text-xs"
+							role="tablist"
+							aria-label="Issue view mode"
 						>
-							<div class="flex min-w-max items-center gap-2 pr-5 sm:pr-0">
-								{#each severityOptions as severity (severity)}
-									{@const count =
-										severity === 'all' ? report.issues.length : (severityCounts[severity] ?? 0)}
-									<button
-										onclick={() => onSeverityChange(severity === 'all' ? null : severity)}
-										disabled={severity !== 'all' && count === 0}
-										class={getSeverityChipClass(
-											severity,
-											activeSeverity === null ? severity === 'all' : activeSeverity === severity
-										)}
-									>
-										{severity} ({count.toLocaleString()})
-									</button>
+							<button
+								type="button"
+								role="tab"
+								aria-selected={viewMode === 'grouped'}
+								onclick={() => (viewMode = 'grouped')}
+								class={cn(
+									'rounded px-2 py-1 font-semibold transition',
+									viewMode === 'grouped'
+										? 'bg-surface text-ink shadow-xs'
+										: 'text-ink-muted'
+								)}
+							>
+								Group by rule
+							</button>
+							<button
+								type="button"
+								role="tab"
+								aria-selected={viewMode === 'flat'}
+								onclick={() => (viewMode = 'flat')}
+								class={cn(
+									'rounded px-2 py-1 font-semibold transition',
+									viewMode === 'flat'
+										? 'bg-surface text-ink shadow-xs'
+										: 'text-ink-muted'
+								)}
+							>
+								Flat list
+							</button>
+						</div>
+						<div class="flex items-center gap-2">
+							<label
+								for="issue-sort"
+								class="text-ink-faint text-xs font-semibold tracking-wide uppercase"
+							>
+								Sort
+							</label>
+							<Select
+								id="issue-sort"
+								uiSize="sm"
+								class="min-w-40"
+								value={issueSort}
+								onchange={(event) =>
+									onSortChange((event.currentTarget as HTMLSelectElement).value)}
+							>
+								{#each ISSUE_SORTS as sort (sort)}
+									<option value={sort}>{ISSUE_SORT_LABELS[sort]}</option>
+								{/each}
+							</Select>
+						</div>
+					</div>
+
+					<div
+						class="border-line/70 bg-surface flex flex-wrap items-center justify-between gap-2 rounded-xl border px-2 py-2"
+					>
+						<div class="text-ink-muted text-xs">
+							{#if viewMode === 'grouped'}
+								<span class="font-mono">{groups.length.toLocaleString()}</span> rules ·
+								<span class="font-mono">{sortedIssues.length.toLocaleString()}</span> occurrences
+							{:else}
+								<span class="font-mono">{sortedIssues.length.toLocaleString()}</span> visible results
+							{/if}
+						</div>
+						<div
+							class="border-line/70 bg-surface-muted inline-flex items-center gap-1 rounded-lg border p-1 text-xs"
+						>
+							<button
+								type="button"
+								onclick={() => (previewMode = 'auto')}
+								class={cn(
+									'rounded px-2 py-1 font-semibold transition',
+									previewMode === 'auto'
+										? 'bg-surface text-ink shadow-xs'
+										: 'text-ink-muted'
+								)}
+							>
+								Previews auto
+							</button>
+							<button
+								type="button"
+								onclick={() => (previewMode = 'on')}
+								class={cn(
+									'rounded px-2 py-1 font-semibold transition',
+									previewMode === 'on' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
+								)}
+							>
+								On
+							</button>
+							<button
+								type="button"
+								onclick={() => (previewMode = 'off')}
+								class={cn(
+									'rounded px-2 py-1 font-semibold transition',
+									previewMode === 'off' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
+								)}
+							>
+								Off
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{#if filteredIssues.length === 0}
+				<div class="bg-surface-muted/30 flex flex-col items-center justify-center py-14 text-center">
+					<p class="text-ink font-medium">No issues found</p>
+					<p class="text-ink-muted mt-1 text-sm">
+						{#if hasActiveFilters}
+							Try adjusting your filters
+						{:else}
+							This scan completed with no issues
+						{/if}
+					</p>
+				</div>
+			{:else if viewMode === 'grouped'}
+				<div
+					class="border-line/70 border-t"
+					data-testid="issue-group-list"
+				>
+					{#each groups as group (group.fingerprint)}
+						<IssueGroupRow
+							{group}
+							{pagesById}
+							{screenshots}
+							showPreviews={showPreviews}
+							expanded={!!expandedGroups[group.fingerprint]}
+							{selectedIssueId}
+							onToggle={() => toggleGroup(group.fingerprint)}
+							onIssueSelect={onIssueSelect}
+						/>
+					{/each}
+				</div>
+			{:else}
+				<div
+					bind:this={listContainer}
+					class={cn(
+						'divide-line border-line/70 divide-y border-t',
+						shouldVirtualize && 'max-h-[70vh] overflow-y-auto overscroll-contain'
+					)}
+					data-testid="issue-list"
+					onscroll={handleListScroll}
+				>
+					{#if shouldVirtualize}
+						<div style={`height: ${totalHeight}px; position: relative;`}>
+							<div style={`transform: translateY(${offsetY}px);`}>
+								{#each visibleIssues as issue (issue.id)}
+									<IssueRowCard
+										{issue}
+										page={pagesById[issue.pageId] ?? null}
+										{screenshots}
+										showScreenshot={showPreviews}
+										isVirtualized={true}
+										isSelected={selectedIssueId === issue.id}
+										onclick={() => onIssueSelect(issue)}
+									/>
 								{/each}
 							</div>
 						</div>
-						{#if severitySwipeHintVisible}
-							<div
-								class="from-surface-muted pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l to-transparent sm:hidden"
-							></div>
-						{/if}
-					</div>
-					<div class="mt-1 flex items-center justify-between gap-2">
-						{#if severitySwipeHintVisible}
-							<span class="text-ink-faint text-[11px] font-medium sm:hidden">Swipe for more</span>
-						{/if}
-						<button
-							type="button"
-							onclick={() => {
-								showMoreFilters = !showMoreFilters;
-							}}
-							class="text-ink-muted hover:text-ink ml-auto text-xs font-semibold transition"
-						>
-							{showMoreFilters || hasSecondaryFilters ? 'Less filters' : 'More filters'}
-						</button>
-					</div>
-				</div>
-				{#if showMoreFilters || hasSecondaryFilters}
-					<div
-						class="border-line grid grid-cols-1 gap-3 border-t border-dashed pt-3 sm:grid-cols-2"
-					>
-						<label class="text-ink-muted text-xs" for="issue-category-filter">
-							Category
-							<Select
-								id="issue-category-filter"
-								class="mt-1"
-								value={activeCategory ?? 'all'}
-								onchange={(event) => {
-									const value = (event.currentTarget as HTMLSelectElement).value;
-									onCategoryChange(value === 'all' ? null : value);
-								}}
-							>
-								<option value="all">All categories</option>
-								{#each categories as category (category)}
-									<option value={category}>{category}</option>
-								{/each}
-							</Select>
-						</label>
-						<label class="text-ink-muted text-xs" for="issue-page-filter">
-							Page
-							<Select
-								id="issue-page-filter"
-								class="mt-1"
-								value={activePage ?? 'all'}
-								onchange={(event) => {
-									const value = (event.currentTarget as HTMLSelectElement).value;
-									onPageChange(value === 'all' ? null : value);
-								}}
-							>
-								<option value="all">All pages</option>
-								{#each report.pages as page (page.id)}
-									<option value={page.id}>{page.path ?? page.url}</option>
-								{/each}
-							</Select>
-						</label>
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		{#if filteredIssues.length === 0}
-			<div class="bg-surface-muted/30 flex flex-col items-center justify-center py-14 text-center">
-				<p class="text-ink font-medium">No issues found</p>
-				<p class="text-ink-muted mt-1 text-sm">
-					{#if hasActiveFilters}
-						Try adjusting your filters
 					{:else}
-						This scan completed with no issues
+						{#each sortedIssues as issue (issue.id)}
+							<IssueRowCard
+								{issue}
+								page={pagesById[issue.pageId] ?? null}
+								{screenshots}
+								showScreenshot={showPreviews}
+								isVirtualized={false}
+								isSelected={selectedIssueId === issue.id}
+								onclick={() => onIssueSelect(issue)}
+							/>
+						{/each}
 					{/if}
-				</p>
-			</div>
-		{:else}
-			<div
-				bind:this={listContainer}
-				class={cn(
-					'divide-line border-line/70 divide-y border-t',
-					shouldVirtualize && 'max-h-[70vh] overflow-y-auto overscroll-contain'
-				)}
-				data-testid="issue-list"
-				onscroll={handleListScroll}
-			>
-				{#if shouldVirtualize}
-					<div style={`height: ${totalHeight}px; position: relative;`}>
-						<div style={`transform: translateY(${offsetY}px);`}>
-							{#each visibleIssues as issue (issue.id)}
-								<IssueRowCard
-									{issue}
-									page={pagesById[issue.pageId] ?? null}
-									{screenshots}
-									showScreenshot={showPreviews}
-									isVirtualized={true}
-									isSelected={selectedIssueId === issue.id}
-									onclick={() => onIssueSelect(issue)}
-								/>
-							{/each}
-						</div>
-					</div>
-				{:else}
-					{#each sortedIssues as issue (issue.id)}
-						<IssueRowCard
-							{issue}
-							page={pagesById[issue.pageId] ?? null}
-							{screenshots}
-							showScreenshot={showPreviews}
-							isVirtualized={false}
-							isSelected={selectedIssueId === issue.id}
-							onclick={() => onIssueSelect(issue)}
-						/>
-					{/each}
-				{/if}
-			</div>
-		{/if}
-	</Panel>
+				</div>
+			{/if}
+		</Panel>
+	</div>
 </div>

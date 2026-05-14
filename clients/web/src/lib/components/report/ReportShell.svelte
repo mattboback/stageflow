@@ -44,9 +44,10 @@
 			: 'overview';
 	});
 
-	const activeScanner = $derived.by(() => {
+	const activeScanners = $derived.by(() => {
 		const value = page.url.searchParams.get('scanner');
-		return value && value !== 'all' ? value : null;
+		if (!value || value === 'all') return [] as string[];
+		return value.split(',').filter(Boolean);
 	});
 
 	const activePage = $derived.by(() => {
@@ -54,9 +55,10 @@
 		return value && value !== 'all' ? value : null;
 	});
 
-	const activeSeverity = $derived.by(() => {
+	const activeSeverities = $derived.by(() => {
 		const value = page.url.searchParams.get('severity');
-		return value && value !== 'all' ? value : null;
+		if (!value || value === 'all') return [] as string[];
+		return value.split(',').filter(Boolean);
 	});
 
 	const activeCategory = $derived.by(() => {
@@ -70,12 +72,14 @@
 	const issueSort = $derived.by(() => page.url.searchParams.get('sort') ?? 'severity');
 	const displayReport = $derived(report ? buildOccurrenceModeReport(report) : null);
 
+	const activeScanner = $derived(activeScanners.length === 1 ? activeScanners[0] : null);
+
 	const modalIssueList = $derived.by(() => {
 		if (!displayReport) return [];
 		const filtered = displayReport.issues.filter((issue) => {
-			if (activeScanner && issue.scanner !== activeScanner) return false;
+			if (activeScanners.length && !activeScanners.includes(issue.scanner)) return false;
 			if (activePage && issue.pageId !== activePage) return false;
-			if (activeSeverity && issue.severity !== activeSeverity) return false;
+			if (activeSeverities.length && !activeSeverities.includes(issue.severity)) return false;
 			if (activeCategory && issue.category !== activeCategory) return false;
 			if (searchTerm) {
 				const haystack =
@@ -218,16 +222,18 @@
 					<IssuesView
 						report={displayReport}
 						{screenshots}
-						{activeScanner}
+						{activeScanners}
 						{activePage}
-						{activeSeverity}
+						{activeSeverities}
 						{activeCategory}
 						{searchTerm}
 						issueSort={normalizedIssueSort}
 						selectedIssueId={activeIssueId}
-						onScannerChange={(value) => updateQueryParams({ scanner: value })}
+						onScannersChange={(values) =>
+							updateQueryParams({ scanner: values.length ? values.join(',') : null })}
 						onPageChange={(value) => updateQueryParams({ page: value })}
-						onSeverityChange={(value) => updateQueryParams({ severity: value })}
+						onSeveritiesChange={(values) =>
+							updateQueryParams({ severity: values.length ? values.join(',') : null })}
 						onCategoryChange={(value) => updateQueryParams({ category: value })}
 						onSearchChange={(value) => updateQueryParams({ q: value || null })}
 						onSortChange={(value) =>
