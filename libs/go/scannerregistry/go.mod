@@ -28,7 +28,7 @@ require (
 )
 
 require (
-	github.com/kr/pretty v0.3.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattboback/stageflow/libs/contracts/scanner-manifest v0.0.0-00010101000000-000000000000 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect

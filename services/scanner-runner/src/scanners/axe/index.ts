@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { Page } from 'playwright';
 
 import { getRuleBehavior } from '../../config/rule-behaviors';
 import { getUserImpact } from '../../config/user-impact';
@@ -114,6 +115,29 @@ function parseAxeOptions(raw: unknown): AxeOptions {
 	return options;
 }
 
+async function withTimeoutFallback<T>(
+	operation: Promise<T>,
+	timeoutMs: number,
+	fallback: () => T
+): Promise<T> {
+	let timeout: ReturnType<typeof setTimeout> | undefined;
+
+	try {
+		return await Promise.race([
+			operation,
+			new Promise<T>((resolve) => {
+				timeout = setTimeout(() => {
+					resolve(fallback());
+				}, timeoutMs);
+			})
+		]);
+	} finally {
+		if (timeout !== undefined) {
+			clearTimeout(timeout);
+		}
+	}
+}
+
 export class AxeScanner extends ScannerBase {
 	readonly metadata: ScannerMetadata = {
 		name: 'axe',
@@ -150,10 +174,11 @@ export class AxeScanner extends ScannerBase {
 			// Wait for networkidle with timeout to handle sites with persistent connections.
 			// If timeout is reached, proceed anyway - the page is likely ready enough for scanning.
 			try {
-				await Promise.race([
+				await withTimeoutFallback(
 					page.waitForLoadState('networkidle'),
-					new Promise<void>((resolve) => setTimeout(resolve, NETWORKIDLE_TIMEOUT_MS))
-				]);
+					NETWORKIDLE_TIMEOUT_MS,
+					() => undefined
+				);
 			} catch {
 				// Ignore networkidle timeout - page may still be scannable
 				logger.debug('Networkidle wait timed out, proceeding with scan', {
@@ -222,22 +247,16 @@ export class AxeScanner extends ScannerBase {
 
 			const processViolation = async (violation: AxeViolationResult) => {
 				const [screenshotResult, enrichedNodes] = await Promise.all([
-					Promise.race([
+					withTimeoutFallback(
 						this.captureViolationScreenshot(page, violation as AxeViolation, screenshotsDir),
-						new Promise<null>((resolve) => {
-							setTimeout(() => {
-								resolve(null);
-							}, SCREENSHOT_TIMEOUT);
-						})
-					]),
-					Promise.race([
+						SCREENSHOT_TIMEOUT,
+						() => null
+					),
+					withTimeoutFallback(
 						this.enrichNodesWithContext(page, violation.nodes ?? []),
-						new Promise<AxeNode[]>((resolve) => {
-							setTimeout(() => {
-								resolve([...(violation.nodes ?? [])]);
-							}, ENRICHMENT_TIMEOUT);
-						})
-					])
+						ENRICHMENT_TIMEOUT,
+						() => [...(violation.nodes ?? [])]
+					)
 				]);
 				return { violation, screenshotResult, enrichedNodes };
 			};
@@ -329,7 +348,7 @@ export class AxeScanner extends ScannerBase {
 	}
 
 	private async captureViolationScreenshot(
-		page: import('playwright').Page,
+		page: Page,
 		violation: AxeViolation,
 		screenshotsDir: string
 	): Promise<EnhancedScreenshotResult | null> {
