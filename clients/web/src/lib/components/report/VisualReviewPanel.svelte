@@ -422,7 +422,9 @@
 											getSeverityContainerClass(issue.severity)
 										)}
 									>
-										<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}></span>
+										<span
+											class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
+										></span>
 										{issue.severity}
 									</span>
 

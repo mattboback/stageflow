@@ -113,15 +113,18 @@
 		{:else}
 			<div class="bento-grid-bottom">
 				<div class="bento-panel">
-					<span class="text-ink-muted text-[11px] font-medium uppercase tracking-wide">Elapsed</span>
+					<span class="text-ink-muted text-[11px] font-medium tracking-wide uppercase">Elapsed</span
+					>
 					<p class="stat-mono text-ink-strong mt-1 text-lg font-bold">{formatElapsed(elapsed)}</p>
 				</div>
 				<div class="bento-panel">
-					<span class="text-ink-muted text-[11px] font-medium uppercase tracking-wide">Scanners</span>
+					<span class="text-ink-muted text-[11px] font-medium tracking-wide uppercase"
+						>Scanners</span
+					>
 					<p class="stat-mono text-ink-strong mt-1 text-lg font-bold">{scannerCount}</p>
 				</div>
 				<div class="bento-panel">
-					<span class="text-ink-muted text-[11px] font-medium uppercase tracking-wide">Status</span>
+					<span class="text-ink-muted text-[11px] font-medium tracking-wide uppercase">Status</span>
 					<p class="text-ink-strong mt-1 text-lg font-bold">{statusLabel}</p>
 				</div>
 			</div>

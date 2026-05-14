@@ -65,17 +65,19 @@
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-2">
 						<StatusPill {tone} label={group.severity} size="sm" />
-						<span class="text-ink-faint font-mono text-[11px] uppercase tracking-wide">
+						<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
 							{group.ruleId}
 						</span>
 					</div>
-					<h4 class="text-ink mt-1.5 truncate text-sm font-semibold leading-snug">
+					<h4 class="text-ink mt-1.5 truncate text-sm leading-snug font-semibold">
 						{group.title}
 					</h4>
 					<div class="text-ink-muted mt-1 flex items-center gap-3 text-xs">
 						<span>
 							Found on
-							<span class="text-ink font-mono font-semibold">{occurrenceCount.toLocaleString()}</span>
+							<span class="text-ink font-mono font-semibold"
+								>{occurrenceCount.toLocaleString()}</span
+							>
 							{occurrenceCount === 1 ? 'element' : 'elements'} across
 							<span class="text-ink font-mono font-semibold">{pageCount.toLocaleString()}</span>
 							{pageCount === 1 ? 'page' : 'pages'}
@@ -83,7 +85,7 @@
 					</div>
 				</div>
 				<span
-					class="text-ink-faint shrink-0 font-mono text-[11px] uppercase tracking-wide"
+					class="text-ink-faint shrink-0 font-mono text-[11px] tracking-wide uppercase"
 					data-testid="group-scanner"
 				>
 					{group.scanner}

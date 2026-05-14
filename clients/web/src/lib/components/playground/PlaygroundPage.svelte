@@ -186,7 +186,9 @@
 			<div>
 				<PlaygroundReadinessBento
 					navLabel="Configure Scan"
-					readyLabel={canSubmit ? 'Ready' : `${missingRequirements.length} step${missingRequirements.length === 1 ? '' : 's'} left`}
+					readyLabel={canSubmit
+						? 'Ready'
+						: `${missingRequirements.length} step${missingRequirements.length === 1 ? '' : 's'} left`}
 					isReady={canSubmit}
 					scannerCount={enabledScannerCount}
 				>
@@ -330,18 +332,26 @@
 					{#snippet bottomCenter()}
 						<div class="flex items-center gap-3">
 							<div class="text-center">
-								<span class="stat-mono text-ink-strong text-xl font-bold">{enabledScannerCount}</span>
+								<span class="stat-mono text-ink-strong text-xl font-bold"
+									>{enabledScannerCount}</span
+								>
 								<p class="text-ink-muted text-[10px] font-medium">Scanners</p>
 							</div>
 							<div class="bg-line h-8 w-px"></div>
 							<div class="text-center">
-								<span class="stat-mono text-ink-strong text-xl font-bold">{screenshot ? '✓' : '—'}</span>
+								<span class="stat-mono text-ink-strong text-xl font-bold"
+									>{screenshot ? '✓' : '—'}</span
+								>
 								<p class="text-ink-muted text-[10px] font-medium">Screenshots</p>
 							</div>
 							{#if isAiNavigatorEnabled}
 								<div class="bg-line h-8 w-px"></div>
 								<div class="text-center">
-									<span class="stat-mono text-xl font-bold" class:text-emerald-700={isAiConfigValid} class:text-amber-700={!isAiConfigValid}>{isAiConfigValid ? '✓' : '!'}</span>
+									<span
+										class="stat-mono text-xl font-bold"
+										class:text-emerald-700={isAiConfigValid}
+										class:text-amber-700={!isAiConfigValid}>{isAiConfigValid ? '✓' : '!'}</span
+									>
 									<p class="text-ink-muted text-[10px] font-medium">AI Nav</p>
 								</div>
 							{/if}

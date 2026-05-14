@@ -125,14 +125,13 @@
 				value={localSearch}
 				placeholder="Search issues"
 				class="h-9 pl-8 text-xs"
-				oninput={(event) =>
-					(localSearch = (event.currentTarget as HTMLInputElement).value)}
+				oninput={(event) => (localSearch = (event.currentTarget as HTMLInputElement).value)}
 			/>
 		</div>
 	</div>
 
 	<fieldset class="flex flex-col gap-1.5">
-		<legend class="text-ink-faint mb-1 text-[11px] font-semibold uppercase tracking-wide">
+		<legend class="text-ink-faint mb-1 text-[11px] font-semibold tracking-wide uppercase">
 			Scanner
 		</legend>
 		{#each report.scanners as scanner (scanner.id)}
@@ -156,7 +155,7 @@
 	</fieldset>
 
 	<fieldset class="flex flex-col gap-1.5">
-		<legend class="text-ink-faint mb-1 text-[11px] font-semibold uppercase tracking-wide">
+		<legend class="text-ink-faint mb-1 text-[11px] font-semibold tracking-wide uppercase">
 			Severity
 		</legend>
 		{#each SEVERITIES as severity (severity)}
@@ -181,7 +180,10 @@
 	</fieldset>
 
 	<div class="flex flex-col gap-1.5">
-		<label for="issue-sidebar-page" class="text-ink-faint text-[11px] font-semibold uppercase tracking-wide">
+		<label
+			for="issue-sidebar-page"
+			class="text-ink-faint text-[11px] font-semibold tracking-wide uppercase"
+		>
 			Page
 		</label>
 		<Select
@@ -202,7 +204,10 @@
 
 	{#if categories.length > 0}
 		<div class="flex flex-col gap-1.5">
-			<label for="issue-sidebar-category" class="text-ink-faint text-[11px] font-semibold uppercase tracking-wide">
+			<label
+				for="issue-sidebar-category"
+				class="text-ink-faint text-[11px] font-semibold tracking-wide uppercase"
+			>
 				Category
 			</label>
 			<Select

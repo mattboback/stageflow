@@ -24,23 +24,17 @@
 	const band = $derived(rounded === null ? null : bandFor(rounded));
 
 	const numClass = $derived(
-		size === 'lg'
-			? 'text-5xl sm:text-6xl'
-			: size === 'sm'
-				? 'text-2xl'
-				: 'text-4xl'
+		size === 'lg' ? 'text-5xl sm:text-6xl' : size === 'sm' ? 'text-2xl' : 'text-4xl'
 	);
 
-	const denomClass = $derived(
-		size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-sm' : 'text-base'
-	);
+	const denomClass = $derived(size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-sm' : 'text-base');
 </script>
 
 <div class={cn('flex flex-col gap-1.5', className)} data-testid="score">
 	<div class="flex items-baseline gap-1.5">
 		<span
 			class={cn(
-				'font-mono font-semibold tabular-nums leading-none tracking-tight text-ink-strong',
+				'text-ink-strong font-mono leading-none font-semibold tracking-tight tabular-nums',
 				numClass
 			)}
 			data-testid="score-number"
@@ -51,9 +45,7 @@
 				{rounded}
 			{/if}
 		</span>
-		<span class={cn('font-mono text-ink-faint tabular-nums leading-none', denomClass)}>
-			/100
-		</span>
+		<span class={cn('text-ink-faint font-mono leading-none tabular-nums', denomClass)}> /100 </span>
 	</div>
 	{#if showPill && band}
 		<StatusPill tone={band.tone} label={band.label} size={size === 'sm' ? 'sm' : 'md'} />

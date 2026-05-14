@@ -39,7 +39,7 @@
 
 <span
 	class={cn(
-		'inline-flex items-center gap-1.5 rounded-full border font-semibold uppercase tracking-[0.08em]',
+		'inline-flex items-center gap-1.5 rounded-full border font-semibold tracking-[0.08em] uppercase',
 		size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]',
 		toneClasses[tone],
 		className

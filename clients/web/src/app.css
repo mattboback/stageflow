@@ -553,7 +553,7 @@
 		box-shadow: var(--shadow-sm);
 	}
 
-	/* Bento layout system — reusable across PlaygroundReadinessBento, ScanStatusLiveBento, ReportOverviewBento */
+	/* Bento layout system — reusable across PlaygroundReadinessBento and ScanStatusLiveBento */
 	.bento-frame {
 		background: #d1d9e0;
 		border-radius: 1.5rem;

@@ -25,10 +25,7 @@ function occ(html: string, extra: Partial<IssueOccurrence> = {}): IssueOccurrenc
 
 describe('generateContextualFix', () => {
 	it('image-alt: includes the src attribute', () => {
-		const fix = generateContextualFix(
-			issue({ ruleId: 'image-alt' }),
-			occ('<img src="/logo.png">')
-		);
+		const fix = generateContextualFix(issue({ ruleId: 'image-alt' }), occ('<img src="/logo.png">'));
 		expect(fix).toMatch(/alt/);
 		expect(fix).toMatch(/logo\.png/);
 	});
@@ -63,18 +60,12 @@ describe('generateContextualFix', () => {
 	});
 
 	it('heading-order: mentions the level', () => {
-		const fix = generateContextualFix(
-			issue({ ruleId: 'heading-order' }),
-			occ('<h3>Section</h3>')
-		);
+		const fix = generateContextualFix(issue({ ruleId: 'heading-order' }), occ('<h3>Section</h3>'));
 		expect(fix).toMatch(/<h3>/);
 	});
 
 	it('link-name: includes href when present', () => {
-		const fix = generateContextualFix(
-			issue({ ruleId: 'link-name' }),
-			occ('<a href="/about"></a>')
-		);
+		const fix = generateContextualFix(issue({ ruleId: 'link-name' }), occ('<a href="/about"></a>'));
 		expect(fix).toMatch(/\/about/);
 	});
 

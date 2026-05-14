@@ -41,16 +41,17 @@ The browser never talks directly to the Orchestrator or Scanner Runner. It consu
 
 ## Key directories
 
-| Path                             | What is there                                                          |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| `src/lib/api/`                   | Browser API client, URL helpers, and SSE plumbing                      |
-| `src/lib/components/playground/` | Scan configuration UI, presets, validation, and ZIP upload flow        |
-| `src/lib/components/report/`     | Report rendering, issue detail, evidence, and summary components       |
-| `src/lib/stores/`                | Realtime scan/report stores and job-stream state management            |
-| `src/lib/report/`                | Filtering, grouping, severity, screenshots, and virtualization helpers |
-| `tests/unit/api/`                | API client and request/response behavior tests                         |
-| `tests/unit/components/`         | Component-level tests for playground and report surfaces               |
-| `.storybook/`                    | Storybook stories used by interaction and accessibility checks         |
+| Path                             | What is there                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------- |
+| `src/lib/api/`                   | Browser API client, URL helpers, and SSE plumbing                                |
+| `src/lib/components/playground/` | Scan configuration UI, presets, validation, and ZIP upload flow                  |
+| `src/lib/components/report/`     | Report shell, condensed stats header, grouped issue list, modal, filter sidebar  |
+| `src/lib/components/ui/`         | Design-system primitives (Score, StatusPill, SeverityBar, Panel, Tabs, Modal, …) |
+| `src/lib/stores/`                | Realtime scan/report stores and job-stream state management                      |
+| `src/lib/report/`                | Filtering, grouping (by rule), contextual fixes, score bands, severity helpers   |
+| `tests/unit/api/`                | API client and request/response behavior tests                                   |
+| `tests/unit/components/`         | Component-level tests for playground and report surfaces                         |
+| `.storybook/`                    | Storybook stories used by interaction and accessibility checks                   |
 
 ## Local commands
 
@@ -87,3 +88,15 @@ If you only inspect a few files, start here:
 ## Relationship to reports
 
 The frontend assumes the backend already did the hard normalization work. It renders the canonical report contract rather than branching on scanner-specific payloads. That is why most report logic lives in filtering, grouping, screenshot, and presentation helpers instead of per-scanner adapters.
+
+## Report UX patterns
+
+The report surface is built around a small number of opinionated patterns:
+
+- **0–100 score with status pill.** No letter grades. `Score` (in `lib/components/ui/`) renders the numeric score plus a `StatusPill` band (`Strong` / `Watch` / `Needs work` / `High risk` / `Failing`) computed by `lib/report/score-band.ts`.
+- **Severity distribution bar.** `SeverityBar` consumes `report.summary.bySeverity` and renders a single proportional stacked bar so reviewers see the issue mix at a glance. The same color ramp is used everywhere (red → orange → amber → blue → purple).
+- **Grouped issues by rule.** `lib/report/grouping.ts#groupIssuesByRule` aggregates flat occurrences into one row per `${scanner}:${ruleId}` fingerprint (Sentry-style). The fingerprint is stable across input reorderings to support a future diff-scan feature.
+- **Filter sidebar.** Scanner and severity multi-select, page/category single-select, and search live in `IssueFilterSidebar.svelte` on the left. Active filters surface as removable chips above the list.
+- **Modal with tabs and keyboard nav.** `IssueDetailModal` exposes Fix / Evidence / Details / Occurrences tabs, `Prev`/`Next` arrows, and `j`/`k`/arrow-key bindings to walk the filtered+sorted list without closing the modal.
+- **Contextual fix instructions.** `lib/report/contextual-fix.ts` parses occurrence HTML to emit rule-specific guidance (e.g., "Add `alt=…` to `<img src=…>`") and falls back to the generic `howToFix` when no generator matches.
+- **No audience toggle.** PM/Engineer/Designer modes were removed; there is one canonical, engineer-leaning report layout.
