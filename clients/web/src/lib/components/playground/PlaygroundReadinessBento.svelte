@@ -28,7 +28,7 @@
 	}: Props = $props();
 </script>
 
-<div class="bento-frame" aria-label="Scan configuration dashboard">
+<div class="bento-frame playground-bento-frame" aria-label="Scan configuration dashboard">
 	<!-- Browser chrome -->
 	<div class="bento-chrome">
 		<div class="bento-chrome-dots">

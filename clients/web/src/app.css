@@ -615,6 +615,10 @@
 		min-height: 0;
 	}
 
+	.playground-bento-frame .bento-grid-main {
+		grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.88fr);
+	}
+
 	.bento-grid-main > :first-child {
 		border-right: 1px solid var(--color-line);
 	}
@@ -639,8 +643,60 @@
 		color: var(--color-ink-strong);
 	}
 
+	.scanner-grid-container {
+		container-type: inline-size;
+	}
+
+	.playground-mode-grid-container,
+	.playground-options-grid-container {
+		container-type: inline-size;
+	}
+
+	.playground-mode-grid,
+	.playground-options-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.75rem;
+	}
+
+	.playground-mode-card {
+		min-width: 0;
+	}
+
+	.scanner-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0.75rem;
+	}
+
+	.scanner-grid-card {
+		min-width: 0;
+	}
+
+	@container (min-width: 34rem) {
+		.scanner-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@container (min-width: 28rem) {
+		.playground-mode-grid,
+		.playground-options-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
+		.playground-mode-card {
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.playground-bento-frame .bento-grid-main {
 			grid-template-columns: 1fr;
 		}
 		.bento-grid-main > :last-child {

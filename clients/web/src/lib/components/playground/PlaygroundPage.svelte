@@ -180,9 +180,15 @@
 
 <PlaygroundHeroSection />
 
-<PageSection class="playground-shell relative overflow-hidden py-10 lg:py-14">
-	<div class="container-width relative">
-		<div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+<PageSection
+	class="playground-shell relative overflow-hidden py-10 lg:py-14"
+	padding="none"
+	disableContainer={true}
+>
+	<div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+		<div
+			class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]"
+		>
 			<div>
 				<PlaygroundReadinessBento
 					navLabel="Configure Scan"

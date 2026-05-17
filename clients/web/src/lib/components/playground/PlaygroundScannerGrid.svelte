@@ -118,58 +118,60 @@
 			No scanners available
 		</p>
 	{:else}
-		<div class="grid gap-3 sm:grid-cols-2">
-			{#each scanners as scanner (scanner.id)}
-				{@const meta = SCANNER_META[scanner.id] || {
-					icon: Shield,
-					label: scanner.id.replace(/-/g, ' '),
-					description: 'Run scan checks'
-				}}
-				{@const Icon = meta.icon}
-				<button
-					type="button"
-					aria-pressed={scanner.enabled}
-					onclick={() => onToggle(scanner.id)}
-					class={cn(
-						'group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
-						'focus-visible:ring-accent focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
-						getScannerTileClass(scanner.enabled)
-					)}
-				>
-					<div
+		<div class="scanner-grid-container">
+			<div class="scanner-grid">
+				{#each scanners as scanner (scanner.id)}
+					{@const meta = SCANNER_META[scanner.id] || {
+						icon: Shield,
+						label: scanner.id.replace(/-/g, ' '),
+						description: 'Run scan checks'
+					}}
+					{@const Icon = meta.icon}
+					<button
+						type="button"
+						aria-pressed={scanner.enabled}
+						onclick={() => onToggle(scanner.id)}
 						class={cn(
-							'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform] duration-200',
-							getScannerIconClass(scanner.enabled)
+							'scanner-grid-card group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
+							'focus-visible:ring-accent focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+							getScannerTileClass(scanner.enabled)
 						)}
 					>
-						<Icon class="h-5 w-5" />
-					</div>
-					<div class="min-w-0 flex-1">
-						<span class="text-ink block text-sm font-semibold capitalize">
-							{meta.label}
-						</span>
-						<span class="text-ink-muted text-xs">
-							{meta.description}
-						</span>
-						{#if scanner.id === 'ai-navigator' && scanner.enabled}
-							<span class="mt-1 inline-flex items-center gap-1 text-xs text-amber-600">
-								<Settings2 class="h-3 w-3" />
-								Configure below
+						<div
+							class={cn(
+								'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform] duration-200',
+								getScannerIconClass(scanner.enabled)
+							)}
+						>
+							<Icon class="h-5 w-5" />
+						</div>
+						<div class="min-w-0 flex-1">
+							<span class="text-ink block text-sm font-semibold capitalize">
+								{meta.label}
 							</span>
-						{/if}
-					</div>
-					<div
-						class={cn(
-							'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
-							scanner.enabled ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
-						)}
-					>
-						{#if scanner.enabled}
-							{@render checkMarkSvg()}
-						{/if}
-					</div>
-				</button>
-			{/each}
+							<span class="text-ink-muted text-xs">
+								{meta.description}
+							</span>
+							{#if scanner.id === 'ai-navigator' && scanner.enabled}
+								<span class="mt-1 inline-flex items-center gap-1 text-xs text-amber-600">
+									<Settings2 class="h-3 w-3" />
+									Configure below
+								</span>
+							{/if}
+						</div>
+						<div
+							class={cn(
+								'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
+								scanner.enabled ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
+							)}
+						>
+							{#if scanner.enabled}
+								{@render checkMarkSvg()}
+							{/if}
+						</div>
+					</button>
+				{/each}
+			</div>
 		</div>
 	{/if}
 </div>

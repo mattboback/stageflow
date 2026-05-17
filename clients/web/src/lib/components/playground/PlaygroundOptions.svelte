@@ -28,58 +28,60 @@
 	</svg>
 {/snippet}
 
-<div class="grid gap-4 sm:grid-cols-2">
-	<div>
-		<Label class="mb-3 block text-sm font-bold">Screenshot Options</Label>
-		<button
-			type="button"
-			onclick={() => onScreenshotChange(!screenshot)}
-			class={selectableSurfaceClass(
-				'group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
-				screenshot
-			)}
-		>
-			<div
-				class={cn(
-					'flex h-10 w-10 items-center justify-center rounded-xl transition-colors',
+<div class="playground-options-grid-container">
+	<div class="playground-options-grid">
+		<div>
+			<Label class="mb-3 block text-sm font-bold">Screenshot Options</Label>
+			<button
+				type="button"
+				onclick={() => onScreenshotChange(!screenshot)}
+				class={selectableSurfaceClass(
+					'group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
 					screenshot
-						? 'bg-accent text-white'
-						: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
 				)}
 			>
-				<Camera class="h-5 w-5" />
-			</div>
-			<div class="flex-1">
-				<span class="text-ink block text-sm font-bold">Capture Screenshots</span>
-				<span class="text-ink-muted text-xs">Visual evidence of issues</span>
-			</div>
-			<div
-				class={cn(
-					'flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
-					screenshot ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
-				)}
-			>
-				{#if screenshot}
-					{@render checkMarkSvg()}
-				{/if}
-			</div>
-		</button>
-		<p class="text-ink-muted mt-2 text-xs leading-relaxed">
-			Artifacts, logs, and screenshots expire automatically within 24 hours of a completed scan.
-		</p>
-	</div>
+				<div
+					class={cn(
+						'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+						screenshot
+							? 'bg-accent text-white'
+							: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
+					)}
+				>
+					<Camera class="h-5 w-5" />
+				</div>
+				<div class="min-w-0 flex-1">
+					<span class="text-ink block text-sm font-bold">Capture Screenshots</span>
+					<span class="text-ink-muted text-xs">Visual evidence of issues</span>
+				</div>
+				<div
+					class={cn(
+						'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
+						screenshot ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
+					)}
+				>
+					{#if screenshot}
+						{@render checkMarkSvg()}
+					{/if}
+				</div>
+			</button>
+			<p class="text-ink-muted mt-2 text-xs leading-relaxed">
+				Artifacts, logs, and screenshots expire automatically within 24 hours of a completed scan.
+			</p>
+		</div>
 
-	<div>
-		<Label for="highlight-style" class="mb-3 block text-sm font-bold">Highlight Style</Label>
-		<SelectField
-			id="highlight-style"
-			variant="prominent"
-			value={highlightStyle}
-			onchange={(e) => onHighlightStyleChange(e.currentTarget.value as 'solid' | 'dashed')}
-			class="py-4"
-		>
-			<option value="solid">Solid Border</option>
-			<option value="dashed">Dashed Border</option>
-		</SelectField>
+		<div>
+			<Label for="highlight-style" class="mb-3 block text-sm font-bold">Highlight Style</Label>
+			<SelectField
+				id="highlight-style"
+				variant="prominent"
+				value={highlightStyle}
+				onchange={(e) => onHighlightStyleChange(e.currentTarget.value as 'solid' | 'dashed')}
+				class="py-4"
+			>
+				<option value="solid">Solid Border</option>
+				<option value="dashed">Dashed Border</option>
+			</SelectField>
+		</div>
 	</div>
 </div>

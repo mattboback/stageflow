@@ -25,62 +25,64 @@
 
 <div>
 	<Label class="mb-3 block text-sm font-bold">Input Type</Label>
-	<div class="grid grid-cols-2 gap-3">
-		<button
-			type="button"
-			onclick={() => onModeChange('url')}
-			class={selectableSurfaceClass(
-				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-[background-color,border-color,box-shadow,transform] duration-200',
-				mode === 'url'
-			)}
-		>
-			{#if mode === 'url'}
-				<div class="absolute top-2 right-2">
-					<CheckCircle2 class="text-accent h-4 w-4" />
-				</div>
-			{/if}
-			<div
-				class={cn(
-					'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+	<div class="playground-mode-grid-container">
+		<div class="playground-mode-grid">
+			<button
+				type="button"
+				onclick={() => onModeChange('url')}
+				class={selectableSurfaceClass(
+					'playground-mode-card group relative flex items-center gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
 					mode === 'url'
-						? 'bg-accent text-white'
-						: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
 				)}
 			>
-				<Globe class="h-6 w-6" />
-			</div>
-			<div class="text-center">
-				<span class="text-ink block text-sm font-bold">Live URLs</span>
-				<span class="text-ink-muted text-xs">Scan websites directly</span>
-			</div>
-		</button>
-		<button
-			type="button"
-			onclick={() => onModeChange('zip')}
-			class={selectableSurfaceClass(
-				'group relative flex flex-col items-center gap-2.5 rounded-2xl border p-4 transition-[background-color,border-color,box-shadow,transform] duration-200',
-				mode === 'zip'
-			)}
-		>
-			{#if mode === 'zip'}
-				<div class="absolute top-2 right-2">
-					<CheckCircle2 class="text-accent h-4 w-4" />
+				{#if mode === 'url'}
+					<div class="absolute top-2 right-2">
+						<CheckCircle2 class="text-accent h-4 w-4" />
+					</div>
+				{/if}
+				<div
+					class={cn(
+						'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+						mode === 'url'
+							? 'bg-accent text-white'
+							: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
+					)}
+				>
+					<Globe class="h-6 w-6" />
 				</div>
-			{/if}
-			<div
-				class={cn(
-					'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+				<div class="min-w-0 flex-1">
+					<span class="text-ink block text-sm font-bold">Live URLs</span>
+					<span class="text-ink-muted text-xs">Scan websites directly</span>
+				</div>
+			</button>
+			<button
+				type="button"
+				onclick={() => onModeChange('zip')}
+				class={selectableSurfaceClass(
+					'playground-mode-card group relative flex items-center gap-3 rounded-2xl border p-4 text-left transition-[background-color,border-color,box-shadow,transform] duration-200',
 					mode === 'zip'
-						? 'bg-accent text-white'
-						: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
 				)}
 			>
-				<FileUp class="h-6 w-6" />
-			</div>
-			<div class="text-center">
-				<span class="text-ink block text-sm font-bold">ZIP Archive</span>
-				<span class="text-ink-muted text-xs">Upload static site</span>
-			</div>
-		</button>
+				{#if mode === 'zip'}
+					<div class="absolute top-2 right-2">
+						<CheckCircle2 class="text-accent h-4 w-4" />
+					</div>
+				{/if}
+				<div
+					class={cn(
+						'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+						mode === 'zip'
+							? 'bg-accent text-white'
+							: 'bg-surface-muted text-ink-muted group-hover:bg-accent/10 group-hover:text-accent'
+					)}
+				>
+					<FileUp class="h-6 w-6" />
+				</div>
+				<div class="min-w-0 flex-1">
+					<span class="text-ink block text-sm font-bold">ZIP Archive</span>
+					<span class="text-ink-muted text-xs">Upload static site</span>
+				</div>
+			</button>
+		</div>
 	</div>
 </div>
