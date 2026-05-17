@@ -1,6 +1,6 @@
 import type { ScannerSelection } from '$lib/types/scan';
 
-import { fetchWithTimeout, submitScanJob } from '$lib/api/client';
+import { fetchScanners, fetchWithTimeout, submitScanJob } from '$lib/api/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const SCANNERS: ScannerSelection[] = [{ id: 'axe', enabled: true }];
@@ -142,5 +142,34 @@ describe('api/client submitScanJob', () => {
 				writable: true
 			});
 		}
+	});
+});
+
+describe('api/client fetchScanners', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('falls back to built-in scanners when the scanner catalog request fails', async () => {
+		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+
+		const result = await fetchScanners();
+
+		expect(result.categories).toEqual([]);
+		expect(result.scanners.slice(0, 3).map((scanner) => scanner.id)).toEqual([
+			'axe',
+			'lighthouse',
+			'link-checker'
+		]);
+		expect(result.scanners.every((scanner) => scanner.enabled)).toBe(true);
+	});
+
+	it('falls back to built-in scanners when the scanner catalog returns an error', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(500, {}));
+
+		const result = await fetchScanners();
+
+		expect(result.scanners.map((scanner) => scanner.id)).toContain('security-headers');
+		expect(result.scanners.map((scanner) => scanner.id)).toContain('spelling-grammar');
 	});
 });

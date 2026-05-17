@@ -4,6 +4,46 @@ import { applyScannerPreset } from '$lib/domain/scanners/presets';
 
 import { buildApiUrl } from './utils';
 
+const fallbackScannerIds = [
+	'axe',
+	'lighthouse',
+	'link-checker',
+	'security-headers',
+	'seo',
+	'open-graph',
+	'spelling-grammar'
+] as const;
+
+const fallbackScannerCapabilities = {
+	outputFormats: [],
+	supportsScreenshots: false,
+	supportsConcurrency: false,
+	requiresBrowser: false,
+	supportsOffline: false,
+	maxConcurrency: 1
+};
+
+function getFallbackScannerDefinitions(): ScannerDefinition[] {
+	return fallbackScannerIds.map((id) => ({
+		id,
+		name: id,
+		version: 'local-fallback',
+		description: '',
+		categories: [],
+		aliases: [],
+		enabled: true,
+		builtIn: true,
+		capabilities: fallbackScannerCapabilities
+	}));
+}
+
+function getFallbackScannersResponse(): ScannersResponse {
+	return {
+		scanners: getFallbackScannerDefinitions(),
+		categories: []
+	};
+}
+
 type AbortSignalAnyFn = (this: typeof AbortSignal, signals: AbortSignal[]) => AbortSignal;
 const noop = () => undefined;
 
@@ -226,32 +266,33 @@ export async function submitScanJob({
 }
 
 export async function fetchScanners(signal?: AbortSignal): Promise<ScannersResponse> {
-	const response = await fetchWithTimeout(
-		buildApiUrl('/api/v1/scanners'),
-		{
-			method: 'GET',
-			headers: { 'Content-Type': 'application/json' },
-			signal: signal ?? null
-		},
-		15000
-	);
+	try {
+		const response = await fetchWithTimeout(
+			buildApiUrl('/api/v1/scanners'),
+			{
+				method: 'GET',
+				headers: { 'Content-Type': 'application/json' },
+				signal: signal ?? null
+			},
+			15000
+		);
 
-	if (!response.ok) {
-		if (response.status >= 500) {
-			throw new Error('Scanner service unavailable. Using default scanners.');
+		if (!response.ok) {
+			return getFallbackScannersResponse();
 		}
-		throw new Error('Failed to load scanners. Using default scanners.');
+
+		const data = (await response.json()) as ScannersResponse;
+
+		// Hide disabled scanners from the UI by default.
+		const enabledScanners = data.scanners.filter((scanner) => scanner.enabled);
+
+		return {
+			scanners: enabledScanners,
+			categories: data.categories
+		};
+	} catch {
+		return getFallbackScannersResponse();
 	}
-
-	const data = (await response.json()) as ScannersResponse;
-
-	// Hide disabled scanners from the UI by default.
-	const enabledScanners = data.scanners.filter((scanner) => scanner.enabled);
-
-	return {
-		scanners: enabledScanners,
-		categories: data.categories
-	};
 }
 
 export function getDefaultScannerSelections(scanners: ScannerDefinition[]): ScannerSelection[] {
