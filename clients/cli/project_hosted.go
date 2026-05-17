@@ -50,8 +50,8 @@ func loadProjectHostedConfig(projectRoot, projectArg string) (projectConfig, str
 		return projectConfig{}, "", err
 	}
 
-	if err := validateHostedProjectConfig(cfg); err != nil {
-		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, err)
+	if validationErr := validateHostedProjectConfig(cfg); validationErr != nil {
+		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
 	}
 
 	return cfg, cfgPath, nil
@@ -64,6 +64,7 @@ func resolveProjectHostedStageflow(
 	getenv getenvFunc,
 ) (string, string) {
 	apiURL := root.apiURL
+
 	if !cobraFlagChanged(cmd, "api") {
 		switch {
 		case strings.TrimSpace(cfg.Stageflow.RemoteAPIURL) != "":

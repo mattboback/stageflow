@@ -130,8 +130,8 @@ func loadProjectConfig(projectRoot string) (projectConfig, string, error) {
 		return projectConfig{}, "", err
 	}
 
-	if err := validateProjectConfig(cfg); err != nil {
-		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, err)
+	if validationErr := validateProjectConfig(cfg); validationErr != nil {
+		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
 	}
 
 	return cfg, cfgPath, nil

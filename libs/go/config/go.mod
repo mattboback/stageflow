@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/libs/go/config
 
-go 1.26.2
+go 1.26.3
 
 replace github.com/mattboback/stageflow/libs/go/bootstrap => ../../../libs/go/bootstrap
 
