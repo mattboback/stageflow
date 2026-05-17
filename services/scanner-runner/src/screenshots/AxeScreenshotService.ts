@@ -8,12 +8,11 @@ import type {
 	ViolationScreenshotCaptureResult
 } from './axe/types';
 
+import { createLogger } from '../utils/logger';
 import { loadAxeScreenshotConfig } from './axe/config';
 import { saveScreenshot } from './axe/image';
 import { capturePageOverviewRaw, loadPageOverviewConfig } from './axe/page-overview';
 import { captureViolationScreenshot } from './axe/violation-capture';
-
-import { createLogger } from '../utils/logger';
 
 export type {
 	AxeViolation,

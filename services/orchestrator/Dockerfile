@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/library/golang:1.26 AS builder
+FROM docker.io/library/golang:1.26.3 AS builder
 WORKDIR /src
 
 # Copy module definitions first for better layer caching
@@ -33,6 +33,10 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 # Use debian-slim instead of distroless because podman-compose materializes
 # healthchecks through /bin/sh -c, and distroless images do not provide /bin/sh.
 FROM docker.io/library/debian:bookworm-slim
+
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /out/orchestrator /usr/local/bin/orchestrator
 COPY --from=builder /out/orchestrator-healthcheck /usr/local/bin/orchestrator-healthcheck

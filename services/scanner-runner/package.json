@@ -48,7 +48,7 @@
 	"dependencies": {
 		"@axe-core/playwright": "^4.11.3",
 		"@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
-		"ajv": "8.17.1",
+		"ajv": "8.20.0",
 		"ajv-formats": "^3.0.1",
 		"chrome-launcher": "^1.2.1",
 		"fast-glob": "^3.3.3",
@@ -80,7 +80,8 @@
 	},
 	"overrides": {
 		"esbuild": "0.27.0",
-		"fast-xml-parser": "5.5.6",
+		"fast-uri": "3.1.2",
+		"fast-xml-parser": "5.8.0",
 		"flatted": "3.4.2",
 		"lodash": "4.18.1",
 		"lodash-es": "4.18.1",

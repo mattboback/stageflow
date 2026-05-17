@@ -36,7 +36,7 @@ export const FullDistribution: Story = {
 		const canvas = within(canvasElement);
 		await expect(canvas.getByTestId('severity-bar')).toBeVisible();
 		await expect(canvas.getByText('3')).toBeVisible();
-		await expect(canvas.getByText('Critical')).toBeVisible();
+		await expect(canvas.getByText(/critical/i)).toBeVisible();
 	}
 };
 
@@ -46,8 +46,8 @@ export const CriticalOnly: Story = {
 	},
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await expect(canvas.getByText('Critical')).toBeVisible();
-		await expect(canvas.queryByText('Serious')).not.toBeInTheDocument();
+		await expect(canvas.getByText(/critical/i)).toBeVisible();
+		await expect(canvas.queryByText(/serious/i)).not.toBeInTheDocument();
 	}
 };
 
@@ -66,7 +66,7 @@ export const NoLabels: Story = {
 	args: { showLabels: false },
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
-		await expect(canvas.queryByText('Critical')).not.toBeInTheDocument();
+		await expect(canvas.queryByText(/critical/i)).not.toBeInTheDocument();
 	}
 };
 

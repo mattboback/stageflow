@@ -1,7 +1,8 @@
+import type { Page } from 'playwright';
+
 import AxeBuilder from '@axe-core/playwright';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Page } from 'playwright';
 
 import { getRuleBehavior } from '../../config/rule-behaviors';
 import { getUserImpact } from '../../config/user-impact';

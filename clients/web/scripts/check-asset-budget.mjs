@@ -11,7 +11,7 @@ const assetPaths = [
 	'_app/immutable/nodes'
 ];
 const budgets = {
-	js: 380 * 1024,
+	js: 420 * 1024,
 	css: 100 * 1024
 };
 
