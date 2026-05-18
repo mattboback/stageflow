@@ -44,6 +44,16 @@ setup:
     echo "==> Ensuring stageflow_net network exists..."
     {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
 
+    just deps
+
+[group('setup'), doc('Install Go/Bun dependencies and default local config')]
+deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "==> Ensuring scanner config exists..."
+    ./infra/scripts/ensure-scanner-config.sh
+
     echo "==> Syncing Go workspace..."
     {{go}} work sync
 
@@ -165,6 +175,9 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
 
     echo "==> Ensuring stageflow_net network exists..."
     {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
+
+    echo "==> Ensuring scanner config exists..."
+    ./infra/scripts/ensure-scanner-config.sh
 
     project="{{compose_project}}"
     env_args=()
@@ -508,6 +521,8 @@ ci:
 build:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    just deps
 
     echo "==> Building Go modules..."
     while IFS= read -r dir; do

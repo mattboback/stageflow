@@ -698,18 +698,99 @@
 		background: #0d5c63;
 	}
 
-	/* Responsive — hide complex layout on small screens */
+	/* Responsive — simplified mobile dashboard */
 	@media (max-width: 768px) {
+		.nf-frame {
+			border-radius: 1rem;
+			padding: 0.625rem 0.625rem 0;
+		}
+
+		.nf-dot {
+			width: 8px;
+			height: 8px;
+		}
+
+		.nf-urlbar {
+			font-size: 9px;
+			padding: 3px 8px;
+		}
+
 		.nf-bento-main {
 			grid-template-columns: 1fr;
 		}
+
+		.nf-panel-left {
+			padding: 1rem;
+			border-right: none;
+		}
+
 		.nf-panel-right {
 			display: none;
 		}
+
+		.nf-score-area {
+			grid-template-columns: 1fr;
+			gap: 1rem;
+		}
+
+		.nf-score-num {
+			font-size: 40px;
+		}
+
+		.nf-score-denom {
+			font-size: 18px;
+		}
+
+		.nf-nav {
+			padding: 0.5rem 0.75rem;
+			gap: 0.75rem;
+		}
+
+		.nf-logo-icon {
+			width: 22px;
+			height: 22px;
+			font-size: 8px;
+		}
+
+		.nf-logo-text {
+			font-size: 11px;
+		}
+
+		.nf-tab {
+			font-size: 10px;
+			padding: 0.25rem 0.5rem;
+		}
+
 		.nf-bento-bottom {
 			grid-template-columns: 1fr;
 		}
-		.nf-bottom-panel:not(:first-child) {
+
+		.nf-bottom-panel {
+			padding: 0.875rem 1rem;
+			border-right: none;
+			border-bottom: 1px solid #e2e8f0;
+		}
+
+		.nf-bottom-panel:last-child {
+			border-bottom: none;
+		}
+
+		.nf-cta-title {
+			font-size: 15px;
+		}
+
+		.nf-trend-num {
+			font-size: 16px;
+		}
+	}
+
+	/* Very small screens — hide bottom row entirely */
+	@media (max-width: 480px) {
+		.nf-bento-bottom {
+			display: none;
+		}
+
+		.nf-tabs {
 			display: none;
 		}
 	}

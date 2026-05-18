@@ -9,6 +9,7 @@ PODMAN_BIN="${PODMAN:-podman}"
 JUST_BIN="${JUST:-just}"
 CURL_BIN="${CURL:-curl}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
+SCANNER_CONFIG_FILE="${SCANNER_CONFIG_FILE:-$REPO_ROOT/infra/scanners/scanners.yaml}"
 EXPECTED_GO_MIN="1.26.3"
 EXPECTED_BUN_MIN="1.3.8"
 EXPECTED_NODE_MAJOR="22"
@@ -234,6 +235,14 @@ if [[ -f "$ENV_FILE" ]]; then
 	fi
 else
 	fail "Missing $(basename "$ENV_FILE"). Copy .env.example to .env before starting the stack."
+fi
+
+if [[ -f "$SCANNER_CONFIG_FILE" ]]; then
+	pass "Found scanner config at ${SCANNER_CONFIG_FILE#$REPO_ROOT/}"
+elif [[ -d "$SCANNER_CONFIG_FILE" ]]; then
+	fail "Scanner config path is a directory at ${SCANNER_CONFIG_FILE#$REPO_ROOT/}. Run \`just setup\` to replace an empty generated directory with the default YAML file."
+else
+	warn "Scanner config missing at ${SCANNER_CONFIG_FILE#$REPO_ROOT/}. \`just setup\` will copy infra/scanners/scanners.example.yaml before starting the stack."
 fi
 
 say ""

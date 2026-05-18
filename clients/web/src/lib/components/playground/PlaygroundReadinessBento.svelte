@@ -72,9 +72,9 @@
 			</div>
 		</div>
 
-		<!-- Bottom strip -->
+		<!-- Bottom strip — hidden on mobile where sticky bar provides same info -->
 		{#if bottomLeft || bottomCenter || bottomRight}
-			<div class="bento-grid-bottom">
+			<div class="bento-grid-bottom hidden lg:grid">
 				<div class="bento-panel">
 					{#if bottomLeft}
 						{@render bottomLeft()}
