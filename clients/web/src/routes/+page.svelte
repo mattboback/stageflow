@@ -169,7 +169,7 @@
 </svelte:head>
 
 <div class="landing-shell min-h-screen">
-	<section class="landing-hero pt-28 pb-8 sm:pt-32">
+	<section class="landing-hero pt-24 pb-8 sm:pt-28 lg:pt-32">
 		<div class="container-width">
 			<!-- Centered headline + CTAs -->
 			<div class="mx-auto max-w-3xl text-center">
@@ -244,7 +244,7 @@
 				</p>
 			</div>
 
-			<div class="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+			<div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 				{#each scanners as scanner, index (scanner.name)}
 					{@const ScannerIcon = scanner.icon}
 					<article class={cn('editorial-card scanner-card border-t-2 p-6', scanner.border)}>
@@ -348,7 +348,7 @@
 		<div class="container-width">
 			<div class="cta-panel mx-auto max-w-4xl">
 				<p class="section-kicker text-accent-subtle mb-3">Ready to scan</p>
-				<h2 class="h2-display text-surface text-3xl sm:text-4xl">
+				<h2 class="h2-display text-surface text-2xl sm:text-3xl lg:text-4xl">
 					Audit your site with one pipeline
 				</h2>
 				<p class="text-surface/70 mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base">

@@ -3,7 +3,7 @@
 </script>
 
 <section class="playground-hero border-line relative overflow-hidden border-b">
-	<div class="container-width relative pt-22 pb-8 lg:pt-22 lg:pb-10">
+	<div class="container-width relative pt-20 pb-6 sm:pt-22 lg:pt-22 lg:pb-10">
 		<div class="max-w-3xl">
 			<p class="section-kicker mb-3">Playground</p>
 			<h1 class="h1-display max-w-2xl text-[clamp(3rem,6vw,4.5rem)] leading-[0.94]">

@@ -180,12 +180,42 @@
 
 <PlaygroundHeroSection />
 
+<!-- Mobile sticky bottom bar -->
+<div class="mobile-sticky-bar xl:hidden">
+	<div class="flex flex-1 items-center gap-3">
+		<div class="flex items-center gap-2">
+			<span class="stat-mono text-accent text-lg font-bold">{enabledScannerCount}</span>
+			<span class="text-ink-muted text-xs">scanner{enabledScannerCount === 1 ? '' : 's'}</span>
+		</div>
+		{#if !canSubmit && missingRequirements.length > 0}
+			<span class="text-amber-600 text-xs font-medium">
+				{missingRequirements.length} step{missingRequirements.length === 1 ? '' : 's'} left
+			</span>
+		{/if}
+	</div>
+	<Button
+		variant="glow"
+		size="lg"
+		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold"
+		disabled={!canSubmit}
+		onclick={handleSubmit}
+	>
+		{#if isSubmitting}
+			<Loader2 class="h-4 w-4 animate-spin" />
+			Starting…
+		{:else}
+			<Play class="h-4 w-4" />
+			Start Scan
+		{/if}
+	</Button>
+</div>
+
 <PageSection
 	class="playground-shell relative overflow-hidden py-10 lg:py-14"
 	padding="none"
 	disableContainer={true}
 >
-	<div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+	<div class="relative mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8 xl:pb-0">
 		<div
 			class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]"
 		>
@@ -384,16 +414,18 @@
 				</PlaygroundReadinessBento>
 			</div>
 
-			<PlaygroundSidebar
-				{mode}
-				{scanners}
-				{screenshot}
-				{highlightStyle}
-				{canSubmit}
-				{isAiNavigatorEnabled}
-				{isAiConfigValid}
-				{missingRequirements}
-			/>
+			<div class="hidden xl:block">
+				<PlaygroundSidebar
+					{mode}
+					{scanners}
+					{screenshot}
+					{highlightStyle}
+					{canSubmit}
+					{isAiNavigatorEnabled}
+					{isAiConfigValid}
+					{missingRequirements}
+				/>
+			</div>
 		</div>
 	</div>
 </PageSection>

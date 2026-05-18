@@ -36,7 +36,7 @@
 					aria-current={isActive(link.href) ? 'page' : undefined}
 					onclick={onClose}
 					class={cn(
-						'block rounded-2xl px-4 py-4 text-lg font-semibold tracking-[-0.01em]',
+						'block rounded-2xl px-5 py-4.5 text-lg font-semibold tracking-[-0.01em]',
 						isActive(link.href)
 							? 'border-line/70 bg-surface text-ink border shadow-[0_8px_20px_-14px_rgba(15,15,15,0.45)]'
 							: 'text-ink-muted hover:bg-surface/80 hover:text-ink'
@@ -48,7 +48,14 @@
 		{/each}
 	</nav>
 
-	<div class="border-line mt-8 space-y-6 border-t pt-8">
+	<div class="border-line mt-6 space-y-3 border-t pt-6">
+		<a
+			href="/playground"
+			onclick={onClose}
+			class="bg-accent hover:bg-accent-hover text-surface flex items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-semibold shadow-sm transition-colors"
+		>
+			Run Scan
+		</a>
 		<a
 			href={SITE.githubUrl}
 			target="_blank"

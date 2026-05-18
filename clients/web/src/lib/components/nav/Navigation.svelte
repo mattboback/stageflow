@@ -70,7 +70,7 @@
 		<div class="flex items-center gap-4 md:hidden">
 			<button
 				onclick={toggleMobileMenu}
-				class="text-ink-muted hover:text-ink hover:bg-surface/80 relative z-50 rounded-full p-3"
+				class="text-ink-muted hover:text-ink hover:bg-surface/80 relative z-50 rounded-full p-3.5"
 				aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
 				aria-expanded={mobileMenuOpen}
 				aria-controls="mobile-menu"
