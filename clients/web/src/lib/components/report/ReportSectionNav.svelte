@@ -19,41 +19,34 @@
 
 	let { section, report, onSectionChange }: Props = $props();
 
-	const sections = $derived<Section[]>(
-		[
-			{ id: 'overview', label: 'Overview', shortLabel: 'Overview' },
-			{
-				id: 'issues',
-				label: 'Issues',
-				shortLabel: 'Issues',
-				count: report.issues.length
-			},
-			{
-				id: 'pages',
-				label: 'Pages',
-				shortLabel: 'Pages',
-				count: report.pages.length
-			},
-			{
-				id: 'scanners',
-				label: 'Scanners',
-				shortLabel: 'Scans',
-				count: report.scanners.length
-			},
-			{ id: 'visual', label: 'Visual Inspector', shortLabel: 'Visual' },
-			{ id: 'artifacts', label: 'Artifacts', shortLabel: 'Files' },
-			{
-				id: 'errors',
-				label: 'Errors',
-				shortLabel: 'Errors',
-				count: report.errors?.length ?? 0
-			}
-		].filter((item) => {
-			if (item.id !== 'errors') return true;
-			if (section === 'errors') return true;
-			return (item.count ?? 0) > 0;
-		})
-	);
+	const sections = $derived<Section[]>([
+		{ id: 'overview', label: 'Overview', shortLabel: 'Overview' },
+		{
+			id: 'issues',
+			label: 'Issues',
+			shortLabel: 'Issues',
+			count: report.issues.length
+		},
+		{
+			id: 'pages',
+			label: 'Pages',
+			shortLabel: 'Pages',
+			count: report.pages.length
+		},
+		{
+			id: 'scanners',
+			label: 'Scanners',
+			shortLabel: 'Scans',
+			count: report.scanners.length
+		},
+		{ id: 'visual', label: 'Visual Inspector', shortLabel: 'Visual' },
+		{
+			id: 'artifacts',
+			label: 'Diagnostics',
+			shortLabel: 'Diagnostics',
+			count: (report.artifacts?.length ?? 0) + (report.errors?.length ?? 0)
+		}
+	]);
 </script>
 
 <Panel

@@ -37,11 +37,18 @@
 
 	const section = $derived.by(() => {
 		const value = page.url.searchParams.get('section') ?? 'overview';
-		return ['overview', 'issues', 'pages', 'scanners', 'visual', 'artifacts', 'errors'].includes(
-			value
-		)
+		// Legacy 'errors' is folded into the combined Diagnostics (artifacts) section.
+		if (value === 'errors') return 'artifacts';
+		return ['overview', 'issues', 'pages', 'scanners', 'visual', 'artifacts'].includes(value)
 			? value
 			: 'overview';
+	});
+
+	// Strip legacy 'errors' from the URL so deep links remain canonical.
+	$effect(() => {
+		if (page.url.searchParams.get('section') === 'errors') {
+			updateQueryParams({ section: 'artifacts' });
+		}
 	});
 
 	const activeScanners = $derived.by(() => {
@@ -277,11 +284,10 @@
 				</section>
 			{:else if section === 'artifacts'}
 				<section id="report-panel-artifacts" aria-labelledby="report-tab-artifacts">
-					<ArtifactsView {jobId} {job} {...onRefreshArtifacts ? { onRefreshArtifacts } : {}} />
-				</section>
-			{:else if section === 'errors'}
-				<section id="report-panel-errors" aria-labelledby="report-tab-errors">
-					<ErrorsView errors={displayReport.errors} />
+					<div class="grid gap-6 lg:grid-cols-2">
+						<ArtifactsView {jobId} {job} {...onRefreshArtifacts ? { onRefreshArtifacts } : {}} />
+						<ErrorsView errors={displayReport.errors} />
+					</div>
 				</section>
 			{/if}
 		</svelte:boundary>
