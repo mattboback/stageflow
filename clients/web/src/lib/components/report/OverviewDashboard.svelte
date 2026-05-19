@@ -177,36 +177,56 @@
 	{@const StatusIcon = getStatusIcon(scanner.status)}
 	{@const statusTone = getScannerStatusTone(scanner.status)}
 	{@const issueCount = scanner.issueCount ?? report.summary.byScanner?.[scanner.id] ?? 0}
-	<button
-		onclick={() => onSelectScanner(scanner.id)}
-		class="border-line hover:border-accent/50 hover:bg-surface-muted flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition"
+	{@const hasError = scanner.status === 'failed' || !!scanner.error}
+	<div
+		class={cn(
+			'border-line flex flex-col gap-2 rounded-xl border p-3 transition',
+			hasError ? 'border-red-200/70 bg-red-50/40' : 'hover:border-accent/50 hover:bg-surface-muted'
+		)}
 	>
-		<div class="flex min-w-0 items-start gap-3">
-			<StatusIcon
-				class={cn(
-					'mt-0.5 h-5 w-5',
-					scanner.status === 'success'
-						? 'text-emerald-500'
-						: scanner.status === 'failed'
-							? 'text-red-500'
-							: scanner.status === 'skipped'
-								? 'text-slate-400'
-								: 'text-amber-500'
-				)}
-			/>
-			<div class="min-w-0">
-				<p class="text-ink truncate font-semibold">
-					{scanner.name ?? scanner.id}
+		<button
+			onclick={() => onSelectScanner(scanner.id)}
+			class="-m-1 flex w-full items-center justify-between gap-3 rounded-lg p-1 text-left transition"
+		>
+			<div class="flex min-w-0 items-start gap-3">
+				<StatusIcon
+					class={cn(
+						'mt-0.5 h-5 w-5 shrink-0',
+						scanner.status === 'success'
+							? 'text-emerald-500'
+							: scanner.status === 'failed'
+								? 'text-red-500'
+								: scanner.status === 'skipped'
+									? 'text-slate-400'
+									: 'text-amber-500'
+					)}
+				/>
+				<div class="min-w-0">
+					<p class="text-ink truncate font-semibold">
+						{scanner.name ?? scanner.id}
+					</p>
+					<p class="text-ink-muted text-xs">
+						{issueCount} issues
+					</p>
+				</div>
+			</div>
+			<span class={cn(chipVariants({ tone: statusTone, size: 'xs', caps: true }))}>
+				{formatScannerStatus(scanner.status)}
+			</span>
+		</button>
+		{#if hasError}
+			<div
+				class="overflow-hidden rounded-lg border border-red-200 bg-red-50/80 p-2.5 text-xs text-red-800"
+			>
+				<p class="text-[10px] font-semibold tracking-wider text-red-600 uppercase">
+					Scanner failure
 				</p>
-				<p class="text-ink-muted text-xs">
-					{issueCount} issues
+				<p class="mt-1 font-mono break-all">
+					{scanner.error || 'Terminated without producing results.'}
 				</p>
 			</div>
-		</div>
-		<span class={cn(chipVariants({ tone: statusTone, size: 'xs', caps: true }))}>
-			{formatScannerStatus(scanner.status)}
-		</span>
-	</button>
+		{/if}
+	</div>
 {/snippet}
 
 <div class="space-y-6">
