@@ -277,6 +277,12 @@
 	.workflow-step {
 		@apply border-line bg-surface relative rounded-2xl border px-6 py-7;
 		box-shadow: var(--shadow-sm);
+		transition: all var(--duration-normal) var(--ease-out);
+	}
+
+	.workflow-step:hover {
+		border-color: var(--color-accent);
+		box-shadow: 0 12px 30px rgba(13, 92, 99, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02);
 	}
 
 	.workflow-index {
@@ -285,8 +291,9 @@
 	}
 
 	.workflow-line {
-		background: var(--color-line);
-		@apply pointer-events-none absolute top-12 left-0 hidden h-px w-full lg:block;
+		background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-line) 100%);
+		@apply pointer-events-none absolute top-12 left-0 hidden h-[2px] w-full lg:block;
+		opacity: 0.8;
 	}
 
 	.cta-panel {
@@ -361,6 +368,12 @@
 	.scanner-card {
 		position: relative;
 		overflow: hidden;
+		border-top-color: var(--color-line) !important;
+		transition: all var(--duration-slow) var(--ease-out);
+	}
+	.scanner-card:hover {
+		border-top-color: var(--brand-color) !important;
+		box-shadow: 0 12px 32px var(--glow-color), 0 4px 12px rgba(0, 0, 0, 0.02);
 	}
 	.scanner-card::after {
 		content: '';

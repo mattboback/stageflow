@@ -136,9 +136,9 @@
 		<div class="border-line bg-surface-muted rounded-2xl border p-5">
 			<div class="flex items-start gap-4">
 				<div
-					class="bg-accent-soft text-accent-ink flex h-12 w-12 items-center justify-center rounded-xl"
+					class="bg-accent-soft text-accent-ink flex h-12 w-12 items-center justify-center rounded-xl relative shadow-[0_0_15px_rgba(13,92,99,0.12)] shrink-0 animate-pulse"
 				>
-					<stageInfo.icon class="h-6 w-6" />
+					<stageInfo.icon class="h-6 w-6 {stageInfo.stage === 'Scanning' ? 'animate-spin' : ''}" />
 				</div>
 				<div class="min-w-0 flex-1">
 					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">
@@ -155,13 +155,13 @@
 			<div class="mt-5 space-y-3">
 				<div class="flex items-center justify-between text-sm">
 					<span class="text-ink-muted font-medium">{progressLabel}</span>
-					<span class="text-ink font-mono">{percentage}%</span>
+					<span class="text-ink font-mono font-bold text-accent">{percentage}%</span>
 				</div>
-				<Progress value={percentage} class="h-3" />
+				<Progress value={percentage} class="h-3 bg-gradient-to-r from-[#0d5c63] to-emerald-500 transition-all duration-300" />
 				<div class="flex flex-wrap items-center justify-between gap-2 text-sm">
 					<div class="text-ink-muted flex items-center gap-2">
-						<span class="bg-accent inline-flex h-2 w-2 rounded-full"></span>
-						<span>{estimatedTime}</span>
+						<span class="bg-accent inline-flex h-2 w-2 rounded-full animate-ping"></span>
+						<span class="font-medium">{estimatedTime}</span>
 					</div>
 					{#if result?.progress && result.progress.total_pages > 0}
 						<span class="text-ink-muted font-medium">
@@ -231,8 +231,9 @@
 					<div class="flex flex-wrap gap-2">
 						{#each remainingScanners as scannerType (scannerType)}
 							<span
-								class="border-line bg-surface text-ink inline-flex rounded-full border px-3 py-1 text-xs font-medium"
+								class="border-line bg-surface text-ink inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium shadow-sm transition-all duration-200"
 							>
+								<span class="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_#10b981] shrink-0"></span>
 								{formatScannerName(scannerType)}
 							</span>
 						{/each}
@@ -247,8 +248,9 @@
 					<div class="flex flex-wrap gap-2">
 						{#each completedScanners as scannerType (scannerType)}
 							<span
-								class="bg-accent-soft text-accent-ink inline-flex rounded-full px-3 py-1 text-xs font-medium"
+								class="bg-accent-soft text-accent-ink inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
 							>
+								<span class="inline-block h-1.5 w-1.5 rounded-full bg-accent shrink-0"></span>
 								{formatScannerName(scannerType)}
 							</span>
 						{/each}

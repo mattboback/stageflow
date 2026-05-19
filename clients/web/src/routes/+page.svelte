@@ -30,64 +30,80 @@
 			name: 'Axe',
 			desc: 'WCAG 2.1 AA/AAA checks with full node-level evidence and violation context.',
 			color: 'text-blue-600',
-			bg: 'bg-blue-50',
-			border: 'border-t-blue-500'
+			bg: 'bg-blue-50/50',
+			border: 'border-t-blue-500',
+			glow: 'rgba(59, 130, 246, 0.15)',
+			brand: '#3b82f6'
 		},
 		{
 			icon: Zap,
 			name: 'Lighthouse',
 			desc: 'Performance, SEO, and best-practices scoring from the same run pipeline.',
 			color: 'text-amber-600',
-			bg: 'bg-amber-50',
-			border: 'border-t-amber-500'
+			bg: 'bg-amber-50/50',
+			border: 'border-t-amber-500',
+			glow: 'rgba(245, 158, 11, 0.15)',
+			brand: '#f59e0b'
 		},
 		{
 			icon: Search,
 			name: 'SEO',
 			desc: 'Meta, headings, structured data, and crawlability checks surfaced in one report.',
 			color: 'text-rose-600',
-			bg: 'bg-rose-50',
-			border: 'border-t-rose-500'
+			bg: 'bg-rose-50/50',
+			border: 'border-t-rose-500',
+			glow: 'rgba(244, 63, 94, 0.15)',
+			brand: '#f43f5e'
 		},
 		{
 			icon: Shield,
 			name: 'Security Headers',
 			desc: 'CSP, HSTS, X-Frame-Options, and critical header posture scoring.',
 			color: 'text-violet-600',
-			bg: 'bg-violet-50',
-			border: 'border-t-violet-500'
+			bg: 'bg-violet-50/50',
+			border: 'border-t-violet-500',
+			glow: 'rgba(139, 92, 246, 0.15)',
+			brand: '#8b5cf6'
 		},
 		{
 			icon: Link2,
 			name: 'Link Checker',
 			desc: 'Broken links, redirect chains, and dead-end paths caught before release.',
 			color: 'text-emerald-600',
-			bg: 'bg-emerald-50',
-			border: 'border-t-emerald-500'
+			bg: 'bg-emerald-50/50',
+			border: 'border-t-emerald-500',
+			glow: 'rgba(16, 185, 129, 0.15)',
+			brand: '#10b981'
 		},
 		{
 			icon: Bot,
 			name: 'AI Navigator',
 			desc: 'Goal-based journey simulation that catches experience breakpoints early.',
 			color: 'text-fuchsia-600',
-			bg: 'bg-fuchsia-50',
-			border: 'border-t-fuchsia-500'
+			bg: 'bg-fuchsia-50/50',
+			border: 'border-t-fuchsia-500',
+			glow: 'rgba(217, 70, 239, 0.15)',
+			brand: '#d946ef'
 		},
 		{
 			icon: Search,
 			name: 'Open Graph',
 			desc: 'Social preview metadata validation for Open Graph tags, Twitter cards, and share readiness.',
 			color: 'text-cyan-600',
-			bg: 'bg-cyan-50',
-			border: 'border-t-cyan-500'
+			bg: 'bg-cyan-50/50',
+			border: 'border-t-cyan-500',
+			glow: 'rgba(6, 182, 212, 0.15)',
+			brand: '#06b6d4'
 		},
 		{
 			icon: CheckCircle,
 			name: 'Spelling & Grammar',
 			desc: 'AI-powered spelling, grammar, and content quality checks for polished publication-ready copy.',
 			color: 'text-lime-700',
-			bg: 'bg-lime-50',
-			border: 'border-t-lime-500'
+			bg: 'bg-lime-50/50',
+			border: 'border-t-lime-500',
+			glow: 'rgba(132, 204, 22, 0.15)',
+			brand: '#84cc16'
 		}
 	] as const;
 
@@ -169,13 +185,19 @@
 </svelte:head>
 
 <div class="landing-shell min-h-screen">
-	<section class="landing-hero pt-24 pb-8 sm:pt-28 lg:pt-32">
-		<div class="container-width">
+	<!-- Hero Section -->
+	<section class="landing-hero relative overflow-hidden pt-24 pb-8 sm:pt-28 lg:pt-32">
+		<!-- Cybernetic Backdrop Auroras -->
+		<div class="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-radial from-accent/15 to-transparent blur-3xl pointer-events-none z-0"></div>
+		<div class="absolute top-20 right-[-10%] w-[500px] h-[500px] rounded-full bg-radial from-blue-500/10 to-transparent blur-3xl pointer-events-none z-0"></div>
+		<div class="absolute bottom-[-10%] left-[30%] w-[450px] h-[450px] rounded-full bg-radial from-fuchsia-500/8 to-transparent blur-3xl pointer-events-none z-0"></div>
+
+		<div class="container-width relative z-10">
 			<!-- Centered headline + CTAs -->
 			<div class="mx-auto max-w-3xl text-center">
 				<div class="mb-5 flex flex-wrap items-center justify-center gap-3">
 					<p class="section-kicker">Open-Source Scanning Platform</p>
-					<Chip tone="muted" size="sm" class="landing-chip gap-1.5">
+					<Chip tone="muted" size="sm" class="landing-chip gap-1.5 hover:bg-surface-muted/85 transition-colors cursor-pointer">
 						<GithubIcon class="h-3.5 w-3.5" />
 						Open Source
 					</Chip>
@@ -194,7 +216,7 @@
 				<div class="mt-7 flex flex-wrap justify-center gap-3">
 					<a
 						href="/playground"
-						class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 px-7 text-base')}
+						class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 px-7 text-base transition-transform hover:scale-102 hover:shadow-[0_0_15px_rgba(13,92,99,0.15)]')}
 					>
 						Start scanning
 						<ArrowRight class="h-4 w-4" />
@@ -203,7 +225,7 @@
 						href={SITE.githubUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 px-7 text-base')}
+						class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 px-7 text-base transition-transform hover:scale-102')}
 					>
 						<GithubIcon class="h-4 w-4" />
 						View source
@@ -231,6 +253,7 @@
 
 	<div class="section-divider"></div>
 
+	<!-- Capabilities Section -->
 	<section class="section-padding">
 		<div class="container-width">
 			<div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
@@ -247,15 +270,18 @@
 			<div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 				{#each scanners as scanner, index (scanner.name)}
 					{@const ScannerIcon = scanner.icon}
-					<article class={cn('editorial-card scanner-card border-t-2 p-6', scanner.border)}>
+					<article 
+						class="editorial-card scanner-card group relative overflow-hidden rounded-2xl border border-line bg-surface p-6 transition-all duration-300 hover:-translate-y-1 hover:scale-102"
+						style="--glow-color: {scanner.glow}; --brand-color: {scanner.brand}; border-top-width: 4px;"
+					>
 						<div class="mb-4 flex items-start justify-between gap-4">
 							<div
 								class={cn(
-									'flex h-12 w-12 items-center justify-center rounded-xl shadow-sm',
+									'flex h-12 w-12 items-center justify-center rounded-xl shadow-sm transition-all duration-300 group-hover:scale-110',
 									scanner.bg
 								)}
 							>
-								<ScannerIcon class={cn('h-5.5 w-5.5', scanner.color)} />
+								<ScannerIcon class={cn('h-5.5 w-5.5 transition-colors duration-300', scanner.color)} />
 							</div>
 							<span
 								class={cn(
@@ -279,6 +305,7 @@
 
 	<div class="section-divider"></div>
 
+	<!-- Workflow Section -->
 	<section class="workflow-band section-padding">
 		<div class="container-width">
 			<div class="mx-auto max-w-2xl text-center lg:text-left">
@@ -289,10 +316,10 @@
 			<div class="relative mt-12 grid gap-5 lg:grid-cols-3">
 				<div class="workflow-line"></div>
 				{#each workflowSteps as item (item.step)}
-					<article class="workflow-step">
+					<article class="workflow-step group hover:-translate-y-1 transition-all duration-300">
 						<div class="mb-5 flex items-center gap-2">
 							<span
-								class="bg-accent/10 text-accent inline-flex h-7 w-7 items-center justify-center rounded-lg font-mono text-xs font-semibold"
+								class="bg-accent/10 text-accent inline-flex h-7 w-7 items-center justify-center rounded-lg font-mono text-xs font-semibold group-hover:bg-accent group-hover:text-surface transition-all duration-300"
 								>{item.step}</span
 							>
 							<div class="bg-line h-px flex-1 opacity-60"></div>
@@ -308,6 +335,7 @@
 
 	<div class="section-divider"></div>
 
+	<!-- Why StageFlow Section -->
 	<section class="section-padding">
 		<div class="container-width">
 			<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
@@ -321,10 +349,10 @@
 				</div>
 				<div class="grid gap-4">
 					{#each differentiators as item (item.title)}
-						<article class="editorial-card p-6">
+						<article class="editorial-card p-6 hover:-translate-y-0.5 transition-all duration-300">
 							<div class="flex gap-4">
 								<div
-									class="bg-accent/12 text-accent mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+									class="bg-accent/12 text-accent mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
 								>
 									<CheckCircle class="h-4.5 w-4.5" />
 								</div>
@@ -344,28 +372,35 @@
 
 	<div class="section-divider"></div>
 
+	<!-- CTA Section -->
 	<section class="pt-16 pb-24">
 		<div class="container-width">
-			<div class="cta-panel mx-auto max-w-4xl">
-				<p class="section-kicker text-accent-subtle mb-3">Ready to scan</p>
-				<h2 class="h2-display text-surface text-2xl sm:text-3xl lg:text-4xl">
-					Audit your site with one pipeline
-				</h2>
-				<p class="text-surface/70 mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base">
-					No account required. Open the playground, choose your scanners, and start a complete run
-					in under a minute.
-				</p>
-				<div class="mt-7">
-					<a
-						href="/playground"
-						class={cn(
-							buttonVariants({ variant: 'outline', size: 'lg' }),
-							'border-surface/40 text-surface hover:bg-surface/15 gap-2.5 rounded-xl px-8 text-base font-semibold'
-						)}
-					>
-						Open Playground
-						<ArrowRight class="h-4 w-4" />
-					</a>
+			<div class="cta-panel mx-auto max-w-4xl relative overflow-hidden rounded-3xl px-8 py-14 text-center sm:px-12 border border-accent/20 shadow-2xl">
+				<!-- Custom CTA Backdrop Auroras -->
+				<div class="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-radial from-accent/35 to-transparent blur-3xl pointer-events-none"></div>
+				<div class="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-radial from-fuchsia-500/20 to-transparent blur-3xl pointer-events-none"></div>
+
+				<div class="relative z-10">
+					<p class="section-kicker text-accent-subtle mb-3">Ready to scan</p>
+					<h2 class="h2-display text-surface text-2xl sm:text-3xl lg:text-4xl">
+						Audit your site with one pipeline
+					</h2>
+					<p class="text-surface/70 mx-auto mt-3 max-w-2xl text-sm leading-relaxed sm:text-base">
+						No account required. Open the playground, choose your scanners, and start a complete run
+						in under a minute.
+					</p>
+					<div class="mt-7">
+						<a
+							href="/playground"
+							class={cn(
+								buttonVariants({ variant: 'outline', size: 'lg' }),
+								'border-surface/40 text-surface hover:bg-surface/15 gap-2.5 rounded-xl px-8 text-base font-semibold transition-all duration-300 hover:scale-102 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)]'
+							)}
+						>
+							Open Playground
+							<ArrowRight class="h-4 w-4" />
+						</a>
+					</div>
 				</div>
 			</div>
 		</div>
