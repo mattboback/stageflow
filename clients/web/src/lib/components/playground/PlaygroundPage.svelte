@@ -25,6 +25,7 @@
 	} from '$lib/domain/scanners/presets';
 	import { Alert, Button, PageSection } from '$lib/components/ui';
 	import { AlertTriangle, Loader2, Play } from 'lucide-svelte';
+	import { slide } from 'svelte/transition';
 
 	// Form state
 	let mode = $state<'url' | 'zip'>('url');
@@ -196,7 +197,7 @@
 	<Button
 		variant="glow"
 		size="lg"
-		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold"
+		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold transition-all duration-300 {canSubmit && !isSubmitting ? 'animate-concentric' : ''}"
 		disabled={!canSubmit}
 		onclick={handleSubmit}
 	>
@@ -285,21 +286,23 @@
 							</div>
 
 							{#if isAiNavigatorEnabled}
-								<PlaygroundAiConfig
-									objective={aiObjective}
-									model={aiModel}
-									maxSteps={aiMaxSteps}
-									maxWallTimeMs={aiMaxWallTimeMs}
-									inputValues={aiInputValues}
-									successCriteria={aiSuccessCriteria}
-									isValid={isAiConfigValid}
-									onObjectiveChange={(v) => (aiObjective = v)}
-									onModelChange={(v) => (aiModel = v)}
-									onMaxStepsChange={(v) => (aiMaxSteps = v)}
-									onMaxWallTimeMsChange={(v) => (aiMaxWallTimeMs = v)}
-									onInputValuesChange={(v) => (aiInputValues = v)}
-									onSuccessCriteriaChange={(v) => (aiSuccessCriteria = v)}
-								/>
+								<div transition:slide={{ duration: 300 }}>
+									<PlaygroundAiConfig
+										objective={aiObjective}
+										model={aiModel}
+										maxSteps={aiMaxSteps}
+										maxWallTimeMs={aiMaxWallTimeMs}
+										inputValues={aiInputValues}
+										successCriteria={aiSuccessCriteria}
+										isValid={isAiConfigValid}
+										onObjectiveChange={(v) => (aiObjective = v)}
+										onModelChange={(v) => (aiModel = v)}
+										onMaxStepsChange={(v) => (aiMaxSteps = v)}
+										onMaxWallTimeMsChange={(v) => (aiMaxWallTimeMs = v)}
+										onInputValuesChange={(v) => (aiInputValues = v)}
+										onSuccessCriteriaChange={(v) => (aiSuccessCriteria = v)}
+									/>
+								</div>
 							{/if}
 
 							{#if error}
@@ -398,7 +401,7 @@
 						<Button
 							variant="glow"
 							size="lg"
-							class="h-11 w-full gap-2 rounded-xl text-sm font-semibold"
+							class="h-11 w-full gap-2 rounded-xl text-sm font-semibold transition-all duration-300 {canSubmit && !isSubmitting ? 'animate-concentric' : ''}"
 							disabled={!canSubmit}
 							onclick={handleSubmit}
 						>
@@ -429,3 +432,22 @@
 		</div>
 	</div>
 </PageSection>
+
+<style>
+	@keyframes concentric-pulse {
+		0% {
+			box-shadow: 0 0 0 0 rgba(13, 92, 99, 0.45);
+		}
+		70% {
+			box-shadow: 0 0 0 10px rgba(13, 92, 99, 0);
+		}
+		100% {
+			box-shadow: 0 0 0 0 rgba(13, 92, 99, 0);
+		}
+	}
+
+	:global(.animate-concentric) {
+		animation: concentric-pulse 2s infinite !important;
+	}
+</style>
+
