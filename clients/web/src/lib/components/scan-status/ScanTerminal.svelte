@@ -120,21 +120,33 @@
 	class="terminal-glow-bg relative mt-8 overflow-hidden rounded-2xl border border-[#1e293b]/70 bg-[#080b11] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]"
 >
 	<!-- Glassy terminal header -->
-	<div class="flex items-center justify-between border-b border-[#1e293b]/70 bg-[#0e131f]/90 px-5 py-3 backdrop-blur-md">
+	<div
+		class="flex items-center justify-between border-b border-[#1e293b]/70 bg-[#0e131f]/90 px-5 py-3 backdrop-blur-md"
+	>
 		<div class="flex items-center gap-2 text-[#64748b]">
 			<Terminal class="text-accent h-4 w-4 drop-shadow-[0_0_6px_rgba(13,92,99,0.5)]" />
-			<span class="font-mono text-xs font-semibold tracking-wide text-slate-300">stageflow-orchestrator</span>
+			<span class="font-mono text-xs font-semibold tracking-wide text-slate-300"
+				>stageflow-orchestrator</span
+			>
 		</div>
 		<div class="flex items-center gap-3">
 			{#if logs.length > 0}
-				<span class="bg-[#1e293b]/40 rounded-full px-2.5 py-0.5 font-mono text-[10px] font-bold text-slate-400 border border-[#1e293b]/50">
+				<span
+					class="rounded-full border border-[#1e293b]/50 bg-[#1e293b]/40 px-2.5 py-0.5 font-mono text-[10px] font-bold text-slate-400"
+				>
 					{logs.length} events
 				</span>
 			{/if}
 			<div class="flex gap-1.5">
-				<div class="h-2.5 w-2.5 rounded-full bg-[#FF5F56] opacity-90 shadow-[0_0_6px_rgba(255,95,86,0.5)]"></div>
-				<div class="h-2.5 w-2.5 rounded-full bg-[#FFBD2E] opacity-90 shadow-[0_0_6px_rgba(255,189,46,0.5)]"></div>
-				<div class="h-2.5 w-2.5 rounded-full bg-[#27C93F] opacity-90 shadow-[0_0_6px_rgba(39,201,63,0.5)]"></div>
+				<div
+					class="h-2.5 w-2.5 rounded-full bg-[#FF5F56] opacity-90 shadow-[0_0_6px_rgba(255,95,86,0.5)]"
+				></div>
+				<div
+					class="h-2.5 w-2.5 rounded-full bg-[#FFBD2E] opacity-90 shadow-[0_0_6px_rgba(255,189,46,0.5)]"
+				></div>
+				<div
+					class="h-2.5 w-2.5 rounded-full bg-[#27C93F] opacity-90 shadow-[0_0_6px_rgba(39,201,63,0.5)]"
+				></div>
 			</div>
 		</div>
 	</div>
@@ -145,9 +157,11 @@
 		class="terminal-console-scroller h-80 space-y-1.5 overflow-y-auto p-5 font-mono text-xs text-slate-300"
 	>
 		{#if logs.length === 0}
-			<div class="flex items-center gap-2.5 text-slate-500 py-2">
+			<div class="flex items-center gap-2.5 py-2 text-slate-500">
 				<Loader2 class="text-accent h-3.5 w-3.5 animate-spin" />
-				<span class="animate-pulse">Awaiting connection to remote scanner orchestration pipeline…</span>
+				<span class="animate-pulse"
+					>Awaiting connection to remote scanner orchestration pipeline…</span
+				>
 			</div>
 		{/if}
 
@@ -155,7 +169,7 @@
 			{@const style = getLogStyle(log)}
 			<div class="terminal-line flex items-start gap-2.5 py-0.5" in:fade={{ duration: 150 }}>
 				<!-- Timestamp -->
-				<span class="shrink-0 text-slate-600 tabular-nums select-none tracking-tight">
+				<span class="shrink-0 tracking-tight text-slate-600 tabular-nums select-none">
 					[{formatTimestamp(effectiveStartTime, logs.length - idx, now)}]
 				</span>
 
@@ -172,20 +186,26 @@
 				{/if}
 
 				<!-- Log message -->
-				<span class={cn('break-all leading-relaxed', style.textClass)}>{log}</span>
+				<span class={cn('leading-relaxed break-all', style.textClass)}>{log}</span>
 			</div>
 		{/each}
 
 		<!-- Active Blinking Prompt at bottom when logs exist -->
 		{#if logs.length > 0}
 			<div class="flex items-center gap-2.5 py-1 text-slate-500" in:fade={{ duration: 120 }}>
-				<span class="shrink-0 text-slate-600 select-none">[{formatTimestamp(effectiveStartTime, 0, now)}]</span>
-				<span class="border-emerald-500/30 bg-emerald-500/10 text-emerald-400 shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.08em] uppercase">
+				<span class="shrink-0 text-slate-600 select-none"
+					>[{formatTimestamp(effectiveStartTime, 0, now)}]</span
+				>
+				<span
+					class="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.08em] text-emerald-400 uppercase"
+				>
 					AGNT
 				</span>
-				<span class="flex items-center gap-1.5 text-emerald-400 font-semibold tracking-wide">
+				<span class="flex items-center gap-1.5 font-semibold tracking-wide text-emerald-400">
 					stageflow-agent: listening_active_diagnostics
-					<span class="terminal-cursor inline-block h-3.5 w-2 bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"></span>
+					<span
+						class="terminal-cursor inline-block h-3.5 w-2 bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+					></span>
 				</span>
 			</div>
 		{/if}
@@ -200,10 +220,13 @@
 
 	/* CRT scanline overlay */
 	.terminal-glow-bg::before {
-		content: " ";
+		content: ' ';
 		display: block;
 		position: absolute;
-		top: 0; left: 0; bottom: 0; right: 0;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		right: 0;
 		background: linear-gradient(rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
 		background-size: 100% 4px;
 		z-index: 10;
@@ -228,8 +251,13 @@
 
 	/* Blinking block terminal cursor */
 	@keyframes cursor-blink {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
 	}
 
 	.terminal-cursor {

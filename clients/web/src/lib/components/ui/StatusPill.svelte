@@ -28,12 +28,12 @@
 	};
 
 	const toneClasses: Record<StatusPillTone, string> = {
-		strong: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-		watch: 'bg-blue-50 text-blue-700 border-blue-200',
-		'needs-work': 'bg-amber-50 text-amber-700 border-amber-200',
-		'high-risk': 'bg-orange-50 text-orange-700 border-orange-200',
-		failing: 'bg-red-50 text-red-700 border-red-200',
-		neutral: 'bg-slate-50 text-slate-700 border-slate-200'
+		strong: 'bg-emerald-500/5 text-emerald-800 border-emerald-500/20',
+		watch: 'bg-blue-500/5 text-blue-800 border-blue-500/20',
+		'needs-work': 'bg-amber-500/5 text-amber-800 border-amber-500/20',
+		'high-risk': 'bg-orange-500/5 text-orange-800 border-orange-500/20',
+		failing: 'bg-red-500/5 text-red-800 border-red-500/20',
+		neutral: 'bg-slate-500/5 text-slate-800 border-slate-500/20'
 	};
 </script>
 

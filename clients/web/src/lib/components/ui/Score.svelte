@@ -24,30 +24,103 @@
 	const band = $derived(rounded === null ? null : bandFor(rounded));
 
 	const numClass = $derived(
-		size === 'lg' ? 'text-5xl sm:text-6xl' : size === 'sm' ? 'text-2xl' : 'text-4xl'
+		size === 'lg' ? 'text-4xl sm:text-5xl font-bold' : size === 'sm' ? 'text-xl' : 'text-3xl'
 	);
 
-	const denomClass = $derived(size === 'lg' ? 'text-xl' : size === 'sm' ? 'text-sm' : 'text-base');
+	const denomClass = $derived(
+		size === 'lg' ? 'text-lg' : size === 'sm' ? 'text-[11px]' : 'text-sm'
+	);
+
+	// SVG Circular progress configurations
+	const radius = $derived(size === 'sm' ? 12 : size === 'md' ? 18 : 24);
+	const strokeWidth = $derived(size === 'sm' ? 2 : 3);
+	const viewBoxSize = $derived(radius * 2 + strokeWidth * 2 + 2);
+	const center = $derived(viewBoxSize / 2);
+	const circumference = $derived(2 * Math.PI * radius);
+	const strokeDashoffset = $derived(
+		rounded === null
+			? circumference
+			: circumference - (Math.min(100, Math.max(0, rounded)) / 100) * circumference
+	);
+
+	const strokeColorClass = $derived.by(() => {
+		if (!band) return 'stroke-slate-300';
+		switch (band.tone) {
+			case 'strong':
+				return 'stroke-emerald-500';
+			case 'watch':
+				return 'stroke-blue-500';
+			case 'needs-work':
+				return 'stroke-amber-500';
+			case 'high-risk':
+				return 'stroke-orange-500';
+			case 'failing':
+				return 'stroke-red-500';
+			default:
+				return 'stroke-slate-300';
+		}
+	});
 </script>
 
-<div class={cn('flex flex-col gap-1.5', className)} data-testid="score">
-	<div class="flex items-baseline gap-1.5">
-		<span
-			class={cn(
-				'text-ink-strong font-mono leading-none font-semibold tracking-tight tabular-nums',
-				numClass
-			)}
-			data-testid="score-number"
+<div class={cn('flex items-center gap-3.5', className)} data-testid="score">
+	<div class="relative flex shrink-0 items-center justify-center">
+		<svg
+			width={viewBoxSize}
+			height={viewBoxSize}
+			viewBox="0 0 {viewBoxSize} {viewBoxSize}"
+			class="rotate-[-90deg] transition-all duration-700 ease-out"
 		>
-			{#if rounded === null}
-				—
-			{:else}
-				{rounded}
+			<!-- Track circle -->
+			<circle
+				cx={center}
+				cy={center}
+				r={radius}
+				fill="none"
+				stroke="currentColor"
+				class="stroke-slate-100 dark:stroke-slate-800"
+				stroke-width={strokeWidth}
+			/>
+			<!-- Active circle -->
+			{#if rounded !== null}
+				<circle
+					cx={center}
+					cy={center}
+					r={radius}
+					fill="none"
+					class={strokeColorClass}
+					stroke-width={strokeWidth}
+					stroke-dasharray={circumference}
+					stroke-dashoffset={strokeDashoffset}
+					stroke-linecap="round"
+					style="transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);"
+				/>
 			{/if}
-		</span>
-		<span class={cn('text-ink-faint font-mono leading-none tabular-nums', denomClass)}> /100 </span>
+		</svg>
 	</div>
-	{#if showPill && band}
-		<StatusPill tone={band.tone} label={band.label} size={size === 'sm' ? 'sm' : 'md'} />
-	{/if}
+
+	<div class="flex flex-col gap-1">
+		<div class="flex items-baseline gap-0.5">
+			<span
+				class={cn('text-ink-strong font-mono leading-none tracking-tight tabular-nums', numClass)}
+				data-testid="score-number"
+			>
+				{#if rounded === null}
+					—
+				{:else}
+					{rounded}
+				{/if}
+			</span>
+			<span class={cn('text-ink-faint font-mono leading-none tabular-nums', denomClass)}>
+				/100
+			</span>
+		</div>
+		{#if showPill && band}
+			<StatusPill
+				tone={band.tone}
+				label={band.label}
+				size={size === 'sm' ? 'sm' : 'md'}
+				class="origin-left scale-[0.95]"
+			/>
+		{/if}
+	</div>
 </div>

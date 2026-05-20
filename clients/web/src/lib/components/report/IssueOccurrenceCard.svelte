@@ -93,8 +93,8 @@
 	rounded="lg"
 	class={cn(
 		'transition-all duration-300',
-		isHighlighted 
-			? 'border-accent bg-accent/5 ring-accent/30 ring-2 scale-[1.005] shadow-sm' 
+		isHighlighted
+			? 'border-accent bg-accent/5 ring-accent/30 scale-[1.005] shadow-sm ring-2'
 			: 'bg-surface-muted border-line hover:border-accent/25 hover:shadow-xs'
 	)}
 	data-occurrence-id={occurrence.elementId ?? undefined}
@@ -145,27 +145,34 @@
 			</button>
 		{/if}
 
-		<div class="min-w-0 flex flex-col justify-between">
+		<div class="flex min-w-0 flex-col justify-between">
 			<div>
 				{#if showDetails && occurrence.ancestorPath}
-					<p class="text-ink-faint mb-2 font-mono text-[10px] uppercase tracking-wider" title="Element location in DOM">
+					<p
+						class="text-ink-faint mb-2 font-mono text-[10px] tracking-wider uppercase"
+						title="Element location in DOM"
+					>
 						{occurrence.ancestorPath}
 					</p>
 				{/if}
 
 				{#if showDetails && occurrence.selector}
-					<div class="mb-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/50 p-2.5 shadow-inner">
-						<p class="text-ink-muted flex-1 font-mono text-xs break-all leading-normal">
+					<div
+						class="border-line bg-surface/50 mb-3 flex items-center justify-between gap-3 rounded-xl border p-2.5 shadow-inner"
+					>
+						<p class="text-ink-muted flex-1 font-mono text-xs leading-normal break-all">
 							{occurrence.selector}
 						</p>
 						<button
 							onclick={() => occurrence.selector && handleCopy(occurrence.selector, 'selector')}
-							class="text-ink-muted hover:text-accent flex items-center shrink-0 p-1.5 transition-colors"
+							class="text-ink-muted hover:text-accent flex shrink-0 items-center p-1.5 transition-colors"
 							aria-label="Copy selector"
 							title="Copy selector"
 						>
 							{#if copiedType === 'selector'}
-								<span class="text-emerald-600 font-extrabold text-[10px] animate-pulse">Copied!</span>
+								<span class="animate-pulse text-[10px] font-extrabold text-emerald-600"
+									>Copied!</span
+								>
 							{:else}
 								<Copy class="h-3.5 w-3.5" />
 							{/if}
@@ -181,11 +188,13 @@
 					{@const primaryFailure = extractPrimaryFailureDetail(occurrence.failureSummary)}
 					<p
 						class={cn(
-							'text-ink-muted mt-2 text-sm leading-relaxed border-l-2 border-line pl-3 py-0.5',
+							'text-ink-muted border-line mt-2 border-l-2 py-0.5 pl-3 text-sm leading-relaxed',
 							showDetails ? 'whitespace-pre-wrap' : 'line-clamp-3'
 						)}
 					>
-						{showDetails ? occurrence.failureSummary : (primaryFailure ?? occurrence.failureSummary)}
+						{showDetails
+							? occurrence.failureSummary
+							: (primaryFailure ?? occurrence.failureSummary)}
 					</p>
 				{:else if !showDetails && occurrence.textSnippet}
 					<p class="text-ink-muted mt-2 text-sm italic">"{occurrence.textSnippet}"</p>
@@ -197,10 +206,13 @@
 					<div class="mt-4">
 						<button
 							type="button"
-							onclick={() => isHtmlExpanded = !isHtmlExpanded}
+							onclick={() => (isHtmlExpanded = !isHtmlExpanded)}
 							class="text-ink-muted hover:text-accent flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase transition-colors"
 						>
-							<span class="inline-block transition-transform duration-200" class:rotate-90={isHtmlExpanded}>▶</span>
+							<span
+								class="inline-block transition-transform duration-200"
+								class:rotate-90={isHtmlExpanded}>▶</span
+							>
 							{occurrence.contextHtml ? 'HTML Context' : 'Element HTML'}
 						</button>
 						{#if isHtmlExpanded}
@@ -210,15 +222,14 @@
 									class="absolute top-2.5 right-2.5 z-10 flex items-center gap-1 rounded-lg border border-neutral-700/50 bg-neutral-900/80 px-2.5 py-1 text-[10px] font-bold text-neutral-300 backdrop-blur-md transition-all hover:bg-neutral-800"
 								>
 									{#if copiedType === 'html'}
-										<span class="text-emerald-400 font-extrabold animate-pulse">✓ Copied!</span>
+										<span class="animate-pulse font-extrabold text-emerald-400">✓ Copied!</span>
 									{:else}
 										<Copy class="h-3 w-3" />
 										Copy
 									{/if}
 								</button>
 								<pre
-									class="max-h-64 overflow-x-auto overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 p-3.5 font-mono text-xs text-neutral-200 shadow-inner"
-								>{htmlContent}</pre>
+									class="max-h-64 overflow-x-auto overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 p-3.5 font-mono text-xs text-neutral-200 shadow-inner">{htmlContent}</pre>
 								{#if occurrence.contextHtml}
 									<p class="text-ink-faint mt-1.5 text-[10px] italic">
 										Context: target element displayed with immediate DOM siblings and parent nodes.
@@ -231,7 +242,7 @@
 			</div>
 
 			{#if showDetails}
-				<div class="mt-4 flex flex-wrap items-center gap-3 border-t border-line/45 pt-3">
+				<div class="border-line/45 mt-4 flex flex-wrap items-center gap-3 border-t pt-3">
 					<button
 						onclick={() => {
 							const snippet = getOccurrenceSnippet();
@@ -242,7 +253,7 @@
 					>
 						<Copy class="h-3.5 w-3.5" />
 						{#if copiedType === 'details'}
-							<span class="text-emerald-600 font-bold">Details copied!</span>
+							<span class="font-bold text-emerald-600">Details copied!</span>
 						{:else}
 							Copy details
 						{/if}
@@ -258,7 +269,7 @@
 						>
 							<Copy class="h-3.5 w-3.5" />
 							{#if copiedType === 'fix'}
-								<span class="text-emerald-600 font-bold">Fix copied!</span>
+								<span class="font-bold text-emerald-600">Fix copied!</span>
 							{:else}
 								Copy fix
 							{/if}

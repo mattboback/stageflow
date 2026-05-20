@@ -46,7 +46,8 @@
 			impact: 'Critical',
 			selector: 'button.btn-secondary',
 			code: '<button class="bg-[#a5e] text-white">Subscribe</button>',
-			remediation: 'Increase contrast ratio to at least 4.5:1 by darkening the background color to HSL(267, 75%, 35%).'
+			remediation:
+				'Increase contrast ratio to at least 4.5:1 by darkening the background color to HSL(267, 75%, 35%).'
 		},
 		{
 			id: 2,
@@ -54,7 +55,8 @@
 			impact: 'Serious',
 			selector: 'input#newsletter-email',
 			code: '<input type="email" id="newsletter-email" placeholder="Enter email" />',
-			remediation: 'Wrap input with a descriptive label or add a matching label element with the attribute for="newsletter-email".'
+			remediation:
+				'Wrap input with a descriptive label or add a matching label element with the attribute for="newsletter-email".'
 		},
 		{
 			id: 3,
@@ -62,15 +64,34 @@
 			impact: 'Moderate',
 			selector: 'HTTP Response Headers',
 			code: 'Header missing: Strict-Transport-Security',
-			remediation: 'Configure your web server to append "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" response header.'
+			remediation:
+				'Configure your web server to append "Strict-Transport-Security: max-age=63072000; includeSubDomains; preload" response header.'
 		}
 	] as const;
 
 	const mockPages = [
 		{ path: '/', label: 'Landing Page', issues: 0, score: 100, loadTime: '0.4s' },
-		{ path: '/playground', label: 'Playground Configuration', issues: 11, score: 82, loadTime: '0.9s' },
-		{ path: '/scan/status', label: 'Real-time Progress Tracker', issues: 6, score: 88, loadTime: '0.7s' },
-		{ path: '/report/staging', label: 'Audited Report Summary', issues: 8, score: 94, loadTime: '0.5s' }
+		{
+			path: '/playground',
+			label: 'Playground Configuration',
+			issues: 11,
+			score: 82,
+			loadTime: '0.9s'
+		},
+		{
+			path: '/scan/status',
+			label: 'Real-time Progress Tracker',
+			issues: 6,
+			score: 88,
+			loadTime: '0.7s'
+		},
+		{
+			path: '/report/staging',
+			label: 'Audited Report Summary',
+			issues: 8,
+			score: 94,
+			loadTime: '0.5s'
+		}
 	] as const;
 </script>
 
@@ -144,7 +165,10 @@
 									<div class="nf-cat-row">
 										<span class="nf-cat-label">{cat.label}</span>
 										<div class="nf-cat-track">
-											<div class="nf-cat-fill" style="width:{cat.score}%; background:{cat.color}"></div>
+											<div
+												class="nf-cat-fill"
+												style="width:{cat.score}%; background:{cat.color}"
+											></div>
 										</div>
 										<span class="nf-cat-num">{cat.score}</span>
 									</div>
@@ -180,13 +204,16 @@
 					<div class="nf-bottom-panel">
 						<div class="nf-panel-toprow">
 							<span class="nf-panel-title">Findings</span>
-							<button type="button" class="nf-see-all-btn" onclick={() => activeTab = 'Issues'}>View details →</button>
+							<button type="button" class="nf-see-all-btn" onclick={() => (activeTab = 'Issues')}
+								>View details →</button
+							>
 						</div>
 						<div class="nf-findings">
 							{#each findings as f (f.label)}
 								<div class="nf-finding-row">
 									<div class="nf-finding-avatar" style="background:{f.bg}">
-										<span style="color:{f.color}; font-size:9px; font-weight:800">{f.label[0]}</span>
+										<span style="color:{f.color}; font-size:9px; font-weight:800">{f.label[0]}</span
+										>
 									</div>
 									<span class="nf-finding-label">{f.label}</span>
 									<span class="nf-finding-count" style="color:{f.color}">{f.count} found</span>
@@ -200,7 +227,8 @@
 					<div class="nf-bottom-panel nf-cta-card">
 						<p class="nf-cta-title">One run. All scanners.</p>
 						<p class="nf-cta-desc">
-							No account required. Accessibility, performance, SEO, and security in one execution path.
+							No account required. Accessibility, performance, SEO, and security in one execution
+							path.
 						</p>
 						<a href="/playground" class="nf-cta-btn">Start scanning →</a>
 					</div>
@@ -252,7 +280,7 @@
 							type="button"
 							class="nf-interactive-issue-row"
 							class:nf-issue-expanded={expandedIssueIdx === idx}
-							onclick={() => expandedIssueIdx = expandedIssueIdx === idx ? null : idx}
+							onclick={() => (expandedIssueIdx = expandedIssueIdx === idx ? null : idx)}
 						>
 							<div class="nf-issue-meta">
 								<span
@@ -266,7 +294,7 @@
 								<span class="nf-issue-selector-pill">{issue.selector}</span>
 							</div>
 							<p class="nf-interactive-issue-title">{issue.title}</p>
-							
+
 							{#if expandedIssueIdx === idx}
 								<div class="nf-issue-drawer" in:fade={{ duration: 100 }}>
 									<p class="nf-drawer-heading">HTML Evidence</p>
@@ -302,7 +330,10 @@
 							<div class="nf-page-metrics">
 								<div class="nf-page-metric">
 									<span class="nf-metric-label">Score</span>
-									<span class="nf-metric-value" style="color: {p.score > 90 ? '#10b981' : '#f59e0b'}">{p.score}</span>
+									<span
+										class="nf-metric-value"
+										style="color: {p.score > 90 ? '#10b981' : '#f59e0b'}">{p.score}</span
+									>
 								</div>
 								<div class="nf-page-metric">
 									<span class="nf-metric-label">Audited</span>

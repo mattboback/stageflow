@@ -282,7 +282,9 @@
 
 	.workflow-step:hover {
 		border-color: var(--color-accent);
-		box-shadow: 0 12px 30px rgba(13, 92, 99, 0.08), 0 4px 12px rgba(0, 0, 0, 0.02);
+		box-shadow:
+			0 12px 30px rgba(13, 92, 99, 0.08),
+			0 4px 12px rgba(0, 0, 0, 0.02);
 	}
 
 	.workflow-index {
@@ -373,7 +375,9 @@
 	}
 	.scanner-card:hover {
 		border-top-color: var(--brand-color) !important;
-		box-shadow: 0 12px 32px var(--glow-color), 0 4px 12px rgba(0, 0, 0, 0.02);
+		box-shadow:
+			0 12px 32px var(--glow-color),
+			0 4px 12px rgba(0, 0, 0, 0.02);
 	}
 	.scanner-card::after {
 		content: '';

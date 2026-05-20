@@ -158,7 +158,7 @@
 </script>
 
 {#snippet summaryCard(title: string, value: number | string, tone?: 'warn' | 'danger' | null)}
-	<Panel class="ring-line/70 shadow-sm ring-1" padding="sm" rounded="2xl">
+	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
 		<div class="flex min-h-24 flex-col justify-between gap-2">
 			<p class="text-ink-faint text-xs font-semibold tracking-wide uppercase">{title}</p>
 			<p
@@ -289,7 +289,7 @@
 
 	<Panel
 		class="border-line/70 from-surface via-surface to-accent-soft/20 relative overflow-hidden border bg-gradient-to-br shadow-sm"
-		padding="md"
+		padding="lg"
 		rounded="2xl"
 	>
 		<div
@@ -297,7 +297,13 @@
 		></div>
 		<div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 			<div>
-				<p class="text-ink-faint text-xs font-semibold tracking-[0.12em] uppercase">
+				<p
+					class="text-ink-faint flex items-center text-xs font-semibold tracking-[0.12em] uppercase"
+				>
+					<span
+						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+						>01</span
+					>
 					Risk snapshot
 				</p>
 				<div class="mt-2 flex flex-wrap items-center gap-2">
@@ -367,10 +373,16 @@
 		</Panel>
 	{/if}
 
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr,0.86fr]">
 		<Panel class="ring-line/70 min-w-0 shadow-sm ring-1" padding="none" rounded="2xl">
 			<div class="border-line border-b p-4">
-				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Scanner Status</h3>
+				<h3 class="text-ink flex items-center text-base leading-none font-semibold tracking-tight">
+					<span
+						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+						>02</span
+					>
+					Scanner Status
+				</h3>
 			</div>
 			<div class="p-4">
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -384,7 +396,15 @@
 		<div class="space-y-4">
 			<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
 				<div class="border-line border-b p-4">
-					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Top Pages</h3>
+					<h3
+						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
+					>
+						<span
+							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+							>03</span
+						>
+						Top Pages
+					</h3>
 				</div>
 				{#each topPages as page (page.id)}
 					<button
@@ -394,14 +414,20 @@
 						<span class="text-ink truncate font-medium">
 							{page.path ?? page.url}
 						</span>
-						<span class="text-ink-muted text-xs">{page.issueCount} issues</span>
+						<span class="text-ink-muted font-mono text-xs">{page.issueCount} issues</span>
 					</button>
 				{/each}
 			</Panel>
 
 			<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
 				<div class="border-line border-b p-4">
-					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
+					<h3
+						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
+					>
+						<span
+							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+							>04</span
+						>
 						Top Issue Rules
 					</h3>
 				</div>
@@ -412,7 +438,7 @@
 							class="hover:bg-surface-muted flex w-full flex-col gap-1 px-4 py-3 text-left text-sm transition"
 						>
 							<span class="text-ink font-medium">{rule.title}</span>
-							<span class="text-ink-muted text-xs">
+							<span class="text-ink-muted font-mono text-xs">
 								{rule.scanner} · {rule.count} occurrences
 							</span>
 						</button>
@@ -422,7 +448,13 @@
 
 			<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
 				<div class="border-line border-b p-4">
-					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
+					<h3
+						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
+					>
+						<span
+							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+							>05</span
+						>
 						Coverage Heat
 					</h3>
 				</div>
