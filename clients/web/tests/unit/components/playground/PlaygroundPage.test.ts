@@ -69,7 +69,7 @@ describe('PlaygroundPage', () => {
 
 		expect(screen.getByText('Configure Scan')).toBeInTheDocument();
 		expect(await screen.findByText('No scanners available')).toBeInTheDocument();
-		expect(screen.getByText('Start Scan')).toBeInTheDocument();
+		expect(screen.getAllByText('Start Scan')[0]).toBeInTheDocument();
 		expect(screen.getByText('What happens next')).toBeInTheDocument();
 		expect(screen.getByText(/live scan status/i)).toBeInTheDocument();
 	});
@@ -120,7 +120,7 @@ describe('PlaygroundPage', () => {
 
 		const textarea = expectTextarea(await screen.findByLabelText('URLs to Scan'));
 		await user.type(textarea, 'example.com');
-		await user.click(screen.getByRole('button', { name: 'Start Scan' }));
+		await user.click(screen.getAllByRole('button', { name: 'Start Scan' })[0]);
 
 		await waitFor(() => {
 			expect(mockSubmitScanJob).toHaveBeenCalledWith(

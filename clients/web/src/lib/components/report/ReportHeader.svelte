@@ -61,11 +61,7 @@
 	const band = $derived(scoreBandFor(score));
 </script>
 
-<Panel
-	class="border-line/70 from-surface via-accent-mist/40 to-accent-subtle/20 mb-6 border bg-gradient-to-br shadow-sm"
-	padding="md"
-	rounded="2xl"
->
+<Panel class="border-line/60 bg-surface mb-6 border shadow-xs" padding="lg" rounded="2xl">
 	<div class="flex flex-col gap-4">
 		<!-- Top row: title + actions -->
 		<div class="flex flex-wrap items-start justify-between gap-3">

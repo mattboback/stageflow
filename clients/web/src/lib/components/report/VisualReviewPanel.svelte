@@ -127,21 +127,21 @@
 		if (!focusedElement || !cameraFocusLock) {
 			return `0 0 ${pageWidth} ${pageHeight}`;
 		}
-		
+
 		// Add relative magnification padding
 		const padX = Math.max(280, focusedElement.width * 2.2);
 		const padY = Math.max(200, focusedElement.height * 2.2);
-		
+
 		// Center alignment target
 		const targetX = focusedElement.x + focusedElement.width / 2 - padX / 2;
 		const targetY = focusedElement.y + focusedElement.height / 2 - padY / 2;
-		
+
 		// Bounds clamp
 		const x = Math.max(0, Math.min(pageWidth - padX, targetX));
 		const y = Math.max(0, Math.min(pageHeight - padY, targetY));
 		const w = Math.min(pageWidth, padX);
 		const h = Math.min(pageHeight, padY);
-		
+
 		return `${x} ${y} ${w} ${h}`;
 	});
 
@@ -225,7 +225,7 @@
 					class={cn(
 						'flex flex-col items-start rounded-xl px-3.5 py-2 text-left text-xs font-semibold whitespace-nowrap transition-all duration-200',
 						selectedPage?.id === p.id
-							? 'bg-ink text-surface shadow-xs scale-102'
+							? 'bg-ink text-surface scale-102 shadow-xs'
 							: 'text-ink-muted hover:bg-surface-muted hover:text-ink'
 					)}
 					title={p.url}
@@ -245,7 +245,7 @@
 	<button
 		type="button"
 		onclick={() => window.print()}
-		class="border-line text-ink hover:border-accent hover:text-accent inline-flex shrink-0 items-center gap-2 rounded-xl border bg-surface px-4 py-2 text-sm font-semibold transition-all shadow-xs hover:scale-102"
+		class="border-line text-ink hover:border-accent hover:text-accent bg-surface inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-xs transition-all hover:scale-102"
 	>
 		<Printer class="h-4 w-4" />
 		Print / Save PDF
@@ -255,9 +255,11 @@
 <!-- ── Two-column layout ──────────────────────────────────────────────────── -->
 <div class="items-start gap-4 lg:grid lg:grid-cols-[1fr,380px] print:hidden">
 	<!-- LEFT: Screenshot + overlay -->
-	<Panel class="overflow-hidden shadow-sm border border-line" padding="none" rounded="2xl">
+	<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
 		<!-- Controls bar -->
-		<div class="border-line flex flex-wrap items-center gap-2 border-b bg-surface-muted/50 px-4 py-2.5">
+		<div
+			class="border-line bg-surface-muted/50 flex flex-wrap items-center gap-2 border-b px-4 py-2.5"
+		>
 			<!-- Severity filter toggles -->
 			<div class="flex flex-wrap items-center gap-1.5">
 				{#each Object.entries(severityFilters) as [key, enabled] (key)}
@@ -281,7 +283,7 @@
 				<!-- Auto Lens Focus Target Toggle -->
 				<button
 					type="button"
-					onclick={() => cameraFocusLock = !cameraFocusLock}
+					onclick={() => (cameraFocusLock = !cameraFocusLock)}
 					class={cn(
 						'flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200',
 						cameraFocusLock
@@ -291,10 +293,10 @@
 					title="Auto Lens Target Zoom"
 				>
 					<Target class="h-3.5 w-3.5" />
-					<span class="text-[10px] uppercase font-bold tracking-wide">Lens Lock</span>
+					<span class="text-[10px] font-bold tracking-wide uppercase">Lens Lock</span>
 				</button>
 
-				<div class="h-4 w-[1px] bg-line/80 mx-0.5"></div>
+				<div class="bg-line/80 mx-0.5 h-4 w-[1px]"></div>
 
 				<button
 					type="button"
@@ -304,7 +306,9 @@
 				>
 					<ZoomOut class="h-3.5 w-3.5" />
 				</button>
-				<span class="text-ink-muted min-w-[2.5rem] text-center text-xs font-mono font-bold tabular-nums">
+				<span
+					class="text-ink-muted min-w-[2.5rem] text-center font-mono text-xs font-bold tabular-nums"
+				>
 					{Math.round(zoom * 100)}%
 				</span>
 				<button
@@ -389,16 +393,22 @@
 		{:else}
 			<!-- Screenshot available but no overlay dimensions — show image only -->
 			<div class="overflow-auto bg-neutral-900" style="max-height: 72vh">
-				<img src={overviewUrl} alt="Page screenshot" class="block w-full shadow-2xl" loading="lazy" />
+				<img
+					src={overviewUrl}
+					alt="Page screenshot"
+					class="block w-full shadow-2xl"
+					loading="lazy"
+				/>
 			</div>
 		{/if}
 
 		<!-- Footer hint -->
 		{#if overlayElements.length > 0}
-			<div class="border-line border-t bg-surface-muted/30 px-4 py-2 flex items-center gap-1.5">
-				<Focus class="h-3.5 w-3.5 text-accent animate-pulse" />
+			<div class="border-line bg-surface-muted/30 flex items-center gap-1.5 border-t px-4 py-2">
+				<Focus class="text-accent h-3.5 w-3.5 animate-pulse" />
 				<p class="text-ink-faint text-xs font-medium">
-					{overlayElements.length} element{overlayElements.length !== 1 ? 's' : ''} targetable · select a marker box to target camera lens
+					{overlayElements.length} element{overlayElements.length !== 1 ? 's' : ''} targetable · select
+					a marker box to target camera lens
 				</p>
 			</div>
 		{/if}
@@ -406,10 +416,10 @@
 
 	<!-- RIGHT: Issues list -->
 	<div>
-		<Panel class="overflow-hidden shadow-sm border border-line" padding="none" rounded="2xl">
+		<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
 			<!-- Header -->
-			<div class="border-line border-b bg-surface-muted/20 px-4 py-3">
-				<h3 class="text-ink text-sm font-semibold truncate" title={selectedPage?.url}>
+			<div class="border-line bg-surface-muted/20 border-b px-4 py-3">
+				<h3 class="text-ink truncate text-sm font-semibold" title={selectedPage?.url}>
 					{selectedPage?.path ?? selectedPage?.url ?? 'Page issues'}
 				</h3>
 				<p class="text-ink-muted mt-0.5 text-xs font-medium">
@@ -418,7 +428,7 @@
 						·
 						<button
 							type="button"
-							class="text-accent hover:underline font-bold"
+							class="text-accent font-bold hover:underline"
 							onclick={() => (activeIssueId = null)}
 						>
 							Clear selection
@@ -430,11 +440,13 @@
 			<!-- Issue list -->
 			<div
 				bind:this={rightPanelRef}
-				class="divide-y divide-line overflow-y-auto"
+				class="divide-line divide-y overflow-y-auto"
 				style="max-height: calc(72vh - 3.5rem)"
 			>
 				{#if pageIssues.length === 0}
-					<div class="text-ink-muted p-10 text-center text-sm italic">No issues detected on this page.</div>
+					<div class="text-ink-muted p-10 text-center text-sm italic">
+						No issues detected on this page.
+					</div>
 				{:else}
 					{#each pageIssues as issue (issue.id)}
 						{@const isActive = activeIssueId === issue.id}
@@ -444,10 +456,10 @@
 							<div
 								data-issue-id={issue.id}
 								class={cn(
-									'flex cursor-pointer items-start gap-2.5 px-4 py-3.5 pr-10 border-l-4 transition-all duration-200',
+									'flex cursor-pointer items-start gap-2.5 border-l-4 px-4 py-3.5 pr-10 transition-all duration-200',
 									isActive
-										? 'bg-accent/5 border-accent shadow-xs scale-[1.002]'
-										: 'border-transparent hover:bg-surface-muted/60'
+										? 'bg-accent/5 border-accent scale-[1.002] shadow-xs'
+										: 'hover:bg-surface-muted/60 border-transparent'
 								)}
 								role="button"
 								tabindex="0"
@@ -467,8 +479,7 @@
 										getSeverityContainerClass(issue.severity)
 									)}
 								>
-									<span
-										class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
+									<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
 									></span>
 									{issue.severity}
 								</span>
@@ -486,7 +497,9 @@
 										{/if}
 									</p>
 									{#if isActive}
-										<p class="text-accent mt-1.5 text-[10px] font-bold tracking-wide uppercase animate-pulse">
+										<p
+											class="text-accent mt-1.5 animate-pulse text-[10px] font-bold tracking-wide uppercase"
+										>
 											Click again to inspect occurrence evidence
 										</p>
 									{/if}
@@ -513,7 +526,9 @@
 		</Panel>
 
 		{#if activeIssueId && issuesWithMarkers.has(activeIssueId)}
-			<p class="text-ink-muted mt-2 text-center text-xs font-semibold tracking-wide uppercase text-accent/80">
+			<p
+				class="text-ink-muted text-accent/80 mt-2 text-center text-xs font-semibold tracking-wide uppercase"
+			>
 				← Focal coordinates locked on active occurrence
 			</p>
 		{/if}

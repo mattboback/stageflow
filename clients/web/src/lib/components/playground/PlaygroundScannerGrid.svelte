@@ -29,10 +29,10 @@
 
 	// Brand-specific color specs for premium glows and icons
 	const BRAND_COLORS: Record<string, { rgb: string; color: string; bg: string }> = {
-		'axe': { rgb: '13,92,99', color: '#0d5c63', bg: '#e6f4f4' },
-		'lighthouse': { rgb: '245,158,11', color: '#f59e0b', bg: '#fffbeb' },
+		axe: { rgb: '13,92,99', color: '#0d5c63', bg: '#e6f4f4' },
+		lighthouse: { rgb: '245,158,11', color: '#f59e0b', bg: '#fffbeb' },
 		'security-headers': { rgb: '139,92,246', color: '#8b5cf6', bg: '#f5f3ff' },
-		'seo': { rgb: '244,63,94', color: '#f43f5e', bg: '#fff1f2' },
+		seo: { rgb: '244,63,94', color: '#f43f5e', bg: '#fff1f2' },
 		'link-checker': { rgb: '16,185,129', color: '#10b981', bg: '#f0fdf4' },
 		'ai-navigator': { rgb: '217,70,239', color: '#d946ef', bg: '#fdf4ff' },
 		'open-graph': { rgb: '6,182,212', color: '#06b6d4', bg: '#ecfeff' },
@@ -110,7 +110,10 @@
 							<span
 								class="bg-surface text-ink-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
 							>
-								<span class="inline-block w-1.5 h-1.5 rounded-full mr-0.5" style="background-color: {brand.color}"></span>
+								<span
+									class="mr-0.5 inline-block h-1.5 w-1.5 rounded-full"
+									style="background-color: {brand.color}"
+								></span>
 								<MiniIcon class="h-2.5 w-2.5" />
 								{meta.label}
 							</span>
@@ -140,7 +143,11 @@
 						label: scanner.id.replace(/-/g, ' '),
 						description: 'Run scan checks'
 					}}
-					{@const brand = BRAND_COLORS[scanner.id] || { rgb: '13,92,99', color: '#0d5c63', bg: '#e6f4f4' }}
+					{@const brand = BRAND_COLORS[scanner.id] || {
+						rgb: '13,92,99',
+						color: '#0d5c63',
+						bg: '#e6f4f4'
+					}}
 					{@const Icon = meta.icon}
 					<button
 						type="button"
@@ -150,17 +157,21 @@
 							'scanner-grid-card group relative flex items-start gap-3 rounded-2xl border p-4 text-left transition-[all] duration-300',
 							'focus-visible:ring-accent focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 							scanner.enabled
-								? 'bg-surface border-transparent scale-[1.01] -translate-y-0.5'
+								? 'bg-surface -translate-y-0.5 scale-[1.01] border-transparent'
 								: 'border-line bg-surface hover:border-accent/30 hover:bg-surface-muted hover:-translate-y-0.5 hover:shadow-sm'
 						)}
-						style={scanner.enabled ? `box-shadow: 0 10px 25px -5px rgba(${brand.rgb}, 0.12), 0 8px 10px -6px rgba(${brand.rgb}, 0.12), 0 0 0 1px rgba(${brand.rgb}, 0.35); border-color: rgba(${brand.rgb}, 0.4);` : ''}
+						style={scanner.enabled
+							? `box-shadow: 0 10px 25px -5px rgba(${brand.rgb}, 0.12), 0 8px 10px -6px rgba(${brand.rgb}, 0.12), 0 0 0 1px rgba(${brand.rgb}, 0.35); border-color: rgba(${brand.rgb}, 0.4);`
+							: ''}
 					>
 						<div
 							class={cn(
 								'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-300 group-hover:scale-105',
 								scanner.enabled ? 'text-white' : 'bg-surface-muted text-ink-muted'
 							)}
-							style={scanner.enabled ? `background-color: ${brand.color}; box-shadow: 0 4px 12px rgba(${brand.rgb}, 0.35);` : ''}
+							style={scanner.enabled
+								? `background-color: ${brand.color}; box-shadow: 0 4px 12px rgba(${brand.rgb}, 0.35);`
+								: ''}
 						>
 							<Icon class="h-5 w-5" />
 						</div>
@@ -183,7 +194,9 @@
 								'absolute top-3 right-3 flex h-5 w-5 items-center justify-center rounded-full border transition-[background-color,border-color,color] duration-200',
 								scanner.enabled ? 'border-accent bg-accent text-white' : 'border-line bg-surface'
 							)}
-							style={scanner.enabled ? `background-color: ${brand.color}; border-color: ${brand.color};` : ''}
+							style={scanner.enabled
+								? `background-color: ${brand.color}; border-color: ${brand.color};`
+								: ''}
 						>
 							{#if scanner.enabled}
 								{@render checkMarkSvg()}

@@ -188,16 +188,26 @@
 	<!-- Hero Section -->
 	<section class="landing-hero relative overflow-hidden pt-24 pb-8 sm:pt-28 lg:pt-32">
 		<!-- Cybernetic Backdrop Auroras -->
-		<div class="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-radial from-accent/15 to-transparent blur-3xl pointer-events-none z-0"></div>
-		<div class="absolute top-20 right-[-10%] w-[500px] h-[500px] rounded-full bg-radial from-blue-500/10 to-transparent blur-3xl pointer-events-none z-0"></div>
-		<div class="absolute bottom-[-10%] left-[30%] w-[450px] h-[450px] rounded-full bg-radial from-fuchsia-500/8 to-transparent blur-3xl pointer-events-none z-0"></div>
+		<div
+			class="from-accent/15 pointer-events-none absolute -top-40 -left-40 z-0 h-96 w-96 rounded-full bg-radial to-transparent blur-3xl"
+		></div>
+		<div
+			class="pointer-events-none absolute top-20 right-[-10%] z-0 h-[500px] w-[500px] rounded-full bg-radial from-blue-500/10 to-transparent blur-3xl"
+		></div>
+		<div
+			class="pointer-events-none absolute bottom-[-10%] left-[30%] z-0 h-[450px] w-[450px] rounded-full bg-radial from-fuchsia-500/8 to-transparent blur-3xl"
+		></div>
 
 		<div class="container-width relative z-10">
 			<!-- Centered headline + CTAs -->
 			<div class="mx-auto max-w-3xl text-center">
 				<div class="mb-5 flex flex-wrap items-center justify-center gap-3">
 					<p class="section-kicker">Open-Source Scanning Platform</p>
-					<Chip tone="muted" size="sm" class="landing-chip gap-1.5 hover:bg-surface-muted/85 transition-colors cursor-pointer">
+					<Chip
+						tone="muted"
+						size="sm"
+						class="landing-chip hover:bg-surface-muted/85 cursor-pointer gap-1.5 transition-colors"
+					>
 						<GithubIcon class="h-3.5 w-3.5" />
 						Open Source
 					</Chip>
@@ -216,7 +226,10 @@
 				<div class="mt-7 flex flex-wrap justify-center gap-3">
 					<a
 						href="/playground"
-						class={cn(buttonVariants({ variant: 'default', size: 'lg' }), 'gap-2 px-7 text-base transition-transform hover:scale-102 hover:shadow-[0_0_15px_rgba(13,92,99,0.15)]')}
+						class={cn(
+							buttonVariants({ variant: 'default', size: 'lg' }),
+							'gap-2 px-7 text-base transition-transform hover:scale-102 hover:shadow-[0_0_15px_rgba(13,92,99,0.15)]'
+						)}
 					>
 						Start scanning
 						<ArrowRight class="h-4 w-4" />
@@ -225,7 +238,10 @@
 						href={SITE.githubUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'gap-2 px-7 text-base transition-transform hover:scale-102')}
+						class={cn(
+							buttonVariants({ variant: 'outline', size: 'lg' }),
+							'gap-2 px-7 text-base transition-transform hover:scale-102'
+						)}
 					>
 						<GithubIcon class="h-4 w-4" />
 						View source
@@ -270,8 +286,8 @@
 			<div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
 				{#each scanners as scanner, index (scanner.name)}
 					{@const ScannerIcon = scanner.icon}
-					<article 
-						class="editorial-card scanner-card group relative overflow-hidden rounded-2xl border border-line bg-surface p-6 transition-all duration-300 hover:-translate-y-1 hover:scale-102"
+					<article
+						class="editorial-card scanner-card group border-line bg-surface relative overflow-hidden rounded-2xl border p-6 transition-all duration-300 hover:-translate-y-1 hover:scale-102"
 						style="--glow-color: {scanner.glow}; --brand-color: {scanner.brand}; border-top-width: 4px;"
 					>
 						<div class="mb-4 flex items-start justify-between gap-4">
@@ -281,7 +297,9 @@
 									scanner.bg
 								)}
 							>
-								<ScannerIcon class={cn('h-5.5 w-5.5 transition-colors duration-300', scanner.color)} />
+								<ScannerIcon
+									class={cn('h-5.5 w-5.5 transition-colors duration-300', scanner.color)}
+								/>
 							</div>
 							<span
 								class={cn(
@@ -316,10 +334,10 @@
 			<div class="relative mt-12 grid gap-5 lg:grid-cols-3">
 				<div class="workflow-line"></div>
 				{#each workflowSteps as item (item.step)}
-					<article class="workflow-step group hover:-translate-y-1 transition-all duration-300">
+					<article class="workflow-step group transition-all duration-300 hover:-translate-y-1">
 						<div class="mb-5 flex items-center gap-2">
 							<span
-								class="bg-accent/10 text-accent inline-flex h-7 w-7 items-center justify-center rounded-lg font-mono text-xs font-semibold group-hover:bg-accent group-hover:text-surface transition-all duration-300"
+								class="bg-accent/10 text-accent group-hover:bg-accent group-hover:text-surface inline-flex h-7 w-7 items-center justify-center rounded-lg font-mono text-xs font-semibold transition-all duration-300"
 								>{item.step}</span
 							>
 							<div class="bg-line h-px flex-1 opacity-60"></div>
@@ -349,7 +367,7 @@
 				</div>
 				<div class="grid gap-4">
 					{#each differentiators as item (item.title)}
-						<article class="editorial-card p-6 hover:-translate-y-0.5 transition-all duration-300">
+						<article class="editorial-card p-6 transition-all duration-300 hover:-translate-y-0.5">
 							<div class="flex gap-4">
 								<div
 									class="bg-accent/12 text-accent mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105"
@@ -375,10 +393,16 @@
 	<!-- CTA Section -->
 	<section class="pt-16 pb-24">
 		<div class="container-width">
-			<div class="cta-panel mx-auto max-w-4xl relative overflow-hidden rounded-3xl px-8 py-14 text-center sm:px-12 border border-accent/20 shadow-2xl">
+			<div
+				class="cta-panel border-accent/20 relative mx-auto max-w-4xl overflow-hidden rounded-3xl border px-8 py-14 text-center shadow-2xl sm:px-12"
+			>
 				<!-- Custom CTA Backdrop Auroras -->
-				<div class="absolute -top-32 -right-32 w-80 h-80 rounded-full bg-radial from-accent/35 to-transparent blur-3xl pointer-events-none"></div>
-				<div class="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-radial from-fuchsia-500/20 to-transparent blur-3xl pointer-events-none"></div>
+				<div
+					class="from-accent/35 pointer-events-none absolute -top-32 -right-32 h-80 w-80 rounded-full bg-radial to-transparent blur-3xl"
+				></div>
+				<div
+					class="pointer-events-none absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-radial from-fuchsia-500/20 to-transparent blur-3xl"
+				></div>
 
 				<div class="relative z-10">
 					<p class="section-kicker text-accent-subtle mb-3">Ready to scan</p>

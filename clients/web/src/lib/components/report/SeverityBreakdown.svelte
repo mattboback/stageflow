@@ -58,15 +58,17 @@
 			{#if item.count > 0}
 				<Chip class="transition-all duration-300 hover:scale-105">
 					<span class={cn('mr-2 inline-block h-2 w-2 rounded-full', item.class)}></span>
-					<span class="font-bold mr-1">{item.count}</span>
+					<span class="mr-1 font-bold">{item.count}</span>
 					<span class="text-ink-muted">{item.label.toLowerCase()}</span>
 				</Chip>
 			{/if}
 		{/each}
 	</div>
 	{#if total > 0}
-		<div class="bg-surface-muted flex h-2.5 w-full overflow-hidden rounded-full border border-line/30 shadow-inner">
-			{#each severityItems.filter(i => i.count > 0) as item, index (item.id)}
+		<div
+			class="bg-surface-muted border-line/30 flex h-2.5 w-full overflow-hidden rounded-full border shadow-inner"
+		>
+			{#each severityItems.filter((i) => i.count > 0) as item, index (item.id)}
 				<div
 					class={cn(item.class, 'animate-grow h-full first:rounded-l-full last:rounded-r-full')}
 					style={`width: ${(item.count / total) * 100}%; animation-delay: ${index * 80}ms;`}

@@ -189,7 +189,7 @@
 			<span class="text-ink-muted text-xs">scanner{enabledScannerCount === 1 ? '' : 's'}</span>
 		</div>
 		{#if !canSubmit && missingRequirements.length > 0}
-			<span class="text-amber-600 text-xs font-medium">
+			<span class="text-xs font-medium text-amber-600">
 				{missingRequirements.length} step{missingRequirements.length === 1 ? '' : 's'} left
 			</span>
 		{/if}
@@ -197,7 +197,10 @@
 	<Button
 		variant="glow"
 		size="lg"
-		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold transition-all duration-300 {canSubmit && !isSubmitting ? 'animate-concentric' : ''}"
+		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold transition-all duration-300 {canSubmit &&
+		!isSubmitting
+			? 'animate-concentric'
+			: ''}"
 		disabled={!canSubmit}
 		onclick={handleSubmit}
 	>
@@ -401,7 +404,10 @@
 						<Button
 							variant="glow"
 							size="lg"
-							class="h-11 w-full gap-2 rounded-xl text-sm font-semibold transition-all duration-300 {canSubmit && !isSubmitting ? 'animate-concentric' : ''}"
+							class="h-11 w-full gap-2 rounded-xl text-sm font-semibold transition-all duration-300 {canSubmit &&
+							!isSubmitting
+								? 'animate-concentric'
+								: ''}"
 							disabled={!canSubmit}
 							onclick={handleSubmit}
 						>
@@ -450,4 +456,3 @@
 		animation: concentric-pulse 2s infinite !important;
 	}
 </style>
-
