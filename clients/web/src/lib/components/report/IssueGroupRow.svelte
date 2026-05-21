@@ -103,6 +103,7 @@
 					{screenshots}
 					showScreenshot={showPreviews}
 					isSelected={selectedIssueId === issue.id}
+					inGroup={true}
 					onclick={() => onIssueSelect(issue)}
 				/>
 			{/each}
