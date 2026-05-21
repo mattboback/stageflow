@@ -137,8 +137,32 @@ describe('IssueDetailModal', () => {
 		expect(getByText('On the page')).toBeInTheDocument();
 	});
 
-	it('hides occurrence thumbnails when page overview is visible', async () => {
+	it('shows occurrence thumbnails when page overview is visible', async () => {
 		const user = userEvent.setup();
+		const testPage = {
+			...page,
+			pageOverview: {
+				...page.pageOverview,
+				elements: [
+					...page.pageOverview.elements,
+					{
+						issueId: 'issue-1',
+						ruleId: 'color-contrast',
+						severity: 'critical' as const,
+						selector: '.sub-text',
+						nodeIndex: 1,
+						xPercent: 10,
+						yPercent: 30,
+						widthPercent: 30,
+						heightPercent: 10,
+						x: 120,
+						y: 240,
+						width: 360,
+						height: 80
+					}
+				]
+			}
+		};
 		const { container, getByRole } = render(IssueDetailModal, {
 			props: {
 				issue: {
@@ -148,7 +172,7 @@ describe('IssueDetailModal', () => {
 						{ selector: '.sub-text', elementId: 'issue-1-el-1' }
 					]
 				},
-				page,
+				page: testPage,
 				screenshots,
 				onClose: () => undefined
 			}
@@ -159,7 +183,7 @@ describe('IssueDetailModal', () => {
 		const occurrenceCards = container.querySelectorAll('[data-occurrence-id]');
 		expect(occurrenceCards.length).toBeGreaterThan(0);
 		for (const card of occurrenceCards) {
-			expect(card.querySelector('svg image')).not.toBeInTheDocument();
+			expect(card.querySelector('svg image')).toBeInTheDocument();
 		}
 	});
 
