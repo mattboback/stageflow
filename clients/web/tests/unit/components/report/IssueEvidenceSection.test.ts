@@ -80,44 +80,57 @@ function createIssue(overrides?: Partial<IssueDetail>): IssueDetail {
 	};
 }
 
+/** The full-page overview SVG (with interactive rects) is always last and
+ * carries an aria-label mentioning highlighted elements. */
+function getOverviewSvg(container: HTMLElement): SVGElement | null {
+	return container.querySelector('svg[aria-label*="highlighted"]');
+}
+
 describe('IssueEvidenceSection', () => {
 	afterEach(() => {
 		cleanup();
 	});
 
 	describe('scanner screenshot rendering', () => {
-		it('renders scanner screenshot when screenshotUrl is provided', () => {
-			const { getByAltText, getByText } = render(IssueEvidenceSection, {
+		it('renders scanner-captured fallback img when no overview crop is available', () => {
+			const { getByAltText } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
-					page: createPage(),
+					// No pageOverview elements -> no crop SVG, falls through to <img>
+					page: createPage({
+						pageOverview: {
+							screenshotFilename: 'overview.png',
+							pageWidth: 1200,
+							pageHeight: 800,
+							elements: []
+						}
+					}),
 					screenshotUrl: 'http://example.com/screenshot.png',
 					pageOverviewUrl: null,
 					onElementClick: vi.fn()
 				}
 			});
 
-			expect(getByText('Scanner screenshot')).toBeInTheDocument();
 			expect(getByAltText('Issue highlighted on page')).toBeInTheDocument();
 		});
 
-		it('does not render scanner screenshot section when screenshotUrl is null', () => {
-			const { queryByText } = render(IssueEvidenceSection, {
+		it('does not render scanner screenshot fallback when screenshotUrl is null and no crop possible', () => {
+			const { queryByAltText } = render(IssueEvidenceSection, {
 				props: {
-					issue: createIssue(),
+					issue: createIssue({ id: 'unmatched-issue' }),
 					page: createPage(),
 					screenshotUrl: null,
-					pageOverviewUrl: 'http://example.com/overview.png',
+					pageOverviewUrl: null,
 					onElementClick: vi.fn()
 				}
 			});
 
-			expect(queryByText('Scanner screenshot')).not.toBeInTheDocument();
+			expect(queryByAltText('Issue highlighted on page')).not.toBeInTheDocument();
 		});
 	});
 
 	describe('SVG-based page overview rendering', () => {
-		it('renders SVG with correct viewBox matching page dimensions', () => {
+		it('renders the full-page overview SVG with viewBox matching page dimensions', () => {
 			const page = createPage();
 			const { container } = render(IssueEvidenceSection, {
 				props: {
@@ -129,7 +142,7 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const svg = container.querySelector('svg');
+			const svg = getOverviewSvg(container);
 			expect(svg).toBeInTheDocument();
 			expect(svg?.getAttribute('viewBox')).toBe('0 0 1200 800');
 			expect(svg?.getAttribute('preserveAspectRatio')).toBe('xMinYMin meet');
@@ -147,7 +160,8 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const image = container.querySelector('svg image');
+			const overviewSvg = getOverviewSvg(container);
+			const image = overviewSvg?.querySelector('image');
 			expect(image).toBeInTheDocument();
 			expect(image?.getAttribute('href')).toBe('http://example.com/overview.png');
 			expect(image?.getAttribute('width')).toBe('1200');
@@ -166,16 +180,15 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const rects = container.querySelectorAll('svg rect');
+			const overviewSvg = getOverviewSvg(container);
+			const rects = overviewSvg?.querySelectorAll('rect') ?? [];
 			expect(rects).toHaveLength(2);
 
-			// First element at x:120, y:160
 			expect(rects[0].getAttribute('x')).toBe('120');
 			expect(rects[0].getAttribute('y')).toBe('160');
 			expect(rects[0].getAttribute('width')).toBe('360');
 			expect(rects[0].getAttribute('height')).toBe('80');
 
-			// Second element at x:120, y:280
 			expect(rects[1].getAttribute('x')).toBe('120');
 			expect(rects[1].getAttribute('y')).toBe('280');
 			expect(rects[1].getAttribute('width')).toBe('300');
@@ -233,15 +246,15 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			// Should only show the element for issue-1, not other-issue
-			const rects = container.querySelectorAll('svg rect');
+			const overviewSvg = getOverviewSvg(container);
+			const rects = overviewSvg?.querySelectorAll('rect') ?? [];
 			expect(rects).toHaveLength(1);
 			expect(rects[0].getAttribute('x')).toBe('120');
 		});
 	});
 
 	describe('element click interaction', () => {
-		it('calls onElementClick with correct elementId when rect is clicked', async () => {
+		it('calls onElementClick with correct elementId when overview rect is clicked', async () => {
 			const user = userEvent.setup();
 			const onElementClick = vi.fn();
 
@@ -255,15 +268,16 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const rect = container.querySelector('svg rect');
-			expect(rect).toBeInTheDocument();
+			const overviewSvg = getOverviewSvg(container);
+			const rect = overviewSvg?.querySelector('rect');
+			expect(rect).toBeTruthy();
 
 			await user.click(rect as Element);
 
 			expect(onElementClick).toHaveBeenCalledWith('issue-1-el-0');
 		});
 
-		it('calls onElementClick when Enter key is pressed on rect', () => {
+		it('calls onElementClick when Enter key is pressed on overview rect', () => {
 			const onElementClick = vi.fn();
 
 			const { container } = render(IssueEvidenceSection, {
@@ -276,8 +290,9 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const rect = container.querySelector('svg rect');
-			expect(rect).toBeInTheDocument();
+			const overviewSvg = getOverviewSvg(container);
+			const rect = overviewSvg?.querySelector('rect');
+			expect(rect).toBeTruthy();
 
 			rect?.dispatchEvent(
 				new KeyboardEvent('keydown', {
@@ -306,7 +321,7 @@ describe('IssueEvidenceSection', () => {
 	});
 
 	describe('edge cases', () => {
-		it('does not render page overview when showPageOverview is false', () => {
+		it('does not render full-page overview when showPageOverview is false', () => {
 			const { container, queryByText } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -319,11 +334,10 @@ describe('IssueEvidenceSection', () => {
 			});
 
 			expect(queryByText('On the page')).not.toBeInTheDocument();
-			expect(container.querySelector('svg')).not.toBeInTheDocument();
-			expect(queryByText('Scanner screenshot')).toBeInTheDocument();
+			expect(getOverviewSvg(container)).toBeNull();
 		});
 
-		it('does not render page overview when page is null', () => {
+		it('does not render full-page overview when page is null', () => {
 			const { container, queryByText } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -335,10 +349,10 @@ describe('IssueEvidenceSection', () => {
 			});
 
 			expect(queryByText('On the page')).not.toBeInTheDocument();
-			expect(container.querySelector('svg')).not.toBeInTheDocument();
+			expect(getOverviewSvg(container)).toBeNull();
 		});
 
-		it('does not render page overview when pageOverviewUrl is null', () => {
+		it('does not render full-page overview when pageOverviewUrl is null', () => {
 			const { container, queryByText } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -350,10 +364,10 @@ describe('IssueEvidenceSection', () => {
 			});
 
 			expect(queryByText('On the page')).not.toBeInTheDocument();
-			expect(container.querySelector('svg')).not.toBeInTheDocument();
+			expect(getOverviewSvg(container)).toBeNull();
 		});
 
-		it('does not render page overview when page dimensions are invalid', () => {
+		it('does not render full-page overview when page dimensions are invalid', () => {
 			const { container, queryByText } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -372,7 +386,7 @@ describe('IssueEvidenceSection', () => {
 			});
 
 			expect(queryByText('On the page')).not.toBeInTheDocument();
-			expect(container.querySelector('svg')).not.toBeInTheDocument();
+			expect(getOverviewSvg(container)).toBeNull();
 		});
 
 		it('does not show helper text when there are no matching elements', () => {
@@ -386,13 +400,32 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			// The SVG should still render but without any rects
 			expect(queryByText(/click a highlight box/i)).not.toBeInTheDocument();
 		});
 	});
 
+	describe('manual review', () => {
+		it('renders a manual review banner for Lighthouse info issues without occurrences', () => {
+			const { getByText } = render(IssueEvidenceSection, {
+				props: {
+					issue: createIssue({
+						scanner: 'lighthouse',
+						severity: 'info',
+						occurrences: []
+					}),
+					page: createPage(),
+					screenshotUrl: null,
+					pageOverviewUrl: null,
+					onElementClick: vi.fn()
+				}
+			});
+
+			expect(getByText(/manual review item/i)).toBeInTheDocument();
+		});
+	});
+
 	describe('accessibility', () => {
-		it('has appropriate ARIA label on SVG', () => {
+		it('has appropriate ARIA label on the full-page overview SVG', () => {
 			const { container } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -403,12 +436,12 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const svg = container.querySelector('svg');
+			const svg = getOverviewSvg(container);
 			expect(svg?.getAttribute('role')).toBe('img');
 			expect(svg?.getAttribute('aria-label')).toContain('2 highlighted element');
 		});
 
-		it('has appropriate ARIA labels on interactive rects', () => {
+		it('has appropriate ARIA labels on interactive overview rects', () => {
 			const { container } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -419,13 +452,14 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const rect = container.querySelector('svg rect');
+			const overviewSvg = getOverviewSvg(container);
+			const rect = overviewSvg?.querySelector('rect');
 			expect(rect?.getAttribute('role')).toBe('button');
 			expect(rect?.getAttribute('tabindex')).toBe('0');
 			expect(rect?.getAttribute('aria-label')).toContain('Highlight occurrence');
 		});
 
-		it('has title elements for tooltips', () => {
+		it('has title elements for tooltips on overview rects', () => {
 			const { container } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue(),
@@ -436,7 +470,8 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const titles = container.querySelectorAll('svg rect title');
+			const overviewSvg = getOverviewSvg(container);
+			const titles = overviewSvg?.querySelectorAll('rect title') ?? [];
 			expect(titles).toHaveLength(2);
 			expect(titles[0].textContent).toContain('Click to focus occurrence 1');
 			expect(titles[1].textContent).toContain('Click to focus occurrence 2');
@@ -444,7 +479,7 @@ describe('IssueEvidenceSection', () => {
 	});
 
 	describe('severity stroke color', () => {
-		it('applies correct stroke color based on issue severity', () => {
+		it('applies correct stroke color based on issue severity in overlay rects', () => {
 			const { container } = render(IssueEvidenceSection, {
 				props: {
 					issue: createIssue({ severity: 'critical' }),
@@ -455,9 +490,9 @@ describe('IssueEvidenceSection', () => {
 				}
 			});
 
-			const rect = container.querySelector('svg rect');
+			const overviewSvg = getOverviewSvg(container);
+			const rect = overviewSvg?.querySelector('rect');
 			const strokeColor = rect?.getAttribute('stroke');
-			// Critical severity should have red stroke (rgb 239, 68, 68)
 			expect(strokeColor).toContain('rgba(239, 68, 68');
 		});
 	});

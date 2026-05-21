@@ -2,9 +2,14 @@
 	import type { UnifiedReport } from '$lib/types/unified-report';
 
 	import { Panel, chipVariants } from '$lib/components/ui';
-	import { formatScannerStatus, getScannerStatusTone } from '$lib/report';
+	import {
+		formatScannerStatus,
+		getScannerStatusTone,
+		getSeverityDotClass,
+		severityRank
+	} from '$lib/report';
 	import { cn } from '$lib/utils';
-	import { AlertTriangle, CheckCircle2, MinusCircle, XCircle } from 'lucide-svelte';
+	import { AlertTriangle, ArrowRight, CheckCircle2, MinusCircle, XCircle } from 'lucide-svelte';
 
 	import LighthouseSummary from './LighthouseSummary.svelte';
 	import SeverityBreakdown from './SeverityBreakdown.svelte';
@@ -61,19 +66,33 @@
 	const topRules = $derived.by(() => {
 		const counts: Record<
 			string,
-			{ count: number; title: string; scanner: string; ruleId: string }
+			{
+				count: number;
+				title: string;
+				scanner: string;
+				ruleId: string;
+				severity: string;
+				pages: Set<string>;
+			}
 		> = {};
 		for (const issue of report.issues) {
 			const key = `${issue.scanner}::${issue.ruleId}`;
 			const existing = counts[key];
 			if (existing) {
 				existing.count += 1;
+				if (issue.pageId) existing.pages.add(issue.pageId);
+				// Keep the highest-severity title we saw for the group
+				if (severityRank(issue.severity) < severityRank(existing.severity)) {
+					existing.severity = issue.severity;
+				}
 			} else {
 				counts[key] = {
 					count: 1,
 					title: issue.title ?? issue.ruleId,
 					scanner: issue.scanner,
-					ruleId: issue.ruleId
+					ruleId: issue.ruleId,
+					severity: issue.severity,
+					pages: new Set(issue.pageId ? [issue.pageId] : [])
 				};
 			}
 		}
@@ -83,11 +102,24 @@
 				count: meta.count,
 				title: meta.title,
 				scanner: meta.scanner,
-				ruleId: meta.ruleId
+				ruleId: meta.ruleId,
+				severity: meta.severity,
+				pageIds: Array.from(meta.pages)
 			}))
-			.sort((a, b) => b.count - a.count)
+			.sort((a, b) => {
+				const sevDiff = severityRank(a.severity) - severityRank(b.severity);
+				if (sevDiff !== 0) return sevDiff;
+				return b.count - a.count;
+			})
 			.slice(0, 5);
 	});
+
+	const topFixes = $derived(topRules.slice(0, 5));
+
+	function pageLabelForId(pageId: string): string {
+		const found = report.pages.find((p) => p.id === pageId);
+		return found?.path ?? found?.url ?? pageId;
+	}
 
 	const riskSummary = $derived.by(() => {
 		const critical = report.summary.bySeverity?.critical ?? 0;
@@ -348,6 +380,89 @@
 		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
 		{@render summaryCard('Issue Density', issueDensity.toFixed(1))}
 	</div>
+
+	{#if topFixes.length > 0}
+		<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
+			<div class="border-line flex items-center justify-between gap-3 border-b p-4">
+				<h3 class="text-ink flex items-center text-base leading-none font-semibold tracking-tight">
+					<span
+						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+						>FIX</span
+					>
+					Top fixes — start here
+				</h3>
+				<button
+					type="button"
+					onclick={() => onSearchIssues('', undefined)}
+					class="text-accent hover:text-accent-strong inline-flex items-center gap-1 text-xs font-semibold"
+				>
+					Open issue list
+					<ArrowRight class="h-3 w-3" aria-hidden="true" />
+				</button>
+			</div>
+			<ol class="divide-line/70 divide-y" data-testid="top-fixes">
+				{#each topFixes as fix, idx (fix.key)}
+					{@const previewPages = fix.pageIds.slice(0, 3)}
+					{@const remainingPages = Math.max(0, fix.pageIds.length - previewPages.length)}
+					<li>
+						<button
+							type="button"
+							onclick={() => onSearchIssues(fix.ruleId, fix.scanner)}
+							class="hover:bg-surface-muted/60 flex w-full items-start gap-4 px-4 py-3 text-left transition"
+						>
+							<span
+								class="text-ink-faint mt-0.5 w-6 shrink-0 font-mono text-sm font-semibold tabular-nums"
+								>#{idx + 1}</span
+							>
+							<div class="min-w-0 flex-1">
+								<div class="flex flex-wrap items-center gap-2">
+									<span
+										class={cn(
+											'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] leading-none font-semibold tracking-wide uppercase',
+											'bg-surface'
+										)}
+									>
+										<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(fix.severity))}
+										></span>
+										{fix.severity}
+									</span>
+									<span class="text-ink-faint font-mono text-[10px] tracking-wide uppercase">
+										{fix.scanner} · {fix.ruleId}
+									</span>
+								</div>
+								<p class="text-ink mt-1.5 text-sm font-semibold">{fix.title}</p>
+								<div
+									class="text-ink-muted mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+								>
+									<span class="font-mono">
+										{fix.count.toLocaleString()}
+										{fix.count === 1 ? 'occurrence' : 'occurrences'} · {fix.pageIds.length}
+										{fix.pageIds.length === 1 ? 'page' : 'pages'}
+									</span>
+									{#if previewPages.length}
+										<span class="text-ink-faint inline-flex flex-wrap gap-1.5">
+											{#each previewPages as pageId (pageId)}
+												<span
+													class="border-line/60 bg-surface-muted text-ink-muted truncate rounded border px-1.5 py-0.5 font-mono text-[10px]"
+													title={pageLabelForId(pageId)}
+												>
+													{pageLabelForId(pageId)}
+												</span>
+											{/each}
+											{#if remainingPages > 0}
+												<span class="text-ink-faint text-[10px]">+{remainingPages} more</span>
+											{/if}
+										</span>
+									{/if}
+								</div>
+							</div>
+							<ArrowRight class="text-ink-faint mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+						</button>
+					</li>
+				{/each}
+			</ol>
+		</Panel>
+	{/if}
 
 	<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
 		<div class="border-line border-b p-4">

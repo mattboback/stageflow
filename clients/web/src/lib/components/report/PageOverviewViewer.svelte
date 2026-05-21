@@ -2,7 +2,13 @@
 	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
 
 	import { Chip, Panel } from '$lib/components/ui';
-	import { getSeverityFillColor, getSeverityStrokeColor } from '$lib/report';
+	import {
+		getIssueKind,
+		getSeverityFillColor,
+		getSeverityStrokeColor,
+		rewriteIssueTitle
+	} from '$lib/report';
+	import { cn } from '$lib/utils';
 
 	interface Props {
 		page: PageSummary;
@@ -46,6 +52,10 @@
 		info: true
 	});
 
+	// Focus mode: only the hovered/focused element is rendered prominently;
+	// non-focused boxes are dimmed. "Show all" turns this off.
+	let focusMode = $state(true);
+
 	function toggleSeverity(key: keyof typeof severityFilters) {
 		severityFilters = { ...severityFilters, [key]: !severityFilters[key] };
 	}
@@ -59,9 +69,10 @@
 		})
 	);
 
-	// Track focused element for keyboard accessibility
 	let focusedIndex = $state(-1);
 	let hoveredIndex = $state<number | null>(null);
+
+	const activeIndex = $derived(hoveredIndex ?? (focusedIndex >= 0 ? focusedIndex : null));
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (filteredElements.length === 0) return;
@@ -103,6 +114,20 @@
 							{key}
 						</Chip>
 					{/each}
+					<span class="border-line/70 mx-1 h-4 border-l" aria-hidden="true"></span>
+					<Chip
+						as="button"
+						type="button"
+						caps
+						interactive
+						tone={focusMode ? 'active' : 'default'}
+						onclick={() => (focusMode = !focusMode)}
+						title={focusMode
+							? 'Currently dimming non-selected boxes. Click to show all overlays.'
+							: 'Currently showing all overlays. Click to focus only the hovered/selected box.'}
+					>
+						{focusMode ? 'Focus mode' : 'Show all'}
+					</Chip>
 				</div>
 			{:else}
 				<p class="text-ink-muted text-xs">No overlay markers were produced for this page.</p>
@@ -165,20 +190,25 @@
 									{#if issue}
 										{@const strokeColor = getSeverityStrokeColor(issue.severity)}
 										{@const fillColor = getSeverityFillColor(issue.severity)}
-										{@const isFocused = focusedIndex === idx || hoveredIndex === idx}
+										{@const isActive = activeIndex === idx}
+										{@const someActive = activeIndex !== null}
+										{@const dimmed = focusMode && someActive && !isActive}
+										{@const baseStroke = isActive ? 8 : focusMode && !someActive ? 2 : 4}
+										{@const opacity = dimmed ? 0.18 : 1}
 										<rect
 											x={element.x}
 											y={element.y}
 											width={element.width}
 											height={element.height}
-											fill={isFocused ? fillColor : 'transparent'}
+											fill={isActive ? fillColor : 'transparent'}
 											stroke={strokeColor}
-											stroke-width={isFocused ? 6 : 4}
-											class="cursor-pointer motion-safe:transition-[fill,stroke-width]"
+											stroke-width={baseStroke}
+											{opacity}
+											class="cursor-pointer motion-safe:transition-[fill,stroke-width,opacity]"
 											style={`--hover-fill: ${fillColor}`}
 											role="button"
 											tabindex="0"
-											aria-label={`${issue.title} (${issue.severity})`}
+											aria-label={`${rewriteIssueTitle(issue)} (${issue.severity})`}
 											onmouseenter={() => (hoveredIndex = idx)}
 											onmouseleave={() => (hoveredIndex = null)}
 											onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
@@ -190,11 +220,37 @@
 											}}
 											data-testid="page-overview-marker"
 										>
-											<title>{issue.title} ({issue.severity})</title>
+											<title
+												>{rewriteIssueTitle(issue)} — {issue.scanner} · {issue.ruleId} · {issue.severity}</title
+											>
 										</rect>
 									{/if}
 								{/each}
 							</svg>
+
+							{#if activeIndex !== null && filteredElements[activeIndex]}
+								{@const el = filteredElements[activeIndex]}
+								{@const issue = issueMap[el.issueId]}
+								{#if issue}
+									{@const labelX = el.x + el.width / 2}
+									{@const labelY = Math.max(el.y - 32, 0)}
+									{@const kind = getIssueKind(issue)}
+									{@const labelText = `${rewriteIssueTitle(issue)}`}
+									<div
+										class="pointer-events-none absolute"
+										style={`left: ${(labelX / pageWidth) * 100}%; top: ${(labelY / pageHeight) * 100}%; transform: translate(-50%, -100%);`}
+									>
+										<div
+											class="border-ink/10 max-w-xs rounded-lg border bg-neutral-900/95 px-2.5 py-1.5 text-[11px] leading-snug text-white shadow-lg backdrop-blur-md"
+										>
+											<div class="font-semibold">{labelText}</div>
+											<div class="mt-0.5 font-mono text-[10px] text-neutral-300">
+												{issue.scanner} · {issue.ruleId} · {issue.severity} · {kind}
+											</div>
+										</div>
+									</div>
+								{/if}
+							{/if}
 						</button>
 					</div>
 				</div>
@@ -209,13 +265,17 @@
 					<h4 class="text-ink text-xs font-semibold tracking-wide uppercase">
 						Elements ({filteredElements.length})
 					</h4>
-					<p class="text-ink-muted mt-0.5 text-[11px]">Hover or click to highlight on page</p>
+					<p class="text-ink-muted mt-0.5 text-[11px]">
+						{focusMode
+							? 'Hover or click to highlight; non-selected boxes are dimmed.'
+							: 'All boxes shown; hover or click to inspect.'}
+					</p>
 				</div>
 				<ul class="divide-line/70 divide-y overflow-y-auto text-sm">
 					{#each filteredElements as element, idx (`${element.issueId}:${element.nodeIndex}:${idx}`)}
 						{@const issue = issueMap[element.issueId]}
 						{#if issue}
-							{@const isActive = focusedIndex === idx || hoveredIndex === idx}
+							{@const isActive = activeIndex === idx}
 							<li>
 								<button
 									type="button"
@@ -223,7 +283,10 @@
 									onmouseleave={() => (hoveredIndex = null)}
 									onfocus={() => (focusedIndex = idx)}
 									onclick={() => onSelectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
-									class={`hover:bg-surface-muted/60 flex w-full items-start gap-2 px-3 py-2 text-left transition ${isActive ? 'bg-surface-muted' : ''}`}
+									class={cn(
+										'hover:bg-surface-muted/60 flex w-full items-start gap-2 px-3 py-2 text-left transition',
+										isActive && 'bg-surface-muted'
+									)}
 									data-testid="page-overview-element-row"
 								>
 									<span class="text-ink-faint mt-0.5 shrink-0 font-mono text-[11px]">
@@ -231,10 +294,10 @@
 									</span>
 									<span class="min-w-0 flex-1">
 										<span class="text-ink block truncate text-xs font-semibold">
-											{issue.title}
+											{rewriteIssueTitle(issue)}
 										</span>
 										<span class="text-ink-faint mt-0.5 block text-[11px] capitalize">
-											{issue.severity}
+											{issue.severity} · {issue.scanner}
 										</span>
 									</span>
 								</button>

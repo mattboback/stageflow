@@ -5,13 +5,17 @@
 	import { Chip, Modal, Tabs, panelVariants } from '$lib/components/ui';
 	import {
 		generateContextualFix,
+		getIssueKind,
+		getIssueKindLabel,
 		getIssueScreenshotUrl,
 		getPageOverviewUrl,
 		getSeverityContainerClass,
-		getSeverityDotClass
+		getSeverityDotClass,
+		isManualReviewIssue,
+		rewriteIssueTitle
 	} from '$lib/report';
 	import { cn, getWcagUnderstandingUrl, normalizeWcagTag } from '$lib/utils';
-	import { ChevronLeft, ChevronRight, ExternalLink, FileText, XCircle } from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, ExternalLink, FileText, Globe, XCircle } from 'lucide-svelte';
 	import { tick } from 'svelte';
 
 	import IssueEvidenceSection from './IssueEvidenceSection.svelte';
@@ -50,7 +54,12 @@
 		if (target) onNavigate(target.id);
 	}
 
+	const issueKind = $derived(getIssueKind(issue));
+	const isManual = $derived(isManualReviewIssue(issue));
+	const displayTitle = $derived(rewriteIssueTitle(issue));
+
 	const primaryOccurrence = $derived(issue.occurrences?.[0] ?? null);
+	const occurrenceCount = $derived(issue.occurrences?.length ?? 0);
 	const contextualFix = $derived(generateContextualFix(issue, primaryOccurrence));
 
 	const alsoDetectedBy = $derived.by(() => {
@@ -77,7 +86,6 @@
 
 	let modalRef = $state<HTMLDivElement | null>(null);
 	let localHighlightedElementId = $state<string | null>(null);
-	let activeTab = $state('fix');
 
 	const activeHighlightId = $derived(localHighlightedElementId ?? highlightedElementId ?? null);
 	const openedFromOverlay = $derived(Boolean(highlightedElementId));
@@ -92,11 +100,45 @@
 			(page.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
 	);
 
+	// Evidence is meaningful when there's a screenshot, an overlay we can render,
+	// or any text/DOM data on the primary occurrence. We never show an empty tab.
+	const hasEvidence = $derived(
+		Boolean(
+			screenshotUrl ||
+			pageOverviewRenderable ||
+			primaryOccurrence?.selector ||
+			primaryOccurrence?.ancestorPath ||
+			primaryOccurrence?.contextHtml ||
+			primaryOccurrence?.html ||
+			primaryOccurrence?.failureSummary
+		)
+	);
+
+	const tabs = $derived(
+		[
+			{ id: 'fix', label: 'Fix' },
+			hasEvidence ? { id: 'evidence', label: 'Evidence' } : null,
+			{ id: 'details', label: 'Details' },
+			occurrenceCount > 0 ? { id: 'occurrences', label: `Occurrences (${occurrenceCount})` } : null
+		].filter((tab): tab is { id: string; label: string } => tab !== null)
+	);
+
+	const defaultTabId = $derived(hasEvidence ? 'evidence' : 'fix');
+	let activeTab = $state('fix');
+
 	$effect(() => {
 		issue.id;
 		highlightedElementId;
 		fullPageEvidenceOverride = null;
-		activeTab = 'fix';
+		activeTab = defaultTabId;
+	});
+
+	// If the active tab disappears because the new issue is shaped differently,
+	// fall back to the first available tab to avoid a blank panel.
+	$effect(() => {
+		if (!tabs.some((t) => t.id === activeTab)) {
+			activeTab = tabs[0]?.id ?? 'fix';
+		}
 	});
 
 	$effect(() => {
@@ -136,15 +178,8 @@
 		}
 	}
 
-	const tabs = $derived([
-		{ id: 'fix', label: 'Fix' },
-		{ id: 'evidence', label: 'Evidence' },
-		{ id: 'details', label: 'Details' },
-		{
-			id: 'occurrences',
-			label: `Occurrences (${issue.occurrences?.length ?? 0})`
-		}
-	]);
+	const pageLabel = $derived(page?.path ?? page?.url ?? null);
+	const kindLabel = $derived(getIssueKindLabel(issueKind));
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -174,11 +209,22 @@
 							></span>
 							{issue.severity}
 						</span>
+						<span
+							class="border-line bg-surface text-ink-muted inline-flex items-center rounded border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide uppercase"
+						>
+							{kindLabel}
+						</span>
 						<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
 							{issue.scanner} · {issue.ruleId}
 						</span>
 					</div>
-					<h2 class="text-ink text-xl leading-tight font-bold">{issue.title}</h2>
+					<h2 class="text-ink text-xl leading-tight font-bold">{displayTitle}</h2>
+					{#if isManual}
+						<p class="text-ink-muted mt-1 text-sm">
+							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this for human verification
+							— no concrete DOM target was reported.
+						</p>
+					{/if}
 					{#if alsoDetectedBy.length}
 						<p class="text-ink-muted mt-1 text-sm">
 							Also detected by: {alsoDetectedBy.join(', ')}
@@ -224,6 +270,38 @@
 					</button>
 				</div>
 			</div>
+
+			{#if pageLabel || issue.category || occurrenceCount > 0}
+				<div
+					class="border-line/70 bg-surface/60 mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border px-3 py-2 text-xs"
+				>
+					{#if pageLabel}
+						<span class="inline-flex min-w-0 items-center gap-1.5">
+							<Globe class="text-ink-faint h-3 w-3 shrink-0" aria-hidden="true" />
+							<span class="text-ink-faint font-mono tracking-wide uppercase">Page</span>
+							<span class="text-ink min-w-0 truncate font-mono">{pageLabel}</span>
+						</span>
+					{/if}
+					{#if issue.category}
+						<span class="inline-flex items-center gap-1.5">
+							<span class="text-ink-faint font-mono tracking-wide uppercase">Category</span>
+							<span class="text-ink">{issue.category}</span>
+						</span>
+					{/if}
+					{#if occurrenceCount > 0}
+						<span class="inline-flex items-center gap-1.5">
+							<span class="text-ink-faint font-mono tracking-wide uppercase">Occurrences</span>
+							<span class="text-ink font-mono">{occurrenceCount}</span>
+						</span>
+					{/if}
+					{#if primaryOccurrence?.selector}
+						<span class="inline-flex min-w-0 items-center gap-1.5">
+							<span class="text-ink-faint font-mono tracking-wide uppercase">Selector</span>
+							<span class="text-ink min-w-0 truncate font-mono">{primaryOccurrence.selector}</span>
+						</span>
+					{/if}
+				</div>
+			{/if}
 		</div>
 
 		<div class="px-6 pt-4">
@@ -257,43 +335,33 @@
 					</a>
 				{/if}
 			{:else if activeTab === 'evidence'}
-				{#if screenshotUrl || (pageOverviewUrl && pageOverviewRenderable)}
-					{#if openedFromOverlay}
-						<div
-							class="border-line bg-surface-muted/40 flex items-center justify-between rounded-lg border border-dashed px-3 py-2"
+				{#if openedFromOverlay && pageOverviewRenderable}
+					<div
+						class="border-line bg-surface-muted/40 flex items-center justify-between rounded-lg border border-dashed px-3 py-2"
+					>
+						<p class="text-ink-muted text-xs">Opened from page highlight.</p>
+						<button
+							type="button"
+							class="text-accent hover:text-accent-strong text-xs font-semibold"
+							onclick={() => {
+								fullPageEvidenceOverride = !showFullPageEvidence;
+							}}
 						>
-							<p class="text-ink-muted text-xs">Opened from page highlight.</p>
-							<button
-								type="button"
-								class="text-accent hover:text-accent-strong text-xs font-semibold"
-								onclick={() => {
-									fullPageEvidenceOverride = !showFullPageEvidence;
-								}}
-							>
-								{showFullPageEvidence ? 'Hide full page context' : 'Show full page context'}
-							</button>
-						</div>
-					{/if}
-					<IssueEvidenceSection
-						{issue}
-						{page}
-						{screenshotUrl}
-						{pageOverviewUrl}
-						showPageOverview={shouldShowPageOverview}
-						hideScreenshot={openedFromOverlay && shouldShowPageOverview && pageOverviewRenderable}
-						onElementClick={(elementId) => {
-							localHighlightedElementId = elementId;
-						}}
-					/>
-				{:else if primaryOccurrence?.html}
-					<div>
-						<h3 class="text-ink mb-2 font-semibold">Element</h3>
-						<pre
-							class="border-line bg-surface-muted text-ink overflow-x-auto rounded-lg border p-3 font-mono text-xs leading-relaxed">{primaryOccurrence.html}</pre>
+							{showFullPageEvidence ? 'Hide full page context' : 'Show full page context'}
+						</button>
 					</div>
-				{:else}
-					<p class="text-ink-muted text-sm italic">No evidence captured for this issue.</p>
 				{/if}
+				<IssueEvidenceSection
+					{issue}
+					{page}
+					{screenshotUrl}
+					{pageOverviewUrl}
+					showPageOverview={shouldShowPageOverview}
+					hideScreenshot={openedFromOverlay && shouldShowPageOverview && pageOverviewRenderable}
+					onElementClick={(elementId) => {
+						localHighlightedElementId = elementId;
+					}}
+				/>
 			{:else if activeTab === 'details'}
 				<div>
 					<h3 class="text-ink mb-2 font-semibold">Description</h3>
@@ -344,34 +412,41 @@
 						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Severity</p>
 						<p class="text-ink mt-0.5 text-sm capitalize">{issue.severity}</p>
 					</div>
+					<div>
+						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Issue kind</p>
+						<p class="text-ink mt-0.5 text-sm">{kindLabel}</p>
+					</div>
+					{#if pageLabel}
+						<div class="min-w-0">
+							<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Page</p>
+							<p class="text-ink mt-0.5 truncate font-mono text-sm" title={pageLabel}>
+								{pageLabel}
+							</p>
+						</div>
+					{/if}
 				</div>
 			{:else if activeTab === 'occurrences'}
-				{#if issue.occurrences?.length}
-					<div class="space-y-3">
-						<h3 class="text-ink font-semibold">
-							Affected elements ({issue.occurrences.length})
-						</h3>
-						{#each issue.occurrences as occurrence, idx (idx)}
-							{@const isHighlighted =
-								activeHighlightId && occurrence.elementId === activeHighlightId}
-							<IssueOccurrenceCard
-								{occurrence}
-								index={idx}
-								{issue}
-								{page}
-								{pageOverviewUrl}
-								isHighlighted={!!isHighlighted}
-								showDetails={true}
-								hideThumbnail={false}
-								onHighlight={() => {
-									localHighlightedElementId = occurrence.elementId ?? null;
-								}}
-							/>
-						{/each}
-					</div>
-				{:else}
-					<p class="text-ink-muted text-sm italic">No occurrences recorded for this issue.</p>
-				{/if}
+				<div class="space-y-3">
+					<h3 class="text-ink font-semibold">
+						Affected elements ({occurrenceCount})
+					</h3>
+					{#each issue.occurrences ?? [] as occurrence, idx (idx)}
+						{@const isHighlighted = activeHighlightId && occurrence.elementId === activeHighlightId}
+						<IssueOccurrenceCard
+							{occurrence}
+							index={idx}
+							{issue}
+							{page}
+							{pageOverviewUrl}
+							isHighlighted={!!isHighlighted}
+							showDetails={true}
+							hideThumbnail={false}
+							onHighlight={() => {
+								localHighlightedElementId = occurrence.elementId ?? null;
+							}}
+						/>
+					{/each}
+				</div>
 			{/if}
 		</div>
 	</div>

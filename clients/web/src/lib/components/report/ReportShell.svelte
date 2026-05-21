@@ -283,10 +283,22 @@
 					/>
 				</section>
 			{:else if section === 'artifacts'}
+				{@const errorCount = displayReport.errors?.length ?? 0}
 				<section id="report-panel-artifacts" aria-labelledby="report-tab-artifacts">
-					<div class="grid gap-6 lg:grid-cols-2">
-						<ArtifactsView {jobId} {job} {...onRefreshArtifacts ? { onRefreshArtifacts } : {}} />
-						<ErrorsView errors={displayReport.errors} />
+					<div class="space-y-6">
+						{#if errorCount === 0}
+							<ErrorsView errors={displayReport.errors} compact />
+							<ArtifactsView {jobId} {job} {...onRefreshArtifacts ? { onRefreshArtifacts } : {}} />
+						{:else}
+							<div class="grid gap-6 lg:grid-cols-2">
+								<ArtifactsView
+									{jobId}
+									{job}
+									{...onRefreshArtifacts ? { onRefreshArtifacts } : {}}
+								/>
+								<ErrorsView errors={displayReport.errors} />
+							</div>
+						{/if}
 					</div>
 				</section>
 			{/if}

@@ -8,7 +8,8 @@
 		getPageOverviewUrl,
 		getSeverityContainerClass,
 		getSeverityDotClass,
-		getSeverityStrokeColor
+		getSeverityStrokeColor,
+		rewriteIssueTitle
 	} from '$lib/report';
 	import { cn } from '$lib/utils';
 
@@ -19,6 +20,12 @@
 		showScreenshot?: boolean;
 		isVirtualized?: boolean;
 		isSelected?: boolean;
+		/**
+		 * When true, the row is rendered inside an expanded rule group — show
+		 * occurrence-specific context (page URL + selector + element label)
+		 * instead of repeating the rule title and description.
+		 */
+		inGroup?: boolean;
 		onclick?: () => void;
 	}
 
@@ -29,6 +36,7 @@
 		showScreenshot = true,
 		isVirtualized = false,
 		isSelected = false,
+		inGroup = false,
 		onclick
 	}: Props = $props();
 
@@ -65,6 +73,28 @@
 				})
 			: null
 	);
+
+	const primaryOccurrence = $derived(issue.occurrences?.[0] ?? null);
+	const pageLabel = $derived(page?.path ?? page?.url ?? null);
+	const displayTitle = $derived(rewriteIssueTitle(issue));
+
+	// In group context, the "primary line" is the page+selector context so
+	// occurrences don't all look identical. Otherwise it's the rule title.
+	const primaryLine = $derived.by(() => {
+		if (!inGroup) return displayTitle;
+		const selector = primaryOccurrence?.selector ?? primaryOccurrence?.label ?? null;
+		if (pageLabel && selector) return `${pageLabel} · ${selector}`;
+		if (selector) return selector;
+		if (pageLabel) return pageLabel;
+		return displayTitle;
+	});
+
+	const secondaryLine = $derived.by(() => {
+		if (!inGroup) return issue.description;
+		const summary = primaryOccurrence?.failureSummary ?? primaryOccurrence?.textSnippet ?? null;
+		if (summary) return summary;
+		return issue.description;
+	});
 </script>
 
 <button
@@ -91,20 +121,23 @@
 		<p
 			class={cn(
 				'text-ink text-base leading-snug font-semibold',
+				inGroup && 'font-mono text-sm break-all',
 				isVirtualized && showScreenshot ? 'line-clamp-1' : 'line-clamp-2'
 			)}
 		>
-			{issue.title}
+			{primaryLine}
 		</p>
-		<p class="text-ink-muted mt-1.5 line-clamp-2 text-sm leading-relaxed">
-			{issue.description}
-		</p>
+		{#if secondaryLine}
+			<p class="text-ink-muted mt-1.5 line-clamp-2 text-sm leading-relaxed">
+				{secondaryLine}
+			</p>
+		{/if}
 		{#if showScreenshot}
 			<div class="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
 				<span class="text-ink-faint">
 					{issue.scanner} &middot; {issue.elementCount} element{issue.elementCount !== 1 ? 's' : ''}
 				</span>
-				{#if issue.wcagTags?.length}
+				{#if !inGroup && issue.wcagTags?.length}
 					{#each issue.wcagTags.slice(0, 3) as tag (tag)}
 						<span class="bg-surface-muted text-ink-muted rounded-md px-1.5 py-0.5">
 							{tag}
@@ -113,6 +146,8 @@
 					{#if issue.wcagTags.length > 3}
 						<span class="text-ink-faint">+{issue.wcagTags.length - 3} more</span>
 					{/if}
+				{:else if inGroup && pageLabel}
+					<span class="text-ink-faint truncate font-mono">{pageLabel}</span>
 				{/if}
 			</div>
 		{/if}
