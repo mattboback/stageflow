@@ -362,7 +362,7 @@
 								{pageOverviewUrl}
 								isHighlighted={!!isHighlighted}
 								showDetails={true}
-								hideThumbnail={shouldShowPageOverview && pageOverviewRenderable}
+								hideThumbnail={false}
 								onHighlight={() => {
 									localHighlightedElementId = occurrence.elementId ?? null;
 								}}
