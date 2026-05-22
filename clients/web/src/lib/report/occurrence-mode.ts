@@ -159,23 +159,59 @@ function expandIssuesByOccurrence(issues: IssueDetail[]): ExpandedIssues {
 	return { issues: expanded, derivedIdsByIssueId };
 }
 
+function buildSelectorIndex(issues: IssueDetail[]): Map<string, string> {
+	const index = new Map<string, string>();
+	for (const issue of issues) {
+		const occurrence = issue.occurrences?.[0];
+		if (!occurrence) continue;
+		// Use selector from occurrence (preferred) or target[0] as fallback
+		const selector = occurrence.selector ?? occurrence.target?.[0];
+		if (selector) {
+			// Key by ruleId + selector to avoid cross-rule collisions
+			index.set(`${issue.ruleId}|${selector}`, issue.id);
+		}
+	}
+	return index;
+}
+
 function remapPageOverviewElements(
 	elements: PageOverviewElement[],
-	derivedIdsByIssueId: Map<string, string[]>
+	derivedIdsByIssueId: Map<string, string[]>,
+	expandedIssues: IssueDetail[]
 ): PageOverviewElement[] {
+	// Build a selector-based fallback index for elements whose nodeIndex lookup fails.
+	// This handles incomplete results (e.g., color-contrast manual review) where the
+	// scanner assigns all nodes the same issueId but the formatter creates separate
+	// issues with per-node fingerprints.
+	const selectorIndex = buildSelectorIndex(expandedIssues);
+
 	return elements.map((element) => {
 		const derivedIssueIds = derivedIdsByIssueId.get(element.issueId);
 		if (!derivedIssueIds || derivedIssueIds.length === 0) {
+			// Primary issueId not found in expanded issues — try selector-based fallback
+			const fallbackId = selectorIndex.get(`${element.ruleId}|${element.selector}`);
+			if (fallbackId) {
+				return { ...element, issueId: fallbackId, nodeIndex: 0 };
+			}
 			return element;
 		}
 
-		const remappedIssueId = derivedIssueIds[element.nodeIndex] ?? derivedIssueIds[0];
+		const remappedIssueId = derivedIssueIds[element.nodeIndex];
+		if (remappedIssueId !== undefined) {
+			return { ...element, issueId: remappedIssueId, nodeIndex: 0 };
+		}
 
-		return {
-			...element,
-			issueId: remappedIssueId,
-			nodeIndex: 0
-		};
+		// nodeIndex is out of bounds — use selector-based fallback instead of
+		// blindly mapping to the first derived issue (which causes the wrong
+		// element's details to appear in the modal).
+		const selectorFallbackId = selectorIndex.get(`${element.ruleId}|${element.selector}`);
+		if (selectorFallbackId) {
+			return { ...element, issueId: selectorFallbackId, nodeIndex: 0 };
+		}
+
+		// Last resort: map to first derived issue (preserves old behavior for
+		// edge cases where no selector match is possible)
+		return { ...element, issueId: derivedIssueIds[0], nodeIndex: 0 };
 	});
 }
 
@@ -235,7 +271,7 @@ export function buildOccurrenceModeReport(report: UnifiedReport): UnifiedReport 
 		const updatedPageOverview = page.pageOverview
 			? {
 					...page.pageOverview,
-					elements: remapPageOverviewElements(page.pageOverview.elements, derivedIdsByIssueId)
+					elements: remapPageOverviewElements(page.pageOverview.elements, derivedIdsByIssueId, occurrenceIssues)
 				}
 			: undefined;
 		return {
