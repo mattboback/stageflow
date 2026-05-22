@@ -354,7 +354,7 @@
 							aria-label="Page overview with markers"
 						>
 							<image href={overviewUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
-							{#each overlayElements as element, elIdx (elIdx)}
+							{#each overlayElements as element (element.issueId + '|' + element.selector)}
 								{@const issue = issueMap[element.issueId]}
 								{#if issue}
 									{@const strokeColor = getSeverityStrokeColor(issue.severity)}
