@@ -149,10 +149,14 @@ export abstract class ScannerBase {
 		provenance: Provenance
 	): Promise<{ pageResults: PageScanResult[]; pageIterationMs: number }> {
 		const hooks = this.hooks;
+		const stageLogger = this.scanStageLogger;
 		const pageIteratorCallbacks = {
 			onPageComplete: async (result: PageScanResult, index: number, total: number) => {
 				await this.eventPublisher.publishPageCompleted(result, index + 1, total);
 				await hooks.onPageEnd?.(result);
+			},
+			onAuditEvent: (event: { type: string; details?: Record<string, unknown> }) => {
+				stageLogger?.recordEvent(event.type, event.details);
 			},
 			...(hooks.onPageStart
 				? {
@@ -260,10 +264,12 @@ export abstract class ScannerBase {
 		const browserManager = new BrowserManager(this.config.browser, this.logger);
 		this.browserManager = browserManager;
 
-		this.pageIterator = new PageIterator(browserManager, this.config, this.logger);
-
 		this.storageProvider = new MinioStorageProvider(this.config.storage, this.logger);
 		await this.storageProvider.ensureBucket(this.config.storage.bucket);
+
+		this.pageIterator = new PageIterator(browserManager, this.config, this.logger, {
+			storageProvider: this.storageProvider
+		});
 
 		this.scanStageLogger = new ScanStageLogger(this.config, this.storageProvider);
 		const { recipePath } = await this.scanStageLogger.start();
