@@ -99,13 +99,26 @@ export class PageIterator {
 				}))
 			};
 
+			attachAuthFromEnv(provenance, this.logger);
+
 			await fs.ensureDir(dirname(provenancePath));
 			await fs.writeJSON(provenancePath, provenance, { spaces: 2 });
 			return provenance;
 		}
 
 		const provenanceRaw = (await fs.readJSON(provenancePath)) as unknown;
-		return this.normalizeProvenance(provenanceRaw as Provenance);
+		const normalized = this.normalizeProvenance(provenanceRaw as Provenance);
+
+		// The orchestrator may also emit PROVENANCE_AUTH_JSON for ZIP-input
+		// jobs that opt into authenticated scanning post-extraction. If the
+		// loaded Provenance does not already carry an auth block, attach the
+		// orchestrator's; if it does, leave it alone (the file is the source
+		// of truth in that case).
+		if (!normalized.auth) {
+			attachAuthFromEnv(normalized, this.logger);
+		}
+
+		return normalized;
 	}
 
 	async iteratePages(
@@ -583,4 +596,68 @@ function parseScanUrls(raw: string): string[] {
 	}
 
 	return parsed as string[];
+}
+
+
+/**
+ * Attaches a Provenance.auth block from PROVENANCE_AUTH_JSON when present.
+ *
+ * The orchestrator emits this env var with the canonical auth shape (form
+ * recipe with from_env references, or storage_state with an artifact_key)
+ * derived from JobConfig.Auth. Resolved credential values are never present in
+ * this env var; only the recipe shape is.
+ *
+ * Behavior is byte-identical to today when PROVENANCE_AUTH_JSON is unset: no
+ * auth block is attached and the synthesized Provenance matches the pre-auth
+ * shape on disk.
+ */
+function attachAuthFromEnv(provenance: Provenance, logger: ScannerLogger): void {
+	const raw = process.env.PROVENANCE_AUTH_JSON;
+	if (!raw) {
+		return;
+	}
+
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(raw);
+	} catch (err) {
+		logger.warn('PROVENANCE_AUTH_JSON is not valid JSON; ignoring auth env var', {
+			error: err instanceof Error ? err.message : String(err)
+		});
+		return;
+	}
+
+	if (!isProvenanceAuth(parsed)) {
+		logger.warn('PROVENANCE_AUTH_JSON did not match Provenance.auth shape; ignoring', {
+			parsed: typeof parsed === 'object' ? Object.keys(parsed as object) : typeof parsed
+		});
+		return;
+	}
+
+	provenance.auth = parsed;
+	logger.info('Attached auth block from PROVENANCE_AUTH_JSON', {
+		mode: parsed.mode
+	});
+}
+
+function isProvenanceAuth(value: unknown): value is ProvenanceAuth {
+	if (typeof value !== 'object' || value === null) {
+		return false;
+	}
+
+	const v = value as Record<string, unknown>;
+	if (v.mode === 'storage_state') {
+		return typeof v.artifact_key === 'string' && v.artifact_key.length > 0;
+	}
+
+	if (v.mode === 'form') {
+		return (
+			typeof v.login_url === 'string' &&
+			Array.isArray(v.steps) &&
+			typeof v.success === 'object' &&
+			v.success !== null
+		);
+	}
+
+	return false;
 }
