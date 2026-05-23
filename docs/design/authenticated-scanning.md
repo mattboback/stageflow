@@ -97,9 +97,10 @@ worth preserving is preserved by Git itself.
   LinkedIn checkpoint, Indeed, and Indeed's Cloudflare interstitial.
   Those targets are AlchemizeCV's job-board domain, not StageFlow's.
   A generic version (login redirects, generic captcha presence,
-  generic 401/403 patterns) is worth doing eventually but is not part
-  of this work, and porting the AlchemizeCV-specific version would add
-  noise without value.
+  generic 401/403 patterns) is the follow-up captured in
+  [`docs/design/auth-wall-detector.md`](./auth-wall-detector.md);
+  porting the AlchemizeCV-specific version would add noise without
+  value.
 - `patchright-companion/src/frame-capture.ts` — multi-target labeled
   screenshot overlay. Nice to have for richer agent traces, but
   StageFlow's `core/screenshots.ts` already covers the current need
