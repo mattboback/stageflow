@@ -48,7 +48,7 @@ function makePage(state: FakePageState): Page {
 		title: () => Promise.resolve('title'),
 		screenshot: () => Promise.resolve(Buffer.from([])),
 		waitForTimeout: vi.fn().mockResolvedValue(undefined),
-		evaluate: vi.fn().mockImplementation(async () => state.domLength),
+		evaluate: vi.fn().mockImplementation(() => Promise.resolve(state.domLength)),
 		// goal-checker may call locator/getByText, but these tests don't set
 		// successCriteria so checkGoal returns confidence 0.2 without touching
 		// the page.
@@ -63,7 +63,7 @@ function makeScreenshotService(): ScreenshotService {
 		captureWithHighlights: vi
 			.fn()
 			.mockResolvedValue({ buffer: Buffer.from([]), height: 1, width: 1 })
-	} as unknown as ScreenshotService;
+	};
 }
 
 function makeAnalyzer(): PageAnalyzer {

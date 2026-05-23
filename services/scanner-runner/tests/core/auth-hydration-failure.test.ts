@@ -15,17 +15,17 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type {
-	PageIteratorAuditEvent,
-	PageScanCallback
-} from '../../src/core/page-iterator';
-import type {
 	PageScanResult,
 	Provenance,
 	ScannerConfig,
 	StorageProvider
 } from '../../src/core/types';
 
-import { PageIterator } from '../../src/core/page-iterator';
+import {
+	PageIterator,
+	type PageIteratorAuditEvent,
+	type PageScanCallback
+} from '../../src/core/page-iterator';
 
 vi.mock('fs-extra', () => ({
 	default: {
