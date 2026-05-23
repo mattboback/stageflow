@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/mattboback/stageflow/libs/go/models"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
@@ -29,6 +30,7 @@ func (o *Orchestrator) newService() *appjobs.Service {
 		orchestratorRuntime{orchestrator: o},
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
+		appjobs.WithAuthUploader(adapterstorage.NewAuthStorageStateUploader(o.storage)),
 		appjobs.WithScannerLaunchPlanner(appjobs.NewScannerLaunchPlanner(appjobs.ScannerLaunchPlannerConfig{
 			ScannerRegistry:      o.scannerRegistry,
 			DefaultScannerImage:  defaultScannerImage,
@@ -44,6 +46,7 @@ func (o *Orchestrator) newService() *appjobs.Service {
 			OpenRouterAPIKey:     o.openRouterAPIKey,
 			OpenRouterAppTitle:   o.openRouterAppTitle,
 			OpenRouterAppReferer: o.openRouterAppReferer,
+			HostEnv:              os.Getenv,
 		})),
 	)
 }

@@ -21,6 +21,7 @@ If you are still orienting yourself, start with the [repository README](../../RE
 - [Scanner Plugin System](#scanner-plugin-system)
 - [AI Navigator](#ai-navigator)
 - [Security Model](#security-model)
+- [Authenticated Scanning](#authenticated-scanning)
 - [Storage Model](#storage-model)
 - [Database Schemas](#database-schemas)
 - [CLI Architecture](#cli-architecture)
@@ -1227,6 +1228,136 @@ Scanner Runner applies the same target policy at browser runtime for URL jobs: i
 | **VPS deployment guardrails** | Protected hostname check prevents accidental production disruption                                   |
 | **API key auth**              | `X-Api-Key` header on all API endpoints (except health/scanners)                                     |
 | **Request timeouts**          | All endpoints have timeout middleware except SSE stream                                              |
+
+---
+
+## Authenticated Scanning
+
+StageFlow can scan beyond a marketing landing page or login redirect by
+attaching a session-aware authentication block to a job's Provenance. The
+design lives in
+[docs/design/authenticated-scanning.md](../design/authenticated-scanning.md);
+the section here documents the contract, the trust boundaries, and the
+storage-state retention rules.
+
+### The contract
+
+`Provenance.auth` is an optional, discriminated union that flows from the CLI
+through the platform-api and orchestrator into the scanner-runner. When it is
+absent the runtime is byte-identical to the pre-auth shape on disk and on the
+wire.
+
+```jsonc
+// libs/contracts/provenance/schema/provenance.schema.json
+{
+  "auth": {
+    "mode": "form",                               // "form" | "storage_state"
+    "login_url": "https://app.example.com/login",
+    "steps": [
+      { "type": "fill", "selector": "input[name=email]",    "value": { "from_env": "STAGEFLOW_AUTH_USER" } },
+      { "type": "fill", "selector": "input[name=password]", "value": { "from_env": "STAGEFLOW_AUTH_PASSWORD" } },
+      { "type": "click", "selector": "button[type=submit]" }
+    ],
+    "success": { "type": "selector", "selector": "[data-test=signed-in]" }
+  }
+}
+
+// or
+
+{
+  "auth": {
+    "mode": "storage_state",
+    "artifact_key": "<jobID>/auth/storage-state.json"
+  }
+}
+```
+
+Two important invariants:
+
+- `form` step values are either literal strings or `{from_env: NAME}`
+  references resolved at scanner-runner execution time against an explicit
+  allow-list derived from the recipe. Resolved credential values never appear
+  in stored Provenance, the unified report, the scan stage log, or any NATS
+  event.
+- `storage_state` carries an `artifact_key` only. The captured Playwright JSON
+  lives at that key under the job's MinIO prefix; bytes are never persisted
+  to Postgres or re-emitted on subsequent NATS events.
+
+### Trust boundaries
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                       Authenticated Scanning Boundaries                    │
+│                                                                            │
+│  Developer machine                                                         │
+│   • `stageflow auth capture` is the only flow that ever sees a real        │
+│     password. It launches non-headless Chromium via Playwright and writes  │
+│     storageState JSON locally with file mode 0600.                         │
+│   • `stageflow scan --auth-state <path>` base64-encodes the captured file  │
+│     and ships it inline with the URL submission. `--auth-recipe <path>`    │
+│     loads a YAML/JSON recipe whose values reference env vars by name only. │
+│        │                                                                   │
+│        ▼                                                                   │
+│  Platform API                                                              │
+│   • Validates auth.mode, auth.form schema, and the storage-state byte      │
+│     limit (1 MiB). Never sees a password. Forwards JobConfig.Auth on the   │
+│     job.created event without resolving any from_env reference.            │
+│        │                                                                   │
+│        ▼                                                                   │
+│  Orchestrator                                                              │
+│   • For storage_state with inline content: uploads to                      │
+│     scanner-artifacts/<jobID>/auth/storage-state.json and rewrites Auth    │
+│     to `{mode: storage_state, artifact_key}` before persisting Job.Config  │
+│     to Postgres. Bytes never appear in the database.                       │
+│   • Walks Provenance.auth.form.steps for {from_env: NAME} references and  │
+│     forwards exactly those env-var names from the orchestrator host into  │
+│     the scanner-runner pod via the launch plan. Anything else from the    │
+│     host environment stays out of the pod. Unresolved references fail     │
+│     fast with a structured error before the pod starts.                   │
+│        │                                                                   │
+│        ▼                                                                   │
+│  Scanner-runner pod                                                        │
+│   • Reads PROVENANCE_AUTH_JSON (form recipe with from_env refs, or         │
+│     storage_state with artifact_key) and merges it into the Provenance.    │
+│   • PageIterator hydrates auth once per scanner before iterating pages:    │
+│     storage_state mode downloads the artifact and feeds it into            │
+│     Playwright's `storageState`; form mode replays the recipe through the  │
+│     existing PreScanAction executor with a SecretsResolver bound to the   │
+│     recipe's allow-list. Resolved values stay in process memory.          │
+│   • SSRF policy applies to login_url and to every subsequent navigation.   │
+│   • Hydration failure surfaces an `auth-hydration-failed` issue at         │
+│     severity `critical` and skips downstream pages for that scanner.       │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Storage-state retention
+
+A captured storage-state file is treated as a job-scoped credential:
+
+- It is uploaded once to `scanner-artifacts/<jobID>/auth/storage-state.json`
+  by the orchestrator during job-created handling.
+- It is subject to the existing scan-artifact retention policy and is removed
+  at the same time as the rest of the job's MinIO objects.
+- The Web UI never receives a signed URL for the storage-state object — it is
+  not exposed via the public artifact surface that other scan outputs use.
+- The scanner-runner downloads it to the job workspace, sets file mode 0600,
+  and deletes it during `cleanup()` at end-of-run.
+
+If a storage-state file expires (cookies invalidated, session terminated by
+the target), the scan fails with `auth-hydration-failed`. Capture a new one
+with `stageflow auth capture` and re-submit.
+
+### Where to read more
+
+- The PR-1 runtime implementation: `services/scanner-runner/src/core/`
+  (`auth-hydrator.ts`, `secrets-resolver.ts`, `page-iterator.ts`).
+- The PR-2 user-facing surfaces: `clients/cli/cobra_auth.go`,
+  `clients/cli/cobra_scan.go`, `clients/cli/auth_intake.go`, and the
+  orchestrator launch planner at
+  `services/orchestrator/internal/application/jobs/scanner_launch_planner.go`.
+- The shared from_env walker: `libs/go/provenance/auth.go` (Go) is a direct
+  port of `services/scanner-runner/src/core/secrets-resolver.ts`
+  (`collectFromEnvReferences`); fixture-driven tests keep the two in sync.
 
 ---
 

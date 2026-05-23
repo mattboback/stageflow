@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/libs/go/provenance"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
 )
@@ -39,6 +41,11 @@ type ScannerLaunchPlannerConfig struct {
 	OpenRouterAPIKey     string
 	OpenRouterAppTitle   string
 	OpenRouterAppReferer string
+	// HostEnv is the source of truth for env-var values forwarded into the
+	// scanner-runner pod. The planner only ever reads names that appear in the
+	// auth recipe's from_env references; arbitrary passthrough is forbidden.
+	// Tests inject a stub map; production wires os.Getenv at startup.
+	HostEnv func(name string) string
 }
 
 type ScannerLaunchPlanner struct {
@@ -120,6 +127,10 @@ func (p *ScannerLaunchPlanner) Plan(
 	}
 
 	p.applyAINavigatorEnv(env, scannerType)
+
+	if err := p.applyAuth(env, job); err != nil {
+		return nil, err
+	}
 
 	return &ScannerLaunchPlan{
 		Name:  fmt.Sprintf("scanner-%s-%s", scannerType, job.ID),
@@ -261,6 +272,129 @@ func (p *ScannerLaunchPlanner) applyAINavigatorEnv(env map[string]string, scanne
 	if p.config.OpenRouterAppReferer != "" {
 		env["OPENROUTER_APP_REFERER"] = p.config.OpenRouterAppReferer
 	}
+}
+
+// applyAuth wires the optional Provenance.auth block into the scanner-runner
+// pod's environment.
+//
+// Two outputs:
+//
+//  1. PROVENANCE_AUTH_JSON: the canonical Provenance.auth JSON the scanner-runner
+//     attaches to its synthesized Provenance. Carries from_env references for
+//     form mode and an artifact_key for storage_state mode; never raw bytes,
+//     never resolved credentials.
+//  2. Forwarded env vars: exactly the names referenced by Provenance.auth.form.steps
+//     via {from_env: NAME}. The planner reads them from the orchestrator host
+//     (HostEnv) and injects them into the pod env. Anything else from the host
+//     environment stays out of the pod.
+//
+// If a referenced env var is unset on the orchestrator host we fail fast with
+// a structured error before the pod starts; producing a clean axe report
+// against the login page is the worst possible outcome and the recipe is the
+// place to surface this.
+func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job) error {
+	if len(job.Config.Auth) == 0 {
+		return nil
+	}
+
+	var auth provenance.Auth
+	if err := json.Unmarshal(job.Config.Auth, &auth); err != nil {
+		return fmt.Errorf("auth: invalid JobConfig.Auth payload: %w", err)
+	}
+
+	if err := provenance.ValidateAuth(&auth); err != nil {
+		return fmt.Errorf("auth: %w", err)
+	}
+
+	if auth.Mode == provenance.AuthModeStorageState && auth.StorageState != nil &&
+		auth.StorageState.ContentBase64 != "" {
+		// The orchestrator is supposed to upload the bytes to MinIO and
+		// rewrite Auth to {mode, artifact_key} before launch. Reaching this
+		// point with inline content is a wiring bug; refuse rather than leak.
+		return errors.New(
+			"auth.storage_state still has inline content_b64 at scanner-launch time; " +
+				"the orchestrator must upload it to MinIO and replace it with an artifact_key first",
+		)
+	}
+
+	compactJSON, err := json.Marshal(auth.Compact())
+	if err != nil {
+		return fmt.Errorf("auth: failed to encode PROVENANCE_AUTH_JSON: %w", err)
+	}
+
+	env["PROVENANCE_AUTH_JSON"] = string(compactJSON)
+
+	allowList := provenance.CollectFromEnvReferences(&auth)
+	if len(allowList) == 0 {
+		return nil
+	}
+
+	hostEnv := p.config.HostEnv
+	if hostEnv == nil {
+		hostEnv = os.Getenv
+	}
+
+	missing := make([]string, 0)
+
+	for _, name := range allowList {
+		// Refuse to overwrite operationally critical env vars even if a
+		// recipe accidentally references them. The scanner-runner sets these
+		// via baseEnv and they must not be co-opted by an auth recipe.
+		if _, reserved := reservedScannerEnvNames[name]; reserved {
+			return fmt.Errorf(
+				"auth: from_env reference %q collides with a reserved scanner env var; "+
+					"choose a different env var name in the recipe",
+				name,
+			)
+		}
+
+		value := hostEnv(name)
+		if value == "" {
+			missing = append(missing, name)
+
+			continue
+		}
+
+		env[name] = value
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf(
+			"auth: from_env references not set on orchestrator host: %v "+
+				"(set them in the orchestrator deployment env, or remove them from the recipe)",
+			missing,
+		)
+	}
+
+	return nil
+}
+
+// reservedScannerEnvNames are env vars baseEnv() and applyAINavigatorEnv() set;
+// an auth recipe must not collide with them.
+var reservedScannerEnvNames = map[string]struct{}{
+	"JOB_ID":                {},
+	"SCANNER_TYPE":          {},
+	"NATS_URL":              {},
+	"MINIO_ENDPOINT":        {},
+	"MINIO_ACCESS_KEY":      {},
+	"MINIO_SECRET_KEY":      {},
+	"MINIO_USE_SSL":         {},
+	"MINIO_ARTIFACT_BUCKET": {},
+	"PROVENANCE_PATH":       {},
+	"PROVENANCE_AUTH_JSON":  {},
+	"RESULTS_DIR":           {},
+	"PAGE_LOAD_TIMEOUT":     {},
+	"A11Y_SCROLL_TIMEOUT":   {},
+	"A11Y_SHOT_ENABLED":     {},
+	"A11Y_HIGHLIGHT_STYLE":  {},
+	"ALLOW_PRIVATE_TARGETS": {},
+	"REQUEST_ID":            {},
+	"RUN_ID":                {},
+	"SCAN_URLS":             {},
+	"SCANNER_OPTIONS":       {},
+	"OPENROUTER_API_KEY":    {},
+	"OPENROUTER_APP_TITLE":  {},
+	"OPENROUTER_APP_REFERER": {},
 }
 
 func (p *ScannerLaunchPlanner) scannerImage(scannerType string) string {
