@@ -28,6 +28,7 @@ go build -o stageflow .
 | Command | Description |
 | --- | --- |
 | `scan` | Submit a scan job, wait for completion, print results |
+| `auth capture` | Launch Chromium for interactive login and write Playwright storage state |
 | `project` | Run a Project Mode scan using `.stageflow/config.yaml` |
 | `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
 | `project doctor` | Validate project config and dev readiness without scanning |
@@ -270,3 +271,71 @@ API URL at the shell.
 | --- | --- | --- |
 | `STAGEFLOW_API_URL` | `http://localhost:8080` | Platform API base URL (overridden by `--api`) |
 | `STAGEFLOW_API_KEY` | *(unset)* | API key (sent as `X-Api-Key`, overridden by `--api-key`) |
+
+
+
+## Authenticated scans
+
+Scan beyond a marketing landing page or login redirect by attaching a session
+to the scan job. Two flows, both fronted by `stageflow auth …` and
+`stageflow scan --auth-state | --auth-recipe`:
+
+### Capture a developer session (one-off / personal apps)
+
+```bash
+# Local interactive login. Writes a Playwright storage-state JSON with mode 0600.
+stageflow auth capture https://app.example.com/login --output ./auth/state.json
+
+# Attach it to a scan. The CLI base64-encodes the file, the orchestrator
+# uploads it to MinIO under the job's prefix, and Provenance.auth references
+# it as `{mode: storage_state, artifact_key: ...}`.
+stageflow scan https://app.example.com/profile --auth-state ./auth/state.json
+```
+
+`stageflow auth capture` shells out to `npx playwright open --save-storage`,
+so the developer machine needs Node.js and Playwright (e.g. `npm install -g
+playwright`, or run from a project that already has `playwright` as a
+dependency).
+
+### Declarative form recipe (CI-driven)
+
+Save a YAML/JSON recipe that mirrors the `Provenance.auth.form` shape. Step
+values are either literal strings or `{from_env: NAME}` references — the CLI
+never resolves names, the orchestrator forwards exactly the named env vars
+into the scanner pod and nothing else.
+
+```yaml
+# auth/recipe.yaml
+mode: form
+login_url: https://app.example.com/login
+steps:
+  - type: fill
+    selector: input[name=email]
+    value:
+      from_env: STAGEFLOW_AUTH_USER
+  - type: fill
+    selector: input[name=password]
+    value:
+      from_env: STAGEFLOW_AUTH_PASSWORD
+  - type: click
+    selector: button[type=submit]
+success:
+  type: selector
+  selector: '[data-test=signed-in]'
+  timeout: 15000
+```
+
+```bash
+# CI runs this with STAGEFLOW_AUTH_USER and STAGEFLOW_AUTH_PASSWORD set in
+# the orchestrator host's environment.
+stageflow scan https://app.example.com/profile --auth-recipe ./auth/recipe.yaml
+```
+
+`--auth-state` and `--auth-recipe` are mutually exclusive, and neither is
+supported alongside `--project` (configure auth on the registered project
+instead).
+
+The full design and trust boundaries live in
+[docs/design/authenticated-scanning.md](../../docs/design/authenticated-scanning.md);
+the architectural threat-model section is at
+[docs/architecture/system.md#authenticated-scanning](../../docs/architecture/system.md#authenticated-scanning).

@@ -5,6 +5,11 @@ shape of the work needed to make StageFlow scan beyond marketing
 homepages. The execution plan lives at
 `docs/plans/2026-05-23-authenticated-scanning-v1.md`.
 
+> **See also:** the architecture-level write-up of the contract, trust
+> boundaries, and storage-state retention rules at
+> [`docs/architecture/system.md#authenticated-scanning`](../architecture/system.md#authenticated-scanning),
+> and the developer workflows at [`clients/cli/README.md#authenticated-scans`](../../clients/cli/README.md#authenticated-scans).
+
 This document does two things:
 
 1. Gives an honest verdict on whether `agent-harness-legacy/` has a place
