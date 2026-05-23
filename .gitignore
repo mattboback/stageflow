@@ -64,7 +64,7 @@ infra/caddy/snippets/monitoring-basicauth*.caddy
 .go/
 .direnv/
 repo-context.md
-plans/
+/plans/
 flattened_repo*.md
 flattened_repo*.json
 pipeline_logs.txt
@@ -114,5 +114,5 @@ infra/scanners/scanners.yaml
 .opencode/
 
 # Local-only OSS-readiness plan
-plan/
+/plan/
 
