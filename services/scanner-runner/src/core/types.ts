@@ -42,6 +42,26 @@ export const DEFAULT_WAIT_STRATEGY: WaitStrategy = { type: 'load' };
 
 export type ActionType = 'click' | 'fill' | 'select' | 'hover' | 'wait' | 'scroll' | 'keyboard';
 
+/**
+ * Reference to an environment variable resolved at execution time inside the
+ * scanner-runner pod. Persisted Provenance only carries the reference, never
+ * the resolved value, so credentials never appear in stored artifacts.
+ */
+export interface FromEnvReference {
+	from_env: string;
+}
+
+/**
+ * A PreScanAction value is either a literal string or a typed `from_env`
+ * reference. The shape mirrors the JSON schema in
+ * `libs/contracts/provenance/schema/provenance.schema.json`.
+ */
+export type PreScanActionValue = string | FromEnvReference;
+
+export function isFromEnvReference(value: PreScanActionValue): value is FromEnvReference {
+	return typeof value === 'object' && typeof value.from_env === 'string';
+}
+
 export interface ActionClick {
 	type: 'click';
 	selector: string;
@@ -51,14 +71,14 @@ export interface ActionClick {
 export interface ActionFill {
 	type: 'fill';
 	selector: string;
-	value: string;
+	value: PreScanActionValue;
 	timeout?: number;
 }
 
 export interface ActionSelect {
 	type: 'select';
 	selector: string;
-	value: string;
+	value: PreScanActionValue;
 	timeout?: number;
 }
 
@@ -107,6 +127,31 @@ export interface PageEntry {
 	metadata?: Record<string, unknown>;
 }
 
+/**
+ * Authentication block carried on Provenance. When absent, the scanner-runner
+ * behaves byte-identically to the pre-auth shape. Discriminated by `mode`.
+ *
+ * - `storage_state`: a Playwright storage-state JSON file uploaded to the job's
+ *   MinIO prefix; resolved via StorageProvider at hydration time.
+ * - `form`: a declarative login replay built from the existing PreScanAction
+ *   shape. `success` is a WaitStrategy that signals a completed login. Any
+ *   string value can also be a `from_env` reference; resolved values never
+ *   appear in stored Provenance, the unified report, or the scan stage log.
+ */
+export interface ProvenanceAuthStorageState {
+	mode: 'storage_state';
+	artifact_key: string;
+}
+
+export interface ProvenanceAuthForm {
+	mode: 'form';
+	login_url: string;
+	steps: PreScanAction[];
+	success: WaitStrategy;
+}
+
+export type ProvenanceAuth = ProvenanceAuthStorageState | ProvenanceAuthForm;
+
 export interface Provenance {
 	version: string;
 	job_id: string;
@@ -115,6 +160,7 @@ export interface Provenance {
 	default_wait_for?: WaitStrategy;
 	default_viewport?: { width: number; height: number };
 	pages: PageEntry[];
+	auth?: ProvenanceAuth;
 	metadata?: Record<string, unknown>;
 }
 

@@ -26,7 +26,7 @@
 		}
 	},
 	"scripts": {
-		"prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs",
+		"prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs",
 		"build": "bun run prepare:contracts && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
 		"start": "node dist/index.js",
 		"dev": "ts-node src/index.ts",
@@ -48,6 +48,7 @@
 	"dependencies": {
 		"@axe-core/playwright": "^4.11.3",
 		"@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
+		"@stageflow/contracts-provenance": "file:../../libs/contracts/provenance",
 		"ajv": "8.20.0",
 		"ajv-formats": "^3.0.1",
 		"chrome-launcher": "^1.2.1",

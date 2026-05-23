@@ -1,0 +1,20 @@
+{
+	"version": "1.0.0",
+	"job_id": "job-form-auth-literal",
+	"base_url": "https://demo.local",
+	"mode": "live",
+	"default_wait_for": { "type": "domcontentloaded" },
+	"pages": [
+		{ "id": "dashboard", "path": "/dashboard", "url": "https://demo.local/dashboard" }
+	],
+	"auth": {
+		"mode": "form",
+		"login_url": "https://demo.local/login",
+		"steps": [
+			{ "type": "fill", "selector": "input[name=email]", "value": "demo@example.com" },
+			{ "type": "fill", "selector": "input[name=password]", "value": "demo-password" },
+			{ "type": "click", "selector": "button[type=submit]" }
+		],
+		"success": { "type": "selector", "selector": "[data-test=dashboard]" }
+	}
+}
