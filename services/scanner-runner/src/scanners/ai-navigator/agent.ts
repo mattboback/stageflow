@@ -164,9 +164,7 @@ export async function runAiNavigatorAgent(
 			);
 
 			consecutiveFailures = 0;
-			const domLength = await page
-				.evaluate(() => document.body?.innerHTML.length ?? 0)
-				.catch(() => 0);
+			const domLength = await page.evaluate(() => document.body.innerHTML.length).catch(() => 0);
 			const signature = `${page.url()}|${domLength}`;
 			if (lastSignature !== undefined && signature === lastSignature) {
 				noProgressTurns += 1;

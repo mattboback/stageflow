@@ -13,33 +13,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import type { Provenance, ScannerConfig, StorageProvider } from '../../src/core/types';
+
 import { ScanStageLogger } from '../../src/core/scan-stage-logger';
-import {
-	createSecretsResolver,
-	collectFromEnvReferences
-} from '../../src/core/secrets-resolver';
-import type {
-	Provenance,
-	ScannerConfig,
-	StorageProvider
-} from '../../src/core/types';
+import { createSecretsResolver, collectFromEnvReferences } from '../../src/core/secrets-resolver';
 
 class InMemoryStorageProvider implements StorageProvider {
 	uploads: { bucket: string; key: string; path: string; body: string }[] = [];
 
-	ensureBucket = async (): Promise<void> => undefined;
-	upload = async (
-		bucket: string,
-		key: string,
-		filePath: string
-	): Promise<void> => {
+	ensureBucket = (): Promise<void> => Promise.resolve();
+	upload = async (bucket: string, key: string, filePath: string): Promise<void> => {
 		const body = await readFile(filePath, 'utf8');
 		this.uploads.push({ bucket, key, path: filePath, body });
 	};
-	uploadBuffer = async (): Promise<void> => undefined;
-	uploadDirectory = async (): Promise<number> => 0;
-	download = async (): Promise<void> => undefined;
-	exists = async (): Promise<boolean> => false;
+	uploadBuffer = (): Promise<void> => Promise.resolve();
+	uploadDirectory = (): Promise<number> => Promise.resolve(0);
+	download = (): Promise<void> => Promise.resolve();
+	exists = (): Promise<boolean> => Promise.resolve(false);
 }
 
 const SECRET_USER = 'auth-test-user-aljkfhqwouihasdf';
@@ -50,9 +40,7 @@ function makeProvenance(): Provenance {
 		version: '1.0.0',
 		job_id: 'job-redact',
 		base_url: 'https://app.example.com',
-		pages: [
-			{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }
-		],
+		pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
 		auth: {
 			mode: 'form',
 			login_url: 'https://app.example.com/login',

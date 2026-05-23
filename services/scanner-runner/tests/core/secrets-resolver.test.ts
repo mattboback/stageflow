@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Provenance } from '../../src/core/types';
+
 import {
 	SecretsResolutionError,
 	collectFromEnvReferences,
 	createSecretsResolver
 } from '../../src/core/secrets-resolver';
-import type { Provenance } from '../../src/core/types';
 
 describe('SecretsResolver', () => {
 	describe('createSecretsResolver', () => {
@@ -20,9 +21,7 @@ describe('SecretsResolver', () => {
 				env: { STAGEFLOW_AUTH_USER: 'demo@example.com' }
 			});
 			expect(resolver.resolve({ from_env: 'STAGEFLOW_AUTH_USER' })).toBe('demo@example.com');
-			expect(resolver.resolveValue({ from_env: 'STAGEFLOW_AUTH_USER' })).toBe(
-				'demo@example.com'
-			);
+			expect(resolver.resolveValue({ from_env: 'STAGEFLOW_AUTH_USER' })).toBe('demo@example.com');
 		});
 
 		it('rejects an env var not in the allow-list with SecretsResolutionError', () => {
@@ -30,9 +29,7 @@ describe('SecretsResolver', () => {
 				allowList: ['STAGEFLOW_AUTH_USER'],
 				env: { OTHER_SECRET: 'leak' }
 			});
-			expect(() => resolver.resolve({ from_env: 'OTHER_SECRET' })).toThrow(
-				SecretsResolutionError
-			);
+			expect(() => resolver.resolve({ from_env: 'OTHER_SECRET' })).toThrow(SecretsResolutionError);
 		});
 
 		it('rejects an unset env var with SecretsResolutionError', () => {

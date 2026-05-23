@@ -49,9 +49,9 @@ describe('Provenance contract', () => {
 		const fixture = loadFixture('provenance.auth-storage-state.json');
 		expect(validate(fixture)).toBe(true);
 		expect(fixture.auth?.mode).toBe('storage_state');
-		expect(
-			(fixture.auth as { mode: 'storage_state'; artifact_key: string }).artifact_key
-		).toMatch(/storage-state\.json$/);
+		expect((fixture.auth as { mode: 'storage_state'; artifact_key: string }).artifact_key).toMatch(
+			/storage-state\.json$/
+		);
 	});
 
 	it('accepts a form auth document with from_env references', () => {
@@ -92,13 +92,11 @@ describe('Provenance contract', () => {
 		const fixture = loadFixture('provenance.auth-form.json') as Record<string, unknown>;
 		const auth = { ...(fixture.auth as Record<string, unknown>) };
 		delete auth.success;
-		expect(validate({ ...fixture, auth } as ProvenanceLike)).toBe(false);
+		expect(validate({ ...fixture, auth })).toBe(false);
 	});
 
 	it('rejects unknown discriminator on auth.mode', () => {
 		const fixture = loadFixture('provenance.no-auth.json') as Record<string, unknown>;
-		expect(
-			validate({ ...fixture, auth: { mode: 'oauth', token: 'x' } } as unknown as ProvenanceLike)
-		).toBe(false);
+		expect(validate({ ...fixture, auth: { mode: 'oauth', token: 'x' } })).toBe(false);
 	});
 });
