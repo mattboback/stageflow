@@ -8,11 +8,13 @@ import { type Browser, type BrowserContext, type Page, type Route, chromium } fr
 
 import { createLogger } from '../utils/logger';
 import { resolvePlaywrightImageChromiumExecutablePath } from '../utils/playwright';
+import { type SecretsResolver } from './secrets-resolver';
 import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';
 import {
 	type BrowserConfig,
 	DEFAULT_WAIT_STRATEGY,
 	type PreScanAction,
+	type PreScanActionValue,
 	type ScannerLogger,
 	type WaitStrategy
 } from './types';
@@ -112,16 +114,27 @@ export class BrowserManager {
 		throw lastError instanceof Error ? lastError : new Error(String(lastError));
 	}
 
-	async createContext(viewport?: { width: number; height: number }): Promise<BrowserContext> {
+	async createContext(
+		viewport?: { width: number; height: number },
+		options?: { storageStatePath?: string }
+	): Promise<BrowserContext> {
 		const browser = await this.launch();
 
 		const vp = viewport ?? this.config.defaultViewport;
+
+		const storageStatePath = options?.storageStatePath;
+		if (storageStatePath !== undefined) {
+			this.logger.info('Creating browser context with storage state', {
+				storageStatePath
+			});
+		}
 
 		return browser.newContext({
 			viewport: vp,
 			deviceScaleFactor: this.config.deviceScaleFactor,
 			// We inject small amounts of CSS/JS for scanning + screenshots; some sites have strict CSP that would block it.
-			bypassCSP: this.config.bypassCSP ?? false
+			bypassCSP: this.config.bypassCSP ?? false,
+			...(storageStatePath !== undefined ? { storageState: storageStatePath } : {})
 		});
 	}
 
@@ -211,7 +224,11 @@ export class BrowserManager {
 		});
 	}
 
-	async executePreScanActions(page: Page, actions: PreScanAction[]): Promise<void> {
+	async executePreScanActions(
+		page: Page,
+		actions: PreScanAction[],
+		secretsResolver?: SecretsResolver
+	): Promise<void> {
 		if (actions.length === 0) {
 			return;
 		}
@@ -219,11 +236,15 @@ export class BrowserManager {
 		this.logger.debug('Executing pre-scan actions', { count: actions.length });
 
 		for (const action of actions) {
-			await this.executeAction(page, action);
+			await this.executeAction(page, action, secretsResolver);
 		}
 	}
 
-	private async executeAction(page: Page, action: PreScanAction): Promise<void> {
+	private async executeAction(
+		page: Page,
+		action: PreScanAction,
+		secretsResolver?: SecretsResolver
+	): Promise<void> {
 		const timeout =
 			'timeout' in action && typeof action.timeout === 'number'
 				? action.timeout
@@ -233,12 +254,16 @@ export class BrowserManager {
 			case 'click':
 				await page.click(action.selector, { timeout });
 				return;
-			case 'fill':
-				await page.fill(action.selector, action.value, { timeout });
+			case 'fill': {
+				const value = resolveActionValue(action.value, secretsResolver);
+				await page.fill(action.selector, value, { timeout });
 				return;
-			case 'select':
-				await page.selectOption(action.selector, action.value, { timeout });
+			}
+			case 'select': {
+				const value = resolveActionValue(action.value, secretsResolver);
+				await page.selectOption(action.selector, value, { timeout });
 				return;
+			}
 			case 'hover':
 				await page.hover(action.selector, { timeout });
 				return;
@@ -327,4 +352,23 @@ export class BrowserManager {
 	getConfig(): BrowserConfig {
 		return { ...this.config };
 	}
+}
+
+
+function resolveActionValue(
+	value: PreScanActionValue,
+	secretsResolver: SecretsResolver | undefined
+): string {
+	if (typeof value === 'string') {
+		return value;
+	}
+
+	if (!secretsResolver) {
+		throw new Error(
+			'PreScanAction value contains a from_env reference, but no SecretsResolver was provided. ' +
+				'PageIterator must build a resolver from the recipe before invoking executePreScanActions.'
+		);
+	}
+
+	return secretsResolver.resolveValue(value);
 }

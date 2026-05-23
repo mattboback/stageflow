@@ -9,25 +9,36 @@ const repoRoot = resolve(scriptDir, "..", "..", "..");
 const stagedFiles = process.argv
 	.slice(2)
 	.map((file) => file.replaceAll("\\", "/"));
-const monitoredPrefixes = ["libs/contracts/report/"];
 
-const shouldRunContractsReportCheck = stagedFiles.some((file) =>
-	monitoredPrefixes.some((prefix) => file.startsWith(prefix)),
-);
-
-if (!shouldRunContractsReportCheck) {
-	process.exit(0);
-}
+const contractsToCheck = [
+	{ prefix: "libs/contracts/report/", cwd: "libs/contracts/report" },
+	{ prefix: "libs/contracts/provenance/", cwd: "libs/contracts/provenance" },
+];
 
 const bunCommand = process.platform === "win32" ? "bun.exe" : "bun";
-const result = spawnSync(bunCommand, ["run", "check"], {
-	cwd: resolve(repoRoot, "libs/contracts/report"),
-	stdio: "inherit",
-});
 
-if (result.error) {
-	console.error(result.error.message);
-	process.exit(1);
+let exitCode = 0;
+
+for (const contract of contractsToCheck) {
+	const shouldRun = stagedFiles.some((file) => file.startsWith(contract.prefix));
+	if (!shouldRun) {
+		continue;
+	}
+
+	const result = spawnSync(bunCommand, ["run", "check"], {
+		cwd: resolve(repoRoot, contract.cwd),
+		stdio: "inherit",
+	});
+
+	if (result.error) {
+		console.error(result.error.message);
+		exitCode = 1;
+		continue;
+	}
+
+	if ((result.status ?? 1) !== 0) {
+		exitCode = result.status ?? 1;
+	}
 }
 
-process.exit(result.status ?? 1);
+process.exit(exitCode);

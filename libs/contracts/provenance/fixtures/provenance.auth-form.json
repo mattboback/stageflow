@@ -1,0 +1,20 @@
+{
+	"version": "1.0.0",
+	"job_id": "job-form-auth",
+	"base_url": "https://app.example.com",
+	"mode": "live",
+	"default_wait_for": { "type": "domcontentloaded" },
+	"pages": [
+		{ "id": "profile", "path": "/profile", "url": "https://app.example.com/profile" }
+	],
+	"auth": {
+		"mode": "form",
+		"login_url": "https://app.example.com/login",
+		"steps": [
+			{ "type": "fill", "selector": "input[name=email]", "value": { "from_env": "STAGEFLOW_AUTH_USER" } },
+			{ "type": "fill", "selector": "input[name=password]", "value": { "from_env": "STAGEFLOW_AUTH_PASSWORD" } },
+			{ "type": "click", "selector": "button[type=submit]" }
+		],
+		"success": { "type": "selector", "selector": "[data-test=signed-in]", "timeout": 15000 }
+	}
+}

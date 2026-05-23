@@ -52,6 +52,13 @@ export async function runAiNavigatorAgent(
 
 	const maxSteps = goal.maxSteps ?? 10;
 	const maxWallTimeMs = goal.maxWallTimeMs ?? 120_000;
+	// Two failure-policy guards ported (inline, no new abstractions) from the
+	// legacy agent-harness turn loop. Total budget for this port is <50 lines.
+	const maxConsecutiveFailures = goal.maxConsecutiveFailures ?? 3;
+	const maxNoProgressTurns = goal.maxNoProgressTurns ?? 3;
+	let consecutiveFailures = 0;
+	let noProgressTurns = 0;
+	let lastSignature: string | undefined;
 
 	const steps: AgentStep[] = [];
 	let stuckReason: string | undefined;
@@ -155,9 +162,25 @@ export async function runAiNavigatorAgent(
 					durationMs: Date.now() - stepStartedMs
 				})
 			);
+
+			consecutiveFailures = 0;
+			const domLength = await page
+				.evaluate(() => document.body?.innerHTML.length ?? 0)
+				.catch(() => 0);
+			const signature = `${page.url()}|${domLength}`;
+			if (lastSignature !== undefined && signature === lastSignature) {
+				noProgressTurns += 1;
+				if (noProgressTurns >= maxNoProgressTurns) {
+					stuckReason = `No observable progress in ${noProgressTurns} successful turns`;
+					break;
+				}
+			} else {
+				noProgressTurns = 0;
+			}
+			lastSignature = signature;
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			stuckReason = message;
+			consecutiveFailures += 1;
 
 			steps.push(
 				buildAgentStep({
@@ -171,7 +194,11 @@ export async function runAiNavigatorAgent(
 					durationMs: Date.now() - stepStartedMs
 				})
 			);
-			break;
+
+			if (consecutiveFailures >= maxConsecutiveFailures) {
+				stuckReason = `Stopped after ${consecutiveFailures} consecutive failed action attempts: ${message}`;
+				break;
+			}
 		}
 	}
 

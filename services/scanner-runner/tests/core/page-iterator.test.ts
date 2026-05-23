@@ -374,9 +374,11 @@ describe('PageIterator', () => {
 
 			await pageIterator.iteratePages(provenanceWithActions, mockScanCallback);
 
-			expect(mockBrowserManager.executePreScanActions).toHaveBeenCalledWith(mockPage, [
-				{ type: 'click', selector: '#button' }
-			]);
+			expect(mockBrowserManager.executePreScanActions).toHaveBeenCalledWith(
+				mockPage,
+				[{ type: 'click', selector: '#button' }],
+				expect.objectContaining({ allowList: [] })
+			);
 		});
 
 		it('should retry failed pages up to maxRetries', async () => {

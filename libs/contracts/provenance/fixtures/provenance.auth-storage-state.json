@@ -1,0 +1,15 @@
+{
+	"version": "1.0.0",
+	"job_id": "job-storage-state",
+	"base_url": "https://app.example.com",
+	"mode": "live",
+	"default_wait_for": { "type": "domcontentloaded" },
+	"pages": [
+		{ "id": "profile", "path": "/profile", "url": "https://app.example.com/profile" },
+		{ "id": "settings", "path": "/settings", "url": "https://app.example.com/settings" }
+	],
+	"auth": {
+		"mode": "storage_state",
+		"artifact_key": "job-storage-state/auth/storage-state.json"
+	}
+}

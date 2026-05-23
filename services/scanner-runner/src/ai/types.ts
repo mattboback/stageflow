@@ -66,6 +66,17 @@ export interface AgentGoal {
 	maxTokensTotal?: number;
 	maxWallTimeMs?: number;
 	inputValues?: Record<string, string>;
+	/**
+	 * Stop after this many consecutive failed action attempts. Ported from the
+	 * legacy agent-harness turn loop. Defaults to 3 when unset.
+	 */
+	maxConsecutiveFailures?: number;
+	/**
+	 * Stop when this many successive successful turns produced no observable
+	 * URL or DOM signature change. Ported from the legacy agent-harness turn
+	 * loop. Defaults to 3 when unset.
+	 */
+	maxNoProgressTurns?: number;
 }
 
 export interface SuccessCriterion {
