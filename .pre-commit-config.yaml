@@ -36,10 +36,10 @@ repos:
         language: system
         types: [text]
         files: "\\.(jsx?|tsx?|c(js|ts)|m(js|ts)|d\\.(ts|cts|mts)|jsonc?|css|svelte|vue|astro|graphql|gql)$"
-        exclude: ^(clients/web/\.svelte-kit/|libs/contracts/report/generated/|libs/contracts/scanner-manifest/generated/)
+        exclude: ^(clients/web/\.svelte-kit/|libs/contracts/report/generated/|libs/contracts/scanner-manifest/generated/|libs/contracts/provenance/generated/)
       - id: stageflow-precommit
         name: stageflow-precommit
         entry: node devtools/scripts/precommit/run.mjs
         language: system
-        files: ^libs/contracts/report/
+        files: ^libs/contracts/(report|provenance)/
         require_serial: true
