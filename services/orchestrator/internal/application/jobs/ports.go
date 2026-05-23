@@ -52,6 +52,14 @@ type Artifacts interface {
 	BuildAggregatedReport(ctx context.Context, job *models.Job) (string, error)
 }
 
+// AuthUploader uploads an inline storage-state blob to the job's MinIO prefix
+// during JobCreated handling so the bytes never get persisted in Postgres or
+// re-emitted on subsequent NATS events. Returns the canonical artifact key
+// (relative to the artifacts bucket) the rest of the pipeline references.
+type AuthUploader interface {
+	UploadAuthStorageState(ctx context.Context, jobID string, content []byte) (string, error)
+}
+
 type Publisher interface {
 	PublishJobCompleted(ctx context.Context, payload *events.JobCompletedPayload) error
 	PublishJobFailed(ctx context.Context, payload *events.JobFailedPayload) error

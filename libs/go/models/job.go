@@ -1,7 +1,10 @@
 // Package models defines shared data structures for scan jobs.
 package models
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // JobState represents the current state of a job.
 type JobState string
@@ -108,6 +111,13 @@ type JobConfig struct {
 	Screenshot          bool                      `json:"screenshot"`
 	HighlightStyle      string                    `json:"highlight_style,omitempty"`
 	AllowPrivateTargets bool                      `json:"allow_private_targets,omitempty"`
+	// Auth carries the optional Provenance.auth block. It is omitted entirely
+	// for unauthenticated scans so the persisted JobConfig is byte-identical
+	// to the pre-auth shape on disk. For form recipes Auth carries only
+	// literal strings or {from_env: NAME} references; resolved credentials
+	// never appear here. For storage_state, the orchestrator strips any
+	// inline content blob and writes only the artifact_key after upload.
+	Auth json.RawMessage `json:"auth,omitempty"`
 }
 
 // JobStatus is the response for job status queries.

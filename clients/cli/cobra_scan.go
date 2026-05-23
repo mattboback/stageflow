@@ -13,13 +13,15 @@ import (
 
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
-		rawScanners  string
-		screenshot   = true
-		allowPrivate bool
-		timeout      time.Duration
-		noStream     bool
-		projectSlug  string
-		reportOpts   reportCommandOptions
+		rawScanners    string
+		screenshot     = true
+		allowPrivate   bool
+		timeout        time.Duration
+		noStream       bool
+		projectSlug    string
+		authStatePath  string
+		authRecipePath string
+		reportOpts     reportCommandOptions
 	)
 
 	cmd := &cobra.Command{
@@ -29,6 +31,13 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		Args:                  cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if projectSlug != "" {
+				if authStatePath != "" || authRecipePath != "" {
+					return exitCodeError{
+						Code: 2,
+						Err:  errors.New("--auth-state and --auth-recipe are not supported with --project (configure auth on the remote project instead)"),
+					}
+				}
+
 				return runRemoteProjectScan(cmd, root, projectSlug, timeout, noStream, reportOpts)
 			}
 
@@ -55,6 +64,11 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 				return exitCodeError{Code: 2, Err: validateErr}
 			}
 
+			authInput, authErr := loadAuthInputFromFlags(authStatePath, authRecipePath)
+			if authErr != nil {
+				return exitCodeError{Code: 2, Err: authErr}
+			}
+
 			effectiveAllowPrivate := allowPrivate
 			if !cobraFlagChanged(cmd, "allow-private-targets") && urlcheck.ContainsPrivateTargets(urls) {
 				effectiveAllowPrivate = true
@@ -67,15 +81,26 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 
 			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
+			req := apiclient.SubmitJobRequest{
+				URLs:                urls,
+				Modules:             modules,
+				Screenshot:          screenshot,
+				AllowPrivateTargets: effectiveAllowPrivate,
+			}
+			if authInput != nil {
+				req.Auth = authInput
+
+				fmt.Fprintf(
+					cmd.ErrOrStderr(),
+					"Attaching auth block (mode=%s) to scan submission.\n",
+					authInput.Mode,
+				)
+			}
+
 			status, doc, err := runScanJob(
 				cmd.Context(),
 				client,
-				apiclient.SubmitJobRequest{
-					URLs:                urls,
-					Modules:             modules,
-					Screenshot:          screenshot,
-					AllowPrivateTargets: effectiveAllowPrivate,
-				},
+				req,
 				timeout,
 				cmd.ErrOrStderr(),
 				noStream,
@@ -105,9 +130,43 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	)
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time")
 	cmd.Flags().StringVar(&projectSlug, "project", "", "Scan using a registered project's URLs and config")
+	cmd.Flags().StringVar(
+		&authStatePath,
+		"auth-state",
+		"",
+		"Path to a Playwright storage-state JSON captured via `stageflow auth capture`. "+
+			"Uploaded under the job's MinIO prefix and referenced from Provenance.auth.",
+	)
+	cmd.Flags().StringVar(
+		&authRecipePath,
+		"auth-recipe",
+		"",
+		"Path to a YAML/JSON form-auth recipe (Provenance.auth.form shape). "+
+			"Step values may be literal strings or {from_env: NAME} references.",
+	)
+	cmd.MarkFlagsMutuallyExclusive("auth-state", "auth-recipe")
 	bindReportFlags(cmd, &reportOpts, true)
 	cmd.Flags().BoolVar(&noStream, "no-stream", false, "Poll instead of SSE")
 	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
 	return cmd
+}
+
+// loadAuthInputFromFlags resolves --auth-state or --auth-recipe into a
+// JobAuthInput payload. Mutual exclusivity is enforced upstream by Cobra; this
+// function additionally guards against both being set defensively.
+func loadAuthInputFromFlags(authStatePath, authRecipePath string) (*apiclient.JobAuthInput, error) {
+	if authStatePath != "" && authRecipePath != "" {
+		return nil, errors.New("--auth-state and --auth-recipe are mutually exclusive")
+	}
+
+	if authStatePath != "" {
+		return loadAuthStateFile(authStatePath)
+	}
+
+	if authRecipePath != "" {
+		return loadAuthRecipeFile(authRecipePath)
+	}
+
+	return nil, nil
 }

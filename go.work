@@ -16,6 +16,7 @@ use (
 	./libs/go/logging
 	./libs/go/messaging
 	./libs/go/models
+	./libs/go/provenance
 	./libs/go/scannercatalog
 	./libs/go/scannerregistry
 	./libs/go/storage

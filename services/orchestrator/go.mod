@@ -14,6 +14,7 @@ require (
 	github.com/mattboback/stageflow/libs/go/logging v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/messaging v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/models v0.0.0-00010101000000-000000000000
+	github.com/mattboback/stageflow/libs/go/provenance v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/scannercatalog v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/scannerregistry v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/storage v0.0.0-00010101000000-000000000000
@@ -71,6 +72,8 @@ replace github.com/mattboback/stageflow/libs/go/logging => ../../libs/go/logging
 replace github.com/mattboback/stageflow/libs/go/messaging => ../../libs/go/messaging
 
 replace github.com/mattboback/stageflow/libs/go/models => ../../libs/go/models
+
+replace github.com/mattboback/stageflow/libs/go/provenance => ../../libs/go/provenance
 
 replace github.com/mattboback/stageflow/libs/go/scannercatalog => ../../libs/go/scannercatalog
 

@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,11 +12,18 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
+	provenanceauth "github.com/mattboback/stageflow/libs/go/provenance"
 	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
 )
 
 func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPayload) error {
 	now := time.Now()
+
+	authRaw, err := s.normalizeJobAuth(ctx, payload)
+	if err != nil {
+		return err
+	}
+
 	job := &models.Job{
 		ID:        payload.JobID,
 		State:     models.JobStatePending,
@@ -27,6 +36,7 @@ func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPaylo
 			Screenshot:          payload.Config.Screenshot,
 			HighlightStyle:      payload.Config.HighlightStyle,
 			AllowPrivateTargets: payload.Config.AllowPrivateTargets,
+			Auth:                authRaw,
 		},
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -220,4 +230,54 @@ func (s *Service) failJobSafe(ctx context.Context, jobID, stage, message, detail
 
 func describeTransition(from, to models.JobState) string {
 	return fmt.Sprintf("current_state=%s target_state=%s", from, to)
+}
+
+
+// normalizeJobAuth handles the "ingress" half of the auth boundary: the
+// platform-api may have shipped a storage-state blob inline in JobConfig.Auth.
+// Before we persist the job (or emit any further event), upload the bytes to
+// the artifacts bucket under the job's prefix and rewrite Auth to carry only
+// the artifact_key. Form recipes pass through untouched.
+func (s *Service) normalizeJobAuth(ctx context.Context, payload *events.JobCreatedPayload) ([]byte, error) {
+	if len(payload.Config.Auth) == 0 {
+		return nil, nil
+	}
+
+	var auth provenanceauth.Auth
+	if err := json.Unmarshal(payload.Config.Auth, &auth); err != nil {
+		return nil, fmt.Errorf("invalid JobConfig.Auth on job.created: %w", err)
+	}
+
+	if err := provenanceauth.ValidateAuth(&auth); err != nil {
+		return nil, fmt.Errorf("invalid JobConfig.Auth on job.created: %w", err)
+	}
+
+	if auth.Mode == provenanceauth.AuthModeStorageState && auth.StorageState != nil &&
+		auth.StorageState.ContentBase64 != "" {
+		if s.authUploader == nil {
+			return nil, errors.New(
+				"storage_state auth received but the orchestrator has no AuthUploader configured; " +
+					"set up the storage-state upload adapter or use form-mode auth instead",
+			)
+		}
+
+		decoded, decodeErr := base64.StdEncoding.DecodeString(auth.StorageState.ContentBase64)
+		if decodeErr != nil {
+			return nil, fmt.Errorf("auth.storage_state content_b64 is not valid base64: %w", decodeErr)
+		}
+
+		key, uploadErr := s.authUploader.UploadAuthStorageState(ctx, payload.JobID, decoded)
+		if uploadErr != nil {
+			return nil, fmt.Errorf("failed to upload auth storage_state: %w", uploadErr)
+		}
+
+		auth.StorageState = &provenanceauth.StorageStateBlock{ArtifactKey: key}
+	}
+
+	out, err := json.Marshal(auth.Compact())
+	if err != nil {
+		return nil, fmt.Errorf("failed to re-marshal normalized JobConfig.Auth: %w", err)
+	}
+
+	return out, nil
 }
