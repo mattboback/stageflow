@@ -128,4 +128,4 @@ Make StageFlow scan beyond marketing homepages by adding session-aware authentic
 
 - The plan deliberately omits the LinkedIn and Indeed auth-wall detector and the multi-target labeled-screenshot port from `agent-harness-legacy/`. Both are domain-specific to AlchemizeCV's job-board targets and add noise without a present consumer in StageFlow.
 - The deletion of `agent-harness-legacy/` lands together with the failure-policy port (task 9). The port is the only piece of the legacy snapshot that survives, and it survives in the live codebase rather than as a frozen reference.
-- A follow-up plan should cover a generic auth-wall detector (login-redirect heuristics, captcha presence, generic 401 and 403 patterns) once the deterministic auth path is in place.
+- A follow-up plan covers a generic auth-wall detector (login-redirect heuristics, captcha presence, generic 401 and 403 patterns) at [`docs/plans/2026-05-23-auth-wall-detector-v1.md`](./2026-05-23-auth-wall-detector-v1.md), with design context at [`docs/design/auth-wall-detector.md`](../design/auth-wall-detector.md).
