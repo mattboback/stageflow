@@ -10,14 +10,13 @@
  *      log, or any NATS event.
  */
 
-import type {
-	FromEnvReference,
-	PreScanAction,
-	PreScanActionValue,
-	Provenance
+import {
+	isFromEnvReference,
+	type FromEnvReference,
+	type PreScanAction,
+	type PreScanActionValue,
+	type Provenance
 } from './types';
-
-import { isFromEnvReference } from './types';
 
 export class SecretsResolutionError extends Error {
 	readonly reference: string;

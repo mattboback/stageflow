@@ -354,7 +354,6 @@ export class BrowserManager {
 	}
 }
 
-
 function resolveActionValue(
 	value: PreScanActionValue,
 	secretsResolver: SecretsResolver | undefined

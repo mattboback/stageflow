@@ -189,7 +189,7 @@ export class PageIterator {
 						}
 					});
 				} catch (err) {
-					return this.synthesizeAuthFailureResults(pages, err, provenance.auth, callbacks);
+					return await this.synthesizeAuthFailureResults(pages, err, provenance.auth, callbacks);
 				}
 			}
 
@@ -279,9 +279,7 @@ export class PageIterator {
 			type: 'auth_hydration_failed',
 			details: {
 				mode: hydrationError.mode,
-				...(hydrationError.loginUrl !== undefined
-					? { login_url: hydrationError.loginUrl }
-					: {}),
+				...(hydrationError.loginUrl !== undefined ? { login_url: hydrationError.loginUrl } : {}),
 				...(hydrationError.postLoginUrl !== undefined
 					? { post_login_url: hydrationError.postLoginUrl }
 					: {}),
@@ -598,7 +596,6 @@ function parseScanUrls(raw: string): string[] {
 	return parsed as string[];
 }
 
-
 /**
  * Attaches a Provenance.auth block from PROVENANCE_AUTH_JSON when present.
  *
@@ -629,7 +626,7 @@ function attachAuthFromEnv(provenance: Provenance, logger: ScannerLogger): void 
 
 	if (!isProvenanceAuth(parsed)) {
 		logger.warn('PROVENANCE_AUTH_JSON did not match Provenance.auth shape; ignoring', {
-			parsed: typeof parsed === 'object' ? Object.keys(parsed as object) : typeof parsed
+			parsed: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : typeof parsed
 		});
 		return;
 	}

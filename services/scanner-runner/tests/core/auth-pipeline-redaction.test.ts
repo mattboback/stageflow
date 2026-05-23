@@ -31,10 +31,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type {
-	PageIteratorAuditEvent,
-	PageScanCallback
-} from '../../src/core/page-iterator';
-import type {
 	PageScanResult,
 	Provenance,
 	ScanEventPublisher,
@@ -44,7 +40,11 @@ import type {
 	StorageProvider
 } from '../../src/core/types';
 
-import { PageIterator } from '../../src/core/page-iterator';
+import {
+	PageIterator,
+	type PageIteratorAuditEvent,
+	type PageScanCallback
+} from '../../src/core/page-iterator';
 import { ScanStageLogger } from '../../src/core/scan-stage-logger';
 
 const SECRET_USER = 'leak-canary-user-r4ndom-7c2x';
@@ -55,38 +55,42 @@ class CapturingPublisher implements ScanEventPublisher {
 	scanCompleted: { results: ScanResults; timing?: ScanTiming }[] = [];
 	scanFailed: { error: string; details?: string }[] = [];
 
-	publishPageCompleted = async (result: PageScanResult): Promise<void> => {
+	publishPageCompleted = (result: PageScanResult): Promise<void> => {
 		this.pageCompleted.push(JSON.parse(JSON.stringify(result)) as PageScanResult);
+		return Promise.resolve();
 	};
 
-	publishScanCompleted = async (results: ScanResults, timing?: ScanTiming): Promise<void> => {
+	publishScanCompleted = (results: ScanResults, timing?: ScanTiming): Promise<void> => {
 		this.scanCompleted.push({
 			results: JSON.parse(JSON.stringify(results)) as ScanResults,
 			...(timing !== undefined ? { timing: JSON.parse(JSON.stringify(timing)) as ScanTiming } : {})
 		});
+		return Promise.resolve();
 	};
 
-	publishScanFailed = async (error: string, details?: string): Promise<void> => {
+	publishScanFailed = (error: string, details?: string): Promise<void> => {
 		this.scanFailed.push({ error, ...(details !== undefined ? { details } : {}) });
+		return Promise.resolve();
 	};
 
-	close = async (): Promise<void> => undefined;
+	close = (): Promise<void> => Promise.resolve();
 }
 
 class CapturingStorageProvider implements StorageProvider {
 	uploads: { bucket: string; key: string; body: string }[] = [];
 
-	ensureBucket = async (): Promise<void> => undefined;
+	ensureBucket = (): Promise<void> => Promise.resolve();
 	upload = async (bucket: string, key: string, filePath: string): Promise<void> => {
 		const body = await readFile(filePath, 'utf8');
 		this.uploads.push({ bucket, key, body });
 	};
-	uploadBuffer = async (bucket: string, key: string, data: Buffer): Promise<void> => {
+	uploadBuffer = (bucket: string, key: string, data: Buffer): Promise<void> => {
 		this.uploads.push({ bucket, key, body: data.toString('utf8') });
+		return Promise.resolve();
 	};
-	uploadDirectory = async (): Promise<number> => 0;
-	download = async (): Promise<void> => undefined;
-	exists = async (): Promise<boolean> => false;
+	uploadDirectory = (): Promise<number> => Promise.resolve(0);
+	download = (): Promise<void> => Promise.resolve();
+	exists = (): Promise<boolean> => Promise.resolve(false);
 }
 
 interface BrowserHarness {
@@ -232,7 +236,11 @@ async function runFullPipeline(
 		}
 	});
 
-	stageLogger.setMetrics({ pages_total: results.length, pages_scanned: results.length, total_issues: 0 });
+	stageLogger.setMetrics({
+		pages_total: results.length,
+		pages_scanned: results.length,
+		total_issues: 0
+	});
 	stageLogger.setArtifacts({ results_key: `${config.jobId}/axe/results.json` });
 	await stageLogger.finalizeSuccess();
 
@@ -280,14 +288,23 @@ describe('Auth pipeline redaction (form mode)', () => {
 	afterEach(async () => {
 		await rm(tmp, { recursive: true, force: true });
 
-		if (originalUser === undefined) delete process.env.STAGEFLOW_AUTH_USER;
-		else process.env.STAGEFLOW_AUTH_USER = originalUser;
+		if (originalUser === undefined) {
+			delete process.env.STAGEFLOW_AUTH_USER;
+		} else {
+			process.env.STAGEFLOW_AUTH_USER = originalUser;
+		}
 
-		if (originalPassword === undefined) delete process.env.STAGEFLOW_AUTH_PASSWORD;
-		else process.env.STAGEFLOW_AUTH_PASSWORD = originalPassword;
+		if (originalPassword === undefined) {
+			delete process.env.STAGEFLOW_AUTH_PASSWORD;
+		} else {
+			process.env.STAGEFLOW_AUTH_PASSWORD = originalPassword;
+		}
 
-		if (originalAuthEnv === undefined) delete process.env.PROVENANCE_AUTH_JSON;
-		else process.env.PROVENANCE_AUTH_JSON = originalAuthEnv;
+		if (originalAuthEnv === undefined) {
+			delete process.env.PROVENANCE_AUTH_JSON;
+		} else {
+			process.env.PROVENANCE_AUTH_JSON = originalAuthEnv;
+		}
 
 		vi.clearAllMocks();
 	});
@@ -383,7 +400,9 @@ describe('Auth pipeline redaction (form mode)', () => {
 
 		// Storage state path was threaded into createContext.
 		expect(ssRun.harness.storageStatePathSeen).toBeDefined();
-		expect(ssRun.harness.storageStatePathSeen).toContain(storageStatePath.split('auth/').pop() ?? '');
+		expect(ssRun.harness.storageStatePathSeen).toContain(
+			storageStatePath.split('auth/').pop() ?? ''
+		);
 
 		// All persisted/published surfaces remain free of secrets in storage_state mode.
 		expectNoSecrets('ss audit events', JSON.stringify(ssRun.auditEvents));
@@ -405,9 +424,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 		process.env.PROVENANCE_AUTH_JSON = JSON.stringify({
 			mode: 'form',
 			login_url: 'https://app.example.com/login',
-			steps: [
-				{ type: 'fill', selector: '#u', value: { from_env: 'STAGEFLOW_AUTH_USER' } }
-			],
+			steps: [{ type: 'fill', selector: '#u', value: { from_env: 'STAGEFLOW_AUTH_USER' } }],
 			success: { type: 'load' }
 		});
 		// SCAN_URLS forces the synthesize-from-env path.
@@ -428,8 +445,11 @@ describe('Auth pipeline redaction (form mode)', () => {
 			expectNoSecrets('persisted synthesized Provenance', persisted);
 			expect(persisted).toContain('STAGEFLOW_AUTH_USER');
 		} finally {
-			if (originalScanUrls === undefined) delete process.env.SCAN_URLS;
-			else process.env.SCAN_URLS = originalScanUrls;
+			if (originalScanUrls === undefined) {
+				delete process.env.SCAN_URLS;
+			} else {
+				process.env.SCAN_URLS = originalScanUrls;
+			}
 		}
 	});
 });
