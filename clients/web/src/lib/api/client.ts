@@ -128,6 +128,7 @@ interface SubmitJobParams {
 	scanners: ScannerSelection[];
 	highlightStyle: 'solid' | 'dashed';
 	screenshot?: boolean;
+	auth?: Record<string, unknown> | null;
 	signal?: AbortSignal;
 }
 
@@ -186,6 +187,7 @@ export async function submitScanJob({
 	scanners,
 	highlightStyle,
 	screenshot = true,
+	auth = null,
 	signal
 }: SubmitJobParams): Promise<SubmitJobResponse> {
 	let response: Response;
@@ -233,7 +235,8 @@ export async function submitScanJob({
 				modules,
 				scanner_configs: scannerConfigs,
 				screenshot,
-				highlight_style: highlightStyle
+				highlight_style: highlightStyle,
+				...(auth ? { auth } : {})
 			}),
 			signal: signal ?? null
 		});
