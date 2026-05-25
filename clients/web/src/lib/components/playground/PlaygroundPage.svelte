@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { fetchScanners, getDefaultScannerSelections, submitScanJob } from '$lib/api/client';
 	import PlaygroundAiConfig from '$lib/components/playground/PlaygroundAiConfig.svelte';
+	import PlaygroundAuthConfig from '$lib/components/playground/PlaygroundAuthConfig.svelte';
 	import PlaygroundHeroSection from '$lib/components/playground/PlaygroundHeroSection.svelte';
 	import PlaygroundModeToggle from '$lib/components/playground/PlaygroundModeToggle.svelte';
 	import PlaygroundOptions from '$lib/components/playground/PlaygroundOptions.svelte';
@@ -14,9 +15,12 @@
 	import PlaygroundZipUpload from '$lib/components/playground/PlaygroundZipUpload.svelte';
 	import {
 		buildAiNavigatorConfig,
+		buildFormAuthConfig,
+		isAuthConfigComplete,
 		normalizeUrlListText,
 		parseUrlList,
-		validateHttpUrls
+		validateHttpUrls,
+		type AuthFormConfig
 	} from '$lib/components/playground/playground-utils';
 	import {
 		type ScannerPreset,
@@ -50,6 +54,19 @@
 	let aiInputValues = $state<Array<{ key: string; value: string }>>([]);
 	let aiSuccessCriteria = $state<Array<{ type: string; value: string }>>([]);
 
+	// Auth configuration
+	let authConfig = $state<AuthFormConfig>({
+		enabled: false,
+		loginUrl: '',
+		username: '',
+		password: '',
+		usernameSelector: '',
+		passwordSelector: '',
+		submitSelector: '',
+		successStrategy: 'networkidle',
+		successSelector: ''
+	});
+
 	// Derived state
 	const hasValidInput = $derived(mode === 'url' ? urls.trim().length > 0 : file !== null);
 	const hasEnabledScanner = $derived(scanners.some((s) => s.enabled));
@@ -58,8 +75,10 @@
 	const isAiConfigValid = $derived(
 		!isAiNavigatorEnabled || (aiObjective.trim().length > 0 && aiModel.trim().length > 0)
 	);
+	const isAuthEnabled = $derived(authConfig.enabled);
+	const isAuthConfigValid = $derived(isAuthConfigComplete(authConfig));
 	const canSubmit = $derived(
-		hasValidInput && hasEnabledScanner && isAiConfigValid && !isSubmitting
+		hasValidInput && hasEnabledScanner && isAiConfigValid && isAuthConfigValid && !isSubmitting
 	);
 	const missingRequirements = $derived.by(() => {
 		const requirements: string[] = [];
@@ -73,6 +92,11 @@
 		}
 		if (isAiNavigatorEnabled && !isAiConfigValid) {
 			requirements.push('Add an AI Navigator objective before running.');
+		}
+		if (mode === 'url' && isAuthEnabled && !isAuthConfigValid) {
+			requirements.push(
+				'Complete the authentication setup (login URL, username, and password required).'
+			);
 		}
 		return requirements;
 	});
@@ -161,13 +185,16 @@
 				return;
 			}
 
+			const auth = mode === 'url' ? buildFormAuthConfig(authConfig) : null;
+
 			const result = await submitScanJob({
 				mode,
 				urls: mode === 'url' ? valid : urlList,
 				file,
 				scanners,
 				screenshot,
-				highlightStyle
+				highlightStyle,
+				auth
 			});
 
 			await goto(`/scan/${result.job_id}`);
@@ -308,6 +335,16 @@
 								</div>
 							{/if}
 
+							{#if mode === 'url'}
+								<div transition:slide={{ duration: 300 }}>
+									<PlaygroundAuthConfig
+										config={authConfig}
+										isValid={isAuthConfigValid}
+										onConfigChange={(v) => (authConfig = v)}
+									/>
+								</div>
+							{/if}
+
 							{#if error}
 								<Alert variant="error">
 									<div class="flex items-start gap-3">
@@ -397,6 +434,18 @@
 									<p class="text-ink-muted text-[10px] font-medium">AI Nav</p>
 								</div>
 							{/if}
+							{#if isAuthEnabled}
+								<div class="bg-line h-8 w-px"></div>
+								<div class="text-center">
+									<span
+										class="stat-mono text-xl font-bold"
+										class:text-emerald-700={isAuthConfigValid}
+										class:text-amber-700={!isAuthConfigValid}
+										>{isAuthConfigValid ? '✓' : '!'}</span
+									>
+									<p class="text-ink-muted text-[10px] font-medium">Auth</p>
+								</div>
+							{/if}
 						</div>
 					{/snippet}
 
@@ -432,6 +481,8 @@
 					{canSubmit}
 					{isAiNavigatorEnabled}
 					{isAiConfigValid}
+					{isAuthEnabled}
+					{isAuthConfigValid}
 					{missingRequirements}
 				/>
 			</div>

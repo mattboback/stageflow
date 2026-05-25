@@ -1,3 +1,79 @@
+export interface AuthFormConfig {
+	enabled: boolean;
+	loginUrl: string;
+	username: string;
+	password: string;
+	/** Empty string means use the smart default: `input[type="email"]` */
+	usernameSelector: string;
+	/** Empty string means use the smart default: `input[type="password"]` */
+	passwordSelector: string;
+	/** Empty string means use the smart default: `button[type="submit"]` */
+	submitSelector: string;
+	successStrategy: 'networkidle' | 'selector';
+	/** Only used when successStrategy === 'selector' */
+	successSelector: string;
+}
+
+/**
+ * Returns true when the config is either disabled (trivially valid) or fully
+ * filled in so that `buildFormAuthConfig` can produce a usable recipe.
+ */
+export function isAuthConfigComplete(config: AuthFormConfig): boolean {
+	if (!config.enabled) {
+		return true;
+	}
+
+	const hasRequired =
+		config.loginUrl.trim().length > 0 &&
+		config.username.trim().length > 0 &&
+		config.password.trim().length > 0;
+
+	if (!hasRequired) {
+		return false;
+	}
+
+	if (config.successStrategy === 'selector' && config.successSelector.trim().length === 0) {
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Builds the auth wire format for `/api/v1/jobs/urls`.
+ *
+ * Returns `null` if auth is disabled or the config is incomplete — callers
+ * should gate on `isAuthConfigComplete` before calling this and handle null
+ * by omitting the `auth` key from the request body.
+ */
+export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unknown> | null {
+	if (!config.enabled || !isAuthConfigComplete(config)) {
+		return null;
+	}
+
+	const usernameSelector = config.usernameSelector.trim() || 'input[type="email"]';
+	const passwordSelector = config.passwordSelector.trim() || 'input[type="password"]';
+	const submitSelector = config.submitSelector.trim() || 'button[type="submit"]';
+
+	const success: Record<string, unknown> =
+		config.successStrategy === 'selector' && config.successSelector.trim()
+			? { type: 'selector', selector: config.successSelector.trim() }
+			: { type: 'networkidle' };
+
+	return {
+		mode: 'form',
+		form: {
+			login_url: config.loginUrl.trim(),
+			steps: [
+				{ type: 'fill', selector: usernameSelector, value: config.username },
+				{ type: 'fill', selector: passwordSelector, value: config.password },
+				{ type: 'click', selector: submitSelector }
+			],
+			success
+		}
+	};
+}
+
 export interface AiInputValue {
 	key: string;
 	value: string;

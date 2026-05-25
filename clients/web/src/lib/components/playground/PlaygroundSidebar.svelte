@@ -13,6 +13,8 @@
 		canSubmit: boolean;
 		isAiNavigatorEnabled: boolean;
 		isAiConfigValid: boolean;
+		isAuthEnabled: boolean;
+		isAuthConfigValid: boolean;
 		missingRequirements: string[];
 	}
 
@@ -24,6 +26,8 @@
 		canSubmit,
 		isAiNavigatorEnabled,
 		isAiConfigValid,
+		isAuthEnabled,
+		isAuthConfigValid,
 		missingRequirements
 	}: Props = $props();
 
@@ -118,6 +122,19 @@
 									class={cn('font-medium', isAiConfigValid ? 'text-emerald-700' : 'text-amber-700')}
 								>
 									{isAiConfigValid ? 'Configured' : 'Needs objective'}
+								</span>
+							</div>
+						{/if}
+						{#if isAuthEnabled}
+							<div class="flex items-center justify-between gap-3">
+								<span class="text-ink-muted">Authentication</span>
+								<span
+									class={cn(
+										'font-medium',
+										isAuthConfigValid ? 'text-emerald-700' : 'text-amber-700'
+									)}
+								>
+									{isAuthConfigValid ? 'Configured' : 'Incomplete'}
 								</span>
 							</div>
 						{/if}
