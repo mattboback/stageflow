@@ -80,18 +80,6 @@
 		@apply text-ink selection:bg-accent-soft selection:text-ink;
 	}
 
-	body::before {
-		content: '';
-		position: fixed;
-		inset: 0;
-		z-index: 9999;
-		pointer-events: none;
-		opacity: 0.008;
-		background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-		background-repeat: repeat;
-		background-size: 256px 256px;
-	}
-
 	/* Typography utilities */
 	h1,
 	h2,
@@ -155,10 +143,6 @@
 		@apply py-16 lg:py-24;
 	}
 
-	.playground-hero {
-		background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-paper) 100%);
-	}
-
 	.playground-shell {
 		background: var(--color-paper);
 	}
@@ -191,24 +175,10 @@
 	}
 
 	.landing-hero {
-		background: linear-gradient(170deg, var(--color-surface) 0%, var(--color-paper) 55%);
+		background: var(--color-surface);
 		position: relative;
 		overflow: hidden;
-	}
-	.landing-hero::before {
-		content: '';
-		position: absolute;
-		top: -20%;
-		right: -5%;
-		width: 600px;
-		height: 600px;
-		background: radial-gradient(circle, rgba(13, 92, 99, 0.06) 0%, transparent 60%);
-		pointer-events: none;
-		z-index: 0;
-	}
-	.landing-hero > * {
-		position: relative;
-		z-index: 1;
+		border-bottom: 1px solid var(--color-line);
 	}
 
 	.landing-grid {
@@ -247,14 +217,6 @@
 	.editorial-card {
 		box-shadow: var(--shadow-sm);
 		@apply border-line bg-surface rounded-2xl border;
-		transition:
-			box-shadow var(--duration-normal) var(--ease-out),
-			transform var(--duration-normal) var(--ease-out);
-	}
-
-	.editorial-card:hover {
-		box-shadow: var(--shadow-card-hover);
-		transform: translateY(-2px);
 	}
 
 	.hero-summary-card {
@@ -277,14 +239,6 @@
 	.workflow-step {
 		@apply border-line bg-surface relative rounded-2xl border px-6 py-7;
 		box-shadow: var(--shadow-sm);
-		transition: all var(--duration-normal) var(--ease-out);
-	}
-
-	.workflow-step:hover {
-		border-color: var(--color-accent);
-		box-shadow:
-			0 12px 30px rgba(13, 92, 99, 0.08),
-			0 4px 12px rgba(0, 0, 0, 0.02);
 	}
 
 	.workflow-index {
@@ -293,36 +247,15 @@
 	}
 
 	.workflow-line {
-		background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-line) 100%);
-		@apply pointer-events-none absolute top-12 left-0 hidden h-[2px] w-full lg:block;
-		opacity: 0.8;
+		background: var(--color-line);
+		@apply pointer-events-none absolute top-12 left-0 hidden h-px w-full lg:block;
 	}
 
 	.cta-panel {
-		background: linear-gradient(135deg, var(--color-accent-deep) 0%, #0a1a1a 100%);
+		background: var(--color-ink-strong);
 		position: relative;
 		overflow: hidden;
 		@apply rounded-3xl px-8 py-14 text-center sm:px-12;
-	}
-	.cta-panel::before {
-		content: '';
-		position: absolute;
-		top: -40%;
-		right: -10%;
-		width: 500px;
-		height: 500px;
-		background: radial-gradient(circle, rgba(13, 92, 99, 0.3) 0%, transparent 65%);
-		pointer-events: none;
-	}
-	.cta-panel::after {
-		content: '';
-		position: absolute;
-		bottom: -30%;
-		left: -5%;
-		width: 400px;
-		height: 400px;
-		background: radial-gradient(circle, rgba(13, 92, 99, 0.2) 0%, transparent 65%);
-		pointer-events: none;
 	}
 
 	.nav-shell {
@@ -370,23 +303,10 @@
 	.scanner-card {
 		position: relative;
 		overflow: hidden;
-		border-top-color: var(--color-line) !important;
-		transition: all var(--duration-slow) var(--ease-out);
+		transition: border-color var(--duration-fast) var(--ease-out);
 	}
 	.scanner-card:hover {
-		border-top-color: var(--brand-color) !important;
-		box-shadow:
-			0 12px 32px var(--glow-color),
-			0 4px 12px rgba(0, 0, 0, 0.02);
-	}
-	.scanner-card::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		height: 1px;
-		background: linear-gradient(90deg, transparent, var(--color-line), transparent);
+		border-color: var(--color-ink-faint);
 	}
 
 	.form-section-label {
@@ -396,6 +316,30 @@
 	.h3-display {
 		font-family: var(--font-display);
 		@apply text-ink text-xl font-semibold tracking-[-0.01em] sm:text-2xl;
+	}
+
+	/* Form step pattern: small, accessible numbered headings */
+	.form-step-head {
+		@apply mb-3 flex items-center gap-2.5;
+	}
+
+	.form-step-num {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+		@apply border-line bg-surface text-ink-faint inline-flex h-6 w-6 items-center justify-center rounded-md border text-[11px] font-semibold;
+	}
+
+	.form-step-title {
+		@apply text-ink text-sm font-semibold tracking-[-0.005em];
+	}
+
+	.form-step-rule {
+		@apply bg-line h-px flex-1;
+	}
+
+	.section-tag {
+		font-family: var(--font-mono);
+		@apply text-ink-faint text-[11px] font-medium tracking-[0.06em] uppercase;
 	}
 
 	.nav-link {
