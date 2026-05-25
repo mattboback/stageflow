@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { ScannerSelection } from '$lib/types/scan';
 
-	import { Chip, Panel } from '$lib/components/ui';
+	import { Chip } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import { CheckCircle2, Lock, Play, Sparkles, Target, WandSparkles } from 'lucide-svelte';
+	import { AlertTriangle, CheckCircle2, Lock } from 'lucide-svelte';
 
 	interface Props {
 		mode: 'url' | 'zip';
@@ -35,166 +35,118 @@
 	const previewScanners = $derived(enabledScanners.slice(0, 4));
 </script>
 
-<div class="space-y-4 xl:sticky xl:top-24">
-	<Panel
-		padding="none"
-		rounded="2xl"
-		class="text-ink border-line/80 overflow-hidden shadow-[var(--shadow-sm)]"
-	>
-		<div class="border-line/80 bg-surface-muted/70 border-b px-5 py-4">
-			<div class="flex items-center justify-between gap-3">
-				<div>
-					<h3 class="text-sm font-semibold tracking-wide uppercase">Run Summary</h3>
-					<p class="text-ink-muted mt-1 text-xs">Everything needed to launch this scan.</p>
-				</div>
-				<Chip tone={canSubmit ? 'success' : 'warning'} size="sm">
-					{canSubmit ? 'Ready' : 'Needs input'}
-				</Chip>
+<aside class="space-y-4 xl:sticky xl:top-24" aria-label="Scan summary">
+	<div class="border-line bg-surface rounded-2xl border shadow-[var(--shadow-sm)]">
+		<header class="border-line/80 flex items-center justify-between gap-3 border-b px-5 py-4">
+			<div>
+				<h2 class="text-ink text-sm font-semibold tracking-[-0.005em]">Run summary</h2>
+				<p class="text-ink-muted mt-0.5 text-xs">Everything queued for this scan.</p>
 			</div>
-		</div>
-		<div class="px-5 py-5">
-			<div class="space-y-4">
-				<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-					<div class="bg-surface-muted/60 rounded-2xl px-4 py-3">
-						<div
-							class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+			<Chip tone={canSubmit ? 'success' : 'warning'} size="sm">
+				{canSubmit ? 'Ready' : 'Needs input'}
+			</Chip>
+		</header>
+
+		<dl class="border-line/80 divide-line/80 divide-y border-b text-sm">
+			<div class="flex items-center justify-between gap-3 px-5 py-3">
+				<dt class="text-ink-muted text-xs font-medium tracking-[0.04em] uppercase">Target</dt>
+				<dd class="text-ink font-medium">{mode === 'url' ? 'Live URLs' : 'ZIP archive'}</dd>
+			</div>
+			<div class="flex items-center justify-between gap-3 px-5 py-3">
+				<dt class="text-ink-muted text-xs font-medium tracking-[0.04em] uppercase">Scanners</dt>
+				<dd class="text-ink font-medium">
+					{enabledScanners.length}<span class="text-ink-faint"> / {scanners.length}</span>
+				</dd>
+			</div>
+			<div class="flex items-center justify-between gap-3 px-5 py-3">
+				<dt class="text-ink-muted text-xs font-medium tracking-[0.04em] uppercase">Screenshots</dt>
+				<dd class="text-ink font-medium">{screenshot ? 'Included' : 'Off'}</dd>
+			</div>
+			<div class="flex items-center justify-between gap-3 px-5 py-3">
+				<dt class="text-ink-muted text-xs font-medium tracking-[0.04em] uppercase">Highlights</dt>
+				<dd class="text-ink font-medium capitalize">{highlightStyle}</dd>
+			</div>
+			{#if isAiNavigatorEnabled}
+				<div class="flex items-center justify-between gap-3 px-5 py-3">
+					<dt class="text-ink-muted text-xs font-medium tracking-[0.04em] uppercase">
+						AI Navigator
+					</dt>
+					<dd class={cn('font-medium', isAiConfigValid ? 'text-emerald-700' : 'text-amber-700')}>
+						{isAiConfigValid ? 'Configured' : 'Needs objective'}
+					</dd>
+				</div>
+			{/if}
+			{#if isAuthEnabled}
+				<div class="flex items-center justify-between gap-3 px-5 py-3">
+					<dt class="text-ink-muted text-xs font-medium tracking-[0.04em] uppercase">
+						Authentication
+					</dt>
+					<dd class={cn('font-medium', isAuthConfigValid ? 'text-emerald-700' : 'text-amber-700')}>
+						{isAuthConfigValid ? 'Configured' : 'Incomplete'}
+					</dd>
+				</div>
+			{/if}
+		</dl>
+
+		{#if previewScanners.length > 0}
+			<div class="border-line/80 border-b px-5 py-4">
+				<p class="text-ink-muted mb-2 text-xs font-medium tracking-[0.04em] uppercase">Selected</p>
+				<div class="flex flex-wrap gap-1.5">
+					{#each previewScanners as scanner (scanner.id)}
+						<span
+							class="border-line bg-surface-muted/60 text-ink inline-flex rounded-md border px-2 py-0.5 text-xs font-medium capitalize"
 						>
-							<Target class="h-3.5 w-3.5" />
-							Target
-						</div>
-						<p class="mt-2 text-sm font-medium">{mode === 'url' ? 'Live URLs' : 'ZIP archive'}</p>
-					</div>
-					<div class="bg-surface-muted/60 rounded-2xl px-4 py-3">
-						<div
-							class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
+							{scanner.id.replace(/-/g, ' ')}
+						</span>
+					{/each}
+					{#if enabledScanners.length > previewScanners.length}
+						<span
+							class="border-line bg-surface-muted/60 text-ink-muted inline-flex rounded-md border px-2 py-0.5 text-xs font-medium"
 						>
-							<Sparkles class="h-3.5 w-3.5" />
-							Scanners
-						</div>
-						<p class="mt-2 text-sm font-medium">
-							{enabledScanners.length} enabled
-							{#if enabledScanners.length > 0}
-								<span class="text-ink-muted">of {scanners.length}</span>
-							{/if}
+							+{enabledScanners.length - previewScanners.length} more
+						</span>
+					{/if}
+				</div>
+			</div>
+		{/if}
+
+		<div class="px-5 py-4">
+			{#if canSubmit}
+				<div class="flex items-start gap-2.5">
+					<CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+					<div class="min-w-0">
+						<p class="text-ink text-sm font-semibold">Ready to start scan</p>
+						<p class="text-ink-muted mt-1 text-xs leading-relaxed">
+							Your scan launches immediately and streams progress on the next screen.
 						</p>
 					</div>
 				</div>
-
-				{#if previewScanners.length > 0}
-					<div>
-						<p class="text-ink-muted mb-2 text-[11px] font-semibold tracking-[0.14em] uppercase">
-							Selected now
-						</p>
-						<div class="flex flex-wrap gap-1.5">
-							{#each previewScanners as scanner (scanner.id)}
-								<span class="bg-surface inline-flex rounded-full px-2.5 py-1 text-xs font-medium">
-									{scanner.id.replace(/-/g, ' ')}
-								</span>
+			{:else}
+				<div class="flex items-start gap-2.5">
+					<AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+					<div class="min-w-0">
+						<p class="text-ink text-sm font-semibold">Complete these before running</p>
+						<ul class="text-ink-muted mt-1.5 space-y-1 text-xs leading-relaxed">
+							{#each missingRequirements as requirement (requirement)}
+								<li>{requirement}</li>
 							{/each}
-							{#if enabledScanners.length > previewScanners.length}
-								<span
-									class="text-ink-muted bg-surface inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
-								>
-									+{enabledScanners.length - previewScanners.length} more
-								</span>
-							{/if}
-						</div>
-					</div>
-				{/if}
-
-				<div class="bg-surface-muted/60 rounded-2xl px-4 py-3">
-					<p class="text-ink-muted text-[11px] font-semibold tracking-[0.14em] uppercase">
-						Run options
-					</p>
-					<div class="mt-2 space-y-2 text-sm">
-						<div class="flex items-center justify-between gap-3">
-							<span class="text-ink-muted">Screenshots</span>
-							<span class="font-medium">{screenshot ? 'Included' : 'Off'}</span>
-						</div>
-						<div class="flex items-center justify-between gap-3">
-							<span class="text-ink-muted">Highlights</span>
-							<span class="font-medium capitalize">{highlightStyle}</span>
-						</div>
-						{#if isAiNavigatorEnabled}
-							<div class="flex items-center justify-between gap-3">
-								<span class="text-ink-muted">AI Navigator</span>
-								<span
-									class={cn('font-medium', isAiConfigValid ? 'text-emerald-700' : 'text-amber-700')}
-								>
-									{isAiConfigValid ? 'Configured' : 'Needs objective'}
-								</span>
-							</div>
-						{/if}
-						{#if isAuthEnabled}
-							<div class="flex items-center justify-between gap-3">
-								<span class="text-ink-muted">Authentication</span>
-								<span
-									class={cn(
-										'font-medium',
-										isAuthConfigValid ? 'text-emerald-700' : 'text-amber-700'
-									)}
-								>
-									{isAuthConfigValid ? 'Configured' : 'Incomplete'}
-								</span>
-							</div>
-						{/if}
+						</ul>
 					</div>
 				</div>
-
-				<div
-					class={cn(
-						'rounded-2xl border px-4 py-3',
-						canSubmit ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'
-					)}
-				>
-					<div class="flex items-start gap-2.5">
-						<div
-							class={cn(
-								'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-								canSubmit ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-							)}
-						>
-							{#if canSubmit}
-								<Play class="h-4 w-4" />
-							{:else}
-								<WandSparkles class="h-4 w-4" />
-							{/if}
-						</div>
-						<div class="min-w-0">
-							<p class="text-sm font-semibold">
-								{canSubmit ? 'Ready to start scan' : 'Complete these before running'}
-							</p>
-							{#if canSubmit}
-								<p class="text-ink-muted mt-1 text-xs">
-									Your scan will launch immediately and stream progress on the next screen.
-								</p>
-							{:else}
-								<ul class="mt-1 space-y-1 text-xs">
-									{#each missingRequirements as requirement (requirement)}
-										<li class="flex items-start gap-2">
-											<CheckCircle2 class="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" />
-											<span>{requirement}</span>
-										</li>
-									{/each}
-								</ul>
-							{/if}
-						</div>
-					</div>
-				</div>
-			</div>
+			{/if}
 		</div>
-	</Panel>
+	</div>
 
 	<div
-		class="bg-accent-soft/50 border-accent/10 flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-[var(--shadow-xs)]"
+		class="border-line bg-surface flex items-start gap-3 rounded-2xl border px-4 py-3 shadow-[var(--shadow-xs)]"
 	>
-		<Lock class="text-accent h-5 w-5 shrink-0" />
+		<Lock class="text-ink-faint mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
 		<div>
-			<p class="text-sm font-medium">What happens next</p>
-			<p class="text-ink-muted text-xs">
-				You&apos;ll go straight to live scan status, then into the unified report with screenshots
-				and remediation details.
+			<p class="text-ink text-sm font-medium">What happens next</p>
+			<p class="text-ink-muted mt-0.5 text-xs leading-relaxed">
+				You go straight to live scan status, then into the unified report with screenshots and
+				remediation details.
 			</p>
 		</div>
 	</div>
-</div>
+</aside>
