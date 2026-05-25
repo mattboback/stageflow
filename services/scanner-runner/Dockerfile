@@ -28,6 +28,7 @@ RUN bun x tsc
 # --- Build scanner-runner ---
 WORKDIR /repo/services/scanner-runner
 COPY libs/contracts/scanner-manifest /repo/libs/contracts/scanner-manifest
+COPY libs/contracts/provenance /repo/libs/contracts/provenance
 COPY services/scanner-runner/package.json services/scanner-runner/bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY services/scanner-runner/tsconfig.json ./tsconfig.json
@@ -41,8 +42,10 @@ RUN bun run build
 RUN rm -rf node_modules \
   && bun install --frozen-lockfile --production --ignore-scripts \
   && rm -rf node_modules/@stageflow/contracts-scanner-manifest \
+  && rm -rf node_modules/@stageflow/contracts-provenance \
   && mkdir -p node_modules/@stageflow \
-  && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest
+  && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest \
+  && cp -R /repo/libs/contracts/provenance node_modules/@stageflow/contracts-provenance
 
 # Runtime stage
 FROM mcr.microsoft.com/playwright:v1.60.0-noble
