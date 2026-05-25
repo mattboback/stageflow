@@ -8,7 +8,6 @@
 	import PlaygroundHeroSection from '$lib/components/playground/PlaygroundHeroSection.svelte';
 	import PlaygroundModeToggle from '$lib/components/playground/PlaygroundModeToggle.svelte';
 	import PlaygroundOptions from '$lib/components/playground/PlaygroundOptions.svelte';
-	import PlaygroundReadinessBento from '$lib/components/playground/PlaygroundReadinessBento.svelte';
 	import PlaygroundScannerGrid from '$lib/components/playground/PlaygroundScannerGrid.svelte';
 	import PlaygroundSidebar from '$lib/components/playground/PlaygroundSidebar.svelte';
 	import PlaygroundUrlInput from '$lib/components/playground/PlaygroundUrlInput.svelte';
@@ -208,270 +207,243 @@
 
 <PlaygroundHeroSection />
 
-<!-- Mobile sticky bottom bar -->
+<!-- Mobile sticky run bar -->
 <div class="mobile-sticky-bar xl:hidden">
 	<div class="flex flex-1 items-center gap-3">
 		<div class="flex items-center gap-2">
-			<span class="stat-mono text-accent text-lg font-bold">{enabledScannerCount}</span>
+			<span class="stat-mono text-ink-strong text-lg font-bold">{enabledScannerCount}</span>
 			<span class="text-ink-muted text-xs">scanner{enabledScannerCount === 1 ? '' : 's'}</span>
 		</div>
 		{#if !canSubmit && missingRequirements.length > 0}
-			<span class="text-xs font-medium text-amber-600">
+			<span class="text-ink-muted text-xs font-medium">
 				{missingRequirements.length} step{missingRequirements.length === 1 ? '' : 's'} left
 			</span>
 		{/if}
 	</div>
 	<Button
-		variant="glow"
+		variant="default"
 		size="lg"
-		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold transition-all duration-300 {canSubmit &&
-		!isSubmitting
-			? 'animate-concentric'
-			: ''}"
+		class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold"
 		disabled={!canSubmit}
 		onclick={handleSubmit}
 	>
 		{#if isSubmitting}
-			<Loader2 class="h-4 w-4 animate-spin" />
+			<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
 			Starting…
 		{:else}
-			<Play class="h-4 w-4" />
+			<Play class="h-4 w-4" aria-hidden="true" />
 			Start Scan
 		{/if}
 	</Button>
 </div>
 
 <PageSection
-	class="playground-shell relative overflow-hidden py-10 lg:py-14"
+	class="playground-shell relative py-10 lg:py-14"
 	padding="none"
 	disableContainer={true}
 >
-	<div class="relative mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8 xl:pb-0">
+	<div class="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8 xl:pb-0">
 		<div
-			class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:grid-cols-[minmax(0,1fr)_22rem]"
+			class="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_22rem] 2xl:grid-cols-[minmax(0,1fr)_24rem]"
 		>
-			<div>
-				<PlaygroundReadinessBento
-					navLabel="Configure Scan"
-					readyLabel={canSubmit
-						? 'Ready'
-						: `${missingRequirements.length} step${missingRequirements.length === 1 ? '' : 's'} left`}
-					isReady={canSubmit}
-					scannerCount={enabledScannerCount}
+			<form
+				class="border-line bg-surface rounded-2xl border shadow-[var(--shadow-sm)]"
+				aria-label="Configure Scan"
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleSubmit();
+				}}
+			>
+				<header
+					class="border-line/80 flex flex-wrap items-center justify-between gap-3 border-b px-6 py-4 sm:px-8"
 				>
-					{#snippet leftPanel()}
-						<div class="space-y-6">
-							<div>
-								<div class="mb-2 flex items-center gap-2">
-									<span
-										class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-										>1</span
-									>
-									<span class="form-section-label text-ink-muted">Input</span>
-								</div>
-								<PlaygroundModeToggle {mode} onModeChange={(m) => (mode = m)} />
+					<div>
+						<h2 class="text-ink text-base font-semibold tracking-[-0.005em]">Configure Scan</h2>
+						<p class="text-ink-muted mt-0.5 text-xs">
+							{enabledScannerCount} scanner{enabledScannerCount === 1 ? '' : 's'} selected
+						</p>
+					</div>
+					<span
+						class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+						class:bg-emerald-50={canSubmit}
+						class:text-emerald-700={canSubmit}
+						class:bg-amber-50={!canSubmit}
+						class:text-amber-700={!canSubmit}
+					>
+						{canSubmit
+							? 'Ready'
+							: `${missingRequirements.length} step${missingRequirements.length === 1 ? '' : 's'} left`}
+					</span>
+				</header>
+
+				<div class="grid gap-8 px-6 py-7 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.85fr)]">
+					<!-- Left: form steps -->
+					<div class="space-y-7">
+						<section aria-labelledby="step-1-title">
+							<div class="form-step-head">
+								<span class="form-step-num">1</span>
+								<h3 id="step-1-title" class="form-step-title">Input</h3>
+								<div class="form-step-rule" aria-hidden="true"></div>
 							</div>
+							<PlaygroundModeToggle {mode} onModeChange={(m) => (mode = m)} />
+						</section>
 
-							<div>
-								<div class="mb-2 flex items-center gap-2">
-									<span
-										class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-										>2</span
-									>
-									<span class="form-section-label text-ink-muted">Target</span>
-								</div>
-								{#if mode === 'url'}
-									<PlaygroundUrlInput
-										{urls}
-										onUrlsChange={handleUrlsChange}
-										onNormalize={normalizeUrlsIfNeeded}
-									/>
-								{/if}
-
-								{#if mode === 'zip'}
-									<PlaygroundZipUpload
-										{file}
-										onFileChange={handleFileChange}
-										onError={handleFileError}
-									/>
-								{/if}
+						<section aria-labelledby="step-2-title">
+							<div class="form-step-head">
+								<span class="form-step-num">2</span>
+								<h3 id="step-2-title" class="form-step-title">Target</h3>
+								<div class="form-step-rule" aria-hidden="true"></div>
 							</div>
-
-							<div class="section-divider"></div>
-
-							<div>
-								<div class="mb-2 flex items-center gap-2">
-									<span
-										class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-										>3</span
-									>
-									<span class="form-section-label text-ink-muted">Options</span>
-								</div>
-								<PlaygroundOptions
-									{screenshot}
-									{highlightStyle}
-									onScreenshotChange={(v) => (screenshot = v)}
-									onHighlightStyleChange={(v) => (highlightStyle = v)}
-								/>
-							</div>
-
-							{#if isAiNavigatorEnabled}
-								<div transition:slide={{ duration: 300 }}>
-									<PlaygroundAiConfig
-										objective={aiObjective}
-										model={aiModel}
-										maxSteps={aiMaxSteps}
-										maxWallTimeMs={aiMaxWallTimeMs}
-										inputValues={aiInputValues}
-										successCriteria={aiSuccessCriteria}
-										isValid={isAiConfigValid}
-										onObjectiveChange={(v) => (aiObjective = v)}
-										onModelChange={(v) => (aiModel = v)}
-										onMaxStepsChange={(v) => (aiMaxSteps = v)}
-										onMaxWallTimeMsChange={(v) => (aiMaxWallTimeMs = v)}
-										onInputValuesChange={(v) => (aiInputValues = v)}
-										onSuccessCriteriaChange={(v) => (aiSuccessCriteria = v)}
-									/>
-								</div>
-							{/if}
-
 							{#if mode === 'url'}
-								<div transition:slide={{ duration: 300 }}>
-									<PlaygroundAuthConfig
-										config={authConfig}
-										isValid={isAuthConfigValid}
-										onConfigChange={(v) => (authConfig = v)}
-									/>
-								</div>
+								<PlaygroundUrlInput
+									{urls}
+									onUrlsChange={handleUrlsChange}
+									onNormalize={normalizeUrlsIfNeeded}
+								/>
+							{:else}
+								<PlaygroundZipUpload
+									{file}
+									onFileChange={handleFileChange}
+									onError={handleFileError}
+								/>
 							{/if}
+						</section>
 
-							{#if error}
-								<Alert variant="error">
-									<div class="flex items-start gap-3">
-										<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" />
-										<div class="min-w-0">
-											<p>{error}</p>
-											{#if invalidUrls.length > 0}
-												<ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
-													{#each invalidUrls.slice(0, 6) as item (item.url)}
-														<li class="font-mono">{item.url} — {item.reason}</li>
-													{/each}
-													{#if invalidUrls.length > 6}
-														<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
-													{/if}
-												</ul>
-											{/if}
-										</div>
-									</div>
-								</Alert>
-							{/if}
-						</div>
-					{/snippet}
-
-					{#snippet rightPanel()}
-						<div>
-							<div class="mb-2 flex items-center gap-2">
-								<span
-									class="bg-accent/10 text-accent flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-									>4</span
-								>
-								<span class="form-section-label text-ink-muted">Scanners</span>
+						<section aria-labelledby="step-3-title">
+							<div class="form-step-head">
+								<span class="form-step-num">3</span>
+								<h3 id="step-3-title" class="form-step-title">Options</h3>
+								<div class="form-step-rule" aria-hidden="true"></div>
 							</div>
-							<PlaygroundScannerGrid
-								{scanners}
-								isLoading={isLoadingScanners}
-								preset={scannerPreset}
-								onPresetChange={handlePresetChange}
-								onToggle={handleScannerToggle}
+							<PlaygroundOptions
+								{screenshot}
+								{highlightStyle}
+								onScreenshotChange={(v) => (screenshot = v)}
+								onHighlightStyleChange={(v) => (highlightStyle = v)}
 							/>
-						</div>
-					{/snippet}
+						</section>
 
-					{#snippet bottomLeft()}
-						<div>
-							<p class="bento-panel-title">Run readiness</p>
-							{#if canSubmit}
-								<p class="text-ink-muted mt-1 text-xs">
-									{mode === 'url' ? 'URL target ready.' : 'ZIP upload ready.'}
-									{enabledScannerCount} scanner{enabledScannerCount === 1 ? '' : 's'} selected.
-								</p>
-							{:else}
-								<ul class="mt-2 space-y-1.5 text-xs">
-									{#each missingRequirements as requirement (requirement)}
-										<li class="flex items-start gap-2">
-											<AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-											<span>{requirement}</span>
-										</li>
-									{/each}
-								</ul>
-							{/if}
-						</div>
-					{/snippet}
-
-					{#snippet bottomCenter()}
-						<div class="flex items-center gap-3">
-							<div class="text-center">
-								<span class="stat-mono text-ink-strong text-xl font-bold"
-									>{enabledScannerCount}</span
-								>
-								<p class="text-ink-muted text-[10px] font-medium">Scanners</p>
-							</div>
-							<div class="bg-line h-8 w-px"></div>
-							<div class="text-center">
-								<span class="stat-mono text-ink-strong text-xl font-bold"
-									>{screenshot ? '✓' : '—'}</span
-								>
-								<p class="text-ink-muted text-[10px] font-medium">Screenshots</p>
-							</div>
-							{#if isAiNavigatorEnabled}
-								<div class="bg-line h-8 w-px"></div>
-								<div class="text-center">
-									<span
-										class="stat-mono text-xl font-bold"
-										class:text-emerald-700={isAiConfigValid}
-										class:text-amber-700={!isAiConfigValid}>{isAiConfigValid ? '✓' : '!'}</span
-									>
-									<p class="text-ink-muted text-[10px] font-medium">AI Nav</p>
+						{#if isAiNavigatorEnabled}
+							<section transition:slide={{ duration: 200 }} aria-labelledby="step-ai-title">
+								<div class="form-step-head">
+									<span class="form-step-num">A</span>
+									<h3 id="step-ai-title" class="form-step-title">AI Navigator</h3>
+									<div class="form-step-rule" aria-hidden="true"></div>
 								</div>
-							{/if}
-							{#if isAuthEnabled}
-								<div class="bg-line h-8 w-px"></div>
-								<div class="text-center">
-									<span
-										class="stat-mono text-xl font-bold"
-										class:text-emerald-700={isAuthConfigValid}
-										class:text-amber-700={!isAuthConfigValid}
-										>{isAuthConfigValid ? '✓' : '!'}</span
-									>
-									<p class="text-ink-muted text-[10px] font-medium">Auth</p>
+								<PlaygroundAiConfig
+									objective={aiObjective}
+									model={aiModel}
+									maxSteps={aiMaxSteps}
+									maxWallTimeMs={aiMaxWallTimeMs}
+									inputValues={aiInputValues}
+									successCriteria={aiSuccessCriteria}
+									isValid={isAiConfigValid}
+									onObjectiveChange={(v) => (aiObjective = v)}
+									onModelChange={(v) => (aiModel = v)}
+									onMaxStepsChange={(v) => (aiMaxSteps = v)}
+									onMaxWallTimeMsChange={(v) => (aiMaxWallTimeMs = v)}
+									onInputValuesChange={(v) => (aiInputValues = v)}
+									onSuccessCriteriaChange={(v) => (aiSuccessCriteria = v)}
+								/>
+							</section>
+						{/if}
+
+						{#if mode === 'url'}
+							<section transition:slide={{ duration: 200 }} aria-labelledby="step-auth-title">
+								<div class="form-step-head">
+									<span class="form-step-num">B</span>
+									<h3 id="step-auth-title" class="form-step-title">Authentication</h3>
+									<div class="form-step-rule" aria-hidden="true"></div>
 								</div>
-							{/if}
+								<PlaygroundAuthConfig
+									config={authConfig}
+									isValid={isAuthConfigValid}
+									onConfigChange={(v) => (authConfig = v)}
+								/>
+							</section>
+						{/if}
+
+						{#if error}
+							<Alert variant="error">
+								<div class="flex items-start gap-3">
+									<AlertTriangle class="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+									<div class="min-w-0">
+										<p>{error}</p>
+										{#if invalidUrls.length > 0}
+											<ul class="mt-2 list-disc space-y-1 pl-5 text-sm">
+												{#each invalidUrls.slice(0, 6) as item (item.url)}
+													<li class="font-mono">{item.url} — {item.reason}</li>
+												{/each}
+												{#if invalidUrls.length > 6}
+													<li class="text-ink-muted">…and {invalidUrls.length - 6} more</li>
+												{/if}
+											</ul>
+										{/if}
+									</div>
+								</div>
+							</Alert>
+						{/if}
+					</div>
+
+					<!-- Right: scanner grid -->
+					<aside aria-labelledby="step-4-title">
+						<div class="form-step-head">
+							<span class="form-step-num">4</span>
+							<h3 id="step-4-title" class="form-step-title">Scanners</h3>
+							<div class="form-step-rule" aria-hidden="true"></div>
 						</div>
-					{/snippet}
+						<PlaygroundScannerGrid
+							{scanners}
+							isLoading={isLoadingScanners}
+							preset={scannerPreset}
+							onPresetChange={handlePresetChange}
+							onToggle={handleScannerToggle}
+						/>
+					</aside>
+				</div>
 
-					{#snippet bottomRight()}
-						<Button
-							variant="glow"
-							size="lg"
-							class="h-11 w-full gap-2 rounded-xl text-sm font-semibold transition-all duration-300 {canSubmit &&
-							!isSubmitting
-								? 'animate-concentric'
-								: ''}"
-							disabled={!canSubmit}
-							onclick={handleSubmit}
-						>
-							{#if isSubmitting}
-								<Loader2 class="h-4 w-4 animate-spin" />
-								Starting…
-							{:else}
-								<Play class="h-4 w-4" />
-								Start Scan
-							{/if}
-						</Button>
-					{/snippet}
-				</PlaygroundReadinessBento>
-			</div>
+				<!-- Footer action bar (xl+ shows full version, smaller relies on sticky bar) -->
+				<footer
+					class="border-line/80 hidden flex-wrap items-center justify-between gap-4 border-t px-6 py-4 sm:px-8 lg:flex"
+				>
+					<div class="text-ink-muted min-w-0 flex-1 text-xs leading-relaxed">
+						{#if canSubmit}
+							{mode === 'url' ? 'URL target ready.' : 'ZIP upload ready.'}
+							{enabledScannerCount} scanner{enabledScannerCount === 1 ? '' : 's'} selected. Screenshots
+							{screenshot ? 'on' : 'off'}.
+						{:else}
+							<ul class="space-y-1">
+								{#each missingRequirements as requirement (requirement)}
+									<li class="flex items-start gap-2">
+										<AlertTriangle
+											class="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600"
+											aria-hidden="true"
+										/>
+										<span>{requirement}</span>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+					<Button
+						type="submit"
+						variant="default"
+						size="lg"
+						class="h-11 gap-2 rounded-xl px-6 text-sm font-semibold"
+						disabled={!canSubmit}
+					>
+						{#if isSubmitting}
+							<Loader2 class="h-4 w-4 animate-spin" aria-hidden="true" />
+							Starting…
+						{:else}
+							<Play class="h-4 w-4" aria-hidden="true" />
+							Start Scan
+						{/if}
+					</Button>
+				</footer>
+			</form>
 
+			<!-- Sticky run summary, xl+ only -->
 			<div class="hidden xl:block">
 				<PlaygroundSidebar
 					{mode}
@@ -489,21 +461,3 @@
 		</div>
 	</div>
 </PageSection>
-
-<style>
-	@keyframes concentric-pulse {
-		0% {
-			box-shadow: 0 0 0 0 rgba(13, 92, 99, 0.45);
-		}
-		70% {
-			box-shadow: 0 0 0 10px rgba(13, 92, 99, 0);
-		}
-		100% {
-			box-shadow: 0 0 0 0 rgba(13, 92, 99, 0);
-		}
-	}
-
-	:global(.animate-concentric) {
-		animation: concentric-pulse 2s infinite !important;
-	}
-</style>
