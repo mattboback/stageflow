@@ -9,8 +9,7 @@ export interface AuthFormConfig {
 	passwordSelector: string;
 	/** Empty string means use the smart default: `button[type="submit"]` */
 	submitSelector: string;
-	successStrategy: 'networkidle' | 'selector';
-	/** Only used when successStrategy === 'selector' */
+	successStrategy: 'selector';
 	successSelector: string;
 }
 
@@ -32,7 +31,7 @@ export function isAuthConfigComplete(config: AuthFormConfig): boolean {
 		return false;
 	}
 
-	if (config.successStrategy === 'selector' && config.successSelector.trim().length === 0) {
+	if (config.successSelector.trim().length === 0) {
 		return false;
 	}
 
@@ -55,11 +54,6 @@ export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unkn
 	const passwordSelector = config.passwordSelector.trim() || 'input[type="password"]';
 	const submitSelector = config.submitSelector.trim() || 'button[type="submit"]';
 
-	const success: Record<string, unknown> =
-		config.successStrategy === 'selector' && config.successSelector.trim()
-			? { type: 'selector', selector: config.successSelector.trim() }
-			: { type: 'networkidle' };
-
 	return {
 		mode: 'form',
 		form: {
@@ -69,7 +63,7 @@ export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unkn
 				{ type: 'fill', selector: passwordSelector, value: config.password },
 				{ type: 'click', selector: submitSelector }
 			],
-			success
+			success: { type: 'selector', selector: config.successSelector.trim() }
 		}
 	};
 }

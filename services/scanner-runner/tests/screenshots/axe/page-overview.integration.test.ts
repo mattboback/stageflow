@@ -298,6 +298,121 @@ describe('capturePageOverviewRaw (integration)', () => {
 		}
 	}, 30_000);
 
+	it('expands internal scroll containers so app-shell pages are captured beyond the viewport', async () => {
+		const resultsDir = createTempDir('stageflow-page-overview-inner-scroll-');
+		const context = await getBrowser().newContext({
+			viewport: { width: 500, height: 320 },
+			deviceScaleFactor: 1
+		});
+		const page = await context.newPage();
+
+		try {
+			await page.setContent(`
+          <!doctype html>
+          <html>
+            <head>
+              <style>
+                html, body {
+                  margin: 0;
+                  padding: 0;
+                  width: 500px;
+                  height: 320px;
+                  overflow: hidden;
+                  background: #ffffff;
+                }
+                .app-shell {
+                  height: 320px;
+                  overflow: hidden;
+                  display: flex;
+                }
+                .sidebar {
+                  width: 80px;
+                  background: #f3f4f6;
+                }
+                .content-pane {
+                  flex: 1;
+                  height: 320px;
+                  overflow-y: auto;
+                  position: relative;
+                  background: #ffffff;
+                }
+                .content-inner {
+                  position: relative;
+                  min-height: 1280px;
+                }
+                #deep-issue {
+                  position: absolute;
+                  left: 120px;
+                  top: 980px;
+                  width: 180px;
+                  height: 80px;
+                  background: rgb(220, 38, 38);
+                }
+              </style>
+            </head>
+            <body>
+              <div class="app-shell">
+                <aside class="sidebar">Nav</aside>
+                <main class="content-pane">
+                  <div class="content-inner">
+                    <div id="deep-issue"></div>
+                  </div>
+                </main>
+              </div>
+            </body>
+          </html>
+        `);
+
+			const violations: PageOverviewViolation[] = [
+				{
+					id: 'deep-in-scroll-container',
+					impact: 'serious',
+					nodes: [{ target: ['#deep-issue'] }]
+				}
+			];
+
+			const screenshotCfg = loadAxeScreenshotConfig({
+				screenshotsEnabled: true,
+				outputFormat: 'png'
+			});
+
+			const captured = await capturePageOverviewRaw(
+				page,
+				violations,
+				resultsDir,
+				'inner-scroll-page',
+				'axe',
+				screenshotCfg,
+				{ enabled: true, maxElements: 50, maxHeight: 0, preScroll: false }
+			);
+
+			expect(captured).not.toBeNull();
+			if (!captured) {
+				throw new Error('expected inner-scroll capture result');
+			}
+
+			expect(captured.pageHeight).toBeGreaterThan(1000);
+			const deepIssue = captured.elements.find((el) => el.selector === '#deep-issue');
+			expect(deepIssue).toBeDefined();
+			if (!deepIssue) {
+				throw new Error('expected deep issue element');
+			}
+
+			expect(deepIssue.y).toBeGreaterThan(900);
+			const pixel = await readPixel(
+				captured.buffer,
+				deepIssue.x + deepIssue.width / 2,
+				deepIssue.y + deepIssue.height / 2
+			);
+			expect(pixel.r).toBeGreaterThan(180);
+			expect(pixel.g).toBeLessThan(80);
+			expect(pixel.b).toBeLessThan(80);
+		} finally {
+			await context.close();
+			fs.rmSync(resultsDir, { recursive: true, force: true });
+		}
+	}, 30_000);
+
 	it('forces content-visibility auto content to paint in the overview screenshot', async () => {
 		const resultsDir = createTempDir('stageflow-page-overview-content-visibility-');
 		const context = await getBrowser().newContext({

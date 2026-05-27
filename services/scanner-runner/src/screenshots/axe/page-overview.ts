@@ -117,6 +117,11 @@ interface PagePreparationResult {
 	preScrollSteps: number;
 }
 
+interface ScrollContainerExpansionResult {
+	expandedCount: number;
+	maxScrollHeight: number;
+}
+
 interface AnimationStabilizationResult {
 	animationFinishedCount: number;
 	animationPausedCount: number;
@@ -335,6 +340,74 @@ async function preparePageForOverview(
 	}
 
 	return result;
+}
+
+async function expandScrollableContainersForOverview(
+	page: Page
+): Promise<ScrollContainerExpansionResult> {
+	try {
+		return await page.evaluate(() => {
+			const MIN_OVERFLOW_PX = 24;
+			const MIN_CONTAINER_HEIGHT_PX = 80;
+			const elements = Array.from(document.querySelectorAll<HTMLElement>('body *'));
+			let expandedCount = 0;
+			let maxScrollHeight = 0;
+
+			const relaxContainer = (element: HTMLElement, minHeight?: number): void => {
+				element.style.setProperty('max-height', 'none', 'important');
+				element.style.setProperty('overflow', 'visible', 'important');
+				element.style.setProperty('overflow-y', 'visible', 'important');
+				if (minHeight !== undefined && minHeight > 0) {
+					element.style.setProperty('min-height', `${Math.ceil(minHeight)}px`, 'important');
+				}
+			};
+
+			document.documentElement.style.setProperty('height', 'auto', 'important');
+			relaxContainer(document.documentElement);
+			document.body.style.setProperty('height', 'auto', 'important');
+			relaxContainer(document.body);
+
+			for (const element of elements) {
+				const rect = element.getBoundingClientRect();
+				if (rect.width <= 0 || rect.height <= 0) {
+					continue;
+				}
+
+				const overflowAmount = element.scrollHeight - element.clientHeight;
+				if (
+					overflowAmount < MIN_OVERFLOW_PX ||
+					element.clientHeight < MIN_CONTAINER_HEIGHT_PX ||
+					element.scrollHeight <= element.clientHeight
+				) {
+					continue;
+				}
+
+				const style = window.getComputedStyle(element);
+				const overflowY = style.overflowY.toLowerCase();
+				if (!['auto', 'scroll', 'hidden', 'clip'].includes(overflowY)) {
+					continue;
+				}
+
+				element.dataset.stageflowOverviewExpanded = 'true';
+				element.style.setProperty('height', `${element.scrollHeight}px`, 'important');
+				relaxContainer(element, element.scrollHeight);
+
+				let ancestor = element.parentElement;
+				while (ancestor && ancestor !== document.body) {
+					ancestor.style.setProperty('height', 'auto', 'important');
+					relaxContainer(ancestor, Math.max(ancestor.scrollHeight, element.scrollHeight));
+					ancestor = ancestor.parentElement;
+				}
+
+				maxScrollHeight = Math.max(maxScrollHeight, element.scrollHeight);
+				expandedCount += 1;
+			}
+
+			return { expandedCount, maxScrollHeight };
+		});
+	} catch {
+		return { expandedCount: 0, maxScrollHeight: 0 };
+	}
 }
 
 async function stabilizePageForScreenshot(
@@ -630,6 +703,9 @@ export async function capturePageOverviewRaw(
 		diagnostics.preScrollBeforeHeight = preparation.preScrollBeforeHeight;
 		diagnostics.preScrollCompleted = preparation.preScrollCompleted;
 		diagnostics.preScrollSteps = preparation.preScrollSteps;
+
+		const scrollExpansion = await expandScrollableContainersForOverview(page);
+		debugLog('Expanded scrollable containers before page overview capture', scrollExpansion);
 
 		// Step 2: Stabilize moving parts without forcing reveal animations back to hidden states.
 		const stabilization = await stabilizePageForScreenshot(page, resolvedOverviewCfg);

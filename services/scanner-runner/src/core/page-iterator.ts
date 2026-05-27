@@ -18,6 +18,7 @@ import {
 	hydrateForm,
 	hydrateStorageState
 } from './auth-hydrator';
+import { detectAuthWall } from './auth-wall';
 import { collectFromEnvReferences, createSecretsResolver } from './secrets-resolver';
 import { buildTargetValidationPolicy } from './target-validation';
 import {
@@ -142,6 +143,7 @@ export class PageIterator {
 			fromEnvAllowList: allowList
 		});
 
+		let authHydrated = false;
 		let storageStatePath: string | undefined;
 		if (provenance.auth?.mode === 'storage_state') {
 			try {
@@ -153,6 +155,7 @@ export class PageIterator {
 					logger: this.logger
 				});
 				storageStatePath = result.storageStatePath;
+				authHydrated = true;
 				callbacks?.onAuditEvent?.({
 					type: 'auth_hydrated',
 					details: {
@@ -191,6 +194,7 @@ export class PageIterator {
 				} catch (err) {
 					return await this.synthesizeAuthFailureResults(pages, err, provenance.auth, callbacks);
 				}
+				authHydrated = true;
 			}
 
 			for (const [i, pageEntry] of pages.entries()) {
@@ -200,6 +204,7 @@ export class PageIterator {
 					i,
 					pages.length,
 					provenance,
+					authHydrated,
 					targetValidationPolicy,
 					secretsResolver,
 					scanCallback,
@@ -376,6 +381,7 @@ export class PageIterator {
 		index: number,
 		total: number,
 		provenance: Provenance,
+		authHydrated: boolean,
 		targetValidationPolicy: ReturnType<typeof buildTargetValidationPolicy>,
 		secretsResolver: ReturnType<typeof createSecretsResolver>,
 		scanCallback: PageScanCallback,
@@ -416,6 +422,15 @@ export class PageIterator {
 					targetValidationPolicy
 				);
 
+				const authWallIssue = await detectAuthWall({
+					page,
+					requestedUrl: pageEntry.url,
+					scannerName: this.config.scannerName,
+					authConfigured: provenance.auth !== undefined,
+					authHydrated,
+					...(provenance.auth?.mode !== undefined ? { authMode: provenance.auth.mode } : {})
+				});
+
 				if (pageEntry.pre_scan_actions?.length) {
 					await this.browserManager.executePreScanActions(
 						page,
@@ -438,6 +453,9 @@ export class PageIterator {
 				};
 
 				result = await scanCallback(scanContext);
+				if (authWallIssue) {
+					result.issues = [...result.issues, authWallIssue];
+				}
 
 				if (!result.success) {
 					const retryable = result.retryable !== false && attempt < this.config.maxRetries;

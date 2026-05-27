@@ -82,6 +82,10 @@ function makeBrowserManager(overrides?: Partial<BrowserManager>): BrowserManager
 		goto: vi.fn().mockResolvedValue(undefined),
 		close: vi.fn().mockResolvedValue(undefined),
 		setViewportSize: vi.fn().mockResolvedValue(undefined),
+		waitForLoadState: vi.fn().mockResolvedValue(undefined),
+		waitForSelector: vi.fn().mockResolvedValue(undefined),
+		waitForTimeout: vi.fn().mockResolvedValue(undefined),
+		evaluate: vi.fn().mockResolvedValue(true),
 		url: vi.fn().mockReturnValue('https://app.example.com/login')
 	} as unknown as Page;
 
@@ -177,5 +181,61 @@ describe('PageIterator auth hydration failure path', () => {
 		expect(results[0]!.issues[0]!.id).toBe('auth-hydration-failed');
 		expect(results[0]!.issues[0]!.description).toMatch(/StorageProvider not configured/);
 		expect(browserManager.createContext).not.toHaveBeenCalled();
+	});
+
+	it('fails form auth when success waiting leaves the browser on a visible login form', async () => {
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [
+					{ type: 'fill', selector: 'input[name=email]', value: 'demo@example.com' },
+					{ type: 'fill', selector: 'input[name=password]', value: 'wrong-password' },
+					{ type: 'click', selector: 'button[type=submit]' }
+				],
+				success: { type: 'load' }
+			}
+		};
+
+		const browserManager = makeBrowserManager();
+		const auditEvents: PageIteratorAuditEvent[] = [];
+		const iterator = new PageIterator(browserManager, baseScannerConfig);
+		const scanCallback = vi.fn<PageScanCallback>();
+
+		const results = await iterator.iteratePages(provenance, scanCallback, {
+			onAuditEvent: (event) => auditEvents.push(event)
+		});
+
+		expect(scanCallback).not.toHaveBeenCalled();
+		expect(browserManager.executePreScanActions).toHaveBeenCalledOnce();
+		expect(results).toHaveLength(1);
+		expect(results[0]!.success).toBe(false);
+		expect(results[0]!.error).toContain('did not leave the login page');
+		expect(results[0]!.issues[0]!).toMatchObject({
+			id: 'auth-hydration-failed',
+			severity: 'critical',
+			category: 'auth',
+			metadata: {
+				mode: 'form',
+				loginUrl: 'https://app.example.com/login',
+				postLoginUrl: 'https://app.example.com/login'
+			}
+		});
+
+		expect(auditEvents).toContainEqual(
+			expect.objectContaining({
+				type: 'auth_hydration_failed',
+				details: expect.objectContaining({
+					mode: 'form',
+					login_url: 'https://app.example.com/login',
+					post_login_url: 'https://app.example.com/login'
+				})
+			})
+		);
+		expect(auditEvents.some((event) => event.type === 'auth_hydrated')).toBe(false);
 	});
 });
