@@ -62,7 +62,7 @@
 		usernameSelector: '',
 		passwordSelector: '',
 		submitSelector: '',
-		successStrategy: 'networkidle',
+		successStrategy: 'selector',
 		successSelector: ''
 	});
 
@@ -94,7 +94,7 @@
 		}
 		if (mode === 'url' && isAuthEnabled && !isAuthConfigValid) {
 			requirements.push(
-				'Complete the authentication setup (login URL, username, and password required).'
+				'Complete the authentication setup (login URL, username, password, and success selector required).'
 			);
 		}
 		return requirements;

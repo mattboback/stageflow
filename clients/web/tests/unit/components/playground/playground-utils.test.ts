@@ -1,5 +1,7 @@
 import {
 	buildAiNavigatorConfig,
+	buildFormAuthConfig,
+	isAuthConfigComplete,
 	isZipFilename,
 	normalizeUrlInput,
 	normalizeUrlListText,
@@ -75,6 +77,50 @@ describe('playground-utils', () => {
 				successCriteria: [{ type: 'url-contains', value: '/done' }]
 			},
 			vision: { provider: 'openrouter', model: 'openai/gpt-4o-mini' }
+		});
+	});
+
+	it('requires a post-login success selector for form auth', () => {
+		const config = {
+			enabled: true,
+			loginUrl: 'https://app.example.com/login',
+			username: 'demo@example.com',
+			password: 'secret',
+			usernameSelector: '',
+			passwordSelector: '',
+			submitSelector: '',
+			successStrategy: 'selector' as const,
+			successSelector: ''
+		};
+
+		expect(isAuthConfigComplete(config)).toBe(false);
+		expect(buildFormAuthConfig(config)).toBeNull();
+	});
+
+	it('builds form auth with selector-based success detection', () => {
+		const config = buildFormAuthConfig({
+			enabled: true,
+			loginUrl: ' https://app.example.com/login ',
+			username: 'demo@example.com',
+			password: 'secret',
+			usernameSelector: '',
+			passwordSelector: '',
+			submitSelector: '',
+			successStrategy: 'selector',
+			successSelector: ' a[href="/dashboard"] '
+		});
+
+		expect(config).toEqual({
+			mode: 'form',
+			form: {
+				login_url: 'https://app.example.com/login',
+				steps: [
+					{ type: 'fill', selector: 'input[type="email"]', value: 'demo@example.com' },
+					{ type: 'fill', selector: 'input[type="password"]', value: 'secret' },
+					{ type: 'click', selector: 'button[type="submit"]' }
+				],
+				success: { type: 'selector', selector: 'a[href="/dashboard"]' }
+			}
 		});
 	});
 });

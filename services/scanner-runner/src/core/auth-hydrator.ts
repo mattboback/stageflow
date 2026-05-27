@@ -127,6 +127,18 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 		await waitForSuccess(page, auth);
 
 		postLoginUrl = page.url();
+		if (await isStillOnVisibleLoginForm(page, auth.login_url, postLoginUrl)) {
+			throw new AuthHydrationError(
+				`Form auth hydration did not leave the login page: ${postLoginUrl}. ` +
+					'Use a success selector that only appears after login or verify the submitted credentials.',
+				{
+					mode: 'form',
+					loginUrl: auth.login_url,
+					postLoginUrl
+				}
+			);
+		}
+
 		return { postLoginUrl };
 	} catch (err) {
 		const capturedUrl = postLoginUrl ?? safeUrl(page);
@@ -203,4 +215,54 @@ function safeUrl(page: import('playwright').Page): string | undefined {
  */
 export function defaultStorageStatePath(resultsDir: string): string {
 	return join(resultsDir, 'auth', 'storage-state.json');
+}
+
+async function isStillOnVisibleLoginForm(
+	page: import('playwright').Page,
+	loginUrl: string,
+	postLoginUrl: string
+): Promise<boolean> {
+	if (!sameOriginAndPath(loginUrl, postLoginUrl)) {
+		return false;
+	}
+
+	try {
+		return await page.evaluate(() => {
+			const passwordInput = document.querySelector<HTMLInputElement>('input[type="password"]');
+			if (!passwordInput) {
+				return false;
+			}
+
+			const style = window.getComputedStyle(passwordInput);
+			const rect = passwordInput.getBoundingClientRect();
+			return (
+				style.visibility !== 'hidden' &&
+				style.display !== 'none' &&
+				rect.width > 0 &&
+				rect.height > 0
+			);
+		});
+	} catch {
+		return false;
+	}
+}
+
+function sameOriginAndPath(a: string, b: string): boolean {
+	try {
+		const left = new URL(a);
+		const right = new URL(b);
+		return (
+			left.origin === right.origin &&
+			trimTrailingSlash(left.pathname) === trimTrailingSlash(right.pathname)
+		);
+	} catch {
+		return a === b;
+	}
+}
+
+function trimTrailingSlash(pathname: string): string {
+	if (pathname === '/') {
+		return pathname;
+	}
+	return pathname.replace(/\/+$/, '');
 }

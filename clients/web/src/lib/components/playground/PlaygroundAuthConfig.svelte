@@ -1,16 +1,9 @@
 <script lang="ts">
 	import type { AuthFormConfig } from '$lib/components/playground/playground-utils';
 
-	import { Label, SelectField, Chip } from '$lib/components/ui';
+	import { Label, Chip } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import {
-		AlertTriangle,
-		ChevronDown,
-		ChevronUp,
-		Eye,
-		EyeOff,
-		Lock
-	} from 'lucide-svelte';
+	import { AlertTriangle, ChevronDown, ChevronUp, Eye, EyeOff, Lock } from 'lucide-svelte';
 
 	interface Props {
 		config: AuthFormConfig;
@@ -55,7 +48,7 @@
 			aria-label="Enable authentication"
 			onclick={() => update({ enabled: !config.enabled })}
 			class={cn(
-				'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+				'relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 				config.enabled
 					? 'border-accent bg-accent focus-visible:ring-accent'
 					: 'border-line bg-surface-muted focus-visible:ring-accent'
@@ -143,9 +136,7 @@
 					{/if}
 				</button>
 			</div>
-			<p class="text-ink-faint mt-1.5 text-xs">
-				Credentials are sent directly to the scanner and are not stored.
-			</p>
+			<p class="text-ink-faint mt-1.5 text-xs">Use a demo or scoped account for hosted scans.</p>
 		</div>
 
 		<!-- Advanced Settings Toggle -->
@@ -173,17 +164,14 @@
 				<div class="grid gap-4 sm:grid-cols-2">
 					<!-- Username selector -->
 					<div>
-						<Label
-							for="auth-username-selector"
-							class="mb-2 block text-sm font-semibold"
-						>
+						<Label for="auth-username-selector" class="mb-2 block text-sm font-semibold">
 							Username Field Selector
 						</Label>
 						<input
 							id="auth-username-selector"
 							type="text"
 							autocomplete="off"
-							placeholder='input[type="email"]'
+							placeholder={'input[type="email"]'}
 							value={config.usernameSelector}
 							oninput={(e) => update({ usernameSelector: e.currentTarget.value })}
 							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none"
@@ -192,17 +180,14 @@
 
 					<!-- Password selector -->
 					<div>
-						<Label
-							for="auth-password-selector"
-							class="mb-2 block text-sm font-semibold"
-						>
+						<Label for="auth-password-selector" class="mb-2 block text-sm font-semibold">
 							Password Field Selector
 						</Label>
 						<input
 							id="auth-password-selector"
 							type="text"
 							autocomplete="off"
-							placeholder='input[type="password"]'
+							placeholder={'input[type="password"]'}
 							value={config.passwordSelector}
 							oninput={(e) => update({ passwordSelector: e.currentTarget.value })}
 							class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none"
@@ -219,56 +204,37 @@
 						id="auth-submit-selector"
 						type="text"
 						autocomplete="off"
-						placeholder='button[type="submit"]'
+						placeholder={'button[type="submit"]'}
 						value={config.submitSelector}
 						oninput={(e) => update({ submitSelector: e.currentTarget.value })}
 						class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none"
 					/>
 				</div>
 
-				<!-- Success strategy -->
-				<div>
-					<Label for="auth-success-strategy" class="mb-2 block text-sm font-semibold">
-						Login Success Detection
-					</Label>
-					<SelectField
-						id="auth-success-strategy"
-						variant="prominent"
-						value={config.successStrategy}
-						onchange={(e) =>
-							update({
-								successStrategy: e.currentTarget.value as 'networkidle' | 'selector'
-							})}
-						name="authSuccessStrategy"
+				<div class="animate-fade-in">
+					<Label
+						for="auth-success-selector"
+						class="mb-2 flex items-center gap-1 text-sm font-semibold"
 					>
-						<option value="networkidle">Network settled (recommended)</option>
-						<option value="selector">Element visible (CSS selector)</option>
-					</SelectField>
+						Success Selector
+						<span class="text-accent">*</span>
+					</Label>
+					<input
+						id="auth-success-selector"
+						type="text"
+						autocomplete="off"
+						placeholder={'a[href="/dashboard"], [data-testid="welcome"]'}
+						value={config.successSelector}
+						oninput={(e) => update({ successSelector: e.currentTarget.value })}
+						class={cn(
+							'border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none',
+							!config.successSelector.trim() && 'border-amber-300 focus:border-amber-500'
+						)}
+					/>
+					<p class="text-ink-faint mt-1 text-xs">
+						Scan proceeds when this element becomes visible after login.
+					</p>
 				</div>
-
-				{#if config.successStrategy === 'selector'}
-					<div class="animate-fade-in">
-						<Label for="auth-success-selector" class="mb-2 flex items-center gap-1 text-sm font-semibold">
-							Success Selector
-							<span class="text-accent">*</span>
-						</Label>
-						<input
-							id="auth-success-selector"
-							type="text"
-							autocomplete="off"
-							placeholder='.dashboard, [data-testid="welcome"]'
-							value={config.successSelector}
-							oninput={(e) => update({ successSelector: e.currentTarget.value })}
-							class={cn(
-								'border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none',
-								!config.successSelector.trim() && 'border-amber-300 focus:border-amber-500'
-							)}
-						/>
-						<p class="text-ink-faint mt-1 text-xs">
-							Scan proceeds when this element becomes visible after login.
-						</p>
-					</div>
-				{/if}
 			</div>
 		{/if}
 	{/if}
