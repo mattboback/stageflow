@@ -298,7 +298,7 @@ Add to your CI pipeline:
 ### Issues Found in This Schema
 
 Please report via:
-- GitHub Issues: https://github.com/matthewboback/stageflow/issues
+- GitHub Issues: https://github.com/mattboback/stageflow/issues
 - Label: `schema`, `contracts`
 
 ### Questions

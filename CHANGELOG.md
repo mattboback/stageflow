@@ -5,29 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-05-28
 
-### Added
+Initial public release.
 
-- `open-graph` scanner: social preview and metadata validation (og:title, og:image, Twitter cards)
-- `spelling-grammar` scanner: AI-assisted content quality analysis
-- Standalone HTML report generation in scanner runtime (self-contained, portable output)
-- `docs/evaluators-guide.md`: structured guide for hiring managers and code reviewers
-- README: "What this project demonstrates" and "Hosted demo and self-hosting" sections
+### Scanners
 
-### Changed
+- `axe`: accessibility checks via axe-core with page-level evidence and screenshots
+- `lighthouse`: performance, best-practices, and PWA signals
+- `seo`: title, meta, heading, and structured-data validation
+- `security-headers`: HTTP response-header policy checks
+- `link-checker`: in-page link health and cross-page reachability
+- `open-graph`: social-preview metadata (og:*, Twitter cards)
+- `spelling-grammar`: AI-assisted content quality analysis
+- `ai-navigator`: agent-driven navigation traces for guided audits
 
-- Svelte 5 runes migration: state and props use `$state`, `$derived`, `$effect` throughout
-- Monorepo orchestration consolidated; import paths and module boundaries clarified
-- Public-facing docs tightened around CLI setup, project mode, and operational references
+### Surfaces
 
-### Chore
+- SvelteKit web app for scan submission, live status, and report exploration
+- Go CLI (`stageflow`) for terminal-first scans, Project Mode, JSON output, and severity-based exit codes
+- Platform API for URL/ZIP intake, projects, reports, diffing, and SSE streaming
+- Authenticated scanning: interactive Playwright capture and deterministic form recipes flow through the runtime so every scanner runs against the post-login surface
+- Auth-wall detector emits a unified report issue when a scan lands on a login redirect, login form, or recognized 401/403 page
 
-- Pre-commit framework replaces lint-staged/Husky for formatting and secret scanning
+### Orchestration
 
-## [0.1.0] - 2026-02-03
+- Job FSM driven by NATS JetStream with durable consumers and event replay
+- Per-job Podman pod isolation for scanner runtime, archive extractor, and orchestrator
+- MinIO-backed artifact storage with presigned access; PostgreSQL for job, project, and report state
 
-- Initial open-source release of StageFlow
-- Implementation of axe, lighthouse, seo, security-headers, link-checker, and ai-navigator scanners
-- Full Svelte 5 frontend with realtime SSE integration
-- Core NATS JetStream and Podman orchestration engine
+### Contracts
+
+- JSON Schema contracts in `libs/contracts/` with generated Go and TypeScript types
+- Stable, content-derived issue IDs so reports compare cleanly against promoted baselines
+
+### Verification
+
+- Go services: `go build`, `go test -race`, `golangci-lint`, `govulncheck`
+- Web app: Vitest unit tests, Storybook interaction and accessibility checks, type-check, lint
+- Scanner runner: Bun-based unit and integration suites, including real-browser authenticated flows
+- Golden regression flow (`qa/e2e/project-scan-golden.sh`) covering baseline → promote → regression diff with exit-code assertions
+- CI includes secrets scanning (gitleaks), SBOM generation, and Trivy image scanning

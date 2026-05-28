@@ -1234,11 +1234,9 @@ Scanner Runner applies the same target policy at browser runtime for URL jobs: i
 ## Authenticated Scanning
 
 StageFlow can scan beyond a marketing landing page or login redirect by
-attaching a session-aware authentication block to a job's Provenance. The
-design lives in
-[docs/design/authenticated-scanning.md](../design/authenticated-scanning.md);
-the section here documents the contract, the trust boundaries, and the
-storage-state retention rules.
+attaching a session-aware authentication block to a job's Provenance. This
+section is the source of truth for the contract, the trust boundaries, and
+the storage-state retention rules.
 
 ### The contract
 

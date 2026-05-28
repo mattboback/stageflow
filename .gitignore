@@ -56,7 +56,9 @@ coverage.html
 .tech-debt-audit/
 .claude/
 .github/skills/
-output/playwright/
+output/
+.gitcleanup/
+.kiro/
 # Local-only Caddy snippets (secrets)
 infra/caddy/snippets/monitoring-basicauth*.caddy
 # Root-only local runtime data (avoid ignoring real source folders named "data")

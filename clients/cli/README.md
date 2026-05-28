@@ -335,7 +335,5 @@ stageflow scan https://app.example.com/profile --auth-recipe ./auth/recipe.yaml
 supported alongside `--project` (configure auth on the registered project
 instead).
 
-The full design and trust boundaries live in
-[docs/design/authenticated-scanning.md](../../docs/design/authenticated-scanning.md);
-the architectural threat-model section is at
+The full design, trust boundaries, and threat model live in
 [docs/architecture/system.md#authenticated-scanning](../../docs/architecture/system.md#authenticated-scanning).
