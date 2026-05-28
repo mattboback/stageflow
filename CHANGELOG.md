@@ -16,8 +16,8 @@ Initial public release.
 - `seo`: title, meta, heading, and structured-data validation
 - `security-headers`: HTTP response-header policy checks
 - `link-checker`: in-page link health and cross-page reachability
-- `open-graph`: social-preview metadata (og:*, Twitter cards)
-- `spelling-grammar`: AI-assisted content quality analysis
+- `open-graph`: social-preview metadata (og:\*, Twitter cards)
+- `spelling-grammar`: rule-based spelling and content-quality checks
 - `ai-navigator`: agent-driven navigation traces for guided audits
 
 ### Surfaces
@@ -32,7 +32,7 @@ Initial public release.
 
 - Job FSM driven by NATS JetStream with durable consumers and event replay
 - Per-job Podman pod isolation for scanner runtime, archive extractor, and orchestrator
-- MinIO-backed artifact storage with presigned access; PostgreSQL for job, project, and report state
+- MinIO-backed artifact storage with presigned access, PostgreSQL-backed orchestrator job/event state, and SQLite-backed Platform API project metadata
 
 ### Contracts
 

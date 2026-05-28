@@ -13,7 +13,7 @@
 Run checks directly from each workspace before opening a PR.
 
 - `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...` for Go modules
-- `bun run ci` in `clients/web`
+- `bun run ci` in `clients/web` and, for UI changes, `bun run build && bun run check:asset-budget` plus Storybook evidence when relevant
 - `bun run ci` in `services/scanner-runner`
 - `bash devtools/scripts/tests/cli-install.test.sh`
 - `just project-golden` when project-mode baseline, diff, CLI exit-code, or report normalization behavior changes

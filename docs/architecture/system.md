@@ -169,15 +169,15 @@ services/platform-api/
     │   ├── handlers_jobs_url_submit.go   # URL intake
     │   ├── handlers_jobs_zip_upload.go   # ZIP intake
     │   ├── handlers_sse.go               # SSE stream hub
-    │   ├── handlers_projects.go          # Project CRUD
-    │   ├── handlers_diff.go              # On-demand diff engine
-    │   ├── scanner_configs.go            # AI Navigator config validation
+    │   ├── handlers_projects.go          # Project CRUD, scans, and baseline promotion
+    │   ├── handlers_jobs_status.go       # Job status, artifact redirects, and project diffs
+    │   ├── scanner_configs.go            # Per-scanner config validation
     │   └── security.go                   # SSRF protection
     ├── jobstatus/                  # Event-sourced pipeline
     │   ├── types.go                # Signal, Change, Subscription types
     │   └── pipeline.go             # StatusPipeline interface
     ├── messaging/                  # NATS publish/subscribe wrapper
-    ├── status/                     # Job status models and SQLite store
+    ├── status/                     # Job status model/store used by tests and projections
     │   └── schema.sql              # job_status table
     ├── statussource/               # HTTP client to read orchestrator status
     ├── project/                    # SQLite-backed project store
@@ -195,36 +195,42 @@ Request → Logging → CORS → API Key Auth → Rate Limiting → Timeout → 
 
 **API Endpoints:**
 
-| Method | Path                              | Purpose                          | Auth    |
-| ------ | --------------------------------- | -------------------------------- | ------- |
-| POST   | `/api/v1/jobs/urls`               | Submit URLs for scanning         | API key |
-| POST   | `/api/v1/jobs/zip`                | Submit ZIP archive for scanning  | API key |
-| GET    | `/api/v1/jobs/{id}`               | Get job status                   | API key |
-| GET    | `/api/v1/jobs/{id}/stream`        | SSE stream for real-time updates | API key |
-| GET    | `/api/v1/projects`                | List projects                    | API key |
-| POST   | `/api/v1/projects`                | Create project                   | API key |
-| GET    | `/api/v1/projects/{slug}`         | Show project                     | API key |
-| PATCH  | `/api/v1/projects/{slug}`         | Update project                   | API key |
-| DELETE | `/api/v1/projects/{slug}`         | Delete project                   | API key |
-| POST   | `/api/v1/projects/{slug}/promote` | Promote job as baseline          | API key |
-| GET    | `/api/v1/projects/{slug}/diff`    | Diff current vs baseline         | API key |
-| GET    | `/api/v1/scanners`                | List available scanners          | —       |
-| GET    | `/healthz`                        | Health check                     | —       |
+| Method | Path                              | Purpose                                         | Auth    |
+| ------ | --------------------------------- | ----------------------------------------------- | ------- |
+| POST   | `/api/v1/jobs/urls`               | Submit URLs for scanning                        | API key |
+| POST   | `/api/v1/jobs/zip`                | Submit ZIP archive for scanning                 | API key |
+| GET    | `/api/v1/jobs/{id}`               | Get job status                                  | API key |
+| GET    | `/api/v1/jobs/{id}/stream`        | SSE stream for real-time updates                | API key |
+| GET    | `/api/v1/jobs/{id}/report`        | Redirect to HTML report artifact                | API key |
+| GET    | `/api/v1/jobs/{id}/results`       | Redirect to normalized JSON report artifact     | API key |
+| GET    | `/api/v1/jobs/{id}/diff`          | Diff project scan against its promoted baseline | API key |
+| GET    | `/api/v1/projects`                | List projects                                   | API key |
+| POST   | `/api/v1/projects`                | Create project                                  | API key |
+| GET    | `/api/v1/projects/{slug}`         | Show project                                    | API key |
+| PATCH  | `/api/v1/projects/{slug}`         | Update project                                  | API key |
+| DELETE | `/api/v1/projects/{slug}`         | Delete project                                  | API key |
+| POST   | `/api/v1/projects/{slug}/scan`    | Launch a scan from stored project config        | API key |
+| POST   | `/api/v1/projects/{slug}/promote` | Promote job as baseline                         | API key |
+| GET    | `/api/v1/scanners`                | List available scanners                         | API key |
+| GET    | `/healthz`                        | Health check                                    | —       |
 
 **Key Configuration (env vars):**
 
-| Variable                 | Default         | Purpose                                                 |
-| ------------------------ | --------------- | ------------------------------------------------------- |
-| `PORT`                   | 8080            | HTTP listen port                                        |
-| `NATS_URL`               | —               | NATS server URL                                         |
-| `MINIO_ENDPOINT`         | —               | MinIO internal endpoint                                 |
-| `MINIO_PUBLIC_ENDPOINT`  | —               | MinIO public endpoint (for presigned URLs)              |
-| `MINIO_ACCESS_KEY`       | —               | MinIO credentials (falls back to `MINIO_ROOT_USER`)     |
-| `MINIO_SECRET_KEY`       | —               | MinIO credentials (falls back to `MINIO_ROOT_PASSWORD`) |
-| `ORCHESTRATOR_API_URL`   | —               | Internal orchestrator API URL                           |
-| `ORCHESTRATOR_API_TOKEN` | —               | Inter-service auth token                                |
-| `SCANNER_CONFIG_PATH`    | —               | YAML scanner override file path                         |
-| `PROJECT_DB_PATH`        | `./projects.db` | SQLite project database path                            |
+| Variable                       | Default         | Purpose                                                                       |
+| ------------------------------ | --------------- | ----------------------------------------------------------------------------- |
+| `PORT`                         | 8080            | HTTP listen port                                                              |
+| `NATS_URL`                     | —               | NATS server URL                                                               |
+| `MINIO_ENDPOINT`               | —               | MinIO internal endpoint                                                       |
+| `MINIO_PUBLIC_ENDPOINT`        | —               | MinIO public endpoint (for presigned URLs)                                    |
+| `MINIO_ACCESS_KEY`             | —               | MinIO credentials (falls back to `MINIO_ROOT_USER`)                           |
+| `MINIO_SECRET_KEY`             | —               | MinIO credentials (falls back to `MINIO_ROOT_PASSWORD`)                       |
+| `ORCHESTRATOR_API_URL`         | —               | Internal orchestrator API URL                                                 |
+| `ORCHESTRATOR_API_TOKEN`       | —               | Inter-service auth token                                                      |
+| `PLATFORM_API_TOKEN`           | —               | Public API token; required unless auth is explicitly disabled                 |
+| `PLATFORM_API_AUTH_DISABLED`   | `false`         | Local-only opt-out for API auth                                               |
+| `PLATFORM_API_TRUSTED_PROXIES` | —               | Trusted proxy CIDRs/IPs allowed to supply `X-Forwarded-For` for rate limiting |
+| `SCANNER_CONFIG_PATH`          | —               | YAML scanner override file path                                               |
+| `PROJECT_DB_PATH`              | `./projects.db` | SQLite project database path                                                  |
 
 ---
 
@@ -361,7 +367,7 @@ services/scanner-runner/
 │   │   ├── security-headers/       # HTTP security headers
 │   │   ├── link-checker/           # Broken link detection
 │   │   ├── open-graph/             # Open Graph validation
-│   │   ├── spelling-grammar/       # AI-assisted content quality
+│   │   ├── spelling-grammar/       # Rule-based content quality
 │   │   └── ai-navigator/           # LLM-powered browser agent
 │   └── screenshots/
 │       └── axe/                    # Advanced screenshot capture for violations
@@ -512,32 +518,32 @@ Info (public API projection — strips Image, Aliases, Config, Requirements)
 
 ```json
 {
-  "event": "scan.completed",
-  "job_id": "550e8400-e29b-41d4-a716-446655440000",
-  "request_id": "optional-correlation-id",
-  "run_id": "optional-run-id",
-  "timestamp": "2026-04-04T00:00:00Z",
-  "producer": "scanner-runner",
-  "payload": {
-    "job_id": "550e8400-e29b-41d4-a716-446655440000",
-    "scanner_type": "axe",
-    "results_path": "550e8400.../axe/results.json",
-    "report_path": "550e8400.../axe/report.html",
-    "total_pages_scanned": 5,
-    "summary": {
-      "total_violations": 12,
-      "by_severity": { "critical": 2, "serious": 5, "moderate": 3, "minor": 2 },
-      "pages_scanned": 5
-    },
-    "timing": {
-      "total_ms": 45000,
-      "page_iteration_ms": 30000,
-      "write_results_ms": 5000,
-      "upload_artifacts_ms": 8000,
-      "publish_completed_ms": 1000,
-      "finalization_ms": 1000
-    }
-  }
+	"event": "scan.completed",
+	"job_id": "550e8400-e29b-41d4-a716-446655440000",
+	"request_id": "optional-correlation-id",
+	"run_id": "optional-run-id",
+	"timestamp": "2026-04-04T00:00:00Z",
+	"producer": "scanner-runner",
+	"payload": {
+		"job_id": "550e8400-e29b-41d4-a716-446655440000",
+		"scanner_type": "axe",
+		"results_path": "550e8400.../axe/results.json",
+		"report_path": "550e8400.../axe/report.html",
+		"total_pages_scanned": 5,
+		"summary": {
+			"total_violations": 12,
+			"by_severity": { "critical": 2, "serious": 5, "moderate": 3, "minor": 2 },
+			"pages_scanned": 5
+		},
+		"timing": {
+			"total_ms": 45000,
+			"page_iteration_ms": 30000,
+			"write_results_ms": 5000,
+			"upload_artifacts_ms": 8000,
+			"publish_completed_ms": 1000,
+			"finalization_ms": 1000
+		}
+	}
 }
 ```
 
@@ -999,7 +1005,7 @@ The orchestrator's `rule_deduplication.go` handles cross-scanner deduplication d
        link-checker, open-graph, spelling-grammar, ai-navigator
 
 2. Mounted /plugins volume
-   └── Docker volume mount at runtime
+   └── Podman/compose volume mount at runtime
 
 3. ~/.stageflow/plugins/
    └── User-local plugin directory
@@ -1220,14 +1226,14 @@ Scanner Runner applies the same target policy at browser runtime for URL jobs: i
 
 ### Additional Security Measures
 
-| Measure                       | Implementation                                                                                       |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Dependency scanning**       | `gitleaks` on every commit + CI, `govulncheck` across all Go modules, `bun audit --audit-level=high` |
+| Measure                       | Implementation                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Dependency scanning**       | `gitleaks` on every commit + CI, `govulncheck` across all Go modules, `bun audit --audit-level=high`        |
 | **Container security**        | Rootless Podman job pods, `no-new-privileges:true`, resource limits, logging limits (`max-size`/`max-file`) |
-| **Credential aliasing**       | `MINIO_ACCESS_KEY` ↔ `MINIO_ROOT_USER`, `MINIO_SECRET_KEY` ↔ `MINIO_ROOT_PASSWORD`                   |
-| **VPS deployment guardrails** | Protected hostname check prevents accidental production disruption                                   |
-| **API key auth**              | `X-Api-Key` header on all API endpoints (except health/scanners)                                     |
-| **Request timeouts**          | All endpoints have timeout middleware except SSE stream                                              |
+| **Credential aliasing**       | `MINIO_ACCESS_KEY` ↔ `MINIO_ROOT_USER`, `MINIO_SECRET_KEY` ↔ `MINIO_ROOT_PASSWORD`                          |
+| **VPS deployment guardrails** | Protected hostname check prevents accidental production disruption                                          |
+| **API key auth**              | `X-Api-Key` header on all API endpoints (except health/scanners)                                            |
+| **Request timeouts**          | All endpoints have timeout middleware except SSE stream                                                     |
 
 ---
 
@@ -1612,7 +1618,7 @@ The `project init` command intelligently detects:
 
 - **Framework:** SvelteKit 5
 - **Styling:** Tailwind CSS
-- **Testing:** Playwright + Storybook test-runner + axe accessibility tests
+- **Testing:** Vitest component/unit tests, Storybook test-runner, and Storybook a11y checks
 - **Build:** Static assets served by Caddy in the frontend container
 
 ### Key Components
@@ -1620,33 +1626,32 @@ The `project init` command intelligently detects:
 ```
 clients/web/
 ├── src/
-│   ├── routes/                     # SvelteKit file-based routing
-│   ├── lib/
-│   │   ├── api/
-│   │   │   └── client.ts           # Platform API client
-│   │   ├── stores/
-│   │   │   └── scan-status.svelte.ts  # Reactive scan status store
-│   │   ├── config/
-│   │   │   └── site.ts             # VITE_* env var normalization
-│   │   └── types/                  # TypeScript type definitions
-│   └── static/
-│       └── qa/                     # Golden test fixture pages
-├── static/                         # Static assets
-├── tests/                          # Playwright tests
-└── stories/                        # Storybook stories
+│   ├── routes/                     # Landing, playground, live scan, report routes
+│   └── lib/
+│       ├── api/                    # Platform API client, URL helpers, SSE plumbing
+│       ├── components/playground/  # URL/ZIP submission, scanner selection, AI/auth config
+│       ├── components/report/      # Report shell, issue detail modal, artifacts, visual review
+│       ├── components/scan-status/ # Live status, terminal, artifacts sidebar
+│       ├── components/ui/          # Design-system primitives and Storybook stories
+│       ├── config/                 # VITE_* env var normalization
+│       ├── domain/scanners/        # Scanner presets and product grouping
+│       ├── report/                 # Filtering, grouping, sorting, screenshots, severity helpers
+│       ├── stores/                 # Svelte stores for scan status, monitor, report, history
+│       └── types/                  # TypeScript report/scan types
+├── static/                         # Static assets served by SvelteKit/Caddy
+├── tests/unit/                     # Vitest API, store, utility, and component tests
+└── .storybook/                     # Storybook configuration and test harnesses
 ```
 
 ### Client-Side Types
 
-| Type                 | Purpose                                          |
-| -------------------- | ------------------------------------------------ | ------------------------------ | ---------- | -------- | ---------- | -------- | ------ | ------- | ----- |
-| `ScanResult`         | Mirrors `JobStatus` with string-based state      |
-| `ScanStatus`         | Union of UI states: pending                      | processing                     | extracting | scanning | completing | complete | failed | loading | error |
-| `ScanProgress`       | `current_page`, `total_pages`, `percentage`      |
-| `ScreenshotArtifact` | Discriminated union: ViolationScreenshotArtifact | PageOverviewScreenshotArtifact |
-| `ScannerDefinition`  | Mirrors `scannerregistry.Info`                   |
-| `ScannerSelection`   | `{id, enabled, config?}`                         |
-| `ReportAudience`     | pm                                               | engineer                       | designer   |
+| Type / module                     | Purpose                                                        |
+| --------------------------------- | -------------------------------------------------------------- |
+| `src/lib/types/scan.ts`           | Job status, scan status strings, progress, artifacts, scanners |
+| `src/lib/types/unified-report.ts` | Frontend-facing aliases for the canonical report contract      |
+| `ScannerDefinition`               | Browser/API representation of `scannerregistry.Info`           |
+| `ScannerSelection`                | `{id, enabled, config?}` selection state for scan submission   |
+| `ScreenshotArtifact`              | Discriminated screenshot/link metadata rendered in reports     |
 
 ### SSE Streaming
 
@@ -1924,11 +1929,11 @@ Golden fixtures fail when missing or different. Regenerate intentionally with `U
 
 ### CI/CD Workflows
 
-| Workflow              | Trigger                 | Duration | Key Gates                                                                |
-| --------------------- | ----------------------- | -------- | ------------------------------------------------------------------------ |
-| **CI**                | Push/PR to `main`       | ~30m     | workflow_lint → secrets → Go → web → Storybook → scanner-runner → images |
+| Workflow              | Trigger                  | Duration | Key Gates                                                                |
+| --------------------- | ------------------------ | -------- | ------------------------------------------------------------------------ |
+| **CI**                | Push/PR to `main`        | ~30m     | workflow_lint → secrets → Go → web → Storybook → scanner-runner → images |
 | **Golden Regression** | Manual + daily 08:23 UTC | ~90m     | Full stack bootstrap → golden test → teardown                            |
-| **CLI Release**       | Tags `clients/cli/v*`   | ~15m     | Matrix build (5 OS/arch) → GitHub Release                                |
+| **CLI Release**       | Tags `clients/cli/v*`    | ~15m     | Matrix build (5 OS/arch) → GitHub Release                                |
 
 ### Local Quality Gate
 
@@ -1961,22 +1966,22 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 
 ### Platform API
 
-| Area                      | File                                                             |
-| ------------------------- | ---------------------------------------------------------------- |
-| Entry point               | `services/platform-api/cmd/server/main.go`                       |
-| Configuration             | `services/platform-api/cmd/server/config.go`                     |
-| Route registration        | `services/platform-api/internal/api/router.go`                   |
-| URL intake validation     | `services/platform-api/internal/api/handlers_jobs_url_submit.go` |
-| ZIP intake handler        | `services/platform-api/internal/api/handlers_jobs_zip_upload.go` |
-| SSRF checks               | `services/platform-api/internal/api/security.go`                 |
-| SSE stream handler        | `services/platform-api/internal/api/handlers_sse.go`             |
-| Scanner config validation | `services/platform-api/internal/api/scanner_configs.go`          |
-| Project CRUD handlers     | `services/platform-api/internal/api/handlers_projects.go`        |
-| Diff endpoint             | `services/platform-api/internal/api/handlers_diff.go`            |
-| Job status pipeline       | `services/platform-api/internal/jobstatus/`                      |
-| Project store (SQLite)    | `services/platform-api/internal/project/store.go`                |
-| Project store schema      | `services/platform-api/internal/project/schema.sql`              |
-| Job status schema         | `services/platform-api/internal/status/schema.sql`               |
+| Area                              | File                                                             |
+| --------------------------------- | ---------------------------------------------------------------- |
+| Entry point                       | `services/platform-api/cmd/server/main.go`                       |
+| Configuration                     | `services/platform-api/cmd/server/config.go`                     |
+| Route registration                | `services/platform-api/internal/api/router.go`                   |
+| URL intake validation             | `services/platform-api/internal/api/handlers_jobs_url_submit.go` |
+| ZIP intake handler                | `services/platform-api/internal/api/handlers_jobs_zip_upload.go` |
+| SSRF checks                       | `services/platform-api/internal/api/security.go`                 |
+| SSE stream handler                | `services/platform-api/internal/api/handlers_sse.go`             |
+| Scanner config validation         | `services/platform-api/internal/api/scanner_configs.go`          |
+| Project CRUD/scan handlers        | `services/platform-api/internal/api/handlers_projects.go`        |
+| Job status/artifact/diff handlers | `services/platform-api/internal/api/handlers_jobs_status.go`     |
+| Job status pipeline               | `services/platform-api/internal/jobstatus/`                      |
+| Project store (SQLite)            | `services/platform-api/internal/project/store.go`                |
+| Project store schema              | `services/platform-api/internal/project/schema.sql`              |
+| Job status schema                 | `services/platform-api/internal/status/schema.sql`               |
 
 ### Orchestrator
 

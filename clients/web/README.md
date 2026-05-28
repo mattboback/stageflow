@@ -95,7 +95,7 @@ The report surface is built around a small number of opinionated patterns:
 
 - **0–100 score with status pill.** No letter grades. `Score` (in `lib/components/ui/`) renders the numeric score plus a `StatusPill` band (`Strong` / `Watch` / `Needs work` / `High risk` / `Failing`) computed by `lib/report/score-band.ts`.
 - **Severity distribution bar.** `SeverityBar` consumes `report.summary.bySeverity` and renders a single proportional stacked bar so reviewers see the issue mix at a glance. The same color ramp is used everywhere (red → orange → amber → blue → purple).
-- **Grouped issues by rule.** `lib/report/grouping.ts#groupIssuesByRule` aggregates flat occurrences into one row per `${scanner}:${ruleId}` fingerprint (Sentry-style). The fingerprint is stable across input reorderings to support a future diff-scan feature.
+- **Grouped issues by rule.** `lib/report/grouping.ts#groupIssuesByRule` aggregates flat occurrences into one row per `${scanner}:${ruleId}` fingerprint (Sentry-style). The fingerprint is stable across input reorderings and complements backend issue IDs used by project baseline diffing.
 - **Filter sidebar.** Scanner and severity multi-select, page/category single-select, and search live in `IssueFilterSidebar.svelte` on the left. Active filters surface as removable chips above the list.
 - **Modal with tabs and keyboard nav.** `IssueDetailModal` exposes Fix / Evidence / Details / Occurrences tabs, `Prev`/`Next` arrows, and `j`/`k`/arrow-key bindings to walk the filtered+sorted list without closing the modal.
 - **Contextual fix instructions.** `lib/report/contextual-fix.ts` parses occurrence HTML to emit rule-specific guidance (e.g., "Add `alt=…` to `<img src=…>`") and falls back to the generic `howToFix` when no generator matches.

@@ -64,10 +64,41 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 
 ### Platform API
 
-| Variable                             | Required | Default in `.env.example` | Purpose                                                 |
-| ------------------------------------ | -------- | ------------------------- | ------------------------------------------------------- |
-| `PLATFORM_API_TOKEN`                 | no       | empty                     | Used for API authentication.                            |
-| `PLATFORM_API_ALLOW_PRIVATE_TARGETS` | no       | `false`                   | Controls whether the API accepts private/local targets. |
+| Variable                             | Required | Default in `.env.example`        | Purpose                                                                                                             |
+| ------------------------------------ | -------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `PORT`                               | no       | `8080`                           | Platform API HTTP listen port inside the container.                                                                 |
+| `NATS_URL`                           | yes      | `nats://nats:4222`               | NATS server URL used to publish job events and subscribe to lifecycle events.                                       |
+| `ORCHESTRATOR_API_URL`               | yes      | `http://orchestrator:8081`       | Internal orchestrator admin API URL used for status snapshots.                                                      |
+| `ORCHESTRATOR_API_TOKEN`             | yes      | `change-me-orchestrator-token`   | Inter-service token for calls from Platform API to Orchestrator.                                                    |
+| `PLATFORM_API_TOKEN`                 | yes      | `change-me-platform-api-token`   | Public API token accepted via `X-Api-Key` or `Authorization: Bearer`.                                               |
+| `PLATFORM_API_AUTH_DISABLED`         | no       | `false`                          | Explicit local-only opt-out when running the API without `PLATFORM_API_TOKEN`. Do not enable in public deployments. |
+| `PLATFORM_API_ALLOW_PRIVATE_TARGETS` | no       | `false`                          | Controls whether the API accepts private/local targets.                                                             |
+| `PLATFORM_API_TRUSTED_PROXIES`       | no       | empty                            | Comma-separated trusted proxy CIDRs/IPs allowed to supply `X-Forwarded-For` for rate-limit keys.                    |
+| `SCANNER_CONFIG_PATH`                | no       | `/data/scanners.yaml` in compose | Optional YAML scanner override file for enablement, image, and resource tweaks.                                     |
+| `PROJECT_DB_PATH`                    | no       | `./projects.db` in code          | SQLite database path for project records, project/job mappings, and baselines.                                      |
+
+`PLATFORM_API_TOKEN` is required at startup unless `PLATFORM_API_AUTH_DISABLED=true` is set. The disabled mode exists for local development only and should not be used on a public domain.
+
+### Orchestrator
+
+| Variable                            | Required | Default in compose/code                     | Purpose                                                                              |
+| ----------------------------------- | -------- | ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                      | yes      | from `.env.example`                         | PostgreSQL DSN for orchestrator jobs, events, metrics, and state.                    |
+| `PODMAN_SOCKET`                     | yes      | `/run/podman/podman.sock`                   | Podman API socket mounted into the orchestrator container.                           |
+| `EXTRACTION_IMAGE`                  | yes      | `localhost/stageflow/extractor:latest`      | Image used for ZIP extraction job containers.                                        |
+| `SCANNER_IMAGE`                     | yes      | `localhost/stageflow/scanner-runner:latest` | Default scanner runner image.                                                        |
+| `SCANNER_IMAGE_OVERRIDE`            | no       | empty                                       | Global scanner image override when set.                                              |
+| `API_PORT`                          | yes      | `8081`                                      | Orchestrator admin API port.                                                         |
+| `ORCHESTRATOR_API_TOKEN`            | yes      | `change-me-orchestrator-token`              | Admin API token accepted via `X-Api-Key` or bearer auth.                             |
+| `NATS_HOST`                         | yes      | `nats`                                      | Hostname injected into job pods so scanners can reach NATS.                          |
+| `MINIO_HOST`                        | yes      | `minio`                                     | Hostname injected into job pods so scanners can reach MinIO.                         |
+| `POD_NETWORK`                       | no       | `stageflow_net`                             | Podman network for job pods in bridge mode.                                          |
+| `POD_NETNS_MODE`                    | no       | `bridge` (`host` in local overlay)          | Network namespace mode for job pods. Use `host` only for local/private target scans. |
+| `PAGE_LOAD_TIMEOUT`                 | no       | `15000`                                     | Browser page-load timeout in milliseconds.                                           |
+| `A11Y_SCROLL_TIMEOUT`               | no       | `300`                                       | Accessibility scan scroll timeout in milliseconds.                                   |
+| `JOB_EVENTS_RETENTION_DAYS`         | no       | `30`                                        | Retention window for stored job events.                                              |
+| `JOB_EVENTS_PRUNE_INTERVAL_MINUTES` | no       | `60`                                        | Background job-event pruning interval.                                               |
+| `JOB_EVENTS_PRUNE_BATCH_SIZE`       | no       | implementation default                      | Maximum number of old job events pruned per batch.                                   |
 
 ### Public Domain and CORS
 
@@ -97,6 +128,12 @@ The frontend container builds the SvelteKit app to static files and serves them 
 | `OPENROUTER_APP_TITLE`       | no                           | `StageFlow`               | OpenRouter request attribution title.                       |
 | `OPENROUTER_APP_REFERER`     | no                           | `http://localhost:3000`   | OpenRouter request attribution referer.                     |
 | `AI_NAVIGATOR_DEFAULT_MODEL` | no                           | `openai/gpt-4o-mini`      | Default backend model when scanner options do not override. |
+
+### Scanner Registry Overrides
+
+Built-in scanner metadata is embedded from `libs/go/scannercatalog/manifests/*/manifest.json`. The checked-in compose files mount `infra/scanners/scanners.yaml` into both Platform API and Orchestrator as `/data/scanners.yaml`; `just setup` creates that local file from `services/orchestrator/config/scanners.yaml` when needed. Use `infra/scanners/scanners.example.yaml` as a public template for deployments that need to disable scanners, override images, or tune resource limits without editing embedded manifests.
+
+Current built-in scanner IDs are: `axe`, `lighthouse`, `seo`, `security-headers`, `link-checker`, `open-graph`, `spelling-grammar`, and `ai-navigator`.
 
 ### Caddy (Edge)
 

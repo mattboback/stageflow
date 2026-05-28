@@ -189,9 +189,10 @@ The project uses layered verification rather than a single happy-path build:
 CI-backed checks:
 
 - **Go services:** `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...`
-- **Web app:** `bun run ci` in `clients/web` for typecheck, lint, unit tests, and Storybook checks
-- **Scanner Runner:** `bun run ci` in `services/scanner-runner`
-- **Containers/security:** image builds, SBOM generation, Trivy scanning, and gitleaks
+- **Web app:** `bun run ci` in `clients/web` for format checks, strict linting, type checks, and coverage-backed unit tests
+- **Storybook:** separate CI job builds Storybook and runs interaction/accessibility checks with the Storybook test runner
+- **Scanner Runner:** `bun run ci` in `services/scanner-runner` for format checks, strict linting, type checks, and coverage-backed tests
+- **Containers/security:** image builds, SBOM generation, Trivy scanning, `bun audit`, and gitleaks
 - **Dead code:** web and scanner-runner dead-code analysis currently runs as a non-blocking CI job
 
 Acceptance checks:

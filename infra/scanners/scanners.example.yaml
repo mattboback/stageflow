@@ -26,5 +26,11 @@ scanners:
   seo:
     enabled: false
 
+  open-graph:
+    enabled: false
+
+  spelling-grammar:
+    enabled: false
+
   security-headers:
     enabled: false

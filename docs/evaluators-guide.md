@@ -78,7 +78,7 @@ Highlights:
 
 - Contract-driven normalization of eight different scanners into a single report shape.
 - Use of Playwright for browser automation and screenshot evidence.
-- Optional AI-powered scanners with clear boundaries around configuration (for example `OPENROUTER_API_KEY`).
+- Optional AI Navigator scanner with clear boundaries around configuration (for example `OPENROUTER_API_KEY`).
 
 ### 2.5 Web App and Accessibility Testing
 
@@ -103,8 +103,8 @@ Highlights:
   - `govulncheck ./...` for vulnerability scanning.
 
 - Web app and Scanner Runner:
-  - `bun run ci` in `clients/web` and `services/scanner-runner` (typecheck, lint, tests).
-  - Storybook interaction + axe-based a11y tests.
+  - `bun run ci` in `clients/web` and `services/scanner-runner` (format check, strict lint, typecheck, coverage-backed tests).
+  - Web CI also builds the app and checks the asset budget; Storybook interaction + a11y tests run in a separate CI job.
 
 - End-to-end verification:
   - `qa/e2e/project-scan-golden.sh` and `qa/fixtures/project-golden/*` — project baseline and regression golden test.
