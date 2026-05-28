@@ -9,7 +9,7 @@
 // developer's machine and never reaches the platform-api or the orchestrator;
 // only the captured storage-state file does (via `stageflow scan --auth-state`).
 //
-// See docs/design/authenticated-scanning.md for the trust boundaries.
+// See docs/architecture/system.md#authenticated-scanning for the trust boundaries.
 package main
 
 import (
@@ -33,7 +33,7 @@ func newAuthCmd(_ *rootOptions) *cobra.Command {
 		Use:   "auth",
 		Short: "Manage authentication artifacts for authenticated scans",
 		Long: "Subcommands that capture browser session state for use with `stageflow scan --auth-state`.\n\n" +
-			"See docs/design/authenticated-scanning.md for the design and trust boundaries.",
+			"See docs/architecture/system.md#authenticated-scanning for the design and trust boundaries.",
 	}
 
 	cmd.AddCommand(newAuthCaptureCmd(defaultAuthCaptureRunner))
