@@ -6,12 +6,14 @@ import type {
 	LighthouseIssueNode
 } from './types';
 
+// Lighthouse audits score 0..1 (binary pass/fail audits score exactly 0 or 1).
+// We deliberately do NOT mint 'critical' from a zero score: a single failing
+// audit (e.g. errors-in-console, is-crawlable) re-runs on every page and would
+// otherwise manufacture a pile of bogus criticals. A hard fail is reported as
+// 'serious' at most; severity here is an ordering hint, not a verdict.
 export function mapScoreToSeverity(score: number | null): IssueSeverity {
 	if (score === null) {
 		return 'info';
-	}
-	if (score === 0) {
-		return 'critical';
 	}
 	if (score < 0.5) {
 		return 'serious';

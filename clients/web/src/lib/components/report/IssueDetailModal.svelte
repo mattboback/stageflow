@@ -92,20 +92,25 @@
 	let fullPageEvidenceOverride = $state<boolean | null>(null);
 	const showFullPageEvidence = $derived(fullPageEvidenceOverride ?? !highlightedElementId);
 	const shouldShowPageOverview = $derived(showFullPageEvidence || !openedFromOverlay);
-	const pageOverviewRenderable = $derived(
+	const pageOverviewExists = $derived(
 		!!page &&
 			!!pageOverviewUrl &&
 			(page.pageOverview?.pageWidth ?? 0) > 0 &&
-			(page.pageOverview?.pageHeight ?? 0) > 0 &&
-			(page.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
+			(page.pageOverview?.pageHeight ?? 0) > 0
+	);
+	const pageOverviewRenderable = $derived(
+		pageOverviewExists &&
+			(page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
 	);
 
 	// Evidence is meaningful when there's a screenshot, an overlay we can render,
-	// or any text/DOM data on the primary occurrence. We never show an empty tab.
+	// a page-level screenshot to anchor a page-global finding, or any text/DOM data
+	// on the primary occurrence. We never show an empty tab.
 	const hasEvidence = $derived(
 		Boolean(
 			screenshotUrl ||
 			pageOverviewRenderable ||
+			pageOverviewExists ||
 			primaryOccurrence?.selector ||
 			primaryOccurrence?.ancestorPath ||
 			primaryOccurrence?.contextHtml ||

@@ -22,10 +22,24 @@ func TestBuiltinManifests(t *testing.T) {
 
 	sort.Strings(gotIDs)
 
-	want := []string{"ai-navigator", "axe", "lighthouse", "link-checker", "security-headers", "seo"}
-	for _, id := range want {
-		if i := sort.SearchStrings(gotIDs, id); i >= len(gotIDs) || gotIDs[i] != id {
-			t.Fatalf("missing builtin manifest id %q; got %v", id, gotIDs)
+	want := []string{
+		"ai-navigator",
+		"axe",
+		"lighthouse",
+		"link-checker",
+		"open-graph",
+		"security-headers",
+		"seo",
+		"spelling-grammar",
+	}
+
+	if len(gotIDs) != len(want) {
+		t.Fatalf("builtin manifest ids = %v, want %v", gotIDs, want)
+	}
+
+	for i := range want {
+		if gotIDs[i] != want[i] {
+			t.Fatalf("builtin manifest ids = %v, want %v", gotIDs, want)
 		}
 	}
 }

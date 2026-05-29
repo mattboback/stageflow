@@ -39,6 +39,12 @@ Initial public release.
 - JSON Schema contracts in `libs/contracts/` with generated Go and TypeScript types
 - Stable, content-derived issue IDs so reports compare cleanly against promoted baselines
 
+### Observability
+
+- Authenticated Prometheus-compatible `/metrics` endpoint on the orchestrator admin API: job-state and Podman pod gauges, `event_handled_total{event,status}` counters, an event-handler duration histogram, and `http_requests_total{status}` counters — collected in-process with no metrics-client dependency
+- Structured panic recovery and per-client rate limiting on the orchestrator admin API
+- Grafana dashboards (optional) for job overview and provenance validation
+
 ### Verification
 
 - Go services: `go build`, `go test -race`, `golangci-lint`, `govulncheck`

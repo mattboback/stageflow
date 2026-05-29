@@ -154,10 +154,13 @@ func run() int {
 	orch.Start(backgroundCtx)
 
 	apiServer := api.NewServer(&api.Config{
-		Database:     database,
-		PodmanClient: podmanClient,
-		APIToken:     cfg.APIToken,
-		Port:         cfg.APIPort,
+		Database:            database,
+		PodmanClient:        podmanClient,
+		APIToken:            cfg.APIToken,
+		Port:                cfg.APIPort,
+		AdminRateLimitRPS:   cfg.AdminRateLimitRPS,
+		AdminRateLimitBurst: cfg.AdminRateLimitBurst,
+		Metrics:             orch.Metrics(),
 	})
 
 	sigChan := make(chan os.Signal, 1)

@@ -404,6 +404,60 @@ describe('IssueEvidenceSection', () => {
 		});
 	});
 
+	describe('page-level evidence fallback', () => {
+		it('renders the full-page screenshot for a page-global issue with no element match', () => {
+			const { container, getByText, queryByText } = render(IssueEvidenceSection, {
+				props: {
+					// Issue id has no matching pageOverview element (page-global finding).
+					issue: createIssue({ id: 'missing-csp', occurrences: [] }),
+					page: createPage({
+						pageOverview: {
+							screenshotFilename: 'overview.png',
+							pageWidth: 1200,
+							pageHeight: 800,
+							elements: []
+						}
+					}),
+					screenshotUrl: null,
+					pageOverviewUrl: 'http://example.com/overview.png',
+					onElementClick: vi.fn()
+				}
+			});
+
+			const fallbackSvg = container.querySelector('svg[aria-label*="page-level finding"]');
+			expect(fallbackSvg).toBeInTheDocument();
+			expect(fallbackSvg?.querySelector('image')?.getAttribute('href')).toBe(
+				'http://example.com/overview.png'
+			);
+			// No bounding-box rects, and never the "no evidence" empty state.
+			expect(fallbackSvg?.querySelector('rect')).toBeNull();
+			expect(getByText(/applies to the whole page/i)).toBeInTheDocument();
+			expect(queryByText(/no dom evidence captured/i)).not.toBeInTheDocument();
+		});
+
+		it('does not show the page-level fallback for manual review items', () => {
+			const { container, getByText } = render(IssueEvidenceSection, {
+				props: {
+					issue: createIssue({ scanner: 'lighthouse', severity: 'info', occurrences: [] }),
+					page: createPage({
+						pageOverview: {
+							screenshotFilename: 'overview.png',
+							pageWidth: 1200,
+							pageHeight: 800,
+							elements: []
+						}
+					}),
+					screenshotUrl: null,
+					pageOverviewUrl: 'http://example.com/overview.png',
+					onElementClick: vi.fn()
+				}
+			});
+
+			expect(container.querySelector('svg[aria-label*="page-level finding"]')).toBeNull();
+			expect(getByText(/manual review item/i)).toBeInTheDocument();
+		});
+	});
+
 	describe('manual review', () => {
 		it('renders a manual review banner for Lighthouse info issues without occurrences', () => {
 			const { getByText } = render(IssueEvidenceSection, {

@@ -16,6 +16,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/metrics"
 )
 
 const (
@@ -33,6 +34,8 @@ type Server struct {
 	apiToken     string
 	port         string
 	server       *http.Server
+	rateLimiter  *adminRateLimiter
+	metrics      *metrics.Collector
 }
 
 // PodmanClient is the subset of Podman operations the API server needs.
@@ -66,10 +69,13 @@ func parsePaginationParams(query url.Values, defaultLimit, maxLimit int) (limit,
 
 // Config contains configuration for the API server.
 type Config struct {
-	Database     *db.Database
-	PodmanClient PodmanClient
-	APIToken     string
-	Port         string // Default: "8081"
+	Database            *db.Database
+	PodmanClient        PodmanClient
+	APIToken            string
+	Port                string             // Default: "8081"
+	AdminRateLimitRPS   int                // 0 disables rate limiting.
+	AdminRateLimitBurst int                // Defaults to AdminRateLimitRPS when rate limiting is enabled.
+	Metrics             *metrics.Collector // Optional: shared collector for /metrics counters.
 }
 
 // NewServer creates a new API server.
@@ -83,6 +89,8 @@ func NewServer(cfg *Config) *Server {
 		podmanClient: cfg.PodmanClient,
 		apiToken:     strings.TrimSpace(cfg.APIToken),
 		port:         cfg.Port,
+		rateLimiter:  newAdminRateLimiter(cfg.AdminRateLimitRPS, cfg.AdminRateLimitBurst),
+		metrics:      cfg.Metrics,
 	}
 
 	mux := http.NewServeMux()
@@ -93,12 +101,13 @@ func NewServer(cfg *Config) *Server {
 	mux.HandleFunc("/api/v1/pods", s.requireAuth(s.handleListPods))
 	mux.HandleFunc("/api/v1/pods/", s.requireAuth(s.handlePodDetails))
 	mux.HandleFunc("/api/v1/status", s.requireAuth(s.handleSystemStatus))
+	mux.HandleFunc("/metrics", s.requireAuth(s.handleMetrics))
 
 	mux.HandleFunc("/healthz", s.handleHealth)
 
 	s.server = &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           mux,
+		Handler:           s.recoverPanic(s.recordMetrics(s.rateLimit(mux))),
 		ReadHeaderTimeout: 15 * time.Second,
 	}
 

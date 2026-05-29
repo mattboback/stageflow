@@ -170,9 +170,9 @@ describe('LighthouseScanner', () => {
 			expect(result).toBe('info');
 		});
 
-		it("returns 'critical' for score of 0", () => {
+		it("returns 'serious' for score of 0 (never auto-criticals)", () => {
 			const result = callPrivateMethod(scanner, 'mapScoreToSeverity', 0) as string;
-			expect(result).toBe('critical');
+			expect(result).toBe('serious');
 		});
 
 		it("returns 'serious' for score below 0.5", () => {
@@ -397,7 +397,7 @@ describe('LighthouseScanner', () => {
 			expect(issues[0]!.description).toContain('Manual verification required');
 		});
 
-		it('maps critical score (0) to critical severity', () => {
+		it('maps a hard-fail score (0) to serious, not critical', () => {
 			const lhResult = createMockLighthouseResult({
 				'html-has-lang': {
 					id: 'html-has-lang',
@@ -413,7 +413,7 @@ describe('LighthouseScanner', () => {
 			}[];
 
 			expect(issues).toHaveLength(1);
-			expect(issues[0]!.severity).toBe('critical');
+			expect(issues[0]!.severity).toBe('serious');
 		});
 
 		it('includes metadata from audit details', () => {

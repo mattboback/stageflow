@@ -59,6 +59,7 @@ func TestPlanForwardsOnlyFromEnvAllowList(t *testing.T) {
 	}
 
 	planner := newAuthPlanner(t, host)
+
 	plan, err := planner.Plan(context.Background(), newAuthJob(t, authFormFixture), "axe")
 	if err != nil {
 		t.Fatalf("Plan() error = %v", err)
@@ -102,6 +103,7 @@ func TestPlanFailsFastWhenFromEnvIsUnset(t *testing.T) {
 	host := map[string]string{"STAGEFLOW_AUTH_USER": "demo@example.com"}
 
 	planner := newAuthPlanner(t, host)
+
 	_, err := planner.Plan(context.Background(), newAuthJob(t, authFormFixture), "axe")
 	if err == nil {
 		t.Fatal("expected Plan() to fail when a from_env reference is unset on the host")
@@ -122,6 +124,7 @@ func TestPlanStorageStateForwardsArtifactKey(t *testing.T) {
 	host := map[string]string{"OTHER_HOST_SECRET": "must-not-leak"}
 
 	planner := newAuthPlanner(t, host)
+
 	plan, err := planner.Plan(context.Background(), newAuthJob(t, authStorageFixed), "axe")
 	if err != nil {
 		t.Fatalf("Plan() error = %v", err)
@@ -148,6 +151,7 @@ func TestPlanStorageStateRejectsInlineContentAtLaunchTime(t *testing.T) {
 	t.Parallel()
 
 	planner := newAuthPlanner(t, nil)
+
 	_, err := planner.Plan(context.Background(), newAuthJob(t, authStorageInline), "axe")
 	if err == nil {
 		t.Fatal("expected Plan() to refuse inline content_b64 at scanner-launch time")

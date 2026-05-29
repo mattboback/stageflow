@@ -3,7 +3,9 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -62,60 +64,95 @@ func (o *Orchestrator) withInboundEvent(
 	eventName, jobID string,
 	payload any,
 	fn func(context.Context) error,
-) error {
+) (err error) {
 	start := time.Now()
-	err := fn(ctx)
-	durationMs := time.Since(start).Milliseconds()
+	handlerStatus := "ok"
 
-	meta, _ := sharedmsg.ReceivedEventMetaFromContext(ctx)
+	defer func() {
+		panicValue := recover()
+		if panicValue != nil {
+			err = fmt.Errorf("panic handling %s: %v", eventName, panicValue)
+			handlerStatus = "panic"
 
-	insert := &db.JobEventInsert{
-		JobID:         jobID,
-		Event:         eventName,
-		Timestamp:     time.Now().UTC(),
-		Payload:       marshalPayload(payload),
-		RequestID:     logging.RequestID(ctx),
-		RunID:         logging.RunID(ctx),
-		HandlerStatus: "ok",
-		DurationMs:    &durationMs,
-	}
-
-	//nolint:nestif // Meta validation requires multiple optional field checks
-	if meta != nil {
-		if meta.Event != "" {
-			insert.Event = meta.Event
+			slog.Error(
+				"Recovered panic in orchestrator event handler",
+				"event",
+				eventName,
+				"job_id",
+				jobID,
+				"panic",
+				panicValue,
+				"stack",
+				string(debug.Stack()),
+			)
 		}
 
-		insert.Producer = meta.Producer
-		insert.NATSSubject = meta.Subject
-		insert.NATSStream = meta.Stream
-		insert.NATSConsumer = meta.Consumer
+		durationMs := time.Since(start).Milliseconds()
 
-		if !meta.StoredAt.IsZero() {
-			insert.NATSStoredAt = &meta.StoredAt
+		insert := &db.JobEventInsert{
+			JobID:         jobID,
+			Event:         eventName,
+			Timestamp:     time.Now().UTC(),
+			Payload:       marshalPayload(payload),
+			RequestID:     logging.RequestID(ctx),
+			RunID:         logging.RunID(ctx),
+			HandlerStatus: handlerStatus,
+			DurationMs:    &durationMs,
 		}
 
-		if meta.StreamSeq != 0 {
-			insert.NATSStreamSeq = &meta.StreamSeq
+		if meta, ok := sharedmsg.ReceivedEventMetaFromContext(ctx); ok {
+			applyReceivedEventMeta(insert, meta)
 		}
 
-		if meta.ConsumerSeq != 0 {
-			insert.NATSConsumerSeq = &meta.ConsumerSeq
+		if err != nil {
+			if handlerStatus == "ok" {
+				insert.HandlerStatus = "error"
+			}
+
+			insert.HandlerError = err.Error()
 		}
 
-		if meta.Deliveries != 0 {
-			insert.NATSDeliveries = &meta.Deliveries
-		}
-	}
+		o.metrics.ObserveEvent(insert.Event, insert.HandlerStatus, durationMs)
+		o.recordJobEvent(ctx, insert)
+	}()
 
-	if err != nil {
-		insert.HandlerStatus = "error"
-		insert.HandlerError = err.Error()
-	}
-
-	o.recordJobEvent(ctx, insert)
+	err = fn(ctx)
 
 	return err
+}
+
+// applyReceivedEventMeta copies optional NATS delivery metadata onto a job
+// event insert. Zero-valued sequence and timestamp fields are left nil so the
+// audit row only records metadata the broker actually provided.
+func applyReceivedEventMeta(insert *db.JobEventInsert, meta *sharedmsg.ReceivedEventMeta) {
+	if meta == nil {
+		return
+	}
+
+	if meta.Event != "" {
+		insert.Event = meta.Event
+	}
+
+	insert.Producer = meta.Producer
+	insert.NATSSubject = meta.Subject
+	insert.NATSStream = meta.Stream
+	insert.NATSConsumer = meta.Consumer
+
+	if !meta.StoredAt.IsZero() {
+		insert.NATSStoredAt = &meta.StoredAt
+	}
+
+	if meta.StreamSeq != 0 {
+		insert.NATSStreamSeq = &meta.StreamSeq
+	}
+
+	if meta.ConsumerSeq != 0 {
+		insert.NATSConsumerSeq = &meta.ConsumerSeq
+	}
+
+	if meta.Deliveries != 0 {
+		insert.NATSDeliveries = &meta.Deliveries
+	}
 }
 
 func (o *Orchestrator) recordInternalEvent(ctx context.Context, jobID, event string, payload any) {

@@ -1672,8 +1672,15 @@ The web app subscribes to `/api/v1/jobs/{id}/stream` with:
 | -------------------------- | ----------------------------- | --------------------------------------- |
 | Job state transitions      | Platform API SSE              | `/api/v1/jobs/{id}/stream`              |
 | Orchestrator event history | PostgreSQL `job_events` table | Internal API `/api/v1/jobs/{id}/events` |
+| Prometheus metrics         | Orchestrator (in-process)     | Authenticated `/metrics` (text v0.0.4)  |
 | Scanner artifacts          | MinIO object storage          | Presigned URLs via API                  |
 | Service logs               | Container stdout/stderr       | `just dev logs`                         |
+
+The orchestrator's `/metrics` endpoint exposes job-state and Podman pod gauges plus
+process-level counters and a latency histogram: `stageflow_orchestrator_event_handled_total{event,status}`,
+`stageflow_orchestrator_event_handler_duration_milliseconds`, and
+`stageflow_orchestrator_http_requests_total{status}`. These are collected in-process
+(`services/orchestrator/internal/metrics`) without a metrics-client dependency.
 
 ### Grafana Dashboards
 

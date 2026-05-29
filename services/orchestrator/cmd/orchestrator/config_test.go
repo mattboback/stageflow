@@ -52,6 +52,28 @@ func TestConfigValidateJobEventsSettings(t *testing.T) {
 			},
 			expectedError: "JOB_EVENTS_PRUNE_BATCH_SIZE must be > 0 when retention is enabled",
 		},
+		{
+			name: "admin rate limit rps cannot be negative",
+			mutate: func(cfg *Config) {
+				cfg.AdminRateLimitRPS = -1
+			},
+			expectedError: "ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS must be >= 0",
+		},
+		{
+			name: "admin rate limit burst cannot be negative",
+			mutate: func(cfg *Config) {
+				cfg.AdminRateLimitBurst = -1
+			},
+			expectedError: "ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST must be >= 0",
+		},
+		{
+			name: "admin rate limit burst requires rps",
+			mutate: func(cfg *Config) {
+				cfg.AdminRateLimitRPS = 0
+				cfg.AdminRateLimitBurst = 10
+			},
+			expectedError: "ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS must be > 0 when burst is set",
+		},
 	}
 
 	for _, tt := range tests {

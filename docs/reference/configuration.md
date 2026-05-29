@@ -99,6 +99,10 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | `JOB_EVENTS_RETENTION_DAYS`         | no       | `30`                                        | Retention window for stored job events.                                              |
 | `JOB_EVENTS_PRUNE_INTERVAL_MINUTES` | no       | `60`                                        | Background job-event pruning interval.                                               |
 | `JOB_EVENTS_PRUNE_BATCH_SIZE`       | no       | implementation default                      | Maximum number of old job events pruned per batch.                                   |
+| `ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS` | no       | `0` (disabled)                              | Per-client request/sec limit on the admin API. `0` disables rate limiting.           |
+| `ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST` | no     | falls back to RPS                           | Token-bucket burst for the admin API rate limiter.                                   |
+
+> **Rate limiter scope:** admin API rate limiting is **in-memory, per orchestrator process** — an accepted single-instance tradeoff. The orchestrator admin API is not public; it is reached only by the Platform API over the internal network. If you ever run multiple orchestrator replicas *and* expose the admin API publicly, enforce limits at a shared edge proxy (e.g. Caddy) instead of relying on per-process counters.
 
 ### Public Domain and CORS
 

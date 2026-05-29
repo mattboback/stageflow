@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 )
 
 func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, jobID, component string) {
@@ -13,8 +14,31 @@ func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, j
 	go func() {
 		defer o.monitorWG.Done()
 
-		o.monitorContainer(ctx, containerID, jobID, component)
+		monitorCtx := ctx
+
+		cancel := func() {}
+		if timeout := o.monitorTimeout(component); timeout > 0 {
+			monitorCtx, cancel = context.WithTimeout(ctx, timeout)
+		}
+		defer cancel()
+
+		o.monitorContainer(monitorCtx, containerID, jobID, component)
 	}()
+}
+
+func (o *Orchestrator) monitorTimeout(component string) time.Duration {
+	if o == nil {
+		return 0
+	}
+
+	switch {
+	case strings.HasPrefix(component, "scanner"):
+		return o.scanTimeout + time.Minute
+	case component == "extraction":
+		return o.extractionTimeout + time.Minute
+	default:
+		return 0
+	}
 }
 
 func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID, component string) {
@@ -94,11 +118,17 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 
 func truncateLogs(logs string, n int) string {
 	cleaned := sanitizeLogText(logs)
-	if len(cleaned) <= n {
+
+	if n <= 0 {
+		return ""
+	}
+
+	runes := []rune(cleaned)
+	if len(runes) <= n {
 		return cleaned
 	}
 
-	return "..." + cleaned[len(cleaned)-n:]
+	return "..." + string(runes[len(runes)-n:])
 }
 
 func sanitizeLogText(logs string) string {
