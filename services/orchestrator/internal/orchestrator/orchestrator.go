@@ -15,6 +15,7 @@ import (
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/metrics"
 )
 
 const (
@@ -78,6 +79,7 @@ type Orchestrator struct {
 	storage              storage.Client // Full storage access for report generation
 	deadlinePollInterval time.Duration
 	deadlineSweepOnce    sync.Once
+	metrics              *metrics.Collector
 }
 
 // Config wires dependencies and optional overrides into a new Orchestrator.
@@ -211,11 +213,18 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		stagingStorage:       config.StagingStorage,
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,
+		metrics:              metrics.New(),
 	}
 
 	orch.refreshJobRuntime()
 
 	return orch
+}
+
+// Metrics exposes the orchestrator's in-memory metrics collector so the API
+// server can render it on the /metrics endpoint.
+func (o *Orchestrator) Metrics() *metrics.Collector {
+	return o.metrics
 }
 
 func (o *Orchestrator) canTransition(from, to models.JobState) bool {

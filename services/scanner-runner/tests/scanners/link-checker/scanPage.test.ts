@@ -181,7 +181,8 @@ describe('LinkCheckerScanner.scanPage', () => {
 				externalLinks: 1,
 				brokenCount: 0,
 				redirectChainCount: 0,
-				averageResponseTime: expect.any(Number)
+				averageResponseTime: expect.any(Number),
+				pageOverview: null
 			});
 		});
 

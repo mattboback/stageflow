@@ -3,120 +3,175 @@
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-**Live demo:** [stageflow.org](https://stageflow.org) | **Run locally:** `cp .env.example .env && just diagnose && just demo`
+**Live demo:** [stageflow.org](https://stageflow.org) &nbsp;|&nbsp; **Run locally:** `cp .env.example .env && just diagnose && just demo`
 
-Open-source, self-hosted frontend quality gate for accessibility, SEO, security, performance, and content checks, designed to give developers and AI agents fast regression-aware feedback.
+---
 
-StageFlow accepts live URLs or static-site ZIP archives, runs eight scanners, streams execution over Server-Sent Events, and merges heterogeneous results into one normalized report for both the web UI and the Go CLI. The long-term product center is the CLI: run StageFlow after a frontend edit, get structured terminal output, and use hosted project baselines and diffs to decide whether the change regressed quality.
+StageFlow is an open-source, self-hosted **frontend quality gate** that answers one practical question after every code change:
 
-This repository is designed to be both runnable and reviewable. Start from `.env.example`, replace every `change-me` value before using a public domain, and treat `stageflow.org` references as project examples rather than defaults to reuse unchanged.
+> *Did this edit make accessibility, performance, SEO, security, or content quality worse?*
+
+It runs eight scanners — Axe, Lighthouse, SEO, Link Checker, Security Headers, Open Graph, Spelling/Grammar, and an AI Navigator — against live URLs or static-site ZIP archives, normalizes the results into a single contract-driven report, and streams job progress in real time. The primary interface is a Go CLI designed for terminal-first feedback loops and CI gating.
 
 ![StageFlow dashboard and scan pipeline](docs/images/hero.png)
 
-## Start Here
+---
 
-- **Fastest smoke test:** `cp .env.example .env && just diagnose && just demo`
-- **Reviewer path (5–15 minutes):** [docs/evaluators-guide.md](docs/evaluators-guide.md)
-- **Contributor setup:** [CONTRIBUTING.md](CONTRIBUTING.md)
-- **System design entrypoint:** [ARCHITECTURE.md](ARCHITECTURE.md)
-- **System design deep dive:** [docs/architecture/system.md](docs/architecture/system.md)
-- **High-signal code entrypoints:** [Web app](clients/web/README.md), [Platform API](services/platform-api/README.md), [Scanner Runner](services/scanner-runner/README.md), [CLI](clients/cli/README.md)
+## Why This Project
 
-## Why This Repo Is Worth Reviewing
+StageFlow is a portfolio-quality distributed system built to be both **runnable and reviewable**. It demonstrates:
 
-- **Real distributed system** — Go services, NATS JetStream, Podman-isolated job execution, MinIO, PostgreSQL, and SQLite
-- **Contract-driven integration** — shared JSON Schema contracts generate types for Go and TypeScript consumers
-- **Two client surfaces over one backend** — a SvelteKit web app and a Go CLI both consume the same Platform API
-- **Strong verification story** — Go race tests, Vitest, Storybook interaction and accessibility checks, end-to-end flows, and golden regression tests
-- **Security-aware by default** — SSRF protections, archive safety checks, rootless containers, API middleware, and secrets scanning in CI
+- **Real distributed architecture** — multiple Go services, NATS JetStream event streaming, per-job Podman pod isolation, MinIO artifact storage, PostgreSQL, and SQLite running together as a coherent system
+- **Contract-first design** — shared JSON Schema contracts generate types for both Go and TypeScript consumers, keeping services decoupled without leaking implementation details
+- **Two client surfaces, one API** — a SvelteKit 5 web app and a Go CLI both consume the same Platform API with no server-side differences
+- **Layered verification** — Go race tests, Vitest unit tests, Storybook interaction and accessibility checks, golden regression flows, and CI gates at every layer
+- **Security by default** — SSRF protections on URL intake, archive bomb defense on ZIP handling, rootless Podman execution, API middleware stack, and CI secrets scanning
 
-## What StageFlow Does
+The codebase is intentionally structured to be read as well as run. Start from `.env.example`, replace every `change-me` before using a public domain.
 
-StageFlow solves the problem of **gating frontend changes with one regression-aware quality check**.
+---
 
-It is meant to answer a practical question after an edit:
+## What It Does
 
-> Did this change make accessibility, performance, SEO, security, or content quality worse?
+StageFlow accepts two input modes:
 
-It supports two input modes:
+| Input | How it works |
+|-------|-------------|
+| **URL scan** | Submit one or more live URLs; scanners hit them directly |
+| **ZIP scan** | Upload a static-site archive; StageFlow extracts it safely, discovers HTML, and scans it locally in an isolated container |
 
-1. **URL scans** — scan one or more live URLs
-2. **ZIP scans** — upload a static-site archive, extract it safely, discover HTML, and scan it locally
+The system produces one normalized report with:
 
-The system normalizes scanner output into one contract-driven report with:
+- Unified severity scoring (critical → serious → moderate → minor → info)
+- Stable content-based issue IDs for regression diffing across reruns
+- Page-level evidence with screenshots
+- Per-scanner summaries and per-page rollups
+- Real-time job progress streamed over SSE
 
-- unified severity scoring
-- stable issue IDs for regression diffing
-- page-level evidence including screenshots
-- scanner summaries and per-page rollups
-- streaming job progress for the browser and CLI
+The primary product loop is:
 
-The most important product loop is:
+```
+1. Make a frontend change locally
+2. Run: stageflow project
+3. StageFlow starts your dev server, scans it, and streams results
+4. CLI exits 0 (pass) or 1 (severity gate) — machines and humans both understand it
+```
 
-1. Make a frontend change locally.
-2. Run StageFlow from the terminal.
-3. Compare against a baseline or promoted project state.
-4. Let the CLI tell you whether the edit passed, regressed, or needs review.
+---
 
 ## Architecture at a Glance
 
-| Surface / service            | Responsibility                                                                       |
-| ---------------------------- | ------------------------------------------------------------------------------------ |
-| `clients/web`                | SvelteKit UI for job submission, live status, and report exploration                 |
-| `clients/cli`                | Go CLI for automation, CI gating, Project Mode, and JSON output                      |
-| `services/platform-api`      | URL/ZIP intake, project CRUD, report APIs, diffing, SSE hub, and API boundary        |
-| `services/orchestrator`      | Job state machine, NATS event handling, Podman pod lifecycle, and report aggregation |
-| `services/archive-extractor` | Safe ZIP extraction, provenance generation, and static file serving inside a job pod |
-| `services/scanner-runner`    | TypeScript/Bun runtime that loads scanners, captures artifacts, and publishes events |
-| `libs/contracts`             | JSON Schema contracts with generated Go and TypeScript types                         |
+```
+┌─ Clients ─────────────────────────────────────────────────────────────────┐
+│  Web (SvelteKit 5)            CLI (Go)                                    │
+│       │                           │                                       │
+│       └───────────────┬───────────┘                                       │
+│                       ↓                                                   │
+│              Platform API (Go)                                            │
+│         ┌────────────────────────────┐                                    │
+│         │  URL/ZIP intake + SSRF     │                                    │
+│         │  Project CRUD + baselines  │                                    │
+│         │  Report APIs + SSE hub     │                                    │
+│         │  Diff engine               │                                    │
+│         └────────────┬───────────────┘                                    │
+└──────────────────────┼────────────────────────────────────────────────────┘
+                       │ NATS JetStream (job.created → ...)
+                       ↓
+              Orchestrator (Go)
+         ┌────────────────────────────┐
+         │  Job FSM (state machine)   │
+         │  Podman pod lifecycle      │
+         │  Report aggregation        │
+         │  PostgreSQL persistence    │
+         └────────────┬───────────────┘
+                      │ launches per-job Podman pod
+                      ↓
+         ┌────────────────────────────────────────┐
+         │  Job Pod (ephemeral, rootless)         │
+         │                                        │
+         │  Archive Extractor (Go)                │
+         │  ├─ Safe ZIP extraction                │
+         │  └─ Static file serving                │
+         │                                        │
+         │  Scanner Runner (TypeScript/Bun)       │
+         │  ├─ Axe (accessibility)                │
+         │  ├─ Lighthouse (performance/SEO)       │
+         │  ├─ Security Headers                   │
+         │  ├─ SEO, Link Checker, Open Graph      │
+         │  ├─ Spelling/Grammar                   │
+         │  └─ AI Navigator                       │
+         └────────────────────────────────────────┘
+                      │ artifacts → MinIO
+                      │ events → NATS JetStream
+```
 
-The design decisions worth inspecting first are:
+| Service | Language | Responsibility |
+|---------|----------|---------------|
+| `clients/web` | SvelteKit 5 | Scan submission, live status, report exploration |
+| `clients/cli` | Go | Automation, CI gating, Project Mode, JSON output |
+| `services/platform-api` | Go | HTTP boundary, intake, SSE hub, projects, diffs |
+| `services/orchestrator` | Go | Job FSM, NATS events, Podman pods, aggregation |
+| `services/archive-extractor` | Go | Safe ZIP extraction, provenance, static serving |
+| `services/scanner-runner` | TypeScript/Bun | Scanner plugins, Playwright automation, artifacts |
+| `libs/contracts` | JSON Schema | Shared report/event contracts → generated Go + TS types |
 
-- **SSE over WebSocket** for simple, proxy-friendly job progress streaming
-- **NATS JetStream** for durable orchestration events and replay after restarts
-- **Typed event envelopes** with lenient envelope parsing, strict payload parsing, event metadata propagation, and explicit ACK/NAK behavior
-- **Podman per-job isolation** instead of long-lived shared worker containers
-- **Schema-first contracts** so scanners, API, CLI, and web UI all share the same report shape
-- **Stable content-based issue IDs** so baseline diffing works across reruns
+Full architecture details: [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/architecture/system.md](docs/architecture/system.md).
 
-## Environment Modes
+---
 
-| Mode                                  | Primary use                                           | Web                       | API                       | Grafana                   | Source of truth                                                              |
-| ------------------------------------- | ----------------------------------------------------- | ------------------------- | ------------------------- | ------------------------- | ---------------------------------------------------------------------------- |
-| `dev` via `just demo` / `just dev up` | Fastest local smoke test                              | `http://localhost:3000`   | `http://localhost:8080`   | `http://localhost:3001`   | `infra/compose/podman-compose.yml` + `infra/compose/podman-compose.test.yml` |
-| `local` overlay                       | Scan localhost/private targets during development     | `http://localhost:3010`   | `http://localhost:8080`   | `http://localhost:3001`   | `infra/compose/podman-compose.local.yml`                                     |
-| repo-managed staging overlay          | Domain-like staging on alternate loopback ports       | `http://127.0.0.1:3300`   | `http://127.0.0.1:8300`   | `http://127.0.0.1:3301`   | `infra/compose/podman-compose.staging.yml`                                   |
-| optional self-hosted edge             | Public-domain routing and TLS for your own deployment | proxied by host Caddy     | proxied by host Caddy     | proxied by host Caddy     | `infra/caddy/Caddyfile`                                                      |
-| hosted `stageflow.org` production     | Shared public demo                                    | managed outside this repo | managed outside this repo | managed outside this repo | external deployment control plane                                            |
+## Tech Stack
 
-These modes intentionally use different port layouts. The self-hosted Caddy edge proxies to bridge-bound service ports (`3100` frontend, `8100` API, `3101` Grafana, `9100` MinIO), while the local and staging overlays expose different loopback ports for developer convenience. Use one topology per environment rather than mixing configs across them.
+| Layer | Technology |
+|-------|-----------|
+| API services | Go 1.26 |
+| Scanner runtime | TypeScript, Bun 1.3.8, Node 22 |
+| Web UI | SvelteKit 5, Svelte 5, Tailwind CSS |
+| CLI | Go 1.26 |
+| Message bus | NATS JetStream 2.12 |
+| Job state | PostgreSQL 17 |
+| Project baselines | SQLite |
+| Artifact storage | MinIO (S3-compatible) |
+| Browser automation | Playwright + Chromium |
+| Container runtime | Podman (rootless) |
+| Observability | Grafana 12 |
 
-The hosted `stageflow.org` demo uses the same application code, but its
-production release, verification, monitoring, and rollback process is managed
-outside this public repository.
+---
 
 ## Quick Start
 
 ### Prerequisites
 
 - [Go 1.26.3](https://go.dev/dl/)
-- [Node.js 22](https://nodejs.org/)
-- [Bun](https://bun.sh/)
+- [Node.js 22](https://nodejs.org/) + [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) with `podman compose`
 - [just](https://github.com/casey/just)
 - [golangci-lint v2](https://golangci-lint.run/)
 
-### Fastest local smoke test
+### Fastest smoke test
 
 ```bash
 git clone https://github.com/mattboback/stageflow.git
 cd stageflow
 cp .env.example .env
-just diagnose
-just demo
+just diagnose   # checks prerequisites
+just demo       # builds images, starts stack, initializes MinIO
 ```
 
-`just demo` runs the full bootstrap: prerequisite checks, dependency install, image builds, stack restart, health waits, and MinIO initialization.
+Then open `http://localhost:3000` or run a scan from the terminal:
+
+```bash
+just cli-install
+stageflow scan https://example.com
+```
+
+### Local Project Mode (scan your dev server)
+
+```bash
+just setup && just images && just dev up local && just dev init local
+stageflow project init    # creates .stageflow/config.yaml
+stageflow project doctor  # validates wiring
+stageflow project         # starts dev server, scans it, streams results
+```
 
 ### Manual bootstrap
 
@@ -127,39 +182,69 @@ just dev up
 just dev init
 ```
 
-### Run a first scan
+---
 
-```bash
-just cli-install
-stageflow scan https://example.com
-```
+## Key Design Decisions
 
-To scan `localhost` or other private targets during development:
+**SSE over WebSocket** — job progress is one-directional. Server-Sent Events are simpler, proxy-friendly, and require no upgrade handshake. Reconnection and event buffering are handled in the SSE hub.
 
-```bash
-just setup && just images && just dev up local && just dev init local
-stageflow project init
-stageflow project doctor .
-stageflow project .
-```
+**NATS JetStream** — the API publishes events; the Orchestrator subscribes. Durable consumers and explicit ACK/NAK mean the Orchestrator can replay missed events after a restart without polling the database.
 
-`.stageflow/config.yaml` still drives a local Project Mode run, but it can now
-also carry the hosted project link you use for baseline memory via
-`stageflow.remote_project` and `stageflow.remote_api_url`. That keeps the
-terminal loop as: edit locally, run `stageflow project`, then follow with
-`stageflow scan --project <slug> --api https://stageflow.org` when you want the
-hosted regression-memory step.
+**Per-job Podman pods** — every scan runs in an ephemeral rootless pod with `no-new-privileges` and CPU/memory limits. Isolation is per-job, not per-scanner, so a compromised scanner cannot affect the host or other jobs.
 
-### Self-hosting notes
+**Schema-first contracts** — one JSON Schema per concept (`unified-report`, `scanner-manifest`, `provenance`, events). Generated Go and TypeScript types are committed to the repo. Adding a scanner cannot silently break the web UI or CLI.
 
-- Start from `.env.example`; never commit `.env`, `.env.staging`, or real credentials
-- Replace every `change-me` value before using a public domain or shared environment
-- Set `STAGEFLOW_PUBLIC_DOMAIN`, `PLATFORM_API_CORS_ALLOW_ORIGINS`, `GF_SERVER_ROOT_URL`, and the frontend `VITE_*` URLs for your deployment
-- `infra/caddy/Caddyfile` is an optional host-level edge example for self-hosted public domains and TLS
-- Public self-hosted scanner deployments should pair runtime URL validation with host/container egress controls; see [infra/security/egress-policy.example.md](infra/security/egress-policy.example.md)
-- The hosted `stageflow.org` demo uses the same application code, but its production control plane is intentionally managed outside this repository
+**Stable content-based issue IDs** — each issue is fingerprinted from `sha256(ruleId + context + occurrence)`. The same violation produces the same ID across reruns and scanner updates, which is what makes baseline diffing reliable.
 
-For detailed environment variables and overlay-specific notes, see [docs/reference/configuration.md](docs/reference/configuration.md) and [docs/operations/deployment.md](docs/operations/deployment.md).
+**Explicit job FSM** — the Orchestrator tracks `PENDING → EXTRACTING → SCANNING → COMPLETING → DONE/FAILED` with defined transition rules and completion policies. Terminal states prevent duplicate events; the FSM is tested independently of real infrastructure.
+
+---
+
+## Testing Strategy
+
+| Layer | Tools | What it covers |
+|-------|-------|---------------|
+| Go unit tests | `go test -race` | FSM transitions, domain logic, utilities |
+| Go lint/vuln | `golangci-lint`, `govulncheck` | Code quality and known CVEs |
+| Web unit tests | Vitest, Testing Library | Components, SSE stores, report logic |
+| Storybook CI | Storybook test runner | Component interaction and accessibility |
+| Scanner runner tests | Vitest | Plugin loading, scanner output validation |
+| E2E golden flow | `qa/e2e/project-scan-golden.sh` | Baseline → promote → regression diff → exit code |
+| Container security | Trivy, `bun audit`, gitleaks | Image CVEs, dependency audit, secrets |
+
+---
+
+## Environment Modes
+
+| Mode | Use | Web | API |
+|------|-----|-----|-----|
+| `dev` (`just demo`) | Local smoke test | `localhost:3000` | `localhost:8080` |
+| `local` overlay | Scan private/localhost targets | `localhost:3010` | `localhost:8080` |
+| `staging` overlay | Domain-like alt ports | `127.0.0.1:3300` | `127.0.0.1:8300` |
+| Self-hosted edge | Public domain + TLS | Caddy → bridge port | Caddy → bridge port |
+
+Self-hosting notes:
+- Start from `.env.example`; never commit `.env` or real credentials
+- Replace every `change-me` value before using a public domain
+- See [docs/reference/configuration.md](docs/reference/configuration.md) and [docs/operations/deployment.md](docs/operations/deployment.md) for full guidance
+- The hosted `stageflow.org` demo runs the same code; its production control plane is managed outside this repo
+
+---
+
+## Where to Start Reviewing
+
+The highest-signal parts of the codebase for a technical review:
+
+1. [services/orchestrator](services/orchestrator) — explicit FSM, NATS-driven coordination, E2E-style tests without real infra
+2. [services/scanner-runner](services/scanner-runner/README.md) — plugin system, Playwright integration, contract enforcement
+3. [libs/contracts](libs/contracts) — schema-first design, generated cross-language types
+4. [clients/cli](clients/cli/README.md) — Project Mode, streaming UX, JSON output, severity exit codes
+5. [clients/web](clients/web/README.md) — SSE-driven report UX, accessibility, component tests
+6. [ARCHITECTURE.md](ARCHITECTURE.md) — service boundaries, data flow, design rationale
+
+Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guide.md)
+
+---
 
 ## Screenshots
 
@@ -170,78 +255,33 @@ For detailed environment variables and overlay-specific notes, see [docs/referen
   </tr>
   <tr>
     <td align="center"><em>Live job progress streamed over SSE</em></td>
-    <td align="center"><em>Contract-driven unified report output</em></td>
+    <td align="center"><em>Contract-driven unified report</em></td>
   </tr>
 </table>
 
-## Security and Operations Posture
-
-- URL intake enforces SSRF protections and private-target controls
-- ZIP handling is isolated into a dedicated extractor with archive safety limits
-- Scan execution runs inside rootless Podman job pods
-- API boundaries use middleware for request IDs, logging, panic recovery, CORS, auth, and rate limiting where appropriate
-- CI includes secrets scanning, `govulncheck`, Go race tests, web tests, Storybook interaction checks, and image builds
-
-## Testing Strategy
-
-The project uses layered verification rather than a single happy-path build:
-
-CI-backed checks:
-
-- **Go services:** `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...`
-- **Web app:** `bun run ci` in `clients/web` for format checks, strict linting, type checks, and coverage-backed unit tests
-- **Storybook:** separate CI job builds Storybook and runs interaction/accessibility checks with the Storybook test runner
-- **Scanner Runner:** `bun run ci` in `services/scanner-runner` for format checks, strict linting, type checks, and coverage-backed tests
-- **Containers/security:** image builds, SBOM generation, Trivy scanning, `bun audit`, and gitleaks
-- **Dead code:** web and scanner-runner dead-code analysis currently runs as a non-blocking CI job
-
-Acceptance checks:
-
-- **Golden regression flow:** `qa/e2e/project-scan-golden.sh` runs baseline, promote, regression diff, and exit-code assertions. It is wired to scheduled/manual GitHub Actions and is available locally with `just project-golden`.
-
-## Agent-facing workflow
-
-StageFlow is increasingly optimized for **terminal-first quality gating**:
-
-- **Local loop:** `stageflow project init`, `stageflow project doctor`, then `stageflow project --format json` to run a local dev-server scan with structured output. `.stageflow/config.yaml` can optionally record the hosted project slug for the follow-up regression-memory step.
-- **Setup loop:** `stageflow project init --format json` and `stageflow project doctor --format json` let agents bootstrap and validate project wiring with parseable terminal output, including the hosted project association when one is configured.
-- **Hosted regression memory:** hosted baselines still run in a separate StageFlow API context. After the local loop, run `stageflow scan --project <slug> --format json --api https://stageflow.org` against the associated hosted project to get one parseable envelope with the current report plus baseline diff metadata.
-- **Automation decision:** agents can inspect exit codes for pass/fail and parse JSON output to decide whether to stop, retry, or escalate.
-
-## Where Reviewers Should Look First
-
-If you want the strongest engineering signals quickly, start here:
-
-1. [services/orchestrator](services/orchestrator) — explicit job FSM, NATS-driven execution, and E2E-style tests
-2. [services/scanner-runner](services/scanner-runner/README.md) — scanner plugin runtime, Playwright integration, artifact handling, and contract enforcement
-3. [libs/contracts](libs/contracts) — schema-first design and generated cross-language types
-4. [clients/cli](clients/cli/README.md) — streaming CLI UX, Project Mode, JSON output, and severity-based exit codes
-5. [clients/web](clients/web/README.md) — report UX, live status flows, accessibility checks, and component tests
-6. [docs/architecture/system.md](docs/architecture/system.md) — trust boundaries, data flow, failure modes, and topology
-
-For a guided 5–15 minute walkthrough, use [docs/evaluators-guide.md](docs/evaluators-guide.md).
+---
 
 ## Docs
 
-| Document                                                               | Description                                                               |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| [docs/evaluators-guide.md](docs/evaluators-guide.md)                   | Structured review path for hiring managers and senior engineers           |
-| [ARCHITECTURE.md](ARCHITECTURE.md)                                     | Short root entrypoint to the architecture material                        |
-| [docs/architecture/system.md](docs/architecture/system.md)             | Full system design, service boundaries, event flow, and threat model      |
-| [docs/reference/configuration.md](docs/reference/configuration.md)     | Environment variables, compose overlays, and topology guidance            |
-| [docs/operations/deployment.md](docs/operations/deployment.md)         | Local, self-hosted, and hosted-demo deployment boundaries                 |
-| [clients/web/README.md](clients/web/README.md)                         | Frontend routes, architecture, commands, and tests                        |
-| [services/platform-api/README.md](services/platform-api/README.md)     | Intake API boundary, routes, middleware, and local verification           |
-| [services/scanner-runner/README.md](services/scanner-runner/README.md) | Scanner runtime responsibilities, plugin loading, outputs, and validation |
-| [clients/cli/README.md](clients/cli/README.md)                         | CLI install, commands, and output formats                                 |
-| [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md)                           | Local dev server lifecycle scanning                                       |
-| [docs/operations/devtools.md](docs/operations/devtools.md)             | Repo-local tooling and QA helpers                                         |
-| [docs/operations/cli_cheatsheet.md](docs/operations/cli_cheatsheet.md) | Common CLI workflows                                                      |
+| Document | Description |
+|----------|-------------|
+| [docs/evaluators-guide.md](docs/evaluators-guide.md) | Guided 5–15 min review path |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Architecture overview with diagrams and design rationale |
+| [ROADMAP.md](ROADMAP.md) | Direction and planned work |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes (Keep a Changelog) |
+| [docs/architecture/system.md](docs/architecture/system.md) | Full system design, threat model, failure modes |
+| [docs/reference/configuration.md](docs/reference/configuration.md) | Environment variables and overlay topology |
+| [docs/operations/deployment.md](docs/operations/deployment.md) | Local, self-hosted, and hosted deployment boundaries |
+| [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md) | Local dev server lifecycle scanning |
+| [clients/web/README.md](clients/web/README.md) | Frontend architecture, routes, tests |
+| [services/platform-api/README.md](services/platform-api/README.md) | API routes, middleware, SSRF |
+| [services/scanner-runner/README.md](services/scanner-runner/README.md) | Scanner plugin system and outputs |
+| [clients/cli/README.md](clients/cli/README.md) | CLI commands and output formats |
 
 ## Support
 
-- Use repository issue templates for bug reports and setup questions
-- Use [SECURITY.md](SECURITY.md) for private vulnerability reporting
+- Bug reports and setup questions: GitHub issue templates
+- Vulnerability reports: [SECURITY.md](SECURITY.md)
 
 ## License
 

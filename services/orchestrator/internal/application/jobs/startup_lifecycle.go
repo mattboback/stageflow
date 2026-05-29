@@ -232,7 +232,6 @@ func describeTransition(from, to models.JobState) string {
 	return fmt.Sprintf("current_state=%s target_state=%s", from, to)
 }
 
-
 // normalizeJobAuth handles the "ingress" half of the auth boundary: the
 // platform-api may have shipped a storage-state blob inline in JobConfig.Auth.
 // Before we persist the job (or emit any further event), upload the bytes to

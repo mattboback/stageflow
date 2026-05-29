@@ -37,31 +37,27 @@
 		return report.summary.pagesWithIssues / report.summary.pagesScanned;
 	});
 
-	const criticalRatio = $derived.by(() => {
-		if (report.summary.totalIssues <= 0) return 0;
-		return (report.summary.bySeverity?.critical ?? 0) / report.summary.totalIssues;
-	});
-
 	const highSeverityCount = $derived(
 		(report.summary.bySeverity?.critical ?? 0) + (report.summary.bySeverity?.serious ?? 0)
 	);
 
-	const riskLabel = $derived.by(() => {
-		const critical = report.summary.bySeverity?.critical ?? 0;
-		const serious = report.summary.bySeverity?.serious ?? 0;
-		// "High risk" only when there are critical issues OR many serious issues
-		if (critical > 0 || serious >= 3) return 'High risk';
-		if (serious > 0) return 'Elevated risk';
-		if (report.summary.totalIssues > 0) return 'Moderate risk';
-		return 'Low risk';
+	// Distinct findings (one per scanner+rule), so the headline reflects real
+	// problems rather than the per-page occurrence count. The same console error
+	// seen on 8 pages is one issue, not eight.
+	const distinctIssueCount = $derived.by(() => {
+		const keys = new Set<string>();
+		for (const issue of report.issues) keys.add(`${issue.scanner}::${issue.ruleId}`);
+		return keys.size;
 	});
 
-	const riskTone = $derived.by(() => {
-		if (riskLabel === 'High risk') return 'danger';
-		if (riskLabel === 'Elevated risk') return 'warn';
-		if (riskLabel === 'Moderate risk') return 'info';
-		return 'success';
+	// Plain, non-alarmist headline. We report what was found, we don't rank dread.
+	const riskLabel = $derived.by(() => {
+		const n = distinctIssueCount;
+		if (n === 0) return 'No issues found';
+		return `${n.toLocaleString()} issue${n !== 1 ? 's' : ''} found`;
 	});
+
+	const riskTone = $derived(distinctIssueCount === 0 ? 'success' : 'info');
 
 	const topRules = $derived.by(() => {
 		const counts: Record<
@@ -122,25 +118,18 @@
 	}
 
 	const riskSummary = $derived.by(() => {
-		const critical = report.summary.bySeverity?.critical ?? 0;
-		const serious = report.summary.bySeverity?.serious ?? 0;
-		const base = `${report.summary.totalIssues.toLocaleString()} issue${report.summary.totalIssues !== 1 ? 's' : ''} across ${report.summary.pagesScanned.toLocaleString()} page${report.summary.pagesScanned !== 1 ? 's' : ''}.`;
-		if (critical > 0 || serious > 0)
-			return `${base} Prioritize critical and serious findings first.`;
-		if (report.summary.totalIssues > 0)
-			return `${base} All findings are moderate severity or below.`;
-		if ((report.errors?.length ?? 0) > 0)
-			return 'No issues detected, but scan errors need review before treating this as clean.';
-		return 'No issues detected.';
-	});
-
-	const issueTone = $derived.by((): 'warn' | 'danger' | null => {
-		if (report.summary.totalIssues === 0) return null;
-		const critical = report.summary.bySeverity?.critical ?? 0;
-		if (critical > 0) return 'danger';
-		const serious = report.summary.bySeverity?.serious ?? 0;
-		if (serious > 5) return 'warn';
-		return null;
+		const distinct = distinctIssueCount;
+		const occurrences = report.summary.totalIssues;
+		const pagesWith = report.summary.pagesWithIssues;
+		const scanned = report.summary.pagesScanned;
+		if (distinct === 0) {
+			if ((report.errors?.length ?? 0) > 0)
+				return 'No issues detected, but some scans errored — review before treating this as clean.';
+			return 'No issues detected.';
+		}
+		const occNote =
+			occurrences !== distinct ? ` (${occurrences.toLocaleString()} occurrences)` : '';
+		return `${distinct.toLocaleString()} distinct issue${distinct !== 1 ? 's' : ''}${occNote} seen across ${pagesWith.toLocaleString()} of ${scanned.toLocaleString()} page${scanned !== 1 ? 's' : ''} scanned.`;
 	});
 
 	const pagesWithIssuesTone = $derived.by((): 'warn' | 'danger' | null => {
@@ -264,24 +253,22 @@
 <div class="space-y-6">
 	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
 		<div class="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
-			<div class="rounded-2xl border border-red-100 bg-red-50/70 p-4">
-				<p class="text-[11px] font-semibold tracking-[0.14em] text-red-700 uppercase">
-					Priority path
-				</p>
-				<p class="mt-2 text-sm font-semibold text-red-900">{riskSummary}</p>
+			<div class="border-line bg-surface-muted/40 rounded-2xl border p-4">
+				<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Summary</p>
+				<p class="text-ink mt-2 text-sm font-semibold">{riskSummary}</p>
 				<div class="mt-4 flex flex-wrap gap-2">
 					<button
 						onclick={() => onSearchIssues('', undefined)}
-						class="rounded-xl bg-red-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800"
+						class="bg-accent hover:bg-accent/90 rounded-xl px-3 py-2 text-sm font-semibold text-white transition"
 					>
 						Open issue list
 					</button>
 					{#if topPage}
 						<button
 							onclick={() => onSelectPage(topPage.id)}
-							class="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-900 transition hover:bg-red-50"
+							class="border-line bg-surface text-ink hover:bg-surface-muted rounded-xl border px-3 py-2 text-sm font-semibold transition"
 						>
-							Inspect worst page
+							Inspect most-affected page
 						</button>
 					{/if}
 				</div>
@@ -336,17 +323,18 @@
 						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
 						>01</span
 					>
-					Risk snapshot
+					Overview
 				</p>
 				<div class="mt-2 flex flex-wrap items-center gap-2">
 					<p class="text-ink text-2xl font-bold sm:text-3xl">{riskLabel}</p>
 					<span
 						class={cn(
-							'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide uppercase',
+							'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold tracking-wide',
 							getRiskChipClass(riskTone)
 						)}
 					>
-						{Math.round(affectedRatio * 100)}% pages impacted
+						{report.summary.pagesWithIssues.toLocaleString()} of {report.summary.pagesScanned.toLocaleString()}
+						pages affected
 					</span>
 				</div>
 				<p class="text-ink-muted mt-2 max-w-2xl text-sm">{riskSummary}</p>
@@ -354,9 +342,9 @@
 			<div class="grid grid-cols-3 gap-3 text-right lg:min-w-[380px]">
 				<div>
 					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.1em] uppercase">
-						Critical share
+						Pages affected
 					</p>
-					<p class="text-ink mt-1 text-2xl font-bold">{Math.round(criticalRatio * 100)}%</p>
+					<p class="text-ink mt-1 text-2xl font-bold">{report.summary.pagesWithIssues}</p>
 				</div>
 				<div>
 					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.1em] uppercase">
@@ -375,10 +363,10 @@
 	</Panel>
 
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-		{@render summaryCard('Total Issues', report.summary.totalIssues, issueTone)}
+		{@render summaryCard('Distinct Issues', distinctIssueCount)}
+		{@render summaryCard('Occurrences', report.summary.totalIssues)}
 		{@render summaryCard('Pages Scanned', report.summary.pagesScanned)}
 		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
-		{@render summaryCard('Issue Density', issueDensity.toFixed(1))}
 	</div>
 
 	{#if topFixes.length > 0}
@@ -595,15 +583,17 @@
 					</div>
 					<div>
 						<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
-							<span>Critical concentration</span>
-							<span>{Math.round(criticalRatio * 100)}%</span>
+							<span>Distinct issues</span>
+							<span>{distinctIssueCount.toLocaleString()}</span>
 						</div>
-						<div class="bg-surface-muted h-2 w-full overflow-hidden rounded-full">
-							<div
-								class="h-full bg-red-500 transition-[width] duration-500"
-								style={`width: ${Math.round(criticalRatio * 100)}%`}
-							></div>
-						</div>
+						<p class="text-ink-faint text-xs leading-relaxed">
+							{report.summary.totalIssues.toLocaleString()} total occurrence{report.summary
+								.totalIssues !== 1
+								? 's'
+								: ''} across {report.scanners.length} scanner{report.scanners.length !== 1
+								? 's'
+								: ''}.
+						</p>
 					</div>
 				</div>
 			</Panel>

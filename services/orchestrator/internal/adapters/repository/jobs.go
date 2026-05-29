@@ -18,6 +18,12 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
+type jobRows interface {
+	rowScanner
+	Next() bool
+	Err() error
+}
+
 // CreateJob creates a new job in the database.
 func (d *Database) CreateJob(ctx context.Context, job *models.Job) error {
 	configJSON, err := json.Marshal(job.Config)
@@ -277,7 +283,7 @@ func (d *Database) ListJobsByState(ctx context.Context, state models.JobState) (
 		ORDER BY created_at ASC
 	`, jobSelectColumns)
 
-	rows, err := d.queryContext(ctx, query, state)
+	rows, err := d.queryContext(ctx, query, state) //nolint:rowserrcheck // rows.Err() is checked in scanJobs
 	if err != nil {
 		return nil, fmt.Errorf("failed to list jobs: %w", err)
 	}
@@ -328,7 +334,7 @@ func (d *Database) ListJobs(ctx context.Context, opts ListJobsOptions) ([]*model
 		args = append(args, opts.Offset)
 	}
 
-	rows, err := d.queryContext(ctx, query, args...)
+	rows, err := d.queryContext(ctx, query, args...) //nolint:rowserrcheck // rows.Err() is checked in scanJobs
 	if err != nil {
 		return nil, fmt.Errorf("failed to list jobs: %w", err)
 	}
@@ -340,7 +346,7 @@ func (d *Database) ListJobs(ctx context.Context, opts ListJobsOptions) ([]*model
 	return d.scanJobs(rows)
 }
 
-func (d *Database) scanJobs(rows *sql.Rows) ([]*models.Job, error) {
+func (d *Database) scanJobs(rows jobRows) ([]*models.Job, error) {
 	var jobs []*models.Job
 
 	for rows.Next() {
@@ -350,6 +356,10 @@ func (d *Database) scanJobs(rows *sql.Rows) ([]*models.Job, error) {
 		}
 
 		jobs = append(jobs, job)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate jobs: %w", err)
 	}
 
 	return jobs, nil

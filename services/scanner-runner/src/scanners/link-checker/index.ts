@@ -7,12 +7,40 @@
 
 import type { Page } from 'playwright';
 
+import { join } from 'node:path';
+
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 import type { LinkCheckResult, LinkInfo } from './types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import { AxeScreenshotService } from '../../screenshots/AxeScreenshotService';
+import { capturePageOverviewFromIssues } from '../../screenshots/page-overview-from-issues';
 import { SCANNER_VERSION } from '../version';
 import { checkSingleLink, getSeverityForStatus, groupByStatus } from './validation';
+
+/** Located link element: a CSS selector plus a trimmed HTML snippet. */
+interface LocatedElement {
+	selector: string;
+	html: string;
+}
+
+/** Builds occurrence nodes (selector + html) for attaching to an issue's metadata. */
+function nodesFromSelectors(
+	items: { selector?: string | undefined; html?: string | undefined }[]
+): {
+	target: string[];
+	selector: string;
+	html?: string;
+}[] {
+	return items
+		.filter((item): item is { selector: string; html?: string } => Boolean(item.selector))
+		.slice(0, 5)
+		.map((item) => ({
+			target: [item.selector],
+			selector: item.selector,
+			...(item.html !== undefined ? { html: item.html } : {})
+		}));
+}
 
 export type { LinkCheckResult, LinkInfo } from './types';
 // Re-export for backwards compatibility and testing
@@ -26,9 +54,10 @@ export class LinkCheckerScanner extends ScannerBase {
 	};
 
 	private readonly maxConcurrentRequests = 5;
+	private readonly screenshotService = new AxeScreenshotService();
 
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
-		const { page, pageEntry, logger } = context;
+		const { page, pageEntry, logger, resultsDir } = context;
 		const startTime = Date.now();
 		const issues: Issue[] = [];
 
@@ -71,7 +100,10 @@ export class LinkCheckerScanner extends ScannerBase {
 					category: 'links',
 					title: 'Empty or Placeholder Links',
 					description: `Found ${emptyLinks.length} link(s) with empty href, javascript:void(0), or # placeholders. These provide poor user experience and accessibility.`,
-					metadata: { links: emptyLinks.slice(0, 10) }
+					metadata: {
+						links: emptyLinks.slice(0, 10).map((l) => l.html),
+						nodes: nodesFromSelectors(emptyLinks)
+					}
 				});
 			}
 
@@ -85,7 +117,10 @@ export class LinkCheckerScanner extends ScannerBase {
 					title: 'Links Without Accessible Text',
 					description: `Found ${noTextLinks.length} link(s) without accessible text content. Screen reader users won't know where these links lead.`,
 					helpUrl: 'https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context.html',
-					metadata: { links: noTextLinks.slice(0, 10) }
+					metadata: {
+						links: noTextLinks.slice(0, 10).map((l) => l.html),
+						nodes: nodesFromSelectors(noTextLinks)
+					}
 				});
 			}
 
@@ -94,6 +129,16 @@ export class LinkCheckerScanner extends ScannerBase {
 				totalLinks: links.length,
 				brokenCount: brokenLinks.length,
 				issues: issues.length
+			});
+
+			const pageOverview = await capturePageOverviewFromIssues({
+				service: this.screenshotService,
+				page,
+				issues,
+				screenshotsDir: join(resultsDir, 'screenshots'),
+				pageId: pageEntry.id,
+				scannerId: this.metadata.name,
+				logger
 			});
 
 			return {
@@ -105,6 +150,7 @@ export class LinkCheckerScanner extends ScannerBase {
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),
 				finishedAt: new Date().toISOString(),
+				artifacts: pageOverview ? [pageOverview.screenshotPath] : [],
 				rawResults: {
 					totalLinks: links.length,
 					internalLinks: links.filter((l) => l.isInternal).length,
@@ -114,7 +160,15 @@ export class LinkCheckerScanner extends ScannerBase {
 					averageResponseTime:
 						results.length > 0
 							? Math.round(results.reduce((sum, r) => sum + r.responseTime, 0) / results.length)
-							: 0
+							: 0,
+					pageOverview: pageOverview
+						? {
+								screenshotFilename: pageOverview.screenshotFilename,
+								pageWidth: pageOverview.pageWidth,
+								pageHeight: pageOverview.pageHeight,
+								elements: pageOverview.elements
+							}
+						: null
 				}
 			};
 		} catch (error) {
@@ -154,7 +208,8 @@ export class LinkCheckerScanner extends ScannerBase {
 				helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status',
 				metadata: {
 					links: links.slice(0, 10).map((l) => ({ url: l.url, error: l.error })),
-					totalCount: links.length
+					totalCount: links.length,
+					nodes: nodesFromSelectors(links.map((l) => ({ selector: l.selector, html: l.url })))
 				}
 			});
 		}
@@ -206,11 +261,36 @@ export class LinkCheckerScanner extends ScannerBase {
 
 	private async extractLinks(page: Page, baseUrl: string): Promise<LinkInfo[]> {
 		return page.evaluate((base) => {
+			const cssPath = (el: Element): string => {
+				const parts: string[] = [];
+				let node: Element | null = el;
+				while (node && node.nodeType === 1 && node !== document.body && parts.length < 6) {
+					if (node.id) {
+						parts.unshift(`#${CSS.escape(node.id)}`);
+						break;
+					}
+					let part = node.tagName.toLowerCase();
+					const parent: Element | null = node.parentElement;
+					if (parent) {
+						const sameTag = Array.from(parent.children).filter(
+							(c) => c.tagName === node!.tagName
+						);
+						if (sameTag.length > 1) {
+							part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
+						}
+					}
+					parts.unshift(part);
+					node = node.parentElement;
+				}
+				return parts.join(' > ');
+			};
+
 			const links: {
 				href: string;
 				text: string;
 				isInternal: boolean;
 				element: string;
+				selector: string;
 			}[] = [];
 			const currentHost = new URL(base).host;
 
@@ -244,7 +324,8 @@ export class LinkCheckerScanner extends ScannerBase {
 					href: absoluteUrl,
 					text: (el.textContent || '').trim().slice(0, 100),
 					isInternal,
-					element: el.tagName.toLowerCase()
+					element: el.tagName.toLowerCase(),
+					selector: cssPath(el)
 				});
 			}
 
@@ -268,7 +349,12 @@ export class LinkCheckerScanner extends ScannerBase {
 		for (let i = 0; i < links.length; i += this.maxConcurrentRequests) {
 			const batch = links.slice(i, i + this.maxConcurrentRequests);
 			const batchResults = await Promise.all(
-				batch.map((link) => checkSingleLink(link.href, targetValidationPolicy))
+				batch.map(async (link) => {
+					const result = await checkSingleLink(link.href, targetValidationPolicy);
+					return link.selector !== undefined
+						? { ...result, selector: link.selector }
+						: result;
+				})
 			);
 			results.push(...batchResults);
 
@@ -280,9 +366,31 @@ export class LinkCheckerScanner extends ScannerBase {
 		return results;
 	}
 
-	private async checkEmptyLinks(page: Page): Promise<string[]> {
+	private async checkEmptyLinks(page: Page): Promise<LocatedElement[]> {
 		return page.evaluate(() => {
-			const emptyLinks: string[] = [];
+			const cssPath = (el: Element): string => {
+				const parts: string[] = [];
+				let node: Element | null = el;
+				while (node && node.nodeType === 1 && node !== document.body && parts.length < 6) {
+					if (node.id) {
+						parts.unshift(`#${CSS.escape(node.id)}`);
+						break;
+					}
+					let part = node.tagName.toLowerCase();
+					const parent: Element | null = node.parentElement;
+					if (parent) {
+						const sameTag = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+						if (sameTag.length > 1) {
+							part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
+						}
+					}
+					parts.unshift(part);
+					node = node.parentElement;
+				}
+				return parts.join(' > ');
+			};
+
+			const emptyLinks: { selector: string; html: string }[] = [];
 			for (const el of document.querySelectorAll('a')) {
 				const href = el.getAttribute('href');
 				if (
@@ -292,16 +400,38 @@ export class LinkCheckerScanner extends ScannerBase {
 					href === 'javascript:;' ||
 					href === 'javascript:void(0);'
 				) {
-					emptyLinks.push(el.outerHTML.slice(0, 200));
+					emptyLinks.push({ selector: cssPath(el), html: el.outerHTML.slice(0, 200) });
 				}
 			}
 			return emptyLinks;
 		});
 	}
 
-	private async checkLinksWithoutText(page: Page): Promise<string[]> {
+	private async checkLinksWithoutText(page: Page): Promise<LocatedElement[]> {
 		return page.evaluate(() => {
-			const noTextLinks: string[] = [];
+			const cssPath = (el: Element): string => {
+				const parts: string[] = [];
+				let node: Element | null = el;
+				while (node && node.nodeType === 1 && node !== document.body && parts.length < 6) {
+					if (node.id) {
+						parts.unshift(`#${CSS.escape(node.id)}`);
+						break;
+					}
+					let part = node.tagName.toLowerCase();
+					const parent: Element | null = node.parentElement;
+					if (parent) {
+						const sameTag = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+						if (sameTag.length > 1) {
+							part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
+						}
+					}
+					parts.unshift(part);
+					node = node.parentElement;
+				}
+				return parts.join(' > ');
+			};
+
+			const noTextLinks: { selector: string; html: string }[] = [];
 			for (const el of document.querySelectorAll('a[href]')) {
 				const text = (el.textContent || '').trim();
 				const ariaLabel = el.getAttribute('aria-label')?.trim() ?? '';
@@ -309,7 +439,7 @@ export class LinkCheckerScanner extends ScannerBase {
 				const hasImage = el.querySelector('img[alt]') !== null;
 
 				if (!text && !ariaLabel && !title && !hasImage) {
-					noTextLinks.push(el.outerHTML.slice(0, 200));
+					noTextLinks.push({ selector: cssPath(el), html: el.outerHTML.slice(0, 200) });
 				}
 			}
 			return noTextLinks;

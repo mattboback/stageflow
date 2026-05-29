@@ -449,6 +449,77 @@ func TestHandleListJobsRejectsWrongMethod(t *testing.T) {
 	}
 }
 
+func TestRecoveryMiddlewareReturnsStructured500(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	handler := srv.recoverPanic(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic("boom")
+	}))
+
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/jobs/123", nil))
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status 500, got %d", rec.Code)
+	}
+
+	if !strings.Contains(rec.Body.String(), "Internal server error") {
+		t.Fatalf("expected structured error response, got %q", rec.Body.String())
+	}
+}
+
+func TestRateLimitMiddlewareRejectsExcessRequests(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0", AdminRateLimitRPS: 1, AdminRateLimitBurst: 1})
+	handler := srv.rateLimit(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	first := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil)
+	req.RemoteAddr = "192.0.2.10:12345"
+	handler.ServeHTTP(first, req)
+
+	if first.Code != http.StatusNoContent {
+		t.Fatalf("first request status = %d, want 204", first.Code)
+	}
+
+	second := httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil)
+	req.RemoteAddr = "192.0.2.10:54321"
+	handler.ServeHTTP(second, req)
+
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request status = %d, want 429", second.Code)
+	}
+}
+
+func TestHandleMetrics(t *testing.T) {
+	srv, cleanup := newTestServer(t)
+	defer cleanup()
+
+	req := newAuthedRequest(http.MethodGet, "/metrics")
+	rec := httptest.NewRecorder()
+	srv.server.Handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		"stageflow_orchestrator_jobs_total 2",
+		"stageflow_orchestrator_jobs_by_state{state=\"PENDING\"} 1",
+		"stageflow_orchestrator_pods_total 2",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("metrics body missing %q; body:\n%s", want, body)
+		}
+	}
+}
+
 // intFromAny safely converts JSON numbers to int for assertions.
 func intFromAny(v any) int {
 	switch value := v.(type) {

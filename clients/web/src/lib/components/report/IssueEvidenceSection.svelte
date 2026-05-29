@@ -78,6 +78,19 @@
 
 	const showFullPagePanel = $derived(showPageOverview && overlayRenderable);
 
+	// Page-level fallback: a full-page screenshot exists for this page but no
+	// element box matches this issue (page-global findings — headers, meta,
+	// crawlability). We still anchor the finding to the live page visually.
+	const showPageLevelFallback = $derived(
+		showPageOverview &&
+			!showFullPagePanel &&
+			!showCropPanel &&
+			!isManual &&
+			!!pageOverviewUrl &&
+			pageWidth > 0 &&
+			pageHeight > 0
+	);
+
 	const pageLabel = $derived(page?.path ?? page?.url ?? null);
 </script>
 
@@ -244,7 +257,30 @@
 		</div>
 	{/if}
 
-	{#if !showCropPanel && !primaryOccurrence?.selector && !primaryOccurrence?.contextHtml && !primaryOccurrence?.html && !primaryOccurrence?.failureSummary && !showFullPagePanel}
+	{#if showPageLevelFallback}
+		<div>
+			<p class="text-ink-muted mb-2 text-sm">On the page (page-level finding)</p>
+			<Panel padding="none" rounded="lg" class="overflow-hidden">
+				<div class="overflow-auto">
+					<svg
+						class="block w-full"
+						viewBox={`0 0 ${pageWidth} ${pageHeight}`}
+						preserveAspectRatio="xMinYMin meet"
+						role="img"
+						aria-label="Full-page screenshot for a page-level finding"
+					>
+						<image href={pageOverviewUrl} x="0" y="0" width={pageWidth} height={pageHeight} />
+					</svg>
+				</div>
+			</Panel>
+			<p class="text-ink-muted mt-2 text-xs">
+				This finding applies to the whole page rather than a single element, so no box is
+				highlighted.
+			</p>
+		</div>
+	{/if}
+
+	{#if !showCropPanel && !showPageLevelFallback && !primaryOccurrence?.selector && !primaryOccurrence?.contextHtml && !primaryOccurrence?.html && !primaryOccurrence?.failureSummary && !showFullPagePanel}
 		{#if !isManual}
 			<Panel variant="muted" padding="md" rounded="lg">
 				<div class="flex items-start gap-3">

@@ -31,6 +31,8 @@ type Config struct {
 	JobEventsRetentionDays        int
 	JobEventsPruneIntervalMinutes int
 	JobEventsPruneBatchSize       int
+	AdminRateLimitRPS             int
+	AdminRateLimitBurst           int
 }
 
 func loadConfig() *Config {
@@ -82,6 +84,8 @@ func loadConfig() *Config {
 		JobEventsRetentionDays:        config.GetEnvInt("JOB_EVENTS_RETENTION_DAYS", 30),
 		JobEventsPruneIntervalMinutes: config.GetEnvInt("JOB_EVENTS_PRUNE_INTERVAL_MINUTES", 60),
 		JobEventsPruneBatchSize:       config.GetEnvInt("JOB_EVENTS_PRUNE_BATCH_SIZE", 1000),
+		AdminRateLimitRPS:             config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS", 0),
+		AdminRateLimitBurst:           config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST", 0),
 	}
 }
 
@@ -122,6 +126,16 @@ func (c *Config) Validate() error {
 		errs = append(errs, errors.New("A11Y_SCROLL_TIMEOUT must be >= 0"))
 	}
 
+	errs = append(errs, c.validateJobEventsConfig()...)
+	errs = append(errs, c.validateRateLimitConfig()...)
+
+	return config.ValidateAll(errs...)
+}
+
+// validateJobEventsConfig checks the job-event retention/pruning settings.
+func (c *Config) validateJobEventsConfig() []error {
+	var errs []error
+
 	if c.JobEventsRetentionDays < 0 {
 		errs = append(errs, errors.New("JOB_EVENTS_RETENTION_DAYS must be >= 0"))
 	}
@@ -142,5 +156,24 @@ func (c *Config) Validate() error {
 		errs = append(errs, errors.New("JOB_EVENTS_PRUNE_BATCH_SIZE must be > 0 when retention is enabled"))
 	}
 
-	return config.ValidateAll(errs...)
+	return errs
+}
+
+// validateRateLimitConfig checks the admin API rate-limit settings.
+func (c *Config) validateRateLimitConfig() []error {
+	var errs []error
+
+	if c.AdminRateLimitRPS < 0 {
+		errs = append(errs, errors.New("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS must be >= 0"))
+	}
+
+	if c.AdminRateLimitBurst < 0 {
+		errs = append(errs, errors.New("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST must be >= 0"))
+	}
+
+	if c.AdminRateLimitRPS == 0 && c.AdminRateLimitBurst > 0 {
+		errs = append(errs, errors.New("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS must be > 0 when burst is set"))
+	}
+
+	return errs
 }
