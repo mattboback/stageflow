@@ -187,6 +187,74 @@ describe('scan-monitor', () => {
 		expect((monitor.getSnapshot() as StatusMonitorSnapshot).status).toBe('complete');
 	});
 
+	it('moves a status monitor into an error state when the stream sends invalid data', () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi.fn<ScanJobStatusPort['fetch']>().mockResolvedValue(createScanResult());
+		let streamSink: Parameters<ScanJobEventsPort['open']>[1] | undefined;
+		const close = vi.fn();
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => true,
+			open: (_jobId, sink) => {
+				streamSink = sink;
+				return { close };
+			}
+		};
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'status', jobId: 'job-123' },
+			{ statusPort: { fetch: fetchStatus }, eventsPort, scheduler }
+		);
+
+		monitor.start();
+		streamSink?.onTransport({ type: 'exhausted', reason: 'invalid-message' });
+
+		const snapshot = monitor.getSnapshot() as StatusMonitorSnapshot;
+		expect(close).toHaveBeenCalledTimes(1);
+		expect(snapshot.status).toBe('error');
+		expect(snapshot.error).toBe('Live updates failed (invalid stream data).');
+		expect(snapshot.transport).toBe('idle');
+		expect(snapshot.logs).toContain(
+			'ERROR: Live updates failed (invalid stream data). Refresh to retry.'
+		);
+	});
+
+	it('switches report monitors to polling when a stream sends invalid data', async () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi.fn<ScanJobStatusPort['fetch']>().mockResolvedValue(createScanResult());
+		let streamSink: Parameters<ScanJobEventsPort['open']>[1] | undefined;
+		const close = vi.fn();
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => true,
+			open: (_jobId, sink) => {
+				streamSink = sink;
+				return { close };
+			}
+		};
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'report', jobId: 'job-123', pollIntervalMs: 5000 },
+			{
+				statusPort: { fetch: fetchStatus },
+				eventsPort,
+				reportPort: { fetch: vi.fn().mockResolvedValue({ state: 'pending' }) },
+				scheduler
+			}
+		);
+
+		monitor.start();
+		streamSink?.onTransport({ type: 'exhausted', reason: 'invalid-message' });
+		await Promise.resolve();
+
+		const snapshot = monitor.getSnapshot() as ReportMonitorSnapshot;
+		expect(close).toHaveBeenCalledTimes(1);
+		expect(snapshot.transport).toBe('polling');
+		expect(snapshot.logs).toContain(
+			'ERROR: Live updates failed (invalid stream data). Refresh to retry.'
+		);
+		expect(snapshot.logs).toContain('WARN: Connection lost. Switching to polling...');
+		expect(fetchStatus).toHaveBeenCalledTimes(2);
+	});
+
 	it('polls report status when streaming is unavailable and stops on cleanup', async () => {
 		const scheduler = createScheduler();
 		const fetchStatus = vi
@@ -219,6 +287,33 @@ describe('scan-monitor', () => {
 		scheduler.advance(5000);
 		await Promise.resolve();
 		expect(fetchStatus).toHaveBeenCalledTimes(2);
+	});
+
+	it('records status fetch errors when live status streaming is unavailable', async () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi
+			.fn<ScanJobStatusPort['fetch']>()
+			.mockRejectedValue(new Error('status API unavailable'));
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => false,
+			open: () => {
+				throw new Error('should not open stream');
+			}
+		};
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'status', jobId: 'job-123' },
+			{ statusPort: { fetch: fetchStatus }, eventsPort, scheduler }
+		);
+
+		monitor.start();
+		await Promise.resolve();
+
+		const snapshot = monitor.getSnapshot() as StatusMonitorSnapshot;
+		expect(snapshot.status).toBe('error');
+		expect(snapshot.error).toBe('status API unavailable');
+		expect(snapshot.logs).toContain('ERROR: Your browser does not support live updates (SSE).');
+		expect(snapshot.logs).toContain('ERROR: status API unavailable. Refresh to retry.');
 	});
 
 	it('retries report loading and refreshes artifacts when the report becomes ready', async () => {
@@ -339,6 +434,151 @@ describe('scan-monitor', () => {
 		expect(reportPort.fetch).toHaveBeenCalledTimes(2);
 		expect(snapshot.report?.meta.jobId).toBe('job-123');
 		expect(snapshot.error).toBeNull();
+	});
+
+	it('surfaces failed report generation responses', async () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi
+			.fn<ScanJobStatusPort['fetch']>()
+			.mockResolvedValue(createScanResult({ state: 'DONE' }));
+		const reportPort: ScanJobReportPort = {
+			fetch: vi.fn<ScanJobReportPort['fetch']>().mockResolvedValue({
+				state: 'failed',
+				message: 'aggregated report missing'
+			})
+		};
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => false,
+			open: () => {
+				throw new Error('should not open stream');
+			}
+		};
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'report', jobId: 'job-123' },
+			{ statusPort: { fetch: fetchStatus }, eventsPort, reportPort, scheduler }
+		);
+
+		monitor.start();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const snapshot = monitor.getSnapshot() as ReportMonitorSnapshot;
+		expect(snapshot.status).toBe('complete');
+		expect(snapshot.report).toBeNull();
+		expect(snapshot.error).toBe('aggregated report missing. Refresh to retry.');
+		expect(snapshot.logs).toContain('ERROR: aggregated report missing. Refresh to retry.');
+	});
+
+	it('stops retrying report loading after the configured retry budget', async () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi
+			.fn<ScanJobStatusPort['fetch']>()
+			.mockResolvedValue(createScanResult({ state: 'DONE' }));
+		const reportPort: ScanJobReportPort = {
+			fetch: vi.fn<ScanJobReportPort['fetch']>().mockResolvedValue({ state: 'pending' })
+		};
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => false,
+			open: () => {
+				throw new Error('should not open stream');
+			}
+		};
+
+		const monitor = createScanJobMonitor(
+			{
+				kind: 'report',
+				jobId: 'job-123',
+				reportRetry: { initialDelayMs: 10, maxDelayMs: 10, maxAttempts: 1 }
+			},
+			{ statusPort: { fetch: fetchStatus }, eventsPort, reportPort, scheduler }
+		);
+
+		monitor.start();
+		await Promise.resolve();
+		await Promise.resolve();
+		scheduler.advance(10);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		const snapshot = monitor.getSnapshot() as ReportMonitorSnapshot;
+		expect(reportPort.fetch).toHaveBeenCalledTimes(2);
+		expect(snapshot.error).toBe(
+			'Aggregated report is taking longer than expected. Refresh to retry.'
+		);
+		expect(snapshot.logs).toContain(
+			'WARN: Aggregated report is taking longer than expected. Refresh to retry.'
+		);
+	});
+
+	it('applies terminal failure updates and refreshes final status', async () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi.fn<ScanJobStatusPort['fetch']>().mockResolvedValue(
+			createScanResult({
+				state: 'FAILED',
+				error: 'worker failed',
+				error_details: 'scanner timed out'
+			})
+		);
+		let streamSink: Parameters<ScanJobEventsPort['open']>[1] | undefined;
+		const close = vi.fn();
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => true,
+			open: (_jobId, sink) => {
+				streamSink = sink;
+				return { close };
+			}
+		};
+		const historyPort = { markTerminal: vi.fn() };
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'status', jobId: 'job-123' },
+			{ statusPort: { fetch: fetchStatus }, eventsPort, scheduler, historyPort }
+		);
+
+		monitor.start();
+		streamSink?.onStatus(createScanResult({ state: 'SCANNING' }));
+		streamSink?.onUpdate({
+			type: 'job_failed',
+			state: 'FAILED',
+			error: 'worker failed',
+			error_details: 'scanner timed out'
+		});
+		await Promise.resolve();
+
+		const snapshot = monitor.getSnapshot() as StatusMonitorSnapshot;
+		expect(close).toHaveBeenCalledTimes(1);
+		expect(fetchStatus).toHaveBeenCalledTimes(1);
+		expect(historyPort.markTerminal).toHaveBeenCalledWith('job-123', 'failed');
+		expect(snapshot.status).toBe('failed');
+		expect(snapshot.logs).toContain('CRITICAL: Job failed - worker failed (scanner timed out)');
+	});
+
+	it('treats start as idempotent and lets subscribers unsubscribe', () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi.fn<ScanJobStatusPort['fetch']>().mockResolvedValue(createScanResult());
+		const open = vi.fn<ScanJobEventsPort['open']>().mockReturnValue({ close: vi.fn() });
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => true,
+			open
+		};
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'status', jobId: 'job-123' },
+			{ statusPort: { fetch: fetchStatus }, eventsPort, scheduler }
+		);
+		const listener = vi.fn();
+		const unsubscribe = monitor.subscribe(listener);
+
+		monitor.stop();
+		monitor.start();
+		monitor.start();
+		unsubscribe();
+		monitor.stop();
+
+		expect(open).toHaveBeenCalledTimes(1);
+		expect(listener).toHaveBeenCalledTimes(2);
+		expect(scheduler.pendingIntervals()).toBe(0);
 	});
 
 	it('stops timers and closes streams on stop', async () => {

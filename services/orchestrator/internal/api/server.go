@@ -4,6 +4,7 @@ package api
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -44,27 +45,40 @@ type PodmanClient interface {
 	InspectPod(ctx context.Context, podID string) (*podman.PodInfo, error)
 }
 
-func parsePaginationParams(query url.Values, defaultLimit, maxLimit int) (limit, offset int) {
+func parsePaginationParams(query url.Values, defaultLimit, maxLimit int) (limit, offset int, err error) {
 	limit = defaultLimit
 
 	if limitStr := query.Get("limit"); limitStr != "" {
-		if parsed, err := strconv.Atoi(
-			limitStr,
-		); err == nil && parsed >= minPaginationLimitValue &&
-			parsed <= maxLimit {
-			limit = parsed
+		parsed, parseErr := strconv.Atoi(limitStr)
+		if parseErr != nil || parsed < minPaginationLimitValue || parsed > maxLimit {
+			return 0, 0, fmt.Errorf("limit must be an integer between %d and %d", minPaginationLimitValue, maxLimit)
 		}
+
+		limit = parsed
 	}
 
 	offset = 0
 
 	if offsetStr := query.Get("offset"); offsetStr != "" {
-		if parsed, err := strconv.Atoi(offsetStr); err == nil && parsed >= 0 {
-			offset = parsed
+		parsed, parseErr := strconv.Atoi(offsetStr)
+		if parseErr != nil || parsed < 0 {
+			return 0, 0, errors.New("offset must be a non-negative integer")
+		}
+
+		offset = parsed
+	}
+
+	return limit, offset, nil
+}
+
+func validJobStateFilter(state models.JobState) bool {
+	for _, known := range models.AllJobStates {
+		if state == known {
+			return true
 		}
 	}
 
-	return limit, offset
+	return false
 }
 
 // Config contains configuration for the API server.
@@ -165,7 +179,12 @@ func (s *Server) handleJobRoutes(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		limit, offset := parsePaginationParams(r.URL.Query(), defaultJobEventsLimit, maxJobEventsLimit)
+		limit, offset, pageErr := parsePaginationParams(r.URL.Query(), defaultJobEventsLimit, maxJobEventsLimit)
+		if pageErr != nil {
+			httputil.RespondError(w, http.StatusBadRequest, pageErr.Error())
+
+			return
+		}
 
 		eventsList, err := s.database.ListJobEvents(
 			r.Context(),
@@ -241,10 +260,21 @@ func (s *Server) handleListJobs(w http.ResponseWriter, r *http.Request) {
 
 	if stateStr := query.Get("state"); stateStr != "" {
 		state := models.JobState(stateStr)
+		if !validJobStateFilter(state) {
+			httputil.RespondError(w, http.StatusBadRequest, "Unknown job state")
+
+			return
+		}
+
 		stateFilter = &state
 	}
 
-	limit, offset := parsePaginationParams(query, defaultJobsListLimit, maxJobsListLimit)
+	limit, offset, pageErr := parsePaginationParams(query, defaultJobsListLimit, maxJobsListLimit)
+	if pageErr != nil {
+		httputil.RespondError(w, http.StatusBadRequest, pageErr.Error())
+
+		return
+	}
 
 	jobs, err := s.database.ListJobs(r.Context(), db.ListJobsOptions{
 		State:  stateFilter,

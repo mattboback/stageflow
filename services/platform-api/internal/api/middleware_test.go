@@ -36,7 +36,7 @@ func TestCORSMiddleware(t *testing.T) {
 		t.Errorf("Expected Access-Control-Allow-Origin to echo origin, got %q", got)
 	}
 
-	if rr.Header().Get("Access-Control-Allow-Methods") != "GET, POST, OPTIONS" {
+	if rr.Header().Get("Access-Control-Allow-Methods") != "GET, POST, PATCH, DELETE, OPTIONS" {
 		t.Error("Expected Access-Control-Allow-Methods header")
 	}
 

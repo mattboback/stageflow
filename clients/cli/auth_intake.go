@@ -58,13 +58,18 @@ func loadAuthStateFile(path string) (*apiclient.JobAuthInput, error) {
 
 	// Read up to maxAuthStateBytes+1 so we can detect oversize files cleanly.
 	limited := io.LimitReader(f, int64(maxAuthStateBytes)+1)
+
 	data, err := io.ReadAll(limited)
 	if err != nil {
 		return nil, fmt.Errorf("read --auth-state %q: %w", trimmed, err)
 	}
 
 	if len(data) == 0 {
-		return nil, fmt.Errorf("--auth-state file %q is empty; capture a session first with `stageflow auth capture`", trimmed)
+		return nil, fmt.Errorf(
+			"--auth-state file %q is empty; "+
+				"capture a session first with `stageflow auth capture`",
+			trimmed,
+		)
 	}
 
 	if len(data) > maxAuthStateBytes {
@@ -80,8 +85,8 @@ func loadAuthStateFile(path string) (*apiclient.JobAuthInput, error) {
 	// writes objects with `cookies` and `origins` arrays; we only require valid
 	// JSON object form so future Playwright versions remain compatible.
 	var probe map[string]any
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return nil, fmt.Errorf("--auth-state %q is not valid JSON: %w", trimmed, err)
+	if unmarshalErr := json.Unmarshal(data, &probe); unmarshalErr != nil {
+		return nil, fmt.Errorf("--auth-state %q is not valid JSON: %w", trimmed, unmarshalErr)
 	}
 
 	enc := base64.StdEncoding.EncodeToString(data)
@@ -211,12 +216,20 @@ func normalizeYAMLValue(v any) (any, error) {
 }
 
 func buildFormRecipe(parsed map[string]any) (*apiclient.JobAuthFormRecipe, error) {
-	mode, _ := parsed["mode"].(string)
+	mode, ok := parsed["mode"].(string)
+	if !ok {
+		return nil, errors.New(`recipe.mode must be "form"`)
+	}
+
 	if mode != "form" {
 		return nil, fmt.Errorf(`recipe.mode must be "form" (got %q)`, mode)
 	}
 
-	loginURL, _ := parsed["login_url"].(string)
+	loginURL, ok := parsed["login_url"].(string)
+	if !ok {
+		return nil, errors.New("recipe.login_url is required")
+	}
+
 	if strings.TrimSpace(loginURL) == "" {
 		return nil, errors.New("recipe.login_url is required")
 	}
@@ -265,15 +278,15 @@ func buildFormRecipe(parsed map[string]any) (*apiclient.JobAuthFormRecipe, error
 // PreScanAction in the schema. The platform-api applies the canonical
 // validation; we just want to catch obvious mistakes early.
 func validateStep(step map[string]any) error {
-	t, _ := step["type"].(string)
-	if t == "" {
+	stepType, ok := step["type"].(string)
+	if !ok || stepType == "" {
 		return errors.New(`step.type is required (one of: click, fill, select, hover, wait, scroll, keyboard)`)
 	}
 
-	switch t {
+	switch stepType {
 	case "click", "fill", "select", "hover":
 		if _, hasSel := step["selector"].(string); !hasSel {
-			return fmt.Errorf("step type %q requires a selector", t)
+			return fmt.Errorf("step type %q requires a selector", stepType)
 		}
 	case "wait":
 		if _, hasMS := step["ms"]; !hasMS {
@@ -286,13 +299,13 @@ func validateStep(step map[string]any) error {
 			return errors.New(`step type "keyboard" requires "key"`)
 		}
 	default:
-		return fmt.Errorf("unknown step.type %q", t)
+		return fmt.Errorf("unknown step.type %q", stepType)
 	}
 
-	if t == "fill" || t == "select" {
+	if stepType == "fill" || stepType == "select" {
 		raw, hasValue := step["value"]
 		if !hasValue {
-			return fmt.Errorf("step type %q requires a value (literal string or {from_env: NAME})", t)
+			return fmt.Errorf("step type %q requires a value (literal string or {from_env: NAME})", stepType)
 		}
 
 		if err := validateActionValue(raw); err != nil {

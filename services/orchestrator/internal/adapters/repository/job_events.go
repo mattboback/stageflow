@@ -6,16 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 )
 
 // JobEvent represents a job event.
 type JobEvent struct {
-	ID        int64
-	JobID     string
-	Event     string
-	Timestamp time.Time
-	Payload   string
+	ID           int64
+	JobID        string
+	PayloadJobID string
+	Event        string
+	Timestamp    time.Time
+	Payload      string
 
 	RequestID string
 	RunID     string
@@ -64,10 +66,6 @@ func (d *Database) InsertJobEvent(ctx context.Context, e *JobEventInsert) error 
 		return errors.New("job event is nil")
 	}
 
-	if e.JobID == "" {
-		return errors.New("job_id is required")
-	}
-
 	if e.Event == "" {
 		return errors.New("event is required")
 	}
@@ -78,11 +76,11 @@ func (d *Database) InsertJobEvent(ctx context.Context, e *JobEventInsert) error 
 
 	query := `
 		INSERT INTO job_events (
-			job_id, event, timestamp, payload_json,
+			job_id, payload_job_id, event, timestamp, payload_json,
 			request_id, run_id, producer,
 			nats_subject, nats_stream, nats_consumer, nats_stream_seq, nats_consumer_seq, nats_deliveries, nats_stored_at,
 			handler_status, handler_error, duration_ms
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	var streamSeq any
@@ -125,34 +123,53 @@ func (d *Database) InsertJobEvent(ctx context.Context, e *JobEventInsert) error 
 		duration = *e.DurationMs
 	}
 
-	_, err := d.execContext(
-		ctx,
-		query,
-		e.JobID,
-		e.Event,
-		e.Timestamp,
-		nullIfEmpty(e.Payload),
-		nullIfEmpty(e.RequestID),
-		nullIfEmpty(e.RunID),
-		nullIfEmpty(e.Producer),
-		nullIfEmpty(
-			e.NATSSubject,
-		),
-		nullIfEmpty(e.NATSStream),
-		nullIfEmpty(e.NATSConsumer),
-		streamSeq,
-		consumerSeq,
-		deliveries,
-		storedAt,
-		nullIfEmpty(e.HandlerStatus),
-		nullIfEmpty(e.HandlerError),
-		duration,
-	)
+	insert := func(jobID any) error {
+		_, execErr := d.execContext(
+			ctx,
+			query,
+			jobID,
+			nullIfEmpty(e.JobID),
+			e.Event,
+			e.Timestamp,
+			nullIfEmpty(e.Payload),
+			nullIfEmpty(e.RequestID),
+			nullIfEmpty(e.RunID),
+			nullIfEmpty(e.Producer),
+			nullIfEmpty(e.NATSSubject),
+			nullIfEmpty(e.NATSStream),
+			nullIfEmpty(e.NATSConsumer),
+			streamSeq,
+			consumerSeq,
+			deliveries,
+			storedAt,
+			nullIfEmpty(e.HandlerStatus),
+			nullIfEmpty(e.HandlerError),
+			duration,
+		)
+
+		return execErr
+	}
+
+	err := insert(nullIfEmpty(e.JobID))
+	if err != nil && isForeignKeyFailure(err) {
+		err = insert(nil)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to insert job event: %w", err)
 	}
 
 	return nil
+}
+
+func isForeignKeyFailure(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	msg := strings.ToLower(err.Error())
+
+	return strings.Contains(msg, "foreign key")
 }
 
 // ListJobEventsOptions controls paging for ListJobEvents.
@@ -177,7 +194,7 @@ func (d *Database) ListJobEvents(ctx context.Context, jobID string, opts ListJob
 
 	query := `
 		SELECT
-			id, job_id, event, timestamp, payload_json,
+			id, COALESCE(job_id, ''), COALESCE(payload_job_id, ''), event, timestamp, payload_json,
 			COALESCE(request_id, ''), COALESCE(run_id, ''), COALESCE(producer, ''),
 			COALESCE(nats_subject, ''), COALESCE(nats_stream, ''), COALESCE(nats_consumer, ''),
 			nats_stream_seq, nats_consumer_seq, nats_deliveries, nats_stored_at,
@@ -213,6 +230,7 @@ func (d *Database) ListJobEvents(ctx context.Context, jobID string, opts ListJob
 		if scanErr := rows.Scan(
 			&event.ID,
 			&event.JobID,
+			&event.PayloadJobID,
 			&event.Event,
 			&event.Timestamp,
 			&payloadJSON,

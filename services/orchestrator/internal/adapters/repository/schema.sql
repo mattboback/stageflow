@@ -69,7 +69,8 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS scanner_results TEXT;
 -- Job events table logs all events for a job.
 CREATE TABLE IF NOT EXISTS job_events (
     id BIGSERIAL PRIMARY KEY,
-    job_id TEXT NOT NULL,
+    job_id TEXT,
+    payload_job_id TEXT,
     event TEXT NOT NULL,
     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     payload_json TEXT,
@@ -102,6 +103,7 @@ ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_stored_at TIMESTAMP;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_status TEXT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_error TEXT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS duration_ms BIGINT;
+ALTER TABLE job_events ADD COLUMN IF NOT EXISTS payload_job_id TEXT;
 
 -- Terminal event outbox stores job.completed/job.failed until they are
 -- successfully published to NATS.

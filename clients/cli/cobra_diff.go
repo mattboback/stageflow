@@ -177,8 +177,9 @@ func runLiveDiffScan(
 		return reportEnvelope{}, "", err
 	}
 
-	if err := urlcheck.ValidateLocalTargets(root.apiURL, urls); err != nil {
-		return reportEnvelope{}, "", err
+	validateErr := urlcheck.ValidateLocalTargets(root.apiURL, urls)
+	if validateErr != nil {
+		return reportEnvelope{}, "", validateErr
 	}
 
 	allowPrivateTargets := urlcheck.ContainsPrivateTargets(urls)

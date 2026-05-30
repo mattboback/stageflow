@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"github.com/mattboback/stageflow/libs/go/config"
@@ -53,12 +54,14 @@ func runExtraction(ctx context.Context, cfg *Config) {
 
 	pages := mustDiscoverPages(ctx, cfg, natsClient, stageLog, siteDir)
 
-	prov, baseURL, provenancePath := mustGenerateProvenance(ctx, cfg, natsClient, stageLog, pages)
-
-	provenanceArtifactPath := mustUploadProvenance(ctx, cfg, natsClient, stageLog, minioClient, provenancePath)
-
 	siteServer := mustStartStaticServer(ctx, cfg, natsClient, stageLog, siteDir)
 	defer stopStaticServer(ctx, siteServer)
+
+	baseURL := "http://" + siteServer.ListenerAddr()
+
+	prov, provenancePath := mustGenerateProvenance(ctx, cfg, natsClient, stageLog, pages, baseURL)
+
+	provenanceArtifactPath := mustUploadProvenance(ctx, cfg, natsClient, stageLog, minioClient, provenancePath)
 
 	publishExtractionReady(ctx, cfg, natsClient, stageLog, prov, baseURL, provenancePath, provenanceArtifactPath)
 
@@ -205,11 +208,11 @@ func mustGenerateProvenance(
 	natsClient *sharedmsg.Client,
 	stageLog *stageLogger,
 	pages []discovery.HTMLPage,
-) (prov *models.Provenance, baseURL, provenancePath string) {
+	baseURL string,
+) (prov *models.Provenance, provenancePath string) {
 	slog.Info("Generating provenance.json", "job_id", cfg.JobID)
 
 	provenanceGen := provenance.NewGenerator()
-	baseURL = "http://localhost:" + cfg.Port
 	provenancePath = cfg.Workspace + "/provenance.json"
 
 	prov, err := provenanceGen.Generate(cfg.JobID, baseURL, pages, provenancePath)
@@ -228,7 +231,7 @@ func mustGenerateProvenance(
 	stageLog.setArtifacts(provenancePath, baseURL)
 	stageLog.recordEvent("provenance_generated", map[string]any{"pages": len(prov.Pages)})
 
-	return prov, baseURL, provenancePath
+	return prov, provenancePath
 }
 
 func mustUploadProvenance(
@@ -410,6 +413,11 @@ func (c *Config) Validate() error {
 
 	if c.ArtifactsBucket == "" {
 		return errors.New("MINIO_ARTIFACT_BUCKET is required")
+	}
+
+	port, err := strconv.Atoi(c.Port)
+	if err != nil || port < 1 || port > 65535 {
+		return errors.New("PORT must be an integer between 1 and 65535")
 	}
 
 	return nil

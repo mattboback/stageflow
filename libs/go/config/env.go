@@ -2,6 +2,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -27,6 +28,29 @@ func GetEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
+func GetEnvIntStrict(key string, defaultValue int) (int, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	i, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be an integer: %w", key, err)
+	}
+
+	return i, nil
+}
+
+func MustGetEnvInt(key string, defaultValue int) int {
+	value, err := GetEnvIntStrict(key, defaultValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return value
+}
+
 // GetEnvBool reads a boolean env var using a fixed allowlist to avoid surprising coercions.
 // Recognized true values: "1", "true", "TRUE", "True".
 // Recognized false values: "0", "false", "FALSE", "False".
@@ -43,6 +67,31 @@ func GetEnvBool(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
+func GetEnvBoolStrict(key string, defaultValue bool) (bool, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	switch value {
+	case "1", "true", "TRUE", "True":
+		return true, nil
+	case "0", "false", "FALSE", "False":
+		return false, nil
+	default:
+		return false, fmt.Errorf("%s must be a boolean (true/false or 1/0)", key)
+	}
+}
+
+func MustGetEnvBool(key string, defaultValue bool) bool {
+	value, err := GetEnvBoolStrict(key, defaultValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return value
+}
+
 // GetEnvDuration parses a duration env var, defaulting on parse errors to keep services configurable but robust.
 // Duration strings follow time.ParseDuration (e.g., "5m", "30s", "1h").
 func GetEnvDuration(key string, defaultValue time.Duration) time.Duration {
@@ -53,4 +102,27 @@ func GetEnvDuration(key string, defaultValue time.Duration) time.Duration {
 	}
 
 	return defaultValue
+}
+
+func GetEnvDurationStrict(key string, defaultValue time.Duration) (time.Duration, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue, nil
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a duration: %w", key, err)
+	}
+
+	return duration, nil
+}
+
+func MustGetEnvDuration(key string, defaultValue time.Duration) time.Duration {
+	value, err := GetEnvDurationStrict(key, defaultValue)
+	if err != nil {
+		panic(err)
+	}
+
+	return value
 }

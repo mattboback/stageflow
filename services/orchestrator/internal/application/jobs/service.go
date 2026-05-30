@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/mattboback/stageflow/libs/go/events"
+	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
 )
@@ -192,7 +193,8 @@ func (s *Service) RecordScannerFailure(ctx context.Context, payload *events.Scan
 	}
 
 	if domainjobs.ShouldIgnoreTerminalEvent(job.State, events.EventScanFailed) {
-		return s.publishPendingTerminalEvents(ctx, payload.JobID)
+		_, publishErr := s.publishPendingTerminalEvents(ctx, payload.JobID)
+		return publishErr
 	}
 
 	if artifactsErr := s.store.UpdateJobCompletionArtifacts(
@@ -272,7 +274,8 @@ func (s *Service) RecordScannerCompletion(ctx context.Context, payload *events.S
 	}
 
 	if domainjobs.ShouldIgnoreTerminalEvent(job.State, events.EventScanCompleted) {
-		return s.publishPendingTerminalEvents(ctx, payload.JobID)
+		_, publishErr := s.publishPendingTerminalEvents(ctx, payload.JobID)
+		return publishErr
 	}
 
 	allComplete, err := s.store.RecordScannerCompletion(ctx, payload.JobID, &models.ScannerResult{
@@ -314,21 +317,56 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 		return errors.New("job is required")
 	}
 
-	if !domainjobs.CanEnterCompleting(job.State) {
-		return s.publishPendingTerminalEvents(ctx, job.ID)
+	proceed, err := s.beginJobCompletion(ctx, job)
+	if err != nil || !proceed {
+		return err
 	}
 
-	claimed, err := s.store.ClaimJobCompletion(ctx, job.ID)
-	if err != nil {
-		return fmt.Errorf("claim job completion: %w", err)
+	return s.finalizeJobCompletion(ctx, job)
+}
+
+func (s *Service) beginJobCompletion(ctx context.Context, job *models.Job) (bool, error) {
+	needsCompletionClaim := true
+
+	switch {
+	case domainjobs.IsTerminalState(job.State):
+		_, publishErr := s.publishPendingTerminalEvents(ctx, job.ID)
+		return false, publishErr
+	case job.State == models.JobStateCompleting:
+		published, err := s.publishPendingTerminalEvents(ctx, job.ID)
+		if err != nil {
+			return false, err
+		}
+
+		if published > 0 || !shouldResumeCompletingJob(ctx) {
+			return false, nil
+		}
+
+		needsCompletionClaim = false
+	case domainjobs.CanEnterCompleting(job.State):
+	default:
+		_, publishErr := s.publishPendingTerminalEvents(ctx, job.ID)
+		return false, publishErr
 	}
 
-	if !claimed {
-		return s.publishPendingTerminalEvents(ctx, job.ID)
+	if needsCompletionClaim {
+		claimed, err := s.store.ClaimJobCompletion(ctx, job.ID)
+		if err != nil {
+			return false, fmt.Errorf("claim job completion: %w", err)
+		}
+
+		if !claimed {
+			_, publishErr := s.publishPendingTerminalEvents(ctx, job.ID)
+			return false, publishErr
+		}
+
+		job.State = models.JobStateCompleting
 	}
 
-	job.State = models.JobStateCompleting
+	return true, nil
+}
 
+func (s *Service) finalizeJobCompletion(ctx context.Context, job *models.Job) error {
 	reportJSONPath, err := s.artifacts.BuildAggregatedReport(ctx, job)
 	if err != nil {
 		return err
@@ -384,6 +422,17 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 	})
 }
 
+func shouldResumeCompletingJob(ctx context.Context) bool {
+	meta, ok := sharedmsg.ReceivedEventMetaFromContext(ctx)
+	if !ok {
+		return true
+	}
+
+	// First deliveries that observe COMPLETING probably lost the completion
+	// claim race; redeliveries are the recovery path for a failed owner.
+	return meta.Deliveries > 1
+}
+
 func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details string) error {
 	job, err := s.store.GetJob(ctx, jobID)
 	if err != nil {
@@ -391,7 +440,8 @@ func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details st
 	}
 
 	if domainjobs.IsTerminalState(job.State) {
-		return s.publishPendingTerminalEvents(ctx, jobID)
+		_, publishErr := s.publishPendingTerminalEvents(ctx, jobID)
+		return publishErr
 	}
 
 	normalizedStage := domainjobs.NormalizeFailureStage(stage)
@@ -404,7 +454,14 @@ func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details st
 		ErrorDetails: details,
 	}
 
-	if failErr := s.store.FailJobWithTerminalEvent(ctx, jobID, normalizedStage, message, details, payload); failErr != nil {
+	if failErr := s.store.FailJobWithTerminalEvent(
+		ctx,
+		jobID,
+		normalizedStage,
+		message,
+		details,
+		payload,
+	); failErr != nil {
 		return fmt.Errorf("failed to fail job: %w", failErr)
 	}
 
@@ -422,19 +479,23 @@ func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details st
 	})
 }
 
-func (s *Service) publishPendingTerminalEvents(ctx context.Context, jobID string) error {
+func (s *Service) publishPendingTerminalEvents(ctx context.Context, jobID string) (int, error) {
 	pending, err := s.store.ListUnpublishedTerminalEvents(ctx, jobID)
 	if err != nil {
-		return fmt.Errorf("list pending terminal events: %w", err)
+		return 0, fmt.Errorf("list pending terminal events: %w", err)
 	}
+
+	published := 0
 
 	for _, terminalEvent := range pending {
-		if err := s.publishTerminalEvent(ctx, jobID, terminalEvent); err != nil {
-			return err
+		if publishErr := s.publishTerminalEvent(ctx, jobID, terminalEvent); publishErr != nil {
+			return published, publishErr
 		}
+
+		published++
 	}
 
-	return nil
+	return published, nil
 }
 
 func (s *Service) publishTerminalEvent(ctx context.Context, jobID string, terminalEvent TerminalEvent) error {

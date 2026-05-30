@@ -216,15 +216,17 @@ func (s orchestratorJobStore) ListUnpublishedTerminalEvents(
 		switch record.Event {
 		case events.EventJobCompleted:
 			var payload events.JobCompletedPayload
-			if err := json.Unmarshal([]byte(record.PayloadJSON), &payload); err != nil {
-				return nil, fmt.Errorf("decode job.completed terminal payload: %w", err)
+			if unmarshalErr := json.Unmarshal([]byte(record.PayloadJSON), &payload); unmarshalErr != nil {
+				return nil, fmt.Errorf("decode job.completed terminal payload: %w", unmarshalErr)
 			}
+
 			terminalEvent.JobCompleted = &payload
 		case events.EventJobFailed:
 			var payload events.JobFailedPayload
-			if err := json.Unmarshal([]byte(record.PayloadJSON), &payload); err != nil {
-				return nil, fmt.Errorf("decode job.failed terminal payload: %w", err)
+			if unmarshalErr := json.Unmarshal([]byte(record.PayloadJSON), &payload); unmarshalErr != nil {
+				return nil, fmt.Errorf("decode job.failed terminal payload: %w", unmarshalErr)
 			}
+
 			terminalEvent.JobFailed = &payload
 		default:
 			return nil, fmt.Errorf("unknown terminal event: %s", record.Event)

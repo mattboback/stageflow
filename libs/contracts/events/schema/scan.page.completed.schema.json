@@ -10,7 +10,7 @@
 		"producer": { "type": "string", "minLength": 1 },
 		"payload": {
 			"type": "object",
-				"required": ["job_id", "page_id", "page_index", "total_pages"],
+				"required": ["job_id", "scanner_type", "page_id", "page_index", "total_pages"],
 				"properties": {
 					"job_id": { "type": "string", "minLength": 1 },
 					"scanner_type": { "type": "string", "minLength": 1 },

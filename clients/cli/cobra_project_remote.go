@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
 func newProjectRemoteCmd(root *rootOptions) []*cobra.Command {
@@ -43,9 +44,24 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 				return exitCodeError{Code: 2, Err: errors.New("at least one --url is required")}
 			}
 
+			normalizedURLs, err := urlcheck.NormalizeTargets(urls)
+			if err != nil {
+				return exitCodeError{Code: 2, Err: err}
+			}
+
+			validateErr := urlcheck.ValidateLocalTargets(root.apiURL, normalizedURLs)
+			if validateErr != nil {
+				return exitCodeError{Code: 2, Err: validateErr}
+			}
+
+			normalizedScanners, err := normalizeProjectScannerFlags(scanners)
+			if err != nil {
+				return exitCodeError{Code: 2, Err: err}
+			}
+
 			client := newAPICommandClient(root)
 
-			p, err := client.CreateProject(cmd.Context(), slug, name, urls, scanners)
+			p, err := client.CreateProject(cmd.Context(), slug, name, normalizedURLs, normalizedScanners)
 			if err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("create project: %w", err)}
 			}
@@ -64,6 +80,24 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 	cmd.Flags().StringSliceVar(&scanners, "scanner", nil, "Scanner module (repeatable; omit for all)")
 
 	return cmd
+}
+
+func normalizeProjectScannerFlags(scanners []string) ([]string, error) {
+	if len(scanners) == 0 {
+		return nil, nil
+	}
+
+	normalized := make([]string, 0, len(scanners))
+	for _, scanner := range scanners {
+		trimmed := strings.TrimSpace(scanner)
+		if trimmed == "" {
+			return nil, errors.New("scanner list contains an empty module name")
+		}
+
+		normalized = append(normalized, trimmed)
+	}
+
+	return normalized, nil
 }
 
 func newProjectListCmd(root *rootOptions) *cobra.Command {

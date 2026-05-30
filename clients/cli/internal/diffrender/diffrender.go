@@ -97,21 +97,30 @@ func IsRemoteTarget(target string) bool {
 		return true
 	}
 
-	if trimmed == "" ||
+	if isLocalDiffTarget(trimmed, lower) {
+		return false
+	}
+
+	return isHostLikeTarget(hostFromTarget(trimmed))
+}
+
+func isLocalDiffTarget(trimmed, lower string) bool {
+	return trimmed == "" ||
 		strings.Contains(trimmed, "://") ||
-		strings.HasPrefix(trimmed, "/") ||
-		strings.HasPrefix(trimmed, "./") ||
-		strings.HasPrefix(trimmed, "../") ||
-		strings.HasPrefix(trimmed, `\`) ||
-		strings.HasPrefix(trimmed, `.\`) ||
-		strings.HasPrefix(trimmed, `..\`) {
-		return false
-	}
+		hasLocalPathPrefix(trimmed) ||
+		(!strings.ContainsAny(trimmed, `/\`) && strings.HasSuffix(lower, ".json"))
+}
 
-	if !strings.ContainsAny(trimmed, `/\`) && strings.HasSuffix(lower, ".json") {
-		return false
-	}
+func hasLocalPathPrefix(target string) bool {
+	return strings.HasPrefix(target, "/") ||
+		strings.HasPrefix(target, "./") ||
+		strings.HasPrefix(target, "../") ||
+		strings.HasPrefix(target, `\`) ||
+		strings.HasPrefix(target, `.\`) ||
+		strings.HasPrefix(target, `..\`)
+}
 
+func hostFromTarget(trimmed string) string {
 	host := trimmed
 	if idx := strings.IndexAny(host, `/\`); idx >= 0 {
 		host = host[:idx]
@@ -121,7 +130,10 @@ func IsRemoteTarget(target string) bool {
 		host = h
 	}
 
-	host = strings.Trim(host, "[]")
+	return strings.Trim(host, "[]")
+}
+
+func isHostLikeTarget(host string) bool {
 	if strings.EqualFold(host, "localhost") {
 		return true
 	}

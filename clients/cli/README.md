@@ -33,7 +33,6 @@ go build -o stageflow .
 | `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
 | `project doctor` | Validate project config and dev readiness without scanning |
 | `project hosted` | Run the configured hosted project scan without starting local dev |
-| `ai` | Run the AI Navigator with natural language objectives |
 | `diff` | Compare a saved baseline against another report or a live URL |
 | `report` | Fetch and display results for an existing job ID |
 | `scanners` | List scanners available on the API |

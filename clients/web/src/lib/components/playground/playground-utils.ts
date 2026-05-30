@@ -157,6 +157,20 @@ export function isZipFilename(name: string): boolean {
 	return name.trim().toLowerCase().endsWith('.zip');
 }
 
+export const MAX_ZIP_UPLOAD_BYTES = 100 * 1024 * 1024;
+
+export function validateZipUploadFile(file: File): string | null {
+	if (!isZipFilename(file.name)) {
+		return 'Please select a ZIP file';
+	}
+
+	if (file.size > MAX_ZIP_UPLOAD_BYTES) {
+		return 'ZIP file must be 100MB or smaller';
+	}
+
+	return null;
+}
+
 export function buildAiNavigatorConfig(params: {
 	objective: string;
 	maxSteps: number;

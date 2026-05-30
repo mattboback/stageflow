@@ -36,6 +36,74 @@ describe('api/client submitScanJob', () => {
 		expect(fetchMock).toHaveBeenCalledOnce();
 	});
 
+	it('submits ZIP scans with scanner config and screenshot flag in form data', async () => {
+		const fetchMock = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValue(mockJsonResponse(201, { job_id: 'job-zip' }));
+		const file = new File(['zip-bytes'], 'site.zip', { type: 'application/zip' });
+
+		await expect(
+			submitScanJob({
+				mode: 'zip',
+				file,
+				urls: [],
+				scanners: [{ id: 'axe', enabled: true, config: { tags: ['wcag2a'] } }],
+				highlightStyle: 'solid',
+				screenshot: false
+			})
+		).resolves.toEqual({ job_id: 'job-zip' });
+
+		const [, init] = fetchMock.mock.calls[0] ?? [];
+		const formData = init?.body as FormData;
+		expect(init?.method).toBe('POST');
+		expect(formData.get('file')).toBe(file);
+		expect(formData.get('modules')).toBe('axe');
+		expect(formData.get('screenshot')).toBe('false');
+		expect(formData.get('scanner_configs')).toBe(JSON.stringify({ axe: { tags: ['wcag2a'] } }));
+	});
+
+	it('rejects ZIP submission without a selected file', async () => {
+		await expect(
+			submitScanJob({
+				mode: 'zip',
+				file: null,
+				urls: [],
+				scanners: SCANNERS,
+				highlightStyle: 'dashed'
+			})
+		).rejects.toThrow('Select a file');
+	});
+
+	it('rejects URL submission without URLs', async () => {
+		await expect(
+			submitScanJob({
+				mode: 'url',
+				file: null,
+				urls: [],
+				scanners: SCANNERS,
+				highlightStyle: 'dashed'
+			})
+		).rejects.toThrow('Enter a URL');
+	});
+
+	it('uses top-level API error messages when present', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			mockJsonResponse(400, {
+				message: 'Project limit reached'
+			})
+		);
+
+		await expect(
+			submitScanJob({
+				mode: 'url',
+				file: null,
+				urls: ['https://example.com'],
+				scanners: SCANNERS,
+				highlightStyle: 'solid'
+			})
+		).rejects.toThrow('Project limit reached');
+	});
+
 	it('surfaces structured validation message with suggestion/details', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
 			mockJsonResponse(400, {
@@ -82,6 +150,34 @@ describe('api/client submitScanJob', () => {
 		).rejects.toThrow('Unsupported scanner module: unknown-scanner');
 	});
 
+	it('uses the dedicated file size message for 413 responses', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(413, {}));
+
+		await expect(
+			submitScanJob({
+				mode: 'url',
+				file: null,
+				urls: ['https://example.com'],
+				scanners: SCANNERS,
+				highlightStyle: 'dashed'
+			})
+		).rejects.toThrow('File too large. Maximum size is 100MB.');
+	});
+
+	it('falls back for unrecognized non-success statuses', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(409, {}));
+
+		await expect(
+			submitScanJob({
+				mode: 'url',
+				file: null,
+				urls: ['https://example.com'],
+				scanners: SCANNERS,
+				highlightStyle: 'dashed'
+			})
+		).rejects.toThrow('Scan failed. Please try again.');
+	});
+
 	it('falls back to generic server error when payload is not JSON', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue({
 			ok: false,
@@ -98,6 +194,20 @@ describe('api/client submitScanJob', () => {
 				highlightStyle: 'dashed'
 			})
 		).rejects.toThrow('Server error. Please try again in a moment.');
+	});
+
+	it('rejects successful responses that do not include a job id', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(200, { message: 'created' }));
+
+		await expect(
+			submitScanJob({
+				mode: 'url',
+				file: null,
+				urls: ['https://example.com'],
+				scanners: SCANNERS,
+				highlightStyle: 'dashed'
+			})
+		).rejects.toThrow('No job ID returned. Please try again.');
 	});
 
 	it('preserves caller abort when AbortSignal.any is unavailable', async () => {
@@ -155,6 +265,22 @@ describe('api/client fetchScanners', () => {
 
 		await expect(fetchScanners()).rejects.toThrow(
 			'Scanner catalog failed to load. Failed to fetch. Refresh to retry.'
+		);
+	});
+
+	it('rethrows caller aborts instead of wrapping them as catalog failures', async () => {
+		const controller = new AbortController();
+		controller.abort();
+		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+
+		await expect(fetchScanners(controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+	});
+
+	it('uses a network error fallback for non-Error scanner catalog failures', async () => {
+		vi.spyOn(globalThis, 'fetch').mockRejectedValue('connection reset');
+
+		await expect(fetchScanners()).rejects.toThrow(
+			'Scanner catalog failed to load. Network error. Refresh to retry.'
 		);
 	});
 

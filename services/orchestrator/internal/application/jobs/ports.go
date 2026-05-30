@@ -35,7 +35,11 @@ type JobStore interface {
 	RecordScannerCompletion(ctx context.Context, jobID string, result *models.ScannerResult) (bool, error)
 	RecordScannerFailure(ctx context.Context, jobID, scannerType, errorMsg string) (bool, error)
 	CompleteJobWithTerminalEvent(ctx context.Context, jobID string, payload *events.JobCompletedPayload) error
-	FailJobWithTerminalEvent(ctx context.Context, jobID, stage, errorMsg, errorDetails string, payload *events.JobFailedPayload) error
+	FailJobWithTerminalEvent(
+		ctx context.Context,
+		jobID, stage, errorMsg, errorDetails string,
+		payload *events.JobFailedPayload,
+	) error
 	ListUnpublishedTerminalEvents(ctx context.Context, jobID string) ([]TerminalEvent, error)
 	MarkTerminalEventPublished(ctx context.Context, jobID, event string) error
 	RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error

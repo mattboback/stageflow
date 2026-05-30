@@ -19,7 +19,7 @@ func jobIDFromJobPath(path, suffix string) (string, bool) {
 	path = strings.TrimPrefix(path, "/api/v1/jobs/")
 	parts := strings.Split(path, "/")
 
-	if len(parts) < 2 || parts[1] != suffix || parts[0] == "" {
+	if len(parts) != 2 || parts[1] != suffix || parts[0] == "" {
 		return "", false
 	}
 
@@ -201,7 +201,22 @@ func (s *Server) sendInitialStatus(
 ) bool {
 	job, buildErr := s.buildJobStatusResponse(ctx, rec)
 	if buildErr != nil {
-		return true
+		logging.Error(ctx, "Failed to build initial status for SSE", "error", buildErr)
+
+		data, marshalErr := json.Marshal(map[string]string{
+			"error": "failed to build initial job status",
+		})
+		if marshalErr != nil {
+			logging.Error(ctx, "Failed to marshal initial SSE error", "error", marshalErr)
+
+			return false
+		}
+
+		if err := writeSSEEvent(w, flusher, "error", data); err != nil {
+			return false
+		}
+
+		return false
 	}
 
 	data, marshalErr := json.Marshal(job)

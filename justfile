@@ -22,7 +22,13 @@ deploy:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    control_plane="${STAGEFLOW_DEPLOY_CONTROL_PLANE:-/home/matt/Deployment}"
+    control_plane="${STAGEFLOW_DEPLOY_CONTROL_PLANE:-}"
+    if [[ -z "$control_plane" ]]; then
+        echo "Hosted stageflow.org deployment is managed by an external control plane." >&2
+        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local, staging, and self-hosted environments." >&2
+        exit 1
+    fi
+
     control_justfile="${control_plane}/justfile"
     just_bin="${JUST:-just}"
 

@@ -77,6 +77,10 @@ class MockEventSource {
 		this.dispatchEvent(new MessageEvent('status', { data }));
 	}
 
+	emitUpdateRaw(data: string) {
+		this.dispatchEvent(new MessageEvent('update', { data }));
+	}
+
 	emitDone() {
 		this.dispatchEvent(new Event('done'));
 	}
@@ -145,6 +149,21 @@ describe('SSE Stream', () => {
 		expect(onStatus).toHaveBeenCalledWith({ state: 'running' });
 	});
 
+	it('handles valid update events', () => {
+		const onUpdate = vi.fn();
+		createSSEStream('job-123', {
+			onStatus: vi.fn(),
+			onUpdate,
+			onDone: vi.fn(),
+			onError: vi.fn()
+		});
+
+		const instance = firstInstance();
+		instance.emitUpdateRaw(JSON.stringify({ type: 'scanner_complete', scanner_type: 'axe' }));
+
+		expect(onUpdate).toHaveBeenCalledWith({ type: 'scanner_complete', scanner_type: 'axe' });
+	});
+
 	it('handles parse errors and closes stream after threshold', () => {
 		const onError = vi.fn();
 		createSSEStream(
@@ -163,6 +182,35 @@ describe('SSE Stream', () => {
 		instance.emitStatusRaw('invalid json');
 		instance.emitStatusRaw('invalid json');
 
+		expect(onError).toHaveBeenCalledWith({
+			message: 'Too many parse errors',
+			kind: 'parse'
+		});
+		expect(instance.readyState).toBe(MockEventSource.CLOSED);
+	});
+
+	it('uses the same parse-failure threshold for update events', () => {
+		const onError = vi.fn();
+		const onLog = vi.fn();
+		createSSEStream(
+			'job-123',
+			{
+				onStatus: vi.fn(),
+				onUpdate: vi.fn(),
+				onDone: vi.fn(),
+				onError
+			},
+			{ onLog }
+		);
+
+		const instance = firstInstance();
+		instance.emitUpdateRaw('{not json');
+		instance.emitUpdateRaw('{not json');
+		instance.emitUpdateRaw('{not json');
+
+		expect(onLog).toHaveBeenCalledWith(
+			'ERROR: Live updates failed (invalid stream data). Refresh to retry.'
+		);
 		expect(onError).toHaveBeenCalledWith({
 			message: 'Too many parse errors',
 			kind: 'parse'
@@ -224,6 +272,61 @@ describe('SSE Stream', () => {
 		});
 	});
 
+	it('reports one transient connection error until the stream opens again', () => {
+		const onError = vi.fn();
+		createSSEStream('job-123', {
+			onStatus: vi.fn(),
+			onUpdate: vi.fn(),
+			onDone: vi.fn(),
+			onError
+		});
+
+		const instance = firstInstance();
+		instance.readyState = MockEventSource.OPEN;
+		instance.emitError();
+		instance.emitError();
+		instance.onopen?.(new Event('open'));
+		instance.emitError();
+
+		expect(onError).toHaveBeenCalledTimes(2);
+		expect(onError).toHaveBeenNthCalledWith(1, {
+			message: 'Connection error',
+			kind: 'transient'
+		});
+		expect(onError).toHaveBeenNthCalledWith(2, {
+			message: 'Connection error',
+			kind: 'transient'
+		});
+	});
+
+	it('reports exhausted reconnects and logs scan-status fallback text', () => {
+		const onError = vi.fn();
+		const onLog = vi.fn();
+		createSSEStream(
+			'job-123',
+			{
+				onStatus: vi.fn(),
+				onUpdate: vi.fn(),
+				onDone: vi.fn(),
+				onError
+			},
+			{ sourceName: 'scan-status', onLog }
+		);
+
+		const instance = firstInstance();
+		instance.readyState = MockEventSource.OPEN;
+		for (let attempt = 0; attempt < 5; attempt++) {
+			instance.emitError();
+		}
+
+		expect(onLog).toHaveBeenCalledWith('WARN: Connection lost. Fetching latest status...');
+		expect(onError).toHaveBeenLastCalledWith({
+			message: 'Max reconnect attempts reached',
+			kind: 'exhausted'
+		});
+		expect(instance.readyState).toBe(MockEventSource.CLOSED);
+	});
+
 	it('reports permanently closed streams with a closed error kind', () => {
 		const onError = vi.fn();
 		createSSEStream('job-123', {
@@ -237,6 +340,31 @@ describe('SSE Stream', () => {
 		instance.readyState = MockEventSource.CLOSED;
 		instance.emitError();
 
+		expect(onError).toHaveBeenCalledWith({
+			message: 'Connection closed permanently',
+			kind: 'closed'
+		});
+	});
+
+	it('uses scan-status fallback text for permanently closed streams', () => {
+		const onError = vi.fn();
+		const onLog = vi.fn();
+		createSSEStream(
+			'job-123',
+			{
+				onStatus: vi.fn(),
+				onUpdate: vi.fn(),
+				onDone: vi.fn(),
+				onError
+			},
+			{ sourceName: 'scan-status', onLog }
+		);
+
+		const instance = firstInstance();
+		instance.readyState = MockEventSource.CLOSED;
+		instance.emitError();
+
+		expect(onLog).toHaveBeenCalledWith('WARN: Connection closed. Fetching latest status...');
 		expect(onError).toHaveBeenCalledWith({
 			message: 'Connection closed permanently',
 			kind: 'closed'

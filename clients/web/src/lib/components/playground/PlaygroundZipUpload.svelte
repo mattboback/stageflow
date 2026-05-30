@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { isZipFilename } from '$lib/components/playground/playground-utils';
+	import { validateZipUploadFile } from '$lib/components/playground/playground-utils';
 	import { Button, Label } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
 	import { FileUp, Upload } from 'lucide-svelte';
@@ -15,16 +15,23 @@
 	let fileInputRef = $state<HTMLInputElement | null>(null);
 	let isDragOver = $state(false);
 
+	function acceptFile(selectedFile: File) {
+		const validationError = validateZipUploadFile(selectedFile);
+		if (validationError) {
+			onError(validationError);
+			onFileChange(null);
+			if (fileInputRef) fileInputRef.value = '';
+			return;
+		}
+
+		onFileChange(selectedFile);
+	}
+
 	function handleFileChange(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const selectedFile = target.files?.[0];
 		if (selectedFile) {
-			if (!isZipFilename(selectedFile.name)) {
-				onError('Please select a ZIP file');
-				onFileChange(null);
-				return;
-			}
-			onFileChange(selectedFile);
+			acceptFile(selectedFile);
 		}
 	}
 
@@ -42,12 +49,7 @@
 		isDragOver = false;
 		const droppedFile = event.dataTransfer?.files?.[0];
 		if (droppedFile) {
-			if (!isZipFilename(droppedFile.name)) {
-				onError('Please select a ZIP file');
-				onFileChange(null);
-				return;
-			}
-			onFileChange(droppedFile);
+			acceptFile(droppedFile);
 		}
 	}
 

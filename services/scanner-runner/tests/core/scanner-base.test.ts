@@ -515,7 +515,7 @@ describe('ScannerBase', () => {
 			return Promise.resolve(undefined);
 		});
 
-		await scanner.run(mockConfig);
+		await expect(scanner.run(mockConfig)).rejects.toThrow('dir upload failed');
 
 		expect(mocks.mockStorageProviderInstance.upload).toHaveBeenCalledWith(
 			mockConfig.storage.bucket,

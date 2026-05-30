@@ -116,8 +116,12 @@ func (s *Server) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		req.Name = req.Slug
 	}
 
-	if len(req.URLs) == 0 {
-		httputil.RespondError(w, http.StatusBadRequest, "At least one URL is required")
+	if !s.validateProjectURLs(w, r, req.URLs) {
+		return
+	}
+
+	if _, err := s.normalizeModules(req.Scanners); err != nil {
+		httputil.RespondError(w, http.StatusBadRequest, err.Error())
 
 		return
 	}
@@ -179,10 +183,33 @@ func (s *Server) handleGetProject(w http.ResponseWriter, r *http.Request, slug s
 	httputil.RespondOK(w, p)
 }
 
+func (s *Server) validateProjectURLs(w http.ResponseWriter, r *http.Request, urls []string) bool {
+	if detail := validateURLSubmitRequest(urls); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+
+		return false
+	}
+
+	validationMode, detail := s.resolveTargetValidationMode(false)
+	if detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+
+		return false
+	}
+
+	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, urls, validationMode); err != nil {
+		httputil.RespondError(w, http.StatusBadRequest, err.Error())
+
+		return false
+	}
+
+	return true
+}
+
 type updateProjectRequest struct {
-	Name     *string  `json:"name,omitempty"`
-	URLs     []string `json:"urls,omitempty"`
-	Scanners []string `json:"scanners,omitempty"`
+	Name     *string   `json:"name,omitempty"`
+	URLs     *[]string `json:"urls,omitempty"`
+	Scanners []string  `json:"scanners,omitempty"`
 }
 
 func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request, slug string) {
@@ -209,9 +236,27 @@ func (s *Server) handleUpdateProject(w http.ResponseWriter, r *http.Request, slu
 		return
 	}
 
+	var urls []string
+
+	if req.URLs != nil {
+		if !s.validateProjectURLs(w, r, *req.URLs) {
+			return
+		}
+
+		urls = *req.URLs
+	}
+
+	if req.Scanners != nil {
+		if _, normalizeErr := s.normalizeModules(req.Scanners); normalizeErr != nil {
+			httputil.RespondError(w, http.StatusBadRequest, normalizeErr.Error())
+
+			return
+		}
+	}
+
 	err = s.projectStore.UpdateProject(r.Context(), p.ID, project.Update{
 		Name:     req.Name,
-		URLs:     req.URLs,
+		URLs:     urls,
 		Scanners: req.Scanners,
 	})
 	if err != nil {
@@ -280,17 +325,7 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		return
 	}
 
-	validationMode, detail := s.resolveTargetValidationMode(false)
-	if detail != nil {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
-
-		return
-	}
-
-	err = validateTargetURLsWithResolver(r.Context(), s.ipResolver, p.URLs, validationMode)
-	if err != nil {
-		httputil.RespondError(w, http.StatusBadRequest, err.Error())
-
+	if !s.validateProjectURLs(w, r, p.URLs) {
 		return
 	}
 

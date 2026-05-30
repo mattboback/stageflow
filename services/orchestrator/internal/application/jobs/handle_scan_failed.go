@@ -16,5 +16,6 @@ func (s *Service) HandleScanFailed(
 	}
 
 	slog.Error("Handling scan.failed", "job_id", payload.JobID, "scanner", payload.ScannerType, "error", payload.Error)
+
 	return s.RecordScannerFailure(ctx, payload)
 }

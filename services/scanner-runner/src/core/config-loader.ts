@@ -134,7 +134,7 @@ function getEnvBool(name: string, defaultValue: boolean): boolean {
 	if (['1', 'true', 'yes', 'on'].includes(normalized)) {
 		return true;
 	}
-	return defaultValue;
+	throw new Error(`Invalid boolean environment variable ${name}: ${raw}`);
 }
 
 function getEnvNumber(name: string, defaultValue: number): number {
@@ -143,7 +143,11 @@ function getEnvNumber(name: string, defaultValue: number): number {
 		return defaultValue;
 	}
 	const n = Number(raw);
-	return Number.isFinite(n) ? n : defaultValue;
+	if (!Number.isFinite(n)) {
+		throw new Error(`Invalid numeric environment variable ${name}: ${raw}`);
+	}
+
+	return n;
 }
 
 function getEnvInt(name: string, defaultValue: number): number {
@@ -152,7 +156,11 @@ function getEnvInt(name: string, defaultValue: number): number {
 		return defaultValue;
 	}
 	const n = Number.parseInt(raw, 10);
-	return Number.isFinite(n) && n >= 0 ? n : defaultValue;
+	if (!Number.isInteger(n) || String(n) !== raw.trim() || n < 0) {
+		throw new Error(`Invalid integer environment variable ${name}: ${raw}`);
+	}
+
+	return n;
 }
 
 function loadScannerOptionsFromEnv(): Record<string, unknown> | undefined {

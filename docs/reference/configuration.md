@@ -135,7 +135,7 @@ The frontend container builds the SvelteKit app to static files and serves them 
 
 ### Scanner Registry Overrides
 
-Built-in scanner metadata is embedded from `libs/go/scannercatalog/manifests/*/manifest.json`. The checked-in compose files mount `infra/scanners/scanners.yaml` into both Platform API and Orchestrator as `/data/scanners.yaml`; `just setup` creates that local file from `services/orchestrator/config/scanners.yaml` when needed. Use `infra/scanners/scanners.example.yaml` as a public template for deployments that need to disable scanners, override images, or tune resource limits without editing embedded manifests.
+Built-in scanner metadata is embedded from `libs/go/scannercatalog/manifests/*/manifest.json`. The checked-in compose files mount `infra/scanners/scanners.yaml` into both Platform API and Orchestrator as `/data/scanners.yaml`; `just setup` creates that local file from `infra/scanners/scanners.example.yaml` when needed. Use that tracked example as the public template for deployments that need to disable scanners, override images, or tune resource limits without editing embedded manifests. `services/orchestrator/config/scanners.yaml` is a service-local example/default, not the setup template.
 
 Current built-in scanner IDs are: `axe`, `lighthouse`, `seo`, `security-headers`, `link-checker`, `open-graph`, `spelling-grammar`, and `ai-navigator`.
 

@@ -47,8 +47,8 @@ func TestRunProjectCommand_PlaceholderPreflight(t *testing.T) {
 		&rootOptions{apiURL: "http://localhost:8080"},
 		func(string) string { return "" },
 		&projectCmdOptions{
-			Timeout:   time.Minute,
-			MaxIssues: defaultMaxIssues,
+			Timeout: time.Minute,
+			Report:  reportCommandOptions{maxIssues: defaultMaxIssues},
 		},
 	)
 	if runErr == nil {

@@ -240,15 +240,19 @@ success:
 }
 
 func TestLoadAuthInputFromFlags_MutuallyExclusive(t *testing.T) {
-	_, err := loadAuthInputFromFlags("/x", "/y")
+	_, _, err := loadAuthInputFromFlags("/x", "/y")
 	if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Fatalf("expected mutually-exclusive error, got %v", err)
 	}
 }
 
 func TestLoadAuthInputFromFlags_NeitherSet(t *testing.T) {
-	got, err := loadAuthInputFromFlags("", "")
+	got, hasAuth, err := loadAuthInputFromFlags("", "")
 	requireNoErr(t, err)
+
+	if hasAuth {
+		t.Fatal("expected hasAuth=false when no flags set")
+	}
 
 	if got != nil {
 		t.Fatalf("expected nil JobAuthInput when no flags set, got %#v", got)

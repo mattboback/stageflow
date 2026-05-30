@@ -221,3 +221,29 @@ func TestGetEnvDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestStrictEnvHelpersRejectMalformedExplicitValues(t *testing.T) {
+	t.Run("int", func(t *testing.T) {
+		t.Setenv("TEST_STRICT_INT", "nope")
+
+		if _, err := GetEnvIntStrict("TEST_STRICT_INT", 10); err == nil {
+			t.Fatal("GetEnvIntStrict() err = nil, want non-nil")
+		}
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		t.Setenv("TEST_STRICT_BOOL", "treu")
+
+		if _, err := GetEnvBoolStrict("TEST_STRICT_BOOL", true); err == nil {
+			t.Fatal("GetEnvBoolStrict() err = nil, want non-nil")
+		}
+	})
+
+	t.Run("duration", func(t *testing.T) {
+		t.Setenv("TEST_STRICT_DURATION", "later")
+
+		if _, err := GetEnvDurationStrict("TEST_STRICT_DURATION", time.Second); err == nil {
+			t.Fatal("GetEnvDurationStrict() err = nil, want non-nil")
+		}
+	})
+}

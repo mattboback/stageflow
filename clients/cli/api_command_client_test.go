@@ -16,6 +16,7 @@ func TestAPICommandClient_TimesOutHungScannersResponse(t *testing.T) {
 
 	previousTimeout := apiCommandHTTPTimeout
 	apiCommandHTTPTimeout = 20 * time.Millisecond
+
 	t.Cleanup(func() {
 		apiCommandHTTPTimeout = previousTimeout
 	})

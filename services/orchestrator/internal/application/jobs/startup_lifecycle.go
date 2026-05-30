@@ -186,18 +186,22 @@ func (s *Service) startExtraction(ctx context.Context, job *models.Job) error {
 	case domainjobs.ExtractionStartAlreadyExtracting:
 	case domainjobs.ExtractionStartAdvance:
 		if updateErr := s.store.UpdateJobState(ctx, job.ID, models.JobStateExtracting); updateErr != nil {
-			return fmt.Errorf("failed to update job state to extracting: %w", updateErr)
+			return s.failExtractionSetup(
+				ctx,
+				job,
+				fmt.Errorf("failed to update job state to extracting: %w", updateErr),
+			)
 		}
 
 		job.State = models.JobStateExtracting
 
 		if recordErr := s.store.RecordExtractionStart(ctx, job.ID); recordErr != nil {
-			return fmt.Errorf("failed to record extraction start: %w", recordErr)
+			return s.failExtractionSetup(ctx, job, fmt.Errorf("failed to record extraction start: %w", recordErr))
 		}
 	}
 
 	if workerErr := s.runtime.StartExtractionWorker(ctx, job); workerErr != nil {
-		return fmt.Errorf("failed to start extraction worker: %w", workerErr)
+		return s.failExtractionSetup(ctx, job, fmt.Errorf("failed to start extraction worker: %w", workerErr))
 	}
 
 	return nil
@@ -214,12 +218,38 @@ func (s *Service) ensureJobPod(ctx context.Context, job *models.Job) error {
 	}
 
 	if updateErr := s.store.UpdateJobPodID(ctx, job.ID, podID); updateErr != nil {
-		return fmt.Errorf("failed to update job pod ID: %w", updateErr)
+		job.PodID = podID
+
+		return s.failExtractionSetup(ctx, job, fmt.Errorf("failed to update job pod ID: %w", updateErr))
 	}
 
 	job.PodID = podID
 
 	return nil
+}
+
+func (s *Service) failExtractionSetup(ctx context.Context, job *models.Job, setupErr error) error {
+	if job != nil && job.PodID != "" {
+		if cleanupErr := s.runtime.CleanupJob(ctx, job); cleanupErr != nil {
+			slog.Warn("Failed to clean up job runtime after extraction setup failure",
+				"job_id", job.ID,
+				"pod_id", job.PodID,
+				"error", cleanupErr,
+			)
+		}
+	}
+
+	if job != nil {
+		s.failJobSafe(
+			ctx,
+			job.ID,
+			"extraction_setup",
+			"Extraction setup failed",
+			setupErr.Error(),
+		)
+	}
+
+	return setupErr
 }
 
 func (s *Service) failJobSafe(ctx context.Context, jobID, stage, message, details string) {

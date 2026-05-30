@@ -248,14 +248,25 @@ Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guid
 
 ## Screenshots
 
+### Real-World Dogfooding: Auditing AlchemizeCV
+StageFlow is used to continuously audit [AlchemizeCV](https://alchemizecv.com) (our resume-tailoring SaaS platform) using a secure, multi-step authenticated scanning flow:
+
 <table>
   <tr>
-    <td><img src="docs/images/scan-in-progress.png" alt="Live scan progress with scanner status and event streaming" /></td>
-    <td><img src="docs/images/report-overview.png" alt="Unified report overview with score, issue totals, and scanner summary" /></td>
+    <td><img src="docs/images/scan-in-progress.png" alt="Live scan progress of AlchemizeCV with scanner status and event streaming" /></td>
+    <td><img src="docs/images/report-overview.png" alt="Unified report overview of AlchemizeCV's private workspace dashboard" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Live job progress streamed over SSE</em></td>
-    <td align="center"><em>Contract-driven unified report</em></td>
+    <td align="center"><em>Live job progress of AlchemizeCV scan streamed over SSE</em></td>
+    <td align="center"><em>Unified report overview of AlchemizeCV's private dashboard after authentication</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/report-issues.png" alt="Detailed issues view of AlchemizeCV dashboard audit" /></td>
+    <td><img src="docs/images/report-pages.png" alt="Page-level visual evidence and contrast highlights on the AlchemizeCV dashboard" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Grouped scanner issues view with precise rule breakdowns</em></td>
+    <td align="center"><em>Page-level interactive evidence overlay showing visual accessibility outlines</em></td>
   </tr>
 </table>
 

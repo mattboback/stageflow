@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
+	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -216,6 +217,139 @@ func TestServiceRecordScannerCompletionDoesNotCompleteWithoutOwnership(t *testin
 
 	if store.claimJobCompletionCalls != 1 {
 		t.Fatalf("ClaimJobCompletion() calls = %d, want 1", store.claimJobCompletionCalls)
+	}
+
+	if store.completeJobCalls != 0 {
+		t.Fatalf("CompleteJobWithTerminalEvent() calls = %d, want 0", store.completeJobCalls)
+	}
+
+	if publisher.completedCalls != 0 {
+		t.Fatalf("PublishJobCompleted() calls = %d, want 0", publisher.completedCalls)
+	}
+}
+
+func TestServiceCompleteJobCompletingPublishesPendingTerminalEvent(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{
+		pendingTerminalEvents: []TerminalEvent{
+			{
+				Event: events.EventJobCompleted,
+				JobCompleted: &events.JobCompletedPayload{
+					JobID:  "job-completing",
+					Status: events.JobStatusSuccess,
+				},
+			},
+		},
+	}
+	artifacts := &fakeArtifacts{reportPath: "job-completing/report.json"}
+	publisher := &fakePublisher{}
+	service := NewService(store, &fakeRuntime{}, artifacts, publisher)
+
+	job := &models.Job{
+		ID:    "job-completing",
+		State: models.JobStateCompleting,
+	}
+
+	if err := service.CompleteJob(t.Context(), job); err != nil {
+		t.Fatalf("CompleteJob() error = %v", err)
+	}
+
+	if store.listUnpublishedTerminalEventsCalls != 1 {
+		t.Fatalf("ListUnpublishedTerminalEvents() calls = %d, want 1", store.listUnpublishedTerminalEventsCalls)
+	}
+
+	if publisher.completedCalls != 1 {
+		t.Fatalf("PublishJobCompleted() calls = %d, want 1", publisher.completedCalls)
+	}
+
+	if store.markTerminalEventPublishedCalls != 1 {
+		t.Fatalf("MarkTerminalEventPublished() calls = %d, want 1", store.markTerminalEventPublishedCalls)
+	}
+
+	if artifacts.buildAggregatedReportCalls != 0 {
+		t.Fatalf("BuildAggregatedReport() calls = %d, want 0", artifacts.buildAggregatedReportCalls)
+	}
+
+	if store.completeJobCalls != 0 {
+		t.Fatalf("CompleteJobWithTerminalEvent() calls = %d, want 0", store.completeJobCalls)
+	}
+}
+
+func TestServiceCompleteJobCompletingRedeliveryResumesWithoutPendingTerminalEvent(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{}
+	artifacts := &fakeArtifacts{reportPath: "job-redelivery/report.json"}
+	publisher := &fakePublisher{}
+	service := NewService(store, &fakeRuntime{}, artifacts, publisher)
+	ctx := sharedmsg.WithReceivedEventMeta(t.Context(), &sharedmsg.ReceivedEventMeta{Deliveries: 2})
+
+	job := &models.Job{
+		ID:    "job-redelivery",
+		State: models.JobStateCompleting,
+		ScannerResults: map[string]*models.ScannerResult{
+			"axe": {
+				ScannerType: "axe",
+				Success:     true,
+				ReportPath:  "job-redelivery/axe/report.html",
+			},
+		},
+	}
+
+	if err := service.CompleteJob(ctx, job); err != nil {
+		t.Fatalf("CompleteJob() error = %v", err)
+	}
+
+	if store.claimJobCompletionCalls != 0 {
+		t.Fatalf("ClaimJobCompletion() calls = %d, want 0", store.claimJobCompletionCalls)
+	}
+
+	if artifacts.buildAggregatedReportCalls != 1 {
+		t.Fatalf("BuildAggregatedReport() calls = %d, want 1", artifacts.buildAggregatedReportCalls)
+	}
+
+	if store.completeJobCalls != 1 {
+		t.Fatalf("CompleteJobWithTerminalEvent() calls = %d, want 1", store.completeJobCalls)
+	}
+
+	if publisher.completedCalls != 1 {
+		t.Fatalf("PublishJobCompleted() calls = %d, want 1", publisher.completedCalls)
+	}
+
+	if store.markTerminalEventPublishedCalls != 1 {
+		t.Fatalf("MarkTerminalEventPublished() calls = %d, want 1", store.markTerminalEventPublishedCalls)
+	}
+}
+
+func TestServiceCompleteJobCompletingFirstDeliveryWithoutPendingTerminalEventNoops(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{}
+	artifacts := &fakeArtifacts{reportPath: "job-first-delivery/report.json"}
+	publisher := &fakePublisher{}
+	service := NewService(store, &fakeRuntime{}, artifacts, publisher)
+	ctx := sharedmsg.WithReceivedEventMeta(t.Context(), &sharedmsg.ReceivedEventMeta{Deliveries: 1})
+
+	job := &models.Job{
+		ID:    "job-first-delivery",
+		State: models.JobStateCompleting,
+	}
+
+	if err := service.CompleteJob(ctx, job); err != nil {
+		t.Fatalf("CompleteJob() error = %v", err)
+	}
+
+	if store.listUnpublishedTerminalEventsCalls != 1 {
+		t.Fatalf("ListUnpublishedTerminalEvents() calls = %d, want 1", store.listUnpublishedTerminalEventsCalls)
+	}
+
+	if store.claimJobCompletionCalls != 0 {
+		t.Fatalf("ClaimJobCompletion() calls = %d, want 0", store.claimJobCompletionCalls)
+	}
+
+	if artifacts.buildAggregatedReportCalls != 0 {
+		t.Fatalf("BuildAggregatedReport() calls = %d, want 0", artifacts.buildAggregatedReportCalls)
 	}
 
 	if store.completeJobCalls != 0 {
@@ -647,10 +781,12 @@ func (f *fakeRuntime) recordOperation(op string) {
 }
 
 type fakeArtifacts struct {
-	reportPath string
+	reportPath                 string
+	buildAggregatedReportCalls int
 }
 
 func (f *fakeArtifacts) BuildAggregatedReport(_ context.Context, _ *models.Job) (string, error) {
+	f.buildAggregatedReportCalls++
 	return f.reportPath, nil
 }
 

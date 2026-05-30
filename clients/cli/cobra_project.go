@@ -8,8 +8,7 @@ import (
 
 func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	runOpts := &projectCmdOptions{
-		Timeout:   10 * time.Minute,
-		MaxIssues: defaultMaxIssues,
+		Timeout: 10 * time.Minute,
 	}
 	doctorOpts := &projectDoctorCmdOptions{
 		Timeout: 2 * time.Minute,
@@ -29,12 +28,7 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	}
 
 	cmd.Flags().DurationVar(&runOpts.Timeout, "timeout", runOpts.Timeout, "Max total time (dev + scan)")
-	cmd.Flags().IntVar(
-		&runOpts.MaxIssues,
-		"max-issues",
-		runOpts.MaxIssues,
-		"Max issues to include in output (0 = unlimited)",
-	)
+	bindReportFlags(cmd, &runOpts.Report, false)
 	cmd.Flags().BoolVar(&runOpts.NoStream, "no-stream", false, "Poll instead of SSE")
 	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
@@ -87,9 +81,9 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 }
 
 type projectCmdOptions struct {
-	Timeout   time.Duration
-	MaxIssues int
-	NoStream  bool
+	Timeout  time.Duration
+	NoStream bool
+	Report   reportCommandOptions
 }
 
 type projectDoctorCmdOptions struct {

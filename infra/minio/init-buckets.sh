@@ -7,8 +7,17 @@ PODMAN=${PODMAN:-podman}
 MC_IMAGE=${MC_IMAGE:-docker.io/minio/mc}
 MC_NETWORK=${MC_NETWORK:-host}
 MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://127.0.0.1:9000}
-MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
-MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-password}
+
+if [[ -f .env ]]; then
+	set -a
+	# shellcheck source=/dev/null
+	source .env
+	set +a
+fi
+
+: "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set, or provide it in .env}"
+: "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set, or provide it in .env}"
+
 MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-}
 MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-}
 MINIO_APP_POLICY=${MINIO_APP_POLICY:-stageflow-app}
