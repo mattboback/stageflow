@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	jobstate "github.com/mattboback/stageflow/libs/go/domain/job"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -55,17 +56,109 @@ func (d *Database) execJobUpdate(ctx context.Context, jobID, query string, args 
 
 // UpdateJobState updates the job state and updated_at timestamp.
 func (d *Database) UpdateJobState(ctx context.Context, jobID string, state models.JobState) error {
+	targetRank := jobstate.Order(state)
+	if targetRank < 0 {
+		return fmt.Errorf("unsupported job state: %s", state)
+	}
+
 	query := `
 		UPDATE jobs
 		SET state = ?, updated_at = ?
 		WHERE id = ?
+		  AND state NOT IN (?, ?)
+		  AND ` + jobstate.StateRankSQL() + ` <= ?
 	`
 
-	if err := d.execJobUpdate(ctx, jobID, query, state, time.Now(), jobID); err != nil {
+	result, err := d.execContext(
+		ctx,
+		query,
+		state,
+		time.Now(),
+		jobID,
+		models.JobStateDone,
+		models.JobStateFailed,
+		targetRank,
+	)
+	if err != nil {
 		return fmt.Errorf("failed to update job state: %w", err)
 	}
 
-	return nil
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows != 0 {
+		return nil
+	}
+
+	current, stateErr := d.getJobState(ctx, jobID)
+	if errors.Is(stateErr, sql.ErrNoRows) {
+		return fmt.Errorf("job not found: %s", jobID)
+	}
+
+	if stateErr != nil {
+		return fmt.Errorf("failed to load job state: %w", stateErr)
+	}
+
+	if current == state {
+		return nil
+	}
+
+	if jobstate.IsTerminal(current) {
+		return fmt.Errorf("job %s is terminal (state=%s), refusing transition to %s", jobID, current, state)
+	}
+
+	return fmt.Errorf("job %s not eligible for transition to %s from %s", jobID, state, current)
+}
+
+// ClaimJobCompletion atomically grants ownership of the SCANNING -> COMPLETING
+// work. Duplicate scanner terminal events see claimed=false and must not
+// aggregate, cleanup, or publish terminal events.
+func (d *Database) ClaimJobCompletion(ctx context.Context, jobID string) (bool, error) {
+	now := time.Now()
+
+	result, err := d.execContext(
+		ctx,
+		`
+			UPDATE jobs
+			SET state = ?, updated_at = ?
+			WHERE id = ?
+			  AND state = ?
+		`,
+		models.JobStateCompleting,
+		now,
+		jobID,
+		models.JobStateScanning,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to claim job completion: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows != 0 {
+		return true, nil
+	}
+
+	state, err := d.getJobState(ctx, jobID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, fmt.Errorf("job not found: %s", jobID)
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("failed to load job state: %w", err)
+	}
+
+	switch state {
+	case models.JobStateCompleting, models.JobStateDone, models.JobStateFailed:
+		return false, nil
+	default:
+		return false, fmt.Errorf("job %s not eligible for completion claim (state=%s)", jobID, state)
+	}
 }
 
 // UpdateJobPodID updates the job's pod ID.

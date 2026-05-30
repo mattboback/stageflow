@@ -17,8 +17,8 @@ func TestE2E_ScanFailureFlow(t *testing.T) {
 
 	jobCreated := &events.JobCreatedPayload{
 		JobID:     jobID,
-		InputType: "directory",
-		InputPath: "staging/test-job-789",
+		InputType: events.InputTypeZip,
+		InputPath: "staging/test-job-789/site.zip",
 		Config:    models.JobConfig{Modules: []string{"axe"}},
 	}
 	if err := orch.HandleJobCreated(ctx, jobCreated); err != nil {
@@ -26,8 +26,10 @@ func TestE2E_ScanFailureFlow(t *testing.T) {
 	}
 
 	extractionReady := &events.ExtractionReadyPayload{
-		JobID:      jobID,
-		TotalPages: 3,
+		JobID:          jobID,
+		ProvenancePath: "/workspace/provenance.json",
+		BaseURL:        "http://127.0.0.1:8080",
+		TotalPages:     3,
 	}
 	if err := orch.HandleExtractionReady(ctx, extractionReady); err != nil {
 		t.Fatalf("HandleExtractionReady failed: %v", err)

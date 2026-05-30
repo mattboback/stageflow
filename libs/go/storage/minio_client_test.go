@@ -314,6 +314,46 @@ func TestGetPresignedURL_UsesPublicClientWhenConfigured(t *testing.T) {
 	}
 }
 
+func TestGetPresignedURL_UseProxyURLsStillPresigns(t *testing.T) {
+	internal := &fakeMinioClient{
+		PresignFn: func(_ context.Context, _, _ string, _ time.Duration, _ url.Values) (*url.URL, error) {
+			t.Fatalf("unexpected internal presign call")
+
+			return nil, errors.New("unexpected internal presign call")
+		},
+	}
+
+	publicURL, _ := url.Parse("https://public.example.com/scanner-artifacts/job/report.json?X-Amz-Signature=abc")
+	public := &fakeMinioClient{
+		PresignFn: func(_ context.Context, bucket, object string, _ time.Duration, _ url.Values) (*url.URL, error) {
+			if bucket != BucketArtifacts || object != "job/report.json" {
+				t.Fatalf("unexpected presign target %s/%s", bucket, object)
+			}
+
+			return publicURL, nil
+		},
+	}
+
+	client := &MinIOClient{
+		client:       internal,
+		publicClient: public,
+		config:       &MinIOConfig{UseProxyURLs: true},
+	}
+
+	got, err := client.GetPresignedURL(context.Background(), BucketArtifacts, "job/report.json", time.Minute)
+	if err != nil {
+		t.Fatalf("GetPresignedURL: %v", err)
+	}
+
+	if got != publicURL.String() {
+		t.Fatalf("expected %q, got %q", publicURL.String(), got)
+	}
+
+	if public.presignCalls != 1 {
+		t.Fatalf("expected 1 public presign call, got %d", public.presignCalls)
+	}
+}
+
 func TestGetPresignedURL_FallsBackToInternalClient(t *testing.T) {
 	internalURL, _ := url.Parse("https://internal.example.com/presigned")
 	internal := &fakeMinioClient{

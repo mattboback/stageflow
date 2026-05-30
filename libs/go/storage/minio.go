@@ -300,13 +300,10 @@ func (c *MinIOClient) UploadFile(ctx context.Context, bucket, path string, reade
 	return nil
 }
 
-// GetPresignedURL generates a presigned URL for downloading a file.
-// If UseProxyURLs is set, returns a simple public URL for Caddy proxy instead of a presigned URL.
+// GetPresignedURL generates a presigned URL for downloading a file. When a
+// public endpoint is configured, the URL is signed against that endpoint so
+// private buckets can still be served through the public Caddy/MinIO route.
 func (c *MinIOClient) GetPresignedURL(ctx context.Context, bucket, path string, expiry time.Duration) (string, error) {
-	if c.config.UseProxyURLs {
-		return c.buildPublicProxyURL(bucket, path)
-	}
-
 	// Use cached public client if available (created once in NewMinIOClient)
 	clientToUse := c.client
 	if c.publicClient != nil {
@@ -319,22 +316,6 @@ func (c *MinIOClient) GetPresignedURL(ctx context.Context, bucket, path string, 
 	}
 
 	return url.String(), nil
-}
-
-// buildPublicProxyURL builds a simple public URL for Caddy proxy access.
-// Caddy is configured to proxy /{bucket}/* to MinIO.
-func (c *MinIOClient) buildPublicProxyURL(bucket, path string) (string, error) {
-	scheme := "http://"
-	if c.config.PublicUseSSL {
-		scheme = "https://"
-	}
-
-	endpoint := c.config.PublicEndpoint
-	if endpoint == "" {
-		return "", errors.New("public endpoint is required when MINIO_USE_PROXY_URLS is enabled")
-	}
-
-	return fmt.Sprintf("%s%s/%s/%s", scheme, endpoint, bucket, path), nil
 }
 
 // DownloadFile retrieves an object reader from MinIO.

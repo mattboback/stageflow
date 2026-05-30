@@ -1176,6 +1176,146 @@ describe('LighthouseScanner', () => {
 		});
 	});
 
+	describe('authenticated browser state', () => {
+		it('hydrates Lighthouse Chrome with Playwright context storage before auditing', async () => {
+			const testScanner = new LighthouseScanner();
+			const logger = createMockLogger();
+			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
+
+			const storageState = {
+				cookies: [
+					{
+						name: 'session',
+						value: 'authenticated',
+						domain: 'example.com',
+						path: '/',
+						expires: -1,
+						httpOnly: true,
+						secure: true,
+						sameSite: 'Lax' as const
+					}
+				],
+				origins: [
+					{
+						origin: 'https://example.com',
+						localStorage: [{ name: 'auth-token', value: 'present' }]
+					}
+				]
+			};
+			const setStorageState = vi.fn().mockResolvedValue(undefined);
+			const cdpClose = vi.fn().mockResolvedValue(undefined);
+			const connectOverCDPSpy = vi.spyOn(chromium, 'connectOverCDP').mockResolvedValue({
+				contexts: () => [{ setStorageState }],
+				close: cdpClose
+			} as never);
+			const lighthouseMock = vi.fn().mockResolvedValue({
+				lhr: {
+					requestedUrl: 'https://example.com/dashboard',
+					finalUrl: 'https://example.com/dashboard',
+					fetchTime: new Date().toISOString(),
+					categories: {},
+					audits: {}
+				}
+			});
+
+			(
+				testScanner as unknown as {
+					loadLighthouseModule: () => Promise<{ default: typeof lighthouseMock }>;
+				}
+			).loadLighthouseModule = vi.fn().mockResolvedValue({ default: lighthouseMock });
+			(
+				testScanner as unknown as {
+					ensureChrome: () => Promise<{ port: number; kill: () => Promise<void> }>;
+				}
+			).ensureChrome = vi.fn().mockResolvedValue({
+				port: 9222,
+				kill: vi.fn()
+			});
+
+			const storageStateMock = vi.fn().mockResolvedValue(storageState);
+			const page = createMockPage({
+				context: vi.fn().mockReturnValue({
+					storageState: storageStateMock
+				})
+			});
+
+			const result = await callPrivateMethod(
+				testScanner,
+				'runLighthouse',
+				page,
+				'https://example.com/dashboard'
+			);
+
+			expect(result).toMatchObject({
+				requestedUrl: 'https://example.com/dashboard',
+				finalUrl: 'https://example.com/dashboard'
+			});
+			expect(connectOverCDPSpy).toHaveBeenCalledWith('http://127.0.0.1:9222', {
+				timeout: 10_000
+			});
+			expect(setStorageState).toHaveBeenCalledWith(storageState);
+			expect(lighthouseMock).toHaveBeenCalledWith(
+				'https://example.com/dashboard',
+				expect.objectContaining({
+					port: 9222,
+					disableStorageReset: true
+				}),
+				expect.any(Object)
+			);
+			expect(cdpClose).toHaveBeenCalledWith({
+				reason: 'Lighthouse auth state hydration complete'
+			});
+		});
+
+		it('keeps Lighthouse storage reset enabled when the Playwright context has no state', async () => {
+			const testScanner = new LighthouseScanner();
+			(testScanner as unknown as { logger: ScannerLogger }).logger = createMockLogger();
+
+			const connectOverCDPSpy = vi.spyOn(chromium, 'connectOverCDP');
+			const lighthouseMock = vi.fn().mockResolvedValue({
+				lhr: {
+					requestedUrl: 'https://example.com/public',
+					finalUrl: 'https://example.com/public',
+					fetchTime: new Date().toISOString(),
+					categories: {},
+					audits: {}
+				}
+			});
+
+			(
+				testScanner as unknown as {
+					loadLighthouseModule: () => Promise<{ default: typeof lighthouseMock }>;
+				}
+			).loadLighthouseModule = vi.fn().mockResolvedValue({ default: lighthouseMock });
+			(
+				testScanner as unknown as {
+					ensureChrome: () => Promise<{ port: number; kill: () => Promise<void> }>;
+				}
+			).ensureChrome = vi.fn().mockResolvedValue({
+				port: 9223,
+				kill: vi.fn()
+			});
+
+			const page = createMockPage({
+				context: vi.fn().mockReturnValue({
+					storageState: vi.fn().mockResolvedValue({ cookies: [], origins: [] })
+				})
+			});
+
+			await callPrivateMethod(testScanner, 'runLighthouse', page, 'https://example.com/public');
+
+			expect(connectOverCDPSpy).not.toHaveBeenCalled();
+			expect(lighthouseMock).toHaveBeenCalledWith(
+				'https://example.com/public',
+				expect.objectContaining({
+					port: 9223,
+					disableStorageReset: false
+				}),
+				expect.any(Object)
+			);
+		});
+	});
+
 	describe('scanPage resilience', () => {
 		it('continues when re-navigation and screenshot capture fail', async () => {
 			const testScanner = new LighthouseScanner();

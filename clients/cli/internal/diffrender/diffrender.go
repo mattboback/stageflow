@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
@@ -89,7 +90,47 @@ func IsRegressed(e Envelope) bool {
 // IsRemoteTarget reports whether a `diff` command's current-target string is
 // a URL to scan live (versus a path to a saved report file).
 func IsRemoteTarget(target string) bool {
-	return strings.HasPrefix(target, "http://") || strings.HasPrefix(target, "https://")
+	trimmed := strings.TrimSpace(target)
+	lower := strings.ToLower(trimmed)
+
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+		return true
+	}
+
+	if trimmed == "" ||
+		strings.Contains(trimmed, "://") ||
+		strings.HasPrefix(trimmed, "/") ||
+		strings.HasPrefix(trimmed, "./") ||
+		strings.HasPrefix(trimmed, "../") ||
+		strings.HasPrefix(trimmed, `\`) ||
+		strings.HasPrefix(trimmed, `.\`) ||
+		strings.HasPrefix(trimmed, `..\`) {
+		return false
+	}
+
+	if !strings.ContainsAny(trimmed, `/\`) && strings.HasSuffix(lower, ".json") {
+		return false
+	}
+
+	host := trimmed
+	if idx := strings.IndexAny(host, `/\`); idx >= 0 {
+		host = host[:idx]
+	}
+
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+
+	if net.ParseIP(host) != nil {
+		return true
+	}
+
+	return strings.Contains(host, ".")
 }
 
 // SeverityChecker abstracts severity gating so callers can wire in their own

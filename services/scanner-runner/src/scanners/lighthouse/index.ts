@@ -2,6 +2,12 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
+	chromium,
+	type Browser,
+	type BrowserContext as PlaywrightBrowserContext
+} from 'playwright';
+
+import {
 	type Issue,
 	type PageScanResult,
 	type ScanContext,
@@ -38,6 +44,15 @@ import {
 } from './types';
 
 export type { LighthouseOptions } from './types';
+
+type BrowserStorageState = Awaited<ReturnType<PlaywrightBrowserContext['storageState']>>;
+
+function hasStorageStateEntries(storageState: BrowserStorageState): boolean {
+	return (
+		storageState.cookies.length > 0 ||
+		storageState.origins.some((origin) => origin.localStorage.length > 0)
+	);
+}
 
 export class LighthouseScanner extends ScannerBase {
 	readonly metadata: ScannerMetadata = {
@@ -216,7 +231,7 @@ export class LighthouseScanner extends ScannerBase {
 	// --- Chrome and Lighthouse lifecycle ---
 
 	private async runLighthouse(
-		_page: import('playwright').Page,
+		page: import('playwright').Page,
 		url: string
 	): Promise<LighthouseResult> {
 		const lighthouseModule = await this.loadLighthouseModule();
@@ -225,16 +240,64 @@ export class LighthouseScanner extends ScannerBase {
 		return this.runSerialized(async () => {
 			const chrome = await this.ensureChrome();
 			const categories = this.options.categories ?? DEFAULT_LIGHTHOUSE_CATEGORIES;
+			const cdpBrowser = await this.hydrateLighthouseBrowserState(page, chrome.port);
+			const disableStorageReset = cdpBrowser !== null;
 
-			return runLighthouseInvocation({
-				url,
-				port: chrome.port,
-				categories,
-				lighthouse,
-				logger: this.logger,
-				scanStageLogger: this.scanStageLogger
-			});
+			try {
+				return await runLighthouseInvocation({
+					url,
+					port: chrome.port,
+					categories,
+					disableStorageReset,
+					lighthouse,
+					logger: this.logger,
+					scanStageLogger: this.scanStageLogger
+				});
+			} finally {
+				if (cdpBrowser !== null) {
+					await this.closeCdpConnection(cdpBrowser);
+				}
+			}
 		});
+	}
+
+	private async hydrateLighthouseBrowserState(
+		page: import('playwright').Page,
+		port: number
+	): Promise<Browser | null> {
+		const storageState = await page.context().storageState();
+		if (!hasStorageStateEntries(storageState)) {
+			return null;
+		}
+
+		const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, {
+			timeout: 10_000
+		});
+		const [defaultContext] = browser.contexts();
+		if (!defaultContext) {
+			await this.closeCdpConnection(browser);
+			throw new Error(
+				'Unable to hydrate Lighthouse auth state: CDP browser has no default context'
+			);
+		}
+
+		await defaultContext.setStorageState(storageState);
+		this.logger.debug('Hydrated Lighthouse browser state from Playwright context', {
+			cookies: storageState.cookies.length,
+			origins: storageState.origins.length
+		});
+
+		return browser;
+	}
+
+	private async closeCdpConnection(browser: Browser): Promise<void> {
+		try {
+			await browser.close({ reason: 'Lighthouse auth state hydration complete' });
+		} catch (error) {
+			this.logger.warn('Failed to close Lighthouse CDP connection', {
+				error: error instanceof Error ? error.message : String(error)
+			});
+		}
 	}
 
 	protected override async cleanup(): Promise<void> {

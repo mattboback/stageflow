@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 )
@@ -22,11 +23,22 @@ type AuthStorageStateUploader struct {
 	storage sharedstorage.Uploader
 }
 
+// AuthStorageStateCleaner removes the job-scoped storage-state object after
+// scanners no longer need it. It refuses non-auth keys so cleanup cannot delete
+// report artifacts accidentally.
+type AuthStorageStateCleaner struct {
+	storage sharedstorage.Deleter
+}
+
 // NewAuthStorageStateUploader returns an uploader bound to the given storage
 // client. The shared storage client is the same one the rest of the
 // orchestrator uses; we only need the Uploader half.
 func NewAuthStorageStateUploader(storageClient sharedstorage.Uploader) *AuthStorageStateUploader {
 	return &AuthStorageStateUploader{storage: storageClient}
+}
+
+func NewAuthStorageStateCleaner(storageClient sharedstorage.Deleter) *AuthStorageStateCleaner {
+	return &AuthStorageStateCleaner{storage: storageClient}
 }
 
 // UploadAuthStorageState writes the storage-state JSON to
@@ -62,4 +74,25 @@ func (u *AuthStorageStateUploader) UploadAuthStorageState(
 	}
 
 	return key, nil
+}
+
+func (c *AuthStorageStateCleaner) DeleteAuthStorageState(ctx context.Context, key string) error {
+	if c == nil || c.storage == nil {
+		return errors.New("auth storage_state cleaner: no storage client configured")
+	}
+
+	if key == "" {
+		return nil
+	}
+
+	if strings.HasPrefix(key, "/") || strings.Contains(key, "..") ||
+		!strings.HasSuffix(key, "/auth/storage-state.json") {
+		return fmt.Errorf("auth storage_state cleaner: refusing non-auth key %q", key)
+	}
+
+	if err := c.storage.DeleteFile(ctx, sharedstorage.BucketArtifacts, key); err != nil {
+		return fmt.Errorf("delete auth storage_state %s/%s: %w", sharedstorage.BucketArtifacts, key, err)
+	}
+
+	return nil
 }

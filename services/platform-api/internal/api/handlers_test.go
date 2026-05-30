@@ -4,7 +4,9 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -20,8 +22,9 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/libs/go/storage"
+	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
@@ -217,6 +220,157 @@ func TestHandleJobURLSubmitPrivateTargetSucceedsWhenBothOptInsEnabled(t *testing
 	}
 }
 
+func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
+	server, storage, publisher := newTestServer(t)
+
+	storageState := `{"cookies":[],"origins":[]}`
+	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
+
+	publisher.onPublish = func(envelope *events.Envelope) error {
+		created, ok := envelope.Payload.(*events.JobCreatedPayload)
+		if !ok || created == nil {
+			t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
+		}
+
+		expectedKey := created.JobID + "/auth/storage-state.json"
+		uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
+		if string(uploaded) != storageState {
+			t.Fatalf("auth state was not uploaded before publish; got %q, want %q", uploaded, storageState)
+		}
+
+		return nil
+	}
+
+	body, err := json.Marshal(map[string]any{
+		"urls": []string{"https://example.com"},
+		"auth": map[string]any{
+			"mode": "storage_state",
+			"storage_state": map[string]any{
+				"content_b64": encoded,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 job.created published, got %d", len(publisher.envelopes))
+	}
+
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
+	}
+
+	authWire := string(created.Config.Auth)
+	if strings.Contains(authWire, "content_b64") || strings.Contains(authWire, encoded) {
+		t.Fatalf("published auth leaked storage-state content: %s", authWire)
+	}
+
+	expectedKey := created.JobID + "/auth/storage-state.json"
+	if !strings.Contains(authWire, `"artifact_key":"`+expectedKey+`"`) {
+		t.Fatalf("published auth missing artifact_key %q: %s", expectedKey, authWire)
+	}
+
+	uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
+	if string(uploaded) != storageState {
+		t.Fatalf("uploaded storage state = %q, want %q", uploaded, storageState)
+	}
+}
+
+func TestHandleJobURLSubmitStorageStateAuthCleanupOnPublishFailure(t *testing.T) {
+	server, storage, publisher := newTestServer(t)
+	publisher.err = errors.New("nats down")
+
+	storageState := `{"cookies":[],"origins":[]}`
+	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
+	body, err := json.Marshal(map[string]any{
+		"urls": []string{"https://example.com"},
+		"auth": map[string]any{
+			"mode": "storage_state",
+			"storage_state": map[string]any{
+				"content_b64": encoded,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal body: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(storage.deletes) != 1 {
+		t.Fatalf("expected 1 auth cleanup delete, got %d", len(storage.deletes))
+	}
+
+	if _, ok := storage.uploads[storage.deletes[0]]; ok {
+		t.Fatalf("expected uploaded auth object to be removed")
+	}
+}
+
+func TestHandleJobZipUploadCleanupOnPublishFailure(t *testing.T) {
+	server, storage, publisher := newTestServer(t)
+	publisher.err = errors.New("nats down")
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "site.zip")
+	if err != nil {
+		t.Fatalf("create form file: %v", err)
+	}
+
+	if _, writeErr := part.Write(buildTestZip(t)); writeErr != nil {
+		t.Fatalf("write file: %v", writeErr)
+	}
+
+	if fieldErr := writer.WriteField("modules", scannerTypeAxe); fieldErr != nil {
+		t.Fatalf("write modules field: %v", fieldErr)
+	}
+
+	if closeErr := writer.Close(); closeErr != nil {
+		t.Fatalf("close writer: %v", closeErr)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rr := httptest.NewRecorder()
+	server.handleJobZipUpload(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(storage.deletes) != 1 {
+		t.Fatalf("expected 1 staged ZIP cleanup delete, got %d", len(storage.deletes))
+	}
+
+	if _, ok := storage.uploads[storage.deletes[0]]; ok {
+		t.Fatalf("expected staged ZIP object to be removed")
+	}
+}
+
 func TestHandleJobURLSubmitAiNavigatorRequiresScannerConfig(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
@@ -405,7 +559,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 		t.Fatalf("marshal report: %v", err)
 	}
 
-	uploadKey := fmt.Sprintf("%s::%s", storage.BucketArtifacts, reportKey)
+	uploadKey := fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, reportKey)
 	objectStore.uploads[uploadKey] = reportBytes
 
 	if _, completeErr := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
@@ -825,10 +979,151 @@ func TestCreateProjectBodyTooLarge(t *testing.T) {
 	}
 }
 
+func TestHandleProjectScanRecordsMappingBeforePublish(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	p := createTestProject(t, server, "mapped-scan")
+
+	publisher.onPublish = func(envelope *events.Envelope) error {
+		payload, ok := envelope.Payload.(*events.JobCreatedPayload)
+		if !ok || payload == nil {
+			t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
+		}
+
+		belongs, err := server.projectStore.JobBelongsToProject(context.Background(), p.ID, payload.JobID)
+		if err != nil {
+			t.Fatalf("check project mapping during publish: %v", err)
+		}
+
+		if !belongs {
+			t.Fatalf("expected project job mapping to be durable before publish")
+		}
+
+		return nil
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+p.Slug+"/scan", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	server.handleProjectScan(rr, req, p.Slug)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(publisher.envelopes) != 1 {
+		t.Fatalf("expected 1 job.created published, got %d", len(publisher.envelopes))
+	}
+}
+
+func TestHandleProjectScanMappingFailureReturnsErrorBeforePublish(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	p := createTestProject(t, server, "mapping-fails")
+	baseStore := requireProjectStore(t, server)
+	server.projectStore = &failingRecordProjectStore{
+		Store:     baseStore,
+		recordErr: errors.New("project_jobs unavailable"),
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+p.Slug+"/scan", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	server.handleProjectScan(rr, req, p.Slug)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(publisher.envelopes) != 0 {
+		t.Fatalf("expected no job.created publish when mapping fails, got %d", len(publisher.envelopes))
+	}
+}
+
+func TestHandleProjectScanPublishFailureDeletesMapping(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+	publisher.err = errors.New("nats down")
+
+	p := createTestProject(t, server, "publish-fails")
+	trackingStore := &trackingProjectStore{Store: requireProjectStore(t, server)}
+	server.projectStore = trackingStore
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+p.Slug+"/scan", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	server.handleProjectScan(rr, req, p.Slug)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if len(trackingStore.deleted) != 1 {
+		t.Fatalf("expected 1 project mapping cleanup, got %d", len(trackingStore.deleted))
+	}
+
+	belongs, err := trackingStore.JobBelongsToProject(context.Background(), p.ID, trackingStore.deleted[0])
+	if err != nil {
+		t.Fatalf("check cleaned project mapping: %v", err)
+	}
+
+	if belongs {
+		t.Fatalf("expected project job mapping to be deleted after publish failure")
+	}
+}
+
 // Helpers
+
+type failingRecordProjectStore struct {
+	*project.Store
+	recordErr error
+}
+
+func (s *failingRecordProjectStore) RecordProjectJob(context.Context, string, string) error {
+	return s.recordErr
+}
+
+type trackingProjectStore struct {
+	*project.Store
+	deleted []string
+}
+
+func (s *trackingProjectStore) DeleteProjectJob(ctx context.Context, jobID string) error {
+	s.deleted = append(s.deleted, jobID)
+
+	return s.Store.DeleteProjectJob(ctx, jobID)
+}
+
+func createTestProject(t *testing.T, server *Server, slug string) *project.Project {
+	t.Helper()
+
+	p := &project.Project{
+		Slug:     slug,
+		Name:     slug,
+		URLs:     []string{"https://example.com"},
+		Scanners: []string{scannerTypeAxe},
+	}
+
+	if err := server.projectStore.CreateProject(context.Background(), p); err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+
+	return p
+}
+
+func requireProjectStore(t *testing.T, server *Server) *project.Store {
+	t.Helper()
+
+	store, ok := server.projectStore.(*project.Store)
+	if !ok {
+		t.Fatalf("expected test server project store to be *project.Store, got %T", server.projectStore)
+	}
+
+	return store
+}
 
 type fakeStorage struct {
 	uploads map[string][]byte
+	deletes []string
 }
 
 func newFakeStorage() *fakeStorage {
@@ -905,7 +1200,11 @@ func (f *fakeStorage) DownloadFile(_ context.Context, bucket, path string) (io.R
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-func (f *fakeStorage) DeleteFile(_ context.Context, _, _ string) error {
+func (f *fakeStorage) DeleteFile(_ context.Context, bucket, path string) error {
+	key := fmt.Sprintf("%s::%s", bucket, path)
+	f.deletes = append(f.deletes, key)
+	delete(f.uploads, key)
+
 	return nil
 }
 
@@ -946,9 +1245,21 @@ func strPtr(value string) *string {
 
 type fakePublisher struct {
 	envelopes []*events.Envelope
+	err       error
+	onPublish func(envelope *events.Envelope) error
 }
 
 func (f *fakePublisher) PublishJobCreated(_ context.Context, envelope *events.Envelope) error {
+	if f.err != nil {
+		return f.err
+	}
+
+	if f.onPublish != nil {
+		if err := f.onPublish(envelope); err != nil {
+			return err
+		}
+	}
+
 	f.envelopes = append(f.envelopes, envelope)
 
 	return nil
@@ -963,9 +1274,18 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 		t.Fatalf("new store: %v", err)
 	}
 
+	projectStore, err := project.NewStore(filepath.Join(dir, "projects.db"))
+	if err != nil {
+		t.Fatalf("new project store: %v", err)
+	}
+
 	t.Cleanup(func() {
 		if closeErr := store.Close(); closeErr != nil {
 			t.Fatalf("close store: %v", closeErr)
+		}
+
+		if closeErr := projectStore.Close(); closeErr != nil {
+			t.Fatalf("close project store: %v", closeErr)
 		}
 	})
 
@@ -987,9 +1307,11 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 			Storage:         storage,
 			Publisher:       publisher,
 			StatusReader:    store,
+			ProjectStore:    projectStore,
 			ScannerRegistry: registry,
 		},
 		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: store}),
+		projectStore:    projectStore,
 		scannerRegistry: registry,
 		ipResolver:      defaultSecurityTestResolver(t),
 	}

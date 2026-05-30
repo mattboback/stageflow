@@ -4,46 +4,6 @@ import { applyScannerPreset } from '$lib/domain/scanners/presets';
 
 import { buildApiUrl } from './utils';
 
-const fallbackScannerIds = [
-	'axe',
-	'lighthouse',
-	'link-checker',
-	'security-headers',
-	'seo',
-	'open-graph',
-	'spelling-grammar'
-] as const;
-
-const fallbackScannerCapabilities = {
-	outputFormats: [],
-	supportsScreenshots: false,
-	supportsConcurrency: false,
-	requiresBrowser: false,
-	supportsOffline: false,
-	maxConcurrency: 1
-};
-
-function getFallbackScannerDefinitions(): ScannerDefinition[] {
-	return fallbackScannerIds.map((id) => ({
-		id,
-		name: id,
-		version: 'local-fallback',
-		description: '',
-		categories: [],
-		aliases: [],
-		enabled: true,
-		builtIn: true,
-		capabilities: fallbackScannerCapabilities
-	}));
-}
-
-function getFallbackScannersResponse(): ScannersResponse {
-	return {
-		scanners: getFallbackScannerDefinitions(),
-		categories: []
-	};
-}
-
 type AbortSignalAnyFn = (this: typeof AbortSignal, signals: AbortSignal[]) => AbortSignal;
 const noop = () => undefined;
 
@@ -281,7 +241,7 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 		);
 
 		if (!response.ok) {
-			return getFallbackScannersResponse();
+			throw new Error(`Scanner catalog failed to load (${response.status}). Refresh to retry.`);
 		}
 
 		const data = (await response.json()) as ScannersResponse;
@@ -293,8 +253,17 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 			scanners: enabledScanners,
 			categories: data.categories
 		};
-	} catch {
-		return getFallbackScannersResponse();
+	} catch (error) {
+		if (signal?.aborted && error instanceof Error && error.name === 'AbortError') {
+			throw error;
+		}
+
+		if (error instanceof Error && error.message.includes('Scanner catalog failed to load')) {
+			throw error;
+		}
+
+		const message = error instanceof Error ? error.message : 'Network error';
+		throw new Error(`Scanner catalog failed to load. ${message}. Refresh to retry.`);
 	}
 }
 

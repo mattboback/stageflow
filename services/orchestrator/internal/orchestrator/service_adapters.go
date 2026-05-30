@@ -2,10 +2,12 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 
+	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	adapterstorage "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/storage"
@@ -31,6 +33,7 @@ func (o *Orchestrator) newService() *appjobs.Service {
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
 		appjobs.WithAuthUploader(adapterstorage.NewAuthStorageStateUploader(o.storage)),
+		appjobs.WithAuthCleaner(adapterstorage.NewAuthStorageStateCleaner(o.storage)),
 		appjobs.WithScannerLaunchPlanner(appjobs.NewScannerLaunchPlanner(appjobs.ScannerLaunchPlannerConfig{
 			ScannerRegistry:      o.scannerRegistry,
 			DefaultScannerImage:  defaultScannerImage,
@@ -85,6 +88,10 @@ func (s orchestratorJobStore) GetJob(ctx context.Context, jobID string) (*models
 
 func (s orchestratorJobStore) UpdateJobState(ctx context.Context, jobID string, state models.JobState) error {
 	return s.orchestrator.database.UpdateJobState(ctx, jobID, state)
+}
+
+func (s orchestratorJobStore) ClaimJobCompletion(ctx context.Context, jobID string) (bool, error) {
+	return s.orchestrator.database.ClaimJobCompletion(ctx, jobID)
 }
 
 func (s orchestratorJobStore) RecordExtractionComplete(ctx context.Context, jobID string) error {
@@ -178,15 +185,59 @@ func (s orchestratorJobStore) RecordScannerFailure(
 	return s.orchestrator.database.RecordScannerFailure(ctx, jobID, scannerType, errorMsg)
 }
 
-func (s orchestratorJobStore) CompleteJob(ctx context.Context, jobID string) error {
-	return s.orchestrator.database.CompleteJob(ctx, jobID)
+func (s orchestratorJobStore) CompleteJobWithTerminalEvent(
+	ctx context.Context,
+	jobID string,
+	payload *events.JobCompletedPayload,
+) error {
+	return s.orchestrator.database.CompleteJobWithTerminalEvent(ctx, jobID, payload)
 }
 
-func (s orchestratorJobStore) FailJob(
+func (s orchestratorJobStore) FailJobWithTerminalEvent(
 	ctx context.Context,
 	jobID, stage, errorMsg, errorDetails string,
+	payload *events.JobFailedPayload,
 ) error {
-	return s.orchestrator.database.FailJob(ctx, jobID, stage, errorMsg, errorDetails)
+	return s.orchestrator.database.FailJobWithTerminalEvent(ctx, jobID, stage, errorMsg, errorDetails, payload)
+}
+
+func (s orchestratorJobStore) ListUnpublishedTerminalEvents(
+	ctx context.Context,
+	jobID string,
+) ([]appjobs.TerminalEvent, error) {
+	records, err := s.orchestrator.database.ListUnpublishedTerminalEvents(ctx, jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]appjobs.TerminalEvent, 0, len(records))
+	for _, record := range records {
+		terminalEvent := appjobs.TerminalEvent{Event: record.Event}
+		switch record.Event {
+		case events.EventJobCompleted:
+			var payload events.JobCompletedPayload
+			if err := json.Unmarshal([]byte(record.PayloadJSON), &payload); err != nil {
+				return nil, fmt.Errorf("decode job.completed terminal payload: %w", err)
+			}
+			terminalEvent.JobCompleted = &payload
+		case events.EventJobFailed:
+			var payload events.JobFailedPayload
+			if err := json.Unmarshal([]byte(record.PayloadJSON), &payload); err != nil {
+				return nil, fmt.Errorf("decode job.failed terminal payload: %w", err)
+			}
+			terminalEvent.JobFailed = &payload
+		default:
+			return nil, fmt.Errorf("unknown terminal event: %s", record.Event)
+		}
+
+		out = append(out, terminalEvent)
+	}
+
+	return out, nil
+}
+
+func (s orchestratorJobStore) MarkTerminalEventPublished(ctx context.Context, jobID, event string) error {
+	return s.orchestrator.database.MarkTerminalEventPublished(ctx, jobID, event)
 }
 
 func (s orchestratorJobStore) RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error {

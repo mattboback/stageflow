@@ -219,6 +219,12 @@ func (s *Store) RecordProjectJob(ctx context.Context, projectID, jobID string) e
 	return err
 }
 
+func (s *Store) DeleteProjectJob(ctx context.Context, jobID string) error {
+	_, err := s.db.ExecContext(ctx, `DELETE FROM project_jobs WHERE job_id = ?`, jobID)
+
+	return err
+}
+
 func (s *Store) GetProjectForJob(ctx context.Context, jobID string) (*Project, error) {
 	row := s.db.QueryRowContext(ctx,
 		`SELECT p.id, p.slug, p.name, p.urls, p.scanners, p.baseline_job_id, p.created_at, p.updated_at

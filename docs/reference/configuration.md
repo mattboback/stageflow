@@ -155,7 +155,7 @@ Most first-time local setups can ignore this section. These variables are mainly
 | ------------------------------- | --------------------------------------------------- |
 | `MINIO_ENDPOINT`                | Internal host/port for MinIO API.                   |
 | `MINIO_USE_SSL`                 | Whether internal MinIO connections use SSL.         |
-| `MINIO_USE_PROXY_URLS`          | Whether to use proxy URLs for MinIO presigned URLs. |
+| `MINIO_USE_PROXY_URLS`          | Legacy compatibility flag; artifact access is still signed through the configured public endpoint. |
 | `MINIO_REGION`                  | MinIO region configuration.                         |
 | `MINIO_ARTIFACT_BUCKET`         | Name of the bucket used for storing artifacts.      |
 | `GF_AUTH_ANONYMOUS_ENABLED`     | Enables anonymous access to Grafana dashboards.     |

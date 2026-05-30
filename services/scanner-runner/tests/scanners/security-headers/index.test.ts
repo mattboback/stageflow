@@ -119,6 +119,7 @@ const createMockContext = (overrides: Partial<ScanContext> = {}): ScanContext =>
 		resultsDir: '/tmp/results',
 		config,
 		logger: createMockLogger(),
+		targetValidationPolicy: { allowedOrigins: ['https://example.com'] },
 		...overrides
 	};
 };
@@ -263,7 +264,8 @@ describe('SecurityHeadersScanner', () => {
 			expect(result.issues).toHaveLength(0);
 			expect(fetchMock).toHaveBeenCalledWith('https://example.com/current', {
 				method: 'GET',
-				timeout: 30_000
+				timeout: 30_000,
+				maxRedirects: 0
 			});
 		});
 
@@ -312,8 +314,44 @@ describe('SecurityHeadersScanner', () => {
 
 			expect(fetchMock).toHaveBeenCalledWith('https://example.com/fallback', {
 				method: 'GET',
-				timeout: 30_000
+				timeout: 30_000,
+				maxRedirects: 0
 			});
+		});
+
+		it('blocks redirects to disallowed targets before following them', async () => {
+			const fetchMock = vi.fn().mockResolvedValue({
+				headers: () => ({ location: 'http://169.254.169.254/latest/meta-data' }),
+				status: () => 302
+			});
+			const page = {
+				url: vi.fn().mockReturnValue('https://example.com/redirect'),
+				request: {
+					fetch: fetchMock
+				},
+				evaluate: vi.fn().mockResolvedValue([])
+			} as unknown as Page;
+			const logger = createMockLogger();
+			const context = createMockContext({ page, logger });
+			const integrationScanner = new SecurityHeadersScanner();
+
+			const result = await integrationScanner.scanPage(context);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toContain('Blocked target URL');
+			expect(result.error).toContain('169.254.169.254');
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			expect(fetchMock).toHaveBeenCalledWith('https://example.com/redirect', {
+				method: 'GET',
+				timeout: 30_000,
+				maxRedirects: 0
+			});
+			expect(logger.error).toHaveBeenCalledWith(
+				'Security scan failed',
+				expect.objectContaining({
+					error: expect.stringContaining('169.254.169.254')
+				})
+			);
 		});
 
 		it('reports mixed content when insecure resources are found', async () => {

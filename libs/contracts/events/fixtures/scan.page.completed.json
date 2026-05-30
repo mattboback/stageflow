@@ -5,6 +5,7 @@
 	"producer": "axe",
 	"payload": {
 		"job_id": "job-123",
+		"scanner_type": "axe",
 		"page_id": "page-1",
 		"page_index": 1,
 		"total_pages": 3

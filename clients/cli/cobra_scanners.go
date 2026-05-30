@@ -15,7 +15,7 @@ func newScannersCmd(root *rootOptions) *cobra.Command {
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
+			client := newAPICommandClient(root)
 
 			var response apiclient.ScannersResponse
 			if err := client.GetJSON(cmd.Context(), "/api/v1/scanners", &response); err != nil {

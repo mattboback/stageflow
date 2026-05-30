@@ -1304,15 +1304,14 @@ Two important invariants:
 │        ▼                                                                   │
 │  Platform API                                                              │
 │   • Validates auth.mode, auth.form schema, and the storage-state byte      │
-│     limit (1 MiB). Never sees a password. Forwards JobConfig.Auth on the   │
-│     job.created event without resolving any from_env reference.            │
+│     limit (1 MiB). Never resolves a password. For storage_state, uploads   │
+│     the captured bytes to MinIO and publishes only the artifact_key.        │
 │        │                                                                   │
 │        ▼                                                                   │
 │  Orchestrator                                                              │
-│   • For storage_state with inline content: uploads to                      │
-│     scanner-artifacts/<jobID>/auth/storage-state.json and rewrites Auth    │
-│     to `{mode: storage_state, artifact_key}` before persisting Job.Config  │
-│     to Postgres. Bytes never appear in the database.                       │
+│   • Treats storage_state inline content as a legacy/defensive path: if an  │
+│     old producer sends content_b64, uploads it and rewrites Auth before    │
+│     persisting Job.Config to Postgres. Event audit rows redact content_b64.│
 │   • Walks Provenance.auth.form.steps for {from_env: NAME} references and  │
 │     forwards exactly those env-var names from the orchestrator host into  │
 │     the scanner-runner pod via the launch plan. Anything else from the    │
@@ -1339,9 +1338,10 @@ Two important invariants:
 A captured storage-state file is treated as a job-scoped credential:
 
 - It is uploaded once to `scanner-artifacts/<jobID>/auth/storage-state.json`
-  by the orchestrator during job-created handling.
-- It is subject to the existing scan-artifact retention policy and is removed
-  at the same time as the rest of the job's MinIO objects.
+  by the Platform API before `job.created` is published. The Orchestrator keeps
+  a legacy defensive uploader for older producers.
+- It is removed when the job reaches `DONE` or `FAILED`, independent of normal
+  report artifact retention.
 - The Web UI never receives a signed URL for the storage-state object — it is
   not exposed via the public artifact surface that other scan outputs use.
 - The scanner-runner downloads it to the job workspace, sets file mode 0600,
@@ -1408,7 +1408,7 @@ staging/{jobID}/{filename}              Uploaded ZIP files
 | Mode           | Configuration               | Use Case                                         |
 | -------------- | --------------------------- | ------------------------------------------------ |
 | Presigned URLs | Default                     | Direct MinIO access with time-limited signatures |
-| Proxy URLs     | `MINIO_USE_PROXY_URLS=true` | Routes through Caddy reverse proxy               |
+| Public signed URLs | `MINIO_PUBLIC_ENDPOINT` | Presigned URLs generated for the public Caddy/MinIO route |
 
 ### Storage Flow
 
@@ -1819,6 +1819,16 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 | **Pod netns mode**  | `host`                     | `bridge`                | `bridge`                          |
 | **CORS origins**    | `localhost:3010,3000,8080` | `staging.stageflow.org` | `stageflow.org,www.stageflow.org` |
 | **Edge proxy**      | None                       | External Caddy          | Production Caddy                  |
+
+### Horizontal Scaling Boundary
+
+The current deployment topology is intentionally single-instance for the
+Platform API and Orchestrator. PostgreSQL, NATS JetStream, and MinIO are shared
+infrastructure, but live SSE fanout is process-local, admin API rate limiting is
+in-memory, and Podman job ownership assumes one Orchestrator process managing
+job pods. Before running multiple replicas, add a shared status/pub-sub fanout
+for SSE reconnects, a singleton or lease-based runtime owner for Podman jobs,
+and shared edge/admin rate limiting.
 
 ---
 

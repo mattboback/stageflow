@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
 	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
@@ -37,12 +38,56 @@ func marshalPayload(v any) string {
 		return ""
 	}
 
-	b, err := json.Marshal(v)
+	b, err := json.Marshal(redactPayloadForAudit(v))
 	if err != nil {
 		return `{"marshal_error":` + strconvQuote(err.Error()) + `}`
 	}
 
 	return string(b)
+}
+
+func redactPayloadForAudit(v any) any {
+	switch payload := v.(type) {
+	case *events.JobCreatedPayload:
+		if payload == nil {
+			return v
+		}
+
+		clone := *payload
+		clone.Config.Auth = redactAuthForAudit(payload.Config.Auth)
+
+		return &clone
+	case events.JobCreatedPayload:
+		clone := payload
+		clone.Config.Auth = redactAuthForAudit(payload.Config.Auth)
+
+		return clone
+	default:
+		return v
+	}
+}
+
+func redactAuthForAudit(raw json.RawMessage) json.RawMessage {
+	if len(raw) == 0 {
+		return raw
+	}
+
+	var auth map[string]any
+	if err := json.Unmarshal(raw, &auth); err != nil {
+		return json.RawMessage(`{"redacted":true}`)
+	}
+
+	if _, ok := auth["content_b64"]; ok {
+		delete(auth, "content_b64")
+		auth["content_redacted"] = true
+	}
+
+	out, err := json.Marshal(auth)
+	if err != nil {
+		return json.RawMessage(`{"redacted":true}`)
+	}
+
+	return out
 }
 
 func strconvQuote(s string) string {

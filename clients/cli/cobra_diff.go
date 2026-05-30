@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -137,12 +138,30 @@ func loadCurrentDiffTarget(
 		return currentEnv, "", currentTarget, nil
 	}
 
+	if !isExplicitHTTPURL(currentTarget) {
+		info, statErr := os.Stat(currentTarget)
+		if statErr == nil && !info.IsDir() {
+			currentEnv, err := loadReportFile(currentTarget)
+			if err != nil {
+				return reportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
+			}
+
+			return currentEnv, "", currentTarget, nil
+		}
+	}
+
 	currentEnv, jobID, err := runLiveDiffScan(cmd, root, baselineEnv, currentTarget, timeout, noStream)
 	if err != nil {
 		return reportEnvelope{}, "", "", err
 	}
 
 	return currentEnv, jobID, "", nil
+}
+
+func isExplicitHTTPURL(target string) bool {
+	lower := strings.ToLower(strings.TrimSpace(target))
+
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
 }
 
 func runLiveDiffScan(
@@ -153,11 +172,28 @@ func runLiveDiffScan(
 	timeout time.Duration,
 	noStream bool,
 ) (reportEnvelope, string, error) {
+	urls, err := urlcheck.NormalizeTargets([]string{currentTarget})
+	if err != nil {
+		return reportEnvelope{}, "", err
+	}
+
+	if err := urlcheck.ValidateLocalTargets(root.apiURL, urls); err != nil {
+		return reportEnvelope{}, "", err
+	}
+
+	allowPrivateTargets := urlcheck.ContainsPrivateTargets(urls)
+	if allowPrivateTargets {
+		fmt.Fprintln(
+			cmd.ErrOrStderr(),
+			"Detected private/loopback targets; setting allow_private_targets=true.",
+		)
+	}
+
 	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 	req := apiclient.SubmitJobRequest{
-		URLs:                []string{currentTarget},
+		URLs:                urls,
 		Modules:             diffScanModules(baselineEnv),
-		AllowPrivateTargets: urlcheck.ContainsPrivateTargets([]string{currentTarget}),
+		AllowPrivateTargets: allowPrivateTargets,
 	}
 
 	status, doc, err := runScanJob(

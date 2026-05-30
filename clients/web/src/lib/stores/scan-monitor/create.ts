@@ -260,6 +260,12 @@ export function createScanJobMonitor(
 		});
 	};
 
+	const setReportFetchError = (message: string) => {
+		const retryableMessage = `${message}. Refresh to retry.`;
+		addLog(`ERROR: ${retryableMessage}`);
+		setError(retryableMessage);
+	};
+
 	const fetchReport = async (token = generation) => {
 		if (
 			options.kind !== 'report' ||
@@ -271,43 +277,55 @@ export function createScanJobMonitor(
 		}
 
 		reportFetchInFlight = true;
-		const response = await resolvedDeps.reportPort.fetch(options.jobId);
-		if (!active || generation !== token) {
-			reportFetchInFlight = false;
-			return;
-		}
+		let shouldRefreshArtifacts = false;
 
-		if (response.state === 'pending') {
-			reportFetchInFlight = false;
-			scheduleReportRetry(token);
-			return;
-		}
-
-		if (response.state === 'failed') {
-			reportFetchInFlight = false;
-			setError(response.message);
-			return;
-		}
-
-		clearReportRetry();
-		updateSnapshot((current) => {
-			if (!isReportSnapshot(current)) {
-				return current;
+		try {
+			const response = await resolvedDeps.reportPort.fetch(options.jobId);
+			if (!active || generation !== token) {
+				return;
 			}
 
-			return {
-				...current,
-				report: response.report,
-				error: null
-			};
-		});
-		reportFetchInFlight = false;
+			if (response.state === 'pending') {
+				scheduleReportRetry(token);
+				return;
+			}
 
-		if (
-			isReportSnapshot(snapshot) &&
-			snapshot.status === 'complete' &&
-			snapshot.screenshots.length === 0
-		) {
+			if (response.state === 'failed') {
+				setReportFetchError(response.message);
+				return;
+			}
+
+			clearReportRetry();
+			updateSnapshot((current) => {
+				if (!isReportSnapshot(current)) {
+					return current;
+				}
+
+				return {
+					...current,
+					report: response.report,
+					error: null
+				};
+			});
+
+			shouldRefreshArtifacts =
+				isReportSnapshot(snapshot) &&
+				snapshot.status === 'complete' &&
+				snapshot.screenshots.length === 0;
+		} catch (error) {
+			if (!active || generation !== token) {
+				return;
+			}
+
+			const message = error instanceof Error ? error.message : 'Failed to load report';
+			setReportFetchError(`Report fetch failed: ${message}`);
+		} finally {
+			if (generation === token) {
+				reportFetchInFlight = false;
+			}
+		}
+
+		if (shouldRefreshArtifacts && active && generation === token) {
 			await refreshStatus(token);
 		}
 	};

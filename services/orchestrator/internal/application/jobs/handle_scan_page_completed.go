@@ -13,6 +13,10 @@ func (s *Service) HandleScanPageCompleted(
 	ctx context.Context,
 	payload *events.ScanPageCompletedPayload,
 ) error {
+	if err := validateInboundPayload(events.EventScanPageCompleted, payload); err != nil {
+		return err
+	}
+
 	job, err := s.store.GetJob(ctx, payload.JobID)
 	if err != nil {
 		if shouldIgnoreMissingJob(events.EventScanPageCompleted, payload.JobID, err) {

@@ -103,6 +103,7 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 		JobID:                  job.ID,
 		TotalPages:             1,
 		ProvenancePath:         "/workspace/provenance.json",
+		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: job.ID + "/provenance.json",
 	})
 	if err != nil {
@@ -175,6 +176,7 @@ func TestHandleExtractionReadyUsesRegistryDefaultScannerImageWhenNoOverride(t *t
 		JobID:                  job.ID,
 		TotalPages:             1,
 		ProvenancePath:         "/workspace/provenance.json",
+		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: job.ID + "/provenance.json",
 	})
 	if err != nil {
@@ -240,6 +242,7 @@ func TestHandleExtractionReadyUsesExplicitScannerImageOverride(t *testing.T) {
 		JobID:                  job.ID,
 		TotalPages:             1,
 		ProvenancePath:         "/workspace/provenance.json",
+		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: job.ID + "/provenance.json",
 	})
 	if err != nil {

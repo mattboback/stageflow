@@ -193,6 +193,19 @@ func TestProjectJobMapping(t *testing.T) {
 	if belongs {
 		t.Error("expected other job NOT to belong to project")
 	}
+
+	if err := s.DeleteProjectJob(ctx, jobID); err != nil {
+		t.Fatalf("DeleteProjectJob: %v", err)
+	}
+
+	belongs, err = s.JobBelongsToProject(ctx, p.ID, jobID)
+	if err != nil {
+		t.Fatalf("JobBelongsToProject (deleted): %v", err)
+	}
+
+	if belongs {
+		t.Error("expected deleted job NOT to belong to project")
+	}
 }
 
 func TestGetProjectForJobNotFound(t *testing.T) {

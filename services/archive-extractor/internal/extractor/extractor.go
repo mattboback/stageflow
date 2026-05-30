@@ -14,19 +14,29 @@ import (
 	"strings"
 
 	"github.com/mattboback/stageflow/libs/go/storage"
+	"github.com/minio/minio-go/v7"
 )
 
 const (
 	maxZipEntries               = 5000                   // protect against tiny-file floods
 	maxZipExpansionRatio        = 100                    // 100x expansion max
+	maxZipCompressedSize        = 100 * 1024 * 1024      // mirror platform-api ZIP upload limit
 	maxZipUncompressedSize      = 1 * 1024 * 1024 * 1024 // 1 GiB
 	maxZipEntryUncompressedSize = 250 * 1024 * 1024      // 250 MiB
 	maxZipNameLen               = 4096
 )
 
+type objectDownloader interface {
+	DownloadFile(ctx context.Context, bucket, path string) (io.ReadCloser, error)
+}
+
+type objectStatReader interface {
+	Stat() (minio.ObjectInfo, error)
+}
+
 // Extractor downloads job ZIPs from staging and extracts them safely.
 type Extractor struct {
-	storageClient *storage.MinIOClient
+	storageClient objectDownloader
 }
 
 // NewExtractor wires a shared MinIO client into an Extractor.
@@ -65,7 +75,11 @@ func (e *Extractor) Extract(ctx context.Context, bucket, objectPath, destDir str
 		}
 	}()
 
-	size, err := io.Copy(tmpFile, obj)
+	if statErr := enforceCompressedZIPObjectMetadataLimit(obj, maxZipCompressedSize); statErr != nil {
+		return statErr
+	}
+
+	size, err := copyCompressedZIPObject(tmpFile, obj, maxZipCompressedSize)
 	if err != nil {
 		return fmt.Errorf("failed to download ZIP: %w", err)
 	}
@@ -79,6 +93,45 @@ func (e *Extractor) Extract(ctx context.Context, bucket, objectPath, destDir str
 	}
 
 	return nil
+}
+
+func enforceCompressedZIPObjectMetadataLimit(obj io.Reader, maxBytes int64) error {
+	statReader, ok := obj.(objectStatReader)
+	if !ok {
+		return nil
+	}
+
+	info, err := statReader.Stat()
+	if err != nil {
+		return fmt.Errorf("failed to stat ZIP object: %w", err)
+	}
+
+	if info.Size > maxBytes {
+		return fmt.Errorf(
+			"compressed ZIP object too large (%d bytes > %d byte limit)",
+			info.Size,
+			maxBytes,
+		)
+	}
+
+	return nil
+}
+
+func copyCompressedZIPObject(dst io.Writer, src io.Reader, maxBytes int64) (int64, error) {
+	n, err := io.Copy(dst, io.LimitReader(src, maxBytes+1))
+	if err != nil {
+		return n, err
+	}
+
+	if n > maxBytes {
+		return n, fmt.Errorf(
+			"compressed ZIP object too large (%d bytes > %d byte limit)",
+			n,
+			maxBytes,
+		)
+	}
+
+	return n, nil
 }
 
 // ExtractZIPToDir validates and extracts a ZIP already on disk.

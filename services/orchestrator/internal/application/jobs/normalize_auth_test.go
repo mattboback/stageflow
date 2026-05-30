@@ -18,6 +18,11 @@ type fakeAuthUploader struct {
 	err     error
 }
 
+type fakeAuthCleaner struct {
+	deleted []string
+	err     error
+}
+
 type fakeUpload struct {
 	jobID   string
 	content []byte
@@ -36,6 +41,16 @@ func (f *fakeAuthUploader) UploadAuthStorageState(_ context.Context, jobID strin
 	}
 
 	return f.key, nil
+}
+
+func (f *fakeAuthCleaner) DeleteAuthStorageState(_ context.Context, key string) error {
+	if f.err != nil {
+		return f.err
+	}
+
+	f.deleted = append(f.deleted, key)
+
+	return nil
 }
 
 func newServiceWithUploader(uploader AuthUploader) *Service {
@@ -190,5 +205,41 @@ func TestNormalizeJobAuth_AbsentAuthIsByteIdenticalToPreAuth(t *testing.T) {
 
 	if out != nil {
 		t.Errorf("absent auth must return nil so JobConfig.Auth omitempty kicks in; got %s", out)
+	}
+}
+
+func TestCleanupAuthStorageStateDeletesStorageStateCredential(t *testing.T) {
+	t.Parallel()
+
+	cleaner := &fakeAuthCleaner{}
+	s := NewService(nil, nil, nil, nil, WithAuthCleaner(cleaner))
+
+	s.cleanupAuthStorageState(context.Background(), &models.Job{
+		ID: "job-clean",
+		Config: models.JobConfig{
+			Auth: json.RawMessage(`{"mode":"storage_state","artifact_key":"job-clean/auth/storage-state.json"}`),
+		},
+	})
+
+	if len(cleaner.deleted) != 1 || cleaner.deleted[0] != "job-clean/auth/storage-state.json" {
+		t.Fatalf("deleted auth keys = %v", cleaner.deleted)
+	}
+}
+
+func TestCleanupAuthStorageStateIgnoresFormAuth(t *testing.T) {
+	t.Parallel()
+
+	cleaner := &fakeAuthCleaner{}
+	s := NewService(nil, nil, nil, nil, WithAuthCleaner(cleaner))
+
+	s.cleanupAuthStorageState(context.Background(), &models.Job{
+		ID: "job-form",
+		Config: models.JobConfig{
+			Auth: json.RawMessage(authFormFixture),
+		},
+	})
+
+	if len(cleaner.deleted) != 0 {
+		t.Fatalf("expected no deletes for form auth, got %v", cleaner.deleted)
 	}
 }

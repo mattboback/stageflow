@@ -111,12 +111,9 @@ func run() error {
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
 
-	pipelineHandler := jobstatus.NewEventHandler(server.JobStatus())
-	if subscribeErr := msgService.SubscribeToStatusEvents(ctx, pipelineHandler); subscribeErr != nil {
-		slog.Warn("Failed to subscribe to lifecycle events", "error", subscribeErr)
+	if subscribeErr := subscribeStatusEvents(ctx, msgService, server.JobStatus()); subscribeErr != nil {
+		return subscribeErr
 	}
-
-	slog.Info("Subscribed to lifecycle events")
 
 	httpServer := newHTTPServer(cfg.Port, server.Router())
 
@@ -142,6 +139,25 @@ func run() error {
 	}
 
 	slog.Info("Server stopped")
+
+	return nil
+}
+
+type statusEventSubscriber interface {
+	SubscribeToStatusEvents(context.Context, messaging.EventHandler) error
+}
+
+func subscribeStatusEvents(
+	ctx context.Context,
+	subscriber statusEventSubscriber,
+	pipeline *jobstatus.Pipeline,
+) error {
+	pipelineHandler := jobstatus.NewEventHandler(pipeline)
+	if subscribeErr := subscriber.SubscribeToStatusEvents(ctx, pipelineHandler); subscribeErr != nil {
+		return fmt.Errorf("failed to subscribe to lifecycle events: %w", subscribeErr)
+	}
+
+	slog.Info("Subscribed to lifecycle events")
 
 	return nil
 }

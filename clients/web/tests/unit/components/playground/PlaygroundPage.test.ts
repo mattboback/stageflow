@@ -74,6 +74,30 @@ describe('PlaygroundPage', () => {
 		expect(screen.getByText(/live scan status/i)).toBeInTheDocument();
 	});
 
+	it('surfaces scanner catalog load errors and prevents scan submission', async () => {
+		mockFetchScanners.mockRejectedValue(
+			new Error('Scanner catalog failed to load. Failed to fetch. Refresh to retry.')
+		);
+
+		const user = userEvent.setup();
+		render(PlaygroundPage);
+
+		const message = await screen.findAllByText(
+			'Scanner catalog failed to load. Failed to fetch. Refresh to retry.'
+		);
+		expect(message.length).toBeGreaterThan(0);
+		expect(
+			screen.getAllByText('Scanner catalog failed to load. Refresh the page to retry.').length
+		).toBeGreaterThan(0);
+
+		const textarea = expectTextarea(screen.getByLabelText('URLs to Scan'));
+		await user.type(textarea, 'https://example.com');
+		await user.click(screen.getAllByRole('button', { name: 'Start Scan' })[0]);
+
+		expect(mockSubmitScanJob).not.toHaveBeenCalled();
+		expect(screen.getAllByRole('button', { name: 'Start Scan' })[0]).toBeDisabled();
+	});
+
 	it('uses multiline placeholder and shows normalization guidance', async () => {
 		mockFetchScanners.mockResolvedValue({
 			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],

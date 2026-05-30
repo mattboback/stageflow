@@ -4,11 +4,15 @@
  * Analyzes HTTP security headers and detects common security misconfigurations.
  */
 
-import type { Page } from 'playwright';
+import type { APIResponse, Page } from 'playwright';
 
 import type { Issue, IssueSeverity, PageScanResult, ScanContext } from '../../core/types';
 
 import { ScannerBase } from '../../core/scanner-base';
+import {
+	type TargetValidationPolicy,
+	validateTargetURLForPolicy
+} from '../../core/target-validation';
 import { SCANNER_VERSION } from '../version';
 
 interface SecurityHeader {
@@ -80,6 +84,49 @@ const SECURITY_HEADERS: SecurityHeader[] = [
 	}
 ];
 
+const MAX_REDIRECTS = 10;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+
+async function fetchWithValidatedRedirects(
+	page: Page,
+	url: string,
+	targetValidationPolicy: TargetValidationPolicy
+): Promise<{ response: APIResponse; finalURL: string; redirects: string[] }> {
+	let currentURL = url;
+	const redirects: string[] = [];
+
+	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+		await validateTargetURLForPolicy(currentURL, targetValidationPolicy);
+
+		const response = await page.request.fetch(currentURL, {
+			method: 'GET',
+			timeout: 30_000,
+			maxRedirects: 0
+		});
+
+		if (!REDIRECT_STATUSES.has(response.status())) {
+			return { response, finalURL: currentURL, redirects };
+		}
+
+		const locationHeader = response.headers().location;
+		if (!locationHeader) {
+			return { response, finalURL: currentURL, redirects };
+		}
+
+		let nextURL: string;
+		try {
+			nextURL = new URL(locationHeader, currentURL).toString();
+		} catch {
+			return { response, finalURL: currentURL, redirects };
+		}
+
+		redirects.push(nextURL);
+		currentURL = nextURL;
+	}
+
+	throw new Error(`Too many redirects (>${MAX_REDIRECTS})`);
+}
+
 export class SecurityHeadersScanner extends ScannerBase {
 	readonly metadata = {
 		name: 'security-headers',
@@ -99,10 +146,11 @@ export class SecurityHeadersScanner extends ScannerBase {
 					? currentPageURL
 					: pageEntry.url;
 
-			const response = await page.request.fetch(targetURL, {
-				method: 'GET',
-				timeout: 30_000
-			});
+			const { response, finalURL, redirects } = await fetchWithValidatedRedirects(
+				page,
+				targetURL,
+				context.targetValidationPolicy ?? { allowedOrigins: [] }
+			);
 
 			const headers = response.headers();
 			const headerKeys = new Set(Object.keys(headers).map((k) => k.toLowerCase()));
@@ -155,6 +203,8 @@ export class SecurityHeadersScanner extends ScannerBase {
 
 			logger.info('Security scan complete', {
 				url: pageEntry.url,
+				finalURL,
+				redirects: redirects.length,
 				issues: issues.length,
 				statusCode
 			});
