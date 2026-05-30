@@ -27,6 +27,7 @@ func TestMapChangeToSSEPayload_Golden(t *testing.T) {
 					Kind: jobstatus.SignalScanPageCompleted,
 					ScanPageCompleted: &events.ScanPageCompletedPayload{
 						ScannerType: "axe",
+						PageID:      "page-1",
 					},
 				},
 				Snapshot: &status.JobRecord{
@@ -43,6 +44,7 @@ func TestMapChangeToSSEPayload_Golden(t *testing.T) {
 					Kind: jobstatus.SignalScanCompleted,
 					ScanCompleted: &events.ScanCompletedPayload{
 						ScannerType:       "lighthouse",
+						ReportPath:        "job-1/lighthouse/report.html",
 						TotalPagesScanned: 3,
 						Summary:           events.ScanSummary{TotalViolations: 7},
 						Timing:            &events.ScanTiming{TotalMs: 1234},

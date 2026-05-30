@@ -11,6 +11,10 @@ func (s *Service) HandleExtractionFailed(
 	ctx context.Context,
 	payload *events.ExtractionFailedPayload,
 ) error {
+	if err := validateInboundPayload(events.EventExtractionFailed, payload); err != nil {
+		return err
+	}
+
 	slog.Error("Handling extraction.failed", "job_id", payload.JobID, "error", payload.Error)
 
 	if payload.StageLogPath != "" || payload.RecipePath != "" {

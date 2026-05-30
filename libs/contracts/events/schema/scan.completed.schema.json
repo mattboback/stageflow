@@ -16,9 +16,8 @@
 				"results_path",
 				"report_path",
 				"total_pages_scanned",
-				"summary",
-				"timing"
-			],
+					"summary"
+				],
 			"properties": {
 				"job_id": { "type": "string", "minLength": 1 },
 				"scanner_type": { "type": "string", "minLength": 1 },

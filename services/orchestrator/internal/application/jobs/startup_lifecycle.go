@@ -232,11 +232,12 @@ func describeTransition(from, to models.JobState) string {
 	return fmt.Sprintf("current_state=%s target_state=%s", from, to)
 }
 
-// normalizeJobAuth handles the "ingress" half of the auth boundary: the
-// platform-api may have shipped a storage-state blob inline in JobConfig.Auth.
-// Before we persist the job (or emit any further event), upload the bytes to
-// the artifacts bucket under the job's prefix and rewrite Auth to carry only
-// the artifact_key. Form recipes pass through untouched.
+// normalizeJobAuth handles the defensive half of the auth boundary. Current
+// platform-api producers upload storage-state blobs before publishing
+// job.created, but older or malformed producers may still send inline bytes.
+// Before we persist the job, upload those bytes to the artifacts bucket and
+// rewrite Auth to carry only the artifact_key. Form recipes pass through
+// untouched.
 func (s *Service) normalizeJobAuth(ctx context.Context, payload *events.JobCreatedPayload) ([]byte, error) {
 	if len(payload.Config.Auth) == 0 {
 		return nil, nil

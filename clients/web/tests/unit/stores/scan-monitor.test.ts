@@ -293,6 +293,54 @@ describe('scan-monitor', () => {
 		expect(streamSink).toBeDefined();
 	});
 
+	it('clears report fetch in-flight after report port rejection so refresh can retry', async () => {
+		const scheduler = createScheduler();
+		const fetchStatus = vi
+			.fn<ScanJobStatusPort['fetch']>()
+			.mockResolvedValue(createScanResult({ state: 'DONE' }));
+		const reportPort: ScanJobReportPort = {
+			fetch: vi
+				.fn<ScanJobReportPort['fetch']>()
+				.mockRejectedValueOnce(new Error('object storage unavailable'))
+				.mockResolvedValueOnce({ state: 'ready', report: createReport() })
+		};
+		const eventsPort: ScanJobEventsPort = {
+			supportsStreaming: () => false,
+			open: () => {
+				throw new Error('should not open stream');
+			}
+		};
+
+		const monitor = createScanJobMonitor(
+			{ kind: 'report', jobId: 'job-123' },
+			{ statusPort: { fetch: fetchStatus }, eventsPort, reportPort, scheduler }
+		);
+
+		monitor.start();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		let snapshot = monitor.getSnapshot() as ReportMonitorSnapshot;
+		expect(reportPort.fetch).toHaveBeenCalledTimes(1);
+		expect(snapshot.status).toBe('complete');
+		expect(snapshot.report).toBeNull();
+		expect(snapshot.error).toBe(
+			'Report fetch failed: object storage unavailable. Refresh to retry.'
+		);
+		expect(snapshot.logs).toContain(
+			'ERROR: Report fetch failed: object storage unavailable. Refresh to retry.'
+		);
+
+		await monitor.refreshArtifacts();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		snapshot = monitor.getSnapshot() as ReportMonitorSnapshot;
+		expect(reportPort.fetch).toHaveBeenCalledTimes(2);
+		expect(snapshot.report?.meta.jobId).toBe('job-123');
+		expect(snapshot.error).toBeNull();
+	});
+
 	it('stops timers and closes streams on stop', async () => {
 		const scheduler = createScheduler();
 		const fetchStatus = vi.fn<ScanJobStatusPort['fetch']>().mockResolvedValue(createScanResult());

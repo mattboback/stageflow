@@ -109,6 +109,32 @@ describe('Scan Report Store', () => {
 		expect(store.logs).toEqual(['Scan complete. Generating aggregated report...']);
 	});
 
+	it('mirrors retryable report load errors from the monitor', () => {
+		monitorMocks.subscribe.mockImplementation(
+			(listener: (snapshot: ReportMonitorSnapshot) => void) => {
+				listener(
+					createSnapshot({
+						status: 'complete',
+						error: 'Report fetch failed: object storage unavailable. Refresh to retry.',
+						logs: ['ERROR: Report fetch failed: object storage unavailable. Refresh to retry.']
+					})
+				);
+				return vi.fn();
+			}
+		);
+
+		const store = createScanReportStore('job-123');
+
+		expect(store.status).toBe('complete');
+		expect(store.report).toBeNull();
+		expect(store.error).toBe(
+			'Report fetch failed: object storage unavailable. Refresh to retry.'
+		);
+		expect(store.logs).toEqual([
+			'ERROR: Report fetch failed: object storage unavailable. Refresh to retry.'
+		]);
+	});
+
 	it('delegates lifecycle methods to the monitor', async () => {
 		const unsubscribe = vi.fn();
 		monitorMocks.subscribe.mockImplementation(

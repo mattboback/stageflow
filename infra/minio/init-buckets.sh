@@ -62,8 +62,8 @@ for bucket in "${BUCKETS[@]}"; do
 	run_mc mb "${MINIO_ALIAS}/${bucket}"
 done
 
-echo "[minio] Setting anonymous download on scanner-artifacts (served via Caddy proxy)"
-run_mc anonymous set download "${MINIO_ALIAS}/scanner-artifacts"
+echo "[minio] Ensuring anonymous access is disabled on scanner-artifacts"
+run_mc anonymous set none "${MINIO_ALIAS}/scanner-artifacts"
 echo "[minio] Ensuring anonymous access is disabled on scanner-staging"
 run_mc anonymous set none "${MINIO_ALIAS}/scanner-staging"
 

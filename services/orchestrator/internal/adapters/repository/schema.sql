@@ -103,9 +103,23 @@ ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_status TEXT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_error TEXT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS duration_ms BIGINT;
 
+-- Terminal event outbox stores job.completed/job.failed until they are
+-- successfully published to NATS.
+CREATE TABLE IF NOT EXISTS terminal_events (
+    job_id TEXT NOT NULL,
+    event TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    published_at TIMESTAMP,
+    PRIMARY KEY (job_id, event),
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_completed_at ON jobs(completed_at);
 CREATE INDEX IF NOT EXISTS idx_job_events_job_id ON job_events(job_id);
 CREATE INDEX IF NOT EXISTS idx_job_events_job_id_timestamp ON job_events(job_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_job_events_timestamp ON job_events(timestamp);
+CREATE INDEX IF NOT EXISTS idx_terminal_events_unpublished ON terminal_events(published_at, created_at);

@@ -7,6 +7,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
+	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 func TestRecoveringHandlerReturnsErrorOnPanic(t *testing.T) {
@@ -27,7 +28,12 @@ func TestRecoveringHandlerReturnsErrorOnPanic(t *testing.T) {
 		panic("boom")
 	})
 
-	err := handler(ctx, &events.JobCreatedPayload{JobID: "job-panic"})
+	err := handler(ctx, &events.JobCreatedPayload{
+		JobID:     "job-panic",
+		InputType: events.InputTypeURLs,
+		URLs:      []string{"https://example.com"},
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+	})
 	if err == nil {
 		t.Fatal("recoveringHandler() error = nil, want panic error")
 	}

@@ -217,9 +217,11 @@ func TestServiceHandleScanPageCompletedPersistsProgress(t *testing.T) {
 
 	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, &fakePublisher{})
 	payload := &events.ScanPageCompletedPayload{
-		JobID:      "job-page",
-		PageIndex:  2,
-		TotalPages: 5,
+		JobID:       "job-page",
+		ScannerType: "axe",
+		PageID:      "page-2",
+		PageIndex:   2,
+		TotalPages:  5,
 	}
 
 	if err := service.HandleScanPageCompleted(t.Context(), payload); err != nil {

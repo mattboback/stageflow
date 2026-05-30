@@ -16,6 +16,7 @@ type Service struct {
 	runtime      Runtime
 	artifacts    Artifacts
 	authUploader AuthUploader
+	authCleaner  AuthCleaner
 	publisher    Publisher
 	planner      *ScannerLaunchPlanner
 }
@@ -39,6 +40,17 @@ func WithAuthUploader(uploader AuthUploader) ServiceOption {
 	return func(service *Service) {
 		if uploader != nil {
 			service.authUploader = uploader
+		}
+	}
+}
+
+// WithAuthCleaner plugs in terminal-state cleanup for job-scoped storage-state
+// credentials. Cleanup failures are logged but do not change the already-final
+// job outcome.
+func WithAuthCleaner(cleaner AuthCleaner) ServiceOption {
+	return func(service *Service) {
+		if cleaner != nil {
+			service.authCleaner = cleaner
 		}
 	}
 }
@@ -180,7 +192,7 @@ func (s *Service) RecordScannerFailure(ctx context.Context, payload *events.Scan
 	}
 
 	if domainjobs.ShouldIgnoreTerminalEvent(job.State, events.EventScanFailed) {
-		return nil
+		return s.publishPendingTerminalEvents(ctx, payload.JobID)
 	}
 
 	if artifactsErr := s.store.UpdateJobCompletionArtifacts(
@@ -260,7 +272,7 @@ func (s *Service) RecordScannerCompletion(ctx context.Context, payload *events.S
 	}
 
 	if domainjobs.ShouldIgnoreTerminalEvent(job.State, events.EventScanCompleted) {
-		return nil
+		return s.publishPendingTerminalEvents(ctx, payload.JobID)
 	}
 
 	allComplete, err := s.store.RecordScannerCompletion(ctx, payload.JobID, &models.ScannerResult{
@@ -302,17 +314,20 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 		return errors.New("job is required")
 	}
 
-	if job.State != models.JobStateCompleting {
-		if !domainjobs.CanEnterCompleting(job.State) {
-			return fmt.Errorf("job %s cannot transition to COMPLETING from %s", job.ID, job.State)
-		}
-
-		if err := s.store.UpdateJobState(ctx, job.ID, models.JobStateCompleting); err != nil {
-			return fmt.Errorf("failed to update job state to completing: %w", err)
-		}
-
-		job.State = models.JobStateCompleting
+	if !domainjobs.CanEnterCompleting(job.State) {
+		return s.publishPendingTerminalEvents(ctx, job.ID)
 	}
+
+	claimed, err := s.store.ClaimJobCompletion(ctx, job.ID)
+	if err != nil {
+		return fmt.Errorf("claim job completion: %w", err)
+	}
+
+	if !claimed {
+		return s.publishPendingTerminalEvents(ctx, job.ID)
+	}
+
+	job.State = models.JobStateCompleting
 
 	reportJSONPath, err := s.artifacts.BuildAggregatedReport(ctx, job)
 	if err != nil {
@@ -338,17 +353,7 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 		return fmt.Errorf("failed to persist completion artifacts: %w", artifactsErr)
 	}
 
-	if completeErr := s.store.CompleteJob(ctx, job.ID); completeErr != nil {
-		return fmt.Errorf("complete job: %w", completeErr)
-	}
-
-	job.State = models.JobStateDone
-
-	if cleanupErr := s.runtime.CleanupJob(ctx, job); cleanupErr != nil {
-		slog.Warn("Failed to cleanup job", "job_id", job.ID, "error", cleanupErr)
-	}
-
-	return s.publisher.PublishJobCompleted(ctx, &events.JobCompletedPayload{
+	payload := &events.JobCompletedPayload{
 		JobID:  job.ID,
 		Status: "success",
 		Artifacts: events.ArtifactLocations{
@@ -359,6 +364,23 @@ func (s *Service) CompleteJob(ctx context.Context, job *models.Job) error {
 			ProvenanceJSON: job.ProvenanceKey,
 		},
 		ScannerArtifacts: scannerArtifacts,
+	}
+
+	if completeErr := s.store.CompleteJobWithTerminalEvent(ctx, job.ID, payload); completeErr != nil {
+		return fmt.Errorf("complete job: %w", completeErr)
+	}
+
+	job.State = models.JobStateDone
+
+	if cleanupErr := s.runtime.CleanupJob(ctx, job); cleanupErr != nil {
+		slog.Warn("Failed to cleanup job", "job_id", job.ID, "error", cleanupErr)
+	}
+
+	s.cleanupAuthStorageState(ctx, job)
+
+	return s.publishTerminalEvent(ctx, job.ID, TerminalEvent{
+		Event:        events.EventJobCompleted,
+		JobCompleted: payload,
 	})
 }
 
@@ -369,12 +391,20 @@ func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details st
 	}
 
 	if domainjobs.IsTerminalState(job.State) {
-		return nil
+		return s.publishPendingTerminalEvents(ctx, jobID)
 	}
 
 	normalizedStage := domainjobs.NormalizeFailureStage(stage)
 
-	if failErr := s.store.FailJob(ctx, jobID, normalizedStage, message, details); failErr != nil {
+	payload := &events.JobFailedPayload{
+		JobID:        jobID,
+		Status:       "failed",
+		Stage:        normalizedStage,
+		Error:        message,
+		ErrorDetails: details,
+	}
+
+	if failErr := s.store.FailJobWithTerminalEvent(ctx, jobID, normalizedStage, message, details, payload); failErr != nil {
 		return fmt.Errorf("failed to fail job: %w", failErr)
 	}
 
@@ -384,13 +414,56 @@ func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details st
 		slog.Warn("Failed to cleanup job", "job_id", job.ID, "error", cleanupErr)
 	}
 
-	return s.publisher.PublishJobFailed(ctx, &events.JobFailedPayload{
-		JobID:        jobID,
-		Status:       "failed",
-		Stage:        normalizedStage,
-		Error:        message,
-		ErrorDetails: details,
+	s.cleanupAuthStorageState(ctx, job)
+
+	return s.publishTerminalEvent(ctx, jobID, TerminalEvent{
+		Event:     events.EventJobFailed,
+		JobFailed: payload,
 	})
+}
+
+func (s *Service) publishPendingTerminalEvents(ctx context.Context, jobID string) error {
+	pending, err := s.store.ListUnpublishedTerminalEvents(ctx, jobID)
+	if err != nil {
+		return fmt.Errorf("list pending terminal events: %w", err)
+	}
+
+	for _, terminalEvent := range pending {
+		if err := s.publishTerminalEvent(ctx, jobID, terminalEvent); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) publishTerminalEvent(ctx context.Context, jobID string, terminalEvent TerminalEvent) error {
+	switch terminalEvent.Event {
+	case events.EventJobCompleted:
+		if terminalEvent.JobCompleted == nil {
+			return errors.New("job.completed terminal payload is nil")
+		}
+
+		if err := s.publisher.PublishJobCompleted(ctx, terminalEvent.JobCompleted); err != nil {
+			return err
+		}
+	case events.EventJobFailed:
+		if terminalEvent.JobFailed == nil {
+			return errors.New("job.failed terminal payload is nil")
+		}
+
+		if err := s.publisher.PublishJobFailed(ctx, terminalEvent.JobFailed); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unsupported terminal event: %s", terminalEvent.Event)
+	}
+
+	if err := s.store.MarkTerminalEventPublished(ctx, jobID, terminalEvent.Event); err != nil {
+		return fmt.Errorf("mark terminal event published: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) persistExtractionReadyMetadata(

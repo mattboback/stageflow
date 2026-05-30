@@ -41,8 +41,10 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 		jobID := "concurrent-job-" + string(rune('A'+i))
 
 		if err := orch.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{
-			JobID:      jobID,
-			TotalPages: 1,
+			JobID:          jobID,
+			ProvenancePath: "/workspace/provenance.json",
+			BaseURL:        "http://127.0.0.1:8080",
+			TotalPages:     1,
 		}); err != nil {
 			t.Fatalf("HandleExtractionReady failed for job %s: %v", jobID, err)
 		}
@@ -53,6 +55,7 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 			ResultsPath:       jobID + "/axe/results.json",
 			ReportPath:        jobID + "/axe/report.html",
 			TotalPagesScanned: 1,
+			Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 		}
 		seedScanResults(t, mem, jobID, scanCompleted.ResultsPath)
 

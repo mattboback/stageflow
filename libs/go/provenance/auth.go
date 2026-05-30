@@ -75,9 +75,10 @@ type FormStepValue struct {
 }
 
 // StorageStateBlock is the storage_state branch of Provenance.auth. The
-// orchestrator uploads a captured Playwright JSON to MinIO and writes its key
-// here before the scanner-runner pod starts; ContentBase64 is only set on the
-// CLI-to-orchestrator wire, never on the persisted Provenance.
+// platform-api uploads a captured Playwright JSON to MinIO and writes its key
+// here before publishing job.created; the orchestrator retains a legacy
+// defensive uploader for older producers. ContentBase64 is only set on the
+// CLI-to-platform wire, never on persisted Provenance.
 type StorageStateBlock struct {
 	ArtifactKey   string `json:"artifact_key,omitempty"`
 	ContentBase64 string `json:"content_b64,omitempty"`

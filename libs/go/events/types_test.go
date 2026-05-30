@@ -330,20 +330,22 @@ func TestScanPageCompletedPayload_Validate(t *testing.T) {
 	t.Parallel()
 
 	ok := &ScanPageCompletedPayload{
-		JobID:      "job-123",
-		PageID:     "page-3",
-		PageIndex:  3,
-		TotalPages: 10,
+		JobID:       "job-123",
+		ScannerType: "axe",
+		PageID:      "page-3",
+		PageIndex:   3,
+		TotalPages:  10,
 	}
 	if err := ok.Validate(); err != nil {
 		t.Fatalf("expected valid payload: %v", err)
 	}
 
 	bad := &ScanPageCompletedPayload{
-		JobID:      "job-123",
-		PageID:     "page-3",
-		PageIndex:  11,
-		TotalPages: 10,
+		JobID:       "job-123",
+		ScannerType: "axe",
+		PageID:      "page-3",
+		PageIndex:   11,
+		TotalPages:  10,
 	}
 	if err := bad.Validate(); err == nil {
 		t.Fatalf("expected invalid payload")

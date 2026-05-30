@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +36,74 @@ func TestUpdateJobState(t *testing.T) {
 
 	if retrieved.State != models.JobStateExtracting {
 		t.Errorf("Expected state EXTRACTING, got %s", retrieved.State)
+	}
+}
+
+func TestUpdateJobStateRejectsRegression(t *testing.T) {
+	db := setupTestDB(t)
+
+	job := &models.Job{
+		ID:        "job-regression",
+		State:     models.JobStateScanning,
+		InputType: "zip",
+		InputPath: "test.zip",
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	mustCreateJob(t, db, job)
+
+	err := db.UpdateJobState(context.Background(), job.ID, models.JobStateReady)
+	if err == nil {
+		t.Fatal("expected regression transition to fail")
+	}
+
+	if !strings.Contains(err.Error(), "not eligible for transition") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	retrieved, getErr := db.GetJob(context.Background(), job.ID)
+	if getErr != nil {
+		t.Fatalf("GetJob: %v", getErr)
+	}
+
+	if retrieved.State != models.JobStateScanning {
+		t.Fatalf("state changed on rejected regression: %s", retrieved.State)
+	}
+}
+
+func TestUpdateJobStateRejectsTerminalMutation(t *testing.T) {
+	db := setupTestDB(t)
+
+	job := &models.Job{
+		ID:        "job-terminal",
+		State:     models.JobStateFailed,
+		InputType: "zip",
+		InputPath: "test.zip",
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	mustCreateJob(t, db, job)
+
+	err := db.UpdateJobState(context.Background(), job.ID, models.JobStateScanning)
+	if err == nil {
+		t.Fatal("expected terminal mutation to fail")
+	}
+
+	if !strings.Contains(err.Error(), "is terminal") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	retrieved, getErr := db.GetJob(context.Background(), job.ID)
+	if getErr != nil {
+		t.Fatalf("GetJob: %v", getErr)
+	}
+
+	if retrieved.State != models.JobStateFailed {
+		t.Fatalf("state changed on rejected terminal mutation: %s", retrieved.State)
 	}
 }
 

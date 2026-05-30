@@ -22,11 +22,26 @@ type JobStatusReader interface {
 	GetJob(ctx context.Context, jobID string) (*status.JobRecord, error)
 }
 
+// ProjectStore abstracts project persistence for handler tests and runtime wiring.
+type ProjectStore interface {
+	CreateProject(ctx context.Context, p *project.Project) error
+	GetProjectBySlug(ctx context.Context, slug string) (*project.Project, error)
+	GetProjectByID(ctx context.Context, id string) (*project.Project, error)
+	ListProjects(ctx context.Context) ([]project.Project, error)
+	UpdateProject(ctx context.Context, id string, u project.Update) error
+	DeleteProject(ctx context.Context, id string) error
+	RecordProjectJob(ctx context.Context, projectID, jobID string) error
+	DeleteProjectJob(ctx context.Context, jobID string) error
+	GetProjectForJob(ctx context.Context, jobID string) (*project.Project, error)
+	SetBaseline(ctx context.Context, projectID, jobID string) error
+	JobBelongsToProject(ctx context.Context, projectID, jobID string) (bool, error)
+}
+
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
 type Server struct {
 	config          *ServerConfig
 	jobStatus       *jobstatus.Pipeline
-	projectStore    *project.Store
+	projectStore    ProjectStore
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
 }
@@ -37,7 +52,7 @@ type ServerConfig struct {
 	Storage             storage.Client
 	Publisher           JobPublisher
 	StatusReader        JobStatusReader
-	ProjectStore        *project.Store
+	ProjectStore        ProjectStore
 	ScannerRegistry     *scannerregistry.Registry
 	AllowPrivateTargets bool
 	MinIOEndpoint       string // Internal MinIO endpoint (e.g., "minio:9000")

@@ -8,6 +8,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
+	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 // MockEventHandler records method calls for testing.
@@ -115,6 +116,7 @@ func TestEventHandlerInterface(t *testing.T) {
 			JobID:     "job-123",
 			InputType: "zip",
 			InputPath: "staging/job-123/archive.zip",
+			Config:    models.JobConfig{Modules: []string{"axe"}},
 		}
 
 		err := handler.HandleJobCreated(context.Background(), payload)
@@ -210,10 +212,11 @@ func TestEventHandlerInterface(t *testing.T) {
 	t.Run("MockEventHandler records ScanPageCompleted calls", func(t *testing.T) {
 		handler := &MockEventHandler{}
 		payload := &events.ScanPageCompletedPayload{
-			JobID:      "job-scan-page",
-			PageID:     "page-1",
-			PageIndex:  3,
-			TotalPages: 10,
+			JobID:       "job-scan-page",
+			ScannerType: "axe",
+			PageID:      "page-1",
+			PageIndex:   3,
+			TotalPages:  10,
 		}
 
 		err := handler.HandleScanPageCompleted(context.Background(), payload)
@@ -289,6 +292,7 @@ func TestEventPayloadStructures(t *testing.T) {
 			JobID:     "job-1",
 			InputType: "urls",
 			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: []string{"axe"}},
 		}
 
 		if payload.JobID == "" {
@@ -373,20 +377,38 @@ func TestMockHandlerConcurrency(t *testing.T) {
 
 				switch i % 6 {
 				case 0:
-					_ = handler.HandleJobCreated(ctx, &events.JobCreatedPayload{JobID: "job"})
+					_ = handler.HandleJobCreated(ctx, &events.JobCreatedPayload{
+						JobID:     "job",
+						InputType: events.InputTypeURLs,
+						URLs:      []string{"https://example.com"},
+						Config:    models.JobConfig{Modules: []string{"axe"}},
+					})
 				case 1:
-					_ = handler.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{JobID: "job"})
+					_ = handler.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{
+						JobID:          "job",
+						ProvenancePath: "/workspace/provenance.json",
+						BaseURL:        "http://127.0.0.1:8080",
+						TotalPages:     1,
+					})
 				case 2:
 					_ = handler.HandleExtractionFailed(ctx, &events.ExtractionFailedPayload{JobID: "job"})
 				case 3:
 					_ = handler.HandleScanPageCompleted(ctx, &events.ScanPageCompletedPayload{
-						JobID:      "job",
-						PageID:     "page-1",
-						PageIndex:  1,
-						TotalPages: 1,
+						JobID:       "job",
+						ScannerType: "axe",
+						PageID:      "page-1",
+						PageIndex:   1,
+						TotalPages:  1,
 					})
 				case 4:
-					_ = handler.HandleScanCompleted(ctx, &events.ScanCompletedPayload{JobID: "job"})
+					_ = handler.HandleScanCompleted(ctx, &events.ScanCompletedPayload{
+						JobID:             "job",
+						ScannerType:       "axe",
+						ResultsPath:       "job/axe/results.json",
+						ReportPath:        "job/axe/report.html",
+						TotalPagesScanned: 1,
+						Summary:           events.ScanSummary{BySeverity: map[string]int{}},
+					})
 				case 5:
 					_ = handler.HandleScanFailed(ctx, &events.ScanFailedPayload{JobID: "job"})
 				}

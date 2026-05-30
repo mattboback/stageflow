@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -426,10 +427,14 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 	envelope.RunID = logging.RunID(ctx)
 
 	if err := ctx.Err(); err != nil {
+		s.cleanupStagedZip(req.zipPath)
+
 		return err
 	}
 
 	if err := s.config.Publisher.PublishJobCreated(ctx, envelope); err != nil {
+		s.cleanupStagedZip(req.zipPath)
+
 		return fmt.Errorf("failed to publish job.created event: %w", err)
 	}
 
@@ -443,4 +448,17 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 	logging.Info(ctx, "Job created", "filename", filepath.Base(req.zipPath), "input_type", "zip")
 
 	return nil
+}
+
+func (s *Server) cleanupStagedZip(key string) {
+	if key == "" || s == nil || s.config == nil || s.config.Storage == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.config.Storage.DeleteFile(ctx, storage.BucketStaging, key); err != nil {
+		logging.Warn(ctx, "Failed to clean up staged ZIP", "key", key, "error", err)
+	}
 }

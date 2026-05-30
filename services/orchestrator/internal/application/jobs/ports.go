@@ -11,6 +11,7 @@ type JobStore interface {
 	CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool, error)
 	GetJob(ctx context.Context, jobID string) (*models.Job, error)
 	UpdateJobState(ctx context.Context, jobID string, state models.JobState) error
+	ClaimJobCompletion(ctx context.Context, jobID string) (bool, error)
 	RecordExtractionComplete(ctx context.Context, jobID string) error
 	RecordExtractionStart(ctx context.Context, jobID string) error
 	RecordScanStart(ctx context.Context, jobID string) error
@@ -33,9 +34,17 @@ type JobStore interface {
 	SetExpectedScanners(ctx context.Context, jobID string, scanners []string) error
 	RecordScannerCompletion(ctx context.Context, jobID string, result *models.ScannerResult) (bool, error)
 	RecordScannerFailure(ctx context.Context, jobID, scannerType, errorMsg string) (bool, error)
-	CompleteJob(ctx context.Context, jobID string) error
-	FailJob(ctx context.Context, jobID, stage, errorMsg, errorDetails string) error
+	CompleteJobWithTerminalEvent(ctx context.Context, jobID string, payload *events.JobCompletedPayload) error
+	FailJobWithTerminalEvent(ctx context.Context, jobID, stage, errorMsg, errorDetails string, payload *events.JobFailedPayload) error
+	ListUnpublishedTerminalEvents(ctx context.Context, jobID string) ([]TerminalEvent, error)
+	MarkTerminalEventPublished(ctx context.Context, jobID, event string) error
 	RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error
+}
+
+type TerminalEvent struct {
+	Event        string
+	JobCompleted *events.JobCompletedPayload
+	JobFailed    *events.JobFailedPayload
 }
 
 type Runtime interface {
@@ -58,6 +67,13 @@ type Artifacts interface {
 // (relative to the artifacts bucket) the rest of the pipeline references.
 type AuthUploader interface {
 	UploadAuthStorageState(ctx context.Context, jobID string, content []byte) (string, error)
+}
+
+// AuthCleaner removes a job-scoped storage-state object after the scan reaches
+// a terminal state. It intentionally accepts only the already-normalized object
+// key so credential cleanup stays independent from public artifact cleanup.
+type AuthCleaner interface {
+	DeleteAuthStorageState(ctx context.Context, key string) error
 }
 
 type Publisher interface {

@@ -154,6 +154,10 @@ func (p *ScanPageCompletedPayload) Validate() error {
 		return errors.New("events: ScanPageCompletedPayload.page_id is required")
 	}
 
+	if p.ScannerType == "" {
+		return errors.New("events: ScanPageCompletedPayload.scanner_type is required")
+	}
+
 	if p.PageIndex < 1 {
 		return fmt.Errorf("events: ScanPageCompletedPayload.page_index must be >= 1 (got %d)", p.PageIndex)
 	}
@@ -196,6 +200,10 @@ func (p *ScanCompletedPayload) Validate() error {
 
 	if p.ResultsPath == "" {
 		return errors.New("events: ScanCompletedPayload.results_path is required")
+	}
+
+	if p.ScannerType == "" {
+		return errors.New("events: ScanCompletedPayload.scanner_type is required")
 	}
 
 	if p.ReportPath == "" {

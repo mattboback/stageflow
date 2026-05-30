@@ -12,6 +12,10 @@ func (s *Service) HandleExtractionReady(
 	ctx context.Context,
 	payload *events.ExtractionReadyPayload,
 ) error {
+	if err := validateInboundPayload(events.EventExtractionReady, payload); err != nil {
+		return err
+	}
+
 	slog.Info("Handling extraction.ready", "job_id", payload.JobID)
 
 	if payload.StageLogPath != "" || payload.RecipePath != "" {

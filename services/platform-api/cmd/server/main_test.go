@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -9,7 +11,43 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
+	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 )
+
+type fakeStatusEventSubscriber struct {
+	err    error
+	called bool
+}
+
+func (f *fakeStatusEventSubscriber) SubscribeToStatusEvents(
+	_ context.Context,
+	handler messaging.EventHandler,
+) error {
+	f.called = true
+
+	if handler == nil {
+		return errors.New("handler is required")
+	}
+
+	return f.err
+}
+
+func TestSubscribeStatusEventsReturnsSubscriptionError(t *testing.T) {
+	t.Parallel()
+
+	expected := errors.New("jetstream unavailable")
+	subscriber := &fakeStatusEventSubscriber{err: expected}
+
+	err := subscribeStatusEvents(context.Background(), subscriber, jobstatus.New(&jobstatus.Config{}))
+	if !errors.Is(err, expected) {
+		t.Fatalf("expected subscription error to propagate, got %v", err)
+	}
+
+	if !subscriber.called {
+		t.Fatal("expected subscriber to be called")
+	}
+}
 
 func TestNewHTTPServer(t *testing.T) {
 	t.Parallel()

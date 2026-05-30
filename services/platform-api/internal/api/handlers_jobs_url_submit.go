@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -16,20 +18,23 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
+	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 const (
-	maxURLSubmitBodySize  = 2 * 1024 * 1024 // 2 MB
-	maxURLCount           = 100
-	maxURLLength          = 2048
-	defaultScreenshot     = true
-	maxAuthStateBytes     = 1 << 20 // 1 MiB cap on storage-state payload
-	authModeForm          = "form"
-	authModeStorageState  = "storage_state"
+	maxURLSubmitBodySize = 2 * 1024 * 1024 // 2 MB
+	maxURLCount          = 100
+	maxURLLength         = 2048
+	defaultScreenshot    = true
+	maxAuthStateBytes    = 1 << 20 // 1 MiB cap on storage-state payload
+	authModeForm         = "form"
+	authModeStorageState = "storage_state"
 )
 
 var authFromEnvNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+
+var errAuthStorageUnavailable = errors.New("auth storage backend unavailable")
 
 type jobURLSubmitRequest struct {
 	URLs                []string                  `json:"urls"`
@@ -45,10 +50,9 @@ type jobURLSubmitRequest struct {
 // SubmitJobRequest.Auth. Discriminated by mode.
 //
 // For storage_state the CLI base64-encodes the captured Playwright JSON
-// inline; the platform-api validates it parses + enforces a 1 MiB cap, then
-// forwards on as-is in JobConfig.Auth. The orchestrator uploads the bytes to
-// MinIO under the job's prefix and rewrites JobConfig.Auth so only the
-// artifact_key is persisted in Postgres.
+// inline; the platform-api validates it parses + enforces a 1 MiB cap, uploads
+// it to MinIO under the job's prefix, then forwards only an artifact_key in
+// JobConfig.Auth. Raw storage-state bytes must not cross the NATS boundary.
 //
 // For form, values are either literal strings or {from_env: NAME} references.
 // The platform-api does NOT resolve from_env (it has no business doing so); it
@@ -141,17 +145,36 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		screenshot = *req.Screenshot
 	}
 
-	authRaw, authErr := normalizeJobURLAuth(req.Auth)
-	if authErr != nil {
-		httputil.RespondError(w, http.StatusBadRequest, authErr.Error())
-
-		return
-	}
-
 	jobID := uuid.New().String()
 	ctx := logging.WithJobID(r.Context(), jobID)
 	runID := uuid.New().String()[:8]
 	ctx = logging.WithRunID(ctx, runID)
+
+	authRaw, authStorageKey, authErr := s.normalizeAndStoreJobURLAuth(ctx, jobID, req.Auth)
+	if authErr != nil {
+		if errors.Is(authErr, context.DeadlineExceeded) {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
+
+			return
+		}
+
+		if errors.Is(authErr, context.Canceled) {
+			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+
+			return
+		}
+
+		if errors.Is(authErr, errAuthStorageUnavailable) {
+			logging.Error(ctx, "Failed to store auth state", "error", authErr)
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to store auth state")
+
+			return
+		}
+
+		httputil.RespondError(w, http.StatusBadRequest, authErr.Error())
+
+		return
+	}
 
 	payload := &events.JobCreatedPayload{
 		JobID:     jobID,
@@ -172,6 +195,8 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	envelope.RunID = logging.RunID(ctx)
 
 	if ctxErr := ctx.Err(); ctxErr != nil {
+		s.cleanupUploadedAuthState(authStorageKey)
+
 		if errors.Is(ctxErr, context.DeadlineExceeded) {
 			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
 		} else {
@@ -182,6 +207,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if publishErr := s.config.Publisher.PublishJobCreated(ctx, envelope); publishErr != nil {
+		s.cleanupUploadedAuthState(authStorageKey)
 		logging.Error(ctx, "Failed to publish job.created event", "error", publishErr)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue job")
 
@@ -261,41 +287,93 @@ func (s *Server) resolveTargetValidationMode(
 	return targetValidationModePrivate, nil
 }
 
+func (s *Server) normalizeAndStoreJobURLAuth(
+	ctx context.Context,
+	jobID string,
+	in *jobURLAuthInput,
+) (json.RawMessage, string, error) {
+	raw, decodedStorageState, err := normalizeJobURLAuth(in)
+	if err != nil || decodedStorageState == nil {
+		return raw, "", err
+	}
+
+	if s == nil || s.config == nil || s.config.Storage == nil {
+		return nil, "", errAuthStorageUnavailable
+	}
+
+	key := jobID + "/auth/storage-state.json"
+	if uploadErr := s.config.Storage.UploadFile(
+		ctx,
+		sharedstorage.BucketArtifacts,
+		key,
+		bytes.NewReader(decodedStorageState),
+		int64(len(decodedStorageState)),
+	); uploadErr != nil {
+		return nil, "", fmt.Errorf("%w: %w", errAuthStorageUnavailable, uploadErr)
+	}
+
+	out := map[string]any{
+		"mode":         authModeStorageState,
+		"artifact_key": key,
+	}
+
+	normalized, marshalErr := json.Marshal(out)
+	if marshalErr != nil {
+		s.cleanupUploadedAuthState(key)
+
+		return nil, "", fmt.Errorf("auth.storage_state: failed to re-marshal: %w", marshalErr)
+	}
+
+	return normalized, key, nil
+}
+
+func (s *Server) cleanupUploadedAuthState(key string) {
+	if key == "" || s == nil || s.config == nil || s.config.Storage == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.config.Storage.DeleteFile(ctx, sharedstorage.BucketArtifacts, key); err != nil {
+		logging.Warn(ctx, "Failed to clean up uploaded auth state", "key", key, "error", err)
+	}
+}
 
 // normalizeJobURLAuth validates the optional auth block carried in the URL
 // submit request and returns its canonical JSON form (Provenance.auth shape)
 // for storage in JobConfig.Auth.
 //
 // The platform-api enforces structure but never resolves credentials: form
-// recipes round-trip with from_env references intact, and storage_state keeps
-// the inline content_b64 blob for the orchestrator to upload to MinIO before
-// the job is persisted.
-func normalizeJobURLAuth(in *jobURLAuthInput) (json.RawMessage, error) {
+// recipes round-trip with from_env references intact, and storage_state returns
+// decoded bytes to the handler so it can upload them before publishing the
+// job.created event.
+func normalizeJobURLAuth(in *jobURLAuthInput) (json.RawMessage, []byte, error) {
 	if in == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	switch in.Mode {
 	case authModeStorageState:
 		if in.Form != nil {
-			return nil, errors.New(`auth.form is only valid with mode="form"`)
+			return nil, nil, errors.New(`auth.form is only valid with mode="form"`)
 		}
 
 		if in.StorageState == nil || strings.TrimSpace(in.StorageState.ContentBase64) == "" {
-			return nil, errors.New(`auth.storage_state.content_b64 is required when mode="storage_state"`)
+			return nil, nil, errors.New(`auth.storage_state.content_b64 is required when mode="storage_state"`)
 		}
 
 		decoded, err := base64.StdEncoding.DecodeString(in.StorageState.ContentBase64)
 		if err != nil {
-			return nil, fmt.Errorf("auth.storage_state.content_b64 is not valid base64: %w", err)
+			return nil, nil, fmt.Errorf("auth.storage_state.content_b64 is not valid base64: %w", err)
 		}
 
 		if len(decoded) == 0 {
-			return nil, errors.New("auth.storage_state.content_b64 decodes to empty bytes")
+			return nil, nil, errors.New("auth.storage_state.content_b64 decodes to empty bytes")
 		}
 
 		if len(decoded) > maxAuthStateBytes {
-			return nil, fmt.Errorf(
+			return nil, nil, fmt.Errorf(
 				"auth.storage_state.content_b64 decodes to %d bytes, exceeding the %d byte limit",
 				len(decoded),
 				maxAuthStateBytes,
@@ -304,51 +382,39 @@ func normalizeJobURLAuth(in *jobURLAuthInput) (json.RawMessage, error) {
 
 		var probe map[string]any
 		if err := json.Unmarshal(decoded, &probe); err != nil {
-			return nil, fmt.Errorf("auth.storage_state.content_b64 is not valid JSON: %w", err)
+			return nil, nil, fmt.Errorf("auth.storage_state.content_b64 is not valid JSON: %w", err)
 		}
 
-		// Re-marshal as a stable JSON shape; the orchestrator decodes this from
-		// JobConfig.Auth before persistence and uploads.
-		out := map[string]any{
-			"mode":        authModeStorageState,
-			"content_b64": in.StorageState.ContentBase64,
-		}
-
-		raw, err := json.Marshal(out)
-		if err != nil {
-			return nil, fmt.Errorf("auth.storage_state: failed to re-marshal: %w", err)
-		}
-
-		return raw, nil
+		return nil, decoded, nil
 
 	case authModeForm:
 		if in.StorageState != nil {
-			return nil, errors.New(`auth.storage_state is only valid with mode="storage_state"`)
+			return nil, nil, errors.New(`auth.storage_state is only valid with mode="storage_state"`)
 		}
 
 		if in.Form == nil {
-			return nil, errors.New(`auth.form is required when mode="form"`)
+			return nil, nil, errors.New(`auth.form is required when mode="form"`)
 		}
 
 		if strings.TrimSpace(in.Form.LoginURL) == "" {
-			return nil, errors.New("auth.form.login_url is required")
+			return nil, nil, errors.New("auth.form.login_url is required")
 		}
 
 		if len(in.Form.Steps) == 0 {
-			return nil, errors.New("auth.form.steps must contain at least one step")
+			return nil, nil, errors.New("auth.form.steps must contain at least one step")
 		}
 
 		if in.Form.Success == nil {
-			return nil, errors.New("auth.form.success is required")
+			return nil, nil, errors.New("auth.form.success is required")
 		}
 
 		if _, hasType := in.Form.Success["type"].(string); !hasType {
-			return nil, errors.New("auth.form.success.type is required")
+			return nil, nil, errors.New("auth.form.success.type is required")
 		}
 
 		for i, step := range in.Form.Steps {
 			if validateErr := validateAuthStep(step); validateErr != nil {
-				return nil, fmt.Errorf("auth.form.steps[%d]: %w", i, validateErr)
+				return nil, nil, fmt.Errorf("auth.form.steps[%d]: %w", i, validateErr)
 			}
 		}
 
@@ -361,16 +427,16 @@ func normalizeJobURLAuth(in *jobURLAuthInput) (json.RawMessage, error) {
 
 		raw, err := json.Marshal(out)
 		if err != nil {
-			return nil, fmt.Errorf("auth.form: failed to re-marshal: %w", err)
+			return nil, nil, fmt.Errorf("auth.form: failed to re-marshal: %w", err)
 		}
 
-		return raw, nil
+		return raw, nil, nil
 
 	case "":
-		return nil, errors.New("auth.mode is required")
+		return nil, nil, errors.New("auth.mode is required")
 
 	default:
-		return nil, fmt.Errorf("auth.mode %q is not supported (expected %q or %q)",
+		return nil, nil, fmt.Errorf("auth.mode %q is not supported (expected %q or %q)",
 			in.Mode, authModeForm, authModeStorageState)
 	}
 }

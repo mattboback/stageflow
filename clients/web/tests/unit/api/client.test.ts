@@ -150,26 +150,36 @@ describe('api/client fetchScanners', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('falls back to built-in scanners when the scanner catalog request fails', async () => {
+	it('rejects when the scanner catalog request fails', async () => {
 		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
 
-		const result = await fetchScanners();
-
-		expect(result.categories).toEqual([]);
-		expect(result.scanners.slice(0, 3).map((scanner) => scanner.id)).toEqual([
-			'axe',
-			'lighthouse',
-			'link-checker'
-		]);
-		expect(result.scanners.every((scanner) => scanner.enabled)).toBe(true);
+		await expect(fetchScanners()).rejects.toThrow(
+			'Scanner catalog failed to load. Failed to fetch. Refresh to retry.'
+		);
 	});
 
-	it('falls back to built-in scanners when the scanner catalog returns an error', async () => {
+	it('rejects when the scanner catalog returns an error', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockJsonResponse(500, {}));
+
+		await expect(fetchScanners()).rejects.toThrow(
+			'Scanner catalog failed to load (500). Refresh to retry.'
+		);
+	});
+
+	it('returns only enabled scanners from the scanner catalog', async () => {
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			mockJsonResponse(200, {
+				categories: ['accessibility'],
+				scanners: [
+					{ id: 'axe', enabled: true },
+					{ id: 'stale-disabled', enabled: false }
+				]
+			})
+		);
 
 		const result = await fetchScanners();
 
-		expect(result.scanners.map((scanner) => scanner.id)).toContain('security-headers');
-		expect(result.scanners.map((scanner) => scanner.id)).toContain('spelling-grammar');
+		expect(result.categories).toEqual(['accessibility']);
+		expect(result.scanners.map((scanner) => scanner.id)).toEqual(['axe']);
 	});
 });

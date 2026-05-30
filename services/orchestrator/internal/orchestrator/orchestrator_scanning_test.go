@@ -152,6 +152,7 @@ func TestHandleMultipleScanners(t *testing.T) {
 		ResultsPath:       "job-multi/axe/results.json",
 		ReportPath:        "job-multi/axe/report.html",
 		TotalPagesScanned: 3,
+		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
 
 	mustHandleScannerCompletion(t, orch, mem, axePayload)
@@ -167,6 +168,7 @@ func TestHandleMultipleScanners(t *testing.T) {
 		ResultsPath:       "job-multi/lighthouse/results.json",
 		ReportPath:        "job-multi/lighthouse/report.html",
 		TotalPagesScanned: 3,
+		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
 
 	mustHandleScannerCompletion(t, orch, mem, lighthousePayload)
@@ -300,6 +302,7 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 		ResultsPath:       "job-partial/axe/results.json",
 		ReportPath:        "job-partial/axe/report.html",
 		TotalPagesScanned: 3,
+		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
 
 	seedScanResults(t, mem, "job-partial", axePayload.ResultsPath)
@@ -368,9 +371,11 @@ func TestHandleScanPageCompleted_IgnoresMissingJob(t *testing.T) {
 	defer orch.WaitForMonitors()
 
 	payload := &events.ScanPageCompletedPayload{
-		JobID:      "missing-job",
-		PageIndex:  1,
-		TotalPages: 1,
+		JobID:       "missing-job",
+		ScannerType: "axe",
+		PageID:      "page-1",
+		PageIndex:   1,
+		TotalPages:  1,
 	}
 
 	if err := orch.HandleScanPageCompleted(t.Context(), payload); err != nil {
@@ -394,7 +399,9 @@ func TestHandleScanCompleted_IgnoresMissingJob(t *testing.T) {
 		JobID:             "missing-job",
 		ScannerType:       "axe",
 		ResultsPath:       "missing-job/axe/results.json",
+		ReportPath:        "missing-job/axe/report.html",
 		TotalPagesScanned: 1,
+		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
 
 	if err := orch.HandleScanCompleted(t.Context(), payload); err != nil {

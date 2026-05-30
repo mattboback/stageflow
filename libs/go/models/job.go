@@ -115,8 +115,10 @@ type JobConfig struct {
 	// for unauthenticated scans so the persisted JobConfig is byte-identical
 	// to the pre-auth shape on disk. For form recipes Auth carries only
 	// literal strings or {from_env: NAME} references; resolved credentials
-	// never appear here. For storage_state, the orchestrator strips any
-	// inline content blob and writes only the artifact_key after upload.
+	// never appear here. For storage_state, the Platform API uploads any
+	// inline client blob before publishing job.created so downstream services
+	// should only see the artifact_key. The orchestrator still strips inline
+	// content defensively if an old producer sends it.
 	Auth json.RawMessage `json:"auth,omitempty"`
 }
 

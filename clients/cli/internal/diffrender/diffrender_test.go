@@ -36,12 +36,29 @@ func TestIsRegressed(t *testing.T) {
 }
 
 func TestIsRemoteTarget(t *testing.T) {
-	if !IsRemoteTarget("http://example.com") || !IsRemoteTarget("https://x/y") {
-		t.Fatal("expected http/https to be remote")
+	tests := []struct {
+		name   string
+		target string
+		want   bool
+	}{
+		{name: "http url", target: "http://example.com", want: true},
+		{name: "https url", target: "https://x/y", want: true},
+		{name: "bare hostname", target: "example.com", want: true},
+		{name: "bare hostname with path", target: "example.com/docs", want: true},
+		{name: "localhost port", target: "localhost:3000", want: true},
+		{name: "ipv4 port", target: "127.0.0.1:5173", want: true},
+		{name: "absolute path", target: "/path/to/file.json", want: false},
+		{name: "json file", target: "file.json", want: false},
+		{name: "relative path", target: "reports/current", want: false},
+		{name: "unsupported scheme", target: "ftp://example.com", want: false},
 	}
 
-	if IsRemoteTarget("/path/to/file.json") || IsRemoteTarget("file.json") {
-		t.Fatal("expected local paths to be non-remote")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsRemoteTarget(tt.target); got != tt.want {
+				t.Fatalf("IsRemoteTarget(%q) = %v, want %v", tt.target, got, tt.want)
+			}
+		})
 	}
 }
 

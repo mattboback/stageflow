@@ -36,6 +36,7 @@ func TestServicePrepareExtractedJobStartsScanning(t *testing.T) {
 		StageLogPath:           "job-123/extraction/stage.log",
 		RecipePath:             "job-123/extraction/recipe.json",
 		ProvenancePath:         "/workspace/provenance.json",
+		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: "job-123/provenance.json",
 		TotalPages:             3,
 	}
@@ -96,6 +97,7 @@ func TestServiceRecordScannerFailureCompletesWithPartialResults(t *testing.T) {
 			},
 		},
 		recordScannerFailureAllComplete: true,
+		claimJobCompletionResult:        true,
 	}
 	artifacts := &fakeArtifacts{reportPath: "job-fail/report.json"}
 	publisher := &fakePublisher{}
@@ -158,6 +160,115 @@ func TestServiceRecordScannerCompletionWaitsForRemainingScanners(t *testing.T) {
 
 	if store.completeJobCalls != 0 {
 		t.Fatalf("CompleteJob() calls = %d, want 0", store.completeJobCalls)
+	}
+}
+
+func TestServiceRecordScannerCompletionDoesNotCompleteWithoutOwnership(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{
+		getJobResults: []*models.Job{
+			{
+				ID:               "job-race",
+				State:            models.JobStateScanning,
+				ExpectedScanners: []string{"axe"},
+				ScannerResults: map[string]*models.ScannerResult{
+					"axe": {
+						ScannerType: "axe",
+						Success:     true,
+						ResultsPath: "job-race/axe/results.json",
+						ReportPath:  "job-race/axe/report.html",
+					},
+				},
+			},
+			{
+				ID:               "job-race",
+				State:            models.JobStateScanning,
+				ExpectedScanners: []string{"axe"},
+				ScannerResults: map[string]*models.ScannerResult{
+					"axe": {
+						ScannerType: "axe",
+						Success:     true,
+						ResultsPath: "job-race/axe/results.json",
+						ReportPath:  "job-race/axe/report.html",
+					},
+				},
+			},
+		},
+		recordScannerCompletionAllComplete: true,
+		claimJobCompletionResult:           false,
+	}
+	publisher := &fakePublisher{}
+
+	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{reportPath: "job-race/report.json"}, publisher)
+	payload := &events.ScanCompletedPayload{
+		JobID:             "job-race",
+		ScannerType:       "axe",
+		ResultsPath:       "job-race/axe/results.json",
+		ReportPath:        "job-race/axe/report.html",
+		TotalPagesScanned: 1,
+		Summary:           events.ScanSummary{TotalViolations: 0, BySeverity: map[string]int{}},
+	}
+
+	if err := service.RecordScannerCompletion(t.Context(), payload); err != nil {
+		t.Fatalf("RecordScannerCompletion() error = %v", err)
+	}
+
+	if store.claimJobCompletionCalls != 1 {
+		t.Fatalf("ClaimJobCompletion() calls = %d, want 1", store.claimJobCompletionCalls)
+	}
+
+	if store.completeJobCalls != 0 {
+		t.Fatalf("CompleteJobWithTerminalEvent() calls = %d, want 0", store.completeJobCalls)
+	}
+
+	if publisher.completedCalls != 0 {
+		t.Fatalf("PublishJobCompleted() calls = %d, want 0", publisher.completedCalls)
+	}
+}
+
+func TestServicePublishesPendingTerminalEventForDuplicateTerminalScanEvent(t *testing.T) {
+	t.Parallel()
+
+	store := &fakeJobStore{
+		getJobResults: []*models.Job{
+			{
+				ID:    "job-terminal",
+				State: models.JobStateDone,
+			},
+		},
+		pendingTerminalEvents: []TerminalEvent{
+			{
+				Event: events.EventJobCompleted,
+				JobCompleted: &events.JobCompletedPayload{
+					JobID:  "job-terminal",
+					Status: events.JobStatusSuccess,
+				},
+			},
+		},
+	}
+	publisher := &fakePublisher{}
+
+	service := NewService(store, &fakeRuntime{}, &fakeArtifacts{}, publisher)
+	payload := &events.ScanCompletedPayload{
+		JobID:             "job-terminal",
+		ScannerType:       "axe",
+		ResultsPath:       "job-terminal/axe/results.json",
+		ReportPath:        "job-terminal/axe/report.html",
+		TotalPagesScanned: 1,
+		Summary:           events.ScanSummary{TotalViolations: 0, BySeverity: map[string]int{}},
+	}
+
+	if err := service.RecordScannerCompletion(t.Context(), payload); err != nil {
+		t.Fatalf("RecordScannerCompletion() error = %v", err)
+	}
+
+	if publisher.completedCalls != 1 {
+		t.Fatalf("PublishJobCompleted() calls = %d, want 1", publisher.completedCalls)
+	}
+
+	if store.markTerminalEventPublishedCalls != 1 {
+		t.Fatalf("MarkTerminalEventPublished() calls = %d, want 1", store.markTerminalEventPublishedCalls)
 	}
 }
 
@@ -271,6 +382,8 @@ type fakeJobStore struct {
 	createJobIfAbsentCalls             int
 	getJobResults                      []*models.Job
 	getJobCalls                        int
+	claimJobCompletionCalls            int
+	claimJobCompletionResult           bool
 	recordExtractionCompleteCalls      int
 	recordExtractionStartCalls         int
 	recordScanStartCalls               int
@@ -290,6 +403,9 @@ type fakeJobStore struct {
 	recordScannerFailureAllComplete    bool
 	completeJobCalls                   int
 	failJobCalls                       int
+	listUnpublishedTerminalEventsCalls int
+	markTerminalEventPublishedCalls    int
+	pendingTerminalEvents              []TerminalEvent
 	recordInternalEventCalls           int
 	lastExpectedScanners               []string
 	lastStateUpdates                   []models.JobState
@@ -323,6 +439,13 @@ func (f *fakeJobStore) UpdateJobState(_ context.Context, _ string, state models.
 	f.recordOperation("store.UpdateJobState:" + string(state))
 
 	return nil
+}
+
+func (f *fakeJobStore) ClaimJobCompletion(_ context.Context, _ string) (bool, error) {
+	f.claimJobCompletionCalls++
+	f.recordOperation("store.ClaimJobCompletion")
+
+	return f.claimJobCompletionResult, nil
 }
 
 func (f *fakeJobStore) RecordExtractionComplete(_ context.Context, _ string) error {
@@ -417,13 +540,27 @@ func (f *fakeJobStore) RecordScannerFailure(_ context.Context, _, _, _ string) (
 	return f.recordScannerFailureAllComplete, nil
 }
 
-func (f *fakeJobStore) CompleteJob(_ context.Context, _ string) error {
+func (f *fakeJobStore) CompleteJobWithTerminalEvent(_ context.Context, _ string, _ *events.JobCompletedPayload) error {
 	f.completeJobCalls++
 	return nil
 }
 
-func (f *fakeJobStore) FailJob(_ context.Context, _, _, _, _ string) error {
+func (f *fakeJobStore) FailJobWithTerminalEvent(
+	_ context.Context,
+	_, _, _, _ string,
+	_ *events.JobFailedPayload,
+) error {
 	f.failJobCalls++
+	return nil
+}
+
+func (f *fakeJobStore) ListUnpublishedTerminalEvents(_ context.Context, _ string) ([]TerminalEvent, error) {
+	f.listUnpublishedTerminalEventsCalls++
+	return append([]TerminalEvent{}, f.pendingTerminalEvents...), nil
+}
+
+func (f *fakeJobStore) MarkTerminalEventPublished(_ context.Context, _, _ string) error {
+	f.markTerminalEventPublishedCalls++
 	return nil
 }
 

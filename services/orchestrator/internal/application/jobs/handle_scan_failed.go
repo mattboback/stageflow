@@ -11,6 +11,10 @@ func (s *Service) HandleScanFailed(
 	ctx context.Context,
 	payload *events.ScanFailedPayload,
 ) error {
+	if err := validateInboundPayload(events.EventScanFailed, payload); err != nil {
+		return err
+	}
+
 	slog.Error("Handling scan.failed", "job_id", payload.JobID, "scanner", payload.ScannerType, "error", payload.Error)
 	return s.RecordScannerFailure(ctx, payload)
 }

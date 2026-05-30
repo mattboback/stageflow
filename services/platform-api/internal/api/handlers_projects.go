@@ -323,7 +323,18 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		return
 	}
 
+	if recordErr := s.projectStore.RecordProjectJob(ctx, p.ID, jobID); recordErr != nil {
+		logging.Error(ctx, "Failed to record project job mapping", "error", recordErr)
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to record project scan")
+
+		return
+	}
+
 	if publishErr := s.config.Publisher.PublishJobCreated(ctx, envelope); publishErr != nil {
+		if deleteErr := s.projectStore.DeleteProjectJob(context.Background(), jobID); deleteErr != nil {
+			logging.Warn(ctx, "Failed to clean up project job mapping after publish failure", "error", deleteErr)
+		}
+
 		logging.Error(ctx, "Failed to publish job.created event", "error", publishErr)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue scan job")
 
@@ -335,10 +346,6 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		ObservedAt: envelope.Timestamp,
 	}); beginErr != nil {
 		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
-	}
-
-	if recordErr := s.projectStore.RecordProjectJob(r.Context(), p.ID, jobID); recordErr != nil {
-		logging.Error(ctx, "Failed to record project job mapping", "error", recordErr)
 	}
 
 	logging.Info(ctx, "Project scan created", "project", p.Slug, "url_count", len(p.URLs))

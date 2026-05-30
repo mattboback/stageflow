@@ -10,12 +10,13 @@
 	interface Props {
 		scanners: ScannerSelection[];
 		isLoading: boolean;
+		loadError?: string | null;
 		preset: ScannerPreset;
 		onPresetChange: (preset: ScannerPreset) => void;
 		onToggle: (scannerId: string) => void;
 	}
 
-	let { scanners, isLoading, preset, onPresetChange, onToggle }: Props = $props();
+	let { scanners, isLoading, loadError = null, preset, onPresetChange, onToggle }: Props = $props();
 
 	const enabledScannerCount = $derived(scanners.filter((s) => s.enabled).length);
 	const enabledScanners = $derived(scanners.filter((s) => s.enabled));
@@ -130,6 +131,10 @@
 			<Loader2 class="text-accent h-5 w-5 animate-spin" />
 			<span class="text-sm">Loading available scanners…</span>
 		</div>
+	{:else if loadError}
+		<p class="text-ink-muted bg-surface-muted rounded-xl px-4 py-8 text-center text-sm">
+			{loadError}
+		</p>
 	{:else if scanners.length === 0}
 		<p class="text-ink-muted bg-surface-muted rounded-xl py-8 text-center text-sm">
 			No scanners available

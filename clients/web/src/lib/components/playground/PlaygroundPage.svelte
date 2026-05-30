@@ -42,6 +42,7 @@
 	// UI state
 	let isSubmitting = $state(false);
 	let isLoadingScanners = $state(true);
+	let scannerLoadError = $state<string | null>(null);
 	let error = $state<string | null>(null);
 	let invalidUrls = $state<Array<{ url: string; reason: string }>>([]);
 
@@ -77,7 +78,12 @@
 	const isAuthEnabled = $derived(authConfig.enabled);
 	const isAuthConfigValid = $derived(isAuthConfigComplete(authConfig));
 	const canSubmit = $derived(
-		hasValidInput && hasEnabledScanner && isAiConfigValid && isAuthConfigValid && !isSubmitting
+		hasValidInput &&
+			hasEnabledScanner &&
+			isAiConfigValid &&
+			isAuthConfigValid &&
+			!scannerLoadError &&
+			!isSubmitting
 	);
 	const missingRequirements = $derived.by(() => {
 		const requirements: string[] = [];
@@ -86,7 +92,9 @@
 				mode === 'url' ? 'Add at least one URL or switch to ZIP mode.' : 'Upload a ZIP archive.'
 			);
 		}
-		if (!hasEnabledScanner) {
+		if (scannerLoadError) {
+			requirements.push('Scanner catalog failed to load. Refresh the page to retry.');
+		} else if (!hasEnabledScanner) {
 			requirements.push('Enable at least one scanner.');
 		}
 		if (isAiNavigatorEnabled && !isAiConfigValid) {
@@ -104,11 +112,15 @@
 	$effect(() => {
 		fetchScanners()
 			.then((data) => {
+				scannerLoadError = null;
 				scanners = getDefaultScannerSelections(data.scanners);
 				scannerPreset = detectScannerPreset(scanners);
 			})
 			.catch((e) => {
-				error = e instanceof Error ? e.message : 'Failed to load scanners';
+				const message = e instanceof Error ? e.message : 'Failed to load scanners. Refresh to retry.';
+				scannerLoadError = message;
+				error = message;
+				scanners = [];
 			})
 			.finally(() => {
 				isLoadingScanners = false;
@@ -395,6 +407,7 @@
 						<PlaygroundScannerGrid
 							{scanners}
 							isLoading={isLoadingScanners}
+							loadError={scannerLoadError}
 							preset={scannerPreset}
 							onPresetChange={handlePresetChange}
 							onToggle={handleScannerToggle}

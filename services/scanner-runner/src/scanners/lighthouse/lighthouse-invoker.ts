@@ -10,11 +10,12 @@ export async function runLighthouseInvocation(deps: {
 	url: string;
 	port: number;
 	categories: string[];
+	disableStorageReset: boolean;
 	lighthouse: LighthouseModule['default'];
 	logger: ScannerLogger;
 	scanStageLogger: ScanStageLogger | null;
 }): Promise<LighthouseResult> {
-	const { url, port, categories, lighthouse, logger, scanStageLogger } = deps;
+	const { url, port, categories, disableStorageReset, lighthouse, logger, scanStageLogger } = deps;
 
 	logger.info('Running Lighthouse', {
 		url,
@@ -39,8 +40,7 @@ export async function runLighthouseInvocation(deps: {
 			rttMs: 0,
 			throughputKbps: 0
 		},
-		// Allow Lighthouse to reset storage between runs when reusing Chrome.
-		disableStorageReset: false,
+		disableStorageReset,
 		formFactor: 'desktop' as const,
 		screenEmulation: {
 			mobile: false,
