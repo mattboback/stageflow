@@ -140,6 +140,15 @@ function readApiErrorMessage(data: ApiErrorResponse | null): string | null {
 	return extras.length > 0 ? `${message} ${extras.join(' ')}` : message;
 }
 
+function isAbortError(error: unknown): boolean {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		'name' in error &&
+		(error as { name?: unknown }).name === 'AbortError'
+	);
+}
+
 export async function submitScanJob({
 	mode,
 	file,
@@ -254,7 +263,7 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 			categories: data.categories
 		};
 	} catch (error) {
-		if (signal?.aborted && error instanceof Error && error.name === 'AbortError') {
+		if (signal?.aborted && isAbortError(error)) {
 			throw error;
 		}
 

@@ -9,7 +9,7 @@ import (
 )
 
 func TestDiffLiveTarget_NormalizesAndAllowsPrivateTargetsForLocalAPI(t *testing.T) {
-	server, captured, _ := newCapturingScanAPI(t)
+	server, captured := newCapturingScanAPI(t)
 	defer server.Close()
 
 	baselinePath := writeDiffBaselineReport(t)
@@ -71,6 +71,7 @@ func TestDiffLiveTarget_RejectsPrivateTargetsForRemoteAPI(t *testing.T) {
 
 func TestDiffCurrentTarget_PrefersExistingSchemelessFile(t *testing.T) {
 	dir := t.TempDir()
+
 	cleanup := withWorkingDir(t, dir)
 	defer cleanup()
 

@@ -473,33 +473,11 @@ export abstract class ScannerBase {
 				continue;
 			}
 
-			try {
-				uploadedCount += await this.storageProvider.uploadDirectory(
-					bucket,
-					`${prefix}/${entry.name}/screenshots`,
-					screenshotsDir
-				);
-			} catch (err) {
-				const errorCode =
-					err instanceof Error && 'code' in err && typeof err.code === 'string'
-						? err.code
-						: undefined;
-				const isFilesystemError =
-					typeof errorCode === 'string' &&
-					['ENOENT', 'EACCES', 'EPERM', 'ENOTDIR'].includes(errorCode);
-
-				const detail = {
-					scanId: entry.name,
-					path: screenshotsDir,
-					error: err instanceof Error ? err.message : String(err)
-				};
-
-				if (isFilesystemError) {
-					this.logger.warn('Screenshots directory unavailable, skipping', detail);
-				} else {
-					this.logger.error('Failed to upload screenshots directory', detail);
-				}
-			}
+			uploadedCount += await this.storageProvider.uploadDirectory(
+				bucket,
+				`${prefix}/${entry.name}/screenshots`,
+				screenshotsDir
+			);
 		}
 
 		uploadedCount += await this.uploadExtraArtifacts(bucket, prefix);
@@ -586,10 +564,11 @@ export abstract class ScannerBase {
 						absolutePath
 					);
 				} catch (err) {
-					this.logger.warn('Failed to upload extra artifact directory', {
+					this.logger.error('Failed to upload extra artifact directory', {
 						relPath,
 						error: err instanceof Error ? err.message : String(err)
 					});
+					throw err;
 				}
 				continue;
 			}
@@ -608,10 +587,11 @@ export abstract class ScannerBase {
 				uploadedKeys.add(objectKey);
 				uploadedCount += 1;
 			} catch (err) {
-				this.logger.warn('Failed to upload extra artifact file', {
+				this.logger.error('Failed to upload extra artifact file', {
 					relPath,
 					error: err instanceof Error ? err.message : String(err)
 				});
+				throw err;
 			}
 		}
 

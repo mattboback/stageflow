@@ -233,6 +233,7 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 		}
 
 		expectedKey := created.JobID + "/auth/storage-state.json"
+
 		uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
 		if string(uploaded) != storageState {
 			t.Fatalf("auth state was not uploaded before publish; got %q, want %q", uploaded, storageState)
@@ -296,6 +297,7 @@ func TestHandleJobURLSubmitStorageStateAuthCleanupOnPublishFailure(t *testing.T)
 
 	storageState := `{"cookies":[],"origins":[]}`
 	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
+
 	body, err := json.Marshal(map[string]any{
 		"urls": []string{"https://example.com"},
 		"auth": map[string]any{
@@ -335,6 +337,7 @@ func TestHandleJobZipUploadCleanupOnPublishFailure(t *testing.T) {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
+
 	part, err := writer.CreateFormFile("file", "site.zip")
 	if err != nil {
 		t.Fatalf("create form file: %v", err)

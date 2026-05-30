@@ -83,3 +83,30 @@ func TestDefaultConfigMatchesBuiltinCatalog(t *testing.T) {
 	assertDefaultModules(t, registry)
 	assertCategoryResolution(t, registry)
 }
+
+func TestApplyOverridesCheckedReportsUnknownScannerIDs(t *testing.T) {
+	cfg, err := DefaultConfig()
+	if err != nil {
+		t.Fatalf("DefaultConfig() error: %v", err)
+	}
+
+	enabled := false
+	updated, unknown := ApplyOverridesChecked(cfg, &Overrides{
+		Scanners: map[string]*ScannerConfig{
+			"axe":             {Enabled: &enabled},
+			"typo-scanner-id": {Enabled: &enabled},
+		},
+	})
+
+	if updated.Scanners["axe"].Enabled {
+		t.Fatal("expected axe override to be applied")
+	}
+
+	if len(unknown) != 1 || unknown[0] != "typo-scanner-id" {
+		t.Fatalf("unknown overrides = %v", unknown)
+	}
+
+	if formatErr := FormatUnknownScannerOverrides(unknown); formatErr == nil {
+		t.Fatal("FormatUnknownScannerOverrides() err = nil, want non-nil")
+	}
+}

@@ -57,18 +57,18 @@ export async function loadPluginFromManifest(
 			};
 		}
 
-		const factory = factoryResult.factory;
-		const validationError = validateFactory(factory);
-		if (validationError) {
+		const instanceResult = instantiateScanner(factoryResult.factory);
+		if (!instanceResult.ok) {
 			return {
 				success: false,
-				error: validationError
+				error: instanceResult.error
 			};
 		}
 
+		const scanner = instanceResult.scanner;
 		const plugin: ScannerPlugin = {
 			manifest: info.manifest,
-			factory,
+			factory: () => scanner,
 			path: manifestDir
 		};
 
@@ -128,16 +128,23 @@ function resolveFactory(module: Record<string, unknown>, info: PluginInfo): Fact
 	};
 }
 
-function validateFactory(factory: () => ScannerBase): string | undefined {
-	try {
-		const testInstance = factory();
-		// metadata is abstract on ScannerBase so must be implemented by subclasses
-		if (typeof testInstance.scanPage !== 'function') {
-			return 'Scanner does not implement required interface (scanPage method)';
-		}
-	} catch (err) {
-		return `Failed to instantiate scanner: ${err instanceof Error ? err.message : String(err)}`;
-	}
+type ScannerInstantiation =
+	| { ok: true; scanner: ScannerBase }
+	| { ok: false; error: string };
 
-	return undefined;
+function instantiateScanner(factory: () => ScannerBase): ScannerInstantiation {
+	try {
+		const scanner = factory();
+		// metadata is abstract on ScannerBase so must be implemented by subclasses
+		if (typeof scanner.scanPage !== 'function') {
+			return { ok: false, error: 'Scanner does not implement required interface (scanPage method)' };
+		}
+
+		return { ok: true, scanner };
+	} catch (err) {
+		return {
+			ok: false,
+			error: `Failed to instantiate scanner: ${err instanceof Error ? err.message : String(err)}`
+		};
+	}
 }

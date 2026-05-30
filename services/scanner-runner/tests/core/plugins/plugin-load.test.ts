@@ -331,6 +331,45 @@ describe('loadPluginFromManifest', () => {
 		);
 	});
 
+	it('constructs a plugin scanner only once during load and first use', async () => {
+		tempRoot = await mkdtemp(path.join(os.tmpdir(), 'stageflow-plugin-load-single-construct-'));
+		const manifestPath = path.join(tempRoot, 'manifest.json');
+		const modulePath = path.join(tempRoot, 'scanner.mjs');
+
+		await writeModule(
+			modulePath,
+			[
+				'let constructions = 0;',
+				'export function getConstructions() { return constructions; }',
+				'export default class DefaultScanner {',
+				'  constructor() {',
+				'    constructions += 1;',
+				"    this.metadata = { name: 'default-scanner', version: '1.0.0' };",
+				'  }',
+				'  async scanPage() {',
+				'    return { success: true };',
+				'  }',
+				'}',
+				''
+			].join('\n')
+		);
+
+		const info = pluginInfo(manifestPath, baseManifest());
+		const result = await loadPluginFromManifest(
+			info,
+			config({ searchPaths: [tempRoot] }),
+			loggerMock()
+		);
+
+		expect(result.success).toBe(true);
+		const first = result.plugin?.factory();
+		const second = result.plugin?.factory();
+		expect(first).toBe(second);
+
+		const module = (await import(modulePath)) as { getConstructions: () => number };
+		expect(module.getConstructions()).toBe(1);
+	});
+
 	it('returns import error details when module parsing fails', async () => {
 		tempRoot = await mkdtemp(path.join(os.tmpdir(), 'stageflow-plugin-load-import-error-'));
 		const manifestPath = path.join(tempRoot, 'manifest.json');

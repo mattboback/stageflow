@@ -15,8 +15,13 @@ export default defineConfig({
 			provider: 'v8',
 			reporter: ['text', 'lcov', 'json-summary'],
 			include: [
+				'src/lib/api/client.ts',
+				'src/lib/api/sse.ts',
 				'src/lib/api/utils.ts',
 				'src/lib/components/nav/MobileMenu.svelte',
+				'src/lib/components/playground/PlaygroundPage.svelte',
+				'src/lib/components/playground/PlaygroundZipUpload.svelte',
+				'src/lib/components/playground/playground-utils.ts',
 				'src/lib/components/report/IssueEvidenceSection.svelte',
 				'src/lib/components/report/PageOverviewViewer.svelte',
 				'src/lib/components/report/SeverityBreakdown.svelte',
@@ -35,6 +40,7 @@ export default defineConfig({
 				'src/lib/stores/scan-status/constants.ts',
 				'src/lib/stores/scan-status/log-messages.ts',
 				'src/lib/stores/scan-status/scanner-progress.ts',
+				'src/lib/stores/scan-monitor/create.ts',
 				'src/lib/utils/**/*.ts'
 			],
 			exclude: ['**/*.stories.ts', '**/story-harnesses/**', '**/index.ts'],

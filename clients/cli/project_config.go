@@ -244,6 +244,20 @@ func validateProjectConfig(cfg projectConfig) error {
 		return errors.New("dev.ready.url is required")
 	}
 
+	for _, item := range []struct {
+		field string
+		raw   string
+	}{
+		{field: "scan.timeout", raw: cfg.Scan.Timeout},
+		{field: "dev.ready.timeout", raw: cfg.Dev.Ready.Timeout},
+		{field: "dev.ready.interval", raw: cfg.Dev.Ready.Interval},
+		{field: "dev.stop.timeout", raw: cfg.Dev.Stop.Timeout},
+	} {
+		if err := validatePositiveConfigDuration(item.field, item.raw); err != nil {
+			return err
+		}
+	}
+
 	if err := validateOptionalHTTPURL("stageflow.remote_api_url", cfg.Stageflow.RemoteAPIURL); err != nil {
 		return err
 	}
@@ -268,6 +282,19 @@ func validateOptionalHTTPURL(fieldName string, raw string) error {
 
 	if u.Host == "" {
 		return fmt.Errorf("%s is invalid: missing host", fieldName)
+	}
+
+	return nil
+}
+
+func validatePositiveConfigDuration(fieldName, raw string) error {
+	d, ok, err := configDuration(raw)
+	if err != nil {
+		return fmt.Errorf("%s: %w", fieldName, err)
+	}
+
+	if ok && d <= 0 {
+		return fmt.Errorf("%s must be > 0", fieldName)
 	}
 
 	return nil

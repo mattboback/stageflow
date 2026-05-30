@@ -13,8 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/minio/minio-go/v7"
+
+	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (
@@ -177,6 +178,9 @@ func validateZIP(zipPath string, fileSize int64) error {
 
 	var totalUncompressed uint64
 
+	seenFiles := make(map[string]struct{}, len(r.File))
+	seenDirs := make(map[string]struct{}, len(r.File))
+
 	for _, file := range r.File {
 		if file.Name == "" || len(file.Name) > maxZipNameLen {
 			return fmt.Errorf("invalid entry name length (%d)", len(file.Name))
@@ -186,8 +190,13 @@ func validateZIP(zipPath string, fileSize int64) error {
 			return fmt.Errorf("invalid entry name (NUL byte): %q", file.Name)
 		}
 
-		if _, sanitizeErr := sanitizeZipEntryName(file.Name); sanitizeErr != nil {
+		cleanName, sanitizeErr := sanitizeZipEntryName(file.Name)
+		if sanitizeErr != nil {
 			return sanitizeErr
+		}
+
+		if collisionErr := trackZipEntryName(cleanName, zipEntryIsDir(file), seenFiles, seenDirs); collisionErr != nil {
+			return collisionErr
 		}
 
 		if file.UncompressedSize64 > maxZipEntryUncompressedSize {
@@ -216,12 +225,53 @@ func validateZIP(zipPath string, fileSize int64) error {
 	return nil
 }
 
+func trackZipEntryName(
+	cleanName string,
+	isDir bool,
+	seenFiles map[string]struct{},
+	seenDirs map[string]struct{},
+) error {
+	if _, ok := seenFiles[cleanName]; ok {
+		return fmt.Errorf("duplicate ZIP entry path after normalization: %s", cleanName)
+	}
+
+	if _, ok := seenDirs[cleanName]; ok {
+		return fmt.Errorf("duplicate ZIP entry path after normalization: %s", cleanName)
+	}
+
+	if isDir {
+		seenDirs[cleanName] = struct{}{}
+
+		return nil
+	}
+
+	for parent := path.Dir(cleanName); parent != "." && parent != "/"; parent = path.Dir(parent) {
+		if _, ok := seenFiles[parent]; ok {
+			return fmt.Errorf("ZIP entry collides with file path: %s", cleanName)
+		}
+	}
+
+	seenFiles[cleanName] = struct{}{}
+
+	return nil
+}
+
 func sanitizeZipEntryName(name string) (string, error) {
 	// ZIP paths use forward slashes, but malicious archives may include backslashes.
 	n := strings.ReplaceAll(name, "\\", "/")
 
 	if strings.HasPrefix(n, "/") {
 		return "", fmt.Errorf("absolute path not allowed: %q", name)
+	}
+
+	for _, segment := range strings.Split(n, "/") {
+		if segment == ".." {
+			return "", fmt.Errorf("path traversal detected: %q", name)
+		}
+
+		if segment == "." {
+			return "", fmt.Errorf("ambiguous path segment not allowed: %q", name)
+		}
 	}
 
 	// Disallow Windows drive letters (C:/...).
@@ -264,14 +314,26 @@ func extractZIPWithLimits(zipPath, destDir string, maxAggregateBytes, maxEntryBy
 		}
 	}()
 
-	if mkdirErr := os.MkdirAll(destDir, 0o750); mkdirErr != nil {
+	if mkdirErr := os.MkdirAll(filepath.Dir(destDir), 0o750); mkdirErr != nil {
 		return fmt.Errorf("failed to create destination directory: %w", mkdirErr)
 	}
+
+	tmpDir, tmpErr := os.MkdirTemp(filepath.Dir(destDir), "."+filepath.Base(destDir)+"-*")
+	if tmpErr != nil {
+		return fmt.Errorf("failed to create temporary extraction directory: %w", tmpErr)
+	}
+
+	extractionComplete := false
+	defer func() {
+		if !extractionComplete {
+			_ = os.RemoveAll(tmpDir)
+		}
+	}()
 
 	var totalExtracted int64
 
 	for _, file := range r.File {
-		n, extractErr := extractZipEntry(file, destDir, maxEntryBytes)
+		n, extractErr := extractZipEntry(file, tmpDir, maxEntryBytes)
 		if extractErr != nil {
 			return extractErr
 		}
@@ -280,6 +342,59 @@ func extractZIPWithLimits(zipPath, destDir string, maxAggregateBytes, maxEntryBy
 		if sizeErr := enforceAggregateExtractionLimit(totalExtracted, maxAggregateBytes); sizeErr != nil {
 			return sizeErr
 		}
+	}
+
+	if replaceErr := replaceDirectory(destDir, tmpDir); replaceErr != nil {
+		return replaceErr
+	}
+
+	extractionComplete = true
+
+	return nil
+}
+
+func replaceDirectory(destDir, tmpDir string) error {
+	destDir = filepath.Clean(destDir)
+	tmpDir = filepath.Clean(tmpDir)
+
+	backupDir := ""
+
+	if _, statErr := os.Stat(destDir); statErr == nil {
+		parent := filepath.Dir(destDir)
+
+		createdBackup, mkErr := os.MkdirTemp(parent, "."+filepath.Base(destDir)+"-old-*")
+		if mkErr != nil {
+			return fmt.Errorf("failed to create backup directory: %w", mkErr)
+		}
+
+		if removeErr := os.Remove(createdBackup); removeErr != nil {
+			return fmt.Errorf("failed to prepare backup directory: %w", removeErr)
+		}
+
+		if renameErr := os.Rename(destDir, createdBackup); renameErr != nil {
+			return fmt.Errorf("failed to move existing destination aside: %w", renameErr)
+		}
+
+		backupDir = createdBackup
+	} else if !os.IsNotExist(statErr) {
+		return fmt.Errorf("failed to stat destination directory: %w", statErr)
+	}
+
+	if renameErr := os.Rename(tmpDir, destDir); renameErr != nil {
+		if backupDir != "" {
+			if restoreErr := os.Rename(backupDir, destDir); restoreErr != nil {
+				return errors.Join(
+					fmt.Errorf("failed to replace destination directory: %w", renameErr),
+					fmt.Errorf("failed to restore backup directory: %w", restoreErr),
+				)
+			}
+		}
+
+		return fmt.Errorf("failed to replace destination directory: %w", renameErr)
+	}
+
+	if backupDir != "" {
+		_ = os.RemoveAll(backupDir)
 	}
 
 	return nil

@@ -41,6 +41,12 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	jobID := parts[0]
 
 	if len(parts) > 1 {
+		if len(parts) != 2 {
+			httputil.RespondNotFound(w, "Endpoint")
+
+			return
+		}
+
 		switch parts[1] {
 		case "report":
 			s.handleJobReport(w, r, jobID)
@@ -55,6 +61,10 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 			return
 		}
+
+		httputil.RespondNotFound(w, "Endpoint")
+
+		return
 	}
 
 	ctx := logging.WithJobID(r.Context(), jobID)

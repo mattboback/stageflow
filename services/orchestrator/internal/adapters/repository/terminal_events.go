@@ -34,6 +34,7 @@ func (d *Database) CompleteJobWithTerminalEvent(
 	defer rollbackOnError(tx, &err, "complete job")
 
 	now := time.Now()
+
 	result, err := tx.ExecContext(
 		ctx,
 		bindPostgresParams(`
@@ -68,12 +69,12 @@ func (d *Database) CompleteJobWithTerminalEvent(
 		}
 	}
 
-	if err := insertTerminalEventTx(ctx, tx, jobID, events.EventJobCompleted, payload); err != nil {
-		return err
+	if insertErr := insertTerminalEventTx(ctx, tx, jobID, events.EventJobCompleted, payload); insertErr != nil {
+		return insertErr
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit complete job transaction: %w", err)
+	if commitErr := tx.Commit(); commitErr != nil {
+		return fmt.Errorf("commit complete job transaction: %w", commitErr)
 	}
 
 	return nil
@@ -96,6 +97,7 @@ func (d *Database) FailJobWithTerminalEvent(
 	defer rollbackOnError(tx, &err, "fail job")
 
 	now := time.Now()
+
 	result, err := tx.ExecContext(
 		ctx,
 		bindPostgresParams(`
@@ -134,12 +136,12 @@ func (d *Database) FailJobWithTerminalEvent(
 		}
 	}
 
-	if err := insertTerminalEventTx(ctx, tx, jobID, events.EventJobFailed, payload); err != nil {
-		return err
+	if insertErr := insertTerminalEventTx(ctx, tx, jobID, events.EventJobFailed, payload); insertErr != nil {
+		return insertErr
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit fail job transaction: %w", err)
+	if commitErr := tx.Commit(); commitErr != nil {
+		return fmt.Errorf("commit fail job transaction: %w", commitErr)
 	}
 
 	return nil
@@ -166,8 +168,8 @@ func (d *Database) ListUnpublishedTerminalEvents(ctx context.Context, jobID stri
 
 	for rows.Next() {
 		var eventName, payloadJSON string
-		if err := rows.Scan(&eventName, &payloadJSON); err != nil {
-			return nil, fmt.Errorf("scan terminal event: %w", err)
+		if scanErr := rows.Scan(&eventName, &payloadJSON); scanErr != nil {
+			return nil, fmt.Errorf("scan terminal event: %w", scanErr)
 		}
 
 		out = append(out, TerminalEventRecord{
@@ -176,8 +178,8 @@ func (d *Database) ListUnpublishedTerminalEvents(ctx context.Context, jobID stri
 		})
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate terminal events: %w", err)
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, fmt.Errorf("iterate terminal events: %w", rowsErr)
 	}
 
 	return out, nil
@@ -212,6 +214,7 @@ func insertTerminalEventTx(ctx context.Context, tx *sql.Tx, jobID, eventName str
 	}
 
 	now := time.Now()
+
 	_, err = tx.ExecContext(
 		ctx,
 		bindPostgresParams(`
@@ -237,6 +240,7 @@ func insertTerminalEventTx(ctx context.Context, tx *sql.Tx, jobID, eventName str
 
 func getJobStateTx(ctx context.Context, tx *sql.Tx, jobID string) (models.JobState, error) {
 	var state models.JobState
+
 	err := tx.QueryRowContext(ctx, bindPostgresParams(`SELECT state FROM jobs WHERE id = ?`), jobID).Scan(&state)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("job not found: %s", jobID)

@@ -3,9 +3,11 @@ import {
 	buildFormAuthConfig,
 	isAuthConfigComplete,
 	isZipFilename,
+	MAX_ZIP_UPLOAD_BYTES,
 	normalizeUrlInput,
 	normalizeUrlListText,
 	parseUrlList,
+	validateZipUploadFile,
 	validateHttpUrls
 } from '$lib/components/playground/playground-utils';
 import { describe, expect, it } from 'vitest';
@@ -50,6 +52,15 @@ describe('playground-utils', () => {
 		expect(isZipFilename('site.zip')).toBe(true);
 		expect(isZipFilename(' SITE.ZIP ')).toBe(true);
 		expect(isZipFilename('site.tar.gz')).toBe(false);
+	});
+
+	it('validates zip upload file names and sizes', () => {
+		expect(validateZipUploadFile(new File(['ok'], 'site.zip'))).toBeNull();
+		expect(validateZipUploadFile(new File(['ok'], 'site.txt'))).toBe('Please select a ZIP file');
+
+		const oversized = new File([new Uint8Array(1)], 'site.zip');
+		Object.defineProperty(oversized, 'size', { value: MAX_ZIP_UPLOAD_BYTES + 1 });
+		expect(validateZipUploadFile(oversized)).toBe('ZIP file must be 100MB or smaller');
 	});
 
 	it('builds AI navigator config with optional fields', () => {

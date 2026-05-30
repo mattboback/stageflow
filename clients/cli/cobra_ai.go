@@ -38,9 +38,10 @@ func newAICmd(root *rootOptions) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "ai <url> <objective>",
-		Short: "Run the AI navigator against a project with natural language objectives",
-		Args:  cobra.ExactArgs(2),
+		Use:    "ai <url> <objective>",
+		Short:  "Run the experimental AI navigator",
+		Hidden: true,
+		Args:   cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			urlStrs, err := urlcheck.NormalizeTargets([]string{args[0]})
 			if err != nil {

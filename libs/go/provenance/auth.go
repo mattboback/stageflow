@@ -220,62 +220,80 @@ func ValidateAuth(auth *Auth) error {
 
 	switch auth.Mode {
 	case AuthModeStorageState:
-		if auth.StorageState == nil {
-			return errors.New("provenance.auth.storage_state is required when mode=storage_state")
-		}
-
-		if auth.StorageState.ArtifactKey == "" && auth.StorageState.ContentBase64 == "" {
-			return errors.New(
-				"provenance.auth.storage_state must carry either an artifact_key or an inline content_b64 blob",
-			)
-		}
-
+		return validateStorageStateAuth(auth.StorageState)
 	case AuthModeForm:
-		if auth.Form == nil {
-			return errors.New("provenance.auth.form is required when mode=form")
-		}
-
-		if auth.Form.LoginURL == "" {
-			return errors.New("provenance.auth.form.login_url is required")
-		}
-
-		if len(auth.Form.Steps) == 0 {
-			return errors.New("provenance.auth.form.steps must contain at least one step")
-		}
-
-		if auth.Form.Success == nil {
-			return errors.New("provenance.auth.form.success is required")
-		}
-
-		if _, hasType := auth.Form.Success["type"].(string); !hasType {
-			return errors.New("provenance.auth.form.success.type is required")
-		}
-
-		for i, step := range auth.Form.Steps {
-			if step.Type == "" {
-				return fmt.Errorf("provenance.auth.form.steps[%d].type is required", i)
-			}
-
-			if step.Value != nil && step.Value.FromEnv != nil {
-				if !envVarNamePattern.MatchString(*step.Value.FromEnv) {
-					return fmt.Errorf(
-						"provenance.auth.form.steps[%d].value.from_env %q must match %s",
-						i,
-						*step.Value.FromEnv,
-						envVarNamePattern.String(),
-					)
-				}
-			}
-		}
-
+		return validateFormAuth(auth.Form)
 	case "":
 		return errors.New("provenance.auth.mode is required")
 	default:
 		return fmt.Errorf("provenance.auth.mode %q is not supported (expected %q or %q)",
 			auth.Mode, AuthModeForm, AuthModeStorageState)
 	}
+}
+
+func validateStorageStateAuth(storageState *StorageStateBlock) error {
+	if storageState == nil {
+		return errors.New("provenance.auth.storage_state is required when mode=storage_state")
+	}
+
+	if storageState.ArtifactKey == "" && storageState.ContentBase64 == "" {
+		return errors.New(
+			"provenance.auth.storage_state must carry either an artifact_key or an inline content_b64 blob",
+		)
+	}
 
 	return nil
+}
+
+func validateFormAuth(form *FormRecipe) error {
+	if form == nil {
+		return errors.New("provenance.auth.form is required when mode=form")
+	}
+
+	if form.LoginURL == "" {
+		return errors.New("provenance.auth.form.login_url is required")
+	}
+
+	if len(form.Steps) == 0 {
+		return errors.New("provenance.auth.form.steps must contain at least one step")
+	}
+
+	if form.Success == nil {
+		return errors.New("provenance.auth.form.success is required")
+	}
+
+	if _, hasType := form.Success["type"].(string); !hasType {
+		return errors.New("provenance.auth.form.success.type is required")
+	}
+
+	for i, step := range form.Steps {
+		if err := validateFormAuthStep(i, step); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateFormAuthStep(index int, step FormStep) error {
+	if step.Type == "" {
+		return fmt.Errorf("provenance.auth.form.steps[%d].type is required", index)
+	}
+
+	if step.Value == nil || step.Value.FromEnv == nil {
+		return nil
+	}
+
+	if envVarNamePattern.MatchString(*step.Value.FromEnv) {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"provenance.auth.form.steps[%d].value.from_env %q must match %s",
+		index,
+		*step.Value.FromEnv,
+		envVarNamePattern.String(),
+	)
 }
 
 // MarshalJSON encodes Auth so it round-trips with the JSON schema shape: a flat
@@ -309,47 +327,55 @@ func (a *Auth) UnmarshalJSON(data []byte) error {
 
 	switch a.Mode {
 	case AuthModeStorageState:
-		ss := &StorageStateBlock{}
-		if v, has := raw["artifact_key"]; has {
-			if err := json.Unmarshal(v, &ss.ArtifactKey); err != nil {
-				return fmt.Errorf("provenance.auth.artifact_key: %w", err)
-			}
-		}
-
-		if v, has := raw["content_b64"]; has {
-			if err := json.Unmarshal(v, &ss.ContentBase64); err != nil {
-				return fmt.Errorf("provenance.auth.content_b64: %w", err)
-			}
-		}
-
-		a.StorageState = ss
-
+		return a.decodeStorageStateAuth(raw)
 	case AuthModeForm:
-		form := &FormRecipe{}
-
-		if v, has := raw["login_url"]; has {
-			if err := json.Unmarshal(v, &form.LoginURL); err != nil {
-				return fmt.Errorf("provenance.auth.login_url: %w", err)
-			}
-		}
-
-		if v, has := raw["steps"]; has {
-			if err := json.Unmarshal(v, &form.Steps); err != nil {
-				return fmt.Errorf("provenance.auth.steps: %w", err)
-			}
-		}
-
-		if v, has := raw["success"]; has {
-			if err := json.Unmarshal(v, &form.Success); err != nil {
-				return fmt.Errorf("provenance.auth.success: %w", err)
-			}
-		}
-
-		a.Form = form
-
+		return a.decodeFormAuth(raw)
 	default:
 		return fmt.Errorf("provenance.auth.mode %q is not supported", a.Mode)
 	}
+}
+
+func (a *Auth) decodeStorageStateAuth(raw map[string]json.RawMessage) error {
+	ss := &StorageStateBlock{}
+	if v, has := raw["artifact_key"]; has {
+		if err := json.Unmarshal(v, &ss.ArtifactKey); err != nil {
+			return fmt.Errorf("provenance.auth.artifact_key: %w", err)
+		}
+	}
+
+	if v, has := raw["content_b64"]; has {
+		if err := json.Unmarshal(v, &ss.ContentBase64); err != nil {
+			return fmt.Errorf("provenance.auth.content_b64: %w", err)
+		}
+	}
+
+	a.StorageState = ss
+
+	return nil
+}
+
+func (a *Auth) decodeFormAuth(raw map[string]json.RawMessage) error {
+	form := &FormRecipe{}
+
+	if v, has := raw["login_url"]; has {
+		if err := json.Unmarshal(v, &form.LoginURL); err != nil {
+			return fmt.Errorf("provenance.auth.login_url: %w", err)
+		}
+	}
+
+	if v, has := raw["steps"]; has {
+		if err := json.Unmarshal(v, &form.Steps); err != nil {
+			return fmt.Errorf("provenance.auth.steps: %w", err)
+		}
+	}
+
+	if v, has := raw["success"]; has {
+		if err := json.Unmarshal(v, &form.Success); err != nil {
+			return fmt.Errorf("provenance.auth.success: %w", err)
+		}
+	}
+
+	a.Form = form
 
 	return nil
 }

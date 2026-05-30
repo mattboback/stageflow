@@ -1,9 +1,11 @@
 package scannerregistry
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 
@@ -163,24 +165,50 @@ func toStringSlice[T ~string](values []T) []string {
 
 // ApplyOverrides applies YAML overrides to a registry config in place.
 func ApplyOverrides(config *Config, overrides *Overrides) *Config {
+	updated, _ := ApplyOverridesChecked(config, overrides)
+
+	return updated
+}
+
+// ApplyOverridesChecked applies YAML overrides and reports scanner IDs that do
+// not match built-in scanner definitions.
+func ApplyOverridesChecked(config *Config, overrides *Overrides) (*Config, []string) {
 	if config == nil || overrides == nil {
-		return config
+		return config, nil
 	}
 
 	if overrides.DefaultImage != "" {
 		config.DefaultImage = overrides.DefaultImage
 	}
 
+	var unknown []string
+
 	for id, scanner := range overrides.Scanners {
 		def, ok := config.Scanners[id]
 		if !ok {
+			unknown = append(unknown, id)
+
 			continue
 		}
 
 		applyScannerOverride(def, scanner)
 	}
 
-	return config
+	sort.Strings(unknown)
+
+	return config, unknown
+}
+
+// ErrUnknownScannerOverride is returned when overrides name scanner IDs that
+// are not in the built-in scanner catalog.
+var ErrUnknownScannerOverride = errors.New("unknown scanner override IDs")
+
+func FormatUnknownScannerOverrides(unknown []string) error {
+	if len(unknown) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("%w: %v", ErrUnknownScannerOverride, unknown)
 }
 
 // InitializeRegistry creates and populates a registry from config.

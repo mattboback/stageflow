@@ -9,7 +9,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -48,6 +50,27 @@ func NewStaticServer(config *Config) *StaticServer {
 	}
 }
 
+func containsDotPathSegment(pathValue string) bool {
+	for _, segment := range strings.Split(path.Clean("/"+pathValue), "/") {
+		if strings.HasPrefix(segment, ".") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *StaticServer) localPathForRequest(urlPath string) string {
+	cleanPath := path.Clean("/" + urlPath)
+
+	rel := strings.TrimPrefix(cleanPath, "/")
+	if rel == "" {
+		return filepath.Clean(s.siteDir)
+	}
+
+	return filepath.Join(filepath.Clean(s.siteDir), filepath.FromSlash(rel))
+}
+
 // Start begins serving in a background goroutine.
 func (s *StaticServer) Start(ctx context.Context) error {
 	if s.siteDir == "" {
@@ -72,6 +95,27 @@ func (s *StaticServer) Start(ctx context.Context) error {
 			return
 		}
 
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+			return
+		}
+
+		if containsDotPathSegment(r.URL.Path) {
+			http.NotFound(w, r)
+
+			return
+		}
+
+		localPath := s.localPathForRequest(r.URL.Path)
+		if info, statErr := os.Stat(localPath); statErr == nil && info.IsDir() {
+			if _, indexErr := os.Stat(filepath.Join(localPath, "index.html")); indexErr != nil {
+				http.NotFound(w, r)
+
+				return
+			}
+		}
+
 		fileServer.ServeHTTP(w, r)
 	})
 
@@ -79,6 +123,9 @@ func (s *StaticServer) Start(ctx context.Context) error {
 		Addr:              s.addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       30 * time.Second,
 		BaseContext: func(net.Listener) context.Context {
 			return ctx
 		},
@@ -108,6 +155,15 @@ func (s *StaticServer) Start(ctx context.Context) error {
 	return nil
 }
 
+// ListenerAddr returns the bound TCP address after Start succeeds.
+func (s *StaticServer) ListenerAddr() string {
+	if s.listener == nil {
+		return ""
+	}
+
+	return s.listener.Addr().String()
+}
+
 // Wait blocks until the server exits.
 func (s *StaticServer) Wait() error {
 	if s.server == nil {
@@ -127,13 +183,4 @@ func (s *StaticServer) Stop(ctx context.Context) error {
 	defer cancel()
 
 	return s.server.Shutdown(ctx)
-}
-
-// ListenerAddr returns the bound address once Start has been called.
-func (s *StaticServer) ListenerAddr() string {
-	if s.listener == nil {
-		return ""
-	}
-
-	return s.listener.Addr().String()
 }

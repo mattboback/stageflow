@@ -139,6 +139,26 @@ describe('config-loader', () => {
 		);
 	});
 
+	it('throws when explicit env values are malformed', () => {
+		setRequiredRuntimeEnv();
+		process.env.JOB_ID = 'job-123';
+		process.env.BROWSER_HEADLESS = 'treu';
+
+		expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
+			'Invalid boolean environment variable BROWSER_HEADLESS'
+		);
+	});
+
+	it('throws when explicit numeric env values are malformed', () => {
+		setRequiredRuntimeEnv();
+		process.env.JOB_ID = 'job-123';
+		process.env.PAGE_LOAD_TIMEOUT = 'abc';
+
+		expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
+			'Invalid integer environment variable PAGE_LOAD_TIMEOUT'
+		);
+	});
+
 	it('validateConfig reports invalid settings', () => {
 		const config = {
 			jobId: '',

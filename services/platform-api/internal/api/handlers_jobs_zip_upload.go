@@ -26,13 +26,38 @@ const maxUploadSize = 100 * 1024 * 1024
 
 // Note: keep reverse proxies/LB client_max_body_size in sync with maxUploadSize.
 
+type formFieldTooLargeError struct {
+	limit int64
+}
+
+func (e *formFieldTooLargeError) Error() string {
+	return fmt.Sprintf("multipart field exceeds %d byte limit", e.limit)
+}
+
 func readFormValue(part *multipart.Part, limit int64) (string, error) {
-	data, err := io.ReadAll(io.LimitReader(part, limit))
+	data, err := io.ReadAll(io.LimitReader(part, limit+1))
 	if err != nil {
 		return "", err
 	}
 
+	if int64(len(data)) > limit {
+		return "", &formFieldTooLargeError{limit: limit}
+	}
+
 	return string(data), nil
+}
+
+func formReadClientError(field string, err error) error {
+	var tooLarge *formFieldTooLargeError
+	if errors.As(err, &tooLarge) {
+		return newClientDetailError(httputil.NewValidationError(
+			field,
+			fmt.Sprintf("%s field is too large", field),
+			fmt.Sprintf("Keep %s at or below %d bytes.", field, tooLarge.limit),
+		))
+	}
+
+	return newClientMessageError(fmt.Sprintf("Failed to read %s field", field))
 }
 
 func sanitizeFilename(name string) string {
@@ -334,7 +359,7 @@ func handleModulesPart(ctx context.Context, part *multipart.Part, state *zipUplo
 	if err != nil {
 		logging.Error(ctx, "Failed to read modules value", "error", err)
 
-		return newClientMessageError("Failed to read modules field")
+		return formReadClientError("modules", err)
 	}
 
 	if strings.TrimSpace(value) != "" {
@@ -349,7 +374,7 @@ func handleScannerConfigsPart(ctx context.Context, part *multipart.Part, state *
 	if err != nil {
 		logging.Error(ctx, "Failed to read scanner_configs value", "error", err)
 
-		return newClientMessageError("Failed to read scanner_configs field")
+		return formReadClientError("scanner_configs", err)
 	}
 
 	if strings.TrimSpace(value) == "" {
@@ -377,7 +402,7 @@ func handleHighlightStylePart(ctx context.Context, part *multipart.Part, state *
 	if err != nil {
 		logging.Error(ctx, "Failed to read highlight_style value", "error", err)
 
-		return newClientMessageError("Failed to read highlight_style field")
+		return formReadClientError("highlight_style", err)
 	}
 
 	state.highlightStyle = value
@@ -390,7 +415,7 @@ func handleScreenshotPart(ctx context.Context, part *multipart.Part, state *zipU
 	if err != nil {
 		logging.Error(ctx, "Failed to read screenshot value", "error", err)
 
-		return newClientMessageError("Failed to read screenshot field")
+		return formReadClientError("screenshot", err)
 	}
 
 	enabled := strings.EqualFold(strings.TrimSpace(value), "true")

@@ -24,7 +24,7 @@ type capturedScanSubmission struct {
 	hits int
 }
 
-func newCapturingScanAPI(t *testing.T) (*httptest.Server, *capturedScanSubmission, string) {
+func newCapturingScanAPI(t *testing.T) (*httptest.Server, *capturedScanSubmission) {
 	t.Helper()
 
 	jobID := "job-auth-test"
@@ -37,9 +37,13 @@ func newCapturingScanAPI(t *testing.T) (*httptest.Server, *capturedScanSubmissio
 			captured.mu.Lock()
 			defer captured.mu.Unlock()
 
-			body, _ := io.ReadAll(r.Body)
-			if err := json.Unmarshal(body, &captured.body); err != nil {
-				t.Fatalf("failed to decode submitted body: %v", err)
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("failed to read submitted body: %v", err)
+			}
+
+			if unmarshalErr := json.Unmarshal(body, &captured.body); unmarshalErr != nil {
+				t.Fatalf("failed to decode submitted body: %v", unmarshalErr)
 			}
 
 			captured.hits++
@@ -61,11 +65,11 @@ func newCapturingScanAPI(t *testing.T) (*httptest.Server, *capturedScanSubmissio
 		}
 	})
 
-	return httptest.NewServer(handler), captured, jobID
+	return httptest.NewServer(handler), captured
 }
 
 func TestScanAuthState_AttachesBase64StorageState(t *testing.T) {
-	server, captured, _ := newCapturingScanAPI(t)
+	server, captured := newCapturingScanAPI(t)
 	defer server.Close()
 
 	tmp := t.TempDir()
@@ -133,7 +137,7 @@ func TestScanAuthState_AttachesBase64StorageState(t *testing.T) {
 }
 
 func TestScanAuthRecipe_AttachesFormRecipeWithFromEnv(t *testing.T) {
-	server, captured, _ := newCapturingScanAPI(t)
+	server, captured := newCapturingScanAPI(t)
 	defer server.Close()
 
 	tmp := t.TempDir()
@@ -229,7 +233,13 @@ func TestScanAuth_MutuallyExclusiveFlags(t *testing.T) {
 	recipePath := filepath.Join(tmp, "r.yaml")
 	statePath := filepath.Join(tmp, "s.json")
 
-	if err := os.WriteFile(recipePath, []byte("mode: form\nlogin_url: https://x\nsteps: [{type: click, selector: a}]\nsuccess: {type: load}\n"), 0o600); err != nil {
+	recipe := []byte(
+		"mode: form\n" +
+			"login_url: https://x\n" +
+			"steps: [{type: click, selector: a}]\n" +
+			"success: {type: load}\n",
+	)
+	if err := os.WriteFile(recipePath, recipe, 0o600); err != nil {
 		t.Fatalf("write recipe: %v", err)
 	}
 

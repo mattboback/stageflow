@@ -441,3 +441,62 @@ func TestConfigDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadProjectConfigRejectsNonPositiveDurations(t *testing.T) {
+	tests := []struct {
+		name        string
+		configYAML  string
+		errContains string
+	}{
+		{
+			name: "ready interval zero",
+			configYAML: `version: 1
+stageflow:
+  api_url: http://localhost:8080
+scan:
+  urls:
+    - http://localhost:3000
+dev:
+  start:
+    cmd: ["npm", "run", "dev"]
+  ready:
+    url: http://localhost:3000/health
+    interval: 0s
+`,
+			errContains: "dev.ready.interval must be > 0",
+		},
+		{
+			name: "scan timeout negative",
+			configYAML: `version: 1
+stageflow:
+  api_url: http://localhost:8080
+scan:
+  urls:
+    - http://localhost:3000
+  timeout: -1s
+dev:
+  start:
+    cmd: ["npm", "run", "dev"]
+  ready:
+    url: http://localhost:3000/health
+`,
+			errContains: "scan.timeout must be > 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeProjectConfig(t, root, tt.configYAML)
+
+			_, _, err := loadProjectConfig(root)
+			if err == nil {
+				t.Fatalf("loadProjectConfig err = nil, want non-nil")
+			}
+
+			if !strings.Contains(err.Error(), tt.errContains) {
+				t.Fatalf("loadProjectConfig err = %q, want %q", err.Error(), tt.errContains)
+			}
+		})
+	}
+}

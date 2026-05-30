@@ -29,6 +29,14 @@ func (s *Service) HandleExtractionFailed(
 		)
 	}
 
+	if _, err := s.store.GetJob(ctx, payload.JobID); err != nil {
+		if shouldIgnoreMissingJob(events.EventExtractionFailed, payload.JobID, err) {
+			return nil
+		}
+
+		return err
+	}
+
 	if err := s.store.UpdateJobExtractionArtifacts(
 		ctx,
 		payload.JobID,

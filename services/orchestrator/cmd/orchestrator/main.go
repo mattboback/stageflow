@@ -234,7 +234,13 @@ func loadScannerRegistry(logger *slog.Logger, defaultImage string) (*scanners.Re
 	}
 
 	if scannerOverrides != nil {
-		registryConfig = scanners.ApplyOverrides(registryConfig, scannerOverrides)
+		var unknown []string
+
+		registryConfig, unknown = scanners.ApplyOverridesChecked(registryConfig, scannerOverrides)
+		if err := scanners.FormatUnknownScannerOverrides(unknown); err != nil {
+			return nil, fmt.Errorf("apply scanner overrides: %w", err)
+		}
+
 		logger.Info("Applied scanner overrides", "override_count", len(scannerOverrides.Scanners))
 	}
 

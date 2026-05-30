@@ -194,8 +194,8 @@ func TestProjectJobMapping(t *testing.T) {
 		t.Error("expected other job NOT to belong to project")
 	}
 
-	if err := s.DeleteProjectJob(ctx, jobID); err != nil {
-		t.Fatalf("DeleteProjectJob: %v", err)
+	if deleteErr := s.DeleteProjectJob(ctx, jobID); deleteErr != nil {
+		t.Fatalf("DeleteProjectJob: %v", deleteErr)
 	}
 
 	belongs, err = s.JobBelongsToProject(ctx, p.ID, jobID)

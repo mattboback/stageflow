@@ -156,6 +156,8 @@ func (d *Database) ClaimJobCompletion(ctx context.Context, jobID string) (bool, 
 	switch state {
 	case models.JobStateCompleting, models.JobStateDone, models.JobStateFailed:
 		return false, nil
+	case models.JobStatePending, models.JobStateExtracting, models.JobStateReady, models.JobStateScanning:
+		return false, fmt.Errorf("job %s not eligible for completion claim (state=%s)", jobID, state)
 	default:
 		return false, fmt.Errorf("job %s not eligible for completion claim (state=%s)", jobID, state)
 	}

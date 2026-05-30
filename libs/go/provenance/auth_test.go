@@ -25,8 +25,8 @@ func loadAuthFromFixture(t *testing.T, name string) *Auth {
 	var doc struct {
 		Auth *Auth `json:"auth"`
 	}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		t.Fatalf("parse fixture %s: %v", path, err)
+	if unmarshalErr := json.Unmarshal(data, &doc); unmarshalErr != nil {
+		t.Fatalf("parse fixture %s: %v", path, unmarshalErr)
 	}
 
 	return doc.Auth
@@ -41,7 +41,7 @@ func mustFindRepoRoot(t *testing.T) string {
 	}
 
 	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.work")); statErr == nil {
 			return dir
 		}
 
@@ -209,8 +209,8 @@ func TestAuthRoundTripFromFormFixture(t *testing.T) {
 	}
 
 	var roundtrip Auth
-	if err := json.Unmarshal(wire, &roundtrip); err != nil {
-		t.Fatalf("unmarshal: %v", err)
+	if unmarshalErr := json.Unmarshal(wire, &roundtrip); unmarshalErr != nil {
+		t.Fatalf("unmarshal: %v", unmarshalErr)
 	}
 
 	if !reflect.DeepEqual(CollectFromEnvReferences(auth), CollectFromEnvReferences(&roundtrip)) {

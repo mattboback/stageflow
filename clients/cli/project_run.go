@@ -44,6 +44,10 @@ func resolveProjectTimeout(cmd *cobra.Command, defaultTimeout time.Duration, raw
 		return 0, fmt.Errorf("invalid scan.timeout: %w", durationErr)
 	}
 
+	if ok && d <= 0 {
+		return 0, errors.New("invalid scan.timeout: scan.timeout must be > 0")
+	}
+
 	if ok {
 		return d, nil
 	}
@@ -156,7 +160,7 @@ func runProjectCommand(
 	getenv getenvFunc,
 	opts *projectCmdOptions,
 ) error {
-	if opts.MaxIssues < 0 {
+	if opts.Report.maxIssues < 0 {
 		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 	}
 
@@ -230,10 +234,7 @@ func runProjectCommand(
 		return exitCodeError{Code: 2, Err: err}
 	}
 
-	renderErr := renderUnifiedReport(cmd.OutOrStdout(), apiURL, status, doc, reportRenderOptions{
-		Format:    format,
-		MaxIssues: opts.MaxIssues,
-	})
+	renderErr := renderUnifiedReport(cmd.OutOrStdout(), apiURL, status, doc, opts.Report.renderOptions(format))
 	if renderErr != nil {
 		return wrapRenderError(renderErr)
 	}

@@ -14,9 +14,9 @@ type NATSConfig struct {
 func LoadNATSConfig() NATSConfig {
 	return NATSConfig{
 		URL:            GetEnv("NATS_URL", "nats://localhost:4222"),
-		MaxReconnects:  GetEnvInt("NATS_MAX_RECONNECTS", 10),
-		ReconnectWait:  GetEnvDuration("NATS_RECONNECT_WAIT", 2*time.Second),
-		ConnectTimeout: GetEnvDuration("NATS_CONNECT_TIMEOUT", 10*time.Second),
+		MaxReconnects:  MustGetEnvInt("NATS_MAX_RECONNECTS", 10),
+		ReconnectWait:  MustGetEnvDuration("NATS_RECONNECT_WAIT", 2*time.Second),
+		ConnectTimeout: MustGetEnvDuration("NATS_CONNECT_TIMEOUT", 10*time.Second),
 	}
 }
 
@@ -54,9 +54,9 @@ func LoadMinIOConfig() MinIOConfig {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		UseSSL:         GetEnvBool("MINIO_USE_SSL", false),
-		PublicUseSSL:   GetEnvBool("MINIO_PUBLIC_USE_SSL", true),
+		UseSSL:         MustGetEnvBool("MINIO_USE_SSL", false),
+		PublicUseSSL:   MustGetEnvBool("MINIO_PUBLIC_USE_SSL", true),
 		Region:         GetEnv("MINIO_REGION", "us-east-1"),
-		UseProxyURLs:   GetEnvBool("MINIO_USE_PROXY_URLS", false),
+		UseProxyURLs:   MustGetEnvBool("MINIO_USE_PROXY_URLS", false),
 	}
 }
