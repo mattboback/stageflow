@@ -173,7 +173,25 @@ describe('AxeScanner.scanPage', () => {
 			[
 				{
 					id: 'color-contrast',
-					nodes: expect.any(Array)
+					nodes: [
+						{
+							target: ['.hero-help'],
+							html: '<p class="hero-help">Enter any public URL above and press Enter to run a live scan</p>',
+							failureSummary:
+								"Fix any of the following:\n  Element's background color could not be determined due to a pseudo element"
+						}
+					]
+				},
+				{
+					id: 'color-contrast',
+					nodes: [
+						{
+							target: ['.muted-link'],
+							html: '<a class="muted-link">LinkedIn</a>',
+							failureSummary:
+								"Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+						}
+					]
 				}
 			],
 			expect.any(String),

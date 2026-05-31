@@ -249,24 +249,40 @@ Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guid
 ## Screenshots
 
 ### Real-World Dogfooding: Auditing AlchemizeCV
-StageFlow is used to continuously audit [AlchemizeCV](https://alchemizecv.com) (our resume-tailoring SaaS platform) using a secure, multi-step authenticated scanning flow:
+StageFlow is dogfooded against [AlchemizeCV](https://alchemizecv.com), a private resume-tailoring SaaS workspace. The current screenshots come from a headful Chrome/Xvfb run on May 30, 2026 that used StageFlow's web Playground form-auth flow to log in, scan `/dashboard`, `/applications`, and `/profile`, and verify all seven standard scanners completed.
 
 <table>
   <tr>
     <td><img src="docs/images/scan-in-progress.png" alt="Live scan progress of AlchemizeCV with scanner status and event streaming" /></td>
-    <td><img src="docs/images/report-overview.png" alt="Unified report overview of AlchemizeCV's private workspace dashboard" /></td>
+    <td><img src="docs/images/scan-complete.png" alt="Completed authenticated AlchemizeCV scan with report artifacts ready" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Live job progress of AlchemizeCV scan streamed over SSE</em></td>
-    <td align="center"><em>Unified report overview of AlchemizeCV's private dashboard after authentication</em></td>
+    <td align="center"><em>Live job progress streamed over SSE while scanners audit authenticated pages</em></td>
+    <td align="center"><em>Completed scan with report, logs, recipes, provenance, and page screenshots attached</em></td>
   </tr>
   <tr>
-    <td><img src="docs/images/report-issues.png" alt="Detailed issues view of AlchemizeCV dashboard audit" /></td>
+    <td><img src="docs/images/report-overview.png" alt="Unified report overview of an authenticated AlchemizeCV scan" /></td>
+    <td><img src="docs/images/report-issues.png" alt="Issue triage view for the authenticated AlchemizeCV scan" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Unified report overview: 3 authenticated pages, 7 scanners, 60 findings</em></td>
+    <td align="center"><em>Grouped issue triage with severity, scanner, page, and remediation context</em></td>
+  </tr>
+  <tr>
     <td><img src="docs/images/report-pages.png" alt="Page-level visual evidence and contrast highlights on the AlchemizeCV dashboard" /></td>
+    <td><img src="docs/images/report-pages-detail.png" alt="Visual review overlay for the authenticated AlchemizeCV applications page" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Grouped scanner issues view with precise rule breakdowns</em></td>
-    <td align="center"><em>Page-level interactive evidence overlay showing visual accessibility outlines</em></td>
+    <td align="center"><em>Page-level evidence confirms the private applications workspace rendered after login</em></td>
+    <td align="center"><em>Visual review overlays scanner evidence directly on the captured authenticated page</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/report-scanners.png" alt="Scanner status view showing successful AlchemizeCV scan modules" /></td>
+    <td><img src="docs/images/mobile-stageflow-report-overview.png" alt="Mobile report overview for the authenticated AlchemizeCV scan" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>All standard scanners completed successfully</em></td>
+    <td align="center"><em>The same report remains reviewable on a mobile viewport</em></td>
   </tr>
 </table>
 

@@ -271,7 +271,11 @@ export function buildOccurrenceModeReport(report: UnifiedReport): UnifiedReport 
 		const updatedPageOverview = page.pageOverview
 			? {
 					...page.pageOverview,
-					elements: remapPageOverviewElements(page.pageOverview.elements, derivedIdsByIssueId, occurrenceIssues)
+					elements: remapPageOverviewElements(
+						page.pageOverview.elements,
+						derivedIdsByIssueId,
+						occurrenceIssues
+					)
 				}
 			: undefined;
 		return {

@@ -539,7 +539,7 @@ describe('scan-monitor', () => {
 		monitor.start();
 		streamSink?.onStatus(createScanResult({ state: 'SCANNING' }));
 		streamSink?.onUpdate({
-			type: 'job_failed',
+			type: 'failed',
 			state: 'FAILED',
 			error: 'worker failed',
 			error_details: 'scanner timed out'

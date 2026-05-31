@@ -41,7 +41,9 @@ describe('PlaygroundZipUpload', () => {
 		const { container } = render(PlaygroundZipUpload, {
 			props: { file: null, onFileChange, onError }
 		});
-		const input = container.querySelector<HTMLInputElement>('input[type="file"]') as HTMLInputElement;
+		const input = container.querySelector<HTMLInputElement>(
+			'input[type="file"]'
+		) as HTMLInputElement;
 
 		await fireEvent.change(input, { target: { files: [new File(['x'], 'site.txt')] } });
 		expect(onError).toHaveBeenLastCalledWith('Please select a ZIP file');
