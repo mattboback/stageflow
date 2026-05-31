@@ -195,13 +195,22 @@ export abstract class ScannerBase {
 			reportPath: string;
 		}
 	): Promise<{ publishCompletedMs: number }> {
+		// The five timing components are disjoint phases that must sum to <= totalMs
+		// (enforced by the scan.completed contract validator). publishCompletedMs is 0
+		// here because we are still inside the publish phase, and finalizationMs is the
+		// unaccounted remainder (provenance load/upload, stage-log finalize, teardown)
+		// rather than a roll-up of the write/upload phases — double-counting those made
+		// the component sum exceed totalMs and the orchestrator rejected the event.
+		const totalMs = Date.now() - this.runStartedAt;
+		const measuredMs =
+			timing.pageIterationMs + timing.writeResultsMs + timing.uploadArtifactsMs;
 		const timingForEvent = {
-			totalMs: Date.now() - this.runStartedAt,
+			totalMs,
 			pageIterationMs: timing.pageIterationMs,
 			writeResultsMs: timing.writeResultsMs,
 			uploadArtifactsMs: timing.uploadArtifactsMs,
 			publishCompletedMs: 0,
-			finalizationMs: timing.writeResultsMs + timing.uploadArtifactsMs
+			finalizationMs: Math.max(0, totalMs - measuredMs)
 		};
 
 		const { durationMs: publishCompletedMs } = await this.runPhase('publishScanCompleted', () =>
