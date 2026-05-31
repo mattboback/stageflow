@@ -1,8 +1,8 @@
 import type { Page } from 'playwright';
 
 import type { Issue } from '../core/types';
-import type { AxeScreenshotService } from './AxeScreenshotService';
 import type { PageOverviewResult, PageOverviewViolation } from './axe/types';
+import type { AxeScreenshotService } from './AxeScreenshotService';
 
 interface MetadataNode {
 	target?: unknown;
@@ -27,9 +27,9 @@ export function issuesToPageOverviewViolations(issues: Issue[]): PageOverviewVio
 
 		const nodes = rawNodes
 			.map((node) => {
-				const target = Array.isArray(node?.target)
+				const target = Array.isArray(node.target)
 					? node.target.filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-					: typeof node?.selector === 'string' && node.selector.trim().length > 0
+					: typeof node.selector === 'string' && node.selector.trim().length > 0
 						? [node.selector]
 						: [];
 				return target.length > 0 ? { target } : null;

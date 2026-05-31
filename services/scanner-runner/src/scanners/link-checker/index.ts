@@ -264,7 +264,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			const cssPath = (el: Element): string => {
 				const parts: string[] = [];
 				let node: Element | null = el;
-				while (node && node.nodeType === 1 && node !== document.body && parts.length < 6) {
+				while (node?.nodeType === 1 && node !== document.body && parts.length < 6) {
 					if (node.id) {
 						parts.unshift(`#${CSS.escape(node.id)}`);
 						break;
@@ -272,9 +272,8 @@ export class LinkCheckerScanner extends ScannerBase {
 					let part = node.tagName.toLowerCase();
 					const parent: Element | null = node.parentElement;
 					if (parent) {
-						const sameTag = Array.from(parent.children).filter(
-							(c) => c.tagName === node!.tagName
-						);
+						const nodeTag = node.tagName;
+						const sameTag = Array.from(parent.children).filter((c) => c.tagName === nodeTag);
 						if (sameTag.length > 1) {
 							part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
 						}
@@ -351,9 +350,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			const batchResults = await Promise.all(
 				batch.map(async (link) => {
 					const result = await checkSingleLink(link.href, targetValidationPolicy);
-					return link.selector !== undefined
-						? { ...result, selector: link.selector }
-						: result;
+					return link.selector !== undefined ? { ...result, selector: link.selector } : result;
 				})
 			);
 			results.push(...batchResults);
@@ -371,7 +368,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			const cssPath = (el: Element): string => {
 				const parts: string[] = [];
 				let node: Element | null = el;
-				while (node && node.nodeType === 1 && node !== document.body && parts.length < 6) {
+				while (node?.nodeType === 1 && node !== document.body && parts.length < 6) {
 					if (node.id) {
 						parts.unshift(`#${CSS.escape(node.id)}`);
 						break;
@@ -379,7 +376,8 @@ export class LinkCheckerScanner extends ScannerBase {
 					let part = node.tagName.toLowerCase();
 					const parent: Element | null = node.parentElement;
 					if (parent) {
-						const sameTag = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+						const nodeTag = node.tagName;
+						const sameTag = Array.from(parent.children).filter((c) => c.tagName === nodeTag);
 						if (sameTag.length > 1) {
 							part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
 						}
@@ -412,7 +410,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			const cssPath = (el: Element): string => {
 				const parts: string[] = [];
 				let node: Element | null = el;
-				while (node && node.nodeType === 1 && node !== document.body && parts.length < 6) {
+				while (node?.nodeType === 1 && node !== document.body && parts.length < 6) {
 					if (node.id) {
 						parts.unshift(`#${CSS.escape(node.id)}`);
 						break;
@@ -420,7 +418,8 @@ export class LinkCheckerScanner extends ScannerBase {
 					let part = node.tagName.toLowerCase();
 					const parent: Element | null = node.parentElement;
 					if (parent) {
-						const sameTag = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+						const nodeTag = node.tagName;
+						const sameTag = Array.from(parent.children).filter((c) => c.tagName === nodeTag);
 						if (sameTag.length > 1) {
 							part += `:nth-of-type(${sameTag.indexOf(node) + 1})`;
 						}

@@ -127,9 +127,7 @@ describe('Scan Report Store', () => {
 
 		expect(store.status).toBe('complete');
 		expect(store.report).toBeNull();
-		expect(store.error).toBe(
-			'Report fetch failed: object storage unavailable. Refresh to retry.'
-		);
+		expect(store.error).toBe('Report fetch failed: object storage unavailable. Refresh to retry.');
 		expect(store.logs).toEqual([
 			'ERROR: Report fetch failed: object storage unavailable. Refresh to retry.'
 		]);

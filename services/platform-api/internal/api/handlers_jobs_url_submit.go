@@ -108,7 +108,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	runID := uuid.New().String()[:8]
 	ctx = logging.WithRunID(ctx, runID)
 
-	authRaw, authStorageKey, ok := s.normalizeJobURLSubmitAuth(w, ctx, jobID, req.Auth, validationMode)
+	authRaw, authStorageKey, ok := s.normalizeJobURLSubmitAuth(ctx, w, jobID, req.Auth, validationMode)
 	if !ok {
 		return
 	}
@@ -131,7 +131,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	envelope.RequestID = logging.RequestID(ctx)
 	envelope.RunID = logging.RunID(ctx)
 
-	if !s.publishJobURLCreated(w, ctx, envelope, authStorageKey) {
+	if !s.publishJobURLCreated(ctx, w, envelope, authStorageKey) {
 		return
 	}
 
@@ -225,8 +225,8 @@ func (s *Server) normalizeURLSubmitModules(w http.ResponseWriter, req jobURLSubm
 }
 
 func (s *Server) normalizeJobURLSubmitAuth(
-	w http.ResponseWriter,
 	ctx context.Context,
+	w http.ResponseWriter,
 	jobID string,
 	in *jobURLAuthInput,
 	validationMode targetValidationMode,
@@ -261,8 +261,8 @@ func (s *Server) normalizeJobURLSubmitAuth(
 }
 
 func (s *Server) publishJobURLCreated(
-	w http.ResponseWriter,
 	ctx context.Context,
+	w http.ResponseWriter,
 	envelope *events.Envelope,
 	authStorageKey string,
 ) bool {
@@ -448,8 +448,8 @@ func normalizeJobURLStorageStateAuth(in *jobURLAuthInput) (json.RawMessage, []by
 		return nil, nil, fmt.Errorf("auth.storage_state.content_b64 is not valid base64: %w", err)
 	}
 
-	if err := validateDecodedStorageState(decoded); err != nil {
-		return nil, nil, err
+	if validateErr := validateDecodedStorageState(decoded); validateErr != nil {
+		return nil, nil, validateErr
 	}
 
 	return nil, decoded, nil

@@ -99,8 +99,7 @@
 			(page.pageOverview?.pageHeight ?? 0) > 0
 	);
 	const pageOverviewRenderable = $derived(
-		pageOverviewExists &&
-			(page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
+		pageOverviewExists && (page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
 	);
 
 	// Evidence is meaningful when there's a screenshot, an overlay we can render,

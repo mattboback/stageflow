@@ -1,12 +1,12 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
 import { afterEach, describe, expect, it } from 'vitest';
+
+import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/types';
 
 import { BrowserManager } from '../../src/core/browser-manager';
 import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
-import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/types';
 
 const ALCHEMIZECV_BASE_URL = 'https://alchemizecv.com';
 const DEMO_EMAIL = 'matthewboback2@gmail.com';
@@ -99,7 +99,7 @@ describe('live AlchemizeCV authenticated scanning', () => {
 			browserManager = new BrowserManager(makeConfig(tmp).browser);
 
 			const iterator = new PageIterator(browserManager, makeConfig(tmp));
-			const auditEvents: Array<{ type: string; details?: Record<string, unknown> }> = [];
+			const auditEvents: { type: string; details?: Record<string, unknown> }[] = [];
 
 			const scanCallback: PageScanCallback = async (ctx) => {
 				await ctx.page.waitForSelector('a[href="/dashboard"]', { timeout: 30_000 });

@@ -117,7 +117,8 @@
 				scannerPreset = detectScannerPreset(scanners);
 			})
 			.catch((e) => {
-				const message = e instanceof Error ? e.message : 'Failed to load scanners. Refresh to retry.';
+				const message =
+					e instanceof Error ? e.message : 'Failed to load scanners. Refresh to retry.';
 				scannerLoadError = message;
 				error = message;
 				scanners = [];

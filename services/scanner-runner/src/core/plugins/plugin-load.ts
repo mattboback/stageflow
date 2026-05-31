@@ -128,16 +128,17 @@ function resolveFactory(module: Record<string, unknown>, info: PluginInfo): Fact
 	};
 }
 
-type ScannerInstantiation =
-	| { ok: true; scanner: ScannerBase }
-	| { ok: false; error: string };
+type ScannerInstantiation = { ok: true; scanner: ScannerBase } | { ok: false; error: string };
 
 function instantiateScanner(factory: () => ScannerBase): ScannerInstantiation {
 	try {
 		const scanner = factory();
 		// metadata is abstract on ScannerBase so must be implemented by subclasses
 		if (typeof scanner.scanPage !== 'function') {
-			return { ok: false, error: 'Scanner does not implement required interface (scanPage method)' };
+			return {
+				ok: false,
+				error: 'Scanner does not implement required interface (scanPage method)'
+			};
 		}
 
 		return { ok: true, scanner };

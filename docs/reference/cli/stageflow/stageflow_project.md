@@ -9,9 +9,15 @@ stageflow project [path]
 ### Options
 
 ```
-  -h, --help               help for project
-      --max-issues int     Max issues to include in output (0 = unlimited) (default 200)
-      --timeout duration   Max total time (dev + scan) (default 10m0s)
+      --category string       Filter displayed findings by category (comma-separated: accessibility,performance,seo,security,best-practices)
+      --fail-on string        Exit 1 if any displayed issue is at or above this severity (critical,serious,moderate,minor,info)
+      --group-by string       Group findings by: none, category, scanner (default: category for markdown, none for text)
+  -h, --help                  help for project
+      --max-issues int        Max issues to include in output (0 = unlimited) (default 200)
+      --max-occurrences int   Max occurrences per issue to display (0 = unlimited) (default 3)
+      --severity string       Filter displayed findings by severity (comma-separated: critical,serious,moderate,minor,info)
+      --summary-only          Only show summary, skip detailed findings
+      --timeout duration      Max total time (dev + scan) (default 10m0s)
 ```
 
 ### Options inherited from parent commands
