@@ -256,6 +256,33 @@ describe('ScannerBase', () => {
 		expect(mocks.mockEventPublisherInstance.publishPageCompleted).toHaveBeenCalledTimes(2);
 	});
 
+	it('emits scan.completed timing whose disjoint components do not exceed total_ms', async () => {
+		await scanner.run(mockConfig);
+
+		const call = mocks.mockEventPublisherInstance.publishScanCompleted.mock.calls[0];
+		expect(call).toBeDefined();
+		const timing = call![1] as {
+			totalMs: number;
+			pageIterationMs: number;
+			writeResultsMs: number;
+			uploadArtifactsMs: number;
+			publishCompletedMs: number;
+			finalizationMs: number;
+		};
+
+		// The Go scan.completed validator treats the five phase fields as disjoint and
+		// rejects the event when their sum exceeds total_ms. finalizationMs must therefore
+		// be the unaccounted remainder, never a roll-up of write_results + upload_artifacts.
+		const componentSum =
+			timing.pageIterationMs +
+			timing.writeResultsMs +
+			timing.uploadArtifactsMs +
+			timing.publishCompletedMs +
+			timing.finalizationMs;
+		expect(componentSum).toBeLessThanOrEqual(timing.totalMs);
+		expect(timing.finalizationMs).toBeGreaterThanOrEqual(0);
+	});
+
 	it('should handle scan errors gracefully', async () => {
 		vi.clearAllMocks();
 		(fs.ensureDir as unknown as Mock).mockResolvedValue(undefined);
