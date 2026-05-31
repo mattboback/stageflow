@@ -51,6 +51,10 @@ coverage.html
 # Temporary / local data
 *.tmp
 .cache/
+# Internal pre-fix review notes (not shipped)
+audit.md
+AUDIT.md
+masteraudit.md
 .playwright-mcp/
 .playwright-cli/
 .tech-debt-audit/
