@@ -49,7 +49,7 @@ export interface PageIteratorCallbacks {
 	onAuditEvent?: (event: PageIteratorAuditEvent) => void;
 }
 
-export interface PageIteratorOptions {
+interface PageIteratorOptions {
 	storageProvider?: StorageProvider;
 }
 

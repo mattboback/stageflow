@@ -31,9 +31,9 @@ import type {
 	StorageProvider
 } from './types';
 
-export type AuthMode = ProvenanceAuth['mode'];
+type AuthMode = ProvenanceAuth['mode'];
 
-export interface AuthHydrationErrorOptions {
+interface AuthHydrationErrorOptions {
 	mode: AuthMode;
 	loginUrl?: string;
 	postLoginUrl?: string;
@@ -55,7 +55,7 @@ export class AuthHydrationError extends Error {
 	}
 }
 
-export interface HydrateStorageStateOptions {
+interface HydrateStorageStateOptions {
 	auth: ProvenanceAuthStorageState;
 	storageProvider: StorageProvider;
 	bucket: string;
@@ -63,7 +63,7 @@ export interface HydrateStorageStateOptions {
 	logger: ScannerLogger;
 }
 
-export interface HydrateStorageStateResult {
+interface HydrateStorageStateResult {
 	storageStatePath: string;
 }
 
@@ -88,7 +88,7 @@ export async function hydrateStorageState(
 	}
 }
 
-export interface HydrateFormOptions {
+interface HydrateFormOptions {
 	auth: ProvenanceAuthForm;
 	context: BrowserContext;
 	browserManager: BrowserManager;
@@ -97,7 +97,7 @@ export interface HydrateFormOptions {
 	logger: ScannerLogger;
 }
 
-export interface HydrateFormResult {
+interface HydrateFormResult {
 	postLoginUrl: string;
 }
 

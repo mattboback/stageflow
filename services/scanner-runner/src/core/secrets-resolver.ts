@@ -44,7 +44,7 @@ export interface SecretsResolver {
 	readonly allowList: readonly string[];
 }
 
-export interface CreateSecretsResolverOptions {
+interface CreateSecretsResolverOptions {
 	/** Env var names this resolver may read. Anything else is rejected. */
 	allowList: Iterable<string>;
 	/**

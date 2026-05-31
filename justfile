@@ -625,6 +625,12 @@ project-golden:
     set -euo pipefail
     bash qa/e2e/project-scan-golden.sh
 
+[group('quality'), doc('Run opt-in live AlchemizeCV dogfood QA through StageFlow Playground')]
+dogfood-alchemizecv:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    node devtools/qa/alchemizecv-dogfood/run-cdp-auth-scan.mjs
+
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':
     #!/usr/bin/env bash
