@@ -38,13 +38,13 @@ No high-severity findings were identified in this slice during the initial pass.
 
    Remediation: remove the personal default and require `STAGEFLOW_DEPLOY_CONTROL_PLANE` for hosted-demo deployment, or move hosted deploy delegation into a local/private justfile.
 
-3. Dead-code analysis is intentionally non-blocking in CI.
+3. Dead-code analysis is now blocking in CI.
 
-   The `dead_code` workflow job is named non-blocking and sets `continue-on-error: true` (`.github/workflows/ci.yml:235`, `.github/workflows/ci.yml:240`). It still runs useful commands for web and scanner-runner dead-code analysis (`.github/workflows/ci.yml:264`, `.github/workflows/ci.yml:267`, `.github/workflows/ci.yml:268`, `.github/workflows/ci.yml:269`).
+   The `dead_code` workflow job runs web and scanner-runner dead-code analysis and now fails CI when any command fails.
 
-   Impact: dead code can accumulate without failing pull requests. This is not a runtime blocker, but it weakens the "portfolio polish" signal.
+   Impact: the prior portfolio-polish gap is closed; unused dependencies/exports now block pull requests.
 
-   Remediation: make the job blocking once current known false positives are handled, or document the non-blocking status as temporary.
+   Remediation status: completed after removing scanner-runner's unused provenance dependency and internal-only exported type noise.
 
 4. Standalone MinIO bootstrap defaults differ from `.env.example`.
 
@@ -136,7 +136,8 @@ Scope: `clients/web` only. Existing worktree changes were treated as user-owned.
 
 - High finding 1 was addressed by surfacing scanner-catalog load failures instead of returning enabled fallback scanners in production request paths.
 - Medium finding 2 was addressed by clearing report-fetch in-flight state on rejected report-port calls and surfacing a retryable report error.
-- Remaining medium findings are still follow-up polish.
+- Medium finding 3 was addressed with client-side ZIP extension and 100 MB size validation before upload, while retaining server-side 413 handling.
+- Medium finding 4 was addressed by adding the primary playground/API/SSE/scan-monitor paths to the Vitest coverage include set and strengthening tests until the existing coverage threshold passes.
 
 ## Strengths
 
@@ -147,10 +148,12 @@ Scope: `clients/web` only. Existing worktree changes were treated as user-owned.
 
 ## Validation
 
+- `bun run format:check` from `clients/web`: passed.
+- `bun run lint:strict` from `clients/web`: passed.
 - `bun run type-check` from `clients/web`: passed with 0 errors and 0 warnings.
-- `bun run vitest run tests/unit/api/client.test.ts tests/unit/components/playground/PlaygroundPage.test.ts tests/unit/stores/scan-monitor.test.ts tests/unit/stores/scan-report.test.ts` from `clients/web`: passed, 4 files and 27 tests.
+- `bun run test:coverage` from `clients/web`: passed, 59 test files and 420 tests. Branch coverage was 80.26%, clearing the existing 80% threshold.
 
-Not run: full `bun run ci`, Storybook tests, browser E2E, or production API smoke tests.
+Not run: Storybook tests, browser E2E, or production API smoke tests.
 
 ## Finding Counts
 
@@ -242,7 +245,12 @@ Scope: `clients/cli` only. Existing dirty worktree changes were treated as user-
 
 - High finding 1 was addressed by routing live `diff` targets through the shared normalization and private-target validation path used by `scan`, with regression tests for local and remote API behavior.
 - High finding 2 was addressed by adding a shared bounded API command context/client path and a hung-response regression test.
-- Medium and low findings remain follow-up work.
+- Medium finding 3 was addressed by rejecting non-positive project readiness, stop, and scan timeouts during config/command handling.
+- Medium finding 4 was addressed by binding the shared report quality-gate flags to local Project Mode and rendering through the shared report options.
+- Medium finding 5 was addressed by hiding the experimental `ai` command from public help/README command listings.
+- Low finding 6 was addressed by removing the accidental pflag metavar from `--auth-state` help.
+- Low finding 7 was addressed with focused `internal/apiclient` tests for URL construction, API-key injection, JSON requests, error propagation, and project slug escaping.
+- Low finding 8 was addressed by normalizing and validating remote project create/update URLs and scanner inputs before API submission.
 
 ## Strengths
 
@@ -257,16 +265,16 @@ Scope: `clients/cli` only. Existing dirty worktree changes were treated as user-
   Outcome: passed; `go version go1.26.3 linux/amd64`.
 
 - `go test -count=1 ./...`  
-  Outcome: passed. Packages tested: root CLI, `internal/diffrender`, `internal/jobstream`, `internal/manifesttmpl`, `internal/projectmode`, and `internal/urlcheck`. `internal/apiclient` reported `[no test files]`.
+  Outcome: passed. Packages tested include root CLI, `internal/apiclient`, `internal/diffrender`, `internal/jobstream`, `internal/manifesttmpl`, `internal/projectmode`, and `internal/urlcheck`.
 
 - `go vet ./...`  
   Outcome: passed with no output.
 
 - `go test -count=1 ./internal/apiclient`  
-  Outcome: passed as a package invocation, but reported `[no test files]`.
+  Outcome: passed with focused API client tests.
 
 - `go run . scan --help`  
-  Outcome: exited 0; confirmed the malformed `--auth-state stageflow auth capture` help metavar described above.
+  Outcome: exited 0; confirmed `--auth-state` now renders as a string/path-style flag instead of the malformed `stageflow auth capture` metavar.
 
 ## Documentation Checked
 
@@ -378,13 +386,17 @@ Outcome: passed. The race check completed successfully for the highest-risk hand
 - High finding 1 was addressed by making lifecycle subscription setup fail startup when required status subscriptions cannot be established.
 - High finding 2 was addressed by making project-job mapping durable before publish and cleaning it up when publish fails.
 - High finding 3 was addressed by deleting staged ZIP objects on publish failure or request cancellation after upload.
-- Medium and low findings remain follow-up work.
+- Medium finding 4 was addressed by reusing URL intake and target validation for project create/update/scan paths, including empty-list and scanner-module validation.
+- Medium finding 5 was addressed by including `PATCH` and `DELETE` in CORS preflight methods.
+- Medium finding 6 was addressed by sending a deterministic SSE error event when the initial status snapshot cannot be built.
+- Medium finding 7 was addressed by requiring exact job route shapes and returning 404 for unknown suffixes/extra segments.
+- Medium finding 8 was addressed by validating form-auth `login_url` through the same target URL policy used for scan targets.
+- Low finding 9 was addressed by reading multipart form fields with a `limit+1` guard and returning structured validation errors for oversized fields.
 
 ## Suggested Next Work
 
-1. Tackle the remaining medium API-contract issues: project URL intake parity, complete CORS method coverage, SSE initial-error behavior, exact job-route parsing, and form-auth login URL validation.
-2. Add focused regression tests for each finding before changing behavior.
-3. Run `go test ./...` and the targeted race command above after each fix. For release confidence, also run the repo-level Go command documented in `README.md:136` to `README.md:143` once unrelated dirty changes are controlled.
+1. Keep the targeted API handler regressions in the normal test path.
+2. For release confidence, rerun `go test ./...` and the targeted race command above after future API changes. Also run the repo-level Go command documented in `README.md:136` to `README.md:143` once unrelated dirty changes are controlled.
 
 ---
 
@@ -446,7 +458,10 @@ Remediation: return `400` for invalid pagination and reject unknown job states u
 
 - High terminal-event loss and duplicate-completion findings were addressed with an idempotent terminal-event outbox plus an atomic completion ownership claim.
 - High inbound-validation finding was addressed by validating orchestrator-owned inbound event payloads before lifecycle side effects.
-- The medium and low findings remain follow-up work.
+- Medium setup-compensation finding was addressed by cleaning up runtime resources and failing jobs when extraction setup fails after pod creation.
+- Medium rejected/unknown-event audit finding was addressed by allowing nullable `job_events.job_id`, storing the original payload job ID separately, retrying inserts without a job FK on missing-job failures, and adding a legacy-schema migration guard that drops `job_events.job_id NOT NULL`.
+- Medium `extraction.failed` missing-job handling was addressed by applying the same missing-job ignore policy used by the other inbound event handlers.
+- Low API parameter validation was addressed by returning `400` for invalid pagination and unknown job state filters.
 
 ## Strengths
 
@@ -459,11 +474,8 @@ Remediation: return `400` for invalid pagination and reject unknown job states u
 
 ## Test Gaps To Close
 
-- Terminal publish failure: simulate `PublishJobCompleted`/`PublishJobFailed` returning an error after the DB terminal update, then verify the next redelivery/outbox retry publishes exactly once.
-- Duplicate scanner events: send duplicate `scan.completed` and concurrent duplicate completion events and assert one aggregation, one cleanup, and one terminal event.
-- Inbound validation: malformed `job.created`, `extraction.ready`, `scan.completed`, `scan.failed`, and `scan.page.completed` payloads should fail before state/runtime/storage side effects.
-- Setup compensation: force `UpdateJobPodID`, `UpdateJobState`, `RecordExtractionStart`, and `StartExtractionWorker` failures after pod creation and assert no orphaned pod/volume remains or that a cleanup task can find it.
-- Event audit rejection path: verify unknown-job and validation-failed events are retained somewhere queryable even when no `jobs` row exists.
+- Keep regression coverage around terminal publish retry/outbox behavior, duplicate scanner events, inbound validation before side effects, setup compensation after pod creation, and missing-job event audit insertion.
+- For deployed databases created before nullable `job_events.job_id`, keep the schema migration test that proves startup drops the legacy `NOT NULL` constraint.
 
 ## Validation Run
 
@@ -547,7 +559,12 @@ Remediation: keep the loopback-only design documented and enforced, or add expli
 ## Post-Fix Status
 
 - The high compressed-ZIP resource-exhaustion finding was addressed with a 100 MiB compressed object policy, metadata pre-check when object size is available, and a hard `max+1` streaming copy guard.
-- Medium and low findings remain follow-up work.
+- Medium extraction idempotency finding was addressed by extracting into a fresh temp directory and replacing the destination only after successful validation/extraction.
+- Medium static-server exposure finding was addressed by denying dot-path segments and directory listings while still serving extracted assets needed by scanners.
+- Medium ZIP path ambiguity finding was addressed by rejecting ambiguous `.`/`..` segments, duplicate normalized entries, and file/directory collisions.
+- Low port/provenance findings were addressed by validating `PORT`, starting the static server before provenance generation, and building provenance URLs from the bound listener address.
+- Low server hardening was addressed by adding read, write, and idle timeouts appropriate for the short-lived loopback server.
+- The main `cmd/server` lifecycle still deserves broader fake-based unit coverage around ready/failed event payloads and stage artifact finalization.
 
 ## Strengths
 
@@ -563,7 +580,7 @@ Commands run from `/home/matt/Deployment/stageflow/services/archive-extractor`:
 
 - `GOWORK=off go test ./...`
   - Outcome: passed.
-  - Output summary: `cmd/server` had no test files; discovery, extractor, provenance, and server packages passed.
+  - Output summary: archive extractor packages passed.
 - `GOWORK=off go test -tags=integration ./...`
   - Outcome: passed.
   - Output summary: build-tagged integration package passed, and package tests passed.
@@ -669,7 +686,10 @@ Remediation: fail fast, or at least log structured warnings, for malformed expli
 
 - High finding 1 was addressed by carrying hydrated Playwright browser context state into Lighthouse's Chrome/CDP session and preserving state during authenticated audits.
 - High finding 2 was addressed by validating the initial security-headers URL and every redirect hop with manual redirect handling.
-- Medium and low findings remain follow-up work.
+- Medium plugin lifecycle finding was addressed by validating and retaining a single scanner instance during plugin load.
+- Medium artifact upload finding was addressed by propagating screenshot and extra artifact upload failures instead of publishing reports that reference missing artifacts.
+- Low malformed-env finding was addressed by failing fast on malformed explicit boolean, number, and integer environment values.
+- The broader runtime coverage hardening finding remains follow-up work; the dead-code gate is now blocking and passes locally.
 
 ## Strengths
 
@@ -686,8 +706,14 @@ Remediation: fail fast, or at least log structured warnings, for malformed expli
   - Outcome: passed, 5 test files, 136 tests.
 - `bun run vitest run tests/core/page-iterator.test.ts tests/core/scanner-base.test.ts tests/scanners/security-headers/index.test.ts tests/scanners/link-checker/scanPage.test.ts tests/scanners/link-checker/index.test.ts tests/worker/worker-validation.test.ts`
   - Outcome: passed, 6 test files, 97 tests.
+- `bun run find-dead-code`
+  - Outcome: passed.
+- `bun run analyze:dead`
+  - Outcome: passed.
+- `bun run ci`
+  - Outcome: passed, including format, strict lint, type-check, and coverage. Coverage ran 62 test files with 673 passing tests and 1 skipped test.
 
-Not run: full `bun run ci`, coverage, Docker build, live MinIO/NATS worker run, or `E2E_LIGHTHOUSE=1` real Lighthouse integration.
+Not run: Docker build, live MinIO/NATS worker run, or `E2E_LIGHTHOUSE=1` real Lighthouse integration.
 
 ## External Docs Checked
 
@@ -755,7 +781,9 @@ Scope: `libs/contracts` and `libs/go`. Existing worktree changes were treated as
 ## Post-Fix Status
 
 - High finding 1 was addressed by aligning the event JSON Schemas, fixtures, and Go validation for `scan.page.completed` and `scan.completed`.
-- Medium findings remain follow-up work.
+- Medium finding 2 was addressed by replacing the hand-rolled event schema validator with Ajv 2020 plus format support and wiring fixture validation into CI.
+- Medium finding 3 was addressed by adding strict Go env helpers and migrating infrastructure-critical config loaders to fail fast on malformed explicit values.
+- Medium finding 4 was addressed by adding checked scanner override application and making Platform API/Orchestrator startup fail on unknown scanner override IDs.
 
 ## Strengths
 

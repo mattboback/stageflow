@@ -183,3 +183,24 @@ go build -o suite-runner .
 
 Set `PLATFORM_API_BASE_URL` to point at the Platform API (default
 `http://localhost:8080`).
+
+### AlchemizeCV dogfood QA
+
+`alchemizecv-dogfood` is an opt-in live QA runner for the hosted StageFlow demo.
+It drives `https://stageflow.org/playground` through Chrome DevTools Protocol
+attached to Xvfb-hosted Chrome, configures form authentication for AlchemizeCV,
+and verifies that `/dashboard`, `/applications`, and `/profile` are present in
+the completed report.
+
+Required environment:
+
+```bash
+export QA_LOGIN_EMAIL='demo@example.com'
+export QA_LOGIN_PASS='...'
+just dogfood-alchemizecv
+```
+
+The runner writes evidence under `output/alchemizecv-prod-qa/<UTC timestamp>/`,
+including `report.md`, `scan-verification.json`, browser logs, network logs, and
+screenshots. It is not part of default CI because it depends on live services
+and demo-account credentials.

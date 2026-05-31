@@ -9,11 +9,12 @@ import { BrowserManager } from '../../src/core/browser-manager';
 import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
 
 const ALCHEMIZECV_BASE_URL = 'https://alchemizecv.com';
-const DEMO_EMAIL = 'matthewboback2@gmail.com';
-// This is an intentionally public demo credential for the always-on live QA account.
-const DEMO_PASSWORD = 'Boback18';
+const DEMO_EMAIL = process.env.QA_LOGIN_EMAIL ?? '';
+const DEMO_PASSWORD = process.env.QA_LOGIN_PASS ?? '';
+const RUN_LIVE_QA = process.env.STAGEFLOW_RUN_LIVE_ALCHEMIZECV_QA === '1';
 
 const TEST_TIMEOUT_MS = 90_000;
+const describeLive = RUN_LIVE_QA ? describe : describe.skip;
 
 function makeConfig(resultsDir: string): ScannerConfig {
 	return {
@@ -77,7 +78,7 @@ function makeProvenance(): Provenance {
 	};
 }
 
-describe('live AlchemizeCV authenticated scanning', () => {
+describeLive('live AlchemizeCV authenticated scanning', () => {
 	let tmp: string | undefined;
 	let browserManager: BrowserManager | undefined;
 
@@ -95,6 +96,9 @@ describe('live AlchemizeCV authenticated scanning', () => {
 	it(
 		'logs into the live demo account and scans the dashboard as authenticated content',
 		async () => {
+			expect(DEMO_EMAIL, 'QA_LOGIN_EMAIL is required for live QA').not.toBe('');
+			expect(DEMO_PASSWORD, 'QA_LOGIN_PASS is required for live QA').not.toBe('');
+
 			tmp = await mkdtemp(join(tmpdir(), 'stageflow-alchemizecv-live-'));
 			browserManager = new BrowserManager(makeConfig(tmp).browser);
 

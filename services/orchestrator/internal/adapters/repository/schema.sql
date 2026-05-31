@@ -104,6 +104,7 @@ ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_status TEXT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_error TEXT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS duration_ms BIGINT;
 ALTER TABLE job_events ADD COLUMN IF NOT EXISTS payload_job_id TEXT;
+ALTER TABLE job_events ALTER COLUMN job_id DROP NOT NULL;
 
 -- Terminal event outbox stores job.completed/job.failed until they are
 -- successfully published to NATS.

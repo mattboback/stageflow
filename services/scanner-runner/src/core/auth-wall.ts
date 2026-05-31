@@ -16,11 +16,11 @@ const LOGIN_PATH_PATTERNS: RegExp[] = [
 	/^\/admin\/login\/?$/i
 ];
 
-export type AuthWallSignal =
+type AuthWallSignal =
 	| { type: 'login_redirect'; finalUrl: string; matchedPattern: string }
 	| { type: 'login_form'; selector: string };
 
-export interface DetectAuthWallOptions {
+interface DetectAuthWallOptions {
 	page: Page;
 	requestedUrl: string;
 	scannerName: string;
