@@ -167,7 +167,7 @@
 			No page overview screenshot available for this scan.
 		</Panel>
 	{:else if canRenderOverview}
-		<div class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr,260px]">
+		<div class="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_260px]">
 			<Panel
 				padding="none"
 				rounded="2xl"

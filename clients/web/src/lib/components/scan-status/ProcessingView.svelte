@@ -132,7 +132,7 @@
 </script>
 
 <div class="space-y-8">
-	<div class="grid gap-4 lg:grid-cols-[1.2fr,0.8fr]">
+	<div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
 		<div class="border-line bg-surface-muted rounded-2xl border p-5">
 			<div class="flex items-start gap-4">
 				<div

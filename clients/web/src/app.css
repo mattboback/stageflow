@@ -523,20 +523,25 @@
 		overflow: hidden;
 	}
 
-	/* On mobile, strip the browser frame decoration and show as a clean card */
+	/* On mobile, strip the browser frame decoration and show as a clean card.
+	   Shared by the playground bento and the scan-status bento; the scan-status
+	   bento keeps its .bento-nav status strip (the playground hides its nav). */
 	@media (max-width: 1023px) {
-		.playground-bento-frame {
+		.playground-bento-frame,
+		.status-bento-frame {
 			background: transparent;
 			border-radius: 0;
 			padding: 0;
 			box-shadow: none;
 		}
 
-		.playground-bento-frame .bento-chrome {
+		.playground-bento-frame .bento-chrome,
+		.status-bento-frame .bento-chrome {
 			display: none;
 		}
 
-		.playground-bento-frame .bento-card {
+		.playground-bento-frame .bento-card,
+		.status-bento-frame .bento-card {
 			background: transparent;
 			border-radius: 0;
 		}
@@ -545,15 +550,18 @@
 			display: none;
 		}
 
-		.playground-bento-frame .bento-panel {
+		.playground-bento-frame .bento-panel,
+		.status-bento-frame .bento-panel {
 			padding: 0;
 		}
 
-		.playground-bento-frame .bento-grid-main {
+		.playground-bento-frame .bento-grid-main,
+		.status-bento-frame .bento-grid-main {
 			border-bottom: none;
 		}
 
-		.playground-bento-frame .bento-grid-main > :first-child {
+		.playground-bento-frame .bento-grid-main > :first-child,
+		.status-bento-frame .bento-grid-main > :first-child {
 			border-right: none;
 		}
 	}
@@ -613,6 +621,12 @@
 
 	.playground-bento-frame .bento-grid-main {
 		grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.88fr);
+	}
+
+	/* Prevent wide content (e.g. long terminal log lines) from forcing the
+	   fractional grid wider than the viewport on tablet. */
+	.bento-grid-main > * {
+		min-width: 0;
 	}
 
 	.bento-grid-main > :first-child {
@@ -726,6 +740,30 @@
 			border-right: none;
 			border-bottom: 1px solid var(--color-line);
 			padding-bottom: 0.75rem;
+		}
+	}
+
+	/* Scan-status bento: stack main + sidebar once the frame is stripped */
+	@media (max-width: 1023px) {
+		.status-bento-frame .bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.status-bento-frame .bento-grid-main > :first-child {
+			border-bottom: 1px solid var(--color-line);
+			padding-bottom: 1.5rem;
+			margin-bottom: 1.5rem;
+		}
+		.status-bento-frame .bento-grid-bottom {
+			grid-template-columns: 1fr;
+		}
+		/* Restore a little padding for the raw-text stat tiles (Elapsed/Scanners/
+		   Status) since the shared rule strips bento-panel padding to 0 on mobile. */
+		.status-bento-frame .bento-grid-bottom .bento-panel {
+			padding: 0.75rem 0;
+		}
+		.status-bento-frame .bento-grid-bottom > :not(:last-child) {
+			border-right: none;
+			border-bottom: 1px solid var(--color-line);
 		}
 	}
 

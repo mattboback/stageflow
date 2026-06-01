@@ -102,7 +102,7 @@
 	<div
 		class={cn(
 			'grid gap-4',
-			!hideThumbnail && viewBox && pageOverviewUrl ? 'md:grid-cols-[220px,1fr]' : ''
+			!hideThumbnail && viewBox && pageOverviewUrl ? 'md:grid-cols-[220px_1fr]' : ''
 		)}
 	>
 		{#if !hideThumbnail && viewBox && pageOverviewUrl && overviewEl && page?.pageOverview}
