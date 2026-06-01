@@ -202,8 +202,7 @@ export abstract class ScannerBase {
 		// rather than a roll-up of the write/upload phases — double-counting those made
 		// the component sum exceed totalMs and the orchestrator rejected the event.
 		const totalMs = Date.now() - this.runStartedAt;
-		const measuredMs =
-			timing.pageIterationMs + timing.writeResultsMs + timing.uploadArtifactsMs;
+		const measuredMs = timing.pageIterationMs + timing.writeResultsMs + timing.uploadArtifactsMs;
 		const timingForEvent = {
 			totalMs,
 			pageIterationMs: timing.pageIterationMs,
