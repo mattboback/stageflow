@@ -294,7 +294,6 @@ StageFlow is dogfooded against [AlchemizeCV](https://alchemizecv.com), a private
 |----------|-------------|
 | [docs/evaluators-guide.md](docs/evaluators-guide.md) | Guided 5–15 min review path |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Architecture overview with diagrams and design rationale |
-| [ROADMAP.md](ROADMAP.md) | Direction and planned work |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes (Keep a Changelog) |
 | [docs/architecture/system.md](docs/architecture/system.md) | Full system design, threat model, failure modes |
 | [docs/reference/configuration.md](docs/reference/configuration.md) | Environment variables and overlay topology |
