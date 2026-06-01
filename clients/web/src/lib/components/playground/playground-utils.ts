@@ -9,33 +9,32 @@ export interface AuthFormConfig {
 	passwordSelector: string;
 	/** Empty string means use the smart default: `button[type="submit"]` */
 	submitSelector: string;
-	successStrategy: 'selector';
+	/**
+	 * `'auto'` (default) detects a completed login without a selector: the scanner
+	 * waits for the post-submit network to settle and confirms the page left the
+	 * login form. `'selector'` waits for an explicit element instead.
+	 */
+	successStrategy: 'auto' | 'selector';
+	/** Optional. Only used when `successStrategy` is `'selector'`. */
 	successSelector: string;
 }
 
 /**
- * Returns true when the config is either disabled (trivially valid) or fully
- * filled in so that `buildFormAuthConfig` can produce a usable recipe.
+ * Returns true when the config is either disabled (trivially valid) or has the
+ * minimum fields `buildFormAuthConfig` needs. Only the login URL, username, and
+ * password are required — login success is auto-detected, so no selector is
+ * needed unless the operator explicitly opts into a success selector.
  */
 export function isAuthConfigComplete(config: AuthFormConfig): boolean {
 	if (!config.enabled) {
 		return true;
 	}
 
-	const hasRequired =
+	return (
 		config.loginUrl.trim().length > 0 &&
 		config.username.trim().length > 0 &&
-		config.password.trim().length > 0;
-
-	if (!hasRequired) {
-		return false;
-	}
-
-	if (config.successSelector.trim().length === 0) {
-		return false;
-	}
-
-	return true;
+		config.password.trim().length > 0
+	);
 }
 
 /**
@@ -54,6 +53,15 @@ export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unkn
 	const passwordSelector = config.passwordSelector.trim() || 'input[type="password"]';
 	const submitSelector = config.submitSelector.trim() || 'button[type="submit"]';
 
+	// Default to selector-free auto-detection: wait for the post-submit network to
+	// settle and let the scanner confirm the page left the login form. Fall back to
+	// an explicit selector only when the operator provides one.
+	const successSelector = config.successSelector.trim();
+	const success =
+		config.successStrategy === 'selector' && successSelector.length > 0
+			? { type: 'selector', selector: successSelector }
+			: { type: 'networkidle' };
+
 	return {
 		mode: 'form',
 		form: {
@@ -63,7 +71,7 @@ export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unkn
 				{ type: 'fill', selector: passwordSelector, value: config.password },
 				{ type: 'click', selector: submitSelector }
 			],
-			success: { type: 'selector', selector: config.successSelector.trim() }
+			success
 		}
 	};
 }

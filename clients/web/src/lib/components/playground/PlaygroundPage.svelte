@@ -63,7 +63,7 @@
 		usernameSelector: '',
 		passwordSelector: '',
 		submitSelector: '',
-		successStrategy: 'selector',
+		successStrategy: 'auto',
 		successSelector: ''
 	});
 
