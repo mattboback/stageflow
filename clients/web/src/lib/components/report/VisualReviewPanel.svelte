@@ -102,12 +102,17 @@
 
 	const overlayElements = $derived.by(() => {
 		const elements = selectedPage?.pageOverview?.elements ?? [];
-		return elements.filter((el) => {
-			const issue = issueMap[el.issueId];
-			if (!issue) return false;
-			const sev = issue.severity as keyof typeof severityFilters;
-			return severityFilters[sev] ?? true;
-		});
+		// Largest boxes first so the smallest, most specific marker paints on top and
+		// stays clickable — a full-page document-level box must not swallow clicks meant
+		// for the boxes beneath it. (Same paint-order rationale as PageOverviewViewer.)
+		return elements
+			.filter((el) => {
+				const issue = issueMap[el.issueId];
+				if (!issue) return false;
+				const sev = issue.severity as keyof typeof severityFilters;
+				return severityFilters[sev] ?? true;
+			})
+			.sort((a, b) => b.width * b.height - a.width * a.height);
 	});
 
 	// Issues that have at least one overlay element on the current page

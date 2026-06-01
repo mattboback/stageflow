@@ -137,6 +137,69 @@ describe('PageOverviewViewer', () => {
 			expect(container.querySelectorAll("[data-testid='page-overview-marker']")).toHaveLength(2);
 		});
 
+		it('paints larger boxes first so the smallest box stays clickable on top', () => {
+			// A full-page document-level box plus a small element box. The small box must
+			// render LAST (top-most) so it wins clicks instead of being swallowed by the
+			// transparent-but-pointer-capturing full-page box beneath it.
+			const page = createPage({
+				pageOverview: {
+					screenshotFilename: 'shot.png',
+					pageWidth: 1200,
+					pageHeight: 900,
+					elements: [
+						{
+							issueId: 'small',
+							ruleId: 'color-contrast',
+							severity: 'critical',
+							selector: '.hero',
+							nodeIndex: 0,
+							xPercent: 10,
+							yPercent: 20,
+							widthPercent: 5,
+							heightPercent: 5,
+							x: 120,
+							y: 180,
+							width: 60,
+							height: 45
+						},
+						{
+							issueId: 'fullpage',
+							ruleId: 'landmark-one-main',
+							severity: 'moderate',
+							selector: 'html',
+							nodeIndex: 0,
+							xPercent: 0,
+							yPercent: 0,
+							widthPercent: 100,
+							heightPercent: 100,
+							x: 0,
+							y: 0,
+							width: 1200,
+							height: 900
+						}
+					]
+				}
+			});
+
+			const { container } = render(PageOverviewViewer, {
+				props: {
+					page,
+					issues: [
+						createIssue({ id: 'small', severity: 'critical' }),
+						createIssue({ id: 'fullpage', severity: 'moderate', title: 'Missing main landmark' })
+					],
+					screenshotUrl: 'http://example.com/shot.png',
+					onSelectIssue: vi.fn()
+				}
+			});
+
+			const rects = [...container.querySelectorAll('svg rect[data-testid="page-overview-marker"]')];
+			expect(rects).toHaveLength(2);
+			// Largest (full-page) painted first/underneath, smallest painted last/on top.
+			expect(rects[0]?.getAttribute('width')).toBe('1200');
+			expect(rects[rects.length - 1]?.getAttribute('width')).toBe('60');
+		});
+
 		it('shows empty state when no screenshot URL is provided', () => {
 			const { container, getByText } = render(PageOverviewViewer, {
 				props: {

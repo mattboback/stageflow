@@ -60,13 +60,21 @@
 		severityFilters = { ...severityFilters, [key]: !severityFilters[key] };
 	}
 
+	// Paint order is clickability: SVG rects hit-test in document order, so the last
+	// (top-most) painted rect wins a click. Render larger boxes first (underneath) so the
+	// smallest, most specific box at any point stays on top and clickable — otherwise a
+	// full-page, document-level issue box (e.g. "missing main landmark") swallows the
+	// clicks meant for the small element boxes beneath it. Array.sort is stable, so
+	// equal-area boxes keep their original order.
 	const filteredElements = $derived(
-		elements.filter((el) => {
-			const issue = issueMap[el.issueId];
-			if (!issue) return false;
-			const severity = issue.severity as keyof typeof severityFilters;
-			return severityFilters[severity] ?? true;
-		})
+		elements
+			.filter((el) => {
+				const issue = issueMap[el.issueId];
+				if (!issue) return false;
+				const severity = issue.severity as keyof typeof severityFilters;
+				return severityFilters[severity] ?? true;
+			})
+			.sort((a, b) => b.width * b.height - a.width * a.height)
 	);
 
 	let focusedIndex = $state(-1);
