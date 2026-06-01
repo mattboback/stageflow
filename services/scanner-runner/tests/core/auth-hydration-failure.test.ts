@@ -77,7 +77,10 @@ const baseScannerConfig: ScannerConfig = {
 	}
 };
 
-function makeBrowserManager(overrides?: Partial<BrowserManager>): BrowserManager {
+function makeBrowserManager(
+	overrides?: Partial<BrowserManager>,
+	pageOverrides?: Partial<Record<keyof Page, unknown>>
+): BrowserManager {
 	const mockPage = {
 		goto: vi.fn().mockResolvedValue(undefined),
 		close: vi.fn().mockResolvedValue(undefined),
@@ -86,7 +89,8 @@ function makeBrowserManager(overrides?: Partial<BrowserManager>): BrowserManager
 		waitForSelector: vi.fn().mockResolvedValue(undefined),
 		waitForTimeout: vi.fn().mockResolvedValue(undefined),
 		evaluate: vi.fn().mockResolvedValue(true),
-		url: vi.fn().mockReturnValue('https://app.example.com/login')
+		url: vi.fn().mockReturnValue('https://app.example.com/login'),
+		...pageOverrides
 	} as unknown as Page;
 
 	const mockContext = {
@@ -201,14 +205,29 @@ describe('PageIterator auth hydration failure path', () => {
 			}
 		};
 
-		const browserManager = makeBrowserManager();
+		// Wrong credentials keep the browser on a visible login form, so the
+		// post-login grace poll exhausts its window before declaring failure.
+		// Drive that window with fake timers (the mocked `waitForTimeout` advances
+		// the clock) so the test exercises the real timeout without sleeping for it.
+		vi.useFakeTimers();
+		const browserManager = makeBrowserManager(undefined, {
+			waitForTimeout: vi.fn().mockImplementation((ms: number) => {
+				vi.advanceTimersByTime(ms);
+				return Promise.resolve();
+			})
+		});
 		const auditEvents: PageIteratorAuditEvent[] = [];
 		const iterator = new PageIterator(browserManager, baseScannerConfig);
 		const scanCallback = vi.fn<PageScanCallback>();
 
-		const results = await iterator.iteratePages(provenance, scanCallback, {
-			onAuditEvent: (event) => auditEvents.push(event)
-		});
+		let results: PageScanResult[];
+		try {
+			results = await iterator.iteratePages(provenance, scanCallback, {
+				onAuditEvent: (event) => auditEvents.push(event)
+			});
+		} finally {
+			vi.useRealTimers();
+		}
 
 		expect(scanCallback).not.toHaveBeenCalled();
 		expect(browserManager.executePreScanActions).toHaveBeenCalledOnce();

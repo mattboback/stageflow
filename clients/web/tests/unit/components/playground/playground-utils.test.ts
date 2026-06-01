@@ -91,21 +91,50 @@ describe('playground-utils', () => {
 		});
 	});
 
-	it('requires a post-login success selector for form auth', () => {
+	it('auto-detects login (no success selector) when only credentials are provided', () => {
 		const config = {
 			enabled: true,
-			loginUrl: 'https://app.example.com/login',
+			loginUrl: ' https://app.example.com/login ',
 			username: 'demo@example.com',
 			password: 'secret',
 			usernameSelector: '',
 			passwordSelector: '',
 			submitSelector: '',
-			successStrategy: 'selector' as const,
+			successStrategy: 'auto' as const,
 			successSelector: ''
 		};
 
-		expect(isAuthConfigComplete(config)).toBe(false);
-		expect(buildFormAuthConfig(config)).toBeNull();
+		// Login URL + username + password are the only required fields now.
+		expect(isAuthConfigComplete(config)).toBe(true);
+		expect(buildFormAuthConfig(config)).toEqual({
+			mode: 'form',
+			form: {
+				login_url: 'https://app.example.com/login',
+				steps: [
+					{ type: 'fill', selector: 'input[type="email"]', value: 'demo@example.com' },
+					{ type: 'fill', selector: 'input[type="password"]', value: 'secret' },
+					{ type: 'click', selector: 'button[type="submit"]' }
+				],
+				success: { type: 'networkidle' }
+			}
+		});
+	});
+
+	it('still requires login URL, username, and password', () => {
+		const base = {
+			enabled: true,
+			loginUrl: '',
+			username: 'demo@example.com',
+			password: 'secret',
+			usernameSelector: '',
+			passwordSelector: '',
+			submitSelector: '',
+			successStrategy: 'auto' as const,
+			successSelector: ''
+		};
+
+		expect(isAuthConfigComplete(base)).toBe(false);
+		expect(buildFormAuthConfig(base)).toBeNull();
 	});
 
 	it('builds form auth with selector-based success detection', () => {

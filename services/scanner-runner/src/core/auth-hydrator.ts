@@ -126,11 +126,18 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 
 		await waitForSuccess(page, auth);
 
-		postLoginUrl = page.url();
-		if (await isStillOnVisibleLoginForm(page, auth.login_url, postLoginUrl)) {
+		// Confirm we actually left the login form. Client-rendered apps often finish
+		// their post-login redirect a beat after the success wait resolves (e.g. a
+		// `networkidle` wait completes once the auth XHR settles, before the SPA swaps
+		// routes), so poll for a grace period instead of failing on a single snapshot.
+		// Selector-based success already waited for real post-login content, so this
+		// returns on the first check in that case.
+		const leftLoginFormUrl = await waitUntilLeftLoginForm(page, auth.login_url);
+		if (leftLoginFormUrl === null) {
+			postLoginUrl = page.url();
 			throw new AuthHydrationError(
 				`Form auth hydration did not leave the login page: ${postLoginUrl}. ` +
-					'Use a success selector that only appears after login or verify the submitted credentials.',
+					'Verify the submitted credentials, or set a success selector that only appears after login.',
 				{
 					mode: 'form',
 					loginUrl: auth.login_url,
@@ -139,6 +146,7 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 			);
 		}
 
+		postLoginUrl = leftLoginFormUrl;
 		return { postLoginUrl };
 	} catch (err) {
 		const capturedUrl = postLoginUrl ?? safeUrl(page);
@@ -215,6 +223,36 @@ function safeUrl(page: import('playwright').Page): string | undefined {
  */
 export function defaultStorageStatePath(resultsDir: string): string {
 	return join(resultsDir, 'auth', 'storage-state.json');
+}
+
+// Grace period for a client-side post-login redirect to complete. An SPA route
+// swap almost always lands within a tick of the auth XHR resolving (and the
+// `networkidle` success wait already absorbed the network quiet period), so this
+// is a safety net for slow redirects — not the expected wait. Kept short enough
+// that a genuinely failed login surfaces its error promptly rather than hanging.
+const LOGIN_FORM_CLEAR_TIMEOUT_MS = 12_000;
+const LOGIN_FORM_POLL_INTERVAL_MS = 750;
+
+/**
+ * Polls until the page has left the visible login form, returning the post-login
+ * URL once it has. Returns null if the login form is still visible after the
+ * grace period (i.e. login appears to have failed).
+ */
+async function waitUntilLeftLoginForm(
+	page: import('playwright').Page,
+	loginUrl: string
+): Promise<string | null> {
+	const deadline = Date.now() + LOGIN_FORM_CLEAR_TIMEOUT_MS;
+	for (;;) {
+		const currentUrl = page.url();
+		if (!(await isStillOnVisibleLoginForm(page, loginUrl, currentUrl))) {
+			return currentUrl;
+		}
+		if (Date.now() >= deadline) {
+			return null;
+		}
+		await page.waitForTimeout(LOGIN_FORM_POLL_INTERVAL_MS);
+	}
 }
 
 async function isStillOnVisibleLoginForm(

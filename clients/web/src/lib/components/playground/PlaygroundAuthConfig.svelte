@@ -139,6 +139,13 @@
 			<p class="text-ink-faint mt-1.5 text-xs">Use a demo or scoped account for hosted scans.</p>
 		</div>
 
+		<!-- Auto-detect reassurance: the three fields above are all that's needed. -->
+		<p class="text-ink-muted bg-surface/60 border-line/70 rounded-xl border px-3 py-2 text-xs">
+			That's all we need — StageFlow auto-detects a successful login after submitting the form. Open <span
+				class="font-medium">Advanced Settings</span
+			> only if your form uses unusual field names or login doesn't redirect on its own.
+		</p>
+
 		<!-- Advanced Settings Toggle -->
 		<button
 			type="button"
@@ -212,12 +219,8 @@
 				</div>
 
 				<div class="animate-fade-in">
-					<Label
-						for="auth-success-selector"
-						class="mb-2 flex items-center gap-1 text-sm font-semibold"
-					>
-						Success Selector
-						<span class="text-accent">*</span>
+					<Label for="auth-success-selector" class="mb-2 block text-sm font-semibold">
+						Success Selector <span class="text-ink-faint font-normal">(optional)</span>
 					</Label>
 					<input
 						id="auth-success-selector"
@@ -225,14 +228,18 @@
 						autocomplete="off"
 						placeholder={'a[href="/dashboard"], [data-testid="welcome"]'}
 						value={config.successSelector}
-						oninput={(e) => update({ successSelector: e.currentTarget.value })}
-						class={cn(
-							'border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none',
-							!config.successSelector.trim() && 'border-amber-300 focus:border-amber-500'
-						)}
+						oninput={(e) => {
+							const value = e.currentTarget.value;
+							update({
+								successSelector: value,
+								successStrategy: value.trim().length > 0 ? 'selector' : 'auto'
+							});
+						}}
+						class="border-line bg-surface text-ink placeholder:text-ink-faint focus:border-accent w-full rounded-xl border px-3 py-2 font-mono text-xs focus:outline-none"
 					/>
 					<p class="text-ink-faint mt-1 text-xs">
-						Scan proceeds when this element becomes visible after login.
+						Leave blank to auto-detect login (recommended). Provide an element that only appears
+						after login if auto-detection doesn't work for your app.
 					</p>
 				</div>
 			</div>
