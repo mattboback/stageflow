@@ -212,8 +212,9 @@ async function main() {
 		await page.locator('#auth-login-url').fill(`${config.site}/login`);
 		await page.locator('#auth-username').fill(config.email);
 		await page.locator('#auth-password').fill(config.password);
-		await page.getByRole('button', { name: /Advanced Settings/i }).click();
-		await page.locator('#auth-success-selector').fill('a[href="/dashboard"]');
+		// Exercise the recommended default: login URL + credentials only, with no
+		// success selector. This dogfoods the auto-detect login path (success:
+		// networkidle + post-login grace poll) that the hosted Playground leads with.
 		await screenshot(
 			page,
 			config.artifactRoot,
