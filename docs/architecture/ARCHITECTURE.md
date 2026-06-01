@@ -2,7 +2,7 @@
 
 StageFlow is a self-hosted frontend quality gate built from multiple Go services, a TypeScript/Bun scanner runtime, a SvelteKit 5 web app, and a Go CLI. This document covers the system shape, data flow, and the reasoning behind the key design decisions.
 
-For an exhaustive deep-dive — trust boundaries, failure modes, all event types, deployment topology — see [docs/architecture/system.md](docs/architecture/system.md).
+For an exhaustive deep-dive — trust boundaries, failure modes, all event types, deployment topology — see [system.md](system.md).
 
 ---
 
