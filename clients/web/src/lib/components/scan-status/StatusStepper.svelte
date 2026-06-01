@@ -25,7 +25,7 @@
 	);
 </script>
 
-<div class="relative mx-auto w-full max-w-3xl px-4">
+<div class="relative mx-auto w-full max-w-3xl px-1 sm:px-4">
 	<div class="bg-surface-muted absolute top-5 left-0 h-0.5 w-full -translate-y-1/2">
 		<div
 			class="bg-accent h-full transition-[width] duration-500 ease-in-out"
@@ -59,7 +59,7 @@
 				</div>
 				<span
 					class={cn(
-						'text-xs font-semibold tracking-wider uppercase',
+						'max-w-[3.75rem] text-center text-[10px] leading-tight font-semibold tracking-normal uppercase sm:max-w-none sm:text-xs sm:tracking-wider',
 						isFuture ? 'text-ink-faint' : 'text-ink'
 					)}
 				>

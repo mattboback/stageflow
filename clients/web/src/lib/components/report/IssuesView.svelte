@@ -188,7 +188,7 @@
 	}
 </script>
 
-<div class="grid grid-cols-1 gap-4 lg:grid-cols-[260px,1fr]">
+<div class="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
 	<div class="hidden lg:block">
 		<IssueFilterSidebar
 			{report}

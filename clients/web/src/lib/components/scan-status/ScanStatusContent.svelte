@@ -21,10 +21,10 @@
 </script>
 
 <Panel padding="none" rounded="xl" class="text-ink overflow-hidden shadow-sm">
-	<div class="border-line bg-surface-muted border-b px-6 pt-8 pb-10">
+	<div class="border-line bg-surface-muted border-b px-2 pt-8 pb-10 sm:px-6">
 		<StatusStepper currentStatus={status} />
 	</div>
-	<div class="p-8">
+	<div class="p-4 sm:p-8">
 		{#if !isComplete && !isFailed}
 			<ProcessingView {result} {logs} />
 		{/if}

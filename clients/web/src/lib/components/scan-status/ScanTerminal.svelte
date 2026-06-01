@@ -121,7 +121,7 @@
 >
 	<!-- Glassy terminal header -->
 	<div
-		class="flex items-center justify-between border-b border-[#1e293b]/70 bg-[#0e131f]/90 px-5 py-3 backdrop-blur-md"
+		class="flex items-center justify-between border-b border-[#1e293b]/70 bg-[#0e131f]/90 px-3 py-3 backdrop-blur-md sm:px-5"
 	>
 		<div class="flex items-center gap-2 text-[#64748b]">
 			<Terminal class="text-accent h-4 w-4 drop-shadow-[0_0_6px_rgba(13,92,99,0.5)]" />
@@ -154,7 +154,7 @@
 	<!-- Scrollable logs body with scanline overlay -->
 	<div
 		bind:this={containerRef}
-		class="terminal-console-scroller h-80 space-y-1.5 overflow-y-auto p-5 font-mono text-xs text-slate-300"
+		class="terminal-console-scroller h-80 space-y-1.5 overflow-y-auto p-3 font-mono text-xs text-slate-300 sm:p-5"
 	>
 		{#if logs.length === 0}
 			<div class="flex items-center gap-2.5 py-2 text-slate-500">
@@ -186,7 +186,7 @@
 				{/if}
 
 				<!-- Log message -->
-				<span class={cn('leading-relaxed break-all', style.textClass)}>{log}</span>
+				<span class={cn('leading-relaxed break-words', style.textClass)}>{log}</span>
 			</div>
 		{/each}
 

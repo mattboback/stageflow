@@ -258,7 +258,7 @@
 </div>
 
 <!-- ── Two-column layout ──────────────────────────────────────────────────── -->
-<div class="items-start gap-4 lg:grid lg:grid-cols-[1fr,380px] print:hidden">
+<div class="items-start gap-4 lg:grid lg:grid-cols-[1fr_380px] print:hidden">
 	<!-- LEFT: Screenshot + overlay -->
 	<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
 		<!-- Controls bar -->

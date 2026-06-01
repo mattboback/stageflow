@@ -49,7 +49,7 @@
 	}
 </script>
 
-<div class="bento-frame" aria-label="Scan status dashboard">
+<div class="bento-frame status-bento-frame" aria-label="Scan status dashboard">
 	<div class="bento-chrome">
 		<div class="bento-chrome-dots">
 			<i class="bento-chrome-dot" style="background:#fc5f57"></i>

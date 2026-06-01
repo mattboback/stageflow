@@ -252,7 +252,7 @@
 
 <div class="space-y-6">
 	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
-		<div class="grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+		<div class="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
 			<div class="border-line bg-surface-muted/40 rounded-2xl border p-4">
 				<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Summary</p>
 				<p class="text-ink mt-2 text-sm font-semibold">{riskSummary}</p>
@@ -476,7 +476,7 @@
 		</Panel>
 	{/if}
 
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr,0.86fr]">
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_0.86fr]">
 		<Panel class="ring-line/70 min-w-0 shadow-sm ring-1" padding="none" rounded="2xl">
 			<div class="border-line border-b p-4">
 				<h3 class="text-ink flex items-center text-base leading-none font-semibold tracking-tight">
