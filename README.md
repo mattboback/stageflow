@@ -249,7 +249,7 @@ Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guid
 ## Screenshots
 
 ### Example scan: an intentionally inaccessible demo site
-These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow scanned it and produced one unified report; because the page is deliberately broken, the Pages tab fills with severity-colored finding overlays.
+These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow's seven standard scanners surfaced 54 distinct issues across 189 occurrences (8 critical) on a single page; because the page is deliberately broken, the Pages tab fills with severity-colored finding overlays.
 
 <table>
   <tr>
@@ -265,7 +265,7 @@ These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https:/
     <td><img src="docs/images/report-issues.png" alt="Issue triage view for the demo-site scan" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Unified report overview rolling up every scanner and page into one severity-scored view</em></td>
+    <td align="center"><em>Unified report overview: 1 page, 7 scanners, 54 distinct issues (189 occurrences, 8 critical) in one severity-scored view</em></td>
     <td align="center"><em>Grouped issue triage with severity, scanner, page, and remediation context</em></td>
   </tr>
   <tr>
