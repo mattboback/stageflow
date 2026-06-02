@@ -20,13 +20,6 @@
 	let { section, report, onSectionChange }: Props = $props();
 
 	const sections = $derived<Section[]>([
-		{ id: 'overview', label: 'Overview', shortLabel: 'Overview' },
-		{
-			id: 'issues',
-			label: 'Issues',
-			shortLabel: 'Issues',
-			count: report.issues.length
-		},
 		{
 			id: 'pages',
 			label: 'Pages',
@@ -34,16 +27,16 @@
 			count: report.pages.length
 		},
 		{
-			id: 'scanners',
-			label: 'Scanners',
-			shortLabel: 'Scans',
-			count: report.scanners.length
+			id: 'issues',
+			label: 'Issues',
+			shortLabel: 'Issues',
+			count: report.issues.length
 		},
-		{ id: 'visual', label: 'Visual Inspector', shortLabel: 'Visual' },
+		{ id: 'overview', label: 'Overview', shortLabel: 'Overview' },
 		{
 			id: 'artifacts',
-			label: 'Diagnostics',
-			shortLabel: 'Diagnostics',
+			label: 'Downloads',
+			shortLabel: 'Downloads',
 			count: (report.artifacts?.length ?? 0) + (report.errors?.length ?? 0)
 		}
 	]);

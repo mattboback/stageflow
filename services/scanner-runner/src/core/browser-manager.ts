@@ -4,7 +4,14 @@
  * Playwright browser management for scanner operations.
  */
 
-import { type Browser, type BrowserContext, type Page, type Route, chromium } from 'playwright';
+import {
+	type Browser,
+	type BrowserContext,
+	type ElementHandle,
+	type Page,
+	type Route,
+	chromium
+} from 'playwright';
 
 import { createLogger } from '../utils/logger';
 import { resolvePlaywrightImageChromiumExecutablePath } from '../utils/playwright';
@@ -18,6 +25,14 @@ import {
 	type ScannerLogger,
 	type WaitStrategy
 } from './types';
+
+// Selector-free auth. When the playground operator leaves a login-form field
+// override blank, the recipe carries `auto:<field>` instead of a CSS selector.
+// The executor resolves these to a real element via login-form heuristics
+// (see findLoginFieldInPage) rather than handing them to Playwright's selector
+// engine. Every other layer treats the selector as an opaque string.
+const AUTO_SELECTOR_PREFIX = 'auto:';
+const AUTO_SELECTOR_POLL_INTERVAL_MS = 250;
 
 const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
 	headless: true,
@@ -250,6 +265,17 @@ export class BrowserManager {
 				? action.timeout
 				: this.config.defaultTimeout;
 
+		// Resolve the selector-free auth convention before falling through to
+		// Playwright's selector engine.
+		if (
+			'selector' in action &&
+			typeof action.selector === 'string' &&
+			action.selector.startsWith(AUTO_SELECTOR_PREFIX)
+		) {
+			await this.executeAutoLoginAction(page, action, secretsResolver, timeout);
+			return;
+		}
+
 		switch (action.type) {
 			case 'click':
 				await page.click(action.selector, { timeout });
@@ -290,6 +316,78 @@ export class BrowserManager {
 			default:
 				this.logger.warn('Unknown action type', { action });
 				return;
+		}
+	}
+
+	/**
+	 * Handles an `auto:<field>` step: locate the login-form element by heuristic,
+	 * then fill or click it. `auto:submit` falls back to pressing Enter when no
+	 * submit control is found, which submits the form the password field is in.
+	 */
+	private async executeAutoLoginAction(
+		page: Page,
+		action: PreScanAction,
+		secretsResolver: SecretsResolver | undefined,
+		timeout: number
+	): Promise<void> {
+		if (action.type !== 'fill' && action.type !== 'click') {
+			throw new Error(
+				`The auto-detect selector convention supports only fill and click steps (got "${action.type}").`
+			);
+		}
+
+		const field = action.selector.slice(AUTO_SELECTOR_PREFIX.length);
+		const element = await this.resolveAutoLoginElement(page, field, timeout);
+
+		if (action.type === 'fill') {
+			if (!element) {
+				throw new Error(
+					`Auto-detect could not find the "${field}" field on the login form. ` +
+						'Open Advanced Settings and provide a CSS selector for this field.'
+				);
+			}
+
+			const value = resolveActionValue(action.value, secretsResolver);
+			await element.fill(value, { timeout });
+			await element.dispose();
+			return;
+		}
+
+		// click — typically auto:submit.
+		if (!element) {
+			this.logger.debug('Auto-detect found no submit control; pressing Enter to submit', { field });
+			await page.keyboard.press('Enter');
+			return;
+		}
+
+		await element.click({ timeout });
+		await element.dispose();
+	}
+
+	/**
+	 * Polls the page (up to `timeout`) for the requested login field, returning a
+	 * handle to the first match or null if none appears. The heuristic itself runs
+	 * in the page context — see findLoginFieldInPage.
+	 */
+	private async resolveAutoLoginElement(
+		page: Page,
+		field: string,
+		timeout: number
+	): Promise<ElementHandle<HTMLElement> | null> {
+		const deadline = Date.now() + timeout;
+		for (;;) {
+			const handle = await page.evaluateHandle(findLoginFieldInPage, field);
+			const element = handle.asElement();
+			if (element) {
+				return element;
+			}
+
+			await handle.dispose();
+			if (Date.now() >= deadline) {
+				return null;
+			}
+
+			await page.waitForTimeout(AUTO_SELECTOR_POLL_INTERVAL_MS);
 		}
 	}
 
@@ -352,6 +450,75 @@ export class BrowserManager {
 	getConfig(): BrowserConfig {
 		return { ...this.config };
 	}
+}
+
+/**
+ * Login-form field heuristic, evaluated in the page context. Given a logical
+ * field name (`username` | `password` | `submit`), returns the best-matching
+ * visible element, or null. Must be fully self-contained: it is serialized and
+ * run inside the browser, so it cannot close over module scope.
+ */
+function findLoginFieldInPage(field: string): HTMLElement | null {
+	const isVisible = (el: Element | null): el is HTMLElement => {
+		if (!el) {
+			return false;
+		}
+		const style = window.getComputedStyle(el);
+		const rect = el.getBoundingClientRect();
+		return (
+			style.visibility !== 'hidden' &&
+			style.display !== 'none' &&
+			rect.width > 0 &&
+			rect.height > 0
+		);
+	};
+
+	const passwordField =
+		Array.from(document.querySelectorAll<HTMLInputElement>('input[type="password"]')).find(
+			isVisible
+		) ?? null;
+
+	if (field === 'password') {
+		return passwordField;
+	}
+
+	if (field === 'username') {
+		const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input')).filter(
+			isVisible
+		);
+		const usernameLike = (el: HTMLInputElement): boolean => {
+			const type = (el.getAttribute('type') ?? 'text').toLowerCase();
+			return !['password', 'hidden', 'checkbox', 'radio', 'submit', 'button'].includes(type);
+		};
+		// Prefer username-like fields that precede the password field; otherwise
+		// consider every username-like field on the page.
+		const candidates =
+			passwordField !== null
+				? inputs.slice(0, inputs.indexOf(passwordField)).filter(usernameLike)
+				: inputs.filter(usernameLike);
+		// An explicit email input wins; otherwise take the one closest to the password.
+		const email = candidates.find((el) => (el.getAttribute('type') ?? '').toLowerCase() === 'email');
+		return email ?? candidates[candidates.length - 1] ?? null;
+	}
+
+	if (field === 'submit') {
+		const scope: ParentNode = passwordField?.closest('form') ?? document;
+		const explicit = scope.querySelector<HTMLElement>('button[type="submit"], input[type="submit"]');
+		if (isVisible(explicit)) {
+			return explicit;
+		}
+		const buttons = Array.from(
+			scope.querySelectorAll<HTMLElement>('button, input[type="button"], [role="button"]')
+		).filter(isVisible);
+		const labelOf = (el: HTMLElement): string =>
+			el instanceof HTMLInputElement ? el.value : el.textContent;
+		const labelled = buttons.find((el) =>
+			/log\s*in|sign\s*in|continue|submit|next|go/i.test(labelOf(el).trim())
+		);
+		return labelled ?? buttons[0] ?? null;
+	}
+
+	return null;
 }
 
 function resolveActionValue(

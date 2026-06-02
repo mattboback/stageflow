@@ -248,37 +248,37 @@ Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guid
 
 ## Screenshots
 
-### Real-World Dogfooding: Auditing AlchemizeCV
-StageFlow is dogfooded against [AlchemizeCV](https://alchemizecv.com), a private resume-tailoring SaaS workspace. The current screenshots come from a headful Chrome/Xvfb run on May 30, 2026 that used StageFlow's web Playground form-auth flow to log in, scan `/dashboard`, `/applications`, and `/profile`, and verify all seven standard scanners completed.
+### Example scan: an intentionally inaccessible demo site
+These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow scanned it and produced one unified report; because the page is deliberately broken, the Pages tab fills with severity-colored finding overlays.
 
 <table>
   <tr>
-    <td><img src="docs/images/scan-in-progress.png" alt="Live scan progress of AlchemizeCV with scanner status and event streaming" /></td>
-    <td><img src="docs/images/scan-complete.png" alt="Completed authenticated AlchemizeCV scan with report artifacts ready" /></td>
+    <td><img src="docs/images/scan-in-progress.png" alt="Live scan progress with scanner status and event streaming" /></td>
+    <td><img src="docs/images/scan-complete.png" alt="Completed scan with report artifacts ready" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Live job progress streamed over SSE while scanners audit authenticated pages</em></td>
+    <td align="center"><em>Live job progress streamed over SSE while scanners audit the target pages</em></td>
     <td align="center"><em>Completed scan with report, logs, recipes, provenance, and page screenshots attached</em></td>
   </tr>
   <tr>
-    <td><img src="docs/images/report-overview.png" alt="Unified report overview of an authenticated AlchemizeCV scan" /></td>
-    <td><img src="docs/images/report-issues.png" alt="Issue triage view for the authenticated AlchemizeCV scan" /></td>
+    <td><img src="docs/images/report-overview.png" alt="Unified report overview of the demo-site scan" /></td>
+    <td><img src="docs/images/report-issues.png" alt="Issue triage view for the demo-site scan" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Unified report overview: 3 authenticated pages, 7 scanners, 60 findings</em></td>
+    <td align="center"><em>Unified report overview rolling up every scanner and page into one severity-scored view</em></td>
     <td align="center"><em>Grouped issue triage with severity, scanner, page, and remediation context</em></td>
   </tr>
   <tr>
-    <td><img src="docs/images/report-pages.png" alt="Page-level visual evidence and contrast highlights on the AlchemizeCV dashboard" /></td>
-    <td><img src="docs/images/report-pages-detail.png" alt="Visual review overlay for the authenticated AlchemizeCV applications page" /></td>
+    <td><img src="docs/images/report-pages-overlay.png" alt="Pages tab: severity-colored issue boxes drawn over a captured page, with the issue list alongside" /></td>
+    <td><img src="docs/images/report-issue-card.png" alt="Clicking an issue box opens a detail card with evidence, the highlighted element, selector, and remediation" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Page-level evidence confirms the private applications workspace rendered after login</em></td>
-    <td align="center"><em>Visual review overlays scanner evidence directly on the captured authenticated page</em></td>
+    <td align="center"><em>The default <strong>Pages</strong> tab overlays every finding as a severity-colored box on the captured page — click a box (or an issue in the list) to lock the lens onto it</em></td>
+    <td align="center"><em>Selecting a marker pops a detail card: evidence screenshot, highlighted element, CSS selector, scanner message, and the fix</em></td>
   </tr>
   <tr>
-    <td><img src="docs/images/report-scanners.png" alt="Scanner status view showing successful AlchemizeCV scan modules" /></td>
-    <td><img src="docs/images/mobile-stageflow-report-overview.png" alt="Mobile report overview for the authenticated AlchemizeCV scan" /></td>
+    <td><img src="docs/images/report-scanners.png" alt="Scanner status view showing completed scan modules" /></td>
+    <td><img src="docs/images/mobile-stageflow-report-overview.png" alt="Mobile report overview for the demo-site scan" /></td>
   </tr>
   <tr>
     <td align="center"><em>All standard scanners completed successfully</em></td>

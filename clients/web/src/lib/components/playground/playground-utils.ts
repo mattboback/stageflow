@@ -49,23 +49,32 @@ export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unkn
 		return null;
 	}
 
-	const usernameSelector = config.usernameSelector.trim() || 'input[type="email"]';
-	const passwordSelector = config.passwordSelector.trim() || 'input[type="password"]';
-	const submitSelector = config.submitSelector.trim() || 'button[type="submit"]';
+	// Each field independently falls back to scanner-side auto-detection (the
+	// `auto:` selector convention the scanner-runner understands) when the operator
+	// leaves its Advanced-Settings override blank. The result: a standard login form
+	// needs no DOM selectors at all, while a power user can still pin any single
+	// field that auto-detection gets wrong.
+	const usernameSelector = config.usernameSelector.trim() || 'auto:username';
+	const passwordSelector = config.passwordSelector.trim() || 'auto:password';
+	const submitSelector = config.submitSelector.trim() || 'auto:submit';
 
-	// Default to selector-free auto-detection: wait for the post-submit network to
-	// settle and let the scanner confirm the page left the login form. Fall back to
-	// an explicit selector only when the operator provides one.
+	// Default to selector-free success detection: wait for the post-submit network
+	// to settle and let the scanner confirm the page left the login form. Fall back
+	// to an explicit selector only when the operator provides one.
 	const successSelector = config.successSelector.trim();
 	const success =
 		config.successStrategy === 'selector' && successSelector.length > 0
 			? { type: 'selector', selector: successSelector }
 			: { type: 'networkidle' };
 
+	// The URL list normalizes bare domains to https://; the login URL must get the
+	// same treatment or the platform-api rejects a schemeless value as invalid.
+	const loginUrl = normalizeUrlInput(config.loginUrl) ?? config.loginUrl.trim();
+
 	return {
 		mode: 'form',
 		form: {
-			login_url: config.loginUrl.trim(),
+			login_url: loginUrl,
 			steps: [
 				{ type: 'fill', selector: usernameSelector, value: config.username },
 				{ type: 'fill', selector: passwordSelector, value: config.password },

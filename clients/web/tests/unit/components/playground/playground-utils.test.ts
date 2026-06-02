@@ -111,9 +111,9 @@ describe('playground-utils', () => {
 			form: {
 				login_url: 'https://app.example.com/login',
 				steps: [
-					{ type: 'fill', selector: 'input[type="email"]', value: 'demo@example.com' },
-					{ type: 'fill', selector: 'input[type="password"]', value: 'secret' },
-					{ type: 'click', selector: 'button[type="submit"]' }
+					{ type: 'fill', selector: 'auto:username', value: 'demo@example.com' },
+					{ type: 'fill', selector: 'auto:password', value: 'secret' },
+					{ type: 'click', selector: 'auto:submit' }
 				],
 				success: { type: 'networkidle' }
 			}
@@ -155,9 +155,9 @@ describe('playground-utils', () => {
 			form: {
 				login_url: 'https://app.example.com/login',
 				steps: [
-					{ type: 'fill', selector: 'input[type="email"]', value: 'demo@example.com' },
-					{ type: 'fill', selector: 'input[type="password"]', value: 'secret' },
-					{ type: 'click', selector: 'button[type="submit"]' }
+					{ type: 'fill', selector: 'auto:username', value: 'demo@example.com' },
+					{ type: 'fill', selector: 'auto:password', value: 'secret' },
+					{ type: 'click', selector: 'auto:submit' }
 				],
 				success: { type: 'selector', selector: 'a[href="/dashboard"]' }
 			}
