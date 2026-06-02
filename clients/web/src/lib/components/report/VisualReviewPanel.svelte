@@ -14,8 +14,6 @@
 	import { ExternalLink, Printer, RotateCcw, ZoomIn, ZoomOut, Target, Focus } from 'lucide-svelte';
 	import { tick } from 'svelte';
 
-	import IssueDetailModal from './IssueDetailModal.svelte';
-
 	interface Props {
 		report: UnifiedReport;
 		screenshots: ScreenshotArtifact[];
@@ -104,7 +102,7 @@
 		const elements = selectedPage?.pageOverview?.elements ?? [];
 		// Largest boxes first so the smallest, most specific marker paints on top and
 		// stays clickable — a full-page document-level box must not swallow clicks meant
-		// for the boxes beneath it. (Same paint-order rationale as PageOverviewViewer.)
+		// for the boxes beneath it.
 		return elements
 			.filter((el) => {
 				const issue = issueMap[el.issueId];
@@ -163,7 +161,7 @@
 			const el = rightPanelRef?.querySelector<HTMLElement>(
 				`[data-issue-id="${CSS.escape(activeIssueId ?? '')}"]`
 			);
-			el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+			el?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
 		})();
 		return () => {
 			cancelled = true;
@@ -188,30 +186,12 @@
 		severityFilters = { ...severityFilters, [key]: !severityFilters[key] };
 	}
 
-	function handleBoxClick(issueId: string) {
-		activeIssueId = activeIssueId === issueId ? null : issueId;
-	}
-
-	function handleIssueCardClick(issue: IssueDetail) {
-		if (activeIssueId === issue.id) {
-			// Second click on an already-selected card → open modal
-			openModal(issue);
-		} else {
-			activeIssueId = issue.id;
-		}
-	}
-
-	// ─── Detail modal ─────────────────────────────────────────────────────────
-
-	let modalIssue = $state<IssueDetail | null>(null);
-
-	function openModal(issue: IssueDetail) {
-		modalIssue = issue;
-		onIssueSelect(issue);
-	}
-
-	function closeModal() {
-		modalIssue = null;
+	// Selecting an issue locks the lens camera onto it (activeIssueId drives the zoom)
+	// and opens the shared, URL-driven detail modal (owned by ReportShell via onIssueSelect),
+	// so issues stay deep-linkable. The optional elementId targets a specific occurrence.
+	function selectIssue(issue: IssueDetail, elementId?: string) {
+		activeIssueId = issue.id;
+		onIssueSelect(issue, elementId);
 	}
 
 	// ─── Print summary ────────────────────────────────────────────────────────
@@ -379,11 +359,11 @@
 										tabindex="0"
 										aria-label="{issue.title} ({issue.severity})"
 										aria-pressed={isActive}
-										onclick={() => handleBoxClick(issue.id)}
+										onclick={() => selectIssue(issue, `${issue.id}-el-${element.nodeIndex}`)}
 										onkeydown={(e) => {
 											if (e.key === 'Enter' || e.key === ' ') {
 												e.preventDefault();
-												handleBoxClick(issue.id);
+												selectIssue(issue, `${issue.id}-el-${element.nodeIndex}`);
 											}
 										}}
 									>
@@ -457,7 +437,7 @@
 						{@const isActive = activeIssueId === issue.id}
 						{@const hasMarker = issuesWithMarkers.has(issue.id)}
 						<div class="group relative">
-							<!-- Row: click to select (second click opens modal) -->
+							<!-- Row: click to focus the lens on this issue and open its detail -->
 							<div
 								data-issue-id={issue.id}
 								class={cn(
@@ -469,11 +449,11 @@
 								role="button"
 								tabindex="0"
 								aria-pressed={isActive}
-								onclick={() => handleIssueCardClick(issue)}
+								onclick={() => selectIssue(issue)}
 								onkeydown={(e) => {
 									if (e.key === 'Enter' || e.key === ' ') {
 										e.preventDefault();
-										handleIssueCardClick(issue);
+										selectIssue(issue);
 									}
 								}}
 							>
@@ -502,10 +482,8 @@
 										{/if}
 									</p>
 									{#if isActive}
-										<p
-											class="text-accent mt-1.5 animate-pulse text-[10px] font-bold tracking-wide uppercase"
-										>
-											Click again to inspect occurrence evidence
+										<p class="text-accent mt-1.5 text-[10px] font-bold tracking-wide uppercase">
+											Locked · lens focused on this occurrence
 										</p>
 									{/if}
 								</div>
@@ -516,7 +494,7 @@
 								type="button"
 								onclick={(e) => {
 									e.stopPropagation();
-									openModal(issue);
+									selectIssue(issue);
 								}}
 								class="text-ink-faint hover:text-accent focus-visible:text-accent absolute top-4 right-3.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
 								title="View full details"
@@ -596,16 +574,6 @@
 		{/if}
 	{/each}
 </div>
-
-<!-- Detail modal (shared with existing report sections) -->
-{#if modalIssue}
-	<IssueDetailModal
-		issue={modalIssue}
-		page={report.pages.find((p) => p.id === modalIssue?.pageId) ?? null}
-		{screenshots}
-		onClose={closeModal}
-	/>
-{/if}
 
 <style>
 	/* SVG hover fill for overlay boxes — CSS custom property since Tailwind doesn't work in SVG */

@@ -54,6 +54,7 @@ describe('BrowserManager', () => {
 				scrollIntoViewIfNeeded: vi.fn().mockResolvedValue(undefined)
 			}),
 			evaluate: vi.fn().mockResolvedValue(undefined),
+			evaluateHandle: vi.fn(),
 			keyboard: {
 				press: vi.fn().mockResolvedValue(undefined)
 			}
@@ -597,6 +598,67 @@ describe('BrowserManager', () => {
 			await browserManager.executePreScanActions(mockPage, []);
 
 			expect(mockPage.click).not.toHaveBeenCalled();
+		});
+
+		describe('auto-detect login selectors', () => {
+			// A fake ElementHandle plus the evaluateHandle wrapper the resolver unwraps.
+			function fakeHandle(element: unknown) {
+				return {
+					asElement: () => element,
+					dispose: vi.fn().mockResolvedValue(undefined)
+				};
+			}
+			function fakeElement() {
+				return {
+					fill: vi.fn().mockResolvedValue(undefined),
+					click: vi.fn().mockResolvedValue(undefined),
+					dispose: vi.fn().mockResolvedValue(undefined)
+				};
+			}
+
+			it('fills the resolved element for an auto: fill step and never touches page.fill', async () => {
+				const element = fakeElement();
+				vi.mocked(mockPage.evaluateHandle).mockResolvedValue(fakeHandle(element));
+
+				await browserManager.executePreScanActions(mockPage, [
+					{ type: 'fill', selector: 'auto:password', value: 'hunter2' }
+				]);
+
+				expect(element.fill).toHaveBeenCalledWith('hunter2', { timeout: 30_000 });
+				expect(mockPage.fill).not.toHaveBeenCalled();
+			});
+
+			it('clicks the resolved element for auto:submit', async () => {
+				const element = fakeElement();
+				vi.mocked(mockPage.evaluateHandle).mockResolvedValue(fakeHandle(element));
+
+				await browserManager.executePreScanActions(mockPage, [
+					{ type: 'click', selector: 'auto:submit' }
+				]);
+
+				expect(element.click).toHaveBeenCalledWith({ timeout: 30_000 });
+				expect(mockPage.click).not.toHaveBeenCalled();
+			});
+
+			it('falls back to pressing Enter when auto:submit finds no button', async () => {
+				vi.mocked(mockPage.evaluateHandle).mockResolvedValue(fakeHandle(null));
+
+				await browserManager.executePreScanActions(mockPage, [
+					{ type: 'click', selector: 'auto:submit', timeout: 0 }
+				]);
+
+				expect(mockPage.keyboard.press).toHaveBeenCalledWith('Enter');
+			});
+
+			it('throws when an auto: fill field cannot be detected', async () => {
+				vi.mocked(mockPage.evaluateHandle).mockResolvedValue(fakeHandle(null));
+
+				await expect(
+					browserManager.executePreScanActions(mockPage, [
+						{ type: 'fill', selector: 'auto:username', value: 'x', timeout: 0 }
+					])
+				).rejects.toThrow(/could not find the "username" field/);
+			});
 		});
 	});
 

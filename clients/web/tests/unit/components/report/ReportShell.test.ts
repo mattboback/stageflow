@@ -238,7 +238,7 @@ describe('ReportShell', () => {
 			}
 		});
 
-		const markers = container.querySelectorAll("[data-testid='page-overview-marker']");
+		const markers = container.querySelectorAll('rect.overlay-rect');
 		expect(markers).toHaveLength(2);
 
 		await user.click(markers[1]);

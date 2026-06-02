@@ -15,10 +15,8 @@
 	import IssueDetailModal from './IssueDetailModal.svelte';
 	import IssuesView from './IssuesView.svelte';
 	import OverviewDashboard from './OverviewDashboard.svelte';
-	import PagesView from './PagesView.svelte';
 	import ReportHeader from './ReportHeader.svelte';
 	import ReportSectionNav from './ReportSectionNav.svelte';
-	import ScannersView from './ScannersView.svelte';
 	import VisualReviewPanel from './VisualReviewPanel.svelte';
 
 	interface Props {
@@ -35,19 +33,26 @@
 	let { jobId, status, report, job, logs, screenshots, error, onRefreshArtifacts }: Props =
 		$props();
 
+	// Legacy section ids that were merged away, mapped to their current home so old
+	// deep links keep resolving: 'errors' → combined Downloads (artifacts); 'visual' →
+	// the unified Pages overlay; 'scanners' → Overview (which carries scanner status).
+	const LEGACY_SECTIONS: Record<string, string> = {
+		errors: 'artifacts',
+		visual: 'pages',
+		scanners: 'overview'
+	};
+
 	const section = $derived.by(() => {
-		const value = page.url.searchParams.get('section') ?? 'overview';
-		// Legacy 'errors' is folded into the combined Diagnostics (artifacts) section.
-		if (value === 'errors') return 'artifacts';
-		return ['overview', 'issues', 'pages', 'scanners', 'visual', 'artifacts'].includes(value)
-			? value
-			: 'overview';
+		const value = page.url.searchParams.get('section') ?? 'pages';
+		if (value in LEGACY_SECTIONS) return LEGACY_SECTIONS[value];
+		return ['pages', 'issues', 'overview', 'artifacts'].includes(value) ? value : 'pages';
 	});
 
-	// Strip legacy 'errors' from the URL so deep links remain canonical.
+	// Rewrite legacy section ids in the URL so deep links remain canonical.
 	$effect(() => {
-		if (page.url.searchParams.get('section') === 'errors') {
-			updateQueryParams({ section: 'artifacts' });
+		const value = page.url.searchParams.get('section');
+		if (value && value in LEGACY_SECTIONS) {
+			updateQueryParams({ section: LEGACY_SECTIONS[value] });
 		}
 	});
 
@@ -126,7 +131,8 @@
 	}
 
 	function setSection(value: string) {
-		updateQueryParams({ section: value === 'overview' ? null : value }, { replaceState: false });
+		// 'pages' is the default landing tab, so it drops out of the URL for clean links.
+		updateQueryParams({ section: value === 'pages' ? null : value }, { replaceState: false });
 	}
 
 	function handleIssueSelect(issue: IssueDetail, highlightedElementId?: string) {
@@ -202,7 +208,13 @@
 							updateQueryParams({ section: 'pages', page: pageId }, { replaceState: false })}
 						onSelectScanner={(scannerId) =>
 							updateQueryParams(
-								{ section: 'scanners', scanner: scannerId },
+								{
+									section: 'issues',
+									scanner: scannerId,
+									page: null,
+									severity: null,
+									category: null
+								},
 								{ replaceState: false }
 							)}
 						onSearchIssues={(query, scannerId) =>
@@ -253,26 +265,6 @@
 				</section>
 			{:else if section === 'pages'}
 				<section id="report-panel-pages" aria-labelledby="report-tab-pages">
-					<PagesView
-						report={displayReport}
-						{screenshots}
-						{activeScanner}
-						{activePage}
-						onSelectPage={(pageId) => updateQueryParams({ page: pageId })}
-						onIssueSelect={handleIssueSelect}
-					/>
-				</section>
-			{:else if section === 'scanners'}
-				<section id="report-panel-scanners" aria-labelledby="report-tab-scanners">
-					<ScannersView
-						report={displayReport}
-						{job}
-						{activeScanner}
-						onSelectScanner={(scannerId) => updateQueryParams({ scanner: scannerId })}
-					/>
-				</section>
-			{:else if section === 'visual'}
-				<section id="report-panel-visual" aria-labelledby="report-tab-visual">
 					<VisualReviewPanel
 						report={displayReport}
 						{screenshots}
