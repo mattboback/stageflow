@@ -50,7 +50,7 @@ jobs:
       - name: Lint workflows
         run: actionlint -color -shellcheck="$(command -v shellcheck)"
 
-  secrets:
+  secrets_scan:
     name: Secrets (gitleaks)
     runs-on: ubuntu-latest
     needs: workflow_lint
