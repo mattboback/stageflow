@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Consolidated the report UI: the standalone Scanners and page-overview views are merged into the Overview dashboard and a single `VisualReviewPanel` Pages overlay; report sections are now Overview, Issues, Pages, and Downloads
+- Playground form-auth: auto-detect the login form and make the post-login success selector optional
+- Generalized mobile "bento" styling and improved the scan-status layout
+- Refreshed all README screenshots against a public demo target (Deque "Mars Commuter"), captured from the consolidated report UI
+
+### Removed
+
+- Removed the internal AlchemizeCV dogfooding harness, its live integration test, the `dogfood-alchemizecv` justfile recipe, and all documentation references
+
+### Fixed
+
+- Keep small issue boxes clickable under full-page overlays in the report
+- `scan.completed` timing no longer exceeds the reported `total_ms`
+
 ## [0.1.0] - 2026-05-28
 
 Initial public release.
