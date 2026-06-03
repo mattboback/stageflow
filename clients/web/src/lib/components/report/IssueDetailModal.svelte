@@ -127,7 +127,9 @@
 		].filter((tab): tab is { id: string; label: string } => tab !== null)
 	);
 
-	const defaultTabId = $derived(hasEvidence ? 'evidence' : 'fix');
+	const defaultTabId = $derived(
+		highlightedElementId ? 'occurrences' : (hasEvidence ? 'evidence' : 'fix')
+	);
 	let activeTab = $state('fix');
 
 	$effect(() => {
@@ -195,7 +197,7 @@
 	size="xl"
 	contentClass={cn(
 		panelVariants({ padding: 'none', rounded: '2xl' }),
-		'max-h-[90vh] overflow-y-auto shadow-xl'
+		'max-h-[90vh] flex flex-col shadow-xl'
 	)}
 >
 	<div bind:this={modalRef} class="contents">
@@ -312,7 +314,7 @@
 			<Tabs {tabs} value={activeTab} onValueChange={(id) => (activeTab = id)} />
 		</div>
 
-		<div class="space-y-6 p-6">
+		<div class="flex-1 overflow-y-auto space-y-6 p-6">
 			{#if activeTab === 'fix'}
 				<div>
 					<h3 class="text-ink mb-2 font-semibold">How to fix</h3>
