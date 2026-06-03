@@ -11,7 +11,7 @@
 		getSeverityStrokeColor
 	} from '$lib/report';
 	import { cn, formatTimestamp } from '$lib/utils';
-	import { ExternalLink, Printer, RotateCcw, ZoomIn, ZoomOut, Target, Focus } from 'lucide-svelte';
+	import { ExternalLink, Printer, RotateCcw, ZoomIn, ZoomOut, Target, Focus, Columns, Maximize2 } from 'lucide-svelte';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -81,6 +81,7 @@
 	let activeIssueId = $state<string | null>(null);
 	let zoom = $state(1);
 	let cameraFocusLock = $state(true); // Auto-zoom target camera onto selected issue
+	let isRightPanelCollapsed = $state(false);
 	let severityFilters = $state({
 		critical: true,
 		serious: true,
@@ -238,7 +239,12 @@
 </div>
 
 <!-- ── Two-column layout ──────────────────────────────────────────────────── -->
-<div class="items-start gap-4 lg:grid lg:grid-cols-[1fr_380px] print:hidden">
+<div
+	class={cn(
+		'items-start gap-4 lg:grid print:hidden',
+		isRightPanelCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-[1fr_380px]'
+	)}
+>
 	<!-- LEFT: Screenshot + overlay -->
 	<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
 		<!-- Controls bar -->
@@ -265,6 +271,29 @@
 
 			<!-- Zoom & Camera controls -->
 			<div class="ml-auto flex items-center gap-2">
+				<!-- Expand Screenshot Toggle -->
+				<button
+					type="button"
+					onclick={() => (isRightPanelCollapsed = !isRightPanelCollapsed)}
+					class={cn(
+						'flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-all duration-200',
+						isRightPanelCollapsed
+							? 'bg-accent/15 border-accent text-accent shadow-xs'
+							: 'border-line text-ink-muted hover:bg-surface-muted'
+					)}
+					title={isRightPanelCollapsed ? 'Show Issues List' : 'Expand Screenshot (Hide Issues)'}
+				>
+					{#if isRightPanelCollapsed}
+						<Columns class="h-3.5 w-3.5" />
+						<span class="text-[10px] font-bold tracking-wide uppercase">Split View</span>
+					{:else}
+						<Maximize2 class="h-3.5 w-3.5" />
+						<span class="text-[10px] font-bold tracking-wide uppercase">Expand</span>
+					{/if}
+				</button>
+
+				<div class="bg-line/80 mx-0.5 h-4 w-[1px]"></div>
+
 				<!-- Auto Lens Focus Target Toggle -->
 				<button
 					type="button"
@@ -321,10 +350,9 @@
 				No page overview screenshot is available for this page.
 			</div>
 		{:else if canRenderOverlay}
-			<div class="overflow-auto bg-neutral-900 shadow-inner" style="max-height: 72vh">
+			<div class="overflow-auto bg-neutral-900 shadow-inner" style="max-height: 80vh">
 				<div
-					style="transform: scale({zoom}); transform-origin: top left; width: {100 /
-						zoom}%; will-change: transform; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
+					style="width: {zoom * 100}%; will-change: width; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
 				>
 					<button
 						type="button"
@@ -377,13 +405,17 @@
 			</div>
 		{:else}
 			<!-- Screenshot available but no overlay dimensions — show image only -->
-			<div class="overflow-auto bg-neutral-900" style="max-height: 72vh">
-				<img
-					src={overviewUrl}
-					alt="Page screenshot"
-					class="block w-full shadow-2xl"
-					loading="lazy"
-				/>
+			<div class="overflow-auto bg-neutral-900 shadow-inner" style="max-height: 80vh">
+				<div
+					style="width: {zoom * 100}%; will-change: width; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
+				>
+					<img
+						src={overviewUrl}
+						alt="Page screenshot"
+						class="block w-full shadow-2xl"
+						loading="lazy"
+					/>
+				</div>
 			</div>
 		{/if}
 
@@ -400,8 +432,9 @@
 	</Panel>
 
 	<!-- RIGHT: Issues list -->
-	<div>
-		<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
+	{#if !isRightPanelCollapsed}
+		<div>
+			<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
 			<!-- Header -->
 			<div class="border-line bg-surface-muted/20 border-b px-4 py-3">
 				<h3 class="text-ink truncate text-sm font-semibold" title={selectedPage?.url}>
@@ -426,7 +459,7 @@
 			<div
 				bind:this={rightPanelRef}
 				class="divide-line divide-y overflow-y-auto"
-				style="max-height: calc(72vh - 3.5rem)"
+				style="max-height: calc(80vh - 3.5rem)"
 			>
 				{#if pageIssues.length === 0}
 					<div class="text-ink-muted p-10 text-center text-sm italic">
@@ -508,14 +541,15 @@
 			</div>
 		</Panel>
 
-		{#if activeIssueId && issuesWithMarkers.has(activeIssueId)}
-			<p
-				class="text-ink-muted text-accent/80 mt-2 text-center text-xs font-semibold tracking-wide uppercase"
-			>
-				← Focal coordinates locked on active occurrence
-			</p>
-		{/if}
-	</div>
+			{#if activeIssueId && issuesWithMarkers.has(activeIssueId)}
+				<p
+					class="text-ink-muted text-accent/80 mt-2 text-center text-xs font-semibold tracking-wide uppercase"
+				>
+					← Focal coordinates locked on active occurrence
+				</p>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <!-- ── Print-only view (all pages, linearised) ─────────────────────────── -->

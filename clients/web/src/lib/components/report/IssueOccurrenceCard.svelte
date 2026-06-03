@@ -45,7 +45,11 @@
 	const viewBox = $derived.by(() => {
 		const overview = page?.pageOverview;
 		if (!overview || !overviewEl) return null;
-		return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl);
+		return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewEl, {
+			padding: 24,
+			minWidth: 280,
+			minHeight: 180
+		});
 	});
 
 	async function copyToClipboard(text: string) {
