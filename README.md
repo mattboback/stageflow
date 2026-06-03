@@ -249,15 +249,15 @@ Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guid
 ## Screenshots
 
 ### Example scan: an intentionally inaccessible demo site
-These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow's seven standard scanners surfaced 54 distinct issues across 189 occurrences (8 critical) on a single page; because the page is deliberately broken, the Pages tab fills with severity-colored finding overlays.
+These screenshots come from a live URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow's seven standard scanners surfaced 190 issues on a single page, including 8 critical findings, so the Pages tab fills with severity-colored finding overlays.
 
 <table>
   <tr>
-    <td><img src="docs/images/scan-in-progress.png" alt="Live scan progress with scanner status and event streaming" /></td>
+    <td><img src="docs/images/hero.png" alt="StageFlow live site landing page and report preview" /></td>
     <td><img src="docs/images/scan-complete.png" alt="Completed scan with report artifacts ready" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Live job progress streamed over SSE while scanners audit the target pages</em></td>
+    <td align="center"><em>The hosted StageFlow experience at stageflow.org</em></td>
     <td align="center"><em>Completed scan with report, logs, recipes, provenance, and page screenshots attached</em></td>
   </tr>
   <tr>
@@ -265,7 +265,7 @@ These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https:/
     <td><img src="docs/images/report-issues.png" alt="Issue triage view for the demo-site scan" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Unified report overview: 1 page, 7 scanners, 54 distinct issues (189 occurrences, 8 critical) in one severity-scored view</em></td>
+    <td align="center"><em>Unified report overview: 1 page, 7 scanners, and 190 severity-scored issues in one view</em></td>
     <td align="center"><em>Grouped issue triage with severity, scanner, page, and remediation context</em></td>
   </tr>
   <tr>
@@ -277,12 +277,50 @@ These screenshots come from a URL scan of [Deque's "Mars Commuter" demo](https:/
     <td align="center"><em>Selecting a marker pops a detail card: evidence screenshot, highlighted element, CSS selector, scanner message, and the fix</em></td>
   </tr>
   <tr>
-    <td><img src="docs/images/report-scanners.png" alt="Scanner status view showing completed scan modules" /></td>
+    <td><img src="docs/images/report-scanners.png" alt="Downloads and scanner artifacts from the completed scan" /></td>
     <td><img src="docs/images/mobile-stageflow-report-overview.png" alt="Mobile report overview for the demo-site scan" /></td>
   </tr>
   <tr>
-    <td align="center"><em>All standard scanners completed successfully</em></td>
+    <td align="center"><em>Raw artifacts stay available for deeper inspection: report JSON, scanner HTML, logs, recipes, and provenance</em></td>
     <td align="center"><em>The same report remains reviewable on a mobile viewport</em></td>
+  </tr>
+</table>
+
+### Authenticated scan: live AlchemizeCV pages
+StageFlow can log in before scanning protected pages. This live run authenticated against [alchemizecv.com](https://alchemizecv.com), scanned eight post-login pages, and produced report evidence for cards, interactive controls, and clickable bounding-box overlays.
+
+<table>
+  <tr>
+    <td><img src="docs/images/auth-mode-configured.png" alt="StageFlow Playground with authentication mode configured for protected AlchemizeCV pages" /></td>
+    <td><img src="docs/images/auth-scan-in-progress.png" alt="Authenticated scan running across eight protected AlchemizeCV pages" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Authentication mode configured in the Playground before scanning protected URLs</em></td>
+    <td align="center"><em>Live progress while StageFlow scans eight authenticated AlchemizeCV pages</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/auth-scan-complete.png" alt="Authenticated scan complete with artifacts ready" /></td>
+    <td><img src="docs/images/auth-report-overview.png" alt="Unified authenticated report overview for AlchemizeCV pages" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Authenticated scan completion unlocks the same report, JSON, logs, and provenance flow</em></td>
+    <td align="center"><em>Eight authenticated pages rolled up into one report</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/auth-report-issues.png" alt="Grouped authenticated scan issues across AlchemizeCV pages" /></td>
+    <td><img src="docs/images/auth-report-issue-detail.png" alt="Authenticated issue detail expanded with scanner evidence and remediation context" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Issues remain grouped by severity, scanner, page, selector, and remediation context</em></td>
+    <td align="center"><em>Expanded issue rows expose scanner evidence without leaving the report</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/auth-report-pages-overlay.png" alt="Authenticated report Pages tab with clickable bounding boxes over captured AlchemizeCV UI" /></td>
+    <td><img src="docs/images/auth-report-issue-card.png" alt="Authenticated report issue evidence modal with highlighted AlchemizeCV card/control" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Pages view draws clickable bounding boxes over the captured authenticated UI</em></td>
+    <td align="center"><em>Selecting a marker opens evidence with the highlighted control, selector, page, and occurrence count</em></td>
   </tr>
 </table>
 
