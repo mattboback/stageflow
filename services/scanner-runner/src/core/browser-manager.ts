@@ -466,10 +466,7 @@ function findLoginFieldInPage(field: string): HTMLElement | null {
 		const style = window.getComputedStyle(el);
 		const rect = el.getBoundingClientRect();
 		return (
-			style.visibility !== 'hidden' &&
-			style.display !== 'none' &&
-			rect.width > 0 &&
-			rect.height > 0
+			style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0
 		);
 	};
 
@@ -497,13 +494,17 @@ function findLoginFieldInPage(field: string): HTMLElement | null {
 				? inputs.slice(0, inputs.indexOf(passwordField)).filter(usernameLike)
 				: inputs.filter(usernameLike);
 		// An explicit email input wins; otherwise take the one closest to the password.
-		const email = candidates.find((el) => (el.getAttribute('type') ?? '').toLowerCase() === 'email');
+		const email = candidates.find(
+			(el) => (el.getAttribute('type') ?? '').toLowerCase() === 'email'
+		);
 		return email ?? candidates[candidates.length - 1] ?? null;
 	}
 
 	if (field === 'submit') {
 		const scope: ParentNode = passwordField?.closest('form') ?? document;
-		const explicit = scope.querySelector<HTMLElement>('button[type="submit"], input[type="submit"]');
+		const explicit = scope.querySelector<HTMLElement>(
+			'button[type="submit"], input[type="submit"]'
+		);
 		if (isVisible(explicit)) {
 			return explicit;
 		}

@@ -52,12 +52,17 @@ func FindGitRoot(startDir string) (string, bool, error) {
 	dir := startDir
 
 	for {
-		// Support both a .git directory and a .git file (worktrees/submodules).
+		// Support both a real .git directory and a .git file
+		// (worktrees/submodules). An empty directory named .git is ignored so
+		// temporary parent directories cannot accidentally capture unrelated
+		// project paths.
 		dotGit := filepath.Join(dir, ".git")
-		if _, err := os.Stat(dotGit); err == nil {
+		isGitRoot, err := isGitMarker(dotGit)
+		if err != nil {
+			return "", false, err
+		}
+		if isGitRoot {
 			return dir, true, nil
-		} else if !errors.Is(err, os.ErrNotExist) {
-			return "", false, fmt.Errorf("failed to stat %s: %w", dotGit, err)
 		}
 
 		parent := filepath.Dir(dir)
@@ -67,4 +72,31 @@ func FindGitRoot(startDir string) (string, bool, error) {
 
 		dir = parent
 	}
+}
+
+func isGitMarker(dotGit string) (bool, error) {
+	info, err := os.Stat(dotGit)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to stat %s: %w", dotGit, err)
+	}
+
+	if info.IsDir() {
+		if _, err := os.Stat(filepath.Join(dotGit, "HEAD")); err == nil {
+			return true, nil
+		} else if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		} else {
+			return false, fmt.Errorf("failed to stat %s: %w", filepath.Join(dotGit, "HEAD"), err)
+		}
+	}
+
+	data, err := os.ReadFile(dotGit)
+	if err != nil {
+		return false, fmt.Errorf("failed to read %s: %w", dotGit, err)
+	}
+
+	return len(data) >= len("gitdir:") && string(data[:len("gitdir:")]) == "gitdir:", nil
 }
