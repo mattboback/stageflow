@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"strings"
 	"time"
 )
@@ -13,6 +14,21 @@ func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, j
 
 	go func() {
 		defer o.monitorWG.Done()
+
+		// Recover so a panic in the background monitor cannot crash the whole
+		// orchestrator process; the failure is logged with the job context.
+		defer func() {
+			if panicValue := recover(); panicValue != nil {
+				slog.Error(
+					"Recovered panic in container monitor goroutine",
+					"component", component,
+					"container_id", containerID,
+					"job_id", jobID,
+					"panic", panicValue,
+					"stack", string(debug.Stack()),
+				)
+			}
+		}()
 
 		monitorCtx := ctx
 

@@ -74,3 +74,20 @@ func TestSpawnMonitorContainerBoundsScannerWait(t *testing.T) {
 		t.Fatal("wait container was not called")
 	}
 }
+
+func TestSpawnMonitorContainerRecoversPanic(t *testing.T) {
+	t.Parallel()
+
+	client := &mockPodmanClient{
+		waitContainerFunc: func(context.Context, string) (*podman.ContainerWaitResponse, error) {
+			panic("boom in monitor")
+		},
+	}
+
+	orch := NewOrchestrator(&Config{PodmanClient: client})
+
+	// If the panic were not recovered, the goroutine would crash the test
+	// process. Reaching the assertion after WaitForMonitors proves recovery.
+	orch.spawnMonitorContainer(context.Background(), "container-1", "job-1", "scanner-axe")
+	orch.WaitForMonitors()
+}
