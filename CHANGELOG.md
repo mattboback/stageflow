@@ -13,15 +13,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Playground form-auth: auto-detect the login form and make the post-login success selector optional
 - Generalized mobile "bento" styling and improved the scan-status layout
 - Refreshed all README screenshots against a public demo target (Deque "Mars Commuter"), captured from the consolidated report UI
+- Consolidated the four duplicated orchestrator PostgreSQL test harnesses into a single shared helper that caches the embedded-Postgres binary across runs and honors a `TEST_DATABASE_URL` override for running against an existing database
+- Aligned CI Go version with the `go.mod` toolchain pin (1.26.4)
+
+### Added
+
+- Panic recovery on the orchestrator container-monitor goroutine so a monitor panic can no longer crash the process
+- Test coverage for the CLI SSE wire-format parser and the report-aggregator guard paths
 
 ### Removed
 
 - Removed the internal AlchemizeCV dogfooding harness, its live integration test, the `dogfood-alchemizecv` justfile recipe, and all documentation references
+- Removed internal, auto-generated `docs/repo-map.md` navigation snapshots and an internal code-quality audit document that are not part of the published project
 
 ### Fixed
 
 - Keep small issue boxes clickable under full-page overlays in the report
 - `scan.completed` timing no longer exceeds the reported `total_ms`
+- Made the platform-api auth-disabled startup warning explicit and unmissable so it cannot be silently overlooked
 
 ## [0.1.0] - 2026-05-28
 

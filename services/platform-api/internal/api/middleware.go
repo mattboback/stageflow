@@ -317,7 +317,11 @@ func ValidateAuthConfig() error {
 
 	if disabled {
 		slog.Warn(
-			"Platform API authentication is disabled via PLATFORM_API_AUTH_DISABLED=true; do not use in production",
+			"SECURITY: Platform API authentication is DISABLED (PLATFORM_API_AUTH_DISABLED=true). "+
+				"Every endpoint is unauthenticated. Only run this on a loopback/trusted network. "+
+				"Set PLATFORM_API_TOKEN and unset PLATFORM_API_AUTH_DISABLED before exposing this API.",
+			"auth_disabled", true,
+			"token_set", token != "",
 		)
 	}
 

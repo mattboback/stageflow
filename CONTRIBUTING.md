@@ -19,6 +19,14 @@ Run checks directly from each workspace before opening a PR.
 - `just project-golden` when project-mode baseline, diff, CLI exit-code, or report normalization behavior changes
 - `just dead-code` when removing or moving TypeScript exports/components
 
+### Orchestrator database tests
+
+The `services/orchestrator` tests run against a real PostgreSQL. By default they
+start an embedded PostgreSQL automatically — the binaries download once and are
+cached under your user cache dir, so first run is slower and later runs are fast.
+To run against an existing PostgreSQL instead (no download), set
+`TEST_DATABASE_URL`, e.g. `TEST_DATABASE_URL=postgres://user:pass@localhost:5432/db?sslmode=disable go test ./...`.
+
 ## Getting Help
 
 - Use the bug report or question issue templates for public support requests.

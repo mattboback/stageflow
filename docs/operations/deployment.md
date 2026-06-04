@@ -33,6 +33,6 @@ The hosted `stageflow.org` demo runs the same application code, but its producti
 
 The repo `just deploy` recipe is a guarded delegate for that control plane:
 
-- On the VPS, it uses `${STAGEFLOW_DEPLOY_CONTROL_PLANE:-/home/matt/Deployment}/justfile` and runs `just deploy stageflow`.
-- Outside that host, it fails with a neutral message and leaves local, staging, and self-hosted deployment to the checked-in compose/Caddy files.
+- It requires `STAGEFLOW_DEPLOY_CONTROL_PLANE` to point at a directory containing the external deployment `justfile`, then runs `just deploy stageflow` there.
+- When that variable is unset or the control-plane `justfile` is absent, it fails with a neutral message and leaves local, staging, and self-hosted deployment to the checked-in compose/Caddy files.
 - Set `STAGEFLOW_DEPLOY_CONTROL_PLANE=/path/to/control-plane` only on hosts that intentionally provide the external deployment justfile.
