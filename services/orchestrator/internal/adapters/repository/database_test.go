@@ -100,6 +100,7 @@ func TestInitSchemaDropsLegacyJobEventsJobIDNotNull(t *testing.T) {
 	}
 
 	dbURL := fmt.Sprintf("%s&search_path=%s", testDatabaseURL, schema)
+
 	database, err := NewDatabase(&Config{URL: dbURL})
 	if err != nil {
 		t.Fatalf("NewDatabase failed on legacy schema: %v", err)
@@ -121,16 +122,20 @@ func TestInitSchemaDropsLegacyJobEventsJobIDNotNull(t *testing.T) {
 	}
 
 	var jobIDIsNullable string
+
 	nullabilityQuery := `
-		SELECT is_nullable
-		FROM information_schema.columns
+			SELECT is_nullable
+			FROM information_schema.columns
 		WHERE table_schema = $1
-		  AND table_name = 'job_events'
-		  AND column_name = 'job_id'
-	`
-	if scanErr := admin.QueryRowContext(context.Background(), nullabilityQuery, schema).Scan(&jobIDIsNullable); scanErr != nil {
+			  AND table_name = 'job_events'
+			  AND column_name = 'job_id'
+		`
+
+	row := admin.QueryRowContext(context.Background(), nullabilityQuery, schema)
+	if scanErr := row.Scan(&jobIDIsNullable); scanErr != nil {
 		t.Fatalf("Failed to read migrated job_id nullability: %v", scanErr)
 	}
+
 	if jobIDIsNullable != "YES" {
 		t.Fatalf("job_events.job_id is_nullable = %q, want YES", jobIDIsNullable)
 	}

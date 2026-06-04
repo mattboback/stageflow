@@ -52,15 +52,11 @@
         }
     }
 
-    # Protected Grafana monitoring dashboard
+    # Monitoring is disabled by default so a fresh self-hosted Caddy config
+    # cannot expose Grafana accidentally. See infra/caddy/Caddyfile.monitoring.example
+    # for the explicit opt-in proxy with Basic Auth.
     handle /monitoring* {
-        # Optional HTTP Basic Auth (recommended for public exposure).
-        # Create `infra/caddy/snippets/monitoring-basicauth.caddy` (gitignored) to enable.
-        # Uses a glob so the snippet is optional (Caddy warns if missing, but still loads).
-        import snippets/monitoring-basicauth*.caddy
-
-        # Proxy to Grafana (served from the /monitoring subpath)
-        reverse_proxy 127.0.0.1:3101
+        respond 404
     }
 
     # Proxy everything else to the frontend

@@ -22,7 +22,7 @@ Distribution by top-level dir (loc, files):
 | `devtools/` | 1,937 | n/a | n/a |
 | `qa/` | 1,000 | 1,000 | 100% (all e2e) |
 
-All four Go services + the CLI + the seven `libs/go/*` shared packages compile against `Go 1.26.3` (pinned in every `go.mod`, `go.work`, `Dockerfile`, and `.golangci.yml:1-3`).
+All four Go services + the CLI + the seven `libs/go/*` shared packages compile against `Go 1.26.4` (pinned in every `go.mod`, `go.work`, `Dockerfile`, and `.golangci.yml:1-3`).
 
 ## Go module layout
 
@@ -46,7 +46,7 @@ All four Go services + the CLI + the seven `libs/go/*` shared packages compile a
 
 ### Strongest areas
 
-1. **Pinned toolchain.** Every Go module declares `go 1.26.3` (verified in all 10 `go.mod` files inspected). The single `Dockerfile` builder base is `golang:1.26.3` for orchestrator and platform-api, `golang:1.26.3-alpine` for archive-extractor. The `.golangci.yml` v2 config selects ~40 linters including `staticcheck`, `govet` (full minus `fieldalignment`), `errcheck`, `gosec`, `gocritic`, `bodyclose`, `rowserrcheck`, `sqlclosecheck`, `noctx`, `exhaustive`, `copyloopvar`, `wsl_v5`, `dupl`, `nestif`, `gocyclo` (min 15), `gocognit` (min 25), `depguard`. `just ci` runs `golangci-lint run --allow-parallel-runners` for every workspace module, then `go test -race ./...`, then `govulncheck ./...`.
+1. **Pinned toolchain.** Every Go module declares `go 1.26.4` (verified in all 10 `go.mod` files inspected). The single `Dockerfile` builder base is `golang:1.26.4` for orchestrator and platform-api, `golang:1.26.4-alpine` for archive-extractor. The `.golangci.yml` v2 config selects ~40 linters including `staticcheck`, `govet` (full minus `fieldalignment`), `errcheck`, `gosec`, `gocritic`, `bodyclose`, `rowserrcheck`, `sqlclosecheck`, `noctx`, `exhaustive`, `copyloopvar`, `wsl_v5`, `dupl`, `nestif`, `gocyclo` (min 15), `gocognit` (min 25), `depguard`. `just ci` runs `golangci-lint run --allow-parallel-runners` for every workspace module, then `go test -race ./...`, then `govulncheck ./...`.
 
 2. **Structured logging with context propagation.** `libs/go/logging/logger.go:1-207` provides `slog.NewJSONHandler` plus `WithJobID/WithRequestID/WithRunID/WithScanner/WithComponent` context keys and `Info/Warn/Error/Debug` helpers that pull context values. Used uniformly in all three services. Event handlers in orchestrator explicitly propagate `request_id`/`run_id` from the inbound envelope via `event_trace.go:18-34 backgroundWithCorrelation()` and re-attach to background goroutines.
 

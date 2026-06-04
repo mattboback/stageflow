@@ -14,7 +14,7 @@ GO_OUTPUT := generated/go/provenance_schema.go
 GO_MOD_OUTPUT := generated/go/go.mod
 GO_PACKAGE := provenance
 GO_MODULE := github.com/mattboback/stageflow/libs/contracts/provenance/generated/go
-GO_VERSION := 1.26.3
+GO_VERSION := 1.26.4
 
 GO_JSONSCHEMA := $(shell which go-jsonschema 2>/dev/null || echo "$(HOME)/go/bin/go-jsonschema")
 GOIMPORTS := $(shell which goimports 2>/dev/null || echo "$(HOME)/go/bin/goimports")

@@ -65,10 +65,12 @@ func TestResolveProjectRoot_IgnoresEmptyGitDirectoryInParent(t *testing.T) {
 
 func TestFindGitRoot_WorktreeGitFile(t *testing.T) {
 	root := t.TempDir()
+
 	gitDir := filepath.Join(root, ".git-worktree")
 	if err := os.MkdirAll(gitDir, 0o750); err != nil {
 		t.Fatalf("mkdir git dir: %v", err)
 	}
+
 	if err := os.WriteFile(filepath.Join(root, ".git"), []byte("gitdir: "+gitDir+"\n"), 0o600); err != nil {
 		t.Fatalf("write .git file: %v", err)
 	}
@@ -82,9 +84,11 @@ func TestFindGitRoot_WorktreeGitFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindGitRoot error: %v", err)
 	}
+
 	if !ok {
 		t.Fatalf("FindGitRoot did not find root from %q", nested)
 	}
+
 	if got != root {
 		t.Fatalf("FindGitRoot(%q) = %q, want %q", nested, got, root)
 	}
@@ -115,6 +119,7 @@ func writeGitHead(t *testing.T, root string) {
 	if err := os.MkdirAll(dotGit, 0o750); err != nil {
 		t.Fatalf("mkdir .git: %v", err)
 	}
+
 	if err := os.WriteFile(filepath.Join(dotGit, "HEAD"), []byte("ref: refs/heads/main\n"), 0o600); err != nil {
 		t.Fatalf("write .git/HEAD: %v", err)
 	}

@@ -1,6 +1,12 @@
 ## stageflow ai
 
-Run the AI navigator against a project with natural language objectives
+Run the experimental AI navigator
+
+### Synopsis
+
+Run the experimental AI navigator scanner against one URL.
+
+This command requires the target StageFlow API to be configured with an AI provider such as OpenRouter.
 
 ```
 stageflow ai <url> <objective> [flags]

@@ -2,7 +2,19 @@
 	"name": "scanner-runner",
 	"version": "0.1.0",
 	"description": "StageFlow scanner execution runtime",
+	"homepage": "https://stageflow.org",
+	"bugs": {
+		"url": "https://github.com/mattboback/stageflow/issues"
+	},
+	"author": "Matthew Boback",
 	"license": "MIT",
+	"keywords": [
+		"accessibility",
+		"lighthouse",
+		"playwright",
+		"quality-gate",
+		"scanner"
+	],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/mattboback/stageflow.git",

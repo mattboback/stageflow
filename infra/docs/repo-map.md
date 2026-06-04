@@ -252,10 +252,10 @@ sequenceDiagram
 | Script/command | What it does | Source |
 |---|---|---|
 | `infra/scripts/build-images.sh` | Resolves repo root, loads `.env` if present, builds local Podman images, tags both `localhost/stageflow/...:latest` and `stageflow/...:latest`, then verifies inventory | `infra/scripts/build-images.sh:4`, `infra/scripts/build-images.sh:17`, `infra/scripts/build-images.sh:24`, `infra/scripts/build-images.sh:62` |
-| Platform API image | Go 1.26.3 build, Debian runtime, nonroot UID 65532, exposes 8080 | `services/platform-api/Dockerfile:3`, `services/platform-api/Dockerfile:39`, `services/platform-api/Dockerfile:52`, `services/platform-api/Dockerfile:55` |
-| Orchestrator image | Go 1.26.3 build, Debian runtime, nonroot default in image; compose overrides user for socket access | `services/orchestrator/Dockerfile:3`, `services/orchestrator/Dockerfile:35`, `services/orchestrator/Dockerfile:44`, `infra/compose/podman-compose.yml:223` |
+| Platform API image | Go 1.26.4 build, Debian runtime, nonroot UID 65532, exposes 8080 | `services/platform-api/Dockerfile:3`, `services/platform-api/Dockerfile:39`, `services/platform-api/Dockerfile:52`, `services/platform-api/Dockerfile:55` |
+| Orchestrator image | Go 1.26.4 build, Debian runtime, nonroot default in image; compose overrides user for socket access | `services/orchestrator/Dockerfile:3`, `services/orchestrator/Dockerfile:35`, `services/orchestrator/Dockerfile:44`, `infra/compose/podman-compose.yml:223` |
 | Frontend image | Bun 1.3.8 static build, nginx 1.29-alpine runtime, exposes 3000 | `clients/web/Dockerfile:5`, `clients/web/Dockerfile:45`, `clients/web/Dockerfile:60` |
-| Archive Extractor image | Go 1.26.3 Alpine build, Alpine runtime, nonroot `extractor` user | `services/archive-extractor/Dockerfile:3`, `services/archive-extractor/Dockerfile:27`, `services/archive-extractor/Dockerfile:29` |
+| Archive Extractor image | Go 1.26.4 Alpine build, Alpine runtime, nonroot `extractor` user | `services/archive-extractor/Dockerfile:3`, `services/archive-extractor/Dockerfile:27`, `services/archive-extractor/Dockerfile:29` |
 | Scanner Runner image | Bun/Node/Playwright build, Playwright runtime, `pwuser`, `/data` volume, 8080 healthcheck | `services/scanner-runner/Dockerfile:4`, `services/scanner-runner/Dockerfile:51`, `services/scanner-runner/Dockerfile:77`, `services/scanner-runner/Dockerfile:81` |
 | `infra/scripts/verify-image-inventory.sh` | Fails if any required local image is missing: platform-api, orchestrator, frontend, extractor, scanner-runner | `infra/scripts/verify-image-inventory.sh:6`, `infra/scripts/verify-image-inventory.sh:22` |
 
@@ -281,9 +281,9 @@ The deployment notes reinforce that hosted `stageflow.org` production release, v
 
 | Workflow | Trigger | Runtime mapping | Artifacts | Source |
 |---|---|---|---|---|
-| `CI` | Push/PR to `main` | Uses Go `1.26.3`, Node `22`, Bun `1.3.8`; lints workflows, runs gitleaks, Go build/lint/test/vuln, web CI/storybook, scanner-runner CI, image builds/SBOM/Trivy | Storybook failure artifacts, SBOMs per image | `.github/workflows/ci.yml:3`, `.github/workflows/ci.yml:21`, `.github/workflows/ci.yml:68`, `.github/workflows/ci.yml:272` |
+| `CI` | Push/PR to `main` | Uses Go `1.26.4`, Node `22`, Bun `1.3.8`; lints workflows, runs gitleaks, Go build/lint/test/vuln, web CI/storybook, scanner-runner CI, image builds/SBOM/Trivy | Storybook failure artifacts, SBOMs per image | `.github/workflows/ci.yml:3`, `.github/workflows/ci.yml:21`, `.github/workflows/ci.yml:68`, `.github/workflows/ci.yml:272` |
 | `Golden Regression` | Manual dispatch and daily cron `23 8 * * *` | Installs Podman, copies `.env.example`, appends CI tokens, builds CLI and images, starts base+local compose stack, waits for MinIO/API/frontend, initializes MinIO, runs `qa/e2e/project-scan-golden.sh` | Failure logs and `artifacts/project-golden` | `.github/workflows/golden-regression.yml:3`, `.github/workflows/golden-regression.yml:49`, `.github/workflows/golden-regression.yml:60`, `.github/workflows/golden-regression.yml:76`, `.github/workflows/golden-regression.yml:101` |
-| `Release StageFlow CLI` | Tag `clients/cli/v*` or manual dispatch | Matrix builds CLI for linux/darwin/windows on amd64/arm64 except windows arm64; uses Go `1.26.3`; creates GitHub release only for tag refs | Tar/zip CLI assets and `checksums.txt` | `.github/workflows/release-stageflow-cli.yml:3`, `.github/workflows/release-stageflow-cli.yml:20`, `.github/workflows/release-stageflow-cli.yml:28`, `.github/workflows/release-stageflow-cli.yml:93` |
+| `Release StageFlow CLI` | Tag `clients/cli/v*` or manual dispatch | Matrix builds CLI for linux/darwin/windows on amd64/arm64 except windows arm64; uses Go `1.26.4`; creates GitHub release only for tag refs | Tar/zip CLI assets and `checksums.txt` | `.github/workflows/release-stageflow-cli.yml:3`, `.github/workflows/release-stageflow-cli.yml:20`, `.github/workflows/release-stageflow-cli.yml:28`, `.github/workflows/release-stageflow-cli.yml:93` |
 
 Image CI builds the same five Dockerfiles referenced by local image scripts: Platform API, Orchestrator, Archive Extractor, Scanner Runner, and Frontend; `.github/workflows/ci.yml:280`. Golden regression starts the same base+local overlay used for local host-network scans; `.github/workflows/golden-regression.yml:79`.
 
@@ -310,7 +310,7 @@ Image CI builds the same five Dockerfiles referenced by local image scripts: Pla
 | Check | Details | Source |
 |---|---|---|
 | Tool availability | Go, Bun, Node.js, Podman, just, curl | `infra/scripts/diagnose-local-env.sh:132` |
-| Version expectations | Go `>=1.26.3`, Bun `>=1.3.8`, Node major `22` | `infra/scripts/diagnose-local-env.sh:13`, `infra/scripts/diagnose-local-env.sh:139` |
+| Version expectations | Go `>=1.26.4`, Bun `>=1.3.8`, Node major `22` | `infra/scripts/diagnose-local-env.sh:13`, `infra/scripts/diagnose-local-env.sh:139` |
 | Podman readiness | `podman info`, `podman compose version`, socket path from `PODMAN_SOCKET` or `XDG_RUNTIME_DIR`, `/dev/net/tun`, `stageflow_net` | `infra/scripts/diagnose-local-env.sh:168`, `infra/scripts/diagnose-local-env.sh:175`, `infra/scripts/diagnose-local-env.sh:181`, `infra/scripts/diagnose-local-env.sh:194` |
 | Port conflicts | Checks common local/demo ports `3000`, `3001`, `3010`, `4222`, `8080`, `9000`, `9001` with `ss` or `lsof` | `infra/scripts/diagnose-local-env.sh:95`, `infra/scripts/diagnose-local-env.sh:100` |
 | Env hints | Warns when `.env` still points public-domain values during local work and fails when app MinIO key equals root user | `infra/scripts/diagnose-local-env.sh:212`, `infra/scripts/diagnose-local-env.sh:221`, `infra/scripts/diagnose-local-env.sh:233` |

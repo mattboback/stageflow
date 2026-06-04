@@ -158,8 +158,8 @@ flowchart TD
 
 | Component | Dependencies/Tests | Evidence |
 | --- | --- | --- |
-| `job-status-cli` | Standalone Go module using Go `1.26.3`; test files cover run/format behavior. | `devtools/ops/job-status-cli/go.mod:1`, `devtools/ops/job-status-cli/go.mod:3`, `devtools/ops/job-status-cli/run_test.go:44`, `devtools/ops/job-status-cli/format_test.go:20` |
-| `suite-runner` | Standalone Go module using Go `1.26.3` and `gopkg.in/yaml.v3`; tests cover defaults, threshold evaluation, and SSE parsing. | `devtools/qa/suite-runner/go.mod:1`, `devtools/qa/suite-runner/go.mod:3`, `devtools/qa/suite-runner/go.mod:5`, `devtools/qa/suite-runner/suite_test.go:8`, `devtools/qa/suite-runner/poll_test.go:10`, `devtools/qa/suite-runner/sse_test.go:26` |
+| `job-status-cli` | Standalone Go module using Go `1.26.4`; test files cover run/format behavior. | `devtools/ops/job-status-cli/go.mod:1`, `devtools/ops/job-status-cli/go.mod:3`, `devtools/ops/job-status-cli/run_test.go:44`, `devtools/ops/job-status-cli/format_test.go:20` |
+| `suite-runner` | Standalone Go module using Go `1.26.4` and `gopkg.in/yaml.v3`; tests cover defaults, threshold evaluation, and SSE parsing. | `devtools/qa/suite-runner/go.mod:1`, `devtools/qa/suite-runner/go.mod:3`, `devtools/qa/suite-runner/go.mod:5`, `devtools/qa/suite-runner/suite_test.go:8`, `devtools/qa/suite-runner/poll_test.go:10`, `devtools/qa/suite-runner/sse_test.go:26` |
 | Install script tests | Shell tests are invoked by root `just ci`, root `just shell-test`, and GitHub CI. | `justfile:500`, `justfile:604`, `.github/workflows/ci.yml:112` |
 | Standalone axe helper | Uses scanner-runner's Node dependency tree rather than declaring its own package manifest in `devtools/scripts/a11y`. | `devtools/scripts/a11y/test-axe-local.js:6`, `devtools/scripts/a11y/test-axe-local.js:13`, `devtools/scripts/a11y/test-axe-local.js:17` |
 

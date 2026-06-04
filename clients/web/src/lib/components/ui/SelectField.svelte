@@ -40,7 +40,13 @@
 		{@render children()}
 	</select>
 	<div class="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2">
-		<svg class="text-ink-muted h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<svg
+			class="text-ink-muted h-4 w-4"
+			fill="none"
+			stroke="currentColor"
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+		>
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 		</svg>
 	</div>

@@ -141,7 +141,7 @@ External semantic note: Podman pod defaults include sharing the network namespac
 | Shared Go libs | `config`, `events`, `messaging`, `models`, `storage` are direct dependencies; module replaces them to local `libs/go/*`. | Env parsing, event contracts, NATS, provenance model, MinIO I/O. | `services/archive-extractor/go.mod:5`, `services/archive-extractor/go.mod:43` |
 | MinIO client | `DownloadFile` stats objects before returning readers; `UploadFile` writes `application/octet-stream`. | Deterministic missing-object errors and artifact upload. | `libs/go/storage/minio.go:284`, `libs/go/storage/minio.go:291`, `libs/go/storage/minio.go:321`, `libs/go/storage/minio.go:328` |
 | NATS publishing | `PublishEvent` validates event envelopes before publishing JSON to JetStream. | Ready/failed event emission. | `libs/go/messaging/publish.go:37`, `libs/go/messaging/publish.go:46`, `libs/go/messaging/publish.go:50` |
-| Container image | Built from Go 1.26.3 Alpine, copied into Alpine runtime, runs as `extractor` user. | Production runtime. | `services/archive-extractor/Dockerfile:3`, `services/archive-extractor/Dockerfile:24`, `services/archive-extractor/Dockerfile:27`, `services/archive-extractor/Dockerfile:29`, `services/archive-extractor/Dockerfile:31` |
+| Container image | Built from Go 1.26.4 Alpine, copied into Alpine runtime, runs as `extractor` user. | Production runtime. | `services/archive-extractor/Dockerfile:3`, `services/archive-extractor/Dockerfile:24`, `services/archive-extractor/Dockerfile:27`, `services/archive-extractor/Dockerfile:29`, `services/archive-extractor/Dockerfile:31` |
 
 ## External Boundaries
 

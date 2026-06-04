@@ -57,10 +57,12 @@ func FindGitRoot(startDir string) (string, bool, error) {
 		// temporary parent directories cannot accidentally capture unrelated
 		// project paths.
 		dotGit := filepath.Join(dir, ".git")
+
 		isGitRoot, err := isGitMarker(dotGit)
 		if err != nil {
 			return "", false, err
 		}
+
 		if isGitRoot {
 			return dir, true, nil
 		}
@@ -79,18 +81,24 @@ func isGitMarker(dotGit string) (bool, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
 	}
+
 	if err != nil {
 		return false, fmt.Errorf("failed to stat %s: %w", dotGit, err)
 	}
 
 	if info.IsDir() {
-		if _, err := os.Stat(filepath.Join(dotGit, "HEAD")); err == nil {
+		headPath := filepath.Join(dotGit, "HEAD")
+
+		_, statErr := os.Stat(headPath)
+		if statErr == nil {
 			return true, nil
-		} else if errors.Is(err, os.ErrNotExist) {
-			return false, nil
-		} else {
-			return false, fmt.Errorf("failed to stat %s: %w", filepath.Join(dotGit, "HEAD"), err)
 		}
+
+		if errors.Is(statErr, os.ErrNotExist) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("failed to stat %s: %w", headPath, statErr)
 	}
 
 	data, err := os.ReadFile(dotGit)

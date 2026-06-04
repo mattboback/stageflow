@@ -308,7 +308,7 @@ The API client closes response bodies after JSON and DELETE requests; the SSE pa
 
 | Item | Note |
 | --- | --- |
-| `go.mod` Go version | The module declares `go 1.26.3`; this map records the local directive and does not change it. `clients/cli/go.mod:3` |
+| `go.mod` Go version | The module declares `go 1.26.4`; this map records the local directive and does not change it. `clients/cli/go.mod:3` |
 | `internal/apiclient` tests | No package-local apiclient tests were found; command smoke tests cover many paths indirectly. |
 | Hidden `--no-stream` | Present on scan/project/diff/hosted for polling fallback/testing, but hidden from help. `clients/cli/cobra_scan.go:149`, `clients/cli/cobra_project.go:38`, `clients/cli/cobra_diff.go:123` |
 | Auth secrets | Local code intentionally does not resolve `{from_env: NAME}` values; storage state is base64-transmitted once, then server-side storage takes over. `clients/cli/auth_intake.go:10`, `services/platform-api/internal/api/handlers_jobs_url_submit.go:57` |

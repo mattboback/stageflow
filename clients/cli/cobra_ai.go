@@ -38,10 +38,11 @@ func newAICmd(root *rootOptions) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:    "ai <url> <objective>",
-		Short:  "Run the experimental AI navigator",
-		Hidden: true,
-		Args:   cobra.ExactArgs(2),
+		Use:   "ai <url> <objective>",
+		Short: "Run the experimental AI navigator",
+		Long: "Run the experimental AI navigator scanner against one URL.\n\n" +
+			"This command requires the target StageFlow API to be configured with an AI provider such as OpenRouter.",
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			urlStrs, err := urlcheck.NormalizeTargets([]string{args[0]})
 			if err != nil {

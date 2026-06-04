@@ -21,7 +21,7 @@ meaningful. Every behavioral claim below is grounded in the cited source lines.
 
 | Dependency | Used By | Why It Matters | Evidence |
 | --- | --- | --- | --- |
-| Go `1.26.3` | `qa/e2e` module | E2E tests are an independent Go module in the workspace. | `qa/e2e/go.mod:1`, `qa/e2e/go.mod:3` |
+| Go `1.26.4` | `qa/e2e` module | E2E tests are an independent Go module in the workspace. | `qa/e2e/go.mod:1`, `qa/e2e/go.mod:3` |
 | Generated report contract | URL scan report parser and validators | URL E2E unmarshals `/results` into `report.UnifiedReportV2`, so report contract changes can break the QA slice. | `qa/e2e/url_scan_helpers_test.go:14`, `qa/e2e/url_scan_helpers_test.go:161`, `qa/e2e/url_scan_helpers_test.go:166`, `qa/e2e/go.mod:29`, `qa/e2e/go.mod:31` |
 | Platform API | URL and ZIP E2E tests | Tests hit `/api/v1/healthz`, `/scanners`, `/jobs/urls`, `/jobs/zip`, `/jobs/{id}`, `/jobs/{id}/report`, and `/jobs/{id}/results`. | `qa/e2e/config_test.go:17`, `qa/e2e/url_scan_helpers_test.go:20`, `qa/e2e/url_scan_helpers_test.go:80`, `qa/e2e/zip_scan_helpers_test.go:66`, `qa/e2e/zip_scan_helpers_test.go:159`, `qa/e2e/zip_scan_helpers_test.go:238`, `qa/e2e/zip_scan_helpers_test.go:334` |
 | Object storage artifact redirects | URL and ZIP result checks | The tests account for signed URLs that point at `minio:9000` by rewriting to localhost while preserving the signed Host header. | `qa/e2e/url_scan_helpers_test.go:263`, `qa/e2e/url_scan_helpers_test.go:234`, `qa/e2e/zip_scan_helpers_test.go:311`, `qa/e2e/zip_scan_helpers_test.go:334`, `qa/e2e/zip_scan_helpers_test.go:335` |

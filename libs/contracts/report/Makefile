@@ -14,7 +14,7 @@ GO_OUTPUT := generated/go/report_schema.go
 GO_MOD_OUTPUT := generated/go/go.mod
 GO_PACKAGE := report
 GO_MODULE := github.com/mattboback/stageflow/libs/contracts/report/generated/go
-GO_VERSION := 1.26.3
+GO_VERSION := 1.26.4
 
 # Tool paths
 GO_JSONSCHEMA := $(shell which go-jsonschema 2>/dev/null || echo "$(HOME)/go/bin/go-jsonschema")

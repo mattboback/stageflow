@@ -34,7 +34,7 @@
 			<div class="h-2.5 w-2.5 rounded-full bg-amber-400"></div>
 			<div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>
 		</div>
-		<span class="text-ink-faint font-mono text-[10px]">{path}</span>
+		<span class="text-ink-muted font-mono text-[10px]">{path}</span>
 	</div>
 
 	{#if badges.length > 0}

@@ -17,6 +17,7 @@ stageflow [flags]
 
 ### SEE ALSO
 
+* [stageflow ai](stageflow_ai.md)	 - Run the experimental AI navigator
 * [stageflow auth](stageflow_auth.md)	 - Manage authentication artifacts for authenticated scans
 * [stageflow completion](stageflow_completion.md)	 - Generate shell completion scripts
 * [stageflow diff](stageflow_diff.md)	 - Compare a current scan against a saved baseline

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
+	import { siteDisplayPath } from '$lib/config/site';
+
 	import type { ScanStatus } from '$lib/types/scan';
 
 	interface Props {
@@ -56,7 +58,7 @@
 			<i class="bento-chrome-dot" style="background:#fdbc2d"></i>
 			<i class="bento-chrome-dot" style="background:#34c749"></i>
 		</div>
-		<div class="bento-chrome-url">stageflow.org/scan/status</div>
+		<div class="bento-chrome-url">{siteDisplayPath('/scan/status')}</div>
 	</div>
 
 	<div class="bento-card">

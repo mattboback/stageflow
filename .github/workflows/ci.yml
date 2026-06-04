@@ -19,11 +19,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: "1.26.3"
-  NODE_VERSION: "22"
-  BUN_VERSION: "1.3.8"
-  GOLANGCI_LINT_VERSION: "v2.12.2"
-  GOVULNCHECK_VERSION: "v1.1.4"
+  GO_VERSION: '1.26.3'
+  NODE_VERSION: '22'
+  BUN_VERSION: '1.3.8'
+  GOLANGCI_LINT_VERSION: 'v2.12.2'
+  GOVULNCHECK_VERSION: 'v1.1.4'
 
 jobs:
   workflow_lint:
@@ -49,6 +49,9 @@ jobs:
 
       - name: Lint workflows
         run: actionlint -color -shellcheck="$(command -v shellcheck)"
+
+      - name: Check stale vocabulary
+        run: ./devtools/scripts/check-stale-vocab.sh
 
   secrets_scan:
     name: Secrets (gitleaks)
@@ -78,7 +81,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-          cache-dependency-path: "**/*.sum"
+          cache-dependency-path: '**/*.sum'
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -224,7 +227,7 @@ jobs:
         run: bun install --frozen-lockfile
         working-directory: services/scanner-runner
         env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
       - name: Audit (high)
         run: bun audit --audit-level=high
@@ -264,7 +267,7 @@ jobs:
         run: bun install --frozen-lockfile
         working-directory: services/scanner-runner
         env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
       - name: Dead-code analysis
         run: |

@@ -86,7 +86,7 @@ Highlights:
   - `clients/web/README.md` — frontend architecture, local commands, routes, and test entrypoints.
   - `clients/web` — SvelteKit 5 web app.
   - `clients/web/tests/unit` — Vitest unit tests for stores, utilities, and components.
-    Highlights:
+  - Highlights:
 - Focus on report UX, evidence visualization, and live job status.
 - Storybook-based interaction and accessibility tests in CI.
 

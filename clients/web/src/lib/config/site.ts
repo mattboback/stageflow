@@ -2,7 +2,7 @@ const env = import.meta.env as Record<string, string | undefined>;
 
 const DEFAULT_GITHUB_URL = 'https://github.com/mattboback/stageflow';
 const DEFAULT_TAGLINE =
-	'StageFlow is a self-hosted, Podman-native platform that runs eight web accessibility, performance, SEO, and security scanners in one report';
+	'StageFlow is a self-hosted, Podman-native platform that supports web accessibility, performance, SEO, and security scanners in one report';
 const DEFAULT_SITE_TITLE = 'StageFlow — Podman-Native Accessibility Scanning Platform';
 
 function normalizeGithubUrl(value: string | undefined): string {
@@ -36,4 +36,10 @@ export function buildSiteUrl(path = '/'): string {
 
 	const suffix = path.startsWith('/') ? path : `/${path}`;
 	return `${base}${suffix}`;
+}
+
+export function siteDisplayPath(path = '/'): string {
+	const url = new URL(buildSiteUrl(path));
+
+	return `${url.host}${url.pathname}`;
 }

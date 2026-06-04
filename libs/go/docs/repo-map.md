@@ -260,7 +260,7 @@ The `provenance` package states that the canonical schema lives in `libs/contrac
 
 Context helpers store/read `job_id`, `request_id`, `run_id`, `scanner_type`, and `component` (`libs/go/logging/logger.go:64`, `libs/go/logging/logger.go:69`, `libs/go/logging/logger.go:74`, `libs/go/logging/logger.go:79`, `libs/go/logging/logger.go:84`). `FromContext` converts non-empty values into `slog.Attr`s (`libs/go/logging/logger.go:145`), `L` returns `slog.Default()` enriched with those attrs (`libs/go/logging/logger.go:173`), and `Info/Warn/Error/Debug` delegate through `L` (`libs/go/logging/logger.go:190`).
 
-Upstream note: Go `log/slog` 1.26.3 documents `JSONHandler` as line-delimited JSON, `NewJSONHandler` as writing to an `io.Writer` with handler options, `HandlerOptions` as controlling level/source/attribute replacement, and `SetDefault` as making top-level slog functions use the provided logger. This matches the local wrapper's construction.
+Upstream note: Go `log/slog` 1.26.4 documents `JSONHandler` as line-delimited JSON, `NewJSONHandler` as writing to an `io.Writer` with handler options, `HandlerOptions` as controlling level/source/attribute replacement, and `SetDefault` as making top-level slog functions use the provided logger. This matches the local wrapper's construction.
 
 ### HTTP Error Helpers
 
@@ -328,7 +328,7 @@ Notable gap: `bootstrap` has no package-local test file in this slice. Its behav
 |---|---|---|---|
 | NATS Go / JetStream | `messaging`, `bootstrap` | `github.com/nats-io/nats.go v1.52.0` in `libs/go/messaging/go.mod:21` | NATS JetStream docs describe server-acknowledged stream publishing, at-least-once behavior, and consumer ACK/redelivery semantics. This supports interpreting local `Publish`, `Ack`, `NakWithDelay`, `AckExplicitPolicy`, and `MaxDeliver` behavior. |
 | MinIO Go SDK | `storage`, `bootstrap` | `github.com/minio/minio-go/v7 v7.1.0` in `libs/go/storage/go.mod:21` | MinIO SDK docs list object operations including `PutObject` and `PresignedGetObject`, matching local object upload and presigned download wrappers. |
-| Go `log/slog` | `logging`, plus direct use in messaging/storage/httputil | Standard library under Go `1.26.3` in module files, for example `libs/go/logging/go.mod:3` | Official Go docs define JSONHandler as line-delimited JSON, `HandlerOptions` for level/source control, and `SetDefault` as installing the logger used by top-level slog functions. |
+| Go `log/slog` | `logging`, plus direct use in messaging/storage/httputil | Standard library under Go `1.26.4` in module files, for example `libs/go/logging/go.mod:3` | Official Go docs define JSONHandler as line-delimited JSON, `HandlerOptions` for level/source control, and `SetDefault` as installing the logger used by top-level slog functions. |
 | `gopkg.in/yaml.v3` | `scannerregistry` | `gopkg.in/yaml.v3 v3.0.1` in `libs/go/scannerregistry/go.mod:21` | Package docs define `Unmarshal` into an output value and support `yaml` field tags, matching YAML override structs. |
 | `github.com/mattn/go-sqlite3` | Platform API stores consuming shared models/state | `github.com/mattn/go-sqlite3 v1.14.44` in `services/platform-api/go.mod:19` | Official project docs describe it as a `database/sql` driver and note CGO requirements. `libs/go` itself does not import it. |
 | `github.com/jackc/pgx/v5` | Orchestrator repositories consuming shared models/state | `github.com/jackc/pgx/v5 v5.9.2` in `services/orchestrator/go.mod:7` | Official pgx v5 docs cover PostgreSQL driver/pool APIs. `libs/go` itself does not import it. |
@@ -341,7 +341,7 @@ Official references checked:
 |---|---|
 | NATS JetStream and consumers | https://docs.nats.io/nats-concepts/jetstream and https://docs.nats.io/nats-concepts/jetstream/consumers |
 | MinIO Go SDK | https://docs.min.io/enterprise/aistor-object-store/developers/sdk/go/ |
-| Go `log/slog` 1.26.3 | https://pkg.go.dev/log/slog@go1.26.3 |
+| Go `log/slog` 1.26.4 | https://pkg.go.dev/log/slog@go1.26.4 |
 | YAML v3 | https://gopkg.in/yaml.v3 |
 | go-sqlite3 | https://github.com/mattn/go-sqlite3 |
 | pgx v5 pgxpool | https://pkg.go.dev/github.com/jackc/pgx/v5/pgxpool |
