@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 
+	import { siteDisplayPath } from '$lib/config/site';
+
 	interface Props {
 		urlBarText?: string;
 		navLabel?: string;
@@ -15,7 +17,7 @@
 	}
 
 	let {
-		urlBarText = 'stageflow.org/playground',
+		urlBarText = siteDisplayPath('/playground'),
 		navLabel = 'Configure Scan',
 		readyLabel = '',
 		isReady = false,

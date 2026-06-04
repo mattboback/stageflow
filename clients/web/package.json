@@ -2,7 +2,20 @@
 	"name": "stageflow-web",
 	"private": true,
 	"version": "0.0.1",
+	"description": "SvelteKit web app for StageFlow scan submission, live status, and report review.",
+	"homepage": "https://stageflow.org",
+	"bugs": {
+		"url": "https://github.com/mattboback/stageflow/issues"
+	},
+	"author": "Matthew Boback",
 	"license": "MIT",
+	"keywords": [
+		"accessibility",
+		"developer-tools",
+		"quality-gate",
+		"scanner",
+		"sveltekit"
+	],
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/mattboback/stageflow.git",

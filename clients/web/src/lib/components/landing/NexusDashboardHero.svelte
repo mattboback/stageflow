@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 
+	import { siteDisplayPath } from '$lib/config/site';
+
 	const navTabs = ['Overview', 'Issues', 'Pages', 'Scanners'] as const;
 
 	let activeTab = $state<'Overview' | 'Issues' | 'Pages' | 'Scanners'>('Overview');
@@ -103,7 +105,7 @@
 			<i class="nf-dot" style="background:#fdbc2d"></i>
 			<i class="nf-dot" style="background:#34c749"></i>
 		</div>
-		<div class="nf-urlbar">stageflow.org/report/staging-deploy</div>
+		<div class="nf-urlbar">{siteDisplayPath('/report/staging-deploy')}</div>
 	</div>
 
 	<!-- White dashboard card -->

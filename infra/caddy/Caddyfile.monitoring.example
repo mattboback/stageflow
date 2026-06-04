@@ -1,0 +1,14 @@
+# Optional monitoring proxy for self-hosted environments.
+#
+# Copy this block into infra/caddy/Caddyfile only after setting a real
+# bcrypt-hashed password. Generate one with:
+#
+#   caddy hash-password --plaintext 'replace-me'
+
+handle /monitoring* {
+    basicauth {
+        stageflow $2a$14$replace_with_caddy_hash_password_output
+    }
+
+    reverse_proxy 127.0.0.1:3101
+}

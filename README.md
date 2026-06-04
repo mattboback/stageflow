@@ -9,9 +9,9 @@
 
 StageFlow is an open-source, self-hosted **frontend quality gate** that answers one practical question after every code change:
 
-> *Did this edit make accessibility, performance, SEO, security, or content quality worse?*
+> _Did this edit make accessibility, performance, SEO, security, or content quality worse?_
 
-It runs eight scanners — Axe, Lighthouse, SEO, Link Checker, Security Headers, Open Graph, Spelling/Grammar, and an AI Navigator — against live URLs or static-site ZIP archives, normalizes the results into a single contract-driven report, and streams job progress in real time. The primary interface is a Go CLI designed for terminal-first feedback loops and CI gating.
+It supports eight scanners — Axe, Lighthouse, SEO, Link Checker, Security Headers, Open Graph, Spelling/Grammar, and an AI Navigator — against live URLs or static-site ZIP archives, normalizes the results into a single contract-driven report, and streams job progress in real time. The CLI defaults to the fast core scanners for local feedback, while heavier scanners are opt-in for fuller audits.
 
 ![StageFlow dashboard and scan pipeline](docs/images/hero.png)
 
@@ -35,9 +35,9 @@ The codebase is intentionally structured to be read as well as run. Start from `
 
 StageFlow accepts two input modes:
 
-| Input | How it works |
-|-------|-------------|
-| **URL scan** | Submit one or more live URLs; scanners hit them directly |
+| Input        | How it works                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| **URL scan** | Submit one or more live URLs; scanners hit them directly                                                                  |
 | **ZIP scan** | Upload a static-site archive; StageFlow extracts it safely, discovers HTML, and scans it locally in an isolated container |
 
 The system produces one normalized report with:
@@ -105,15 +105,15 @@ The primary product loop is:
                       │ events → NATS JetStream
 ```
 
-| Service | Language | Responsibility |
-|---------|----------|---------------|
-| `clients/web` | SvelteKit 5 | Scan submission, live status, report exploration |
-| `clients/cli` | Go | Automation, CI gating, Project Mode, JSON output |
-| `services/platform-api` | Go | HTTP boundary, intake, SSE hub, projects, diffs |
-| `services/orchestrator` | Go | Job FSM, NATS events, Podman pods, aggregation |
-| `services/archive-extractor` | Go | Safe ZIP extraction, provenance, static serving |
-| `services/scanner-runner` | TypeScript/Bun | Scanner plugins, Playwright automation, artifacts |
-| `libs/contracts` | JSON Schema | Shared report/event contracts → generated Go + TS types |
+| Service                      | Language       | Responsibility                                          |
+| ---------------------------- | -------------- | ------------------------------------------------------- |
+| `clients/web`                | SvelteKit 5    | Scan submission, live status, report exploration        |
+| `clients/cli`                | Go             | Automation, CI gating, Project Mode, JSON output        |
+| `services/platform-api`      | Go             | HTTP boundary, intake, SSE hub, projects, diffs         |
+| `services/orchestrator`      | Go             | Job FSM, NATS events, Podman pods, aggregation          |
+| `services/archive-extractor` | Go             | Safe ZIP extraction, provenance, static serving         |
+| `services/scanner-runner`    | TypeScript/Bun | Scanner plugins, Playwright automation, artifacts       |
+| `libs/contracts`             | JSON Schema    | Shared report/event contracts → generated Go + TS types |
 
 Full architecture details: [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/architecture/system.md](docs/architecture/system.md).
 
@@ -121,19 +121,19 @@ Full architecture details: [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/architec
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| API services | Go 1.26 |
-| Scanner runtime | TypeScript, Bun 1.3.8, Node 22 |
-| Web UI | SvelteKit 5, Svelte 5, Tailwind CSS |
-| CLI | Go 1.26 |
-| Message bus | NATS JetStream 2.12 |
-| Job state | PostgreSQL 17 |
-| Project baselines | SQLite |
-| Artifact storage | MinIO (S3-compatible) |
-| Browser automation | Playwright + Chromium |
-| Container runtime | Podman (rootless) |
-| Observability | Grafana 12 |
+| Layer              | Technology                          |
+| ------------------ | ----------------------------------- |
+| API services       | Go 1.26                             |
+| Scanner runtime    | TypeScript, Bun 1.3.8, Node 22      |
+| Web UI             | SvelteKit 5, Svelte 5, Tailwind CSS |
+| CLI                | Go 1.26                             |
+| Message bus        | NATS JetStream 2.12                 |
+| Job state          | PostgreSQL 17                       |
+| Project baselines  | SQLite                              |
+| Artifact storage   | MinIO (S3-compatible)               |
+| Browser automation | Playwright + Chromium               |
+| Container runtime  | Podman (rootless)                   |
+| Observability      | Grafana 12                          |
 
 ---
 
@@ -141,7 +141,7 @@ Full architecture details: [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/architec
 
 ### Prerequisites
 
-- [Go 1.26.3](https://go.dev/dl/)
+- [Go 1.26.4](https://go.dev/dl/)
 - [Node.js 22](https://nodejs.org/) + [Bun](https://bun.sh/)
 - [Podman](https://podman.io/) with `podman compose`
 - [just](https://github.com/casey/just)
@@ -202,28 +202,29 @@ just dev init
 
 ## Testing Strategy
 
-| Layer | Tools | What it covers |
-|-------|-------|---------------|
-| Go unit tests | `go test -race` | FSM transitions, domain logic, utilities |
-| Go lint/vuln | `golangci-lint`, `govulncheck` | Code quality and known CVEs |
-| Web unit tests | Vitest, Testing Library | Components, SSE stores, report logic |
-| Storybook CI | Storybook test runner | Component interaction and accessibility |
-| Scanner runner tests | Vitest | Plugin loading, scanner output validation |
-| E2E golden flow | `qa/e2e/project-scan-golden.sh` | Baseline → promote → regression diff → exit code |
-| Container security | Trivy, `bun audit`, gitleaks | Image CVEs, dependency audit, secrets |
+| Layer                | Tools                           | What it covers                                   |
+| -------------------- | ------------------------------- | ------------------------------------------------ |
+| Go unit tests        | `go test -race`                 | FSM transitions, domain logic, utilities         |
+| Go lint/vuln         | `golangci-lint`, `govulncheck`  | Code quality and known CVEs                      |
+| Web unit tests       | Vitest, Testing Library         | Components, SSE stores, report logic             |
+| Storybook CI         | Storybook test runner           | Component interaction and accessibility          |
+| Scanner runner tests | Vitest                          | Plugin loading, scanner output validation        |
+| E2E golden flow      | `qa/e2e/project-scan-golden.sh` | Baseline → promote → regression diff → exit code |
+| Container security   | Trivy, `bun audit`, gitleaks    | Image CVEs, dependency audit, secrets            |
 
 ---
 
 ## Environment Modes
 
-| Mode | Use | Web | API |
-|------|-----|-----|-----|
-| `dev` (`just demo`) | Local smoke test | `localhost:3000` | `localhost:8080` |
-| `local` overlay | Scan private/localhost targets | `localhost:3010` | `localhost:8080` |
-| `staging` overlay | Domain-like alt ports | `127.0.0.1:3300` | `127.0.0.1:8300` |
-| Self-hosted edge | Public domain + TLS | Caddy → bridge port | Caddy → bridge port |
+| Mode                | Use                            | Web                 | API                 |
+| ------------------- | ------------------------------ | ------------------- | ------------------- |
+| `dev` (`just demo`) | Local smoke test               | `localhost:3000`    | `localhost:8080`    |
+| `local` overlay     | Scan private/localhost targets | `localhost:3010`    | `localhost:8080`    |
+| `staging` overlay   | Domain-like alt ports          | `127.0.0.1:3300`    | `127.0.0.1:8300`    |
+| Self-hosted edge    | Public domain + TLS            | Caddy → bridge port | Caddy → bridge port |
 
 Self-hosting notes:
+
 - Start from `.env.example`; never commit `.env` or real credentials
 - Replace every `change-me` value before using a public domain
 - See [docs/reference/configuration.md](docs/reference/configuration.md) and [docs/operations/deployment.md](docs/operations/deployment.md) for full guidance
@@ -249,7 +250,8 @@ Guided review path (5–15 min): [docs/evaluators-guide.md](docs/evaluators-guid
 ## Screenshots
 
 ### Example scan: an intentionally inaccessible demo site
-These screenshots come from a live URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow's seven standard scanners surfaced 190 issues on a single page, including 8 critical findings, so the Pages tab fills with severity-colored finding overlays.
+
+These screenshots come from a live URL scan of [Deque's "Mars Commuter" demo](https://dequeuniversity.com/demo/mars/) — a public site purpose-built with accessibility, SEO, and content defects. StageFlow's standard scanner set surfaced 190 issues on a single page, including 8 critical findings, so the Pages tab fills with severity-colored finding overlays.
 
 <table>
   <tr>
@@ -265,7 +267,7 @@ These screenshots come from a live URL scan of [Deque's "Mars Commuter" demo](ht
     <td><img src="docs/images/report-issues.png" alt="Issue triage view for the demo-site scan" /></td>
   </tr>
   <tr>
-    <td align="center"><em>Unified report overview: 1 page, 7 scanners, and 190 severity-scored issues in one view</em></td>
+    <td align="center"><em>Unified report overview: 1 page, scanner rollups, and 190 severity-scored issues in one view</em></td>
     <td align="center"><em>Grouped issue triage with severity, scanner, page, and remediation context</em></td>
   </tr>
   <tr>
@@ -286,66 +288,28 @@ These screenshots come from a live URL scan of [Deque's "Mars Commuter" demo](ht
   </tr>
 </table>
 
-### Authenticated scan: live AlchemizeCV pages
-StageFlow can log in before scanning protected pages. This live run authenticated against [alchemizecv.com](https://alchemizecv.com), scanned eight post-login pages, and produced report evidence for cards, interactive controls, and clickable bounding-box overlays.
-
-<table>
-  <tr>
-    <td><img src="docs/images/auth-mode-configured.png" alt="StageFlow Playground with authentication mode configured for protected AlchemizeCV pages" /></td>
-    <td><img src="docs/images/auth-scan-in-progress.png" alt="Authenticated scan running across eight protected AlchemizeCV pages" /></td>
-  </tr>
-  <tr>
-    <td align="center"><em>Authentication mode configured in the Playground before scanning protected URLs</em></td>
-    <td align="center"><em>Live progress while StageFlow scans eight authenticated AlchemizeCV pages</em></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/auth-scan-complete.png" alt="Authenticated scan complete with artifacts ready" /></td>
-    <td><img src="docs/images/auth-report-overview.png" alt="Unified authenticated report overview for AlchemizeCV pages" /></td>
-  </tr>
-  <tr>
-    <td align="center"><em>Authenticated scan completion unlocks the same report, JSON, logs, and provenance flow</em></td>
-    <td align="center"><em>Eight authenticated pages rolled up into one report</em></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/auth-report-issues.png" alt="Grouped authenticated scan issues across AlchemizeCV pages" /></td>
-    <td><img src="docs/images/auth-report-issue-detail.png" alt="Authenticated issue detail expanded with scanner evidence and remediation context" /></td>
-  </tr>
-  <tr>
-    <td align="center"><em>Issues remain grouped by severity, scanner, page, selector, and remediation context</em></td>
-    <td align="center"><em>Expanded issue rows expose scanner evidence without leaving the report</em></td>
-  </tr>
-  <tr>
-    <td><img src="docs/images/auth-report-pages-overlay.png" alt="Authenticated report Pages tab with clickable bounding boxes over captured AlchemizeCV UI" /></td>
-    <td><img src="docs/images/auth-report-issue-card.png" alt="Authenticated report issue evidence modal with highlighted AlchemizeCV card/control" /></td>
-  </tr>
-  <tr>
-    <td align="center"><em>Pages view draws clickable bounding boxes over the captured authenticated UI</em></td>
-    <td align="center"><em>Selecting a marker opens evidence with the highlighted control, selector, page, and occurrence count</em></td>
-  </tr>
-</table>
-
----
-
 ## Docs
 
-| Document | Description |
-|----------|-------------|
-| [docs/evaluators-guide.md](docs/evaluators-guide.md) | Guided 5–15 min review path |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Architecture overview with diagrams and design rationale |
-| [CHANGELOG.md](CHANGELOG.md) | Release notes (Keep a Changelog) |
-| [docs/architecture/system.md](docs/architecture/system.md) | Full system design, threat model, failure modes |
-| [docs/reference/configuration.md](docs/reference/configuration.md) | Environment variables and overlay topology |
-| [docs/operations/deployment.md](docs/operations/deployment.md) | Local, self-hosted, and hosted deployment boundaries |
-| [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md) | Local dev server lifecycle scanning |
-| [clients/web/README.md](clients/web/README.md) | Frontend architecture, routes, tests |
-| [services/platform-api/README.md](services/platform-api/README.md) | API routes, middleware, SSRF |
-| [services/scanner-runner/README.md](services/scanner-runner/README.md) | Scanner plugin system and outputs |
-| [clients/cli/README.md](clients/cli/README.md) | CLI commands and output formats |
+| Document                                                               | Description                                              |
+| ---------------------------------------------------------------------- | -------------------------------------------------------- |
+| [docs/evaluators-guide.md](docs/evaluators-guide.md)                   | Guided 5–15 min review path                              |
+| [ARCHITECTURE.md](ARCHITECTURE.md)                                     | Architecture overview with diagrams and design rationale |
+| [CHANGELOG.md](CHANGELOG.md)                                           | Release notes (Keep a Changelog)                         |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)                               | Community expectations                                   |
+| [docs/architecture/system.md](docs/architecture/system.md)             | Full system design, threat model, failure modes          |
+| [docs/reference/configuration.md](docs/reference/configuration.md)     | Environment variables and overlay topology               |
+| [docs/operations/deployment.md](docs/operations/deployment.md)         | Local, self-hosted, and hosted deployment boundaries     |
+| [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md)                           | Local dev server lifecycle scanning                      |
+| [clients/web/README.md](clients/web/README.md)                         | Frontend architecture, routes, tests                     |
+| [services/platform-api/README.md](services/platform-api/README.md)     | API routes, middleware, SSRF                             |
+| [services/scanner-runner/README.md](services/scanner-runner/README.md) | Scanner plugin system and outputs                        |
+| [clients/cli/README.md](clients/cli/README.md)                         | CLI commands and output formats                          |
 
 ## Support
 
 - Bug reports and setup questions: GitHub issue templates
 - Vulnerability reports: [SECURITY.md](SECURITY.md)
+- Community expectations: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## License
 

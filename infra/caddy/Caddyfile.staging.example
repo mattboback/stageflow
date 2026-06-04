@@ -45,9 +45,11 @@ staging.example.com {
         }
     }
 
+    # Monitoring is disabled by default so this example cannot expose Grafana
+    # accidentally. See infra/caddy/Caddyfile.monitoring.example for the
+    # explicit opt-in proxy with Basic Auth.
     handle /monitoring* {
-        import snippets/monitoring-basicauth*.caddy
-        reverse_proxy 127.0.0.1:3301
+        respond 404
     }
 
     handle /* {

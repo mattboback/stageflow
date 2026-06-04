@@ -69,6 +69,7 @@
 			height={viewBoxSize}
 			viewBox="0 0 {viewBoxSize} {viewBoxSize}"
 			class="rotate-[-90deg] transition-all duration-700 ease-out"
+			aria-hidden="true"
 		>
 			<!-- Track circle -->
 			<circle
