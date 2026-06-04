@@ -11,7 +11,17 @@
 		getSeverityStrokeColor
 	} from '$lib/report';
 	import { cn, formatTimestamp } from '$lib/utils';
-	import { ExternalLink, Printer, RotateCcw, ZoomIn, ZoomOut, Target, Focus, Columns, Maximize2 } from 'lucide-svelte';
+	import {
+		ExternalLink,
+		Printer,
+		RotateCcw,
+		ZoomIn,
+		ZoomOut,
+		Target,
+		Focus,
+		Columns,
+		Maximize2
+	} from 'lucide-svelte';
 	import { tick } from 'svelte';
 
 	interface Props {
@@ -352,7 +362,8 @@
 		{:else if canRenderOverlay}
 			<div class="overflow-auto bg-neutral-900 shadow-inner" style="max-height: 80vh">
 				<div
-					style="width: {zoom * 100}%; will-change: width; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
+					style="width: {zoom *
+						100}%; will-change: width; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
 				>
 					<button
 						type="button"
@@ -407,7 +418,8 @@
 			<!-- Screenshot available but no overlay dimensions — show image only -->
 			<div class="overflow-auto bg-neutral-900 shadow-inner" style="max-height: 80vh">
 				<div
-					style="width: {zoom * 100}%; will-change: width; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
+					style="width: {zoom *
+						100}%; will-change: width; transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);"
 				>
 					<img
 						src={overviewUrl}
@@ -435,111 +447,112 @@
 	{#if !isRightPanelCollapsed}
 		<div>
 			<Panel class="border-line overflow-hidden border shadow-sm" padding="none" rounded="2xl">
-			<!-- Header -->
-			<div class="border-line bg-surface-muted/20 border-b px-4 py-3">
-				<h3 class="text-ink truncate text-sm font-semibold" title={selectedPage?.url}>
-					{selectedPage?.path ?? selectedPage?.url ?? 'Page issues'}
-				</h3>
-				<p class="text-ink-muted mt-0.5 text-xs font-medium">
-					{pageIssues.length} issue{pageIssues.length !== 1 ? 's' : ''} detected
-					{#if activeIssueId}
-						·
-						<button
-							type="button"
-							class="text-accent font-bold hover:underline"
-							onclick={() => (activeIssueId = null)}
-						>
-							Clear selection
-						</button>
-					{/if}
-				</p>
-			</div>
-
-			<!-- Issue list -->
-			<div
-				bind:this={rightPanelRef}
-				class="divide-line divide-y overflow-y-auto"
-				style="max-height: calc(80vh - 3.5rem)"
-			>
-				{#if pageIssues.length === 0}
-					<div class="text-ink-muted p-10 text-center text-sm italic">
-						No issues detected on this page.
-					</div>
-				{:else}
-					{#each pageIssues as issue (issue.id)}
-						{@const isActive = activeIssueId === issue.id}
-						{@const hasMarker = issuesWithMarkers.has(issue.id)}
-						<div class="group relative">
-							<!-- Row: click to focus the lens on this issue and open its detail -->
-							<div
-								data-issue-id={issue.id}
-								class={cn(
-									'flex cursor-pointer items-start gap-2.5 border-l-4 px-4 py-3.5 pr-10 transition-all duration-200',
-									isActive
-										? 'bg-accent/5 border-accent scale-[1.002] shadow-xs'
-										: 'hover:bg-surface-muted/60 border-transparent'
-								)}
-								role="button"
-								tabindex="0"
-								aria-pressed={isActive}
-								onclick={() => selectIssue(issue)}
-								onkeydown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') {
-										e.preventDefault();
-										selectIssue(issue);
-									}
-								}}
-							>
-								<!-- Severity badge -->
-								<span
-									class={cn(
-										'mt-0.5 inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase',
-										getSeverityContainerClass(issue.severity)
-									)}
-								>
-									<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
-									></span>
-									{issue.severity}
-								</span>
-
-								<!-- Title + meta -->
-								<div class="min-w-0 flex-1">
-									<p class="text-ink line-clamp-2 text-sm leading-snug font-semibold">
-										{issue.title}
-									</p>
-									<p class="text-ink-faint mt-1 text-[11px] font-medium">
-										{issue.elementCount} element{issue.elementCount !== 1 ? 's' : ''}
-										{#if hasMarker}
-											·
-											<span class="text-accent font-semibold">interactive marker</span>
-										{/if}
-									</p>
-									{#if isActive}
-										<p class="text-accent mt-1.5 text-[10px] font-bold tracking-wide uppercase">
-											Locked · lens focused on this occurrence
-										</p>
-									{/if}
-								</div>
-							</div>
-
-							<!-- Details icon: always visible on hover, stops propagation -->
+				<!-- Header -->
+				<div class="border-line bg-surface-muted/20 border-b px-4 py-3">
+					<h3 class="text-ink truncate text-sm font-semibold" title={selectedPage?.url}>
+						{selectedPage?.path ?? selectedPage?.url ?? 'Page issues'}
+					</h3>
+					<p class="text-ink-muted mt-0.5 text-xs font-medium">
+						{pageIssues.length} issue{pageIssues.length !== 1 ? 's' : ''} detected
+						{#if activeIssueId}
+							·
 							<button
 								type="button"
-								onclick={(e) => {
-									e.stopPropagation();
-									selectIssue(issue);
-								}}
-								class="text-ink-faint hover:text-accent focus-visible:text-accent absolute top-4 right-3.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-								title="View full details"
-								aria-label="View full details for {issue.title}"
+								class="text-accent font-bold hover:underline"
+								onclick={() => (activeIssueId = null)}
 							>
-								<ExternalLink class="h-3.5 w-3.5" />
+								Clear selection
 							</button>
+						{/if}
+					</p>
+				</div>
+
+				<!-- Issue list -->
+				<div
+					bind:this={rightPanelRef}
+					class="divide-line divide-y overflow-y-auto"
+					style="max-height: calc(80vh - 3.5rem)"
+				>
+					{#if pageIssues.length === 0}
+						<div class="text-ink-muted p-10 text-center text-sm italic">
+							No issues detected on this page.
 						</div>
-					{/each}
-				{/if}
-			</div>
-		</Panel>
+					{:else}
+						{#each pageIssues as issue (issue.id)}
+							{@const isActive = activeIssueId === issue.id}
+							{@const hasMarker = issuesWithMarkers.has(issue.id)}
+							<div class="group relative">
+								<!-- Row: click to focus the lens on this issue and open its detail -->
+								<div
+									data-issue-id={issue.id}
+									class={cn(
+										'flex cursor-pointer items-start gap-2.5 border-l-4 px-4 py-3.5 pr-10 transition-all duration-200',
+										isActive
+											? 'bg-accent/5 border-accent scale-[1.002] shadow-xs'
+											: 'hover:bg-surface-muted/60 border-transparent'
+									)}
+									role="button"
+									tabindex="0"
+									aria-pressed={isActive}
+									onclick={() => selectIssue(issue)}
+									onkeydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											selectIssue(issue);
+										}
+									}}
+								>
+									<!-- Severity badge -->
+									<span
+										class={cn(
+											'mt-0.5 inline-flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase',
+											getSeverityContainerClass(issue.severity)
+										)}
+									>
+										<span
+											class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
+										></span>
+										{issue.severity}
+									</span>
+
+									<!-- Title + meta -->
+									<div class="min-w-0 flex-1">
+										<p class="text-ink line-clamp-2 text-sm leading-snug font-semibold">
+											{issue.title}
+										</p>
+										<p class="text-ink-faint mt-1 text-[11px] font-medium">
+											{issue.elementCount} element{issue.elementCount !== 1 ? 's' : ''}
+											{#if hasMarker}
+												·
+												<span class="text-accent font-semibold">interactive marker</span>
+											{/if}
+										</p>
+										{#if isActive}
+											<p class="text-accent mt-1.5 text-[10px] font-bold tracking-wide uppercase">
+												Locked · lens focused on this occurrence
+											</p>
+										{/if}
+									</div>
+								</div>
+
+								<!-- Details icon: always visible on hover, stops propagation -->
+								<button
+									type="button"
+									onclick={(e) => {
+										e.stopPropagation();
+										selectIssue(issue);
+									}}
+									class="text-ink-faint hover:text-accent focus-visible:text-accent absolute top-4 right-3.5 rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+									title="View full details"
+									aria-label="View full details for {issue.title}"
+								>
+									<ExternalLink class="h-3.5 w-3.5" />
+								</button>
+							</div>
+						{/each}
+					{/if}
+				</div>
+			</Panel>
 
 			{#if activeIssueId && issuesWithMarkers.has(activeIssueId)}
 				<p

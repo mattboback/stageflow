@@ -1,12 +1,26 @@
 package orchestrator
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
+
+func TestMarshalPayloadReturnsValidJSONOnMarshalError(t *testing.T) {
+	auditPayload := marshalPayload(map[string]any{"bad": make(chan int)})
+
+	var decoded map[string]string
+	if err := json.Unmarshal([]byte(auditPayload), &decoded); err != nil {
+		t.Fatalf("audit payload should remain valid JSON after marshal error: %v; payload=%s", err, auditPayload)
+	}
+
+	if decoded["marshal_error"] == "" {
+		t.Fatalf("audit payload should include marshal_error: %s", auditPayload)
+	}
+}
 
 func TestMarshalPayloadRedactsInlineAuthStorageState(t *testing.T) {
 	payload := &events.JobCreatedPayload{

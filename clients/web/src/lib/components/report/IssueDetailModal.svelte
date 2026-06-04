@@ -128,7 +128,7 @@
 	);
 
 	const defaultTabId = $derived(
-		highlightedElementId ? 'occurrences' : (hasEvidence ? 'evidence' : 'fix')
+		highlightedElementId ? 'occurrences' : hasEvidence ? 'evidence' : 'fix'
 	);
 	let activeTab = $state('fix');
 
@@ -314,7 +314,7 @@
 			<Tabs {tabs} value={activeTab} onValueChange={(id) => (activeTab = id)} />
 		</div>
 
-		<div class="flex-1 overflow-y-auto space-y-6 p-6">
+		<div class="flex-1 space-y-6 overflow-y-auto p-6">
 			{#if activeTab === 'fix'}
 				<div>
 					<h3 class="text-ink mb-2 font-semibold">How to fix</h3>

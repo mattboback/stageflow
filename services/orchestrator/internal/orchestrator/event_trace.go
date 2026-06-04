@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
-	"strconv"
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
@@ -40,12 +39,20 @@ func marshalPayload(v any) string {
 
 	b, err := json.Marshal(redactPayloadForAudit(v))
 	if err != nil {
-		return `{"marshal_error":` + strconvQuote(err.Error()) + `}`
+		fallback, fallbackErr := json.Marshal(map[string]string{"marshal_error": err.Error()})
+		if fallbackErr != nil {
+			return `{"marshal_error":"payload could not be marshaled"}`
+		}
+
+		return string(fallback)
 	}
 
 	return string(b)
 }
 
+// redactPayloadForAudit only handles JobCreatedPayload because it is the event
+// payload that can carry inline auth material. Other event payloads are expected
+// to be safe to persist verbatim in the job-event audit trail.
 func redactPayloadForAudit(v any) any {
 	switch payload := v.(type) {
 	case *events.JobCreatedPayload:
@@ -88,10 +95,6 @@ func redactAuthForAudit(raw json.RawMessage) json.RawMessage {
 	}
 
 	return out
-}
-
-func strconvQuote(s string) string {
-	return strconv.Quote(s)
 }
 
 func (o *Orchestrator) recordJobEvent(ctx context.Context, e *db.JobEventInsert) {
