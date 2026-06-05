@@ -1,5 +1,7 @@
 # Local development overrides
-# Use with: podman compose -f infra/compose/podman-compose.yml -f infra/compose/podman-compose.local.yml up -d
+# Prefer `just dev up local`. For direct compose usage, create and export the
+# external network first: `export STAGEFLOW_NETWORK_NAME=stageflow_dev_net &&
+# podman network create "$STAGEFLOW_NETWORK_NAME"`.
 
 services:
   frontend:

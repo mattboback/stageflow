@@ -5,7 +5,7 @@
 go := env_var_or_default('GO', 'go')
 podman := env_var_or_default('PODMAN', 'podman')
 bun := env_var_or_default('BUN', 'bun')
-compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow')
+compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow_dev')
 repo_root := justfile_directory()
 
 # Paths
@@ -47,8 +47,11 @@ setup:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    echo "==> Ensuring stageflow_net network exists..."
-    {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
+    project="{{compose_project}}"
+    network="${STAGEFLOW_NETWORK_NAME:-${project}_net}"
+
+    echo "==> Ensuring $network network exists..."
+    {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
 
     just deps
 
@@ -131,19 +134,35 @@ demo URL='https://example.com':
     GF_SERVER_ROOT_URL="$demo_grafana_url" \
     just images
 
-    echo "==> Restarting stack..."
+    echo "==> Restarting MinIO..."
     VITE_API_URL="$demo_vite_api_url" \
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
     GF_SERVER_ROOT_URL="$demo_grafana_url" \
-    just dev restart
+    just dev down
+
+    VITE_API_URL="$demo_vite_api_url" \
+    VITE_SITE_URL="$demo_site_url" \
+    STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
+    PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
+    GF_SERVER_ROOT_URL="$demo_grafana_url" \
+    just dev up dev http://127.0.0.1:9000 minio
 
     wait_for_http "http://127.0.0.1:9000/minio/health/live" "MinIO" 120
-    wait_for_http "http://127.0.0.1:8080/healthz" "Platform API" 120
 
     echo "==> Initializing MinIO buckets..."
     just dev init
+
+    echo "==> Starting stack..."
+    VITE_API_URL="$demo_vite_api_url" \
+    VITE_SITE_URL="$demo_site_url" \
+    STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
+    PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
+    GF_SERVER_ROOT_URL="$demo_grafana_url" \
+    just dev up
+
+    wait_for_http "http://127.0.0.1:8080/healthz" "Platform API" 120
 
     wait_for_http "http://127.0.0.1:3000/" "Frontend" 120
 
@@ -163,13 +182,14 @@ demo URL='https://example.com':
     echo "  -d '{\"urls\":[\"$url\"]}'"
 
 [group('dev'), doc('Local stack: up/down/restart/logs/init (ENV=dev|local)')]
-dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
+dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
     #!/usr/bin/env bash
     set -euo pipefail
 
     cmd="{{CMD}}"
     env="{{ENV}}"
     endpoint="{{ENDPOINT}}"
+    services="{{SERVICES}}"
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
@@ -179,13 +199,16 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
         exit 1
     fi
 
-    echo "==> Ensuring stageflow_net network exists..."
-    {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
+    project="{{compose_project}}"
+    network="${STAGEFLOW_NETWORK_NAME:-${project}_net}"
+    export STAGEFLOW_NETWORK_NAME="$network"
+
+    echo "==> Ensuring $network network exists..."
+    {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
 
     echo "==> Ensuring scanner config exists..."
     ./infra/scripts/ensure-scanner-config.sh
 
-    project="{{compose_project}}"
     env_args=()
     [[ -f "$root_dir/.env" ]] && env_args=(--env-file "$root_dir/.env")
 
@@ -230,7 +253,11 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000':
         up)
             require_job_images
             echo "==> Starting $env stack..."
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d
+            service_args=()
+            if [[ -n "${services// }" ]]; then
+                read -r -a service_args <<<"$services"
+            fi
+            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d "${service_args[@]}"
             ;;
         down)
             echo "==> Stopping $env stack..."
@@ -291,10 +318,13 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend':
         exit 2
     fi
 
-    echo "==> Ensuring stageflow_net network exists..."
-    {{podman}} network inspect stageflow_net >/dev/null 2>&1 || {{podman}} network create stageflow_net
-
     project="{{compose_project}}"
+    network="${STAGEFLOW_NETWORK_NAME:-${project}_net}"
+    export STAGEFLOW_NETWORK_NAME="$network"
+
+    echo "==> Ensuring $network network exists..."
+    {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
+
     env_args=()
     [[ -f "$root_dir/.env" ]] && env_args=(--env-file "$root_dir/.env")
 
@@ -471,7 +501,7 @@ ci:
     git diff --exit-code docs/reference/cli/stageflow
 
     echo "==> Shell regression tests..."
-    bash devtools/scripts/tests/cli-install.test.sh
+    just shell-tests
 
     echo "==> Frontend CI..."
     (cd {{web_dir}} && {{bun}} run ci)
@@ -576,6 +606,7 @@ shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/dev-onboarding.test.sh
 
 [group('quality'), doc('Run dead-code analysis for TypeScript workspaces')]
 dead-code:

@@ -22,6 +22,12 @@ just cli-install
 stageflow version
 ```
 
+`just cli-install` installs to `~/.local/bin` by default and verifies that the
+`stageflow` command on `PATH` resolves to that binary. If your shell finds a
+different `stageflow`, put `~/.local/bin` earlier on `PATH` and rerun the
+install. See [docs/operations/devtools.md](docs/operations/devtools.md) for
+details.
+
 Run a hosted scan:
 
 ```bash
@@ -120,6 +126,11 @@ cp .env.example .env
 just diagnose
 just demo
 ```
+
+`just demo` uses an isolated local compose project and Podman network by
+default (`stageflow_dev` / `stageflow_dev_net`). Set `COMPOSE_PROJECT_NAME` or
+`STAGEFLOW_NETWORK_NAME` when you intentionally want a different local stack
+identity.
 
 When the demo is ready:
 

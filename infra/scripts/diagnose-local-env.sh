@@ -10,6 +10,8 @@ JUST_BIN="${JUST:-just}"
 CURL_BIN="${CURL:-curl}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
 SCANNER_CONFIG_FILE="${SCANNER_CONFIG_FILE:-$REPO_ROOT/infra/scanners/scanners.yaml}"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-stageflow_dev}"
+LOCAL_NETWORK="${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME}_net}"
 EXPECTED_GO_MIN="1.26.4"
 EXPECTED_BUN_MIN="1.3.8"
 EXPECTED_NODE_MAJOR="22"
@@ -127,6 +129,44 @@ check_default_ports() {
 	fi
 }
 
+check_network_alias_conflicts() {
+	local network="$1"
+	local alias_format
+	local aliases
+	local container_id
+	local container_name
+	local conflict_count=0
+	local service_aliases=(
+		"nats"
+		"minio"
+		"postgres"
+		"orchestrator"
+		"platform-api"
+		"frontend"
+		"grafana"
+	)
+
+	alias_format="{{range (index .NetworkSettings.Networks \"${network}\").Aliases}}{{println .}}{{end}}"
+
+	while read -r container_id container_name; do
+		[[ -n "$container_id" ]] || continue
+
+		aliases="$("$PODMAN_BIN" inspect "$container_id" --format "$alias_format" 2>/dev/null || true)"
+		[[ -n "$aliases" ]] || continue
+
+		for service_alias in "${service_aliases[@]}"; do
+			if grep -Fxq "$service_alias" <<<"$aliases"; then
+				warn "Podman network \`${network}\` already has container \`${container_name}\` exposing service alias \`${service_alias}\`; use a different COMPOSE_PROJECT_NAME or STAGEFLOW_NETWORK_NAME before starting a second local stack."
+				conflict_count=$((conflict_count + 1))
+			fi
+		done
+	done < <("$PODMAN_BIN" ps -a --filter "network=$network" --format '{{.ID}} {{.Names}}' 2>/dev/null || true)
+
+	if (( conflict_count == 0 )); then
+		pass "No existing StageFlow service aliases detected on Podman network \`${network}\`"
+	fi
+}
+
 say "==> StageFlow local diagnose"
 
 require_command "$GO_BIN" "Go"
@@ -197,10 +237,11 @@ if command -v "$PODMAN_BIN" >/dev/null 2>&1; then
 		warn "/dev/net/tun is missing. Rootless Podman networking can fail with \`Failed to open() /dev/net/tun\` when using pasta or slirp4netns."
 	fi
 
-	if "$PODMAN_BIN" network inspect stageflow_net >/dev/null 2>&1; then
-		pass "Podman network \`stageflow_net\` already exists"
+	if "$PODMAN_BIN" network inspect "$LOCAL_NETWORK" >/dev/null 2>&1; then
+		pass "Podman network \`${LOCAL_NETWORK}\` already exists"
+		check_network_alias_conflicts "$LOCAL_NETWORK"
 	else
-		warn "Podman network \`stageflow_net\` is missing. \`just setup\` will create it."
+		warn "Podman network \`${LOCAL_NETWORK}\` is missing. \`just setup\` will create it."
 	fi
 
 	check_image "localhost/stageflow/extractor:latest"
@@ -238,11 +279,11 @@ else
 fi
 
 if [[ -f "$SCANNER_CONFIG_FILE" ]]; then
-	pass "Found scanner config at ${SCANNER_CONFIG_FILE#$REPO_ROOT/}"
+	pass "Found scanner config at ${SCANNER_CONFIG_FILE#"$REPO_ROOT"/}"
 elif [[ -d "$SCANNER_CONFIG_FILE" ]]; then
-	fail "Scanner config path is a directory at ${SCANNER_CONFIG_FILE#$REPO_ROOT/}. Run \`just setup\` to replace an empty generated directory with the default YAML file."
+	fail "Scanner config path is a directory at ${SCANNER_CONFIG_FILE#"$REPO_ROOT"/}. Run \`just setup\` to replace an empty generated directory with the default YAML file."
 else
-	warn "Scanner config missing at ${SCANNER_CONFIG_FILE#$REPO_ROOT/}. \`just setup\` will copy infra/scanners/scanners.example.yaml before starting the stack."
+	warn "Scanner config missing at ${SCANNER_CONFIG_FILE#"$REPO_ROOT"/}. \`just setup\` will copy infra/scanners/scanners.example.yaml before starting the stack."
 fi
 
 say ""
