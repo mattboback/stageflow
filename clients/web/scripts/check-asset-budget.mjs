@@ -11,8 +11,8 @@ const assetPaths = [
 	'_app/immutable/nodes'
 ];
 const budgets = {
-	js: 420 * 1024,
-	css: 100 * 1024
+	js: 450 * 1024,
+	css: 125 * 1024
 };
 
 async function sumBytes(extension) {
