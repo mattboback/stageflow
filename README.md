@@ -15,9 +15,10 @@ or a CI gate based on issue severity.
 
 Download a release asset from
 [GitHub Releases](https://github.com/mattboback/stageflow/releases), or build
-from this repository:
+Ensure `~/.local/bin` is in your `PATH` (or export it for the current session), then build and install:
 
 ```bash
+export PATH="$HOME/.local/bin:$PATH"
 just cli-install
 stageflow version
 ```
