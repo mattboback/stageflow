@@ -1,5 +1,7 @@
 # Development overlay - exposes ports for local testing
-# Usage: podman compose -f infra/compose/podman-compose.yml -f infra/compose/podman-compose.test.yml up
+# Prefer `just dev up`. For direct compose usage, create and export the external
+# network first: `export STAGEFLOW_NETWORK_NAME=stageflow_dev_net && podman network
+# create "$STAGEFLOW_NETWORK_NAME"`.
 
 services:
   nats:

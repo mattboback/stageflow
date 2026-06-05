@@ -13,6 +13,11 @@ just demo
 ```
 
 This uses the compose files under `infra/compose/`, builds local images, starts the stack on loopback ports, and initializes MinIO buckets.
+Local `just` recipes isolate the default compose project and Podman network as
+`stageflow_dev` and `stageflow_dev_net`, so repeat smoke tests do not share DNS
+aliases with unrelated StageFlow stacks on the same host. Override
+`COMPOSE_PROJECT_NAME` or `STAGEFLOW_NETWORK_NAME` only when you intentionally
+want a different local identity.
 
 ## Repo-Managed Staging and Self-Hosting
 

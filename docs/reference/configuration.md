@@ -15,6 +15,9 @@ just demo
 ```
 
 `just demo` is the fastest end-to-end smoke test. For the individual bootstrap steps behind it, run `just setup && just images && just dev up && just dev init`.
+The local `just` recipes default to compose project `stageflow_dev` and Podman
+network `stageflow_dev_net`; set `COMPOSE_PROJECT_NAME` or
+`STAGEFLOW_NETWORK_NAME` to isolate additional local stacks.
 
 ## Environment Topology
 
@@ -92,7 +95,7 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | `ORCHESTRATOR_API_TOKEN`            | yes      | `change-me-orchestrator-token`              | Admin API token accepted via `X-Api-Key` or bearer auth.                             |
 | `NATS_HOST`                         | yes      | `nats`                                      | Hostname injected into job pods so scanners can reach NATS.                          |
 | `MINIO_HOST`                        | yes      | `minio`                                     | Hostname injected into job pods so scanners can reach MinIO.                         |
-| `POD_NETWORK`                       | no       | `stageflow_net`                             | Podman network for job pods in bridge mode.                                          |
+| `POD_NETWORK`                       | no       | effective `STAGEFLOW_NETWORK_NAME`          | Podman network for job pods in bridge mode.                                          |
 | `POD_NETNS_MODE`                    | no       | `bridge` (`host` in local overlay)          | Network namespace mode for job pods. Use `host` only for local/private target scans. |
 | `PAGE_LOAD_TIMEOUT`                 | no       | `15000`                                     | Browser page-load timeout in milliseconds.                                           |
 | `A11Y_SCROLL_TIMEOUT`               | no       | `300`                                       | Accessibility scan scroll timeout in milliseconds.                                   |
