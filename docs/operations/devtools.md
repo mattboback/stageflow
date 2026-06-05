@@ -19,6 +19,7 @@ The source lives in `clients/cli/`, but the built binary is named
 For the recommended local install loop, run:
 
 ```bash
+export PATH="$HOME/.local/bin:$PATH"
 just cli-install
 stageflow version
 ```
