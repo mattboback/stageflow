@@ -129,7 +129,7 @@ EOF
 	fi
 
 	echo "[minio] Creating app policy ${MINIO_APP_POLICY}"
-	MC_VOLUME="${policy_dir}:/policy:ro" \
+	MC_VOLUME="${policy_dir}:/policy:ro,z" \
 		run_mc admin policy create "${MINIO_ALIAS}" "${MINIO_APP_POLICY}" "/policy/${MINIO_APP_POLICY}.json"
 
 	echo "[minio] Creating app user ${MINIO_ACCESS_KEY}"
