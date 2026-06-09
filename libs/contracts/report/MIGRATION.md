@@ -138,9 +138,12 @@ If issues arise during migration:
 
 ---
 
-## Timeline Recommendation
+## Historical Migration Sequence
 
-1. **Week 1**: Set up contracts package, update scanner-runner TypeScript imports
-2. **Week 2**: Create Go adapter layer, update API services
-3. **Week 3**: Update frontend consumers, remove adapters
-4. **Week 4**: Delete old type files, verify all tests pass
+The in-repo migration is complete; this is the order it was carried out, kept as
+a reference for external consumers adopting the contract in their own codebase:
+
+1. Set up the contracts package and update TypeScript imports to `@stageflow/contracts-report`.
+2. Generate the Go types and update the API/orchestrator services to consume them.
+3. Update frontend consumers and remove any temporary adapter layer.
+4. Delete the old hand-maintained type files and verify all tests pass.

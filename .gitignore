@@ -62,6 +62,7 @@ masteraudit.md
 .github/skills/
 output/
 .gitcleanup/
+.agent-harness/
 .kiro/
 # Local-only Caddy snippets (secrets)
 infra/caddy/snippets/monitoring-basicauth*.caddy

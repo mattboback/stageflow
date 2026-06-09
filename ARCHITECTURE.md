@@ -45,7 +45,8 @@ For an exhaustive deep-dive — trust boundaries, failure modes, all event types
                                ↓
 ┌─ Orchestrator (Go) ─────────────────────────────────────────────────────────┐
 │                                                                             │
-│  Job FSM: PENDING → EXTRACTING → SCANNING → COMPLETING → DONE/FAILED       │
+│  Job FSM: PENDING → EXTRACTING → READY_TO_SCAN →                            │
+│           SCANNING → COMPLETING → DONE/FAILED                               │
 │  Podman pod lifecycle: launch, monitor, cleanup per job                     │
 │  Report aggregation: merges scanner results into unified report             │
 │  PostgreSQL: persists job state + event audit trail                         │

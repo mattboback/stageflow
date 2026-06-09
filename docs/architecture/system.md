@@ -122,7 +122,7 @@ StageFlow is designed around four goals:
 | `clients/web`                | Submission UX and live status/report views (SvelteKit 5)                |
 | `clients/cli`                | Go CLI — scan submission, SSE streaming, report rendering, project mode |
 | `libs/contracts`             | JSON Schemas and generated contracts (Go + TypeScript)                  |
-| `libs/go/*`                  | 12 shared Go packages (messaging, models, config, etc.)                 |
+| `libs/go/*`                  | 13 shared Go packages (messaging, models, config, etc.)                 |
 
 ---
 
@@ -134,7 +134,7 @@ StageFlow is designed around four goals:
 | -------------- | ----------------------------------------- | ----------------- | ---------------------------------- | ---------------- |
 | `platform-api` | `localhost/stageflow/platform-api:latest` | Go 1.26           | 8080                               | 512M RAM, 2 CPU  |
 | `orchestrator` | `localhost/stageflow/orchestrator:latest` | Go 1.26           | 8081 (internal)                    | 512M RAM, 4 CPU  |
-| `frontend`     | `localhost/stageflow/frontend:latest`     | SvelteKit + Caddy | 3010                               | 64M RAM, 0.5 CPU |
+| `frontend`     | `localhost/stageflow/frontend:latest`     | SvelteKit + Caddy | 3000 (demo) / 3010 (local overlay) | 64M RAM, 0.5 CPU |
 | `nats`         | `nats:2.12.2-alpine`                      | —                 | 4222 (internal), 8222 (monitoring) | 256M RAM, 1 CPU  |
 | `minio`        | `minio:RELEASE.2025-09-07`                | —                 | 9000 (internal), 9001 (console)    | 512M RAM, 2 CPU  |
 | `postgres`     | `postgres:17-alpine`                      | —                 | internal                           | 512M RAM, 2 CPU  |
@@ -251,13 +251,14 @@ services/orchestrator/
     ├── application/jobs/           # Application service layer (ports/interfaces)
     │   └── scanner_launch_planner.go  # AI Navigator env injection
     ├── domain/jobs/                # Domain logic
-    │   ├── state_transitions.go    # FSM transition rules
+    │   ├── transitions.go          # FSM transition rules
     │   ├── completion_policy.go    # When all scanners are done
     │   └── failure_policy.go       # Failure handling
     ├── adapters/
     │   ├── repository/             # PostgreSQL persistence
     │   │   ├── schema.sql          # jobs + job_events tables
-    │   │   └── job_repository.go   # CRUD + event audit
+    │   │   ├── jobs.go             # job CRUD
+    │   │   └── job_events.go       # event audit persistence
     │   ├── runtime/                # Podman client
     │   │   ├── pod_manager.go      # Pod lifecycle
     │   │   ├── container_manager.go# Container management
@@ -814,11 +815,10 @@ libs/contracts/
 ├── scanner-manifest/
 │   ├── schema/
 │   │   └── scanner-manifest.schema.json     # 294 lines — plugin descriptor format
-│   └── generated/
-│       ├── go/
-│       │   └── scanner_manifest.go          # 534 lines — atombender/go-jsonschema
-│       └── typescript/
-│           └── scanner-manifest.ts          # 163 lines — json-schema-to-typescript
+│   ├── generated/
+│   │   └── typescript/
+│   │       └── scanner-manifest.ts          # 163 lines — json-schema-to-typescript
+│   ├── scanner_manifest.go                  # 534 lines — atombender/go-jsonschema
 │   └── validator.go                         # 125 lines — santhosh-tekuri/jsonschema
 │
 └── events/
@@ -1717,7 +1717,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 │                    Local Machine                                 │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │              Podman Compose (stageflow project)           │   │
+│  │              Podman Compose (stageflow_dev project)       │   │
 │  │                                                          │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │   │
 │  │  │platform- │ │orchestra-│ │ frontend │ │  nats    │   │   │
@@ -1730,7 +1730,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 │  │  │:9000/9001│ │  :5432   │ │ :3001    │                 │   │
 │  │  └──────────┘ └──────────┘ └──────────┘                 │   │
 │  │                                                          │   │
-│  │  Network: stageflow_net                                  │   │
+│  │  Network: stageflow_dev_net                              │   │
 │  │  POD_NETNS_MODE: host                                    │   │
 │  │  Private targets: enabled                                │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -1808,7 +1808,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 | Aspect              | Local Dev                  | Staging                 | Production                        |
 | ------------------- | -------------------------- | ----------------------- | --------------------------------- |
 | **Domain**          | `localhost`                | `staging.stageflow.org` | `stageflow.org`                   |
-| **Compose project** | `stageflow`                | `stageflow-staging`     | `stageflow`                       |
+| **Compose project** | `stageflow_dev`            | `stageflow-staging`     | `stageflow`                       |
 | **Frontend port**   | 3010                       | 3300                    | 3100 (Caddy proxy)                |
 | **API port**        | 8080                       | 8300                    | 8100 (Caddy proxy)                |
 | **MinIO ports**     | 9000, 9001                 | 9300, 9301              | 9100 (Caddy proxy)                |
@@ -2059,14 +2059,14 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 | Remote project commands   | `clients/cli/cobra_project_remote.go`   |
 | Report rendering          | `clients/cli/report_output.go`          |
 | Markdown rendering        | `clients/cli/report_output_markdown.go` |
-| SSE streaming             | `clients/cli/sse.go`                    |
+| SSE streaming             | `clients/cli/internal/jobstream/sse.go` |
 | Issue filtering           | `clients/cli/filter.go`                 |
 | Dev server lifecycle      | `clients/cli/dev_stack.go`              |
 | Project config            | `clients/cli/project_config.go`         |
-| API client                | `clients/cli/client.go`                 |
-| Remote project API client | `clients/cli/client_projects.go`        |
-| Types                     | `clients/cli/types.go`                  |
-| Local target validation   | `clients/cli/local_targets.go`          |
+| API client                | `clients/cli/internal/apiclient/client.go` |
+| Remote project API client | `clients/cli/internal/apiclient/client_projects.go` |
+| API client types          | `clients/cli/internal/apiclient/types.go` |
+| Local target validation   | `clients/cli/internal/urlcheck/urlcheck.go` |
 
 ### Shared Libraries
 
@@ -2074,7 +2074,7 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 | ------------------- | ----------------------------- |
 | State machine       | `libs/go/domain/job/state.go` |
 | Event types         | `libs/go/events/types.go`     |
-| NATS client         | `libs/go/messaging/nats.go`   |
+| NATS client         | `libs/go/messaging/client.go` |
 | Core models         | `libs/go/models/job.go`       |
 | Scanner registry    | `libs/go/scannerregistry/`    |
 | Scanner catalog     | `libs/go/scannercatalog/`     |
@@ -2106,7 +2106,7 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 | Test overlay         | `infra/compose/podman-compose.test.yml`    |
 | Staging overlay      | `infra/compose/podman-compose.staging.yml` |
 | Caddy config         | `infra/caddy/Caddyfile`                    |
-| Scanner config       | `infra/scanners/scanners.yaml`             |
+| Scanner config       | `infra/scanners/scanners.example.yaml`     |
 | MinIO bucket init    | `infra/minio/init-buckets.sh`              |
 | Grafana provisioning | `infra/grafana/provisioning/`              |
 

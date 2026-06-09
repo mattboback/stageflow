@@ -53,6 +53,10 @@ The browser never talks directly to the Orchestrator or Scanner Runner. It consu
 | `tests/unit/components/`         | Component-level tests for playground and report surfaces                         |
 | `.storybook/`                    | Storybook stories used by interaction and accessibility checks                   |
 
+The visual language behind these primitives — color tokens, typography, spacing,
+shadows, and layout guardrails — is specified in
+[docs/design-system.md](../../docs/design-system.md).
+
 ## Local commands
 
 From `clients/web/`:

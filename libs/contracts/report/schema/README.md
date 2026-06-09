@@ -4,7 +4,7 @@
 
 This is the **single source of truth** for the Unified Scan Report schema. All TypeScript and Go type definitions are generated from this JSON Schema.
 
-The Unified Report format aggregates results from multiple accessibility and quality scanners (Axe, Lighthouse, Pa11y, etc.) into a single, consistent structure.
+The Unified Report format aggregates results from multiple accessibility and quality scanners (Axe, Lighthouse, etc.) into a single, consistent structure.
 
 ## Schema Location
 
@@ -205,7 +205,7 @@ Generated types use:
 
 ```bash
 # Generate Go structs
-make generate-schema-go
+make generate-go
 
 # Output: libs/contracts/report/generated/go/report_schema.go
 ```
@@ -229,7 +229,7 @@ import { UnifiedReportV2 } from '../contracts/unified-report.v2';
 **After:**
 ```typescript
 // Single source
-import { UnifiedReportV2 } from '@stageflow/contracts/report';
+import { UnifiedReportV2 } from '@stageflow/contracts-report';
 ```
 
 Prefer the stable alias name `UnifiedReport` for application code (it currently points at `UnifiedReportV2`).
@@ -304,7 +304,7 @@ Please report via:
 ### Questions
 
 Check existing documentation:
-- Main README: `libs/contracts/README.md`
+- Migration guide: `libs/contracts/report/MIGRATION.md`
 - Type definitions: See generated code comments
 
 ## License
