@@ -33,7 +33,7 @@ The StageFlow CLI also supports **remote project management**:
 - `stageflow project delete`
 - `stageflow project promote`
 
-Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same execution context: `stageflow project` is still local dev-server scanning, while `stageflow scan --project ...` is still the hosted baseline/regression-memory step.
+Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same execution context: `stageflow project` is still local dev-server scanning, while `stageflow scan --project ...` is still the hosted baseline/regression-memory step. The remote project lifecycle — create, scan, promote a baseline, diff for regressions, and gate CI — is documented in full in [docs/remote.md](remote.md).
 
 ## Prerequisites
 
