@@ -110,9 +110,9 @@ Localhost scans are only intended for local/self-hosted stacks.
 The repo includes a local-only compose override that sets these defaults:
 
 ```bash
+just images
 just dev up local
 just dev init local
-just images
 ```
 
 #### Example `.stageflow/config.yaml`
