@@ -1,10 +1,35 @@
 # StageFlow
 
-StageFlow is a frontend quality gate for accessibility, performance, SEO,
-links, security headers, social metadata, content quality, and agent-driven
-navigation checks. It gives developers a CLI-first workflow, a hosted report UI
-at `stageflow.org`, and a self-hostable Podman stack for teams that want to run
-the whole system themselves.
+[![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+**▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
+real, interactive report in the browser. No account required.
+
+Reviewing this codebase? The
+[evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
+contracts, SSRF guards, the job FSM, and the test strategy — into a 5–15 minute
+tour.
+
+StageFlow is a self-hostable **frontend quality platform**. It runs eight
+scanners — accessibility, performance, SEO, links, security headers, social
+metadata, content quality, and agent-driven navigation — as one pipeline behind
+a single report contract, and remembers a **baseline per project** so every scan
+can answer the question that matters in CI: *did this change make the frontend
+worse?*
+
+There are three ways to use the platform, all backed by the same API:
+
+- **CLI** — a single Go binary that submits scans to any StageFlow API and
+  streams live results to your terminal or CI, with machine-readable exit codes.
+- **Remote projects** — named projects with promoted baselines and regression
+  diffing, created and driven entirely from the CLI against a local or hosted
+  API. See [docs/remote.md](docs/remote.md).
+- **Hosted + self-host** — a browser report UI at `stageflow.org`, or the
+  identical Podman stack run yourself.
+
+The CLI is a thin client over an HTTP + SSE API: the same binary scans a one-off
+URL, drives a registered project, and gates CI on regressions.
 
 ![StageFlow report overview](docs/images/report-overview.png)
 
@@ -15,7 +40,8 @@ or a CI gate based on issue severity.
 
 Download a release asset from
 [GitHub Releases](https://github.com/mattboback/stageflow/releases), or build
-Ensure `~/.local/bin` is in your `PATH` (or export it for the current session), then build and install:
+from source. To build from source, ensure `~/.local/bin` is on your `PATH` (or
+export it for the current session), then install:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -81,15 +107,42 @@ The report UI is built for triage:
 
 ![StageFlow issue list](docs/images/report-issues.png)
 
+To see the exact shape of a unified report without running a scan, open the
+committed fixture
+[`libs/contracts/report/fixtures/unified-report.v2.all-scans.json`](libs/contracts/report/fixtures/unified-report.v2.all-scans.json)
+— a full multi-scanner report validated against the v2 schema.
+
 Hosted production deployment, monitoring, rollback, and VPS control-plane
 automation are intentionally managed outside this public repository. This repo
 contains the application source, local development stack, and self-hosting
 examples.
 
-## Project Mode
+## Remote Projects & Regression Memory
 
-Project Mode turns the CLI into a repeatable frontend regression loop. It can
-start your dev server, wait for readiness, run a scan, stream progress, stop the
+The platform's headline capability: register a project once, promote a baseline,
+and let every later scan tell you whether the frontend regressed — all from the
+CLI, against a local stack or hosted `stageflow.org`.
+
+```bash
+# Register a project (URLs + scanners) on a StageFlow API.
+stageflow project create marketing-site \
+  --url https://example.com --scanner axe --scanner seo
+
+# Scan it; streams live, then diffs against the promoted baseline.
+stageflow scan --project marketing-site --format json
+
+# Accept a known-good run as the reference point.
+stageflow project promote marketing-site --job-id <job-id>
+```
+
+A project scan exits non-zero when new issues appear or the severity gate trips,
+so it drops straight into CI. The full lifecycle, a CI gate snippet, and auth
+details are in [docs/remote.md](docs/remote.md).
+
+## Project Mode (local dev loop)
+
+Project Mode turns the CLI into a repeatable local regression loop. It can start
+your dev server, wait for readiness, run a scan, stream progress, stop the
 server, and emit JSON that agents or CI jobs can parse.
 
 ```bash
@@ -98,14 +151,15 @@ stageflow project doctor
 stageflow project --format json
 ```
 
-After a project is associated with a hosted StageFlow project, run the hosted
-baseline/diff loop from the same repo:
+When a repo's `.stageflow/config.yaml` declares a hosted project slug, run the
+hosted baseline/diff loop from the same repo without starting a dev server:
 
 ```bash
 stageflow project hosted --format json
 ```
 
-See [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md) for configuration details.
+See [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md) for the config reference and
+[docs/remote.md](docs/remote.md) for the remote project workflow.
 
 ## Self-Host Locally
 
@@ -183,7 +237,7 @@ The AI Navigator is optional and requires `OPENROUTER_API_KEY` when enabled.
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                |
 | `libs/contracts`             | JSON Schema contracts and generated Go/TypeScript types                  |
 | `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples           |
-| `docs`                       | Architecture, Project Mode, configuration, operations, and CLI reference |
+| `docs`                       | Architecture, remote projects, Project Mode, configuration, and CLI reference |
 
 For the system architecture and trust boundaries, start with
 [ARCHITECTURE.md](ARCHITECTURE.md), then read

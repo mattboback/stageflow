@@ -49,7 +49,7 @@ build frontend localhost/stageflow/frontend:latest stageflow/frontend:latest cli
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-http://localhost:3000}" \
   --build-arg VITE_GITHUB_URL="${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}" \
-  --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Podman-native web accessibility scanning platform}" \
+  --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Podman-native web accessibility and quality scanning platform}" \
   --build-arg VITE_AI_NAVIGATOR_DEFAULT_MODEL="${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}"
 
 echo "[images] Building job images..."
