@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scan.completed` timing no longer exceeds the reported `total_ms`
 - Made the platform-api auth-disabled startup warning explicit and unmissable so it cannot be silently overlooked
 - MinIO policy volume mount uses the `:z` SELinux label so local provisioning works on SELinux-enforcing hosts (e.g. Fedora)
+- Web container builds no longer fail prerendering when `VITE_SITE_URL` (or other site vars) arrive as empty build args — blank values now fall back to defaults
 
 ## [0.1.0] - 2026-05-28
 
