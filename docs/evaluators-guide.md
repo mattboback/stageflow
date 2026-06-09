@@ -4,6 +4,13 @@ This guide is for hiring managers, staff+ engineers, and other reviewers who wan
 
 If you have 5–15 minutes, follow the paths below. Each one points to concrete files and directories in this repository.
 
+**Two-minute path, no checkout:** open the live demo at
+[stageflow.org](https://stageflow.org), scan a URL, and explore the report. Then
+open the committed report fixture
+[`libs/contracts/report/fixtures/unified-report.v2.all-scans.json`](../libs/contracts/report/fixtures/unified-report.v2.all-scans.json)
+to see the output contract, and skim the service-topology and trust-boundary
+tables in [`docs/architecture/system.md`](architecture/system.md).
+
 ---
 
 ## 1. Product and Architecture at a Glance
@@ -45,6 +52,7 @@ Highlights:
   - `services/platform-api/README.md` — HTTP boundary, routes, middleware, and dependency map.
   - `services/platform-api/cmd/server/main.go` — process wiring and dependency construction.
   - `services/platform-api/internal/api` — route handlers, middleware, SSRF checks, SSE, and artifact redirects.
+  - `services/platform-api/internal/api/security.go` — the SSRF/private-IP guard, with `security_test.go` and `security_dns_test.go` covering blocked ranges and the DNS-rebinding case.
 
 Highlights:
 
@@ -55,7 +63,7 @@ Highlights:
 ### 2.3 Orchestrator and Job Lifecycle
 
 - Entry points:
-  - `services/orchestrator/internal/domain/jobs` — job model and state machine.
+  - `services/orchestrator/internal/domain/jobs/transitions.go` — the FSM transition rules, with `transitions_test.go` exercising the legal and illegal transitions.
   - `services/orchestrator/internal/application/jobs` — application services and policies.
   - `services/orchestrator/internal/api` — admin API for inspection and tests.
   - `services/orchestrator/test` — E2E-style tests for job flow.

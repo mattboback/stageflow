@@ -3,6 +3,9 @@
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+**▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
+real, interactive report in the browser. No account required.
+
 StageFlow is a self-hostable **frontend quality platform**. It runs eight
 scanners — accessibility, performance, SEO, links, security headers, social
 metadata, content quality, and agent-driven navigation — as one pipeline behind
@@ -98,6 +101,11 @@ The report UI is built for triage:
 - downloads for JSON and HTML report artifacts
 
 ![StageFlow issue list](docs/images/report-issues.png)
+
+To see the exact shape of a unified report without running a scan, open the
+committed fixture
+[`libs/contracts/report/fixtures/unified-report.v2.all-scans.json`](libs/contracts/report/fixtures/unified-report.v2.all-scans.json)
+— a full multi-scanner report validated against the v2 schema.
 
 Hosted production deployment, monitoring, rollback, and VPS control-plane
 automation are intentionally managed outside this public repository. This repo

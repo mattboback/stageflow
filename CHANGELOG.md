@@ -21,11 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Panic recovery on the orchestrator container-monitor goroutine so a monitor panic can no longer crash the process
 - Test coverage for the CLI SSE wire-format parser and the report-aggregator guard paths
 
-### Removed
-
-- Removed the internal AlchemizeCV dogfooding harness, its live integration test, the `dogfood-alchemizecv` justfile recipe, and all documentation references
-- Removed internal, auto-generated `docs/repo-map.md` navigation snapshots and an internal code-quality audit document that are not part of the published project
-
 ### Fixed
 
 - Keep small issue boxes clickable under full-page overlays in the report
