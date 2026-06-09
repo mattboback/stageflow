@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-09
+
 ### Changed
 
 - Consolidated the report UI: the standalone Scanners and page-overview views are merged into the Overview dashboard and a single `VisualReviewPanel` Pages overlay; report sections are now Overview, Issues, Pages, and Downloads
@@ -15,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refreshed all README screenshots against a public demo target (Deque "Mars Commuter"), captured from the consolidated report UI
 - Consolidated the four duplicated orchestrator PostgreSQL test harnesses into a single shared helper that caches the embedded-Postgres binary across runs and honors a `TEST_DATABASE_URL` override for running against an existing database
 - Aligned CI Go version with the `go.mod` toolchain pin (1.26.4)
+- Extracted MinIO bucket/app-user provisioning into a shared `provision.sh` used by every compose overlay
+- Isolated the default local compose stack under its own project and network (`stageflow_dev` / `stageflow_dev_net`)
+- Rewrote the README and remote-projects guide to lead with the platform workflow; added per-service READMEs and an evaluator guide
 
 ### Added
 
@@ -26,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep small issue boxes clickable under full-page overlays in the report
 - `scan.completed` timing no longer exceeds the reported `total_ms`
 - Made the platform-api auth-disabled startup warning explicit and unmissable so it cannot be silently overlooked
+- MinIO policy volume mount uses the `:z` SELinux label so local provisioning works on SELinux-enforcing hosts (e.g. Fedora)
 
 ## [0.1.0] - 2026-05-28
 

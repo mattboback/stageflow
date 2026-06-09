@@ -6,6 +6,11 @@
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
 real, interactive report in the browser. No account required.
 
+Reviewing this codebase? The
+[evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
+contracts, SSRF guards, the job FSM, and the test strategy — into a 5–15 minute
+tour.
+
 StageFlow is a self-hostable **frontend quality platform**. It runs eight
 scanners — accessibility, performance, SEO, links, security headers, social
 metadata, content quality, and agent-driven navigation — as one pipeline behind
