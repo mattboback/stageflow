@@ -17,9 +17,9 @@ Use the local overlay when you want to scan private targets such as `localhost` 
 ```bash
 cp .env.example .env
 just setup
+just images
 just dev up local
 just dev init local
-just images
 ```
 
 `just images` builds the scanner images the stack uses during scans. The first run is the slowest.
