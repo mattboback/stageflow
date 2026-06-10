@@ -79,7 +79,7 @@ func buildProjectUpdateBody(
 	}
 
 	if cmd.Flags().Changed("scanner") {
-		normalizedScanners, normalizeErr := normalizeProjectScannerFlags(scanners)
+		normalizedScanners, normalizeErr := normalizeScannerList(scanners)
 		if normalizeErr != nil {
 			return nil, exitCodeError{Code: 2, Err: normalizeErr}
 		}

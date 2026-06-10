@@ -1,9 +1,9 @@
-## stageflow project doctor
+## stageflow dev doctor
 
-Validate project config and dev readiness without scanning
+Validate the config and dev-server readiness without scanning
 
 ```
-stageflow project doctor [path]
+stageflow dev doctor [path]
 ```
 
 ### Options
@@ -17,12 +17,12 @@ stageflow project doctor [path]
 ### Options inherited from parent commands
 
 ```
-      --api string       API base URL (default "http://localhost:8080")
-      --api-key string   API key
+      --api string       API base URL (env: STAGEFLOW_API_URL) (default "http://localhost:8080")
+      --api-key string   API key (env: STAGEFLOW_API_KEY)
       --format string    Output format: text, markdown, or json (default "text")
 ```
 
 ### SEE ALSO
 
-* [stageflow project](stageflow_project.md)	 - Run Project Mode scan using .stageflow/config.yaml
+* [stageflow dev](stageflow_dev.md)	 - Scan your local dev server from .stageflow/config.yaml
 

@@ -6,7 +6,7 @@
 	import { page } from '$app/state';
 	import FailedView from '$lib/components/scan-status/FailedView.svelte';
 	import ProcessingView from '$lib/components/scan-status/ProcessingView.svelte';
-	import { Alert, PageSection, Panel } from '$lib/components/ui';
+	import { Alert, PageSection, Panel, Skeleton } from '$lib/components/ui';
 	import { buildOccurrenceModeReport, isIssueSortKey } from '$lib/report';
 	import { AlertTriangle, ArrowLeft, Loader2 } from 'lucide-svelte';
 
@@ -163,9 +163,16 @@
 			{jobId}
 			report={displayReport}
 			{job}
-			onJumpToIssues={() =>
+			onJumpToIssues={(severity) =>
 				updateQueryParams(
-					{ section: 'issues', q: null, scanner: null, page: null },
+					{
+						section: 'issues',
+						q: null,
+						scanner: null,
+						page: null,
+						category: null,
+						severity: severity ?? null
+					},
 					{ replaceState: false }
 				)}
 			onJumpToPages={() =>
@@ -225,6 +232,18 @@
 									scanner: scannerId ?? null,
 									page: null,
 									severity: null,
+									category: null
+								},
+								{ replaceState: false }
+							)}
+						onReviewSeverity={(severity) =>
+							updateQueryParams(
+								{
+									section: 'issues',
+									q: null,
+									scanner: null,
+									page: null,
+									severity,
 									category: null
 								},
 								{ replaceState: false }
@@ -312,12 +331,32 @@
 	{:else}
 		<Panel class="shadow-sm" padding="xl" rounded="2xl">
 			<div class="space-y-6">
-				<div class="flex flex-col items-center justify-center gap-4">
-					<Loader2 class="text-accent h-10 w-10 animate-spin" />
-					<p class="text-ink-muted text-lg">Preparing report…</p>
-					{#if status === 'complete'}
-						<p class="text-ink-muted text-sm">Scan complete. Generating aggregated report…</p>
-					{/if}
+				<div class="flex items-center gap-3">
+					<Loader2 class="text-accent h-6 w-6 shrink-0 animate-spin" />
+					<div>
+						<p class="text-ink-muted text-lg">Preparing report…</p>
+						{#if status === 'complete'}
+							<p class="text-ink-muted text-sm">Scan complete. Generating aggregated report…</p>
+						{/if}
+					</div>
+				</div>
+				<!-- Skeleton mirroring the report layout: header score block, stat row, lists -->
+				<div aria-hidden="true" class="space-y-6">
+					<div class="flex items-center gap-4">
+						<div class="bg-surface-muted h-14 w-14 shrink-0 animate-pulse rounded-full"></div>
+						<div class="flex-1">
+							<Skeleton lines={2} />
+						</div>
+					</div>
+					<div class="grid gap-3 sm:grid-cols-4">
+						{#each Array(4) as _, i (i)}
+							<div
+								class="bg-surface-muted h-20 animate-pulse rounded-xl"
+								style={`animation-delay: ${i * 120}ms`}
+							></div>
+						{/each}
+					</div>
+					<Skeleton lines={4} />
 				</div>
 				{#if status !== 'loading' && status !== 'complete'}
 					<ProcessingView result={job} {logs} />

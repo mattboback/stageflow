@@ -1,6 +1,6 @@
 ## stageflow project promote
 
-Set a job as the project baseline
+Promote a scan job to be the project baseline
 
 ```
 stageflow project promote <slug> [flags]
@@ -16,12 +16,12 @@ stageflow project promote <slug> [flags]
 ### Options inherited from parent commands
 
 ```
-      --api string       API base URL (default "http://localhost:8080")
-      --api-key string   API key
+      --api string       API base URL (env: STAGEFLOW_API_URL) (default "http://localhost:8080")
+      --api-key string   API key (env: STAGEFLOW_API_KEY)
       --format string    Output format: text, markdown, or json (default "text")
 ```
 
 ### SEE ALSO
 
-* [stageflow project](stageflow_project.md)	 - Run Project Mode scan using .stageflow/config.yaml
+* [stageflow project](stageflow_project.md)	 - Manage remote projects and scan them against their baselines
 

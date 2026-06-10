@@ -2,6 +2,7 @@
 	import type { UnifiedReport } from '$lib/types/unified-report';
 
 	import { Input, Select } from '$lib/components/ui';
+	import { getSeverityChipClass, getSeverityDotClass } from '$lib/report';
 	import { cn } from '$lib/utils';
 	import { Search, X } from 'lucide-svelte';
 
@@ -158,25 +159,32 @@
 		<legend class="text-ink-faint mb-1 text-[11px] font-semibold tracking-wide uppercase">
 			Severity
 		</legend>
-		{#each SEVERITIES as severity (severity)}
-			{@const count = severityCounts[severity] ?? 0}
-			{@const checked = activeSeverities.includes(severity)}
-			<label
-				class="hover:bg-surface-muted/60 flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1"
-			>
-				<span class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						{checked}
-						disabled={count === 0}
-						onchange={() => toggleSeverity(severity)}
-						class="border-line text-accent focus:ring-accent h-3.5 w-3.5 rounded"
-					/>
-					<span class="text-ink text-xs capitalize">{severity}</span>
-				</span>
-				<span class="text-ink-faint font-mono text-[11px]">{count.toLocaleString()}</span>
-			</label>
-		{/each}
+		<div class="flex flex-wrap gap-1.5" data-testid="severity-chip-filters">
+			{#each SEVERITIES as severity (severity)}
+				{@const count = severityCounts[severity] ?? 0}
+				{@const isActive = activeSeverities.includes(severity)}
+				<button
+					type="button"
+					disabled={count === 0}
+					aria-pressed={isActive}
+					onclick={() => toggleSeverity(severity)}
+					class={cn(
+						getSeverityChipClass(severity, isActive),
+						'gap-1.5',
+						count === 0 && 'cursor-not-allowed opacity-40'
+					)}
+				>
+					<span
+						class={cn(
+							'h-2 w-2 rounded-full',
+							isActive ? 'bg-white/80' : getSeverityDotClass(severity)
+						)}
+					></span>
+					{severity}
+					<span class="font-mono text-[10px] tabular-nums">{count.toLocaleString()}</span>
+				</button>
+			{/each}
+		</div>
 	</fieldset>
 
 	<div class="flex flex-col gap-1.5">

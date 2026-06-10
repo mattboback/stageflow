@@ -7,10 +7,9 @@ import (
 )
 
 type rootOptions struct {
-	apiURL           string
-	apiKey           string
-	outputFormatRaw  string
-	jsonOutputCompat bool
+	apiURL          string
+	apiKey          string
+	outputFormatRaw string
 }
 
 func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
@@ -20,8 +19,15 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:           "stageflow",
-		Short:         "StageFlow CLI",
+		Use:   "stageflow",
+		Short: "StageFlow CLI",
+		Long: "StageFlow CLI — scan web pages for accessibility, performance, and SEO issues.\n\n" +
+			"There are three ways to scan:\n\n" +
+			"  stageflow scan <url>        one-off scan of any URL\n" +
+			"  stageflow dev scan          start your local dev server, then scan it\n" +
+			"  stageflow project scan      scan a registered project and diff its baseline\n\n" +
+			"Exit codes: 0 success, 1 policy failure (--fail-on threshold or regression),\n" +
+			"2 usage or API error.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(*cobra.Command, []string) error {
@@ -37,29 +43,23 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	rootCmd.SetOut(stdout)
 	rootCmd.SetErr(stderr)
 
-	rootCmd.PersistentFlags().StringVar(&opts.apiURL, "api", opts.apiURL, "API base URL")
-	rootCmd.PersistentFlags().StringVar(&opts.apiKey, "api-key", opts.apiKey, "API key")
+	rootCmd.PersistentFlags().StringVar(&opts.apiURL, "api", opts.apiURL, "API base URL (env: STAGEFLOW_API_URL)")
+	rootCmd.PersistentFlags().StringVar(&opts.apiKey, "api-key", opts.apiKey, "API key (env: STAGEFLOW_API_KEY)")
 	rootCmd.PersistentFlags().StringVar(
 		&opts.outputFormatRaw,
 		"format",
 		string(outputFormatText),
 		"Output format: text, markdown, or json",
 	)
-	rootCmd.PersistentFlags().BoolVar(
-		&opts.jsonOutputCompat,
-		"json",
-		false,
-		"Output JSON instead of plain text",
-	)
-	cobra.CheckErr(rootCmd.PersistentFlags().MarkDeprecated("json", "use --format=json instead"))
 
 	rootCmd.AddCommand(newScanCmd(opts))
-	rootCmd.AddCommand(newDiffCmd(opts))
-	rootCmd.AddCommand(newAICmd(opts))
-	rootCmd.AddCommand(newAuthCmd(opts))
+	rootCmd.AddCommand(newDevCmd(opts, getenv))
 	rootCmd.AddCommand(newProjectCmd(opts, getenv))
+	rootCmd.AddCommand(newDiffCmd(opts))
 	rootCmd.AddCommand(newReportCmd(opts))
 	rootCmd.AddCommand(newScannersCmd(opts))
+	rootCmd.AddCommand(newAuthCmd(opts))
+	rootCmd.AddCommand(newAICmd(opts))
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newCompletionCmd())
 	rootCmd.AddCommand(newDocsCmd())
@@ -68,5 +68,5 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 }
 
 func (r *rootOptions) outputFormat() (outputFormat, error) {
-	return normalizeOutputFormat(r.outputFormatRaw, r.jsonOutputCompat)
+	return normalizeOutputFormat(r.outputFormatRaw)
 }

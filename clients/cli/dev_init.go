@@ -13,7 +13,7 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 )
 
-type projectInitEnvelope struct {
+type devInitEnvelope struct {
 	Schema      string   `json:"schema"`
 	ProjectRoot string   `json:"projectRoot"`
 	ConfigPath  string   `json:"configPath"`
@@ -103,7 +103,7 @@ func printProjectBootstrapHelp(
 		relGuidePath = guidePath
 	}
 
-	fmt.Fprintln(out, "Created StageFlow project bootstrap:")
+	fmt.Fprintln(out, "Created StageFlow dev-loop bootstrap:")
 	fmt.Fprintf(out, "- %s\n", configPath)
 	fmt.Fprintf(out, "- %s\n\n", guidePath)
 	fmt.Fprintln(out, "Next steps:")
@@ -115,7 +115,7 @@ func printProjectBootstrapHelp(
 	fmt.Fprintln(out, "3. For localhost/private target scans, run your local StageFlow stack:")
 	fmt.Fprintln(out, "   - just dev up local")
 	fmt.Fprintln(out, "   - just dev init local")
-	fmt.Fprintln(out, "4. Re-run: stageflow project")
+	fmt.Fprintln(out, "4. Re-run: stageflow dev scan")
 }
 
 func hasScaffoldPlaceholderDevCommand(cfg projectConfig) bool {
@@ -142,13 +142,13 @@ func ensureProjectConfigReady(projectRoot string, cfgPath string, cfg projectCon
 	)
 }
 
-func writeProjectInitJSON(
+func writeDevInitJSON(
 	out io.Writer,
 	projectRoot, configPath, guidePath string,
 	created bool,
 ) error {
-	payload := projectInitEnvelope{
-		Schema:      "stageflow-cli/project-init@v1",
+	payload := devInitEnvelope{
+		Schema:      "stageflow-cli/dev-init@v1",
 		ProjectRoot: projectRoot,
 		ConfigPath:  configPath,
 		GuidePath:   guidePath,
@@ -156,9 +156,9 @@ func writeProjectInitJSON(
 		NextSteps: []string{
 			"Read .stageflow/README.md.",
 			"Update dev.start.cmd, dev.ready.url, and scan.urls in .stageflow/config.yaml.",
-			"Optional: set stageflow.remote_project and stageflow.remote_api_url for the hosted regression-memory step.",
+			"Optional: set stageflow.project to link a remote project for baseline diffs.",
 			"For localhost/private scans, start the local StageFlow stack with just dev up local and just dev init local.",
-			"Run stageflow project doctor, then stageflow project.",
+			"Run stageflow dev doctor, then stageflow dev scan.",
 		},
 	}
 
@@ -176,7 +176,7 @@ func cobraFlagChanged(cmd *cobra.Command, name string) bool {
 
 	return false
 }
-func runProjectInitCommand(
+func runDevInitCommand(
 	cmd *cobra.Command,
 	args []string,
 	root *rootOptions,
@@ -203,7 +203,7 @@ func runProjectInitCommand(
 
 	if !created {
 		if format == outputFormatJSON {
-			return writeProjectInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, false)
+			return writeDevInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, false)
 		}
 
 		fmt.Fprintln(cmd.OutOrStdout(), "StageFlow project bootstrap already exists:")
@@ -214,7 +214,7 @@ func runProjectInitCommand(
 	}
 
 	if format == outputFormatJSON {
-		return writeProjectInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, true)
+		return writeDevInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, true)
 	}
 
 	printProjectBootstrapHelp(cmd.OutOrStdout(), projectRoot, configPath, guidePath)

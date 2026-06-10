@@ -27,7 +27,7 @@ func runCommandSteps(ctx context.Context, projectRoot string, steps [][]string, 
 
 		fmt.Fprintf(stderr, "[dev] running: %s\n", strings.Join(step, " "))
 
-		//nolint:gosec // Project Mode executes repo-provided commands; config is trusted input.
+		//nolint:gosec // dev scan executes repo-provided commands; config is trusted input.
 		cmd := exec.CommandContext(ctx, step[0], step[1:]...)
 		cmd.Dir = projectRoot
 		cmd.Env = os.Environ()
@@ -60,7 +60,7 @@ func startDevServer(
 		}
 	}
 
-	//nolint:gosec // Project Mode executes repo-provided commands; config is trusted input.
+	//nolint:gosec // dev scan executes repo-provided commands; config is trusted input.
 	cmd := exec.CommandContext(ctx, cfg.Cmd[0], cfg.Cmd[1:]...)
 	cmd.Dir = dir
 	cmd.Env = mergeEnv(os.Environ(), cfg.Env)

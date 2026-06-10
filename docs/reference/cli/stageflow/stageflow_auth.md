@@ -17,8 +17,8 @@ See docs/architecture/system.md#authenticated-scanning for the design and trust 
 ### Options inherited from parent commands
 
 ```
-      --api string       API base URL (default "http://localhost:8080")
-      --api-key string   API key
+      --api string       API base URL (env: STAGEFLOW_API_URL) (default "http://localhost:8080")
+      --api-key string   API key (env: STAGEFLOW_API_KEY)
       --format string    Output format: text, markdown, or json (default "text")
 ```
 

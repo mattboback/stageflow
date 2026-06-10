@@ -180,24 +180,3 @@ func TestNormalizeTargets(t *testing.T) {
 		})
 	}
 }
-
-func TestParseModules(t *testing.T) {
-	got, err := ParseModules("a, b ,c")
-	if err != nil || !reflect.DeepEqual(got, []string{"a", "b", "c"}) {
-		t.Fatalf("ParseModules happy = %v %v", got, err)
-	}
-
-	_, emptyEntryErr := ParseModules("a,,b")
-	if emptyEntryErr == nil {
-		t.Fatalf("ParseModules empty entry should error")
-	}
-
-	emptyModules, emptyModulesErr := ParseModules("")
-	if emptyModulesErr != nil {
-		t.Fatalf("ParseModules empty err = %v", emptyModulesErr)
-	}
-
-	if emptyModules != nil {
-		t.Fatalf("ParseModules empty should be nil, got %v", emptyModules)
-	}
-}

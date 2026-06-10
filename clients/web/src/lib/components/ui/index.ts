@@ -44,6 +44,7 @@ export { default as SelectField } from './SelectField.svelte';
 export { selectVariants, type SelectSize } from './select';
 export { default as Score } from './Score.svelte';
 export { default as Separator } from './Separator.svelte';
+export { default as Skeleton } from './Skeleton.svelte';
 export { default as SeverityBar } from './SeverityBar.svelte';
 export { default as StatusPill, type StatusPillTone } from './StatusPill.svelte';
 export { default as Tabs } from './Tabs.svelte';

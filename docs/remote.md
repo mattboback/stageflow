@@ -9,7 +9,7 @@ answer the question that actually matters in CI: *did this change make the
 frontend worse?*
 
 This guide covers the remote/platform workflow. For the local dev-server loop
-(`stageflow project`), see [PROJECT_MODE.md](PROJECT_MODE.md).
+(`stageflow dev`), see [dev-mode.md](dev-mode.md).
 
 ## The mental model
 
@@ -58,7 +58,7 @@ scanners. `--name` defaults to the slug.
 ### 2. Run a project scan
 
 ```bash
-stageflow scan --project marketing-site
+stageflow project scan marketing-site
 ```
 
 This submits a job built from the project's stored URLs and scanners, streams
@@ -68,7 +68,7 @@ a pass/fail decision (`passed`, `severityFailed`, `regressed`), the full report,
 and the diff:
 
 ```bash
-stageflow scan --project marketing-site --format json
+stageflow project scan marketing-site --format json
 ```
 
 ### 3. Promote a baseline
@@ -79,7 +79,7 @@ Pick a known-good job and make it the reference:
 stageflow project promote marketing-site --job-id <job-id>
 ```
 
-Every subsequent `scan --project` is now diffed against it. Re-promote whenever
+Every subsequent `project scan` is now diffed against it. Re-promote whenever
 you want to accept a new baseline.
 
 ### 4. Inspect and maintain
@@ -94,27 +94,28 @@ stageflow project delete marketing-site
 `update` flags replace the corresponding field wholesale: `--url` replaces all
 URLs, `--scanner` replaces all scanners.
 
-## From a repository: `stageflow project hosted`
+## From a repository: slug-free `stageflow project scan`
 
-If a repo has a `.stageflow/config.yaml` that declares a `remote_project` slug,
-`stageflow project hosted` runs that hosted project **without** starting a local
-dev server, then reports the regression diff:
+If a repo has a `.stageflow/config.yaml` that declares a `project` slug,
+`stageflow project scan` with no argument scans that project **without**
+starting a local dev server, then reports the regression diff:
 
 ```yaml
 # .stageflow/config.yaml
+version: 2
 stageflow:
-  remote_project: marketing-site
-  remote_api_url: https://stageflow.org   # optional; falls back to api_url
+  project: marketing-site
+  api_url: https://stageflow.org
 ```
 
 ```bash
-stageflow project hosted --format json
+stageflow project scan --format json
 ```
 
-This is the bridge between local Project Mode and the hosted platform: the local
-loop (`stageflow project`) gives you fast validation against your dev server,
-while `project hosted` asks the hosted API for baseline and regression memory.
-See [PROJECT_MODE.md](PROJECT_MODE.md) for the config reference.
+This is the bridge between the local dev loop and the platform: `stageflow dev scan`
+gives you fast validation against your dev server, while `stageflow project scan`
+asks the API for baseline and regression memory.
+See [dev-mode.md](dev-mode.md) for the config reference.
 
 ## Gating CI on regressions
 
@@ -132,7 +133,7 @@ Exit codes are machine-readable, so a project scan is a one-line gate:
   env:
     STAGEFLOW_API_URL: https://stageflow.org
     STAGEFLOW_API_KEY: ${{ secrets.STAGEFLOW_API_KEY }}
-  run: stageflow scan --project marketing-site --fail-on serious
+  run: stageflow project scan marketing-site --fail-on serious
 ```
 
 The job fails if the deploy introduced new serious-or-worse issues, or if the
@@ -143,7 +144,7 @@ report regressed against the promoted baseline.
 - Private/loopback targets (`localhost`, `127.0.0.1`, RFC1918) are rejected
   against a non-loopback API unless the API explicitly runs in private-target
   mode. Configure auth on the remote project rather than passing `--auth-state`
-  to `scan --project`.
+  (a `stageflow scan` flag) — `project scan` does not accept auth flags.
 - When the API enforces authentication, supply `--api-key` or `STAGEFLOW_API_KEY`.
 - The hosted `stageflow.org` API runs the same application code as this repo;
   self-host the identical stack with the [local instructions](../README.md#self-host-locally).

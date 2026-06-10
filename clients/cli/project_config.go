@@ -23,15 +23,14 @@ type projectConfig struct {
 }
 
 type projectStageflowCfg struct {
-	APIURL        string `yaml:"api_url"`
-	APIKeyEnv     string `yaml:"api_key_env"`
-	RemoteProject string `yaml:"remote_project"`
-	RemoteAPIURL  string `yaml:"remote_api_url"`
+	APIURL    string `yaml:"api_url"`
+	APIKeyEnv string `yaml:"api_key_env"`
+	Project   string `yaml:"project"`
 }
 
 type projectScanCfg struct {
 	URLs                []string `yaml:"urls"`
-	Scanners            string   `yaml:"scanners"`
+	Scanners            []string `yaml:"scanners"`
 	Screenshot          *bool    `yaml:"screenshot"`
 	AllowPrivateTargets *bool    `yaml:"allow_private_targets"`
 	Timeout             string   `yaml:"timeout"`
@@ -204,8 +203,8 @@ func defaultProjectGuideTemplate() string {
 }
 
 func validateProjectConfig(cfg projectConfig) error {
-	if cfg.Version != 1 {
-		return fmt.Errorf("version must be 1 (got %d)", cfg.Version)
+	if cfg.Version != 2 {
+		return fmt.Errorf("version must be 2 (got %d)", cfg.Version)
 	}
 
 	if len(cfg.Scan.URLs) == 0 {
@@ -258,11 +257,24 @@ func validateProjectConfig(cfg projectConfig) error {
 		}
 	}
 
-	if err := validateOptionalHTTPURL("stageflow.remote_api_url", cfg.Stageflow.RemoteAPIURL); err != nil {
-		return err
+	return validateOptionalHTTPURL("stageflow.api_url", cfg.Stageflow.APIURL)
+}
+
+// validateProjectScanConfig checks only what `stageflow project scan` needs
+// from .stageflow/config.yaml: a remote project slug. The dev-loop fields
+// required by validateProjectConfig may be absent in a remote-only config.
+func validateProjectScanConfig(cfg projectConfig) error {
+	if cfg.Version != 2 {
+		return fmt.Errorf("version must be 2 (got %d)", cfg.Version)
 	}
 
-	return nil
+	if strings.TrimSpace(cfg.Stageflow.Project) == "" {
+		return errors.New(
+			"stageflow.project is not set; pass a slug (`stageflow project scan <slug>`) or set it",
+		)
+	}
+
+	return validateOptionalHTTPURL("stageflow.api_url", cfg.Stageflow.APIURL)
 }
 
 func validateOptionalHTTPURL(fieldName string, raw string) error {

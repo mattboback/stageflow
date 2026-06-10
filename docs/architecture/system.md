@@ -669,7 +669,7 @@ Client ──POST /api/v1/jobs/zip──► Platform API
 ### CLI Scan Flow
 
 ```
-stageflow scan https://example.com --scanners axe,seo --format json --fail-on serious
+stageflow scan https://example.com --scanner axe,seo --format json --fail-on serious
      │
      ├─ 1. Normalize URLs, validate private targets
      │     (auto-enable --allow-private-targets if localhost detected)
@@ -696,10 +696,10 @@ stageflow scan https://example.com --scanners axe,seo --format json --fail-on se
            → Exit 1 if issues meet/exceed threshold
 ```
 
-### CLI Project Mode Flow
+### CLI Dev-Loop Flow
 
 ```
-stageflow project [path]
+stageflow dev scan [path]
      │
      ├─ 1. Resolve project root (git repo root)
      ├─ 2. Load or bootstrap .stageflow/config.yaml
@@ -722,7 +722,7 @@ stageflow project [path]
 ### Remote Project Scan Flow
 
 ```
-stageflow scan --project my-app --format json
+stageflow project scan my-app --format json
      │
      ├─ 1. GET /api/v1/projects/my-app
      │     → Resolve: URLs, scanners, baseline_job_id
@@ -1777,7 +1777,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 │                    Production VPS                                 │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │         Podman Compose (stageflow project)                │   │
+│  │         Podman Compose (stageflow dev scan)                │   │
 │  │                                                          │   │
 │  │  Same services, NO host ports exposed by compose         │   │
 │  │  Internal ports: API 8100, MinIO 9100, Grafana 3101,     │   │

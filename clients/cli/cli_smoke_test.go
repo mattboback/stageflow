@@ -87,8 +87,9 @@ func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 	data, err := os.ReadFile(readmePath)
 	requireNoErr(t, err)
 
-	if !strings.Contains(string(data), "scanners: "+defaultScanScanners) {
-		t.Fatalf("expected %s to contain current default scanner list %q", readmePath, defaultScanScanners)
+	scannerListYAML := "scanners: [" + strings.Join(defaultScanScannerList(), ", ") + "]"
+	if !strings.Contains(string(data), scannerListYAML) {
+		t.Fatalf("expected %s to contain current default scanner list %q", readmePath, scannerListYAML)
 	}
 }
 
@@ -112,7 +113,7 @@ func TestRepoProjectBootstrapSuggestionUsesLocalSelfScanDefaults(t *testing.T) {
 	}
 }
 
-func TestCLIProjectCommandsSmoke(t *testing.T) {
+func TestCLIDevCommandsSmoke(t *testing.T) {
 	root := t.TempDir()
 
 	err := os.WriteFile(filepath.Join(root, "justfile"), []byte("run SERVICE:\n\t@true\n"), 0o600)
@@ -131,12 +132,12 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 	err = os.WriteFile(filepath.Join(root, "clients", "web", "vite.config.ts"), []byte("export default {}\n"), 0o600)
 	requireNoErr(t, err)
 
-	stdout, stderr, exitCode := runCLI(t, "stageflow", "project", "init", root)
+	stdout, stderr, exitCode := runCLI(t, "stageflow", "dev", "init", root)
 	if exitCode != 0 {
 		t.Fatalf("exitCode=%d stderr=%q", exitCode, stderr)
 	}
 
-	if !strings.Contains(stdout, "Created StageFlow project bootstrap") {
+	if !strings.Contains(stdout, "Created StageFlow dev-loop bootstrap") {
 		t.Fatalf("unexpected init output: %q", stdout)
 	}
 
@@ -153,7 +154,7 @@ func TestCLIProjectCommandsSmoke(t *testing.T) {
 	}
 }
 
-func TestCLIProjectDoctorRepoSmoke(t *testing.T) {
+func TestCLIDevDoctorRepoSmoke(t *testing.T) {
 	repoDir := os.Getenv("STAGEFLOW_TEST_REPO_DIR")
 	if repoDir == "" {
 		t.Skip("skipping: set STAGEFLOW_TEST_REPO_DIR to the repo root")
@@ -166,7 +167,7 @@ func TestCLIProjectDoctorRepoSmoke(t *testing.T) {
 	cleanup := withWorkingDir(t, repoDir)
 	defer cleanup()
 
-	stdout, stderr, exitCode := runCLI(t, "stageflow", "project", "doctor", "--skip-dev")
+	stdout, stderr, exitCode := runCLI(t, "stageflow", "dev", "doctor", "--skip-dev")
 	if exitCode != 0 {
 		t.Fatalf("exitCode=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
 	}
@@ -232,8 +233,8 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 		server.URL,
 		"--format",
 		"json",
+		"project",
 		"scan",
-		"--project",
 		"demo-site",
 		"--no-stream",
 		"--summary-only",
@@ -269,16 +270,18 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 	requireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
 }
 
-func TestCLIProjectHostedJSONEnvelope(t *testing.T) {
+func TestCLIProjectScanFromConfigJSONEnvelope(t *testing.T) {
 	server, jobID := newCLIProjectScanAPIServer(t)
 	defer server.Close()
 
 	root := t.TempDir()
-	writeProjectConfig(t, root, `version: 1
+	writeProjectConfig(t, root, `version: 2
 stageflow:
-  remote_project: demo-site
-  remote_api_url: https://hosted.stageflow.example
+  project: demo-site
 `)
+
+	cleanup := withWorkingDir(t, root)
+	defer cleanup()
 
 	stdout, stderr, exitCode := runCLI(
 		t,
@@ -288,21 +291,20 @@ stageflow:
 		"--format",
 		"json",
 		"project",
-		"hosted",
+		"scan",
 		"--no-stream",
 		"--summary-only",
-		root,
 	)
 	if exitCode != 1 {
 		t.Fatalf("exitCode=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
 	}
 
-	if !strings.Contains(stderr, "Using project config:") {
-		t.Fatalf("unexpected hosted stderr: %q", stderr)
+	if !strings.Contains(stderr, `Using project "demo-site" from`) {
+		t.Fatalf("unexpected project scan stderr: %q", stderr)
 	}
 
 	if !strings.Contains(stderr, "Waiting for completion") {
-		t.Fatalf("unexpected hosted stderr: %q", stderr)
+		t.Fatalf("unexpected project scan stderr: %q", stderr)
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(stdout))

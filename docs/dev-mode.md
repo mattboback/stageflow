@@ -1,30 +1,31 @@
-# StageFlow Project Mode
+# StageFlow Dev Mode
 
-Project Mode integrates StageFlow scans directly into your local development
-workflow.
+`stageflow dev` integrates StageFlow scans directly into your local
+development workflow.
 
-Instead of manually starting your app and then running scans, Project Mode
+Instead of manually starting your app and then running scans, `stageflow dev scan`
 automates the full lifecycle: start the dev server, wait for readiness, run the
 StageFlow scanners, stream the results, and shut the dev server down when the
 scan finishes.
 
 If you need the bigger picture first, start with the [repository README](../README.md), the [CLI README](../clients/cli/README.md), or the [CLI cheatsheet](operations/cli_cheatsheet.md).
 
-## Local Project Mode vs. remote projects
+## The dev loop vs. remote projects
 
-This document covers **local Project Mode**:
+This document covers the **local dev loop**:
 
-- `stageflow project`
-- `stageflow project init`
-- `stageflow project doctor`
+- `stageflow dev init`
+- `stageflow dev doctor`
+- `stageflow dev scan`
 
 These commands use a local `.stageflow/config.yaml` to start your dev server, scan it, and stop it again.
 
-That same config can now also declare an optional hosted project association so
-the local loop knows which remote project to use for the later baseline-memory
-step.
+That same config can also declare an optional remote project link
+(`stageflow.project`) so the follow-up baseline step knows which remote
+project to scan.
 
-The StageFlow CLI also supports **remote project management**:
+The StageFlow CLI separately supports **remote project management** under
+`stageflow project`:
 
 - `stageflow project create`
 - `stageflow project list`
@@ -32,12 +33,13 @@ The StageFlow CLI also supports **remote project management**:
 - `stageflow project update`
 - `stageflow project delete`
 - `stageflow project promote`
+- `stageflow project scan`
 
-Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same execution context: `stageflow project` is still local dev-server scanning, while `stageflow scan --project ...` is still the hosted baseline/regression-memory step. The remote project lifecycle — create, scan, promote a baseline, diff for regressions, and gate CI — is documented in full in [docs/remote.md](remote.md).
+Those commands manage named project records on a running StageFlow API for baselines and regression tracking. They are related, but they are not the same execution context: `stageflow dev scan` is local dev-server scanning, while `stageflow project scan` is the remote baseline/regression-memory step. The remote project lifecycle — create, scan, promote a baseline, diff for regressions, and gate CI — is documented in full in [docs/remote.md](remote.md).
 
 ## Prerequisites
 
-Before using Project Mode, you need:
+Before using the dev loop, you need:
 
 1. The `stageflow` CLI installed.
 2. A running local StageFlow stack configured to allow private target scans (like `127.0.0.1` or `localhost`).
@@ -55,7 +57,7 @@ _Note: The `local` environment flag is crucial. It tells the Platform API to per
 
 `just images` builds the scanner images used by local runs. On a fresh setup it can take a while, so treat it as part of environment setup rather than a per-scan command.
 
-After the local overlay is up, run `stageflow project init` to scaffold a `.stageflow/config.yaml`, then `stageflow project doctor .` to verify wiring before running a scan.
+After the local overlay is up, run `stageflow dev init` to scaffold a `.stageflow/config.yaml`, then `stageflow dev doctor .` to verify wiring before running a scan.
 
 If you are integrating StageFlow into an automated agent workflow, both commands
 also support `--format json` so setup and readiness checks can be consumed as
@@ -63,11 +65,11 @@ structured terminal output instead of scraped from text.
 
 ## Initialization
 
-To set up Project Mode for your web app, navigate to your project's root directory and run:
+To set up the dev loop for your web app, navigate to your project's root directory and run:
 
 ```bash
-stageflow project init
-stageflow project init --format json
+stageflow dev init
+stageflow dev init --format json
 ```
 
 This command inspects your project (looking for `package.json`, `Justfile`,
@@ -77,17 +79,16 @@ etc.) and creates a configuration directory containing:
 - `.stageflow/README.md` (A quick-start guide)
 
 If StageFlow cannot infer a startup command, the generated config keeps a
-placeholder for `dev.start.cmd`. Replace it before running `stageflow project`.
+placeholder for `dev.start.cmd`. Replace it before running `stageflow dev scan`.
 
-If you already have a hosted project registered on a StageFlow API, keep its
-slug in the generated config as the optional `stageflow.remote_project`
-association. Add `stageflow.remote_api_url` when the hosted project lives on a
-different API base URL. That link powers `stageflow project hosted` and surfaces
-in `stageflow project doctor --format json`.
+If you already have a project registered on a StageFlow API, keep its slug in
+the generated config as the optional `stageflow.project` link. That link powers
+`stageflow project scan` (run with no slug) and surfaces in
+`stageflow dev doctor --format json`.
 
 If you run the command from a subdirectory, StageFlow resolves the git root first and creates `.stageflow/` there so the config stays attached to the repository instead of one nested folder.
 
-If you only need copy/paste command examples, the [CLI cheatsheet](operations/cli_cheatsheet.md#5-project-mode) is the shortest companion doc.
+If you only need copy/paste command examples, the [CLI cheatsheet](operations/cli_cheatsheet.md#4-the-dev-loop) is the shortest companion doc.
 
 ## Configuration (`.stageflow/config.yaml`)
 
@@ -96,18 +97,17 @@ The generated `config.yaml` file controls how StageFlow interacts with your proj
 Here is an example configuration:
 
 ```yaml
-version: 1
+version: 2
 
 stageflow:
   api_url: "http://localhost:8080"
-  remote_project: "my-frontend" # Optional hosted project slug for follow-up remote scans
-  remote_api_url: "https://stageflow.org" # Optional hosted API for the remote project
+  project: "my-frontend" # Optional remote project slug for `stageflow project scan`
 
 scan:
   # Set this to the page URLs your dev server serves.
   urls:
     - http://127.0.0.1:5173
-  scanners: axe,lighthouse,seo,link-checker
+  scanners: [axe, lighthouse, seo, link-checker]
   allow_private_targets: true
 
 dev:
@@ -126,13 +126,12 @@ dev:
 
 - `api_url`: The URL of your StageFlow Platform API (defaults to `http://localhost:8080`).
 - `api_key_env`: (Optional) The name of the environment variable containing your StageFlow API key, if authentication is required.
-- `remote_project`: (Optional for local mode, required for hosted mode) Hosted project slug associated with this repo. `stageflow project hosted` uses it to run the registered project against the configured remote API.
-- `remote_api_url`: (Optional) Hosted API base URL for that remote project when it differs from the local Project Mode API.
+- `project`: (Optional) Remote project slug associated with this repo. `stageflow project scan` (run with no slug) uses it to scan the registered project against its baseline.
 
 #### `scan`
 
 - `urls`: A list of URLs to scan. These should point to your local dev server (e.g., `http://127.0.0.1:5173`).
-- `scanners`: A comma-separated list of scanners to run (e.g., `axe,lighthouse,seo,link-checker`).
+- `scanners`: A list of scanners to run (e.g., `[axe, lighthouse, seo, link-checker]`).
 - `screenshot`: (Optional) Boolean indicating whether to capture screenshots during the scan.
 - `allow_private_targets`: Must be `true` when scanning local addresses like `127.0.0.1`.
 - `timeout`: (Optional) The maximum duration for the scan (e.g., `5m`).
@@ -155,7 +154,7 @@ dev:
 Once configured, you can run a full scan cycle by simply executing:
 
 ```bash
-stageflow project
+stageflow dev scan
 ```
 
 When you run this command, StageFlow will:
@@ -171,19 +170,18 @@ Recommended terminal-first loop:
 
 ```bash
 # Local edit / validate / scan loop
-stageflow project doctor --format json
-stageflow project --format json
+stageflow dev doctor --format json
+stageflow dev scan --format json
 
-# Follow-up hosted baseline-memory step
-stageflow project hosted --format json
+# Follow-up remote baseline-memory step
+stageflow project scan --format json
 ```
 
-If `.stageflow/config.yaml` includes `stageflow.remote_project`,
-`stageflow project hosted` skips the dev-server lifecycle and scans the hosted
-project through `stageflow.remote_api_url` or `stageflow.api_url`. The local and
-hosted runs remain separate on purpose: the first is fast local validation
-against your dev server, the second asks the hosted API for baseline and
-regression memory.
+If `.stageflow/config.yaml` includes `stageflow.project`,
+`stageflow project scan` (with no slug) skips the dev-server lifecycle and
+scans the registered project. The local and remote runs remain separate on
+purpose: the first is fast local validation against your dev server, the
+second asks the API for baseline and regression memory.
 
 ## Troubleshooting and Validation
 
@@ -191,20 +189,20 @@ If you are unsure whether your configuration is correct, use the `doctor`
 command:
 
 ```bash
-stageflow project doctor
-stageflow project doctor --skip-dev
-stageflow project doctor --format json
+stageflow dev doctor
+stageflow dev doctor --skip-dev
+stageflow dev doctor --format json
 ```
 
-`stageflow project doctor` will:
+`stageflow dev doctor` will:
 
 - Validate your `config.yaml` syntax and structure.
 - Verify that the StageFlow API is reachable.
 - Start your dev server, wait for the readiness URL to respond, and then shut it down **without** actually running a scan.
 
-With `--format json`, doctor also reports the hosted project association when
-one is configured, which makes it easier for agents to carry the local result
-into the follow-up `stageflow scan --project ...` step.
+With `--format json`, doctor also reports the linked remote project when one
+is configured, which makes it easier for agents to carry the local result into
+the follow-up `stageflow project scan` step.
 
 This is the best way to debug issues with your `dev.start.cmd` or `dev.ready.url`.
 

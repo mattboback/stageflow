@@ -11,28 +11,6 @@ import (
 	"strings"
 )
 
-// ParseModules splits a comma-separated scanner list into a normalized slice,
-// rejecting empty entries.
-func ParseModules(raw string) ([]string, error) {
-	if strings.TrimSpace(raw) == "" {
-		return nil, nil
-	}
-
-	modules := strings.Split(raw, ",")
-
-	parsed := make([]string, 0, len(modules))
-	for _, item := range modules {
-		trimmed := strings.TrimSpace(item)
-		if trimmed == "" {
-			return nil, errors.New("scanner list contains an empty module name")
-		}
-
-		parsed = append(parsed, trimmed)
-	}
-
-	return parsed, nil
-}
-
 // NormalizeTargets validates and normalizes raw scan target URLs. Bare hosts
 // are prefixed with http:// to keep parity with the original CLI behavior.
 func NormalizeTargets(raw []string) ([]string, error) {

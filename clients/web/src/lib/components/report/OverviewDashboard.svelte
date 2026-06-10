@@ -1,11 +1,12 @@
 <script lang="ts">
 	import type { UnifiedReport } from '$lib/types/unified-report';
 
-	import { Panel, chipVariants } from '$lib/components/ui';
+	import { Panel, SeverityBar, chipVariants } from '$lib/components/ui';
 	import {
 		formatScannerStatus,
 		getScannerStatusTone,
 		getSeverityDotClass,
+		isManualReviewIssue,
 		severityRank
 	} from '$lib/report';
 	import { cn } from '$lib/utils';
@@ -13,15 +14,17 @@
 
 	import LighthouseSummary from './LighthouseSummary.svelte';
 	import SeverityBreakdown from './SeverityBreakdown.svelte';
+	import SeverityDonut from './SeverityDonut.svelte';
 
 	interface Props {
 		report: UnifiedReport;
 		onSelectPage: (pageId: string) => void;
 		onSelectScanner: (scannerId: string) => void;
 		onSearchIssues: (query: string, scannerId?: string) => void;
+		onReviewSeverity?: (severity: string) => void;
 	}
 
-	let { report, onSelectPage, onSelectScanner, onSearchIssues }: Props = $props();
+	let { report, onSelectPage, onSelectScanner, onSearchIssues, onReviewSeverity }: Props = $props();
 
 	const topPages = $derived(
 		[...report.pages].sort((a, b) => b.issueCount - a.issueCount).slice(0, 5)
@@ -58,6 +61,35 @@
 	});
 
 	const riskTone = $derived(distinctIssueCount === 0 ? 'success' : 'info');
+
+	// The triage sentence: fix the worst bucket first, recognize repeated
+	// patterns as one fix, and park manual checks for later.
+	const urgent = $derived.by(() => {
+		const critical = report.summary.bySeverity?.critical ?? 0;
+		if (critical > 0) return { severity: 'critical', count: critical };
+		const serious = report.summary.bySeverity?.serious ?? 0;
+		if (serious > 0) return { severity: 'serious', count: serious };
+		return null;
+	});
+
+	const repeatStats = $derived.by(() => {
+		const counts = new Map<string, number>();
+		for (const issue of report.issues) {
+			const key = `${issue.scanner}::${issue.ruleId}`;
+			counts.set(key, (counts.get(key) ?? 0) + 1);
+		}
+		let repeats = 0;
+		let patterns = 0;
+		for (const count of counts.values()) {
+			if (count > 1) {
+				patterns += 1;
+				repeats += count - 1;
+			}
+		}
+		return { repeats, patterns };
+	});
+
+	const manualCount = $derived(report.issues.filter(isManualReviewIssue).length);
 
 	const topRules = $derived.by(() => {
 		const counts: Record<
@@ -149,7 +181,8 @@
 		return 'warn';
 	});
 	const topPage = $derived(topPages[0] ?? null);
-	const topRule = $derived(topRules[0] ?? null);
+
+	const hasLighthouse = $derived((report.summary.lighthouseCategories?.length ?? 0) > 0);
 
 	function getStatusIcon(status: string) {
 		switch (status) {
@@ -178,20 +211,18 @@
 	}
 </script>
 
-{#snippet summaryCard(title: string, value: number | string, tone?: 'warn' | 'danger' | null)}
-	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
-		<div class="flex min-h-24 flex-col justify-between gap-2">
-			<p class="text-ink-faint text-xs font-semibold tracking-wide uppercase">{title}</p>
-			<p
-				class={cn(
-					'text-3xl leading-none font-bold',
-					tone === 'danger' ? 'text-red-600' : tone === 'warn' ? 'text-amber-600' : 'text-ink'
-				)}
-			>
-				{value}
-			</p>
-		</div>
-	</Panel>
+{#snippet miniStat(title: string, value: number | string, tone?: 'warn' | 'danger' | null)}
+	<div>
+		<p class="text-ink-faint text-[10px] font-semibold tracking-wide uppercase">{title}</p>
+		<p
+			class={cn(
+				'mt-0.5 font-mono text-xl leading-none font-bold tabular-nums',
+				tone === 'danger' ? 'text-red-600' : tone === 'warn' ? 'text-amber-600' : 'text-ink'
+			)}
+		>
+			{value}
+		</p>
+	</div>
 {/snippet}
 
 {#snippet scannerRow(scanner: UnifiedReport['scanners'][number])}
@@ -250,62 +281,8 @@
 	</div>
 {/snippet}
 
-<div class="space-y-6">
-	<Panel class="ring-line/70 shadow-sm ring-1" padding="md" rounded="2xl">
-		<div class="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-			<div class="border-line bg-surface-muted/40 rounded-2xl border p-4">
-				<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">Summary</p>
-				<p class="text-ink mt-2 text-sm font-semibold">{riskSummary}</p>
-				<div class="mt-4 flex flex-wrap gap-2">
-					<button
-						onclick={() => onSearchIssues('', undefined)}
-						class="bg-accent hover:bg-accent/90 rounded-xl px-3 py-2 text-sm font-semibold text-white transition"
-					>
-						Open issue list
-					</button>
-					{#if topPage}
-						<button
-							onclick={() => onSelectPage(topPage.id)}
-							class="border-line bg-surface text-ink hover:bg-surface-muted rounded-xl border px-3 py-2 text-sm font-semibold transition"
-						>
-							Inspect most-affected page
-						</button>
-					{/if}
-				</div>
-			</div>
-			<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-				{#if topRule}
-					<button
-						onclick={() => onSearchIssues(topRule.ruleId, topRule.scanner)}
-						class="border-line hover:border-accent/40 hover:bg-surface-muted rounded-2xl border p-4 text-left transition"
-					>
-						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">
-							Top recurring rule
-						</p>
-						<p class="text-ink mt-2 text-sm font-semibold">{topRule.title}</p>
-						<p class="text-ink-muted mt-1 text-xs">
-							{topRule.scanner} · {topRule.count} occurrences
-						</p>
-					</button>
-				{/if}
-				{#if topPage}
-					<button
-						onclick={() => onSelectPage(topPage.id)}
-						class="border-line hover:border-accent/40 hover:bg-surface-muted rounded-2xl border p-4 text-left transition"
-					>
-						<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">
-							Most impacted page
-						</p>
-						<p class="text-ink mt-2 truncate text-sm font-semibold">
-							{topPage.path ?? topPage.url}
-						</p>
-						<p class="text-ink-muted mt-1 text-xs">{topPage.issueCount} issues</p>
-					</button>
-				{/if}
-			</div>
-		</div>
-	</Panel>
-
+<div class="space-y-4">
+	<!-- Hero: what was found, and what to do about it -->
 	<Panel
 		class="border-line/70 from-surface via-surface to-accent-soft/20 relative overflow-hidden border bg-gradient-to-br shadow-sm"
 		padding="lg"
@@ -314,15 +291,11 @@
 		<div
 			class="bg-accent/12 pointer-events-none absolute -top-18 -right-14 h-44 w-44 rounded-full blur-3xl"
 		></div>
-		<div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-			<div>
+		<div class="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+			<div class="min-w-0">
 				<p
 					class="text-ink-faint flex items-center text-xs font-semibold tracking-[0.12em] uppercase"
 				>
-					<span
-						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
-						>01</span
-					>
 					Overview
 				</p>
 				<div class="mt-2 flex flex-wrap items-center gap-2">
@@ -338,8 +311,76 @@
 					</span>
 				</div>
 				<p class="text-ink-muted mt-2 max-w-2xl text-sm">{riskSummary}</p>
+
+				<!-- Workflow strip: the triage path through this report -->
+				{#if distinctIssueCount > 0}
+					<div class="mt-4 flex flex-wrap items-center gap-2" data-testid="overview-workflow">
+						{#if urgent}
+							{@const u = urgent}
+							<button
+								type="button"
+								onclick={() =>
+									onReviewSeverity ? onReviewSeverity(u.severity) : onSearchIssues('')}
+								class={cn(
+									'inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors',
+									u.severity === 'critical'
+										? 'bg-red-600 hover:bg-red-700'
+										: 'bg-orange-500 hover:bg-orange-600'
+								)}
+							>
+								Fix {u.count.toLocaleString()}
+								{u.severity} first
+								<ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
+							</button>
+						{:else}
+							<button
+								type="button"
+								onclick={() => onSearchIssues('')}
+								class="bg-accent hover:bg-accent/90 inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors"
+							>
+								Open issue list
+								<ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
+							</button>
+						{/if}
+						{#if repeatStats.repeats > 0}
+							<button
+								type="button"
+								onclick={() => onSearchIssues('')}
+								class="border-line bg-surface/80 text-ink-muted hover:bg-surface-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors"
+							>
+								<span class="text-ink font-mono font-bold"
+									>{repeatStats.repeats.toLocaleString()}</span
+								>
+								are repeats of
+								<span class="text-ink font-mono font-bold"
+									>{repeatStats.patterns.toLocaleString()}</span
+								>
+								pattern{repeatStats.patterns === 1 ? '' : 's'}
+							</button>
+						{/if}
+						{#if manualCount > 0}
+							<button
+								type="button"
+								onclick={() => onSearchIssues('')}
+								class="border-line bg-surface/80 text-ink-muted hover:bg-surface-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors"
+							>
+								<span class="text-ink font-mono font-bold">{manualCount.toLocaleString()}</span>
+								need manual review
+							</button>
+						{/if}
+						{#if topPage}
+							<button
+								type="button"
+								onclick={() => onSelectPage(topPage.id)}
+								class="border-line bg-surface/80 text-ink-muted hover:bg-surface-muted hover:text-ink inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors"
+							>
+								Inspect most-affected page
+							</button>
+						{/if}
+					</div>
+				{/if}
 			</div>
-			<div class="grid grid-cols-3 gap-3 text-right lg:min-w-[380px]">
+			<div class="grid shrink-0 grid-cols-3 gap-3 text-right lg:min-w-[380px]">
 				<div>
 					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.1em] uppercase">
 						Pages affected
@@ -362,130 +403,126 @@
 		</div>
 	</Panel>
 
-	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-		{@render summaryCard('Distinct Issues', distinctIssueCount)}
-		{@render summaryCard('Occurrences', report.summary.totalIssues)}
-		{@render summaryCard('Pages Scanned', report.summary.pagesScanned)}
-		{@render summaryCard('Pages With Issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
-	</div>
-
-	{#if topFixes.length > 0}
-		<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
-			<div class="border-line flex items-center justify-between gap-3 border-b p-4">
-				<h3 class="text-ink flex items-center text-base leading-none font-semibold tracking-tight">
-					<span
-						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
-						>FIX</span
-					>
-					Top fixes — start here
-				</h3>
-				<button
-					type="button"
-					onclick={() => onSearchIssues('', undefined)}
-					class="text-accent hover:text-accent-strong inline-flex items-center gap-1 text-xs font-semibold"
-				>
-					Open issue list
-					<ArrowRight class="h-3 w-3" aria-hidden="true" />
-				</button>
+	<!-- Bento grid: severity mix, fixes, scanners, pages -->
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-4">
+		<Panel class="ring-line/70 shadow-sm ring-1 lg:col-span-2" padding="none" rounded="2xl">
+			<div class="border-line border-b p-4">
+				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Severity Mix</h3>
 			</div>
-			<ol class="divide-line/70 divide-y" data-testid="top-fixes">
-				{#each topFixes as fix, idx (fix.key)}
-					{@const previewPages = fix.pageIds.slice(0, 3)}
-					{@const remainingPages = Math.max(0, fix.pageIds.length - previewPages.length)}
-					<li>
-						<button
-							type="button"
-							onclick={() => onSearchIssues(fix.ruleId, fix.scanner)}
-							class="hover:bg-surface-muted/60 flex w-full items-start gap-4 px-4 py-3 text-left transition"
+			<div class="flex flex-col items-center gap-5 p-4 sm:flex-row">
+				<SeverityDonut counts={report.summary.bySeverity} centerLabel="issues" />
+				<div class="min-w-0 flex-1">
+					<SeverityBreakdown bySeverity={report.summary.bySeverity} />
+				</div>
+			</div>
+			<div class="border-line/70 grid grid-cols-2 gap-3 border-t p-4 sm:grid-cols-4">
+				{@render miniStat('Distinct', distinctIssueCount)}
+				{@render miniStat('Occurrences', report.summary.totalIssues)}
+				{@render miniStat('Pages scanned', report.summary.pagesScanned)}
+				{@render miniStat('Pages w/ issues', report.summary.pagesWithIssues, pagesWithIssuesTone)}
+			</div>
+		</Panel>
+
+		{#if topFixes.length > 0}
+			<Panel class="ring-line/70 shadow-sm ring-1 lg:col-span-2" padding="none" rounded="2xl">
+				<div class="border-line flex items-center justify-between gap-3 border-b p-4">
+					<h3
+						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
+					>
+						<span
+							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
+							>FIX</span
 						>
-							<span
-								class="text-ink-faint mt-0.5 w-6 shrink-0 font-mono text-sm font-semibold tabular-nums"
-								>#{idx + 1}</span
-							>
-							<div class="min-w-0 flex-1">
-								<div class="flex flex-wrap items-center gap-2">
-									<span
-										class={cn(
-											'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] leading-none font-semibold tracking-wide uppercase',
-											'bg-surface'
-										)}
-									>
-										<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(fix.severity))}
-										></span>
-										{fix.severity}
-									</span>
-									<span class="text-ink-faint font-mono text-[10px] tracking-wide uppercase">
-										{fix.scanner} · {fix.ruleId}
-									</span>
-								</div>
-								<p class="text-ink mt-1.5 text-sm font-semibold">{fix.title}</p>
-								<div
-									class="text-ink-muted mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
-								>
-									<span class="font-mono">
-										{fix.count.toLocaleString()}
-										{fix.count === 1 ? 'occurrence' : 'occurrences'} · {fix.pageIds.length}
-										{fix.pageIds.length === 1 ? 'page' : 'pages'}
-									</span>
-									{#if previewPages.length}
-										<span class="text-ink-faint inline-flex flex-wrap gap-1.5">
-											{#each previewPages as pageId (pageId)}
-												<span
-													class="border-line/60 bg-surface-muted text-ink-muted truncate rounded border px-1.5 py-0.5 font-mono text-[10px]"
-													title={pageLabelForId(pageId)}
-												>
-													{pageLabelForId(pageId)}
-												</span>
-											{/each}
-											{#if remainingPages > 0}
-												<span class="text-ink-faint text-[10px]">+{remainingPages} more</span>
-											{/if}
-										</span>
-									{/if}
-								</div>
-							</div>
-							<ArrowRight class="text-ink-faint mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
-						</button>
-					</li>
-				{/each}
-			</ol>
-		</Panel>
-	{/if}
-
-	<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
-		<div class="border-line border-b p-4">
-			<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
-				Severity Breakdown
-			</h3>
-		</div>
-		<div class="p-4">
-			<SeverityBreakdown bySeverity={report.summary.bySeverity} />
-		</div>
-	</Panel>
-
-	{#if report.summary.lighthouseCategories?.length}
-		<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
-			<div class="border-line border-b p-4">
-				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
-					Lighthouse Averages
-				</h3>
-			</div>
-			<div class="p-4">
-				<LighthouseSummary categories={report.summary.lighthouseCategories} />
-			</div>
-		</Panel>
-	{/if}
-
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_0.86fr]">
-		<Panel class="ring-line/70 min-w-0 shadow-sm ring-1" padding="none" rounded="2xl">
-			<div class="border-line border-b p-4">
-				<h3 class="text-ink flex items-center text-base leading-none font-semibold tracking-tight">
-					<span
-						class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
-						>02</span
+						Top fixes — start here
+					</h3>
+					<button
+						type="button"
+						onclick={() => onSearchIssues('')}
+						class="text-accent hover:text-accent-strong inline-flex items-center gap-1 text-xs font-semibold"
 					>
-					Scanner Status
-				</h3>
+						Open issue list
+						<ArrowRight class="h-3 w-3" aria-hidden="true" />
+					</button>
+				</div>
+				<ol class="divide-line/70 divide-y" data-testid="top-fixes">
+					{#each topFixes as fix, idx (fix.key)}
+						{@const previewPages = fix.pageIds.slice(0, 2)}
+						{@const remainingPages = Math.max(0, fix.pageIds.length - previewPages.length)}
+						<li>
+							<button
+								type="button"
+								onclick={() => onSearchIssues(fix.ruleId, fix.scanner)}
+								class="hover:bg-surface-muted/60 flex w-full items-start gap-4 px-4 py-3 text-left transition"
+							>
+								<span
+									class="text-ink-faint mt-0.5 w-6 shrink-0 font-mono text-sm font-semibold tabular-nums"
+									>#{idx + 1}</span
+								>
+								<div class="min-w-0 flex-1">
+									<div class="flex flex-wrap items-center gap-2">
+										<span
+											class={cn(
+												'inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] leading-none font-semibold tracking-wide uppercase',
+												'bg-surface'
+											)}
+										>
+											<span
+												class={cn(
+													'h-2 w-2 rounded-full',
+													getSeverityDotClass(fix.severity),
+													fix.severity === 'critical' && 'animate-hotspot-pulse'
+												)}
+											></span>
+											{fix.severity}
+										</span>
+										<span class="text-ink-faint font-mono text-[10px] tracking-wide uppercase">
+											{fix.scanner} · {fix.ruleId}
+										</span>
+									</div>
+									<p class="text-ink mt-1.5 text-sm font-semibold">{fix.title}</p>
+									<div
+										class="text-ink-muted mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs"
+									>
+										<span class="font-mono">
+											{fix.count.toLocaleString()}
+											{fix.count === 1 ? 'occurrence' : 'occurrences'} · {fix.pageIds.length}
+											{fix.pageIds.length === 1 ? 'page' : 'pages'}
+										</span>
+										{#if previewPages.length}
+											<span class="text-ink-faint inline-flex flex-wrap gap-1.5">
+												{#each previewPages as pageId (pageId)}
+													<span
+														class="border-line/60 bg-surface-muted text-ink-muted truncate rounded border px-1.5 py-0.5 font-mono text-[10px]"
+														title={pageLabelForId(pageId)}
+													>
+														{pageLabelForId(pageId)}
+													</span>
+												{/each}
+												{#if remainingPages > 0}
+													<span class="text-ink-faint text-[10px]">+{remainingPages} more</span>
+												{/if}
+											</span>
+										{/if}
+									</div>
+								</div>
+								<ArrowRight class="text-ink-faint mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+							</button>
+						</li>
+					{/each}
+				</ol>
+			</Panel>
+		{/if}
+
+		<Panel
+			class={cn(
+				'ring-line/70 min-w-0 shadow-sm ring-1',
+				hasLighthouse ? 'lg:col-span-2' : 'lg:col-span-4'
+			)}
+			padding="none"
+			rounded="2xl"
+		>
+			<div class="border-line border-b p-4">
+				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Scanner Status</h3>
 			</div>
 			<div class="p-4">
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -496,107 +533,101 @@
 			</div>
 		</Panel>
 
-		<div class="space-y-4">
-			<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
+		{#if hasLighthouse}
+			<Panel class="ring-line/70 shadow-sm ring-1 lg:col-span-2" padding="none" rounded="2xl">
 				<div class="border-line border-b p-4">
-					<h3
-						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
-					>
-						<span
-							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
-							>03</span
-						>
-						Top Pages
+					<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
+						Lighthouse Averages
 					</h3>
 				</div>
-				{#each topPages as page (page.id)}
-					<button
-						onclick={() => onSelectPage(page.id)}
-						class="border-line hover:bg-surface-muted flex w-full items-center justify-between border-b px-4 py-3 text-left text-sm transition last:border-b-0"
-					>
+				<div class="p-4">
+					<LighthouseSummary categories={report.summary.lighthouseCategories ?? []} />
+				</div>
+			</Panel>
+		{/if}
+
+		<Panel class="ring-line/70 min-w-0 shadow-sm ring-1 lg:col-span-1" padding="none" rounded="2xl">
+			<div class="border-line border-b p-4">
+				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Top Pages</h3>
+			</div>
+			{#each topPages as page (page.id)}
+				<button
+					onclick={() => onSelectPage(page.id)}
+					class="border-line hover:bg-surface-muted flex w-full flex-col gap-1.5 border-b px-4 py-3 text-left text-sm transition last:border-b-0"
+				>
+					<span class="flex w-full items-center justify-between gap-2">
 						<span class="text-ink truncate font-medium">
 							{page.path ?? page.url}
 						</span>
-						<span class="text-ink-muted font-mono text-xs">{page.issueCount} issues</span>
+						<span class="text-ink-muted shrink-0 font-mono text-xs">{page.issueCount} issues</span>
+					</span>
+					{#if page.bySeverity}
+						<SeverityBar counts={page.bySeverity} height="sm" />
+					{/if}
+				</button>
+			{/each}
+		</Panel>
+
+		<Panel class="ring-line/70 min-w-0 shadow-sm ring-1 lg:col-span-1" padding="none" rounded="2xl">
+			<div class="border-line border-b p-4">
+				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
+					Top Issue Rules
+				</h3>
+			</div>
+			<div class="divide-line divide-y">
+				{#each topRules as rule (rule.key)}
+					<button
+						onclick={() => onSearchIssues(rule.ruleId, rule.scanner)}
+						class="hover:bg-surface-muted flex w-full flex-col gap-1 px-4 py-3 text-left text-sm transition"
+					>
+						<span class="text-ink line-clamp-2 font-medium">{rule.title}</span>
+						<span class="text-ink-muted font-mono text-xs">
+							{rule.scanner} · {rule.count} occurrences
+						</span>
 					</button>
 				{/each}
-			</Panel>
+			</div>
+		</Panel>
 
-			<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
-				<div class="border-line border-b p-4">
-					<h3
-						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
-					>
-						<span
-							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
-							>04</span
-						>
-						Top Issue Rules
-					</h3>
-				</div>
-				<div class="divide-line divide-y">
-					{#each topRules as rule (rule.key)}
-						<button
-							onclick={() => onSearchIssues(rule.ruleId, rule.scanner)}
-							class="hover:bg-surface-muted flex w-full flex-col gap-1 px-4 py-3 text-left text-sm transition"
-						>
-							<span class="text-ink font-medium">{rule.title}</span>
-							<span class="text-ink-muted font-mono text-xs">
-								{rule.scanner} · {rule.count} occurrences
-							</span>
-						</button>
-					{/each}
-				</div>
-			</Panel>
-
-			<Panel class="ring-line/70 shadow-sm ring-1" padding="none" rounded="2xl">
-				<div class="border-line border-b p-4">
-					<h3
-						class="text-ink flex items-center text-base leading-none font-semibold tracking-tight"
-					>
-						<span
-							class="text-accent bg-accent-soft mr-2 rounded px-1.5 py-0.5 font-mono text-[9px] leading-none font-bold"
-							>05</span
-						>
-						Coverage Heat
-					</h3>
-				</div>
-				<div class="space-y-3 p-4">
-					<div>
-						<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
-							<span>Pages with issues</span>
-							<span>{Math.round(affectedRatio * 100)}%</span>
-						</div>
-						<div class="bg-surface-muted h-2 w-full overflow-hidden rounded-full">
-							<div
-								class={cn(
-									'h-full transition-[width] duration-500',
-									coverageTone === 'danger'
-										? 'bg-red-500'
-										: coverageTone === 'warn'
-											? 'bg-amber-500'
-											: 'bg-emerald-500'
-								)}
-								style={`width: ${Math.round(affectedRatio * 100)}%`}
-							></div>
-						</div>
+		<Panel class="ring-line/70 shadow-sm ring-1 lg:col-span-2" padding="none" rounded="2xl">
+			<div class="border-line border-b p-4">
+				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">Coverage Heat</h3>
+			</div>
+			<div class="space-y-3 p-4">
+				<div>
+					<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
+						<span>Pages with issues</span>
+						<span>{Math.round(affectedRatio * 100)}%</span>
 					</div>
-					<div>
-						<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
-							<span>Distinct issues</span>
-							<span>{distinctIssueCount.toLocaleString()}</span>
-						</div>
-						<p class="text-ink-faint text-xs leading-relaxed">
-							{report.summary.totalIssues.toLocaleString()} total occurrence{report.summary
-								.totalIssues !== 1
-								? 's'
-								: ''} across {report.scanners.length} scanner{report.scanners.length !== 1
-								? 's'
-								: ''}.
-						</p>
+					<div class="bg-surface-muted h-2 w-full overflow-hidden rounded-full">
+						<div
+							class={cn(
+								'h-full transition-[width] duration-500',
+								coverageTone === 'danger'
+									? 'bg-red-500'
+									: coverageTone === 'warn'
+										? 'bg-amber-500'
+										: 'bg-emerald-500'
+							)}
+							style={`width: ${Math.round(affectedRatio * 100)}%`}
+						></div>
 					</div>
 				</div>
-			</Panel>
-		</div>
+				<div>
+					<div class="text-ink-muted mb-1 flex items-center justify-between text-xs">
+						<span>Distinct issues</span>
+						<span>{distinctIssueCount.toLocaleString()}</span>
+					</div>
+					<p class="text-ink-faint text-xs leading-relaxed">
+						{report.summary.totalIssues.toLocaleString()} total occurrence{report.summary
+							.totalIssues !== 1
+							? 's'
+							: ''} across {report.scanners.length} scanner{report.scanners.length !== 1
+							? 's'
+							: ''}.
+					</p>
+				</div>
+			</div>
+		</Panel>
 	</div>
 </div>

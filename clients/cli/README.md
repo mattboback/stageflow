@@ -2,9 +2,9 @@
 
 Submit URL scan jobs to a StageFlow API, wait for completion, and render the
 unified report in shell-friendly formats. Supports severity-based exit codes
-for CI gating, structured JSON output for automation, Project Mode for
-local dev server scanning, and baseline-aware project diffs for regression
-gating after frontend edits.
+for CI gating, structured JSON output for automation, a dev-server scan loop
+for local development, and baseline-aware project diffs for regression gating
+after frontend edits.
 
 Need the broader product overview first? Start with the [repository README](../../README.md).
 
@@ -23,18 +23,28 @@ go build -o stageflow .
 ./stageflow version
 ```
 
+## The three ways to scan
+
+| Command | What it scans | When to use it |
+| --- | --- | --- |
+| `stageflow scan <url>` | Any URL you give it | One-off checks, ad-hoc audits |
+| `stageflow dev scan` | Your local dev server (started for you) | Local edit-then-check loops |
+| `stageflow project scan [slug]` | A project registered on the API, diffed against its baseline | CI regression gating |
+
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `scan` | Submit a scan job, wait for completion, print results |
-| `auth capture` | Launch Chromium for interactive login and write Playwright storage state |
-| `project` | Run a Project Mode scan using `.stageflow/config.yaml` |
-| `project init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
-| `project doctor` | Validate project config and dev readiness without scanning |
-| `project hosted` | Run the configured hosted project scan without starting local dev |
+| `scan` | Scan one or more URLs and report the results |
+| `dev init` | Scaffold `.stageflow/config.yaml` and `.stageflow/README.md` |
+| `dev doctor` | Validate the config and dev-server readiness without scanning |
+| `dev scan` | Start the dev server, scan it, and report results |
+| `project create/list/show/update/delete` | Manage remote projects on the API |
+| `project scan` | Scan a remote project and diff against its baseline |
+| `project promote` | Promote a scan job to be the project baseline |
 | `diff` | Compare a saved baseline against another report or a live URL |
 | `report` | Fetch and display results for an existing job ID |
+| `auth capture` | Launch Chromium for interactive login and write Playwright storage state |
 | `scanners` | List scanners available on the API |
 | `version` | Print version information |
 | `completion` | Generate shell completion scripts |
@@ -47,7 +57,7 @@ go build -o stageflow .
 stageflow scan https://example.com --api https://stageflow.org
 
 # Pick scanners and output format
-stageflow scan https://example.com --scanners axe,seo --format json --api https://stageflow.org
+stageflow scan https://example.com --scanner axe,seo --format json --api https://stageflow.org
 
 # Scan multiple routes in one job
 stageflow scan https://example.com https://example.com/about --format markdown
@@ -59,29 +69,32 @@ stageflow scan http://127.0.0.1:5173 --allow-private-targets
 stageflow scan https://example.com --format json > report.json
 ```
 
+`--scanner` is repeatable and comma-tolerant: `--scanner axe --scanner seo`
+and `--scanner axe,seo` are equivalent.
+
 ## Agent gating loop
 
 StageFlow is designed to fit an edit-then-check terminal workflow:
 
 ```bash
 # Local dev loop
-stageflow project init --format json > project-init.json
-stageflow project doctor --format json > project-doctor.json
-stageflow project --format json > local-scan.json
+stageflow dev init --format json > dev-init.json
+stageflow dev doctor --format json > dev-doctor.json
+stageflow dev scan --format json > local-scan.json
 
-# Follow-up hosted regression loop
-stageflow project hosted --format json > hosted-scan.json
+# Follow-up remote regression loop
+stageflow project scan --format json > project-scan.json
 ```
 
-Use the local Project Mode loop when you want fast feedback against a dev
-server. Use `stageflow project hosted` when you want hosted baseline memory and
-regression diffs for a project already registered on a StageFlow API, without
-starting the local dev server.
+Use the local dev loop when you want fast feedback against a dev server. Use
+`stageflow project scan` when you want baseline memory and regression diffs
+for a project already registered on a StageFlow API, without starting the
+local dev server.
 
-`project init` and `project doctor` also support JSON output so agents can
-bootstrap and validate the local loop without scraping human-oriented text.
-`project doctor --format json` also exposes the hosted project association when
-one is configured.
+`dev init` and `dev doctor` also support JSON output so agents can bootstrap
+and validate the local loop without scraping human-oriented text.
+`dev doctor --format json` also exposes the linked remote project when one is
+configured.
 
 ## Output formats
 
@@ -98,17 +111,17 @@ one is configured.
 | Exit code | Meaning |
 | --- | --- |
 | 0 | Scan completed, no issues at or above `--fail-on` threshold |
-| 1 | Issues meet or exceed `--fail-on` severity threshold |
+| 1 | Issues meet or exceed `--fail-on` severity threshold, or a baseline regression |
 | 2 | CLI or API error |
 
 ### `--fail-on` severity gate
 
 ```bash
 # Pass — only moderate issues, threshold is serious
-stageflow scan https://example.com --scanners axe --fail-on serious   # exit 0
+stageflow scan https://example.com --scanner axe --fail-on serious   # exit 0
 
 # Fail — moderate issues exist, threshold is moderate
-stageflow scan https://example.com --scanners axe --fail-on moderate  # exit 1
+stageflow scan https://example.com --scanner axe --fail-on moderate  # exit 1
 ```
 
 Severity hierarchy (highest to lowest): `critical` > `serious` > `moderate` > `minor` > `info`.
@@ -123,6 +136,8 @@ Severity hierarchy (highest to lowest): `critical` > `serious` > `moderate` > `m
 | `--max-issues <n>` | Cap returned issues (default 200, 0 = unlimited) |
 | `--summary-only` | Summary counts only, skip individual findings |
 | `--group-by <mode>` | Group by `category`, `scanner`, or `none` |
+
+The full filter set is documented on `stageflow report --help`.
 
 ## Compare against a baseline
 
@@ -140,10 +155,10 @@ stageflow diff baseline.json https://example.com --api https://stageflow.org
 Use `--fail-on-new` to gate on newly introduced issues and
 `--fail-on-regression` to fail when scores drop or new issues appear.
 
-For registered remote projects, `stageflow scan --project <slug> --format json`
-now emits a single envelope that includes both the scan report and any
-available regression diff, which makes it easier for agents to parse one
-terminal payload instead of correlating separate commands.
+For registered remote projects, `stageflow project scan <slug> --format json`
+emits a single envelope that includes both the scan report and any available
+regression diff, which makes it easier for agents to parse one terminal
+payload instead of correlating separate commands.
 
 ## JSON report envelope
 
@@ -197,35 +212,31 @@ terminal payload instead of correlating separate commands.
 
 Issue `id` fields are content-based hashes — the same violation on the same page produces the same `id` across runs, making them reliable for regression diffing.
 
-## Project Mode
+## The dev loop
 
-`stageflow project` (without remote CRUD subcommands) is the local Project Mode workflow. The remote commands such as `stageflow project create`, `list`, `show`, `update`, `delete`, and `promote` manage named project records on a StageFlow API instead.
-
-Project Mode automates the full scan lifecycle for local development:
+`stageflow dev` automates the full scan lifecycle for local development:
 start dev server, wait for readiness, submit scan, stream results, stop server.
 
 ```bash
-stageflow project init          # scaffold config
-stageflow project doctor        # validate config without scanning
-stageflow project               # full lifecycle
-stageflow project hosted        # hosted scan from remote_project
+stageflow dev init          # scaffold config
+stageflow dev doctor        # validate config without scanning
+stageflow dev scan          # full lifecycle
 ```
 
 ### Example config (`.stageflow/config.yaml`)
 
 ```yaml
-version: 1
+version: 2
 
 stageflow:
   api_url: "http://localhost:8080"
-  remote_project: "my-frontend" # Optional hosted project slug for follow-up remote scans
-  remote_api_url: "https://stageflow.org" # Optional hosted API for the remote project
+  project: "my-frontend" # Optional remote project slug for `stageflow project scan`
 
 scan:
   urls:
     - http://127.0.0.1:5173/
     - http://127.0.0.1:5173/login
-  scanners: axe,lighthouse,seo,link-checker
+  scanners: [axe, lighthouse, seo, link-checker]
   screenshot: true
   allow_private_targets: true
 
@@ -240,29 +251,27 @@ dev:
 Cover the routes you care about in `scan.urls` — scanning only `/` misses
 route-specific regressions.
 
-`stageflow.remote_project` is optional for local runs, but required by
-`stageflow project hosted`. Hosted mode reads only the repository config needed
-to find the remote project and API, then delegates to the same baseline/diff
-flow used by `stageflow scan --project ...`.
+`stageflow.project` is optional for local runs; it lets `stageflow project scan`
+(run with no slug) find the remote project from the repo config.
 
-See [Project Mode docs](../../docs/PROJECT_MODE.md) for the full configuration reference.
+See the [dev mode guide](../../docs/dev-mode.md) for the full configuration reference.
 
 ## Remote projects and baselines
 
-Remote project commands manage the hosted regression-memory layer:
+Remote project commands manage the regression-memory layer hosted on the API:
 
 ```bash
 stageflow project create my-frontend --url https://staging.example.com --api https://stageflow.org
-stageflow scan --project my-frontend --api https://stageflow.org
-stageflow project hosted --format json
+stageflow project scan my-frontend --api https://stageflow.org
 stageflow project promote my-frontend --job-id <job-id> --api https://stageflow.org
+stageflow project scan my-frontend --api https://stageflow.org   # now diffs against the baseline
 ```
 
 That flow is what lets StageFlow answer "did this frontend change regress from
 the last known-good baseline?" rather than only "what issues exist right now?"
-If `.stageflow/config.yaml` already records `stageflow.remote_project: my-frontend`,
-run `stageflow project hosted` from the repo instead of repeating the slug and
-API URL at the shell.
+If `.stageflow/config.yaml` already records `stageflow.project: my-frontend`,
+run `stageflow project scan` from the repo with no slug instead of repeating
+it at the shell.
 
 ## Environment variables
 
@@ -330,9 +339,9 @@ success:
 stageflow scan https://app.example.com/profile --auth-recipe ./auth/recipe.yaml
 ```
 
-`--auth-state` and `--auth-recipe` are mutually exclusive, and neither is
-supported alongside `--project` (configure auth on the registered project
-instead).
+`--auth-state` and `--auth-recipe` are mutually exclusive, and they apply only
+to `stageflow scan` (for `project scan`, configure auth on the registered
+project instead).
 
 The full design, trust boundaries, and threat model live in
 [docs/architecture/system.md#authenticated-scanning](../../docs/architecture/system.md#authenticated-scanning).

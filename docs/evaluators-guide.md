@@ -37,14 +37,14 @@ Depending on your focus, you can dive into different parts of the system.
 
 - Entry points:
   - `clients/cli` — Go CLI implementation.
-  - `clients/cli/README.md` — concepts, examples, JSON envelope, and Project Mode.
+  - `clients/cli/README.md` — concepts, examples, JSON envelope, and the dev loop.
   - `docs/reference/cli/stageflow/*.md` — generated reference for each subcommand.
 
 Highlights:
 
 - Streaming scan status over SSE and structured JSON output for automation.
 - Support for project baselines and regression diffing.
-- Local Project Mode that drives a dev server lifecycle from the CLI.
+- A local dev loop (`stageflow dev`) that drives a dev server lifecycle from the CLI.
 
 ### 2.2 Platform API and intake boundary
 
@@ -175,7 +175,7 @@ The most interesting parts to look at for engineering depth:
 1. `services/orchestrator` — explicit job FSM, NATS-driven state transitions, E2E test harness with mock Podman.
 2. `services/scanner-runner` — abstract `ScannerBase`, plugin system, Playwright integration, AI scanner boundaries.
 3. `libs/contracts` — schema-first design, codegen for two languages, migration docs.
-4. `clients/cli` — SSE streaming, Project Mode lifecycle, structured JSON output, `--fail-on` quality gate.
+4. `clients/cli` — SSE streaming, dev-loop lifecycle, structured JSON output, `--fail-on` quality gate.
 5. `qa/e2e/project-scan-golden.sh` — golden regression test for the full scan → baseline → diff pipeline.
 6. `.github/workflows/ci.yml` — layered CI across Go, web app, Scanner Runner, and Storybook.
 

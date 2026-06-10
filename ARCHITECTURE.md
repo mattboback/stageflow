@@ -14,7 +14,7 @@ For an exhaustive deep-dive — trust boundaries, failure modes, all event types
 │   ┌──────────────────────┐       ┌──────────────────────┐                 │
 │   │  Web App             │       │  CLI                 │                 │
 │   │  SvelteKit 5         │       │  Go                  │                 │
-│   │  Scan submission     │       │  Project Mode        │                 │
+│   │  Scan submission     │       │  Dev loop            │                 │
 │   │  Live status (SSE)   │       │  JSON output         │                 │
 │   │  Report exploration  │       │  Severity exit codes │                 │
 │   └──────────┬───────────┘       └──────────┬───────────┘                 │
@@ -128,7 +128,7 @@ Key files: `clients/web/src/routes/`, `clients/web/src/lib/stores/`
 
 ### CLI
 
-Go binary for terminal-first workflows. Commands: `scan`, `project` (init/doctor/run), `auth capture`, `diff`, `report`, `scanners`. Output formats: human text, markdown, JSON. Project Mode (`stageflow project`) automates the full loop: start dev server → wait for readiness → submit scan → stream results → stop server — all driven by `.stageflow/config.yaml`. Exit codes are machine-readable: `0` (pass), `1` (severity gate), `2` (error).
+Go binary for terminal-first workflows. Commands: `scan`, `dev` (init/doctor/scan), `project` (create/list/show/update/delete/promote/scan), `auth capture`, `diff`, `report`, `scanners`. Output formats: human text, markdown, JSON. The dev loop (`stageflow dev scan`) automates the full cycle: start dev server → wait for readiness → submit scan → stream results → stop server — all driven by `.stageflow/config.yaml`. Exit codes are machine-readable: `0` (pass), `1` (severity gate), `2` (error).
 
 Key files: `clients/cli/` (Cobra command files, e.g. `project_run.go`), `clients/cli/internal/projectmode/`
 
@@ -305,7 +305,7 @@ Container security     Trivy, bun audit,          Image CVEs, dependency audit,
                        gitleaks                   secrets in source
 ```
 
-The E2E golden flow (`just project-golden`) is the most valuable integration check: it exercises the full `stageflow project` loop, promotes a baseline, makes a breaking change, and asserts that the CLI exits `1` with the right regression output.
+The E2E golden flow (`just project-golden`) is the most valuable integration check: it exercises the full remote project loop (`stageflow project scan`), promotes a baseline, makes a breaking change, and asserts that the CLI exits `1` with the right regression output.
 
 ---
 
@@ -319,7 +319,7 @@ The E2E golden flow (`just project-golden`) is the most valuable integration che
 | How does the SSE hub buffer and replay events? | `services/platform-api/internal/jobstatus/` |
 | How are scanner plugins discovered and loaded? | `services/scanner-runner/src/core/plugins/` |
 | What is the full report shape? | `libs/contracts/report/schema/unified-report.v2.schema.json` |
-| How does the CLI drive Project Mode? | `clients/cli/project_run.go`, `clients/cli/internal/projectmode/` |
+| How does the CLI drive the dev loop? | `clients/cli/project_run.go`, `clients/cli/internal/projectmode/` |
 | How are Podman pods launched and cleaned up? | `services/orchestrator/internal/adapters/runtime/` |
 | How does the diff engine compare baselines? | `libs/go/diff/` |
 | How are NATS streams created and consumed? | `libs/go/messaging/` |

@@ -1,9 +1,9 @@
 ## stageflow scan
 
-Submit a scan job and wait for results
+Scan one or more URLs and report the results
 
 ```
-stageflow scan [url...] [--project <slug>]
+stageflow scan <url>...
 ```
 
 ### Options
@@ -15,8 +15,7 @@ stageflow scan [url...] [--project <slug>]
       --fail-on string          Exit 1 if any displayed issue is at or above this severity (critical,serious,moderate,minor,info)
   -h, --help                    help for scan
       --max-issues int          Max issues to include in output (0 = unlimited) (default 200)
-      --project string          Scan using a registered project's URLs and config
-      --scanners string         Comma-separated scanner modules (default "axe,lighthouse,seo,link-checker")
+      --scanner strings         Scanner module (repeatable or comma-separated) (default [axe,lighthouse,seo,link-checker])
       --screenshot              Capture screenshots (default true)
       --timeout duration        Max wait time (default 5m0s)
 ```
@@ -24,8 +23,8 @@ stageflow scan [url...] [--project <slug>]
 ### Options inherited from parent commands
 
 ```
-      --api string       API base URL (default "http://localhost:8080")
-      --api-key string   API key
+      --api string       API base URL (env: STAGEFLOW_API_URL) (default "http://localhost:8080")
+      --api-key string   API key (env: STAGEFLOW_API_KEY)
       --format string    Output format: text, markdown, or json (default "text")
 ```
 

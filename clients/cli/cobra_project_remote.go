@@ -5,22 +5,163 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"os"
+
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
-func newProjectRemoteCmd(root *rootOptions) []*cobra.Command {
-	return []*cobra.Command{
+func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "project",
+		Short: "Manage remote projects and scan them against their baselines",
+		Long: "Manage projects registered on a StageFlow API.\n\n" +
+			"A project stores target URLs, scanner configuration, and a promoted baseline\n" +
+			"server-side. `stageflow project scan` runs a scan against those URLs and diffs\n" +
+			"the results against the baseline, making regressions visible in CI.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
+	}
+
+	cmd.AddCommand(
+		newProjectScanCmd(root, getenv),
 		newProjectCreateCmd(root),
 		newProjectListCmd(root),
 		newProjectShowCmd(root),
 		newProjectUpdateCmd(root),
 		newProjectDeleteCmd(root),
 		newProjectPromoteCmd(root),
+	)
+
+	return cmd
+}
+
+type projectScanCmdOptions struct {
+	Timeout  time.Duration
+	NoStream bool
+	Report   reportCommandOptions
+}
+
+func newProjectScanCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
+	opts := &projectScanCmdOptions{
+		Timeout: 5 * time.Minute,
 	}
+
+	cmd := &cobra.Command{
+		Use:   "scan [slug]",
+		Short: "Scan a remote project and diff against its baseline",
+		Long: "Run a scan of a remote project's configured URLs and compare the results\n" +
+			"against its promoted baseline.\n\n" +
+			"Pass the project slug as an argument, or omit it to use `stageflow.project`\n" +
+			"from .stageflow/config.yaml in the current repository.",
+		DisableFlagsInUseLine: true,
+		Args:                  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runProjectScanCommand(cmd, args, root, getenv, opts)
+		},
+	}
+
+	cmd.Flags().DurationVar(&opts.Timeout, "timeout", opts.Timeout, "Max wait time")
+	bindReportFlags(cmd, &opts.Report, true)
+	cmd.Flags().BoolVar(&opts.NoStream, "no-stream", false, "Poll instead of SSE")
+	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
+
+	return cmd
+}
+
+func runProjectScanCommand(
+	cmd *cobra.Command,
+	args []string,
+	root *rootOptions,
+	getenv getenvFunc,
+	opts *projectScanCmdOptions,
+) error {
+	if opts.Timeout <= 0 {
+		return exitCodeError{Code: 2, Err: errors.New("--timeout must be > 0")}
+	}
+
+	if opts.Report.maxIssues < 0 {
+		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
+	}
+
+	scanRoot := *root
+
+	slug := ""
+	if len(args) == 1 {
+		slug = strings.TrimSpace(args[0])
+	}
+
+	if slug == "" {
+		projectRoot, err := resolveProjectScanRoot()
+		if err != nil {
+			return exitCodeError{Code: 2, Err: err}
+		}
+
+		cfg, cfgPath, err := loadProjectScanConfig(projectRoot)
+		if err != nil {
+			return exitCodeError{Code: 2, Err: err}
+		}
+
+		slug = strings.TrimSpace(cfg.Stageflow.Project)
+		scanRoot.apiURL, scanRoot.apiKey = resolveProjectStageflow(cmd, root, cfg, getenv)
+
+		fmt.Fprintf(cmd.ErrOrStderr(), "Using project %q from %s\n", slug, cfgPath)
+	}
+
+	return runRemoteProjectScan(cmd, &scanRoot, slug, opts.Timeout, opts.NoStream, opts.Report)
+}
+
+// resolveProjectScanRoot picks where to look for .stageflow/config.yaml when
+// no slug is given: the enclosing git root if there is one, else the current
+// directory. Unlike the dev commands, not being inside a git repo is fine —
+// the missing-config error already tells the user to pass a slug instead.
+func resolveProjectScanRoot() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve working directory: %w", err)
+	}
+
+	gitRoot, ok, err := projectmode.FindGitRoot(wd)
+	if err != nil {
+		return "", err
+	}
+
+	if ok {
+		return gitRoot, nil
+	}
+
+	return wd, nil
+}
+
+func loadProjectScanConfig(projectRoot string) (projectConfig, string, error) {
+	cfg, cfgPath, err := readProjectConfig(projectRoot)
+	if err != nil {
+		var missingErr missingProjectConfigError
+		if errors.As(err, &missingErr) {
+			return projectConfig{}, "", fmt.Errorf(
+				"no slug given and no .stageflow/config.yaml found under %s; "+
+					"pass a slug (`stageflow project scan <slug>`) or run `stageflow dev init` "+
+					"and set stageflow.project",
+				projectRoot,
+			)
+		}
+
+		return projectConfig{}, "", err
+	}
+
+	if validationErr := validateProjectScanConfig(cfg); validationErr != nil {
+		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
+	}
+
+	return cfg, cfgPath, nil
 }
 
 func newProjectCreateCmd(root *rootOptions) *cobra.Command {
@@ -54,7 +195,7 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 				return exitCodeError{Code: 2, Err: validateErr}
 			}
 
-			normalizedScanners, err := normalizeProjectScannerFlags(scanners)
+			normalizedScanners, err := normalizeScannerList(scanners)
 			if err != nil {
 				return exitCodeError{Code: 2, Err: err}
 			}
@@ -82,7 +223,7 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func normalizeProjectScannerFlags(scanners []string) ([]string, error) {
+func normalizeScannerList(scanners []string) ([]string, error) {
 	if len(scanners) == 0 {
 		return nil, nil
 	}
@@ -193,7 +334,7 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "promote <slug>",
-		Short: "Set a job as the project baseline",
+		Short: "Promote a scan job to be the project baseline",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if jobID == "" {

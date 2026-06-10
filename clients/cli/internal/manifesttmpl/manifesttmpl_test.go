@@ -19,7 +19,7 @@ func TestConfigYAML_HappyPath(t *testing.T) {
 
 	mustContain(t, out, `api_url: "http://localhost:8080"`)
 	mustContain(t, out, `- http://127.0.0.1:5173`)
-	mustContain(t, out, `scanners: axe,lighthouse`)
+	mustContain(t, out, `scanners: [axe, lighthouse]`)
 	mustContain(t, out, `cmd: ["bun", "run", "dev"]`)
 	mustContain(t, out, `cwd: clients/web`)
 	mustContain(t, out, `url: http://127.0.0.1:5173`)
@@ -43,7 +43,7 @@ func TestConfigYAML_EmptyDefaultsAndPlaceholder(t *testing.T) {
 
 func TestGuideMarkdown_HasKeySections(t *testing.T) {
 	out := GuideMarkdown()
-	mustContain(t, out, "# StageFlow project setup")
+	mustContain(t, out, "# StageFlow dev setup")
 	mustContain(t, out, "## Quick setup")
 	mustContain(t, out, "## Localhost/private scans")
 }

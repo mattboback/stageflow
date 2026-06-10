@@ -90,11 +90,18 @@
 	});
 
 	const secondaryLine = $derived.by(() => {
-		if (!inGroup) return issue.description;
+		// Prefer the plain-English element label over the rule's technical
+		// description — "Image in the page header" beats spec prose at a glance.
+		if (!inGroup) return issue.friendlyNode?.label ?? issue.description;
 		const summary = primaryOccurrence?.failureSummary ?? primaryOccurrence?.textSnippet ?? null;
 		if (summary) return summary;
 		return issue.description;
 	});
+
+	const affectedGroups = $derived(issue.userImpact?.affectedGroups ?? []);
+	const affectedLabel = $derived(
+		affectedGroups.includes('all') ? 'all users' : affectedGroups.join(', ')
+	);
 </script>
 
 <button
@@ -114,7 +121,13 @@
 			getSeverityContainerClass(issue.severity)
 		)}
 	>
-		<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}></span>
+		<span
+			class={cn(
+				'h-2 w-2 rounded-full',
+				getSeverityDotClass(issue.severity),
+				issue.severity === 'critical' && 'animate-hotspot-pulse text-red-500'
+			)}
+		></span>
 		{issue.severity}
 	</span>
 	<div class="min-w-0 flex-1">
@@ -133,21 +146,23 @@
 			</p>
 		{/if}
 		{#if showScreenshot}
-			<div class="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
-				<span class="text-ink-faint">
+			<div
+				class="text-ink-faint mt-2.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[10px]"
+			>
+				<span>
 					{issue.scanner} &middot; {issue.elementCount} element{issue.elementCount !== 1 ? 's' : ''}
 				</span>
 				{#if !inGroup && issue.wcagTags?.length}
-					{#each issue.wcagTags.slice(0, 3) as tag (tag)}
-						<span class="bg-surface-muted text-ink-muted rounded-md px-1.5 py-0.5">
-							{tag}
-						</span>
-					{/each}
-					{#if issue.wcagTags.length > 3}
-						<span class="text-ink-faint">+{issue.wcagTags.length - 3} more</span>
-					{/if}
+					<span class="text-ink-faint/80">
+						&middot; {issue.wcagTags.slice(0, 3).join(', ')}{issue.wcagTags.length > 3
+							? ` +${issue.wcagTags.length - 3}`
+							: ''}
+					</span>
 				{:else if inGroup && pageLabel}
-					<span class="text-ink-faint truncate font-mono">{pageLabel}</span>
+					<span class="truncate">&middot; {pageLabel}</span>
+				{/if}
+				{#if affectedGroups.length}
+					<span class="font-sans">&middot; Affects: {affectedLabel}</span>
 				{/if}
 			</div>
 		{/if}

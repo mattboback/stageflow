@@ -1,15 +1,15 @@
-## stageflow project list
+## stageflow dev init
 
-List remote projects
+Scaffold .stageflow/config.yaml and a setup guide
 
 ```
-stageflow project list [flags]
+stageflow dev init [path]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for list
+  -h, --help   help for init
 ```
 
 ### Options inherited from parent commands
@@ -22,5 +22,5 @@ stageflow project list [flags]
 
 ### SEE ALSO
 
-* [stageflow project](stageflow_project.md)	 - Manage remote projects and scan them against their baselines
+* [stageflow dev](stageflow_dev.md)	 - Scan your local dev server from .stageflow/config.yaml
 

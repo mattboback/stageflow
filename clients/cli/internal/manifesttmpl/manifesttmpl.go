@@ -1,5 +1,5 @@
 // Package manifesttmpl renders the YAML and Markdown templates that
-// `stageflow project init` scaffolds inside a project's .stageflow directory.
+// `stageflow dev init` scaffolds inside a repository's .stageflow directory.
 package manifesttmpl
 
 import (
@@ -65,20 +65,21 @@ func ConfigYAML(params ConfigParams) string {
 		commandComment = source
 	}
 
+	scannerList := strings.Join(strings.Split(params.Scanners, ","), ", ")
+
 	return strings.TrimSpace(fmt.Sprintf(`
-version: 1
+version: 2
 
 stageflow:
   api_url: %s
-  # Optional: link this repo to a hosted StageFlow project for regression memory.
-  # remote_project: your-hosted-project-slug
-  # remote_api_url: https://api.stageflow.example
+  # Optional: link this repo to a remote StageFlow project for baseline diffs.
+  # project: your-project-slug
 
 scan:
   # Set this to the page URL your dev server serves.
   urls:
     - %s
-  scanners: %s
+  scanners: [%s]
   allow_private_targets: true
 
 dev:
@@ -89,16 +90,16 @@ dev:
   ready:
     # Match this to your dev server URL.
     url: %s
-`, strconv.Quote(baseAPI), devURL, params.Scanners, commandComment, devCommandFormatted, devCwd, devURL)) + "\n"
+`, strconv.Quote(baseAPI), devURL, scannerList, commandComment, devCommandFormatted, devCwd, devURL)) + "\n"
 }
 
 // GuideMarkdown returns the contents of .stageflow/README.md that walks users
-// through setting up Project Mode.
+// through setting up the dev-server scan loop.
 func GuideMarkdown() string {
 	return strings.TrimSpace(`
-# StageFlow project setup
+# StageFlow dev setup
 
-This folder configures `+"`stageflow project`"+` for this repository.
+This folder configures `+"`stageflow dev`"+` for this repository.
 
 ## Quick setup
 
@@ -106,8 +107,7 @@ This folder configures `+"`stageflow project`"+` for this repository.
 2. Set `+"`dev.start.cmd`"+` to the command that starts your app.
 3. Set `+"`dev.ready.url`"+` to the URL that returns HTTP 2xx or 3xx when your app is ready.
 4. Set `+"`scan.urls`"+` to the page URLs you want scanned.
-5. Optional: set `+"`stageflow.remote_project`"+` (and `+"`stageflow.remote_api_url`"+` if needed) to link hosted regression memory.
-6. Run `+"`stageflow project`"+` again.
+5. Run `+"`stageflow dev scan`"+`.
 
 ## Example dev commands
 
@@ -123,22 +123,21 @@ For local targets like `+"`localhost`"+` and `+"`127.0.0.1`"+`:
 1. Start the StageFlow local overlay:
    - `+"`just dev up local`"+`
    - `+"`just dev init local`"+`
-2. Re-run `+"`stageflow project`"+`.
+2. Re-run `+"`stageflow dev scan`"+`.
 
-## Hosted regression memory (optional)
+## Baseline diffs against a remote project (optional)
 
-After your local localhost loop passes, you can follow up against a hosted project baseline:
+To compare scans against a promoted baseline, link this repo to a remote project:
 
-- Set `+"`stageflow.remote_project`"+` to the hosted project slug.
-- Set `+"`stageflow.remote_api_url`"+` if the hosted project uses a different API base URL.
-- Run `+"`stageflow project hosted --format json`"+` to scan the hosted project without starting local dev.
-- Run `+"`stageflow project doctor --format json`"+` when agents need structured setup/readiness details.
+- Set `+"`stageflow.project`"+` to the remote project slug.
+- Run `+"`stageflow project scan --format json`"+` to scan it without starting local dev.
+- Run `+"`stageflow dev doctor --format json`"+` when agents need structured setup/readiness details.
 
 ## Troubleshooting
 
 - If you see "ENOENT" for your dev command, verify `+"`dev.start.cmd`"+` and `+"`dev.start.cwd`"+`.
 - If readiness times out, verify `+"`dev.ready.url`"+` responds while your app is running.
 
-For full documentation, see the [Project Mode guide](https://github.com/mattboback/stageflow/blob/main/docs/PROJECT_MODE.md).
+For full documentation, see the [dev mode guide](https://github.com/mattboback/stageflow/blob/main/docs/dev-mode.md).
 `) + "\n"
 }

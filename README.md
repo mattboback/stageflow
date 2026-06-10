@@ -65,7 +65,7 @@ Common CLI workflows:
 
 ```bash
 # Choose scanners and return JSON for automation.
-stageflow scan https://example.com --scanners axe,seo --format json --api https://stageflow.org
+stageflow scan https://example.com --scanner axe,seo --format json --api https://stageflow.org
 
 # Fail the command when serious-or-worse issues are found.
 stageflow scan https://example.com --fail-on serious --api https://stageflow.org
@@ -129,7 +129,7 @@ stageflow project create marketing-site \
   --url https://example.com --scanner axe --scanner seo
 
 # Scan it; streams live, then diffs against the promoted baseline.
-stageflow scan --project marketing-site --format json
+stageflow project scan marketing-site --format json
 
 # Accept a known-good run as the reference point.
 stageflow project promote marketing-site --job-id <job-id>
@@ -139,26 +139,26 @@ A project scan exits non-zero when new issues appear or the severity gate trips,
 so it drops straight into CI. The full lifecycle, a CI gate snippet, and auth
 details are in [docs/remote.md](docs/remote.md).
 
-## Project Mode (local dev loop)
+## Dev Mode (local dev loop)
 
-Project Mode turns the CLI into a repeatable local regression loop. It can start
-your dev server, wait for readiness, run a scan, stream progress, stop the
-server, and emit JSON that agents or CI jobs can parse.
-
-```bash
-stageflow project init
-stageflow project doctor
-stageflow project --format json
-```
-
-When a repo's `.stageflow/config.yaml` declares a hosted project slug, run the
-hosted baseline/diff loop from the same repo without starting a dev server:
+`stageflow dev` turns the CLI into a repeatable local regression loop. It can
+start your dev server, wait for readiness, run a scan, stream progress, stop
+the server, and emit JSON that agents or CI jobs can parse.
 
 ```bash
-stageflow project hosted --format json
+stageflow dev init
+stageflow dev doctor
+stageflow dev scan --format json
 ```
 
-See [docs/PROJECT_MODE.md](docs/PROJECT_MODE.md) for the config reference and
+When a repo's `.stageflow/config.yaml` declares a remote project slug, run the
+baseline/diff loop from the same repo without starting a dev server:
+
+```bash
+stageflow project scan --format json
+```
+
+See [docs/dev-mode.md](docs/dev-mode.md) for the config reference and
 [docs/remote.md](docs/remote.md) for the remote project workflow.
 
 ## Self-Host Locally
@@ -229,7 +229,7 @@ The AI Navigator is optional and requires `OPENROUTER_API_KEY` when enabled.
 
 | Path                         | Purpose                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------ |
-| `clients/cli`                | Go CLI for scans, Project Mode, baselines, reports, and docs generation  |
+| `clients/cli`                | Go CLI for scans, the dev loop, baselines, reports, and docs generation  |
 | `clients/web`                | SvelteKit app for hosted/local browser workflows                         |
 | `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, projects, reports      |
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence        |
@@ -237,7 +237,7 @@ The AI Navigator is optional and requires `OPENROUTER_API_KEY` when enabled.
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                |
 | `libs/contracts`             | JSON Schema contracts and generated Go/TypeScript types                  |
 | `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples           |
-| `docs`                       | Architecture, remote projects, Project Mode, configuration, and CLI reference |
+| `docs`                       | Architecture, remote projects, dev mode, configuration, and CLI reference |
 
 For the system architecture and trust boundaries, start with
 [ARCHITECTURE.md](ARCHITECTURE.md), then read

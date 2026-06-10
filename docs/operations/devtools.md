@@ -81,21 +81,21 @@ Configure the CLI using:
 - `STAGEFLOW_API_URL` (default `http://localhost:8080`)
 - `STAGEFLOW_API_KEY` (optional, sent as `X-Api-Key`)
 
-### Local Project Mode
+### Local dev loop
 
-When you run `stageflow project`, the CLI uses `.stageflow/config.yaml` to
+When you run `stageflow dev scan`, the CLI uses `.stageflow/config.yaml` to
 start a local dev server and scan `scan.urls`. Optionally pass a single
 positional argument to set the project path; if omitted, the CLI uses the git
 root of the current working directory.
 
 Use these companion subcommands:
 
-- `stageflow project init [path]` to create `.stageflow/config.yaml` and
+- `stageflow dev init [path]` to create `.stageflow/config.yaml` and
   `.stageflow/README.md`.
-- `stageflow project doctor [path]` to validate config and preflight checks
+- `stageflow dev doctor [path]` to validate config and preflight checks
   without submitting a scan job.
 
-> **Warning:** Project Mode can execute commands from your repo config. Only run
+> **Warning:** The dev loop can execute commands from your repo config. Only run
 > it on trusted repositories.
 
 #### Prerequisites for scanning `localhost`
@@ -137,11 +137,11 @@ dev:
     url: http://127.0.0.1:5173
 ```
 
-> **Note:** If `stageflow project init` cannot infer your dev command, it leaves
+> **Note:** If `stageflow dev init` cannot infer your dev command, it leaves
 > a placeholder in the generated config. Replace that placeholder before running
-> `stageflow project`.
+> `stageflow dev scan`.
 
-> **Note:** `stageflow project doctor --skip-dev` validates config and scan
+> **Note:** `stageflow dev doctor --skip-dev` validates config and scan
 > preflight only, without starting your dev process.
 
 #### Notes / limitations

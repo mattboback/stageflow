@@ -26,7 +26,7 @@ func TestHasScaffoldPlaceholderDevCommand(t *testing.T) {
 	}
 }
 
-func TestRunProjectCommand_PlaceholderPreflight(t *testing.T) {
+func TestRunDevScanCommand_PlaceholderPreflight(t *testing.T) {
 	root := t.TempDir()
 
 	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
@@ -41,30 +41,30 @@ func TestRunProjectCommand_PlaceholderPreflight(t *testing.T) {
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stdout)
 
-	runErr := runProjectCommand(
+	runErr := runDevScanCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080"},
 		func(string) string { return "" },
-		&projectCmdOptions{
+		&devScanCmdOptions{
 			Timeout: time.Minute,
 			Report:  reportCommandOptions{maxIssues: defaultMaxIssues},
 		},
 	)
 	if runErr == nil {
-		t.Fatalf("runProjectCommand err = nil, want non-nil")
+		t.Fatalf("runDevScanCommand err = nil, want non-nil")
 	}
 
 	if !strings.Contains(runErr.Error(), "project config is not set up yet") {
-		t.Fatalf("runProjectCommand err = %q, want setup guidance", runErr.Error())
+		t.Fatalf("runDevScanCommand err = %q, want setup guidance", runErr.Error())
 	}
 
 	if strings.Contains(stdout.String(), "[dev] starting:") {
-		t.Fatalf("runProjectCommand unexpectedly attempted to start dev server")
+		t.Fatalf("runDevScanCommand unexpectedly attempted to start dev server")
 	}
 }
 
-func TestRunProjectInitCommand_ScaffoldsFiles(t *testing.T) {
+func TestRunDevInitCommand_ScaffoldsFiles(t *testing.T) {
 	root := t.TempDir()
 
 	var stdout bytes.Buffer
@@ -73,7 +73,7 @@ func TestRunProjectInitCommand_ScaffoldsFiles(t *testing.T) {
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stdout)
 
-	err := runProjectInitCommand(
+	err := runDevInitCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080"},
@@ -91,12 +91,12 @@ func TestRunProjectInitCommand_ScaffoldsFiles(t *testing.T) {
 		t.Fatalf("missing guide scaffold: %v", statErr)
 	}
 
-	if !strings.Contains(stdout.String(), "Created StageFlow project bootstrap:") {
+	if !strings.Contains(stdout.String(), "Created StageFlow dev-loop bootstrap:") {
 		t.Fatalf("expected bootstrap output, got: %q", stdout.String())
 	}
 }
 
-func TestRunProjectInitCommand_JSON(t *testing.T) {
+func TestRunDevInitCommand_JSON(t *testing.T) {
 	root := t.TempDir()
 
 	var stdout bytes.Buffer
@@ -105,16 +105,16 @@ func TestRunProjectInitCommand_JSON(t *testing.T) {
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stdout)
 
-	err := runProjectInitCommand(
+	err := runDevInitCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
 	)
 	requireNoErr(t, err)
 
-	var payload projectInitEnvelope
+	var payload devInitEnvelope
 	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.Schema, "stageflow-cli/project-init@v1", "payload.Schema")
+	requireEqual(t, payload.Schema, "stageflow-cli/dev-init@v1", "payload.Schema")
 	requireEqual(t, payload.ProjectRoot, root, "payload.ProjectRoot")
 	requireEqual(t, payload.Created, true, "payload.Created")
 
@@ -123,41 +123,41 @@ func TestRunProjectInitCommand_JSON(t *testing.T) {
 	}
 }
 
-func TestRunProjectDoctorCommand_MissingConfigShowsInitHint(t *testing.T) {
+func TestRunDevDoctorCommand_MissingConfigShowsInitHint(t *testing.T) {
 	root := t.TempDir()
 
 	cmd := &cobra.Command{}
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
 
-	err := runProjectDoctorCommand(
+	err := runDevDoctorCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080"},
 		func(string) string { return "" },
-		&projectDoctorCmdOptions{
+		&devDoctorCmdOptions{
 			Timeout: time.Minute,
 		},
 	)
 	if err == nil {
-		t.Fatalf("runProjectDoctorCommand err = nil, want non-nil")
+		t.Fatalf("runDevDoctorCommand err = nil, want non-nil")
 	}
 
-	if !strings.Contains(err.Error(), "stageflow project init") {
-		t.Fatalf("runProjectDoctorCommand err = %q, want init hint", err.Error())
+	if !strings.Contains(err.Error(), "stageflow dev init") {
+		t.Fatalf("runDevDoctorCommand err = %q, want init hint", err.Error())
 	}
 }
 
-func TestRunProjectDoctorCommand_SkipDevPasses(t *testing.T) {
+func TestRunDevDoctorCommand_SkipDevPasses(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 1
+	writeProjectConfig(t, root, `version: 2
 stageflow:
   api_url: http://localhost:8080
 scan:
   urls:
     - https://example.com
-  scanners: axe
+  scanners: [axe]
 dev:
   start:
     cmd: ["echo", "dev"]
@@ -171,12 +171,12 @@ dev:
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&bytes.Buffer{})
 
-	err := runProjectDoctorCommand(
+	err := runDevDoctorCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080"},
 		func(string) string { return "" },
-		&projectDoctorCmdOptions{
+		&devDoctorCmdOptions{
 			Timeout: time.Minute,
 			SkipDev: true,
 		},
@@ -188,16 +188,16 @@ dev:
 	}
 }
 
-func TestRunProjectDoctorCommand_SkipDevJSON(t *testing.T) {
+func TestRunDevDoctorCommand_SkipDevJSON(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 1
+	writeProjectConfig(t, root, `version: 2
 stageflow:
   api_url: http://localhost:8080
 scan:
   urls:
     - http://127.0.0.1:5173
-  scanners: axe
+  scanners: [axe]
 dev:
   start:
     cmd: ["echo", "dev"]
@@ -211,24 +211,24 @@ dev:
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&bytes.Buffer{})
 
-	err := runProjectDoctorCommand(
+	err := runDevDoctorCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
 		func(string) string { return "" },
-		&projectDoctorCmdOptions{
+		&devDoctorCmdOptions{
 			Timeout: time.Minute,
 			SkipDev: true,
 		},
 	)
 	requireNoErr(t, err)
 
-	var payload projectDoctorEnvelope
+	var payload devDoctorEnvelope
 	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.Schema, "stageflow-cli/project-doctor@v1", "payload.Schema")
+	requireEqual(t, payload.Schema, "stageflow-cli/dev-doctor@v1", "payload.Schema")
 	requireEqual(t, payload.Passed, true, "payload.Passed")
 	requireEqual(t, payload.AutoAllowPrivateTargets, true, "payload.AutoAllowPrivateTargets")
-	requireEqual(t, payload.HostedMemory.Configured, false, "payload.HostedMemory.Configured")
+	requireEqual(t, payload.RemoteProject.Configured, false, "payload.RemoteProject.Configured")
 
 	if len(payload.Checks) != 3 {
 		t.Fatalf("expected 3 checks, got %d", len(payload.Checks))
@@ -237,7 +237,7 @@ dev:
 	requireEqual(t, payload.Checks[2].Status, "skipped", "payload.Checks[2].Status")
 }
 
-func TestWriteProjectDoctorJSONComputesPassedFromChecks(t *testing.T) {
+func TestWriteDevDoctorJSONComputesPassedFromChecks(t *testing.T) {
 	t.Parallel()
 
 	var stdout bytes.Buffer
@@ -257,7 +257,7 @@ func TestWriteProjectDoctorJSONComputesPassedFromChecks(t *testing.T) {
 	)
 	requireNoErr(t, err)
 
-	var payload projectDoctorEnvelope
+	var payload devDoctorEnvelope
 	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
 	requireEqual(t, payload.Passed, false, "payload.Passed")
 }
@@ -271,18 +271,17 @@ func TestAbbreviateIDHandlesShortIDs(t *testing.T) {
 	requireEqual(t, abbreviateID("short", 0), "short", "zero max")
 }
 
-func TestRunProjectDoctorCommand_SkipDevJSONHostedMemory(t *testing.T) {
+func TestRunDevDoctorCommand_SkipDevJSONRemoteProject(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 1
+	writeProjectConfig(t, root, `version: 2
 stageflow:
   api_url: http://localhost:8080
-  remote_project: hosted-demo
-  remote_api_url: https://hosted.stageflow.example
+  project: hosted-demo
 scan:
   urls:
     - https://example.com
-  scanners: axe
+  scanners: [axe]
 dev:
   start:
     cmd: ["echo", "dev"]
@@ -296,38 +295,37 @@ dev:
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&bytes.Buffer{})
 
-	err := runProjectDoctorCommand(
+	err := runDevDoctorCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
 		func(string) string { return "" },
-		&projectDoctorCmdOptions{
+		&devDoctorCmdOptions{
 			Timeout: time.Minute,
 			SkipDev: true,
 		},
 	)
 	requireNoErr(t, err)
 
-	var payload projectDoctorEnvelope
+	var payload devDoctorEnvelope
 	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.HostedMemory.Configured, true, "payload.HostedMemory.Configured")
-	requireEqual(t, payload.HostedMemory.ProjectSlug, "hosted-demo", "payload.HostedMemory.ProjectSlug")
-	requireEqual(t, payload.HostedMemory.APIURL, "https://hosted.stageflow.example", "payload.HostedMemory.APIURL")
+	requireEqual(t, payload.RemoteProject.Configured, true, "payload.RemoteProject.Configured")
+	requireEqual(t, payload.RemoteProject.Slug, "hosted-demo", "payload.RemoteProject.Slug")
 	requireEqual(
 		t,
-		payload.HostedMemory.RecommendedScanCommand,
-		`stageflow scan --project hosted-demo --format json --api https://hosted.stageflow.example`,
-		"payload.HostedMemory.RecommendedScanCommand",
+		payload.RemoteProject.RecommendedScanCommand,
+		`stageflow project scan hosted-demo --format json`,
+		"payload.RemoteProject.RecommendedScanCommand",
 	)
 	requireEqual(
 		t,
-		payload.HostedMemory.PromoteCommandTemplate,
-		`stageflow project promote hosted-demo --job-id <job-id> --api https://hosted.stageflow.example`,
-		"payload.HostedMemory.PromoteCommandTemplate",
+		payload.RemoteProject.PromoteCommandTemplate,
+		`stageflow project promote hosted-demo --job-id <job-id>`,
+		"payload.RemoteProject.PromoteCommandTemplate",
 	)
 }
 
-func TestRunProjectDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
+func TestRunDevDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 	root := t.TempDir()
 
 	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
@@ -342,12 +340,12 @@ func TestRunProjectDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&bytes.Buffer{})
 
-	err = runProjectDoctorCommand(
+	err = runDevDoctorCommand(
 		cmd,
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080"},
 		func(string) string { return "" },
-		&projectDoctorCmdOptions{
+		&devDoctorCmdOptions{
 			Timeout: time.Minute,
 			SkipDev: true,
 		},
@@ -359,16 +357,16 @@ func TestRunProjectDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 	}
 }
 
-func TestResolveProjectHostedStageflowPrefersRemoteAPIURL(t *testing.T) {
+func TestResolveProjectStageflowUsesConfigAPIURL(t *testing.T) {
 	cmd := &cobra.Command{}
 
-	apiURL, apiKey := resolveProjectHostedStageflow(
+	apiURL, apiKey := resolveProjectStageflow(
 		cmd,
 		&rootOptions{apiURL: "http://localhost:8080"},
 		projectConfig{
 			Stageflow: projectStageflowCfg{
-				RemoteAPIURL: "https://hosted.stageflow.example",
-				APIKeyEnv:    "HOSTED_STAGEFLOW_KEY",
+				APIURL:    "https://hosted.stageflow.example",
+				APIKeyEnv: "HOSTED_STAGEFLOW_KEY",
 			},
 		},
 		func(name string) string {
@@ -382,17 +380,17 @@ func TestResolveProjectHostedStageflowPrefersRemoteAPIURL(t *testing.T) {
 	requireEqual(t, apiKey, "secret-token", "apiKey")
 }
 
-func TestResolveProjectHostedStageflowExplicitAPIWins(t *testing.T) {
+func TestResolveProjectStageflowExplicitAPIWins(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().String("api", "", "")
 	requireNoErr(t, cmd.Flags().Set("api", "https://explicit.stageflow.example"))
 
-	apiURL, _ := resolveProjectHostedStageflow(
+	apiURL, _ := resolveProjectStageflow(
 		cmd,
 		&rootOptions{apiURL: "https://explicit.stageflow.example"},
 		projectConfig{
 			Stageflow: projectStageflowCfg{
-				RemoteAPIURL: "https://hosted.stageflow.example",
+				APIURL: "https://hosted.stageflow.example",
 			},
 		},
 		func(string) string { return "" },

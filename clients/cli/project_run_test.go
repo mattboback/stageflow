@@ -5,7 +5,7 @@ import "testing"
 func TestBuildProjectSubmitJobRequestDefaultsScreenshotCaptureOn(t *testing.T) {
 	req, _, err := buildProjectSubmitJobRequest(projectScanCfg{
 		URLs:     []string{"https://example.com"},
-		Scanners: "axe",
+		Scanners: []string{"axe"},
 	})
 	requireNoErr(t, err)
 
@@ -16,7 +16,7 @@ func TestBuildProjectSubmitJobRequestHonorsScreenshotFalse(t *testing.T) {
 	disabled := false
 	req, _, err := buildProjectSubmitJobRequest(projectScanCfg{
 		URLs:       []string{"https://example.com"},
-		Scanners:   "axe",
+		Scanners:   []string{"axe"},
 		Screenshot: &disabled,
 	})
 	requireNoErr(t, err)
