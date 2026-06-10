@@ -190,11 +190,11 @@ func (s *Server) validateProjectURLs(w http.ResponseWriter, r *http.Request, url
 		return false
 	}
 
-	validationMode, detail := s.resolveTargetValidationMode(false)
-	if detail != nil {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
-
-		return false
+	// Projects carry no per-request opt-in, so the instance-level setting
+	// decides whether private project URLs are accepted.
+	validationMode := targetValidationModePublic
+	if s.config.AllowPrivateTargets {
+		validationMode = targetValidationModePrivate
 	}
 
 	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, urls, validationMode); err != nil {
