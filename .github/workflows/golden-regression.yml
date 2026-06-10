@@ -56,6 +56,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y podman
+          # podman compose delegates to the docker-compose plugin, which needs
+          # the rootless API socket listening.
+          systemctl --user enable --now podman.socket
 
       - name: Prepare dependencies
         run: |
