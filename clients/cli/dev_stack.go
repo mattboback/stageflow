@@ -222,7 +222,9 @@ func sendSignal(p *os.Process, sig syscall.Signal) {
 		return
 	}
 
-	_ = p.Signal(sig)
+	if err := p.Signal(sig); err != nil {
+		return
+	}
 }
 
 func mergeEnv(base []string, overlay map[string]string) []string {
