@@ -67,7 +67,8 @@ describe('IssuesView grouped rendering', () => {
 		const rows = container.querySelectorAll("[data-testid='issue-group-row']");
 		expect(rows).toHaveLength(1);
 		expect(container.textContent).toContain('10');
-		expect(container.textContent?.toLowerCase()).toContain('occurrences of this pattern');
+		expect(container.textContent?.toLowerCase()).toContain('occurrences');
+		expect(container.textContent?.toLowerCase()).toContain('fix once → closes 10 instances');
 	});
 
 	it('expands a group to show occurrences when clicked', async () => {

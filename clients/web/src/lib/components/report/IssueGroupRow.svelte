@@ -90,10 +90,17 @@
 							×{occurrenceCount.toLocaleString()}
 						</span>
 						<span class="text-ink-muted">
-							{occurrenceCount === 1 ? 'one occurrence' : 'occurrences of this pattern'} across
+							{occurrenceCount === 1 ? 'occurrence' : 'occurrences'} ·
 							<span class="text-ink font-mono font-semibold">{pageCount.toLocaleString()}</span>
 							{pageCount === 1 ? 'page' : 'pages'}
 						</span>
+						{#if occurrenceCount >= 5}
+							<span
+								class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] leading-none font-semibold text-emerald-700"
+							>
+								Fix once → closes {occurrenceCount.toLocaleString()} instances
+							</span>
+						{/if}
 					</div>
 				</div>
 				<span
