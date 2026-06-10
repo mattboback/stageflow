@@ -85,6 +85,19 @@ jobs:
       - name: Start stack
         run: |
           podman network inspect stageflow_net >/dev/null 2>&1 || podman network create stageflow_net
+          # MinIO first, then provision the app user; platform-api's healthcheck
+          # cannot pass until the app user exists (same sequence as `just demo`).
+          podman compose -p stageflow \
+            -f infra/compose/podman-compose.yml \
+            -f infra/compose/podman-compose.local.yml \
+            --env-file .env up -d minio
+          for _ in {1..60}; do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          MINIO_ENDPOINT=http://127.0.0.1:9000 ./infra/minio/init-buckets.sh
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
             -f infra/compose/podman-compose.local.yml \
@@ -106,13 +119,6 @@ jobs:
             done
             curl -fsS "${url}" >/dev/null
           done
-
-      - name: Initialize MinIO buckets
-        run: |
-          set -a
-          source .env
-          set +a
-          MINIO_ENDPOINT=http://127.0.0.1:9000 ./infra/minio/init-buckets.sh
 
       - name: Run golden regression script
         run: bash qa/e2e/project-scan-golden.sh
