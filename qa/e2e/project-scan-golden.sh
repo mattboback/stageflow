@@ -210,7 +210,7 @@ echo "    Done."
 
 # --- Step 2: Baseline scan ---
 echo "==> Step 2: Running baseline scan..."
-sf_json scan --project "${PROJECT_SLUG}" --timeout 5m \
+sf_json project scan "${PROJECT_SLUG}" --timeout 5m \
   > "${WORK_DIR}/baseline-raw.json" 2>"${WORK_DIR}/baseline-stderr.txt"
 echo "    Done."
 
@@ -245,7 +245,7 @@ echo "    Done."
 # --- Step 5: Regression scan ---
 echo "==> Step 5: Running regression scan..."
 set +e
-sf_json scan --project "${PROJECT_SLUG}" --timeout 5m \
+sf_json project scan "${PROJECT_SLUG}" --timeout 5m \
   > "${WORK_DIR}/regression-raw.json" 2>"${WORK_DIR}/regression-stderr.txt"
 REGRESSION_EXIT=$?
 set -e

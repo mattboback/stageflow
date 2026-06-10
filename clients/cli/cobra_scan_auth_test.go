@@ -91,7 +91,7 @@ func TestScanAuthState_AttachesBase64StorageState(t *testing.T) {
 		"--summary-only",
 		"--auth-state",
 		statePath,
-		"--scanners",
+		"--scanner",
 		"axe",
 	)
 	if exitCode != 0 {
@@ -176,7 +176,7 @@ success:
 		"--summary-only",
 		"--auth-recipe",
 		recipePath,
-		"--scanners",
+		"--scanner",
 		"axe",
 	)
 	if exitCode != 0 {
@@ -267,7 +267,7 @@ func TestScanAuth_MutuallyExclusiveFlags(t *testing.T) {
 	}
 }
 
-func TestScanAuth_ProjectModeRejectsAuthFlags(t *testing.T) {
+func TestProjectScanRejectsAuthFlags(t *testing.T) {
 	tmp := t.TempDir()
 	statePath := filepath.Join(tmp, "s.json")
 
@@ -278,17 +278,17 @@ func TestScanAuth_ProjectModeRejectsAuthFlags(t *testing.T) {
 	stdout, stderr, exitCode := runCLI(
 		t,
 		"stageflow",
+		"project",
 		"scan",
-		"--project",
 		"demo-site",
 		"--auth-state",
 		statePath,
 	)
-	if exitCode == 0 {
-		t.Fatalf("expected non-zero exit; stdout=%q stderr=%q", stdout, stderr)
+	if exitCode != 2 {
+		t.Fatalf("expected exit 2; stdout=%q stderr=%q", stdout, stderr)
 	}
 
-	if !strings.Contains(stderr, "not supported with --project") {
-		t.Errorf("expected project-mode rejection in stderr; got %q", stderr)
+	if !strings.Contains(stderr, "unknown flag: --auth-state") {
+		t.Errorf("expected unknown-flag rejection in stderr; got %q", stderr)
 	}
 }

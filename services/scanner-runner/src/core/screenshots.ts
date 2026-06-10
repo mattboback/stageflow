@@ -138,6 +138,8 @@ class DefaultScreenshotService implements ScreenshotService {
 	): Promise<ScreenshotResult> {
 		const { format = 'png', quality, scale = 1, timeout = 30_000 } = options;
 
+		await this.settleDynamicContent(page, Math.min(timeout, 10_000));
+
 		try {
 			const screenshotOptions = {
 				fullPage: true,
@@ -189,6 +191,8 @@ class DefaultScreenshotService implements ScreenshotService {
 		const limitedTargets = targets.slice(0, maxTargets);
 		const highlightedElements: HighlightedElement[] = [];
 		const styleId = `stageflow-highlight-${Date.now()}`;
+
+		await this.settleDynamicContent(page, Math.min(timeout, 10_000));
 
 		try {
 			await page.addStyleTag({
@@ -275,6 +279,45 @@ class DefaultScreenshotService implements ScreenshotService {
 					}
 				}, styleId)
 				.catch(() => undefined);
+		}
+	}
+
+	/**
+	 * Scroll through the page before a full-page capture so IntersectionObserver
+	 * reveal animations fire and lazy-loaded images start fetching; otherwise
+	 * below-the-fold content is captured at its hidden (opacity: 0) state.
+	 * Best-effort: any failure falls through and the capture proceeds as-is.
+	 */
+	private async settleDynamicContent(page: Page, budgetMs: number): Promise<void> {
+		try {
+			await page.evaluate(async (maxMs) => {
+				const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+				const deadline = Date.now() + maxMs;
+				const root = document.scrollingElement ?? document.documentElement;
+				const step = Math.max(window.innerHeight, 1);
+
+				for (let y = 0; y <= root.scrollHeight && Date.now() < deadline; y += step) {
+					window.scrollTo(0, y);
+					await sleep(120);
+				}
+				window.scrollTo(0, root.scrollHeight);
+				await sleep(200);
+
+				const pendingImages = Array.from(document.images)
+					.filter((img) => !img.complete)
+					.map((img) => img.decode().catch(() => undefined));
+				await Promise.race([
+					Promise.allSettled(pendingImages),
+					sleep(Math.max(deadline - Date.now(), 0))
+				]);
+
+				window.scrollTo(0, 0);
+				await sleep(400);
+			}, budgetMs);
+		} catch (err) {
+			this.logger.warn?.('Pre-capture scroll pass failed; capturing current state', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 		}
 	}
 

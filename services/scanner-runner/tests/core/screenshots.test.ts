@@ -136,7 +136,8 @@ describe('ScreenshotService', () => {
 			expect(result.highlightedElements[0]!.selector).toBe('#ok');
 			expect(result.highlightedElements[0]!.visible).toBe(true);
 
-			expect(cleanupEvaluate).toHaveBeenCalledTimes(1);
+			// page.evaluate runs twice: the pre-capture settle pass, then cleanup.
+			expect(cleanupEvaluate).toHaveBeenCalledTimes(2);
 			expect(cleanupEvaluate).toHaveBeenCalledWith(expect.any(Function), 'stageflow-highlight-123');
 		} finally {
 			nowSpy.mockRestore();
@@ -168,7 +169,8 @@ describe('ScreenshotService', () => {
 			await expect(service.captureWithHighlights(page, [{ selector: '#ok' }])).rejects.toThrow(
 				'boom'
 			);
-			expect(cleanupEvaluate).toHaveBeenCalledTimes(1);
+			// page.evaluate runs twice: the pre-capture settle pass, then cleanup.
+			expect(cleanupEvaluate).toHaveBeenCalledTimes(2);
 		} finally {
 			nowSpy.mockRestore();
 		}

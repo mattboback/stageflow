@@ -186,6 +186,36 @@
 
 	const pageLabel = $derived(page?.path ?? page?.url ?? null);
 	const kindLabel = $derived(getIssueKindLabel(issueKind));
+
+	const impactBanner = $derived.by(() => {
+		switch (issue.userImpact?.severity) {
+			case 'blocking':
+				return {
+					label: 'Blocking — affected users cannot complete this task',
+					containerClass: 'border-red-200 bg-red-600/10 text-red-800',
+					dotClass: 'bg-red-500 text-red-500 animate-hotspot-pulse'
+				};
+			case 'degraded':
+				return {
+					label: 'Degraded — the experience is significantly harder for affected users',
+					containerClass: 'border-amber-200 bg-amber-500/10 text-amber-800',
+					dotClass: 'bg-amber-500'
+				};
+			case 'inconvenient':
+				return {
+					label: 'Inconvenient — affected users can work around this',
+					containerClass: 'border-blue-200 bg-blue-500/10 text-blue-800',
+					dotClass: 'bg-blue-500'
+				};
+			default:
+				return null;
+		}
+	});
+
+	const affectedGroupLabels = $derived.by(() => {
+		const groups = issue.userImpact?.affectedGroups ?? [];
+		return groups.map((group) => (group === 'all' ? 'all users' : group.replace('-', ' ')));
+	});
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -211,7 +241,12 @@
 								getSeverityContainerClass(issue.severity)
 							)}
 						>
-							<span class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
+							<span
+								class={cn(
+									'h-2 w-2 rounded-full',
+									getSeverityDotClass(issue.severity),
+									issue.severity === 'critical' && 'animate-hotspot-pulse text-red-500'
+								)}
 							></span>
 							{issue.severity}
 						</span>
@@ -238,6 +273,18 @@
 					{/if}
 					{#if issue.friendlyNode?.label}
 						<p class="text-ink-muted mt-2 text-sm">{issue.friendlyNode.label}</p>
+					{/if}
+					{#if impactBanner}
+						<div
+							class={cn(
+								'mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold',
+								impactBanner.containerClass
+							)}
+							data-testid="impact-banner"
+						>
+							<span class={cn('h-2 w-2 shrink-0 rounded-full', impactBanner.dotClass)}></span>
+							{impactBanner.label}
+						</div>
 					{/if}
 				</div>
 				<div class="flex shrink-0 items-center gap-1">
@@ -328,6 +375,29 @@
 						</p>
 					{/if}
 				</div>
+				{#if issue.userImpact && (issue.userImpact.statement || affectedGroupLabels.length || issue.userImpact.userStory)}
+					<div
+						class="rounded-xl border border-amber-100 bg-amber-50/60 p-4"
+						data-testid="user-impact-callout"
+					>
+						<p class="mb-1 text-xs font-semibold tracking-wide text-amber-900 uppercase">
+							Who is affected
+						</p>
+						{#if issue.userImpact.statement}
+							<p class="text-ink-muted text-sm leading-relaxed">{issue.userImpact.statement}</p>
+						{/if}
+						{#if affectedGroupLabels.length}
+							<div class="mt-2 flex flex-wrap gap-1.5">
+								{#each affectedGroupLabels as group (group)}
+									<Chip tone="muted" size="sm">{group}</Chip>
+								{/each}
+							</div>
+						{/if}
+						{#if issue.userImpact.userStory}
+							<p class="text-ink-muted mt-2 text-sm italic">“{issue.userImpact.userStory}”</p>
+						{/if}
+					</div>
+				{/if}
 				{#if issue.helpUrl}
 					<a
 						href={issue.helpUrl}

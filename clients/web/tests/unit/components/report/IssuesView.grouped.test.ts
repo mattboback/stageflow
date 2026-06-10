@@ -67,7 +67,7 @@ describe('IssuesView grouped rendering', () => {
 		const rows = container.querySelectorAll("[data-testid='issue-group-row']");
 		expect(rows).toHaveLength(1);
 		expect(container.textContent).toContain('10');
-		expect(container.textContent?.toLowerCase()).toContain('elements');
+		expect(container.textContent?.toLowerCase()).toContain('occurrences of this pattern');
 	});
 
 	it('expands a group to show occurrences when clicked', async () => {

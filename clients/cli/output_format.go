@@ -13,11 +13,7 @@ const (
 	outputFormatJSON     outputFormat = "json"
 )
 
-func normalizeOutputFormat(raw string, jsonAlias bool) (outputFormat, error) {
-	if jsonAlias {
-		return outputFormatJSON, nil
-	}
-
+func normalizeOutputFormat(raw string) (outputFormat, error) {
 	trimmed := strings.TrimSpace(strings.ToLower(raw))
 	if trimmed == "" {
 		return outputFormatText, nil

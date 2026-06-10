@@ -122,11 +122,11 @@ func runProjectScan(
 
 func buildProjectSubmitJobRequest(cfg projectScanCfg) (apiclient.SubmitJobRequest, []string, error) {
 	scanners := cfg.Scanners
-	if scanners == "" {
-		scanners = defaultScanScanners
+	if len(scanners) == 0 {
+		scanners = defaultScanScannerList()
 	}
 
-	modules, err := urlcheck.ParseModules(scanners)
+	modules, err := normalizeScannerList(scanners)
 	if err != nil {
 		return apiclient.SubmitJobRequest{}, nil, fmt.Errorf("invalid scan.scanners: %w", err)
 	}
@@ -153,12 +153,12 @@ func buildProjectSubmitJobRequest(cfg projectScanCfg) (apiclient.SubmitJobReques
 		AllowPrivateTargets: allowPrivate,
 	}, urls, nil
 }
-func runProjectCommand(
+func runDevScanCommand(
 	cmd *cobra.Command,
 	args []string,
 	root *rootOptions,
 	getenv getenvFunc,
-	opts *projectCmdOptions,
+	opts *devScanCmdOptions,
 ) error {
 	if opts.Report.maxIssues < 0 {
 		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}

@@ -3,6 +3,7 @@
 	import type { IssueDetail, IssueGroup, PageSummary } from '$lib/types/unified-report';
 
 	import { StatusPill, type StatusPillTone } from '$lib/components/ui';
+	import { rewriteIssueTitle } from '$lib/report';
 	import { cn } from '$lib/utils';
 	import { ChevronDown, ChevronRight } from 'lucide-svelte';
 
@@ -41,6 +42,11 @@
 	const tone = $derived<StatusPillTone>(severityToTone[group.severity] ?? 'neutral');
 	const occurrenceCount = $derived(group.occurrences.length);
 	const pageCount = $derived(group.pageIds.length);
+	// Manual-audit titles ship as positive statements ("controls are focusable")
+	// that read like a pass — rewrite them to "Verify: …" like the modal does.
+	const displayTitle = $derived(
+		group.occurrences[0] ? rewriteIssueTitle(group.occurrences[0]) : group.title
+	);
 </script>
 
 <div class="border-line/70 bg-surface border-b last:border-b-0" data-testid="issue-group-row">
@@ -70,15 +76,21 @@
 						</span>
 					</div>
 					<h4 class="text-ink mt-1.5 truncate text-sm leading-snug font-semibold">
-						{group.title}
+						{displayTitle}
 					</h4>
-					<div class="text-ink-muted mt-1 flex items-center gap-3 text-xs">
-						<span>
-							Found on
-							<span class="text-ink font-mono font-semibold"
-								>{occurrenceCount.toLocaleString()}</span
-							>
-							{occurrenceCount === 1 ? 'element' : 'elements'} across
+					<div class="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+						<span
+							class={cn(
+								'inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[11px] leading-none font-bold tabular-nums',
+								occurrenceCount > 1
+									? 'border-line bg-surface-muted text-ink'
+									: 'border-line/60 bg-surface text-ink-muted'
+							)}
+						>
+							×{occurrenceCount.toLocaleString()}
+						</span>
+						<span class="text-ink-muted">
+							{occurrenceCount === 1 ? 'one occurrence' : 'occurrences of this pattern'} across
 							<span class="text-ink font-mono font-semibold">{pageCount.toLocaleString()}</span>
 							{pageCount === 1 ? 'page' : 'pages'}
 						</span>

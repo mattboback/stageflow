@@ -9,10 +9,11 @@
 		getVirtualWindow,
 		groupIssuesByRule,
 		isIssueSortKey,
+		isManualReviewIssue,
 		sortIssues
 	} from '$lib/report';
 	import { cn } from '$lib/utils';
-	import { Filter, X } from 'lucide-svelte';
+	import { ChevronDown, ChevronRight, Eye, Filter, X } from 'lucide-svelte';
 
 	import IssueFilterSidebar from './IssueFilterSidebar.svelte';
 	import IssueGroupRow from './IssueGroupRow.svelte';
@@ -83,6 +84,23 @@
 	);
 
 	const groups = $derived<IssueGroup[]>(groupIssuesByRule(filteredIssues));
+
+	// Manual-review rules (e.g. "verify color contrast" checks) are noise next to
+	// concrete failures — park them in a collapsed bucket below the actionable list.
+	const actionableGroups = $derived(
+		groups.filter((group) => !group.occurrences.every(isManualReviewIssue))
+	);
+	const manualGroups = $derived(
+		groups.filter((group) => group.occurrences.every(isManualReviewIssue))
+	);
+	const manualCheckCount = $derived(
+		manualGroups.reduce((sum, group) => sum + group.occurrences.length, 0)
+	);
+
+	let manualOpen = $state(false);
+	// If everything needs manual review, hiding the whole list behind a collapse
+	// would render an empty panel — force the bucket open in that case.
+	const manualExpanded = $derived(manualOpen || actionableGroups.length === 0);
 
 	const hasActiveFilters = $derived(
 		activeScanners.length > 0 ||
@@ -371,8 +389,12 @@
 					>
 						<div class="text-ink-muted text-xs">
 							{#if viewMode === 'grouped'}
-								<span class="font-mono">{groups.length.toLocaleString()}</span> rules ·
-								<span class="font-mono">{sortedIssues.length.toLocaleString()}</span> occurrences
+								<span class="font-mono">{actionableGroups.length.toLocaleString()}</span>
+								actionable rule{actionableGroups.length === 1 ? '' : 's'}
+								{#if manualGroups.length > 0}
+									· <span class="font-mono">{manualGroups.length.toLocaleString()}</span> manual review
+								{/if}
+								· <span class="font-mono">{sortedIssues.length.toLocaleString()}</span> occurrences
 							{:else}
 								<span class="font-mono">{sortedIssues.length.toLocaleString()}</span> visible results
 							{/if}
@@ -430,7 +452,7 @@
 				</div>
 			{:else if viewMode === 'grouped'}
 				<div class="border-line/70 border-t" data-testid="issue-group-list">
-					{#each groups as group (group.fingerprint)}
+					{#each actionableGroups as group (group.fingerprint)}
 						<IssueGroupRow
 							{group}
 							{pagesById}
@@ -442,6 +464,51 @@
 							{onIssueSelect}
 						/>
 					{/each}
+
+					{#if manualGroups.length > 0}
+						<div class="bg-surface-muted/30" data-testid="manual-review-bucket">
+							<button
+								type="button"
+								onclick={() => (manualOpen = !manualOpen)}
+								aria-expanded={manualExpanded}
+								class="hover:bg-surface-muted/70 border-line/70 flex w-full items-center gap-3 border-t px-4 py-3 text-left transition sm:px-5"
+							>
+								<span class="text-ink-faint flex h-4 w-4 shrink-0 items-center justify-center">
+									{#if manualExpanded}
+										<ChevronDown class="h-4 w-4" />
+									{:else}
+										<ChevronRight class="h-4 w-4" />
+									{/if}
+								</span>
+								<Eye class="text-ink-faint h-4 w-4 shrink-0" aria-hidden="true" />
+								<span class="min-w-0 flex-1">
+									<span class="text-ink text-sm font-semibold">
+										Needs manual review ({manualGroups.length.toLocaleString()})
+									</span>
+									<span class="text-ink-muted ml-2 text-xs">
+										{manualCheckCount.toLocaleString()} check{manualCheckCount === 1 ? '' : 's'} the scanners
+										couldn't verify automatically
+									</span>
+								</span>
+							</button>
+							{#if manualExpanded}
+								<div class="border-line/60 border-t">
+									{#each manualGroups as group (group.fingerprint)}
+										<IssueGroupRow
+											{group}
+											{pagesById}
+											{screenshots}
+											{showPreviews}
+											expanded={!!expandedGroups[group.fingerprint]}
+											{selectedIssueId}
+											onToggle={() => toggleGroup(group.fingerprint)}
+											{onIssueSelect}
+										/>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{:else}
 				<div

@@ -2,7 +2,7 @@
 	import type { ScreenshotArtifact } from '$lib/types/scan';
 	import type { IssueDetail, UnifiedReport } from '$lib/types/unified-report';
 
-	import { Panel } from '$lib/components/ui';
+	import { Panel, SeverityBar } from '$lib/components/ui';
 	import {
 		getPageOverviewUrl,
 		getSeverityContainerClass,
@@ -215,24 +215,61 @@
 		<div class="flex min-w-max gap-1">
 			{#each report.pages as p (p.id)}
 				{@const count = (issuesByPage[p.id] ?? []).length}
+				{@const isActiveTab = selectedPage?.id === p.id}
+				{@const tabOverview = p.pageOverview ?? null}
+				{@const tabOverviewUrl =
+					tabOverview && (tabOverview.pageWidth ?? 0) > 0
+						? getPageOverviewUrl(
+								screenshots,
+								p.id,
+								activeScanner ? [activeScanner, 'axe'] : ['axe']
+							)
+						: null}
 				<button
 					type="button"
 					onclick={() => onSelectPage(p.id)}
 					class={cn(
-						'flex flex-col items-start rounded-xl px-3.5 py-2 text-left text-xs font-semibold whitespace-nowrap transition-all duration-200',
-						selectedPage?.id === p.id
-							? 'bg-ink text-surface scale-102 shadow-xs'
+						'flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold whitespace-nowrap transition-all duration-200',
+						isActiveTab
+							? 'bg-ink text-surface ring-ink/20 scale-102 shadow-xs ring-2'
 							: 'text-ink-muted hover:bg-surface-muted hover:text-ink'
 					)}
 					title={p.url}
 				>
-					<span class="block max-w-[140px] truncate">{p.path ?? p.url}</span>
-					{#if count > 0}
+					{#if tabOverviewUrl && tabOverview}
 						<span
-							class={cn('text-[10px]', selectedPage?.id === p.id ? 'opacity-65' : 'text-ink-faint')}
-							>{count} issues</span
+							class={cn(
+								'border-line/60 bg-surface h-8 w-11 shrink-0 overflow-hidden rounded-md border',
+								isActiveTab && 'border-surface/30'
+							)}
 						>
+							<svg
+								class="h-full w-full"
+								viewBox={`0 0 ${tabOverview.pageWidth} ${Math.min(tabOverview.pageHeight, Math.round(tabOverview.pageWidth * 0.72))}`}
+								preserveAspectRatio="xMidYMin slice"
+								aria-hidden="true"
+							>
+								<image
+									href={tabOverviewUrl}
+									x="0"
+									y="0"
+									width={tabOverview.pageWidth}
+									height={tabOverview.pageHeight}
+								/>
+							</svg>
+						</span>
 					{/if}
+					<span class="flex min-w-0 flex-col items-start gap-0.5">
+						<span class="block max-w-[140px] truncate">{p.path ?? p.url}</span>
+						{#if count > 0}
+							<span class={cn('text-[10px]', isActiveTab ? 'opacity-65' : 'text-ink-faint')}
+								>{count} issues</span
+							>
+						{/if}
+						{#if p.bySeverity && count > 0}
+							<SeverityBar counts={p.bySeverity} height="sm" class="w-16" />
+						{/if}
+					</span>
 				</button>
 			{/each}
 		</div>
@@ -510,7 +547,11 @@
 										)}
 									>
 										<span
-											class={cn('h-1.5 w-1.5 rounded-full', getSeverityDotClass(issue.severity))}
+											class={cn(
+												'h-2 w-2 rounded-full',
+												getSeverityDotClass(issue.severity),
+												issue.severity === 'critical' && 'animate-hotspot-pulse text-red-500'
+											)}
 										></span>
 										{issue.severity}
 									</span>

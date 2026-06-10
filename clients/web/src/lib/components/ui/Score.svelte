@@ -5,12 +5,14 @@
 
 	interface Props {
 		score: number | null;
+		/** Letter grade (e.g. "B", "A+") shown as the hero value when provided. */
+		grade?: string | null;
 		size?: 'sm' | 'md' | 'lg';
 		showPill?: boolean;
 		class?: string;
 	}
 
-	let { score, size = 'md', showPill = true, class: className }: Props = $props();
+	let { score, grade = null, size = 'md', showPill = true, class: className }: Props = $props();
 
 	function bandFor(value: number): { tone: StatusPillTone; label: string } {
 		if (value >= 90) return { tone: 'strong', label: 'Strong' };
@@ -60,6 +62,24 @@
 				return 'stroke-slate-300';
 		}
 	});
+
+	const gradeColorClass = $derived.by(() => {
+		if (!band) return 'text-ink-strong';
+		switch (band.tone) {
+			case 'strong':
+				return 'text-emerald-600';
+			case 'watch':
+				return 'text-blue-600';
+			case 'needs-work':
+				return 'text-amber-600';
+			case 'high-risk':
+				return 'text-orange-600';
+			case 'failing':
+				return 'text-red-600';
+			default:
+				return 'text-ink-strong';
+		}
+	});
 </script>
 
 <div class={cn('flex items-center gap-3.5', className)} data-testid="score">
@@ -88,12 +108,12 @@
 					cy={center}
 					r={radius}
 					fill="none"
-					class={strokeColorClass}
+					class={cn('animate-score-ring', strokeColorClass)}
 					stroke-width={strokeWidth}
 					stroke-dasharray={circumference}
 					stroke-dashoffset={strokeDashoffset}
 					stroke-linecap="round"
-					style="transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1);"
+					style={`--circumference: ${circumference}; --target-offset: ${strokeDashoffset};`}
 				/>
 			{/if}
 		</svg>
@@ -101,19 +121,31 @@
 
 	<div class="flex flex-col gap-1">
 		<div class="flex items-baseline gap-0.5">
-			<span
-				class={cn('text-ink-strong font-mono leading-none tracking-tight tabular-nums', numClass)}
-				data-testid="score-number"
-			>
-				{#if rounded === null}
-					—
-				{:else}
-					{rounded}
-				{/if}
-			</span>
-			<span class={cn('text-ink-faint font-mono leading-none tabular-nums', denomClass)}>
-				/100
-			</span>
+			{#if grade && rounded !== null}
+				<span
+					class={cn('leading-none font-black tracking-tight', gradeColorClass, numClass)}
+					data-testid="score-grade"
+				>
+					{grade}
+				</span>
+				<span class={cn('text-ink-muted ml-2 font-mono leading-none tabular-nums', denomClass)}>
+					<span data-testid="score-number">{rounded}</span><span class="text-ink-faint">/100</span>
+				</span>
+			{:else}
+				<span
+					class={cn('text-ink-strong font-mono leading-none tracking-tight tabular-nums', numClass)}
+					data-testid="score-number"
+				>
+					{#if rounded === null}
+						—
+					{:else}
+						{rounded}
+					{/if}
+				</span>
+				<span class={cn('text-ink-faint font-mono leading-none tabular-nums', denomClass)}>
+					/100
+				</span>
+			{/if}
 		</div>
 		{#if showPill && band}
 			<StatusPill

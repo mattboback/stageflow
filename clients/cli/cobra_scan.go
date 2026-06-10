@@ -13,30 +13,28 @@ import (
 
 func newScanCmd(root *rootOptions) *cobra.Command {
 	var (
-		rawScanners    string
+		scanners       []string
 		screenshot     = true
 		allowPrivate   bool
 		timeout        time.Duration
 		noStream       bool
-		projectSlug    string
 		authStatePath  string
 		authRecipePath string
 		reportOpts     reportCommandOptions
 	)
 
 	cmd := &cobra.Command{
-		Use:                   "scan [url...] [--project <slug>]",
-		Short:                 "Submit a scan job and wait for results",
+		Use:                   "scan <url>...",
+		Short:                 "Scan one or more URLs and report the results",
 		DisableFlagsInUseLine: true,
-		Args:                  cobra.ArbitraryArgs,
+		Args:                  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts := scanCommandOptions{
-				rawScanners:    rawScanners,
+				scanners:       scanners,
 				screenshot:     screenshot,
 				allowPrivate:   allowPrivate,
 				timeout:        timeout,
 				noStream:       noStream,
-				projectSlug:    projectSlug,
 				authStatePath:  authStatePath,
 				authRecipePath: authRecipePath,
 				reportOpts:     reportOpts,
@@ -46,7 +44,12 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&rawScanners, "scanners", defaultScanScanners, "Comma-separated scanner modules")
+	cmd.Flags().StringSliceVar(
+		&scanners,
+		"scanner",
+		defaultScanScannerList(),
+		"Scanner module (repeatable or comma-separated)",
+	)
 	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
 	cmd.Flags().BoolVar(
 		&allowPrivate,
@@ -55,7 +58,6 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		"Allow private/loopback targets (requires API instance to permit it)",
 	)
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time")
-	cmd.Flags().StringVar(&projectSlug, "project", "", "Scan using a registered project's URLs and config")
 	cmd.Flags().StringVar(
 		&authStatePath,
 		"auth-state",
@@ -79,44 +81,17 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 }
 
 type scanCommandOptions struct {
-	rawScanners    string
+	scanners       []string
 	screenshot     bool
 	allowPrivate   bool
 	timeout        time.Duration
 	noStream       bool
-	projectSlug    string
 	authStatePath  string
 	authRecipePath string
 	reportOpts     reportCommandOptions
 }
 
 func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, args []string) error {
-	if opts.projectSlug != "" {
-		return runScanProjectCmd(cmd, root, opts)
-	}
-
-	return runScanURLCmd(cmd, root, opts, args)
-}
-
-func runScanProjectCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions) error {
-	if opts.authStatePath != "" || opts.authRecipePath != "" {
-		return exitCodeError{
-			Code: 2,
-			Err: errors.New(
-				"--auth-state and --auth-recipe are not supported with --project " +
-					"(configure auth on the remote project instead)",
-			),
-		}
-	}
-
-	return runRemoteProjectScan(cmd, root, opts.projectSlug, opts.timeout, opts.noStream, opts.reportOpts)
-}
-
-func runScanURLCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, args []string) error {
-	if len(args) == 0 {
-		return exitCodeError{Code: 2, Err: errors.New("at least one URL is required (or use --project)")}
-	}
-
 	if opts.reportOpts.maxIssues < 0 {
 		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 	}
@@ -161,7 +136,7 @@ func buildScanRequest(
 		return apiclient.SubmitJobRequest{}, exitCodeError{Code: 2, Err: err}
 	}
 
-	modules, err := urlcheck.ParseModules(opts.rawScanners)
+	modules, err := normalizeScannerList(opts.scanners)
 	if err != nil {
 		return apiclient.SubmitJobRequest{}, exitCodeError{Code: 2, Err: err}
 	}

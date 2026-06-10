@@ -74,7 +74,7 @@ func TestWriteProjectDoctorJSON_PassedTrueWhenAllChecksPass(t *testing.T) {
 		t.Fatalf("writeProjectDoctorJSON: %v", err)
 	}
 
-	var envelope projectDoctorEnvelope
+	var envelope devDoctorEnvelope
 	if err := json.Unmarshal(out.Bytes(), &envelope); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestWriteProjectDoctorJSON_PassedFalseWhenCheckFails(t *testing.T) {
 		t.Fatalf("writeProjectDoctorJSON: %v", err)
 	}
 
-	var envelope projectDoctorEnvelope
+	var envelope devDoctorEnvelope
 	if err := json.Unmarshal(out.Bytes(), &envelope); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -128,12 +128,12 @@ func TestWriteProjectDoctorJSON_SchemaIsSet(t *testing.T) {
 		t.Fatalf("writeProjectDoctorJSON: %v", err)
 	}
 
-	var envelope projectDoctorEnvelope
+	var envelope devDoctorEnvelope
 	if err := json.Unmarshal(out.Bytes(), &envelope); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
-	if envelope.Schema != "stageflow-cli/project-doctor@v1" {
-		t.Errorf("expected schema 'stageflow-cli/project-doctor@v1', got %q", envelope.Schema)
+	if envelope.Schema != "stageflow-cli/dev-doctor@v1" {
+		t.Errorf("expected schema 'stageflow-cli/dev-doctor@v1', got %q", envelope.Schema)
 	}
 }

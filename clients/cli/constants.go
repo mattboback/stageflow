@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 const (
 	jobStateDone   = "DONE"
 	jobStateFailed = "FAILED"
@@ -8,3 +10,9 @@ const (
 	defaultMaxIssues      = 200
 	defaultMaxOccurrences = 3
 )
+
+// defaultScanScannerList is the slice form of defaultScanScanners, used as the
+// --scanner flag default.
+func defaultScanScannerList() []string {
+	return strings.Split(defaultScanScanners, ",")
+}

@@ -24,16 +24,15 @@ func writeProjectConfig(t *testing.T, root string, yaml string) string {
 func TestLoadProjectConfig_Success(t *testing.T) {
 	root := t.TempDir()
 
-	configYAML := `version: 1
+	configYAML := `version: 2
 stageflow:
   api_url: http://localhost:8080
   api_key_env: STAGEFLOW_API_KEY
-  remote_project: hosted-demo
-  remote_api_url: https://hosted.stageflow.example
+  project: hosted-demo
 scan:
   urls:
     - http://localhost:3000
-  scanners: axe,lighthouse
+  scanners: [axe, lighthouse]
   screenshot: true
   allow_private_targets: true
   timeout: 2s
@@ -55,11 +54,11 @@ dev:
 
 	requireEqual(t, gotPath, configPath, "config path")
 
-	requireEqual(t, cfg.Version, 1, "cfg.Version")
+	requireEqual(t, cfg.Version, 2, "cfg.Version")
 
 	requireDeepEqual(t, cfg.Scan.URLs, []string{"http://localhost:3000"}, "cfg.Scan.URLs")
 
-	requireEqual(t, cfg.Scan.Scanners, "axe,lighthouse", "cfg.Scan.Scanners")
+	requireDeepEqual(t, cfg.Scan.Scanners, []string{"axe", "lighthouse"}, "cfg.Scan.Scanners")
 
 	requireBoolPtr(t, cfg.Scan.Screenshot, true, "cfg.Scan.Screenshot")
 
@@ -68,8 +67,7 @@ dev:
 	requireDeepEqual(t, cfg.Dev.Start.Cmd, []string{"npm", "run", "dev"}, "cfg.Dev.Start.Cmd")
 
 	requireEqual(t, cfg.Dev.Ready.URL, "http://localhost:3000/health", "cfg.Dev.Ready.URL")
-	requireEqual(t, cfg.Stageflow.RemoteProject, "hosted-demo", "cfg.Stageflow.RemoteProject")
-	requireEqual(t, cfg.Stageflow.RemoteAPIURL, "https://hosted.stageflow.example", "cfg.Stageflow.RemoteAPIURL")
+	requireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
 }
 
 func TestLoadProjectConfig_MissingFile(t *testing.T) {
@@ -101,39 +99,52 @@ func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
 	requireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
 }
 
-func TestLoadProjectHostedConfig_Minimal(t *testing.T) {
+func TestLoadProjectScanConfig_Minimal(t *testing.T) {
 	root := t.TempDir()
 
-	configPath := writeProjectConfig(t, root, `version: 1
+	configPath := writeProjectConfig(t, root, `version: 2
 stageflow:
-  remote_project: hosted-demo
-  remote_api_url: https://hosted.stageflow.example
+  project: hosted-demo
+  api_url: https://hosted.stageflow.example
 `)
 
-	cfg, gotPath, err := loadProjectHostedConfig(root, "")
+	cfg, gotPath, err := loadProjectScanConfig(root)
 	requireNoErr(t, err)
 
 	requireEqual(t, gotPath, configPath, "config path")
-	requireEqual(t, cfg.Version, 1, "cfg.Version")
-	requireEqual(t, cfg.Stageflow.RemoteProject, "hosted-demo", "cfg.Stageflow.RemoteProject")
-	requireEqual(t, cfg.Stageflow.RemoteAPIURL, "https://hosted.stageflow.example", "cfg.Stageflow.RemoteAPIURL")
+	requireEqual(t, cfg.Version, 2, "cfg.Version")
+	requireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
+	requireEqual(t, cfg.Stageflow.APIURL, "https://hosted.stageflow.example", "cfg.Stageflow.APIURL")
 }
 
-func TestLoadProjectHostedConfig_RequiresRemoteProject(t *testing.T) {
+func TestLoadProjectScanConfig_RequiresProject(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 1
+	writeProjectConfig(t, root, `version: 2
 stageflow:
-  remote_api_url: https://hosted.stageflow.example
+  api_url: https://hosted.stageflow.example
 `)
 
-	_, _, err := loadProjectHostedConfig(root, "")
+	_, _, err := loadProjectScanConfig(root)
 	if err == nil {
-		t.Fatalf("loadProjectHostedConfig err = nil, want non-nil")
+		t.Fatalf("loadProjectScanConfig err = nil, want non-nil")
 	}
 
-	if !strings.Contains(err.Error(), "stageflow.remote_project is required") {
-		t.Fatalf("loadProjectHostedConfig err = %q, want remote_project guidance", err.Error())
+	if !strings.Contains(err.Error(), "stageflow.project is not set") {
+		t.Fatalf("loadProjectScanConfig err = %q, want stageflow.project guidance", err.Error())
+	}
+}
+
+func TestLoadProjectScanConfig_MissingConfigSuggestsDevInit(t *testing.T) {
+	root := t.TempDir()
+
+	_, _, err := loadProjectScanConfig(root)
+	if err == nil {
+		t.Fatalf("loadProjectScanConfig err = nil, want non-nil")
+	}
+
+	if !strings.Contains(err.Error(), "stageflow dev init") {
+		t.Fatalf("loadProjectScanConfig err = %q, want dev init hint", err.Error())
 	}
 }
 
@@ -150,11 +161,11 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 	requireNoErr(t, err)
 
 	text := string(data)
-	if !strings.Contains(text, "version: 1") {
+	if !strings.Contains(text, "version: 2") {
 		t.Fatalf("scaffolded config missing version field")
 	}
 
-	if !strings.Contains(text, "scanners: "+defaultScanScanners) {
+	if !strings.Contains(text, "scanners: [axe, lighthouse, seo, link-checker]") {
 		t.Fatalf("scaffolded config missing default scanner list")
 	}
 
@@ -166,18 +177,14 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 		t.Fatalf("scaffolded config missing dev command placeholder")
 	}
 
-	if !strings.Contains(text, "remote_project") {
-		t.Fatalf("scaffolded config missing remote_project guidance")
-	}
-
-	if !strings.Contains(text, "remote_api_url") {
-		t.Fatalf("scaffolded config missing remote_api_url guidance")
+	if !strings.Contains(text, "# project: your-project-slug") {
+		t.Fatalf("scaffolded config missing project guidance")
 	}
 
 	cfg, gotPath, err := loadProjectConfig(root)
 	requireNoErr(t, err)
 	requireEqual(t, gotPath, configPath, "loaded config path")
-	requireEqual(t, cfg.Version, 1, "cfg.Version")
+	requireEqual(t, cfg.Version, 2, "cfg.Version")
 }
 
 func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
@@ -193,7 +200,7 @@ func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 	requireNoErr(t, err)
 
 	text := string(data)
-	if !strings.Contains(text, "StageFlow project setup") {
+	if !strings.Contains(text, "StageFlow dev setup") {
 		t.Fatalf("guide missing heading")
 	}
 
@@ -205,11 +212,11 @@ func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 		t.Fatalf("guide missing localhost setup guidance")
 	}
 
-	if !strings.Contains(text, "stageflow.remote_project") {
-		t.Fatalf("guide missing hosted memory guidance")
+	if !strings.Contains(text, "stageflow.project") {
+		t.Fatalf("guide missing remote project guidance")
 	}
 
-	if !strings.Contains(text, "stageflow project doctor --format json") {
+	if !strings.Contains(text, "stageflow dev doctor --format json") {
 		t.Fatalf("guide missing doctor json guidance")
 	}
 }
@@ -217,7 +224,7 @@ func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 func TestLoadProjectConfig_UnknownFieldReturnsError(t *testing.T) {
 	root := t.TempDir()
 
-	configYAML := `version: 1
+	configYAML := `version: 2
 scan:
   urls: ["https://example.com"]
 dev:
@@ -236,6 +243,30 @@ nope: 1
 	}
 }
 
+func TestLoadProjectConfig_RejectsRemovedV1Keys(t *testing.T) {
+	root := t.TempDir()
+
+	configYAML := `version: 2
+stageflow:
+  remote_project: hosted-demo
+  remote_api_url: https://hosted.stageflow.example
+scan:
+  urls: ["https://example.com"]
+dev:
+  start:
+    cmd: ["true"]
+  ready:
+    url: "http://localhost:1234"
+`
+
+	_ = writeProjectConfig(t, root, configYAML)
+
+	_, _, err := loadProjectConfig(root)
+	if err == nil {
+		t.Fatalf("loadProjectConfig err = nil, want parse error for removed v1 keys")
+	}
+}
+
 func TestLoadProjectConfig_ValidationFailures(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -243,8 +274,8 @@ func TestLoadProjectConfig_ValidationFailures(t *testing.T) {
 		errContains string
 	}{
 		{
-			name: "version != 1",
-			yaml: `version: 2
+			name: "version != 2",
+			yaml: `version: 1
 scan:
   urls: ["https://example.com"]
 dev:
@@ -253,11 +284,11 @@ dev:
   ready:
     url: "http://localhost:1234"
 `,
-			errContains: "version must be 1",
+			errContains: "version must be 2",
 		},
 		{
 			name: "scan.urls empty",
-			yaml: `version: 1
+			yaml: `version: 2
 scan:
   urls: []
 dev:
@@ -270,7 +301,7 @@ dev:
 		},
 		{
 			name: "scan.urls contains blank entry",
-			yaml: `version: 1
+			yaml: `version: 2
 scan:
   urls:
     - ""
@@ -285,7 +316,7 @@ dev:
 		},
 		{
 			name: "scan.urls unsupported scheme",
-			yaml: `version: 1
+			yaml: `version: 2
 scan:
   urls: ["ftp://example.com"]
 dev:
@@ -298,7 +329,7 @@ dev:
 		},
 		{
 			name: "scan.urls missing host",
-			yaml: `version: 1
+			yaml: `version: 2
 scan:
   urls: ["http:///nope"]
 dev:
@@ -311,7 +342,7 @@ dev:
 		},
 		{
 			name: "dev.start.cmd missing/empty",
-			yaml: `version: 1
+			yaml: `version: 2
 scan:
   urls: ["https://example.com"]
 dev:
@@ -324,7 +355,7 @@ dev:
 		},
 		{
 			name: "dev.ready.url blank",
-			yaml: `version: 1
+			yaml: `version: 2
 scan:
   urls: ["https://example.com"]
 dev:
@@ -336,10 +367,10 @@ dev:
 			errContains: "dev.ready.url is required",
 		},
 		{
-			name: "stageflow.remote_api_url unsupported scheme",
-			yaml: `version: 1
+			name: "stageflow.api_url unsupported scheme",
+			yaml: `version: 2
 stageflow:
-  remote_api_url: ftp://example.com
+  api_url: ftp://example.com
 scan:
   urls: ["https://example.com"]
 dev:
@@ -348,13 +379,13 @@ dev:
   ready:
     url: "http://localhost:1234"
 `,
-			errContains: "stageflow.remote_api_url has unsupported scheme",
+			errContains: "stageflow.api_url has unsupported scheme",
 		},
 		{
-			name: "stageflow.remote_api_url missing host",
-			yaml: `version: 1
+			name: "stageflow.api_url missing host",
+			yaml: `version: 2
 stageflow:
-  remote_api_url: https:///missing-host
+  api_url: https:///missing-host
 scan:
   urls: ["https://example.com"]
 dev:
@@ -363,7 +394,7 @@ dev:
   ready:
     url: "http://localhost:1234"
 `,
-			errContains: "stageflow.remote_api_url is invalid: missing host",
+			errContains: "stageflow.api_url is invalid: missing host",
 		},
 	}
 
@@ -450,7 +481,7 @@ func TestLoadProjectConfigRejectsNonPositiveDurations(t *testing.T) {
 	}{
 		{
 			name: "ready interval zero",
-			configYAML: `version: 1
+			configYAML: `version: 2
 stageflow:
   api_url: http://localhost:8080
 scan:
@@ -467,7 +498,7 @@ dev:
 		},
 		{
 			name: "scan timeout negative",
-			configYAML: `version: 1
+			configYAML: `version: 2
 stageflow:
   api_url: http://localhost:8080
 scan:

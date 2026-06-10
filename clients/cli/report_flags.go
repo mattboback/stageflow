@@ -56,7 +56,6 @@ func bindReportFlags(cmd *cobra.Command, opts *reportCommandOptions, hideAdvance
 		"",
 		"Exit 1 if any displayed issue is at or above this severity (critical,serious,moderate,minor,info)",
 	)
-	cmd.Flags().StringVar(&opts.failSeverity, "fail-severity", "", "Alias for --fail-on")
 	cmd.Flags().BoolVar(&opts.summaryOnly, "summary-only", false, "Only show summary, skip detailed findings")
 	cmd.Flags().StringVar(
 		&opts.groupBy,
@@ -64,7 +63,6 @@ func bindReportFlags(cmd *cobra.Command, opts *reportCommandOptions, hideAdvance
 		"",
 		"Group findings by: none, category, scanner (default: category for markdown, none for text)",
 	)
-	cobra.CheckErr(cmd.Flags().MarkHidden("fail-severity"))
 
 	if !hideAdvanced {
 		return

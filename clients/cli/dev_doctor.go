@@ -14,7 +14,7 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
-type projectDoctorEnvelope struct {
+type devDoctorEnvelope struct {
 	Schema                  string               `json:"schema"`
 	ProjectRoot             string               `json:"projectRoot"`
 	ConfigPath              string               `json:"configPath"`
@@ -22,14 +22,15 @@ type projectDoctorEnvelope struct {
 	APIURL                  string               `json:"apiUrl"`
 	URLs                    []string             `json:"urls"`
 	AutoAllowPrivateTargets bool                 `json:"autoAllowPrivateTargets"`
-	HostedMemory            projectHostedMemory  `json:"hostedMemory"`
+	RemoteProject           remoteProjectLink    `json:"remoteProject"`
 	Checks                  []projectDoctorCheck `json:"checks"`
 }
 
-type projectHostedMemory struct {
+// remoteProjectLink describes the remote project (if any) this repo links to
+// via stageflow.project, plus ready-to-run commands for its baseline loop.
+type remoteProjectLink struct {
 	Configured             bool   `json:"configured"`
-	ProjectSlug            string `json:"projectSlug,omitempty"`
-	APIURL                 string `json:"apiUrl,omitempty"`
+	Slug                   string `json:"slug,omitempty"`
 	RecommendedScanCommand string `json:"recommendedScanCommand,omitempty"`
 	PromoteCommandTemplate string `json:"promoteCommandTemplate,omitempty"`
 }
@@ -48,15 +49,15 @@ func writeProjectDoctorJSON(
 	autoAllowPrivateTargets bool,
 	checks []projectDoctorCheck,
 ) error {
-	payload := projectDoctorEnvelope{
-		Schema:                  "stageflow-cli/project-doctor@v1",
+	payload := devDoctorEnvelope{
+		Schema:                  "stageflow-cli/dev-doctor@v1",
 		ProjectRoot:             projectRoot,
 		ConfigPath:              configPath,
 		Passed:                  allProjectDoctorChecksPassed(checks),
 		APIURL:                  apiURL,
 		URLs:                    urls,
 		AutoAllowPrivateTargets: autoAllowPrivateTargets,
-		HostedMemory:            buildProjectHostedMemory(stageflowCfg),
+		RemoteProject:           buildRemoteProjectLink(stageflowCfg),
 		Checks:                  checks,
 	}
 
@@ -76,42 +77,18 @@ func allProjectDoctorChecksPassed(checks []projectDoctorCheck) bool {
 	return true
 }
 
-func buildProjectHostedMemory(cfg projectStageflowCfg) projectHostedMemory {
-	projectSlug := strings.TrimSpace(cfg.RemoteProject)
-	apiURL := strings.TrimSpace(cfg.RemoteAPIURL)
-	configured := projectSlug != ""
-
-	hosted := projectHostedMemory{
-		Configured:  configured,
-		ProjectSlug: projectSlug,
-		APIURL:      apiURL,
-	}
-	if !configured {
-		return hosted
+func buildRemoteProjectLink(cfg projectStageflowCfg) remoteProjectLink {
+	slug := strings.TrimSpace(cfg.Project)
+	if slug == "" {
+		return remoteProjectLink{}
 	}
 
-	hosted.RecommendedScanCommand = buildHostedProjectScanCommand(projectSlug, apiURL)
-	hosted.PromoteCommandTemplate = buildHostedProjectPromoteCommand(projectSlug, apiURL)
-
-	return hosted
-}
-
-func buildHostedProjectScanCommand(projectSlug string, apiURL string) string {
-	command := fmt.Sprintf("stageflow scan --project %s --format json", projectSlug)
-	if trimmedAPIURL := strings.TrimSpace(apiURL); trimmedAPIURL != "" {
-		command += fmt.Sprintf(" --api %s", trimmedAPIURL)
+	return remoteProjectLink{
+		Configured:             true,
+		Slug:                   slug,
+		RecommendedScanCommand: fmt.Sprintf("stageflow project scan %s --format json", slug),
+		PromoteCommandTemplate: fmt.Sprintf("stageflow project promote %s --job-id <job-id>", slug),
 	}
-
-	return command
-}
-
-func buildHostedProjectPromoteCommand(projectSlug string, apiURL string) string {
-	command := fmt.Sprintf("stageflow project promote %s --job-id <job-id>", projectSlug)
-	if trimmedAPIURL := strings.TrimSpace(apiURL); trimmedAPIURL != "" {
-		command += fmt.Sprintf(" --api %s", trimmedAPIURL)
-	}
-
-	return command
 }
 
 func writeJSONEnvelope(out io.Writer, payload any) error {
@@ -133,9 +110,9 @@ func loadProjectDoctorConfig(projectRoot, projectArg string) (projectConfig, str
 		return projectConfig{}, "", err
 	}
 
-	hint := "stageflow project init"
+	hint := "stageflow dev init"
 	if projectArg != "" {
-		hint = fmt.Sprintf("stageflow project init %s", projectArg)
+		hint = fmt.Sprintf("stageflow dev init %s", projectArg)
 	}
 
 	return projectConfig{}, "", fmt.Errorf("project config not found under %s; run `%s`", projectRoot, hint)
@@ -169,12 +146,12 @@ func writeProjectDoctorResult(
 	return nil
 }
 
-func runProjectDoctorCommand(
+func runDevDoctorCommand(
 	cmd *cobra.Command,
 	args []string,
 	root *rootOptions,
 	getenv getenvFunc,
-	opts *projectDoctorCmdOptions,
+	opts *devDoctorCmdOptions,
 ) error {
 	if opts.Timeout <= 0 {
 		return exitCodeError{Code: 2, Err: errors.New("--timeout must be > 0")}
