@@ -86,40 +86,6 @@ normalize_diff() {
   '
 }
 
-# Split combined stdout into separate JSON documents.
-# The CLI outputs report JSON, a blank line, then diff JSON.
-split_json_docs() {
-  local input="$1"
-  local report_file="$2"
-  local diff_file="$3"
-
-  python3 -c "
-import json, sys
-
-text = open(sys.argv[1]).read()
-decoder = json.JSONDecoder()
-pos = 0
-docs = []
-while pos < len(text):
-    remaining = text[pos:].lstrip()
-    if not remaining:
-        break
-    pos = len(text) - len(remaining)
-    obj, end = decoder.raw_decode(text, pos)
-    docs.append(obj)
-    pos += end
-
-if len(docs) >= 1:
-    with open(sys.argv[2], 'w') as f:
-        json.dump(docs[0], f, indent=2)
-        f.write('\n')
-if len(docs) >= 2:
-    with open(sys.argv[3], 'w') as f:
-        json.dump(docs[1], f, indent=2)
-        f.write('\n')
-" "$input" "$report_file" "$diff_file"
-}
-
 compare_golden() {
   local actual="$1"
   local golden="$2"
@@ -160,7 +126,7 @@ cleanup_project() {
 # --- Prerequisites ---
 echo "==> Checking prerequisites..."
 
-for cmd in stageflow jq python3 curl; do
+for cmd in stageflow jq curl; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "FATAL: ${cmd} not found on PATH" >&2
     exit 2
@@ -225,25 +191,20 @@ sf_json scan --project "${PROJECT_SLUG}" --timeout 5m \
   > "${WORK_DIR}/baseline-raw.json" 2>"${WORK_DIR}/baseline-stderr.txt"
 echo "    Done."
 
-BASELINE_JOB_ID=$(python3 -c "
-import json, sys
-decoder = json.JSONDecoder()
-text = open(sys.argv[1]).read().lstrip()
-obj, _ = decoder.raw_decode(text, 0)
-print(obj['job']['id'])
-" "${WORK_DIR}/baseline-raw.json")
+# Project scans emit a single project-scan envelope:
+# {schema, project, decision, report, diff?}
+BASELINE_JOB_ID=$(jq -r '.report.job.id' "${WORK_DIR}/baseline-raw.json")
 echo "    Job ID: ${BASELINE_JOB_ID}"
 
-BASELINE_ISSUES=$(python3 -c "
-import json, sys
-decoder = json.JSONDecoder()
-text = open(sys.argv[1]).read().lstrip()
-obj, _ = decoder.raw_decode(text, 0)
-print(obj['report']['summary']['totalIssues'])
-" "${WORK_DIR}/baseline-raw.json")
+BASELINE_ISSUES=$(jq '.report.report.summary.totalIssues' "${WORK_DIR}/baseline-raw.json")
 
 if [[ "${BASELINE_ISSUES}" != "0" ]]; then
   fail "Baseline scan should have 0 issues, got ${BASELINE_ISSUES}"
+fi
+
+BASELINE_STATUS=$(jq -r '.project.baseline.status' "${WORK_DIR}/baseline-raw.json")
+if [[ "${BASELINE_STATUS}" != "missing" ]]; then
+  fail "First scan should report baseline status 'missing', got '${BASELINE_STATUS}'"
 fi
 
 # --- Step 3: Promote baseline ---
@@ -274,22 +235,20 @@ fi
 # --- Step 6: Normalize ---
 echo "==> Step 6: Normalizing output..."
 
-# Baseline is a single JSON doc (no diff — no baseline was set at scan time)
-normalize_report < "${WORK_DIR}/baseline-raw.json" > "${WORK_DIR}/baseline-normalized.json"
-
-# Regression has report + diff
-split_json_docs "${WORK_DIR}/regression-raw.json" \
-  "${WORK_DIR}/regression-report.json" \
-  "${WORK_DIR}/regression-diff.json"
-
-if [[ ! -s "${WORK_DIR}/regression-report.json" ]]; then
-  fail "Failed to extract report JSON from regression output"
-fi
-if [[ ! -s "${WORK_DIR}/regression-diff.json" ]]; then
-  fail "Failed to extract diff JSON from regression output"
+REGRESSED=$(jq -r '.decision.regressed' "${WORK_DIR}/regression-raw.json")
+if [[ "${REGRESSED}" != "true" ]]; then
+  fail "Regression scan decision should report regressed=true, got '${REGRESSED}'"
 fi
 
-normalize_report < "${WORK_DIR}/regression-report.json" > "${WORK_DIR}/regression-report-normalized.json"
+# Golden files cover the inner report and diff documents of the envelope.
+jq '.report' "${WORK_DIR}/baseline-raw.json" | normalize_report > "${WORK_DIR}/baseline-normalized.json"
+jq '.report' "${WORK_DIR}/regression-raw.json" | normalize_report > "${WORK_DIR}/regression-report-normalized.json"
+jq '.diff' "${WORK_DIR}/regression-raw.json" > "${WORK_DIR}/regression-diff.json"
+
+if [[ "$(jq 'type' "${WORK_DIR}/regression-diff.json")" != '"object"' ]]; then
+  fail "Regression envelope is missing the diff document"
+fi
+
 normalize_diff < "${WORK_DIR}/regression-diff.json" > "${WORK_DIR}/regression-diff-normalized.json"
 
 # --- Step 7: Golden comparison ---
