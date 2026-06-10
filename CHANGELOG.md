@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Project URLs now honor `PLATFORM_API_ALLOW_PRIVATE_TARGETS`: instances that
-  opt in accept private/localhost project targets, matching scan submission
-  behavior (project creation previously always enforced public-only validation)
+- Projects now honor `PLATFORM_API_ALLOW_PRIVATE_TARGETS` end to end: instances
+  that opt in accept private/localhost project URLs (creation previously always
+  enforced public-only validation), and project scan jobs carry the opt-in to
+  scanner pods so the runner's own target guard no longer blocks those scans
 
 ## [0.2.0] - 2026-06-09
 

@@ -341,6 +341,9 @@ func (s *Server) handleProjectScan(w http.ResponseWriter, r *http.Request, slug 
 		Config: models.JobConfig{
 			Modules:    modules,
 			Screenshot: defaultScreenshot,
+			// Scanner pods enforce their own target guard; carry the
+			// instance-level opt-in so private project URLs stay scannable.
+			AllowPrivateTargets: s.config.AllowPrivateTargets,
 		},
 	}
 
