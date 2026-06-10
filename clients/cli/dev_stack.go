@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -68,9 +67,7 @@ func startDevServer(
 	cmd.Stdout = stderr
 	cmd.Stderr = stderr
 
-	if runtime.GOOS != "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	}
+	setProcessGroup(cmd)
 
 	fmt.Fprintf(stderr, "[dev] starting: %s\n", strings.Join(cfg.Cmd, " "))
 
@@ -220,16 +217,12 @@ func sendSignal(p *os.Process, sig syscall.Signal) {
 		return
 	}
 
-	if runtime.GOOS != "windows" {
-		// Best-effort: send to process group so child processes also stop.
-		if err := syscall.Kill(-p.Pid, sig); err == nil {
-			return
-		}
-	}
-
-	if err := p.Signal(sig); err != nil {
+	// Best-effort: signal the whole process group so child processes also stop.
+	if signalProcessGroup(p, sig) {
 		return
 	}
+
+	_ = p.Signal(sig)
 }
 
 func mergeEnv(base []string, overlay map[string]string) []string {
