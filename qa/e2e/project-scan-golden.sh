@@ -47,19 +47,34 @@ sf_json() {
   sf --format json "$@"
 }
 
+# Strip values that vary per run (ids, timestamps, durations) or per
+# environment (API base URL, fixture host, random artifact filenames) so the
+# same goldens hold locally and in CI.
 normalize_report() {
-  jq '
+  jq --arg fixture "${FIXTURE_BASE_URL}" '
+    def stripfixture:
+      if type == "string" and startswith($fixture)
+      then "FIXTURE" + .[($fixture | length):]
+      else . end;
     .cli = {"version":"NORMALIZED","commit":"NORMALIZED","date":"NORMALIZED"}
+    | .api.base_url = "NORMALIZED"
     | .job.id = "NORMALIZED"
     | .job.created_at = "2000-01-01T00:00:00Z"
     | .job.updated_at = "2000-01-01T00:00:00Z"
     | .links.job = "NORMALIZED"
     | .links.results = "NORMALIZED"
+    | .urls |= map(stripfixture)
     | .report.meta.jobId = "NORMALIZED"
     | .report.meta.durationMs = 0
     | .report.meta.scannedAt = "2000-01-01T00:00:00.000Z"
     | .report.meta.startedAt = "2000-01-01T00:00:00.000Z"
     | .report.meta.completedAt = "2000-01-01T00:00:00.000Z"
+    | (if .report.artifacts then
+        .report.artifacts |= map(.path = "NORMALIZED")
+      else . end)
+    | (if .report.issues then
+        .report.issues |= map(.pageUrl |= stripfixture)
+      else . end)
     | (if .report.scanners then
         .report.scanners |= map(
           .durationMs = 0
@@ -74,15 +89,23 @@ normalize_report() {
           .durationMs = 0
           | .startedAt = "2000-01-01T00:00:00.000Z"
           | .finishedAt = "2000-01-01T00:00:00.000Z"
+          | .url |= stripfixture
         )
       else . end)
   '
 }
 
 normalize_diff() {
-  jq '
+  jq --arg fixture "${FIXTURE_BASE_URL}" '
+    def stripfixture:
+      if type == "string" and startswith($fixture)
+      then "FIXTURE" + .[($fixture | length):]
+      else . end;
     .baseline.jobId = "NORMALIZED"
     | .current.jobId = "NORMALIZED"
+    | (if .new then .new |= map(.pageUrl |= stripfixture) else . end)
+    | (if .fixed then .fixed |= map(.pageUrl |= stripfixture) else . end)
+    | (if .regressed then .regressed |= map(.pageUrl |= stripfixture) else . end)
   '
 }
 
