@@ -262,10 +262,13 @@
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between gap-3">
 						<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
-							Issues (<span class="font-mono">{filteredIssues.length.toLocaleString()}</span
+							<span class="font-mono">{groups.length.toLocaleString()}</span>
+							pattern{groups.length === 1 ? '' : 's'}
+							<span class="text-ink-faint">·</span>
+							<span class="font-mono">{filteredIssues.length.toLocaleString()}</span
 							>{filteredIssues.length !== report.issues.length
 								? ` / ${report.issues.length.toLocaleString()}`
-								: ''})
+								: ''} occurrence{filteredIssues.length === 1 ? '' : 's'}
 						</h3>
 						{#if hasActiveFilters}
 							<button
@@ -348,7 +351,7 @@
 									viewMode === 'grouped' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
 								)}
 							>
-								Group by rule
+								Patterns
 							</button>
 							<button
 								type="button"
@@ -356,8 +359,8 @@
 								aria-selected={viewMode === 'flat'}
 								onclick={() => (viewMode = 'flat')}
 								class={cn(
-									'rounded px-2 py-1 font-semibold transition',
-									viewMode === 'flat' ? 'bg-surface text-ink shadow-xs' : 'text-ink-muted'
+									'rounded px-2 py-1 font-medium transition',
+									viewMode === 'flat' ? 'bg-surface text-ink shadow-xs' : 'text-ink-faint'
 								)}
 							>
 								Flat list
@@ -390,7 +393,7 @@
 						<div class="text-ink-muted text-xs">
 							{#if viewMode === 'grouped'}
 								<span class="font-mono">{actionableGroups.length.toLocaleString()}</span>
-								actionable rule{actionableGroups.length === 1 ? '' : 's'}
+								actionable pattern{actionableGroups.length === 1 ? '' : 's'}
 								{#if manualGroups.length > 0}
 									· <span class="font-mono">{manualGroups.length.toLocaleString()}</span> manual review
 								{/if}

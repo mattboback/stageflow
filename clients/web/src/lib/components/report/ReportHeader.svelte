@@ -4,6 +4,7 @@
 
 	import { buildApiUrl } from '$lib/api/utils';
 	import { Button, Panel, Score, SeverityBar } from '$lib/components/ui';
+	import { groupIssuesByRule } from '$lib/report';
 	import { cn, formatDuration, formatTimestamp } from '$lib/utils';
 	import {
 		AlertTriangle,
@@ -52,6 +53,7 @@
 	);
 	const criticalCount = $derived(severityCounts.critical ?? 0);
 	const seriousCount = $derived(severityCounts.serious ?? 0);
+	const patternCount = $derived(groupIssuesByRule(report.issues ?? []).length);
 
 	interface Triage {
 		message: string;
@@ -59,6 +61,7 @@
 		containerClass: string;
 		buttonClass: string;
 		clean: boolean;
+		prominent: boolean;
 	}
 
 	const triage = $derived.by((): Triage => {
@@ -66,33 +69,36 @@
 			return {
 				message: `Start with the ${criticalCount.toLocaleString()} critical issue${criticalCount === 1 ? '' : 's'} — these block users outright.`,
 				cta: {
-					label: `Review ${criticalCount.toLocaleString()} critical issue${criticalCount === 1 ? '' : 's'}`,
+					label: `Fix these ${criticalCount.toLocaleString()} critical issue${criticalCount === 1 ? '' : 's'}`,
 					severity: 'critical'
 				},
 				containerClass: 'border-red-200 bg-red-50 text-red-900',
 				buttonClass: 'bg-red-600 hover:bg-red-700',
-				clean: false
+				clean: false,
+				prominent: true
 			};
 		}
 		if (seriousCount > 0) {
 			return {
 				message: `No critical findings. Prioritize the ${seriousCount.toLocaleString()} serious issue${seriousCount === 1 ? '' : 's'} next.`,
 				cta: {
-					label: `Review ${seriousCount.toLocaleString()} serious issue${seriousCount === 1 ? '' : 's'}`,
+					label: `Fix these ${seriousCount.toLocaleString()} serious issue${seriousCount === 1 ? '' : 's'}`,
 					severity: 'serious'
 				},
 				containerClass: 'border-orange-200 bg-orange-50 text-orange-900',
 				buttonClass: 'bg-orange-500 hover:bg-orange-600',
-				clean: false
+				clean: false,
+				prominent: true
 			};
 		}
 		if (report.summary.totalIssues > 0) {
 			return {
-				message: 'No critical or serious findings — work through the remaining issues.',
+				message: `No critical or serious findings — work through the remaining ${patternCount.toLocaleString()} issue pattern${patternCount === 1 ? '' : 's'}.`,
 				cta: { label: 'Review all issues' },
 				containerClass: 'border-amber-200 bg-amber-50 text-amber-900',
 				buttonClass: 'bg-amber-500 hover:bg-amber-600',
-				clean: false
+				clean: false,
+				prominent: false
 			};
 		}
 		if ((report.errors?.length ?? 0) > 0) {
@@ -101,7 +107,8 @@
 				cta: null,
 				containerClass: 'border-amber-200 bg-amber-50 text-amber-900',
 				buttonClass: '',
-				clean: false
+				clean: false,
+				prominent: false
 			};
 		}
 		return {
@@ -109,7 +116,8 @@
 			cta: null,
 			containerClass: 'border-emerald-200 bg-emerald-50 text-emerald-900',
 			buttonClass: '',
-			clean: true
+			clean: true,
+			prominent: false
 		};
 	});
 </script>
@@ -194,6 +202,43 @@
 			</div>
 		</div>
 
+		<!-- Triage strip: the report's primary next action -->
+		<div
+			class={cn(
+				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border px-4',
+				triage.prominent ? 'py-4' : 'py-3',
+				triage.containerClass
+			)}
+			data-testid="report-triage-strip"
+		>
+			<div class="flex min-w-0 items-center gap-3">
+				{#if triage.clean}
+					<CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+				{:else}
+					<AlertTriangle class="h-5 w-5 shrink-0 opacity-80" aria-hidden="true" />
+				{/if}
+				<p class={cn('leading-snug font-medium', triage.prominent ? 'text-base' : 'text-sm')}>
+					{triage.message}
+				</p>
+			</div>
+			{#if triage.cta && onJumpToIssues}
+				{@const cta = triage.cta}
+				<button
+					type="button"
+					onclick={() => onJumpToIssues(cta.severity)}
+					class={cn(
+						'inline-flex shrink-0 items-center gap-1.5 rounded-lg font-semibold text-white shadow-xs transition-colors',
+						triage.prominent ? 'px-5 py-2.5 text-sm' : 'px-3.5 py-2 text-xs',
+						triage.buttonClass
+					)}
+					data-testid="triage-cta"
+				>
+					{cta.label}
+					<ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
+				</button>
+			{/if}
+		</div>
+
 		<!-- Condensed stats bar -->
 		<div
 			class="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[auto_1fr_auto] sm:items-center"
@@ -211,10 +256,9 @@
 				>
 					<span class="tracking-wide uppercase">Severity distribution</span>
 					<span class="text-ink-muted"
-						>{(report.summary.totalIssues ?? 0).toLocaleString()} issue{report.summary
-							.totalIssues === 1
-							? ''
-							: 's'}</span
+						>{patternCount.toLocaleString()} pattern{patternCount === 1 ? '' : 's'} · {(
+							report.summary.totalIssues ?? 0
+						).toLocaleString()} occurrence{report.summary.totalIssues === 1 ? '' : 's'}</span
 					>
 				</div>
 				<SeverityBar counts={severityCounts} showLabels height="md" />
@@ -237,39 +281,6 @@
 					</span>
 				{/if}
 			</div>
-		</div>
-
-		<!-- Triage strip: the report's primary next action -->
-		<div
-			class={cn(
-				'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border px-4 py-3',
-				triage.containerClass
-			)}
-			data-testid="report-triage-strip"
-		>
-			<div class="flex min-w-0 items-center gap-3">
-				{#if triage.clean}
-					<CheckCircle2 class="h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-				{:else}
-					<AlertTriangle class="h-5 w-5 shrink-0 opacity-80" aria-hidden="true" />
-				{/if}
-				<p class="text-sm leading-snug font-medium">{triage.message}</p>
-			</div>
-			{#if triage.cta && onJumpToIssues}
-				{@const cta = triage.cta}
-				<button
-					type="button"
-					onclick={() => onJumpToIssues(cta.severity)}
-					class={cn(
-						'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors',
-						triage.buttonClass
-					)}
-					data-testid="triage-cta"
-				>
-					{cta.label}
-					<ArrowRight class="h-3.5 w-3.5" aria-hidden="true" />
-				</button>
-			{/if}
 		</div>
 
 		<!-- Secondary meta row (scan ID, timestamps) -->

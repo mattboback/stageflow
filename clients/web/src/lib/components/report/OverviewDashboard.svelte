@@ -57,7 +57,7 @@
 	const riskLabel = $derived.by(() => {
 		const n = distinctIssueCount;
 		if (n === 0) return 'No issues found';
-		return `${n.toLocaleString()} issue${n !== 1 ? 's' : ''} found`;
+		return `${n.toLocaleString()} issue pattern${n !== 1 ? 's' : ''} found`;
 	});
 
 	const riskTone = $derived(distinctIssueCount === 0 ? 'success' : 'info');
@@ -161,7 +161,7 @@
 		}
 		const occNote =
 			occurrences !== distinct ? ` (${occurrences.toLocaleString()} occurrences)` : '';
-		return `${distinct.toLocaleString()} distinct issue${distinct !== 1 ? 's' : ''}${occNote} seen across ${pagesWith.toLocaleString()} of ${scanned.toLocaleString()} page${scanned !== 1 ? 's' : ''} scanned.`;
+		return `${distinct.toLocaleString()} issue pattern${distinct !== 1 ? 's' : ''}${occNote} seen across ${pagesWith.toLocaleString()} of ${scanned.toLocaleString()} page${scanned !== 1 ? 's' : ''} scanned.`;
 	});
 
 	const pagesWithIssuesTone = $derived.by((): 'warn' | 'danger' | null => {
@@ -571,7 +571,7 @@
 		<Panel class="ring-line/70 min-w-0 shadow-sm ring-1 lg:col-span-1" padding="none" rounded="2xl">
 			<div class="border-line border-b p-4">
 				<h3 class="text-ink text-base leading-none font-semibold tracking-tight">
-					Top Issue Rules
+					Patterns to fix
 				</h3>
 			</div>
 			<div class="divide-line divide-y">

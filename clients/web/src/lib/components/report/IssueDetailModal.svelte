@@ -122,7 +122,6 @@
 		[
 			{ id: 'fix', label: 'Fix' },
 			hasEvidence ? { id: 'evidence', label: 'Evidence' } : null,
-			{ id: 'details', label: 'Details' },
 			occurrenceCount > 0 ? { id: 'occurrences', label: `Occurrences (${occurrenceCount})` } : null
 		].filter((tab): tab is { id: string; label: string } => tab !== null)
 	);
@@ -274,18 +273,6 @@
 					{#if issue.friendlyNode?.label}
 						<p class="text-ink-muted mt-2 text-sm">{issue.friendlyNode.label}</p>
 					{/if}
-					{#if impactBanner}
-						<div
-							class={cn(
-								'mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold',
-								impactBanner.containerClass
-							)}
-							data-testid="impact-banner"
-						>
-							<span class={cn('h-2 w-2 shrink-0 rounded-full', impactBanner.dotClass)}></span>
-							{impactBanner.label}
-						</div>
-					{/if}
 				</div>
 				<div class="flex shrink-0 items-center gap-1">
 					{#if onNavigate && totalCount > 1}
@@ -383,6 +370,18 @@
 						<p class="mb-1 text-xs font-semibold tracking-wide text-amber-900 uppercase">
 							Who is affected
 						</p>
+						{#if impactBanner}
+							<div
+								class={cn(
+									'mb-2 inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold',
+									impactBanner.containerClass
+								)}
+								data-testid="impact-banner"
+							>
+								<span class={cn('h-2 w-2 shrink-0 rounded-full', impactBanner.dotClass)}></span>
+								{impactBanner.label}
+							</div>
+						{/if}
 						{#if issue.userImpact.statement}
 							<p class="text-ink-muted text-sm leading-relaxed">{issue.userImpact.statement}</p>
 						{/if}
@@ -398,6 +397,33 @@
 						{/if}
 					</div>
 				{/if}
+				<div>
+					<h3 class="text-ink mb-2 font-semibold">About this rule</h3>
+					<p class="text-ink-muted text-sm leading-relaxed">{issue.description}</p>
+					{#if issue.wcagTags?.length}
+						<div class="mt-3 flex flex-wrap gap-2">
+							{#each issue.wcagTags as tag (tag)}
+								{@const criterion = normalizeWcagTag(tag)}
+								{#if criterion}
+									<Chip
+										as="a"
+										href={getWcagUnderstandingUrl(criterion)}
+										target="_blank"
+										rel="noopener noreferrer"
+										tone="muted"
+										size="md"
+										interactive
+										title={`Open WCAG Understanding ${criterion}`}
+									>
+										{criterion}
+									</Chip>
+								{:else}
+									<Chip tone="muted" size="md">{tag}</Chip>
+								{/if}
+							{/each}
+						</div>
+					{/if}
+				</div>
 				{#if issue.helpUrl}
 					<a
 						href={issue.helpUrl}
@@ -438,69 +464,6 @@
 						localHighlightedElementId = elementId;
 					}}
 				/>
-			{:else if activeTab === 'details'}
-				<div>
-					<h3 class="text-ink mb-2 font-semibold">Description</h3>
-					<p class="text-ink-muted text-sm leading-relaxed">{issue.description}</p>
-				</div>
-				{#if issue.wcagTags?.length}
-					<div>
-						<h3 class="text-ink mb-2 font-semibold">WCAG criteria</h3>
-						<div class="flex flex-wrap gap-2">
-							{#each issue.wcagTags as tag (tag)}
-								{@const criterion = normalizeWcagTag(tag)}
-								{#if criterion}
-									<Chip
-										as="a"
-										href={getWcagUnderstandingUrl(criterion)}
-										target="_blank"
-										rel="noopener noreferrer"
-										tone="muted"
-										size="md"
-										interactive
-										title={`Open WCAG Understanding ${criterion}`}
-									>
-										{criterion}
-									</Chip>
-								{:else}
-									<Chip tone="muted" size="md">{tag}</Chip>
-								{/if}
-							{/each}
-						</div>
-					</div>
-				{/if}
-				<div class="grid gap-3 sm:grid-cols-2">
-					<div>
-						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Scanner</p>
-						<p class="text-ink mt-0.5 font-mono text-sm">{issue.scanner}</p>
-					</div>
-					<div>
-						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Rule ID</p>
-						<p class="text-ink mt-0.5 font-mono text-sm">{issue.ruleId}</p>
-					</div>
-					{#if issue.category}
-						<div>
-							<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Category</p>
-							<p class="text-ink mt-0.5 text-sm">{issue.category}</p>
-						</div>
-					{/if}
-					<div>
-						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Severity</p>
-						<p class="text-ink mt-0.5 text-sm capitalize">{issue.severity}</p>
-					</div>
-					<div>
-						<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Issue kind</p>
-						<p class="text-ink mt-0.5 text-sm">{kindLabel}</p>
-					</div>
-					{#if pageLabel}
-						<div class="min-w-0">
-							<p class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">Page</p>
-							<p class="text-ink mt-0.5 truncate font-mono text-sm" title={pageLabel}>
-								{pageLabel}
-							</p>
-						</div>
-					{/if}
-				</div>
 			{:else if activeTab === 'occurrences'}
 				<div class="space-y-3">
 					<h3 class="text-ink font-semibold">
