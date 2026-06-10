@@ -6,7 +6,7 @@
     "date": "NORMALIZED"
   },
   "api": {
-    "base_url": "https://stageflow.org"
+    "base_url": "NORMALIZED"
   },
   "job": {
     "id": "NORMALIZED",
@@ -19,7 +19,7 @@
     "results": "NORMALIZED"
   },
   "urls": [
-    "https://stageflow.org/qa/baseline.html"
+    "FIXTURE/qa/baseline.html"
   ],
   "filters": {
     "max_issues": 200,
@@ -29,6 +29,14 @@
     "sort": "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
   },
   "report": {
+    "artifacts": [
+      {
+        "id": "page-overview-axe-url-1",
+        "mime": "image/webp",
+        "path": "NORMALIZED",
+        "type": "page-overview"
+      }
+    ],
     "issues": [],
     "meta": {
       "completedAt": "2000-01-01T00:00:00.000Z",
@@ -43,9 +51,15 @@
         "finishedAt": "2000-01-01T00:00:00.000Z",
         "id": "url-1",
         "issueCount": 0,
+        "pageOverview": {
+          "elements": [],
+          "pageHeight": 1440,
+          "pageWidth": 2560,
+          "screenshotFilename": "page-overview-url-1.webp"
+        },
         "path": "/qa/baseline.html",
         "startedAt": "2000-01-01T00:00:00.000Z",
-        "url": "https://stageflow.org/qa/baseline.html"
+        "url": "FIXTURE/qa/baseline.html"
       }
     ],
     "scanners": [
@@ -65,7 +79,7 @@
         },
         "startedAt": "2000-01-01T00:00:00.000Z",
         "status": "success",
-        "toolVersion": "1.0.0"
+        "toolVersion": "0.1.0"
       }
     ],
     "summary": {
@@ -79,6 +93,6 @@
       "pagesWithIssues": 0,
       "totalIssues": 0
     },
-    "version": "2.0.0"
+    "version": "2.1.0"
   }
 }
