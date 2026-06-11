@@ -43,6 +43,12 @@ type inMemoryRateLimiter struct {
 	mu      sync.Mutex
 	windows map[string]rateWindow
 	limit   int
+
+	// saturationCount tracks how many requests were denied because the window
+	// table was at capacity. lastSaturationLog throttles the accompanying warn
+	// log to at most once per window so a flood cannot spam the logs.
+	saturationCount   uint64
+	lastSaturationLog time.Time
 }
 
 func newInMemoryRateLimiter(limit int) *inMemoryRateLimiter {
@@ -54,14 +60,46 @@ func newInMemoryRateLimiter(limit int) *inMemoryRateLimiter {
 
 func (l *inMemoryRateLimiter) allow(key string, now time.Time) (bool, int) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
+	allowed, retryAfter, logSaturation := l.allowLocked(key, now)
+	saturationTotal := l.saturationCount
+	l.mu.Unlock()
 
+	if logSaturation {
+		slog.Warn(
+			"SECURITY: API rate-limiter window table is saturated; denying new clients (fail-closed). "+
+				"This typically indicates a high-cardinality source-IP flood against the scan endpoints.",
+			"max_entries", rateLimiterMaxEntries,
+			"saturation_total", saturationTotal,
+		)
+	}
+
+	return allowed, retryAfter
+}
+
+// allowLocked holds l.mu and returns (allowed, retryAfter, logSaturation). The
+// third value asks the caller to emit a (throttled) saturation log outside the
+// lock.
+func (l *inMemoryRateLimiter) allowLocked(key string, now time.Time) (bool, int, bool) {
 	l.evictStaleLocked(now)
 
-	window := l.windows[key]
-	if window.start.IsZero() || now.Sub(window.start) >= rateLimitWindow {
-		if len(l.windows) >= rateLimiterMaxEntries {
-			return true, 0
+	window, exists := l.windows[key]
+	if !exists || now.Sub(window.start) >= rateLimitWindow {
+		// A brand-new key would grow the table. When it is already full, fail
+		// CLOSED (deny) rather than open. Returning "allowed" here let an
+		// attacker who saturates the table — e.g. by rotating through many
+		// source IPs — disable rate limiting for everyone, turning the
+		// container-spawning scan endpoints into an unbounded resource sink.
+		// Only brand-new keys are denied; already-tracked clients (handled
+		// below) keep their window, so legitimate steady traffic is unaffected.
+		if !exists && len(l.windows) >= rateLimiterMaxEntries {
+			l.saturationCount++
+
+			logNow := l.lastSaturationLog.IsZero() || now.Sub(l.lastSaturationLog) >= rateLimitWindow
+			if logNow {
+				l.lastSaturationLog = now
+			}
+
+			return false, int(rateLimitWindow.Seconds()), logNow
 		}
 
 		window = rateWindow{start: now, count: 0}
@@ -75,13 +113,13 @@ func (l *inMemoryRateLimiter) allow(key string, now time.Time) (bool, int) {
 
 		l.windows[key] = window
 
-		return false, retryAfter
+		return false, retryAfter, false
 	}
 
 	window.count++
 	l.windows[key] = window
 
-	return true, 0
+	return true, 0, false
 }
 
 func (l *inMemoryRateLimiter) evictStaleLocked(now time.Time) {
