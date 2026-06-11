@@ -69,30 +69,32 @@
 		<div class="min-w-0 flex-1">
 			<div class="flex items-start justify-between gap-3">
 				<div class="min-w-0 flex-1">
-					<div class="flex items-center gap-2">
+					<div class="flex min-w-0 items-center gap-2">
 						<StatusPill {tone} label={group.severity} size="sm" />
-						<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
+						<span class="text-ink-faint truncate font-mono text-[11px] tracking-wide uppercase">
 							{group.ruleId}
 						</span>
 					</div>
-					<h4 class="text-ink mt-1.5 truncate text-sm leading-snug font-semibold">
+					<h4 class="text-ink mt-1.5 line-clamp-2 text-sm leading-snug font-semibold">
 						{displayTitle}
 					</h4>
 					<div class="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-						<span
-							class={cn(
-								'inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[11px] leading-none font-bold tabular-nums',
-								occurrenceCount > 1
-									? 'border-line bg-surface-muted text-ink'
-									: 'border-line/60 bg-surface text-ink-muted'
-							)}
-						>
-							×{occurrenceCount.toLocaleString()}
-						</span>
-						<span class="text-ink-muted">
-							{occurrenceCount === 1 ? 'occurrence' : 'occurrences'} ·
-							<span class="text-ink font-mono font-semibold">{pageCount.toLocaleString()}</span>
-							{pageCount === 1 ? 'page' : 'pages'}
+						<span class="flex items-center gap-2">
+							<span
+								class={cn(
+									'inline-flex items-center rounded-full border px-2 py-0.5 font-mono text-[11px] leading-none font-bold tabular-nums',
+									occurrenceCount > 1
+										? 'border-line bg-surface-muted text-ink'
+										: 'border-line/60 bg-surface text-ink-muted'
+								)}
+							>
+								×{occurrenceCount.toLocaleString()}
+							</span>
+							<span class="text-ink-muted">
+								{occurrenceCount === 1 ? 'occurrence' : 'occurrences'} ·
+								<span class="text-ink font-mono font-semibold">{pageCount.toLocaleString()}</span>
+								{pageCount === 1 ? 'page' : 'pages'}
+							</span>
 						</span>
 						{#if occurrenceCount >= 5}
 							<span

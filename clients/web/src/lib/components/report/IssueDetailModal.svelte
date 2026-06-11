@@ -231,48 +231,31 @@
 >
 	<div bind:this={modalRef} class="contents">
 		<div class={cn('border border-b p-6', getSeverityContainerClass(issue.severity))}>
-			<div class="flex items-start justify-between gap-4">
-				<div class="min-w-0">
-					<div class="mb-2 flex flex-wrap items-center gap-2">
+			<div class="mb-2 flex items-start justify-between gap-4">
+				<div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+					<span
+						class={cn(
+							'inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide uppercase',
+							getSeverityContainerClass(issue.severity)
+						)}
+					>
 						<span
 							class={cn(
-								'inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide uppercase',
-								getSeverityContainerClass(issue.severity)
+								'h-2 w-2 rounded-full',
+								getSeverityDotClass(issue.severity),
+								issue.severity === 'critical' && 'animate-hotspot-pulse text-red-500'
 							)}
-						>
-							<span
-								class={cn(
-									'h-2 w-2 rounded-full',
-									getSeverityDotClass(issue.severity),
-									issue.severity === 'critical' && 'animate-hotspot-pulse text-red-500'
-								)}
-							></span>
-							{issue.severity}
-						</span>
-						<span
-							class="border-line bg-surface text-ink-muted inline-flex items-center rounded border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide uppercase"
-						>
-							{kindLabel}
-						</span>
-						<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
-							{issue.scanner} · {issue.ruleId}
-						</span>
-					</div>
-					<h2 class="text-ink text-xl leading-tight font-bold">{displayTitle}</h2>
-					{#if isManual}
-						<p class="text-ink-muted mt-1 text-sm">
-							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this for human verification
-							— no concrete DOM target was reported.
-						</p>
-					{/if}
-					{#if alsoDetectedBy.length}
-						<p class="text-ink-muted mt-1 text-sm">
-							Also detected by: {alsoDetectedBy.join(', ')}
-						</p>
-					{/if}
-					{#if issue.friendlyNode?.label}
-						<p class="text-ink-muted mt-2 text-sm">{issue.friendlyNode.label}</p>
-					{/if}
+						></span>
+						{issue.severity}
+					</span>
+					<span
+						class="border-line bg-surface text-ink-muted inline-flex items-center rounded border px-2 py-0.5 font-mono text-[11px] font-semibold tracking-wide uppercase"
+					>
+						{kindLabel}
+					</span>
+					<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
+						{issue.scanner} · {issue.ruleId}
+					</span>
 				</div>
 				<div class="flex shrink-0 items-center gap-1">
 					{#if onNavigate && totalCount > 1}
@@ -310,6 +293,22 @@
 					</button>
 				</div>
 			</div>
+
+			<h2 class="text-ink text-xl leading-tight font-bold">{displayTitle}</h2>
+			{#if isManual}
+				<p class="text-ink-muted mt-1 text-sm">
+					{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this for human verification
+					— no concrete DOM target was reported.
+				</p>
+			{/if}
+			{#if alsoDetectedBy.length}
+				<p class="text-ink-muted mt-1 text-sm">
+					Also detected by: {alsoDetectedBy.join(', ')}
+				</p>
+			{/if}
+			{#if issue.friendlyNode?.label}
+				<p class="text-ink-muted mt-2 text-sm">{issue.friendlyNode.label}</p>
+			{/if}
 
 			{#if pageLabel || issue.category || occurrenceCount > 0}
 				<div

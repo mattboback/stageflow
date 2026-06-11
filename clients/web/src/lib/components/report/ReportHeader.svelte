@@ -67,9 +67,15 @@
 	const triage = $derived.by((): Triage => {
 		if (criticalCount > 0) {
 			return {
-				message: `Start with the ${criticalCount.toLocaleString()} critical issue${criticalCount === 1 ? '' : 's'} — these block users outright.`,
+				message:
+					criticalCount === 1
+						? 'Start with the critical issue — it blocks users outright.'
+						: `Start with the ${criticalCount.toLocaleString()} critical issues — these block users outright.`,
 				cta: {
-					label: `Fix these ${criticalCount.toLocaleString()} critical issue${criticalCount === 1 ? '' : 's'}`,
+					label:
+						criticalCount === 1
+							? 'Fix this critical issue'
+							: `Fix these ${criticalCount.toLocaleString()} critical issues`,
 					severity: 'critical'
 				},
 				containerClass: 'border-red-200 bg-red-50 text-red-900',
@@ -82,7 +88,10 @@
 			return {
 				message: `No critical findings. Prioritize the ${seriousCount.toLocaleString()} serious issue${seriousCount === 1 ? '' : 's'} next.`,
 				cta: {
-					label: `Fix these ${seriousCount.toLocaleString()} serious issue${seriousCount === 1 ? '' : 's'}`,
+					label:
+						seriousCount === 1
+							? 'Fix this serious issue'
+							: `Fix these ${seriousCount.toLocaleString()} serious issues`,
 					severity: 'serious'
 				},
 				containerClass: 'border-orange-200 bg-orange-50 text-orange-900',
@@ -124,9 +133,10 @@
 
 <Panel class="border-line/60 bg-surface mb-6 border shadow-xs" padding="lg" rounded="2xl">
 	<div class="flex flex-col gap-4">
-		<!-- Top row: title + actions -->
+		<!-- Top row: title + actions. The title keeps a 16rem basis so the action
+		     buttons wrap below it before the URL gets squeezed into mid-word breaks. -->
 		<div class="flex flex-wrap items-start justify-between gap-3">
-			<div class="min-w-0 flex-1">
+			<div class="min-w-0 flex-[1_1_16rem]">
 				<p class="text-ink-faint text-[11px] font-semibold tracking-[0.12em] uppercase">
 					Scan report
 				</p>
