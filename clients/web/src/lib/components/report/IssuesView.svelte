@@ -268,7 +268,7 @@
 							<span class="font-mono">{filteredIssues.length.toLocaleString()}</span
 							>{filteredIssues.length !== report.issues.length
 								? ` / ${report.issues.length.toLocaleString()}`
-								: ''} occurrence{filteredIssues.length === 1 ? '' : 's'}
+								: ''} occurrence{report.issues.length === 1 ? '' : 's'}
 						</h3>
 						{#if hasActiveFilters}
 							<button
@@ -397,7 +397,8 @@
 								{#if manualGroups.length > 0}
 									· <span class="font-mono">{manualGroups.length.toLocaleString()}</span> manual review
 								{/if}
-								· <span class="font-mono">{sortedIssues.length.toLocaleString()}</span> occurrences
+								· <span class="font-mono">{sortedIssues.length.toLocaleString()}</span>
+								occurrence{sortedIssues.length === 1 ? '' : 's'}
 							{:else}
 								<span class="font-mono">{sortedIssues.length.toLocaleString()}</span> visible results
 							{/if}

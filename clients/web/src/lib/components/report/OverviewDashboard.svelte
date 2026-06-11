@@ -258,7 +258,7 @@
 						{scanner.name ?? scanner.id}
 					</p>
 					<p class="text-ink-muted text-xs">
-						{issueCount} issues
+						{issueCount} issue{issueCount === 1 ? '' : 's'}
 					</p>
 				</div>
 			</div>
@@ -559,7 +559,9 @@
 						<span class="text-ink truncate font-medium">
 							{page.path ?? page.url}
 						</span>
-						<span class="text-ink-muted shrink-0 font-mono text-xs">{page.issueCount} issues</span>
+						<span class="text-ink-muted shrink-0 font-mono text-xs"
+							>{page.issueCount} issue{page.issueCount === 1 ? '' : 's'}</span
+						>
 					</span>
 					{#if page.bySeverity}
 						<SeverityBar counts={page.bySeverity} height="sm" />
@@ -582,7 +584,7 @@
 					>
 						<span class="text-ink line-clamp-2 font-medium">{rule.title}</span>
 						<span class="text-ink-muted font-mono text-xs">
-							{rule.scanner} · {rule.count} occurrences
+							{rule.scanner} · {rule.count} occurrence{rule.count === 1 ? '' : 's'}
 						</span>
 					</button>
 				{/each}
