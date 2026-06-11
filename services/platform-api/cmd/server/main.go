@@ -47,6 +47,10 @@ func run() error {
 		return fmt.Errorf("invalid authentication configuration: %w", err)
 	}
 
+	if err := api.ValidateCORSConfig(); err != nil {
+		return fmt.Errorf("invalid CORS configuration: %w", err)
+	}
+
 	ctx := context.Background()
 
 	natsClient, err := bootstrap.NewNATSClient(ctx, cfg.NATS, bootstrap.NATSOptions{EnsureStreams: true})

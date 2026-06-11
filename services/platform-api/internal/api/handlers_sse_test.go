@@ -262,3 +262,38 @@ func TestTerminalDonePayloadFromUpdate_DerivesStateFromCompleteType(t *testing.T
 		t.Fatalf("expected DONE state, got %q", done.State)
 	}
 }
+
+func TestJobIDFromJobPath_RejectsMalformedID(t *testing.T) {
+	if _, ok := jobIDFromJobPath("/api/v1/jobs/bad id/stream", "stream"); ok {
+		t.Fatal("expected a job ID with a space to be rejected")
+	}
+
+	valid := "123e4567-e89b-12d3-a456-426614174000"
+	if id, ok := jobIDFromJobPath("/api/v1/jobs/"+valid+"/stream", "stream"); !ok || id != valid {
+		t.Fatalf("expected valid UUID to be accepted, got id=%q ok=%v", id, ok)
+	}
+}
+
+func TestValidJobID(t *testing.T) {
+	for _, good := range []string{
+		"123e4567-e89b-12d3-a456-426614174000", // production UUID
+		"job-structured-screenshots",           // readable fixture id
+		"12345",
+	} {
+		if !validJobID(good) {
+			t.Fatalf("expected %q to be accepted", good)
+		}
+	}
+
+	for _, bad := range []string{
+		"",
+		"../../etc/passwd",      // path traversal
+		"drop table jobs",       // spaces / SQL metachars
+		"id\ninjected-log-line", // control char (log injection)
+		strings.Repeat("a", 65), // over length bound
+	} {
+		if validJobID(bad) {
+			t.Fatalf("expected %q to be rejected", bad)
+		}
+	}
+}

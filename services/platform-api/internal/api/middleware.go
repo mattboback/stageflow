@@ -366,6 +366,34 @@ func ValidateAuthConfig() error {
 	return nil
 }
 
+// ValidateCORSConfig rejects a wildcard CORS origin when authentication is
+// enabled. With "*" configured, corsMiddleware echoes back any Origin, so an
+// authenticated API would accept credentialed cross-origin requests from any
+// site — a CSRF anti-pattern. Operators must enumerate explicit origins. When
+// authentication is disabled the wildcard is only warned about, since there are
+// no credentials to steal in that mode.
+func ValidateCORSConfig() error {
+	origins := parseAllowedOrigins(os.Getenv("PLATFORM_API_CORS_ALLOW_ORIGINS"))
+	if !origins["*"] {
+		return nil
+	}
+
+	authDisabled := strings.EqualFold(strings.TrimSpace(os.Getenv("PLATFORM_API_AUTH_DISABLED")), "true")
+	if !authDisabled {
+		return errors.New(
+			"PLATFORM_API_CORS_ALLOW_ORIGINS=* is not allowed while authentication is enabled; " +
+				"enumerate explicit origins (e.g. https://stageflow.org)",
+		)
+	}
+
+	slog.Warn(
+		"SECURITY: PLATFORM_API_CORS_ALLOW_ORIGINS=* echoes back any Origin. " +
+			"This is tolerated only because authentication is disabled; set explicit origins before enabling auth.",
+	)
+
+	return nil
+}
+
 func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	expected := strings.TrimSpace(os.Getenv("PLATFORM_API_TOKEN"))
 	if expected == "" {
