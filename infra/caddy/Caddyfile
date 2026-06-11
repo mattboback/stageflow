@@ -9,6 +9,20 @@
 
 # Public domain for this stack (override via STAGEFLOW_PUBLIC_DOMAIN).
 {$STAGEFLOW_PUBLIC_DOMAIN:stageflow.org} {
+    # Baseline security response headers for every route. Caddy terminates TLS
+    # via ACME, so HSTS is safe to assert here. frame-ancestors blocks
+    # clickjacking; nosniff blocks MIME-confusion; the referrer policy avoids
+    # leaking full URLs cross-origin.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "frame-ancestors 'none'"
+        X-Frame-Options "DENY"
+        # Don't advertise the server software.
+        -Server
+    }
+
     # Proxy API requests directly to platform-api
     handle /api/* {
         reverse_proxy 127.0.0.1:8100
