@@ -207,3 +207,36 @@ func TestPlanRejectsCollisionWithReservedEnvName(t *testing.T) {
 		t.Errorf("error should mention reserved name; got: %v", err)
 	}
 }
+
+// TestPlanRejectsBrowserAndResultSubjectEnvCollisions guards the security
+// reservation for env vars the scanner-runner interprets directly: Chromium
+// launch controls and result-subject overrides must not be settable via a
+// from_env auth reference.
+func TestPlanRejectsBrowserAndResultSubjectEnvCollisions(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{
+		"BROWSER_ARGS",
+		"BROWSER_BYPASS_CSP",
+		"NATS_SUBJECT_SCAN_COMPLETED",
+		"SCANNER_DATA_DIR",
+	} {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			authJSON := `{"mode":"form","login_url":"https://x","steps":[{"type":"fill","selector":"#a","value":{"from_env":"` + name + `"}}],"success":{"type":"load"}}`
+
+			planner := newAuthPlanner(t, map[string]string{name: "attacker-controlled"})
+
+			_, err := planner.Plan(context.Background(), newAuthJob(t, authJSON), "axe")
+			if err == nil {
+				t.Fatalf("expected Plan() to reject from_env collision with reserved env var %q", name)
+			}
+
+			if !strings.Contains(err.Error(), "reserved") {
+				t.Errorf("error should mention reserved name for %q; got: %v", name, err)
+			}
+		})
+	}
+}
