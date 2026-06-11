@@ -369,8 +369,15 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 	return nil
 }
 
-// reservedScannerEnvNames are env vars baseEnv() and applyAINavigatorEnv() set;
-// an auth recipe must not collide with them.
+// reservedScannerEnvNames are env vars the scanner-runner interprets as
+// infrastructure or behaviour controls. An auth recipe must not be able to set
+// them via {from_env: "NAME"}: doing so would let a recipe pull a value off the
+// orchestrator host env and have the scanner pod interpret it as Chromium launch
+// flags, a CSP bypass, a result-subject override, a data path, or a resource
+// limit. The list is intentionally broader than the vars baseEnv()/
+// applyAINavigatorEnv() set today, so the invariant holds even for controls the
+// scanner reads directly from its environment (see scanner-runner
+// src/core/config-loader.ts).
 var reservedScannerEnvNames = map[string]struct{}{
 	"JOB_ID":                 {},
 	"SCANNER_TYPE":           {},
@@ -395,6 +402,27 @@ var reservedScannerEnvNames = map[string]struct{}{
 	"OPENROUTER_API_KEY":     {},
 	"OPENROUTER_APP_TITLE":   {},
 	"OPENROUTER_APP_REFERER": {},
+
+	// Headless-browser controls: arbitrary Chromium flags or a CSP bypass would
+	// undermine the browser sandbox if an attacker could inject them.
+	"BROWSER_ARGS":       {},
+	"BROWSER_BYPASS_CSP": {},
+	"BROWSER_HEADLESS":   {},
+
+	// Result-subject overrides: redirecting these would let a recipe forge or
+	// suppress scan-result events on arbitrary NATS subjects.
+	"NATS_SUBJECT_PAGE_COMPLETED": {},
+	"NATS_SUBJECT_SCAN_COMPLETED": {},
+	"NATS_SUBJECT_SCAN_FAILED":    {},
+
+	// Data path and resource limits: control where the pod writes and how much
+	// CPU/memory/time it can consume.
+	"SCANNER_DATA_DIR": {},
+	"SCAN_CONCURRENCY": {},
+	"MAX_RETRIES":      {},
+	"DEFAULT_TIMEOUT":  {},
+	"VIEWPORT_WIDTH":   {},
+	"VIEWPORT_HEIGHT":  {},
 }
 
 func (p *ScannerLaunchPlanner) scannerImage(scannerType string) string {
