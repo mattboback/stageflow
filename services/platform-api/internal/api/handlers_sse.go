@@ -23,6 +23,10 @@ func jobIDFromJobPath(path, suffix string) (string, bool) {
 		return "", false
 	}
 
+	if !validJobID(parts[0]) {
+		return "", false
+	}
+
 	return parts[0], true
 }
 

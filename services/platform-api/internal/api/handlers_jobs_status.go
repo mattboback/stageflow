@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -21,6 +22,20 @@ import (
 )
 
 const maxReportJSONBytes = 64 * 1024 * 1024
+
+// jobIDPattern bounds a job-ID path parameter to a safe charset and length.
+// Job IDs are minted as UUIDs, but validating by charset rather than strict
+// UUID format stays robust if that ever changes while still rejecting the
+// inputs that matter: path separators (traversal), SQL/quote metacharacters,
+// control characters (log injection), and unbounded-length strings.
+var jobIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+
+// validJobID reports whether id is a safe job-ID path parameter. Rejecting
+// malformed IDs up front avoids pointless store/cache lookups and keeps
+// attacker-controlled strings out of logs.
+func validJobID(id string) bool {
+	return jobIDPattern.MatchString(id)
+}
 
 func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -39,6 +54,12 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jobID := parts[0]
+
+	if !validJobID(jobID) {
+		httputil.RespondError(w, http.StatusBadRequest, "Invalid job ID")
+
+		return
+	}
 
 	if len(parts) > 1 {
 		if len(parts) != 2 {

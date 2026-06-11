@@ -350,6 +350,33 @@ func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 	}
 }
 
+func TestValidateCORSConfig_WildcardWithAuthFails(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://stageflow.org,*")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
+
+	if err := ValidateCORSConfig(); err == nil {
+		t.Fatal("expected error for wildcard CORS while auth is enabled")
+	}
+}
+
+func TestValidateCORSConfig_WildcardWithAuthDisabledWarnsOnly(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "*")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "true")
+
+	if err := ValidateCORSConfig(); err != nil {
+		t.Fatalf("expected no error for wildcard CORS when auth is disabled, got %v", err)
+	}
+}
+
+func TestValidateCORSConfig_ExplicitOriginsOK(t *testing.T) {
+	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://stageflow.org,https://www.stageflow.org")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
+
+	if err := ValidateCORSConfig(); err != nil {
+		t.Fatalf("expected no error for explicit origins, got %v", err)
+	}
+}
+
 func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
 	limiter := newInMemoryRateLimiter(100)
 	now := time.Now().UTC()
