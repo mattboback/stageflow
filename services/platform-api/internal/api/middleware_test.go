@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -346,6 +347,39 @@ func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 
 	if rr2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected second request 429, got %d", rr2.Code)
+	}
+}
+
+func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
+	limiter := newInMemoryRateLimiter(100)
+	now := time.Now().UTC()
+
+	// Fill the window table to capacity with distinct, in-window keys.
+	for i := 0; i < rateLimiterMaxEntries; i++ {
+		allowed, _ := limiter.allow("filler-"+strconv.Itoa(i), now)
+		if !allowed {
+			t.Fatalf("filler %d should be allowed while filling the table", i)
+		}
+	}
+
+	// A brand-new key must now be DENIED (fail closed), not silently allowed.
+	allowed, retryAfter := limiter.allow("new-client", now)
+	if allowed {
+		t.Fatal("expected new client to be denied when the table is saturated (fail closed)")
+	}
+
+	if retryAfter < 1 {
+		t.Fatalf("expected a positive Retry-After on saturation, got %d", retryAfter)
+	}
+
+	if limiter.saturationCount == 0 {
+		t.Fatal("expected saturationCount to be incremented on a fail-closed denial")
+	}
+
+	// An already-tracked key must keep being served from its existing window,
+	// so saturation never starves established legitimate clients.
+	if allowed, _ := limiter.allow("filler-0", now); !allowed {
+		t.Fatal("expected an already-tracked key to remain allowed under saturation")
 	}
 }
 
