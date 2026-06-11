@@ -164,27 +164,20 @@ func (s *Server) rateLimit(next http.Handler) http.Handler {
 	})
 }
 
+// clientKey identifies the caller for rate limiting. The orchestrator admin API
+// is internal: its only caller (platform-api) connects directly with no proxy in
+// front, so X-Forwarded-For / X-Real-IP are attacker-spoofable and deliberately
+// ignored here. Keying off the real RemoteAddr is correct for this API; if it is
+// ever placed behind a trusted proxy, add an explicit trusted-proxy check (see
+// platform-api's remoteAddrIsTrusted) rather than trusting the headers blindly.
 func clientKey(r *http.Request) string {
-	forwardedFor := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
-	if forwardedFor != "" {
-		first, _, _ := strings.Cut(forwardedFor, ",")
-		if first = strings.TrimSpace(first); first != "" {
-			return first
-		}
-	}
-
-	realIP := strings.TrimSpace(r.Header.Get("X-Real-IP"))
-	if realIP != "" {
-		return realIP
-	}
-
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err == nil && host != "" {
 		return host
 	}
 
-	if strings.TrimSpace(r.RemoteAddr) != "" {
-		return r.RemoteAddr
+	if addr := strings.TrimSpace(r.RemoteAddr); addr != "" {
+		return addr
 	}
 
 	return "unknown"
