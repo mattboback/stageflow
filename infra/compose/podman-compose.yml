@@ -220,9 +220,17 @@ services:
       context: ../..
       dockerfile: services/orchestrator/Dockerfile
     image: localhost/stageflow/orchestrator:latest
-    # The orchestrator owns job pod creation and needs write access to the mounted Podman socket.
-    user: "0:0"
+    # The orchestrator owns job pod creation and needs write access to the
+    # mounted Podman socket. Run as the mapped host user (keep-id) rather than
+    # in-container root: under rootless Podman keep-id maps container uid 1000 ->
+    # host uid 1000 (the socket owner), so socket access is preserved without the
+    # process running as uid 0 inside the container.
+    user: "1000:1000"
+    userns_mode: "keep-id"
     security_opt:
+      # label=disable is required so the container can access the relabeled
+      # rootless Podman socket; SELinux confinement cannot be scoped per-mount in
+      # compose. Self-hosters on a non-SELinux host can drop this line.
       - label=disable
       - no-new-privileges:true
     volumes:
