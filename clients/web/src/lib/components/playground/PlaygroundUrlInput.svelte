@@ -50,7 +50,7 @@
 	}
 </script>
 
-<div class="animate-fade-in">
+<div>
 	<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
 		<div class="flex items-center gap-2">
 			<Label for="urls" class="text-sm font-bold">URLs to Scan</Label>
@@ -99,7 +99,7 @@
 			>
 		</div>
 	{:else if urlCount > 0 && !hasErrors}
-		<div class="animate-fade-in mt-2 flex items-start gap-1.5 text-xs text-emerald-700">
+		<div class="mt-2 flex items-start gap-1.5 text-xs text-emerald-700">
 			<CheckCircle2 class="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<span>All {urlCount} {urlCount === 1 ? 'target is ready' : 'targets are ready'}.</span>
 		</div>

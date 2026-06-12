@@ -46,9 +46,9 @@ export const Processing: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		await expect(canvas.getByText('SCANNING')).toBeVisible();
+		await expect(canvas.getByText('Running')).toBeVisible();
 		await expect(canvas.getByText('Currently scanning page 2 of 5.')).toBeVisible();
-		await expect(canvas.getByText('2 of 5')).toBeVisible();
+		await expect(canvas.getByText('0m 45s elapsed')).toBeVisible();
 	}
 };
 
@@ -61,7 +61,11 @@ export const Complete: Story = {
 	play: async ({ canvasElement }) => {
 		const canvas = within(canvasElement);
 
-		await expect(canvas.getByText('COMPLETE')).toBeVisible();
-		await expect(canvas.queryByText('Initializing scan...')).not.toBeInTheDocument();
+		await expect(canvas.getByText('Complete')).toBeVisible();
+		await expect(
+			canvas.getByText(
+				'Scan complete. Open the unified report to review the highest-priority findings first.'
+			)
+		).toBeVisible();
 	}
 };
