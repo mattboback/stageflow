@@ -2,8 +2,10 @@
 	import type { ScanResult } from '$lib/types/scan';
 
 	import { Progress } from '$lib/components/ui';
-	import { Clock, FileSearch, Loader2, Server, ShieldCheck, TerminalSquare } from 'lucide-svelte';
+	import { cn } from '$lib/utils';
+	import { ChevronDown, TerminalSquare } from 'lucide-svelte';
 
+	import ScannerActivityTable from './ScannerActivityTable.svelte';
 	import ScanTerminal from './ScanTerminal.svelte';
 
 	interface Props {
@@ -13,56 +15,33 @@
 
 	let { result, logs }: Props = $props();
 
+	let logsOpen = $state(false);
+
 	function getStageInfo(
 		state?: string,
 		progress?: { current_page: number; total_pages: number }
-	): { stage: string; icon: typeof Clock; description: string } {
+	): { stage: string; description: string } {
 		const normalizedState = (state || '').toUpperCase();
 
 		switch (normalizedState) {
 			case 'PENDING':
-				return {
-					stage: 'Queued',
-					icon: Clock,
-					description: 'Waiting for available worker…'
-				};
+				return { stage: 'Queued', description: 'Waiting for available worker…' };
 			case 'EXTRACTING':
-				return {
-					stage: 'Extracting',
-					icon: Server,
-					description: 'Processing uploaded content…'
-				};
+				return { stage: 'Extracting', description: 'Processing uploaded content…' };
 			case 'READY_TO_SCAN':
-				return {
-					stage: 'Preparing',
-					icon: FileSearch,
-					description: 'Analyzing site structure…'
-				};
+				return { stage: 'Preparing', description: 'Analyzing site structure…' };
 			case 'SCANNING':
 				if (progress) {
 					return {
 						stage: 'Scanning',
-						icon: Loader2,
 						description: `Auditing page ${progress.current_page} of ${progress.total_pages}`
 					};
 				}
-				return {
-					stage: 'Scanning',
-					icon: Loader2,
-					description: 'Running accessibility checks…'
-				};
+				return { stage: 'Scanning', description: 'Running accessibility checks…' };
 			case 'COMPLETING':
-				return {
-					stage: 'Finalizing',
-					icon: FileSearch,
-					description: 'Generating reports…'
-				};
+				return { stage: 'Finalizing', description: 'Generating reports…' };
 			default:
-				return {
-					stage: 'Processing',
-					icon: Loader2,
-					description: 'Initializing scan environment…'
-				};
+				return { stage: 'Processing', description: 'Initializing scan environment…' };
 		}
 	}
 
@@ -98,10 +77,6 @@
 	const percentage = $derived(result?.progress?.percentage ?? 0);
 	const completedScanners = $derived(result?.completed_scanners ?? []);
 	const remainingScanners = $derived(result?.remaining_scanners ?? []);
-	const expectedScannerCount = $derived(
-		result?.expected_scanners?.length ??
-			Math.max(completedScanners.length + remainingScanners.length, completedScanners.length)
-	);
 	const currentAction = $derived.by(() => {
 		if (remainingScanners.length > 0) {
 			return `Running ${remainingScanners
@@ -131,140 +106,45 @@
 	}
 </script>
 
-<div class="space-y-8">
-	<div class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-		<div class="border-line bg-surface-muted rounded-2xl border p-5">
-			<div class="flex items-start gap-4">
-				<div
-					class="bg-accent-soft text-accent-ink relative flex h-12 w-12 shrink-0 animate-pulse items-center justify-center rounded-xl shadow-[0_0_15px_rgba(13,92,99,0.12)]"
-				>
-					<stageInfo.icon class="h-6 w-6 {stageInfo.stage === 'Scanning' ? 'animate-spin' : ''}" />
-				</div>
-				<div class="min-w-0 flex-1">
-					<p class="text-ink-faint text-[11px] font-semibold tracking-[0.14em] uppercase">
-						What&apos;s happening now
-					</p>
-					<h3 class="text-ink mt-1 text-lg font-semibold">
-						{stageInfo.stage}
-					</h3>
-					<p class="text-ink-muted mt-1 text-sm">{stageInfo.description}</p>
-					<p class="text-ink mt-3 text-sm font-medium">{currentAction}</p>
-				</div>
-			</div>
+<div class="space-y-7">
+	<!-- Current stage -->
+	<div>
+		<p class="section-tag">What&apos;s happening now</p>
+		<h3 class="font-display text-ink-strong mt-1.5 text-2xl font-semibold tracking-[-0.01em]">
+			{stageInfo.stage}
+		</h3>
+		<p class="text-ink-muted mt-1 text-sm">{stageInfo.description}</p>
+		<p class="text-ink mt-2 text-sm font-medium">{currentAction}</p>
+	</div>
 
-			<div class="mt-5 space-y-3">
-				<div class="flex items-center justify-between text-sm">
-					<span class="text-ink-muted font-medium">{progressLabel}</span>
-					<span class="text-ink text-accent font-mono font-bold">{percentage}%</span>
-				</div>
-				<Progress
-					value={percentage}
-					class="h-3 bg-gradient-to-r from-[#0d5c63] to-emerald-500 transition-all duration-300"
-				/>
-				<div class="flex flex-wrap items-center justify-between gap-2 text-sm">
-					<div class="text-ink-muted flex items-center gap-2">
-						<span class="bg-accent inline-flex h-2 w-2 animate-ping rounded-full"></span>
-						<span class="font-medium">{estimatedTime}</span>
-					</div>
-					{#if result?.progress && result.progress.total_pages > 0}
-						<span class="text-ink-muted font-medium">
-							{Math.max(result.progress.total_pages - result.progress.current_page, 0)} pages remaining
-						</span>
-					{/if}
-				</div>
-			</div>
+	<!-- Progress -->
+	<div>
+		<div class="mb-2 flex items-baseline justify-between text-xs">
+			<span class="text-ink-muted font-medium">{progressLabel}</span>
+			<span class="text-accent font-mono font-bold tabular-nums">{percentage}%</span>
 		</div>
-
-		<div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-			<div class="bg-surface rounded-2xl border border-[var(--color-line)] px-4 py-3">
-				<div
-					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
-				>
-					<FileSearch class="h-3.5 w-3.5" />
-					Pages
-				</div>
-				<p class="mt-2 text-sm font-semibold">
-					{#if result?.progress?.total_pages}
-						{result.progress.current_page} of {result.progress.total_pages}
-					{:else}
-						Awaiting totals
-					{/if}
-				</p>
-			</div>
-			<div class="bg-surface rounded-2xl border border-[var(--color-line)] px-4 py-3">
-				<div
-					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
-				>
-					<ShieldCheck class="h-3.5 w-3.5" />
-					Scanners
-				</div>
-				<p class="mt-2 text-sm font-semibold">
-					{completedScanners.length} complete{#if expectedScannerCount > 0}<span
-							class="text-ink-muted"
-						>
-							of {expectedScannerCount}</span
-						>{/if}
-				</p>
-			</div>
-			<div class="bg-surface rounded-2xl border border-[var(--color-line)] px-4 py-3">
-				<div
-					class="text-ink-muted flex items-center gap-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
-				>
-					<Clock class="h-3.5 w-3.5" />
-					Handoff
-				</div>
-				<p class="mt-2 text-sm font-semibold">Report unlocks when all scanners finish</p>
-			</div>
+		<Progress value={percentage} />
+		<div
+			class="text-ink-faint mt-2 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px]"
+		>
+			<span>{estimatedTime}</span>
+			{#if result?.progress && result.progress.total_pages > 0}
+				<span>
+					{Math.max(result.progress.total_pages - result.progress.current_page, 0)} pages remaining
+				</span>
+			{/if}
 		</div>
 	</div>
 
+	<!-- Per-scanner state -->
 	{#if completedScanners.length > 0 || remainingScanners.length > 0}
-		<div class="space-y-4">
-			<div class="flex items-center justify-between">
-				<h4 class="text-ink text-sm font-semibold">Scanner Activity</h4>
-				<div class="text-ink-muted text-xs font-medium">
-					{completedScanners.length} of {completedScanners.length + remainingScanners.length} finished
-				</div>
-			</div>
-			{#if remainingScanners.length > 0}
-				<div class="space-y-2">
-					<div class="text-ink-muted text-xs font-semibold tracking-[0.18em] uppercase">
-						Still running
-					</div>
-					<div class="flex flex-wrap gap-2">
-						{#each remainingScanners as scannerType (scannerType)}
-							<span
-								class="border-line bg-surface text-ink inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium shadow-sm transition-all duration-200"
-							>
-								<span
-									class="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"
-								></span>
-								{formatScannerName(scannerType)}
-							</span>
-						{/each}
-					</div>
-				</div>
-			{/if}
-			{#if completedScanners.length > 0}
-				<div class="space-y-2">
-					<div class="text-ink-muted text-xs font-semibold tracking-[0.18em] uppercase">
-						Completed
-					</div>
-					<div class="flex flex-wrap gap-2">
-						{#each completedScanners as scannerType (scannerType)}
-							<span
-								class="bg-accent-soft text-accent-ink inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-							>
-								<span class="bg-accent inline-block h-1.5 w-1.5 shrink-0 rounded-full"></span>
-								{formatScannerName(scannerType)}
-							</span>
-						{/each}
-					</div>
-				</div>
-			{/if}
-		</div>
+		<ScannerActivityTable
+			expected={result?.expected_scanners ?? []}
+			completed={completedScanners}
+			remaining={remainingScanners}
+		/>
 	{:else}
-		<div class="border-line bg-surface-muted/55 rounded-2xl border p-4">
+		<div class="border-line border-l-2 py-1 pl-4">
 			<p class="text-ink text-sm font-semibold">Waiting for scanner activity</p>
 			<p class="text-ink-muted mt-1 text-sm">
 				The scan has started, but no scanner progress has been reported yet. Logs below will update
@@ -273,18 +153,29 @@
 		</div>
 	{/if}
 
-	<div class="space-y-3">
-		<div class="flex items-center justify-between gap-3">
-			<div>
-				<h4 class="text-ink flex items-center gap-2 text-sm font-semibold">
-					<TerminalSquare class="h-4 w-4" />
-					Live logs
-				</h4>
-				<p class="text-ink-muted text-xs">
-					Use logs for detailed diagnostics when the summary above is not enough.
-				</p>
+	<!-- Live logs, collapsed by default -->
+	<div>
+		<button
+			type="button"
+			class="text-ink-muted hover:text-ink flex w-full items-center gap-2 text-left text-sm font-medium transition-colors"
+			aria-expanded={logsOpen}
+			aria-controls="live-logs"
+			onclick={() => (logsOpen = !logsOpen)}
+		>
+			<ChevronDown
+				class={cn('h-4 w-4 transition-transform', logsOpen && 'rotate-180')}
+				aria-hidden="true"
+			/>
+			<TerminalSquare class="h-4 w-4" aria-hidden="true" />
+			Live logs
+			<span class="text-ink-faint ml-auto font-mono text-[11px]">
+				{logs.length} line{logs.length === 1 ? '' : 's'}
+			</span>
+		</button>
+		{#if logsOpen}
+			<div id="live-logs" class="mt-3">
+				<ScanTerminal {logs} />
 			</div>
-		</div>
-		<ScanTerminal {logs} />
+		{/if}
 	</div>
 </div>

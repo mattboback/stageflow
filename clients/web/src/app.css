@@ -147,20 +147,12 @@
 }
 
 @layer components {
-	.glass-panel {
-		@apply border-line bg-surface border;
-	}
-
 	.container-width {
 		@apply mx-auto max-w-6xl px-5 sm:px-6 lg:px-8;
 	}
 
 	.section-padding {
 		@apply py-16 lg:py-24;
-	}
-
-	.playground-shell {
-		background: var(--color-paper);
 	}
 
 	.h1-display {
@@ -191,132 +183,15 @@
 		margin-inline: auto;
 	}
 
-	.landing-shell {
-		background: var(--color-paper);
-	}
-
-	/* DEPRECATED — legacy landing classes; consumers removed in homepage rebuild */
-	.landing-hero {
-		background: var(--color-paper);
-		position: relative;
-		overflow: hidden;
-	}
-
-	.landing-grid {
-		@apply grid items-start gap-12;
-	}
-
-	.landing-headline {
-		@apply max-w-4xl text-balance;
-	}
-
-	.landing-subhead {
-		@apply text-ink-muted max-w-2xl text-lg leading-relaxed;
-	}
-
-	.landing-chip {
-		box-shadow: inset 0 0 0 1px var(--color-line);
-	}
-
-	.metric-strip {
-		@apply mt-10 grid gap-3 sm:grid-cols-3;
-	}
-
-	.metric-card {
-		@apply border-line bg-surface rounded-md border px-5 py-4;
-	}
-
-	.metric-value {
-		@apply text-ink-strong text-3xl leading-none font-bold tracking-[-0.03em];
-	}
-
-	.metric-label {
-		@apply text-ink-muted mt-1.5 text-xs leading-snug font-medium;
-	}
-
-	.editorial-card {
-		@apply border-line bg-surface rounded-md border;
-	}
-
-	.hero-summary-card {
-		@apply border-line bg-surface rounded-md border p-5;
-	}
-
-	.hero-summary-label {
-		@apply text-ink-faint text-xs font-medium tracking-[0.06em] uppercase;
-	}
-
-	.hero-summary-value {
-		@apply text-ink mt-1 text-3xl leading-none font-bold tracking-[-0.03em];
-	}
-
-	.workflow-band {
-		background: var(--color-paper);
-	}
-
-	.workflow-step {
-		@apply border-line bg-surface relative rounded-md border px-6 py-7;
-	}
-
-	.workflow-index {
-		font-family: var(--font-mono);
-		@apply text-accent text-xs font-semibold;
-	}
-
-	.workflow-line {
-		background: var(--color-line);
-		@apply pointer-events-none absolute top-12 left-0 hidden h-px w-full lg:block;
-	}
-
-	.cta-panel {
-		background: var(--color-ink-strong);
-		position: relative;
-		overflow: hidden;
-		@apply rounded-lg px-8 py-14 text-center sm:px-12;
-	}
-	/* END DEPRECATED landing classes */
-
-	.nav-shell {
-		@apply transition-[background-color,border-color,padding,box-shadow] duration-200;
-	}
-
 	.nav-link-pill {
 		@apply rounded-md px-3.5 py-2 text-[13px] font-medium transition-colors;
 	}
 
-	/* DEPRECATED — legacy hero preview; consumer removed in homepage rebuild */
-	.hero-preview {
-		box-shadow: var(--shadow-float);
-		@apply border-line bg-surface relative rounded-lg border;
+	.nav-link {
+		@apply text-ink-muted hover:text-ink text-sm font-medium;
 	}
 
-	.hero-preview-track {
-		@apply bg-line/70 h-1.5 overflow-hidden rounded-full;
-	}
-
-	.hero-preview-fill {
-		@apply h-full rounded-full;
-	}
-
-	.hero-preview-legend {
-		@apply text-ink-faint text-[11px] font-medium;
-	}
-	/* END DEPRECATED hero preview */
-
-	.scanner-card {
-		position: relative;
-		overflow: hidden;
-		transition: border-color var(--duration-fast) var(--ease-out);
-	}
-	.scanner-card:hover {
-		border-color: var(--color-ink-faint);
-	}
-
-	.form-section-label {
-		@apply text-xs font-bold;
-	}
-
-	/* Form step pattern: small, accessible numbered headings */
+	/* Form step pattern: small, accessible section headings */
 	.form-step-head {
 		@apply mb-3 flex items-center gap-2.5;
 	}
@@ -338,10 +213,6 @@
 	.section-tag {
 		font-family: var(--font-mono);
 		@apply text-ink-faint text-[11px] font-medium tracking-[0.06em] uppercase;
-	}
-
-	.nav-link {
-		@apply text-ink-muted hover:text-ink text-sm font-medium;
 	}
 
 	/* Monospace stats */
@@ -367,28 +238,6 @@
 		}
 	}
 
-	.animate-slide-up {
-		animation: slideUp 0.25s ease-out;
-	}
-
-	@keyframes slideUp {
-		from {
-			opacity: 0;
-			transform: translateY(100%);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	/* Shimmer animation for skeleton loaders */
-	@keyframes shimmer {
-		100% {
-			transform: translateX(100%);
-		}
-	}
-
 	/* Donut chart segment animation */
 	.animate-donut-segment {
 		animation: donutGrow 0.6s ease-out forwards;
@@ -401,20 +250,6 @@
 		}
 		to {
 			stroke-dasharray: var(--segment-length) var(--segment-gap);
-		}
-	}
-
-	/* Bar chart entrance animation */
-	.animate-bar-entrance {
-		animation: barEntrance 0.4s ease-out forwards;
-		opacity: 0;
-		transform: translateY(8px);
-	}
-
-	@keyframes barEntrance {
-		to {
-			opacity: 1;
-			transform: translateY(0);
 		}
 	}
 
@@ -449,47 +284,6 @@
 		}
 	}
 
-	/* Count up animation for numbers */
-	.animate-count-up {
-		animation: countUp 0.8s var(--ease-out) forwards;
-	}
-
-	@keyframes countUp {
-		from {
-			opacity: 0;
-			transform: scale(0.8) translateY(4px);
-		}
-		to {
-			opacity: 1;
-			transform: scale(1) translateY(0);
-		}
-	}
-
-	/* Section entrance animation */
-	.animate-section-enter {
-		animation: sectionEnter 0.5s var(--ease-out) both;
-	}
-
-	@keyframes sectionEnter {
-		from {
-			opacity: 0;
-			transform: translateY(16px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-
-	/* Mermaid Diagram Styling */
-	.mermaid-container {
-		@apply border-line bg-surface rounded-lg border p-4;
-	}
-
-	.mermaid-container svg {
-		@apply mx-auto max-w-full;
-	}
-
 	/* No Scrollbar utility */
 	.no-scrollbar::-webkit-scrollbar {
 		display: none;
@@ -509,248 +303,19 @@
 		@apply border-ink/25;
 	}
 
-	/* ──────────────────────────────────────────────────────────────────────
-	   DEPRECATED — Bento layout system. Only ScanStatusLiveBento consumes
-	   these; it is removed in the scan progress rebuild, after which this
-	   whole block is deleted.
-	   ────────────────────────────────────────────────────────────────────── */
-	.bento-frame {
-		background: var(--color-paper-deep);
-		border-radius: 8px;
-		padding: 0.875rem 0.875rem 0;
-		box-shadow: var(--shadow-float);
-		overflow: hidden;
-	}
-
-	@media (max-width: 1023px) {
-		.playground-bento-frame,
-		.status-bento-frame {
-			background: transparent;
-			border-radius: 0;
-			padding: 0;
-			box-shadow: none;
-		}
-
-		.playground-bento-frame .bento-chrome,
-		.status-bento-frame .bento-chrome {
-			display: none;
-		}
-
-		.playground-bento-frame .bento-card,
-		.status-bento-frame .bento-card {
-			background: transparent;
-			border-radius: 0;
-		}
-
-		.playground-bento-frame .bento-nav {
-			display: none;
-		}
-
-		.playground-bento-frame .bento-panel,
-		.status-bento-frame .bento-panel {
-			padding: 0;
-		}
-
-		.playground-bento-frame .bento-grid-main,
-		.status-bento-frame .bento-grid-main {
-			border-bottom: none;
-		}
-
-		.playground-bento-frame .bento-grid-main > :first-child,
-		.status-bento-frame .bento-grid-main > :first-child {
-			border-right: none;
-		}
-	}
-
-	.bento-chrome {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding-bottom: 0.75rem;
-	}
-
-	.bento-chrome-dots {
-		display: flex;
-		gap: 5px;
-		flex-shrink: 0;
-	}
-
-	.bento-chrome-dot {
-		display: block;
-		width: 11px;
-		height: 11px;
-		border-radius: 50%;
-	}
-
-	.bento-chrome-url {
-		flex: 1;
-		background: rgba(255, 255, 255, 0.45);
-		border-radius: 6px;
-		padding: 4px 12px;
-		font-size: 11px;
-		color: var(--color-ink-muted);
-		font-family: var(--font-mono);
-		text-align: center;
-		border: 1px solid rgba(255, 255, 255, 0.3);
-	}
-
-	.bento-card {
-		background: #ffffff;
-		border-radius: 8px 8px 0 0;
-		overflow: hidden;
-	}
-
-	.bento-nav {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		padding: 0.75rem 1.25rem;
-		border-bottom: 1px solid var(--color-line);
-	}
-
-	.bento-grid-main {
-		display: grid;
-		grid-template-columns: 7fr 5fr;
-		border-bottom: 1px solid var(--color-line);
-		min-height: 0;
-	}
-
-	.playground-bento-frame .bento-grid-main {
-		grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.88fr);
-	}
-
-	.bento-grid-main > * {
-		min-width: 0;
-	}
-
-	.bento-grid-main > :first-child {
-		border-right: 1px solid var(--color-line);
-	}
-
-	.bento-grid-bottom {
-		display: grid;
-		grid-template-columns: repeat(3, 1fr);
-		border-top: 1px solid var(--color-line);
-	}
-
-	.bento-grid-bottom > :not(:last-child) {
-		border-right: 1px solid var(--color-line);
-	}
-
-	.bento-panel {
-		padding: 1.25rem 1.5rem;
-	}
-
-	.bento-panel-title {
-		font-size: 13px;
-		font-weight: 600;
-		color: var(--color-ink-strong);
-	}
-
-	@media (max-width: 768px) {
-		.bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.bento-grid-main > :first-child {
-			border-right: none;
-		}
-		.bento-grid-bottom {
-			grid-template-columns: 1fr;
-		}
-		.bento-grid-bottom > :not(:last-child) {
-			border-right: none;
-		}
-	}
-
-	@media (max-width: 1023px) {
-		.playground-bento-frame .bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.playground-bento-frame .bento-grid-main > :first-child {
-			border-right: none;
-			border-bottom: 1px solid var(--color-line);
-			padding-bottom: 1.5rem;
-			margin-bottom: 1.5rem;
-		}
-		.playground-bento-frame .bento-grid-bottom {
-			grid-template-columns: 1fr;
-			gap: 0.75rem;
-		}
-		.playground-bento-frame .bento-grid-bottom > :not(:last-child) {
-			border-right: none;
-			border-bottom: 1px solid var(--color-line);
-			padding-bottom: 0.75rem;
-		}
-	}
-
-	@media (max-width: 1023px) {
-		.status-bento-frame .bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.status-bento-frame .bento-grid-main > :first-child {
-			border-bottom: 1px solid var(--color-line);
-			padding-bottom: 1.5rem;
-			margin-bottom: 1.5rem;
-		}
-		.status-bento-frame .bento-grid-bottom {
-			grid-template-columns: 1fr;
-		}
-		.status-bento-frame .bento-grid-bottom .bento-panel {
-			padding: 0.75rem 0;
-		}
-		.status-bento-frame .bento-grid-bottom > :not(:last-child) {
-			border-right: none;
-			border-bottom: 1px solid var(--color-line);
-		}
-	}
-	/* END DEPRECATED bento */
-
-	.scanner-grid-container {
-		container-type: inline-size;
-	}
-
-	.playground-mode-grid-container,
 	.playground-options-grid-container {
 		container-type: inline-size;
 	}
 
-	.playground-mode-grid,
 	.playground-options-grid {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		gap: 0.75rem;
 	}
 
-	.playground-mode-card {
-		min-width: 0;
-	}
-
-	.scanner-grid {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 0.75rem;
-	}
-
-	.scanner-grid-card {
-		min-width: 0;
-	}
-
-	@container (min-width: 34rem) {
-		.scanner-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
 	@container (min-width: 28rem) {
-		.playground-mode-grid,
 		.playground-options-grid {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-
-		.playground-mode-card {
-			flex-direction: column;
-			align-items: center;
-			text-align: center;
 		}
 	}
 
