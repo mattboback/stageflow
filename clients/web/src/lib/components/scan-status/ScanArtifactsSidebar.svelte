@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ScanResult, ScanStatus } from '$lib/types/scan';
 
-	import { Button, Chip, Panel } from '$lib/components/ui';
+	import { Button, Chip } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
 	import { ArrowRight, Clock, FileText, Loader2 } from 'lucide-svelte';
 
@@ -43,12 +43,12 @@
 	}
 </script>
 
-<Panel padding="none" rounded="xl" class="text-ink shadow-sm lg:sticky lg:top-28">
+<div class="border-line bg-surface text-ink rounded-md border lg:sticky lg:top-24">
 	<!-- Header -->
-	<div class="bg-surface-muted flex flex-col space-y-1.5 p-6">
+	<div class="border-line flex flex-col space-y-1.5 border-b p-4 sm:p-5">
 		<div class="flex items-center justify-between gap-3">
-			<h3 class="flex items-center gap-2 text-lg leading-none font-semibold tracking-tight">
-				<FileText class="text-accent h-5 w-5" /> Logs &amp; Artifacts
+			<h3 class="flex items-center gap-2 text-sm leading-none font-semibold">
+				<FileText class="text-accent h-4 w-4" aria-hidden="true" /> Logs &amp; Artifacts
 			</h3>
 			<Button
 				variant="ghost"
@@ -68,16 +68,14 @@
 		{#if status === 'complete' && reportUrl}
 			<a
 				href={reportUrl}
-				class="border-line bg-surface text-ink hover:border-accent hover:text-accent mt-3 inline-flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-medium transition-colors"
+				class="border-line bg-surface text-ink hover:border-accent hover:text-accent mt-3 inline-flex items-center justify-between rounded-md border px-3 py-2 text-sm font-medium transition-colors"
 			>
 				<span>Review unified report first</span>
-				<ArrowRight class="h-4 w-4" />
+				<ArrowRight class="h-4 w-4" aria-hidden="true" />
 			</a>
 		{/if}
 		{#if artifacts}
-			<div
-				class="bg-surface/70 text-ink-muted mt-4 flex gap-2 rounded-full p-1 text-xs font-semibold"
-			>
+			<div class="mt-3 flex gap-2 text-xs font-semibold" role="group" aria-label="Artifact view">
 				{#each TABS as tab (tab)}
 					<Chip
 						as="button"
@@ -95,7 +93,7 @@
 	</div>
 
 	{#if open}
-		<div class="space-y-4 p-6 pt-6">
+		<div class="space-y-4 p-4 sm:p-5">
 			{#if !artifacts}
 				<div class="text-ink-faint flex flex-col items-center justify-center py-8 text-center">
 					<Loader2
@@ -120,18 +118,18 @@
 				{/if}
 
 				<!-- Expiration Notice -->
-				<div class="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
-					<p class="flex items-start gap-2">
-						<Clock class="mt-0.5 h-4 w-4 shrink-0" />
-						<span>
-							Artifacts expire automatically
-							{expirationLabel ? ` on ${expirationLabel}.` : ' within 24 hours.'}
-						</span>
-					</p>
-				</div>
+				<p class="text-ink-faint flex items-start gap-2 font-mono text-[11px]">
+					<Clock class="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+					<span>
+						Artifacts expire automatically
+						{expirationLabel ? ` on ${expirationLabel}.` : ' within 24 hours.'}
+					</span>
+				</p>
 			{/if}
 		</div>
 	{:else}
-		<div class="text-ink-faint px-6 pb-6 text-sm">Expand to view logs and automation snippets.</div>
+		<div class="text-ink-faint p-4 text-sm sm:p-5">
+			Expand to view logs and automation snippets.
+		</div>
 	{/if}
-</Panel>
+</div>

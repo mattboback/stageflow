@@ -41,7 +41,7 @@ describe('ScanStatusContent', () => {
 			}
 		});
 
-		expect(getByText('Scanner Activity')).toBeInTheDocument();
+		expect(getByText('Scanner activity')).toBeInTheDocument();
 		expect(getByText('Axe')).toBeInTheDocument();
 		expect(getByText('Waiting on Lighthouse')).toBeInTheDocument();
 	});
@@ -84,7 +84,7 @@ describe('ScanStatusContent', () => {
 			}
 		});
 
-		expect(failed.getByText('Scan Failed')).toBeInTheDocument();
+		expect(failed.getByText('Scan failed')).toBeInTheDocument();
 		expect(failed.getByText('scanner crashed')).toBeInTheDocument();
 	});
 });

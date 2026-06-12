@@ -116,39 +116,22 @@
 	});
 </script>
 
-<div
-	class="terminal-glow-bg relative mt-8 overflow-hidden rounded-2xl border border-[#1e293b]/70 bg-[#080b11] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.7)]"
->
-	<!-- Glassy terminal header -->
+<div class="relative overflow-hidden rounded-md border border-[#1e293b]/70 bg-[#0c0e13]">
+	<!-- Terminal header -->
 	<div
-		class="flex items-center justify-between border-b border-[#1e293b]/70 bg-[#0e131f]/90 px-3 py-3 backdrop-blur-md sm:px-5"
+		class="flex items-center justify-between border-b border-[#1e293b]/70 bg-[#11141b] px-3 py-2.5 sm:px-5"
 	>
 		<div class="flex items-center gap-2 text-[#64748b]">
-			<Terminal class="text-accent h-4 w-4 drop-shadow-[0_0_6px_rgba(13,92,99,0.5)]" />
+			<Terminal class="h-4 w-4" />
 			<span class="font-mono text-xs font-semibold tracking-wide text-slate-300"
 				>stageflow-orchestrator</span
 			>
 		</div>
-		<div class="flex items-center gap-3">
-			{#if logs.length > 0}
-				<span
-					class="rounded-full border border-[#1e293b]/50 bg-[#1e293b]/40 px-2.5 py-0.5 font-mono text-[10px] font-bold text-slate-400"
-				>
-					{logs.length} events
-				</span>
-			{/if}
-			<div class="flex gap-1.5">
-				<div
-					class="h-2.5 w-2.5 rounded-full bg-[#FF5F56] opacity-90 shadow-[0_0_6px_rgba(255,95,86,0.5)]"
-				></div>
-				<div
-					class="h-2.5 w-2.5 rounded-full bg-[#FFBD2E] opacity-90 shadow-[0_0_6px_rgba(255,189,46,0.5)]"
-				></div>
-				<div
-					class="h-2.5 w-2.5 rounded-full bg-[#27C93F] opacity-90 shadow-[0_0_6px_rgba(39,201,63,0.5)]"
-				></div>
-			</div>
-		</div>
+		{#if logs.length > 0}
+			<span class="font-mono text-[10px] font-bold text-slate-500 tabular-nums">
+				{logs.length} events
+			</span>
+		{/if}
 	</div>
 
 	<!-- Scrollable logs body with scanline overlay -->
@@ -203,9 +186,7 @@
 				</span>
 				<span class="flex items-center gap-1.5 font-semibold tracking-wide text-emerald-400">
 					stageflow-agent: listening_active_diagnostics
-					<span
-						class="terminal-cursor inline-block h-3.5 w-2 bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
-					></span>
+					<span class="terminal-cursor inline-block h-3.5 w-2 bg-emerald-400"></span>
 				</span>
 			</div>
 		{/if}
@@ -213,26 +194,6 @@
 </div>
 
 <style>
-	/* Background with radial highlight */
-	.terminal-glow-bg {
-		background: radial-gradient(circle at 50% 30%, #0d1424 0%, #060910 100%) !important;
-	}
-
-	/* CRT scanline overlay */
-	.terminal-glow-bg::before {
-		content: ' ';
-		display: block;
-		position: absolute;
-		top: 0;
-		left: 0;
-		bottom: 0;
-		right: 0;
-		background: linear-gradient(rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
-		background-size: 100% 4px;
-		z-index: 10;
-		pointer-events: none;
-	}
-
 	/* Styled custom scrollbar */
 	.terminal-console-scroller::-webkit-scrollbar {
 		width: 8px;

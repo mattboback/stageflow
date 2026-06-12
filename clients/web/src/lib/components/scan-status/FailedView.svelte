@@ -3,7 +3,7 @@
 
 	import { Button, buttonVariants } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
-	import { ArrowLeft, RefreshCw, XCircle } from 'lucide-svelte';
+	import { ArrowLeft, RefreshCw } from 'lucide-svelte';
 
 	interface Props {
 		result: ScanResult | null;
@@ -16,40 +16,33 @@
 	}
 </script>
 
-<div class="flex flex-col items-center justify-center space-y-6 py-12 text-center">
-	<div class="rounded-full bg-red-100 p-4 text-red-600">
-		<XCircle class="h-10 w-10" />
-	</div>
-	<div>
-		<h3 class="text-ink text-xl font-bold tracking-tight">Scan Failed</h3>
-		<p class="text-ink-muted mt-2 max-w-md">
-			{result?.error || 'The worker process was terminated unexpectedly. Please try again.'}
+<div class="border-severity-critical border-l-2 py-1 pl-5">
+	<h3 class="font-display text-ink-strong text-2xl font-semibold tracking-[-0.01em]">
+		Scan failed
+	</h3>
+	<p class="text-ink-muted mt-2 max-w-prose text-sm leading-relaxed">
+		{result?.error || 'The worker process was terminated unexpectedly. Please try again.'}
+	</p>
+	{#if result?.last_stage}
+		<p class="text-ink-faint mt-3 font-mono text-[11px] uppercase">
+			stage: {result.last_stage}
 		</p>
-		{#if result?.last_stage}
-			<p class="text-ink-faint mt-2 text-xs font-semibold tracking-wide uppercase">
-				Stage: {result.last_stage}
-			</p>
-		{/if}
-		{#if result?.error_details}
-			<div
-				class="border-line bg-surface-muted text-ink mt-4 rounded-lg border p-3 text-left text-xs"
-			>
-				<div class="text-ink-faint mb-2 text-[10px] font-semibold tracking-wider uppercase">
-					Error details
-				</div>
-				<pre
-					class="max-h-40 overflow-auto font-mono leading-relaxed whitespace-pre-wrap">{result.error_details}</pre>
-			</div>
-		{/if}
-	</div>
-	<div class="flex gap-3">
+	{/if}
+	{#if result?.error_details}
+		<div class="border-line bg-surface-muted text-ink mt-4 rounded-md border p-3 text-xs">
+			<div class="text-ink-faint mb-2 font-mono text-[10px] uppercase">Error details</div>
+			<pre
+				class="max-h-40 overflow-auto font-mono leading-relaxed whitespace-pre-wrap">{result.error_details}</pre>
+		</div>
+	{/if}
+	<div class="mt-6 flex flex-wrap gap-3">
 		<Button onclick={handleRetry} variant="outline" class="gap-2">
-			<RefreshCw class="h-4 w-4" />
+			<RefreshCw class="h-4 w-4" aria-hidden="true" />
 			Retry
 		</Button>
-		<a href="/" class={cn(buttonVariants({ variant: 'default' }), 'gap-2')}>
-			<ArrowLeft class="h-4 w-4" />
-			Back Home
+		<a href="/playground" class={cn(buttonVariants({ variant: 'default' }), 'gap-2')}>
+			<ArrowLeft class="h-4 w-4" aria-hidden="true" />
+			Run another scan
 		</a>
 	</div>
 </div>
