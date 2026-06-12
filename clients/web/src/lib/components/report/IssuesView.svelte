@@ -9,9 +9,11 @@
 		getVirtualWindow,
 		groupIssuesByRule,
 		isIssueSortKey,
+		isAxeIncompleteIssue,
 		isManualReviewIssue,
 		sortIssues
 	} from '$lib/report';
+	import { contrastVerdictsStore } from '$lib/stores/contrast-verdicts.svelte';
 	import { cn } from '$lib/utils';
 	import { ChevronDown, ChevronRight, Eye, Filter, X } from 'lucide-svelte';
 
@@ -22,6 +24,7 @@
 	interface Props {
 		report: UnifiedReport;
 		screenshots: ScreenshotArtifact[];
+		jobId?: string;
 		activeScanners: string[];
 		activePage: string | null;
 		activeSeverities: string[];
@@ -42,6 +45,7 @@
 	let {
 		report,
 		screenshots,
+		jobId = '',
 		activeScanners,
 		activePage,
 		activeSeverities,
@@ -95,6 +99,16 @@
 	);
 	const manualCheckCount = $derived(
 		manualGroups.reduce((sum, group) => sum + group.occurrences.length, 0)
+	);
+
+	// Color-contrast results axe couldn't auto-judge — track human verification progress.
+	const verificationIssueIds = $derived(
+		filteredIssues.filter(isAxeIncompleteIssue).map((issue) => issue.id)
+	);
+	const verificationSummary = $derived(
+		verificationIssueIds.length > 0
+			? contrastVerdictsStore.summarize(jobId, verificationIssueIds)
+			: null
 	);
 
 	let manualOpen = $state(false);
@@ -402,6 +416,14 @@
 							{:else}
 								<span class="font-mono">{sortedIssues.length.toLocaleString()}</span> visible results
 							{/if}
+							{#if verificationSummary}
+								<span class="text-ink-faint font-mono" data-testid="verification-progress">
+									· manual verification: {verificationSummary.reviewed} of {verificationSummary.total}
+									reviewed{verificationSummary.failed > 0
+										? ` · ${verificationSummary.failed} failed`
+										: ''}
+								</span>
+							{/if}
 						</div>
 						<div
 							class="border-line/70 bg-surface-muted inline-flex items-center gap-1 rounded-lg border p-1 text-xs"
@@ -461,6 +483,7 @@
 							{group}
 							{pagesById}
 							{screenshots}
+							{jobId}
 							{showPreviews}
 							expanded={!!expandedGroups[group.fingerprint]}
 							{selectedIssueId}
@@ -502,6 +525,7 @@
 											{group}
 											{pagesById}
 											{screenshots}
+											{jobId}
 											{showPreviews}
 											expanded={!!expandedGroups[group.fingerprint]}
 											{selectedIssueId}
@@ -532,6 +556,7 @@
 										{issue}
 										page={pagesById[issue.pageId] ?? null}
 										{screenshots}
+										{jobId}
 										showScreenshot={showPreviews}
 										isVirtualized={true}
 										isSelected={selectedIssueId === issue.id}
@@ -546,6 +571,7 @@
 								{issue}
 								page={pagesById[issue.pageId] ?? null}
 								{screenshots}
+								{jobId}
 								showScreenshot={showPreviews}
 								isVirtualized={false}
 								isSelected={selectedIssueId === issue.id}

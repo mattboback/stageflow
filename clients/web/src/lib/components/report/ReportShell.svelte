@@ -255,6 +255,7 @@
 					<IssuesView
 						report={displayReport}
 						{screenshots}
+						{jobId}
 						{activeScanners}
 						{activePage}
 						{activeSeverities}

@@ -2,6 +2,7 @@
 	import type { ScreenshotArtifact } from '$lib/types/scan';
 	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
 
+	import { StatusPill } from '$lib/components/ui';
 	import {
 		getCroppedViewBox,
 		getIssueScreenshotUrl,
@@ -9,14 +10,18 @@
 		getSeverityContainerClass,
 		getSeverityDotClass,
 		getSeverityStrokeColor,
+		isAxeIncompleteIssue,
+		isColorContrastIssue,
 		rewriteIssueTitle
 	} from '$lib/report';
+	import { contrastVerdictsStore } from '$lib/stores/contrast-verdicts.svelte';
 	import { cn } from '$lib/utils';
 
 	interface Props {
 		issue: IssueDetail;
 		page: PageSummary | null;
 		screenshots: ScreenshotArtifact[];
+		jobId?: string;
 		showScreenshot?: boolean;
 		isVirtualized?: boolean;
 		isSelected?: boolean;
@@ -33,12 +38,18 @@
 		issue,
 		page = null,
 		screenshots,
+		jobId = '',
 		showScreenshot = true,
 		isVirtualized = false,
 		isSelected = false,
 		inGroup = false,
 		onclick
 	}: Props = $props();
+
+	const needsVerification = $derived(isColorContrastIssue(issue) && isAxeIncompleteIssue(issue));
+	const contrastVerdict = $derived(
+		jobId && isColorContrastIssue(issue) ? contrastVerdictsStore.getVerdict(jobId, issue.id) : null
+	);
 
 	const overview = $derived(page?.pageOverview ?? null);
 	const overviewEl = $derived(overview?.elements?.find((el) => el.issueId === issue.id) ?? null);
@@ -140,6 +151,19 @@
 		>
 			{primaryLine}
 		</p>
+		{#if contrastVerdict || needsVerification}
+			<div class="mt-1.5">
+				{#if contrastVerdict}
+					<StatusPill
+						tone={contrastVerdict.verdict === 'pass' ? 'strong' : 'failing'}
+						label={`Verified · ${contrastVerdict.verdict}`}
+						size="sm"
+					/>
+				{:else}
+					<StatusPill tone="needs-work" label="Needs verification" size="sm" />
+				{/if}
+			</div>
+		{/if}
 		{#if secondaryLine}
 			<p class="text-ink-muted mt-1.5 line-clamp-2 text-sm leading-relaxed">
 				{secondaryLine}

@@ -40,15 +40,18 @@ describe('generateContextualFix', () => {
 
 	it('color-contrast: uses contrast ratio when available', () => {
 		const fix = generateContextualFix(
-			issue({ ruleId: 'color-contrast' }),
-			occ('<span>txt</span>', {
+			issue({
+				ruleId: 'color-contrast',
 				scannerData: {
-					fgColor: '#888',
-					bgColor: '#fff',
-					contrastRatio: 3.2,
-					expectedContrastRatio: 4.5
+					contrastData: {
+						fgColor: '#888',
+						bgColor: '#fff',
+						contrastRatio: 3.2,
+						expectedContrastRatio: 4.5
+					}
 				}
-			} as unknown as IssueOccurrence)
+			}),
+			occ('<span>txt</span>')
 		);
 		expect(fix).toMatch(/3\.2/);
 		expect(fix).toMatch(/4\.5/);
