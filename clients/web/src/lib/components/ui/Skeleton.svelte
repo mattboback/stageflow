@@ -13,7 +13,7 @@
 <div class={cn('space-y-2.5', className)} aria-hidden="true" data-testid="skeleton">
 	{#each Array(lines) as _, i (i)}
 		<div
-			class="skeleton-line bg-surface-muted relative h-4 overflow-hidden rounded-full"
+			class="skeleton-line bg-surface-muted relative h-4 overflow-hidden rounded-sm"
 			style={`width: ${Math.max(40, 95 - i * 14)}%`}
 		></div>
 	{/each}

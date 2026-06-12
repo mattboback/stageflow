@@ -24,7 +24,7 @@
 </script>
 
 <div
-	class={cn('bg-surface-muted relative h-2 w-full overflow-hidden rounded-full', className)}
+	class={cn('bg-paper-deep relative h-1 w-full overflow-hidden', className)}
 	role="progressbar"
 	aria-label={ariaLabel}
 	aria-valuemin={0}

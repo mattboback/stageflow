@@ -10,6 +10,6 @@ describe('buttonVariants', () => {
 	it('applies size + variant classes', () => {
 		expect(buttonVariants({ size: 'sm' })).toContain('h-8');
 		expect(buttonVariants({ variant: 'outline' })).toContain('border-line');
-		expect(buttonVariants({ variant: 'glow' })).toContain('transition-shadow');
+		expect(buttonVariants({ variant: 'glow' })).toContain('bg-accent');
 	});
 });

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 describe('badgeVariants', () => {
 	it('includes base classes', () => {
 		expect(badgeVariants({})).toContain('inline-flex');
-		expect(badgeVariants({})).toContain('rounded-md');
+		expect(badgeVariants({})).toContain('rounded-sm');
 	});
 
 	it('applies variants', () => {

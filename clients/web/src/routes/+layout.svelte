@@ -2,6 +2,7 @@
 	// Self-hosted fonts via fontsource
 	import '@fontsource-variable/inter';
 	import '@fontsource-variable/jetbrains-mono';
+	import '@fontsource-variable/source-serif-4';
 
 	import '../app.css';
 	import { page } from '$app/state';
