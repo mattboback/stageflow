@@ -1,5 +1,7 @@
 import type { IssueDetail, IssueOccurrence } from '$lib/types/unified-report';
 
+import { getContrastData } from './contrast-verify';
+
 /**
  * Generate a rule-specific, context-aware fix instruction for an issue occurrence.
  *
@@ -41,13 +43,7 @@ export function generateContextualFix(
 	}
 
 	if (ruleId.includes('color-contrast') || ruleId === 'contrast') {
-		const raw = occurrence as (IssueOccurrence & { scannerData?: unknown }) | null;
-		const data = (raw?.scannerData ?? null) as {
-			fgColor?: string;
-			bgColor?: string;
-			contrastRatio?: number | string;
-			expectedContrastRatio?: number | string;
-		} | null;
+		const data = getContrastData(issue);
 		if (data?.contrastRatio && data?.expectedContrastRatio) {
 			const fg = data.fgColor ? ` (foreground ${data.fgColor})` : '';
 			const bg = data.bgColor ? ` against ${data.bgColor}` : '';

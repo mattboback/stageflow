@@ -13,6 +13,7 @@
 		group: IssueGroup;
 		pagesById: Record<string, PageSummary>;
 		screenshots: ScreenshotArtifact[];
+		jobId?: string;
 		showPreviews?: boolean;
 		expanded?: boolean;
 		selectedIssueId?: string | null;
@@ -24,6 +25,7 @@
 		group,
 		pagesById,
 		screenshots,
+		jobId = '',
 		showPreviews = false,
 		expanded = false,
 		selectedIssueId = null,
@@ -122,6 +124,7 @@
 					{issue}
 					page={pagesById[issue.pageId] ?? null}
 					{screenshots}
+					{jobId}
 					showScreenshot={showPreviews}
 					isSelected={selectedIssueId === issue.id}
 					inGroup={true}

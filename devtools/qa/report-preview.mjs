@@ -34,6 +34,58 @@ byId['axe-image-alt-page-2'].userImpact = {
 	severity: 'inconvenient'
 };
 
+// ── Augment fixture: axe contrast check data (powers the Verify tab) ───────
+byId['axe-color-contrast-page-1'].scannerData = {
+	...(byId['axe-color-contrast-page-1'].scannerData ?? {}),
+	contrastData: {
+		fgColor: '#b8c9d9',
+		bgColor: '#9fb4c7',
+		contrastRatio: 1.18,
+		expectedContrastRatio: '4.5:1',
+		fontSize: '12.0pt (16.0px)',
+		fontWeight: 'bold'
+	}
+};
+
+// An axe `incomplete` result: gradient background defeated the automatic check.
+const incompleteContrast = {
+	id: 'axe-color-contrast-incomplete-page-1',
+	scanner: 'axe',
+	ruleId: 'color-contrast',
+	severity: 'serious',
+	title: 'Color contrast needs manual verification',
+	description:
+		'axe-core could not determine the background color for this text, so StageFlow cannot treat it as a pass. Review the actual foreground and background contrast.',
+	category: 'wcag2aa',
+	wcagTags: ['wcag2aa', 'wcag143'],
+	pageId: 'page-1',
+	pageUrl: 'http://localhost:8080/index.html',
+	elementCount: 1,
+	occurrences: [
+		{
+			selector: '#hero h1',
+			html: '<h1>Design that ships.</h1>',
+			failureSummary:
+				"Fix any of the following:\n  Element's background color could not be determined due to a background gradient"
+		}
+	],
+	scannerData: {
+		axeIncomplete: true,
+		incompleteNodeIndex: 0,
+		contrastData: {
+			fgColor: '#222222',
+			expectedContrastRatio: '4.5:1',
+			fontSize: '33.0pt (44.0px)',
+			fontWeight: 'bold',
+			messageKey: 'bgGradient'
+		}
+	}
+};
+report.issues.push(incompleteContrast);
+report.summary.totalIssues += 1;
+report.summary.bySeverity.serious = (report.summary.bySeverity.serious ?? 0) + 1;
+if (report.summary.byScanner?.axe !== undefined) report.summary.byScanner.axe += 1;
+
 // ── Augment fixture: manual-review noise so the bucket renders ─────────────
 const manualIssues = [
 	{
@@ -171,6 +223,7 @@ const p1Size = await shotPage.evaluate(() => ({
 const ctaBox = await shotPage.locator('#hero a.cta').boundingBox();
 const emailBox = await shotPage.locator('#email').boundingBox();
 const moreBox = await shotPage.locator('a.more').boundingBox();
+const heroBox = await shotPage.locator('#hero h1').boundingBox();
 mockShots['page-1.png'] = await shotPage.screenshot({ fullPage: true });
 
 report.pages[0].pageOverview = {
@@ -179,11 +232,13 @@ report.pages[0].pageOverview = {
 	pageHeight: p1Size.h,
 	elements: [
 		el('axe-color-contrast-page-1', 'color-contrast', 'critical', '#hero a.cta', ctaBox, p1Size.w, p1Size.h),
+		el('axe-color-contrast-incomplete-page-1', 'color-contrast', 'serious', '#hero h1', heroBox, p1Size.w, p1Size.h),
 		el('axe-aria-input-field-name-page-1', 'aria-input-field-name', 'serious', '#email', emailBox, p1Size.w, p1Size.h),
 		el('link-checker-empty-href-page-1', 'empty-href', 'serious', 'a.more', moreBox, p1Size.w, p1Size.h)
 	]
 };
 byId['axe-color-contrast-page-1'].occurrences[0].boundingBox = ctaBox;
+incompleteContrast.occurrences[0].boundingBox = heroBox;
 byId['axe-aria-input-field-name-page-1'].occurrences[0].boundingBox = emailBox;
 
 // page 2
@@ -275,6 +330,35 @@ if (await fixTab.count()) {
 	await page.screenshot({ path: `${OUT}/06-issue-modal-fix.png`, fullPage: false });
 	console.log('captured 06-issue-modal-fix');
 }
+
+// verify-contrast tab — the needs-verification issue defaults to it
+await page.goto(
+	`${APP}/scan/job-123/report?section=issues&issueId=axe-color-contrast-incomplete-page-1`,
+	{ waitUntil: 'networkidle' }
+);
+await page.waitForTimeout(1600);
+await page.screenshot({ path: `${OUT}/07-verify-tab.png`, fullPage: false });
+console.log('captured 07-verify-tab');
+
+// record a verdict, then surface chips + the progress line in the issues list
+const failBtn = page.getByRole('button', { name: 'Mark as fail' });
+if (await failBtn.count()) {
+	await failBtn.click();
+	await page.waitForTimeout(500);
+	await page.screenshot({ path: `${OUT}/08-verify-verdict.png`, fullPage: false });
+	console.log('captured 08-verify-verdict');
+}
+await page.getByRole('button', { name: 'Close modal' }).click();
+await page.waitForTimeout(800);
+const contrastGroup = page
+	.locator('[data-testid="issue-group-row"]', { hasText: /contrast/i })
+	.first();
+if (await contrastGroup.count()) {
+	await contrastGroup.locator('button').first().click();
+	await page.waitForTimeout(500);
+}
+await page.screenshot({ path: `${OUT}/09-verify-chips.png`, fullPage: true });
+console.log('captured 09-verify-chips');
 
 await browser.close();
 console.log('done ->', OUT);
