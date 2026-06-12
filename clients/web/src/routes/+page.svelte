@@ -158,7 +158,9 @@
 
 			<ol class="border-line mt-10 max-w-3xl border-t">
 				{#each workflowSteps as item (item.step)}
-					<li class="border-line grid grid-cols-[3.5rem_1fr] gap-x-6 border-b py-7 sm:grid-cols-[5rem_1fr]">
+					<li
+						class="border-line grid grid-cols-[3.5rem_1fr] gap-x-6 border-b py-7 sm:grid-cols-[5rem_1fr]"
+					>
 						<span
 							class="stat-mono text-paper-deep text-4xl leading-none font-bold select-none sm:text-5xl"
 							aria-hidden="true">{item.step}</span
@@ -211,7 +213,9 @@
 		<div class="container-width py-16 lg:py-20">
 			<div class="max-w-2xl">
 				<p class="section-kicker text-accent-subtle">Ready to scan</p>
-				<h2 class="font-display text-paper mt-2 text-[1.75rem] leading-[1.18] font-semibold tracking-[-0.01em] sm:text-[2rem] lg:text-[2.5rem] lg:leading-[1.15]">
+				<h2
+					class="font-display text-paper mt-2 text-[1.75rem] leading-[1.18] font-semibold tracking-[-0.01em] sm:text-[2rem] lg:text-[2.5rem] lg:leading-[1.15]"
+				>
 					Audit your site in one run
 				</h2>
 				<p class="text-paper/60 mt-3 max-w-xl text-sm leading-relaxed sm:text-base">

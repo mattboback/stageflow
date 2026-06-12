@@ -31,6 +31,10 @@ function expectTextarea(element: Element | null): HTMLTextAreaElement {
 	return element;
 }
 
+async function openAdvancedOptions(user: ReturnType<typeof userEvent.setup>) {
+	await user.click(await screen.findByRole('button', { name: /advanced options/i }));
+}
+
 function createScanner(id: string): ScannerDefinition {
 	return {
 		id,
@@ -62,16 +66,17 @@ describe('PlaygroundPage', () => {
 		cleanup();
 	});
 
-	it('renders the scan configuration surface and handles empty scanners', async () => {
+	it('renders the launcher surface and handles empty scanners', async () => {
 		mockFetchScanners.mockResolvedValue({ scanners: [], categories: [] });
 
+		const user = userEvent.setup();
 		render(PlaygroundPage);
 
-		expect(screen.getByText('Configure Scan')).toBeInTheDocument();
-		expect(await screen.findByText('No scanners available')).toBeInTheDocument();
+		expect(screen.getByRole('heading', { name: 'Run a scan' })).toBeInTheDocument();
 		expect(screen.getAllByText('Start Scan')[0]).toBeInTheDocument();
-		expect(screen.getByText('What happens next')).toBeInTheDocument();
-		expect(screen.getByText(/live scan status/i)).toBeInTheDocument();
+
+		await openAdvancedOptions(user);
+		expect(await screen.findByText('No scanners available')).toBeInTheDocument();
 	});
 
 	it('surfaces scanner catalog load errors and prevents scan submission', async () => {
@@ -162,13 +167,19 @@ describe('PlaygroundPage', () => {
 			categories: []
 		});
 
+		const user = userEvent.setup();
 		render(PlaygroundPage);
 
 		const coverageButton = await screen.findByRole('button', {
 			name: 'Coverage'
 		});
 		expect(coverageButton).toHaveAttribute('aria-pressed', 'true');
-		expect(screen.getByRole('button', { name: /axe/i })).toHaveAttribute('aria-pressed', 'true');
+
+		await openAdvancedOptions(user);
+		expect(await screen.findByRole('button', { name: /axe/i })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
 		expect(screen.getByRole('button', { name: /lighthouse/i })).toHaveAttribute(
 			'aria-pressed',
 			'true'
@@ -189,8 +200,12 @@ describe('PlaygroundPage', () => {
 		render(PlaygroundPage);
 
 		await screen.findByRole('button', { name: 'Coverage' });
+		await openAdvancedOptions(user);
 		await user.click(screen.getByRole('button', { name: 'Quick' }));
-		expect(screen.getByRole('button', { name: /axe/i })).toHaveAttribute('aria-pressed', 'true');
+		expect(await screen.findByRole('button', { name: /axe/i })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
 		expect(screen.getByRole('button', { name: /lighthouse/i })).toHaveAttribute(
 			'aria-pressed',
 			'false'
@@ -215,8 +230,9 @@ describe('PlaygroundPage', () => {
 		render(PlaygroundPage);
 
 		await screen.findByRole('button', { name: 'Coverage' });
-		await user.click(screen.getByRole('button', { name: /ai navigator/i }));
-		await user.click(screen.getByRole('button', { name: 'Add Field' }));
+		await openAdvancedOptions(user);
+		await user.click(await screen.findByRole('button', { name: /ai navigator/i }));
+		await user.click(await screen.findByRole('button', { name: 'Add Field' }));
 
 		expect(screen.getByLabelText('Input field name 1')).toHaveAttribute(
 			'name',
