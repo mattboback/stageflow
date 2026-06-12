@@ -37,13 +37,35 @@ const DEFAULT_DYNAMIC_CONTENT_WAIT_MS = 50;
  */
 const NETWORKIDLE_TIMEOUT_MS = 5_000;
 
+interface AxeCheckResult {
+	id?: string;
+	data?: Record<string, unknown> | null;
+}
+
 interface AxeNode {
 	target?: string[];
 	html?: string;
 	failureSummary?: string;
 	contextHtml?: string;
 	ancestorPath?: string;
+	any?: AxeCheckResult[];
+	all?: AxeCheckResult[];
 }
+
+/**
+ * The fields of axe's color-contrast check data worth forwarding to the report.
+ * Powers the in-report "Verify contrast" tool: pre-filled colors, measured
+ * ratio, and the messageKey explaining why automatic verification failed.
+ */
+const CONTRAST_DATA_FIELDS = [
+	'fgColor',
+	'bgColor',
+	'contrastRatio',
+	'expectedContrastRatio',
+	'fontSize',
+	'fontWeight',
+	'messageKey'
+] as const;
 
 interface AxeViolationResult {
 	id?: string;
@@ -276,7 +298,10 @@ export class AxeScanner extends ScannerBase {
 				}
 			}
 
-			const incompleteIssues = this.mapIncompleteResultsToIssues(reportableIncompleteResults);
+			const incompleteIssues = await this.mapIncompleteResultsToIssues(
+				page,
+				reportableIncompleteResults
+			);
 			if (incompleteIssues.length > 0) {
 				logger.info('Axe incomplete results promoted to review issues', {
 					issueCount: incompleteIssues.length,
@@ -420,14 +445,55 @@ export class AxeScanner extends ScannerBase {
 	}
 
 	private shouldReportIncompleteResult(result: AxeViolationResult): boolean {
-		return result.id === 'color-contrast' || result.id === 'color-contrast-enhanced';
+		return this.isColorContrastRule(result.id);
 	}
 
-	private mapIncompleteResultsToIssues(incompleteResults: AxeViolationResult[]): Issue[] {
-		return incompleteResults.flatMap((result) => {
+	private isColorContrastRule(ruleId: string | undefined): boolean {
+		return ruleId === 'color-contrast' || ruleId === 'color-contrast-enhanced';
+	}
+
+	/**
+	 * Pull axe's contrast check data (fgColor, bgColor, measured ratio, messageKey, …)
+	 * off a node. Axe stores it on the node's check results, which the upstream
+	 * types don't model but the runtime objects always carry.
+	 */
+	private extractContrastData(node: AxeNode | undefined): Record<string, unknown> | undefined {
+		const checks = [...(node?.any ?? []), ...(node?.all ?? [])];
+		const data = checks.find(
+			(check) => check?.data && typeof check.data === 'object' && !Array.isArray(check.data)
+		)?.data;
+		if (!data) return undefined;
+
+		const picked: Record<string, unknown> = {};
+		for (const field of CONTRAST_DATA_FIELDS) {
+			const value = data[field];
+			if (value !== undefined && value !== null) {
+				picked[field] = value;
+			}
+		}
+		return Object.keys(picked).length > 0 ? picked : undefined;
+	}
+
+	private async mapIncompleteResultsToIssues(
+		page: Page,
+		incompleteResults: AxeViolationResult[]
+	): Promise<Issue[]> {
+		const ENRICHMENT_TIMEOUT = 5_000;
+		const issues: Issue[] = [];
+
+		for (const result of incompleteResults) {
 			const nodes = result.nodes ?? [];
-			return nodes.map((node, index) => this.mapIncompleteNodeToIssue(result, node, index));
-		});
+			const enrichedNodes = await withTimeoutFallback(
+				this.enrichNodesWithContext(page, nodes),
+				ENRICHMENT_TIMEOUT,
+				() => [...nodes]
+			);
+			nodes.forEach((node, index) => {
+				issues.push(this.mapIncompleteNodeToIssue(result, enrichedNodes[index] ?? node, index));
+			});
+		}
+
+		return issues;
 	}
 
 	private mapIncompleteNodeToIssue(
@@ -440,6 +506,7 @@ export class AxeScanner extends ScannerBase {
 		const userImpact = getUserImpact(ruleId);
 		const selector = node.target?.[0];
 		const category = this.extractCategory(result.tags);
+		const contrastData = this.extractContrastData(node);
 
 		const location = {
 			...(selector !== undefined ? { selector } : {}),
@@ -464,10 +531,13 @@ export class AxeScanner extends ScannerBase {
 					{
 						target: node.target,
 						html: node.html,
-						failureSummary: node.failureSummary
+						failureSummary: node.failureSummary,
+						contextHtml: node.contextHtml,
+						ancestorPath: node.ancestorPath
 					}
 				],
 				axeIncomplete: true,
+				...(contrastData !== undefined ? { contrastData } : {}),
 				incompleteNodeIndex: nodeIndex,
 				ruleBehavior: behavior,
 				userImpact: {
@@ -549,6 +619,11 @@ export class AxeScanner extends ScannerBase {
 		const selector = primaryNode?.target?.[0];
 
 		const category = this.extractCategory(violation.tags);
+		// First node only: a pragmatic prefill for the report's contrast verifier;
+		// other occurrences may have different measured colors.
+		const contrastData = this.isColorContrastRule(violation.id)
+			? this.extractContrastData(nodes[0])
+			: undefined;
 
 		const location = {
 			...(selector !== undefined ? { selector } : {}),
@@ -579,6 +654,7 @@ export class AxeScanner extends ScannerBase {
 					ancestorPath: node.ancestorPath
 				})),
 				ruleBehavior: behavior,
+				...(contrastData !== undefined ? { contrastData } : {}),
 				friendlyNode: screenshotResult?.friendlyNode,
 				locationInfo: screenshotResult?.locationInfo,
 				thumbnail: screenshotResult?.thumbnail,

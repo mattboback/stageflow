@@ -200,6 +200,147 @@ describe('AxeScanner.scanPage', () => {
 		);
 	});
 
+	it('forwards axe contrast check data on incomplete nodes', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: [
+				{
+					id: 'color-contrast',
+					impact: 'serious',
+					tags: ['cat.color', 'wcag2aa', 'wcag143'],
+					nodes: [
+						{
+							target: ['.hero-help'],
+							html: '<p class="hero-help">Help text</p>',
+							failureSummary: 'Fix any of the following: ...',
+							any: [
+								{
+									id: 'color-contrast',
+									data: {
+										fgColor: '#666666',
+										bgColor: null,
+										contrastRatio: 0,
+										expectedContrastRatio: '4.5:1',
+										fontSize: '10.0pt (13.3333px)',
+										fontWeight: 'normal',
+										messageKey: 'bgImage',
+										shadowColor: 'drop-me'
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.success).toBe(true);
+		expect(result.issues).toHaveLength(1);
+		expect(result.issues[0]?.metadata?.contrastData).toEqual({
+			fgColor: '#666666',
+			contrastRatio: 0,
+			expectedContrastRatio: '4.5:1',
+			fontSize: '10.0pt (13.3333px)',
+			fontWeight: 'normal',
+			messageKey: 'bgImage'
+		});
+	});
+
+	it('omits contrastData when axe provides no check data', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: [
+				{
+					id: 'color-contrast',
+					nodes: [{ target: ['.plain'], html: '<span class="plain">text</span>' }]
+				}
+			]
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.issues).toHaveLength(1);
+		expect(result.issues[0]?.metadata?.contrastData).toBeUndefined();
+	});
+
+	it('attaches first-node contrast data to color-contrast violations', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [
+				{
+					id: 'color-contrast',
+					impact: 'serious',
+					help: 'Elements must meet minimum color contrast ratio thresholds',
+					tags: ['cat.color', 'wcag2aa', 'wcag143'],
+					nodes: [
+						{
+							target: ['.low-contrast'],
+							html: '<p class="low-contrast">Faint</p>',
+							failureSummary: 'Fix any of the following: ...',
+							any: [
+								{
+									id: 'color-contrast',
+									data: {
+										fgColor: '#999999',
+										bgColor: '#ffffff',
+										contrastRatio: 2.85,
+										expectedContrastRatio: '4.5:1'
+									}
+								}
+							]
+						},
+						{
+							target: ['.other'],
+							html: '<p class="other">Other</p>',
+							any: [{ id: 'color-contrast', data: { fgColor: '#000000', bgColor: '#111111' } }]
+						}
+					]
+				},
+				{
+					id: 'image-alt',
+					impact: 'critical',
+					help: 'Images must have alternate text',
+					tags: ['cat.text-alternatives', 'wcag2a'],
+					nodes: [
+						{
+							target: ['img.logo'],
+							html: '<img class="logo" src="logo.png">',
+							any: [{ id: 'has-alt', data: { someField: 'value' } }]
+						}
+					]
+				}
+			],
+			passes: [],
+			inapplicable: [],
+			incomplete: []
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.success).toBe(true);
+		const contrastIssue = result.issues.find((issue) => issue.id === 'color-contrast');
+		expect(contrastIssue?.metadata?.contrastData).toEqual({
+			fgColor: '#999999',
+			bgColor: '#ffffff',
+			contrastRatio: 2.85,
+			expectedContrastRatio: '4.5:1'
+		});
+
+		const altIssue = result.issues.find((issue) => issue.id === 'image-alt');
+		expect(altIssue?.metadata?.contrastData).toBeUndefined();
+	});
+
 	it('does not promote non-contrast incomplete results', async () => {
 		const { AxeScanner } = await import('../../../src/scanners/axe');
 		axeAnalyzeMock.mockResolvedValue({
