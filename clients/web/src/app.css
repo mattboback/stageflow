@@ -510,9 +510,9 @@
 	}
 
 	/* ──────────────────────────────────────────────────────────────────────
-	   DEPRECATED — Bento layout system. Only ScanStatusLiveBento and
-	   PlaygroundReadinessBento consume these; both are removed in the scan
-	   progress rebuild, after which this whole block is deleted.
+	   DEPRECATED — Bento layout system. Only ScanStatusLiveBento consumes
+	   these; it is removed in the scan progress rebuild, after which this
+	   whole block is deleted.
 	   ────────────────────────────────────────────────────────────────────── */
 	.bento-frame {
 		background: var(--color-paper-deep);
@@ -648,9 +648,6 @@
 	}
 
 	@media (max-width: 768px) {
-		.nf-bento-mobile-hide .bento-grid-main {
-			grid-template-columns: 1fr;
-		}
 		.bento-grid-main {
 			grid-template-columns: 1fr;
 		}
