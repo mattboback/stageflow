@@ -369,6 +369,7 @@
 {#if displayReport && selectedIssue}
 	<IssueDetailModal
 		issue={selectedIssue}
+		{jobId}
 		page={displayReport.pages.find((p) => p.id === selectedIssue.pageId) ?? null}
 		issues={modalIssueList}
 		{screenshots}
