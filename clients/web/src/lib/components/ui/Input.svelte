@@ -15,7 +15,7 @@
 <input
 	bind:value
 	class={cn(
-		'bg-surface-muted ring-offset-paper placeholder:text-ink-faint flex h-10 w-full rounded-md border px-3 py-2 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50',
+		'bg-surface ring-offset-paper placeholder:text-ink-faint flex h-10 w-full rounded-md border px-3 py-2 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:cursor-not-allowed disabled:opacity-50',
 		'border-line',
 		'focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
 		error

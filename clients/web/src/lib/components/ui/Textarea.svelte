@@ -13,7 +13,7 @@
 
 <textarea
 	class={cn(
-		'border-line bg-surface-muted text-ink placeholder:text-ink-faint focus-visible:ring-accent focus-visible:ring-offset-paper flex min-h-[120px] w-full rounded-md border px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+		'border-line bg-surface text-ink placeholder:text-ink-faint focus-visible:ring-accent focus-visible:ring-offset-paper flex min-h-[120px] w-full rounded-md border px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
 		error && 'border-red-500 focus-visible:ring-red-500',
 		className
 	)}

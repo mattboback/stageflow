@@ -20,8 +20,8 @@
 			class={cn(
 				'nav-link-pill',
 				isActive(link.href)
-					? 'border-line/80 bg-surface text-ink border shadow-[0_4px_12px_-10px_rgba(15,15,15,0.45)]'
-					: 'text-ink-muted hover:text-ink hover:bg-surface/80'
+					? 'border-line bg-surface text-ink border'
+					: 'text-ink-muted hover:text-ink hover:bg-surface-muted'
 			)}
 		>
 			{link.label}

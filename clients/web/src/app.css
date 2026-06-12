@@ -2,55 +2,72 @@
 @import 'tailwindcss';
 
 @theme {
-	/* Font families - self-hosted variable fonts */
-	--font-display:
-		'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+	/* Font families - self-hosted variable fonts.
+	   Display = Source Serif 4: editorial headlines ("Print Room" identity).
+	   Body = Inter. Mono = JetBrains Mono for every number, ID, and status. */
+	--font-display: 'Source Serif 4 Variable', Georgia, 'Times New Roman', serif;
 	--font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
 	--font-mono:
 		'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-	/* Surfaces — cool slate */
-	--color-paper: #f8fafc;
+	/* Surfaces — warm paper, not cool slate */
+	--color-paper: #faf9f7;
 	--color-surface: #ffffff;
-	--color-surface-muted: #f1f5f9;
-	--color-paper-deep: #e2e8f0;
+	--color-surface-muted: #f4f2ee;
+	--color-paper-deep: #e8e5df;
 
-	/* Text — cool slate */
-	--color-ink-strong: #0f172a;
-	--color-ink: #1e293b;
-	--color-ink-muted: #475569;
-	--color-ink-faint: #64748b;
+	/* Text — warm near-black ink */
+	--color-ink-strong: #1a1714;
+	--color-ink: #2d2a26;
+	--color-ink-muted: #5c5751;
+	--color-ink-faint: #8c877f;
 
-	/* Borders */
-	--color-line: #e2e8f0;
+	/* Borders — hairline, warm grey */
+	--color-line: #ddd9d0;
 
-	/* Accent — Deep Teal */
-	--color-accent: #0d5c63;
-	--color-accent-hover: #094a50;
-	--color-accent-soft: #e0f2f1;
-	--color-accent-ink: #083d42;
-	--color-accent-mist: #f0faf9;
-	--color-accent-subtle: #b2dfdb;
-	--color-accent-deep: #052e32;
+	/* Accent — single deep teal, used like spot colour in print */
+	--color-accent: #1b5c5e;
+	--color-accent-hover: #154a4c;
+	--color-accent-soft: #e6efef;
+	--color-accent-ink: #0e3638;
+	--color-accent-mist: #f0f7f7;
+	--color-accent-subtle: #b2cecd;
+	--color-accent-deep: #0a2526;
 
-	/* Shadows (Nexus ultra-subtle — cards float, not cast) */
-	--shadow-xs: 0 2px 8px rgb(0, 0, 0, 0.04);
-	--shadow-sm: 0 4px 16px rgb(0, 0, 0, 0.03);
-	--shadow-md: 0 8px 30px rgb(0, 0, 0, 0.04);
-	--shadow-lg: 0 16px 40px rgb(0, 0, 0, 0.06);
-	--shadow-xl: 0 24px 56px rgb(0, 0, 0, 0.08);
-	--shadow-card-hover: 0 8px 32px rgb(0, 0, 0, 0.08);
-	--shadow-float: 0 20px 48px rgb(0, 0, 0, 0.1), 0 8px 16px rgb(0, 0, 0, 0.06);
+	/* Severity — semantic, shared with the report */
+	--color-severity-critical: #b91c1c;
+	--color-severity-serious: #c2410c;
+	--color-severity-moderate: #a16207;
+	--color-severity-minor: #3f6212;
+
+	/* Radius — rectilinear surfaces; clamp the upper end of the scale */
+	--radius-xs: 2px;
+	--radius-sm: 3px;
+	--radius-md: 6px;
+	--radius-lg: 8px;
+	--radius-xl: 8px;
+	--radius-2xl: 8px;
+	--radius-3xl: 8px;
+	--radius-4xl: 8px;
+
+	/* Shadows — near-zero; elevation comes from borders, not blur */
+	--shadow-xs: 0 1px 3px rgba(26, 23, 20, 0.06);
+	--shadow-sm: 0 1px 4px rgba(26, 23, 20, 0.08);
+	--shadow-md: 0 2px 8px rgba(26, 23, 20, 0.08);
+	--shadow-lg: 0 4px 16px rgba(26, 23, 20, 0.1);
+	--shadow-xl: 0 8px 24px rgba(26, 23, 20, 0.12);
+	--shadow-card-hover: 0 2px 8px rgba(26, 23, 20, 0.08);
+	--shadow-float: 0 4px 16px rgba(26, 23, 20, 0.1);
 
 	/* Animation Timing */
-	--duration-fast: 150ms;
-	--duration-normal: 200ms;
-	--duration-slow: 300ms;
-	--duration-slower: 500ms;
-	--duration-slowest: 700ms;
-	--ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+	--duration-fast: 120ms;
+	--duration-normal: 180ms;
+	--duration-slow: 250ms;
+	--duration-slower: 400ms;
+	--duration-slowest: 600ms;
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
 @layer base {
@@ -80,10 +97,9 @@
 		@apply text-ink selection:bg-accent-soft selection:text-ink;
 	}
 
-	/* Typography utilities */
+	/* Typography: serif display for h1/h2 only; h3 and below stay Inter */
 	h1,
 	h2,
-	h3,
 	.font-display {
 		font-family: var(--font-display);
 	}
@@ -101,7 +117,7 @@
 		top: -3rem;
 		z-index: 100;
 		padding: 0.75rem 1rem;
-		border-radius: 0.75rem;
+		border-radius: 6px;
 		background: var(--color-accent);
 		color: #fff;
 		font-weight: 700;
@@ -150,17 +166,22 @@
 	.h1-display {
 		font-family: var(--font-display);
 		color: var(--color-ink-strong);
-		@apply text-4xl font-bold tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem] lg:leading-[1.08];
+		@apply text-[2.25rem] leading-[1.12] font-bold tracking-[-0.015em] text-balance sm:text-[2.75rem] lg:text-[3.5rem] lg:leading-[1.08];
 	}
 
 	.h2-display {
 		font-family: var(--font-display);
-		@apply text-ink text-3xl font-bold tracking-[-0.02em] sm:text-4xl lg:text-[2.75rem] lg:leading-[1.15];
+		@apply text-ink-strong text-[1.75rem] leading-[1.18] font-semibold tracking-[-0.01em] sm:text-[2rem] lg:text-[2.5rem] lg:leading-[1.15];
+	}
+
+	.h3-display {
+		font-family: var(--font-body);
+		@apply text-ink text-xl font-semibold tracking-[-0.005em] sm:text-2xl;
 	}
 
 	.section-kicker {
 		font-family: var(--font-body);
-		@apply text-accent text-xs font-semibold tracking-[0.08em] uppercase;
+		@apply text-accent text-[11px] font-semibold tracking-[0.1em] uppercase;
 	}
 
 	.section-divider {
@@ -174,11 +195,11 @@
 		background: var(--color-paper);
 	}
 
+	/* DEPRECATED — legacy landing classes; consumers removed in homepage rebuild */
 	.landing-hero {
-		background: var(--color-surface);
+		background: var(--color-paper);
 		position: relative;
 		overflow: hidden;
-		border-bottom: 1px solid var(--color-line);
 	}
 
 	.landing-grid {
@@ -202,8 +223,7 @@
 	}
 
 	.metric-card {
-		box-shadow: var(--shadow-sm);
-		@apply border-line bg-surface rounded-2xl border px-5 py-4;
+		@apply border-line bg-surface rounded-md border px-5 py-4;
 	}
 
 	.metric-value {
@@ -215,13 +235,11 @@
 	}
 
 	.editorial-card {
-		box-shadow: var(--shadow-sm);
-		@apply border-line bg-surface rounded-2xl border;
+		@apply border-line bg-surface rounded-md border;
 	}
 
 	.hero-summary-card {
-		box-shadow: var(--shadow-sm);
-		@apply border-line bg-surface rounded-xl border p-5;
+		@apply border-line bg-surface rounded-md border p-5;
 	}
 
 	.hero-summary-label {
@@ -233,12 +251,11 @@
 	}
 
 	.workflow-band {
-		background: linear-gradient(180deg, var(--color-surface-muted) 0%, var(--color-paper) 100%);
+		background: var(--color-paper);
 	}
 
 	.workflow-step {
-		@apply border-line bg-surface relative rounded-2xl border px-6 py-7;
-		box-shadow: var(--shadow-sm);
+		@apply border-line bg-surface relative rounded-md border px-6 py-7;
 	}
 
 	.workflow-index {
@@ -255,37 +272,22 @@
 		background: var(--color-ink-strong);
 		position: relative;
 		overflow: hidden;
-		@apply rounded-3xl px-8 py-14 text-center sm:px-12;
+		@apply rounded-lg px-8 py-14 text-center sm:px-12;
 	}
+	/* END DEPRECATED landing classes */
 
 	.nav-shell {
 		@apply transition-[background-color,border-color,padding,box-shadow] duration-200;
 	}
 
 	.nav-link-pill {
-		@apply rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors;
+		@apply rounded-md px-3.5 py-2 text-[13px] font-medium transition-colors;
 	}
 
-	.footer-shell {
-		background: var(--color-ink-strong);
-		color: var(--color-surface);
-	}
-
-	.footer-link {
-		color: rgba(255, 255, 255, 0.5);
-		@apply text-sm font-medium transition-colors;
-	}
-	.footer-link:hover {
-		color: rgba(255, 255, 255, 0.9);
-	}
-	.footer-category {
-		color: rgba(255, 255, 255, 0.3);
-		@apply mb-3 text-[11px] font-semibold tracking-[0.1em] uppercase;
-	}
-
+	/* DEPRECATED — legacy hero preview; consumer removed in homepage rebuild */
 	.hero-preview {
 		box-shadow: var(--shadow-float);
-		@apply border-line bg-surface relative rounded-xl border;
+		@apply border-line bg-surface relative rounded-lg border;
 	}
 
 	.hero-preview-track {
@@ -299,6 +301,7 @@
 	.hero-preview-legend {
 		@apply text-ink-faint text-[11px] font-medium;
 	}
+	/* END DEPRECATED hero preview */
 
 	.scanner-card {
 		position: relative;
@@ -311,11 +314,6 @@
 
 	.form-section-label {
 		@apply text-xs font-bold;
-	}
-
-	.h3-display {
-		font-family: var(--font-display);
-		@apply text-ink text-xl font-semibold tracking-[-0.01em] sm:text-2xl;
 	}
 
 	/* Form step pattern: small, accessible numbered headings */
@@ -502,30 +500,28 @@
 		scrollbar-width: none;
 	}
 
-	/* Interactive panel hover */
+	/* Interactive panel hover — border darkens; no shadow lift */
 	.hover-glow {
-		transition:
-			border-color var(--duration-fast) var(--ease-out),
-			box-shadow var(--duration-fast) var(--ease-out);
+		transition: border-color var(--duration-fast) var(--ease-out);
 	}
 
 	.hover-glow:hover {
-		@apply border-ink/20;
-		box-shadow: var(--shadow-sm);
+		@apply border-ink/25;
 	}
 
-	/* Bento layout system — reusable across PlaygroundReadinessBento and ScanStatusLiveBento */
+	/* ──────────────────────────────────────────────────────────────────────
+	   DEPRECATED — Bento layout system. Only ScanStatusLiveBento and
+	   PlaygroundReadinessBento consume these; both are removed in the scan
+	   progress rebuild, after which this whole block is deleted.
+	   ────────────────────────────────────────────────────────────────────── */
 	.bento-frame {
-		background: #d1d9e0;
-		border-radius: 1.5rem;
+		background: var(--color-paper-deep);
+		border-radius: 8px;
 		padding: 0.875rem 0.875rem 0;
 		box-shadow: var(--shadow-float);
 		overflow: hidden;
 	}
 
-	/* On mobile, strip the browser frame decoration and show as a clean card.
-	   Shared by the playground bento and the scan-status bento; the scan-status
-	   bento keeps its .bento-nav status strip (the playground hides its nav). */
 	@media (max-width: 1023px) {
 		.playground-bento-frame,
 		.status-bento-frame {
@@ -592,7 +588,7 @@
 		border-radius: 6px;
 		padding: 4px 12px;
 		font-size: 11px;
-		color: #475569;
+		color: var(--color-ink-muted);
 		font-family: var(--font-mono);
 		text-align: center;
 		border: 1px solid rgba(255, 255, 255, 0.3);
@@ -600,7 +596,7 @@
 
 	.bento-card {
 		background: #ffffff;
-		border-radius: 1rem 1rem 0 0;
+		border-radius: 8px 8px 0 0;
 		overflow: hidden;
 	}
 
@@ -623,8 +619,6 @@
 		grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.88fr);
 	}
 
-	/* Prevent wide content (e.g. long terminal log lines) from forcing the
-	   fractional grid wider than the viewport on tablet. */
 	.bento-grid-main > * {
 		min-width: 0;
 	}
@@ -652,6 +646,67 @@
 		font-weight: 600;
 		color: var(--color-ink-strong);
 	}
+
+	@media (max-width: 768px) {
+		.nf-bento-mobile-hide .bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.bento-grid-main > :first-child {
+			border-right: none;
+		}
+		.bento-grid-bottom {
+			grid-template-columns: 1fr;
+		}
+		.bento-grid-bottom > :not(:last-child) {
+			border-right: none;
+		}
+	}
+
+	@media (max-width: 1023px) {
+		.playground-bento-frame .bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.playground-bento-frame .bento-grid-main > :first-child {
+			border-right: none;
+			border-bottom: 1px solid var(--color-line);
+			padding-bottom: 1.5rem;
+			margin-bottom: 1.5rem;
+		}
+		.playground-bento-frame .bento-grid-bottom {
+			grid-template-columns: 1fr;
+			gap: 0.75rem;
+		}
+		.playground-bento-frame .bento-grid-bottom > :not(:last-child) {
+			border-right: none;
+			border-bottom: 1px solid var(--color-line);
+			padding-bottom: 0.75rem;
+		}
+	}
+
+	@media (max-width: 1023px) {
+		.status-bento-frame .bento-grid-main {
+			grid-template-columns: 1fr;
+		}
+		.status-bento-frame .bento-grid-main > :first-child {
+			border-bottom: 1px solid var(--color-line);
+			padding-bottom: 1.5rem;
+			margin-bottom: 1.5rem;
+		}
+		.status-bento-frame .bento-grid-bottom {
+			grid-template-columns: 1fr;
+		}
+		.status-bento-frame .bento-grid-bottom .bento-panel {
+			padding: 0.75rem 0;
+		}
+		.status-bento-frame .bento-grid-bottom > :not(:last-child) {
+			border-right: none;
+			border-bottom: 1px solid var(--color-line);
+		}
+	}
+	/* END DEPRECATED bento */
 
 	.scanner-grid-container {
 		container-type: inline-size;
@@ -702,71 +757,6 @@
 		}
 	}
 
-	@media (max-width: 768px) {
-		/* NexusDashboardHero (homepage) bento — simplified on mobile */
-		.nf-bento-mobile-hide .bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.bento-grid-main > :first-child {
-			border-right: none;
-		}
-		.bento-grid-bottom {
-			grid-template-columns: 1fr;
-		}
-		.bento-grid-bottom > :not(:last-child) {
-			border-right: none;
-		}
-	}
-
-	/* Playground bento: stack all panels on mobile/tablet */
-	@media (max-width: 1023px) {
-		.playground-bento-frame .bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.playground-bento-frame .bento-grid-main > :first-child {
-			border-right: none;
-			border-bottom: 1px solid var(--color-line);
-			padding-bottom: 1.5rem;
-			margin-bottom: 1.5rem;
-		}
-		.playground-bento-frame .bento-grid-bottom {
-			grid-template-columns: 1fr;
-			gap: 0.75rem;
-		}
-		.playground-bento-frame .bento-grid-bottom > :not(:last-child) {
-			border-right: none;
-			border-bottom: 1px solid var(--color-line);
-			padding-bottom: 0.75rem;
-		}
-	}
-
-	/* Scan-status bento: stack main + sidebar once the frame is stripped */
-	@media (max-width: 1023px) {
-		.status-bento-frame .bento-grid-main {
-			grid-template-columns: 1fr;
-		}
-		.status-bento-frame .bento-grid-main > :first-child {
-			border-bottom: 1px solid var(--color-line);
-			padding-bottom: 1.5rem;
-			margin-bottom: 1.5rem;
-		}
-		.status-bento-frame .bento-grid-bottom {
-			grid-template-columns: 1fr;
-		}
-		/* Restore a little padding for the raw-text stat tiles (Elapsed/Scanners/
-		   Status) since the shared rule strips bento-panel padding to 0 on mobile. */
-		.status-bento-frame .bento-grid-bottom .bento-panel {
-			padding: 0.75rem 0;
-		}
-		.status-bento-frame .bento-grid-bottom > :not(:last-child) {
-			border-right: none;
-			border-bottom: 1px solid var(--color-line);
-		}
-	}
-
 	/* Sticky mobile bottom bar for playground */
 	.mobile-sticky-bar {
 		position: fixed;
@@ -776,7 +766,7 @@
 		z-index: 40;
 		background: var(--color-surface);
 		border-top: 1px solid var(--color-line);
-		box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+		box-shadow: 0 -2px 12px rgba(26, 23, 20, 0.06);
 		padding: 0.75rem 1.25rem;
 		padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 		display: flex;

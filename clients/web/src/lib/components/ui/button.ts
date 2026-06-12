@@ -11,7 +11,7 @@ export const buttonVariants = cva(
 				secondary: 'bg-surface-muted text-ink hover:bg-line',
 				ghost: 'text-ink-muted hover:bg-surface-muted hover:text-ink',
 				link: 'text-accent underline-offset-4 hover:underline',
-				glow: 'bg-accent text-white hover:bg-accent-hover shadow-[0_0_20px_rgba(13,92,99,0.3)] hover:shadow-[0_0_28px_rgba(13,92,99,0.4)] transition-shadow'
+				glow: 'bg-accent text-white hover:bg-accent-hover'
 			},
 			size: {
 				default: 'h-9 px-4 py-2',
