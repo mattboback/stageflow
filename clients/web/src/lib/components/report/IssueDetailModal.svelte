@@ -2,7 +2,7 @@
 	import type { ScreenshotArtifact } from '$lib/types/scan';
 	import type { IssueDetail, PageSummary } from '$lib/types/unified-report';
 
-	import { Chip, Modal, Tabs, panelVariants } from '$lib/components/ui';
+	import { Chip, Modal, StatusPill, Tabs, panelVariants } from '$lib/components/ui';
 	import {
 		generateContextualFix,
 		getIssueKind,
@@ -11,18 +11,23 @@
 		getPageOverviewUrl,
 		getSeverityContainerClass,
 		getSeverityDotClass,
+		isAxeIncompleteIssue,
+		isColorContrastIssue,
 		isManualReviewIssue,
 		rewriteIssueTitle
 	} from '$lib/report';
+	import { contrastVerdictsStore } from '$lib/stores/contrast-verdicts.svelte';
 	import { cn, getWcagUnderstandingUrl, normalizeWcagTag } from '$lib/utils';
 	import { ChevronLeft, ChevronRight, ExternalLink, FileText, Globe, XCircle } from 'lucide-svelte';
 	import { tick } from 'svelte';
 
 	import IssueEvidenceSection from './IssueEvidenceSection.svelte';
 	import IssueOccurrenceCard from './IssueOccurrenceCard.svelte';
+	import VerifyContrastTab from './verify/VerifyContrastTab.svelte';
 
 	interface Props {
 		issue: IssueDetail;
+		jobId?: string;
 		page?: PageSummary | null;
 		issues?: IssueDetail[];
 		screenshots: ScreenshotArtifact[];
@@ -33,6 +38,7 @@
 
 	let {
 		issue,
+		jobId = '',
 		page = null,
 		issues = [],
 		screenshots,
@@ -118,16 +124,29 @@
 		)
 	);
 
+	const canVerifyContrast = $derived(isColorContrastIssue(issue));
+	const needsVerification = $derived(canVerifyContrast && isAxeIncompleteIssue(issue));
+	const contrastVerdict = $derived(
+		canVerifyContrast ? contrastVerdictsStore.getVerdict(jobId, issue.id) : null
+	);
+
 	const tabs = $derived(
 		[
 			{ id: 'fix', label: 'Fix' },
 			hasEvidence ? { id: 'evidence', label: 'Evidence' } : null,
+			canVerifyContrast ? { id: 'verify', label: 'Verify contrast' } : null,
 			occurrenceCount > 0 ? { id: 'occurrences', label: `Occurrences (${occurrenceCount})` } : null
 		].filter((tab): tab is { id: string; label: string } => tab !== null)
 	);
 
 	const defaultTabId = $derived(
-		highlightedElementId ? 'occurrences' : hasEvidence ? 'evidence' : 'fix'
+		highlightedElementId
+			? 'occurrences'
+			: needsVerification
+				? 'verify'
+				: hasEvidence
+					? 'evidence'
+					: 'fix'
 	);
 	let activeTab = $state('fix');
 
@@ -256,6 +275,15 @@
 					<span class="text-ink-faint font-mono text-[11px] tracking-wide uppercase">
 						{issue.scanner} · {issue.ruleId}
 					</span>
+					{#if contrastVerdict}
+						<StatusPill
+							tone={contrastVerdict.verdict === 'pass' ? 'strong' : 'failing'}
+							label={`Verified · ${contrastVerdict.verdict}`}
+							size="sm"
+						/>
+					{:else if needsVerification}
+						<StatusPill tone="needs-work" label="Needs verification" size="sm" />
+					{/if}
 				</div>
 				<div class="flex shrink-0 items-center gap-1">
 					{#if onNavigate && totalCount > 1}
@@ -463,6 +491,8 @@
 						localHighlightedElementId = elementId;
 					}}
 				/>
+			{:else if activeTab === 'verify'}
+				<VerifyContrastTab {issue} {page} {pageOverviewUrl} {jobId} />
 			{:else if activeTab === 'occurrences'}
 				<div class="space-y-3">
 					<h3 class="text-ink font-semibold">
