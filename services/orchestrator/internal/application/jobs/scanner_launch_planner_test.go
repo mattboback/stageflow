@@ -70,6 +70,10 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		t.Fatalf("plan.Env[A11Y_HIGHLIGHT_STYLE] = %q, want %q", got, want)
 	}
 
+	if got, want := plan.Env["BROWSER_ENGINE"], "chromium"; got != want {
+		t.Fatalf("plan.Env[BROWSER_ENGINE] = %q, want %q", got, want)
+	}
+
 	if got, want := plan.Env["REQUEST_ID"], "req-123"; got != want {
 		t.Fatalf("plan.Env[REQUEST_ID] = %q, want %q", got, want)
 	}
@@ -121,6 +125,7 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 		Config: models.JobConfig{
 			Modules:             []string{"ai-navigator"},
 			HighlightStyle:      "solid",
+			Browser:             "firefox",
 			AllowPrivateTargets: true,
 			ScannerConfigs: map[string]map[string]any{
 				"ai-navigator": {"model": "openai/gpt-5"},
@@ -155,6 +160,10 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 
 	if got, want := plan.Env["A11Y_HIGHLIGHT_STYLE"], "solid"; got != want {
 		t.Fatalf("plan.Env[A11Y_HIGHLIGHT_STYLE] = %q, want %q", got, want)
+	}
+
+	if got, want := plan.Env["BROWSER_ENGINE"], "firefox"; got != want {
+		t.Fatalf("plan.Env[BROWSER_ENGINE] = %q, want %q", got, want)
 	}
 
 	var urls []string

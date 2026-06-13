@@ -101,12 +101,14 @@ type zipJobRequest struct {
 	scannerConfigs map[string]map[string]any
 	screenshot     bool
 	highlightStyle string
+	browser        string
 }
 
 type zipUploadState struct {
 	fileUploaded   bool
 	modulesValues  []string
 	highlightStyle string
+	browser        string
 	screenshot     *bool
 	zipPath        string
 	scannerConfigs map[string]map[string]any
@@ -269,6 +271,7 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRe
 	}
 
 	style := normalizeHighlightStyle(state.highlightStyle)
+	engine := normalizeBrowserEngine(state.browser)
 	screenshot := defaultScreenshot
 
 	if state.screenshot != nil {
@@ -287,6 +290,7 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRe
 		scannerConfigs: state.scannerConfigs,
 		screenshot:     screenshot,
 		highlightStyle: style,
+		browser:        engine,
 	}, nil
 }
 
@@ -300,6 +304,8 @@ func (s *Server) processZipPart(ctx context.Context, part *multipart.Part, jobID
 		return handleScannerConfigsPart(ctx, part, state)
 	case "highlight_style":
 		return handleHighlightStylePart(ctx, part, state)
+	case "browser":
+		return handleBrowserEnginePart(ctx, part, state)
 	case artifactTypeScreenshot:
 		return handleScreenshotPart(ctx, part, state)
 	default:
@@ -410,6 +416,19 @@ func handleHighlightStylePart(ctx context.Context, part *multipart.Part, state *
 	return nil
 }
 
+func handleBrowserEnginePart(ctx context.Context, part *multipart.Part, state *zipUploadState) error {
+	value, err := readFormValue(part, 32)
+	if err != nil {
+		logging.Error(ctx, "Failed to read browser value", "error", err)
+
+		return formReadClientError("browser", err)
+	}
+
+	state.browser = value
+
+	return nil
+}
+
 func handleScreenshotPart(ctx context.Context, part *multipart.Part, state *zipUploadState) error {
 	value, err := readFormValue(part, 32)
 	if err != nil {
@@ -444,6 +463,7 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 			ScannerConfigs: req.scannerConfigs,
 			Screenshot:     req.screenshot,
 			HighlightStyle: req.highlightStyle,
+			Browser:        req.browser,
 		},
 	}
 

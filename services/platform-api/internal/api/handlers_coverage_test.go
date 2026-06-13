@@ -167,6 +167,78 @@ func TestHandleJobURLSubmitInvalidHighlightStyleFallsBackToDefault(t *testing.T)
 	}
 }
 
+func TestHandleJobURLSubmitNormalizesBrowserEngine(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["https://example.com"],"browser":"  FIREFOX  "}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected payload type *events.JobCreatedPayload")
+	}
+
+	if created.Config.Browser != "firefox" {
+		t.Fatalf("Browser = %q, want %q", created.Config.Browser, "firefox")
+	}
+}
+
+func TestHandleJobURLSubmitInvalidBrowserEngineFallsBackToDefault(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["https://example.com"],"browser":"opera"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected payload type *events.JobCreatedPayload")
+	}
+
+	if created.Config.Browser != defaultBrowserEngine {
+		t.Fatalf("Browser = %q, want %q", created.Config.Browser, defaultBrowserEngine)
+	}
+}
+
+func TestHandleJobURLSubmitDefaultsBrowserEngineWhenOmitted(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	body := bytes.NewBufferString(`{"urls":["https://example.com"]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
+	if !ok || created == nil {
+		t.Fatalf("expected payload type *events.JobCreatedPayload")
+	}
+
+	if created.Config.Browser != defaultBrowserEngine {
+		t.Fatalf("Browser = %q, want %q (omitted browser should default)", created.Config.Browser, defaultBrowserEngine)
+	}
+}
+
 func TestHandleJobURLSubmitAiNavigatorInvalidProviderReturnsValidationError(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
@@ -358,6 +430,7 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 	writeField(t, writer, "modules", "axe")
 	writeField(t, writer, "scanner_configs", `{"axe":{"rules":["color-contrast"]}}`)
 	writeField(t, writer, "highlight_style", "solid")
+	writeField(t, writer, "browser", "webkit")
 	writeField(t, writer, "screenshot", "true")
 	writeField(t, writer, "unknown_field", "ignored")
 	writer.Close()
@@ -387,6 +460,10 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 
 	if payload.Config.HighlightStyle != "solid" {
 		t.Fatalf("expected highlight_style=solid, got %q", payload.Config.HighlightStyle)
+	}
+
+	if payload.Config.Browser != "webkit" {
+		t.Fatalf("expected browser=webkit, got %q", payload.Config.Browser)
 	}
 
 	if !payload.Config.Screenshot {

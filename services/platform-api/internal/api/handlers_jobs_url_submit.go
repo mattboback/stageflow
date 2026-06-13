@@ -42,6 +42,7 @@ type jobURLSubmitRequest struct {
 	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
 	Screenshot          *bool                     `json:"screenshot"`
 	HighlightStyle      string                    `json:"highlight_style"`
+	Browser             string                    `json:"browser"`
 	AllowPrivateTargets bool                      `json:"allow_private_targets"`
 	Auth                *jobURLAuthInput          `json:"auth,omitempty"`
 }
@@ -97,6 +98,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	highlightStyle := normalizeHighlightStyle(req.HighlightStyle)
+	browserEngine := normalizeBrowserEngine(req.Browser)
 	screenshot := defaultScreenshot
 
 	if req.Screenshot != nil {
@@ -122,6 +124,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 			ScannerConfigs:      req.ScannerConfigs,
 			Screenshot:          screenshot,
 			HighlightStyle:      highlightStyle,
+			Browser:             browserEngine,
 			AllowPrivateTargets: req.AllowPrivateTargets,
 			Auth:                authRaw,
 		},
