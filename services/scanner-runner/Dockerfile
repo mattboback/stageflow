@@ -55,11 +55,13 @@ ENV NODE_ENV=production \
     PORT=8080 \
     SCANNER_DATA_DIR=/data
 
+# NOTE: gstreamer1.0-plugins-bad / libgstreamer-plugins-bad1.0-0 are intentionally
+# kept. The WebKit engine's Linux media stack dlopen()s them at launch — purging
+# them (a past slimming/hardening step) makes `browser=webkit` scans fail with
+# "Host system is missing dependencies to run browsers". Chromium/Firefox don't
+# need them, but we expose WebKit as a selectable engine, so they must stay.
 RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
-  && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove \
-    gstreamer1.0-plugins-bad \
-    libgstreamer-plugins-bad1.0-0 \
   && rm -rf /var/lib/apt/lists/* /usr/lib/node_modules/npm /usr/bin/node /usr/bin/npm /usr/bin/npx
 
 COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
