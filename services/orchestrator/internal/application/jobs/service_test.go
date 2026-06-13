@@ -544,11 +544,13 @@ type fakeJobStore struct {
 	lastExpectedScanners               []string
 	lastStateUpdates                   []models.JobState
 	lastPodID                          string
+	lastCreatedJob                     *models.Job
 	operationLog                       *[]string
 }
 
-func (f *fakeJobStore) CreateJobIfAbsent(_ context.Context, _ *models.Job) (bool, error) {
+func (f *fakeJobStore) CreateJobIfAbsent(_ context.Context, job *models.Job) (bool, error) {
 	f.createJobIfAbsentCalls++
+	f.lastCreatedJob = job
 	return f.createJobIfAbsentCreated, nil
 }
 
