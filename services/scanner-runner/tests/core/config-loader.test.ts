@@ -159,6 +159,41 @@ describe('config-loader', () => {
 		);
 	});
 
+	describe('browser engine', () => {
+		beforeEach(() => {
+			setRequiredRuntimeEnv();
+			process.env.JOB_ID = 'job-123';
+		});
+
+		it('defaults to chromium when BROWSER_ENGINE is unset', () => {
+			delete process.env.BROWSER_ENGINE;
+
+			const config = loadConfigFromEnv({ scannerName: 'axe' });
+			expect(config.browser.engine).toBe('chromium');
+		});
+
+		it('honors a valid BROWSER_ENGINE', () => {
+			process.env.BROWSER_ENGINE = 'firefox';
+
+			const config = loadConfigFromEnv({ scannerName: 'axe' });
+			expect(config.browser.engine).toBe('firefox');
+		});
+
+		it('normalizes case and whitespace', () => {
+			process.env.BROWSER_ENGINE = '  WebKit ';
+
+			const config = loadConfigFromEnv({ scannerName: 'axe' });
+			expect(config.browser.engine).toBe('webkit');
+		});
+
+		it('falls back to chromium for an unknown engine', () => {
+			process.env.BROWSER_ENGINE = 'opera';
+
+			const config = loadConfigFromEnv({ scannerName: 'axe' });
+			expect(config.browser.engine).toBe('chromium');
+		});
+	});
+
 	it('validateConfig reports invalid settings', () => {
 		const config = {
 			jobId: '',
@@ -168,6 +203,7 @@ describe('config-loader', () => {
 			concurrency: 0,
 			maxRetries: 0,
 			browser: {
+				engine: 'chromium',
 				headless: true,
 				args: [],
 				defaultViewport: { width: 1280, height: 720 },

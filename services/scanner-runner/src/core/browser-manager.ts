@@ -7,10 +7,13 @@
 import {
 	type Browser,
 	type BrowserContext,
+	type BrowserType,
 	type ElementHandle,
 	type Page,
 	type Route,
-	chromium
+	chromium,
+	firefox,
+	webkit
 } from 'playwright';
 
 import { createLogger } from '../utils/logger';
@@ -19,6 +22,7 @@ import { type SecretsResolver } from './secrets-resolver';
 import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';
 import {
 	type BrowserConfig,
+	type BrowserEngine,
 	DEFAULT_WAIT_STRATEGY,
 	type PreScanAction,
 	type PreScanActionValue,
@@ -35,6 +39,7 @@ const AUTO_SELECTOR_PREFIX = 'auto:';
 const AUTO_SELECTOR_POLL_INTERVAL_MS = 250;
 
 const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
+	engine: 'chromium',
 	headless: true,
 	args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
 	defaultViewport: { width: 1280, height: 720 },
@@ -73,6 +78,21 @@ export class BrowserManager {
 			return this.browser;
 		}
 
+		this.browser =
+			this.config.engine === 'chromium'
+				? await this.launchChromium()
+				: await this.launchNonChromium(this.config.engine);
+
+		return this.browser;
+	}
+
+	/**
+	 * Launch Chromium. The hardened container needs several fallbacks: a
+	 * bundled-Chrome executablePath when the default download is missing, and a
+	 * single-process retry for constrained sandboxes. These options are
+	 * Chromium-specific — Firefox and WebKit reject them — so they stay here.
+	 */
+	private async launchChromium(): Promise<Browser> {
 		const fallbackExecutable = resolvePlaywrightImageChromiumExecutablePath();
 
 		const launchAttempts = [
@@ -100,12 +120,13 @@ export class BrowserManager {
 					typeof attempt.opts.executablePath === 'string' ? attempt.opts.executablePath : undefined;
 
 				this.logger.info('Launching browser', {
+					engine: 'chromium',
 					attempt: attempt.name,
 					headless: this.config.headless,
 					args: attempt.opts.args ?? this.config.args
 				});
 
-				this.browser = await chromium.launch({
+				return await chromium.launch({
 					headless: this.config.headless,
 					args: attemptArgs,
 					chromiumSandbox: false,
@@ -115,11 +136,10 @@ export class BrowserManager {
 					},
 					...(executablePath !== undefined ? { executablePath } : {})
 				});
-
-				return this.browser;
 			} catch (err) {
 				lastError = err;
 				this.logger.warn('Browser launch attempt failed', {
+					engine: 'chromium',
 					attempt: attempt.name,
 					error: err instanceof Error ? err.message : String(err)
 				});
@@ -127,6 +147,28 @@ export class BrowserManager {
 		}
 
 		throw lastError instanceof Error ? lastError : new Error(String(lastError));
+	}
+
+	/**
+	 * Launch Firefox or WebKit. Neither accepts Chromium's CLI args or the
+	 * chromiumSandbox flag, and both ship as Playwright-managed builds (no
+	 * executablePath fallback), so this is a single clean launch.
+	 */
+	private async launchNonChromium(engine: Exclude<BrowserEngine, 'chromium'>): Promise<Browser> {
+		const browserType: BrowserType = engine === 'firefox' ? firefox : webkit;
+
+		this.logger.info('Launching browser', {
+			engine,
+			headless: this.config.headless
+		});
+
+		return browserType.launch({
+			headless: this.config.headless,
+			env: {
+				...process.env,
+				DBUS_SESSION_BUS_ADDRESS: 'disabled'
+			}
+		});
 	}
 
 	async createContext(
