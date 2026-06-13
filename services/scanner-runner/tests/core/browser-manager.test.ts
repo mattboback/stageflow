@@ -5,7 +5,7 @@
  */
 
 import fs from 'node:fs';
-import { type Browser, type BrowserContext, type Page, chromium } from 'playwright';
+import { type Browser, type BrowserContext, type Page, chromium, firefox, webkit } from 'playwright';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PreScanAction, WaitStrategy } from '../../src/core/types';
@@ -16,6 +16,12 @@ import { validateTargetURLForPolicy } from '../../src/core/target-validation';
 // Mock Playwright and fs
 vi.mock('playwright', () => ({
 	chromium: {
+		launch: vi.fn()
+	},
+	firefox: {
+		launch: vi.fn()
+	},
+	webkit: {
 		launch: vi.fn()
 	}
 }));
@@ -71,6 +77,8 @@ describe('BrowserManager', () => {
 		} as unknown as Browser;
 
 		vi.mocked(chromium.launch).mockResolvedValue(mockBrowser);
+		vi.mocked(firefox.launch).mockResolvedValue(mockBrowser);
+		vi.mocked(webkit.launch).mockResolvedValue(mockBrowser);
 		vi.mocked(fs.existsSync).mockReturnValue(false);
 		vi.mocked(fs.readdirSync).mockReturnValue([]);
 
@@ -166,6 +174,44 @@ describe('BrowserManager', () => {
 			vi.mocked(chromium.launch).mockRejectedValue(new Error('All attempts failed'));
 
 			await expect(browserManager.launch()).rejects.toThrow('All attempts failed');
+		});
+
+		it('launches Firefox without any Chromium-only launch options', async () => {
+			const manager = new BrowserManager({ engine: 'firefox' });
+
+			const browser = await manager.launch();
+
+			expect(browser).toBe(mockBrowser);
+			expect(firefox.launch).toHaveBeenCalledTimes(1);
+			expect(chromium.launch).not.toHaveBeenCalled();
+			expect(webkit.launch).not.toHaveBeenCalled();
+
+			const opts = vi.mocked(firefox.launch).mock.calls[0]?.[0] ?? {};
+			expect(opts).toMatchObject({ headless: true });
+			// Chromium args, sandbox flag, and the executablePath fallback would all
+			// make Firefox throw — none must be passed.
+			expect('args' in opts).toBe(false);
+			expect('chromiumSandbox' in opts).toBe(false);
+			expect('executablePath' in opts).toBe(false);
+		});
+
+		it('launches WebKit via the webkit engine', async () => {
+			const manager = new BrowserManager({ engine: 'webkit' });
+
+			const browser = await manager.launch();
+
+			expect(browser).toBe(mockBrowser);
+			expect(webkit.launch).toHaveBeenCalledTimes(1);
+			expect(chromium.launch).not.toHaveBeenCalled();
+			expect(firefox.launch).not.toHaveBeenCalled();
+		});
+
+		it('does not apply Chromium multi-attempt fallbacks when Firefox fails', async () => {
+			vi.mocked(firefox.launch).mockRejectedValue(new Error('firefox boom'));
+			const manager = new BrowserManager({ engine: 'firefox' });
+
+			await expect(manager.launch()).rejects.toThrow('firefox boom');
+			expect(firefox.launch).toHaveBeenCalledTimes(1);
 		});
 	});
 
