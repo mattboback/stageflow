@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { BrowserEngine } from '$lib/api/client';
+
 	import { Label, SelectField } from '$lib/components/ui';
 	import { cn } from '$lib/utils';
 	import { Camera } from 'lucide-svelte';
@@ -6,11 +8,20 @@
 	interface Props {
 		screenshot: boolean;
 		highlightStyle: 'solid' | 'dashed';
+		engine: BrowserEngine;
 		onScreenshotChange: (value: boolean) => void;
 		onHighlightStyleChange: (value: 'solid' | 'dashed') => void;
+		onEngineChange: (value: BrowserEngine) => void;
 	}
 
-	let { screenshot, highlightStyle, onScreenshotChange, onHighlightStyleChange }: Props = $props();
+	let {
+		screenshot,
+		highlightStyle,
+		engine,
+		onScreenshotChange,
+		onHighlightStyleChange,
+		onEngineChange
+	}: Props = $props();
 
 	function selectableSurfaceClass(base: string, isSelected: boolean) {
 		return cn(
@@ -82,6 +93,24 @@
 				<option value="solid">Solid Border</option>
 				<option value="dashed">Dashed Border</option>
 			</SelectField>
+		</div>
+
+		<div>
+			<Label for="browser-engine" class="mb-3 block text-sm font-bold">Browser Engine</Label>
+			<SelectField
+				id="browser-engine"
+				variant="prominent"
+				value={engine}
+				onchange={(e) => onEngineChange(e.currentTarget.value as BrowserEngine)}
+				class="py-4"
+			>
+				<option value="chromium">Chromium (default)</option>
+				<option value="firefox">Firefox</option>
+				<option value="webkit">WebKit</option>
+			</SelectField>
+			<p class="text-ink-muted mt-2 text-xs leading-relaxed">
+				Renders the page in the chosen engine. Lighthouse always runs on Chromium.
+			</p>
 		</div>
 	</div>
 </div>

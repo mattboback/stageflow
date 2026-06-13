@@ -161,6 +161,56 @@ describe('PlaygroundPage', () => {
 		});
 	});
 
+	it('submits the browser engine chosen in advanced options', async () => {
+		mockFetchScanners.mockResolvedValue({
+			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
+			categories: []
+		});
+		mockSubmitScanJob.mockResolvedValue({ job_id: 'job-fx' });
+
+		const user = userEvent.setup();
+		render(PlaygroundPage);
+
+		const textarea = expectTextarea(await screen.findByLabelText('URLs to Scan'));
+		await user.type(textarea, 'https://example.com');
+
+		await openAdvancedOptions(user);
+		await user.selectOptions(await screen.findByLabelText('Browser Engine'), 'firefox');
+
+		await user.click(screen.getAllByRole('button', { name: 'Start Scan' })[0]);
+
+		await waitFor(() => {
+			expect(mockSubmitScanJob).toHaveBeenCalledWith(
+				expect.objectContaining({
+					mode: 'url',
+					urls: ['https://example.com'],
+					engine: 'firefox'
+				})
+			);
+		});
+	}, 15000);
+
+	it('defaults the browser engine to chromium when untouched', async () => {
+		mockFetchScanners.mockResolvedValue({
+			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],
+			categories: []
+		});
+		mockSubmitScanJob.mockResolvedValue({ job_id: 'job-cr' });
+
+		const user = userEvent.setup();
+		render(PlaygroundPage);
+
+		const textarea = expectTextarea(await screen.findByLabelText('URLs to Scan'));
+		await user.type(textarea, 'https://example.com');
+		await user.click(screen.getAllByRole('button', { name: 'Start Scan' })[0]);
+
+		await waitFor(() => {
+			expect(mockSubmitScanJob).toHaveBeenCalledWith(
+				expect.objectContaining({ engine: 'chromium' })
+			);
+		});
+	});
+
 	it('defaults to coverage preset and enables multiple scanners', async () => {
 		mockFetchScanners.mockResolvedValue({
 			scanners: [createScanner('axe'), createScanner('lighthouse'), createScanner('ai-navigator')],

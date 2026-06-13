@@ -81,12 +81,16 @@ export async function fetchWithTimeout(
 	}
 }
 
+/** The Playwright engine a scan runs on. Chromium is the default. */
+export type BrowserEngine = 'chromium' | 'firefox' | 'webkit';
+
 interface SubmitJobParams {
 	mode: 'zip' | 'url';
 	file: File | null;
 	urls: string[];
 	scanners: ScannerSelection[];
 	highlightStyle: 'solid' | 'dashed';
+	engine?: BrowserEngine;
 	screenshot?: boolean;
 	auth?: Record<string, unknown> | null;
 	signal?: AbortSignal;
@@ -155,6 +159,7 @@ export async function submitScanJob({
 	urls,
 	scanners,
 	highlightStyle,
+	engine = 'chromium',
 	screenshot = true,
 	auth = null,
 	signal
@@ -177,6 +182,7 @@ export async function submitScanJob({
 		const formData = new FormData();
 		formData.append('file', file);
 		formData.append('highlight_style', highlightStyle);
+		formData.append('browser', engine);
 		formData.append('modules', modules.join(','));
 		formData.append('screenshot', screenshot ? 'true' : 'false');
 		if (Object.keys(scannerConfigs).length > 0) {
@@ -205,6 +211,7 @@ export async function submitScanJob({
 				scanner_configs: scannerConfigs,
 				screenshot,
 				highlight_style: highlightStyle,
+				browser: engine,
 				...(auth ? { auth } : {})
 			}),
 			signal: signal ?? null
