@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { BrowserEngine } from '$lib/api/client';
 	import type { ScannerSelection } from '$lib/types/scan';
 
 	import { goto } from '$app/navigation';
@@ -35,6 +36,7 @@
 	let scannerPreset = $state<ScannerPreset>('coverage');
 	let screenshot = $state(true);
 	let highlightStyle = $state<'solid' | 'dashed'>('solid');
+	let engine = $state<BrowserEngine>('chromium');
 
 	// UI state
 	let isSubmitting = $state(false);
@@ -204,6 +206,7 @@
 				scanners,
 				screenshot,
 				highlightStyle,
+				engine,
 				auth
 			});
 
@@ -314,8 +317,10 @@
 								<PlaygroundOptions
 									{screenshot}
 									{highlightStyle}
+									{engine}
 									onScreenshotChange={(v) => (screenshot = v)}
 									onHighlightStyleChange={(v) => (highlightStyle = v)}
+									onEngineChange={(v) => (engine = v)}
 								/>
 							</section>
 
