@@ -106,11 +106,16 @@ type ScannerResult struct {
 
 // JobConfig contains configuration for a scan job.
 type JobConfig struct {
-	Modules             []string                  `json:"modules"` // e.g., ["axe", "keyboard"]
-	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
-	Screenshot          bool                      `json:"screenshot"`
-	HighlightStyle      string                    `json:"highlight_style,omitempty"`
-	AllowPrivateTargets bool                      `json:"allow_private_targets,omitempty"`
+	Modules        []string                  `json:"modules"` // e.g., ["axe", "keyboard"]
+	ScannerConfigs map[string]map[string]any `json:"scanner_configs,omitempty"`
+	Screenshot     bool                      `json:"screenshot"`
+	HighlightStyle string                    `json:"highlight_style,omitempty"`
+	// Browser selects the Playwright engine: "chromium" (default), "firefox", or
+	// "webkit". Omitted for chromium scans so the persisted JobConfig stays
+	// byte-identical to the pre-engine shape. The Platform API validates it
+	// (normalizeBrowserEngine); the orchestrator forwards it as BROWSER_ENGINE.
+	Browser             string `json:"browser,omitempty"`
+	AllowPrivateTargets bool   `json:"allow_private_targets,omitempty"`
 	// Auth carries the optional Provenance.auth block. It is omitted entirely
 	// for unauthenticated scans so the persisted JobConfig is byte-identical
 	// to the pre-auth shape on disk. For form recipes Auth carries only
