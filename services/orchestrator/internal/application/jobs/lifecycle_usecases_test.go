@@ -56,6 +56,53 @@ func TestServiceCreateJobDuplicatePendingRetriesWorkflow(t *testing.T) {
 	}
 }
 
+func TestServiceCreateJobCarriesBrowserEngineFromPayload(t *testing.T) {
+	t.Parallel()
+
+	var operationLog []string
+	store := &fakeJobStore{
+		createJobIfAbsentCreated: true,
+		operationLog:             &operationLog,
+	}
+	runtime := &fakeRuntime{
+		createJobPodID:       "pod-engine",
+		resolvedScannerTypes: []string{"axe"},
+		allowLoopbackTargets: true,
+		operationLog:         &operationLog,
+	}
+
+	service := NewService(store, runtime, &fakeArtifacts{}, &fakePublisher{})
+	payload := &events.JobCreatedPayload{
+		JobID:     "job-engine",
+		InputType: string(models.JobInputTypeURLs),
+		URLs:      []string{"https://example.com"},
+		Config: models.JobConfig{
+			Modules:        []string{"axe"},
+			Browser:        "firefox",
+			HighlightStyle: "solid",
+		},
+	}
+
+	if err := service.CreateJob(t.Context(), payload); err != nil {
+		t.Fatalf("CreateJob() error = %v", err)
+	}
+
+	if store.lastCreatedJob == nil {
+		t.Fatal("CreateJobIfAbsent was not called with a job")
+	}
+
+	// Regression: the orchestrator rebuilds JobConfig field-by-field from the
+	// event payload, so a new Config field must be copied here too — Browser was
+	// dropped while HighlightStyle was carried, sending every scan to Chromium.
+	if got := store.lastCreatedJob.Config.Browser; got != "firefox" {
+		t.Fatalf("persisted Config.Browser = %q, want %q", got, "firefox")
+	}
+
+	if got := store.lastCreatedJob.Config.HighlightStyle; got != "solid" {
+		t.Fatalf("persisted Config.HighlightStyle = %q, want %q", got, "solid")
+	}
+}
+
 func TestServiceCreateJobURLPreparesLifecycleBeforeStartingScanners(t *testing.T) {
 	t.Parallel()
 
