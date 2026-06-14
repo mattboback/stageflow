@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "xvfb-run",
+      "args": [
+        "-a",
+        "-s",
+        "-screen 0 1440x1000x24",
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--isolated",
+        "--viewport=1440x1000"
+      ]
+    }
+  }
+}
