@@ -19,6 +19,10 @@ services:
 
   platform-api:
     environment:
+      # Repo-local dev stack runs unauthenticated on loopback so `just demo`,
+      # the printed CLI/curl commands, and the Web UI work without a key. The
+      # base compose keeps auth enabled for staging/self-host deployments.
+      PLATFORM_API_AUTH_DISABLED: "true"
       PLATFORM_API_ALLOW_PRIVATE_TARGETS: "true"
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"
       MINIO_PUBLIC_USE_SSL: "false"
