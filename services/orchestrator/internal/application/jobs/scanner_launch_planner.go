@@ -371,7 +371,7 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 }
 
 // reservedScannerEnvNames are env vars the scanner-runner interprets as
-// infrastructure or behaviour controls. An auth recipe must not be able to set
+// infrastructure or behavior controls. An auth recipe must not be able to set
 // them via {from_env: "NAME"}: doing so would let a recipe pull a value off the
 // orchestrator host env and have the scanner pod interpret it as Chromium launch
 // flags, a CSP bypass, a result-subject override, a data path, or a resource

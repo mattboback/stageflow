@@ -221,7 +221,6 @@ func TestPlanRejectsBrowserAndResultSubjectEnvCollisions(t *testing.T) {
 		"NATS_SUBJECT_SCAN_COMPLETED",
 		"SCANNER_DATA_DIR",
 	} {
-		name := name
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

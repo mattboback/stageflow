@@ -60,6 +60,7 @@ func TestServiceCreateJobCarriesBrowserEngineFromPayload(t *testing.T) {
 	t.Parallel()
 
 	var operationLog []string
+
 	store := &fakeJobStore{
 		createJobIfAbsentCreated: true,
 		operationLog:             &operationLog,
