@@ -27,7 +27,9 @@ export function createContrastVerdictsStore() {
 	let verdicts = $state<VerdictsByJob>({});
 
 	function load() {
-		if (!browser) return;
+		if (!browser) {
+			return;
+		}
 		try {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			verdicts = stored ? (JSON.parse(stored) as VerdictsByJob) : {};
@@ -39,7 +41,9 @@ export function createContrastVerdictsStore() {
 
 	function trimToMaxJobs() {
 		const jobIds = Object.keys(verdicts);
-		if (jobIds.length <= MAX_JOBS) return;
+		if (jobIds.length <= MAX_JOBS) {
+			return;
+		}
 		const byRecency = jobIds.sort((a, b) =>
 			latestTimestamp(verdicts[b]).localeCompare(latestTimestamp(verdicts[a]))
 		);
@@ -47,7 +51,9 @@ export function createContrastVerdictsStore() {
 	}
 
 	function save(attempt = 0) {
-		if (!browser) return;
+		if (!browser) {
+			return;
+		}
 		const MAX_SAVE_ATTEMPTS = 3;
 
 		try {
@@ -76,15 +82,19 @@ export function createContrastVerdictsStore() {
 	}
 
 	function getVerdict(jobId: string, issueId: string): ContrastVerdict | null {
-		return verdicts[jobId]?.[issueId] ?? null;
+		const forJob: Record<string, ContrastVerdict> | undefined = verdicts[jobId];
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- verdicts[jobId] is undefined for unknown jobs at runtime (noUncheckedIndexedAccess is off)
+		return forJob?.[issueId] ?? null;
 	}
 
 	function setVerdict(jobId: string, issueId: string, verdict: Omit<ContrastVerdict, 'at'>) {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- one-shot ISO timestamp string, not reactive Date state
+		const at = new Date().toISOString();
 		verdicts = {
 			...verdicts,
 			[jobId]: {
 				...verdicts[jobId],
-				[issueId]: { ...verdict, at: new Date().toISOString() }
+				[issueId]: { ...verdict, at }
 			}
 		};
 		trimToMaxJobs();
@@ -92,8 +102,11 @@ export function createContrastVerdictsStore() {
 	}
 
 	function clearVerdict(jobId: string, issueId: string) {
-		const forJob = verdicts[jobId];
-		if (!forJob?.[issueId]) return;
+		const forJob: Record<string, ContrastVerdict> | undefined = verdicts[jobId];
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- verdicts[jobId] is undefined for unknown jobs at runtime (noUncheckedIndexedAccess is off)
+		if (!forJob || !(issueId in forJob)) {
+			return;
+		}
 		const { [issueId]: _removed, ...rest } = forJob;
 		verdicts =
 			Object.keys(rest).length > 0

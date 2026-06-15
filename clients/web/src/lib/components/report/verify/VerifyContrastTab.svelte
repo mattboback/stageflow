@@ -23,7 +23,7 @@
 		jobId: string;
 	}
 
-	let { issue, page, pageOverviewUrl, jobId }: Props = $props();
+	const { issue, page, pageOverviewUrl, jobId }: Props = $props();
 
 	const contrastData = $derived(getContrastData(issue));
 	const isIncomplete = $derived(isAxeIncompleteIssue(issue));
@@ -34,6 +34,7 @@
 	let largeText = $state(false);
 
 	$effect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions -- touch issue.id so the effect re-runs when navigating between issues
 		issue.id;
 		const data = getContrastData(issue);
 		fg = data?.fgColor ?? '';
@@ -52,7 +53,9 @@
 
 	const cropViewBox = $derived.by(() => {
 		const overview = page?.pageOverview;
-		if (!overview || !overviewElement) return null;
+		if (!overview || !overviewElement) {
+			return null;
+		}
 		return getCroppedViewBox(overview.pageWidth, overview.pageHeight, overviewElement, {
 			padding: 100,
 			minWidth: 480,
@@ -63,10 +66,16 @@
 	const samplerAvailable = $derived(Boolean(pageOverviewUrl && cropViewBox && page?.pageOverview));
 
 	const measuredNote = $derived.by(() => {
-		if (!contrastData) return null;
+		if (!contrastData) {
+			return null;
+		}
 		const parts: string[] = [];
-		if (contrastData.fgColor) parts.push(`text ${contrastData.fgColor}`);
-		if (contrastData.bgColor) parts.push(`on ${contrastData.bgColor}`);
+		if (contrastData.fgColor) {
+			parts.push(`text ${contrastData.fgColor}`);
+		}
+		if (contrastData.bgColor) {
+			parts.push(`on ${contrastData.bgColor}`);
+		}
 		const numericRatio = Number(contrastData.contrastRatio);
 		if (Number.isFinite(numericRatio) && numericRatio > 0) {
 			parts.push(`· ${formatRatio(numericRatio)}:1`);
@@ -75,8 +84,11 @@
 	});
 
 	function handlePick(slot: SampleSlot, hex: string) {
-		if (slot === 'fg') fg = hex;
-		else bg = hex;
+		if (slot === 'fg') {
+			fg = hex;
+		} else {
+			bg = hex;
+		}
 	}
 
 	function recordVerdict(value: 'pass' | 'fail', ratio: number | null) {
@@ -131,13 +143,15 @@
 		ruleId={issue.ruleId}
 		{largeText}
 		{verdict}
-		onFgChange={(value) => (fg = value)}
-		onBgChange={(value) => (bg = value)}
+		onFgChange={(value: string) => (fg = value)}
+		onBgChange={(value: string) => (bg = value)}
 		onSwap={() => {
 			[fg, bg] = [bg, fg];
 		}}
-		onLargeTextChange={(value) => (largeText = value)}
+		onLargeTextChange={(value: boolean) => (largeText = value)}
 		onRecord={recordVerdict}
-		onClear={() => contrastVerdictsStore.clearVerdict(jobId, issue.id)}
+		onClear={() => {
+			contrastVerdictsStore.clearVerdict(jobId, issue.id);
+		}}
 	/>
 </div>
