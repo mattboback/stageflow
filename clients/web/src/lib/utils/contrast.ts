@@ -31,7 +31,9 @@ function clampChannel(value: number): number {
  * Returns null for anything it cannot parse.
  */
 export function parseColor(input: string | null | undefined): Rgba | null {
-	if (!input) return null;
+	if (!input) {
+		return null;
+	}
 	const value = input.trim();
 
 	const hexMatch = HEX_PATTERN.exec(value);
@@ -55,11 +57,15 @@ export function parseColor(input: string | null | undefined): Rgba | null {
 		const r = clampChannel(Number(rgbMatch[1]));
 		const g = clampChannel(Number(rgbMatch[2]));
 		const b = clampChannel(Number(rgbMatch[3]));
+		const alpha: string | undefined = rgbMatch[4];
 		let a = 1;
-		if (rgbMatch[4] !== undefined) {
-			a = rgbMatch[4].endsWith('%') ? Number(rgbMatch[4].slice(0, -1)) / 100 : Number(rgbMatch[4]);
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- regex optional alpha group is undefined at runtime (noUncheckedIndexedAccess is off)
+		if (alpha !== undefined) {
+			a = alpha.endsWith('%') ? Number(alpha.slice(0, -1)) / 100 : Number(alpha);
 		}
-		if ([r, g, b, a].some((n) => Number.isNaN(n))) return null;
+		if ([r, g, b, a].some((n) => Number.isNaN(n))) {
+			return null;
+		}
 		return { r, g, b, a: Math.min(1, Math.max(0, a)) };
 	}
 
@@ -73,7 +79,9 @@ export function rgbToHex({ r, g, b }: Pick<Rgba, 'r' | 'g' | 'b'>): string {
 
 /** Alpha-composite a (possibly translucent) foreground over an opaque background. */
 export function compositeOver(fg: Rgba, bg: Rgba): Rgba {
-	if (fg.a >= 1) return fg;
+	if (fg.a >= 1) {
+		return fg;
+	}
 	const blend = (f: number, b: number) => f * fg.a + b * (1 - fg.a);
 	return { r: blend(fg.r, bg.r), g: blend(fg.g, bg.g), b: blend(fg.b, bg.b), a: 1 };
 }
@@ -103,7 +111,9 @@ export function contrastRatioFromStrings(
 ): number | null {
 	const fgColor = parseColor(fg);
 	const bgColor = parseColor(bg);
-	if (!fgColor || !bgColor) return null;
+	if (!fgColor || !bgColor) {
+		return null;
+	}
 	return contrastRatio(fgColor, bgColor);
 }
 
@@ -123,10 +133,16 @@ export function isLargeText(fontSizePx: number, bold: boolean): boolean {
 
 /** axe reports fontWeight as "bold"/"normal" or a numeric weight. */
 export function isBoldWeight(fontWeight: string | number | null | undefined): boolean {
-	if (fontWeight === null || fontWeight === undefined) return false;
-	if (typeof fontWeight === 'number') return fontWeight >= 700;
+	if (fontWeight === null || fontWeight === undefined) {
+		return false;
+	}
+	if (typeof fontWeight === 'number') {
+		return fontWeight >= 700;
+	}
 	const normalized = fontWeight.trim().toLowerCase();
-	if (normalized === 'bold' || normalized === 'bolder') return true;
+	if (normalized === 'bold' || normalized === 'bolder') {
+		return true;
+	}
 	const numeric = Number(normalized);
 	return !Number.isNaN(numeric) && numeric >= 700;
 }
@@ -136,8 +152,12 @@ export function isBoldWeight(fontWeight: string | number | null | undefined): bo
  * Returns the size in CSS pixels, or null.
  */
 export function parseAxeFontSize(fontSize: string | number | null | undefined): number | null {
-	if (typeof fontSize === 'number') return Number.isFinite(fontSize) ? fontSize : null;
-	if (!fontSize) return null;
+	if (typeof fontSize === 'number') {
+		return Number.isFinite(fontSize) ? fontSize : null;
+	}
+	if (!fontSize) {
+		return null;
+	}
 
 	const pxMatch = /([\d.]+)\s*px/i.exec(fontSize);
 	if (pxMatch) {

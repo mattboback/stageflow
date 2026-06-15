@@ -27,7 +27,7 @@
 		onClear: () => void;
 	}
 
-	let {
+	const {
 		fg,
 		bg,
 		ruleId,
@@ -64,7 +64,9 @@
 				<Input
 					id="contrast-fg"
 					value={fg}
-					oninput={(e) => onFgChange(e.currentTarget.value)}
+					oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+						onFgChange(e.currentTarget.value);
+					}}
 					placeholder="#1a1714"
 					class="h-9 font-mono text-xs"
 					autocomplete="off"
@@ -92,7 +94,9 @@
 				<Input
 					id="contrast-bg"
 					value={bg}
-					oninput={(e) => onBgChange(e.currentTarget.value)}
+					oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+						onBgChange(e.currentTarget.value);
+					}}
 					placeholder="#faf9f7"
 					class="h-9 font-mono text-xs"
 					autocomplete="off"
@@ -147,7 +151,9 @@
 			<input
 				type="checkbox"
 				checked={largeText}
-				onchange={(e) => onLargeTextChange(e.currentTarget.checked)}
+				onchange={(e) => {
+					onLargeTextChange(e.currentTarget.checked);
+				}}
 				class="accent-accent h-3.5 w-3.5"
 			/>
 			Large text (≥24px, or bold ≥18.7px)
@@ -172,10 +178,22 @@
 		{:else}
 			<div class="flex flex-wrap items-center gap-3">
 				<p class="text-ink-muted mr-1 text-sm">Your judgement:</p>
-				<Button variant="default" size="sm" onclick={() => onRecord('pass', ratio)}>
+				<Button
+					variant="default"
+					size="sm"
+					onclick={() => {
+						onRecord('pass', ratio);
+					}}
+				>
 					Mark as pass
 				</Button>
-				<Button variant="destructive" size="sm" onclick={() => onRecord('fail', ratio)}>
+				<Button
+					variant="destructive"
+					size="sm"
+					onclick={() => {
+						onRecord('fail', ratio);
+					}}
+				>
 					Mark as fail
 				</Button>
 			</div>

@@ -12,7 +12,7 @@
 		onPick: (slot: SampleSlot, hex: string) => void;
 	}
 
-	let { imageUrl, pageWidth, pageHeight, viewBox, element = null, onPick }: Props = $props();
+	const { imageUrl, pageWidth, pageHeight, viewBox, element = null, onPick }: Props = $props();
 
 	const LOUPE_GRID = 9;
 	const LOUPE_ZOOM = 12;
@@ -22,6 +22,7 @@
 	let imageFailed = $state(false);
 	let imageReady = $state(false);
 	let cursorHex = $state<string | null>(null);
+	// eslint-disable-next-line svelte/prefer-writable-derived -- cursor is both reset by an $effect on element/viewBox and updated imperatively by keyboard navigation
 	let cursor = $state({ x: 0, y: 0 });
 
 	let svgEl = $state<SVGSVGElement | null>(null);
@@ -69,7 +70,9 @@
 	});
 
 	function sampleAt(x: number, y: number): string | null {
-		if (!sourceCtx) return null;
+		if (!sourceCtx) {
+			return null;
+		}
 		const px = Math.min(sourceCtx.canvas.width - 1, Math.max(0, Math.round(x * pixelScale)));
 		const py = Math.min(sourceCtx.canvas.height - 1, Math.max(0, Math.round(y * pixelScale)));
 		const [r, g, b] = sourceCtx.getImageData(px, py, 1, 1).data;
@@ -77,9 +80,13 @@
 	}
 
 	function drawLoupe() {
-		if (!loupeEl || !sourceCtx) return;
+		if (!loupeEl || !sourceCtx) {
+			return;
+		}
 		const ctx = loupeEl.getContext('2d');
-		if (!ctx) return;
+		if (!ctx) {
+			return;
+		}
 		const px = Math.round(cursor.x * pixelScale);
 		const py = Math.round(cursor.y * pixelScale);
 		ctx.imageSmoothingEnabled = false;
@@ -118,16 +125,22 @@
 
 	function handlePointerMove(event: PointerEvent) {
 		const ctm = svgEl?.getScreenCTM();
-		if (!ctm) return;
+		if (!ctm) {
+			return;
+		}
 		const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
 		moveCursorTo(point.x, point.y);
 	}
 
 	function pick() {
 		const hex = sampleAt(cursor.x, cursor.y);
-		if (!hex) return;
+		if (!hex) {
+			return;
+		}
 		onPick(activeSlot, hex);
-		if (activeSlot === 'fg') activeSlot = 'bg';
+		if (activeSlot === 'fg') {
+			activeSlot = 'bg';
+		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -138,6 +151,7 @@
 			ArrowUp: [0, -step],
 			ArrowDown: [0, step]
 		};
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- moves[key] is undefined for non-arrow keys at runtime (noUncheckedIndexedAccess is off)
 		if (moves[event.key]) {
 			event.preventDefault();
 			moveCursorTo(cursor.x + moves[event.key][0], cursor.y + moves[event.key][1]);
