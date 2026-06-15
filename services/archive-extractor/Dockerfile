@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 
 # Runtime stage
 FROM docker.io/library/alpine:3.22
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates && apk upgrade --no-cache
 RUN addgroup -S extractor && adduser -S extractor -G extractor
 COPY --from=builder /out/extractor /usr/local/bin/extractor
 USER extractor

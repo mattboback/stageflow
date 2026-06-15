@@ -31,14 +31,9 @@ func main() {
 	}
 }
 
-func run() error {
-	slog.Info("Starting Platform API...")
-
-	cfg := loadConfig()
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("invalid configuration: %w", err)
-	}
-
+// validateSecurityPolicies validates the security, auth, and CORS
+// configuration before the server starts accepting traffic.
+func validateSecurityPolicies() error {
 	if err := api.ValidateSecurityConfig(); err != nil {
 		return fmt.Errorf("invalid security policy configuration: %w", err)
 	}
@@ -49,6 +44,21 @@ func run() error {
 
 	if err := api.ValidateCORSConfig(); err != nil {
 		return fmt.Errorf("invalid CORS configuration: %w", err)
+	}
+
+	return nil
+}
+
+func run() error {
+	slog.Info("Starting Platform API...")
+
+	cfg := loadConfig()
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	if err := validateSecurityPolicies(); err != nil {
+		return err
 	}
 
 	ctx := context.Background()
