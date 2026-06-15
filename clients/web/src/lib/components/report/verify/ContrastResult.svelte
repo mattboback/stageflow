@@ -118,16 +118,27 @@
 				{@const threshold = WCAG_THRESHOLDS[level][largeText ? 'large' : 'normal']}
 				{@const passes = ratio !== null && ratio >= threshold}
 				<li class="flex items-center gap-2.5">
-					<span class={['stat-mono w-28 text-xs', level === required ? 'text-ink font-bold' : 'text-ink-muted']}>
+					<span
+						class={[
+							'stat-mono w-28 text-xs',
+							level === required ? 'text-ink font-bold' : 'text-ink-muted'
+						]}
+					>
 						{level} · {threshold.toFixed(1)}:1
 					</span>
 					{#if ratio !== null}
-						<StatusPill tone={passes ? 'strong' : 'failing'} label={passes ? 'Pass' : 'Fail'} size="sm" />
+						<StatusPill
+							tone={passes ? 'strong' : 'failing'}
+							label={passes ? 'Pass' : 'Fail'}
+							size="sm"
+						/>
 					{:else}
 						<StatusPill tone="neutral" label="No colors" size="sm" />
 					{/if}
 					{#if level === required}
-						<span class="text-ink-faint font-mono text-[10px] tracking-wider uppercase">required</span>
+						<span class="text-ink-faint font-mono text-[10px] tracking-wider uppercase"
+							>required</span
+						>
 					{/if}
 				</li>
 			{/each}

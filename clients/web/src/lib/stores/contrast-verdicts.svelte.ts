@@ -40,8 +40,8 @@ export function createContrastVerdictsStore() {
 	function trimToMaxJobs() {
 		const jobIds = Object.keys(verdicts);
 		if (jobIds.length <= MAX_JOBS) return;
-		const byRecency = jobIds.sort(
-			(a, b) => latestTimestamp(verdicts[b]).localeCompare(latestTimestamp(verdicts[a]))
+		const byRecency = jobIds.sort((a, b) =>
+			latestTimestamp(verdicts[b]).localeCompare(latestTimestamp(verdicts[a]))
 		);
 		verdicts = Object.fromEntries(byRecency.slice(0, MAX_JOBS).map((id) => [id, verdicts[id]]));
 	}
@@ -57,8 +57,8 @@ export function createContrastVerdictsStore() {
 				console.warn('[contrast-verdicts] localStorage quota exceeded, trimming oldest jobs');
 				const jobCount = Object.keys(verdicts).length;
 				if (jobCount > 1 && attempt < MAX_SAVE_ATTEMPTS) {
-					const byRecency = Object.keys(verdicts).sort(
-						(a, b) => latestTimestamp(verdicts[b]).localeCompare(latestTimestamp(verdicts[a]))
+					const byRecency = Object.keys(verdicts).sort((a, b) =>
+						latestTimestamp(verdicts[b]).localeCompare(latestTimestamp(verdicts[a]))
 					);
 					verdicts = Object.fromEntries(
 						byRecency.slice(0, Math.ceil(jobCount / 2)).map((id) => [id, verdicts[id]])

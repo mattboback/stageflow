@@ -460,9 +460,11 @@ export class AxeScanner extends ScannerBase {
 	private extractContrastData(node: AxeNode | undefined): Record<string, unknown> | undefined {
 		const checks = [...(node?.any ?? []), ...(node?.all ?? [])];
 		const data = checks.find(
-			(check) => check?.data && typeof check.data === 'object' && !Array.isArray(check.data)
+			(check) => check.data && typeof check.data === 'object' && !Array.isArray(check.data)
 		)?.data;
-		if (!data) return undefined;
+		if (!data) {
+			return undefined;
+		}
 
 		const picked: Record<string, unknown> = {};
 		for (const field of CONTRAST_DATA_FIELDS) {

@@ -5,7 +5,14 @@
  */
 
 import fs from 'node:fs';
-import { type Browser, type BrowserContext, type Page, chromium, firefox, webkit } from 'playwright';
+import {
+	type Browser,
+	type BrowserContext,
+	type Page,
+	chromium,
+	firefox,
+	webkit
+} from 'playwright';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PreScanAction, WaitStrategy } from '../../src/core/types';

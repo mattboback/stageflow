@@ -60,9 +60,7 @@
 		});
 	});
 
-	const samplerAvailable = $derived(
-		Boolean(pageOverviewUrl && cropViewBox && page?.pageOverview)
-	);
+	const samplerAvailable = $derived(Boolean(pageOverviewUrl && cropViewBox && page?.pageOverview));
 
 	const measuredNote = $derived.by(() => {
 		if (!contrastData) return null;
@@ -106,8 +104,8 @@
 		</Panel>
 	{:else if measuredNote}
 		<p class="text-ink-muted text-sm">
-			axe measured <span class="stat-mono text-ink">{measuredNote}</span> — sample the screenshot to
-			double-check it.
+			axe measured <span class="stat-mono text-ink">{measuredNote}</span> — sample the screenshot to double-check
+			it.
 		</p>
 	{/if}
 

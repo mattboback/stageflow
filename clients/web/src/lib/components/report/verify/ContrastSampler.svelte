@@ -70,14 +70,8 @@
 
 	function sampleAt(x: number, y: number): string | null {
 		if (!sourceCtx) return null;
-		const px = Math.min(
-			sourceCtx.canvas.width - 1,
-			Math.max(0, Math.round(x * pixelScale))
-		);
-		const py = Math.min(
-			sourceCtx.canvas.height - 1,
-			Math.max(0, Math.round(y * pixelScale))
-		);
+		const px = Math.min(sourceCtx.canvas.width - 1, Math.max(0, Math.round(x * pixelScale)));
+		const py = Math.min(sourceCtx.canvas.height - 1, Math.max(0, Math.round(y * pixelScale)));
 		const [r, g, b] = sourceCtx.getImageData(px, py, 1, 1).data;
 		return rgbToHex({ r, g, b });
 	}
@@ -217,8 +211,8 @@
 				</svg>
 			</div>
 			<p class="text-ink-muted mt-2 text-xs">
-				Click the image to sample the {slotLabels[activeSlot].toLowerCase()} color. Sample the
-				thickest part of a letter stroke — edges are anti-aliased.
+				Click the image to sample the {slotLabels[activeSlot].toLowerCase()} color. Sample the thickest
+				part of a letter stroke — edges are anti-aliased.
 			</p>
 		</div>
 
