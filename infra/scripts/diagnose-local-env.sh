@@ -14,7 +14,7 @@ COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-stageflow_dev}"
 LOCAL_NETWORK="${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME}_net}"
 EXPECTED_GO_MIN="1.26.4"
 EXPECTED_BUN_MIN="1.3.8"
-EXPECTED_NODE_MAJOR="22"
+EXPECTED_NODE_MIN_MAJOR="22"
 
 fatal_count=0
 warn_count=0
@@ -198,10 +198,10 @@ if command -v "$NODE_BIN" >/dev/null 2>&1; then
 	node_version="$("$NODE_BIN" --version)"
 	node_major="${node_version#v}"
 	node_major="${node_major%%.*}"
-	if [[ "$node_major" == "$EXPECTED_NODE_MAJOR" ]]; then
-		pass "Node.js version $node_version (need $EXPECTED_NODE_MAJOR.x)"
+	if [[ "$node_major" =~ ^[0-9]+$ ]] && (( node_major >= EXPECTED_NODE_MIN_MAJOR )); then
+		pass "Node.js version $node_version (need >= $EXPECTED_NODE_MIN_MAJOR.x)"
 	else
-		fail "Node.js version $node_version does not match required major $EXPECTED_NODE_MAJOR.x. Use the version in .node-version or set NODE=/path/to/node."
+		fail "Node.js version $node_version is too old (need >= $EXPECTED_NODE_MIN_MAJOR.x). The repo pins Node $EXPECTED_NODE_MIN_MAJOR in .node-version; install it or set NODE=/path/to/node."
 	fi
 fi
 
