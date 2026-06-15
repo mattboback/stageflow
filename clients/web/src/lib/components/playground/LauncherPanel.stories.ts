@@ -65,9 +65,7 @@ export const Default: Story = {
 			'aria-pressed',
 			'true'
 		);
-		await expect(
-			canvas.getByText('Add at least one URL or switch to ZIP mode.')
-		).toBeVisible();
+		await expect(canvas.getByText('Add at least one URL or switch to ZIP mode.')).toBeVisible();
 
 		await userEvent.click(canvas.getByRole('button', { name: /advanced options/i }));
 		await expect(args.onToggleAdvanced).toHaveBeenCalledTimes(1);

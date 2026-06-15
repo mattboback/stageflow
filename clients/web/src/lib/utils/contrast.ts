@@ -19,7 +19,8 @@ export const WCAG_THRESHOLDS: Record<ContrastLevel, { normal: number; large: num
 };
 
 const HEX_PATTERN = /^#?([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const RGB_PATTERN = /^rgba?\(\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/i;
+const RGB_PATTERN =
+	/^rgba?\(\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/i;
 
 function clampChannel(value: number): number {
 	return Math.min(255, Math.max(0, Math.round(value)));

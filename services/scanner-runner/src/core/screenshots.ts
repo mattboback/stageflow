@@ -315,7 +315,7 @@ class DefaultScreenshotService implements ScreenshotService {
 				await sleep(400);
 			}, budgetMs);
 		} catch (err) {
-			this.logger.warn?.('Pre-capture scroll pass failed; capturing current state', {
+			this.logger.warn('Pre-capture scroll pass failed; capturing current state', {
 				error: err instanceof Error ? err.message : String(err)
 			});
 		}
