@@ -35,9 +35,3 @@ export function buildSiteUrl(path = '/'): string {
 	const suffix = path.startsWith('/') ? path : `/${path}`;
 	return `${base}${suffix}`;
 }
-
-export function siteDisplayPath(path = '/'): string {
-	const url = new URL(buildSiteUrl(path));
-
-	return `${url.host}${url.pathname}`;
-}

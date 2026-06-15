@@ -551,6 +551,7 @@ type fakeJobStore struct {
 func (f *fakeJobStore) CreateJobIfAbsent(_ context.Context, job *models.Job) (bool, error) {
 	f.createJobIfAbsentCalls++
 	f.lastCreatedJob = job
+
 	return f.createJobIfAbsentCreated, nil
 }
 
