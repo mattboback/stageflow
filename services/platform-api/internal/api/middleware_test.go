@@ -382,7 +382,7 @@ func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
 	now := time.Now().UTC()
 
 	// Fill the window table to capacity with distinct, in-window keys.
-	for i := 0; i < rateLimiterMaxEntries; i++ {
+	for i := range rateLimiterMaxEntries {
 		allowed, _ := limiter.allow("filler-"+strconv.Itoa(i), now)
 		if !allowed {
 			t.Fatalf("filler %d should be allowed while filling the table", i)
@@ -405,7 +405,7 @@ func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
 
 	// An already-tracked key must keep being served from its existing window,
 	// so saturation never starves established legitimate clients.
-	if allowed, _ := limiter.allow("filler-0", now); !allowed {
+	if ok, _ := limiter.allow("filler-0", now); !ok {
 		t.Fatal("expected an already-tracked key to remain allowed under saturation")
 	}
 }
