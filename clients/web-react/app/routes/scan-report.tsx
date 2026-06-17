@@ -10,6 +10,8 @@ import {
 	type ReportSection
 } from '../components/report/ReportSectionNav';
 import { IssuesView } from '../components/report/IssuesView';
+import { OverviewDashboard } from '../components/report/OverviewDashboard';
+import { IssueDetailModal } from '../components/report/IssueDetailModal';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
 import { buildOccurrenceModeReport, isIssueSortKey, type IssueSortKey } from '../lib/report';
 import reportStyles from './scan-report.css?url';
@@ -35,7 +37,7 @@ export default function ScanReport() {
 	const { id = '' } = useParams();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const { status, report, job, error } = useScanReport(id);
+	const { status, report, job, error, screenshots } = useScanReport(id);
 
 	const displayReport = useMemo(
 		() => (report ? buildOccurrenceModeReport(report) : null),
@@ -53,6 +55,7 @@ export default function ScanReport() {
 		? (searchParams.get('sort') as IssueSortKey)
 		: 'severity';
 	const groupByRule = searchParams.get('group') !== 'flat';
+	const activeIssueId = searchParams.get('issue');
 
 	const updateParams = useCallback(
 		(updates: Record<string, string | null>) => {
@@ -81,6 +84,16 @@ export default function ScanReport() {
 		[updateParams]
 	);
 
+	const activeIssue = useMemo(() => {
+		if (!activeIssueId || !displayReport) return null;
+		return displayReport.issues.find((i) => i.id === activeIssueId) ?? null;
+	}, [activeIssueId, displayReport]);
+
+	const activeIssuePage = useMemo(() => {
+		if (!activeIssue || !displayReport) return null;
+		return displayReport.pages.find((p) => p.id === activeIssue.pageId) ?? null;
+	}, [activeIssue, displayReport]);
+
 	return (
 		<>
 			<SiteHeader />
@@ -99,6 +112,34 @@ export default function ScanReport() {
 								section={section}
 								onSectionChange={setSection}
 							/>
+
+							{section === 'overview' && (
+								<section
+									id="report-panel-overview"
+									role="tabpanel"
+									aria-labelledby="report-tab-overview"
+								>
+									<OverviewDashboard
+										report={displayReport}
+										onSelectPage={(pageId) =>
+											updateParams({ section: null, page: pageId })
+										}
+										onSelectScanner={(scannerId) =>
+											updateParams({ section: null, scanner: scannerId })
+										}
+										onSearchIssues={(query, scannerId) =>
+											updateParams({
+												section: null,
+												q: query || null,
+												scanner: scannerId ?? null
+											})
+										}
+										onReviewSeverity={(severity) =>
+											updateParams({ section: null, severity })
+										}
+									/>
+								</section>
+							)}
 
 							{section === 'issues' && (
 								<section
@@ -133,19 +174,8 @@ export default function ScanReport() {
 												q: null
 											})
 										}
+										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 									/>
-								</section>
-							)}
-
-							{section === 'overview' && (
-								<section
-									id="report-panel-overview"
-									role="tabpanel"
-									aria-labelledby="report-tab-overview"
-									className="rsection-placeholder"
-								>
-									<h2>Overview dashboard</h2>
-									<p>Coming in Phase 3 — severity donut, scanner status grid, top pages.</p>
 								</section>
 							)}
 
@@ -158,8 +188,8 @@ export default function ScanReport() {
 								>
 									<h2>Visual review</h2>
 									<p>
-										Coming in Phase 4 — screenshot viewer with issue overlay markers and
-										live WCAG contrast sampler.
+										Coming in Phase 4 — screenshot viewer with issue overlay markers
+										and live WCAG contrast sampler.
 									</p>
 								</section>
 							)}
@@ -178,6 +208,17 @@ export default function ScanReport() {
 									</p>
 								</section>
 							)}
+
+							{activeIssue && (
+								<IssueDetailModal
+									issue={activeIssue}
+									page={activeIssuePage}
+									issues={displayReport.issues}
+									screenshots={screenshots}
+									onClose={() => updateParams({ issue: null })}
+									onNavigate={(issueId) => updateParams({ issue: issueId })}
+								/>
+							)}
 						</>
 					) : status === 'failed' || status === 'error' ? (
 						<div className="rsection-placeholder" role="alert">
@@ -189,7 +230,12 @@ export default function ScanReport() {
 							className="rsection-placeholder"
 							role="status"
 							aria-live="polite"
-							style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', alignItems: 'center' }}
+							style={{
+								display: 'flex',
+								flexDirection: 'column',
+								gap: '0.6rem',
+								alignItems: 'center'
+							}}
 						>
 							<Pill variant="queued">Loading</Pill>
 							<h2>Preparing report…</h2>
