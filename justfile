@@ -9,7 +9,7 @@ compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow_dev')
 repo_root := justfile_directory()
 
 # Paths
-web_dir := 'clients/web'
+web_dir := 'clients/web-react'
 scanner_dir := 'services/scanner-runner'
 go_work := 'go.work'
 
@@ -66,11 +66,8 @@ deps:
     echo "==> Syncing Go workspace..."
     {{go}} work sync
 
-    echo "==> Installing clients/web dependencies..."
-    (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
-
     echo "==> Installing clients/web-react dependencies..."
-    (cd clients/web-react && {{bun}} install)
+    (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
 
     echo "==> Installing scanner-runner dependencies..."
     (cd {{scanner_dir}} && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 {{bun}} install --frozen-lockfile)
@@ -509,11 +506,6 @@ ci:
     echo "==> Frontend CI..."
     (cd {{web_dir}} && {{bun}} run ci)
 
-    echo "==> Frontend Storybook browser setup..."
-    (cd {{web_dir}} && {{bun}} x playwright install chromium)
-    echo "==> Frontend Storybook tests..."
-    (cd {{web_dir}} && {{bun}} run test-storybook)
-
     echo "==> Frontend audit..."
     (cd {{web_dir}} && {{bun}} audit --audit-level=high)
 
@@ -524,7 +516,7 @@ ci:
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
 
-[group('build'), doc('Build all artifacts (clients/web + Go + runner)')]
+[group('build'), doc('Build all artifacts (clients/web-react + Go + runner)')]
 build:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -538,11 +530,8 @@ build:
         (cd "$dir" && {{go}} build ./...)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
-    echo "==> Building clients/web..."
-    (cd {{web_dir}} && {{bun}} run build)
-
     echo "==> Building clients/web-react..."
-    (cd clients/web-react && {{bun}} run build)
+    (cd {{web_dir}} && {{bun}} run build)
 
     echo "==> Building scanner-runner..."
     (cd {{scanner_dir}} && {{bun}} run build)
@@ -556,7 +545,7 @@ images:
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     @{{repo_root}}/devtools/scripts/install-cli.sh "{{BIN_DIR}}" "{{BIN_NAME}}"
 
-[group('run'), doc('Run a service locally (SERVICE=clients/web|clients/web-react|storybook|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=clients/web-react|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -573,27 +562,14 @@ run SERVICE MODE='dev':
     fi
 
     case "$service" in
-        clients/web)
-            if [[ "$mode" == "preview" ]]; then
-                echo "==> Starting clients/web preview server..."
-                (cd {{web_dir}} && {{bun}} run preview)
-            else
-                echo "==> Starting clients/web dev server..."
-                (cd {{web_dir}} && {{bun}} run dev)
-            fi
-            ;;
-        clients/web-react)
+        clients/web-react|clients/web)
             if [[ "$mode" == "preview" ]]; then
                 echo "==> Starting clients/web-react preview server..."
-                (cd clients/web-react && {{bun}} run preview)
+                (cd {{web_dir}} && {{bun}} run preview)
             else
                 echo "==> Starting clients/web-react dev server..."
-                (cd clients/web-react && {{bun}} run dev)
+                (cd {{web_dir}} && {{bun}} run dev)
             fi
-            ;;
-        storybook)
-            echo "==> Starting clients/web Storybook..."
-            (cd {{web_dir}} && {{bun}} run storybook)
             ;;
         api)
             echo "==> Starting platform-api..."
@@ -604,17 +580,10 @@ run SERVICE MODE='dev':
             (cd services/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be clients/web, clients/web-react, storybook, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be clients/web-react, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac
-
-[group('quality'), doc('Run clients/web Storybook interaction + accessibility tests')]
-storybook-test:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    (cd {{web_dir}} && {{bun}} x playwright install chromium)
-    (cd {{web_dir}} && {{bun}} run test-storybook)
 
 [group('quality'), doc('Run repo shell regression tests')]
 shell-tests:
