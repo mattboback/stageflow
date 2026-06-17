@@ -126,3 +126,6 @@ infra/scanners/scanners.yaml
 # Auto-generated internal repo maps (regenerated locally; not shipped)
 **/docs/repo-map.md
 
+
+# AI assistant artifacts
+context-snapshot.json

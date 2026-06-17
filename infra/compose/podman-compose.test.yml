@@ -28,7 +28,7 @@ services:
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"
       MINIO_PUBLIC_USE_SSL: "false"
       MINIO_USE_PROXY_URLS: "false"
-      PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+      PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:3020,http://127.0.0.1:3020
     ports:
       - "127.0.0.1:8080:8080"
 
@@ -39,3 +39,7 @@ services:
   frontend:
     ports:
       - "127.0.0.1:3000:3000"
+
+  frontend-react:
+    ports:
+      - "127.0.0.1:3020:3020"

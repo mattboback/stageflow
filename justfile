@@ -69,6 +69,9 @@ deps:
     echo "==> Installing clients/web dependencies..."
     (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
 
+    echo "==> Installing clients/web-react dependencies..."
+    (cd clients/web-react && {{bun}} install)
+
     echo "==> Installing scanner-runner dependencies..."
     (cd {{scanner_dir}} && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 {{bun}} install --frozen-lockfile)
 
@@ -86,7 +89,7 @@ demo URL='https://example.com':
     current_host="$(hostname -f 2>/dev/null || hostname)"
     demo_vite_api_url="${STAGEFLOW_DEMO_VITE_API_URL:-http://localhost:8080}"
     demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-http://localhost:3000}"
-    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080}"
+    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:3020,http://127.0.0.1:3020}"
     demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-localhost}"
     demo_grafana_url="${STAGEFLOW_DEMO_GF_SERVER_ROOT_URL:-http://localhost:3001}"
 
@@ -297,8 +300,8 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
             ;;
     esac
 
-[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES=\"platform-api orchestrator frontend\")')]
-dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend':
+[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES="platform-api orchestrator frontend frontend-react")')]
+dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend frontend-react':
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -538,6 +541,9 @@ build:
     echo "==> Building clients/web..."
     (cd {{web_dir}} && {{bun}} run build)
 
+    echo "==> Building clients/web-react..."
+    (cd clients/web-react && {{bun}} run build)
+
     echo "==> Building scanner-runner..."
     (cd {{scanner_dir}} && {{bun}} run build)
 
@@ -550,7 +556,7 @@ images:
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     @{{repo_root}}/devtools/scripts/install-cli.sh "{{BIN_DIR}}" "{{BIN_NAME}}"
 
-[group('run'), doc('Run a service locally (SERVICE=clients/web|storybook|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=clients/web|clients/web-react|storybook|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -576,6 +582,15 @@ run SERVICE MODE='dev':
                 (cd {{web_dir}} && {{bun}} run dev)
             fi
             ;;
+        clients/web-react)
+            if [[ "$mode" == "preview" ]]; then
+                echo "==> Starting clients/web-react preview server..."
+                (cd clients/web-react && {{bun}} run preview)
+            else
+                echo "==> Starting clients/web-react dev server..."
+                (cd clients/web-react && {{bun}} run dev)
+            fi
+            ;;
         storybook)
             echo "==> Starting clients/web Storybook..."
             (cd {{web_dir}} && {{bun}} run storybook)
@@ -589,7 +604,7 @@ run SERVICE MODE='dev':
             (cd services/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be clients/web, storybook, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be clients/web, clients/web-react, storybook, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac

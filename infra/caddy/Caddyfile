@@ -78,3 +78,27 @@
         reverse_proxy 127.0.0.1:3100
     }
 }
+
+# React frontend side-by-side subdomain
+react.{$STAGEFLOW_PUBLIC_DOMAIN:stageflow.org} {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "frame-ancestors 'none'"
+        X-Frame-Options "DENY"
+        # Don't advertise the server software.
+        -Server
+    }
+
+    # Proxy API requests directly to platform-api
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8100
+    }
+
+    # Proxy everything else to the React frontend
+    handle /* {
+        reverse_proxy 127.0.0.1:3120
+    }
+}
+
