@@ -395,6 +395,13 @@ func ValidateCORSConfig() error {
 }
 
 func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	// Operators can explicitly run without authentication (local/dev) by setting
+	// PLATFORM_API_AUTH_DISABLED=true. This must bypass the request-path check even
+	// when PLATFORM_API_TOKEN is set; ValidateAuthConfig already logs the warning.
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("PLATFORM_API_AUTH_DISABLED")), "true") {
+		return next
+	}
+
 	expected := strings.TrimSpace(os.Getenv("PLATFORM_API_TOKEN"))
 	if expected == "" {
 		return next

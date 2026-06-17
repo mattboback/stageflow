@@ -202,6 +202,26 @@ func TestAPIKeyMiddleware_WithToken_RejectsWrongKey(t *testing.T) {
 	}
 }
 
+func TestAPIKeyMiddleware_AuthDisabled_AllowsMissingKey(t *testing.T) {
+	// Regression for F4: PLATFORM_API_AUTH_DISABLED=true must bypass auth at the
+	// request path even when PLATFORM_API_TOKEN is set (the shipped local default).
+	t.Setenv("PLATFORM_API_TOKEN", "secret")
+	t.Setenv("PLATFORM_API_AUTH_DISABLED", "true")
+
+	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	rr := httptest.NewRecorder()
+
+	handler(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 with PLATFORM_API_AUTH_DISABLED=true and no key, got %d", rr.Code)
+	}
+}
+
 func TestValidateAuthConfig_MissingTokenFails(t *testing.T) {
 	t.Setenv("PLATFORM_API_TOKEN", "")
 	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")

@@ -1,10 +1,11 @@
-import { sveltekit } from '@sveltejs/kit/vite';
-import tailwindcss from '@tailwindcss/vite';
+import { reactRouter } from '@react-router/dev/vite';
 import { defineConfig } from 'vite';
 
+// https://reactrouter.com/start/framework/installation
 export default defineConfig({
-	plugins: [
-		tailwindcss(), // MUST be before sveltekit()
-		sveltekit()
-	]
+	plugins: [reactRouter()],
+	server: {
+		port: 3020,
+		strictPort: true
+	}
 });

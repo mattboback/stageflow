@@ -287,19 +287,19 @@ services:
         max-file: "5"
 
   # --- Frontend ---
-  frontend:
+  frontend-react:
     build:
       context: ../..
       dockerfile: clients/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
-        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3000}
+        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3020}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
         VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility and quality scanning platform}
-    image: localhost/stageflow/frontend:latest
+    image: localhost/stageflow/frontend-react:latest
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3020/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -326,6 +326,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
 
 volumes:
   nats_data:

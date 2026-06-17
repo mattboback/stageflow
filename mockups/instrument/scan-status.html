@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scan running — StageFlow</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="instrument.css" />
+<style>
+	.run { padding-block: clamp(1.6rem, 3vw, 2.4rem) 4rem; }
+
+	/* status header strip */
+	.shead { display: grid; grid-template-columns: 1fr auto; gap: 1.2rem; align-items: center;
+		padding: 1.1rem 1.25rem; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+	.shead__id { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+	.shead__id h1 { font-size: 1.15rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
+	.shead__url { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-muted); }
+	.shead__meta { display: flex; gap: 1.8rem; align-items: center; }
+	.timer { text-align: right; }
+	.timer b { font-family: var(--mono); font-weight: 700; font-size: 1.5rem; color: var(--ink-strong); line-height: 1;
+		font-variant-numeric: tabular-nums; }
+	.timer small { display: block; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); margin-top: 0.2rem; }
+
+	/* overall progress meter */
+	.meter { margin-top: 0.9rem; height: 7px; border-radius: 4px; background: var(--surface-sunk); border: 1px solid var(--line); overflow: hidden; }
+	.meter > i { display: block; height: 100%; background: linear-gradient(90deg, var(--signal-strong), var(--signal));
+		width: 0; transition: width 0.6s var(--ease); position: relative; }
+	.meter > i::after { content: ''; position: absolute; inset: 0; background:
+		repeating-linear-gradient(45deg, transparent 0 8px, oklch(1 0 0 / 0.18) 8px 16px); animation: slide 0.9s linear infinite; }
+	@keyframes slide { to { background-position: 22px 0; } }
+
+	.grid { display: grid; grid-template-columns: 1fr 19rem; gap: 1.5rem; align-items: start; margin-top: 1.5rem; }
+
+	/* channels */
+	.ch { display: grid; grid-template-columns: 1.1rem 1fr auto; gap: 0.85rem; align-items: center;
+		padding: 0.85rem 1.1rem; border-top: 1px solid var(--line); }
+	.ch:first-child { border-top: 0; }
+	.ch__led { width: 9px; height: 9px; border-radius: 50%; justify-self: center; }
+	.ch__name { font-weight: 600; color: var(--ink-strong); font-size: 0.94rem; }
+	.ch__sub { font-family: var(--mono); font-size: 0.72rem; color: var(--ink-muted); margin-top: 0.15rem; }
+	.ch__right { justify-self: end; display: flex; align-items: center; gap: 0.8rem; }
+	/* per state */
+	.ch--done .ch__led { background: var(--sev-minor); }
+	.ch--run  .ch__led { background: var(--signal); box-shadow: 0 0 0 0 var(--signal); animation: pulse 1.4s var(--ease) infinite; }
+	.ch--queue .ch__led { background: var(--line-strong); }
+	.ch--err  .ch__led { background: var(--sev-critical); }
+	@keyframes pulse { 0% { box-shadow: 0 0 0 0 oklch(0.58 0.094 210 / 0.5); } 70%,100% { box-shadow: 0 0 0 7px oklch(0.58 0.094 210 / 0); } }
+	.ch__bar { width: 120px; height: 5px; border-radius: 3px; background: var(--surface-sunk); overflow: hidden; }
+	.ch__bar > i { display: block; height: 100%; width: 100%; background: var(--signal);
+		transform-origin: left center; transition: transform 0.5s var(--ease); }
+	.ch__score { font-family: var(--mono); font-weight: 700; font-size: 0.95rem; color: var(--ink-strong); min-width: 2ch; text-align: right; }
+	.ch__tag { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
+	.ch--done .ch__tag { color: var(--sev-minor); }
+	.ch--run  .ch__tag { color: var(--signal-ink); }
+	.ch--queue .ch__tag, .ch--queue .ch__name { color: var(--ink-muted); }
+	.ch--queue .ch__name { font-weight: 500; }
+
+	/* log readout */
+	.log { margin-top: 1.5rem; }
+	.log__body { background: var(--ground-deep); border-radius: 0 0 var(--r-lg) var(--r-lg); padding: 0.9rem 1.1rem;
+		font-family: var(--mono); font-size: 0.78rem; line-height: 1.7; max-height: 230px; overflow: auto; }
+	.log__line { display: grid; grid-template-columns: 5.5rem 1fr; gap: 0.9rem; }
+	.log__t { color: var(--ink-faint); }
+	.log__m { color: var(--ink); }
+	.log__m .k { color: var(--signal-ink); }
+	.log__m .ok { color: var(--sev-minor); }
+	.cursor { display: inline-block; width: 8px; height: 1em; background: var(--signal); vertical-align: -2px; animation: blink 1s steps(2) infinite; }
+
+	/* sidebar */
+	.side { display: grid; gap: 1.2rem; position: sticky; top: 84px; }
+	.gaugewrap { display: grid; place-items: center; padding: 0.5rem 0 0.2rem; }
+	.dial { width: 120px; height: 120px; }
+	.track { stroke: var(--line); }
+	.arc { stroke: var(--signal); stroke-linecap: round; transition: stroke-dashoffset 0.8s var(--ease); }
+	.artifact { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0; font-size: 0.86rem; color: var(--ink-muted); }
+	.artifact .ic { font-family: var(--mono); font-size: 0.7rem; color: var(--ink-faint); border: 1px solid var(--line); border-radius: 3px; padding: 0.1rem 0.3rem; }
+	.artifact.pending { opacity: 0.5; }
+
+	@media (max-width: 880px) {
+		.grid { grid-template-columns: 1fr; }
+		.side { position: static; }
+		.shead { grid-template-columns: 1fr; }
+		.ch__bar { width: 72px; }
+	}
+</style>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+
+<header class="site-header">
+	<div class="wrap site-header__bar">
+		<a class="brand" href="index.html" aria-label="StageFlow home"><span class="brand__mark" aria-hidden="true"></span><span class="brand__name">STAGEFLOW</span></a>
+		<nav class="nav" aria-label="Primary">
+			<a class="navlink" href="playground.html">Playground</a>
+			<a class="navlink" href="index.html#scanners">Scanners</a>
+			<a class="navlink" href="scan-status.html" aria-current="page" style="color:var(--ink-strong)">Live demo</a>
+			<a class="navlink" href="#">Docs</a>
+			<a class="btn btn--ghost btn--sm" href="#" style="margin-left:.4rem">GitHub ↗</a>
+		</nav>
+	</div>
+</header>
+<div class="rule-ticks" aria-hidden="true"></div>
+
+<main id="main" class="run">
+	<div class="wrap">
+		<!-- status header -->
+		<div class="shead">
+			<div>
+				<div class="shead__id">
+					<h1>Scan in progress</h1>
+					<span class="pill pill--live"><span class="pill__led"></span>Running</span>
+				</div>
+				<div style="margin-top:.55rem; display:flex; gap:1.2rem; flex-wrap:wrap; align-items:center">
+					<span class="shead__url">job_8f3c21d9</span>
+					<span class="shead__url" style="color:var(--ink-faint)">→</span>
+					<span class="shead__url">https://example.com · +1 route</span>
+				</div>
+				<div class="meter" role="progressbar" aria-valuenow="62" aria-valuemin="0" aria-valuemax="100" aria-label="Overall scan progress"><i id="ovr" style="width:62%"></i></div>
+			</div>
+			<div class="shead__meta">
+				<div class="readout"><span class="readout__val" id="chdone">4<span style="color:var(--ink-faint)">/7</span></span><span class="readout__lab">channels done</span></div>
+				<div class="timer"><b id="elapsed">00:38</b><small>elapsed</small></div>
+			</div>
+		</div>
+
+		<div class="grid">
+			<!-- channels + log -->
+			<div>
+				<section class="panel" aria-label="Scanner channels">
+					<div class="panel__head"><span class="label">Channels · live</span><span class="mono" style="font-size:.72rem; color:var(--ink-muted)">SSE connected</span></div>
+					<div class="panel__body" style="padding:0">
+						<div class="ch ch--done"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">axe-core</div><div class="ch__sub">23 issues · 12.4s</div></div><div class="ch__right"><span class="ch__tag">done</span><span class="ch__score">94</span></div></div>
+						<div class="ch ch--done"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">Lighthouse</div><div class="ch__sub">4 categories · 18.1s</div></div><div class="ch__right"><span class="ch__tag">done</span><span class="ch__score">88</span></div></div>
+						<div class="ch ch--done"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">SEO</div><div class="ch__sub">3 issues · 4.2s</div></div><div class="ch__right"><span class="ch__tag">done</span><span class="ch__score">97</span></div></div>
+						<div class="ch ch--done"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">security-headers</div><div class="ch__sub">6 issues · 2.0s</div></div><div class="ch__right"><span class="ch__tag" style="color:var(--sev-moderate)">done</span><span class="ch__score">75</span></div></div>
+						<div class="ch ch--run"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">link-checker</div><div class="ch__sub" id="lcsub">crawling · 41 / 68 links</div></div><div class="ch__right"><span class="ch__bar"><i id="lcbar" style="transform:scaleX(.6)"></i></span><span class="ch__tag">running</span></div></div>
+						<div class="ch ch--queue"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">open-graph</div><div class="ch__sub">waiting for slot</div></div><div class="ch__right"><span class="ch__tag" style="color:var(--ink-faint)">queued</span></div></div>
+						<div class="ch ch--queue"><span class="ch__led" aria-hidden="true"></span><div><div class="ch__name">spelling-grammar</div><div class="ch__sub">waiting for slot</div></div><div class="ch__right"><span class="ch__tag" style="color:var(--ink-faint)">queued</span></div></div>
+					</div>
+				</section>
+
+				<section class="panel log" aria-label="Scan log">
+					<div class="panel__head"><span class="label">Stream</span><span class="mono" style="font-size:.72rem; color:var(--ink-muted)">stdout · job_8f3c21d9</span></div>
+					<div class="log__body" id="logbody" aria-live="polite">
+						<div class="log__line"><span class="log__t">00:02.1</span><span class="log__m"><span class="k">orchestrator</span> pod scheduled · 7 channels armed</span></div>
+						<div class="log__line"><span class="log__t">00:14.6</span><span class="log__m"><span class="k">axe-core</span> complete <span class="ok">✓</span> score 94</span></div>
+						<div class="log__line"><span class="log__t">00:20.8</span><span class="log__m"><span class="k">seo</span> complete <span class="ok">✓</span> score 97</span></div>
+						<div class="log__line"><span class="log__t">00:33.0</span><span class="log__m"><span class="k">lighthouse</span> complete <span class="ok">✓</span> score 88</span></div>
+						<div class="log__line"><span class="log__t">00:36.7</span><span class="log__m"><span class="k">link-checker</span> crawling internal links…</span></div>
+					</div>
+				</section>
+			</div>
+
+			<!-- sidebar -->
+			<aside class="side" aria-label="Run summary">
+				<div class="panel">
+					<div class="panel__head"><span class="label">Aggregate</span><span class="pill pill--live" style="font-size:.66rem"><span class="pill__led"></span>partial</span></div>
+					<div class="panel__body">
+						<div class="gaugewrap">
+							<div class="gauge">
+								<svg class="dial" viewBox="0 0 120 120" role="img" aria-label="Provisional score 89 of 100">
+									<circle class="track" cx="60" cy="60" r="52" fill="none" stroke-width="9" />
+									<circle class="arc" id="arc" cx="60" cy="60" r="52" fill="none" stroke-width="9" stroke-dasharray="326.7" stroke-dashoffset="35.9" transform="rotate(-90 60 60)" />
+								</svg>
+								<div class="gauge__num"><span class="gauge__val" style="font-size:1.9rem">89</span><span class="gauge__cap">provisional</span></div>
+							</div>
+						</div>
+						<div class="sevscale" style="margin-top:.4rem">
+							<div class="sevrow sev-critical"><span class="sevrow__dot"></span><span class="sevrow__name">Critical</span><span class="sevrow__count">0</span></div>
+							<div class="sevrow sev-serious"><span class="sevrow__dot"></span><span class="sevrow__name">Serious</span><span class="sevrow__count">3</span></div>
+							<div class="sevrow sev-moderate"><span class="sevrow__dot"></span><span class="sevrow__name">Moderate</span><span class="sevrow__count">8</span></div>
+							<div class="sevrow sev-minor"><span class="sevrow__dot"></span><span class="sevrow__name">Minor</span><span class="sevrow__count">21</span></div>
+						</div>
+					</div>
+				</div>
+				<div class="panel">
+					<div class="panel__head"><span class="label">Artifacts</span></div>
+					<div class="panel__body" style="padding-block:.4rem">
+						<div class="artifact"><span class="ic">PNG</span> 5 page screenshots</div>
+						<div class="artifact pending"><span class="ic">JSON</span> unified report · pending</div>
+						<div class="artifact pending"><span class="ic">HTML</span> report bundle · pending</div>
+					</div>
+				</div>
+			</aside>
+		</div>
+	</div>
+</main>
+
+<script>
+	(function () {
+		var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+		// elapsed timer
+		var t = 38, el = document.getElementById('elapsed');
+		function fmt(s){ var m = Math.floor(s/60), r = s%60; return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0'); }
+		if (!reduce) setInterval(function(){ t++; el.textContent = fmt(t); }, 1000);
+
+		// link-checker progress + streamed lines
+		if (reduce) return;
+		var bar = document.getElementById('lcbar'), sub = document.getElementById('lcsub'),
+			body = document.getElementById('logbody'), ovr = document.getElementById('ovr');
+		var done = 41, total = 68, p = 60;
+		var tick = setInterval(function(){
+			done = Math.min(total, done + Math.ceil(Math.random()*4));
+			p = Math.round(done/total*100);
+			bar.style.transform = 'scaleX(' + (p / 100) + ')';
+			sub.textContent = 'crawling · ' + done + ' / ' + total + ' links';
+			ovr.style.width = (62 + Math.round(p*0.12)) + '%';
+			if (done >= total) {
+				clearInterval(tick);
+				addLine(fmtT(t), 'link-checker', 'complete', '✓', 'score 91');
+			}
+		}, 1400);
+
+		function fmtT(s){ var m=Math.floor(s/60), r=s%60; return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0')+'.'+Math.floor(Math.random()*9); }
+		function addLine(time, k, msg, ok, tail){
+			var line = document.createElement('div'); line.className = 'log__line';
+			line.innerHTML = '<span class="log__t">'+time+'</span><span class="log__m"><span class="k">'+k+'</span> '+msg+' <span class="ok">'+ok+'</span> '+(tail||'')+'</span>';
+			body.appendChild(line); body.scrollTop = body.scrollHeight;
+		}
+	})();
+</script>
+</body>
+</html>

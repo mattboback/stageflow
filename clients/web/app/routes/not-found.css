@@ -1,0 +1,15 @@
+/* ---- page-local: 404 fault readout ---- */
+.fault { min-height: calc(100dvh - 61px); display: grid; place-items: center; padding: 3rem 1.5rem; }
+.fault__panel { width: 100%; max-width: 32rem; }
+.fault__top { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--line); }
+.fault__code { font-family: var(--mono); font-weight: 700; font-size: clamp(3.5rem, 11vw, 5.5rem); line-height: 0.9;
+	letter-spacing: -0.04em; color: var(--ink-strong); padding: 1.6rem 1.4rem 0.4rem; font-variant-numeric: tabular-nums; }
+.fault__code span { color: var(--sev-serious); }
+.fault__body { padding: 0 1.4rem 1.6rem; }
+.fault__body h1 { font-size: 1.15rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
+.fault__body p { color: var(--ink-muted); margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.55; }
+.fault__trace { margin: 1.2rem 0 1.4rem; background: var(--ground-deep); border-radius: var(--r-md);
+	padding: 0.8rem 1rem; font-family: var(--mono); font-size: 0.78rem; line-height: 1.7; color: var(--ink); word-break: break-word; }
+.fault__trace .k { color: var(--signal-ink); }
+.fault__trace .warn { color: var(--sev-serious); }
+.fault__actions { display: flex; gap: 0.7rem; flex-wrap: wrap; }
