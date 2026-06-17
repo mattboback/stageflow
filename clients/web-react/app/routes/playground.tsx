@@ -9,11 +9,21 @@ import {
 	submitScanJob
 } from '../lib/api/client';
 import {
+	buildAiNavigatorConfig,
+	buildFormAuthConfig,
+	isAuthConfigComplete,
 	normalizeUrlInput,
 	validateHttpUrls,
-	validateZipUploadFile
+	validateZipUploadFile,
+	type AuthFormConfig
 } from '../lib/components/playground/playground-utils';
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
+import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
+import {
+	PlaygroundAiConfig,
+	DEFAULT_AI_CONFIG,
+	type AiConfigState
+} from '../components/playground/PlaygroundAiConfig';
 import playgroundStyles from './playground.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: playgroundStyles }];
@@ -55,6 +65,24 @@ export default function Playground() {
 
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
+
+	const [authConfig, setAuthConfig] = useState<AuthFormConfig>({
+		enabled: false,
+		loginUrl: '',
+		username: '',
+		password: '',
+		usernameSelector: '',
+		passwordSelector: '',
+		submitSelector: '',
+		successStrategy: 'auto',
+		successSelector: ''
+	});
+	const isAuthValid = isAuthConfigComplete(authConfig);
+
+	const [aiConfig, setAiConfig] = useState<AiConfigState>(DEFAULT_AI_CONFIG);
+	const isAiNavigatorEnabled = selections.some(
+		(s) => s.id === 'ai-navigator' && s.enabled
+	);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -143,14 +171,30 @@ export default function Playground() {
 			return;
 		}
 
+		if (authConfig.enabled && !isAuthValid) {
+			setError('Auth is enabled but Login URL / username / password are incomplete.');
+			return;
+		}
+
+		const auth = mode === 'url' ? buildFormAuthConfig(authConfig) : null;
+		const scannersForSubmit =
+			isAiNavigatorEnabled && aiConfig.objective.trim()
+				? selections.map((s) =>
+						s.id === 'ai-navigator'
+							? { ...s, config: buildAiNavigatorConfig(aiConfig) }
+							: s
+					)
+				: selections;
+
 		setSubmitting(true);
 		try {
 			const { job_id } = await submitScanJob({
 				mode,
 				file,
 				urls: validUrls,
-				scanners: selections,
-				highlightStyle: 'solid'
+				scanners: scannersForSubmit,
+				highlightStyle: 'solid',
+				auth
 			});
 			navigate(`/scan/${job_id}`);
 		} catch (err: unknown) {
@@ -305,6 +349,21 @@ export default function Playground() {
 									)}
 								</div>
 							</section>
+
+							{mode === 'url' && (
+								<PlaygroundAuthConfig
+									config={authConfig}
+									isValid={isAuthValid}
+									onConfigChange={setAuthConfig}
+								/>
+							)}
+
+							{isAiNavigatorEnabled && (
+								<PlaygroundAiConfig
+									config={aiConfig}
+									onConfigChange={setAiConfig}
+								/>
+							)}
 						</div>
 
 						{/* right: run dock */}
