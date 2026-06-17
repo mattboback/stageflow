@@ -1,106 +1,73 @@
-# StageFlow Web App
+# React + TypeScript + Vite
 
-The web app is the SvelteKit 5 frontend for StageFlow.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-It is responsible for:
+Currently, two official plugins are available:
 
-- scan submission from the browser
-- live job progress over SSE
-- unified report exploration with issue evidence and screenshots
-- scanner selection, presets, and AI Navigator configuration
-- the public-facing landing and playground experience
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-It is not responsible for:
+## React Compiler
 
-- executing scanners
-- persisting jobs or reports
-- orchestrating containers or NATS consumers
-- normalizing raw scanner output into the canonical report contract
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-Those responsibilities live in the Platform API, Orchestrator, Scanner Runner, and shared contracts.
+## Expanding the ESLint configuration
 
-## How it fits into the system
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-The web app talks to the Platform API over HTTP:
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-- `POST /api/v1/jobs/urls` and `POST /api/v1/jobs/zip` submit scans
-- `GET /api/v1/scanners` loads available scanners and capabilities
-- `GET /api/v1/jobs/:id/stream` drives live status updates over SSE
-- `GET /api/v1/jobs/:id`, `/report`, `/results`, and `/diff` back the report view and project diff UX
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-The browser never talks directly to the Orchestrator or Scanner Runner. It consumes the API boundary and renders the normalized report shape produced by the backend.
-
-## Routes worth inspecting
-
-| Route                                      | Purpose                                                  |
-| ------------------------------------------ | -------------------------------------------------------- |
-| `src/routes/+page.svelte`                  | Marketing/landing page and product framing               |
-| `src/routes/playground/+page.svelte`       | Main scan configuration flow for URL and ZIP jobs        |
-| `src/routes/scan/[id]/+page.svelte`        | Live job status shell                                    |
-| `src/routes/scan/[id]/report/+page.svelte` | Unified report view with evidence and remediation detail |
-
-## Key directories
-
-| Path                             | What is there                                                                    |
-| -------------------------------- | -------------------------------------------------------------------------------- |
-| `src/lib/api/`                   | Browser API client, URL helpers, and SSE plumbing                                |
-| `src/lib/components/playground/` | Scan configuration UI, presets, validation, and ZIP upload flow                  |
-| `src/lib/components/report/`     | Report shell, condensed stats header, grouped issue list, modal, filter sidebar  |
-| `src/lib/components/ui/`         | Design-system primitives (Score, StatusPill, SeverityBar, Panel, Tabs, Modal, …) |
-| `src/lib/stores/`                | Realtime scan/report stores and job-stream state management                      |
-| `src/lib/report/`                | Filtering, grouping (by rule), contextual fixes, score bands, severity helpers   |
-| `tests/unit/api/`                | API client and request/response behavior tests                                   |
-| `tests/unit/components/`         | Component-level tests for playground and report surfaces                         |
-| `.storybook/`                    | Storybook stories used by interaction and accessibility checks                   |
-
-The visual language behind these primitives — color tokens, typography, spacing,
-shadows, and layout guardrails — is specified in
-[docs/design-system.md](../../docs/design-system.md).
-
-## Local commands
-
-From `clients/web/`:
-
-```bash
-bun install --frozen-lockfile
-bun run dev
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-Useful workspace commands:
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```bash
-bun run type-check
-bun run lint
-bun run test
-bun run storybook
-bun run ci
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-`bun run ci` is the main verification path. It runs formatting checks, strict linting, type checks, and coverage-backed tests.
-
-## What to look at first
-
-If you only inspect a few files, start here:
-
-- `src/routes/playground/+page.svelte` — the main scan submission experience
-- `src/lib/components/playground/PlaygroundPage.svelte` — form state, presets, AI config, submission flow
-- `src/lib/stores/scan-report.svelte.ts` and `src/lib/stores/scan-status.svelte.ts` — job streaming and report hydration
-- `src/lib/components/report/` — report UX and evidence rendering
-- `tests/unit/components/playground/PlaygroundPage.test.ts` — broad UI behavior coverage for the main flow
-- `tests/unit/api/client.test.ts` — browser/API contract behavior and error handling
-
-## Relationship to reports
-
-The frontend assumes the backend already did the hard normalization work. It renders the canonical report contract rather than branching on scanner-specific payloads. That is why most report logic lives in filtering, grouping, screenshot, and presentation helpers instead of per-scanner adapters.
-
-## Report UX patterns
-
-The report surface is built around a small number of opinionated patterns:
-
-- **0–100 score with status pill.** No letter grades. `Score` (in `lib/components/ui/`) renders the numeric score plus a `StatusPill` band (`Strong` / `Watch` / `Needs work` / `High risk` / `Failing`) computed by `lib/report/score-band.ts`.
-- **Severity distribution bar.** `SeverityBar` consumes `report.summary.bySeverity` and renders a single proportional stacked bar so reviewers see the issue mix at a glance. The same color ramp is used everywhere (red → orange → amber → blue → purple).
-- **Grouped issues by rule.** `lib/report/grouping.ts#groupIssuesByRule` aggregates flat occurrences into one row per `${scanner}:${ruleId}` fingerprint (Sentry-style). The fingerprint is stable across input reorderings and complements backend issue IDs used by project baseline diffing.
-- **Filter sidebar.** Scanner and severity multi-select, page/category single-select, and search live in `IssueFilterSidebar.svelte` on the left. Active filters surface as removable chips above the list.
-- **Modal with tabs and keyboard nav.** `IssueDetailModal` exposes Fix / Evidence / Details / Occurrences tabs, `Prev`/`Next` arrows, and `j`/`k`/arrow-key bindings to walk the filtered+sorted list without closing the modal.
-- **Contextual fix instructions.** `lib/report/contextual-fix.ts` parses occurrence HTML to emit rule-specific guidance (e.g., "Add `alt=…` to `<img src=…>`") and falls back to the generic `howToFix` when no generator matches.
-- **No audience toggle.** PM/Engineer/Designer modes were removed; there is one canonical, engineer-leaning report layout.

@@ -119,7 +119,7 @@ StageFlow is designed around four goals:
 | `services/orchestrator`      | FSM, container lifecycle, aggregation, PostgreSQL persistence           |
 | `services/archive-extractor` | Secure archive extraction and provenance generation                     |
 | `services/scanner-runner`    | Plugin discovery and scanner execution runtime                          |
-| `clients/web`                | Submission UX and live status/report views (SvelteKit 5)                |
+| `clients/web`                | Submission UX and live status/report views (React Router v7 SPA)        |
 | `clients/cli`                | Go CLI — scan submission, SSE streaming, report rendering, project mode |
 | `libs/contracts`             | JSON Schemas and generated contracts (Go + TypeScript)                  |
 | `libs/go/*`                  | 13 shared Go packages (messaging, models, config, etc.)                 |

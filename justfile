@@ -86,7 +86,7 @@ demo URL='https://example.com':
     current_host="$(hostname -f 2>/dev/null || hostname)"
     demo_vite_api_url="${STAGEFLOW_DEMO_VITE_API_URL:-http://localhost:8080}"
     demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-http://localhost:3000}"
-    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080}"
+    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:3020,http://127.0.0.1:3020}"
     demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-localhost}"
     demo_grafana_url="${STAGEFLOW_DEMO_GF_SERVER_ROOT_URL:-http://localhost:3001}"
 
@@ -297,8 +297,8 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
             ;;
     esac
 
-[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES=\"platform-api orchestrator frontend\")')]
-dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend':
+[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES="platform-api orchestrator frontend frontend-react")')]
+dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend frontend-react':
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -506,11 +506,6 @@ ci:
     echo "==> Frontend CI..."
     (cd {{web_dir}} && {{bun}} run ci)
 
-    echo "==> Frontend Storybook browser setup..."
-    (cd {{web_dir}} && {{bun}} x playwright install chromium)
-    echo "==> Frontend Storybook tests..."
-    (cd {{web_dir}} && {{bun}} run test-storybook)
-
     echo "==> Frontend audit..."
     (cd {{web_dir}} && {{bun}} audit --audit-level=high)
 
@@ -550,7 +545,7 @@ images:
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     @{{repo_root}}/devtools/scripts/install-cli.sh "{{BIN_DIR}}" "{{BIN_NAME}}"
 
-[group('run'), doc('Run a service locally (SERVICE=clients/web|storybook|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=clients/web|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -576,10 +571,6 @@ run SERVICE MODE='dev':
                 (cd {{web_dir}} && {{bun}} run dev)
             fi
             ;;
-        storybook)
-            echo "==> Starting clients/web Storybook..."
-            (cd {{web_dir}} && {{bun}} run storybook)
-            ;;
         api)
             echo "==> Starting platform-api..."
             (cd services/platform-api && {{go}} run ./cmd/server)
@@ -589,17 +580,10 @@ run SERVICE MODE='dev':
             (cd services/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be clients/web, storybook, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be clients/web, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac
-
-[group('quality'), doc('Run clients/web Storybook interaction + accessibility tests')]
-storybook-test:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    (cd {{web_dir}} && {{bun}} x playwright install chromium)
-    (cd {{web_dir}} && {{bun}} run test-storybook)
 
 [group('quality'), doc('Run repo shell regression tests')]
 shell-tests:

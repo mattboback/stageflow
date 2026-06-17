@@ -7,6 +7,7 @@ required_images=(
   "localhost/stageflow/platform-api:latest"
   "localhost/stageflow/orchestrator:latest"
   "localhost/stageflow/frontend:latest"
+  "localhost/stageflow/frontend-react:latest"
   "localhost/stageflow/extractor:latest"
   "localhost/stageflow/scanner-runner:latest"
 )

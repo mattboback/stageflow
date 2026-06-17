@@ -4,26 +4,30 @@
 # podman network create "$STAGEFLOW_NETWORK_NAME"`.
 
 services:
-  frontend:
+  frontend-react:
     build:
       context: ../..
       dockerfile: clients/web/Dockerfile
       args:
         VITE_API_URL: http://localhost:8080
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
-        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3010}
+        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3020}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
         VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility and quality scanning platform}
     ports:
-      - "127.0.0.1:3010:3000"
+      - "127.0.0.1:3020:3020"
 
   platform-api:
     environment:
+      # Repo-local dev stack runs unauthenticated on loopback so `just demo`,
+      # the printed CLI/curl commands, and the Web UI work without a key. The
+      # base compose keeps auth enabled for staging/self-host deployments.
+      PLATFORM_API_AUTH_DISABLED: "true"
       PLATFORM_API_ALLOW_PRIVATE_TARGETS: "true"
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"
       MINIO_PUBLIC_USE_SSL: "false"
       MINIO_USE_PROXY_URLS: "false"
-      PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:3010,http://localhost:3000,http://localhost:8080
+      PLATFORM_API_CORS_ALLOW_ORIGINS: http://localhost:8080,http://localhost:3020,http://127.0.0.1:3020
     ports:
       - "127.0.0.1:8080:8080"
 
