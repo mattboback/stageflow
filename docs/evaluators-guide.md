@@ -91,19 +91,17 @@ Highlights:
 ### 2.5 Web App and Accessibility Testing
 
 - Entry points:
-  - `clients/web/README.md` — frontend architecture, local commands, routes, and test entrypoints.
-  - `clients/web` — SvelteKit 5 web app.
-  - `clients/web/tests/unit` — Vitest unit tests for stores, utilities, and components.
+  - `clients/web/app/` — React Router v7 SPA routes and components.
+  - `clients/web` — React Router v7 web app (single frontend for stageflow.org).
   - Highlights:
 - Focus on report UX, evidence visualization, and live job status.
-- Storybook-based interaction and accessibility tests in CI.
 
 ---
 
 ## 3. Testing and Quality Gates
 
 - CI workflows:
-  - `.github/workflows/ci.yml` — combined Go, web app, Storybook, and Scanner Runner jobs.
+  - `.github/workflows/ci.yml` — combined Go, web app, and Scanner Runner jobs.
   - `.github/workflows/release-stageflow-cli.yml` — multi-platform CLI release pipeline.
 
 - Go quality gates:
@@ -111,8 +109,7 @@ Highlights:
   - `govulncheck ./...` for vulnerability scanning.
 
 - Web app and Scanner Runner:
-  - `bun run ci` in `clients/web` and `services/scanner-runner` (format check, strict lint, typecheck, coverage-backed tests).
-  - Web CI also builds the app and checks the asset budget; Storybook interaction + a11y tests run in a separate CI job.
+  - `bun run lint && bun run typecheck && bun run build` in `clients/web`; `bun run ci` in `services/scanner-runner`.
 
 - End-to-end verification:
   - `qa/e2e/project-scan-golden.sh` and `qa/fixtures/project-golden/*` — project baseline and regression golden test.

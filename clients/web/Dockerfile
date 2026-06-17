@@ -18,7 +18,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files first for better caching
-COPY clients/web-react/package.json clients/web-react/bun.lock ./
+COPY clients/web/package.json clients/web/bun.lock ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile
@@ -27,9 +27,9 @@ RUN bun install --frozen-lockfile
 COPY libs/contracts /libs/contracts
 
 # Copy React source code and configurations
-COPY clients/web-react/eslint.config.js clients/web-react/vite.config.ts clients/web-react/react-router.config.ts clients/web-react/tsconfig.app.json clients/web-react/tsconfig.json clients/web-react/tsconfig.node.json ./
-COPY clients/web-react/app ./app
-COPY clients/web-react/public ./public
+COPY clients/web/eslint.config.js clients/web/vite.config.ts clients/web/react-router.config.ts clients/web/tsconfig.app.json clients/web/tsconfig.json clients/web/tsconfig.node.json ./
+COPY clients/web/app ./app
+COPY clients/web/public ./public
 
 # Build arguments for environment variables.
 # These are baked into the static build at image build-time.
@@ -59,7 +59,7 @@ RUN apk upgrade --no-cache
 RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
 
 # Copy the repo-owned nginx config
-COPY clients/web-react/nginx.conf /etc/nginx/conf.d/default.conf
+COPY clients/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from builder (React Router SPA output)
 COPY --from=builder /app/build/client /usr/share/nginx/html

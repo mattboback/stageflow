@@ -290,7 +290,7 @@ services:
   frontend-react:
     build:
       context: ../..
-      dockerfile: clients/web-react/Dockerfile
+      dockerfile: clients/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}

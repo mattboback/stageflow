@@ -260,7 +260,7 @@ if [[ -f "$ENV_FILE" ]]; then
 	minio_access_key="$(read_env_value MINIO_ACCESS_KEY || true)"
 
 	if [[ -n "$vite_api_url" && ! "$vite_api_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then
-		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. \`just demo\` overrides this for the containerized demo, but \`just run clients/web-react\` and \`stageflow dev scan\` expect http://localhost:8080 for repo-local work."
+		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. \`just demo\` overrides this for the containerized demo, but \`just run clients/web\` and \`stageflow dev scan\` expect http://localhost:8080 for repo-local work."
 	fi
 
 	if [[ -n "$vite_site_url" && ! "$vite_site_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then

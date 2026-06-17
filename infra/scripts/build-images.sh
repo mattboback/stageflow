@@ -44,7 +44,7 @@ build platform-api localhost/stageflow/platform-api:latest stageflow/platform-ap
 build orchestrator localhost/stageflow/orchestrator:latest stageflow/orchestrator:latest services/orchestrator/Dockerfile
 
 echo "[images] Building React frontend..."
-build frontend-react localhost/stageflow/frontend-react:latest stageflow/frontend-react:latest clients/web-react/Dockerfile \
+build frontend-react localhost/stageflow/frontend-react:latest stageflow/frontend-react:latest clients/web/Dockerfile \
   --build-arg VITE_API_URL="${VITE_API_URL:-http://localhost:8080}" \
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-http://localhost:3020}" \

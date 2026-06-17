@@ -9,7 +9,7 @@ compose_project := env_var_or_default('COMPOSE_PROJECT_NAME', 'stageflow_dev')
 repo_root := justfile_directory()
 
 # Paths
-web_dir := 'clients/web-react'
+web_dir := 'clients/web'
 scanner_dir := 'services/scanner-runner'
 go_work := 'go.work'
 
@@ -66,7 +66,7 @@ deps:
     echo "==> Syncing Go workspace..."
     {{go}} work sync
 
-    echo "==> Installing clients/web-react dependencies..."
+    echo "==> Installing clients/web dependencies..."
     (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
 
     echo "==> Installing scanner-runner dependencies..."
@@ -516,7 +516,7 @@ ci:
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
 
-[group('build'), doc('Build all artifacts (clients/web-react + Go + runner)')]
+[group('build'), doc('Build all artifacts (clients/web + Go + runner)')]
 build:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -530,7 +530,7 @@ build:
         (cd "$dir" && {{go}} build ./...)
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
-    echo "==> Building clients/web-react..."
+    echo "==> Building clients/web..."
     (cd {{web_dir}} && {{bun}} run build)
 
     echo "==> Building scanner-runner..."
@@ -545,7 +545,7 @@ images:
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     @{{repo_root}}/devtools/scripts/install-cli.sh "{{BIN_DIR}}" "{{BIN_NAME}}"
 
-[group('run'), doc('Run a service locally (SERVICE=clients/web-react|api|orchestrator MODE=dev|preview)')]
+[group('run'), doc('Run a service locally (SERVICE=clients/web|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -562,12 +562,12 @@ run SERVICE MODE='dev':
     fi
 
     case "$service" in
-        clients/web-react|clients/web)
+        clients/web)
             if [[ "$mode" == "preview" ]]; then
-                echo "==> Starting clients/web-react preview server..."
+                echo "==> Starting clients/web preview server..."
                 (cd {{web_dir}} && {{bun}} run preview)
             else
-                echo "==> Starting clients/web-react dev server..."
+                echo "==> Starting clients/web dev server..."
                 (cd {{web_dir}} && {{bun}} run dev)
             fi
             ;;
@@ -580,7 +580,7 @@ run SERVICE MODE='dev':
             (cd services/orchestrator && {{go}} run ./cmd/orchestrator)
             ;;
         *)
-            echo "SERVICE must be clients/web-react, api, or orchestrator (got: $service)" >&2
+            echo "SERVICE must be clients/web, api, or orchestrator (got: $service)" >&2
             exit 2
             ;;
     esac
