@@ -4,6 +4,7 @@
 	import { Panel, SeverityBar, chipVariants } from '$lib/components/ui';
 	import {
 		formatScannerStatus,
+		getScannerLabel,
 		getScannerStatusTone,
 		getSeverityDotClass,
 		isManualReviewIssue,
@@ -249,13 +250,13 @@
 							: scanner.status === 'failed'
 								? 'text-red-500'
 								: scanner.status === 'skipped'
-									? 'text-slate-400'
+									? 'text-ink-faint'
 									: 'text-amber-500'
 					)}
 				/>
 				<div class="min-w-0">
 					<p class="text-ink truncate font-semibold">
-						{scanner.name ?? scanner.id}
+						{getScannerLabel(scanner.id)}
 					</p>
 					<p class="text-ink-muted text-xs">
 						{issueCount} issue{issueCount === 1 ? '' : 's'}

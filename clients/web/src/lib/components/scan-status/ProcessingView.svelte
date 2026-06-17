@@ -2,6 +2,7 @@
 	import type { ScanResult } from '$lib/types/scan';
 
 	import { Progress } from '$lib/components/ui';
+	import { getScannerLabel } from '$lib/report';
 	import { cn } from '$lib/utils';
 	import { ChevronDown, TerminalSquare } from 'lucide-svelte';
 
@@ -61,13 +62,6 @@
 		return `~${minutes} min remaining`;
 	}
 
-	function formatScannerName(scannerType: string): string {
-		return scannerType
-			.split('-')
-			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-			.join(' ');
-	}
-
 	const stageInfo = $derived(getStageInfo(result?.state, result?.progress));
 	const estimatedTime = $derived(
 		result?.remaining_scanners?.length === 1 && result.remaining_scanners[0] === 'lighthouse'
@@ -81,7 +75,7 @@
 		if (remainingScanners.length > 0) {
 			return `Running ${remainingScanners
 				.slice(0, 2)
-				.map((scannerType) => formatScannerName(scannerType))
+				.map((scannerType) => getScannerLabel(scannerType))
 				.join(
 					', '
 				)}${remainingScanners.length > 2 ? ` and ${remainingScanners.length - 2} more` : ''}.`;

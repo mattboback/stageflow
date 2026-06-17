@@ -60,7 +60,7 @@
 	).join(', ')}"
 >
 	<svg viewBox="0 0 80 80" width={size} height={size} class="-rotate-90" aria-hidden="true">
-		<circle cx="40" cy="40" r={RADIUS} fill="none" class="stroke-slate-100" stroke-width={STROKE} />
+		<circle cx="40" cy="40" r={RADIUS} fill="none" class="stroke-surface-muted" stroke-width={STROKE} />
 		{#each segments as segment, idx (segment.level)}
 			<circle
 				cx="40"

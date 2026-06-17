@@ -46,7 +46,7 @@
 	);
 
 	const strokeColorClass = $derived.by(() => {
-		if (!band) return 'stroke-slate-300';
+		if (!band) return 'stroke-line';
 		switch (band.tone) {
 			case 'strong':
 				return 'stroke-emerald-500';
@@ -59,7 +59,7 @@
 			case 'failing':
 				return 'stroke-red-500';
 			default:
-				return 'stroke-slate-300';
+				return 'stroke-line';
 		}
 	});
 
@@ -98,7 +98,7 @@
 				r={radius}
 				fill="none"
 				stroke="currentColor"
-				class="stroke-slate-100 dark:stroke-slate-800"
+				class="stroke-surface-muted"
 				stroke-width={strokeWidth}
 			/>
 			<!-- Active circle -->

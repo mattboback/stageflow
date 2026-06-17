@@ -21,6 +21,8 @@
 	--color-ink: #2d2a26;
 	--color-ink-muted: #5c5751;
 	--color-ink-faint: #6f6961;
+	/* Decorative ghost numerals/marks — soft, but clears WCAG AA large-text (3:1) on paper */
+	--color-ink-ghost: #877f74;
 
 	/* Borders — hairline, warm grey */
 	--color-line: #ddd9d0;
@@ -34,11 +36,15 @@
 	--color-accent-subtle: #b2cecd;
 	--color-accent-deep: #0a2526;
 
-	/* Severity — semantic, shared with the report */
-	--color-severity-critical: #b91c1c;
-	--color-severity-serious: #c2410c;
-	--color-severity-moderate: #a16207;
-	--color-severity-minor: #3f6212;
+	/* Severity — semantic, shared with the report.
+	   Canonical primary hue per level (Tailwind -500), matching the dots, bars,
+	   and donut strokes the app actually renders. Pastel bg/border + -600 badge
+	   variants remain Tailwind-palette in severity.ts (see docs/design-system.md). */
+	--color-severity-critical: #ef4444;
+	--color-severity-serious: #f97316;
+	--color-severity-moderate: #f59e0b;
+	--color-severity-minor: #3b82f6;
+	--color-severity-info: #a855f7;
 
 	/* Radius — rectilinear surfaces; clamp the upper end of the scale */
 	--radius-xs: 2px;

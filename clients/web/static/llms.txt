@@ -1,0 +1,24 @@
+# StageFlow
+
+> StageFlow is a self-hosted, Podman-native platform that runs accessibility, performance, SEO, and security scanners in rootless containers, streams progress live, and merges every finding into a single release-ready report. No account is required.
+
+StageFlow runs eight scanners (Axe, Lighthouse, Security Headers, SEO, Open Graph, Link Checker, Spelling & Grammar, and an optional AI Navigator). Submit one or more live URLs (or a static-site ZIP), and each scanner runs isolated and reports into one unified report with severity, evidence, and remediation side by side.
+
+## Core pages
+
+- [Home](https://stageflow.org/): Product overview — what StageFlow does, what a report looks like, and the scanner index.
+- [Playground](https://stageflow.org/playground): Start a scan — paste URLs or upload a ZIP, choose scanners, and run a complete scan in under a minute.
+
+## Documentation
+
+- [README / Docs](https://github.com/mattboback/stageflow/blob/main/README.md): Setup, architecture, and self-hosting instructions.
+- [GitHub repository](https://github.com/mattboback/stageflow): Source code, issues, and Podman Quadlet deployment.
+
+## API
+
+- [Scan results (JSON)](https://stageflow.org/api/v1/jobs/{jobId}/results): Machine-readable unified report for a completed scan job.
+- [Standalone report (HTML)](https://stageflow.org/api/v1/jobs/{jobId}/report): Per-scanner standalone HTML report for a completed scan job.
+
+## Optional
+
+- [Open source license](https://github.com/mattboback/stageflow/blob/main/LICENSE): Licensing terms for self-hosting and reuse.

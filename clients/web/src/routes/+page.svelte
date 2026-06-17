@@ -8,7 +8,7 @@
 	import { ArrowRight } from 'lucide-svelte';
 
 	const facts = [
-		{ value: '8', label: 'scanners per run' },
+		{ value: '8', label: 'scanners available' },
 		{ value: 'WCAG 2.1 AA', label: 'accessibility baseline' },
 		{ value: '0', label: 'accounts required' }
 	] as const;
@@ -162,7 +162,7 @@
 						class="border-line grid grid-cols-[3.5rem_1fr] gap-x-6 border-b py-7 sm:grid-cols-[5rem_1fr]"
 					>
 						<span
-							class="stat-mono text-paper-deep text-4xl leading-none font-bold select-none sm:text-5xl"
+							class="stat-mono text-ink-ghost text-4xl leading-none font-bold select-none sm:text-5xl"
 							aria-hidden="true">{item.step}</span
 						>
 						<div>
