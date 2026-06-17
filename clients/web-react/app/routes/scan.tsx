@@ -151,7 +151,7 @@ export default function Scan() {
 								aria-valuemax={100}
 								aria-label="Overall scan progress"
 							>
-								<i className={isRunning ? 'live' : undefined} style={{ width: `${pct}%` }} />
+								<i className={isRunning ? 'live' : undefined} style={{ transform: `scaleX(${pct / 100})` }} />
 							</div>
 						</div>
 						<div className="shead__meta">
@@ -198,7 +198,14 @@ export default function Scan() {
 						<div>
 							<section className="panel" aria-label="Scanner channels">
 								<div className="panel__head">
-									<span className="label">Channels · live</span>
+									<span className="label">
+										Channels · live{' '}
+										{totalCount > 0 && (
+											<span className="ch-summary">
+												— {doneCount}/{totalCount} done
+											</span>
+										)}
+									</span>
 									<span className="mono" style={{ fontSize: '.72rem', color: 'var(--ink-muted)' }}>
 										{transportLabel}
 									</span>

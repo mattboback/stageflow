@@ -16,12 +16,20 @@
 /* overall progress meter */
 .meter { margin-top: 0.9rem; height: 7px; border-radius: 4px; background: var(--surface-sunk); border: 1px solid var(--line); overflow: hidden; }
 .meter > i { display: block; height: 100%; background: linear-gradient(90deg, var(--signal-strong), var(--signal));
-	width: 0; transition: width 0.6s var(--ease); position: relative; }
+	width: 100%; transform: scaleX(0); transform-origin: left center;
+	transition: transform 0.6s var(--ease); position: relative; }
 .meter > i.live::after { content: ''; position: absolute; inset: 0; background:
 	repeating-linear-gradient(45deg, transparent 0 8px, oklch(1 0 0 / 0.18) 8px 16px); animation: slide 0.9s linear infinite; }
 @keyframes slide { to { background-position: 22px 0; } }
 
 .grid { display: grid; grid-template-columns: 1fr 19rem; gap: 1.5rem; align-items: start; margin-top: 1.5rem; }
+
+.ch-summary {
+	font-family: var(--mono); font-size: 0.7rem;
+	color: var(--ink-faint); font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	margin-left: 0.3rem;
+}
 
 /* channels */
 .ch { display: grid; grid-template-columns: 1.1rem 1fr auto; gap: 0.85rem; align-items: center;
