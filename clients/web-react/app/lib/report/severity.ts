@@ -46,24 +46,29 @@ export function compareSeverity(a?: string | null, b?: string | null): number {
 	return severityRank(a) - severityRank(b);
 }
 
+function severityToken(severity?: string | null): string {
+	const normalized = normalizeSeverity(severity);
+	return normalized ? ` sev-${normalized}` : '';
+}
+
 export function getSeverityContainerClass(severity?: string | null): string {
-	return `sev-container sev-${severity || 'default'}`;
+	return `sev-container${severityToken(severity)}`;
 }
 
 export function getSeverityDotClass(severity?: string | null): string {
-	return `sev-dot sev-${severity || 'default'}`;
+	return `sev-dot${severityToken(severity)}`;
 }
 
 export function getSeverityBadgeClass(severity?: string | null): string {
-	return `sev-badge sev-${severity || 'default'}`;
+	return `sev-badge${severityToken(severity)}`;
 }
 
 export function getSeverityBorderClass(severity?: string | null): string {
-	return `sev-border sev-${severity || 'default'}`;
+	return `sev-border${severityToken(severity)}`;
 }
 
 export function getSeverityOverlayClass(severity?: string | null): string {
-	return `sev-overlay sev-${severity || 'default'}`;
+	return `sev-overlay${severityToken(severity)}`;
 }
 
 export function getSeverityStrokeColor(severity?: string | null): string {
@@ -105,10 +110,11 @@ export function getSeverityChipClass(
 	isActive: boolean,
 	size: 'sm' | 'md' = 'sm'
 ): string {
+	const normalized = normalizeSeverity(severity);
 	return cn(
 		'sev-chip',
-		`sev-${severity}`,
-		`size-${size}`,
+		size === 'md' && 'size-md',
+		normalized && `sev-${normalized}`,
 		isActive && 'active'
 	);
 }
