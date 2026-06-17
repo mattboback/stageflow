@@ -12,6 +12,9 @@ import {
 import { IssuesView } from '../components/report/IssuesView';
 import { OverviewDashboard } from '../components/report/OverviewDashboard';
 import { IssueDetailModal } from '../components/report/IssueDetailModal';
+import { VisualReviewPanel } from '../components/report/VisualReviewPanel';
+import { ArtifactsView } from '../components/report/ArtifactsView';
+import { ErrorsView } from '../components/report/ErrorsView';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
 import { buildOccurrenceModeReport, isIssueSortKey, type IssueSortKey } from '../lib/report';
 import reportStyles from './scan-report.css?url';
@@ -37,7 +40,8 @@ export default function ScanReport() {
 	const { id = '' } = useParams();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const { status, report, job, error, screenshots } = useScanReport(id);
+	const { status, report, job, error, screenshots, refreshArtifacts } =
+		useScanReport(id);
 
 	const displayReport = useMemo(
 		() => (report ? buildOccurrenceModeReport(report) : null),
@@ -184,13 +188,15 @@ export default function ScanReport() {
 									id="report-panel-pages"
 									role="tabpanel"
 									aria-labelledby="report-tab-pages"
-									className="rsection-placeholder"
 								>
-									<h2>Visual review</h2>
-									<p>
-										Coming in Phase 4 — screenshot viewer with issue overlay markers
-										and live WCAG contrast sampler.
-									</p>
+									<VisualReviewPanel
+										report={displayReport}
+										screenshots={screenshots}
+										activeScanner={activeScanner}
+										activePage={activePage}
+										onSelectPage={(pageId) => updateParams({ page: pageId })}
+										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+									/>
 								</section>
 							)}
 
@@ -199,13 +205,14 @@ export default function ScanReport() {
 									id="report-panel-artifacts"
 									role="tabpanel"
 									aria-labelledby="report-tab-artifacts"
-									className="rsection-placeholder"
+									className="rsection-artifacts"
 								>
-									<h2>Artifacts & errors</h2>
-									<p>
-										Coming in Phase 4 — JSON/HTML report downloads, screenshot grid,
-										scanner error details.
-									</p>
+									<ArtifactsView
+										jobId={id}
+										job={job}
+										onRefreshArtifacts={refreshArtifacts}
+									/>
+									<ErrorsView errors={displayReport.errors} />
 								</section>
 							)}
 
