@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getScannerLabel } from '$lib/report';
 	import { cn } from '$lib/utils';
 
 	interface Props {
@@ -8,15 +9,6 @@
 	}
 
 	let { expected, completed, remaining }: Props = $props();
-
-	// Scanner names are derived from ids, not hardcoded labels, so new
-	// scanners render correctly without a client release.
-	function formatScannerName(scannerType: string): string {
-		return scannerType
-			.split('-')
-			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-			.join(' ');
-	}
 
 	const rows = $derived.by(() => {
 		const order = expected.length > 0 ? expected : [...completed, ...remaining];
@@ -62,7 +54,7 @@
 							></span>
 						{/if}
 						<span class={cn('font-medium', row.done ? 'text-ink' : 'text-ink-strong')}>
-							{formatScannerName(row.id)}
+							{getScannerLabel(row.id)}
 						</span>
 					</td>
 					<td class="text-right">

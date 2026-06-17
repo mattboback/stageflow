@@ -86,7 +86,7 @@
 					'border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-[color,border-color]',
 					activeTab === tab.id
 						? 'border-accent text-accent'
-						: 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+						: 'border-transparent text-ink-muted hover:border-line hover:text-ink'
 				)}
 				role="tab"
 				id={`tab-${tab.id}`}

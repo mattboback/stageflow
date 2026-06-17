@@ -33,7 +33,7 @@
 		'needs-work': 'bg-amber-500/5 text-amber-800 border-amber-500/20',
 		'high-risk': 'bg-orange-500/5 text-orange-800 border-orange-500/20',
 		failing: 'bg-red-500/5 text-red-800 border-red-500/20',
-		neutral: 'bg-slate-500/5 text-slate-800 border-slate-500/20'
+		neutral: 'bg-ink/5 text-ink border-ink/20'
 	};
 </script>
 
@@ -56,7 +56,7 @@
 			tone === 'needs-work' && 'bg-amber-500',
 			tone === 'high-risk' && 'bg-orange-500',
 			tone === 'failing' && 'bg-red-500',
-			tone === 'neutral' && 'bg-slate-400'
+			tone === 'neutral' && 'bg-ink-faint'
 		)}
 	></span>
 	{label ?? defaultLabels[tone]}

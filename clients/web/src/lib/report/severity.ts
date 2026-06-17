@@ -21,6 +21,28 @@ const SEVERITY_RANK: Record<SeverityLevel, number> = {
 	info: 4
 };
 
+/**
+ * Canonical severity primaries as `r, g, b` triples — these MIRROR the
+ * `--color-severity-*` tokens in app.css. They live here (rather than as
+ * `var(--color-severity-*)`) because they feed SVG `stroke`/`fill` presentation
+ * attributes, which do not resolve CSS custom properties. Keep in sync with
+ * app.css; CSS-context severity colors (bars, dots, tracks) read the tokens directly.
+ */
+const SEVERITY_PRIMARY_RGB: Record<SeverityLevel, string> = {
+	critical: '239, 68, 68', // red-500   #ef4444
+	serious: '249, 115, 22', // orange-500 #f97316
+	moderate: '245, 158, 11', // amber-500 #f59e0b
+	minor: '59, 130, 246', // blue-500  #3b82f6
+	info: '168, 85, 247' // purple-500 #a855f7
+};
+/** Neutral fallback — mirrors --color-ink-faint (#6f6961). */
+const SEVERITY_NEUTRAL_RGB = '111, 105, 97';
+
+function severityRgb(severity?: string | null): string {
+	const level = normalizeSeverity(severity);
+	return level ? SEVERITY_PRIMARY_RGB[level] : SEVERITY_NEUTRAL_RGB;
+}
+
 export function normalizeSeverity(value?: string | null): SeverityLevel | null {
 	if (!value) return null;
 	return (SEVERITY_LEVELS as readonly string[]).includes(value) ? (value as SeverityLevel) : null;
@@ -65,7 +87,7 @@ export function getSeverityContainerClass(severity?: string | null): string {
 		case 'info':
 			return 'bg-purple-50 border-purple-100';
 		default:
-			return 'bg-slate-50 border-slate-100';
+			return 'bg-surface-muted border-line';
 	}
 }
 
@@ -85,7 +107,7 @@ export function getSeverityDotClass(severity?: string | null): string {
 		case 'info':
 			return 'bg-purple-500';
 		default:
-			return 'bg-slate-400';
+			return 'bg-ink-faint';
 	}
 }
 
@@ -105,7 +127,7 @@ export function getSeverityBadgeClass(severity?: string | null): string {
 		case 'info':
 			return 'bg-purple-500 text-white';
 		default:
-			return 'bg-slate-400 text-white';
+			return 'bg-ink-faint text-white';
 	}
 }
 
@@ -125,7 +147,7 @@ export function getSeverityBorderClass(severity?: string | null): string {
 		case 'info':
 			return 'border-purple-200 bg-purple-50';
 		default:
-			return 'border-slate-200 bg-slate-50';
+			return 'border-line bg-surface-muted';
 	}
 }
 
@@ -145,7 +167,7 @@ export function getSeverityOverlayClass(severity?: string | null): string {
 		case 'info':
 			return 'border-purple-500 bg-purple-500/10';
 		default:
-			return 'border-slate-400 bg-slate-200/30';
+			return 'border-ink-faint bg-ink-faint/15';
 	}
 }
 
@@ -154,20 +176,7 @@ export function getSeverityOverlayClass(severity?: string | null): string {
  * Used for SVG-based overlays where Tailwind classes don't apply.
  */
 export function getSeverityStrokeColor(severity?: string | null): string {
-	switch (severity) {
-		case 'critical':
-			return 'rgba(239, 68, 68, 0.95)'; // red-500
-		case 'serious':
-			return 'rgba(249, 115, 22, 0.95)'; // orange-500
-		case 'moderate':
-			return 'rgba(245, 158, 11, 0.95)'; // amber-500
-		case 'minor':
-			return 'rgba(59, 130, 246, 0.95)'; // blue-500
-		case 'info':
-			return 'rgba(168, 85, 247, 0.95)'; // purple-500
-		default:
-			return 'rgba(148, 163, 184, 0.95)'; // slate-400
-	}
+	return `rgba(${severityRgb(severity)}, 0.95)`;
 }
 
 /**
@@ -175,20 +184,7 @@ export function getSeverityStrokeColor(severity?: string | null): string {
  * Used for SVG-based overlays where Tailwind classes don't apply.
  */
 export function getSeverityFillColor(severity?: string | null): string {
-	switch (severity) {
-		case 'critical':
-			return 'rgba(239, 68, 68, 0.15)'; // red-500 @ 15%
-		case 'serious':
-			return 'rgba(249, 115, 22, 0.15)'; // orange-500 @ 15%
-		case 'moderate':
-			return 'rgba(245, 158, 11, 0.15)'; // amber-500 @ 15%
-		case 'minor':
-			return 'rgba(59, 130, 246, 0.15)'; // blue-500 @ 15%
-		case 'info':
-			return 'rgba(168, 85, 247, 0.15)'; // purple-500 @ 15%
-		default:
-			return 'rgba(148, 163, 184, 0.15)'; // slate-400 @ 15%
-	}
+	return `rgba(${severityRgb(severity)}, 0.15)`;
 }
 
 /**

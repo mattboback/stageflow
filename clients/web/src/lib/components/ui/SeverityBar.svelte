@@ -23,14 +23,6 @@
 		'info'
 	];
 
-	const colorClass: Record<SeveritySegment['severity'], string> = {
-		critical: 'bg-red-500',
-		serious: 'bg-orange-500',
-		moderate: 'bg-amber-500',
-		minor: 'bg-blue-500',
-		info: 'bg-purple-500'
-	};
-
 	const textClass: Record<SeveritySegment['severity'], string> = {
 		critical: 'text-red-700',
 		serious: 'text-orange-700',
@@ -50,7 +42,7 @@
 <div class={cn('w-full', className)} data-testid="severity-bar">
 	<div
 		class={cn(
-			'flex w-full overflow-hidden rounded-full bg-slate-100',
+			'flex w-full overflow-hidden rounded-full bg-surface-muted',
 			height === 'sm' ? 'h-1.5' : 'h-2.5'
 		)}
 		role="img"
@@ -59,7 +51,10 @@
 		{#each SEGMENTS as severity (severity)}
 			{@const value = pct(severity)}
 			{#if value > 0}
-				<span class={cn('h-full', colorClass[severity])} style="width: {value}%"></span>
+				<span
+						class="h-full"
+						style="width: {value}%; background-color: var(--color-severity-{severity})"
+					></span>
 			{/if}
 		{/each}
 	</div>
@@ -69,7 +64,10 @@
 				{@const value = counts[severity] ?? 0}
 				{#if value > 0}
 					<span class={cn('inline-flex items-center gap-1.5', textClass[severity])}>
-						<span class={cn('h-1.5 w-1.5 rounded-full', colorClass[severity])}></span>
+						<span
+								class="h-1.5 w-1.5 rounded-full"
+								style="background-color: var(--color-severity-{severity})"
+							></span>
 						<span class="font-semibold">{value}</span>
 						<span class="text-ink-faint capitalize">{severity}</span>
 					</span>

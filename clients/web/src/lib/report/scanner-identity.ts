@@ -50,6 +50,20 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 };
 
 /**
+ * Canonical display label for a scanner id (e.g. `seo` → "SEO",
+ * `spelling-grammar` → "Spelling & Grammar"). Falls back to a title-cased slug
+ * so newly-added scanners still render a sensible name without a client release.
+ */
+export function getScannerLabel(scannerId: string): string {
+	const meta = SCANNER_META[scannerId];
+	if (meta) return meta.label;
+	return scannerId
+		.split('-')
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(' ');
+}
+
+/**
  * Returns Tailwind classes for a scanner tile.
  * Neutral slate/white base; teal accent ring when selected.
  */
