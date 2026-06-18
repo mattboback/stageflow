@@ -137,7 +137,7 @@ jobs:
 
       - name: Upload golden artifacts
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: golden-regression-artifacts
           path: artifacts/project-golden
