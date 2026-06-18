@@ -16,7 +16,7 @@ require (
 	github.com/mattboback/stageflow/libs/go/models v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/scannerregistry v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/storage v0.0.0-00010101000000-000000000000
-	github.com/mattn/go-sqlite3 v1.14.44
+	github.com/mattn/go-sqlite3 v1.14.46
 	github.com/nats-io/nats-server/v2 v2.14.0
 )
 
