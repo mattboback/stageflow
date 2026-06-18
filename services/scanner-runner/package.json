@@ -76,7 +76,7 @@
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@types/fs-extra": "^11.0.4",
-		"@types/node": "22",
+		"@types/node": "25",
 		"@vitest/coverage-v8": "4.1.6",
 		"@vitest/eslint-plugin": "^1.6.17",
 		"eslint": "^10.3.0",
