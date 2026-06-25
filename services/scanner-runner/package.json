@@ -69,7 +69,7 @@
 		"minio": "^8.0.7",
 		"nats": "^2.29.3",
 		"playwright": "1.60.0",
-		"playwright-core": "1.60.0",
+		"playwright-core": "1.61.1",
 		"sharp": "^0.34.5",
 		"uuid": "14.0.0"
 	},
