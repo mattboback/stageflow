@@ -47,7 +47,7 @@ COPY services/scanner-runner/src ./src
 COPY services/scanner-runner/scripts ./scripts
 COPY libs/go/scannercatalog/manifests /repo/libs/go/scannercatalog/manifests
 COPY libs/contracts/scanner-manifest/schema /repo/libs/contracts/scanner-manifest/schema
-RUN bun run build
+RUN bun run build:prepared
 RUN rm -rf node_modules \
   && bun install --frozen-lockfile --production --ignore-scripts \
   && rm -rf node_modules/@stageflow/contracts-scanner-manifest \

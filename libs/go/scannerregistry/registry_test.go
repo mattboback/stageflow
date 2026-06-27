@@ -200,18 +200,63 @@ func TestRegistry_ReturnsCopies(t *testing.T) {
 
 	registerDefinition(t, reg, def)
 
-	def.Name = "mutated"
-	def.Categories[0] = "mutated-category"
-	def.Aliases[0] = "mutated-alias"
-	def.Capabilities.OutputFormats[0] = "xml"
-	def.Requirements.Browser.Args[0] = "--mutated"
-	def.Config["mode"] = "mutated"
-	def.Config["rules"].([]any)[0] = "mutated"
+	t.Run("register clones caller state", func(t *testing.T) {
+		def.Name = "mutated"
+		def.Categories[0] = "mutated-category"
+		def.Aliases[0] = "mutated-alias"
+		def.Capabilities.OutputFormats[0] = "xml"
+		def.Requirements.Browser.Args[0] = "--mutated"
+		def.Config["mode"] = "mutated"
+		def.Config["rules"].([]any)[0] = "mutated"
 
-	got, ok := reg.Get(moduleAxe)
-	if !ok {
-		t.Fatalf("Get(%q) not found", moduleAxe)
-	}
+		got, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		requireAxeDefinitionCopy(t, got)
+	})
+
+	t.Run("get clones internal state", func(t *testing.T) {
+		got, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		got.Name = "changed-after-get"
+		got.Categories[0] = "changed-after-get"
+		got.Aliases[0] = "changed-after-get"
+		got.Capabilities.OutputFormats[0] = "changed-after-get"
+		got.Requirements.Browser.Args[0] = "changed-after-get"
+		got.Config["mode"] = "changed-after-get"
+		got.Config["rules"].([]any)[0] = "changed-after-get"
+
+		again, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		requireAxeDefinitionCopy(t, again)
+	})
+
+	t.Run("list clones internal state", func(t *testing.T) {
+		list := reg.List()
+		list[0].Name = "changed-through-list"
+
+		again, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		if again.Name != scannerNameAxe {
+			t.Fatalf("List returned mutable internal state: %q", again.Name)
+		}
+	})
+}
+
+func requireAxeDefinitionCopy(t *testing.T, got *Definition) {
+	t.Helper()
+
 	if got.Name != scannerNameAxe ||
 		got.Categories[0] != categoryAccessibility ||
 		got.Aliases[0] != moduleAxeAlias ||
@@ -219,33 +264,7 @@ func TestRegistry_ReturnsCopies(t *testing.T) {
 		got.Requirements.Browser.Args[0] != "--headless" ||
 		got.Config["mode"] != "strict" ||
 		got.Config["rules"].([]any)[0] != "color-contrast" {
-		t.Fatalf("Register kept mutable caller state: %#v", got)
-	}
-
-	got.Name = "changed-after-get"
-	got.Categories[0] = "changed-after-get"
-	got.Aliases[0] = "changed-after-get"
-	got.Capabilities.OutputFormats[0] = "changed-after-get"
-	got.Requirements.Browser.Args[0] = "changed-after-get"
-	got.Config["mode"] = "changed-after-get"
-	got.Config["rules"].([]any)[0] = "changed-after-get"
-
-	again, _ := reg.Get(moduleAxe)
-	if again.Name != scannerNameAxe ||
-		again.Categories[0] != categoryAccessibility ||
-		again.Aliases[0] != moduleAxeAlias ||
-		again.Capabilities.OutputFormats[0] != "json" ||
-		again.Requirements.Browser.Args[0] != "--headless" ||
-		again.Config["mode"] != "strict" ||
-		again.Config["rules"].([]any)[0] != "color-contrast" {
-		t.Fatalf("Get returned mutable internal state: %#v", again)
-	}
-
-	list := reg.List()
-	list[0].Name = "changed-through-list"
-	again, _ = reg.Get(moduleAxe)
-	if again.Name != scannerNameAxe {
-		t.Fatalf("List returned mutable internal state: %q", again.Name)
+		t.Fatalf("registry returned mutable scanner state: %#v", got)
 	}
 }
 

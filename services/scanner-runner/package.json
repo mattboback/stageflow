@@ -39,7 +39,8 @@
 	},
 	"scripts": {
 		"prepare:contracts": "../../devtools/scripts/generate-contracts.sh ts && node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs",
-		"build": "bun run prepare:contracts && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
+		"build": "bun run prepare:contracts && bun run build:prepared",
+		"build:prepared": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
 		"start": "node dist/index.js",
 		"dev": "bun src/index.ts",
 		"lint": "bun run prepare:contracts && eslint \"src/**/*.ts\" \"tests/**/*.ts\" vitest.config.ts eslint.config.mjs --cache --cache-location ../../.cache/eslint-scanner",

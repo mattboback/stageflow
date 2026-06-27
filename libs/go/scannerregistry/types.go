@@ -84,19 +84,21 @@ func (d *Definition) clone() *Definition {
 		return nil
 	}
 
-	copy := *d
-	copy.Categories = append([]string(nil), d.Categories...)
-	copy.Aliases = append([]string(nil), d.Aliases...)
-	copy.Capabilities = d.Capabilities.clone()
-	copy.Requirements = d.Requirements.clone()
+	clone := *d
+
+	clone.Categories = append([]string(nil), d.Categories...)
+	clone.Aliases = append([]string(nil), d.Aliases...)
+	clone.Capabilities = d.Capabilities.clone()
+
+	clone.Requirements = d.Requirements.clone()
 	if d.Config != nil {
-		copy.Config = make(map[string]any, len(d.Config))
+		clone.Config = make(map[string]any, len(d.Config))
 		for key, value := range d.Config {
-			copy.Config[key] = cloneConfigValue(value)
+			clone.Config[key] = cloneConfigValue(value)
 		}
 	}
 
-	return &copy
+	return &clone
 }
 
 func (c Capabilities) clone() Capabilities {
@@ -117,17 +119,19 @@ func (r Requirements) clone() Requirements {
 func cloneConfigValue(value any) any {
 	switch typed := value.(type) {
 	case map[string]any:
-		copy := make(map[string]any, len(typed))
+		clone := make(map[string]any, len(typed))
 		for key, item := range typed {
-			copy[key] = cloneConfigValue(item)
+			clone[key] = cloneConfigValue(item)
 		}
-		return copy
+
+		return clone
 	case []any:
-		copy := make([]any, len(typed))
+		clone := make([]any, len(typed))
 		for i, item := range typed {
-			copy[i] = cloneConfigValue(item)
+			clone[i] = cloneConfigValue(item)
 		}
-		return copy
+
+		return clone
 	case []string:
 		return append([]string(nil), typed...)
 	default:
