@@ -7,8 +7,7 @@ use this guide for external consumers or new code.
 ## Current Source of Truth
 
 - JSON Schema: `libs/contracts/report/schema/unified-report.v2.schema.json`
-- Generated TypeScript: `libs/contracts/report/generated/typescript/`
-- Generated Go: `libs/contracts/report/generated/go/`
+- Generated code: run `just generate-contracts` from the repo root.
 
 ### Repo Status (Jan 2026)
 
@@ -40,25 +39,6 @@ The StageFlow frontend currently imports directly from the generated file:
 ```
 libs/contracts/report/generated/typescript/unified-report.v2.ts
 ```
-
-### Validation
-
-The generated package includes validators:
-
-```typescript
-import { validateReport, isValidReport } from "@stageflow/contracts-report";
-
-if (isValidReport(data)) {
-  // data is UnifiedReportV2
-}
-
-const result = validateReport(jsonData);
-if (!result.valid) {
-  console.error(result.errors);
-}
-```
-
----
 
 ## Go Usage
 

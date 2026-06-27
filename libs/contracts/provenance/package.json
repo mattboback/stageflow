@@ -10,9 +10,9 @@
 	"main": "dist/generated/typescript/index.js",
 	"types": "dist/generated/typescript/index.d.ts",
 	"scripts": {
-		"generate": "bun run generate:ts && bun run generate:go",
-		"generate:ts": "json2ts schema/provenance.schema.json -o generated/typescript/provenance.ts --unreachableDefinitions",
-		"generate:go": "go run github.com/atombender/go-jsonschema@v0.20.0 --package provenance --tags json --struct-name-from-title schema/provenance.schema.json > generated/go/provenance_schema.go",
+		"generate": "../../../devtools/scripts/generate-contracts.sh",
+		"generate:ts": "../../../devtools/scripts/generate-contracts.sh",
+		"generate:go": "../../../devtools/scripts/generate-contracts.sh",
 		"validate": "node schema/validate.js",
 		"validate:fixtures": "node schema/validate.js fixtures/provenance.no-auth.json && node schema/validate.js fixtures/provenance.auth-storage-state.json && node schema/validate.js fixtures/provenance.auth-form.json && node schema/validate.js fixtures/provenance.auth-form-literal.json",
 		"build": "bun run generate && bun run validate:fixtures && tsc",

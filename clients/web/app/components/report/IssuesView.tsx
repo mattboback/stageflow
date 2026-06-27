@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import type { IssueDetail, UnifiedReport } from '../../lib/types/unified-report';
+import type { IssueDetail, PageSummary, UnifiedReport } from '../../lib/types/unified-report';
 import {
 	ISSUE_SORTS,
 	ISSUE_SORT_LABELS,
@@ -65,7 +65,7 @@ export function IssuesView({
 	}, [report.issues]);
 
 	const pageById = useMemo(() => {
-		const map = new Map<string, (typeof report.pages)[number]>();
+		const map = new Map<string, PageSummary>();
 		for (const page of report.pages) map.set(page.id, page);
 		return map;
 	}, [report.pages]);

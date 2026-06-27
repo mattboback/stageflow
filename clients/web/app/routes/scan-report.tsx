@@ -110,7 +110,7 @@ export default function ScanReport() {
 
 					{displayReport ? (
 						<>
-							<ReportHeader jobId={id} report={displayReport} />
+							<ReportHeader report={displayReport} />
 							<ReportSectionNav
 								report={displayReport}
 								section={section}

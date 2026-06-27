@@ -1,12 +1,33 @@
-import fs from 'fs-extra';
-import { type Mock, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageIteratorCallbacks, PageScanCallback } from '../../src/core/page-iterator';
 import type { PageScanResult, Provenance, ScanContext, ScannerConfig } from '../../src/core/types';
 
 import { ScannerBase, type ScannerMetadata } from '../../src/core/scanner-base';
 
-vi.mock('fs-extra');
+const fsHelperMocks = vi.hoisted(() => ({
+	ensureDir: vi.fn(),
+	pathExists: vi.fn(),
+	readJson: vi.fn(),
+	writeJson: vi.fn()
+}));
+
+const fsPromiseMocks = vi.hoisted(() => ({
+	readdir: vi.fn(),
+	stat: vi.fn(),
+	writeFile: vi.fn()
+}));
+
+vi.mock('../../src/utils/fs', () => fsHelperMocks);
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		readdir: fsPromiseMocks.readdir,
+		stat: fsPromiseMocks.stat,
+		writeFile: fsPromiseMocks.writeFile
+	};
+});
 
 const mocks = vi.hoisted(() => {
 	const mockBrowserManagerInstance = {
@@ -213,21 +234,21 @@ describe('ScannerBase', () => {
 			}
 		};
 
-		(fs.ensureDir as unknown as Mock).mockResolvedValue(undefined);
-		(fs.writeJSON as unknown as Mock).mockResolvedValue(undefined);
-		(fs.writeFile as unknown as Mock).mockResolvedValue(undefined);
-		(fs.readJSON as unknown as Mock).mockResolvedValue({});
-		(fs.stat as unknown as Mock).mockResolvedValue({
+		fsHelperMocks.ensureDir.mockResolvedValue(undefined);
+		fsHelperMocks.writeJson.mockResolvedValue(undefined);
+		fsPromiseMocks.writeFile.mockResolvedValue(undefined);
+		fsHelperMocks.readJson.mockResolvedValue({});
+		fsPromiseMocks.stat.mockResolvedValue({
 			isDirectory: () => false,
 			isFile: () => true
 		});
-		(fs.pathExists as unknown as Mock).mockImplementation((path: string) => {
+		fsHelperMocks.pathExists.mockImplementation((path: string) => {
 			if (path.includes('.stageflow-artifacts.json')) {
 				return Promise.resolve(false);
 			}
 			return Promise.resolve(true);
 		});
-		(fs.readdir as unknown as Mock).mockResolvedValue([]);
+		fsPromiseMocks.readdir.mockResolvedValue([]);
 		mocks.mockStorageProviderInstance.uploadDirectory.mockResolvedValue(0);
 		mocks.mockStorageProviderInstance.upload.mockResolvedValue(undefined);
 	});
@@ -235,7 +256,7 @@ describe('ScannerBase', () => {
 	it('should initialize and run a scan successfully', async () => {
 		const results = await scanner.run(mockConfig);
 
-		expect(fs.ensureDir).toHaveBeenCalledWith(mockConfig.resultsDir);
+		expect(fsHelperMocks.ensureDir).toHaveBeenCalledWith(mockConfig.resultsDir);
 
 		expect(mocks.mockPageIteratorInstance.loadProvenance).toHaveBeenCalled();
 		expect(mocks.mockPageIteratorInstance.iteratePages).toHaveBeenCalled();
@@ -245,7 +266,7 @@ describe('ScannerBase', () => {
 		expect(results.pages).toHaveLength(2);
 		expect(results.summary.pagesScanned).toBe(2);
 
-		expect(fs.writeJSON).toHaveBeenCalledWith(
+		expect(fsHelperMocks.writeJson).toHaveBeenCalledWith(
 			expect.stringContaining('results.json'),
 			expect.anything(),
 			expect.anything()
@@ -285,7 +306,7 @@ describe('ScannerBase', () => {
 
 	it('should handle scan errors gracefully', async () => {
 		vi.clearAllMocks();
-		(fs.ensureDir as unknown as Mock).mockResolvedValue(undefined);
+		fsHelperMocks.ensureDir.mockResolvedValue(undefined);
 
 		mocks.mockPageIteratorInstance.loadProvenance.mockRejectedValueOnce(
 			new Error('Provenance missing')
@@ -457,12 +478,12 @@ describe('ScannerBase', () => {
 	});
 
 	it('uploads screenshot subdirectories for discovered page folders', async () => {
-		(fs.readdir as unknown as Mock).mockResolvedValue([
+		fsPromiseMocks.readdir.mockResolvedValue([
 			{ name: 'page-1', isDirectory: () => true },
 			{ name: 'ignored-file', isDirectory: () => false },
 			{ name: 'page-2', isDirectory: () => true }
 		]);
-		(fs.pathExists as unknown as Mock).mockImplementation((path: string) => {
+		fsHelperMocks.pathExists.mockImplementation((path: string) => {
 			if (path.includes('.stageflow-artifacts.json')) {
 				return Promise.resolve(false);
 			}
@@ -486,7 +507,7 @@ describe('ScannerBase', () => {
 	});
 
 	it('handles mixed extra artifact manifest entries', async () => {
-		(fs.pathExists as unknown as Mock).mockImplementation((path: string) => {
+		fsHelperMocks.pathExists.mockImplementation((path: string) => {
 			if (path.includes('.stageflow-artifacts.json')) {
 				return Promise.resolve(true);
 			}
@@ -495,7 +516,7 @@ describe('ScannerBase', () => {
 			}
 			return Promise.resolve(true);
 		});
-		(fs.readJSON as unknown as Mock).mockResolvedValue({
+		fsHelperMocks.readJson.mockResolvedValue({
 			paths: [
 				'../outside.txt',
 				'missing.txt',
@@ -509,7 +530,7 @@ describe('ScannerBase', () => {
 			files: ['file-fail.txt', 123, '   '],
 			directories: ['dir-ok', null]
 		});
-		(fs.stat as unknown as Mock).mockImplementation((path: string) => {
+		fsPromiseMocks.stat.mockImplementation((path: string) => {
 			if (path.endsWith('broken-stat.txt')) {
 				throw new Error('stat failed');
 			}
@@ -557,13 +578,13 @@ describe('ScannerBase', () => {
 	});
 
 	it('ignores extra artifact manifests with no usable paths', async () => {
-		(fs.pathExists as unknown as Mock).mockImplementation((path: string) => {
+		fsHelperMocks.pathExists.mockImplementation((path: string) => {
 			if (path.includes('.stageflow-artifacts.json')) {
 				return Promise.resolve(true);
 			}
 			return Promise.resolve(true);
 		});
-		(fs.readJSON as unknown as Mock).mockResolvedValue({
+		fsHelperMocks.readJson.mockResolvedValue({
 			paths: ['   ', 42],
 			files: null,
 			directories: 'not-an-array'

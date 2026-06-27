@@ -3,11 +3,10 @@ import { Gauge } from '../Gauge';
 import { scoreBandFor } from '../../lib/report';
 
 interface Props {
-	jobId: string;
 	report: UnifiedReport;
 }
 
-export function ReportHeader({ jobId: _jobId, report }: Props) {
+export function ReportHeader({ report }: Props) {
 	const score = typeof report.summary.score === 'number' ? Math.round(report.summary.score) : null;
 	const band = scoreBandFor(score);
 	const totals = report.summary.bySeverity;

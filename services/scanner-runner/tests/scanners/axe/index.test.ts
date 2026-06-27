@@ -1,6 +1,6 @@
 import type { BrowserContext, Page } from 'playwright';
 
-import fs from 'fs-extra';
+import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -100,7 +100,7 @@ describe('AxeScanner.scanPage', () => {
 	let resultsDir: string;
 
 	beforeEach(async () => {
-		resultsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'stageflow-axe-test-'));
+		resultsDir = await mkdtemp(path.join(os.tmpdir(), 'stageflow-axe-test-'));
 		capturePageOverviewMock.mockResolvedValue(null);
 		axeAnalyzeMock.mockResolvedValue({
 			violations: [],
@@ -111,7 +111,7 @@ describe('AxeScanner.scanPage', () => {
 	});
 
 	afterEach(async () => {
-		await fs.remove(resultsDir);
+		await rm(resultsDir, { force: true, recursive: true });
 		vi.clearAllMocks();
 	});
 

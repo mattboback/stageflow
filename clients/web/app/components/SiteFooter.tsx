@@ -2,7 +2,6 @@ import { Link } from 'react-router';
 
 const GITHUB_URL = 'https://github.com/mattboback/stageflow';
 
-/** Instrument footer. Mirrors mockups/instrument. */
 export function SiteFooter() {
 	return (
 		<footer className="site-footer">

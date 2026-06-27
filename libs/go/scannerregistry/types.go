@@ -72,9 +72,65 @@ func (d *Definition) ToInfo() Info {
 		Name:         d.Name,
 		Version:      d.Version,
 		Description:  d.Description,
-		Categories:   d.Categories,
+		Categories:   append([]string(nil), d.Categories...),
 		Enabled:      d.Enabled,
 		BuiltIn:      d.BuiltIn,
-		Capabilities: d.Capabilities,
+		Capabilities: d.Capabilities.clone(),
+	}
+}
+
+func (d *Definition) clone() *Definition {
+	if d == nil {
+		return nil
+	}
+
+	copy := *d
+	copy.Categories = append([]string(nil), d.Categories...)
+	copy.Aliases = append([]string(nil), d.Aliases...)
+	copy.Capabilities = d.Capabilities.clone()
+	copy.Requirements = d.Requirements.clone()
+	if d.Config != nil {
+		copy.Config = make(map[string]any, len(d.Config))
+		for key, value := range d.Config {
+			copy.Config[key] = cloneConfigValue(value)
+		}
+	}
+
+	return &copy
+}
+
+func (c Capabilities) clone() Capabilities {
+	c.OutputFormats = append([]string(nil), c.OutputFormats...)
+	return c
+}
+
+func (r Requirements) clone() Requirements {
+	if r.Browser != nil {
+		browser := *r.Browser
+		browser.Args = append([]string(nil), r.Browser.Args...)
+		r.Browser = &browser
+	}
+
+	return r
+}
+
+func cloneConfigValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		copy := make(map[string]any, len(typed))
+		for key, item := range typed {
+			copy[key] = cloneConfigValue(item)
+		}
+		return copy
+	case []any:
+		copy := make([]any, len(typed))
+		for i, item := range typed {
+			copy[i] = cloneConfigValue(item)
+		}
+		return copy
+	case []string:
+		return append([]string(nil), typed...)
+	default:
+		return value
 	}
 }

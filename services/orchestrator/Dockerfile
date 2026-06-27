@@ -3,9 +3,28 @@
 FROM docker.io/library/golang:1.26.4 AS builder
 WORKDIR /src
 
-# Copy module definitions first for better layer caching
-COPY libs/contracts/report/generated/go/go.mod ./libs/contracts/report/generated/go/
+# Generate schema contracts first; generated outputs are intentionally untracked.
+COPY libs/contracts/report/schema ./libs/contracts/report/schema
+RUN mkdir -p libs/contracts/report/generated/go \
+    && go run github.com/atombender/go-jsonschema@v0.20.0 --package report --tags json --struct-name-from-title \
+      libs/contracts/report/schema/unified-report.v2.schema.json > libs/contracts/report/generated/go/report_schema.go \
+    && gofmt -w libs/contracts/report/generated/go/report_schema.go \
+    && printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.4\n" \
+      > libs/contracts/report/generated/go/go.mod
+
 COPY libs/contracts/scanner-manifest/go.mod libs/contracts/scanner-manifest/go.sum ./libs/contracts/scanner-manifest/
+COPY libs/contracts/scanner-manifest/schema ./libs/contracts/scanner-manifest/schema
+RUN cd libs/contracts/scanner-manifest \
+    && go run github.com/atombender/go-jsonschema@v0.20.0 --package scannermanifest --tags json --struct-name-from-title \
+      schema/scanner-manifest.schema.json > scanner_manifest.go \
+    && sed -i.bak \
+      -e 's|^type ManifestConfigSchema interface{}$|// JSON Schema for SCANNER_OPTIONS validation (see ManifestConfigSchema definition\n// in schema/scanner-manifest.schema.json). Carried as json.RawMessage so the\n// Go side can forward the original bytes to the runtime validator.\ntype ManifestConfigSchema = json.RawMessage|' \
+      -e 's|^type ScannerManifestConfigSchema interface{}$|// Embedded JSON Schema for the scanner-level configSchema field. Same\n// rationale as ManifestConfigSchema: round-tripped as raw JSON.\ntype ScannerManifestConfigSchema = json.RawMessage|' \
+      scanner_manifest.go \
+    && rm -f scanner_manifest.go.bak \
+    && gofmt -w scanner_manifest.go
+
+# Copy module definitions first for better layer caching
 COPY libs/go ./libs/go/
 COPY services/orchestrator/go.mod services/orchestrator/go.sum ./services/orchestrator/
 
@@ -14,7 +33,6 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     cd services/orchestrator && GOWORK=off go mod download
 
 # Copy source code
-COPY libs/contracts/report/generated/go ./libs/contracts/report/generated/go
 COPY libs/contracts/scanner-manifest ./libs/contracts/scanner-manifest
 COPY libs/go ./libs/go
 COPY services/orchestrator ./services/orchestrator

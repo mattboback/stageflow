@@ -28,11 +28,10 @@
 import type { AddressInfo } from 'node:net';
 
 import AxeBuilder from '@axe-core/playwright';
-import fs from 'fs-extra';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import http, { type Server } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { type BrowserContext, type Page, chromium } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -258,8 +257,8 @@ class CapturingStorageProvider implements StorageProvider {
 		if (this.downloadFromPath === undefined) {
 			throw new Error('CapturingStorageProvider.download called without downloadFromPath set');
 		}
-		await fs.ensureDir(join(dest, '..'));
-		await fs.copyFile(this.downloadFromPath, dest);
+		await mkdir(dirname(dest), { recursive: true });
+		await copyFile(this.downloadFromPath, dest);
 	};
 
 	exists = (): Promise<boolean> => Promise.resolve(true);
@@ -354,8 +353,8 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 	// Persist Provenance to disk first so PageIterator.loadProvenance reads
 	// the file (matches the canonical flow where the orchestrator writes
 	// the document into the scanner-runner workspace before it starts).
-	await fs.ensureDir(resultsDir);
-	await fs.writeJSON(config.provenancePath, provenance, { spaces: 2 });
+	await mkdir(resultsDir, { recursive: true });
+	await writeFile(config.provenancePath, JSON.stringify(provenance, null, 2), 'utf8');
 
 	const stageStorage = new CapturingStorageProvider();
 	const stageLogger = new ScanStageLogger(config, stageStorage);
@@ -495,7 +494,7 @@ async function captureStorageStateViaForm(opts: {
 			page.waitForURL(opts.fixture.profileUrl, { waitUntil: 'load' }),
 			page.click('button[type=submit]')
 		]);
-		await fs.ensureDir(join(opts.destPath, '..'));
+		await mkdir(dirname(opts.destPath), { recursive: true });
 		await context.storageState({ path: opts.destPath });
 		await page.close();
 		await context.close();

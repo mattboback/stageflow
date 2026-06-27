@@ -33,8 +33,8 @@ data-loss findings; the core scan pipeline, CLI, and golden E2E are all sound.
   base compose stays auth-enabled for staging/self-host. After rebuild: keyless
   `GET /api/v1/scanners` → 200 and keyless `POST /api/v1/jobs/urls` (the exact demo curl) → 201.
   Web UI Playground loads "7 scanners"; ran a full **live UI scan** end-to-end (submit → live SSE
-  progress → COMPLETE → rendered unified report, grade B 85/100, 2 issues). Evidence:
-  `qa/evidence/F3-fixed-unified-report.png`. The docs' "optional" wording for `STAGEFLOW_API_KEY`
+  progress → COMPLETE → rendered unified report, grade B 85/100, 2 issues). Screenshot evidence is
+  local-only and no longer committed. The docs' "optional" wording for `STAGEFLOW_API_KEY`
   is now accurate for the default local stack (key still required for auth-enabled self-host).
 - **F1 — FIXED & verified.** `diagnose-local-env.sh` now accepts Node major **>= 22** (matching
   the Go/Bun `version_ge` style) instead of strict `== 22`; rejects non-numeric majors. Verified:
@@ -119,7 +119,7 @@ private-target scanning all verified. No blocker-severity or data-loss issues we
 - **Actual (confirmed in-browser):** page shows **"Scanner catalog failed to load (401). Refresh
   to retry."**, "0 scanners", and the **"Start Scan" button is disabled** — a fresh user cannot
   run any scan from the UI. DevTools shows the page's only XHR is
-  `GET http://localhost:8080/api/v1/scanners` → **401**. Evidence: `qa/evidence/F3-playground-401.png`.
+  `GET http://localhost:8080/api/v1/scanners` → **401**. Screenshot evidence is local-only.
 - **Why:** the SvelteKit app calls the platform API **directly from the browser** via
   `VITE_API_URL` with **no API key** (no server-side proxy, no `+server.ts`/`hooks.server.ts`,
   no key in `clients/web/src`), so with auth enabled (F2) every API call 401s.

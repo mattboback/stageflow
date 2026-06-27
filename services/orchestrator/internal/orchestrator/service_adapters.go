@@ -28,8 +28,8 @@ func (o *Orchestrator) newService() *appjobs.Service {
 	}
 
 	return appjobs.NewService(
-		orchestratorJobStore{orchestrator: o},
-		orchestratorRuntime{orchestrator: o},
+		o,
+		o,
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
 		appjobs.WithAuthUploader(adapterstorage.NewAuthStorageStateUploader(o.storage)),
@@ -54,10 +54,6 @@ func (o *Orchestrator) newService() *appjobs.Service {
 	)
 }
 
-func (o *Orchestrator) runtimeAdapter() *podman.JobRuntime {
-	return o.jobRuntime
-}
-
 func (o *Orchestrator) refreshJobRuntime() {
 	o.jobRuntime = podman.NewJobRuntime(podman.JobRuntimeConfig{
 		Client:          o.podmanClient,
@@ -74,71 +70,67 @@ func (o *Orchestrator) refreshJobRuntime() {
 	})
 }
 
-type orchestratorJobStore struct {
-	orchestrator *Orchestrator
+func (o *Orchestrator) CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool, error) {
+	return o.database.CreateJobIfAbsent(ctx, job)
 }
 
-func (s orchestratorJobStore) CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool, error) {
-	return s.orchestrator.database.CreateJobIfAbsent(ctx, job)
+func (o *Orchestrator) GetJob(ctx context.Context, jobID string) (*models.Job, error) {
+	return o.database.GetJob(ctx, jobID)
 }
 
-func (s orchestratorJobStore) GetJob(ctx context.Context, jobID string) (*models.Job, error) {
-	return s.orchestrator.database.GetJob(ctx, jobID)
+func (o *Orchestrator) UpdateJobState(ctx context.Context, jobID string, state models.JobState) error {
+	return o.database.UpdateJobState(ctx, jobID, state)
 }
 
-func (s orchestratorJobStore) UpdateJobState(ctx context.Context, jobID string, state models.JobState) error {
-	return s.orchestrator.database.UpdateJobState(ctx, jobID, state)
+func (o *Orchestrator) ClaimJobCompletion(ctx context.Context, jobID string) (bool, error) {
+	return o.database.ClaimJobCompletion(ctx, jobID)
 }
 
-func (s orchestratorJobStore) ClaimJobCompletion(ctx context.Context, jobID string) (bool, error) {
-	return s.orchestrator.database.ClaimJobCompletion(ctx, jobID)
+func (o *Orchestrator) RecordExtractionComplete(ctx context.Context, jobID string) error {
+	return o.database.RecordExtractionComplete(ctx, jobID)
 }
 
-func (s orchestratorJobStore) RecordExtractionComplete(ctx context.Context, jobID string) error {
-	return s.orchestrator.database.RecordExtractionComplete(ctx, jobID)
+func (o *Orchestrator) RecordExtractionStart(ctx context.Context, jobID string) error {
+	return o.database.RecordExtractionStart(ctx, jobID)
 }
 
-func (s orchestratorJobStore) RecordExtractionStart(ctx context.Context, jobID string) error {
-	return s.orchestrator.database.RecordExtractionStart(ctx, jobID)
+func (o *Orchestrator) RecordScanStart(ctx context.Context, jobID string) error {
+	return o.database.RecordScanStart(ctx, jobID)
 }
 
-func (s orchestratorJobStore) RecordScanStart(ctx context.Context, jobID string) error {
-	return s.orchestrator.database.RecordScanStart(ctx, jobID)
+func (o *Orchestrator) RecordScanComplete(ctx context.Context, jobID string) error {
+	return o.database.RecordScanComplete(ctx, jobID)
 }
 
-func (s orchestratorJobStore) RecordScanComplete(ctx context.Context, jobID string) error {
-	return s.orchestrator.database.RecordScanComplete(ctx, jobID)
+func (o *Orchestrator) UpdateJobProgress(ctx context.Context, jobID string, currentPage, totalPages int) error {
+	return o.database.UpdateJobProgress(ctx, jobID, currentPage, totalPages)
 }
 
-func (s orchestratorJobStore) UpdateJobProgress(ctx context.Context, jobID string, currentPage, totalPages int) error {
-	return s.orchestrator.database.UpdateJobProgress(ctx, jobID, currentPage, totalPages)
-}
-
-func (s orchestratorJobStore) UpdateJobExtractionArtifacts(
+func (o *Orchestrator) UpdateJobExtractionArtifacts(
 	ctx context.Context,
 	jobID, stageLogPath, recipePath string,
 ) error {
-	return s.orchestrator.database.UpdateJobExtractionArtifacts(ctx, jobID, stageLogPath, recipePath)
+	return o.database.UpdateJobExtractionArtifacts(ctx, jobID, stageLogPath, recipePath)
 }
 
-func (s orchestratorJobStore) UpdateJobProvenance(ctx context.Context, jobID, provenancePath string) error {
-	return s.orchestrator.database.UpdateJobProvenance(ctx, jobID, provenancePath)
+func (o *Orchestrator) UpdateJobProvenance(ctx context.Context, jobID, provenancePath string) error {
+	return o.database.UpdateJobProvenance(ctx, jobID, provenancePath)
 }
 
-func (s orchestratorJobStore) UpdateJobProvenanceKey(ctx context.Context, jobID, provenanceKey string) error {
-	return s.orchestrator.database.UpdateJobProvenanceKey(ctx, jobID, provenanceKey)
+func (o *Orchestrator) UpdateJobProvenanceKey(ctx context.Context, jobID, provenanceKey string) error {
+	return o.database.UpdateJobProvenanceKey(ctx, jobID, provenanceKey)
 }
 
-func (s orchestratorJobStore) UpdateJobPodID(ctx context.Context, jobID, podID string) error {
-	return s.orchestrator.database.UpdateJobPodID(ctx, jobID, podID)
+func (o *Orchestrator) UpdateJobPodID(ctx context.Context, jobID, podID string) error {
+	return o.database.UpdateJobPodID(ctx, jobID, podID)
 }
 
-func (s orchestratorJobStore) UpdateJobCompletionArtifacts(
+func (o *Orchestrator) UpdateJobCompletionArtifacts(
 	ctx context.Context,
 	jobID, reportJSONPath, reportHTMLPath, stageLogPath, recipePath string,
 	totalIssues int,
 ) error {
-	return s.orchestrator.database.UpdateJobCompletionArtifacts(
+	return o.database.UpdateJobCompletionArtifacts(
 		ctx,
 		jobID,
 		reportJSONPath,
@@ -149,12 +141,12 @@ func (s orchestratorJobStore) UpdateJobCompletionArtifacts(
 	)
 }
 
-func (s orchestratorJobStore) UpdateJobMetrics(
+func (o *Orchestrator) UpdateJobMetrics(
 	ctx context.Context,
 	jobID string,
 	pagesScanned, totalIssues, criticalIssues, seriousIssues, moderateIssues, minorIssues int,
 ) error {
-	return s.orchestrator.database.UpdateJobMetrics(
+	return o.database.UpdateJobMetrics(
 		ctx,
 		jobID,
 		pagesScanned,
@@ -166,46 +158,46 @@ func (s orchestratorJobStore) UpdateJobMetrics(
 	)
 }
 
-func (s orchestratorJobStore) SetExpectedScanners(ctx context.Context, jobID string, scanners []string) error {
-	return s.orchestrator.database.SetExpectedScanners(ctx, jobID, scanners)
+func (o *Orchestrator) SetExpectedScanners(ctx context.Context, jobID string, scanners []string) error {
+	return o.database.SetExpectedScanners(ctx, jobID, scanners)
 }
 
-func (s orchestratorJobStore) RecordScannerCompletion(
+func (o *Orchestrator) RecordScannerCompletion(
 	ctx context.Context,
 	jobID string,
 	result *models.ScannerResult,
 ) (bool, error) {
-	return s.orchestrator.database.RecordScannerCompletion(ctx, jobID, result)
+	return o.database.RecordScannerCompletion(ctx, jobID, result)
 }
 
-func (s orchestratorJobStore) RecordScannerFailure(
+func (o *Orchestrator) RecordScannerFailure(
 	ctx context.Context,
 	jobID, scannerType, errorMsg string,
 ) (bool, error) {
-	return s.orchestrator.database.RecordScannerFailure(ctx, jobID, scannerType, errorMsg)
+	return o.database.RecordScannerFailure(ctx, jobID, scannerType, errorMsg)
 }
 
-func (s orchestratorJobStore) CompleteJobWithTerminalEvent(
+func (o *Orchestrator) CompleteJobWithTerminalEvent(
 	ctx context.Context,
 	jobID string,
 	payload *events.JobCompletedPayload,
 ) error {
-	return s.orchestrator.database.CompleteJobWithTerminalEvent(ctx, jobID, payload)
+	return o.database.CompleteJobWithTerminalEvent(ctx, jobID, payload)
 }
 
-func (s orchestratorJobStore) FailJobWithTerminalEvent(
+func (o *Orchestrator) FailJobWithTerminalEvent(
 	ctx context.Context,
 	jobID, stage, errorMsg, errorDetails string,
 	payload *events.JobFailedPayload,
 ) error {
-	return s.orchestrator.database.FailJobWithTerminalEvent(ctx, jobID, stage, errorMsg, errorDetails, payload)
+	return o.database.FailJobWithTerminalEvent(ctx, jobID, stage, errorMsg, errorDetails, payload)
 }
 
-func (s orchestratorJobStore) ListUnpublishedTerminalEvents(
+func (o *Orchestrator) ListUnpublishedTerminalEvents(
 	ctx context.Context,
 	jobID string,
 ) ([]appjobs.TerminalEvent, error) {
-	records, err := s.orchestrator.database.ListUnpublishedTerminalEvents(ctx, jobID)
+	records, err := o.database.ListUnpublishedTerminalEvents(ctx, jobID)
 	if err != nil {
 		return nil, err
 	}
@@ -238,33 +230,29 @@ func (s orchestratorJobStore) ListUnpublishedTerminalEvents(
 	return out, nil
 }
 
-func (s orchestratorJobStore) MarkTerminalEventPublished(ctx context.Context, jobID, event string) error {
-	return s.orchestrator.database.MarkTerminalEventPublished(ctx, jobID, event)
+func (o *Orchestrator) MarkTerminalEventPublished(ctx context.Context, jobID, event string) error {
+	return o.database.MarkTerminalEventPublished(ctx, jobID, event)
 }
 
-func (s orchestratorJobStore) RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error {
-	s.orchestrator.recordInternalEvent(ctx, jobID, event, payload)
+func (o *Orchestrator) RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error {
+	o.recordInternalEvent(ctx, jobID, event, payload)
 	return nil
 }
 
-type orchestratorRuntime struct {
-	orchestrator *Orchestrator
+func (o *Orchestrator) PodNetnsMode() string {
+	return o.jobRuntime.PodNetnsMode()
 }
 
-func (r orchestratorRuntime) PodNetnsMode() string {
-	return r.orchestrator.runtimeAdapter().PodNetnsMode()
+func (o *Orchestrator) AllowsLoopbackTargets() bool {
+	return o.jobRuntime.AllowsLoopbackTargets()
 }
 
-func (r orchestratorRuntime) AllowsLoopbackTargets() bool {
-	return r.orchestrator.runtimeAdapter().AllowsLoopbackTargets()
+func (o *Orchestrator) CreateJobPod(ctx context.Context, job *models.Job) (string, error) {
+	return o.jobRuntime.CreateJobPod(ctx, job)
 }
 
-func (r orchestratorRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string, error) {
-	return r.orchestrator.runtimeAdapter().CreateJobPod(ctx, job)
-}
-
-func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *models.Job) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, r.orchestrator.extractionTimeout)
+func (o *Orchestrator) StartExtractionWorker(ctx context.Context, job *models.Job) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, o.extractionTimeout)
 	defer cancel()
 
 	type extractionStartResult struct {
@@ -275,7 +263,7 @@ func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *mod
 	resultChan := make(chan extractionStartResult, 1)
 
 	go func() {
-		result, err := r.orchestrator.runtimeAdapter().StartExtractionWorker(timeoutCtx, job, job.PodID)
+		result, err := o.jobRuntime.StartExtractionWorker(timeoutCtx, job, job.PodID)
 		resultChan <- extractionStartResult{result: result, err: err}
 	}()
 
@@ -289,7 +277,7 @@ func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *mod
 				"job_id",
 				job.ID,
 			)
-			r.orchestrator.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
+			o.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
 				"component":    "extraction-worker",
 				"container_id": started.result.ContainerID,
 			})
@@ -306,11 +294,11 @@ func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *mod
 			"job_id",
 			job.ID,
 		)
-		r.orchestrator.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
+		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
 			"component":    "extraction-worker",
 			"container_id": started.result.ContainerID,
 		})
-		r.orchestrator.spawnMonitorContainer(
+		o.spawnMonitorContainer(
 			backgroundWithCorrelation(ctx),
 			started.result.ContainerID,
 			job.ID,
@@ -319,35 +307,35 @@ func (r orchestratorRuntime) StartExtractionWorker(ctx context.Context, job *mod
 
 		return nil
 	case <-timeoutCtx.Done():
-		return fmt.Errorf("extraction worker start timed out after %v", r.orchestrator.extractionTimeout)
+		return fmt.Errorf("extraction worker start timed out after %v", o.extractionTimeout)
 	}
 }
 
-func (r orchestratorRuntime) ResolveScannerTypes(modules []string) []string {
-	return r.orchestrator.runtimeAdapter().ResolveScannerTypes(modules)
+func (o *Orchestrator) ResolveScannerTypes(modules []string) []string {
+	return o.jobRuntime.ResolveScannerTypes(modules)
 }
 
-func (r orchestratorRuntime) StartScanner(
+func (o *Orchestrator) StartScanner(
 	ctx context.Context,
 	job *models.Job,
 	plan *appjobs.ScannerLaunchPlan,
 ) error {
-	return r.orchestrator.startPlannedScanner(ctx, job, plan)
+	return o.startPlannedScanner(ctx, job, plan)
 }
 
-func (r orchestratorRuntime) CleanupJob(ctx context.Context, job *models.Job) error {
+func (o *Orchestrator) CleanupJob(ctx context.Context, job *models.Job) error {
 	if job == nil {
 		return nil
 	}
 
 	if job.PodID != "" {
-		if err := r.orchestrator.cleanupPod(ctx, job.PodID); err != nil {
+		if err := o.cleanupPod(ctx, job.PodID); err != nil {
 			return err
 		}
 	}
 
-	r.orchestrator.cleanupVolumes(ctx, job.ID)
-	r.orchestrator.cleanupStaging(ctx, job)
+	o.cleanupVolumes(ctx, job.ID)
+	o.cleanupStaging(ctx, job)
 
 	return nil
 }

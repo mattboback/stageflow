@@ -10,8 +10,7 @@ authenticated scanning.
 - `../generated/typescript/provenance.ts` — TypeScript types via `json2ts`.
 - `../generated/go/provenance_schema.go` — Go types via `go-jsonschema`.
 
-Both are produced by `make generate` (or `bun run generate` in this directory)
-and are kept in sync by the local pre-commit check.
+Both are produced by `just generate-contracts` from the repo root.
 
 ## Auth contract
 

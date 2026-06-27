@@ -9,7 +9,6 @@
 
 import type { BrowserContext, Page } from 'playwright';
 
-import fs from 'fs-extra';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
@@ -26,20 +25,28 @@ import {
 	type PageScanCallback
 } from '../../src/core/page-iterator';
 
-vi.mock('fs-extra', () => ({
-	default: {
-		pathExists: vi.fn().mockResolvedValue(false),
-		readJSON: vi.fn(),
-		writeJSON: vi.fn().mockResolvedValue(undefined),
-		ensureDir: vi.fn().mockResolvedValue(undefined),
-		chmod: vi.fn().mockResolvedValue(undefined)
-	}
+const fsHelperMocks = vi.hoisted(() => ({
+	pathExists: vi.fn().mockResolvedValue(false),
+	readJson: vi.fn(),
+	writeJson: vi.fn().mockResolvedValue(undefined),
+	ensureDir: vi.fn().mockResolvedValue(undefined)
 }));
 
-const fsMock = fs as unknown as {
+const chmodMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../src/utils/fs', () => fsHelperMocks);
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		chmod: chmodMock
+	};
+});
+
+const fsMock: {
 	ensureDir: ReturnType<typeof vi.fn>;
 	chmod: ReturnType<typeof vi.fn>;
-};
+} = { ensureDir: fsHelperMocks.ensureDir, chmod: chmodMock };
 
 const SECRET_USER = 'hydrate-test-user-9j2n3kl12';
 const SECRET_PASSWORD = 'hydrate-test-pw-uw7gx48p2j';
