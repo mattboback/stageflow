@@ -1,7 +1,9 @@
-import fs from 'fs-extra';
+import { readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ScannerLogger, StorageProvider } from '../../core/types';
+
+import { pathExists } from '../../utils/fs';
 
 export async function uploadAiNavigatorTraces({
 	storageProvider,
@@ -17,14 +19,14 @@ export async function uploadAiNavigatorTraces({
 	logger: ScannerLogger;
 }): Promise<void> {
 	try {
-		const entries = await fs.readdir(resultsDir, { withFileTypes: true });
+		const entries = await readdir(resultsDir, { withFileTypes: true });
 		for (const entry of entries) {
 			if (!entry.isDirectory()) {
 				continue;
 			}
 
 			const tracePath = path.join(resultsDir, entry.name, 'ai-trace.json');
-			if (!(await fs.pathExists(tracePath))) {
+			if (!(await pathExists(tracePath))) {
 				continue;
 			}
 

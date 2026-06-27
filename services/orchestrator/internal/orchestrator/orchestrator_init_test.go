@@ -20,7 +20,7 @@ func TestNewOrchestrator(t *testing.T) {
 	}
 }
 
-func TestNewOrchestratorInitializesStableRuntimeAdapter(t *testing.T) {
+func TestNewOrchestratorInitializesStableRuntime(t *testing.T) {
 	database := newInMemoryDB(t)
 
 	orch := NewOrchestrator(&Config{
@@ -29,18 +29,18 @@ func TestNewOrchestratorInitializesStableRuntimeAdapter(t *testing.T) {
 		Publisher:    &mockPublisher{},
 	})
 
-	adapter := orch.runtimeAdapter()
-	if adapter == nil {
-		t.Fatal("expected runtime adapter to be initialized")
+	runtime := orch.jobRuntime
+	if runtime == nil {
+		t.Fatal("expected runtime to be initialized")
 	}
 
 	orch.podNetnsMode = podNetnsModeHost
 
-	if got, want := orch.runtimeAdapter(), adapter; got != want {
-		t.Fatal("expected runtime adapter to remain stable after construction")
+	if got, want := orch.jobRuntime, runtime; got != want {
+		t.Fatal("expected runtime to remain stable after construction")
 	}
 
-	if got, want := adapter.PodNetnsMode(), podNetnsModeBridge; got != want {
-		t.Fatalf("expected runtime adapter pod netns mode %q, got %q", want, got)
+	if got, want := orch.PodNetnsMode(), podNetnsModeBridge; got != want {
+		t.Fatalf("expected runtime pod netns mode %q, got %q", want, got)
 	}
 }

@@ -6,11 +6,11 @@
 
 import type { BrowserContext, Page } from 'playwright';
 
-import fs from 'fs-extra';
 import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
 
+import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
 import { createLogger } from '../utils/logger';
 import {
 	AuthHydrationError,
@@ -74,7 +74,7 @@ export class PageIterator {
 	async loadProvenance(): Promise<Provenance> {
 		const provenancePath = this.config.provenancePath;
 
-		if (!(await fs.pathExists(provenancePath))) {
+		if (!(await pathExists(provenancePath))) {
 			const scanUrls = process.env.SCAN_URLS;
 			if (!scanUrls) {
 				throw new Error(`Provenance file not found at ${provenancePath}`);
@@ -102,12 +102,12 @@ export class PageIterator {
 
 			attachAuthFromEnv(provenance, this.logger);
 
-			await fs.ensureDir(dirname(provenancePath));
-			await fs.writeJSON(provenancePath, provenance, { spaces: 2 });
+			await ensureDir(dirname(provenancePath));
+			await writeJson(provenancePath, provenance, { spaces: 2 });
 			return provenance;
 		}
 
-		const provenanceRaw = (await fs.readJSON(provenancePath)) as unknown;
+		const provenanceRaw = await readJson(provenancePath);
 		const normalized = this.normalizeProvenance(provenanceRaw as Provenance);
 
 		// The orchestrator may also emit PROVENANCE_AUTH_JSON for ZIP-input
@@ -440,7 +440,7 @@ export class PageIterator {
 				}
 
 				const pageResultsDir = join(this.config.resultsDir, pageEntry.id);
-				await fs.ensureDir(pageResultsDir);
+				await ensureDir(pageResultsDir);
 
 				const scanContext: ScanContext = {
 					page,

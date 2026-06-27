@@ -15,8 +15,9 @@ vi.mock('node:fs', () => ({
 	mkdirSync: vi.fn()
 }));
 
-vi.mock('uuid', () => ({
-	v4: vi.fn().mockReturnValue('test-uuid-1234')
+vi.mock('node:crypto', async () => ({
+	...(await vi.importActual<typeof import('node:crypto')>('node:crypto')),
+	randomUUID: vi.fn().mockReturnValue('test-uuid-1234')
 }));
 
 vi.mock('../../../src/screenshots/axe/image', () => ({

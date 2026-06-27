@@ -1,6 +1,6 @@
 import type { Page } from 'playwright';
 
-import fs from 'fs-extra';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ActionDecider, AgentGoal, AgentResult, AgentStep, PageAnalyzer } from '../../ai';
@@ -235,14 +235,14 @@ async function captureStepScreenshot(
 				[{ selector: highlightSelector }],
 				{ format: 'png' }
 			);
-			await fs.writeFile(fullPath, buffer);
+			await writeFile(fullPath, buffer);
 			return filename;
 		}
 
 		const { buffer } = await screenshotService.captureFullPage(page, {
 			format: 'png'
 		});
-		await fs.writeFile(fullPath, buffer);
+		await writeFile(fullPath, buffer);
 		return filename;
 	} catch (err) {
 		logger.warn('Failed to capture ai-navigator screenshot', {

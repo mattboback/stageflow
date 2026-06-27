@@ -190,10 +190,7 @@ Represents aggregated Lighthouse category scores:
 ### TypeScript
 
 ```bash
-# Generate TypeScript types
-bun run generate:ts
-
-# Output: libs/contracts/report/generated/typescript/unified-report.v2.ts
+just generate-contracts
 ```
 
 Generated types use:
@@ -204,10 +201,7 @@ Generated types use:
 ### Go
 
 ```bash
-# Generate Go structs
-make generate-go
-
-# Output: libs/contracts/report/generated/go/report_schema.go
+just generate-contracts
 ```
 
 Generated code uses:

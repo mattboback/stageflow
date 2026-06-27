@@ -4,7 +4,7 @@ This service is the **Scanner Runner** runtime that runs *inside per-job pods*.
 
 It is responsible for:
 - Loading job provenance (the list of pages/URLs to scan) from the shared job workspace.
-- Resolving a scanner module (Axe, Lighthouse, SEO, etc.) via a filesystem plugin + manifest model.
+- Resolving a built-in scanner module (Axe, Lighthouse, SEO, etc.) via the shared manifest catalog.
 - Writing scanner artifacts (`results.json`, `report.html`, and any per-page assets like screenshots) into the worker results directory.
 - Uploading artifacts to object storage and publishing scan lifecycle events over NATS.
 
@@ -19,23 +19,19 @@ For URL jobs, the worker validates browser network requests when `SCAN_URLS` is 
 
 Chromium currently launches with `--no-sandbox`, `--disable-setuid-sandbox`, and `chromiumSandbox: false`. This is acceptable only inside the intended StageFlow job boundary: rootless Podman job pods, `no-new-privileges`, per-job containers, constrained resources, and host/container egress controls for hosted or self-hosted public deployments. Enabling Chromium sandboxing in the runtime image is a future hardening task; do not treat the browser process as the primary isolation boundary.
 
-## Scanner resolution (plugin loader)
+## Scanner resolution
 
-On startup the worker discovers plugin manifests and then loads the scanner selected by `SCANNER_TYPE`.
+On startup the worker loads the built-in manifest catalog and resolves the scanner selected by `SCANNER_TYPE`.
 
-- Manifest filenames: `manifest.json` or `scanner.json`
 - IDs and aliases: resolution is case-insensitive for aliases; IDs are expected to be lowercase/hyphenated
-- Default search paths:
-  - `dist/scanners` (built-ins; populated during `bun run build` via `scripts/copy-builtin-manifests.mjs`)
-  - `/plugins` (volume-mounted plugins)
-  - `${HOME}/.stageflow/plugins` (dev convenience)
-  - plus `PLUGIN_PATHS` (colon-separated)
+- Built-in manifests live in `libs/go/scannercatalog/manifests/*/manifest.json`.
+- `bun run build` copies those manifests into `dist/scanners` for runtime images.
 
 ## Outputs
 
 The worker writes into `RESULTS_DIR` (default: `${SCANNER_DATA_DIR}/results`):
 
-- Note: the scanner identifier used in artifact keys is `scanner.metadata.name` at runtime; for built-ins it matches the manifest `id`. For third-party plugins, keep them the same.
+- Note: the scanner identifier used in artifact keys is `scanner.metadata.name` at runtime; for built-ins it matches the manifest `id`.
 - `results.json` (always; web-server results format, version `2.0.0`)
 - `report.html` (best-effort; may be missing if report generation fails)
 - `<pageId>/...` (per-page directories created during scanning)

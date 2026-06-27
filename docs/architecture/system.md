@@ -809,8 +809,7 @@ libs/contracts/
 │       │   └── report_schema.go             # 1208 lines — atombender/go-jsonschema
 │       │                                     # Custom UnmarshalJSON enforces all constraints
 │       └── typescript/
-│           ├── unified-report.v2.ts         # 276 lines — json-schema-to-typescript
-│           └── validator.ts                 # 345 lines — Ajv + data integrity checks
+│           └── unified-report.v2.ts         # json-schema-to-typescript
 │
 ├── scanner-manifest/
 │   ├── schema/
@@ -866,16 +865,10 @@ The following enums appear identically across all contract families:
 | **Subscribing (envelope)** | Lenient — unknown fields allowed           | Forward-compatible event evolution   |
 | **Subscribing (payload)**  | Strict — `DisallowUnknownFields()`         | Catch schema drift in payloads       |
 
-### Data Integrity Beyond Schema
+### Generated Contract Code
 
-The TypeScript report validator (`libs/contracts/report/generated/typescript/validator.ts`) checks business logic invariants that JSON Schema cannot express:
-
-- `summary.totalIssues` matches `issues.length`
-- Severity counts match actual issue severities
-- `pagesScanned` matches `pages.length`
-- Scanner IDs in issues exist in scanners array
-- Page IDs in issues exist in pages array
-- Artifact IDs in occurrences exist in artifacts array
+Generated contract code is a build artifact. Run `just generate-contracts` before
+building Go or TypeScript packages that import generated contract modules.
 
 Go-side validation:
 
@@ -2036,7 +2029,7 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 | Scanner base lifecycle      | `services/scanner-runner/src/core/scanner-base.ts`                    |
 | Core types                  | `services/scanner-runner/src/core/types.ts`                           |
 | Config loader               | `services/scanner-runner/src/core/config-loader.ts`                   |
-| Plugin loader               | `services/scanner-runner/src/core/plugins/`                           |
+| Built-in scanner registry   | `services/scanner-runner/src/scanners/registry.ts`                    |
 | Event publisher             | `services/scanner-runner/src/core/event-publisher.ts`                 |
 | Storage provider            | `services/scanner-runner/src/core/storage-provider/`                  |
 | Browser manager             | `services/scanner-runner/src/core/browser-manager.ts`                 |
@@ -2090,11 +2083,9 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 | Area                      | File                                                                  |
 | ------------------------- | --------------------------------------------------------------------- |
 | Report schema             | `libs/contracts/report/schema/unified-report.v2.schema.json`          |
-| Report Go types           | `libs/contracts/report/generated/go/report_schema.go`                 |
-| Report TS types           | `libs/contracts/report/generated/typescript/unified-report.v2.ts`     |
-| Report TS validator       | `libs/contracts/report/generated/typescript/validator.ts`             |
+| Report generated code     | `libs/contracts/report/generated/`                                   |
 | Scanner manifest schema   | `libs/contracts/scanner-manifest/schema/scanner-manifest.schema.json` |
-| Scanner manifest Go types | `libs/contracts/scanner-manifest/scanner_manifest.go`                 |
+| Scanner manifest generated code | `libs/contracts/scanner-manifest/generated/`, `libs/contracts/scanner-manifest/scanner_manifest.go` |
 | Event schemas             | `libs/contracts/events/schema/`                                       |
 
 ### Infrastructure

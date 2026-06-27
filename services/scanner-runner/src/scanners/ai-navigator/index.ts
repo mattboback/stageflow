@@ -1,4 +1,3 @@
-import fs from 'fs-extra';
 import path from 'node:path';
 
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
@@ -12,6 +11,7 @@ import {
 } from '../../ai';
 import { ScannerBase } from '../../core/scanner-base';
 import { type ScreenshotService, createScreenshotService } from '../../core/screenshots';
+import { ensureDir, writeJson } from '../../utils/fs';
 import { SCANNER_VERSION } from '../version';
 import { runAiNavigatorAgent } from './agent';
 import { type AiNavigatorOptions, parseAiNavigatorOptions } from './options';
@@ -64,7 +64,7 @@ export class AiNavigatorScanner extends ScannerBase {
 
 		const tracePath = path.join(context.resultsDir, 'ai-trace.json');
 		const screenshotsDir = path.join(context.resultsDir, 'screenshots');
-		await fs.ensureDir(screenshotsDir);
+		await ensureDir(screenshotsDir);
 
 		const goal = this.options.goal;
 
@@ -82,7 +82,7 @@ export class AiNavigatorScanner extends ScannerBase {
 			preScanExecutor: browserManager
 		});
 
-		await fs.writeJSON(tracePath, agentResult, { spaces: 2 });
+		await writeJson(tracePath, agentResult, { spaces: 2 });
 
 		const finishedAt = new Date().toISOString();
 		const durationMs = Date.now() - startedMs;

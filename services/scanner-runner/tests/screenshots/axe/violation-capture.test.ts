@@ -21,9 +21,9 @@ vi.mock('node:fs', () => ({
 	mkdirSync: vi.fn()
 }));
 
-// Mock uuid
-vi.mock('uuid', () => ({
-	v4: vi.fn().mockReturnValue('test-uuid-abc123')
+vi.mock('node:crypto', async () => ({
+	...(await vi.importActual<typeof import('node:crypto')>('node:crypto')),
+	randomUUID: vi.fn().mockReturnValue('test-uuid-abc123')
 }));
 
 // Mock config/rule-behaviors

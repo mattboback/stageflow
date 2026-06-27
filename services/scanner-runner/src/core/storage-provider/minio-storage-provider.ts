@@ -2,9 +2,9 @@
  * MinIO-based storage provider for uploading scan artifacts.
  */
 
-import fg from 'fast-glob';
 import { Client as MinioClient } from 'minio';
-import { join } from 'node:path';
+import { readdir } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 
 import type { ScannerLogger, StorageConfig, StorageProvider } from '../types';
 
@@ -14,6 +14,24 @@ import { guessContentType } from './content-type';
 import { parseMinioEndpoint } from './endpoint';
 import { getFileSize, waitForFileReady } from './files';
 import { wrapMinioError } from './minio-errors';
+
+async function listFiles(root: string, dir = root): Promise<string[]> {
+	const entries = await readdir(dir, { withFileTypes: true });
+	const files: string[] = [];
+
+	for (const entry of entries) {
+		const path = join(dir, entry.name);
+		if (entry.isDirectory()) {
+			files.push(...(await listFiles(root, path)));
+			continue;
+		}
+		if (entry.isFile()) {
+			files.push(relative(root, path).split('\\').join('/'));
+		}
+	}
+
+	return files;
+}
 
 export class MinioStorageProvider implements StorageProvider {
 	private readonly client: MinioClient;
@@ -127,11 +145,7 @@ export class MinioStorageProvider implements StorageProvider {
 	}
 
 	async uploadDirectory(bucket: string, prefix: string, localDir: string): Promise<number> {
-		const files = await fg(['**/*'], {
-			cwd: localDir,
-			dot: true,
-			onlyFiles: true
-		});
+		const files = await listFiles(localDir);
 
 		if (files.length === 0) {
 			return 0;
@@ -147,8 +161,7 @@ export class MinioStorageProvider implements StorageProvider {
 		let skippedCount = 0;
 
 		for (const relPath of files) {
-			const normalized = relPath.split('\\').join('/');
-			const objectName = `${prefix}/${normalized}`;
+			const objectName = `${prefix}/${relPath}`;
 			const filePath = join(localDir, relPath);
 
 			const isReady = await waitForFileReady(filePath, this.logger);

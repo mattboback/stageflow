@@ -4,7 +4,6 @@ type Current = 'home' | 'playground' | undefined;
 
 const GITHUB_URL = 'https://github.com/mattboback/stageflow';
 
-/** Sticky instrument header + calibration tick-rule. Mirrors mockups/instrument. */
 export function SiteHeader({ current }: { current?: Current }) {
 	return (
 		<>

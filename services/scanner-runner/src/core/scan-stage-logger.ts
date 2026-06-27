@@ -1,8 +1,10 @@
-import fs from 'fs-extra';
 import { createHash } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import type { ScannerConfig, StorageProvider } from './types';
+
+import { ensureDir } from '../utils/fs';
 
 const scanStageSchema = 'stageflow.stages.scan.v1';
 const scanRecipeSchema = 'stageflow.recipes.scan.v1';
@@ -100,8 +102,8 @@ export class ScanStageLogger {
 	}
 
 	async start(): Promise<{ recipePath: string }> {
-		await fs.ensureDir(dirname(this.recipeLocalPath));
-		await fs.ensureDir(dirname(this.stageLogLocalPath));
+		await ensureDir(dirname(this.recipeLocalPath));
+		await ensureDir(dirname(this.stageLogLocalPath));
 
 		const recipe: ScanRecipe = {
 			schema: scanRecipeSchema,
@@ -124,7 +126,7 @@ export class ScanStageLogger {
 
 		const json = JSON.stringify(recipe, null, 2);
 		this.recipeHash = sha256Hex(json);
-		await fs.writeFile(this.recipeLocalPath, json, {
+		await writeFile(this.recipeLocalPath, json, {
 			encoding: 'utf8',
 			mode: 0o600
 		});
@@ -207,7 +209,7 @@ export class ScanStageLogger {
 		};
 
 		const json = JSON.stringify(log, null, 2);
-		await fs.writeFile(this.stageLogLocalPath, json, {
+		await writeFile(this.stageLogLocalPath, json, {
 			encoding: 'utf8',
 			mode: 0o600
 		});

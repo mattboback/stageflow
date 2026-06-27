@@ -116,15 +116,15 @@ Key files: `services/archive-extractor/internal/extractor/`, `services/archive-e
 
 ### Scanner Runner
 
-The TypeScript/Bun runtime that actually runs the eight scanners. It discovers scanner plugins from manifests on the filesystem, validates configuration schemas, and executes each scanner against the target URLs using Playwright. For every page it captures a screenshot; for every scanner it produces `results.json` (structured data) and `report.html` (human-readable). Both are uploaded to MinIO and announced to NATS.
+The TypeScript/Bun runtime that actually runs the built-in scanners. It loads the built-in scanner manifest catalog, validates configuration schemas, and executes each scanner against the target URLs using Playwright. For every page it captures a screenshot; for every scanner it produces `results.json` (structured data) and `report.html` (human-readable). Both are uploaded to MinIO and announced to NATS.
 
-Key files: `services/scanner-runner/src/worker.ts`, `services/scanner-runner/src/core/plugins/`, `services/scanner-runner/src/scanners/`
+Key files: `services/scanner-runner/src/worker.ts`, `services/scanner-runner/src/scanners/registry.ts`, `services/scanner-runner/src/scanners/`
 
 ### Web App
 
-SvelteKit 5 frontend with three main routes: playground (scan submission), scan status (SSE-driven live view), and report (issue exploration). The report view renders the unified report contract — it contains no scanner-specific branches; adding a new scanner does not require frontend changes.
+React Router frontend with three main routes: playground (scan submission), scan status (SSE-driven live view), and report (issue exploration). The report view renders the unified report contract — it contains no scanner-specific branches; adding a new scanner does not require frontend changes.
 
-Key files: `clients/web/src/routes/`, `clients/web/src/lib/stores/`
+Key files: `clients/web/app/routes/`, `clients/web/app/lib/`
 
 ### CLI
 
@@ -317,7 +317,7 @@ The E2E golden flow (`just project-golden`) is the most valuable integration che
 | When is a job considered done? | `services/orchestrator/internal/domain/jobs/completion_policy.go` |
 | How does the API validate URLs for SSRF? | `services/platform-api/internal/api/security.go` |
 | How does the SSE hub buffer and replay events? | `services/platform-api/internal/jobstatus/` |
-| How are scanner plugins discovered and loaded? | `services/scanner-runner/src/core/plugins/` |
+| How are built-in scanners resolved? | `services/scanner-runner/src/scanners/registry.ts` |
 | What is the full report shape? | `libs/contracts/report/schema/unified-report.v2.schema.json` |
 | How does the CLI drive the dev loop? | `clients/cli/project_run.go`, `clients/cli/internal/projectmode/` |
 | How are Podman pods launched and cleaned up? | `services/orchestrator/internal/adapters/runtime/` |

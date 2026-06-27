@@ -2,13 +2,12 @@
  * Scanner Worker
  *
  * Entry point for running scanners in worker mode.
- * Uses the plugin system (manifests) for scanner resolution.
  */
 
 import type { ManifestConfigSchema } from '@stageflow/contracts-scanner-manifest';
 
 import { type ScannerBase, loadConfigFromEnv, validateConfig } from './core';
-import { type PluginLoader, createPluginLoader } from './core/plugins';
+import { type BuiltinScannerRegistry, loadBuiltinScannerRegistry } from './scanners/registry';
 import { createLogger } from './utils/logger';
 import {
 	assertScannerIdMatchesManifest,
@@ -17,92 +16,30 @@ import {
 
 const logger = createLogger('Worker');
 
-async function initializePlugins(): Promise<PluginLoader> {
-	const loader = createPluginLoader();
-	logger.info('Initializing plugin loader', {
-		searchPaths: loader.getConfig().searchPaths
-	});
-
-	const discovery = await loader.discover();
-
-	if (discovery.errors.length > 0) {
-		logger.warn('Plugin discovery errors', {
-			errorCount: discovery.errors.length,
-			errors: discovery.errors.map((e) => ({ path: e.path, error: e.error }))
-		});
-	}
-
-	if (discovery.plugins.length > 0) {
-		logger.info('Plugins discovered', {
-			count: discovery.plugins.length,
-			plugins: discovery.plugins.map((p) => ({
-				id: p.manifest.id,
-				version: p.manifest.version
-			}))
-		});
-	}
-
-	return loader;
-}
-
-async function getScanner(
+function getScanner(
 	scannerType: string,
-	pluginLoader: PluginLoader
-): Promise<{
+	registry: BuiltinScannerRegistry
+): {
 	scanner: ScannerBase;
 	manifestId: string;
 	manifestConfigSchema?: ManifestConfigSchema;
 	manifestMaxConcurrency?: number;
-}> {
-	const loadResult = await pluginLoader.load(scannerType);
+} {
+	const resolved = registry.resolve(scannerType);
 
-	if (loadResult.success && loadResult.plugin) {
-		const strict = pluginLoader.getConfig().strictValidation;
+	logger.info('Using built-in scanner', {
+		id: resolved.manifestId,
+		requested: scannerType
+	});
 
-		logger.info('Using plugin scanner', {
-			id: loadResult.plugin.manifest.id,
-			version: loadResult.plugin.manifest.version,
-			path: loadResult.plugin.path
-		});
+	assertScannerIdMatchesManifest({
+		manifestId: resolved.manifestId,
+		scannerId: resolved.scanner.metadata.name,
+		strict: registry.strictValidation,
+		logger
+	});
 
-		const scanner = loadResult.plugin.factory();
-		const manifestId = loadResult.plugin.manifest.id;
-
-		assertScannerIdMatchesManifest({
-			manifestId,
-			scannerId: scanner.metadata.name,
-			strict,
-			logger
-		});
-
-		return {
-			scanner,
-			manifestId,
-			...(loadResult.plugin.manifest.configSchema !== undefined
-				? { manifestConfigSchema: loadResult.plugin.manifest.configSchema }
-				: {}),
-			...(loadResult.plugin.manifest.capabilities.maxConcurrency !== undefined
-				? { manifestMaxConcurrency: loadResult.plugin.manifest.capabilities.maxConcurrency }
-				: {})
-		};
-	}
-
-	const availableFromPlugins = pluginLoader.listDiscovered();
-	const loadError = loadResult.error?.trim();
-
-	if (loadError) {
-		throw new Error(
-			`Failed to load scanner type "${scannerType}": ${loadError}. Available scanners: ${
-				availableFromPlugins.join(', ') || 'none'
-			}`
-		);
-	}
-
-	throw new Error(
-		`Unknown scanner type: "${scannerType}". Available scanners: ${
-			availableFromPlugins.join(', ') || 'none'
-		}`
-	);
+	return resolved;
 }
 
 export async function runWorkerMode(): Promise<void> {
@@ -113,11 +50,17 @@ export async function runWorkerMode(): Promise<void> {
 		nodeEnv: process.env.NODE_ENV
 	});
 
-	let pluginLoader: PluginLoader;
+	let scannerRegistry: BuiltinScannerRegistry;
 	try {
-		pluginLoader = await initializePlugins();
+		scannerRegistry = await loadBuiltinScannerRegistry({
+			strictValidation: process.env.NODE_ENV === 'production',
+			logger
+		});
+		logger.info('Built-in scanner registry loaded', {
+			scanners: scannerRegistry.listIds()
+		});
 	} catch (err) {
-		logger.error('Failed to initialize plugin system', {
+		logger.error('Failed to initialize scanner registry', {
 			error: err instanceof Error ? err.message : String(err)
 		});
 		process.exit(1);
@@ -128,7 +71,7 @@ export async function runWorkerMode(): Promise<void> {
 	let manifestConfigSchema: ManifestConfigSchema | undefined;
 	let manifestMaxConcurrency: number | undefined;
 	try {
-		const resolved = await getScanner(scannerType, pluginLoader);
+		const resolved = getScanner(scannerType, scannerRegistry);
 		scanner = resolved.scanner;
 		manifestId = resolved.manifestId;
 		manifestConfigSchema = resolved.manifestConfigSchema;
@@ -159,12 +102,11 @@ export async function runWorkerMode(): Promise<void> {
 
 	if (manifestConfigSchema !== undefined) {
 		try {
-			const strict = pluginLoader.getConfig().strictValidation;
 			assertScannerOptionsMatchSchema({
 				manifestId,
 				schema: manifestConfigSchema,
 				options: config.options,
-				strict,
+				strict: scannerRegistry.strictValidation,
 				logger
 			});
 		} catch (err) {
@@ -173,7 +115,7 @@ export async function runWorkerMode(): Promise<void> {
 				error: err instanceof Error ? err.message : String(err)
 			});
 
-			if (pluginLoader.getConfig().strictValidation) {
+			if (scannerRegistry.strictValidation) {
 				process.exit(1);
 			}
 		}

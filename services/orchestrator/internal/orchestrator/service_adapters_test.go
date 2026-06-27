@@ -32,7 +32,7 @@ func TestOrchestratorRuntimeCreateJobPodDelegatesWithoutRecordingInternalEvents(
 	}
 	insertJob(t, database, job)
 
-	podID, err := (orchestratorRuntime{orchestrator: orch}).CreateJobPod(context.Background(), job)
+	podID, err := orch.CreateJobPod(context.Background(), job)
 	if err != nil {
 		t.Fatalf("CreateJobPod() error = %v", err)
 	}

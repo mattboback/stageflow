@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { ScannerLogger, StorageConfig } from '../../src/core/types';
 
 import { MinioStorageProvider, parseMinioEndpoint } from '../../src/core/storage-provider';
 
-const globMock = vi.hoisted(() => vi.fn());
 const fileMocks = vi.hoisted(() => ({
 	getFileSize: vi.fn().mockResolvedValue(123),
 	waitForFileReady: vi.fn().mockResolvedValue(true)
 }));
 
-vi.mock('fast-glob', () => ({ default: globMock }));
 vi.mock('../../src/core/storage-provider/files', () => fileMocks);
 
 const mocks = vi.hoisted(() => {
@@ -139,17 +140,25 @@ describe('MinioStorageProvider', () => {
 	});
 
 	it('returns 0 when uploading an empty directory', async () => {
-		globMock.mockResolvedValue([]);
+		const dir = await mkdtemp(join(tmpdir(), 'stageflow-empty-upload-'));
 
-		const provider = new MinioStorageProvider(baseConfig, logger);
-		const uploaded = await provider.uploadDirectory('scanner-artifacts', 'job-1/axe', '/tmp');
+		try {
+			const provider = new MinioStorageProvider(baseConfig, logger);
+			const uploaded = await provider.uploadDirectory('scanner-artifacts', 'job-1/axe', dir);
 
-		expect(uploaded).toBe(0);
-		expect(mocks.client.fPutObject).not.toHaveBeenCalled();
+			expect(uploaded).toBe(0);
+			expect(mocks.client.fPutObject).not.toHaveBeenCalled();
+		} finally {
+			await rm(dir, { force: true, recursive: true });
+		}
 	});
 
 	it('skips unreadable files and continues after upload failures', async () => {
-		globMock.mockResolvedValue(['a.txt', 'b.txt', 'sub\\c.txt']);
+		const dir = await mkdtemp(join(tmpdir(), 'stageflow-upload-'));
+		await mkdir(join(dir, 'sub'));
+		await writeFile(join(dir, 'a.txt'), 'a');
+		await writeFile(join(dir, 'b.txt'), 'b');
+		await writeFile(join(dir, 'sub', 'c.txt'), 'c');
 
 		fileMocks.waitForFileReady.mockImplementation((filePath: string) =>
 			Promise.resolve(!filePath.endsWith('a.txt'))
@@ -162,20 +171,20 @@ describe('MinioStorageProvider', () => {
 			return Promise.resolve(undefined);
 		});
 
-		const provider = new MinioStorageProvider(baseConfig, logger);
-		const uploaded = await provider.uploadDirectory(
-			'scanner-artifacts',
-			'job-1/axe',
-			'/scan-results'
-		);
+		try {
+			const provider = new MinioStorageProvider(baseConfig, logger);
+			const uploaded = await provider.uploadDirectory('scanner-artifacts', 'job-1/axe', dir);
 
-		expect(uploaded).toBe(1);
-		expect(mocks.client.fPutObject).toHaveBeenCalledWith(
-			'scanner-artifacts',
-			'job-1/axe/sub/c.txt',
-			'/scan-results/sub\\c.txt',
-			{ 'Content-Type': 'text/plain' }
-		);
+			expect(uploaded).toBe(1);
+			expect(mocks.client.fPutObject).toHaveBeenCalledWith(
+				'scanner-artifacts',
+				'job-1/axe/sub/c.txt',
+				join(dir, 'sub', 'c.txt'),
+				{ 'Content-Type': 'text/plain' }
+			);
+		} finally {
+			await rm(dir, { force: true, recursive: true });
+		}
 	});
 
 	it('downloads files and wraps errors', async () => {
