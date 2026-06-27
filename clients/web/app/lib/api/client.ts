@@ -279,7 +279,9 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 		}
 
 		const message = error instanceof Error ? error.message : 'Network error';
-		throw new Error(`Scanner catalog failed to load. ${message}. Refresh to retry.`);
+		throw new Error(`Scanner catalog failed to load. ${message}. Refresh to retry.`, {
+			cause: error
+		});
 	}
 }
 

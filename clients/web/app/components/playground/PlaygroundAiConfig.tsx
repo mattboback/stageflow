@@ -1,25 +1,9 @@
 import type {
+	AiConfigState,
 	AiInputValue,
 	AiSuccessCriterion
 } from '../../lib/components/playground/playground-utils';
-
-export interface AiConfigState {
-	objective: string;
-	maxSteps: number;
-	maxWallTimeMs: number;
-	model: string;
-	inputValues: AiInputValue[];
-	successCriteria: AiSuccessCriterion[];
-}
-
-export const DEFAULT_AI_CONFIG: AiConfigState = {
-	objective: '',
-	maxSteps: 12,
-	maxWallTimeMs: 120_000,
-	model: 'anthropic/claude-3.5-sonnet',
-	inputValues: [],
-	successCriteria: []
-};
+import { DEFAULT_AI_CONFIG } from '../../lib/components/playground/playground-utils';
 
 interface Props {
 	config: AiConfigState;

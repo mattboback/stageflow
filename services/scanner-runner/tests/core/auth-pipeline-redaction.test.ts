@@ -23,8 +23,7 @@
 
 import type { BrowserContext, Page } from 'playwright';
 
-import fs from 'fs-extra';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -342,7 +341,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 		const formRun = await runFullPipeline(tmp, formProvenance);
 
 		// 1. Stored Provenance file (we synthesize on disk in the test by re-emitting).
-		await fs.writeJSON(join(tmp, 'provenance.json'), formProvenance, { spaces: 2 });
+		await writeFile(join(tmp, 'provenance.json'), JSON.stringify(formProvenance, null, 2), 'utf8');
 		expectNoSecrets('stored Provenance', await readFile(join(tmp, 'provenance.json'), 'utf8'));
 
 		// 2. Stage log + recipe uploaded via the stage logger.
@@ -379,8 +378,8 @@ describe('Auth pipeline redaction (form mode)', () => {
 			uploadBuffer: vi.fn(),
 			uploadDirectory: vi.fn().mockResolvedValue(0),
 			download: vi.fn().mockImplementation(async (_b: string, _k: string, dest: string) => {
-				await fs.ensureDir(join(tmp, 'auth'));
-				await fs.writeFile(dest, JSON.stringify({ cookies: [], origins: [] }));
+				await mkdir(join(tmp, 'auth'), { recursive: true });
+				await writeFile(dest, JSON.stringify({ cookies: [], origins: [] }), 'utf8');
 			}),
 			exists: vi.fn().mockResolvedValue(true)
 		};

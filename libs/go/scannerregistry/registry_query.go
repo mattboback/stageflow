@@ -12,7 +12,7 @@ func (r *Registry) Get(id string) (*Definition, bool) {
 
 	def, ok := r.scanners[id]
 
-	return def, ok
+	return def.clone(), ok
 }
 
 // Resolve looks up a scanner by ID or alias.
@@ -21,12 +21,12 @@ func (r *Registry) Resolve(idOrAlias string) (*Definition, bool) {
 	defer r.mu.RUnlock()
 
 	if def, ok := r.scanners[idOrAlias]; ok {
-		return def, true
+		return def.clone(), true
 	}
 
 	if id, aliasFound := r.aliasMap[strings.ToLower(idOrAlias)]; aliasFound {
 		if def, defFound := r.scanners[id]; defFound {
-			return def, true
+			return def.clone(), true
 		}
 	}
 
@@ -47,7 +47,7 @@ func (r *Registry) List() []*Definition {
 
 	result := make([]*Definition, 0, len(ids))
 	for _, id := range ids {
-		result = append(result, r.scanners[id])
+		result = append(result, r.scanners[id].clone())
 	}
 
 	return result
@@ -84,7 +84,7 @@ func (r *Registry) ListEnabled() []*Definition {
 
 	result := make([]*Definition, 0, len(ids))
 	for _, id := range ids {
-		result = append(result, r.scanners[id])
+		result = append(result, r.scanners[id].clone())
 	}
 
 	return result
@@ -103,7 +103,7 @@ func (r *Registry) ListByCategory(category string) []*Definition {
 	result := make([]*Definition, 0, len(ids))
 	for _, id := range ids {
 		if def, found := r.scanners[id]; found && def.Enabled {
-			result = append(result, def)
+			result = append(result, def.clone())
 		}
 	}
 

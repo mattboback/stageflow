@@ -11,19 +11,17 @@ import {
 import {
 	buildAiNavigatorConfig,
 	buildFormAuthConfig,
+	DEFAULT_AI_CONFIG,
 	isAuthConfigComplete,
 	normalizeUrlInput,
 	validateHttpUrls,
 	validateZipUploadFile,
+	type AiConfigState,
 	type AuthFormConfig
 } from '../lib/components/playground/playground-utils';
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
-import {
-	PlaygroundAiConfig,
-	DEFAULT_AI_CONFIG,
-	type AiConfigState
-} from '../components/playground/PlaygroundAiConfig';
+import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
 import playgroundStyles from './playground.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: playgroundStyles }];
@@ -86,7 +84,6 @@ export default function Playground() {
 
 	useEffect(() => {
 		const controller = new AbortController();
-		setCatalogLoading(true);
 		fetchScanners(controller.signal)
 			.then((res) => {
 				setCatalog(res.scanners);

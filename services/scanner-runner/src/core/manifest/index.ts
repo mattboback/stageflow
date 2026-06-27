@@ -9,8 +9,6 @@ import type { ManifestConfigSchema, ScannerManifest } from '@stageflow/contracts
 import manifestSchema from '@stageflow/contracts-scanner-manifest/schema';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import fs from 'fs-extra';
-import path from 'node:path';
 
 export type { ScannerManifest } from '@stageflow/contracts-scanner-manifest';
 
@@ -34,12 +32,6 @@ interface ManifestValidationWarning {
 	path: string;
 	message: string;
 	suggestion?: string;
-}
-
-export async function loadManifest(manifestPath: string): Promise<ScannerManifest> {
-	const content = await fs.readFile(manifestPath, 'utf-8');
-	const manifest = JSON.parse(content) as ScannerManifest;
-	return manifest;
 }
 
 export function validateManifest(manifest: ScannerManifest): ManifestValidationResult {
@@ -103,24 +95,6 @@ export function validateManifest(manifest: ScannerManifest): ManifestValidationR
 		errors,
 		warnings
 	};
-}
-
-export function resolveEntryPath(manifest: ScannerManifest, manifestDir: string): string {
-	const entryModule = manifest.entry.module.trim();
-	if (!entryModule) {
-		throw new Error('Manifest entry.module must not be empty');
-	}
-	if (path.isAbsolute(entryModule)) {
-		throw new Error(`Absolute plugin entry paths are not allowed: ${entryModule}`);
-	}
-
-	const resolvedPath = path.resolve(manifestDir, entryModule);
-	const relativePath = path.relative(manifestDir, resolvedPath);
-	if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-		throw new Error(`Plugin entry path escapes plugin directory: ${entryModule}`);
-	}
-
-	return resolvedPath;
 }
 
 export function validateOptionsAgainstSchema(

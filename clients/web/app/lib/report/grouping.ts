@@ -55,18 +55,18 @@ export function groupIssues(
 	}
 
 	const result: IssueBucket[] = Array.from(groups.entries()).map(([id, grouped]) => {
-		let label = id;
-		if (key === 'rule') {
-			label = grouped[0]?.title ?? id;
-		} else if (key === 'page') {
-			const page = pagesById[id];
-			label = page ? (page.path ?? page.url) : id;
-		} else if (key === 'scanner') {
-			const scanner = scannersById[id];
-			label = scanner ? (scanner.name ?? id) : id;
-		} else {
-			label = id === 'uncategorized' ? 'Uncategorized' : id;
-		}
+		const page = pagesById[id];
+		const scanner = scannersById[id];
+		const label =
+			key === 'rule'
+				? (grouped[0]?.title ?? id)
+				: key === 'page'
+					? (page?.path ?? page?.url ?? id)
+					: key === 'scanner'
+						? (scanner?.name ?? id)
+						: id === 'uncategorized'
+							? 'Uncategorized'
+							: id;
 
 		return {
 			id,

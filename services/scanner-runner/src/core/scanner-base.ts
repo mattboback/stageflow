@@ -1,6 +1,6 @@
 import type { Stats } from 'node:fs';
 
-import fs from 'fs-extra';
+import { readdir, stat, writeFile } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 
 import type {
@@ -20,6 +20,7 @@ import type {
 } from './types';
 
 import { createLogger } from '../utils/logger';
+import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
 import {
 	reportPath as artifactReportPath,
 	resultsPath as artifactResultsPath
@@ -267,7 +268,7 @@ export abstract class ScannerBase {
 	}
 
 	protected async initialize(): Promise<void> {
-		await fs.ensureDir(this.config.resultsDir);
+		await ensureDir(this.config.resultsDir);
 
 		const browserManager = new BrowserManager(this.config.browser, this.logger);
 		this.browserManager = browserManager;
@@ -437,11 +438,11 @@ export abstract class ScannerBase {
 		const webServerFormat = new WebServerFormatter().format(provenance, results, this.metadata);
 
 		const resultsPath = join(this.config.resultsDir, 'results.json');
-		await fs.writeJSON(resultsPath, webServerFormat, { spaces: 2 });
+		await writeJson(resultsPath, webServerFormat, { spaces: 2 });
 		this.logger.info('Wrote results file', { path: resultsPath });
 
 		const reportPath = join(this.config.resultsDir, 'report.html');
-		await fs.writeFile(reportPath, this.buildStandaloneReportHTML(results), 'utf8');
+		await writeFile(reportPath, this.buildStandaloneReportHTML(results), 'utf8');
 		this.logger.info('Wrote standalone report file', { path: reportPath });
 
 		return { reportPath };
@@ -468,7 +469,7 @@ export abstract class ScannerBase {
 
 		let uploadedCount = 2;
 
-		const entries = await fs.readdir(this.config.resultsDir, {
+		const entries = await readdir(this.config.resultsDir, {
 			withFileTypes: true
 		});
 		for (const entry of entries) {
@@ -477,7 +478,7 @@ export abstract class ScannerBase {
 			}
 
 			const screenshotsDir = join(this.config.resultsDir, entry.name, 'screenshots');
-			if (!(await fs.pathExists(screenshotsDir))) {
+			if (!(await pathExists(screenshotsDir))) {
 				continue;
 			}
 
@@ -500,13 +501,13 @@ export abstract class ScannerBase {
 	private async uploadExtraArtifacts(bucket: string, prefix: string): Promise<number> {
 		const manifestPath = join(this.config.resultsDir, ScannerBase.extraArtifactsManifest);
 
-		if (!(await fs.pathExists(manifestPath))) {
+		if (!(await pathExists(manifestPath))) {
 			return 0;
 		}
 
 		let manifest: unknown;
 		try {
-			manifest = await fs.readJSON(manifestPath);
+			manifest = await readJson(manifestPath);
 		} catch (err) {
 			this.logger.warn('Failed to read extra artifacts manifest', {
 				path: manifestPath,
@@ -545,14 +546,14 @@ export abstract class ScannerBase {
 				continue;
 			}
 
-			if (!(await fs.pathExists(absolutePath))) {
+			if (!(await pathExists(absolutePath))) {
 				this.logger.warn('Extra artifact path does not exist', { relPath });
 				continue;
 			}
 
 			let stats: Stats;
 			try {
-				stats = await fs.stat(absolutePath);
+				stats = await stat(absolutePath);
 			} catch (err) {
 				this.logger.warn('Failed to stat extra artifact path', {
 					relPath,

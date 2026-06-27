@@ -1,8 +1,8 @@
 import type { Page } from 'playwright';
 
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
 
 import type { AxeScreenshotConfig, AxeViolation, EnhancedScreenshotResult } from './types';
 
@@ -28,7 +28,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 	}
 
 	const ruleId = input.violation.id ?? '';
-	const overlayId = `sf-semantic-${uuidv4()}`;
+	const overlayId = `sf-semantic-${randomUUID()}`;
 
 	let overlayCount: number;
 	if (HEADING_OVERLAY_RULES.has(ruleId)) {
@@ -57,7 +57,7 @@ export async function captureSemanticOverlayScreenshot(input: {
 	}
 
 	const ext = input.cfg.outputFormat === 'webp' ? '.webp' : '.png';
-	const screenshotFilename = `semantic-${ruleId || 'unknown'}-${uuidv4()}${ext}`;
+	const screenshotFilename = `semantic-${ruleId || 'unknown'}-${randomUUID()}${ext}`;
 	const screenshotPath = join(input.resultsDir, screenshotFilename);
 
 	try {

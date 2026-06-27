@@ -35,7 +35,7 @@ func (r *Registry) Register(def *Definition) error {
 		}
 	}
 
-	r.scanners[def.ID] = def
+	r.scanners[def.ID] = def.clone()
 
 	// Treat the scanner ID as an implicit alias.
 	r.aliasMap[strings.ToLower(def.ID)] = def.ID

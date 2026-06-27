@@ -20,7 +20,7 @@ func (o *Orchestrator) startPlannedScanner(
 
 	scannerType := plan.Labels["scanner_type"]
 
-	result, err := o.runtimeAdapter().StartScanner(ctx, job, plan)
+	result, err := o.jobRuntime.StartScanner(ctx, job, plan)
 	if result != nil && result.ContainerID != "" {
 		slog.Info(
 			"Created scanner container",

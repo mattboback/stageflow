@@ -3,7 +3,6 @@ export { type ConfigLoaderOptions, loadConfigFromEnv, validateConfig } from './c
 export { type EventEnvelope, NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
 
 export { PageIterator, type PageIteratorCallbacks, type PageScanCallback } from './page-iterator';
-export * from './plugins';
 // Local scanner-base with extended functionality
 export { ScannerBase, type ScannerMetadata } from './scanner-base';
 export { MinioStorageProvider, parseMinioEndpoint } from './storage-provider';

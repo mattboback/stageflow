@@ -6,7 +6,6 @@
 
 import type { BrowserContext, Page } from 'playwright';
 
-import fs from 'fs-extra';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
@@ -14,26 +13,16 @@ import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/t
 
 import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
 
-// Mock dependencies
-vi.mock('fs-extra', () => ({
-	default: {
-		pathExists: vi.fn(),
-		readJSON: vi.fn(),
-		writeJSON: vi.fn(),
-		ensureDir: vi.fn()
-	}
+const fsMock = vi.hoisted(() => ({
+	pathExists: vi.fn(),
+	readJson: vi.fn(),
+	writeJson: vi.fn(),
+	ensureDir: vi.fn()
 }));
 
+vi.mock('../../src/utils/fs', () => fsMock);
+
 vi.mock('../../src/core/browser-manager');
-
-interface FsExtraMock {
-	pathExists: ReturnType<typeof vi.fn>;
-	readJSON: ReturnType<typeof vi.fn>;
-	writeJSON: ReturnType<typeof vi.fn>;
-	ensureDir: ReturnType<typeof vi.fn>;
-}
-
-const fsMock = fs as unknown as FsExtraMock;
 
 describe('PageIterator', () => {
 	let pageIterator: PageIterator;
@@ -129,12 +118,12 @@ describe('PageIterator', () => {
 	describe('loadProvenance', () => {
 		it('should load provenance from file', async () => {
 			fsMock.pathExists.mockResolvedValue(true);
-			fsMock.readJSON.mockResolvedValue(mockProvenance);
+			fsMock.readJson.mockResolvedValue(mockProvenance);
 
 			const provenance = await pageIterator.loadProvenance();
 
 			expect(fsMock.pathExists).toHaveBeenCalledWith('/tmp/provenance.json');
-			expect(fsMock.readJSON).toHaveBeenCalledWith('/tmp/provenance.json');
+			expect(fsMock.readJson).toHaveBeenCalledWith('/tmp/provenance.json');
 			expect(provenance).toMatchObject({
 				job_id: 'test-job',
 				pages: expect.arrayContaining([
@@ -160,7 +149,7 @@ describe('PageIterator', () => {
 			};
 
 			fsMock.pathExists.mockResolvedValue(true);
-			fsMock.readJSON.mockResolvedValue(rawProvenance);
+			fsMock.readJson.mockResolvedValue(rawProvenance);
 
 			const provenance = await pageIterator.loadProvenance();
 
@@ -180,7 +169,7 @@ describe('PageIterator', () => {
 			expect(provenance.pages[0]!.url).toBe('https://example.com');
 			expect(provenance.pages[1]!.url).toBe('https://example.com/page2');
 			expect(provenance.default_wait_for).toEqual({ type: 'domcontentloaded' });
-			expect(fsMock.writeJSON).toHaveBeenCalled();
+			expect(fsMock.writeJson).toHaveBeenCalled();
 
 			delete process.env.SCAN_URLS;
 		});
@@ -556,7 +545,7 @@ describe('PageIterator', () => {
 			};
 
 			fsMock.pathExists.mockResolvedValue(true);
-			fsMock.readJSON.mockResolvedValue(provenance);
+			fsMock.readJson.mockResolvedValue(provenance);
 
 			const result = await pageIterator.loadProvenance();
 
@@ -579,7 +568,7 @@ describe('PageIterator', () => {
 			};
 
 			fsMock.pathExists.mockResolvedValue(true);
-			fsMock.readJSON.mockResolvedValue(provenance);
+			fsMock.readJson.mockResolvedValue(provenance);
 
 			const result = await pageIterator.loadProvenance();
 
@@ -602,7 +591,7 @@ describe('PageIterator', () => {
 			};
 
 			fsMock.pathExists.mockResolvedValue(true);
-			fsMock.readJSON.mockResolvedValue(provenance);
+			fsMock.readJson.mockResolvedValue(provenance);
 
 			const result = await pageIterator.loadProvenance();
 

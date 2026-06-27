@@ -5,7 +5,6 @@
 
 import type { Page } from 'playwright';
 
-import fs from 'fs-extra';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -20,13 +19,15 @@ import type { PreScanAction, ScannerLogger } from '../../../src/core/types';
 
 import { runAiNavigatorAgent } from '../../../src/scanners/ai-navigator/agent';
 
-vi.mock('fs-extra', () => ({
-	default: {
-		writeFile: vi.fn().mockResolvedValue(undefined)
-	}
-}));
+const writeFileMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
-const fsMock = fs as unknown as { writeFile: ReturnType<typeof vi.fn> };
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		writeFile: writeFileMock
+	};
+});
 
 function makeLogger(): ScannerLogger {
 	return {
@@ -107,7 +108,7 @@ async function runAgent(opts: RunOptions): ReturnType<typeof runAiNavigatorAgent
 
 describe('runAiNavigatorAgent failure-policy guards', () => {
 	it('keeps going after one failure but stops once consecutive failures hit the threshold', async () => {
-		fsMock.writeFile.mockResolvedValue(undefined);
+		writeFileMock.mockResolvedValue(undefined);
 		const goal: AgentGoal = { objective: 'demo', maxSteps: 10, maxConsecutiveFailures: 3 };
 		const executor = {
 			executePreScanActions: vi
@@ -128,7 +129,7 @@ describe('runAiNavigatorAgent failure-policy guards', () => {
 	});
 
 	it('stops when N successful turns produced no observable URL or DOM signature change', async () => {
-		fsMock.writeFile.mockResolvedValue(undefined);
+		writeFileMock.mockResolvedValue(undefined);
 		const goal: AgentGoal = { objective: 'demo', maxSteps: 10, maxNoProgressTurns: 3 };
 		const pageState: FakePageState = { url: 'https://app.example.com/x', domLength: 42 };
 		const page = makePage(pageState);
@@ -151,7 +152,7 @@ describe('runAiNavigatorAgent failure-policy guards', () => {
 	});
 
 	it('continues iterating when each turn changes the URL or DOM signature', async () => {
-		fsMock.writeFile.mockResolvedValue(undefined);
+		writeFileMock.mockResolvedValue(undefined);
 		const goal: AgentGoal = {
 			objective: 'demo',
 			maxSteps: 4,

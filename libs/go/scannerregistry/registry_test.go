@@ -181,6 +181,93 @@ func TestRegistry_Get(t *testing.T) {
 	})
 }
 
+func TestRegistry_ReturnsCopies(t *testing.T) {
+	reg := NewRegistry("")
+	def := &Definition{
+		ID:         moduleAxe,
+		Name:       scannerNameAxe,
+		Categories: []string{categoryAccessibility},
+		Aliases:    []string{moduleAxeAlias},
+		Enabled:    true,
+		Config:     map[string]any{"mode": "strict", "rules": []any{"color-contrast"}},
+		Capabilities: Capabilities{
+			OutputFormats: []string{"json"},
+		},
+		Requirements: Requirements{
+			Browser: &BrowserRequirement{Type: "chromium", Args: []string{"--headless"}},
+		},
+	}
+
+	registerDefinition(t, reg, def)
+
+	t.Run("register clones caller state", func(t *testing.T) {
+		def.Name = "mutated"
+		def.Categories[0] = "mutated-category"
+		def.Aliases[0] = "mutated-alias"
+		def.Capabilities.OutputFormats[0] = "xml"
+		def.Requirements.Browser.Args[0] = "--mutated"
+		def.Config["mode"] = "mutated"
+		def.Config["rules"].([]any)[0] = "mutated"
+
+		got, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		requireAxeDefinitionCopy(t, got)
+	})
+
+	t.Run("get clones internal state", func(t *testing.T) {
+		got, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		got.Name = "changed-after-get"
+		got.Categories[0] = "changed-after-get"
+		got.Aliases[0] = "changed-after-get"
+		got.Capabilities.OutputFormats[0] = "changed-after-get"
+		got.Requirements.Browser.Args[0] = "changed-after-get"
+		got.Config["mode"] = "changed-after-get"
+		got.Config["rules"].([]any)[0] = "changed-after-get"
+
+		again, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		requireAxeDefinitionCopy(t, again)
+	})
+
+	t.Run("list clones internal state", func(t *testing.T) {
+		list := reg.List()
+		list[0].Name = "changed-through-list"
+
+		again, ok := reg.Get(moduleAxe)
+		if !ok {
+			t.Fatalf("Get(%q) not found", moduleAxe)
+		}
+
+		if again.Name != scannerNameAxe {
+			t.Fatalf("List returned mutable internal state: %q", again.Name)
+		}
+	})
+}
+
+func requireAxeDefinitionCopy(t *testing.T, got *Definition) {
+	t.Helper()
+
+	if got.Name != scannerNameAxe ||
+		got.Categories[0] != categoryAccessibility ||
+		got.Aliases[0] != moduleAxeAlias ||
+		got.Capabilities.OutputFormats[0] != "json" ||
+		got.Requirements.Browser.Args[0] != "--headless" ||
+		got.Config["mode"] != "strict" ||
+		got.Config["rules"].([]any)[0] != "color-contrast" {
+		t.Fatalf("registry returned mutable scanner state: %#v", got)
+	}
+}
+
 func TestRegistry_Resolve(t *testing.T) {
 	reg := NewRegistry("")
 	def := &Definition{

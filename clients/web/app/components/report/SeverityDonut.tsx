@@ -48,12 +48,15 @@ export function SeverityDonut({ counts, centerLabel = 'issues', size = 132 }: Pr
 		);
 	}
 
-	let offset = 0;
-	const segments = SEVERITY_LEVELS.flatMap((sev) => {
+	const segments = SEVERITY_LEVELS.flatMap((sev, index) => {
 		const value = safe[sev] ?? 0;
 		if (value === 0) return [];
 		const fraction = value / total;
 		const dash = fraction * circumference;
+		const offset = SEVERITY_LEVELS.slice(0, index).reduce(
+			(sum, previous) => sum + ((safe[previous] ?? 0) / total) * circumference,
+			0
+		);
 		const segment = (
 			<circle
 				key={sev}
@@ -68,7 +71,6 @@ export function SeverityDonut({ counts, centerLabel = 'issues', size = 132 }: Pr
 				transform={`rotate(-90 ${size / 2} ${size / 2})`}
 			/>
 		);
-		offset += dash;
 		return [segment];
 	});
 

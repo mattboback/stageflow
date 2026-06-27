@@ -62,6 +62,7 @@ jobs:
 
       - name: Prepare dependencies
         run: |
+          ./devtools/scripts/generate-contracts.sh
           go work sync
           (cd clients/web && bun install --frozen-lockfile)
           (cd services/scanner-runner && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile)

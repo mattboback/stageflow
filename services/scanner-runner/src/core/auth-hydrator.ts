@@ -17,7 +17,7 @@
 
 import type { BrowserContext } from 'playwright';
 
-import fs from 'fs-extra';
+import { chmod } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
@@ -30,6 +30,7 @@ import type {
 	ScannerLogger,
 	StorageProvider
 } from './types';
+import { ensureDir } from '../utils/fs';
 
 type AuthMode = ProvenanceAuth['mode'];
 
@@ -73,9 +74,9 @@ export async function hydrateStorageState(
 	const { auth, storageProvider, bucket, destPath, logger } = options;
 
 	try {
-		await fs.ensureDir(dirname(destPath));
+		await ensureDir(dirname(destPath));
 		await storageProvider.download(bucket, auth.artifact_key, destPath);
-		await fs.chmod(destPath, 0o600);
+		await chmod(destPath, 0o600);
 		logger.info('Downloaded auth storage state', { artifactKey: auth.artifact_key });
 		return { storageStatePath: destPath };
 	} catch (err) {

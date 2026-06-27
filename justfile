@@ -63,6 +63,9 @@ deps:
     echo "==> Ensuring scanner config exists..."
     ./infra/scripts/ensure-scanner-config.sh
 
+    echo "==> Generating schema contracts..."
+    just generate-contracts
+
     echo "==> Syncing Go workspace..."
     {{go}} work sync
 
@@ -516,6 +519,10 @@ ci:
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
 
+[group('quality'), doc('Generate JSON-schema contract code used by Go and TypeScript builds')]
+generate-contracts:
+    @./devtools/scripts/generate-contracts.sh
+
 [group('build'), doc('Build all artifacts (clients/web + Go + runner)')]
 build:
     #!/usr/bin/env bash
@@ -599,7 +606,6 @@ dead-code:
     status=0
     (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
     (cd {{scanner_dir}} && {{bun}} run find-dead-code) || status=$?
-    (cd {{scanner_dir}} && {{bun}} run analyze:dead) || status=$?
     exit "$status"
 
 [group('quality'), doc('Run the project baseline->promote->diff golden flow against the local overlay')]

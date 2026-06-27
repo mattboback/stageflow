@@ -1,8 +1,8 @@
 import type { Page } from 'playwright';
 
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { v4 as uuidv4 } from 'uuid';
 
 import type {
 	AxeScreenshotConfig,
@@ -73,7 +73,7 @@ export async function captureViolationScreenshot(input: {
 	const { targets, selector } = extractAxeViolationTargets(input.violation);
 
 	const ext = input.cfg.outputFormat === 'webp' ? '.webp' : '.png';
-	const screenshotFilename = `violation-${input.violation.id ?? 'unknown'}-${uuidv4()}${ext}`;
+	const screenshotFilename = `violation-${input.violation.id ?? 'unknown'}-${randomUUID()}${ext}`;
 	const screenshotPath = join(input.resultsDir, screenshotFilename);
 
 	if (!existsSync(input.resultsDir)) {

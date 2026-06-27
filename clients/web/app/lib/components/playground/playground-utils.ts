@@ -63,6 +63,24 @@ export interface AiSuccessCriterion {
 	value: string;
 }
 
+export interface AiConfigState {
+	objective: string;
+	maxSteps: number;
+	maxWallTimeMs: number;
+	model: string;
+	inputValues: AiInputValue[];
+	successCriteria: AiSuccessCriterion[];
+}
+
+export const DEFAULT_AI_CONFIG: AiConfigState = {
+	objective: '',
+	maxSteps: 12,
+	maxWallTimeMs: 120_000,
+	model: 'anthropic/claude-3.5-sonnet',
+	inputValues: [],
+	successCriteria: []
+};
+
 export function normalizeUrlInput(input: string): string | null {
 	const trimmed = input.trim();
 	if (!trimmed) return null;

@@ -79,18 +79,14 @@ export function IssueDetailModal({
 		return tabs;
 	}, [hasEvidence, occurrenceCount]);
 
-	const [activeTab, setActiveTab] = useState<TabId>(availableTabs[0] ?? 'fix');
-
-	useEffect(() => {
-		if (!availableTabs.includes(activeTab)) {
-			setActiveTab(availableTabs[0] ?? 'fix');
-		}
-	}, [availableTabs, activeTab]);
-
-	useEffect(() => {
-		setActiveTab(availableTabs[0] ?? 'fix');
-		// reset when issue changes; intentionally only listening on issue.id
-	}, [issue.id, availableTabs]);
+	const [tabState, setTabState] = useState<{ issueId: string; tab: TabId }>({
+		issueId: issue.id,
+		tab: 'fix'
+	});
+	const selectedTab = tabState.issueId === issue.id ? tabState.tab : 'fix';
+	const activeTab = availableTabs.includes(selectedTab)
+		? selectedTab
+		: (availableTabs[0] ?? 'fix');
 
 	const navigate = (delta: number) => {
 		if (!onNavigate || currentIndex < 0) return;
@@ -236,7 +232,7 @@ export function IssueDetailModal({
 							role="tab"
 							aria-selected={activeTab === tab}
 							className="imodal__tab"
-							onClick={() => setActiveTab(tab)}
+							onClick={() => setTabState({ issueId: issue.id, tab })}
 						>
 							{tab === 'fix' && 'Fix'}
 							{tab === 'evidence' && 'Evidence'}
