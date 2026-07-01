@@ -6,8 +6,8 @@ GO_JSONSCHEMA="github.com/atombender/go-jsonschema@v0.20.0"
 JSON_SCHEMA_TO_TYPESCRIPT="json-schema-to-typescript@15.0.4"
 
 MODE="${1:-all}"
-if [[ "$MODE" != "all" && "$MODE" != "ts" ]]; then
-  echo "Error: Unknown mode '$MODE'. Allowed modes: all, ts" >&2
+if [[ "$MODE" != "all" && "$MODE" != "ts" && "$MODE" != "go" ]]; then
+  echo "Error: Unknown mode '$MODE'. Allowed modes: all, ts, go" >&2
   exit 1
 fi
 
@@ -22,13 +22,15 @@ json2ts() {
 generate_report() {
   local dir="$ROOT_DIR/libs/contracts/report"
 
-  json2ts "$dir/schema/unified-report.v2.schema.json" "$dir/generated/typescript/unified-report.v2.ts"
-  cat > "$dir/generated/typescript/index.ts" <<'EOF'
+  if [[ "$MODE" == "all" || "$MODE" == "ts" ]]; then
+    json2ts "$dir/schema/unified-report.v2.schema.json" "$dir/generated/typescript/unified-report.v2.ts"
+    cat > "$dir/generated/typescript/index.ts" <<'EOF'
 export * from './unified-report.v2';
 export type { UnifiedReportV2 as UnifiedReport } from './unified-report.v2';
 EOF
+  fi
 
-  if [[ "$MODE" == "all" ]]; then
+  if [[ "$MODE" == "all" || "$MODE" == "go" ]]; then
     mkdir -p "$dir/generated/go"
     go run "$GO_JSONSCHEMA" --package report --tags json --struct-name-from-title \
       "$dir/schema/unified-report.v2.schema.json" > "$dir/generated/go/report_schema.go"
@@ -41,12 +43,14 @@ EOF
 generate_provenance() {
   local dir="$ROOT_DIR/libs/contracts/provenance"
 
-  json2ts "$dir/schema/provenance.schema.json" "$dir/generated/typescript/provenance.ts"
-  cat > "$dir/generated/typescript/index.ts" <<'EOF'
+  if [[ "$MODE" == "all" || "$MODE" == "ts" ]]; then
+    json2ts "$dir/schema/provenance.schema.json" "$dir/generated/typescript/provenance.ts"
+    cat > "$dir/generated/typescript/index.ts" <<'EOF'
 export * from './provenance';
 EOF
+  fi
 
-  if [[ "$MODE" == "all" ]]; then
+  if [[ "$MODE" == "all" || "$MODE" == "go" ]]; then
     mkdir -p "$dir/generated/go"
     go run "$GO_JSONSCHEMA" --package provenance --tags json --struct-name-from-title \
       "$dir/schema/provenance.schema.json" > "$dir/generated/go/provenance_schema.go"
@@ -59,13 +63,15 @@ EOF
 generate_scanner_manifest() {
   local dir="$ROOT_DIR/libs/contracts/scanner-manifest"
 
-  json2ts "$dir/schema/scanner-manifest.schema.json" \
-    "$dir/generated/typescript/scanner-manifest.ts"
-  cat > "$dir/generated/typescript/index.ts" <<'EOF'
+  if [[ "$MODE" == "all" || "$MODE" == "ts" ]]; then
+    json2ts "$dir/schema/scanner-manifest.schema.json" \
+      "$dir/generated/typescript/scanner-manifest.ts"
+    cat > "$dir/generated/typescript/index.ts" <<'EOF'
 export * from './scanner-manifest';
 EOF
+  fi
 
-  if [[ "$MODE" == "all" ]]; then
+  if [[ "$MODE" == "all" || "$MODE" == "go" ]]; then
     go run "$GO_JSONSCHEMA" --package scannermanifest --tags json --struct-name-from-title \
       "$dir/schema/scanner-manifest.schema.json" > "$dir/scanner_manifest.go"
     sed -i.bak \

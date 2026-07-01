@@ -1,6 +1,9 @@
 import { Link } from 'react-router';
 
 const GITHUB_URL = 'https://github.com/mattboback/stageflow';
+const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
+const CLI_REFERENCE_URL = `${GITHUB_URL}/tree/main/docs/reference/cli/stageflow`;
+const SELF_HOSTING_URL = `${GITHUB_URL}/blob/main/docs/operations/deployment.md`;
 
 export function SiteFooter() {
 	return (
@@ -22,9 +25,9 @@ export function SiteFooter() {
 				</nav>
 				<nav aria-label="Resources" style={{ display: 'grid', gap: '.55rem' }}>
 					<span className="label">Resources</span>
-					<a href="https://stageflow.org/docs">Documentation</a>
-					<a href="https://stageflow.org/docs/reference/cli">CLI reference</a>
-					<a href="https://stageflow.org/docs/self-hosting">Self-hosting</a>
+					<a href={DOCS_URL}>Documentation</a>
+					<a href={CLI_REFERENCE_URL}>CLI reference</a>
+					<a href={SELF_HOSTING_URL}>Self-hosting</a>
 				</nav>
 				<nav aria-label="Project" style={{ display: 'grid', gap: '.55rem' }}>
 					<span className="label">Project</span>

@@ -142,12 +142,15 @@ export function useScanStatus(jobId: string) {
 			return;
 		}
 
-		setSnapshot(emptyStatusSnapshot);
-
 		let closed = false;
 		let stream: { close(): void } | null = null;
 		const isActive = () => !closed;
 		const isCurrentResult = (result: ScanResult) => isActive() && result.id === jobId;
+		queueMicrotask(() => {
+			if (isActive()) {
+				setSnapshot(emptyStatusSnapshot);
+			}
+		});
 		const timer = window.setInterval(() => {
 			setSnapshot((current) =>
 				isTerminal(current.status)
@@ -351,13 +354,16 @@ export function useScanReport(jobId: string) {
 			return;
 		}
 
-		setSnapshot(emptyReportSnapshot);
-
 		let closed = false;
 		let stream: { close(): void } | null = null;
 		let reportRetryAttempts = 0;
 		const isActive = () => !closed;
 		const isCurrentResult = (result: ScanResult) => isActive() && result.id === jobId;
+		queueMicrotask(() => {
+			if (isActive()) {
+				setSnapshot(emptyReportSnapshot);
+			}
+		});
 
 		const scheduleReportRetry = () => {
 			if (!isActive() || reportRetryRef.current !== null) {

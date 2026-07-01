@@ -76,7 +76,7 @@
 }
 .pauth__head > div, .pai__head { flex: 1; min-width: 0; }
 .pauth__title, .pai__title {
-	font-family: var(--serif); font-size: 0.98rem; font-weight: 600;
+	font-family: var(--sans); font-size: 0.98rem; font-weight: 600;
 	color: var(--ink-strong); margin: 0;
 }
 .pauth__sub, .pai__sub {

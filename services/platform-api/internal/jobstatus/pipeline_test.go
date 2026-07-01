@@ -221,7 +221,7 @@ func newWatchedPipeline(t *testing.T) (*Pipeline, Subscription, time.Time) {
 		t.Fatalf("Begin() error = %v", err)
 	}
 
-	_, sub, err := pipeline.Watch(context.Background(), "job-watch", WatchOptions{})
+	_, sub, err := pipeline.Watch(context.Background(), "job-watch")
 	if err != nil {
 		t.Fatalf("Watch() error = %v", err)
 	}
@@ -282,7 +282,7 @@ func TestPipelineApplyKeepsFailureStickyAgainstLateSuccess(t *testing.T) {
 		},
 	})
 
-	_, sub, err := pipeline.Watch(context.Background(), "job-sticky", WatchOptions{})
+	_, sub, err := pipeline.Watch(context.Background(), "job-sticky")
 	if err != nil {
 		t.Fatalf("Watch() error = %v", err)
 	}
@@ -425,7 +425,7 @@ func TestPipelineWatchDeliversInitialReaderSnapshot(t *testing.T) {
 		},
 	})
 
-	rec, sub, err := pipeline.Watch(context.Background(), "job-watch-reader", WatchOptions{})
+	rec, sub, err := pipeline.Watch(context.Background(), "job-watch-reader")
 	if err != nil {
 		t.Fatalf("Watch() error = %v", err)
 	}
@@ -459,7 +459,7 @@ func TestPipelineWatchClosesWhenContextCanceled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	_, sub, err := pipeline.Watch(ctx, "job-watch-cancel", WatchOptions{})
+	_, sub, err := pipeline.Watch(ctx, "job-watch-cancel")
 	if err != nil {
 		t.Fatalf("Watch() error = %v", err)
 	}

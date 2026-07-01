@@ -29,6 +29,7 @@ import { BrowserManager } from './browser-manager';
 import { NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
 import { PageIterator } from './page-iterator';
 import { ScanStageLogger } from './scan-stage-logger';
+import { buildScanCompletedTiming, withPublishCompletedTiming } from './scan-lifecycle';
 import { buildStandaloneReportHTML } from './standalone-report-template';
 import { MinioStorageProvider } from './storage-provider';
 import { WebServerFormatter } from './web-server-formatter';
@@ -202,16 +203,12 @@ export abstract class ScannerBase {
 		// unaccounted remainder (provenance load/upload, stage-log finalize, teardown)
 		// rather than a roll-up of the write/upload phases — double-counting those made
 		// the component sum exceed totalMs and the orchestrator rejected the event.
-		const totalMs = Date.now() - this.runStartedAt;
-		const measuredMs = timing.pageIterationMs + timing.writeResultsMs + timing.uploadArtifactsMs;
-		const timingForEvent = {
-			totalMs,
+		const timingForEvent = buildScanCompletedTiming({
+			totalMs: Date.now() - this.runStartedAt,
 			pageIterationMs: timing.pageIterationMs,
 			writeResultsMs: timing.writeResultsMs,
-			uploadArtifactsMs: timing.uploadArtifactsMs,
-			publishCompletedMs: 0,
-			finalizationMs: Math.max(0, totalMs - measuredMs)
-		};
+			uploadArtifactsMs: timing.uploadArtifactsMs
+		});
 
 		const { durationMs: publishCompletedMs } = await this.runPhase('publishScanCompleted', () =>
 			this.eventPublisher.publishScanCompleted(results, timingForEvent, {
@@ -221,11 +218,7 @@ export abstract class ScannerBase {
 			})
 		);
 
-		this.logPipelineTiming({
-			...timingForEvent,
-			publishCompletedMs,
-			finalizationMs: timingForEvent.finalizationMs + publishCompletedMs
-		});
+		this.logPipelineTiming(withPublishCompletedTiming(timingForEvent, publishCompletedMs));
 
 		return { publishCompletedMs };
 	}

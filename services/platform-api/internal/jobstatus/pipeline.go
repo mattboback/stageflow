@@ -104,7 +104,7 @@ func (p *Pipeline) Current(ctx context.Context, jobID string) (*status.JobRecord
 	return nil, status.ErrJobNotFound
 }
 
-func (p *Pipeline) Watch(ctx context.Context, jobID string, _ WatchOptions) (*status.JobRecord, Subscription, error) {
+func (p *Pipeline) Watch(ctx context.Context, jobID string) (*status.JobRecord, Subscription, error) {
 	sub := p.broker.Subscribe(jobID)
 
 	if done := ctx.Done(); done != nil {

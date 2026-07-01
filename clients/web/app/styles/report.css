@@ -4,7 +4,7 @@
  * getSeverityOverlayClass / getSeverityChipClass in app/lib/report/severity.ts.
  *
  * All colors are pulled from instrument.css tokens. Severity=info maps onto the
- * "pass" tone in the design system — the Print Room palette has no separate
+ * "pass" tone in the design system — the instrument palette has no separate
  * info hue, and info issues are informational/passing in practice.
  */
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 type Current = 'home' | 'playground' | undefined;
 
 const GITHUB_URL = 'https://github.com/mattboback/stageflow';
+const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
 
 export function SiteHeader({ current }: { current?: Current }) {
 	return (
@@ -25,7 +26,7 @@ export function SiteHeader({ current }: { current?: Current }) {
 						<Link className="navlink" to="/#scanners">
 							Scanners
 						</Link>
-						<a className="navlink" href="https://stageflow.org/docs">
+						<a className="navlink" href={DOCS_URL}>
 							Docs
 						</a>
 						<a className="btn btn--ghost btn--sm" href={GITHUB_URL} style={{ marginLeft: '.4rem' }}>

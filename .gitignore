@@ -19,10 +19,8 @@ libs/contracts/scanner-manifest/generated/
 libs/contracts/scanner-manifest/scanner_manifest.go
 
 # clients/web generated artifacts
-/clients/web/.svelte-kit/
 /clients/web/.react-router/
 /clients/web/build/
-/clients/web/storybook-static/
 /clients/web/coverage/
 /clients/web/junit.xml
 
@@ -62,6 +60,7 @@ coverage.html
 *.tmp
 .cache/
 /.patchright-cli/
+/.impeccable/
 # Internal pre-fix review notes (not shipped)
 audit.md
 AUDIT.md

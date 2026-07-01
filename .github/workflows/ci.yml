@@ -23,6 +23,7 @@ env:
   GO_VERSION: '1.26.4'
   NODE_VERSION: '22'
   BUN_VERSION: '1.3.8'
+  JUST_VERSION: '1.55.1'
   GOLANGCI_LINT_VERSION: 'v2.12.2'
   GOVULNCHECK_VERSION: 'v1.1.4'
 
@@ -117,18 +118,23 @@ jobs:
         run: bash devtools/scripts/go/run-in-work-dirs.sh Testing go test -race ./...
 
       - name: CLI docs stay generated
-        run: |
-          go run ./clients/cli docs --out-dir docs/reference/cli/stageflow
-          git diff --exit-code docs/reference/cli/stageflow
+        run: ./devtools/scripts/check-cli-docs-generated.sh
+
+      - name: Setup just
+        uses: step-security/setup-just@9e8475ea068409b4ab53e0e7ef313e8bab0b6cbd # v3.0.1
+        with:
+          just-version: ${{ env.JUST_VERSION }}
 
       - name: Shell regression tests
-        run: bash devtools/scripts/tests/cli-install.test.sh
+        run: |
+          bash devtools/scripts/tests/cli-install.test.sh
+          bash devtools/scripts/tests/dev-onboarding.test.sh
 
       - name: Go vulncheck
         run: bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
 
   clients_web:
-    name: Web App (lint, typecheck, test)
+    name: Web App (audit, typecheck, build)
     runs-on: ubuntu-latest
     needs: workflow_lint
     timeout-minutes: 25

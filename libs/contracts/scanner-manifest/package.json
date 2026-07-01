@@ -11,8 +11,8 @@
 	"types": "dist/generated/typescript/index.d.ts",
 	"scripts": {
 		"generate": "../../../devtools/scripts/generate-contracts.sh",
-		"generate:ts": "../../../devtools/scripts/generate-contracts.sh",
-		"generate:go": "../../../devtools/scripts/generate-contracts.sh",
+		"generate:ts": "../../../devtools/scripts/generate-contracts.sh ts",
+		"generate:go": "../../../devtools/scripts/generate-contracts.sh go",
 		"validate": "node schema/validate.js",
 		"validate:fixtures": "node schema/validate.js fixtures/scanner-manifest.min.json && node schema/validate.js fixtures/scanner-manifest.full.json",
 		"build": "bun run generate && bun run validate:fixtures && tsc",

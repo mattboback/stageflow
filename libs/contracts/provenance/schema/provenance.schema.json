@@ -24,7 +24,7 @@
 			"type": "string"
 		},
 		"mode": {
-			"$ref": "#/definitions/ProvenanceMode"
+			"$ref": "#/definitions/ProvenanceRunMode"
 		},
 		"default_wait_for": {
 			"$ref": "#/definitions/WaitStrategy"
@@ -39,7 +39,7 @@
 			}
 		},
 		"auth": {
-			"$ref": "#/definitions/ProvenanceAuth"
+			"$ref": "#/definitions/ProvenanceAuthBlock"
 		},
 		"metadata": {
 			"type": "object",
@@ -47,7 +47,7 @@
 		}
 	},
 	"definitions": {
-		"ProvenanceMode": {
+		"ProvenanceRunMode": {
 			"title": "ProvenanceMode",
 			"type": "string",
 			"enum": [
@@ -409,7 +409,7 @@
 				}
 			}
 		},
-		"ProvenanceAuth": {
+		"ProvenanceAuthBlock": {
 			"title": "ProvenanceAuth",
 			"description": "Optional authentication block. Discriminated by mode. Secrets are never persisted: form recipes only ever carry literal strings or {from_env} references, and storage_state holds an artifact key, not the credentials that produced it.",
 			"oneOf": [

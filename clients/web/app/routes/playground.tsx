@@ -22,18 +22,21 @@ import {
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
 import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
+import {
+	buildSiteMeta,
+	PLAYGROUND_DESCRIPTION,
+	PLAYGROUND_TITLE
+} from '../lib/site-metadata';
 import playgroundStyles from './playground.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: playgroundStyles }];
 
-export const meta: MetaFunction = () => [
-	{ title: 'Playground — StageFlow' },
-	{
-		name: 'description',
-		content:
-			'Configure and run a frontend quality scan against any public URL or static-site archive.'
-	}
-];
+export const meta: MetaFunction = () =>
+	buildSiteMeta({
+		title: PLAYGROUND_TITLE,
+		description: PLAYGROUND_DESCRIPTION,
+		path: '/playground'
+	});
 
 type Mode = 'url' | 'zip';
 
@@ -57,9 +60,6 @@ export default function Playground() {
 	});
 	const [file, setFile] = useState<File | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-
-	const [failOn, setFailOn] = useState('serious');
-	const [output, setOutput] = useState('browser report');
 
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
@@ -385,34 +385,6 @@ export default function Playground() {
 											{armed}
 											<small>/{total || 8}</small>
 										</b>
-									</div>
-									<hr className="divider" />
-									<div className="optrow">
-										<label htmlFor="failon">Fail on</label>
-										<select
-											className="sel"
-											id="failon"
-											value={failOn}
-											onChange={(e) => setFailOn(e.target.value)}
-										>
-											<option value="critical">critical</option>
-											<option value="serious">serious</option>
-											<option value="moderate">moderate</option>
-											<option value="minor">minor</option>
-										</select>
-									</div>
-									<div className="optrow">
-										<label htmlFor="fmt">Output</label>
-										<select
-											className="sel"
-											id="fmt"
-											value={output}
-											onChange={(e) => setOutput(e.target.value)}
-										>
-											<option value="browser report">browser report</option>
-											<option value="json">json</option>
-											<option value="markdown">markdown</option>
-										</select>
 									</div>
 									<hr className="divider" />
 									<button

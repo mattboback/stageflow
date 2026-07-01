@@ -87,7 +87,7 @@ type StorageStateBlock struct {
 // Compact returns a wire-safe representation suitable for storage in Postgres
 // or for serialization into PROVENANCE_AUTH_JSON. For storage_state, the
 // returned map omits any inline content_b64 so the bytes never leak past the
-// orchestrator's upload step.
+// platform-api upload step or the orchestrator's legacy fallback.
 func (a *Auth) Compact() map[string]any {
 	if a == nil {
 		return nil

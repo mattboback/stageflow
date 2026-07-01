@@ -11,7 +11,7 @@ done < <(
         --include='*.sh' --include='*.go' --include='justfile' \
         --include='*.toml' --include='*.json' \
         --exclude-dir='.git' --exclude-dir='node_modules' \
-        --exclude-dir='vendor' --exclude-dir='.storybook' \
+        --exclude-dir='vendor' \
         -E '(^|[^a-zA-Z0-9_/.-])(apps/|tools/[a-z]|docs/CONFIGURATION\.md|just run frontend|Scan Worker \(|Release stageflow CLI|project-mode scan using \.stageflow/config\.yaml)' \
         . \
     | grep -v 'bun\.lock' \

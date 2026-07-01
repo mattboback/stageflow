@@ -1,7 +1,7 @@
 const R = 52;
 const CIRC = 2 * Math.PI * R; // 326.7
 
-/** Arc score dial. value 0-100. Mirrors the mockup gauge markup. */
+/** Arc score dial. value 0-100. */
 export function Gauge({
 	value,
 	caption = 'score',

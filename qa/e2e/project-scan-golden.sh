@@ -15,7 +15,7 @@ PROJECT_SLUG="qa-golden-$(date +%s)"
 if [[ -z "${FIXTURE_BASE_URL}" ]]; then
   case "${API_URL}" in
     http://localhost:*|http://127.0.0.1:*)
-      FIXTURE_BASE_URL="http://localhost:3010"
+      FIXTURE_BASE_URL="http://localhost:3020"
       ;;
     *)
       FIXTURE_BASE_URL="${API_URL}"
@@ -169,7 +169,7 @@ fi
 for page in "${BASELINE_URL}" "${REGRESSION_URL}"; do
   if ! curl -sf --head "${page}" >/dev/null 2>&1; then
     echo "FATAL: Fixture page not accessible: ${page}" >&2
-    echo "The repo-local default expects the local overlay frontend at http://localhost:3010." >&2
+    echo "The repo-local default expects the local overlay frontend at http://localhost:3020." >&2
     echo "If your fixtures are served somewhere else, set STAGEFLOW_FIXTURE_BASE_URL." >&2
     exit 2
   fi
