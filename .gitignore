@@ -18,13 +18,12 @@ libs/contracts/provenance/generated/
 libs/contracts/scanner-manifest/generated/
 libs/contracts/scanner-manifest/scanner_manifest.go
 
-# clients/web generated artifacts
-/clients/web/.svelte-kit/
+# Web and scanner-runner generated artifacts
 /clients/web/.react-router/
 /clients/web/build/
-/clients/web/storybook-static/
 /clients/web/coverage/
 /clients/web/junit.xml
+/services/scanner-runner/dist/
 
 # Environment files
 .env
@@ -33,14 +32,12 @@ libs/contracts/scanner-manifest/scanner_manifest.go
 .env.*.local
 .env.ci.*
 
-# IDE
+# IDE / OS
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 
@@ -48,7 +45,7 @@ Thumbs.db
 *.log
 logs/
 
-# Test coverage
+# Test coverage and QA evidence
 coverage/
 coverage.out
 coverage.html
@@ -62,31 +59,41 @@ coverage.html
 *.tmp
 .cache/
 /.patchright-cli/
-# Internal pre-fix review notes (not shipped)
-audit.md
-AUDIT.md
-masteraudit.md
 .playwright-mcp/
 .playwright-cli/
 .tech-debt-audit/
-.claude/
-.github/skills/
 output/
 .gitcleanup/
 .agent-harness/
 .kiro/
-# Local-only Caddy snippets (secrets)
-infra/caddy/snippets/monitoring-basicauth*.caddy
-# Root-only local runtime data (avoid ignoring real source folders named "data")
-/data/
 .go/
 .direnv/
+/data/
+/.local/
+
+# Local-only assistant and design-tool state
+.claude/
+.github/skills/
+.impeccable/
+.junie/
+.pi/
+.opencode/
+
+# Internal review notes and repo maps
+audit.md
+AUDIT.md
+masteraudit.md
 repo-context.md
 /plans/
+/plan/
 flattened_repo*.md
 flattened_repo*.json
 pipeline_logs.txt
 log.duff
+**/docs/repo-map.md
+
+# Local-only Caddy snippets (secrets)
+infra/caddy/snippets/monitoring-basicauth*.caddy
 
 # Generated root-level showcase/demo artifacts
 /cli
@@ -110,9 +117,7 @@ devtools/ops/job-status-cli/job-status-cli
 devtools/qa/suite-runner/suite-runner
 clients/cli/stageflow
 clients/cli/stageflow-cli
-/.local/
 /platform/
-services/scanner-runner/dist/
 /stageflow
 /stageflow-cli
 
@@ -123,20 +128,8 @@ services/scanner-runner/dist/
 # StageFlow project config (generated per-repo by `stageflow project init`)
 .stageflow/
 
-# AI agent instructions (local-only)
-.junie/
-.pi/
-
 # Deployment-specific scanner overrides (copy from infra/scanners/scanners.example.yaml)
 infra/scanners/scanners.yaml
-.opencode/
-
-# Local-only OSS-readiness plan
-/plan/
-
-# Auto-generated internal repo maps (regenerated locally; not shipped)
-**/docs/repo-map.md
-
 
 # AI assistant artifacts
 context-snapshot.json
