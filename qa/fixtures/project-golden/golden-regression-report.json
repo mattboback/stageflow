@@ -64,10 +64,10 @@
             "artifactIds": [
               "ss-589b73d3a7fa"
             ],
-            "contextHtml": "<main>\n  <!-- ... -->\n  <img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E\" alt=\"Placeholder\">\n  <img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'/%3E\"> <!-- TARGET -->\n</main>",
+            "contextHtml": "<main>\n  <!-- ... -->\n  ...\n  <img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fee2e2'/%3E%3Cpath d='M40 150 L100 40 L160 150 Z' fill='%23dc2626'/%3E%3C/svg%3E\"> <!-- TARGET -->\n</main>",
             "elementId": "589b73d3a7fa-el-0",
             "failureSummary": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
-            "html": "<img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'/%3E\">",
+            "html": "<img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23fee2e2'/%3E%3Cpath d='M40 150 L100 40 L160 150 Z' fill='%23dc2626'/%3E%3C/svg%3E\">",
             "selector": "img:nth-child(4)",
             "target": [
               "img:nth-child(4)"
@@ -118,19 +118,19 @@
         "pageOverview": {
           "elements": [
             {
-              "height": 200,
-              "heightPercent": 13.89,
+              "height": 404,
+              "heightPercent": 28.06,
               "issueId": "589b73d3a7fa",
               "nodeIndex": 0,
               "ruleId": "image-alt",
               "selector": "img:nth-child(4)",
               "severity": "critical",
-              "width": 200,
-              "widthPercent": 7.81,
-              "x": 26,
-              "xPercent": 1.02,
-              "y": 228,
-              "yPercent": 15.82
+              "width": 404,
+              "widthPercent": 15.78,
+              "x": 96,
+              "xPercent": 3.75,
+              "y": 858,
+              "yPercent": 59.59
             }
           ],
           "pageHeight": 1440,

@@ -21,7 +21,7 @@ type StatusPipeline interface {
 	Begin(ctx context.Context, cmd BeginJob) (*status.JobRecord, error)
 	Apply(ctx context.Context, signal Signal) (*status.JobRecord, error)
 	Current(ctx context.Context, jobID string) (*status.JobRecord, error)
-	Watch(ctx context.Context, jobID string, opts WatchOptions) (*status.JobRecord, Subscription, error)
+	Watch(ctx context.Context, jobID string) (*status.JobRecord, Subscription, error)
 }
 
 type BeginJob struct {
@@ -61,10 +61,6 @@ type Change struct {
 	Signal     Signal
 	ObservedAt time.Time
 }
-
-// WatchOptions configures pipeline watch behavior. Reserved for future use
-// (e.g., replay-from, filter-by-state). Currently unused; pass empty struct.
-type WatchOptions struct{}
 
 type Subscription interface {
 	Updates() <-chan Change

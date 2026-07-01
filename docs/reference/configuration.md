@@ -14,7 +14,11 @@ just diagnose
 just demo
 ```
 
-`just demo` is the fastest end-to-end smoke test. For the individual bootstrap steps behind it, run `just setup && just images && just dev up && just dev init`.
+`just demo` is the fastest end-to-end smoke test. It is a guided wrapper around
+the local `dev` stack: it runs setup, builds images, starts MinIO first,
+initializes buckets, starts the full stack, and waits for readiness. For manual
+control, run the individual steps yourself with `just setup`, `just images`,
+`just dev up dev`, and `just dev init`.
 The local `just` recipes default to compose project `stageflow_dev` and Podman
 network `stageflow_dev_net`; set `COMPOSE_PROJECT_NAME` or
 `STAGEFLOW_NETWORK_NAME` to isolate additional local stacks.
@@ -26,16 +30,21 @@ network `stageflow_dev_net`; set `COMPOSE_PROJECT_NAME` or
 | Mode                                  | When to use it                                        | Web                     | API                     | Grafana                 | Primary files                                                                |
 | ------------------------------------- | ----------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- | ---------------------------------------------------------------------------- |
 | `dev` via `just demo` / `just dev up` | Fastest local smoke test                              | `http://localhost:3000` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.yml` + `infra/compose/podman-compose.test.yml` |
-| `local` overlay                       | Localhost/private-target scans during development     | `http://localhost:3010` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.local.yml`                                     |
+| `local` overlay                       | Localhost/private-target scans during development     | `http://localhost:3020` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.local.yml`                                     |
 | repo-managed staging overlay          | Domain-like staging on alternate loopback ports       | `http://127.0.0.1:3300` | `http://127.0.0.1:8300` | `http://127.0.0.1:3301` | `infra/compose/podman-compose.staging.yml`                                   |
 | optional self-hosted edge             | Public-domain routing and TLS for your own deployment | proxied by host Caddy   | proxied by host Caddy   | proxied by host Caddy   | `infra/caddy/Caddyfile`                                                      |
 | hosted `stageflow.org` production     | Shared VPS deployment for the live demo               | gateway-managed         | gateway-managed         | gateway-managed         | separate deployment workspace (Quadlets + ingress network)                   |
+
+The `dev` and `local` rows are both local development modes, not competing
+deployment targets. Use `dev` for the normal demo/UI stack. Use `local` when a
+scan must reach localhost or private-network targets from scanner pods; that
+overlay serves the frontend on `3020` and switches job pods to host networking.
 
 The repo-managed staging overlay, the optional self-hosted Caddy edge, and the hosted `stageflow.org` deployment intentionally use different topologies. `podman-compose.staging.yml` binds `3300/3301/8300/9300`, while the live demo runs behind a separate gateway + Quadlet-managed ingress network rather than repo-managed host port bindings. Use one topology per environment rather than mixing them.
 
 The hosted `stageflow.org` demo uses the same application code, but this repository should be treated as the source for local development and self-hosted layouts rather than as the authoritative deployment automation for that public instance.
 
-The optional Caddy edge expects a separate host-level loopback layout where the app is already exposed on `127.0.0.1:3100` (frontend), `127.0.0.1:3101` (Grafana), `127.0.0.1:8100` (API), and `127.0.0.1:9100` (MinIO). Those are not the same ports used by the local (`3000/3010/8080/3001`) or staging (`3300/8300/3301/9300`) compose overlays.
+The optional Caddy edge expects a separate host-level loopback layout where the app is already exposed on `127.0.0.1:3100` (frontend), `127.0.0.1:3101` (Grafana), `127.0.0.1:8100` (API), and `127.0.0.1:9100` (MinIO). Those are not the same ports used by the local (`3000/3020/8080/3001`) or staging (`3300/8300/3301/9300`) compose overlays.
 
 ## Variable Reference
 
@@ -112,7 +121,7 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | Variable                          | Required | Default in `.env.example`                                                                 | Purpose                                               |
 | --------------------------------- | -------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `STAGEFLOW_PUBLIC_DOMAIN`         | yes      | `localhost`                                                                               | Public domain used in generated URLs and edge config. |
-| `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes      | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:3010,http://localhost:8080` | Browser origin allowlist for API requests.            |
+| `PLATFORM_API_CORS_ALLOW_ORIGINS` | yes      | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:3020,http://127.0.0.1:3020` | Browser origin allowlist for API requests. |
 
 ### Web App
 
@@ -125,7 +134,7 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | `VITE_TAGLINE`                    | no       | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces.                 |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
 
-The frontend container builds the SvelteKit app to static files and serves them with Caddy on port `3000`.
+The frontend container builds the React Router app to static files and serves them with nginx on port `3020`.
 
 ### AI Navigator (Optional)
 
@@ -171,6 +180,10 @@ Most first-time local setups can ignore this section. These variables are mainly
 - Keep domains and CORS origins environment-specific.
 - For self-hosted public domains, either route StageFlow through an existing host-level gateway or use `infra/caddy/Caddyfile` as the starting point for your own edge config.
 - The hosted `stageflow.org` demo runs on a separate Quadlet-managed ingress topology; do not expect the repo-local compose overlays to mirror that production host layout 1:1.
+- Keep committed screenshots and reviewer-facing images under `docs/images`.
+  Ephemeral QA/build evidence belongs under ignored artifact, output, or cache
+  paths such as `artifacts/`, `output/`, and `.cache/`; `just clean` may remove
+  those files.
 
 ## Pre-Deploy Validation
 

@@ -294,9 +294,9 @@ to the scan job. Two flows, both fronted by `stageflow auth …` and
 # Local interactive login. Writes a Playwright storage-state JSON with mode 0600.
 stageflow auth capture https://app.example.com/login --output ./auth/state.json
 
-# Attach it to a scan. The CLI base64-encodes the file, the orchestrator
-# uploads it to MinIO under the job's prefix, and Provenance.auth references
-# it as `{mode: storage_state, artifact_key: ...}`.
+# Attach it to a scan. The CLI base64-encodes the file, the platform-api
+# uploads it to MinIO under the job's prefix before publishing job.created,
+# and Provenance.auth references it as `{mode: storage_state, artifact_key: ...}`.
 stageflow scan https://app.example.com/profile --auth-state ./auth/state.json
 ```
 

@@ -309,12 +309,13 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 
 	if auth.Mode == provenance.AuthModeStorageState && auth.StorageState != nil &&
 		auth.StorageState.ContentBase64 != "" {
-		// The orchestrator is supposed to upload the bytes to MinIO and
-		// rewrite Auth to {mode, artifact_key} before launch. Reaching this
-		// point with inline content is a wiring bug; refuse rather than leak.
+		// The platform-api normally uploads storage-state bytes before
+		// job.created is published. The orchestrator also normalizes inline
+		// legacy producer payloads during CreateJob, so reaching scanner launch
+		// with inline content is a wiring bug; refuse rather than leak.
 		return errors.New(
 			"auth.storage_state still has inline content_b64 at scanner-launch time; " +
-				"the orchestrator must upload it to MinIO and replace it with an artifact_key first",
+				"it must be uploaded to MinIO and replaced with an artifact_key first",
 		)
 	}
 

@@ -93,7 +93,9 @@ Highlights:
 - Entry points:
   - `clients/web/app/` — React Router v7 SPA routes and components.
   - `clients/web` — React Router v7 web app (single frontend for stageflow.org).
-  - Highlights:
+
+Highlights:
+
 - Focus on report UX, evidence visualization, and live job status.
 
 ---
@@ -159,13 +161,13 @@ Each issue gets a stable hash derived from its content. This is what makes the b
 
 ### Dual surface (web UI + CLI) from one API
 
-The same platform API drives both the SvelteKit web UI and the Go CLI. The CLI adds `--fail-on` severity gating and `--format json` for CI pipelines. This demonstrates how the same backend can serve different clients with very different output requirements without duplicating logic.
+The same platform API drives both the React Router web UI and the Go CLI. The CLI adds `--fail-on` severity gating and `--format json` for CI pipelines. This demonstrates how the same backend can serve different clients with very different output requirements without duplicating logic.
 
 ---
 
 ## 6. How This Project Represents My Work
 
-This is a solo-authored project. Everything in the repo — system design, Go services, TypeScript runtime, SvelteKit web app, CLI, infra, tests, and docs — was built and maintained by one person.
+This is a solo-authored project. Everything in the repo — system design, Go services, TypeScript runtime, React Router web app, CLI, infra, tests, and docs — was built and maintained by one person.
 
 The most interesting parts to look at for engineering depth:
 
@@ -174,6 +176,6 @@ The most interesting parts to look at for engineering depth:
 3. `libs/contracts` — schema-first design, codegen for two languages, migration docs.
 4. `clients/cli` — SSE streaming, dev-loop lifecycle, structured JSON output, `--fail-on` quality gate.
 5. `qa/e2e/project-scan-golden.sh` — golden regression test for the full scan → baseline → diff pipeline.
-6. `.github/workflows/ci.yml` — layered CI across Go, web app, Scanner Runner, and Storybook.
+6. `.github/workflows/ci.yml` — layered CI across Go, web app, Scanner Runner, dependency audits, image builds, and vulnerability scans.
 
 If you have questions about any part of the system, use the repository question template or reach out via the contact on my GitHub profile.

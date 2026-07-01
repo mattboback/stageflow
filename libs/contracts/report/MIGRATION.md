@@ -76,8 +76,8 @@ if issue.HelpUrl != nil {
 
 ### JSON Unmarshal (Go)
 
-The generated Go types validate required fields and enum values during
-`json.Unmarshal`:
+The generated Go types include `UnmarshalJSON` checks for required fields,
+enum values, and supported schema constraints during `json.Unmarshal`:
 
 ```go
 var report UnifiedReportV2

@@ -13,8 +13,10 @@
 //     references. The CLI never resolves those references; the orchestrator
 //     forwards only the named env vars into the scanner-runner pod.
 //   - Storage state: the captured Playwright JSON is base64-encoded and shipped
-//     once over the wire, then uploaded to MinIO by the orchestrator under the
-//     job's prefix. It is never persisted to Postgres.
+//     once over the wire, then uploaded to MinIO by the platform-api under the
+//     job's prefix before job.created is published. It is never persisted to
+//     Postgres; the orchestrator only keeps a defensive fallback for legacy
+//     producers that still send inline bytes.
 package main
 
 import (

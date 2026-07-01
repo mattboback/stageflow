@@ -5,17 +5,21 @@ import { SiteFooter } from '../components/SiteFooter';
 import { Gauge } from '../components/Gauge';
 import { SeverityScale } from '../components/SeverityScale';
 import { Pill } from '../components/Pill';
+import {
+	buildSiteMeta,
+	HOME_DESCRIPTION,
+	HOME_TITLE,
+	SITE_URL
+} from '../lib/site-metadata';
 import homeStyles from './home.css?url';
-
-const SITE_URL = 'https://stageflow.org';
-const TAGLINE =
-	'Self-hostable frontend quality platform. Eight scanners, one report, a baseline per project.';
 
 export const links = () => [{ rel: 'stylesheet', href: homeStyles }];
 
 export const meta: MetaFunction = () => [
-	{ title: 'StageFlow — Frontend quality, measured' },
-	{ name: 'description', content: TAGLINE },
+	...buildSiteMeta({
+		title: HOME_TITLE,
+		description: HOME_DESCRIPTION
+	}),
 	{
 		'script:ld+json': {
 			'@context': 'https://schema.org',
@@ -23,7 +27,7 @@ export const meta: MetaFunction = () => [
 			name: 'StageFlow',
 			url: SITE_URL,
 			applicationCategory: 'DeveloperApplication',
-			description: TAGLINE
+			description: HOME_DESCRIPTION
 		}
 	}
 ];
@@ -108,15 +112,15 @@ export default function Home() {
 							</div>
 						</div>
 
-						{/* instrument preview */}
+						{/* report preview */}
 						<div className="panel" style={{ boxShadow: 'var(--shadow-md)' }}>
 							<div className="panel__head">
-								<span className="label">Report · example.com</span>
-								<Pill variant="done">Pass</Pill>
+								<span className="label">Sample report · example.com</span>
+								<Pill variant="done">Preview</Pill>
 							</div>
 							<div className="panel__body">
 								<div className="preview__top">
-									<Gauge value={92} caption="score" size={132} valFontSize="2.1rem" />
+									<Gauge value={92} caption="sample score" size={132} valFontSize="2.1rem" />
 									<SeverityScale counts={{ critical: 0, serious: 2, moderate: 5, minor: 11 }} />
 								</div>
 								<div className="perf-list">
@@ -193,24 +197,24 @@ export default function Home() {
 									Straight into CI.
 								</p>
 							</div>
-							<div className="diffcard" role="group" aria-label="Baseline diff readout">
+							<div className="diffcard" role="group" aria-label="Sample baseline diff readout">
 								<div className="diffrow">
 									<div className="diffstat">
 										<b>88</b>
-										<small>baseline</small>
+										<small>sample baseline</small>
 									</div>
 									<span className="delta up" aria-label="up four points">
 										▲ 4
 									</span>
 									<div className="diffstat">
 										<b>92</b>
-										<small>this run</small>
+										<small>sample run</small>
 									</div>
 								</div>
 								<div className="diffnew">
 									<span className="badge">+2</span>
 									<span style={{ color: 'oklch(0.78 0.01 240)' }}>
-										new serious issues · gate:{' '}
+										sample new serious issues · gate:{' '}
 										<strong style={{ color: '#fff' }}>fail</strong>
 									</span>
 								</div>
@@ -269,7 +273,10 @@ export default function Home() {
 										→
 									</span>
 								</Link>
-								<a className="btn btn--ghost" href="https://stageflow.org/docs">
+								<a
+									className="btn btn--ghost"
+									href="https://github.com/mattboback/stageflow/tree/main/docs"
+								>
 									Read the docs
 								</a>
 							</div>

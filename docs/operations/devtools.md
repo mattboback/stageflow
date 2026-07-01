@@ -115,6 +115,10 @@ just dev up local
 just dev init local
 ```
 
+This is intentionally separate from `just demo`. `just demo` is the guided
+smoke test for the default local `dev` stack on port `3000`; `just dev up local`
+uses the local overlay on port `3020` for localhost/private-target scans.
+
 #### Example `.stageflow/config.yaml`
 
 ```yaml
@@ -154,6 +158,29 @@ dev:
 
 These helpers are mainly for maintainers working against a local StageFlow
 stack.
+
+### Contract Generation
+
+`devtools/scripts/generate-contracts.sh` regenerates JSON Schema-derived
+contracts under `libs/contracts/`.
+
+Run all generated contract artifacts from the repo root:
+
+```bash
+./devtools/scripts/generate-contracts.sh
+```
+
+The script accepts mode arguments when you need only one language surface:
+
+```bash
+./devtools/scripts/generate-contracts.sh ts
+./devtools/scripts/generate-contracts.sh go
+```
+
+The generated Go artifacts are type definitions with `UnmarshalJSON` checks
+emitted by `go-jsonschema`. Use each contract package's `schema/validate.js`
+or dedicated Go validator for full schema validation of JSON fixtures or
+incoming payloads.
 
 ### job-status-cli
 

@@ -1,6 +1,6 @@
 # StageFlow Architecture
 
-StageFlow is a self-hosted frontend quality gate built from multiple Go services, a TypeScript/Bun scanner runtime, a SvelteKit 5 web app, and a Go CLI. This document covers the system shape, data flow, and the reasoning behind the key design decisions.
+StageFlow is a self-hosted frontend quality gate built from multiple Go services, a TypeScript/Bun scanner runtime, a React Router web app, and a Go CLI. This document covers the system shape, data flow, and the reasoning behind the key design decisions.
 
 For an exhaustive deep-dive — trust boundaries, failure modes, all event types, deployment topology — see [docs/architecture/system.md](docs/architecture/system.md).
 
@@ -13,7 +13,7 @@ For an exhaustive deep-dive — trust boundaries, failure modes, all event types
 │                                                                            │
 │   ┌──────────────────────┐       ┌──────────────────────┐                 │
 │   │  Web App             │       │  CLI                 │                 │
-│   │  SvelteKit 5         │       │  Go                  │                 │
+│   │  React Router       │       │  Go                  │                 │
 │   │  Scan submission     │       │  Dev loop            │                 │
 │   │  Live status (SSE)   │       │  JSON output         │                 │
 │   │  Report exploration  │       │  Severity exit codes │                 │
@@ -293,10 +293,9 @@ Go unit                go test -race              FSM transitions, domain rules,
                                                   utilities — no infra required
 Go lint/vuln           golangci-lint,             Code quality, known CVEs
                        govulncheck
-Web unit               Vitest, Testing Library    Components, SSE stores,
-                                                  report logic, scoring
-Storybook CI           Storybook test runner      Component interaction,
-                                                  accessibility (axe audit)
+Web app                ESLint, React Router       Routing, type generation,
+                      typegen, TypeScript,       type safety, production
+                      build                      bundle
 Scanner runner         Vitest                     Plugin loading, output
                                                   validation, config schemas
 E2E golden flow        qa/e2e/ shell script       Baseline → promote → regression

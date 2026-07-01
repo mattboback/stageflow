@@ -164,7 +164,7 @@ See [docs/dev-mode.md](docs/dev-mode.md) for the config reference and
 ## Self-Host Locally
 
 The local stack uses Podman, NATS JetStream, PostgreSQL, MinIO, the Go Platform
-API and Orchestrator, the TypeScript scanner runner, and the SvelteKit web app.
+API and Orchestrator, the TypeScript scanner runner, and the React Router web app.
 
 Prerequisites:
 
@@ -186,6 +186,13 @@ just demo
 default (`stageflow_dev` / `stageflow_dev_net`). Set `COMPOSE_PROJECT_NAME` or
 `STAGEFLOW_NETWORK_NAME` when you intentionally want a different local stack
 identity.
+
+`just demo`, `just dev up dev`, and `just dev up local` are different entry
+points into the same local stack. `just demo` is the guided smoke test: it runs
+setup, builds images, starts MinIO first, initializes buckets, and then starts
+the full `dev` stack. `just dev up dev` is the lower-level default compose mode
+on port `3000`. `just dev up local` applies the local overlay on port `3020`
+and enables localhost/private-target scanning for the CLI dev loop.
 
 When the demo is ready:
 
@@ -230,7 +237,7 @@ The AI Navigator is optional and requires `OPENROUTER_API_KEY` when enabled.
 | Path                         | Purpose                                                                  |
 | ---------------------------- | ------------------------------------------------------------------------ |
 | `clients/cli`                | Go CLI for scans, the dev loop, baselines, reports, and docs generation  |
-| `clients/web`                | SvelteKit app for hosted/local browser workflows                         |
+| `clients/web`                | React Router/Vite app for hosted/local browser workflows                 |
 | `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, projects, reports      |
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence        |
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                   |
@@ -257,17 +264,27 @@ Run the repository quality gate:
 just ci
 ```
 
+Pre-commit hooks are a fast local guard for common mistakes before a commit.
+`just ci` is the full repo quality gate and is the command to use before
+opening a PR or handing work to CI.
+
 Useful focused checks:
 
 ```bash
 just shell-tests
-just storybook-test
+(cd clients/web && bun run ci)
+(cd services/scanner-runner && bun run ci)
 just dead-code
 just project-golden
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for pull request expectations and
 workspace-specific validation commands.
+
+Committed screenshots and reviewer-facing images live under `docs/images`.
+Temporary QA/build evidence belongs under ignored artifact, output, or cache
+paths such as `artifacts/`, `output/`, and `.cache/`; `just clean` may remove
+those ephemeral files.
 
 ## Security
 
