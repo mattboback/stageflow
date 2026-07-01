@@ -128,7 +128,7 @@ jobs:
         run: bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
 
   clients_web:
-    name: Web App (lint, typecheck, test)
+    name: Web App (lint, typecheck, build)
     runs-on: ubuntu-latest
     needs: workflow_lint
     timeout-minutes: 25
@@ -161,6 +161,10 @@ jobs:
 
       - name: Audit (high)
         run: bun audit --audit-level=high
+        working-directory: clients/web
+
+      - name: Lint
+        run: bun run lint
         working-directory: clients/web
 
       - name: Typecheck
