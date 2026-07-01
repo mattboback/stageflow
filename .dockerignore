@@ -4,41 +4,54 @@
 .git
 .gitignore
 
-# IDE
+# IDE / local tooling
 .vscode
 .idea
 *.swp
 *.swo
+.impeccable
+.claude
+.junie
+.pi
+.opencode
 
-# Node modules (frontend/scanner)
+# Dependencies and generated frontend assets
 **/node_modules
 **/dist
+**/build
+**/.react-router
 **/.next
+**/coverage
+**/*.tsbuildinfo
 
-# Tests
+# Tests and local evidence
 **/test
 **/*_test.go
 **/*.test.ts
 **/__tests__
-**/coverage
+screenshots
+qa/evidence
+mockups/instrument
 
-# Documentation
+# Documentation and portfolio screenshots
 *.md
 docs
 
-# Local config
+# Local config and secrets
 .env
 .env.*
 *.local
-.claude
+.stageflow
+infra/caddy/snippets/monitoring-basicauth*.caddy
+infra/scanners/scanners.yaml
 output
 
 # Logs
 *.log
+logs
 
 # CI/CD
 .github
-tests
 
 # OS files
 .DS_Store
