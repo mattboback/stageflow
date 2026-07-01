@@ -207,7 +207,8 @@ just generate-contracts
 Generated code uses:
 - Pointer types for optional fields (`*int`, `*string`)
 - Proper struct tags for JSON marshaling
-- Validation method stubs
+- `UnmarshalJSON` checks emitted by `go-jsonschema` for required fields,
+  enums, and supported schema constraints
 
 ## Migration Guide
 

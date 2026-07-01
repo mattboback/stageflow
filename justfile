@@ -300,8 +300,8 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
             ;;
     esac
 
-[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES="platform-api orchestrator frontend frontend-react")')]
-dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend frontend-react':
+[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES="platform-api orchestrator frontend-react")')]
+dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -458,7 +458,7 @@ staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='st
             ;;
     esac
 
-[group('quality'), doc('Run local CI: lint + test + vuln + Storybook')]
+[group('quality'), doc('Run local CI: lint + test + vuln')]
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -500,8 +500,7 @@ ci:
     done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
 
     echo "==> CLI docs..."
-    {{go}} run ./clients/cli docs --out-dir docs/reference/cli/stageflow
-    git diff --exit-code docs/reference/cli/stageflow
+    ./devtools/scripts/check-cli-docs-generated.sh
 
     echo "==> Shell regression tests..."
     just shell-tests
@@ -599,12 +598,11 @@ shell-tests:
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
 
-[group('quality'), doc('Run dead-code analysis for TypeScript workspaces')]
+[group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
 dead-code:
     #!/usr/bin/env bash
     set -uo pipefail
     status=0
-    (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
     (cd {{scanner_dir}} && {{bun}} run find-dead-code) || status=$?
     exit "$status"
 
@@ -622,7 +620,8 @@ clean MODE='all':
     mode="{{MODE}}"
     echo "==> Cleaning artifacts..."
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
-    find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".svelte-kit" -o -name ".gocache" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
+    find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" -o -name ".impeccable" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
+    rm -rf .cache output .patchright-cli
     rm -f devtools/ops/job-status-cli/job-status-cli devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then

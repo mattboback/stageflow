@@ -32,9 +32,10 @@ func WithScannerLaunchPlanner(planner *ScannerLaunchPlanner) ServiceOption {
 	}
 }
 
-// WithAuthUploader plugs in the orchestrator-side uploader used during
-// CreateJob to move inline storage-state blobs from the job-created event to
-// MinIO before the job is persisted. If unset, JobConfig.Auth payloads with
+// WithAuthUploader plugs in the orchestrator-side compatibility uploader used
+// during CreateJob to move inline storage-state blobs from legacy job-created
+// producers to MinIO before the job is persisted. Current platform-api
+// producers upload before publish. If unset, JobConfig.Auth payloads with
 // inline content_b64 fail fast with a clear setup error rather than silently
 // landing in Postgres.
 func WithAuthUploader(uploader AuthUploader) ServiceOption {

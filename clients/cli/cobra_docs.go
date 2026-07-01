@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -32,14 +33,8 @@ func newDocsCmd() *cobra.Command {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("create out dir %s: %w", targetDir, err)}
 			}
 
-			err = doc.GenMarkdownTree(cmd.Root(), targetDir)
-			if err != nil {
+			if err = generateMarkdownDocs(cmd.Root(), targetDir); err != nil {
 				return exitCodeError{Code: 2, Err: fmt.Errorf("generate docs: %w", err)}
-			}
-
-			err = scrubCobraDocFooters(targetDir)
-			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("normalize docs: %w", err)}
 			}
 
 			return nil
@@ -54,6 +49,24 @@ func newDocsCmd() *cobra.Command {
 	)
 
 	return cmd
+}
+
+func generateMarkdownDocs(root *cobra.Command, targetDir string) error {
+	expectedDocs := expectedCommandDocFiles(root)
+
+	if err := doc.GenMarkdownTree(root, targetDir); err != nil {
+		return err
+	}
+
+	if err := scrubCobraDocFooters(targetDir); err != nil {
+		return fmt.Errorf("normalize docs: %w", err)
+	}
+
+	if err := verifyGeneratedCommandDocs(targetDir, expectedDocs); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func resolveDocsOutDir(outDir string) (string, error) {
@@ -81,6 +94,53 @@ func resolveDocsOutDir(outDir string) (string, error) {
 	}
 
 	return filepath.Join(wd, raw), nil
+}
+
+func expectedCommandDocFiles(root *cobra.Command) []string {
+	files := make([]string, 0)
+
+	walkCommands(root, func(cmd *cobra.Command) {
+		if cmd.Hidden || cmd.Name() == "help" || cmd.Deprecated != "" || cmd.IsAdditionalHelpTopicCommand() {
+			return
+		}
+
+		files = append(files, cobraMarkdownFilename(cmd))
+	})
+	sort.Strings(files)
+
+	return files
+}
+
+func verifyGeneratedCommandDocs(dir string, expectedDocs []string) error {
+	var missing []string
+
+	for _, name := range expectedDocs {
+		if _, err := os.Stat(filepath.Join(dir, name)); err == nil {
+			continue
+		} else if errors.Is(err, os.ErrNotExist) {
+			missing = append(missing, name)
+		} else {
+			return fmt.Errorf("stat generated doc %s: %w", name, err)
+		}
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing generated CLI docs for registered commands: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
+}
+
+func cobraMarkdownFilename(cmd *cobra.Command) string {
+	return strings.ReplaceAll(cmd.CommandPath(), " ", "_") + ".md"
+}
+
+func walkCommands(cmd *cobra.Command, visit func(*cobra.Command)) {
+	visit(cmd)
+
+	for _, child := range cmd.Commands() {
+		walkCommands(child, visit)
+	}
 }
 
 func scrubCobraDocFooters(dir string) error {

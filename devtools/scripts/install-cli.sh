@@ -13,6 +13,9 @@ mkdir -p "$bin_dir"
 tmp="$(mktemp -t stageflow-cli.XXXXXX)"
 trap 'rm -f "$tmp"' EXIT
 
+echo "==> Generating schema contracts..."
+(cd "${REPO_ROOT}" && ./devtools/scripts/generate-contracts.sh go)
+
 echo "==> Building StageFlow CLI..."
 version="$(cd "${REPO_ROOT}" && git describe --tags --always --dirty 2>/dev/null || echo dev)"
 commit="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo "")"

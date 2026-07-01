@@ -8,16 +8,32 @@
 4. Run `just dev up` and `just dev init`.
 5. Run `pre-commit install --hook-type pre-commit --hook-type commit-msg` if you want the repo hooks locally.
 
+Use `just demo` when you want the guided smoke test that performs the setup,
+image build, MinIO initialization, and stack start in sequence. Use
+`just dev up local` instead of the default `just dev up` when you need the
+localhost/private-target overlay for CLI dev-loop scans.
+
 ## Quality Gates
 
-Run checks directly from each workspace before opening a PR.
+Pre-commit is a fast local guard for formatting, secrets, generated contract
+drift, and other common mistakes. It is not the full repo gate.
+
+Run `just ci` before opening a PR when feasible. It runs the stale-vocabulary
+check, Go build/lint/test/vuln checks, generated CLI-doc drift check, shell
+regression tests, frontend CI/audit, and scanner-runner CI/audit. For focused
+iteration, run the relevant workspace checks directly:
 
 - `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...` for Go modules
-- `bun run ci` in `clients/web` and, for UI changes, `bun run build && bun run check:asset-budget` plus Storybook evidence when relevant
+- `bun run ci` in `clients/web`; include browser screenshots or scan/report evidence for UI changes when relevant
 - `bun run ci` in `services/scanner-runner`
-- `bash devtools/scripts/tests/cli-install.test.sh`
+- `just shell-tests` or both shell tests individually: `bash devtools/scripts/tests/cli-install.test.sh` and `bash devtools/scripts/tests/dev-onboarding.test.sh`
 - `just project-golden` when project-mode baseline, diff, CLI exit-code, or report normalization behavior changes
-- `just dead-code` when removing or moving TypeScript exports/components
+- `just dead-code` when removing or moving scanner-runner TypeScript exports/components
+
+Committed screenshots and reviewer-facing images belong in `docs/images`.
+Ephemeral QA/build evidence should stay under ignored artifact, output, or
+cache paths such as `artifacts/`, `output/`, and `.cache/`; `just clean` may
+delete those local files.
 
 ### Orchestrator database tests
 
@@ -44,7 +60,7 @@ Before opening a PR, check:
 - Tests run are listed with pass/fail results.
 - Contract schemas and generated Go/TypeScript types are regenerated when `libs/contracts` changes.
 - CLI reference docs are regenerated with `go run ./clients/cli docs --out-dir docs/reference/cli/stageflow` when CLI commands or flags change.
-- Screenshots or Storybook evidence are included for UI changes.
+- Screenshots or rendered scan/report evidence are included for UI changes.
 - Security-sensitive paths are called out, especially URL intake, ZIP extraction, browser/network behavior, auth, CORS, tokens, and deployment config.
 - `qa/e2e/project-scan-golden.sh` was run or explicitly judged not relevant.
 

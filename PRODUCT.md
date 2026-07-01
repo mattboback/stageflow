@@ -1,9 +1,9 @@
 # Product
 
 > Strategic context for StageFlow's design work. Describes the **web client**
-> (`clients/web`, the SvelteKit app served at stageflow.org). The visual system
-> lives in [DESIGN.md](DESIGN.md); tokens are canonical in
-> `clients/web/src/app.css`.
+> (`clients/web`, the React Router app served at stageflow.org). The visual
+> system lives in [DESIGN.md](DESIGN.md); tokens are canonical in
+> `clients/web/app/styles/instrument.css`.
 
 ## Register
 
@@ -79,8 +79,8 @@ What StageFlow's web UI must **not** look like:
 
 ## Accessibility & Inclusion
 
-- **WCAG 2.1 AA** across primitives, gated by the Storybook axe / test-runner
-  (`cd clients/web && bun run test-storybook`).
+- **WCAG 2.1 AA** across primitives, checked through the web app CI path
+  (`cd clients/web && bun run ci`) plus StageFlow dogfooding.
 - Contrast floors enforced via tokens: `--color-ink-faint` ≥ 4.5:1; decorative large text
   (`--color-ink-ghost`) ≥ 3:1 on paper.
 - **Severity is never conveyed by color alone** (color-blind safe): pair every hue with a

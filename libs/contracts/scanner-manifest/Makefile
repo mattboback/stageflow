@@ -2,8 +2,14 @@
 
 all: generate validate
 
-generate generate-ts generate-go:
+generate:
 	../../../devtools/scripts/generate-contracts.sh
+
+generate-ts:
+	../../../devtools/scripts/generate-contracts.sh ts
+
+generate-go:
+	../../../devtools/scripts/generate-contracts.sh go
 
 validate:
 	node schema/validate.js fixtures/scanner-manifest.min.json

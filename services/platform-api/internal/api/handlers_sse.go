@@ -285,7 +285,7 @@ func (s *Server) watchJobStream(
 	w http.ResponseWriter,
 	jobID string,
 ) (*status.JobRecord, jobstatus.Subscription, bool) {
-	rec, sub, err := s.jobStatus.Watch(ctx, jobID, jobstatus.WatchOptions{})
+	rec, sub, err := s.jobStatus.Watch(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			http.Error(w, "Job not found", http.StatusNotFound)

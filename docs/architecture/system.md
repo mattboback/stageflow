@@ -61,8 +61,8 @@ StageFlow is designed around four goals:
 │  │          │    │                                                       │    │
 │  │ ┌──────┐ │    │  ┌──────┐  ┌──────┐  ┌──────────┐  ┌──────────┐     │    │
 │  │ │ Web  │ │    │  │ NATS │  │ MinIO│  │PostgreSQL│  │ Grafana  │     │    │
-│  │ │Svelte│ │    │  │JetStr│  │ S3   │  │ 17       │  │ 12       │     │    │
-│  │ │Kit   │ │    │  │eam   │  │      │  │          │  │          │     │    │
+│  │ │React │ │    │  │JetStr│  │ S3   │  │ 17       │  │ 12       │     │    │
+│  │ │Router│ │    │  │eam   │  │      │  │          │  │          │     │    │
 │  │ └──┬───┘ │    │  └──┬───┘  └──┬───┘  └──────────┘  └──────────┘     │    │
 │  │    │     │    │     │          │                                     │    │
 │  │ ┌──┴───┐ │    │     ▼          ▼                                     │    │
@@ -134,7 +134,7 @@ StageFlow is designed around four goals:
 | -------------- | ----------------------------------------- | ----------------- | ---------------------------------- | ---------------- |
 | `platform-api` | `localhost/stageflow/platform-api:latest` | Go 1.26           | 8080                               | 512M RAM, 2 CPU  |
 | `orchestrator` | `localhost/stageflow/orchestrator:latest` | Go 1.26           | 8081 (internal)                    | 512M RAM, 4 CPU  |
-| `frontend`     | `localhost/stageflow/frontend:latest`     | SvelteKit + Caddy | 3000 (demo) / 3010 (local overlay) | 64M RAM, 0.5 CPU |
+| `frontend-react` | `localhost/stageflow/frontend-react:latest` | React Router + nginx | 3000 (demo) / 3020 (local overlay) | 64M RAM, 0.5 CPU |
 | `nats`         | `nats:2.12.2-alpine`                      | —                 | 4222 (internal), 8222 (monitoring) | 256M RAM, 1 CPU  |
 | `minio`        | `minio:RELEASE.2025-09-07`                | —                 | 9000 (internal), 9001 (console)    | 512M RAM, 2 CPU  |
 | `postgres`     | `postgres:17-alpine`                      | —                 | internal                           | 512M RAM, 2 CPU  |
@@ -1609,39 +1609,36 @@ The `project init` command intelligently detects:
 
 ### Technology Stack
 
-- **Framework:** SvelteKit 5
-- **Styling:** Tailwind CSS
-- **Testing:** Vitest component/unit tests, Storybook test-runner, and Storybook a11y checks
-- **Build:** Static assets served by Caddy in the frontend container
+- **Framework:** React Router v7
+- **Styling:** Repo-owned CSS modules and global tokens under `clients/web/app/styles/`
+- **Testing:** ESLint, React Router type generation, TypeScript project build, and production build
+- **Build:** Static assets served by nginx in the frontend container
 
 ### Key Components
 
 ```
 clients/web/
-├── src/
+├── app/
 │   ├── routes/                     # Landing, playground, live scan, report routes
-│   └── lib/
-│       ├── api/                    # Platform API client, URL helpers, SSE plumbing
-│       ├── components/playground/  # URL/ZIP submission, scanner selection, AI/auth config
-│       ├── components/report/      # Report shell, issue detail modal, artifacts, visual review
-│       ├── components/scan-status/ # Live status, terminal, artifacts sidebar
-│       ├── components/ui/          # Design-system primitives and Storybook stories
-│       ├── config/                 # VITE_* env var normalization
-│       ├── domain/scanners/        # Scanner presets and product grouping
-│       ├── report/                 # Filtering, grouping, sorting, screenshots, severity helpers
-│       ├── stores/                 # Svelte stores for scan status, monitor, report, history
-│       └── types/                  # TypeScript report/scan types
-├── static/                         # Static assets served by SvelteKit/Caddy
-├── tests/unit/                     # Vitest API, store, utility, and component tests
-└── .storybook/                     # Storybook configuration and test harnesses
+│   ├── components/                 # Shared UI and report/playground components
+│   ├── lib/
+│   │   ├── api/                    # Platform API client, URL helpers, SSE plumbing
+│   │   ├── domain/scanners/        # Scanner presets and product grouping
+│   │   ├── hooks/                  # Scan monitor and status hooks
+│   │   ├── report/                 # Filtering, grouping, sorting, screenshots, severity helpers
+│   │   ├── stores/                 # Scan-status event update helpers
+│   │   └── types/                  # TypeScript report/scan types
+│   └── styles/                     # Global design tokens and report severity classes
+├── public/                         # Static assets copied into the nginx-served build
+└── static/                         # Text assets served with the app
 ```
 
 ### Client-Side Types
 
 | Type / module                     | Purpose                                                        |
 | --------------------------------- | -------------------------------------------------------------- |
-| `src/lib/types/scan.ts`           | Job status, scan status strings, progress, artifacts, scanners |
-| `src/lib/types/unified-report.ts` | Frontend-facing aliases for the canonical report contract      |
+| `app/lib/types/scan.ts`           | Job status, scan status strings, progress, artifacts, scanners |
+| `app/lib/types/unified-report.ts` | Frontend-facing aliases for the canonical report contract      |
 | `ScannerDefinition`               | Browser/API representation of `scannerregistry.Info`           |
 | `ScannerSelection`                | `{id, enabled, config?}` selection state for scan submission   |
 | `ScreenshotArtifact`              | Discriminated screenshot/link metadata rendered in reports     |
@@ -1714,9 +1711,9 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 │  │                                                          │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │   │
 │  │  │platform- │ │orchestra-│ │ frontend │ │  nats    │   │   │
-│  │  │  api     │ │  tor     │ │(Caddy+   │ │          │   │   │
-│  │  │:8080     │ │:8081     │ │ SvelteKit│ │:4222     │   │   │
-│  │  └──────────┘ └──────────┘ │ :3010)   │ └──────────┘   │   │
+│  │  │  api     │ │  tor     │ │(nginx+   │ │          │   │   │
+│  │  │:8080     │ │:8081     │ │ React    │ │:4222     │   │   │
+│  │  └──────────┘ └──────────┘ │ :3020)   │ └──────────┘   │   │
 │  │                            └──────────┘                 │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐                 │   │
 │  │  │  minio   │ │ postgres │ │ grafana  │                 │   │
@@ -1729,7 +1726,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  External: stageflow CLI (go run or installed binary)           │
-│  External: Browser at http://localhost:3010                     │
+│  External: Browser at http://localhost:3020                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1802,7 +1799,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 | ------------------- | -------------------------- | ----------------------- | --------------------------------- |
 | **Domain**          | `localhost`                | `staging.stageflow.org` | `stageflow.org`                   |
 | **Compose project** | `stageflow_dev`            | `stageflow-staging`     | `stageflow`                       |
-| **Frontend port**   | 3010                       | 3300                    | 3100 (Caddy proxy)                |
+| **Frontend port**   | 3000 demo / 3020 local     | 3300                    | 3100 (Caddy proxy)                |
 | **API port**        | 8080                       | 8300                    | 8100 (Caddy proxy)                |
 | **MinIO ports**     | 9000, 9001                 | 9300, 9301              | 9100 (Caddy proxy)                |
 | **Grafana port**    | 3001                       | 3301                    | 3101 (Caddy proxy)                |
@@ -1810,7 +1807,7 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 | **Private targets** | Enabled                    | Disabled                | Disabled                          |
 | **MinIO SSL**       | `false`                    | `true` (default)        | `true`                            |
 | **Pod netns mode**  | `host`                     | `bridge`                | `bridge`                          |
-| **CORS origins**    | `localhost:3010,3000,8080` | `staging.stageflow.org` | `stageflow.org,www.stageflow.org` |
+| **CORS origins**    | `localhost:3000,3020,8080` | `staging.stageflow.org` | `stageflow.org,www.stageflow.org` |
 | **Edge proxy**      | None                       | External Caddy          | Production Caddy                  |
 
 ### Horizontal Scaling Boundary
@@ -1896,7 +1893,7 @@ and shared edge/admin rate limiting.
                          │   Unit               │
                          │   Go race tests      │
                          │   Vitest             │
-                         │   Storybook          │
+                         │   Frontend build     │
                          └─────────────────────┘
 ```
 
@@ -1906,7 +1903,7 @@ and shared edge/admin rate limiting.
 | -------------- | ---------------------------------- | ------------------------------------- |
 | **Go**         | `testing` (stdlib) + `-race`       | All Go packages, qa/e2e, devtools     |
 | **TypeScript** | Vitest with `v8` coverage          | services/scanner-runner/tests/        |
-| **TypeScript** | Playwright + Storybook test-runner | clients/web/                          |
+| **TypeScript** | ESLint + React Router typegen + TypeScript build | clients/web/               |
 | **Shell**      | Bash with `set -Eeuo pipefail`     | devtools/scripts/tests/, qa/e2e/\*.sh |
 
 ### E2E Gating Pattern
@@ -1941,7 +1938,7 @@ Golden fixtures fail when missing or different. Regenerate intentionally with `U
 
 | Workflow              | Trigger                  | Duration | Key Gates                                                                |
 | --------------------- | ------------------------ | -------- | ------------------------------------------------------------------------ |
-| **CI**                | Push/PR to `main`        | ~30m     | workflow_lint → secrets → Go → web → Storybook → scanner-runner → images |
+| **CI**                | Push/PR to `main`        | ~30m     | workflow_lint → secrets → Go → web → scanner-runner → dead-code → images |
 | **Golden Regression** | Manual + daily 08:23 UTC | ~90m     | Full stack bootstrap → golden test → teardown                            |
 | **CLI Release**       | Tags `clients/cli/v*`    | ~15m     | Matrix build (5 OS/arch) → GitHub Release                                |
 
@@ -1953,7 +1950,7 @@ just ci
 # Go build, lint, test (-race), vulncheck
 # CLI docs regression (git diff --exit-code)
 # Shell regression tests
-# Frontend CI, Storybook tests, audit
+# Frontend CI and audit
 # Scanner-runner CI, audit
 ```
 

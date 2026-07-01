@@ -1,6 +1,6 @@
 type PillVariant = 'live' | 'done' | 'queued' | 'error';
 
-/** Status pill with LED. Mirrors mockup .pill. */
+/** Status pill with LED. */
 export function Pill({
 	variant,
 	children,
