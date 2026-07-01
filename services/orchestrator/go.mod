@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/fergusstrange/embedded-postgres v1.34.0
-	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/pgx/v5 v5.10.0
 	github.com/mattboback/stageflow/libs/contracts/report/generated/go v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/bootstrap v0.0.0-00010101000000-000000000000
 	github.com/mattboback/stageflow/libs/go/config v0.0.0-00010101000000-000000000000
