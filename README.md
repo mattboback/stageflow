@@ -13,7 +13,7 @@ worse?*
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
 real, interactive report in the browser. No account required.
 
-<!-- demo-gif: docs/images/demo.gif (added in a follow-up) -->
+![StageFlow CLI scanning example.com and failing on serious issues](docs/images/demo.gif)
 
 Reviewing this codebase? The
 [evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
