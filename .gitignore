@@ -119,6 +119,10 @@ services/scanner-runner/dist/
 /stageflow
 /stageflow-cli
 
+# Playwright output (clients/web e2e smoke)
+clients/web/test-results/
+clients/web/playwright-report/
+
 # Go build cache
 .gocache/
 **/.gocache/

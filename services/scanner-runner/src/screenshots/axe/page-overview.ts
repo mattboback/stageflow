@@ -493,7 +493,9 @@ async function waitForStablePaint(page: Page): Promise<void> {
 		await page.evaluate(async () => {
 			const waitForAnimationFrame = (): Promise<void> =>
 				new Promise((resolve) => {
-					window.requestAnimationFrame(() => resolve());
+					window.requestAnimationFrame(() => {
+						resolve();
+					});
 				});
 
 			if ('fonts' in document) {
