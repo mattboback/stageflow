@@ -120,6 +120,9 @@ From `services/platform-api/`:
 go run ./cmd/server
 ```
 
+From a fresh checkout, run `just generate-contracts` from the repo root before
+running Go commands directly inside this module.
+
 Typical verification commands:
 
 ```bash

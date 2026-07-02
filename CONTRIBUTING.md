@@ -13,6 +13,10 @@ image build, MinIO initialization, and stack start in sequence. Use
 `just dev up local` instead of the default `just dev up` when you need the
 localhost/private-target overlay for CLI dev-loop scans.
 
+Generated contract code is intentionally ignored. From a fresh checkout, run
+`just setup` or `just generate-contracts` before running focused Go or
+TypeScript commands directly inside a workspace.
+
 ## Quality Gates
 
 Pre-commit is a fast local guard for formatting, secrets, generated contract
@@ -58,7 +62,7 @@ Before opening a PR, check:
 
 - Changed behavior is described in the PR body.
 - Tests run are listed with pass/fail results.
-- Contract schemas and generated Go/TypeScript types are regenerated when `libs/contracts` changes.
+- Contract schemas and generated Go/TypeScript types are regenerated locally when `libs/contracts` changes.
 - CLI reference docs are regenerated with `go run ./clients/cli docs --out-dir docs/reference/cli/stageflow` when CLI commands or flags change.
 - Screenshots or rendered scan/report evidence are included for UI changes.
 - Security-sensitive paths are called out, especially URL intake, ZIP extraction, browser/network behavior, auth, CORS, tokens, and deployment config.

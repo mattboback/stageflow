@@ -68,6 +68,9 @@ go test ./...
 go test -race ./...
 ```
 
+From a fresh checkout, run `just generate-contracts` from the repo root before
+running Go commands directly inside this module.
+
 Integration tests that touch PostgreSQL use an embedded harness
 (`internal/orchtest/postgres.go`); no external database is required.
 

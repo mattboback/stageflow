@@ -14,13 +14,18 @@
 **/node_modules
 **/dist
 **/.next
+*.tsbuildinfo
 
 # Tests
 **/test
+**/tests
+**/testdata
 **/*_test.go
 **/*.test.ts
 **/__tests__
 **/coverage
+**/playwright-report
+**/test-results
 
 # Documentation
 *.md
@@ -31,7 +36,11 @@ docs
 .env.*
 *.local
 .claude
+.cache
+artifacts
 output
+.patchright-cli
+.playwright-cli
 
 # Logs
 *.log

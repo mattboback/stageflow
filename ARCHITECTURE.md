@@ -24,10 +24,10 @@ For an exhaustive deep-dive — trust boundaries, failure modes, all event types
                               ↓
 ┌─ Platform API (Go) ─────────────────────────────────────────────────────────┐
 │                                                                             │
-│  POST /v1/scan/url        POST /v1/scan/zip                                 │
-│  GET  /v1/jobs/:id/status (SSE)                                             │
-│  GET  /v1/jobs/:id/report                                                   │
-│  POST /v1/projects        GET /v1/projects/:slug/diff                       │
+│  POST /api/v1/jobs/urls   POST /api/v1/jobs/zip                             │
+│  GET  /api/v1/jobs/:id    GET  /api/v1/jobs/:id/stream (SSE)                │
+│  GET  /api/v1/jobs/:id/report                                               │
+│  POST /api/v1/projects    GET  /api/v1/jobs/:id/diff                        │
 │                                                                             │
 │  Middleware: request IDs, logging, CORS, API key auth, rate limiting        │
 │  SSRF guard: blocks private IPs, non-HTTP schemes, metadata endpoints       │
@@ -139,12 +139,12 @@ Key files: `clients/cli/` (Cobra command files, e.g. `project_run.go`), `clients
 ```
 Client                Platform API         NATS         Orchestrator       Job Pod
   │                        │                │                │                │
-  │── POST /v1/scan/url ──▶│                │                │                │
+  │── POST /api/v1/jobs/urls ─▶             │                │                │
   │                        │─ validate ─────│                │                │
   │                        │─ job.created ─▶│                │                │
   │◀── 202 { jobId } ──────│                │─ job.created ─▶│                │
   │                        │                │                │─ launch pod ──▶│
-  │── GET /v1/jobs/:id ───▶│ (SSE stream)   │                │                │
+  │── GET /api/v1/jobs/:id/stream ─────────▶│                │                │
   │◀── job:started ─────────────────────────────────────────│                │
   │◀── scan:started ────────────────────────────────────────│◀─ event ───────│
   │◀── scan:page ───────────────────────────────────────────│◀─ event ───────│
@@ -153,7 +153,7 @@ Client                Platform API         NATS         Orchestrator       Job P
   │                        │                │                │─ write report ─│
   │◀── job:done ────────────────────────────────────────────│                │
   │                        │                │                │─ cleanup pod ─▶│
-  │── GET /v1/jobs/:id/report ────────────▶ │                │                │
+  │── GET /api/v1/jobs/:id/results ───────▶ │                │                │
   │◀── unified report (JSON) ──────────────│                │                │
 ```
 
@@ -198,7 +198,7 @@ Every scan runs in an ephemeral pod that is created for the job and destroyed af
 
 ### 5. Schema-First Contracts
 
-The canonical report shape, scanner manifest format, provenance record, and NATS event envelopes are all defined as JSON Schemas in `libs/contracts/`. Go and TypeScript types are generated from these schemas and committed to the repo.
+The canonical report shape, scanner manifest format, provenance record, and NATS event envelopes are all defined as JSON Schemas in `libs/contracts/`. Go and TypeScript types are generated from these schemas during setup and CI, then ignored locally to avoid stale generated drift.
 
 **Why generate types?** Because hand-written types drift. If the scanner runner emits a field the web UI's TypeScript types don't know about, the TypeScript compiler catches it at build time — not at runtime in production. Adding a new scanner field is a schema change, not a hunt for all places that parse the report.
 

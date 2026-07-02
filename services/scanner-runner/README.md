@@ -27,6 +27,10 @@ On startup the worker loads the built-in manifest catalog and resolves the scann
 - Built-in manifests live in `libs/go/scannercatalog/manifests/*/manifest.json`.
 - `bun run build` copies those manifests into `dist/scanners` for runtime images.
 
+## Contract types
+
+`bun run prepare:contracts` regenerates TypeScript contracts and writes local package shims under `services/scanner-runner/node_modules/@stageflow/*`. This is intentional: the source tree typechecks against generated contract files before the publishable contract packages have been built into `dist`.
+
 ## Outputs
 
 The worker writes into `RESULTS_DIR` (default: `${SCANNER_DATA_DIR}/results`):

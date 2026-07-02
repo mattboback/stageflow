@@ -24,8 +24,6 @@ replace github.com/mattboback/stageflow/libs/go/storage => ../../../libs/go/stor
 
 require github.com/mattboback/stageflow/libs/go/models v0.0.0-00010101000000-000000000000
 
-replace github.com/mattboback/stageflow/libs/go/events => ../../../libs/go/events
-
 replace github.com/mattboback/stageflow/libs/contracts/scanner-manifest => ../../../libs/contracts/scanner-manifest
 
 replace github.com/mattboback/stageflow/libs/contracts/report/generated/go => ../../../libs/contracts/report/generated/go

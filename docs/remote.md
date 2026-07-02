@@ -52,8 +52,9 @@ stageflow project create marketing-site \
   --scanner axe --scanner seo --scanner link-checker
 ```
 
-`--url` is repeatable. `--scanner` is repeatable; omit it to run all enabled
-scanners. `--name` defaults to the slug.
+`--url` is repeatable. `--scanner` is repeatable; omit it to use the API's
+default scanner selection. Pass scanners explicitly when a project needs a
+stable roster. `--name` defaults to the slug.
 
 ### 2. Run a project scan
 
@@ -147,4 +148,5 @@ report regressed against the promoted baseline.
   (a `stageflow scan` flag) — `project scan` does not accept auth flags.
 - When the API enforces authentication, supply `--api-key` or `STAGEFLOW_API_KEY`.
 - The hosted `stageflow.org` API runs the same application code as this repo;
-  self-host the identical stack with the [local instructions](../README.md#self-host-locally).
+  self-host the same app stack with the [local instructions](../README.md#self-host-locally).
+  Hosted production deployment automation lives outside this public repo.

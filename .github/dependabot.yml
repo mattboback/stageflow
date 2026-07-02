@@ -4,34 +4,34 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 2
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 2
 
   - package-ecosystem: "npm"
     directory: "/clients/web"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 2
 
   - package-ecosystem: "npm"
     directory: "/services/scanner-runner"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 2
 
   - package-ecosystem: "npm"
     directory: "/libs/contracts/report"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 2
 
   - package-ecosystem: "npm"
     directory: "/libs/contracts/scanner-manifest"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 2

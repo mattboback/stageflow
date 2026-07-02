@@ -5,10 +5,6 @@
 > system lives in [DESIGN.md](DESIGN.md); tokens are canonical in
 > `clients/web/app/styles/instrument.css`.
 
-## Register
-
-product
-
 ## Users
 
 **Primary — first-time visitors to stageflow.org.** A developer or site owner who
@@ -28,10 +24,10 @@ terminal/JSON workflow, not their main surface.
 
 ## Product Purpose
 
-StageFlow is a self-hostable **frontend quality platform**. It runs eight scanners —
-accessibility, performance, SEO, links, security headers, social metadata, content
-quality, and agent-driven navigation — as one pipeline behind a single report contract,
-and remembers a **baseline per project** so CI can answer the question that matters:
+StageFlow is a self-hostable **frontend quality platform**. It ships eight built-in
+scanners — accessibility, performance, SEO, links, security headers, social metadata,
+content quality, and agent-driven navigation — behind a single report contract, and
+remembers a **baseline per project** so CI can answer the question that matters:
 *did this change make the frontend worse?*
 
 The web app is the platform's public face: submit a scan (URL or static-site ZIP), watch

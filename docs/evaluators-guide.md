@@ -72,7 +72,7 @@ Highlights:
 
 - Explicit job FSM and state transitions.
 - Use of NATS JetStream for job events and coordination.
-- Test coverage that exercises end-to-end flows without relying on a real Podman or Postgres.
+- Test coverage that exercises end-to-end flows with mocked Podman/runtime boundaries; database-backed tests use an embedded PostgreSQL harness by default.
 
 ### 2.4 Scanner Runner and Contracts
 
@@ -141,7 +141,7 @@ These decisions shaped the system most. Each is a good place to dig deeper.
 
 ### Podman over Docker
 
-StageFlow uses rootless Podman for scanner pod isolation. Rootless containers run without a daemon and without privilege escalation. This simplifies the security model for self-hosted deployments: scanner containers cannot affect the host even if compromised.
+StageFlow uses rootless Podman for scanner pod isolation. Rootless containers run without a daemon and without privilege escalation. This reduces host blast radius for self-hosted deployments, but it does not replace host and network hardening.
 
 ### NATS JetStream over a traditional job queue
 

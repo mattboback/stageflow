@@ -1215,7 +1215,7 @@ The Platform API (`security.go`) implements comprehensive SSRF protection:
 
 **Config validation at startup:** `ValidateSecurityConfig()` parses all CIDR ranges at startup, failing fast on invalid entries.
 
-Scanner Runner applies the same target policy at browser runtime for URL jobs: initial targets, redirects, final URLs, and HTTP(S) subresources are validated when `SCAN_URLS` is set. Hosted and self-hosted public deployments should also enforce a container or host egress policy; see [infra/security/egress-policy.example.md](../../infra/security/egress-policy.example.md).
+Scanner Runner applies the same target policy at browser runtime for URL jobs: initial targets, redirects, final URLs, and HTTP(S) subresources are validated when `SCAN_URLS` is set. This is not connection-level DNS pinning; see [SECURITY.md](../../SECURITY.md) for residual DNS rebinding risk. Hosted and self-hosted public deployments should also enforce a container or host egress policy; see [infra/security/egress-policy.example.md](../../infra/security/egress-policy.example.md).
 
 ### Additional Security Measures
 
@@ -1225,7 +1225,7 @@ Scanner Runner applies the same target policy at browser runtime for URL jobs: i
 | **Container security**        | Rootless Podman job pods, `no-new-privileges:true`, resource limits, logging limits (`max-size`/`max-file`) |
 | **Credential aliasing**       | `MINIO_ACCESS_KEY` ↔ `MINIO_ROOT_USER`, `MINIO_SECRET_KEY` ↔ `MINIO_ROOT_PASSWORD`                          |
 | **VPS deployment guardrails** | Protected hostname check prevents accidental production disruption                                          |
-| **API key auth**              | `X-Api-Key` header on all API endpoints (except health/scanners)                                            |
+| **API key auth**              | `X-Api-Key` header on API endpoints; `/healthz` is unauthenticated                                           |
 | **Request timeouts**          | All endpoints have timeout middleware except SSE stream                                                     |
 
 ---
@@ -1595,9 +1595,9 @@ The `cobraFlagChanged()` helper checks whether a flag was explicitly set on the 
 6. Run dev.down command steps
 ```
 
-### Auto-Detection (`project init`)
+### Auto-Detection (`dev init`)
 
-The `project init` command intelligently detects:
+The `stageflow dev init` command intelligently detects:
 
 - **Dev commands** by inspecting Justfile recipes (`stageflow-dev`, `dev`, `dev-web`, `run`) and `package.json` scripts (`stageflow:dev`, `dev`, `start`)
 - **Package manager** via lockfiles (bun → `bun.lock`, pnpm → `pnpm-lock.yaml`, yarn → `yarn.lock`, npm → `package-lock.json`)

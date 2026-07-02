@@ -11,11 +11,11 @@ Reviewing this codebase? The
 contracts, SSRF guards, the job FSM, and the test strategy — into a 5–15 minute
 tour.
 
-StageFlow is a self-hostable **frontend quality platform**. It runs eight
-scanners — accessibility, performance, SEO, links, security headers, social
-metadata, content quality, and agent-driven navigation — as one pipeline behind
-a single report contract, and remembers a **baseline per project** so every scan
-can answer the question that matters in CI: *did this change make the frontend
+StageFlow is a self-hostable **frontend quality platform**. It ships eight
+built-in scanners — accessibility, performance, SEO, links, security headers,
+social metadata, content quality, and agent-driven navigation — behind a single
+report contract, and remembers a **baseline per project** so every scan can
+answer the question that matters in CI: *did this change make the frontend
 worse?*
 
 There are three ways to use the platform, all backed by the same API:
@@ -25,8 +25,8 @@ There are three ways to use the platform, all backed by the same API:
 - **Remote projects** — named projects with promoted baselines and regression
   diffing, created and driven entirely from the CLI against a local or hosted
   API. See [docs/remote.md](docs/remote.md).
-- **Hosted + self-host** — a browser report UI at `stageflow.org`, or the
-  identical Podman stack run yourself.
+- **Hosted + self-host** — a browser report UI at `stageflow.org`, or the same
+  application stack run yourself with the repo-local Podman examples.
 
 The CLI is a thin client over an HTTP + SSE API: the same binary scans a one-off
 URL, drives a registered project, and gates CI on regressions.
@@ -230,7 +230,9 @@ Built-in scanners:
 
 Scanner enablement and resource overrides are configured through
 [infra/scanners/scanners.example.yaml](infra/scanners/scanners.example.yaml).
-The AI Navigator is optional and requires `OPENROUTER_API_KEY` when enabled.
+The local example enables a smaller default set for resource use; request or
+enable additional scanners when you need them. The AI Navigator is optional and
+requires `OPENROUTER_API_KEY` when enabled.
 
 ## Repository Map
 
@@ -242,7 +244,7 @@ The AI Navigator is optional and requires `OPENROUTER_API_KEY` when enabled.
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence        |
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                   |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                |
-| `libs/contracts`             | JSON Schema contracts and generated Go/TypeScript types                  |
+| `libs/contracts`             | JSON Schema contracts; Go/TypeScript types are generated during setup/CI |
 | `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples           |
 | `docs`                       | Architecture, remote projects, dev mode, configuration, and CLI reference |
 
@@ -257,6 +259,10 @@ Install dependencies and local config:
 ```bash
 just setup
 ```
+
+From a fresh checkout, run `just setup` or `just generate-contracts` before
+running focused Go or TypeScript build commands directly; generated contract
+code is intentionally ignored.
 
 Run the repository quality gate:
 

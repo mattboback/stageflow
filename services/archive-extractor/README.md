@@ -65,6 +65,9 @@ go test ./...
 go test -race ./...
 ```
 
+From a fresh checkout, run `just generate-contracts` from the repo root before
+running Go commands directly inside this module.
+
 Running the binary directly requires `JOB_ID`, `INPUT_PATH`, NATS, and MinIO to
 be set; in practice it runs inside an Orchestrator-launched job pod.
 

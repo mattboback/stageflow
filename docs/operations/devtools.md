@@ -51,9 +51,11 @@ machine-readable output. `--json` remains available for backward compatibility.
 
 If you built the binary in place instead of installing it, use `./stageflow ...` from `clients/cli/`.
 
-### Run an AI Navigator session
+### Run an experimental AI Navigator session
 
-Run the AI Navigator against a project with natural language objectives:
+`stageflow ai` is hidden from normal help output while the workflow is still
+experimental. Maintainers can run the AI Navigator against a project with
+natural-language objectives:
 
 ```bash
 stageflow ai https://example.com "Navigate to the contact page and submit the form" --api https://stageflow.org
@@ -122,15 +124,16 @@ uses the local overlay on port `3020` for localhost/private-target scans.
 #### Example `.stageflow/config.yaml`
 
 ```yaml
-version: 1
+version: 2
 
 stageflow:
   api_url: http://localhost:8080
+  project: my-frontend # Optional remote project slug for `stageflow project scan`
 
 scan:
   urls:
     - http://127.0.0.1:5173
-  scanners: axe,lighthouse,seo,link-checker
+  scanners: [axe, lighthouse, seo, link-checker]
   allow_private_targets: true
 
 dev:
