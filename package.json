@@ -2,7 +2,7 @@
 	"name": "stageflow-workspace",
 	"private": true,
 	"version": "0.0.0",
-	"description": "Workspace-level scripts for the StageFlow monorepo",
+	"description": "Root package metadata for StageFlow repository tooling",
 	"homepage": "https://stageflow.org",
 	"bugs": {
 		"url": "https://github.com/mattboback/stageflow/issues"

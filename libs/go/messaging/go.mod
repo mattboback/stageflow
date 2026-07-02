@@ -38,8 +38,6 @@ require (
 	golang.org/x/sys v0.46.0 // indirect
 )
 
-replace github.com/mattboback/stageflow/libs/go/messaging => ../../../libs/go/messaging
-
 replace github.com/mattboback/stageflow/libs/contracts/scanner-manifest => ../../../libs/contracts/scanner-manifest
 
 replace github.com/mattboback/stageflow/libs/contracts/report/generated/go => ../../../libs/contracts/report/generated/go

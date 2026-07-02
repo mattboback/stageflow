@@ -22,8 +22,6 @@ replace github.com/mattboback/stageflow/libs/go/scannerregistry => ../../../libs
 
 replace github.com/mattboback/stageflow/libs/go/storage => ../../../libs/go/storage
 
-replace github.com/mattboback/stageflow/libs/go/logging => ../../../libs/go/logging
-
 replace github.com/mattboback/stageflow/libs/contracts/scanner-manifest => ../../../libs/contracts/scanner-manifest
 
 replace github.com/mattboback/stageflow/libs/contracts/report/generated/go => ../../../libs/contracts/report/generated/go

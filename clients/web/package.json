@@ -22,7 +22,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@react-router/dev": "^7.18.0",
-    "@types/node": "^24.12.3",
+    "@types/node": "22",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint": "^10.3.0",

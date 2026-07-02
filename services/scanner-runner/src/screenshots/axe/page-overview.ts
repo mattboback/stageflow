@@ -488,6 +488,35 @@ async function stabilizePageForScreenshot(
 	}
 }
 
+async function waitForStablePaint(page: Page): Promise<void> {
+	try {
+		await page.evaluate(async () => {
+			const waitForAnimationFrame = (): Promise<void> =>
+				new Promise((resolve) => {
+					window.requestAnimationFrame(() => resolve());
+				});
+
+			if ('fonts' in document) {
+				try {
+					await Promise.race([
+						document.fonts.ready,
+						new Promise<void>((resolve) => {
+							window.setTimeout(resolve, 500);
+						})
+					]);
+				} catch {
+					// Font readiness is best-effort; the frame waits below still flush layout.
+				}
+			}
+
+			await waitForAnimationFrame();
+			await waitForAnimationFrame();
+		});
+	} catch {
+		// Ignore pages that navigate/detach while screenshots are being prepared.
+	}
+}
+
 export function computeScreenshotScaleFactor(actualPixels: number, cssPixels: number): number {
 	if (actualPixels <= 0 || cssPixels <= 0) {
 		return 1;
@@ -712,6 +741,7 @@ export async function capturePageOverviewRaw(
 		diagnostics.animationFinishedCount = stabilization.animationFinishedCount;
 		diagnostics.animationPausedCount = stabilization.animationPausedCount;
 		await waitInPage(page, 50);
+		await waitForStablePaint(page);
 
 		// Step 3: Get page dimensions and devicePixelRatio
 		const pageInfo = await page.evaluate(() => {

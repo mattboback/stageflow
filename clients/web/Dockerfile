@@ -13,7 +13,7 @@ WORKDIR /app
 # Install bun for the frozen-lockfile install (bun.lock is bun-specific)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl unzip \
-    && curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.10" \
+    && curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.8" \
     && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
     && rm -rf /var/lib/apt/lists/*
 

@@ -466,6 +466,12 @@ ci:
     echo "==> Stale-vocabulary and naming drift check..."
     ./devtools/scripts/check-stale-vocab.sh
 
+    echo "==> Generating schema contracts..."
+    just generate-contracts
+
+    echo "==> Syncing Go workspace..."
+    {{go}} work sync
+
     echo "==> Ensuring Go lint and vuln tools..."
     {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
     {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
@@ -621,7 +627,12 @@ clean MODE='all':
     echo "==> Cleaning artifacts..."
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
     find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" -o -name ".impeccable" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
-    rm -rf .cache output .patchright-cli
+    rm -rf .cache artifacts output .patchright-cli .playwright-cli
+    rm -rf libs/contracts/report/generated libs/contracts/provenance/generated libs/contracts/scanner-manifest/generated
+    rm -f libs/contracts/scanner-manifest/scanner_manifest.go
+    rm -f cli job-status-cli suite-runner scan_result.json stageflow stageflow-cli sbom-*.spdx.json
+    rm -f clients/cli/cli clients/cli/report.json clients/cli/stageflow clients/cli/stageflow-cli
+    rm -f clients/cli/stageflow_*.tar.gz clients/cli/stageflow_*.zip
     rm -f devtools/ops/job-status-cli/job-status-cli devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then

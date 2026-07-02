@@ -10,12 +10,17 @@ yarn-error.log*
 
 # Build output (will be rebuilt)
 dist
+*.tsbuildinfo
 
 # Tests
+tests
+testdata
 *.test.ts
 __tests__
 coverage
 .nyc_output
+playwright-report
+test-results
 
 # IDE
 .vscode
@@ -31,6 +36,11 @@ docs
 .env
 .env.*
 *.local
+.cache
+artifacts
+output
+.patchright-cli
+.playwright-cli
 eslint.config.*
 
 # OS files

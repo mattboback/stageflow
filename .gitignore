@@ -59,6 +59,7 @@ coverage.html
 # Temporary / local data
 *.tmp
 .cache/
+/artifacts/
 /.patchright-cli/
 /.impeccable/
 # Internal pre-fix review notes (not shipped)
@@ -98,6 +99,9 @@ log.duff
 # Generated local CLI artifacts
 /clients/cli/cli
 /clients/cli/report.json
+/clients/cli/stageflow_*.tar.gz
+/clients/cli/stageflow_*.zip
+/sbom-*.spdx.json
 
 # Go build artifacts
 bin/

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type {
 	IssueDetail,
@@ -71,9 +71,40 @@ export function VisualReviewPanel({
 
 	const pageWidth = selectedPage?.pageOverview?.pageWidth ?? 0;
 	const pageHeight = selectedPage?.pageOverview?.pageHeight ?? 0;
-	const canRenderOverlay = !!overviewUrl && pageWidth > 0 && pageHeight > 0;
+	const canRenderScreenshot = !!overviewUrl && pageWidth > 0 && pageHeight > 0;
 
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
+	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
+	const [screenshotLoadFailed, setScreenshotLoadFailed] = useState(false);
+
+	useEffect(() => {
+		setLoadedOverviewUrl(null);
+		setScreenshotLoadFailed(false);
+
+		if (!overviewUrl) {
+			return;
+		}
+
+		let cancelled = false;
+		const image = new Image();
+		image.onload = () => {
+			if (!cancelled) {
+				setLoadedOverviewUrl(overviewUrl);
+			}
+		};
+		image.onerror = () => {
+			if (!cancelled) {
+				setScreenshotLoadFailed(true);
+			}
+		};
+		image.src = overviewUrl;
+
+		return () => {
+			cancelled = true;
+		};
+	}, [overviewUrl]);
+
+	const screenshotReady = !!overviewUrl && loadedOverviewUrl === overviewUrl;
 
 	const overlayElements = useMemo(() => {
 		const elements = selectedPage?.pageOverview?.elements ?? [];
@@ -124,12 +155,20 @@ export function VisualReviewPanel({
 			</aside>
 
 			<section className="vrev__stage">
-				{!canRenderOverlay ? (
+				{!canRenderScreenshot ? (
 					<div className="vrev__empty">
 						<p>
 							No page-overview screenshot is available for this page yet. Visual review
 							will appear here once captured.
 						</p>
+					</div>
+				) : screenshotLoadFailed ? (
+					<div className="vrev__empty">
+						<p>The page-overview screenshot could not be loaded.</p>
+					</div>
+				) : !screenshotReady ? (
+					<div className="vrev__empty">
+						<p>Loading page-overview screenshot...</p>
 					</div>
 				) : (
 					<div className="vrev__viewport">

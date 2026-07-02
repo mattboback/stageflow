@@ -4,7 +4,6 @@ use (
 	./clients/cli
 	./devtools/ops/job-status-cli
 	./devtools/qa/suite-runner
-	./libs/contracts/provenance/generated/go
 	./libs/contracts/report/generated/go
 	./libs/contracts/scanner-manifest
 	./libs/go/bootstrap
