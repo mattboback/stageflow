@@ -47,7 +47,7 @@ stageflow scan https://example.com --api https://stageflow.org
 ```
 
 By default, `stageflow` prints plain text. Add `--format json` for
-machine-readable output. `--json` remains available for backward compatibility.
+machine-readable output.
 
 If you built the binary in place instead of installing it, use `./stageflow ...` from `clients/cli/`.
 

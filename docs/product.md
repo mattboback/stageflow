@@ -2,7 +2,7 @@
 
 > Strategic context for StageFlow's design work. Describes the **web client**
 > (`clients/web`, the React Router app served at stageflow.org). The visual
-> system lives in [DESIGN.md](DESIGN.md); tokens are canonical in
+> system lives in [design.md](design.md); tokens are canonical in
 > `clients/web/app/styles/instrument.css`.
 
 ## Users
