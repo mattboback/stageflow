@@ -1,8 +1,8 @@
 # StageFlow Configuration
 
-Reference for environment variables used by local, staging, and production StageFlow deployments.
+Reference for environment variables used by local and production StageFlow deployments.
 
-Use `.env.example` as the local baseline. It now favors localhost-friendly defaults, so override the domain-facing values before staging or production use. Keep secrets in your secret manager or host-level env, never in git.
+Use `.env.example` as the local baseline. It now favors localhost-friendly defaults, so override the domain-facing values before production use. Keep secrets in your secret manager or host-level env, never in git.
 
 If you are orienting yourself for the first time, start with the [repository README](../../README.md) for the quick start. This page is the detailed configuration reference once you know which environment you are setting up.
 
@@ -31,7 +31,6 @@ network `stageflow_dev_net`; set `COMPOSE_PROJECT_NAME` or
 | ------------------------------------- | ----------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- | ---------------------------------------------------------------------------- |
 | `dev` via `just demo` / `just dev up` | Fastest local smoke test                              | `http://localhost:3000` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.yml` + `infra/compose/podman-compose.test.yml` |
 | `local` overlay                       | Localhost/private-target scans during development     | `http://localhost:3020` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.local.yml`                                     |
-| repo-managed staging overlay          | Domain-like staging on alternate loopback ports       | `http://127.0.0.1:3300` | `http://127.0.0.1:8300` | `http://127.0.0.1:3301` | `infra/compose/podman-compose.staging.yml`                                   |
 | optional self-hosted edge             | Public-domain routing and TLS for your own deployment | proxied by host Caddy   | proxied by host Caddy   | proxied by host Caddy   | `infra/caddy/Caddyfile`                                                      |
 | hosted `stageflow.org` production     | Shared VPS deployment for the live demo               | gateway-managed         | gateway-managed         | gateway-managed         | separate deployment workspace (Quadlets + ingress network)                   |
 
@@ -40,11 +39,11 @@ deployment targets. Use `dev` for the normal demo/UI stack. Use `local` when a
 scan must reach localhost or private-network targets from scanner pods; that
 overlay serves the frontend on `3020` and switches job pods to host networking.
 
-The repo-managed staging overlay, the optional self-hosted Caddy edge, and the hosted `stageflow.org` deployment intentionally use different topologies. `podman-compose.staging.yml` binds `3300/3301/8300/9300`, while the live demo runs behind a separate gateway + Quadlet-managed ingress network rather than repo-managed host port bindings. Use one topology per environment rather than mixing them.
+The optional self-hosted Caddy edge and the hosted `stageflow.org` deployment intentionally use different topologies. The live demo runs behind a separate gateway + Quadlet-managed ingress network rather than repo-managed host port bindings. Use one topology per environment rather than mixing them.
 
 The hosted `stageflow.org` demo uses the same application code, but this repository should be treated as the source for local development and self-hosted layouts rather than as the authoritative deployment automation for that public instance.
 
-The optional Caddy edge expects a separate host-level loopback layout where the app is already exposed on `127.0.0.1:3100` (frontend), `127.0.0.1:3101` (Grafana), `127.0.0.1:8100` (API), and `127.0.0.1:9100` (MinIO). Those are not the same ports used by the local (`3000/3020/8080/3001`) or staging (`3300/8300/3301/9300`) compose overlays.
+The optional Caddy edge expects a separate host-level loopback layout where the app is already exposed on `127.0.0.1:3100` (frontend), `127.0.0.1:3101` (Grafana), `127.0.0.1:8100` (API), and `127.0.0.1:9100` (MinIO). Those are not the same ports used by the local (`3000/3020/8080/3001`) compose overlays.
 
 ## Variable Reference
 
@@ -176,7 +175,7 @@ Most first-time local setups can ignore this section. These variables are mainly
 
 ## Environment Guidance
 
-- Use distinct credentials for local, staging, and production.
+- Use distinct credentials for local and production.
 - Keep domains and CORS origins environment-specific.
 - For self-hosted public domains, either route StageFlow through an existing host-level gateway or use `infra/caddy/Caddyfile` as the starting point for your own edge config.
 - The hosted `stageflow.org` demo runs on a separate Quadlet-managed ingress topology; do not expect the repo-local compose overlays to mirror that production host layout 1:1.

@@ -1730,36 +1730,6 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Staging
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Staging Server                                 │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │         Podman Compose (stageflow-staging project)        │   │
-│  │                                                          │   │
-│  │  Same services as local, different port ranges:          │   │
-│  │  • Frontend: 3300                                        │   │
-│  │  • API: 8300                                             │   │
-│  │  • MinIO: 9300/9301                                      │   │
-│  │  • Grafana: 3301                                         │   │
-│  │                                                          │   │
-│  │  Network: stageflow_staging_net                          │   │
-│  │  POD_NETNS_MODE: bridge                                  │   │
-│  │  Private targets: disabled                               │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │  External Caddy (not in repo)                            │   │
-│  │  staging.stageflow.org ──► localhost:3300 (frontend)     │   │
-│  │                    ──► localhost:8300 (API)              │   │
-│  │                    ──► localhost:9300 (MinIO)            │   │
-│  │                    ──► localhost:3301 (Grafana)          │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ### Production (stageflow.org)
 
 ```
@@ -1795,20 +1765,20 @@ process-level counters and a latency histogram: `stageflow_orchestrator_event_ha
 
 ### Environment Comparison
 
-| Aspect              | Local Dev                  | Staging                 | Production                        |
-| ------------------- | -------------------------- | ----------------------- | --------------------------------- |
-| **Domain**          | `localhost`                | `staging.stageflow.org` | `stageflow.org`                   |
-| **Compose project** | `stageflow_dev`            | `stageflow-staging`     | `stageflow`                       |
-| **Frontend port**   | 3000 demo / 3020 local     | 3300                    | 3100 (Caddy proxy)                |
-| **API port**        | 8080                       | 8300                    | 8100 (Caddy proxy)                |
-| **MinIO ports**     | 9000, 9001                 | 9300, 9301              | 9100 (Caddy proxy)                |
-| **Grafana port**    | 3001                       | 3301                    | 3101 (Caddy proxy)                |
-| **NATS port**       | 4222 (exposed)             | Not exposed             | Not exposed                       |
-| **Private targets** | Enabled                    | Disabled                | Disabled                          |
-| **MinIO SSL**       | `false`                    | `true` (default)        | `true`                            |
-| **Pod netns mode**  | `host`                     | `bridge`                | `bridge`                          |
-| **CORS origins**    | `localhost:3000,3020,8080` | `staging.stageflow.org` | `stageflow.org,www.stageflow.org` |
-| **Edge proxy**      | None                       | External Caddy          | Production Caddy                  |
+| Aspect              | Local Dev                  | Production                        |
+| ------------------- | -------------------------- | --------------------------------- |
+| **Domain**          | `localhost`                | `stageflow.org`                   |
+| **Compose project** | `stageflow_dev`            | `stageflow`                       |
+| **Frontend port**   | 3000 demo / 3020 local     | 3100 (Caddy proxy)                |
+| **API port**        | 8080                       | 8100 (Caddy proxy)                |
+| **MinIO ports**     | 9000, 9001                 | 9100 (Caddy proxy)                |
+| **Grafana port**    | 3001                       | 3101 (Caddy proxy)                |
+| **NATS port**       | 4222 (exposed)             | Not exposed                       |
+| **Private targets** | Enabled                    | Disabled                          |
+| **MinIO SSL**       | `false`                    | `true`                            |
+| **Pod netns mode**  | `host`                     | `bridge`                          |
+| **CORS origins**    | `localhost:3000,3020,8080` | `stageflow.org,www.stageflow.org` |
+| **Edge proxy**      | None                       | Production Caddy                  |
 
 ### Horizontal Scaling Boundary
 
@@ -2092,7 +2062,6 @@ Test file exclusions: bodyclose, dupl, errcheck, gosec, noctx are relaxed for `_
 | Base compose         | `infra/compose/podman-compose.yml`         |
 | Local overlay        | `infra/compose/podman-compose.local.yml`   |
 | Test overlay         | `infra/compose/podman-compose.test.yml`    |
-| Staging overlay      | `infra/compose/podman-compose.staging.yml` |
 | Caddy config         | `infra/caddy/Caddyfile`                    |
 | Scanner config       | `infra/scanners/scanners.example.yaml`     |
 | MinIO bucket init    | `infra/minio/init-buckets.sh`              |

@@ -1,10 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { chromium } from '/home/matt/Deployment/stageflow/clients/web/node_modules/playwright/index.mjs';
 
-const FIXTURE =
-	'/home/matt/Deployment/stageflow/libs/contracts/report/fixtures/unified-report.v2.all-scans.json';
-const OUT = '/home/matt/Deployment/stageflow/output/ui-refresh-preview';
+const REPO_ROOT = path.resolve(import.meta.dirname, '../..');
+// Playwright comes from clients/web's dev dependencies (@playwright/test).
+const { chromium } = await import(
+	path.join(REPO_ROOT, 'clients/web/node_modules/playwright/index.mjs')
+);
+
+const FIXTURE = path.join(
+	REPO_ROOT,
+	'libs/contracts/report/fixtures/unified-report.v2.all-scans.json'
+);
+const OUT = path.join(REPO_ROOT, 'output/ui-refresh-preview');
 const APP = 'http://localhost:5199';
 const API = 'http://localhost:8080';
 
@@ -348,7 +355,11 @@ if (await failBtn.count()) {
 	await page.screenshot({ path: `${OUT}/08-verify-verdict.png`, fullPage: false });
 	console.log('captured 08-verify-verdict');
 }
-await page.getByRole('button', { name: 'Close modal' }).click();
+// The modal may already have closed after recording a verdict.
+const closeBtn = page.getByRole('button', { name: 'Close modal' });
+if (await closeBtn.isVisible().catch(() => false)) {
+	await closeBtn.click();
+}
 await page.waitForTimeout(800);
 const contrastGroup = page
 	.locator('[data-testid="issue-group-row"]', { hasText: /contrast/i })

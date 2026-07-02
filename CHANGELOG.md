@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Web client test suite: vitest unit/component tests driven by the committed
+  v2 report fixture, plus a Playwright e2e smoke against the preview build
+  with a mocked API; both run in CI alongside a new web-client README
+- CLI demo GIF in the README, recorded against the hosted API with a committed
+  recording script (`devtools/qa/record-demo.sh`)
+
 ### Changed
+
+- README now leads with a single golden path (CLI scan against the hosted
+  demo); `PRODUCT.md` and `DESIGN.md` moved under `docs/`
+- `devtools/qa/report-preview.mjs` uses repo-relative paths and the
+  Playwright dependency declared in `clients/web`, so it runs from any checkout
 
 - **Breaking (CLI):** redesigned the command grammar so each noun means one thing
   - The local dev-server scan loop moved from bare `stageflow project` to `stageflow dev scan`; `project init` and `project doctor` moved to `stageflow dev init` and `stageflow dev doctor`. Bare `stageflow dev` and `stageflow project` print help instead of acting
@@ -21,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The repo-managed staging deployment mode (`just staging`, the staging
+  compose/Caddy/env examples, and its docs); hosted deployment is managed
+  outside this repository, and self-hosting uses the base compose files
 - `stageflow project hosted` (superseded by slug-free `stageflow project scan`)
 - `--project` flag on `stageflow scan` (use `stageflow project scan <slug>`)
 - Deprecated `--json` global flag (use `--format json`) and the hidden `--fail-severity` alias (use `--fail-on`)

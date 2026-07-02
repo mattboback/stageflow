@@ -19,13 +19,12 @@ aliases with unrelated StageFlow stacks on the same host. Override
 `COMPOSE_PROJECT_NAME` or `STAGEFLOW_NETWORK_NAME` only when you intentionally
 want a different local identity.
 
-## Repo-Managed Staging and Self-Hosting
+## Repo-Managed Self-Hosting
 
 Use the checked-in compose and Caddy examples for deployments you manage from this repository:
 
 - `infra/compose/podman-compose.yml` is the base service topology.
 - `infra/compose/podman-compose.local.yml` enables local/private target scanning for development.
-- `infra/compose/podman-compose.staging.yml` provides a domain-like staging overlay on alternate loopback ports.
 - `infra/caddy/Caddyfile` is an optional host-level edge example for public-domain routing and TLS.
 
 Before exposing a public domain, replace every `change-me` value in `.env.example`, set explicit CORS origins, and review the scanner egress guidance in `infra/security/egress-policy.example.md`.
@@ -39,5 +38,5 @@ The hosted `stageflow.org` demo runs the same application code, but its producti
 The repo `just deploy` recipe is a guarded delegate for that control plane:
 
 - It requires `STAGEFLOW_DEPLOY_CONTROL_PLANE` to point at a directory containing the external deployment `justfile`, then runs `just deploy stageflow` there.
-- When that variable is unset or the control-plane `justfile` is absent, it fails with a neutral message and leaves local, staging, and self-hosted deployment to the checked-in compose/Caddy files.
+- When that variable is unset or the control-plane `justfile` is absent, it fails with a neutral message and leaves local and self-hosted deployment to the checked-in compose/Caddy files.
 - Set `STAGEFLOW_DEPLOY_CONTROL_PLANE=/path/to/control-plane` only on hosts that intentionally provide the external deployment justfile.
