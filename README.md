@@ -3,14 +3,6 @@
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
-real, interactive report in the browser. No account required.
-
-Reviewing this codebase? The
-[evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
-contracts, SSRF guards, the job FSM, and the test strategy — into a 5–15 minute
-tour.
-
 StageFlow is a self-hostable **frontend quality platform**. It ships eight
 built-in scanners — accessibility, performance, SEO, links, security headers,
 social metadata, content quality, and agent-driven navigation — behind a single
@@ -18,48 +10,30 @@ report contract, and remembers a **baseline per project** so every scan can
 answer the question that matters in CI: *did this change make the frontend
 worse?*
 
-There are three ways to use the platform, all backed by the same API:
+**▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
+real, interactive report in the browser. No account required.
 
-- **CLI** — a single Go binary that submits scans to any StageFlow API and
-  streams live results to your terminal or CI, with machine-readable exit codes.
-- **Remote projects** — named projects with promoted baselines and regression
-  diffing, created and driven entirely from the CLI against a local or hosted
-  API. See [docs/remote.md](docs/remote.md).
-- **Hosted + self-host** — a browser report UI at `stageflow.org`, or the same
-  application stack run yourself with the repo-local Podman examples.
+<!-- demo-gif: docs/images/demo.gif (added in a follow-up) -->
 
-The CLI is a thin client over an HTTP + SSE API: the same binary scans a one-off
-URL, drives a registered project, and gates CI on regressions.
+Reviewing this codebase? The
+[evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
+contracts, SSRF guards, the job FSM, and the test strategy — into a 5–15 minute
+tour.
 
-![StageFlow report overview](docs/images/report-overview.png)
+## Try It in 60 Seconds
 
-## Start With the CLI
-
-Use the CLI when you want a terminal-friendly scan result, JSON for automation,
-or a CI gate based on issue severity.
-
-Download a release asset from
-[GitHub Releases](https://github.com/mattboback/stageflow/releases), or build
-from source. To build from source, ensure `~/.local/bin` is on your `PATH` (or
-export it for the current session), then install:
+The CLI is a single Go binary that submits scans to any StageFlow API and
+streams live results to your terminal. Point it at the hosted demo — nothing to
+deploy:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
-just cli-install
-stageflow version
-```
-
-`just cli-install` installs to `~/.local/bin` by default and verifies that the
-`stageflow` command on `PATH` resolves to that binary. If your shell finds a
-different `stageflow`, put `~/.local/bin` earlier on `PATH` and rerun the
-install. See [docs/operations/devtools.md](docs/operations/devtools.md) for
-details.
-
-Run a hosted scan:
-
-```bash
+just cli-install          # or download a binary from GitHub Releases
 stageflow scan https://example.com --api https://stageflow.org
 ```
+
+Prefer a browser? Submit the same scan at [stageflow.org](https://stageflow.org)
+and watch it stream live.
 
 Common CLI workflows:
 
@@ -67,99 +41,64 @@ Common CLI workflows:
 # Choose scanners and return JSON for automation.
 stageflow scan https://example.com --scanner axe,seo --format json --api https://stageflow.org
 
-# Fail the command when serious-or-worse issues are found.
+# Fail the command (exit 1) when serious-or-worse issues are found — a CI gate.
 stageflow scan https://example.com --fail-on serious --api https://stageflow.org
 
 # Scan several routes in one job.
-stageflow scan https://example.com https://example.com/about \
-  --format markdown \
-  --api https://stageflow.org
-
-# Scan a local dev server through a local StageFlow API.
-stageflow scan http://127.0.0.1:5173 --allow-private-targets
+stageflow scan https://example.com https://example.com/about --format markdown --api https://stageflow.org
 ```
 
-Exit codes are intentionally machine-readable:
+Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API
+error. Release binaries are on
+[GitHub Releases](https://github.com/mattboback/stageflow/releases); the full
+command reference is in [clients/cli/README.md](clients/cli/README.md) and
+[docs/reference/cli/stageflow](docs/reference/cli/stageflow). If `stageflow`
+doesn't resolve after `just cli-install`, put `~/.local/bin` earlier on `PATH`
+and rerun — see [docs/operations/devtools.md](docs/operations/devtools.md).
 
-| Exit code | Meaning                                                             |
-| --------- | ------------------------------------------------------------------- |
-| `0`       | Scan completed and no displayed issue met the `--fail-on` threshold |
-| `1`       | Scan completed and at least one displayed issue met the threshold   |
-| `2`       | CLI or API error                                                    |
+## The Report
 
-For the full command reference, see [clients/cli/README.md](clients/cli/README.md)
-and [docs/reference/cli/stageflow](docs/reference/cli/stageflow).
+Every scan — CLI or browser — produces one unified report built for triage:
+score and severity distribution at a glance, issues grouped by scanner/rule,
+page screenshots and occurrence evidence, remediation details for engineers,
+and JSON/HTML downloads.
 
-## Hosted StageFlow
-
-The hosted `stageflow.org` service runs the same application code as this repo
-and is the fastest way to try StageFlow without operating the stack. Use it from
-the CLI with `--api https://stageflow.org`, or use the browser UI for scan
-submission, live status, and report review.
-
-The report UI is built for triage:
-
-- score and severity distribution at a glance
-- issue grouping by scanner/rule
-- page screenshots and occurrence evidence
-- remediation details for engineers
-- downloads for JSON and HTML report artifacts
+![StageFlow report overview](docs/images/report-overview.png)
 
 ![StageFlow issue list](docs/images/report-issues.png)
 
-To see the exact shape of a unified report without running a scan, open the
-committed fixture
+The report shape is a versioned contract. To see it without running a scan,
+open the committed fixture
 [`libs/contracts/report/fixtures/unified-report.v2.all-scans.json`](libs/contracts/report/fixtures/unified-report.v2.all-scans.json)
 — a full multi-scanner report validated against the v2 schema.
 
-Hosted production deployment, monitoring, rollback, and VPS control-plane
-automation are intentionally managed outside this public repository. This repo
-contains the application source, local development stack, and self-hosting
-examples.
+## Regression Memory: The Headline Capability
 
-## Remote Projects & Regression Memory
-
-The platform's headline capability: register a project once, promote a baseline,
-and let every later scan tell you whether the frontend regressed — all from the
-CLI, against a local stack or hosted `stageflow.org`.
+Register a project once, promote a known-good scan as its baseline, and every
+later scan diffs against it — new issues or a tripped severity gate exit
+non-zero, so it drops straight into CI:
 
 ```bash
-# Register a project (URLs + scanners) on a StageFlow API.
-stageflow project create marketing-site \
-  --url https://example.com --scanner axe --scanner seo
-
-# Scan it; streams live, then diffs against the promoted baseline.
-stageflow project scan marketing-site --format json
-
-# Accept a known-good run as the reference point.
-stageflow project promote marketing-site --job-id <job-id>
+stageflow project create marketing-site --url https://example.com --scanner axe --scanner seo
+stageflow project scan marketing-site --format json     # streams live, then diffs vs. baseline
+stageflow project promote marketing-site --job-id <id>  # accept a run as the new reference
 ```
 
-A project scan exits non-zero when new issues appear or the severity gate trips,
-so it drops straight into CI. The full lifecycle, a CI gate snippet, and auth
-details are in [docs/remote.md](docs/remote.md).
+The full lifecycle, a CI gate snippet, and auth details are in
+[docs/remote.md](docs/remote.md).
 
-## Dev Mode (local dev loop)
+## Going Deeper
 
-`stageflow dev` turns the CLI into a repeatable local regression loop. It can
-start your dev server, wait for readiness, run a scan, stream progress, stop
-the server, and emit JSON that agents or CI jobs can parse.
-
-```bash
-stageflow dev init
-stageflow dev doctor
-stageflow dev scan --format json
-```
-
-When a repo's `.stageflow/config.yaml` declares a remote project slug, run the
-baseline/diff loop from the same repo without starting a dev server:
-
-```bash
-stageflow project scan --format json
-```
-
-See [docs/dev-mode.md](docs/dev-mode.md) for the config reference and
-[docs/remote.md](docs/remote.md) for the remote project workflow.
+- **Dev mode** — `stageflow dev` turns the CLI into a repeatable local
+  regression loop: start your dev server, wait for readiness, scan, stream
+  progress, emit JSON for agents or CI. See [docs/dev-mode.md](docs/dev-mode.md).
+- **Architecture** — clients → Platform API → NATS JetStream → Orchestrator →
+  per-job rootless Podman pods, with SSRF and ZIP-bomb guards at the trust
+  boundaries. Start with [ARCHITECTURE.md](ARCHITECTURE.md), then
+  [docs/architecture/system.md](docs/architecture/system.md).
+- **Product & design rationale** — who the platform serves and why the report
+  UI looks the way it does: [docs/product.md](docs/product.md) and
+  [docs/design.md](docs/design.md).
 
 ## Self-Host Locally
 
@@ -171,10 +110,11 @@ Prerequisites:
 - Go `1.26.4` or newer in the `1.26` line
 - Node.js `22.x` or newer (the repo pins `22` in `.node-version`)
 - Bun `1.3.8` or newer
-- Podman with Compose support
+- **Podman with Compose support — Docker is not supported.** Per-job rootless
+  Podman pods are core to the isolation model, not an interchangeable runtime.
 - `just`
 
-Run the fastest local smoke test:
+Run the guided smoke test:
 
 ```bash
 cp .env.example .env
@@ -182,38 +122,29 @@ just diagnose
 just demo
 ```
 
-`just demo` uses an isolated local compose project and Podman network by
-default (`stageflow_dev` / `stageflow_dev_net`). Set `COMPOSE_PROJECT_NAME` or
-`STAGEFLOW_NETWORK_NAME` when you intentionally want a different local stack
-identity.
-
-`just demo`, `just dev up dev`, and `just dev up local` are different entry
-points into the same local stack. `just demo` is the guided smoke test: it runs
-setup, builds images, starts MinIO first, initializes buckets, and then starts
-the full `dev` stack. `just dev up dev` is the lower-level default compose mode
-on port `3000`. `just dev up local` applies the local overlay on port `3020`
-and enables localhost/private-target scanning for the CLI dev loop.
-
 When the demo is ready:
 
 - Web UI: `http://localhost:3000`
 - API: `http://localhost:8080`
 - Grafana: `http://localhost:3001`
 
-Manual stack commands are available when you want more control:
-
-```bash
-just setup
-just images
-just dev up
-just dev init
-just dev logs
-```
+`just demo` uses an isolated local compose project and Podman network by
+default (`stageflow_dev` / `stageflow_dev_net`). `just dev up dev` is the
+lower-level default compose mode on port `3000`; `just dev up local` applies
+the local overlay on port `3020` and enables localhost/private-target scanning
+for the CLI dev loop. Manual stack commands (`just setup`, `just images`,
+`just dev up`, `just dev init`, `just dev logs`) are available when you want
+more control.
 
 Before exposing StageFlow on a public domain, replace every `change-me` value
 in `.env`, set explicit CORS origins, keep API authentication enabled, and
 review [docs/reference/configuration.md](docs/reference/configuration.md) and
 [infra/security/egress-policy.example.md](infra/security/egress-policy.example.md).
+
+Hosted production deployment, monitoring, rollback, and VPS control-plane
+automation are intentionally managed outside this public repository. This repo
+contains the application source, local development stack, and self-hosting
+examples.
 
 ## What StageFlow Runs
 
@@ -247,10 +178,6 @@ requires `OPENROUTER_API_KEY` when enabled.
 | `libs/contracts`             | JSON Schema contracts; Go/TypeScript types are generated during setup/CI |
 | `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples           |
 | `docs`                       | Architecture, remote projects, dev mode, configuration, and CLI reference |
-
-For the system architecture and trust boundaries, start with
-[ARCHITECTURE.md](ARCHITECTURE.md), then read
-[docs/architecture/system.md](docs/architecture/system.md).
 
 ## Development
 
