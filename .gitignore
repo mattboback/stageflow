@@ -26,7 +26,6 @@ libs/contracts/scanner-manifest/scanner_manifest.go
 
 # Environment files
 .env
-.env.staging
 .env.local
 .env.*.local
 .env.ci.*

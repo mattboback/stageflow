@@ -25,7 +25,7 @@ deploy:
     control_plane="${STAGEFLOW_DEPLOY_CONTROL_PLANE:-}"
     if [[ -z "$control_plane" ]]; then
         echo "Hosted stageflow.org deployment is managed by an external control plane." >&2
-        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local, staging, and self-hosted environments." >&2
+        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local and self-hosted environments." >&2
         exit 1
     fi
 
@@ -35,7 +35,7 @@ deploy:
     if [[ ! -f "$control_justfile" ]]; then
         echo "Hosted stageflow.org deployment is managed by an external control plane." >&2
         echo "No control-plane justfile found at: $control_justfile" >&2
-        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local, staging, and self-hosted environments." >&2
+        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local and self-hosted environments." >&2
         exit 1
     fi
 
@@ -368,95 +368,6 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
     fi
 
     exit "$refresh_status"
-
-[group('staging'), doc('Staging stack via compose: up/down/restart/logs/init/ps')]
-staging CMD='up' ENV_FILE='.env.staging' PROJECT='stageflow-staging' NETWORK='stageflow_staging_net' ENDPOINT='http://127.0.0.1:9300':
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    cmd="{{CMD}}"
-    env_file_input="{{ENV_FILE}}"
-    project="{{PROJECT}}"
-    fallback_network="{{NETWORK}}"
-    endpoint="{{ENDPOINT}}"
-    root_dir="{{repo_root}}"
-    current_host="$(hostname -f 2>/dev/null || hostname)"
-    declare -A env_overrides=()
-
-    for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
-        if [[ -v "$name" ]]; then
-            env_overrides["$name"]="${!name}"
-        fi
-    done
-
-    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
-        echo "Refusing to run repo-local StageFlow staging stacks on the production VPS." >&2
-        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-the external deployment directory} for live operations." >&2
-        exit 1
-    fi
-
-    if [[ "$env_file_input" = /* ]]; then
-        env_file="$env_file_input"
-    else
-        env_file="$root_dir/$env_file_input"
-    fi
-
-    if [[ ! -f "$env_file" ]]; then
-        echo "Missing env file: $env_file (copy infra/.env.staging.example to .env.staging first)" >&2
-        exit 1
-    fi
-
-    files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.staging.yml")
-    env_args=(--env-file "$env_file")
-
-    # shellcheck disable=SC1090
-    source "$env_file"
-    network="${STAGEFLOW_NETWORK_NAME:-$fallback_network}"
-
-    case "$cmd" in
-        up)
-            echo "==> Ensuring staging network exists: $network"
-            {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
-
-            echo "==> Starting staging stack (project: $project)..."
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d
-            ;;
-        down)
-            echo "==> Stopping staging stack (project: $project)..."
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" down
-            ;;
-        restart)
-            echo "==> Ensuring staging network exists: $network"
-            {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
-
-            echo "==> Restarting staging stack (project: $project)..."
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" down
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" up -d
-            ;;
-        logs)
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" logs -f
-            ;;
-        init)
-            echo "==> Initializing staging MinIO buckets ($endpoint)..."
-            set -a
-            # shellcheck disable=SC1090
-            source "$env_file"
-            set +a
-
-            for name in "${!env_overrides[@]}"; do
-                export "$name=${env_overrides[$name]}"
-            done
-
-            MINIO_ENDPOINT="$endpoint" ./infra/minio/init-buckets.sh
-            ;;
-        ps)
-            {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" ps
-            ;;
-        *)
-            echo "CMD must be up, down, restart, logs, init, or ps (got: $cmd)" >&2
-            exit 2
-            ;;
-    esac
 
 [group('quality'), doc('Run local CI: lint + test + vuln')]
 ci:
