@@ -134,7 +134,7 @@ jobs:
         run: bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
 
   clients_web:
-    name: Web App (audit, typecheck, build)
+    name: Web App (audit, lint, typecheck, test, build, e2e)
     runs-on: ubuntu-latest
     needs: workflow_lint
     timeout-minutes: 25
@@ -169,12 +169,28 @@ jobs:
         run: bun audit --audit-level=high
         working-directory: clients/web
 
+      - name: Lint
+        run: bun run lint
+        working-directory: clients/web
+
       - name: Typecheck
         run: bun run typecheck
         working-directory: clients/web
 
+      - name: Unit and component tests
+        run: bun run test
+        working-directory: clients/web
+
       - name: Build
         run: bun run build
+        working-directory: clients/web
+
+      - name: Install Playwright browser
+        run: bunx playwright install --with-deps chromium
+        working-directory: clients/web
+
+      - name: E2E smoke (preview build, mocked API)
+        run: bun run test:e2e
         working-directory: clients/web
 
   scanner-runner:

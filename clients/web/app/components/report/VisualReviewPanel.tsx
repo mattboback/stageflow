@@ -74,13 +74,11 @@ export function VisualReviewPanel({
 	const canRenderScreenshot = !!overviewUrl && pageWidth > 0 && pageHeight > 0;
 
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
+	// Both load states are keyed by URL so switching pages needs no reset.
 	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
-	const [screenshotLoadFailed, setScreenshotLoadFailed] = useState(false);
+	const [failedOverviewUrl, setFailedOverviewUrl] = useState<string | null>(null);
 
 	useEffect(() => {
-		setLoadedOverviewUrl(null);
-		setScreenshotLoadFailed(false);
-
 		if (!overviewUrl) {
 			return;
 		}
@@ -94,7 +92,7 @@ export function VisualReviewPanel({
 		};
 		image.onerror = () => {
 			if (!cancelled) {
-				setScreenshotLoadFailed(true);
+				setFailedOverviewUrl(overviewUrl);
 			}
 		};
 		image.src = overviewUrl;
@@ -105,6 +103,7 @@ export function VisualReviewPanel({
 	}, [overviewUrl]);
 
 	const screenshotReady = !!overviewUrl && loadedOverviewUrl === overviewUrl;
+	const screenshotLoadFailed = !!overviewUrl && failedOverviewUrl === overviewUrl;
 
 	const overlayElements = useMemo(() => {
 		const elements = selectedPage?.pageOverview?.elements ?? [];
