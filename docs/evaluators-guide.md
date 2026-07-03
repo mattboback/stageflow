@@ -91,12 +91,18 @@ Highlights:
 ### 2.5 Web App and Accessibility Testing
 
 - Entry points:
+  - `clients/web/README.md` — stack, layout, and test strategy.
   - `clients/web/app/` — React Router v7 SPA routes and components.
-  - `clients/web` — React Router v7 web app (single frontend for stageflow.org).
+  - `clients/web/app/components/report/report-components.test.tsx` — component
+    tests driven by the committed contract fixture.
+  - `clients/web/e2e/report.spec.ts` — Playwright smoke against the production
+    preview build with a mocked API.
 
 Highlights:
 
 - Focus on report UX, evidence visualization, and live job status.
+- Tests are contract-driven: the same committed fixture powers unit tests,
+  component tests, the e2e smoke, and the QA screenshot harness.
 
 ---
 
@@ -111,7 +117,7 @@ Highlights:
   - `govulncheck ./...` for vulnerability scanning.
 
 - Web app and Scanner Runner:
-  - `bun run lint && bun run typecheck && bun run build` in `clients/web`; `bun run ci` in `services/scanner-runner`.
+  - `bun run ci` in `clients/web` (lint, typecheck, vitest, build; CI also runs the Playwright smoke) and in `services/scanner-runner`.
 
 - End-to-end verification:
   - `qa/e2e/project-scan-golden.sh` and `qa/fixtures/project-golden/*` — project baseline and regression golden test.
