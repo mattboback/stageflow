@@ -17,6 +17,10 @@ Generated contract code is intentionally ignored. From a fresh checkout, run
 `just setup` or `just generate-contracts` before running focused Go or
 TypeScript commands directly inside a workspace.
 
+Go modules pin the `1.26.4` toolchain in `go.mod` so local builds, CI, and
+release binaries all compile with the same Go version; a newer Go on your
+machine will download that toolchain automatically rather than drift from CI.
+
 ## Quality Gates
 
 Pre-commit is a fast local guard for formatting, secrets, generated contract
