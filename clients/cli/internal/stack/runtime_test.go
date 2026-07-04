@@ -69,108 +69,106 @@ func testOptions(t *testing.T, podmanBin string) Options {
 	}
 }
 
-func TestUp(t *testing.T) {
-	t.Run("happy path streams compose up -d", func(t *testing.T) {
-		logPath := filepath.Join(t.TempDir(), "calls.log")
-		podman := writeFakePodman(t, logPath, nil)
-		opts := testOptions(t, podman)
+func TestUpHappyPathStreamsComposeUp(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "calls.log")
+	podman := writeFakePodman(t, logPath, nil)
+	opts := testOptions(t, podman)
 
-		var stdout, stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
 
-		if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
-			t.Fatalf("Up() error = %v", err)
+	if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
+		t.Fatalf("Up() error = %v", err)
+	}
+
+	calls := readLog(t, logPath)
+
+	if len(calls) != 4 {
+		t.Fatalf("expected 4 podman invocations (network inspect, image exists x2, compose up), got %d: %v",
+			len(calls), calls)
+	}
+
+	if !strings.HasPrefix(calls[0], "network inspect stageflow_test_net") {
+		t.Fatalf("call[0] = %q, want network inspect", calls[0])
+	}
+
+	last := calls[len(calls)-1]
+	if !strings.Contains(last, "compose -p stageflow_test") || !strings.Contains(last, " up -d") {
+		t.Fatalf("final call = %q, want a compose up -d invocation", last)
+	}
+
+	if !strings.Contains(last, "podman-compose.test.yml") {
+		t.Fatalf("final call = %q, want the dev overlay file", last)
+	}
+}
+
+func TestUpCreatesNetworkWhenMissing(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "calls.log")
+	podman := writeFakePodman(t, logPath, map[string]int{"network inspect": 1})
+	opts := testOptions(t, podman)
+
+	var stdout, stderr bytes.Buffer
+
+	if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
+		t.Fatalf("Up() error = %v", err)
+	}
+
+	calls := readLog(t, logPath)
+
+	found := false
+
+	for _, c := range calls {
+		if strings.HasPrefix(c, "network create stageflow_test_net") {
+			found = true
 		}
+	}
 
-		calls := readLog(t, logPath)
+	if !found {
+		t.Fatalf("expected a network create call, got %v", calls)
+	}
+}
 
-		if len(calls) != 4 {
-			t.Fatalf("expected 4 podman invocations (network inspect, image exists x2, compose up), got %d: %v",
-				len(calls), calls)
+func TestUpFailsFastWhenJobImagesAreMissing(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "calls.log")
+	podman := writeFakePodman(t, logPath, map[string]int{"image exists": 1})
+	opts := testOptions(t, podman)
+
+	var stdout, stderr bytes.Buffer
+
+	err := Up(context.Background(), opts, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("Up() error = nil, want non-nil")
+	}
+
+	if !strings.Contains(err.Error(), "just images") {
+		t.Fatalf("Up() error = %q, want a hint to run `just images`", err.Error())
+	}
+
+	calls := readLog(t, logPath)
+	for _, c := range calls {
+		if strings.Contains(c, "compose") {
+			t.Fatalf("expected compose up to be skipped when images are missing, got call: %q", c)
 		}
+	}
+}
 
-		if !strings.HasPrefix(calls[0], "network inspect stageflow_test_net") {
-			t.Fatalf("call[0] = %q, want network inspect", calls[0])
-		}
+func TestUpRefusesToRunOnAProtectedHost(t *testing.T) {
+	t.Setenv("STAGEFLOW_PROTECTED_HOST", mustHostname(t))
+	t.Setenv("STAGEFLOW_ALLOW_VPS_LOCAL_STACKS", "")
 
-		last := calls[len(calls)-1]
-		if !strings.Contains(last, "compose -p stageflow_test") || !strings.Contains(last, " up -d") {
-			t.Fatalf("final call = %q, want a compose up -d invocation", last)
-		}
+	logPath := filepath.Join(t.TempDir(), "calls.log")
+	podman := writeFakePodman(t, logPath, nil)
+	opts := testOptions(t, podman)
 
-		if !strings.Contains(last, "podman-compose.test.yml") {
-			t.Fatalf("final call = %q, want the dev overlay file", last)
-		}
-	})
+	var stdout, stderr bytes.Buffer
 
-	t.Run("creates network when missing", func(t *testing.T) {
-		logPath := filepath.Join(t.TempDir(), "calls.log")
-		podman := writeFakePodman(t, logPath, map[string]int{"network inspect": 1})
-		opts := testOptions(t, podman)
+	err := Up(context.Background(), opts, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("Up() error = nil, want non-nil")
+	}
 
-		var stdout, stderr bytes.Buffer
-
-		if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
-			t.Fatalf("Up() error = %v", err)
-		}
-
-		calls := readLog(t, logPath)
-
-		found := false
-
-		for _, c := range calls {
-			if strings.HasPrefix(c, "network create stageflow_test_net") {
-				found = true
-			}
-		}
-
-		if !found {
-			t.Fatalf("expected a network create call, got %v", calls)
-		}
-	})
-
-	t.Run("fails fast when job images are missing", func(t *testing.T) {
-		logPath := filepath.Join(t.TempDir(), "calls.log")
-		podman := writeFakePodman(t, logPath, map[string]int{"image exists": 1})
-		opts := testOptions(t, podman)
-
-		var stdout, stderr bytes.Buffer
-
-		err := Up(context.Background(), opts, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("Up() error = nil, want non-nil")
-		}
-
-		if !strings.Contains(err.Error(), "just images") {
-			t.Fatalf("Up() error = %q, want a hint to run `just images`", err.Error())
-		}
-
-		calls := readLog(t, logPath)
-		for _, c := range calls {
-			if strings.Contains(c, "compose") {
-				t.Fatalf("expected compose up to be skipped when images are missing, got call: %q", c)
-			}
-		}
-	})
-
-	t.Run("refuses to run on a protected host", func(t *testing.T) {
-		t.Setenv("STAGEFLOW_PROTECTED_HOST", mustHostname(t))
-		t.Setenv("STAGEFLOW_ALLOW_VPS_LOCAL_STACKS", "")
-
-		logPath := filepath.Join(t.TempDir(), "calls.log")
-		podman := writeFakePodman(t, logPath, nil)
-		opts := testOptions(t, podman)
-
-		var stdout, stderr bytes.Buffer
-
-		err := Up(context.Background(), opts, &stdout, &stderr)
-		if err == nil {
-			t.Fatal("Up() error = nil, want non-nil")
-		}
-
-		if readLog(t, logPath) != nil {
-			t.Fatal("expected no podman invocations when the protected-host guard trips")
-		}
-	})
+	if readLog(t, logPath) != nil {
+		t.Fatal("expected no podman invocations when the protected-host guard trips")
+	}
 }
 
 func TestDown(t *testing.T) {

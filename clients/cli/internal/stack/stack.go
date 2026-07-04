@@ -144,7 +144,9 @@ func CheckProtectedHost(getenv func(string) string, hostname func() (string, err
 
 	host, err := hostname()
 	if err != nil {
-		return nil
+		// Can't confirm we're on the protected host; fail open rather than
+		// block on an unrelated hostname-lookup error.
+		return nil //nolint:nilerr
 	}
 
 	if host == protected {

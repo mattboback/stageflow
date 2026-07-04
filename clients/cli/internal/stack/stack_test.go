@@ -102,7 +102,7 @@ func TestComposeFiles(t *testing.T) {
 		t.Fatalf("ComposeFiles(local) = %v, want %v", files, want)
 	}
 
-	if _, err := ComposeFiles("/repo", "staging"); err == nil {
+	if _, err = ComposeFiles("/repo", "staging"); err == nil {
 		t.Fatal("ComposeFiles(staging) error = nil, want non-nil")
 	}
 }
@@ -151,6 +151,7 @@ func TestCheckProtectedHost(t *testing.T) {
 			hostname := func() (string, error) { return tt.hostname, tt.hostErr }
 
 			err := CheckProtectedHost(getenv, hostname)
+
 			if tt.wantErr {
 				var protectedErr *ProtectedHostError
 				if !errors.As(err, &protectedErr) {
