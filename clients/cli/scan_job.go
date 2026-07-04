@@ -11,7 +11,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/jobstream"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -22,11 +24,11 @@ const (
 )
 
 type projectScanEnvelope struct {
-	Schema   string              `json:"schema"`
-	Project  projectScanMeta     `json:"project"`
-	Decision projectScanDecision `json:"decision"`
-	Report   reportEnvelope      `json:"report"`
-	Diff     *diffEnvelope       `json:"diff,omitempty"`
+	Schema   string                `json:"schema"`
+	Project  projectScanMeta       `json:"project"`
+	Decision projectScanDecision   `json:"decision"`
+	Report   render.ReportEnvelope `json:"report"`
+	Diff     *diffEnvelope         `json:"diff,omitempty"`
 }
 
 type projectScanMeta struct {
@@ -64,13 +66,13 @@ func waitForCompletedJobReport(
 		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("wait for completion: %w", err)
 	}
 
-	status, err := fetchJobStatus(ctx, client, jobID)
+	status, err := render.FetchJobStatus(ctx, client, jobID)
 	if err != nil {
 		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch job status: %w", err)
 	}
 
-	if status.State != jobStateDone {
-		if status.State == jobStateFailed {
+	if status.State != apiclient.JobStateDone {
+		if status.State == apiclient.JobStateFailed {
 			return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
 		}
 
@@ -80,7 +82,7 @@ func waitForCompletedJobReport(
 		)
 	}
 
-	doc, err := fetchReport(ctx, client, jobID)
+	doc, err := render.FetchReport(ctx, client, jobID)
 	if err != nil {
 		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch report: %w", err)
 	}
@@ -110,7 +112,7 @@ func resolveProjectDiffState(
 		return state, nil
 	}
 
-	return projectDiffState{}, exitCodeError{Code: 2, Err: fmt.Errorf("fetch diff: %w", err)}
+	return projectDiffState{}, exitcode.Error{Code: 2, Err: fmt.Errorf("fetch diff: %w", err)}
 }
 
 func interpretProjectDiffError(slug, jobID string, err error) (projectDiffState, bool) {
@@ -194,7 +196,7 @@ func runRemoteProjectScan(
 	slug string,
 	timeout time.Duration,
 	noStream bool,
-	reportOpts reportCommandOptions,
+	reportOpts render.ReportFlags,
 ) error {
 	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
@@ -203,39 +205,39 @@ func runRemoteProjectScan(
 
 	resp, err := client.ProjectScan(opCtx, slug)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
 	}
 
 	jobID := resp.JobID
 	if jobID == "" {
-		return exitCodeError{Code: 2, Err: errors.New("submit project scan: missing job_id in response")}
+		return exitcode.Error{Code: 2, Err: errors.New("submit project scan: missing job_id in response")}
 	}
 
 	fmt.Fprintf(cmd.ErrOrStderr(), "Project scan submitted: %s (job %s)\nWaiting for completion...\n", slug, jobID)
 
 	status, doc, err := waitForCompletedJobReport(opCtx, client, jobID, cmd.ErrOrStderr(), noStream)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	format, err := root.outputFormat()
+	format, err := root.renderFormat()
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	if format == outputFormatJSON {
+	if format == render.FormatJSON {
 		return runRemoteProjectScanJSON(cmd, root.apiURL, slug, status, doc, client, jobID, reportOpts)
 	}
 
 	severityFailed := false
 
-	err = renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format))
+	err = render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.RenderOptions(format))
 	if err != nil {
-		var exitErr exitCodeError
+		var exitErr exitcode.Error
 		if errors.As(err, &exitErr) && exitErr.Code == 1 {
 			severityFailed = true
 		} else {
-			return wrapRenderError(err)
+			return render.WrapError(err)
 		}
 	}
 
@@ -245,7 +247,7 @@ func runRemoteProjectScan(
 	}
 
 	if severityFailed || regressed {
-		return exitCodeError{Code: 1}
+		return exitcode.Error{Code: 1}
 	}
 
 	return nil

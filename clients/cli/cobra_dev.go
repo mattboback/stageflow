@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 )
 
 func newDevCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
@@ -64,7 +66,7 @@ func newDevCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 		},
 	}
 	scanCmd.Flags().DurationVar(&scanOpts.Timeout, "timeout", scanOpts.Timeout, "Max total time (dev + scan)")
-	bindReportFlags(scanCmd, &scanOpts.Report, true)
+	render.BindReportFlags(scanCmd, &scanOpts.Report, true)
 	scanCmd.Flags().BoolVar(&scanOpts.NoStream, "no-stream", false, "Poll instead of SSE")
 	cobra.CheckErr(scanCmd.Flags().MarkHidden("no-stream"))
 
@@ -76,7 +78,7 @@ func newDevCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 type devScanCmdOptions struct {
 	Timeout  time.Duration
 	NoStream bool
-	Report   reportCommandOptions
+	Report   render.ReportFlags
 }
 
 type devDoctorCmdOptions struct {

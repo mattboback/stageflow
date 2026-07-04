@@ -1,4 +1,4 @@
-package main
+package render
 
 import (
 	"fmt"
@@ -134,7 +134,7 @@ func filterByCategory(issues []report.IssueDetail, categories []string) []report
 	return filtered
 }
 
-func hasIssuesAtOrAbove(issues []report.IssueDetail, threshold string) (bool, error) {
+func HasIssuesAtOrAbove(issues []report.IssueDetail, threshold string) (bool, error) {
 	normalized, err := normalizeSeverities([]string{threshold})
 	if err != nil {
 		return false, err

@@ -6,6 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestDiffLiveTarget_NormalizesAndAllowsPrivateTargetsForLocalAPI(t *testing.T) {
@@ -35,9 +39,9 @@ func TestDiffLiveTarget_NormalizesAndAllowsPrivateTargetsForLocalAPI(t *testing.
 	captured.mu.Lock()
 	defer captured.mu.Unlock()
 
-	requireEqual(t, captured.hits, 1, "captured.hits")
-	requireDeepEqual(t, captured.body.URLs, []string{"http://127.0.0.1:5173"}, "captured.body.URLs")
-	requireEqual(t, captured.body.AllowPrivateTargets, true, "captured.body.AllowPrivateTargets")
+	testsupport.RequireEqual(t, captured.hits, 1, "captured.hits")
+	testsupport.RequireDeepEqual(t, captured.body.URLs, []string{"http://127.0.0.1:5173"}, "captured.body.URLs")
+	testsupport.RequireEqual(t, captured.body.AllowPrivateTargets, true, "captured.body.AllowPrivateTargets")
 }
 
 func TestDiffLiveTarget_RejectsPrivateTargetsForRemoteAPI(t *testing.T) {
@@ -100,15 +104,15 @@ func writeDiffBaselineReport(t *testing.T) string {
 func writeDiffReportFile(t *testing.T, path, jobID string) {
 	t.Helper()
 
-	env := reportEnvelope{
+	env := render.ReportEnvelope{
 		Schema: "stageflow-cli/report@v1",
-		Job:    jobMeta{ID: jobID, State: jobStateDone},
-		Report: sampleReport(jobID),
+		Job:    render.JobMeta{ID: jobID, State: apiclient.JobStateDone},
+		Report: testsupport.SampleReport(jobID),
 	}
 
 	data, err := json.Marshal(env)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	err = os.WriteFile(path, data, 0o600)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 }

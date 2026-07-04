@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 // authCaptureScanAPIServer captures the body of the first POST /api/v1/jobs/urls
@@ -29,7 +30,7 @@ func newCapturingScanAPI(t *testing.T) (*httptest.Server, *capturedScanSubmissio
 
 	jobID := "job-auth-test"
 	captured := &capturedScanSubmission{}
-	doc := sampleReport(jobID)
+	doc := testsupport.SampleReport(jobID)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -52,7 +53,7 @@ func newCapturingScanAPI(t *testing.T) (*httptest.Server, *capturedScanSubmissio
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
 			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
 				ID:                jobID,
-				State:             jobStateDone,
+				State:             apiclient.JobStateDone,
 				ExpectedScanners:  []string{"axe"},
 				CompletedScanners: []string{"axe"},
 				CreatedAt:         time.Unix(1700000000, 0).UTC(),

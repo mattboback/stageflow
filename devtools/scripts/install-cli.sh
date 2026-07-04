@@ -20,7 +20,7 @@ echo "==> Building StageFlow CLI..."
 version="$(cd "${REPO_ROOT}" && git describe --tags --always --dirty 2>/dev/null || echo dev)"
 commit="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo "")"
 build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-ldflags="-s -w -X main.version=${version} -X main.commit=${commit} -X main.date=${build_date}"
+ldflags="-s -w -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Version=${version} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Commit=${commit} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Date=${build_date}"
 (cd "${REPO_ROOT}/clients/cli" && go build -trimpath -ldflags "$ldflags" -o "$tmp" .)
 
 echo "==> Installing: $dest"

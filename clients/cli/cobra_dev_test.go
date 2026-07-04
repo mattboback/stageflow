@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestHasScaffoldPlaceholderDevCommand(t *testing.T) {
@@ -30,10 +33,10 @@ func TestRunDevScanCommand_PlaceholderPreflight(t *testing.T) {
 	root := t.TempDir()
 
 	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	_, err = scaffoldProjectGuide(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	var stdout bytes.Buffer
 
@@ -48,7 +51,7 @@ func TestRunDevScanCommand_PlaceholderPreflight(t *testing.T) {
 		func(string) string { return "" },
 		&devScanCmdOptions{
 			Timeout: time.Minute,
-			Report:  reportCommandOptions{maxIssues: defaultMaxIssues},
+			Report:  render.ReportFlags{MaxIssues: render.DefaultMaxIssues},
 		},
 	)
 	if runErr == nil {
@@ -78,7 +81,7 @@ func TestRunDevInitCommand_ScaffoldsFiles(t *testing.T) {
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080"},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	configPath := filepath.Join(root, ".stageflow", "config.yaml")
 	guidePath := filepath.Join(root, ".stageflow", "README.md")
@@ -110,13 +113,13 @@ func TestRunDevInitCommand_JSON(t *testing.T) {
 		[]string{root},
 		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	var payload devInitEnvelope
-	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.Schema, "stageflow-cli/dev-init@v1", "payload.Schema")
-	requireEqual(t, payload.ProjectRoot, root, "payload.ProjectRoot")
-	requireEqual(t, payload.Created, true, "payload.Created")
+	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/dev-init@v1", "payload.Schema")
+	testsupport.RequireEqual(t, payload.ProjectRoot, root, "payload.ProjectRoot")
+	testsupport.RequireEqual(t, payload.Created, true, "payload.Created")
 
 	if len(payload.NextSteps) == 0 {
 		t.Fatalf("expected next steps in init payload")
@@ -181,7 +184,7 @@ dev:
 			SkipDev: true,
 		},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if !strings.Contains(stdout.String(), "Doctor checks passed") {
 		t.Fatalf("expected doctor success output, got: %q", stdout.String())
@@ -221,20 +224,20 @@ dev:
 			SkipDev: true,
 		},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	var payload devDoctorEnvelope
-	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.Schema, "stageflow-cli/dev-doctor@v1", "payload.Schema")
-	requireEqual(t, payload.Passed, true, "payload.Passed")
-	requireEqual(t, payload.AutoAllowPrivateTargets, true, "payload.AutoAllowPrivateTargets")
-	requireEqual(t, payload.RemoteProject.Configured, false, "payload.RemoteProject.Configured")
+	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/dev-doctor@v1", "payload.Schema")
+	testsupport.RequireEqual(t, payload.Passed, true, "payload.Passed")
+	testsupport.RequireEqual(t, payload.AutoAllowPrivateTargets, true, "payload.AutoAllowPrivateTargets")
+	testsupport.RequireEqual(t, payload.RemoteProject.Configured, false, "payload.RemoteProject.Configured")
 
 	if len(payload.Checks) != 3 {
 		t.Fatalf("expected 3 checks, got %d", len(payload.Checks))
 	}
 
-	requireEqual(t, payload.Checks[2].Status, "skipped", "payload.Checks[2].Status")
+	testsupport.RequireEqual(t, payload.Checks[2].Status, "skipped", "payload.Checks[2].Status")
 }
 
 func TestWriteDevDoctorJSONComputesPassedFromChecks(t *testing.T) {
@@ -255,20 +258,20 @@ func TestWriteDevDoctorJSONComputesPassedFromChecks(t *testing.T) {
 			{Name: "dev-readiness", Status: "failed", Message: "not ready"},
 		},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	var payload devDoctorEnvelope
-	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.Passed, false, "payload.Passed")
+	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	testsupport.RequireEqual(t, payload.Passed, false, "payload.Passed")
 }
 
 func TestAbbreviateIDHandlesShortIDs(t *testing.T) {
 	t.Parallel()
 
-	requireEqual(t, abbreviateID("", 8), "", "empty id")
-	requireEqual(t, abbreviateID("short", 8), "short", "short id")
-	requireEqual(t, abbreviateID("123456789", 8), "12345678", "long id")
-	requireEqual(t, abbreviateID("short", 0), "short", "zero max")
+	testsupport.RequireEqual(t, abbreviateID("", 8), "", "empty id")
+	testsupport.RequireEqual(t, abbreviateID("short", 8), "short", "short id")
+	testsupport.RequireEqual(t, abbreviateID("123456789", 8), "12345678", "long id")
+	testsupport.RequireEqual(t, abbreviateID("short", 0), "short", "zero max")
 }
 
 func TestRunDevDoctorCommand_SkipDevJSONRemoteProject(t *testing.T) {
@@ -305,19 +308,19 @@ dev:
 			SkipDev: true,
 		},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	var payload devDoctorEnvelope
-	requireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	requireEqual(t, payload.RemoteProject.Configured, true, "payload.RemoteProject.Configured")
-	requireEqual(t, payload.RemoteProject.Slug, "hosted-demo", "payload.RemoteProject.Slug")
-	requireEqual(
+	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
+	testsupport.RequireEqual(t, payload.RemoteProject.Configured, true, "payload.RemoteProject.Configured")
+	testsupport.RequireEqual(t, payload.RemoteProject.Slug, "hosted-demo", "payload.RemoteProject.Slug")
+	testsupport.RequireEqual(
 		t,
 		payload.RemoteProject.RecommendedScanCommand,
 		`stageflow project scan hosted-demo --format json`,
 		"payload.RemoteProject.RecommendedScanCommand",
 	)
-	requireEqual(
+	testsupport.RequireEqual(
 		t,
 		payload.RemoteProject.PromoteCommandTemplate,
 		`stageflow project promote hosted-demo --job-id <job-id>`,
@@ -329,10 +332,10 @@ func TestRunDevDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 	root := t.TempDir()
 
 	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	_, err = scaffoldProjectGuide(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	var stdout bytes.Buffer
 
@@ -350,7 +353,7 @@ func TestRunDevDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 			SkipDev: true,
 		},
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if !strings.Contains(stdout.String(), "Doctor checks passed") {
 		t.Fatalf("expected doctor success output, got: %q", stdout.String())
@@ -370,20 +373,20 @@ func TestResolveProjectStageflowUsesConfigAPIURL(t *testing.T) {
 			},
 		},
 		func(name string) string {
-			requireEqual(t, name, "HOSTED_STAGEFLOW_KEY", "env name")
+			testsupport.RequireEqual(t, name, "HOSTED_STAGEFLOW_KEY", "env name")
 
 			return "secret-token"
 		},
 	)
 
-	requireEqual(t, apiURL, "https://hosted.stageflow.example", "apiURL")
-	requireEqual(t, apiKey, "secret-token", "apiKey")
+	testsupport.RequireEqual(t, apiURL, "https://hosted.stageflow.example", "apiURL")
+	testsupport.RequireEqual(t, apiKey, "secret-token", "apiKey")
 }
 
 func TestResolveProjectStageflowExplicitAPIWins(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().String("api", "", "")
-	requireNoErr(t, cmd.Flags().Set("api", "https://explicit.stageflow.example"))
+	testsupport.RequireNoErr(t, cmd.Flags().Set("api", "https://explicit.stageflow.example"))
 
 	apiURL, _ := resolveProjectStageflow(
 		cmd,
@@ -396,5 +399,5 @@ func TestResolveProjectStageflowExplicitAPIWins(t *testing.T) {
 		func(string) string { return "" },
 	)
 
-	requireEqual(t, apiURL, "https://explicit.stageflow.example", "apiURL")
+	testsupport.RequireEqual(t, apiURL, "https://explicit.stageflow.example", "apiURL")
 }

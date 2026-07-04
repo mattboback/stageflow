@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestVersionCommand(t *testing.T) {
@@ -12,7 +14,7 @@ func TestVersionCommand(t *testing.T) {
 		stderr bytes.Buffer
 	)
 
-	exitCode := run([]string{"stageflow", "version"}, stubEnv, &stdout, &stderr)
+	exitCode := run([]string{"stageflow", "version"}, testsupport.StubEnv, &stdout, &stderr)
 	if exitCode != 0 {
 		t.Fatalf("exitCode = %d, want 0; stderr=%s", exitCode, stderr.String())
 	}

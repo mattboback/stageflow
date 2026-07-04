@@ -81,7 +81,7 @@ jobs:
 
           out_bin="${bin}${ext}"
           build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          ldflags="-s -w -X main.version=${version} -X main.commit=${GITHUB_SHA} -X main.date=${build_date}"
+          ldflags="-s -w -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Version=${version} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Commit=${GITHUB_SHA} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Date=${build_date}"
 
           CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
             go build -trimpath -ldflags "$ldflags" -o "${build_dir}/${out_bin}" .

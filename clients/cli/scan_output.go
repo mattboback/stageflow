@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -18,13 +20,13 @@ func runRemoteProjectScanJSON(
 	doc report.UnifiedReportV2,
 	client *apiclient.Client,
 	jobID string,
-	reportOpts reportCommandOptions,
+	reportOpts render.ReportFlags,
 ) error {
-	renderOpts := reportOpts.renderOptions(outputFormatJSON)
+	renderOpts := reportOpts.RenderOptions(render.FormatJSON)
 
-	selectedIssues, filters, err := validatedIssueSelection(doc.Issues, renderOpts)
+	selectedIssues, filters, err := render.ValidatedIssueSelection(doc.Issues, renderOpts)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	filteredDoc := doc
@@ -34,14 +36,14 @@ func runRemoteProjectScanJSON(
 		filteredDoc.Issues = nil
 	}
 
-	reportPayload, err := buildReportEnvelope(apiBaseURL, status, filteredDoc, filters)
+	reportPayload, err := render.BuildReportEnvelope(apiBaseURL, status, filteredDoc, filters)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	severityFailed, err := shouldFailForSeverity(selectedIssues, renderOpts.FailSeverity)
+	severityFailed, err := render.ShouldFailForSeverity(selectedIssues, renderOpts.FailSeverity)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	diffState, err := resolveProjectDiffState(cmd.Context(), client, slug, jobID)
@@ -69,11 +71,11 @@ func runRemoteProjectScanJSON(
 	encoder.SetEscapeHTML(false)
 
 	if encodeErr := encoder.Encode(payload); encodeErr != nil {
-		return exitCodeError{Code: 2, Err: encodeErr}
+		return exitcode.Error{Code: 2, Err: encodeErr}
 	}
 
 	if severityFailed || diffState.regressed {
-		return exitCodeError{Code: 1}
+		return exitcode.Error{Code: 1}
 	}
 
 	return nil
@@ -84,7 +86,7 @@ func renderProjectDiff(
 	cmd *cobra.Command,
 	client *apiclient.Client,
 	slug, jobID string,
-	format outputFormat,
+	format render.Format,
 ) (bool, error) {
 	diffState, err := resolveProjectDiffState(ctx, client, slug, jobID)
 	if err != nil {
@@ -105,7 +107,7 @@ func renderProjectDiff(
 
 	err = renderDiff(cmd.OutOrStdout(), *diffState.diff, format)
 	if err != nil {
-		return false, exitCodeError{Code: 2, Err: err}
+		return false, exitcode.Error{Code: 2, Err: err}
 	}
 
 	return diffState.regressed, nil

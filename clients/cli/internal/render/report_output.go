@@ -1,4 +1,4 @@
-package main
+package render
 
 import (
 	"context"
@@ -12,11 +12,13 @@ import (
 	"strings"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/buildinfo"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
-type reportRenderOptions struct {
-	Format         outputFormat
+type RenderOptions struct {
+	Format         Format
 	MaxIssues      int
 	MaxOccurrences int
 	Severities     []string
@@ -28,17 +30,17 @@ type reportRenderOptions struct {
 
 const issueSortOrder = "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
 
-type cliMeta struct {
+type CLIMeta struct {
 	Version string `json:"version"`
 	Commit  string `json:"commit,omitempty"`
 	Date    string `json:"date,omitempty"`
 }
 
-type apiMeta struct {
+type APIMeta struct {
 	BaseURL string `json:"base_url"`
 }
 
-type jobMeta struct {
+type JobMeta struct {
 	ID        string `json:"id"`
 	State     string `json:"state"`
 	Error     string `json:"error,omitempty"`
@@ -46,12 +48,12 @@ type jobMeta struct {
 	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
-type reportLinks struct {
+type ReportLinks struct {
 	Job     string `json:"job"`
 	Results string `json:"results"`
 }
 
-type issueFilters struct {
+type IssueFilters struct {
 	MaxIssues      int      `json:"max_issues"`
 	IssuesReturned int      `json:"issues_returned"`
 	IssuesTotal    int      `json:"issues_total"`
@@ -61,18 +63,18 @@ type issueFilters struct {
 	Categories     []string `json:"categories,omitempty"`
 }
 
-type reportEnvelope struct {
+type ReportEnvelope struct {
 	Schema  string                 `json:"schema"`
-	CLI     cliMeta                `json:"cli"`
-	API     apiMeta                `json:"api"`
-	Job     jobMeta                `json:"job"`
-	Links   reportLinks            `json:"links"`
+	CLI     CLIMeta                `json:"cli"`
+	API     APIMeta                `json:"api"`
+	Job     JobMeta                `json:"job"`
+	Links   ReportLinks            `json:"links"`
 	URLs    []string               `json:"urls,omitempty"`
-	Filters issueFilters           `json:"filters"`
+	Filters IssueFilters           `json:"filters"`
 	Report  report.UnifiedReportV2 `json:"report"`
 }
 
-func fetchJobStatus(ctx context.Context, client *apiclient.Client, jobID string) (apiclient.JobStatus, error) {
+func FetchJobStatus(ctx context.Context, client *apiclient.Client, jobID string) (apiclient.JobStatus, error) {
 	var status apiclient.JobStatus
 
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
@@ -83,7 +85,7 @@ func fetchJobStatus(ctx context.Context, client *apiclient.Client, jobID string)
 	return status, nil
 }
 
-func fetchReport(ctx context.Context, client *apiclient.Client, jobID string) (report.UnifiedReportV2, error) {
+func FetchReport(ctx context.Context, client *apiclient.Client, jobID string) (report.UnifiedReportV2, error) {
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(jobID))
 
 	var raw json.RawMessage
@@ -91,7 +93,7 @@ func fetchReport(ctx context.Context, client *apiclient.Client, jobID string) (r
 		return report.UnifiedReportV2{}, err
 	}
 
-	raw = sanitizeScoreGrade(raw)
+	raw = SanitizeScoreGrade(raw)
 
 	var doc report.UnifiedReportV2
 	if err := json.Unmarshal(raw, &doc); err != nil {
@@ -101,24 +103,24 @@ func fetchReport(ctx context.Context, client *apiclient.Client, jobID string) (r
 	return doc, nil
 }
 
-// sanitizeScoreGrade fixes scoreGrade values that don't match the schema
+// SanitizeScoreGrade fixes scoreGrade values that don't match the schema
 // pattern ^[A-F][+-]?$. Older API versions returned "Excellent" for
 // perfect scores; the CLI must tolerate these to avoid crashing on
 // existing reports.
-func sanitizeScoreGrade(raw json.RawMessage) json.RawMessage {
+func SanitizeScoreGrade(raw json.RawMessage) json.RawMessage {
 	return scoreGradeReplacer.ReplaceAll(raw, []byte(`"scoreGrade":"A+"`))
 }
 
 var scoreGradeReplacer = regexp.MustCompile(`"scoreGrade"\s*:\s*"(?:Excellent)"`)
 
-func renderUnifiedReport(
+func UnifiedReport(
 	out io.Writer,
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	opts reportRenderOptions,
+	opts RenderOptions,
 ) error {
-	selectedIssues, filters, err := validatedIssueSelection(doc.Issues, opts)
+	selectedIssues, filters, err := ValidatedIssueSelection(doc.Issues, opts)
 	if err != nil {
 		return err
 	}
@@ -130,33 +132,33 @@ func renderUnifiedReport(
 		return renderErr
 	}
 
-	fail, err := shouldFailForSeverity(selectedIssues, opts.FailSeverity)
+	fail, err := ShouldFailForSeverity(selectedIssues, opts.FailSeverity)
 	if err != nil {
 		return err
 	}
 
 	if fail {
-		return exitCodeError{Code: 1}
+		return exitcode.Error{Code: 1}
 	}
 
 	return nil
 }
 
-func validatedIssueSelection(
+func ValidatedIssueSelection(
 	issues []report.IssueDetail,
-	opts reportRenderOptions,
-) ([]report.IssueDetail, issueFilters, error) {
+	opts RenderOptions,
+) ([]report.IssueDetail, IssueFilters, error) {
 	if _, err := normalizeSeverities(opts.Severities); err != nil {
-		return nil, issueFilters{}, err
+		return nil, IssueFilters{}, err
 	}
 
 	if _, err := normalizeCategories(opts.Categories); err != nil {
-		return nil, issueFilters{}, err
+		return nil, IssueFilters{}, err
 	}
 
 	if opts.FailSeverity != "" {
 		if _, err := normalizeSeverities([]string{opts.FailSeverity}); err != nil {
-			return nil, issueFilters{}, err
+			return nil, IssueFilters{}, err
 		}
 	}
 
@@ -181,15 +183,15 @@ func writeRenderedReport(
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
-	opts reportRenderOptions,
+	filters IssueFilters,
+	opts RenderOptions,
 ) error {
 	switch opts.Format {
-	case outputFormatText:
+	case FormatText:
 		return writeSummaryReport(out, apiBaseURL, status, doc, filters, opts.MaxOccurrences, opts.SummaryOnly)
-	case outputFormatJSON:
+	case FormatJSON:
 		return writeJSONReport(out, apiBaseURL, status, doc, filters, opts.SummaryOnly)
-	case outputFormatMarkdown:
+	case FormatMarkdown:
 		return writeMarkdownReport(out, apiBaseURL, status, doc, filters, markdownRenderOptions{
 			MaxOccurrences: opts.MaxOccurrences,
 			SummaryOnly:    opts.SummaryOnly,
@@ -205,14 +207,14 @@ func writeJSONReport(
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
+	filters IssueFilters,
 	summaryOnly bool,
 ) error {
 	if summaryOnly {
 		doc.Issues = nil
 	}
 
-	payload, err := buildReportEnvelope(apiBaseURL, status, doc, filters)
+	payload, err := BuildReportEnvelope(apiBaseURL, status, doc, filters)
 	if err != nil {
 		return err
 	}
@@ -224,31 +226,31 @@ func writeJSONReport(
 	return encoder.Encode(payload)
 }
 
-func shouldFailForSeverity(issues []report.IssueDetail, threshold string) (bool, error) {
+func ShouldFailForSeverity(issues []report.IssueDetail, threshold string) (bool, error) {
 	if threshold == "" {
 		return false, nil
 	}
 
-	return hasIssuesAtOrAbove(issues, threshold)
+	return HasIssuesAtOrAbove(issues, threshold)
 }
 
-func buildReportEnvelope(
+func BuildReportEnvelope(
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
-) (reportEnvelope, error) {
+	filters IssueFilters,
+) (ReportEnvelope, error) {
 	jobLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(status.ID)))
 	if err != nil {
-		return reportEnvelope{}, err
+		return ReportEnvelope{}, err
 	}
 
 	resultsLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(status.ID)))
 	if err != nil {
-		return reportEnvelope{}, err
+		return ReportEnvelope{}, err
 	}
 
-	job := jobMeta{
+	job := JobMeta{
 		ID:    status.ID,
 		State: status.State,
 		Error: status.Error,
@@ -262,14 +264,14 @@ func buildReportEnvelope(
 		job.UpdatedAt = status.UpdatedAt.UTC().Format(timeFormatRFC3339)
 	}
 
-	payload := reportEnvelope{
+	payload := ReportEnvelope{
 		Schema: "stageflow-cli/report@v1",
 		CLI:    currentCLIMeta(),
-		API: apiMeta{
+		API: APIMeta{
 			BaseURL: apiBaseURL,
 		},
 		Job: job,
-		Links: reportLinks{
+		Links: ReportLinks{
 			Job:     jobLink,
 			Results: resultsLink,
 		},
@@ -283,16 +285,16 @@ func buildReportEnvelope(
 
 const timeFormatRFC3339 = "2006-01-02T15:04:05Z07:00"
 
-func currentCLIMeta() cliMeta {
-	v := strings.TrimSpace(version)
+func currentCLIMeta() CLIMeta {
+	v := strings.TrimSpace(buildinfo.Version)
 	if v == "" {
 		v = "dev"
 	}
 
-	c := strings.TrimSpace(commit)
-	d := strings.TrimSpace(date)
+	c := strings.TrimSpace(buildinfo.Commit)
+	d := strings.TrimSpace(buildinfo.Date)
 
-	return cliMeta{
+	return CLIMeta{
 		Version: v,
 		Commit:  c,
 		Date:    d,
@@ -313,10 +315,10 @@ func buildAPILink(baseURL, apiPath string) (string, error) {
 	return base.ResolveReference(ref).String(), nil
 }
 
-func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDetail, issueFilters) {
+func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDetail, IssueFilters) {
 	total := len(issues)
 	if total == 0 {
-		return []report.IssueDetail{}, issueFilters{
+		return []report.IssueDetail{}, IssueFilters{
 			MaxIssues:      maxIssues,
 			IssuesReturned: 0,
 			IssuesTotal:    0,
@@ -358,7 +360,7 @@ func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDet
 
 	selected := sorted[:limit]
 
-	return selected, issueFilters{
+	return selected, IssueFilters{
 		MaxIssues:      maxIssues,
 		IssuesReturned: len(selected),
 		IssuesTotal:    total,
@@ -372,7 +374,7 @@ func writeSummaryReport(
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
+	filters IssueFilters,
 	maxOccurrences int,
 	summaryOnly bool,
 ) error {
@@ -396,13 +398,13 @@ func buildSummaryLines(
 	_ string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
+	filters IssueFilters,
 ) []string {
 	lines := []string{
 		"Job: " + status.ID,
 	}
 
-	if status.State != jobStateDone {
+	if status.State != apiclient.JobStateDone {
 		lines = append(lines, "State: "+status.State)
 	}
 

@@ -1,23 +1,25 @@
-package main
+package render
 
 import (
 	"errors"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 )
 
 func TestWrapRenderError_NilReturnsNil(t *testing.T) {
-	if got := wrapRenderError(nil); got != nil {
+	if got := WrapError(nil); got != nil {
 		t.Fatalf("expected nil, got %v", got)
 	}
 }
 
 func TestWrapRenderError_ExitCode1IsPreserved(t *testing.T) {
 	inner := errors.New("threshold exceeded")
-	err := wrapRenderError(exitCodeError{Code: 1, Err: inner})
+	err := WrapError(exitcode.Error{Code: 1, Err: inner})
 
-	var ece exitCodeError
+	var ece exitcode.Error
 	if !errors.As(err, &ece) {
-		t.Fatalf("expected exitCodeError, got %T: %v", err, err)
+		t.Fatalf("expected exitcode.Error, got %T: %v", err, err)
 	}
 
 	if ece.Code != 1 {
@@ -26,11 +28,11 @@ func TestWrapRenderError_ExitCode1IsPreserved(t *testing.T) {
 }
 
 func TestWrapRenderError_PlainErrorBecomesExitCode2(t *testing.T) {
-	err := wrapRenderError(errors.New("render failed"))
+	err := WrapError(errors.New("render failed"))
 
-	var ece exitCodeError
+	var ece exitcode.Error
 	if !errors.As(err, &ece) {
-		t.Fatalf("expected exitCodeError, got %T: %v", err, err)
+		t.Fatalf("expected exitcode.Error, got %T: %v", err, err)
 	}
 
 	if ece.Code != 2 {
@@ -39,12 +41,12 @@ func TestWrapRenderError_PlainErrorBecomesExitCode2(t *testing.T) {
 }
 
 func TestWrapRenderError_ExitCode2IsWrappedAsCode2(t *testing.T) {
-	original := exitCodeError{Code: 2, Err: errors.New("original")}
-	err := wrapRenderError(original)
+	original := exitcode.Error{Code: 2, Err: errors.New("original")}
+	err := WrapError(original)
 
-	var ece exitCodeError
+	var ece exitcode.Error
 	if !errors.As(err, &ece) {
-		t.Fatalf("expected exitCodeError, got %T: %v", err, err)
+		t.Fatalf("expected exitcode.Error, got %T: %v", err, err)
 	}
 
 	if ece.Code != 2 {

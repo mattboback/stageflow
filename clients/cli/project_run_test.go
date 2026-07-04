@@ -1,15 +1,19 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
+)
 
 func TestBuildProjectSubmitJobRequestDefaultsScreenshotCaptureOn(t *testing.T) {
 	req, _, err := buildProjectSubmitJobRequest(projectScanCfg{
 		URLs:     []string{"https://example.com"},
 		Scanners: []string{"axe"},
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, req.Screenshot, true, "req.Screenshot")
+	testsupport.RequireEqual(t, req.Screenshot, true, "req.Screenshot")
 }
 
 func TestBuildProjectSubmitJobRequestHonorsScreenshotFalse(t *testing.T) {
@@ -19,7 +23,7 @@ func TestBuildProjectSubmitJobRequestHonorsScreenshotFalse(t *testing.T) {
 		Scanners:   []string{"axe"},
 		Screenshot: &disabled,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, req.Screenshot, false, "req.Screenshot")
+	testsupport.RequireEqual(t, req.Screenshot, false, "req.Screenshot")
 }

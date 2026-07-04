@@ -1,4 +1,4 @@
-package main
+package render
 
 import (
 	"encoding/json"
@@ -24,7 +24,7 @@ func writeMarkdownReport(
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
+	filters IssueFilters,
 	opts markdownRenderOptions,
 ) error {
 	jobLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(status.ID)))
@@ -86,7 +86,7 @@ func writeMarkdownSummary(
 	out io.Writer,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	filters issueFilters,
+	filters IssueFilters,
 	jobLink string,
 	resultsLink string,
 ) error {

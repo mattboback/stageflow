@@ -8,10 +8,12 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestGenerateMarkdownDocsOmitsHiddenRegisteredCommands(t *testing.T) {
-	root := newRootCmd(stubEnv, io.Discard, io.Discard)
+	root := newRootCmd(testsupport.StubEnv, io.Discard, io.Discard)
 
 	aiCmd := findChildCommand(root, "ai")
 	if aiCmd == nil {

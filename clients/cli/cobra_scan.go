@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
@@ -20,7 +22,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		noStream       bool
 		authStatePath  string
 		authRecipePath string
-		reportOpts     reportCommandOptions
+		reportOpts     render.ReportFlags
 	)
 
 	cmd := &cobra.Command{
@@ -73,7 +75,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 			"Step values may be literal strings or {from_env: NAME} references.",
 	)
 	cmd.MarkFlagsMutuallyExclusive("auth-state", "auth-recipe")
-	bindReportFlags(cmd, &reportOpts, true)
+	render.BindReportFlags(cmd, &reportOpts, true)
 	cmd.Flags().BoolVar(&noStream, "no-stream", false, "Poll instead of SSE")
 	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
@@ -88,12 +90,12 @@ type scanCommandOptions struct {
 	noStream       bool
 	authStatePath  string
 	authRecipePath string
-	reportOpts     reportCommandOptions
+	reportOpts     render.ReportFlags
 }
 
 func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, args []string) error {
-	if opts.reportOpts.maxIssues < 0 {
-		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
+	if opts.reportOpts.MaxIssues < 0 {
+		return exitcode.Error{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 	}
 
 	req, err := buildScanRequest(cmd, root, opts, args)
@@ -112,16 +114,16 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		opts.noStream,
 	)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	format, err := root.outputFormat()
+	format, err := root.renderFormat()
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	return wrapRenderError(
-		renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, opts.reportOpts.renderOptions(format)),
+	return render.WrapError(
+		render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, opts.reportOpts.RenderOptions(format)),
 	)
 }
 
@@ -133,22 +135,22 @@ func buildScanRequest(
 ) (apiclient.SubmitJobRequest, error) {
 	urls, err := urlcheck.NormalizeTargets(args)
 	if err != nil {
-		return apiclient.SubmitJobRequest{}, exitCodeError{Code: 2, Err: err}
+		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: err}
 	}
 
 	modules, err := normalizeScannerList(opts.scanners)
 	if err != nil {
-		return apiclient.SubmitJobRequest{}, exitCodeError{Code: 2, Err: err}
+		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: err}
 	}
 
 	validateErr := urlcheck.ValidateLocalTargets(root.apiURL, urls)
 	if validateErr != nil {
-		return apiclient.SubmitJobRequest{}, exitCodeError{Code: 2, Err: validateErr}
+		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: validateErr}
 	}
 
 	authInput, hasAuth, authErr := loadAuthInputFromFlags(opts.authStatePath, opts.authRecipePath)
 	if authErr != nil {
-		return apiclient.SubmitJobRequest{}, exitCodeError{Code: 2, Err: authErr}
+		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: authErr}
 	}
 
 	req := apiclient.SubmitJobRequest{

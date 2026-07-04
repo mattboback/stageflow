@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -47,7 +48,7 @@ func newAICmd(root *rootOptions) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			urlStrs, err := urlcheck.NormalizeTargets([]string{args[0]})
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			urlStr := urlStrs[0]
@@ -55,7 +56,7 @@ func newAICmd(root *rootOptions) *cobra.Command {
 
 			validateErr := urlcheck.ValidateLocalTargets(root.apiURL, []string{urlStr})
 			if validateErr != nil {
-				return exitCodeError{Code: 2, Err: validateErr}
+				return exitcode.Error{Code: 2, Err: validateErr}
 			}
 
 			effectiveAllowPrivate := allowPrivate
@@ -98,7 +99,7 @@ func newAICmd(root *rootOptions) *cobra.Command {
 				false,
 			)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			success := determineSuccess(reportDoc)

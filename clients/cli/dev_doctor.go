@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
@@ -125,10 +127,10 @@ func writeProjectDoctorResult(
 	stageflowCfg projectStageflowCfg,
 	autoAllowPrivateTargets bool,
 	checks []projectDoctorCheck,
-	format outputFormat,
+	format render.Format,
 	message string,
 ) error {
-	if format == outputFormatJSON {
+	if format == render.FormatJSON {
 		return writeProjectDoctorJSON(
 			out,
 			projectRoot,
@@ -154,7 +156,7 @@ func runDevDoctorCommand(
 	opts *devDoctorCmdOptions,
 ) error {
 	if opts.Timeout <= 0 {
-		return exitCodeError{Code: 2, Err: errors.New("--timeout must be > 0")}
+		return exitcode.Error{Code: 2, Err: errors.New("--timeout must be > 0")}
 	}
 
 	projectArg := ""
@@ -164,12 +166,12 @@ func runDevDoctorCommand(
 
 	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	cfg, cfgPath, err := loadProjectDoctorConfig(projectRoot, projectArg)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	fmt.Fprintf(cmd.ErrOrStderr(), "Using project config: %s\n", cfgPath)
@@ -177,7 +179,7 @@ func runDevDoctorCommand(
 	if !opts.SkipDev {
 		configReadyErr := ensureProjectConfigReady(projectRoot, cfgPath, cfg)
 		if configReadyErr != nil {
-			return exitCodeError{Code: 2, Err: configReadyErr}
+			return exitcode.Error{Code: 2, Err: configReadyErr}
 		}
 	}
 
@@ -185,12 +187,12 @@ func runDevDoctorCommand(
 
 	_, urls, err := buildProjectSubmitJobRequest(cfg.Scan)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	validateErr := urlcheck.ValidateLocalTargets(apiURL, urls)
 	if validateErr != nil {
-		return exitCodeError{Code: 2, Err: validateErr}
+		return exitcode.Error{Code: 2, Err: validateErr}
 	}
 
 	autoAllowPrivateTargets := cfg.Scan.AllowPrivateTargets == nil && urlcheck.ContainsPrivateTargets(urls)
@@ -206,9 +208,9 @@ func runDevDoctorCommand(
 		{Name: "scan-preflight", Status: "passed", Message: "Validated scan targets and scanner configuration."},
 	}
 
-	format, formatErr := root.outputFormat()
+	format, formatErr := root.renderFormat()
 	if formatErr != nil {
-		return exitCodeError{Code: 2, Err: formatErr}
+		return exitcode.Error{Code: 2, Err: formatErr}
 	}
 
 	if opts.SkipDev {
@@ -237,13 +239,13 @@ func runDevDoctorCommand(
 
 	proc, cleanup, err := runProjectDev(doctorCtx, projectRoot, cfg.Dev, cmd.ErrOrStderr())
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 	defer cleanup()
 
 	readyErr := waitForReady(doctorCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
 	if readyErr != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
 	}
 
 	checks = append(checks, projectDoctorCheck{

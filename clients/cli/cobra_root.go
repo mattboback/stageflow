@@ -4,6 +4,8 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 )
 
 type rootOptions struct {
@@ -31,7 +33,7 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(*cobra.Command, []string) error {
-			_, err := opts.outputFormat()
+			_, err := opts.renderFormat()
 
 			return err
 		},
@@ -48,7 +50,7 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(
 		&opts.outputFormatRaw,
 		"format",
-		string(outputFormatText),
+		string(render.FormatText),
 		"Output format: text, markdown, or json",
 	)
 
@@ -67,6 +69,6 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	return rootCmd
 }
 
-func (r *rootOptions) outputFormat() (outputFormat, error) {
-	return normalizeOutputFormat(r.outputFormatRaw)
+func (r *rootOptions) renderFormat() (render.Format, error) {
+	return render.NormalizeFormat(r.outputFormatRaw)
 }
