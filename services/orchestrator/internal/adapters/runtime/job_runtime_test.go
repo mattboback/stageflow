@@ -213,6 +213,10 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 	if mount.Source != "/volumes/workspace-job-123" || mount.Destination != "/workspace" || mount.Type != "bind" {
 		t.Fatalf("unexpected workspace mount: %#v", mount)
 	}
+
+	if !mount.ChownToContainerUser {
+		t.Fatalf("workspace mount must chown to the container user (extractor runs non-root): %#v", mount)
+	}
 }
 
 func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSucceeds(t *testing.T) {

@@ -52,6 +52,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `toolVersion`), localhost URLs from the local golden stack, and the rescored
   summary
 
+- ZIP scans no longer fail at the extraction stage on rootless Podman
+  deployments: the freshly created per-job workspace volume was owned by
+  container-root, so the non-root extractor could not write to it. The
+  orchestrator now mounts the workspace with Podman's `U` option, which
+  chowns it to the extraction worker's runtime user at start
+
 - Projects now honor `PLATFORM_API_ALLOW_PRIVATE_TARGETS` end to end: instances
   that opt in accept private/localhost project URLs (creation previously always
   enforced public-only validation), and project scan jobs carry the opt-in to

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -303,5 +304,33 @@ func TestGetContainerLogsBoundsErrorBody(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "errtail") {
 		t.Fatalf("expected tail in error, got %v", err)
+	}
+}
+
+func TestBuildContainerCreateBodyMountOptions(t *testing.T) {
+	req := &ContainerCreateRequest{
+		Name:  "extraction-worker",
+		Image: "extractor:latest",
+		Mounts: []VolumeMount{
+			{Type: "bind", Source: "/volumes/ws", Destination: "/workspace", ChownToContainerUser: true},
+			{Type: "bind", Source: "/volumes/results", Destination: "/results", ReadOnly: true},
+		},
+	}
+
+	body := buildContainerCreateBody(req)
+
+	mounts, ok := body["mounts"].([]map[string]any)
+	if !ok || len(mounts) != 2 {
+		t.Fatalf("mounts = %#v, want 2 entries", body["mounts"])
+	}
+
+	wsOpts, _ := mounts[0]["options"].([]string)
+	if !reflect.DeepEqual(wsOpts, []string{"rbind", "U"}) {
+		t.Fatalf("workspace mount options = %v, want [rbind U]", wsOpts)
+	}
+
+	resultOpts, _ := mounts[1]["options"].([]string)
+	if !reflect.DeepEqual(resultOpts, []string{"rbind", "ro"}) {
+		t.Fatalf("results mount options = %v, want [rbind ro]", resultOpts)
 	}
 }
