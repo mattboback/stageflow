@@ -16,6 +16,7 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
@@ -73,7 +74,7 @@ func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
 	docPath := filepath.Join(repoRoot, "docs", "reference", "cli", "stageflow", "stageflow_scan.md")
 
 	data, err := os.ReadFile(docPath)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if !strings.Contains(string(data), defaultScanScanners) {
 		t.Fatalf("expected %s to contain current default scanner list %q", docPath, defaultScanScanners)
@@ -85,7 +86,7 @@ func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 	readmePath := filepath.Join(repoRoot, "clients", "cli", "README.md")
 
 	data, err := os.ReadFile(readmePath)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	scannerListYAML := "scanners: [" + strings.Join(defaultScanScannerList(), ", ") + "]"
 	if !strings.Contains(string(data), scannerListYAML) {
@@ -96,7 +97,7 @@ func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 func TestRepoProjectBootstrapSuggestionUsesLocalSelfScanDefaults(t *testing.T) {
 	repoRoot := mustFindRepoRoot(t)
 	suggestion, err := detectProjectBootstrapSuggestion(repoRoot)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if suggestion.IsPlaceholder {
 		t.Fatalf("expected repo bootstrap suggestion, got placeholder")
@@ -117,20 +118,20 @@ func TestCLIDevCommandsSmoke(t *testing.T) {
 	root := t.TempDir()
 
 	err := os.WriteFile(filepath.Join(root, "justfile"), []byte("run SERVICE:\n\t@true\n"), 0o600)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	err = os.MkdirAll(filepath.Join(root, "clients", "web"), 0o750)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	err = os.WriteFile(
 		filepath.Join(root, "clients", "web", "package.json"),
 		[]byte(`{"scripts":{"dev":"vite dev"}}`),
 		0o600,
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	err = os.WriteFile(filepath.Join(root, "clients", "web", "vite.config.ts"), []byte("export default {}\n"), 0o600)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	stdout, stderr, exitCode := runCLI(t, "stageflow", "dev", "init", root)
 	if exitCode != 0 {
@@ -142,7 +143,7 @@ func TestCLIDevCommandsSmoke(t *testing.T) {
 	}
 
 	data, err := os.ReadFile(filepath.Join(root, ".stageflow", "config.yaml"))
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	contents := string(data)
 	if !strings.Contains(contents, `cmd: ["just", "run", "clients/web"]`) {
@@ -250,14 +251,14 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 	decoder := json.NewDecoder(strings.NewReader(stdout))
 
 	var payload projectScanEnvelope
-	requireNoErr(t, decoder.Decode(&payload))
+	testsupport.RequireNoErr(t, decoder.Decode(&payload))
 
-	requireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
-	requireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
-	requireEqual(t, payload.Project.Baseline.Status, projectBaselineStatusAvailable, "payload.Project.Baseline.Status")
-	requireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
-	requireEqual(t, payload.Decision.Passed, false, "payload.Decision.Passed")
-	requireEqual(t, payload.Report.Schema, "stageflow-cli/report@v1", "payload.Report.Schema")
+	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
+	testsupport.RequireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
+	testsupport.RequireEqual(t, payload.Project.Baseline.Status, projectBaselineStatusAvailable, "payload.Project.Baseline.Status")
+	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
+	testsupport.RequireEqual(t, payload.Decision.Passed, false, "payload.Decision.Passed")
+	testsupport.RequireEqual(t, payload.Report.Schema, "stageflow-cli/report@v1", "payload.Report.Schema")
 
 	if payload.Diff == nil {
 		t.Fatalf("expected diff payload")
@@ -267,7 +268,7 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 		t.Fatalf("expected a single JSON document, got err=%v", err)
 	}
 
-	requireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
+	testsupport.RequireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
 }
 
 func TestCLIProjectScanFromConfigJSONEnvelope(t *testing.T) {
@@ -310,12 +311,12 @@ stageflow:
 	decoder := json.NewDecoder(strings.NewReader(stdout))
 
 	var payload projectScanEnvelope
-	requireNoErr(t, decoder.Decode(&payload))
+	testsupport.RequireNoErr(t, decoder.Decode(&payload))
 
-	requireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
-	requireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
-	requireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
-	requireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
+	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
+	testsupport.RequireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
+	testsupport.RequireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
+	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
 
 	if payload.Diff == nil {
 		t.Fatalf("expected diff payload")
@@ -329,7 +330,7 @@ func runCLI(t *testing.T, args ...string) (string, string, int) {
 
 	var stderr bytes.Buffer
 
-	exitCode := run(args, stubEnv, &stdout, &stderr)
+	exitCode := run(args, testsupport.StubEnv, &stdout, &stderr)
 
 	return stdout.String(), stderr.String(), exitCode
 }
@@ -359,10 +360,10 @@ func mustFindRepoRoot(t *testing.T) string {
 	t.Helper()
 
 	wd, err := os.Getwd()
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	root, ok, err := projectmode.FindGitRoot(wd)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if !ok {
 		t.Fatalf("expected to find git root from %s", wd)
@@ -375,7 +376,7 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 
 	jobID := "job-smoke"
-	reportDoc := sampleReport(jobID)
+	reportDoc := testsupport.SampleReport(jobID)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -384,7 +385,7 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
 			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
 				ID:                jobID,
-				State:             jobStateDone,
+				State:             apiclient.JobStateDone,
 				ExpectedScanners:  []string{"axe", "lighthouse"},
 				CompletedScanners: []string{"axe", "lighthouse"},
 				CreatedAt:         time.Unix(1700000000, 0).UTC(),
@@ -427,8 +428,8 @@ func newCLIProjectScanAPIServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 
 	jobID := "job-project"
-	currentDoc := sampleReport(jobID)
-	baselineDoc := sampleReport("job-baseline")
+	currentDoc := testsupport.SampleReport(jobID)
+	baselineDoc := testsupport.SampleReport("job-baseline")
 	baselineDoc.Issues = []report.IssueDetail{baselineDoc.Issues[1]}
 	baselineScore := 84
 	baselineDoc.Summary.Score = &baselineScore
@@ -442,7 +443,7 @@ func newCLIProjectScanAPIServer(t *testing.T) (*httptest.Server, string) {
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
 			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
 				ID:                jobID,
-				State:             jobStateDone,
+				State:             apiclient.JobStateDone,
 				ExpectedScanners:  []string{"axe"},
 				CompletedScanners: []string{"axe"},
 				CreatedAt:         time.Unix(1700001000, 0).UTC(),

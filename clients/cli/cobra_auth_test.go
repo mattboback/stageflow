@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 )
 
 func TestAuthCaptureRequiresOutput(t *testing.T) {
@@ -116,7 +118,7 @@ func TestAuthCaptureFailsWhenRunnerErrors(t *testing.T) {
 	out := filepath.Join(tmp, "state.json")
 
 	stubRunner := func(_ *cobra.Command, _, _ string, _ []string) error {
-		return exitCodeError{Code: 2, Err: errors.New("boom")}
+		return exitcode.Error{Code: 2, Err: errors.New("boom")}
 	}
 
 	cmd := newAuthCaptureCmd(stubRunner)
@@ -129,9 +131,9 @@ func TestAuthCaptureFailsWhenRunnerErrors(t *testing.T) {
 		t.Fatal("expected error from runner")
 	}
 
-	var exitErr exitCodeError
+	var exitErr exitcode.Error
 	if !errors.As(err, &exitErr) {
-		t.Fatalf("expected exitCodeError; got %v", err)
+		t.Fatalf("expected exitcode.Error; got %v", err)
 	}
 
 	if exitErr.Code != 2 {

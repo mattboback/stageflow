@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 )
 
 type getenvFunc func(string) string
@@ -16,7 +18,7 @@ func run(args []string, getenv getenvFunc, stdout, stderr io.Writer) int {
 	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
 		code := 2
 
-		var exitErr exitCodeError
+		var exitErr exitcode.Error
 		if errors.As(err, &exitErr) {
 			code = exitErr.Code
 			err = exitErr.Err

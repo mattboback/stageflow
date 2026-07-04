@@ -53,6 +53,12 @@ type SubmitJobResponse struct {
 	Message string `json:"message"`
 }
 
+// Terminal job states reported by GET /api/v1/jobs/{id}.
+const (
+	JobStateDone   = "DONE"
+	JobStateFailed = "FAILED"
+)
+
 // JobStatus represents the subset of GET /api/v1/jobs/{id} used by the CLI.
 type JobStatus struct {
 	ID                string          `json:"id"`

@@ -7,16 +7,18 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func writeProjectConfig(t *testing.T, root string, yaml string) string {
 	t.Helper()
 
 	configDir := filepath.Join(root, ".stageflow")
-	requireNoErr(t, os.MkdirAll(configDir, 0o750))
+	testsupport.RequireNoErr(t, os.MkdirAll(configDir, 0o750))
 
 	configPath := filepath.Join(configDir, "config.yaml")
-	requireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o640))
+	testsupport.RequireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o640))
 
 	return configPath
 }
@@ -50,24 +52,24 @@ dev:
 	configPath := writeProjectConfig(t, root, configYAML)
 
 	cfg, gotPath, err := loadProjectConfig(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, gotPath, configPath, "config path")
+	testsupport.RequireEqual(t, gotPath, configPath, "config path")
 
-	requireEqual(t, cfg.Version, 2, "cfg.Version")
+	testsupport.RequireEqual(t, cfg.Version, 2, "cfg.Version")
 
-	requireDeepEqual(t, cfg.Scan.URLs, []string{"http://localhost:3000"}, "cfg.Scan.URLs")
+	testsupport.RequireDeepEqual(t, cfg.Scan.URLs, []string{"http://localhost:3000"}, "cfg.Scan.URLs")
 
-	requireDeepEqual(t, cfg.Scan.Scanners, []string{"axe", "lighthouse"}, "cfg.Scan.Scanners")
+	testsupport.RequireDeepEqual(t, cfg.Scan.Scanners, []string{"axe", "lighthouse"}, "cfg.Scan.Scanners")
 
-	requireBoolPtr(t, cfg.Scan.Screenshot, true, "cfg.Scan.Screenshot")
+	testsupport.RequireBoolPtr(t, cfg.Scan.Screenshot, true, "cfg.Scan.Screenshot")
 
-	requireBoolPtr(t, cfg.Scan.AllowPrivateTargets, true, "cfg.Scan.AllowPrivateTargets")
+	testsupport.RequireBoolPtr(t, cfg.Scan.AllowPrivateTargets, true, "cfg.Scan.AllowPrivateTargets")
 
-	requireDeepEqual(t, cfg.Dev.Start.Cmd, []string{"npm", "run", "dev"}, "cfg.Dev.Start.Cmd")
+	testsupport.RequireDeepEqual(t, cfg.Dev.Start.Cmd, []string{"npm", "run", "dev"}, "cfg.Dev.Start.Cmd")
 
-	requireEqual(t, cfg.Dev.Ready.URL, "http://localhost:3000/health", "cfg.Dev.Ready.URL")
-	requireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
+	testsupport.RequireEqual(t, cfg.Dev.Ready.URL, "http://localhost:3000/health", "cfg.Dev.Ready.URL")
+	testsupport.RequireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
 }
 
 func TestLoadProjectConfig_MissingFile(t *testing.T) {
@@ -96,7 +98,7 @@ func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
 		t.Fatalf("loadProjectConfig err = %T, want missingProjectConfigError", err)
 	}
 
-	requireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
+	testsupport.RequireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
 }
 
 func TestLoadProjectScanConfig_Minimal(t *testing.T) {
@@ -109,12 +111,12 @@ stageflow:
 `)
 
 	cfg, gotPath, err := loadProjectScanConfig(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, gotPath, configPath, "config path")
-	requireEqual(t, cfg.Version, 2, "cfg.Version")
-	requireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
-	requireEqual(t, cfg.Stageflow.APIURL, "https://hosted.stageflow.example", "cfg.Stageflow.APIURL")
+	testsupport.RequireEqual(t, gotPath, configPath, "config path")
+	testsupport.RequireEqual(t, cfg.Version, 2, "cfg.Version")
+	testsupport.RequireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
+	testsupport.RequireEqual(t, cfg.Stageflow.APIURL, "https://hosted.stageflow.example", "cfg.Stageflow.APIURL")
 }
 
 func TestLoadProjectScanConfig_RequiresProject(t *testing.T) {
@@ -152,13 +154,13 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 	root := t.TempDir()
 
 	configPath, err := scaffoldProjectConfig(root, "http://localhost:8080")
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	expectedPath := filepath.Join(root, ".stageflow", "config.yaml")
-	requireEqual(t, configPath, expectedPath, "config path")
+	testsupport.RequireEqual(t, configPath, expectedPath, "config path")
 
 	data, err := os.ReadFile(configPath)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	text := string(data)
 	if !strings.Contains(text, "version: 2") {
@@ -182,22 +184,22 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 	}
 
 	cfg, gotPath, err := loadProjectConfig(root)
-	requireNoErr(t, err)
-	requireEqual(t, gotPath, configPath, "loaded config path")
-	requireEqual(t, cfg.Version, 2, "cfg.Version")
+	testsupport.RequireNoErr(t, err)
+	testsupport.RequireEqual(t, gotPath, configPath, "loaded config path")
+	testsupport.RequireEqual(t, cfg.Version, 2, "cfg.Version")
 }
 
 func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 	root := t.TempDir()
 
 	guidePath, err := scaffoldProjectGuide(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	expectedPath := filepath.Join(root, ".stageflow", "README.md")
-	requireEqual(t, guidePath, expectedPath, "guide path")
+	testsupport.RequireEqual(t, guidePath, expectedPath, "guide path")
 
 	data, err := os.ReadFile(guidePath)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	text := string(data)
 	if !strings.Contains(text, "StageFlow dev setup") {

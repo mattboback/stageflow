@@ -1,4 +1,4 @@
-package main
+package render
 
 import (
 	"bytes"
@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -18,54 +20,54 @@ func TestRenderUnifiedReport_JSONEnvelope(t *testing.T) {
 
 	status := apiclient.JobStatus{
 		ID:        "job-123",
-		State:     jobStateDone,
+		State:     apiclient.JobStateDone,
 		CreatedAt: createdAt,
 		UpdatedAt: updatedAt,
 	}
 
-	doc := sampleReport(status.ID)
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatJSON,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatJSON,
 		MaxIssues: 1,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	var payload reportEnvelope
-	requireNoErr(t, json.NewDecoder(bytes.NewReader(buf.Bytes())).Decode(&payload))
+	var payload ReportEnvelope
+	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(buf.Bytes())).Decode(&payload))
 
-	requireEqual(t, payload.Schema, "stageflow-cli/report@v1", "payload.Schema")
-	requireEqual(t, payload.API.BaseURL, "http://localhost:8080", "payload.API.BaseURL")
+	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/report@v1", "payload.Schema")
+	testsupport.RequireEqual(t, payload.API.BaseURL, "http://localhost:8080", "payload.API.BaseURL")
 
-	requireEqual(t, payload.Job.ID, status.ID, "payload.Job.ID")
-	requireEqual(t, payload.Job.State, status.State, "payload.Job.State")
-	requireEqual(t, payload.Job.CreatedAt, createdAt.UTC().Format(timeFormatRFC3339), "payload.Job.CreatedAt")
-	requireEqual(t, payload.Job.UpdatedAt, updatedAt.UTC().Format(timeFormatRFC3339), "payload.Job.UpdatedAt")
+	testsupport.RequireEqual(t, payload.Job.ID, status.ID, "payload.Job.ID")
+	testsupport.RequireEqual(t, payload.Job.State, status.State, "payload.Job.State")
+	testsupport.RequireEqual(t, payload.Job.CreatedAt, createdAt.UTC().Format(timeFormatRFC3339), "payload.Job.CreatedAt")
+	testsupport.RequireEqual(t, payload.Job.UpdatedAt, updatedAt.UTC().Format(timeFormatRFC3339), "payload.Job.UpdatedAt")
 
-	requireEqual(t, payload.Links.Job, "http://localhost:8080/api/v1/jobs/job-123", "payload.Links.Job")
-	requireEqual(t, payload.Links.Results, "http://localhost:8080/api/v1/jobs/job-123/results", "payload.Links.Results")
+	testsupport.RequireEqual(t, payload.Links.Job, "http://localhost:8080/api/v1/jobs/job-123", "payload.Links.Job")
+	testsupport.RequireEqual(t, payload.Links.Results, "http://localhost:8080/api/v1/jobs/job-123/results", "payload.Links.Results")
 
-	requireEqual(t, payload.Filters.Sort, issueSortOrder, "payload.Filters.Sort")
-	requireEqual(t, payload.Filters.MaxIssues, 1, "payload.Filters.MaxIssues")
-	requireEqual(t, payload.Filters.IssuesTotal, 2, "payload.Filters.IssuesTotal")
-	requireEqual(t, payload.Filters.IssuesReturned, 1, "payload.Filters.IssuesReturned")
-	requireEqual(t, payload.Filters.Truncated, true, "payload.Filters.Truncated")
+	testsupport.RequireEqual(t, payload.Filters.Sort, issueSortOrder, "payload.Filters.Sort")
+	testsupport.RequireEqual(t, payload.Filters.MaxIssues, 1, "payload.Filters.MaxIssues")
+	testsupport.RequireEqual(t, payload.Filters.IssuesTotal, 2, "payload.Filters.IssuesTotal")
+	testsupport.RequireEqual(t, payload.Filters.IssuesReturned, 1, "payload.Filters.IssuesReturned")
+	testsupport.RequireEqual(t, payload.Filters.Truncated, true, "payload.Filters.Truncated")
 
-	requireEqual(t, len(payload.Report.Issues), 1, "len(payload.Report.Issues)")
-	requireEqual(t, payload.Report.Issues[0].Id, "issue-critical", "payload.Report.Issues[0].Id")
+	testsupport.RequireEqual(t, len(payload.Report.Issues), 1, "len(payload.Report.Issues)")
+	testsupport.RequireEqual(t, payload.Report.Issues[0].Id, "issue-critical", "payload.Report.Issues[0].Id")
 }
 
 func TestRenderUnifiedReport_Markdown(t *testing.T) {
 	status := apiclient.JobStatus{
 		ID:        "job-123",
-		State:     jobStateDone,
+		State:     apiclient.JobStateDone,
 		CreatedAt: time.Date(2026, 3, 4, 12, 0, 0, 0, time.UTC),
 		UpdatedAt: time.Date(2026, 3, 4, 12, 1, 0, 0, time.UTC),
 	}
 
-	doc := sampleReport(status.ID)
+	doc := testsupport.SampleReport(status.ID)
 	artifactPath := "screenshots/page-overview-page-1.webp"
 	artifactMime := "image/webp"
 	doc.Artifacts = []report.ReportArtifact{
@@ -79,11 +81,11 @@ func TestRenderUnifiedReport_Markdown(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatMarkdown,
 		MaxIssues: 10,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	for _, want := range []string{
@@ -106,8 +108,8 @@ func TestRenderUnifiedReport_Markdown(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MarkdownNoFindingsNoArtifacts(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-456", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-456", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 	doc.Issues = []report.IssueDetail{}
 	doc.Artifacts = nil
 	doc.Errors = nil
@@ -117,11 +119,11 @@ func TestRenderUnifiedReport_MarkdownNoFindingsNoArtifacts(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatMarkdown,
 		MaxIssues: 10,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "No findings.") {
@@ -134,8 +136,8 @@ func TestRenderUnifiedReport_MarkdownNoFindingsNoArtifacts(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-occ", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-occ", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	selector1 := "#main > p.intro"
 	html1 := `<p class="intro" style="color:#999">...</p>`
@@ -156,7 +158,7 @@ func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
 			HowToFix:    &howToFix,
 			Category:    &category,
 			WcagTags:    []string{"1.4.3"},
-			HelpUrl:     stringPtr("https://example.com/help"),
+			HelpUrl:     testsupport.StringPtr("https://example.com/help"),
 			PageId:      "page-1",
 			PageUrl:     "https://example.com",
 			Occurrences: []report.IssueOccurrence{
@@ -169,12 +171,12 @@ func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:         outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:         FormatMarkdown,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	for _, want := range []string{
@@ -194,8 +196,8 @@ func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-text-occ", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-text-occ", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	selector := "#main > p"
 	html := `<p>hello</p>`
@@ -224,12 +226,12 @@ func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:         outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:         FormatText,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	for _, want := range []string{
@@ -246,8 +248,8 @@ func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-text-summary-only", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-text-summary-only", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	failureSummary := "Element has no accessible name"
 	doc.Issues = []report.IssueDetail{
@@ -266,12 +268,12 @@ func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:         outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:         FormatText,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "Occurrences (1 of 1):") {
@@ -284,8 +286,8 @@ func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MarkdownOccurrences_FailureSummaryOnly(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-md-summary-only", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-md-summary-only", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	failureSummary := "Landmark region is missing a label"
 	doc.Issues = []report.IssueDetail{
@@ -304,12 +306,12 @@ func TestRenderUnifiedReport_MarkdownOccurrences_FailureSummaryOnly(t *testing.T
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:         outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:         FormatMarkdown,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "Occurrences (1 of 1):") {
@@ -322,8 +324,8 @@ func TestRenderUnifiedReport_MarkdownOccurrences_FailureSummaryOnly(t *testing.T
 }
 
 func TestRenderUnifiedReport_LighthouseScoresMarkdown(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-lh", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-lh", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 	doc.Summary.LighthouseCategories = []report.LighthouseCategorySummary{
 		{Id: "performance", Title: "Performance", AvgScore: 0.85},
 		{Id: "accessibility", Title: "Accessibility", AvgScore: 0.62},
@@ -331,11 +333,11 @@ func TestRenderUnifiedReport_LighthouseScoresMarkdown(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatMarkdown,
 		MaxIssues: 10,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	for _, want := range []string{
@@ -350,8 +352,8 @@ func TestRenderUnifiedReport_LighthouseScoresMarkdown(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_LighthouseScoresText(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-lh-text", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-lh-text", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 	doc.Summary.LighthouseCategories = []report.LighthouseCategorySummary{
 		{Id: "performance", Title: "Performance", AvgScore: 0.85},
 		{Id: "seo", Title: "SEO", AvgScore: 0.91},
@@ -359,11 +361,11 @@ func TestRenderUnifiedReport_LighthouseScoresText(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatText,
 		MaxIssues: 10,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "Lighthouse: performance=0.85 seo=0.91") {
@@ -372,17 +374,17 @@ func TestRenderUnifiedReport_LighthouseScoresText(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_SummaryOnly(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-summ", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-summ", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:      outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:      FormatMarkdown,
 		MaxIssues:   10,
 		SummaryOnly: true,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if strings.Contains(output, "## Findings") {
@@ -399,17 +401,17 @@ func TestRenderUnifiedReport_SummaryOnly(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_SummaryOnlyText(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-summ-text", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-summ-text", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:      outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:      FormatText,
 		MaxIssues:   10,
 		SummaryOnly: true,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if strings.Contains(output, "\nIssues:\n") {
@@ -422,8 +424,8 @@ func TestRenderUnifiedReport_SummaryOnlyText(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_GroupByCategory(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-group", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-group", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	a11y := "accessibility"
 	seo := "seo"
@@ -459,12 +461,12 @@ func TestRenderUnifiedReport_GroupByCategory(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatMarkdown,
 		MaxIssues: 10,
 		GroupBy:   "category",
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	for _, want := range []string{
@@ -488,8 +490,8 @@ func TestRenderUnifiedReport_GroupByCategory(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_GroupByScanner(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-group-scan", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-group-scan", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	doc.Issues = []report.IssueDetail{
 		{
@@ -512,12 +514,12 @@ func TestRenderUnifiedReport_GroupByScanner(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatMarkdown,
 		MaxIssues: 10,
 		GroupBy:   "scanner",
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "### axe") {
@@ -530,17 +532,17 @@ func TestRenderUnifiedReport_GroupByScanner(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_GroupByNone(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-group-none", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-group-none", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:    outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:    FormatMarkdown,
 		MaxIssues: 10,
 		GroupBy:   "none",
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if strings.Contains(output, "###") {
@@ -549,45 +551,45 @@ func TestRenderUnifiedReport_GroupByNone(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_FailSeverity(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-fail", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-fail", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:       outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:       FormatText,
 		MaxIssues:    10,
 		FailSeverity: "critical",
 	})
 
-	var ece exitCodeError
+	var ece exitcode.Error
 	if !errors.As(err, &ece) {
-		t.Fatalf("expected exitCodeError, got %v", err)
+		t.Fatalf("expected exitcode.Error, got %v", err)
 	}
 
-	requireEqual(t, ece.Code, 1, "exit code")
+	testsupport.RequireEqual(t, ece.Code, 1, "exit code")
 }
 
 func TestRenderUnifiedReport_FailSeverity_NoMatch(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-fail-no", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-fail-no", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 	doc.Issues = []report.IssueDetail{
 		{Id: "a", Severity: report.IssueSeverityMinor},
 	}
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:       outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:       FormatText,
 		MaxIssues:    10,
 		FailSeverity: "critical",
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 }
 
 func TestRenderUnifiedReport_FailSeverity_UsesFilteredIssues(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-fail-filtered", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-fail-filtered", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	a11y := "accessibility"
 	seo := "seo"
@@ -614,23 +616,23 @@ func TestRenderUnifiedReport_FailSeverity_UsesFilteredIssues(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:       outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:       FormatText,
 		MaxIssues:    10,
 		Categories:   []string{"seo"},
 		FailSeverity: "serious",
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 }
 
 func TestRenderUnifiedReport_FailSeverity_Invalid(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-fail-invalid", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-fail-invalid", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:       outputFormatText,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:       FormatText,
 		MaxIssues:    10,
 		FailSeverity: "warning",
 	})
@@ -640,17 +642,17 @@ func TestRenderUnifiedReport_FailSeverity_Invalid(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_SeverityFilter(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-sev-filter", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-sev-filter", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:     outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:     FormatMarkdown,
 		MaxIssues:  10,
 		Severities: []string{"critical"},
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "Critical issue") {
@@ -667,8 +669,8 @@ func TestRenderUnifiedReport_SeverityFilter(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_CategoryFilter(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-cat-filter", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-cat-filter", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	a11y := "accessibility"
 	seo := "seo"
@@ -695,12 +697,12 @@ func TestRenderUnifiedReport_CategoryFilter(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:     outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:     FormatMarkdown,
 		MaxIssues:  10,
 		Categories: []string{"accessibility"},
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "A11y issue") {
@@ -713,8 +715,8 @@ func TestRenderUnifiedReport_CategoryFilter(t *testing.T) {
 }
 
 func TestRenderUnifiedReport_MaxOccurrencesTruncates(t *testing.T) {
-	status := apiclient.JobStatus{ID: "job-max-occ", State: jobStateDone}
-	doc := sampleReport(status.ID)
+	status := apiclient.JobStatus{ID: "job-max-occ", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
 
 	sel1 := ".a"
 	sel2 := ".b"
@@ -736,12 +738,12 @@ func TestRenderUnifiedReport_MaxOccurrencesTruncates(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderUnifiedReport(&buf, "http://localhost:8080", status, doc, reportRenderOptions{
-		Format:         outputFormatMarkdown,
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+		Format:         FormatMarkdown,
 		MaxIssues:      10,
 		MaxOccurrences: 2,
 	})
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "Occurrences (2 of 3):") {

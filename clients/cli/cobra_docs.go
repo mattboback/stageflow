@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 )
 
@@ -25,16 +26,16 @@ func newDocsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			targetDir, err := resolveDocsOutDir(outDir)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			err = os.MkdirAll(targetDir, 0o750)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("create out dir %s: %w", targetDir, err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("create out dir %s: %w", targetDir, err)}
 			}
 
 			if err = generateMarkdownDocs(cmd.Root(), targetDir); err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("generate docs: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("generate docs: %w", err)}
 			}
 
 			return nil

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
 
@@ -32,12 +33,12 @@ func newProjectUpdateCmd(root *rootOptions) *cobra.Command {
 
 			p, err := client.UpdateProject(cmd.Context(), slug, body)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("update project: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("update project: %w", err)}
 			}
 
-			format, err := root.outputFormat()
+			format, err := root.renderFormat()
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			return printProject(cmd, p, format)
@@ -67,12 +68,12 @@ func buildProjectUpdateBody(
 	if cmd.Flags().Changed("url") {
 		normalizedURLs, normalizeErr := urlcheck.NormalizeTargets(urls)
 		if normalizeErr != nil {
-			return nil, exitCodeError{Code: 2, Err: normalizeErr}
+			return nil, exitcode.Error{Code: 2, Err: normalizeErr}
 		}
 
 		validateErr := urlcheck.ValidateLocalTargets(root.apiURL, normalizedURLs)
 		if validateErr != nil {
-			return nil, exitCodeError{Code: 2, Err: validateErr}
+			return nil, exitcode.Error{Code: 2, Err: validateErr}
 		}
 
 		body["urls"] = normalizedURLs
@@ -81,14 +82,14 @@ func buildProjectUpdateBody(
 	if cmd.Flags().Changed("scanner") {
 		normalizedScanners, normalizeErr := normalizeScannerList(scanners)
 		if normalizeErr != nil {
-			return nil, exitCodeError{Code: 2, Err: normalizeErr}
+			return nil, exitcode.Error{Code: 2, Err: normalizeErr}
 		}
 
 		body["scanners"] = normalizedScanners
 	}
 
 	if len(body) == 0 {
-		return nil, exitCodeError{
+		return nil, exitcode.Error{
 			Code: 2,
 			Err:  errors.New("at least one flag (--name, --url, --scanner) is required"),
 		}

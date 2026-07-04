@@ -1,4 +1,4 @@
-package main
+package render
 
 import (
 	"encoding/json"
@@ -11,8 +11,8 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
 
-func renderScanners(out io.Writer, response apiclient.ScannersResponse, format outputFormat) error {
-	if format == outputFormatJSON {
+func Scanners(out io.Writer, response apiclient.ScannersResponse, format Format) error {
+	if format == FormatJSON {
 		encoder := json.NewEncoder(out)
 		encoder.SetIndent("", "  ")
 		encoder.SetEscapeHTML(false)
@@ -20,7 +20,7 @@ func renderScanners(out io.Writer, response apiclient.ScannersResponse, format o
 		return encoder.Encode(response)
 	}
 
-	if format == outputFormatMarkdown {
+	if format == FormatMarkdown {
 		return writeScannersMarkdown(out, response)
 	}
 

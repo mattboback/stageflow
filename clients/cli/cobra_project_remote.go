@@ -12,6 +12,8 @@ import (
 	"os"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
@@ -47,7 +49,7 @@ func newProjectCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 type projectScanCmdOptions struct {
 	Timeout  time.Duration
 	NoStream bool
-	Report   reportCommandOptions
+	Report   render.ReportFlags
 }
 
 func newProjectScanCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
@@ -70,7 +72,7 @@ func newProjectScanCmd(root *rootOptions, getenv getenvFunc) *cobra.Command {
 	}
 
 	cmd.Flags().DurationVar(&opts.Timeout, "timeout", opts.Timeout, "Max wait time")
-	bindReportFlags(cmd, &opts.Report, true)
+	render.BindReportFlags(cmd, &opts.Report, true)
 	cmd.Flags().BoolVar(&opts.NoStream, "no-stream", false, "Poll instead of SSE")
 	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
@@ -85,11 +87,11 @@ func runProjectScanCommand(
 	opts *projectScanCmdOptions,
 ) error {
 	if opts.Timeout <= 0 {
-		return exitCodeError{Code: 2, Err: errors.New("--timeout must be > 0")}
+		return exitcode.Error{Code: 2, Err: errors.New("--timeout must be > 0")}
 	}
 
-	if opts.Report.maxIssues < 0 {
-		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
+	if opts.Report.MaxIssues < 0 {
+		return exitcode.Error{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 	}
 
 	scanRoot := *root
@@ -102,12 +104,12 @@ func runProjectScanCommand(
 	if slug == "" {
 		projectRoot, err := resolveProjectScanRoot()
 		if err != nil {
-			return exitCodeError{Code: 2, Err: err}
+			return exitcode.Error{Code: 2, Err: err}
 		}
 
 		cfg, cfgPath, err := loadProjectScanConfig(projectRoot)
 		if err != nil {
-			return exitCodeError{Code: 2, Err: err}
+			return exitcode.Error{Code: 2, Err: err}
 		}
 
 		slug = strings.TrimSpace(cfg.Stageflow.Project)
@@ -182,34 +184,34 @@ func newProjectCreateCmd(root *rootOptions) *cobra.Command {
 			}
 
 			if len(urls) == 0 {
-				return exitCodeError{Code: 2, Err: errors.New("at least one --url is required")}
+				return exitcode.Error{Code: 2, Err: errors.New("at least one --url is required")}
 			}
 
 			normalizedURLs, err := urlcheck.NormalizeTargets(urls)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			validateErr := urlcheck.ValidateLocalTargets(root.apiURL, normalizedURLs)
 			if validateErr != nil {
-				return exitCodeError{Code: 2, Err: validateErr}
+				return exitcode.Error{Code: 2, Err: validateErr}
 			}
 
 			normalizedScanners, err := normalizeScannerList(scanners)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			client := newAPICommandClient(root)
 
 			p, err := client.CreateProject(cmd.Context(), slug, name, normalizedURLs, normalizedScanners)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("create project: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("create project: %w", err)}
 			}
 
-			format, err := root.outputFormat()
+			format, err := root.renderFormat()
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			return printProject(cmd, p, format)
@@ -251,15 +253,15 @@ func newProjectListCmd(root *rootOptions) *cobra.Command {
 
 			projects, err := client.ListProjects(cmd.Context())
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("list projects: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("list projects: %w", err)}
 			}
 
-			format, err := root.outputFormat()
+			format, err := root.renderFormat()
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
-			if format == outputFormatJSON {
+			if format == render.FormatJSON {
 				enc := json.NewEncoder(cmd.OutOrStdout())
 				enc.SetIndent("", "  ")
 
@@ -297,12 +299,12 @@ func newProjectShowCmd(root *rootOptions) *cobra.Command {
 
 			p, err := client.GetProject(cmd.Context(), args[0])
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("get project: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("get project: %w", err)}
 			}
 
-			format, err := root.outputFormat()
+			format, err := root.renderFormat()
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
 			return printProject(cmd, p, format)
@@ -319,7 +321,7 @@ func newProjectDeleteCmd(root *rootOptions) *cobra.Command {
 			client := newAPICommandClient(root)
 
 			if err := client.DeleteProject(cmd.Context(), args[0]); err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("delete project: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("delete project: %w", err)}
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Deleted project %q.\n", args[0])
@@ -338,13 +340,13 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if jobID == "" {
-				return exitCodeError{Code: 2, Err: errors.New("--job-id is required")}
+				return exitcode.Error{Code: 2, Err: errors.New("--job-id is required")}
 			}
 
 			client := newAPICommandClient(root)
 
 			if err := client.PromoteBaseline(cmd.Context(), args[0], jobID); err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("promote baseline: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("promote baseline: %w", err)}
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Baseline for %q set to job %s.\n", args[0], jobID)
@@ -358,8 +360,8 @@ func newProjectPromoteCmd(root *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func printProject(cmd *cobra.Command, p apiclient.RemoteProject, format outputFormat) error {
-	if format == outputFormatJSON {
+func printProject(cmd *cobra.Command, p apiclient.RemoteProject, format render.Format) error {
+	if format == render.FormatJSON {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 

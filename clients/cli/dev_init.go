@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 )
 
 type devInitEnvelope struct {
@@ -188,21 +190,21 @@ func runDevInitCommand(
 
 	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	configPath, guidePath, created, err := scaffoldProjectBootstrap(projectRoot, root.apiURL)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	format, formatErr := root.outputFormat()
+	format, formatErr := root.renderFormat()
 	if formatErr != nil {
-		return exitCodeError{Code: 2, Err: formatErr}
+		return exitcode.Error{Code: 2, Err: formatErr}
 	}
 
 	if !created {
-		if format == outputFormatJSON {
+		if format == render.FormatJSON {
 			return writeDevInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, false)
 		}
 
@@ -213,7 +215,7 @@ func runDevInitCommand(
 		return nil
 	}
 
-	if format == outputFormatJSON {
+	if format == render.FormatJSON {
 		return writeDevInitJSON(cmd.OutOrStdout(), projectRoot, configPath, guidePath, true)
 	}
 

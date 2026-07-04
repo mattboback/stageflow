@@ -5,10 +5,14 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 )
 
 func newReportCmd(root *rootOptions) *cobra.Command {
-	var reportOpts reportCommandOptions
+	var reportOpts render.ReportFlags
 
 	cmd := &cobra.Command{
 		Use:                   "report <job-id>",
@@ -16,42 +20,42 @@ func newReportCmd(root *rootOptions) *cobra.Command {
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if reportOpts.maxIssues < 0 {
-				return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
+			if reportOpts.MaxIssues < 0 {
+				return exitcode.Error{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 			}
 
 			client := newAPICommandClient(root)
 			jobID := args[0]
 
-			status, err := fetchJobStatus(cmd.Context(), client, jobID)
+			status, err := render.FetchJobStatus(cmd.Context(), client, jobID)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("fetch job status: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("fetch job status: %w", err)}
 			}
 
 			switch status.State {
-			case jobStateDone:
-			case jobStateFailed:
-				return exitCodeError{Code: 2, Err: fmt.Errorf("job failed: %s", status.Error)}
+			case apiclient.JobStateDone:
+			case apiclient.JobStateFailed:
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("job failed: %s", status.Error)}
 			default:
-				return exitCodeError{Code: 2, Err: fmt.Errorf("job is not completed yet: %s", status.State)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("job is not completed yet: %s", status.State)}
 			}
 
-			doc, err := fetchReport(cmd.Context(), client, jobID)
+			doc, err := render.FetchReport(cmd.Context(), client, jobID)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("fetch report: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("fetch report: %w", err)}
 			}
 
-			format, err := root.outputFormat()
+			format, err := root.renderFormat()
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
-			return wrapRenderError(
-				renderUnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.renderOptions(format)),
+			return render.WrapError(
+				render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.RenderOptions(format)),
 			)
 		},
 	}
-	bindReportFlags(cmd, &reportOpts, false)
+	render.BindReportFlags(cmd, &reportOpts, false)
 
 	return cmd
 }

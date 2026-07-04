@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func writeFile(t *testing.T, dir, name string, contents string) string {
@@ -26,16 +28,16 @@ func TestLoadAuthStateFile_HappyPath(t *testing.T) {
 	path := writeFile(t, tmp, "state.json", body)
 
 	got, err := loadAuthStateFile(path)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, got.Mode, "storage_state", "mode")
+	testsupport.RequireEqual(t, got.Mode, "storage_state", "mode")
 
 	if got.StorageState == nil {
 		t.Fatalf("StorageState is nil")
 	}
 
 	decoded, err := base64.StdEncoding.DecodeString(got.StorageState.ContentBase64)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if string(decoded) != body {
 		t.Fatalf("decoded body mismatch:\n got=%q\nwant=%q", string(decoded), body)
@@ -110,9 +112,9 @@ success:
 	path := writeFile(t, tmp, "recipe.yaml", yaml)
 
 	got, err := loadAuthRecipeFile(path)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, got.Mode, "form", "mode")
+	testsupport.RequireEqual(t, got.Mode, "form", "mode")
 
 	if got.Form == nil {
 		t.Fatal("Form is nil")
@@ -142,7 +144,7 @@ success:
 
 	// Round-trip through JSON to confirm it survives the wire shape.
 	wire, err := json.Marshal(got)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if !strings.Contains(string(wire), `"from_env":"STAGEFLOW_AUTH_USER"`) {
 		t.Fatalf("from_env reference missing from JSON: %s", wire)
@@ -163,9 +165,9 @@ func TestLoadAuthRecipeFile_JSONForm(t *testing.T) {
 	path := writeFile(t, tmp, "recipe.json", body)
 
 	got, err := loadAuthRecipeFile(path)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, got.Mode, "form", "mode")
+	testsupport.RequireEqual(t, got.Mode, "form", "mode")
 
 	if got.Form.Steps[0]["value"] != "demo@example.com" {
 		t.Fatalf("expected literal string value, got %v", got.Form.Steps[0]["value"])
@@ -248,7 +250,7 @@ func TestLoadAuthInputFromFlags_MutuallyExclusive(t *testing.T) {
 
 func TestLoadAuthInputFromFlags_NeitherSet(t *testing.T) {
 	got, hasAuth, err := loadAuthInputFromFlags("", "")
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	if hasAuth {
 		t.Fatal("expected hasAuth=false when no flags set")

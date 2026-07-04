@@ -1,8 +1,9 @@
-package main
+package render
 
 import (
 	"testing"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
@@ -71,9 +72,9 @@ func TestFilterBySeverity(t *testing.T) {
 	}
 
 	filtered := filterBySeverity(issues, []string{"critical"})
-	requireEqual(t, len(filtered), 2, "len(filtered)")
-	requireEqual(t, filtered[0].Id, "a", "filtered[0].Id")
-	requireEqual(t, filtered[1].Id, "d", "filtered[1].Id")
+	testsupport.RequireEqual(t, len(filtered), 2, "len(filtered)")
+	testsupport.RequireEqual(t, filtered[0].Id, "a", "filtered[0].Id")
+	testsupport.RequireEqual(t, filtered[1].Id, "d", "filtered[1].Id")
 }
 
 func TestFilterBySeverity_MultipleLevels(t *testing.T) {
@@ -84,9 +85,9 @@ func TestFilterBySeverity_MultipleLevels(t *testing.T) {
 	}
 
 	filtered := filterBySeverity(issues, []string{"critical", "serious"})
-	requireEqual(t, len(filtered), 2, "len(filtered)")
-	requireEqual(t, filtered[0].Id, "a", "filtered[0].Id")
-	requireEqual(t, filtered[1].Id, "b", "filtered[1].Id")
+	testsupport.RequireEqual(t, len(filtered), 2, "len(filtered)")
+	testsupport.RequireEqual(t, filtered[0].Id, "a", "filtered[0].Id")
+	testsupport.RequireEqual(t, filtered[1].Id, "b", "filtered[1].Id")
 }
 
 func TestFilterBySeverity_Empty(t *testing.T) {
@@ -95,7 +96,7 @@ func TestFilterBySeverity_Empty(t *testing.T) {
 	}
 
 	filtered := filterBySeverity(issues, nil)
-	requireEqual(t, len(filtered), 1, "len(filtered)")
+	testsupport.RequireEqual(t, len(filtered), 1, "len(filtered)")
 }
 
 func TestFilterByCategory(t *testing.T) {
@@ -110,9 +111,9 @@ func TestFilterByCategory(t *testing.T) {
 	}
 
 	filtered := filterByCategory(issues, []string{"accessibility"})
-	requireEqual(t, len(filtered), 2, "len(filtered)")
-	requireEqual(t, filtered[0].Id, "a", "filtered[0].Id")
-	requireEqual(t, filtered[1].Id, "c", "filtered[1].Id")
+	testsupport.RequireEqual(t, len(filtered), 2, "len(filtered)")
+	testsupport.RequireEqual(t, filtered[0].Id, "a", "filtered[0].Id")
+	testsupport.RequireEqual(t, filtered[1].Id, "c", "filtered[1].Id")
 }
 
 func TestFilterByCategory_Empty(t *testing.T) {
@@ -121,7 +122,7 @@ func TestFilterByCategory_Empty(t *testing.T) {
 	}
 
 	filtered := filterByCategory(issues, nil)
-	requireEqual(t, len(filtered), 1, "len(filtered)")
+	testsupport.RequireEqual(t, len(filtered), 1, "len(filtered)")
 }
 
 func TestHasIssuesAtOrAbove(t *testing.T) {
@@ -130,31 +131,31 @@ func TestHasIssuesAtOrAbove(t *testing.T) {
 		{Severity: report.IssueSeveritySerious},
 	}
 
-	matched, err := hasIssuesAtOrAbove(issues, "critical")
-	requireNoErr(t, err)
-	requireEqual(t, matched, false, "critical threshold")
+	matched, err := HasIssuesAtOrAbove(issues, "critical")
+	testsupport.RequireNoErr(t, err)
+	testsupport.RequireEqual(t, matched, false, "critical threshold")
 
-	matched, err = hasIssuesAtOrAbove(issues, "serious")
-	requireNoErr(t, err)
-	requireEqual(t, matched, true, "serious threshold")
+	matched, err = HasIssuesAtOrAbove(issues, "serious")
+	testsupport.RequireNoErr(t, err)
+	testsupport.RequireEqual(t, matched, true, "serious threshold")
 
-	matched, err = hasIssuesAtOrAbove(issues, "minor")
-	requireNoErr(t, err)
-	requireEqual(t, matched, true, "minor threshold")
+	matched, err = HasIssuesAtOrAbove(issues, "minor")
+	testsupport.RequireNoErr(t, err)
+	testsupport.RequireEqual(t, matched, true, "minor threshold")
 
-	matched, err = hasIssuesAtOrAbove(issues, "info")
-	requireNoErr(t, err)
-	requireEqual(t, matched, true, "info threshold")
+	matched, err = HasIssuesAtOrAbove(issues, "info")
+	testsupport.RequireNoErr(t, err)
+	testsupport.RequireEqual(t, matched, true, "info threshold")
 }
 
 func TestHasIssuesAtOrAbove_NoIssues(t *testing.T) {
-	matched, err := hasIssuesAtOrAbove(nil, "critical")
-	requireNoErr(t, err)
-	requireEqual(t, matched, false, "nil issues")
+	matched, err := HasIssuesAtOrAbove(nil, "critical")
+	testsupport.RequireNoErr(t, err)
+	testsupport.RequireEqual(t, matched, false, "nil issues")
 }
 
 func TestHasIssuesAtOrAbove_InvalidSeverity(t *testing.T) {
-	_, err := hasIssuesAtOrAbove(nil, "warning")
+	_, err := HasIssuesAtOrAbove(nil, "warning")
 	if err == nil {
 		t.Fatal("expected invalid severity error")
 	}
@@ -175,9 +176,9 @@ func TestNormalizeCategories_Invalid(t *testing.T) {
 }
 
 func TestSplitCSV(t *testing.T) {
-	requireDeepEqual(t, splitCSV("critical,serious"), []string{"critical", "serious"}, "basic")
-	requireDeepEqual(t, splitCSV(" critical , serious "), []string{"critical", "serious"}, "with spaces")
-	requireDeepEqual(t, splitCSV(""), []string(nil), "empty")
-	requireDeepEqual(t, splitCSV("  "), []string(nil), "whitespace")
-	requireDeepEqual(t, splitCSV("single"), []string{"single"}, "single value")
+	testsupport.RequireDeepEqual(t, splitCSV("critical,serious"), []string{"critical", "serious"}, "basic")
+	testsupport.RequireDeepEqual(t, splitCSV(" critical , serious "), []string{"critical", "serious"}, "with spaces")
+	testsupport.RequireDeepEqual(t, splitCSV(""), []string(nil), "empty")
+	testsupport.RequireDeepEqual(t, splitCSV("  "), []string(nil), "whitespace")
+	testsupport.RequireDeepEqual(t, splitCSV("single"), []string{"single"}, "single value")
 }

@@ -1,4 +1,4 @@
-package main
+package render
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestRenderScanners_DefaultTextOutput(t *testing.T) {
@@ -19,8 +20,8 @@ func TestRenderScanners_DefaultTextOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderScanners(&buf, response, outputFormatText)
-	requireNoErr(t, err)
+	err := Scanners(&buf, response, FormatText)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "Scanners (enabled 1/1)") {
@@ -43,8 +44,8 @@ func TestRenderScanners_JSONOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderScanners(&buf, response, outputFormatJSON)
-	requireNoErr(t, err)
+	err := Scanners(&buf, response, FormatJSON)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	if !strings.Contains(output, "\"scanners\"") {
@@ -73,8 +74,8 @@ func TestRenderScanners_MarkdownOutput(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := renderScanners(&buf, response, outputFormatMarkdown)
-	requireNoErr(t, err)
+	err := Scanners(&buf, response, FormatMarkdown)
+	testsupport.RequireNoErr(t, err)
 
 	output := buf.String()
 	for _, want := range []string{

@@ -12,6 +12,8 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/diffrender"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
@@ -79,7 +81,7 @@ func runDiffCommand(
 ) error {
 	baselineEnv, err := loadReportFile(baselinePath)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("baseline: %w", err)}
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("baseline: %w", err)}
 	}
 
 	currentEnv, currentJobID, currentFile, err := loadCurrentDiffTarget(
@@ -91,7 +93,7 @@ func runDiffCommand(
 		noStream,
 	)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
@@ -99,23 +101,23 @@ func runDiffCommand(
 
 	regressed, err := evaluateDiffRegression(d, failOnRegression, failOnNew)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	d.Regressed = regressed
 
-	format, err := root.outputFormat()
+	format, err := root.renderFormat()
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	err = renderDiff(cmd.OutOrStdout(), d, format)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	if regressed {
-		return exitCodeError{Code: 1}
+		return exitcode.Error{Code: 1}
 	}
 
 	return nil
@@ -124,15 +126,15 @@ func runDiffCommand(
 func loadCurrentDiffTarget(
 	cmd *cobra.Command,
 	root *rootOptions,
-	baselineEnv reportEnvelope,
+	baselineEnv render.ReportEnvelope,
 	currentTarget string,
 	timeout time.Duration,
 	noStream bool,
-) (reportEnvelope, string, string, error) {
+) (render.ReportEnvelope, string, string, error) {
 	if !diffrender.IsRemoteTarget(currentTarget) {
 		currentEnv, err := loadReportFile(currentTarget)
 		if err != nil {
-			return reportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
+			return render.ReportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
 		}
 
 		return currentEnv, "", currentTarget, nil
@@ -143,7 +145,7 @@ func loadCurrentDiffTarget(
 		if statErr == nil && !info.IsDir() {
 			currentEnv, err := loadReportFile(currentTarget)
 			if err != nil {
-				return reportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
+				return render.ReportEnvelope{}, "", "", fmt.Errorf("current: %w", err)
 			}
 
 			return currentEnv, "", currentTarget, nil
@@ -152,7 +154,7 @@ func loadCurrentDiffTarget(
 
 	currentEnv, jobID, err := runLiveDiffScan(cmd, root, baselineEnv, currentTarget, timeout, noStream)
 	if err != nil {
-		return reportEnvelope{}, "", "", err
+		return render.ReportEnvelope{}, "", "", err
 	}
 
 	return currentEnv, jobID, "", nil
@@ -167,19 +169,19 @@ func isExplicitHTTPURL(target string) bool {
 func runLiveDiffScan(
 	cmd *cobra.Command,
 	root *rootOptions,
-	baselineEnv reportEnvelope,
+	baselineEnv render.ReportEnvelope,
 	currentTarget string,
 	timeout time.Duration,
 	noStream bool,
-) (reportEnvelope, string, error) {
+) (render.ReportEnvelope, string, error) {
 	urls, err := urlcheck.NormalizeTargets([]string{currentTarget})
 	if err != nil {
-		return reportEnvelope{}, "", err
+		return render.ReportEnvelope{}, "", err
 	}
 
 	validateErr := urlcheck.ValidateLocalTargets(root.apiURL, urls)
 	if validateErr != nil {
-		return reportEnvelope{}, "", validateErr
+		return render.ReportEnvelope{}, "", validateErr
 	}
 
 	allowPrivateTargets := urlcheck.ContainsPrivateTargets(urls)
@@ -206,16 +208,16 @@ func runLiveDiffScan(
 		noStream,
 	)
 	if err != nil {
-		return reportEnvelope{}, "", err
+		return render.ReportEnvelope{}, "", err
 	}
 
-	return reportEnvelope{
-		Job:    jobMeta{ID: status.ID},
+	return render.ReportEnvelope{
+		Job:    render.JobMeta{ID: status.ID},
 		Report: doc,
 	}, status.ID, nil
 }
 
-func diffScanModules(env reportEnvelope) []string {
+func diffScanModules(env render.ReportEnvelope) []string {
 	modules := make([]string, 0, len(env.Report.Scanners))
 	for _, scanner := range env.Report.Scanners {
 		modules = append(modules, scanner.Id)
@@ -225,7 +227,7 @@ func diffScanModules(env reportEnvelope) []string {
 }
 
 func evaluateDiffRegression(d diffEnvelope, failOnRegression bool, failOnNew string) (bool, error) {
-	return diffrender.EvaluateRegression(d, failOnRegression, failOnNew, hasIssuesAtOrAbove)
+	return diffrender.EvaluateRegression(d, failOnRegression, failOnNew, render.HasIssuesAtOrAbove)
 }
 
 func isDiffRegressed(d diffEnvelope) bool {
@@ -236,7 +238,7 @@ func diffFromResult(r diff.Result, baselineFile, currentFile string) diffEnvelop
 	return diffrender.FromResult(r, baselineFile, currentFile)
 }
 
-func renderDiff(out io.Writer, d diffEnvelope, format outputFormat) error {
+func renderDiff(out io.Writer, d diffEnvelope, format render.Format) error {
 	f, err := diffRenderFormat(format)
 	if err != nil {
 		return err
@@ -245,32 +247,32 @@ func renderDiff(out io.Writer, d diffEnvelope, format outputFormat) error {
 	return diffrender.Render(out, d, f)
 }
 
-func diffRenderFormat(format outputFormat) (diffrender.Format, error) {
+func diffRenderFormat(format render.Format) (diffrender.Format, error) {
 	switch format {
-	case outputFormatJSON:
+	case render.FormatJSON:
 		return diffrender.FormatJSON, nil
-	case outputFormatText:
+	case render.FormatText:
 		return diffrender.FormatText, nil
-	case outputFormatMarkdown:
+	case render.FormatMarkdown:
 		return diffrender.FormatMarkdown, nil
 	default:
 		return 0, fmt.Errorf("unsupported output format %q", format)
 	}
 }
 
-func loadReportFile(path string) (reportEnvelope, error) {
+func loadReportFile(path string) (render.ReportEnvelope, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return reportEnvelope{}, fmt.Errorf("read %s: %w", path, err)
+		return render.ReportEnvelope{}, fmt.Errorf("read %s: %w", path, err)
 	}
 
-	data = sanitizeScoreGrade(data)
+	data = render.SanitizeScoreGrade(data)
 
-	var env reportEnvelope
+	var env render.ReportEnvelope
 
 	err = json.Unmarshal(data, &env)
 	if err != nil {
-		return reportEnvelope{}, fmt.Errorf("parse %s: %w", path, err)
+		return render.ReportEnvelope{}, fmt.Errorf("parse %s: %w", path, err)
 	}
 
 	return env, nil

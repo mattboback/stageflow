@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 )
 
 // authCaptureRunner is the indirection that lets tests replace the actual
@@ -61,16 +63,16 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := strings.TrimSpace(args[0])
 			if url == "" {
-				return exitCodeError{Code: 2, Err: errors.New("login URL must not be empty")}
+				return exitcode.Error{Code: 2, Err: errors.New("login URL must not be empty")}
 			}
 
 			if strings.TrimSpace(output) == "" {
-				return exitCodeError{Code: 2, Err: errors.New("--output is required")}
+				return exitcode.Error{Code: 2, Err: errors.New("--output is required")}
 			}
 
 			absOut, err := filepath.Abs(output)
 			if err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("resolve --output path: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("resolve --output path: %w", err)}
 			}
 
 			if dir := filepath.Dir(absOut); dir != "" {
@@ -78,7 +80,7 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 				// directory we created ourselves. Existing parent dirs are left
 				// alone.
 				if mkErr := os.MkdirAll(dir, 0o700); mkErr != nil {
-					return exitCodeError{Code: 2, Err: fmt.Errorf("create output directory: %w", mkErr)}
+					return exitcode.Error{Code: 2, Err: fmt.Errorf("create output directory: %w", mkErr)}
 				}
 			}
 
@@ -88,7 +90,7 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 
 			info, statErr := os.Stat(absOut)
 			if statErr != nil {
-				return exitCodeError{
+				return exitcode.Error{
 					Code: 2,
 					Err: fmt.Errorf(
 						"playwright open exited but did not write %s: %w",
@@ -99,7 +101,7 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 			}
 
 			if info.Size() == 0 {
-				return exitCodeError{
+				return exitcode.Error{
 					Code: 2,
 					Err: fmt.Errorf(
 						"playwright open wrote an empty storage-state file at %s; "+
@@ -110,7 +112,7 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 			}
 
 			if chmodErr := os.Chmod(absOut, 0o600); chmodErr != nil {
-				return exitCodeError{
+				return exitcode.Error{
 					Code: 2,
 					Err:  fmt.Errorf("set 0600 permissions on %s: %w", absOut, chmodErr),
 				}
@@ -153,7 +155,7 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 // the browser as if they had run npx directly.
 func defaultAuthCaptureRunner(cmd *cobra.Command, url, output string, extraArgs []string) error {
 	if _, err := exec.LookPath("npx"); err != nil {
-		return exitCodeError{
+		return exitcode.Error{
 			Code: 2,
 			Err: errors.New(
 				"npx not found on PATH. Install Node.js (>= 22) and Playwright " +
@@ -180,7 +182,7 @@ func defaultAuthCaptureRunner(cmd *cobra.Command, url, output string, extraArgs 
 	sub.Stderr = cmd.ErrOrStderr()
 
 	if err := sub.Run(); err != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("`npx playwright open` exited with error: %w", err)}
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("`npx playwright open` exited with error: %w", err)}
 	}
 
 	return nil

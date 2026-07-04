@@ -5,16 +5,18 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestDetectProjectBootstrapSuggestion_UsesPlaceholderWhenNoCommandFound(t *testing.T) {
 	root := t.TempDir()
 
 	suggestion, err := detectProjectBootstrapSuggestion(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(t, suggestion.Command, scaffoldDevStartCommandPlaceholder, "suggestion.Command")
-	requireEqual(
+	testsupport.RequireEqual(t, suggestion.Command, scaffoldDevStartCommandPlaceholder, "suggestion.Command")
+	testsupport.RequireEqual(
 		t,
 		suggestion.CommandSource,
 		"set `dev.start.cmd` to the command that makes your app reachable locally",
@@ -31,32 +33,32 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 
 	justfile := filepath.Join(root, "justfile")
 	err := os.WriteFile(justfile, []byte("run SERVICE:\n\t@true\n"), 0o600)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	frontendDir := filepath.Join(root, "frontend")
 	err = os.MkdirAll(frontendDir, 0o750)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	err = os.WriteFile(
 		filepath.Join(frontendDir, "package.json"),
 		[]byte(`{"scripts":{"dev":"vite dev"}}`),
 		0o600,
 	)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	err = os.WriteFile(filepath.Join(frontendDir, "vite.config.ts"), []byte("export default {}\n"), 0o600)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
 	suggestion, err := detectProjectBootstrapSuggestion(root)
-	requireNoErr(t, err)
+	testsupport.RequireNoErr(t, err)
 
-	requireEqual(
+	testsupport.RequireEqual(
 		t,
 		suggestion.Command,
 		"just run frontend", // stale-vocab-ok: tests generic fallback
 		"suggestion.Command",
 	) // stale-vocab-ok: tests generic fallback
-	requireEqual(t, suggestion.URL, "http://127.0.0.1:5173", "suggestion.URL")
+	testsupport.RequireEqual(t, suggestion.URL, "http://127.0.0.1:5173", "suggestion.URL")
 
 	if suggestion.IsPlaceholder {
 		t.Fatalf("expected inferred command, got placeholder")

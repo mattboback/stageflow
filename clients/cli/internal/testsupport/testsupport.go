@@ -1,14 +1,20 @@
-package main
+// Package testsupport provides shared fixtures and assertion helpers for CLI tests.
+package testsupport
 
 import (
+	"reflect"
+	"testing"
+
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
-func stubEnv(string) string {
+// StubEnv is a getenv stand-in that resolves every variable to empty.
+func StubEnv(string) string {
 	return ""
 }
 
-func sampleReport(jobID string) report.UnifiedReportV2 {
+// SampleReport returns a small two-issue unified report for the given job ID.
+func SampleReport(jobID string) report.UnifiedReportV2 {
 	baseURL := "https://example.com"
 	duration := 47000.0
 	score := 72
@@ -43,7 +49,7 @@ func sampleReport(jobID string) report.UnifiedReportV2 {
 		Scanners: []report.ScannerSummary{
 			{
 				Id:         "axe",
-				Name:       stringPtr("Axe"),
+				Name:       StringPtr("Axe"),
 				Status:     report.ScannerStatusSuccess,
 				IssueCount: &criticalIssues,
 			},
@@ -64,7 +70,7 @@ func sampleReport(jobID string) report.UnifiedReportV2 {
 				Severity:     report.IssueSeverityCritical,
 				Title:        "Critical issue",
 				Description:  "Text contrast is too low.",
-				HelpUrl:      stringPtr("https://example.com/help/color-contrast"),
+				HelpUrl:      StringPtr("https://example.com/help/color-contrast"),
 				PageId:       "page-1",
 				PageUrl:      "https://example.com",
 				ElementCount: 1,
@@ -84,6 +90,42 @@ func sampleReport(jobID string) report.UnifiedReportV2 {
 	}
 }
 
-func stringPtr(value string) *string {
+func StringPtr(value string) *string {
 	return &value
+}
+
+func RequireNoErr(t *testing.T, err error) {
+	t.Helper()
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func RequireEqual[T comparable](t *testing.T, got, want T, label string) {
+	t.Helper()
+
+	if got != want {
+		t.Fatalf("%s = %v, want %v", label, got, want)
+	}
+}
+
+func RequireDeepEqual(t *testing.T, got, want any, label string) {
+	t.Helper()
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("%s = %#v, want %#v", label, got, want)
+	}
+}
+
+func RequireBoolPtr(t *testing.T, got *bool, want bool, label string) {
+	t.Helper()
+
+	if got == nil {
+		t.Fatalf("%s = nil, want %v", label, want)
+	}
+
+	if *got != want {
+		t.Fatalf("%s = %v, want %v", label, *got, want)
+	}
 }

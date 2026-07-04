@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestNewScanCmd_DefaultsScreenshotCaptureOn(t *testing.T) {
@@ -13,7 +15,7 @@ func TestNewScanCmd_DefaultsScreenshotCaptureOn(t *testing.T) {
 		t.Fatal("missing --screenshot flag")
 	}
 
-	requireEqual(t, flag.DefValue, "true", "screenshot default")
+	testsupport.RequireEqual(t, flag.DefValue, "true", "screenshot default")
 }
 
 func TestInterpretProjectDiffError_MissingBaseline(t *testing.T) {
@@ -26,8 +28,8 @@ func TestInterpretProjectDiffError_MissingBaseline(t *testing.T) {
 		t.Fatalf("expected missing-baseline error to match")
 	}
 
-	requireEqual(t, state.baseline.Status, projectBaselineStatusMissing, "state.baseline.Status")
-	requireEqual(
+	testsupport.RequireEqual(t, state.baseline.Status, projectBaselineStatusMissing, "state.baseline.Status")
+	testsupport.RequireEqual(
 		t,
 		state.baseline.PromoteCommand,
 		"Promote this scan: stageflow project promote demo-site --job-id job-123",
@@ -45,8 +47,8 @@ func TestInterpretProjectDiffError_CurrentBaseline(t *testing.T) {
 		t.Fatalf("expected current-baseline error to match")
 	}
 
-	requireEqual(t, state.baseline.Status, projectBaselineStatusCurrent, "state.baseline.Status")
-	requireEqual(
+	testsupport.RequireEqual(t, state.baseline.Status, projectBaselineStatusCurrent, "state.baseline.Status")
+	testsupport.RequireEqual(
 		t,
 		state.baseline.Message,
 		"This scan is the current baseline. Run a new scan to see a diff.",

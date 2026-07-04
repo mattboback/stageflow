@@ -10,7 +10,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
@@ -160,8 +162,8 @@ func runDevScanCommand(
 	getenv getenvFunc,
 	opts *devScanCmdOptions,
 ) error {
-	if opts.Report.maxIssues < 0 {
-		return exitCodeError{Code: 2, Err: errors.New("--max-issues must be >= 0")}
+	if opts.Report.MaxIssues < 0 {
+		return exitcode.Error{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 	}
 
 	projectArg := ""
@@ -171,12 +173,12 @@ func runDevScanCommand(
 
 	projectRoot, err := projectmode.ResolveProjectRoot(projectArg)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	cfg, cfgPath, bootstrapped, err := loadOrBootstrapProjectConfig(projectRoot, root.apiURL, cmd.OutOrStdout())
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	if bootstrapped {
@@ -187,14 +189,14 @@ func runDevScanCommand(
 
 	configReadyErr := ensureProjectConfigReady(projectRoot, cfgPath, cfg)
 	if configReadyErr != nil {
-		return exitCodeError{Code: 2, Err: configReadyErr}
+		return exitcode.Error{Code: 2, Err: configReadyErr}
 	}
 
 	apiURL, apiKey := resolveProjectStageflow(cmd, root, cfg, getenv)
 
 	totalTimeout, err := resolveProjectTimeout(cmd, opts.Timeout, cfg.Scan.Timeout)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
 	totalCtx, cancel := context.WithTimeout(cmd.Context(), totalTimeout)
@@ -202,18 +204,18 @@ func runDevScanCommand(
 
 	proc, cleanup, err := runProjectDev(totalCtx, projectRoot, cfg.Dev, cmd.ErrOrStderr())
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 	defer cleanup()
 
 	readyErr := waitForReady(totalCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
 	if readyErr != nil {
-		return exitCodeError{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
 	}
 
 	remaining := remainingDuration(totalCtx)
 	if remaining <= 0 {
-		return exitCodeError{Code: 2, Err: errors.New("timed out before scan could start")}
+		return exitcode.Error{Code: 2, Err: errors.New("timed out before scan could start")}
 	}
 
 	status, doc, err := runProjectScan(
@@ -226,17 +228,17 @@ func runDevScanCommand(
 		opts.NoStream,
 	)
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	format, err := root.outputFormat()
+	format, err := root.renderFormat()
 	if err != nil {
-		return exitCodeError{Code: 2, Err: err}
+		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	renderErr := renderUnifiedReport(cmd.OutOrStdout(), apiURL, status, doc, opts.Report.renderOptions(format))
+	renderErr := render.UnifiedReport(cmd.OutOrStdout(), apiURL, status, doc, opts.Report.RenderOptions(format))
 	if renderErr != nil {
-		return wrapRenderError(renderErr)
+		return render.WrapError(renderErr)
 	}
 
 	return nil

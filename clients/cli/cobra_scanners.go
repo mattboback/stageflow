@@ -6,6 +6,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/render"
 )
 
 func newScannersCmd(root *rootOptions) *cobra.Command {
@@ -19,17 +21,17 @@ func newScannersCmd(root *rootOptions) *cobra.Command {
 
 			var response apiclient.ScannersResponse
 			if err := client.GetJSON(cmd.Context(), "/api/v1/scanners", &response); err != nil {
-				return exitCodeError{Code: 2, Err: fmt.Errorf("fetch scanners: %w", err)}
+				return exitcode.Error{Code: 2, Err: fmt.Errorf("fetch scanners: %w", err)}
 			}
 
-			format, err := root.outputFormat()
+			format, err := root.renderFormat()
 			if err != nil {
-				return exitCodeError{Code: 2, Err: err}
+				return exitcode.Error{Code: 2, Err: err}
 			}
 
-			renderErr := renderScanners(cmd.OutOrStdout(), response, format)
+			renderErr := render.Scanners(cmd.OutOrStdout(), response, format)
 			if renderErr != nil {
-				return exitCodeError{Code: 2, Err: renderErr}
+				return exitcode.Error{Code: 2, Err: renderErr}
 			}
 
 			return nil
