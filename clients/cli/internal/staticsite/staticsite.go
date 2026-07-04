@@ -134,6 +134,12 @@ func packageDirectory(dir string) (Target, error) {
 }
 
 func writeDirArchive(out io.Writer, dir string) (bool, error) {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return false, fmt.Errorf("open %s: %w", dir, err)
+	}
+	defer func() { _ = root.Close() }()
+
 	zw := zip.NewWriter(out)
 	hasIndex := false
 	fileCount := 0
@@ -157,32 +163,13 @@ func writeDirArchive(out io.Writer, dir string) (bool, error) {
 			return nil
 		}
 
-		rel, relErr := filepath.Rel(dir, path)
-		if relErr != nil {
-			return relErr
+		isIndex, addErr := addZipEntry(root, zw, dir, path)
+		if addErr != nil {
+			return addErr
 		}
 
-		name := filepath.ToSlash(rel)
-		if name == "index.html" {
+		if isIndex {
 			hasIndex = true
-		}
-
-		writer, createErr := zw.Create(name)
-		if createErr != nil {
-			return createErr
-		}
-
-		file, openErr := os.Open(path) // #nosec G304 -- walking a user-supplied directory is the point
-		if openErr != nil {
-			return openErr
-		}
-
-		_, copyErr := io.Copy(writer, file)
-
-		_ = file.Close()
-
-		if copyErr != nil {
-			return copyErr
 		}
 
 		fileCount++
@@ -201,9 +188,41 @@ func writeDirArchive(out io.Writer, dir string) (bool, error) {
 		return false, errors.New(dir + " contains no files to scan")
 	}
 
-	if err := zw.Close(); err != nil {
+	if err = zw.Close(); err != nil {
 		return false, fmt.Errorf("zip %s: %w", dir, err)
 	}
 
 	return hasIndex, nil
+}
+
+// addZipEntry writes the file at path (relative to root/dir) into zw, using
+// the root-scoped Open to resolve it safely if a symlink swap races the walk.
+// It reports whether the entry is the site's root index.html.
+func addZipEntry(root *os.Root, zw *zip.Writer, dir, path string) (bool, error) {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return false, err
+	}
+
+	name := filepath.ToSlash(rel)
+
+	writer, err := zw.Create(name)
+	if err != nil {
+		return false, err
+	}
+
+	file, err := root.Open(rel)
+	if err != nil {
+		return false, err
+	}
+
+	_, copyErr := io.Copy(writer, file)
+
+	_ = file.Close()
+
+	if copyErr != nil {
+		return false, copyErr
+	}
+
+	return name == "index.html", nil
 }

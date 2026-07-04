@@ -49,7 +49,7 @@ func (c *Client) SubmitZipJob(
 	defer func() { _ = resp.Body.Close() }()
 
 	var out SubmitJobResponse
-	if err := decodeJSONResponse(resp, &out); err != nil {
+	if err = decodeJSONResponse(resp, &out); err != nil {
 		return SubmitJobResponse{}, err
 	}
 
@@ -90,17 +90,17 @@ func writeZipUploadParts(
 		return err
 	}
 
-	if _, err := io.Copy(part, archive); err != nil {
+	if _, err = io.Copy(part, archive); err != nil {
 		return err
 	}
 
 	if len(modules) > 0 {
-		if err := writer.WriteField("modules", strings.Join(modules, ",")); err != nil {
+		if err = writer.WriteField("modules", strings.Join(modules, ",")); err != nil {
 			return err
 		}
 	}
 
-	if err := writer.WriteField("screenshot", strconv.FormatBool(screenshot)); err != nil {
+	if err = writer.WriteField("screenshot", strconv.FormatBool(screenshot)); err != nil {
 		return err
 	}
 
