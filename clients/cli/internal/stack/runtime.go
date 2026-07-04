@@ -131,6 +131,7 @@ func Status(ctx context.Context, opts Options, stdout, stderr io.Writer, jsonOut
 	}
 
 	extra := []string{}
+
 	if jsonOutput {
 		extra = append(extra, "--format", "json")
 	}
