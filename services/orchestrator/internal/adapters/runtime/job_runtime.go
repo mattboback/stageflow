@@ -158,6 +158,10 @@ func (r *JobRuntime) StartExtractionWorker(
 				Type:        "bind",
 				Source:      workspaceVolume.Mountpoint,
 				Destination: "/workspace",
+				// The extractor image runs as a non-root user; the fresh
+				// volume mountpoint is owned by container-root, so have
+				// Podman chown it to the extractor at start.
+				ChownToContainerUser: true,
 			},
 		},
 		Labels: map[string]string{

@@ -37,6 +37,11 @@ type VolumeMount struct {
 	Source      string `json:"source,omitempty"`
 	Destination string `json:"destination"`
 	ReadOnly    bool   `json:"read_only,omitempty"`
+	// ChownToContainerUser adds Podman's "U" mount option, which recursively
+	// chowns the mount source to the container's runtime user at start. Needed
+	// when a non-root container user must write to a freshly created volume,
+	// whose mountpoint is otherwise owned by container-root.
+	ChownToContainerUser bool `json:"chown_to_container_user,omitempty"`
 }
 
 // ContainerCreateResponse captures the Podman create result (container ID plus warnings).
@@ -126,6 +131,10 @@ func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 
 			if m.ReadOnly {
 				opts = append(opts, "ro")
+			}
+
+			if m.ChownToContainerUser {
+				opts = append(opts, "U")
 			}
 
 			if len(opts) > 0 {
