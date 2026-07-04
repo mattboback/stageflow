@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the same `STAGEFLOW_PROTECTED_HOST` production-safety guard `just`
   enforces
 
+### Fixed
+
+- The text-format issue renderer printed `ScannerData` as a single-line raw
+  JSON blob (`Details: {"missing":[...],"present":[]}`); it's now pretty-
+  printed as an indented block matching the rest of the human-readable
+  output
+
 ### Removed
 
 - Internal QA helpers that weren't wired into any `just` or CI target: the
