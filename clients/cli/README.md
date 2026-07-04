@@ -23,11 +23,12 @@ go build -o stageflow .
 ./stageflow version
 ```
 
-## The three ways to scan
+## The ways to scan
 
 | Command | What it scans | When to use it |
 | --- | --- | --- |
 | `stageflow scan <url>` | Any URL you give it | One-off checks, ad-hoc audits |
+| `stageflow scan <dir\|zip>` | A local build directory or ZIP, uploaded and served by the platform | Scan `./dist` with zero local setup |
 | `stageflow dev scan` | Your local dev server (started for you) | Local edit-then-check loops |
 | `stageflow project scan [slug]` | A project registered on the API, diffed against its baseline | CI regression gating |
 
@@ -65,9 +66,20 @@ stageflow scan https://example.com https://example.com/about --format markdown
 # Scan a local dev server
 stageflow scan http://127.0.0.1:5173 --allow-private-targets
 
+# Scan a local build output — zipped, uploaded, and served by the platform,
+# so this works against the hosted API with no local stack
+stageflow scan ./dist --api https://stageflow.org
+
+# An existing ZIP archive works too
+stageflow scan site.zip --api https://stageflow.org
+
 # Save JSON report to file
 stageflow scan https://example.com --format json > report.json
 ```
+
+Directory scans upload at most 100 MB (compressed), skip VCS metadata and
+`node_modules`, and expect an `index.html` at the top level of the directory
+or archive.
 
 `--scanner` is repeatable and comma-tolerant: `--scanner axe --scanner seo`
 and `--scanner axe,seo` are equivalent.

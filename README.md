@@ -46,6 +46,10 @@ stageflow scan https://example.com --fail-on serious --api https://stageflow.org
 
 # Scan several routes in one job.
 stageflow scan https://example.com https://example.com/about --format markdown --api https://stageflow.org
+
+# Scan a local build before it ships anywhere: the directory is zipped,
+# uploaded, and served by the platform — no dev server or public URL needed.
+stageflow scan ./dist --api https://stageflow.org
 ```
 
 Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API

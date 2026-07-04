@@ -37,7 +37,7 @@ stageflow [flags]
 * [stageflow docs](stageflow_docs.md)	 - Generate CLI documentation (Markdown)
 * [stageflow project](stageflow_project.md)	 - Manage remote projects and scan them against their baselines
 * [stageflow report](stageflow_report.md)	 - Fetch and display results for an existing job
-* [stageflow scan](stageflow_scan.md)	 - Scan one or more URLs and report the results
+* [stageflow scan](stageflow_scan.md)	 - Scan URLs, or upload a local build directory / ZIP archive and scan it
 * [stageflow scanners](stageflow_scanners.md)	 - List available scanners
 * [stageflow version](stageflow_version.md)	 - Print version information
 

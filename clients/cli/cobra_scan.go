@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -12,7 +13,9 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/staticsite"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
 func newScanCmd(root *rootOptions) *cobra.Command {
@@ -28,8 +31,12 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:                   "scan <url>...",
-		Short:                 "Scan one or more URLs and report the results",
+		Use:   "scan <url>... | scan <dir|zip>",
+		Short: "Scan URLs, or upload a local build directory / ZIP archive and scan it",
+		Long: "Scan one or more URLs and report the results.\n\n" +
+			"When the argument is a local directory or .zip file, it is uploaded to the\n" +
+			"API's ZIP intake and served from an isolated static server for scanning —\n" +
+			"no dev server or public URL required (e.g. `stageflow scan ./dist`).",
 		DisableFlagsInUseLine: true,
 		Args:                  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -100,6 +107,24 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		return exitcode.Error{Code: 2, Err: errors.New("--max-issues must be >= 0")}
 	}
 
+	pathTargets := 0
+
+	for _, arg := range args {
+		if staticsite.IsPathTarget(arg) {
+			pathTargets++
+		}
+	}
+
+	if pathTargets > 0 {
+		if len(args) > 1 {
+			return exitcode.Error{Code: 2, Err: errors.New(
+				"a directory/ZIP scan takes exactly one target and cannot be mixed with URLs",
+			)}
+		}
+
+		return runStaticScan(cmd, root, opts, args[0])
+	}
+
 	req, err := buildScanRequest(cmd, root, opts, args)
 	if err != nil {
 		return err
@@ -119,6 +144,16 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
+	return renderScanReport(cmd, root, opts, status, doc)
+}
+
+func renderScanReport(
+	cmd *cobra.Command,
+	root *rootOptions,
+	opts scanCommandOptions,
+	status apiclient.JobStatus,
+	doc report.UnifiedReportV2,
+) error {
 	format, err := root.renderFormat()
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
@@ -127,6 +162,58 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 	return render.WrapError(
 		render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, opts.reportOpts.RenderOptions(format)),
 	)
+}
+
+// runStaticScan uploads a local directory or ZIP archive to the platform's
+// ZIP intake and follows the job like a URL scan.
+func runStaticScan(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, path string) error {
+	if opts.authStatePath != "" || opts.authRecipePath != "" {
+		return exitcode.Error{Code: 2, Err: errors.New(
+			"--auth-state/--auth-recipe do not apply to directory/ZIP scans: the site is served statically",
+		)}
+	}
+
+	modules, err := normalizeScannerList(opts.scanners)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: err}
+	}
+
+	target, err := staticsite.Package(path)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: err}
+	}
+	defer target.Cleanup()
+
+	if !target.HasRootIndex {
+		fmt.Fprintf(
+			cmd.ErrOrStderr(),
+			"Warning: %s has no top-level index.html; the scan may find nothing to serve.\n",
+			path,
+		)
+	}
+
+	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
+
+	opCtx, cancel := context.WithTimeout(cmd.Context(), opts.timeout)
+	defer cancel()
+
+	resp, err := client.SubmitZipJob(opCtx, target.ZipPath, modules, opts.screenshot)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit zip job: %w", err)}
+	}
+
+	if resp.JobID == "" {
+		return exitcode.Error{Code: 2, Err: errors.New("submit zip job: missing job_id in response")}
+	}
+
+	fmt.Fprintf(cmd.ErrOrStderr(), "Uploaded %s\nJob submitted: %s\nWaiting for completion...\n", path, resp.JobID)
+
+	status, doc, err := waitForCompletedJobReport(opCtx, client, resp.JobID, cmd.ErrOrStderr(), opts.noStream)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: err}
+	}
+
+	return renderScanReport(cmd, root, opts, status, doc)
 }
 
 func buildScanRequest(

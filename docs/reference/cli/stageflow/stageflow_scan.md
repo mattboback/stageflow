@@ -1,9 +1,17 @@
 ## stageflow scan
 
-Scan one or more URLs and report the results
+Scan URLs, or upload a local build directory / ZIP archive and scan it
+
+### Synopsis
+
+Scan one or more URLs and report the results.
+
+When the argument is a local directory or .zip file, it is uploaded to the
+API's ZIP intake and served from an isolated static server for scanning —
+no dev server or public URL required (e.g. `stageflow scan ./dist`).
 
 ```
-stageflow scan <url>...
+stageflow scan <url>... | scan <dir|zip>
 ```
 
 ### Options
