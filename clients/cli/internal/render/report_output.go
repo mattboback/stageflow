@@ -17,7 +17,7 @@ import (
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
-type RenderOptions struct {
+type Options struct {
 	Format         Format
 	MaxIssues      int
 	MaxOccurrences int
@@ -118,7 +118,7 @@ func UnifiedReport(
 	apiBaseURL string,
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
-	opts RenderOptions,
+	opts Options,
 ) error {
 	selectedIssues, filters, err := ValidatedIssueSelection(doc.Issues, opts)
 	if err != nil {
@@ -146,7 +146,7 @@ func UnifiedReport(
 
 func ValidatedIssueSelection(
 	issues []report.IssueDetail,
-	opts RenderOptions,
+	opts Options,
 ) ([]report.IssueDetail, IssueFilters, error) {
 	if _, err := normalizeSeverities(opts.Severities); err != nil {
 		return nil, IssueFilters{}, err
@@ -184,7 +184,7 @@ func writeRenderedReport(
 	status apiclient.JobStatus,
 	doc report.UnifiedReportV2,
 	filters IssueFilters,
-	opts RenderOptions,
+	opts Options,
 ) error {
 	switch opts.Format {
 	case FormatText:

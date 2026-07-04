@@ -24,8 +24,8 @@ type ReportFlags struct {
 	GroupBy        string
 }
 
-func (o ReportFlags) RenderOptions(format Format) RenderOptions {
-	return RenderOptions{
+func (o ReportFlags) RenderOptions(format Format) Options {
+	return Options{
 		Format:         format,
 		MaxIssues:      o.MaxIssues,
 		MaxOccurrences: o.MaxOccurrences,

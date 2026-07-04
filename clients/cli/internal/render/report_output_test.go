@@ -29,7 +29,7 @@ func TestRenderUnifiedReport_JSONEnvelope(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatJSON,
 		MaxIssues: 1,
 	})
@@ -43,11 +43,26 @@ func TestRenderUnifiedReport_JSONEnvelope(t *testing.T) {
 
 	testsupport.RequireEqual(t, payload.Job.ID, status.ID, "payload.Job.ID")
 	testsupport.RequireEqual(t, payload.Job.State, status.State, "payload.Job.State")
-	testsupport.RequireEqual(t, payload.Job.CreatedAt, createdAt.UTC().Format(timeFormatRFC3339), "payload.Job.CreatedAt")
-	testsupport.RequireEqual(t, payload.Job.UpdatedAt, updatedAt.UTC().Format(timeFormatRFC3339), "payload.Job.UpdatedAt")
+	testsupport.RequireEqual(
+		t,
+		payload.Job.CreatedAt,
+		createdAt.UTC().Format(timeFormatRFC3339),
+		"payload.Job.CreatedAt",
+	)
+	testsupport.RequireEqual(
+		t,
+		payload.Job.UpdatedAt,
+		updatedAt.UTC().Format(timeFormatRFC3339),
+		"payload.Job.UpdatedAt",
+	)
 
 	testsupport.RequireEqual(t, payload.Links.Job, "http://localhost:8080/api/v1/jobs/job-123", "payload.Links.Job")
-	testsupport.RequireEqual(t, payload.Links.Results, "http://localhost:8080/api/v1/jobs/job-123/results", "payload.Links.Results")
+	testsupport.RequireEqual(
+		t,
+		payload.Links.Results,
+		"http://localhost:8080/api/v1/jobs/job-123/results",
+		"payload.Links.Results",
+	)
 
 	testsupport.RequireEqual(t, payload.Filters.Sort, issueSortOrder, "payload.Filters.Sort")
 	testsupport.RequireEqual(t, payload.Filters.MaxIssues, 1, "payload.Filters.MaxIssues")
@@ -81,7 +96,7 @@ func TestRenderUnifiedReport_Markdown(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatMarkdown,
 		MaxIssues: 10,
 	})
@@ -119,7 +134,7 @@ func TestRenderUnifiedReport_MarkdownNoFindingsNoArtifacts(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatMarkdown,
 		MaxIssues: 10,
 	})
@@ -171,7 +186,7 @@ func TestRenderUnifiedReport_MarkdownOccurrences(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:         FormatMarkdown,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
@@ -226,7 +241,7 @@ func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:         FormatText,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
@@ -268,7 +283,7 @@ func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:         FormatText,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
@@ -306,7 +321,7 @@ func TestRenderUnifiedReport_MarkdownOccurrences_FailureSummaryOnly(t *testing.T
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:         FormatMarkdown,
 		MaxIssues:      10,
 		MaxOccurrences: 3,
@@ -333,7 +348,7 @@ func TestRenderUnifiedReport_LighthouseScoresMarkdown(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatMarkdown,
 		MaxIssues: 10,
 	})
@@ -361,7 +376,7 @@ func TestRenderUnifiedReport_LighthouseScoresText(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatText,
 		MaxIssues: 10,
 	})
@@ -379,7 +394,7 @@ func TestRenderUnifiedReport_SummaryOnly(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:      FormatMarkdown,
 		MaxIssues:   10,
 		SummaryOnly: true,
@@ -406,7 +421,7 @@ func TestRenderUnifiedReport_SummaryOnlyText(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:      FormatText,
 		MaxIssues:   10,
 		SummaryOnly: true,
@@ -461,7 +476,7 @@ func TestRenderUnifiedReport_GroupByCategory(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatMarkdown,
 		MaxIssues: 10,
 		GroupBy:   "category",
@@ -514,7 +529,7 @@ func TestRenderUnifiedReport_GroupByScanner(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatMarkdown,
 		MaxIssues: 10,
 		GroupBy:   "scanner",
@@ -537,7 +552,7 @@ func TestRenderUnifiedReport_GroupByNone(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:    FormatMarkdown,
 		MaxIssues: 10,
 		GroupBy:   "none",
@@ -556,7 +571,7 @@ func TestRenderUnifiedReport_FailSeverity(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:       FormatText,
 		MaxIssues:    10,
 		FailSeverity: "critical",
@@ -579,7 +594,7 @@ func TestRenderUnifiedReport_FailSeverity_NoMatch(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:       FormatText,
 		MaxIssues:    10,
 		FailSeverity: "critical",
@@ -616,7 +631,7 @@ func TestRenderUnifiedReport_FailSeverity_UsesFilteredIssues(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:       FormatText,
 		MaxIssues:    10,
 		Categories:   []string{"seo"},
@@ -631,7 +646,7 @@ func TestRenderUnifiedReport_FailSeverity_Invalid(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:       FormatText,
 		MaxIssues:    10,
 		FailSeverity: "warning",
@@ -647,7 +662,7 @@ func TestRenderUnifiedReport_SeverityFilter(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:     FormatMarkdown,
 		MaxIssues:  10,
 		Severities: []string{"critical"},
@@ -697,7 +712,7 @@ func TestRenderUnifiedReport_CategoryFilter(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:     FormatMarkdown,
 		MaxIssues:  10,
 		Categories: []string{"accessibility"},
@@ -738,7 +753,7 @@ func TestRenderUnifiedReport_MaxOccurrencesTruncates(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, RenderOptions{
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
 		Format:         FormatMarkdown,
 		MaxIssues:      10,
 		MaxOccurrences: 2,
