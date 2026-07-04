@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking (config):** `.stageflow/config.yaml` is now `version: 2` — `stageflow.remote_project` renamed to `stageflow.project`, `stageflow.remote_api_url` removed (use `stageflow.api_url`, `--api`, or `STAGEFLOW_API_URL`), and `scan.scanners` is a YAML list instead of a comma string
 - **Breaking (JSON):** CLI envelope schemas `stageflow-cli/project-init@v1` and `project-doctor@v1` renamed to `dev-init@v1` and `dev-doctor@v1`; the doctor envelope's `hostedMemory` field is now `remoteProject` (with `slug` instead of `projectSlug`) and its `recommendedScanCommand` emits the new `stageflow project scan` grammar. `report@v1` and `project-scan@v1` are unchanged
 - `stageflow ai` is hidden from help output (still functional; experimental)
+- Internal: the CLI's flat `package main` (60 files) is decomposed into
+  focused internal packages (`render`, `projectmode`, `authintake`,
+  `exitcode`, `buildinfo`, `testsupport`); release ldflags now stamp
+  `internal/buildinfo` instead of `main`
 - Rewrote root and per-command help text around the three scan entry points (`scan <url>`, `dev scan`, `project scan`); exit-code semantics are unchanged (0 pass, 1 policy failure, 2 error)
 - `docs/PROJECT_MODE.md` renamed to `docs/dev-mode.md` to match the new `dev` namespace
 
