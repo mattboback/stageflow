@@ -13,7 +13,7 @@ worse?*
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
 real, interactive report in the browser. No account required.
 
-![StageFlow CLI scanning example.com and failing on serious issues](docs/images/demo.gif)
+![Clicking a bounding-box overlay on the Pages tab opens the issue detail card](docs/images/report-bounding-box.gif)
 
 Reviewing this codebase? The
 [evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
@@ -52,6 +52,8 @@ stageflow scan https://example.com https://example.com/about --format markdown -
 stageflow scan ./dist --api https://stageflow.org
 ```
 
+![StageFlow CLI streaming a live scan and printing the machine-readable JSON envelope](docs/images/demo.gif)
+
 Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API
 error. Release binaries are on
 [GitHub Releases](https://github.com/mattboback/stageflow/releases); the full
@@ -69,11 +71,9 @@ and JSON/HTML downloads.
 
 ![StageFlow report overview](docs/images/report-overview.png)
 
-Every flagged element is overlaid directly on a full-page screenshot — click a
-bounding box on the Pages tab to jump straight to that issue's fix guidance,
-WCAG references, and evidence:
-
-![Clicking a bounding-box overlay on the Pages tab opens the issue detail card](docs/images/report-bounding-box.gif)
+Every flagged element is overlaid directly on a full-page screenshot (see the
+GIF above) — click a bounding box on the Pages tab to jump straight to that
+issue's fix guidance, WCAG references, and evidence.
 
 The report shape is a versioned contract. To see it without running a scan,
 open the committed fixture
