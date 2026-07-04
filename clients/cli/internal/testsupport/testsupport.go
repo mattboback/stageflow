@@ -2,6 +2,8 @@
 package testsupport
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -128,4 +130,16 @@ func RequireBoolPtr(t *testing.T, got *bool, want bool, label string) {
 	if *got != want {
 		t.Fatalf("%s = %v, want %v", label, *got, want)
 	}
+}
+
+func WriteProjectConfig(t *testing.T, root string, yaml string) string {
+	t.Helper()
+
+	configDir := filepath.Join(root, ".stageflow")
+	RequireNoErr(t, os.MkdirAll(configDir, 0o750))
+
+	configPath := filepath.Join(configDir, "config.yaml")
+	RequireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o640))
+
+	return configPath
 }

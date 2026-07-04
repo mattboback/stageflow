@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"context"
@@ -14,12 +14,12 @@ import (
 	"time"
 )
 
-type runningProcess struct {
+type RunningProcess struct {
 	cmd    *exec.Cmd
 	waitCh chan error
 }
 
-func runCommandSteps(ctx context.Context, projectRoot string, steps [][]string, stderr io.Writer) error {
+func RunCommandSteps(ctx context.Context, projectRoot string, steps [][]string, stderr io.Writer) error {
 	for i, step := range steps {
 		if len(step) == 0 {
 			return fmt.Errorf("dev.up[%d] is empty", i)
@@ -42,12 +42,12 @@ func runCommandSteps(ctx context.Context, projectRoot string, steps [][]string, 
 	return nil
 }
 
-func startDevServer(
+func StartDevServer(
 	ctx context.Context,
 	projectRoot string,
-	cfg projectDevStartCfg,
+	cfg DevStartConfig,
 	stderr io.Writer,
-) (*runningProcess, error) {
+) (*RunningProcess, error) {
 	if len(cfg.Cmd) == 0 {
 		return nil, errors.New("dev.start.cmd is empty")
 	}
@@ -81,14 +81,14 @@ func startDevServer(
 		waitCh <- cmd.Wait()
 	}()
 
-	return &runningProcess{
+	return &RunningProcess{
 		cmd:    cmd,
 		waitCh: waitCh,
 	}, nil
 }
 
 //nolint:gocognit,gocyclo // Readiness checks involve timeouts, polling, and process lifecycle handling.
-func waitForReady(ctx context.Context, proc *runningProcess, cfg projectDevReadyCfg, stderr io.Writer) error {
+func WaitForReady(ctx context.Context, proc *RunningProcess, cfg DevReadyConfig, stderr io.Writer) error {
 	readyURL := strings.TrimSpace(cfg.URL)
 	if readyURL == "" {
 		return errors.New("dev.ready.url is empty")
@@ -96,7 +96,7 @@ func waitForReady(ctx context.Context, proc *runningProcess, cfg projectDevReady
 
 	timeout := 60 * time.Second
 
-	if d, ok, err := configDuration(cfg.Timeout); err != nil {
+	if d, ok, err := ConfigDuration(cfg.Timeout); err != nil {
 		return fmt.Errorf("dev.ready.timeout: %w", err)
 	} else if ok {
 		timeout = d
@@ -104,7 +104,7 @@ func waitForReady(ctx context.Context, proc *runningProcess, cfg projectDevReady
 
 	interval := 500 * time.Millisecond
 
-	if d, ok, err := configDuration(cfg.Interval); err != nil {
+	if d, ok, err := ConfigDuration(cfg.Interval); err != nil {
 		return fmt.Errorf("dev.ready.interval: %w", err)
 	} else if ok {
 		interval = d
@@ -162,7 +162,7 @@ func waitForReady(ctx context.Context, proc *runningProcess, cfg projectDevReady
 	}
 }
 
-func stopDevServer(proc *runningProcess, cfg projectDevStopCfg, stderr io.Writer) {
+func StopDevServer(proc *RunningProcess, cfg DevStopConfig, stderr io.Writer) {
 	if proc == nil || proc.cmd == nil || proc.cmd.Process == nil {
 		return
 	}
@@ -180,7 +180,7 @@ func stopDevServer(proc *runningProcess, cfg projectDevStopCfg, stderr io.Writer
 
 	timeout := 10 * time.Second
 
-	if d, ok, err := configDuration(cfg.Timeout); err != nil {
+	if d, ok, err := ConfigDuration(cfg.Timeout); err != nil {
 		fmt.Fprintf(stderr, "[dev] invalid stop.timeout %q: %v (defaulting to %v)\n", cfg.Timeout, err, timeout)
 	} else if ok {
 		timeout = d

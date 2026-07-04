@@ -1,4 +1,4 @@
-package main
+package authintake
 
 import (
 	"encoding/base64"
@@ -27,7 +27,7 @@ func TestLoadAuthStateFile_HappyPath(t *testing.T) {
 	body := `{"cookies":[{"name":"sid","value":"abc","domain":".example.com","path":"/","expires":-1,"httpOnly":true,"secure":true,"sameSite":"Lax"}],"origins":[]}`
 	path := writeFile(t, tmp, "state.json", body)
 
-	got, err := loadAuthStateFile(path)
+	got, err := LoadStateFile(path)
 	testsupport.RequireNoErr(t, err)
 
 	testsupport.RequireEqual(t, got.Mode, "storage_state", "mode")
@@ -49,7 +49,7 @@ func TestLoadAuthStateFile_HappyPath(t *testing.T) {
 }
 
 func TestLoadAuthStateFile_RejectsMissing(t *testing.T) {
-	_, err := loadAuthStateFile(filepath.Join(t.TempDir(), "no-such-file.json"))
+	_, err := LoadStateFile(filepath.Join(t.TempDir(), "no-such-file.json"))
 	if err == nil {
 		t.Fatal("expected error for missing file")
 	}
@@ -59,7 +59,7 @@ func TestLoadAuthStateFile_RejectsEmpty(t *testing.T) {
 	tmp := t.TempDir()
 	path := writeFile(t, tmp, "empty.json", "")
 
-	_, err := loadAuthStateFile(path)
+	_, err := LoadStateFile(path)
 	if err == nil || !strings.Contains(err.Error(), "is empty") {
 		t.Fatalf("expected empty error, got %v", err)
 	}
@@ -69,7 +69,7 @@ func TestLoadAuthStateFile_RejectsNonJSON(t *testing.T) {
 	tmp := t.TempDir()
 	path := writeFile(t, tmp, "bad.json", "not json at all")
 
-	_, err := loadAuthStateFile(path)
+	_, err := LoadStateFile(path)
 	if err == nil || !strings.Contains(err.Error(), "not valid JSON") {
 		t.Fatalf("expected JSON error, got %v", err)
 	}
@@ -81,7 +81,7 @@ func TestLoadAuthStateFile_RejectsOversize(t *testing.T) {
 	body := `{"cookies":[],"origins":[],"pad":"` + bigCookie + `"}`
 	path := writeFile(t, tmp, "huge.json", body)
 
-	_, err := loadAuthStateFile(path)
+	_, err := LoadStateFile(path)
 	if err == nil || !strings.Contains(err.Error(), "exceeds the") {
 		t.Fatalf("expected size-limit error, got %v", err)
 	}
@@ -111,7 +111,7 @@ success:
 
 	path := writeFile(t, tmp, "recipe.yaml", yaml)
 
-	got, err := loadAuthRecipeFile(path)
+	got, err := LoadRecipeFile(path)
 	testsupport.RequireNoErr(t, err)
 
 	testsupport.RequireEqual(t, got.Mode, "form", "mode")
@@ -164,7 +164,7 @@ func TestLoadAuthRecipeFile_JSONForm(t *testing.T) {
 }`
 	path := writeFile(t, tmp, "recipe.json", body)
 
-	got, err := loadAuthRecipeFile(path)
+	got, err := LoadRecipeFile(path)
 	testsupport.RequireNoErr(t, err)
 
 	testsupport.RequireEqual(t, got.Mode, "form", "mode")
@@ -178,7 +178,7 @@ func TestLoadAuthRecipeFile_RejectsMissingMode(t *testing.T) {
 	tmp := t.TempDir()
 	path := writeFile(t, tmp, "recipe.yaml", "login_url: https://x\nsteps: []\nsuccess: {type: load}\n")
 
-	_, err := loadAuthRecipeFile(path)
+	_, err := LoadRecipeFile(path)
 	if err == nil || !strings.Contains(err.Error(), `mode must be "form"`) {
 		t.Fatalf("expected mode error, got %v", err)
 	}
@@ -198,7 +198,7 @@ success:
 `
 	path := writeFile(t, tmp, "recipe.yaml", body)
 
-	_, err := loadAuthRecipeFile(path)
+	_, err := LoadRecipeFile(path)
 	if err == nil || !strings.Contains(err.Error(), "from_env") {
 		t.Fatalf("expected from_env validation error, got %v", err)
 	}
@@ -219,7 +219,7 @@ success:
 `
 	path := writeFile(t, tmp, "recipe.yaml", body)
 
-	_, err := loadAuthRecipeFile(path)
+	_, err := LoadRecipeFile(path)
 	if err == nil || !strings.Contains(err.Error(), "unexpected key") {
 		t.Fatalf("expected unexpected-key error, got %v", err)
 	}
@@ -235,21 +235,21 @@ success:
 `
 	path := writeFile(t, tmp, "recipe.yaml", body)
 
-	_, err := loadAuthRecipeFile(path)
+	_, err := LoadRecipeFile(path)
 	if err == nil || !strings.Contains(err.Error(), "at least one step") {
 		t.Fatalf("expected empty-steps error, got %v", err)
 	}
 }
 
 func TestLoadAuthInputFromFlags_MutuallyExclusive(t *testing.T) {
-	_, _, err := loadAuthInputFromFlags("/x", "/y")
+	_, _, err := LoadFromFlags("/x", "/y")
 	if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Fatalf("expected mutually-exclusive error, got %v", err)
 	}
 }
 
 func TestLoadAuthInputFromFlags_NeitherSet(t *testing.T) {
-	got, hasAuth, err := loadAuthInputFromFlags("", "")
+	got, hasAuth, err := LoadFromFlags("", "")
 	testsupport.RequireNoErr(t, err)
 
 	if hasAuth {

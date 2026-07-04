@@ -20,7 +20,7 @@ import (
 func resolveProjectStageflow(
 	cmd *cobra.Command,
 	root *rootOptions,
-	cfg projectConfig,
+	cfg projectmode.Config,
 	getenv getenvFunc,
 ) (string, string) {
 	apiURL := root.apiURL
@@ -41,7 +41,7 @@ func resolveProjectTimeout(cmd *cobra.Command, defaultTimeout time.Duration, raw
 		return defaultTimeout, nil
 	}
 
-	d, ok, durationErr := configDuration(rawTimeout)
+	d, ok, durationErr := projectmode.ConfigDuration(rawTimeout)
 	if durationErr != nil {
 		return 0, fmt.Errorf("invalid scan.timeout: %w", durationErr)
 	}
@@ -60,21 +60,21 @@ func resolveProjectTimeout(cmd *cobra.Command, defaultTimeout time.Duration, raw
 func runProjectDev(
 	ctx context.Context,
 	projectRoot string,
-	cfg projectDevCfg,
+	cfg projectmode.DevConfig,
 	stderr io.Writer,
-) (*runningProcess, func(), error) {
-	setupErr := runCommandSteps(ctx, projectRoot, cfg.Up, stderr)
+) (*projectmode.RunningProcess, func(), error) {
+	setupErr := projectmode.RunCommandSteps(ctx, projectRoot, cfg.Up, stderr)
 	if setupErr != nil {
 		return nil, func() {}, fmt.Errorf("dev setup failed: %w", setupErr)
 	}
 
-	proc, err := startDevServer(ctx, projectRoot, cfg.Start, stderr)
+	proc, err := projectmode.StartDevServer(ctx, projectRoot, cfg.Start, stderr)
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("dev start failed: %w", err)
 	}
 
 	cleanup := func() {
-		stopDevServer(proc, cfg.Stop, stderr)
+		projectmode.StopDevServer(proc, cfg.Stop, stderr)
 
 		if len(cfg.Down) == 0 {
 			return
@@ -83,7 +83,7 @@ func runProjectDev(
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cleanupCancel()
 
-		downErr := runCommandSteps(cleanupCtx, projectRoot, cfg.Down, stderr)
+		downErr := projectmode.RunCommandSteps(cleanupCtx, projectRoot, cfg.Down, stderr)
 		if downErr != nil {
 			fmt.Fprintf(stderr, "Dev teardown failed: %v\n", downErr)
 		}
@@ -96,7 +96,7 @@ func runProjectScan(
 	ctx context.Context,
 	apiURL string,
 	apiKey string,
-	cfg projectScanCfg,
+	cfg projectmode.ScanConfig,
 	timeout time.Duration,
 	stderr io.Writer,
 	noStream bool,
@@ -122,10 +122,10 @@ func runProjectScan(
 	return runScanJob(ctx, client, scanReq, timeout, stderr, noStream)
 }
 
-func buildProjectSubmitJobRequest(cfg projectScanCfg) (apiclient.SubmitJobRequest, []string, error) {
+func buildProjectSubmitJobRequest(cfg projectmode.ScanConfig) (apiclient.SubmitJobRequest, []string, error) {
 	scanners := cfg.Scanners
 	if len(scanners) == 0 {
-		scanners = defaultScanScannerList()
+		scanners = projectmode.DefaultScanScannerList()
 	}
 
 	modules, err := normalizeScannerList(scanners)
@@ -208,7 +208,7 @@ func runDevScanCommand(
 	}
 	defer cleanup()
 
-	readyErr := waitForReady(totalCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
+	readyErr := projectmode.WaitForReady(totalCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
 	if readyErr != nil {
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
 	}

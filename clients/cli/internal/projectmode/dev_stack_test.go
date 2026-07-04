@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"context"
@@ -98,14 +98,14 @@ func TestWaitForReady(t *testing.T) {
 
 		t.Cleanup(func() { http.DefaultClient = prevClient })
 
-		proc := &runningProcess{waitCh: make(chan error, 1)}
-		cfg := projectDevReadyCfg{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
+		proc := &RunningProcess{waitCh: make(chan error, 1)}
+		cfg := DevReadyConfig{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		if err := waitForReady(ctx, proc, cfg, ioDiscard{}); err != nil {
-			t.Fatalf("waitForReady error: %v", err)
+		if err := WaitForReady(ctx, proc, cfg, ioDiscard{}); err != nil {
+			t.Fatalf("WaitForReady error: %v", err)
 		}
 	})
 
@@ -128,14 +128,14 @@ func TestWaitForReady(t *testing.T) {
 
 		t.Cleanup(func() { http.DefaultClient = prevClient })
 
-		proc := &runningProcess{waitCh: make(chan error, 1)}
-		cfg := projectDevReadyCfg{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
+		proc := &RunningProcess{waitCh: make(chan error, 1)}
+		cfg := DevReadyConfig{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		if err := waitForReady(ctx, proc, cfg, ioDiscard{}); err != nil {
-			t.Fatalf("waitForReady error: %v", err)
+		if err := WaitForReady(ctx, proc, cfg, ioDiscard{}); err != nil {
+			t.Fatalf("WaitForReady error: %v", err)
 		}
 
 		if calls.Load() < 2 {
@@ -154,19 +154,19 @@ func TestWaitForReady(t *testing.T) {
 
 		t.Cleanup(func() { http.DefaultClient = prevClient })
 
-		proc := &runningProcess{waitCh: make(chan error, 1)}
-		cfg := projectDevReadyCfg{URL: srv.URL, Timeout: "80ms", Interval: "10ms"}
+		proc := &RunningProcess{waitCh: make(chan error, 1)}
+		cfg := DevReadyConfig{URL: srv.URL, Timeout: "80ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		err := waitForReady(ctx, proc, cfg, ioDiscard{})
+		err := WaitForReady(ctx, proc, cfg, ioDiscard{})
 		if err == nil {
-			t.Fatalf("waitForReady err = nil, want non-nil")
+			t.Fatalf("WaitForReady err = nil, want non-nil")
 		}
 
 		if !strings.Contains(err.Error(), "not ready within") {
-			t.Fatalf("waitForReady err = %q, want to contain %q", err.Error(), "not ready within")
+			t.Fatalf("WaitForReady err = %q, want to contain %q", err.Error(), "not ready within")
 		}
 	})
 
@@ -181,26 +181,26 @@ func TestWaitForReady(t *testing.T) {
 
 		t.Cleanup(func() { http.DefaultClient = prevClient })
 
-		proc := &runningProcess{waitCh: make(chan error, 1)}
+		proc := &RunningProcess{waitCh: make(chan error, 1)}
 		proc.waitCh <- errors.New("boom")
 
-		cfg := projectDevReadyCfg{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
+		cfg := DevReadyConfig{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		err := waitForReady(ctx, proc, cfg, ioDiscard{})
+		err := WaitForReady(ctx, proc, cfg, ioDiscard{})
 		if err == nil {
-			t.Fatalf("waitForReady err = nil, want non-nil")
+			t.Fatalf("WaitForReady err = nil, want non-nil")
 		}
 
 		if !strings.Contains(err.Error(), "exited before ready") {
-			t.Fatalf("waitForReady err = %q, want to contain %q", err.Error(), "exited before ready")
+			t.Fatalf("WaitForReady err = %q, want to contain %q", err.Error(), "exited before ready")
 		}
 
 		if !strings.Contains(err.Error(), "boom") {
 			// The wrapped error should include the process failure.
-			t.Fatalf("waitForReady err = %q, want to include process error", err.Error())
+			t.Fatalf("WaitForReady err = %q, want to include process error", err.Error())
 		}
 	})
 }

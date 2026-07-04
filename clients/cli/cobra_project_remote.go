@@ -107,7 +107,7 @@ func runProjectScanCommand(
 			return exitcode.Error{Code: 2, Err: err}
 		}
 
-		cfg, cfgPath, err := loadProjectScanConfig(projectRoot)
+		cfg, cfgPath, err := projectmode.LoadScanConfig(projectRoot)
 		if err != nil {
 			return exitcode.Error{Code: 2, Err: err}
 		}
@@ -141,29 +141,6 @@ func resolveProjectScanRoot() (string, error) {
 	}
 
 	return wd, nil
-}
-
-func loadProjectScanConfig(projectRoot string) (projectConfig, string, error) {
-	cfg, cfgPath, err := readProjectConfig(projectRoot)
-	if err != nil {
-		var missingErr missingProjectConfigError
-		if errors.As(err, &missingErr) {
-			return projectConfig{}, "", fmt.Errorf(
-				"no slug given and no .stageflow/config.yaml found under %s; "+
-					"pass a slug (`stageflow project scan <slug>`) or run `stageflow dev init` "+
-					"and set stageflow.project",
-				projectRoot,
-			)
-		}
-
-		return projectConfig{}, "", err
-	}
-
-	if validationErr := validateProjectScanConfig(cfg); validationErr != nil {
-		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
-	}
-
-	return cfg, cfgPath, nil
 }
 
 func newProjectCreateCmd(root *rootOptions) *cobra.Command {

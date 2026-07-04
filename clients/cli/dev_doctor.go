@@ -47,7 +47,7 @@ func writeProjectDoctorJSON(
 	out io.Writer,
 	projectRoot, configPath, apiURL string,
 	urls []string,
-	stageflowCfg projectStageflowCfg,
+	stageflowCfg projectmode.StageflowConfig,
 	autoAllowPrivateTargets bool,
 	checks []projectDoctorCheck,
 ) error {
@@ -79,7 +79,7 @@ func allProjectDoctorChecksPassed(checks []projectDoctorCheck) bool {
 	return true
 }
 
-func buildRemoteProjectLink(cfg projectStageflowCfg) remoteProjectLink {
+func buildRemoteProjectLink(cfg projectmode.StageflowConfig) remoteProjectLink {
 	slug := strings.TrimSpace(cfg.Project)
 	if slug == "" {
 		return remoteProjectLink{}
@@ -101,15 +101,15 @@ func writeJSONEnvelope(out io.Writer, payload any) error {
 	return encoder.Encode(payload)
 }
 
-func loadProjectDoctorConfig(projectRoot, projectArg string) (projectConfig, string, error) {
-	cfg, cfgPath, err := loadProjectConfig(projectRoot)
+func loadProjectDoctorConfig(projectRoot, projectArg string) (projectmode.Config, string, error) {
+	cfg, cfgPath, err := projectmode.LoadConfig(projectRoot)
 	if err == nil {
 		return cfg, cfgPath, nil
 	}
 
-	var missingErr missingProjectConfigError
+	var missingErr projectmode.MissingConfigError
 	if !errors.As(err, &missingErr) {
-		return projectConfig{}, "", err
+		return projectmode.Config{}, "", err
 	}
 
 	hint := "stageflow dev init"
@@ -117,14 +117,14 @@ func loadProjectDoctorConfig(projectRoot, projectArg string) (projectConfig, str
 		hint = fmt.Sprintf("stageflow dev init %s", projectArg)
 	}
 
-	return projectConfig{}, "", fmt.Errorf("project config not found under %s; run `%s`", projectRoot, hint)
+	return projectmode.Config{}, "", fmt.Errorf("project config not found under %s; run `%s`", projectRoot, hint)
 }
 
 func writeProjectDoctorResult(
 	out io.Writer,
 	projectRoot, cfgPath, apiURL string,
 	urls []string,
-	stageflowCfg projectStageflowCfg,
+	stageflowCfg projectmode.StageflowConfig,
 	autoAllowPrivateTargets bool,
 	checks []projectDoctorCheck,
 	format render.Format,
@@ -243,7 +243,7 @@ func runDevDoctorCommand(
 	}
 	defer cleanup()
 
-	readyErr := waitForReady(doctorCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
+	readyErr := projectmode.WaitForReady(doctorCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
 	if readyErr != nil {
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
 	}
