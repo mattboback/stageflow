@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with the same `STAGEFLOW_PROTECTED_HOST` production-safety guard `just`
   enforces
 
+### Changed
+
+- Re-recorded the README CLI demo GIF (`docs/images/demo.gif`) to compress
+  idle time and play back faster; it now runs ~3s instead of ~10s
+
 ### Fixed
 
 - The text-format issue renderer printed `ScannerData` as a single-line raw
