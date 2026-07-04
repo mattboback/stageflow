@@ -262,6 +262,50 @@ func TestRenderUnifiedReport_TextOccurrences(t *testing.T) {
 	}
 }
 
+func TestRenderUnifiedReport_TextScannerDataIsPrettyPrinted(t *testing.T) {
+	status := apiclient.JobStatus{ID: "job-text-scanner-data", State: apiclient.JobStateDone}
+	doc := testsupport.SampleReport(status.ID)
+
+	doc.Issues = []report.IssueDetail{
+		{
+			Id:       "issue-1",
+			Scanner:  "seo",
+			RuleId:   "seo-missing-og-tags",
+			Severity: report.IssueSeverityModerate,
+			Title:    "Missing Open Graph Tags",
+			PageId:   "page-1",
+			PageUrl:  "https://example.com",
+			ScannerData: map[string]interface{}{
+				"missing": []string{"og:title", "og:description"},
+				"present": []string{},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+
+	err := UnifiedReport(&buf, "http://localhost:8080", status, doc, Options{
+		Format:    FormatText,
+		MaxIssues: 10,
+	})
+	testsupport.RequireNoErr(t, err)
+
+	output := buf.String()
+	if strings.Contains(output, `Details: {"missing"`) {
+		t.Fatalf("Details should not be a single-line JSON blob:\n%s", output)
+	}
+
+	for _, want := range []string{
+		"  Details:\n",
+		`"missing": [`,
+		`"og:title",`,
+	} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("text output missing %q:\n%s", want, output)
+		}
+	}
+}
+
 func TestRenderUnifiedReport_TextOccurrences_FailureSummaryOnly(t *testing.T) {
 	status := apiclient.JobStatus{ID: "job-text-summary-only", State: apiclient.JobStateDone}
 	doc := testsupport.SampleReport(status.ID)

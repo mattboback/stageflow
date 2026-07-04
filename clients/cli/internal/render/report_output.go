@@ -549,8 +549,9 @@ func writeSummaryIssue(out io.Writer, issue report.IssueDetail, maxOccurrences i
 	}
 
 	if len(issue.ScannerData) > 0 {
-		if dataBytes, err := json.Marshal(issue.ScannerData); err == nil && string(dataBytes) != "{}" {
-			if _, printErr := fmt.Fprintf(out, "  Details: %s\n", string(dataBytes)); printErr != nil {
+		if dataBytes, err := json.MarshalIndent(issue.ScannerData, "    ", "  "); err == nil &&
+			string(dataBytes) != "{}" {
+			if _, printErr := fmt.Fprintf(out, "  Details:\n    %s\n", string(dataBytes)); printErr != nil {
 				return printErr
 			}
 		}
