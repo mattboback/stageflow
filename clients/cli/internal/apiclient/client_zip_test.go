@@ -11,10 +11,11 @@ import (
 	"testing"
 )
 
-func TestSubmitZipJob(t *testing.T) {
-	zipPath := filepath.Join(t.TempDir(), "site.zip")
+// writeSiteZip creates a single-page ZIP fixture at path for upload tests.
+func writeSiteZip(t *testing.T, path string) {
+	t.Helper()
 
-	f, err := os.Create(zipPath)
+	f, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,17 +27,22 @@ func TestSubmitZipJob(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := entry.Write([]byte("<html></html>")); err != nil {
+	if _, err = entry.Write([]byte("<html></html>")); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := zw.Close(); err != nil {
+	if err = zw.Close(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := f.Close(); err != nil {
+	if err = f.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestSubmitZipJob(t *testing.T) {
+	zipPath := filepath.Join(t.TempDir(), "site.zip")
+	writeSiteZip(t, zipPath)
 
 	var gotFilename, gotModules, gotScreenshot string
 
