@@ -47,6 +47,7 @@ go build -o stageflow .
 | `report` | Fetch and display results for an existing job ID |
 | `auth capture` | Launch Chromium for interactive login and write Playwright storage state |
 | `scanners` | List scanners available on the API |
+| `stack up/down/status` | Manage a local self-hosted compose stack |
 | `version` | Print version information |
 | `completion` | Generate shell completion scripts |
 | `docs` | Generate Markdown reference docs |
@@ -284,6 +285,30 @@ the last known-good baseline?" rather than only "what issues exist right now?"
 If `.stageflow/config.yaml` already records `stageflow.project: my-frontend`,
 run `stageflow project scan` from the repo with no slug instead of repeating
 it at the shell.
+
+## Self-hosting: manage the local stack
+
+`stageflow stack up|down|status` drives the same Podman Compose files
+`just dev`/`just demo` use, so you can manage a self-hosted stack from the
+`stageflow` binary without needing `just`:
+
+```bash
+stageflow stack up               # podman compose up -d (default: dev overlay)
+stageflow stack up --env local   # local overlay (port 3020, private-target scanning)
+stageflow stack status           # podman compose ps
+stageflow stack down              # podman compose down
+```
+
+This is a thin lifecycle wrapper, not a bootstrapper: run it from inside a
+`stageflow` checkout with `.env` configured and job images already built
+(`just images`); `stack up` checks for the `extractor`/`scanner-runner`
+images and fails fast with the command to run if they're missing.
+`--project` overrides the compose project name (default: `stageflow_dev`, or
+`$COMPOSE_PROJECT_NAME`).
+
+`stageflow stack` refuses to run on a host set as `STAGEFLOW_PROTECTED_HOST`
+unless `STAGEFLOW_ALLOW_VPS_LOCAL_STACKS=1` is also set — the same guard
+`just dev`/`just demo` enforce, so this CLI path can't bypass it.
 
 ## Environment variables
 

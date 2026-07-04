@@ -6,11 +6,14 @@ StageFlow CLI
 
 StageFlow CLI — scan web pages for accessibility, performance, and SEO issues.
 
-There are three ways to scan:
+There are a few ways to scan:
 
   stageflow scan <url>        one-off scan of any URL
+  stageflow scan <dir|zip>    scan a local build directory or ZIP archive
   stageflow dev scan          start your local dev server, then scan it
   stageflow project scan      scan a registered project and diff its baseline
+
+`stageflow stack` manages a local self-hosted compose stack (up/down/status).
 
 Exit codes: 0 success, 1 policy failure (--fail-on threshold or regression),
 2 usage or API error.
@@ -39,5 +42,6 @@ stageflow [flags]
 * [stageflow report](stageflow_report.md)	 - Fetch and display results for an existing job
 * [stageflow scan](stageflow_scan.md)	 - Scan URLs, or upload a local build directory / ZIP archive and scan it
 * [stageflow scanners](stageflow_scanners.md)	 - List available scanners
+* [stageflow stack](stageflow_stack.md)	 - Manage the local self-hosted StageFlow compose stack
 * [stageflow version](stageflow_version.md)	 - Print version information
 

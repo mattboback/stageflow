@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `stageflow stack up|down|status`: manage the local Podman Compose stack
+  (the same compose files `just dev`/`just demo` use) from the CLI binary,
+  with the same `STAGEFLOW_PROTECTED_HOST` production-safety guard `just`
+  enforces
+
 ### Removed
 
 - Internal QA helpers that weren't wired into any `just` or CI target: the
