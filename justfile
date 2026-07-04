@@ -17,31 +17,6 @@ go_work := 'go.work'
 help:
     @just --list
 
-[group('meta'), doc('Deploy the hosted StageFlow demo through the optional VPS control plane')]
-deploy:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    control_plane="${STAGEFLOW_DEPLOY_CONTROL_PLANE:-}"
-    if [[ -z "$control_plane" ]]; then
-        echo "Hosted stageflow.org deployment is managed by an external control plane." >&2
-        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local and self-hosted environments." >&2
-        exit 1
-    fi
-
-    control_justfile="${control_plane}/justfile"
-    just_bin="${JUST:-just}"
-
-    if [[ ! -f "$control_justfile" ]]; then
-        echo "Hosted stageflow.org deployment is managed by an external control plane." >&2
-        echo "No control-plane justfile found at: $control_justfile" >&2
-        echo "Set STAGEFLOW_DEPLOY_CONTROL_PLANE to its directory, or use docs/operations/deployment.md for repo-managed local and self-hosted environments." >&2
-        exit 1
-    fi
-
-    echo "Running: just deploy stageflow" >&2
-    exec "$just_bin" --justfile "$control_justfile" deploy stageflow
-
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
 setup:
     #!/usr/bin/env bash

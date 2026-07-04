@@ -12,6 +12,6 @@ indent_style = tab
 [*.go]
 indent_style = tab
 
-[*.{md,yml,yaml,json,ts,tsx,js,mjs,cjs,svelte,css,scss,html}]
+[*.{md,yml,yaml,json,ts,tsx,js,mjs,cjs,css,scss,html}]
 indent_style = space
 indent_size = 2
