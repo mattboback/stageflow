@@ -138,7 +138,8 @@ lower-level default compose mode on port `3000`; `just dev up local` applies
 the local overlay on port `3020` and enables localhost/private-target scanning
 for the CLI dev loop. Manual stack commands (`just setup`, `just images`,
 `just dev up`, `just dev init`, `just dev logs`) are available when you want
-more control.
+more control. Once the stack is up, `stageflow stack up|down|status` (the CLI
+binary itself) can drive its day-to-day lifecycle in place of `just dev`.
 
 Before exposing StageFlow on a public domain, replace every `change-me` value
 in `.env`, set explicit CORS origins, keep API authentication enabled, and
