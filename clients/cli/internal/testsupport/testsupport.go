@@ -139,7 +139,7 @@ func WriteProjectConfig(t *testing.T, root string, yaml string) string {
 	RequireNoErr(t, os.MkdirAll(configDir, 0o750))
 
 	configPath := filepath.Join(configDir, "config.yaml")
-	RequireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o640))
+	RequireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o600))
 
 	return configPath
 }

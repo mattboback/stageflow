@@ -255,7 +255,12 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 
 	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
 	testsupport.RequireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
-	testsupport.RequireEqual(t, payload.Project.Baseline.Status, projectBaselineStatusAvailable, "payload.Project.Baseline.Status")
+	testsupport.RequireEqual(
+		t,
+		payload.Project.Baseline.Status,
+		projectBaselineStatusAvailable,
+		"payload.Project.Baseline.Status",
+	)
 	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
 	testsupport.RequireEqual(t, payload.Decision.Passed, false, "payload.Decision.Passed")
 	testsupport.RequireEqual(t, payload.Report.Schema, "stageflow-cli/report@v1", "payload.Report.Schema")
