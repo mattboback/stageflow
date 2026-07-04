@@ -7,18 +7,25 @@ import (
 	"testing"
 )
 
-func writeStageflowCheckout(t *testing.T) string {
+func writeGitMarker(t *testing.T, root string) {
 	t.Helper()
-
-	root := t.TempDir()
 
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o600); err != nil {
+	head := []byte("ref: refs/heads/main\n")
+	if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), head, 0o600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func writeStageflowCheckout(t *testing.T) string {
+	t.Helper()
+
+	root := t.TempDir()
+
+	writeGitMarker(t, root)
 
 	composeDir := filepath.Join(root, "infra", "compose")
 	if err := os.MkdirAll(composeDir, 0o755); err != nil {
@@ -67,13 +74,7 @@ func TestFindRoot(t *testing.T) {
 	t.Run("errors when compose files are missing", func(t *testing.T) {
 		root := t.TempDir()
 
-		if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o600); err != nil {
-			t.Fatal(err)
-		}
+		writeGitMarker(t, root)
 
 		if _, err := FindRoot(root); err == nil {
 			t.Fatal("FindRoot() error = nil, want non-nil")

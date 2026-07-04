@@ -15,7 +15,8 @@ func TestResolveStackOptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o600); err != nil {
+	head := []byte("ref: refs/heads/main\n")
+	if err := os.WriteFile(filepath.Join(root, ".git", "HEAD"), head, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -24,7 +25,8 @@ func TestResolveStackOptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Join(composeDir, "podman-compose.yml"), []byte("services: {}\n"), 0o600); err != nil {
+	composeYAML := []byte("services: {}\n")
+	if err := os.WriteFile(filepath.Join(composeDir, "podman-compose.yml"), composeYAML, 0o600); err != nil {
 		t.Fatal(err)
 	}
 
