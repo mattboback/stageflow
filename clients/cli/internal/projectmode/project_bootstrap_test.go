@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"os"
@@ -12,10 +12,10 @@ import (
 func TestDetectProjectBootstrapSuggestion_UsesPlaceholderWhenNoCommandFound(t *testing.T) {
 	root := t.TempDir()
 
-	suggestion, err := detectProjectBootstrapSuggestion(root)
+	suggestion, err := DetectBootstrapSuggestion(root)
 	testsupport.RequireNoErr(t, err)
 
-	testsupport.RequireEqual(t, suggestion.Command, scaffoldDevStartCommandPlaceholder, "suggestion.Command")
+	testsupport.RequireEqual(t, suggestion.Command, ScaffoldDevStartCommandPlaceholder, "suggestion.Command")
 	testsupport.RequireEqual(
 		t,
 		suggestion.CommandSource,
@@ -49,7 +49,7 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 	err = os.WriteFile(filepath.Join(frontendDir, "vite.config.ts"), []byte("export default {}\n"), 0o600)
 	testsupport.RequireNoErr(t, err)
 
-	suggestion, err := detectProjectBootstrapSuggestion(root)
+	suggestion, err := DetectBootstrapSuggestion(root)
 	testsupport.RequireNoErr(t, err)
 
 	testsupport.RequireEqual(
@@ -66,7 +66,7 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 }
 
 func TestDefaultProjectConfigTemplate_UsesBootstrapSuggestion(t *testing.T) {
-	template := defaultProjectConfigTemplate("http://localhost:8080", projectBootstrapSuggestion{
+	template := DefaultConfigTemplate("http://localhost:8080", BootstrapSuggestion{
 		Command:       "just run clients/web",
 		CommandSource: "best guess from Justfile recipe `run`",
 		URL:           "http://127.0.0.1:5173",

@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"errors"
@@ -10,18 +10,6 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
-
-func writeProjectConfig(t *testing.T, root string, yaml string) string {
-	t.Helper()
-
-	configDir := filepath.Join(root, ".stageflow")
-	testsupport.RequireNoErr(t, os.MkdirAll(configDir, 0o750))
-
-	configPath := filepath.Join(configDir, "config.yaml")
-	testsupport.RequireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o640))
-
-	return configPath
-}
 
 func TestLoadProjectConfig_Success(t *testing.T) {
 	root := t.TempDir()
@@ -49,9 +37,9 @@ dev:
     interval: 10ms
 `
 
-	configPath := writeProjectConfig(t, root, configYAML)
+	configPath := testsupport.WriteProjectConfig(t, root, configYAML)
 
-	cfg, gotPath, err := loadProjectConfig(root)
+	cfg, gotPath, err := LoadConfig(root)
 	testsupport.RequireNoErr(t, err)
 
 	testsupport.RequireEqual(t, gotPath, configPath, "config path")
@@ -75,27 +63,27 @@ dev:
 func TestLoadProjectConfig_MissingFile(t *testing.T) {
 	root := t.TempDir()
 
-	_, _, err := loadProjectConfig(root)
+	_, _, err := LoadConfig(root)
 	if err == nil {
-		t.Fatalf("loadProjectConfig err = nil, want non-nil")
+		t.Fatalf("LoadConfig err = nil, want non-nil")
 	}
 
 	if !strings.Contains(err.Error(), "no .stageflow/config.yaml") {
-		t.Fatalf("loadProjectConfig err = %q, want to contain %q", err.Error(), "no .stageflow/config.yaml")
+		t.Fatalf("LoadConfig err = %q, want to contain %q", err.Error(), "no .stageflow/config.yaml")
 	}
 }
 
 func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
 	root := t.TempDir()
 
-	_, _, err := loadProjectConfig(root)
+	_, _, err := LoadConfig(root)
 	if err == nil {
-		t.Fatalf("loadProjectConfig err = nil, want non-nil")
+		t.Fatalf("LoadConfig err = nil, want non-nil")
 	}
 
-	var missingErr missingProjectConfigError
+	var missingErr MissingConfigError
 	if !errors.As(err, &missingErr) {
-		t.Fatalf("loadProjectConfig err = %T, want missingProjectConfigError", err)
+		t.Fatalf("LoadConfig err = %T, want MissingConfigError", err)
 	}
 
 	testsupport.RequireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
@@ -104,13 +92,13 @@ func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
 func TestLoadProjectScanConfig_Minimal(t *testing.T) {
 	root := t.TempDir()
 
-	configPath := writeProjectConfig(t, root, `version: 2
+	configPath := testsupport.WriteProjectConfig(t, root, `version: 2
 stageflow:
   project: hosted-demo
   api_url: https://hosted.stageflow.example
 `)
 
-	cfg, gotPath, err := loadProjectScanConfig(root)
+	cfg, gotPath, err := LoadScanConfig(root)
 	testsupport.RequireNoErr(t, err)
 
 	testsupport.RequireEqual(t, gotPath, configPath, "config path")
@@ -122,12 +110,12 @@ stageflow:
 func TestLoadProjectScanConfig_RequiresProject(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 2
+	testsupport.WriteProjectConfig(t, root, `version: 2
 stageflow:
   api_url: https://hosted.stageflow.example
 `)
 
-	_, _, err := loadProjectScanConfig(root)
+	_, _, err := LoadScanConfig(root)
 	if err == nil {
 		t.Fatalf("loadProjectScanConfig err = nil, want non-nil")
 	}
@@ -140,7 +128,7 @@ stageflow:
 func TestLoadProjectScanConfig_MissingConfigSuggestsDevInit(t *testing.T) {
 	root := t.TempDir()
 
-	_, _, err := loadProjectScanConfig(root)
+	_, _, err := LoadScanConfig(root)
 	if err == nil {
 		t.Fatalf("loadProjectScanConfig err = nil, want non-nil")
 	}
@@ -153,7 +141,7 @@ func TestLoadProjectScanConfig_MissingConfigSuggestsDevInit(t *testing.T) {
 func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 	root := t.TempDir()
 
-	configPath, err := scaffoldProjectConfig(root, "http://localhost:8080")
+	configPath, err := ScaffoldConfig(root, "http://localhost:8080")
 	testsupport.RequireNoErr(t, err)
 
 	expectedPath := filepath.Join(root, ".stageflow", "config.yaml")
@@ -175,7 +163,7 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 		t.Fatalf("scaffolded config missing allow_private_targets default")
 	}
 
-	if !strings.Contains(text, scaffoldDevStartCommandPlaceholder) {
+	if !strings.Contains(text, ScaffoldDevStartCommandPlaceholder) {
 		t.Fatalf("scaffolded config missing dev command placeholder")
 	}
 
@@ -183,7 +171,7 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 		t.Fatalf("scaffolded config missing project guidance")
 	}
 
-	cfg, gotPath, err := loadProjectConfig(root)
+	cfg, gotPath, err := LoadConfig(root)
 	testsupport.RequireNoErr(t, err)
 	testsupport.RequireEqual(t, gotPath, configPath, "loaded config path")
 	testsupport.RequireEqual(t, cfg.Version, 2, "cfg.Version")
@@ -192,7 +180,7 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 	root := t.TempDir()
 
-	guidePath, err := scaffoldProjectGuide(root)
+	guidePath, err := ScaffoldGuide(root)
 	testsupport.RequireNoErr(t, err)
 
 	expectedPath := filepath.Join(root, ".stageflow", "README.md")
@@ -237,11 +225,11 @@ dev:
 nope: 1
 `
 
-	_ = writeProjectConfig(t, root, configYAML)
+	_ = testsupport.WriteProjectConfig(t, root, configYAML)
 
-	_, _, err := loadProjectConfig(root)
+	_, _, err := LoadConfig(root)
 	if err == nil {
-		t.Fatalf("loadProjectConfig err = nil, want non-nil")
+		t.Fatalf("LoadConfig err = nil, want non-nil")
 	}
 }
 
@@ -261,11 +249,11 @@ dev:
     url: "http://localhost:1234"
 `
 
-	_ = writeProjectConfig(t, root, configYAML)
+	_ = testsupport.WriteProjectConfig(t, root, configYAML)
 
-	_, _, err := loadProjectConfig(root)
+	_, _, err := LoadConfig(root)
 	if err == nil {
-		t.Fatalf("loadProjectConfig err = nil, want parse error for removed v1 keys")
+		t.Fatalf("LoadConfig err = nil, want parse error for removed v1 keys")
 	}
 }
 
@@ -414,13 +402,13 @@ dev:
 				t.Fatalf("write config.yaml: %v", err)
 			}
 
-			_, _, err := loadProjectConfig(root)
+			_, _, err := LoadConfig(root)
 			if err == nil {
-				t.Fatalf("loadProjectConfig err = nil, want non-nil")
+				t.Fatalf("LoadConfig err = nil, want non-nil")
 			}
 
 			if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-				t.Fatalf("loadProjectConfig err = %q, want to contain %q", err.Error(), tt.errContains)
+				t.Fatalf("LoadConfig err = %q, want to contain %q", err.Error(), tt.errContains)
 			}
 		})
 	}
@@ -459,17 +447,17 @@ func TestConfigDuration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok, err := configDuration(tt.raw)
+			got, ok, err := ConfigDuration(tt.raw)
 			if (err != nil) != tt.err {
-				t.Fatalf("configDuration(%q) err = %v, want err=%v", tt.raw, err, tt.err)
+				t.Fatalf("ConfigDuration(%q) err = %v, want err=%v", tt.raw, err, tt.err)
 			}
 
 			if ok != tt.ok {
-				t.Fatalf("configDuration(%q) ok = %v, want %v", tt.raw, ok, tt.ok)
+				t.Fatalf("ConfigDuration(%q) ok = %v, want %v", tt.raw, ok, tt.ok)
 			}
 
 			if err == nil && got != tt.want {
-				t.Fatalf("configDuration(%q) = %v, want %v", tt.raw, got, tt.want)
+				t.Fatalf("ConfigDuration(%q) = %v, want %v", tt.raw, got, tt.want)
 			}
 		})
 	}
@@ -520,15 +508,15 @@ dev:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
-			writeProjectConfig(t, root, tt.configYAML)
+			testsupport.WriteProjectConfig(t, root, tt.configYAML)
 
-			_, _, err := loadProjectConfig(root)
+			_, _, err := LoadConfig(root)
 			if err == nil {
-				t.Fatalf("loadProjectConfig err = nil, want non-nil")
+				t.Fatalf("LoadConfig err = nil, want non-nil")
 			}
 
 			if !strings.Contains(err.Error(), tt.errContains) {
-				t.Fatalf("loadProjectConfig err = %q, want %q", err.Error(), tt.errContains)
+				t.Fatalf("LoadConfig err = %q, want %q", err.Error(), tt.errContains)
 			}
 		})
 	}

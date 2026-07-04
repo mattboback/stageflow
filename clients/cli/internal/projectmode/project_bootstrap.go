@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-type projectBootstrapSuggestion struct {
+type BootstrapSuggestion struct {
 	Command            string
 	Cwd                string
 	CommandSource      string
@@ -44,14 +44,14 @@ var justRecipePrefixes = map[string]*regexp.Regexp{
 	"run":            regexp.MustCompile(`^run\b[^:]*:`),
 }
 
-func detectProjectBootstrapSuggestion(projectRoot string) (projectBootstrapSuggestion, error) {
-	suggestion := projectBootstrapSuggestion{
+func DetectBootstrapSuggestion(projectRoot string) (BootstrapSuggestion, error) {
+	suggestion := BootstrapSuggestion{
 		URL: guessProjectDevURL(projectRoot),
 	}
 
 	command, cwd, source, dedicated, found, err := detectProjectBootstrapCommand(projectRoot)
 	if err != nil {
-		return projectBootstrapSuggestion{}, err
+		return BootstrapSuggestion{}, err
 	}
 
 	if found {
@@ -62,7 +62,7 @@ func detectProjectBootstrapSuggestion(projectRoot string) (projectBootstrapSugge
 	}
 
 	if suggestion.Command == "" {
-		suggestion.Command = scaffoldDevStartCommandPlaceholder
+		suggestion.Command = ScaffoldDevStartCommandPlaceholder
 		suggestion.CommandSource = "set `dev.start.cmd` to the command that makes your app reachable locally"
 		suggestion.IsPlaceholder = true
 
@@ -75,7 +75,7 @@ func detectProjectBootstrapSuggestion(projectRoot string) (projectBootstrapSugge
 
 	cleanup, cleanupSource, found, err := detectProjectBootstrapCleanup(projectRoot)
 	if err != nil {
-		return projectBootstrapSuggestion{}, err
+		return BootstrapSuggestion{}, err
 	}
 
 	if found {

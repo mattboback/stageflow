@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"testing"
+
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 )
 
 func TestAllProjectDoctorChecksPassed_TrueWhenAllPass(t *testing.T) {
@@ -67,7 +69,7 @@ func TestWriteProjectDoctorJSON_PassedTrueWhenAllChecksPass(t *testing.T) {
 		"/repo/.stageflow/config.yaml",
 		"http://api",
 		[]string{"https://example.com"},
-		projectStageflowCfg{},
+		projectmode.StageflowConfig{},
 		false,
 		checks,
 	); err != nil {
@@ -96,7 +98,7 @@ func TestWriteProjectDoctorJSON_PassedFalseWhenCheckFails(t *testing.T) {
 		"/repo/.stageflow/config.yaml",
 		"http://api",
 		[]string{"https://example.com"},
-		projectStageflowCfg{},
+		projectmode.StageflowConfig{},
 		false,
 		checks,
 	); err != nil {
@@ -121,7 +123,7 @@ func TestWriteProjectDoctorJSON_SchemaIsSet(t *testing.T) {
 		"/repo/.stageflow/config.yaml",
 		"http://api",
 		nil,
-		projectStageflowCfg{},
+		projectmode.StageflowConfig{},
 		false,
 		nil,
 	); err != nil {

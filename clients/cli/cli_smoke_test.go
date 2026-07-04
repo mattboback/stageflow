@@ -76,8 +76,8 @@ func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
 	data, err := os.ReadFile(docPath)
 	testsupport.RequireNoErr(t, err)
 
-	if !strings.Contains(string(data), defaultScanScanners) {
-		t.Fatalf("expected %s to contain current default scanner list %q", docPath, defaultScanScanners)
+	if !strings.Contains(string(data), projectmode.DefaultScanScanners) {
+		t.Fatalf("expected %s to contain current default scanner list %q", docPath, projectmode.DefaultScanScanners)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 	data, err := os.ReadFile(readmePath)
 	testsupport.RequireNoErr(t, err)
 
-	scannerListYAML := "scanners: [" + strings.Join(defaultScanScannerList(), ", ") + "]"
+	scannerListYAML := "scanners: [" + strings.Join(projectmode.DefaultScanScannerList(), ", ") + "]"
 	if !strings.Contains(string(data), scannerListYAML) {
 		t.Fatalf("expected %s to contain current default scanner list %q", readmePath, scannerListYAML)
 	}
@@ -96,14 +96,14 @@ func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
 
 func TestRepoProjectBootstrapSuggestionUsesLocalSelfScanDefaults(t *testing.T) {
 	repoRoot := mustFindRepoRoot(t)
-	suggestion, err := detectProjectBootstrapSuggestion(repoRoot)
+	suggestion, err := projectmode.DetectBootstrapSuggestion(repoRoot)
 	testsupport.RequireNoErr(t, err)
 
 	if suggestion.IsPlaceholder {
 		t.Fatalf("expected repo bootstrap suggestion, got placeholder")
 	}
 
-	template := defaultProjectConfigTemplate("http://localhost:8080", suggestion)
+	template := projectmode.DefaultConfigTemplate("http://localhost:8080", suggestion)
 	for _, expected := range []string{
 		`cmd: ["just", "run", "clients/web"]`,
 		`url: http://127.0.0.1:5173`,
@@ -276,7 +276,7 @@ func TestCLIProjectScanFromConfigJSONEnvelope(t *testing.T) {
 	defer server.Close()
 
 	root := t.TempDir()
-	writeProjectConfig(t, root, `version: 2
+	testsupport.WriteProjectConfig(t, root, `version: 2
 stageflow:
   project: demo-site
 `)

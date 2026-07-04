@@ -11,15 +11,16 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestHasScaffoldPlaceholderDevCommand(t *testing.T) {
-	cfg := projectConfig{
-		Dev: projectDevCfg{
-			Start: projectDevStartCfg{
-				Cmd: []string{scaffoldDevStartCommandPlaceholder},
+	cfg := projectmode.Config{
+		Dev: projectmode.DevConfig{
+			Start: projectmode.DevStartConfig{
+				Cmd: []string{projectmode.ScaffoldDevStartCommandPlaceholder},
 			},
 		},
 	}
@@ -32,10 +33,10 @@ func TestHasScaffoldPlaceholderDevCommand(t *testing.T) {
 func TestRunDevScanCommand_PlaceholderPreflight(t *testing.T) {
 	root := t.TempDir()
 
-	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
+	_, err := projectmode.ScaffoldConfig(root, "http://localhost:8080")
 	testsupport.RequireNoErr(t, err)
 
-	_, err = scaffoldProjectGuide(root)
+	_, err = projectmode.ScaffoldGuide(root)
 	testsupport.RequireNoErr(t, err)
 
 	var stdout bytes.Buffer
@@ -154,7 +155,7 @@ func TestRunDevDoctorCommand_MissingConfigShowsInitHint(t *testing.T) {
 func TestRunDevDoctorCommand_SkipDevPasses(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 2
+	testsupport.WriteProjectConfig(t, root, `version: 2
 stageflow:
   api_url: http://localhost:8080
 scan:
@@ -194,7 +195,7 @@ dev:
 func TestRunDevDoctorCommand_SkipDevJSON(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 2
+	testsupport.WriteProjectConfig(t, root, `version: 2
 stageflow:
   api_url: http://localhost:8080
 scan:
@@ -251,7 +252,7 @@ func TestWriteDevDoctorJSONComputesPassedFromChecks(t *testing.T) {
 		"/project/.stageflow/config.yaml",
 		"http://localhost:8080",
 		[]string{"https://example.com"},
-		projectStageflowCfg{},
+		projectmode.StageflowConfig{},
 		false,
 		[]projectDoctorCheck{
 			{Name: "config", Status: "passed"},
@@ -277,7 +278,7 @@ func TestAbbreviateIDHandlesShortIDs(t *testing.T) {
 func TestRunDevDoctorCommand_SkipDevJSONRemoteProject(t *testing.T) {
 	root := t.TempDir()
 
-	writeProjectConfig(t, root, `version: 2
+	testsupport.WriteProjectConfig(t, root, `version: 2
 stageflow:
   api_url: http://localhost:8080
   project: hosted-demo
@@ -331,10 +332,10 @@ dev:
 func TestRunDevDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
 	root := t.TempDir()
 
-	_, err := scaffoldProjectConfig(root, "http://localhost:8080")
+	_, err := projectmode.ScaffoldConfig(root, "http://localhost:8080")
 	testsupport.RequireNoErr(t, err)
 
-	_, err = scaffoldProjectGuide(root)
+	_, err = projectmode.ScaffoldGuide(root)
 	testsupport.RequireNoErr(t, err)
 
 	var stdout bytes.Buffer
@@ -366,8 +367,8 @@ func TestResolveProjectStageflowUsesConfigAPIURL(t *testing.T) {
 	apiURL, apiKey := resolveProjectStageflow(
 		cmd,
 		&rootOptions{apiURL: "http://localhost:8080"},
-		projectConfig{
-			Stageflow: projectStageflowCfg{
+		projectmode.Config{
+			Stageflow: projectmode.StageflowConfig{
 				APIURL:    "https://hosted.stageflow.example",
 				APIKeyEnv: "HOSTED_STAGEFLOW_KEY",
 			},
@@ -391,8 +392,8 @@ func TestResolveProjectStageflowExplicitAPIWins(t *testing.T) {
 	apiURL, _ := resolveProjectStageflow(
 		cmd,
 		&rootOptions{apiURL: "https://explicit.stageflow.example"},
-		projectConfig{
-			Stageflow: projectStageflowCfg{
+		projectmode.Config{
+			Stageflow: projectmode.StageflowConfig{
 				APIURL: "https://hosted.stageflow.example",
 			},
 		},

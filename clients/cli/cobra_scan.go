@@ -8,7 +8,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
+	"github.com/mattboback/stageflow/clients/cli/internal/authintake"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 )
@@ -49,7 +51,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	cmd.Flags().StringSliceVar(
 		&scanners,
 		"scanner",
-		defaultScanScannerList(),
+		projectmode.DefaultScanScannerList(),
 		"Scanner module (repeatable or comma-separated)",
 	)
 	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
@@ -148,7 +150,7 @@ func buildScanRequest(
 		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: validateErr}
 	}
 
-	authInput, hasAuth, authErr := loadAuthInputFromFlags(opts.authStatePath, opts.authRecipePath)
+	authInput, hasAuth, authErr := authintake.LoadFromFlags(opts.authStatePath, opts.authRecipePath)
 	if authErr != nil {
 		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: authErr}
 	}
@@ -183,25 +185,4 @@ func effectiveAllowPrivateTargets(cmd *cobra.Command, urls []string, allowPrivat
 	)
 
 	return true
-}
-
-// loadAuthInputFromFlags resolves --auth-state or --auth-recipe into a
-// JobAuthInput payload. Mutual exclusivity is enforced upstream by Cobra; this
-// function additionally guards against both being set defensively.
-func loadAuthInputFromFlags(authStatePath, authRecipePath string) (*apiclient.JobAuthInput, bool, error) {
-	if authStatePath != "" && authRecipePath != "" {
-		return nil, false, errors.New("--auth-state and --auth-recipe are mutually exclusive")
-	}
-
-	if authStatePath != "" {
-		input, err := loadAuthStateFile(authStatePath)
-		return input, err == nil, err
-	}
-
-	if authRecipePath != "" {
-		input, err := loadAuthRecipeFile(authRecipePath)
-		return input, err == nil, err
-	}
-
-	return nil, false, nil
 }

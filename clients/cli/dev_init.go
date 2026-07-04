@@ -28,25 +28,25 @@ func loadOrBootstrapProjectConfig(
 	projectRoot string,
 	apiURL string,
 	out io.Writer,
-) (projectConfig, string, bool, error) {
-	cfg, cfgPath, err := loadProjectConfig(projectRoot)
+) (projectmode.Config, string, bool, error) {
+	cfg, cfgPath, err := projectmode.LoadConfig(projectRoot)
 	if err == nil {
 		return cfg, cfgPath, false, nil
 	}
 
-	var missingErr missingProjectConfigError
+	var missingErr projectmode.MissingConfigError
 	if !errors.As(err, &missingErr) {
-		return projectConfig{}, "", false, err
+		return projectmode.Config{}, "", false, err
 	}
 
 	configPath, guidePath, _, scaffoldErr := scaffoldProjectBootstrap(projectRoot, apiURL)
 	if scaffoldErr != nil {
-		return projectConfig{}, "", false, scaffoldErr
+		return projectmode.Config{}, "", false, scaffoldErr
 	}
 
 	printProjectBootstrapHelp(out, projectRoot, configPath, guidePath)
 
-	return projectConfig{}, "", true, nil
+	return projectmode.Config{}, "", true, nil
 }
 
 func scaffoldProjectBootstrap(projectRoot string, apiURL string) (string, string, bool, error) {
@@ -63,12 +63,12 @@ func scaffoldProjectBootstrap(projectRoot string, apiURL string) (string, string
 		return "", "", false, fmt.Errorf("stat %s: %w", guidePath, err)
 	}
 
-	configPath, err = scaffoldProjectConfig(projectRoot, apiURL)
+	configPath, err = projectmode.ScaffoldConfig(projectRoot, apiURL)
 	if err != nil {
 		return "", "", false, err
 	}
 
-	guidePath, err = scaffoldProjectGuide(projectRoot)
+	guidePath, err = projectmode.ScaffoldGuide(projectRoot)
 	if err != nil {
 		return "", "", false, err
 	}
@@ -120,9 +120,9 @@ func printProjectBootstrapHelp(
 	fmt.Fprintln(out, "4. Re-run: stageflow dev scan")
 }
 
-func hasScaffoldPlaceholderDevCommand(cfg projectConfig) bool {
+func hasScaffoldPlaceholderDevCommand(cfg projectmode.Config) bool {
 	for _, item := range cfg.Dev.Start.Cmd {
-		if strings.TrimSpace(item) == scaffoldDevStartCommandPlaceholder {
+		if strings.TrimSpace(item) == projectmode.ScaffoldDevStartCommandPlaceholder {
 			return true
 		}
 	}
@@ -130,7 +130,7 @@ func hasScaffoldPlaceholderDevCommand(cfg projectConfig) bool {
 	return false
 }
 
-func ensureProjectConfigReady(projectRoot string, cfgPath string, cfg projectConfig) error {
+func ensureProjectConfigReady(projectRoot string, cfgPath string, cfg projectmode.Config) error {
 	if !hasScaffoldPlaceholderDevCommand(cfg) {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package main
+package projectmode
 
 import (
 	"bytes"
@@ -15,20 +15,20 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/manifesttmpl"
 )
 
-type projectConfig struct {
-	Version   int                 `yaml:"version"`
-	Stageflow projectStageflowCfg `yaml:"stageflow"`
-	Scan      projectScanCfg      `yaml:"scan"`
-	Dev       projectDevCfg       `yaml:"dev"`
+type Config struct {
+	Version   int             `yaml:"version"`
+	Stageflow StageflowConfig `yaml:"stageflow"`
+	Scan      ScanConfig      `yaml:"scan"`
+	Dev       DevConfig       `yaml:"dev"`
 }
 
-type projectStageflowCfg struct {
+type StageflowConfig struct {
 	APIURL    string `yaml:"api_url"`
 	APIKeyEnv string `yaml:"api_key_env"`
 	Project   string `yaml:"project"`
 }
 
-type projectScanCfg struct {
+type ScanConfig struct {
 	URLs                []string `yaml:"urls"`
 	Scanners            []string `yaml:"scanners"`
 	Screenshot          *bool    `yaml:"screenshot"`
@@ -36,42 +36,42 @@ type projectScanCfg struct {
 	Timeout             string   `yaml:"timeout"`
 }
 
-type projectDevCfg struct {
-	Up    [][]string         `yaml:"up"`
-	Start projectDevStartCfg `yaml:"start"`
-	Ready projectDevReadyCfg `yaml:"ready"`
-	Down  [][]string         `yaml:"down"`
-	Stop  projectDevStopCfg  `yaml:"stop"`
+type DevConfig struct {
+	Up    [][]string     `yaml:"up"`
+	Start DevStartConfig `yaml:"start"`
+	Ready DevReadyConfig `yaml:"ready"`
+	Down  [][]string     `yaml:"down"`
+	Stop  DevStopConfig  `yaml:"stop"`
 }
 
-type projectDevStartCfg struct {
+type DevStartConfig struct {
 	Cmd []string          `yaml:"cmd"`
 	Cwd string            `yaml:"cwd"`
 	Env map[string]string `yaml:"env"`
 }
 
-type projectDevReadyCfg struct {
+type DevReadyConfig struct {
 	URL      string `yaml:"url"`
 	Timeout  string `yaml:"timeout"`
 	Interval string `yaml:"interval"`
 }
 
-type projectDevStopCfg struct {
+type DevStopConfig struct {
 	Signal  string `yaml:"signal"`
 	Timeout string `yaml:"timeout"`
 }
 
-type missingProjectConfigError struct {
+type MissingConfigError struct {
 	ProjectRoot string
 }
 
-const scaffoldDevStartCommandPlaceholder = manifesttmpl.DevStartCommandPlaceholder
+const ScaffoldDevStartCommandPlaceholder = manifesttmpl.DevStartCommandPlaceholder
 
-func (e missingProjectConfigError) Error() string {
+func (e MissingConfigError) Error() string {
 	return fmt.Sprintf("no .stageflow/config.yaml found under %s", e.ProjectRoot)
 }
 
-func readProjectConfig(projectRoot string) (projectConfig, string, error) {
+func ReadConfig(projectRoot string) (Config, string, error) {
 	configDir := filepath.Join(projectRoot, ".stageflow")
 
 	candidates := []string{
@@ -105,38 +105,38 @@ func readProjectConfig(projectRoot string) (projectConfig, string, error) {
 
 	if cfgPath == "" {
 		if len(readErrs) > 0 {
-			return projectConfig{}, "", fmt.Errorf("failed to read .stageflow config: %w", errors.Join(readErrs...))
+			return Config{}, "", fmt.Errorf("failed to read .stageflow config: %w", errors.Join(readErrs...))
 		}
 
-		return projectConfig{}, "", missingProjectConfigError{ProjectRoot: projectRoot}
+		return Config{}, "", MissingConfigError{ProjectRoot: projectRoot}
 	}
 
-	var cfg projectConfig
+	var cfg Config
 
 	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	decoder.KnownFields(true)
 
 	if err := decoder.Decode(&cfg); err != nil {
-		return projectConfig{}, "", fmt.Errorf("failed to parse %s: %w", cfgPath, err)
+		return Config{}, "", fmt.Errorf("failed to parse %s: %w", cfgPath, err)
 	}
 
 	return cfg, cfgPath, nil
 }
 
-func loadProjectConfig(projectRoot string) (projectConfig, string, error) {
-	cfg, cfgPath, err := readProjectConfig(projectRoot)
+func LoadConfig(projectRoot string) (Config, string, error) {
+	cfg, cfgPath, err := ReadConfig(projectRoot)
 	if err != nil {
-		return projectConfig{}, "", err
+		return Config{}, "", err
 	}
 
-	if validationErr := validateProjectConfig(cfg); validationErr != nil {
-		return projectConfig{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
+	if validationErr := ValidateConfig(cfg); validationErr != nil {
+		return Config{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
 	}
 
 	return cfg, cfgPath, nil
 }
 
-func scaffoldProjectConfig(projectRoot string, apiURL string) (string, error) {
+func ScaffoldConfig(projectRoot string, apiURL string) (string, error) {
 	configDir := filepath.Join(projectRoot, ".stageflow")
 	if err := os.MkdirAll(configDir, 0o750); err != nil {
 		return "", fmt.Errorf("create %s: %w", configDir, err)
@@ -149,12 +149,12 @@ func scaffoldProjectConfig(projectRoot string, apiURL string) (string, error) {
 		return "", fmt.Errorf("stat %s: %w", configPath, err)
 	}
 
-	suggestion, err := detectProjectBootstrapSuggestion(projectRoot)
+	suggestion, err := DetectBootstrapSuggestion(projectRoot)
 	if err != nil {
 		return "", err
 	}
 
-	template := defaultProjectConfigTemplate(apiURL, suggestion)
+	template := DefaultConfigTemplate(apiURL, suggestion)
 
 	writeErr := os.WriteFile(configPath, []byte(template), 0o600)
 	if writeErr != nil {
@@ -164,7 +164,7 @@ func scaffoldProjectConfig(projectRoot string, apiURL string) (string, error) {
 	return configPath, nil
 }
 
-func scaffoldProjectGuide(projectRoot string) (string, error) {
+func ScaffoldGuide(projectRoot string) (string, error) {
 	configDir := filepath.Join(projectRoot, ".stageflow")
 	if err := os.MkdirAll(configDir, 0o750); err != nil {
 		return "", fmt.Errorf("create %s: %w", configDir, err)
@@ -185,10 +185,10 @@ func scaffoldProjectGuide(projectRoot string) (string, error) {
 	return guidePath, nil
 }
 
-func defaultProjectConfigTemplate(apiURL string, suggestion projectBootstrapSuggestion) string {
+func DefaultConfigTemplate(apiURL string, suggestion BootstrapSuggestion) string {
 	return manifesttmpl.ConfigYAML(manifesttmpl.ConfigParams{
 		APIURL:   apiURL,
-		Scanners: defaultScanScanners,
+		Scanners: DefaultScanScanners,
 		Suggestion: manifesttmpl.Suggestion{
 			Command:       suggestion.Command,
 			Cwd:           suggestion.Cwd,
@@ -202,7 +202,7 @@ func defaultProjectGuideTemplate() string {
 	return manifesttmpl.GuideMarkdown()
 }
 
-func validateProjectConfig(cfg projectConfig) error {
+func ValidateConfig(cfg Config) error {
 	if cfg.Version != 2 {
 		return fmt.Errorf("version must be 2 (got %d)", cfg.Version)
 	}
@@ -260,10 +260,10 @@ func validateProjectConfig(cfg projectConfig) error {
 	return validateOptionalHTTPURL("stageflow.api_url", cfg.Stageflow.APIURL)
 }
 
-// validateProjectScanConfig checks only what `stageflow project scan` needs
+// ValidateScanConfig checks only what `stageflow project scan` needs
 // from .stageflow/config.yaml: a remote project slug. The dev-loop fields
-// required by validateProjectConfig may be absent in a remote-only config.
-func validateProjectScanConfig(cfg projectConfig) error {
+// required by ValidateConfig may be absent in a remote-only config.
+func ValidateScanConfig(cfg Config) error {
 	if cfg.Version != 2 {
 		return fmt.Errorf("version must be 2 (got %d)", cfg.Version)
 	}
@@ -300,7 +300,7 @@ func validateOptionalHTTPURL(fieldName string, raw string) error {
 }
 
 func validatePositiveConfigDuration(fieldName, raw string) error {
-	d, ok, err := configDuration(raw)
+	d, ok, err := ConfigDuration(raw)
 	if err != nil {
 		return fmt.Errorf("%s: %w", fieldName, err)
 	}
@@ -312,7 +312,7 @@ func validatePositiveConfigDuration(fieldName, raw string) error {
 	return nil
 }
 
-func configDuration(raw string) (time.Duration, bool, error) {
+func ConfigDuration(raw string) (time.Duration, bool, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
 		return 0, false, nil
@@ -324,4 +324,35 @@ func configDuration(raw string) (time.Duration, bool, error) {
 	}
 
 	return d, true, nil
+}
+
+const DefaultScanScanners = "axe,lighthouse,seo,link-checker"
+
+// DefaultScanScannerList is the slice form of DefaultScanScanners, used as the
+// --scanner flag default.
+func DefaultScanScannerList() []string {
+	return strings.Split(DefaultScanScanners, ",")
+}
+
+func LoadScanConfig(projectRoot string) (Config, string, error) {
+	cfg, cfgPath, err := ReadConfig(projectRoot)
+	if err != nil {
+		var missingErr MissingConfigError
+		if errors.As(err, &missingErr) {
+			return Config{}, "", fmt.Errorf(
+				"no slug given and no .stageflow/config.yaml found under %s; "+
+					"pass a slug (`stageflow project scan <slug>`) or run `stageflow dev init` "+
+					"and set stageflow.project",
+				projectRoot,
+			)
+		}
+
+		return Config{}, "", err
+	}
+
+	if validationErr := ValidateScanConfig(cfg); validationErr != nil {
+		return Config{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
+	}
+
+	return cfg, cfgPath, nil
 }

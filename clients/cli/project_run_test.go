@@ -3,11 +3,12 @@ package main
 import (
 	"testing"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
 func TestBuildProjectSubmitJobRequestDefaultsScreenshotCaptureOn(t *testing.T) {
-	req, _, err := buildProjectSubmitJobRequest(projectScanCfg{
+	req, _, err := buildProjectSubmitJobRequest(projectmode.ScanConfig{
 		URLs:     []string{"https://example.com"},
 		Scanners: []string{"axe"},
 	})
@@ -18,7 +19,7 @@ func TestBuildProjectSubmitJobRequestDefaultsScreenshotCaptureOn(t *testing.T) {
 
 func TestBuildProjectSubmitJobRequestHonorsScreenshotFalse(t *testing.T) {
 	disabled := false
-	req, _, err := buildProjectSubmitJobRequest(projectScanCfg{
+	req, _, err := buildProjectSubmitJobRequest(projectmode.ScanConfig{
 		URLs:       []string{"https://example.com"},
 		Scanners:   []string{"axe"},
 		Screenshot: &disabled,

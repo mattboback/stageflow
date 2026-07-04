@@ -17,7 +17,7 @@
 //     job's prefix before job.created is published. It is never persisted to
 //     Postgres; the orchestrator only keeps a defensive fallback for legacy
 //     producers that still send inline bytes.
-package main
+package authintake
 
 import (
 	"encoding/base64"
@@ -43,10 +43,10 @@ const maxAuthStateBytes = 1 << 20 // 1 MiB
 // Names must start with an uppercase letter and contain only A-Z, 0-9, _.
 var envVarNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 
-// loadAuthStateFile reads a Playwright storage-state JSON file, validates it
+// LoadStateFile reads a Playwright storage-state JSON file, validates it
 // parses as JSON and stays under the size cap, and returns it as a base64-encoded
 // payload ready to ship in JobAuthInput.
-func loadAuthStateFile(path string) (*apiclient.JobAuthInput, error) {
+func LoadStateFile(path string) (*apiclient.JobAuthInput, error) {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
 		return nil, errors.New("--auth-state path must not be empty")
@@ -101,7 +101,7 @@ func loadAuthStateFile(path string) (*apiclient.JobAuthInput, error) {
 	}, nil
 }
 
-// loadAuthRecipeFile reads a YAML or JSON form-auth recipe, validates it
+// LoadRecipeFile reads a YAML or JSON form-auth recipe, validates it
 // locally against the Provenance.auth.form shape, and returns it as a
 // JobAuthInput payload.
 //
@@ -109,7 +109,7 @@ func loadAuthStateFile(path string) (*apiclient.JobAuthInput, error) {
 // libs/contracts/provenance/schema/provenance.schema.json (ProvenanceAuthForm).
 // The platform-api will re-validate; this CLI-side check exists only so the
 // developer gets a fast, clear error before paying a network round-trip.
-func loadAuthRecipeFile(path string) (*apiclient.JobAuthInput, error) {
+func LoadRecipeFile(path string) (*apiclient.JobAuthInput, error) {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
 		return nil, errors.New("--auth-recipe path must not be empty")
@@ -347,4 +347,25 @@ func validateActionValue(raw any) error {
 	default:
 		return fmt.Errorf("step.value must be a string or {from_env: NAME} object (got %T)", raw)
 	}
+}
+
+// LoadFromFlags resolves --auth-state or --auth-recipe into a
+// JobAuthInput payload. Mutual exclusivity is enforced upstream by Cobra; this
+// function additionally guards against both being set defensively.
+func LoadFromFlags(authStatePath, authRecipePath string) (*apiclient.JobAuthInput, bool, error) {
+	if authStatePath != "" && authRecipePath != "" {
+		return nil, false, errors.New("--auth-state and --auth-recipe are mutually exclusive")
+	}
+
+	if authStatePath != "" {
+		input, err := LoadStateFile(authStatePath)
+		return input, err == nil, err
+	}
+
+	if authRecipePath != "" {
+		input, err := LoadRecipeFile(authRecipePath)
+		return input, err == nil, err
+	}
+
+	return nil, false, nil
 }
