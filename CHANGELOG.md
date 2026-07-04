@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Re-recorded the README CLI demo GIF (`docs/images/demo.gif`) to compress
   idle time and play back faster; it now runs ~3s instead of ~10s
+- Replaced the static issue-list screenshot in the README with an animated
+  GIF (`docs/images/report-bounding-box.gif`) showing the actual interaction:
+  clicking a bounding-box overlay on the Pages tab opens that issue's detail
+  card. Recorded with a new script (`clients/web/qa/record-report-gif.mjs`)
+  against a mocked API and a real Playwright-captured screenshot
 
 ### Fixed
 

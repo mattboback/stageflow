@@ -69,7 +69,11 @@ and JSON/HTML downloads.
 
 ![StageFlow report overview](docs/images/report-overview.png)
 
-![StageFlow issue list](docs/images/report-issues.png)
+Every flagged element is overlaid directly on a full-page screenshot — click a
+bounding box on the Pages tab to jump straight to that issue's fix guidance,
+WCAG references, and evidence:
+
+![Clicking a bounding-box overlay on the Pages tab opens the issue detail card](docs/images/report-bounding-box.gif)
 
 The report shape is a versioned contract. To see it without running a scan,
 open the committed fixture
