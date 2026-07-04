@@ -24,8 +24,7 @@ Committed fixtures are contract documentation you can execute:
 
 - [`report/fixtures/unified-report.v2.all-scans.json`](report/fixtures/unified-report.v2.all-scans.json)
   — a full multi-scanner report, validated against the schema. It drives the
-  web client's component tests and e2e smoke, and the report-preview QA
-  harness renders the real UI from it.
+  web client's component tests and e2e smoke.
 - `report/MIGRATION.md` records the v1 → v2 migration.
 
 ## Codegen flow

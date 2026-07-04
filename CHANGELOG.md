@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- Internal QA helpers that weren't wired into any `just` or CI target: the
+  mocked-API report-preview harness (`devtools/qa/report-preview.mjs`) and the
+  local axe spot-check script (`devtools/scripts/a11y/test-axe-local.js`)
+- The `just deploy` recipe: hosted-demo deployment is managed outside this
+  repository, and the recipe was only a guarded delegate to that external
+  control plane
+
 ## [0.3.0] - 2026-07-03
 
 ### Added
@@ -21,10 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Migrated the web client from SvelteKit to React Router v7: the React app
+  reached full feature parity and replaced the original SvelteKit app, which
+  was removed
 - README now leads with a single golden path (CLI scan against the hosted
   demo); `PRODUCT.md` and `DESIGN.md` moved under `docs/`
-- `devtools/qa/report-preview.mjs` uses repo-relative paths and the
-  Playwright dependency declared in `clients/web`, so it runs from any checkout
 
 - **Breaking (CLI):** redesigned the command grammar so each noun means one thing
   - The local dev-server scan loop moved from bare `stageflow project` to `stageflow dev scan`; `project init` and `project doctor` moved to `stageflow dev init` and `stageflow dev doctor`. Bare `stageflow dev` and `stageflow project` print help instead of acting

@@ -33,10 +33,4 @@ The compose orchestrator mounts the rootless Podman socket so it can create scan
 
 ## Hosted Demo
 
-The hosted `stageflow.org` demo runs the same application code, but its production release, verification, monitoring, rollback, and host-level deployment control plane are intentionally managed outside this public repository.
-
-The repo `just deploy` recipe is a guarded delegate for that control plane:
-
-- It requires `STAGEFLOW_DEPLOY_CONTROL_PLANE` to point at a directory containing the external deployment `justfile`, then runs `just deploy stageflow` there.
-- When that variable is unset or the control-plane `justfile` is absent, it fails with a neutral message and leaves local and self-hosted deployment to the checked-in compose/Caddy files.
-- Set `STAGEFLOW_DEPLOY_CONTROL_PLANE=/path/to/control-plane` only on hosts that intentionally provide the external deployment justfile.
+The hosted `stageflow.org` demo runs the same application code, but its production release, verification, monitoring, rollback, and host-level deployment control plane are intentionally managed outside this public repository. Local and self-hosted deployments use the checked-in compose/Caddy files above.
