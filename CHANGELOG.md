@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `stageflow scan <dir|zip>`: point the CLI at a local build directory (or an
+  existing ZIP archive) and it is zipped, uploaded to the platform's ZIP
+  intake, served from the job's isolated static server, and scanned — local
+  project scanning with zero local stack, including against the hosted API
 - Web client test suite: vitest unit/component tests driven by the committed
   v2 report fixture, plus a Playwright e2e smoke against the preview build
   with a mocked API; both run in CI alongside a new web-client README
@@ -51,6 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   doc v2.1.0 fields (page overview artifacts, `locationInfo`, real scanner
   `toolVersion`), localhost URLs from the local golden stack, and the rescored
   summary
+
+- ZIP job pages are no longer blocked by the scanner-side private-target
+  guard: the intake now marks ZIP jobs `allow_private_targets`, since their
+  scan target is the job's own loopback static server, not a user-supplied
+  URL (previously every page after the entry URL failed with
+  "IP 127.0.0.1 is in a blocked network range")
 
 - ZIP scans no longer fail at the extraction stage on rootless Podman
   deployments: the freshly created per-job workspace volume was owned by
