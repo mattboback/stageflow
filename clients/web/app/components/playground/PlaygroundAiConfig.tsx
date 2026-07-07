@@ -52,14 +52,14 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 	return (
 		<section className="pai">
 			<header className="pai__head">
-				<h3 className="pai__title">AI Navigator</h3>
+				<h2 className="pai__title">AI Navigator</h2>
 				<p className="pai__sub">
 					Give the navigator a high-level goal; it drives the page to satisfy it.
 				</p>
 			</header>
 
 			<label className="pai__field">
-				<span className="pai__label">
+				<span className="label">
 					Objective <span className="pai__req">*</span>
 				</span>
 				<textarea
@@ -72,7 +72,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 
 			<div className="pai__row">
 				<label className="pai__field">
-					<span className="pai__label">Max steps</span>
+					<span className="label">Max steps</span>
 					<input
 						type="number"
 						min={1}
@@ -84,7 +84,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 					/>
 				</label>
 				<label className="pai__field">
-					<span className="pai__label">Max wall time (ms)</span>
+					<span className="label">Max wall time (ms)</span>
 					<input
 						type="number"
 						min={10_000}
@@ -99,7 +99,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 					/>
 				</label>
 				<label className="pai__field">
-					<span className="pai__label">Model</span>
+					<span className="label">Model</span>
 					<input
 						type="text"
 						value={config.model}

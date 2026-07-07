@@ -9,27 +9,27 @@ export function SiteFooter() {
 	return (
 		<footer className="site-footer">
 			<div className="wrap site-footer__inner">
-				<div style={{ flex: '1 1 14rem' }}>
+				<div className="site-footer__brand">
 					<Link className="brand" to="/">
 						<span className="brand__mark" aria-hidden="true" />
 						<span className="brand__name">STAGEFLOW</span>
 					</Link>
-					<p className="muted" style={{ fontSize: '.875rem', maxWidth: '32ch', marginTop: '.7rem' }}>
+					<p className="muted site-footer__tagline">
 						Self-hostable frontend quality platform. MIT licensed.
 					</p>
 				</div>
-				<nav aria-label="Product" style={{ display: 'grid', gap: '.55rem' }}>
+				<nav aria-label="Product" className="site-footer__col">
 					<span className="label">Product</span>
 					<Link to="/playground">Playground</Link>
 					<Link to="/#scanners">Scanners</Link>
 				</nav>
-				<nav aria-label="Resources" style={{ display: 'grid', gap: '.55rem' }}>
+				<nav aria-label="Resources" className="site-footer__col">
 					<span className="label">Resources</span>
 					<a href={DOCS_URL}>Documentation</a>
 					<a href={CLI_REFERENCE_URL}>CLI reference</a>
 					<a href={SELF_HOSTING_URL}>Self-hosting</a>
 				</nav>
-				<nav aria-label="Project" style={{ display: 'grid', gap: '.55rem' }}>
+				<nav aria-label="Project" className="site-footer__col">
 					<span className="label">Project</span>
 					<a href={GITHUB_URL}>GitHub</a>
 					<a href={`${GITHUB_URL}/blob/main/CHANGELOG.md`}>Changelog</a>
