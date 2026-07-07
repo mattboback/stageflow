@@ -17,6 +17,10 @@ go_work := 'go.work'
 help:
     @just --list
 
+[group('production'), doc('Redirect production deploys to the shared VPS control plane')]
+deploy:
+    @cd /home/matt/Deployment && just deploy stageflow
+
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
 setup:
     #!/usr/bin/env bash

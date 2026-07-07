@@ -20,7 +20,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 		<section className="pauth">
 			<header className="pauth__head">
 				<div>
-					<h3 className="pauth__title">Authentication</h3>
+					<h2 className="pauth__title">Authentication</h2>
 					<p className="pauth__sub">Log in before scanning protected pages.</p>
 				</div>
 				{config.enabled && !isValid && (
@@ -40,7 +40,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 			{config.enabled && (
 				<div className="pauth__body">
 					<label className="pauth__field">
-						<span className="pauth__label">
+						<span className="label">
 							Login URL <span className="pauth__req">*</span>
 						</span>
 						<input
@@ -53,7 +53,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 					</label>
 					<div className="pauth__row">
 						<label className="pauth__field">
-							<span className="pauth__label">
+							<span className="label">
 								Username / email <span className="pauth__req">*</span>
 							</span>
 							<input
@@ -64,7 +64,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 							/>
 						</label>
 						<label className="pauth__field">
-							<span className="pauth__label">
+							<span className="label">
 								Password <span className="pauth__req">*</span>
 							</span>
 							<div className="pauth__pwd">
@@ -96,7 +96,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 					{showAdvanced && (
 						<div className="pauth__adv">
 							<label className="pauth__field">
-								<span className="pauth__label">Username selector</span>
+								<span className="label">Username selector</span>
 								<input
 									type="text"
 									placeholder="auto:username"
@@ -105,7 +105,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								/>
 							</label>
 							<label className="pauth__field">
-								<span className="pauth__label">Password selector</span>
+								<span className="label">Password selector</span>
 								<input
 									type="text"
 									placeholder="auto:password"
@@ -114,7 +114,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								/>
 							</label>
 							<label className="pauth__field">
-								<span className="pauth__label">Submit selector</span>
+								<span className="label">Submit selector</span>
 								<input
 									type="text"
 									placeholder="auto:submit"
@@ -123,7 +123,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								/>
 							</label>
 							<label className="pauth__field">
-								<span className="pauth__label">Success strategy</span>
+								<span className="label">Success strategy</span>
 								<select
 									value={config.successStrategy}
 									onChange={(e) =>
@@ -138,7 +138,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 							</label>
 							{config.successStrategy === 'selector' && (
 								<label className="pauth__field">
-									<span className="pauth__label">Success selector</span>
+									<span className="label">Success selector</span>
 									<input
 										type="text"
 										placeholder=".dashboard, [data-logged-in]"

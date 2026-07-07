@@ -5,6 +5,10 @@
 > system lives in [design.md](design.md); tokens are canonical in
 > `clients/web/app/styles/instrument.css`.
 
+## Register
+
+product
+
 ## Users
 
 **Primary — first-time visitors to stageflow.org.** A developer or site owner who

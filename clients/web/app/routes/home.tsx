@@ -5,6 +5,7 @@ import { SiteFooter } from '../components/SiteFooter';
 import { Gauge } from '../components/Gauge';
 import { SeverityScale } from '../components/SeverityScale';
 import { Pill } from '../components/Pill';
+import { normalizeUrlInput, validateHttpUrls } from '../lib/components/playground/playground-utils';
 import {
 	buildSiteMeta,
 	HOME_DESCRIPTION,
@@ -53,10 +54,22 @@ const SCANNERS: { name: string; sub: string; cat: string; off?: boolean }[] = [
 export default function Home() {
 	const navigate = useNavigate();
 	const [url, setUrl] = useState('https://example.com');
+	const [urlError, setUrlError] = useState<string | null>(null);
 
 	function onScan(e: React.FormEvent) {
 		e.preventDefault();
-		navigate(`/playground?url=${encodeURIComponent(url.trim())}`);
+		const normalized = normalizeUrlInput(url);
+		if (!normalized) {
+			setUrlError('Enter a URL to scan.');
+			return;
+		}
+		const { valid, invalid } = validateHttpUrls([normalized]);
+		if (invalid.length > 0) {
+			setUrlError(invalid[0].reason);
+			return;
+		}
+		setUrlError(null);
+		navigate(`/playground?url=${encodeURIComponent(valid[0])}`);
 	}
 
 	return (
@@ -65,30 +78,44 @@ export default function Home() {
 
 			<main id="main">
 				{/* HERO */}
-				<section className="hero">
+				<section className="hero hero--dark">
+					<div className="hero__ticks" aria-hidden="true" />
 					<div className="wrap hero__grid">
 						<div>
-							<span className="eyetag">Frontend quality, measured</span>
 							<h1>
-								Did this change make the&nbsp;frontend <em>worse?</em>
+								Every deploy answers one question:{' '}
+								<span className="verdict">better</span>, or{' '}
+								<span className="verdict">worse</span>.
 							</h1>
 							<p className="hero__lede">
 								Eight scanners, one pipeline, one report. StageFlow remembers a baseline per
 								project and tells you, in CI or the browser, exactly what regressed.
 							</p>
-							<form className="scanbar" onSubmit={onScan}>
+							<form className="scanbar" onSubmit={onScan} noValidate>
 								<label className="sr-only" htmlFor="url">
 									URL to scan
 								</label>
-								<input
-									className="input mono"
-									id="url"
-									type="url"
-									inputMode="url"
-									placeholder="https://example.com"
-									value={url}
-									onChange={(e) => setUrl(e.target.value)}
-								/>
+								<div className="scanbar__field">
+									<input
+										className="input mono"
+										id="url"
+										type="url"
+										inputMode="url"
+										placeholder="https://example.com"
+										value={url}
+										aria-invalid={urlError ? true : undefined}
+										aria-describedby={urlError ? 'url-error' : undefined}
+										onChange={(e) => {
+											setUrl(e.target.value);
+											if (urlError) setUrlError(null);
+										}}
+									/>
+									{urlError && (
+										<span className="scanbar__err" id="url-error" role="alert">
+											{urlError}
+										</span>
+									)}
+								</div>
 								<button className="btn btn--primary" type="submit">
 									Scan{' '}
 									<span className="ar" aria-hidden="true">
@@ -113,7 +140,7 @@ export default function Home() {
 						</div>
 
 						{/* report preview */}
-						<div className="panel" style={{ boxShadow: 'var(--shadow-md)' }}>
+						<div className="panel hero__preview" style={{ boxShadow: 'var(--shadow-pop)' }}>
 							<div className="panel__head">
 								<span className="label">Sample report · example.com</span>
 								<Pill variant="done">Preview</Pill>
@@ -148,7 +175,6 @@ export default function Home() {
 				<section className="section" id="scanners">
 					<div className="wrap">
 						<div className="section__head">
-							<span className="eyetag">The instrument</span>
 							<h2>Eight scanners. One pass. One report contract.</h2>
 							<p>
 								Every channel runs in an isolated, rootless container and merges into a single
@@ -185,12 +211,7 @@ export default function Home() {
 					<div className="wrap">
 						<div className="regress">
 							<div>
-								<span className="eyetag" style={{ color: 'var(--signal)' }}>
-									Regression memory
-								</span>
-								<h2 style={{ marginTop: '.7rem' }}>
-									Promote a baseline once. Gate every scan after it.
-								</h2>
+								<h2>Promote a baseline once. Gate every scan after it.</h2>
 								<p>
 									Register a project, accept a known-good run, and every later scan diffs against
 									it, exiting non-zero the moment a new issue appears or the severity gate trips.
@@ -213,9 +234,8 @@ export default function Home() {
 								</div>
 								<div className="diffnew">
 									<span className="badge">+2</span>
-									<span style={{ color: 'oklch(0.78 0.01 240)' }}>
-										sample new serious issues · gate:{' '}
-										<strong style={{ color: '#fff' }}>fail</strong>
+									<span className="diffnew__text">
+										sample new serious issues · gate: <strong>fail</strong>
 									</span>
 								</div>
 							</div>
@@ -227,7 +247,6 @@ export default function Home() {
 				<section className="section">
 					<div className="wrap">
 						<div className="section__head" style={{ marginBottom: '2.6rem' }}>
-							<span className="eyetag">Operation</span>
 							<h2>From URL to one report in three moves.</h2>
 						</div>
 						<div className="flow">
@@ -260,11 +279,10 @@ export default function Home() {
 				<section className="section" style={{ paddingTop: 0 }}>
 					<div className="wrap">
 						<div className="cta">
-							<span className="eyetag">No account required</span>
-							<h2 style={{ marginTop: '.8rem' }}>Measure your frontend in the next minute.</h2>
+							<h2>Measure your frontend in the next minute.</h2>
 							<p>
-								Run a hosted scan in the browser, or self-host the identical Podman stack. Same
-								API, same report, your infrastructure.
+								No account required. Run a hosted scan in the browser, or self-host the identical
+								Podman stack. Same API, same report, your infrastructure.
 							</p>
 							<div className="cta__actions">
 								<Link className="btn btn--primary" to="/playground">

@@ -62,6 +62,7 @@ export default function Playground() {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const [error, setError] = useState<string | null>(null);
+	const [urlRowErrors, setUrlRowErrors] = useState<Record<number, string>>({});
 	const [submitting, setSubmitting] = useState(false);
 
 	const [authConfig, setAuthConfig] = useState<AuthFormConfig>({
@@ -113,8 +114,18 @@ export default function Playground() {
 		setSelections((prev) => prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s)));
 	}
 
+	function setAllScanners(enabled: boolean) {
+		setSelections((prev) => prev.map((s) => ({ ...s, enabled })));
+	}
+
 	function updateUrl(index: number, value: string) {
 		setUrls((prev) => prev.map((u, i) => (i === index ? value : u)));
+		setUrlRowErrors((prev) => {
+			if (!(index in prev)) return prev;
+			const next = { ...prev };
+			delete next[index];
+			return next;
+		});
 	}
 
 	function addUrlRow() {
@@ -123,6 +134,7 @@ export default function Playground() {
 
 	function removeUrlRow(index: number) {
 		setUrls((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+		setUrlRowErrors({});
 	}
 
 	function onFilePicked(f: File | null) {
@@ -142,6 +154,7 @@ export default function Playground() {
 
 	async function runScan() {
 		setError(null);
+		setUrlRowErrors({});
 
 		if (armed === 0) {
 			setError('Arm at least one scanner channel.');
@@ -150,19 +163,27 @@ export default function Playground() {
 
 		let validUrls: string[] = [];
 		if (mode === 'url') {
-			const normalized = urls
-				.map((u) => normalizeUrlInput(u))
-				.filter((u): u is string => Boolean(u));
-			if (normalized.length === 0) {
+			const rowErrors: Record<number, string> = {};
+			const collected: string[] = [];
+			urls.forEach((raw, i) => {
+				const normalized = normalizeUrlInput(raw);
+				if (!normalized) return;
+				const { valid, invalid } = validateHttpUrls([normalized]);
+				if (invalid.length > 0) {
+					rowErrors[i] = invalid[0].reason;
+				} else {
+					collected.push(valid[0]);
+				}
+			});
+			if (Object.keys(rowErrors).length > 0) {
+				setUrlRowErrors(rowErrors);
+				return;
+			}
+			if (collected.length === 0) {
 				setError('Enter at least one URL to scan.');
 				return;
 			}
-			const { valid, invalid } = validateHttpUrls(normalized);
-			if (invalid.length > 0) {
-				setError(`${invalid[0].url}: ${invalid[0].reason}`);
-				return;
-			}
-			validUrls = valid;
+			validUrls = collected;
 		} else if (!file) {
 			setError('Select a ZIP archive to scan.');
 			return;
@@ -232,7 +253,7 @@ export default function Playground() {
 						<div style={{ display: 'grid', gap: '1.5rem' }}>
 							<section className="panel">
 								<div className="panel__head">
-									<span className="label">Target</span>
+									<h2 className="label">Target</h2>
 									<div className="seg" role="group" aria-label="Target type">
 										<button
 											type="button"
@@ -257,14 +278,29 @@ export default function Playground() {
 												{urls.map((u, i) => (
 													<div className="urlrow" key={i}>
 														<span className="ix">{i + 1}</span>
-														<input
-															className="input mono"
-															type="url"
-															value={u}
-															placeholder="https://…"
-															aria-label={`URL ${i + 1}`}
-															onChange={(e) => updateUrl(i, e.target.value)}
-														/>
+														<div className="urlrow__field">
+															<input
+																className="input mono"
+																type="url"
+																value={u}
+																placeholder="https://…"
+																aria-label={`URL ${i + 1}`}
+																aria-invalid={urlRowErrors[i] ? true : undefined}
+																aria-describedby={
+																	urlRowErrors[i] ? `urlrow-err-${i}` : undefined
+																}
+																onChange={(e) => updateUrl(i, e.target.value)}
+															/>
+															{urlRowErrors[i] && (
+																<span
+																	className="urlrow__err"
+																	id={`urlrow-err-${i}`}
+																	role="alert"
+																>
+																	{urlRowErrors[i]}
+																</span>
+															)}
+														</div>
 														<button
 															type="button"
 															className="rm"
@@ -306,10 +342,23 @@ export default function Playground() {
 
 							<section className="panel">
 								<div className="panel__head">
-									<span className="label">Channels</span>
-									<span className="mono" style={{ fontSize: '.72rem', color: 'var(--ink-muted)' }}>
-										{catalogLoading ? 'loading…' : `${armed} / ${total} armed`}
-									</span>
+									<h2 className="label">Channels</h2>
+									<div className="chanhead__meta">
+										<span className="mono chanhead__count">
+											{catalogLoading ? 'loading…' : `${armed} / ${total} armed`}
+										</span>
+										{!catalogLoading && !catalogError && (
+											<span className="chanhead__bulk">
+												<button type="button" onClick={() => setAllScanners(true)}>
+													All
+												</button>
+												<span aria-hidden="true">·</span>
+												<button type="button" onClick={() => setAllScanners(false)}>
+													None
+												</button>
+											</span>
+										)}
+									</div>
 								</div>
 								<div className="panel__body" style={{ padding: 0 }}>
 									{catalogError ? (
