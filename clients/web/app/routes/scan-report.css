@@ -550,9 +550,18 @@
 	box-shadow: 0 30px 80px -20px rgba(10, 12, 16, 0.4);
 	overflow: hidden;
 }
+/* Quiet modal head: white surface, severity only as top hairline + badge (no wash slab) */
 .imodal__head {
-	padding: 1.4rem 1.5rem 1.2rem; border-bottom: 1px solid var(--line);
+	padding: 1.4rem 1.5rem 1.2rem;
+	border-bottom: 1px solid var(--line);
+	background: var(--surface);
+	box-shadow: inset 0 2px 0 var(--line-strong);
 }
+.imodal__head--critical { box-shadow: inset 0 2px 0 var(--sev-critical); }
+.imodal__head--serious  { box-shadow: inset 0 2px 0 var(--sev-serious); }
+.imodal__head--moderate { box-shadow: inset 0 2px 0 var(--sev-moderate); }
+.imodal__head--minor    { box-shadow: inset 0 2px 0 var(--sev-minor); }
+.imodal__head--info     { box-shadow: inset 0 2px 0 var(--sev-pass); }
 .imodal__head-top {
 	display: flex; align-items: flex-start; justify-content: space-between;
 	gap: 0.8rem; margin-bottom: 0.7rem;
@@ -562,12 +571,17 @@
 }
 .imodal__sev {
 	display: inline-flex; align-items: center; gap: 0.4rem;
-	padding: 0.16rem 0.55rem; border: 1px solid var(--line);
-	border-radius: var(--r-sm); background: var(--surface);
+	padding: 0.16rem 0.55rem; border: 1px solid var(--line-strong);
+	border-radius: 999px; background: var(--surface);
 	font-family: var(--mono); font-size: 0.66rem; font-weight: 700;
 	letter-spacing: 0.06em; text-transform: uppercase;
 	color: var(--ink-strong);
 }
+.imodal__sev.sev-critical { color: var(--sev-critical); border-color: oklch(0.86 0.05 27); background: var(--sev-critical-wash); }
+.imodal__sev.sev-serious  { color: var(--sev-serious);  border-color: oklch(0.86 0.05 47); background: var(--sev-serious-wash); }
+.imodal__sev.sev-moderate { color: var(--sev-moderate); border-color: oklch(0.86 0.06 80); background: var(--sev-moderate-wash); }
+.imodal__sev.sev-minor    { color: var(--sev-minor);    border-color: oklch(0.86 0.05 135); background: var(--sev-minor-wash); }
+.imodal__sev.sev-info     { color: var(--sev-pass);     border-color: oklch(0.86 0.05 165); background: oklch(0.965 0.025 165); }
 .imodal__kind {
 	display: inline-flex; align-items: center; padding: 0.16rem 0.55rem;
 	border: 1px solid var(--line); border-radius: var(--r-sm);

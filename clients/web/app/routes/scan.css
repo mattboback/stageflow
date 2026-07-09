@@ -52,14 +52,51 @@
 .ch--queue .ch__tag, .ch--queue .ch__name { color: var(--ink-muted); }
 .ch--queue .ch__name { font-weight: 500; }
 
-/* log readout */
-.log { margin-top: 1.5rem; }
-.log__body { background: var(--ground-deep); border-radius: 0 0 var(--r-lg) var(--r-lg); padding: 0.9rem 1.1rem;
-	font-family: var(--mono); font-size: 0.78rem; line-height: 1.7; max-height: 230px; overflow: auto; }
-.log__line { display: grid; grid-template-columns: 3.2rem 1fr; gap: 0.9rem; }
-.log__t { color: var(--ink-faint); font-variant-numeric: tabular-nums; }
-.log__m { color: var(--ink); white-space: pre-wrap; word-break: break-word; }
-.log__empty { color: var(--ink-faint); }
+/* log readout — intentional dark terminal island (stdout / SSE stream) */
+.log {
+	margin-top: 1.5rem;
+	background: var(--ink-strong);
+	border-color: oklch(0.34 0.012 250);
+	overflow: hidden;
+}
+.log .panel__head {
+	border-bottom-color: oklch(0.34 0.012 250);
+	background: transparent;
+}
+.log .label {
+	color: oklch(0.72 0.012 240);
+}
+.log__meta {
+	font-size: 0.72rem;
+	color: oklch(0.68 0.012 240);
+}
+.log__body {
+	background: var(--ink-strong);
+	border-radius: 0 0 var(--r-lg) var(--r-lg);
+	padding: 0.9rem 1.1rem;
+	font-family: var(--mono);
+	font-size: 0.8rem;
+	line-height: 1.7;
+	max-height: 230px;
+	overflow: auto;
+}
+.log__line {
+	display: grid;
+	grid-template-columns: 3.2rem 1fr;
+	gap: 0.9rem;
+}
+.log__t {
+	color: oklch(0.62 0.012 240);
+	font-variant-numeric: tabular-nums;
+}
+.log__m {
+	color: oklch(0.94 0.008 240);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+.log__empty {
+	color: oklch(0.68 0.012 240);
+}
 
 /* sidebar */
 .side { display: grid; gap: 1.2rem; position: sticky; top: 84px; }

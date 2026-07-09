@@ -247,9 +247,7 @@ export default function Scan() {
 							<section className="panel log" aria-label="Scan log">
 								<div className="panel__head">
 									<span className="label">Stream</span>
-									<span className="mono" style={{ fontSize: '.72rem', color: 'var(--ink-muted)' }}>
-										stdout · {id}
-									</span>
+									<span className="log__meta mono">stdout · {id}</span>
 								</div>
 								<div className="log__body" ref={logBodyRef} aria-live="polite">
 									{logs.length === 0 ? (
