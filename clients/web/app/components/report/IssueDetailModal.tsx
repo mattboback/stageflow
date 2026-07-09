@@ -7,8 +7,8 @@ import {
 	getIssueKind,
 	getIssueKindLabel,
 	getIssueScreenshotUrl,
-	getSeverityContainerClass,
 	getSeverityDotClass,
+	normalizeSeverity,
 	isManualReviewIssue,
 	rewriteIssueTitle
 } from '../../lib/report';
@@ -125,6 +125,7 @@ export function IssueDetailModal({
 	}, [hasNext, hasPrev, currentIndex, totalCount]);
 
 	const pageLabel = page?.path ?? page?.url ?? null;
+	const severity = normalizeSeverity(issue.severity) ?? 'info';
 
 	return (
 		<div
@@ -135,12 +136,13 @@ export function IssueDetailModal({
 			onClick={onClose}
 		>
 			<div className="imodal" onClick={(e) => e.stopPropagation()}>
-				<header className={`imodal__head ${getSeverityContainerClass(issue.severity)}`}>
+				{/* Quiet head: plain surface + 2px severity top edge; badge carries status */}
+				<header className={`imodal__head imodal__head--${severity}`}>
 					<div className="imodal__head-top">
 						<div className="imodal__chips">
-							<span className={`imodal__sev sev-container sev-${issue.severity}`}>
-								<span className={getSeverityDotClass(issue.severity)} aria-hidden="true" />
-								{issue.severity}
+							<span className={`imodal__sev sev-${severity}`}>
+								<span className={getSeverityDotClass(severity)} aria-hidden="true" />
+								{severity}
 							</span>
 							<span className="imodal__kind">{kindLabel}</span>
 							<span className="imodal__rule">
