@@ -59,8 +59,8 @@ What StageFlow's web UI must **not** look like:
 - Alarmist security-scanner aesthetics — red-everywhere, scare-tactic "THREATS DETECTED"
   urgency, gamified scores, confetti.
 - Fake browser chrome; brand-colored scanner logos used as decoration.
-- Cool-slate "developer-tool dark dashboard." StageFlow is light-only warm paper; dark is
-  reserved for the intentional terminal/automation islands only.
+- Cool-slate "developer-tool dark dashboard." StageFlow is light-only cool graphite;
+  dark is reserved for the intentional terminal/automation islands only.
 - Heavy marketing-page reveal choreography on a tool that should feel instant and honest.
 
 ## Design Principles
@@ -70,8 +70,8 @@ What StageFlow's web UI must **not** look like:
 2. **Calm under criticality.** Even critical findings are presented with composure —
    evidence, severity, and remediation side by side. Never alarmist, never gamified.
 3. **Practice what you preach.** A tool that scans for accessibility and quality must be
-   exemplary itself: WCAG AA, fast, semantic, keyboard-navigable. The product is its own
-   best demo.
+   exemplary itself: WCAG AA floor, AAA contrast where practical, fast, semantic,
+   keyboard-navigable. The product is its own best demo.
 4. **Trust through transparency.** Every score and claim is backed by evidence
    (screenshots, exact rules, source). No black-box numbers without the "why."
 5. **Earn the first minute.** Optimize the path from first-time visitor to "I understand
@@ -79,10 +79,13 @@ What StageFlow's web UI must **not** look like:
 
 ## Accessibility & Inclusion
 
-- **WCAG 2.1 AA** across primitives, checked through the web app CI path
-  (`cd clients/web && bun run ci`) plus StageFlow dogfooding.
-- Contrast floors enforced via tokens: `--color-ink-faint` ≥ 4.5:1; decorative large text
-  (`--color-ink-ghost`) ≥ 3:1 on paper.
+- **WCAG 2.1 AA** is the hard floor across primitives, checked through the web app CI
+  path (`cd clients/web && bun run ci`) plus StageFlow dogfooding.
+- **Prefer AAA contrast where practical** on body and UI text; tokens target cool
+  near-black ink on white/near-white surfaces (`--ink` / `--ink-strong` on
+  `--surface` / `--ground`).
+- Contrast floors: `--ink-muted` and body text ≥ 4.5:1 (AA); decorative large or
+  non-essential text may use fainter ink only when it still meets the applicable ratio.
 - **Severity is never conveyed by color alone** (color-blind safe): pair every hue with a
   label, icon, or text.
 - **Reduced motion** is honored on every animation; no entrance fades on form fields (axe

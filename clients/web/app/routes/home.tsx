@@ -33,11 +33,12 @@ export const meta: MetaFunction = () => [
 	}
 ];
 
-const PERF: { id: string; val: number; moderate?: boolean }[] = [
-	{ id: 'axe', val: 94 },
-	{ id: 'lighthouse', val: 88 },
-	{ id: 'seo', val: 97 },
-	{ id: 'sec-headers', val: 75, moderate: true }
+const PERF: { id: string; label: string; val: number; moderate?: boolean }[] = [
+	{ id: 'a11y', label: 'Accessibility', val: 94 },
+	{ id: 'perf', label: 'Performance', val: 88 },
+	{ id: 'seo', label: 'SEO', val: 97 },
+	{ id: 'sec', label: 'Security', val: 75, moderate: true },
+	{ id: 'qual', label: 'Quality', val: 91 }
 ];
 
 const SCANNERS: { name: string; sub: string; cat: string; off?: boolean }[] = [
@@ -50,6 +51,42 @@ const SCANNERS: { name: string; sub: string; cat: string; off?: boolean }[] = [
 	{ name: 'spelling-grammar', sub: 'Content quality checks', cat: 'Quality' },
 	{ name: 'ai-navigator', sub: 'Natural-language navigation objectives', cat: 'AI · opt-in', off: true }
 ];
+
+const BASELINE_STEPS = [
+	{
+		n: '1',
+		title: 'Establish a baseline',
+		body: 'Pick a known-good run as your baseline.'
+	},
+	{
+		n: '2',
+		title: 'Run on every deploy',
+		body: 'Each scan compares against that baseline.'
+	},
+	{
+		n: '3',
+		title: 'See what changed',
+		body: 'Only new or worse issues are highlighted.'
+	}
+] as const;
+
+const PATH_STEPS = [
+	{
+		n: '01',
+		title: 'Configure',
+		body: 'Set the scope. Point at a URL or upload a ZIP archive.'
+	},
+	{
+		n: '02',
+		title: 'Run',
+		body: 'Each scanner runs in isolation in a rootless container while progress streams live over SSE.'
+	},
+	{
+		n: '03',
+		title: 'Ship',
+		body: 'Read the report. Merged findings with severity, evidence, and remediation in a single, triage-ready view.'
+	}
+] as const;
 
 export default function Home() {
 	const navigate = useNavigate();
@@ -77,19 +114,30 @@ export default function Home() {
 			<SiteHeader current="home" />
 
 			<main id="main">
-				{/* HERO */}
-				<section className="hero hero--dark">
-					<div className="hero__ticks" aria-hidden="true" />
+				{/* HERO — light, scan-first */}
+				<section className="hero" aria-labelledby="hero-heading">
+					<div className="rule-ticks" aria-hidden="true" />
 					<div className="wrap hero__grid">
-						<div>
-							<h1>
+						<div className="hero__copy">
+							<p className="hero__pills" aria-label="Product attributes">
+								<span className="hero__pill">Self-hosted</span>
+								<span className="hero__pill-sep" aria-hidden="true">
+									·
+								</span>
+								<span className="hero__pill">Open source</span>
+								<span className="hero__pill-sep" aria-hidden="true">
+									·
+								</span>
+								<span className="hero__pill">CLI-first</span>
+							</p>
+							<h1 id="hero-heading">
 								Every deploy answers one question:{' '}
 								<span className="verdict">better</span>, or{' '}
 								<span className="verdict">worse</span>.
 							</h1>
 							<p className="hero__lede">
-								Eight scanners, one pipeline, one report. StageFlow remembers a baseline per
-								project and tells you, in CI or the browser, exactly what regressed.
+								StageFlow runs eight scanners, compares against a baseline, and shows you exactly
+								what regressed. Paste a URL and get a real report in seconds.
 							</p>
 							<form className="scanbar" onSubmit={onScan} noValidate>
 								<label className="sr-only" htmlFor="url">
@@ -101,6 +149,7 @@ export default function Home() {
 										id="url"
 										type="url"
 										inputMode="url"
+										autoComplete="url"
 										placeholder="https://example.com"
 										value={url}
 										aria-invalid={urlError ? true : undefined}
@@ -117,7 +166,7 @@ export default function Home() {
 									)}
 								</div>
 								<button className="btn btn--primary" type="submit">
-									Scan{' '}
+									Run a scan{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>
@@ -126,179 +175,226 @@ export default function Home() {
 							<div className="facts">
 								<div className="readout">
 									<span className="readout__val">8</span>
-									<span className="readout__lab">scanners / run</span>
+									<span className="readout__lab">scanners</span>
 								</div>
 								<div className="readout">
-									<span className="readout__val">WCAG&nbsp;AA</span>
-									<span className="readout__lab">a11y baseline</span>
+									<span className="readout__val">1</span>
+									<span className="readout__lab">report</span>
 								</div>
 								<div className="readout">
-									<span className="readout__val">0</span>
-									<span className="readout__lab">accounts required</span>
+									<span className="readout__val">CLI</span>
+									<span className="readout__lab">first</span>
+								</div>
+								<div className="readout">
+									<span className="readout__val">OPEN</span>
+									<span className="readout__lab">source</span>
 								</div>
 							</div>
 						</div>
 
-						{/* report preview */}
-						<div className="panel hero__preview" style={{ boxShadow: 'var(--shadow-pop)' }}>
+						{/* Sample report preview — product chrome, not marketing card */}
+						<aside className="panel hero__preview" aria-label="Sample report preview">
 							<div className="panel__head">
 								<span className="label">Sample report · example.com</span>
-								<Pill variant="done">Preview</Pill>
+								<Pill variant="done">Completed</Pill>
 							</div>
 							<div className="panel__body">
 								<div className="preview__top">
-									<Gauge value={92} caption="sample score" size={132} valFontSize="2.1rem" />
-									<SeverityScale counts={{ critical: 0, serious: 2, moderate: 5, minor: 11 }} />
-								</div>
-								<div className="perf-list">
-									{PERF.map((p) => (
-										<div className="perf" key={p.id}>
-											<span className="perf__id">{p.id}</span>
-											<span className="perf__bar">
-												<i
-													style={{
-														width: `${p.val}%`,
-														...(p.moderate ? { background: 'var(--sev-moderate)' } : {})
-													}}
-												/>
-											</span>
-											<span className="perf__val">{p.val}</span>
+									<Gauge value={92} caption="quality score" size={132} valFontSize="2.1rem" />
+									<div className="preview__cats">
+										<p className="preview__cats-note muted">
+											Weighted score across eight frontend quality areas.
+										</p>
+										<div className="perf-list">
+											{PERF.map((p) => (
+												<div className="perf" key={p.id}>
+													<span className="perf__id">{p.label}</span>
+													<span className="perf__bar">
+														<i
+															style={{
+																width: `${p.val}%`,
+																...(p.moderate ? { background: 'var(--sev-moderate)' } : {})
+															}}
+														/>
+													</span>
+													<span className="perf__val">{p.val}</span>
+												</div>
+											))}
 										</div>
-									))}
+									</div>
+								</div>
+								<div className="preview__bottom">
+									<SeverityScale counts={{ critical: 0, serious: 2, moderate: 5, minor: 11 }} />
+									<p className="preview__baseline mono">
+										<span className="preview__baseline-lab">Baseline</span>
+										<span>score 88 → 92</span>
+										<span className="preview__delta" aria-label="up four points">
+											▲ 4
+										</span>
+									</p>
 								</div>
 							</div>
-						</div>
+						</aside>
 					</div>
 				</section>
 
-				{/* SCANNER ARRAY */}
-				<section className="section" id="scanners">
-					<div className="wrap">
-						<div className="section__head">
-							<h2>Eight scanners. One pass. One report contract.</h2>
+				{/* BASELINE IDEA — one deliberate 3-step sequence */}
+				<section className="section section--band" aria-labelledby="baseline-heading">
+					<div className="wrap baseline">
+						<div className="baseline__intro">
+							<h2 id="baseline-heading">The baseline idea</h2>
 							<p>
-								Every channel runs in an isolated, rootless container and merges into a single
-								severity-ranked report: the same shape from the CLI, CI, or the browser.
+								StageFlow gives every scan a point of reference, so changes are clear and
+								actionable.
 							</p>
 						</div>
-						<div className="array" role="table" aria-label="Built-in scanners">
-							{SCANNERS.map((s) => (
-								<div className="array__row" role="row" key={s.name}>
-									<span className="array__name">
-										{s.name}
-										<span>{s.sub}</span>
+						<ol className="baseline__steps">
+							{BASELINE_STEPS.map((s) => (
+								<li className="baseline__step" key={s.n}>
+									<span className="baseline__n mono" aria-hidden="true">
+										{s.n}
 									</span>
-									<span className="array__cat">{s.cat}</span>
-									{s.off ? (
-										<span className="array__state" style={{ color: 'var(--ink-faint)' }}>
-											<i style={{ background: 'var(--ink-faint)' }} />
-											off
-										</span>
-									) : (
-										<span className="array__state">
-											<i />
-											armed
-										</span>
-									)}
-								</div>
+									<div>
+										<h3>{s.title}</h3>
+										<p>{s.body}</p>
+									</div>
+								</li>
 							))}
-						</div>
+						</ol>
 					</div>
 				</section>
 
-				{/* REGRESSION MEMORY */}
-				<section className="section" style={{ paddingTop: 0 }}>
-					<div className="wrap">
-						<div className="regress">
-							<div>
-								<h2>Promote a baseline once. Gate every scan after it.</h2>
+				{/* SCANNERS + PATH */}
+				<section className="section" id="scanners" aria-labelledby="scanners-heading">
+					<div className="wrap mid">
+						<div className="mid__scanners">
+							<header className="section__head">
+								<h2 id="scanners-heading">Eight scanners. One pass. One report.</h2>
 								<p>
-									Register a project, accept a known-good run, and every later scan diffs against
-									it, exiting non-zero the moment a new issue appears or the severity gate trips.
-									Straight into CI.
+									Every channel runs in isolation and merges into a single severity-ranked report —
+									the same shape from the CLI, CI, or the browser.
 								</p>
-							</div>
-							<div className="diffcard" role="group" aria-label="Sample baseline diff readout">
-								<div className="diffrow">
-									<div className="diffstat">
-										<b>88</b>
-										<small>sample baseline</small>
+							</header>
+							<div className="array" role="table" aria-label="Built-in scanners">
+								{SCANNERS.map((s) => (
+									<div className="array__row" role="row" key={s.name}>
+										<span className="array__name" role="cell">
+											{s.name}
+											<span>{s.sub}</span>
+										</span>
+										<span className="array__cat" role="cell">
+											{s.cat}
+										</span>
+										{s.off ? (
+											<span className="array__state array__state--off" role="cell">
+												<i aria-hidden="true" />
+												off
+											</span>
+										) : (
+											<span className="array__state" role="cell">
+												<i aria-hidden="true" />
+												active
+											</span>
+										)}
 									</div>
-									<span className="delta up" aria-label="up four points">
-										▲ 4
-									</span>
-									<div className="diffstat">
-										<b>92</b>
-										<small>sample run</small>
-									</div>
-								</div>
-								<div className="diffnew">
-									<span className="badge">+2</span>
-									<span className="diffnew__text">
-										sample new serious issues · gate: <strong>fail</strong>
-									</span>
-								</div>
+								))}
 							</div>
 						</div>
+
+						<aside className="mid__path panel" aria-labelledby="path-heading">
+							<div className="panel__body path">
+								<header className="path__head">
+									<h2 id="path-heading">From URL to report</h2>
+									<p className="muted">Three steps. No setup required.</p>
+								</header>
+								<ol className="path__steps">
+									{PATH_STEPS.map((s) => (
+										<li className="path__step" key={s.n}>
+											<span className="path__n mono" aria-hidden="true">
+												{s.n}
+											</span>
+											<div>
+												<h3>{s.title}</h3>
+												<p>{s.body}</p>
+											</div>
+										</li>
+									))}
+								</ol>
+								<div className="path__actions">
+									<Link className="btn btn--primary" to="/playground">
+										Open the playground{' '}
+										<span className="ar" aria-hidden="true">
+											→
+										</span>
+									</Link>
+									<p className="path__cli mono" aria-label="Sample CLI command">
+										$ stageflow scan https://example.com --fail-on serious
+									</p>
+								</div>
+							</div>
+						</aside>
 					</div>
 				</section>
 
-				{/* WORKFLOW */}
-				<section className="section">
-					<div className="wrap">
-						<div className="section__head" style={{ marginBottom: '2.6rem' }}>
-							<h2>From URL to one report in three moves.</h2>
+				{/* CLI island + self-host */}
+				<section className="section section--foot" aria-labelledby="cli-heading">
+					<div className="wrap foot">
+						<div className="terminal" aria-labelledby="cli-heading">
+							<h2 id="cli-heading" className="sr-only">
+								CLI
+							</h2>
+							<pre className="terminal__pre">
+								<code>
+									<span className="terminal__prompt">$</span> stageflow scan https://example.com
+									{'\n'}
+									{'  '}--fail-on serious
+									{'\n'}
+									{'\n'}
+									<span className="terminal__ok">✓</span> 8 scanners
+									{'\n'}
+									<span className="terminal__ok">✓</span> Baseline: May 5, 2025 at 9:12 AM
+									{'\n'}
+									<span className="terminal__ok">✓</span> Completed in 14m 32s
+									{'\n'}
+									{'\n'}
+									Report: reports/example-2025-05-07.html
+								</code>
+							</pre>
 						</div>
-						<div className="flow">
-							<div className="step">
-								<span className="step__no">01 · Configure</span>
-								<h3>Set the scope</h3>
-								<p>
-									Point at URLs or upload a ZIP archive, then arm the scanners that matter for
-									this release.
-								</p>
-							</div>
-							<div className="step">
-								<span className="step__no">02 · Run</span>
-								<h3>Scan in isolation</h3>
-								<p>Each scanner runs in a rootless container while progress streams live over SSE.</p>
-							</div>
-							<div className="step">
-								<span className="step__no">03 · Ship</span>
-								<h3>Read one report</h3>
-								<p>
-									Merged findings with severity, evidence, and remediation in a single,
-									triage-ready view.
-								</p>
-							</div>
-						</div>
-					</div>
-				</section>
 
-				{/* CTA */}
-				<section className="section" style={{ paddingTop: 0 }}>
-					<div className="wrap">
-						<div className="cta">
-							<h2>Measure your frontend in the next minute.</h2>
-							<p>
-								No account required. Run a hosted scan in the browser, or self-host the identical
-								Podman stack. Same API, same report, your infrastructure.
-							</p>
-							<div className="cta__actions">
-								<Link className="btn btn--primary" to="/playground">
-									Open the playground{' '}
-									<span className="ar" aria-hidden="true">
-										→
-									</span>
-								</Link>
-								<a
-									className="btn btn--ghost"
-									href="https://github.com/mattboback/stageflow/tree/main/docs"
-								>
-									Read the docs
-								</a>
+						<div className="panel selfhost">
+							<div className="panel__body">
+								<h2>Self-hosted. CLI first. Built for teams.</h2>
+								<p className="muted">
+									StageFlow runs in your infrastructure and your data stays with you. Use the UI for
+									exploration or the CLI for automation.
+								</p>
+								<ul className="selfhost__list">
+									<li>
+										<span className="selfhost__mark" aria-hidden="true" />
+										Docker-based · rootless containers
+									</li>
+									<li>
+										<span className="selfhost__mark" aria-hidden="true" />
+										No SaaS lock-in · run anywhere
+									</li>
+									<li>
+										<span className="selfhost__mark" aria-hidden="true" />
+										Artifacts you own · HTML · JSON · SARIF
+									</li>
+								</ul>
+								<div className="selfhost__actions">
+									<a
+										className="btn btn--ghost"
+										href="https://github.com/mattboback/stageflow/tree/main/docs"
+									>
+										Documentation{' '}
+										<span className="ar" aria-hidden="true">
+											→
+										</span>
+									</a>
+								</div>
 							</div>
-							<p className="cta__meta">$ stageflow scan https://example.com --fail-on serious</p>
 						</div>
 					</div>
 				</section>
