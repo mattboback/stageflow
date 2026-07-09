@@ -44,6 +44,13 @@ const TAG_LABEL: Record<ChannelState, string> = {
 	err: 'failed'
 };
 
+const SUB_LABEL: Record<ChannelState, string> = {
+	done: 'complete',
+	run: 'scanning…',
+	queue: 'waiting for slot',
+	err: 'did not finish'
+};
+
 export default function Scan() {
 	const { id = '' } = useParams();
 	const navigate = useNavigate();
@@ -119,29 +126,25 @@ export default function Scan() {
 				? 'polling'
 				: 'connecting…';
 
+	const heading = isFailed ? 'Scan failed' : isComplete ? 'Scan complete' : 'Scan in progress';
+
 	return (
 		<>
 			<SiteHeader />
 
 			<main id="main" className="run">
-				<div className="wrap">
+				<div className="wrap run__wrap">
 					{/* status header */}
-					<div className="shead">
+					<div className={`shead${isFailed ? ' shead--failed' : ''}`}>
 						<div>
 							<div className="shead__id">
-								<h1>{isFailed ? 'Scan failed' : isComplete ? 'Scan complete' : 'Scan in progress'}</h1>
+								<h1>{heading}</h1>
 								{statusPill}
 							</div>
-							<div
-								style={{
-									marginTop: '.55rem',
-									display: 'flex',
-									gap: '1.2rem',
-									flexWrap: 'wrap',
-									alignItems: 'center'
-								}}
-							>
-								<span className="shead__url">{id}</span>
+							<div className="shead__meta-row">
+								<span className="shead__url mono" title={id}>
+									job {id}
+								</span>
 							</div>
 							<div
 								className="meter"
@@ -151,14 +154,17 @@ export default function Scan() {
 								aria-valuemax={100}
 								aria-label="Overall scan progress"
 							>
-								<i className={isRunning ? 'live' : undefined} style={{ transform: `scaleX(${pct / 100})` }} />
+								<i
+									className={isRunning ? 'live' : undefined}
+									style={{ transform: `scaleX(${pct / 100})` }}
+								/>
 							</div>
 						</div>
 						<div className="shead__meta">
 							<div className="readout">
 								<span className="readout__val">
 									{doneCount}
-									<span style={{ color: 'var(--ink-faint)' }}>/{totalCount || '—'}</span>
+									<span className="readout__den">/{totalCount || '—'}</span>
 								</span>
 								<span className="readout__lab">channels done</span>
 							</div>
@@ -169,44 +175,46 @@ export default function Scan() {
 						</div>
 					</div>
 
-					{isFailed && error && (
-						<div
-							className="note note--err"
-							role="status"
-							style={{
-								marginTop: '1.2rem',
-								display: 'flex',
-								gap: '.6rem',
-								alignItems: 'flex-start',
-								padding: '.7rem .85rem',
-								borderRadius: 'var(--r-md)',
-								background: 'var(--sev-critical-wash)',
-								border: '1px solid oklch(0.86 0.05 27)',
-								color: 'oklch(0.4 0.16 27)',
-								fontSize: '.86rem'
-							}}
-						>
-							<span aria-hidden="true" style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>
+					{isFailed && (
+						<div className="note note--err" role="alert">
+							<span className="note__ic" aria-hidden="true">
 								!
 							</span>
-							<span>{error}</span>
+							<div>
+								<span>{error ?? 'The scan did not complete. Check the stream for details.'}</span>
+								<div className="note__actions">
+									<Link className="btn btn--ghost btn--sm" to="/playground">
+										Back to playground
+									</Link>
+									{id && (
+										<button
+											type="button"
+											className="btn btn--ghost btn--sm"
+											onClick={() => window.location.reload()}
+										>
+											Retry connection
+										</button>
+									)}
+								</div>
+							</div>
 						</div>
 					)}
 
 					<div className="grid">
-						{/* channels + log */}
-						<div>
+						<div className="grid__main">
 							<section className="panel" aria-label="Scanner channels">
 								<div className="panel__head">
 									<span className="label">
-										Channels · live{' '}
+										Channels
 										{totalCount > 0 && (
 											<span className="ch-summary">
-												— {doneCount}/{totalCount} done
+												· {doneCount}/{totalCount} done
 											</span>
 										)}
 									</span>
-									<span className="mono" style={{ fontSize: '.72rem', color: 'var(--ink-muted)' }}>
+									<span
+										className={`transport${transport === 'streaming' ? ' transport--live' : ''}`}
+									>
 										{transportLabel}
 									</span>
 								</div>
@@ -225,15 +233,7 @@ export default function Scan() {
 												<span className="ch__led" aria-hidden="true" />
 												<div>
 													<div className="ch__name">{scannerLabel(ch.id)}</div>
-													<div className="ch__sub">
-														{ch.state === 'done'
-															? 'complete'
-															: ch.state === 'run'
-																? 'scanning…'
-																: ch.state === 'err'
-																	? 'did not finish'
-																	: 'waiting for slot'}
-													</div>
+													<div className="ch__sub">{SUB_LABEL[ch.state]}</div>
 												</div>
 												<div className="ch__right">
 													<span className="ch__tag">{TAG_LABEL[ch.state]}</span>
@@ -247,18 +247,18 @@ export default function Scan() {
 							<section className="panel log" aria-label="Scan log">
 								<div className="panel__head">
 									<span className="label">Stream</span>
-									<span className="log__meta mono">stdout · {id}</span>
+									<span className="log__meta mono" title={id}>
+										stdout · {id}
+									</span>
 								</div>
 								<div className="log__body" ref={logBodyRef} aria-live="polite">
 									{logs.length === 0 ? (
 										<div className="log__line">
-											<span className="log__t" />
 											<span className="log__m log__empty">waiting for output…</span>
 										</div>
 									) : (
 										logs.map((line, i) => (
 											<div className="log__line" key={i}>
-												<span className="log__t" />
 												<span className="log__m">{line}</span>
 											</div>
 										))
@@ -267,23 +267,16 @@ export default function Scan() {
 							</section>
 						</div>
 
-						{/* sidebar */}
 						<aside className="side" aria-label="Run summary">
 							<div className="panel">
 								<div className="panel__head">
 									<span className="label">Progress</span>
 									{isComplete ? (
-										<Pill variant="done" style={{ fontSize: '.66rem' }}>
-											done
-										</Pill>
+										<Pill variant="done">done</Pill>
 									) : isFailed ? (
-										<Pill variant="error" style={{ fontSize: '.66rem' }}>
-											failed
-										</Pill>
+										<Pill variant="error">failed</Pill>
 									) : (
-										<Pill variant="live" style={{ fontSize: '.66rem' }}>
-											live
-										</Pill>
+										<Pill variant="live">live</Pill>
 									)}
 								</div>
 								<div className="panel__body">
@@ -291,11 +284,7 @@ export default function Scan() {
 										<Gauge value={pct} caption="complete" size={120} valFontSize="1.9rem" />
 									</div>
 									{isComplete && (
-										<Link
-											className="btn btn--primary"
-											to={`/scan/${id}/report`}
-											style={{ width: '100%', justifyContent: 'center' }}
-										>
+										<Link className="btn btn--primary btn--block" to={`/scan/${id}/report`}>
 											View report{' '}
 											<span className="ar" aria-hidden="true">
 												→
@@ -308,18 +297,18 @@ export default function Scan() {
 								<div className="panel__head">
 									<span className="label">Artifacts</span>
 								</div>
-								<div className="panel__body" style={{ paddingBlock: '.4rem' }}>
+								<div className="panel__body panel__body--tight">
 									<div className={`artifact${shots > 0 ? '' : ' pending'}`}>
-										<span className="ic">PNG</span>{' '}
+										<span className="ic">PNG</span>
 										{shots > 0 ? `${shots} page screenshots` : 'page screenshots · pending'}
 									</div>
 									<div className={`artifact${artifacts?.report_json ? '' : ' pending'}`}>
-										<span className="ic">JSON</span> unified report
-										{artifacts?.report_json ? '' : ' · pending'}
+										<span className="ic">JSON</span>
+										unified report{artifacts?.report_json ? '' : ' · pending'}
 									</div>
 									<div className={`artifact${artifacts?.report_html ? '' : ' pending'}`}>
-										<span className="ic">HTML</span> report bundle
-										{artifacts?.report_html ? '' : ' · pending'}
+										<span className="ic">HTML</span>
+										report bundle{artifacts?.report_html ? '' : ' · pending'}
 									</div>
 								</div>
 							</div>
