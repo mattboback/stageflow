@@ -168,7 +168,7 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .nav { display: flex; align-items: center; gap: 0.35rem; margin-left: auto; }
 .nav a.navlink {
-	font-size: 0.875rem; color: var(--ink-muted); padding: 0.45rem 0.7rem;
+	font-size: 0.875rem; color: var(--ink); padding: 0.45rem 0.7rem;
 	border-radius: var(--r-sm); transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 .nav a.navlink:hover { color: var(--ink-strong); background: var(--ground-deep); }
@@ -224,11 +224,25 @@ input, select, textarea { font: inherit; color: inherit; }
 .sevscale { display: flex; flex-direction: column; gap: 1px; border-radius: var(--r-sm); overflow: hidden;
 	border: 1px solid var(--line); }
 .sevrow {
-	display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 0.7rem;
+	display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: 0.55rem;
 	padding: 0.5rem 0.7rem; background: var(--surface);
+	transition: background var(--dur-1) var(--ease);
 }
+.sevrow:hover { background: var(--ground); }
 .sevrow__dot { width: 9px; height: 9px; border-radius: 2px; }
-.sevrow__name { font-size: 0.82rem; color: var(--ink); }
+.sevrow__name {
+	display: flex; align-items: center; gap: 0.55rem;
+	min-width: 0; font-size: 0.82rem; color: var(--ink);
+}
+/* faint dotted leader to the count — TOC track, not decoration */
+.sevrow__name::after {
+	content: '';
+	flex: 1 1 auto;
+	min-width: 0.75rem;
+	height: 0;
+	border-bottom: 1px dotted var(--line-strong);
+	transform: translateY(0.05em);
+}
 .sevrow__count { font-family: var(--mono); font-weight: 600; font-size: 0.9rem; color: var(--ink-strong); }
 .sev-critical .sevrow__dot { background: var(--sev-critical); }
 .sev-serious  .sevrow__dot { background: var(--sev-serious); }
@@ -277,7 +291,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .site-footer__brand { flex: 1 1 14rem; }
 .site-footer__tagline { font-size: 0.875rem; max-width: 32ch; margin-top: 0.7rem; }
 .site-footer__col { display: grid; gap: 0.55rem; }
-.site-footer a { color: var(--ink-muted); font-size: 0.875rem; }
+.site-footer a { color: var(--ink); font-size: 0.875rem; }
 .site-footer a:hover { color: var(--ink-strong); }
 
 /* -------------------------------------------------------------- utilities */
