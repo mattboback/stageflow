@@ -38,18 +38,19 @@
 }
 .hero h1 {
 	font-size: clamp(2.15rem, 4.6vw, 3.35rem);
-	line-height: 1.06;
-	letter-spacing: -0.032em;
+	line-height: 1.14;
+	letter-spacing: -0.03em;
 	font-weight: 800;
 	color: var(--ink-strong);
 	text-wrap: balance;
-	margin: 0 0 1rem;
-	max-width: 11.5em;
+	margin: 0 0 1.05rem;
+	max-width: 12em;
 }
+/* Mono readout for the verdict pair — same weight as surrounding head for rhythm */
 .hero h1 .verdict {
 	font-family: var(--mono);
-	font-weight: 700;
-	letter-spacing: -0.02em;
+	font-weight: 800;
+	letter-spacing: -0.025em;
 }
 .hero__lede {
 	font-size: 1.05rem;
@@ -88,25 +89,39 @@
 	font-weight: 500;
 }
 
-/* compact facts strip */
+/* facts strip — anchored under scanbar with calibration ticks */
 .facts {
+	margin-top: 1.75rem;
+	max-width: 34rem;
+}
+.facts__rule {
+	height: 9px;
+	margin-bottom: 1rem;
+	background-image: repeating-linear-gradient(
+		to right,
+		var(--tick) 0,
+		var(--tick) 1px,
+		transparent 1px,
+		transparent 12px
+	);
+	border-bottom: 1px solid var(--line);
+}
+.facts__row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 1.5rem 2rem;
-	margin-top: 2rem;
-	padding-top: 1.4rem;
-	border-top: 1px solid var(--line);
+	gap: 1.35rem 2rem;
 }
 .hero .readout__val {
-	font-size: 1.35rem;
+	font-size: 1.3rem;
 }
 .hero .readout__lab {
 	font-size: 0.62rem;
 }
 
-/* report preview panel */
+/* report preview — flat panel, no decorative shadow (flat-by-default) */
 .hero__preview {
-	box-shadow: var(--shadow-pop, 0 12px 40px oklch(0.22 0.012 250 / 0.06));
+	/* border + surface only; elevation from rules, not blur */
+	box-shadow: none;
 }
 .preview__top {
 	display: grid;
@@ -238,13 +253,32 @@
 	padding: 0;
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 1.25rem 1.5rem;
+	gap: 0;
+	position: relative;
+}
+/* hairline process rail — instrument flow, not decoration */
+.baseline__steps::before {
+	content: '';
+	position: absolute;
+	top: 0.8rem;
+	left: calc(0.825rem + 0.5px);
+	right: calc(33.333% + 0.825rem);
+	height: 1px;
+	background: var(--line-strong);
+	z-index: 0;
+	pointer-events: none;
 }
 .baseline__step {
 	display: grid;
 	grid-template-columns: auto 1fr;
-	gap: 0.7rem;
+	gap: 0.55rem;
 	align-items: start;
+	position: relative;
+	z-index: 1;
+	padding-right: 1.1rem;
+}
+.baseline__step:last-child {
+	padding-right: 0;
 }
 .baseline__n {
 	display: grid;
@@ -261,19 +295,20 @@
 	flex-shrink: 0;
 }
 .baseline__step h3 {
-	font-size: 0.95rem;
+	font-size: 0.92rem;
 	font-weight: 700;
 	color: var(--ink-strong);
-	margin: 0.1rem 0 0.3rem;
+	margin: 0.15rem 0 0.25rem;
 	letter-spacing: -0.01em;
 	line-height: 1.25;
 }
 .baseline__step p {
 	margin: 0;
-	font-size: 0.88rem;
-	line-height: 1.5;
+	font-size: 0.86rem;
+	line-height: 1.45;
 	color: var(--ink-muted);
 	text-wrap: pretty;
+	max-width: 22ch;
 }
 
 /* ----------------------------------------------------- mid two-column */
@@ -354,11 +389,12 @@
 	background: var(--ink-faint);
 }
 
-/* path panel */
+/* path panel — filled instruction rail, not empty marketing card */
 .path {
 	display: flex;
 	flex-direction: column;
-	gap: 1.35rem;
+	gap: 1.25rem;
+	min-height: 100%;
 }
 .path__head p {
 	margin: 0.4rem 0 0;
@@ -369,20 +405,46 @@
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: 1.15rem;
+	gap: 0;
+	position: relative;
+	flex: 1;
+}
+/* vertical calibration rail through steps */
+.path__steps::before {
+	content: '';
+	position: absolute;
+	top: 0.35rem;
+	bottom: 0.35rem;
+	left: 0.7rem;
+	width: 1px;
+	background: var(--line);
+	pointer-events: none;
 }
 .path__step {
 	display: grid;
 	grid-template-columns: 2.1rem 1fr;
-	gap: 0.65rem;
+	gap: 0.55rem;
 	align-items: start;
+	position: relative;
+	padding-block: 0.7rem;
+}
+.path__step:first-child {
+	padding-top: 0;
+}
+.path__step:last-child {
+	padding-bottom: 0;
 }
 .path__n {
+	position: relative;
+	z-index: 1;
 	font-size: 0.72rem;
 	font-weight: 700;
 	color: var(--signal-ink);
 	letter-spacing: 0.04em;
-	padding-top: 0.15rem;
+	padding-top: 0.12rem;
+	background: var(--surface);
+	width: 1.5rem;
+	text-align: center;
 }
 .path__step h3 {
 	font-size: 0.98rem;
@@ -401,18 +463,12 @@
 .path__actions {
 	display: grid;
 	gap: 0.85rem;
-	padding-top: 0.25rem;
+	padding-top: 1rem;
 	border-top: 1px solid var(--line);
+	margin-top: auto;
 }
 .path__actions .btn {
 	justify-self: start;
-}
-.path__cli {
-	margin: 0;
-	font-size: 0.72rem;
-	color: var(--ink-muted);
-	line-height: 1.45;
-	overflow-wrap: anywhere;
 }
 
 /* ------------------------------------------------ terminal + self-host */
@@ -435,19 +491,20 @@
 .terminal__pre {
 	margin: 0;
 	font-family: var(--mono);
-	font-size: 0.8rem;
+	font-size: 0.84rem;
 	line-height: 1.65;
-	color: oklch(0.88 0.01 240);
+	/* high-contrast off-white on ink-strong (~AAA) */
+	color: oklch(0.94 0.008 240);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 	flex: 1;
 }
 .terminal__prompt {
-	color: var(--signal);
+	color: oklch(0.78 0.09 205);
 	font-weight: 700;
 }
 .terminal__ok {
-	color: oklch(0.72 0.12 155);
+	color: oklch(0.82 0.11 155);
 	font-weight: 700;
 }
 
@@ -521,7 +578,22 @@
 	}
 	.baseline__steps {
 		grid-template-columns: 1fr;
-		gap: 1.1rem;
+		gap: 1rem;
+	}
+	.baseline__steps::before {
+		/* vertical rail on stacked steps */
+		top: 0.8rem;
+		bottom: 0.8rem;
+		left: 0.8rem;
+		right: auto;
+		width: 1px;
+		height: auto;
+	}
+	.baseline__step {
+		padding-right: 0;
+	}
+	.baseline__step p {
+		max-width: none;
 	}
 }
 
@@ -552,6 +624,9 @@
 		width: 100%;
 	}
 	.facts {
+		max-width: none;
+	}
+	.facts__row {
 		gap: 1.1rem 1.5rem;
 	}
 	.hero h1 {
@@ -560,7 +635,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.array__row {
+	.array__row,
+	.sevrow {
 		transition: none;
 	}
 }

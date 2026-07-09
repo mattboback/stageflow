@@ -172,22 +172,25 @@ export default function Home() {
 									</span>
 								</button>
 							</form>
-							<div className="facts">
-								<div className="readout">
-									<span className="readout__val">8</span>
-									<span className="readout__lab">scanners</span>
-								</div>
-								<div className="readout">
-									<span className="readout__val">1</span>
-									<span className="readout__lab">report</span>
-								</div>
-								<div className="readout">
-									<span className="readout__val">CLI</span>
-									<span className="readout__lab">first</span>
-								</div>
-								<div className="readout">
-									<span className="readout__val">OPEN</span>
-									<span className="readout__lab">source</span>
+							<div className="facts" aria-label="Product facts">
+								<div className="facts__rule" aria-hidden="true" />
+								<div className="facts__row">
+									<div className="readout">
+										<span className="readout__val">8</span>
+										<span className="readout__lab">scanners</span>
+									</div>
+									<div className="readout">
+										<span className="readout__val">1</span>
+										<span className="readout__lab">report</span>
+									</div>
+									<div className="readout">
+										<span className="readout__val">CLI</span>
+										<span className="readout__lab">first</span>
+									</div>
+									<div className="readout">
+										<span className="readout__val">OPEN</span>
+										<span className="readout__lab">source</span>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -327,9 +330,6 @@ export default function Home() {
 											→
 										</span>
 									</Link>
-									<p className="path__cli mono" aria-label="Sample CLI command">
-										$ stageflow scan https://example.com --fail-on serious
-									</p>
 								</div>
 							</div>
 						</aside>
