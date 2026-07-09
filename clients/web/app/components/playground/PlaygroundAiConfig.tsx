@@ -66,6 +66,8 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 					rows={3}
 					placeholder="Add a Pro plan subscription and reach the checkout success page"
 					value={config.objective}
+					aria-required="true"
+					aria-invalid={!config.objective.trim() ? true : undefined}
 					onChange={(e) => update({ objective: e.target.value })}
 				/>
 			</label>

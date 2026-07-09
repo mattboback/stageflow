@@ -24,13 +24,18 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 					<p className="pauth__sub">Log in before scanning protected pages.</p>
 				</div>
 				{config.enabled && !isValid && (
-					<span className="pauth__warn">Required fields missing</span>
+					<span className="pauth__warn" role="status" id="pauth-incomplete">
+						Required fields missing
+					</span>
 				)}
 				<label className="pauth__toggle">
 					<input
 						type="checkbox"
 						checked={config.enabled}
 						onChange={(e) => update({ enabled: e.target.checked })}
+						aria-describedby={
+							config.enabled && !isValid ? 'pauth-incomplete' : undefined
+						}
 					/>
 					<span className="pauth__toggle-track" aria-hidden="true" />
 					<span className="sr-only">Enable authentication</span>
@@ -48,6 +53,8 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 							autoComplete="off"
 							placeholder="https://app.example.com/login"
 							value={config.loginUrl}
+							aria-invalid={config.enabled && !config.loginUrl.trim() ? true : undefined}
+							aria-required="true"
 							onChange={(e) => update({ loginUrl: e.target.value })}
 						/>
 					</label>
@@ -60,6 +67,8 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								type="text"
 								autoComplete="off"
 								value={config.username}
+								aria-invalid={config.enabled && !config.username.trim() ? true : undefined}
+								aria-required="true"
 								onChange={(e) => update({ username: e.target.value })}
 							/>
 						</label>
@@ -72,6 +81,8 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 									type={showPassword ? 'text' : 'password'}
 									autoComplete="off"
 									value={config.password}
+									aria-invalid={config.enabled && !config.password.trim() ? true : undefined}
+									aria-required="true"
 									onChange={(e) => update({ password: e.target.value })}
 								/>
 								<button

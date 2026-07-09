@@ -232,7 +232,7 @@ export default function Playground() {
 				<div className="wrap">
 					<div className="console__head">
 						<div>
-							<span className="eyetag">Playground</span>
+							<span className="console__kicker">Playground</span>
 							<h1>Configure a scan.</h1>
 							<p>
 								Point StageFlow at any public URL or a static-site archive, arm the channels you
@@ -249,8 +249,8 @@ export default function Playground() {
 					</div>
 
 					<div className="console__grid">
-						{/* left: configuration */}
-						<div style={{ display: 'grid', gap: '1.5rem' }}>
+						{/* left: configuration stack */}
+						<div className="console__main">
 							<section className="panel">
 								<div className="panel__head">
 									<h2 className="label">Target</h2>
@@ -362,7 +362,7 @@ export default function Playground() {
 								</div>
 								<div className="panel__body" style={{ padding: 0 }}>
 									{catalogError ? (
-										<div className="note note--err" role="status" style={{ margin: '1rem' }}>
+										<div className="note note--err note--inset" role="status">
 											<span className="note__ic" aria-hidden="true">
 												!
 											</span>
@@ -427,9 +427,7 @@ export default function Playground() {
 								</div>
 								<div className="panel__body">
 									<div className="armline">
-										<span className="label" style={{ alignSelf: 'center' }}>
-											Channels armed
-										</span>
+										<span className="armline__lab">Channels armed</span>
 										<b>
 											{armed}
 											<small>/{total || 8}</small>
