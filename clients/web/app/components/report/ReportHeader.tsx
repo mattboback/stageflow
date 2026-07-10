@@ -1,9 +1,9 @@
-import { AlertTriangle, FileText, Layers, ScanLine } from 'lucide-react';
+import { AlertTriangle, Eye, FileText } from 'lucide-react';
 
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Gauge } from '../Gauge';
 import { Pill } from '../Pill';
-import { scoreBandFor } from '../../lib/report';
+import { isManualReviewIssue, scoreBandFor } from '../../lib/report';
 
 interface Props {
 	report: UnifiedReport;
@@ -37,8 +37,7 @@ export function ReportHeader({ report }: Props) {
 	const critical = totals.critical ?? 0;
 	const serious = totals.serious ?? 0;
 	const total = report.summary.totalIssues ?? 0;
-	const scannersDone = report.scanners.filter((s) => s.status === 'success').length;
-	const artifactCount = report.artifacts?.length ?? 0;
+	const manualCount = report.issues.filter(isManualReviewIssue).length;
 
 	const scannedAt = formatScannedAt(report.meta.completedAt ?? report.meta.scannedAt);
 	const duration = formatDuration(report.meta.durationMs);
@@ -52,22 +51,21 @@ export function ReportHeader({ report }: Props) {
 		}
 	})();
 
+	const grade = report.summary.scoreGrade ?? band?.label ?? null;
+
 	return (
 		<header className="rhead">
 			<div className="rhead__score">
 				{score !== null && (
 					<Gauge
 						value={score}
-						caption={report.summary.scoreGrade ?? band?.label ?? 'Score'}
-						size={116}
-						valFontSize="2rem"
+						caption={grade ? `${grade} · Site score` : 'Site score'}
+						size={92}
+						valFontSize="1.7rem"
 					/>
 				)}
 				<div className="rhead__score-meta">
-					<div className="rhead__title-row">
-						<h1>{host ?? 'Scan report'}</h1>
-						<Pill variant="done">Completed</Pill>
-					</div>
+					<h1>{host ?? 'Scan report'}</h1>
 					{baseUrl && (
 						<a
 							className="rhead__url"
@@ -85,14 +83,15 @@ export function ReportHeader({ report }: Props) {
 								{scannedAt || duration ? ' · ' : ''}
 								<span className="rhead__jobid mono">{report.meta.jobId.slice(0, 8)}</span>
 							</>
-						)}
+						)}{' '}
+						<Pill variant="done">Completed</Pill>
 					</p>
 				</div>
 			</div>
 			<dl className="rhead__stats" aria-label="Scan totals">
 				<div className="rhead__stat">
 					<dt className="rhead__stat-lab">
-						<AlertTriangle size={15} aria-hidden="true" />
+						<AlertTriangle size={16} aria-hidden="true" />
 						Total issues
 					</dt>
 					<dd className="rhead__stat-val">{total.toLocaleString()}</dd>
@@ -102,33 +101,23 @@ export function ReportHeader({ report }: Props) {
 				</div>
 				<div className="rhead__stat">
 					<dt className="rhead__stat-lab">
-						<FileText size={15} aria-hidden="true" />
+						<Eye size={16} aria-hidden="true" />
+						Manual review
+					</dt>
+					<dd className="rhead__stat-val">{manualCount.toLocaleString()}</dd>
+					<dd className="rhead__stat-sub">
+						{manualCount > 0 ? 'findings need a human check' : 'nothing to verify'}
+					</dd>
+				</div>
+				<div className="rhead__stat">
+					<dt className="rhead__stat-lab">
+						<FileText size={16} aria-hidden="true" />
 						Pages scanned
 					</dt>
 					<dd className="rhead__stat-val">{report.summary.pagesScanned.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
 						{report.summary.pagesWithIssues.toLocaleString()} with issues
 					</dd>
-				</div>
-				<div className="rhead__stat">
-					<dt className="rhead__stat-lab">
-						<Layers size={15} aria-hidden="true" />
-						Scanners
-					</dt>
-					<dd className="rhead__stat-val">{report.scanners.length}</dd>
-					<dd className="rhead__stat-sub">
-						{scannersDone === report.scanners.length
-							? 'All completed'
-							: `${scannersDone} completed`}
-					</dd>
-				</div>
-				<div className="rhead__stat">
-					<dt className="rhead__stat-lab">
-						<ScanLine size={15} aria-hidden="true" />
-						Artifacts
-					</dt>
-					<dd className="rhead__stat-val">{artifactCount}</dd>
-					<dd className="rhead__stat-sub">HTML · JSON · PNG</dd>
 				</div>
 			</dl>
 		</header>

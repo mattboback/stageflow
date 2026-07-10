@@ -10,10 +10,10 @@
 	display: flex;
 	align-items: flex-end;
 	justify-content: space-between;
-	gap: 1.25rem 1.5rem;
-	margin-bottom: 1.5rem;
+	gap: var(--sp-5) var(--sp-5);
+	margin: 0 auto var(--sp-5);
 	flex-wrap: wrap;
-	max-width: 68rem;
+	max-width: 84rem;
 }
 .console__head h1 {
 	font-size: clamp(1.8rem, 3vw, 2.35rem);
@@ -31,18 +31,38 @@
 	text-wrap: pretty;
 }
 
-/* configure row */
+/* configure row: readable form width + sticky review column, centered in
+   the app shell instead of stranding the right third of the viewport */
 .console__grid {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 21rem;
-	gap: 1.25rem;
+	grid-template-columns: minmax(0, 58rem) minmax(21rem, 24rem);
+	gap: var(--sp-6);
 	align-items: start;
-	max-width: 68rem;
+	justify-content: center;
+	margin: 0 auto;
+	max-width: 84rem;
 }
 .console__main {
 	display: grid;
-	gap: 1.15rem;
+	gap: var(--sp-5);
 	min-width: 0;
+}
+
+/* step numeral in card headings */
+.stepno {
+	display: inline-grid;
+	place-items: center;
+	width: 1.6rem;
+	height: 1.6rem;
+	margin-right: var(--sp-2);
+	border-radius: 50%;
+	border: 1.5px solid var(--signal-edge);
+	background: var(--signal-wash);
+	color: var(--signal-ink);
+	font-family: var(--sans);
+	font-size: 0.875rem;
+	font-weight: 700;
+	vertical-align: -0.22em;
 }
 
 .console .panel__head {
@@ -57,9 +77,9 @@
 	margin: 0;
 }
 .panel__sub {
-	font-size: 0.86rem;
+	font-size: 0.9375rem;
 	color: var(--ink-muted);
-	margin: 0.2rem 0 0;
+	margin: 0.25rem 0 0;
 	line-height: 1.45;
 }
 
@@ -78,7 +98,7 @@
 	flex-shrink: 0;
 }
 .seg button {
-	font-size: 0.84rem;
+	font-size: 0.875rem;
 	font-weight: 600;
 	padding: 0.4rem 0.8rem;
 	border-radius: calc(var(--r-sm) - 2px);
@@ -107,36 +127,30 @@
 }
 .urlrow {
 	display: grid;
-	grid-template-columns: 1.35rem 1fr auto;
+	grid-template-columns: 1fr auto;
 	align-items: start;
-	gap: 0.55rem;
-}
-.urlrow .ix {
-	font-size: 0.8rem;
-	font-weight: 600;
-	color: var(--ink-muted);
-	text-align: right;
-	padding-top: 0.75rem;
+	gap: var(--sp-2);
 }
 .urlrow__field {
 	display: grid;
-	gap: 0.3rem;
+	gap: var(--sp-1);
 	min-width: 0;
 }
 .urlrow__err {
-	font-size: 0.82rem;
+	font-size: 0.875rem;
 	font-weight: 500;
 	color: var(--sev-critical);
 }
 .urlrow button.rm {
-	margin-top: 0.35rem;
-	color: var(--ink-faint);
-	padding: 0.4rem 0.45rem;
+	margin-top: 0.3rem;
+	color: var(--ink-muted);
+	padding: 0.55rem 0.6rem;
 	border-radius: var(--r-sm);
 	border: 0;
 	background: transparent;
 	cursor: pointer;
 	line-height: 1;
+	font-size: 1rem;
 }
 .urlrow button.rm:hover {
 	color: var(--ink-strong);
@@ -146,42 +160,44 @@
 	outline: 2px solid var(--signal);
 	outline-offset: 1px;
 }
+/* a real secondary action, not minor text */
 .addmore {
 	justify-self: start;
-	font-size: 0.875rem;
+	font-size: 0.9375rem;
 	font-weight: 600;
 	color: var(--signal-ink);
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.35rem 0;
-	background: transparent;
-	border: 0;
+	padding: 0.5rem 0.9rem;
+	background: var(--surface);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--r-sm);
 	cursor: pointer;
+	transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 .addmore:hover {
-	text-decoration: underline;
+	border-color: var(--signal);
+	background: var(--signal-wash);
 }
 .addmore:focus-visible {
 	outline: 2px solid var(--signal);
 	outline-offset: 2px;
-	border-radius: var(--r-xs);
 }
+/* quiet caption — the add action outranks it */
 .intake__note {
 	display: flex;
 	align-items: flex-start;
-	gap: 0.5rem;
+	gap: var(--sp-2);
 	margin: 0;
-	padding: 0.65rem 0.8rem;
-	border-radius: var(--r-sm);
-	background: var(--signal-wash);
-	color: var(--signal-ink);
-	font-size: 0.86rem;
+	color: var(--ink-muted);
+	font-size: 0.875rem;
 	line-height: 1.45;
 }
 .intake__note svg {
 	flex-shrink: 0;
 	margin-top: 0.14rem;
+	color: var(--ink-faint);
 }
 
 /* zip dropzone */
@@ -228,33 +244,29 @@
 	flex-shrink: 0;
 }
 .chanhead__count {
-	font-size: 0.82rem;
+	font-size: 0.9375rem;
 	font-weight: 600;
 	color: var(--ink-muted);
 }
-.chanhead__bulk {
-	display: flex;
-	align-items: center;
-	gap: 0.35rem;
-	font-size: 0.82rem;
-	color: var(--ink-muted);
-}
-.chanhead__bulk button {
-	color: var(--signal-ink);
-	background: transparent;
-	border: 0;
-	padding: 0.15rem 0.2rem;
+.chanhead__bulk-btn {
+	color: var(--ink);
+	background: var(--surface);
+	border: 1px solid var(--line-strong);
+	border-radius: var(--r-sm);
+	padding: 0.4rem 0.8rem;
 	cursor: pointer;
 	font: inherit;
+	font-size: 0.875rem;
 	font-weight: 600;
+	transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
-.chanhead__bulk button:hover {
-	text-decoration: underline;
+.chanhead__bulk-btn:hover {
+	border-color: var(--ink-faint);
+	background: var(--surface-sunk);
 }
-.chanhead__bulk button:focus-visible {
+.chanhead__bulk-btn:focus-visible {
 	outline: 2px solid var(--signal);
 	outline-offset: 1px;
-	border-radius: var(--r-xs);
 }
 
 /* scanner rack */
@@ -306,18 +318,20 @@
 .chan__name {
 	font-weight: 600;
 	color: var(--ink-strong);
-	font-size: 0.95rem;
+	font-size: 1rem;
 }
+/* wraps to two lines instead of truncating mid-sentence */
 .chan__desc {
-	font-size: 0.84rem;
+	font-size: 0.9375rem;
 	color: var(--ink-muted);
 	line-height: 1.4;
 	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 .chan__cat {
-	font-size: 0.78rem;
+	font-size: 0.8125rem;
 	font-weight: 600;
 	color: var(--ink-muted);
 	background: var(--surface-sunk);
@@ -377,12 +391,12 @@
 	border-radius: var(--r-sm);
 	background: var(--surface-sunk);
 	color: var(--ink-muted);
-	font-size: 0.88rem;
+	font-size: 0.9375rem;
 	line-height: 1.45;
 }
 .readybox b {
 	display: block;
-	font-size: 0.95rem;
+	font-size: 1rem;
 	color: var(--ink-strong);
 	margin-bottom: 0.1rem;
 }
@@ -429,7 +443,7 @@
 	color: var(--ink-muted);
 }
 .sumlist__lab {
-	font-size: 0.9rem;
+	font-size: 0.9375rem;
 	font-weight: 600;
 	color: var(--ink-strong);
 	min-width: 0;
@@ -437,13 +451,13 @@
 }
 .sumlist__lab small {
 	display: block;
-	font-size: 0.78rem;
+	font-size: 0.875rem;
 	font-weight: 400;
 	color: var(--ink-muted);
 	margin-top: 0.08rem;
 }
 .sumlist b {
-	font-size: 0.95rem;
+	font-size: 1rem;
 	font-weight: 700;
 	color: var(--ink-strong);
 	white-space: nowrap;
@@ -453,11 +467,27 @@
 	width: 100%;
 }
 .runhint {
-	font-size: 0.84rem;
+	font-size: 0.875rem;
 	color: var(--ink-muted);
 	text-align: center;
 	line-height: 1.45;
 	margin: -0.2rem 0 0;
+}
+
+/* the form's terminal action bar */
+.endbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--sp-3) var(--sp-4);
+	flex-wrap: wrap;
+	padding: var(--sp-4) 0 0;
+	border-top: 1px solid var(--line);
+}
+.endbar__sum {
+	font-size: 0.9375rem;
+	color: var(--ink-muted);
+	font-variant-numeric: tabular-nums;
 }
 
 /* error / status note */
@@ -467,7 +497,7 @@
 	align-items: flex-start;
 	padding: 0.75rem 0.9rem;
 	border-radius: var(--r-sm);
-	font-size: 0.88rem;
+	font-size: 0.9375rem;
 	line-height: 1.45;
 }
 .note--err {
@@ -545,9 +575,9 @@
 }
 .pauth__sub,
 .pai__sub {
-	font-size: 0.86rem;
+	font-size: 0.9375rem;
 	color: var(--ink-muted);
-	margin: 0.2rem 0 0;
+	margin: 0.25rem 0 0;
 	line-height: 1.45;
 }
 /* Incomplete form warning */
@@ -559,7 +589,7 @@
 	border: 1px solid oklch(0.85 0.05 47);
 	border-radius: var(--r-pill);
 	background: var(--sev-serious-wash);
-	font-size: 0.78rem;
+	font-size: 0.8125rem;
 	font-weight: 600;
 	color: var(--sev-serious);
 	flex-shrink: 0;
@@ -642,7 +672,7 @@
 	background: var(--surface);
 	color: var(--ink-strong);
 	font-family: inherit;
-	font-size: 0.9rem;
+	font-size: 0.9375rem;
 	transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
 }
 .pai__field textarea {

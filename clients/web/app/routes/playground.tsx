@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, type MetaFunction } from 'react-router';
-import { CircleCheck, Clock, FileArchive, Info, Layers, Target } from 'lucide-react';
+import {
+	CircleCheck,
+	Clock,
+	FileArchive,
+	Info,
+	KeyRound,
+	Layers,
+	Target
+} from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
@@ -252,7 +260,7 @@ export default function Playground() {
 			<SiteHeader current="playground" />
 
 			<main id="main" className="console">
-				<div className="wrap">
+				<div className="wrap wrap--app">
 					<div className="console__head">
 						<div>
 							<h1>Configure a scan</h1>
@@ -270,7 +278,12 @@ export default function Playground() {
 							<section className="panel">
 								<div className="panel__head">
 									<div className="panel__head-copy">
-										<h2>Target</h2>
+										<h2>
+											<span className="stepno num" aria-hidden="true">
+												1
+											</span>
+											Target
+										</h2>
 										<p className="panel__sub">
 											Add one or more URLs to scan, or upload a static-site archive.
 										</p>
@@ -298,7 +311,6 @@ export default function Playground() {
 											<div className="addurls">
 												{urls.map((u, i) => (
 													<div className="urlrow" key={i}>
-														<span className="ix num">{i + 1}</span>
 														<div className="urlrow__field">
 															<input
 																className="input"
@@ -338,7 +350,8 @@ export default function Playground() {
 											</button>
 											<p className="intake__note">
 												<Info size={15} aria-hidden="true" />
-												We scan the provided URLs and linked pages that are in scope.
+												Each URL is scanned as its own page — add every page you want
+												covered.
 											</p>
 										</>
 									) : (
@@ -369,23 +382,30 @@ export default function Playground() {
 							<section className="panel">
 								<div className="panel__head">
 									<div className="panel__head-copy">
-										<h2>Scanners</h2>
+										<h2>
+											<span className="stepno num" aria-hidden="true">
+												2
+											</span>
+											Scanners
+										</h2>
 										<p className="panel__sub">Choose the channels you want to run.</p>
 									</div>
 									<div className="chanhead__meta">
 										<span className="chanhead__count num">
-											{catalogLoading ? 'Loading…' : `${armed} / ${total} enabled`}
+											{catalogLoading
+												? 'Loading…'
+												: armed === total
+													? `${total} scanners enabled`
+													: `${armed} of ${total} enabled`}
 										</span>
 										{!catalogLoading && !catalogError && (
-											<span className="chanhead__bulk">
-												<button type="button" onClick={() => setAllScanners(true)}>
-													Select all
-												</button>
-												<span aria-hidden="true">·</span>
-												<button type="button" onClick={() => setAllScanners(false)}>
-													None
-												</button>
-											</span>
+											<button
+												type="button"
+												className="chanhead__bulk-btn"
+												onClick={() => setAllScanners(armed < total)}
+											>
+												{armed < total ? 'Enable all' : 'Disable all'}
+											</button>
 										)}
 									</div>
 								</div>
@@ -447,13 +467,43 @@ export default function Playground() {
 									onConfigChange={setAiConfig}
 								/>
 							)}
+
+							{/* the form ends with the action, not dead space */}
+							<div className="endbar">
+								<span className="endbar__sum">
+									{mode === 'url'
+										? `${targetCount} ${targetCount === 1 ? 'target' : 'targets'}`
+										: file
+											? '1 archive'
+											: 'no archive'}{' '}
+									· {armed} of {total || 8} scanners · authentication{' '}
+									{mode === 'url' && authConfig.enabled
+										? isAuthValid
+											? 'on'
+											: 'incomplete'
+										: 'off'}
+								</span>
+								<button
+									type="button"
+									className="btn btn--primary"
+									onClick={runScan}
+									disabled={submitting || catalogLoading || armed === 0}
+								>
+									{submitting ? 'Submitting…' : 'Run scan'}{' '}
+									{!submitting && (
+										<span className="ar" aria-hidden="true">
+											→
+										</span>
+									)}
+								</button>
+							</div>
 						</div>
 
 						{/* right: scan summary dock */}
 						<aside className="dock" aria-label="Scan summary">
 							<div className="panel">
 								<div className="panel__head">
-									<h2>Scan summary</h2>
+									<h2>Review & run</h2>
 								</div>
 								<div className="panel__body">
 									<div
@@ -500,6 +550,24 @@ export default function Playground() {
 												{armed} of {total || 8}
 											</b>
 										</li>
+										{mode === 'url' && (
+											<li>
+												<span className="sumlist__icon" aria-hidden="true">
+													<KeyRound size={16} />
+												</span>
+												<span className="sumlist__lab">
+													Authentication
+													<small>
+														{authConfig.enabled
+															? isAuthValid
+																? 'Form login before scanning'
+																: 'Required fields missing'
+															: 'Scanning public pages'}
+													</small>
+												</span>
+												<b>{authConfig.enabled ? (isAuthValid ? 'On' : 'Incomplete') : 'Off'}</b>
+											</li>
+										)}
 										<li>
 											<span className="sumlist__icon" aria-hidden="true">
 												<Clock size={16} />

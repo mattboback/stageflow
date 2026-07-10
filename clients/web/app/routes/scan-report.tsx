@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react';
 import { Link, useParams, useSearchParams, type MetaFunction } from 'react-router';
 
 import { SiteHeader } from '../components/SiteHeader';
-import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
 import { ReportHeader } from '../components/report/ReportHeader';
 import {
@@ -132,6 +131,7 @@ export default function ScanReport() {
 								>
 									<ReportStatStrip
 										report={displayReport}
+										jobId={id}
 										onReviewSeverity={(severity) =>
 											updateParams({ section: 'issues', severity })
 										}
@@ -250,8 +250,6 @@ export default function ScanReport() {
 					)}
 				</div>
 			</main>
-
-			<SiteFooter />
 		</>
 	);
 }

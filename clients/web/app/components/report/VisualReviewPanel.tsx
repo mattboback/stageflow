@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Maximize2, Minus, Plus } from 'lucide-react';
 
 import type {
 	IssueDetail,
@@ -6,10 +7,12 @@ import type {
 } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
 import {
+	SEVERITY_LEVELS,
 	getPageOverviewUrl,
 	getSeverityDotClass,
 	getSeverityFillColor,
 	getSeverityStrokeColor,
+	normalizeSeverity,
 	rewriteIssueTitle
 } from '../../lib/report';
 
@@ -20,6 +23,27 @@ interface Props {
 	activePage: string | null;
 	onSelectPage: (pageId: string) => void;
 	onIssueSelect: (issue: IssueDetail) => void;
+}
+
+interface IssueGroup {
+	key: string;
+	title: string;
+	scanner: string;
+	ruleId: string;
+	severity: string;
+	issues: IssueDetail[];
+}
+
+type Zoom = 'fit' | number;
+
+const ZOOM_STEP = 1.25;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 4;
+
+function severityRank(severity: string | undefined): number {
+	const normalized = normalizeSeverity(severity) ?? 'info';
+	const index = (SEVERITY_LEVELS as readonly string[]).indexOf(normalized);
+	return index === -1 ? SEVERITY_LEVELS.length : index;
 }
 
 export function VisualReviewPanel({
@@ -56,6 +80,31 @@ export function VisualReviewPanel({
 		});
 	}, [selectedPage, issuesByPage]);
 
+	/* One row per rule: nine identical contrast findings become "× 9". */
+	const issueGroups = useMemo<IssueGroup[]>(() => {
+		const groups = new Map<string, IssueGroup>();
+		for (const issue of pageIssues) {
+			const severity = normalizeSeverity(issue.severity) ?? 'info';
+			const key = `${issue.scanner}:${issue.ruleId}:${severity}`;
+			const existing = groups.get(key);
+			if (existing) {
+				existing.issues.push(issue);
+			} else {
+				groups.set(key, {
+					key,
+					title: rewriteIssueTitle(issue),
+					scanner: issue.scanner,
+					ruleId: issue.ruleId,
+					severity,
+					issues: [issue]
+				});
+			}
+		}
+		return [...groups.values()].sort(
+			(a, b) => severityRank(a.severity) - severityRank(b.severity)
+		);
+	}, [pageIssues]);
+
 	const issueMap = useMemo(
 		() => Object.fromEntries(pageIssues.map((issue) => [issue.id, issue])),
 		[pageIssues]
@@ -74,6 +123,7 @@ export function VisualReviewPanel({
 	const canRenderScreenshot = !!overviewUrl && pageWidth > 0 && pageHeight > 0;
 
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
+	const [zoom, setZoom] = useState<Zoom>('fit');
 	// Both load states are keyed by URL so switching pages needs no reset.
 	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
 	const [failedOverviewUrl, setFailedOverviewUrl] = useState<string | null>(null);
@@ -127,6 +177,15 @@ export function VisualReviewPanel({
 		onIssueSelect(issue);
 	};
 
+	const zoomBy = (factor: number) => {
+		setZoom((prev) => {
+			const current = prev === 'fit' ? 1 : prev;
+			return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current * factor));
+		});
+	};
+
+	const zoomPercent = zoom === 'fit' ? null : `${Math.round(zoom * 100)}%`;
+
 	return (
 		<div className="vrev">
 			<aside className="vrev__pages">
@@ -135,8 +194,14 @@ export function VisualReviewPanel({
 				</header>
 				<ul className="vrev__pages-list">
 					{report.pages.map((page) => {
-						const count = (issuesByPage[page.id] ?? []).length;
+						const pagePageIssues = issuesByPage[page.id] ?? [];
 						const isActive = page.id === selectedPage.id;
+						const sevCounts = SEVERITY_LEVELS.map((level) => ({
+							level,
+							count: pagePageIssues.filter(
+								(issue) => (normalizeSeverity(issue.severity) ?? 'info') === level
+							).length
+						})).filter((entry) => entry.count > 0);
 						return (
 							<li key={page.id}>
 								<button
@@ -144,8 +209,20 @@ export function VisualReviewPanel({
 									className={`vrev__page-btn${isActive ? ' vrev__page-btn--active' : ''}`}
 									onClick={() => onSelectPage(page.id)}
 								>
-									<span className="vrev__page-label">{page.path ?? page.url}</span>
-									<span className="vrev__page-count">{count}</span>
+									<span className="vrev__page-main">
+										<span className="vrev__page-label">{page.path ?? page.url}</span>
+										{sevCounts.length > 0 && (
+											<span className="vrev__page-sevs" aria-hidden="true">
+												{sevCounts.map(({ level, count }) => (
+													<span key={level} className="vrev__page-sev">
+														<span className={getSeverityDotClass(level)} />
+														{count}
+													</span>
+												))}
+											</span>
+										)}
+									</span>
+									<span className="vrev__page-count num">{pagePageIssues.length}</span>
 								</button>
 							</li>
 						);
@@ -154,6 +231,53 @@ export function VisualReviewPanel({
 			</aside>
 
 			<section className="vrev__stage">
+				{canRenderScreenshot && (
+					<div className="vrev__stage-bar">
+						<div className="vrev__zoom" role="group" aria-label="Zoom">
+							<button
+								type="button"
+								className={`vrev__zoom-btn${zoom === 'fit' ? ' vrev__zoom-btn--on' : ''}`}
+								onClick={() => setZoom('fit')}
+							>
+								Fit width
+							</button>
+							<button
+								type="button"
+								className={`vrev__zoom-btn${zoom === 1 ? ' vrev__zoom-btn--on' : ''}`}
+								onClick={() => setZoom(1)}
+							>
+								100%
+							</button>
+							<button
+								type="button"
+								className="vrev__zoom-btn vrev__zoom-btn--icon"
+								onClick={() => zoomBy(1 / ZOOM_STEP)}
+								aria-label="Zoom out"
+							>
+								<Minus size={15} aria-hidden="true" />
+							</button>
+							<button
+								type="button"
+								className="vrev__zoom-btn vrev__zoom-btn--icon"
+								onClick={() => zoomBy(ZOOM_STEP)}
+								aria-label="Zoom in"
+							>
+								<Plus size={15} aria-hidden="true" />
+							</button>
+							{zoomPercent && <span className="vrev__zoom-val num">{zoomPercent}</span>}
+						</div>
+						{overviewUrl && (
+							<a
+								className="vrev__stage-open"
+								href={overviewUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+							>
+								<Maximize2 size={14} aria-hidden="true" /> Full screenshot
+							</a>
+						)}
+					</div>
+				)}
 				{!canRenderScreenshot ? (
 					<div className="vrev__empty">
 						<p>
@@ -173,6 +297,7 @@ export function VisualReviewPanel({
 					<div className="vrev__viewport">
 						<svg
 							className="vrev__svg"
+							style={zoom === 'fit' ? undefined : { width: pageWidth * zoom }}
 							viewBox={`0 0 ${pageWidth} ${pageHeight}`}
 							preserveAspectRatio="xMidYMin meet"
 							role="img"
@@ -217,30 +342,37 @@ export function VisualReviewPanel({
 					<p className="vrev__empty-msg">No issues match the current scanner filter.</p>
 				) : (
 					<ul className="vrev__issues-list">
-						{pageIssues.map((issue) => {
-							const isActive = issue.id === activeIssueId;
+						{issueGroups.map((group) => {
+							const isActive = group.issues.some((issue) => issue.id === activeIssueId);
+							const first = group.issues[0];
 							return (
-								<li key={issue.id}>
+								<li key={group.key}>
 									<button
 										type="button"
 										className={`vrev__issue-btn${isActive ? ' vrev__issue-btn--active' : ''}`}
 										onClick={() => {
-											setActiveIssueId(issue.id);
-											onIssueSelect(issue);
+											setActiveIssueId(first.id);
+											onIssueSelect(first);
 										}}
 									>
 										<span
-											className={getSeverityDotClass(issue.severity)}
+											className={getSeverityDotClass(group.severity)}
 											aria-hidden="true"
 										/>
 										<span className="vrev__issue-body">
-											<span className="vrev__issue-title">
-												{rewriteIssueTitle(issue)}
-											</span>
+											<span className="vrev__issue-title">{group.title}</span>
 											<span className="vrev__issue-meta">
-												{issue.scanner} · {issue.ruleId}
+												{group.scanner} · {group.ruleId}
 											</span>
 										</span>
+										{group.issues.length > 1 && (
+											<span
+												className="vrev__issue-times num"
+												aria-label={`${group.issues.length} occurrences`}
+											>
+												× {group.issues.length}
+											</span>
+										)}
 									</button>
 								</li>
 							);

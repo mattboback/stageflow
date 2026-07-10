@@ -206,6 +206,25 @@ export function ContrastSampler({
 
 	return (
 		<div className="vfy__sampler">
+			<div className="vfy__sampler-head">
+				<div className="vfy__slots" role="group" aria-label="Color to sample next">
+					{(['fg', 'bg'] as const).map((slot) => (
+						<button
+							key={slot}
+							type="button"
+							aria-pressed={activeSlot === slot}
+							className="vfy__slot-btn"
+							onClick={() => setActiveSlot(slot)}
+						>
+							{SLOT_LABELS[slot]}
+						</button>
+					))}
+				</div>
+				<p className="vfy__hint">
+					Click the image to sample the {SLOT_LABELS[activeSlot].toLowerCase()} color.
+					Sample the thickest part of a letter stroke — edges are anti-aliased.
+				</p>
+			</div>
 			<div className="vfy__stage">
 				{/* role="application" scopes arrow keys to the sampler widget */}
 				<div
@@ -258,26 +277,9 @@ export function ContrastSampler({
 						/>
 					</svg>
 				</div>
-				<p className="vfy__hint">
-					Click the image to sample the {SLOT_LABELS[activeSlot].toLowerCase()} color.
-					Sample the thickest part of a letter stroke — edges are anti-aliased.
-				</p>
 			</div>
 
-			<div className="vfy__loupe-col">
-				<div className="vfy__slots" role="group" aria-label="Color to sample next">
-					{(['fg', 'bg'] as const).map((slot) => (
-						<button
-							key={slot}
-							type="button"
-							aria-pressed={activeSlot === slot}
-							className="vfy__slot-btn"
-							onClick={() => setActiveSlot(slot)}
-						>
-							{SLOT_LABELS[slot]}
-						</button>
-					))}
-				</div>
+			<div className="vfy__sampler-foot">
 				<canvas
 					ref={loupeRef}
 					width={LOUPE_SIZE}

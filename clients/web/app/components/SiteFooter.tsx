@@ -15,26 +15,33 @@ export function SiteFooter() {
 						<span className="brand__name">StageFlow</span>
 					</Link>
 					<p className="muted site-footer__tagline">
-						Self-hostable frontend quality platform. MIT licensed.
+						Self-hostable frontend quality platform.
 					</p>
 				</div>
-				<nav aria-label="Product" className="site-footer__col">
-					<span className="label">Product</span>
-					<Link to="/playground">Playground</Link>
-					<Link to="/#scanners">Scanners</Link>
-				</nav>
-				<nav aria-label="Resources" className="site-footer__col">
-					<span className="label">Resources</span>
-					<a href={DOCS_URL}>Documentation</a>
-					<a href={CLI_REFERENCE_URL}>CLI reference</a>
-					<a href={SELF_HOSTING_URL}>Self-hosting</a>
-				</nav>
-				<nav aria-label="Project" className="site-footer__col">
-					<span className="label">Project</span>
-					<a href={GITHUB_URL}>GitHub</a>
-					<a href={`${GITHUB_URL}/blob/main/CHANGELOG.md`}>Changelog</a>
-					<a href={`${GITHUB_URL}/security/policy`}>Security</a>
-				</nav>
+				<div className="site-footer__cols">
+					<nav aria-label="Product" className="site-footer__col">
+						<span className="label">Product</span>
+						<Link to="/playground">Configure scan</Link>
+						<Link to="/#scanners">Scanners</Link>
+					</nav>
+					<nav aria-label="Resources" className="site-footer__col">
+						<span className="label">Resources</span>
+						<a href={DOCS_URL}>Documentation</a>
+						<a href={CLI_REFERENCE_URL}>CLI reference</a>
+						<a href={SELF_HOSTING_URL}>Self-hosting</a>
+					</nav>
+					<nav aria-label="Project" className="site-footer__col">
+						<span className="label">Project</span>
+						<a href={GITHUB_URL}>GitHub</a>
+						<a href={`${GITHUB_URL}/blob/main/CHANGELOG.md`}>Changelog</a>
+						<a href={`${GITHUB_URL}/security/policy`}>Security</a>
+					</nav>
+				</div>
+			</div>
+			<div className="wrap site-footer__meta">
+				<span>MIT licensed</span>
+				<span>Runs in your infrastructure — your data stays with you</span>
+				<a href={GITHUB_URL}>github.com/mattboback/stageflow</a>
 			</div>
 		</footer>
 	);

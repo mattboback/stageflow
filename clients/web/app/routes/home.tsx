@@ -4,11 +4,8 @@ import {
 	Accessibility,
 	Bot,
 	Check,
-	Flag,
 	Gauge as GaugeIcon,
 	Link2,
-	ListChecks,
-	RefreshCw,
 	Search,
 	Share2,
 	ShieldCheck,
@@ -16,8 +13,8 @@ import {
 } from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
+import { Delta } from '../components/Delta';
 import { Gauge } from '../components/Gauge';
-import { SeverityScale } from '../components/SeverityScale';
 import { Pill } from '../components/Pill';
 import { normalizeUrlInput, validateHttpUrls } from '../lib/components/playground/playground-utils';
 import {
@@ -48,45 +45,46 @@ export const meta: MetaFunction = () => [
 ];
 
 const PERF: { id: string; label: string; val: number; moderate?: boolean }[] = [
-	{ id: 'a11y', label: 'Accessibility', val: 94 },
-	{ id: 'perf', label: 'Performance', val: 88 },
+	{ id: 'a11y', label: 'Accessibility', val: 88, moderate: true },
+	{ id: 'perf', label: 'Performance', val: 91 },
 	{ id: 'seo', label: 'SEO', val: 97 },
 	{ id: 'sec', label: 'Security', val: 75, moderate: true },
-	{ id: 'qual', label: 'Quality', val: 91 }
+	{ id: 'qual', label: 'Quality', val: 93 }
 ];
 
+/* One naming table: user-facing name first, implementation as the sub. */
 const SCANNERS: {
 	name: string;
 	sub: string;
 	cat: string;
 	icon: React.ComponentType<{ size?: number | string; 'aria-hidden'?: boolean }>;
-	off?: boolean;
+	optIn?: boolean;
 }[] = [
-	{ name: 'axe-core', sub: 'Accessibility rules, WCAG 2.1 mapping', cat: 'Accessibility', icon: Accessibility },
-	{ name: 'Lighthouse', sub: 'Performance, best practices, PWA signals', cat: 'Performance', icon: GaugeIcon },
+	{ name: 'Axe Accessibility', sub: 'WCAG 2.1 rules, powered by axe-core', cat: 'Accessibility', icon: Accessibility },
+	{ name: 'Lighthouse', sub: 'Google Lighthouse performance and best-practice audits', cat: 'Performance', icon: GaugeIcon },
 	{ name: 'SEO', sub: 'Title, metadata, headings, structured data', cat: 'SEO', icon: Search },
-	{ name: 'security-headers', sub: 'HTTP response-header policy', cat: 'Security', icon: ShieldCheck },
-	{ name: 'link-checker', sub: 'Internal and external link health', cat: 'Quality', icon: Link2 },
-	{ name: 'open-graph', sub: 'Social preview metadata', cat: 'SEO', icon: Share2 },
-	{ name: 'spelling-grammar', sub: 'Content quality checks', cat: 'Quality', icon: SpellCheck },
-	{ name: 'ai-navigator', sub: 'Natural-language navigation objectives', cat: 'AI, opt-in', icon: Bot, off: true }
+	{ name: 'Security Headers', sub: 'HTTP response-header policy', cat: 'Security', icon: ShieldCheck },
+	{ name: 'Link Checker', sub: 'Internal and external link health', cat: 'Quality', icon: Link2 },
+	{ name: 'Open Graph', sub: 'Social preview metadata', cat: 'SEO', icon: Share2 },
+	{ name: 'Spelling & Grammar', sub: 'Content quality checks', cat: 'Quality', icon: SpellCheck },
+	{ name: 'AI Navigator', sub: 'Natural-language navigation objectives', cat: 'AI', icon: Bot, optIn: true }
 ];
 
-const BASELINE_STEPS = [
+const BASELINE_TRACK = [
 	{
-		icon: Flag,
+		score: '92',
 		title: 'Establish a baseline',
-		body: 'Pick a known-good run as your baseline.'
+		body: 'Pick a known-good run as your point of reference.'
 	},
 	{
-		icon: RefreshCw,
-		title: 'Run on every deploy',
-		body: 'Each scan compares against that baseline.'
+		score: '88',
+		title: 'Scan every deploy',
+		body: 'Each new scan is compared against that baseline.'
 	},
 	{
-		icon: ListChecks,
-		title: 'See what changed',
-		body: 'Only new or worse issues are highlighted.'
+		delta: -4,
+		title: 'Review only what changed',
+		body: 'New or worsened findings are highlighted; everything else stays quiet.'
 	}
 ] as const;
 
@@ -94,17 +92,17 @@ const PATH_STEPS = [
 	{
 		n: '1',
 		title: 'Configure',
-		body: 'Set the scope. Point at a URL or upload a ZIP archive.'
+		body: 'Point at a URL or upload a ZIP archive.'
 	},
 	{
 		n: '2',
 		title: 'Run',
-		body: 'Each scanner runs in isolation in a rootless container while progress streams live.'
+		body: 'Each scanner runs in an isolated rootless container.'
 	},
 	{
 		n: '3',
 		title: 'Ship',
-		body: 'Read one merged report with severity, evidence, and remediation for every finding.'
+		body: 'One merged report with severity, evidence, and remediation.'
 	}
 ] as const;
 
@@ -134,9 +132,9 @@ export default function Home() {
 			<SiteHeader current="home" />
 
 			<main id="main">
-				{/* HERO — light, scan-first */}
+				{/* HERO — URL in, regression report out */}
 				<section className="hero" aria-labelledby="hero-heading">
-					<div className="wrap hero__grid">
+					<div className="wrap wrap--app hero__grid">
 						<div className="hero__copy">
 							<h1 id="hero-heading">
 								Every deploy answers one question:{' '}
@@ -154,7 +152,7 @@ export default function Home() {
 								</label>
 								<div className="scanbar__field">
 									<input
-										className="input"
+										className="input scanbar__input"
 										id="url"
 										type="url"
 										inputMode="url"
@@ -174,7 +172,7 @@ export default function Home() {
 										</span>
 									)}
 								</div>
-								<button className="btn btn--primary" type="submit">
+								<button className="btn btn--primary btn--lg" type="submit">
 									Configure & run{' '}
 									<span className="ar" aria-hidden="true">
 										→
@@ -186,15 +184,20 @@ export default function Home() {
 							</p>
 						</div>
 
-						{/* Sample report preview — product chrome, not marketing card */}
+						{/* The output side of the scanbar: a report with a real regression */}
 						<aside className="panel hero__preview" aria-label="Sample report preview">
 							<div className="panel__head">
-								<span className="label">Sample report · example.com</span>
+								<span className="label">
+									<span className="hero__preview-arrow" aria-hidden="true">
+										→
+									</span>{' '}
+									What comes back · example.com
+								</span>
 								<Pill variant="done">Completed</Pill>
 							</div>
 							<div className="panel__body">
 								<div className="preview__top">
-									<Gauge value={92} caption="Quality score" size={132} valFontSize="2.3rem" />
+									<Gauge value={88} caption="Quality score" size={132} valFontSize="2.3rem" />
 									<div className="preview__cats">
 										<p className="preview__cats-note muted">
 											Weighted score across eight frontend quality areas.
@@ -217,24 +220,37 @@ export default function Home() {
 										</div>
 									</div>
 								</div>
-								<div className="preview__bottom">
-									<SeverityScale counts={{ critical: 0, serious: 2, moderate: 5, minor: 11 }} />
-									<p className="preview__baseline">
-										<span className="preview__baseline-lab">Baseline</span>
-										<span className="num">score 88 → 92</span>
-										<span className="preview__delta num" aria-label="up four points">
-											▲ 4
-										</span>
+								<div className="preview__reg">
+									<p className="preview__reg-title">
+										<span className="sev-dot sev-serious" aria-hidden="true" /> Dashboard
+										regressed since baseline
 									</p>
+									<ul className="preview__reg-rows">
+										<li>
+											<span>Accessibility</span>
+											<span className="num">
+												94 → 88 <Delta value={-6} />
+											</span>
+										</li>
+										<li>
+											<span>New serious issues</span>
+											<span className="num">
+												3 <Delta value={3} improvedWhenPositive={false} />
+											</span>
+										</li>
+									</ul>
+									<span className="preview__reg-cta">
+										View evidence <span aria-hidden="true">→</span>
+									</span>
 								</div>
 							</div>
 						</aside>
 					</div>
 				</section>
 
-				{/* BASELINE IDEA — one deliberate 3-step sequence */}
+				{/* BASELINE IDEA — before/after comparison track */}
 				<section className="section section--band" aria-labelledby="baseline-heading">
-					<div className="wrap baseline">
+					<div className="wrap wrap--app baseline">
 						<div className="baseline__intro">
 							<h2 id="baseline-heading">The baseline idea</h2>
 							<p>
@@ -242,15 +258,20 @@ export default function Home() {
 								actionable.
 							</p>
 						</div>
-						<ol className="baseline__steps">
-							{BASELINE_STEPS.map((s) => (
-								<li className="baseline__step" key={s.title}>
-									<span className="baseline__icon" aria-hidden="true">
-										<s.icon size={17} />
-									</span>
-									<div>
-										<h3>{s.title}</h3>
-										<p>{s.body}</p>
+						<ol className="basetrack">
+							{BASELINE_TRACK.map((step, i) => (
+								<li className="basetrack__node" key={step.title}>
+									{i > 0 && (
+										<span className="basetrack__link" aria-hidden="true">
+											→
+										</span>
+									)}
+									<div className="basetrack__card">
+										<span className="basetrack__score num">
+											{'score' in step ? step.score : <Delta value={step.delta} />}
+										</span>
+										<h3>{step.title}</h3>
+										<p>{step.body}</p>
 									</div>
 								</li>
 							))}
@@ -258,9 +279,9 @@ export default function Home() {
 					</div>
 				</section>
 
-				{/* SCANNERS + PATH */}
+				{/* SCANNERS — list + how they merge into one report */}
 				<section className="section" id="scanners" aria-labelledby="scanners-heading">
-					<div className="wrap mid">
+					<div className="wrap wrap--app mid">
 						<div className="mid__scanners">
 							<header className="section__head">
 								<h2 id="scanners-heading">Eight scanners, one merged report</h2>
@@ -273,33 +294,50 @@ export default function Home() {
 								{SCANNERS.map((s) => (
 									<div className="array__row" role="row" key={s.name}>
 										<span className="array__icon" aria-hidden="true">
-											<s.icon size={17} />
+											<s.icon size={18} />
 										</span>
 										<span className="array__name" role="cell">
 											{s.name}
 											<span>{s.sub}</span>
 										</span>
-										<span className="array__cat" role="cell">
-											{s.cat}
+										<span
+											className={`array__cat${s.optIn ? ' array__cat--optin' : ''}`}
+											role="cell"
+										>
+											{s.optIn ? 'Opt-in' : s.cat}
 										</span>
-										{s.off ? (
-											<span className="array__state array__state--off" role="cell">
-												<i aria-hidden="true" />
-												Off
-											</span>
-										) : (
-											<span className="array__state" role="cell">
-												<i aria-hidden="true" />
-												Active
-											</span>
-										)}
 									</div>
 								))}
 							</div>
 						</div>
 
-						<aside className="mid__path panel" aria-labelledby="path-heading">
-							<div className="panel__body path">
+						<aside className="mid__path" aria-labelledby="path-heading">
+							<div className="merge" aria-hidden="true">
+								<ul className="merge__chips">
+									{SCANNERS.map((s) => (
+										<li key={s.name}>{s.name}</li>
+									))}
+								</ul>
+								<span className="merge__brace" />
+								<div className="merge__report panel">
+									<span className="label">One report</span>
+									<div className="merge__rows">
+										<span className="merge__row">
+											<span className="sev-dot sev-critical" /> 0 critical
+										</span>
+										<span className="merge__row">
+											<span className="sev-dot sev-serious" /> 2 serious
+										</span>
+										<span className="merge__row">
+											<span className="sev-dot sev-moderate" /> 5 moderate
+										</span>
+										<span className="merge__row">
+											<span className="sev-dot sev-minor" /> 11 minor
+										</span>
+									</div>
+								</div>
+							</div>
+							<div className="path">
 								<header className="path__head">
 									<h2 id="path-heading">From URL to report</h2>
 									<p className="muted">Three steps. No setup required.</p>
@@ -319,7 +357,7 @@ export default function Home() {
 								</ol>
 								<div className="path__actions">
 									<Link className="btn btn--primary" to="/playground">
-										Open the playground{' '}
+										Configure a scan{' '}
 										<span className="ar" aria-hidden="true">
 											→
 										</span>
@@ -332,7 +370,7 @@ export default function Home() {
 
 				{/* CLI island + self-host */}
 				<section className="section section--foot" aria-labelledby="cli-heading">
-					<div className="wrap foot">
+					<div className="wrap wrap--app foot">
 						<div className="terminal" aria-labelledby="cli-heading">
 							<h2 id="cli-heading" className="sr-only">
 								CLI
@@ -340,18 +378,25 @@ export default function Home() {
 							<pre className="terminal__pre">
 								<code>
 									<span className="terminal__prompt">$</span> stageflow scan https://example.com
-									{'\n'}
-									{'  '}--fail-on serious
-									{'\n'}
-									{'\n'}
-									<span className="terminal__ok">✓</span> 8 scanners
-									{'\n'}
-									<span className="terminal__ok">✓</span> Baseline: May 5, 2025 at 9:12 AM
-									{'\n'}
-									<span className="terminal__ok">✓</span> Completed in 14m 32s
+									--fail-on serious
 									{'\n'}
 									{'\n'}
-									Report: reports/example-2025-05-07.html
+									<span className="terminal__ok">✓</span> axe{'              '}21 issues · 36.8s
+									{'\n'}
+									<span className="terminal__ok">✓</span> lighthouse{'       '}82 issues · 82.6s
+									{'\n'}
+									<span className="terminal__ok">✓</span> seo{'              '}20 issues · 10.8s
+									{'\n'}
+									<span className="terminal__ok">✓</span> link-checker{'     '}20 issues · 23.2s
+									{'\n'}
+									<span className="terminal__ok">✓</span> 4 more scanners{'  '}completed
+									{'\n'}
+									{'\n'}
+									Score: 88 (B) · serious 2 · moderate 5 · minor 11
+									{'\n'}
+									Baseline: May 5 → <span className="terminal__warn">3 new serious regressions</span>
+									{'\n'}
+									Report: reports/example-2026-07-10.html
 								</code>
 							</pre>
 						</div>
@@ -385,13 +430,16 @@ export default function Home() {
 								</ul>
 								<div className="selfhost__actions">
 									<a
-										className="btn btn--ghost"
+										className="btn btn--primary"
 										href="https://github.com/mattboback/stageflow/tree/main/docs"
 									>
 										Documentation{' '}
 										<span className="ar" aria-hidden="true">
 											→
 										</span>
+									</a>
+									<a className="btn btn--ghost" href="https://github.com/mattboback/stageflow">
+										GitHub ↗
 									</a>
 								</div>
 							</div>

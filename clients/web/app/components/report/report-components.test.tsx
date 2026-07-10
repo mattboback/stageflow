@@ -19,7 +19,7 @@ describe('ReportHeader', () => {
 		expect(totals.textContent).toContain('Total issues');
 		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
 		expect(totals.textContent).toContain('Pages scanned');
-		expect(totals.textContent).toContain(String(report.scanners.length));
+		expect(totals.textContent).toContain('Manual review');
 	});
 });
 
@@ -31,7 +31,7 @@ describe('ReportStatStrip', () => {
 	});
 
 	it('renders severity pills and scanner chips from the fixture', () => {
-		render(<ReportStatStrip report={report} {...handlers()} />);
+		render(<ReportStatStrip report={report} jobId="test-job" {...handlers()} />);
 
 		const critical = report.summary.bySeverity.critical ?? 0;
 		expect(critical).toBeGreaterThan(0);
@@ -45,7 +45,7 @@ describe('ReportStatStrip', () => {
 
 	it('routes severity pills and scanner chips to the issues view', () => {
 		const h = handlers();
-		render(<ReportStatStrip report={report} {...h} />);
+		render(<ReportStatStrip report={report} jobId="test-job" {...h} />);
 
 		const critical = report.summary.bySeverity.critical ?? 0;
 		fireEvent.click(screen.getByRole('button', { name: `${critical} critical` }));

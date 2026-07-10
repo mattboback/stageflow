@@ -235,8 +235,8 @@ export function IssueDetailModal({
 			onClick={onClose}
 		>
 			<div className="imodal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
-				{/* Quiet head: plain surface + 2px severity top edge; badge carries status */}
-				<header className={`imodal__head imodal__head--${severity}`}>
+				{/* Compressed head: severity + status + context on one line, title below. */}
+				<header className="imodal__head">
 					<div className="imodal__head-top">
 						<div className="imodal__chips">
 							<span className={`imodal__sev sev-${severity}`}>
@@ -244,9 +244,6 @@ export function IssueDetailModal({
 								{severity}
 							</span>
 							<span className="imodal__kind">{kindLabel}</span>
-							<span className="imodal__rule">
-								{issue.scanner} · {issue.ruleId}
-							</span>
 							{contrastVerdict ? (
 								<span
 									className={`imodal__verdict imodal__verdict--${contrastVerdict.verdict}`}
@@ -259,6 +256,13 @@ export function IssueDetailModal({
 										Needs verification
 									</span>
 								)
+							)}
+							{(pageLabel || occurrenceCount > 1) && (
+								<span className="imodal__context">
+									{pageLabel}
+									{pageLabel && occurrenceCount > 1 ? ' · ' : ''}
+									{occurrenceCount > 1 ? `${occurrenceCount} occurrences` : ''}
+								</span>
 							)}
 						</div>
 						<div className="imodal__nav">
@@ -305,36 +309,6 @@ export function IssueDetailModal({
 							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this
 							for human verification — no concrete DOM target was reported.
 						</p>
-					)}
-					{(pageLabel || issue.category || occurrenceCount > 0) && (
-						<div className="imodal__strip">
-							{pageLabel && (
-								<span>
-									<span className="imodal__strip-lab">Page</span>
-									<span className="imodal__strip-val">{pageLabel}</span>
-								</span>
-							)}
-							{issue.category && (
-								<span>
-									<span className="imodal__strip-lab">Category</span>
-									<span className="imodal__strip-val">{issue.category}</span>
-								</span>
-							)}
-							{occurrenceCount > 0 && (
-								<span>
-									<span className="imodal__strip-lab">Occurrences</span>
-									<span className="imodal__strip-val">{occurrenceCount}</span>
-								</span>
-							)}
-							{primaryOccurrence?.selector && (
-								<span>
-									<span className="imodal__strip-lab">Selector</span>
-									<span className="imodal__strip-val imodal__strip-val--mono">
-										{primaryOccurrence.selector}
-									</span>
-								</span>
-							)}
-						</div>
 					)}
 				</header>
 

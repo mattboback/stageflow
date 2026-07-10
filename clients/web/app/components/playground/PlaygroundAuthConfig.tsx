@@ -20,8 +20,16 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 		<section className="pauth">
 			<header className="pauth__head">
 				<div>
-					<h2 className="pauth__title">Authentication</h2>
-					<p className="pauth__sub">Log in before scanning protected pages.</p>
+					<h2 className="pauth__title">
+						<span className="stepno num" aria-hidden="true">
+							3
+						</span>
+						Authentication
+					</h2>
+					<p className="pauth__sub">
+						Log in before scanning protected pages — the scan browser replays a form
+						login with the credentials you provide.
+					</p>
 				</div>
 				{config.enabled && !isValid && (
 					<span className="pauth__warn" role="status" id="pauth-incomplete">

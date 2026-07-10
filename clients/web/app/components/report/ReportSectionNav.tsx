@@ -11,17 +11,29 @@ interface Props {
 interface TabSpec {
 	id: ReportSection;
 	label: string;
-	count: number | null;
+	/* Worded, so "Review · 5 pages" can't be confused with an issue count. */
+	count: string | null;
 }
 
 export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 	const artifactCount =
 		(report.artifacts?.length ?? 0) + (report.errors?.length ?? 0);
+	const pages = report.summary.pagesScanned ?? 0;
+	const issues = report.summary.totalIssues ?? 0;
 
 	const tabs: TabSpec[] = [
-		{ id: 'review', label: 'Review', count: report.summary.pagesScanned ?? 0 },
-		{ id: 'issues', label: 'Issues', count: report.summary.totalIssues ?? 0 },
-		{ id: 'artifacts', label: 'Artifacts', count: artifactCount || null }
+		{
+			id: 'review',
+			label: 'Review',
+			count: pages > 0 ? `${pages} page${pages === 1 ? '' : 's'}` : null
+		},
+		{ id: 'issues', label: 'Issues', count: issues > 0 ? String(issues) : null },
+		{
+			id: 'artifacts',
+			label: 'Artifacts',
+			count:
+				artifactCount > 0 ? `${artifactCount} file${artifactCount === 1 ? '' : 's'}` : null
+		}
 	];
 
 	return (
@@ -40,7 +52,7 @@ export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 						onClick={() => onSectionChange(tab.id)}
 					>
 						<span>{tab.label}</span>
-						{tab.count !== null && tab.count > 0 && (
+						{tab.count !== null && (
 							<span className="rnav__tab-count">{tab.count}</span>
 						)}
 					</button>

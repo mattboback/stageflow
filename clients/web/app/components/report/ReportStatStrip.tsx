@@ -8,9 +8,11 @@ import {
 	getSeverityDotClass,
 	isManualReviewIssue
 } from '../../lib/report';
+import { useContrastVerdicts } from '../../lib/hooks/useContrastVerdicts';
 
 interface Props {
 	report: UnifiedReport;
+	jobId: string;
 	onReviewSeverity: (severity: string) => void;
 	onSelectScanner: (scannerId: string) => void;
 	onReviewManual: () => void;
@@ -18,15 +20,19 @@ interface Props {
 
 export function ReportStatStrip({
 	report,
+	jobId,
 	onReviewSeverity,
 	onSelectScanner,
 	onReviewManual
 }: Props) {
 	const bySeverity = report.summary.bySeverity ?? {};
-	const manualCount = useMemo(
-		() => report.issues.filter(isManualReviewIssue).length,
+	const { getVerdict } = useContrastVerdicts(jobId);
+	const manualIssues = useMemo(
+		() => report.issues.filter(isManualReviewIssue),
 		[report.issues]
 	);
+	const manualCount = manualIssues.length;
+	const reviewedCount = manualIssues.filter((issue) => getVerdict(issue.id)).length;
 
 	const severityCounts = SEVERITY_LEVELS.map((level) => ({
 		level,
@@ -36,6 +42,7 @@ export function ReportStatStrip({
 	return (
 		<div className="rstrip" aria-label="Scan summary">
 			<div className="rstrip__group" aria-label="Issues by severity">
+				<span className="rstrip__lab">Severity</span>
 				{severityCounts.length === 0 ? (
 					<span className="rstrip__clean">No issues found</span>
 				) : (
@@ -52,18 +59,27 @@ export function ReportStatStrip({
 						</button>
 					))
 				)}
-				{manualCount > 0 && (
+			</div>
+			{manualCount > 0 && (
+				<div className="rstrip__group" aria-label="Review queue">
+					<span className="rstrip__lab">Review queue</span>
 					<button
 						type="button"
 						className="rstrip__manual"
 						onClick={onReviewManual}
 						title="Review issues needing manual verification"
 					>
-						{manualCount.toLocaleString()} need manual review
+						{reviewedCount > 0
+							? `${reviewedCount.toLocaleString()} of ${manualCount.toLocaleString()} reviewed`
+							: `${manualCount.toLocaleString()} need manual review`}{' '}
+						<span className="ar" aria-hidden="true">
+							→
+						</span>
 					</button>
-				)}
-			</div>
+				</div>
+			)}
 			<div className="rstrip__group rstrip__group--scanners" aria-label="Scanner status">
+				<span className="rstrip__lab">Scanners</span>
 				{report.scanners.map((scanner) => {
 					const issueCount =
 						scanner.issueCount ?? report.summary.byScanner?.[scanner.id] ?? 0;

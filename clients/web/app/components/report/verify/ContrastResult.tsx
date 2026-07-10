@@ -1,6 +1,5 @@
 import { ArrowLeftRight } from 'lucide-react';
 
-import type { ContrastVerdict } from '../../../lib/hooks/useContrastVerdicts';
 import {
 	WCAG_THRESHOLDS,
 	type ContrastLevel,
@@ -15,43 +14,28 @@ interface Props {
 	bg: string;
 	ruleId: string;
 	largeText: boolean;
-	verdict: ContrastVerdict | null;
 	onFgChange: (value: string) => void;
 	onBgChange: (value: string) => void;
 	onSwap: () => void;
 	onLargeTextChange: (value: boolean) => void;
-	onRecord: (verdict: 'pass' | 'fail', ratio: number | null) => void;
-	onClear: () => void;
 }
 
 const LEVELS: ContrastLevel[] = ['AA', 'AAA'];
-
-function formatVerdictTime(iso: string): string {
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return iso;
-	return date.toLocaleString(undefined, {
-		month: 'short',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit'
-	});
-}
 
 export function ContrastResult({
 	fg,
 	bg,
 	ruleId,
 	largeText,
-	verdict,
 	onFgChange,
 	onBgChange,
 	onSwap,
-	onLargeTextChange,
-	onRecord,
-	onClear
+	onLargeTextChange
 }: Props) {
 	const ratio = contrastRatioFromStrings(fg, bg);
 	const required = requiredLevel(ruleId);
+	const requiredThreshold = WCAG_THRESHOLDS[required][largeText ? 'large' : 'normal'];
+	const requiredPasses = ratio !== null && ratio >= requiredThreshold;
 
 	return (
 		<div className="vfy__result">
@@ -84,7 +68,7 @@ export function ContrastResult({
 					aria-label="Swap text and background colors"
 					title="Swap colors"
 				>
-					<ArrowLeftRight size={14} aria-hidden="true" />
+					<ArrowLeftRight size={15} aria-hidden="true" />
 				</button>
 				<div className="vfy__color">
 					<label className="vfy__color-lab" htmlFor="contrast-bg">
@@ -109,94 +93,72 @@ export function ContrastResult({
 				</div>
 			</div>
 
-			<div className="vfy__readout">
-				<div className="vfy__ratio-box">
-					<span className="vfy__ratio-lab">Measured ratio</span>
-					<span className="vfy__ratio" aria-live="polite">
-						{ratio !== null ? (
-							<>
-								{formatRatio(ratio)}
-								<small> : 1</small>
-							</>
-						) : (
-							'—'
-						)}
+			{/* Ratio is the headline result; the levels table qualifies it. */}
+			<div className="vfy__hero">
+				<span className="vfy__ratio" aria-live="polite">
+					{ratio !== null ? (
+						<>
+							{formatRatio(ratio)}
+							<small> : 1</small>
+						</>
+					) : (
+						'—'
+					)}
+				</span>
+				{ratio !== null && (
+					<span
+						className={`vfy__level-pill vfy__level-pill--${requiredPasses ? 'pass' : 'fail'}`}
+					>
+						{requiredPasses ? `Passes ${required}` : `Fails ${required}`}
 					</span>
-				</div>
-				<ul className="vfy__levels">
+				)}
+			</div>
+
+			<table className="vfy__levels-table">
+				<thead className="sr-only">
+					<tr>
+						<th scope="col">Level</th>
+						<th scope="col">Required ratio</th>
+						<th scope="col">Result</th>
+					</tr>
+				</thead>
+				<tbody>
 					{LEVELS.map((level) => {
 						const threshold = WCAG_THRESHOLDS[level][largeText ? 'large' : 'normal'];
 						const passes = ratio !== null && ratio >= threshold;
+						const isRequired = level === required;
 						return (
-							<li key={level} className="vfy__level">
-								<span
-									className={`vfy__level-lab${level === required ? ' vfy__level-lab--req' : ''}`}
-								>
-									{level} · {threshold.toFixed(1)}:1
-								</span>
-								{ratio !== null ? (
-									<span
-										className={`vfy__level-pill vfy__level-pill--${passes ? 'pass' : 'fail'}`}
-									>
-										{passes ? 'Pass' : 'Fail'}
-									</span>
-								) : (
-									<span className="vfy__level-pill">No colors</span>
-								)}
-								{level === required && (
-									<span className="vfy__level-req">required</span>
-								)}
-							</li>
+							<tr key={level} className={isRequired ? 'vfy__level-row--req' : undefined}>
+								<td className="vfy__level-name">
+									{level}
+									{isRequired && <span className="vfy__level-req"> required</span>}
+								</td>
+								<td className="vfy__level-need num">≥ {threshold.toFixed(1)}:1</td>
+								<td>
+									{ratio !== null ? (
+										<span
+											className={`vfy__level-pill vfy__level-pill--${passes ? 'pass' : 'fail'}`}
+										>
+											{passes ? 'Pass' : 'Fail'}
+										</span>
+									) : (
+										<span className="vfy__level-pill">No colors</span>
+									)}
+								</td>
+							</tr>
 						);
 					})}
-				</ul>
-				<label className="vfy__large">
-					<input
-						type="checkbox"
-						checked={largeText}
-						onChange={(e) => onLargeTextChange(e.currentTarget.checked)}
-					/>
-					Large text (≥24px, or bold ≥18.7px)
-				</label>
-			</div>
+				</tbody>
+			</table>
 
-			<div className="vfy__verdict">
-				{verdict ? (
-					<div className="vfy__verdict-row">
-						<span
-							className={`vfy__level-pill vfy__level-pill--${verdict.verdict === 'pass' ? 'pass' : 'fail'}`}
-						>
-							Verified · {verdict.verdict}
-						</span>
-						<span className="vfy__verdict-meta mono">
-							{verdict.fg || '—'} on {verdict.bg || '—'}
-							{verdict.ratio !== null ? ` · ${formatRatio(verdict.ratio)}:1` : ''} ·{' '}
-							{formatVerdictTime(verdict.at)}
-						</span>
-						<button type="button" className="vfy__btn vfy__btn--ghost" onClick={onClear}>
-							Clear verdict
-						</button>
-					</div>
-				) : (
-					<div className="vfy__verdict-row">
-						<span className="vfy__verdict-ask">Does this element pass in context?</span>
-						<button
-							type="button"
-							className="vfy__btn vfy__btn--pass"
-							onClick={() => onRecord('pass', ratio)}
-						>
-							Mark pass
-						</button>
-						<button
-							type="button"
-							className="vfy__btn vfy__btn--fail"
-							onClick={() => onRecord('fail', ratio)}
-						>
-							Mark fail
-						</button>
-					</div>
-				)}
-			</div>
+			<label className="vfy__large">
+				<input
+					type="checkbox"
+					checked={largeText}
+					onChange={(e) => onLargeTextChange(e.currentTarget.checked)}
+				/>
+				Large text (≥24px, or bold ≥18.7px)
+			</label>
 		</div>
 	);
 }

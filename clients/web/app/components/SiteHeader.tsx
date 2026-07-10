@@ -19,9 +19,8 @@ export function SiteHeader({ current }: { current?: Current }) {
 							className="navlink"
 							to="/playground"
 							aria-current={current === 'playground' ? 'page' : undefined}
-							style={current === 'playground' ? { color: 'var(--ink-strong)' } : undefined}
 						>
-							Playground
+							Configure scan
 						</Link>
 						<Link className="navlink" to="/#scanners">
 							Scanners
@@ -29,12 +28,9 @@ export function SiteHeader({ current }: { current?: Current }) {
 						<a className="navlink" href={DOCS_URL}>
 							Docs
 						</a>
-						<a className="btn btn--ghost btn--sm" href={GITHUB_URL} style={{ marginLeft: '.4rem' }}>
+						<a className="btn btn--ghost btn--sm" href={GITHUB_URL}>
 							GitHub ↗
 						</a>
-						<Link className="btn btn--primary btn--sm" to="/playground">
-							Configure scan
-						</Link>
 					</nav>
 				</div>
 			</header>

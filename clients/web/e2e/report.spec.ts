@@ -51,17 +51,20 @@ test('report page renders the fixture report end to end', async ({ page }) => {
 
 	await page.goto(`/scan/${JOB_ID}/report?section=overview`);
 
-	// Header: host from baseUrl (Daylight Gauge redesign) plus stats strip.
+	// Header: host from baseUrl (Daylight Gauge redesign) plus compact stats.
 	const host = new URL(report.meta.baseUrl as string).host;
 	const totals = page.getByLabel('Scan totals');
 	await expect(page.getByRole('heading', { name: host })).toBeVisible();
 	await expect(totals.getByText('Pages scanned', { exact: true })).toBeVisible();
-	await expect(totals.getByText(`${report.summary.pagesScanned.toLocaleString()} with issues`)).toBeVisible();
-	await expect(totals.getByText('All completed')).toBeVisible();
+	await expect(
+		totals.getByText(`${report.summary.pagesWithIssues.toLocaleString()} with issues`)
+	).toBeVisible();
+	await expect(totals.getByText('Manual review')).toBeVisible();
 
-	// Overview: the dashboard summarizes issue patterns and scanner status.
-	await expect(page.getByRole('heading', { name: /issue patterns? found/ })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Scanner status' })).toBeVisible();
+	// Review landing: filter toolbar plus the three-panel visual review.
+	await expect(page.getByLabel('Scan summary').getByText('Severity')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Pages', exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Issues on this page' })).toBeVisible();
 
 	expect(pageErrors).toEqual([]);
 });
