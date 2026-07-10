@@ -12,7 +12,7 @@ export function SiteHeader({ current }: { current?: Current }) {
 				<div className="wrap site-header__bar">
 					<Link className="brand" to="/" aria-label="StageFlow home">
 						<span className="brand__mark" aria-hidden="true" />
-						<span className="brand__name">STAGEFLOW</span>
+						<span className="brand__name">StageFlow</span>
 					</Link>
 					<nav className="nav" aria-label="Primary">
 						<Link
@@ -33,12 +33,11 @@ export function SiteHeader({ current }: { current?: Current }) {
 							GitHub ↗
 						</a>
 						<Link className="btn btn--primary btn--sm" to="/playground">
-							Run a scan
+							Configure scan
 						</Link>
 					</nav>
 				</div>
 			</header>
-			<div className="rule-ticks" aria-hidden="true" />
 		</>
 	);
 }

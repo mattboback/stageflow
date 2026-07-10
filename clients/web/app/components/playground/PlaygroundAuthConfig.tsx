@@ -28,18 +28,19 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 						Required fields missing
 					</span>
 				)}
-				<label className="pauth__toggle">
-					<input
-						type="checkbox"
-						checked={config.enabled}
-						onChange={(e) => update({ enabled: e.target.checked })}
-						aria-describedby={
-							config.enabled && !isValid ? 'pauth-incomplete' : undefined
-						}
-					/>
+				<button
+					type="button"
+					role="switch"
+					aria-checked={config.enabled}
+					onClick={() => update({ enabled: !config.enabled })}
+					className="pauth__toggle"
+					aria-describedby={
+						config.enabled && !isValid ? 'pauth-incomplete' : undefined
+					}
+				>
 					<span className="pauth__toggle-track" aria-hidden="true" />
 					<span className="sr-only">Enable authentication</span>
-				</label>
+				</button>
 			</header>
 
 			{config.enabled && (

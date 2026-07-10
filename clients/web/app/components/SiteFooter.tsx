@@ -12,7 +12,7 @@ export function SiteFooter() {
 				<div className="site-footer__brand">
 					<Link className="brand" to="/">
 						<span className="brand__mark" aria-hidden="true" />
-						<span className="brand__name">STAGEFLOW</span>
+						<span className="brand__name">StageFlow</span>
 					</Link>
 					<p className="muted site-footer__tagline">
 						Self-hostable frontend quality platform. MIT licensed.
