@@ -115,7 +115,7 @@ API and Orchestrator, the TypeScript scanner runner, and the React Router web ap
 
 Prerequisites:
 
-- Go `1.26.4` or newer in the `1.26` line
+- Go `1.26.5` or newer in the `1.26` line
 - Node.js `22.x` or newer (the repo pins `22` in `.node-version`)
 - Bun `1.3.8` or newer
 - **Podman with Compose support — Docker is not supported.** Per-job rootless
