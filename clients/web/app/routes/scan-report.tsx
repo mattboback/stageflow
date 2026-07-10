@@ -10,10 +10,11 @@ import {
 	type ReportSection
 } from '../components/report/ReportSectionNav';
 import { IssuesView } from '../components/report/IssuesView';
-import { OverviewDashboard } from '../components/report/OverviewDashboard';
+import { ReportStatStrip } from '../components/report/ReportStatStrip';
 import { IssueDetailModal } from '../components/report/IssueDetailModal';
 import { VisualReviewPanel } from '../components/report/VisualReviewPanel';
 import { ArtifactsView } from '../components/report/ArtifactsView';
+import { LighthouseSummary } from '../components/report/LighthouseSummary';
 import { ErrorsView } from '../components/report/ErrorsView';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
 import { buildOccurrenceModeReport, isIssueSortKey, type IssueSortKey } from '../lib/report';
@@ -30,10 +31,17 @@ export const meta: MetaFunction = () => [
 	{ name: 'robots', content: 'noindex' }
 ];
 
-const SECTIONS: readonly ReportSection[] = ['overview', 'issues', 'pages', 'artifacts'];
+const SECTIONS: readonly ReportSection[] = ['review', 'issues', 'artifacts'];
 
 function isSection(value: string | null): value is ReportSection {
 	return value !== null && (SECTIONS as readonly string[]).includes(value);
+}
+
+/* Old links used ?section=overview / ?section=pages — both fold into review. */
+function resolveSection(raw: string | null): ReportSection {
+	if (isSection(raw)) return raw;
+	if (raw === 'overview' || raw === 'pages') return 'review';
+	return 'review';
 }
 
 export default function ScanReport() {
@@ -48,8 +56,7 @@ export default function ScanReport() {
 		[report]
 	);
 
-	const rawSection = searchParams.get('section');
-	const section: ReportSection = isSection(rawSection) ? rawSection : 'issues';
+	const section: ReportSection = resolveSection(searchParams.get('section'));
 	const activeScanner = searchParams.get('scanner');
 	const activeSeverity = searchParams.get('severity');
 	const activePage = searchParams.get('page');
@@ -83,7 +90,7 @@ export default function ScanReport() {
 
 	const setSection = useCallback(
 		(next: ReportSection) => {
-			updateParams({ section: next === 'issues' ? null : next });
+			updateParams({ section: next === 'review' ? null : next });
 		},
 		[updateParams]
 	);
@@ -117,30 +124,29 @@ export default function ScanReport() {
 								onSectionChange={setSection}
 							/>
 
-							{section === 'overview' && (
+							{section === 'review' && (
 								<section
-									id="report-panel-overview"
+									id="report-panel-review"
 									role="tabpanel"
-									aria-labelledby="report-tab-overview"
+									aria-labelledby="report-tab-review"
 								>
-									<OverviewDashboard
+									<ReportStatStrip
 										report={displayReport}
-										onSelectPage={(pageId) =>
-											updateParams({ section: null, page: pageId })
+										onReviewSeverity={(severity) =>
+											updateParams({ section: 'issues', severity })
 										}
 										onSelectScanner={(scannerId) =>
-											updateParams({ section: null, scanner: scannerId })
+											updateParams({ section: 'issues', scanner: scannerId })
 										}
-										onSearchIssues={(query, scannerId) =>
-											updateParams({
-												section: null,
-												q: query || null,
-												scanner: scannerId ?? null
-											})
-										}
-										onReviewSeverity={(severity) =>
-											updateParams({ section: null, severity })
-										}
+										onReviewManual={() => updateParams({ section: 'issues' })}
+									/>
+									<VisualReviewPanel
+										report={displayReport}
+										screenshots={screenshots}
+										activeScanner={activeScanner}
+										activePage={activePage}
+										onSelectPage={(pageId) => updateParams({ page: pageId })}
+										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 									/>
 								</section>
 							)}
@@ -183,23 +189,6 @@ export default function ScanReport() {
 								</section>
 							)}
 
-							{section === 'pages' && (
-								<section
-									id="report-panel-pages"
-									role="tabpanel"
-									aria-labelledby="report-tab-pages"
-								>
-									<VisualReviewPanel
-										report={displayReport}
-										screenshots={screenshots}
-										activeScanner={activeScanner}
-										activePage={activePage}
-										onSelectPage={(pageId) => updateParams({ page: pageId })}
-										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
-									/>
-								</section>
-							)}
-
 							{section === 'artifacts' && (
 								<section
 									id="report-panel-artifacts"
@@ -207,6 +196,11 @@ export default function ScanReport() {
 									aria-labelledby="report-tab-artifacts"
 									className="rsection-artifacts"
 								>
+									{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+										<LighthouseSummary
+											categories={displayReport.summary.lighthouseCategories ?? []}
+										/>
+									)}
 									<ArtifactsView
 										jobId={id}
 										job={job}
@@ -219,6 +213,7 @@ export default function ScanReport() {
 							{activeIssue && (
 								<IssueDetailModal
 									issue={activeIssue}
+									jobId={id}
 									page={activeIssuePage}
 									issues={displayReport.issues}
 									screenshots={screenshots}

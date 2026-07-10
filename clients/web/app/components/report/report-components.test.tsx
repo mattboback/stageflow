@@ -4,9 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { loadAllScansFixture } from '../../test/load-fixture';
 
 import { IssueRowCard } from './IssueRowCard';
-import { OverviewDashboard } from './OverviewDashboard';
 import { ReportHeader } from './ReportHeader';
-import { SeverityBreakdown } from './SeverityBreakdown';
+import { ReportStatStrip } from './ReportStatStrip';
 
 const report = loadAllScansFixture();
 
@@ -24,20 +23,39 @@ describe('ReportHeader', () => {
 	});
 });
 
-describe('SeverityBreakdown', () => {
-	it('renders one row per severity level with fixture counts', () => {
-		render(<SeverityBreakdown bySeverity={report.summary.bySeverity} />);
-
-		const list = screen.getByRole('list', { name: 'Issues by severity' });
-		const rows = list.querySelectorAll('li');
-		expect(rows.length).toBe(5);
-		expect(screen.getByText('Critical').parentElement?.textContent).toContain('Critical');
+describe('ReportStatStrip', () => {
+	const handlers = () => ({
+		onReviewSeverity: vi.fn(),
+		onSelectScanner: vi.fn(),
+		onReviewManual: vi.fn()
 	});
 
-	it('renders zero counts when no severity data is present', () => {
-		render(<SeverityBreakdown bySeverity={undefined} />);
-		const list = screen.getByRole('list', { name: 'Issues by severity' });
-		expect(list.querySelectorAll('li').length).toBe(5);
+	it('renders severity pills and scanner chips from the fixture', () => {
+		render(<ReportStatStrip report={report} {...handlers()} />);
+
+		const critical = report.summary.bySeverity.critical ?? 0;
+		expect(critical).toBeGreaterThan(0);
+		expect(
+			screen.getByRole('button', { name: `${critical} critical` })
+		).toBeTruthy();
+		for (const scanner of report.scanners) {
+			expect(screen.getAllByText(scanner.name ?? scanner.id).length).toBeGreaterThan(0);
+		}
+	});
+
+	it('routes severity pills and scanner chips to the issues view', () => {
+		const h = handlers();
+		render(<ReportStatStrip report={report} {...h} />);
+
+		const critical = report.summary.bySeverity.critical ?? 0;
+		fireEvent.click(screen.getByRole('button', { name: `${critical} critical` }));
+		expect(h.onReviewSeverity).toHaveBeenCalledWith('critical');
+
+		const scanner = report.scanners[0]!;
+		fireEvent.click(
+			screen.getAllByText(scanner.name ?? scanner.id)[0]!.closest('button')!
+		);
+		expect(h.onSelectScanner).toHaveBeenCalledWith(scanner.id);
 	});
 });
 
@@ -63,33 +81,3 @@ describe('IssueRowCard', () => {
 	});
 });
 
-describe('OverviewDashboard', () => {
-	const handlers = () => ({
-		onSelectPage: vi.fn(),
-		onSelectScanner: vi.fn(),
-		onSearchIssues: vi.fn(),
-		onReviewSeverity: vi.fn()
-	});
-
-	it('summarizes the fixture: issue patterns, scanner statuses, top pages', () => {
-		render(<OverviewDashboard report={report} {...handlers()} />);
-
-		expect(screen.getByRole('heading', { name: /issue patterns? found/ })).toBeTruthy();
-		expect(screen.getByRole('heading', { name: 'Scanner status' })).toBeTruthy();
-		for (const scanner of report.scanners) {
-			expect(screen.getAllByText(scanner.name ?? scanner.id).length).toBeGreaterThan(0);
-		}
-	});
-
-	it('routes the urgent CTA to the worst outstanding severity', () => {
-		const h = handlers();
-		render(<OverviewDashboard report={report} {...h} />);
-
-		const critical = report.summary.bySeverity.critical ?? 0;
-		expect(critical).toBeGreaterThan(0);
-		fireEvent.click(
-			screen.getByRole('button', { name: `Fix ${critical} critical first →` })
-		);
-		expect(h.onReviewSeverity).toHaveBeenCalledWith('critical');
-	});
-});

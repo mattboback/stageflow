@@ -1,6 +1,6 @@
 import type { UnifiedReport } from '../../lib/types/unified-report';
 
-export type ReportSection = 'overview' | 'issues' | 'pages' | 'artifacts';
+export type ReportSection = 'review' | 'issues' | 'artifacts';
 
 interface Props {
 	report: UnifiedReport;
@@ -19,9 +19,8 @@ export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 		(report.artifacts?.length ?? 0) + (report.errors?.length ?? 0);
 
 	const tabs: TabSpec[] = [
-		{ id: 'overview', label: 'Overview', count: null },
+		{ id: 'review', label: 'Review', count: report.summary.pagesScanned ?? 0 },
 		{ id: 'issues', label: 'Issues', count: report.summary.totalIssues ?? 0 },
-		{ id: 'pages', label: 'Pages', count: report.summary.pagesScanned ?? 0 },
 		{ id: 'artifacts', label: 'Artifacts', count: artifactCount || null }
 	];
 

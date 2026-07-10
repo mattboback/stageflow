@@ -7,17 +7,23 @@ import {
 	getIssueKind,
 	getIssueKindLabel,
 	getIssueScreenshotUrl,
+	getPageOverviewUrl,
 	getSeverityDotClass,
 	normalizeSeverity,
+	isAxeIncompleteIssue,
+	isColorContrastIssue,
 	isManualReviewIssue,
 	rewriteIssueTitle
 } from '../../lib/report';
+import { useContrastVerdicts } from '../../lib/hooks/useContrastVerdicts';
 
 import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueOccurrenceCard } from './IssueOccurrenceCard';
+import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
 interface Props {
 	issue: IssueDetail;
+	jobId?: string;
 	page: PageSummary | null;
 	issues: IssueDetail[];
 	screenshots: ScreenshotArtifact[];
@@ -25,10 +31,11 @@ interface Props {
 	onNavigate?: (issueId: string) => void;
 }
 
-type TabId = 'fix' | 'evidence' | 'occurrences';
+type TabId = 'fix' | 'evidence' | 'verify' | 'occurrences';
 
 export function IssueDetailModal({
 	issue,
+	jobId = '',
 	page,
 	issues,
 	screenshots,
@@ -63,8 +70,26 @@ export function IssueDetailModal({
 		[screenshots, issue.scanner, issue.id, issue.pageId]
 	);
 
+	const pageOverviewUrl = useMemo(
+		() =>
+			page
+				? getPageOverviewUrl(
+						screenshots,
+						page.id,
+						issue.scanner ? [issue.scanner, 'axe'] : ['axe']
+					)
+				: null,
+		[screenshots, page, issue.scanner]
+	);
+
+	const hasOverviewCrop = Boolean(
+		pageOverviewUrl &&
+			(page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
+	);
+
 	const hasEvidence = Boolean(
 		screenshotUrl ||
+			hasOverviewCrop ||
 			primaryOccurrence?.selector ||
 			primaryOccurrence?.ancestorPath ||
 			primaryOccurrence?.contextHtml ||
@@ -72,18 +97,27 @@ export function IssueDetailModal({
 			primaryOccurrence?.failureSummary
 	);
 
+	const canVerifyContrast = isColorContrastIssue(issue);
+	const needsVerification = canVerifyContrast && isAxeIncompleteIssue(issue);
+	const { getVerdict } = useContrastVerdicts(jobId);
+	const contrastVerdict = canVerifyContrast ? getVerdict(issue.id) : null;
+
 	const availableTabs = useMemo<TabId[]>(() => {
 		const tabs: TabId[] = ['fix'];
 		if (hasEvidence) tabs.push('evidence');
+		if (canVerifyContrast) tabs.push('verify');
 		if (occurrenceCount > 0) tabs.push('occurrences');
 		return tabs;
-	}, [hasEvidence, occurrenceCount]);
+	}, [hasEvidence, canVerifyContrast, occurrenceCount]);
+
+	// Needs-verification contrast issues land straight on the verify tools.
+	const defaultTab: TabId = needsVerification ? 'verify' : 'fix';
 
 	const [tabState, setTabState] = useState<{ issueId: string; tab: TabId }>({
 		issueId: issue.id,
-		tab: 'fix'
+		tab: defaultTab
 	});
-	const selectedTab = tabState.issueId === issue.id ? tabState.tab : 'fix';
+	const selectedTab = tabState.issueId === issue.id ? tabState.tab : defaultTab;
 	const activeTab = availableTabs.includes(selectedTab)
 		? selectedTab
 		: (availableTabs[0] ?? 'fix');
@@ -213,6 +247,19 @@ export function IssueDetailModal({
 							<span className="imodal__rule">
 								{issue.scanner} · {issue.ruleId}
 							</span>
+							{contrastVerdict ? (
+								<span
+									className={`imodal__verdict imodal__verdict--${contrastVerdict.verdict}`}
+								>
+									Verified · {contrastVerdict.verdict}
+								</span>
+							) : (
+								needsVerification && (
+									<span className="imodal__verdict imodal__verdict--pending">
+										Needs verification
+									</span>
+								)
+							)}
 						</div>
 						<div className="imodal__nav">
 							{onNavigate && totalCount > 1 && (
@@ -303,6 +350,7 @@ export function IssueDetailModal({
 						>
 							{tab === 'fix' && 'Fix'}
 							{tab === 'evidence' && 'Evidence'}
+							{tab === 'verify' && 'Verify contrast'}
 							{tab === 'occurrences' && `Occurrences (${occurrenceCount})`}
 						</button>
 					))}
@@ -352,6 +400,17 @@ export function IssueDetailModal({
 								issue={issue}
 								page={page}
 								screenshotUrl={screenshotUrl}
+								pageOverviewUrl={pageOverviewUrl}
+							/>
+						</div>
+					)}
+					{activeTab === 'verify' && (
+						<div className="imodal__pane">
+							<VerifyContrastTab
+								issue={issue}
+								page={page}
+								pageOverviewUrl={pageOverviewUrl}
+								jobId={jobId}
 							/>
 						</div>
 					)}
@@ -365,6 +424,8 @@ export function IssueDetailModal({
 										occurrence={occ}
 										index={idx}
 										page={page}
+										issueId={issue.id}
+										pageOverviewUrl={pageOverviewUrl}
 									/>
 								))}
 							</div>
