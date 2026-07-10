@@ -143,6 +143,10 @@ infra/scanners/scanners.yaml
 # Auto-generated internal repo maps (regenerated locally; not shipped)
 **/docs/repo-map.md
 
+# Local design / visual QA artifacts (do not ship)
+/pageimage/
+/gptdesign/
+/stag/
 
 # AI assistant artifacts
 context-snapshot.json
