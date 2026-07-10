@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/library/golang:1.26.4-alpine AS builder
+FROM docker.io/library/golang:1.26.5-alpine AS builder
 WORKDIR /src
 
 # Copy module definitions first for better layer caching

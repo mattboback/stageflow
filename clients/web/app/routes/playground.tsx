@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, type MetaFunction } from 'react-router';
+import { CircleCheck, Clock, FileArchive, Info, Layers, Target } from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
@@ -20,6 +21,7 @@ import {
 	type AuthFormConfig
 } from '../lib/components/playground/playground-utils';
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
+import { SCANNER_META } from '../lib/report/scanner-identity';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
 import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
 import {
@@ -40,7 +42,14 @@ export const meta: MetaFunction = () =>
 
 type Mode = 'url' | 'zip';
 
-function titleCase(s: string): string {
+const CATEGORY_LABELS: Record<string, string> = {
+	seo: 'SEO',
+	ai: 'AI',
+	custom: 'AI, opt-in'
+};
+
+function categoryLabel(s: string): string {
+	if (CATEGORY_LABELS[s]) return CATEGORY_LABELS[s];
 	return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
@@ -157,7 +166,7 @@ export default function Playground() {
 		setUrlRowErrors({});
 
 		if (armed === 0) {
-			setError('Arm at least one scanner channel.');
+			setError('Enable at least one scanner.');
 			return;
 		}
 
@@ -190,7 +199,7 @@ export default function Playground() {
 		}
 
 		if (authConfig.enabled && !isAuthValid) {
-			setError('Auth is enabled but Login URL / username / password are incomplete.');
+			setError('Authentication is enabled but Login URL, username, or password is missing.');
 			return;
 		}
 
@@ -223,6 +232,20 @@ export default function Playground() {
 
 	const estSeconds = Math.max(20, armed * 6);
 	const targetCount = mode === 'url' ? urls.filter((u) => u.trim()).length : file ? 1 : 0;
+	const authBlocking = mode === 'url' && authConfig.enabled && !isAuthValid;
+	const ready =
+		!catalogLoading && !catalogError && armed > 0 && targetCount > 0 && !authBlocking;
+	const readyDetail = catalogLoading
+		? 'Loading the scanner catalog.'
+		: armed === 0
+			? 'Enable at least one scanner.'
+			: targetCount === 0
+				? mode === 'url'
+					? 'Add at least one URL to scan.'
+					: 'Choose a ZIP archive to scan.'
+				: authBlocking
+					? 'Finish the authentication fields, or turn authentication off.'
+					: "All set! You're ready to scan.";
 
 	return (
 		<>
@@ -232,20 +255,13 @@ export default function Playground() {
 				<div className="wrap">
 					<div className="console__head">
 						<div>
-							<span className="console__kicker">Playground</span>
-							<h1>Configure a scan.</h1>
+							<h1>Configure a scan</h1>
 							<p>
-								Point StageFlow at any public URL or a static-site archive, arm the channels you
-								need, and run. No account, no install.
+								Point StageFlow at any public URL or a static-site archive, choose the scanners
+								you need, and run. No account, no install.
 							</p>
 						</div>
-						{submitting ? (
-							<Pill variant="live">Submitting</Pill>
-						) : (
-							<Pill led ledColor="var(--ink-faint)">
-								Idle
-							</Pill>
-						)}
+						{submitting && <Pill variant="live">Submitting</Pill>}
 					</div>
 
 					<div className="console__grid">
@@ -253,7 +269,12 @@ export default function Playground() {
 						<div className="console__main">
 							<section className="panel">
 								<div className="panel__head">
-									<h2 className="label">Target</h2>
+									<div className="panel__head-copy">
+										<h2>Target</h2>
+										<p className="panel__sub">
+											Add one or more URLs to scan, or upload a static-site archive.
+										</p>
+									</div>
 									<div className="seg" role="group" aria-label="Target type">
 										<button
 											type="button"
@@ -277,10 +298,10 @@ export default function Playground() {
 											<div className="addurls">
 												{urls.map((u, i) => (
 													<div className="urlrow" key={i}>
-														<span className="ix">{i + 1}</span>
+														<span className="ix num">{i + 1}</span>
 														<div className="urlrow__field">
 															<input
-																className="input mono"
+																className="input"
 																type="url"
 																value={u}
 																placeholder="https://…"
@@ -313,8 +334,12 @@ export default function Playground() {
 												))}
 											</div>
 											<button type="button" className="addmore" onClick={addUrlRow}>
-												+ add another URL
+												+ Add another URL
 											</button>
+											<p className="intake__note">
+												<Info size={15} aria-hidden="true" />
+												We scan the provided URLs and linked pages that are in scope.
+											</p>
 										</>
 									) : (
 										<>
@@ -323,6 +348,7 @@ export default function Playground() {
 												className="drop"
 												onClick={() => fileInputRef.current?.click()}
 											>
+												<FileArchive size={22} aria-hidden="true" />
 												<span className="drop__file">
 													{file ? file.name : 'Choose a ZIP archive'}
 												</span>
@@ -342,15 +368,18 @@ export default function Playground() {
 
 							<section className="panel">
 								<div className="panel__head">
-									<h2 className="label">Channels</h2>
+									<div className="panel__head-copy">
+										<h2>Scanners</h2>
+										<p className="panel__sub">Choose the channels you want to run.</p>
+									</div>
 									<div className="chanhead__meta">
-										<span className="mono chanhead__count">
-											{catalogLoading ? 'loading…' : `${armed} / ${total} armed`}
+										<span className="chanhead__count num">
+											{catalogLoading ? 'Loading…' : `${armed} / ${total} enabled`}
 										</span>
 										{!catalogLoading && !catalogError && (
 											<span className="chanhead__bulk">
 												<button type="button" onClick={() => setAllScanners(true)}>
-													All
+													Select all
 												</button>
 												<span aria-hidden="true">·</span>
 												<button type="button" onClick={() => setAllScanners(false)}>
@@ -372,6 +401,8 @@ export default function Playground() {
 										<div className="rack" role="group" aria-label="Scanner channels">
 											{catalog.map((scanner) => {
 												const on = enabledById.get(scanner.id) ?? false;
+												const meta = SCANNER_META[scanner.id];
+												const Icon = meta?.icon ?? Layers;
 												return (
 													<button
 														type="button"
@@ -381,11 +412,17 @@ export default function Playground() {
 														key={scanner.id}
 														onClick={() => toggleScanner(scanner.id)}
 													>
+														<span className="chan__icon" aria-hidden="true">
+															<Icon size={17} />
+														</span>
 														<span className="chan__main">
 															<span className="chan__name">{scanner.name}</span>
-															<span className="chan__cat">
-																{titleCase(scanner.categories[0] ?? '')}
+															<span className="chan__desc">
+																{scanner.description || meta?.description || ''}
 															</span>
+														</span>
+														<span className="chan__cat">
+															{categoryLabel(scanner.categories[0] ?? '')}
 														</span>
 														<span className="tog" aria-hidden="true" />
 													</button>
@@ -412,31 +449,71 @@ export default function Playground() {
 							)}
 						</div>
 
-						{/* right: run dock */}
-						<aside className="dock" aria-label="Run controls">
+						{/* right: scan summary dock */}
+						<aside className="dock" aria-label="Scan summary">
 							<div className="panel">
 								<div className="panel__head">
-									<span className="label">Ready to run</span>
-									<Pill
-										variant={armed > 0 ? 'live' : undefined}
-										led
-										ledColor={armed > 0 ? undefined : 'var(--ink-faint)'}
-									>
-										{armed > 0 ? 'Armed' : 'Idle'}
-									</Pill>
+									<h2>Scan summary</h2>
 								</div>
 								<div className="panel__body">
-									<div className="armline">
-										<span className="armline__lab">Channels armed</span>
-										<b>
-											{armed}
-											<small>/{total || 8}</small>
-										</b>
+									<div
+										className={ready ? 'readybox readybox--go' : 'readybox'}
+										role="status"
+										aria-live="polite"
+									>
+										<CircleCheck size={19} aria-hidden="true" />
+										<span>
+											<b>{ready ? 'Ready to run' : 'Almost there'}</b>
+											{readyDetail}
+										</span>
 									</div>
-									<hr className="divider" />
+									<ul className="sumlist">
+										<li>
+											<span className="sumlist__icon" aria-hidden="true">
+												<Target size={16} />
+											</span>
+											<span className="sumlist__lab">
+												Targets
+												<small>
+													{mode === 'url'
+														? 'Starting points for the scan'
+														: 'Static-site archive'}
+												</small>
+											</span>
+											<b className="num">
+												{mode === 'url'
+													? `${targetCount} ${targetCount === 1 ? 'URL' : 'URLs'}`
+													: file
+														? '1 archive'
+														: 'None'}
+											</b>
+										</li>
+										<li>
+											<span className="sumlist__icon" aria-hidden="true">
+												<Layers size={16} />
+											</span>
+											<span className="sumlist__lab">
+												Scanners
+												<small>{armed === total ? 'All enabled' : 'Partial selection'}</small>
+											</span>
+											<b className="num">
+												{armed} of {total || 8}
+											</b>
+										</li>
+										<li>
+											<span className="sumlist__icon" aria-hidden="true">
+												<Clock size={16} />
+											</span>
+											<span className="sumlist__lab">
+												Estimated runtime
+												<small>Per page, scanners run in parallel</small>
+											</span>
+											<b className="num">~ {estSeconds}s</b>
+										</li>
+									</ul>
 									<button
 										type="button"
-										className="btn btn--primary run"
+										className="btn btn--primary btn--lg run"
 										onClick={runScan}
 										disabled={submitting || catalogLoading || armed === 0}
 									>
@@ -447,11 +524,7 @@ export default function Playground() {
 											</span>
 										)}
 									</button>
-									<p className="runhint">
-										~ {estSeconds}s estimated · {targetCount}{' '}
-										{mode === 'url' ? (targetCount === 1 ? 'URL' : 'URLs') : 'archive'} · {armed}{' '}
-										{armed === 1 ? 'scanner' : 'scanners'}
-									</p>
+									<p className="runhint">No account required · Free to use</p>
 								</div>
 							</div>
 							{error && (

@@ -71,18 +71,22 @@ export function getSeverityOverlayClass(severity?: string | null): string {
 	return `sev-overlay${severityToken(severity)}`;
 }
 
+/*
+ * SVG presentation attributes can't resolve CSS custom properties, so these
+ * mirror the --sev-* tokens in instrument.css (sRGB approximations).
+ */
 export function getSeverityStrokeColor(severity?: string | null): string {
 	switch (severity) {
 		case 'critical':
-			return 'rgba(239, 68, 68, 0.95)'; // red
+			return 'rgba(198, 44, 41, 0.95)'; // red — --sev-critical
 		case 'serious':
-			return 'rgba(249, 115, 22, 0.95)'; // orange
+			return 'rgba(199, 93, 22, 0.95)'; // orange — --sev-serious
 		case 'moderate':
-			return 'rgba(245, 158, 11, 0.95)'; // amber
+			return 'rgba(175, 123, 15, 0.95)'; // amber — --sev-moderate
 		case 'minor':
-			return 'rgba(59, 130, 246, 0.95)'; // blue
+			return 'rgba(64, 133, 60, 0.95)'; // green — --sev-minor
 		case 'info':
-			return 'rgba(168, 85, 247, 0.95)'; // purple
+			return 'rgba(63, 113, 191, 0.95)'; // blue — --sev-info
 		default:
 			return 'rgba(148, 163, 184, 0.95)'; // slate
 	}
@@ -91,15 +95,15 @@ export function getSeverityStrokeColor(severity?: string | null): string {
 export function getSeverityFillColor(severity?: string | null): string {
 	switch (severity) {
 		case 'critical':
-			return 'rgba(239, 68, 68, 0.15)';
+			return 'rgba(198, 44, 41, 0.15)';
 		case 'serious':
-			return 'rgba(249, 115, 22, 0.15)';
+			return 'rgba(199, 93, 22, 0.15)';
 		case 'moderate':
-			return 'rgba(245, 158, 11, 0.15)';
+			return 'rgba(175, 123, 15, 0.15)';
 		case 'minor':
-			return 'rgba(59, 130, 246, 0.15)';
+			return 'rgba(64, 133, 60, 0.15)';
 		case 'info':
-			return 'rgba(168, 85, 247, 0.15)';
+			return 'rgba(63, 113, 191, 0.15)';
 		default:
 			return 'rgba(148, 163, 184, 0.15)';
 	}

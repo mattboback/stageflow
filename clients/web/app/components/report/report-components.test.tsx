@@ -11,19 +11,16 @@ import { SeverityBreakdown } from './SeverityBreakdown';
 const report = loadAllScansFixture();
 
 describe('ReportHeader', () => {
-	it('renders the score, page/scanner counts, and severity totals from the fixture', () => {
+	it('renders the title and scan totals from the fixture', () => {
 		render(<ReportHeader report={report} />);
 
-		expect(screen.getByRole('heading', { name: 'Scan report' })).toBeTruthy();
-		expect(
-			screen.getByText(
-				`${report.summary.pagesScanned} pages · ${report.scanners.length} scanners`
-			)
-		).toBeTruthy();
+		expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
-		const totals = screen.getByLabelText('Issue counts');
-		expect(totals.textContent).toContain(`Total${report.summary.totalIssues}`);
-		expect(totals.textContent).toContain(`Critical${report.summary.bySeverity.critical ?? 0}`);
+		const totals = screen.getByLabelText('Scan totals');
+		expect(totals.textContent).toContain('Total issues');
+		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
+		expect(totals.textContent).toContain('Pages scanned');
+		expect(totals.textContent).toContain(String(report.scanners.length));
 	});
 });
 
@@ -78,7 +75,7 @@ describe('OverviewDashboard', () => {
 		render(<OverviewDashboard report={report} {...handlers()} />);
 
 		expect(screen.getByRole('heading', { name: /issue patterns? found/ })).toBeTruthy();
-		expect(screen.getByRole('heading', { name: 'Scanner Status' })).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Scanner status' })).toBeTruthy();
 		for (const scanner of report.scanners) {
 			expect(screen.getAllByText(scanner.name ?? scanner.id).length).toBeGreaterThan(0);
 		}

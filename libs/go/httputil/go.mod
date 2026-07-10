@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow/libs/go/httputil
 
-go 1.26.4
+go 1.26.5
 
 replace github.com/mattboback/stageflow/libs/go/bootstrap => ../../../libs/go/bootstrap
 

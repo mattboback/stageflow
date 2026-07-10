@@ -3,9 +3,8 @@
  * getSeverityDotClass / getSeverityBadgeClass / getSeverityBorderClass /
  * getSeverityOverlayClass / getSeverityChipClass in app/lib/report/severity.ts.
  *
- * All colors are pulled from instrument.css tokens. Severity=info maps onto the
- * "pass" tone in the design system — the instrument palette has no separate
- * info hue, and info issues are informational/passing in practice.
+ * All colors are pulled from instrument.css tokens. Severity labels are always
+ * text next to color, never color alone.
  */
 
 /* ------------------------------------------------------------------------- */
@@ -32,18 +31,18 @@
 	border-color: oklch(0.86 0.05 135);
 }
 .sev-container.sev-info {
-	background: oklch(0.965 0.025 165);
-	border-color: oklch(0.86 0.05 165);
+	background: var(--sev-info-wash);
+	border-color: oklch(0.86 0.04 245);
 }
 
 /* ------------------------------------------------------------------------- */
-/*  Severity dot (small 8px circle, used in row headers / counts)             */
+/*  Severity dot (small circle, used in row headers / counts)                 */
 /* ------------------------------------------------------------------------- */
 .sev-dot {
 	display: inline-block;
-	width: 0.55rem;
-	height: 0.55rem;
-	border-radius: 999px;
+	width: 0.6rem;
+	height: 0.6rem;
+	border-radius: 50%;
 	background: var(--ink-faint);
 	flex: 0 0 auto;
 }
@@ -51,30 +50,28 @@
 .sev-dot.sev-serious  { background: var(--sev-serious); }
 .sev-dot.sev-moderate { background: var(--sev-moderate); }
 .sev-dot.sev-minor    { background: var(--sev-minor); }
-.sev-dot.sev-info     { background: var(--sev-pass); }
+.sev-dot.sev-info     { background: var(--sev-info); }
 
 /* ------------------------------------------------------------------------- */
-/*  Severity badge (solid pill, used for severity labels)                     */
+/*  Severity badge (tinted pill with severity-colored text)                   */
 /* ------------------------------------------------------------------------- */
 .sev-badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.16rem 0.5rem;
-	border-radius: 999px;
-	font-family: var(--mono);
-	font-size: 0.66rem;
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--surface);
-	background: var(--ink-faint);
+	padding: 0.2rem 0.6rem;
+	border-radius: var(--r-pill);
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: capitalize;
+	color: var(--ink-muted);
+	background: var(--surface-sunk);
 }
-.sev-badge.sev-critical { background: var(--sev-critical); }
-.sev-badge.sev-serious  { background: var(--sev-serious); }
-.sev-badge.sev-moderate { background: var(--sev-moderate); }
-.sev-badge.sev-minor    { background: var(--sev-minor); }
-.sev-badge.sev-info     { background: var(--sev-pass); }
+.sev-badge.sev-critical { color: var(--sev-critical); background: var(--sev-critical-wash); }
+.sev-badge.sev-serious  { color: var(--sev-serious);  background: var(--sev-serious-wash); }
+.sev-badge.sev-moderate { color: oklch(0.46 0.11 80);  background: var(--sev-moderate-wash); }
+.sev-badge.sev-minor    { color: oklch(0.44 0.11 140); background: var(--sev-minor-wash); }
+.sev-badge.sev-info     { color: var(--sev-info);     background: var(--sev-info-wash); }
 
 /* ------------------------------------------------------------------------- */
 /*  Severity border (highlighted card border for selection / focus states)    */
@@ -87,7 +84,7 @@
 .sev-border.sev-serious  { border-color: var(--sev-serious);  background: var(--sev-serious-wash); }
 .sev-border.sev-moderate { border-color: var(--sev-moderate); background: var(--sev-moderate-wash); }
 .sev-border.sev-minor    { border-color: var(--sev-minor);    background: var(--sev-minor-wash); }
-.sev-border.sev-info     { border-color: var(--sev-pass);     background: oklch(0.965 0.025 165); }
+.sev-border.sev-info     { border-color: var(--sev-info);     background: var(--sev-info-wash); }
 
 /* ------------------------------------------------------------------------- */
 /*  Severity overlay (screenshot marker rectangle on visual review)           */
@@ -114,8 +111,8 @@
 	background: color-mix(in oklch, var(--sev-minor) 10%, transparent);
 }
 .sev-overlay.sev-info {
-	border-color: var(--sev-pass);
-	background: color-mix(in oklch, var(--sev-pass) 10%, transparent);
+	border-color: var(--sev-info);
+	background: color-mix(in oklch, var(--sev-info) 10%, transparent);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -125,48 +122,46 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	padding: 0.22rem 0.55rem;
-	border-radius: 999px;
+	padding: 0.3rem 0.7rem;
+	border-radius: var(--r-pill);
 	border: 1px solid var(--line-strong);
 	background: var(--surface);
 	color: var(--ink-muted);
-	font-family: var(--mono);
-	font-size: 0.7rem;
+	font-size: 0.8rem;
 	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
+	text-transform: capitalize;
 	cursor: pointer;
 	transition: background-color 0.12s, border-color 0.12s, color 0.12s;
 	white-space: nowrap;
+	font-family: inherit;
 }
 .sev-chip.size-md {
-	padding: 0.32rem 0.7rem;
-	font-size: 0.75rem;
+	padding: 0.36rem 0.8rem;
+	font-size: 0.84rem;
 }
 .sev-chip:hover {
 	background: var(--surface-sunk);
 	border-color: var(--ink-faint);
 }
 .sev-chip:focus-visible {
-	outline: 2px solid var(--ink-strong);
+	outline: 2px solid var(--signal);
 	outline-offset: 2px;
 }
 
 /* Active state — severity-coloured fill */
 .sev-chip.active {
-	color: var(--surface);
+	color: oklch(0.99 0 0);
 	background: var(--ink-strong);
 	border-color: var(--ink-strong);
 }
 .sev-chip.sev-critical.active { background: var(--sev-critical); border-color: var(--sev-critical); }
 .sev-chip.sev-serious.active  { background: var(--sev-serious);  border-color: var(--sev-serious); }
-.sev-chip.sev-moderate.active { background: var(--sev-moderate); border-color: var(--sev-moderate); }
-.sev-chip.sev-minor.active    { background: var(--sev-minor);    border-color: var(--sev-minor); }
-.sev-chip.sev-info.active     { background: var(--sev-pass);     border-color: var(--sev-pass); }
+.sev-chip.sev-moderate.active { background: oklch(0.46 0.11 80); border-color: oklch(0.46 0.11 80); }
+.sev-chip.sev-minor.active    { background: oklch(0.44 0.11 140); border-color: oklch(0.44 0.11 140); }
+.sev-chip.sev-info.active     { background: var(--sev-info);     border-color: var(--sev-info); }
 
-/* Inactive tinted state — soft severity wash, used when chip is unselected
- * but represents a severity. Lets the user "see" which chips correspond to
- * which severity before toggling. */
+/* Inactive tinted state — severity-colored text so the mapping reads before
+ * toggling. */
 .sev-chip.sev-critical:not(.active) {
 	color: var(--sev-critical);
 	border-color: oklch(0.86 0.05 27);
@@ -178,17 +173,17 @@
 }
 .sev-chip.sev-serious:not(.active):hover { background: var(--sev-serious-wash); }
 .sev-chip.sev-moderate:not(.active) {
-	color: var(--sev-moderate);
+	color: oklch(0.46 0.11 80);
 	border-color: oklch(0.86 0.06 80);
 }
 .sev-chip.sev-moderate:not(.active):hover { background: var(--sev-moderate-wash); }
 .sev-chip.sev-minor:not(.active) {
-	color: var(--sev-minor);
+	color: oklch(0.44 0.11 140);
 	border-color: oklch(0.86 0.05 135);
 }
 .sev-chip.sev-minor:not(.active):hover { background: var(--sev-minor-wash); }
 .sev-chip.sev-info:not(.active) {
-	color: var(--sev-pass);
-	border-color: oklch(0.86 0.05 165);
+	color: var(--sev-info);
+	border-color: oklch(0.86 0.04 245);
 }
-.sev-chip.sev-info:not(.active):hover { background: oklch(0.965 0.025 165); }
+.sev-chip.sev-info:not(.active):hover { background: var(--sev-info-wash); }

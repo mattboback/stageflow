@@ -38,17 +38,17 @@ function fmtElapsed(totalSeconds: number): string {
 }
 
 const TAG_LABEL: Record<ChannelState, string> = {
-	done: 'done',
-	run: 'running',
-	queue: 'queued',
-	err: 'failed'
+	done: 'Done',
+	run: 'Running',
+	queue: 'Queued',
+	err: 'Failed'
 };
 
 const SUB_LABEL: Record<ChannelState, string> = {
-	done: 'complete',
-	run: 'scanning…',
-	queue: 'waiting for slot',
-	err: 'did not finish'
+	done: 'Complete',
+	run: 'Scanning…',
+	queue: 'Waiting for a slot',
+	err: 'Did not finish'
 };
 
 export default function Scan() {
@@ -204,14 +204,14 @@ export default function Scan() {
 						<div className="grid__main">
 							<section className="panel" aria-label="Scanner channels">
 								<div className="panel__head">
-									<span className="label">
-										Channels
+									<h2>
+										Scanners
 										{totalCount > 0 && (
-											<span className="ch-summary">
-												· {doneCount}/{totalCount} done
+											<span className="ch-summary num">
+												{doneCount} of {totalCount} done
 											</span>
 										)}
-									</span>
+									</h2>
 									<span
 										className={`transport${transport === 'streaming' ? ' transport--live' : ''}`}
 									>
@@ -223,8 +223,8 @@ export default function Scan() {
 										<div className="ch">
 											<span className="ch__led" aria-hidden="true" />
 											<div>
-												<div className="ch__name">Waiting for orchestrator…</div>
-												<div className="ch__sub">scheduling pod</div>
+												<div className="ch__name">Waiting for the orchestrator…</div>
+												<div className="ch__sub">Scheduling containers</div>
 											</div>
 										</div>
 									) : (
@@ -246,7 +246,7 @@ export default function Scan() {
 
 							<section className="panel log" aria-label="Scan log">
 								<div className="panel__head">
-									<span className="label">Stream</span>
+									<h2>Live log</h2>
 									<span className="log__meta mono" title={id}>
 										stdout · {id}
 									</span>
@@ -270,18 +270,18 @@ export default function Scan() {
 						<aside className="side" aria-label="Run summary">
 							<div className="panel">
 								<div className="panel__head">
-									<span className="label">Progress</span>
+									<h2>Progress</h2>
 									{isComplete ? (
-										<Pill variant="done">done</Pill>
+										<Pill variant="done">Done</Pill>
 									) : isFailed ? (
-										<Pill variant="error">failed</Pill>
+										<Pill variant="error">Failed</Pill>
 									) : (
-										<Pill variant="live">live</Pill>
+										<Pill variant="live">Live</Pill>
 									)}
 								</div>
 								<div className="panel__body">
 									<div className="gaugewrap">
-										<Gauge value={pct} caption="complete" size={120} valFontSize="1.9rem" />
+										<Gauge value={pct} caption="Complete" size={120} valFontSize="1.9rem" />
 									</div>
 									{isComplete && (
 										<Link className="btn btn--primary btn--block" to={`/scan/${id}/report`}>
@@ -295,20 +295,20 @@ export default function Scan() {
 							</div>
 							<div className="panel">
 								<div className="panel__head">
-									<span className="label">Artifacts</span>
+									<h2>Artifacts</h2>
 								</div>
 								<div className="panel__body panel__body--tight">
 									<div className={`artifact${shots > 0 ? '' : ' pending'}`}>
 										<span className="ic">PNG</span>
-										{shots > 0 ? `${shots} page screenshots` : 'page screenshots · pending'}
+										{shots > 0 ? `${shots} page screenshots` : 'Page screenshots · pending'}
 									</div>
 									<div className={`artifact${artifacts?.report_json ? '' : ' pending'}`}>
 										<span className="ic">JSON</span>
-										unified report{artifacts?.report_json ? '' : ' · pending'}
+										Unified report{artifacts?.report_json ? '' : ' · pending'}
 									</div>
 									<div className={`artifact${artifacts?.report_html ? '' : ' pending'}`}>
 										<span className="ic">HTML</span>
-										report bundle{artifacts?.report_html ? '' : ' · pending'}
+										Report bundle{artifacts?.report_html ? '' : ' · pending'}
 									</div>
 								</div>
 							</div>

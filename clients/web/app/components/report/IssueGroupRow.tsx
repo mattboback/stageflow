@@ -79,8 +79,8 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 								</span>
 								<span
 									style={{
-										fontFamily: 'var(--mono)',
-										fontSize: '0.72rem',
+										fontSize: '0.8125rem',
+										fontVariantNumeric: 'tabular-nums',
 										color: 'var(--ink-muted)'
 									}}
 								>

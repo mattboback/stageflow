@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
@@ -96,6 +96,32 @@ export function IssueDetailModal({
 		if (target) onNavigate(target.id);
 	};
 
+	const modalRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		const previousActiveElement = document.activeElement as HTMLElement | null;
+
+		if (modalRef.current) {
+			const closeBtn = modalRef.current.querySelector('.imodal__close') as HTMLElement | null;
+			if (closeBtn) {
+				closeBtn.focus();
+			} else {
+				const focusable = modalRef.current.querySelectorAll(
+					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+				);
+				if (focusable.length > 0) {
+					(focusable[0] as HTMLElement).focus();
+				}
+			}
+		}
+
+		return () => {
+			if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+				previousActiveElement.focus();
+			}
+		};
+	}, []);
+
 	useEffect(() => {
 		const handleKeydown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') {
@@ -103,10 +129,48 @@ export function IssueDetailModal({
 				onClose();
 				return;
 			}
+
+			if (event.key === 'Tab') {
+				if (modalRef.current) {
+					const focusable = Array.from(
+						modalRef.current.querySelectorAll(
+							'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+						)
+					).filter((el) => {
+						const htmlEl = el as HTMLElement;
+						return (
+							htmlEl.offsetWidth > 0 ||
+							htmlEl.offsetHeight > 0 ||
+							htmlEl.getClientRects().length > 0
+						);
+					}) as HTMLElement[];
+
+					if (focusable.length > 0) {
+						const first = focusable[0];
+						const last = focusable[focusable.length - 1];
+						const active = document.activeElement as HTMLElement;
+
+						if (event.shiftKey) {
+							if (active === first || !focusable.includes(active)) {
+								event.preventDefault();
+								last.focus();
+							}
+						} else {
+							if (active === last || !focusable.includes(active)) {
+								event.preventDefault();
+								first.focus();
+							}
+						}
+					}
+				}
+				return;
+			}
+
 			const target = event.target as HTMLElement | null;
 			const tag = target?.tagName;
 			if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
+
 			if (event.key === 'j' || event.key === 'ArrowDown') {
 				if (hasNext) {
 					event.preventDefault();
@@ -119,6 +183,7 @@ export function IssueDetailModal({
 				}
 			}
 		};
+
 		window.addEventListener('keydown', handleKeydown);
 		return () => window.removeEventListener('keydown', handleKeydown);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,7 +200,7 @@ export function IssueDetailModal({
 			aria-label="Issue details"
 			onClick={onClose}
 		>
-			<div className="imodal" onClick={(e) => e.stopPropagation()}>
+			<div className="imodal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
 				{/* Quiet head: plain surface + 2px severity top edge; badge carries status */}
 				<header className={`imodal__head imodal__head--${severity}`}>
 					<div className="imodal__head-top">

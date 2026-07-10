@@ -140,8 +140,22 @@ export function validateHttpUrls(urls: string[]): {
 				});
 				continue;
 			}
-			if (!parsed.hostname) {
+			const hostname = parsed.hostname;
+			if (!hostname) {
 				invalid.push({ url, reason: 'Missing hostname.' });
+				continue;
+			}
+			const hasDot = hostname.includes('.');
+			const isLocalhost = hostname.toLowerCase() === 'localhost';
+			// Node may keep brackets; browsers expose bare IPv6 (colons, no dots).
+			const isIpv6 =
+				(hostname.startsWith('[') && hostname.endsWith(']')) ||
+				(!hasDot && hostname.includes(':'));
+			if (!hasDot && !isLocalhost && !isIpv6) {
+				invalid.push({
+					url,
+					reason: 'Hostname must contain a dot or be localhost.'
+				});
 				continue;
 			}
 			valid.push(url);

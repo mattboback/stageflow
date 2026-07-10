@@ -153,8 +153,7 @@ export function IssueFilterSidebar({
 				<p
 					style={{
 						margin: '0 0 0.6rem',
-						fontFamily: 'var(--mono)',
-						fontSize: '0.72rem',
+						fontSize: '0.84rem',
 						color: 'var(--ink-muted)'
 					}}
 				>

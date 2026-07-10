@@ -35,7 +35,7 @@ EOF
     go run "$GO_JSONSCHEMA" --package report --tags json --struct-name-from-title \
       "$dir/schema/unified-report.v2.schema.json" > "$dir/generated/go/report_schema.go"
     gofmt -w "$dir/generated/go/report_schema.go"
-    printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.4\n" \
+    printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.5\n" \
       > "$dir/generated/go/go.mod"
   fi
 }
@@ -55,7 +55,7 @@ EOF
     go run "$GO_JSONSCHEMA" --package provenance --tags json --struct-name-from-title \
       "$dir/schema/provenance.schema.json" > "$dir/generated/go/provenance_schema.go"
     gofmt -w "$dir/generated/go/provenance_schema.go"
-    printf "module github.com/mattboback/stageflow/libs/contracts/provenance/generated/go\n\ngo 1.26.4\n" \
+    printf "module github.com/mattboback/stageflow/libs/contracts/provenance/generated/go\n\ngo 1.26.5\n" \
       > "$dir/generated/go/go.mod"
   fi
 }

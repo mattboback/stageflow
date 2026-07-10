@@ -38,7 +38,7 @@ export function SeverityDonut({ counts, centerLabel = 'issues', size = 132 }: Pr
 					textAnchor="middle"
 					dominantBaseline="central"
 					fill="var(--ink-strong)"
-					fontFamily="var(--mono)"
+					fontFamily="var(--display)"
 					fontWeight="700"
 					fontSize="1.1rem"
 				>
@@ -96,22 +96,21 @@ export function SeverityDonut({ counts, centerLabel = 'issues', size = 132 }: Pr
 				textAnchor="middle"
 				dominantBaseline="central"
 				fill="var(--ink-strong)"
-				fontFamily="var(--mono)"
+				fontFamily="var(--display)"
 				fontWeight="700"
-				fontSize="1.35rem"
+				fontSize="1.5rem"
 			>
 				{total.toLocaleString()}
 			</text>
 			<text
 				x="50%"
-				y="62%"
+				y="63%"
 				textAnchor="middle"
 				dominantBaseline="central"
-				fill="var(--ink-faint)"
-				fontFamily="var(--mono)"
-				fontSize="0.66rem"
-				letterSpacing="0.08em"
-				style={{ textTransform: 'uppercase' }}
+				fill="var(--ink-muted)"
+				fontFamily="var(--sans)"
+				fontSize="0.72rem"
+				fontWeight="600"
 			>
 				{centerLabel}
 			</text>

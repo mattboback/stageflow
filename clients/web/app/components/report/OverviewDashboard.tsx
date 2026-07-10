@@ -169,7 +169,6 @@ export function OverviewDashboard({
 		<div className="ovr">
 			<section className="ovr__hero">
 				<div className="ovr__hero-main">
-					<p className="ovr__eyebrow">Overview</p>
 					<h2 className="ovr__risk">{riskLabel}</h2>
 					<p className="ovr__risk-pill">
 						{report.summary.pagesWithIssues.toLocaleString()} of{' '}
@@ -252,7 +251,7 @@ export function OverviewDashboard({
 			<div className="ovr__grid">
 				<section className="ovr__card ovr__card--wide">
 					<header className="ovr__card-head">
-						<h3>Severity Mix</h3>
+						<h3>Severity mix</h3>
 					</header>
 					<div className="ovr__mix">
 						<SeverityDonut counts={report.summary.bySeverity} centerLabel="issues" />
@@ -283,9 +282,7 @@ export function OverviewDashboard({
 				{topRules.length > 0 && (
 					<section className="ovr__card ovr__card--wide">
 						<header className="ovr__card-head ovr__card-head--split">
-							<h3>
-								<span className="ovr__fix-tag">FIX</span> Top fixes — start here
-							</h3>
+							<h3>Top fixes to start with</h3>
 							<button
 								type="button"
 								className="ovr__link-btn"
@@ -363,7 +360,7 @@ export function OverviewDashboard({
 					className={`ovr__card ${hasLighthouse ? 'ovr__card--wide' : 'ovr__card--full'}`}
 				>
 					<header className="ovr__card-head">
-						<h3>Scanner Status</h3>
+						<h3>Scanner status</h3>
 					</header>
 					<div className="ovr__scanners">
 						{report.scanners.map((scanner) => {
@@ -415,7 +412,7 @@ export function OverviewDashboard({
 				{hasLighthouse && (
 					<section className="ovr__card ovr__card--wide">
 						<header className="ovr__card-head">
-							<h3>Lighthouse Averages</h3>
+							<h3>Lighthouse averages</h3>
 						</header>
 						<div className="ovr__card-body">
 							<LighthouseSummary
@@ -427,7 +424,7 @@ export function OverviewDashboard({
 
 				<section className="ovr__card">
 					<header className="ovr__card-head">
-						<h3>Top Pages</h3>
+						<h3>Most affected pages</h3>
 					</header>
 					{topPages.length === 0 ? (
 						<div className="ovr__empty">No pages scanned.</div>
@@ -472,7 +469,7 @@ export function OverviewDashboard({
 
 				<section className="ovr__card ovr__card--wide">
 					<header className="ovr__card-head">
-						<h3>Coverage Heat</h3>
+						<h3>Coverage</h3>
 					</header>
 					<div className="ovr__coverage">
 						<div>
