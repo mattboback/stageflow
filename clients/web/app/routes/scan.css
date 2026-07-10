@@ -283,9 +283,7 @@
 	overflow: auto;
 }
 .log__line {
-	display: grid;
-	grid-template-columns: 0 1fr;
-	gap: 0;
+	display: block;
 }
 .log__m {
 	color: oklch(0.94 0.008 240);
