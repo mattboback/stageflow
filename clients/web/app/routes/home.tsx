@@ -1,5 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
+import {
+	Accessibility,
+	Bot,
+	Check,
+	Flag,
+	Gauge as GaugeIcon,
+	Link2,
+	ListChecks,
+	RefreshCw,
+	Search,
+	Share2,
+	ShieldCheck,
+	SpellCheck
+} from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Gauge } from '../components/Gauge';
@@ -41,30 +55,36 @@ const PERF: { id: string; label: string; val: number; moderate?: boolean }[] = [
 	{ id: 'qual', label: 'Quality', val: 91 }
 ];
 
-const SCANNERS: { name: string; sub: string; cat: string; off?: boolean }[] = [
-	{ name: 'axe-core', sub: 'Accessibility rules, WCAG 2.1 mapping', cat: 'Accessibility' },
-	{ name: 'Lighthouse', sub: 'Performance, best-practices, PWA signals', cat: 'Performance' },
-	{ name: 'SEO', sub: 'Title, metadata, headings, structured data', cat: 'SEO' },
-	{ name: 'security-headers', sub: 'HTTP response-header policy', cat: 'Security' },
-	{ name: 'link-checker', sub: 'Internal & external link health', cat: 'Quality' },
-	{ name: 'open-graph', sub: 'Social preview metadata', cat: 'SEO' },
-	{ name: 'spelling-grammar', sub: 'Content quality checks', cat: 'Quality' },
-	{ name: 'ai-navigator', sub: 'Natural-language navigation objectives', cat: 'AI · opt-in', off: true }
+const SCANNERS: {
+	name: string;
+	sub: string;
+	cat: string;
+	icon: React.ComponentType<{ size?: number | string; 'aria-hidden'?: boolean }>;
+	off?: boolean;
+}[] = [
+	{ name: 'axe-core', sub: 'Accessibility rules, WCAG 2.1 mapping', cat: 'Accessibility', icon: Accessibility },
+	{ name: 'Lighthouse', sub: 'Performance, best practices, PWA signals', cat: 'Performance', icon: GaugeIcon },
+	{ name: 'SEO', sub: 'Title, metadata, headings, structured data', cat: 'SEO', icon: Search },
+	{ name: 'security-headers', sub: 'HTTP response-header policy', cat: 'Security', icon: ShieldCheck },
+	{ name: 'link-checker', sub: 'Internal and external link health', cat: 'Quality', icon: Link2 },
+	{ name: 'open-graph', sub: 'Social preview metadata', cat: 'SEO', icon: Share2 },
+	{ name: 'spelling-grammar', sub: 'Content quality checks', cat: 'Quality', icon: SpellCheck },
+	{ name: 'ai-navigator', sub: 'Natural-language navigation objectives', cat: 'AI, opt-in', icon: Bot, off: true }
 ];
 
 const BASELINE_STEPS = [
 	{
-		n: '1',
+		icon: Flag,
 		title: 'Establish a baseline',
 		body: 'Pick a known-good run as your baseline.'
 	},
 	{
-		n: '2',
+		icon: RefreshCw,
 		title: 'Run on every deploy',
 		body: 'Each scan compares against that baseline.'
 	},
 	{
-		n: '3',
+		icon: ListChecks,
 		title: 'See what changed',
 		body: 'Only new or worse issues are highlighted.'
 	}
@@ -72,19 +92,19 @@ const BASELINE_STEPS = [
 
 const PATH_STEPS = [
 	{
-		n: '01',
+		n: '1',
 		title: 'Configure',
 		body: 'Set the scope. Point at a URL or upload a ZIP archive.'
 	},
 	{
-		n: '02',
+		n: '2',
 		title: 'Run',
-		body: 'Each scanner runs in isolation in a rootless container while progress streams live over SSE.'
+		body: 'Each scanner runs in isolation in a rootless container while progress streams live.'
 	},
 	{
-		n: '03',
+		n: '3',
 		title: 'Ship',
-		body: 'Read the report. Merged findings with severity, evidence, and remediation in a single, triage-ready view.'
+		body: 'Read one merged report with severity, evidence, and remediation for every finding.'
 	}
 ] as const;
 
@@ -116,20 +136,8 @@ export default function Home() {
 			<main id="main">
 				{/* HERO — light, scan-first */}
 				<section className="hero" aria-labelledby="hero-heading">
-					<div className="rule-ticks" aria-hidden="true" />
 					<div className="wrap hero__grid">
 						<div className="hero__copy">
-							<p className="hero__pills" aria-label="Product attributes">
-								<span className="hero__pill">Self-hosted</span>
-								<span className="hero__pill-sep" aria-hidden="true">
-									·
-								</span>
-								<span className="hero__pill">Open source</span>
-								<span className="hero__pill-sep" aria-hidden="true">
-									·
-								</span>
-								<span className="hero__pill">CLI-first</span>
-							</p>
 							<h1 id="hero-heading">
 								Every deploy answers one question:{' '}
 								<span className="verdict">better</span>, or{' '}
@@ -137,7 +145,8 @@ export default function Home() {
 							</h1>
 							<p className="hero__lede">
 								StageFlow runs eight scanners, compares against a baseline, and shows you exactly
-								what regressed. Paste a URL and get a real report in seconds.
+								what regressed. Self-hosted and open source. Paste a URL and get a real report in
+								seconds.
 							</p>
 							<form className="scanbar" onSubmit={onScan} noValidate>
 								<label className="sr-only" htmlFor="url">
@@ -145,7 +154,7 @@ export default function Home() {
 								</label>
 								<div className="scanbar__field">
 									<input
-										className="input mono"
+										className="input"
 										id="url"
 										type="url"
 										inputMode="url"
@@ -166,33 +175,15 @@ export default function Home() {
 									)}
 								</div>
 								<button className="btn btn--primary" type="submit">
-									Run a scan{' '}
+									Configure & run{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>
 								</button>
 							</form>
-							<div className="facts" aria-label="Product facts">
-								<div className="facts__rule" aria-hidden="true" />
-								<div className="facts__row">
-									<div className="readout">
-										<span className="readout__val">8</span>
-										<span className="readout__lab">scanners</span>
-									</div>
-									<div className="readout">
-										<span className="readout__val">1</span>
-										<span className="readout__lab">report</span>
-									</div>
-									<div className="readout">
-										<span className="readout__val">CLI</span>
-										<span className="readout__lab">first</span>
-									</div>
-									<div className="readout">
-										<span className="readout__val">OPEN</span>
-										<span className="readout__lab">source</span>
-									</div>
-								</div>
-							</div>
+							<p className="hero__note muted">
+								No account, no install. Or run the same scan from the CLI in CI.
+							</p>
 						</div>
 
 						{/* Sample report preview — product chrome, not marketing card */}
@@ -203,7 +194,7 @@ export default function Home() {
 							</div>
 							<div className="panel__body">
 								<div className="preview__top">
-									<Gauge value={92} caption="quality score" size={132} valFontSize="2.1rem" />
+									<Gauge value={92} caption="Quality score" size={132} valFontSize="2.3rem" />
 									<div className="preview__cats">
 										<p className="preview__cats-note muted">
 											Weighted score across eight frontend quality areas.
@@ -228,10 +219,10 @@ export default function Home() {
 								</div>
 								<div className="preview__bottom">
 									<SeverityScale counts={{ critical: 0, serious: 2, moderate: 5, minor: 11 }} />
-									<p className="preview__baseline mono">
+									<p className="preview__baseline">
 										<span className="preview__baseline-lab">Baseline</span>
-										<span>score 88 → 92</span>
-										<span className="preview__delta" aria-label="up four points">
+										<span className="num">score 88 → 92</span>
+										<span className="preview__delta num" aria-label="up four points">
 											▲ 4
 										</span>
 									</p>
@@ -253,9 +244,9 @@ export default function Home() {
 						</div>
 						<ol className="baseline__steps">
 							{BASELINE_STEPS.map((s) => (
-								<li className="baseline__step" key={s.n}>
-									<span className="baseline__n mono" aria-hidden="true">
-										{s.n}
+								<li className="baseline__step" key={s.title}>
+									<span className="baseline__icon" aria-hidden="true">
+										<s.icon size={17} />
 									</span>
 									<div>
 										<h3>{s.title}</h3>
@@ -272,15 +263,18 @@ export default function Home() {
 					<div className="wrap mid">
 						<div className="mid__scanners">
 							<header className="section__head">
-								<h2 id="scanners-heading">Eight scanners. One pass. One report.</h2>
+								<h2 id="scanners-heading">Eight scanners, one merged report</h2>
 								<p>
-									Every channel runs in isolation and merges into a single severity-ranked report —
+									Every channel runs in isolation and merges into a single severity-ranked report,
 									the same shape from the CLI, CI, or the browser.
 								</p>
 							</header>
 							<div className="array" role="table" aria-label="Built-in scanners">
 								{SCANNERS.map((s) => (
 									<div className="array__row" role="row" key={s.name}>
+										<span className="array__icon" aria-hidden="true">
+											<s.icon size={17} />
+										</span>
 										<span className="array__name" role="cell">
 											{s.name}
 											<span>{s.sub}</span>
@@ -291,12 +285,12 @@ export default function Home() {
 										{s.off ? (
 											<span className="array__state array__state--off" role="cell">
 												<i aria-hidden="true" />
-												off
+												Off
 											</span>
 										) : (
 											<span className="array__state" role="cell">
 												<i aria-hidden="true" />
-												active
+												Active
 											</span>
 										)}
 									</div>
@@ -313,7 +307,7 @@ export default function Home() {
 								<ol className="path__steps">
 									{PATH_STEPS.map((s) => (
 										<li className="path__step" key={s.n}>
-											<span className="path__n mono" aria-hidden="true">
+											<span className="path__n" aria-hidden="true">
 												{s.n}
 											</span>
 											<div>
@@ -371,16 +365,22 @@ export default function Home() {
 								</p>
 								<ul className="selfhost__list">
 									<li>
-										<span className="selfhost__mark" aria-hidden="true" />
-										Docker-based · rootless containers
+										<span className="selfhost__mark" aria-hidden="true">
+											<Check size={13} />
+										</span>
+										Docker-based, rootless containers
 									</li>
 									<li>
-										<span className="selfhost__mark" aria-hidden="true" />
-										No SaaS lock-in · run anywhere
+										<span className="selfhost__mark" aria-hidden="true">
+											<Check size={13} />
+										</span>
+										No SaaS lock-in, run anywhere
 									</li>
 									<li>
-										<span className="selfhost__mark" aria-hidden="true" />
-										Artifacts you own · HTML · JSON · SARIF
+										<span className="selfhost__mark" aria-hidden="true">
+											<Check size={13} />
+										</span>
+										Artifacts you own: HTML, JSON, SARIF
 									</li>
 								</ul>
 								<div className="selfhost__actions">
