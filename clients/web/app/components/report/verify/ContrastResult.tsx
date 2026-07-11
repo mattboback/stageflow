@@ -55,7 +55,7 @@ export function ContrastResult({
 							className="vfy__hex mono"
 							value={fg}
 							onChange={(e) => onFgChange(e.currentTarget.value)}
-							placeholder="#1f2933"
+							placeholder="Not sampled"
 							autoComplete="off"
 							spellCheck={false}
 						/>
@@ -85,7 +85,7 @@ export function ContrastResult({
 							className="vfy__hex mono"
 							value={bg}
 							onChange={(e) => onBgChange(e.currentTarget.value)}
-							placeholder="#ffffff"
+							placeholder="Not sampled"
 							autoComplete="off"
 							spellCheck={false}
 						/>

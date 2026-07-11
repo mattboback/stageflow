@@ -22,11 +22,17 @@ export function IssueOccurrenceCard({
 	const pageLabel = page?.path ?? page?.url ?? occurrence.pageId ?? null;
 	const overviewElement = issueId ? findOverviewElement(page, issueId, index) : null;
 
+	/* The ancestor path only earns space when it says more than the selector. */
+	const selector = occurrence.selector?.trim() ?? '';
+	const ancestorPath = occurrence.ancestorPath?.trim() ?? '';
+	const ancestorAddsContext =
+		ancestorPath.length > 0 && ancestorPath !== selector && !selector.endsWith(ancestorPath);
+
 	return (
 		<article className="occ">
 			<header className="occ__head">
-				<span className="occ__idx">#{index + 1}</span>
-				{pageLabel && <span className="occ__page">{pageLabel}</span>}
+				<span className="occ__idx">Occurrence {index + 1}</span>
+				{pageLabel && <span className="occ__page">Page {pageLabel}</span>}
 				{occurrence.label && <span className="occ__label">{occurrence.label}</span>}
 			</header>
 			{page && pageOverviewUrl && overviewElement && (
@@ -42,32 +48,24 @@ export function IssueOccurrenceCard({
 				<dl className="occ__field">
 					<dt>Selector</dt>
 					<dd>
-						<code>{occurrence.selector}</code>
+						<code className="code-well">{occurrence.selector}</code>
 					</dd>
 				</dl>
 			)}
-			{occurrence.ancestorPath && (
-				<dl className="occ__field">
-					<dt>Ancestor path</dt>
-					<dd>
-						<code>{occurrence.ancestorPath}</code>
-					</dd>
-				</dl>
+			{ancestorAddsContext && (
+				<details className="occ__dom">
+					<summary>DOM context</summary>
+					<code className="code-well">{ancestorPath}</code>
+				</details>
 			)}
 			{(occurrence.html || occurrence.contextHtml) && (
 				<dl className="occ__field">
 					<dt>HTML</dt>
 					<dd>
-						<pre>
+						<pre className="code-well">
 							<code>{occurrence.html ?? occurrence.contextHtml}</code>
 						</pre>
 					</dd>
-				</dl>
-			)}
-			{occurrence.failureSummary && (
-				<dl className="occ__field">
-					<dt>Why this fails</dt>
-					<dd>{occurrence.failureSummary}</dd>
 				</dl>
 			)}
 		</article>

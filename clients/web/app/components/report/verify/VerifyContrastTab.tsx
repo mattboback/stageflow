@@ -10,9 +10,11 @@ import {
 	isAxeIncompleteIssue
 } from '../../../lib/report';
 import {
+	WCAG_THRESHOLDS,
 	contrastRatioFromStrings,
 	describeMessageKey,
-	formatRatio
+	formatRatio,
+	requiredLevel
 } from '../../../lib/utils/contrast';
 import { useContrastVerdicts } from '../../../lib/hooks/useContrastVerdicts';
 
@@ -67,6 +69,9 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 	};
 
 	const ratio = contrastRatioFromStrings(state.fg, state.bg);
+	const required = requiredLevel(issue.ruleId);
+	const requiredThreshold = WCAG_THRESHOLDS[required][state.largeText ? 'large' : 'normal'];
+	const measuredPasses = ratio !== null ? ratio >= requiredThreshold : null;
 
 	const overviewElement = findOverviewElement(page, issue.id);
 	const overview = page?.pageOverview;
@@ -175,33 +180,52 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 					<>
 						<span className="vfy__verdict-ask">Does this element pass in context?</span>
 						{ratio !== null && (
-							<span className="vfy__verdict-ratio num">{formatRatio(ratio)}:1</span>
+							<span className="vfy__verdict-ratio num">
+								{formatRatio(ratio)}:1 — {measuredPasses ? 'passes' : 'fails'} {required}
+							</span>
 						)}
 						<button
 							type="button"
 							className="vfy__btn vfy__btn--pass"
-							onClick={() =>
+							onClick={() => {
+								/* Marking against the measurement deserves a pause. */
+								if (
+									measuredPasses === false &&
+									!window.confirm(
+										`Measured ${formatRatio(ratio!)}:1 fails ${required}. Mark it as passing anyway?`
+									)
+								) {
+									return;
+								}
 								setVerdict(issue.id, {
 									verdict: 'pass',
 									fg: state.fg,
 									bg: state.bg,
 									ratio
-								})
-							}
+								});
+							}}
 						>
-							Mark pass
+							{measuredPasses === false ? 'Pass anyway' : 'Mark pass'}
 						</button>
 						<button
 							type="button"
 							className="vfy__btn vfy__btn--fail"
-							onClick={() =>
+							onClick={() => {
+								if (
+									measuredPasses === true &&
+									!window.confirm(
+										`Measured ${formatRatio(ratio!)}:1 passes ${required}. Mark it as failing anyway?`
+									)
+								) {
+									return;
+								}
 								setVerdict(issue.id, {
 									verdict: 'fail',
 									fg: state.fg,
 									bg: state.bg,
 									ratio
-								})
-							}
+								});
+							}}
 						>
 							Mark fail
 						</button>

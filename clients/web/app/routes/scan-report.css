@@ -412,10 +412,8 @@
 .imodal__sev.sev-minor    { color: oklch(0.44 0.11 140); background: var(--sev-minor-wash); }
 .imodal__sev.sev-info     { color: var(--sev-info);     background: var(--sev-info-wash); }
 .imodal__kind {
-	display: inline-flex; align-items: center; padding: 0.28rem 0.7rem;
-	border-radius: var(--r-pill);
-	background: var(--surface-sunk); font-size: 0.8125rem;
-	font-weight: 600;
+	display: inline-flex; align-items: center;
+	font-size: 0.875rem; font-weight: 600;
 	color: var(--ink-muted);
 }
 .imodal__context {
@@ -464,7 +462,6 @@
 .imodal__tab:hover { color: var(--ink-strong); }
 .imodal__tab[aria-selected="true"] {
 	color: var(--signal-ink); border-bottom-color: var(--signal);
-	background: var(--signal-wash);
 }
 .imodal__body {
 	overflow-y: auto; padding: var(--sp-5); flex: 1;
@@ -530,15 +527,6 @@
 	border-radius: var(--r-xs); background: var(--surface-sunk);
 }
 .ecrop--sm { max-height: 240px; margin-bottom: var(--sp-2); }
-.evidence__copy {
-	display: inline-flex; align-items: center; gap: 0.3rem;
-	margin-left: var(--sp-2); padding: 0.15rem 0.55rem;
-	border: 1px solid var(--line-strong); border-radius: var(--r-pill);
-	background: var(--surface); color: var(--ink-muted);
-	font-size: 0.8125rem; font-weight: 600; cursor: pointer; font-family: inherit;
-	transition: color 0.12s, border-color 0.12s;
-}
-.evidence__copy:hover { color: var(--ink-strong); border-color: var(--ink-faint); }
 
 /* ---- verify contrast tab ---- */
 .vfy { display: grid; gap: var(--sp-5); }
@@ -714,6 +702,24 @@
 	margin: 0; font-size: 1rem; color: var(--ink); min-width: 0;
 }
 .evidence__field .code-well { font-size: 0.875rem; }
+/* Page + Rule share one quiet line instead of two stacked label/value blocks. */
+.evidence__field--inline {
+	display: flex; flex-wrap: wrap; align-items: baseline;
+	column-gap: var(--sp-2); row-gap: var(--sp-1);
+	font-size: 0.9375rem;
+}
+.evidence__field--inline dt {
+	font-size: 0.875rem;
+}
+.evidence__field--inline dd {
+	font-size: 0.9375rem;
+	overflow-wrap: anywhere;
+}
+.evidence__field--inline dd + dt::before {
+	content: "·";
+	margin-right: var(--sp-2);
+	color: var(--ink-faint);
+}
 
 /* occurrences */
 .imodal__occs { display: grid; gap: var(--sp-4); }
@@ -731,6 +737,11 @@
 	font-variant-numeric: tabular-nums;
 }
 .occ__page { color: var(--ink-strong); overflow-wrap: anywhere; }
+.occ__idx + .occ__page::before {
+	content: "·";
+	margin-right: var(--sp-2);
+	color: var(--ink-faint);
+}
 .occ__label {
 	margin-left: auto;
 	padding: 0.16rem 0.55rem;
@@ -747,14 +758,15 @@
 	color: var(--ink-muted); padding-top: 0.15rem;
 }
 .occ__field dd { margin: 0; font-size: 0.9375rem; color: var(--ink); min-width: 0; }
-.occ__field code, .occ__field pre {
-	font-family: var(--mono); font-size: 0.8125rem;
-	background: var(--surface-sunk); border: 1px solid var(--line);
-	border-radius: var(--r-xs); padding: 0.3rem 0.5rem;
-	color: var(--ink-strong); word-break: break-all;
-	display: block;
+.occ__field .code-well { font-size: 0.8125rem; padding: 0.4rem 0.6rem; }
+.occ__dom { margin: var(--sp-2) 0 0; }
+.occ__dom summary {
+	font-size: 0.875rem; font-weight: 600; color: var(--ink-muted);
+	cursor: pointer; width: fit-content;
 }
-.occ__field pre { overflow-x: auto; white-space: pre-wrap; padding: 0.6rem 0.8rem; }
+.occ__dom summary:hover { color: var(--ink-strong); }
+.occ__dom[open] summary { margin-bottom: var(--sp-1); }
+.occ__dom .code-well { font-size: 0.8125rem; padding: 0.4rem 0.6rem; }
 
 /* ---- visual review: three equal-height panels fill the viewport ---- */
 .vrev {
@@ -1059,6 +1071,7 @@
 	.imodal__head { padding: var(--sp-4) var(--sp-4) var(--sp-3); }
 	.imodal__body { padding: var(--sp-4); }
 	.imodal__tabs { padding: 0 var(--sp-4); overflow-x: auto; }
+	.imodal__title { font-size: 1.375rem; }
 	.imodal__context { display: none; }
 	.vfy__verdictbar {
 		bottom: calc(-1 * var(--sp-4));

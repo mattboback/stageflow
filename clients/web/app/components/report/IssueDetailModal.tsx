@@ -279,7 +279,7 @@ export function IssueDetailModal({
 										‹
 									</button>
 									<span className="imodal__nav-count">
-										{currentIndex + 1} / {totalCount}
+										{currentIndex + 1} of {totalCount}
 									</span>
 									<button
 										type="button"
@@ -324,8 +324,9 @@ export function IssueDetailModal({
 						>
 							{tab === 'fix' && 'Fix'}
 							{tab === 'evidence' && 'Evidence'}
-							{tab === 'verify' && 'Verify contrast'}
-							{tab === 'occurrences' && `Occurrences (${occurrenceCount})`}
+							{tab === 'verify' && 'Verify'}
+							{tab === 'occurrences' &&
+								(occurrenceCount > 1 ? `Occurrences (${occurrenceCount})` : 'Occurrence')}
 						</button>
 					))}
 				</nav>
@@ -390,7 +391,11 @@ export function IssueDetailModal({
 					)}
 					{activeTab === 'occurrences' && (
 						<div className="imodal__pane">
-							<h3 className="imodal__pane-h">Affected elements ({occurrenceCount})</h3>
+							<h3 className="imodal__pane-h">
+								{occurrenceCount === 1
+									? 'Affected element'
+									: `Affected elements (${occurrenceCount})`}
+							</h3>
 							<div className="imodal__occs">
 								{(issue.occurrences ?? []).map((occ, idx) => (
 									<IssueOccurrenceCard

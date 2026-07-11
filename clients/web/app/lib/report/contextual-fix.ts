@@ -2,6 +2,28 @@ import type { IssueDetail, IssueOccurrence } from '../types/unified-report';
 
 import { getContrastData } from './contrast-verify';
 
+/*
+ * axe failure summaries arrive as machine output ("Fix all of the following:
+ * Document does not have a main landmark"). Strip the imperative wrapper and
+ * present the underlying checks as plain sentences; fall back to the raw text
+ * when the shape is unfamiliar.
+ */
+export function humanizeFailureSummary(
+	summary: string | null | undefined
+): string | null {
+	if (!summary) return null;
+	const requiresAll = /fix all of the following/i.test(summary);
+	const hadWrapper = /fix (all|any) of the following/i.test(summary);
+	const lines = summary
+		.split(/\n+/)
+		.map((line) => line.replace(/^fix (all|any) of the following:?\s*/i, '').trim())
+		.filter(Boolean);
+	if (lines.length === 0) return null;
+	const sentences = lines.map((line) => (/[.!?]$/.test(line) ? line : `${line}.`));
+	if (!hadWrapper || sentences.length === 1) return sentences.join(' ');
+	return `${requiresAll ? 'All of these need fixing' : 'Fixing any one of these resolves it'}: ${sentences.join(' ')}`;
+}
+
 export function generateContextualFix(
 	issue: IssueDetail,
 	occurrence: IssueOccurrence | null
