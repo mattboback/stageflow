@@ -33,6 +33,16 @@
 	color: var(--ink-muted); margin: var(--sp-2) 0 0;
 }
 .rhead__jobid { font-size: 0.875rem; }
+/* run metadata is technical detail: one quiet disclosure, not header space */
+.rhead__details { display: inline-flex; align-items: baseline; gap: var(--sp-2); }
+.rhead__details summary {
+	cursor: pointer; list-style: none;
+	font-size: 0.875rem; font-weight: 600; color: var(--ink-muted);
+	text-decoration: underline; text-underline-offset: 3px;
+}
+.rhead__details summary::-webkit-details-marker { display: none; }
+.rhead__details summary:hover { color: var(--ink-strong); }
+.rhead__details-body { font-size: 0.875rem; color: var(--ink-muted); overflow-wrap: anywhere; }
 .rhead__stats {
 	display: grid; grid-template-columns: repeat(3, minmax(8rem, auto));
 	gap: var(--sp-6); margin: 0;
@@ -91,6 +101,27 @@
 
 /* ---- issues view: sidebar + list grid ---- */
 .iview { display: grid; grid-template-columns: 18rem minmax(0, 1fr); gap: var(--sp-5); margin-top: var(--sp-5); align-items: start; }
+/* Desktop keeps the sidebar in the grid; the toolbar/sheet are mobile-only. */
+.iview__toolbar { display: none; }
+.iview__side { display: contents; }
+.iview__sheet-done { display: none; }
+.iview__backdrop { display: none; }
+.iview__filters-btn {
+	flex-shrink: 0;
+	font: inherit; font-size: 0.9375rem; font-weight: 600;
+	color: var(--ink-strong); background: var(--surface);
+	border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+	padding: 0.55rem 0.9rem; min-height: 44px; cursor: pointer;
+}
+.iview__filters-btn:hover { border-color: var(--ink-faint); background: var(--ground); }
+.iview__chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); width: 100%; }
+.iview__chip {
+	display: inline-flex; align-items: center; gap: 0.35rem;
+	font: inherit; font-size: 0.875rem; font-weight: 600;
+	color: var(--signal-ink); background: var(--signal-wash);
+	border: 1px solid var(--signal-edge); border-radius: var(--r-pill);
+	padding: 0.3rem 0.7rem; cursor: pointer; min-height: 36px;
+}
 .iview__panel {
 	background: var(--surface); border: 1px solid var(--line);
 	border-radius: var(--r-md); padding: var(--sp-4);
@@ -218,6 +249,10 @@
 }
 .igroup__body { display: none; border-top: 1px solid var(--line); background: var(--ground); }
 .igroup--open .igroup__body { display: block; }
+.igroup__body-label {
+	padding: var(--sp-2) 1.1rem 0;
+	font-size: 0.8125rem; font-weight: 600; color: var(--ink-muted);
+}
 .igroup__occ {
 	display: grid; grid-template-columns: 1.3rem minmax(0, 1fr) auto;
 	gap: var(--sp-3); align-items: center;
@@ -236,6 +271,22 @@
 	font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.05rem;
 }
 
+
+/* ---- review landing: the next action leads ---- */
+.rnext {
+	display: flex; align-items: center; justify-content: space-between;
+	gap: var(--sp-3) var(--sp-5); flex-wrap: wrap;
+	margin-top: var(--sp-4); padding: var(--sp-4) var(--sp-5);
+	border: 1px solid var(--signal-edge); border-radius: var(--r-md);
+	background: var(--signal-wash);
+}
+.rnext__copy { min-width: 0; }
+.rnext__count {
+	margin: 0;
+	font-family: var(--display); font-size: 1.25rem; font-weight: 700;
+	color: var(--ink-strong); line-height: 1.2;
+}
+.rnext__sub { margin: 0.25rem 0 0; font-size: 0.9375rem; color: var(--ink-muted); }
 
 /* ---- review landing: filter toolbar above the visual review ----
    A workspace toolbar, not another card: labeled groups, hairline below. */
@@ -264,18 +315,6 @@
 }
 .rstrip__sev:hover { filter: brightness(0.96); }
 .rstrip__sev:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-.rstrip__manual {
-	display: inline-flex; align-items: center; gap: var(--sp-2);
-	padding: 0.4rem 0.85rem;
-	border: 1px solid var(--signal-edge); border-radius: var(--r-pill);
-	background: var(--signal-wash);
-	color: var(--signal-ink); font-size: 0.875rem; font-weight: 600;
-	cursor: pointer; font-family: inherit;
-	transition: background-color 0.12s, border-color 0.12s;
-}
-.rstrip__manual:hover { border-color: var(--signal); }
-.rstrip__manual .ar { transition: transform var(--dur-2) var(--ease); }
-.rstrip__manual:hover .ar { transform: translateX(3px); }
 .rstrip__scanner {
 	display: inline-flex; align-items: center; gap: var(--sp-2);
 	padding: 0.3rem 0.7rem;
@@ -789,6 +828,12 @@
 .vrev__issue-btn--active .vrev__issue-title { font-weight: 600; }
 .vrev__issue-meta {
 	font-size: 0.8125rem; color: var(--ink-muted);
+	display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
+}
+.vrev__issue-verify {
+	font-size: 0.75rem; font-weight: 700; color: var(--signal-ink);
+	background: var(--signal-wash); border: 1px solid var(--signal-edge);
+	border-radius: var(--r-pill); padding: 0.08rem 0.5rem;
 }
 .vrev__issue-times {
 	flex-shrink: 0; align-self: flex-start;
@@ -945,8 +990,8 @@
 /* ---- responsive ---- */
 @media (max-width: 1100px) {
 	.vrev { grid-template-columns: 1fr; }
+	/* the page owns vertical scroll — no nested scrolling lists on mobile */
 	.vrev__pages, .vrev__stage, .vrev__issues { height: auto; max-height: none; }
-	.vrev__issues { max-height: 50vh; }
 	.vrev__pages-list { display: flex; overflow-x: auto; }
 	.vrev__pages-list li { flex: 1 0 auto; max-width: 16rem; }
 	.vrev__page-btn { border-bottom: 0; border-right: 1px solid var(--line); }
@@ -962,10 +1007,39 @@
 		grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4);
 	}
 	.rhead__score { flex-wrap: wrap; gap: var(--sp-4); }
+
+	/* Issues tab: filters become a bottom sheet behind one button */
 	.iview { grid-template-columns: 1fr; }
+	.iview__toolbar {
+		display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2);
+	}
+	.iview__toolbar .isidebar__search { flex: 1; min-width: 0; min-height: 44px; }
+	.iview__side { display: none; }
+	.iview__side--open {
+		display: grid; gap: var(--sp-4);
+		position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-modal);
+		max-height: 82dvh; overflow-y: auto;
+		background: var(--surface); border-top: 1px solid var(--line);
+		border-radius: var(--r-lg) var(--r-lg) 0 0;
+		box-shadow: var(--shadow-pop);
+		padding: var(--sp-5) var(--sp-4) calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
+	}
+	.iview__side--open .isidebar { position: static; }
+	.iview__side--open .iview__sheet-done { display: inline-flex; justify-content: center; }
+	/* mobile sheet has its own search in the toolbar already */
+	.iview__side--open .isidebar__group:has(.isidebar__search) { display: none; }
+	.iview__backdrop {
+		display: block; position: fixed; inset: 0; z-index: var(--z-backdrop);
+		background: oklch(0.23 0.02 230 / 0.35); border: 0; cursor: default;
+	}
 	.isidebar { position: static; }
+
 	.rstrip { flex-direction: column; align-items: stretch; }
-	.rstrip__group--scanners { justify-content: flex-start; }
+	/* scanner chips live in the filter sheet on small screens */
+	.rstrip__group--scanners { display: none; }
+	.rnext { align-items: stretch; flex-direction: column; }
+	.rnext .btn { justify-content: center; }
+	.vrev__stage-open-lab { display: none; }
 	.igroup__head {
 		grid-template-columns: 1.3rem auto minmax(0, 1fr);
 		align-items: start;

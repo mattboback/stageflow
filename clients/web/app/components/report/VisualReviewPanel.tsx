@@ -12,8 +12,8 @@ import {
 	getSeverityDotClass,
 	getSeverityFillColor,
 	getSeverityStrokeColor,
-	normalizeSeverity,
-	rewriteIssueTitle
+	isManualReviewIssue,
+	normalizeSeverity
 } from '../../lib/report';
 
 interface Props {
@@ -31,6 +31,7 @@ interface IssueGroup {
 	scanner: string;
 	ruleId: string;
 	severity: string;
+	needsReview: boolean;
 	issues: IssueDetail[];
 }
 
@@ -92,10 +93,13 @@ export function VisualReviewPanel({
 			} else {
 				groups.set(key, {
 					key,
-					title: rewriteIssueTitle(issue),
+					/* Manual-review items get a chip instead of a repeated
+					   'Verify:' title prefix — less noise in the list. */
+					title: issue.title ?? issue.ruleId,
 					scanner: issue.scanner,
 					ruleId: issue.ruleId,
 					severity,
+					needsReview: isManualReviewIssue(issue),
 					issues: [issue]
 				});
 			}
@@ -123,7 +127,11 @@ export function VisualReviewPanel({
 	const canRenderScreenshot = !!overviewUrl && pageWidth > 0 && pageHeight > 0;
 
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
-	const [zoom, setZoom] = useState<Zoom>('fit');
+	/* Fit-width of a desktop capture on a phone renders the page at ~30% —
+	   unreadable. Small screens start at 100% and pan instead. */
+	const [zoom, setZoom] = useState<Zoom>(() =>
+		typeof window !== 'undefined' && window.innerWidth <= 880 ? 1 : 'fit'
+	);
 	// Both load states are keyed by URL so switching pages needs no reset.
 	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
 	const [failedOverviewUrl, setFailedOverviewUrl] = useState<string | null>(null);
@@ -272,8 +280,10 @@ export function VisualReviewPanel({
 								href={overviewUrl}
 								target="_blank"
 								rel="noopener noreferrer"
+								aria-label="Open full screenshot"
 							>
-								<Maximize2 size={14} aria-hidden="true" /> Full screenshot
+								<Maximize2 size={14} aria-hidden="true" />{' '}
+								<span className="vrev__stage-open-lab">Full screenshot</span>
 							</a>
 						)}
 					</div>
@@ -362,6 +372,9 @@ export function VisualReviewPanel({
 										<span className="vrev__issue-body">
 											<span className="vrev__issue-title">{group.title}</span>
 											<span className="vrev__issue-meta">
+												{group.needsReview && (
+													<span className="vrev__issue-verify">needs review</span>
+												)}
 												{group.scanner} · {group.ruleId}
 											</span>
 										</span>

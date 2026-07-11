@@ -27,12 +27,11 @@ describe('ReportHeader', () => {
 describe('ReportStatStrip', () => {
 	const handlers = () => ({
 		onReviewSeverity: vi.fn(),
-		onSelectScanner: vi.fn(),
-		onReviewManual: vi.fn()
+		onSelectScanner: vi.fn()
 	});
 
 	it('renders severity pills and scanner chips from the fixture', () => {
-		render(<ReportStatStrip report={report} jobId="test-job" {...handlers()} />);
+		render(<ReportStatStrip report={report} {...handlers()} />);
 
 		const critical = report.summary.bySeverity.critical ?? 0;
 		expect(critical).toBeGreaterThan(0);
@@ -48,7 +47,7 @@ describe('ReportStatStrip', () => {
 
 	it('routes severity pills and scanner chips to the issues view', () => {
 		const h = handlers();
-		render(<ReportStatStrip report={report} jobId="test-job" {...h} />);
+		render(<ReportStatStrip report={report} {...h} />);
 
 		const critical = report.summary.bySeverity.critical ?? 0;
 		fireEvent.click(screen.getByRole('button', { name: `${critical} critical` }));

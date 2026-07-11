@@ -16,7 +16,14 @@ import { ArtifactsView } from '../components/report/ArtifactsView';
 import { LighthouseSummary } from '../components/report/LighthouseSummary';
 import { ErrorsView } from '../components/report/ErrorsView';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
-import { buildOccurrenceModeReport, isIssueSortKey, type IssueSortKey } from '../lib/report';
+import {
+	buildOccurrenceModeReport,
+	isIssueSortKey,
+	isManualReviewIssue,
+	sortIssues,
+	type IssueSortKey
+} from '../lib/report';
+import { useContrastVerdicts } from '../lib/hooks/useContrastVerdicts';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
 
@@ -99,6 +106,20 @@ export default function ScanReport() {
 		return displayReport.issues.find((i) => i.id === activeIssueId) ?? null;
 	}, [activeIssueId, displayReport]);
 
+	/* The manual-review queue is the report's primary workflow: highest
+	   severity first, resume at the first finding without a verdict. */
+	const { getVerdict } = useContrastVerdicts(id);
+	const reviewQueue = useMemo(
+		() =>
+			displayReport
+				? sortIssues(displayReport.issues.filter(isManualReviewIssue), 'severity')
+				: [],
+		[displayReport]
+	);
+	const reviewedCount = reviewQueue.filter((issue) => getVerdict(issue.id)).length;
+	const nextReviewIssue =
+		reviewQueue.find((issue) => !getVerdict(issue.id)) ?? reviewQueue[0] ?? null;
+
 	const activeIssuePage = useMemo(() => {
 		if (!activeIssue || !displayReport) return null;
 		return displayReport.pages.find((p) => p.id === activeIssue.pageId) ?? null;
@@ -127,16 +148,43 @@ export default function ScanReport() {
 									role="tabpanel"
 									aria-labelledby="report-tab-review"
 								>
+									{reviewQueue.length > 0 && (
+										<div className="rnext">
+											<div className="rnext__copy">
+												<p className="rnext__count">
+													{reviewedCount >= reviewQueue.length
+														? `All ${reviewQueue.length} findings reviewed`
+														: reviewedCount > 0
+															? `${reviewQueue.length - reviewedCount} of ${reviewQueue.length} findings still need review`
+															: `${reviewQueue.length} findings need review`}
+												</p>
+												<p className="rnext__sub">
+													Highest severity first — evidence and decision tools open in
+													place.
+												</p>
+											</div>
+											{nextReviewIssue && reviewedCount < reviewQueue.length && (
+												<button
+													type="button"
+													className="btn btn--primary btn--lg"
+													onClick={() => updateParams({ issue: nextReviewIssue.id })}
+												>
+													{reviewedCount > 0 ? 'Continue review' : 'Start review'}{' '}
+													<span className="ar" aria-hidden="true">
+														→
+													</span>
+												</button>
+											)}
+										</div>
+									)}
 									<ReportStatStrip
 										report={displayReport}
-										jobId={id}
 										onReviewSeverity={(severity) =>
 											updateParams({ section: 'issues', severity })
 										}
 										onSelectScanner={(scannerId) =>
 											updateParams({ section: 'issues', scanner: scannerId })
 										}
-										onReviewManual={() => updateParams({ section: 'issues' })}
 									/>
 									<VisualReviewPanel
 										report={displayReport}

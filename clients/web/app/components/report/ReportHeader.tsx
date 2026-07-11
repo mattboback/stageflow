@@ -85,16 +85,23 @@ export function ReportHeader({ report }: Props) {
 							{baseUrl} ↗
 						</a>
 					)}
-					<p className="rhead__meta">
-						{[scannedAt, duration].filter(Boolean).join(' · ')}
-						{report.meta.jobId && (
-							<>
-								{scannedAt || duration ? ' · ' : ''}
-								<span className="rhead__jobid mono">{report.meta.jobId.slice(0, 8)}</span>
-							</>
-						)}{' '}
+					<div className="rhead__meta">
 						<Pill variant="done">Completed</Pill>
-					</p>
+						{(scannedAt || duration || report.meta.jobId) && (
+							<details className="rhead__details">
+								<summary>Run details</summary>
+								<span className="rhead__details-body">
+									{[scannedAt, duration].filter(Boolean).join(' · ')}
+									{report.meta.jobId && (
+										<>
+											{scannedAt || duration ? ' · ' : ''}
+											<span className="rhead__jobid mono">job {report.meta.jobId}</span>
+										</>
+									)}
+								</span>
+							</details>
+						)}
+					</div>
 				</div>
 			</div>
 			<dl className="rhead__stats" aria-label="Scan totals">
