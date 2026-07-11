@@ -1,16 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
-import {
-	Accessibility,
-	Bot,
-	Check,
-	Gauge as GaugeIcon,
-	Link2,
-	Search,
-	Share2,
-	ShieldCheck,
-	SpellCheck
-} from 'lucide-react';
+import { Check } from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
@@ -42,32 +32,6 @@ export const meta: MetaFunction = () => [
 			description: HOME_DESCRIPTION
 		}
 	}
-];
-
-const PERF: { id: string; label: string; val: number; moderate?: boolean }[] = [
-	{ id: 'a11y', label: 'Accessibility', val: 88, moderate: true },
-	{ id: 'perf', label: 'Performance', val: 91 },
-	{ id: 'seo', label: 'SEO', val: 97 },
-	{ id: 'sec', label: 'Security', val: 75, moderate: true },
-	{ id: 'qual', label: 'Quality', val: 93 }
-];
-
-/* One naming table: user-facing name first, implementation as the sub. */
-const SCANNERS: {
-	name: string;
-	sub: string;
-	cat: string;
-	icon: React.ComponentType<{ size?: number | string; 'aria-hidden'?: boolean }>;
-	optIn?: boolean;
-}[] = [
-	{ name: 'Axe Accessibility', sub: 'WCAG 2.1 rules, powered by axe-core', cat: 'Accessibility', icon: Accessibility },
-	{ name: 'Lighthouse', sub: 'Google Lighthouse performance and best-practice audits', cat: 'Performance', icon: GaugeIcon },
-	{ name: 'SEO', sub: 'Title, metadata, headings, structured data', cat: 'SEO', icon: Search },
-	{ name: 'Security Headers', sub: 'HTTP response-header policy', cat: 'Security', icon: ShieldCheck },
-	{ name: 'Link Checker', sub: 'Internal and external link health', cat: 'Quality', icon: Link2 },
-	{ name: 'Open Graph', sub: 'Social preview metadata', cat: 'SEO', icon: Share2 },
-	{ name: 'Spelling & Grammar', sub: 'Content quality checks', cat: 'Quality', icon: SpellCheck },
-	{ name: 'AI Navigator', sub: 'Natural-language navigation objectives', cat: 'AI', icon: Bot, optIn: true }
 ];
 
 const BASELINE_TRACK = [
@@ -184,7 +148,7 @@ export default function Home() {
 							</p>
 						</div>
 
-						{/* The output side of the scanbar: a report with a real regression */}
+						{/* The output side of the scanbar: one regression story, one CTA */}
 						<aside className="panel hero__preview" aria-label="Sample report preview">
 							<div className="panel__head">
 								<span className="label">
@@ -197,58 +161,37 @@ export default function Home() {
 							</div>
 							<div className="panel__body">
 								<div className="preview__top">
-									<Gauge value={88} caption="Quality score" size={132} valFontSize="2.3rem" />
-									<div className="preview__cats">
-										<p className="preview__cats-note muted">
-											Weighted score across eight frontend quality areas.
+									<Gauge value={88} caption="Site score" size={132} valFontSize="2.3rem" />
+									<div className="preview__reg">
+										<p className="preview__reg-title">
+											<span className="sev-dot sev-serious" aria-hidden="true" /> Regressed
+											since baseline
 										</p>
-										<div className="perf-list">
-											{PERF.map((p) => (
-												<div className="perf" key={p.id}>
-													<span className="perf__id">{p.label}</span>
-													<span className="perf__bar">
-														<i
-															style={{
-																width: `${p.val}%`,
-																...(p.moderate ? { background: 'var(--sev-moderate)' } : {})
-															}}
-														/>
-													</span>
-													<span className="perf__val">{p.val}</span>
-												</div>
-											))}
-										</div>
+										<ul className="preview__reg-rows">
+											<li>
+												<span>Site score</span>
+												<span className="num">
+													94 → 88 <Delta value={-6} />
+												</span>
+											</li>
+											<li>
+												<span>New serious issues</span>
+												<span className="num">
+													3 <Delta value={3} improvedWhenPositive={false} />
+												</span>
+											</li>
+										</ul>
+										<span className="preview__reg-cta">
+											View evidence <span aria-hidden="true">→</span>
+										</span>
 									</div>
-								</div>
-								<div className="preview__reg">
-									<p className="preview__reg-title">
-										<span className="sev-dot sev-serious" aria-hidden="true" /> Dashboard
-										regressed since baseline
-									</p>
-									<ul className="preview__reg-rows">
-										<li>
-											<span>Accessibility</span>
-											<span className="num">
-												94 → 88 <Delta value={-6} />
-											</span>
-										</li>
-										<li>
-											<span>New serious issues</span>
-											<span className="num">
-												3 <Delta value={3} improvedWhenPositive={false} />
-											</span>
-										</li>
-									</ul>
-									<span className="preview__reg-cta">
-										View evidence <span aria-hidden="true">→</span>
-									</span>
 								</div>
 							</div>
 						</aside>
 					</div>
 				</section>
 
-				{/* BASELINE IDEA — before/after comparison track */}
+				{/* BASELINE IDEA — the review step carries the weight */}
 				<section className="section section--band" aria-labelledby="baseline-heading">
 					<div className="wrap wrap--app baseline">
 						<div className="baseline__intro">
@@ -260,7 +203,10 @@ export default function Home() {
 						</div>
 						<ol className="basetrack">
 							{BASELINE_TRACK.map((step, i) => (
-								<li className="basetrack__node" key={step.title}>
+								<li
+									className={`basetrack__node${i === BASELINE_TRACK.length - 1 ? ' basetrack__node--key' : ''}`}
+									key={step.title}
+								>
 									{i > 0 && (
 										<span className="basetrack__link" aria-hidden="true">
 											→
@@ -279,92 +225,55 @@ export default function Home() {
 					</div>
 				</section>
 
-				{/* SCANNERS — list + how they merge into one report */}
-				<section className="section" id="scanners" aria-labelledby="scanners-heading">
-					<div className="wrap wrap--app mid">
-						<div className="mid__scanners">
-							<header className="section__head">
-								<h2 id="scanners-heading">Eight scanners, one merged report</h2>
-								<p>
-									Every channel runs in isolation and merges into a single severity-ranked report,
-									the same shape from the CLI, CI, or the browser.
-								</p>
-							</header>
-							<div className="array" role="table" aria-label="Built-in scanners">
-								{SCANNERS.map((s) => (
-									<div className="array__row" role="row" key={s.name}>
-										<span className="array__icon" aria-hidden="true">
-											<s.icon size={18} />
-										</span>
-										<span className="array__name" role="cell">
-											{s.name}
-											<span>{s.sub}</span>
-										</span>
-										<span
-											className={`array__cat${s.optIn ? ' array__cat--optin' : ''}`}
-											role="cell"
-										>
-											{s.optIn ? 'Opt-in' : s.cat}
-										</span>
+				{/* FROM URL TO REPORT — three steps, then the CTA */}
+				<section className="section" aria-labelledby="path-heading">
+					<div className="wrap wrap--app">
+						<header className="section__head">
+							<h2 id="path-heading">From URL to report</h2>
+							<p>Three steps. No setup required.</p>
+						</header>
+						<ol className="path__steps path__steps--row">
+							{PATH_STEPS.map((s) => (
+								<li className="path__step" key={s.n}>
+									<span className="path__n" aria-hidden="true">
+										{s.n}
+									</span>
+									<div>
+										<h3>{s.title}</h3>
+										<p>{s.body}</p>
 									</div>
-								))}
-							</div>
+								</li>
+							))}
+						</ol>
+						<div className="path__actions">
+							<Link className="btn btn--primary" to="/playground">
+								Configure a scan{' '}
+								<span className="ar" aria-hidden="true">
+									→
+								</span>
+							</Link>
 						</div>
+					</div>
+				</section>
 
-						<aside className="mid__path" aria-labelledby="path-heading">
-							<div className="merge" aria-hidden="true">
-								<ul className="merge__chips">
-									{SCANNERS.map((s) => (
-										<li key={s.name}>{s.name}</li>
-									))}
-								</ul>
-								<span className="merge__brace" />
-								<div className="merge__report panel">
-									<span className="label">One report</span>
-									<div className="merge__rows">
-										<span className="merge__row">
-											<span className="sev-dot sev-critical" /> 0 critical
-										</span>
-										<span className="merge__row">
-											<span className="sev-dot sev-serious" /> 2 serious
-										</span>
-										<span className="merge__row">
-											<span className="sev-dot sev-moderate" /> 5 moderate
-										</span>
-										<span className="merge__row">
-											<span className="sev-dot sev-minor" /> 11 minor
-										</span>
-									</div>
-								</div>
-							</div>
-							<div className="path">
-								<header className="path__head">
-									<h2 id="path-heading">From URL to report</h2>
-									<p className="muted">Three steps. No setup required.</p>
-								</header>
-								<ol className="path__steps">
-									{PATH_STEPS.map((s) => (
-										<li className="path__step" key={s.n}>
-											<span className="path__n" aria-hidden="true">
-												{s.n}
-											</span>
-											<div>
-												<h3>{s.title}</h3>
-												<p>{s.body}</p>
-											</div>
-										</li>
-									))}
-								</ol>
-								<div className="path__actions">
-									<Link className="btn btn--primary" to="/playground">
-										Configure a scan{' '}
-										<span className="ar" aria-hidden="true">
-											→
-										</span>
-									</Link>
-								</div>
-							</div>
-						</aside>
+				{/* SCANNERS — condensed summary; the full list lives on the configure page */}
+				<section className="section section--band" id="scanners" aria-labelledby="scanners-heading">
+					<div className="wrap wrap--app scansum">
+						<div className="scansum__copy">
+							<h2 id="scanners-heading">Eight scanners, one merged report</h2>
+							<p>
+								Accessibility, performance, SEO, security headers, link health, social previews,
+								and spelling — plus an opt-in AI navigator. Each runs in an isolated container
+								and merges into a single severity-ranked report, the same shape from the CLI,
+								CI, or the browser.
+							</p>
+						</div>
+						<Link className="btn btn--ghost scansum__cta" to="/playground">
+							View all scanners{' '}
+							<span className="ar" aria-hidden="true">
+								→
+							</span>
+						</Link>
 					</div>
 				</section>
 
@@ -385,11 +294,7 @@ export default function Home() {
 									{'\n'}
 									<span className="terminal__ok">✓</span> lighthouse{'       '}82 issues · 82.6s
 									{'\n'}
-									<span className="terminal__ok">✓</span> seo{'              '}20 issues · 10.8s
-									{'\n'}
-									<span className="terminal__ok">✓</span> link-checker{'     '}20 issues · 23.2s
-									{'\n'}
-									<span className="terminal__ok">✓</span> 4 more scanners{'  '}completed
+									<span className="terminal__ok">✓</span> 6 more scanners{'  '}completed
 									{'\n'}
 									{'\n'}
 									Score: 88 (B) · serious 2 · moderate 5 · minor 11

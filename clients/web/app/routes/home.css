@@ -86,57 +86,12 @@
 	gap: var(--sp-5);
 	align-items: center;
 }
-.preview__cats-note {
-	font-size: 0.9375rem;
-	line-height: 1.45;
-	margin: 0 0 var(--sp-3);
-	max-width: 32ch;
-}
-.perf-list {
-	display: grid;
-	gap: var(--sp-2);
-}
-.perf {
-	display: grid;
-	grid-template-columns: 7rem 1fr 2rem;
-	align-items: center;
-	gap: var(--sp-3);
-}
-.perf__id {
-	font-size: 0.875rem;
-	font-weight: 500;
-	color: var(--ink-muted);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.perf__bar {
-	height: 6px;
-	border-radius: var(--r-pill);
-	background: var(--surface-sunk);
-	overflow: hidden;
-}
-.perf__bar > i {
-	display: block;
-	height: 100%;
-	border-radius: var(--r-pill);
-	background: var(--signal);
-}
-.perf__val {
-	font-size: 0.875rem;
-	font-weight: 600;
-	font-variant-numeric: tabular-nums;
-	color: var(--ink-strong);
-	text-align: right;
-}
 
 /* the regression story: what StageFlow adds over a one-shot checker */
 .preview__reg {
-	margin-top: var(--sp-4);
-	padding-top: var(--sp-4);
-	border-top: 1px solid var(--line);
 	display: grid;
 	gap: var(--sp-3);
+	min-width: 0;
 }
 .preview__reg-title {
 	display: flex; align-items: center; gap: var(--sp-2);
@@ -172,6 +127,11 @@
 	margin-top: clamp(2.75rem, 5vw, 4.25rem);
 	padding-block: clamp(2.5rem, 4vw, 3.5rem);
 }
+/* when it directly follows a band, the band's own border is the seam */
+.section--band + .section--foot {
+	margin-top: 0;
+	border-top: 0;
+}
 /* the footer follows immediately — its own border marks the boundary */
 .section--foot + * .site-footer,
 .section--foot ~ .site-footer { margin-top: 0; }
@@ -181,7 +141,6 @@
 }
 .section__head h2,
 .baseline__intro h2,
-.path__head h2,
 .selfhost h2 {
 	font-size: clamp(1.5rem, 2.4vw, 1.95rem);
 	letter-spacing: -0.015em;
@@ -240,7 +199,16 @@
 	display: grid;
 	gap: var(--sp-2);
 	align-content: start;
+	padding: var(--sp-4);
+	border-radius: var(--r-md);
+	border: 1px solid transparent;
 }
+/* Step 3 is the product; steps 1–2 are setup. */
+.basetrack__node--key .basetrack__card {
+	background: var(--signal-wash);
+	border-color: var(--signal-edge);
+}
+.basetrack__node--key .basetrack__card h3 { color: var(--signal-ink); }
 .basetrack__score {
 	font-family: var(--display);
 	font-size: 2rem;
@@ -264,139 +232,32 @@
 	max-width: 30ch;
 }
 
-/* ----------------------------------------------------- mid two-column */
-.mid {
-	display: grid;
-	grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-	gap: clamp(2rem, 4vw, 3.5rem);
-	align-items: start;
-}
-.mid__path {
-	display: grid;
-	gap: var(--sp-6);
-	position: sticky;
-	top: calc(64px + var(--sp-4));
-}
-
-/* scanner array */
-.array {
-	border: 1px solid var(--line);
-	border-radius: var(--r-md);
-	overflow: hidden;
-	background: var(--surface);
-	box-shadow: var(--shadow-sm);
-}
-.array__row {
-	display: grid;
-	grid-template-columns: auto 1fr auto;
+/* -------------------------------------------------- scanner summary band */
+.scansum {
+	display: flex;
 	align-items: center;
-	gap: var(--sp-4);
-	padding: var(--sp-3) var(--sp-4);
-	border-top: 1px solid var(--line);
-	transition: background var(--dur-1) var(--ease);
+	justify-content: space-between;
+	gap: clamp(1.5rem, 3vw, 3rem);
+	flex-wrap: wrap;
 }
-.array__row:first-child {
-	border-top: 0;
-}
-.array__row:hover {
-	background: var(--ground);
-}
-.array__icon {
-	display: grid;
-	place-items: center;
-	color: var(--signal-ink);
-}
-.array__name {
-	font-weight: 600;
-	color: var(--ink-strong);
-	font-size: 1rem;
-	min-width: 0;
-}
-.array__name span {
-	display: block;
-	font-weight: 400;
-	font-size: 0.9375rem;
-	color: var(--ink-muted);
-	margin-top: 0.1rem;
-	line-height: 1.4;
-}
-.array__cat {
-	font-size: 0.8125rem;
-	font-weight: 600;
-	color: var(--ink-muted);
-	white-space: nowrap;
-}
-.array__cat--optin {
-	color: var(--signal-ink);
-	background: var(--signal-wash);
-	border-radius: var(--r-pill);
-	padding: 0.22rem 0.65rem;
-}
-
-/* merged-report visual: eight channels converge into one report */
-.merge {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto minmax(0, auto);
-	gap: var(--sp-3);
-	align-items: center;
-}
-.merge__chips {
-	list-style: none;
+.scansum__copy { max-width: 62ch; }
+.scansum__copy h2 {
+	font-size: clamp(1.5rem, 2.4vw, 1.95rem);
+	letter-spacing: -0.015em;
+	line-height: 1.15;
+	text-wrap: balance;
 	margin: 0;
-	padding: 0;
-	display: grid;
-	gap: var(--sp-1);
-	justify-items: end;
 }
-.merge__chips li {
-	font-size: 0.875rem;
-	font-weight: 600;
+.scansum__copy p {
 	color: var(--ink-muted);
-	background: var(--surface);
-	border: 1px solid var(--line);
-	border-radius: var(--r-pill);
-	padding: 0.18rem 0.65rem;
-	white-space: nowrap;
+	margin: 0.65rem 0 0;
+	font-size: 1.0625rem;
+	line-height: 1.55;
+	text-wrap: pretty;
 }
-.merge__brace {
-	width: 1.6rem;
-	align-self: stretch;
-	border: 1px solid var(--signal-edge);
-	border-left: 0;
-	border-radius: 0 var(--r-md) var(--r-md) 0;
-	position: relative;
-}
-.merge__brace::after {
-	content: '→';
-	position: absolute;
-	right: -1.2rem;
-	top: 50%;
-	transform: translateY(-50%);
-	color: var(--signal-ink);
-	font-weight: 700;
-}
-.merge__report {
-	margin-left: var(--sp-4);
-	padding: var(--sp-3) var(--sp-4);
-	display: grid;
-	gap: var(--sp-2);
-}
-.merge__rows { display: grid; gap: var(--sp-1); }
-.merge__row {
-	display: inline-flex; align-items: center; gap: var(--sp-2);
-	font-size: 0.875rem; color: var(--ink); font-variant-numeric: tabular-nums;
-}
+.scansum__cta { flex-shrink: 0; }
 
 /* path steps */
-.path {
-	display: flex;
-	flex-direction: column;
-	gap: var(--sp-4);
-}
-.path__head p {
-	margin: 0.4rem 0 0;
-	font-size: 0.9375rem;
-}
 .path__steps {
 	list-style: none;
 	margin: 0;
@@ -453,6 +314,13 @@
 	display: flex;
 	gap: var(--sp-3);
 }
+/* three steps read left-to-right when there's room */
+.path__steps--row {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--sp-6);
+	margin-bottom: var(--sp-5);
+}
+.path__steps--row::before { display: none; }
 
 /* ------------------------------------------------ terminal + self-host */
 .foot {
@@ -550,7 +418,6 @@
 /* ---------------------------------------------------------- responsive */
 @media (max-width: 960px) {
 	.hero__grid,
-	.mid,
 	.foot {
 		grid-template-columns: 1fr;
 	}
@@ -560,36 +427,45 @@
 	.hero__preview {
 		margin-top: var(--sp-2);
 	}
-	.mid__path {
-		position: static;
-	}
 	.baseline__intro {
 		max-width: none;
 	}
 	.basetrack {
 		grid-template-columns: 1fr;
-		gap: var(--sp-4);
+		gap: var(--sp-2);
 	}
-	.basetrack__link { display: none; }
+	.basetrack__node {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	/* the connector turns downward when the track stacks */
+	.basetrack__link {
+		position: static;
+		width: auto;
+		height: auto;
+		justify-content: flex-start;
+		padding: var(--sp-1) 0 var(--sp-1) var(--sp-4);
+		font-size: 0;
+	}
+	.basetrack__link::before {
+		content: '↓';
+		font-size: 1.25rem;
+		line-height: 1;
+	}
 	.basetrack__card p {
 		max-width: none;
 	}
-	.merge { display: none; }
+	.path__steps--row {
+		grid-template-columns: 1fr;
+		gap: var(--sp-4);
+	}
+	.path__steps--row::before { display: block; }
 }
 
 @media (max-width: 720px) {
 	.preview__top {
 		grid-template-columns: 1fr;
 		justify-items: start;
-	}
-	.array__row {
-		grid-template-columns: auto 1fr;
-	}
-	.array__cat {
-		display: none;
-	}
-	.perf {
-		grid-template-columns: 5.5rem 1fr 2rem;
 	}
 }
 
