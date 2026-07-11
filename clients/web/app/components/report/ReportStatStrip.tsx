@@ -6,7 +6,8 @@ import {
 	formatScannerStatus,
 	getScannerStatusTone,
 	getSeverityDotClass,
-	isManualReviewIssue
+	isManualReviewIssue,
+	scannerLabel
 } from '../../lib/report';
 import { useContrastVerdicts } from '../../lib/hooks/useContrastVerdicts';
 
@@ -85,6 +86,7 @@ export function ReportStatStrip({
 						scanner.issueCount ?? report.summary.byScanner?.[scanner.id] ?? 0;
 					const tone = getScannerStatusTone(scanner.status);
 					const failed = scanner.status === 'failed' || !!scanner.error;
+					const name = scannerLabel(scanner.id, scanner.name);
 					return (
 						<button
 							key={scanner.id}
@@ -94,11 +96,11 @@ export function ReportStatStrip({
 							title={
 								failed
 									? scanner.error || 'Scanner failed'
-									: `${formatScannerStatus(scanner.status)} · filter issues by ${scanner.name ?? scanner.id}`
+									: `${formatScannerStatus(scanner.status)} · filter issues by ${name}`
 							}
 						>
 							<span className="rstrip__scanner-led" data-tone={tone} aria-hidden="true" />
-							<span className="rstrip__scanner-name">{scanner.name ?? scanner.id}</span>
+							<span className="rstrip__scanner-name">{name}</span>
 							<span className="rstrip__scanner-count">
 								{failed ? formatScannerStatus(scanner.status) : issueCount.toLocaleString()}
 							</span>

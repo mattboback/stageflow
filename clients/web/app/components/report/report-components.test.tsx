@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { loadAllScansFixture } from '../../test/load-fixture';
+import { scannerLabel } from '../../lib/report';
 
 import { IssueRowCard } from './IssueRowCard';
 import { ReportHeader } from './ReportHeader';
@@ -39,7 +40,9 @@ describe('ReportStatStrip', () => {
 			screen.getByRole('button', { name: `${critical} critical` })
 		).toBeTruthy();
 		for (const scanner of report.scanners) {
-			expect(screen.getAllByText(scanner.name ?? scanner.id).length).toBeGreaterThan(0);
+			expect(
+				screen.getAllByText(scannerLabel(scanner.id, scanner.name)).length
+			).toBeGreaterThan(0);
 		}
 	});
 
@@ -53,7 +56,9 @@ describe('ReportStatStrip', () => {
 
 		const scanner = report.scanners[0]!;
 		fireEvent.click(
-			screen.getAllByText(scanner.name ?? scanner.id)[0]!.closest('button')!
+			screen
+				.getAllByText(scannerLabel(scanner.id, scanner.name))[0]!
+				.closest('button')!
 		);
 		expect(h.onSelectScanner).toHaveBeenCalledWith(scanner.id);
 	});

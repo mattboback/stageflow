@@ -41,7 +41,16 @@ export function ReportHeader({ report }: Props) {
 
 	const scannedAt = formatScannedAt(report.meta.completedAt ?? report.meta.scannedAt);
 	const duration = formatDuration(report.meta.durationMs);
-	const baseUrl = report.meta.baseUrl;
+	const baseUrl = (() => {
+		if (report.meta.baseUrl) return report.meta.baseUrl;
+		const firstPage = report.pages[0]?.url;
+		if (!firstPage) return undefined;
+		try {
+			return new URL(firstPage).origin;
+		} catch {
+			return firstPage;
+		}
+	})();
 	const host = (() => {
 		if (!baseUrl) return null;
 		try {

@@ -29,7 +29,7 @@ import {
 	type AuthFormConfig
 } from '../lib/components/playground/playground-utils';
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
-import { SCANNER_META } from '../lib/report/scanner-identity';
+import { SCANNER_META, scannerLabel } from '../lib/report/scanner-identity';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
 import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
 import {
@@ -436,7 +436,9 @@ export default function Playground() {
 															<Icon size={17} />
 														</span>
 														<span className="chan__main">
-															<span className="chan__name">{scanner.name}</span>
+															<span className="chan__name">
+																{scannerLabel(scanner.id, scanner.name)}
+															</span>
 															<span className="chan__desc">
 																{scanner.description || meta?.description || ''}
 															</span>

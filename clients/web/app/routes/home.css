@@ -212,7 +212,7 @@
 	padding: 0;
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: var(--sp-5);
+	gap: var(--sp-6);
 	counter-reset: none;
 }
 .basetrack__node {
@@ -222,12 +222,16 @@
 }
 .basetrack__link {
 	position: absolute;
-	left: calc(-1 * var(--sp-5) + 2px);
-	top: 1.1rem;
-	width: var(--sp-5);
-	text-align: center;
-	color: var(--ink-faint);
-	font-size: 1.1rem;
+	left: calc(-1 * var(--sp-6));
+	top: 0;
+	width: var(--sp-6);
+	height: 2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--ink-muted);
+	font-size: 1.375rem;
+	line-height: 1;
 	font-weight: 600;
 	pointer-events: none;
 }
