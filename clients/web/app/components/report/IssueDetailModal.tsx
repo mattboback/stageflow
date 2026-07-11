@@ -364,7 +364,7 @@ export function IssueDetailModal({
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									Learn more about this issue ↗
+									Learn more about this rule ↗
 								</a>
 							)}
 						</div>

@@ -17,7 +17,7 @@ describe('ReportHeader', () => {
 		expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
 		const totals = screen.getByLabelText('Scan totals');
-		expect(totals.textContent).toContain('Total issues');
+		expect(totals.textContent).toContain('Findings');
 		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
 		expect(totals.textContent).toContain('Pages scanned');
 		expect(totals.textContent).toContain('Manual review');

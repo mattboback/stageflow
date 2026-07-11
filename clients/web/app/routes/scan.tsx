@@ -222,7 +222,7 @@ export default function Scan() {
 
 					<div className="grid">
 						<div className="grid__main">
-							<section className="panel" aria-label="Scanner channels">
+							<section className="panel" aria-label="Scanners">
 								<div className="panel__head">
 									<h2>
 										Scanners

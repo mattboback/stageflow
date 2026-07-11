@@ -23,10 +23,10 @@ export function ReportStatStrip({ report, onReviewSeverity, onSelectScanner }: P
 
 	return (
 		<div className="rstrip" aria-label="Scan summary">
-			<div className="rstrip__group" aria-label="Issues by severity">
+			<div className="rstrip__group" aria-label="Findings by severity">
 				<span className="rstrip__lab">Severity</span>
 				{severityCounts.length === 0 ? (
-					<span className="rstrip__clean">No issues found</span>
+					<span className="rstrip__clean">No findings</span>
 				) : (
 					severityCounts.map(({ level, count }) => (
 						<button
@@ -34,7 +34,7 @@ export function ReportStatStrip({ report, onReviewSeverity, onSelectScanner }: P
 							type="button"
 							className={`rstrip__sev sev-badge sev-${level}`}
 							onClick={() => onReviewSeverity(level)}
-							title={`Review ${level} issues`}
+							title={`View ${level} findings`}
 						>
 							<span className={getSeverityDotClass(level)} aria-hidden="true" />
 							{count.toLocaleString()} {level}

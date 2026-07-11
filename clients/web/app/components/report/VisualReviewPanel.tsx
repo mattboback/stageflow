@@ -343,13 +343,13 @@ export function VisualReviewPanel({
 				)}
 			</section>
 
-			<aside className="vrev__issues" aria-label="Page issues">
+			<aside className="vrev__issues" aria-label="Findings on this page">
 				<header className="vrev__issues-head">
-					<h3>Issues on this page</h3>
+					<h3>Findings on this page</h3>
 					<span className="vrev__issues-count">{pageIssues.length}</span>
 				</header>
 				{pageIssues.length === 0 ? (
-					<p className="vrev__empty-msg">No issues match the current scanner filter.</p>
+					<p className="vrev__empty-msg">No findings match the current scanner filter.</p>
 				) : (
 					<ul className="vrev__issues-list">
 						{issueGroups.map((group) => {

@@ -108,7 +108,7 @@ export function ReportHeader({ report }: Props) {
 				<div className="rhead__stat">
 					<dt className="rhead__stat-lab">
 						<AlertTriangle size={16} aria-hidden="true" />
-						Total issues
+						Findings
 					</dt>
 					<dd className="rhead__stat-val">{total.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
@@ -132,7 +132,7 @@ export function ReportHeader({ report }: Props) {
 					</dt>
 					<dd className="rhead__stat-val">{report.summary.pagesScanned.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
-						{report.summary.pagesWithIssues.toLocaleString()} with issues
+						{report.summary.pagesWithIssues.toLocaleString()} with findings
 					</dd>
 				</div>
 			</dl>

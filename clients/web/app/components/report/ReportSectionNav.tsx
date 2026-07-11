@@ -27,7 +27,7 @@ export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 			label: 'Review',
 			count: pages > 0 ? `${pages} page${pages === 1 ? '' : 's'}` : null
 		},
-		{ id: 'issues', label: 'Issues', count: issues > 0 ? String(issues) : null },
+		{ id: 'issues', label: 'Findings', count: issues > 0 ? String(issues) : null },
 		{
 			id: 'artifacts',
 			label: 'Artifacts',

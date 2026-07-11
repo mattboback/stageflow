@@ -166,7 +166,7 @@ export function IssuesView({
 					placeholder="Search findings…"
 					value={searchQuery}
 					onChange={(e) => onSearchChange(e.target.value)}
-					aria-label="Search issues"
+					aria-label="Search findings"
 				/>
 				<button
 					type="button"
@@ -254,7 +254,7 @@ export function IssuesView({
 									const next = e.target.value;
 									if (isIssueSortKey(next)) onSortChange(next);
 								}}
-								aria-label="Sort issues"
+								aria-label="Sort findings"
 							>
 								{ISSUE_SORTS.map((key) => (
 									<option key={key} value={key}>
@@ -268,11 +268,11 @@ export function IssuesView({
 
 				{filteredCount === 0 ? (
 					<div className="ilist__empty">
-						<p>No issues match the current filters.</p>
+						<p>No findings match the current filters.</p>
 						<small>
 							{totalCount === 0
-								? 'This scan completed without any issues.'
-								: 'Clear filters above to see all issues.'}
+								? 'This scan completed without any findings.'
+								: 'Clear filters above to see all findings.'}
 						</small>
 					</div>
 				) : groupByRule && groupingUseful ? (
