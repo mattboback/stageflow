@@ -439,7 +439,10 @@ export default function Playground() {
 															<span className="chan__name">
 																{scannerLabel(scanner.id, scanner.name)}
 															</span>
-															<span className="chan__desc">
+															<span
+																className="chan__desc"
+																title={scanner.description || meta?.description || undefined}
+															>
 																{scanner.description || meta?.description || ''}
 															</span>
 														</span>
@@ -470,35 +473,6 @@ export default function Playground() {
 								/>
 							)}
 
-							{/* the form ends with the action, not dead space */}
-							<div className="endbar">
-								<span className="endbar__sum">
-									{mode === 'url'
-										? `${targetCount} ${targetCount === 1 ? 'target' : 'targets'}`
-										: file
-											? '1 archive'
-											: 'no archive'}{' '}
-									· {armed} of {total || 8} scanners · authentication{' '}
-									{mode === 'url' && authConfig.enabled
-										? isAuthValid
-											? 'on'
-											: 'incomplete'
-										: 'off'}
-								</span>
-								<button
-									type="button"
-									className="btn btn--primary"
-									onClick={runScan}
-									disabled={submitting || catalogLoading || armed === 0}
-								>
-									{submitting ? 'Submitting…' : 'Run scan'}{' '}
-									{!submitting && (
-										<span className="ar" aria-hidden="true">
-											→
-										</span>
-									)}
-								</button>
-							</div>
 						</div>
 
 						{/* right: scan summary dock */}
@@ -607,6 +581,38 @@ export default function Playground() {
 							)}
 						</aside>
 					</div>
+				</div>
+
+				{/* Mobile: the review summary collapses into one sticky action bar —
+				    the dock's Run button is hidden there so only one Run exists. */}
+				<div className="stickyrun">
+					<span className="stickyrun__sum num">
+						{mode === 'url'
+							? `${targetCount} ${targetCount === 1 ? 'URL' : 'URLs'}`
+							: file
+								? '1 archive'
+								: 'No archive'}{' '}
+						· {armed} of {total || 8} scanners · auth{' '}
+						{mode === 'url' && authConfig.enabled
+							? isAuthValid
+								? 'on'
+								: 'incomplete'
+							: 'off'}{' '}
+						· ~{estSeconds}s
+					</span>
+					<button
+						type="button"
+						className="btn btn--primary"
+						onClick={runScan}
+						disabled={submitting || catalogLoading || armed === 0}
+					>
+						{submitting ? 'Submitting…' : 'Run scan'}{' '}
+						{!submitting && (
+							<span className="ar" aria-hidden="true">
+								→
+							</span>
+						)}
+					</button>
 				</div>
 			</main>
 

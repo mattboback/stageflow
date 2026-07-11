@@ -31,24 +31,42 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 						login with the credentials you provide.
 					</p>
 				</div>
-				{config.enabled && !isValid && (
-					<span className="pauth__warn" role="status" id="pauth-incomplete">
-						Required fields missing
-					</span>
+				{/* Auth is a configuration step, not an on/off preference: show its
+				    state and the action that moves it forward. */}
+				{!config.enabled ? (
+					<div className="pauth__state">
+						<span className="pauth__status">Not configured</span>
+						<button
+							type="button"
+							className="btn btn--ghost btn--sm"
+							onClick={() => update({ enabled: true })}
+						>
+							Set up{' '}
+							<span className="ar" aria-hidden="true">
+								→
+							</span>
+						</button>
+					</div>
+				) : (
+					<div className="pauth__state">
+						{isValid ? (
+							<span className="pauth__ok" role="status">
+								Configured
+							</span>
+						) : (
+							<span className="pauth__warn" role="status" id="pauth-incomplete">
+								Required fields missing
+							</span>
+						)}
+						<button
+							type="button"
+							className="pauth__remove"
+							onClick={() => update({ enabled: false })}
+						>
+							Remove
+						</button>
+					</div>
 				)}
-				<button
-					type="button"
-					role="switch"
-					aria-checked={config.enabled}
-					onClick={() => update({ enabled: !config.enabled })}
-					className="pauth__toggle"
-					aria-describedby={
-						config.enabled && !isValid ? 'pauth-incomplete' : undefined
-					}
-				>
-					<span className="pauth__toggle-track" aria-hidden="true" />
-					<span className="sr-only">Enable authentication</span>
-				</button>
 			</header>
 
 			{config.enabled && (
