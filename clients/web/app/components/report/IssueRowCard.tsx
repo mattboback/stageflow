@@ -6,6 +6,8 @@ import {
 	rewriteIssueTitle
 } from '../../lib/report';
 
+import { ScannerText } from './ScannerText';
+
 interface Props {
 	issue: IssueDetail;
 	onSelect?: (issue: IssueDetail) => void;
@@ -51,7 +53,11 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 						</span>
 					)}
 				</div>
-				{issue.description && <p className="irow__desc">{issue.description}</p>}
+				{issue.description && (
+					<p className="irow__desc">
+						<ScannerText text={issue.description} links={false} />
+					</p>
+				)}
 			</div>
 			<div className="irow__right">
 				<span className="irow__count">{occCount}</span>

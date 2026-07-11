@@ -263,7 +263,8 @@ export default function Scan() {
 												<span className="ch__led" aria-hidden="true" />
 												<div>
 													<div className="ch__name">{scannerLabel(ch.id)}</div>
-													{ch.state !== 'done' && (
+													{/* queued rows already say "Waiting" in the tag */}
+													{ch.state !== 'done' && ch.state !== 'queue' && (
 														<div className="ch__sub">{SUB_LABEL[ch.state]}</div>
 													)}
 												</div>

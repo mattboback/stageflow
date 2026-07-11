@@ -7,6 +7,7 @@ import { scannerLabel } from '../../lib/report';
 import { IssueRowCard } from './IssueRowCard';
 import { ReportHeader } from './ReportHeader';
 import { ReportStatStrip } from './ReportStatStrip';
+import { ScannerText } from './ScannerText';
 
 const report = loadAllScansFixture();
 
@@ -85,3 +86,27 @@ describe('IssueRowCard', () => {
 	});
 });
 
+
+describe('ScannerText', () => {
+	it('renders markdown code spans and links from scanner prose', () => {
+		render(
+			<p>
+				<ScannerText text="Use a `<meta>` tag. [Learn more](https://example.com/docs)." />
+			</p>
+		);
+		expect(screen.getByText('<meta>').tagName).toBe('CODE');
+		const link = screen.getByRole('link', { name: 'Learn more' });
+		expect(link.getAttribute('href')).toBe('https://example.com/docs');
+	});
+
+	it('drops link URLs but keeps the text when links are disabled', () => {
+		render(
+			<p data-testid="no-links">
+				<ScannerText text="[Learn more](https://example.com/docs) about charsets." links={false} />
+			</p>
+		);
+		const el = screen.getByTestId('no-links');
+		expect(el.textContent).toBe('Learn more about charsets.');
+		expect(el.querySelector('a')).toBeNull();
+	});
+});

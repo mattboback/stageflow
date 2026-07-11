@@ -479,6 +479,14 @@
 .imodal__desc {
 	margin: 0; font-size: 1rem; line-height: 1.6; color: var(--ink);
 }
+/* inline code spans in scanner prose (ScannerText) */
+.imodal__desc code, .imodal__fix code, .irow__desc code {
+	font-family: var(--mono); font-size: 0.875em;
+	background: var(--surface-sunk); border-radius: var(--r-xs);
+	padding: 0.05em 0.3em;
+}
+.imodal__desc a, .imodal__fix a { color: var(--signal-ink); }
+.imodal__desc a:hover, .imodal__fix a:hover { text-decoration: underline; }
 .imodal__tags {
 	display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3);
 }

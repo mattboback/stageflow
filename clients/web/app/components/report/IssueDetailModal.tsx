@@ -19,6 +19,7 @@ import { useContrastVerdicts } from '../../lib/hooks/useContrastVerdicts';
 
 import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueOccurrenceCard } from './IssueOccurrenceCard';
+import { ScannerText } from './ScannerText';
 import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
 interface Props {
@@ -337,7 +338,9 @@ export function IssueDetailModal({
 							<section>
 								<h3 className="imodal__pane-h">How to fix</h3>
 								{contextualFix ? (
-									<p className="imodal__fix">{contextualFix}</p>
+									<p className="imodal__fix">
+										<ScannerText text={contextualFix} />
+									</p>
 								) : (
 									<p className="imodal__fix imodal__fix--muted">
 										No fix guidance available for this rule yet.
@@ -346,7 +349,9 @@ export function IssueDetailModal({
 							</section>
 							<section>
 								<h3 className="imodal__pane-h">About this rule</h3>
-								<p className="imodal__desc">{issue.description}</p>
+								<p className="imodal__desc">
+										<ScannerText text={issue.description} />
+									</p>
 								{issue.wcagTags && issue.wcagTags.length > 0 && (
 									<div className="imodal__tags">
 										{issue.wcagTags.map((tag) => (

@@ -388,7 +388,7 @@ export default function Playground() {
 											</span>
 											Scanners
 										</h2>
-										<p className="panel__sub">Choose the channels you want to run.</p>
+										<p className="panel__sub">Choose the scanners you want to run.</p>
 									</div>
 									<div className="chanhead__meta">
 										<span className="chanhead__count num">
