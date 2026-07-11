@@ -84,17 +84,14 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 
 	const samplerAvailable = Boolean(pageOverviewUrl && cropViewBox && overview);
 
-	const measuredNote = useMemo(() => {
-		if (!contrastData) return null;
-		const parts: string[] = [];
-		if (contrastData.fgColor) parts.push(`text ${contrastData.fgColor}`);
-		if (contrastData.bgColor) parts.push(`on ${contrastData.bgColor}`);
-		const numericRatio = Number(contrastData.contrastRatio);
-		if (Number.isFinite(numericRatio) && numericRatio > 0) {
-			parts.push(`· ${formatRatio(numericRatio)}:1`);
-		}
-		return parts.length > 0 ? parts.join(' ') : null;
-	}, [contrastData]);
+	const measuredParts: string[] = [];
+	if (contrastData?.fgColor) measuredParts.push(`text ${contrastData.fgColor}`);
+	if (contrastData?.bgColor) measuredParts.push(`on ${contrastData.bgColor}`);
+	const measuredRatio = Number(contrastData?.contrastRatio);
+	if (Number.isFinite(measuredRatio) && measuredRatio > 0) {
+		measuredParts.push(`· ${formatRatio(measuredRatio)}:1`);
+	}
+	const measuredNote = measuredParts.length > 0 ? measuredParts.join(' ') : null;
 
 	const handlePick = (slot: SampleSlot, hex: string) => {
 		setState((prev) => (slot === 'fg' ? { ...prev, fg: hex } : { ...prev, bg: hex }));

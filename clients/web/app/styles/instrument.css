@@ -194,10 +194,25 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 /* Keep action buttons visually apart from the nav links */
 .nav .btn { margin-left: var(--sp-2); }
+
+/* App-bar variant: workflow chrome, one stable height at every breakpoint */
+.site-header__section {
+	font-weight: 600; font-size: 0.9375rem; color: var(--ink-muted);
+	padding-left: var(--sp-3); border-left: 1px solid var(--line);
+	white-space: nowrap;
+}
+.navlink--back {
+	display: inline-flex; align-items: center; gap: 0.4rem;
+	min-height: 44px;
+}
+
 @media (max-width: 640px) {
 	.nav { gap: 0.4rem; }
-	.nav a.navlink { display: none; }
+	.site-header:not(.site-header--app) .nav a.navlink { display: none; }
 	.site-header__bar { gap: 0.75rem; }
+	/* Touch targets: keep visuals compact, guarantee ~44px hit areas */
+	.nav a.navlink, .btn--sm { min-height: 44px; }
+	.tab { padding-block: 0.85rem; min-height: 44px; }
 }
 
 /* ----------------------------------------------------------------- button */
@@ -372,6 +387,13 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .site-footer__meta a { font-size: 0.875rem; color: var(--ink-muted); }
 .site-footer__meta a:hover { color: var(--signal-ink); }
+.site-footer--slim { margin-top: var(--sp-6); }
+.site-footer--slim .site-footer__meta { border-top: 0; }
+@media (max-width: 640px) {
+	.site-footer__inner { padding-block: 1.25rem; gap: var(--sp-4) var(--sp-5); }
+	.site-footer__cols { gap: var(--sp-4) var(--sp-6); }
+	.site-footer__meta { padding-block: var(--sp-3); }
+}
 
 /* ---------------------------------------------------------- delta marker */
 .delta {
@@ -391,6 +413,21 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	overflow-x: auto; white-space: pre-wrap; word-break: break-word;
 	color: var(--ink-strong);
 }
+
+/* Code surface with the copy action inside its top-right corner — evidence
+   values are content, not form fields; the action belongs to the surface. */
+.codebox { position: relative; }
+.codebox .code-well { padding-right: 4.5rem; }
+.codebox__copy {
+	position: absolute; top: 5px; right: 5px;
+	display: inline-flex; align-items: center; gap: 0.3rem;
+	font-family: var(--sans); font-size: 0.8125rem; font-weight: 600;
+	color: var(--ink-muted); background: var(--surface);
+	border: 1px solid var(--line); border-radius: var(--r-xs);
+	padding: 0.3rem 0.55rem; min-height: 32px;
+	transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.codebox__copy:hover { color: var(--ink-strong); border-color: var(--line-strong); }
 
 /* ----------------------------------------------------- reduced motion */
 @media (prefers-reduced-motion: reduce) {

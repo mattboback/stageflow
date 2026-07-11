@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Link, useParams, useSearchParams, type MetaFunction } from 'react-router';
+import { useParams, useSearchParams, type MetaFunction } from 'react-router';
 
 import { SiteHeader } from '../components/SiteHeader';
 import { Pill } from '../components/Pill';
@@ -106,14 +106,12 @@ export default function ScanReport() {
 
 	return (
 		<>
-			<SiteHeader />
+			<SiteHeader
+				app={{ backTo: `/scan/${id}`, backLabel: 'Scan status', section: 'Report' }}
+			/>
 
 			<main id="main" className="report">
 				<div className="wrap">
-					<Link to={`/scan/${id}`} className="report__back">
-						Back to scan status
-					</Link>
-
 					{displayReport ? (
 						<>
 							<ReportHeader report={displayReport} />

@@ -7,15 +7,6 @@
 	padding-inline: clamp(1.25rem, 2.5vw, 2.5rem);
 }
 
-.report__back {
-	display: inline-flex; align-items: center; gap: 0.45rem;
-	color: var(--ink-muted); font-size: 0.9375rem; font-weight: 500;
-	margin-bottom: var(--sp-3); text-decoration: none;
-	transition: color 0.12s;
-}
-.report__back:hover { color: var(--signal-ink); }
-.report__back::before { content: '←'; }
-
 /* ---- header bar: score + identity + three stats, one reading order ---- */
 .rhead {
 	display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-4) var(--sp-6);

@@ -130,7 +130,9 @@ export default function Scan() {
 
 	return (
 		<>
-			<SiteHeader />
+			<SiteHeader
+				app={{ backTo: '/playground', backLabel: 'New scan', section: 'Scan run' }}
+			/>
 
 			<main id="main" className="run">
 				<div className="wrap run__wrap">

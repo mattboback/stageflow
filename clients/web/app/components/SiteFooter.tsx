@@ -2,10 +2,22 @@ import { Link } from 'react-router';
 
 const GITHUB_URL = 'https://github.com/mattboback/stageflow';
 const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
-const CLI_REFERENCE_URL = `${GITHUB_URL}/tree/main/docs/reference/cli/stageflow`;
-const SELF_HOSTING_URL = `${GITHUB_URL}/blob/main/docs/operations/deployment.md`;
 
-export function SiteFooter() {
+/* slim: meta row only — used under active application workflows where the
+   sitemap is noise (scan progress, report). */
+export function SiteFooter({ slim = false }: { slim?: boolean }) {
+	const meta = (
+		<div className="wrap site-footer__meta">
+			<span>MIT licensed</span>
+			<span>Runs in your infrastructure — your data stays with you</span>
+			<a href={GITHUB_URL}>github.com/mattboback/stageflow</a>
+		</div>
+	);
+
+	if (slim) {
+		return <footer className="site-footer site-footer--slim">{meta}</footer>;
+	}
+
 	return (
 		<footer className="site-footer">
 			<div className="wrap site-footer__inner">
@@ -23,12 +35,7 @@ export function SiteFooter() {
 						<span className="label">Product</span>
 						<Link to="/playground">Configure scan</Link>
 						<Link to="/#scanners">Scanners</Link>
-					</nav>
-					<nav aria-label="Resources" className="site-footer__col">
-						<span className="label">Resources</span>
 						<a href={DOCS_URL}>Documentation</a>
-						<a href={CLI_REFERENCE_URL}>CLI reference</a>
-						<a href={SELF_HOSTING_URL}>Self-hosting</a>
 					</nav>
 					<nav aria-label="Project" className="site-footer__col">
 						<span className="label">Project</span>
@@ -38,11 +45,7 @@ export function SiteFooter() {
 					</nav>
 				</div>
 			</div>
-			<div className="wrap site-footer__meta">
-				<span>MIT licensed</span>
-				<span>Runs in your infrastructure — your data stays with you</span>
-				<a href={GITHUB_URL}>github.com/mattboback/stageflow</a>
-			</div>
+			{meta}
 		</footer>
 	);
 }
