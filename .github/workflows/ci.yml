@@ -126,9 +126,7 @@ jobs:
           just-version: ${{ env.JUST_VERSION }}
 
       - name: Shell regression tests
-        run: |
-          bash devtools/scripts/tests/cli-install.test.sh
-          bash devtools/scripts/tests/dev-onboarding.test.sh
+        run: just shell-tests
 
       - name: Go vulncheck
         run: bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
