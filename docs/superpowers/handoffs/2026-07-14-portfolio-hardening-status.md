@@ -139,9 +139,12 @@ Expected: both commands exit 0. If local Podman prevents the golden test, requir
 gh repo edit --remove-topic sveltekit --add-topic react-router --add-topic typescript
 ```
 
-Update the `Protect main` ruleset to require the existing CI jobs plus `Golden
-Baseline Promote Diff` before pull-request merges. Preserve deletion protection,
-non-fast-forward protection, and the pull-request requirement.
+Update the `Protect main` ruleset to require all eleven existing CI jobs before
+pull-request merges. Preserve deletion protection, non-fast-forward protection,
+and the pull-request requirement. Golden Regression remains a separate manual
+merge gate: GitHub attaches `workflow_run` checks to the default-branch SHA, not
+the triggering PR SHA, so its check context cannot safely be required by the
+ruleset even though the workflow checks out and tests the triggering SHA.
 
 ### 3. Push and merge
 
