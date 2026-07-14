@@ -87,13 +87,13 @@ export function isManualReviewIssue(issue: IssueDetail): boolean {
 export function getIssueKindLabel(kind: IssueKind): string {
 	switch (kind) {
 		case 'element':
-			return 'Element issue';
+			return 'Element finding';
 		case 'url':
-			return 'URL issue';
+			return 'URL finding';
 		case 'manual':
 			return 'Manual review';
 		case 'page':
-			return 'Page issue';
+			return 'Page finding';
 		case 'scanner':
 			return 'Scanner diagnostic';
 	}

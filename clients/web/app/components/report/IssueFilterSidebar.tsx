@@ -50,7 +50,7 @@ export function IssueFilterSidebar({
 		searchQuery.trim().length > 0;
 
 	return (
-		<aside className="iview__panel isidebar" aria-label="Issue filters">
+		<aside className="iview__panel isidebar" aria-label="Finding filters">
 			<div className="isidebar__group">
 				<h3>Search</h3>
 				<input
@@ -59,7 +59,7 @@ export function IssueFilterSidebar({
 					placeholder="Title · rule · page…"
 					value={searchQuery}
 					onChange={(e) => onSearchChange(e.target.value)}
-					aria-label="Search issues"
+					aria-label="Search findings"
 				/>
 			</div>
 

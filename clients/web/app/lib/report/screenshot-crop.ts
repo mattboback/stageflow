@@ -16,12 +16,18 @@ interface CropOptions {
 	minWidth?: number;
 	minHeight?: number;
 	padding?: number;
+	maxAspect?: number;
 }
 
 function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
 }
 
+/*
+ * Crop the page-overview screenshot tightly around one element. Context
+ * scales with the element instead of a fixed window, so a 12px icon isn't
+ * drowned in half a page and a full-width banner still fits.
+ */
 export function getCroppedViewBox(
 	pageWidth: number,
 	pageHeight: number,
@@ -37,15 +43,25 @@ export function getCroppedViewBox(
 		return null;
 	}
 
-	const minWidth = options.minWidth ?? 520;
-	const minHeight = options.minHeight ?? 300;
-	const padding = options.padding ?? 80;
+	const padding =
+		options.padding ?? clamp(0.5 * Math.max(element.width, element.height), 16, 64);
+	const minWidth = options.minWidth ?? 200;
+	const minHeight = options.minHeight ?? 120;
+	const maxAspect = options.maxAspect ?? 3;
 
-	const desiredWidth = Math.max(minWidth, element.width + padding * 2);
-	const desiredHeight = Math.max(minHeight, element.height + padding * 2);
+	let width = Math.max(minWidth, element.width + padding * 2);
+	let height = Math.max(minHeight, element.height + padding * 2);
 
-	const width = Math.min(pageWidth, desiredWidth);
-	const height = Math.min(pageHeight, desiredHeight);
+	// Expand the short axis so extreme strips (skip links, full-width bars)
+	// don't produce an unreadably thin crop.
+	if (width / height > maxAspect) {
+		height = width / maxAspect;
+	} else if (height / width > maxAspect) {
+		width = height / maxAspect;
+	}
+
+	width = Math.min(pageWidth, width);
+	height = Math.min(pageHeight, height);
 
 	const centerX = element.x + element.width / 2;
 	const centerY = element.y + element.height / 2;
