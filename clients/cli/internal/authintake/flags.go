@@ -16,6 +16,7 @@ func LoadFromFlags(authStatePath, authRecipePath string) (*apiclient.JobAuthInpu
 		input, err := LoadStateFile(authStatePath)
 		return input, err == nil, err
 	}
+
 	if authRecipePath != "" {
 		input, err := LoadRecipeFile(authRecipePath)
 		return input, err == nil, err

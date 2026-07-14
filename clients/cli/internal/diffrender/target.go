@@ -8,10 +8,12 @@ import (
 // IsRemoteTarget reports whether a diff target should be scanned live.
 func IsRemoteTarget(target string) bool {
 	trimmed := strings.TrimSpace(target)
+
 	lower := strings.ToLower(trimmed)
 	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
 		return true
 	}
+
 	if isLocalDiffTarget(trimmed, lower) {
 		return false
 	}
@@ -35,6 +37,7 @@ func hostFromTarget(trimmed string) string {
 	if idx := strings.IndexAny(host, `/\`); idx >= 0 {
 		host = host[:idx]
 	}
+
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}

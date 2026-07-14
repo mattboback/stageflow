@@ -24,6 +24,7 @@ func WaitForReady(
 	}
 
 	timeout := 60 * time.Second
+
 	if d, ok, err := ConfigDuration(cfg.Timeout); err != nil {
 		return fmt.Errorf("dev.ready.timeout: %w", err)
 	} else if ok {
@@ -31,6 +32,7 @@ func WaitForReady(
 	}
 
 	interval := 500 * time.Millisecond
+
 	if d, ok, err := ConfigDuration(cfg.Interval); err != nil {
 		return fmt.Errorf("dev.ready.interval: %w", err)
 	} else if ok {
@@ -59,10 +61,12 @@ func WaitForReady(
 	}
 
 	fmt.Fprintf(stderr, "[dev] waiting for readiness: %s\n", readyURL)
+
 	ready, err := checkOnce()
 	if err != nil {
 		return err
 	}
+
 	if ready {
 		return nil
 	}
@@ -78,6 +82,7 @@ func WaitForReady(
 			if err != nil {
 				return err
 			}
+
 			if ready {
 				return nil
 			}

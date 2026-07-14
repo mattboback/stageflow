@@ -36,6 +36,7 @@ func TestFetchProvenanceUsesInjectedHTTPClient(t *testing.T) {
 	if len(full) != 1 {
 		t.Fatalf("full provenance length = %d", len(full))
 	}
+
 	if len(compressed) != 1 || compressed[0].URL != "https://example.com" || compressed[0].Action != "click" {
 		t.Fatalf("compressed provenance = %#v", compressed)
 	}

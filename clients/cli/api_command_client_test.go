@@ -18,6 +18,7 @@ func TestAPICommandClient_TimesOutHungScannersResponse(t *testing.T) {
 	client := newAPICommandClientWithTimeout(&rootOptions{apiURL: server.URL}, 20*time.Millisecond)
 
 	var response any
+
 	err := client.GetJSON(t.Context(), "/api/v1/scanners", &response)
 	elapsed := time.Since(started)
 

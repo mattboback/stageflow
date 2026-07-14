@@ -74,6 +74,7 @@ func BuildReportEnvelope(
 	if !status.CreatedAt.IsZero() {
 		job.CreatedAt = status.CreatedAt.UTC().Format(timeFormatRFC3339)
 	}
+
 	if !status.UpdatedAt.IsZero() {
 		job.UpdatedAt = status.UpdatedAt.UTC().Format(timeFormatRFC3339)
 	}
@@ -135,9 +136,11 @@ func collectReportURLs(doc report.UnifiedReportV2) []string {
 		if page.Url == "" {
 			continue
 		}
+
 		if _, ok := seen[page.Url]; ok {
 			continue
 		}
+
 		seen[page.Url] = struct{}{}
 		urls = append(urls, page.Url)
 	}

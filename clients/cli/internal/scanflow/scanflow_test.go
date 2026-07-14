@@ -18,6 +18,7 @@ func TestSubmitURLsAndWait(t *testing.T) {
 	t.Parallel()
 
 	const jobID = "job-123"
+
 	var submitted apiclient.SubmitJobRequest
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,6 +27,7 @@ func TestSubmitURLsAndWait(t *testing.T) {
 			if err := json.NewDecoder(r.Body).Decode(&submitted); err != nil {
 				t.Errorf("decode submission: %v", err)
 			}
+
 			writeJSON(t, w, apiclient.SubmitJobResponse{JobID: jobID})
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
 			writeJSON(t, w, apiclient.JobStatus{ID: jobID, State: apiclient.JobStateDone})
@@ -38,6 +40,7 @@ func TestSubmitURLsAndWait(t *testing.T) {
 	defer server.Close()
 
 	var progress bytes.Buffer
+
 	request := apiclient.SubmitJobRequest{URLs: []string{"https://example.com"}, Modules: []string{"axe"}}
 	result, err := SubmitURLsAndWait(
 		context.Background(),
@@ -99,7 +102,10 @@ func TestWaitForReportRejectsFailedTerminalState(t *testing.T) {
 func TestRequireJobID(t *testing.T) {
 	t.Parallel()
 
-	if _, err := RequireJobID(apiclient.SubmitJobResponse{}); err == nil || err.Error() != "missing job_id in response" {
+	if _, err := RequireJobID(
+		apiclient.SubmitJobResponse{},
+	); err == nil ||
+		err.Error() != "missing job_id in response" {
 		t.Fatalf("error = %v", err)
 	}
 }
@@ -107,6 +113,7 @@ func TestRequireJobID(t *testing.T) {
 func writeJSON(t *testing.T, w http.ResponseWriter, value any) {
 	t.Helper()
 	w.Header().Set("Content-Type", "application/json")
+
 	if err := json.NewEncoder(w).Encode(value); err != nil {
 		t.Errorf("encode response: %v", err)
 	}

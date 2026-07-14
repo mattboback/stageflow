@@ -12,6 +12,7 @@ import (
 
 func (c *Client) FetchJobStatus(ctx context.Context, jobID string) (JobStatus, error) {
 	var status JobStatus
+
 	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
 	if err := c.GetJSON(ctx, apiPath, &status); err != nil {
 		return JobStatus{}, err

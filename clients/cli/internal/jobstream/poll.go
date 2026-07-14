@@ -17,6 +17,7 @@ func pollJobState(ctx context.Context, c *apiclient.Client, jobID string, out io
 	defer ticker.Stop()
 
 	state := newStreamState()
+
 	isDone, err := checkPolledJobStatus(ctx, c, apiPath, out, state)
 	if err != nil || isDone {
 		return err

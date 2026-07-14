@@ -74,6 +74,7 @@ func WriteResult(
 	}
 
 	severityFailed := false
+
 	err := render.UnifiedReport(opts.Stdout, opts.APIBaseURL, status, doc, opts.Report)
 	if err != nil {
 		var exitErr exitcode.Error
@@ -88,6 +89,7 @@ func WriteResult(
 	if err != nil {
 		return err
 	}
+
 	if severityFailed || regressed {
 		return exitcode.Error{Code: 1}
 	}
@@ -108,6 +110,7 @@ func writeJSON(
 	}
 
 	filteredDoc := doc
+
 	filteredDoc.Issues = selectedIssues
 	if opts.Report.SummaryOnly {
 		filteredDoc.Issues = nil
@@ -123,30 +126,32 @@ func writeJSON(
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	diffState, err := resolveDiffState(ctx, client, opts.Slug, opts.JobID)
+	state, err := resolveDiffState(ctx, client, opts.Slug, opts.JobID)
 	if err != nil {
 		return err
 	}
 
 	payload := Envelope{
 		Schema:  "stageflow-cli/project-scan@v1",
-		Project: ProjectMeta{Slug: opts.Slug, Baseline: diffState.baseline},
+		Project: ProjectMeta{Slug: opts.Slug, Baseline: state.baseline},
 		Decision: Decision{
-			Passed:         !severityFailed && !diffState.regressed,
+			Passed:         !severityFailed && !state.regressed,
 			SeverityFailed: severityFailed,
-			Regressed:      diffState.regressed,
+			Regressed:      state.regressed,
 		},
 		Report: reportPayload,
-		Diff:   diffState.diff,
+		Diff:   state.diff,
 	}
 
 	encoder := json.NewEncoder(opts.Stdout)
 	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(payload); err != nil {
-		return exitcode.Error{Code: 2, Err: err}
+
+	if encodeErr := encoder.Encode(payload); encodeErr != nil {
+		return exitcode.Error{Code: 2, Err: encodeErr}
 	}
-	if severityFailed || diffState.regressed {
+
+	if severityFailed || state.regressed {
 		return exitcode.Error{Code: 1}
 	}
 
@@ -160,11 +165,14 @@ func writeDiff(ctx context.Context, client *apiclient.Client, opts Options) (boo
 	}
 
 	fmt.Fprintln(opts.Stdout)
+
 	if state.diff == nil {
 		fmt.Fprintln(opts.Stderr, state.baseline.Message)
+
 		if state.baseline.PromoteCommand != "" {
 			fmt.Fprintln(opts.Stderr, state.baseline.PromoteCommand)
 		}
+
 		return false, nil
 	}
 
@@ -172,8 +180,9 @@ func writeDiff(ctx context.Context, client *apiclient.Client, opts Options) (boo
 	if err != nil {
 		return false, exitcode.Error{Code: 2, Err: err}
 	}
-	if err := diffrender.Render(opts.Stdout, *state.diff, format); err != nil {
-		return false, exitcode.Error{Code: 2, Err: err}
+
+	if renderErr := diffrender.Render(opts.Stdout, *state.diff, format); renderErr != nil {
+		return false, exitcode.Error{Code: 2, Err: renderErr}
 	}
 
 	return state.regressed, nil
@@ -187,6 +196,7 @@ func resolveDiffState(
 	diffResult, err := client.FetchJobDiff(ctx, jobID)
 	if err == nil {
 		d := diffrender.FromResult(diffResult, "", "")
+
 		return diffState{
 			baseline:  Baseline{Status: BaselineStatusAvailable},
 			diff:      &d,

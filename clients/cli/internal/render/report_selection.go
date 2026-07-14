@@ -16,9 +16,11 @@ func ValidatedIssueSelection(
 	if _, err := normalizeSeverities(opts.Severities); err != nil {
 		return nil, IssueFilters{}, err
 	}
+
 	if _, err := normalizeCategories(opts.Categories); err != nil {
 		return nil, IssueFilters{}, err
 	}
+
 	if opts.FailSeverity != "" {
 		if _, err := normalizeSeverities([]string{opts.FailSeverity}); err != nil {
 			return nil, IssueFilters{}, err
@@ -29,6 +31,7 @@ func ValidatedIssueSelection(
 	if len(opts.Severities) > 0 {
 		filtered = filterBySeverity(filtered, opts.Severities)
 	}
+
 	if len(opts.Categories) > 0 {
 		filtered = filterByCategory(filtered, opts.Categories)
 	}
@@ -62,15 +65,19 @@ func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDet
 		if as, bs := severityRank(a.Severity), severityRank(b.Severity); as != bs {
 			return bs - as
 		}
+
 		if c := strings.Compare(a.Scanner, b.Scanner); c != 0 {
 			return c
 		}
+
 		if c := strings.Compare(a.RuleId, b.RuleId); c != 0 {
 			return c
 		}
+
 		if c := strings.Compare(a.PageUrl, b.PageUrl); c != 0 {
 			return c
 		}
+
 		return strings.Compare(a.Id, b.Id)
 	})
 
@@ -80,6 +87,7 @@ func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDet
 	}
 
 	selected := sorted[:limit]
+
 	return selected, IssueFilters{
 		MaxIssues:      maxIssues,
 		IssuesReturned: len(selected),

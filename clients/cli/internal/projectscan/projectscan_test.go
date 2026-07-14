@@ -27,6 +27,7 @@ func TestInterpretDiffErrorMissingBaseline(t *testing.T) {
 	if !matched {
 		t.Fatal("expected missing-baseline error to match")
 	}
+
 	testsupport.RequireEqual(t, state.baseline.Status, BaselineStatusMissing, "baseline status")
 	testsupport.RequireEqual(
 		t,
@@ -47,6 +48,7 @@ func TestInterpretDiffErrorCurrentBaseline(t *testing.T) {
 	if !matched {
 		t.Fatal("expected current-baseline error to match")
 	}
+
 	testsupport.RequireEqual(t, state.baseline.Status, BaselineStatusCurrent, "baseline status")
 	testsupport.RequireEqual(
 		t,
@@ -60,11 +62,14 @@ func TestWriteResultJSONCombinesReportDiffAndDecision(t *testing.T) {
 	t.Parallel()
 
 	scoreDelta := -10
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI != "/api/v1/jobs/job%2F123/diff" {
 			t.Errorf("RequestURI = %q", r.RequestURI)
 		}
+
 		w.Header().Set("Content-Type", "application/json")
+
 		if err := json.NewEncoder(w).Encode(diff.Result{
 			Schema:  "stageflow/diff@v1",
 			Delta:   diff.Delta{ScoreDelta: &scoreDelta, NewIssues: 1},
@@ -78,6 +83,7 @@ func TestWriteResultJSONCombinesReportDiffAndDecision(t *testing.T) {
 
 	reportDoc := testsupport.SampleReport("job/123")
 	status := apiclient.JobStatus{ID: "job/123", State: apiclient.JobStateDone}
+
 	var stdout bytes.Buffer
 
 	err := WriteResult(
@@ -95,6 +101,7 @@ func TestWriteResultJSONCombinesReportDiffAndDecision(t *testing.T) {
 			Stderr:     &bytes.Buffer{},
 		},
 	)
+
 	var exitErr exitcode.Error
 	if !errors.As(err, &exitErr) || exitErr.Code != 1 {
 		t.Fatalf("error = %v", err)
@@ -106,6 +113,7 @@ func TestWriteResultJSONCombinesReportDiffAndDecision(t *testing.T) {
 	testsupport.RequireEqual(t, payload.Project.Baseline.Status, BaselineStatusAvailable, "baseline status")
 	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "regressed")
 	testsupport.RequireEqual(t, payload.Decision.Passed, false, "passed")
+
 	if payload.Diff == nil {
 		t.Fatal("expected diff")
 	}
