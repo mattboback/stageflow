@@ -108,6 +108,12 @@ jobs:
       - name: Generate schema contracts
         run: ./devtools/scripts/generate-contracts.sh
 
+      - name: Verify TypeScript contract packages
+        run: |
+          for dir in libs/contracts/report libs/contracts/scanner-manifest; do
+            (cd "$dir" && bun install --frozen-lockfile && bun run build && bun run typecheck)
+          done
+
       - name: Go build
         run: bash devtools/scripts/go/run-in-work-dirs.sh Building go build ./...
 

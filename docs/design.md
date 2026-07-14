@@ -61,25 +61,25 @@ components:
   button-primary:
     backgroundColor: "{colors.signal-strong}"
     textColor: "#ffffff"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 1.1rem"
   button-primary-hover:
     backgroundColor: "{colors.signal-press}"
   button-ghost:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink-strong}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 1.1rem"
   button-sm:
     padding: "0.5rem 0.8rem"
   input:
     backgroundColor: "{colors.surface-sunk}"
     textColor: "{colors.ink-strong}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 0.85rem"
   panel:
     backgroundColor: "{colors.surface}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.md}"
   pill:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink-muted}"

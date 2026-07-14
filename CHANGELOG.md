@@ -44,9 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Internal QA helpers that weren't wired into any `just` or CI target: the
   mocked-API report-preview harness (`devtools/qa/report-preview.mjs`) and the
   local axe spot-check script (`devtools/scripts/a11y/test-axe-local.js`)
-- The `just deploy` recipe: hosted-demo deployment is managed outside this
-  repository, and the recipe was only a guarded delegate to that external
-  control plane
 
 ## [0.3.0] - 2026-07-03
 

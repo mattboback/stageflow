@@ -79,6 +79,9 @@ Commit: `257ff57 test: guard employer-facing product claims`
   Review/finding terminology.
 - No package version bump is needed; the release workflow stamps the CLI from
   the `clients/cli/v0.4.0` tag.
+- Whole-branch review corrections removed an inaccurate `just deploy` release
+  note and obsolete report screenshot, added CI verification for both
+  TypeScript 7 contract packages, and aligned documented radius usage with CSS.
 
 ## Current Repository State
 

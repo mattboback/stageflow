@@ -69,8 +69,6 @@ Review for page screenshots, overlays, and human decisions; Findings for
 searchable issues grouped by scanner and rule; and Artifacts for owned HTML and
 JSON report downloads.
 
-![StageFlow report Review workspace](docs/images/report-overview.png)
-
 Every flagged element is overlaid directly on a full-page screenshot (see the
 GIF above) — click a bounding box in Review to jump straight to that finding's
 fix guidance, WCAG references, and evidence. Use Findings for full-list triage
