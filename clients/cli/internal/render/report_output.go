@@ -7,12 +7,10 @@ import (
 	"io"
 	"net/url"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
-	"github.com/mattboback/stageflow/clients/cli/internal/buildinfo"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
@@ -26,52 +24,6 @@ type Options struct {
 	FailSeverity   string
 	SummaryOnly    bool
 	GroupBy        string
-}
-
-const issueSortOrder = "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc"
-
-type CLIMeta struct {
-	Version string `json:"version"`
-	Commit  string `json:"commit,omitempty"`
-	Date    string `json:"date,omitempty"`
-}
-
-type APIMeta struct {
-	BaseURL string `json:"base_url"`
-}
-
-type JobMeta struct {
-	ID        string `json:"id"`
-	State     string `json:"state"`
-	Error     string `json:"error,omitempty"`
-	CreatedAt string `json:"created_at,omitempty"`
-	UpdatedAt string `json:"updated_at,omitempty"`
-}
-
-type ReportLinks struct {
-	Job     string `json:"job"`
-	Results string `json:"results"`
-}
-
-type IssueFilters struct {
-	MaxIssues      int      `json:"max_issues"`
-	IssuesReturned int      `json:"issues_returned"`
-	IssuesTotal    int      `json:"issues_total"`
-	Truncated      bool     `json:"truncated"`
-	Sort           string   `json:"sort"`
-	Severities     []string `json:"severities,omitempty"`
-	Categories     []string `json:"categories,omitempty"`
-}
-
-type ReportEnvelope struct {
-	Schema  string                 `json:"schema"`
-	CLI     CLIMeta                `json:"cli"`
-	API     APIMeta                `json:"api"`
-	Job     JobMeta                `json:"job"`
-	Links   ReportLinks            `json:"links"`
-	URLs    []string               `json:"urls,omitempty"`
-	Filters IssueFilters           `json:"filters"`
-	Report  report.UnifiedReportV2 `json:"report"`
 }
 
 func FetchJobStatus(ctx context.Context, client *apiclient.Client, jobID string) (apiclient.JobStatus, error) {
@@ -144,40 +96,6 @@ func UnifiedReport(
 	return nil
 }
 
-func ValidatedIssueSelection(
-	issues []report.IssueDetail,
-	opts Options,
-) ([]report.IssueDetail, IssueFilters, error) {
-	if _, err := normalizeSeverities(opts.Severities); err != nil {
-		return nil, IssueFilters{}, err
-	}
-
-	if _, err := normalizeCategories(opts.Categories); err != nil {
-		return nil, IssueFilters{}, err
-	}
-
-	if opts.FailSeverity != "" {
-		if _, err := normalizeSeverities([]string{opts.FailSeverity}); err != nil {
-			return nil, IssueFilters{}, err
-		}
-	}
-
-	filtered := issues
-	if len(opts.Severities) > 0 {
-		filtered = filterBySeverity(filtered, opts.Severities)
-	}
-
-	if len(opts.Categories) > 0 {
-		filtered = filterByCategory(filtered, opts.Categories)
-	}
-
-	selectedIssues, filters := selectIssues(filtered, opts.MaxIssues)
-	filters.Severities = opts.Severities
-	filters.Categories = opts.Categories
-
-	return selectedIssues, filters, nil
-}
-
 func writeRenderedReport(
 	out io.Writer,
 	apiBaseURL string,
@@ -224,149 +142,6 @@ func writeJSONReport(
 	encoder.SetEscapeHTML(false)
 
 	return encoder.Encode(payload)
-}
-
-func ShouldFailForSeverity(issues []report.IssueDetail, threshold string) (bool, error) {
-	if threshold == "" {
-		return false, nil
-	}
-
-	return HasIssuesAtOrAbove(issues, threshold)
-}
-
-func BuildReportEnvelope(
-	apiBaseURL string,
-	status apiclient.JobStatus,
-	doc report.UnifiedReportV2,
-	filters IssueFilters,
-) (ReportEnvelope, error) {
-	jobLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(status.ID)))
-	if err != nil {
-		return ReportEnvelope{}, err
-	}
-
-	resultsLink, err := buildAPILink(apiBaseURL, fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(status.ID)))
-	if err != nil {
-		return ReportEnvelope{}, err
-	}
-
-	job := JobMeta{
-		ID:    status.ID,
-		State: status.State,
-		Error: status.Error,
-	}
-
-	if !status.CreatedAt.IsZero() {
-		job.CreatedAt = status.CreatedAt.UTC().Format(timeFormatRFC3339)
-	}
-
-	if !status.UpdatedAt.IsZero() {
-		job.UpdatedAt = status.UpdatedAt.UTC().Format(timeFormatRFC3339)
-	}
-
-	payload := ReportEnvelope{
-		Schema: "stageflow-cli/report@v1",
-		CLI:    currentCLIMeta(),
-		API: APIMeta{
-			BaseURL: apiBaseURL,
-		},
-		Job: job,
-		Links: ReportLinks{
-			Job:     jobLink,
-			Results: resultsLink,
-		},
-		URLs:    collectReportURLs(doc),
-		Filters: filters,
-		Report:  doc,
-	}
-
-	return payload, nil
-}
-
-const timeFormatRFC3339 = "2006-01-02T15:04:05Z07:00"
-
-func currentCLIMeta() CLIMeta {
-	v := strings.TrimSpace(buildinfo.Version)
-	if v == "" {
-		v = "dev"
-	}
-
-	c := strings.TrimSpace(buildinfo.Commit)
-	d := strings.TrimSpace(buildinfo.Date)
-
-	return CLIMeta{
-		Version: v,
-		Commit:  c,
-		Date:    d,
-	}
-}
-
-func buildAPILink(baseURL, apiPath string) (string, error) {
-	base, err := url.Parse(strings.TrimSpace(baseURL))
-	if err != nil {
-		return "", fmt.Errorf("invalid API URL %q: %w", baseURL, err)
-	}
-
-	ref, err := url.Parse(apiPath)
-	if err != nil {
-		return "", fmt.Errorf("invalid API path %q: %w", apiPath, err)
-	}
-
-	return base.ResolveReference(ref).String(), nil
-}
-
-func selectIssues(issues []report.IssueDetail, maxIssues int) ([]report.IssueDetail, IssueFilters) {
-	total := len(issues)
-	if total == 0 {
-		return []report.IssueDetail{}, IssueFilters{
-			MaxIssues:      maxIssues,
-			IssuesReturned: 0,
-			IssuesTotal:    0,
-			Truncated:      false,
-			Sort:           issueSortOrder,
-		}
-	}
-
-	sorted := make([]report.IssueDetail, 0, total)
-	sorted = append(sorted, issues...)
-
-	slices.SortFunc(sorted, func(a, b report.IssueDetail) int {
-		as := severityRank(a.Severity)
-		bs := severityRank(b.Severity)
-
-		if as != bs {
-			return bs - as
-		}
-
-		if c := strings.Compare(a.Scanner, b.Scanner); c != 0 {
-			return c
-		}
-
-		if c := strings.Compare(a.RuleId, b.RuleId); c != 0 {
-			return c
-		}
-
-		if c := strings.Compare(a.PageUrl, b.PageUrl); c != 0 {
-			return c
-		}
-
-		return strings.Compare(a.Id, b.Id)
-	})
-
-	limit := maxIssues
-	if limit <= 0 || limit > total {
-		limit = total
-	}
-
-	selected := sorted[:limit]
-
-	return selected, IssueFilters{
-		MaxIssues:      maxIssues,
-		IssuesReturned: len(selected),
-		IssuesTotal:    total,
-		Truncated:      len(selected) != total,
-		Sort:           issueSortOrder,
-	}
 }
 
 func writeSummaryReport(
@@ -617,31 +392,6 @@ func formatOccurrenceLine(index int, occ report.IssueOccurrence) string {
 	}
 
 	return line
-}
-
-func collectReportURLs(doc report.UnifiedReportV2) []string {
-	seen := make(map[string]struct{}, len(doc.Pages)+1)
-	urls := make([]string, 0, len(doc.Pages)+1)
-
-	if doc.Meta.BaseUrl != nil && *doc.Meta.BaseUrl != "" {
-		seen[*doc.Meta.BaseUrl] = struct{}{}
-		urls = append(urls, *doc.Meta.BaseUrl)
-	}
-
-	for _, page := range doc.Pages {
-		if page.Url == "" {
-			continue
-		}
-
-		if _, ok := seen[page.Url]; ok {
-			continue
-		}
-
-		seen[page.Url] = struct{}{}
-		urls = append(urls, page.Url)
-	}
-
-	return urls
 }
 
 func formatDuration(doc report.UnifiedReportV2) string {
