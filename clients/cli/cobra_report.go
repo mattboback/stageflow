@@ -27,7 +27,7 @@ func newReportCmd(root *rootOptions) *cobra.Command {
 			client := newAPICommandClient(root)
 			jobID := args[0]
 
-			status, err := render.FetchJobStatus(cmd.Context(), client, jobID)
+			status, err := client.FetchJobStatus(cmd.Context(), jobID)
 			if err != nil {
 				return exitcode.Error{Code: 2, Err: fmt.Errorf("fetch job status: %w", err)}
 			}
@@ -40,7 +40,7 @@ func newReportCmd(root *rootOptions) *cobra.Command {
 				return exitcode.Error{Code: 2, Err: fmt.Errorf("job is not completed yet: %s", status.State)}
 			}
 
-			doc, err := render.FetchReport(cmd.Context(), client, jobID)
+			doc, err := client.FetchReport(cmd.Context(), jobID)
 			if err != nil {
 				return exitcode.Error{Code: 2, Err: fmt.Errorf("fetch report: %w", err)}
 			}

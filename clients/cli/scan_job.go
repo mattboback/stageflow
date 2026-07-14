@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -12,9 +11,8 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
-	"github.com/mattboback/stageflow/clients/cli/internal/jobstream"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
-	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 )
 
 const (
@@ -52,42 +50,6 @@ type projectDiffState struct {
 	baseline  projectScanBaseline
 	diff      *diffEnvelope
 	regressed bool
-}
-
-func waitForCompletedJobReport(
-	ctx context.Context,
-	client *apiclient.Client,
-	jobID string,
-	progressOut io.Writer,
-	noStream bool,
-) (apiclient.JobStatus, report.UnifiedReportV2, error) {
-	err := jobstream.WaitJobState(ctx, client, jobID, progressOut, noStream)
-	if err != nil {
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("wait for completion: %w", err)
-	}
-
-	status, err := render.FetchJobStatus(ctx, client, jobID)
-	if err != nil {
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch job status: %w", err)
-	}
-
-	if status.State != apiclient.JobStateDone {
-		if status.State == apiclient.JobStateFailed {
-			return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("job failed: %s", status.Error)
-		}
-
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf(
-			"job finished with non-DONE state: %s",
-			status.State,
-		)
-	}
-
-	doc, err := render.FetchReport(ctx, client, jobID)
-	if err != nil {
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf("fetch report: %w", err)
-	}
-
-	return status, doc, nil
 }
 
 func resolveProjectDiffState(
@@ -139,57 +101,6 @@ func interpretProjectDiffError(slug, jobID string, err error) (projectDiffState,
 	}
 }
 
-func runScanJob(
-	ctx context.Context,
-	client *apiclient.Client,
-	req apiclient.SubmitJobRequest,
-	timeout time.Duration,
-	progressOut io.Writer,
-	noStream bool,
-) (apiclient.JobStatus, report.UnifiedReportV2, error) {
-	opCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	var resp apiclient.SubmitJobResponse
-
-	if err := client.PostJSON(opCtx, "/api/v1/jobs/urls", req, &resp); err != nil {
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, fmt.Errorf(
-			"submit job: %w",
-			enhanceSubmitJobError(err, req),
-		)
-	}
-
-	jobID := resp.JobID
-	if jobID == "" {
-		return apiclient.JobStatus{}, report.UnifiedReportV2{}, errors.New("submit job: missing job_id in response")
-	}
-
-	fmt.Fprintf(progressOut, "Job submitted: %s\nWaiting for completion...\n", jobID)
-
-	return waitForCompletedJobReport(opCtx, client, jobID, progressOut, noStream)
-}
-
-func enhanceSubmitJobError(err error, req apiclient.SubmitJobRequest) error {
-	msg := strings.ToLower(err.Error())
-	if !strings.Contains(msg, "allow_private_targets") &&
-		!strings.Contains(msg, "disallowed address") &&
-		!strings.Contains(msg, "disallowed") {
-		return err
-	}
-
-	if req.AllowPrivateTargets {
-		return fmt.Errorf(
-			"%w; this API instance may not permit private target scans. For local development, run `just dev up local` and `just dev init local`",
-			err,
-		)
-	}
-
-	return fmt.Errorf(
-		"%w; local/private targets require allow_private_targets. Re-run with --allow-private-targets or use a localhost/private URL so the CLI can auto-enable it",
-		err,
-	)
-}
-
 func runRemoteProjectScan(
 	cmd *cobra.Command,
 	root *rootOptions,
@@ -208,14 +119,19 @@ func runRemoteProjectScan(
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
 	}
 
-	jobID := resp.JobID
-	if jobID == "" {
-		return exitcode.Error{Code: 2, Err: errors.New("submit project scan: missing job_id in response")}
+	jobID, err := scanflow.RequireJobID(resp)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
 	}
 
 	fmt.Fprintf(cmd.ErrOrStderr(), "Project scan submitted: %s (job %s)\nWaiting for completion...\n", slug, jobID)
 
-	status, doc, err := waitForCompletedJobReport(opCtx, client, jobID, cmd.ErrOrStderr(), noStream)
+	result, err := scanflow.WaitForReport(
+		opCtx,
+		client,
+		jobID,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: noStream},
+	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
@@ -226,12 +142,16 @@ func runRemoteProjectScan(
 	}
 
 	if format == render.FormatJSON {
-		return runRemoteProjectScanJSON(cmd, root.apiURL, slug, status, doc, client, jobID, reportOpts)
+		return runRemoteProjectScanJSON(
+			cmd, root.apiURL, slug, result.Status, result.Report, client, jobID, reportOpts,
+		)
 	}
 
 	severityFailed := false
 
-	err = render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.RenderOptions(format))
+	err = render.UnifiedReport(
+		cmd.OutOrStdout(), root.apiURL, result.Status, result.Report, reportOpts.RenderOptions(format),
+	)
 	if err != nil {
 		var exitErr exitcode.Error
 		if errors.As(err, &exitErr) && exitErr.Code == 1 {

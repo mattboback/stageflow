@@ -13,6 +13,7 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/staticsite"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
@@ -132,19 +133,18 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 
 	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
-	status, doc, err := runScanJob(
+	result, err := scanflow.SubmitURLsAndWait(
 		cmd.Context(),
 		client,
 		req,
 		opts.timeout,
-		cmd.ErrOrStderr(),
-		opts.noStream,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: opts.noStream},
 	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	return renderScanReport(cmd, root, opts, status, doc)
+	return renderScanReport(cmd, root, opts, result.Status, result.Report)
 }
 
 func renderScanReport(
@@ -202,18 +202,24 @@ func runStaticScan(cmd *cobra.Command, root *rootOptions, opts scanCommandOption
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit zip job: %w", err)}
 	}
 
-	if resp.JobID == "" {
-		return exitcode.Error{Code: 2, Err: errors.New("submit zip job: missing job_id in response")}
+	jobID, err := scanflow.RequireJobID(resp)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit zip job: %w", err)}
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "Uploaded %s\nJob submitted: %s\nWaiting for completion...\n", path, resp.JobID)
+	fmt.Fprintf(cmd.ErrOrStderr(), "Uploaded %s\nJob submitted: %s\nWaiting for completion...\n", path, jobID)
 
-	status, doc, err := waitForCompletedJobReport(opCtx, client, resp.JobID, cmd.ErrOrStderr(), opts.noStream)
+	result, err := scanflow.WaitForReport(
+		opCtx,
+		client,
+		jobID,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: opts.noStream},
+	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	return renderScanReport(cmd, root, opts, status, doc)
+	return renderScanReport(cmd, root, opts, result.Status, result.Report)
 }
 
 func buildScanRequest(

@@ -13,6 +13,7 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
@@ -119,7 +120,15 @@ func runProjectScan(
 
 	client := apiclient.NewClient(apiURL, apiKey, nil)
 
-	return runScanJob(ctx, client, scanReq, timeout, stderr, noStream)
+	result, err := scanflow.SubmitURLsAndWait(
+		ctx,
+		client,
+		scanReq,
+		timeout,
+		scanflow.WaitOptions{Progress: stderr, NoStream: noStream},
+	)
+
+	return result.Status, result.Report, err
 }
 
 func buildProjectSubmitJobRequest(cfg projectmode.ScanConfig) (apiclient.SubmitJobRequest, []string, error) {

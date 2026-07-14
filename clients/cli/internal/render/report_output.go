@@ -1,12 +1,9 @@
 package render
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,45 +22,6 @@ type Options struct {
 	SummaryOnly    bool
 	GroupBy        string
 }
-
-func FetchJobStatus(ctx context.Context, client *apiclient.Client, jobID string) (apiclient.JobStatus, error) {
-	var status apiclient.JobStatus
-
-	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
-	if err := client.GetJSON(ctx, apiPath, &status); err != nil {
-		return apiclient.JobStatus{}, err
-	}
-
-	return status, nil
-}
-
-func FetchReport(ctx context.Context, client *apiclient.Client, jobID string) (report.UnifiedReportV2, error) {
-	apiPath := fmt.Sprintf("/api/v1/jobs/%s/results", url.PathEscape(jobID))
-
-	var raw json.RawMessage
-	if err := client.GetJSON(ctx, apiPath, &raw); err != nil {
-		return report.UnifiedReportV2{}, err
-	}
-
-	raw = SanitizeScoreGrade(raw)
-
-	var doc report.UnifiedReportV2
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		return report.UnifiedReportV2{}, fmt.Errorf("failed to decode report: %w", err)
-	}
-
-	return doc, nil
-}
-
-// SanitizeScoreGrade fixes scoreGrade values that don't match the schema
-// pattern ^[A-F][+-]?$. Older API versions returned "Excellent" for
-// perfect scores; the CLI must tolerate these to avoid crashing on
-// existing reports.
-func SanitizeScoreGrade(raw json.RawMessage) json.RawMessage {
-	return scoreGradeReplacer.ReplaceAll(raw, []byte(`"scoreGrade":"A+"`))
-}
-
-var scoreGradeReplacer = regexp.MustCompile(`"scoreGrade"\s*:\s*"(?:Excellent)"`)
 
 func UnifiedReport(
 	out io.Writer,

@@ -14,6 +14,7 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/diffrender"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
@@ -199,22 +200,21 @@ func runLiveDiffScan(
 		AllowPrivateTargets: allowPrivateTargets,
 	}
 
-	status, doc, err := runScanJob(
+	result, err := scanflow.SubmitURLsAndWait(
 		cmd.Context(),
 		client,
 		req,
 		timeout,
-		cmd.ErrOrStderr(),
-		noStream,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: noStream},
 	)
 	if err != nil {
 		return render.ReportEnvelope{}, "", err
 	}
 
 	return render.ReportEnvelope{
-		Job:    render.JobMeta{ID: status.ID},
-		Report: doc,
-	}, status.ID, nil
+		Job:    render.JobMeta{ID: result.Status.ID},
+		Report: result.Report,
+	}, result.Status.ID, nil
 }
 
 func diffScanModules(env render.ReportEnvelope) []string {
@@ -266,7 +266,7 @@ func loadReportFile(path string) (render.ReportEnvelope, error) {
 		return render.ReportEnvelope{}, fmt.Errorf("read %s: %w", path, err)
 	}
 
-	data = render.SanitizeScoreGrade(data)
+	data = apiclient.SanitizeReportJSON(data)
 
 	var env render.ReportEnvelope
 
