@@ -10,7 +10,6 @@ interface Props {
 	ariaLabel: string;
 	className?: string;
 }
-
 /*
  * Page-overview screenshot cropped tight around one flagged element, with a
  * severity-colored box on top. Shared by the modal's Evidence tab and the
@@ -19,10 +18,7 @@ interface Props {
 export function ElementCrop({ page, overviewUrl, element, ariaLabel, className }: Props) {
 	const overview = page.pageOverview;
 	const viewBox = useMemo(
-		() =>
-			overview
-				? getCroppedViewBox(overview.pageWidth, overview.pageHeight, element)
-				: null,
+		() => (overview ? getCroppedViewBox(overview.pageWidth, overview.pageHeight, element) : null),
 		[overview, element]
 	);
 
@@ -55,4 +51,3 @@ export function ElementCrop({ page, overviewUrl, element, ariaLabel, className }
 		</svg>
 	);
 }
-

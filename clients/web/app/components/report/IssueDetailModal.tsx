@@ -13,13 +13,15 @@ import {
 	isAxeIncompleteIssue,
 	isColorContrastIssue,
 	isManualReviewIssue,
+	needsHumanReview,
 	rewriteIssueTitle
 } from '../../lib/report';
-import { useContrastVerdicts } from '../../lib/hooks/useContrastVerdicts';
+import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 
 import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueOccurrenceCard } from './IssueOccurrenceCard';
 import { ScannerText } from './ScannerText';
+import { ManualReviewTab } from './verify/ManualReviewTab';
 import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
 interface Props {
@@ -32,7 +34,7 @@ interface Props {
 	onNavigate?: (issueId: string) => void;
 }
 
-type TabId = 'fix' | 'evidence' | 'verify' | 'occurrences';
+type TabId = 'review' | 'fix' | 'evidence' | 'verify' | 'occurrences';
 
 export function IssueDetailModal({
 	issue,
@@ -74,54 +76,48 @@ export function IssueDetailModal({
 	const pageOverviewUrl = useMemo(
 		() =>
 			page
-				? getPageOverviewUrl(
-						screenshots,
-						page.id,
-						issue.scanner ? [issue.scanner, 'axe'] : ['axe']
-					)
+				? getPageOverviewUrl(screenshots, page.id, issue.scanner ? [issue.scanner, 'axe'] : ['axe'])
 				: null,
 		[screenshots, page, issue.scanner]
 	);
 
 	const hasOverviewCrop = Boolean(
-		pageOverviewUrl &&
-			(page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
+		pageOverviewUrl && (page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
 	);
 
 	const hasEvidence = Boolean(
 		screenshotUrl ||
-			hasOverviewCrop ||
-			primaryOccurrence?.selector ||
-			primaryOccurrence?.ancestorPath ||
-			primaryOccurrence?.contextHtml ||
-			primaryOccurrence?.html ||
-			primaryOccurrence?.failureSummary
+		hasOverviewCrop ||
+		primaryOccurrence?.selector ||
+		primaryOccurrence?.ancestorPath ||
+		primaryOccurrence?.contextHtml ||
+		primaryOccurrence?.html ||
+		primaryOccurrence?.failureSummary
 	);
 
 	const canVerifyContrast = isColorContrastIssue(issue);
 	const needsVerification = canVerifyContrast && isAxeIncompleteIssue(issue);
-	const { getVerdict } = useContrastVerdicts(jobId);
-	const contrastVerdict = canVerifyContrast ? getVerdict(issue.id) : null;
+	const needsReview = needsHumanReview(issue);
+	const { getVerdict } = useReviewVerdicts(jobId);
+	const reviewVerdict = canVerifyContrast || needsReview ? getVerdict(issue.id) : null;
 
 	const availableTabs = useMemo<TabId[]>(() => {
-		const tabs: TabId[] = ['fix'];
+		const tabs: TabId[] = isManual ? ['review', 'fix'] : ['fix'];
 		if (hasEvidence) tabs.push('evidence');
 		if (canVerifyContrast) tabs.push('verify');
 		if (occurrenceCount > 0) tabs.push('occurrences');
 		return tabs;
-	}, [hasEvidence, canVerifyContrast, occurrenceCount]);
+	}, [isManual, hasEvidence, canVerifyContrast, occurrenceCount]);
 
-	// Needs-verification contrast issues land straight on the verify tools.
-	const defaultTab: TabId = needsVerification ? 'verify' : 'fix';
+	// Human checks land on their decision surface instead of generic fix prose.
+	const defaultTab: TabId = needsVerification ? 'verify' : isManual ? 'review' : 'fix';
 
 	const [tabState, setTabState] = useState<{ issueId: string; tab: TabId }>({
 		issueId: issue.id,
 		tab: defaultTab
 	});
 	const selectedTab = tabState.issueId === issue.id ? tabState.tab : defaultTab;
-	const activeTab = availableTabs.includes(selectedTab)
-		? selectedTab
-		: (availableTabs[0] ?? 'fix');
+	const activeTab = availableTabs.includes(selectedTab) ? selectedTab : (availableTabs[0] ?? 'fix');
 
 	const navigate = (delta: number) => {
 		if (!onNavigate || currentIndex < 0) return;
@@ -245,17 +241,13 @@ export function IssueDetailModal({
 								{severity}
 							</span>
 							<span className="imodal__kind">{kindLabel}</span>
-							{contrastVerdict ? (
-								<span
-									className={`imodal__verdict imodal__verdict--${contrastVerdict.verdict}`}
-								>
-									Verified · {contrastVerdict.verdict}
+							{reviewVerdict ? (
+								<span className={`imodal__verdict imodal__verdict--${reviewVerdict.verdict}`}>
+									Reviewed · {reviewVerdict.verdict}
 								</span>
 							) : (
-								needsVerification && (
-									<span className="imodal__verdict imodal__verdict--pending">
-										Needs verification
-									</span>
+								needsReview && (
+									<span className="imodal__verdict imodal__verdict--pending">Needs review</span>
 								)
 							)}
 							{(pageLabel || occurrenceCount > 1) && (
@@ -307,8 +299,8 @@ export function IssueDetailModal({
 					<h2 className="imodal__title">{displayTitle}</h2>
 					{isManual && (
 						<p className="imodal__sub">
-							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this
-							for human verification — no concrete DOM target was reported.
+							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this for human
+							verification — no concrete DOM target was reported.
 						</p>
 					)}
 				</header>
@@ -323,6 +315,7 @@ export function IssueDetailModal({
 							className="imodal__tab"
 							onClick={() => setTabState({ issueId: issue.id, tab })}
 						>
+							{tab === 'review' && 'Review'}
 							{tab === 'fix' && 'Fix'}
 							{tab === 'evidence' && 'Evidence'}
 							{tab === 'verify' && 'Verify'}
@@ -333,6 +326,11 @@ export function IssueDetailModal({
 				</nav>
 
 				<div className="imodal__body">
+					{activeTab === 'review' && (
+						<div className="imodal__pane">
+							<ManualReviewTab issue={issue} jobId={jobId} />
+						</div>
+					)}
 					{activeTab === 'fix' && (
 						<div className="imodal__pane">
 							<section>
@@ -350,8 +348,8 @@ export function IssueDetailModal({
 							<section>
 								<h3 className="imodal__pane-h">About this rule</h3>
 								<p className="imodal__desc">
-										<ScannerText text={issue.description} />
-									</p>
+									<ScannerText text={issue.description} />
+								</p>
 								{issue.wcagTags && issue.wcagTags.length > 0 && (
 									<div className="imodal__tags">
 										{issue.wcagTags.map((tag) => (

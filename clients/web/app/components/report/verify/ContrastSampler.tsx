@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Rect, SampleSlot, ViewBox } from '../../../lib/report';
+import {
+	clampSamplePoint,
+	toCanvasPixel,
+	type SamplePoint
+} from '../../../lib/report/screenshot-sampling';
 import { rgbToHex } from '../../../lib/utils/contrast';
 
 interface Props {
@@ -12,15 +17,11 @@ interface Props {
 	onPick: (slot: SampleSlot, hex: string) => void;
 }
 
-interface Point {
-	x: number;
-	y: number;
-}
-
 interface ImageSource {
 	url: string;
 	ctx: CanvasRenderingContext2D;
-	pixelScale: number;
+	xScale: number;
+	yScale: number;
 }
 
 const LOUPE_GRID = 9;
@@ -29,16 +30,14 @@ const LOUPE_SIZE = LOUPE_GRID * LOUPE_ZOOM;
 
 const SLOT_LABELS: Record<SampleSlot, string> = { fg: 'Text', bg: 'Background' };
 
-function defaultCursor(viewBox: ViewBox, element: Rect | null): Point {
+function defaultCursor(viewBox: ViewBox, element: Rect | null): SamplePoint {
 	return element
 		? { x: element.x + element.width / 2, y: element.y + element.height / 2 }
 		: { x: viewBox.x + viewBox.width / 2, y: viewBox.y + viewBox.height / 2 };
 }
 
 function cursorKey(viewBox: ViewBox, element: Rect | null): string {
-	return [viewBox.x, viewBox.y, viewBox.width, viewBox.height, element?.x, element?.y].join(
-		':'
-	);
+	return [viewBox.x, viewBox.y, viewBox.width, viewBox.height, element?.x, element?.y].join(':');
 }
 
 export function ContrastSampler({
@@ -56,9 +55,7 @@ export function ContrastSampler({
 	// Cursor state is keyed to the crop, so switching issues re-centers on the
 	// new element without a reset effect.
 	const key = cursorKey(viewBox, element);
-	const [cursorState, setCursorState] = useState<{ key: string; point: Point } | null>(
-		null
-	);
+	const [cursorState, setCursorState] = useState<{ key: string; point: SamplePoint } | null>(null);
 	const cursor = cursorState?.key === key ? cursorState.point : defaultCursor(viewBox, element);
 
 	const svgRef = useRef<SVGSVGElement | null>(null);
@@ -92,8 +89,10 @@ export function ContrastSampler({
 			setSource({
 				url: imageUrl,
 				ctx,
-				pixelScale: pageWidth > 0 ? img.naturalWidth / pageWidth : 1
+				xScale: pageWidth > 0 ? img.naturalWidth / pageWidth : 1,
+				yScale: pageHeight > 0 ? img.naturalHeight / pageHeight : 1
 			});
+			setFailedUrl((failed) => (failed === imageUrl ? null : failed));
 		};
 		img.onerror = () => {
 			if (!cancelled) setFailedUrl(imageUrl);
@@ -102,24 +101,26 @@ export function ContrastSampler({
 		return () => {
 			cancelled = true;
 		};
-	}, [imageUrl, pageWidth]);
+	}, [imageUrl, pageWidth, pageHeight]);
 
 	const sampleAt = useCallback(
 		(x: number, y: number): string | null => {
 			if (!activeSource) return null;
-			const { ctx, pixelScale } = activeSource;
-			const px = Math.min(ctx.canvas.width - 1, Math.max(0, Math.round(x * pixelScale)));
-			const py = Math.min(ctx.canvas.height - 1, Math.max(0, Math.round(y * pixelScale)));
+			const { ctx, xScale, yScale } = activeSource;
+			const { x: px, y: py } = toCanvasPixel(
+				{ x, y },
+				xScale,
+				yScale,
+				ctx.canvas.width,
+				ctx.canvas.height
+			);
 			const [r, g, b] = ctx.getImageData(px, py, 1, 1).data;
 			return rgbToHex({ r: r ?? 0, g: g ?? 0, b: b ?? 0 });
 		},
 		[activeSource]
 	);
 
-	const cursorHex = useMemo(
-		() => sampleAt(cursor.x, cursor.y),
-		[sampleAt, cursor.x, cursor.y]
-	);
+	const cursorHex = useMemo(() => sampleAt(cursor.x, cursor.y), [sampleAt, cursor.x, cursor.y]);
 
 	// Canvas repaint is DOM synchronization, so an effect is the right tool.
 	useEffect(() => {
@@ -127,9 +128,14 @@ export function ContrastSampler({
 		if (!loupe || !activeSource) return;
 		const ctx = loupe.getContext('2d');
 		if (!ctx) return;
-		const { ctx: sourceCtx, pixelScale } = activeSource;
-		const px = Math.round(cursor.x * pixelScale);
-		const py = Math.round(cursor.y * pixelScale);
+		const { ctx: sourceCtx, xScale, yScale } = activeSource;
+		const { x: px, y: py } = toCanvasPixel(
+			{ x: cursor.x, y: cursor.y },
+			xScale,
+			yScale,
+			sourceCtx.canvas.width,
+			sourceCtx.canvas.height
+		);
 		ctx.imageSmoothingEnabled = false;
 		ctx.fillStyle = '#e9edee';
 		ctx.fillRect(0, 0, LOUPE_SIZE, LOUPE_SIZE);
@@ -151,30 +157,41 @@ export function ContrastSampler({
 		ctx.strokeRect(center - 0.5, center - 0.5, LOUPE_ZOOM + 1, LOUPE_ZOOM + 1);
 	}, [activeSource, cursor.x, cursor.y]);
 
-	const moveCursorTo = (x: number, y: number) => {
+	const moveCursorTo = (x: number, y: number): SamplePoint => {
+		const point = clampSamplePoint({ x, y }, viewBox);
 		setCursorState({
 			key,
-			point: {
-				x: Math.min(viewBox.x + viewBox.width, Math.max(viewBox.x, x)),
-				y: Math.min(viewBox.y + viewBox.height, Math.max(viewBox.y, y))
-			}
+			point
 		});
+		return point;
+	};
+
+	const pointFromClient = (clientX: number, clientY: number): SamplePoint | null => {
+		const ctm = svgRef.current?.getScreenCTM();
+		if (!ctm) return null;
+		const point = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+		return clampSamplePoint(point, viewBox);
 	};
 
 	const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
-		const ctm = svgRef.current?.getScreenCTM();
-		if (!ctm) return;
-		const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
-			ctm.inverse()
-		);
-		moveCursorTo(point.x, point.y);
+		const point = pointFromClient(event.clientX, event.clientY);
+		if (point) moveCursorTo(point.x, point.y);
 	};
 
-	const pick = () => {
-		const hex = sampleAt(cursor.x, cursor.y);
+	const pickAt = (point: SamplePoint) => {
+		const hex = sampleAt(point.x, point.y);
 		if (!hex) return;
 		onPick(activeSlot, hex);
 		if (activeSlot === 'fg') setActiveSlot('bg');
+	};
+
+	const pick = () => pickAt(cursor);
+
+	const handleClick = (event: React.MouseEvent<SVGSVGElement>) => {
+		const point = pointFromClient(event.clientX, event.clientY);
+		if (!point) return;
+		moveCursorTo(point.x, point.y);
+		pickAt(point);
 	};
 
 	const handleKeydown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -198,8 +215,7 @@ export function ContrastSampler({
 	if (imageFailed) {
 		return (
 			<p className="vfy__notice">
-				The screenshot could not be loaded for sampling. Enter the colors manually
-				below.
+				The screenshot could not be loaded for sampling. Enter the colors manually below.
 			</p>
 		);
 	}
@@ -221,8 +237,8 @@ export function ContrastSampler({
 					))}
 				</div>
 				<p className="vfy__hint">
-					Click the image to sample the {SLOT_LABELS[activeSlot].toLowerCase()} color.
-					Sample the thickest part of a letter stroke — edges are anti-aliased.
+					Click the image to sample the {SLOT_LABELS[activeSlot].toLowerCase()} color. Sample the
+					thickest part of a letter stroke — edges are anti-aliased.
 				</p>
 			</div>
 			<div className="vfy__stage">
@@ -241,7 +257,7 @@ export function ContrastSampler({
 						preserveAspectRatio="xMidYMid meet"
 						aria-hidden="true"
 						onPointerMove={handlePointerMove}
-						onClick={pick}
+						onClick={handleClick}
 					>
 						<image href={imageUrl} x={0} y={0} width={pageWidth} height={pageHeight} />
 						{element && (

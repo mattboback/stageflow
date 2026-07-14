@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Maximize2, Minus, Plus } from 'lucide-react';
 
-import type {
-	IssueDetail,
-	UnifiedReport
-} from '../../lib/types/unified-report';
+import type { IssueDetail, UnifiedReport } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
 import {
 	SEVERITY_LEVELS,
@@ -12,7 +9,7 @@ import {
 	getSeverityDotClass,
 	getSeverityFillColor,
 	getSeverityStrokeColor,
-	isManualReviewIssue,
+	needsHumanReview,
 	normalizeSeverity
 } from '../../lib/report';
 
@@ -55,8 +52,7 @@ export function VisualReviewPanel({
 	onSelectPage,
 	onIssueSelect
 }: Props) {
-	const selectedPage =
-		report.pages.find((p) => p.id === activePage) ?? report.pages[0] ?? null;
+	const selectedPage = report.pages.find((p) => p.id === activePage) ?? report.pages[0] ?? null;
 
 	const issuesByPage = useMemo(() => {
 		const map: Record<string, IssueDetail[]> = {};
@@ -99,14 +95,12 @@ export function VisualReviewPanel({
 					scanner: issue.scanner,
 					ruleId: issue.ruleId,
 					severity,
-					needsReview: isManualReviewIssue(issue),
+					needsReview: needsHumanReview(issue),
 					issues: [issue]
 				});
 			}
 		}
-		return [...groups.values()].sort(
-			(a, b) => severityRank(a.severity) - severityRank(b.severity)
-		);
+		return [...groups.values()].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
 	}, [pageIssues]);
 
 	const issueMap = useMemo(
@@ -291,8 +285,8 @@ export function VisualReviewPanel({
 				{!canRenderScreenshot ? (
 					<div className="vrev__empty">
 						<p>
-							No page-overview screenshot is available for this page yet. Visual review
-							will appear here once captured.
+							No page-overview screenshot is available for this page yet. Visual review will appear
+							here once captured.
 						</p>
 					</div>
 				) : screenshotLoadFailed ? (
@@ -365,10 +359,7 @@ export function VisualReviewPanel({
 											onIssueSelect(first);
 										}}
 									>
-										<span
-											className={getSeverityDotClass(group.severity)}
-											aria-hidden="true"
-										/>
+										<span className={getSeverityDotClass(group.severity)} aria-hidden="true" />
 										<span className="vrev__issue-body">
 											<span className="vrev__issue-title">{group.title}</span>
 											<span className="vrev__issue-meta">

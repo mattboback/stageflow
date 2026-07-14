@@ -1,22 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, type MetaFunction } from 'react-router';
-import {
-	CircleCheck,
-	Clock,
-	FileArchive,
-	Info,
-	KeyRound,
-	Layers,
-	Target
-} from 'lucide-react';
+import { CircleCheck, Clock, FileArchive, Info, KeyRound, Layers, Target } from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
-import {
-	fetchScanners,
-	getDefaultScannerSelections,
-	submitScanJob
-} from '../lib/api/client';
+import { fetchScanners, getDefaultScannerSelections, submitScanJob } from '../lib/api/client';
 import {
 	buildAiNavigatorConfig,
 	buildFormAuthConfig,
@@ -32,11 +20,7 @@ import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
 import { SCANNER_META, scannerLabel } from '../lib/report/scanner-identity';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
 import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
-import {
-	buildSiteMeta,
-	PLAYGROUND_DESCRIPTION,
-	PLAYGROUND_TITLE
-} from '../lib/site-metadata';
+import { buildSiteMeta, PLAYGROUND_DESCRIPTION, PLAYGROUND_TITLE } from '../lib/site-metadata';
 import playgroundStyles from './playground.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: playgroundStyles }];
@@ -96,9 +80,7 @@ export default function Playground() {
 	const isAuthValid = isAuthConfigComplete(authConfig);
 
 	const [aiConfig, setAiConfig] = useState<AiConfigState>(DEFAULT_AI_CONFIG);
-	const isAiNavigatorEnabled = selections.some(
-		(s) => s.id === 'ai-navigator' && s.enabled
-	);
+	const isAiNavigatorEnabled = selections.some((s) => s.id === 'ai-navigator' && s.enabled);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -206,7 +188,7 @@ export default function Playground() {
 			return;
 		}
 
-		if (authConfig.enabled && !isAuthValid) {
+		if (mode === 'url' && authConfig.enabled && !isAuthValid) {
 			setError('Authentication is enabled but Login URL, username, or password is missing.');
 			return;
 		}
@@ -215,9 +197,7 @@ export default function Playground() {
 		const scannersForSubmit =
 			isAiNavigatorEnabled && aiConfig.objective.trim()
 				? selections.map((s) =>
-						s.id === 'ai-navigator'
-							? { ...s, config: buildAiNavigatorConfig(aiConfig) }
-							: s
+						s.id === 'ai-navigator' ? { ...s, config: buildAiNavigatorConfig(aiConfig) } : s
 					)
 				: selections;
 
@@ -241,8 +221,7 @@ export default function Playground() {
 	const estSeconds = Math.max(20, armed * 6);
 	const targetCount = mode === 'url' ? urls.filter((u) => u.trim()).length : file ? 1 : 0;
 	const authBlocking = mode === 'url' && authConfig.enabled && !isAuthValid;
-	const ready =
-		!catalogLoading && !catalogError && armed > 0 && targetCount > 0 && !authBlocking;
+	const ready = !catalogLoading && !catalogError && armed > 0 && targetCount > 0 && !authBlocking;
 	const readyDetail = catalogLoading
 		? 'Loading the scanner catalog.'
 		: armed === 0
@@ -265,8 +244,8 @@ export default function Playground() {
 						<div>
 							<h1>Configure a scan</h1>
 							<p>
-								Point StageFlow at any public URL or a static-site archive, choose the scanners
-								you need, and run. No account, no install.
+								Point StageFlow at any public URL or a static-site archive, choose the scanners you
+								need, and run. No account, no install.
 							</p>
 						</div>
 						{submitting && <Pill variant="live">Submitting</Pill>}
@@ -319,17 +298,11 @@ export default function Playground() {
 																placeholder="https://…"
 																aria-label={`URL ${i + 1}`}
 																aria-invalid={urlRowErrors[i] ? true : undefined}
-																aria-describedby={
-																	urlRowErrors[i] ? `urlrow-err-${i}` : undefined
-																}
+																aria-describedby={urlRowErrors[i] ? `urlrow-err-${i}` : undefined}
 																onChange={(e) => updateUrl(i, e.target.value)}
 															/>
 															{urlRowErrors[i] && (
-																<span
-																	className="urlrow__err"
-																	id={`urlrow-err-${i}`}
-																	role="alert"
-																>
+																<span className="urlrow__err" id={`urlrow-err-${i}`} role="alert">
 																	{urlRowErrors[i]}
 																</span>
 															)}
@@ -350,8 +323,7 @@ export default function Playground() {
 											</button>
 											<p className="intake__note">
 												<Info size={15} aria-hidden="true" />
-												Each URL is scanned as its own page — add every page you want
-												covered.
+												Each URL is scanned as its own page — add every page you want covered.
 											</p>
 										</>
 									) : (
@@ -418,7 +390,7 @@ export default function Playground() {
 											<span>{catalogError}</span>
 										</div>
 									) : (
-										<div className="rack" role="group" aria-label="Scanner channels">
+										<div className="rack" role="group" aria-label="Scanners">
 											{catalog.map((scanner) => {
 												const on = enabledById.get(scanner.id) ?? false;
 												const meta = SCANNER_META[scanner.id];
@@ -467,12 +439,8 @@ export default function Playground() {
 							)}
 
 							{isAiNavigatorEnabled && (
-								<PlaygroundAiConfig
-									config={aiConfig}
-									onConfigChange={setAiConfig}
-								/>
+								<PlaygroundAiConfig config={aiConfig} onConfigChange={setAiConfig} />
 							)}
-
 						</div>
 
 						{/* right: scan summary dock */}
@@ -501,9 +469,7 @@ export default function Playground() {
 											<span className="sumlist__lab">
 												Targets
 												<small>
-													{mode === 'url'
-														? 'Starting points for the scan'
-														: 'Static-site archive'}
+													{mode === 'url' ? 'Starting points for the scan' : 'Static-site archive'}
 												</small>
 											</span>
 											<b className="num">
@@ -593,12 +559,8 @@ export default function Playground() {
 								? '1 archive'
 								: 'No archive'}{' '}
 						· {armed} of {total || 8} scanners · auth{' '}
-						{mode === 'url' && authConfig.enabled
-							? isAuthValid
-								? 'on'
-								: 'incomplete'
-							: 'off'}{' '}
-						· ~{estSeconds}s
+						{mode === 'url' && authConfig.enabled ? (isAuthValid ? 'on' : 'incomplete') : 'off'} · ~
+						{estSeconds}s
 					</span>
 					<button
 						type="button"

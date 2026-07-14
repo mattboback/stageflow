@@ -16,7 +16,7 @@ import {
 	formatRatio,
 	requiredLevel
 } from '../../../lib/utils/contrast';
-import { useContrastVerdicts } from '../../../lib/hooks/useContrastVerdicts';
+import { useReviewVerdicts } from '../../../lib/hooks/useReviewVerdicts';
 
 import { ContrastResult } from './ContrastResult';
 import { ContrastSampler } from './ContrastSampler';
@@ -49,7 +49,7 @@ function formatVerdictTime(iso: string): string {
 export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props) {
 	const contrastData = getContrastData(issue);
 	const isIncomplete = isAxeIncompleteIssue(issue);
-	const { getVerdict, setVerdict, clearVerdict } = useContrastVerdicts(jobId);
+	const { getVerdict, setVerdict, clearVerdict } = useReviewVerdicts(jobId);
 	const verdict = getVerdict(issue.id);
 
 	// Draft edits are keyed to the issue; navigating to another issue falls
@@ -117,8 +117,8 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 			) : (
 				measuredNote && (
 					<p className="vfy__measured">
-						axe measured <span className="mono">{measuredNote}</span> — sample the
-						screenshot to double-check it.
+						axe measured <span className="mono">{measuredNote}</span> — sample the screenshot to
+						double-check it.
 					</p>
 				)
 			)}
@@ -135,9 +135,8 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 					/>
 				) : (
 					<p className="vfy__notice">
-						No screenshot is available for this element — screenshots may have been
-						disabled for this scan. Enter the colors manually below, or re-run the scan
-						with screenshots enabled.
+						No screenshot is available for this element — screenshots may have been disabled for
+						this scan. Enter the colors manually below, or re-run the scan with screenshots enabled.
 					</p>
 				)}
 
@@ -164,9 +163,11 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 							Verified · {verdict.verdict}
 						</span>
 						<span className="vfy__verdict-meta mono">
-							{verdict.fg || '—'} on {verdict.bg || '—'}
-							{verdict.ratio !== null ? ` · ${formatRatio(verdict.ratio)}:1` : ''} ·{' '}
-							{formatVerdictTime(verdict.at)}
+							{verdict.measurement?.fg || '—'} on {verdict.measurement?.bg || '—'}
+							{verdict.measurement?.ratio !== null && verdict.measurement?.ratio !== undefined
+								? ` · ${formatRatio(verdict.measurement.ratio)}:1`
+								: ''}{' '}
+							· {formatVerdictTime(verdict.at)}
 						</span>
 						<button
 							type="button"
@@ -199,9 +200,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 								}
 								setVerdict(issue.id, {
 									verdict: 'pass',
-									fg: state.fg,
-									bg: state.bg,
-									ratio
+									measurement: { fg: state.fg, bg: state.bg, ratio }
 								});
 							}}
 						>
@@ -221,9 +220,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 								}
 								setVerdict(issue.id, {
 									verdict: 'fail',
-									fg: state.fg,
-									bg: state.bg,
-									ratio
+									measurement: { fg: state.fg, bg: state.bg, ratio }
 								});
 							}}
 						>

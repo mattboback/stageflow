@@ -8,6 +8,7 @@ import { IssueRowCard } from './IssueRowCard';
 import { ReportHeader } from './ReportHeader';
 import { ReportStatStrip } from './ReportStatStrip';
 import { ScannerText } from './ScannerText';
+import { ManualReviewTab } from './verify/ManualReviewTab';
 
 const report = loadAllScansFixture();
 
@@ -21,7 +22,7 @@ describe('ReportHeader', () => {
 		expect(totals.textContent).toContain('Findings');
 		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
 		expect(totals.textContent).toContain('Pages scanned');
-		expect(totals.textContent).toContain('Manual review');
+		expect(totals.textContent).toContain('Human review');
 	});
 });
 
@@ -36,13 +37,9 @@ describe('ReportStatStrip', () => {
 
 		const critical = report.summary.bySeverity.critical ?? 0;
 		expect(critical).toBeGreaterThan(0);
-		expect(
-			screen.getByRole('button', { name: `${critical} critical` })
-		).toBeTruthy();
+		expect(screen.getByRole('button', { name: `${critical} critical` })).toBeTruthy();
 		for (const scanner of report.scanners) {
-			expect(
-				screen.getAllByText(scannerLabel(scanner.id, scanner.name)).length
-			).toBeGreaterThan(0);
+			expect(screen.getAllByText(scannerLabel(scanner.id, scanner.name)).length).toBeGreaterThan(0);
 		}
 	});
 
@@ -56,9 +53,7 @@ describe('ReportStatStrip', () => {
 
 		const scanner = report.scanners[0]!;
 		fireEvent.click(
-			screen
-				.getAllByText(scannerLabel(scanner.id, scanner.name))[0]!
-				.closest('button')!
+			screen.getAllByText(scannerLabel(scanner.id, scanner.name))[0]!.closest('button')!
 		);
 		expect(h.onSelectScanner).toHaveBeenCalledWith(scanner.id);
 	});
@@ -86,7 +81,6 @@ describe('IssueRowCard', () => {
 	});
 });
 
-
 describe('ScannerText', () => {
 	it('renders markdown code spans and links from scanner prose', () => {
 		render(
@@ -108,5 +102,26 @@ describe('ScannerText', () => {
 		const el = screen.getByTestId('no-links');
 		expect(el.textContent).toBe('Learn more about charsets.');
 		expect(el.querySelector('a')).toBeNull();
+	});
+});
+
+describe('ManualReviewTab', () => {
+	it('records and clears a generic human-review decision', () => {
+		const issue = {
+			...report.issues[0]!,
+			id: 'manual-review-component-test',
+			scanner: 'lighthouse',
+			ruleId: 'custom-controls-labels',
+			severity: 'info' as const,
+			description: 'Check custom controls for accessible labels.',
+			occurrences: []
+		};
+
+		render(<ManualReviewTab issue={issue} jobId="manual-review-component-job" />);
+		fireEvent.click(screen.getByRole('button', { name: 'Mark pass' }));
+
+		expect(screen.getByText('Reviewed · pass')).toBeTruthy();
+		fireEvent.click(screen.getByRole('button', { name: 'Clear verdict' }));
+		expect(screen.getByRole('button', { name: 'Mark pass' })).toBeTruthy();
 	});
 });

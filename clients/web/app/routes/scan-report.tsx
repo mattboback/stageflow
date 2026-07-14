@@ -4,10 +4,7 @@ import { useParams, useSearchParams, type MetaFunction } from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
 import { Pill } from '../components/Pill';
 import { ReportHeader } from '../components/report/ReportHeader';
-import {
-	ReportSectionNav,
-	type ReportSection
-} from '../components/report/ReportSectionNav';
+import { ReportSectionNav, type ReportSection } from '../components/report/ReportSectionNav';
 import { IssuesView } from '../components/report/IssuesView';
 import { ReportStatStrip } from '../components/report/ReportStatStrip';
 import { IssueDetailModal } from '../components/report/IssueDetailModal';
@@ -19,11 +16,11 @@ import { useScanReport } from '../lib/hooks/useScanMonitor';
 import {
 	buildOccurrenceModeReport,
 	isIssueSortKey,
-	isManualReviewIssue,
+	needsHumanReview,
 	sortIssues,
 	type IssueSortKey
 } from '../lib/report';
-import { useContrastVerdicts } from '../lib/hooks/useContrastVerdicts';
+import { useReviewVerdicts } from '../lib/hooks/useReviewVerdicts';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
 
@@ -54,8 +51,7 @@ export default function ScanReport() {
 	const { id = '' } = useParams();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const { status, report, job, error, screenshots, refreshArtifacts } =
-		useScanReport(id);
+	const { status, report, job, error, screenshots, refreshArtifacts } = useScanReport(id);
 
 	const displayReport = useMemo(
 		() => (report ? buildOccurrenceModeReport(report) : null),
@@ -106,19 +102,21 @@ export default function ScanReport() {
 		return displayReport.issues.find((i) => i.id === activeIssueId) ?? null;
 	}, [activeIssueId, displayReport]);
 
-	/* The manual-review queue is the report's primary workflow: highest
+	/* The human-review queue is the report's primary workflow: highest
 	   severity first, resume at the first finding without a verdict. */
-	const { getVerdict } = useContrastVerdicts(id);
+	const { getVerdict } = useReviewVerdicts(id);
 	const reviewQueue = useMemo(
 		() =>
-			displayReport
-				? sortIssues(displayReport.issues.filter(isManualReviewIssue), 'severity')
-				: [],
+			displayReport ? sortIssues(displayReport.issues.filter(needsHumanReview), 'severity') : [],
 		[displayReport]
 	);
 	const reviewedCount = reviewQueue.filter((issue) => getVerdict(issue.id)).length;
 	const nextReviewIssue =
 		reviewQueue.find((issue) => !getVerdict(issue.id)) ?? reviewQueue[0] ?? null;
+	const modalIssues =
+		section === 'review' && activeIssue && needsHumanReview(activeIssue)
+			? reviewQueue
+			: (displayReport?.issues ?? []);
 
 	const activeIssuePage = useMemo(() => {
 		if (!activeIssue || !displayReport) return null;
@@ -127,9 +125,7 @@ export default function ScanReport() {
 
 	return (
 		<>
-			<SiteHeader
-				app={{ backTo: `/scan/${id}`, backLabel: 'Scan status', section: 'Report' }}
-			/>
+			<SiteHeader app={{ backTo: `/scan/${id}`, backLabel: 'Scan status', section: 'Report' }} />
 
 			<main id="main" className="report">
 				<div className="wrap">
@@ -159,8 +155,7 @@ export default function ScanReport() {
 															: `${reviewQueue.length} findings need review`}
 												</p>
 												<p className="rnext__sub">
-													Highest severity first — evidence and decision tools open in
-													place.
+													Highest severity first — evidence and decision tools open in place.
 												</p>
 											</div>
 											{nextReviewIssue && reviewedCount < reviewQueue.length && (
@@ -179,9 +174,7 @@ export default function ScanReport() {
 									)}
 									<ReportStatStrip
 										report={displayReport}
-										onReviewSeverity={(severity) =>
-											updateParams({ section: 'issues', severity })
-										}
+										onReviewSeverity={(severity) => updateParams({ section: 'issues', severity })}
 										onSelectScanner={(scannerId) =>
 											updateParams({ section: 'issues', scanner: scannerId })
 										}
@@ -217,9 +210,7 @@ export default function ScanReport() {
 										onPageChange={(v) => updateParams({ page: v })}
 										onCategoryChange={(v) => updateParams({ category: v })}
 										onSearchChange={(v) => updateParams({ q: v.trim() ? v : null })}
-										onSortChange={(v) =>
-											updateParams({ sort: v === 'severity' ? null : v })
-										}
+										onSortChange={(v) => updateParams({ sort: v === 'severity' ? null : v })}
 										onGroupToggle={(v) => updateParams({ group: v ? null : 'flat' })}
 										onClear={() =>
 											updateParams({
@@ -247,11 +238,7 @@ export default function ScanReport() {
 											categories={displayReport.summary.lighthouseCategories ?? []}
 										/>
 									)}
-									<ArtifactsView
-										jobId={id}
-										job={job}
-										onRefreshArtifacts={refreshArtifacts}
-									/>
+									<ArtifactsView jobId={id} job={job} onRefreshArtifacts={refreshArtifacts} />
 									<ErrorsView errors={displayReport.errors} />
 								</section>
 							)}
@@ -261,7 +248,7 @@ export default function ScanReport() {
 									issue={activeIssue}
 									jobId={id}
 									page={activeIssuePage}
-									issues={displayReport.issues}
+									issues={modalIssues}
 									screenshots={screenshots}
 									onClose={() => updateParams({ issue: null })}
 									onNavigate={(issueId) => updateParams({ issue: issueId })}

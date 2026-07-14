@@ -3,7 +3,7 @@ import { AlertTriangle, Eye, FileText } from 'lucide-react';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Gauge } from '../Gauge';
 import { Pill } from '../Pill';
-import { isManualReviewIssue, scoreBandFor } from '../../lib/report';
+import { needsHumanReview, scoreBandFor } from '../../lib/report';
 
 interface Props {
 	report: UnifiedReport;
@@ -37,7 +37,7 @@ export function ReportHeader({ report }: Props) {
 	const critical = totals.critical ?? 0;
 	const serious = totals.serious ?? 0;
 	const total = report.summary.totalIssues ?? 0;
-	const manualCount = report.issues.filter(isManualReviewIssue).length;
+	const reviewCount = report.issues.filter(needsHumanReview).length;
 
 	const scannedAt = formatScannedAt(report.meta.completedAt ?? report.meta.scannedAt);
 	const duration = formatDuration(report.meta.durationMs);
@@ -76,12 +76,7 @@ export function ReportHeader({ report }: Props) {
 				<div className="rhead__score-meta">
 					<h1>{host ?? 'Scan report'}</h1>
 					{baseUrl && (
-						<a
-							className="rhead__url"
-							href={baseUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-						>
+						<a className="rhead__url" href={baseUrl} target="_blank" rel="noopener noreferrer">
 							{baseUrl} ↗
 						</a>
 					)}
@@ -118,11 +113,11 @@ export function ReportHeader({ report }: Props) {
 				<div className="rhead__stat">
 					<dt className="rhead__stat-lab">
 						<Eye size={16} aria-hidden="true" />
-						Manual review
+						Human review
 					</dt>
-					<dd className="rhead__stat-val">{manualCount.toLocaleString()}</dd>
+					<dd className="rhead__stat-val">{reviewCount.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
-						{manualCount > 0 ? 'findings need a human check' : 'nothing to verify'}
+						{reviewCount > 0 ? 'findings need a human check' : 'nothing to verify'}
 					</dd>
 				</div>
 				<div className="rhead__stat">
