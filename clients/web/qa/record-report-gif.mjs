@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Records docs/images/report-bounding-box.gif: clicking a bounding-box
-// overlay on the Pages tab opens the issue detail card for that element.
+// overlay in Review opens the finding detail card for that element.
 //
 // The API is fully mocked from the committed report fixture (the same
 // pattern as e2e/report.spec.ts) so no backend is required. The page-overview

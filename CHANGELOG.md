@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-14
+
 ### Added
 
 - `stageflow stack up|down|status`: manage the local Podman Compose stack
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   terminal
 - Replaced the static issue-list screenshot in the README with an animated
   GIF (`docs/images/report-bounding-box.gif`) showing the actual interaction:
-  clicking a bounding-box overlay on the Pages tab opens that issue's detail
+  clicking a bounding-box overlay in Review opens that finding's detail
   card. Recorded with a new script (`clients/web/qa/record-report-gif.mjs`)
   against a mocked API and a real Playwright-captured screenshot
 - README: the bounding-box GIF now leads at the top of the page; the CLI

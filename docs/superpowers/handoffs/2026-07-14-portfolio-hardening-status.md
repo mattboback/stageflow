@@ -10,7 +10,9 @@ Base: `e8e42bd` (`origin/main`)
 
 Detailed plan: `docs/superpowers/plans/2026-07-14-portfolio-hardening.md`
 
-Current branch is clean and four commits ahead of `origin/main`.
+Use `git status --short --branch` for the current ahead count; this handoff is
+updated in the release-preparation commit, so a hard-coded count would become
+stale immediately.
 
 ## Completed Work
 
@@ -50,7 +52,33 @@ Commit: `257ff57 test: guard employer-facing product claims`
 - Added the test to `just shell-tests`.
 - Changed CI to invoke the canonical `just shell-tests` entry point.
 - Verification: shell tests, ShellCheck, Bash syntax, and diff checks passed.
-- Task review: not completed because execution was intentionally stopped to reduce token use.
+- Follow-up commit `d045308` makes scan/tool errors fatal, adds `.txt` coverage,
+  prevents legacy line filters from suppressing product-copy findings, fixes
+  fixture cleanup, and updates contributor guidance.
+- Verification: focused tests, repository scan, Bash syntax, ShellCheck, and
+  `just shell-tests` passed.
+- Task review: approved after the follow-up fixes.
+
+### 4. Browser and accessibility QA
+
+- Production-preview Playwright passed 9/9 on desktop and mobile.
+- ESLint, typecheck, Vitest 46/46, and the production build passed serially.
+- Manual desktop/mobile checks covered homepage, playground, 404, validation,
+  keyboard focus, reduced motion, console/page errors, network requests, and
+  narrow viewport overflow.
+- Report Review, Findings, Artifacts, review decisions, and cross-tab behavior
+  were exercised through the repository's mocked-API Playwright suite.
+- No reproducible source defects were found; ignored evidence is under
+  `output/portfolio-qa/`.
+
+### 5. CLI v0.4.0 preparation
+
+- `CHANGELOG.md` now keeps a fresh Unreleased section and records 0.4.0 on
+  2026-07-14.
+- Active Pages-tab wording in the release entry and GIF recorder was updated to
+  Review/finding terminology.
+- No package version bump is needed; the release workflow stamps the CLI from
+  the `clients/cli/v0.4.0` tag.
 
 ## Current Repository State
 
@@ -58,60 +86,46 @@ Commit: `257ff57 test: guard employer-facing product claims`
 - Remote branches: `main` and `feat/web-daylight-gauge-ui`.
 - The feature branch is fully represented by merged PR #39 and is safe to delete after the cleanup branch is merged.
 - `origin/main` is `e8e42bd` and has green CI plus Golden Regression.
-- Local cleanup worktree is clean.
+- Local cleanup worktree should be clean after the release-preparation commit.
 
 ## Remaining Findings
 
 ### Important
 
-1. The three completed commits are local only. Push and merge them before deleting the cleanup branch.
-2. Task 3 still needs a quick review of `56dae7e..257ff57`.
-3. `CHANGELOG.md` records 0.3.0 while GitHub's latest CLI release is 0.2.0.
-4. `main` rules prevent deletion and force pushes but do not require existing CI jobs before merge.
+1. The cleanup commits are local only. Push and merge them before deleting the cleanup branch.
+2. GitHub's latest CLI release is 0.2.0; publish 0.4.0 only from the verified post-merge `main` SHA.
+3. `main` rules prevent deletion and force pushes but do not require existing CI jobs before merge.
 
 ### Minor
 
 1. React Router builds emit existing v8 future-flag warnings.
-2. `clients/web/qa/record-report-gif.mjs` has a legacy Pages-tab comment.
-3. GitHub still has the stale `sveltekit` topic.
+2. GitHub still has the stale `sveltekit` topic.
 
 ## Minimum Completion Path
 
-### 1. Review the current diff
+### 1. Review and verify the current diff
 
 ```bash
 cd /tmp/opencode/stageflow-portfolio-hardening
 git diff --check origin/main..HEAD
 git diff --stat origin/main..HEAD
-git show --stat 257ff57
-```
-
-Inspect these Task 3 files:
-
-- `devtools/scripts/check-stale-vocab.sh`
-- `devtools/scripts/tests/stale-vocab.test.sh`
-- `justfile`
-- `.github/workflows/ci.yml`
-
-### 2. Run final local gates
-
-```bash
-cd /tmp/opencode/stageflow-portfolio-hardening
 just ci
 just project-golden
 ```
 
 Expected: both commands exit 0. If local Podman prevents the golden test, require the GitHub Golden Regression workflow before merge.
 
-### 3. Prepare CLI 0.4.0
+### 2. Update GitHub presentation and protection
 
-Edit `CHANGELOG.md`:
+```bash
+gh repo edit --remove-topic sveltekit --add-topic react-router --add-topic typescript
+```
 
-- Keep a fresh `## [Unreleased]` section.
-- Move current unreleased entries under `## [0.4.0] - 2026-07-14`.
-- Commit as `chore(release): prepare CLI v0.4.0`.
+Update the `Protect main` ruleset to require the existing CI jobs plus `Golden
+Baseline Promote Diff` before pull-request merges. Preserve deletion protection,
+non-fast-forward protection, and the pull-request requirement.
 
-### 4. Push and merge
+### 3. Push and merge
 
 ```bash
 git push -u origin cleanup/portfolio-hardening
@@ -121,36 +135,39 @@ gh pr create --base main --head cleanup/portfolio-hardening \
 gh pr checks --watch
 ```
 
-Confirm CI and Golden Regression are green, then merge and delete the PR branch:
+Confirm CI and the follow-on Golden Regression run are green for the exact PR
+head SHA, then merge and delete the PR branch:
 
 ```bash
 gh pr merge --merge --delete-branch
 ```
 
-### 5. Update GitHub presentation
+### 4. Verify merged main and publish CLI 0.4.0
+
+Fetch `main`, record the exact merged SHA, and wait for CI plus Golden Regression
+to succeed on that SHA. Then create the tag explicitly against it:
 
 ```bash
-gh repo edit --remove-topic sveltekit --add-topic react-router --add-topic typescript
-```
-
-Update the `Protect main` ruleset to require the existing CI jobs before pull-request merges. Preserve deletion protection, non-fast-forward protection, and the pull-request requirement.
-
-### 6. Publish CLI 0.4.0
-
-From updated `main`:
-
-```bash
-git tag -a clients/cli/v0.4.0 -m "StageFlow CLI v0.4.0"
+git fetch origin main
+release_sha="$(git rev-parse origin/main)"
+if git ls-remote --exit-code --tags origin refs/tags/clients/cli/v0.4.0 >/dev/null; then
+  echo "clients/cli/v0.4.0 already exists" >&2
+  exit 1
+fi
+git tag -a clients/cli/v0.4.0 "$release_sha" -m "StageFlow CLI v0.4.0"
 git push origin clients/cli/v0.4.0
-gh run list --workflow "Release StageFlow CLI" --limit 1
 gh release view clients/cli/v0.4.0
 ```
 
-Verify five platform archives plus `checksums.txt`.
+Watch the `Release StageFlow CLI` run whose `headSha` is `release_sha`. Verify
+five platform archives plus `checksums.txt`, downloaded checksums, the binary's
+stamped version/commit, and release notes that surface the 0.3.0 breaking CLI,
+config, and JSON changes.
 
-### 7. Final branch cleanup
+### 5. Production smoke and final branch cleanup
 
-Only after the cleanup PR and release are complete:
+Smoke-test `https://stageflow.org` on desktop and mobile, including one
+no-account scan/report path. Only after the smoke test and release are complete:
 
 ```bash
 git push origin --delete feat/web-daylight-gauge-ui
@@ -167,7 +184,7 @@ git branch -d feat/web-daylight-gauge-ui
 git branch -d cleanup/portfolio-hardening
 ```
 
-### 8. Prove completion
+### 6. Prove completion
 
 ```bash
 git status --short --branch
