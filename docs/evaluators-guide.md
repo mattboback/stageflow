@@ -6,6 +6,9 @@ If you have 5–15 minutes, follow the paths below. Each one points to concrete 
 
 **Two-minute path, no checkout:** open the live demo at
 [stageflow.org](https://stageflow.org), scan a URL, and explore the report. Then
+use Review to inspect screenshot evidence and record a human decision, Findings
+to search and group the complete issue list, and Artifacts to inspect the owned
+HTML and JSON outputs. Finally,
 open the committed report fixture
 [`libs/contracts/report/fixtures/unified-report.v2.all-scans.json`](../libs/contracts/report/fixtures/unified-report.v2.all-scans.json)
 to see the output contract, and skim the service-topology and trust-boundary
@@ -100,7 +103,10 @@ Highlights:
 
 Highlights:
 
-- Focus on report UX, evidence visualization, and live job status.
+- The report workflow moves from page-by-page Review and local human decisions,
+  through searchable Findings, to downloadable Artifacts.
+- Server data remains API-owned; review decisions are stored per job in browser
+  `localStorage` and synchronize across tabs.
 - Tests are contract-driven: the same committed fixture powers unit tests,
   component tests, the e2e smoke, and the QA screenshot harness.
 

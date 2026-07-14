@@ -318,19 +318,19 @@ export default function Home() {
 										<span className="selfhost__mark" aria-hidden="true">
 											<Check size={13} />
 										</span>
-										Docker-based, rootless containers
+										Rootless Podman isolation
 									</li>
 									<li>
 										<span className="selfhost__mark" aria-hidden="true">
 											<Check size={13} />
 										</span>
-										No SaaS lock-in, run anywhere
+										Self-host on supported Linux infrastructure
 									</li>
 									<li>
 										<span className="selfhost__mark" aria-hidden="true">
 											<Check size={13} />
 										</span>
-										Artifacts you own: HTML, JSON, SARIF
+										Reports you own: HTML and JSON
 									</li>
 								</ul>
 								<div className="selfhost__actions">

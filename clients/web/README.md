@@ -7,15 +7,17 @@ It is responsible for:
 
 - Submitting scans (URL or static-site ZIP) against a StageFlow API.
 - Streaming live job status over SSE, with polling fallback.
-- Rendering the unified report: overview dashboard, issue triage with evidence
-  and remediation, visual review with screenshot overlays, and artifact
-  downloads.
+- Rendering the unified report: a Review workspace with screenshot overlays and
+  human decisions, a searchable Findings view with evidence and remediation,
+  and Artifacts downloads.
 
 It is **not** responsible for:
 
 - Running scans or talking to scanners (handled by the Orchestrator and
   scanner-runner behind the Platform API).
-- Persisting anything — it is a stateless SPA over the HTTP + SSE API.
+- Persisting server-owned scan, job, or report data, which remains API-owned.
+  Human-review decisions are the exception: they are stored in browser
+  `localStorage`, scoped per job, so reviewers can resume locally.
 
 ## Stack
 
@@ -34,7 +36,7 @@ all-scans fixture there is the canonical example of a full report.
 | Path                     | Purpose                                                  |
 | ------------------------ | -------------------------------------------------------- |
 | `app/routes/`            | Pages: home, playground, scan submission, status, report |
-| `app/components/report/` | Report UI: overview, issue list, evidence, visual review |
+| `app/components/report/` | Report UI: Review, Findings, Artifacts, and evidence     |
 | `app/lib/api/`           | Fetch + SSE clients over the platform API                |
 | `app/lib/report/`        | Pure report logic: severity, grouping, filters, scoring  |
 | `app/lib/hooks/`         | Scan status/report monitors (SSE with polling fallback)  |

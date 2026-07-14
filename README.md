@@ -13,7 +13,7 @@ worse?*
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
 real, interactive report in the browser. No account required.
 
-![Clicking a bounding-box overlay on the Pages tab opens the issue detail card](docs/images/report-bounding-box.gif)
+![Clicking a bounding-box overlay in Review opens the finding detail card](docs/images/report-bounding-box.gif)
 
 Reviewing this codebase? The
 [evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
@@ -64,16 +64,17 @@ and rerun — see [docs/operations/devtools.md](docs/operations/devtools.md).
 
 ## The Report
 
-Every scan — CLI or browser — produces one unified report built for triage:
-score and severity distribution at a glance, issues grouped by scanner/rule,
-page screenshots and occurrence evidence, remediation details for engineers,
-and JSON/HTML downloads.
+Every scan — CLI or browser — produces one unified report built for triage. Use
+Review for page screenshots, overlays, and human decisions; Findings for
+searchable issues grouped by scanner and rule; and Artifacts for owned HTML and
+JSON report downloads.
 
-![StageFlow report overview](docs/images/report-overview.png)
+![StageFlow report Review workspace](docs/images/report-overview.png)
 
 Every flagged element is overlaid directly on a full-page screenshot (see the
-GIF above) — click a bounding box on the Pages tab to jump straight to that
-issue's fix guidance, WCAG references, and evidence.
+GIF above) — click a bounding box in Review to jump straight to that finding's
+fix guidance, WCAG references, and evidence. Use Findings for full-list triage
+and Artifacts to retrieve the generated reports.
 
 The report shape is a versioned contract. To see it without running a scan,
 open the committed fixture
