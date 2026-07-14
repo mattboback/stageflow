@@ -850,10 +850,21 @@
 	font-size: 0.8125rem; color: var(--ink-muted);
 	display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;
 }
-.vrev__issue-verify {
-	font-size: 0.75rem; font-weight: 700; color: var(--signal-ink);
-	background: var(--signal-wash); border: 1px solid var(--signal-edge);
+.vrev__issue-review {
+	font-size: 0.75rem; font-weight: 700;
 	border-radius: var(--r-pill); padding: 0.08rem 0.5rem;
+}
+.vrev__issue-review--pending {
+	color: var(--signal-ink); background: var(--signal-wash); border: 1px solid var(--signal-edge);
+}
+.vrev__issue-review--pass {
+	color: oklch(0.35 0.09 158); background: var(--sev-minor-wash); border: 1px solid oklch(0.78 0.07 150);
+}
+.vrev__issue-review--fail {
+	color: var(--sev-critical); background: var(--sev-critical-wash); border: 1px solid oklch(0.78 0.08 27);
+}
+.vrev__issue-review--mixed {
+	color: var(--ink-muted); background: var(--surface-sunk); border: 1px solid var(--line-strong);
 }
 .vrev__issue-times {
 	flex-shrink: 0; align-self: flex-start;

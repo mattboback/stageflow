@@ -72,6 +72,13 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 	const required = requiredLevel(issue.ruleId);
 	const requiredThreshold = WCAG_THRESHOLDS[required][state.largeText ? 'large' : 'normal'];
 	const measuredPasses = ratio !== null ? ratio >= requiredThreshold : null;
+	const measurement = {
+		fg: state.fg,
+		bg: state.bg,
+		ratio,
+		largeText: state.largeText,
+		requiredThreshold
+	};
 
 	const overviewElement = findOverviewElement(page, issue.id);
 	const overview = page?.pageOverview;
@@ -166,6 +173,12 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 							{verdict.measurement?.fg || '—'} on {verdict.measurement?.bg || '—'}
 							{verdict.measurement?.ratio !== null && verdict.measurement?.ratio !== undefined
 								? ` · ${formatRatio(verdict.measurement.ratio)}:1`
+								: ''}
+							{verdict.measurement?.largeText !== undefined
+								? ` · ${verdict.measurement.largeText ? 'large text' : 'normal text'}`
+								: ''}
+							{verdict.measurement?.requiredThreshold !== undefined
+								? ` · ${verdict.measurement.requiredThreshold.toFixed(1)}:1 required`
 								: ''}{' '}
 							· {formatVerdictTime(verdict.at)}
 						</span>
@@ -200,7 +213,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 								}
 								setVerdict(issue.id, {
 									verdict: 'pass',
-									measurement: { fg: state.fg, bg: state.bg, ratio }
+									measurement
 								});
 							}}
 						>
@@ -220,7 +233,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 								}
 								setVerdict(issue.id, {
 									verdict: 'fail',
-									measurement: { fg: state.fg, bg: state.bg, ratio }
+									measurement
 								});
 							}}
 						>

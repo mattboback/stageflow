@@ -1,87 +1,51 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
+import { REVIEW_VERDICTS_STORAGE_KEY, type ReviewVerdict } from '../report/review-verdict';
 import {
-	LEGACY_CONTRAST_VERDICTS_STORAGE_KEY,
-	REVIEW_VERDICTS_STORAGE_KEY,
-	normalizeReviewVerdicts,
-	type ReviewVerdict,
-	type ReviewVerdictsByJob
-} from '../report/review-verdict';
+	createReviewVerdictStore,
+	type ReviewVerdictStorage
+} from '../report/review-verdict-store';
 
-const MAX_JOBS = 20;
+const browserStorage: ReviewVerdictStorage = {
+	getItem(key) {
+		return typeof window === 'undefined' ? null : window.localStorage.getItem(key);
+	},
+	setItem(key, value) {
+		if (typeof window !== 'undefined') window.localStorage.setItem(key, value);
+	}
+};
 
-let cache: ReviewVerdictsByJob = {};
-let cacheLoaded = false;
-const listeners = new Set<() => void>();
+const store = createReviewVerdictStore(browserStorage);
+let activeSubscriptions = 0;
 
-function parseStored(raw: string | null): ReviewVerdictsByJob {
-	if (!raw) return {};
+function handleStorage(event: StorageEvent) {
+	if (event.key !== REVIEW_VERDICTS_STORAGE_KEY && event.key !== null) return;
 	try {
-		return normalizeReviewVerdicts(JSON.parse(raw));
+		if (event.storageArea && event.storageArea !== window.localStorage) return;
 	} catch {
-		return {};
+		return;
 	}
-}
-
-function load(): ReviewVerdictsByJob {
-	if (typeof window === 'undefined') return {};
-	try {
-		const currentRaw = window.localStorage.getItem(REVIEW_VERDICTS_STORAGE_KEY);
-		if (currentRaw !== null) return parseStored(currentRaw);
-
-		const legacy = parseStored(window.localStorage.getItem(LEGACY_CONTRAST_VERDICTS_STORAGE_KEY));
-		if (Object.keys(legacy).length > 0) {
-			window.localStorage.setItem(REVIEW_VERDICTS_STORAGE_KEY, JSON.stringify(legacy));
-		}
-		return legacy;
-	} catch {
-		return {};
-	}
-}
-
-function latestTimestamp(verdicts: Record<string, ReviewVerdict>): string {
-	return Object.values(verdicts).reduce(
-		(max, verdict) => (verdict.at > max ? verdict.at : max),
-		''
-	);
-}
-
-function persist(next: ReviewVerdictsByJob) {
-	const jobIds = Object.keys(next);
-	if (jobIds.length > MAX_JOBS) {
-		const byRecency = jobIds.sort((a, b) =>
-			latestTimestamp(next[b] ?? {}).localeCompare(latestTimestamp(next[a] ?? {}))
-		);
-		next = Object.fromEntries(byRecency.slice(0, MAX_JOBS).map((id) => [id, next[id] ?? {}]));
-	}
-	cache = next;
-	try {
-		window.localStorage.setItem(REVIEW_VERDICTS_STORAGE_KEY, JSON.stringify(next));
-	} catch {
-		// Quota or private-mode failures lose persistence, not session state.
-	}
-	for (const listener of listeners) listener();
+	if (event.key === null || event.newValue === null) store.sync(null);
+	else store.refresh();
 }
 
 function subscribe(listener: () => void): () => void {
-	listeners.add(listener);
-	return () => listeners.delete(listener);
-}
-
-function getSnapshot(): ReviewVerdictsByJob {
-	if (!cacheLoaded && typeof window !== 'undefined') {
-		cache = load();
-		cacheLoaded = true;
+	const unsubscribe = store.subscribe(listener);
+	if (activeSubscriptions === 0 && typeof window !== 'undefined') {
+		window.addEventListener('storage', handleStorage);
 	}
-	return cache;
-}
-
-function getServerSnapshot(): ReviewVerdictsByJob {
-	return cache;
+	activeSubscriptions += 1;
+	return () => {
+		unsubscribe();
+		activeSubscriptions -= 1;
+		if (activeSubscriptions === 0 && typeof window !== 'undefined') {
+			window.removeEventListener('storage', handleStorage);
+		}
+	};
 }
 
 export function useReviewVerdicts(jobId: string) {
-	const verdicts = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+	const verdicts = useSyncExternalStore(subscribe, store.getSnapshot, store.getServerSnapshot);
 
 	const getVerdict = useCallback(
 		(issueId: string): ReviewVerdict | null => verdicts[jobId]?.[issueId] ?? null,
@@ -90,28 +54,14 @@ export function useReviewVerdicts(jobId: string) {
 
 	const setVerdict = useCallback(
 		(issueId: string, verdict: Omit<ReviewVerdict, 'at'>) => {
-			const current = getSnapshot();
-			persist({
-				...current,
-				[jobId]: {
-					...current[jobId],
-					[issueId]: { ...verdict, at: new Date().toISOString() }
-				}
-			});
+			store.setVerdict(jobId, issueId, verdict);
 		},
 		[jobId]
 	);
 
 	const clearVerdict = useCallback(
 		(issueId: string) => {
-			const current = getSnapshot();
-			if (!current[jobId]?.[issueId]) return;
-			const jobVerdicts = { ...current[jobId] };
-			delete jobVerdicts[issueId];
-			const next = { ...current };
-			if (Object.keys(jobVerdicts).length === 0) delete next[jobId];
-			else next[jobId] = jobVerdicts;
-			persist(next);
+			store.clearVerdict(jobId, issueId);
 		},
 		[jobId]
 	);

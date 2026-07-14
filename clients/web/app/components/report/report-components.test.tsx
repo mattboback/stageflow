@@ -9,12 +9,13 @@ import { ReportHeader } from './ReportHeader';
 import { ReportStatStrip } from './ReportStatStrip';
 import { ScannerText } from './ScannerText';
 import { ManualReviewTab } from './verify/ManualReviewTab';
+import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
 const report = loadAllScansFixture();
 
 describe('ReportHeader', () => {
 	it('renders the title and scan totals from the fixture', () => {
-		render(<ReportHeader report={report} />);
+		render(<ReportHeader report={report} reviewProgress={{ total: 2, reviewed: 0, pending: 2 }} />);
 
 		expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
@@ -23,6 +24,14 @@ describe('ReportHeader', () => {
 		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
 		expect(totals.textContent).toContain('Pages scanned');
 		expect(totals.textContent).toContain('Human review');
+	});
+
+	it('shows completed human reviews without pending copy', () => {
+		render(<ReportHeader report={report} reviewProgress={{ total: 2, reviewed: 2, pending: 0 }} />);
+
+		const totals = screen.getByLabelText('Scan totals');
+		expect(totals.textContent).toContain('all 2 findings reviewed');
+		expect(totals.textContent).not.toContain('need a human check');
 	});
 });
 
@@ -123,5 +132,40 @@ describe('ManualReviewTab', () => {
 		expect(screen.getByText('Reviewed · pass')).toBeTruthy();
 		fireEvent.click(screen.getByRole('button', { name: 'Clear verdict' }));
 		expect(screen.getByRole('button', { name: 'Mark pass' })).toBeTruthy();
+	});
+});
+
+describe('VerifyContrastTab', () => {
+	it('records and displays the text classification and threshold used', () => {
+		const issue = {
+			...report.issues[0]!,
+			id: 'contrast-review-component-test',
+			scanner: 'axe',
+			ruleId: 'color-contrast',
+			description: 'Verify rendered contrast.',
+			scannerData: {
+				axeIncomplete: true,
+				contrastData: {
+					fgColor: '#898989',
+					bgColor: '#ffffff',
+					fontSize: '16px',
+					fontWeight: '400'
+				}
+			}
+		};
+
+		render(
+			<VerifyContrastTab
+				issue={issue}
+				page={null}
+				pageOverviewUrl={null}
+				jobId="contrast-review-component-job"
+			/>
+		);
+		fireEvent.click(screen.getByRole('checkbox', { name: /Large text/ }));
+		fireEvent.click(screen.getByRole('button', { name: 'Mark pass' }));
+
+		expect(screen.getByText('Verified · pass')).toBeTruthy();
+		expect(screen.getByText(/large text/).textContent).toContain('3.0:1 required');
 	});
 });

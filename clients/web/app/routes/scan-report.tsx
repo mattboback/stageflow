@@ -110,7 +110,10 @@ export default function ScanReport() {
 			displayReport ? sortIssues(displayReport.issues.filter(needsHumanReview), 'severity') : [],
 		[displayReport]
 	);
-	const reviewedCount = reviewQueue.filter((issue) => getVerdict(issue.id)).length;
+	const reviewProgress = useMemo(() => {
+		const reviewed = reviewQueue.filter((issue) => getVerdict(issue.id)).length;
+		return { total: reviewQueue.length, reviewed, pending: reviewQueue.length - reviewed };
+	}, [reviewQueue, getVerdict]);
 	const nextReviewIssue =
 		reviewQueue.find((issue) => !getVerdict(issue.id)) ?? reviewQueue[0] ?? null;
 	const modalIssues =
@@ -131,7 +134,7 @@ export default function ScanReport() {
 				<div className="wrap">
 					{displayReport ? (
 						<>
-							<ReportHeader report={displayReport} />
+							<ReportHeader report={displayReport} reviewProgress={reviewProgress} />
 							<ReportSectionNav
 								report={displayReport}
 								section={section}
@@ -148,23 +151,23 @@ export default function ScanReport() {
 										<div className="rnext">
 											<div className="rnext__copy">
 												<p className="rnext__count">
-													{reviewedCount >= reviewQueue.length
+													{reviewProgress.pending === 0
 														? `All ${reviewQueue.length} findings reviewed`
-														: reviewedCount > 0
-															? `${reviewQueue.length - reviewedCount} of ${reviewQueue.length} findings still need review`
+														: reviewProgress.reviewed > 0
+															? `${reviewProgress.pending} of ${reviewQueue.length} findings still need review`
 															: `${reviewQueue.length} findings need review`}
 												</p>
 												<p className="rnext__sub">
 													Highest severity first — evidence and decision tools open in place.
 												</p>
 											</div>
-											{nextReviewIssue && reviewedCount < reviewQueue.length && (
+											{nextReviewIssue && reviewProgress.pending > 0 && (
 												<button
 													type="button"
 													className="btn btn--primary btn--lg"
 													onClick={() => updateParams({ issue: nextReviewIssue.id })}
 												>
-													{reviewedCount > 0 ? 'Continue review' : 'Start review'}{' '}
+													{reviewProgress.reviewed > 0 ? 'Continue review' : 'Start review'}{' '}
 													<span className="ar" aria-hidden="true">
 														→
 													</span>
@@ -184,6 +187,7 @@ export default function ScanReport() {
 										screenshots={screenshots}
 										activeScanner={activeScanner}
 										activePage={activePage}
+										getReviewVerdict={getVerdict}
 										onSelectPage={(pageId) => updateParams({ page: pageId })}
 										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 									/>

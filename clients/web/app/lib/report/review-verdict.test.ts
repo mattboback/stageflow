@@ -41,6 +41,40 @@ describe('normalizeReviewVerdicts', () => {
 		});
 	});
 
+	it('keeps the text classification and threshold used for a contrast decision', () => {
+		expect(
+			normalizeReviewVerdicts({
+				'job-1': {
+					'issue-1': {
+						verdict: 'pass',
+						at: '2026-07-14T10:00:00.000Z',
+						measurement: {
+							fg: '#898989',
+							bg: '#ffffff',
+							ratio: 3.5,
+							largeText: true,
+							requiredThreshold: 3
+						}
+					}
+				}
+			})
+		).toEqual({
+			'job-1': {
+				'issue-1': {
+					verdict: 'pass',
+					at: '2026-07-14T10:00:00.000Z',
+					measurement: {
+						fg: '#898989',
+						bg: '#ffffff',
+						ratio: 3.5,
+						largeText: true,
+						requiredThreshold: 3
+					}
+				}
+			}
+		});
+	});
+
 	it('drops malformed jobs and verdicts', () => {
 		expect(
 			normalizeReviewVerdicts({

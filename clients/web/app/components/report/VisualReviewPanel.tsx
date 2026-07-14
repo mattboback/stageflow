@@ -3,9 +3,11 @@ import { Maximize2, Minus, Plus } from 'lucide-react';
 
 import type { IssueDetail, UnifiedReport } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
+import type { ReviewVerdict } from '../../lib/report/review-verdict';
 import {
 	SEVERITY_LEVELS,
 	getPageOverviewUrl,
+	getReviewGroupStatus,
 	getSeverityDotClass,
 	getSeverityFillColor,
 	getSeverityStrokeColor,
@@ -18,6 +20,7 @@ interface Props {
 	screenshots: ScreenshotArtifact[];
 	activeScanner: string | null;
 	activePage: string | null;
+	getReviewVerdict: (issueId: string) => ReviewVerdict | null;
 	onSelectPage: (pageId: string) => void;
 	onIssueSelect: (issue: IssueDetail) => void;
 }
@@ -28,7 +31,6 @@ interface IssueGroup {
 	scanner: string;
 	ruleId: string;
 	severity: string;
-	needsReview: boolean;
 	issues: IssueDetail[];
 }
 
@@ -49,6 +51,7 @@ export function VisualReviewPanel({
 	screenshots,
 	activeScanner,
 	activePage,
+	getReviewVerdict,
 	onSelectPage,
 	onIssueSelect
 }: Props) {
@@ -95,7 +98,6 @@ export function VisualReviewPanel({
 					scanner: issue.scanner,
 					ruleId: issue.ruleId,
 					severity,
-					needsReview: needsHumanReview(issue),
 					issues: [issue]
 				});
 			}
@@ -348,7 +350,11 @@ export function VisualReviewPanel({
 					<ul className="vrev__issues-list">
 						{issueGroups.map((group) => {
 							const isActive = group.issues.some((issue) => issue.id === activeIssueId);
-							const first = group.issues[0];
+							const reviewStatus = getReviewGroupStatus(group.issues, getReviewVerdict);
+							const first =
+								group.issues.find(
+									(issue) => needsHumanReview(issue) && !getReviewVerdict(issue.id)
+								) ?? group.issues[0];
 							return (
 								<li key={group.key}>
 									<button
@@ -363,8 +369,12 @@ export function VisualReviewPanel({
 										<span className="vrev__issue-body">
 											<span className="vrev__issue-title">{group.title}</span>
 											<span className="vrev__issue-meta">
-												{group.needsReview && (
-													<span className="vrev__issue-verify">needs review</span>
+												{reviewStatus && (
+													<span
+														className={`vrev__issue-review vrev__issue-review--${reviewStatus.tone}`}
+													>
+														{reviewStatus.label}
+													</span>
 												)}
 												{group.scanner} · {group.ruleId}
 											</span>

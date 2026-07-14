@@ -4,6 +4,8 @@ export interface ReviewMeasurement {
 	fg: string;
 	bg: string;
 	ratio: number | null;
+	largeText?: boolean;
+	requiredThreshold?: number;
 }
 
 export interface ReviewVerdict {
@@ -25,7 +27,20 @@ function normalizeMeasurement(value: unknown): ReviewMeasurement | undefined {
 	if (!isRecord(value)) return undefined;
 	if (typeof value.fg !== 'string' || typeof value.bg !== 'string') return undefined;
 	if (value.ratio !== null && typeof value.ratio !== 'number') return undefined;
-	return { fg: value.fg, bg: value.bg, ratio: value.ratio };
+	const largeText = typeof value.largeText === 'boolean' ? value.largeText : undefined;
+	const requiredThreshold =
+		typeof value.requiredThreshold === 'number' &&
+		Number.isFinite(value.requiredThreshold) &&
+		value.requiredThreshold > 0
+			? value.requiredThreshold
+			: undefined;
+	return {
+		fg: value.fg,
+		bg: value.bg,
+		ratio: value.ratio,
+		...(largeText !== undefined ? { largeText } : {}),
+		...(requiredThreshold !== undefined ? { requiredThreshold } : {})
+	};
 }
 
 function normalizeVerdict(value: unknown): ReviewVerdict | null {

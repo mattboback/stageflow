@@ -158,7 +158,39 @@ test('review queue records contrast and generic human decisions', async ({ page 
 	await page.getByRole('button', { name: 'Mark pass' }).click();
 	await page.getByRole('button', { name: 'Close modal' }).click();
 
-	await expect(page.getByText('All 2 findings reviewed')).toBeVisible();
+	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
+	const totals = page.getByLabel('Scan totals');
+	await expect(totals.getByText('all 2 findings reviewed')).toBeVisible();
+	await expect(totals.getByText(/need a human check/)).toHaveCount(0);
+	await expect(page.getByText('needs review', { exact: true })).toHaveCount(0);
+	await expect(page.getByText('reviewed · pass', { exact: true })).toBeVisible();
+});
+
+test('review decisions synchronize without loss across browser tabs', async ({ context, page }) => {
+	const otherPage = await context.newPage();
+	await mockReportRoutes(page);
+	await mockReportRoutes(otherPage);
+	await Promise.all([
+		page.goto(`/scan/${JOB_ID}/report`),
+		otherPage.goto(`/scan/${JOB_ID}/report`)
+	]);
+
+	await page.getByRole('button', { name: /Start review/ }).click();
+	await page.getByRole('button', { name: 'Mark pass' }).click();
+	await page.getByRole('button', { name: 'Close modal' }).click();
+
+	await expect(otherPage.getByText('1 of 2 findings still need review')).toBeVisible();
+	await otherPage.getByRole('button', { name: /Continue review/ }).click();
+	await expect(otherPage.getByRole('tab', { name: 'Review', exact: true })).toHaveAttribute(
+		'aria-selected',
+		'true'
+	);
+	await otherPage.getByRole('button', { name: 'Mark fail' }).click();
+	await otherPage.getByRole('button', { name: 'Close modal' }).click();
+
+	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
+	await page.reload();
+	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
 });
 
 test.describe('mobile report (390×844)', () => {

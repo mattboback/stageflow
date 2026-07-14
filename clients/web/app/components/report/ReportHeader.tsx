@@ -3,10 +3,11 @@ import { AlertTriangle, Eye, FileText } from 'lucide-react';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Gauge } from '../Gauge';
 import { Pill } from '../Pill';
-import { needsHumanReview, scoreBandFor } from '../../lib/report';
+import { scoreBandFor, type ReviewProgress } from '../../lib/report';
 
 interface Props {
 	report: UnifiedReport;
+	reviewProgress: ReviewProgress;
 }
 
 function formatDuration(ms: number | undefined): string | null {
@@ -30,14 +31,21 @@ function formatScannedAt(iso: string | undefined): string | null {
 	});
 }
 
-export function ReportHeader({ report }: Props) {
+export function ReportHeader({ report, reviewProgress }: Props) {
 	const score = typeof report.summary.score === 'number' ? Math.round(report.summary.score) : null;
 	const band = scoreBandFor(score);
 	const totals = report.summary.bySeverity;
 	const critical = totals.critical ?? 0;
 	const serious = totals.serious ?? 0;
 	const total = report.summary.totalIssues ?? 0;
-	const reviewCount = report.issues.filter(needsHumanReview).length;
+	const pendingCopy =
+		reviewProgress.pending === 1
+			? '1 finding needs a human check'
+			: `${reviewProgress.pending} findings need a human check`;
+	const reviewedCopy =
+		reviewProgress.reviewed === 1
+			? 'all 1 finding reviewed'
+			: `all ${reviewProgress.reviewed} findings reviewed`;
 
 	const scannedAt = formatScannedAt(report.meta.completedAt ?? report.meta.scannedAt);
 	const duration = formatDuration(report.meta.durationMs);
@@ -115,9 +123,15 @@ export function ReportHeader({ report }: Props) {
 						<Eye size={16} aria-hidden="true" />
 						Human review
 					</dt>
-					<dd className="rhead__stat-val">{reviewCount.toLocaleString()}</dd>
+					<dd className="rhead__stat-val">{reviewProgress.total.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
-						{reviewCount > 0 ? 'findings need a human check' : 'nothing to verify'}
+						{reviewProgress.pending > 0
+							? reviewProgress.reviewed > 0
+								? `${reviewProgress.reviewed} reviewed · ${pendingCopy}`
+								: pendingCopy
+							: reviewProgress.total > 0
+								? reviewedCopy
+								: 'nothing to verify'}
 					</dd>
 				</div>
 				<div className="rhead__stat">
