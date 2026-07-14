@@ -44,11 +44,15 @@ export default function Root() {
 
 export function ErrorBoundary({ error }: { error: unknown }) {
 	const status = isRouteErrorResponse(error) ? error.status : 500;
-	const title = status === 404 ? 'Channel not found' : 'Unexpected fault';
+	const title = status === 404 ? 'Page not found' : 'Something went wrong';
 	return (
 		<main style={{ padding: '4rem 1.5rem', maxWidth: '32rem', margin: '0 auto' }}>
 			<h1>{title}</h1>
-			<p>The StageFlow console hit an error rendering this view.</p>
+			<p>
+				{status === 404
+					? 'The page you requested could not be found.'
+					: 'StageFlow could not render this page. Please try again.'}
+			</p>
 		</main>
 	);
 }

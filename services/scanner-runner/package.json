@@ -67,7 +67,7 @@
 		"minio": "^8.0.7",
 		"nats": "^2.29.3",
 		"playwright": "1.60.0",
-		"sharp": "^0.34.5"
+		"sharp": "^0.35.3"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

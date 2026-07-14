@@ -29,29 +29,28 @@ colors:
   severity-moderate-wash: "oklch(0.965 0.035 85)"
   severity-minor-wash: "oklch(0.965 0.03 135)"
 typography:
-  sans: "Archivo, system-ui, -apple-system, Segoe UI, sans-serif"
+  display: "Gabarito, Avenir Next, Segoe UI, system-ui, sans-serif"
+  sans: "Source Sans 3, Segoe UI, system-ui, -apple-system, sans-serif"
   mono: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
   body:
-    fontFamily: "Archivo, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Source Sans 3, Segoe UI, system-ui, -apple-system, sans-serif"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.55
   label:
-    fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
-    fontSize: "0.6875rem"
-    fontWeight: 500
-    letterSpacing: "0.09em"
+    fontFamily: "Source Sans 3, Segoe UI, system-ui, -apple-system, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 600
   readout:
-    fontFamily: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
-    fontSize: "1.6rem"
+    fontFamily: "Gabarito, Avenir Next, Segoe UI, system-ui, sans-serif"
+    fontSize: "1.55rem"
     fontWeight: 700
-    lineHeight: 1
-    letterSpacing: "-0.01em"
+    lineHeight: 1.1
 rounded:
-  xs: "2px"
-  sm: "4px"
-  md: "6px"
-  lg: "8px"
+  xs: "6px"
+  sm: "8px"
+  md: "12px"
+  lg: "16px"
   pill: "999px"
 spacing:
   wrap-inline: "1.75rem"
@@ -62,25 +61,25 @@ components:
   button-primary:
     backgroundColor: "{colors.signal-strong}"
     textColor: "#ffffff"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 1.1rem"
   button-primary-hover:
     backgroundColor: "{colors.signal-press}"
   button-ghost:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink-strong}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 1.1rem"
   button-sm:
     padding: "0.5rem 0.8rem"
   input:
     backgroundColor: "{colors.surface-sunk}"
     textColor: "{colors.ink-strong}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.sm}"
     padding: "0.7rem 0.85rem"
   panel:
     backgroundColor: "{colors.surface}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.md}"
   pill:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.ink-muted}"
@@ -110,7 +109,7 @@ when the design language changes.
 **Creative North Star: "Calibrated Instrument"**
 
 StageFlow is a precision measuring instrument for frontend quality: exact, quiet,
-and evidence-heavy. The interface favors linework, mono readouts, compact controls,
+and evidence-heavy. The interface favors linework, clear readouts, compact controls,
 and stable report surfaces over marketing decoration. Density is operational —
 built for scanning scores and issues — without becoming a dark developer console.
 
@@ -127,10 +126,11 @@ dashboards; heavy marketing-page reveal choreography.
 **Key Characteristics:**
 
 - Light-only cool graphite/white surfaces with one teal-cyan signal color
-- Archivo for prose and UI; JetBrains Mono for IDs, scores, status, timings, counts
+- Gabarito for headings and hero numerals; Source Sans 3 for prose and interface
+- JetBrains Mono for literal code and data such as selectors, snippets, and CLI output
 - Borders and tonal steps for structure; shadows only for real overlays
 - Severity always color plus text, count, shape, or position
-- Rounded corners small and consistent: 2px, 4px, 6px, or 8px (pills 999px)
+- Rounded corners consistent: 6px, 8px, 12px, or 16px (pills 999px)
 - Restrained and exact controls — signal rare and meaningful
 - Semantic z-index scale (sticky → dropdown → backdrop → modal → toast → tooltip)
 
@@ -181,37 +181,40 @@ severity color with label, count, badge text, grouped position, or overlay geome
 
 ## 3. Typography
 
-**Display/Body Font:** Archivo (system-ui, -apple-system, Segoe UI, sans-serif)
-**Label/Mono Font:** JetBrains Mono (ui-monospace, SFMono-Regular, Menlo, monospace)
+**Display Font:** Gabarito (Avenir Next, Segoe UI, system-ui, sans-serif)
 
-**Character:** Archivo carries calm UI prose; mono is a co-primary data voice for
-scores, IDs, job states, scanner names, timings, and counts — the instrument's
-readout face. Body sets `font-feature-settings: 'cv05' 1, 'ss01' 1`; mono readouts
-enable `'zero' 1`.
+**Body/Interface Font:** Source Sans 3 (Segoe UI, system-ui, sans-serif)
+
+**Data/Mono Font:** JetBrains Mono (ui-monospace, SFMono-Regular, Menlo, monospace)
+
+**Character:** Gabarito gives headings, hero numerals, gauges, and readouts a
+confident display voice. Source Sans 3 carries calm interface labels and prose.
+JetBrains Mono is reserved for literal code and technical data such as selectors,
+snippets, and CLI output.
 
 ### Hierarchy
 
-- **Body** (400, 16px, line-height 1.55): default page text in Archivo
+- **Body** (400, 16px, line-height 1.55): default page text in Source Sans 3
+- **Headings** (700, line-height 1.15): Gabarito with restrained negative tracking
 - **UI / controls** (600 on buttons, ~0.9rem): compact tool surfaces; steady type,
   not fluid clamp scales on product chrome
-- **Label** (`.label`: mono, 0.6875rem / 11px, weight 500, letter-spacing 0.09em,
-  uppercase): field annotations and instrument captions
-- **Readout** (`.readout__val`: mono, weight 700, 1.6rem, letter-spacing -0.01em):
-  quantitative values
-- **Gauge caption** (mono, 0.625rem, letter-spacing 0.12em, uppercase)
-- **Eyetag** (mono, 0.7rem, letter-spacing 0.14em, uppercase, signal-ink): rare
-  section annotation — not an eyebrow on every section
+- **Label** (`.label`: Source Sans 3, 0.875rem, weight 600, sentence case): field
+  annotations and instrument captions
+- **Readout** (`.readout__val`: Gabarito, weight 700, 1.55rem): quantitative values
+- **Gauge value** (`.gauge__val`: Gabarito, weight 800) with a Source Sans 3 caption
+- **Code/data** (`code`, `pre`, `.mono`): JetBrains Mono for selectors, snippets,
+  commands, and machine-oriented values
 - **Hero / report titles**: larger type only on landing and major report headings;
   panels, filters, and rows stay dense and steady
 
 ### Named Rules
 
-**The Mono-for-Truth Rule.** Quantitative truth — scores, IDs, timestamps,
-severities, command-like labels — uses JetBrains Mono. Prose stays Archivo.
+**The Three-Face Rule.** Gabarito carries display hierarchy and prominent
+measurements, Source Sans 3 carries the interface, and JetBrains Mono carries
+literal code or technical data. Do not substitute one face merely for decoration.
 
 **The No Decorative Display Rule.** No serif display faces, no alternate display
-fonts, no aggressive negative letter-spacing on compact tool surfaces (readout
-allows −0.01em only).
+fonts, and no aggressive negative letter-spacing on compact tool surfaces.
 
 ## 4. Elevation
 

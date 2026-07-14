@@ -6,7 +6,7 @@ import notFoundStyles from './not-found.css?url';
 export const links = () => [{ rel: 'stylesheet', href: notFoundStyles }];
 
 export const meta: MetaFunction = () => [
-	{ title: '404 · Channel not found — StageFlow' },
+	{ title: '404 · Page not found — StageFlow' },
 	{ name: 'robots', content: 'noindex' }
 ];
 
@@ -29,10 +29,10 @@ export default function NotFound() {
 						4<span>0</span>4
 					</div>
 					<div className="fault__body">
-						<h1>This channel isn't on the bench.</h1>
+						<h1>Page not found.</h1>
 						<p>
-							The page or scan you requested doesn't exist, expired, or moved. Scan jobs are kept
-							for a limited window after they complete.
+							The page or scan you requested doesn't exist, has expired, or has moved. Scan jobs
+							are kept for a limited window after they complete.
 						</p>
 						<div className="fault__trace" role="status">
 							<div>
