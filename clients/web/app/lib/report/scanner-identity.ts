@@ -9,7 +9,7 @@ export interface ScannerMeta {
 export const SCANNER_META: Record<string, ScannerMeta> = {
 	axe: {
 		icon: Shield,
-		label: 'Axe',
+		label: 'Axe Accessibility',
 		description: 'WCAG accessibility testing with axe-core engine'
 	},
 	lighthouse: {
@@ -48,6 +48,18 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 		description: 'AI-powered spelling, grammar, and content quality checks'
 	}
 };
+
+/**
+ * Canonical user-facing scanner name. Prefers the SCANNER_META label so the
+ * homepage, configure page, and report all say the same thing; falls back to
+ * the API-provided name with any trailing " Scanner" suffix dropped.
+ */
+export function scannerLabel(id: string, apiName?: string | null): string {
+	const meta = SCANNER_META[id];
+	if (meta) return meta.label;
+	if (apiName) return apiName.replace(/\s+Scanner$/i, '');
+	return id;
+}
 
 export function getScannerTileClass(isSelected: boolean): string {
 	if (isSelected) {

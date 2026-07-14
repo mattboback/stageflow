@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams, type MetaFunction } from 'react-router';
-import { CircleCheck, Clock, FileArchive, Info, Layers, Target } from 'lucide-react';
+import { CircleCheck, Clock, FileArchive, Info, KeyRound, Layers, Target } from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
-import {
-	fetchScanners,
-	getDefaultScannerSelections,
-	submitScanJob
-} from '../lib/api/client';
+import { fetchScanners, getDefaultScannerSelections, submitScanJob } from '../lib/api/client';
 import {
 	buildAiNavigatorConfig,
 	buildFormAuthConfig,
@@ -21,14 +17,10 @@ import {
 	type AuthFormConfig
 } from '../lib/components/playground/playground-utils';
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
-import { SCANNER_META } from '../lib/report/scanner-identity';
+import { SCANNER_META, scannerLabel } from '../lib/report/scanner-identity';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
 import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
-import {
-	buildSiteMeta,
-	PLAYGROUND_DESCRIPTION,
-	PLAYGROUND_TITLE
-} from '../lib/site-metadata';
+import { buildSiteMeta, PLAYGROUND_DESCRIPTION, PLAYGROUND_TITLE } from '../lib/site-metadata';
 import playgroundStyles from './playground.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: playgroundStyles }];
@@ -88,9 +80,7 @@ export default function Playground() {
 	const isAuthValid = isAuthConfigComplete(authConfig);
 
 	const [aiConfig, setAiConfig] = useState<AiConfigState>(DEFAULT_AI_CONFIG);
-	const isAiNavigatorEnabled = selections.some(
-		(s) => s.id === 'ai-navigator' && s.enabled
-	);
+	const isAiNavigatorEnabled = selections.some((s) => s.id === 'ai-navigator' && s.enabled);
 
 	useEffect(() => {
 		const controller = new AbortController();
@@ -198,7 +188,7 @@ export default function Playground() {
 			return;
 		}
 
-		if (authConfig.enabled && !isAuthValid) {
+		if (mode === 'url' && authConfig.enabled && !isAuthValid) {
 			setError('Authentication is enabled but Login URL, username, or password is missing.');
 			return;
 		}
@@ -207,9 +197,7 @@ export default function Playground() {
 		const scannersForSubmit =
 			isAiNavigatorEnabled && aiConfig.objective.trim()
 				? selections.map((s) =>
-						s.id === 'ai-navigator'
-							? { ...s, config: buildAiNavigatorConfig(aiConfig) }
-							: s
+						s.id === 'ai-navigator' ? { ...s, config: buildAiNavigatorConfig(aiConfig) } : s
 					)
 				: selections;
 
@@ -233,8 +221,7 @@ export default function Playground() {
 	const estSeconds = Math.max(20, armed * 6);
 	const targetCount = mode === 'url' ? urls.filter((u) => u.trim()).length : file ? 1 : 0;
 	const authBlocking = mode === 'url' && authConfig.enabled && !isAuthValid;
-	const ready =
-		!catalogLoading && !catalogError && armed > 0 && targetCount > 0 && !authBlocking;
+	const ready = !catalogLoading && !catalogError && armed > 0 && targetCount > 0 && !authBlocking;
 	const readyDetail = catalogLoading
 		? 'Loading the scanner catalog.'
 		: armed === 0
@@ -252,13 +239,13 @@ export default function Playground() {
 			<SiteHeader current="playground" />
 
 			<main id="main" className="console">
-				<div className="wrap">
+				<div className="wrap wrap--app">
 					<div className="console__head">
 						<div>
 							<h1>Configure a scan</h1>
 							<p>
-								Point StageFlow at any public URL or a static-site archive, choose the scanners
-								you need, and run. No account, no install.
+								Point StageFlow at any public URL or a static-site archive, choose the scanners you
+								need, and run. No account, no install.
 							</p>
 						</div>
 						{submitting && <Pill variant="live">Submitting</Pill>}
@@ -270,7 +257,12 @@ export default function Playground() {
 							<section className="panel">
 								<div className="panel__head">
 									<div className="panel__head-copy">
-										<h2>Target</h2>
+										<h2>
+											<span className="stepno num" aria-hidden="true">
+												1
+											</span>
+											Target
+										</h2>
 										<p className="panel__sub">
 											Add one or more URLs to scan, or upload a static-site archive.
 										</p>
@@ -298,7 +290,6 @@ export default function Playground() {
 											<div className="addurls">
 												{urls.map((u, i) => (
 													<div className="urlrow" key={i}>
-														<span className="ix num">{i + 1}</span>
 														<div className="urlrow__field">
 															<input
 																className="input"
@@ -307,17 +298,11 @@ export default function Playground() {
 																placeholder="https://…"
 																aria-label={`URL ${i + 1}`}
 																aria-invalid={urlRowErrors[i] ? true : undefined}
-																aria-describedby={
-																	urlRowErrors[i] ? `urlrow-err-${i}` : undefined
-																}
+																aria-describedby={urlRowErrors[i] ? `urlrow-err-${i}` : undefined}
 																onChange={(e) => updateUrl(i, e.target.value)}
 															/>
 															{urlRowErrors[i] && (
-																<span
-																	className="urlrow__err"
-																	id={`urlrow-err-${i}`}
-																	role="alert"
-																>
+																<span className="urlrow__err" id={`urlrow-err-${i}`} role="alert">
 																	{urlRowErrors[i]}
 																</span>
 															)}
@@ -338,7 +323,7 @@ export default function Playground() {
 											</button>
 											<p className="intake__note">
 												<Info size={15} aria-hidden="true" />
-												We scan the provided URLs and linked pages that are in scope.
+												Each URL is scanned as its own page — add every page you want covered.
 											</p>
 										</>
 									) : (
@@ -369,23 +354,30 @@ export default function Playground() {
 							<section className="panel">
 								<div className="panel__head">
 									<div className="panel__head-copy">
-										<h2>Scanners</h2>
-										<p className="panel__sub">Choose the channels you want to run.</p>
+										<h2>
+											<span className="stepno num" aria-hidden="true">
+												2
+											</span>
+											Scanners
+										</h2>
+										<p className="panel__sub">Choose the scanners you want to run.</p>
 									</div>
 									<div className="chanhead__meta">
 										<span className="chanhead__count num">
-											{catalogLoading ? 'Loading…' : `${armed} / ${total} enabled`}
+											{catalogLoading
+												? 'Loading…'
+												: armed === total
+													? `${total} scanners enabled`
+													: `${armed} of ${total} enabled`}
 										</span>
 										{!catalogLoading && !catalogError && (
-											<span className="chanhead__bulk">
-												<button type="button" onClick={() => setAllScanners(true)}>
-													Select all
-												</button>
-												<span aria-hidden="true">·</span>
-												<button type="button" onClick={() => setAllScanners(false)}>
-													None
-												</button>
-											</span>
+											<button
+												type="button"
+												className="chanhead__bulk-btn"
+												onClick={() => setAllScanners(armed < total)}
+											>
+												{armed < total ? 'Enable all' : 'Disable all'}
+											</button>
 										)}
 									</div>
 								</div>
@@ -398,7 +390,7 @@ export default function Playground() {
 											<span>{catalogError}</span>
 										</div>
 									) : (
-										<div className="rack" role="group" aria-label="Scanner channels">
+										<div className="rack" role="group" aria-label="Scanners">
 											{catalog.map((scanner) => {
 												const on = enabledById.get(scanner.id) ?? false;
 												const meta = SCANNER_META[scanner.id];
@@ -416,8 +408,13 @@ export default function Playground() {
 															<Icon size={17} />
 														</span>
 														<span className="chan__main">
-															<span className="chan__name">{scanner.name}</span>
-															<span className="chan__desc">
+															<span className="chan__name">
+																{scannerLabel(scanner.id, scanner.name)}
+															</span>
+															<span
+																className="chan__desc"
+																title={scanner.description || meta?.description || undefined}
+															>
 																{scanner.description || meta?.description || ''}
 															</span>
 														</span>
@@ -442,10 +439,7 @@ export default function Playground() {
 							)}
 
 							{isAiNavigatorEnabled && (
-								<PlaygroundAiConfig
-									config={aiConfig}
-									onConfigChange={setAiConfig}
-								/>
+								<PlaygroundAiConfig config={aiConfig} onConfigChange={setAiConfig} />
 							)}
 						</div>
 
@@ -453,7 +447,7 @@ export default function Playground() {
 						<aside className="dock" aria-label="Scan summary">
 							<div className="panel">
 								<div className="panel__head">
-									<h2>Scan summary</h2>
+									<h2>Review & run</h2>
 								</div>
 								<div className="panel__body">
 									<div
@@ -475,9 +469,7 @@ export default function Playground() {
 											<span className="sumlist__lab">
 												Targets
 												<small>
-													{mode === 'url'
-														? 'Starting points for the scan'
-														: 'Static-site archive'}
+													{mode === 'url' ? 'Starting points for the scan' : 'Static-site archive'}
 												</small>
 											</span>
 											<b className="num">
@@ -500,6 +492,24 @@ export default function Playground() {
 												{armed} of {total || 8}
 											</b>
 										</li>
+										{mode === 'url' && (
+											<li>
+												<span className="sumlist__icon" aria-hidden="true">
+													<KeyRound size={16} />
+												</span>
+												<span className="sumlist__lab">
+													Authentication
+													<small>
+														{authConfig.enabled
+															? isAuthValid
+																? 'Form login before scanning'
+																: 'Required fields missing'
+															: 'Scanning public pages'}
+													</small>
+												</span>
+												<b>{authConfig.enabled ? (isAuthValid ? 'On' : 'Incomplete') : 'Off'}</b>
+											</li>
+										)}
 										<li>
 											<span className="sumlist__icon" aria-hidden="true">
 												<Clock size={16} />
@@ -537,6 +547,34 @@ export default function Playground() {
 							)}
 						</aside>
 					</div>
+				</div>
+
+				{/* Mobile: the review summary collapses into one sticky action bar —
+				    the dock's Run button is hidden there so only one Run exists. */}
+				<div className="stickyrun">
+					<span className="stickyrun__sum num">
+						{mode === 'url'
+							? `${targetCount} ${targetCount === 1 ? 'URL' : 'URLs'}`
+							: file
+								? '1 archive'
+								: 'No archive'}{' '}
+						· {armed} of {total || 8} scanners · auth{' '}
+						{mode === 'url' && authConfig.enabled ? (isAuthValid ? 'on' : 'incomplete') : 'off'} · ~
+						{estSeconds}s
+					</span>
+					<button
+						type="button"
+						className="btn btn--primary"
+						onClick={runScan}
+						disabled={submitting || catalogLoading || armed === 0}
+					>
+						{submitting ? 'Submitting…' : 'Run scan'}{' '}
+						{!submitting && (
+							<span className="ar" aria-hidden="true">
+								→
+							</span>
+						)}
+					</button>
 				</div>
 			</main>
 

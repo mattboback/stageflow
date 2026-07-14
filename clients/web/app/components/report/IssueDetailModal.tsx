@@ -7,17 +7,26 @@ import {
 	getIssueKind,
 	getIssueKindLabel,
 	getIssueScreenshotUrl,
+	getPageOverviewUrl,
 	getSeverityDotClass,
 	normalizeSeverity,
+	isAxeIncompleteIssue,
+	isColorContrastIssue,
 	isManualReviewIssue,
+	needsHumanReview,
 	rewriteIssueTitle
 } from '../../lib/report';
+import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 
 import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueOccurrenceCard } from './IssueOccurrenceCard';
+import { ScannerText } from './ScannerText';
+import { ManualReviewTab } from './verify/ManualReviewTab';
+import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
 interface Props {
 	issue: IssueDetail;
+	jobId?: string;
 	page: PageSummary | null;
 	issues: IssueDetail[];
 	screenshots: ScreenshotArtifact[];
@@ -25,10 +34,11 @@ interface Props {
 	onNavigate?: (issueId: string) => void;
 }
 
-type TabId = 'fix' | 'evidence' | 'occurrences';
+type TabId = 'review' | 'fix' | 'evidence' | 'verify' | 'occurrences';
 
 export function IssueDetailModal({
 	issue,
+	jobId = '',
 	page,
 	issues,
 	screenshots,
@@ -63,30 +73,51 @@ export function IssueDetailModal({
 		[screenshots, issue.scanner, issue.id, issue.pageId]
 	);
 
-	const hasEvidence = Boolean(
-		screenshotUrl ||
-			primaryOccurrence?.selector ||
-			primaryOccurrence?.ancestorPath ||
-			primaryOccurrence?.contextHtml ||
-			primaryOccurrence?.html ||
-			primaryOccurrence?.failureSummary
+	const pageOverviewUrl = useMemo(
+		() =>
+			page
+				? getPageOverviewUrl(screenshots, page.id, issue.scanner ? [issue.scanner, 'axe'] : ['axe'])
+				: null,
+		[screenshots, page, issue.scanner]
 	);
 
+	const hasOverviewCrop = Boolean(
+		pageOverviewUrl && (page?.pageOverview?.elements ?? []).some((el) => el.issueId === issue.id)
+	);
+
+	const hasEvidence = Boolean(
+		screenshotUrl ||
+		hasOverviewCrop ||
+		primaryOccurrence?.selector ||
+		primaryOccurrence?.ancestorPath ||
+		primaryOccurrence?.contextHtml ||
+		primaryOccurrence?.html ||
+		primaryOccurrence?.failureSummary
+	);
+
+	const canVerifyContrast = isColorContrastIssue(issue);
+	const needsVerification = canVerifyContrast && isAxeIncompleteIssue(issue);
+	const needsReview = needsHumanReview(issue);
+	const { getVerdict } = useReviewVerdicts(jobId);
+	const reviewVerdict = canVerifyContrast || needsReview ? getVerdict(issue.id) : null;
+
 	const availableTabs = useMemo<TabId[]>(() => {
-		const tabs: TabId[] = ['fix'];
+		const tabs: TabId[] = isManual ? ['review', 'fix'] : ['fix'];
 		if (hasEvidence) tabs.push('evidence');
+		if (canVerifyContrast) tabs.push('verify');
 		if (occurrenceCount > 0) tabs.push('occurrences');
 		return tabs;
-	}, [hasEvidence, occurrenceCount]);
+	}, [isManual, hasEvidence, canVerifyContrast, occurrenceCount]);
+
+	// Human checks land on their decision surface instead of generic fix prose.
+	const defaultTab: TabId = needsVerification ? 'verify' : isManual ? 'review' : 'fix';
 
 	const [tabState, setTabState] = useState<{ issueId: string; tab: TabId }>({
 		issueId: issue.id,
-		tab: 'fix'
+		tab: defaultTab
 	});
-	const selectedTab = tabState.issueId === issue.id ? tabState.tab : 'fix';
-	const activeTab = availableTabs.includes(selectedTab)
-		? selectedTab
-		: (availableTabs[0] ?? 'fix');
+	const selectedTab = tabState.issueId === issue.id ? tabState.tab : defaultTab;
+	const activeTab = availableTabs.includes(selectedTab) ? selectedTab : (availableTabs[0] ?? 'fix');
 
 	const navigate = (delta: number) => {
 		if (!onNavigate || currentIndex < 0) return;
@@ -201,8 +232,8 @@ export function IssueDetailModal({
 			onClick={onClose}
 		>
 			<div className="imodal" ref={modalRef} onClick={(e) => e.stopPropagation()}>
-				{/* Quiet head: plain surface + 2px severity top edge; badge carries status */}
-				<header className={`imodal__head imodal__head--${severity}`}>
+				{/* Compressed head: severity + status + context on one line, title below. */}
+				<header className="imodal__head">
 					<div className="imodal__head-top">
 						<div className="imodal__chips">
 							<span className={`imodal__sev sev-${severity}`}>
@@ -210,9 +241,22 @@ export function IssueDetailModal({
 								{severity}
 							</span>
 							<span className="imodal__kind">{kindLabel}</span>
-							<span className="imodal__rule">
-								{issue.scanner} · {issue.ruleId}
-							</span>
+							{reviewVerdict ? (
+								<span className={`imodal__verdict imodal__verdict--${reviewVerdict.verdict}`}>
+									Reviewed · {reviewVerdict.verdict}
+								</span>
+							) : (
+								needsReview && (
+									<span className="imodal__verdict imodal__verdict--pending">Needs review</span>
+								)
+							)}
+							{(pageLabel || occurrenceCount > 1) && (
+								<span className="imodal__context">
+									{pageLabel}
+									{pageLabel && occurrenceCount > 1 ? ' · ' : ''}
+									{occurrenceCount > 1 ? `${occurrenceCount} occurrences` : ''}
+								</span>
+							)}
 						</div>
 						<div className="imodal__nav">
 							{onNavigate && totalCount > 1 && (
@@ -228,7 +272,7 @@ export function IssueDetailModal({
 										‹
 									</button>
 									<span className="imodal__nav-count">
-										{currentIndex + 1} / {totalCount}
+										{currentIndex + 1} of {totalCount}
 									</span>
 									<button
 										type="button"
@@ -255,39 +299,9 @@ export function IssueDetailModal({
 					<h2 className="imodal__title">{displayTitle}</h2>
 					{isManual && (
 						<p className="imodal__sub">
-							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this
-							for human verification — no concrete DOM target was reported.
+							{issue.scanner === 'lighthouse' ? 'Lighthouse' : issue.scanner} flagged this for human
+							verification — no concrete DOM target was reported.
 						</p>
-					)}
-					{(pageLabel || issue.category || occurrenceCount > 0) && (
-						<div className="imodal__strip">
-							{pageLabel && (
-								<span>
-									<span className="imodal__strip-lab">Page</span>
-									<span className="imodal__strip-val">{pageLabel}</span>
-								</span>
-							)}
-							{issue.category && (
-								<span>
-									<span className="imodal__strip-lab">Category</span>
-									<span className="imodal__strip-val">{issue.category}</span>
-								</span>
-							)}
-							{occurrenceCount > 0 && (
-								<span>
-									<span className="imodal__strip-lab">Occurrences</span>
-									<span className="imodal__strip-val">{occurrenceCount}</span>
-								</span>
-							)}
-							{primaryOccurrence?.selector && (
-								<span>
-									<span className="imodal__strip-lab">Selector</span>
-									<span className="imodal__strip-val imodal__strip-val--mono">
-										{primaryOccurrence.selector}
-									</span>
-								</span>
-							)}
-						</div>
 					)}
 				</header>
 
@@ -301,20 +315,30 @@ export function IssueDetailModal({
 							className="imodal__tab"
 							onClick={() => setTabState({ issueId: issue.id, tab })}
 						>
+							{tab === 'review' && 'Review'}
 							{tab === 'fix' && 'Fix'}
 							{tab === 'evidence' && 'Evidence'}
-							{tab === 'occurrences' && `Occurrences (${occurrenceCount})`}
+							{tab === 'verify' && 'Verify'}
+							{tab === 'occurrences' &&
+								(occurrenceCount > 1 ? `Occurrences (${occurrenceCount})` : 'Occurrence')}
 						</button>
 					))}
 				</nav>
 
 				<div className="imodal__body">
+					{activeTab === 'review' && (
+						<div className="imodal__pane">
+							<ManualReviewTab issue={issue} jobId={jobId} />
+						</div>
+					)}
 					{activeTab === 'fix' && (
 						<div className="imodal__pane">
 							<section>
 								<h3 className="imodal__pane-h">How to fix</h3>
 								{contextualFix ? (
-									<p className="imodal__fix">{contextualFix}</p>
+									<p className="imodal__fix">
+										<ScannerText text={contextualFix} />
+									</p>
 								) : (
 									<p className="imodal__fix imodal__fix--muted">
 										No fix guidance available for this rule yet.
@@ -323,7 +347,9 @@ export function IssueDetailModal({
 							</section>
 							<section>
 								<h3 className="imodal__pane-h">About this rule</h3>
-								<p className="imodal__desc">{issue.description}</p>
+								<p className="imodal__desc">
+									<ScannerText text={issue.description} />
+								</p>
 								{issue.wcagTags && issue.wcagTags.length > 0 && (
 									<div className="imodal__tags">
 										{issue.wcagTags.map((tag) => (
@@ -341,7 +367,7 @@ export function IssueDetailModal({
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									Learn more about this issue ↗
+									Learn more about this rule ↗
 								</a>
 							)}
 						</div>
@@ -352,12 +378,27 @@ export function IssueDetailModal({
 								issue={issue}
 								page={page}
 								screenshotUrl={screenshotUrl}
+								pageOverviewUrl={pageOverviewUrl}
+							/>
+						</div>
+					)}
+					{activeTab === 'verify' && (
+						<div className="imodal__pane">
+							<VerifyContrastTab
+								issue={issue}
+								page={page}
+								pageOverviewUrl={pageOverviewUrl}
+								jobId={jobId}
 							/>
 						</div>
 					)}
 					{activeTab === 'occurrences' && (
 						<div className="imodal__pane">
-							<h3 className="imodal__pane-h">Affected elements ({occurrenceCount})</h3>
+							<h3 className="imodal__pane-h">
+								{occurrenceCount === 1
+									? 'Affected element'
+									: `Affected elements (${occurrenceCount})`}
+							</h3>
 							<div className="imodal__occs">
 								{(issue.occurrences ?? []).map((occ, idx) => (
 									<IssueOccurrenceCard
@@ -365,6 +406,8 @@ export function IssueDetailModal({
 										occurrence={occ}
 										index={idx}
 										page={page}
+										issueId={issue.id}
+										pageOverviewUrl={pageOverviewUrl}
 									/>
 								))}
 							</div>

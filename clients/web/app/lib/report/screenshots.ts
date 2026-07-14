@@ -1,4 +1,5 @@
 import type { ScreenshotArtifact } from '../types/scan';
+import type { PageOverviewElement, PageSummary } from '../types/unified-report';
 
 interface IssueScreenshotParams {
 	screenshots: ScreenshotArtifact[];
@@ -39,4 +40,25 @@ export function getPageOverviewUrl(
 	}
 
 	return matches[0].url;
+}
+
+/*
+ * For the primary occurrence (nodeIndex 0) any box for the issue is better
+ * than nothing; for later occurrences only an exact nodeIndex match is safe,
+ * otherwise every card would show the first element again.
+ */
+export function findOverviewElement(
+	page: PageSummary | null,
+	issueId: string,
+	nodeIndex = 0
+): PageOverviewElement | null {
+	const elements = page?.pageOverview?.elements ?? [];
+	const exact = elements.find(
+		(el) => el.issueId === issueId && el.nodeIndex === nodeIndex
+	);
+	if (exact) return exact;
+	if (nodeIndex === 0) {
+		return elements.find((el) => el.issueId === issueId) ?? null;
+	}
+	return null;
 }

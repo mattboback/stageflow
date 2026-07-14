@@ -46,18 +46,20 @@
 	color: var(--ink-muted);
 	overflow-wrap: anywhere;
 }
+.shead__leave {
+	font-size: 0.8125rem;
+	color: var(--ink-muted);
+}
+.shead__progress {
+	margin: 0.5rem 0 0;
+	font-size: 0.9375rem;
+	font-weight: 600;
+	color: var(--ink-strong);
+}
 .shead__meta {
 	display: flex;
 	gap: 1.75rem;
 	align-items: center;
-}
-.shead .readout__val {
-	font-size: 1.6rem;
-}
-.shead .readout__val .readout__den {
-	color: var(--ink-faint);
-	font-weight: 600;
-	font-size: 1.05rem;
 }
 .timer {
 	text-align: right;
@@ -212,12 +214,28 @@
 .ch--done .ch__led {
 	background: var(--sev-pass);
 }
+/* Completed rows go quiet; the unfinished work keeps the visual weight. */
+.ch--done {
+	padding-block: 0.45rem;
+}
+.ch--done .ch__name {
+	font-weight: 500;
+	color: var(--ink-muted);
+	font-size: 0.9rem;
+}
+.ch--run {
+	background: var(--signal-wash);
+}
 .ch--run .ch__led {
 	background: var(--signal);
 	animation: pulse 1.4s var(--ease) infinite;
 }
-.ch--queue .ch__led {
+.ch--queue .ch__led,
+.ch--prep .ch__led {
 	background: var(--line-strong);
+}
+.ch--prep .ch__led {
+	animation: pulse 1.4s var(--ease) infinite;
 }
 .ch--err .ch__led {
 	background: var(--sev-critical);
@@ -252,29 +270,62 @@
 	font-weight: 500;
 }
 
-/* log readout — intentional dark terminal island (real stdout) */
+/* log readout — diagnostic detail, collapsed by default */
 .log {
-	background: var(--ink-strong);
-	border-color: oklch(0.34 0.015 230);
+	grid-column: 1 / -1;
+	border: 1px solid var(--line);
+	border-radius: var(--r-md);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
 	overflow: hidden;
 }
-.log .panel__head {
-	border-bottom-color: oklch(0.34 0.015 230);
-	background: transparent;
+.log__summary {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.8rem 1.15rem;
+	cursor: pointer;
+	list-style: none;
+	min-height: 44px;
 }
-.log .panel__head h2 {
-	color: oklch(0.9 0.008 240);
+.log__summary::-webkit-details-marker {
+	display: none;
 }
-.log__meta {
+.log__summary-title {
+	font-family: var(--display);
+	font-weight: 700;
+	font-size: 0.9375rem;
+	color: var(--ink-strong);
+	flex-shrink: 0;
+}
+.log__summary-last {
+	flex: 1;
+	min-width: 0;
 	font-size: 0.75rem;
-	color: oklch(0.7 0.012 240);
-	overflow-wrap: anywhere;
-	max-width: 14rem;
-	text-align: right;
+	color: var(--ink-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
+.log__summary-toggle {
+	flex-shrink: 0;
+	width: 9px;
+	height: 9px;
+	border-right: 2px solid var(--ink-muted);
+	border-bottom: 2px solid var(--ink-muted);
+	transform: rotate(45deg);
+	transition: transform var(--dur-1) var(--ease);
+	margin-right: 2px;
+}
+.log[open] .log__summary-toggle {
+	transform: rotate(-135deg);
+}
+.log[open] .log__summary {
+	border-bottom: 1px solid var(--line);
+}
+/* the stream itself keeps the dark terminal island — it is literally stdout */
 .log__body {
 	background: var(--ink-strong);
-	border-radius: 0 0 var(--r-md) var(--r-md);
 	padding: 0.9rem 1.15rem;
 	font-family: var(--mono);
 	font-size: 0.8rem;
@@ -301,16 +352,6 @@
 	position: sticky;
 	top: calc(64px + 1rem);
 	align-self: start;
-}
-.gaugewrap {
-	display: grid;
-	place-items: center;
-	padding: 0.35rem 0 0.15rem;
-}
-.side .btn--block {
-	width: 100%;
-	justify-content: center;
-	margin-top: 0.85rem;
 }
 .artifact {
 	display: flex;

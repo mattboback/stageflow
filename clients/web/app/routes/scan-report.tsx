@@ -1,22 +1,26 @@
 import { useCallback, useMemo } from 'react';
-import { Link, useParams, useSearchParams, type MetaFunction } from 'react-router';
+import { useParams, useSearchParams, type MetaFunction } from 'react-router';
 
 import { SiteHeader } from '../components/SiteHeader';
-import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
 import { ReportHeader } from '../components/report/ReportHeader';
-import {
-	ReportSectionNav,
-	type ReportSection
-} from '../components/report/ReportSectionNav';
+import { ReportSectionNav, type ReportSection } from '../components/report/ReportSectionNav';
 import { IssuesView } from '../components/report/IssuesView';
-import { OverviewDashboard } from '../components/report/OverviewDashboard';
+import { ReportStatStrip } from '../components/report/ReportStatStrip';
 import { IssueDetailModal } from '../components/report/IssueDetailModal';
 import { VisualReviewPanel } from '../components/report/VisualReviewPanel';
 import { ArtifactsView } from '../components/report/ArtifactsView';
+import { LighthouseSummary } from '../components/report/LighthouseSummary';
 import { ErrorsView } from '../components/report/ErrorsView';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
-import { buildOccurrenceModeReport, isIssueSortKey, type IssueSortKey } from '../lib/report';
+import {
+	buildOccurrenceModeReport,
+	isIssueSortKey,
+	needsHumanReview,
+	sortIssues,
+	type IssueSortKey
+} from '../lib/report';
+import { useReviewVerdicts } from '../lib/hooks/useReviewVerdicts';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
 
@@ -30,26 +34,31 @@ export const meta: MetaFunction = () => [
 	{ name: 'robots', content: 'noindex' }
 ];
 
-const SECTIONS: readonly ReportSection[] = ['overview', 'issues', 'pages', 'artifacts'];
+const SECTIONS: readonly ReportSection[] = ['review', 'issues', 'artifacts'];
 
 function isSection(value: string | null): value is ReportSection {
 	return value !== null && (SECTIONS as readonly string[]).includes(value);
+}
+
+/* Old links used ?section=overview / ?section=pages — both fold into review. */
+function resolveSection(raw: string | null): ReportSection {
+	if (isSection(raw)) return raw;
+	if (raw === 'overview' || raw === 'pages') return 'review';
+	return 'review';
 }
 
 export default function ScanReport() {
 	const { id = '' } = useParams();
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const { status, report, job, error, screenshots, refreshArtifacts } =
-		useScanReport(id);
+	const { status, report, job, error, screenshots, refreshArtifacts } = useScanReport(id);
 
 	const displayReport = useMemo(
 		() => (report ? buildOccurrenceModeReport(report) : null),
 		[report]
 	);
 
-	const rawSection = searchParams.get('section');
-	const section: ReportSection = isSection(rawSection) ? rawSection : 'issues';
+	const section: ReportSection = resolveSection(searchParams.get('section'));
 	const activeScanner = searchParams.get('scanner');
 	const activeSeverity = searchParams.get('severity');
 	const activePage = searchParams.get('page');
@@ -83,7 +92,7 @@ export default function ScanReport() {
 
 	const setSection = useCallback(
 		(next: ReportSection) => {
-			updateParams({ section: next === 'issues' ? null : next });
+			updateParams({ section: next === 'review' ? null : next });
 		},
 		[updateParams]
 	);
@@ -93,6 +102,25 @@ export default function ScanReport() {
 		return displayReport.issues.find((i) => i.id === activeIssueId) ?? null;
 	}, [activeIssueId, displayReport]);
 
+	/* The human-review queue is the report's primary workflow: highest
+	   severity first, resume at the first finding without a verdict. */
+	const { getVerdict } = useReviewVerdicts(id);
+	const reviewQueue = useMemo(
+		() =>
+			displayReport ? sortIssues(displayReport.issues.filter(needsHumanReview), 'severity') : [],
+		[displayReport]
+	);
+	const reviewProgress = useMemo(() => {
+		const reviewed = reviewQueue.filter((issue) => getVerdict(issue.id)).length;
+		return { total: reviewQueue.length, reviewed, pending: reviewQueue.length - reviewed };
+	}, [reviewQueue, getVerdict]);
+	const nextReviewIssue =
+		reviewQueue.find((issue) => !getVerdict(issue.id)) ?? reviewQueue[0] ?? null;
+	const modalIssues =
+		section === 'review' && activeIssue && needsHumanReview(activeIssue)
+			? reviewQueue
+			: (displayReport?.issues ?? []);
+
 	const activeIssuePage = useMemo(() => {
 		if (!activeIssue || !displayReport) return null;
 		return displayReport.pages.find((p) => p.id === activeIssue.pageId) ?? null;
@@ -100,47 +128,68 @@ export default function ScanReport() {
 
 	return (
 		<>
-			<SiteHeader />
+			<SiteHeader app={{ backTo: `/scan/${id}`, backLabel: 'Scan status', section: 'Report' }} />
 
 			<main id="main" className="report">
 				<div className="wrap">
-					<Link to={`/scan/${id}`} className="report__back">
-						Back to scan status
-					</Link>
-
 					{displayReport ? (
 						<>
-							<ReportHeader report={displayReport} />
+							<ReportHeader report={displayReport} reviewProgress={reviewProgress} />
 							<ReportSectionNav
 								report={displayReport}
 								section={section}
 								onSectionChange={setSection}
 							/>
 
-							{section === 'overview' && (
+							{section === 'review' && (
 								<section
-									id="report-panel-overview"
+									id="report-panel-review"
 									role="tabpanel"
-									aria-labelledby="report-tab-overview"
+									aria-labelledby="report-tab-review"
 								>
-									<OverviewDashboard
+									{reviewQueue.length > 0 && (
+										<div className="rnext">
+											<div className="rnext__copy">
+												<p className="rnext__count">
+													{reviewProgress.pending === 0
+														? `All ${reviewQueue.length} findings reviewed`
+														: reviewProgress.reviewed > 0
+															? `${reviewProgress.pending} of ${reviewQueue.length} findings still need review`
+															: `${reviewQueue.length} findings need review`}
+												</p>
+												<p className="rnext__sub">
+													Highest severity first — evidence and decision tools open in place.
+												</p>
+											</div>
+											{nextReviewIssue && reviewProgress.pending > 0 && (
+												<button
+													type="button"
+													className="btn btn--primary btn--lg"
+													onClick={() => updateParams({ issue: nextReviewIssue.id })}
+												>
+													{reviewProgress.reviewed > 0 ? 'Continue review' : 'Start review'}{' '}
+													<span className="ar" aria-hidden="true">
+														→
+													</span>
+												</button>
+											)}
+										</div>
+									)}
+									<ReportStatStrip
 										report={displayReport}
-										onSelectPage={(pageId) =>
-											updateParams({ section: null, page: pageId })
-										}
+										onReviewSeverity={(severity) => updateParams({ section: 'issues', severity })}
 										onSelectScanner={(scannerId) =>
-											updateParams({ section: null, scanner: scannerId })
+											updateParams({ section: 'issues', scanner: scannerId })
 										}
-										onSearchIssues={(query, scannerId) =>
-											updateParams({
-												section: null,
-												q: query || null,
-												scanner: scannerId ?? null
-											})
-										}
-										onReviewSeverity={(severity) =>
-											updateParams({ section: null, severity })
-										}
+									/>
+									<VisualReviewPanel
+										report={displayReport}
+										screenshots={screenshots}
+										activeScanner={activeScanner}
+										activePage={activePage}
+										getReviewVerdict={getVerdict}
+										onSelectPage={(pageId) => updateParams({ page: pageId })}
+										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 									/>
 								</section>
 							)}
@@ -165,9 +214,7 @@ export default function ScanReport() {
 										onPageChange={(v) => updateParams({ page: v })}
 										onCategoryChange={(v) => updateParams({ category: v })}
 										onSearchChange={(v) => updateParams({ q: v.trim() ? v : null })}
-										onSortChange={(v) =>
-											updateParams({ sort: v === 'severity' ? null : v })
-										}
+										onSortChange={(v) => updateParams({ sort: v === 'severity' ? null : v })}
 										onGroupToggle={(v) => updateParams({ group: v ? null : 'flat' })}
 										onClear={() =>
 											updateParams({
@@ -183,23 +230,6 @@ export default function ScanReport() {
 								</section>
 							)}
 
-							{section === 'pages' && (
-								<section
-									id="report-panel-pages"
-									role="tabpanel"
-									aria-labelledby="report-tab-pages"
-								>
-									<VisualReviewPanel
-										report={displayReport}
-										screenshots={screenshots}
-										activeScanner={activeScanner}
-										activePage={activePage}
-										onSelectPage={(pageId) => updateParams({ page: pageId })}
-										onIssueSelect={(issue) => updateParams({ issue: issue.id })}
-									/>
-								</section>
-							)}
-
 							{section === 'artifacts' && (
 								<section
 									id="report-panel-artifacts"
@@ -207,11 +237,12 @@ export default function ScanReport() {
 									aria-labelledby="report-tab-artifacts"
 									className="rsection-artifacts"
 								>
-									<ArtifactsView
-										jobId={id}
-										job={job}
-										onRefreshArtifacts={refreshArtifacts}
-									/>
+									{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+										<LighthouseSummary
+											categories={displayReport.summary.lighthouseCategories ?? []}
+										/>
+									)}
+									<ArtifactsView jobId={id} job={job} onRefreshArtifacts={refreshArtifacts} />
 									<ErrorsView errors={displayReport.errors} />
 								</section>
 							)}
@@ -219,8 +250,9 @@ export default function ScanReport() {
 							{activeIssue && (
 								<IssueDetailModal
 									issue={activeIssue}
+									jobId={id}
 									page={activeIssuePage}
-									issues={displayReport.issues}
+									issues={modalIssues}
 									screenshots={screenshots}
 									onClose={() => updateParams({ issue: null })}
 									onNavigate={(issueId) => updateParams({ issue: issueId })}
@@ -255,8 +287,6 @@ export default function ScanReport() {
 					)}
 				</div>
 			</main>
-
-			<SiteFooter />
 		</>
 	);
 }

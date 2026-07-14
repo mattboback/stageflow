@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, type MetaFunction } from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
-import { Gauge } from '../components/Gauge';
 import { useScanStatus } from '../lib/hooks/useScanMonitor';
 import { SCANNER_META } from '../lib/report';
 import scanStyles from './scan.css?url';
@@ -40,14 +39,14 @@ function fmtElapsed(totalSeconds: number): string {
 const TAG_LABEL: Record<ChannelState, string> = {
 	done: 'Done',
 	run: 'Running',
-	queue: 'Queued',
+	queue: 'Waiting',
 	err: 'Failed'
 };
 
 const SUB_LABEL: Record<ChannelState, string> = {
 	done: 'Complete',
 	run: 'Scanning…',
-	queue: 'Waiting for a slot',
+	queue: 'Waiting',
 	err: 'Did not finish'
 };
 
@@ -101,13 +100,21 @@ export default function Scan() {
 
 	const doneCount = completed.size;
 	const totalCount = expected.length;
+	/* One canonical progress number: scanner completion when we know the
+	   roster, backend task progress only before the roster exists. */
 	const pct =
 		totalCount > 0
 			? Math.round((doneCount / totalCount) * 100)
 			: Math.round(result?.progress?.percentage ?? 0);
 
+	/* Nothing has started yet: one "preparing" message beats seven identical
+	   queued rows that all ask "waiting for what?". */
+	const isPreparing =
+		isRunning && channels.length > 0 && channels.every((ch) => ch.state === 'queue');
+
 	const artifacts = result?.artifacts;
 	const shots = artifacts?.screenshots?.length ?? 0;
+	const lastLogLine = logs.length > 0 ? logs[logs.length - 1] : null;
 
 	const statusPill = isComplete ? (
 		<Pill variant="done">Complete</Pill>
@@ -121,20 +128,22 @@ export default function Scan() {
 
 	const transportLabel =
 		transport === 'streaming'
-			? 'SSE connected'
+			? 'Live updates on'
 			: transport === 'polling'
-				? 'polling'
-				: 'connecting…';
+				? 'Checking periodically'
+				: 'Connecting…';
 
 	const heading = isFailed ? 'Scan failed' : isComplete ? 'Scan complete' : 'Scan in progress';
 
 	return (
 		<>
-			<SiteHeader />
+			<SiteHeader
+				app={{ backTo: '/playground', backLabel: 'New scan', section: 'Scan run' }}
+			/>
 
 			<main id="main" className="run">
 				<div className="wrap run__wrap">
-					{/* status header */}
+					{/* status header: the one progress model */}
 					<div className={`shead${isFailed ? ' shead--failed' : ''}`}>
 						<div>
 							<div className="shead__id">
@@ -145,6 +154,11 @@ export default function Scan() {
 								<span className="shead__url mono" title={id}>
 									job {id}
 								</span>
+								{isRunning && (
+									<span className="shead__leave">
+										Safe to leave — this page reconnects to the run.
+									</span>
+								)}
 							</div>
 							<div
 								className="meter"
@@ -159,19 +173,25 @@ export default function Scan() {
 									style={{ transform: `scaleX(${pct / 100})` }}
 								/>
 							</div>
+							<p className="shead__progress num">
+								{totalCount > 0
+									? `${doneCount} of ${totalCount} scanners complete · ${pct}%`
+									: `${pct}%`}
+							</p>
 						</div>
 						<div className="shead__meta">
-							<div className="readout">
-								<span className="readout__val">
-									{doneCount}
-									<span className="readout__den">/{totalCount || '—'}</span>
-								</span>
-								<span className="readout__lab">channels done</span>
-							</div>
 							<div className="timer">
 								<b>{fmtElapsed(elapsed)}</b>
 								<small>elapsed</small>
 							</div>
+							{isComplete && (
+								<Link className="btn btn--primary" to={`/scan/${id}/report`}>
+									View report{' '}
+									<span className="ar" aria-hidden="true">
+										→
+									</span>
+								</Link>
+							)}
 						</div>
 					</div>
 
@@ -202,7 +222,7 @@ export default function Scan() {
 
 					<div className="grid">
 						<div className="grid__main">
-							<section className="panel" aria-label="Scanner channels">
+							<section className="panel" aria-label="Scanners">
 								<div className="panel__head">
 									<h2>
 										Scanners
@@ -227,13 +247,26 @@ export default function Scan() {
 												<div className="ch__sub">Scheduling containers</div>
 											</div>
 										</div>
+									) : isPreparing ? (
+										<div className="ch ch--prep">
+											<span className="ch__led" aria-hidden="true" />
+											<div>
+												<div className="ch__name">Preparing scan runner…</div>
+												<div className="ch__sub">
+													{totalCount} scanners will run in parallel
+												</div>
+											</div>
+										</div>
 									) : (
 										channels.map((ch) => (
 											<div className={`ch ch--${ch.state}`} key={ch.id}>
 												<span className="ch__led" aria-hidden="true" />
 												<div>
 													<div className="ch__name">{scannerLabel(ch.id)}</div>
-													<div className="ch__sub">{SUB_LABEL[ch.state]}</div>
+													{/* queued rows already say "Waiting" in the tag */}
+													{ch.state !== 'done' && ch.state !== 'queue' && (
+														<div className="ch__sub">{SUB_LABEL[ch.state]}</div>
+													)}
 												</div>
 												<div className="ch__right">
 													<span className="ch__tag">{TAG_LABEL[ch.state]}</span>
@@ -243,56 +276,9 @@ export default function Scan() {
 									)}
 								</div>
 							</section>
-
-							<section className="panel log" aria-label="Scan log">
-								<div className="panel__head">
-									<h2>Live log</h2>
-									<span className="log__meta mono" title={id}>
-										stdout · {id}
-									</span>
-								</div>
-								<div className="log__body" ref={logBodyRef} aria-live="polite">
-									{logs.length === 0 ? (
-										<div className="log__line">
-											<span className="log__m log__empty">waiting for output…</span>
-										</div>
-									) : (
-										logs.map((line, i) => (
-											<div className="log__line" key={i}>
-												<span className="log__m">{line}</span>
-											</div>
-										))
-									)}
-								</div>
-							</section>
 						</div>
 
 						<aside className="side" aria-label="Run summary">
-							<div className="panel">
-								<div className="panel__head">
-									<h2>Progress</h2>
-									{isComplete ? (
-										<Pill variant="done">Done</Pill>
-									) : isFailed ? (
-										<Pill variant="error">Failed</Pill>
-									) : (
-										<Pill variant="live">Live</Pill>
-									)}
-								</div>
-								<div className="panel__body">
-									<div className="gaugewrap">
-										<Gauge value={pct} caption="Complete" size={120} valFontSize="1.9rem" />
-									</div>
-									{isComplete && (
-										<Link className="btn btn--primary btn--block" to={`/scan/${id}/report`}>
-											View report{' '}
-											<span className="ar" aria-hidden="true">
-												→
-											</span>
-										</Link>
-									)}
-								</div>
-							</div>
 							<div className="panel">
 								<div className="panel__head">
 									<h2>Artifacts</h2>
@@ -313,11 +299,35 @@ export default function Scan() {
 								</div>
 							</div>
 						</aside>
+
+						{/* Diagnostic detail: collapsed by default, never the main event */}
+						<details className="log">
+							<summary className="log__summary">
+								<span className="log__summary-title">Technical log</span>
+								{lastLogLine && (
+									<span className="log__summary-last mono">{lastLogLine}</span>
+								)}
+								<span className="log__summary-toggle" aria-hidden="true" />
+							</summary>
+							<div className="log__body" ref={logBodyRef} aria-live="polite">
+								{logs.length === 0 ? (
+									<div className="log__line">
+										<span className="log__m log__empty">waiting for output…</span>
+									</div>
+								) : (
+									logs.map((line, i) => (
+										<div className="log__line" key={i}>
+											<span className="log__m">{line}</span>
+										</div>
+									))
+								)}
+							</div>
+						</details>
 					</div>
 				</div>
 			</main>
 
-			<SiteFooter />
+			<SiteFooter slim />
 		</>
 	);
 }
