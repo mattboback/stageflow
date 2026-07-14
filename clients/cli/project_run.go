@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -217,7 +218,7 @@ func runDevScanCommand(
 	}
 	defer cleanup()
 
-	readyErr := projectmode.WaitForReady(totalCtx, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
+	readyErr := projectmode.WaitForReady(totalCtx, http.DefaultClient, proc, cfg.Dev.Ready, cmd.ErrOrStderr())
 	if readyErr != nil {
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("dev readiness failed: %w", readyErr)}
 	}

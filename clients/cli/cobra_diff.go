@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -18,10 +17,6 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
-
-// diffEnvelope is re-exported from internal/diffrender so the rest of the
-// main package (notably cobra_scan.go) can continue to reference it unchanged.
-type diffEnvelope = diffrender.Envelope
 
 func newDiffCmd(root *rootOptions) *cobra.Command {
 	var (
@@ -98,9 +93,14 @@ func runDiffCommand(
 	}
 
 	result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
-	d := diffFromResult(result, baselinePath, currentFile)
+	d := diffrender.FromResult(result, baselinePath, currentFile)
 
-	regressed, err := evaluateDiffRegression(d, failOnRegression, failOnNew)
+	regressed, err := diffrender.EvaluateRegression(
+		d,
+		failOnRegression,
+		failOnNew,
+		render.HasIssuesAtOrAbove,
+	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
@@ -112,7 +112,12 @@ func runDiffCommand(
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	err = renderDiff(cmd.OutOrStdout(), d, format)
+	diffFormat, err := diffRenderFormat(format)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: err}
+	}
+
+	err = diffrender.Render(cmd.OutOrStdout(), d, diffFormat)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
@@ -224,27 +229,6 @@ func diffScanModules(env render.ReportEnvelope) []string {
 	}
 
 	return modules
-}
-
-func evaluateDiffRegression(d diffEnvelope, failOnRegression bool, failOnNew string) (bool, error) {
-	return diffrender.EvaluateRegression(d, failOnRegression, failOnNew, render.HasIssuesAtOrAbove)
-}
-
-func isDiffRegressed(d diffEnvelope) bool {
-	return diffrender.IsRegressed(d)
-}
-
-func diffFromResult(r diff.Result, baselineFile, currentFile string) diffEnvelope {
-	return diffrender.FromResult(r, baselineFile, currentFile)
-}
-
-func renderDiff(out io.Writer, d diffEnvelope, format render.Format) error {
-	f, err := diffRenderFormat(format)
-	if err != nil {
-		return err
-	}
-
-	return diffrender.Render(out, d, f)
 }
 
 func diffRenderFormat(format render.Format) (diffrender.Format, error) {

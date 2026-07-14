@@ -104,7 +104,7 @@ func newAICmd(root *rootOptions) *cobra.Command {
 
 			success := determineSuccess(result.Report)
 
-			fullProv, compressedProv := fetchProvenance(cmd.Context(), result.Status)
+			fullProv, compressedProv := fetchProvenance(cmd.Context(), http.DefaultClient, result.Status)
 
 			res := AINavigatorResponse{
 				Success: success,
@@ -150,7 +150,11 @@ func determineSuccess(reportDoc report.UnifiedReportV2) bool {
 }
 
 //nolint:gocognit,gocyclo
-func fetchProvenance(ctx context.Context, status apiclient.JobStatus) ([]any, []CompressedProv) {
+func fetchProvenance(
+	ctx context.Context,
+	httpClient *http.Client,
+	status apiclient.JobStatus,
+) ([]any, []CompressedProv) {
 	var fullProv []any
 
 	var compressedProv []CompressedProv
@@ -175,7 +179,7 @@ func fetchProvenance(ctx context.Context, status apiclient.JobStatus) ([]any, []
 		return fullProv, compressedProv
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fullProv, compressedProv
 	}

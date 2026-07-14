@@ -11,7 +11,13 @@ import (
 )
 
 //nolint:gocognit,gocyclo // Readiness checks involve timeouts, polling, and process lifecycle handling.
-func WaitForReady(ctx context.Context, proc *RunningProcess, cfg DevReadyConfig, stderr io.Writer) error {
+func WaitForReady(
+	ctx context.Context,
+	httpClient *http.Client,
+	proc *RunningProcess,
+	cfg DevReadyConfig,
+	stderr io.Writer,
+) error {
 	readyURL := strings.TrimSpace(cfg.URL)
 	if readyURL == "" {
 		return errors.New("dev.ready.url is empty")
@@ -43,7 +49,7 @@ func WaitForReady(ctx context.Context, proc *RunningProcess, cfg DevReadyConfig,
 			return false, fmt.Errorf("invalid ready URL %q: %w", readyURL, err)
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := httpClient.Do(req)
 		if err != nil {
 			return false, nil
 		}
