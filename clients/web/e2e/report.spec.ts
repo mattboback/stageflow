@@ -117,6 +117,30 @@ function collectPageErrors(page: Page): string[] {
 	return pageErrors;
 }
 
+test.describe('employer-facing product claims', () => {
+	test('homepage describes the supported runtime and owned report formats', async ({ page }) => {
+		await page.goto('/');
+
+		const selfHost = page.locator('.selfhost');
+		await expect(selfHost.getByText('Rootless Podman isolation', { exact: true })).toBeVisible();
+		await expect(
+			selfHost.getByText('Self-host on supported Linux infrastructure', { exact: true })
+		).toBeVisible();
+		await expect(
+			selfHost.getByText('Reports you own: HTML and JSON', { exact: true })
+		).toBeVisible();
+		await expect(selfHost.getByText('Docker-based', { exact: false })).toHaveCount(0);
+		await expect(selfHost.getByText('SARIF', { exact: false })).toHaveCount(0);
+	});
+
+	test('404 metadata uses page terminology', async ({ page }) => {
+		await page.goto('/route-that-does-not-exist');
+
+		await expect(page).toHaveTitle('404 · Page not found — StageFlow');
+		await expect(page.getByText('Channel not found', { exact: false })).toHaveCount(0);
+	});
+});
+
 test('report page renders the fixture report end to end', async ({ page }) => {
 	await mockReportRoutes(page);
 	const pageErrors = collectPageErrors(page);

@@ -493,6 +493,7 @@ shell-tests:
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
+    bash devtools/scripts/tests/stale-vocab.test.sh
 
 [group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
 dead-code:
