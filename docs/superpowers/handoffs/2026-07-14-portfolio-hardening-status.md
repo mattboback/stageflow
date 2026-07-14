@@ -83,6 +83,21 @@ Commit: `257ff57 test: guard employer-facing product claims`
   note and obsolete report screenshot, added CI verification for both
   TypeScript 7 contract packages, and aligned documented radius usage with CSS.
 
+### 6. Final local verification
+
+- `just ci` passed serially, including Go build/lint/race tests/vulnerability
+  checks, shell regressions, web checks, and scanner-runner 667 passed/1 skipped.
+- `just project-golden` passed against the local rootless Podman acceptance
+  stack: project create, baseline scan, promote, regression scan, normalization,
+  golden comparison, and structural assertions.
+- Playwright passed 9/9 after the full gate.
+- Both TypeScript 7 contract packages passed frozen install, build, fixture
+  validation, and typecheck.
+- Actionlint, ShellCheck, Bash syntax, stale-vocabulary scan, and
+  `git diff --check origin/main..HEAD` passed.
+- Whole-branch review findings were corrected in `c4dd376`; no unresolved
+  release-blocking local findings remain.
+
 ## Current Repository State
 
 - Open pull requests: none.
