@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -9,9 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
+	"github.com/mattboback/stageflow/clients/cli/internal/projectscan"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 )
 
 type projectScanCmdOptions struct {
@@ -109,4 +113,61 @@ func resolveProjectScanRoot() (string, error) {
 	}
 
 	return wd, nil
+}
+
+func runRemoteProjectScan(
+	cmd *cobra.Command,
+	root *rootOptions,
+	slug string,
+	timeout time.Duration,
+	noStream bool,
+	reportOpts render.ReportFlags,
+) error {
+	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
+
+	opCtx, cancel := context.WithTimeout(cmd.Context(), timeout)
+	defer cancel()
+
+	resp, err := client.ProjectScan(opCtx, slug)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
+	}
+
+	jobID, err := scanflow.RequireJobID(resp)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit project scan: %w", err)}
+	}
+
+	fmt.Fprintf(cmd.ErrOrStderr(), "Project scan submitted: %s (job %s)\nWaiting for completion...\n", slug, jobID)
+
+	result, err := scanflow.WaitForReport(
+		opCtx,
+		client,
+		jobID,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: noStream},
+	)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: err}
+	}
+
+	format, err := root.renderFormat()
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: err}
+	}
+
+	return projectscan.WriteResult(
+		opCtx,
+		client,
+		result.Status,
+		result.Report,
+		projectscan.Options{
+			APIBaseURL: root.apiURL,
+			Slug:       slug,
+			JobID:      jobID,
+			Format:     format,
+			Report:     reportOpts.RenderOptions(format),
+			Stdout:     cmd.OutOrStdout(),
+			Stderr:     cmd.ErrOrStderr(),
+		},
+	)
 }
