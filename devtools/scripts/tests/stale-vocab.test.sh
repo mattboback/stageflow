@@ -4,6 +4,8 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 CHECKER="${REPO_ROOT}/devtools/scripts/check-stale-vocab.sh"
+temp_dir=""
+trap 'rm -rf "${temp_dir:-}"' EXIT
 
 failures=0
 
@@ -76,15 +78,25 @@ run_stale_case() {
 	assert_contains "$output" "STALE:" "${filename} should emit a STALE diagnostic"
 }
 
+run_invalid_root_case() {
+	local output="${temp_dir}/invalid-root.out"
+	local rc
+
+	rc="$(run_checker "${temp_dir}/does-not-exist" "$output")"
+	assert_exit_code "$rc" 2 "a missing scan root should fail closed"
+	assert_contains "$output" "scan root is not a directory" "a missing root should explain the failure"
+}
+
 main() {
-	local temp_dir
 	temp_dir="$(mktemp -d)"
-	trap 'rm -rf "${temp_dir:-}"' EXIT
 
 	run_clean_case "$temp_dir"
 	run_stale_case "$temp_dir" docker app.ts "Docker-based, rootless cont"'ainers'
 	run_stale_case "$temp_dir" artifacts report.tsx "Artifacts you own: HTML, JSON, SAR"'IF'
 	run_stale_case "$temp_dir" missing styles.css "Channel not "'found'
+	run_stale_case "$temp_dir" public-copy llms.txt "SARI"'F'
+	run_stale_case "$temp_dir" ignored-token README.md "Docker-based developers.google.com"
+	run_invalid_root_case
 
 	if [[ "$failures" -ne 0 ]]; then
 		echo "stale-vocab tests failed: ${failures}" >&2

@@ -34,7 +34,7 @@ iteration, run the relevant workspace checks directly:
 - `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...` for Go modules
 - `bun run ci` in `clients/web`; include browser screenshots or scan/report evidence for UI changes when relevant
 - `bun run ci` in `services/scanner-runner`
-- `just shell-tests` or both shell tests individually: `bash devtools/scripts/tests/cli-install.test.sh` and `bash devtools/scripts/tests/dev-onboarding.test.sh`
+- `just shell-tests`, or run its three scripts individually from `devtools/scripts/tests/`
 - `just project-golden` when project-mode baseline, diff, CLI exit-code, or report normalization behavior changes
 - `just dead-code` when removing or moving scanner-runner TypeScript exports/components
 
