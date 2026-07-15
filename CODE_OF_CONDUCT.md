@@ -1,25 +1,20 @@
 # Code of Conduct
 
-## Our Standards
+## Our standard
 
-We are committed to a welcoming, harassment-free community for everyone.
-
-Examples of expected behavior:
-
-- Respectful, constructive feedback
-- Inclusive and professional communication
-- Assuming good intent while addressing issues directly
-
-Examples of unacceptable behavior:
-
-- Harassment, personal attacks, or discrimination
-- Doxxing or sharing private information without consent
-- Disruptive behavior that blocks collaboration
+StageFlow contributors and maintainers commit to a welcoming, harassment-free
+community. Be respectful, assume good intent, give actionable feedback, and
+disagree with ideas without attacking people. Harassment, discriminatory
+language, intimidation, sexualized attention, and publishing another person's
+private information are not acceptable.
 
 ## Enforcement
 
-Maintainers may remove comments, close discussions, or block participation for violations.
+Report unacceptable behavior privately to the address listed in
+[SECURITY.md](SECURITY.md). Maintainers will review reports promptly, protect
+reporter confidentiality where possible, and may edit or remove contributions,
+issue warnings, temporarily restrict participation, or permanently ban people
+whose behavior threatens the community.
 
-## Reporting
-
-Report conduct concerns privately through repository maintainers or GitHub moderation channels.
+This policy applies in repository spaces and whenever someone publicly
+represents the StageFlow community.

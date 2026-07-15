@@ -138,6 +138,6 @@ To compare scans against a promoted baseline, link this repo to a remote project
 - If you see "ENOENT" for your dev command, verify `+"`dev.start.cmd`"+` and `+"`dev.start.cwd`"+`.
 - If readiness times out, verify `+"`dev.ready.url`"+` responds while your app is running.
 
-For full documentation, see the [dev mode guide](https://github.com/mattboback/stageflow/blob/main/docs/dev-mode.md).
+For full documentation, see the [CLI guide](https://github.com/mattboback/stageflow/blob/main/docs/cli.md#local-dev-loop).
 `) + "\n"
 }
