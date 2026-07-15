@@ -348,24 +348,3 @@ func validateActionValue(raw any) error {
 		return fmt.Errorf("step.value must be a string or {from_env: NAME} object (got %T)", raw)
 	}
 }
-
-// LoadFromFlags resolves --auth-state or --auth-recipe into a
-// JobAuthInput payload. Mutual exclusivity is enforced upstream by Cobra; this
-// function additionally guards against both being set defensively.
-func LoadFromFlags(authStatePath, authRecipePath string) (*apiclient.JobAuthInput, bool, error) {
-	if authStatePath != "" && authRecipePath != "" {
-		return nil, false, errors.New("--auth-state and --auth-recipe are mutually exclusive")
-	}
-
-	if authStatePath != "" {
-		input, err := LoadStateFile(authStatePath)
-		return input, err == nil, err
-	}
-
-	if authRecipePath != "" {
-		input, err := LoadRecipeFile(authRecipePath)
-		return input, err == nil, err
-	}
-
-	return nil, false, nil
-}
