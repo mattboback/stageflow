@@ -1,8 +1,8 @@
 # StageFlow Architecture
 
-This document is the deep-dive companion to the root [ARCHITECTURE.md](../../ARCHITECTURE.md): system design, trust boundaries, data flows, service responsibilities, deployment topology, and failure modes.
+This document is the canonical description of StageFlow's system design, trust boundaries, data flows, service responsibilities, and failure modes.
 
-If you are still orienting yourself, start with the [repository README](../../README.md) for the product overview and fastest local setup path.
+Start with the [repository README](../README.md) for the product overview and fastest local setup path. Deployment instructions live in the [self-hosting guide](self-hosting.md).
 
 ---
 
@@ -25,6 +25,7 @@ If you are still orienting yourself, start with the [repository README](../../RE
 - [Clients](#clients)
 - [Observability](#observability)
 - [Deployment Topology](#deployment-topology)
+- [Known Limitations](#known-limitations)
 - [Failure Modes](#failure-modes)
 - [Testing Architecture](#testing-architecture)
 
@@ -88,7 +89,7 @@ StageFlow is designed around four goals:
 | `libs/contracts`             | JSON Schemas and generated contracts (Go + TypeScript)                  |
 | `libs/go/*`                  | 13 shared Go packages (messaging, models, config, etc.)                 |
 
-All long-running containers and per-job pods run rootless with `no-new-privileges:true` and resource limits. Environment variables for every service are documented in [docs/reference/configuration.md](../reference/configuration.md).
+All long-running containers and per-job pods run rootless with `no-new-privileges:true` and resource limits. Environment variables for every service are documented in the [configuration reference](reference/configuration.md).
 
 ---
 
@@ -98,7 +99,7 @@ All long-running containers and per-job pods run rootless with `no-new-privilege
 
 The public HTTP boundary. Every request passes a middleware stack of logging → CORS → API-key auth → rate limiting → timeout (SSE excepted). It validates intake (request shape, URL count ≤ 100, SSRF classification, scanner configs against manifests), publishes `job.created` to NATS, and answers status queries from an event-sourced SQLite projection updated by job events. It also owns project CRUD, baseline promotion, and the on-demand diff engine (`libs/go/diff`). Key surfaces:
 
-- `POST /api/v1/jobs/urls` and `POST /api/v1/jobs/zip` — intake
+- `POST /api/v1/jobs/urls`, `POST /api/v1/jobs/urls/anonymous`, and `POST /api/v1/jobs/zip` — intake; only the caller-authenticated URL route accepts auth recipes
 - `GET /api/v1/jobs/{id}` / `…/stream` (SSE) / `…/report` / `…/results` / `…/diff`
 - `GET|POST|PATCH|DELETE /api/v1/projects…`, `POST …/{slug}/scan`, `POST …/{slug}/promote`
 - `GET /api/v1/scanners`, unauthenticated `GET /healthz`
@@ -133,11 +134,11 @@ Consumers are durable with explicit ACK, max 10 deliveries, 10-minute ACK wait, 
 
 Every message is an envelope — `event`, `job_id`, optional `request_id`/`run_id`, `timestamp`, `producer`, `payload` — with a deliberate strictness asymmetry:
 
-| Operation                  | Strictness                                 | Rationale                            |
-| -------------------------- | ------------------------------------------ | ------------------------------------ |
-| **Publishing**             | Strict — payload `Validate()` required     | Reject invalid events before sending |
-| **Subscribing (envelope)** | Lenient — unknown fields allowed           | Forward-compatible event evolution   |
-| **Subscribing (payload)**  | Strict — `DisallowUnknownFields()`         | Catch schema drift in payloads       |
+| Operation                  | Strictness                             | Rationale                            |
+| -------------------------- | -------------------------------------- | ------------------------------------ |
+| **Publishing**             | Strict — payload `Validate()` required | Reject invalid events before sending |
+| **Subscribing (envelope)** | Lenient — unknown fields allowed       | Forward-compatible event evolution   |
+| **Subscribing (payload)**  | Strict — `DisallowUnknownFields()`     | Catch schema drift in payloads       |
 
 `libs/go/messaging` wraps this in a generic `SubscribeTyped[T]` that manages durable consumers, parses envelope + payload, attaches event metadata and job/request/run IDs to the logging context, and NAKs on handler failure.
 
@@ -148,7 +149,7 @@ Every message is an envelope — `event`, `job_id`, optional `request_id`/`run_i
 ### URL Job Flow
 
 ```
-Client ── POST /api/v1/jobs/urls {urls, modules} ──► Platform API
+Client ── POST /api/v1/jobs/urls[/anonymous] {urls, modules} ──► Platform API
   │  validate shape → SSRF-check each URL → normalize modules
   │  → validate scanner configs → publish job.created
   │  → seed PENDING status projection → return {job_id}
@@ -262,7 +263,7 @@ It calls OpenRouter over raw HTTP (no vendor SDK), with image compression, a con
 
 Four nested trust boundaries, outermost first:
 
-1. **Edge proxy** — Caddy (`infra/caddy/Caddyfile`): TLS termination, rate limiting, and routing (`/api/*` → platform-api, `/scanner-artifacts/*` → MinIO, `/monitoring*` → Grafana, `/*` → frontend).
+1. **Edge proxy** — Caddy (`infra/caddy/Caddyfile`): TLS termination, security headers, server-side credential injection for anonymous job/report/SSE routes, and routing (`/api/*` → platform-api, `/scanner-artifacts/*` → MinIO, `/monitoring*` → Grafana, `/*` → frontend). Project, baseline, and auth-capable URL submission routes require a caller-provided API key; the separate anonymous URL endpoint rejects every auth recipe. The reference config relies on the Platform API's trusted-proxy-aware limiter; operators may add a shared edge limiter for multi-instance or higher-risk deployments.
 2. **API intake** — scheme validation (http/https only), SSRF classification (below), request size limits (2MB URL submissions, 100MB ZIP), URL count ≤ 100 and length ≤ 2048, API-key middleware, rate limiting, timeouts.
 3. **Archive extraction** — the ZIP safety controls listed under [Archive Extractor](#archive-extractor-servicesarchive-extractor), in an isolated workspace.
 4. **Scanner runtime** — per-job rootless Podman pods, `no-new-privileges:true`, resource limits, scanner identity validated against its manifest, `SCANNER_OPTIONS` schema-validated, artifact upload only through storage interfaces.
@@ -271,13 +272,13 @@ Four nested trust boundaries, outermost first:
 
 `services/platform-api/internal/api/security.go` classifies every resolved IP of every submitted URL:
 
-| Decision                  | Ranges                                                                                                             |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Decision                  | Ranges                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Block (always)**        | `0.0.0.0/8`, `100.64.0.0/10`, `169.254.0.0/16` (cloud metadata), `192.0.0.0/24`, doc/benchmark/multicast/reserved ranges, IPv6 equivalents |
-| **Allow in private mode** | `10.0.0.0/8`, `127.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `::1/128` — only with `--allow-private-targets`    |
-| **Allow**                 | All other public IPs                                                                                                |
+| **Allow in private mode** | `10.0.0.0/8`, `127.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `::1/128` — only with `--allow-private-targets`                            |
+| **Allow**                 | All other public IPs                                                                                                                       |
 
-Validation resolves the hostname via DNS and rejects if *any* resolved IP is blocked (or private outside private mode). All CIDR ranges are parsed at startup by `ValidateSecurityConfig()`, failing fast on invalid entries. The scanner-runner re-applies the same target policy at browser runtime — initial targets, redirects, final URLs, and HTTP(S) subresources. This is not connection-level DNS pinning; [SECURITY.md](../../SECURITY.md) documents the residual DNS-rebinding risk, and public deployments should add a container/host egress policy ([infra/security/egress-policy.example.md](../../infra/security/egress-policy.example.md)).
+Validation resolves the hostname via DNS and rejects if _any_ resolved IP is blocked (or private outside private mode). All CIDR ranges are parsed at startup by `ValidateSecurityConfig()`, failing fast on invalid entries. The scanner-runner re-applies the same target policy at browser runtime — initial targets, redirects, final URLs, and HTTP(S) subresources. This is not connection-level DNS pinning; [SECURITY.md](../SECURITY.md) documents the residual DNS-rebinding risk, and public deployments should add a container/host egress policy ([infra/security/egress-policy.example.md](../infra/security/egress-policy.example.md)).
 
 ### Additional Measures
 
@@ -289,7 +290,7 @@ Validation resolves the hostname via DNS and rejects if *any* resolved IP is blo
 
 StageFlow can scan behind a login by attaching an optional `auth` block to a job's Provenance — a discriminated union with two modes:
 
-- **`form`** — a login URL plus recorded steps (`fill`/`click`) whose values are either literals or `{from_env: NAME}` references, and a success condition. References are resolved only inside the scanner-runner, against an allow-list derived from the recipe itself.
+- **`form`** — a login URL plus recorded steps (`fill`/`click`) whose values must use `{from_env: NAME}` references, and a success condition. The public CLI and API reject literal values so credentials cannot enter durable job configuration. References are resolved only inside the scanner-runner, against an allow-list derived from the recipe itself.
 - **`storage_state`** — an `artifact_key` pointing at captured Playwright storage-state JSON under the job's MinIO prefix.
 
 The credential-handling invariants are the point of the design:
@@ -301,13 +302,13 @@ The credential-handling invariants are the point of the design:
 - Resolved credentials never appear in stored Provenance, the unified report, stage logs, or NATS events. The storage-state object is deleted when the job reaches `DONE`/`FAILED` and is never exposed through the public artifact surface.
 - Hydration failure surfaces a `critical` `auth-hydration-failed` issue and skips that scanner's pages rather than scanning the logged-out surface silently.
 
-Implementation: `services/scanner-runner/src/core/{auth-hydrator,secrets-resolver,page-iterator}.ts`, `clients/cli/cobra_auth.go` + `auth_intake.go`, the orchestrator's `scanner_launch_planner.go`, and the shared `from_env` walker `libs/go/provenance/auth.go` (a direct port of the TS resolver, kept in sync by fixture-driven tests).
+Implementation: `services/scanner-runner/src/core/{auth-hydrator,secrets-resolver,page-iterator}.ts`, `clients/cli/internal/command/cobra_auth.go` + `clients/cli/internal/authintake/`, the orchestrator's `scanner_launch_planner.go`, and the shared `from_env` walker `libs/go/provenance/auth.go` (a direct port of the TS resolver, kept in sync by fixture-driven tests).
 
 ---
 
 ## Storage Model
 
-MinIO with two buckets: `scanner-staging` (uploaded ZIPs, transient) and `scanner-artifacts` (all scan outputs). Object keys are job-prefixed:
+MinIO uses `scanner-staging` for transient ZIP uploads, `scanner-artifacts` for expiring scan outputs, and lifecycle-exempt `scanner-baselines` for reports explicitly promoted as project baselines. Ordinary object keys are job-prefixed; baseline keys include both project and job identity:
 
 ```
 staging/{jobID}/{filename}              Uploaded ZIP
@@ -316,6 +317,7 @@ staging/{jobID}/{filename}              Uploaded ZIP
 {jobID}/stage.log | recipe.json         Execution logs/recipes
 {jobID}/{scanner}/results.json          Per-scanner results
 {jobID}/{scanner}/screenshots/…         Per-scanner screenshots
+{projectID}/{jobID}/report.json         Persistent promoted baseline
 ```
 
 Services access storage only through the `libs/go/storage` client interface (upload/download/delete/presign/exists). Clients never touch MinIO directly: the Platform API hands out time-limited presigned URLs (generated against `MINIO_PUBLIC_ENDPOINT` when the public Caddy route is configured).
@@ -333,7 +335,14 @@ Services access storage only through the `libs/go/storage` client interface (upl
 
 ### CLI (`clients/cli`)
 
-A Cobra-based Go binary whose entry point is `run(args, getenv, stdout, stderr)` — all dependencies injected, no globals, fully testable. Flag precedence is `CLI flags > .stageflow/config.yaml > env vars > defaults`. `stageflow dev init` bootstraps config by auto-detecting dev commands from Justfile recipes and `package.json` scripts, the package manager from lockfiles, and the dev URL. Reports render as text, markdown, or versioned JSON envelopes; exit codes are the CI interface.
+A Cobra-based Go binary with a minimal `main.go` and a testable
+`internal/command.Run(args, getenv, stdout, stderr)` entry point — all
+dependencies injected, no globals. Flag precedence is
+`CLI flags > .stageflow/config.yaml > env vars > defaults`. `stageflow dev init`
+bootstraps config by auto-detecting dev commands from Justfile recipes and
+`package.json` scripts, the package manager from lockfiles, and the dev URL.
+Reports render as text, markdown, or versioned JSON envelopes; exit codes are
+the CI interface.
 
 ### Web App (`clients/web`)
 
@@ -343,13 +352,13 @@ React Router v7 SPA, styled with repo-owned CSS modules and global design tokens
 
 ## Observability
 
-| Signal                     | Source                        | Access                                  |
-| -------------------------- | ----------------------------- | --------------------------------------- |
-| Job state transitions      | Platform API SSE              | `/api/v1/jobs/{id}/stream`              |
-| Orchestrator event history | PostgreSQL `job_events`       | Internal API `/api/v1/jobs/{id}/events` |
-| Prometheus metrics         | Orchestrator (in-process)     | Authenticated `/metrics`                |
-| Scanner artifacts          | MinIO                         | Presigned URLs via API                  |
-| Service logs               | Container stdout/stderr       | `just dev logs`                         |
+| Signal                     | Source                    | Access                                  |
+| -------------------------- | ------------------------- | --------------------------------------- |
+| Job state transitions      | Platform API SSE          | `/api/v1/jobs/{id}/stream`              |
+| Orchestrator event history | PostgreSQL `job_events`   | Internal API `/api/v1/jobs/{id}/events` |
+| Prometheus metrics         | Orchestrator (in-process) | Authenticated `/metrics`                |
+| Scanner artifacts          | MinIO                     | Presigned URLs via API                  |
+| Service logs               | Container stdout/stderr   | `just dev logs`                         |
 
 The orchestrator exposes job-state and pod gauges plus event-handler counters and a latency histogram, collected in-process without a metrics-client dependency. Grafana dashboards (`infra/grafana/provisioning/`) chart job counts, completion rates, timing breakdowns, and extraction success. `devtools/ops/job-status-cli` inspects jobs/events/pods via the admin API; `devtools/qa/suite-runner` runs threshold-based multi-domain validation.
 
@@ -359,17 +368,7 @@ Debug path: check the job's terminal state and latest event → inspect the orch
 
 ## Deployment Topology
 
-**Local dev** runs everything under Podman Compose (project `stageflow_dev`): platform-api :8080, frontend :3020, Grafana :3001, NATS/MinIO/Postgres alongside, `POD_NETNS_MODE=host`, private targets enabled.
-
-**Production (stageflow.org)** runs the same compose topology with no host ports exposed; a host-level Caddy terminates TLS and routes to internal ports, private targets are disabled, and pods use bridge networking. The hosted demo's release/monitoring/rollback control plane is intentionally managed outside this repository — see [docs/operations/deployment.md](../operations/deployment.md).
-
-| Aspect              | Local Dev                  | Production                        |
-| ------------------- | -------------------------- | --------------------------------- |
-| Compose project     | `stageflow_dev`            | `stageflow`                       |
-| Ports               | Exposed on localhost       | Internal only, behind Caddy       |
-| Private targets     | Enabled                    | Disabled                          |
-| Pod netns mode      | `host`                     | `bridge`                          |
-| Edge proxy          | None                       | Caddy + Let's Encrypt             |
+The repository supports a normal local demo, a private-target local overlay, and a compose-based self-hosting example. The hosted `stageflow.org` service uses the same application code but a separately managed gateway and Quadlet deployment; it does not mirror the checked-in compose topology. See [Self-hosting](self-hosting.md) for the supported layouts and security checklist.
 
 ### Horizontal Scaling Boundary
 
@@ -377,16 +376,27 @@ The topology is intentionally single-instance for the Platform API and Orchestra
 
 ---
 
+## Known Limitations
+
+- DNS and browser-request validation reduce SSRF risk but do not provide connection-level DNS pinning. Public operators still need egress policy that blocks private, metadata, and link-local destinations.
+- The reference public edge uses one server-side Platform API credential. It is a gateway trust boundary, not per-user identity or authorization.
+- SSE fanout, request limiting, and job-pod ownership assume one Platform API and one Orchestrator instance. Horizontal scaling needs shared coordination as described above.
+- The hosted demo retains anonymous uploads and generated artifacts for 24 hours; it is not intended for confidential builds or sensitive authenticated targets. See [Privacy](privacy.md).
+- Submitted URLs and job configuration remain in durable job records in this release; event-audit records default to 30-day retention. Operators that need stricter metadata deletion must add database pruning or anonymization.
+- Production gateway, rollout, monitoring, and rollback automation for `stageflow.org` live outside this application repository. The checked-in Caddy and compose files are self-hosting references, not a reproduction of that host.
+
+---
+
 ## Failure Modes
 
-| Stage              | Representative failures                                          | Outcome                                        |
-| ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- |
+| Stage              | Representative failures                                                                      | Outcome                                         |
+| ------------------ | -------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | **Intake**         | Invalid URL/scheme, SSRF violation, oversize payload, unknown module, invalid scanner config | Rejected with a structured 4xx — no job created |
-| **Extraction**     | ZIP bomb, path traversal, archive limits exceeded                 | Job → FAILED with extraction-stage error       |
-| **Scanning**       | Scanner crash, manifest mismatch, browser timeout, page instability | `scan.failed` event → job failure or partial   |
-| **Aggregation**    | Missing artifact, contract/merge incompatibility                  | Job → FAILED                                   |
-| **Infrastructure** | NATS/Postgres/Podman socket unavailable                           | Services fail fast at startup                  |
-| **Stuck jobs**     | Scanner never reports; pod dies silently                          | Deadline sweeper transitions the job to FAILED |
+| **Extraction**     | ZIP bomb, path traversal, archive limits exceeded                                            | Job → FAILED with extraction-stage error        |
+| **Scanning**       | Scanner crash, manifest mismatch, browser timeout, page instability                          | `scan.failed` event → job failure or partial    |
+| **Aggregation**    | Missing artifact, contract/merge incompatibility                                             | Job → FAILED                                    |
+| **Infrastructure** | NATS/Postgres/Podman socket unavailable                                                      | Services fail fast at startup                   |
+| **Stuck jobs**     | Scanner never reports; pod dies silently                                                     | Deadline sweeper transitions the job to FAILED  |
 
 MinIO is the one dependency retried at startup (bucket ensure: 30 retries, 2s delay); everything else fails fast so the supervisor restarts a well-defined world.
 
@@ -405,4 +415,4 @@ E2E tests are double-gated (`testing.Short()` plus a `RUN_E2E` env check), so `g
 
 The **golden regression** (`qa/e2e/project-scan-golden.sh`, run in CI daily) exercises the product's core promise end-to-end: create a project → baseline scan of a clean fixture page → promote → point the project at a fixture with a known `image-alt` violation → regression scan must exit 1 → normalize the JSON output (strip timestamps/IDs/durations) → `diff -u` against committed golden fixtures in `qa/fixtures/project-golden/`. Regenerate intentionally with `UPDATE_GOLDENS=1`.
 
-CI (`.github/workflows/`): the main pipeline gates workflow lint → secrets scan → Go build/lint/test/vulncheck → web CI → scanner-runner CI → dead-code check → image builds; the CLI release workflow cross-builds 5 OS/arch targets on `clients/cli/v*` tags. `just ci` runs the equivalent quality gate locally. Go linting runs 30+ linters via `.golangci.yml`, spanning correctness (errcheck, staticcheck, nilerr), security (gosec, depguard), and quality (gocritic, revive, gocyclo).
+CI (`.github/workflows/`): the main pipeline gates workflow lint → secrets scan → Go build/lint/test/vulncheck → web CI and Playwright/axe E2E → scanner-runner CI → dead-code check → image builds and security scans; the CLI release workflow cross-builds 5 OS/arch targets on `clients/cli/v*` tags. `just ci` is the fast local quality gate; hosted CI adds secret scanning, browser E2E, image builds, SBOMs, and Trivy. Go linting runs 30+ linters via `.golangci.yml`, spanning correctness (errcheck, staticcheck, nilerr), security (gosec, depguard), and quality (gocritic, revive, gocyclo).

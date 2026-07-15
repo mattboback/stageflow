@@ -18,7 +18,7 @@ stageflow scan <url>... | scan <dir|zip>
 
 ```
       --allow-private-targets   Allow private/loopback targets (requires API instance to permit it)
-      --auth-recipe string      Path to a YAML/JSON form-auth recipe (Provenance.auth.form shape). Step values may be literal strings or {from_env: NAME} references.
+      --auth-recipe string      Path to a YAML/JSON form-auth recipe (Provenance.auth.form shape). Step values must use {from_env: NAME} references; literal secrets are rejected.
       --auth-state string       Path to a Playwright storage-state JSON captured via stageflow auth capture. Uploaded under the job's MinIO prefix and referenced from Provenance.auth.
       --fail-on string          Exit 1 if any displayed issue is at or above this severity (critical,serious,moderate,minor,info)
   -h, --help                    help for scan

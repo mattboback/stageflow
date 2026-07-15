@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="title desc">
+  <title id="title">StageFlow architecture overview</title>
+  <desc id="desc">Web and CLI clients submit jobs to the Platform API, which publishes lifecycle events through NATS JetStream to the Orchestrator and isolated scanner pods. PostgreSQL and MinIO are shared infrastructure rather than sequential processing stages. Unified reports return through the Platform API.</desc>
+  <style>
+    .bg { fill: #f1f7f6; }
+    .box { fill: #fff; stroke: #385154; stroke-width: 2; }
+    .accent { fill: #e9f5f3; stroke: #087d89; }
+    .infra { fill: #f8fbfa; stroke: #78908f; }
+    .heading { fill: #17262a; font: 700 22px system-ui, sans-serif; }
+    .body { fill: #526367; font: 15px system-ui, sans-serif; }
+    .mono { fill: #285b60; font: 700 13px ui-monospace, monospace; letter-spacing: .02em; }
+    .lane { fill: #526367; font: 700 13px system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .arrow { stroke: #526d70; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    .shared { stroke: #829897; stroke-width: 2; stroke-dasharray: 6 6; fill: none; }
+    .label-bg { fill: #f1f7f6; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10Z" fill="#526d70"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1200" height="500" rx="18"/>
+  <text class="heading" x="50" y="46">One job, isolated execution, one report contract</text>
+  <text class="lane" x="50" y="82">Request and execution path</text>
+
+  <rect class="box" x="50" y="102" width="190" height="176" rx="13"/>
+  <text class="heading" x="78" y="144">Clients</text>
+  <text class="body" x="78" y="180">React Router web</text>
+  <text class="body" x="78" y="209">Go CLI</text>
+  <text class="mono" x="78" y="249">HTTP + SSE</text>
+
+  <rect class="box accent" x="302" y="102" width="230" height="176" rx="13"/>
+  <text class="heading" x="330" y="144">Platform API</text>
+  <text class="body" x="330" y="180">intake + SSRF policy</text>
+  <text class="body" x="330" y="209">projects + baselines</text>
+  <text class="body" x="330" y="238">status + report access</text>
+
+  <rect class="box" x="594" y="102" width="190" height="176" rx="13"/>
+  <text class="heading" x="622" y="144">NATS</text>
+  <text class="body" x="622" y="180">JetStream event bus</text>
+  <text class="body" x="622" y="209">durable lifecycle</text>
+  <text class="mono" x="622" y="249">job events</text>
+
+  <rect class="box accent" x="846" y="102" width="304" height="176" rx="13"/>
+  <text class="heading" x="874" y="144">Orchestrator + job pods</text>
+  <text class="body" x="874" y="180">explicit job state machine</text>
+  <text class="body" x="874" y="209">rootless Podman isolation</text>
+  <text class="body" x="874" y="238">scanner fan-out + aggregation</text>
+
+  <path class="arrow" d="M240 190H292"/>
+  <path class="arrow" d="M532 190H584"/>
+  <path class="arrow" d="M784 190H836"/>
+
+  <path class="arrow" d="M998 289V314H417V289"/>
+  <rect class="label-bg" x="612" y="301" width="191" height="25" rx="12"/>
+  <text class="mono" x="626" y="319">Unified Report v2</text>
+
+  <text class="lane" x="50" y="363">Shared infrastructure</text>
+  <rect class="box infra" x="302" y="383" width="230" height="82" rx="13"/>
+  <text class="heading" x="330" y="417">PostgreSQL</text>
+  <text class="body" x="330" y="445">projects, baselines, audit</text>
+
+  <rect class="box infra" x="594" y="383" width="230" height="82" rx="13"/>
+  <text class="heading" x="622" y="417">MinIO</text>
+  <text class="body" x="622" y="445">reports + scan artifacts</text>
+
+  <path class="shared" d="M417 278V373"/>
+  <path class="shared" d="M998 278V349H709V373"/>
+</svg>

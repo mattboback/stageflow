@@ -1,343 +1,101 @@
----
-name: StageFlow - Calibrated Instrument
-description: Light-only, measurement-oriented interface language for a frontend quality platform.
-colors:
-  ground: "oklch(0.976 0.004 235)"
-  ground-deep: "oklch(0.955 0.005 235)"
-  surface: "oklch(1 0 0)"
-  surface-sunk: "oklch(0.968 0.004 235)"
-  ink-strong: "oklch(0.22 0.012 250)"
-  ink: "oklch(0.31 0.012 250)"
-  ink-muted: "oklch(0.46 0.013 250)"
-  ink-faint: "oklch(0.56 0.012 250)"
-  line: "oklch(0.90 0.005 240)"
-  line-strong: "oklch(0.82 0.006 240)"
-  tick: "oklch(0.86 0.005 240)"
-  signal: "oklch(0.58 0.094 210)"
-  signal-strong: "oklch(0.50 0.092 211)"
-  signal-press: "oklch(0.44 0.085 212)"
-  signal-ink: "oklch(0.34 0.07 213)"
-  signal-wash: "oklch(0.96 0.018 210)"
-  signal-edge: "oklch(0.86 0.045 208)"
-  severity-critical: "oklch(0.52 0.20 27)"
-  severity-serious: "oklch(0.57 0.16 47)"
-  severity-moderate: "oklch(0.58 0.12 80)"
-  severity-minor: "oklch(0.52 0.12 135)"
-  severity-pass: "oklch(0.56 0.10 165)"
-  severity-critical-wash: "oklch(0.96 0.03 27)"
-  severity-serious-wash: "oklch(0.965 0.03 47)"
-  severity-moderate-wash: "oklch(0.965 0.035 85)"
-  severity-minor-wash: "oklch(0.965 0.03 135)"
-typography:
-  display: "Gabarito, Avenir Next, Segoe UI, system-ui, sans-serif"
-  sans: "Source Sans 3, Segoe UI, system-ui, -apple-system, sans-serif"
-  mono: "JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
-  body:
-    fontFamily: "Source Sans 3, Segoe UI, system-ui, -apple-system, sans-serif"
-    fontSize: "16px"
-    fontWeight: 400
-    lineHeight: 1.55
-  label:
-    fontFamily: "Source Sans 3, Segoe UI, system-ui, -apple-system, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 600
-  readout:
-    fontFamily: "Gabarito, Avenir Next, Segoe UI, system-ui, sans-serif"
-    fontSize: "1.55rem"
-    fontWeight: 700
-    lineHeight: 1.1
-rounded:
-  xs: "6px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  pill: "999px"
-spacing:
-  wrap-inline: "1.75rem"
-  maxw: "76rem"
-  panel-head: "0.85rem 1.1rem"
-  panel-body: "1.1rem"
-components:
-  button-primary:
-    backgroundColor: "{colors.signal-strong}"
-    textColor: "#ffffff"
-    rounded: "{rounded.sm}"
-    padding: "0.7rem 1.1rem"
-  button-primary-hover:
-    backgroundColor: "{colors.signal-press}"
-  button-ghost:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-strong}"
-    rounded: "{rounded.sm}"
-    padding: "0.7rem 1.1rem"
-  button-sm:
-    padding: "0.5rem 0.8rem"
-  input:
-    backgroundColor: "{colors.surface-sunk}"
-    textColor: "{colors.ink-strong}"
-    rounded: "{rounded.sm}"
-    padding: "0.7rem 0.85rem"
-  panel:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.md}"
-  pill:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.pill}"
-    padding: "0.28rem 0.55rem"
-  severity-badge:
-    textColor: "{colors.surface}"
-    rounded: "{rounded.pill}"
-    padding: "0.16rem 0.5rem"
-  severity-chip:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-muted}"
-    rounded: "{rounded.pill}"
-    padding: "0.22rem 0.55rem"
----
+# Design: Calibrated Instrument
 
-# Design System: StageFlow - Calibrated Instrument
+StageFlow should feel like a precise frontend-quality instrument: calm, trustworthy, understated, and evidence-heavy. It favors clear readouts and stable report surfaces over marketing decoration.
 
-Canonical tokens and shared primitives:
-`clients/web/app/styles/instrument.css`. Report severity surfaces:
-`clients/web/app/styles/report.css` (selected via
-`clients/web/app/lib/report/severity.ts`). Update CSS first; update this guide
-when the design language changes.
+Exact tokens and shared primitives live in `clients/web/app/styles/instrument.css`. Report severity treatments live in `clients/web/app/styles/report.css`, selected through `clients/web/app/lib/report/severity.ts`. Update CSS first; keep this document focused on intent and usage.
 
-## 1. Overview
+## Visual Language
 
-**Creative North Star: "Calibrated Instrument"**
+- Use cool graphite and white surfaces with one teal signal color.
+- Use borders and tonal steps for structure; reserve shadows for elements that actually float.
+- Keep controls compact and exact rather than soft or decorative.
+- Use rounded corners from the shared scale; do not invent local radii.
+- Use dark surfaces only for terminal-like output.
+- Treat severity as a calibrated scale, not an alarm.
 
-StageFlow is a precision measuring instrument for frontend quality: exact, quiet,
-and evidence-heavy. The interface favors linework, clear readouts, compact controls,
-and stable report surfaces over marketing decoration. Density is operational —
-built for scanning scores and issues — without becoming a dark developer console.
+Avoid generic cream SaaS dashboards, gradient text, glass cards, fake browser chrome, icon-card grids, gamified scores, red-everywhere security styling, and decorative page-load choreography.
 
-The product is its own proof point. A first-time visitor should run a scan, read
-live progress, and inspect a report without feeling sold to or scared. Calm under
-criticality: severity is a calibrated scale, never a siren. Personality from
-PRODUCT.md: **calm · trustworthy · understated**.
+## Color Semantics
 
-Explicitly rejects: SaaS-cream dashboard templates and gradient-accented
-hero-metric cards; identical icon-card grids; alarmist "THREATS DETECTED"
-urgency, gamified scores, and confetti; fake browser chrome; cool-slate dark
-dashboards; heavy marketing-page reveal choreography.
+Signal teal is reserved for primary actions, links, live state, focus, brand identity, and gauge emphasis. It should remain visually scarce.
 
-**Key Characteristics:**
+Neutral surfaces establish hierarchy:
 
-- Light-only cool graphite/white surfaces with one teal-cyan signal color
-- Gabarito for headings and hero numerals; Source Sans 3 for prose and interface
-- JetBrains Mono for literal code and data such as selectors, snippets, and CLI output
-- Borders and tonal steps for structure; shadows only for real overlays
-- Severity always color plus text, count, shape, or position
-- Rounded corners consistent: 6px, 8px, 12px, or 16px (pills 999px)
-- Restrained and exact controls — signal rare and meaningful
-- Semantic z-index scale (sticky → dropdown → backdrop → modal → toast → tooltip)
+- ground for the page;
+- surface for panels and controls;
+- sunk surface for inputs and inset tracks;
+- progressively muted ink for secondary text;
+- line tokens for structure and calibration marks.
 
-## 2. Colors
+Severity colors communicate critical, serious, moderate, minor, and pass/info states. Never rely on hue alone: pair severity with a label, count, icon, badge text, grouping, or overlay geometry.
 
-Measurement panel, not a themed dashboard. **Restrained** strategy: cool tinted
-neutrals plus one accent used sparingly for primary action, live activity, and links.
+## Typography
 
-### Primary
+- Gabarito carries headings, major measurements, and gauges.
+- Source Sans 3 carries prose, labels, controls, and navigation.
+- JetBrains Mono carries commands, selectors, snippets, IDs, and machine-oriented values.
 
-- **Signal Teal** (`oklch(0.58 0.094 210)` / `--signal`): live activity, links,
-  gauge arcs, brand mark, current-state emphasis
-- **Signal Strong** (`oklch(0.50 0.092 211)` / `--signal-strong`): primary button
-  fill (white text); hover **Signal Press** (`oklch(0.44 0.085 212)`)
-- **Signal Ink / Wash / Edge**: text-on-light signal, faint fills, tinted borders
-  for live pills and focus rings
+Do not substitute fonts for decoration. Product chrome stays compact and steady; large display type belongs only on landing and major report headings.
 
-### Neutral
+## Structure and Elevation
 
-- **Ground** (`oklch(0.976 0.004 235)`): page background — cool near-white graphite,
-  never warm cream
-- **Ground Deep** (`oklch(0.955 0.005 235)`): footer, hover wells
-- **Surface** (`oklch(1 0 0)`): panels, cards, default controls
-- **Surface Sunk** (`oklch(0.968 0.004 235)`): inputs, inset wells, meter tracks
-- **Ink Strong / Ink / Ink Muted / Ink Faint**: text hierarchy; body and muted
-  target AA (prefer AAA where practical); faint ink is not body prose
-- **Line / Line Strong / Tick**: hairline structure and calibration marks
+Surfaces are flat by default. Full borders, background steps, spacing, and calibration marks establish grouping. Shadows indicate real stacking: sticky elements, popovers, modals, toasts, and tooltips.
 
-### Severity (calibrated scale)
+Use the semantic z-index tokens. Never introduce arbitrary values such as `999` or `9999`.
 
-| Role | Token | Value |
-|------|--------|--------|
-| Critical | `--sev-critical` | `oklch(0.52 0.20 27)` |
-| Serious | `--sev-serious` | `oklch(0.57 0.16 47)` |
-| Moderate | `--sev-moderate` | `oklch(0.58 0.12 80)` |
-| Minor | `--sev-minor` | `oklch(0.52 0.12 135)` |
-| Pass / info | `--sev-pass` | `oklch(0.56 0.10 165)` |
-
-Wash variants (`--sev-*-wash`) back issue containers. Info maps onto pass in
-`report.css`. Overlay markers use `color-mix` 10% fills with 2px severity borders.
-
-**The One Signal Rule.** Signal teal appears on ≤10% of any screen — primary
-actions, live state, links, and brand mark. Never as decorative wash across large
-regions.
-
-**The Severity Pairing Rule.** Never rely on severity hue alone. Pair every
-severity color with label, count, badge text, grouped position, or overlay geometry.
-
-## 3. Typography
-
-**Display Font:** Gabarito (Avenir Next, Segoe UI, system-ui, sans-serif)
-
-**Body/Interface Font:** Source Sans 3 (Segoe UI, system-ui, sans-serif)
-
-**Data/Mono Font:** JetBrains Mono (ui-monospace, SFMono-Regular, Menlo, monospace)
-
-**Character:** Gabarito gives headings, hero numerals, gauges, and readouts a
-confident display voice. Source Sans 3 carries calm interface labels and prose.
-JetBrains Mono is reserved for literal code and technical data such as selectors,
-snippets, and CLI output.
-
-### Hierarchy
-
-- **Body** (400, 16px, line-height 1.55): default page text in Source Sans 3
-- **Headings** (700, line-height 1.15): Gabarito with restrained negative tracking
-- **UI / controls** (600 on buttons, ~0.9rem): compact tool surfaces; steady type,
-  not fluid clamp scales on product chrome
-- **Label** (`.label`: Source Sans 3, 0.875rem, weight 600, sentence case): field
-  annotations and instrument captions
-- **Readout** (`.readout__val`: Gabarito, weight 700, 1.55rem): quantitative values
-- **Gauge value** (`.gauge__val`: Gabarito, weight 800) with a Source Sans 3 caption
-- **Code/data** (`code`, `pre`, `.mono`): JetBrains Mono for selectors, snippets,
-  commands, and machine-oriented values
-- **Hero / report titles**: larger type only on landing and major report headings;
-  panels, filters, and rows stay dense and steady
-
-### Named Rules
-
-**The Three-Face Rule.** Gabarito carries display hierarchy and prominent
-measurements, Source Sans 3 carries the interface, and JetBrains Mono carries
-literal code or technical data. Do not substitute one face merely for decoration.
-
-**The No Decorative Display Rule.** No serif display faces, no alternate display
-fonts, and no aggressive negative letter-spacing on compact tool surfaces.
-
-## 4. Elevation
-
-Depth is structural, not theatrical. Surfaces are flat at rest. Structure comes
-from full borders (`--line` / `--line-strong`), tonal steps (`--surface` vs
-`--surface-sunk` vs `--ground`), and calibration ticks (`.rule-ticks`). Shadows
-appear only when something truly floats above the page.
-
-### Shadow Vocabulary
-
-- **sm** (`0 1px 2px oklch(0.22 0.01 250 / 0.06)`): subtle edge on small overlays
-- **md** (`0 2px 10px oklch(0.22 0.01 250 / 0.07)`): sticky bars / modest popovers
-- **pop** (`0 8px 30px oklch(0.22 0.01 250 / 0.12)`): modals and elevated dialogs
-
-Sticky header uses frosted ground (`backdrop-filter: saturate(1.4) blur(8px)`)
-plus a bottom hairline — purposeful stacking, not decorative glass cards.
-
-### z-index scale
-
-`--z-base` 0 → `--z-sticky` 100 → `--z-dropdown` 200 → `--z-backdrop` 300 →
-`--z-modal` 400 → `--z-toast` 500 → `--z-tooltip` 600. Never arbitrary 999 values.
-
-**The Flat-By-Default Rule.** Surfaces are flat at rest. Shadows respond to
-stacking (sticky, popover, modal, tooltip), never decoration on static cards.
-
-## 5. Components
-
-Components are restrained and exact: near-flat, compact, signal reserved for
-primary and live states. Shared primitives live in `instrument.css`; report
-severity surfaces in `report.css`.
+## Components
 
 ### Buttons
 
-- **Shape:** gently rectilinear (`6px` / `--r-md`)
-- **Primary:** `--signal-strong` fill, white text, padding `0.7rem 1.1rem`; hover
-  `--signal-press`; active presses `translateY(1px)`
-- **Ghost:** surface fill, strong line border, ink-strong text; hover deepens
-  border and ground-deep fill
-- **sm:** tighter padding (`0.5rem 0.8rem`, `0.82rem` type) for header actions
-- **Focus:** global `:focus-visible` — `2.5px solid --signal`, offset 2px
-- Optional arrow (`.ar`) nudges `translateX(3px)` on hover
+- Primary buttons use the strong signal token and white text.
+- Ghost buttons use a surface fill and structural border.
+- Active states may move by one pixel; hover should not become theatrical.
+- Every control needs a visible `:focus-visible` treatment.
 
-### Status pills
+### Inputs
 
-- Mono uppercase, LED dot, pill radius `999px`
-- Variants: default, live (signal wash + blink), done (minor/pass), queued, error
-- State language, not decoration
+- Use the sunk surface, strong line, shared radius, and readable placeholder color.
+- Keep labels explicit and sentence-cased.
+- Focus combines signal border and restrained focus wash.
 
-### Cards / Panels
+### Panels
 
-- **Corner:** `8px` (`--r-lg`)
-- **Background:** `--surface` with `1px solid --line`
-- **Shadow:** none at rest
-- **Internal padding:** head `0.85rem 1.1rem`; body `1.1rem`
-- Cards only for repeated items, report panels, modals, tool surfaces — never
-  nested cards
+- Use one border and no resting shadow.
+- Avoid nested cards when spacing or a divider expresses the same hierarchy.
+- Keep evidence adjacent to the issue or decision it explains.
 
-### Inputs / Fields
+### Status and Severity
 
-- **Style:** `--surface-sunk` fill, `--line-strong` border, `--r-md`, padding
-  `0.7rem 0.85rem`, `0.95rem` type
-- **Placeholder:** `--ink-faint` (must remain readable; never pure decorative gray)
-- **Focus:** signal border + `0 0 0 3px --signal-wash`, surface background
-- Label via `.label` mono annotation voice
+- Status pills represent state, not decoration.
+- Severity containers use a complete border and a restrained wash, not colored side stripes.
+- Screenshot markers use both severity border and geometry.
+- Filter chips retain readable labels in active and inactive states.
 
 ### Navigation
 
-- Sticky header (60px), frosted ground, brand mono wordmark + signal mark
-- Nav links: muted ink, soft hover wash; collapse text links under 640px
-- Primary "Run a scan" remains visible; calibration tick-rule sits under the bar
+- Keep the primary navigation stable and compact.
+- Collapse secondary text links on narrow screens while preserving the main action.
+- Use sticky/frosted treatment only where persistent orientation justifies it.
 
-### Severity surfaces (report)
+## Motion
 
-- **Container:** full border + wash fill (no left-stripe accents)
-- **Dot:** ~8px circle for row headers / counts
-- **Badge:** solid mono uppercase pill with severity fill + surface text
-- **Border:** highlighted selection border + wash
-- **Overlay:** 2px severity border on screenshot markers, 10% fill via `color-mix`
-- **Filter chips:** toggleable mono pills; inactive shows severity-tinted border/text;
-  active uses solid severity fill + surface text
-- Helpers: `getSeverity*Class` in `app/lib/report/severity.ts`
+Motion communicates state or feedback. Use the shared duration and easing tokens. Continuous animation is limited to genuine live-state cues, and all motion must honor `prefers-reduced-motion`.
 
-### Signature: Score gauge & severity scale
+Do not orchestrate reveal sequences for ordinary page content.
 
-- Arc gauge (132px dial): track `--line`, arc `--signal`, mono center value
-- Severity scale: compact rows with square 9px dots (not color alone) + mono counts
+## Accessibility Rules
 
-### Motion (folded here)
+- WCAG AA is the contrast floor; prefer AAA for body and interface text where practical.
+- Keep keyboard focus visible.
+- Do not encode severity, status, or selection through color alone.
+- Keep targets usable on mobile and labels available to assistive technology.
+- Test UI changes in the rendered route at desktop and mobile widths.
 
-- Durations: 120ms / 190ms / 280ms; ease-out-quint-ish (`cubic-bezier(0.22, 1, 0.36, 1)`)
-- State and feedback only — no orchestrated page-load reveals
-- Brand mark ping and live LED blink are the rare continuous cues; both honor
-  `prefers-reduced-motion: reduce` (global collapse of animation/transition)
+## Review Checklist
 
-## 6. Do's and Don'ts
-
-### Do:
-
-- **Do** use linework, ticks, score arcs, and tables to reinforce measurement.
-- **Do** keep the signal color rare and meaningful (The One Signal Rule).
-- **Do** pair every severity hue with label, icon, count, or position.
-- **Do** preserve contrast floors (AA hard floor; AAA on body/UI where practical)
-  and visible keyboard focus (`2.5px` signal outline).
-- **Do** keep report evidence next to the issue it explains.
-- **Do** use the semantic z-index scale for stacking contexts.
-- **Do** update `instrument.css` / `report.css` first; this file second.
-- **Do** test UI changes by rendering the relevant route, not just reading CSS.
-
-### Don't:
-
-- **Don't** ship generic SaaS-cream dashboard templates or gradient-accented
-  hero-metric cards.
-- **Don't** use identical icon-card grids ("eight feature cards: icon + heading +
-  blurb").
-- **Don't** use alarmist security-scanner aesthetics — red-everywhere, scare-tactic
-  "THREATS DETECTED" urgency, gamified scores, or confetti.
-- **Don't** add fake browser chrome or brand-colored scanner logos as decoration.
-- **Don't** turn the interface into a cool-slate dark developer console; dark
-  surfaces are reserved for terminal-like output only.
-- **Don't** add heavy marketing-page reveal choreography; the tool should feel
-  instant and honest.
-- **Don't** use side-stripe accent borders (`border-left` / `border-right` > 1px
-  as colored accent), gradient text, or glassmorphism as default card treatment.
-- **Don't** invent z-index values like 999 / 9999.
-- **Don't** redefine design tokens outside `clients/web/app/styles/instrument.css`
-  without a clear reason.
+1. Does the screen read as an instrument rather than a marketing template?
+2. Is signal color rare and meaningful?
+3. Are severity and status understandable without color?
+4. Is hierarchy carried by spacing, linework, and type before cards or shadows?
+5. Are exact values sourced from shared CSS rather than redefined locally?
+6. Does the interaction work with keyboard, reduced motion, and narrow viewports?
