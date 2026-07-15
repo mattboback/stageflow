@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 )
@@ -48,73 +47,6 @@ func newStreamState() *streamState {
 	return &streamState{
 		seenCompleted: make(map[string]struct{}),
 	}
-}
-
-// WaitJobState waits for the job to reach a terminal state.
-// If noStream is true, it polls the API instead of using Server-Sent Events.
-func WaitJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer, noStream bool) error {
-	if noStream {
-		return pollJobState(ctx, c, jobID, out)
-	}
-
-	err := sseJobState(ctx, c, jobID, out)
-	if err == nil || ctx.Err() != nil {
-		return err
-	}
-
-	fmt.Fprintf(out, "stream lost, falling back to polling...\n")
-
-	return pollJobState(ctx, c, jobID, out)
-}
-
-func pollJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {
-	apiPath := fmt.Sprintf("/api/v1/jobs/%s", url.PathEscape(jobID))
-
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	state := newStreamState()
-
-	isDone, err := checkPolledJobStatus(ctx, c, apiPath, out, state)
-	if err != nil {
-		return err
-	}
-
-	if isDone {
-		return nil
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			isDone, err = checkPolledJobStatus(ctx, c, apiPath, out, state)
-			if err != nil {
-				return err
-			}
-
-			if isDone {
-				return nil
-			}
-		}
-	}
-}
-
-func checkPolledJobStatus(
-	ctx context.Context,
-	c *apiclient.Client,
-	apiPath string,
-	out io.Writer,
-	state *streamState,
-) (bool, error) {
-	var status apiclient.JobStatus
-
-	if err := c.GetJSON(ctx, apiPath, &status); err != nil {
-		return false, fmt.Errorf("poll failed: %w", err)
-	}
-
-	return emitStatusSnapshot(out, state, &status)
 }
 
 func sseJobState(ctx context.Context, c *apiclient.Client, jobID string, out io.Writer) error {

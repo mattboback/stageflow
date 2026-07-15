@@ -16,6 +16,7 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
+	"github.com/mattboback/stageflow/clients/cli/internal/projectscan"
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/diff"
@@ -250,7 +251,7 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 
 	decoder := json.NewDecoder(strings.NewReader(stdout))
 
-	var payload projectScanEnvelope
+	var payload projectscan.Envelope
 	testsupport.RequireNoErr(t, decoder.Decode(&payload))
 
 	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
@@ -258,7 +259,7 @@ func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
 	testsupport.RequireEqual(
 		t,
 		payload.Project.Baseline.Status,
-		projectBaselineStatusAvailable,
+		projectscan.BaselineStatusAvailable,
 		"payload.Project.Baseline.Status",
 	)
 	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
@@ -315,7 +316,7 @@ stageflow:
 
 	decoder := json.NewDecoder(strings.NewReader(stdout))
 
-	var payload projectScanEnvelope
+	var payload projectscan.Envelope
 	testsupport.RequireNoErr(t, decoder.Decode(&payload))
 
 	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")

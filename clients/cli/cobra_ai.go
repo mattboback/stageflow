@@ -11,6 +11,7 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -90,21 +91,20 @@ func newAICmd(root *rootOptions) *cobra.Command {
 				},
 			}
 
-			status, reportDoc, err := runScanJob(
+			result, err := scanflow.SubmitURLsAndWait(
 				cmd.Context(),
 				client,
 				req,
 				timeout,
-				cmd.ErrOrStderr(),
-				false,
+				scanflow.WaitOptions{Progress: cmd.ErrOrStderr()},
 			)
 			if err != nil {
 				return exitcode.Error{Code: 2, Err: err}
 			}
 
-			success := determineSuccess(reportDoc)
+			success := determineSuccess(result.Report)
 
-			fullProv, compressedProv := fetchProvenance(cmd.Context(), status)
+			fullProv, compressedProv := fetchProvenance(cmd.Context(), http.DefaultClient, result.Status)
 
 			res := AINavigatorResponse{
 				Success: success,
@@ -150,7 +150,11 @@ func determineSuccess(reportDoc report.UnifiedReportV2) bool {
 }
 
 //nolint:gocognit,gocyclo
-func fetchProvenance(ctx context.Context, status apiclient.JobStatus) ([]any, []CompressedProv) {
+func fetchProvenance(
+	ctx context.Context,
+	httpClient *http.Client,
+	status apiclient.JobStatus,
+) ([]any, []CompressedProv) {
 	var fullProv []any
 
 	var compressedProv []CompressedProv
@@ -175,7 +179,7 @@ func fetchProvenance(ctx context.Context, status apiclient.JobStatus) ([]any, []
 		return fullProv, compressedProv
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fullProv, compressedProv
 	}

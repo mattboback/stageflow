@@ -14,29 +14,26 @@ func TestAPICommandClient_TimesOutHungScannersResponse(t *testing.T) {
 		<-block
 	}))
 
-	previousTimeout := apiCommandHTTPTimeout
-	apiCommandHTTPTimeout = 20 * time.Millisecond
-
-	t.Cleanup(func() {
-		apiCommandHTTPTimeout = previousTimeout
-	})
-
 	started := time.Now()
-	stdout, stderr, exitCode := runCLI(t, "stageflow", "--api", server.URL, "scanners")
+	client := newAPICommandClientWithTimeout(&rootOptions{apiURL: server.URL}, 20*time.Millisecond)
+
+	var response any
+
+	err := client.GetJSON(t.Context(), "/api/v1/scanners", &response)
 	elapsed := time.Since(started)
 
 	close(block)
 	server.Close()
 
-	if exitCode != 2 {
-		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
+	if err == nil {
+		t.Fatal("expected request timeout")
 	}
 
 	if elapsed > time.Second {
 		t.Fatalf("scanners command took %s; expected bounded timeout", elapsed)
 	}
 
-	if !strings.Contains(stderr, "fetch scanners: failed to execute request") {
-		t.Fatalf("expected request failure in stderr, got %q", stderr)
+	if !strings.Contains(err.Error(), "failed to execute request") {
+		t.Fatalf("expected request failure, got %q", err)
 	}
 }

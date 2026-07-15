@@ -93,18 +93,13 @@ func TestWaitForReady(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		prevClient := http.DefaultClient
-		http.DefaultClient = srv.Client()
-
-		t.Cleanup(func() { http.DefaultClient = prevClient })
-
 		proc := &RunningProcess{waitCh: make(chan error, 1)}
 		cfg := DevReadyConfig{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		if err := WaitForReady(ctx, proc, cfg, ioDiscard{}); err != nil {
+		if err := WaitForReady(ctx, srv.Client(), proc, cfg, ioDiscard{}); err != nil {
 			t.Fatalf("WaitForReady error: %v", err)
 		}
 	})
@@ -123,18 +118,13 @@ func TestWaitForReady(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		prevClient := http.DefaultClient
-		http.DefaultClient = srv.Client()
-
-		t.Cleanup(func() { http.DefaultClient = prevClient })
-
 		proc := &RunningProcess{waitCh: make(chan error, 1)}
 		cfg := DevReadyConfig{URL: srv.URL, Timeout: "200ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		if err := WaitForReady(ctx, proc, cfg, ioDiscard{}); err != nil {
+		if err := WaitForReady(ctx, srv.Client(), proc, cfg, ioDiscard{}); err != nil {
 			t.Fatalf("WaitForReady error: %v", err)
 		}
 
@@ -149,18 +139,13 @@ func TestWaitForReady(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		prevClient := http.DefaultClient
-		http.DefaultClient = srv.Client()
-
-		t.Cleanup(func() { http.DefaultClient = prevClient })
-
 		proc := &RunningProcess{waitCh: make(chan error, 1)}
 		cfg := DevReadyConfig{URL: srv.URL, Timeout: "80ms", Interval: "10ms"}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		err := WaitForReady(ctx, proc, cfg, ioDiscard{})
+		err := WaitForReady(ctx, srv.Client(), proc, cfg, ioDiscard{})
 		if err == nil {
 			t.Fatalf("WaitForReady err = nil, want non-nil")
 		}
@@ -176,11 +161,6 @@ func TestWaitForReady(t *testing.T) {
 		}))
 		defer srv.Close()
 
-		prevClient := http.DefaultClient
-		http.DefaultClient = srv.Client()
-
-		t.Cleanup(func() { http.DefaultClient = prevClient })
-
 		proc := &RunningProcess{waitCh: make(chan error, 1)}
 		proc.waitCh <- errors.New("boom")
 
@@ -189,7 +169,7 @@ func TestWaitForReady(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
-		err := WaitForReady(ctx, proc, cfg, ioDiscard{})
+		err := WaitForReady(ctx, srv.Client(), proc, cfg, ioDiscard{})
 		if err == nil {
 			t.Fatalf("WaitForReady err = nil, want non-nil")
 		}

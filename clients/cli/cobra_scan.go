@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
+	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/staticsite"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
@@ -125,26 +127,31 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		return runStaticScan(cmd, root, opts, args[0])
 	}
 
-	req, err := buildScanRequest(cmd, root, opts, args)
+	req, err := buildScanRequest(
+		root.apiURL,
+		opts,
+		args,
+		cobraFlagChanged(cmd, "allow-private-targets"),
+		cmd.ErrOrStderr(),
+	)
 	if err != nil {
 		return err
 	}
 
 	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
-	status, doc, err := runScanJob(
+	result, err := scanflow.SubmitURLsAndWait(
 		cmd.Context(),
 		client,
 		req,
 		opts.timeout,
-		cmd.ErrOrStderr(),
-		opts.noStream,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: opts.noStream},
 	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	return renderScanReport(cmd, root, opts, status, doc)
+	return renderScanReport(cmd, root, opts, result.Status, result.Report)
 }
 
 func renderScanReport(
@@ -202,25 +209,32 @@ func runStaticScan(cmd *cobra.Command, root *rootOptions, opts scanCommandOption
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit zip job: %w", err)}
 	}
 
-	if resp.JobID == "" {
-		return exitcode.Error{Code: 2, Err: errors.New("submit zip job: missing job_id in response")}
+	jobID, err := scanflow.RequireJobID(resp)
+	if err != nil {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit zip job: %w", err)}
 	}
 
-	fmt.Fprintf(cmd.ErrOrStderr(), "Uploaded %s\nJob submitted: %s\nWaiting for completion...\n", path, resp.JobID)
+	fmt.Fprintf(cmd.ErrOrStderr(), "Uploaded %s\nJob submitted: %s\nWaiting for completion...\n", path, jobID)
 
-	status, doc, err := waitForCompletedJobReport(opCtx, client, resp.JobID, cmd.ErrOrStderr(), opts.noStream)
+	result, err := scanflow.WaitForReport(
+		opCtx,
+		client,
+		jobID,
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: opts.noStream},
+	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	return renderScanReport(cmd, root, opts, status, doc)
+	return renderScanReport(cmd, root, opts, result.Status, result.Report)
 }
 
 func buildScanRequest(
-	cmd *cobra.Command,
-	root *rootOptions,
+	apiURL string,
 	opts scanCommandOptions,
 	args []string,
+	allowPrivateExplicit bool,
+	stderr io.Writer,
 ) (apiclient.SubmitJobRequest, error) {
 	urls, err := urlcheck.NormalizeTargets(args)
 	if err != nil {
@@ -232,7 +246,7 @@ func buildScanRequest(
 		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: err}
 	}
 
-	validateErr := urlcheck.ValidateLocalTargets(root.apiURL, urls)
+	validateErr := urlcheck.ValidateLocalTargets(apiURL, urls)
 	if validateErr != nil {
 		return apiclient.SubmitJobRequest{}, exitcode.Error{Code: 2, Err: validateErr}
 	}
@@ -243,16 +257,21 @@ func buildScanRequest(
 	}
 
 	req := apiclient.SubmitJobRequest{
-		URLs:                urls,
-		Modules:             modules,
-		Screenshot:          opts.screenshot,
-		AllowPrivateTargets: effectiveAllowPrivateTargets(cmd, urls, opts.allowPrivate),
+		URLs:       urls,
+		Modules:    modules,
+		Screenshot: opts.screenshot,
+		AllowPrivateTargets: effectiveAllowPrivateTargets(
+			urls,
+			opts.allowPrivate,
+			allowPrivateExplicit,
+			stderr,
+		),
 	}
 	if hasAuth {
 		req.Auth = authInput
 
 		fmt.Fprintf(
-			cmd.ErrOrStderr(),
+			stderr,
 			"Attaching auth block (mode=%s) to scan submission.\n",
 			authInput.Mode,
 		)
@@ -261,13 +280,18 @@ func buildScanRequest(
 	return req, nil
 }
 
-func effectiveAllowPrivateTargets(cmd *cobra.Command, urls []string, allowPrivate bool) bool {
-	if allowPrivate || cobraFlagChanged(cmd, "allow-private-targets") || !urlcheck.ContainsPrivateTargets(urls) {
+func effectiveAllowPrivateTargets(
+	urls []string,
+	allowPrivate bool,
+	allowPrivateExplicit bool,
+	stderr io.Writer,
+) bool {
+	if allowPrivate || allowPrivateExplicit || !urlcheck.ContainsPrivateTargets(urls) {
 		return allowPrivate
 	}
 
 	fmt.Fprintln(
-		cmd.ErrOrStderr(),
+		stderr,
 		"Detected private/loopback targets; setting allow_private_targets=true.",
 	)
 
