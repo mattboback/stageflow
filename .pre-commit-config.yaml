@@ -30,6 +30,12 @@ repos:
 
   - repo: local
     hooks:
+      - id: stageflow-markdown-links
+        name: stageflow-markdown-links
+        entry: node devtools/scripts/check-markdown-links.mjs
+        language: system
+        files: "\\.md$"
+        pass_filenames: false
       - id: biome-check-local
         name: biome-check
         entry: bunx --bun @biomejs/biome@1.9.4 check --files-ignore-unknown=true --no-errors-on-unmatched

@@ -7,7 +7,7 @@
 // validation server-side; the CLI's local validation is purely so we can fail
 // fast with a developer-friendly message instead of a 400 from the API.
 //
-// Secrets-handling rules (mirroring docs/architecture/system.md#authenticated-scanning):
+// Secrets-handling rules (mirroring docs/architecture.md#authenticated-scanning):
 //
 //   - Form recipes: values are either literal strings or {from_env: NAME}
 //     references. The CLI never resolves those references; the orchestrator

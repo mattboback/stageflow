@@ -7,18 +7,14 @@ StageFlow is a self-hostable **frontend quality platform**. It ships eight
 built-in scanners — accessibility, performance, SEO, links, security headers,
 social metadata, content quality, and agent-driven navigation — behind a single
 report contract, and remembers a **baseline per project** so every scan can
-answer the question that matters in CI: *did this change make the frontend
-worse?*
+answer the question that matters in CI: _did this change make the frontend
+worse?_
 
-**▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any URL and explore a
-real, interactive report in the browser. No account required.
+**▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any public URL and
+explore a real, interactive report in the browser. No StageFlow account is
+required on the demo; uploads and generated artifacts expire after 24 hours.
 
-![Clicking a bounding-box overlay in Review opens the finding detail card](docs/images/report-bounding-box.gif)
-
-Reviewing this codebase? The
-[evaluator guide](docs/evaluators-guide.md) maps the most interesting surfaces —
-contracts, SSRF guards, the job FSM, and the test strategy — into a 5–15 minute
-tour.
+Reviewing this codebase? The [code tour](docs/code-tour.md) maps contracts, SSRF guards, the job state machine, and the test strategy into a 5–15 minute path.
 
 ## Try It in 60 Seconds
 
@@ -54,13 +50,7 @@ stageflow scan ./dist --api https://stageflow.org
 
 ![StageFlow CLI streaming a live scan and printing the machine-readable JSON envelope](docs/images/demo.gif)
 
-Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API
-error. Release binaries are on
-[GitHub Releases](https://github.com/mattboback/stageflow/releases); the full
-command reference is in [clients/cli/README.md](clients/cli/README.md) and
-[docs/reference/cli/stageflow](docs/reference/cli/stageflow). If `stageflow`
-doesn't resolve after `just cli-install`, put `~/.local/bin` earlier on `PATH`
-and rerun — see [docs/operations/devtools.md](docs/operations/devtools.md).
+Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API error. Release binaries are on [GitHub Releases](https://github.com/mattboback/stageflow/releases); see the [CLI guide](docs/cli.md) for workflows and the [generated reference](docs/reference/cli/stageflow/stageflow.md) for exact flags.
 
 ## The Report
 
@@ -69,10 +59,12 @@ Review for page screenshots, overlays, and human decisions; Findings for
 searchable issues grouped by scanner and rule; and Artifacts for owned HTML and
 JSON report downloads.
 
-Every flagged element is overlaid directly on a full-page screenshot (see the
-GIF above) — click a bounding box in Review to jump straight to that finding's
-fix guidance, WCAG references, and evidence. Use Findings for full-list triage
-and Artifacts to retrieve the generated reports.
+![StageFlow Review workspace showing page navigation, screenshot evidence, bounding-box overlays, and grouped findings](docs/images/report-review.png)
+
+When a scanner supplies element-location evidence, StageFlow overlays the
+finding on a full-page screenshot. Select a bounding box in Review to open that
+finding's guidance, references, and evidence. Page-level and manual-review
+findings remain available for triage even when no visual overlay exists.
 
 The report shape is a versioned contract. To see it without running a scan,
 open the committed fixture
@@ -91,37 +83,38 @@ stageflow project scan marketing-site --format json     # streams live, then dif
 stageflow project promote marketing-site --job-id <id>  # accept a run as the new reference
 ```
 
-The full lifecycle, a CI gate snippet, and auth details are in
-[docs/remote.md](docs/remote.md).
+The full lifecycle, a CI gate snippet, and auth details are in the [CLI guide](docs/cli.md#projects-and-baselines).
 
 ## Going Deeper
 
-- **Dev mode** — `stageflow dev` turns the CLI into a repeatable local
-  regression loop: start your dev server, wait for readiness, scan, stream
-  progress, emit JSON for agents or CI. See [docs/dev-mode.md](docs/dev-mode.md).
+- **CLI workflows** — one-off scans, local dev loops, registered projects, baselines, and CI gates: [docs/cli.md](docs/cli.md).
 - **Architecture** — clients → Platform API → NATS JetStream → Orchestrator →
   per-job rootless Podman pods, with SSRF and ZIP-bomb guards at the trust
-  boundaries. Start with [ARCHITECTURE.md](ARCHITECTURE.md), then
-  [docs/architecture/system.md](docs/architecture/system.md).
+  boundaries: [docs/architecture.md](docs/architecture.md).
+- **Self-hosting** — local modes, public edge guidance, and the hosted-demo boundary: [docs/self-hosting.md](docs/self-hosting.md).
 - **Product & design rationale** — who the platform serves and why the report
   UI looks the way it does: [docs/product.md](docs/product.md) and
   [docs/design.md](docs/design.md).
+- **Documentation assets** — reproduce the Review screenshot and social card
+  from committed local inputs: [docs/images/README.md](docs/images/README.md).
+- **Engineering case study** — the major architecture, security, contract, and
+  delivery tradeoffs, with links to inspectable evidence: [docs/case-study.md](docs/case-study.md).
+
+![StageFlow clients submit through the Platform API and event bus to isolated scanner pods that produce one unified report](docs/images/architecture.svg)
+
+## Engineering Evidence
+
+| Signal                               | Repository evidence                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| End-to-end regression proof          | [Golden Regression workflow](.github/workflows/golden-regression.yml)                    |
+| Schema-first Go/TypeScript contracts | [Contract fixture](libs/contracts/report/fixtures/unified-report.v2.all-scans.json)      |
+| Explicit trust boundaries            | [Security model](docs/architecture.md#security-model) and [security policy](SECURITY.md) |
+| Broad automated quality gate         | [CI workflow](.github/workflows/ci.yml) and `just ci`                                    |
+| Reviewer-oriented source path        | [Five-to-fifteen-minute code tour](docs/code-tour.md)                                    |
 
 ## Self-Host Locally
 
-The local stack uses Podman, NATS JetStream, PostgreSQL, MinIO, the Go Platform
-API and Orchestrator, the TypeScript scanner runner, and the React Router web app.
-
-Prerequisites:
-
-- Go `1.26.5` or newer in the `1.26` line
-- Node.js `22.x` or newer (the repo pins `22` in `.node-version`)
-- Bun `1.3.8` or newer
-- **Podman with Compose support — Docker is not supported.** Per-job rootless
-  Podman pods are core to the isolation model, not an interchangeable runtime.
-- `just`
-
-Run the guided smoke test:
+With Go 1.26.5, Node.js 22, Bun 1.3.8, Podman Compose, and `just` installed:
 
 ```bash
 cp .env.example .env
@@ -129,30 +122,7 @@ just diagnose
 just demo
 ```
 
-When the demo is ready:
-
-- Web UI: `http://localhost:3000`
-- API: `http://localhost:8080`
-- Grafana: `http://localhost:3001`
-
-`just demo` uses an isolated local compose project and Podman network by
-default (`stageflow_dev` / `stageflow_dev_net`). `just dev up dev` is the
-lower-level default compose mode on port `3000`; `just dev up local` applies
-the local overlay on port `3020` and enables localhost/private-target scanning
-for the CLI dev loop. Manual stack commands (`just setup`, `just images`,
-`just dev up`, `just dev init`, `just dev logs`) are available when you want
-more control. Once the stack is up, `stageflow stack up|down|status` (the CLI
-binary itself) can drive its day-to-day lifecycle in place of `just dev`.
-
-Before exposing StageFlow on a public domain, replace every `change-me` value
-in `.env`, set explicit CORS origins, keep API authentication enabled, and
-review [docs/reference/configuration.md](docs/reference/configuration.md) and
-[infra/security/egress-policy.example.md](infra/security/egress-policy.example.md).
-
-Hosted production deployment, monitoring, rollback, and VPS control-plane
-automation are intentionally managed outside this public repository. This repo
-contains the application source, local development stack, and self-hosting
-examples.
+The web UI starts at `http://localhost:3000`, the API at `http://localhost:8080`, and Grafana at `http://localhost:3001`. See [Self-hosting](docs/self-hosting.md) for private-target development, manual lifecycle commands, public edge guidance, and required hardening.
 
 ## What StageFlow Runs
 
@@ -175,17 +145,17 @@ requires `OPENROUTER_API_KEY` when enabled.
 
 ## Repository Map
 
-| Path                         | Purpose                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| `clients/cli`                | Go CLI for scans, the dev loop, baselines, reports, and docs generation  |
-| `clients/web`                | React Router/Vite app for hosted/local browser workflows                 |
-| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, projects, reports      |
-| `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence        |
-| `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                   |
-| `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                |
-| `libs/contracts`             | JSON Schema contracts; Go/TypeScript types are generated during setup/CI |
-| `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples           |
-| `docs`                       | Architecture, remote projects, dev mode, configuration, and CLI reference |
+| Path                         | Purpose                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `clients/cli`                | Go CLI for scans, the dev loop, baselines, reports, and docs generation        |
+| `clients/web`                | React Router/Vite app for hosted/local browser workflows                       |
+| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, projects, reports            |
+| `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence              |
+| `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
+| `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |
+| `libs/contracts`             | JSON Schema contracts; Go/TypeScript types are generated during setup/CI       |
+| `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples                 |
+| `docs`                       | Canonical architecture, CLI, self-hosting, design, and reference documentation |
 
 ## Development
 
@@ -235,7 +205,8 @@ avoid private-target scans unless explicitly intended, isolate scanner pods, and
 use environment-specific credentials.
 
 Report vulnerabilities privately through [SECURITY.md](SECURITY.md). Do not
-open public issues for vulnerabilities.
+open public issues for vulnerabilities. Before using the hosted demo, review
+its [data handling and 24-hour retention policy](docs/privacy.md).
 
 ## License
 

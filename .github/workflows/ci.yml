@@ -55,6 +55,9 @@ jobs:
       - name: Check stale vocabulary
         run: ./devtools/scripts/check-stale-vocab.sh
 
+      - name: Check Markdown links
+        run: node devtools/scripts/check-markdown-links.mjs
+
   secrets_scan:
     name: Secrets (gitleaks)
     runs-on: ubuntu-latest

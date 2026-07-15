@@ -356,6 +356,9 @@ ci:
     echo "==> Stale-vocabulary and naming drift check..."
     ./devtools/scripts/check-stale-vocab.sh
 
+    echo "==> Internal Markdown links..."
+    node devtools/scripts/check-markdown-links.mjs
+
     echo "==> Generating schema contracts..."
     just generate-contracts
 
@@ -493,6 +496,7 @@ shell-tests:
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
+    bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/stale-vocab.test.sh
 
 [group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
