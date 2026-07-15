@@ -26,6 +26,10 @@ Please include:
 
 You can expect an acknowledgement within 72 hours. Fixes for confirmed vulnerabilities will be committed directly to `main`.
 
+The public no-account demo's scan-data handling and 24-hour object lifecycle
+are documented in [docs/privacy.md](docs/privacy.md). Do not use the hosted
+demo for confidential builds or sensitive authenticated targets.
+
 ## Scope
 
 The following areas are in scope for security reports:
@@ -36,6 +40,9 @@ The following areas are in scope for security reports:
 - **Container isolation** (Podman pod boundaries, scanner runtime sandboxing)
 - **Secret handling** (credential exposure in logs, config, or artifacts)
 - **Dependency vulnerabilities** in Go modules or npm packages
+
+Current narrowly scoped audit waivers, their owners, and removal triggers are
+listed in [docs/dependency-exceptions.md](docs/dependency-exceptions.md).
 
 ## Residual DNS Rebinding Risk
 

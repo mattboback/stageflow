@@ -43,7 +43,8 @@ The process boot sequence is:
 
 | Route                                     | Purpose                                           |
 | ----------------------------------------- | ------------------------------------------------- |
-| `POST /api/v1/jobs/urls`                  | Submit a URL-based scan job                       |
+| `POST /api/v1/jobs/urls`                  | Submit a caller-authenticated URL scan            |
+| `POST /api/v1/jobs/urls/anonymous`        | Submit a URL scan without an authentication recipe |
 | `POST /api/v1/jobs/zip`                   | Submit a ZIP upload job                           |
 | `GET /api/v1/jobs/:id`                    | Current job status snapshot                       |
 | `GET /api/v1/jobs/:id/stream`             | SSE stream for live updates                       |

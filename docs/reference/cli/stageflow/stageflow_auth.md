@@ -6,7 +6,7 @@ Manage authentication artifacts for authenticated scans
 
 Subcommands that capture browser session state for use with `stageflow scan --auth-state`.
 
-See docs/architecture/system.md#authenticated-scanning for the design and trust boundaries.
+See docs/architecture.md#authenticated-scanning for the design and trust boundaries.
 
 ### Options
 

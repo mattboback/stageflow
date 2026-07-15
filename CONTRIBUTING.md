@@ -24,7 +24,8 @@ machine will download that toolchain automatically rather than drift from CI.
 ## Quality Gates
 
 Pre-commit is a fast local guard for formatting, secrets, generated contract
-drift, and other common mistakes. It is not the full repo gate.
+drift, internal documentation links, and other common mistakes. It is not the
+full repo gate.
 
 Run `just ci` before opening a PR when feasible. It runs the stale-vocabulary
 check, Go build/lint/test/vuln checks, generated CLI-doc drift check, shell
@@ -75,8 +76,8 @@ Before opening a PR, check:
 Useful orientation links:
 
 - [README.md](README.md)
-- [ARCHITECTURE.md](ARCHITECTURE.md)
-- [docs/architecture/system.md](docs/architecture/system.md)
-- [docs/operations/deployment.md](docs/operations/deployment.md)
+- [docs/README.md](docs/README.md)
+- [docs/architecture.md](docs/architecture.md)
+- [docs/self-hosting.md](docs/self-hosting.md)
 - [services/platform-api/README.md](services/platform-api/README.md)
 - [services/scanner-runner/README.md](services/scanner-runner/README.md)

@@ -24,6 +24,7 @@ to the pre-auth shape. When present, it is a discriminated union on `mode`:
   `{ from_env: NAME }` reference. The `success` block is a `WaitStrategy` that
   signals a completed login.
 
-Persisted Provenance only ever contains literal strings or `{ from_env }`
+The shared contract remains compatible with literal strings, but the public
+StageFlow API and CLI reject them for persisted form recipes. Persisted jobs use `{ from_env }`
 references. Resolved credentials never appear in stored Provenance, the unified
 report, the scan stage log, or any NATS event.

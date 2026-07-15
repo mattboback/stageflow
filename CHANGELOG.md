@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- Consolidated product, architecture, CLI, self-hosting, privacy, and code-tour docs under `docs/`, with a docs index and internal link checker.
+- Replaced the animated Review GIF with a deterministic Review workspace screenshot and architecture diagram assets.
+
 ## [0.4.0] - 2026-07-14
 
 ### Added

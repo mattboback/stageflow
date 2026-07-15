@@ -2,48 +2,9 @@
 
 Reference for environment variables used by local and production StageFlow deployments.
 
-Use `.env.example` as the local baseline. It now favors localhost-friendly defaults, so override the domain-facing values before production use. Keep secrets in your secret manager or host-level env, never in git.
+Use `.env.example` as the local baseline. It favors localhost-friendly defaults, so override domain-facing values before public use. Keep secrets in a secret manager or host-level environment, never in git.
 
-If you are orienting yourself for the first time, start with the [repository README](../../README.md) for the quick start. This page is the detailed configuration reference once you know which environment you are setting up.
-
-## Quick Start
-
-```bash
-cp .env.example .env
-just diagnose
-just demo
-```
-
-`just demo` is the fastest end-to-end smoke test. It is a guided wrapper around
-the local `dev` stack: it runs setup, builds images, starts MinIO first,
-initializes buckets, starts the full stack, and waits for readiness. For manual
-control, run the individual steps yourself with `just setup`, `just images`,
-`just dev up dev`, and `just dev init`.
-The local `just` recipes default to compose project `stageflow_dev` and Podman
-network `stageflow_dev_net`; set `COMPOSE_PROJECT_NAME` or
-`STAGEFLOW_NETWORK_NAME` to isolate additional local stacks.
-
-## Environment Topology
-
-> The repo contains more than one valid deployment layout. Keep the compose overlay, public URLs, and edge proxy config aligned for the environment you are actually running.
-
-| Mode                                  | When to use it                                        | Web                     | API                     | Grafana                 | Primary files                                                                |
-| ------------------------------------- | ----------------------------------------------------- | ----------------------- | ----------------------- | ----------------------- | ---------------------------------------------------------------------------- |
-| `dev` via `just demo` / `just dev up` | Fastest local smoke test                              | `http://localhost:3000` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.yml` + `infra/compose/podman-compose.test.yml` |
-| `local` overlay                       | Localhost/private-target scans during development     | `http://localhost:3020` | `http://localhost:8080` | `http://localhost:3001` | `infra/compose/podman-compose.local.yml`                                     |
-| optional self-hosted edge             | Public-domain routing and TLS for your own deployment | proxied by host Caddy   | proxied by host Caddy   | proxied by host Caddy   | `infra/caddy/Caddyfile`                                                      |
-| hosted `stageflow.org` production     | Shared VPS deployment for the live demo               | gateway-managed         | gateway-managed         | gateway-managed         | separate deployment workspace (Quadlets + ingress network)                   |
-
-The `dev` and `local` rows are both local development modes, not competing
-deployment targets. Use `dev` for the normal demo/UI stack. Use `local` when a
-scan must reach localhost or private-network targets from scanner pods; that
-overlay serves the frontend on `3020` and switches job pods to host networking.
-
-The optional self-hosted Caddy edge and the hosted `stageflow.org` deployment intentionally use different topologies. The live demo runs behind a separate gateway + Quadlet-managed ingress network rather than repo-managed host port bindings. Use one topology per environment rather than mixing them.
-
-The hosted `stageflow.org` demo uses the same application code, but this repository should be treated as the source for local development and self-hosted layouts rather than as the authoritative deployment automation for that public instance.
-
-The optional Caddy edge expects a separate host-level loopback layout where the app is already exposed on `127.0.0.1:3100` (frontend), `127.0.0.1:3101` (Grafana), `127.0.0.1:8100` (API), and `127.0.0.1:9100` (MinIO). Those are not the same ports used by the local (`3000/3020/8080/3001`) compose overlays.
+Start with [Self-hosting](../self-hosting.md) for setup, topology, and pre-deploy checks. This page only defines configuration variables.
 
 ## Variable Reference
 
@@ -55,6 +16,21 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | `MINIO_ROOT_PASSWORD` | yes      | `change-me`               | MinIO root password.                             |
 | `MINIO_ACCESS_KEY`    | yes      | `stageflow`               | App credential used by services to access MinIO. |
 | `MINIO_SECRET_KEY`    | yes      | `change-me`               | Secret for `MINIO_ACCESS_KEY`.                   |
+| `MINIO_STAGING_RETENTION_DAYS` | no | `1`                     | Positive-integer expiry window for submitted ZIP archives. |
+| `MINIO_ARTIFACT_RETENTION_DAYS` | no | `1`                    | Positive-integer expiry window for authentication state, screenshots, logs, scanner output, and reports. |
+| `MINIO_APPLY_LIFECYCLES` | no | `true` | Set `false` only during a baseline migration preparation pass so buckets and policy are updated before artifact lifecycles. |
+
+MinIO applies lifecycle expiration asynchronously, so an object may remain briefly after its retention window. Provisioning imports deterministic lifecycle rules for the staging and artifact buckets and is safe to rerun. Promoted project reports are copied into the private `scanner-baselines` bucket, which has no lifecycle expiry; each remains until it is replaced or its project is deleted. This release does not provide immediate user-triggered deletion.
+
+When upgrading a deployment that already has promoted baselines, run
+`MINIO_APPLY_LIFECYCLES=false ./infra/minio/init-buckets.sh` first. This creates
+the baseline bucket and updates the restricted application policy without
+shortening existing artifact retention. Start the updated Platform API and
+verify its baseline reconciliation summary before rerunning provisioning with
+the default `MINIO_APPLY_LIFECYCLES=true`. A project listed under
+`missing_legacy_projects` refers to an artifact that expired before the copy;
+its diff endpoint returns HTTP 409 until a new completed job is promoted as the
+baseline.
 
 ### PostgreSQL
 
@@ -81,14 +57,14 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | `NATS_URL`                           | yes      | `nats://nats:4222`               | NATS server URL used to publish job events and subscribe to lifecycle events.                                       |
 | `ORCHESTRATOR_API_URL`               | yes      | `http://orchestrator:8081`       | Internal orchestrator admin API URL used for status snapshots.                                                      |
 | `ORCHESTRATOR_API_TOKEN`             | yes      | `change-me-orchestrator-token`   | Inter-service token for calls from Platform API to Orchestrator.                                                    |
-| `PLATFORM_API_TOKEN`                 | yes      | `change-me-platform-api-token`   | Public API token accepted via `X-Api-Key` or `Authorization: Bearer`.                                               |
+| `PLATFORM_API_TOKEN`                 | yes      | `change-me-platform-api-token`   | Server-side API token accepted via `X-Api-Key` or `Authorization: Bearer`; never expose it through `VITE_*` variables. |
 | `PLATFORM_API_AUTH_DISABLED`         | no       | `false`                          | Explicit local-only opt-out when running the API without `PLATFORM_API_TOKEN`. Do not enable in public deployments. |
 | `PLATFORM_API_ALLOW_PRIVATE_TARGETS` | no       | `false`                          | Controls whether the API accepts private/local targets.                                                             |
 | `PLATFORM_API_TRUSTED_PROXIES`       | no       | empty                            | Comma-separated trusted proxy CIDRs/IPs allowed to supply `X-Forwarded-For` for rate-limit keys.                    |
 | `SCANNER_CONFIG_PATH`                | no       | `/data/scanners.yaml` in compose | Optional YAML scanner override file for enablement, image, and resource tweaks.                                     |
 | `PROJECT_DB_PATH`                    | no       | `./projects.db` in code          | SQLite database path for project records, project/job mappings, and baselines.                                      |
 
-`PLATFORM_API_TOKEN` is required at startup unless `PLATFORM_API_AUTH_DISABLED=true` is set. The disabled mode exists for local development only and should not be used on a public domain.
+`PLATFORM_API_TOKEN` is required at startup unless `PLATFORM_API_AUTH_DISABLED=true` is set. The disabled mode exists for local development only and should not be used on a public domain. The supplied Caddy reference injects this token into anonymous scan, status, report, scanner-catalog, and SSE requests so browser clients never receive the credential. Project and baseline routes remain protected and require callers such as the CLI to provide the API key. Set `PLATFORM_API_TRUSTED_PROXIES` to only Caddy's exact source address (loopback in the reference topology) before relying on forwarded client IPs for rate limiting.
 
 ### Orchestrator
 
@@ -130,7 +106,7 @@ The optional Caddy edge expects a separate host-level loopback layout where the 
 | `VITE_SITE_TITLE`                 | no       | `StageFlow`                                                     | Site title shown in UI metadata.                  |
 | `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                         | Canonical site URL used for metadata/share cards. |
 | `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | GitHub link shown in UI.                          |
-| `VITE_TAGLINE`                    | no       | `Podman-native web accessibility and quality scanning platform` | Marketing tagline in UI surfaces.                 |
+| `VITE_TAGLINE`                    | no       | `Self-hostable frontend quality regression scanning`             | Marketing tagline in UI surfaces.                 |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
 
 The frontend container builds the React Router app to static files and serves them with nginx on port `3020`.
@@ -155,6 +131,7 @@ Current built-in scanner IDs are: `axe`, `lighthouse`, `seo`, `security-headers`
 | Variable      | Required | Default in `.env.example` | Purpose                                                |
 | ------------- | -------- | ------------------------- | ------------------------------------------------------ |
 | `CADDY_EMAIL` | no       | not set                   | Email address used for Let's Encrypt TLS registration. |
+| `PLATFORM_API_TOKEN` | yes | `change-me-platform-api-token` | Server-side credential Caddy overwrites onto all proxied API requests. |
 
 This section refers to the optional host-level edge proxy example under `infra/caddy/` for self-hosted installs. The hosted `stageflow.org` production gateway is managed from a separate deployment workspace rather than from this repository.
 
@@ -173,25 +150,7 @@ Most first-time local setups can ignore this section. These variables are mainly
 | `GF_SERVER_HTTP_PORT`           | Internal HTTP port for Grafana.                     |
 | `GF_SERVER_SERVE_FROM_SUB_PATH` | Whether Grafana serves from a sub-path.             |
 
-## Environment Guidance
-
-- Use distinct credentials for local and production.
-- Keep domains and CORS origins environment-specific.
-- For self-hosted public domains, either route StageFlow through an existing host-level gateway or use `infra/caddy/Caddyfile` as the starting point for your own edge config.
-- The hosted `stageflow.org` demo runs on a separate Quadlet-managed ingress topology; do not expect the repo-local compose overlays to mirror that production host layout 1:1.
-- Keep committed screenshots and reviewer-facing images under `docs/images`.
-  Ephemeral QA/build evidence belongs under ignored artifact, output, or cache
-  paths such as `artifacts/`, `output/`, and `.cache/`; `just clean` may remove
-  those files.
-
-## Pre-Deploy Validation
-
-1. `just build` passes.
-2. `just ci` passes.
-3. One URL scan and one ZIP scan complete successfully.
-4. SSE stream updates and final report retrieval both work.
-
 ## Related Docs
 
-- [README](../../README.md)
-- [Architecture](../architecture/system.md)
+- [Self-hosting](../self-hosting.md)
+- [Architecture](../architecture.md)
