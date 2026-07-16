@@ -22,9 +22,14 @@ import (
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
-const maxUploadSize = 100 * 1024 * 1024
+const (
+	maxZipFileSize       = 100 * 1024 * 1024
+	maxMultipartOverhead = 2 * 1024 * 1024
+	maxUploadRequestSize = maxZipFileSize + maxMultipartOverhead
+	maxUploadSize        = maxZipFileSize // Backward-compatible name used in error tests.
+)
 
-// Note: keep reverse proxies/LB client_max_body_size in sync with maxUploadSize.
+// Note: keep reverse proxies/LB client_max_body_size in sync with maxUploadRequestSize.
 
 type formFieldTooLargeError struct {
 	limit int64
@@ -93,6 +98,10 @@ func newClientMessageError(message string) *clientError {
 	return &clientError{status: http.StatusBadRequest, message: message}
 }
 
+func newClientStatusMessageError(status int, message string) *clientError {
+	return &clientError{status: status, message: message}
+}
+
 type zipJobRequest struct {
 	jobID          string
 	runID          string
@@ -121,12 +130,19 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
 
 	jobReq, parseErr := s.parseZipUpload(r.Context(), r)
 	if parseErr != nil && s.handleZipParseError(r.Context(), w, parseErr) {
 		return
 	}
+
+	queued := false
+	defer func() {
+		if !queued && jobReq != nil {
+			s.cleanupStagedZip(jobReq.zipPath)
+		}
+	}()
 
 	jobCtx := logging.WithJobID(r.Context(), jobReq.jobID)
 	if err := jobCtx.Err(); err != nil {
@@ -158,6 +174,8 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	queued = true
+
 	httputil.RespondCreated(w, map[string]any{
 		"job_id":  jobReq.jobID,
 		"status":  "pending",
@@ -184,7 +202,7 @@ func (s *Server) handleZipParseError(ctx context.Context, w http.ResponseWriter,
 
 	if isRequestTooLarge(err) {
 		httputil.RespondError(w, http.StatusRequestEntityTooLarge,
-			fmt.Sprintf("Request body too large (max %d bytes)", maxUploadSize))
+			fmt.Sprintf("Request body too large (max %d bytes)", maxUploadRequestSize))
 
 		return true
 	}
@@ -217,7 +235,7 @@ func isRequestTooLarge(err error) bool {
 	return strings.Contains(msg, "http: request body too large") || strings.Contains(msg, "request body too large")
 }
 
-func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRequest, error) {
+func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *zipJobRequest, requestErr error) {
 	reader, err := r.MultipartReader()
 	if err != nil {
 		return nil, newClientMessageError("Invalid multipart form: " + err.Error())
@@ -229,6 +247,11 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (*zipJobRe
 	jobCtx = logging.WithRunID(jobCtx, runID)
 
 	state := &zipUploadState{}
+	defer func() {
+		if requestErr != nil && state.fileUploaded {
+			s.cleanupStagedZip(state.zipPath)
+		}
+	}()
 
 	for {
 		part, partErr := reader.NextPart()
@@ -348,10 +371,20 @@ func (s *Server) handleZipFilePart(
 		return err
 	}
 
-	if err := s.config.Storage.UploadFile(ctx, storage.BucketStaging, path, part, -1); err != nil {
+	limited := &io.LimitedReader{R: part, N: maxZipFileSize + 1}
+	if err := s.config.Storage.UploadFile(ctx, storage.BucketStaging, path, limited, -1); err != nil {
 		logging.Error(ctx, "Failed to upload file to MinIO", "error", err)
 
 		return fmt.Errorf("failed to store file: %w", err)
+	}
+
+	if limited.N == 0 {
+		s.cleanupStagedZip(path)
+
+		return newClientStatusMessageError(
+			http.StatusRequestEntityTooLarge,
+			fmt.Sprintf("ZIP file too large (max %d bytes)", maxZipFileSize),
+		)
 	}
 
 	state.zipPath = path
@@ -476,14 +509,10 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 	envelope.RunID = logging.RunID(ctx)
 
 	if err := ctx.Err(); err != nil {
-		s.cleanupStagedZip(req.zipPath)
-
 		return err
 	}
 
 	if err := s.config.Publisher.PublishJobCreated(ctx, envelope); err != nil {
-		s.cleanupStagedZip(req.zipPath)
-
 		return fmt.Errorf("failed to publish job.created event: %w", err)
 	}
 

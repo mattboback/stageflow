@@ -49,7 +49,9 @@ build frontend-react localhost/stageflow/frontend-react:latest stageflow/fronten
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
   --build-arg VITE_SITE_URL="${VITE_SITE_URL:-http://localhost:3020}" \
   --build-arg VITE_GITHUB_URL="${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}" \
-  --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Podman-native web accessibility and quality scanning platform}"
+  --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}" \
+  --build-arg VITE_AI_NAVIGATOR_DEFAULT_MODEL="${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}" \
+  --build-arg VITE_DEPLOYMENT_MODE="${VITE_DEPLOYMENT_MODE:-self-hosted}"
 
 echo "[images] Building job images..."
 build archive-extractor localhost/stageflow/extractor:latest stageflow/extractor:latest services/archive-extractor/Dockerfile

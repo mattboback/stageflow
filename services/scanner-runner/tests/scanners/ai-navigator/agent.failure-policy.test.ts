@@ -78,7 +78,7 @@ function makeAnalyzer(): PageAnalyzer {
 	return { analyze: vi.fn().mockResolvedValue(perception) } as unknown as PageAnalyzer;
 }
 
-function makeDecider(action: PreScanAction): ActionDecider {
+function makeDecider(action: ActionDecision['action']): ActionDecider {
 	const decision: ActionDecision = {
 		action,
 		reasoning: 'forward',
@@ -91,7 +91,7 @@ interface RunOptions {
 	goal: AgentGoal;
 	page: Page;
 	executor: { executePreScanActions: ReturnType<typeof vi.fn> };
-	action?: PreScanAction;
+	action?: ActionDecision['action'];
 }
 
 async function runAgent(opts: RunOptions): ReturnType<typeof runAiNavigatorAgent> {
@@ -107,6 +107,68 @@ async function runAgent(opts: RunOptions): ReturnType<typeof runAiNavigatorAgent
 }
 
 describe('runAiNavigatorAgent failure-policy guards', () => {
+	it('executes configured input values but never returns them in traces or errors', async () => {
+		const secret = 'agent p@ss word+1';
+		const uriEncodedSecret = encodeURIComponent(secret);
+		const formEncodedSecret = new URLSearchParams([['value', secret]])
+			.toString()
+			.slice('value='.length);
+		const executor = {
+			executePreScanActions: vi
+				.fn<(page: Page, actions: PreScanAction[]) => Promise<void>>()
+				.mockRejectedValue(new Error(`could not submit ${secret}`))
+		};
+
+		const result = await runAgent({
+			goal: {
+				objective: `Submit the configured value, never ${secret}`,
+				maxSteps: 1,
+				maxConsecutiveFailures: 1,
+				inputValues: { accountPassword: secret }
+			},
+			page: makePage({
+				url: `https://app.example.com/form?draft=${formEncodedSecret}`,
+				domLength: 100
+			}),
+			executor,
+			action: {
+				type: 'fill',
+				selector: '#password',
+				value: secret,
+				valueKey: 'accountPassword'
+			}
+		});
+
+		expect(executor.executePreScanActions).toHaveBeenCalledWith(
+			expect.anything(),
+			[
+				expect.objectContaining({
+					type: 'fill',
+					value: secret,
+					valueKey: 'accountPassword'
+				})
+			],
+			undefined,
+			{ maskInputValues: true }
+		);
+		expect(result.goal).toMatchObject({
+			objective: 'Submit the configured value, never [REDACTED]',
+			inputValueKeys: ['accountPassword']
+		});
+		expect(result.goal).not.toHaveProperty('inputValues');
+		expect(result.steps[0]?.action).toEqual({
+			type: 'fill',
+			selector: '#password',
+			value: '[REDACTED]',
+			valueKey: 'accountPassword'
+		});
+		expect(result.finalUrl).toBe('https://app.example.com/form?draft=[REDACTED]');
+		expect(JSON.stringify(result)).not.toContain(secret);
+		expect(JSON.stringify(result)).not.toContain(uriEncodedSecret);
+		expect(JSON.stringify(result)).not.toContain(formEncodedSecret);
+		expect(JSON.stringify(result)).toContain('[REDACTED]');
+	});
+
 	it('keeps going after one failure but stops once consecutive failures hit the threshold', async () => {
 		writeFileMock.mockResolvedValue(undefined);
 		const goal: AgentGoal = { objective: 'demo', maxSteps: 10, maxConsecutiveFailures: 3 };

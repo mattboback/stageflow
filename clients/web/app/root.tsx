@@ -12,12 +12,7 @@ import './styles/instrument.css';
 
 export const links: LinksFunction = () => [
 	{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-	{ rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-	{ rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
-	{
-		rel: 'stylesheet',
-		href: 'https://fonts.googleapis.com/css2?family=Gabarito:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap'
-	}
+	{ rel: 'manifest', href: '/site.webmanifest' }
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -30,6 +25,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 				<Links />
 			</head>
 			<body>
+				<a className="skip-link" href="#main">
+					Skip to main content
+				</a>
 				{children}
 				<ScrollRestoration />
 				<Scripts />
@@ -46,7 +44,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
 	const status = isRouteErrorResponse(error) ? error.status : 500;
 	const title = status === 404 ? 'Page not found' : 'Something went wrong';
 	return (
-		<main style={{ padding: '4rem 1.5rem', maxWidth: '32rem', margin: '0 auto' }}>
+		<main id="main" style={{ padding: '4rem 1.5rem', maxWidth: '32rem', margin: '0 auto' }}>
 			<h1>{title}</h1>
 			<p>
 				{status === 404

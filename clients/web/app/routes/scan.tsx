@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link, useNavigate, useParams, type MetaFunction } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams, type MetaFunction } from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
 import { useScanStatus } from '../lib/hooks/useScanMonitor';
+import { pageTitle } from '../lib/site-metadata';
 import { SCANNER_META } from '../lib/report';
 import scanStyles from './scan.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: scanStyles }];
 
 export const meta: MetaFunction = () => [
-	{ title: 'Scan running — StageFlow' },
+	{ title: pageTitle('Scan running') },
 	{ name: 'robots', content: 'noindex' }
 ];
 
@@ -53,6 +54,12 @@ const SUB_LABEL: Record<ChannelState, string> = {
 export default function Scan() {
 	const { id = '' } = useParams();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+	const projectId = searchParams.get('project');
+	const projectQuery = projectId ? `?project=${encodeURIComponent(projectId)}` : '';
+	const playgroundPath = projectId
+		? `/playground?project=${encodeURIComponent(projectId)}`
+		: '/playground';
 	const { status, result, elapsed, logs, transport, error } = useScanStatus(id);
 
 	const logBodyRef = useRef<HTMLDivElement>(null);
@@ -64,9 +71,9 @@ export default function Scan() {
 	// On completion, hand off to the report surface.
 	useEffect(() => {
 		if (isComplete) {
-			navigate(`/scan/${id}/report`, { replace: true });
+			navigate(`/scan/${id}/report${projectQuery}`, { replace: true });
 		}
-	}, [isComplete, id, navigate]);
+	}, [isComplete, id, navigate, projectQuery]);
 
 	// Keep the log stream pinned to the latest line.
 	useEffect(() => {
@@ -138,7 +145,11 @@ export default function Scan() {
 	return (
 		<>
 			<SiteHeader
-				app={{ backTo: '/playground', backLabel: 'New scan', section: 'Scan run' }}
+				app={{
+					backTo: playgroundPath,
+					backLabel: projectId ? 'Project' : 'New scan',
+					section: 'Scan run'
+				}}
 			/>
 
 			<main id="main" className="run">
@@ -185,7 +196,7 @@ export default function Scan() {
 								<small>elapsed</small>
 							</div>
 							{isComplete && (
-								<Link className="btn btn--primary" to={`/scan/${id}/report`}>
+								<Link className="btn btn--primary" to={`/scan/${id}/report${projectQuery}`}>
 									View report{' '}
 									<span className="ar" aria-hidden="true">
 										→
@@ -203,7 +214,7 @@ export default function Scan() {
 							<div>
 								<span>{error ?? 'The scan did not complete. Check the stream for details.'}</span>
 								<div className="note__actions">
-									<Link className="btn btn--ghost btn--sm" to="/playground">
+									<Link className="btn btn--ghost btn--sm" to={playgroundPath}>
 										Back to playground
 									</Link>
 									{id && (
@@ -252,9 +263,7 @@ export default function Scan() {
 											<span className="ch__led" aria-hidden="true" />
 											<div>
 												<div className="ch__name">Preparing scan runner…</div>
-												<div className="ch__sub">
-													{totalCount} scanners will run in parallel
-												</div>
+												<div className="ch__sub">{totalCount} scanners will run in parallel</div>
 											</div>
 										</div>
 									) : (
@@ -304,9 +313,7 @@ export default function Scan() {
 						<details className="log">
 							<summary className="log__summary">
 								<span className="log__summary-title">Technical log</span>
-								{lastLogLine && (
-									<span className="log__summary-last mono">{lastLogLine}</span>
-								)}
+								{lastLogLine && <span className="log__summary-last mono">{lastLogLine}</span>}
 								<span className="log__summary-toggle" aria-hidden="true" />
 							</summary>
 							<div className="log__body" ref={logBodyRef} aria-live="polite">

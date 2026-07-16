@@ -2,6 +2,13 @@
 
 ## Development Setup
 
+Choose the smallest loop that matches the change:
+
+- **Web UI only:** `cd clients/web && bun install --frozen-lockfile && bun run dev`; unit and mocked-browser tests do not require the service stack.
+- **Scanner runtime only:** `cd services/scanner-runner && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile`, then use `bun run ci` (install Chromium when running browser-backed suites).
+- **One Go module:** run `just generate-contracts` once, `cd` into that module, then use `go test -race ./...` and `golangci-lint run`.
+- **End-to-end or infrastructure:** use the full-stack steps below.
+
 1. Copy `.env.example` to `.env`.
 2. Run `just setup`.
 3. Run `just images`.

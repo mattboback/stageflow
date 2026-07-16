@@ -45,6 +45,7 @@ The process boot sequence is:
 | ----------------------------------------- | ------------------------------------------------- |
 | `POST /api/v1/jobs/urls`                  | Submit a caller-authenticated URL scan            |
 | `POST /api/v1/jobs/urls/anonymous`        | Submit a URL scan without an authentication recipe |
+| `POST /api/v1/jobs/urls/browser-auth`     | Submit a public URL scan with a literal form login |
 | `POST /api/v1/jobs/zip`                   | Submit a ZIP upload job                           |
 | `GET /api/v1/jobs/:id`                    | Current job status snapshot                       |
 | `GET /api/v1/jobs/:id/stream`             | SSE stream for live updates                       |
@@ -74,6 +75,7 @@ Security-sensitive behavior worth inspecting:
 
 - `internal/api/security.go` blocks non-HTTP schemes and private/metadata IP ranges unless private-target mode is explicitly enabled
 - `internal/api/handlers_jobs_url_submit.go` limits body size, URL count, and URL length before publishing a job-created event
+- the anonymous public route rejects auth, while the browser-auth route rejects storage state, environment references, and private targets; both share a stricter public-submission limiter
 - `internal/api/handlers_jobs_zip_upload.go` constrains multipart upload size and validates required form parts before enqueueing work
 - `internal/api/scanner_configs.go` validates per-scanner config payloads against the registry
 - `internal/api/object_keys.go` and the job artifact handlers only presign job-scoped object keys
@@ -82,12 +84,14 @@ Security-sensitive behavior worth inspecting:
 
 The rate limiter keys off `X-Forwarded-For` **only** when the immediate
 connection (`RemoteAddr`) originates from a CIDR listed in
-`PLATFORM_API_TRUSTED_PROXIES`. Set this to the IP range of your reverse
-proxy (Caddy, nginx, a load balancer, etc.) — for example
+`PLATFORM_API_TRUSTED_PROXIES`. It defaults to loopback for the supplied
+host-level Caddy topology. Set this to the exact source range of your reverse
+proxy when it differs (Caddy, nginx, a load balancer, etc.) — for example
 `PLATFORM_API_TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12`. When the variable
-is empty, `X-Forwarded-For` is always ignored and the rate-limit key falls
-back to `RemoteAddr`. This prevents unauthenticated clients from spoofing
-the header to obtain a fresh bucket. Authentication also requires
+is unset, only loopback forwarding headers are accepted; other connections
+fall back to `RemoteAddr`. The resolver walks the forwarding chain from the
+trusted edge, so caller-supplied leftmost values cannot mint a fresh bucket.
+Authentication also requires
 `PLATFORM_API_TOKEN`; set `PLATFORM_API_AUTH_DISABLED=true` explicitly for
 local development.
 

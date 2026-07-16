@@ -306,10 +306,11 @@ export function VisualReviewPanel({
 							style={zoom === 'fit' ? undefined : { width: pageWidth * zoom }}
 							viewBox={`0 0 ${pageWidth} ${pageHeight}`}
 							preserveAspectRatio="xMidYMin meet"
-							role="img"
+							role="group"
 							aria-label={`Page overview for ${selectedPage.path ?? selectedPage.url}`}
 						>
-							<image
+								<image
+									aria-hidden="true"
 								href={overviewUrl ?? undefined}
 								x={0}
 								y={0}
@@ -329,8 +330,19 @@ export function VisualReviewPanel({
 										fill={getSeverityFillColor(el.severity)}
 										stroke={getSeverityStrokeColor(el.severity)}
 										strokeWidth={isActive ? 6 : 3}
+										className="vrev__marker"
+										role="button"
+										tabIndex={0}
+										aria-label={`Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
 										style={{ cursor: 'pointer' }}
 										onClick={() => handleMarkerClick(el.issueId)}
+										onFocus={() => setActiveIssueId(el.issueId)}
+										onKeyDown={(event) => {
+											if (event.key === 'Enter' || event.key === ' ') {
+												event.preventDefault();
+												handleMarkerClick(el.issueId);
+											}
+										}}
 									/>
 								);
 							})}

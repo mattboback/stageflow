@@ -33,6 +33,11 @@ func (d *Database) CompleteJobWithTerminalEvent(
 
 	defer rollbackOnError(tx, &err, "complete job")
 
+	configJSON, secrets, err := loadAndSanitizeTerminalJobConfig(ctx, tx, jobID)
+	if err != nil {
+		return err
+	}
+
 	now := time.Now()
 
 	result, err := tx.ExecContext(
@@ -69,6 +74,18 @@ func (d *Database) CompleteJobWithTerminalEvent(
 		}
 	}
 
+	if sanitizeErr := persistSanitizedTerminalJobConfig(ctx, tx, jobID, configJSON); sanitizeErr != nil {
+		return sanitizeErr
+	}
+
+	if sanitizeErr := sanitizeTerminalJobTextFieldsTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
+		return sanitizeErr
+	}
+
+	if sanitizeErr := sanitizeTerminalAuditRecordsTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
+		return sanitizeErr
+	}
+
 	if insertErr := insertTerminalEventTx(ctx, tx, jobID, events.EventJobCompleted, payload); insertErr != nil {
 		return insertErr
 	}
@@ -80,21 +97,33 @@ func (d *Database) CompleteJobWithTerminalEvent(
 	return nil
 }
 
+//nolint:gocyclo // One transaction handles transition, idempotency, scrubbing, and outbox insertion.
 func (d *Database) FailJobWithTerminalEvent(
 	ctx context.Context,
 	jobID, stage, errorMsg, errorDetails string,
 	payload *events.JobFailedPayload,
-) (err error) {
+) (transitioned bool, err error) {
 	if payload == nil {
-		return errors.New("job.failed payload is required")
+		return false, errors.New("job.failed payload is required")
 	}
 
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin fail job transaction: %w", err)
+		return false, fmt.Errorf("begin fail job transaction: %w", err)
 	}
 
 	defer rollbackOnError(tx, &err, "fail job")
+
+	configJSON, secrets, err := loadAndSanitizeTerminalJobConfig(ctx, tx, jobID)
+	if err != nil {
+		return false, err
+	}
+
+	errorMsg = redactKnownConfigSecrets(errorMsg, secrets)
+	errorDetails = redactKnownConfigSecrets(errorDetails, secrets)
+	redactedPayload := *payload
+	redactedPayload.Error = redactKnownConfigSecrets(payload.Error, secrets)
+	redactedPayload.ErrorDetails = redactKnownConfigSecrets(payload.ErrorDetails, secrets)
 
 	now := time.Now()
 
@@ -117,31 +146,140 @@ func (d *Database) FailJobWithTerminalEvent(
 		models.JobStateDone,
 	)
 	if err != nil {
-		return fmt.Errorf("fail job: %w", err)
+		return false, fmt.Errorf("fail job: %w", err)
 	}
 
 	rows, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("fail job rows affected: %w", err)
+		return false, fmt.Errorf("fail job rows affected: %w", err)
 	}
 
 	if rows == 0 {
 		state, stateErr := getJobStateTx(ctx, tx, jobID)
 		if stateErr != nil {
-			return stateErr
+			return false, stateErr
 		}
 
 		if state != models.JobStateFailed {
-			return fmt.Errorf("job %s not eligible for failure (state=%s)", jobID, state)
+			return false, fmt.Errorf("job %s not eligible for failure (state=%s)", jobID, state)
 		}
+
+		// Another caller completed the failure transaction while this caller
+		// waited on the row lock. Reuse the canonical redacted outbox payload;
+		// never overwrite or publish this caller's now-unredactable text.
+		existing, loadErr := loadJobFailedTerminalEventTx(ctx, tx, jobID)
+		if loadErr != nil {
+			return false, loadErr
+		}
+
+		*payload = *existing
+
+		if commitErr := tx.Commit(); commitErr != nil {
+			return false, fmt.Errorf("commit idempotent fail job transaction: %w", commitErr)
+		}
+
+		return false, nil
 	}
 
-	if insertErr := insertTerminalEventTx(ctx, tx, jobID, events.EventJobFailed, payload); insertErr != nil {
-		return insertErr
+	if sanitizeErr := persistSanitizedTerminalJobConfig(ctx, tx, jobID, configJSON); sanitizeErr != nil {
+		return false, sanitizeErr
+	}
+
+	if sanitizeErr := sanitizeTerminalJobTextFieldsTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
+		return false, sanitizeErr
+	}
+
+	if sanitizeErr := sanitizeTerminalAuditRecordsTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
+		return false, sanitizeErr
+	}
+
+	if insertErr := insertTerminalEventTx(
+		ctx,
+		tx,
+		jobID,
+		events.EventJobFailed,
+		&redactedPayload,
+	); insertErr != nil {
+		return false, insertErr
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
-		return fmt.Errorf("commit fail job transaction: %w", commitErr)
+		return false, fmt.Errorf("commit fail job transaction: %w", commitErr)
+	}
+
+	// The application service publishes this same pointer after the transaction.
+	// Return the canonical redacted text so the terminal NATS event cannot
+	// reintroduce values that were just removed from Postgres and the outbox.
+	payload.Error = redactedPayload.Error
+	payload.ErrorDetails = redactedPayload.ErrorDetails
+
+	return true, nil
+}
+
+func loadJobFailedTerminalEventTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	jobID string,
+) (*events.JobFailedPayload, error) {
+	var payloadJSON string
+	if err := tx.QueryRowContext(
+		ctx,
+		bindPostgresParams(`
+			SELECT payload_json FROM terminal_events
+			WHERE job_id = ? AND event = ?
+		`),
+		jobID,
+		events.EventJobFailed,
+	).Scan(&payloadJSON); err != nil {
+		return nil, fmt.Errorf("load canonical job.failed terminal event: %w", err)
+	}
+
+	var payload events.JobFailedPayload
+	if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
+		return nil, fmt.Errorf("decode canonical job.failed terminal event: %w", err)
+	}
+
+	return &payload, nil
+}
+
+func loadAndSanitizeTerminalJobConfig(
+	ctx context.Context,
+	tx *sql.Tx,
+	jobID string,
+) (string, []string, error) {
+	var raw string
+	if err := tx.QueryRowContext(
+		ctx,
+		bindPostgresParams(`SELECT config_json FROM jobs WHERE id = ? FOR UPDATE`),
+		jobID,
+	).Scan(&raw); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", nil, fmt.Errorf("job not found: %s", jobID)
+		}
+
+		return "", nil, fmt.Errorf("load terminal job config: %w", err)
+	}
+
+	configJSON, secrets, err := sanitizeTerminalJobConfig(raw)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return configJSON, secrets, nil
+}
+
+func persistSanitizedTerminalJobConfig(
+	ctx context.Context,
+	tx *sql.Tx,
+	jobID, configJSON string,
+) error {
+	if _, err := tx.ExecContext(
+		ctx,
+		bindPostgresParams(`UPDATE jobs SET config_json = ? WHERE id = ?`),
+		configJSON,
+		jobID,
+	); err != nil {
+		return fmt.Errorf("persist sanitized terminal job config: %w", err)
 	}
 
 	return nil

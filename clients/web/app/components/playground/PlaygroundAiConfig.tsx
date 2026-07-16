@@ -4,6 +4,7 @@ import type {
 	AiSuccessCriterion
 } from '../../lib/components/playground/playground-utils';
 import { DEFAULT_AI_CONFIG } from '../../lib/components/playground/playground-utils';
+import { IS_HOSTED_DEMO } from '../../lib/site-metadata';
 
 interface Props {
 	config: AiConfigState;
@@ -57,12 +58,22 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 					Give the navigator a high-level goal; it drives the page to satisfy it.
 				</p>
 			</header>
+			<div className="sensitive-data-warning" role="note">
+				<strong>
+					{IS_HOSTED_DEMO
+						? 'Hosted demo: use synthetic test data only.'
+						: 'Use synthetic or dedicated test data.'}
+				</strong>{' '}
+				Input values are sent to the navigator for this run. Never provide personal,
+				production, payment, or reusable account data.
+			</div>
 
 			<label className="pai__field">
 				<span className="label">
 					Objective <span className="pai__req">*</span>
 				</span>
 				<textarea
+					id="ai-objective"
 					rows={3}
 					placeholder="Add a Pro plan subscription and reach the checkout success page"
 					value={config.objective}
@@ -76,6 +87,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 				<label className="pai__field">
 					<span className="label">Max steps</span>
 					<input
+						id="ai-max-steps"
 						type="number"
 						min={1}
 						max={50}
@@ -88,8 +100,10 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 				<label className="pai__field">
 					<span className="label">Max wall time (ms)</span>
 					<input
+						id="ai-wall-time"
 						type="number"
 						min={10_000}
+						max={600_000}
 						step={10_000}
 						value={config.maxWallTimeMs}
 						onChange={(e) =>
@@ -103,6 +117,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 				<label className="pai__field">
 					<span className="label">Model</span>
 					<input
+						id="ai-model"
 						type="text"
 						value={config.model}
 						onChange={(e) => update({ model: e.target.value })}
@@ -118,12 +133,14 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 				{config.inputValues.map((row, idx) => (
 					<div key={idx} className="pai__pair">
 						<input
+							id={`ai-input-key-${idx}`}
 							type="text"
 							placeholder="email"
 							value={row.key}
 							onChange={(e) => updateInputValue(idx, { key: e.target.value })}
 						/>
 						<input
+							id={`ai-input-value-${idx}`}
 							type="text"
 							placeholder="value"
 							value={row.value}
@@ -161,6 +178,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 							<option value="selector-visible">Selector visible</option>
 						</select>
 						<input
+							id={`ai-criterion-value-${idx}`}
 							type="text"
 							placeholder="value"
 							value={row.value}

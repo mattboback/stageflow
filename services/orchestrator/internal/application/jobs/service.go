@@ -147,31 +147,26 @@ func (s *Service) StartScanning(ctx context.Context, job *models.Job) error {
 		}
 	}
 
-	if err := s.store.SetExpectedScanners(ctx, job.ID, scannerTypes); err != nil {
-		return fmt.Errorf("failed to set expected scanners: %w", err)
+	if err := s.store.PrepareScannerLaunches(ctx, job.ID, scannerTypes); err != nil {
+		return fmt.Errorf("failed to prepare scanner launches: %w", err)
 	}
 
-	job.ExpectedScanners = append([]string{}, scannerTypes...)
-	job.CompletedScanners = nil
-	job.ScannerResults = make(map[string]*models.ScannerResult)
+	if len(job.ExpectedScanners) == 0 {
+		job.ExpectedScanners = append([]string{}, scannerTypes...)
+	}
 
 	for _, scannerType := range scannerTypes {
-		plan, err := s.planner.Plan(ctx, job, scannerType)
+		claimed, err := s.store.ClaimScannerLaunch(ctx, job.ID, scannerType)
 		if err != nil {
-			return fmt.Errorf("plan scanner launch for %s: %w", scannerType, err)
+			return fmt.Errorf("claim scanner launch for %s: %w", scannerType, err)
 		}
 
-		if startErr := s.runtime.StartScanner(ctx, job, plan); startErr != nil {
-			message := fmt.Sprintf("failed to start scanner %s", scannerType)
-			s.failJobSafe(
-				ctx,
-				job.ID,
-				"scanning",
-				message,
-				fmt.Sprintf("scanner=%s error=%v", scannerType, startErr),
-			)
+		if !claimed {
+			continue
+		}
 
-			return fmt.Errorf("start scanner %s: %w", scannerType, startErr)
+		if launchErr := s.launchClaimedScanner(ctx, job, scannerType); launchErr != nil {
+			return launchErr
 		}
 	}
 
@@ -455,15 +450,22 @@ func (s *Service) FailJob(ctx context.Context, jobID, stage, message, details st
 		ErrorDetails: details,
 	}
 
-	if failErr := s.store.FailJobWithTerminalEvent(
+	transitioned, failErr := s.store.FailJobWithTerminalEvent(
 		ctx,
 		jobID,
 		normalizedStage,
 		message,
 		details,
 		payload,
-	); failErr != nil {
+	)
+	if failErr != nil {
 		return fmt.Errorf("failed to fail job: %w", failErr)
+	}
+
+	if !transitioned {
+		_, publishErr := s.publishPendingTerminalEvents(ctx, jobID)
+
+		return publishErr
 	}
 
 	job.State = models.JobStateFailed

@@ -3,35 +3,93 @@ import type { Page } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ActionDecider, AgentGoal, AgentResult, AgentStep, PageAnalyzer } from '../../ai';
+import type {
+	ActionDecider,
+	ActionDecision,
+	AgentGoal,
+	AgentResult,
+	AgentStep,
+	PageAnalyzer,
+	PublicAgentGoal
+} from '../../ai';
 import type { ScreenshotService } from '../../core/screenshots';
 import type { PreScanAction, ScannerLogger } from '../../core/types';
 
 import { checkGoal } from '../../ai/goal-checker';
+import { redactAgentInputValues, redactAgentInputValuesInObject } from '../../ai/redaction';
 
 interface PreScanExecutor {
-	executePreScanActions(page: Page, actions: PreScanAction[]): Promise<void>;
+	executePreScanActions(
+		page: Page,
+		actions: PreScanAction[],
+		secretsResolver?: undefined,
+		options?: { maskInputValues?: boolean }
+	): Promise<void>;
 }
 
-function buildAgentStep(input: {
-	stepNumber: number;
-	url: string;
-	action: AgentStep['action'];
-	reasoning: string;
-	success: boolean;
-	durationMs: number;
-	error?: string | undefined;
-	screenshotKey?: string | undefined;
-}): AgentStep {
+function buildAgentStep(
+	input: {
+		stepNumber: number;
+		url: string;
+		action: ActionDecision['action'];
+		reasoning: string;
+		success: boolean;
+		durationMs: number;
+		error?: string | undefined;
+		screenshotKey?: string | undefined;
+	},
+	goal: AgentGoal
+): AgentStep {
 	return {
 		stepNumber: input.stepNumber,
-		url: input.url,
-		action: input.action,
-		reasoning: input.reasoning,
+		url: redactAgentInputValues(input.url, goal),
+		action: buildRecordedAction(input.action, goal),
+		reasoning: redactAgentInputValues(input.reasoning, goal),
 		success: input.success,
 		durationMs: input.durationMs,
-		...(input.error !== undefined ? { error: input.error } : {}),
+		...(input.error !== undefined ? { error: redactAgentInputValues(input.error, goal) } : {}),
 		...(input.screenshotKey !== undefined ? { screenshotKey: input.screenshotKey } : {})
+	};
+}
+
+function buildRecordedAction(
+	action: ActionDecision['action'],
+	goal: AgentGoal
+): AgentStep['action'] {
+	if (action.type === 'fill' || action.type === 'select') {
+		return {
+			type: action.type,
+			selector: redactAgentInputValues(action.selector, goal),
+			value: '[REDACTED]',
+			...('valueKey' in action && typeof action.valueKey === 'string'
+				? { valueKey: action.valueKey }
+				: {}),
+			...(action.timeout !== undefined ? { timeout: action.timeout } : {})
+		};
+	}
+
+	if (action.type === 'stuck') {
+		return { ...action, reason: redactAgentInputValues(action.reason, goal) };
+	}
+
+	if (action.type === 'keyboard') {
+		return { ...action, key: redactAgentInputValues(action.key, goal) };
+	}
+
+	return action;
+}
+
+function buildPublicGoal(goal: AgentGoal): PublicAgentGoal {
+	const { inputValues, ...publicGoal } = goal;
+	const redactedGoal = redactAgentInputValuesInObject(publicGoal, goal) as Omit<
+		AgentGoal,
+		'inputValues'
+	>;
+	const inputValueKeys = Object.keys(inputValues ?? {}).sort();
+
+	return {
+		...redactedGoal,
+		...(inputValueKeys.length > 0 ? { inputValueKeys } : {})
 	};
 }
 
@@ -74,15 +132,18 @@ export async function runAiNavigatorAgent(
 				stepNumber
 			);
 			steps.push(
-				buildAgentStep({
-					stepNumber,
-					url: page.url(),
-					action: { type: 'stuck', reason: stuckReason },
-					reasoning: 'Stopping due to maxWallTimeMs budget',
-					success: false,
-					screenshotKey,
-					durationMs: 0
-				})
+				buildAgentStep(
+					{
+						stepNumber,
+						url: page.url(),
+						action: { type: 'stuck', reason: stuckReason },
+						reasoning: 'Stopping due to maxWallTimeMs budget',
+						success: false,
+						screenshotKey,
+						durationMs: 0
+					},
+					goal
+				)
 			);
 			break;
 		}
@@ -100,15 +161,18 @@ export async function runAiNavigatorAgent(
 				stepNumber
 			);
 			steps.push(
-				buildAgentStep({
-					stepNumber,
-					url: page.url(),
-					action: decision.action,
-					reasoning: decision.reasoning,
-					success: true,
-					screenshotKey,
-					durationMs: Date.now() - stepStartedMs
-				})
+				buildAgentStep(
+					{
+						stepNumber,
+						url: page.url(),
+						action: decision.action,
+						reasoning: decision.reasoning,
+						success: true,
+						screenshotKey,
+						durationMs: Date.now() - stepStartedMs
+					},
+					goal
+				)
 			);
 			break;
 		}
@@ -123,16 +187,19 @@ export async function runAiNavigatorAgent(
 				stepNumber
 			);
 			steps.push(
-				buildAgentStep({
-					stepNumber,
-					url: page.url(),
-					action: decision.action,
-					reasoning: decision.reasoning,
-					success: false,
-					error: stuckReason,
-					screenshotKey,
-					durationMs: Date.now() - stepStartedMs
-				})
+				buildAgentStep(
+					{
+						stepNumber,
+						url: page.url(),
+						action: decision.action,
+						reasoning: decision.reasoning,
+						success: false,
+						error: stuckReason,
+						screenshotKey,
+						durationMs: Date.now() - stepStartedMs
+					},
+					goal
+				)
 			);
 			break;
 		}
@@ -148,19 +215,24 @@ export async function runAiNavigatorAgent(
 		);
 
 		try {
-			await deps.preScanExecutor.executePreScanActions(page, [preScanAction]);
+			await deps.preScanExecutor.executePreScanActions(page, [preScanAction], undefined, {
+				maskInputValues: preScanAction.type === 'fill' || preScanAction.type === 'select'
+			});
 			await page.waitForTimeout(250);
 
 			steps.push(
-				buildAgentStep({
-					stepNumber,
-					url: page.url(),
-					action: decision.action,
-					reasoning: decision.reasoning,
-					success: true,
-					screenshotKey,
-					durationMs: Date.now() - stepStartedMs
-				})
+				buildAgentStep(
+					{
+						stepNumber,
+						url: page.url(),
+						action: decision.action,
+						reasoning: decision.reasoning,
+						success: true,
+						screenshotKey,
+						durationMs: Date.now() - stepStartedMs
+					},
+					goal
+				)
 			);
 
 			consecutiveFailures = 0;
@@ -181,16 +253,19 @@ export async function runAiNavigatorAgent(
 			consecutiveFailures += 1;
 
 			steps.push(
-				buildAgentStep({
-					stepNumber,
-					url: page.url(),
-					action: decision.action,
-					reasoning: decision.reasoning,
-					success: false,
-					error: message,
-					screenshotKey,
-					durationMs: Date.now() - stepStartedMs
-				})
+				buildAgentStep(
+					{
+						stepNumber,
+						url: page.url(),
+						action: decision.action,
+						reasoning: decision.reasoning,
+						success: false,
+						error: message,
+						screenshotKey,
+						durationMs: Date.now() - stepStartedMs
+					},
+					goal
+				)
 			);
 
 			if (consecutiveFailures >= maxConsecutiveFailures) {
@@ -207,13 +282,13 @@ export async function runAiNavigatorAgent(
 
 	return {
 		success: goalStatus.achieved,
-		goal,
-		startUrl,
-		finalUrl: page.url(),
+		goal: buildPublicGoal(goal),
+		startUrl: redactAgentInputValues(startUrl, goal),
+		finalUrl: redactAgentInputValues(page.url(), goal),
 		steps,
 		totalSteps: steps.length,
 		totalDurationMs: Date.now() - startedMs,
-		...(stuckReason !== undefined ? { stuckReason } : {})
+		...(stuckReason !== undefined ? { stuckReason: redactAgentInputValues(stuckReason, goal) } : {})
 	};
 }
 

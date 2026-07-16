@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 const FIXTURE_PATH = path.resolve(
 	process.cwd(),
@@ -77,7 +78,11 @@ async function mockReportRoutes(page: Page) {
 		})
 	);
 	await page.route(`**/api/v1/jobs/${JOB_ID}/stream**`, (route) =>
-		route.fulfill({ status: 404, body: 'no stream' })
+		route.fulfill({
+			status: 200,
+			contentType: 'text/event-stream',
+			body: 'event: done\ndata: {}\n\n'
+		})
 	);
 }
 
@@ -109,9 +114,6 @@ async function mockScannerCatalog(page: Page) {
 function collectPageErrors(page: Page): string[] {
 	const pageErrors: string[] = [];
 	page.on('pageerror', (err) => {
-		// React #418 (hydration mismatch) fires when a non-prerendered /scan/*
-		// route hydrates from the SPA shell; tracked separately from this smoke.
-		if (String(err).includes('418')) return;
 		pageErrors.push(String(err));
 	});
 	return pageErrors;

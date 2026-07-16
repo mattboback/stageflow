@@ -31,6 +31,51 @@
 	text-wrap: pretty;
 }
 
+.console__head-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	flex-wrap: wrap;
+}
+
+.console__project-label {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--sp-2);
+	color: var(--signal-ink);
+	font-size: 0.875rem;
+	font-weight: 700;
+}
+
+.console__project-name {
+	display: block;
+	width: min(34rem, 100%);
+	padding: 0;
+	border: 0;
+	border-bottom: 1px solid transparent;
+	background: transparent;
+	font-family: var(--display);
+	font-size: clamp(1.8rem, 3vw, 2.35rem);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+	color: var(--ink-strong);
+}
+
+.console__project-name:hover,
+.console__project-name:focus {
+	border-bottom-color: var(--line-strong);
+	outline: none;
+}
+
+.console__project-notice {
+	max-width: 84rem;
+	margin: calc(-1 * var(--sp-3)) auto var(--sp-4);
+	color: var(--signal-ink);
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
 /* configure row: readable form width + sticky review column, centered in
    the app shell instead of stranding the right third of the viewport */
 .console__grid {
@@ -115,6 +160,10 @@
 	background: var(--surface);
 	color: var(--ink-strong);
 	box-shadow: var(--shadow-sm);
+}
+.seg button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
 .seg button:focus-visible {
 	outline: 2px solid var(--signal);
@@ -661,6 +710,16 @@
 .pai > * {
 	display: grid;
 	gap: 0.85rem;
+}
+.sensitive-data-warning {
+	padding: 0.8rem 0.9rem;
+	border: 1px solid oklch(0.78 0.09 75);
+	border-left: 4px solid oklch(0.52 0.12 65);
+	border-radius: var(--r-sm);
+	background: oklch(0.97 0.025 78);
+	color: var(--ink-strong);
+	font-size: 0.9rem;
+	line-height: 1.5;
 }
 .pauth__row,
 .pai__row {

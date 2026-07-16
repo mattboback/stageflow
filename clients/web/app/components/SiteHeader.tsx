@@ -1,9 +1,7 @@
 import { Link } from 'react-router';
+import { DOCS_URL, GITHUB_URL, SITE_NAME } from '../lib/site-metadata';
 
-type Current = 'home' | 'playground' | undefined;
-
-const GITHUB_URL = 'https://github.com/mattboback/stageflow';
-const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
+type Current = 'home' | 'projects' | 'playground' | undefined;
 
 /* Application chrome for scan/report workflows: brand, current section, and a
    back action. Marketing nav and GitHub stay on marketing pages only. */
@@ -18,9 +16,9 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 		return (
 			<header className="site-header site-header--app">
 				<div className="wrap wrap--app site-header__bar">
-					<Link className="brand" to="/" aria-label="StageFlow home">
+					<Link className="brand" to="/" aria-label={`${SITE_NAME} home`}>
 						<span className="brand__mark" aria-hidden="true" />
-						<span className="brand__name">StageFlow</span>
+						<span className="brand__name">{SITE_NAME}</span>
 					</Link>
 					{app.section && <span className="site-header__section">{app.section}</span>}
 					<nav className="nav" aria-label="Workflow">
@@ -36,11 +34,18 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 	return (
 		<header className="site-header">
 			<div className="wrap site-header__bar">
-				<Link className="brand" to="/" aria-label="StageFlow home">
+				<Link className="brand" to="/" aria-label={`${SITE_NAME} home`}>
 					<span className="brand__mark" aria-hidden="true" />
-					<span className="brand__name">StageFlow</span>
+					<span className="brand__name">{SITE_NAME}</span>
 				</Link>
 				<nav className="nav" aria-label="Primary">
+					<Link
+						className="navlink"
+						to="/projects"
+						aria-current={current === 'projects' ? 'page' : undefined}
+					>
+						Projects
+					</Link>
 					<Link
 						className="navlink"
 						to="/playground"

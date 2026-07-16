@@ -31,7 +31,13 @@ type JobStore interface {
 		jobID string,
 		pagesScanned, totalIssues, criticalIssues, seriousIssues, moderateIssues, minorIssues int,
 	) error
+	ListJobsByState(ctx context.Context, state models.JobState) ([]*models.Job, error)
 	SetExpectedScanners(ctx context.Context, jobID string, scanners []string) error
+	PrepareScannerLaunches(ctx context.Context, jobID string, scanners []string) error
+	ClaimScannerLaunch(ctx context.Context, jobID, scannerType string) (bool, error)
+	ClaimScannerLaunchRecovery(ctx context.Context, jobID, scannerType string) (bool, error)
+	MarkScannerLaunched(ctx context.Context, jobID, scannerType, containerID string) error
+	MarkScannerLaunchFailed(ctx context.Context, jobID, scannerType, errorMessage string) error
 	RecordScannerCompletion(ctx context.Context, jobID string, result *models.ScannerResult) (bool, error)
 	RecordScannerFailure(ctx context.Context, jobID, scannerType, errorMsg string) (bool, error)
 	CompleteJobWithTerminalEvent(ctx context.Context, jobID string, payload *events.JobCompletedPayload) error
@@ -39,7 +45,7 @@ type JobStore interface {
 		ctx context.Context,
 		jobID, stage, errorMsg, errorDetails string,
 		payload *events.JobFailedPayload,
-	) error
+	) (transitioned bool, err error)
 	ListUnpublishedTerminalEvents(ctx context.Context, jobID string) ([]TerminalEvent, error)
 	MarkTerminalEventPublished(ctx context.Context, jobID, event string) error
 	RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error
@@ -57,7 +63,7 @@ type Runtime interface {
 	CreateJobPod(ctx context.Context, job *models.Job) (string, error)
 	StartExtractionWorker(ctx context.Context, job *models.Job) error
 	ResolveScannerTypes(modules []string) []string
-	StartScanner(ctx context.Context, job *models.Job, plan *ScannerLaunchPlan) error
+	StartScanner(ctx context.Context, job *models.Job, plan *ScannerLaunchPlan) (string, error)
 	CleanupJob(ctx context.Context, job *models.Job) error
 }
 

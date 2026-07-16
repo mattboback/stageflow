@@ -1,12 +1,13 @@
 import { Link, useLocation, type MetaFunction } from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
 import { Pill } from '../components/Pill';
+import { pageTitle } from '../lib/site-metadata';
 import notFoundStyles from './not-found.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: notFoundStyles }];
 
 export const meta: MetaFunction = () => [
-	{ title: '404 · Page not found — StageFlow' },
+	{ title: pageTitle('404 · Page not found') },
 	{ name: 'robots', content: 'noindex' }
 ];
 
@@ -17,7 +18,7 @@ export default function NotFound() {
 		<>
 			<SiteHeader />
 
-			<main className="fault">
+			<main id="main" className="fault">
 				<div className="panel fault__panel" style={{ boxShadow: 'var(--shadow-md)' }}>
 					<div className="fault__top">
 						<span className="label">Fault</span>

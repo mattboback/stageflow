@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"net"
+	"sync"
+	"sync/atomic"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -35,6 +37,23 @@ type ProjectStore interface {
 	GetProjectForJob(ctx context.Context, jobID string) (*project.Project, error)
 	SetBaseline(ctx context.Context, projectID, jobID string) error
 	JobBelongsToProject(ctx context.Context, projectID, jobID string) (bool, error)
+	QueueBaselinePromotion(
+		ctx context.Context,
+		projectID, previousJobID, jobID, sourceKey string,
+	) (*project.BaselineOperation, error)
+	QueueBaselineBackfill(
+		ctx context.Context,
+		projectID, jobID, sourceKey string,
+	) (*project.BaselineOperation, error)
+	QueueProjectDeletion(
+		ctx context.Context,
+		projectID string,
+	) (*project.BaselineOperation, error)
+	ListBaselineOperations(ctx context.Context) ([]project.BaselineOperation, error)
+	MarkBaselineOperationObjectReady(ctx context.Context, id int64) error
+	RecordBaselineOperationFailure(ctx context.Context, id int64, cause string) error
+	CompleteBaselinePromotion(ctx context.Context, op project.BaselineOperation) error
+	CompleteBaselineOperation(ctx context.Context, op project.BaselineOperation) error
 }
 
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
@@ -44,6 +63,9 @@ type Server struct {
 	projectStore    ProjectStore
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
+	baselineMu      sync.Mutex
+	baselineWG      sync.WaitGroup
+	legacySweepDue  atomic.Bool
 }
 
 // ServerConfig provides dependencies and endpoints for the public API.
@@ -62,13 +84,16 @@ type ServerConfig struct {
 
 // NewServer constructs an API server with injected dependencies.
 func NewServer(config *ServerConfig) *Server {
-	return &Server{
+	server := &Server{
 		config:          config,
 		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: config.StatusReader}),
 		projectStore:    config.ProjectStore,
 		scannerRegistry: config.ScannerRegistry,
 		ipResolver:      net.DefaultResolver,
 	}
+	server.legacySweepDue.Store(true)
+
+	return server
 }
 
 func (s *Server) JobStatus() *jobstatus.Pipeline {

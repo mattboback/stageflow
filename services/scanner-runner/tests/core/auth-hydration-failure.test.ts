@@ -17,6 +17,7 @@ import type {
 	PageScanResult,
 	Provenance,
 	ScannerConfig,
+	ScannerLogger,
 	StorageProvider
 } from '../../src/core/types';
 
@@ -83,6 +84,23 @@ const baseScannerConfig: ScannerConfig = {
 		}
 	}
 };
+
+const SECRET_USER = 'user+tag@example.com';
+const SECRET_PASSWORD = 'p@ss word+1';
+
+function makeLogger(): ScannerLogger & {
+	info: ReturnType<typeof vi.fn>;
+	warn: ReturnType<typeof vi.fn>;
+	error: ReturnType<typeof vi.fn>;
+	debug: ReturnType<typeof vi.fn>;
+} {
+	return {
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	};
+}
 
 function makeBrowserManager(
 	overrides?: Partial<BrowserManager>,
@@ -192,6 +210,75 @@ describe('PageIterator auth hydration failure path', () => {
 		expect(results[0]!.issues[0]!.id).toBe('auth-hydration-failed');
 		expect(results[0]!.issues[0]!.description).toMatch(/StorageProvider not configured/);
 		expect(browserManager.createContext).not.toHaveBeenCalled();
+	});
+
+	it('redacts raw and encoded credentials from form hydration failures', async () => {
+		const formEncodedUser = new URLSearchParams([['username', SECRET_USER]])
+			.toString()
+			.slice('username='.length);
+		const formEncodedPassword = new URLSearchParams([['password', SECRET_PASSWORD]])
+			.toString()
+			.slice('password='.length);
+		const capturedUrl =
+			`https://app.example.com/login?username=${formEncodedUser}` +
+			`&password=${encodeURIComponent(SECRET_PASSWORD)}`;
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [
+					{ type: 'fill', selector: '#username', value: SECRET_USER },
+					{ type: 'fill', selector: '#password', value: SECRET_PASSWORD },
+					{ type: 'click', selector: 'button[type=submit]' }
+				],
+				success: { type: 'load' }
+			}
+		};
+		const browserManager = makeBrowserManager(
+			{
+				executePreScanActions: vi
+					.fn()
+					.mockRejectedValue(new Error(`submit failed for ${formEncodedPassword}`))
+			},
+			{ url: vi.fn().mockReturnValue(capturedUrl) }
+		);
+		const auditEvents: PageIteratorAuditEvent[] = [];
+		const logger = makeLogger();
+		const iterator = new PageIterator(browserManager, baseScannerConfig, logger);
+
+		const results = await iterator.iteratePages(provenance, vi.fn<PageScanCallback>(), {
+			onAuditEvent: (event) => auditEvents.push(event)
+		});
+
+		expect(results[0]?.issues[0]?.metadata).toMatchObject({
+			mode: 'form',
+			postLoginUrl: 'https://app.example.com/login?username=[REDACTED]&password=[REDACTED]'
+		});
+		const recorded = JSON.stringify({
+			results,
+			auditEvents,
+			logs: {
+				info: logger.info.mock.calls,
+				warn: logger.warn.mock.calls,
+				error: logger.error.mock.calls,
+				debug: logger.debug.mock.calls
+			}
+		});
+		for (const canary of [
+			SECRET_USER,
+			SECRET_PASSWORD,
+			encodeURIComponent(SECRET_USER),
+			encodeURIComponent(SECRET_PASSWORD),
+			formEncodedUser,
+			formEncodedPassword
+		]) {
+			expect(recorded).not.toContain(canary);
+		}
+		expect(recorded).toContain('[REDACTED]');
 	});
 
 	it('fails form auth when success waiting leaves the browser on a visible login form', async () => {

@@ -176,6 +176,9 @@ services:
       MINIO_USE_PROXY_URLS: "true"
       PLATFORM_API_TOKEN: ${PLATFORM_API_TOKEN:-}
       PLATFORM_API_AUTH_DISABLED: ${PLATFORM_API_AUTH_DISABLED:-false}
+      PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM:-6}
+      PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST:-3}
+      PLATFORM_API_TRUSTED_PROXIES: ${PLATFORM_API_TRUSTED_PROXIES:-127.0.0.1/32,::1/128}
       PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-https://${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org},https://www.${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org}}
       ORCHESTRATOR_API_URL: "http://orchestrator:8081"
       ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
@@ -296,7 +299,9 @@ services:
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
         VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3020}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
-        VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility and quality scanning platform}
+        VITE_TAGLINE: ${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}
+        VITE_AI_NAVIGATOR_DEFAULT_MODEL: ${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}
+        VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-self-hosted}
     image: localhost/stageflow/frontend-react:latest
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3020/ || exit 1"]

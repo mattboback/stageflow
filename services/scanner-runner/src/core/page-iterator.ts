@@ -12,6 +12,7 @@ import type { BrowserManager } from './browser-manager';
 
 import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
 import { createLogger } from '../utils/logger';
+import { redactDynamicStringValues, redactStringValues } from '../utils/secret-redaction';
 import {
 	AuthHydrationError,
 	defaultStorageStatePath,
@@ -20,7 +21,7 @@ import {
 } from './auth-hydrator';
 import { detectAuthWall } from './auth-wall';
 import { collectFromEnvReferences, createSecretsResolver } from './secrets-resolver';
-import { buildTargetValidationPolicy } from './target-validation';
+import { buildTargetValidationPolicy, redactURLUserInfo } from './target-validation';
 import {
 	DEFAULT_WAIT_STRATEGY,
 	type Issue,
@@ -187,7 +188,9 @@ export class PageIterator {
 						type: 'auth_hydrated',
 						details: {
 							mode: 'form',
-							login_url: provenance.auth.login_url,
+							login_url: secretsResolver.redactKnownValues(
+								redactURLUserInfo(provenance.auth.login_url)
+							),
 							post_login_url: postLoginUrl
 						}
 					});
@@ -229,7 +232,8 @@ export class PageIterator {
 				close: () => context.close(),
 				label: 'browser context',
 				timeoutMs: 10_000,
-				logger: this.logger
+				logger: this.logger,
+				redactError: (value) => secretsResolver.redactKnownValues(value)
 			});
 			this.logger.info('Browser context closed');
 		}
@@ -389,14 +393,17 @@ export class PageIterator {
 	): Promise<PageScanResult> {
 		const startedAt = new Date().toISOString();
 		const hrStart = process.hrtime.bigint();
+		registerPageLiteralValues(pageEntry, secretsResolver);
+		const redact = (value: string): string => secretsResolver.redactKnownValues(value);
+		const safePageEntry = redactPageEntry(pageEntry, redact);
 
 		this.logger.info(`Scanning page ${index + 1}/${total}`, {
-			pageId: pageEntry.id,
-			url: pageEntry.url
+			pageId: redact(pageEntry.id),
+			url: redact(pageEntry.url)
 		});
 
 		if (callbacks?.onPageStart) {
-			await callbacks.onPageStart(pageEntry, index, total);
+			await callbacks.onPageStart(safePageEntry, index, total);
 		}
 
 		let lastError: Error | null = null;
@@ -435,7 +442,8 @@ export class PageIterator {
 					await this.browserManager.executePreScanActions(
 						page,
 						pageEntry.pre_scan_actions,
-						secretsResolver
+						secretsResolver,
+						{ maskInputValues: true }
 					);
 				}
 
@@ -456,6 +464,7 @@ export class PageIterator {
 				if (authWallIssue) {
 					result.issues = [...result.issues, authWallIssue];
 				}
+				result = redactPageScanResult(result, redact);
 
 				if (!result.success) {
 					const retryable = result.retryable !== false && attempt < this.config.maxRetries;
@@ -465,14 +474,14 @@ export class PageIterator {
 					this.logger.warn(
 						`Page scan reported unsuccessful result (attempt ${attempt}/${this.config.maxRetries})`,
 						{
-							pageId: pageEntry.id,
+							pageId: redact(pageEntry.id),
 							error: errorMessage,
 							retryable
 						}
 					);
 
 					if (callbacks?.onPageError) {
-						await callbacks.onPageError(lastError, pageEntry, attempt);
+						await callbacks.onPageError(lastError, safePageEntry, attempt);
 					}
 
 					if (retryable) {
@@ -483,20 +492,20 @@ export class PageIterator {
 
 				break;
 			} catch (err) {
-				lastError = err instanceof Error ? err : new Error(String(err));
+				lastError = new Error(redact(err instanceof Error ? err.message : String(err)));
 
 				this.logger.warn(`Page scan failed (attempt ${attempt}/${this.config.maxRetries})`, {
-					pageId: pageEntry.id,
+					pageId: redact(pageEntry.id),
 					error: lastError.message
 				});
 
 				if (callbacks?.onPageError) {
-					await callbacks.onPageError(lastError, pageEntry, attempt);
+					await callbacks.onPageError(lastError, safePageEntry, attempt);
 				}
 
 				if (attempt === this.config.maxRetries) {
 					this.logger.error(`Giving up on page after ${this.config.maxRetries} attempts`, {
-						pageId: pageEntry.id
+						pageId: redact(pageEntry.id)
 					});
 				}
 			} finally {
@@ -507,7 +516,8 @@ export class PageIterator {
 						label: 'page',
 						timeoutMs: 5_000,
 						logger: this.logger,
-						meta: { pageId: pageEntry.id }
+						meta: { pageId: redact(pageEntry.id) },
+						redactError: redact
 					});
 				}
 			}
@@ -523,9 +533,9 @@ export class PageIterator {
 			result.durationMs = Math.round(durationMs * 100) / 100;
 		} else {
 			result = {
-				pageId: pageEntry.id,
-				url: pageEntry.url,
-				path: pageEntry.path,
+				pageId: redact(pageEntry.id),
+				url: redact(pageEntry.url),
+				path: redact(pageEntry.path),
 				success: false,
 				issues: [],
 				durationMs: Math.round(durationMs * 100) / 100,
@@ -534,13 +544,14 @@ export class PageIterator {
 				error: lastError?.message ?? 'Unknown error'
 			};
 		}
+		result = redactPageScanResult(result, redact);
 
 		if (callbacks?.onPageComplete) {
 			await callbacks.onPageComplete(result, index, total);
 		}
 
 		this.logger.info(`Completed page ${index + 1}/${total}`, {
-			pageId: pageEntry.id,
+			pageId: redact(pageEntry.id),
 			success: result.success,
 			issues: result.issues.length,
 			durationMs: result.durationMs
@@ -550,19 +561,63 @@ export class PageIterator {
 	}
 }
 
+function redactPageEntry(pageEntry: PageEntry, redact: (value: string) => string): PageEntry {
+	const safePageEntry = redactStringValues(pageEntry, redact);
+	if (pageEntry.metadata !== undefined) {
+		safePageEntry.metadata = redactDynamicStringValues(pageEntry.metadata, redact);
+	}
+	return safePageEntry;
+}
+
+function redactPageScanResult(
+	result: PageScanResult,
+	redact: (value: string) => string
+): PageScanResult {
+	const safeResult = redactStringValues(result, redact);
+
+	for (const [index, issue] of result.issues.entries()) {
+		const safeIssue = safeResult.issues[index];
+		if (safeIssue && issue.metadata !== undefined) {
+			safeIssue.metadata = redactDynamicStringValues(issue.metadata, redact);
+		}
+	}
+
+	if (result.rawResults !== undefined) {
+		safeResult.rawResults = redactDynamicStringValues(result.rawResults, redact);
+	}
+
+	return safeResult;
+}
+
+function registerPageLiteralValues(
+	pageEntry: PageEntry,
+	secretsResolver: ReturnType<typeof createSecretsResolver>
+): void {
+	for (const action of pageEntry.pre_scan_actions ?? []) {
+		if ((action.type === 'fill' || action.type === 'select') && typeof action.value === 'string') {
+			secretsResolver.resolveValue(action.value);
+		}
+	}
+}
+
 async function closeWithTimeout(opts: {
 	close: () => Promise<void>;
 	label: string;
 	timeoutMs: number;
 	logger: ScannerLogger;
 	meta?: Record<string, unknown>;
+	redactError?: (value: string) => string;
 }): Promise<void> {
-	const { close, label, timeoutMs, logger, meta } = opts;
+	const { close, label, timeoutMs, logger, meta, redactError } = opts;
 
 	const closePromise = close().catch((err: unknown) => {
 		logger.warn(`Failed to close ${label} gracefully`, {
 			...meta,
-			error: err instanceof Error ? err.message : String(err)
+			error: redactError
+				? redactError(err instanceof Error ? err.message : String(err))
+				: err instanceof Error
+					? err.message
+					: String(err)
 		});
 	});
 

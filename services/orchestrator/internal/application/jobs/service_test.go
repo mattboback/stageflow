@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -531,6 +532,11 @@ type fakeJobStore struct {
 	updateJobCompletionArtifactsCalls  int
 	updateJobMetricsCalls              int
 	setExpectedScannersCalls           int
+	prepareScannerLaunchesCalls        int
+	claimScannerLaunchCalls            int
+	claimScannerRecoveryCalls          int
+	markScannerLaunchedCalls           int
+	markScannerLaunchFailedCalls       int
 	recordScannerCompletionCalls       int
 	recordScannerCompletionAllComplete bool
 	recordScannerFailureCalls          int
@@ -546,6 +552,8 @@ type fakeJobStore struct {
 	lastPodID                          string
 	lastCreatedJob                     *models.Job
 	operationLog                       *[]string
+	listJobsByStateResults             []*models.Job
+	claimScannerLaunchResult           *bool
 }
 
 func (f *fakeJobStore) CreateJobIfAbsent(_ context.Context, job *models.Job) (bool, error) {
@@ -667,6 +675,45 @@ func (f *fakeJobStore) SetExpectedScanners(_ context.Context, _ string, scanners
 	return nil
 }
 
+func (f *fakeJobStore) ListJobsByState(_ context.Context, _ models.JobState) ([]*models.Job, error) {
+	return append([]*models.Job(nil), f.listJobsByStateResults...), nil
+}
+
+func (f *fakeJobStore) PrepareScannerLaunches(_ context.Context, _ string, scanners []string) error {
+	f.prepareScannerLaunchesCalls++
+
+	f.lastExpectedScanners = append([]string(nil), scanners...)
+
+	return nil
+}
+
+func (f *fakeJobStore) ClaimScannerLaunch(_ context.Context, _, _ string) (bool, error) {
+	f.claimScannerLaunchCalls++
+	if f.claimScannerLaunchResult != nil {
+		return *f.claimScannerLaunchResult, nil
+	}
+
+	return true, nil
+}
+
+func (f *fakeJobStore) ClaimScannerLaunchRecovery(_ context.Context, _, _ string) (bool, error) {
+	f.claimScannerRecoveryCalls++
+
+	return true, nil
+}
+
+func (f *fakeJobStore) MarkScannerLaunched(_ context.Context, _, _, _ string) error {
+	f.markScannerLaunchedCalls++
+
+	return nil
+}
+
+func (f *fakeJobStore) MarkScannerLaunchFailed(_ context.Context, _, _, _ string) error {
+	f.markScannerLaunchFailedCalls++
+
+	return nil
+}
+
 func (f *fakeJobStore) RecordScannerCompletion(_ context.Context, _ string, _ *models.ScannerResult) (bool, error) {
 	f.recordScannerCompletionCalls++
 	return f.recordScannerCompletionAllComplete, nil
@@ -686,9 +733,10 @@ func (f *fakeJobStore) FailJobWithTerminalEvent(
 	_ context.Context,
 	_, _, _, _ string,
 	_ *events.JobFailedPayload,
-) error {
+) (bool, error) {
 	f.failJobCalls++
-	return nil
+
+	return true, nil
 }
 
 func (f *fakeJobStore) ListUnpublishedTerminalEvents(_ context.Context, _ string) ([]TerminalEvent, error) {
@@ -761,13 +809,13 @@ func (f *fakeRuntime) ResolveScannerTypes(_ []string) []string {
 	return append([]string{}, f.resolvedScannerTypes...)
 }
 
-func (f *fakeRuntime) StartScanner(_ context.Context, _ *models.Job, _ *ScannerLaunchPlan) error {
+func (f *fakeRuntime) StartScanner(_ context.Context, _ *models.Job, _ *ScannerLaunchPlan) (string, error) {
 	f.startScannerCalls++
 	if f.startScannerErr != nil && (f.startScannerErrOnCall == 0 || f.startScannerCalls == f.startScannerErrOnCall) {
-		return f.startScannerErr
+		return "", f.startScannerErr
 	}
 
-	return nil
+	return fmt.Sprintf("container-%d", f.startScannerCalls), nil
 }
 
 func (f *fakeRuntime) CleanupJob(_ context.Context, _ *models.Job) error {

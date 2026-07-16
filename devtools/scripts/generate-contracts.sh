@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GO_JSONSCHEMA="github.com/atombender/go-jsonschema@v0.20.0"
 JSON_SCHEMA_TO_TYPESCRIPT="json-schema-to-typescript@15.0.4"
+LOCK_DIR="$ROOT_DIR/.cache/generate-contracts.lock"
 
 MODE="${1:-all}"
 if [[ "$MODE" != "all" && "$MODE" != "ts" && "$MODE" != "go" ]]; then
@@ -11,12 +12,46 @@ if [[ "$MODE" != "all" && "$MODE" != "ts" && "$MODE" != "go" ]]; then
   exit 1
 fi
 
+acquire_generation_lock() {
+  mkdir -p "$(dirname "$LOCK_DIR")"
+
+  local attempts=0
+  until mkdir "$LOCK_DIR" 2>/dev/null; do
+    attempts=$((attempts + 1))
+    if (( attempts > 3000 )); then
+      echo "Error: timed out waiting for contract generation lock: $LOCK_DIR" >&2
+      exit 1
+    fi
+    sleep 0.1
+  done
+
+  trap 'rm -rf "$LOCK_DIR"' EXIT
+}
+
+atomic_temp_for() {
+  local out="$1"
+  mkdir -p "$(dirname "$out")"
+  mktemp "${out}.tmp.XXXXXX"
+}
+
+write_atomic() {
+  local out="$1"
+  local temp
+  temp="$(atomic_temp_for "$out")"
+  cat > "$temp"
+  mv -f "$temp" "$out"
+}
+
+acquire_generation_lock
+
 json2ts() {
   local schema="$1"
   local out="$2"
+  local temp
 
-  mkdir -p "$(dirname "$out")"
-  (cd "$ROOT_DIR" && bun x "$JSON_SCHEMA_TO_TYPESCRIPT" "$schema" -o "$out" --unreachableDefinitions)
+  temp="$(atomic_temp_for "$out")"
+  (cd "$ROOT_DIR" && bun x "$JSON_SCHEMA_TO_TYPESCRIPT" "$schema" -o "$temp" --unreachableDefinitions)
+  mv -f "$temp" "$out"
 }
 
 generate_report() {
@@ -24,19 +59,21 @@ generate_report() {
 
   if [[ "$MODE" == "all" || "$MODE" == "ts" ]]; then
     json2ts "$dir/schema/unified-report.v2.schema.json" "$dir/generated/typescript/unified-report.v2.ts"
-    cat > "$dir/generated/typescript/index.ts" <<'EOF'
+    write_atomic "$dir/generated/typescript/index.ts" <<'EOF'
 export * from './unified-report.v2';
 export type { UnifiedReportV2 as UnifiedReport } from './unified-report.v2';
 EOF
   fi
 
   if [[ "$MODE" == "all" || "$MODE" == "go" ]]; then
-    mkdir -p "$dir/generated/go"
+    local report_go_temp
+    report_go_temp="$(atomic_temp_for "$dir/generated/go/report_schema.go")"
     go run "$GO_JSONSCHEMA" --package report --tags json --struct-name-from-title \
-      "$dir/schema/unified-report.v2.schema.json" > "$dir/generated/go/report_schema.go"
-    gofmt -w "$dir/generated/go/report_schema.go"
+      "$dir/schema/unified-report.v2.schema.json" > "$report_go_temp"
+    gofmt -w "$report_go_temp"
+    mv -f "$report_go_temp" "$dir/generated/go/report_schema.go"
     printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.5\n" \
-      > "$dir/generated/go/go.mod"
+      | write_atomic "$dir/generated/go/go.mod"
   fi
 }
 
@@ -45,18 +82,20 @@ generate_provenance() {
 
   if [[ "$MODE" == "all" || "$MODE" == "ts" ]]; then
     json2ts "$dir/schema/provenance.schema.json" "$dir/generated/typescript/provenance.ts"
-    cat > "$dir/generated/typescript/index.ts" <<'EOF'
+    write_atomic "$dir/generated/typescript/index.ts" <<'EOF'
 export * from './provenance';
 EOF
   fi
 
   if [[ "$MODE" == "all" || "$MODE" == "go" ]]; then
-    mkdir -p "$dir/generated/go"
+    local provenance_go_temp
+    provenance_go_temp="$(atomic_temp_for "$dir/generated/go/provenance_schema.go")"
     go run "$GO_JSONSCHEMA" --package provenance --tags json --struct-name-from-title \
-      "$dir/schema/provenance.schema.json" > "$dir/generated/go/provenance_schema.go"
-    gofmt -w "$dir/generated/go/provenance_schema.go"
+      "$dir/schema/provenance.schema.json" > "$provenance_go_temp"
+    gofmt -w "$provenance_go_temp"
+    mv -f "$provenance_go_temp" "$dir/generated/go/provenance_schema.go"
     printf "module github.com/mattboback/stageflow/libs/contracts/provenance/generated/go\n\ngo 1.26.5\n" \
-      > "$dir/generated/go/go.mod"
+      | write_atomic "$dir/generated/go/go.mod"
   fi
 }
 
@@ -66,20 +105,23 @@ generate_scanner_manifest() {
   if [[ "$MODE" == "all" || "$MODE" == "ts" ]]; then
     json2ts "$dir/schema/scanner-manifest.schema.json" \
       "$dir/generated/typescript/scanner-manifest.ts"
-    cat > "$dir/generated/typescript/index.ts" <<'EOF'
+    write_atomic "$dir/generated/typescript/index.ts" <<'EOF'
 export * from './scanner-manifest';
 EOF
   fi
 
   if [[ "$MODE" == "all" || "$MODE" == "go" ]]; then
+    local manifest_go_temp
+    manifest_go_temp="$(atomic_temp_for "$dir/scanner_manifest.go")"
     go run "$GO_JSONSCHEMA" --package scannermanifest --tags json --struct-name-from-title \
-      "$dir/schema/scanner-manifest.schema.json" > "$dir/scanner_manifest.go"
+      "$dir/schema/scanner-manifest.schema.json" > "$manifest_go_temp"
     sed -i.bak \
       -e 's|^type ManifestConfigSchema interface{}$|// JSON Schema for SCANNER_OPTIONS validation (see ManifestConfigSchema definition\n// in schema/scanner-manifest.schema.json). Carried as json.RawMessage so the\n// Go side can forward the original bytes to the runtime validator.\ntype ManifestConfigSchema = json.RawMessage|' \
       -e 's|^type ScannerManifestConfigSchema interface{}$|// Embedded JSON Schema for the scanner-level configSchema field. Same\n// rationale as ManifestConfigSchema: round-tripped as raw JSON.\ntype ScannerManifestConfigSchema = json.RawMessage|' \
-      "$dir/scanner_manifest.go"
-    rm -f "$dir/scanner_manifest.go.bak"
-    gofmt -w "$dir/scanner_manifest.go"
+      "$manifest_go_temp"
+    rm -f "$manifest_go_temp.bak"
+    gofmt -w "$manifest_go_temp"
+    mv -f "$manifest_go_temp" "$dir/scanner_manifest.go"
   fi
 }
 

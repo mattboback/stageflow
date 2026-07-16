@@ -7,6 +7,191 @@
 	padding-inline: clamp(1.25rem, 2.5vw, 2.5rem);
 }
 
+/* ---- browser-local project baseline ----------------------------------- */
+.local-baseline {
+	display: grid;
+	gap: var(--sp-4);
+	margin-bottom: var(--sp-4);
+	padding: var(--sp-4) var(--sp-5);
+	border: 1px solid var(--signal-edge);
+	border-radius: var(--r-md);
+	background: var(--signal-wash);
+}
+
+.local-baseline__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--sp-4);
+	flex-wrap: wrap;
+}
+
+.local-baseline__head h2 {
+	font-size: 1.3rem;
+	margin-top: var(--sp-1);
+}
+
+.local-baseline__head p:last-child {
+	color: var(--ink-muted);
+	font-size: 0.9375rem;
+	margin-top: var(--sp-1);
+}
+
+.local-baseline__actions {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	flex-wrap: wrap;
+}
+
+.local-baseline__message {
+	padding: var(--sp-2) var(--sp-3);
+	border-radius: var(--r-xs);
+	background: var(--surface);
+	color: var(--signal-ink);
+	font-size: 0.9375rem;
+	font-weight: 600;
+}
+
+.local-baseline__empty,
+.local-baseline__stale {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--sp-3);
+	padding: var(--sp-3) var(--sp-4);
+	border: 1px dashed var(--signal-edge);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+}
+
+.local-baseline__empty svg,
+.local-baseline__stale svg {
+	color: var(--signal-ink);
+	flex: 0 0 auto;
+	margin-top: 0.15rem;
+}
+
+.local-baseline__empty strong,
+.local-baseline__stale strong {
+	color: var(--ink-strong);
+}
+
+.local-baseline__empty p,
+.local-baseline__stale p {
+	color: var(--ink-muted);
+	font-size: 0.9375rem;
+	margin-top: var(--sp-1);
+}
+
+.local-baseline__stats {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+.local-baseline__stats > div {
+	display: grid;
+	gap: var(--sp-1);
+	padding: var(--sp-3) var(--sp-4);
+	border-left: 1px solid var(--line);
+}
+
+.local-baseline__stats > div:first-child {
+	border-left: 0;
+}
+
+.local-baseline__stats span {
+	color: var(--ink-muted);
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+
+.local-baseline__stats strong {
+	color: var(--ink-strong);
+	font-family: var(--display);
+	font-size: 1.4rem;
+}
+
+.local-baseline__stat--bad strong {
+	color: var(--sev-critical);
+}
+
+.local-baseline__stat--good strong {
+	color: oklch(0.42 0.1 160);
+}
+
+.local-baseline__changes {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--sp-4);
+}
+
+.local-baseline__changes > div {
+	padding: var(--sp-3) var(--sp-4);
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+}
+
+.local-baseline__changes h3 {
+	font-size: 0.9375rem;
+	margin-bottom: var(--sp-2);
+}
+
+.local-baseline__changes ul {
+	list-style: none;
+	padding: 0;
+	display: grid;
+	gap: var(--sp-1);
+}
+
+.local-baseline__changes button,
+.local-baseline__fixed-item {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	width: 100%;
+	padding: var(--sp-2) 0;
+	color: var(--ink);
+	font-size: 0.875rem;
+	text-align: left;
+}
+
+.local-baseline__changes button:hover {
+	color: var(--signal-ink);
+}
+
+.local-baseline__fixed-item svg {
+	color: var(--sev-pass);
+	flex: 0 0 auto;
+}
+
+@media (max-width: 720px) {
+	.local-baseline {
+		padding-inline: var(--sp-4);
+	}
+
+	.local-baseline__stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.local-baseline__stats > div:nth-child(3) {
+		border-left: 0;
+		border-top: 1px solid var(--line);
+	}
+
+	.local-baseline__stats > div:nth-child(4) {
+		border-top: 1px solid var(--line);
+	}
+
+	.local-baseline__changes {
+		grid-template-columns: 1fr;
+	}
+}
+
 /* ---- header bar: score + identity + three stats, one reading order ---- */
 .rhead {
 	display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-4) var(--sp-6);
@@ -1099,4 +1284,10 @@
 	}
 	.occ__field { grid-template-columns: 1fr; gap: var(--sp-1); }
 	.occ__field dt { padding-top: 0; }
+}
+.vrev__marker:focus {
+	outline: none;
+	stroke: var(--ink-strong);
+	stroke-width: 7px;
+	stroke-dasharray: 12 6;
 }

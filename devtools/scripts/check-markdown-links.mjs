@@ -42,6 +42,40 @@ function localTarget(rawTarget) {
 	}
 }
 
+function backtickedPath(rawTarget, file) {
+	// Changelog entries intentionally preserve paths from the release in which
+	// they existed; later removals must not rewrite that historical record.
+	if (file.endsWith('/CHANGELOG.md') || file === 'CHANGELOG.md') {
+		return null;
+	}
+
+	const target = rawTarget.trim().replace(/[.,;:]$/, '');
+	if (
+		target !== rawTarget ||
+		target.length === 0 ||
+		/\s/.test(target) ||
+		/[?*{}[\]]/.test(target) ||
+		/^(?:https?:|\/|#|--|\$)/.test(target) ||
+		!target.includes('/')
+	) {
+		return null;
+	}
+
+	const path = target.split('#', 1)[0];
+	const rootCandidate = resolve(process.cwd(), path);
+	const relativeCandidate = resolve(dirname(file), path);
+	const firstSegment = path.replace(/^\.\//, '').split('/', 1)[0];
+	const looksRootRelative = existsSync(resolve(process.cwd(), firstSegment));
+	const looksFileRelative = existsSync(resolve(dirname(file), firstSegment));
+	const explicitlyFileRelative = path.startsWith('./') || path.startsWith('../');
+
+	if (!looksRootRelative && !looksFileRelative) {
+		return null;
+	}
+
+	return explicitlyFileRelative || !looksRootRelative ? relativeCandidate : rootCandidate;
+}
+
 const failures = [];
 
 for (const file of markdownFiles()) {
@@ -70,6 +104,14 @@ for (const file of markdownFiles()) {
 			: resolve(dirname(file), target);
 		if (!existsSync(candidate)) {
 			failures.push(`${file}: ${rawTarget}`);
+		}
+	}
+
+	const prose = source.replace(/```[\s\S]*?```/g, '');
+	for (const match of prose.matchAll(/`([^`\n]+)`/g)) {
+		const candidate = backtickedPath(match[1], file);
+		if (candidate !== null && !existsSync(candidate)) {
+			failures.push(`${file}: \`${match[1]}\``);
 		}
 	}
 }

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">StageFlow social sharing card</title>
+  <desc id="desc">StageFlow frontend quality instrument branding with a score gauge and product capabilities.</desc>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#087d89" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="signal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b8f9d"/>
+      <stop offset="1" stop-color="#066d77"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#17383c" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="630" fill="#f1f7f6"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <path d="M0 518C198 474 342 492 511 540s367 74 689 10v80H0Z" fill="#dceceb"/>
+
+  <rect x="52" y="48" width="1096" height="534" rx="28" fill="#ffffff" stroke="#bfd5d3" stroke-width="2" filter="url(#shadow)"/>
+
+  <g transform="translate(94 88)">
+    <rect width="58" height="58" rx="15" fill="url(#signal)"/>
+    <path d="M14 38a17 17 0 0 1 30 0" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+    <path d="m29 34 9-13" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="29" cy="35" r="3.2" fill="#ffffff"/>
+  </g>
+  <text x="169" y="129" fill="#17262a" font-family="DejaVu Sans, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="-1">StageFlow</text>
+  <text x="1042" y="120" fill="#087d89" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="700" text-anchor="end" letter-spacing="1.4">FRONTEND QUALITY INSTRUMENT</text>
+
+  <text x="94" y="222" fill="#17262a" font-family="DejaVu Sans, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="-2.2">
+    <tspan x="94" dy="0">Find frontend regressions</tspan>
+    <tspan x="94" dy="67">before they ship.</tspan>
+  </text>
+  <text x="98" y="380" fill="#526367" font-family="DejaVu Sans, Arial, sans-serif" font-size="23">
+    Accessibility · performance · SEO · links · security · content
+  </text>
+
+  <g transform="translate(926 245)">
+    <circle cx="0" cy="0" r="91" fill="#f4f9f8" stroke="#d0e2e0" stroke-width="2"/>
+    <path d="M-61 32A69 69 0 1 1 61 32" fill="none" stroke="#dce8e7" stroke-width="14" stroke-linecap="round"/>
+    <path d="M-61 32A69 69 0 1 1 53 -44" fill="none" stroke="#087d89" stroke-width="14" stroke-linecap="round"/>
+    <text y="3" fill="#17262a" font-family="DejaVu Sans, Arial, sans-serif" font-size="48" font-weight="700" text-anchor="middle">82</text>
+    <text y="31" fill="#526367" font-family="DejaVu Sans Mono, monospace" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="1.2">SITE SCORE</text>
+  </g>
+
+  <g font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="700">
+    <g transform="translate(94 446)">
+      <rect width="154" height="46" rx="23" fill="#e5f2f1" stroke="#a9cfcc"/>
+      <circle cx="24" cy="23" r="5" fill="#087d89"/>
+      <text x="40" y="29" fill="#22565b">8 scanners</text>
+    </g>
+    <g transform="translate(263 446)">
+      <rect width="184" height="46" rx="23" fill="#e5f2f1" stroke="#a9cfcc"/>
+      <circle cx="24" cy="23" r="5" fill="#087d89"/>
+      <text x="40" y="29" fill="#22565b">Baseline diffs</text>
+    </g>
+    <g transform="translate(462 446)">
+      <rect width="210" height="46" rx="23" fill="#e5f2f1" stroke="#a9cfcc"/>
+      <circle cx="24" cy="23" r="5" fill="#087d89"/>
+      <text x="40" y="29" fill="#22565b">HTML + JSON reports</text>
+    </g>
+  </g>
+
+  <line x1="94" y1="526" x2="1106" y2="526" stroke="#d5e3e2"/>
+  <text x="94" y="558" fill="#526367" font-family="DejaVu Sans Mono, monospace" font-size="14" font-weight="700" letter-spacing="0.6">SELF-HOSTABLE · MIT LICENSED</text>
+  <text x="1106" y="558" fill="#087d89" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="700" text-anchor="end">stageflow.org</text>
+</svg>

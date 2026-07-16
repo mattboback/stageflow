@@ -9,6 +9,8 @@ export type {
 	GoalStatus,
 	InteractiveElement,
 	PagePerception,
+	PublicAgentGoal,
+	RecordedAgentAction,
 	SuccessCriterion,
 	SuggestedAction,
 	VisionConfig,

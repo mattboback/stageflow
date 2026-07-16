@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams, type MetaFunction } from 'react-router';
-import { CircleCheck, Clock, FileArchive, Info, KeyRound, Layers, Target } from 'lucide-react';
+import { Link, useNavigate, useSearchParams, type MetaFunction } from 'react-router';
+import {
+	CircleCheck,
+	Clock,
+	FileArchive,
+	FolderKanban,
+	Info,
+	KeyRound,
+	Layers,
+	Save,
+	Target
+} from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
@@ -9,9 +19,11 @@ import {
 	buildAiNavigatorConfig,
 	buildFormAuthConfig,
 	DEFAULT_AI_CONFIG,
+	estimateScanRuntime,
 	isAuthConfigComplete,
 	normalizeUrlInput,
 	validateHttpUrls,
+	validatePlaygroundConfiguration,
 	validateZipUploadFile,
 	type AiConfigState,
 	type AuthFormConfig
@@ -21,6 +33,12 @@ import { SCANNER_META, scannerLabel } from '../lib/report/scanner-identity';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
 import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
 import { buildSiteMeta, PLAYGROUND_DESCRIPTION, PLAYGROUND_TITLE } from '../lib/site-metadata';
+import { getLocalProject, saveLocalProject, saveLocalRun } from '../lib/local-project-store';
+import {
+	fingerprintProjectConfiguration,
+	type LocalProject,
+	type LocalProjectConfiguration
+} from '../lib/projects';
 import playgroundStyles from './playground.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: playgroundStyles }];
@@ -45,19 +63,88 @@ function categoryLabel(s: string): string {
 	return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
+function mergeProjectSelections(
+	catalog: ScannerDefinition[],
+	stored: ScannerSelection[]
+): ScannerSelection[] {
+	if (stored.length === 0) return getDefaultScannerSelections(catalog);
+	const storedById = new Map(stored.map((selection) => [selection.id, selection]));
+	return catalog.map((scanner) => storedById.get(scanner.id) ?? { id: scanner.id, enabled: false });
+}
+
+function preserveUnavailableProjectSelections(
+	catalog: ScannerDefinition[],
+	current: ScannerSelection[],
+	stored: ScannerSelection[]
+): ScannerSelection[] {
+	const availableIds = new Set(catalog.map((scanner) => scanner.id));
+	return [...current, ...stored.filter((selection) => !availableIds.has(selection.id))];
+}
+
+function aiStateFromSelections(selections: ScannerSelection[]): AiConfigState {
+	const config = selections.find((selection) => selection.id === 'ai-navigator')?.config;
+	const goal = config?.goal as Record<string, unknown> | undefined;
+	const vision = config?.vision as Record<string, unknown> | undefined;
+	const criteria = Array.isArray(goal?.successCriteria)
+		? goal.successCriteria.flatMap((criterion) => {
+				if (!criterion || typeof criterion !== 'object') return [];
+				const candidate = criterion as Record<string, unknown>;
+				return typeof candidate.type === 'string' && typeof candidate.value === 'string'
+					? [{ type: candidate.type, value: candidate.value }]
+					: [];
+			})
+		: [];
+
+	return {
+		objective: typeof goal?.objective === 'string' ? goal.objective : DEFAULT_AI_CONFIG.objective,
+		maxSteps: typeof goal?.maxSteps === 'number' ? goal.maxSteps : DEFAULT_AI_CONFIG.maxSteps,
+		maxWallTimeMs:
+			typeof goal?.maxWallTimeMs === 'number'
+				? goal.maxWallTimeMs
+				: DEFAULT_AI_CONFIG.maxWallTimeMs,
+		model: typeof vision?.model === 'string' ? vision.model : DEFAULT_AI_CONFIG.model,
+		inputValues: [],
+		successCriteria: criteria
+	};
+}
+
+interface PlaygroundSessionProps {
+	projectId: string | null;
+	seedUrl: string | null;
+}
+
+/**
+ * Keep execution-only form state scoped to the project query that created it.
+ *
+ * React Router reuses this route component when only the query string changes.
+ * Keying the stateful session makes a project switch (including removing the
+ * query) synchronously discard credentials, AI inputs, files, and draft form
+ * values before the next project's asynchronous load starts.
+ */
 export default function Playground() {
-	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
+	const projectId = searchParams.get('project');
+	const seedUrl = searchParams.get('url');
+	const sessionKey = projectId ? `project:${projectId}` : `standalone:${seedUrl ?? ''}`;
+
+	return <PlaygroundSession key={sessionKey} projectId={projectId} seedUrl={seedUrl} />;
+}
+
+function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
+	const navigate = useNavigate();
 
 	const [catalog, setCatalog] = useState<ScannerDefinition[]>([]);
 	const [selections, setSelections] = useState<ScannerSelection[]>([]);
 	const [catalogError, setCatalogError] = useState<string | null>(null);
 	const [catalogLoading, setCatalogLoading] = useState(true);
+	const [project, setProject] = useState<LocalProject | null>(null);
+	const [projectName, setProjectName] = useState('');
+	const [savingProject, setSavingProject] = useState(false);
+	const [projectNotice, setProjectNotice] = useState<string | null>(null);
 
 	const [mode, setMode] = useState<Mode>('url');
 	const [urls, setUrls] = useState<string[]>(() => {
-		const seed = searchParams.get('url');
-		return seed ? [seed, ''] : ['https://example.com', ''];
+		return seedUrl ? [seedUrl, ''] : ['https://example.com', ''];
 	});
 	const [file, setFile] = useState<File | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -84,10 +171,27 @@ export default function Playground() {
 
 	useEffect(() => {
 		const controller = new AbortController();
-		fetchScanners(controller.signal)
-			.then((res) => {
+		Promise.all([
+			fetchScanners(controller.signal),
+			projectId ? getLocalProject(projectId) : Promise.resolve(null)
+		])
+			.then(([res, storedProject]) => {
+				if (controller.signal.aborted) return;
 				setCatalog(res.scanners);
-				setSelections(getDefaultScannerSelections(res.scanners));
+				if (projectId && !storedProject) {
+					setProject(null);
+					setSelections(getDefaultScannerSelections(res.scanners));
+					setError('That local project was not found. It may have been deleted in this browser.');
+				} else if (storedProject) {
+					setProject(storedProject);
+					setProjectName(storedProject.name);
+					setMode('url');
+					setUrls([...storedProject.configuration.urls, '']);
+					setSelections(mergeProjectSelections(res.scanners, storedProject.configuration.scanners));
+					setAiConfig(aiStateFromSelections(storedProject.configuration.scanners));
+				} else {
+					setSelections(getDefaultScannerSelections(res.scanners));
+				}
 				setCatalogError(null);
 			})
 			.catch((err: unknown) => {
@@ -98,7 +202,7 @@ export default function Playground() {
 				if (!controller.signal.aborted) setCatalogLoading(false);
 			});
 		return () => controller.abort();
-	}, []);
+	}, [projectId]);
 
 	const enabledById = useMemo(() => {
 		const map = new Map<string, boolean>();
@@ -151,88 +255,166 @@ export default function Playground() {
 		setFile(f);
 	}
 
+	function selectionsForCurrentConfiguration(): ScannerSelection[] {
+		return isAiNavigatorEnabled
+			? selections.map((selection) =>
+					selection.id === 'ai-navigator'
+						? { ...selection, config: buildAiNavigatorConfig(aiConfig) }
+						: selection
+				)
+			: selections;
+	}
+
+	function selectionsForProjectPersistence(current: ScannerSelection[]): ScannerSelection[] {
+		return project
+			? preserveUnavailableProjectSelections(catalog, current, project.configuration.scanners)
+			: current;
+	}
+
+	function collectValidUrls(): { valid: string[]; rowErrors: Record<number, string> } {
+		const rowErrors: Record<number, string> = {};
+		const valid: string[] = [];
+		urls.forEach((raw, index) => {
+			const normalized = normalizeUrlInput(raw);
+			if (!normalized) return;
+			const result = validateHttpUrls([normalized]);
+			if (result.invalid.length > 0) {
+				rowErrors[index] = result.invalid[0].reason;
+			} else {
+				valid.push(result.valid[0]);
+			}
+		});
+		return { valid, rowErrors };
+	}
+
+	function currentProjectConfiguration(
+		validUrls: string[],
+		scanners: ScannerSelection[]
+	): LocalProjectConfiguration {
+		return {
+			urls: validUrls,
+			scanners,
+			browser: project?.configuration.browser ?? 'chromium',
+			highlightStyle: project?.configuration.highlightStyle ?? 'solid'
+		};
+	}
+
+	async function saveProjectConfiguration() {
+		if (!project) return;
+		setProjectNotice(null);
+		setError(null);
+		const { valid, rowErrors } = collectValidUrls();
+		setUrlRowErrors(rowErrors);
+		if (Object.keys(rowErrors).length > 0) return;
+		if (valid.length === 0) {
+			setError('Enter at least one URL before saving this project.');
+			return;
+		}
+		if (!projectName.trim()) {
+			setError('Give this project a name before saving.');
+			return;
+		}
+
+		setSavingProject(true);
+		try {
+			const currentSelections = selectionsForCurrentConfiguration();
+			const saved = await saveLocalProject({
+				...project,
+				name: projectName,
+				configuration: currentProjectConfiguration(
+					valid,
+					selectionsForProjectPersistence(currentSelections)
+				)
+			});
+			setProject(saved);
+			setProjectName(saved.name);
+			setProjectNotice('Project configuration saved locally.');
+		} catch (saveError) {
+			setError(saveError instanceof Error ? saveError.message : 'Could not save this project.');
+		} finally {
+			setSavingProject(false);
+		}
+	}
+
 	async function runScan() {
 		setError(null);
-		setUrlRowErrors({});
-
-		if (armed === 0) {
-			setError('Enable at least one scanner.');
-			return;
-		}
-
-		let validUrls: string[] = [];
-		if (mode === 'url') {
-			const rowErrors: Record<number, string> = {};
-			const collected: string[] = [];
-			urls.forEach((raw, i) => {
-				const normalized = normalizeUrlInput(raw);
-				if (!normalized) return;
-				const { valid, invalid } = validateHttpUrls([normalized]);
-				if (invalid.length > 0) {
-					rowErrors[i] = invalid[0].reason;
-				} else {
-					collected.push(valid[0]);
-				}
-			});
-			if (Object.keys(rowErrors).length > 0) {
-				setUrlRowErrors(rowErrors);
-				return;
+		setUrlRowErrors(validation.urlRowErrors);
+		if (!validation.ready) {
+			setError(validation.error);
+			if (validation.focusId) {
+				requestAnimationFrame(() => document.getElementById(validation.focusId ?? '')?.focus());
 			}
-			if (collected.length === 0) {
-				setError('Enter at least one URL to scan.');
-				return;
-			}
-			validUrls = collected;
-		} else if (!file) {
-			setError('Select a ZIP archive to scan.');
 			return;
 		}
 
-		if (mode === 'url' && authConfig.enabled && !isAuthValid) {
-			setError('Authentication is enabled but Login URL, username, or password is missing.');
-			return;
-		}
-
+		const validUrls = validation.validUrls;
 		const auth = mode === 'url' ? buildFormAuthConfig(authConfig) : null;
-		const scannersForSubmit =
-			isAiNavigatorEnabled && aiConfig.objective.trim()
-				? selections.map((s) =>
-						s.id === 'ai-navigator' ? { ...s, config: buildAiNavigatorConfig(aiConfig) } : s
-					)
-				: selections;
+		const scannersForSubmit = selectionsForCurrentConfiguration();
 
 		setSubmitting(true);
 		try {
+			let configFingerprint: string | null = null;
+			if (project) {
+				const runConfiguration = currentProjectConfiguration(validUrls, scannersForSubmit);
+				const savedConfiguration = currentProjectConfiguration(
+					validUrls,
+					selectionsForProjectPersistence(scannersForSubmit)
+				);
+				const saved = await saveLocalProject({
+					...project,
+					name: projectName,
+					configuration: savedConfiguration
+				});
+				setProject(saved);
+				configFingerprint = await fingerprintProjectConfiguration(runConfiguration);
+			}
 			const { job_id } = await submitScanJob({
 				mode,
 				file,
 				urls: validUrls,
 				scanners: scannersForSubmit,
-				highlightStyle: 'solid',
+				highlightStyle: project?.configuration.highlightStyle ?? 'solid',
+				engine: project?.configuration.browser ?? 'chromium',
 				auth
 			});
-			navigate(`/scan/${job_id}`);
+			if (project && configFingerprint) {
+				try {
+					await saveLocalRun({
+						jobId: job_id,
+						projectId: project.id,
+						configFingerprint,
+						status: 'submitted',
+						createdAt: new Date().toISOString()
+					});
+				} catch {
+					// The scan is already running. Preserve project context in the URL so the
+					// report can still offer a recovery path if browser storage was exhausted.
+				}
+			}
+			const projectQuery = project ? `?project=${encodeURIComponent(project.id)}` : '';
+			navigate(`/scan/${job_id}${projectQuery}`);
 		} catch (err: unknown) {
 			setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
 			setSubmitting(false);
 		}
 	}
 
-	const estSeconds = Math.max(20, armed * 6);
 	const targetCount = mode === 'url' ? urls.filter((u) => u.trim()).length : file ? 1 : 0;
-	const authBlocking = mode === 'url' && authConfig.enabled && !isAuthValid;
-	const ready = !catalogLoading && !catalogError && armed > 0 && targetCount > 0 && !authBlocking;
-	const readyDetail = catalogLoading
-		? 'Loading the scanner catalog.'
-		: armed === 0
-			? 'Enable at least one scanner.'
-			: targetCount === 0
-				? mode === 'url'
-					? 'Add at least one URL to scan.'
-					: 'Choose a ZIP archive to scan.'
-				: authBlocking
-					? 'Finish the authentication fields, or turn authentication off.'
-					: "All set! You're ready to scan.";
+	const validation = validatePlaygroundConfiguration({
+		mode,
+		urls,
+		file,
+		selections,
+		auth: authConfig,
+		ai: aiConfig,
+		aiEnabled: isAiNavigatorEnabled,
+		catalogLoading,
+		catalogError,
+		projectName: project ? projectName : undefined
+	});
+	const ready = validation.ready;
+	const readyDetail = validation.message;
+	const runtimeEstimate = estimateScanRuntime(catalog, selections, targetCount, mode);
 
 	return (
 		<>
@@ -242,14 +424,56 @@ export default function Playground() {
 				<div className="wrap wrap--app">
 					<div className="console__head">
 						<div>
-							<h1>Configure a scan</h1>
+							{project ? (
+								<>
+									<span className="console__project-label">
+										<FolderKanban size={16} aria-hidden="true" /> Local project
+									</span>
+									<label className="sr-only" htmlFor="project-name">
+										Project name
+									</label>
+									<input
+										id="project-name"
+										className="console__project-name"
+										value={projectName}
+										onChange={(event) => setProjectName(event.target.value)}
+										maxLength={80}
+									/>
+								</>
+							) : (
+								<h1>Configure a scan</h1>
+							)}
 							<p>
-								Point StageFlow at any public URL or a static-site archive, choose the scanners you
-								need, and run. No account, no install.
+								{project
+									? 'Configure repeatable URL scans here. Credentials and AI input values are prompted per run and never saved with the project.'
+									: 'Point StageFlow at any public URL or a static-site archive, choose the scanners you need, and run. No account, no install.'}
 							</p>
 						</div>
-						{submitting && <Pill variant="live">Submitting</Pill>}
+						<div className="console__head-actions">
+							{project && (
+								<>
+									<Link className="btn btn--ghost btn--sm" to="/projects">
+										All projects
+									</Link>
+									<button
+										className="btn btn--ghost btn--sm"
+										type="button"
+										onClick={() => void saveProjectConfiguration()}
+										disabled={savingProject}
+									>
+										<Save size={16} aria-hidden="true" />
+										{savingProject ? 'Saving…' : 'Save project'}
+									</button>
+								</>
+							)}
+							{submitting && <Pill variant="live">Submitting</Pill>}
+						</div>
 					</div>
+					{projectNotice && (
+						<p className="console__project-notice" role="status">
+							{projectNotice}
+						</p>
+					)}
 
 					<div className="console__grid">
 						{/* left: configuration stack */}
@@ -279,6 +503,10 @@ export default function Playground() {
 											type="button"
 											aria-pressed={mode === 'zip'}
 											onClick={() => setMode('zip')}
+											disabled={Boolean(project)}
+											title={
+												project ? 'Local projects support URL scans in this release.' : undefined
+											}
 										>
 											ZIP upload
 										</button>
@@ -292,6 +520,7 @@ export default function Playground() {
 													<div className="urlrow" key={i}>
 														<div className="urlrow__field">
 															<input
+																id={`url-input-${i}`}
 																className="input"
 																type="url"
 																value={u}
@@ -329,6 +558,7 @@ export default function Playground() {
 									) : (
 										<>
 											<button
+												id="zip-picker"
 												type="button"
 												className="drop"
 												onClick={() => fileInputRef.current?.click()}
@@ -390,7 +620,13 @@ export default function Playground() {
 											<span>{catalogError}</span>
 										</div>
 									) : (
-										<div className="rack" role="group" aria-label="Scanners">
+										<div
+											id="scanner-options"
+											className="rack"
+											role="group"
+											aria-label="Scanners"
+											tabIndex={-1}
+										>
 											{catalog.map((scanner) => {
 												const on = enabledById.get(scanner.id) ?? false;
 												const meta = SCANNER_META[scanner.id];
@@ -516,16 +752,16 @@ export default function Playground() {
 											</span>
 											<span className="sumlist__lab">
 												Estimated runtime
-												<small>Per page, scanners run in parallel</small>
+												<small>{runtimeEstimate.detail}</small>
 											</span>
-											<b className="num">~ {estSeconds}s</b>
+											<b className="num">{runtimeEstimate.label}</b>
 										</li>
 									</ul>
 									<button
 										type="button"
 										className="btn btn--primary btn--lg run"
 										onClick={runScan}
-										disabled={submitting || catalogLoading || armed === 0}
+										disabled={submitting || !ready}
 									>
 										{submitting ? 'Submitting…' : 'Run scan'}{' '}
 										{!submitting && (
@@ -559,14 +795,14 @@ export default function Playground() {
 								? '1 archive'
 								: 'No archive'}{' '}
 						· {armed} of {total || 8} scanners · auth{' '}
-						{mode === 'url' && authConfig.enabled ? (isAuthValid ? 'on' : 'incomplete') : 'off'} · ~
-						{estSeconds}s
+						{mode === 'url' && authConfig.enabled ? (isAuthValid ? 'on' : 'incomplete') : 'off'} ·{' '}
+						{runtimeEstimate.label}
 					</span>
 					<button
 						type="button"
 						className="btn btn--primary"
 						onClick={runScan}
-						disabled={submitting || catalogLoading || armed === 0}
+						disabled={submitting || !ready}
 					>
 						{submitting ? 'Submitting…' : 'Run scan'}{' '}
 						{!submitting && (

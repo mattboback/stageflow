@@ -18,7 +18,7 @@ This path gives reviewers a concrete tour of StageFlow without repeating the arc
 | How is completion decided? | `services/orchestrator/internal/domain/jobs/completion_policy.go` |
 | How do scanners share one output model? | `libs/contracts/report/schema/unified-report.v2.schema.json` |
 | How are scanner plugins resolved? | `services/scanner-runner/src/scanners/registry.ts` |
-| How does the CLI stream and gate results? | `clients/cli/internal/command/scan_job.go`, `clients/cli/internal/jobstream/`, `clients/cli/internal/render/` |
+| How does the CLI stream and gate results? | `clients/cli/internal/scanflow/scanflow.go`, `clients/cli/internal/jobstream/`, `clients/cli/internal/render/` |
 | How does the report support human review? | `clients/web/app/components/report/` and `clients/web/e2e/report.spec.ts` |
 | How are regressions proven end to end? | `qa/e2e/project-scan-golden.sh` and `qa/fixtures/project-golden/` |
 

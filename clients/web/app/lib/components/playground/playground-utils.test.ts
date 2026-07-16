@@ -1,5 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeUrlInput, validateHttpUrls } from './playground-utils';
+import {
+	DEFAULT_AI_CONFIG,
+	estimateScanRuntime,
+	normalizeUrlInput,
+	validateHttpUrls,
+	validatePlaygroundConfiguration,
+	type AuthFormConfig
+} from './playground-utils';
+import type { ScannerDefinition, ScannerSelection } from '../../types/scan';
+
+const auth: AuthFormConfig = {
+	enabled: false,
+	loginUrl: '',
+	username: '',
+	password: '',
+	usernameSelector: '',
+	passwordSelector: '',
+	submitSelector: '',
+	successStrategy: 'auto',
+	successSelector: ''
+};
+const selections: ScannerSelection[] = [{ id: 'axe', enabled: true }];
+
+function scanner(id: string, estimatedTimePerPage?: number): ScannerDefinition {
+	return {
+		id,
+		name: id,
+		version: '1',
+		description: '',
+		categories: [],
+		aliases: [],
+		enabled: true,
+		builtIn: true,
+		capabilities: {
+			outputFormats: [],
+			supportsScreenshots: false,
+			supportsConcurrency: true,
+			requiresBrowser: false,
+			supportsOffline: true,
+			maxConcurrency: 1,
+			estimatedTimePerPage
+		}
+	};
+}
 
 describe('normalizeUrlInput', () => {
 	it('normalizes URLs correctly', () => {
@@ -46,5 +89,81 @@ describe('validateHttpUrls', () => {
 			{ url: 'https://not-a-url', reason: 'Hostname must contain a dot or be localhost.' },
 			{ url: 'http://invalid-host', reason: 'Hostname must contain a dot or be localhost.' }
 		]);
+	});
+});
+
+describe('validatePlaygroundConfiguration', () => {
+	it('returns the normalized URLs used by the submitted payload', () => {
+		const result = validatePlaygroundConfiguration({
+			mode: 'url',
+			urls: [' example.com ', ''],
+			file: null,
+			selections,
+			auth,
+			ai: DEFAULT_AI_CONFIG,
+			aiEnabled: false
+		});
+		expect(result.ready).toBe(true);
+		expect(result.validUrls).toEqual(['https://example.com']);
+	});
+
+	it('blocks invalid targets, incomplete form auth, and invalid AI bounds', () => {
+		const invalidUrl = validatePlaygroundConfiguration({
+			mode: 'url',
+			urls: ['ftp://example.com'],
+			file: null,
+			selections,
+			auth,
+			ai: DEFAULT_AI_CONFIG,
+			aiEnabled: false
+		});
+		expect(invalidUrl.focusId).toBe('url-input-0');
+
+		const incompleteAuth = validatePlaygroundConfiguration({
+			mode: 'url',
+			urls: ['https://example.com'],
+			file: null,
+			selections,
+			auth: { ...auth, enabled: true, loginUrl: 'https://example.com/login' },
+			ai: DEFAULT_AI_CONFIG,
+			aiEnabled: false
+		});
+		expect(incompleteAuth.focusId).toBe('auth-username');
+
+		const invalidAi = validatePlaygroundConfiguration({
+			mode: 'url',
+			urls: ['https://example.com'],
+			file: null,
+			selections: [{ id: 'ai-navigator', enabled: true }],
+			auth,
+			ai: { ...DEFAULT_AI_CONFIG, objective: 'Checkout', maxSteps: 51 },
+			aiEnabled: true
+		});
+		expect(invalidAi.focusId).toBe('ai-max-steps');
+	});
+});
+
+describe('estimateScanRuntime', () => {
+	it('uses the slowest parallel scanner and target count to show a range', () => {
+		const estimate = estimateScanRuntime(
+			[scanner('axe', 5_000), scanner('lighthouse', 30_000)],
+			[
+				{ id: 'axe', enabled: true },
+				{ id: 'lighthouse', enabled: true }
+			],
+			2,
+			'url'
+		);
+		expect(estimate).toEqual({
+			label: '48s–1m 30s',
+			detail: '2 pages; scanners run in parallel'
+		});
+	});
+
+	it('does not invent a numeric estimate for archives or missing catalog data', () => {
+		expect(estimateScanRuntime([], selections, 1, 'zip').label).toBe('Varies by archive');
+		expect(estimateScanRuntime([scanner('axe')], selections, 1, 'url').label).toBe(
+			'Varies by site'
+		);
 	});
 });

@@ -35,6 +35,11 @@ body:
   - type: textarea
     id: evidence
     attributes:
-      label: Logs or screenshots
-      description: Paste the most relevant output, stack trace, or screenshot.
+      label: Logs
+      description: Paste the smallest relevant output or stack trace. Remove tokens, credentials, private URLs, and personal data first.
       render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or report evidence
+      description: Drag in screenshots or link an expiring, sanitized report when the problem is visual. Do not upload sensitive authenticated-page content.

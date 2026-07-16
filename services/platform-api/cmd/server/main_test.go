@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,9 +12,65 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
+	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 )
+
+type fakeBaselineMaintainer struct {
+	err               error
+	reconcilerStarted bool
+}
+
+func (f *fakeBaselineMaintainer) ReconcileProjectBaselines(
+	context.Context,
+) (api.BaselineReconcileSummary, error) {
+	return api.BaselineReconcileSummary{JournalReplayed: 2}, f.err
+}
+
+func (f *fakeBaselineMaintainer) StartBaselineReconciler(context.Context) {
+	f.reconcilerStarted = true
+}
+
+func TestStartBaselineMaintenanceStartsRetryLoopAfterTransientFailure(t *testing.T) {
+	t.Parallel()
+
+	expected := errors.New("temporary object-store failure")
+	maintainer := &fakeBaselineMaintainer{err: expected}
+
+	summary, err := startBaselineMaintenance(context.Background(), maintainer)
+	if !errors.Is(err, expected) {
+		t.Fatalf("reconciliation error = %v, want %v", err, expected)
+	}
+
+	if summary.JournalReplayed != 2 {
+		t.Fatalf("reconciliation summary = %#v", summary)
+	}
+
+	if !maintainer.reconcilerStarted {
+		t.Fatal("background reconciler was not started after degraded startup")
+	}
+}
+
+func TestStartHTTPServerReturnsBindFailure(t *testing.T) {
+	t.Parallel()
+
+	occupied, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve port: %v", err)
+	}
+	defer occupied.Close()
+
+	server := &http.Server{
+		Addr:              occupied.Addr().String(),
+		Handler:           http.NewServeMux(),
+		ReadHeaderTimeout: time.Second,
+	}
+
+	if _, startErr := startHTTPServer(server); startErr == nil {
+		t.Fatal("startHTTPServer() error = nil, want occupied-port error")
+	}
+}
 
 type fakeStatusEventSubscriber struct {
 	err    error

@@ -188,8 +188,8 @@ func TestEnsureBuckets_DoesNotCreateWhenExists(t *testing.T) {
 		t.Fatalf("EnsureBuckets: %v", err)
 	}
 
-	if got := len(fake.bucketExistsBuckets); got != 2 {
-		t.Fatalf("expected 2 BucketExists calls, got %d", got)
+	if got := len(fake.bucketExistsBuckets); got != 3 {
+		t.Fatalf("expected 3 BucketExists calls, got %d", got)
 	}
 
 	if len(fake.makeBucketBuckets) != 0 {
@@ -207,8 +207,8 @@ func TestEnsureBuckets_CreatesMissingBuckets(t *testing.T) {
 		t.Fatalf("EnsureBuckets: %v", err)
 	}
 
-	if got := len(fake.makeBucketBuckets); got != 2 {
-		t.Fatalf("expected 2 MakeBucket calls, got %d", got)
+	if got := len(fake.makeBucketBuckets); got != 3 {
+		t.Fatalf("expected 3 MakeBucket calls, got %d", got)
 	}
 }
 
@@ -406,6 +406,30 @@ func TestDeleteFile_WrapsErrors(t *testing.T) {
 	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
 	if err := client.DeleteFile(context.Background(), "bucket", "path"); err == nil {
 		t.Fatalf("expected error")
+	}
+}
+
+func TestDeleteFile_MissingObjectDeleteIsIdempotent(t *testing.T) {
+	// S3/MinIO DeleteObject succeeds when the key is already absent. Keeping
+	// that behavior at this adapter boundary lets durable cleanup safely replay
+	// after a crash between object deletion and journal commit.
+	fake := &fakeMinioClient{
+		RemoveObjectFn: func(_ context.Context, _, _ string, _ minio.RemoveObjectOptions) error {
+			return nil
+		},
+	}
+	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
+
+	if err := client.DeleteFile(context.Background(), "scanner-baselines", "missing/report.json"); err != nil {
+		t.Fatalf("first missing-object delete: %v", err)
+	}
+
+	if err := client.DeleteFile(context.Background(), "scanner-baselines", "missing/report.json"); err != nil {
+		t.Fatalf("replayed missing-object delete: %v", err)
+	}
+
+	if fake.removeObjectCalls != 2 {
+		t.Fatalf("remove calls = %d, want 2", fake.removeObjectCalls)
 	}
 }
 

@@ -85,6 +85,11 @@ stageflow project promote marketing-site --job-id <id>  # accept a run as the ne
 
 The full lifecycle, a CI gate snippet, and auth details are in the [CLI guide](docs/cli.md#projects-and-baselines).
 
+Prefer the browser? The `/projects` workspace keeps named projects, completed
+runs, and manually promoted baselines in your browser's IndexedDB. It requires
+no StageFlow account and performs no cloud sync; clearing site data removes that
+local project history.
+
 ## Going Deeper
 
 - **CLI workflows** — one-off scans, local dev loops, registered projects, baselines, and CI gates: [docs/cli.md](docs/cli.md).

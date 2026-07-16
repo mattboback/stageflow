@@ -66,6 +66,26 @@ ALTER TABLE jobs ADD COLUMN IF NOT EXISTS expected_scanners TEXT;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS completed_scanners TEXT;
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS scanner_results TEXT;
 
+-- Scanner launch ownership is persisted separately from scanner results so a
+-- process restart can distinguish work that was never claimed, work that may
+-- already have created a deterministic Podman container, and work that was
+-- fully launched. The row survives until the parent job is deleted.
+CREATE TABLE IF NOT EXISTS scanner_launches (
+    job_id TEXT NOT NULL,
+    scanner_type TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'pending',
+    container_id TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    claimed_at TIMESTAMP,
+    launched_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (job_id, scanner_type),
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+    CHECK (state IN ('pending', 'launching', 'launched', 'failed'))
+);
+
 -- Job events table logs all events for a job.
 CREATE TABLE IF NOT EXISTS job_events (
     id BIGSERIAL PRIMARY KEY,
@@ -119,6 +139,13 @@ CREATE TABLE IF NOT EXISTS terminal_events (
     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
 );
 
+-- One-time, idempotent data migrations that require application-level JSON
+-- sanitization rather than a static SQL ALTER statement.
+CREATE TABLE IF NOT EXISTS maintenance_migrations (
+    name TEXT PRIMARY KEY,
+    completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_completed_at ON jobs(completed_at);
@@ -126,3 +153,4 @@ CREATE INDEX IF NOT EXISTS idx_job_events_job_id ON job_events(job_id);
 CREATE INDEX IF NOT EXISTS idx_job_events_job_id_timestamp ON job_events(job_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_job_events_timestamp ON job_events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_terminal_events_unpublished ON terminal_events(published_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_scanner_launches_state ON scanner_launches(state, updated_at);

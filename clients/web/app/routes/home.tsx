@@ -9,8 +9,13 @@ import { Pill } from '../components/Pill';
 import { normalizeUrlInput, validateHttpUrls } from '../lib/components/playground/playground-utils';
 import {
 	buildSiteMeta,
+	DOCS_URL,
+	GITHUB_URL,
 	HOME_DESCRIPTION,
 	HOME_TITLE,
+	IS_HOSTED_DEMO,
+	SITE_NAME,
+	SITE_TAGLINE,
 	SITE_URL
 } from '../lib/site-metadata';
 import homeStyles from './home.css?url';
@@ -26,7 +31,7 @@ export const meta: MetaFunction = () => [
 		'script:ld+json': {
 			'@context': 'https://schema.org',
 			'@type': 'SoftwareApplication',
-			name: 'StageFlow',
+			name: SITE_NAME,
 			url: SITE_URL,
 			applicationCategory: 'DeveloperApplication',
 			description: HOME_DESCRIPTION
@@ -106,10 +111,16 @@ export default function Home() {
 								<span className="verdict">worse</span>.
 							</h1>
 							<p className="hero__lede">
-								StageFlow runs eight scanners, compares against a baseline, and shows you exactly
-								what regressed. Self-hosted and open source. Paste a URL and get a real report in
-								seconds.
+								{SITE_NAME} runs eight scanners, compares releases against your known-good
+								baseline, and shows exactly what regressed. Local projects work without an
+								account and stay in your browser.
 							</p>
+							<div className="hero__actions">
+								<Link className="btn btn--primary btn--lg" to="/projects">
+									Create a local project <span aria-hidden="true">→</span>
+								</Link>
+								<span>or run a one-off scan</span>
+							</div>
 							<form className="scanbar" onSubmit={onScan} noValidate>
 								<label className="sr-only" htmlFor="url">
 									URL to scan
@@ -136,7 +147,7 @@ export default function Home() {
 										</span>
 									)}
 								</div>
-								<button className="btn btn--primary btn--lg" type="submit">
+								<button className="btn btn--ghost btn--lg" type="submit">
 									Configure & run{' '}
 									<span className="ar" aria-hidden="true">
 										→
@@ -181,9 +192,9 @@ export default function Home() {
 												</span>
 											</li>
 										</ul>
-										<span className="preview__reg-cta">
+										<Link className="preview__reg-cta" to="/projects">
 											View evidence <span aria-hidden="true">→</span>
-										</span>
+										</Link>
 									</div>
 								</div>
 							</div>
@@ -197,7 +208,7 @@ export default function Home() {
 						<div className="baseline__intro">
 							<h2 id="baseline-heading">The baseline idea</h2>
 							<p>
-								StageFlow gives every scan a point of reference, so changes are clear and
+								{SITE_NAME} gives every scan a point of reference, so changes are clear and
 								actionable.
 							</p>
 						</div>
@@ -246,8 +257,8 @@ export default function Home() {
 							))}
 						</ol>
 						<div className="path__actions">
-							<Link className="btn btn--primary" to="/playground">
-								Configure a scan{' '}
+							<Link className="btn btn--primary" to="/projects">
+								Create a local project{' '}
 								<span className="ar" aria-hidden="true">
 									→
 								</span>
@@ -308,10 +319,11 @@ export default function Home() {
 
 						<div className="panel selfhost">
 							<div className="panel__body">
-								<h2>Self-hosted. CLI first. Built for teams.</h2>
+								<h2>{SITE_TAGLINE}.</h2>
 								<p className="muted">
-									StageFlow runs in your infrastructure and your data stays with you. Use the UI for
-									exploration or the CLI for automation.
+									{IS_HOSTED_DEMO
+										? `This hosted ${SITE_NAME} demo processes submitted targets and scan data. Self-host it when data residency matters.`
+										: `${SITE_NAME} processes scans in your deployment. Use the UI for exploration or the CLI for automation.`}
 								</p>
 								<ul className="selfhost__list">
 									<li>
@@ -336,14 +348,14 @@ export default function Home() {
 								<div className="selfhost__actions">
 									<a
 										className="btn btn--primary"
-										href="https://github.com/mattboback/stageflow/tree/main/docs"
+										href={DOCS_URL}
 									>
 										Documentation{' '}
 										<span className="ar" aria-hidden="true">
 											→
 										</span>
 									</a>
-									<a className="btn btn--ghost" href="https://github.com/mattboback/stageflow">
+									<a className="btn btn--ghost" href={GITHUB_URL}>
 										GitHub ↗
 									</a>
 								</div>

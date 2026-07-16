@@ -40,6 +40,7 @@ type PodmanClient interface {
 	CreateVolume(ctx context.Context, name string) error
 	InspectVolume(ctx context.Context, name string) (*podman.VolumeInfo, error)
 	CreateContainer(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
+	InspectContainer(ctx context.Context, containerID string) (*podman.ContainerInfo, error)
 	StartContainer(ctx context.Context, containerID string) error
 	WaitContainer(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error)
 	GetContainerLogs(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
@@ -55,6 +56,7 @@ type Orchestrator struct {
 	publisher            Publisher
 	scannerRegistry      *scanners.Registry
 	monitorWG            sync.WaitGroup
+	maintenanceWG        sync.WaitGroup
 	natsURL              string
 	minioEndpoint        string
 	minioAccessKey       string
@@ -79,6 +81,7 @@ type Orchestrator struct {
 	storage              storage.Client // Full storage access for report generation
 	deadlinePollInterval time.Duration
 	deadlineSweepOnce    sync.Once
+	lifecycleCtx         context.Context
 	metrics              *metrics.Collector
 }
 
@@ -238,16 +241,30 @@ func (o *Orchestrator) Start(ctx context.Context) {
 	}
 
 	o.deadlineSweepOnce.Do(func() {
-		go o.startDeadlineSweeper(ctx)
+		o.lifecycleCtx = ctx
+
+		if err := o.newService().ReconcileScanningJobs(ctx); err != nil {
+			slog.Warn("Scanner launch startup reconciliation failed", "error", err)
+		}
+
+		o.maintenanceWG.Add(1)
+
+		go func() {
+			defer o.maintenanceWG.Done()
+
+			o.startDeadlineSweeper(ctx)
+		}()
 	})
 }
 
-// WaitForMonitors blocks until all container monitor goroutines have returned.
-// This is primarily intended for tests to avoid schema teardown races.
+// WaitForMonitors blocks until container monitors and background maintenance
+// goroutines have returned. This is primarily intended for tests and graceful
+// shutdown paths to avoid database teardown races.
 func (o *Orchestrator) WaitForMonitors() {
 	if o == nil {
 		return
 	}
 
 	o.monitorWG.Wait()
+	o.maintenanceWG.Wait()
 }

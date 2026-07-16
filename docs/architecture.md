@@ -99,7 +99,7 @@ All long-running containers and per-job pods run rootless with `no-new-privilege
 
 The public HTTP boundary. Every request passes a middleware stack of logging → CORS → API-key auth → rate limiting → timeout (SSE excepted). It validates intake (request shape, URL count ≤ 100, SSRF classification, scanner configs against manifests), publishes `job.created` to NATS, and answers status queries from an event-sourced SQLite projection updated by job events. It also owns project CRUD, baseline promotion, and the on-demand diff engine (`libs/go/diff`). Key surfaces:
 
-- `POST /api/v1/jobs/urls`, `POST /api/v1/jobs/urls/anonymous`, and `POST /api/v1/jobs/zip` — intake; only the caller-authenticated URL route accepts auth recipes
+- `POST /api/v1/jobs/urls`, `POST /api/v1/jobs/urls/anonymous`, `POST /api/v1/jobs/urls/browser-auth`, and `POST /api/v1/jobs/zip` — intake; the browser-auth route is the deliberately narrow public form-login flow, while storage state and environment references require a caller API key
 - `GET /api/v1/jobs/{id}` / `…/stream` (SSE) / `…/report` / `…/results` / `…/diff`
 - `GET|POST|PATCH|DELETE /api/v1/projects…`, `POST …/{slug}/scan`, `POST …/{slug}/promote`
 - `GET /api/v1/scanners`, unauthenticated `GET /healthz`
@@ -149,7 +149,7 @@ Every message is an envelope — `event`, `job_id`, optional `request_id`/`run_i
 ### URL Job Flow
 
 ```
-Client ── POST /api/v1/jobs/urls[/anonymous] {urls, modules} ──► Platform API
+Client ── POST /api/v1/jobs/urls[/anonymous|/browser-auth] {urls, modules} ──► Platform API
   │  validate shape → SSRF-check each URL → normalize modules
   │  → validate scanner configs → publish job.created
   │  → seed PENDING status projection → return {job_id}
@@ -263,7 +263,7 @@ It calls OpenRouter over raw HTTP (no vendor SDK), with image compression, a con
 
 Four nested trust boundaries, outermost first:
 
-1. **Edge proxy** — Caddy (`infra/caddy/Caddyfile`): TLS termination, security headers, server-side credential injection for anonymous job/report/SSE routes, and routing (`/api/*` → platform-api, `/scanner-artifacts/*` → MinIO, `/monitoring*` → Grafana, `/*` → frontend). Project, baseline, and auth-capable URL submission routes require a caller-provided API key; the separate anonymous URL endpoint rejects every auth recipe. The reference config relies on the Platform API's trusted-proxy-aware limiter; operators may add a shared edge limiter for multi-instance or higher-risk deployments.
+1. **Edge proxy** — Caddy (`infra/caddy/Caddyfile`): TLS termination, security headers, server-side credential injection for an exact allowlist of browser submission, job/report/SSE, and scanner-catalog routes, plus routing (`/api/*` → platform-api, `/scanner-artifacts/*` → MinIO, `/monitoring*` → Grafana, `/*` → frontend). Project, baseline, diff, caller-authenticated URL submission, and all unmatched API routes require a caller-provided API key. The anonymous endpoint rejects every auth recipe; the browser-auth endpoint accepts only literal form steps and rejects storage state, environment references, and private targets. Both share the Platform API's trusted-proxy-aware public-submission limiter. Operators may add a shared edge limiter for multi-instance or higher-risk deployments.
 2. **API intake** — scheme validation (http/https only), SSRF classification (below), request size limits (2MB URL submissions, 100MB ZIP), URL count ≤ 100 and length ≤ 2048, API-key middleware, rate limiting, timeouts.
 3. **Archive extraction** — the ZIP safety controls listed under [Archive Extractor](#archive-extractor-servicesarchive-extractor), in an isolated workspace.
 4. **Scanner runtime** — per-job rootless Podman pods, `no-new-privileges:true`, resource limits, scanner identity validated against its manifest, `SCANNER_OPTIONS` schema-validated, artifact upload only through storage interfaces.
@@ -282,7 +282,7 @@ Validation resolves the hostname via DNS and rejects if _any_ resolved IP is blo
 
 ### Additional Measures
 
-`gitleaks` on every commit and in CI, `govulncheck` across all Go modules, `bun audit --audit-level=high`; container log rotation limits; MinIO credential aliasing; request timeouts on every endpoint except SSE.
+`gitleaks` on every commit and in CI, `govulncheck` across all Go modules, a moderate-level scanner dependency audit with the exact documented OpenTelemetry compatibility exception, and a high-level web dependency audit; container log rotation limits; MinIO credential aliasing; request timeouts on every endpoint except SSE.
 
 ---
 
@@ -290,19 +290,19 @@ Validation resolves the hostname via DNS and rejects if _any_ resolved IP is blo
 
 StageFlow can scan behind a login by attaching an optional `auth` block to a job's Provenance — a discriminated union with two modes:
 
-- **`form`** — a login URL plus recorded steps (`fill`/`click`) whose values must use `{from_env: NAME}` references, and a success condition. The public CLI and API reject literal values so credentials cannot enter durable job configuration. References are resolved only inside the scanner-runner, against an allow-list derived from the recipe itself.
+- **`form`** — a login URL plus recorded steps (`fill`/`click`) and a success condition. Caller-authenticated API and CLI workflows should use `{from_env: NAME}` references, resolved only inside the scanner-runner against an allow-list derived from the recipe. The public web browser-auth endpoint accepts literal values for throwaway demo accounts; it rejects environment references, storage state, and private targets.
 - **`storage_state`** — an `artifact_key` pointing at captured Playwright storage-state JSON under the job's MinIO prefix.
 
 The credential-handling invariants are the point of the design:
 
-- `stageflow auth capture` on the developer machine is the **only** flow that ever sees a real password; it writes storage-state locally with mode 0600.
+- `stageflow auth capture` writes storage state locally with mode 0600, keeping the password itself out of the CLI and API. The optional public web form-login flow is a separate, explicitly warned path that does receive literal credentials.
 - The Platform API validates shape and size (1 MiB cap), uploads storage-state bytes to MinIO, and publishes only the artifact key — it never resolves a credential.
 - The orchestrator walks `form` steps for `from_env` references and forwards **exactly those** env-var names into the scanner pod; everything else in the host environment stays out. Unresolved references fail fast before the pod starts. Event audit rows redact any inline content.
 - The scanner-runner hydrates auth once per scanner (downloading storage-state to mode-0600 workspace files, or replaying the form recipe with the allow-listed secrets resolver), keeps resolved values in process memory only, applies the SSRF policy to the login URL and every subsequent navigation, and deletes credential files in `cleanup()`.
-- Resolved credentials never appear in stored Provenance, the unified report, stage logs, or NATS events. The storage-state object is deleted when the job reaches `DONE`/`FAILED` and is never exposed through the public artifact surface.
+- Resolved credentials never appear in public Provenance, the unified report, stage logs, screenshots of sensitive controls, or terminal database event records. The public form-login recipe necessarily crosses the file-backed `job.created` JetStream message (configured with a 72-hour maximum age) and stays in the live job configuration until terminal cleanup scrubs it. The storage-state object is deleted when the job reaches `DONE`/`FAILED` and is never exposed through the public artifact surface.
 - Hydration failure surfaces a `critical` `auth-hydration-failed` issue and skips that scanner's pages rather than scanning the logged-out surface silently.
 
-Implementation: `services/scanner-runner/src/core/{auth-hydrator,secrets-resolver,page-iterator}.ts`, `clients/cli/internal/command/cobra_auth.go` + `clients/cli/internal/authintake/`, the orchestrator's `scanner_launch_planner.go`, and the shared `from_env` walker `libs/go/provenance/auth.go` (a direct port of the TS resolver, kept in sync by fixture-driven tests).
+Implementation: `services/scanner-runner/src/core/{auth-hydrator,secrets-resolver,page-iterator}.ts`, `clients/cli/cobra_auth.go` + `clients/cli/internal/authintake/`, the orchestrator's `scanner_launch_planner.go`, and the shared `from_env` walker `libs/go/provenance/auth.go` (a direct port of the TS resolver, kept in sync by fixture-driven tests).
 
 ---
 

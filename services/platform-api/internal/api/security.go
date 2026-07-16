@@ -12,7 +12,6 @@ import (
 )
 
 type targetHost struct {
-	raw  string
 	host string
 }
 
@@ -73,16 +72,23 @@ func parseTargetURL(raw string) (*targetHost, error) {
 
 	u, err := url.Parse(trimmed)
 	if err != nil {
-		return nil, fmt.Errorf("invalid URL: %s", trimmed)
+		return nil, errors.New("invalid URL")
+	}
+
+	if u.User != nil {
+		// Embedded credentials are persisted as part of the submitted URL and can
+		// surface in browser errors. Require the dedicated auth recipe instead and
+		// never echo the rejected credential-bearing URL in the response.
+		return nil, errors.New("URL must not include embedded credentials")
 	}
 
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return nil, fmt.Errorf("unsupported URL scheme for %s (only http/https allowed)", trimmed)
+		return nil, errors.New("unsupported URL scheme (only http/https allowed)")
 	}
 
 	host := u.Host
 	if host == "" {
-		return nil, fmt.Errorf("URL missing host: %s", trimmed)
+		return nil, errors.New("URL missing host")
 	}
 
 	if h, _, splitErr := net.SplitHostPort(host); splitErr == nil {
@@ -91,15 +97,12 @@ func parseTargetURL(raw string) (*targetHost, error) {
 
 	host = strings.Trim(host, "[]")
 
-	return &targetHost{
-		raw:  trimmed,
-		host: host,
-	}, nil
+	return &targetHost{host: host}, nil
 }
 
 func validateHost(ctx context.Context, resolver ipAddrResolver, target *targetHost, mode targetValidationMode) error {
 	if ip := net.ParseIP(target.host); ip != nil {
-		return ensureAllowedIP(target.raw, target.host, ip, mode)
+		return ensureAllowedIP(target.host, ip, mode)
 	}
 
 	return resolveAndValidate(ctx, resolver, target, mode)
@@ -125,9 +128,9 @@ func resolveAndValidate(
 	return nil
 }
 
-func ensureAllowedIP(raw, host string, ip net.IP, mode targetValidationMode) error {
+func ensureAllowedIP(host string, ip net.IP, mode targetValidationMode) error {
 	if !isAllowedTargetIP(ip, mode) {
-		return fmt.Errorf("URL host %s for %s resolves to a disallowed address", host, raw)
+		return fmt.Errorf("URL host %s resolves to a disallowed address", host)
 	}
 
 	return nil

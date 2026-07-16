@@ -143,3 +143,54 @@ func TestStartJobEventsPruner_PrunesInBackground(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 }
+
+func TestStopBackgroundTasksCancelsAndJoinsWorkers(t *testing.T) {
+	t.Parallel()
+
+	database := &Database{}
+	started := make(chan struct{})
+	canceled := make(chan struct{})
+	release := make(chan struct{})
+
+	if err := database.startBackgroundTask(context.Background(), func(ctx context.Context) {
+		close(started)
+		<-ctx.Done()
+		close(canceled)
+		<-release
+	}); err != nil {
+		t.Fatalf("startBackgroundTask() error = %v", err)
+	}
+
+	<-started
+
+	returned := make(chan struct{})
+
+	go func() {
+		database.StopBackgroundTasks()
+		close(returned)
+	}()
+
+	select {
+	case <-canceled:
+	case <-time.After(time.Second):
+		t.Fatal("StopBackgroundTasks did not cancel the worker")
+	}
+
+	select {
+	case <-returned:
+		t.Fatal("StopBackgroundTasks returned before the worker exited")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	close(release)
+
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		t.Fatal("StopBackgroundTasks did not return after the worker exited")
+	}
+
+	if err := database.startBackgroundTask(context.Background(), func(context.Context) {}); err == nil {
+		t.Fatal("startBackgroundTask() succeeded after shutdown")
+	}
+}
