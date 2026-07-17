@@ -51,11 +51,53 @@ type ContainerCreateResponse struct {
 }
 
 // ContainerInfo is a reduced Podman inspect view used for status and labels.
+type ContainerState string
+
+func (s *ContainerState) UnmarshalJSON(data []byte) error {
+	var value string
+	if err := json.Unmarshal(data, &value); err == nil {
+		*s = ContainerState(value)
+
+		return nil
+	}
+
+	var object struct {
+		Status string `json:"Status"`
+	}
+	if err := json.Unmarshal(data, &object); err != nil {
+		return fmt.Errorf("decode container state: %w", err)
+	}
+
+	*s = ContainerState(object.Status)
+
+	return nil
+}
+
+func (s ContainerState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(s))
+}
+
 type ContainerInfo struct {
-	ID     string `json:"Id"`
-	Name   string `json:"Name"`
-	State  string `json:"State"`
-	Status string `json:"Status"`
+	ID     string            `json:"Id"`
+	Name   string            `json:"Name"`
+	State  ContainerState    `json:"State"`
+	Status string            `json:"Status"`
+	Labels map[string]string `json:"Labels,omitempty"`
+	Config struct {
+		Labels map[string]string `json:"Labels,omitempty"`
+	} `json:"Config,omitempty"`
+}
+
+func (c *ContainerInfo) labels() map[string]string {
+	if c == nil {
+		return nil
+	}
+
+	if len(c.Labels) > 0 {
+		return c.Labels
+	}
+
+	return c.Config.Labels
 }
 
 // ContainerWaitResponse mirrors Podman's wait output for exit status checks.

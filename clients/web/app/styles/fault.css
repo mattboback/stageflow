@@ -1,4 +1,6 @@
-/* ---- page-local: 404 fault readout ---- */
+/* ---- fault readout: 404 page and route error boundaries ----
+   Imported statically from root.tsx so the styles are available even when a
+   route module fails before its own links() stylesheets apply. */
 .fault { min-height: calc(100dvh - 61px); display: grid; place-items: center; padding: 3rem 1.5rem; }
 .fault__panel { width: 100%; max-width: 32rem; }
 .fault__top { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1.1rem; border-bottom: 1px solid var(--line); }

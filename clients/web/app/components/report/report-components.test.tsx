@@ -1,9 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { createRoutesStub } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import { loadAllScansFixture } from '../../test/load-fixture';
 import { scannerLabel } from '../../lib/report';
+import type { UnifiedReport } from '../../lib/types/unified-report';
 
+import { AllClearBanner } from './AllClearBanner';
 import { IssueRowCard } from './IssueRowCard';
 import { ReportHeader } from './ReportHeader';
 import { ReportStatStrip } from './ReportStatStrip';
@@ -12,6 +15,12 @@ import { ManualReviewTab } from './verify/ManualReviewTab';
 import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
 const report = loadAllScansFixture();
+const zeroSeverity: UnifiedReport['summary']['bySeverity'] = {
+	critical: 0,
+	serious: 0,
+	moderate: 0,
+	minor: 0
+};
 
 describe('ReportHeader', () => {
 	it('renders the title and scan totals from the fixture', () => {
@@ -32,6 +41,56 @@ describe('ReportHeader', () => {
 		const totals = screen.getByLabelText('Scan totals');
 		expect(totals.textContent).toContain('all 2 findings reviewed');
 		expect(totals.textContent).not.toContain('need a human check');
+	});
+
+	it('reads "nothing to fix" instead of severity counts on a clean report', () => {
+		const clean: UnifiedReport = {
+			...report,
+			issues: [],
+			summary: { ...report.summary, totalIssues: 0, bySeverity: zeroSeverity }
+		};
+		render(<ReportHeader report={clean} reviewProgress={{ total: 0, reviewed: 0, pending: 0 }} />);
+
+		const totals = screen.getByLabelText('Scan totals');
+		expect(totals.textContent).toContain('nothing to fix');
+		expect(totals.textContent).not.toContain('critical');
+	});
+});
+
+describe('AllClearBanner', () => {
+	function cleanReport(errors: UnifiedReport['errors'] = []): UnifiedReport {
+		return {
+			...report,
+			issues: [],
+			errors,
+			summary: { ...report.summary, totalIssues: 0, pagesWithIssues: 0, bySeverity: zeroSeverity }
+		};
+	}
+
+	function renderBanner(clean: UnifiedReport) {
+		const Stub = createRoutesStub([
+			{ path: '/', Component: () => <AllClearBanner report={clean} /> }
+		]);
+		return render(<Stub initialEntries={['/']} />);
+	}
+
+	it('celebrates a clean run and offers a next scan', () => {
+		renderBanner(cleanReport());
+
+		expect(screen.getByRole('heading', { name: 'All clear.' })).toBeTruthy();
+		expect(screen.getByText('0 findings')).toBeTruthy();
+		expect(screen.getByRole('link', { name: /Run another scan/ })).toBeTruthy();
+		expect(screen.queryByText(/check the Artifacts tab/)).toBeNull();
+	});
+
+	it('flags report errors before recommending the run as a baseline', () => {
+		renderBanner(
+			cleanReport([
+				{ scope: 'scanner', scannerId: 'axe', code: 'timeout', message: 'timed out', retryable: true }
+			])
+		);
+
+		expect(screen.getByText(/One report error was noted/)).toBeTruthy();
 	});
 });
 

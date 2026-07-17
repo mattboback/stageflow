@@ -157,6 +157,24 @@ type requestOptions struct {
 	longPoll bool
 }
 
+// APIError preserves the Podman HTTP status so idempotent runtime operations
+// can distinguish a missing resource or create race from an infrastructure
+// failure without parsing error strings.
+type APIError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error (status %d): %s", e.StatusCode, e.Body)
+}
+
+func isAPIStatus(err error, status int) bool {
+	var apiErr *APIError
+
+	return errors.As(err, &apiErr) && apiErr.StatusCode == status
+}
+
 func (c *Client) doLibpodRequestWithOptions(
 	ctx context.Context,
 	method, suffix string,
@@ -259,7 +277,7 @@ func parseResponse(resp *http.Response, target any) error {
 			body = append([]byte("[truncated] "), body...)
 		}
 
-		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+		return &APIError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	if target != nil && resp.StatusCode != http.StatusNoContent {

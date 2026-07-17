@@ -84,10 +84,10 @@ func (d *Database) StartJobEventsPruner(ctx context.Context, cfg JobEventsPruner
 		logger = slog.Default()
 	}
 
-	pruneOnce := func() {
+	pruneOnce := func(pruneCtx context.Context) {
 		cutoff := time.Now().Add(-cfg.Retention)
 
-		deleted, err := d.PruneJobEventsBefore(ctx, cutoff, batchSize)
+		deleted, err := d.PruneJobEventsBefore(pruneCtx, cutoff, batchSize)
 		if err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return
@@ -103,21 +103,19 @@ func (d *Database) StartJobEventsPruner(ctx context.Context, cfg JobEventsPruner
 		}
 	}
 
-	go func() {
+	return d.startBackgroundTask(ctx, func(taskCtx context.Context) {
 		ticker := time.NewTicker(cfg.Interval)
 		defer ticker.Stop()
 
-		pruneOnce()
+		pruneOnce(taskCtx)
 
 		for {
 			select {
-			case <-ctx.Done():
+			case <-taskCtx.Done():
 				return
 			case <-ticker.C:
-				pruneOnce()
+				pruneOnce(taskCtx)
 			}
 		}
-	}()
-
-	return nil
+	})
 }

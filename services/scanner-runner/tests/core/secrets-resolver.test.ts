@@ -24,6 +24,30 @@ describe('SecretsResolver', () => {
 			expect(resolver.resolveValue({ from_env: 'STAGEFLOW_AUTH_USER' })).toBe('demo@example.com');
 		});
 
+		it('redacts raw, URI-encoded, and form-encoded known values', () => {
+			const envSecret = 'p@ss word+1';
+			const literalSecret = 'literal value+2';
+			const resolver = createSecretsResolver({
+				allowList: ['STAGEFLOW_AUTH_PASSWORD'],
+				env: { STAGEFLOW_AUTH_PASSWORD: envSecret }
+			});
+			resolver.resolveValue(literalSecret);
+
+			const formEncodedEnv = new URLSearchParams([['password', envSecret]])
+				.toString()
+				.slice('password='.length);
+			const raw = [
+				envSecret,
+				encodeURIComponent(envSecret),
+				formEncodedEnv,
+				encodeURIComponent(literalSecret)
+			].join('|');
+
+			expect(resolver.redactKnownValues(raw)).toBe(
+				['[REDACTED]', '[REDACTED]', '[REDACTED]', '[REDACTED]'].join('|')
+			);
+		});
+
 		it('rejects an env var not in the allow-list with SecretsResolutionError', () => {
 			const resolver = createSecretsResolver({
 				allowList: ['STAGEFLOW_AUTH_USER'],

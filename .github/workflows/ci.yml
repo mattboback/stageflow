@@ -52,8 +52,14 @@ jobs:
       - name: Lint workflows
         run: actionlint -color -shellcheck="$(command -v shellcheck)"
 
+      - name: Test Caddy credential boundary
+        run: PODMAN=docker ./infra/caddy/capture_test.sh
+
       - name: Check stale vocabulary
         run: ./devtools/scripts/check-stale-vocab.sh
+
+      - name: Check Dependabot package coverage
+        run: ./devtools/scripts/check-dependabot-coverage.sh
 
       - name: Check Markdown links
         run: node devtools/scripts/check-markdown-links.mjs
@@ -234,8 +240,8 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
-      - name: Audit (high)
-        run: bun audit --audit-level=high
+      - name: Audit (moderate)
+        run: bun audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf
         working-directory: services/scanner-runner
 
       - name: Install Playwright browser

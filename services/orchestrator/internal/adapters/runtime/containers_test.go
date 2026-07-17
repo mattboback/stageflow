@@ -157,6 +157,34 @@ func TestInspectContainer(t *testing.T) {
 	}
 }
 
+func TestInspectContainerDecodesLibpodStateAndConfigLabels(t *testing.T) {
+	mock := newMockPodmanServer()
+	defer mock.Close()
+
+	mock.handle("GET", "/v4.0.0/libpod/containers/scanner-axe-job/json", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"Id":"container-123",
+			"Name":"scanner-axe-job",
+			"State":{"Status":"running","Running":true},
+			"Config":{"Labels":{"managed_by":"orchestrator","job_id":"job"}}
+		}`))
+	})
+
+	result, err := mock.newClient().InspectContainer(t.Context(), "scanner-axe-job")
+	if err != nil {
+		t.Fatalf("InspectContainer() error = %v", err)
+	}
+
+	if result.State != ContainerState("running") {
+		t.Fatalf("state = %q, want running", result.State)
+	}
+
+	if result.labels()["job_id"] != "job" {
+		t.Fatalf("labels = %#v", result.labels())
+	}
+}
+
 func TestWaitContainer(t *testing.T) {
 	mock := newMockPodmanServer()
 	defer mock.Close()

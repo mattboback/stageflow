@@ -127,6 +127,7 @@ func (a *minioClientAdapter) StatObject(
 const (
 	BucketStaging   = "scanner-staging"
 	BucketArtifacts = "scanner-artifacts"
+	BucketBaselines = "scanner-baselines"
 )
 
 // MinIOClient manages internal and public MinIO clients for artifact I/O and URL generation.
@@ -183,7 +184,7 @@ func NewMinIOClient(cfg *MinIOConfig) (*MinIOClient, error) {
 
 // EnsureBuckets creates required buckets if they don't exist.
 func (c *MinIOClient) EnsureBuckets(ctx context.Context) error {
-	buckets := []string{BucketStaging, BucketArtifacts}
+	buckets := []string{BucketStaging, BucketArtifacts, BucketBaselines}
 
 	for _, bucket := range buckets {
 		if err := c.ensureBucket(ctx, bucket); err != nil {

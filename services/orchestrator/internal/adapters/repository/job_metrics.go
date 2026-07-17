@@ -42,7 +42,8 @@ func (d *Database) RecordExtractionComplete(ctx context.Context, jobID string) e
 func (d *Database) RecordScanStart(ctx context.Context, jobID string) error {
 	query := `
 		UPDATE jobs
-		SET scan_started_at = ?, updated_at = ?
+		SET scan_started_at = COALESCE(scan_started_at, ?),
+		    updated_at = CASE WHEN scan_started_at IS NULL THEN ? ELSE updated_at END
 		WHERE id = ?
 	`
 

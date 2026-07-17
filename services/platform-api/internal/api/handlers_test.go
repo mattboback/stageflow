@@ -1305,19 +1305,14 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 		t.Fatalf("init scanner registry: %v", err)
 	}
 
-	server := &Server{
-		config: &ServerConfig{
-			Storage:         storage,
-			Publisher:       publisher,
-			StatusReader:    store,
-			ProjectStore:    projectStore,
-			ScannerRegistry: registry,
-		},
-		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: store}),
-		projectStore:    projectStore,
-		scannerRegistry: registry,
-		ipResolver:      defaultSecurityTestResolver(t),
-	}
+	server := NewServer(&ServerConfig{
+		Storage:         storage,
+		Publisher:       publisher,
+		StatusReader:    store,
+		ProjectStore:    projectStore,
+		ScannerRegistry: registry,
+	})
+	server.ipResolver = defaultSecurityTestResolver(t)
 
 	return server, storage, publisher
 }

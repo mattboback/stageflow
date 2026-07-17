@@ -92,6 +92,29 @@ describe('target validation', () => {
 		);
 	});
 
+	it('rejects URL userinfo without exposing it in the error', async () => {
+		const usernameCanary = 'target-user-canary';
+		const passwordCanary = 'p@ss word+1';
+		const target = `https://${usernameCanary}:${encodeURIComponent(passwordCanary)}@public.example/path`;
+
+		let captured: unknown;
+		try {
+			await validateRuntimeTargetURL(
+				target,
+				staticResolver({ 'public.example': ['93.184.216.34'] })
+			);
+		} catch (error) {
+			captured = error;
+		}
+
+		expect(captured).toBeInstanceOf(BlockedTargetError);
+		expect(String(captured)).toContain('embedded URL credentials are not allowed');
+		expect(String(captured)).not.toContain(usernameCanary);
+		expect(String(captured)).not.toContain(passwordCanary);
+		expect(String(captured)).not.toContain(encodeURIComponent(passwordCanary));
+		expect((captured as BlockedTargetError).targetURL).toBe('https://public.example/path');
+	});
+
 	it('blocks hostnames resolving to blocked ranges', async () => {
 		delete process.env.ALLOW_PRIVATE_TARGETS;
 		const resolver = staticResolver({

@@ -49,7 +49,8 @@ const fsMock: {
 } = { ensureDir: fsHelperMocks.ensureDir, chmod: chmodMock };
 
 const SECRET_USER = 'hydrate-test-user-9j2n3kl12';
-const SECRET_PASSWORD = 'hydrate-test-pw-uw7gx48p2j';
+const SECRET_PASSWORD = 'p@ss word+1';
+const LITERAL_SECRET = 'literal value+2';
 
 const baseConfig: ScannerConfig = {
 	jobId: 'job-hydrate',
@@ -112,7 +113,7 @@ function createHarness(): MockHarness {
 		createContext: vi.fn().mockResolvedValue(context),
 		navigateToPage: vi.fn().mockImplementation((page: Page, url: string) => {
 			(page as Page & { _setUrl: (u: string) => void })._setUrl(
-				url === 'https://app.example.com/login' ? 'https://app.example.com/profile' : url
+				url.startsWith('https://app.example.com/login') ? 'https://app.example.com/profile' : url
 			);
 			return Promise.resolve();
 		}),
@@ -147,6 +148,19 @@ describe('hydrate-then-iterate', () => {
 
 	it('runs form hydration once before iterating pages and resolves from_env', async () => {
 		const harness = createHarness();
+		const formEncodedPassword = new URLSearchParams([['password', SECRET_PASSWORD]])
+			.toString()
+			.slice('password='.length);
+		const credentialRedirect =
+			`https://app.example.com/profile?username=${encodeURIComponent(SECRET_USER)}` +
+			`&password=${formEncodedPassword}`;
+		const authLoginUrl =
+			`https://app.example.com/login?prefill=${formEncodedPassword}` +
+			`&tenant=${encodeURIComponent(LITERAL_SECRET)}`;
+		vi.mocked(harness.browserManager.executePreScanActions).mockImplementation((page: Page) => {
+			(page as Page & { _setUrl: (url: string) => void })._setUrl(credentialRedirect);
+			return Promise.resolve();
+		});
 		const provenance: Provenance = {
 			version: '1.0.0',
 			job_id: 'job-hydrate',
@@ -157,7 +171,7 @@ describe('hydrate-then-iterate', () => {
 			],
 			auth: {
 				mode: 'form',
-				login_url: 'https://app.example.com/login',
+				login_url: authLoginUrl,
 				steps: [
 					{
 						type: 'fill',
@@ -169,6 +183,7 @@ describe('hydrate-then-iterate', () => {
 						selector: 'input[name=password]',
 						value: { from_env: 'STAGEFLOW_AUTH_PASSWORD' }
 					},
+					{ type: 'fill', selector: 'input[name=tenant]', value: LITERAL_SECRET },
 					{ type: 'click', selector: 'button[type=submit]' }
 				],
 				success: { type: 'load' }
@@ -201,7 +216,7 @@ describe('hydrate-then-iterate', () => {
 		const navUrls = (
 			harness.browserManager.navigateToPage as ReturnType<typeof vi.fn>
 		).mock.calls.map((args) => args[1] as string);
-		expect(navUrls[0]).toBe('https://app.example.com/login');
+		expect(navUrls[0]).toBe(authLoginUrl);
 		expect(navUrls.slice(1)).toEqual([
 			'https://app.example.com/profile',
 			'https://app.example.com/settings'
@@ -227,14 +242,19 @@ describe('hydrate-then-iterate', () => {
 				type: 'auth_hydrated',
 				details: expect.objectContaining({
 					mode: 'form',
-					login_url: 'https://app.example.com/login',
-					post_login_url: 'https://app.example.com/profile'
+					login_url: 'https://app.example.com/login?prefill=[REDACTED]&tenant=[REDACTED]',
+					post_login_url: 'https://app.example.com/profile?username=[REDACTED]&password=[REDACTED]'
 				})
 			})
 		);
 		const audit = JSON.stringify(auditEvents);
 		expect(audit).not.toContain(SECRET_USER);
 		expect(audit).not.toContain(SECRET_PASSWORD);
+		expect(audit).not.toContain(encodeURIComponent(SECRET_USER));
+		expect(audit).not.toContain(encodeURIComponent(SECRET_PASSWORD));
+		expect(audit).not.toContain(formEncodedPassword);
+		expect(audit).not.toContain(LITERAL_SECRET);
+		expect(audit).not.toContain(encodeURIComponent(LITERAL_SECRET));
 
 		// page scans succeeded
 		expect(results).toHaveLength(2);

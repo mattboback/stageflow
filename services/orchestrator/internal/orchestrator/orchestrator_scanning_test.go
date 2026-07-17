@@ -2,11 +2,14 @@ package orchestrator
 
 import (
 	"context"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
+	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 )
 
 func TestHandleScanCompleted(t *testing.T) {
@@ -117,6 +120,83 @@ func TestHandleScanFailed(t *testing.T) {
 	// Verify job.failed event was published
 	if publisher.failedCount() != 1 {
 		t.Errorf("Expected 1 job.failed event, got %d", publisher.failedCount())
+	}
+}
+
+func TestHandleScanFailedDoesNotPersistEncodedConfiguredSecrets(t *testing.T) {
+	orch, database, _, _ := setupTestOrchestrator(t)
+	defer orch.WaitForMonitors()
+
+	const (
+		jobID       = "job-scan-failure-secret"
+		secret      = "a~b*c"
+		formEncoded = "a%7Eb*c"
+	)
+
+	job := &models.Job{
+		ID:        jobID,
+		State:     models.JobStateScanning,
+		InputType: models.JobInputTypeURLs,
+		URLs:      []string{"https://example.com"},
+		Config: models.JobConfig{
+			Modules: []string{"axe"},
+			ScannerConfigs: map[string]map[string]any{
+				"ai-navigator": {
+					"goal": map[string]any{
+						"inputValues": map[string]any{"password": secret},
+					},
+				},
+			},
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	insertJob(t, database, job)
+
+	if err := database.SetExpectedScanners(context.Background(), jobID, []string{"axe"}); err != nil {
+		t.Fatalf("SetExpectedScanners() error = %v", err)
+	}
+
+	queryEncoded := url.QueryEscape(secret)
+
+	payload := &events.ScanFailedPayload{
+		JobID:        jobID,
+		ScannerType:  "axe",
+		Error:        "login failed at https://example.com/?password=" + formEncoded,
+		ErrorDetails: "alternate encoder produced " + queryEncoded,
+	}
+	if err := orch.HandleScanFailed(context.Background(), payload); err != nil {
+		t.Fatalf("HandleScanFailed() error = %v", err)
+	}
+
+	eventRows, err := database.ListJobEvents(
+		context.Background(),
+		jobID,
+		db.ListJobEventsOptions{Limit: 100},
+	)
+	if err != nil {
+		t.Fatalf("ListJobEvents() error = %v", err)
+	}
+
+	storedJob, err := database.GetJob(context.Background(), jobID)
+	if err != nil {
+		t.Fatalf("GetJob() error = %v", err)
+	}
+
+	var combined strings.Builder
+
+	combined.WriteString(storedJob.Error)
+	combined.WriteString(storedJob.ErrorDetails)
+
+	for _, event := range eventRows {
+		combined.WriteString(event.Payload)
+		combined.WriteString(event.HandlerError)
+	}
+
+	for _, value := range []string{secret, queryEncoded, formEncoded, strings.ToLower(formEncoded)} {
+		if strings.Contains(combined.String(), value) {
+			t.Fatalf("terminal job or final audit row leaked %q: %s", value, combined.String())
+		}
 	}
 }
 

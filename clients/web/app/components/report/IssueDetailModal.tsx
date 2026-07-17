@@ -222,6 +222,22 @@ export function IssueDetailModal({
 
 	const pageLabel = page?.path ?? page?.url ?? null;
 	const severity = normalizeSeverity(issue.severity) ?? 'info';
+	const moveTabFocus = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+		let nextIndex: number | null = null;
+		if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
+		if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
+		if (event.key === 'Home') nextIndex = 0;
+		if (event.key === 'End') nextIndex = availableTabs.length - 1;
+		if (nextIndex === null) return;
+		event.preventDefault();
+		const nextTab = availableTabs[nextIndex];
+		if (!nextTab) return;
+		setTabState({ issueId: issue.id, tab: nextTab });
+		event.currentTarget.parentElement
+			?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+			.item(nextIndex)
+			.focus();
+	};
 
 	return (
 		<div
@@ -306,14 +322,18 @@ export function IssueDetailModal({
 				</header>
 
 				<nav className="imodal__tabs" role="tablist">
-					{availableTabs.map((tab) => (
+					{availableTabs.map((tab, index) => (
 						<button
 							key={tab}
 							type="button"
 							role="tab"
+							id={`issue-tab-${tab}`}
 							aria-selected={activeTab === tab}
+							aria-controls={`issue-panel-${tab}`}
+							tabIndex={activeTab === tab ? 0 : -1}
 							className="imodal__tab"
 							onClick={() => setTabState({ issueId: issue.id, tab })}
+							onKeyDown={(event) => moveTabFocus(event, index)}
 						>
 							{tab === 'review' && 'Review'}
 							{tab === 'fix' && 'Fix'}
@@ -327,12 +347,12 @@ export function IssueDetailModal({
 
 				<div className="imodal__body">
 					{activeTab === 'review' && (
-						<div className="imodal__pane">
+						<div className="imodal__pane" id="issue-panel-review" role="tabpanel" aria-labelledby="issue-tab-review">
 							<ManualReviewTab issue={issue} jobId={jobId} />
 						</div>
 					)}
 					{activeTab === 'fix' && (
-						<div className="imodal__pane">
+						<div className="imodal__pane" id="issue-panel-fix" role="tabpanel" aria-labelledby="issue-tab-fix">
 							<section>
 								<h3 className="imodal__pane-h">How to fix</h3>
 								{contextualFix ? (
@@ -373,7 +393,7 @@ export function IssueDetailModal({
 						</div>
 					)}
 					{activeTab === 'evidence' && (
-						<div className="imodal__pane">
+						<div className="imodal__pane" id="issue-panel-evidence" role="tabpanel" aria-labelledby="issue-tab-evidence">
 							<IssueEvidenceSection
 								issue={issue}
 								page={page}
@@ -383,7 +403,7 @@ export function IssueDetailModal({
 						</div>
 					)}
 					{activeTab === 'verify' && (
-						<div className="imodal__pane">
+						<div className="imodal__pane" id="issue-panel-verify" role="tabpanel" aria-labelledby="issue-tab-verify">
 							<VerifyContrastTab
 								issue={issue}
 								page={page}
@@ -393,7 +413,7 @@ export function IssueDetailModal({
 						</div>
 					)}
 					{activeTab === 'occurrences' && (
-						<div className="imodal__pane">
+						<div className="imodal__pane" id="issue-panel-occurrences" role="tabpanel" aria-labelledby="issue-tab-occurrences">
 							<h3 className="imodal__pane-h">
 								{occurrenceCount === 1
 									? 'Affected element'

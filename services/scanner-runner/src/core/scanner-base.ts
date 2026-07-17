@@ -28,6 +28,7 @@ import {
 import { BrowserManager } from './browser-manager';
 import { NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
 import { PageIterator } from './page-iterator';
+import { buildPublicProvenance } from './public-provenance';
 import { ScanStageLogger } from './scan-stage-logger';
 import { buildScanCompletedTiming, withPublishCompletedTiming } from './scan-lifecycle';
 import { buildStandaloneReportHTML } from './standalone-report-template';
@@ -86,7 +87,7 @@ export abstract class ScannerBase {
 				pages_total: provenance.pages.filter((p) => !p.skip).length
 			});
 
-			await this.uploadProvenanceArtifactIfNeeded();
+			await this.uploadProvenanceArtifactIfNeeded(provenance);
 
 			const { pageResults, pageIterationMs } = await this.iteratePages(provenance);
 
@@ -604,15 +605,17 @@ export abstract class ScannerBase {
 		return buildStandaloneReportHTML(results, this.metadata);
 	}
 
-	private async uploadProvenanceArtifactIfNeeded(): Promise<void> {
+	private async uploadProvenanceArtifactIfNeeded(provenance: Provenance): Promise<void> {
 		if (!process.env.SCAN_URLS) {
 			return;
 		}
 
 		const bucket = this.config.storage.bucket;
 		const key = `${this.config.jobId}/provenance.json`;
+		const publicProvenance = buildPublicProvenance(provenance);
+		const data = Buffer.from(JSON.stringify(publicProvenance, null, 2), 'utf8');
 
-		await this.storageProvider.upload(bucket, key, this.config.provenancePath, 'application/json');
+		await this.storageProvider.uploadBuffer(bucket, key, data, 'application/json');
 		this.provenanceArtifactKey = key;
 		this.scanStageLogger?.recordEvent('provenance_uploaded', { key });
 	}

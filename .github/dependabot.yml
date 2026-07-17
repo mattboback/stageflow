@@ -1,37 +1,71 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
-    directory: "/"
+    directories:
+      - "/clients/cli"
+      - "/devtools/ops/job-status-cli"
+      - "/devtools/qa/suite-runner"
+      - "/libs/contracts/scanner-manifest"
+      - "/libs/go/bootstrap"
+      - "/libs/go/config"
+      - "/libs/go/diff"
+      - "/libs/go/domain"
+      - "/libs/go/events"
+      - "/libs/go/httputil"
+      - "/libs/go/logging"
+      - "/libs/go/messaging"
+      - "/libs/go/models"
+      - "/libs/go/provenance"
+      - "/libs/go/scannercatalog"
+      - "/libs/go/scannerregistry"
+      - "/libs/go/storage"
+      - "/qa/e2e"
+      - "/services/archive-extractor"
+      - "/services/orchestrator"
+      - "/services/platform-api"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 2
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 6
+    groups:
+      go-minor-and-patch:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "bun"
+    directories:
+      - "/"
+      - "/clients/web"
+      - "/libs/contracts/events"
+      - "/libs/contracts/provenance"
+      - "/libs/contracts/report"
+      - "/libs/contracts/scanner-manifest"
+      - "/services/scanner-runner"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 6
+    groups:
+      bun-minor-and-patch:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 2
-
-  - package-ecosystem: "npm"
-    directory: "/clients/web"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 2
-
-  - package-ecosystem: "npm"
-    directory: "/services/scanner-runner"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 2
-
-  - package-ecosystem: "npm"
-    directory: "/libs/contracts/report"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 2
-
-  - package-ecosystem: "npm"
-    directory: "/libs/contracts/scanner-manifest"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 2
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 4
+    groups:
+      actions-minor-and-patch:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

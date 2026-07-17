@@ -17,6 +17,7 @@ import {
 	type PreScanActionValue,
 	type Provenance
 } from './types';
+import { redactSecretValues } from '../utils/secret-redaction';
 
 export class SecretsResolutionError extends Error {
 	readonly reference: string;
@@ -40,6 +41,9 @@ export interface SecretsResolver {
 	 */
 	resolveValue(value: PreScanActionValue): string;
 
+	/** Redacts every allow-listed or resolved value, including URL encodings. */
+	redactKnownValues(value: string): string;
+
 	/** Sorted, frozen view of the allow-listed env var names. */
 	readonly allowList: readonly string[];
 }
@@ -62,6 +66,13 @@ export function createSecretsResolver(options: CreateSecretsResolverOptions): Se
 	const allowList = Object.freeze([...new Set(options.allowList)].sort());
 	const allowSet = new Set(allowList);
 	const env = options.env ?? process.env;
+	const knownValues = new Set<string>();
+	for (const name of allowList) {
+		const value = env[name];
+		if (typeof value === 'string' && value.length > 0) {
+			knownValues.add(value);
+		}
+	}
 
 	function resolve(reference: FromEnvReference): string {
 		const name = reference.from_env;
@@ -81,17 +92,25 @@ export function createSecretsResolver(options: CreateSecretsResolverOptions): Se
 			);
 		}
 
+		knownValues.add(value);
 		return value;
 	}
 
 	function resolveValue(value: PreScanActionValue): string {
 		if (typeof value === 'string') {
+			if (value.length > 0) {
+				knownValues.add(value);
+			}
 			return value;
 		}
 		return resolve(value);
 	}
 
-	return { resolve, resolveValue, allowList };
+	function redactKnownValues(value: string): string {
+		return redactSecretValues(value, knownValues);
+	}
+
+	return { resolve, resolveValue, redactKnownValues, allowList };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { AuthFormConfig } from '../../lib/components/playground/playground-utils';
+import { IS_HOSTED_DEMO } from '../../lib/site-metadata';
 
 interface Props {
 	config: AuthFormConfig;
@@ -71,11 +72,21 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 
 			{config.enabled && (
 				<div className="pauth__body">
+					<div className="sensitive-data-warning" role="note">
+						<strong>
+							{IS_HOSTED_DEMO
+								? 'Hosted demo: use a throwaway test account.'
+								: 'Use a dedicated test account.'}
+						</strong>{' '}
+						Credentials are sent to this deployment to execute the login and can remain in its
+						job queue for up to 72 hours. Never enter a personal or production password.
+					</div>
 					<label className="pauth__field">
 						<span className="label">
 							Login URL <span className="pauth__req">*</span>
 						</span>
 						<input
+							id="auth-login-url"
 							type="url"
 							autoComplete="off"
 							placeholder="https://app.example.com/login"
@@ -91,6 +102,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								Username / email <span className="pauth__req">*</span>
 							</span>
 							<input
+								id="auth-username"
 								type="text"
 								autoComplete="off"
 								value={config.username}
@@ -105,6 +117,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 							</span>
 							<div className="pauth__pwd">
 								<input
+									id="auth-password"
 									type={showPassword ? 'text' : 'password'}
 									autoComplete="off"
 									value={config.password}
@@ -128,14 +141,17 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 						type="button"
 						className="pauth__adv-toggle"
 						onClick={() => setShowAdvanced((v) => !v)}
+						aria-expanded={showAdvanced}
+						aria-controls="auth-advanced-options"
 					>
 						{showAdvanced ? '▾' : '▸'} Advanced selectors
 					</button>
 					{showAdvanced && (
-						<div className="pauth__adv">
+						<div className="pauth__adv" id="auth-advanced-options">
 							<label className="pauth__field">
 								<span className="label">Username selector</span>
 								<input
+									id="auth-username-selector"
 									type="text"
 									placeholder="auto:username"
 									value={config.usernameSelector}
@@ -178,6 +194,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								<label className="pauth__field">
 									<span className="label">Success selector</span>
 									<input
+										id="auth-success-selector"
 										type="text"
 										placeholder=".dashboard, [data-logged-in]"
 										value={config.successSelector}

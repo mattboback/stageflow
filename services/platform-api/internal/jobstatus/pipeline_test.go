@@ -3,6 +3,8 @@ package jobstatus
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,6 +12,101 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
+
+func TestPipelineApplySerializesConcurrentEventsForOneJob(t *testing.T) {
+	t.Parallel()
+
+	const scannerCount = 64
+
+	pipeline := New(&Config{})
+	now := time.Now().UTC()
+
+	modules := make([]string, scannerCount)
+	for i := range modules {
+		modules[i] = fmt.Sprintf("scanner-%02d", i)
+	}
+
+	if _, err := pipeline.Begin(context.Background(), BeginJob{
+		ObservedAt: now,
+		Payload: &events.JobCreatedPayload{
+			JobID:     "job-concurrent-events",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: modules},
+		},
+	}); err != nil {
+		t.Fatalf("Begin() error = %v", err)
+	}
+
+	if _, err := pipeline.Apply(context.Background(), Signal{
+		Kind:       SignalJobCreated,
+		ObservedAt: now,
+		JobCreated: &events.JobCreatedPayload{
+			JobID:     "job-concurrent-events",
+			InputType: models.JobInputTypeURLs,
+			URLs:      []string{"https://example.com"},
+			Config:    models.JobConfig{Modules: modules},
+		},
+	}); err != nil {
+		t.Fatalf("Apply(job.created) error = %v", err)
+	}
+
+	start := make(chan struct{})
+	errs := make(chan error, scannerCount)
+
+	var wg sync.WaitGroup
+
+	for i, scanner := range modules {
+		wg.Add(1)
+		go func(index int, scannerType string) {
+			defer wg.Done()
+
+			<-start
+
+			_, err := pipeline.Apply(context.Background(), Signal{
+				Kind:       SignalScanCompleted,
+				ObservedAt: now.Add(time.Duration(index+1) * time.Millisecond),
+				ScanCompleted: &events.ScanCompletedPayload{
+					JobID:             "job-concurrent-events",
+					ScannerType:       scannerType,
+					TotalPagesScanned: 1,
+					Summary: events.ScanSummary{
+						TotalViolations: 1,
+					},
+				},
+			})
+			if err != nil {
+				errs <- err
+			}
+		}(i, scanner)
+	}
+
+	close(start)
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		t.Fatalf("concurrent Apply() error = %v", err)
+	}
+
+	rec, err := pipeline.Current(context.Background(), "job-concurrent-events")
+	if err != nil {
+		t.Fatalf("Current() error = %v", err)
+	}
+
+	if len(rec.CompletedScanners) != scannerCount {
+		t.Fatalf(
+			"completed scanners = %d, want %d: %v",
+			len(rec.CompletedScanners),
+			scannerCount,
+			rec.CompletedScanners,
+		)
+	}
+
+	if rec.TotalViolations != scannerCount {
+		t.Fatalf("total violations = %d, want %d", rec.TotalViolations, scannerCount)
+	}
+}
 
 type fakeReader struct {
 	records map[string]*status.JobRecord

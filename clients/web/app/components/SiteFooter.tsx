@@ -1,7 +1,11 @@
 import { Link } from 'react-router';
-
-const GITHUB_URL = 'https://github.com/mattboback/stageflow';
-const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
+import {
+	DOCS_URL,
+	GITHUB_URL,
+	IS_HOSTED_DEMO,
+	SITE_NAME,
+	SITE_TAGLINE
+} from '../lib/site-metadata';
 
 /* slim: meta row only — used under active application workflows where the
    sitemap is noise (scan progress, report). */
@@ -9,8 +13,13 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 	const meta = (
 		<div className="wrap site-footer__meta">
 			<span>MIT licensed</span>
-			<span>Runs in your infrastructure — your data stays with you</span>
-			<a href={GITHUB_URL}>github.com/mattboback/stageflow</a>
+			<span>
+				{IS_HOSTED_DEMO
+					? 'Hosted demo — submitted targets and scan data are processed by this deployment'
+					: 'Self-hosted — scan data is processed by your deployment'}
+			</span>
+			<a href={`${GITHUB_URL}/blob/main/docs/privacy.md`}>Privacy</a>
+			<a href={GITHUB_URL}>Source on GitHub</a>
 		</div>
 	);
 
@@ -24,15 +33,16 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 				<div className="site-footer__brand">
 					<Link className="brand" to="/">
 						<span className="brand__mark" aria-hidden="true" />
-						<span className="brand__name">StageFlow</span>
+						<span className="brand__name">{SITE_NAME}</span>
 					</Link>
 					<p className="muted site-footer__tagline">
-						Self-hostable frontend quality platform.
+						{SITE_TAGLINE}.
 					</p>
 				</div>
 				<div className="site-footer__cols">
 					<nav aria-label="Product" className="site-footer__col">
 						<span className="label">Product</span>
+						<Link to="/projects">Projects</Link>
 						<Link to="/playground">Configure scan</Link>
 						<Link to="/#scanners">Scanners</Link>
 						<a href={DOCS_URL}>Documentation</a>

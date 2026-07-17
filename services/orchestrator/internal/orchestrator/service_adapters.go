@@ -162,6 +162,42 @@ func (o *Orchestrator) SetExpectedScanners(ctx context.Context, jobID string, sc
 	return o.database.SetExpectedScanners(ctx, jobID, scanners)
 }
 
+func (o *Orchestrator) ListJobsByState(
+	ctx context.Context,
+	state models.JobState,
+) ([]*models.Job, error) {
+	return o.database.ListJobsByState(ctx, state)
+}
+
+func (o *Orchestrator) PrepareScannerLaunches(ctx context.Context, jobID string, scanners []string) error {
+	return o.database.PrepareScannerLaunches(ctx, jobID, scanners)
+}
+
+func (o *Orchestrator) ClaimScannerLaunch(ctx context.Context, jobID, scannerType string) (bool, error) {
+	return o.database.ClaimScannerLaunch(ctx, jobID, scannerType)
+}
+
+func (o *Orchestrator) ClaimScannerLaunchRecovery(
+	ctx context.Context,
+	jobID, scannerType string,
+) (bool, error) {
+	return o.database.ClaimScannerLaunchRecovery(ctx, jobID, scannerType)
+}
+
+func (o *Orchestrator) MarkScannerLaunched(
+	ctx context.Context,
+	jobID, scannerType, containerID string,
+) error {
+	return o.database.MarkScannerLaunched(ctx, jobID, scannerType, containerID)
+}
+
+func (o *Orchestrator) MarkScannerLaunchFailed(
+	ctx context.Context,
+	jobID, scannerType, errorMessage string,
+) error {
+	return o.database.MarkScannerLaunchFailed(ctx, jobID, scannerType, errorMessage)
+}
+
 func (o *Orchestrator) RecordScannerCompletion(
 	ctx context.Context,
 	jobID string,
@@ -189,7 +225,7 @@ func (o *Orchestrator) FailJobWithTerminalEvent(
 	ctx context.Context,
 	jobID, stage, errorMsg, errorDetails string,
 	payload *events.JobFailedPayload,
-) error {
+) (bool, error) {
 	return o.database.FailJobWithTerminalEvent(ctx, jobID, stage, errorMsg, errorDetails, payload)
 }
 
@@ -299,7 +335,7 @@ func (o *Orchestrator) StartExtractionWorker(ctx context.Context, job *models.Jo
 			"container_id": started.result.ContainerID,
 		})
 		o.spawnMonitorContainer(
-			backgroundWithCorrelation(ctx),
+			o.backgroundWithCorrelation(ctx),
 			started.result.ContainerID,
 			job.ID,
 			"extraction",
@@ -319,7 +355,7 @@ func (o *Orchestrator) StartScanner(
 	ctx context.Context,
 	job *models.Job,
 	plan *appjobs.ScannerLaunchPlan,
-) error {
+) (string, error) {
 	return o.startPlannedScanner(ctx, job, plan)
 }
 

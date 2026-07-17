@@ -81,7 +81,7 @@ func (o *Orchestrator) failOverdueJobs(
 			continue
 		}
 
-		jobCtx := logging.WithJobID(backgroundWithCorrelation(ctx), job.ID)
+		jobCtx := logging.WithJobID(o.backgroundWithCorrelation(ctx), job.ID)
 		message := fmt.Sprintf("%s timed out after %v", stage, timeout)
 
 		slog.Warn(

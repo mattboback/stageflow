@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -11,11 +12,12 @@ import (
 )
 
 type fakeJobRuntimeClient struct {
-	createPodFunc       func(context.Context, *PodCreateRequest) (*PodCreateResponse, error)
-	createVolumeFunc    func(context.Context, string) error
-	inspectVolumeFunc   func(context.Context, string) (*VolumeInfo, error)
-	createContainerFunc func(context.Context, *ContainerCreateRequest) (*ContainerCreateResponse, error)
-	startContainerFunc  func(context.Context, string) error
+	createPodFunc        func(context.Context, *PodCreateRequest) (*PodCreateResponse, error)
+	createVolumeFunc     func(context.Context, string) error
+	inspectVolumeFunc    func(context.Context, string) (*VolumeInfo, error)
+	createContainerFunc  func(context.Context, *ContainerCreateRequest) (*ContainerCreateResponse, error)
+	inspectContainerFunc func(context.Context, string) (*ContainerInfo, error)
+	startContainerFunc   func(context.Context, string) error
 }
 
 func (f *fakeJobRuntimeClient) CreatePod(ctx context.Context, req *PodCreateRequest) (*PodCreateResponse, error) {
@@ -59,6 +61,14 @@ func (f *fakeJobRuntimeClient) StartContainer(ctx context.Context, containerID s
 	}
 
 	return nil
+}
+
+func (f *fakeJobRuntimeClient) InspectContainer(ctx context.Context, containerID string) (*ContainerInfo, error) {
+	if f.inspectContainerFunc != nil {
+		return f.inspectContainerFunc(ctx, containerID)
+	}
+
+	return nil, &APIError{StatusCode: 404, Body: "container not found"}
 }
 
 func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
@@ -378,5 +388,165 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 		gotReq.ResourceLimits.MemoryLimitMB != 512 ||
 		gotReq.ResourceLimits.MemorySwapMB != 512 {
 		t.Fatalf("unexpected resource limits: %#v", gotReq.ResourceLimits)
+	}
+}
+
+func TestJobRuntimeStartScannerAdoptsDeterministicExistingContainer(t *testing.T) {
+	var (
+		createCalls int
+		startedID   string
+	)
+
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			inspectContainerFunc: func(_ context.Context, name string) (*ContainerInfo, error) {
+				if name != "scanner-axe-job-restart" {
+					t.Fatalf("InspectContainer() name = %q", name)
+				}
+
+				return &ContainerInfo{
+					ID:    "existing-axe",
+					Name:  name,
+					State: "running",
+					Labels: map[string]string{
+						"managed_by":   "orchestrator",
+						"job_id":       "job-restart",
+						"component":    "scanner",
+						"scanner_type": "axe",
+					},
+				}, nil
+			},
+			createContainerFunc: func(_ context.Context, _ *ContainerCreateRequest) (*ContainerCreateResponse, error) {
+				createCalls++
+
+				return nil, errors.New("must not create duplicate container")
+			},
+			startContainerFunc: func(_ context.Context, id string) error {
+				startedID = id
+
+				return nil
+			},
+		},
+	})
+
+	job := &models.Job{ID: "job-restart", PodID: "pod-restart"}
+	plan := &appjobs.ScannerLaunchPlan{
+		Name:  "scanner-axe-job-restart",
+		Image: "scanner:latest",
+		Labels: map[string]string{
+			"managed_by":   "orchestrator",
+			"job_id":       "job-restart",
+			"component":    "scanner",
+			"scanner_type": "axe",
+		},
+	}
+
+	result, err := runtime.StartScanner(t.Context(), job, plan)
+	if err != nil {
+		t.Fatalf("StartScanner() error = %v", err)
+	}
+
+	if createCalls != 0 {
+		t.Fatalf("CreateContainer() calls = %d, want 0", createCalls)
+	}
+
+	if startedID != "existing-axe" {
+		t.Fatalf("StartContainer() ID = %q, want existing-axe", startedID)
+	}
+
+	if result == nil || result.ContainerID != "existing-axe" || !result.Existing || !result.Started {
+		t.Fatalf("StartScanner() result = %#v", result)
+	}
+}
+
+func TestJobRuntimeStartScannerRejectsContainerWithWrongOwnershipLabels(t *testing.T) {
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			inspectContainerFunc: func(_ context.Context, name string) (*ContainerInfo, error) {
+				return &ContainerInfo{
+					ID:    "unrelated-container",
+					Name:  name,
+					State: "running",
+					Labels: map[string]string{
+						"managed_by":   "someone-else",
+						"job_id":       "job-restart",
+						"component":    "scanner",
+						"scanner_type": "axe",
+					},
+				}, nil
+			},
+		},
+	})
+
+	job := &models.Job{ID: "job-restart", PodID: "pod-restart"}
+	plan := &appjobs.ScannerLaunchPlan{
+		Name:  "scanner-axe-job-restart",
+		Image: "scanner:latest",
+		Labels: map[string]string{
+			"managed_by":   "orchestrator",
+			"job_id":       "job-restart",
+			"component":    "scanner",
+			"scanner_type": "axe",
+		},
+	}
+
+	_, err := runtime.StartScanner(t.Context(), job, plan)
+	if err == nil {
+		t.Fatal("StartScanner() adopted a container with mismatched ownership labels")
+	}
+
+	if !strings.Contains(err.Error(), "refusing to adopt") {
+		t.Fatalf("StartScanner() error = %v", err)
+	}
+}
+
+func TestJobRuntimeStartScannerDoesNotRestartExitedContainer(t *testing.T) {
+	startCalls := 0
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			inspectContainerFunc: func(_ context.Context, name string) (*ContainerInfo, error) {
+				return &ContainerInfo{
+					ID:    "completed-axe",
+					Name:  name,
+					State: "exited",
+					Labels: map[string]string{
+						"managed_by":   "orchestrator",
+						"job_id":       "job-restart",
+						"component":    "scanner",
+						"scanner_type": "axe",
+					},
+				}, nil
+			},
+			startContainerFunc: func(_ context.Context, _ string) error {
+				startCalls++
+
+				return nil
+			},
+		},
+	})
+
+	job := &models.Job{ID: "job-restart", PodID: "pod-restart"}
+	plan := &appjobs.ScannerLaunchPlan{
+		Name:  "scanner-axe-job-restart",
+		Image: "scanner:latest",
+		Labels: map[string]string{
+			"managed_by":   "orchestrator",
+			"job_id":       "job-restart",
+			"component":    "scanner",
+			"scanner_type": "axe",
+		},
+	}
+
+	result, err := runtime.StartScanner(t.Context(), job, plan)
+	if err != nil {
+		t.Fatalf("StartScanner() error = %v", err)
+	}
+
+	if startCalls != 0 {
+		t.Fatalf("StartContainer() calls = %d, want 0", startCalls)
+	}
+
+	if result == nil || result.ContainerID != "completed-axe" || !result.Existing || result.Started {
+		t.Fatalf("StartScanner() result = %#v", result)
 	}
 }

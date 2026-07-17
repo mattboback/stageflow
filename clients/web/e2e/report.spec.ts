@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 const FIXTURE_PATH = path.resolve(
 	process.cwd(),
@@ -77,7 +78,11 @@ async function mockReportRoutes(page: Page) {
 		})
 	);
 	await page.route(`**/api/v1/jobs/${JOB_ID}/stream**`, (route) =>
-		route.fulfill({ status: 404, body: 'no stream' })
+		route.fulfill({
+			status: 200,
+			contentType: 'text/event-stream',
+			body: 'event: done\ndata: {}\n\n'
+		})
 	);
 }
 
@@ -109,9 +114,6 @@ async function mockScannerCatalog(page: Page) {
 function collectPageErrors(page: Page): string[] {
 	const pageErrors: string[] = [];
 	page.on('pageerror', (err) => {
-		// React #418 (hydration mismatch) fires when a non-prerendered /scan/*
-		// route hydrates from the SPA shell; tracked separately from this smoke.
-		if (String(err).includes('418')) return;
 		pageErrors.push(String(err));
 	});
 	return pageErrors;
@@ -294,4 +296,48 @@ test.describe('mobile configure page (390×844)', () => {
 			.click();
 		await submitted;
 	});
+});
+
+test('a zero-finding report celebrates the all-clear instead of an empty queue', async ({
+	page
+}) => {
+	const cleanReport = JSON.parse(fs.readFileSync(FIXTURE_PATH, 'utf8'));
+	const CLEAN_JOB_ID = 'e2e-clean-run';
+	cleanReport.meta.jobId = CLEAN_JOB_ID;
+	cleanReport.issues = [];
+	cleanReport.errors = [];
+	cleanReport.summary.totalIssues = 0;
+	cleanReport.summary.pagesWithIssues = 0;
+	cleanReport.summary.score = 100;
+	cleanReport.summary.bySeverity = {};
+
+	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify({ ...jobStatus, id: CLEAN_JOB_ID, violations: 0 })
+		})
+	);
+	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}/results**`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'application/json',
+			body: JSON.stringify(cleanReport)
+		})
+	);
+	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}/stream**`, (route) =>
+		route.fulfill({
+			status: 200,
+			contentType: 'text/event-stream',
+			body: 'event: done\ndata: {}\n\n'
+		})
+	);
+
+	await page.goto(`/scan/${CLEAN_JOB_ID}/report`);
+
+	await expect(page.getByRole('heading', { name: 'All clear.' })).toBeVisible();
+	await expect(page.getByText('0 findings')).toBeVisible();
+	await expect(page.getByText('nothing to fix')).toBeVisible();
+	await expect(page.getByRole('link', { name: /Run another scan/ })).toBeVisible();
+	await expect(page.getByText(/findings need review/)).toHaveCount(0);
 });

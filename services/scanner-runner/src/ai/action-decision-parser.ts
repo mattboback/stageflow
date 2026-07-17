@@ -155,8 +155,8 @@ function parseInputAction(
 	}
 
 	return type === 'fill'
-		? { type: 'fill', selector, value: resolved }
-		: { type: 'select', selector, value: resolved };
+		? { type: 'fill', selector, value: resolved, valueKey }
+		: { type: 'select', selector, value: resolved, valueKey };
 }
 
 function parseModelSelector(raw: unknown): string | undefined {

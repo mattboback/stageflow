@@ -17,7 +17,7 @@ import (
 //go:embed schema.sql
 var schemaFS embed.FS
 
-const schemaVersion = 1
+const schemaVersion = 2
 
 var ErrNotFound = errors.New("project not found")
 

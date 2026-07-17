@@ -126,6 +126,38 @@ run_network_override_case() {
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=custom_net" "dev should export the explicit network override"
 }
 
+run_minio_lifecycle_override_case() {
+	local temp_dir="$1"
+	local work_dir="${temp_dir}/lifecycle-work"
+	local log_file="${temp_dir}/podman.log"
+
+	mkdir -p "$work_dir"
+	ln -s "$REPO_ROOT/infra" "$work_dir/infra"
+	cat >"$work_dir/.env" <<'EOF'
+MINIO_ROOT_USER=file-root
+MINIO_ROOT_PASSWORD=file-secret
+MINIO_STAGING_RETENTION_DAYS=1
+MINIO_ARTIFACT_RETENTION_DAYS=1
+MINIO_APPLY_LIFECYCLES=true
+EOF
+
+	: >"$log_file"
+	STAGEFLOW_TEST_LOG="$log_file" \
+		PODMAN="${temp_dir}/podman" \
+		MINIO_STAGING_RETENTION_DAYS=7 \
+		MINIO_ARTIFACT_RETENTION_DAYS=9 \
+		MINIO_APPLY_LIFECYCLES=false \
+		"$REAL_JUST" --justfile "$REPO_ROOT/justfile" --working-directory "$work_dir" dev init
+
+	assert_contains "$log_file" "MINIO_STAGING_RETENTION_DAYS=7" "dev init should preserve an explicit staging-retention override"
+	assert_contains "$log_file" "MINIO_ARTIFACT_RETENTION_DAYS=9" "dev init should preserve an explicit artifact-retention override"
+	assert_contains "$log_file" "MINIO_APPLY_LIFECYCLES=false" "dev init should preserve the migration-safe lifecycle override"
+	if grep -Fq -- "MINIO_APPLY_LIFECYCLES=true" "$log_file"; then
+		echo "FAIL: dev init replaced the explicit lifecycle override with .env" >&2
+		failures=$((failures + 1))
+	fi
+}
+
 run_demo_order_case() {
 	local justfile="$REPO_ROOT/justfile"
 
@@ -155,6 +187,7 @@ main() {
 	run_network_default_case "$temp_dir"
 	run_network_project_case "$temp_dir"
 	run_network_override_case "$temp_dir"
+	run_minio_lifecycle_override_case "$temp_dir"
 	run_demo_order_case
 
 	if [[ "$failures" -ne 0 ]]; then

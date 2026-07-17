@@ -6,9 +6,11 @@ import (
 	"crypto/subtle"
 	"errors"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,6 +34,13 @@ const (
 	rateLimitWindow                   = time.Minute
 	unknownRateLimitKey               = "unknown"
 	rateLimiterMaxEntries             = 10000
+	maxTimeoutResponseBytes           = 72 * 1024 * 1024
+
+	defaultPublicSubmissionRequestsPerMinute = 6
+	defaultPublicSubmissionBurst             = 3
+	publicSubmissionRateEnv                  = "PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM"
+	publicSubmissionBurstEnv                 = "PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST"
+	defaultTrustedProxyCIDRs                 = "127.0.0.1/32,::1/128"
 )
 
 type rateWindow struct {
@@ -152,6 +161,168 @@ func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+type clientTokenBucket struct {
+	tokens     float64
+	lastUpdate time.Time
+}
+
+// clientTokenBucketLimiter protects the public container-spawning endpoints
+// independently of the general API read limiter. It is intentionally local to
+// one Server router; multi-instance deployments should enforce an equivalent
+// shared limit at their edge.
+type clientTokenBucketLimiter struct {
+	mu                sync.Mutex
+	buckets           map[string]clientTokenBucket
+	requestsPerMinute float64
+	burst             float64
+
+	saturationCount   uint64
+	lastSaturationLog time.Time
+}
+
+func newClientTokenBucketLimiter(requestsPerMinute, burst int) *clientTokenBucketLimiter {
+	return &clientTokenBucketLimiter{
+		buckets:           make(map[string]clientTokenBucket),
+		requestsPerMinute: float64(requestsPerMinute),
+		burst:             float64(burst),
+	}
+}
+
+func newPublicSubmissionRateLimiterFromEnv() *clientTokenBucketLimiter {
+	rpm := positiveIntEnv(publicSubmissionRateEnv, defaultPublicSubmissionRequestsPerMinute)
+	burst := positiveIntEnv(publicSubmissionBurstEnv, defaultPublicSubmissionBurst)
+
+	return newClientTokenBucketLimiter(rpm, burst)
+}
+
+func positiveIntEnv(name string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback
+	}
+
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 {
+		slog.Warn("Ignoring invalid positive-integer rate-limit setting", "name", name, "value", raw)
+
+		return fallback
+	}
+
+	return value
+}
+
+func (l *clientTokenBucketLimiter) allow(key string, now time.Time) (bool, int) {
+	l.mu.Lock()
+	allowed, retryAfter, logSaturation := l.allowLocked(key, now)
+	saturationTotal := l.saturationCount
+	l.mu.Unlock()
+
+	if logSaturation {
+		slog.Warn(
+			"SECURITY: public-submission rate-limiter table is saturated; denying new clients (fail-closed)",
+			"max_entries", rateLimiterMaxEntries,
+			"saturation_total", saturationTotal,
+		)
+	}
+
+	return allowed, retryAfter
+}
+
+func (l *clientTokenBucketLimiter) allowLocked(key string, now time.Time) (bool, int, bool) {
+	// A bucket recovers fully within at most burst/rate minutes. Keeping it for
+	// at least one minute avoids churn while bounding attacker-controlled keys.
+	staleAfter := time.Duration(math.Ceil(l.burst/l.requestsPerMinute*float64(time.Minute))) * time.Nanosecond
+	if staleAfter < time.Minute {
+		staleAfter = time.Minute
+	}
+
+	for bucketKey, bucket := range l.buckets {
+		if now.Sub(bucket.lastUpdate) >= staleAfter {
+			delete(l.buckets, bucketKey)
+		}
+	}
+
+	bucket, exists := l.buckets[key]
+	if !exists {
+		if len(l.buckets) >= rateLimiterMaxEntries {
+			l.saturationCount++
+
+			logNow := l.lastSaturationLog.IsZero() || now.Sub(l.lastSaturationLog) >= rateLimitWindow
+			if logNow {
+				l.lastSaturationLog = now
+			}
+
+			return false, int(rateLimitWindow.Seconds()), logNow
+		}
+
+		bucket = clientTokenBucket{tokens: l.burst, lastUpdate: now}
+	}
+
+	elapsedMinutes := now.Sub(bucket.lastUpdate).Minutes()
+	if elapsedMinutes > 0 {
+		bucket.tokens = math.Min(l.burst, bucket.tokens+(elapsedMinutes*l.requestsPerMinute))
+	}
+
+	bucket.lastUpdate = now
+
+	if bucket.tokens < 1 {
+		secondsPerToken := 60 / l.requestsPerMinute
+
+		retryAfter := int(math.Ceil((1 - bucket.tokens) * secondsPerToken))
+		if retryAfter < 1 {
+			retryAfter = 1
+		}
+
+		l.buckets[key] = bucket
+
+		return false, retryAfter, false
+	}
+
+	bucket.tokens--
+	l.buckets[key] = bucket
+
+	return true, 0, false
+}
+
+func publicSubmissionRateLimitMiddleware(
+	limiter *clientTokenBucketLimiter,
+	next http.HandlerFunc,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		allowed, retryAfter := limiter.allow(rateLimitKey(r), time.Now().UTC())
+		if !allowed {
+			detail := httputil.NewRateLimitError(
+				retryAfter,
+				strconv.Itoa(int(limiter.requestsPerMinute)),
+				"1 minute",
+			)
+			detail.Details = "This client has exceeded the public scan submission limit."
+			detail.Suggestion = "Wait for the Retry-After interval before submitting another scan."
+			detail.Meta["burst"] = strconv.Itoa(int(limiter.burst))
+			httputil.RespondStructuredError(w, http.StatusTooManyRequests, detail)
+
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+// requestReadDeadlineMiddleware overrides the server-wide request-body
+// deadline for endpoints that intentionally accept longer uploads. Keeping
+// this route-scoped preserves the tighter default deadline everywhere else.
+func requestReadDeadlineMiddleware(timeout time.Duration, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		deadline := time.Now().Add(timeout)
+		if err := http.NewResponseController(w).SetReadDeadline(deadline); err != nil &&
+			!errors.Is(err, http.ErrNotSupported) {
+			slog.WarnContext(r.Context(), "Failed to extend request read deadline", "error", err)
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
 // trustedProxies caches the parsed PLATFORM_API_TRUSTED_PROXIES list. It is
 // populated lazily on first use so t.Setenv in tests can change the value
 // before the rate limiter reads it. Call resetTrustedProxiesForTest to force
@@ -177,7 +348,10 @@ func resetTrustedProxiesForTest() {
 func loadTrustedProxies() []*net.IPNet {
 	raw := strings.TrimSpace(os.Getenv("PLATFORM_API_TRUSTED_PROXIES"))
 	if raw == "" {
-		return nil
+		// The supplied Caddy topology connects over loopback. Trusting only
+		// loopback by default gives public users independent limiter buckets
+		// without allowing network clients to spoof forwarding headers.
+		raw = defaultTrustedProxyCIDRs
 	}
 
 	var nets []*net.IPNet
@@ -264,11 +438,44 @@ func trustedForwardedRateLimitKey(r *http.Request) string {
 	}
 
 	parts := strings.Split(forwarded, ",")
-	if len(parts) == 0 {
-		return ""
+
+	var leftmostValid string
+
+	// X-Forwarded-For is appended from left to right by proxies. Walk from the
+	// trusted edge toward the client and select the first untrusted address so
+	// a caller-supplied leftmost value cannot mint fresh limiter buckets.
+	for index := len(parts) - 1; index >= 0; index-- {
+		ip := parseForwardedIP(parts[index])
+		if ip == nil {
+			return ""
+		}
+
+		leftmostValid = ip.String()
+		if !ipIsTrustedProxy(ip) {
+			return leftmostValid
+		}
 	}
 
-	return strings.TrimSpace(parts[0])
+	return leftmostValid
+}
+
+func parseForwardedIP(value string) net.IP {
+	value = strings.TrimSpace(value)
+	if host, _, err := net.SplitHostPort(value); err == nil {
+		value = host
+	}
+
+	return net.ParseIP(strings.Trim(value, "[]"))
+}
+
+func ipIsTrustedProxy(ip net.IP) bool {
+	for _, network := range trustedProxies() {
+		if network.Contains(ip) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func loggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -470,39 +677,89 @@ func timeoutMiddleware(timeout time.Duration, next http.HandlerFunc) http.Handle
 
 		r = r.WithContext(ctx)
 
-		done := make(chan struct{})
+		done := make(chan timeoutHandlerResult, 1)
 		tw := newTimeoutResponseWriter()
 
-		go func() {
-			next.ServeHTTP(tw, r)
-			close(done)
-		}()
+		go runTimedHandler(done, tw, r, next)
 
 		select {
-		case <-done:
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-				writeTimeoutJSON(w, r, timeout)
-
-				return
-			}
-
-			// Handler completed normally.
-			code, header, body := tw.snapshot()
-			for k, vv := range header {
-				w.Header()[k] = vv
-			}
-
-			w.WriteHeader(code)
-
-			if _, err := w.Write(body); err != nil {
-				slog.Warn("Failed to write buffered response", "error", err)
-			}
+		case result := <-done:
+			handleTimedResult(ctx, w, r, timeout, tw, result)
 		case <-ctx.Done():
 			// Timeout reached.
 			tw.markTimedOut()
 			writeTimeoutJSON(w, r, timeout)
 		}
 	}
+}
+
+func runTimedHandler(
+	done chan<- timeoutHandlerResult,
+	tw *timeoutResponseWriter,
+	r *http.Request,
+	next http.HandlerFunc,
+) {
+	result := timeoutHandlerResult{}
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			result.panicValue = recovered
+			result.panicStack = debug.Stack()
+		}
+
+		done <- result
+	}()
+
+	next.ServeHTTP(tw, r)
+}
+
+func handleTimedResult(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	timeout time.Duration,
+	tw *timeoutResponseWriter,
+	result timeoutHandlerResult,
+) {
+	if result.panicValue != nil {
+		slog.Error("HTTP handler panic", "panic", result.panicValue, "stack", string(result.panicStack))
+		// Re-panic on net/http's serving goroutine so its recovery boundary
+		// handles the failure. A panic in the worker goroutine would bypass
+		// that boundary and terminate the process.
+		panic(result.panicValue)
+	}
+
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		writeTimeoutJSON(w, r, timeout)
+
+		return
+	}
+
+	writeBufferedTimedResponse(w, tw)
+}
+
+func writeBufferedTimedResponse(w http.ResponseWriter, tw *timeoutResponseWriter) {
+	code, header, body, overflowed := tw.snapshot()
+	if overflowed {
+		httputil.RespondError(w, http.StatusInternalServerError, "Response exceeded server buffer limit")
+
+		return
+	}
+
+	for key, values := range header {
+		w.Header()[key] = values
+	}
+
+	w.WriteHeader(code)
+
+	if _, err := w.Write(body); err != nil {
+		slog.Warn("Failed to write buffered response", "error", err)
+	}
+}
+
+type timeoutHandlerResult struct {
+	panicValue any
+	panicStack []byte
 }
 
 func writeTimeoutJSON(w http.ResponseWriter, r *http.Request, timeout time.Duration) {
@@ -521,12 +778,13 @@ func writeTimeoutJSON(w http.ResponseWriter, r *http.Request, timeout time.Durat
 }
 
 type timeoutResponseWriter struct {
-	h     http.Header
-	buf   bytes.Buffer
-	mu    sync.Mutex
-	code  int
-	wrote bool
-	timed bool
+	h          http.Header
+	buf        bytes.Buffer
+	mu         sync.Mutex
+	code       int
+	wrote      bool
+	timed      bool
+	overflowed bool
 }
 
 func newTimeoutResponseWriter() *timeoutResponseWriter {
@@ -566,6 +824,12 @@ func (tw *timeoutResponseWriter) Write(b []byte) (int, error) {
 		tw.code = http.StatusOK
 	}
 
+	if len(b) > maxTimeoutResponseBytes-tw.buf.Len() {
+		tw.overflowed = true
+
+		return 0, http.ErrContentLength
+	}
+
 	return tw.buf.Write(b)
 }
 
@@ -575,7 +839,7 @@ func (tw *timeoutResponseWriter) markTimedOut() {
 	tw.mu.Unlock()
 }
 
-func (tw *timeoutResponseWriter) snapshot() (code int, header http.Header, body []byte) {
+func (tw *timeoutResponseWriter) snapshot() (code int, header http.Header, body []byte, overflowed bool) {
 	tw.mu.Lock()
 	defer tw.mu.Unlock()
 
@@ -586,6 +850,7 @@ func (tw *timeoutResponseWriter) snapshot() (code int, header http.Header, body 
 
 	header = tw.h.Clone()
 	body = append([]byte(nil), tw.buf.Bytes()...)
+	overflowed = tw.overflowed
 
-	return code, header, body
+	return code, header, body, overflowed
 }

@@ -37,6 +37,18 @@ import {
 // engine. Every other layer treats the selector as an opaque string.
 const AUTO_SELECTOR_PREFIX = 'auto:';
 const AUTO_SELECTOR_POLL_INTERVAL_MS = 250;
+const SENSITIVE_FIELD_MASK_CSS = `
+input[type="password"],
+input[autocomplete="current-password"],
+input[autocomplete="new-password"],
+input[autocomplete="one-time-code"],
+[data-stageflow-sensitive="true"] {
+  color: transparent !important;
+  caret-color: transparent !important;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.95) !important;
+  -webkit-text-security: disc !important;
+}
+`;
 
 const DEFAULT_BROWSER_CONFIG: BrowserConfig = {
 	engine: 'chromium',
@@ -284,7 +296,8 @@ export class BrowserManager {
 	async executePreScanActions(
 		page: Page,
 		actions: PreScanAction[],
-		secretsResolver?: SecretsResolver
+		secretsResolver?: SecretsResolver,
+		options?: { maskInputValues?: boolean }
 	): Promise<void> {
 		if (actions.length === 0) {
 			return;
@@ -293,14 +306,15 @@ export class BrowserManager {
 		this.logger.debug('Executing pre-scan actions', { count: actions.length });
 
 		for (const action of actions) {
-			await this.executeAction(page, action, secretsResolver);
+			await this.executeAction(page, action, secretsResolver, options?.maskInputValues === true);
 		}
 	}
 
 	private async executeAction(
 		page: Page,
 		action: PreScanAction,
-		secretsResolver?: SecretsResolver
+		secretsResolver: SecretsResolver | undefined,
+		maskInputValue: boolean
 	): Promise<void> {
 		const timeout =
 			'timeout' in action && typeof action.timeout === 'number'
@@ -314,7 +328,7 @@ export class BrowserManager {
 			typeof action.selector === 'string' &&
 			action.selector.startsWith(AUTO_SELECTOR_PREFIX)
 		) {
-			await this.executeAutoLoginAction(page, action, secretsResolver, timeout);
+			await this.executeAutoLoginAction(page, action, secretsResolver, timeout, maskInputValue);
 			return;
 		}
 
@@ -323,11 +337,17 @@ export class BrowserManager {
 				await page.click(action.selector, { timeout });
 				return;
 			case 'fill': {
+				if (maskInputValue) {
+					await this.markSensitiveField(page, action.selector);
+				}
 				const value = resolveActionValue(action.value, secretsResolver);
 				await page.fill(action.selector, value, { timeout });
 				return;
 			}
 			case 'select': {
+				if (maskInputValue) {
+					await this.markSensitiveField(page, action.selector);
+				}
 				const value = resolveActionValue(action.value, secretsResolver);
 				await page.selectOption(action.selector, value, { timeout });
 				return;
@@ -370,7 +390,8 @@ export class BrowserManager {
 		page: Page,
 		action: PreScanAction,
 		secretsResolver: SecretsResolver | undefined,
-		timeout: number
+		timeout: number,
+		maskInputValue: boolean
 	): Promise<void> {
 		if (action.type !== 'fill' && action.type !== 'click') {
 			throw new Error(
@@ -389,9 +410,18 @@ export class BrowserManager {
 				);
 			}
 
-			const value = resolveActionValue(action.value, secretsResolver);
-			await element.fill(value, { timeout });
-			await element.dispose();
+			try {
+				if (maskInputValue) {
+					await this.ensureSensitiveFieldMask(page);
+					await element.evaluate((node) => {
+						node.setAttribute('data-stageflow-sensitive', 'true');
+					});
+				}
+				const value = resolveActionValue(action.value, secretsResolver);
+				await element.fill(value, { timeout });
+			} finally {
+				await element.dispose();
+			}
 			return;
 		}
 
@@ -404,6 +434,27 @@ export class BrowserManager {
 
 		await element.click({ timeout });
 		await element.dispose();
+	}
+
+	private async markSensitiveField(page: Page, selector: string): Promise<void> {
+		await this.ensureSensitiveFieldMask(page);
+		await page.locator(selector).evaluate((node) => {
+			node.setAttribute('data-stageflow-sensitive', 'true');
+		});
+	}
+
+	private async ensureSensitiveFieldMask(page: Page): Promise<void> {
+		if (typeof page.addStyleTag !== 'function') {
+			throw new Error('Sensitive-field masking is unavailable; refusing to continue');
+		}
+
+		try {
+			await page.addStyleTag({ content: SENSITIVE_FIELD_MASK_CSS });
+		} catch (error) {
+			throw new Error('Failed to install sensitive-field masking; refusing to continue', {
+				cause: error
+			});
+		}
 	}
 
 	/**

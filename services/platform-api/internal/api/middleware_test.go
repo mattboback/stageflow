@@ -1,12 +1,16 @@
 package api
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/mattboback/stageflow/libs/go/httputil"
 )
 
 type flusherRecorder struct {
@@ -16,6 +20,71 @@ type flusherRecorder struct {
 
 func (f *flusherRecorder) Flush() {
 	f.flushed = true
+}
+
+type deadlineRecorder struct {
+	*httptest.ResponseRecorder
+	readDeadline time.Time
+}
+
+func (r *deadlineRecorder) SetReadDeadline(deadline time.Time) error {
+	r.readDeadline = deadline
+
+	return nil
+}
+
+func TestRequestReadDeadlineMiddlewareExtendsUploadDeadline(t *testing.T) {
+	t.Parallel()
+
+	started := time.Now()
+	called := false
+	recorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	handler := requestReadDeadlineMiddleware(uploadRequestTimeout, func(http.ResponseWriter, *http.Request) {
+		called = true
+	})
+
+	handler(recorder, httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", http.NoBody))
+
+	if !called {
+		t.Fatal("wrapped upload handler was not called")
+	}
+
+	minimum := started.Add(uploadRequestTimeout)
+	maximum := time.Now().Add(uploadRequestTimeout)
+
+	if recorder.readDeadline.Before(minimum) || recorder.readDeadline.After(maximum) {
+		t.Fatalf(
+			"read deadline = %v, want between %v and %v",
+			recorder.readDeadline,
+			minimum,
+			maximum,
+		)
+	}
+}
+
+func TestRouterExtendsReadDeadlineOnlyForZIPUploads(t *testing.T) {
+	server, _, _ := newTestServer(t)
+	router := server.Router()
+
+	zipRecorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	router.ServeHTTP(
+		zipRecorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", http.NoBody),
+	)
+
+	if zipRecorder.readDeadline.IsZero() {
+		t.Fatal("ZIP route did not extend its request read deadline")
+	}
+
+	urlRecorder := &deadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	router.ServeHTTP(
+		urlRecorder,
+		httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody),
+	)
+
+	if !urlRecorder.readDeadline.IsZero() {
+		t.Fatalf("non-upload route changed its read deadline to %v", urlRecorder.readDeadline)
+	}
 }
 
 func TestCORSMiddleware(t *testing.T) {
@@ -295,6 +364,53 @@ func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
 	}
 }
 
+func TestRateLimitKey_DefaultLoopbackProxyUsesForwardedClient(t *testing.T) {
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "")
+	resetTrustedProxiesForTest()
+	t.Cleanup(resetTrustedProxiesForTest)
+
+	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	first.RemoteAddr = "127.0.0.1:41001"
+	first.Header.Set("X-Forwarded-For", "198.51.100.10")
+
+	second := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	second.RemoteAddr = "127.0.0.1:41002"
+	second.Header.Set("X-Forwarded-For", "198.51.100.11")
+
+	if firstKey, secondKey := rateLimitKey(first), rateLimitKey(second); firstKey != "198.51.100.10" ||
+		secondKey != "198.51.100.11" {
+		t.Fatalf("loopback proxy keys = %q, %q", firstKey, secondKey)
+	}
+}
+
+func TestRateLimitKey_TrustedProxyRejectsSpoofedLeftmostForwardingValue(t *testing.T) {
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "10.0.0.0/8")
+	resetTrustedProxiesForTest()
+	t.Cleanup(resetTrustedProxiesForTest)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	req.RemoteAddr = "10.0.0.1:41001"
+	req.Header.Set("X-Forwarded-For", "192.0.2.200, 203.0.113.25")
+
+	if got := rateLimitKey(req); got != "203.0.113.25" {
+		t.Fatalf("rate-limit key = %q, want rightmost untrusted client", got)
+	}
+}
+
+func TestRateLimitKey_InvalidForwardingChainFallsBackToProxy(t *testing.T) {
+	t.Setenv("PLATFORM_API_TRUSTED_PROXIES", "10.0.0.0/8")
+	resetTrustedProxiesForTest()
+	t.Cleanup(resetTrustedProxiesForTest)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	req.RemoteAddr = "10.0.0.1:41001"
+	req.Header.Set("X-Forwarded-For", "not-an-ip")
+
+	if got := rateLimitKey(req); got != "10.0.0.1" {
+		t.Fatalf("rate-limit key = %q, want immediate proxy fallback", got)
+	}
+}
+
 func TestRateLimit_XForwardedFor_TrustedHonored(t *testing.T) {
 	original := apiRateLimiter
 	apiRateLimiter = newInMemoryRateLimiter(1)
@@ -367,6 +483,85 @@ func TestRateLimitMiddleware_ReturnsTooManyRequests(t *testing.T) {
 
 	if rr2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected second request 429, got %d", rr2.Code)
+	}
+}
+
+func TestClientTokenBucketLimiterEnforcesBurstAndRefill(t *testing.T) {
+	limiter := newClientTokenBucketLimiter(6, 3)
+	now := time.Date(2026, 7, 16, 12, 0, 0, 0, time.UTC)
+
+	for i := range 3 {
+		if allowed, retryAfter := limiter.allow("client-a", now); !allowed || retryAfter != 0 {
+			t.Fatalf("burst request %d = (%v, %d), want (true, 0)", i+1, allowed, retryAfter)
+		}
+	}
+
+	if allowed, retryAfter := limiter.allow("client-a", now); allowed || retryAfter != 10 {
+		t.Fatalf("request past burst = (%v, %d), want (false, 10)", allowed, retryAfter)
+	}
+
+	if allowed, retryAfter := limiter.allow("client-a", now.Add(10*time.Second)); !allowed || retryAfter != 0 {
+		t.Fatalf("request after one-token refill = (%v, %d), want (true, 0)", allowed, retryAfter)
+	}
+
+	if allowed, _ := limiter.allow("client-b", now); !allowed {
+		t.Fatal("expected a different client to have an independent burst")
+	}
+}
+
+func TestPublicSubmissionRateLimiterLoadsConfig(t *testing.T) {
+	t.Setenv(publicSubmissionRateEnv, "12")
+	t.Setenv(publicSubmissionBurstEnv, "4")
+
+	limiter := newPublicSubmissionRateLimiterFromEnv()
+	if limiter.requestsPerMinute != 12 {
+		t.Fatalf("requestsPerMinute = %v, want 12", limiter.requestsPerMinute)
+	}
+
+	if limiter.burst != 4 {
+		t.Fatalf("burst = %v, want 4", limiter.burst)
+	}
+}
+
+func TestPublicSubmissionRateLimitMiddlewareReturnsRetryAfter(t *testing.T) {
+	limiter := newClientTokenBucketLimiter(6, 1)
+	handler := publicSubmissionRateLimitMiddleware(limiter, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+	})
+
+	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	first.RemoteAddr = "127.0.0.1:1234"
+	firstResponse := httptest.NewRecorder()
+	handler(firstResponse, first)
+
+	if firstResponse.Code != http.StatusCreated {
+		t.Fatalf("first request: expected 201, got %d", firstResponse.Code)
+	}
+
+	second := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/browser-auth", http.NoBody)
+	second.RemoteAddr = "127.0.0.1:5678"
+	secondResponse := httptest.NewRecorder()
+	handler(secondResponse, second)
+
+	if secondResponse.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request: expected 429, got %d", secondResponse.Code)
+	}
+
+	if got := secondResponse.Header().Get("Retry-After"); got == "" {
+		t.Fatal("expected Retry-After header")
+	}
+
+	var response httputil.ErrorResponse
+	if err := json.NewDecoder(secondResponse.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if response.Error.Code != httputil.ErrCodeRateLimitExceeded {
+		t.Fatalf("error code = %q, want %q", response.Error.Code, httputil.ErrCodeRateLimitExceeded)
+	}
+
+	if response.Error.Meta["burst"] != "1" {
+		t.Fatalf("burst metadata = %q, want 1", response.Error.Meta["burst"])
 	}
 }
 
@@ -485,4 +680,28 @@ func TestTimeoutMiddleware_TimesOutAndIgnoresLateWrites(t *testing.T) {
 	case <-time.After(250 * time.Millisecond):
 		t.Fatalf("expected handler goroutine to finish")
 	}
+}
+
+func TestTimeoutMiddleware_RepanicsOnServingGoroutine(t *testing.T) {
+	t.Parallel()
+
+	sentinel := errors.New("handler exploded")
+	handler := timeoutMiddleware(time.Second, func(http.ResponseWriter, *http.Request) {
+		panic(sentinel)
+	})
+
+	defer func() {
+		recovered := recover()
+		if !errors.Is(asError(recovered), sentinel) {
+			t.Fatalf("recovered panic = %v, want %v", recovered, sentinel)
+		}
+	}()
+
+	handler(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/panic", http.NoBody))
+}
+
+func asError(value any) error {
+	err, _ := value.(error)
+
+	return err
 }

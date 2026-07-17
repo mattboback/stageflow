@@ -75,7 +75,38 @@ type jobURLAuthFormRecipe struct {
 	Success  map[string]any   `json:"success"`
 }
 
+type jobURLSubmitPolicy uint8
+
+const (
+	jobURLSubmitPolicyAuthenticated jobURLSubmitPolicy = iota
+	jobURLSubmitPolicyAnonymous
+	jobURLSubmitPolicyBrowserAuth
+)
+
 func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
+	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyAuthenticated)
+}
+
+// handleAnonymousJobURLSubmit serves public browser scans that do not need a
+// login. The trusted edge authenticates this exact route with its server-side
+// token, so it must reject every auth recipe and private-network opt-in.
+func (s *Server) handleAnonymousJobURLSubmit(w http.ResponseWriter, r *http.Request) {
+	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyAnonymous)
+}
+
+// handleBrowserAuthJobURLSubmit is the deliberately narrow authenticated-page
+// browser flow. It accepts only literal form-fill values; storage state and
+// from_env references remain available solely through the caller-authenticated
+// URL endpoint.
+func (s *Server) handleBrowserAuthJobURLSubmit(w http.ResponseWriter, r *http.Request) {
+	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyBrowserAuth)
+}
+
+func (s *Server) handleJobURLSubmitWithPolicy(
+	w http.ResponseWriter,
+	r *http.Request,
+	policy jobURLSubmitPolicy,
+) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 
@@ -84,6 +115,12 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 
 	req, ok := decodeJobURLSubmitRequest(w, r)
 	if !ok {
+		return
+	}
+
+	if detail := validateJobURLSubmitPolicy(req, policy); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
+
 		return
 	}
 
@@ -154,6 +191,100 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func validateJobURLSubmitPolicy(
+	req jobURLSubmitRequest,
+	policy jobURLSubmitPolicy,
+) *httputil.ErrorDetail {
+	if policy == jobURLSubmitPolicyAuthenticated {
+		return nil
+	}
+
+	if req.AllowPrivateTargets {
+		detail := httputil.NewValidationError(
+			"allow_private_targets",
+			"Public browser scan endpoints do not permit private target scans",
+			"Use a public http/https target or submit through the caller-authenticated URL endpoint.",
+		)
+
+		return &detail
+	}
+
+	if policy == jobURLSubmitPolicyAnonymous {
+		if req.Auth == nil {
+			return nil
+		}
+
+		detail := httputil.NewValidationError(
+			"auth",
+			"Authentication recipes are not accepted by the anonymous scan endpoint",
+			"Remove auth or use the browser-auth endpoint for a literal form login.",
+		)
+
+		return &detail
+	}
+
+	if req.Auth == nil {
+		detail := httputil.NewValidationError(
+			"auth",
+			"A form authentication recipe is required by the browser-auth endpoint",
+			"Provide auth.mode=form and a form recipe, or use the anonymous endpoint.",
+		)
+
+		return &detail
+	}
+
+	if req.Auth.Mode != authModeForm {
+		detail := httputil.NewValidationError(
+			"auth.mode",
+			`The browser-auth endpoint accepts only auth.mode="form"`,
+			"Use the caller-authenticated URL endpoint for storage state or environment references.",
+		)
+
+		return &detail
+	}
+
+	if req.Auth.StorageState != nil {
+		detail := httputil.NewValidationError(
+			"auth.storage_state",
+			"Storage state is not accepted by the browser-auth endpoint",
+			"Use the caller-authenticated URL endpoint to submit storage state.",
+		)
+
+		return &detail
+	}
+
+	if req.Auth.Form == nil {
+		detail := httputil.NewValidationError(
+			"auth.form",
+			`auth.form is required when auth.mode="form"`,
+			"Provide a login URL, form steps, and success condition.",
+		)
+
+		return &detail
+	}
+
+	for i, step := range req.Auth.Form.Steps {
+		value, hasValue := step["value"]
+		if !hasValue {
+			continue
+		}
+
+		if _, literal := value.(string); literal {
+			continue
+		}
+
+		detail := httputil.NewValidationError(
+			fmt.Sprintf("auth.form.steps[%d].value", i),
+			"The browser-auth endpoint accepts only literal form values",
+			"Use a literal string here or submit environment references through the caller-authenticated URL endpoint.",
+		)
+
+		return &detail
+	}
+
+	return nil
+}
+
 func decodeJobURLSubmitRequest(w http.ResponseWriter, r *http.Request) (jobURLSubmitRequest, bool) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxURLSubmitBodySize)
 
@@ -195,7 +326,12 @@ func (s *Server) validateJobURLSubmitRequest(
 	}
 
 	if err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, req.URLs, validationMode); err != nil {
-		httputil.RespondError(w, http.StatusBadRequest, err.Error())
+		detail := httputil.NewValidationError(
+			"urls",
+			"One or more target URLs are invalid or not allowed",
+			"Use public http/https URLs without embedded credentials.",
+		)
+		httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
 
 		return targetValidationModePublic, false
 	}
@@ -255,7 +391,15 @@ func (s *Server) normalizeJobURLSubmitAuth(
 			return nil, "", false
 		}
 
-		httputil.RespondError(w, http.StatusBadRequest, authErr.Error())
+		// Auth validation errors can contain browser URLs or values supplied in a
+		// recipe. Keep the response structured and actionable without reflecting
+		// execution-only data back to clients or access logs.
+		detail := httputil.NewValidationError(
+			"auth",
+			"Authentication configuration is invalid",
+			"Review the form login URL, steps, and success condition, then retry.",
+		)
+		httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
 
 		return nil, "", false
 	}

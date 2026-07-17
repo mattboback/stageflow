@@ -5,6 +5,7 @@ import type { AgentGoal, InteractiveElement, PagePerception, SuggestedAction } f
 import type { VisionClient } from './vision-client';
 
 import { parseFirstJsonObject } from './json';
+import { redactAgentInputValues } from './redaction';
 
 export class PageAnalyzer {
 	constructor(private readonly visionClient: VisionClient) {}
@@ -15,7 +16,10 @@ export class PageAnalyzer {
 		const title = await page.title();
 		const screenshot = await page.screenshot({ type: 'png' });
 
-		const prompt = this.buildAnalysisPrompt(url, title, interactiveElements, goal);
+		const prompt = redactAgentInputValues(
+			this.buildAnalysisPrompt(url, title, interactiveElements, goal),
+			goal
+		);
 		const response = await this.visionClient.analyze(screenshot, prompt);
 
 		return this.parseAnalysisResponse(response.content, url, title, interactiveElements);

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -18,6 +19,7 @@ type jobRuntimeClient interface {
 	CreateVolume(ctx context.Context, name string) error
 	InspectVolume(ctx context.Context, name string) (*VolumeInfo, error)
 	CreateContainer(ctx context.Context, req *ContainerCreateRequest) (*ContainerCreateResponse, error)
+	InspectContainer(ctx context.Context, containerID string) (*ContainerInfo, error)
 	StartContainer(ctx context.Context, containerID string) error
 }
 
@@ -52,6 +54,7 @@ type JobRuntime struct {
 type ContainerLaunchResult struct {
 	ContainerID string
 	Started     bool
+	Existing    bool
 }
 
 func NewJobRuntime(config JobRuntimeConfig) *JobRuntime {
@@ -179,6 +182,118 @@ func (r *JobRuntime) StartExtractionWorker(
 	)
 }
 
+func (r *JobRuntime) ensureContainerStarted(
+	ctx context.Context,
+	req *ContainerCreateRequest,
+	createErrMessage, startErrMessage string,
+) (*ContainerLaunchResult, error) {
+	if req == nil || req.Name == "" {
+		return nil, errors.New("container name is required")
+	}
+
+	if existing, inspectErr := r.client.InspectContainer(ctx, req.Name); inspectErr == nil {
+		return r.startExistingContainer(ctx, existing, req.Labels, startErrMessage)
+	} else if !isAPIStatus(inspectErr, 404) {
+		return nil, fmt.Errorf("failed to inspect existing container %s: %w", req.Name, inspectErr)
+	}
+
+	containerResp, err := r.client.CreateContainer(ctx, req)
+	if err == nil {
+		if containerResp == nil || containerResp.ID == "" {
+			return nil, errors.New("created container has no ID")
+		}
+
+		return r.startCreatedContainer(ctx, containerResp.ID, startErrMessage)
+	}
+
+	// Podman may have created the deterministic container even when the
+	// response was lost, or another claimant may have won the create race.
+	// Inspecting by name makes both cases idempotent.
+	existing, inspectErr := r.client.InspectContainer(ctx, req.Name)
+	if inspectErr == nil {
+		return r.startExistingContainer(ctx, existing, req.Labels, startErrMessage)
+	}
+
+	return nil, fmt.Errorf("%s: %w", createErrMessage, err)
+}
+
+func (r *JobRuntime) startExistingContainer(
+	ctx context.Context,
+	container *ContainerInfo,
+	expectedLabels map[string]string,
+	startErrMessage string,
+) (*ContainerLaunchResult, error) {
+	if container == nil || container.ID == "" {
+		return nil, errors.New("inspected container has no ID")
+	}
+
+	actualLabels := container.labels()
+
+	for _, key := range []string{"managed_by", "job_id", "component", "scanner_type"} {
+		expected := expectedLabels[key]
+		if expected == "" {
+			continue
+		}
+
+		if actualLabels[key] != expected {
+			return nil, fmt.Errorf(
+				"refusing to adopt container %s: label %s=%q, want %q",
+				container.ID,
+				key,
+				actualLabels[key],
+				expected,
+			)
+		}
+	}
+
+	result := &ContainerLaunchResult{ContainerID: container.ID, Existing: true}
+	if isTerminalContainerState(container) {
+		// A scanner may have finished and published its durable NATS event just
+		// before the orchestrator exited. Reattach the monitor, but never rerun
+		// the completed container and emit duplicate scan events.
+		return result, nil
+	}
+
+	if err := r.client.StartContainer(ctx, container.ID); err != nil {
+		refreshed, inspectErr := r.client.InspectContainer(ctx, container.ID)
+		if inspectErr != nil || refreshed.State != ContainerState("running") {
+			return result, fmt.Errorf("%s: %w", startErrMessage, err)
+		}
+	}
+
+	result.Started = true
+
+	return result, nil
+}
+
+func isTerminalContainerState(container *ContainerInfo) bool {
+	state := strings.ToLower(strings.TrimSpace(string(container.State)))
+	if state == "exited" || state == "stopped" || state == "dead" {
+		return true
+	}
+
+	status := strings.ToLower(strings.TrimSpace(container.Status))
+
+	return strings.HasPrefix(status, "exited") || strings.HasPrefix(status, "stopped")
+}
+
+func (r *JobRuntime) startCreatedContainer(
+	ctx context.Context,
+	containerID, startErrMessage string,
+) (*ContainerLaunchResult, error) {
+	result := &ContainerLaunchResult{ContainerID: containerID}
+	if err := r.client.StartContainer(ctx, containerID); err != nil {
+		container, inspectErr := r.client.InspectContainer(ctx, containerID)
+		if inspectErr != nil || container.State != ContainerState("running") {
+			return result, fmt.Errorf("%s: %w", startErrMessage, err)
+		}
+	}
+
+	result.Started = true
+
+	return result, nil
+}
+
 func (r *JobRuntime) StartScanner(
 	ctx context.Context,
 	job *models.Job,
@@ -213,7 +328,7 @@ func (r *JobRuntime) StartScanner(
 		},
 	}
 
-	return r.createAndStartContainer(
+	return r.ensureContainerStarted(
 		ctx,
 		req,
 		fmt.Sprintf("failed to create %s scanner container", scannerType),

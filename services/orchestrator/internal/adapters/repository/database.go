@@ -7,6 +7,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	// Import pgx stdlib driver for side effects.
@@ -25,7 +26,11 @@ const (
 
 // Database wraps PostgreSQL database access.
 type Database struct {
-	db *sql.DB
+	db                 *sql.DB
+	backgroundMu       sync.Mutex
+	backgroundWG       sync.WaitGroup
+	backgroundCancels  []context.CancelFunc
+	backgroundStopping bool
 }
 
 // Config holds database configuration.
@@ -101,8 +106,68 @@ func (d *Database) queryRowContext(ctx context.Context, query string, args ...an
 	return d.db.QueryRowContext(ctx, bindPostgresParams(query), args...)
 }
 
+func (d *Database) startBackgroundTask(parent context.Context, task func(context.Context)) error {
+	if d == nil {
+		return errors.New("database is nil")
+	}
+
+	if parent == nil {
+		return errors.New("background task context is nil")
+	}
+
+	if task == nil {
+		return errors.New("background task is nil")
+	}
+
+	d.backgroundMu.Lock()
+	defer d.backgroundMu.Unlock()
+
+	if d.backgroundStopping {
+		return errors.New("database background tasks have stopped")
+	}
+
+	taskCtx, cancel := context.WithCancel(parent)
+	d.backgroundCancels = append(d.backgroundCancels, cancel)
+	d.backgroundWG.Add(1)
+
+	go func() {
+		defer d.backgroundWG.Done()
+		defer cancel()
+
+		task(taskCtx)
+	}()
+
+	return nil
+}
+
+// StopBackgroundTasks cancels database-owned maintenance and waits until it
+// can no longer issue queries. It is safe to call more than once.
+func (d *Database) StopBackgroundTasks() {
+	if d == nil {
+		return
+	}
+
+	d.backgroundMu.Lock()
+	d.backgroundStopping = true
+	cancels := append([]context.CancelFunc(nil), d.backgroundCancels...)
+	d.backgroundMu.Unlock()
+
+	for _, cancel := range cancels {
+		cancel()
+	}
+
+	// backgroundStopping prevents Add calls after this Wait begins.
+	d.backgroundWG.Wait()
+}
+
 // Close closes the database connection.
 func (d *Database) Close() error {
+	if d == nil {
+		return nil
+	}
+
+	d.StopBackgroundTasks()
+
 	if d.db != nil {
 		return d.db.Close()
 	}

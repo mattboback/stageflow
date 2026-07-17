@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -151,6 +152,26 @@ func TestValidateTargetURLs_RejectsInvalidURLs(t *testing.T) {
 				t.Errorf("Expected %s to be rejected as invalid, but was allowed", tt.url)
 			}
 		})
+	}
+}
+
+func TestValidateTargetURLsRejectsEmbeddedCredentialsWithoutEchoingThem(t *testing.T) {
+	t.Parallel()
+
+	const passwordCanary = "target-password-canary-41f8"
+
+	err := validateTargetURLsWithResolver(
+		context.Background(),
+		defaultSecurityTestResolver(t),
+		[]string{"https://demo:" + passwordCanary + "@example.com/dashboard"},
+		targetValidationModePublic,
+	)
+	if err == nil {
+		t.Fatal("credential-bearing target URL was accepted")
+	}
+
+	if strings.Contains(err.Error(), passwordCanary) {
+		t.Fatalf("validation error echoed embedded credentials: %v", err)
 	}
 }
 

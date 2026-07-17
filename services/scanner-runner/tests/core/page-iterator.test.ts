@@ -9,7 +9,12 @@ import type { BrowserContext, Page } from 'playwright';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
-import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/types';
+import type {
+	PageScanResult,
+	Provenance,
+	ScannerConfig,
+	ScannerLogger
+} from '../../src/core/types';
 
 import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
 
@@ -350,13 +355,14 @@ describe('PageIterator', () => {
 			});
 		});
 
-		it('should execute pre-scan actions if present', async () => {
+		it('masks literal values used by per-page pre-scan actions', async () => {
+			const inputCanary = 'page-action-input-canary-91f2';
 			const provenanceWithActions: Provenance = {
 				...mockProvenance,
 				pages: [
 					{
 						...mockProvenance.pages[0]!,
-						pre_scan_actions: [{ type: 'click', selector: '#button' }]
+						pre_scan_actions: [{ type: 'fill', selector: '#private-field', value: inputCanary }]
 					}
 				]
 			};
@@ -365,9 +371,168 @@ describe('PageIterator', () => {
 
 			expect(mockBrowserManager.executePreScanActions).toHaveBeenCalledWith(
 				mockPage,
-				[{ type: 'click', selector: '#button' }],
-				expect.objectContaining({ allowList: [] })
+				[{ type: 'fill', selector: '#private-field', value: inputCanary }],
+				expect.objectContaining({ allowList: [] }),
+				{ maskInputValues: true }
 			);
+		});
+
+		it('recursively redacts per-page action values from results and lifecycle callbacks', async () => {
+			const inputCanary = 'page p@ss word+1';
+			const formEncodedCanary = new URLSearchParams([['value', inputCanary]])
+				.toString()
+				.slice('value='.length);
+			const provenance: Provenance = {
+				...mockProvenance,
+				pages: [
+					{
+						...mockProvenance.pages[0]!,
+						id: `page-${inputCanary}`,
+						pre_scan_actions: [{ type: 'fill', selector: '#private-field', value: inputCanary }]
+					}
+				]
+			};
+			const logger = {
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn()
+			} satisfies ScannerLogger;
+			const iterator = new PageIterator(mockBrowserManager, scannerConfig, logger);
+			const onPageStart = vi.fn().mockResolvedValue(undefined);
+			const onPageComplete = vi.fn().mockResolvedValue(undefined);
+			const onPageError = vi.fn().mockResolvedValue(undefined);
+			const callback = vi.fn<PageScanCallback>().mockResolvedValue(
+				makeResult({
+					pageId: 'page-1',
+					url: `https://example.com/result?value=${formEncodedCanary}`,
+					path: '/index.html',
+					success: false,
+					retryable: false,
+					error: `scanner returned ${inputCanary}`,
+					issues: [
+						{
+							id: 'canary-result',
+							scanner: 'test-scanner',
+							severity: 'critical',
+							category: 'test',
+							title: 'Sensitive result',
+							description: `Nested ${formEncodedCanary}`,
+							metadata: {
+								nested: [inputCanary, { encoded: formEncodedCanary }],
+								[formEncodedCanary]: inputCanary
+							}
+						}
+					],
+					rawResults: { raw: inputCanary, encoded: formEncodedCanary }
+				})
+			);
+
+			const results = await iterator.iteratePages(provenance, callback, {
+				onPageStart,
+				onPageComplete,
+				onPageError
+			});
+			const recorded = JSON.stringify({
+				results,
+				onPageStart: onPageStart.mock.calls,
+				onPageComplete: onPageComplete.mock.calls,
+				onPageError: onPageError.mock.calls,
+				logs: {
+					info: logger.info.mock.calls,
+					warn: logger.warn.mock.calls,
+					error: logger.error.mock.calls
+				}
+			});
+
+			expect(recorded).not.toContain(inputCanary);
+			expect(recorded).not.toContain(encodeURIComponent(inputCanary));
+			expect(recorded).not.toContain(formEncodedCanary);
+			expect(recorded).toContain('[REDACTED]');
+			const lifecycleError = onPageError.mock.calls[0]?.[0] as Error;
+			expect(lifecycleError.message).not.toContain(inputCanary);
+			expect(lifecycleError.message).toContain('[REDACTED]');
+			const resultMetadata = results[0]?.issues[0]?.metadata;
+			expect(resultMetadata).toHaveProperty('[REDACTED]', '[REDACTED]');
+		});
+
+		it('preserves result structure when one-character fill and select values are secret', async () => {
+			const provenance: Provenance = {
+				...mockProvenance,
+				pages: [
+					{
+						...mockProvenance.pages[0]!,
+						pre_scan_actions: [
+							{ type: 'fill', selector: '#private-field', value: 'a' },
+							{ type: 'select', selector: '#private-select', value: 's' }
+						]
+					}
+				]
+			};
+			const callback = vi.fn<PageScanCallback>().mockResolvedValue(
+				makeResult({
+					pageId: 'page-1',
+					url: 'https://example.com/result',
+					path: '/page',
+					issues: [
+						{
+							id: 'short-secret',
+							scanner: 'test-scanner',
+							severity: 'minor',
+							category: 'test',
+							title: 'Short secret',
+							description: 'a and s',
+							metadata: { a: 'first', s: 'second' }
+						}
+					]
+				})
+			);
+
+			const [result] = await pageIterator.iteratePages(provenance, callback);
+
+			expect(result).toBeDefined();
+			expect(result).toHaveProperty('pageId');
+			expect(result).toHaveProperty('url');
+			expect(result).toHaveProperty('path');
+			expect(result).toHaveProperty('issues');
+			expect(result!.issues).toHaveLength(1);
+			expect(result!.issues[0]).toHaveProperty('metadata');
+			expect(result!.issues[0]!.metadata).toEqual({
+				'[REDACTED]': 'fir[REDACTED]t',
+				'[REDACTED]#2': '[REDACTED]econd'
+			});
+		});
+
+		it('redacts encoded per-page values from thrown scanner errors', async () => {
+			const inputCanary = 'throw p@ss word+1';
+			const formEncodedCanary = new URLSearchParams([['value', inputCanary]])
+				.toString()
+				.slice('value='.length);
+			const provenance: Provenance = {
+				...mockProvenance,
+				pages: [
+					{
+						...mockProvenance.pages[0]!,
+						pre_scan_actions: [{ type: 'fill', selector: '#private-field', value: inputCanary }]
+					}
+				]
+			};
+			const onPageError = vi.fn().mockResolvedValue(undefined);
+			const callback = vi
+				.fn<PageScanCallback>()
+				.mockRejectedValue(new Error(`scanner crashed with ${formEncodedCanary}`));
+
+			const results = await pageIterator.iteratePages(provenance, callback, { onPageError });
+			const recorded = JSON.stringify({ results, errors: onPageError.mock.calls });
+
+			expect(recorded).not.toContain(inputCanary);
+			expect(recorded).not.toContain(formEncodedCanary);
+			expect(recorded).toContain('[REDACTED]');
+			for (const call of onPageError.mock.calls) {
+				const error = call[0] as Error;
+				expect(error.message).not.toContain(formEncodedCanary);
+				expect(error.message).toContain('[REDACTED]');
+			}
 		});
 
 		it('should retry failed pages up to maxRetries', async () => {

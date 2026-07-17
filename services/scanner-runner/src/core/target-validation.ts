@@ -143,6 +143,13 @@ function parseTargetURL(rawURL: string): URL {
 		throw new Error(`Invalid target URL "${rawURL}": ${message}`, { cause: err });
 	}
 
+	if (target.username || target.password) {
+		throw new BlockedTargetError(
+			redactURLUserInfo(rawURL),
+			'embedded URL credentials are not allowed'
+		);
+	}
+
 	if (target.protocol !== 'http:' && target.protocol !== 'https:') {
 		throw new BlockedTargetError(rawURL, 'only http/https URLs are allowed');
 	}
@@ -152,6 +159,21 @@ function parseTargetURL(rawURL: string): URL {
 	}
 
 	return target;
+}
+
+/** Remove URL userinfo before a target is logged or included in an error. */
+export function redactURLUserInfo(rawURL: string): string {
+	try {
+		const target = new URL(rawURL);
+		if (!target.username && !target.password) {
+			return rawURL;
+		}
+		target.username = '';
+		target.password = '';
+		return target.toString();
+	} catch {
+		return '[invalid URL]';
+	}
 }
 
 export function shouldEnforceRuntimeTargetValidation(): boolean {

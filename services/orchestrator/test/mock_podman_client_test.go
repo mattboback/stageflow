@@ -149,6 +149,27 @@ func (m *mockPodmanClient) StartContainer(_ context.Context, containerID string)
 	return nil
 }
 
+func (m *mockPodmanClient) InspectContainer(
+	_ context.Context,
+	containerID string,
+) (*podman.ContainerInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, container := range m.containers {
+		if container.ID == containerID || container.Name == containerID {
+			return &podman.ContainerInfo{
+				ID:     container.ID,
+				Name:   container.Name,
+				State:  podman.ContainerState(container.State),
+				Labels: container.Labels,
+			}, nil
+		}
+	}
+
+	return nil, &podman.APIError{StatusCode: 404, Body: "container not found"}
+}
+
 func (m *mockPodmanClient) WaitContainer(_ context.Context, containerID string) (*podman.ContainerWaitResponse, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

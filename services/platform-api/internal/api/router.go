@@ -8,10 +8,22 @@ import (
 // Router returns the HTTP router with all public routes configured.
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
+	publicSubmissionLimiter := newPublicSubmissionRateLimiterFromEnv()
 
 	// Upload endpoints get extended timeout for large file transfers.
-	mux.HandleFunc("/api/v1/jobs/zip", s.withUploadMiddleware(s.handleJobZipUpload))
+	mux.HandleFunc("/api/v1/jobs/zip", requestReadDeadlineMiddleware(
+		uploadRequestTimeout,
+		s.withPublicUploadMiddleware(s.handleJobZipUpload, publicSubmissionLimiter),
+	))
 	mux.HandleFunc("/api/v1/jobs/urls", s.withMiddleware(s.handleJobURLSubmit))
+	mux.HandleFunc("/api/v1/jobs/urls/anonymous", s.withPublicSubmissionMiddleware(
+		s.handleAnonymousJobURLSubmit,
+		publicSubmissionLimiter,
+	))
+	mux.HandleFunc("/api/v1/jobs/urls/browser-auth", s.withPublicSubmissionMiddleware(
+		s.handleBrowserAuthJobURLSubmit,
+		publicSubmissionLimiter,
+	))
 	mux.HandleFunc("/api/v1/jobs/", s.handleJobsRoute)
 	mux.HandleFunc("/api/v1/projects", s.withMiddleware(s.handleProjects))
 	mux.HandleFunc("/api/v1/projects/", s.withMiddleware(s.handleProjects))
@@ -19,6 +31,42 @@ func (s *Server) Router() http.Handler {
 	mux.HandleFunc("/healthz", s.handleHealth)
 
 	return mux
+}
+
+func (s *Server) withPublicSubmissionMiddleware(
+	next http.HandlerFunc,
+	limiter *clientTokenBucketLimiter,
+) http.HandlerFunc {
+	return loggingMiddleware(
+		corsMiddleware(
+			apiKeyMiddleware(
+				rateLimitMiddleware(
+					publicSubmissionRateLimitMiddleware(
+						limiter,
+						timeoutMiddleware(defaultRequestTimeout, next),
+					),
+				),
+			),
+		),
+	)
+}
+
+func (s *Server) withPublicUploadMiddleware(
+	next http.HandlerFunc,
+	limiter *clientTokenBucketLimiter,
+) http.HandlerFunc {
+	return loggingMiddleware(
+		corsMiddleware(
+			apiKeyMiddleware(
+				rateLimitMiddleware(
+					publicSubmissionRateLimitMiddleware(
+						limiter,
+						timeoutMiddleware(uploadRequestTimeout, next),
+					),
+				),
+			),
+		),
+	)
 }
 
 func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
@@ -40,16 +88,6 @@ func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		corsMiddleware(
 			apiKeyMiddleware(
 				rateLimitMiddleware(timeoutMiddleware(defaultRequestTimeout, next)),
-			),
-		),
-	)
-}
-
-func (s *Server) withUploadMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return loggingMiddleware(
-		corsMiddleware(
-			apiKeyMiddleware(
-				rateLimitMiddleware(timeoutMiddleware(uploadRequestTimeout, next)),
 			),
 		),
 	)

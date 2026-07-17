@@ -15,7 +15,7 @@ func (s *Service) HandleExtractionFailed(
 		return err
 	}
 
-	slog.Error("Handling extraction.failed", "job_id", payload.JobID, "error", payload.Error)
+	slog.Error("Handling extraction.failed", "job_id", payload.JobID)
 
 	if payload.StageLogPath != "" || payload.RecipePath != "" {
 		slog.Debug(

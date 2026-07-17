@@ -73,10 +73,9 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 		"exit_code":    waitResp.StatusCode,
 	})
 
-	//nolint:nestif // Error handling with log extraction requires multiple conditional paths
 	if waitResp.StatusCode != 0 {
 		logs, logErr := o.podmanClient.GetContainerLogs(ctx, containerID, true, true)
-		logTail := ""
+		logsAvailable := logErr == nil && logs != ""
 
 		if logErr != nil {
 			slog.Error(
@@ -91,7 +90,6 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 				logErr,
 			)
 		} else {
-			logTail = truncateLogs(logs, 500)
 			slog.Error(
 				"Container exited with error",
 				"component",
@@ -100,33 +98,23 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 				containerID,
 				"exit_code",
 				waitResp.StatusCode,
-				"logs_tail",
-				logTail,
+				"logs_available",
+				logsAvailable,
+				"logs_bytes",
+				len(logs),
 			)
 		}
 
-		if logTail != "" {
-			o.recordInternalEvent(ctx, jobID, "orchestrator.container.exit_error", map[string]any{
-				"component":    component,
-				"container_id": containerID,
-				"exit_code":    waitResp.StatusCode,
-				"logs_tail":    logTail,
-			})
-		} else {
-			o.recordInternalEvent(ctx, jobID, "orchestrator.container.exit_error", map[string]any{
-				"component":    component,
-				"container_id": containerID,
-				"exit_code":    waitResp.StatusCode,
-			})
-		}
+		o.recordInternalEvent(ctx, jobID, "orchestrator.container.exit_error", map[string]any{
+			"component":      component,
+			"container_id":   containerID,
+			"exit_code":      waitResp.StatusCode,
+			"logs_available": logsAvailable,
+		})
 
 		// Fail the job to ensure we don't hang if the worker couldn't publish failure (e.g. NATS down)
 		errorMsg := fmt.Sprintf("%s container exited with code %d", component, waitResp.StatusCode)
-		if logTail != "" {
-			o.failJobSafeWithDetails(ctx, jobID, component, errorMsg, logTail)
-		} else {
-			o.failJobSafe(ctx, jobID, component, errorMsg)
-		}
+		o.failJobSafe(ctx, jobID, component, errorMsg)
 	} else {
 		slog.Debug("Container exited successfully", "component", component, "container_id", containerID)
 	}

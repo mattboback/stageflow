@@ -63,8 +63,10 @@ describe('BrowserManager', () => {
 			hover: vi.fn().mockResolvedValue(undefined),
 			waitForTimeout: vi.fn().mockResolvedValue(undefined),
 			waitForSelector: vi.fn().mockResolvedValue(undefined),
+			addStyleTag: vi.fn().mockResolvedValue(undefined),
 			locator: vi.fn().mockReturnValue({
-				scrollIntoViewIfNeeded: vi.fn().mockResolvedValue(undefined)
+				scrollIntoViewIfNeeded: vi.fn().mockResolvedValue(undefined),
+				evaluate: vi.fn().mockResolvedValue(undefined)
 			}),
 			evaluate: vi.fn().mockResolvedValue(undefined),
 			evaluateHandle: vi.fn(),
@@ -327,6 +329,17 @@ describe('BrowserManager', () => {
 			expect(mockPage.waitForTimeout).toHaveBeenCalledWith(5000);
 		});
 
+		it('does not require style injection for unauthenticated navigation', async () => {
+			vi.mocked(mockPage.addStyleTag).mockRejectedValueOnce(
+				new Error('style-src blocks inline styles')
+			);
+
+			await expect(
+				browserManager.navigateToPage(mockPage, 'https://example.com')
+			).resolves.toBeUndefined();
+			expect(mockPage.addStyleTag).not.toHaveBeenCalled();
+		});
+
 		it('should fail before navigation when target validation fails', async () => {
 			vi.mocked(validateTargetURLForPolicy).mockRejectedValueOnce(new Error('Blocked target URL'));
 
@@ -564,6 +577,57 @@ describe('BrowserManager', () => {
 			});
 		});
 
+		it('marks execution-only input values so screenshots mask them', async () => {
+			const evaluate = vi.fn().mockResolvedValue(undefined);
+			vi.mocked(mockPage.locator).mockReturnValue({ evaluate } as never);
+
+			await browserManager.executePreScanActions(
+				mockPage,
+				[{ type: 'fill', selector: '#account-password', value: 'literal-canary' }],
+				undefined,
+				{ maskInputValues: true }
+			);
+
+			expect(mockPage.addStyleTag).toHaveBeenCalledWith({
+				content: expect.stringContaining('[data-stageflow-sensitive="true"]')
+			});
+			expect(evaluate).toHaveBeenCalled();
+		});
+
+		it('fails closed when a sensitive input cannot be marked', async () => {
+			const inputCanary = 'mask-failure-input-canary-8e31';
+			const evaluate = vi.fn().mockRejectedValue(new Error('detached input'));
+			vi.mocked(mockPage.locator).mockReturnValue({ evaluate } as never);
+
+			await expect(
+				browserManager.executePreScanActions(
+					mockPage,
+					[{ type: 'fill', selector: '#account-password', value: inputCanary }],
+					undefined,
+					{ maskInputValues: true }
+				)
+			).rejects.toThrow('detached input');
+			expect(mockPage.fill).not.toHaveBeenCalled();
+		});
+
+		it('does not write a sensitive value when mask CSS injection fails', async () => {
+			const inputCanary = 'mask-css-input-canary-3b17';
+			vi.mocked(mockPage.addStyleTag).mockRejectedValueOnce(
+				new Error('style-src blocks inline styles')
+			);
+
+			await expect(
+				browserManager.executePreScanActions(
+					mockPage,
+					[{ type: 'fill', selector: '#account-password', value: inputCanary }],
+					undefined,
+					{ maskInputValues: true }
+				)
+			).rejects.toThrow('Failed to install sensitive-field masking; refusing to continue');
+			expect(mockPage.locator).not.toHaveBeenCalled();
+			expect(mockPage.fill).not.toHaveBeenCalled();
+		});
+
 		it('should execute select action', async () => {
 			const actions: PreScanAction[] = [
 				{ type: 'select', selector: '#dropdown', value: 'option1' }
@@ -665,6 +729,7 @@ describe('BrowserManager', () => {
 				return {
 					fill: vi.fn().mockResolvedValue(undefined),
 					click: vi.fn().mockResolvedValue(undefined),
+					evaluate: vi.fn().mockResolvedValue(undefined),
 					dispose: vi.fn().mockResolvedValue(undefined)
 				};
 			}
@@ -679,6 +744,31 @@ describe('BrowserManager', () => {
 
 				expect(element.fill).toHaveBeenCalledWith('hunter2', { timeout: 30_000 });
 				expect(mockPage.fill).not.toHaveBeenCalled();
+			});
+
+			it('does not auto-fill a sensitive value when masking fails', async () => {
+				const element = fakeElement();
+				vi.mocked(mockPage.evaluateHandle).mockResolvedValue(fakeHandle(element));
+				vi.mocked(mockPage.addStyleTag).mockRejectedValueOnce(
+					new Error('style-src blocks inline styles')
+				);
+
+				await expect(
+					browserManager.executePreScanActions(
+						mockPage,
+						[
+							{
+								type: 'fill',
+								selector: 'auto:password',
+								value: 'auto-mask-canary-51a8'
+							}
+						],
+						undefined,
+						{ maskInputValues: true }
+					)
+				).rejects.toThrow('Failed to install sensitive-field masking; refusing to continue');
+				expect(element.fill).not.toHaveBeenCalled();
+				expect(element.dispose).toHaveBeenCalled();
 			});
 
 			it('clicks the resolved element for auto:submit', async () => {

@@ -45,12 +45,25 @@
 	text-wrap: pretty;
 }
 
+.hero__actions {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-3);
+	margin-top: var(--sp-6);
+	flex-wrap: wrap;
+}
+
+.hero__actions > span {
+	color: var(--ink-muted);
+	font-size: 0.9375rem;
+}
+
 /* scan form — the conversion point matches the headline's weight */
 .scanbar {
 	display: flex;
 	align-items: flex-start;
 	gap: var(--sp-3);
-	margin-top: var(--sp-6);
+	margin-top: var(--sp-3);
 	max-width: 38rem;
 }
 .scanbar__field {
@@ -111,6 +124,7 @@
 .preview__reg-cta {
 	font-size: 0.9375rem; font-weight: 600; color: var(--signal-ink);
 }
+.preview__reg-cta:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* --------------------------------------------------------------- sections */
 .section {

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -290,9 +289,17 @@ func (s *Server) handleJobDiff(w http.ResponseWriter, r *http.Request, jobID str
 		return
 	}
 
-	baselineRec, err := s.jobStatus.Current(ctx, p.BaselineJobID)
-	if err != nil {
-		httputil.RespondError(w, http.StatusInternalServerError, "Baseline job not found")
+	if err = s.ensureBaselineCopy(ctx, p); err != nil {
+		logging.Error(ctx, "Failed to preserve baseline report", "error", err)
+
+		if errors.Is(err, ErrBaselineUnavailable) ||
+			errors.Is(err, errInvalidBaselineReport) ||
+			errors.Is(err, project.ErrBaselineSuperseded) {
+			httputil.RespondError(w, http.StatusConflict,
+				"Promoted baseline report is unavailable; promote a new completed job")
+		} else {
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch baseline report")
+		}
 
 		return
 	}
@@ -305,10 +312,16 @@ func (s *Server) handleJobDiff(w http.ResponseWriter, r *http.Request, jobID str
 		return
 	}
 
-	baselineReport, err := s.downloadReport(ctx, p.BaselineJobID, baselineRec.ReportJSONKey)
+	baselineReport, err := s.downloadBaselineReport(ctx, p.ID, p.BaselineJobID)
 	if err != nil {
 		logging.Error(ctx, "Failed to download baseline report", "error", err)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch baseline report")
+
+		if errors.Is(err, errInvalidBaselineReport) {
+			httputil.RespondError(w, http.StatusConflict,
+				"Promoted baseline report is invalid; promote a new completed job")
+		} else {
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch baseline report")
+		}
 
 		return
 	}
@@ -355,9 +368,7 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 		return report.UnifiedReportV2{}, fmt.Errorf("read report for %s: %w", jobID, err)
 	}
 
-	var rpt report.UnifiedReportV2
-
-	err = json.Unmarshal(data, &rpt)
+	rpt, err := decodeBaselineReport(data, jobID)
 	if err != nil {
 		return report.UnifiedReportV2{}, fmt.Errorf("parse report for %s: %w", jobID, err)
 	}

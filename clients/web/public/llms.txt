@@ -1,0 +1,22 @@
+# StageFlow
+
+> StageFlow is a self-hostable frontend quality platform that runs accessibility, performance, SEO, security, link, spelling, and optional AI checks in rootless containers, then merges findings into one report.
+
+## Core pages
+
+- [Home](https://stageflow.org/): Product overview and scanner index.
+- [Local projects](https://stageflow.org/projects): Browser-local projects and baseline comparisons.
+- [Playground](https://stageflow.org/playground): Configure a one-off URL or static-site ZIP scan.
+
+## Documentation
+
+- [README](https://github.com/mattboback/stageflow/blob/main/README.md): Setup and project overview.
+- [Documentation](https://github.com/mattboback/stageflow/tree/main/docs): Architecture, operations, privacy, and configuration.
+- [Source](https://github.com/mattboback/stageflow): MIT-licensed source code and issue tracker.
+
+## API
+
+- `GET /api/v1/jobs/{jobId}/results`: Unified JSON report for a completed scan.
+- `GET /api/v1/jobs/{jobId}/report`: Standalone HTML report for a completed scan.
+
+The hosted demo processes submitted targets and scan data on its deployment. Self-host StageFlow when data residency or private-target scanning matters.

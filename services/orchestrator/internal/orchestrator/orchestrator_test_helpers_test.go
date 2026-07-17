@@ -24,17 +24,18 @@ var orchestratorTestSchemaCounter uint64
 
 // mockPodmanClient is a mock Podman client for testing.
 type mockPodmanClient struct {
-	createPodFunc       func(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
-	stopPodFunc         func(ctx context.Context, podID string) error
-	removePodFunc       func(ctx context.Context, podID string, force bool) error
-	createVolumeFunc    func(ctx context.Context, name string) error
-	inspectVolumeFunc   func(ctx context.Context, name string) (*podman.VolumeInfo, error)
-	removeVolumeFunc    func(ctx context.Context, name string, force bool) error
-	createContainerFunc func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
-	startContainerFunc  func(ctx context.Context, containerID string) error
-	waitContainerFunc   func(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error)
-	removeContainerFunc func(ctx context.Context, containerID string, force bool) error
-	getLogsFunc         func(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
+	createPodFunc        func(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
+	stopPodFunc          func(ctx context.Context, podID string) error
+	removePodFunc        func(ctx context.Context, podID string, force bool) error
+	createVolumeFunc     func(ctx context.Context, name string) error
+	inspectVolumeFunc    func(ctx context.Context, name string) (*podman.VolumeInfo, error)
+	removeVolumeFunc     func(ctx context.Context, name string, force bool) error
+	createContainerFunc  func(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
+	inspectContainerFunc func(ctx context.Context, containerID string) (*podman.ContainerInfo, error)
+	startContainerFunc   func(ctx context.Context, containerID string) error
+	waitContainerFunc    func(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error)
+	removeContainerFunc  func(ctx context.Context, containerID string, force bool) error
+	getLogsFunc          func(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
 }
 
 func (m *mockPodmanClient) CreatePod(
@@ -108,6 +109,17 @@ func (m *mockPodmanClient) StartContainer(ctx context.Context, containerID strin
 	}
 
 	return nil
+}
+
+func (m *mockPodmanClient) InspectContainer(
+	ctx context.Context,
+	containerID string,
+) (*podman.ContainerInfo, error) {
+	if m.inspectContainerFunc != nil {
+		return m.inspectContainerFunc(ctx, containerID)
+	}
+
+	return nil, &podman.APIError{StatusCode: 404, Body: "container not found"}
 }
 
 func (m *mockPodmanClient) WaitContainer(

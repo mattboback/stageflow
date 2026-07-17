@@ -97,6 +97,7 @@ const mocks = vi.hoisted(() => {
 	const mockStorageProviderInstance = {
 		ensureBucket: vi.fn().mockResolvedValue(undefined),
 		upload: vi.fn().mockResolvedValue(undefined),
+		uploadBuffer: vi.fn().mockResolvedValue(undefined),
 		uploadDirectory: vi.fn().mockResolvedValue(0)
 	};
 
@@ -251,6 +252,7 @@ describe('ScannerBase', () => {
 		fsPromiseMocks.readdir.mockResolvedValue([]);
 		mocks.mockStorageProviderInstance.uploadDirectory.mockResolvedValue(0);
 		mocks.mockStorageProviderInstance.upload.mockResolvedValue(undefined);
+		mocks.mockStorageProviderInstance.uploadBuffer.mockResolvedValue(undefined);
 	});
 
 	it('should initialize and run a scan successfully', async () => {
@@ -608,11 +610,51 @@ describe('ScannerBase', () => {
 			delete process.env.SCAN_URLS;
 		}
 
-		expect(mocks.mockStorageProviderInstance.upload).toHaveBeenCalledWith(
+		expect(mocks.mockStorageProviderInstance.uploadBuffer).toHaveBeenCalledWith(
 			mockConfig.storage.bucket,
 			'test-job/provenance.json',
-			mockConfig.provenancePath,
+			expect.any(Buffer),
 			'application/json'
 		);
+	});
+
+	it('uploads only the public provenance view when form auth contains literals', async () => {
+		const userCanary = 'scanner-base-user-canary-811d';
+		const passwordCanary = 'scanner-base-password-canary-593a';
+		mocks.mockPageIteratorInstance.loadProvenance.mockResolvedValueOnce({
+			version: '1.0.0',
+			job_id: 'test-job',
+			base_url: 'https://example.com',
+			pages: [{ id: 'account', path: '/account', url: 'https://example.com/account' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://example.com/login',
+				steps: [
+					{ type: 'fill', selector: '#username', value: userCanary },
+					{ type: 'fill', selector: '#password', value: passwordCanary },
+					{ type: 'click', selector: 'button[type=submit]' }
+				],
+				success: { type: 'load' }
+			}
+		});
+		process.env.SCAN_URLS = JSON.stringify(['https://example.com/account']);
+
+		try {
+			await scanner.run(mockConfig);
+		} finally {
+			delete process.env.SCAN_URLS;
+		}
+
+		const provenanceUpload = mocks.mockStorageProviderInstance.uploadBuffer.mock.calls.find(
+			(call) => call[1] === 'test-job/provenance.json'
+		);
+		expect(provenanceUpload).toBeDefined();
+		const serialized = (provenanceUpload?.[2] as Buffer).toString('utf8');
+		expect(serialized).not.toContain(userCanary);
+		expect(serialized).not.toContain(passwordCanary);
+		expect(JSON.parse(serialized)).toMatchObject({
+			metadata: { auth_configured: true, auth_mode: 'form' }
+		});
+		expect(JSON.parse(serialized)).not.toHaveProperty('auth');
 	});
 });

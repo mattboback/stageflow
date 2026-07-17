@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
 FROM docker.io/library/golang:1.26.5 AS builder
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
 WORKDIR /src
 
 # Generate schema contracts first; generated outputs are intentionally untracked.
@@ -42,9 +44,9 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
     cd services/platform-api && \
-    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+    CGO_ENABLED=1 GOOS="$TARGETOS" GOARCH="$TARGETARCH" \
     GOWORK=off go build -ldflags="-s -w" -o /out/platform-api ./cmd/server && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" \
     GOWORK=off go build -ldflags="-s -w" -o /out/platform-api-healthcheck ./cmd/healthcheck
 
 # Prep stage - create directories with correct ownership

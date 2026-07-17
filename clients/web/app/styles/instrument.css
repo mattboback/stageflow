@@ -3,8 +3,8 @@
    Shared public UI stylesheet.
 
    Voice: a confident, friendly QA dashboard. White cards on a cool, faintly
-   teal-tinted ground. Gabarito carries headings and hero numerals; Source
-   Sans 3 carries the interface. Monospace appears only where the content is
+	   teal-tinted ground. System UI fonts keep self-hosted deployments private
+	   and offline-capable. Monospace appears only where the content is
    literally code. Severity is a calibrated color scale, always paired with a
    text label. WCAG AA contrast minimum on all text.
    ============================================================================ */
@@ -37,7 +37,7 @@
 
 	/* --- Calibrated severity scale (always paired with a text label) ------- */
 	--sev-critical: oklch(0.52 0.20 27);
-	--sev-serious:  oklch(0.56 0.16 45);
+	--sev-serious:  oklch(0.52 0.16 45);
 	--sev-moderate: oklch(0.58 0.125 82);
 	--sev-minor:    oklch(0.52 0.12 135);
 	--sev-info:     oklch(0.52 0.10 245);
@@ -48,13 +48,10 @@
 	--sev-minor-wash:    oklch(0.966 0.024 140);
 	--sev-info-wash:     oklch(0.963 0.018 245);
 
-	/* --- Type ---------------------------------------------------------------
-	   Display: Gabarito (headings, hero numerals).
-	   Body: Source Sans 3 (interface, prose).
-	   Mono: JetBrains Mono — code content only (selectors, snippets, CLI). */
-	--display: 'Gabarito', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
-	--sans: 'Source Sans 3', 'Segoe UI', system-ui, -apple-system, sans-serif;
-	--mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+	/* --- Type: local system stacks, with no third-party font requests ------- */
+	--display: 'Avenir Next', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+	--sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+	--mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Consolas, Menlo, monospace;
 
 	/* --- Radius: soft, never blobby ---------------------------------------- */
 	--r-xs: 6px;
@@ -143,6 +140,12 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
 	overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
+.skip-link {
+	position: fixed; top: var(--sp-2); left: var(--sp-2); z-index: calc(var(--z-tooltip) + 1);
+	padding: 0.65rem 0.9rem; border-radius: var(--r-sm); background: var(--ink-strong);
+	color: var(--surface); font-weight: 700; transform: translateY(-180%);
+}
+.skip-link:focus { transform: translateY(0); }
 
 /* Field / section label: small, sentence case, quietly strong */
 .label {
@@ -231,6 +234,8 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .btn--primary:hover { background: var(--signal-press); }
 .btn--ghost { color: var(--ink-strong); border-color: var(--line-strong); background: var(--surface); }
 .btn--ghost:hover { border-color: var(--ink-faint); background: var(--ground); }
+.btn--danger { background: var(--sev-critical); color: oklch(0.99 0 0); }
+.btn--danger:hover { filter: brightness(0.92); }
 .btn--sm { padding: 0.5rem 0.85rem; font-size: 0.875rem; }
 .btn--lg { padding: 0.85rem 1.4rem; font-size: 1rem; border-radius: var(--r-sm); }
 .btn .ar { transition: transform var(--dur-2) var(--ease); }
@@ -366,6 +371,19 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .toggle[aria-checked='true'], .toggle--on { background: var(--signal-strong); }
 .toggle[aria-checked='true']::after, .toggle--on::after { transform: translateX(17px); }
+
+/* ---------------------------------------------------------- confirm dialog */
+.cdialog__backdrop {
+	position: fixed; inset: 0; z-index: var(--z-modal);
+	background: oklch(0.2 0.015 230 / 0.5);
+	display: flex; align-items: center; justify-content: center;
+	padding: 2rem 1rem;
+}
+.cdialog { width: 100%; max-width: 26rem; box-shadow: var(--shadow-md); }
+.cdialog__body { padding: 1.4rem 1.4rem 0.4rem; }
+.cdialog__body h2 { font-size: 1.05rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
+.cdialog__body p { color: var(--ink-muted); margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.55; }
+.cdialog__actions { display: flex; justify-content: flex-end; gap: 0.7rem; padding: 1.2rem 1.4rem 1.4rem; }
 
 /* ------------------------------------------------------------------ footer */
 .site-footer { border-top: 1px solid var(--line); margin-top: var(--sp-7); background: var(--surface); }

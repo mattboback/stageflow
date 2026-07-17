@@ -22,7 +22,7 @@ import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
 import type { SecretsResolver } from './secrets-resolver';
-import type { TargetValidationPolicy } from './target-validation';
+import { redactURLUserInfo, type TargetValidationPolicy } from './target-validation';
 import type {
 	ProvenanceAuth,
 	ProvenanceAuthForm,
@@ -107,11 +107,14 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 		options;
 
 	const page = await context.newPage();
-	let postLoginUrl: string | undefined;
+	let capturedPostLoginUrl: string | undefined;
+	const redact = (value: string): string => secretsResolver.redactKnownValues(value);
+	const sanitizeUrl = (value: string): string => redact(redactURLUserInfo(value));
 
 	try {
+		registerFormActionValues(auth, secretsResolver);
 		logger.info('Hydrating auth via form recipe', {
-			loginUrl: auth.login_url,
+			loginUrl: sanitizeUrl(auth.login_url),
 			steps: auth.steps.length,
 			successType: auth.success.type
 		});
@@ -123,7 +126,9 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 			targetValidationPolicy
 		);
 
-		await browserManager.executePreScanActions(page, auth.steps, secretsResolver);
+		await browserManager.executePreScanActions(page, auth.steps, secretsResolver, {
+			maskInputValues: true
+		});
 
 		await waitForSuccess(page, auth);
 
@@ -135,34 +140,34 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 		// returns on the first check in that case.
 		const leftLoginFormUrl = await waitUntilLeftLoginForm(page, auth.login_url);
 		if (leftLoginFormUrl === null) {
-			postLoginUrl = page.url();
+			capturedPostLoginUrl = page.url();
+			const safePostLoginUrl = sanitizeUrl(capturedPostLoginUrl);
 			throw new AuthHydrationError(
-				`Form auth hydration did not leave the login page: ${postLoginUrl}. ` +
+				`Form auth hydration did not leave the login page: ${safePostLoginUrl}. ` +
 					'Verify the submitted credentials, or set a success selector that only appears after login.',
 				{
 					mode: 'form',
-					loginUrl: auth.login_url,
-					postLoginUrl
+					loginUrl: sanitizeUrl(auth.login_url),
+					postLoginUrl: safePostLoginUrl
 				}
 			);
 		}
 
-		postLoginUrl = leftLoginFormUrl;
-		return { postLoginUrl };
+		capturedPostLoginUrl = leftLoginFormUrl;
+		return { postLoginUrl: sanitizeUrl(capturedPostLoginUrl) };
 	} catch (err) {
-		const capturedUrl = postLoginUrl ?? safeUrl(page);
+		const capturedUrl = sanitizeUrl(capturedPostLoginUrl ?? safeUrl(page) ?? auth.login_url);
 		if (err instanceof AuthHydrationError) {
-			throw err;
+			throw sanitizeAuthHydrationError(err, redact);
 		}
+		const safeErrorMessage = redact(err instanceof Error ? err.message : String(err));
 		throw new AuthHydrationError(
-			`Form auth hydration failed at ${capturedUrl ?? auth.login_url}: ${
-				err instanceof Error ? err.message : String(err)
-			}`,
+			`Form auth hydration failed at ${capturedUrl}: ${safeErrorMessage}`,
 			{
 				mode: 'form',
-				loginUrl: auth.login_url,
-				...(capturedUrl !== undefined ? { postLoginUrl: capturedUrl } : {}),
-				cause: err
+				loginUrl: sanitizeUrl(auth.login_url),
+				postLoginUrl: capturedUrl,
+				cause: new Error(safeErrorMessage)
 			}
 		);
 	} finally {
@@ -170,10 +175,34 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 			await page.close();
 		} catch (closeErr) {
 			logger.warn('Failed to close auth hydration page', {
-				error: closeErr instanceof Error ? closeErr.message : String(closeErr)
+				error: redact(closeErr instanceof Error ? closeErr.message : String(closeErr))
 			});
 		}
 	}
+}
+
+function registerFormActionValues(
+	auth: ProvenanceAuthForm,
+	secretsResolver: SecretsResolver
+): void {
+	for (const action of auth.steps) {
+		if (action.type === 'fill' || action.type === 'select') {
+			secretsResolver.resolveValue(action.value);
+		}
+	}
+}
+
+function sanitizeAuthHydrationError(
+	error: AuthHydrationError,
+	redact: (value: string) => string
+): AuthHydrationError {
+	const cause = error.cause;
+	return new AuthHydrationError(redact(error.message), {
+		mode: error.mode,
+		...(error.loginUrl !== undefined ? { loginUrl: redact(error.loginUrl) } : {}),
+		...(error.postLoginUrl !== undefined ? { postLoginUrl: redact(error.postLoginUrl) } : {}),
+		...(cause instanceof Error ? { cause: new Error(redact(cause.message)) } : {})
+	});
 }
 
 async function waitForSuccess(

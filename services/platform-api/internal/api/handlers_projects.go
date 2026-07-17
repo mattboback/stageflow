@@ -292,10 +292,22 @@ func (s *Server) handleDeleteProject(w http.ResponseWriter, r *http.Request, slu
 		return
 	}
 
-	err = s.projectStore.DeleteProject(r.Context(), p.ID)
+	err = s.deleteProjectBaseline(r.Context(), p.ID)
 	if err != nil {
-		logging.Error(r.Context(), "Failed to delete project", "error", err)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete project")
+		switch {
+		case errors.Is(err, project.ErrNotFound):
+			httputil.RespondNotFound(w, "Project")
+		case errors.Is(err, project.ErrBaselineOperationPending):
+			httputil.RespondError(w, http.StatusConflict,
+				"A baseline operation is still pending; retry project deletion shortly")
+		case errors.Is(err, errBaselineOperationQueued):
+			logging.Error(r.Context(), "Project deletion remains queued for retry", "error", err)
+			httputil.RespondError(w, http.StatusServiceUnavailable,
+				"Project deletion is queued and will be retried")
+		default:
+			logging.Error(r.Context(), "Failed to queue project deletion", "error", err)
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue project deletion")
+		}
 
 		return
 	}
@@ -459,12 +471,24 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 		return
 	}
 
-	err = s.projectStore.SetBaseline(r.Context(), p.ID, req.JobID)
-	if err != nil {
-		logging.Error(r.Context(), "Failed to set baseline", "error", err)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to set baseline")
+	if rec.ReportJSONKey == "" {
+		httputil.RespondError(w, http.StatusBadRequest,
+			fmt.Sprintf("Job %s has no aggregated report", req.JobID))
 
 		return
+	}
+
+	err = s.promoteBaseline(r.Context(), p.ID, p.BaselineJobID, req.JobID, rec.ReportJSONKey)
+	if err != nil {
+		respondProjectPromotionError(r.Context(), w, err)
+
+		return
+	}
+
+	// The pointer is already committed. Replacement cleanup is journaled and
+	// may be retried without turning a successful promotion into an error.
+	if _, reconcileErr := s.reconcileBaselineJournal(r.Context()); reconcileErr != nil {
+		logging.Warn(r.Context(), "Baseline replacement cleanup remains queued", "error", reconcileErr)
 	}
 
 	httputil.RespondOK(w, map[string]any{
@@ -472,6 +496,34 @@ func (s *Server) handleProjectPromote(w http.ResponseWriter, r *http.Request, sl
 		"baseline_job_id": req.JobID,
 		"message":         "Baseline updated",
 	})
+}
+
+func respondProjectPromotionError(ctx context.Context, w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, project.ErrNotFound):
+		httputil.RespondNotFound(w, "Project")
+	case errors.Is(err, project.ErrBaselineSuperseded):
+		httputil.RespondError(
+			w,
+			http.StatusConflict,
+			"The project baseline changed while this promotion was starting; retry with the latest project state",
+		)
+	case errors.Is(err, project.ErrProjectDeletionPending),
+		errors.Is(err, project.ErrBaselineOperationPending):
+		httputil.RespondError(w, http.StatusConflict,
+			"Another baseline operation is still pending; retry shortly")
+	case errors.Is(err, errInvalidBaselineReport):
+		logging.Error(ctx, "Rejected invalid baseline report", "error", err)
+		httputil.RespondError(w, http.StatusBadRequest,
+			"The completed job report is invalid and cannot be promoted")
+	case errors.Is(err, errBaselineOperationQueued):
+		logging.Error(ctx, "Baseline promotion remains queued for retry", "error", err)
+		httputil.RespondError(w, http.StatusServiceUnavailable,
+			"Baseline promotion is queued and will be retried")
+	default:
+		logging.Error(ctx, "Failed to queue baseline promotion", "error", err)
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue baseline promotion")
+	}
 }
 
 func decodeProjectRequestBody(w http.ResponseWriter, r *http.Request, dst any) error {

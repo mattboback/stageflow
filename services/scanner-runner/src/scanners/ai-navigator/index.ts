@@ -93,7 +93,7 @@ export class AiNavigatorScanner extends ScannerBase {
 
 		return {
 			pageId: context.pageEntry.id,
-			url: context.page.url(),
+			url: agentResult.finalUrl,
 			path: context.pageEntry.path,
 			success: agentResult.success,
 			issues,
