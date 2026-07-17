@@ -7,6 +7,7 @@ import { parseActionDecision } from './action-decision-parser';
 import { buildDecisionPrompt } from './decision-prompt';
 import { checkGoal } from './goal-checker';
 import { detectLoop } from './loop-detector';
+import { redactAgentInputValues } from './redaction';
 
 export class ActionDecider {
 	constructor(private readonly visionClient: VisionClient) {}
@@ -43,7 +44,7 @@ export class ActionDecider {
 		}
 
 		const screenshot = await page.screenshot({ type: 'png' });
-		const prompt = buildDecisionPrompt(perception, goal, history);
+		const prompt = redactAgentInputValues(buildDecisionPrompt(perception, goal, history), goal);
 		const response = await this.visionClient.analyze(screenshot, prompt);
 
 		const decision = parseActionDecision(response.content, goal);

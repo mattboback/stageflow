@@ -128,7 +128,12 @@ function updateLog(update: SSEUpdate): string | null {
 
 export function useScanStatus(jobId: string) {
 	const [snapshot, setSnapshot] = useState<StatusSnapshot>(emptyStatusSnapshot);
+	const [attempt, setAttempt] = useState(0);
 	const pollRef = useRef<number | null>(null);
+
+	/* Tears down and re-subscribes the whole monitor (stream, polling, timer)
+	   without a document reload. */
+	const retry = useCallback(() => setAttempt((current) => current + 1), []);
 
 	const clearPoll = useCallback(() => {
 		if (pollRef.current !== null) {
@@ -148,7 +153,11 @@ export function useScanStatus(jobId: string) {
 		const isCurrentResult = (result: ScanResult) => isActive() && result.id === jobId;
 		queueMicrotask(() => {
 			if (isActive()) {
-				setSnapshot(emptyStatusSnapshot);
+				setSnapshot(
+					attempt === 0
+						? emptyStatusSnapshot
+						: addLog({ ...emptyStatusSnapshot }, 'Retrying connection...')
+				);
 			}
 		});
 		const timer = window.setInterval(() => {
@@ -194,7 +203,7 @@ export function useScanStatus(jobId: string) {
 				setSnapshot((current) =>
 					addLog(
 						{ ...current, status: 'error', error: message },
-						`ERROR: ${message}. Refresh to retry.`
+						`ERROR: ${message}. Retry the connection to try again.`
 					)
 				);
 			}
@@ -295,7 +304,7 @@ export function useScanStatus(jobId: string) {
 			stream?.close();
 			clearPoll();
 		};
-	}, [clearPoll, jobId]);
+	}, [attempt, clearPoll, jobId]);
 
 	return {
 		status: snapshot.status,
@@ -303,7 +312,8 @@ export function useScanStatus(jobId: string) {
 		elapsed: snapshot.elapsedSeconds,
 		logs: snapshot.logs,
 		transport: snapshot.transport,
-		error: snapshot.error
+		error: snapshot.error,
+		retry
 	};
 }
 

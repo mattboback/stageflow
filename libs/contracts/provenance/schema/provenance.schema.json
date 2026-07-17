@@ -411,7 +411,7 @@
 		},
 		"ProvenanceAuthBlock": {
 			"title": "ProvenanceAuth",
-			"description": "Optional authentication block. Discriminated by mode. Secrets are never persisted: form recipes only ever carry literal strings or {from_env} references, and storage_state holds an artifact key, not the credentials that produced it.",
+			"description": "Optional authentication block, discriminated by mode. Prefer {from_env} references for caller-authenticated form recipes. A literal form value is execution-only sensitive data and must be stripped from public Provenance and terminal records. storage_state holds an artifact key, not the credentials that produced it.",
 			"oneOf": [
 				{
 					"$ref": "#/definitions/ProvenanceAuthStorageState"

@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -24,6 +25,7 @@ func main() {
 	os.Exit(run())
 }
 
+//nolint:gocyclo,gocognit // Startup validates each dependency and preserves precise failure logging.
 func run() int {
 	logger := bootstrap.SetupLogging("orchestrator")
 
@@ -82,26 +84,34 @@ func run() int {
 		return 1
 	}
 
+	databaseCloseSafe := true
 	defer func() {
+		if !databaseCloseSafe {
+			logger.Error("Skipping database close because HTTP handlers are still active")
+
+			return
+		}
+
 		if closeErr := database.Close(); closeErr != nil {
 			logger.Error("Failed to close database", "error", closeErr)
 		}
 	}()
 
-	if cfg.JobEventsRetentionDays > 0 {
-		prunerErr := database.StartJobEventsPruner(backgroundCtx, db.JobEventsPrunerConfig{
-			Retention: time.Duration(cfg.JobEventsRetentionDays) * 24 * time.Hour,
-			Interval:  time.Duration(cfg.JobEventsPruneIntervalMinutes) * time.Minute,
-			BatchSize: cfg.JobEventsPruneBatchSize,
-			Logger:    logger.With("component", "job-events-pruner"),
-		})
-		if prunerErr != nil {
-			logger.Error("Failed to start job events pruner", "error", prunerErr)
+	sanitizedJobs, sanitizeErr := database.SanitizeLegacyTerminalRecords(ctx)
+	if sanitizeErr != nil {
+		logger.Error("Failed to sanitize legacy terminal records", "error", sanitizeErr)
 
-			return 1
-		}
-	} else {
-		logger.Info("Job events pruner disabled", "retention_days", cfg.JobEventsRetentionDays)
+		return 1
+	}
+
+	if sanitizedJobs > 0 {
+		logger.Info("Sanitized legacy terminal records", "jobs", sanitizedJobs)
+	}
+
+	if prunerErr := startJobEventsPruner(backgroundCtx, logger, database, cfg); prunerErr != nil {
+		logger.Error("Failed to start job events pruner", "error", prunerErr)
+
+		return 1
 	}
 
 	podmanClient, err := podman.NewClient(&podman.Config{
@@ -145,13 +155,12 @@ func run() int {
 
 	consumer := messaging.NewConsumer(natsClient, orch)
 
-	if startErr := consumer.Start(backgroundCtx); startErr != nil {
+	if startErr := startEventProcessing(backgroundCtx, orch, consumer); startErr != nil {
 		logger.Error("Failed to start consumer", "error", startErr)
+		stopEventProcessing(stopBackground, natsClient, database, orch)
 
 		return 1
 	}
-
-	orch.Start(backgroundCtx)
 
 	apiServer := api.NewServer(&api.Config{
 		Database:            database,
@@ -164,31 +173,158 @@ func run() int {
 	})
 
 	sigChan := make(chan os.Signal, 1)
+	apiErr := make(chan error, 1)
+
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	go func() {
-		if apiStartErr := apiServer.Start(); apiStartErr != nil {
-			logger.Error("Failed to start API server", "error", apiStartErr)
-
-			sigChan <- os.Interrupt
-		}
+		apiErr <- apiServer.Start()
 	}()
 
 	logger.Info("Orchestrator service started successfully", "api_port", cfg.APIPort)
 
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	<-sigChan
+	apiStartErr := waitForShutdown(sigChan, apiErr)
+	if apiStartErr != nil {
+		logger.Error("Orchestrator API server stopped unexpectedly", "error", apiStartErr)
+	}
 
 	logger.Info("Shutting down orchestrator service...")
-	stopBackground()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if shutdownErr := apiServer.Shutdown(shutdownCtx); shutdownErr != nil {
+	shutdownErr := shutdownService(
+		shutdownCtx,
+		stopBackground,
+		apiServer,
+		natsClient,
+		database,
+		orch,
+	)
+	if shutdownErr != nil {
 		logger.Error("Failed to shutdown API server", "error", shutdownErr)
 	}
 
+	if errors.Is(shutdownErr, api.ErrRequestDrainTimeout) {
+		// run() is immediately followed by os.Exit in main. Leaving the pool
+		// open until process exit is safer than closing it under a handler that
+		// ignored request-context cancellation.
+		databaseCloseSafe = false
+	}
+
+	if apiStartErr != nil || shutdownErr != nil {
+		return 1
+	}
+
 	return 0
+}
+
+type orchestratorStarter interface {
+	Start(context.Context)
+}
+
+type consumerStarter interface {
+	Start(context.Context) error
+}
+
+type consumerStopper interface {
+	StopConsumers()
+}
+
+type databaseTaskStopper interface {
+	StopBackgroundTasks()
+}
+
+type monitorWaiter interface {
+	WaitForMonitors()
+}
+
+type apiShutdowner interface {
+	Shutdown(context.Context) error
+}
+
+// startEventProcessing completes restart reconciliation before the consumer
+// can redeliver an extraction.ready event. This prevents normal and recovery
+// claim paths from racing over the same deterministic scanner container.
+func startEventProcessing(
+	ctx context.Context,
+	orchestrator orchestratorStarter,
+	consumer consumerStarter,
+) error {
+	orchestrator.Start(ctx)
+
+	return consumer.Start(ctx)
+}
+
+// stopEventProcessing closes intake before waiting on anything that callbacks
+// may create. This ordering prevents sync.WaitGroup Add calls from racing Wait
+// and keeps the database alive until every message and maintenance task exits.
+func stopEventProcessing(
+	cancel context.CancelFunc,
+	consumers consumerStopper,
+	database databaseTaskStopper,
+	monitors monitorWaiter,
+) {
+	cancel()
+	consumers.StopConsumers()
+	database.StopBackgroundTasks()
+	monitors.WaitForMonitors()
+}
+
+// shutdownService cancels background intake before the bounded HTTP drain.
+// Server.Shutdown owns the HTTP handler barrier; only after it returns do the
+// message, database-maintenance, and monitor barriers release dependencies.
+func shutdownService(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	api apiShutdowner,
+	consumers consumerStopper,
+	database databaseTaskStopper,
+	monitors monitorWaiter,
+) error {
+	cancel()
+
+	shutdownErr := api.Shutdown(ctx)
+
+	consumers.StopConsumers()
+	database.StopBackgroundTasks()
+	monitors.WaitForMonitors()
+
+	return shutdownErr
+}
+
+func startJobEventsPruner(
+	ctx context.Context,
+	logger *slog.Logger,
+	database *db.Database,
+	cfg *Config,
+) error {
+	if cfg.JobEventsRetentionDays <= 0 {
+		logger.Info("Job events pruner disabled", "retention_days", cfg.JobEventsRetentionDays)
+
+		return nil
+	}
+
+	return database.StartJobEventsPruner(ctx, db.JobEventsPrunerConfig{
+		Retention: time.Duration(cfg.JobEventsRetentionDays) * 24 * time.Hour,
+		Interval:  time.Duration(cfg.JobEventsPruneIntervalMinutes) * time.Minute,
+		BatchSize: cfg.JobEventsPruneBatchSize,
+		Logger:    logger.With("component", "job-events-pruner"),
+	})
+}
+
+func waitForShutdown(signals <-chan os.Signal, apiErrors <-chan error) error {
+	select {
+	case <-signals:
+		return nil
+	case err := <-apiErrors:
+		if err == nil {
+			return errors.New("API server stopped unexpectedly")
+		}
+
+		return err
+	}
 }
 
 // loadScannerRegistry loads the scanner registry from configuration files or defaults.

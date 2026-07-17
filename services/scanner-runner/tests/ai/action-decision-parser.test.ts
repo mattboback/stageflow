@@ -47,7 +47,8 @@ describe('parseActionDecision', () => {
 		expect(decision?.action).toEqual({
 			type: 'fill',
 			selector: '#email',
-			value: 'me@example.com'
+			value: 'me@example.com',
+			valueKey: 'email'
 		});
 		expect(decision?.confidence).toBe(0.7);
 		expect(decision?.reasoning).toBe('');

@@ -90,6 +90,7 @@ interface ScannerCapabilities {
 	requiresBrowser: boolean;
 	supportsOffline: boolean;
 	maxConcurrency: number;
+	estimatedTimePerPage?: number;
 }
 
 export interface ScannerDefinition {

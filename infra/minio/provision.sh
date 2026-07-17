@@ -10,9 +10,40 @@ MINIO_ALIAS="${MINIO_ALIAS:-stageflow}"
 MINIO_APP_POLICY="${MINIO_APP_POLICY:-stageflow-app}"
 MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-}"
 MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-}"
+MINIO_STAGING_RETENTION_DAYS="${MINIO_STAGING_RETENTION_DAYS:-1}"
+MINIO_ARTIFACT_RETENTION_DAYS="${MINIO_ARTIFACT_RETENTION_DAYS:-1}"
+MINIO_APPLY_LIFECYCLES="${MINIO_APPLY_LIFECYCLES:-true}"
 
 : "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}"
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}"
+
+validate_retention_days() {
+	name="$1"
+	value="$2"
+
+	case "$value" in
+		'' | *[!0-9]*)
+			echo "[minio] ${name} must be a positive integer (got: ${value:-empty})" >&2
+			exit 1
+			;;
+	esac
+
+	if [ "$value" -le 0 ]; then
+		echo "[minio] ${name} must be greater than zero (got: ${value})" >&2
+		exit 1
+	fi
+}
+
+validate_retention_days MINIO_STAGING_RETENTION_DAYS "$MINIO_STAGING_RETENTION_DAYS"
+validate_retention_days MINIO_ARTIFACT_RETENTION_DAYS "$MINIO_ARTIFACT_RETENTION_DAYS"
+
+case "$MINIO_APPLY_LIFECYCLES" in
+	true | false) ;;
+	*)
+		echo "[minio] MINIO_APPLY_LIFECYCLES must be true or false (got: ${MINIO_APPLY_LIFECYCLES})" >&2
+		exit 1
+		;;
+esac
 
 case "$MINIO_ENDPOINT" in
 	http://* | https://*) url="$MINIO_ENDPOINT" ;;
@@ -38,7 +69,33 @@ if [ -z "$ready" ]; then
 	exit 1
 fi
 
-for bucket in scanner-staging scanner-artifacts; do
+temp_dir="$(mktemp -d)"
+trap 'rm -rf "$temp_dir"' EXIT
+
+write_lifecycle_config() {
+	path="$1"
+	rule_id="$2"
+	days="$3"
+
+	cat >"$path" <<EOF
+{
+  "Rules": [
+    {
+      "Expiration": { "Days": ${days} },
+      "ID": "${rule_id}",
+      "Status": "Enabled"
+    }
+  ]
+}
+EOF
+}
+
+staging_lifecycle_file="${temp_dir}/scanner-staging-lifecycle.json"
+artifact_lifecycle_file="${temp_dir}/scanner-artifacts-lifecycle.json"
+write_lifecycle_config "$staging_lifecycle_file" "stageflow-staging-retention" "$MINIO_STAGING_RETENTION_DAYS"
+write_lifecycle_config "$artifact_lifecycle_file" "stageflow-artifact-retention" "$MINIO_ARTIFACT_RETENTION_DAYS"
+
+for bucket in scanner-staging scanner-artifacts scanner-baselines; do
 	if mc ls "${MINIO_ALIAS}/${bucket}" >/dev/null 2>&1; then
 		echo "[minio] Bucket ${bucket} already present"
 	else
@@ -48,6 +105,17 @@ for bucket in scanner-staging scanner-artifacts; do
 	echo "[minio] Ensuring anonymous access is disabled on ${bucket}"
 	mc anonymous set none "${MINIO_ALIAS}/${bucket}" >/dev/null
 done
+
+# Importing the complete desired lifecycle document replaces the existing
+# StageFlow bucket policy instead of appending duplicate rules on every run.
+if [ "$MINIO_APPLY_LIFECYCLES" = "true" ]; then
+	echo "[minio] Enforcing ${MINIO_STAGING_RETENTION_DAYS}-day retention on scanner-staging"
+	mc ilm rule import "${MINIO_ALIAS}/scanner-staging" <"$staging_lifecycle_file"
+	echo "[minio] Enforcing ${MINIO_ARTIFACT_RETENTION_DAYS}-day retention on scanner-artifacts"
+	mc ilm rule import "${MINIO_ALIAS}/scanner-artifacts" <"$artifact_lifecycle_file"
+else
+	echo "[minio] Lifecycle updates deferred; buckets and application policy only"
+fi
 
 if [ -z "$MINIO_ACCESS_KEY" ] || [ -z "$MINIO_SECRET_KEY" ]; then
 	echo "[minio] MINIO_ACCESS_KEY/SECRET_KEY not set; skipping app user/policy"
@@ -60,8 +128,7 @@ if [ "$MINIO_ACCESS_KEY" = "$MINIO_ROOT_USER" ]; then
 	exit 1
 fi
 
-policy_file="$(mktemp)"
-trap 'rm -f "$policy_file"' EXIT
+policy_file="${temp_dir}/app-policy.json"
 cat >"$policy_file" <<'EOF'
 {
   "Version": "2012-10-17",
@@ -75,7 +142,8 @@ cat >"$policy_file" <<'EOF'
       ],
       "Resource": [
         "arn:aws:s3:::scanner-staging",
-        "arn:aws:s3:::scanner-artifacts"
+        "arn:aws:s3:::scanner-artifacts",
+        "arn:aws:s3:::scanner-baselines"
       ]
     },
     {
@@ -89,7 +157,8 @@ cat >"$policy_file" <<'EOF'
       ],
       "Resource": [
         "arn:aws:s3:::scanner-staging/*",
-        "arn:aws:s3:::scanner-artifacts/*"
+        "arn:aws:s3:::scanner-artifacts/*",
+        "arn:aws:s3:::scanner-baselines/*"
       ]
     }
   ]

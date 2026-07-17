@@ -7,10 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Browser-local named projects with manual baseline promotion and report diffing; project metadata and reports stay in IndexedDB with no StageFlow account or cloud sync.
+- Lifecycle-exempt, immutable project baseline storage with a durable SQLite operation journal, startup reconciliation, legacy backfill, and an upgrade-safe MinIO migration path.
+- Persistent scanner-launch claims and deterministic Podman container adoption so orchestrator restarts resume in-flight scanning without creating duplicate workers.
+- Desktop/mobile axe coverage, console-error enforcement, keyboard-operable report tabs and visual findings, a skip link, deployment-aware privacy notices, and complete Open Graph/manifest metadata.
+- An all-clear success state on zero-finding reports, so a clean scan celebrates the result and suggests promoting it as a baseline instead of showing an empty review queue.
+- Branded error pages: the root, scan, and report error boundaries now keep the site header/footer and offer recovery actions instead of dropping to an unstyled page.
+
+### Changed
+
+- Made regression memory the primary web workflow, added centralized submission validation and truthful runtime ranges, and aligned the favicon/social card around the StageFlow score gauge.
+- Reframed the landing headline around the baseline promise (calm, not alarmist), replaced the native `window.confirm` project-delete prompt with a design-system dialog, made the scan page's retry re-subscribe in place instead of reloading the document, unified the playground toggle-switch skin, and added Projects to the footer product navigation.
+- Restricted Caddy credential injection to an exact method/path allowlist and split public browser intake into anonymous and form-auth endpoints with a shared per-client token bucket.
+- Enabled deterministic one-day MinIO staging/artifact lifecycle rules while keeping promoted baselines private and persistent.
+- Expanded Dependabot coverage to every Go and JavaScript workspace, serialized contract generation, and raised scanner dependency auditing to the moderate threshold with one exact, documented OpenTelemetry compatibility exception.
+- Parameterized Go service container builds for the target OS/architecture and documented scoped contributor quickstarts and deployment-mode configuration.
+
+### Fixed
+
+- Prevented concurrent job-status events from overwriting scanner progress, propagated HTTP listener failures at startup, and made timeout handling panic-safe with bounded buffering.
+- Enforced the 100 MiB ZIP-file limit independently of multipart overhead, extended the socket read deadline only for uploads, and removed staged uploads on malformed, duplicate, canceled, timed-out, or failed submissions.
+- Recovered scanner containers before opening event intake, tied monitor lifetimes to graceful shutdown, and made baseline reconciliation continue across independent object failures so one project cannot starve another.
+- Removed golden-test fixtures from the production web image while preserving the local acceptance stack fixture mount.
+
+### Security
+
+- Removed authentication recipes from public Provenance, redacted raw and URL-encoded input values from AI traces and terminal job/event/audit records, and masked sensitive browser controls before values are entered or screenshots are captured.
+- Added an idempotent upgrade migration that scrubs existing terminal job, audit, and outbox records before the orchestrator begins consuming events.
+- Added explicit hosted-demo warnings for literal form credentials and documented the residual 72-hour file-backed `job.created` queue retention.
+
 ### Documentation
 
 - Consolidated product, architecture, CLI, self-hosting, privacy, and code-tour docs under `docs/`, with a docs index and internal link checker.
 - Replaced the animated Review GIF with a deterministic Review workspace screenshot and architecture diagram assets.
+- Made the GitHub Releases binary the primary CLI install path in the README quickstart, with `just cli-install` documented as the from-a-clone alternative.
 
 ## [0.4.0] - 2026-07-14
 

@@ -19,8 +19,14 @@ import {
 	hydrateStorageState
 } from './auth-hydrator';
 import { detectAuthWall } from './auth-wall';
+import { attachAuthFromEnv, normalizeUrl, parseScanUrls } from './page-iterator-provenance';
+import {
+	redactPageEntry,
+	redactPageScanResult,
+	registerPageLiteralValues
+} from './page-iterator-redaction';
 import { collectFromEnvReferences, createSecretsResolver } from './secrets-resolver';
-import { buildTargetValidationPolicy } from './target-validation';
+import { buildTargetValidationPolicy, redactURLUserInfo } from './target-validation';
 import {
 	DEFAULT_WAIT_STRATEGY,
 	type Issue,
@@ -187,7 +193,9 @@ export class PageIterator {
 						type: 'auth_hydrated',
 						details: {
 							mode: 'form',
-							login_url: provenance.auth.login_url,
+							login_url: secretsResolver.redactKnownValues(
+								redactURLUserInfo(provenance.auth.login_url)
+							),
 							post_login_url: postLoginUrl
 						}
 					});
@@ -229,7 +237,8 @@ export class PageIterator {
 				close: () => context.close(),
 				label: 'browser context',
 				timeoutMs: 10_000,
-				logger: this.logger
+				logger: this.logger,
+				redactError: (value) => secretsResolver.redactKnownValues(value)
 			});
 			this.logger.info('Browser context closed');
 		}
@@ -389,14 +398,17 @@ export class PageIterator {
 	): Promise<PageScanResult> {
 		const startedAt = new Date().toISOString();
 		const hrStart = process.hrtime.bigint();
+		registerPageLiteralValues(pageEntry, secretsResolver);
+		const redact = (value: string): string => secretsResolver.redactKnownValues(value);
+		const safePageEntry = redactPageEntry(pageEntry, redact);
 
 		this.logger.info(`Scanning page ${index + 1}/${total}`, {
-			pageId: pageEntry.id,
-			url: pageEntry.url
+			pageId: redact(pageEntry.id),
+			url: redact(pageEntry.url)
 		});
 
 		if (callbacks?.onPageStart) {
-			await callbacks.onPageStart(pageEntry, index, total);
+			await callbacks.onPageStart(safePageEntry, index, total);
 		}
 
 		let lastError: Error | null = null;
@@ -435,7 +447,8 @@ export class PageIterator {
 					await this.browserManager.executePreScanActions(
 						page,
 						pageEntry.pre_scan_actions,
-						secretsResolver
+						secretsResolver,
+						{ maskInputValues: true }
 					);
 				}
 
@@ -456,6 +469,7 @@ export class PageIterator {
 				if (authWallIssue) {
 					result.issues = [...result.issues, authWallIssue];
 				}
+				result = redactPageScanResult(result, redact);
 
 				if (!result.success) {
 					const retryable = result.retryable !== false && attempt < this.config.maxRetries;
@@ -465,14 +479,14 @@ export class PageIterator {
 					this.logger.warn(
 						`Page scan reported unsuccessful result (attempt ${attempt}/${this.config.maxRetries})`,
 						{
-							pageId: pageEntry.id,
+							pageId: redact(pageEntry.id),
 							error: errorMessage,
 							retryable
 						}
 					);
 
 					if (callbacks?.onPageError) {
-						await callbacks.onPageError(lastError, pageEntry, attempt);
+						await callbacks.onPageError(lastError, safePageEntry, attempt);
 					}
 
 					if (retryable) {
@@ -483,20 +497,20 @@ export class PageIterator {
 
 				break;
 			} catch (err) {
-				lastError = err instanceof Error ? err : new Error(String(err));
+				lastError = new Error(redact(err instanceof Error ? err.message : String(err)));
 
 				this.logger.warn(`Page scan failed (attempt ${attempt}/${this.config.maxRetries})`, {
-					pageId: pageEntry.id,
+					pageId: redact(pageEntry.id),
 					error: lastError.message
 				});
 
 				if (callbacks?.onPageError) {
-					await callbacks.onPageError(lastError, pageEntry, attempt);
+					await callbacks.onPageError(lastError, safePageEntry, attempt);
 				}
 
 				if (attempt === this.config.maxRetries) {
 					this.logger.error(`Giving up on page after ${this.config.maxRetries} attempts`, {
-						pageId: pageEntry.id
+						pageId: redact(pageEntry.id)
 					});
 				}
 			} finally {
@@ -507,7 +521,8 @@ export class PageIterator {
 						label: 'page',
 						timeoutMs: 5_000,
 						logger: this.logger,
-						meta: { pageId: pageEntry.id }
+						meta: { pageId: redact(pageEntry.id) },
+						redactError: redact
 					});
 				}
 			}
@@ -523,9 +538,9 @@ export class PageIterator {
 			result.durationMs = Math.round(durationMs * 100) / 100;
 		} else {
 			result = {
-				pageId: pageEntry.id,
-				url: pageEntry.url,
-				path: pageEntry.path,
+				pageId: redact(pageEntry.id),
+				url: redact(pageEntry.url),
+				path: redact(pageEntry.path),
 				success: false,
 				issues: [],
 				durationMs: Math.round(durationMs * 100) / 100,
@@ -534,13 +549,14 @@ export class PageIterator {
 				error: lastError?.message ?? 'Unknown error'
 			};
 		}
+		result = redactPageScanResult(result, redact);
 
 		if (callbacks?.onPageComplete) {
 			await callbacks.onPageComplete(result, index, total);
 		}
 
 		this.logger.info(`Completed page ${index + 1}/${total}`, {
-			pageId: pageEntry.id,
+			pageId: redact(pageEntry.id),
 			success: result.success,
 			issues: result.issues.length,
 			durationMs: result.durationMs
@@ -556,13 +572,18 @@ async function closeWithTimeout(opts: {
 	timeoutMs: number;
 	logger: ScannerLogger;
 	meta?: Record<string, unknown>;
+	redactError?: (value: string) => string;
 }): Promise<void> {
-	const { close, label, timeoutMs, logger, meta } = opts;
+	const { close, label, timeoutMs, logger, meta, redactError } = opts;
 
 	const closePromise = close().catch((err: unknown) => {
 		logger.warn(`Failed to close ${label} gracefully`, {
 			...meta,
-			error: err instanceof Error ? err.message : String(err)
+			error: redactError
+				? redactError(err instanceof Error ? err.message : String(err))
+				: err instanceof Error
+					? err.message
+					: String(err)
 		});
 	});
 
@@ -583,96 +604,4 @@ async function closeWithTimeout(opts: {
 			timeoutMs
 		});
 	}
-}
-
-function normalizeUrl(url: string): string {
-	const trimmed = url.trim();
-	if (!trimmed) {
-		return trimmed;
-	}
-
-	if (/^https?:\/\//i.test(trimmed)) {
-		return trimmed;
-	}
-
-	return `https://${trimmed}`;
-}
-
-function parseScanUrls(raw: string): string[] {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to create provenance from SCAN_URLS: ${message}`, { cause: err });
-	}
-
-	if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== 'string')) {
-		throw new Error('SCAN_URLS must be a JSON array of URLs (strings)');
-	}
-
-	return parsed as string[];
-}
-
-/**
- * Attaches a Provenance.auth block from PROVENANCE_AUTH_JSON when present.
- *
- * The orchestrator emits this env var with the canonical auth shape (form
- * recipe with from_env references, or storage_state with an artifact_key)
- * derived from JobConfig.Auth. Resolved credential values are never present in
- * this env var; only the recipe shape is.
- *
- * Behavior is byte-identical to today when PROVENANCE_AUTH_JSON is unset: no
- * auth block is attached and the synthesized Provenance matches the pre-auth
- * shape on disk.
- */
-function attachAuthFromEnv(provenance: Provenance, logger: ScannerLogger): void {
-	const raw = process.env.PROVENANCE_AUTH_JSON;
-	if (!raw) {
-		return;
-	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		logger.warn('PROVENANCE_AUTH_JSON is not valid JSON; ignoring auth env var', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return;
-	}
-
-	if (!isProvenanceAuth(parsed)) {
-		logger.warn('PROVENANCE_AUTH_JSON did not match Provenance.auth shape; ignoring', {
-			parsed: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : typeof parsed
-		});
-		return;
-	}
-
-	provenance.auth = parsed;
-	logger.info('Attached auth block from PROVENANCE_AUTH_JSON', {
-		mode: parsed.mode
-	});
-}
-
-function isProvenanceAuth(value: unknown): value is ProvenanceAuth {
-	if (typeof value !== 'object' || value === null) {
-		return false;
-	}
-
-	const v = value as Record<string, unknown>;
-	if (v.mode === 'storage_state') {
-		return typeof v.artifact_key === 'string' && v.artifact_key.length > 0;
-	}
-
-	if (v.mode === 'form') {
-		return (
-			typeof v.login_url === 'string' &&
-			Array.isArray(v.steps) &&
-			typeof v.success === 'object' &&
-			v.success !== null
-		);
-	}
-
-	return false;
 }

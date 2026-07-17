@@ -3,6 +3,7 @@ package jobstatus
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
@@ -14,6 +15,13 @@ type Pipeline struct {
 	currentReader CurrentReader
 	cache         *snapshotCache
 	broker        *watcherBroker
+	jobLocksMu    sync.Mutex
+	jobLocks      map[string]*pipelineJobLock
+}
+
+type pipelineJobLock struct {
+	mu   sync.Mutex
+	refs int
 }
 
 func New(cfg *Config) *Pipeline {
@@ -30,6 +38,7 @@ func New(cfg *Config) *Pipeline {
 		currentReader: cfg.CurrentReader,
 		cache:         newSnapshotCache(cacheTTL),
 		broker:        newWatcherBroker(),
+		jobLocks:      make(map[string]*pipelineJobLock),
 	}
 }
 
@@ -38,6 +47,9 @@ func (p *Pipeline) Begin(_ context.Context, cmd BeginJob) (*status.JobRecord, er
 	if err != nil {
 		return nil, err
 	}
+
+	unlock := p.lockJob(rec.JobID)
+	defer unlock()
 
 	if current, ok := p.cache.get(rec.JobID); ok {
 		return current, nil
@@ -53,6 +65,12 @@ func (p *Pipeline) Apply(ctx context.Context, signal Signal) (*status.JobRecord,
 	if jobID == "" {
 		return nil, errors.New("jobstatus: signal job ID is required")
 	}
+
+	// Loading, reducing, and replacing a snapshot is one logical operation.
+	// Serialize it per job so events for independent jobs still run in parallel
+	// while concurrent scanner events cannot overwrite one another.
+	unlock := p.lockJob(jobID)
+	defer unlock()
 
 	base, err := p.loadBaseSnapshot(ctx, jobID, signal.ObservedAt)
 	if err != nil {
@@ -77,6 +95,33 @@ func (p *Pipeline) Apply(ctx context.Context, signal Signal) (*status.JobRecord,
 	})
 
 	return cloneJobRecord(next), nil
+}
+
+func (p *Pipeline) lockJob(jobID string) func() {
+	p.jobLocksMu.Lock()
+
+	lock := p.jobLocks[jobID]
+	if lock == nil {
+		lock = &pipelineJobLock{}
+		p.jobLocks[jobID] = lock
+	}
+
+	lock.refs++
+	p.jobLocksMu.Unlock()
+
+	lock.mu.Lock()
+
+	return func() {
+		lock.mu.Unlock()
+
+		p.jobLocksMu.Lock()
+
+		lock.refs--
+		if lock.refs == 0 {
+			delete(p.jobLocks, jobID)
+		}
+		p.jobLocksMu.Unlock()
+	}
 }
 
 // Current returns the most recent projection for a job. It checks the

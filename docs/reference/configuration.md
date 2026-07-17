@@ -59,12 +59,14 @@ baseline.
 | `ORCHESTRATOR_API_TOKEN`             | yes      | `change-me-orchestrator-token`   | Inter-service token for calls from Platform API to Orchestrator.                                                    |
 | `PLATFORM_API_TOKEN`                 | yes      | `change-me-platform-api-token`   | Server-side API token accepted via `X-Api-Key` or `Authorization: Bearer`; never expose it through `VITE_*` variables. |
 | `PLATFORM_API_AUTH_DISABLED`         | no       | `false`                          | Explicit local-only opt-out when running the API without `PLATFORM_API_TOKEN`. Do not enable in public deployments. |
+| `PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM` | no | `6` | Per-client refill rate shared by public URL and ZIP submissions. |
+| `PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST` | no | `3` | Maximum public submissions a client may burst before receiving `429`. |
 | `PLATFORM_API_ALLOW_PRIVATE_TARGETS` | no       | `false`                          | Controls whether the API accepts private/local targets.                                                             |
-| `PLATFORM_API_TRUSTED_PROXIES`       | no       | empty                            | Comma-separated trusted proxy CIDRs/IPs allowed to supply `X-Forwarded-For` for rate-limit keys.                    |
+| `PLATFORM_API_TRUSTED_PROXIES`       | no       | `127.0.0.1/32,::1/128`          | Comma-separated trusted proxy CIDRs/IPs allowed to supply `X-Forwarded-For` for rate-limit keys.                    |
 | `SCANNER_CONFIG_PATH`                | no       | `/data/scanners.yaml` in compose | Optional YAML scanner override file for enablement, image, and resource tweaks.                                     |
 | `PROJECT_DB_PATH`                    | no       | `./projects.db` in code          | SQLite database path for project records, project/job mappings, and baselines.                                      |
 
-`PLATFORM_API_TOKEN` is required at startup unless `PLATFORM_API_AUTH_DISABLED=true` is set. The disabled mode exists for local development only and should not be used on a public domain. The supplied Caddy reference injects this token into anonymous scan, status, report, scanner-catalog, and SSE requests so browser clients never receive the credential. Project and baseline routes remain protected and require callers such as the CLI to provide the API key. Set `PLATFORM_API_TRUSTED_PROXIES` to only Caddy's exact source address (loopback in the reference topology) before relying on forwarded client IPs for rate limiting.
+`PLATFORM_API_TOKEN` is required at startup unless `PLATFORM_API_AUTH_DISABLED=true` is set. The disabled mode exists for local development only and should not be used on a public domain. The supplied Caddy reference injects this token only into an exact allowlist: anonymous and browser-auth submissions, ZIP uploads, status/report/results/SSE reads, and the scanner catalog. Browser clients never receive the credential. Projects, baselines, diffs, the caller-authenticated URL route, and unmatched API paths remain protected. Set `PLATFORM_API_TRUSTED_PROXIES` to only Caddy's exact source address (loopback in the reference topology) before relying on forwarded client IPs for rate limiting.
 
 ### Orchestrator
 
@@ -106,8 +108,9 @@ baseline.
 | `VITE_SITE_TITLE`                 | no       | `StageFlow`                                                     | Site title shown in UI metadata.                  |
 | `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                         | Canonical site URL used for metadata/share cards. |
 | `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | GitHub link shown in UI.                          |
-| `VITE_TAGLINE`                    | no       | `Self-hostable frontend quality regression scanning`             | Marketing tagline in UI surfaces.                 |
+| `VITE_TAGLINE`                    | no       | `Self-hostable frontend quality regression scanning`             | Product-capability phrase used in marketing and metadata; omit the product name and trailing punctuation. |
 | `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
+| `VITE_DEPLOYMENT_MODE`            | no       | `self-hosted`                                                   | Set to `hosted-demo` only for the public-demo privacy and retention notices. |
 
 The frontend container builds the React Router app to static files and serves them with nginx on port `3020`.
 

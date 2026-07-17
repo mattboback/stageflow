@@ -1,4 +1,4 @@
-import type { PreScanAction } from '../core/types';
+import type { ActionFill, ActionSelect, PreScanAction } from '../core/types';
 
 export interface VisionConfig {
 	provider: 'openrouter';
@@ -79,6 +79,10 @@ export interface AgentGoal {
 	maxNoProgressTurns?: number;
 }
 
+export type PublicAgentGoal = Omit<AgentGoal, 'inputValues'> & {
+	inputValueKeys?: string[];
+};
+
 export interface SuccessCriterion {
 	type: 'url-contains' | 'url-matches' | 'element-visible' | 'text-visible' | 'custom';
 	value: string;
@@ -90,7 +94,28 @@ export interface GoalStatus {
 	reason: string;
 }
 
-export type AgentAction = PreScanAction | { type: 'done' } | { type: 'stuck'; reason: string };
+export type ResolvedAgentInputAction = (ActionFill | ActionSelect) & {
+	value: string;
+	valueKey: string;
+};
+
+export type AgentAction =
+	| PreScanAction
+	| ResolvedAgentInputAction
+	| { type: 'done' }
+	| { type: 'stuck'; reason: string };
+
+type NonInputAgentAction = Exclude<AgentAction, { type: 'fill' | 'select' }>;
+
+export type RecordedAgentAction =
+	| NonInputAgentAction
+	| {
+			type: 'fill' | 'select';
+			selector: string;
+			value: '[REDACTED]';
+			valueKey?: string;
+			timeout?: number;
+	  };
 
 export interface ActionDecision {
 	action: AgentAction;
@@ -102,7 +127,7 @@ export interface ActionDecision {
 export interface AgentStep {
 	stepNumber: number;
 	url: string;
-	action: AgentAction;
+	action: RecordedAgentAction;
 	reasoning: string;
 	success: boolean;
 	error?: string;
@@ -112,7 +137,7 @@ export interface AgentStep {
 
 export interface AgentResult {
 	success: boolean;
-	goal: AgentGoal;
+	goal: PublicAgentGoal;
 	startUrl: string;
 	finalUrl: string;
 	steps: AgentStep[];

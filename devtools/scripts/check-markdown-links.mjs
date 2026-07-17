@@ -2,7 +2,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import process from 'node:process';
 
 function markdownFiles() {
@@ -42,6 +42,62 @@ function localTarget(rawTarget) {
 	}
 }
 
+function backtickedPath(rawTarget, file) {
+	// Changelog entries intentionally preserve paths from the release in which
+	// they existed; later removals must not rewrite that historical record.
+	if (file.endsWith('/CHANGELOG.md') || file === 'CHANGELOG.md') {
+		return null;
+	}
+
+	const target = rawTarget.trim().replace(/[.,;:]$/, '');
+	if (
+		target !== rawTarget ||
+		target.length === 0 ||
+		/\s/.test(target) ||
+		/[?*{}[\]]/.test(target) ||
+		/^(?:https?:|\/|#|--|\$)/.test(target) ||
+		!target.includes('/')
+	) {
+		return null;
+	}
+
+	const path = target.split('#', 1)[0];
+	const rootCandidate = resolve(process.cwd(), path);
+	const relativeCandidate = resolve(dirname(file), path);
+	const firstSegment = path.replace(/^\.\//, '').split('/', 1)[0];
+	const looksRootRelative = existsSync(resolve(process.cwd(), firstSegment));
+	const looksFileRelative = existsSync(resolve(dirname(file), firstSegment));
+	const explicitlyFileRelative = path.startsWith('./') || path.startsWith('../');
+
+	if (!looksRootRelative && !looksFileRelative) {
+		return null;
+	}
+
+	return explicitlyFileRelative || !looksRootRelative ? relativeCandidate : rootCandidate;
+}
+
+function gitIgnored(candidate) {
+	const relativeCandidate = relative(process.cwd(), candidate);
+	if (relativeCandidate.startsWith('..') || isAbsolute(relativeCandidate)) {
+		return false;
+	}
+
+	for (const path of [relativeCandidate, `${relativeCandidate}/.stageflow-link-check`]) {
+		try {
+			execFileSync('git', ['check-ignore', '--quiet', '--', path], {
+				stdio: 'ignore'
+			});
+
+			return true;
+		} catch {
+			// Try a synthetic child as well so directory-only ignore rules work
+			// even when the generated directory does not exist in this checkout.
+		}
+	}
+
+	return false;
+}
+
 const failures = [];
 
 for (const file of markdownFiles()) {
@@ -70,6 +126,17 @@ for (const file of markdownFiles()) {
 			: resolve(dirname(file), target);
 		if (!existsSync(candidate)) {
 			failures.push(`${file}: ${rawTarget}`);
+		}
+	}
+
+	const prose = source.replace(/```[\s\S]*?```/g, '');
+	for (const match of prose.matchAll(/`([^`\n]+)`/g)) {
+		const candidate = backtickedPath(match[1], file);
+		// Generated and local-configuration paths are intentionally absent from
+		// clean checkouts. Keep validating real code-path references while
+		// allowing code spans that are explicitly covered by .gitignore.
+		if (candidate !== null && !existsSync(candidate) && !gitIgnored(candidate)) {
+			failures.push(`${file}: \`${match[1]}\``);
 		}
 	}
 }

@@ -20,10 +20,6 @@ func (c *Client) Subscribe(
 	stream, subject, consumerName string,
 	handler func([]byte) error,
 ) error {
-	if _, err := c.snapshot(); err != nil {
-		return err
-	}
-
 	if ctx == nil {
 		return ErrNilContext
 	}
@@ -31,6 +27,11 @@ func (c *Client) Subscribe(
 	if handler == nil {
 		return ErrNilHandler
 	}
+
+	if err := c.beginConsumeSetup(); err != nil {
+		return err
+	}
+	defer c.finishConsumeSetup()
 
 	cons, err := c.createOrRefreshConsumer(ctx, stream, subject, consumerName)
 	if err != nil {
@@ -78,6 +79,7 @@ func (c *Client) Subscribe(
 		go func() {
 			<-done
 			consumeCtx.Stop()
+			<-consumeCtx.Closed()
 			c.untrackConsumeContext(stream, consumerName, consumeCtx)
 		}()
 	}
@@ -90,10 +92,6 @@ func (c *Client) SubscribeWithContext(
 	stream, subject, consumerName string,
 	handler func(context.Context, jetstream.Msg) error,
 ) error {
-	if _, err := c.snapshot(); err != nil {
-		return err
-	}
-
 	if ctx == nil {
 		return ErrNilContext
 	}
@@ -101,6 +99,11 @@ func (c *Client) SubscribeWithContext(
 	if handler == nil {
 		return ErrNilHandler
 	}
+
+	if err := c.beginConsumeSetup(); err != nil {
+		return err
+	}
+	defer c.finishConsumeSetup()
 
 	cons, err := c.createOrRefreshConsumer(ctx, stream, subject, consumerName)
 	if err != nil {
@@ -147,6 +150,7 @@ func (c *Client) SubscribeWithContext(
 		go func() {
 			<-done
 			consumeCtx.Stop()
+			<-consumeCtx.Closed()
 			c.untrackConsumeContext(stream, consumerName, consumeCtx)
 		}()
 	}

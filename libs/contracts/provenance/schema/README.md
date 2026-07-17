@@ -24,7 +24,10 @@ to the pre-auth shape. When present, it is a discriminated union on `mode`:
   `{ from_env: NAME }` reference. The `success` block is a `WaitStrategy` that
   signals a completed login.
 
-The shared contract remains compatible with literal strings, but the public
-StageFlow API and CLI reject them for persisted form recipes. Persisted jobs use `{ from_env }`
-references. Resolved credentials never appear in stored Provenance, the unified
-report, the scan stage log, or any NATS event.
+The shared contract remains compatible with literal strings. Caller-authenticated
+API and CLI workflows should use `{ from_env }` references. The deliberately
+narrow public browser-auth route accepts literal form steps for throwaway demo
+accounts, then strips auth from public Provenance and artifacts. Literal values
+necessarily cross the file-backed `job.created` event and remain in live job
+configuration until terminal cleanup; terminal audit records, reports, scanner
+stage logs, AI traces, and sensitive screenshots are redacted.

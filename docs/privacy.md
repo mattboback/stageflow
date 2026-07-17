@@ -19,7 +19,7 @@ Do not submit confidential builds, private customer data, production credentials
 
 The hosted demo configures both staging uploads and ordinary completed scan artifacts to expire after **24 hours**. Object-store lifecycle deletion is asynchronous, so an object may disappear shortly after that window rather than at an exact second. Reports explicitly promoted as project baselines are copied to private persistent storage and remain there until replaced or the project is deleted.
 
-Operational metadata has a separate lifecycle. The durable job record includes the submitted URL, selected scanner configuration, state, and timing information and is not automatically deleted in this release. The event audit trail defaults to 30-day retention. The 24-hour promise applies to uploaded files and ordinary generated object-store artifacts, not durable database records or explicitly promoted project baselines. Do not put credentials or sensitive values in submitted URLs or scanner configuration.
+Operational metadata has a separate lifecycle. The durable job record includes the submitted URL, selected scanner configuration, state, and timing information and is not automatically deleted in this release. The event audit trail defaults to 30-day retention. The 24-hour promise applies to uploaded files and ordinary generated object-store artifacts, not durable database records or explicitly promoted project baselines. Do not put credentials or sensitive values in submitted URLs or ordinary scanner configuration.
 
 Buckets are private. The Platform API returns short-lived signed artifact URLs rather than exposing objects anonymously. On the no-account demo, a job ID is an unguessable bearer-style reference: anyone who receives the job or report URL may retrieve its status and report until the data expires. A signed artifact URL may likewise be used by anyone who receives it until that signature expires.
 
@@ -29,7 +29,7 @@ StageFlow does not currently provide an immediate user-triggered deletion endpoi
 
 Storage-state authentication uploads can contain session cookies or tokens. StageFlow stores them under the job prefix, passes only an artifact reference through events, writes hydrated files with restricted permissions inside the scanner workspace, and removes the local hydrated copy during scanner cleanup. The object-store copy remains subject to the 24-hour lifecycle.
 
-Form recipes should reference credentials through explicitly allow-listed environment variables on a trusted self-hosted scanner. The no-account demo is not a credential vault.
+On a trusted self-hosted scanner, form recipes should reference credentials through explicitly allow-listed environment variables. The hosted browser form accepts literal credentials only to support throwaway demo accounts. Those values cross the file-backed `job.created` queue, whose maximum age is 72 hours, and remain in the live job configuration until terminal cleanup. Terminal job, audit, and outbox records, public Provenance, AI traces, screenshots of sensitive controls, and reports are redacted. During an upgrade, the orchestrator runs an idempotent scrub of existing terminal records before it starts consuming events. That containment does not turn the demo into a credential vault. Never enter a personal, reused, customer, or production password.
 
 ## Self-Hosted Configuration
 

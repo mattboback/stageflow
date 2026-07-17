@@ -13,9 +13,13 @@ services:
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
         VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3020}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
-        VITE_TAGLINE: ${VITE_TAGLINE:-Podman-native web accessibility and quality scanning platform}
+        VITE_TAGLINE: ${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}
     ports:
       - "127.0.0.1:3020:3020"
+    volumes:
+      # Golden-regression fixtures are mounted only in this local acceptance
+      # overlay; they are intentionally absent from the production web image.
+      - ../../qa/fixtures/project-golden/site:/usr/share/nginx/html/qa:ro,z
 
   platform-api:
     environment:

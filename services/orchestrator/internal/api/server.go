@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/httputil"
@@ -26,17 +27,27 @@ const (
 	defaultJobEventsLimit   = 500
 	maxJobEventsLimit       = 5000
 	minPaginationLimitValue = 1
+	defaultForcedDrainWait  = time.Second
 )
+
+// ErrRequestDrainTimeout means force-closing HTTP connections did not make
+// every handler exit. Callers must not close handler dependencies before the
+// process terminates.
+var ErrRequestDrainTimeout = errors.New("orchestrator API handlers did not drain")
 
 // Server provides HTTP API endpoints for job and pod status.
 type Server struct {
-	database     *db.Database
-	podmanClient PodmanClient
-	apiToken     string
-	port         string
-	server       *http.Server
-	rateLimiter  *adminRateLimiter
-	metrics      *metrics.Collector
+	database        *db.Database
+	podmanClient    PodmanClient
+	apiToken        string
+	port            string
+	server          *http.Server
+	rateLimiter     *adminRateLimiter
+	metrics         *metrics.Collector
+	requestsMu      sync.Mutex
+	requestsWG      sync.WaitGroup
+	requestsStop    bool
+	forcedDrainWait time.Duration
 }
 
 // PodmanClient is the subset of Podman operations the API server needs.
@@ -99,12 +110,13 @@ func NewServer(cfg *Config) *Server {
 	}
 
 	s := &Server{
-		database:     cfg.Database,
-		podmanClient: cfg.PodmanClient,
-		apiToken:     strings.TrimSpace(cfg.APIToken),
-		port:         cfg.Port,
-		rateLimiter:  newAdminRateLimiter(cfg.AdminRateLimitRPS, cfg.AdminRateLimitBurst),
-		metrics:      cfg.Metrics,
+		database:        cfg.Database,
+		podmanClient:    cfg.PodmanClient,
+		apiToken:        strings.TrimSpace(cfg.APIToken),
+		port:            cfg.Port,
+		rateLimiter:     newAdminRateLimiter(cfg.AdminRateLimitRPS, cfg.AdminRateLimitBurst),
+		metrics:         cfg.Metrics,
+		forcedDrainWait: defaultForcedDrainWait,
 	}
 
 	mux := http.NewServeMux()
@@ -121,11 +133,53 @@ func NewServer(cfg *Config) *Server {
 
 	s.server = &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           s.recoverPanic(s.recordMetrics(s.rateLimit(mux))),
+		Handler:           s.trackRequests(s.recoverPanic(s.recordMetrics(s.rateLimit(mux)))),
 		ReadHeaderTimeout: 15 * time.Second,
 	}
 
 	return s
+}
+
+func (s *Server) trackRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.requestsMu.Lock()
+		if s.requestsStop {
+			s.requestsMu.Unlock()
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Service is shutting down")
+
+			return
+		}
+
+		s.requestsWG.Add(1)
+		s.requestsMu.Unlock()
+
+		defer s.requestsWG.Done()
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) stopAcceptingRequests() {
+	s.requestsMu.Lock()
+	s.requestsStop = true
+	s.requestsMu.Unlock()
+}
+
+func (s *Server) waitForRequests(ctx context.Context) error {
+	// stopAcceptingRequests prevents Add calls after this Wait begins.
+	done := make(chan struct{})
+
+	go func() {
+		s.requestsWG.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
@@ -235,11 +289,33 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown gracefully shuts down the server.
+// Shutdown closes HTTP intake and waits for every active handler. When the
+// graceful deadline expires, it force-closes connections and still joins the
+// handlers so callers may safely close shared dependencies afterward.
 func (s *Server) Shutdown(ctx context.Context) error {
 	slog.Info("Shutting down orchestrator API server...")
+	s.stopAcceptingRequests()
 
-	return s.server.Shutdown(ctx)
+	shutdownErr := s.server.Shutdown(ctx)
+	if shutdownErr == nil {
+		// A successful http.Server shutdown has already joined active
+		// connections; this barrier therefore returns immediately.
+		return s.waitForRequests(context.Background())
+	}
+
+	closeErr := s.server.Close()
+	if closeErr != nil && !errors.Is(closeErr, http.ErrServerClosed) {
+		shutdownErr = errors.Join(shutdownErr, closeErr)
+	}
+
+	forcedDrainCtx, cancel := context.WithTimeout(context.Background(), s.forcedDrainWait)
+	defer cancel()
+
+	if drainErr := s.waitForRequests(forcedDrainCtx); drainErr != nil {
+		return errors.Join(shutdownErr, ErrRequestDrainTimeout, drainErr)
+	}
+
+	return shutdownErr
 }
 
 // handleListJobs handles GET /api/v1/jobs

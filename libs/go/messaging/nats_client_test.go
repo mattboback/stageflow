@@ -4,11 +4,33 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 )
+
+type blockingConsumeContext struct {
+	stopped chan struct{}
+	closed  chan struct{}
+	once    sync.Once
+}
+
+func newBlockingConsumeContext() *blockingConsumeContext {
+	return &blockingConsumeContext{
+		stopped: make(chan struct{}),
+		closed:  make(chan struct{}),
+	}
+}
+
+func (c *blockingConsumeContext) Stop() {
+	c.once.Do(func() { close(c.stopped) })
+}
+
+func (c *blockingConsumeContext) Closed() <-chan struct{} {
+	return c.closed
+}
 
 func TestNewClient_WithNilConfig(t *testing.T) {
 	t.Parallel()
@@ -377,6 +399,60 @@ func TestClient_Close_NilClient(t *testing.T) {
 	var client *Client
 	if err := client.Close(); err != nil {
 		t.Fatalf("Close() on nil client should not error, got: %v", err)
+	}
+}
+
+func TestClient_StopConsumersWaitsForActiveCallbacks(t *testing.T) {
+	t.Parallel()
+
+	consumeCtx := newBlockingConsumeContext()
+	client := &Client{
+		consumeContexts: map[string]consumeContext{"stream/consumer": consumeCtx},
+	}
+
+	returned := make(chan struct{})
+
+	go func() {
+		client.StopConsumers()
+		close(returned)
+	}()
+
+	select {
+	case <-consumeCtx.stopped:
+	case <-time.After(time.Second):
+		t.Fatal("StopConsumers did not stop the subscription")
+	}
+
+	select {
+	case <-returned:
+		t.Fatal("StopConsumers returned before the consume context closed")
+	case <-time.After(25 * time.Millisecond):
+	}
+
+	close(consumeCtx.closed)
+
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		t.Fatal("StopConsumers did not return after the consume context closed")
+	}
+
+	client.mu.Lock()
+	defer client.mu.Unlock()
+
+	if len(client.consumeContexts) != 0 {
+		t.Fatalf("tracked consume contexts = %d, want 0", len(client.consumeContexts))
+	}
+}
+
+func TestClient_StopConsumersClosesSubscriptionRegistration(t *testing.T) {
+	t.Parallel()
+
+	client := &Client{}
+	client.StopConsumers()
+
+	if err := client.beginConsumeSetup(); !errors.Is(err, ErrNotConnected) {
+		t.Fatalf("beginConsumeSetup() error = %v, want ErrNotConnected", err)
 	}
 }
 

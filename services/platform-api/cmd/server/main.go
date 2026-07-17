@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,6 +50,7 @@ func validateSecurityPolicies() error {
 	return nil
 }
 
+//nolint:gocyclo // Startup intentionally validates each dependency and returns its precise failure.
 func run() error {
 	slog.Info("Starting Platform API...")
 
@@ -61,7 +63,8 @@ func run() error {
 		return err
 	}
 
-	ctx := context.Background()
+	ctx, cancelRun := context.WithCancel(context.Background())
+	defer cancelRun()
 
 	natsClient, err := bootstrap.NewNATSClient(ctx, cfg.NATS, bootstrap.NATSOptions{EnsureStreams: true})
 	if err != nil {
@@ -125,40 +128,100 @@ func run() error {
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
 
+	baselineSummary, reconcileErr := startBaselineMaintenance(ctx, server)
+	if reconcileErr != nil {
+		slog.Warn(
+			"Project baseline reconciliation is degraded; durable operations will retry in the background",
+			"error", reconcileErr,
+			"journal_replayed", baselineSummary.JournalReplayed,
+		)
+	} else {
+		slog.Info(
+			"Project baseline reconciliation complete",
+			"journal_replayed", baselineSummary.JournalReplayed,
+			"legacy_present", baselineSummary.LegacyPresent,
+			"legacy_copied", baselineSummary.LegacyCopied,
+			"missing_legacy_count", len(baselineSummary.MissingLegacyProjects),
+			"missing_legacy_projects", baselineSummary.MissingLegacyProjects,
+		)
+	}
+
 	if subscribeErr := subscribeStatusEvents(ctx, msgService, server.JobStatus()); subscribeErr != nil {
 		return subscribeErr
 	}
 
 	httpServer := newHTTPServer(cfg.Port, server.Router())
 
-	go func() {
-		slog.Info("Server listening", "port", cfg.Port)
-
-		if listenErr := httpServer.ListenAndServe(); listenErr != nil && listenErr != http.ErrServerClosed {
-			slog.Error("Server error", "error", listenErr)
-		}
-	}()
-
 	stop := make(chan os.Signal, 1)
+
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
+	defer signal.Stop(stop)
+
+	serverErr, err := startHTTPServer(httpServer)
+	if err != nil {
+		return fmt.Errorf("start HTTP server: %w", err)
+	}
+
+	slog.Info("Server listening", "port", cfg.Port)
+
+	select {
+	case <-stop:
+	case serveErr := <-serverErr:
+		if serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+			return fmt.Errorf("serve HTTP: %w", serveErr)
+		}
+	}
 
 	slog.Info("Shutting down server...")
+	cancelRun()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelShutdown()
 
-	if shutdownErr := httpServer.Shutdown(ctx); shutdownErr != nil {
+	if shutdownErr := httpServer.Shutdown(shutdownCtx); shutdownErr != nil {
 		slog.Error("Server shutdown error", "error", shutdownErr)
 	}
+
+	server.WaitForBaselineReconciler()
 
 	slog.Info("Server stopped")
 
 	return nil
 }
 
+func startHTTPServer(server *http.Server) (<-chan error, error) {
+	var listenConfig net.ListenConfig
+
+	listener, err := listenConfig.Listen(context.Background(), "tcp", server.Addr)
+	if err != nil {
+		return nil, err
+	}
+
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- server.Serve(listener)
+	}()
+
+	return serverErr, nil
+}
+
 type statusEventSubscriber interface {
 	SubscribeToStatusEvents(context.Context, messaging.EventHandler) error
+}
+
+type baselineMaintainer interface {
+	ReconcileProjectBaselines(context.Context) (api.BaselineReconcileSummary, error)
+	StartBaselineReconciler(context.Context)
+}
+
+func startBaselineMaintenance(
+	ctx context.Context,
+	maintainer baselineMaintainer,
+) (api.BaselineReconcileSummary, error) {
+	summary, err := maintainer.ReconcileProjectBaselines(ctx)
+	maintainer.StartBaselineReconciler(ctx)
+
+	return summary, err
 }
 
 func subscribeStatusEvents(

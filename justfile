@@ -17,10 +17,6 @@ go_work := 'go.work'
 help:
     @just --list
 
-[group('production'), doc('Redirect production deploys to the shared VPS control plane')]
-deploy:
-    @cd /home/matt/Deployment && just deploy stageflow
-
 [group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
 setup:
     #!/usr/bin/env bash
@@ -257,7 +253,7 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
         init)
             echo "==> Initializing MinIO buckets ($endpoint)..."
             declare -A env_overrides=()
-            for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
+            for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_STAGING_RETENTION_DAYS MINIO_ARTIFACT_RETENTION_DAYS MINIO_APPLY_LIFECYCLES MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
                 if [[ -v "$name" ]]; then
                     env_overrides["$name"]="${!name}"
                 fi
@@ -415,7 +411,7 @@ ci:
     (cd {{scanner_dir}} && {{bun}} run ci)
 
     echo "==> Scanner-runner audit..."
-    (cd {{scanner_dir}} && {{bun}} audit --audit-level=high)
+    (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf)
 
 [group('quality'), doc('Generate JSON-schema contract code used by Go and TypeScript builds')]
 generate-contracts:
@@ -498,6 +494,7 @@ shell-tests:
     bash devtools/scripts/tests/dev-onboarding.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/stale-vocab.test.sh
+    bash infra/minio/provision_test.sh
 
 [group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
 dead-code:

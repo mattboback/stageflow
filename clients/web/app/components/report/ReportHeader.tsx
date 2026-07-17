@@ -115,7 +115,9 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 					</dt>
 					<dd className="rhead__stat-val">{total.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
-						{critical.toLocaleString()} critical · {serious.toLocaleString()} serious
+						{total === 0
+							? 'nothing to fix'
+							: `${critical.toLocaleString()} critical · ${serious.toLocaleString()} serious`}
 					</dd>
 				</div>
 				<div className="rhead__stat">

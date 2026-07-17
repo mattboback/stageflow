@@ -1,0 +1,17 @@
+{
+  "name": "StageFlow",
+  "short_name": "StageFlow",
+  "description": "Frontend quality regression scanning",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f9f9",
+  "theme_color": "#16747a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
