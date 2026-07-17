@@ -12,7 +12,6 @@ import type { BrowserManager } from './browser-manager';
 
 import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
 import { createLogger } from '../utils/logger';
-import { redactDynamicStringValues, redactStringValues } from '../utils/secret-redaction';
 import {
 	AuthHydrationError,
 	defaultStorageStatePath,
@@ -20,6 +19,12 @@ import {
 	hydrateStorageState
 } from './auth-hydrator';
 import { detectAuthWall } from './auth-wall';
+import { attachAuthFromEnv, normalizeUrl, parseScanUrls } from './page-iterator-provenance';
+import {
+	redactPageEntry,
+	redactPageScanResult,
+	registerPageLiteralValues
+} from './page-iterator-redaction';
 import { collectFromEnvReferences, createSecretsResolver } from './secrets-resolver';
 import { buildTargetValidationPolicy, redactURLUserInfo } from './target-validation';
 import {
@@ -561,45 +566,6 @@ export class PageIterator {
 	}
 }
 
-function redactPageEntry(pageEntry: PageEntry, redact: (value: string) => string): PageEntry {
-	const safePageEntry = redactStringValues(pageEntry, redact);
-	if (pageEntry.metadata !== undefined) {
-		safePageEntry.metadata = redactDynamicStringValues(pageEntry.metadata, redact);
-	}
-	return safePageEntry;
-}
-
-function redactPageScanResult(
-	result: PageScanResult,
-	redact: (value: string) => string
-): PageScanResult {
-	const safeResult = redactStringValues(result, redact);
-
-	for (const [index, issue] of result.issues.entries()) {
-		const safeIssue = safeResult.issues[index];
-		if (safeIssue && issue.metadata !== undefined) {
-			safeIssue.metadata = redactDynamicStringValues(issue.metadata, redact);
-		}
-	}
-
-	if (result.rawResults !== undefined) {
-		safeResult.rawResults = redactDynamicStringValues(result.rawResults, redact);
-	}
-
-	return safeResult;
-}
-
-function registerPageLiteralValues(
-	pageEntry: PageEntry,
-	secretsResolver: ReturnType<typeof createSecretsResolver>
-): void {
-	for (const action of pageEntry.pre_scan_actions ?? []) {
-		if ((action.type === 'fill' || action.type === 'select') && typeof action.value === 'string') {
-			secretsResolver.resolveValue(action.value);
-		}
-	}
-}
-
 async function closeWithTimeout(opts: {
 	close: () => Promise<void>;
 	label: string;
@@ -638,96 +604,4 @@ async function closeWithTimeout(opts: {
 			timeoutMs
 		});
 	}
-}
-
-function normalizeUrl(url: string): string {
-	const trimmed = url.trim();
-	if (!trimmed) {
-		return trimmed;
-	}
-
-	if (/^https?:\/\//i.test(trimmed)) {
-		return trimmed;
-	}
-
-	return `https://${trimmed}`;
-}
-
-function parseScanUrls(raw: string): string[] {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to create provenance from SCAN_URLS: ${message}`, { cause: err });
-	}
-
-	if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== 'string')) {
-		throw new Error('SCAN_URLS must be a JSON array of URLs (strings)');
-	}
-
-	return parsed as string[];
-}
-
-/**
- * Attaches a Provenance.auth block from PROVENANCE_AUTH_JSON when present.
- *
- * The orchestrator emits this env var with the canonical auth shape (form
- * recipe with from_env references, or storage_state with an artifact_key)
- * derived from JobConfig.Auth. Resolved credential values are never present in
- * this env var; only the recipe shape is.
- *
- * Behavior is byte-identical to today when PROVENANCE_AUTH_JSON is unset: no
- * auth block is attached and the synthesized Provenance matches the pre-auth
- * shape on disk.
- */
-function attachAuthFromEnv(provenance: Provenance, logger: ScannerLogger): void {
-	const raw = process.env.PROVENANCE_AUTH_JSON;
-	if (!raw) {
-		return;
-	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		logger.warn('PROVENANCE_AUTH_JSON is not valid JSON; ignoring auth env var', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return;
-	}
-
-	if (!isProvenanceAuth(parsed)) {
-		logger.warn('PROVENANCE_AUTH_JSON did not match Provenance.auth shape; ignoring', {
-			parsed: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : typeof parsed
-		});
-		return;
-	}
-
-	provenance.auth = parsed;
-	logger.info('Attached auth block from PROVENANCE_AUTH_JSON', {
-		mode: parsed.mode
-	});
-}
-
-function isProvenanceAuth(value: unknown): value is ProvenanceAuth {
-	if (typeof value !== 'object' || value === null) {
-		return false;
-	}
-
-	const v = value as Record<string, unknown>;
-	if (v.mode === 'storage_state') {
-		return typeof v.artifact_key === 'string' && v.artifact_key.length > 0;
-	}
-
-	if (v.mode === 'form') {
-		return (
-			typeof v.login_url === 'string' &&
-			Array.isArray(v.steps) &&
-			typeof v.success === 'object' &&
-			v.success !== null
-		);
-	}
-
-	return false;
 }
