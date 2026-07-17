@@ -2,7 +2,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, isAbsolute, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import process from 'node:process';
 
 function markdownFiles() {
@@ -76,6 +76,28 @@ function backtickedPath(rawTarget, file) {
 	return explicitlyFileRelative || !looksRootRelative ? relativeCandidate : rootCandidate;
 }
 
+function gitIgnored(candidate) {
+	const relativeCandidate = relative(process.cwd(), candidate);
+	if (relativeCandidate.startsWith('..') || isAbsolute(relativeCandidate)) {
+		return false;
+	}
+
+	for (const path of [relativeCandidate, `${relativeCandidate}/.stageflow-link-check`]) {
+		try {
+			execFileSync('git', ['check-ignore', '--quiet', '--', path], {
+				stdio: 'ignore'
+			});
+
+			return true;
+		} catch {
+			// Try a synthetic child as well so directory-only ignore rules work
+			// even when the generated directory does not exist in this checkout.
+		}
+	}
+
+	return false;
+}
+
 const failures = [];
 
 for (const file of markdownFiles()) {
@@ -110,7 +132,10 @@ for (const file of markdownFiles()) {
 	const prose = source.replace(/```[\s\S]*?```/g, '');
 	for (const match of prose.matchAll(/`([^`\n]+)`/g)) {
 		const candidate = backtickedPath(match[1], file);
-		if (candidate !== null && !existsSync(candidate)) {
+		// Generated and local-configuration paths are intentionally absent from
+		// clean checkouts. Keep validating real code-path references while
+		// allowing code spans that are explicitly covered by .gitignore.
+		if (candidate !== null && !existsSync(candidate) && !gitIgnored(candidate)) {
 			failures.push(`${file}: \`${match[1]}\``);
 		}
 	}
