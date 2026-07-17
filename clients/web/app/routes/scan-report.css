@@ -458,6 +458,20 @@
 
 
 /* ---- review landing: the next action leads ---- */
+/* zero-findings success state */
+.allclear {
+	display: flex; align-items: center; gap: var(--sp-4);
+	flex-wrap: wrap;
+	margin-top: var(--sp-4); padding: var(--sp-4) var(--sp-5);
+}
+.allclear__mark { color: var(--sev-pass); flex: none; display: grid; place-items: center; }
+.allclear__copy { flex: 1 1 24rem; min-width: 0; }
+.allclear__head { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.allclear__head h2 { font-size: 1.15rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
+.allclear__copy p { color: var(--ink-muted); margin-top: 0.45rem; font-size: 0.95rem; line-height: 1.55; }
+.allclear__copy .allclear__caveat { color: var(--sev-serious); }
+.allclear__cta { flex: none; }
+
 .rnext {
 	display: flex; align-items: center; justify-content: space-between;
 	gap: var(--sp-3) var(--sp-5); flex-wrap: wrap;

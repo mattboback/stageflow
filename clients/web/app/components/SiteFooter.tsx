@@ -42,6 +42,7 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 				<div className="site-footer__cols">
 					<nav aria-label="Product" className="site-footer__col">
 						<span className="label">Product</span>
+						<Link to="/projects">Projects</Link>
 						<Link to="/playground">Configure scan</Link>
 						<Link to="/#scanners">Scanners</Link>
 						<a href={DOCS_URL}>Documentation</a>

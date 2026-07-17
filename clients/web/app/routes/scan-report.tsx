@@ -22,6 +22,7 @@ import { ArtifactsView } from '../components/report/ArtifactsView';
 import { LighthouseSummary } from '../components/report/LighthouseSummary';
 import { ErrorsView } from '../components/report/ErrorsView';
 import { LocalBaselineComparison } from '../components/report/LocalBaselineComparison';
+import { AllClearBanner } from '../components/report/AllClearBanner';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
 import {
 	buildOccurrenceModeReport,
@@ -311,6 +312,9 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 									role="tabpanel"
 									aria-labelledby="report-tab-review"
 								>
+									{displayReport.summary.totalIssues === 0 && (
+										<AllClearBanner report={displayReport} />
+									)}
 									{reviewQueue.length > 0 && (
 										<div className="rnext">
 											<div className="rnext__copy">
