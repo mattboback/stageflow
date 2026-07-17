@@ -234,6 +234,8 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .btn--primary:hover { background: var(--signal-press); }
 .btn--ghost { color: var(--ink-strong); border-color: var(--line-strong); background: var(--surface); }
 .btn--ghost:hover { border-color: var(--ink-faint); background: var(--ground); }
+.btn--danger { background: var(--sev-critical); color: oklch(0.99 0 0); }
+.btn--danger:hover { filter: brightness(0.92); }
 .btn--sm { padding: 0.5rem 0.85rem; font-size: 0.875rem; }
 .btn--lg { padding: 0.85rem 1.4rem; font-size: 1rem; border-radius: var(--r-sm); }
 .btn .ar { transition: transform var(--dur-2) var(--ease); }
@@ -369,6 +371,19 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .toggle[aria-checked='true'], .toggle--on { background: var(--signal-strong); }
 .toggle[aria-checked='true']::after, .toggle--on::after { transform: translateX(17px); }
+
+/* ---------------------------------------------------------- confirm dialog */
+.cdialog__backdrop {
+	position: fixed; inset: 0; z-index: var(--z-modal);
+	background: oklch(0.2 0.015 230 / 0.5);
+	display: flex; align-items: center; justify-content: center;
+	padding: 2rem 1rem;
+}
+.cdialog { width: 100%; max-width: 26rem; box-shadow: var(--shadow-md); }
+.cdialog__body { padding: 1.4rem 1.4rem 0.4rem; }
+.cdialog__body h2 { font-size: 1.05rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
+.cdialog__body p { color: var(--ink-muted); margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.55; }
+.cdialog__actions { display: flex; justify-content: flex-end; gap: 0.7rem; padding: 1.2rem 1.4rem 1.4rem; }
 
 /* ------------------------------------------------------------------ footer */
 .site-footer { border-top: 1px solid var(--line); margin-top: var(--sp-7); background: var(--surface); }

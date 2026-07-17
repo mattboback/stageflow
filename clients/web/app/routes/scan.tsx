@@ -70,7 +70,7 @@ export default function Scan() {
 	const playgroundPath = projectId
 		? `/playground?project=${encodeURIComponent(projectId)}`
 		: '/playground';
-	const { status, result, elapsed, logs, transport, error } = useScanStatus(id);
+	const { status, result, elapsed, logs, transport, error, retry } = useScanStatus(id);
 
 	const logBodyRef = useRef<HTMLDivElement>(null);
 
@@ -228,11 +228,7 @@ export default function Scan() {
 										Back to playground
 									</Link>
 									{id && (
-										<button
-											type="button"
-											className="btn btn--ghost btn--sm"
-											onClick={() => window.location.reload()}
-										>
+										<button type="button" className="btn btn--ghost btn--sm" onClick={retry}>
 											Retry connection
 										</button>
 									)}

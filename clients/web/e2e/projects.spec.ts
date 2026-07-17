@@ -425,3 +425,33 @@ test('SPA project query changes discard project association and execution-only s
 	expect(formValues).not.toContain('standalone-project-password');
 	expect(formValues).not.toContain('standalone-ai-secret');
 });
+
+test('project deletion is confirmed in a dialog instead of window.confirm', async ({ page }) => {
+	await mockProjectApi(page);
+	await page.goto('/projects');
+
+	await page.getByLabel('Project name').fill('Doomed project');
+	await page.getByLabel('Website URL').fill('https://doomed.example.com');
+	await page.getByRole('button', { name: 'Create and configure' }).click();
+	await expect(page).toHaveURL(/\/playground\?project=/);
+
+	await page.goto('/projects');
+	const card = page.getByRole('article').filter({ hasText: 'Doomed project' });
+	await expect(card).toBeVisible();
+
+	// Cancelling keeps the project (Cancel holds initial focus, Escape works too).
+	await card.getByRole('button', { name: 'Delete Doomed project' }).click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog.getByRole('heading', { name: 'Delete “Doomed project”?' })).toBeVisible();
+	await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+	await dialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(card).toBeVisible();
+
+	// Confirming removes the card and its stored data.
+	await card.getByRole('button', { name: 'Delete Doomed project' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Delete project' }).click();
+	await expect(page.getByRole('dialog')).toHaveCount(0);
+	await expect(page.getByRole('article').filter({ hasText: 'Doomed project' })).toHaveCount(0);
+	await expect(page.getByText('No projects yet')).toBeVisible();
+});

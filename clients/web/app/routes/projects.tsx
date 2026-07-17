@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
 import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2 } from 'lucide-react';
 
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { SiteFooter } from '../components/SiteFooter';
 import { SiteHeader } from '../components/SiteHeader';
 import {
@@ -44,6 +45,8 @@ export default function Projects() {
 	const [url, setUrl] = useState('https://example.com');
 	const [formError, setFormError] = useState<string | null>(null);
 	const [creating, setCreating] = useState(false);
+	const [pendingDelete, setPendingDelete] = useState<LocalProject | null>(null);
+	const [deleting, setDeleting] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -101,13 +104,16 @@ export default function Projects() {
 	}
 
 	async function onDelete(project: LocalProject) {
-		if (!window.confirm(`Delete “${project.name}” and its local baseline?`)) return;
+		setDeleting(true);
 		try {
 			await deleteLocalProject(project.id);
 			setItems(await loadProjectList());
 			setStorageError(null);
 		} catch (error) {
 			setStorageError(error instanceof Error ? error.message : 'Could not delete the project.');
+		} finally {
+			setDeleting(false);
+			setPendingDelete(null);
 		}
 	}
 
@@ -230,7 +236,7 @@ export default function Projects() {
 													<button
 														className="project-card__delete"
 														type="button"
-														onClick={() => void onDelete(project)}
+														onClick={() => setPendingDelete(project)}
 														aria-label={`Delete ${project.name}`}
 													>
 														<Trash2 size={17} aria-hidden="true" />
@@ -245,6 +251,17 @@ export default function Projects() {
 					</div>
 				</div>
 			</main>
+			{pendingDelete && (
+				<ConfirmDialog
+					title={`Delete “${pendingDelete.name}”?`}
+					detail="The project, its run history, and its local baseline are removed from this browser. Completed scan reports on the server are unaffected."
+					confirmLabel={deleting ? 'Deleting…' : 'Delete project'}
+					destructive
+					busy={deleting}
+					onConfirm={() => void onDelete(pendingDelete)}
+					onCancel={() => setPendingDelete(null)}
+				/>
+			)}
 			<SiteFooter />
 		</>
 	);
