@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link, useNavigate, useParams, useSearchParams, type MetaFunction } from 'react-router';
+import {
+	Link,
+	isRouteErrorResponse,
+	useLocation,
+	useNavigate,
+	useParams,
+	useRouteError,
+	useSearchParams,
+	type MetaFunction
+} from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
+import { RouteFault } from '../components/RouteFault';
 import { useScanStatus } from '../lib/hooks/useScanMonitor';
 import { pageTitle } from '../lib/site-metadata';
 import { SCANNER_META } from '../lib/report';
@@ -334,6 +344,39 @@ export default function Scan() {
 				</div>
 			</main>
 
+			<SiteFooter slim />
+		</>
+	);
+}
+
+export function ErrorBoundary() {
+	const error = useRouteError();
+	const { pathname } = useLocation();
+	const status = isRouteErrorResponse(error) ? error.status : 500;
+
+	return (
+		<>
+			<SiteHeader app={{ backTo: '/playground', backLabel: 'New scan', section: 'Scan run' }} />
+			<RouteFault
+				status={status}
+				title="This scan can't be shown."
+				detail="Scan jobs are kept for a limited window after they complete. The job id may have expired, or the live view failed to load."
+				traceLine={`scan view ${pathname} failed to load`}
+				traceHint="check the job id · try again or run a new scan"
+				actions={
+					<>
+						<Link className="btn btn--primary" to="/playground">
+							Run a new scan{' '}
+							<span className="ar" aria-hidden="true">
+								→
+							</span>
+						</Link>
+						<a className="btn btn--ghost" href={pathname}>
+							Try again
+						</a>
+					</>
+				}
+			/>
 			<SiteFooter slim />
 		</>
 	);

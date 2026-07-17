@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams, type MetaFunction } from 'react-router';
+import {
+	Link,
+	isRouteErrorResponse,
+	useLocation,
+	useParams,
+	useRouteError,
+	useSearchParams,
+	type MetaFunction
+} from 'react-router';
 
 import { SiteHeader } from '../components/SiteHeader';
+import { RouteFault } from '../components/RouteFault';
 import { Pill } from '../components/Pill';
 import { ReportHeader } from '../components/report/ReportHeader';
 import { ReportSectionNav, type ReportSection } from '../components/report/ReportSectionNav';
@@ -442,6 +451,38 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 					)}
 				</div>
 			</main>
+		</>
+	);
+}
+
+export function ErrorBoundary() {
+	const error = useRouteError();
+	const { pathname } = useLocation();
+	const status = isRouteErrorResponse(error) ? error.status : 500;
+
+	return (
+		<>
+			<SiteHeader app={{ backTo: '/playground', backLabel: 'New scan', section: 'Report' }} />
+			<RouteFault
+				status={status}
+				title="This report can't be shown."
+				detail="Scan jobs are kept for a limited window after they complete. The job id may have expired, or the report failed to load."
+				traceLine={`report view ${pathname} failed to load`}
+				traceHint="check the job id · try again or run a new scan"
+				actions={
+					<>
+						<Link className="btn btn--primary" to="/playground">
+							Run a new scan{' '}
+							<span className="ar" aria-hidden="true">
+								→
+							</span>
+						</Link>
+						<a className="btn btn--ghost" href={pathname}>
+							Try again
+						</a>
+					</>
+				}
+			/>
 		</>
 	);
 }

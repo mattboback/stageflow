@@ -8,7 +8,12 @@ import {
 	type LinksFunction
 } from 'react-router';
 
+import { SiteHeader } from './components/SiteHeader';
+import { SiteFooter } from './components/SiteFooter';
+import { RouteFault } from './components/RouteFault';
+
 import './styles/instrument.css';
+import './styles/fault.css';
 
 export const links: LinksFunction = () => [
 	{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
@@ -42,15 +47,23 @@ export default function Root() {
 
 export function ErrorBoundary({ error }: { error: unknown }) {
 	const status = isRouteErrorResponse(error) ? error.status : 500;
-	const title = status === 404 ? 'Page not found' : 'Something went wrong';
+	const notFound = status === 404;
 	return (
-		<main id="main" style={{ padding: '4rem 1.5rem', maxWidth: '32rem', margin: '0 auto' }}>
-			<h1>{title}</h1>
-			<p>
-				{status === 404
-					? 'The page you requested could not be found.'
-					: 'StageFlow could not render this page. Please try again.'}
-			</p>
-		</main>
+		<>
+			<SiteHeader />
+			<RouteFault
+				status={status}
+				title={notFound ? 'Page not found.' : 'Something went wrong.'}
+				detail={
+					notFound
+						? "The page you requested doesn't exist, has expired, or has moved."
+						: 'StageFlow could not render this page. Try again, or head back home.'
+				}
+				traceKey="renderer"
+				traceLine={notFound ? 'route not matched' : 'route failed to render'}
+				traceHint={notFound ? 'check the URL or run a new scan' : 'reload the page or return home'}
+			/>
+			<SiteFooter slim />
+		</>
 	);
 }
