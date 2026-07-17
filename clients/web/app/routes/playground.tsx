@@ -657,7 +657,10 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 														<span className="chan__cat">
 															{categoryLabel(scanner.categories[0] ?? '')}
 														</span>
-														<span className="tog" aria-hidden="true" />
+														<span
+															className={on ? 'toggle toggle--on' : 'toggle'}
+															aria-hidden="true"
+														/>
 													</button>
 												);
 											})}

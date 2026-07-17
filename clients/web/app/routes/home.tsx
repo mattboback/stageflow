@@ -106,13 +106,12 @@ export default function Home() {
 					<div className="wrap wrap--app hero__grid">
 						<div className="hero__copy">
 							<h1 id="hero-heading">
-								Every deploy answers one question:{' '}
-								<span className="verdict">better</span>, or{' '}
-								<span className="verdict">worse</span>.
+								Every deploy, measured against your{' '}
+								<span className="verdict">last known-good</span>.
 							</h1>
 							<p className="hero__lede">
-								{SITE_NAME} runs eight scanners, compares releases against your known-good
-								baseline, and shows exactly what regressed. Local projects work without an
+								{SITE_NAME} runs eight scanners, compares each release against the baseline
+								you promoted, and shows exactly what changed. Local projects work without an
 								account and stay in your browser.
 							</p>
 							<div className="hero__actions">
