@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Consolidated product, architecture, CLI, self-hosting, privacy, and code-tour docs under `docs/`, with a docs index and internal link checker.
 - Replaced the animated Review GIF with a deterministic Review workspace screenshot and architecture diagram assets.
+- Made the GitHub Releases binary the primary CLI install path in the README quickstart, with `just cli-install` documented as the from-a-clone alternative.
 
 ## [0.4.0] - 2026-07-14
 

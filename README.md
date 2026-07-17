@@ -19,14 +19,23 @@ Reviewing this codebase? The [code tour](docs/code-tour.md) maps contracts, SSRF
 ## Try It in 60 Seconds
 
 The CLI is a single Go binary that submits scans to any StageFlow API and
-streams live results to your terminal. Point it at the hosted demo — nothing to
-deploy:
+streams live results to your terminal. Download it from
+[GitHub Releases](https://github.com/mattboback/stageflow/releases) and point
+it at the hosted demo — nothing to clone, nothing to deploy:
 
 ```bash
-export PATH="$HOME/.local/bin:$PATH"
-just cli-install          # or download a binary from GitHub Releases
+# Linux amd64 shown; macOS (darwin) and Windows assets ship on the same release.
+version=v0.4.0
+curl -fsSL "https://github.com/mattboback/stageflow/releases/download/clients/cli/${version}/stageflow_${version}_linux_amd64.tar.gz" | tar -xz
+install -m 0755 stageflow ~/.local/bin/stageflow   # any directory on your PATH
+
 stageflow scan https://example.com --api https://stageflow.org
 ```
+
+Working from a clone instead? `just cli-install` builds and installs the same
+binary. (The CLI compiles against generated schema contracts, which is why the
+install path is a release binary or `just cli-install` rather than a plain
+`go install …@latest`.)
 
 Prefer a browser? Submit the same scan at [stageflow.org](https://stageflow.org)
 and watch it stream live.
