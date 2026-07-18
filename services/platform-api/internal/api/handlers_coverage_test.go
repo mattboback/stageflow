@@ -1061,6 +1061,25 @@ func TestHandleJobURLSubmitInvalidJSON(t *testing.T) {
 	}
 }
 
+func TestHandleJobURLSubmitUnknownField(t *testing.T) {
+	server, _, _ := newTestServer(t)
+
+	body := `{"urls":["https://example.com"],"scanners":["axe"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	server.handleJobURLSubmit(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if !strings.Contains(rr.Body.String(), "scanners") {
+		t.Fatalf("expected error to name the unknown field, got: %s", rr.Body.String())
+	}
+}
+
 func TestHandleJobURLSubmitMethodNotAllowed(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
