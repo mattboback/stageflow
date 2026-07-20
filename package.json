@@ -33,6 +33,6 @@
 		"node": "22.x"
 	},
 	"devDependencies": {
-		"prettier": "^3.8.3"
+		"prettier": "^3.9.5"
 	}
 }

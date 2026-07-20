@@ -59,30 +59,30 @@
 		"test:coverage": "bun run prepare:contracts && vitest run --coverage --no-file-parallelism"
 	},
 	"dependencies": {
-		"@axe-core/playwright": "^4.11.3",
+		"@axe-core/playwright": "^4.12.1",
 		"@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
 		"ajv": "8.20.0",
 		"ajv-formats": "^3.0.1",
 		"chrome-launcher": "^1.2.1",
-		"lighthouse": "^13.3.0",
+		"lighthouse": "^13.4.1",
 		"minio": "^8.0.7",
 		"nats": "^2.29.3",
-		"playwright": "1.60.0",
+		"playwright": "1.61.1",
 		"sharp": "^0.35.3"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@sentry/node": "9.47.1",
 		"@types/node": "22",
-		"@vitest/coverage-v8": "4.1.6",
-		"@vitest/eslint-plugin": "^1.6.17",
-		"eslint": "^10.3.0",
-		"globals": "^17.6.0",
-		"knip": "^6.12.1",
-		"prettier": "^3.8.3",
+		"@vitest/coverage-v8": "4.1.10",
+		"@vitest/eslint-plugin": "^1.6.23",
+		"eslint": "^10.7.0",
+		"globals": "^17.7.0",
+		"knip": "^6.27.0",
+		"prettier": "^3.9.5",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.59.2",
-		"vitest": "4.1.6"
+		"typescript-eslint": "^8.65.0",
+		"vitest": "4.1.10"
 	},
 	"overrides": {
 		"@opentelemetry/core": "1.30.1",
