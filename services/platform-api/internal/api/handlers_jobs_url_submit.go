@@ -290,11 +290,24 @@ func decodeJobURLSubmitRequest(w http.ResponseWriter, r *http.Request) (jobURLSu
 
 	var req jobURLSubmitRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
 			httputil.RespondError(w, http.StatusRequestEntityTooLarge,
 				fmt.Sprintf("Request body too large (max %d bytes)", maxURLSubmitBodySize))
+
+			return jobURLSubmitRequest{}, false
+		}
+
+		if field, ok := unknownJSONField(err); ok {
+			httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
+				field,
+				fmt.Sprintf("unknown field %q", field),
+				"Supported fields: urls, modules, scanner_configs, screenshot, highlight_style, browser, allow_private_targets, auth",
+			))
 
 			return jobURLSubmitRequest{}, false
 		}
@@ -305,6 +318,19 @@ func decodeJobURLSubmitRequest(w http.ResponseWriter, r *http.Request) (jobURLSu
 	}
 
 	return req, true
+}
+
+// unknownJSONField extracts the offending field name from the unexported
+// error encoding/json returns when DisallowUnknownFields trips.
+func unknownJSONField(err error) (string, bool) {
+	const marker = `json: unknown field "`
+
+	msg := err.Error()
+	if !strings.HasPrefix(msg, marker) {
+		return "", false
+	}
+
+	return strings.TrimSuffix(strings.TrimPrefix(msg, marker), `"`), true
 }
 
 func (s *Server) validateJobURLSubmitRequest(

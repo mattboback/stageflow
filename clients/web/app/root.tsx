@@ -11,6 +11,7 @@ import {
 import { SiteHeader } from './components/SiteHeader';
 import { SiteFooter } from './components/SiteFooter';
 import { RouteFault } from './components/RouteFault';
+import { Pill } from './components/Pill';
 
 import './styles/instrument.css';
 import './styles/fault.css';
@@ -43,6 +44,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function Root() {
 	return <Outlet />;
+}
+
+export function HydrateFallback() {
+	return (
+		<>
+			<SiteHeader />
+			<main id="main" className="hydrate-fallback" role="status" aria-live="polite">
+				<div className="hydrate-fallback__panel">
+					<Pill variant="queued">Loading</Pill>
+					<h1>Loading StageFlow…</h1>
+					<p>Fetching this page.</p>
+				</div>
+			</main>
+			<SiteFooter slim />
+		</>
+	);
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {

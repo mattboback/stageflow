@@ -15,3 +15,10 @@
 .fault__trace .k { color: var(--signal-ink); }
 .fault__trace .warn { color: var(--sev-serious); }
 .fault__actions { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+
+/* ---- hydrate fallback: shown while the SPA shell fetches route modules ----
+   Imported statically from root.tsx for the same reason as the fault styles. */
+.hydrate-fallback { min-height: calc(100dvh - 61px); display: grid; place-items: center; padding: 3rem 1.5rem; }
+.hydrate-fallback__panel { text-align: center; }
+.hydrate-fallback__panel h1 { margin-top: 0.9rem; font-size: 1.15rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
+.hydrate-fallback__panel p { color: var(--ink-muted); margin-top: 0.4rem; font-size: 0.95rem; }
