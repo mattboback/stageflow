@@ -442,6 +442,14 @@ images:
     @echo "==> Building container images..."
     ./infra/scripts/build-images.sh
 
+[group('deploy'), doc('Production deploys run from the root control plane (this recipe only prints the procedure)')]
+deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "StageFlow production deployment is managed from /home/matt/Deployment." >&2
+    echo "Run: cd /home/matt/Deployment && just check stageflow && just deploy stageflow" >&2
+    exit 1
+
 [group('tools'), doc('Build and install stageflow CLI to ~/.local/bin (no stale binaries)')]
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     @{{repo_root}}/devtools/scripts/install-cli.sh "{{BIN_DIR}}" "{{BIN_NAME}}"
