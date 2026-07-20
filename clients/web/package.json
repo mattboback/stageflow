@@ -14,7 +14,7 @@
     "ci": "bun run lint && bun run typecheck && bun run test && bun run build"
   },
   "dependencies": {
-    "@react-router/node": "^7.18.0",
+    "@react-router/node": "^8.2.0",
     "lucide-react": "^1.20.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
