@@ -76,3 +76,21 @@ export function normalizeReviewVerdicts(value: unknown): ReviewVerdictsByJob {
 	}
 	return jobs;
 }
+
+/**
+ * Human-readable timestamp for a review decision.
+ *
+ * Shared by ManualReviewTab and VerifyContrastTab, which held identical private
+ * copies — the two surfaces must format a verdict the same way.
+ * Returns the raw ISO string unchanged when it is unparseable.
+ */
+export function formatVerdictTime(iso: string): string {
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) return iso;
+	return date.toLocaleString(undefined, {
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit'
+	});
+}

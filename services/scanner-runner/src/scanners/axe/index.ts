@@ -18,7 +18,7 @@ import {
 	type EnhancedScreenshotResult,
 	type PageOverviewViolation,
 	type ViolationCaptureFailure
-} from '../../screenshots/AxeScreenshotService';
+} from '../../screenshots/axe-screenshot-service';
 import { SCANNER_VERSION } from '../version';
 import {
 	getReportableIncompleteResults,

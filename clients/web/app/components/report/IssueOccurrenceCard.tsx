@@ -12,13 +12,7 @@ interface Props {
 	pageOverviewUrl?: string | null;
 }
 
-export function IssueOccurrenceCard({
-	occurrence,
-	index,
-	page,
-	issueId,
-	pageOverviewUrl
-}: Props) {
+export function IssueOccurrenceCard({ occurrence, index, page, issueId, pageOverviewUrl }: Props) {
 	const pageLabel = page?.path ?? page?.url ?? occurrence.pageId ?? null;
 	const overviewElement = issueId ? findOverviewElement(page, issueId, index) : null;
 

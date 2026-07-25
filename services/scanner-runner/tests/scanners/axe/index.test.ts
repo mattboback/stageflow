@@ -26,7 +26,7 @@ vi.mock('@axe-core/playwright', () => {
 	return { default: MockAxeBuilder };
 });
 
-vi.mock('../../../src/screenshots/AxeScreenshotService', () => ({
+vi.mock('../../../src/screenshots/axe-screenshot-service', () => ({
 	AxeScreenshotService: class MockAxeScreenshotService {
 		capturePageOverview = capturePageOverviewMock;
 
@@ -124,6 +124,12 @@ describe('AxeScanner.scanPage', () => {
 			incomplete: [
 				{
 					id: 'color-contrast',
+					// axe reports color-contrast at `serious` on incomplete results too.
+					// This fixture used to omit `impact`, so the assertion below passed
+					// only because the severity fell through to the `moderate` default —
+					// production emitted `serious`. Kept realistic so the mapper's
+					// "unverified is not failing" rule is what the test actually proves.
+					impact: 'serious',
 					help: 'Elements must meet minimum color contrast ratio thresholds',
 					helpUrl: 'https://dequeuniversity.com/rules/axe/4.11/color-contrast',
 					description: 'Ensure the contrast between foreground and background colors meets WCAG.',
@@ -173,6 +179,7 @@ describe('AxeScanner.scanPage', () => {
 			[
 				{
 					id: 'color-contrast',
+					impact: 'serious',
 					nodes: [
 						{
 							target: ['.hero-help'],
@@ -184,6 +191,7 @@ describe('AxeScanner.scanPage', () => {
 				},
 				{
 					id: 'color-contrast',
+					impact: 'serious',
 					nodes: [
 						{
 							target: ['.muted-link'],
@@ -339,6 +347,83 @@ describe('AxeScanner.scanPage', () => {
 
 		const altIssue = result.issues.find((issue) => issue.id === 'image-alt');
 		expect(altIssue?.metadata?.contrastData).toBeUndefined();
+	});
+
+	it('does not promote contrast incompletes that have no text to verify', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: [
+				{
+					id: 'color-contrast',
+					impact: 'serious',
+					tags: ['cat.color', 'wcag2aa', 'wcag143'],
+					nodes: [
+						{
+							// axe's `nonBmp`: the element's content is only non-text
+							// characters, so there is no contrast a reviewer could assess.
+							// Scanning StageFlow's own landing page produced nine of these
+							// on aria-hidden icon glyphs alone.
+							target: ['.btn > span[aria-hidden="true"]'],
+							html: '<span aria-hidden="true">→</span>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'nonBmp' } }]
+						}
+					]
+				}
+			]
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.success).toBe(true);
+		expect(result.issues).toEqual([]);
+	});
+
+	it('keeps the verifiable nodes when one result mixes both kinds', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: [
+				{
+					id: 'color-contrast',
+					impact: 'serious',
+					tags: ['cat.color', 'wcag2aa', 'wcag143'],
+					nodes: [
+						{
+							target: ['.icon'],
+							html: '<span aria-hidden="true">→</span>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'nonBmp' } }]
+						},
+						{
+							// `bgOverlap` is genuinely ambiguous: there is real text, and a
+							// human has to determine what is behind it.
+							target: ['.gauge__val'],
+							html: '<span class="gauge__val">88</span>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'bgOverlap' } }]
+						}
+					]
+				}
+			]
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.success).toBe(true);
+		expect(result.issues).toHaveLength(1);
+		expect(result.issues[0]).toMatchObject({
+			id: 'color-contrast',
+			severity: 'moderate',
+			location: { selector: '.gauge__val' }
+		});
+		// Filtering is per node, so the surviving node must still be indexed from the
+		// filtered list rather than carrying its original offset.
+		expect(result.issues[0]?.metadata).toMatchObject({ incompleteNodeIndex: 0 });
 	});
 
 	it('does not promote non-contrast incomplete results', async () => {

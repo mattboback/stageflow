@@ -1,0 +1,7 @@
+{
+	"$schema": "node_modules/knip/schema.json",
+	"entry": ["app/**/*.test.{ts,tsx}", "e2e/**/*.ts", "qa/**/*.mjs"],
+	"project": ["app/**/*.{ts,tsx}", "e2e/**/*.ts", "qa/**/*.mjs"],
+	"ignoreExportsUsedInFile": true,
+	"ignoreBinaries": ["ffmpeg"]
+}

@@ -30,8 +30,13 @@ export const AI_NAVIGATOR_DEFAULT_MODEL = envText(
 	import.meta.env.VITE_AI_NAVIGATOR_DEFAULT_MODEL,
 	DEFAULT_AI_MODEL
 );
+// Vite injects VITE_* as untyped values, so read it as unknown and narrow rather
+// than calling .trim() on an implicit any.
+const rawDeploymentMode: unknown = import.meta.env.VITE_DEPLOYMENT_MODE;
 export const DEPLOYMENT_MODE =
-	import.meta.env.VITE_DEPLOYMENT_MODE?.trim() === 'hosted-demo' ? 'hosted-demo' : 'self-hosted';
+	typeof rawDeploymentMode === 'string' && rawDeploymentMode.trim() === 'hosted-demo'
+		? 'hosted-demo'
+		: 'self-hosted';
 export const IS_HOSTED_DEMO = DEPLOYMENT_MODE === 'hosted-demo';
 export const SHARE_IMAGE_URL = `${SITE_URL}/social/stageflow-og.png`;
 

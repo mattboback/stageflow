@@ -2,12 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
 	DEFAULT_AI_CONFIG,
 	estimateScanRuntime,
-	normalizeUrlInput,
-	validateHttpUrls,
 	validatePlaygroundConfiguration,
 	type AuthFormConfig
 } from './playground-utils';
-import type { ScannerDefinition, ScannerSelection } from '../../types/scan';
+import { normalizeUrlInput, validateHttpUrls } from '../url';
+import type { ScannerDefinition, ScannerSelection } from '../types/scan';
 
 const auth: AuthFormConfig = {
 	enabled: false,
@@ -39,7 +38,9 @@ function scanner(id: string, estimatedTimePerPage?: number): ScannerDefinition {
 			requiresBrowser: false,
 			supportsOffline: true,
 			maxConcurrency: 1,
-			estimatedTimePerPage
+			// Omit the key entirely when unset: under exactOptionalPropertyTypes an
+			// optional field will not accept an explicit undefined.
+			...(estimatedTimePerPage === undefined ? {} : { estimatedTimePerPage })
 		}
 	};
 }
@@ -56,8 +57,16 @@ describe('normalizeUrlInput', () => {
 
 describe('validateHttpUrls', () => {
 	it('accepts valid public domain names', () => {
-		const result = validateHttpUrls(['https://example.com', 'http://google.com', 'https://sub.domain.co.uk']);
-		expect(result.valid).toEqual(['https://example.com', 'http://google.com', 'https://sub.domain.co.uk']);
+		const result = validateHttpUrls([
+			'https://example.com',
+			'http://google.com',
+			'https://sub.domain.co.uk'
+		]);
+		expect(result.valid).toEqual([
+			'https://example.com',
+			'http://google.com',
+			'https://sub.domain.co.uk'
+		]);
 		expect(result.invalid).toHaveLength(0);
 	});
 

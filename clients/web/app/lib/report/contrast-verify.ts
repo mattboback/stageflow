@@ -25,7 +25,7 @@ export function isAxeIncompleteIssue(issue: Pick<IssueDetail, 'scannerData'>): b
 export function getContrastData(issue: Pick<IssueDetail, 'scannerData'>): AxeContrastData | null {
 	const raw = issue.scannerData?.contrastData;
 	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-	return raw as AxeContrastData;
+	return raw;
 }
 
 export function getDefaultLargeText(data: AxeContrastData | null): boolean | null {

@@ -49,11 +49,7 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 				<header className="artifacts__head">
 					<h3>Aggregated report links</h3>
 					{onRefreshArtifacts && (
-						<button
-							type="button"
-							className="artifacts__refresh"
-							onClick={onRefreshArtifacts}
-						>
+						<button type="button" className="artifacts__refresh" onClick={onRefreshArtifacts}>
 							Refresh links
 						</button>
 					)}
@@ -92,12 +88,10 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 								const links: Link[] = [];
 								if (item.results_json)
 									links.push({ href: item.results_json, label: 'JSON results' });
-								if (item.report_html)
-									links.push({ href: item.report_html, label: 'HTML report' });
+								if (item.report_html) links.push({ href: item.report_html, label: 'HTML report' });
 								if (item.scan_stage_log)
 									links.push({ href: item.scan_stage_log, label: 'Stage log' });
-								if (item.scan_recipe)
-									links.push({ href: item.scan_recipe, label: 'Scan recipe' });
+								if (item.scan_recipe) links.push({ href: item.scan_recipe, label: 'Scan recipe' });
 								return (
 									<li key={scannerId}>
 										<p className="artifacts__scanner-name">{scannerId}</p>

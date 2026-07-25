@@ -15,9 +15,7 @@ export function ErrorsView({ errors, compact = false }: Props) {
 					✓
 				</span>
 				<span className="errview__ok-label">No report errors</span>
-				<span className="errview__ok-sub">
-					All scanners completed without pipeline failures.
-				</span>
+				<span className="errview__ok-sub">All scanners completed without pipeline failures.</span>
 			</div>
 		);
 	}
@@ -44,9 +42,7 @@ export function ErrorsView({ errors, compact = false }: Props) {
 								{err.scannerId && <> · Scanner: {err.scannerId}</>}
 								{err.pageId && <> · Page: {err.pageId}</>}
 							</p>
-							<p className="errview__retry">
-								{err.retryable ? 'Retryable' : 'Not retryable'}
-							</p>
+							<p className="errview__retry">{err.retryable ? 'Retryable' : 'Not retryable'}</p>
 						</li>
 					))}
 				</ul>

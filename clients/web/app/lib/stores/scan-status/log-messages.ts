@@ -45,7 +45,7 @@ export function normalizeStatus(raw: string | undefined): ScanStatus {
 	if (value === 'pending' || value === 'ready_to_scan') return 'pending';
 
 	if (value === 'scanning' || value === 'extracting' || value === 'completing') {
-		return value as ScanStatus;
+		return value;
 	}
 
 	return 'processing';

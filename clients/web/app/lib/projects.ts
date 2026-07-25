@@ -198,7 +198,10 @@ export async function fingerprintProjectConfiguration(
 		urls: safe.urls,
 		scanners: safe.scanners
 			.filter((scanner) => scanner.enabled)
-			.map((scanner) => ({ id: scanner.id, ...(scanner.config ? { config: scanner.config } : {}) })),
+			.map((scanner) => ({
+				id: scanner.id,
+				...(scanner.config ? { config: scanner.config } : {})
+			})),
 		browser: safe.browser,
 		highlightStyle: safe.highlightStyle
 	};
@@ -226,7 +229,9 @@ export function computeProjectDiff(
 	const fixedIssues = [...baselineById.values()]
 		.filter((issue) => !currentById.has(issue.id))
 		.sort((left, right) => left.id.localeCompare(right.id));
-	const unchangedIssues = [...currentById.keys()].filter((issueId) => baselineById.has(issueId)).length;
+	const unchangedIssues = [...currentById.keys()].filter((issueId) =>
+		baselineById.has(issueId)
+	).length;
 	const baselineScore = reportScore(baselineReport);
 	const currentScore = reportScore(currentReport);
 

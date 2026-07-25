@@ -16,7 +16,9 @@ export function Pill({
 }) {
 	return (
 		<span className={variant ? `pill pill--${variant}` : 'pill'} style={style}>
-			{led && <span className="pill__led" style={ledColor ? { background: ledColor } : undefined} />}
+			{led && (
+				<span className="pill__led" style={ledColor ? { background: ledColor } : undefined} />
+			)}
 			{children}
 		</span>
 	);

@@ -10,7 +10,9 @@ import { ScannerText } from './ScannerText';
 
 interface Props {
 	issue: IssueDetail;
-	onSelect?: (issue: IssueDetail) => void;
+	// See IssueGroupRow: exactOptionalPropertyTypes requires the explicit
+	// `| undefined` for props that callers forward from their own optional prop.
+	onSelect?: ((issue: IssueDetail) => void) | undefined;
 	showPageUrl?: boolean;
 }
 
@@ -29,13 +31,13 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 				<div className="irow__meta">
 					<span className={getSeverityBadgeClass(issue.severity)}>{issue.severity}</span>
 					<span className="irow__meta-item">
-						<span style={{ color: 'var(--ink-faint)' }}>scanner</span>
-						<b style={{ color: 'var(--ink)' }}>{scannerLabel}</b>
+						<span className="irow__meta-lab">scanner</span>
+						<b className="irow__meta-val">{scannerLabel}</b>
 					</span>
 					{issue.ruleId && (
 						<span className="irow__meta-item">
-							<span style={{ color: 'var(--ink-faint)' }}>rule</span>
-							<b style={{ color: 'var(--ink)' }}>{issue.ruleId}</b>
+							<span className="irow__meta-lab">rule</span>
+							<b className="irow__meta-val">{issue.ruleId}</b>
 						</span>
 					)}
 					{showPageUrl && issue.pageUrl && (
@@ -61,9 +63,7 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 			</div>
 			<div className="irow__right">
 				<span className="irow__count">{occCount}</span>
-				<span className="irow__count-lab">
-					{occCount === 1 ? 'occurrence' : 'occurrences'}
-				</span>
+				<span className="irow__count-lab">{occCount === 1 ? 'occurrence' : 'occurrences'}</span>
 			</div>
 		</>
 	);

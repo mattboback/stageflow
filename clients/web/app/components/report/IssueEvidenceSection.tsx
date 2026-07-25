@@ -3,11 +3,7 @@ import { Check, Copy } from 'lucide-react';
 
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 
-import {
-	findOverviewElement,
-	getIssueKind,
-	humanizeFailureSummary
-} from '../../lib/report';
+import { findOverviewElement, getIssueKind, humanizeFailureSummary } from '../../lib/report';
 
 import { ElementCrop } from './ElementCrop';
 
@@ -26,10 +22,18 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 			className="codebox__copy"
 			aria-label={label}
 			onClick={() => {
-				navigator.clipboard?.writeText(value).then(() => {
-					setCopied(true);
-					window.setTimeout(() => setCopied(false), 1600);
-				});
+				// writeText rejects when the document is not focused or clipboard
+				// permission is denied. Swallowing that leaves the button silently
+				// stuck on "Copy", which is the honest signal: nothing was copied.
+				void navigator.clipboard
+					?.writeText(value)
+					.then(() => {
+						setCopied(true);
+						window.setTimeout(() => setCopied(false), 1600);
+					})
+					.catch(() => {
+						setCopied(false);
+					});
 			}}
 		>
 			{copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
@@ -55,15 +59,10 @@ export function IssueEvidenceSection({ issue, page, screenshotUrl, pageOverviewU
 	const screenshotLeads = kind === 'element' && canCrop;
 	const documentLevel = !canCrop && (selector === 'html' || kind === 'page' || kind === 'manual');
 
-	const hasAny =
-		canCrop || selector || html || failureSummary || screenshotUrl || pageLabel;
+	const hasAny = canCrop || selector || html || failureSummary || screenshotUrl || pageLabel;
 
 	if (!hasAny) {
-		return (
-			<p className="evidence__empty">
-				No DOM evidence was captured for this finding.
-			</p>
-		);
+		return <p className="evidence__empty">No DOM evidence was captured for this finding.</p>;
 	}
 
 	const shot =

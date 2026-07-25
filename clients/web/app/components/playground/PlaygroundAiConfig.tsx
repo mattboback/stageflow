@@ -1,9 +1,9 @@
-import type {
-	AiConfigState,
-	AiInputValue,
-	AiSuccessCriterion
-} from '../../lib/components/playground/playground-utils';
-import { DEFAULT_AI_CONFIG } from '../../lib/components/playground/playground-utils';
+import {
+	DEFAULT_AI_CONFIG,
+	type AiConfigState,
+	type AiInputValue,
+	type AiSuccessCriterion
+} from '../../lib/playground/playground-utils';
 import { IS_HOSTED_DEMO } from '../../lib/site-metadata';
 
 interface Props {
@@ -17,9 +17,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 	};
 
 	const updateInputValue = (idx: number, patch: Partial<AiInputValue>) => {
-		const next = config.inputValues.map((row, i) =>
-			i === idx ? { ...row, ...patch } : row
-		);
+		const next = config.inputValues.map((row, i) => (i === idx ? { ...row, ...patch } : row));
 		update({ inputValues: next });
 	};
 
@@ -32,9 +30,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 	};
 
 	const updateCriterion = (idx: number, patch: Partial<AiSuccessCriterion>) => {
-		const next = config.successCriteria.map((row, i) =>
-			i === idx ? { ...row, ...patch } : row
-		);
+		const next = config.successCriteria.map((row, i) => (i === idx ? { ...row, ...patch } : row));
 		update({ successCriteria: next });
 	};
 
@@ -64,8 +60,8 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 						? 'Hosted demo: use synthetic test data only.'
 						: 'Use synthetic or dedicated test data.'}
 				</strong>{' '}
-				Input values are sent to the navigator for this run. Never provide personal,
-				production, payment, or reusable account data.
+				Input values are sent to the navigator for this run. Never provide personal, production,
+				payment, or reusable account data.
 			</div>
 
 			<label className="pai__field">
@@ -108,8 +104,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 						value={config.maxWallTimeMs}
 						onChange={(e) =>
 							update({
-								maxWallTimeMs:
-									Number(e.target.value) || DEFAULT_AI_CONFIG.maxWallTimeMs
+								maxWallTimeMs: Number(e.target.value) || DEFAULT_AI_CONFIG.maxWallTimeMs
 							})
 						}
 					/>
@@ -163,9 +158,7 @@ export function PlaygroundAiConfig({ config, onConfigChange }: Props) {
 
 			<fieldset className="pai__group">
 				<legend>Success criteria</legend>
-				<p className="pai__hint">
-					Conditions that mark the goal as achieved.
-				</p>
+				<p className="pai__hint">Conditions that mark the goal as achieved.</p>
 				{config.successCriteria.map((row, idx) => (
 					<div key={idx} className="pai__pair">
 						<select

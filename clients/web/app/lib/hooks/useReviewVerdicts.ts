@@ -45,7 +45,13 @@ function subscribe(listener: () => void): () => void {
 }
 
 export function useReviewVerdicts(jobId: string) {
-	const verdicts = useSyncExternalStore(subscribe, store.getSnapshot, store.getServerSnapshot);
+	// Wrapped rather than passed as bare method references: unbound-method flags
+	// those because a detached method could observe the wrong `this`.
+	const verdicts = useSyncExternalStore(
+		subscribe,
+		() => store.getSnapshot(),
+		() => store.getServerSnapshot()
+	);
 
 	const getVerdict = useCallback(
 		(issueId: string): ReviewVerdict | null => verdicts[jobId]?.[issueId] ?? null,

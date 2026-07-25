@@ -35,9 +35,7 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 						<span className="brand__mark" aria-hidden="true" />
 						<span className="brand__name">{SITE_NAME}</span>
 					</Link>
-					<p className="muted site-footer__tagline">
-						{SITE_TAGLINE}.
-					</p>
+					<p className="muted site-footer__tagline">{SITE_TAGLINE}.</p>
 				</div>
 				<div className="site-footer__cols">
 					<nav aria-label="Product" className="site-footer__col">

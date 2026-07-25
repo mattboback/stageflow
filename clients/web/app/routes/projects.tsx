@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
 import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2 } from 'lucide-react';
 
@@ -11,7 +11,7 @@ import {
 	listLocalProjects,
 	listLocalProjectRuns
 } from '../lib/local-project-store';
-import { normalizeUrlInput, validateHttpUrls } from '../lib/components/playground/playground-utils';
+import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import type { LocalProject, LocalRun } from '../lib/projects';
 import { buildSiteMeta, pageTitle, SITE_NAME } from '../lib/site-metadata';
 import projectsStyles from './projects.css?url';
@@ -33,7 +33,8 @@ interface ProjectListItem {
 async function loadProjectList(): Promise<ProjectListItem[]> {
 	const projects = await listLocalProjects();
 	const runs = await Promise.all(projects.map((project) => listLocalProjectRuns(project.id)));
-	return projects.map((project, index) => ({ project, runs: runs[index] }));
+	// Promise.all preserves order, so runs[index] always pairs with projects[index].
+	return projects.map((project, index) => ({ project, runs: runs[index] ?? [] }));
 }
 
 export default function Projects() {
@@ -69,7 +70,7 @@ export default function Projects() {
 		};
 	}, []);
 
-	async function onCreate(event: FormEvent) {
+	async function onCreate(event: SyntheticEvent) {
 		event.preventDefault();
 		setFormError(null);
 		const projectName = name.trim();
@@ -82,21 +83,21 @@ export default function Projects() {
 			setFormError('Enter the website URL for this project.');
 			return;
 		}
-		const { valid, invalid } = validateHttpUrls([normalizedUrl]);
-		if (invalid.length > 0) {
-			setFormError(invalid[0].reason);
+		const checkedUrl = validateHttpUrl(normalizedUrl);
+		if (!checkedUrl.ok) {
+			setFormError(checkedUrl.reason);
 			return;
 		}
 
 		setCreating(true);
 		try {
 			const project = await createLocalProject(projectName, {
-				urls: valid,
+				urls: [checkedUrl.url],
 				scanners: [],
 				browser: 'chromium',
 				highlightStyle: 'solid'
 			});
-			navigate(`/playground?project=${encodeURIComponent(project.id)}`);
+			void navigate(`/playground?project=${encodeURIComponent(project.id)}`);
 		} catch (error) {
 			setFormError(error instanceof Error ? error.message : 'Could not create the project.');
 			setCreating(false);
@@ -149,7 +150,13 @@ export default function Projects() {
 								<h2 id="create-project-heading">Create a project</h2>
 								<FolderPlus size={19} aria-hidden="true" />
 							</div>
-							<form className="panel__body project-create__form" onSubmit={onCreate} noValidate>
+							<form
+								className="panel__body project-create__form"
+								onSubmit={(event) => {
+									void onCreate(event);
+								}}
+								noValidate
+							>
 								<label className="field">
 									<span className="label">Project name</span>
 									<input

@@ -18,7 +18,10 @@ function buildCombinedSignal(
 		};
 	}
 
-	const abortSignalAny = Reflect.get(AbortSignal, 'any');
+	// AbortSignal.any is not in every supported browser's lib typings, so it is
+	// probed reflectively and narrowed through the declared signature rather than
+	// called as an untyped `any`.
+	const abortSignalAny: unknown = Reflect.get(AbortSignal, 'any');
 	if (typeof abortSignalAny === 'function') {
 		const combineSignals = abortSignalAny as AbortSignalAnyFn;
 		return {
@@ -222,8 +225,7 @@ export async function submitScanJob({
 	}
 
 	const data = (await response.json().catch(() => null)) as
-		| (SubmitJobResponse & ApiErrorResponse)
-		| null;
+		(SubmitJobResponse & ApiErrorResponse) | null;
 	const serverMessage = readApiErrorMessage(data);
 	if (!response.ok) {
 		if (response.status === 413) {

@@ -11,7 +11,15 @@ export const SEVERITY_LEVELS = [
 
 export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
 
-const SEVERITY_RANK: Record<SeverityLevel, number> = {
+/**
+ * Display order, NOT severity magnitude: critical is 0 because it sorts first.
+ *
+ * The Go CLI's severityRank in clients/cli/internal/render/filter.go deliberately
+ * runs the other way (critical is highest) because it gates on `>= threshold`.
+ * Two same-named functions with opposite orderings is a trap, so this one is named
+ * for what it produces — a sort index — and callers should prefer compareSeverity.
+ */
+const SEVERITY_SORT_INDEX: Record<SeverityLevel, number> = {
 	critical: 0,
 	serious: 1,
 	moderate: 2,
@@ -19,40 +27,50 @@ const SEVERITY_RANK: Record<SeverityLevel, number> = {
 	info: 4
 };
 
+/** Unrecognized severities sort after every known level. */
+const UNKNOWN_SEVERITY_SORT_INDEX = SEVERITY_LEVELS.length;
+
+/**
+ * Validates an already-normalized severity from the report contract.
+ *
+ * Deliberately stricter than the scanner-runner's normalizeSeverity, which trims,
+ * lowercases, and falls back to a default because it handles raw scanner output.
+ * By the time a report reaches the browser the values are schema-validated, so an
+ * unexpected one is a signal worth surfacing as null rather than silently coercing.
+ */
 export function normalizeSeverity(value?: string | null): SeverityLevel | null {
 	if (!value) return null;
 	return (SEVERITY_LEVELS as readonly string[]).includes(value) ? (value as SeverityLevel) : null;
 }
 
-export function severityRank(value?: string | null): number {
+/** Position of a severity in display order; lower sorts first. */
+export function severitySortIndex(value?: string | null): number {
 	const normalized = normalizeSeverity(value);
-	if (!normalized) return 99;
-	return SEVERITY_RANK[normalized];
+	if (!normalized) return UNKNOWN_SEVERITY_SORT_INDEX;
+	return SEVERITY_SORT_INDEX[normalized];
 }
 
+/** The most severe of `values`, or null if none are recognized. */
 export function getWorstSeverity(values: (string | null | undefined)[]): SeverityLevel | null {
 	let worst: SeverityLevel | null = null;
 	for (const value of values) {
 		const normalized = normalizeSeverity(value);
 		if (!normalized) continue;
-		if (!worst || severityRank(normalized) < severityRank(worst)) {
+		if (!worst || severitySortIndex(normalized) < severitySortIndex(worst)) {
 			worst = normalized;
 		}
 	}
 	return worst;
 }
 
+/** Comparator placing more severe issues first. */
 export function compareSeverity(a?: string | null, b?: string | null): number {
-	return severityRank(a) - severityRank(b);
+	return severitySortIndex(a) - severitySortIndex(b);
 }
 
 function severityToken(severity?: string | null): string {
 	const normalized = normalizeSeverity(severity);
 	return normalized ? ` sev-${normalized}` : '';
-}
-
-export function getSeverityContainerClass(severity?: string | null): string {
-	return `sev-container${severityToken(severity)}`;
 }
 
 export function getSeverityDotClass(severity?: string | null): string {
@@ -61,14 +79,6 @@ export function getSeverityDotClass(severity?: string | null): string {
 
 export function getSeverityBadgeClass(severity?: string | null): string {
 	return `sev-badge${severityToken(severity)}`;
-}
-
-export function getSeverityBorderClass(severity?: string | null): string {
-	return `sev-border${severityToken(severity)}`;
-}
-
-export function getSeverityOverlayClass(severity?: string | null): string {
-	return `sev-overlay${severityToken(severity)}`;
 }
 
 /*

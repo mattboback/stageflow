@@ -6,13 +6,7 @@
  */
 
 export type UserGroup =
-	| 'blind'
-	| 'low-vision'
-	| 'motor'
-	| 'cognitive'
-	| 'deaf'
-	| 'vestibular'
-	| 'all';
+	'blind' | 'low-vision' | 'motor' | 'cognitive' | 'deaf' | 'vestibular' | 'all';
 
 export interface UserImpact {
 	statement: string;

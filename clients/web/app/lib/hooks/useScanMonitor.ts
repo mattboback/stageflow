@@ -224,7 +224,9 @@ export function useScanStatus(jobId: string) {
 					)
 				);
 			});
-			pollRef.current = window.setInterval(refresh, 5000);
+			pollRef.current = window.setInterval(() => {
+				void refresh();
+			}, 5000);
 		} else {
 			stream = createSSEStream<ScanResult, SSEUpdate>(
 				jobId,
@@ -277,7 +279,9 @@ export function useScanStatus(jobId: string) {
 							)
 						);
 						if (pollRef.current === null) {
-							pollRef.current = window.setInterval(refresh, 5000);
+							pollRef.current = window.setInterval(() => {
+								void refresh();
+							}, 5000);
 						}
 						void refresh();
 					}
@@ -495,9 +499,10 @@ export function useScanReport(jobId: string) {
 						}
 
 						setSnapshot((current) => {
-							const job = current.job?.id === jobId
-								? applyScannerCompletionUpdate(applySseUpdate(current.job, update), update)
-								: null;
+							const job =
+								current.job?.id === jobId
+									? applyScannerCompletionUpdate(applySseUpdate(current.job, update), update)
+									: null;
 							return addLog(
 								{
 									...current,
@@ -541,7 +546,9 @@ export function useScanReport(jobId: string) {
 							)
 						);
 						if (pollRef.current === null) {
-							pollRef.current = window.setInterval(refresh, 5000);
+							pollRef.current = window.setInterval(() => {
+								void refresh();
+							}, 5000);
 						}
 						void refresh();
 					}
@@ -566,7 +573,9 @@ export function useScanReport(jobId: string) {
 
 				setSnapshot((current) => ({ ...current, transport: 'polling' }));
 			});
-			pollRef.current = window.setInterval(refresh, 5000);
+			pollRef.current = window.setInterval(() => {
+				void refresh();
+			}, 5000);
 		}
 
 		return () => {

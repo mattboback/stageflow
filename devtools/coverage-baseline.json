@@ -1,0 +1,23 @@
+{
+  "clients/cli": 68.4,
+  "devtools/ops/job-status-cli": 50.5,
+  "devtools/qa/suite-runner": 13.5,
+  "libs/contracts/scanner-manifest": 13.6,
+  "libs/go/bootstrap": 100.0,
+  "libs/go/config": 91.8,
+  "libs/go/diff": 100.0,
+  "libs/go/domain": 92.9,
+  "libs/go/events": 64.9,
+  "libs/go/httputil": 95.5,
+  "libs/go/logging": 94.8,
+  "libs/go/messaging": 44.9,
+  "libs/go/models": 70.4,
+  "libs/go/provenance": 72.1,
+  "libs/go/scannercatalog": 68.9,
+  "libs/go/scannerregistry": 85.7,
+  "libs/go/storage": 56.4,
+  "qa/e2e": 0.0,
+  "services/archive-extractor": 42.5,
+  "services/orchestrator": 72.1,
+  "services/platform-api": 71.0
+}

@@ -33,11 +33,13 @@ import {
 } from './page-preparation';
 
 /* Sibling modules carry the extracted stages; re-export the shared surface so
-   existing importers (and test mocks of this module) keep working. */
+   existing importers (and test mocks of this module) keep working. Only what is
+   actually imported through this module is re-exported — PageOverviewConfig and
+   BoundingBox are consumed from their own modules, and re-exporting them here as
+   well left two exports that nothing resolved. */
 export { loadPageOverviewConfig } from './page-overview-config';
-export type { PageOverviewConfig, PageOverviewConfigInput } from './page-overview-config';
+export type { PageOverviewConfigInput } from './page-overview-config';
 export { clipPageOverviewBounds, computeScreenshotScaleFactor } from './page-overview-geometry';
-export type { BoundingBox } from './page-overview-geometry';
 
 const DEBUG_SCREENSHOTS = getEnvBool('A11Y_DEBUG_SCREENSHOTS', false);
 const log = createLogger('PageOverview');

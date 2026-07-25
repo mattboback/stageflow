@@ -5,7 +5,7 @@ import {
 	compareSeverity,
 	getWorstSeverity,
 	normalizeSeverity,
-	severityRank
+	severitySortIndex
 } from './severity';
 
 describe('normalizeSeverity', () => {
@@ -23,18 +23,18 @@ describe('normalizeSeverity', () => {
 	});
 });
 
-describe('severityRank', () => {
-	it('ranks critical as most severe and info as least', () => {
-		expect(severityRank('critical')).toBe(0);
-		expect(severityRank('critical')).toBeLessThan(severityRank('serious'));
-		expect(severityRank('serious')).toBeLessThan(severityRank('moderate'));
-		expect(severityRank('moderate')).toBeLessThan(severityRank('minor'));
-		expect(severityRank('minor')).toBeLessThan(severityRank('info'));
+describe('severitySortIndex', () => {
+	it('places critical first and info last in display order', () => {
+		expect(severitySortIndex('critical')).toBe(0);
+		expect(severitySortIndex('critical')).toBeLessThan(severitySortIndex('serious'));
+		expect(severitySortIndex('serious')).toBeLessThan(severitySortIndex('moderate'));
+		expect(severitySortIndex('moderate')).toBeLessThan(severitySortIndex('minor'));
+		expect(severitySortIndex('minor')).toBeLessThan(severitySortIndex('info'));
 	});
 
-	it('ranks unknown severities after every real level', () => {
-		expect(severityRank('bogus')).toBeGreaterThan(severityRank('info'));
-		expect(severityRank(null)).toBeGreaterThan(severityRank('info'));
+	it('places unknown severities after every real level', () => {
+		expect(severitySortIndex('bogus')).toBeGreaterThan(severitySortIndex('info'));
+		expect(severitySortIndex(null)).toBeGreaterThan(severitySortIndex('info'));
 	});
 });
 

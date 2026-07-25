@@ -45,8 +45,7 @@ export function ReportStatStrip({ report, onReviewSeverity, onSelectScanner }: P
 			<div className="rstrip__group rstrip__group--scanners" aria-label="Scanner status">
 				<span className="rstrip__lab">Scanners</span>
 				{report.scanners.map((scanner) => {
-					const issueCount =
-						scanner.issueCount ?? report.summary.byScanner?.[scanner.id] ?? 0;
+					const issueCount = scanner.issueCount ?? report.summary.byScanner?.[scanner.id] ?? 0;
 					const tone = getScannerStatusTone(scanner.status);
 					const failed = scanner.status === 'failed' || !!scanner.error;
 					const name = scannerLabel(scanner.id, scanner.name);

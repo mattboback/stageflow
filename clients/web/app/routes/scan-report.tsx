@@ -410,7 +410,13 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 											categories={displayReport.summary.lighthouseCategories ?? []}
 										/>
 									)}
-									<ArtifactsView jobId={id} job={job} onRefreshArtifacts={refreshArtifacts} />
+									<ArtifactsView
+										jobId={id}
+										job={job}
+										onRefreshArtifacts={() => {
+											void refreshArtifacts();
+										}}
+									/>
 									<ErrorsView errors={displayReport.errors} />
 								</section>
 							)}

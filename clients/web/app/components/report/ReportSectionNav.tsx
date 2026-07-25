@@ -16,8 +16,7 @@ interface TabSpec {
 }
 
 export function ReportSectionNav({ report, section, onSectionChange }: Props) {
-	const artifactCount =
-		(report.artifacts?.length ?? 0) + (report.errors?.length ?? 0);
+	const artifactCount = (report.artifacts?.length ?? 0) + (report.errors?.length ?? 0);
 	const pages = report.summary.pagesScanned ?? 0;
 	const issues = report.summary.totalIssues ?? 0;
 
@@ -31,8 +30,7 @@ export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 		{
 			id: 'artifacts',
 			label: 'Artifacts',
-			count:
-				artifactCount > 0 ? `${artifactCount} file${artifactCount === 1 ? '' : 's'}` : null
+			count: artifactCount > 0 ? `${artifactCount} file${artifactCount === 1 ? '' : 's'}` : null
 		}
 	];
 	const moveFocus = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -70,9 +68,7 @@ export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 						onKeyDown={(event) => moveFocus(event, index)}
 					>
 						<span>{tab.label}</span>
-						{tab.count !== null && (
-							<span className="rnav__tab-count">{tab.count}</span>
-						)}
+						{tab.count !== null && <span className="rnav__tab-count">{tab.count}</span>}
 					</button>
 				);
 			})}

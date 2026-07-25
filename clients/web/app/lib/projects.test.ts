@@ -30,7 +30,7 @@ describe('local project configuration', () => {
 
 		expect(JSON.stringify(safe)).not.toContain('secret@example.com');
 		expect(JSON.stringify(safe)).not.toContain('do-not-store');
-		expect(safe.scanners[0].config).toEqual({
+		expect(safe.scanners[0]?.config).toEqual({
 			goal: { objective: 'Complete checkout' },
 			vision: { model: 'example/model' }
 		});
@@ -61,7 +61,7 @@ describe('local project configuration', () => {
 		});
 
 		expect(JSON.stringify(safe)).not.toContain(canary);
-		expect(safe.scanners[0].config).toEqual({
+		expect(safe.scanners[0]?.config).toEqual({
 			goal: {
 				objective: 'Paste [redacted] into the form',
 				successCriteria: [
@@ -135,10 +135,16 @@ describe('computeProjectDiff', () => {
 	it('sorts issue IDs and computes score changes like the Go implementation', () => {
 		const base = loadGoldenReport('golden-regression-report.json');
 		const first = base.issues[0];
+		if (!first) {
+			throw new Error('golden-regression-report.json must contain at least one issue');
+		}
 		const baseline = {
 			...base,
 			summary: { ...base.summary, score: 92, totalIssues: 2 },
-			issues: [{ ...first, id: 'z-fixed' }, { ...first, id: 'shared' }]
+			issues: [
+				{ ...first, id: 'z-fixed' },
+				{ ...first, id: 'shared' }
+			]
 		};
 		const current = {
 			...base,

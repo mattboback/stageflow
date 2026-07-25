@@ -19,8 +19,7 @@ export interface VisionMessage {
 }
 
 export type VisionContent =
-	| { type: 'text'; text: string }
-	| { type: 'image_url'; image_url: { url: string } };
+	{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
 
 export interface VisionResponse {
 	content: string;
@@ -100,10 +99,7 @@ export type ResolvedAgentInputAction = (ActionFill | ActionSelect) & {
 };
 
 export type AgentAction =
-	| PreScanAction
-	| ResolvedAgentInputAction
-	| { type: 'done' }
-	| { type: 'stuck'; reason: string };
+	PreScanAction | ResolvedAgentInputAction | { type: 'done' } | { type: 'stuck'; reason: string };
 
 type NonInputAgentAction = Exclude<AgentAction, { type: 'fill' | 'select' }>;
 

@@ -2,7 +2,12 @@ import { ArrowRight, Check, GitCompareArrows, RotateCcw, Save } from 'lucide-rea
 import { Link } from 'react-router';
 
 import { Delta } from '../Delta';
-import { computeProjectDiff, type LocalBaseline, type LocalProject, type LocalRun } from '../../lib/projects';
+import {
+	computeProjectDiff,
+	type LocalBaseline,
+	type LocalProject,
+	type LocalRun
+} from '../../lib/projects';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 
 interface LocalBaselineComparisonProps {
@@ -28,7 +33,10 @@ export function LocalBaselineComparison({
 }: LocalBaselineComparisonProps) {
 	const isCurrentBaseline = baseline?.jobId === run.jobId;
 	const compatible = baseline?.configFingerprint === run.configFingerprint;
-	const diff = baseline && compatible ? computeProjectDiff(baseline.jobId, baseline.report, run.jobId, report) : null;
+	const diff =
+		baseline && compatible
+			? computeProjectDiff(baseline.jobId, baseline.report, run.jobId, report)
+			: null;
 
 	return (
 		<section className="local-baseline" aria-labelledby="local-baseline-heading">
@@ -79,7 +87,10 @@ export function LocalBaselineComparison({
 					<GitCompareArrows size={22} aria-hidden="true" />
 					<div>
 						<strong>No baseline yet</strong>
-						<p>When this report looks good, promote it. The next compatible run will show regressions here.</p>
+						<p>
+							When this report looks good, promote it. The next compatible run will show regressions
+							here.
+						</p>
 					</div>
 				</div>
 			) : !compatible ? (
@@ -88,8 +99,8 @@ export function LocalBaselineComparison({
 					<div>
 						<strong>Project configuration changed</strong>
 						<p>
-							The URL, scanner selection, or browser options differ from the saved baseline.
-							Review this report and promote it to start a compatible comparison.
+							The URL, scanner selection, or browser options differ from the saved baseline. Review
+							this report and promote it to start a compatible comparison.
 						</p>
 					</div>
 				</div>
@@ -99,7 +110,11 @@ export function LocalBaselineComparison({
 						<div>
 							<span>Score change</span>
 							<strong>
-								{diff.delta.scoreDelta === undefined ? '—' : <Delta value={diff.delta.scoreDelta} />}
+								{diff.delta.scoreDelta === undefined ? (
+									'—'
+								) : (
+									<Delta value={diff.delta.scoreDelta} />
+								)}
 							</strong>
 						</div>
 						<div className={diff.delta.newIssues > 0 ? 'local-baseline__stat--bad' : ''}>

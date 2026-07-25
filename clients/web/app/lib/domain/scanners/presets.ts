@@ -53,35 +53,3 @@ export function applyScannerPreset(
 
 	return updated;
 }
-
-export function detectScannerPreset(scanners: ScannerSelection[]): ScannerPreset {
-	if (scanners.length === 0) {
-		return 'custom';
-	}
-
-	const quickId = getQuickScannerId(scanners);
-	const quickMatch = scanners.every((scanner) => scanner.enabled === (scanner.id === quickId));
-	if (quickMatch) {
-		return 'quick';
-	}
-
-	const allowNonAiOnly = hasNonAiScanner(scanners);
-	if (allowNonAiOnly) {
-		const coverageMatch = scanners.every(
-			(scanner) => scanner.enabled === (scanner.id !== aiNavigatorId)
-		);
-		if (coverageMatch) {
-			return 'coverage';
-		}
-	} else {
-		const fallbackId = scanners[0]?.id;
-		const fallbackMatch = scanners.every(
-			(scanner) => scanner.enabled === (scanner.id === fallbackId)
-		);
-		if (fallbackMatch) {
-			return 'coverage';
-		}
-	}
-
-	return 'custom';
-}

@@ -1,9 +1,5 @@
 import type { PageSummary, ScannerSummary } from '../../lib/types/unified-report';
-import {
-	SCANNER_META,
-	SEVERITY_LEVELS,
-	getSeverityChipClass
-} from '../../lib/report';
+import { SCANNER_META, SEVERITY_LEVELS, getSeverityChipClass } from '../../lib/report';
 
 interface Props {
 	scanners: ScannerSummary[];

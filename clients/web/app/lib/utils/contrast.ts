@@ -29,6 +29,9 @@ export function parseColor(input: string | null | undefined): Rgba | null {
 	const hexMatch = HEX_PATTERN.exec(value);
 	if (hexMatch) {
 		let hex = hexMatch[1];
+		if (hex === undefined) {
+			return null;
+		}
 		if (hex.length === 3 || hex.length === 4) {
 			hex = hex
 				.split('')
@@ -152,11 +155,6 @@ export function parseAxeFontSize(fontSize: string | number | null | undefined): 
 
 export function requiredLevel(ruleId: string | null | undefined): ContrastLevel {
 	return ruleId?.includes('color-contrast-enhanced') ? 'AAA' : 'AA';
-}
-
-export function requiredRatio(ruleId: string | null | undefined, largeText: boolean): number {
-	const thresholds = WCAG_THRESHOLDS[requiredLevel(ruleId)];
-	return largeText ? thresholds.large : thresholds.normal;
 }
 
 const MESSAGE_KEY_DESCRIPTIONS: Record<string, string> = {

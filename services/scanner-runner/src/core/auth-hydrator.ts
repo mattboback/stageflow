@@ -31,6 +31,7 @@ import type {
 	StorageProvider
 } from './types';
 import { ensureDir } from '../utils/fs';
+import { sameOriginAndPath } from '../utils/url-compare';
 
 type AuthMode = ProvenanceAuth['mode'];
 
@@ -313,24 +314,4 @@ async function isStillOnVisibleLoginForm(
 	} catch {
 		return false;
 	}
-}
-
-function sameOriginAndPath(a: string, b: string): boolean {
-	try {
-		const left = new URL(a);
-		const right = new URL(b);
-		return (
-			left.origin === right.origin &&
-			trimTrailingSlash(left.pathname) === trimTrailingSlash(right.pathname)
-		);
-	} catch {
-		return a === b;
-	}
-}
-
-function trimTrailingSlash(pathname: string): string {
-	if (pathname === '/') {
-		return pathname;
-	}
-	return pathname.replace(/\/+$/, '');
 }

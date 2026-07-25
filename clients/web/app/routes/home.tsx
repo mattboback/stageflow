@@ -6,7 +6,7 @@ import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
 import { Gauge } from '../components/Gauge';
 import { Pill } from '../components/Pill';
-import { normalizeUrlInput, validateHttpUrls } from '../lib/components/playground/playground-utils';
+import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import {
 	buildSiteMeta,
 	DOCS_URL,
@@ -80,20 +80,20 @@ export default function Home() {
 	const [url, setUrl] = useState('https://example.com');
 	const [urlError, setUrlError] = useState<string | null>(null);
 
-	function onScan(e: React.FormEvent) {
+	function onScan(e: React.SyntheticEvent) {
 		e.preventDefault();
 		const normalized = normalizeUrlInput(url);
 		if (!normalized) {
 			setUrlError('Enter a URL to scan.');
 			return;
 		}
-		const { valid, invalid } = validateHttpUrls([normalized]);
-		if (invalid.length > 0) {
-			setUrlError(invalid[0].reason);
+		const checked = validateHttpUrl(normalized);
+		if (!checked.ok) {
+			setUrlError(checked.reason);
 			return;
 		}
 		setUrlError(null);
-		navigate(`/playground?url=${encodeURIComponent(valid[0])}`);
+		void navigate(`/playground?url=${encodeURIComponent(checked.url)}`);
 	}
 
 	return (
@@ -106,13 +106,13 @@ export default function Home() {
 					<div className="wrap wrap--app hero__grid">
 						<div className="hero__copy">
 							<h1 id="hero-heading">
-								Every deploy, measured against your{' '}
-								<span className="verdict">last known-good</span>.
+								Every deploy, measured against your <span className="verdict">last known-good</span>
+								.
 							</h1>
 							<p className="hero__lede">
-								{SITE_NAME} runs eight scanners, compares each release against the baseline
-								you promoted, and shows exactly what changed. Local projects work without an
-								account and stay in your browser.
+								{SITE_NAME} runs eight scanners, compares each release against the baseline you
+								promoted, and shows exactly what changed. Local projects work without an account and
+								stay in your browser.
 							</p>
 							<div className="hero__actions">
 								<Link className="btn btn--primary btn--lg" to="/projects">
@@ -174,8 +174,8 @@ export default function Home() {
 									<Gauge value={88} caption="Site score" size={132} valFontSize="2.3rem" />
 									<div className="preview__reg">
 										<p className="preview__reg-title">
-											<span className="sev-dot sev-serious" aria-hidden="true" /> Regressed
-											since baseline
+											<span className="sev-dot sev-serious" aria-hidden="true" /> Regressed since
+											baseline
 										</p>
 										<ul className="preview__reg-rows">
 											<li>
@@ -272,10 +272,10 @@ export default function Home() {
 						<div className="scansum__copy">
 							<h2 id="scanners-heading">Eight scanners, one merged report</h2>
 							<p>
-								Accessibility, performance, SEO, security headers, link health, social previews,
-								and spelling — plus an opt-in AI navigator. Each runs in an isolated container
-								and merges into a single severity-ranked report, the same shape from the CLI,
-								CI, or the browser.
+								Accessibility, performance, SEO, security headers, link health, social previews, and
+								spelling — plus an opt-in AI navigator. Each runs in an isolated container and
+								merges into a single severity-ranked report, the same shape from the CLI, CI, or the
+								browser.
 							</p>
 						</div>
 						<Link className="btn btn--ghost scansum__cta" to="/playground">
@@ -309,7 +309,8 @@ export default function Home() {
 									{'\n'}
 									Score: 88 (B) · serious 2 · moderate 5 · minor 11
 									{'\n'}
-									Baseline: May 5 → <span className="terminal__warn">3 new serious regressions</span>
+									Baseline: May 5 →{' '}
+									<span className="terminal__warn">3 new serious regressions</span>
 									{'\n'}
 									Report: reports/example-2026-07-10.html
 								</code>
@@ -345,10 +346,7 @@ export default function Home() {
 									</li>
 								</ul>
 								<div className="selfhost__actions">
-									<a
-										className="btn btn--primary"
-										href={DOCS_URL}
-									>
+									<a className="btn btn--primary" href={DOCS_URL}>
 										Documentation{' '}
 										<span className="ar" aria-hidden="true">
 											→

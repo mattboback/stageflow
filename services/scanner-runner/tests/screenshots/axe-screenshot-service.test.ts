@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AxeViolation, PageOverviewViolation } from '../../src/screenshots/axe/types';
 
-import { AxeScreenshotService } from '../../src/screenshots/AxeScreenshotService';
+import { AxeScreenshotService } from '../../src/screenshots/axe-screenshot-service';
 
 vi.mock('../../src/screenshots/axe/config', () => ({
 	loadAxeScreenshotConfig: vi.fn((overrides?: Record<string, unknown>) => ({

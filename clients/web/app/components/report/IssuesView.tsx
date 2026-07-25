@@ -79,21 +79,14 @@ export function IssuesView({
 				category: activeCategory,
 				query: searchQuery
 			}),
-		[
-			report.issues,
-			activeScanner,
-			activePage,
-			activeSeverity,
-			activeCategory,
-			searchQuery
-		]
+		[report.issues, activeScanner, activePage, activeSeverity, activeCategory, searchQuery]
 	);
 
 	const sorted = useMemo(() => sortIssues(filtered, sortKey), [filtered, sortKey]);
-	const groups = useMemo(() => (groupByRule ? groupIssuesByRule(sorted) : []), [
-		sorted,
-		groupByRule
-	]);
+	const groups = useMemo(
+		() => (groupByRule ? groupIssuesByRule(sorted) : []),
+		[sorted, groupByRule]
+	);
 
 	const totalCount = report.issues.length;
 	const filteredCount = sorted.length;
@@ -179,12 +172,7 @@ export function IssuesView({
 				{activeChips.length > 0 && (
 					<div className="iview__chips" aria-label="Active filters">
 						{activeChips.map((chip) => (
-							<button
-								key={chip.key}
-								type="button"
-								className="iview__chip"
-								onClick={chip.onClear}
-							>
+							<button key={chip.key} type="button" className="iview__chip" onClick={chip.onClear}>
 								{chip.label} <span aria-hidden="true">×</span>
 							</button>
 						))}

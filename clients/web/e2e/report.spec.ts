@@ -1,15 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, loadReportFixture, test } from './fixtures';
 
-const FIXTURE_PATH = path.resolve(
-	process.cwd(),
-	'../../libs/contracts/report/fixtures/unified-report.v2.all-scans.json'
-);
+const report = loadReportFixture();
 
-const report = JSON.parse(fs.readFileSync(FIXTURE_PATH, 'utf8'));
+const firstPage = report.pages[0];
+if (!firstPage) {
+	throw new Error('unified-report.v2.all-scans.json must contain at least one page');
+}
 
 // The fixture ships no manual-review findings; add one so the review-next
 // CTA (a queue-driven surface) is exercised. Lighthouse info + no occurrences
@@ -21,6 +18,9 @@ report.issues.push({
 	title: 'Custom controls have associated labels',
 	description: 'Verify that custom interactive controls expose accessible labels.',
 	severity: 'info',
+	pageId: firstPage.id,
+	pageUrl: firstPage.url,
+	elementCount: 0,
 	occurrences: []
 });
 
@@ -33,8 +33,8 @@ report.issues.push({
 	title: 'Elements must have sufficient color contrast',
 	description: 'Verify the rendered text and background colors.',
 	severity: 'serious',
-	pageId: report.pages[0].id,
-	pageUrl: report.pages[0].url,
+	pageId: firstPage.id,
+	pageUrl: firstPage.url,
 	elementCount: 1,
 	occurrences: [{ selector: '.hero-copy', html: '<p class="hero-copy">Welcome</p>' }],
 	scannerData: {
@@ -51,7 +51,7 @@ report.issues.push({
 });
 
 // Must match meta.jobId inside the fixture — the report hook rejects mismatches.
-const JOB_ID = report.meta.jobId as string;
+const JOB_ID = report.meta.jobId;
 
 const jobStatus = {
 	id: JOB_ID,
@@ -189,7 +189,9 @@ test('review queue records contrast and generic human decisions', async ({ page 
 	await expect(totals.getByText('all 2 findings reviewed')).toBeVisible();
 	await expect(totals.getByText(/need a human check/)).toHaveCount(0);
 	await expect(page.getByText('needs review', { exact: true })).toHaveCount(0);
-	await expect(page.getByText('reviewed · pass', { exact: true })).toBeVisible();
+	// Both findings were marked pass above, and both are attached to the same page,
+	// so the visual review list shows a badge for each.
+	await expect(page.getByText('reviewed · pass', { exact: true })).toHaveCount(2);
 });
 
 test('review decisions synchronize without loss across browser tabs', async ({ context, page }) => {
@@ -301,7 +303,7 @@ test.describe('mobile configure page (390×844)', () => {
 test('a zero-finding report celebrates the all-clear instead of an empty queue', async ({
 	page
 }) => {
-	const cleanReport = JSON.parse(fs.readFileSync(FIXTURE_PATH, 'utf8'));
+	const cleanReport = loadReportFixture();
 	const CLEAN_JOB_ID = 'e2e-clean-run';
 	cleanReport.meta.jobId = CLEAN_JOB_ID;
 	cleanReport.issues = [];
@@ -309,7 +311,7 @@ test('a zero-finding report celebrates the all-clear instead of an empty queue',
 	cleanReport.summary.totalIssues = 0;
 	cleanReport.summary.pagesWithIssues = 0;
 	cleanReport.summary.score = 100;
-	cleanReport.summary.bySeverity = {};
+	cleanReport.summary.bySeverity = { critical: 0, serious: 0, moderate: 0, minor: 0 };
 
 	await page.route(`**/api/v1/jobs/${CLEAN_JOB_ID}`, (route) =>
 		route.fulfill({
