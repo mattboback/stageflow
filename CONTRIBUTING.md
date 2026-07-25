@@ -36,8 +36,23 @@ full repo gate. Installing the hooks locally is optional, but the same config
 runs in CI (`Workflow Lint` job), so a change that fails it fails your PR
 whether or not you installed them.
 
-Code formatting is Prettier's job, not pre-commit's — see the formatting note
-under Quality Gates.
+### Formatting
+
+Prettier is the only formatter, configured once at the repo root in `.prettierrc`
+and enforced by `format:check` inside each Bun workspace's `ci` script — so it
+runs from `just ci` and from CI without a separate step to keep in sync. Run
+`bun run format` in `clients/web` or `services/scanner-runner` to fix findings.
+
+The gate covers TypeScript. Two deliberate exclusions, both recorded in
+`.prettierignore`:
+
+- **Generated and byte-compared files.** `docs/reference/cli/` is byte-compared
+  against `go run ./clients/cli docs` by `check-cli-docs-generated.sh`, and
+  `qa/fixtures/` holds golden-regression inputs. Formatting either breaks CI.
+- **Stylesheets.** `clients/web`'s CSS is written one rule per line for short
+  declarations, consistently. Prettier cannot preserve that and would rewrite
+  4,621 lines to expand it. Changing the convention is a decision for its own
+  commit, not a side effect of adding a gate.
 
 Run `just ci` before opening a PR when feasible. It runs the stale-vocabulary
 check, Go build/lint/test/vuln checks, generated CLI-doc drift check, shell

@@ -12,9 +12,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "ci": "bun run lint && bun run typecheck && bun run test && bun run build",
-    "format": "prettier --write \"app/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" \"*.ts\" \"*.js\"",
-    "format:check": "prettier --check \"app/**/*.{ts,tsx,css}\" \"e2e/**/*.ts\" \"*.ts\" \"*.js\"",
+    "ci": "bun run format:check && bun run lint && bun run typecheck && bun run test && bun run build",
+    "format": "prettier --write \"app/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"*.ts\" \"*.js\"",
+    "format:check": "prettier --check \"app/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"*.ts\" \"*.js\"",
     "knip": "knip",
     "find-dead-code": "knip --cache --cache-location ../../.cache/knip-web"
   },

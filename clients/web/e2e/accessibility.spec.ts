@@ -72,7 +72,11 @@ async function expectNoSeriousViolations(page: Page, surface: string) {
 		(violation) => violation.impact === 'serious' || violation.impact === 'critical'
 	);
 	expect(
-		violations.map(({ id, impact, nodes }) => ({ id, impact, targets: nodes.map((node) => node.target) })),
+		violations.map(({ id, impact, nodes }) => ({
+			id,
+			impact,
+			targets: nodes.map((node) => node.target)
+		})),
 		`${surface} has serious or critical accessibility violations`
 	).toEqual([]);
 }
