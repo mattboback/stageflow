@@ -78,6 +78,14 @@ jobs:
         with:
           python-version: '3.13'
 
+      # The stageflow-precommit hook regenerates the contract packages to check
+      # for drift, which shells out to bun. It is a `language: system` hook, so
+      # pre-commit provides no environment for it.
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
       - name: Run pre-commit hooks
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
