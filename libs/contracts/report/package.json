@@ -1,6 +1,7 @@
 {
 	"name": "@stageflow/contracts-report",
 	"version": "2.0.0",
+	"private": true,
 	"packageManager": "bun@1.3.8",
 	"engines": {
 		"node": "24.x"
@@ -15,8 +16,7 @@
 		"validate": "node schema/validate.js",
 		"validate:fixtures": "node schema/validate.js fixtures/unified-report.v2.json && node schema/validate.js fixtures/unified-report.v2.all-scans.json",
 		"build": "bun run generate && bun run validate:fixtures && tsc",
-		"typecheck": "tsc --noEmit",
-		"check": "./scripts/pre-commit-check.sh"
+		"typecheck": "tsc --noEmit"
 	},
 	"exports": {
 		".": {
@@ -33,7 +33,11 @@
 			"require": "./schema/validate.js"
 		}
 	},
-	"files": ["dist/**/*", "schema/*.json", "schema/validate.js"],
+	"files": [
+		"dist/**/*",
+		"schema/*.json",
+		"schema/validate.js"
+	],
 	"dependencies": {
 		"ajv": "^8.20.0",
 		"ajv-formats": "^3.0.1"

@@ -49,5 +49,5 @@ repos:
         name: stageflow-precommit
         entry: node devtools/scripts/precommit/run.mjs
         language: system
-        files: ^libs/contracts/(report|provenance)/
+        files: ^libs/contracts/(report|provenance|scanner-manifest|events)/
         require_serial: true
