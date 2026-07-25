@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { AuthFormConfig } from '../../lib/components/playground/playground-utils';
+import type { AuthFormConfig } from '../../lib/playground/playground-utils';
 import { IS_HOSTED_DEMO } from '../../lib/site-metadata';
 
 interface Props {
@@ -28,8 +28,8 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 						Authentication
 					</h2>
 					<p className="pauth__sub">
-						Log in before scanning protected pages — the scan browser replays a form
-						login with the credentials you provide.
+						Log in before scanning protected pages — the scan browser replays a form login with the
+						credentials you provide.
 					</p>
 				</div>
 				{/* Auth is a configuration step, not an on/off preference: show its
@@ -78,8 +78,8 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								? 'Hosted demo: use a throwaway test account.'
 								: 'Use a dedicated test account.'}
 						</strong>{' '}
-						Credentials are sent to this deployment to execute the login and can remain in its
-						job queue for up to 72 hours. Never enter a personal or production password.
+						Credentials are sent to this deployment to execute the login and can remain in its job
+						queue for up to 72 hours. Never enter a personal or production password.
 					</div>
 					<label className="pauth__field">
 						<span className="label">

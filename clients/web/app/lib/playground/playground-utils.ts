@@ -1,3 +1,7 @@
+import { AI_NAVIGATOR_DEFAULT_MODEL } from '../site-metadata';
+import type { ScannerDefinition, ScannerSelection } from '../types/scan';
+import { normalizeUrlInput, validateHttpUrl } from '../url';
+
 export interface AuthFormConfig {
 	enabled: boolean;
 	loginUrl: string;
@@ -18,7 +22,7 @@ export function isAuthConfigComplete(config: AuthFormConfig): boolean {
 	const loginUrl = normalizeUrlInput(config.loginUrl);
 	return (
 		loginUrl !== null &&
-		validateHttpUrls([loginUrl]).invalid.length === 0 &&
+		validateHttpUrl(loginUrl).ok &&
 		config.username.trim().length > 0 &&
 		config.password.trim().length > 0 &&
 		(config.successStrategy !== 'selector' || config.successSelector.trim().length > 0)
@@ -103,9 +107,12 @@ interface PlaygroundValidationInput {
 	auth: AuthFormConfig;
 	ai: AiConfigState;
 	aiEnabled: boolean;
-	catalogLoading?: boolean;
-	catalogError?: string | null;
-	projectName?: string | null;
+	// Explicit `| undefined` throughout: exactOptionalPropertyTypes separates an
+	// absent property from one present-but-undefined, and callers build this
+	// object from optional state rather than omitting keys.
+	catalogLoading?: boolean | undefined;
+	catalogError?: string | null | undefined;
+	projectName?: string | null | undefined;
 }
 
 function invalidValidation(
@@ -145,11 +152,13 @@ export function validatePlaygroundConfiguration({
 		urls.forEach((raw, index) => {
 			const normalized = normalizeUrlInput(raw);
 			if (!normalized) return;
-			const result = validateHttpUrls([normalized]);
-			if (result.invalid[0]) urlRowErrors[index] = result.invalid[0].reason;
-			else if (result.valid[0]) validUrls.push(result.valid[0]);
+			const result = validateHttpUrl(normalized);
+			if (result.ok) validUrls.push(result.url);
+			else urlRowErrors[index] = result.reason;
 		});
-		const firstInvalidRow = Object.keys(urlRowErrors).map(Number).sort((a, b) => a - b)[0];
+		const firstInvalidRow = Object.keys(urlRowErrors)
+			.map(Number)
+			.sort((a, b) => a - b)[0];
 		if (firstInvalidRow !== undefined) {
 			return invalidValidation(
 				'Fix the invalid URL before running the scan.',
@@ -168,38 +177,75 @@ export function validatePlaygroundConfiguration({
 	}
 
 	if (mode === 'url' && auth.enabled) {
-		if (!auth.loginUrl.trim()) return invalidValidation('Enter the login URL.', 'auth-login-url', validUrls);
+		if (!auth.loginUrl.trim())
+			return invalidValidation('Enter the login URL.', 'auth-login-url', validUrls);
 		const normalizedLoginUrl = normalizeUrlInput(auth.loginUrl);
-		if (!normalizedLoginUrl || validateHttpUrls([normalizedLoginUrl]).invalid.length > 0) {
-			return invalidValidation('Enter a valid HTTP or HTTPS login URL.', 'auth-login-url', validUrls);
+		if (!normalizedLoginUrl || !validateHttpUrl(normalizedLoginUrl).ok) {
+			return invalidValidation(
+				'Enter a valid HTTP or HTTPS login URL.',
+				'auth-login-url',
+				validUrls
+			);
 		}
-		if (!auth.username.trim()) return invalidValidation('Enter the login username.', 'auth-username', validUrls);
-		if (!auth.password.trim()) return invalidValidation('Enter the login password.', 'auth-password', validUrls);
+		if (!auth.username.trim())
+			return invalidValidation('Enter the login username.', 'auth-username', validUrls);
+		if (!auth.password.trim())
+			return invalidValidation('Enter the login password.', 'auth-password', validUrls);
 		if (auth.successStrategy === 'selector' && !auth.successSelector.trim()) {
-			return invalidValidation('Enter the selector that confirms login succeeded.', 'auth-success-selector', validUrls);
+			return invalidValidation(
+				'Enter the selector that confirms login succeeded.',
+				'auth-success-selector',
+				validUrls
+			);
 		}
 	}
 
 	if (aiEnabled) {
-		if (!ai.objective.trim()) return invalidValidation('Enter an AI Navigator objective.', 'ai-objective', validUrls);
-		if (!ai.model.trim()) return invalidValidation('Enter an AI Navigator model.', 'ai-model', validUrls);
+		if (!ai.objective.trim())
+			return invalidValidation('Enter an AI Navigator objective.', 'ai-objective', validUrls);
+		if (!ai.model.trim())
+			return invalidValidation('Enter an AI Navigator model.', 'ai-model', validUrls);
 		if (!Number.isInteger(ai.maxSteps) || ai.maxSteps < 1 || ai.maxSteps > 50) {
-			return invalidValidation('AI Navigator max steps must be between 1 and 50.', 'ai-max-steps', validUrls);
+			return invalidValidation(
+				'AI Navigator max steps must be between 1 and 50.',
+				'ai-max-steps',
+				validUrls
+			);
 		}
-		if (!Number.isFinite(ai.maxWallTimeMs) || ai.maxWallTimeMs < 10_000 || ai.maxWallTimeMs > 600_000) {
-			return invalidValidation('AI Navigator wall time must be between 10,000 and 600,000 ms.', 'ai-wall-time', validUrls);
+		if (
+			!Number.isFinite(ai.maxWallTimeMs) ||
+			ai.maxWallTimeMs < 10_000 ||
+			ai.maxWallTimeMs > 600_000
+		) {
+			return invalidValidation(
+				'AI Navigator wall time must be between 10,000 and 600,000 ms.',
+				'ai-wall-time',
+				validUrls
+			);
 		}
 		for (const [index, input] of ai.inputValues.entries()) {
 			if (input.key.trim() && !input.value.trim()) {
-				return invalidValidation('Complete or remove the empty AI input value.', `ai-input-value-${index}`, validUrls);
+				return invalidValidation(
+					'Complete or remove the empty AI input value.',
+					`ai-input-value-${index}`,
+					validUrls
+				);
 			}
 			if (!input.key.trim() && input.value.trim()) {
-				return invalidValidation('Complete or remove the empty AI input key.', `ai-input-key-${index}`, validUrls);
+				return invalidValidation(
+					'Complete or remove the empty AI input key.',
+					`ai-input-key-${index}`,
+					validUrls
+				);
 			}
 		}
 		for (const [index, criterion] of ai.successCriteria.entries()) {
 			if (!criterion.value.trim()) {
-				return invalidValidation('Complete or remove the empty success criterion.', `ai-criterion-value-${index}`, validUrls);
+				return invalidValidation(
+					'Complete or remove the empty success criterion.',
+					`ai-criterion-value-${index}`,
+					validUrls
+				);
 			}
 		}
 	}
@@ -254,92 +300,6 @@ export function estimateScanRuntime(
 		label: `${formatEstimateSeconds(lower)}–${formatEstimateSeconds(upper)}`,
 		detail: `${targetCount} ${targetCount === 1 ? 'page' : 'pages'}; scanners run in parallel`
 	};
-}
-
-export function normalizeUrlInput(input: string): string | null {
-	const trimmed = input.trim();
-	if (!trimmed) return null;
-
-	if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-		return trimmed;
-	}
-
-	if (trimmed.startsWith('//')) {
-		return `https:${trimmed}`;
-	}
-
-	return `https://${trimmed}`;
-}
-
-export function normalizeUrlListText(input: string): {
-	text: string;
-	changed: boolean;
-} {
-	const normalized = input
-		.split('\n')
-		.map((line) => normalizeUrlInput(line))
-		.filter((line): line is string => Boolean(line))
-		.join('\n');
-
-	const originalNormalized = input
-		.split('\n')
-		.map((line) => line.trim())
-		.filter(Boolean)
-		.join('\n');
-
-	return { text: normalized, changed: normalized !== originalNormalized };
-}
-
-export function parseUrlList(input: string): string[] {
-	return input
-		.split('\n')
-		.map((line) => normalizeUrlInput(line))
-		.filter((line): line is string => Boolean(line));
-}
-
-export function validateHttpUrls(urls: string[]): {
-	valid: string[];
-	invalid: { url: string; reason: string }[];
-} {
-	const valid: string[] = [];
-	const invalid: { url: string; reason: string }[] = [];
-
-	for (const url of urls) {
-		try {
-			const parsed = new URL(url);
-			const protocol = parsed.protocol.toLowerCase();
-			if (protocol !== 'http:' && protocol !== 'https:') {
-				invalid.push({
-					url,
-					reason: 'URL must start with http:// or https://.'
-				});
-				continue;
-			}
-			const hostname = parsed.hostname;
-			if (!hostname) {
-				invalid.push({ url, reason: 'Missing hostname.' });
-				continue;
-			}
-			const hasDot = hostname.includes('.');
-			const isLocalhost = hostname.toLowerCase() === 'localhost';
-			// Node may keep brackets; browsers expose bare IPv6 (colons, no dots).
-			const isIpv6 =
-				(hostname.startsWith('[') && hostname.endsWith(']')) ||
-				(!hasDot && hostname.includes(':'));
-			if (!hasDot && !isLocalhost && !isIpv6) {
-				invalid.push({
-					url,
-					reason: 'Hostname must contain a dot or be localhost.'
-				});
-				continue;
-			}
-			valid.push(url);
-		} catch {
-			invalid.push({ url, reason: 'Invalid URL.' });
-		}
-	}
-
-	return { valid, invalid };
 }
 
 export function isZipFilename(name: string): boolean {
@@ -401,5 +361,3 @@ export function buildAiNavigatorConfig(params: {
 
 	return config;
 }
-import { AI_NAVIGATOR_DEFAULT_MODEL } from '../../site-metadata';
-import type { ScannerDefinition, ScannerSelection } from '../../types/scan';

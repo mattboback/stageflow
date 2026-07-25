@@ -1,3 +1,6 @@
+// The app's single entry point for report contract types. Re-exports only what
+// the app actually consumes — ReportArtifact, ReportMeta, and ReportSummary are
+// deliberately absent, and should be added back here when something needs them.
 import type {
 	IssueDetail,
 	IssueOccurrence,
@@ -5,10 +8,7 @@ import type {
 	LighthouseCategorySummary,
 	PageOverviewElement,
 	PageSummary,
-	ReportArtifact,
 	ReportError,
-	ReportMeta,
-	ReportSummary,
 	ScannerStatus,
 	ScannerSummary,
 	SeverityCounts,
@@ -23,10 +23,7 @@ export type {
 	PageOverviewElement,
 	PageSummary,
 	SeverityCounts,
-	ReportArtifact,
 	ReportError,
-	ReportMeta,
-	ReportSummary,
 	ScannerStatus,
 	ScannerSummary,
 	UnifiedReportV2

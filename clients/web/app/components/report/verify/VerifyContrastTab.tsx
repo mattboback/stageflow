@@ -203,10 +203,14 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 							className="vfy__btn vfy__btn--pass"
 							onClick={() => {
 								/* Marking against the measurement deserves a pause. */
+								// Narrow on `ratio` rather than asserting: measuredPasses is only
+								// false when a ratio was measured, but that is not visible to the
+								// compiler through the boolean.
 								if (
+									ratio !== null &&
 									measuredPasses === false &&
 									!window.confirm(
-										`Measured ${formatRatio(ratio!)}:1 fails ${required}. Mark it as passing anyway?`
+										`Measured ${formatRatio(ratio)}:1 fails ${required}. Mark it as passing anyway?`
 									)
 								) {
 									return;
@@ -224,9 +228,10 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 							className="vfy__btn vfy__btn--fail"
 							onClick={() => {
 								if (
+									ratio !== null &&
 									measuredPasses === true &&
 									!window.confirm(
-										`Measured ${formatRatio(ratio!)}:1 passes ${required}. Mark it as failing anyway?`
+										`Measured ${formatRatio(ratio)}:1 passes ${required}. Mark it as failing anyway?`
 									)
 								) {
 									return;

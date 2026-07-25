@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
+import { cycleTabFocus, focusableWithin } from '../../lib/utils/focus-trap';
 import {
 	generateContextualFix,
 	getIssueKind,
@@ -133,17 +134,11 @@ export function IssueDetailModal({
 		const previousActiveElement = document.activeElement as HTMLElement | null;
 
 		if (modalRef.current) {
-			const closeBtn = modalRef.current.querySelector('.imodal__close') as HTMLElement | null;
-			if (closeBtn) {
-				closeBtn.focus();
-			} else {
-				const focusable = modalRef.current.querySelectorAll(
-					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-				);
-				if (focusable.length > 0) {
-					(focusable[0] as HTMLElement).focus();
-				}
-			}
+			// Prefer the close button so Escape and Tab both start from a known place;
+			// otherwise fall back to whatever the trap considers first.
+			const closeBtn = modalRef.current.querySelector<HTMLElement>('.imodal__close');
+			const target = closeBtn ?? focusableWithin(modalRef.current)[0];
+			target?.focus();
 		}
 
 		return () => {
@@ -163,36 +158,7 @@ export function IssueDetailModal({
 
 			if (event.key === 'Tab') {
 				if (modalRef.current) {
-					const focusable = Array.from(
-						modalRef.current.querySelectorAll(
-							'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-						)
-					).filter((el) => {
-						const htmlEl = el as HTMLElement;
-						return (
-							htmlEl.offsetWidth > 0 ||
-							htmlEl.offsetHeight > 0 ||
-							htmlEl.getClientRects().length > 0
-						);
-					}) as HTMLElement[];
-
-					if (focusable.length > 0) {
-						const first = focusable[0];
-						const last = focusable[focusable.length - 1];
-						const active = document.activeElement as HTMLElement;
-
-						if (event.shiftKey) {
-							if (active === first || !focusable.includes(active)) {
-								event.preventDefault();
-								last.focus();
-							}
-						} else {
-							if (active === last || !focusable.includes(active)) {
-								event.preventDefault();
-								first.focus();
-							}
-						}
-					}
+					cycleTabFocus(focusableWithin(modalRef.current), event);
 				}
 				return;
 			}
@@ -225,7 +191,8 @@ export function IssueDetailModal({
 	const moveTabFocus = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
 		let nextIndex: number | null = null;
 		if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
-		if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
+		if (event.key === 'ArrowLeft')
+			nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
 		if (event.key === 'Home') nextIndex = 0;
 		if (event.key === 'End') nextIndex = availableTabs.length - 1;
 		if (nextIndex === null) return;
@@ -347,12 +314,22 @@ export function IssueDetailModal({
 
 				<div className="imodal__body">
 					{activeTab === 'review' && (
-						<div className="imodal__pane" id="issue-panel-review" role="tabpanel" aria-labelledby="issue-tab-review">
+						<div
+							className="imodal__pane"
+							id="issue-panel-review"
+							role="tabpanel"
+							aria-labelledby="issue-tab-review"
+						>
 							<ManualReviewTab issue={issue} jobId={jobId} />
 						</div>
 					)}
 					{activeTab === 'fix' && (
-						<div className="imodal__pane" id="issue-panel-fix" role="tabpanel" aria-labelledby="issue-tab-fix">
+						<div
+							className="imodal__pane"
+							id="issue-panel-fix"
+							role="tabpanel"
+							aria-labelledby="issue-tab-fix"
+						>
 							<section>
 								<h3 className="imodal__pane-h">How to fix</h3>
 								{contextualFix ? (
@@ -393,7 +370,12 @@ export function IssueDetailModal({
 						</div>
 					)}
 					{activeTab === 'evidence' && (
-						<div className="imodal__pane" id="issue-panel-evidence" role="tabpanel" aria-labelledby="issue-tab-evidence">
+						<div
+							className="imodal__pane"
+							id="issue-panel-evidence"
+							role="tabpanel"
+							aria-labelledby="issue-tab-evidence"
+						>
 							<IssueEvidenceSection
 								issue={issue}
 								page={page}
@@ -403,7 +385,12 @@ export function IssueDetailModal({
 						</div>
 					)}
 					{activeTab === 'verify' && (
-						<div className="imodal__pane" id="issue-panel-verify" role="tabpanel" aria-labelledby="issue-tab-verify">
+						<div
+							className="imodal__pane"
+							id="issue-panel-verify"
+							role="tabpanel"
+							aria-labelledby="issue-tab-verify"
+						>
 							<VerifyContrastTab
 								issue={issue}
 								page={page}
@@ -413,7 +400,12 @@ export function IssueDetailModal({
 						</div>
 					)}
 					{activeTab === 'occurrences' && (
-						<div className="imodal__pane" id="issue-panel-occurrences" role="tabpanel" aria-labelledby="issue-tab-occurrences">
+						<div
+							className="imodal__pane"
+							id="issue-panel-occurrences"
+							role="tabpanel"
+							aria-labelledby="issue-tab-occurrences"
+						>
 							<h3 className="imodal__pane-h">
 								{occurrenceCount === 1
 									? 'Affected element'

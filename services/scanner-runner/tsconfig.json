@@ -9,17 +9,13 @@
 		"module": "node16",
 		"moduleResolution": "node16",
 		"lib": ["ES2022", "DOM", "DOM.Iterable"],
-		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"resolveJsonModule": true,
 		"outDir": "dist",
 		"rootDir": "src",
 		"declaration": true,
-		"declarationMap": true,
-		"exactOptionalPropertyTypes": true,
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true
+		"declarationMap": true
 	},
 	"include": ["src"]
 }

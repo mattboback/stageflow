@@ -8,9 +8,7 @@ import { getContrastData } from './contrast-verify';
  * present the underlying checks as plain sentences; fall back to the raw text
  * when the shape is unfamiliar.
  */
-export function humanizeFailureSummary(
-	summary: string | null | undefined
-): string | null {
+export function humanizeFailureSummary(summary: string | null | undefined): string | null {
 	if (!summary) return null;
 	const requiresAll = /fix all of the following/i.test(summary);
 	const hadWrapper = /fix (all|any) of the following/i.test(summary);

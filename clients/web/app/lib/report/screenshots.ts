@@ -39,7 +39,7 @@ export function getPageOverviewUrl(
 		if (preferred) return preferred.url;
 	}
 
-	return matches[0].url;
+	return matches[0]?.url ?? null;
 }
 
 /*
@@ -53,9 +53,7 @@ export function findOverviewElement(
 	nodeIndex = 0
 ): PageOverviewElement | null {
 	const elements = page?.pageOverview?.elements ?? [];
-	const exact = elements.find(
-		(el) => el.issueId === issueId && el.nodeIndex === nodeIndex
-	);
+	const exact = elements.find((el) => el.issueId === issueId && el.nodeIndex === nodeIndex);
 	if (exact) return exact;
 	if (nodeIndex === 0) {
 		return elements.find((el) => el.issueId === issueId) ?? null;

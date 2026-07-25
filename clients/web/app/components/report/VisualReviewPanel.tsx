@@ -309,8 +309,8 @@ export function VisualReviewPanel({
 							role="group"
 							aria-label={`Page overview for ${selectedPage.path ?? selectedPage.url}`}
 						>
-								<image
-									aria-hidden="true"
+							<image
+								aria-hidden="true"
 								href={overviewUrl ?? undefined}
 								x={0}
 								y={0}
@@ -367,6 +367,10 @@ export function VisualReviewPanel({
 								group.issues.find(
 									(issue) => needsHumanReview(issue) && !getReviewVerdict(issue.id)
 								) ?? group.issues[0];
+							if (!first) {
+								// A group only exists because an issue was added to it.
+								return null;
+							}
 							return (
 								<li key={group.key}>
 									<button

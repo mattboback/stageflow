@@ -106,9 +106,7 @@ export function ContrastResult({
 					)}
 				</span>
 				{ratio !== null && (
-					<span
-						className={`vfy__level-pill vfy__level-pill--${requiredPasses ? 'pass' : 'fail'}`}
-					>
+					<span className={`vfy__level-pill vfy__level-pill--${requiredPasses ? 'pass' : 'fail'}`}>
 						{requiredPasses ? `Passes ${required}` : `Fails ${required}`}
 					</span>
 				)}

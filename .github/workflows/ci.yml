@@ -203,20 +203,11 @@ jobs:
         run: bun audit --audit-level=high
         working-directory: clients/web
 
-      - name: Lint
-        run: bun run lint
-        working-directory: clients/web
-
-      - name: Typecheck
-        run: bun run typecheck
-        working-directory: clients/web
-
-      - name: Unit and component tests
-        run: bun run test
-        working-directory: clients/web
-
-      - name: Build
-        run: bun run build
+      # Invokes the package's own `ci` script rather than restating its steps, so
+      # the workflow and `just ci` cannot drift from what a contributor runs
+      # locally. This mirrors how the scanner-runner job is wired below.
+      - name: CI (lint, typecheck, test, build)
+        run: bun run ci
         working-directory: clients/web
 
       - name: Install Playwright browser
@@ -307,11 +298,20 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
+      - name: Install web dependencies
+        run: bun install --frozen-lockfile
+        working-directory: clients/web
+
+      - name: Setup just
+        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
+        with:
+          tool: just@${{ env.JUST_VERSION }}
+
+      # Both Bun workspaces, matching `just dead-code`. clients/web had no
+      # dead-code detection at all, which is how seven unused exports and two
+      # unreferenced modules accumulated there.
       - name: Dead-code analysis
-        run: |
-          status=0
-          (cd services/scanner-runner && bun run find-dead-code) || status=$?
-          exit "$status"
+        run: just dead-code
 
   images:
     name: Container Image (${{ matrix.image.name }})

@@ -51,24 +51,12 @@ function severityToken(severity?: string | null): string {
 	return normalized ? ` sev-${normalized}` : '';
 }
 
-export function getSeverityContainerClass(severity?: string | null): string {
-	return `sev-container${severityToken(severity)}`;
-}
-
 export function getSeverityDotClass(severity?: string | null): string {
 	return `sev-dot${severityToken(severity)}`;
 }
 
 export function getSeverityBadgeClass(severity?: string | null): string {
 	return `sev-badge${severityToken(severity)}`;
-}
-
-export function getSeverityBorderClass(severity?: string | null): string {
-	return `sev-border${severityToken(severity)}`;
-}
-
-export function getSeverityOverlayClass(severity?: string | null): string {
-	return `sev-overlay${severityToken(severity)}`;
 }
 
 /*

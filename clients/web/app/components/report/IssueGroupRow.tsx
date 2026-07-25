@@ -1,17 +1,15 @@
 import { useState } from 'react';
 
 import type { IssueDetail, IssueGroup, PageSummary } from '../../lib/types/unified-report';
-import {
-	SCANNER_META,
-	getSeverityBadgeClass,
-	getSeverityDotClass
-} from '../../lib/report';
+import { SCANNER_META, getSeverityBadgeClass, getSeverityDotClass } from '../../lib/report';
 
 interface Props {
 	group: IssueGroup;
 	pageById: Map<string, PageSummary>;
 	defaultOpen?: boolean;
-	onSelectOccurrence?: (occurrence: IssueDetail) => void;
+	// Explicitly `| undefined`: exactOptionalPropertyTypes distinguishes an absent
+	// prop from one passed as undefined, and callers forward an optional handler.
+	onSelectOccurrence?: ((occurrence: IssueDetail) => void) | undefined;
 }
 
 export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOccurrence }: Props) {
@@ -58,9 +56,7 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 			</button>
 			{open && (
 				<div className="igroup__body">
-					<div className="igroup__body-label">
-						Affected page{pageCount === 1 ? '' : 's'}
-					</div>
+					<div className="igroup__body-label">Affected page{pageCount === 1 ? '' : 's'}</div>
 					{group.occurrences.map((occ) => {
 						const page = pageById.get(occ.pageId);
 						const pageLabel = page?.path ?? page?.url ?? occ.pageUrl ?? occ.pageId;

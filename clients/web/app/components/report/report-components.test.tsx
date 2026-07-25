@@ -86,7 +86,13 @@ describe('AllClearBanner', () => {
 	it('flags report errors before recommending the run as a baseline', () => {
 		renderBanner(
 			cleanReport([
-				{ scope: 'scanner', scannerId: 'axe', code: 'timeout', message: 'timed out', retryable: true }
+				{
+					scope: 'scanner',
+					scannerId: 'axe',
+					code: 'timeout',
+					message: 'timed out',
+					retryable: true
+				}
 			])
 		);
 

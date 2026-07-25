@@ -81,7 +81,7 @@ export default function Scan() {
 	// On completion, hand off to the report surface.
 	useEffect(() => {
 		if (isComplete) {
-			navigate(`/scan/${id}/report${projectQuery}`, { replace: true });
+			void navigate(`/scan/${id}/report${projectQuery}`, { replace: true });
 		}
 	}, [isComplete, id, navigate, projectQuery]);
 

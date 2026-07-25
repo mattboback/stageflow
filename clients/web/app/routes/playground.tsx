@@ -21,13 +21,12 @@ import {
 	DEFAULT_AI_CONFIG,
 	estimateScanRuntime,
 	isAuthConfigComplete,
-	normalizeUrlInput,
-	validateHttpUrls,
 	validatePlaygroundConfiguration,
 	validateZipUploadFile,
 	type AiConfigState,
 	type AuthFormConfig
-} from '../lib/components/playground/playground-utils';
+} from '../lib/playground/playground-utils';
+import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import type { ScannerDefinition, ScannerSelection } from '../lib/types/scan';
 import { SCANNER_META, scannerLabel } from '../lib/report/scanner-identity';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
@@ -277,11 +276,11 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 		urls.forEach((raw, index) => {
 			const normalized = normalizeUrlInput(raw);
 			if (!normalized) return;
-			const result = validateHttpUrls([normalized]);
-			if (result.invalid.length > 0) {
-				rowErrors[index] = result.invalid[0].reason;
+			const result = validateHttpUrl(normalized);
+			if (result.ok) {
+				valid.push(result.url);
 			} else {
-				valid.push(result.valid[0]);
+				rowErrors[index] = result.reason;
 			}
 		});
 		return { valid, rowErrors };
@@ -392,7 +391,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 				}
 			}
 			const projectQuery = project ? `?project=${encodeURIComponent(project.id)}` : '';
-			navigate(`/scan/${job_id}${projectQuery}`);
+			void navigate(`/scan/${job_id}${projectQuery}`);
 		} catch (err: unknown) {
 			setError(err instanceof Error ? err.message : 'Scan failed. Please try again.');
 			setSubmitting(false);
@@ -763,7 +762,9 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 									<button
 										type="button"
 										className="btn btn--primary btn--lg run"
-										onClick={runScan}
+										onClick={() => {
+											void runScan();
+										}}
 										disabled={submitting || !ready}
 									>
 										{submitting ? 'Submitting…' : 'Run scan'}{' '}
@@ -804,7 +805,9 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 					<button
 						type="button"
 						className="btn btn--primary"
-						onClick={runScan}
+						onClick={() => {
+							void runScan();
+						}}
 						disabled={submitting || !ready}
 					>
 						{submitting ? 'Submitting…' : 'Run scan'}{' '}

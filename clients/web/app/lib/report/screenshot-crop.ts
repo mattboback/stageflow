@@ -43,8 +43,7 @@ export function getCroppedViewBox(
 		return null;
 	}
 
-	const padding =
-		options.padding ?? clamp(0.5 * Math.max(element.width, element.height), 16, 64);
+	const padding = options.padding ?? clamp(0.5 * Math.max(element.width, element.height), 16, 64);
 	const minWidth = options.minWidth ?? 200;
 	const minHeight = options.minHeight ?? 120;
 	const maxAspect = options.maxAspect ?? 3;

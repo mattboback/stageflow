@@ -516,7 +516,10 @@ dead-code:
     #!/usr/bin/env bash
     set -uo pipefail
     status=0
+    echo "==> scanner-runner..."
     (cd {{scanner_dir}} && {{bun}} run find-dead-code) || status=$?
+    echo "==> clients/web..."
+    (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
     exit "$status"
 
 [group('quality'), doc('Run the project baseline->promote->diff golden flow against the local overlay')]
