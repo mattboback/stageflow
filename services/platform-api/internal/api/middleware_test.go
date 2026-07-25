@@ -614,8 +614,8 @@ func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
 		t.Fatalf("expected a positive Retry-After on saturation, got %d", retryAfter)
 	}
 
-	if limiter.saturationCount == 0 {
-		t.Fatal("expected saturationCount to be incremented on a fail-closed denial")
+	if limiter.saturation.count == 0 {
+		t.Fatal("expected the saturation counter to be incremented on a fail-closed denial")
 	}
 
 	// An already-tracked key must keep being served from its existing window,
