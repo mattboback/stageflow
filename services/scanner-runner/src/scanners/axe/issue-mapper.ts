@@ -6,7 +6,7 @@
 import { getRuleBehavior } from '../../config/rule-behaviors';
 import { getUserImpact } from '../../config/user-impact';
 import type { Issue } from '../../core';
-import type { EnhancedScreenshotResult } from '../../screenshots/AxeScreenshotService';
+import type { EnhancedScreenshotResult } from '../../screenshots/axe-screenshot-service';
 import { normalizeSeverity } from '../../utils/severity';
 import type { AxeNode, AxeViolationResult } from './types';
 

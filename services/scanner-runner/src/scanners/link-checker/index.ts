@@ -13,7 +13,7 @@ import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 import type { LinkCheckResult, LinkInfo } from './types';
 
 import { ScannerBase } from '../../core/scanner-base';
-import { AxeScreenshotService } from '../../screenshots/AxeScreenshotService';
+import { AxeScreenshotService } from '../../screenshots/axe-screenshot-service';
 import { capturePageOverviewFromIssues } from '../../screenshots/page-overview-from-issues';
 import { SCANNER_VERSION } from '../version';
 import { checkSingleLink, getSeverityForStatus, groupByStatus } from './validation';

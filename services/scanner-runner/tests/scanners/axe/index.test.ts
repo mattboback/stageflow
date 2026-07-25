@@ -26,7 +26,7 @@ vi.mock('@axe-core/playwright', () => {
 	return { default: MockAxeBuilder };
 });
 
-vi.mock('../../../src/screenshots/AxeScreenshotService', () => ({
+vi.mock('../../../src/screenshots/axe-screenshot-service', () => ({
 	AxeScreenshotService: class MockAxeScreenshotService {
 		capturePageOverview = capturePageOverviewMock;
 

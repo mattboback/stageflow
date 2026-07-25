@@ -2,7 +2,7 @@ import type { Page } from 'playwright';
 
 import type { Issue } from '../core/types';
 import type { PageOverviewResult, PageOverviewViolation } from './axe/types';
-import type { AxeScreenshotService } from './AxeScreenshotService';
+import type { AxeScreenshotService } from './axe-screenshot-service';
 
 interface MetadataNode {
 	target?: unknown;
