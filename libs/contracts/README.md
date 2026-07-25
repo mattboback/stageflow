@@ -35,3 +35,26 @@ schema/*.schema.json ──► just generate-contracts ──► Go types (libs/
 
 Change a schema, regenerate, and every consumer typechecks against the new
 shape — contract drift fails the build rather than surfacing at runtime.
+
+## Why the four packages are not identical
+
+They share what should be shared: all four are `private`, all four validate their
+fixtures, and all four are covered by the drift hook
+(`devtools/scripts/precommit/run.mjs`) and by CI. The differences that remain are
+consequences of what each package *is*, and are listed here so the next reader does
+not "fix" one of them:
+
+- **`events` has no `generated/`, `tsconfig.json`, or `exports`.** It defines NATS
+  envelopes consumed from Go, so there is no TypeScript package to build and
+  nothing to generate. Its only job is to validate fixtures against the schema.
+- **`events/schema/validate.mjs` is `.mjs`; the other three are `.js`.** It is the
+  one validator written as ESM, and no package sets `"type": "module"`, so the
+  extension is required rather than stylistic.
+- **`provenance` has no `generate:go`.** It emits TypeScript only. It used to write
+  a Go module too, but `go.work` never included it and nothing imported it, so it
+  was never compiled — see the note in `devtools/scripts/generate-contracts.sh`.
+- **`report` nests its `go.mod` under `generated/go/`, `scanner-manifest` keeps one
+  at the package root.** `report`'s Go is generated from the schema;
+  `scanner-manifest` additionally ships a hand-written Go validator
+  (`validator.go`) that `libs/go/scannercatalog` imports. Different kinds of code,
+  so different placement.

@@ -137,9 +137,17 @@ export default defineConfig(
 		rules: commonTypeRules
 	},
 	{
+		// This file lints itself through `allowDefaultProject`, and that inferred
+		// project loads no ambient type definitions — not even `node:path`. Every
+		// Node-specific value in here, `import.meta.dirname` included, therefore
+		// resolves to the `error` type and trips the no-unsafe-* family. The types
+		// are unavailable to the linter, not absent from the runtime, so these are
+		// false positives scoped to this one file rather than a real hole in
+		// strictTypeChecked coverage. src/ and tests/ keep the full rule set.
 		files: ['eslint.config.mjs'],
 		rules: {
-			'@typescript-eslint/no-deprecated': 'off'
+			'@typescript-eslint/no-deprecated': 'off',
+			'@typescript-eslint/no-unsafe-assignment': 'off'
 		}
 	},
 

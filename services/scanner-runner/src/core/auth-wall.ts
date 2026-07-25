@@ -1,6 +1,7 @@
 import type { Page } from 'playwright';
 
 import type { Issue, ProvenanceAuth } from './types';
+import { sameOriginAndPath } from '../utils/url-compare';
 
 const LOGIN_PATH_PATTERNS: RegExp[] = [
 	/^\/login\/?$/i,
@@ -180,26 +181,6 @@ function matchingLoginPattern(rawUrl: string): string | null {
 
 function isLoginPath(rawUrl: string): boolean {
 	return matchingLoginPattern(rawUrl) !== null;
-}
-
-function sameOriginAndPath(a: string, b: string): boolean {
-	try {
-		const left = new URL(a);
-		const right = new URL(b);
-		return (
-			left.origin === right.origin &&
-			trimTrailingSlash(left.pathname) === trimTrailingSlash(right.pathname)
-		);
-	} catch {
-		return a === b;
-	}
-}
-
-function trimTrailingSlash(pathname: string): string {
-	if (pathname === '/') {
-		return pathname;
-	}
-	return pathname.replace(/\/+$/, '');
 }
 
 function safePageUrl(page: Page): string {

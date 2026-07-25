@@ -1,108 +1,16 @@
-import type {
-	IssueDetail,
-	IssueGroup,
-	IssueSeverity,
-	PageSummary,
-	ScannerSummary
-} from '../types/unified-report';
+import type { IssueDetail, IssueGroup, IssueSeverity } from '../types/unified-report';
 
 import { compareSeverity, getWorstSeverity } from './severity';
 
-export type IssueGroupKey = 'none' | 'rule' | 'page' | 'scanner' | 'category';
-
-export interface IssueBucket {
-	id: string;
-	label: string;
-	issues: IssueDetail[];
-	count: number;
-	severity: string | null;
-}
-
-interface GroupOptions {
-	pagesById?: Record<string, PageSummary>;
-	scannersById?: Record<string, ScannerSummary>;
-}
-
-export function groupIssues(
-	issues: IssueDetail[],
-	key: IssueGroupKey,
-	{ pagesById = {}, scannersById = {} }: GroupOptions = {}
-): IssueBucket[] {
-	if (key === 'none') {
-		return [
-			{
-				id: 'all',
-				label: 'All issues',
-				issues,
-				count: issues.length,
-				severity: getWorstSeverity(issues.map((issue) => issue.severity))
-			}
-		];
-	}
-
-	const groups = new Map<string, IssueDetail[]>();
-
-	for (const issue of issues) {
-		let groupId = '';
-		if (key === 'rule') groupId = issue.ruleId;
-		if (key === 'page') groupId = issue.pageId;
-		if (key === 'scanner') groupId = issue.scanner;
-		if (key === 'category') groupId = issue.category ?? 'uncategorized';
-		if (!groupId) continue;
-		const existing = groups.get(groupId) ?? [];
-		existing.push(issue);
-		groups.set(groupId, existing);
-	}
-
-	const result: IssueBucket[] = Array.from(groups.entries()).map(([id, grouped]) => {
-		const page = pagesById[id];
-		const scanner = scannersById[id];
-		const label =
-			key === 'rule'
-				? (grouped[0]?.title ?? id)
-				: key === 'page'
-					? (page?.path ?? page?.url ?? id)
-					: key === 'scanner'
-						? (scanner?.name ?? id)
-						: id === 'uncategorized'
-							? 'Uncategorized'
-							: id;
-
-		return {
-			id,
-			label,
-			issues: grouped,
-			count: grouped.length,
-			severity: getWorstSeverity(grouped.map((issue) => issue.severity))
-		};
-	});
-
-	return result.sort((a, b) => {
-		const severityOrder = compareSeverity(a.severity, b.severity);
-		if (severityOrder !== 0) return severityOrder;
-		return b.count - a.count;
-	});
-}
-
-const SEVERITY_RANK: Record<string, number> = {
-	critical: 5,
-	serious: 4,
-	moderate: 3,
-	minor: 2,
-	info: 1
-};
-
+/**
+ * The most severe issue in a group, defaulting to 'info' for an empty or entirely
+ * unrecognized set.
+ *
+ * This file used to carry its own severity ranking table — a third ordering in
+ * this workspace alone, running opposite to severity.ts. It now delegates.
+ */
 function maxSeverity(values: IssueSeverity[]): IssueSeverity {
-	let best: IssueSeverity = 'info';
-	let bestRank = 0;
-	for (const v of values) {
-		const r = SEVERITY_RANK[v] ?? 0;
-		if (r > bestRank) {
-			bestRank = r;
-			best = v;
-		}
-	}
-	return best;
+	return getWorstSeverity(values) ?? 'info';
 }
 
 export function groupIssuesByRule(issues: IssueDetail[]): IssueGroup[] {
@@ -114,30 +22,36 @@ export function groupIssuesByRule(issues: IssueDetail[]): IssueGroup[] {
 		buckets.set(fingerprint, list);
 	}
 
-	const groups: IssueGroup[] = Array.from(buckets.entries()).map(([fingerprint, occurrences]) => {
-		const head = occurrences[0];
-		const pageIds = Array.from(new Set(occurrences.map((i) => i.pageId).filter(Boolean)));
-		const wcagTags = Array.from(
-			new Set(occurrences.flatMap((i) => i.wcagTags ?? []).filter(Boolean))
-		);
-		const group: IssueGroup = {
-			fingerprint,
-			ruleId: head.ruleId,
-			scanner: head.scanner,
-			title: head.title,
-			description: head.description,
-			severity: maxSeverity(occurrences.map((i) => i.severity)),
-			occurrences,
-			pageIds
-		};
-		if (head.helpUrl) group.helpUrl = head.helpUrl;
-		if (wcagTags.length) group.wcagTags = wcagTags;
-		if (head.category) group.category = head.category;
-		return group;
-	});
+	const groups: IssueGroup[] = Array.from(buckets.entries()).flatMap(
+		([fingerprint, occurrences]) => {
+			const head = occurrences[0];
+			if (head === undefined) {
+				// Unreachable: a bucket only exists because an issue was pushed into it.
+				return [];
+			}
+			const pageIds = Array.from(new Set(occurrences.map((i) => i.pageId).filter(Boolean)));
+			const wcagTags = Array.from(
+				new Set(occurrences.flatMap((i) => i.wcagTags ?? []).filter(Boolean))
+			);
+			const group: IssueGroup = {
+				fingerprint,
+				ruleId: head.ruleId,
+				scanner: head.scanner,
+				title: head.title,
+				description: head.description,
+				severity: maxSeverity(occurrences.map((i) => i.severity)),
+				occurrences,
+				pageIds
+			};
+			if (head.helpUrl) group.helpUrl = head.helpUrl;
+			if (wcagTags.length) group.wcagTags = wcagTags;
+			if (head.category) group.category = head.category;
+			return [group];
+		}
+	);
 
 	return groups.sort((a, b) => {
-		const sevDiff = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
+		const sevDiff = compareSeverity(a.severity, b.severity);
 		if (sevDiff !== 0) return sevDiff;
 		const countDiff = b.occurrences.length - a.occurrences.length;
 		if (countDiff !== 0) return countDiff;

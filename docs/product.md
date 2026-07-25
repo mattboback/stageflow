@@ -79,9 +79,13 @@ What StageFlow's web UI must **not** look like:
 
 ## Accessibility & Inclusion
 
-- **WCAG 2.1 AA** is the hard floor across primitives, checked through the web app CI
-  path (`cd clients/web && bun run ci`), the separate Playwright/axe E2E suite,
-  plus StageFlow dogfooding.
+- **WCAG 2.1 AA** is the hard floor across primitives, checked three ways:
+  the web app CI path (`cd clients/web && bun run ci`), the separate Playwright/axe
+  E2E suite (`clients/web/e2e/accessibility.spec.ts`, which asserts zero
+  serious-or-critical axe violations on five surfaces at two viewports), and
+  StageFlow scanning its own running UI — the `Scan StageFlow's own UI with
+  StageFlow` step in `.github/workflows/golden-regression.yml`, which runs the real
+  CLI against the frontend container and fails on `serious`.
 - **Prefer AAA contrast where practical** on body and UI text; tokens target cool
   near-black ink on white/near-white surfaces (`--ink` / `--ink-strong` on
   `--surface` / `--ground`).

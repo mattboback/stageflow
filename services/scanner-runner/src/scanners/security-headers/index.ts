@@ -9,10 +9,8 @@ import type { APIResponse, Page } from 'playwright';
 import type { Issue, IssueSeverity, PageScanResult, ScanContext } from '../../core/types';
 
 import { ScannerBase } from '../../core/scanner-base';
-import {
-	type TargetValidationPolicy,
-	validateTargetURLForPolicy
-} from '../../core/target-validation';
+import { followValidatedRedirects } from '../../core/redirect-guard';
+import type { TargetValidationPolicy } from '../../core/target-validation';
 import { SCANNER_VERSION } from '../version';
 
 interface SecurityHeader {
@@ -84,47 +82,26 @@ const SECURITY_HEADERS: SecurityHeader[] = [
 	}
 ];
 
-const MAX_REDIRECTS = 10;
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-
 async function fetchWithValidatedRedirects(
 	page: Page,
 	url: string,
 	targetValidationPolicy: TargetValidationPolicy
 ): Promise<{ response: APIResponse; finalURL: string; redirects: string[] }> {
-	let currentURL = url;
-	const redirects: string[] = [];
-
-	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
-		await validateTargetURLForPolicy(currentURL, targetValidationPolicy);
-
+	return followValidatedRedirects<APIResponse>(url, targetValidationPolicy, async (currentURL) => {
+		// maxRedirects: 0 keeps Playwright from following hops itself, which would
+		// bypass the per-hop policy check.
 		const response = await page.request.fetch(currentURL, {
 			method: 'GET',
 			timeout: 30_000,
 			maxRedirects: 0
 		});
 
-		if (!REDIRECT_STATUSES.has(response.status())) {
-			return { response, finalURL: currentURL, redirects };
-		}
-
-		const locationHeader = response.headers().location;
-		if (!locationHeader) {
-			return { response, finalURL: currentURL, redirects };
-		}
-
-		let nextURL: string;
-		try {
-			nextURL = new URL(locationHeader, currentURL).toString();
-		} catch {
-			return { response, finalURL: currentURL, redirects };
-		}
-
-		redirects.push(nextURL);
-		currentURL = nextURL;
-	}
-
-	throw new Error(`Too many redirects (>${MAX_REDIRECTS})`);
+		return {
+			response,
+			status: response.status(),
+			location: response.headers().location ?? null
+		};
+	});
 }
 
 export class SecurityHeadersScanner extends ScannerBase {

@@ -32,12 +32,12 @@ func (c *blockingConsumeContext) Closed() <-chan struct{} {
 	return c.closed
 }
 
+// TestNewClient_WithNilConfig asserts that a nil config falls back to
+// DefaultConfig — including its nats.DefaultURL — and produces a usable
+// connection and JetStream context.
 func TestNewClient_WithNilConfig(t *testing.T) {
 	t.Parallel()
-
-	// NewClient should use DefaultConfig when nil is passed
-	// Note: This test will fail if NATS server is not running
-	t.Skip("Skipping integration test - requires NATS server")
+	requireDefaultURLNATS(t)
 
 	client, err := NewClient(nil)
 	if err != nil {
@@ -59,14 +59,15 @@ func TestNewClient_WithNilConfig(t *testing.T) {
 	}
 }
 
+// TestNewClient_WithPartialConfig asserts that zero-valued fields are treated as
+// "not set" rather than as literal zeros: an empty URL must become
+// nats.DefaultURL, and a zero ConnectTimeout must not mean "give up immediately".
 func TestNewClient_WithPartialConfig(t *testing.T) {
 	t.Parallel()
+	requireDefaultURLNATS(t)
 
-	t.Skip("Skipping integration test - requires NATS server")
-
-	// Test that zero-values in config are normalized to defaults
 	cfg := &Config{
-		URL: "", // Should be set to nats.DefaultURL
+		URL: "", // Should be normalized to nats.DefaultURL.
 	}
 
 	client, err := NewClient(cfg)

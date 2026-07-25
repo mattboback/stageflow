@@ -238,6 +238,14 @@ describe('PageIterator', () => {
 
 		const mockScanCallback = vi.fn<PageScanCallback>().mockResolvedValue(makeResult());
 
+		/** Resolves a successful page result after `ms`, to model a slow scan. */
+		const resultAfter = (ms: number): Promise<PageScanResult> =>
+			new Promise((resolve) => {
+				setTimeout(() => {
+					resolve(makeResult());
+				}, ms);
+			});
+
 		beforeEach(() => {
 			vi.clearAllMocks();
 		});
@@ -294,14 +302,7 @@ describe('PageIterator', () => {
 		});
 
 		it('should respect concurrency limit', async () => {
-			const slowCallback = vi.fn<PageScanCallback>().mockImplementation(
-				() =>
-					new Promise<PageScanResult>((resolve) => {
-						setTimeout(() => {
-							resolve(makeResult());
-						}, 50);
-					})
-			);
+			const slowCallback = vi.fn<PageScanCallback>().mockImplementation(() => resultAfter(50));
 
 			await pageIterator.iteratePages(mockProvenance, slowCallback);
 

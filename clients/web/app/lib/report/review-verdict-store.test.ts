@@ -15,8 +15,10 @@ class MemoryStorage implements ReviewVerdictStorage {
 	}
 }
 
-function persisted(storage: ReviewVerdictStorage) {
-	return JSON.parse(storage.getItem(REVIEW_VERDICTS_STORAGE_KEY) ?? '{}');
+type PersistedVerdicts = Record<string, Record<string, { verdict: string; at?: string }>>;
+
+function persisted(storage: ReviewVerdictStorage): PersistedVerdicts {
+	return JSON.parse(storage.getItem(REVIEW_VERDICTS_STORAGE_KEY) ?? '{}') as PersistedVerdicts;
 }
 
 describe('createReviewVerdictStore', () => {
@@ -47,11 +49,11 @@ describe('createReviewVerdictStore', () => {
 		storeB.setVerdict('job-b', 'issue-b', { verdict: 'fail' });
 		storeA.clearVerdict('job-a', 'issue-a');
 
-		expect(persisted(storage)).toEqual({
-			'job-b': {
-				'issue-b': expect.objectContaining({ verdict: 'fail' })
-			}
-		});
+		// Asserted field-by-field rather than with expect.objectContaining, whose
+		// `any` return would defeat the typed persisted() helper.
+		const remaining = persisted(storage);
+		expect(Object.keys(remaining)).toEqual(['job-b']);
+		expect(remaining['job-b']?.['issue-b']?.verdict).toBe('fail');
 	});
 
 	it('refreshes cached subscribers from a storage event value', () => {

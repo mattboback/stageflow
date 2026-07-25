@@ -199,7 +199,13 @@ function remapPageOverviewElements(
 			return { ...element, issueId: selectorFallbackId, nodeIndex: 0 };
 		}
 
-		return { ...element, issueId: derivedIssueIds[0], nodeIndex: 0 };
+		// derivedIssueIds is non-empty by the guard above; fall back to the element
+		// unchanged rather than writing an undefined issueId if that ever changes.
+		const firstDerivedId = derivedIssueIds[0];
+		if (firstDerivedId !== undefined) {
+			return { ...element, issueId: firstDerivedId, nodeIndex: 0 };
+		}
+		return element;
 	});
 }
 

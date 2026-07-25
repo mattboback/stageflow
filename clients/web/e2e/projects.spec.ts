@@ -1,20 +1,18 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import type { Page } from '@playwright/test';
-import { expect, test } from './fixtures';
+import { expect, loadReportFixture, test } from './fixtures';
 
-const REPORT_PATH = path.resolve(
-	process.cwd(),
-	'../../libs/contracts/report/fixtures/unified-report.v2.all-scans.json'
-);
-const report = JSON.parse(fs.readFileSync(REPORT_PATH, 'utf8'));
-const JOB_ID = report.meta.jobId as string;
+const report = loadReportFixture();
+const JOB_ID = report.meta.jobId;
 const SECOND_JOB_ID = 'e2e-local-project-regression';
 const secondReport = structuredClone(report);
 secondReport.meta.jobId = SECOND_JOB_ID;
+
+const templateIssue = report.issues[0];
+if (!templateIssue) {
+	throw new Error('unified-report.v2.all-scans.json must contain at least one issue');
+}
 secondReport.issues.push({
-	...structuredClone(report.issues[0]),
+	...structuredClone(templateIssue),
 	id: 'e2e-new-project-issue',
 	title: 'New regression from the second project run'
 });
@@ -167,14 +165,14 @@ test('local project creates a run and promotes its report without persisting cre
 		const database = await new Promise<IDBDatabase>((resolve, reject) => {
 			const request = indexedDB.open('stageflow-local-projects');
 			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
+			request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
 		});
 		const transaction = database.transaction(['projects', 'runs'], 'readonly');
 		const readAll = (store: string) =>
 			new Promise<unknown[]>((resolve, reject) => {
 				const request = transaction.objectStore(store).getAll();
 				request.onsuccess = () => resolve(request.result);
-				request.onerror = () => reject(request.error);
+				request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
 			});
 		const snapshot = await Promise.all([readAll('projects'), readAll('runs')]);
 		database.close();
@@ -274,17 +272,19 @@ test('temporarily unavailable scanners remain stored but are not submitted', asy
 		const database = await new Promise<IDBDatabase>((resolve, reject) => {
 			const request = indexedDB.open('stageflow-local-projects');
 			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
+			request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
 		});
-		const project = await new Promise<{
+		type StoredProject = {
 			configuration: { scanners: { id: string; enabled: boolean; config?: unknown }[] };
-		}>((resolve, reject) => {
+		};
+		const project = await new Promise<StoredProject>((resolve, reject) => {
 			const request = database
 				.transaction('projects', 'readonly')
 				.objectStore('projects')
 				.get(storedProjectId);
-			request.onsuccess = () => resolve(request.result);
-			request.onerror = () => reject(request.error);
+			// IDBRequest.result is typed `any`; narrow it once, here at the boundary.
+			request.onsuccess = () => resolve(request.result as StoredProject);
+			request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
 		});
 		database.close();
 		return project.configuration.scanners.find((scanner) => scanner.id === 'ai-navigator');

@@ -37,11 +37,11 @@ function hasElementTarget(issue: IssueDetail): boolean {
 		if (!occ) return false;
 		return Boolean(
 			occ.selector ||
-				occ.ancestorPath ||
-				occ.contextHtml ||
-				occ.html ||
-				occ.elementId ||
-				occ.boundingBox
+			occ.ancestorPath ||
+			occ.contextHtml ||
+			occ.html ||
+			occ.elementId ||
+			occ.boundingBox
 		);
 	});
 }

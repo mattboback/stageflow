@@ -30,9 +30,29 @@ machine will download that toolchain automatically rather than drift from CI.
 
 ## Quality Gates
 
-Pre-commit is a fast local guard for formatting, secrets, generated contract
+Pre-commit is a fast local guard for whitespace, secrets, generated contract
 drift, internal documentation links, and other common mistakes. It is not the
-full repo gate.
+full repo gate. Installing the hooks locally is optional, but the same config
+runs in CI (`Workflow Lint` job), so a change that fails it fails your PR
+whether or not you installed them.
+
+### Formatting
+
+Prettier is the only formatter, configured once at the repo root in `.prettierrc`
+and enforced by `format:check` inside each Bun workspace's `ci` script — so it
+runs from `just ci` and from CI without a separate step to keep in sync. Run
+`bun run format` in `clients/web` or `services/scanner-runner` to fix findings.
+
+The gate covers TypeScript. Two deliberate exclusions, both recorded in
+`.prettierignore`:
+
+- **Generated and byte-compared files.** `docs/reference/cli/` is byte-compared
+  against `go run ./clients/cli docs` by `check-cli-docs-generated.sh`, and
+  `qa/fixtures/` holds golden-regression inputs. Formatting either breaks CI.
+- **Stylesheets.** `clients/web`'s CSS is written one rule per line for short
+  declarations, consistently. Prettier cannot preserve that and would rewrite
+  4,621 lines to expand it. Changing the convention is a decision for its own
+  commit, not a side effect of adding a gate.
 
 Run `just ci` before opening a PR when feasible. It runs the stale-vocabulary
 check, Go build/lint/test/vuln checks, generated CLI-doc drift check, shell
@@ -42,9 +62,13 @@ iteration, run the relevant workspace checks directly:
 - `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...` for Go modules
 - `bun run ci` in `clients/web`; include browser screenshots or scan/report evidence for UI changes when relevant
 - `bun run ci` in `services/scanner-runner`
-- `just shell-tests`, or run its three scripts individually from `devtools/scripts/tests/`
+- `just shell-tests`, or run the scripts individually from `devtools/scripts/tests/`
 - `just project-golden` when project-mode baseline, diff, CLI exit-code, or report normalization behavior changes
-- `just dead-code` when removing or moving scanner-runner TypeScript exports/components
+- `just dead-code` when removing or moving TypeScript exports/components in either Bun workspace
+- `just coverage` when changing Go tests. It measures each `go.work` module with
+  `-coverpkg=./...` and fails only when a module drops more than 1.5 points below
+  `devtools/coverage-baseline.json`. If a drop is intentional, re-record it with
+  `just coverage-update` and say why in the PR
 
 Committed screenshots and reviewer-facing images belong in `docs/images`.
 Ephemeral QA/build evidence should stay under ignored artifact, output, or

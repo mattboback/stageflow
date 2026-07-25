@@ -60,17 +60,3 @@ export function scannerLabel(id: string, apiName?: string | null): string {
 	if (apiName) return apiName.replace(/\s+Scanner$/i, '');
 	return id;
 }
-
-export function getScannerTileClass(isSelected: boolean): string {
-	if (isSelected) {
-		return 'scanner-tile selected';
-	}
-	return 'scanner-tile';
-}
-
-export function getScannerIconClass(isSelected: boolean): string {
-	if (isSelected) {
-		return 'scanner-icon-container selected';
-	}
-	return 'scanner-icon-container';
-}

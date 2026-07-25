@@ -1,19 +1,16 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
-import { expect, test } from './fixtures';
+import { expect, loadReportFixture, test } from './fixtures';
 
-const fixture = JSON.parse(
-	fs.readFileSync(
-		path.resolve(process.cwd(), '../../libs/contracts/report/fixtures/unified-report.v2.all-scans.json'),
-		'utf8'
-	)
-);
-const jobId = fixture.meta.jobId as string;
-const issueId = fixture.issues[0]?.id as string;
+const fixture = loadReportFixture();
+const jobId = fixture.meta.jobId;
+
+const firstIssue = fixture.issues[0];
+if (!firstIssue) {
+	throw new Error('unified-report.v2.all-scans.json must contain at least one issue');
+}
+const issueId = firstIssue.id;
 
 async function mockCatalog(page: Page) {
 	await page.route('**/api/v1/scanners', (route) =>
@@ -75,7 +72,11 @@ async function expectNoSeriousViolations(page: Page, surface: string) {
 		(violation) => violation.impact === 'serious' || violation.impact === 'critical'
 	);
 	expect(
-		violations.map(({ id, impact, nodes }) => ({ id, impact, targets: nodes.map((node) => node.target) })),
+		violations.map(({ id, impact, nodes }) => ({
+			id,
+			impact,
+			targets: nodes.map((node) => node.target)
+		})),
 		`${surface} has serious or critical accessibility violations`
 	).toEqual([]);
 }

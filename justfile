@@ -366,33 +366,13 @@ ci:
     {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     export PATH="$({{go}} env GOPATH)/bin:$PATH"
 
-    echo "==> Go build..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && {{go}} build ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Building {{go}} build ./...
 
-    echo "==> Go lint..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && golangci-lint run --allow-parallel-runners)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Linting golangci-lint run --allow-parallel-runners
 
-    echo "==> Go test..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && {{go}} test -race ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Testing {{go}} test -race ./...
 
-    echo "==> Go vulncheck..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && govulncheck ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
 
     echo "==> CLI docs..."
     ./devtools/scripts/check-cli-docs-generated.sh
@@ -424,12 +404,7 @@ build:
 
     just deps
 
-    echo "==> Building Go modules..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && {{go}} build ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Building {{go}} build ./...
 
     echo "==> Building clients/web..."
     (cd {{web_dir}} && {{bun}} run build)
@@ -442,12 +417,19 @@ images:
     @echo "==> Building container images..."
     ./infra/scripts/build-images.sh
 
-[group('deploy'), doc('Production deploys run from the root control plane (this recipe only prints the procedure)')]
+[group('deploy'), doc('Production deploys run from an external control plane (this recipe only prints the procedure)')]
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "StageFlow production deployment is managed from /home/matt/Deployment." >&2
-    echo "Run: cd /home/matt/Deployment && just check stageflow && just deploy stageflow" >&2
+    control_plane="${STAGEFLOW_PROD_DEPLOY_DIR:-}"
+    echo "StageFlow production deploys are not driven from this repository." >&2
+    if [[ -n "$control_plane" ]]; then
+        echo "Run: cd $control_plane && just check stageflow && just deploy stageflow" >&2
+    else
+        echo "Set STAGEFLOW_PROD_DEPLOY_DIR to your control-plane directory (see .env.example)," >&2
+        echo "then run: just check stageflow && just deploy stageflow from there." >&2
+        echo "Self-hosting without a control plane: see docs/self-hosting.md." >&2
+    fi
     exit 1
 
 [group('tools'), doc('Build and install stageflow CLI to ~/.local/bin (no stale binaries)')]
@@ -500,16 +482,28 @@ shell-tests:
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
+    bash devtools/scripts/tests/coverage-ratchet.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/stale-vocab.test.sh
     bash infra/minio/provision_test.sh
+
+[group('quality'), doc('Measure Go coverage per module and check it against the baseline')]
+coverage:
+    @bash devtools/scripts/go/coverage.sh
+
+[group('quality'), doc('Re-record devtools/coverage-baseline.json from the current tree')]
+coverage-update:
+    @bash devtools/scripts/go/coverage.sh --update
 
 [group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
 dead-code:
     #!/usr/bin/env bash
     set -uo pipefail
     status=0
+    echo "==> scanner-runner..."
     (cd {{scanner_dir}} && {{bun}} run find-dead-code) || status=$?
+    echo "==> clients/web..."
+    (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
     exit "$status"
 
 [group('quality'), doc('Run the project baseline->promote->diff golden flow against the local overlay')]

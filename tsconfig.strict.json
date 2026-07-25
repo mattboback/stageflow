@@ -1,3 +1,6 @@
+// The one strict baseline for every TypeScript workspace in the repository.
+// Workspaces extend this and add only what is genuinely local to them (module
+// format, lib, paths) — never a weaker correctness setting.
 {
 	"compilerOptions": {
 		"strict": true,
@@ -12,6 +15,9 @@
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
 		"noPropertyAccessFromIndexSignature": false,
-		"forceConsistentCasingInFileNames": true
+		"forceConsistentCasingInFileNames": true,
+		"exactOptionalPropertyTypes": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true
 	}
 }

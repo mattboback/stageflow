@@ -1,4 +1,14 @@
 version: 2
+
+# Each ecosystem groups minor/patch updates into one PR, and majors into a second
+# PR, so a coordinated major upgrade (React Router 8 needed react-router,
+# @react-router/node and @react-router/dev to move together) arrives as one
+# reviewable change instead of fragmenting into PRs that are individually green
+# and jointly broken.
+#
+# The bun ecosystem is split into two entries because `ignore` applies to a whole
+# entry: the ESLint-linted workspaces have a TypeScript ceiling that the
+# contract packages do not. See docs/dependency-exceptions.md.
 updates:
   - package-ecosystem: "gomod"
     directories:
@@ -34,15 +44,15 @@ updates:
         applies-to: "version-updates"
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      go-major:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["major"]
 
+  # Workspaces linted by typescript-eslint. Both carry a TypeScript ceiling.
   - package-ecosystem: "bun"
     directories:
-      - "/"
       - "/clients/web"
-      - "/libs/contracts/events"
-      - "/libs/contracts/provenance"
-      - "/libs/contracts/report"
-      - "/libs/contracts/scanner-manifest"
       - "/services/scanner-runner"
     schedule:
       interval: "weekly"
@@ -51,10 +61,47 @@ updates:
       timezone: "Etc/UTC"
     open-pull-requests-limit: 6
     groups:
-      bun-minor-and-patch:
+      bun-app-minor-and-patch:
         applies-to: "version-updates"
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      bun-app-major:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["major"]
+    ignore:
+      # @typescript-eslint/typescript-estree peers `typescript: >=4.8.4 <6.1.0`,
+      # so 6.1 and 7.x break type-aware linting in these two workspaces.
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+      # @types/node must track the Node runtime major, which is pinned to the
+      # Active LTS in .node-version and every engines.node field.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  # Root tooling and the generated-contract packages. No ESLint, so no ceiling.
+  - package-ecosystem: "bun"
+    directories:
+      - "/"
+      - "/libs/contracts/events"
+      - "/libs/contracts/provenance"
+      - "/libs/contracts/report"
+      - "/libs/contracts/scanner-manifest"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 4
+    groups:
+      bun-contracts-minor-and-patch:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+      bun-contracts-major:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -69,3 +116,7 @@ updates:
         applies-to: "version-updates"
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      actions-major:
+        applies-to: "version-updates"
+        patterns: ["*"]
+        update-types: ["major"]

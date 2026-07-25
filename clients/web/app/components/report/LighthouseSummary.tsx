@@ -28,9 +28,7 @@ export function LighthouseSummary({ categories }: Props) {
 				return (
 					<div key={cat.id} className="lh__cell" data-tone={band?.tone ?? 'none'}>
 						<p className="lh__cell-lab">{label}</p>
-						<p className="lh__cell-score">
-							{score !== null ? score : '—'}
-						</p>
+						<p className="lh__cell-score">{score !== null ? score : '—'}</p>
 						{band ? <p className="lh__cell-band">{band.label}</p> : null}
 					</div>
 				);

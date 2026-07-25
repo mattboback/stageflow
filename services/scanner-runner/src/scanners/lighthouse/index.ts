@@ -16,7 +16,7 @@ import {
 import {
 	AxeScreenshotService,
 	type PageOverviewViolation
-} from '../../screenshots/AxeScreenshotService';
+} from '../../screenshots/axe-screenshot-service';
 import { SCANNER_VERSION } from '../version';
 import {
 	closeLaunchedChrome,
