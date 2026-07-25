@@ -15,7 +15,7 @@ import { Pill } from '../components/Pill';
 import { RouteFault } from '../components/RouteFault';
 import { useScanStatus } from '../lib/hooks/useScanMonitor';
 import { pageTitle } from '../lib/site-metadata';
-import { SCANNER_META } from '../lib/report';
+import { scannerLabel } from '../lib/report';
 import scanStyles from './scan.css?url';
 
 export const links = () => [{ rel: 'stylesheet', href: scanStyles }];
@@ -35,10 +35,6 @@ const RUNNING_STATES = new Set([
 ]);
 
 type ChannelState = 'done' | 'run' | 'queue' | 'err';
-
-function scannerLabel(id: string): string {
-	return SCANNER_META[id]?.label ?? id;
-}
 
 function fmtElapsed(totalSeconds: number): string {
 	const s = Math.max(0, Math.floor(totalSeconds));

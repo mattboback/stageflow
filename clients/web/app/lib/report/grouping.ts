@@ -1,24 +1,16 @@
 import type { IssueDetail, IssueGroup, IssueSeverity } from '../types/unified-report';
 
-const SEVERITY_RANK: Record<string, number> = {
-	critical: 5,
-	serious: 4,
-	moderate: 3,
-	minor: 2,
-	info: 1
-};
+import { compareSeverity, getWorstSeverity } from './severity';
 
+/**
+ * The most severe issue in a group, defaulting to 'info' for an empty or entirely
+ * unrecognized set.
+ *
+ * This file used to carry its own severity ranking table — a third ordering in
+ * this workspace alone, running opposite to severity.ts. It now delegates.
+ */
 function maxSeverity(values: IssueSeverity[]): IssueSeverity {
-	let best: IssueSeverity = 'info';
-	let bestRank = 0;
-	for (const v of values) {
-		const r = SEVERITY_RANK[v] ?? 0;
-		if (r > bestRank) {
-			bestRank = r;
-			best = v;
-		}
-	}
-	return best;
+	return getWorstSeverity(values) ?? 'info';
 }
 
 export function groupIssuesByRule(issues: IssueDetail[]): IssueGroup[] {
@@ -59,7 +51,7 @@ export function groupIssuesByRule(issues: IssueDetail[]): IssueGroup[] {
 	);
 
 	return groups.sort((a, b) => {
-		const sevDiff = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
+		const sevDiff = compareSeverity(a.severity, b.severity);
 		if (sevDiff !== 0) return sevDiff;
 		const countDiff = b.occurrences.length - a.occurrences.length;
 		if (countDiff !== 0) return countDiff;

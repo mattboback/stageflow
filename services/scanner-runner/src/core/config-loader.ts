@@ -14,6 +14,8 @@ import type {
 	StorageConfig
 } from './types';
 
+import { parseEnvBool, parseEnvInt, parseEnvNumber } from '../utils/env';
+
 export interface ConfigLoaderOptions {
 	scannerName: string;
 	defaults?: Partial<ScannerConfig>;
@@ -141,19 +143,24 @@ function requireAnyEnv(names: readonly string[]): string {
 	throw new Error(`Required environment variable not set (expected one of: ${names.join(', ')})`);
 }
 
+/*
+ * Fail-fast wrappers over the shared parsers in utils/env.ts.
+ *
+ * Job configuration must not silently fall back: a mistyped SCANNER_* value that
+ * defaults quietly yields a scan that looks successful but measured the wrong
+ * thing. The lenient getEnv* variants in utils/env.ts are for presentation knobs.
+ */
 function getEnvBool(name: string, defaultValue: boolean): boolean {
 	const raw = process.env[name];
 	if (!raw) {
 		return defaultValue;
 	}
-	const normalized = raw.trim().toLowerCase();
-	if (['0', 'false', 'no', 'off'].includes(normalized)) {
-		return false;
+	const parsed = parseEnvBool(raw);
+	if (parsed === undefined) {
+		throw new Error(`Invalid boolean environment variable ${name}: ${raw}`);
 	}
-	if (['1', 'true', 'yes', 'on'].includes(normalized)) {
-		return true;
-	}
-	throw new Error(`Invalid boolean environment variable ${name}: ${raw}`);
+
+	return parsed;
 }
 
 function getEnvNumber(name: string, defaultValue: number): number {
@@ -161,12 +168,12 @@ function getEnvNumber(name: string, defaultValue: number): number {
 	if (!raw) {
 		return defaultValue;
 	}
-	const n = Number(raw);
-	if (!Number.isFinite(n)) {
+	const parsed = parseEnvNumber(raw);
+	if (parsed === undefined) {
 		throw new Error(`Invalid numeric environment variable ${name}: ${raw}`);
 	}
 
-	return n;
+	return parsed;
 }
 
 function getEnvInt(name: string, defaultValue: number): number {
@@ -174,12 +181,12 @@ function getEnvInt(name: string, defaultValue: number): number {
 	if (!raw) {
 		return defaultValue;
 	}
-	const n = Number.parseInt(raw, 10);
-	if (!Number.isInteger(n) || String(n) !== raw.trim() || n < 0) {
+	const parsed = parseEnvInt(raw);
+	if (parsed === undefined) {
 		throw new Error(`Invalid integer environment variable ${name}: ${raw}`);
 	}
 
-	return n;
+	return parsed;
 }
 
 function loadScannerOptionsFromEnv(): Record<string, unknown> | undefined {

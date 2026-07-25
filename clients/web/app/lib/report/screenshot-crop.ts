@@ -19,7 +19,8 @@ interface CropOptions {
 	maxAspect?: number;
 }
 
-function clamp(value: number, min: number, max: number): number {
+/** Constrains `value` to [min, max]. Shared with screenshot-sampling. */
+export function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
 }
 

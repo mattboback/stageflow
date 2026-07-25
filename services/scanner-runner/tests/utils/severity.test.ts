@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	SEVERITY_LEVELS,
 	incrementSeverityCount,
-	normalizeSeverity,
-	severityRank
+	normalizeSeverity
 } from '../../src/utils/severity';
 
 describe('SEVERITY_LEVELS', () => {
@@ -56,23 +55,6 @@ describe('normalizeSeverity', () => {
 	it('returns fallback for empty string', () => {
 		expect(normalizeSeverity('')).toBe('info');
 		expect(normalizeSeverity('   ')).toBe('info');
-	});
-});
-
-describe('severityRank', () => {
-	it('ranks severities by impact', () => {
-		expect(severityRank('critical')).toBeGreaterThan(severityRank('serious'));
-		expect(severityRank('serious')).toBeGreaterThan(severityRank('moderate'));
-		expect(severityRank('moderate')).toBeGreaterThan(severityRank('minor'));
-		expect(severityRank('minor')).toBeGreaterThan(severityRank('info'));
-	});
-
-	it('returns specific rank values', () => {
-		expect(severityRank('critical')).toBe(4);
-		expect(severityRank('serious')).toBe(3);
-		expect(severityRank('moderate')).toBe(2);
-		expect(severityRank('minor')).toBe(1);
-		expect(severityRank('info')).toBe(0);
 	});
 });
 

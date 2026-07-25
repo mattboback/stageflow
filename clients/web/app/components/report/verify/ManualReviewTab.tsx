@@ -2,21 +2,11 @@ import type { IssueDetail } from '../../../lib/types/unified-report';
 import { useReviewVerdicts } from '../../../lib/hooks/useReviewVerdicts';
 
 import { ScannerText } from '../ScannerText';
+import { formatVerdictTime } from '../../../lib/report/review-verdict';
 
 interface Props {
 	issue: IssueDetail;
 	jobId: string;
-}
-
-function formatVerdictTime(iso: string): string {
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return iso;
-	return date.toLocaleString(undefined, {
-		month: 'short',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit'
-	});
 }
 
 export function ManualReviewTab({ issue, jobId }: Props) {

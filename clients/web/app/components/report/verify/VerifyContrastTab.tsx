@@ -20,6 +20,7 @@ import { useReviewVerdicts } from '../../../lib/hooks/useReviewVerdicts';
 
 import { ContrastResult } from './ContrastResult';
 import { ContrastSampler } from './ContrastSampler';
+import { formatVerdictTime } from '../../../lib/report/review-verdict';
 
 interface Props {
 	issue: IssueDetail;
@@ -33,17 +34,6 @@ interface Draft {
 	fg: string;
 	bg: string;
 	largeText: boolean;
-}
-
-function formatVerdictTime(iso: string): string {
-	const date = new Date(iso);
-	if (Number.isNaN(date.getTime())) return iso;
-	return date.toLocaleString(undefined, {
-		month: 'short',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit'
-	});
 }
 
 export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props) {

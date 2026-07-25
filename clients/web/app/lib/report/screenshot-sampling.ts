@@ -1,12 +1,9 @@
 import type { ViewBox } from './screenshot-crop';
+import { clamp } from './screenshot-crop';
 
 export interface SamplePoint {
 	x: number;
 	y: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-	return Math.min(max, Math.max(min, value));
 }
 
 export function clampSamplePoint(point: SamplePoint, viewBox: ViewBox): SamplePoint {

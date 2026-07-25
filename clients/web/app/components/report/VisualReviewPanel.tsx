@@ -6,6 +6,7 @@ import type { ScreenshotArtifact } from '../../lib/types/scan';
 import type { ReviewVerdict } from '../../lib/report/review-verdict';
 import {
 	SEVERITY_LEVELS,
+	compareSeverity,
 	getPageOverviewUrl,
 	getReviewGroupStatus,
 	getSeverityDotClass,
@@ -39,12 +40,6 @@ type Zoom = 'fit' | number;
 const ZOOM_STEP = 1.25;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
-
-function severityRank(severity: string | undefined): number {
-	const normalized = normalizeSeverity(severity) ?? 'info';
-	const index = (SEVERITY_LEVELS as readonly string[]).indexOf(normalized);
-	return index === -1 ? SEVERITY_LEVELS.length : index;
-}
 
 export function VisualReviewPanel({
 	report,
@@ -102,7 +97,7 @@ export function VisualReviewPanel({
 				});
 			}
 		}
-		return [...groups.values()].sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
+		return [...groups.values()].sort((a, b) => compareSeverity(a.severity, b.severity));
 	}, [pageIssues]);
 
 	const issueMap = useMemo(

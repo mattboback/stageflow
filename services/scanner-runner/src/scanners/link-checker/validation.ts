@@ -7,16 +7,11 @@
 import type { IssueSeverity } from '../../core/types';
 import type { LinkCheckResult } from './types';
 
-import {
-	BlockedTargetError,
-	type TargetValidationPolicy,
-	validateTargetURLForPolicy
-} from '../../core/target-validation';
+import { followValidatedRedirects } from '../../core/redirect-guard';
+import { BlockedTargetError, type TargetValidationPolicy } from '../../core/target-validation';
 
 const REQUEST_TIMEOUT = 10000;
 const USER_AGENT = 'Stageflow-LinkChecker/1.0';
-const MAX_REDIRECTS = 10;
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 async function fetchWithValidatedRedirects(
 	url: string,
@@ -24,46 +19,39 @@ async function fetchWithValidatedRedirects(
 	signal: AbortSignal,
 	targetValidationPolicy: TargetValidationPolicy
 ): Promise<{ response: Response; redirects: string[] }> {
-	let currentURL = url;
+	// A 303 downgrades the method to GET for the remainder of the chain, per
+	// RFC 9110. That is specific to this scanner, which may start with HEAD.
 	let currentMethod: 'HEAD' | 'GET' = method;
-	const redirects: string[] = [];
 
-	for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
-		await validateTargetURLForPolicy(currentURL, targetValidationPolicy);
+	const { response, redirects } = await followValidatedRedirects<Response>(
+		url,
+		targetValidationPolicy,
+		async (currentURL) => {
+			const hopResponse = await fetch(currentURL, {
+				method: currentMethod,
+				redirect: 'manual',
+				signal,
+				headers: {
+					'User-Agent': USER_AGENT
+				}
+			});
 
-		const response = await fetch(currentURL, {
-			method: currentMethod,
-			redirect: 'manual',
-			signal,
-			headers: {
-				'User-Agent': USER_AGENT
+			if (hopResponse.status === 303) {
+				currentMethod = 'GET';
 			}
-		});
 
-		if (!REDIRECT_STATUSES.has(response.status)) {
-			return { response, redirects };
+			let location: string | null;
+			try {
+				location = hopResponse.headers.get('location');
+			} catch {
+				location = null;
+			}
+
+			return { response: hopResponse, status: hopResponse.status, location };
 		}
+	);
 
-		let locationHeader: string | null;
-		try {
-			locationHeader = response.headers.get('location');
-		} catch {
-			return { response, redirects };
-		}
-		if (!locationHeader) {
-			return { response, redirects };
-		}
-
-		const nextURL = new URL(locationHeader, currentURL).toString();
-		redirects.push(nextURL);
-		currentURL = nextURL;
-
-		if (response.status === 303 && currentMethod !== 'GET') {
-			currentMethod = 'GET';
-		}
-	}
-
-	throw new Error(`Too many redirects (>${MAX_REDIRECTS})`);
+	return { response, redirects };
 }
 
 /**
