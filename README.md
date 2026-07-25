@@ -200,6 +200,7 @@ just shell-tests
 (cd clients/web && bun run ci)
 (cd services/scanner-runner && bun run ci)
 just dead-code
+just coverage
 just project-golden
 ```
 

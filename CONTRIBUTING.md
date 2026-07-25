@@ -47,9 +47,13 @@ iteration, run the relevant workspace checks directly:
 - `go build ./...`, `go test -race ./...`, `golangci-lint run`, `govulncheck ./...` for Go modules
 - `bun run ci` in `clients/web`; include browser screenshots or scan/report evidence for UI changes when relevant
 - `bun run ci` in `services/scanner-runner`
-- `just shell-tests`, or run its three scripts individually from `devtools/scripts/tests/`
+- `just shell-tests`, or run the scripts individually from `devtools/scripts/tests/`
 - `just project-golden` when project-mode baseline, diff, CLI exit-code, or report normalization behavior changes
-- `just dead-code` when removing or moving scanner-runner TypeScript exports/components
+- `just dead-code` when removing or moving TypeScript exports/components in either Bun workspace
+- `just coverage` when changing Go tests. It measures each `go.work` module with
+  `-coverpkg=./...` and fails only when a module drops more than 1.5 points below
+  `devtools/coverage-baseline.json`. If a drop is intentional, re-record it with
+  `just coverage-update` and say why in the PR
 
 Committed screenshots and reviewer-facing images belong in `docs/images`.
 Ephemeral QA/build evidence should stay under ignored artifact, output, or

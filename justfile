@@ -366,33 +366,13 @@ ci:
     {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     export PATH="$({{go}} env GOPATH)/bin:$PATH"
 
-    echo "==> Go build..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && {{go}} build ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Building {{go}} build ./...
 
-    echo "==> Go lint..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && golangci-lint run --allow-parallel-runners)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Linting golangci-lint run --allow-parallel-runners
 
-    echo "==> Go test..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && {{go}} test -race ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Testing {{go}} test -race ./...
 
-    echo "==> Go vulncheck..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && govulncheck ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
 
     echo "==> CLI docs..."
     ./devtools/scripts/check-cli-docs-generated.sh
@@ -424,12 +404,7 @@ build:
 
     just deps
 
-    echo "==> Building Go modules..."
-    while IFS= read -r dir; do
-        [[ -n "$dir" ]] || continue
-        echo "  -> $dir"
-        (cd "$dir" && {{go}} build ./...)
-    done < <(awk '/^[[:space:]]+\.\//{gsub(/^[[:space:]]+/, ""); print}' {{go_work}})
+    bash devtools/scripts/go/run-in-work-dirs.sh Building {{go}} build ./...
 
     echo "==> Building clients/web..."
     (cd {{web_dir}} && {{bun}} run build)
@@ -507,9 +482,18 @@ shell-tests:
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
+    bash devtools/scripts/tests/coverage-ratchet.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/stale-vocab.test.sh
     bash infra/minio/provision_test.sh
+
+[group('quality'), doc('Measure Go coverage per module and check it against the baseline')]
+coverage:
+    @bash devtools/scripts/go/coverage.sh
+
+[group('quality'), doc('Re-record devtools/coverage-baseline.json from the current tree')]
+coverage-update:
+    @bash devtools/scripts/go/coverage.sh --update
 
 [group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
 dead-code:
