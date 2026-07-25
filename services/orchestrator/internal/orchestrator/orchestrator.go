@@ -35,6 +35,7 @@ type Publisher interface {
 // PodmanClient abstracts Podman operations so orchestration logic can be unit tested.
 type PodmanClient interface {
 	CreatePod(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
+	InspectPod(ctx context.Context, podID string) (*podman.PodInfo, error)
 	StopPod(ctx context.Context, podID string) error
 	RemovePod(ctx context.Context, podID string, force bool) error
 	CreateVolume(ctx context.Context, name string) error

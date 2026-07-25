@@ -25,6 +25,7 @@ var orchestratorTestSchemaCounter uint64
 // mockPodmanClient is a mock Podman client for testing.
 type mockPodmanClient struct {
 	createPodFunc        func(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
+	inspectPodFunc       func(ctx context.Context, podID string) (*podman.PodInfo, error)
 	stopPodFunc          func(ctx context.Context, podID string) error
 	removePodFunc        func(ctx context.Context, podID string, force bool) error
 	createVolumeFunc     func(ctx context.Context, name string) error
@@ -36,6 +37,14 @@ type mockPodmanClient struct {
 	waitContainerFunc    func(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error)
 	removeContainerFunc  func(ctx context.Context, containerID string, force bool) error
 	getLogsFunc          func(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
+}
+
+func (m *mockPodmanClient) InspectPod(ctx context.Context, podID string) (*podman.PodInfo, error) {
+	if m.inspectPodFunc != nil {
+		return m.inspectPodFunc(ctx, podID)
+	}
+
+	return nil, &podman.APIError{StatusCode: 404, Body: "pod not found"}
 }
 
 func (m *mockPodmanClient) CreatePod(

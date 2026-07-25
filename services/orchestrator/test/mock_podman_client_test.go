@@ -44,6 +44,37 @@ func newMockPodmanClient() *mockPodmanClient {
 	}
 }
 
+// InspectPod resolves by ID or by name. CreatePod keys pods as "pod-"+Name, while
+// the runtime's idempotent recovery path inspects by the bare pod name, so both
+// have to work or adoption silently never matches.
+func (m *mockPodmanClient) InspectPod(_ context.Context, podID string) (*podman.PodInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	pod, ok := m.pods[podID]
+	if !ok {
+		for _, candidate := range m.pods {
+			if candidate.Name == podID {
+				pod = candidate
+				ok = true
+
+				break
+			}
+		}
+	}
+
+	if !ok {
+		return nil, &podman.APIError{StatusCode: 404, Body: "pod not found"}
+	}
+
+	return &podman.PodInfo{
+		ID:     pod.ID,
+		Name:   pod.Name,
+		Status: pod.State,
+		Labels: pod.Labels,
+	}, nil
+}
+
 func (m *mockPodmanClient) CreatePod(
 	_ context.Context,
 	req *podman.PodCreateRequest,
