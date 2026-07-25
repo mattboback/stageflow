@@ -63,7 +63,6 @@
     "@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
     "ajv": "8.20.0",
     "ajv-formats": "^3.0.1",
-    "brace-expansion": "^5.0.8",
     "chrome-launcher": "^1.2.1",
     "lighthouse": "^13.4.1",
     "minio": "^8.0.7",

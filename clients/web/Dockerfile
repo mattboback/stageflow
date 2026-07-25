@@ -30,8 +30,14 @@ RUN mkdir -p /libs/contracts/report/generated/typescript \
       -o /libs/contracts/report/generated/typescript/unified-report.v2.ts \
       --unreachableDefinitions
 
-# Copy React source code and configurations
-COPY clients/web/eslint.config.js clients/web/vite.config.ts clients/web/react-router.config.ts clients/web/tsconfig.app.json clients/web/tsconfig.json clients/web/tsconfig.node.json ./
+# Copy React source code and configurations.
+#
+# tsconfig.json `references` every project config, and tsconfig.app.json now
+# `extends` the repo-root tsconfig.strict.json, so react-router's config loader
+# needs the whole chain resolvable or it fails with a bare "Tsconfig not found".
+# /app/../.. is /, which is where the root config has to land.
+COPY tsconfig.strict.json /tsconfig.strict.json
+COPY clients/web/eslint.config.js clients/web/vite.config.ts clients/web/react-router.config.ts clients/web/tsconfig.app.json clients/web/tsconfig.json clients/web/tsconfig.node.json clients/web/tsconfig.e2e.json ./
 COPY clients/web/app ./app
 COPY clients/web/public ./public
 
