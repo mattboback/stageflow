@@ -1,6 +1,11 @@
 # Scanner Runner - TypeScript/Playwright based scanner
 # Uses multi-stage build for smaller runtime image
 
+# Global ARG: must precede the first FROM to be visible to every stage that
+# redeclares it. Keep in step with the node-bin tag below and engines.node in
+# package.json; the guards assert the copied binary actually matches.
+ARG NODE_MAJOR=24
+
 FROM docker.io/oven/bun:1.3.8@sha256:371d30538b69303ced927bb5915697ac7e2fa8cb409ee332c66009de64de5aa3 AS bun-bin
 FROM docker.io/library/node:24.18.0-bookworm-slim AS node-bin
 
@@ -11,7 +16,9 @@ WORKDIR /repo
 COPY --from=bun-bin /usr/local/bin/bun /usr/local/bin/bun
 # Keep the scanner runtime on the same Node major declared in package metadata.
 COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
-RUN test "$(command -v node)" = "/usr/local/bin/node" && node --version | grep -E '^v22\.'
+ARG NODE_MAJOR
+RUN test "$(command -v node)" = "/usr/local/bin/node" \
+  && node --version | grep -E "^v${NODE_MAJOR}\."
 
 # Shared TypeScript base config used by all packages
 COPY tsconfig.strict.json /repo/tsconfig.strict.json
@@ -75,7 +82,9 @@ RUN apt-get update \
 
 COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
 
-RUN test "$(command -v node)" = "/usr/local/bin/node" && node --version | grep -E '^v22\.'
+ARG NODE_MAJOR
+RUN test "$(command -v node)" = "/usr/local/bin/node" \
+  && node --version | grep -E "^v${NODE_MAJOR}\."
 
 # Create data directory with proper permissions
 RUN mkdir -p /data && chown pwuser:pwuser /data
