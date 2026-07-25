@@ -29,12 +29,39 @@ export function isColorContrastRule(ruleId: string | undefined): boolean {
 	return ruleId === 'color-contrast' || ruleId === 'color-contrast-enhanced';
 }
 
+/**
+ * axe messageKeys that mean "there is no text here whose contrast could fail",
+ * as opposed to "the contrast could not be determined".
+ *
+ * `nonBmp` fires on elements whose content is only non-text characters — icon
+ * glyphs, arrows, decorative dividers. Asking a human to manually verify the
+ * contrast of a character that carries no information is busywork, and it drowns
+ * the findings that do need a look: scanning StageFlow's own landing page
+ * produced 14 of these findings, 12 of them `nonBmp`.
+ */
+const NON_VERIFIABLE_CONTRAST_MESSAGE_KEYS = new Set(['nonBmp']);
+
+function isVerifiableContrastIncomplete(node: AxeNode): boolean {
+	const messageKey = extractContrastData(node)?.messageKey;
+
+	return typeof messageKey !== 'string' || !NON_VERIFIABLE_CONTRAST_MESSAGE_KEYS.has(messageKey);
+}
+
+/**
+ * Narrows axe's `incomplete` results to the color-contrast nodes a human could
+ * actually adjudicate. Filters per node rather than per rule, because one
+ * color-contrast result mixes genuinely-ambiguous nodes with vacuous ones.
+ */
 export function getReportableIncompleteResults(
 	incompleteResults: AxeViolationResult[]
 ): AxeViolationResult[] {
-	return incompleteResults.filter(
-		(result) => isColorContrastRule(result.id) && (result.nodes?.length ?? 0) > 0
-	);
+	return incompleteResults
+		.filter((result) => isColorContrastRule(result.id))
+		.map((result) => ({
+			...result,
+			nodes: (result.nodes ?? []).filter(isVerifiableContrastIncomplete)
+		}))
+		.filter((result) => result.nodes.length > 0);
 }
 
 /**
@@ -122,7 +149,12 @@ export function mapIncompleteNodeToIssue(
 	return {
 		id: ruleId,
 		scanner: scannerName,
-		severity: normalizeSeverity(result.impact, 'moderate'),
+		// Always moderate, never axe's impact. axe reports color-contrast at
+		// `serious`, but an *incomplete* result means the check did not finish — the
+		// text is unverified, not failing. Inheriting `serious` conflated the two and
+		// made `--fail-on serious` unusable: it failed the build on ambiguity a human
+		// still has to adjudicate. axe's own impact stays in metadata below.
+		severity: 'moderate',
 		category,
 		title: 'Color contrast needs manual verification',
 		description:

@@ -51,7 +51,7 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 						)}
 						{pageCount} page{pageCount === 1 ? '' : 's'}
 					</span>
-					<span style={{ color: 'var(--ink-faint)' }}>{scannerLabel}</span>
+					<span className="igroup__scanner">{scannerLabel}</span>
 				</span>
 			</button>
 			{open && (

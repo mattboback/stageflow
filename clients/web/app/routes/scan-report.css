@@ -391,6 +391,13 @@
 	font-size: 0.875rem; color: var(--ink-muted);
 }
 .irow__meta-item { display: inline-flex; align-items: center; gap: var(--sp-1); }
+/* Label/value pair inside a meta item. These were inline `--ink-faint`, which
+   instrument.css reserves for "large/decorative only, never body prose" — it
+   measures 4.15:1 on --ground-deep and 4.35:1 on --surface-sunk, under AA's 4.5:1.
+   A field label naming the scanner or rule is informative text, so it uses
+   --ink-muted (>= 6.36:1 on every surface the row renders against). */
+.irow__meta-lab { color: var(--ink-muted); }
+.irow__meta-val { color: var(--ink); }
 .irow__desc {
 	color: var(--ink-muted); font-size: 0.9375rem; line-height: 1.55;
 	margin: var(--sp-2) 0 0; max-width: 72ch;
@@ -432,6 +439,10 @@
 	display: flex; gap: var(--sp-3); align-items: center;
 	font-size: 0.875rem; color: var(--ink-muted);
 }
+/* The scanner name identifies which tool produced the group, so it is
+   informative rather than decorative. Was inline `--ink-faint`, which fell to
+   4.35:1 once .igroup__head hovers to --surface-sunk. */
+.igroup__scanner { color: var(--ink-muted); }
 .igroup__body { display: none; border-top: 1px solid var(--line); background: var(--ground); }
 .igroup--open .igroup__body { display: block; }
 .igroup__body-label {

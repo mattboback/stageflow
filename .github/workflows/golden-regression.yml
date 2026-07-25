@@ -133,6 +133,60 @@ jobs:
           PROJECT_GOLDEN_ARTIFACT_DIR: artifacts/project-golden
           STAGEFLOW_API_KEY: ci-platform-api-token
 
+      # docs/product.md claims WCAG 2.1 AA is verified "plus StageFlow
+      # dogfooding". This is that claim. The stack is already up with the real
+      # frontend container on :3020, so scanning it costs one step.
+      #
+      # Scoped to --scanner axe deliberately: the claim being substantiated is an
+      # accessibility one. Folding in seo/link-checker/lighthouse would make a
+      # broken outbound link fail the accessibility gate.
+      - name: Scan StageFlow's own UI with StageFlow
+        run: |
+          mkdir -p artifacts/self-scan
+          stageflow scan http://localhost:3020/ \
+            --api http://localhost:8080 \
+            --scanner axe \
+            --allow-private-targets \
+            --fail-on serious \
+            --format json \
+            > artifacts/self-scan/landing.json
+        env:
+          STAGEFLOW_API_KEY: ci-platform-api-token
+
+      - name: Summarize self-scan
+        if: always()
+        run: |
+          report=artifacts/self-scan/landing.json
+          if [[ ! -s "$report" ]]; then
+            echo "No self-scan report produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo '## StageFlow scanning StageFlow'
+            echo ''
+            echo '| severity | findings |'
+            echo '| --- | --- |'
+            jq -r '
+              [.report.issues[]?.severity] | group_by(.) | map({s: .[0], n: length})
+              | if length == 0 then "| _none_ | 0 |"
+                else .[] | "| \(.s) | \(.n) |" end
+            ' "$report"
+            echo ''
+            jq -r '
+              .report.issues[]? | "- **\(.severity)** `\(.ruleId)` — \(.title)"
+            ' "$report" | sort -u
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload self-scan report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: self-scan-report
+          path: artifacts/self-scan
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Capture stack logs
         if: failure()
         run: |
