@@ -48,9 +48,18 @@ export function focusableWithin(container: HTMLElement): HTMLElement[] {
 	const candidates = container.querySelectorAll<HTMLElement>(
 		'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
 	);
-	// offsetWidth/offsetHeight are zero for display:none; getClientRects covers
-	// elements laid out but clipped, which are still reachable by keyboard.
 	return Array.from(candidates).filter(
-		(el) => el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0
+		(el) =>
+			// The `[tabindex]:not([tabindex="-1"])` clause above only excludes elements
+			// whose sole reason for matching is that attribute. A `<button tabindex="-1">`
+			// still matches the `button` clause, and IssueDetailModal renders exactly that
+			// for its inactive tabs (the roving-tabindex pattern). Collecting one as the
+			// last candidate breaks the wrap check in cycleTabFocus and lets focus escape
+			// the dialog. `el.tabIndex` reads the effective value, covering every clause
+			// of the selector at once.
+			el.tabIndex >= 0 &&
+			// offsetWidth/offsetHeight are zero for display:none; getClientRects covers
+			// elements laid out but clipped, which are still reachable by keyboard.
+			(el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0)
 	);
 }

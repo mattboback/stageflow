@@ -41,6 +41,12 @@ export function parseEnvBool(raw: string | undefined): boolean | undefined {
 /**
  * Parses a finite number from an environment value.
  *
+ * The whole trimmed string must be the number. `Number.parseFloat` would accept a
+ * trailing suffix — `parseFloat('2oops')` is `2` — which matters because
+ * core/config-loader.ts treats `undefined` as "set but invalid" and fails fast on
+ * it. Returning 2 there would silently accept a malformed job setting instead.
+ * This matches parseEnvInt below, which already required a full-string match.
+ *
  * @returns the number, or `undefined` when unset, unparseable, or non-finite.
  */
 export function parseEnvNumber(raw: string | undefined): number | undefined {
@@ -48,7 +54,14 @@ export function parseEnvNumber(raw: string | undefined): number | undefined {
 		return undefined;
 	}
 
-	const parsed = Number.parseFloat(raw);
+	const trimmed = raw.trim();
+	if (trimmed === '') {
+		return undefined;
+	}
+
+	// Number() rejects trailing garbage that parseFloat tolerates, but accepts ''
+	// (handled above) and hex/binary literals, which is fine for a numeric setting.
+	const parsed = Number(trimmed);
 	return Number.isFinite(parsed) ? parsed : undefined;
 }
 

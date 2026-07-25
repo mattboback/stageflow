@@ -56,7 +56,12 @@ func timeoutMiddleware(timeout time.Duration, next http.HandlerFunc) http.Handle
 		case result := <-done:
 			handleTimedResult(ctx, w, r, timeout, tw, result)
 		case <-ctx.Done():
-			// Timeout reached.
+			// Timeout reached. The handler goroutine is still running and nothing reads
+			// `done` after this point, so a panic it hits later would be recovered by
+			// runTimedHandler and then discarded — no log line, no stack — in the request
+			// most likely to be in a bad state. Drain it in the background to record it.
+			go logPanicAfterTimeout(done, r, timeout)
+
 			tw.markTimedOut()
 			writeTimeoutJSON(w, r, timeout)
 		}
@@ -81,6 +86,30 @@ func runTimedHandler(
 	}()
 
 	next.ServeHTTP(tw, r)
+}
+
+// logPanicAfterTimeout records a panic raised by a handler that was still running
+// when its deadline fired.
+//
+// It deliberately does not re-panic. handleTimedResult can, because it runs on
+// net/http's serving goroutine where the server's recovery boundary catches it.
+// This runs on neither that goroutine nor the handler's, so a panic here would
+// terminate the process. The response has already been sent, so recording it is the
+// only thing left worth doing.
+func logPanicAfterTimeout(done <-chan timeoutHandlerResult, r *http.Request, timeout time.Duration) {
+	result := <-done
+	if result.panicValue == nil {
+		return
+	}
+
+	slog.Error(
+		"HTTP handler panicked after its deadline elapsed; response was already sent",
+		"panic", result.panicValue,
+		"method", r.Method,
+		"path", r.URL.Path,
+		"timeout", timeout.String(),
+		"stack", string(result.panicStack),
+	)
 }
 
 func handleTimedResult(

@@ -68,6 +68,9 @@ type inMemoryRateLimiter struct {
 	windows map[string]rateWindow
 	limit   int
 
+	// lastEvict throttles the full-table sweep; see evictStaleLocked.
+	lastEvict time.Time
+
 	saturation saturationTracker
 }
 
@@ -136,7 +139,27 @@ func (l *inMemoryRateLimiter) allowLocked(key string, now time.Time) (bool, int,
 	return true, 0, false
 }
 
+// evictStaleLocked reclaims windows that have expired, at most once per
+// rate-limit window.
+//
+// The throttle matters: this walks the entire key table while holding l.mu, so
+// running it per request made the mitigation O(n) under exactly the condition it
+// defends against -- a high-cardinality source-IP flood driving the table toward
+// rateLimiterMaxEntries. Every request would pay a 10,000-entry scan under the
+// lock, and the rate limiter becomes the bottleneck it was added to prevent.
+//
+// Once per window is the right cadence rather than a compromise. allowLocked
+// already resets an expired window inline for any key that comes back, so the
+// sweep only ever reclaims keys that never return -- attacker-rotated addresses.
+// Deferring that by up to one window leaves at most two windows of dead keys in
+// the table, and errs toward fail-closed, which is the safe direction here.
 func (l *inMemoryRateLimiter) evictStaleLocked(now time.Time) {
+	if !l.lastEvict.IsZero() && now.Sub(l.lastEvict) < rateLimitWindow {
+		return
+	}
+
+	l.lastEvict = now
+
 	for key, window := range l.windows {
 		if now.Sub(window.start) >= rateLimitWindow {
 			delete(l.windows, key)
@@ -180,6 +203,9 @@ type clientTokenBucketLimiter struct {
 	buckets           map[string]clientTokenBucket
 	requestsPerMinute float64
 	burst             float64
+
+	// lastEvict throttles the full-table sweep; see evictStaleLocked.
+	lastEvict time.Time
 
 	saturation saturationTracker
 }
@@ -231,7 +257,17 @@ func (l *clientTokenBucketLimiter) allow(key string, now time.Time) (bool, int) 
 	return allowed, retryAfter
 }
 
-func (l *clientTokenBucketLimiter) allowLocked(key string, now time.Time) (bool, int, bool) {
+// evictStaleLocked reclaims fully-recovered buckets, at most once per rate-limit
+// window. Same reasoning as the fixed-window limiter's: this walks the whole table
+// under l.mu, so running it per request turned the flood defense into an O(n) cost
+// per request precisely when the table was largest.
+func (l *clientTokenBucketLimiter) evictStaleLocked(now time.Time) {
+	if !l.lastEvict.IsZero() && now.Sub(l.lastEvict) < rateLimitWindow {
+		return
+	}
+
+	l.lastEvict = now
+
 	// A bucket recovers fully within at most burst/rate minutes. Keeping it for
 	// at least one minute avoids churn while bounding attacker-controlled keys.
 	staleAfter := time.Duration(math.Ceil(l.burst/l.requestsPerMinute*float64(time.Minute))) * time.Nanosecond
@@ -244,6 +280,10 @@ func (l *clientTokenBucketLimiter) allowLocked(key string, now time.Time) (bool,
 			delete(l.buckets, bucketKey)
 		}
 	}
+}
+
+func (l *clientTokenBucketLimiter) allowLocked(key string, now time.Time) (bool, int, bool) {
+	l.evictStaleLocked(now)
 
 	bucket, exists := l.buckets[key]
 	if !exists {

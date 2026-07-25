@@ -89,8 +89,25 @@ describe('parseEnvNumber', () => {
 	it('returns undefined for unset, unparseable, and non-finite values', () => {
 		expect(parseEnvNumber(undefined)).toBeUndefined();
 		expect(parseEnvNumber('')).toBeUndefined();
+		expect(parseEnvNumber('   ')).toBeUndefined();
 		expect(parseEnvNumber('abc')).toBeUndefined();
 		expect(parseEnvNumber('Infinity')).toBeUndefined();
+		expect(parseEnvNumber('NaN')).toBeUndefined();
+	});
+
+	it('rejects a trailing suffix rather than truncating to the numeric prefix', () => {
+		// Number.parseFloat('2oops') is 2. Returning that would let
+		// core/config-loader.ts accept a malformed setting, because it fails fast
+		// only on undefined.
+		expect(parseEnvNumber('2oops')).toBeUndefined();
+		expect(parseEnvNumber('1.5rem')).toBeUndefined();
+		expect(parseEnvNumber('30s')).toBeUndefined();
+		expect(parseEnvNumber('5,000')).toBeUndefined();
+	});
+
+	it('still tolerates surrounding whitespace', () => {
+		expect(parseEnvNumber(' 42 ')).toBe(42);
+		expect(parseEnvNumber('\t1.5\n')).toBe(1.5);
 	});
 });
 

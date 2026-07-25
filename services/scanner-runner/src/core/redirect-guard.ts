@@ -10,6 +10,16 @@
  * copies had already drifted apart in their error handling. Since SECURITY.md
  * names SSRF as an in-scope boundary, the loop, the hop cap, and the location
  * resolution are defined once here, and callers supply only the transport.
+ *
+ * Scope note: this validates each hop's URL, not the connection. Validation resolves
+ * the hostname (target-validation.ts checks every returned address against the
+ * blocklist) and then hands the URL *string* to the transport, which resolves
+ * independently, so a record that changes between the two lookups is not caught
+ * here. That is the DNS-rebinding residual risk SECURITY.md already documents, along
+ * with the deployment-level mitigations; closing it would mean pinning the validated
+ * address into the connection, which neither transport supports without replacement
+ * (`fetch` needs a custom Agent with its own lookup, and Playwright's request API
+ * exposes no resolver hook).
  */
 
 import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';

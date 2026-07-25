@@ -1,12 +1,15 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -622,6 +625,187 @@ func TestRateLimiter_FailsClosedWhenTableSaturated(t *testing.T) {
 	// so saturation never starves established legitimate clients.
 	if ok, _ := limiter.allow("filler-0", now); !ok {
 		t.Fatal("expected an already-tracked key to remain allowed under saturation")
+	}
+}
+
+func TestRateLimiter_ExpiredWindowIsResetForReturningKey(t *testing.T) {
+	// The throttled sweep is only safe because a returning key has its expired
+	// window reset inline, independent of eviction. Without that, throttling the
+	// sweep would let a stale count deny a legitimate client.
+	limiter := newInMemoryRateLimiter(1)
+	start := time.Now().UTC()
+
+	if ok, _ := limiter.allow("client", start); !ok {
+		t.Fatal("first request should be allowed")
+	}
+
+	if ok, _ := limiter.allow("client", start); ok {
+		t.Fatal("second request in the same window should be denied at limit 1")
+	}
+
+	if ok, _ := limiter.allow("client", start.Add(rateLimitWindow+time.Second)); !ok {
+		t.Fatal("expected the window to reset for a returning key after it expired")
+	}
+}
+
+// mustAllow fails the test if a request is denied, so the sweep assertions below
+// read as statements about eviction rather than about rate limiting.
+func mustAllow(t *testing.T, limiter *inMemoryRateLimiter, key string, at time.Time) {
+	t.Helper()
+
+	if allowed, _ := limiter.allow(key, at); !allowed {
+		t.Fatalf("request for %q at %v should have been allowed", key, at)
+	}
+}
+
+func TestRateLimiter_SweepIsThrottledToOncePerWindow(t *testing.T) {
+	limiter := newInMemoryRateLimiter(100)
+	t0 := time.Now().UTC()
+
+	// The first call sweeps unconditionally and anchors the throttle at t0.
+	mustAllow(t, limiter, "anchor", t0)
+
+	// Tracked mid-window, so this one expires *between* scheduled sweeps rather
+	// than on one -- which is the only way to observe the throttle at all, since
+	// the staleness threshold and the sweep interval are both rateLimitWindow.
+	mustAllow(t, limiter, "midwindow", t0.Add(30*time.Second))
+
+	// t0+61s: a sweep is due. "anchor" is 61s old and goes; "midwindow" is 31s old
+	// and stays.
+	mustAllow(t, limiter, "trigger", t0.Add(rateLimitWindow+time.Second))
+
+	if _, exists := limiter.windows["anchor"]; exists {
+		t.Fatal("expected the expired anchor window to be swept")
+	}
+
+	if _, exists := limiter.windows["midwindow"]; !exists {
+		t.Fatal("expected the still-live midwindow entry to survive the sweep")
+	}
+
+	// t0+95s: "midwindow" is now 65s old, so it is expired -- but the last sweep ran
+	// at t0+61s, so the throttle must suppress this one. An unthrottled sweep walks
+	// the whole table here, which is the per-request O(n) cost being removed.
+	mustAllow(t, limiter, "probe", t0.Add(95*time.Second))
+
+	if _, exists := limiter.windows["midwindow"]; !exists {
+		t.Fatal("expected an expired entry to persist until the next scheduled sweep")
+	}
+
+	// t0+125s: the next sweep is due, and reclaims it.
+	mustAllow(t, limiter, "final", t0.Add(125*time.Second))
+
+	if _, exists := limiter.windows["midwindow"]; exists {
+		t.Fatal("expected the expired entry to be reclaimed once a sweep was due again")
+	}
+}
+
+func TestClientTokenBucketLimiter_SweepIsThrottledToOncePerWindow(t *testing.T) {
+	// burst/rate is 3/6 of a minute, floored to one minute, so staleAfter equals
+	// rateLimitWindow and the same between-sweeps window applies.
+	limiter := newClientTokenBucketLimiter(6, 3)
+	t0 := time.Now().UTC()
+
+	if allowed, _ := limiter.allow("anchor", t0); !allowed {
+		t.Fatal("anchor should be allowed")
+	}
+
+	if allowed, _ := limiter.allow("midwindow", t0.Add(30*time.Second)); !allowed {
+		t.Fatal("midwindow should be allowed")
+	}
+
+	if allowed, _ := limiter.allow("trigger", t0.Add(rateLimitWindow+time.Second)); !allowed {
+		t.Fatal("trigger should be allowed")
+	}
+
+	if _, exists := limiter.buckets["anchor"]; exists {
+		t.Fatal("expected the recovered anchor bucket to be swept")
+	}
+
+	if _, exists := limiter.buckets["midwindow"]; !exists {
+		t.Fatal("expected the not-yet-recovered midwindow bucket to survive")
+	}
+
+	if allowed, _ := limiter.allow("probe", t0.Add(95*time.Second)); !allowed {
+		t.Fatal("probe should be allowed")
+	}
+
+	if _, exists := limiter.buckets["midwindow"]; !exists {
+		t.Fatal("expected a recovered bucket to persist until the next scheduled sweep")
+	}
+
+	if allowed, _ := limiter.allow("final", t0.Add(125*time.Second)); !allowed {
+		t.Fatal("final should be allowed")
+	}
+
+	if _, exists := limiter.buckets["midwindow"]; exists {
+		t.Fatal("expected the recovered bucket to be reclaimed once a sweep was due again")
+	}
+}
+
+// syncBuffer collects log output written from another goroutine. bytes.Buffer is
+// not safe for concurrent use, and the drain this test exercises logs from a
+// background goroutine while the test reads.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.String()
+}
+
+func TestTimeoutMiddleware_LogsPanicRaisedAfterTheDeadline(t *testing.T) {
+	// A handler that outran its deadline and then panicked used to vanish entirely:
+	// runTimedHandler recovered it and sent it on a channel nobody read again.
+	// Assert it is logged, and that recovering it does not take the process down.
+	logs := &syncBuffer{}
+	previous := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewTextHandler(logs, &slog.HandlerOptions{Level: slog.LevelError})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	panicked := make(chan struct{})
+	handler := timeoutMiddleware(20*time.Millisecond, func(_ http.ResponseWriter, _ *http.Request) {
+		defer close(panicked)
+
+		time.Sleep(80 * time.Millisecond)
+
+		panic("late boom")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/slow", http.NoBody)
+	rr := httptest.NewRecorder()
+	handler(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503 once the deadline elapsed, got %d", rr.Code)
+	}
+
+	<-panicked
+
+	// The drain goroutine logs after receiving from the channel, so poll briefly.
+	deadline := time.Now().Add(2 * time.Second)
+	for !strings.Contains(logs.String(), "late boom") && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	logged := logs.String()
+	if !strings.Contains(logged, "late boom") {
+		t.Fatalf("expected the post-deadline panic to be logged, got: %q", logged)
+	}
+
+	if !strings.Contains(logged, "after its deadline") {
+		t.Fatalf("expected the log line to identify it as post-deadline, got: %q", logged)
 	}
 }
 
