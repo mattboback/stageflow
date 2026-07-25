@@ -78,16 +78,16 @@ jobs:
         with:
           python-version: '3.13'
 
-      # The stageflow-precommit hook regenerates the contract packages to check
-      # for drift, which shells out to bun. It is a `language: system` hook, so
-      # pre-commit provides no environment for it.
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
+      # stageflow-precommit is skipped here, not disabled. It is a `language: system`
+      # hook that regenerates the contract packages, so it needs those workspaces
+      # bootstrapped -- installing them in this job just to re-run a check the `go`
+      # job already performs (`bun run build` = generate -> validate:fixtures -> tsc,
+      # for all three packages) would duplicate the work and the wall-clock. Every
+      # other hook runs.
       - name: Run pre-commit hooks
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+        env:
+          SKIP: stageflow-precommit
 
   secrets_scan:
     name: Secrets (gitleaks)
@@ -142,9 +142,12 @@ jobs:
       - name: Generate schema contracts
         run: ./devtools/scripts/generate-contracts.sh
 
+      # `build` runs generate -> validate:fixtures -> tsc, so this is the contract
+      # drift and fixture-validity gate. provenance was missing from the loop, which
+      # left its four auth fixtures unvalidated anywhere in CI.
       - name: Verify TypeScript contract packages
         run: |
-          for dir in libs/contracts/report libs/contracts/scanner-manifest; do
+          for dir in libs/contracts/report libs/contracts/provenance libs/contracts/scanner-manifest; do
             (cd "$dir" && bun install --frozen-lockfile && bun run build && bun run typecheck)
           done
 
