@@ -27,7 +27,7 @@ concurrency:
 
 env:
   GO_VERSION: '1.26.5'
-  NODE_VERSION: '22'
+  NODE_VERSION: '24'
   BUN_VERSION: '1.3.8'
   JUST_VERSION: '1.55.1'
   GOLANGCI_LINT_VERSION: 'v2.12.2'
@@ -39,10 +39,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
@@ -74,7 +74,7 @@ jobs:
       # it. The dedicated gitleaks job is still separate: it scans full history
       # with fetch-depth 0, which the hook does not.
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.13'
 
@@ -87,7 +87,7 @@ jobs:
     needs: workflow_lint
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -102,10 +102,10 @@ jobs:
     needs: workflow_lint
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -173,7 +173,7 @@ jobs:
     needs: workflow_lint
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -181,7 +181,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -233,10 +233,10 @@ jobs:
     needs: workflow_lint
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -279,7 +279,7 @@ jobs:
     needs: workflow_lint
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -287,7 +287,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -333,7 +333,7 @@ jobs:
           - name: frontend-react
             dockerfile: clients/web/Dockerfile
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Build image
         run: docker build -f "${{ matrix.image.dockerfile }}" -t "stageflow/${{ matrix.image.name }}:ci" .
@@ -347,7 +347,7 @@ jobs:
           upload-artifact: false
 
       - name: Upload SBOM artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ matrix.image.name }}
           path: ./sbom-${{ matrix.image.name }}.spdx.json

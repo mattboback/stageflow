@@ -346,11 +346,6 @@ export interface ScannerMetadata {
 }
 
 export type ScannerCategory =
-	| 'accessibility'
-	| 'performance'
-	| 'security'
-	| 'seo'
-	| 'quality'
-	| 'custom';
+	'accessibility' | 'performance' | 'security' | 'seo' | 'quality' | 'custom';
 
 export type OutputFormat = 'json' | 'html' | 'csv';

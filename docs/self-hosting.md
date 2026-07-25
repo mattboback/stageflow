@@ -5,7 +5,7 @@ StageFlow uses rootless Podman for its long-running services and isolated per-jo
 ## Requirements
 
 - Go 1.26.5
-- Node.js 22
+- Node.js 24
 - Bun 1.3.8
 - Podman with Compose support
 - `just`

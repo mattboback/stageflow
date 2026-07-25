@@ -7,7 +7,7 @@
 # which then picks the `bun` export condition for react-dom/server and resolves
 # to server.bun.js, which does not export renderToPipeableStream and breaks the
 # react-router SSR/prerender pass.
-FROM docker.io/library/node:22-bookworm-slim AS builder
+FROM docker.io/library/node:24-bookworm-slim AS builder
 WORKDIR /app
 
 # Install bun for the frozen-lockfile install (bun.lock is bun-specific)
