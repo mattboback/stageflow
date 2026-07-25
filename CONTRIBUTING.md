@@ -30,9 +30,14 @@ machine will download that toolchain automatically rather than drift from CI.
 
 ## Quality Gates
 
-Pre-commit is a fast local guard for formatting, secrets, generated contract
+Pre-commit is a fast local guard for whitespace, secrets, generated contract
 drift, internal documentation links, and other common mistakes. It is not the
-full repo gate.
+full repo gate. Installing the hooks locally is optional, but the same config
+runs in CI (`Workflow Lint` job), so a change that fails it fails your PR
+whether or not you installed them.
+
+Code formatting is Prettier's job, not pre-commit's — see the formatting note
+under Quality Gates.
 
 Run `just ci` before opening a PR when feasible. It runs the stale-vocabulary
 check, Go build/lint/test/vuln checks, generated CLI-doc drift check, shell

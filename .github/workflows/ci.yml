@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Keeps the README's CI badge meaningful between merges: a green badge should
+  # mean "green against today's toolchain and dependency graph", not "green on
+  # whatever day main last moved". Offset from the golden-regression cron so the
+  # two suites do not contend for runners.
+  schedule:
+    - cron: '41 7 * * *'
   workflow_dispatch: {}
 
 permissions:
@@ -61,8 +67,19 @@ jobs:
       - name: Check Dependabot package coverage
         run: ./devtools/scripts/check-dependabot-coverage.sh
 
-      - name: Check Markdown links
-        run: node devtools/scripts/check-markdown-links.mjs
+      # Installing the hooks locally is optional (see CONTRIBUTING.md), so run the
+      # same config here. Without this, .pre-commit-config.yaml gates nothing for
+      # anyone who has not opted in, and drift in it goes unnoticed. This also
+      # covers the Markdown link check, which is why there is no separate step for
+      # it. The dedicated gitleaks job is still separate: it scans full history
+      # with fetch-depth 0, which the hook does not.
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Run pre-commit hooks
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
 
   secrets_scan:
     name: Secrets (gitleaks)
@@ -135,10 +152,14 @@ jobs:
       - name: CLI docs stay generated
         run: ./devtools/scripts/check-cli-docs-generated.sh
 
+      # Resolves `just` from a baked-in download manifest rather than querying the
+      # casey/just releases API at runtime. The previous action did the latter and
+      # intermittently failed with "no release for just matching version specifier"
+      # on a version that is in fact published, reddening unrelated PRs.
       - name: Setup just
-        uses: step-security/setup-just@9e8475ea068409b4ab53e0e7ef313e8bab0b6cbd # v3.0.1
+        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
         with:
-          just-version: ${{ env.JUST_VERSION }}
+          tool: just@${{ env.JUST_VERSION }}
 
       - name: Shell regression tests
         run: just shell-tests

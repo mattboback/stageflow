@@ -442,12 +442,19 @@ images:
     @echo "==> Building container images..."
     ./infra/scripts/build-images.sh
 
-[group('deploy'), doc('Production deploys run from the root control plane (this recipe only prints the procedure)')]
+[group('deploy'), doc('Production deploys run from an external control plane (this recipe only prints the procedure)')]
 deploy:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "StageFlow production deployment is managed from /home/matt/Deployment." >&2
-    echo "Run: cd /home/matt/Deployment && just check stageflow && just deploy stageflow" >&2
+    control_plane="${STAGEFLOW_PROD_DEPLOY_DIR:-}"
+    echo "StageFlow production deploys are not driven from this repository." >&2
+    if [[ -n "$control_plane" ]]; then
+        echo "Run: cd $control_plane && just check stageflow && just deploy stageflow" >&2
+    else
+        echo "Set STAGEFLOW_PROD_DEPLOY_DIR to your control-plane directory (see .env.example)," >&2
+        echo "then run: just check stageflow && just deploy stageflow from there." >&2
+        echo "Self-hosting without a control plane: see docs/self-hosting.md." >&2
+    fi
     exit 1
 
 [group('tools'), doc('Build and install stageflow CLI to ~/.local/bin (no stale binaries)')]
