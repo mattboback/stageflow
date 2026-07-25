@@ -67,14 +67,14 @@
     "lighthouse": "^13.4.1",
     "minio": "^8.0.7",
     "nats": "^2.29.3",
-    "playwright": "1.60.0",
+    "playwright": "1.62.0",
     "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@sentry/node": "9.47.1",
     "@types/node": "^24.13.3",
-    "@vitest/coverage-v8": "4.1.6",
+    "@vitest/coverage-v8": "4.1.10",
     "@vitest/eslint-plugin": "^1.6.24",
     "eslint": "^10.8.0",
     "globals": "^17.7.0",
@@ -82,7 +82,7 @@
     "prettier": "^3.9.6",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.65.0",
-    "vitest": "4.1.6"
+    "vitest": "4.1.10"
   },
   "overrides": {
     "@opentelemetry/core": "1.30.1",
