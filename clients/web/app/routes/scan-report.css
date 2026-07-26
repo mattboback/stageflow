@@ -1228,6 +1228,10 @@
 	margin: 0 0 var(--sp-2);
 }
 .rsection-placeholder p { margin: 0; font-size: var(--fs-4); }
+/* was an inline style object on the element; the pill needs a column to sit in */
+.rsection-placeholder--loading {
+	display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+}
 
 /* ---- responsive ---- */
 @media (max-width: 1100px) {
