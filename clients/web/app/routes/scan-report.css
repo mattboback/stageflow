@@ -1189,7 +1189,7 @@
 .errview__check {
 	display: inline-flex; align-items: center; justify-content: center;
 	width: 1.2rem; height: 1.2rem; border-radius: 50%;
-	background: var(--sev-pass); color: var(--on-severity);
+	background: var(--sev-pass-ink); color: var(--on-severity);
 	font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
 }
 .errview__ok-label { color: var(--ink-strong); font-weight: 600; }
