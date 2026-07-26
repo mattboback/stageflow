@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Maximize2, Minus, Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronRight, Maximize2, Minus, Plus } from 'lucide-react';
 
 import type { IssueDetail, UnifiedReport } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
@@ -40,6 +40,14 @@ type Zoom = 'fit' | number;
 const ZOOM_STEP = 1.25;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
+/* Below this, a pointer press is a click on a marker; above it, a pan. Three
+   pixels of tremor while clicking a 6px-stroked rect is normal. */
+const DRAG_SLOP = 4;
+
+function prefersReducedMotion(): boolean {
+	if (typeof window === 'undefined') return false;
+	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 export function VisualReviewPanel({
 	report,
@@ -127,6 +135,14 @@ export function VisualReviewPanel({
 	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
 	const [failedOverviewUrl, setFailedOverviewUrl] = useState<string | null>(null);
 
+	const viewportRef = useRef<HTMLDivElement | null>(null);
+	const svgRef = useRef<SVGSVGElement | null>(null);
+	/* Set on pointerup when the press turned out to be a pan, and read by the
+	   marker click handler on the click event that follows. Without it, every
+	   drag that happens to start on a marker opens that finding. */
+	const draggedRef = useRef(false);
+	const [panning, setPanning] = useState(false);
+
 	useEffect(() => {
 		if (!overviewUrl) {
 			return;
@@ -161,6 +177,138 @@ export function VisualReviewPanel({
 			.sort((a, b) => b.width * b.height - a.width * a.height);
 	}, [selectedPage, issueMap]);
 
+	/*
+	 * Page coordinates -> rendered pixels.
+	 *
+	 * The SVG carries viewBox="0 0 pageWidth pageHeight" and is laid out either
+	 * at 100% of the viewport (fit) or at an explicit pageWidth * zoom, so the
+	 * only honest source for the scale is what the browser actually rendered.
+	 * Deriving it from `zoom` would be wrong for the whole 'fit' branch.
+	 */
+	const scrollToElement = useCallback(
+		(element: { x: number; y: number; width: number; height: number }) => {
+			const viewport = viewportRef.current;
+			const svg = svgRef.current;
+			if (!viewport || !svg || pageWidth <= 0) return;
+
+			/* Rect deltas plus current scroll, rather than offsetLeft/offsetTop:
+			   those live on HTMLElement and an SVGSVGElement does not have them. */
+			const svgRect = svg.getBoundingClientRect();
+			const viewRect = viewport.getBoundingClientRect();
+			const scale = svgRect.width / pageWidth;
+			const originX = svgRect.left - viewRect.left + viewport.scrollLeft;
+			const originY = svgRect.top - viewRect.top + viewport.scrollTop;
+			const centerX = originX + (element.x + element.width / 2) * scale;
+			const centerY = originY + (element.y + element.height / 2) * scale;
+
+			viewport.scrollTo({
+				left: centerX - viewport.clientWidth / 2,
+				top: centerY - viewport.clientHeight / 2,
+				behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+			});
+		},
+		[pageWidth]
+	);
+
+	/* Leaving 'fit' has to start from the scale that was on screen, or the first
+	   pinch jumps to 100% before zooming. */
+	const renderedScaleRef = useRef(1);
+	useEffect(() => {
+		const svg = svgRef.current;
+		if (!svg || pageWidth <= 0) return;
+		renderedScaleRef.current = svg.getBoundingClientRect().width / pageWidth;
+	});
+
+	/*
+	 * Wheel zoom, attached natively rather than through onWheel.
+	 *
+	 * React registers its root wheel listener as passive, so preventDefault from
+	 * a synthetic handler is ignored and the browser zooms the whole page
+	 * instead. Only ctrl/meta-wheel is intercepted -- that is what a trackpad
+	 * pinch sends -- so ordinary two-finger scrolling still scrolls.
+	 */
+	useEffect(() => {
+		const viewport = viewportRef.current;
+		if (!viewport) return;
+
+		const onWheel = (event: WheelEvent) => {
+			if (!event.ctrlKey && !event.metaKey) return;
+			event.preventDefault();
+			setZoom((prev) => {
+				const current = prev === 'fit' ? renderedScaleRef.current : prev;
+				const next = current * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
+				return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+			});
+		};
+
+		viewport.addEventListener('wheel', onWheel, { passive: false });
+		return () => {
+			viewport.removeEventListener('wheel', onWheel);
+		};
+	}, []);
+
+	const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+		const viewport = viewportRef.current;
+		// Only the primary button, and only when there is something to pan to.
+		if (!viewport || event.button !== 0) return;
+		if (
+			viewport.scrollWidth <= viewport.clientWidth &&
+			viewport.scrollHeight <= viewport.clientHeight
+		)
+			return;
+
+		const startX = event.clientX;
+		const startY = event.clientY;
+		const startLeft = viewport.scrollLeft;
+		const startTop = viewport.scrollTop;
+		let moved = false;
+
+		const onMove = (move: PointerEvent) => {
+			const dx = move.clientX - startX;
+			const dy = move.clientY - startY;
+			if (!moved && Math.hypot(dx, dy) < DRAG_SLOP) return;
+			if (!moved) {
+				moved = true;
+				setPanning(true);
+				viewport.setPointerCapture(move.pointerId);
+			}
+			viewport.scrollLeft = startLeft - dx;
+			viewport.scrollTop = startTop - dy;
+		};
+
+		const onUp = (up: PointerEvent) => {
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+			if (!moved) return;
+			setPanning(false);
+			draggedRef.current = true;
+			if (viewport.hasPointerCapture(up.pointerId)) viewport.releasePointerCapture(up.pointerId);
+			// Cleared after the click this drag is about to synthesize.
+			window.setTimeout(() => {
+				draggedRef.current = false;
+			}, 0);
+		};
+
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	};
+
+	/* Markers in reading order down the page rather than the paint order, which
+	   is largest-first so big boxes sit behind small ones. */
+	const walkOrder = useMemo(
+		() => [...overlayElements].sort((a, b) => a.y - b.y || a.x - b.x),
+		[overlayElements]
+	);
+
+	const stepToNextMarker = () => {
+		if (walkOrder.length === 0) return;
+		const current = walkOrder.findIndex((el) => el.issueId === activeIssueId);
+		const next = walkOrder[(current + 1) % walkOrder.length];
+		if (!next) return;
+		setActiveIssueId(next.issueId);
+		scrollToElement(next);
+	};
+
 	if (!selectedPage) {
 		return (
 			<div className="vrev__empty">
@@ -170,6 +318,7 @@ export function VisualReviewPanel({
 	}
 
 	const handleMarkerClick = (issueId: string) => {
+		if (draggedRef.current) return;
 		const issue = issueMap[issueId];
 		if (!issue) return;
 		setActiveIssueId(issueId);
@@ -265,6 +414,16 @@ export function VisualReviewPanel({
 							</button>
 							{zoomPercent && <span className="vrev__zoom-val num">{zoomPercent}</span>}
 						</div>
+						{walkOrder.length > 0 && (
+							<button
+								type="button"
+								className="vrev__stage-next"
+								onClick={stepToNextMarker}
+								aria-label={`Next finding on this page, ${walkOrder.length} located`}
+							>
+								Next finding <ChevronRight size={14} aria-hidden="true" />
+							</button>
+						)}
 						{overviewUrl && (
 							<a
 								className="vrev__stage-open"
@@ -295,8 +454,13 @@ export function VisualReviewPanel({
 						<p>Loading page-overview screenshot...</p>
 					</div>
 				) : (
-					<div className="vrev__viewport">
+					<div
+						ref={viewportRef}
+						className={`vrev__viewport${panning ? ' vrev__viewport--panning' : ''}`}
+						onPointerDown={handlePointerDown}
+					>
 						<svg
+							ref={svgRef}
 							className="vrev__svg"
 							style={zoom === 'fit' ? undefined : { width: pageWidth * zoom }}
 							viewBox={`0 0 ${pageWidth} ${pageHeight}`}
@@ -331,7 +495,13 @@ export function VisualReviewPanel({
 										aria-label={`Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
 										style={{ cursor: 'pointer' }}
 										onClick={() => handleMarkerClick(el.issueId)}
-										onFocus={() => setActiveIssueId(el.issueId)}
+										onFocus={() => {
+											setActiveIssueId(el.issueId);
+											/* Tab already walks the markers; without this the
+											   focused one is routinely off screen, which is the
+											   same as having no keyboard support at all. */
+											scrollToElement(el);
+										}}
 										onKeyDown={(event) => {
 											if (event.key === 'Enter' || event.key === ' ') {
 												event.preventDefault();

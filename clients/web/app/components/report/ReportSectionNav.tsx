@@ -1,6 +1,6 @@
 import type { UnifiedReport } from '../../lib/types/unified-report';
 
-export type ReportSection = 'review' | 'issues' | 'artifacts';
+export type ReportSection = 'review' | 'pages' | 'issues' | 'artifacts';
 
 interface Props {
 	report: UnifiedReport;
@@ -26,6 +26,11 @@ export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 			label: 'Review',
 			count: pages > 0 ? `${pages} page${pages === 1 ? '' : 's'}` : null
 		},
+		/* Hidden below two pages: a single-page scan has nothing to compare and a
+		   tab that always reads "1" is furniture. */
+		...(report.pages.length > 1
+			? [{ id: 'pages' as const, label: 'Pages', count: String(report.pages.length) }]
+			: []),
 		{ id: 'issues', label: 'Findings', count: issues > 0 ? String(issues) : null },
 		{
 			id: 'artifacts',

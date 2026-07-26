@@ -1110,6 +1110,14 @@
 }
 .vrev__zoom-btn--icon { padding: 0.35rem 0.5rem; }
 .vrev__zoom-val { font-size: var(--fs-3); color: var(--ink-muted); min-width: 3ch; }
+.vrev__stage-next {
+	display: inline-flex; align-items: center; gap: 0.25rem;
+	margin-left: auto; padding: 0.35rem 0.7rem;
+	border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+	background: var(--surface); color: var(--ink-strong);
+	font-size: var(--fs-3); font-weight: 600; font-family: inherit; cursor: pointer;
+}
+.vrev__stage-next:hover { border-color: var(--signal); color: var(--signal-ink); }
 .vrev__stage-open {
 	display: inline-flex; align-items: center; gap: 0.35rem;
 	font-size: var(--fs-3); font-weight: 600; color: var(--signal-ink);
@@ -1118,7 +1126,14 @@
 .vrev__viewport {
 	overflow: auto; flex: 1; min-height: 0;
 	background: var(--ground-deep);
+	/* grab, not grabbing: the pointer handler bails when there is nothing to
+	   pan, and a grab cursor over a screenshot that cannot move is a lie.
+	   overscroll-behavior stops a pan that hits the bottom from scrolling the
+	   report page out from under the screenshot. */
+	cursor: grab; overscroll-behavior: contain;
+	touch-action: pan-x pan-y pinch-zoom;
 }
+.vrev__viewport--panning { cursor: grabbing; user-select: none; }
 .vrev__svg { display: block; width: 100%; height: auto; max-width: none; }
 .vrev__empty, .vrev__empty-msg {
 	padding: 2.5rem 1.5rem; text-align: center;
@@ -1321,3 +1336,67 @@
 	stroke-width: 7px;
 	stroke-dasharray: 12 6;
 }
+
+/* ---- page index (?section=pages) --------------------------------------
+   Renders entirely from data the report already carried: pages[] has the
+   per-page severity counts, and the page↔screenshot join was written for the
+   visual review panel. */
+.pgrid {
+	list-style: none; margin: var(--sp-5) 0 0; padding: 0;
+	display: grid; gap: var(--sp-4);
+	grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+}
+.pcard {
+	display: grid; grid-template-rows: auto 1fr; gap: 0;
+	width: 100%; height: 100%; padding: 0; text-align: left;
+	border: 1px solid var(--line); border-radius: var(--r-md);
+	background: var(--surface); overflow: hidden;
+	box-shadow: var(--shadow-sm);
+	transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+.pcard:hover { border-color: var(--line-strong); box-shadow: var(--shadow-md); }
+/* Fixed aspect so a 5000px-tall page and a short one produce the same card.
+   The screenshot is anchored to the top because that is the part anyone
+   recognises. */
+.pcard__shot {
+	display: block; aspect-ratio: 16 / 10; overflow: hidden;
+	background: var(--ground-deep); border-bottom: 1px solid var(--line);
+}
+.pcard__shot img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.pcard__shot-empty {
+	display: grid; place-items: center; height: 100%;
+	color: var(--ink-faint); font-size: var(--fs-2);
+}
+.pcard__body { display: grid; align-content: start; gap: var(--sp-2); padding: var(--sp-4); }
+.pcard__path {
+	font-size: var(--fs-5); font-weight: 600; color: var(--ink-strong);
+	overflow-wrap: anywhere;
+}
+.pcard__url {
+	font-size: var(--fs-2); color: var(--ink-muted);
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Segment widths are a share of the worst page's total, not of this page's
+   own, so the bars are comparable between cards instead of every one filling
+   its track. The clean state keeps the track visible rather than collapsing
+   the row and shifting everything below it. */
+.pcard__bar {
+	display: flex; gap: 2px; height: 6px; margin-top: var(--sp-1);
+	border-radius: var(--r-pill); overflow: hidden; background: var(--surface-sunk);
+}
+.pcard__bar-seg { display: block; min-width: 4px; border-radius: var(--r-pill); }
+.pcard__bar-seg.sev-critical { background: var(--sev-critical); }
+.pcard__bar-seg.sev-serious  { background: var(--sev-serious); }
+.pcard__bar-seg.sev-moderate { background: var(--sev-moderate); }
+.pcard__bar-seg.sev-minor    { background: var(--sev-minor); }
+.pcard__bar-seg.sev-info     { background: var(--sev-info); }
+.pcard__bar-clean { display: block; flex: 1; background: var(--sev-pass); }
+.pcard__meta {
+	display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.35rem;
+	font-size: var(--fs-3); color: var(--ink-muted);
+}
+.pcard__count {
+	font-size: var(--fs-6); font-weight: 700; color: var(--ink-strong);
+	font-variant-numeric: tabular-nums;
+}
+.pcard__markers { color: var(--ink-faint); }
