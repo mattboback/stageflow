@@ -28,6 +28,15 @@ const LOUPE_GRID = 9;
 const LOUPE_ZOOM = 12;
 const LOUPE_SIZE = LOUPE_GRID * LOUPE_ZOOM;
 
+/*
+ * The loupe mat, the crosshair, and the element outline are hardcoded on
+ * purpose and must not become theme tokens. They sit over a screenshot of the
+ * scanned page, whose colors are fixed data — sampling a pixel has to look the
+ * same whichever theme the operator happens to be running. The crosshair is a
+ * white-over-dark double stroke precisely so it stays visible on any pixel it
+ * lands on.
+ */
+
 const SLOT_LABELS: Record<SampleSlot, string> = { fg: 'Text', bg: 'Background' };
 
 function defaultCursor(viewBox: ViewBox, element: Rect | null): SamplePoint {

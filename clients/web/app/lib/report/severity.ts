@@ -84,6 +84,11 @@ export function getSeverityBadgeClass(severity?: string | null): string {
 /*
  * SVG presentation attributes can't resolve CSS custom properties, so these
  * mirror the --sev-* tokens in instrument.css (sRGB approximations).
+ *
+ * These deliberately do NOT follow the theme. They are painted on top of a
+ * screenshot of someone else's page, which does not change when our chrome
+ * does — a marker tuned for our dark surface would be wrong over a light
+ * screenshot. Leave them fixed.
  */
 export function getSeverityStrokeColor(severity?: string | null): string {
 	switch (severity) {

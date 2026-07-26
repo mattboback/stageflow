@@ -6,6 +6,7 @@ import {
 	SITE_NAME,
 	SITE_TAGLINE
 } from '../lib/site-metadata';
+import { BrandMark } from './BrandMark';
 
 /* slim: meta row only — used under active application workflows where the
    sitemap is noise (scan progress, report). */
@@ -32,7 +33,7 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 			<div className="wrap site-footer__inner">
 				<div className="site-footer__brand">
 					<Link className="brand" to="/">
-						<span className="brand__mark" aria-hidden="true" />
+						<BrandMark />
 						<span className="brand__name">{SITE_NAME}</span>
 					</Link>
 					<p className="muted site-footer__tagline">{SITE_TAGLINE}.</p>
