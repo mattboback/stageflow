@@ -12,6 +12,7 @@ import { SiteHeader } from './components/SiteHeader';
 import { SiteFooter } from './components/SiteFooter';
 import { RouteFault } from './components/RouteFault';
 import { Pill } from './components/Pill';
+import { THEME_INIT_SCRIPT } from './lib/theme';
 
 import './styles/instrument.css';
 import './styles/fault.css';
@@ -23,12 +24,23 @@ export const links: LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en">
+		/*
+		 * suppressHydrationWarning is required, not tidiness. THEME_INIT_SCRIPT
+		 * sets data-theme on this element before React hydrates, and React 19
+		 * reports the extra attribute through console.error — which the
+		 * Playwright fixture fails every spec on.
+		 *
+		 * This lives in Layout rather than a route because Layout also produces
+		 * __spa-fallback.html, which nginx serves for /scan/* and /demo. One
+		 * place covers every entry document.
+		 */
+		<html lang="en" suppressHydrationWarning>
 			<head>
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<Meta />
 				<Links />
+				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 			</head>
 			<body>
 				<a className="skip-link" href="#main">

@@ -365,6 +365,11 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	/* Touch targets: keep visuals compact, guarantee ~44px hit areas */
 	.nav a.navlink, .btn--sm { min-height: 44px; }
 	.tab { padding-block: 0.85rem; min-height: 44px; }
+	/* Drop the words, keep the icons and the hit area. The group still has its
+	   accessible name from the legend, and each radio from its value. */
+	.themepick__label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+		overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+	.themepick__opt { min-height: 38px; padding-inline: 0.55rem; }
 }
 
 /* ----------------------------------------------------------------- button */
@@ -506,6 +511,31 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .input::placeholder { color: var(--ink-faint); }
 .input:focus { outline: none; border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-wash); }
+
+/* -------------------------------------------------------------- theme pick
+   Segmented control over three native radios. The inputs are .sr-only, so the
+   visible state rides :checked on the label, and focus rides :focus-visible on
+   the input via :has() — the ring has to appear on the segment the keyboard is
+   actually on, not on the group. */
+.themepick {
+	display: inline-flex; align-items: center; gap: 1px;
+	padding: 2px; margin: 0; border: 1px solid var(--line); border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+}
+.themepick__opt {
+	display: inline-flex; align-items: center; gap: 0.35rem;
+	padding: 0.32rem 0.6rem; border-radius: var(--r-pill);
+	font-size: 0.8125rem; font-weight: 600; color: var(--ink-muted);
+	cursor: pointer; white-space: nowrap;
+	transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+.themepick__opt:hover { color: var(--ink-strong); }
+.themepick__opt:has(input:checked) {
+	color: var(--signal-ink); background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.themepick__opt:has(input:focus-visible) {
+	outline: 2.5px solid var(--signal); outline-offset: 2px;
+}
 
 /* ------------------------------------------------------------------ toggle */
 .toggle {

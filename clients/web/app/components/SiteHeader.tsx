@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { DOCS_URL, GITHUB_URL, SITE_NAME } from '../lib/site-metadata';
+import { ThemeToggle } from './ThemeToggle';
 
 type Current = 'home' | 'projects' | 'playground' | undefined;
 
@@ -25,6 +26,7 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 						<Link className="navlink navlink--back" to={app.backTo}>
 							<span aria-hidden="true">←</span> {app.backLabel}
 						</Link>
+						<ThemeToggle />
 					</nav>
 				</div>
 			</header>
@@ -59,6 +61,7 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 					<a className="navlink" href={DOCS_URL}>
 						Docs
 					</a>
+					<ThemeToggle />
 					<a className="btn btn--ghost btn--sm" href={GITHUB_URL}>
 						GitHub ↗
 					</a>
