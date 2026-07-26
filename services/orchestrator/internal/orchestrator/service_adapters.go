@@ -364,10 +364,17 @@ func (o *Orchestrator) CleanupJob(ctx context.Context, job *models.Job) error {
 		return nil
 	}
 
-	if job.PodID != "" {
-		if err := o.cleanupPod(ctx, job.PodID); err != nil {
-			return err
-		}
+	// Fall back to the deterministic name when no pod ID was recorded. Podman can
+	// create the pod and lose the response, so an empty PodID does not mean no pod
+	// exists -- and without this the orphan is never removed by anything.
+	// Stop/Remove both accept a name in place of an ID.
+	podRef := job.PodID
+	if podRef == "" {
+		podRef = podman.JobPodName(job.ID)
+	}
+
+	if err := o.cleanupPod(ctx, podRef); err != nil {
+		return err
 	}
 
 	o.cleanupVolumes(ctx, job.ID)

@@ -175,6 +175,13 @@ func isAPIStatus(err error, status int) bool {
 	return errors.As(err, &apiErr) && apiErr.StatusCode == status
 }
 
+// IsNotFound reports whether err is Podman's 404. Exported because callers
+// outside this package delete by name and need "it was already gone" to count as
+// success rather than as a failure that aborts the rest of a cleanup.
+func IsNotFound(err error) bool {
+	return isAPIStatus(err, http.StatusNotFound)
+}
+
 func (c *Client) doLibpodRequestWithOptions(
 	ctx context.Context,
 	method, suffix string,
