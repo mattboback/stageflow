@@ -47,7 +47,7 @@
 
 .projects-alert {
 	padding: var(--sp-3) var(--sp-4);
-	border: 1px solid oklch(0.86 0.05 27);
+	border: 1px solid var(--sev-critical-edge);
 	border-radius: var(--r-sm);
 	background: var(--sev-critical-wash);
 	color: var(--sev-critical);
@@ -150,7 +150,7 @@
 
 .project-card__delete:hover {
 	color: var(--sev-critical);
-	border-color: oklch(0.86 0.05 27);
+	border-color: var(--sev-critical-edge);
 	background: var(--sev-critical-wash);
 }
 

@@ -35,7 +35,15 @@
 	--signal-wash: oklch(0.955 0.024 202);  /* faint fill */
 	--signal-edge: oklch(0.865 0.055 203);  /* tinted border */
 
-	/* --- Calibrated severity scale (always paired with a text label) ------- */
+	/* --- Calibrated severity scale (always paired with a text label) -------
+	   Four roles per severity, and every one of them is a contrast obligation
+	   checked by app/styles/theme-contrast.test.ts:
+	     base    fill and non-text marks     >= 3:1 on surface  (SC 1.4.11)
+	     -ink    severity-colored text       >= 4.5:1 on surface and on -wash
+	     -wash   tinted fill behind -ink
+	     -edge   tinted border on a wash
+	   The base hue is NOT always legible as text: amber and green have to drop
+	   in lightness to clear 4.5:1, which is why -ink exists separately. */
 	--sev-critical: oklch(0.52 0.20 27);
 	--sev-serious:  oklch(0.52 0.16 45);
 	--sev-moderate: oklch(0.58 0.125 82);
@@ -47,6 +55,73 @@
 	--sev-moderate-wash: oklch(0.968 0.028 85);
 	--sev-minor-wash:    oklch(0.966 0.024 140);
 	--sev-info-wash:     oklch(0.963 0.018 245);
+
+	--sev-critical-ink: oklch(0.52 0.20 27);   /* base already clears 4.5:1 */
+	--sev-serious-ink:  oklch(0.52 0.16 45);
+	--sev-moderate-ink: oklch(0.46 0.11 80);   /* amber must darken to be text */
+	--sev-minor-ink:    oklch(0.44 0.11 140);  /* so must green */
+	--sev-info-ink:     oklch(0.52 0.10 245);
+	--sev-pass-ink:     oklch(0.42 0.09 158);
+
+	/* Emphatic variants: verdict buttons and review chips, where the label is
+	   the whole control rather than a word inside a sentence. */
+	--sev-critical-ink-strong: oklch(0.40 0.14 27);
+	--sev-pass-ink-strong:     oklch(0.35 0.09 158);
+
+	--sev-critical-edge: oklch(0.86 0.05 27);
+	--sev-serious-edge:  oklch(0.86 0.05 47);
+	--sev-moderate-edge: oklch(0.86 0.06 80);
+	--sev-minor-edge:    oklch(0.86 0.05 135);
+	--sev-info-edge:     oklch(0.86 0.04 245);
+	--sev-pass-edge:     oklch(0.86 0.05 158);
+	--sev-critical-edge-strong: oklch(0.78 0.08 27);
+	--sev-pass-edge-strong:     oklch(0.78 0.07 150);
+	--sev-pass-edge-hover:      oklch(0.55 0.10 155);
+	--sev-critical-press:       oklch(0.47 0.19 27);
+
+	/* Screenshot marker fills. Flat tokens rather than color-mix(), because a
+	   10%-of-base tint calibrated against white is wrong on a dark ground and
+	   has to be re-derived, not recomputed. */
+	--sev-neutral-overlay:  oklch(0.55 0.014 225 / 0.1);
+	--sev-critical-overlay: oklch(0.52 0.20 27 / 0.1);
+	--sev-serious-overlay:  oklch(0.52 0.16 45 / 0.1);
+	--sev-moderate-overlay: oklch(0.58 0.125 82 / 0.1);
+	--sev-minor-overlay:    oklch(0.52 0.12 135 / 0.1);
+	--sev-info-overlay:     oklch(0.52 0.10 245 / 0.1);
+
+	/* --- Foreground on a filled color -------------------------------------
+	   Split by what they sit on, because they do not move together: in dark
+	   the signal stays deep enough for white text while severity fills go
+	   light and need dark text. */
+	--on-signal:   oklch(0.99 0 0);
+	--on-severity: oklch(0.99 0 0);
+	--knob:        oklch(0.99 0 0);   /* toggle handle */
+
+	/* --- Overlay surfaces --------------------------------------------------- */
+	--surface-glass: oklch(0.995 0.002 210 / 0.88);        /* sticky header */
+	--surface-glass-strong: oklch(0.995 0.002 210 / 0.94); /* mobile action bar */
+	--scrim: oklch(0.2 0.015 230 / 0.5);                   /* modal backdrop */
+	--scrim-soft: oklch(0.23 0.02 230 / 0.35);             /* sheet backdrop */
+	--shadow-color: oklch(0.25 0.02 230 / 0.05);
+	--signal-ring: oklch(0.55 0.105 205 / 0.4);            /* live pulse */
+	--signal-ring-fade: oklch(0.55 0.105 205 / 0);
+
+	/* --- Advisory amber: not a finding severity, a caution about input ----- */
+	--warn-wash: oklch(0.97 0.025 78);
+	--warn-edge: oklch(0.78 0.09 75);
+	--warn-rule: oklch(0.52 0.12 65);
+
+	/* --- Terminal island: literal CLI output, dark in BOTH themes ----------
+	   Deliberately not sourced from --ink-strong. If it were, it would invert
+	   with the theme and render near-white text on a near-white block. */
+	--terminal-bg: oklch(0.23 0.02 230);
+	--terminal-edge: transparent;
+	--terminal-ink: oklch(0.94 0.008 240);
+	--terminal-ink-faint: oklch(0.68 0.012 240);
+	--terminal-prompt: oklch(0.78 0.09 205);
+	--terminal-ok: oklch(0.82 0.11 155);
+	--terminal-warn: oklch(0.83 0.11 65);
+	--stripe: oklch(1 0 0 / 0.16);   /* barber-pole on the running meter */
 
 	/* --- Type: local system stacks, with no third-party font requests ------- */
 	--display: 'Avenir Next', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
@@ -64,6 +139,11 @@
 	--shadow-sm: 0 1px 2px oklch(0.25 0.02 230 / 0.05);
 	--shadow-md: 0 4px 14px oklch(0.25 0.02 230 / 0.09);
 	--shadow-pop: 0 16px 48px oklch(0.25 0.02 230 / 0.16);
+
+	/* Hover dim for surfaces whose fill is set per-severity by a class, where
+	   an explicit press token per severity would cost five more tokens for one
+	   hover state. Inverts above 1 on a dark ground. */
+	--dim: 0.96;
 
 	/* --- Motion --- */
 	--dur-1: 120ms;
@@ -158,7 +238,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 /* ----------------------------------------------------------------- header */
 .site-header {
 	position: sticky; top: 0; z-index: var(--z-sticky);
-	background: oklch(0.995 0.002 210 / 0.88);
+	background: var(--surface-glass);
 	backdrop-filter: saturate(1.3) blur(10px);
 	border-bottom: 1px solid var(--line);
 }
@@ -177,7 +257,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	content: '';
 	position: absolute; inset: 4px;
 	border-radius: 50%;
-	border: 2.5px solid oklch(0.99 0 0);
+	border: 2.5px solid var(--on-signal);
 	border-bottom-color: transparent;
 	border-left-color: transparent;
 	transform: rotate(45deg);
@@ -230,12 +310,12 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	white-space: nowrap;
 }
 .btn:active { transform: translateY(1px); }
-.btn--primary { background: var(--signal-strong); color: oklch(0.99 0 0); }
+.btn--primary { background: var(--signal-strong); color: var(--on-signal); }
 .btn--primary:hover { background: var(--signal-press); }
 .btn--ghost { color: var(--ink-strong); border-color: var(--line-strong); background: var(--surface); }
 .btn--ghost:hover { border-color: var(--ink-faint); background: var(--ground); }
-.btn--danger { background: var(--sev-critical); color: oklch(0.99 0 0); }
-.btn--danger:hover { filter: brightness(0.92); }
+.btn--danger { background: var(--sev-critical); color: var(--on-severity); }
+.btn--danger:hover { background: var(--sev-critical-press); }
 .btn--sm { padding: 0.5rem 0.85rem; font-size: 0.875rem; }
 .btn--lg { padding: 0.85rem 1.4rem; font-size: 1rem; border-radius: var(--r-sm); }
 .btn .ar { transition: transform var(--dur-2) var(--ease); }
@@ -330,10 +410,10 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .pill__led { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pill--live { color: var(--signal-ink); border-color: var(--signal-edge); background: var(--signal-wash); }
 .pill--live .pill__led { background: var(--signal); animation: blink 1.2s steps(2, jump-none) infinite; }
-.pill--done { color: oklch(0.42 0.10 160); border-color: oklch(0.86 0.05 158); background: var(--sev-minor-wash); }
+.pill--done { color: var(--sev-pass-ink); border-color: var(--sev-pass-edge); background: var(--sev-minor-wash); }
 .pill--done .pill__led { background: var(--sev-pass); }
 .pill--queued { color: var(--ink-muted); }
-.pill--error { color: var(--sev-critical); border-color: oklch(0.86 0.05 27); background: var(--sev-critical-wash); }
+.pill--error { color: var(--sev-critical-ink); border-color: var(--sev-critical-edge); background: var(--sev-critical-wash); }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 /* Severity badge: filled wash pill, label always textual */
@@ -342,11 +422,11 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	font-size: 0.8125rem; font-weight: 700; line-height: 1;
 	padding: 0.32rem 0.65rem; border-radius: var(--r-pill);
 }
-.sevbadge--critical { color: var(--sev-critical); background: var(--sev-critical-wash); }
-.sevbadge--serious  { color: var(--sev-serious);  background: var(--sev-serious-wash); }
-.sevbadge--moderate { color: oklch(0.46 0.11 80);  background: var(--sev-moderate-wash); }
-.sevbadge--minor    { color: oklch(0.44 0.11 140); background: var(--sev-minor-wash); }
-.sevbadge--info     { color: var(--sev-info);     background: var(--sev-info-wash); }
+.sevbadge--critical { color: var(--sev-critical-ink); background: var(--sev-critical-wash); }
+.sevbadge--serious  { color: var(--sev-serious-ink);  background: var(--sev-serious-wash); }
+.sevbadge--moderate { color: var(--sev-moderate-ink); background: var(--sev-moderate-wash); }
+.sevbadge--minor    { color: var(--sev-minor-ink);    background: var(--sev-minor-wash); }
+.sevbadge--info     { color: var(--sev-info-ink);     background: var(--sev-info-wash); }
 
 /* ------------------------------------------------------------- input field */
 .field { display: flex; flex-direction: column; gap: 0.45rem; }
@@ -366,7 +446,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .toggle::after {
 	content: ''; position: absolute; top: 3px; left: 3px; width: 17px; height: 17px;
-	border-radius: 50%; background: oklch(0.99 0 0); box-shadow: var(--shadow-sm);
+	border-radius: 50%; background: var(--knob); box-shadow: var(--shadow-sm);
 	transition: transform var(--dur-2) var(--ease);
 }
 .toggle[aria-checked='true'], .toggle--on { background: var(--signal-strong); }
@@ -375,7 +455,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 /* ---------------------------------------------------------- confirm dialog */
 .cdialog__backdrop {
 	position: fixed; inset: 0; z-index: var(--z-modal);
-	background: oklch(0.2 0.015 230 / 0.5);
+	background: var(--scrim);
 	display: flex; align-items: center; justify-content: center;
 	padding: 2rem 1rem;
 }
@@ -418,8 +498,8 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	display: inline-flex; align-items: center; gap: 0.25rem;
 	font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.delta--good { color: oklch(0.44 0.11 155); }
-.delta--bad { color: var(--sev-critical); }
+.delta--good { color: var(--sev-pass-ink); }
+.delta--bad { color: var(--sev-critical-ink); }
 .delta--flat { color: var(--ink-muted); }
 
 /* -------------------------------------------------------------- utilities */

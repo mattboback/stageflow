@@ -21,7 +21,7 @@
 	box-shadow: var(--shadow-sm);
 }
 .shead--failed {
-	border-color: oklch(0.86 0.05 27);
+	border-color: var(--sev-critical-edge);
 }
 .shead__id {
 	display: flex;
@@ -106,7 +106,7 @@
 	background: repeating-linear-gradient(
 		45deg,
 		transparent 0 8px,
-		oklch(1 0 0 / 0.16) 8px 16px
+		var(--stripe) 8px 16px
 	);
 	animation: slide 0.95s linear infinite;
 }
@@ -129,8 +129,8 @@
 }
 .note--err {
 	background: var(--sev-critical-wash);
-	border: 1px solid oklch(0.86 0.05 27);
-	color: oklch(0.4 0.14 27);
+	border: 1px solid var(--sev-critical-edge);
+	color: var(--sev-critical-ink-strong);
 }
 .note__ic {
 	font-weight: 700;
@@ -242,11 +242,11 @@
 }
 @keyframes pulse {
 	0% {
-		box-shadow: 0 0 0 0 oklch(0.55 0.105 205 / 0.4);
+		box-shadow: 0 0 0 0 var(--signal-ring);
 	}
 	70%,
 	100% {
-		box-shadow: 0 0 0 6px oklch(0.55 0.105 205 / 0);
+		box-shadow: 0 0 0 6px var(--signal-ring-fade);
 	}
 }
 .ch__tag {
@@ -254,7 +254,7 @@
 	font-weight: 600;
 }
 .ch--done .ch__tag {
-	color: oklch(0.42 0.09 158);
+	color: var(--sev-pass-ink);
 }
 .ch--run .ch__tag {
 	color: var(--signal-ink);
@@ -323,9 +323,13 @@
 .log[open] .log__summary {
 	border-bottom: 1px solid var(--line);
 }
-/* the stream itself keeps the dark terminal island — it is literally stdout */
+/* The stream itself keeps the dark terminal island — it is literally stdout.
+   Same construction as .terminal on home: --terminal-bg stays dark in both
+   themes, where --ink-strong would invert. */
 .log__body {
-	background: var(--ink-strong);
+	background: var(--terminal-bg);
+	border-top: 1px solid var(--terminal-edge);
+	color-scheme: dark;
 	padding: 0.9rem 1.15rem;
 	font-family: var(--mono);
 	font-size: 0.8rem;
@@ -337,12 +341,12 @@
 	display: block;
 }
 .log__m {
-	color: oklch(0.94 0.008 240);
+	color: var(--terminal-ink);
 	white-space: pre-wrap;
 	word-break: break-word;
 }
 .log__empty {
-	color: oklch(0.68 0.012 240);
+	color: var(--terminal-ink-faint);
 }
 
 /* sidebar */

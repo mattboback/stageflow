@@ -120,7 +120,7 @@
 }
 
 .local-baseline__stat--good strong {
-	color: oklch(0.42 0.1 160);
+	color: var(--sev-pass-ink);
 }
 
 .local-baseline__changes {
@@ -523,7 +523,7 @@
 	font-size: 0.875rem;
 	transition: filter 0.12s;
 }
-.rstrip__sev:hover { filter: brightness(0.96); }
+.rstrip__sev:hover { filter: brightness(var(--dim)); }
 .rstrip__sev:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 .rstrip__scanner {
 	display: inline-flex; align-items: center; gap: var(--sp-2);
@@ -536,7 +536,7 @@
 }
 .rstrip__scanner:hover { border-color: var(--ink-faint); background: var(--surface-sunk); }
 .rstrip__scanner--err {
-	border-color: oklch(0.86 0.05 27);
+	border-color: var(--sev-critical-edge);
 	background: var(--sev-critical-wash);
 	color: var(--sev-critical);
 }
@@ -572,8 +572,8 @@
 	font-family: var(--display); font-size: 1.75rem; font-weight: 700;
 	color: var(--ink-strong); font-variant-numeric: tabular-nums; margin: 0;
 }
-.lh__cell[data-tone="good"] .lh__cell-score { color: oklch(0.42 0.1 158); }
-.lh__cell[data-tone="warn"] .lh__cell-score { color: oklch(0.46 0.11 80); }
+.lh__cell[data-tone="good"] .lh__cell-score { color: var(--sev-pass-ink); }
+.lh__cell[data-tone="warn"] .lh__cell-score { color: var(--sev-moderate-ink); }
 .lh__cell[data-tone="poor"] .lh__cell-score { color: var(--sev-critical); }
 .lh__cell-band {
 	font-size: 0.8125rem; margin: 0;
@@ -585,7 +585,7 @@
 /* ---- issue detail modal ---- */
 .imodal__backdrop {
 	position: fixed; inset: 0; z-index: var(--z-modal);
-	background: oklch(0.2 0.015 230 / 0.5);
+	background: var(--scrim);
 	display: flex; align-items: center; justify-content: center;
 	padding: 2rem 1rem;
 }
@@ -618,8 +618,8 @@
 }
 .imodal__sev.sev-critical { color: var(--sev-critical); background: var(--sev-critical-wash); }
 .imodal__sev.sev-serious  { color: var(--sev-serious);  background: var(--sev-serious-wash); }
-.imodal__sev.sev-moderate { color: oklch(0.46 0.11 80); background: var(--sev-moderate-wash); }
-.imodal__sev.sev-minor    { color: oklch(0.44 0.11 140); background: var(--sev-minor-wash); }
+.imodal__sev.sev-moderate { color: var(--sev-moderate-ink); background: var(--sev-moderate-wash); }
+.imodal__sev.sev-minor    { color: var(--sev-minor-ink); background: var(--sev-minor-wash); }
 .imodal__sev.sev-info     { color: var(--sev-info);     background: var(--sev-info-wash); }
 .imodal__kind {
 	display: inline-flex; align-items: center;
@@ -852,7 +852,7 @@
 	font-size: 0.8125rem; font-weight: 700;
 	color: var(--ink-muted); background: var(--surface-sunk);
 }
-.vfy__level-pill--pass { color: oklch(0.42 0.09 158); background: var(--sev-minor-wash); }
+.vfy__level-pill--pass { color: var(--sev-pass-ink); background: var(--sev-minor-wash); }
 .vfy__level-pill--fail { color: var(--sev-critical); background: var(--sev-critical-wash); }
 .vfy__large {
 	display: flex; align-items: center; gap: var(--sp-2);
@@ -868,7 +868,7 @@
 	margin: 0 calc(-1 * var(--sp-5)) calc(-1 * var(--sp-5));
 	padding: var(--sp-3) var(--sp-5);
 	background: var(--surface); border-top: 1px solid var(--line);
-	box-shadow: 0 -6px 16px oklch(0.25 0.02 230 / 0.05);
+	box-shadow: 0 -6px 16px var(--shadow-color);
 }
 .vfy__verdict-ask { font-size: 1rem; font-weight: 600; color: var(--ink-strong); }
 .vfy__verdict-ratio {
@@ -887,12 +887,12 @@
 }
 .vfy__btn:hover { border-color: var(--ink-faint); background: var(--surface-sunk); }
 .vfy__btn--pass {
-	color: oklch(0.35 0.09 158); border-color: oklch(0.78 0.07 150);
+	color: var(--sev-pass-ink-strong); border-color: var(--sev-pass-edge-strong);
 	background: var(--sev-minor-wash);
 }
-.vfy__btn--pass:hover { border-color: oklch(0.55 0.1 155); background: var(--sev-minor-wash); }
+.vfy__btn--pass:hover { border-color: var(--sev-pass-edge-hover); background: var(--sev-minor-wash); }
 .vfy__btn--fail {
-	color: var(--sev-critical); border-color: oklch(0.78 0.08 27);
+	color: var(--sev-critical); border-color: var(--sev-critical-edge-strong);
 	background: var(--sev-critical-wash);
 }
 .vfy__btn--fail:hover { border-color: var(--sev-critical); background: var(--sev-critical-wash); }
@@ -904,9 +904,9 @@
 	padding: 0.24rem 0.65rem; border-radius: var(--r-pill);
 	font-size: 0.8125rem; font-weight: 700;
 }
-.imodal__verdict--pass { color: oklch(0.42 0.09 158); background: var(--sev-minor-wash); }
+.imodal__verdict--pass { color: var(--sev-pass-ink); background: var(--sev-minor-wash); }
 .imodal__verdict--fail { color: var(--sev-critical); background: var(--sev-critical-wash); }
-.imodal__verdict--pending { color: oklch(0.46 0.11 80); background: var(--sev-moderate-wash); }
+.imodal__verdict--pending { color: var(--sev-moderate-ink); background: var(--sev-moderate-wash); }
 .evidence__field {
 	display: grid; gap: var(--sp-2);
 	margin: 0;
@@ -1068,10 +1068,10 @@
 	color: var(--signal-ink); background: var(--signal-wash); border: 1px solid var(--signal-edge);
 }
 .vrev__issue-review--pass {
-	color: oklch(0.35 0.09 158); background: var(--sev-minor-wash); border: 1px solid oklch(0.78 0.07 150);
+	color: var(--sev-pass-ink-strong); background: var(--sev-minor-wash); border: 1px solid var(--sev-pass-edge-strong);
 }
 .vrev__issue-review--fail {
-	color: var(--sev-critical); background: var(--sev-critical-wash); border: 1px solid oklch(0.78 0.08 27);
+	color: var(--sev-critical); background: var(--sev-critical-wash); border: 1px solid var(--sev-critical-edge-strong);
 }
 .vrev__issue-review--mixed {
 	color: var(--ink-muted); background: var(--surface-sunk); border: 1px solid var(--line-strong);
@@ -1189,7 +1189,7 @@
 .errview__check {
 	display: inline-flex; align-items: center; justify-content: center;
 	width: 1.2rem; height: 1.2rem; border-radius: 50%;
-	background: var(--sev-pass); color: oklch(0.99 0 0);
+	background: var(--sev-pass); color: var(--on-severity);
 	font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
 }
 .errview__ok-label { color: var(--ink-strong); font-weight: 600; }
@@ -1271,7 +1271,7 @@
 	.iview__side--open .isidebar__group:has(.isidebar__search) { display: none; }
 	.iview__backdrop {
 		display: block; position: fixed; inset: 0; z-index: var(--z-backdrop);
-		background: oklch(0.23 0.02 230 / 0.35); border: 0; cursor: default;
+		background: var(--scrim-soft); border: 0; cursor: default;
 	}
 	.isidebar { position: static; }
 

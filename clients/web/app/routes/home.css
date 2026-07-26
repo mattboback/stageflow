@@ -344,9 +344,15 @@
 	align-items: stretch;
 }
 
-/* intentional dark island — real CLI output, the one dark surface on home */
+/* Intentional dark island — real CLI output, the one dark surface on home.
+   color-scheme: dark makes every token used inside resolve to its dark value
+   even on a light page, so anything dropped in here later is right by
+   construction. The background is --terminal-bg and NOT --ink-strong: the
+   latter inverts with the theme and would render this near-white. */
 .terminal {
-	background: var(--ink-strong);
+	background: var(--terminal-bg);
+	border: 1px solid var(--terminal-edge);
+	color-scheme: dark;
 	border-radius: var(--r-lg);
 	padding: clamp(1.35rem, 2.5vw, 1.75rem);
 	display: flex;
@@ -357,21 +363,21 @@
 	font-family: var(--mono);
 	font-size: 0.875rem;
 	line-height: 1.75;
-	color: oklch(0.94 0.008 240);
+	color: var(--terminal-ink);
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 	flex: 1;
 }
 .terminal__prompt {
-	color: oklch(0.78 0.09 205);
+	color: var(--terminal-prompt);
 	font-weight: 500;
 }
 .terminal__ok {
-	color: oklch(0.82 0.11 155);
+	color: var(--terminal-ok);
 	font-weight: 500;
 }
 .terminal__warn {
-	color: oklch(0.83 0.11 65);
+	color: var(--terminal-warn);
 	font-weight: 500;
 }
 
