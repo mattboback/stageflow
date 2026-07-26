@@ -16,6 +16,7 @@ import (
 
 type jobRuntimeClient interface {
 	CreatePod(ctx context.Context, req *PodCreateRequest) (*PodCreateResponse, error)
+	InspectPod(ctx context.Context, podID string) (*PodInfo, error)
 	CreateVolume(ctx context.Context, name string) error
 	InspectVolume(ctx context.Context, name string) (*VolumeInfo, error)
 	CreateContainer(ctx context.Context, req *ContainerCreateRequest) (*ContainerCreateResponse, error)
@@ -108,13 +109,20 @@ func (r *JobRuntime) ResolveScannerTypes(modules []string) []string {
 	return r.scannerRegistry.ResolveModules(modules)
 }
 
+// JobPodName returns the deterministic pod name for a job. It is deterministic so
+// that a pod can be found again by name when its create response was lost, and so
+// that cleanup can remove it without knowing its ID.
+func JobPodName(jobID string) string {
+	return "job-" + jobID
+}
+
 func (r *JobRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string, error) {
 	if job == nil {
 		return "", errors.New("job is nil")
 	}
 
 	podReq := &PodCreateRequest{
-		Name: "job-" + job.ID,
+		Name: JobPodName(job.ID),
 		Labels: map[string]string{
 			"managed_by": "orchestrator",
 			"job_id":     job.ID,
@@ -129,12 +137,77 @@ func (r *JobRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string,
 		}
 	}
 
-	podResp, err := r.client.CreatePod(ctx, podReq)
-	if err != nil {
-		return "", fmt.Errorf("failed to create pod: %w", err)
+	return r.ensurePod(ctx, podReq)
+}
+
+// ensurePod creates a pod, recovering the one Podman may already have made.
+//
+// This mirrors ensureContainerStarted below, for the same reason: the pod name is
+// deterministic, so a create whose response never arrived leaves a pod that every
+// later attempt then collides with. In production a `pods/create` call exceeded
+// the client's response-header timeout, Podman created the pod anyway, and the
+// nine redeliveries that followed each got 409 "pod already exists" until the
+// message was dropped and the job sat in PENDING forever.
+//
+// Two deliberate differences from the container path:
+//
+//   - No pre-inspect. A container is inspected first because the caller must
+//     choose between adopting, starting, and skipping it. A pod yields only an ID,
+//     so the extra round-trip would buy nothing on the happy path.
+//   - Recovery runs on *any* create error, not just a 409. The failure that
+//     started this was a transport timeout, not an API status, so gating on 409
+//     would still lose the first delivery.
+func (r *JobRuntime) ensurePod(ctx context.Context, req *PodCreateRequest) (string, error) {
+	if req == nil || req.Name == "" {
+		return "", errors.New("pod name is required")
 	}
 
-	return podResp.ID, nil
+	resp, err := r.client.CreatePod(ctx, req)
+	if err == nil {
+		if resp == nil || resp.ID == "" {
+			return "", errors.New("created pod has no ID")
+		}
+
+		return resp.ID, nil
+	}
+
+	// Podman may have created the deterministic pod even when the response was
+	// lost, or another claimant may have won the create race. Inspecting by name
+	// makes both cases idempotent.
+	if existing, inspectErr := r.client.InspectPod(ctx, req.Name); inspectErr == nil {
+		return adoptPod(existing, req.Labels)
+	}
+
+	return "", fmt.Errorf("failed to create pod: %w", err)
+}
+
+// adoptPod accepts an existing pod only when it carries the labels we would have
+// set ourselves, so a name collision with something else is refused rather than
+// hijacked. A pod needs no state check: unlike a container it runs nothing on its
+// own, and Podman accepts new containers into a created or stopped pod.
+func adoptPod(pod *PodInfo, expectedLabels map[string]string) (string, error) {
+	if pod == nil || pod.ID == "" {
+		return "", errors.New("inspected pod has no ID")
+	}
+
+	for _, key := range []string{"managed_by", "job_id"} {
+		expected := expectedLabels[key]
+		if expected == "" {
+			continue
+		}
+
+		if pod.Labels[key] != expected {
+			return "", fmt.Errorf(
+				"refusing to adopt pod %s: label %s=%q, want %q",
+				pod.ID,
+				key,
+				pod.Labels[key],
+				expected,
+			)
+		}
+	}
+
+	return pod.ID, nil
 }
 
 func (r *JobRuntime) StartExtractionWorker(

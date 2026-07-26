@@ -766,6 +766,7 @@ type fakeRuntime struct {
 	resolvedScannerTypes       []string
 	allowLoopbackTargets       bool
 	createJobPodID             string
+	createJobPodErr            error
 	startScannerErr            error
 	startScannerErrOnCall      int
 	createJobPodCalls          int
@@ -790,6 +791,10 @@ func (f *fakeRuntime) PodNetnsMode() string {
 func (f *fakeRuntime) CreateJobPod(_ context.Context, _ *models.Job) (string, error) {
 	f.createJobPodCalls++
 	f.recordOperation("runtime.CreateJobPod")
+
+	if f.createJobPodErr != nil {
+		return "", f.createJobPodErr
+	}
 
 	if f.createJobPodID == "" {
 		return "pod-123", nil

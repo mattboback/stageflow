@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
+	"github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	provenanceauth "github.com/mattboback/stageflow/libs/go/provenance"
 	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
@@ -215,7 +216,19 @@ func (s *Service) ensureJobPod(ctx context.Context, job *models.Job) error {
 
 	podID, err := s.runtime.CreateJobPod(ctx, job)
 	if err != nil {
-		return err
+		podErr := fmt.Errorf("failed to create job pod: %w", err)
+
+		// Keep retrying while the delivery budget lasts: pod creation fails for
+		// transient reasons (a busy Podman socket, a slow netns setup), and
+		// CreateJobPod adopts the pod on the next attempt if one was left behind.
+		// But the budget has to end somewhere, or the job is abandoned mid-setup
+		// with no terminal state -- which is exactly how one sat in PENDING
+		// indefinitely. On the last attempt, record the failure instead.
+		if !messaging.IsFinalDelivery(ctx) {
+			return podErr
+		}
+
+		return s.failExtractionSetup(ctx, job, podErr)
 	}
 
 	if updateErr := s.store.UpdateJobPodID(ctx, job.ID, podID); updateErr != nil {
@@ -230,7 +243,11 @@ func (s *Service) ensureJobPod(ctx context.Context, job *models.Job) error {
 }
 
 func (s *Service) failExtractionSetup(ctx context.Context, job *models.Job, setupErr error) error {
-	if job != nil && job.PodID != "" {
+	// Cleanup runs even without a recorded pod ID. Pod creation can succeed on the
+	// daemon while its response is lost, so "no pod ID" does not mean "no pod" --
+	// guarding on job.PodID here is what would leak the pod this path exists to
+	// remove. CleanupJob resolves it by name in that case.
+	if job != nil {
 		if cleanupErr := s.runtime.CleanupJob(ctx, job); cleanupErr != nil {
 			slog.Warn("Failed to clean up job runtime after extraction setup failure",
 				"job_id", job.ID,

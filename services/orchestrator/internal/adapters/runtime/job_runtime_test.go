@@ -13,6 +13,7 @@ import (
 
 type fakeJobRuntimeClient struct {
 	createPodFunc        func(context.Context, *PodCreateRequest) (*PodCreateResponse, error)
+	inspectPodFunc       func(context.Context, string) (*PodInfo, error)
 	createVolumeFunc     func(context.Context, string) error
 	inspectVolumeFunc    func(context.Context, string) (*VolumeInfo, error)
 	createContainerFunc  func(context.Context, *ContainerCreateRequest) (*ContainerCreateResponse, error)
@@ -61,6 +62,14 @@ func (f *fakeJobRuntimeClient) StartContainer(ctx context.Context, containerID s
 	}
 
 	return nil
+}
+
+func (f *fakeJobRuntimeClient) InspectPod(ctx context.Context, podID string) (*PodInfo, error) {
+	if f.inspectPodFunc != nil {
+		return f.inspectPodFunc(ctx, podID)
+	}
+
+	return nil, &APIError{StatusCode: 404, Body: "pod not found"}
 }
 
 func (f *fakeJobRuntimeClient) InspectContainer(ctx context.Context, containerID string) (*ContainerInfo, error) {
@@ -548,5 +557,153 @@ func TestJobRuntimeStartScannerDoesNotRestartExitedContainer(t *testing.T) {
 
 	if result == nil || result.ContainerID != "completed-axe" || !result.Existing || result.Started {
 		t.Fatalf("StartScanner() result = %#v", result)
+	}
+}
+
+// The production incident these cover: `pods/create` exceeded the client's
+// response-header timeout, Podman created the pod anyway, and every redelivery
+// then collided with the name until the job was abandoned in PENDING.
+
+func TestCreateJobPodAdoptsPodPodmanCreatedAfterALostResponse(t *testing.T) {
+	inspected := 0
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			// A transport timeout, not an API status: this is why recovery cannot
+			// be gated on a 409.
+			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
+				return nil, errors.New("net/http: timeout awaiting response headers")
+			},
+			inspectPodFunc: func(_ context.Context, name string) (*PodInfo, error) {
+				inspected++
+
+				return &PodInfo{
+					ID:   "pod-recovered",
+					Name: name,
+					Labels: map[string]string{
+						"managed_by": "orchestrator",
+						"job_id":     "job-123",
+					},
+				}, nil
+			},
+		},
+	})
+
+	podID, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"})
+	if err != nil {
+		t.Fatalf("CreateJobPod error: %v", err)
+	}
+
+	if podID != "pod-recovered" {
+		t.Fatalf("podID = %q, want %q", podID, "pod-recovered")
+	}
+
+	if inspected != 1 {
+		t.Fatalf("InspectPod calls = %d, want 1", inspected)
+	}
+}
+
+func TestCreateJobPodAdoptsPodOnConflict(t *testing.T) {
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
+				return nil, &APIError{StatusCode: 409, Body: `{"cause":"pod already exists"}`}
+			},
+			inspectPodFunc: func(_ context.Context, name string) (*PodInfo, error) {
+				return &PodInfo{
+					ID:   "pod-existing",
+					Name: name,
+					Labels: map[string]string{
+						"managed_by": "orchestrator",
+						"job_id":     "job-123",
+					},
+				}, nil
+			},
+		},
+	})
+
+	podID, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"})
+	if err != nil {
+		t.Fatalf("CreateJobPod error: %v", err)
+	}
+
+	if podID != "pod-existing" {
+		t.Fatalf("podID = %q, want %q", podID, "pod-existing")
+	}
+}
+
+func TestCreateJobPodRefusesToAdoptAPodItDoesNotOwn(t *testing.T) {
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
+				return nil, &APIError{StatusCode: 409, Body: "pod already exists"}
+			},
+			inspectPodFunc: func(_ context.Context, name string) (*PodInfo, error) {
+				return &PodInfo{
+					ID:     "pod-someone-else",
+					Name:   name,
+					Labels: map[string]string{"managed_by": "orchestrator", "job_id": "a-different-job"},
+				}, nil
+			},
+		},
+	})
+
+	_, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"})
+	if err == nil {
+		t.Fatal("expected an error rather than adopting a pod belonging to another job")
+	}
+
+	if !strings.Contains(err.Error(), "refusing to adopt pod") {
+		t.Fatalf("error = %v, want it to explain the refusal", err)
+	}
+}
+
+func TestCreateJobPodReportsTheCreateFailureWhenNoPodExists(t *testing.T) {
+	createErr := errors.New("podman socket unavailable")
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
+				return nil, createErr
+			},
+			// Default inspect returns 404, so there is nothing to adopt.
+		},
+	})
+
+	_, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"})
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+
+	// The create failure is the useful diagnosis; the 404 from the recovery probe
+	// would only describe the symptom.
+	if !errors.Is(err, createErr) {
+		t.Fatalf("error = %v, want it to wrap the original create error", err)
+	}
+}
+
+func TestCreateJobPodDoesNotInspectOnTheHappyPath(t *testing.T) {
+	inspected := 0
+	runtime := NewJobRuntime(JobRuntimeConfig{
+		Client: &fakeJobRuntimeClient{
+			inspectPodFunc: func(_ context.Context, _ string) (*PodInfo, error) {
+				inspected++
+
+				return nil, &APIError{StatusCode: 404}
+			},
+		},
+	})
+
+	if _, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"}); err != nil {
+		t.Fatalf("CreateJobPod error: %v", err)
+	}
+
+	if inspected != 0 {
+		t.Fatalf("InspectPod calls = %d, want 0: a successful create needs no recovery probe", inspected)
+	}
+}
+
+func TestJobPodNameIsDeterministic(t *testing.T) {
+	// Cleanup relies on reconstructing this name when no pod ID was recorded.
+	if got := JobPodName("abc"); got != "job-abc" {
+		t.Fatalf("JobPodName = %q, want %q", got, "job-abc")
 	}
 }

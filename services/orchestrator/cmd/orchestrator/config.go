@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/mattboback/stageflow/libs/go/config"
 )
@@ -12,6 +13,9 @@ type Config struct {
 	NATS                          config.NATSConfig
 	MinIO                         config.MinIOConfig
 	PodmanSocket                  string
+	PodmanRequestTimeout          time.Duration
+	PodmanResponseHeaderTimeout   time.Duration
+	PodmanDialTimeout             time.Duration
 	DatabaseURL                   string
 	ExtractionImage               string
 	ScannerImage                  string
@@ -65,6 +69,9 @@ func loadConfig() *Config {
 		NATS:                          natsCfg,
 		MinIO:                         minioCfg,
 		PodmanSocket:                  config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
+		PodmanRequestTimeout:          config.MustGetEnvDuration("PODMAN_REQUEST_TIMEOUT", 120*time.Second),
+		PodmanResponseHeaderTimeout:   config.MustGetEnvDuration("PODMAN_RESPONSE_HEADER_TIMEOUT", 60*time.Second),
+		PodmanDialTimeout:             config.MustGetEnvDuration("PODMAN_DIAL_TIMEOUT", 5*time.Second),
 		DatabaseURL:                   databaseURL,
 		ExtractionImage:               config.GetEnv("EXTRACTION_IMAGE", "localhost/stageflow/extractor:latest"),
 		ScannerImage:                  scannerImage,
@@ -126,10 +133,38 @@ func (c *Config) Validate() error {
 		errs = append(errs, errors.New("A11Y_SCROLL_TIMEOUT must be >= 0"))
 	}
 
+	errs = append(errs, c.validatePodmanConfig()...)
 	errs = append(errs, c.validateJobEventsConfig()...)
 	errs = append(errs, c.validateRateLimitConfig()...)
 
 	return config.ValidateAll(errs...)
+}
+
+// validatePodmanConfig checks the Podman client timeout budget.
+func (c *Config) validatePodmanConfig() []error {
+	var errs []error
+
+	if c.PodmanRequestTimeout <= 0 {
+		errs = append(errs, errors.New("PODMAN_REQUEST_TIMEOUT must be > 0"))
+	}
+
+	if c.PodmanResponseHeaderTimeout <= 0 {
+		errs = append(errs, errors.New("PODMAN_RESPONSE_HEADER_TIMEOUT must be > 0"))
+	}
+
+	if c.PodmanDialTimeout <= 0 {
+		errs = append(errs, errors.New("PODMAN_DIAL_TIMEOUT must be > 0"))
+	}
+
+	// The request timeout caps the whole exchange, so a larger header timeout can
+	// never be reached -- the knob would silently do nothing.
+	if c.PodmanResponseHeaderTimeout > c.PodmanRequestTimeout {
+		errs = append(errs, errors.New(
+			"PODMAN_RESPONSE_HEADER_TIMEOUT must be <= PODMAN_REQUEST_TIMEOUT",
+		))
+	}
+
+	return errs
 }
 
 // validateJobEventsConfig checks the job-event retention/pruning settings.

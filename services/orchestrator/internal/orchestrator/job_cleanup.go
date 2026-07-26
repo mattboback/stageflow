@@ -8,6 +8,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
+	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
 // failJob marks the job as failed and cleans up resources.
@@ -20,7 +21,10 @@ func (o *Orchestrator) cleanupPod(ctx context.Context, podID string) error {
 		slog.Warn("Failed to stop pod", "pod_id", podID, "error", err)
 	}
 
-	if err := o.podmanClient.RemovePod(ctx, podID, true); err != nil {
+	// Cleanup runs on paths that cannot know whether a pod was ever created, so an
+	// absent pod is the desired end state rather than a failure. Treating it as an
+	// error here would abort before the volumes and staging below.
+	if err := o.podmanClient.RemovePod(ctx, podID, true); err != nil && !podman.IsNotFound(err) {
 		return fmt.Errorf("failed to remove pod: %w", err)
 	}
 

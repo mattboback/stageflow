@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/events"
+	"github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -380,5 +381,124 @@ func TestServiceStartScanningRejectsInvalidTransition(t *testing.T) {
 
 	if runtime.startScannerCalls != 0 {
 		t.Fatalf("StartScanner() calls = %d, want 0", runtime.startScannerCalls)
+	}
+}
+
+// Pod setup used to be the one failure in this path that returned bare, so a job
+// whose pod could never be created was left in PENDING with no terminal state and
+// no cleanup. These pin both halves of the replacement: keep retrying while the
+// delivery budget lasts, then record the failure on the last attempt.
+
+func newPodCreateFailureService(
+	t *testing.T,
+	jobID string,
+) (*Service, *fakeJobStore, *fakeRuntime, *fakePublisher) {
+	t.Helper()
+
+	store := &fakeJobStore{
+		createJobIfAbsentCreated: true,
+		// FailJob re-reads the job before recording the terminal state.
+		getJobResults: []*models.Job{{ID: jobID, State: models.JobStatePending}},
+	}
+	runtime := &fakeRuntime{createJobPodErr: errors.New("podman: timeout awaiting response headers")}
+	publisher := &fakePublisher{}
+
+	return NewService(store, runtime, &fakeArtifacts{}, publisher), store, runtime, publisher
+}
+
+func zipJobCreatedPayload(jobID string) *events.JobCreatedPayload {
+	return &events.JobCreatedPayload{
+		JobID:     jobID,
+		InputType: string(models.JobInputTypeZip),
+		InputPath: "staging/" + jobID + "/site.zip",
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+	}
+}
+
+func TestPodCreateFailureRetriesWhileDeliveryBudgetRemains(t *testing.T) {
+	t.Parallel()
+
+	service, store, runtime, publisher := newPodCreateFailureService(t, "job-retry")
+
+	// No delivery metadata at all: the conservative default, and what
+	// reconciliation sweeps and direct calls look like.
+	err := service.CreateJob(t.Context(), zipJobCreatedPayload("job-retry"))
+	if err == nil {
+		t.Fatal("expected the pod failure to be returned so the message is redelivered")
+	}
+
+	if store.failJobCalls != 0 {
+		t.Fatalf("failJobCalls = %d, want 0: the job must keep its remaining attempts", store.failJobCalls)
+	}
+
+	if publisher.failedCalls != 0 {
+		t.Fatalf("failedCalls = %d, want 0", publisher.failedCalls)
+	}
+
+	if runtime.cleanupJobCalls != 0 {
+		t.Fatalf("cleanupJobCalls = %d, want 0 before the budget is spent", runtime.cleanupJobCalls)
+	}
+}
+
+func TestPodCreateFailureFailsTheJobOnTheFinalDelivery(t *testing.T) {
+	t.Parallel()
+
+	service, store, runtime, publisher := newPodCreateFailureService(t, "job-final")
+
+	ctx := messaging.WithReceivedEventMeta(
+		t.Context(),
+		&messaging.ReceivedEventMeta{Deliveries: messaging.MaxDeliver},
+	)
+
+	if err := service.CreateJob(ctx, zipJobCreatedPayload("job-final")); err == nil {
+		t.Fatal("expected the setup error to be reported")
+	}
+
+	if store.failJobCalls != 1 {
+		t.Fatalf("failJobCalls = %d, want 1: the last attempt must record a terminal state", store.failJobCalls)
+	}
+
+	if publisher.failedCalls != 1 {
+		t.Fatalf("failedCalls = %d, want 1: the client needs to see the job stop", publisher.failedCalls)
+	}
+
+	// Cleanup must run even though no pod ID was ever recorded -- Podman can create
+	// the pod and lose the response, and nothing else would remove it. The count is
+	// deliberately not pinned: failExtractionSetup cleans up, and FailJob cleans up
+	// again after transitioning, which is intentional belt-and-braces because
+	// FailJob returns early for an already-terminal job before reaching its own
+	// cleanup.
+	if runtime.cleanupJobCalls < 1 {
+		t.Fatal("expected cleanup to run so a pod created behind a lost response is removed")
+	}
+}
+
+func TestPodCreateFailureFailsURLJobsOnTheFinalDelivery(t *testing.T) {
+	t.Parallel()
+
+	service, store, runtime, _ := newPodCreateFailureService(t, "job-url-final")
+
+	ctx := messaging.WithReceivedEventMeta(
+		t.Context(),
+		&messaging.ReceivedEventMeta{Deliveries: messaging.MaxDeliver},
+	)
+
+	payload := &events.JobCreatedPayload{
+		JobID:     "job-url-final",
+		InputType: "urls",
+		URLs:      []string{"https://example.com"},
+		Config:    models.JobConfig{Modules: []string{"axe"}},
+	}
+
+	if err := service.CreateJob(ctx, payload); err == nil {
+		t.Fatal("expected the setup error to be reported")
+	}
+
+	if store.failJobCalls != 1 {
+		t.Fatalf("failJobCalls = %d, want 1 for the URL path too", store.failJobCalls)
+	}
+
+	if runtime.cleanupJobCalls < 1 {
+		t.Fatal("expected cleanup to run for the URL path too")
 	}
 }
