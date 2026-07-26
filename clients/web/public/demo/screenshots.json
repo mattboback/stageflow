@@ -1,0 +1,26 @@
+[
+  {
+    "artifact_id": "demo-url-1",
+    "scanner_id": "axe",
+    "page_id": "url-1",
+    "page_url": "https://stageflow.org/",
+    "url": "/demo/url-1.webp",
+    "kind": "page_overview"
+  },
+  {
+    "artifact_id": "demo-url-3",
+    "scanner_id": "lighthouse",
+    "page_id": "url-3",
+    "page_url": "https://stageflow.org/playground",
+    "url": "/demo/url-3.webp",
+    "kind": "page_overview"
+  },
+  {
+    "artifact_id": "demo-url-2",
+    "scanner_id": "lighthouse",
+    "page_id": "url-2",
+    "page_url": "https://stageflow.org/projects",
+    "url": "/demo/url-2.webp",
+    "kind": "page_overview"
+  }
+]
