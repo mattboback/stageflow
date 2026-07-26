@@ -29,6 +29,24 @@ func (o *Orchestrator) startDeadlineSweeper(ctx context.Context) {
 }
 
 func (o *Orchestrator) runDeadlineSweep(ctx context.Context) error {
+	// PENDING and READY_TO_SCAN precede both stage timers, so nothing used to sweep
+	// them. A job whose setup never completed -- because the handler exhausted its
+	// redeliveries, or the process died between creating a pod and recording the
+	// state -- stayed non-terminal forever, showing "Scan in progress" to a client
+	// that would never get a result. The in-band path handles the first case; this
+	// is the backstop for the rest.
+	//
+	// "setup" is passed as a literal rather than an events.JobFailStage* constant:
+	// NormalizeFailureStage already maps it onto the scanning stage the wire format
+	// allows, while the operator-facing message keeps the more accurate word.
+	if err := o.failOverdueJobs(ctx, models.JobStatePending, o.setupTimeout, "setup"); err != nil {
+		return err
+	}
+
+	if err := o.failOverdueJobs(ctx, models.JobStateReady, o.setupTimeout, "setup"); err != nil {
+		return err
+	}
+
 	if err := o.failOverdueJobs(
 		ctx,
 		models.JobStateExtracting,

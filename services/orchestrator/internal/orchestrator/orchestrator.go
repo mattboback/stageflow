@@ -65,6 +65,7 @@ type Orchestrator struct {
 	minioUseSSL          bool
 	natsHost             string // NATS hostname for job containers
 	minioHost            string // MinIO hostname for job containers
+	setupTimeout         time.Duration
 	extractionTimeout    time.Duration
 	scanTimeout          time.Duration
 	extractionImage      string
@@ -99,6 +100,7 @@ type Config struct {
 	MinIOUseSSL          bool
 	NatsHost             string // NATS hostname for job containers on POD_NETWORK
 	MinioHost            string // MinIO hostname for job containers on POD_NETWORK
+	SetupTimeout         time.Duration
 	ExtractionTimeout    time.Duration
 	ScanTimeout          time.Duration
 	ExtractionImage      string
@@ -119,6 +121,15 @@ type Config struct {
 
 // NewOrchestrator builds an Orchestrator, applying defaults.
 func NewOrchestrator(config *Config) *Orchestrator {
+	// Setup covers PENDING and READY_TO_SCAN, before any stage timer starts. It is
+	// deliberately not the extraction timeout: the floor is the consumer's AckWait,
+	// because sweeping a job whose handler still holds an unacked message would
+	// race that handler's own state write.
+	setupTimeout := config.SetupTimeout
+	if setupTimeout == 0 {
+		setupTimeout = 10 * time.Minute
+	}
+
 	extractionTimeout := config.ExtractionTimeout
 	if extractionTimeout == 0 {
 		extractionTimeout = 5 * time.Minute
@@ -201,6 +212,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		minioUseSSL:          config.MinIOUseSSL,
 		natsHost:             natsHost,
 		minioHost:            minioHost,
+		setupTimeout:         setupTimeout,
 		extractionTimeout:    extractionTimeout,
 		scanTimeout:          scanTimeout,
 		extractionImage:      extractionImage,
