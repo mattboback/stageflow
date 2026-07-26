@@ -25,9 +25,9 @@
 	align-items: center;
 }
 .hero h1 {
-	font-size: clamp(2.2rem, 4.4vw, 3.25rem);
-	line-height: 1.12;
-	letter-spacing: -0.02em;
+	font-size: var(--fs-10);
+	line-height: 1.08;
+	letter-spacing: var(--track-hero);
 	font-weight: 800;
 	text-wrap: balance;
 	margin: 0 0 var(--sp-4);
@@ -37,7 +37,7 @@
 	color: var(--signal-ink);
 }
 .hero__lede {
-	font-size: 1.125rem;
+	font-size: var(--fs-6);
 	line-height: 1.6;
 	color: var(--ink-muted);
 	max-width: 46ch;
@@ -55,7 +55,7 @@
 
 .hero__actions > span {
 	color: var(--ink-muted);
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 }
 
 /* scan form — the conversion point matches the headline's weight */
@@ -75,16 +75,16 @@
 }
 .scanbar__input {
 	padding: 0.85rem 1rem;
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 }
 .scanbar__err {
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	color: var(--sev-critical);
 	font-weight: 500;
 }
 .hero__note {
 	margin: var(--sp-3) 0 0;
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 }
 
 /* report preview — the output side of the scanbar */
@@ -109,7 +109,7 @@
 .preview__reg-title {
 	display: flex; align-items: center; gap: var(--sp-2);
 	margin: 0;
-	font-weight: 600; color: var(--ink-strong); font-size: 1rem;
+	font-weight: 600; color: var(--ink-strong); font-size: var(--fs-5);
 }
 .preview__reg-rows {
 	list-style: none; margin: 0; padding: 0;
@@ -118,28 +118,34 @@
 .preview__reg-rows li {
 	display: flex; align-items: baseline; justify-content: space-between;
 	gap: var(--sp-4);
-	font-size: 0.9375rem; color: var(--ink-muted);
+	font-size: var(--fs-4); color: var(--ink-muted);
 }
 .preview__reg-rows .num { color: var(--ink-strong); font-weight: 600; }
 .preview__reg-cta {
-	font-size: 0.9375rem; font-weight: 600; color: var(--signal-ink);
+	font-size: var(--fs-4); font-weight: 600; color: var(--signal-ink);
 }
 .preview__reg-cta:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* --------------------------------------------------------------- sections */
+/* Section rhythm.
+   Every band on this page used to be within three-quarters of a rem of every
+   other, so the page read as one continuous scroll of cards rather than as a
+   sequence of arguments. The plain sections now breathe noticeably more than
+   the tinted ones, which is what makes the alternation legible: a band is a
+   held note between two longer rests, not just a change of background. */
 .section {
-	padding-block: clamp(2.75rem, 5vw, 4.25rem);
+	padding-block: clamp(3.5rem, 6.5vw, 6rem);
 }
 .section--band {
 	background: var(--surface);
 	border-block: 1px solid var(--line);
-	padding-block: clamp(2.5rem, 4vw, 3.5rem);
+	padding-block: clamp(3rem, 5vw, 4.5rem);
 }
 .section--foot {
 	background: var(--surface);
 	border-top: 1px solid var(--line);
-	margin-top: clamp(2.75rem, 5vw, 4.25rem);
-	padding-block: clamp(2.5rem, 4vw, 3.5rem);
+	margin-top: clamp(3.5rem, 6.5vw, 6rem);
+	padding-block: clamp(3rem, 5vw, 4.5rem);
 }
 /* when it directly follows a band, the band's own border is the seam */
 .section--band + .section--foot {
@@ -156,8 +162,8 @@
 .section__head h2,
 .baseline__intro h2,
 .selfhost h2 {
-	font-size: clamp(1.5rem, 2.4vw, 1.95rem);
-	letter-spacing: -0.015em;
+	font-size: var(--fs-8);
+	letter-spacing: var(--track-display);
 	line-height: 1.15;
 	text-wrap: balance;
 	margin: 0;
@@ -166,7 +172,7 @@
 .baseline__intro p {
 	color: var(--ink-muted);
 	margin: 0.65rem 0 0;
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	line-height: 1.55;
 	text-wrap: pretty;
 }
@@ -203,7 +209,7 @@
 	align-items: center;
 	justify-content: center;
 	color: var(--ink-muted);
-	font-size: 1.375rem;
+	font-size: var(--fs-7);
 	line-height: 1;
 	font-weight: 600;
 	pointer-events: none;
@@ -224,22 +230,21 @@
 }
 .basetrack__node--key .basetrack__card h3 { color: var(--signal-ink); }
 .basetrack__score {
-	font-family: var(--display);
-	font-size: 2rem;
+	font-size: var(--fs-9);
 	font-weight: 800;
 	line-height: 1;
 	color: var(--ink-strong);
 	font-variant-numeric: tabular-nums;
 }
-.basetrack__score .delta { font-size: 1.6rem; }
+.basetrack__score .delta { font-size: var(--fs-8); }
 .basetrack__card h3 {
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	margin: 0;
 	line-height: 1.25;
 }
 .basetrack__card p {
 	margin: 0;
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	line-height: 1.5;
 	color: var(--ink-muted);
 	text-wrap: pretty;
@@ -256,8 +261,8 @@
 }
 .scansum__copy { max-width: 62ch; }
 .scansum__copy h2 {
-	font-size: clamp(1.5rem, 2.4vw, 1.95rem);
-	letter-spacing: -0.015em;
+	font-size: var(--fs-8);
+	letter-spacing: var(--track-display);
 	line-height: 1.15;
 	text-wrap: balance;
 	margin: 0;
@@ -265,7 +270,7 @@
 .scansum__copy p {
 	color: var(--ink-muted);
 	margin: 0.65rem 0 0;
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	line-height: 1.55;
 	text-wrap: pretty;
 }
@@ -309,17 +314,17 @@
 	border: 1.5px solid var(--signal-edge);
 	background: var(--signal-wash);
 	color: var(--signal-ink);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 }
 .path__step h3 {
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	margin: 0.1rem 0 0.25rem;
 }
 .path__step p {
 	margin: 0;
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	line-height: 1.5;
 	color: var(--ink-muted);
 	text-wrap: pretty;
@@ -361,7 +366,7 @@
 .terminal__pre {
 	margin: 0;
 	font-family: var(--mono);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	line-height: 1.75;
 	color: var(--terminal-ink);
 	white-space: pre-wrap;
@@ -397,7 +402,7 @@
 }
 .selfhost .panel__body > p.muted {
 	margin: 0;
-	font-size: 1rem;
+	font-size: var(--fs-5);
 	line-height: 1.55;
 	max-width: 46ch;
 }
@@ -412,7 +417,7 @@
 	display: flex;
 	align-items: flex-start;
 	gap: var(--sp-2);
-	font-size: 1rem;
+	font-size: var(--fs-5);
 	color: var(--ink);
 	line-height: 1.45;
 }
@@ -469,7 +474,7 @@
 	}
 	.basetrack__link::before {
 		content: '↓';
-		font-size: 1.25rem;
+		font-size: var(--fs-7);
 		line-height: 1;
 	}
 	.basetrack__card p {
@@ -500,7 +505,7 @@
 		width: 100%;
 	}
 	.hero h1 {
-		font-size: clamp(1.9rem, 8.5vw, 2.4rem);
+		font-size: var(--fs-9);
 	}
 }
 

@@ -14,7 +14,11 @@ const contentTypes = {
 	'.png': 'image/png',
 	'.svg': 'image/svg+xml',
 	'.txt': 'text/plain; charset=utf-8',
-	'.webmanifest': 'application/manifest+json'
+	'.webmanifest': 'application/manifest+json',
+	/* Not optional. This server sends X-Content-Type-Options: nosniff, so a
+	   font served as application/octet-stream is refused outright and the page
+	   silently falls back to system-ui. */
+	'.woff2': 'font/woff2'
 };
 
 function candidateFor(pathname) {

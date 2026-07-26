@@ -19,7 +19,20 @@ import './styles/fault.css';
 
 export const links: LinksFunction = () => [
 	{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
-	{ rel: 'manifest', href: '/site.webmanifest' }
+	{ rel: 'manifest', href: '/site.webmanifest' },
+	/*
+	 * The sans is on the critical path for every page; the mono is not, so it
+	 * is left to be discovered. crossOrigin is required even same-origin --
+	 * fonts are always fetched in CORS mode, and a preload without it warms a
+	 * cache entry the font request will not match, doubling the download.
+	 */
+	{
+		rel: 'preload',
+		href: '/fonts/geist-sans-latin.woff2',
+		as: 'font',
+		type: 'font/woff2',
+		crossOrigin: 'anonymous'
+	}
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

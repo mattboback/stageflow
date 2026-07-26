@@ -61,7 +61,7 @@
 	gap: 0.35rem;
 	padding: 0.24rem 0.65rem;
 	border-radius: var(--r-pill);
-	font-size: 0.8125rem;
+	font-size: var(--fs-2);
 	font-weight: 700;
 	text-transform: capitalize;
 	color: var(--ink-muted);
@@ -127,7 +127,7 @@
 	border: 1px solid var(--line-strong);
 	background: var(--surface);
 	color: var(--ink-muted);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	text-transform: capitalize;
 	cursor: pointer;
@@ -137,7 +137,7 @@
 }
 .sev-chip.size-md {
 	padding: 0.4rem 0.85rem;
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 }
 .sev-chip:hover {
 	background: var(--surface-sunk);

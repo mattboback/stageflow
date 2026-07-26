@@ -16,8 +16,8 @@
 	max-width: 84rem;
 }
 .console__head h1 {
-	font-size: clamp(1.8rem, 3vw, 2.35rem);
-	letter-spacing: -0.02em;
+	font-size: var(--fs-9);
+	letter-spacing: var(--track-display);
 	line-height: 1.1;
 	text-wrap: balance;
 	margin: 0;
@@ -26,7 +26,7 @@
 	color: var(--ink-muted);
 	margin: 0.55rem 0 0;
 	max-width: 52ch;
-	font-size: 1.02rem;
+	font-size: var(--fs-5);
 	line-height: 1.55;
 	text-wrap: pretty;
 }
@@ -43,7 +43,7 @@
 	align-items: center;
 	gap: var(--sp-2);
 	color: var(--signal-ink);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 700;
 }
 
@@ -54,10 +54,9 @@
 	border: 0;
 	border-bottom: 1px solid transparent;
 	background: transparent;
-	font-family: var(--display);
-	font-size: clamp(1.8rem, 3vw, 2.35rem);
+	font-size: var(--fs-9);
 	font-weight: 700;
-	letter-spacing: -0.02em;
+	letter-spacing: var(--track-display);
 	line-height: 1.1;
 	color: var(--ink-strong);
 }
@@ -72,7 +71,7 @@
 	max-width: 84rem;
 	margin: calc(-1 * var(--sp-3)) auto var(--sp-4);
 	color: var(--signal-ink);
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	font-weight: 600;
 }
 
@@ -105,7 +104,7 @@
 	background: var(--signal-wash);
 	color: var(--signal-ink);
 	font-family: var(--sans);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 700;
 	vertical-align: -0.22em;
 }
@@ -118,11 +117,11 @@
 	min-width: 0;
 }
 .panel__head-copy h2 {
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	margin: 0;
 }
 .panel__sub {
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	color: var(--ink-muted);
 	margin: 0.25rem 0 0;
 	line-height: 1.45;
@@ -143,7 +142,7 @@
 	flex-shrink: 0;
 }
 .seg button {
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	padding: 0.4rem 0.8rem;
 	border-radius: calc(var(--r-sm) - 2px);
@@ -186,7 +185,7 @@
 	min-width: 0;
 }
 .urlrow__err {
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 500;
 	color: var(--sev-critical);
 }
@@ -199,7 +198,7 @@
 	background: transparent;
 	cursor: pointer;
 	line-height: 1;
-	font-size: 1rem;
+	font-size: var(--fs-5);
 }
 .urlrow button.rm:hover {
 	color: var(--ink-strong);
@@ -212,7 +211,7 @@
 /* a real secondary action, not minor text */
 .addmore {
 	justify-self: start;
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	font-weight: 600;
 	color: var(--signal-ink);
 	display: inline-flex;
@@ -240,7 +239,7 @@
 	gap: var(--sp-2);
 	margin: 0;
 	color: var(--ink-muted);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	line-height: 1.45;
 }
 .intake__note svg {
@@ -275,11 +274,11 @@
 	outline-offset: 2px;
 }
 .drop__hint {
-	font-size: 0.8rem;
+	font-size: var(--fs-2);
 	color: var(--ink-muted);
 }
 .drop__file {
-	font-size: 0.95rem;
+	font-size: var(--fs-4);
 	font-weight: 600;
 	color: var(--ink-strong);
 }
@@ -293,7 +292,7 @@
 	flex-shrink: 0;
 }
 .chanhead__count {
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	font-weight: 600;
 	color: var(--ink-muted);
 }
@@ -305,7 +304,7 @@
 	padding: 0.4rem 0.2rem;
 	cursor: pointer;
 	font: inherit;
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	text-decoration: underline;
 	text-underline-offset: 3px;
@@ -368,11 +367,11 @@
 .chan__name {
 	font-weight: 600;
 	color: var(--ink-strong);
-	font-size: 1rem;
+	font-size: var(--fs-5);
 }
 /* one short line per scanner; the full sentence lives in the title tooltip */
 .chan__desc {
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	color: var(--ink-muted);
 	line-height: 1.4;
 	overflow: hidden;
@@ -380,7 +379,7 @@
 	text-overflow: ellipsis;
 }
 .chan__cat {
-	font-size: 0.8125rem;
+	font-size: var(--fs-2);
 	font-weight: 600;
 	color: var(--ink-muted);
 	background: var(--surface-sunk);
@@ -411,12 +410,12 @@
 	border-radius: var(--r-sm);
 	background: var(--surface-sunk);
 	color: var(--ink-muted);
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	line-height: 1.45;
 }
 .readybox b {
 	display: block;
-	font-size: 1rem;
+	font-size: var(--fs-5);
 	color: var(--ink-strong);
 	margin-bottom: 0.1rem;
 }
@@ -463,7 +462,7 @@
 	color: var(--ink-muted);
 }
 .sumlist__lab {
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	font-weight: 600;
 	color: var(--ink-strong);
 	min-width: 0;
@@ -471,13 +470,13 @@
 }
 .sumlist__lab small {
 	display: block;
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 400;
 	color: var(--ink-muted);
 	margin-top: 0.08rem;
 }
 .sumlist b {
-	font-size: 1rem;
+	font-size: var(--fs-5);
 	font-weight: 700;
 	color: var(--ink-strong);
 	white-space: nowrap;
@@ -487,7 +486,7 @@
 	width: 100%;
 }
 .runhint {
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	color: var(--ink-muted);
 	text-align: center;
 	line-height: 1.45;
@@ -506,7 +505,7 @@
 	align-items: flex-start;
 	padding: 0.75rem 0.9rem;
 	border-radius: var(--r-sm);
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	line-height: 1.45;
 }
 .note--err {
@@ -565,7 +564,7 @@
 		border-top: 1px solid var(--line);
 	}
 	.stickyrun__sum {
-		font-size: 0.875rem;
+		font-size: var(--fs-3);
 		color: var(--ink-muted);
 		min-width: 0;
 		line-height: 1.35;
@@ -608,15 +607,14 @@
 }
 .pauth__title,
 .pai__title {
-	font-family: var(--display);
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	font-weight: 700;
 	color: var(--ink-strong);
 	margin: 0;
 }
 .pauth__sub,
 .pai__sub {
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	color: var(--ink-muted);
 	margin: 0.25rem 0 0;
 	line-height: 1.45;
@@ -630,7 +628,7 @@
 	border: 1px solid var(--sev-serious-edge);
 	border-radius: var(--r-pill);
 	background: var(--sev-serious-wash);
-	font-size: 0.8125rem;
+	font-size: var(--fs-2);
 	font-weight: 600;
 	color: var(--sev-serious);
 	flex-shrink: 0;
@@ -645,7 +643,7 @@
 	justify-content: flex-end;
 }
 .pauth__status {
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	color: var(--ink-muted);
 }
@@ -657,7 +655,7 @@
 	border: 1px solid var(--sev-pass-edge);
 	border-radius: var(--r-pill);
 	background: var(--sev-minor-wash);
-	font-size: 0.8125rem;
+	font-size: var(--fs-2);
 	font-weight: 600;
 	color: var(--sev-pass-ink);
 }
@@ -666,7 +664,7 @@
 	border: 0;
 	color: var(--ink-muted);
 	font: inherit;
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	cursor: pointer;
 	text-decoration: underline;
@@ -689,7 +687,7 @@
 	border-radius: var(--r-sm);
 	background: var(--warn-wash);
 	color: var(--ink-strong);
-	font-size: 0.9rem;
+	font-size: var(--fs-3);
 	line-height: 1.5;
 }
 .pauth__row,
@@ -720,7 +718,7 @@
 	background: var(--surface);
 	color: var(--ink-strong);
 	font-family: inherit;
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 	transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
 }
 .pai__field textarea {
@@ -758,7 +756,7 @@
 	border: 0;
 	color: var(--ink-muted);
 	cursor: pointer;
-	font-size: 0.9rem;
+	font-size: var(--fs-3);
 	padding: 0.25rem 0.35rem;
 	border-radius: var(--r-sm);
 	line-height: 1;
@@ -775,7 +773,7 @@
 	background: transparent;
 	border: 0;
 	color: var(--ink-muted);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	cursor: pointer;
 	justify-self: start;
@@ -811,12 +809,12 @@
 }
 .pai__group legend {
 	padding: 0 0.35rem;
-	font-size: 0.84rem;
+	font-size: var(--fs-2);
 	color: var(--ink-strong);
 	font-weight: 600;
 }
 .pai__hint {
-	font-size: 0.82rem;
+	font-size: var(--fs-2);
 	color: var(--ink-muted);
 	margin: 0 0 0.25rem;
 	line-height: 1.45;
@@ -835,7 +833,7 @@
 	background: var(--surface);
 	color: var(--ink-strong);
 	font-family: inherit;
-	font-size: 0.86rem;
+	font-size: var(--fs-3);
 }
 .pai__pair input:focus-visible,
 .pai__pair select:focus-visible {
@@ -853,7 +851,7 @@
 	border-radius: var(--r-sm);
 	color: var(--ink-muted);
 	cursor: pointer;
-	font-size: 0.95rem;
+	font-size: var(--fs-4);
 	font-family: inherit;
 }
 .pai__remove:hover {
@@ -871,7 +869,7 @@
 	border: 1px dashed var(--line-strong);
 	border-radius: var(--r-sm);
 	padding: 0.4rem 0.75rem;
-	font-size: 0.84rem;
+	font-size: var(--fs-2);
 	font-weight: 600;
 	color: var(--ink-muted);
 	cursor: pointer;

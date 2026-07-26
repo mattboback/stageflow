@@ -60,7 +60,16 @@ function splitTopLevel(value: string): string[] {
 
 function readTokens(mode: Mode): Map<string, string> {
 	const css = readFileSync(INSTRUMENT_CSS, 'utf8');
-	const start = css.indexOf(':root');
+	/*
+	 * Anchored to the rule at the start of a line, not to the first occurrence
+	 * of the string. The file's own header comment mentions :root[data-theme],
+	 * and matching that instead silently reads the wrong block — which is
+	 * exactly what happened when @font-face landed between the comment and the
+	 * real rule, and every obligation started failing at once.
+	 */
+	const opening = /^:root\s*\{/m.exec(css);
+	if (!opening) throw new Error('instrument.css has no :root rule');
+	const start = opening.index;
 	const rootBlock = css.slice(start, css.indexOf('\n}', start));
 
 	const tokens = new Map<string, string>();
@@ -180,6 +189,36 @@ const OBLIGATIONS: Obligation[] = [
 	{ fg: '--signal-ink', bg: '--surface', level: 'AA', size: 'normal', why: 'link on a card' },
 	{ fg: '--signal-ink', bg: '--ground', level: 'AA', size: 'normal', why: 'link on the page' },
 	{ fg: '--signal', bg: '--surface', level: 'AA', size: 'large', why: 'focus ring, SC 1.4.11' },
+
+	/*
+	 * Input and ghost-button borders. 'large' is this table's 3:1 floor, which
+	 * is the non-text threshold SC 1.4.11 asks for — these are not text, they
+	 * are the only thing identifying where a control begins. All three
+	 * backgrounds are listed because an input appears on the page, on a card,
+	 * and inside a sunk panel, and a border tuned against the lightest of
+	 * those disappears on the other two.
+	 */
+	{
+		fg: '--line-strong',
+		bg: '--surface',
+		level: 'AA',
+		size: 'large',
+		why: 'input border on a card, SC 1.4.11'
+	},
+	{
+		fg: '--line-strong',
+		bg: '--ground',
+		level: 'AA',
+		size: 'large',
+		why: 'input border on the page, SC 1.4.11'
+	},
+	{
+		fg: '--line-strong',
+		bg: '--surface-sunk',
+		level: 'AA',
+		size: 'large',
+		why: 'input border in a sunk panel, SC 1.4.11'
+	},
 
 	// Emphatic variants used by verdict controls.
 	{

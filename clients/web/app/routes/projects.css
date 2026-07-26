@@ -16,13 +16,13 @@
 }
 
 .projects-page__head h1 {
-	font-size: clamp(2rem, 4vw, 2.7rem);
+	font-size: var(--fs-9);
 	margin-top: var(--sp-1);
 }
 
 .projects-page__head > div:first-child > p:last-child {
 	color: var(--ink-muted);
-	font-size: 1.0625rem;
+	font-size: var(--fs-6);
 	max-width: 60ch;
 	margin-top: var(--sp-3);
 }
@@ -37,7 +37,7 @@
 	border-radius: var(--r-sm);
 	background: var(--signal-wash);
 	color: var(--ink-muted);
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 }
 
 .projects-local-note svg {
@@ -71,7 +71,7 @@
 
 .project-create__error {
 	color: var(--sev-critical);
-	font-size: 0.9375rem;
+	font-size: var(--fs-4);
 }
 
 .project-list {
@@ -88,7 +88,7 @@
 }
 
 .project-list__head h2 {
-	font-size: 1.35rem;
+	font-size: var(--fs-7);
 }
 
 .project-cards {
@@ -113,12 +113,12 @@
 }
 
 .project-card h3 {
-	font-size: 1.1rem;
+	font-size: var(--fs-6);
 }
 
 .project-card__url {
 	color: var(--signal-ink);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -127,7 +127,7 @@
 
 .project-card__meta {
 	color: var(--ink-muted);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	margin-top: var(--sp-2);
 }
 
