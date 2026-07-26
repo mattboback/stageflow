@@ -523,11 +523,22 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	background: var(--surface-sunk);
 }
 .themepick__opt {
+	/* Positioned so each sr-only radio resolves against its own label. Without
+	   it all three land on the header's containing block, stacked on one spot. */
+	position: relative;
 	display: inline-flex; align-items: center; gap: 0.35rem;
 	padding: 0.32rem 0.6rem; border-radius: var(--r-pill);
 	font-size: 0.8125rem; font-weight: 600; color: var(--ink-muted);
 	cursor: pointer; white-space: nowrap;
 	transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+/* The radio covers its own pill rather than hiding in a 1px sr-only box: the
+   real control is then the thing under the pointer, so the whole pill is the
+   hit area at every viewport and nothing is dispatching clicks on its behalf.
+   Still a plain focusable radio, named by the label around it. */
+.themepick__input {
+	position: absolute; inset: 0; margin: 0;
+	appearance: none; opacity: 0; cursor: pointer;
 }
 .themepick__opt:hover { color: var(--ink-strong); }
 .themepick__opt:has(input:checked) {

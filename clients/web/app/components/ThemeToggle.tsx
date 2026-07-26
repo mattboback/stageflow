@@ -30,7 +30,7 @@ export function ThemeToggle() {
 				return (
 					<label className="themepick__opt" key={option}>
 						<input
-							className="sr-only"
+							className="themepick__input"
 							type="radio"
 							name="theme"
 							value={option}
