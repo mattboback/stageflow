@@ -15,9 +15,90 @@ export const WCAG_THRESHOLDS: Record<ContrastLevel, { normal: number; large: num
 const HEX_PATTERN = /^#?([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const RGB_PATTERN =
 	/^rgba?\(\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*[, ]\s*([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/i;
+const OKLCH_PATTERN =
+	/^oklch\(\s*([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+)(?:deg)?\s*(?:\/\s*([\d.]+%?)\s*)?\)$/i;
 
 function clampChannel(value: number): number {
 	return Math.min(255, Math.max(0, Math.round(value)));
+}
+
+/**
+ * An sRGB color converted from OKLCH, carrying the pre-clip linear channels.
+ *
+ * The linear values matter: OKLCH can express colors sRGB cannot show, and a
+ * browser clips them silently. A contrast ratio measured on a clipped value is
+ * a ratio for a color that never renders, so callers checking a palette must
+ * reject any channel outside [0, 1] rather than trust the number.
+ */
+export interface OklchRgb extends Rgba {
+	linear: { r: number; g: number; b: number };
+	inGamut: boolean;
+}
+
+function parsePortion(value: string, scale: number): number {
+	return value.endsWith('%') ? (Number(value.slice(0, -1)) / 100) * scale : Number(value);
+}
+
+/**
+ * OKLCH -> sRGB, via OKLab and linear sRGB (Ottosson's matrices).
+ * Returns null if the input is not an oklch() string.
+ */
+export function oklchToRgb(input: string | null | undefined): OklchRgb | null {
+	if (!input) {
+		return null;
+	}
+	const match = OKLCH_PATTERN.exec(input.trim());
+	if (!match) {
+		return null;
+	}
+	const [, rawL, rawC, rawH, rawAlpha] = match;
+	if (rawL === undefined || rawC === undefined || rawH === undefined) {
+		return null;
+	}
+
+	const lightness = parsePortion(rawL, 1);
+	const chroma = parsePortion(rawC, 0.4);
+	const hue = (Number(rawH) * Math.PI) / 180;
+	const alpha = rawAlpha === undefined ? 1 : parsePortion(rawAlpha, 1);
+	if ([lightness, chroma, hue, alpha].some((n) => Number.isNaN(n))) {
+		return null;
+	}
+
+	const labA = chroma * Math.cos(hue);
+	const labB = chroma * Math.sin(hue);
+
+	const lRoot = lightness + 0.3963377774 * labA + 0.2158037573 * labB;
+	const mRoot = lightness - 0.1055613458 * labA - 0.0638541728 * labB;
+	const sRoot = lightness - 0.0894841775 * labA - 1.291485548 * labB;
+	const l = lRoot ** 3;
+	const m = mRoot ** 3;
+	const s = sRoot ** 3;
+
+	const linear = {
+		r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+		g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+		b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s
+	};
+
+	const epsilon = 1e-4;
+	const inGamut = ([linear.r, linear.g, linear.b] as const).every(
+		(c) => c >= -epsilon && c <= 1 + epsilon
+	);
+
+	const encode = (channel: number): number => {
+		const clamped = Math.min(1, Math.max(0, channel));
+		const gamma = clamped <= 0.0031308 ? 12.92 * clamped : 1.055 * clamped ** (1 / 2.4) - 0.055;
+		return gamma * 255;
+	};
+
+	return {
+		r: encode(linear.r),
+		g: encode(linear.g),
+		b: encode(linear.b),
+		a: Math.min(1, Math.max(0, alpha)),
+		linear,
+		inGamut
+	};
 }
 
 export function parseColor(input: string | null | undefined): Rgba | null {
@@ -61,7 +142,7 @@ export function parseColor(input: string | null | undefined): Rgba | null {
 		return { r, g, b, a: Math.min(1, Math.max(0, a)) };
 	}
 
-	return null;
+	return oklchToRgb(value);
 }
 
 export function rgbToHex({ r, g, b }: Pick<Rgba, 'r' | 'g' | 'b'>): string {

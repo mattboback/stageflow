@@ -1,57 +1,257 @@
 /* ============================================================================
-   StageFlow — "Daylight Gauge" design system (light)
+   StageFlow — "Daylight Gauge" design system
    Shared public UI stylesheet.
 
-   Voice: a confident, friendly QA dashboard. White cards on a cool, faintly
-	   teal-tinted ground. System UI fonts keep self-hosted deployments private
-	   and offline-capable. Monospace appears only where the content is
-   literally code. Severity is a calibrated color scale, always paired with a
-   text label. WCAG AA contrast minimum on all text.
+   Voice: a confident, friendly QA dashboard. Cards on a cool, faintly
+   teal-tinted ground. Type is self-hosted, so a deployment behind a firewall
+   renders exactly like stageflow.org and asks nobody's CDN for permission.
+   Monospace appears only where the content is literally code. Severity is a
+   calibrated color scale, always paired with a text label. WCAG AA contrast
+   minimum on all text.
+
+   THEMING
+   Every color token is light-dark(light, dark) and nothing outside :root names
+   a color. Two consequences worth knowing before editing:
+
+   - The system-preference case costs zero JavaScript and cannot flash. The
+	 prerendered routes ship the right palette in the first CSS the browser
+	 parses. Only an explicit user override needs a script (see app/lib/theme.ts).
+   - A token cannot exist in one theme and not the other, which a duplicated
+	 :root[data-theme='dark'] block quietly invites.
+
+   The dark side is derived, not inverted. app/styles/theme-contrast.test.ts
+   holds both sides to the same table of obligations and rejects any token that
+   falls outside sRGB, because a browser clips those silently and a palette
+   tuned against numbers the screen never shows is not tuned at all.
    ============================================================================ */
 
+/* ---------------------------------------------------------------- typeface
+   Geist Sans and Geist Mono, self-hosted and subset to latin. Provenance, the
+   exact subset command, and the reasoning are in public/fonts/README.md.
+
+   One variable file per family spans 100-900, so every weight this UI uses
+   arrives in the two requests below rather than one request per weight. The
+   fallbacks are not decoration: five symbols the UI renders (▸ ▾ ◉ ✓ ✕) are
+   absent from Geist itself and resolve through them. */
+@font-face {
+	font-family: 'Geist';
+	src: url('/fonts/geist-sans-latin.woff2') format('woff2');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'Geist Mono';
+	src: url('/fonts/geist-mono-latin.woff2') format('woff2');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
-	/* --- Ground & surface: cool near-white, tinted toward the brand hue ---- */
-	--ground: oklch(0.971 0.007 215);       /* page bg */
-	--ground-deep: oklch(0.947 0.009 215);
-	--surface: oklch(0.995 0.002 210);      /* cards */
-	--surface-sunk: oklch(0.963 0.006 212); /* inset wells, inputs */
+	color-scheme: light dark;
 
-	/* --- Ink: cool near-black, AA+ on surface ------------------------------ */
-	--ink-strong: oklch(0.23 0.02 230);  /* headings, key numbers */
-	--ink: oklch(0.33 0.018 230);        /* body */
-	--ink-muted: oklch(0.45 0.016 228);  /* secondary — still >= 4.5:1 on white */
-	--ink-faint: oklch(0.55 0.014 225);  /* large/decorative only, never body prose */
+	/* --- Ground & surface --------------------------------------------------
+	   Ordering is by RECESSION, not by lightness, and it flips: deeper is
+	   darker on a light ground and the reverse is not automatic. --ground-deep
+	   backs inset panels and the gauge track, so it steps away from the page in
+	   both themes. --surface-sunk is mostly row hover and code wells, so in dark
+	   it steps toward the light — a hover that darkens reads as disabled. */
+	--ground: light-dark(oklch(0.971 0.007 215), oklch(0.185 0.012 235));
+	--ground-deep: light-dark(oklch(0.947 0.009 215), oklch(0.145 0.012 235));
+	--surface: light-dark(oklch(0.995 0.002 210), oklch(0.225 0.013 235));
+	--surface-sunk: light-dark(oklch(0.963 0.006 212), oklch(0.265 0.013 235));
 
-	/* --- Lines ------------------------------------------------------------- */
-	--line: oklch(0.885 0.01 220);
-	--line-strong: oklch(0.82 0.014 220);
-	--tick: oklch(0.885 0.009 220);
+	/* --- Ink: AA+ on both grounds ------------------------------------------ */
+	--ink-strong: light-dark(oklch(0.23 0.02 230), oklch(0.97 0.005 230));
+	--ink: light-dark(oklch(0.33 0.018 230), oklch(0.89 0.008 230));
+	--ink-muted: light-dark(oklch(0.45 0.016 228), oklch(0.74 0.012 228));
+	--ink-faint: light-dark(oklch(0.55 0.014 225), oklch(0.60 0.012 225));
 
-	/* --- Signal: StageFlow teal, deepened ---------------------------------- */
-	--signal: oklch(0.55 0.105 205);        /* accents, active state */
-	--signal-strong: oklch(0.48 0.10 206);  /* primary button bg, white text AA */
-	--signal-press: oklch(0.42 0.09 207);
-	--signal-ink: oklch(0.40 0.09 207);     /* teal-colored text on light */
-	--signal-wash: oklch(0.955 0.024 202);  /* faint fill */
-	--signal-edge: oklch(0.865 0.055 203);  /* tinted border */
+	/* --- Lines -------------------------------------------------------------
+	   Two roles, and only one of them is an accessibility obligation.
 
-	/* --- Calibrated severity scale (always paired with a text label) ------- */
-	--sev-critical: oklch(0.52 0.20 27);
-	--sev-serious:  oklch(0.52 0.16 45);
-	--sev-moderate: oklch(0.58 0.125 82);
-	--sev-minor:    oklch(0.52 0.12 135);
-	--sev-info:     oklch(0.52 0.10 245);
-	--sev-pass:     oklch(0.55 0.12 160);
-	--sev-critical-wash: oklch(0.962 0.022 27);
-	--sev-serious-wash:  oklch(0.965 0.024 47);
-	--sev-moderate-wash: oklch(0.968 0.028 85);
-	--sev-minor-wash:    oklch(0.966 0.024 140);
-	--sev-info-wash:     oklch(0.963 0.018 245);
+	   --line is decoration: card edges, rules between rows, the seam under the
+	   header. Nothing identifies a control by it, so it is free to be quiet.
 
-	/* --- Type: local system stacks, with no third-party font requests ------- */
-	--display: 'Avenir Next', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
-	--sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
-	--mono: ui-monospace, 'SFMono-Regular', 'Cascadia Code', Consolas, Menlo, monospace;
+	   --line-strong is the identifying boundary of a text input and of a ghost
+	   button — the only thing that says "you can type here" — which SC 1.4.11
+	   holds to 3:1 against whatever sits behind it. The light value used to be
+	   0.82, which measured 1.72:1 and failed. It is now 0.63: 3.43:1 on a card,
+	   3.20:1 on the page, 3.13:1 on a sunk panel. That is a visibly darker
+	   border on every input on the site, which is the point — the old one was
+	   a suggestion of an edge. Both values are checked in theme-contrast.test.ts
+	   against all three backgrounds, so neither can quietly drift back. */
+	--line: light-dark(oklch(0.885 0.01 220), oklch(0.32 0.012 220));
+	--line-strong: light-dark(oklch(0.63 0.014 220), oklch(0.54 0.014 220));
+	/* --tick was declared here and referenced nowhere; removed rather than
+	   carried into a second theme. */
+
+	/* --- Signal: StageFlow teal --------------------------------------------
+	   The fill inverts. On a light ground the button is a deep teal carrying
+	   white; on a dark ground it is a bright teal carrying dark ink, which is
+	   both more legible (9.09:1 against 4.90:1 for the deep-teal alternative)
+	   and far more present against the page (8.73:1 against 3.69:1). That is
+	   why --on-signal is a token rather than a hardcoded white. */
+	--signal: light-dark(oklch(0.55 0.105 205), oklch(0.72 0.11 205));
+	--signal-strong: light-dark(oklch(0.48 0.10 206), oklch(0.75 0.115 206));
+	--signal-press: light-dark(oklch(0.42 0.09 207), oklch(0.68 0.11 206));
+	--signal-ink: light-dark(oklch(0.40 0.09 207), oklch(0.80 0.09 205));
+	--signal-wash: light-dark(oklch(0.955 0.024 202), oklch(0.28 0.038 203));
+	--signal-edge: light-dark(oklch(0.865 0.055 203), oklch(0.42 0.055 203));
+
+	/* --- Calibrated severity scale (always paired with a text label) -------
+	   Four roles per severity, and every one of them is a contrast obligation
+	   checked by app/styles/theme-contrast.test.ts:
+	     base    fill and non-text marks     >= 3:1 on surface  (SC 1.4.11)
+	     -ink    severity-colored text       >= 4.5:1 on surface and on -wash
+	     -wash   tinted fill behind -ink
+	     -edge   tinted border on a wash
+	   The base hue is NOT always legible as text: amber and green have to drop
+	   in lightness to clear 4.5:1, which is why -ink exists separately.
+
+	   Dark is a re-derivation, not an inversion. The base rises to L 0.68-0.80
+	   with chroma pulled back, because high chroma at high lightness leaves
+	   sRGB for the red and orange hues. The wash becomes a DARK tint rather
+	   than a light one — the single token most likely to be left alone and be
+	   wrong. --sev-minor (135) and --sev-pass (168) stay close in hue in both
+	   themes; they never appear adjacent, minor being a finding level and pass
+	   a run state. */
+	--sev-critical: light-dark(oklch(0.52 0.20 27), oklch(0.68 0.17 27));
+	--sev-serious:  light-dark(oklch(0.52 0.16 45), oklch(0.73 0.14 50));
+	--sev-moderate: light-dark(oklch(0.58 0.125 82), oklch(0.80 0.12 85));
+	--sev-minor:    light-dark(oklch(0.52 0.12 135), oklch(0.75 0.14 140));
+	--sev-info:     light-dark(oklch(0.52 0.10 245), oklch(0.72 0.11 245));
+	--sev-pass:     light-dark(oklch(0.55 0.12 160), oklch(0.78 0.13 168));
+	--sev-critical-wash: light-dark(oklch(0.962 0.022 27), oklch(0.27 0.05 27));
+	--sev-serious-wash:  light-dark(oklch(0.965 0.024 47), oklch(0.27 0.045 50));
+	--sev-moderate-wash: light-dark(oklch(0.968 0.028 85), oklch(0.27 0.04 85));
+	--sev-minor-wash:    light-dark(oklch(0.966 0.024 140), oklch(0.27 0.04 140));
+	--sev-info-wash:     light-dark(oklch(0.963 0.018 245), oklch(0.27 0.04 245));
+
+	/* light: base already clears 4.5:1 except amber and green, which darken.
+	   dark: every -ink rises past its own base. */
+	--sev-critical-ink: light-dark(oklch(0.52 0.20 27), oklch(0.79 0.13 27));
+	--sev-serious-ink:  light-dark(oklch(0.52 0.16 45), oklch(0.82 0.12 50));
+	--sev-moderate-ink: light-dark(oklch(0.46 0.11 80), oklch(0.86 0.12 85));
+	--sev-minor-ink:    light-dark(oklch(0.44 0.11 140), oklch(0.84 0.13 140));
+	--sev-info-ink:     light-dark(oklch(0.52 0.10 245), oklch(0.81 0.09 245));
+	--sev-pass-ink:     light-dark(oklch(0.42 0.09 158), oklch(0.85 0.12 168));
+
+	/* Emphatic variants: verdict buttons and review chips, where the label is
+	   the whole control rather than a word inside a sentence. The dark red is
+	   held to C 0.10 — at L 0.82 anything more saturated leaves sRGB and the
+	   browser renders a color nobody chose. */
+	--sev-critical-ink-strong: light-dark(oklch(0.40 0.14 27), oklch(0.82 0.10 27));
+	--sev-pass-ink-strong:     light-dark(oklch(0.35 0.09 158), oklch(0.91 0.10 168));
+
+	--sev-critical-edge: light-dark(oklch(0.86 0.05 27), oklch(0.42 0.08 27));
+	--sev-serious-edge:  light-dark(oklch(0.86 0.05 47), oklch(0.42 0.07 50));
+	--sev-moderate-edge: light-dark(oklch(0.86 0.06 80), oklch(0.42 0.06 85));
+	--sev-minor-edge:    light-dark(oklch(0.86 0.05 135), oklch(0.42 0.06 140));
+	--sev-info-edge:     light-dark(oklch(0.86 0.04 245), oklch(0.42 0.06 245));
+	--sev-pass-edge:     light-dark(oklch(0.86 0.05 158), oklch(0.42 0.06 168));
+	--sev-critical-edge-strong: light-dark(oklch(0.78 0.08 27), oklch(0.54 0.11 27));
+	--sev-pass-edge-strong:     light-dark(oklch(0.78 0.07 150), oklch(0.54 0.09 168));
+	--sev-pass-edge-hover:      light-dark(oklch(0.55 0.10 155), oklch(0.70 0.11 168));
+	--sev-critical-press:       light-dark(oklch(0.47 0.19 27), oklch(0.74 0.16 27));
+
+	/* Screenshot marker fills. Flat tokens rather than color-mix() so the value
+	   can be chosen per theme rather than recomputed from a base that moved.
+	   These then deliberately do NOT move: they are painted over a screenshot
+	   of someone else's page, which looks the same whichever theme the operator
+	   is running. Same reasoning as getSeverityFillColor in
+	   app/lib/report/severity.ts, which draws the marker strokes. */
+	--sev-neutral-overlay:  oklch(0.55 0.014 225 / 0.1);
+	--sev-critical-overlay: oklch(0.52 0.20 27 / 0.1);
+	--sev-serious-overlay:  oklch(0.52 0.16 45 / 0.1);
+	--sev-moderate-overlay: oklch(0.58 0.125 82 / 0.1);
+	--sev-minor-overlay:    oklch(0.52 0.12 135 / 0.1);
+	--sev-info-overlay:     oklch(0.52 0.10 245 / 0.1);
+
+	/* --- Foreground on a filled color -------------------------------------
+	   Both flip to dark ink in dark mode, because both fills go bright there.
+	   --knob does not: it is the handle of a switch whose off-state track is
+	   --line-strong, so it stays near-white to read against either state. */
+	--on-signal:   light-dark(oklch(0.99 0 0), oklch(0.16 0.012 235));
+	--on-severity: light-dark(oklch(0.99 0 0), oklch(0.16 0.012 235));
+	--knob:        light-dark(oklch(0.99 0 0), oklch(0.96 0 0));
+
+	/* --- Overlay surfaces --------------------------------------------------
+	   Glass must match the surface it fronts, or the sticky header reads as a
+	   pale smear over dark content. The scrims deepen and gain alpha: a 50%
+	   veil that separates a modal from a white page disappears over a dark one. */
+	--surface-glass: light-dark(oklch(0.995 0.002 210 / 0.88), oklch(0.225 0.013 235 / 0.88));
+	--surface-glass-strong: light-dark(oklch(0.995 0.002 210 / 0.94), oklch(0.225 0.013 235 / 0.94));
+	--scrim: light-dark(oklch(0.2 0.015 230 / 0.5), oklch(0.08 0.01 235 / 0.68));
+	--scrim-soft: light-dark(oklch(0.23 0.02 230 / 0.35), oklch(0.08 0.01 235 / 0.55));
+	--shadow-color: light-dark(oklch(0.25 0.02 230 / 0.05), oklch(0 0 0 / 0.45));
+	--signal-ring: light-dark(oklch(0.55 0.105 205 / 0.4), oklch(0.72 0.11 205 / 0.45));
+	--signal-ring-fade: light-dark(oklch(0.55 0.105 205 / 0), oklch(0.72 0.11 205 / 0));
+
+	/* --- Advisory amber: not a finding severity, a caution about input ----- */
+	--warn-wash: light-dark(oklch(0.97 0.025 78), oklch(0.27 0.045 78));
+	--warn-edge: light-dark(oklch(0.78 0.09 75), oklch(0.46 0.08 75));
+	--warn-rule: light-dark(oklch(0.52 0.12 65), oklch(0.82 0.13 72));
+
+	/* --- Terminal island: literal CLI output, dark in BOTH themes ----------
+	   Deliberately not sourced from --ink-strong. If it were, it would invert
+	   with the theme and render near-white text on a near-white block. In dark
+	   it goes darker than the page rather than matching it, so the island still
+	   reads as a distinct recessed surface, and gains a visible edge. */
+	--terminal-bg: light-dark(oklch(0.23 0.02 230), oklch(0.135 0.014 235));
+	--terminal-edge: light-dark(transparent, oklch(0.29 0.012 230));
+	--terminal-ink: light-dark(oklch(0.94 0.008 240), oklch(0.90 0.010 240));
+	--terminal-ink-faint: light-dark(oklch(0.68 0.012 240), oklch(0.66 0.012 240));
+	--terminal-prompt: oklch(0.78 0.09 205);
+	--terminal-ok: oklch(0.82 0.11 155);
+	--terminal-warn: oklch(0.83 0.11 65);
+	--stripe: oklch(1 0 0 / 0.16);   /* barber-pole on the running meter */
+
+	/* --- Type ---------------------------------------------------------------
+	   One sans for everything and one mono for code. There is deliberately no
+	   separate display face: the stack this replaced named 'Avenir Next' for
+	   headings and 'Segoe UI Variable Text' for body, which meant that on
+	   anything but macOS or Windows both fell through to the same system-ui
+	   face and headings differed from body by weight alone. Most visitors saw
+	   a flatter site than the author did. Hierarchy now comes from the scale
+	   below and from tracking, which are the same on every machine. */
+	--sans: 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Consolas, Menlo, monospace;
+
+	/* --- Type scale ---------------------------------------------------------
+	   Two registers, because one ratio cannot serve both halves of this UI.
+
+	   The UI register steps by a single pixel on purpose. At 12-15px a 1.25
+	   ratio skips the size you actually needed: a column of counts beside a
+	   row of labels beside a chip legitimately wants three sizes inside four
+	   pixels, and rounding them together flattens the reading order.
+
+	   The text register is a 1.25 major third off the 16px body, where a step
+	   has to read as intent across a whole viewport rather than as drift.
+	   --fs-6 is the one deliberate half-step: a lead paragraph that jumps
+	   straight to 20px competes with the heading above it. Everything from
+	   --fs-7 up is fluid, each clamp() floor being its phone size and the
+	   ceiling its desktop size, so no heading needs a media query.
+
+	   Before this there were 25 distinct sizes between 0.7rem and 2.4rem,
+	   most within a pixel of a neighbour. A size that does not name a step is
+	   now an accident, with one commented exception in fault.css. */
+	--fs-1: 0.75rem;    /* 12 — legends, chip counts, axis labels */
+	--fs-2: 0.8125rem;  /* 13 — dense meta, table cells, timestamps */
+	--fs-3: 0.875rem;   /* 14 — secondary UI text, control labels */
+	--fs-4: 0.9375rem;  /* 15 — default UI text */
+	--fs-5: 1rem;       /* 16 — body */
+	--fs-6: 1.125rem;   /* 18 — lead paragraphs, h4 */
+	--fs-7: clamp(1.25rem, 1.6vw, 1.375rem);      /* 20→22 — h3, panel titles */
+	--fs-8: clamp(1.5rem, 2.5vw, 1.9375rem);      /* 24→31 — h2, in-app h1 */
+	--fs-9: clamp(1.875rem, 3.2vw, 2.4375rem);    /* 30→39 — display numerals, page h1 */
+	--fs-10: clamp(2.1875rem, 4.6vw, 3.0625rem);  /* 35→49 — the hero, once */
+
+	/* Display tracking. Geist is drawn at text spacing, so headings need it
+	   pulled in, and the larger the type the more it needs. */
+	--track-display: -0.02em;
+	--track-hero: -0.03em;
 
 	/* --- Radius: soft, never blobby ---------------------------------------- */
 	--r-xs: 6px;
@@ -60,10 +260,23 @@
 	--r-lg: 16px;     /* page panels, modals */
 	--r-pill: 999px;
 
-	/* --- Elevation: tinted border OR shadow, cards get border + crisp ambient */
-	--shadow-sm: 0 1px 2px oklch(0.25 0.02 230 / 0.05);
-	--shadow-md: 0 4px 14px oklch(0.25 0.02 230 / 0.09);
-	--shadow-pop: 0 16px 48px oklch(0.25 0.02 230 / 0.16);
+	/* --- Elevation: tinted border OR shadow, cards get border + crisp ambient
+	   The dark values are near-black and roughly five times the alpha. A 5%
+	   tinted shadow reads as depth against white and as nothing at all against
+	   a dark ground, where separation has to come from an actual shadow rather
+	   than a hint of one. */
+	--shadow-sm: light-dark(0 1px 2px oklch(0.25 0.02 230 / 0.05), 0 1px 2px oklch(0 0 0 / 0.4));
+	--shadow-md: light-dark(0 4px 14px oklch(0.25 0.02 230 / 0.09), 0 4px 14px oklch(0 0 0 / 0.5));
+	--shadow-pop: light-dark(0 16px 48px oklch(0.25 0.02 230 / 0.16), 0 16px 48px oklch(0 0 0 / 0.65));
+
+	/* Hover feedback for surfaces whose fill is set per-severity by a class,
+	   where an explicit press token per severity would cost five more tokens
+	   for one hover state. A translucent veil rather than filter: brightness(),
+	   because brightness() takes a number and light-dark() only accepts colors
+	   — a numeric light-dark() parses as a custom property but is invalid where
+	   it is used, so the hover would silently do nothing. The veil also gets
+	   the direction right for free: darken on light, lighten on dark. */
+	--hover-veil: light-dark(oklch(0 0 0 / 0.06), oklch(1 0 0 / 0.1));
 
 	/* --- Motion --- */
 	--dur-1: 120ms;
@@ -96,13 +309,21 @@
 	--sp-7: 64px;
 }
 
+/* An explicit choice pins color-scheme, which is what makes light-dark() and
+   the native form controls resolve to that side. Absent the attribute the
+   :root rule above leaves both on, so the OS decides and no script has to run.
+   The attribute is set before first paint by THEME_INIT_SCRIPT in
+   app/lib/theme.ts. */
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+
 /* ------------------------------------------------------------------ reset */
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; }
 html { -webkit-text-size-adjust: 100%; }
 body {
 	font-family: var(--sans);
-	font-size: 16px;
+	font-size: var(--fs-5);
 	line-height: 1.55;
 	color: var(--ink);
 	background: var(--ground);
@@ -110,10 +331,9 @@ body {
 	text-rendering: optimizeLegibility;
 }
 h1, h2, h3, h4 {
-	font-family: var(--display);
 	color: var(--ink-strong);
 	line-height: 1.15;
-	letter-spacing: -0.01em;
+	letter-spacing: var(--track-display);
 	font-weight: 700;
 }
 img, svg { display: block; max-width: 100%; }
@@ -150,7 +370,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 /* Field / section label: small, sentence case, quietly strong */
 .label {
 	font-family: var(--sans);
-	font-size: 0.875rem;
+	font-size: var(--fs-3);
 	font-weight: 600;
 	color: var(--ink-muted);
 }
@@ -158,7 +378,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 /* ----------------------------------------------------------------- header */
 .site-header {
 	position: sticky; top: 0; z-index: var(--z-sticky);
-	background: oklch(0.995 0.002 210 / 0.88);
+	background: var(--surface-glass);
 	backdrop-filter: saturate(1.3) blur(10px);
 	border-bottom: 1px solid var(--line);
 }
@@ -167,28 +387,32 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	height: 64px;
 }
 .brand { display: inline-flex; align-items: center; gap: 0.55rem; }
-.brand__mark {
-	width: 20px; height: 20px; border-radius: 7px;
-	background: var(--signal-strong);
-	position: relative;
+/* The gauge, drawn in app/components/BrandMark.tsx. */
+.brandmark { width: 22px; height: 22px; flex-shrink: 0; }
+.brandmark__field { fill: var(--signal-strong); }
+.brandmark__dial,
+.brandmark__needle { stroke: var(--on-signal); }
+.brandmark__hub { fill: var(--on-signal); }
+/* One sweep on mount, pivoting on the hub the needle is actually attached to.
+   transform-box: view-box makes 32 39 mean the viewBox coordinates rather than
+   the needle path's own bounding box, which would put the pivot in mid-air.
+   The global prefers-reduced-motion rule collapses this to nothing. */
+.brandmark__needle {
+	transform-box: view-box;
+	transform-origin: 32px 39px;
+	animation: brandmark-sweep var(--dur-3) var(--ease-io) 1;
 }
-/* gauge needle: a small white arc cut into the mark */
-.brand__mark::after {
-	content: '';
-	position: absolute; inset: 4px;
-	border-radius: 50%;
-	border: 2.5px solid oklch(0.99 0 0);
-	border-bottom-color: transparent;
-	border-left-color: transparent;
-	transform: rotate(45deg);
+@keyframes brandmark-sweep {
+	from { transform: rotate(-78deg); }
+	to { transform: rotate(0deg); }
 }
 .brand__name {
-	font-family: var(--display); font-weight: 700;
-	font-size: 1.1rem; color: var(--ink-strong); letter-spacing: -0.01em;
+	font-weight: 700;
+	font-size: var(--fs-6); color: var(--ink-strong); letter-spacing: var(--track-display);
 }
 .nav { display: flex; align-items: center; gap: 0.35rem; margin-left: auto; }
 .nav a.navlink {
-	font-size: 1rem; font-weight: 500; color: var(--ink); padding: 0.45rem 0.75rem;
+	font-size: var(--fs-5); font-weight: 500; color: var(--ink); padding: 0.45rem 0.75rem;
 	border-radius: var(--r-sm); transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 .nav a.navlink:hover { color: var(--ink-strong); background: var(--ground); }
@@ -200,7 +424,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 
 /* App-bar variant: workflow chrome, one stable height at every breakpoint */
 .site-header__section {
-	font-weight: 600; font-size: 0.9375rem; color: var(--ink-muted);
+	font-weight: 600; font-size: var(--fs-4); color: var(--ink-muted);
 	padding-left: var(--sp-3); border-left: 1px solid var(--line);
 	white-space: nowrap;
 }
@@ -216,12 +440,17 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	/* Touch targets: keep visuals compact, guarantee ~44px hit areas */
 	.nav a.navlink, .btn--sm { min-height: 44px; }
 	.tab { padding-block: 0.85rem; min-height: 44px; }
+	/* Drop the words, keep the icons and the hit area. The group still has its
+	   accessible name from the legend, and each radio from its value. */
+	.themepick__label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+		overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+	.themepick__opt { min-height: 38px; padding-inline: 0.55rem; }
 }
 
 /* ----------------------------------------------------------------- button */
 .btn {
 	display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-	font-weight: 600; font-size: 0.9375rem; line-height: 1;
+	font-weight: 600; font-size: var(--fs-4); line-height: 1;
 	padding: 0.7rem 1.15rem; border-radius: var(--r-sm);
 	border: 1px solid transparent;
 	transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
@@ -230,14 +459,14 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	white-space: nowrap;
 }
 .btn:active { transform: translateY(1px); }
-.btn--primary { background: var(--signal-strong); color: oklch(0.99 0 0); }
+.btn--primary { background: var(--signal-strong); color: var(--on-signal); }
 .btn--primary:hover { background: var(--signal-press); }
 .btn--ghost { color: var(--ink-strong); border-color: var(--line-strong); background: var(--surface); }
 .btn--ghost:hover { border-color: var(--ink-faint); background: var(--ground); }
-.btn--danger { background: var(--sev-critical); color: oklch(0.99 0 0); }
-.btn--danger:hover { filter: brightness(0.92); }
-.btn--sm { padding: 0.5rem 0.85rem; font-size: 0.875rem; }
-.btn--lg { padding: 0.85rem 1.4rem; font-size: 1rem; border-radius: var(--r-sm); }
+.btn--danger { background: var(--sev-critical); color: var(--on-severity); }
+.btn--danger:hover { background: var(--sev-critical-press); }
+.btn--sm { padding: 0.5rem 0.85rem; font-size: var(--fs-3); }
+.btn--lg { padding: 0.85rem 1.4rem; font-size: var(--fs-5); border-radius: var(--r-sm); }
 .btn .ar { transition: transform var(--dur-2) var(--ease); }
 .btn:hover .ar { transform: translateX(3px); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -252,14 +481,14 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	display: flex; align-items: center; justify-content: space-between; gap: 1rem;
 	padding: 0.9rem 1.15rem; border-bottom: 1px solid var(--line);
 }
-.panel__head h2, .panel__head h3 { font-size: 1.0625rem; font-weight: 700; }
+.panel__head h2, .panel__head h3 { font-size: var(--fs-6); font-weight: 700; }
 .panel__body { padding: 1.15rem; }
 
 /* ------------------------------------------------------------- underline tabs */
 .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--line); overflow-x: auto; }
 .tab {
 	display: inline-flex; align-items: center; gap: 0.5rem;
-	font-size: 1rem; font-weight: 600; color: var(--ink-muted);
+	font-size: var(--fs-5); font-weight: 600; color: var(--ink-muted);
 	padding: 0.7rem 1rem; border-bottom: 3px solid transparent;
 	margin-bottom: -1px; white-space: nowrap;
 	transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
@@ -271,7 +500,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	background: var(--signal-wash);
 }
 .tab__count {
-	font-size: 0.8125rem; font-weight: 600; font-variant-numeric: tabular-nums;
+	font-size: var(--fs-2); font-weight: 600; font-variant-numeric: tabular-nums;
 	color: var(--ink-muted); background: var(--surface-sunk);
 	padding: 0.08rem 0.5rem; border-radius: var(--r-pill);
 }
@@ -286,10 +515,10 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
 }
 .gauge__val {
-	font-family: var(--display); font-weight: 800; font-variant-numeric: tabular-nums;
+	font-weight: 800; font-variant-numeric: tabular-nums;
 	color: var(--ink-strong); line-height: 1;
 }
-.gauge__cap { font-size: 0.8125rem; font-weight: 600; color: var(--ink-muted); margin-top: 0.3rem; }
+.gauge__cap { font-size: var(--fs-2); font-weight: 600; color: var(--ink-muted); margin-top: 0.3rem; }
 
 /* --------------------------------------------------- severity scale chip */
 .sevscale { display: grid; gap: 0.15rem; }
@@ -300,10 +529,10 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .sevrow:hover { background: var(--surface-sunk); }
 .sevrow__dot { width: 10px; height: 10px; border-radius: 50%; }
-.sevrow__name { min-width: 0; font-size: 0.9375rem; font-weight: 500; color: var(--ink); }
+.sevrow__name { min-width: 0; font-size: var(--fs-4); font-weight: 500; color: var(--ink); }
 .sevrow__count {
 	font-weight: 700; font-variant-numeric: tabular-nums;
-	font-size: 0.95rem; color: var(--ink-strong);
+	font-size: var(--fs-4); color: var(--ink-strong);
 }
 .sev-critical .sevrow__dot { background: var(--sev-critical); }
 .sev-serious  .sevrow__dot { background: var(--sev-serious); }
@@ -314,15 +543,15 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 /* ------------------------------------------------------------- data readouts */
 .readout { display: flex; flex-direction: column; gap: 0.2rem; }
 .readout__val {
-	font-family: var(--display); font-weight: 700; font-variant-numeric: tabular-nums;
-	color: var(--ink-strong); font-size: 1.55rem; line-height: 1.1;
+	font-weight: 700; font-variant-numeric: tabular-nums;
+	color: var(--ink-strong); font-size: var(--fs-8); line-height: 1.1;
 }
-.readout__lab { font-size: 0.875rem; font-weight: 500; color: var(--ink-muted); }
+.readout__lab { font-size: var(--fs-3); font-weight: 500; color: var(--ink-muted); }
 
 /* ------------------------------------------------------------- status pill */
 .pill {
 	display: inline-flex; align-items: center; gap: 0.4rem;
-	font-size: 0.875rem; font-weight: 600; line-height: 1;
+	font-size: var(--fs-3); font-weight: 600; line-height: 1;
 	padding: 0.32rem 0.7rem; border-radius: var(--r-pill);
 	border: 1px solid var(--line-strong);
 	color: var(--ink-muted); background: var(--surface);
@@ -330,33 +559,69 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .pill__led { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pill--live { color: var(--signal-ink); border-color: var(--signal-edge); background: var(--signal-wash); }
 .pill--live .pill__led { background: var(--signal); animation: blink 1.2s steps(2, jump-none) infinite; }
-.pill--done { color: oklch(0.42 0.10 160); border-color: oklch(0.86 0.05 158); background: var(--sev-minor-wash); }
+.pill--done { color: var(--sev-pass-ink); border-color: var(--sev-pass-edge); background: var(--sev-minor-wash); }
 .pill--done .pill__led { background: var(--sev-pass); }
 .pill--queued { color: var(--ink-muted); }
-.pill--error { color: var(--sev-critical); border-color: oklch(0.86 0.05 27); background: var(--sev-critical-wash); }
+.pill--error { color: var(--sev-critical-ink); border-color: var(--sev-critical-edge); background: var(--sev-critical-wash); }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
 /* Severity badge: filled wash pill, label always textual */
 .sevbadge {
 	display: inline-flex; align-items: center; gap: 0.35rem;
-	font-size: 0.8125rem; font-weight: 700; line-height: 1;
+	font-size: var(--fs-2); font-weight: 700; line-height: 1;
 	padding: 0.32rem 0.65rem; border-radius: var(--r-pill);
 }
-.sevbadge--critical { color: var(--sev-critical); background: var(--sev-critical-wash); }
-.sevbadge--serious  { color: var(--sev-serious);  background: var(--sev-serious-wash); }
-.sevbadge--moderate { color: oklch(0.46 0.11 80);  background: var(--sev-moderate-wash); }
-.sevbadge--minor    { color: oklch(0.44 0.11 140); background: var(--sev-minor-wash); }
-.sevbadge--info     { color: var(--sev-info);     background: var(--sev-info-wash); }
+.sevbadge--critical { color: var(--sev-critical-ink); background: var(--sev-critical-wash); }
+.sevbadge--serious  { color: var(--sev-serious-ink);  background: var(--sev-serious-wash); }
+.sevbadge--moderate { color: var(--sev-moderate-ink); background: var(--sev-moderate-wash); }
+.sevbadge--minor    { color: var(--sev-minor-ink);    background: var(--sev-minor-wash); }
+.sevbadge--info     { color: var(--sev-info-ink);     background: var(--sev-info-wash); }
 
 /* ------------------------------------------------------------- input field */
 .field { display: flex; flex-direction: column; gap: 0.45rem; }
 .input {
 	width: 100%; background: var(--surface); border: 1px solid var(--line-strong);
-	border-radius: var(--r-sm); padding: 0.7rem 0.9rem; font-size: 0.95rem; color: var(--ink-strong);
+	border-radius: var(--r-sm); padding: 0.7rem 0.9rem; font-size: var(--fs-4); color: var(--ink-strong);
 	transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
 }
 .input::placeholder { color: var(--ink-faint); }
 .input:focus { outline: none; border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-wash); }
+
+/* -------------------------------------------------------------- theme pick
+   Segmented control over three native radios. The inputs are .sr-only, so the
+   visible state rides :checked on the label, and focus rides :focus-visible on
+   the input via :has() — the ring has to appear on the segment the keyboard is
+   actually on, not on the group. */
+.themepick {
+	display: inline-flex; align-items: center; gap: 1px;
+	padding: 2px; margin: 0; border: 1px solid var(--line); border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+}
+.themepick__opt {
+	/* Positioned so each sr-only radio resolves against its own label. Without
+	   it all three land on the header's containing block, stacked on one spot. */
+	position: relative;
+	display: inline-flex; align-items: center; gap: 0.35rem;
+	padding: 0.32rem 0.6rem; border-radius: var(--r-pill);
+	font-size: var(--fs-2); font-weight: 600; color: var(--ink-muted);
+	cursor: pointer; white-space: nowrap;
+	transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+}
+/* The radio covers its own pill rather than hiding in a 1px sr-only box: the
+   real control is then the thing under the pointer, so the whole pill is the
+   hit area at every viewport and nothing is dispatching clicks on its behalf.
+   Still a plain focusable radio, named by the label around it. */
+.themepick__input {
+	position: absolute; inset: 0; margin: 0;
+	appearance: none; opacity: 0; cursor: pointer;
+}
+.themepick__opt:hover { color: var(--ink-strong); }
+.themepick__opt:has(input:checked) {
+	color: var(--signal-ink); background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.themepick__opt:has(input:focus-visible) {
+	outline: 2.5px solid var(--signal); outline-offset: 2px;
+}
 
 /* ------------------------------------------------------------------ toggle */
 .toggle {
@@ -366,7 +631,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .toggle::after {
 	content: ''; position: absolute; top: 3px; left: 3px; width: 17px; height: 17px;
-	border-radius: 50%; background: oklch(0.99 0 0); box-shadow: var(--shadow-sm);
+	border-radius: 50%; background: var(--knob); box-shadow: var(--shadow-sm);
 	transition: transform var(--dur-2) var(--ease);
 }
 .toggle[aria-checked='true'], .toggle--on { background: var(--signal-strong); }
@@ -375,14 +640,14 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 /* ---------------------------------------------------------- confirm dialog */
 .cdialog__backdrop {
 	position: fixed; inset: 0; z-index: var(--z-modal);
-	background: oklch(0.2 0.015 230 / 0.5);
+	background: var(--scrim);
 	display: flex; align-items: center; justify-content: center;
 	padding: 2rem 1rem;
 }
 .cdialog { width: 100%; max-width: 26rem; box-shadow: var(--shadow-md); }
 .cdialog__body { padding: 1.4rem 1.4rem 0.4rem; }
-.cdialog__body h2 { font-size: 1.05rem; font-weight: 700; color: var(--ink-strong); letter-spacing: -0.01em; }
-.cdialog__body p { color: var(--ink-muted); margin-top: 0.5rem; font-size: 0.95rem; line-height: 1.55; }
+.cdialog__body h2 { font-size: var(--fs-5); font-weight: 700; color: var(--ink-strong); letter-spacing: var(--track-display); }
+.cdialog__body p { color: var(--ink-muted); margin-top: 0.5rem; font-size: var(--fs-4); line-height: 1.55; }
 .cdialog__actions { display: flex; justify-content: flex-end; gap: 0.7rem; padding: 1.2rem 1.4rem 1.4rem; }
 
 /* ------------------------------------------------------------------ footer */
@@ -392,18 +657,18 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	justify-content: space-between; padding-block: 1.75rem;
 }
 .site-footer__brand { flex: 0 1 auto; }
-.site-footer__tagline { font-size: 0.9375rem; max-width: 34ch; margin-top: 0.5rem; }
+.site-footer__tagline { font-size: var(--fs-4); max-width: 34ch; margin-top: 0.5rem; }
 .site-footer__cols { display: flex; flex-wrap: wrap; gap: var(--sp-5) clamp(1.5rem, 4vw, 3.5rem); }
 .site-footer__col { display: grid; gap: 0.4rem; align-content: start; }
 .site-footer__col .label { margin-bottom: 0.1rem; }
-.site-footer a { color: var(--ink); font-size: 0.9375rem; }
+.site-footer a { color: var(--ink); font-size: var(--fs-4); }
 .site-footer a:hover { color: var(--signal-ink); }
 .site-footer__meta {
 	display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; align-items: center;
 	padding-block: var(--sp-3) var(--sp-4); border-top: 1px solid var(--line);
-	color: var(--ink-muted); font-size: 0.875rem;
+	color: var(--ink-muted); font-size: var(--fs-3);
 }
-.site-footer__meta a { font-size: 0.875rem; color: var(--ink-muted); }
+.site-footer__meta a { font-size: var(--fs-3); color: var(--ink-muted); }
 .site-footer__meta a:hover { color: var(--signal-ink); }
 .site-footer--slim { margin-top: var(--sp-6); }
 .site-footer--slim .site-footer__meta { border-top: 0; }
@@ -418,15 +683,15 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 	display: inline-flex; align-items: center; gap: 0.25rem;
 	font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.delta--good { color: oklch(0.44 0.11 155); }
-.delta--bad { color: var(--sev-critical); }
+.delta--good { color: var(--sev-pass-ink); }
+.delta--bad { color: var(--sev-critical-ink); }
 .delta--flat { color: var(--ink-muted); }
 
 /* -------------------------------------------------------------- utilities */
 .divider { height: 1px; background: var(--line); border: 0; }
 .code-well {
 	display: block; margin: 0;
-	font-family: var(--mono); font-size: 0.875rem; line-height: 1.6;
+	font-family: var(--mono); font-size: var(--fs-3); line-height: 1.6;
 	background: var(--surface-sunk); border: 1px solid var(--line);
 	border-radius: var(--r-sm); padding: 0.7rem 0.85rem;
 	overflow-x: auto; white-space: pre-wrap; word-break: break-word;
@@ -440,7 +705,7 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .codebox__copy {
 	position: absolute; top: 5px; right: 5px;
 	display: inline-flex; align-items: center; gap: 0.3rem;
-	font-family: var(--sans); font-size: 0.8125rem; font-weight: 600;
+	font-family: var(--sans); font-size: var(--fs-2); font-weight: 600;
 	color: var(--ink-muted); background: var(--surface);
 	border: 1px solid var(--line); border-radius: var(--r-xs);
 	padding: 0.3rem 0.55rem; min-height: 32px;
