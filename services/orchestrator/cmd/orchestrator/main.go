@@ -115,7 +115,10 @@ func run() int {
 	}
 
 	podmanClient, err := podman.NewClient(&podman.Config{
-		SocketPath: cfg.PodmanSocket,
+		SocketPath:            cfg.PodmanSocket,
+		RequestTimeout:        cfg.PodmanRequestTimeout,
+		ResponseHeaderTimeout: cfg.PodmanResponseHeaderTimeout,
+		DialTimeout:           cfg.PodmanDialTimeout,
 	})
 	if err != nil {
 		logger.Error("Failed to create Podman client", "error", err)

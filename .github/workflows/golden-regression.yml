@@ -15,8 +15,13 @@ defaults:
   run:
     shell: bash
 
+# Group by the commit under test, not the ref. For workflow_run events
+# github.ref_name is always the default branch, so every chained run landed in one
+# group -- and because concurrency is evaluated before the job-level `if`, a run
+# that was about to skip still cancelled a real one. Dependabot completing CI on
+# its own PRs cancelled this suite twice on the last merge.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name || github.run_id }}
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: true
 
 env:

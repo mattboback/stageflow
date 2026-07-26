@@ -242,6 +242,13 @@ services:
     environment:
       NATS_URL: "nats://nats:4222"
       PODMAN_SOCKET: "/run/podman/podman.sock"
+      # Podman control-plane budget. Creating a pod writes the pod record, creates
+      # the infra container, and programs the netns, which on a loaded host runs
+      # past a short timeout. The request timeout caps the whole exchange, so the
+      # header timeout must stay <= it or it can never be reached.
+      PODMAN_REQUEST_TIMEOUT: "${PODMAN_REQUEST_TIMEOUT:-120s}"
+      PODMAN_RESPONSE_HEADER_TIMEOUT: "${PODMAN_RESPONSE_HEADER_TIMEOUT:-60s}"
+      PODMAN_DIAL_TIMEOUT: "${PODMAN_DIAL_TIMEOUT:-5s}"
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
       SCANNER_CONFIG_PATH: "/data/scanners.yaml"
       MINIO_ENDPOINT: "minio:9000"

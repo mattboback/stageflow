@@ -36,10 +36,16 @@ type PodCreateResponse struct {
 }
 
 // PodInfo is a reduced view of Podman pod list/inspect output for API responses.
+//
+// Labels carries the pod's own labels, which Podman returns at the top level of
+// the inspect report (unlike containers, which nest theirs under Config). It is
+// what lets pod adoption verify ownership before reusing a pod it did not
+// observe being created — see adoptPod in job_runtime.go.
 type PodInfo struct {
-	ID     string `json:"Id"`
-	Name   string `json:"Name"`
-	Status string `json:"Status"`
+	ID     string            `json:"Id"`
+	Name   string            `json:"Name"`
+	Status string            `json:"Status"`
+	Labels map[string]string `json:"Labels,omitempty"`
 }
 
 // CreatePod calls the Podman pods/create endpoint.

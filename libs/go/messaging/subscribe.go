@@ -40,21 +40,7 @@ func (c *Client) Subscribe(
 
 	consumeCtx, err := cons.Consume(func(msg jetstream.Msg) {
 		if handleErr := handler(msg.Data()); handleErr != nil {
-			slog.Error("Error handling message",
-				"stream", stream,
-				"subject", subject,
-				"consumer", consumerName,
-				"error", handleErr,
-			)
-
-			if nakErr := msg.NakWithDelay(defaultConsumerNAKDelay); nakErr != nil {
-				slog.Warn("Failed to NAK message",
-					"stream", stream,
-					"subject", subject,
-					"consumer", consumerName,
-					"error", nakErr,
-				)
-			}
+			disposeFailedMessage(msg, stream, subject, consumerName, handleErr)
 
 			return
 		}
@@ -112,21 +98,7 @@ func (c *Client) SubscribeWithContext(
 
 	consumeCtx, err := cons.Consume(func(msg jetstream.Msg) {
 		if handleErr := handler(ctx, msg); handleErr != nil {
-			slog.Error("Error handling message",
-				"stream", stream,
-				"subject", subject,
-				"consumer", consumerName,
-				"error", handleErr,
-			)
-
-			if nakErr := msg.NakWithDelay(defaultConsumerNAKDelay); nakErr != nil {
-				slog.Warn("Failed to NAK message",
-					"stream", stream,
-					"subject", subject,
-					"consumer", consumerName,
-					"error", nakErr,
-				)
-			}
+			disposeFailedMessage(msg, stream, subject, consumerName, handleErr)
 
 			return
 		}
@@ -293,4 +265,66 @@ func unmarshalLenient(data []byte, target any) error {
 	}
 
 	return nil
+}
+
+// disposeFailedMessage decides what happens to a message whose handler returned
+// an error, and is shared by both subscribe paths so the two cannot drift.
+//
+// Redeliveries are spaced by an escalating delay, and the last one is terminated
+// rather than NAK'd. Terminating does not change whether the message is
+// redelivered -- JetStream stops at MaxDeliver regardless -- but it records the
+// reason instead of letting the message disappear, which is what made a wedged
+// production job so hard to see.
+func disposeFailedMessage(
+	msg jetstream.Msg,
+	stream, subject, consumerName string,
+	handleErr error,
+) {
+	var deliveries uint64
+	if meta, metaErr := msg.Metadata(); metaErr == nil && meta != nil {
+		deliveries = meta.NumDelivered
+	}
+
+	if decideDisposition(deliveries, handleErr) == dispositionTerminate {
+		slog.Error("Terminating message; giving up",
+			"stream", stream,
+			"subject", subject,
+			"consumer", consumerName,
+			"deliveries", deliveries,
+			"max_deliveries", MaxDeliver,
+			"terminal_error", IsTerminal(handleErr),
+			"error", handleErr,
+		)
+
+		if termErr := msg.TermWithReason(handleErr.Error()); termErr != nil {
+			slog.Warn("Failed to terminate message",
+				"stream", stream,
+				"subject", subject,
+				"consumer", consumerName,
+				"error", termErr,
+			)
+		}
+
+		return
+	}
+
+	delay := nakDelay(deliveries)
+
+	slog.Error("Error handling message",
+		"stream", stream,
+		"subject", subject,
+		"consumer", consumerName,
+		"deliveries", deliveries,
+		"retry_in", delay.String(),
+		"error", handleErr,
+	)
+
+	if nakErr := msg.NakWithDelay(delay); nakErr != nil {
+		slog.Warn("Failed to NAK message",
+			"stream", stream,
+			"subject", subject,
+			"consumer", consumerName,
+			"error", nakErr,
+		)
+	}
 }

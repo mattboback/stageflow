@@ -171,3 +171,55 @@ func TestListPods(t *testing.T) {
 		t.Errorf("Expected first pod ID pod-1, got %s", result[0].ID)
 	}
 }
+
+func TestInspectPodDecodesLabels(t *testing.T) {
+	// Labels are what pod adoption checks before reusing a pod whose creation it
+	// never observed, so they have to survive the wire.
+	mock := newMockPodmanServer()
+	defer mock.Close()
+
+	mock.handle("GET", "/v4.0.0/libpod/pods/job-abc/json", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		if _, err := w.Write([]byte(
+			`{"Id":"pod-1","Name":"job-abc","Status":"Created",` +
+				`"Labels":{"managed_by":"orchestrator","job_id":"abc"}}`,
+		)); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
+	})
+
+	result, err := mock.newClient().InspectPod(context.Background(), "job-abc")
+	if err != nil {
+		t.Fatalf("InspectPod error: %v", err)
+	}
+
+	if result.Labels["managed_by"] != "orchestrator" || result.Labels["job_id"] != "abc" {
+		t.Fatalf("labels = %v, want managed_by=orchestrator job_id=abc", result.Labels)
+	}
+}
+
+func TestCreatePodSurfacesConflictAsAPIError(t *testing.T) {
+	// A 409 must arrive as a typed APIError rather than an opaque string, so
+	// recovery can reason about it without parsing prose.
+	mock := newMockPodmanServer()
+	defer mock.Close()
+
+	mock.handle("POST", "/v4.0.0/libpod/pods/create", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+
+		if _, err := w.Write([]byte(`{"cause":"pod already exists"}`)); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
+	})
+
+	_, err := mock.newClient().CreatePod(context.Background(), &PodCreateRequest{Name: "job-abc"})
+	if err == nil {
+		t.Fatal("expected an error for a 409 response")
+	}
+
+	if !isAPIStatus(err, http.StatusConflict) {
+		t.Fatalf("error = %v, want an APIError carrying status 409", err)
+	}
+}
