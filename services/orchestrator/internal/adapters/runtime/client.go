@@ -44,14 +44,34 @@ type Config struct {
 	IdleConnTimeout time.Duration
 }
 
+// Default control-plane timeouts.
+//
+// Creating a pod is not one operation: Podman writes the pod record, creates and
+// possibly pulls the infra container, and programs the network namespace through
+// netavark. On a loaded host that legitimately runs past ten seconds, and when it
+// did in production the lost response left a pod behind that every retry then
+// collided with. Kubelet's equivalent runtime-request-timeout defaults to two
+// minutes for the same reason.
+//
+// RequestTimeout caps the whole request, so it has to move with the header
+// timeout -- raising only the latter changes nothing but the error text. Both stay
+// well under the consumer AckWait, so a hung socket still cannot outlive a
+// message's ack window and cause concurrent redelivery.
+const (
+	defaultRequestTimeout        = 120 * time.Second
+	defaultDialTimeout           = 5 * time.Second
+	defaultResponseHeaderTimeout = 60 * time.Second
+	defaultIdleConnTimeout       = 90 * time.Second
+)
+
 // DefaultConfig returns the standard rootless Podman socket path.
 func DefaultConfig() *Config {
 	return &Config{
 		SocketPath:            "/run/podman/podman.sock",
-		RequestTimeout:        30 * time.Second,
-		DialTimeout:           5 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
-		IdleConnTimeout:       90 * time.Second,
+		RequestTimeout:        defaultRequestTimeout,
+		DialTimeout:           defaultDialTimeout,
+		ResponseHeaderTimeout: defaultResponseHeaderTimeout,
+		IdleConnTimeout:       defaultIdleConnTimeout,
 	}
 }
 
@@ -67,19 +87,19 @@ func NewClient(config *Config) (*Client, error) {
 	}
 
 	if config.RequestTimeout <= 0 {
-		config.RequestTimeout = 30 * time.Second
+		config.RequestTimeout = defaultRequestTimeout
 	}
 
 	if config.DialTimeout <= 0 {
-		config.DialTimeout = 5 * time.Second
+		config.DialTimeout = defaultDialTimeout
 	}
 
 	if config.ResponseHeaderTimeout <= 0 {
-		config.ResponseHeaderTimeout = 10 * time.Second
+		config.ResponseHeaderTimeout = defaultResponseHeaderTimeout
 	}
 
 	if config.IdleConnTimeout <= 0 {
-		config.IdleConnTimeout = 90 * time.Second
+		config.IdleConnTimeout = defaultIdleConnTimeout
 	}
 
 	dialer := &net.Dialer{
