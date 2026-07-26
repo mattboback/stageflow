@@ -1,39 +1,72 @@
 /* ============================================================================
-   StageFlow — "Daylight Gauge" design system (light)
+   StageFlow — "Daylight Gauge" design system
    Shared public UI stylesheet.
 
-   Voice: a confident, friendly QA dashboard. White cards on a cool, faintly
+   Voice: a confident, friendly QA dashboard. Cards on a cool, faintly
 	   teal-tinted ground. System UI fonts keep self-hosted deployments private
 	   and offline-capable. Monospace appears only where the content is
    literally code. Severity is a calibrated color scale, always paired with a
    text label. WCAG AA contrast minimum on all text.
+
+   THEMING
+   Every color token is light-dark(light, dark) and nothing outside :root names
+   a color. Two consequences worth knowing before editing:
+
+   - The system-preference case costs zero JavaScript and cannot flash. The
+	 prerendered routes ship the right palette in the first CSS the browser
+	 parses. Only an explicit user override needs a script (see app/lib/theme.ts).
+   - A token cannot exist in one theme and not the other, which a duplicated
+	 :root[data-theme='dark'] block quietly invites.
+
+   The dark side is derived, not inverted. app/styles/theme-contrast.test.ts
+   holds both sides to the same table of obligations and rejects any token that
+   falls outside sRGB, because a browser clips those silently and a palette
+   tuned against numbers the screen never shows is not tuned at all.
    ============================================================================ */
 
 :root {
-	/* --- Ground & surface: cool near-white, tinted toward the brand hue ---- */
-	--ground: oklch(0.971 0.007 215);       /* page bg */
-	--ground-deep: oklch(0.947 0.009 215);
-	--surface: oklch(0.995 0.002 210);      /* cards */
-	--surface-sunk: oklch(0.963 0.006 212); /* inset wells, inputs */
+	color-scheme: light dark;
 
-	/* --- Ink: cool near-black, AA+ on surface ------------------------------ */
-	--ink-strong: oklch(0.23 0.02 230);  /* headings, key numbers */
-	--ink: oklch(0.33 0.018 230);        /* body */
-	--ink-muted: oklch(0.45 0.016 228);  /* secondary — still >= 4.5:1 on white */
-	--ink-faint: oklch(0.55 0.014 225);  /* large/decorative only, never body prose */
+	/* --- Ground & surface --------------------------------------------------
+	   Ordering is by RECESSION, not by lightness, and it flips: deeper is
+	   darker on a light ground and the reverse is not automatic. --ground-deep
+	   backs inset panels and the gauge track, so it steps away from the page in
+	   both themes. --surface-sunk is mostly row hover and code wells, so in dark
+	   it steps toward the light — a hover that darkens reads as disabled. */
+	--ground: light-dark(oklch(0.971 0.007 215), oklch(0.185 0.012 235));
+	--ground-deep: light-dark(oklch(0.947 0.009 215), oklch(0.145 0.012 235));
+	--surface: light-dark(oklch(0.995 0.002 210), oklch(0.225 0.013 235));
+	--surface-sunk: light-dark(oklch(0.963 0.006 212), oklch(0.265 0.013 235));
 
-	/* --- Lines ------------------------------------------------------------- */
-	--line: oklch(0.885 0.01 220);
-	--line-strong: oklch(0.82 0.014 220);
-	--tick: oklch(0.885 0.009 220);
+	/* --- Ink: AA+ on both grounds ------------------------------------------ */
+	--ink-strong: light-dark(oklch(0.23 0.02 230), oklch(0.97 0.005 230));
+	--ink: light-dark(oklch(0.33 0.018 230), oklch(0.89 0.008 230));
+	--ink-muted: light-dark(oklch(0.45 0.016 228), oklch(0.74 0.012 228));
+	--ink-faint: light-dark(oklch(0.55 0.014 225), oklch(0.60 0.012 225));
 
-	/* --- Signal: StageFlow teal, deepened ---------------------------------- */
-	--signal: oklch(0.55 0.105 205);        /* accents, active state */
-	--signal-strong: oklch(0.48 0.10 206);  /* primary button bg, white text AA */
-	--signal-press: oklch(0.42 0.09 207);
-	--signal-ink: oklch(0.40 0.09 207);     /* teal-colored text on light */
-	--signal-wash: oklch(0.955 0.024 202);  /* faint fill */
-	--signal-edge: oklch(0.865 0.055 203);  /* tinted border */
+	/* --- Lines -------------------------------------------------------------
+	   --line-strong is the identifying boundary of an input, so SC 1.4.11 wants
+	   3:1 against the surface behind it. The dark value clears that at 3.39:1;
+	   the light value is 1.72:1 and does not. Raising the light side changes
+	   every input and ghost-button border on the site, so it is a deliberate
+	   visual decision rather than a palette tweak. */
+	--line: light-dark(oklch(0.885 0.01 220), oklch(0.32 0.012 220));
+	--line-strong: light-dark(oklch(0.82 0.014 220), oklch(0.54 0.014 220));
+	/* --tick was declared here and referenced nowhere; removed rather than
+	   carried into a second theme. */
+
+	/* --- Signal: StageFlow teal --------------------------------------------
+	   The fill inverts. On a light ground the button is a deep teal carrying
+	   white; on a dark ground it is a bright teal carrying dark ink, which is
+	   both more legible (9.09:1 against 4.90:1 for the deep-teal alternative)
+	   and far more present against the page (8.73:1 against 3.69:1). That is
+	   why --on-signal is a token rather than a hardcoded white. */
+	--signal: light-dark(oklch(0.55 0.105 205), oklch(0.72 0.11 205));
+	--signal-strong: light-dark(oklch(0.48 0.10 206), oklch(0.75 0.115 206));
+	--signal-press: light-dark(oklch(0.42 0.09 207), oklch(0.68 0.11 206));
+	--signal-ink: light-dark(oklch(0.40 0.09 207), oklch(0.80 0.09 205));
+	--signal-wash: light-dark(oklch(0.955 0.024 202), oklch(0.28 0.038 203));
+	--signal-edge: light-dark(oklch(0.865 0.055 203), oklch(0.42 0.055 203));
 
 	/* --- Calibrated severity scale (always paired with a text label) -------
 	   Four roles per severity, and every one of them is a contrast obligation
@@ -43,45 +76,60 @@
 	     -wash   tinted fill behind -ink
 	     -edge   tinted border on a wash
 	   The base hue is NOT always legible as text: amber and green have to drop
-	   in lightness to clear 4.5:1, which is why -ink exists separately. */
-	--sev-critical: oklch(0.52 0.20 27);
-	--sev-serious:  oklch(0.52 0.16 45);
-	--sev-moderate: oklch(0.58 0.125 82);
-	--sev-minor:    oklch(0.52 0.12 135);
-	--sev-info:     oklch(0.52 0.10 245);
-	--sev-pass:     oklch(0.55 0.12 160);
-	--sev-critical-wash: oklch(0.962 0.022 27);
-	--sev-serious-wash:  oklch(0.965 0.024 47);
-	--sev-moderate-wash: oklch(0.968 0.028 85);
-	--sev-minor-wash:    oklch(0.966 0.024 140);
-	--sev-info-wash:     oklch(0.963 0.018 245);
+	   in lightness to clear 4.5:1, which is why -ink exists separately.
 
-	--sev-critical-ink: oklch(0.52 0.20 27);   /* base already clears 4.5:1 */
-	--sev-serious-ink:  oklch(0.52 0.16 45);
-	--sev-moderate-ink: oklch(0.46 0.11 80);   /* amber must darken to be text */
-	--sev-minor-ink:    oklch(0.44 0.11 140);  /* so must green */
-	--sev-info-ink:     oklch(0.52 0.10 245);
-	--sev-pass-ink:     oklch(0.42 0.09 158);
+	   Dark is a re-derivation, not an inversion. The base rises to L 0.68-0.80
+	   with chroma pulled back, because high chroma at high lightness leaves
+	   sRGB for the red and orange hues. The wash becomes a DARK tint rather
+	   than a light one — the single token most likely to be left alone and be
+	   wrong. --sev-minor (135) and --sev-pass (168) stay close in hue in both
+	   themes; they never appear adjacent, minor being a finding level and pass
+	   a run state. */
+	--sev-critical: light-dark(oklch(0.52 0.20 27), oklch(0.68 0.17 27));
+	--sev-serious:  light-dark(oklch(0.52 0.16 45), oklch(0.73 0.14 50));
+	--sev-moderate: light-dark(oklch(0.58 0.125 82), oklch(0.80 0.12 85));
+	--sev-minor:    light-dark(oklch(0.52 0.12 135), oklch(0.75 0.14 140));
+	--sev-info:     light-dark(oklch(0.52 0.10 245), oklch(0.72 0.11 245));
+	--sev-pass:     light-dark(oklch(0.55 0.12 160), oklch(0.78 0.13 168));
+	--sev-critical-wash: light-dark(oklch(0.962 0.022 27), oklch(0.27 0.05 27));
+	--sev-serious-wash:  light-dark(oklch(0.965 0.024 47), oklch(0.27 0.045 50));
+	--sev-moderate-wash: light-dark(oklch(0.968 0.028 85), oklch(0.27 0.04 85));
+	--sev-minor-wash:    light-dark(oklch(0.966 0.024 140), oklch(0.27 0.04 140));
+	--sev-info-wash:     light-dark(oklch(0.963 0.018 245), oklch(0.27 0.04 245));
+
+	/* light: base already clears 4.5:1 except amber and green, which darken.
+	   dark: every -ink rises past its own base. */
+	--sev-critical-ink: light-dark(oklch(0.52 0.20 27), oklch(0.79 0.13 27));
+	--sev-serious-ink:  light-dark(oklch(0.52 0.16 45), oklch(0.82 0.12 50));
+	--sev-moderate-ink: light-dark(oklch(0.46 0.11 80), oklch(0.86 0.12 85));
+	--sev-minor-ink:    light-dark(oklch(0.44 0.11 140), oklch(0.84 0.13 140));
+	--sev-info-ink:     light-dark(oklch(0.52 0.10 245), oklch(0.81 0.09 245));
+	--sev-pass-ink:     light-dark(oklch(0.42 0.09 158), oklch(0.85 0.12 168));
 
 	/* Emphatic variants: verdict buttons and review chips, where the label is
-	   the whole control rather than a word inside a sentence. */
-	--sev-critical-ink-strong: oklch(0.40 0.14 27);
-	--sev-pass-ink-strong:     oklch(0.35 0.09 158);
+	   the whole control rather than a word inside a sentence. The dark red is
+	   held to C 0.10 — at L 0.82 anything more saturated leaves sRGB and the
+	   browser renders a color nobody chose. */
+	--sev-critical-ink-strong: light-dark(oklch(0.40 0.14 27), oklch(0.82 0.10 27));
+	--sev-pass-ink-strong:     light-dark(oklch(0.35 0.09 158), oklch(0.91 0.10 168));
 
-	--sev-critical-edge: oklch(0.86 0.05 27);
-	--sev-serious-edge:  oklch(0.86 0.05 47);
-	--sev-moderate-edge: oklch(0.86 0.06 80);
-	--sev-minor-edge:    oklch(0.86 0.05 135);
-	--sev-info-edge:     oklch(0.86 0.04 245);
-	--sev-pass-edge:     oklch(0.86 0.05 158);
-	--sev-critical-edge-strong: oklch(0.78 0.08 27);
-	--sev-pass-edge-strong:     oklch(0.78 0.07 150);
-	--sev-pass-edge-hover:      oklch(0.55 0.10 155);
-	--sev-critical-press:       oklch(0.47 0.19 27);
+	--sev-critical-edge: light-dark(oklch(0.86 0.05 27), oklch(0.42 0.08 27));
+	--sev-serious-edge:  light-dark(oklch(0.86 0.05 47), oklch(0.42 0.07 50));
+	--sev-moderate-edge: light-dark(oklch(0.86 0.06 80), oklch(0.42 0.06 85));
+	--sev-minor-edge:    light-dark(oklch(0.86 0.05 135), oklch(0.42 0.06 140));
+	--sev-info-edge:     light-dark(oklch(0.86 0.04 245), oklch(0.42 0.06 245));
+	--sev-pass-edge:     light-dark(oklch(0.86 0.05 158), oklch(0.42 0.06 168));
+	--sev-critical-edge-strong: light-dark(oklch(0.78 0.08 27), oklch(0.54 0.11 27));
+	--sev-pass-edge-strong:     light-dark(oklch(0.78 0.07 150), oklch(0.54 0.09 168));
+	--sev-pass-edge-hover:      light-dark(oklch(0.55 0.10 155), oklch(0.70 0.11 168));
+	--sev-critical-press:       light-dark(oklch(0.47 0.19 27), oklch(0.74 0.16 27));
 
-	/* Screenshot marker fills. Flat tokens rather than color-mix(), because a
-	   10%-of-base tint calibrated against white is wrong on a dark ground and
-	   has to be re-derived, not recomputed. */
+	/* Screenshot marker fills. Flat tokens rather than color-mix() so the value
+	   can be chosen per theme rather than recomputed from a base that moved.
+	   These then deliberately do NOT move: they are painted over a screenshot
+	   of someone else's page, which looks the same whichever theme the operator
+	   is running. Same reasoning as getSeverityFillColor in
+	   app/lib/report/severity.ts, which draws the marker strokes. */
 	--sev-neutral-overlay:  oklch(0.55 0.014 225 / 0.1);
 	--sev-critical-overlay: oklch(0.52 0.20 27 / 0.1);
 	--sev-serious-overlay:  oklch(0.52 0.16 45 / 0.1);
@@ -90,34 +138,39 @@
 	--sev-info-overlay:     oklch(0.52 0.10 245 / 0.1);
 
 	/* --- Foreground on a filled color -------------------------------------
-	   Split by what they sit on, because they do not move together: in dark
-	   the signal stays deep enough for white text while severity fills go
-	   light and need dark text. */
-	--on-signal:   oklch(0.99 0 0);
-	--on-severity: oklch(0.99 0 0);
-	--knob:        oklch(0.99 0 0);   /* toggle handle */
+	   Both flip to dark ink in dark mode, because both fills go bright there.
+	   --knob does not: it is the handle of a switch whose off-state track is
+	   --line-strong, so it stays near-white to read against either state. */
+	--on-signal:   light-dark(oklch(0.99 0 0), oklch(0.16 0.012 235));
+	--on-severity: light-dark(oklch(0.99 0 0), oklch(0.16 0.012 235));
+	--knob:        light-dark(oklch(0.99 0 0), oklch(0.96 0 0));
 
-	/* --- Overlay surfaces --------------------------------------------------- */
-	--surface-glass: oklch(0.995 0.002 210 / 0.88);        /* sticky header */
-	--surface-glass-strong: oklch(0.995 0.002 210 / 0.94); /* mobile action bar */
-	--scrim: oklch(0.2 0.015 230 / 0.5);                   /* modal backdrop */
-	--scrim-soft: oklch(0.23 0.02 230 / 0.35);             /* sheet backdrop */
-	--shadow-color: oklch(0.25 0.02 230 / 0.05);
-	--signal-ring: oklch(0.55 0.105 205 / 0.4);            /* live pulse */
-	--signal-ring-fade: oklch(0.55 0.105 205 / 0);
+	/* --- Overlay surfaces --------------------------------------------------
+	   Glass must match the surface it fronts, or the sticky header reads as a
+	   pale smear over dark content. The scrims deepen and gain alpha: a 50%
+	   veil that separates a modal from a white page disappears over a dark one. */
+	--surface-glass: light-dark(oklch(0.995 0.002 210 / 0.88), oklch(0.225 0.013 235 / 0.88));
+	--surface-glass-strong: light-dark(oklch(0.995 0.002 210 / 0.94), oklch(0.225 0.013 235 / 0.94));
+	--scrim: light-dark(oklch(0.2 0.015 230 / 0.5), oklch(0.08 0.01 235 / 0.68));
+	--scrim-soft: light-dark(oklch(0.23 0.02 230 / 0.35), oklch(0.08 0.01 235 / 0.55));
+	--shadow-color: light-dark(oklch(0.25 0.02 230 / 0.05), oklch(0 0 0 / 0.45));
+	--signal-ring: light-dark(oklch(0.55 0.105 205 / 0.4), oklch(0.72 0.11 205 / 0.45));
+	--signal-ring-fade: light-dark(oklch(0.55 0.105 205 / 0), oklch(0.72 0.11 205 / 0));
 
 	/* --- Advisory amber: not a finding severity, a caution about input ----- */
-	--warn-wash: oklch(0.97 0.025 78);
-	--warn-edge: oklch(0.78 0.09 75);
-	--warn-rule: oklch(0.52 0.12 65);
+	--warn-wash: light-dark(oklch(0.97 0.025 78), oklch(0.27 0.045 78));
+	--warn-edge: light-dark(oklch(0.78 0.09 75), oklch(0.46 0.08 75));
+	--warn-rule: light-dark(oklch(0.52 0.12 65), oklch(0.82 0.13 72));
 
 	/* --- Terminal island: literal CLI output, dark in BOTH themes ----------
 	   Deliberately not sourced from --ink-strong. If it were, it would invert
-	   with the theme and render near-white text on a near-white block. */
-	--terminal-bg: oklch(0.23 0.02 230);
-	--terminal-edge: transparent;
-	--terminal-ink: oklch(0.94 0.008 240);
-	--terminal-ink-faint: oklch(0.68 0.012 240);
+	   with the theme and render near-white text on a near-white block. In dark
+	   it goes darker than the page rather than matching it, so the island still
+	   reads as a distinct recessed surface, and gains a visible edge. */
+	--terminal-bg: light-dark(oklch(0.23 0.02 230), oklch(0.135 0.014 235));
+	--terminal-edge: light-dark(transparent, oklch(0.29 0.012 230));
+	--terminal-ink: light-dark(oklch(0.94 0.008 240), oklch(0.90 0.010 240));
+	--terminal-ink-faint: light-dark(oklch(0.68 0.012 240), oklch(0.66 0.012 240));
 	--terminal-prompt: oklch(0.78 0.09 205);
 	--terminal-ok: oklch(0.82 0.11 155);
 	--terminal-warn: oklch(0.83 0.11 65);
@@ -135,15 +188,23 @@
 	--r-lg: 16px;     /* page panels, modals */
 	--r-pill: 999px;
 
-	/* --- Elevation: tinted border OR shadow, cards get border + crisp ambient */
-	--shadow-sm: 0 1px 2px oklch(0.25 0.02 230 / 0.05);
-	--shadow-md: 0 4px 14px oklch(0.25 0.02 230 / 0.09);
-	--shadow-pop: 0 16px 48px oklch(0.25 0.02 230 / 0.16);
+	/* --- Elevation: tinted border OR shadow, cards get border + crisp ambient
+	   The dark values are near-black and roughly five times the alpha. A 5%
+	   tinted shadow reads as depth against white and as nothing at all against
+	   a dark ground, where separation has to come from an actual shadow rather
+	   than a hint of one. */
+	--shadow-sm: light-dark(0 1px 2px oklch(0.25 0.02 230 / 0.05), 0 1px 2px oklch(0 0 0 / 0.4));
+	--shadow-md: light-dark(0 4px 14px oklch(0.25 0.02 230 / 0.09), 0 4px 14px oklch(0 0 0 / 0.5));
+	--shadow-pop: light-dark(0 16px 48px oklch(0.25 0.02 230 / 0.16), 0 16px 48px oklch(0 0 0 / 0.65));
 
-	/* Hover dim for surfaces whose fill is set per-severity by a class, where
-	   an explicit press token per severity would cost five more tokens for one
-	   hover state. Inverts above 1 on a dark ground. */
-	--dim: 0.96;
+	/* Hover feedback for surfaces whose fill is set per-severity by a class,
+	   where an explicit press token per severity would cost five more tokens
+	   for one hover state. A translucent veil rather than filter: brightness(),
+	   because brightness() takes a number and light-dark() only accepts colors
+	   — a numeric light-dark() parses as a custom property but is invalid where
+	   it is used, so the hover would silently do nothing. The veil also gets
+	   the direction right for free: darken on light, lighten on dark. */
+	--hover-veil: light-dark(oklch(0 0 0 / 0.06), oklch(1 0 0 / 0.1));
 
 	/* --- Motion --- */
 	--dur-1: 120ms;
@@ -175,6 +236,14 @@
 	--sp-6: 32px;
 	--sp-7: 64px;
 }
+
+/* An explicit choice pins color-scheme, which is what makes light-dark() and
+   the native form controls resolve to that side. Absent the attribute the
+   :root rule above leaves both on, so the OS decides and no script has to run.
+   The attribute is set before first paint by THEME_INIT_SCRIPT in
+   app/lib/theme.ts. */
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
 
 /* ------------------------------------------------------------------ reset */
 *, *::before, *::after { box-sizing: border-box; }

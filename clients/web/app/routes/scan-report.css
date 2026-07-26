@@ -521,9 +521,11 @@
 	border: 0; cursor: pointer; font-family: inherit;
 	font-variant-numeric: tabular-nums;
 	font-size: 0.875rem;
-	transition: filter 0.12s;
+	transition: box-shadow 0.12s;
 }
-.rstrip__sev:hover { filter: brightness(var(--dim)); }
+/* Veil rather than filter: brightness() — see --hover-veil in instrument.css.
+   The inset spread floods the button, so it respects the border radius. */
+.rstrip__sev:hover { box-shadow: inset 0 0 0 100vmax var(--hover-veil); }
 .rstrip__sev:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 .rstrip__scanner {
 	display: inline-flex; align-items: center; gap: var(--sp-2);

@@ -237,6 +237,59 @@ const OBLIGATIONS: Obligation[] = [
 	{ fg: '--terminal-warn', bg: '--terminal-bg', level: 'AA', size: 'normal', why: 'CLI warning' }
 ];
 
+/*
+ * Without this, a light-dark() parser that quietly stopped splitting would
+ * make the dark suite re-check the light palette and still report 92 passes.
+ * Every token below is one whose whole purpose is to invert.
+ */
+describe('theme resolution', () => {
+	const light = readTokens('light');
+	const dark = readTokens('dark');
+
+	it.each(['--ground', '--surface', '--ink', '--ink-strong', '--line', '--on-severity'])(
+		'%s resolves to a different value per theme',
+		(token) => {
+			expect(resolve(dark, token)).not.toEqual(resolve(light, token));
+		}
+	);
+
+	it('only uses light-dark() with colors on both sides', () => {
+		/*
+		 * light-dark() is defined over <color> only. A numeric one still parses
+		 * as a custom property, so nothing complains — it fails later, at the
+		 * point of use, and the declaration is simply dropped. That is a silent
+		 * dead hover or a missing radius, found by eye or not at all.
+		 */
+		const css = readFileSync(INSTRUMENT_CSS, 'utf8');
+		const rootBlock = css.slice(css.indexOf(':root'), css.indexOf('\n}', css.indexOf(':root')));
+		const offenders: string[] = [];
+
+		for (const match of rootBlock.matchAll(/(--[\w-]+):\s*light-dark\(([\s\S]+?)\);/g)) {
+			const [, name, inner] = match;
+			if (name === undefined || inner === undefined) continue;
+			for (const side of splitTopLevel(inner)) {
+				// Shadows are a color inside a length list, so check the color part.
+				const color = /(oklch\([^)]*\)|transparent)/.exec(side)?.[1];
+				if (!color || (color !== 'transparent' && !oklchToRgb(color))) {
+					offenders.push(`${name}: ${side}`);
+				}
+			}
+		}
+		expect(offenders, `not a color:\n${offenders.join('\n')}`).toEqual([]);
+	});
+
+	it('keeps the terminal island dark in both themes', () => {
+		// It is literal stdout. If it ever inverts, home renders a near-white
+		// block of near-white text.
+		const lightBg = colorOf(light, '--terminal-bg');
+		const darkBg = colorOf(dark, '--terminal-bg');
+		const lum = (c: { r: number; g: number; b: number }) =>
+			0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+		expect(lum(lightBg)).toBeLessThan(128);
+		expect(lum(darkBg)).toBeLessThan(128);
+	});
+});
+
 describe.each(MODES)('%s theme', (mode) => {
 	const tokens = readTokens(mode);
 
