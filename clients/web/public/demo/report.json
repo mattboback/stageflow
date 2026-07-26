@@ -48,441 +48,9 @@
   ],
   "issues": [
     {
-      "category": "best-practices",
-      "description": "Errors logged to the console indicate unresolved problems. They can come from network request failures and other browser concerns. [Learn more about this errors in console diagnostic audit](https://developer.chrome.com/docs/lighthouse/best-practices/errors-in-console/)",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "8f0e30d633ab",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "errors-in-console",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "sourceLocation",
-              "label": "Source",
-              "valueType": "source-location"
-            },
-            {
-              "key": "description",
-              "label": "Description",
-              "valueType": "code"
-            }
-          ],
-          "items": [
-            {
-              "description": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
-              "source": "network",
-              "sourceLocation": {
-                "column": 0,
-                "line": 0,
-                "type": "source-location",
-                "url": "https://stageflow.org/api/v1/scanners",
-                "urlProvider": "network"
-              }
-            }
-          ],
-          "type": "table"
-        },
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Browser errors were logged to the console"
-    },
-    {
-      "category": "best-practices",
-      "description": "All sites should be protected with HTTPS, even ones that don't handle sensitive data. This includes avoiding [mixed content](https://developers.google.com/web/fundamentals/security/prevent-mixed-content/what-is-mixed-content), where some resources are loaded over HTTP despite the initial request being served over HTTPS. HTTPS prevents intruders from tampering with or passively listening in on the communications between your app and your users, and is a prerequisite for HTTP/2 and many new web platform APIs. [Learn more about HTTPS](https://developer.chrome.com/docs/lighthouse/pwa/is-on-https/).",
-      "elementCount": 18,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "b0c2d153b28f",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "is-on-https",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "url",
-              "label": "Insecure URL",
-              "valueType": "url"
-            },
-            {
-              "key": "resolution",
-              "label": "Request Resolution",
-              "valueType": "text"
-            }
-          ],
-          "items": [
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/fonts/geist-sans-latin.woff2"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/manifest-3bbfcce1.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/entry.client-Dd7JiZnj.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/jsx-runtime-BTBB2Rr_.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/root-Dwrn1d4E.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/SiteHeader-CvAu11Ol.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/SiteFooter-Cc8-ydH5.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/Pill-b5hhGlZP.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/RouteFault-BSsyD2yb.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/home-B-0bssKl.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/Gauge-D4NHsRuF.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/url-NzV5XFh5.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/root-uQ4ItAZE.css"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/home-Qu9t3YYh.css"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/site.webmanifest"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/fonts/geist-mono-latin.woff2"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/favicon.svg"
-            }
-          ],
-          "type": "table"
-        },
-        "displayValue": "18 insecure requests found",
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Does not use HTTPS"
-    },
-    {
-      "category": "best-practices",
-      "description": "All sites should be protected with HTTPS, even ones that don't handle sensitive data. This includes avoiding [mixed content](https://developers.google.com/web/fundamentals/security/prevent-mixed-content/what-is-mixed-content), where some resources are loaded over HTTP despite the initial request being served over HTTPS. HTTPS prevents intruders from tampering with or passively listening in on the communications between your app and your users, and is a prerequisite for HTTP/2 and many new web platform APIs. [Learn more about HTTPS](https://developer.chrome.com/docs/lighthouse/pwa/is-on-https/).",
-      "elementCount": 19,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "067bd5f3c571",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "is-on-https",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "url",
-              "label": "Insecure URL",
-              "valueType": "url"
-            },
-            {
-              "key": "resolution",
-              "label": "Request Resolution",
-              "valueType": "text"
-            }
-          ],
-          "items": [
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/playground"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/fonts/geist-sans-latin.woff2"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/manifest-3bbfcce1.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/entry.client-Dd7JiZnj.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/jsx-runtime-BTBB2Rr_.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/root-Dwrn1d4E.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/SiteHeader-CvAu11Ol.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/SiteFooter-Cc8-ydH5.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/Pill-b5hhGlZP.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/RouteFault-BSsyD2yb.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/playground-D8UeZjyH.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/scanner-identity-D12q1MDB.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/save-BsKLIvkp.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/url-NzV5XFh5.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/local-project-store-Cr6rZ6Cq.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/root-uQ4ItAZE.css"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/playground-C2D5N_sN.css"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/site.webmanifest"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/favicon.svg"
-            }
-          ],
-          "type": "table"
-        },
-        "displayValue": "19 insecure requests found",
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Does not use HTTPS"
-    },
-    {
-      "category": "best-practices",
-      "description": "All sites should be protected with HTTPS, even ones that don't handle sensitive data. This includes avoiding [mixed content](https://developers.google.com/web/fundamentals/security/prevent-mixed-content/what-is-mixed-content), where some resources are loaded over HTTP despite the initial request being served over HTTPS. HTTPS prevents intruders from tampering with or passively listening in on the communications between your app and your users, and is a prerequisite for HTTP/2 and many new web platform APIs. [Learn more about HTTPS](https://developer.chrome.com/docs/lighthouse/pwa/is-on-https/).",
-      "elementCount": 19,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "92fa78fd3a41",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "is-on-https",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "url",
-              "label": "Insecure URL",
-              "valueType": "url"
-            },
-            {
-              "key": "resolution",
-              "label": "Request Resolution",
-              "valueType": "text"
-            }
-          ],
-          "items": [
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/projects"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/projects/"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/fonts/geist-sans-latin.woff2"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/manifest-3bbfcce1.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/entry.client-Dd7JiZnj.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/jsx-runtime-BTBB2Rr_.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/root-Dwrn1d4E.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/SiteHeader-CvAu11Ol.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/SiteFooter-Cc8-ydH5.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/Pill-b5hhGlZP.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/RouteFault-BSsyD2yb.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/projects-CRgnHvKR.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/focus-trap-VV4CgBap.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/url-NzV5XFh5.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/local-project-store-Cr6rZ6Cq.js"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/root-uQ4ItAZE.css"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/assets/projects-3pWUsESw.css"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/site.webmanifest"
-            },
-            {
-              "resolution": "Allowed",
-              "url": "https://stageflow.org/favicon.svg"
-            }
-          ],
-          "type": "table"
-        },
-        "displayValue": "19 insecure requests found",
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Does not use HTTPS"
-    },
-    {
-      "category": "best-practices",
-      "description": "Make sure that you redirect all HTTP traffic to HTTPS in order to enable secure web features for all your users. [Learn more](https://developer.chrome.com/docs/lighthouse/pwa/redirects-http/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "71a1acd3ae1c",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "redirects-http",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Does not redirect HTTP traffic to HTTPS"
-    },
-    {
-      "category": "best-practices",
-      "description": "Make sure that you redirect all HTTP traffic to HTTPS in order to enable secure web features for all your users. [Learn more](https://developer.chrome.com/docs/lighthouse/pwa/redirects-http/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "d1a7d3641e64",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "redirects-http",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Does not redirect HTTP traffic to HTTPS"
-    },
-    {
-      "category": "best-practices",
-      "description": "Make sure that you redirect all HTTP traffic to HTTPS in order to enable secure web features for all your users. [Learn more](https://developer.chrome.com/docs/lighthouse/pwa/redirects-http/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "ac86bc25a494",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "redirects-http",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "Does not redirect HTTP traffic to HTTPS"
-    },
-    {
       "category": "seo",
       "description": "If your robots.txt file is malformed, crawlers may not be able to understand how you want your website to be crawled or indexed. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).",
-      "elementCount": 4,
+      "elementCount": 5,
       "elementsTruncated": true,
       "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
       "id": "cc948647d698",
@@ -512,12 +80,12 @@
           "items": [
             {
               "index": "1",
-              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"preload\" href=\"/fonts/geist-sans-latin.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"modulepreload\" href=\"/assets/manifest-3bbfcce1.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-Dwrn1d4E.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-CvAu11Ol.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-Cc8-ydH5.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-BSsyD2yb.js\"/><link rel=\"stylesheet\" href=\"/assets/root-uQ4ItAZE.css\"/><script>try{var t=localStorage.getItem(\"stageflow-theme\");if(t===\"dark\"||t===\"light\")document.documentElement.dataset.theme=t}catch(e){}</script></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><svg class=\"brandmark\" viewBox=\"0 0 64 64\" aria-hidden=\"true\" focusable=\"false\"><rect class=\"brandmark__field\" width=\"64\" height=\"64\" rx=\"18\"></rect><path class=\"brandmark__dial\" d=\"M16 39a17 17 0 0 1 32 0\" fill=\"none\" stroke-width=\"6\" stroke-linecap=\"round\"></path><path class=\"brandmark__needle\" d=\"m32 37 10-11\" fill=\"none\" stroke-width=\"5\" stroke-linecap=\"round\"></path><circle class=\"brandmark__hub\" cx=\"32\" cy=\"39\" r=\"4\"></circle></svg><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><fieldset class=\"themepick\"><legend class=\"sr-only\">Color theme</legend><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" value=\"light\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-sun\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle><path d=\"M12 2v2\"></path><path d=\"M12 20v2\"></path><path d=\"m4.93 4.93 1.41 1.41\"></path><path d=\"m17.66 17.66 1.41 1.41\"></path><path d=\"M2 12h2\"></path><path d=\"M20 12h2\"></path><path d=\"m6.34 17.66-1.41 1.41\"></path><path d=\"m19.07 4.93-1.41 1.41\"></path></svg><span class=\"themepick__label\">Light</span></label><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" value=\"dark\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-moon\" aria-hidden=\"true\"><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\"></path></svg><span class=\"themepick__label\">Dark</span></label><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" checked=\"\" value=\"system\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-monitor\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\"></rect><line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\"></line><line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\"></line></svg><span class=\"themepick__label\">System</span></label></fieldset><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-3bbfcce1.js\";",
+              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"modulepreload\" href=\"/assets/manifest-a349b864.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-CgaGDe0R.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-B1lWS_qw.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-r4D9kZde.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-DfXA2TCv.js\"/><link rel=\"stylesheet\" href=\"/assets/root-BO-tQCIj.css\"/></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><span class=\"brand__mark\" aria-hidden=\"true\"></span><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-a349b864.js\";",
               "message": "Syntax not understood"
             },
             {
               "index": "2",
-              "line": "import * as route0 from \"/assets/root-Dwrn1d4E.js\";",
+              "line": "import * as route0 from \"/assets/root-CgaGDe0R.js\";",
               "message": "Syntax not understood"
             },
             {
@@ -527,13 +95,18 @@
             },
             {
               "index": "6",
-              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--></body></html>",
+              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496\" integrity=\"sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"db38df7d4969432bacde1055556ce9e7\",\"r\":1}' crossorigin=\"anonymous\"></script>",
               "message": "Unknown directive"
+            },
+            {
+              "index": "7",
+              "line": "</body></html>",
+              "message": "Syntax not understood"
             }
           ],
           "type": "table"
         },
-        "displayValue": "4 errors found",
+        "displayValue": "5 errors found",
         "score": 0,
         "scoreDisplayMode": "binary"
       },
@@ -543,7 +116,7 @@
     {
       "category": "seo",
       "description": "If your robots.txt file is malformed, crawlers may not be able to understand how you want your website to be crawled or indexed. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).",
-      "elementCount": 4,
+      "elementCount": 5,
       "elementsTruncated": true,
       "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
       "id": "33dd6425caf2",
@@ -573,12 +146,12 @@
           "items": [
             {
               "index": "1",
-              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"preload\" href=\"/fonts/geist-sans-latin.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"modulepreload\" href=\"/assets/manifest-3bbfcce1.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-Dwrn1d4E.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-CvAu11Ol.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-Cc8-ydH5.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-BSsyD2yb.js\"/><link rel=\"stylesheet\" href=\"/assets/root-uQ4ItAZE.css\"/><script>try{var t=localStorage.getItem(\"stageflow-theme\");if(t===\"dark\"||t===\"light\")document.documentElement.dataset.theme=t}catch(e){}</script></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><svg class=\"brandmark\" viewBox=\"0 0 64 64\" aria-hidden=\"true\" focusable=\"false\"><rect class=\"brandmark__field\" width=\"64\" height=\"64\" rx=\"18\"></rect><path class=\"brandmark__dial\" d=\"M16 39a17 17 0 0 1 32 0\" fill=\"none\" stroke-width=\"6\" stroke-linecap=\"round\"></path><path class=\"brandmark__needle\" d=\"m32 37 10-11\" fill=\"none\" stroke-width=\"5\" stroke-linecap=\"round\"></path><circle class=\"brandmark__hub\" cx=\"32\" cy=\"39\" r=\"4\"></circle></svg><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><fieldset class=\"themepick\"><legend class=\"sr-only\">Color theme</legend><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" value=\"light\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-sun\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle><path d=\"M12 2v2\"></path><path d=\"M12 20v2\"></path><path d=\"m4.93 4.93 1.41 1.41\"></path><path d=\"m17.66 17.66 1.41 1.41\"></path><path d=\"M2 12h2\"></path><path d=\"M20 12h2\"></path><path d=\"m6.34 17.66-1.41 1.41\"></path><path d=\"m19.07 4.93-1.41 1.41\"></path></svg><span class=\"themepick__label\">Light</span></label><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" value=\"dark\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-moon\" aria-hidden=\"true\"><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\"></path></svg><span class=\"themepick__label\">Dark</span></label><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" checked=\"\" value=\"system\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-monitor\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\"></rect><line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\"></line><line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\"></line></svg><span class=\"themepick__label\">System</span></label></fieldset><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-3bbfcce1.js\";",
+              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"modulepreload\" href=\"/assets/manifest-a349b864.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-CgaGDe0R.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-B1lWS_qw.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-r4D9kZde.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-DfXA2TCv.js\"/><link rel=\"stylesheet\" href=\"/assets/root-BO-tQCIj.css\"/></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><span class=\"brand__mark\" aria-hidden=\"true\"></span><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-a349b864.js\";",
               "message": "Syntax not understood"
             },
             {
               "index": "2",
-              "line": "import * as route0 from \"/assets/root-Dwrn1d4E.js\";",
+              "line": "import * as route0 from \"/assets/root-CgaGDe0R.js\";",
               "message": "Syntax not understood"
             },
             {
@@ -588,13 +161,18 @@
             },
             {
               "index": "6",
-              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--></body></html>",
+              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496\" integrity=\"sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"db38df7d4969432bacde1055556ce9e7\",\"r\":1}' crossorigin=\"anonymous\"></script>",
               "message": "Unknown directive"
+            },
+            {
+              "index": "7",
+              "line": "</body></html>",
+              "message": "Syntax not understood"
             }
           ],
           "type": "table"
         },
-        "displayValue": "4 errors found",
+        "displayValue": "5 errors found",
         "score": 0,
         "scoreDisplayMode": "binary"
       },
@@ -604,7 +182,7 @@
     {
       "category": "seo",
       "description": "If your robots.txt file is malformed, crawlers may not be able to understand how you want your website to be crawled or indexed. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).",
-      "elementCount": 4,
+      "elementCount": 5,
       "elementsTruncated": true,
       "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
       "id": "b42a3d0c0a18",
@@ -634,12 +212,12 @@
           "items": [
             {
               "index": "1",
-              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"preload\" href=\"/fonts/geist-sans-latin.woff2\" as=\"font\" type=\"font/woff2\" crossorigin=\"anonymous\"/><link rel=\"modulepreload\" href=\"/assets/manifest-3bbfcce1.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-Dwrn1d4E.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-CvAu11Ol.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-Cc8-ydH5.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-BSsyD2yb.js\"/><link rel=\"stylesheet\" href=\"/assets/root-uQ4ItAZE.css\"/><script>try{var t=localStorage.getItem(\"stageflow-theme\");if(t===\"dark\"||t===\"light\")document.documentElement.dataset.theme=t}catch(e){}</script></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><svg class=\"brandmark\" viewBox=\"0 0 64 64\" aria-hidden=\"true\" focusable=\"false\"><rect class=\"brandmark__field\" width=\"64\" height=\"64\" rx=\"18\"></rect><path class=\"brandmark__dial\" d=\"M16 39a17 17 0 0 1 32 0\" fill=\"none\" stroke-width=\"6\" stroke-linecap=\"round\"></path><path class=\"brandmark__needle\" d=\"m32 37 10-11\" fill=\"none\" stroke-width=\"5\" stroke-linecap=\"round\"></path><circle class=\"brandmark__hub\" cx=\"32\" cy=\"39\" r=\"4\"></circle></svg><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><fieldset class=\"themepick\"><legend class=\"sr-only\">Color theme</legend><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" value=\"light\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-sun\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"4\"></circle><path d=\"M12 2v2\"></path><path d=\"M12 20v2\"></path><path d=\"m4.93 4.93 1.41 1.41\"></path><path d=\"m17.66 17.66 1.41 1.41\"></path><path d=\"M2 12h2\"></path><path d=\"M20 12h2\"></path><path d=\"m6.34 17.66-1.41 1.41\"></path><path d=\"m19.07 4.93-1.41 1.41\"></path></svg><span class=\"themepick__label\">Light</span></label><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" value=\"dark\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-moon\" aria-hidden=\"true\"><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\"></path></svg><span class=\"themepick__label\">Dark</span></label><label class=\"themepick__opt\"><input class=\"themepick__input\" type=\"radio\" name=\"theme\" checked=\"\" value=\"system\"/><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-monitor\" aria-hidden=\"true\"><rect width=\"20\" height=\"14\" x=\"2\" y=\"3\" rx=\"2\"></rect><line x1=\"8\" x2=\"16\" y1=\"21\" y2=\"21\"></line><line x1=\"12\" x2=\"12\" y1=\"17\" y2=\"21\"></line></svg><span class=\"themepick__label\">System</span></label></fieldset><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-3bbfcce1.js\";",
+              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"modulepreload\" href=\"/assets/manifest-a349b864.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-CgaGDe0R.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-B1lWS_qw.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-r4D9kZde.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-DfXA2TCv.js\"/><link rel=\"stylesheet\" href=\"/assets/root-BO-tQCIj.css\"/></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><span class=\"brand__mark\" aria-hidden=\"true\"></span><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-a349b864.js\";",
               "message": "Syntax not understood"
             },
             {
               "index": "2",
-              "line": "import * as route0 from \"/assets/root-Dwrn1d4E.js\";",
+              "line": "import * as route0 from \"/assets/root-CgaGDe0R.js\";",
               "message": "Syntax not understood"
             },
             {
@@ -649,69 +227,23 @@
             },
             {
               "index": "6",
-              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--></body></html>",
+              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496\" integrity=\"sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"db38df7d4969432bacde1055556ce9e7\",\"r\":1}' crossorigin=\"anonymous\"></script>",
               "message": "Unknown directive"
+            },
+            {
+              "index": "7",
+              "line": "</body></html>",
+              "message": "Syntax not understood"
             }
           ],
           "type": "table"
         },
-        "displayValue": "4 errors found",
+        "displayValue": "5 errors found",
         "score": 0,
         "scoreDisplayMode": "binary"
       },
       "severity": "serious",
       "title": "robots.txt is not valid"
-    },
-    {
-      "category": "security-headers",
-      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
-      "id": "3fe8abf987ed",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "security-headers-missing-strict-transport-security",
-      "scanner": "security-headers",
-      "scannerData": {
-        "headerName": "strict-transport-security"
-      },
-      "severity": "serious",
-      "title": "Missing HSTS Header"
-    },
-    {
-      "category": "security-headers",
-      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
-      "id": "b1ddbc4d893c",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "security-headers-missing-strict-transport-security",
-      "scanner": "security-headers",
-      "scannerData": {
-        "headerName": "strict-transport-security"
-      },
-      "severity": "serious",
-      "title": "Missing HSTS Header"
-    },
-    {
-      "category": "security-headers",
-      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
-      "id": "3a3e5770c33a",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "security-headers-missing-strict-transport-security",
-      "scanner": "security-headers",
-      "scannerData": {
-        "headerName": "strict-transport-security"
-      },
-      "severity": "serious",
-      "title": "Missing HSTS Header"
     },
     {
       "category": "wcag2aa",
@@ -822,8 +354,26 @@
       ]
     },
     {
+      "category": "meta",
+      "description": "Meta description is too long (223 characters). It may be truncated. Recommended: 120-160 characters.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://moz.com/learn/seo/meta-description",
+      "id": "476002d4e20a",
+      "pageId": "url-1",
+      "pageUrl": "https://stageflow.org/",
+      "ruleId": "seo-description-length",
+      "scanner": "seo",
+      "scannerData": {
+        "length": 223,
+        "recommended": "120-160"
+      },
+      "severity": "moderate",
+      "title": "Meta Description Length"
+    },
+    {
       "category": "content",
-      "description": "Page has only 191 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
+      "description": "Page has only 200 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
       "elementCount": 1,
       "elementsTruncated": true,
       "id": "9bbeea68edac",
@@ -833,14 +383,14 @@
       "scanner": "seo",
       "scannerData": {
         "recommended": "300+",
-        "wordCount": 191
+        "wordCount": 200
       },
       "severity": "moderate",
       "title": "Thin Content"
     },
     {
       "category": "content",
-      "description": "Page has only 93 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
+      "description": "Page has only 114 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
       "elementCount": 1,
       "elementsTruncated": true,
       "id": "7aedbc4314f2",
@@ -850,7 +400,7 @@
       "scanner": "seo",
       "scannerData": {
         "recommended": "300+",
-        "wordCount": 93
+        "wordCount": 114
       },
       "severity": "moderate",
       "title": "Thin Content"
@@ -872,57 +422,6 @@
       },
       "severity": "moderate",
       "title": "Title Tag Length"
-    },
-    {
-      "category": "security-headers",
-      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
-      "id": "3215d1227478",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "security-headers-missing-permissions-policy",
-      "scanner": "security-headers",
-      "scannerData": {
-        "headerName": "permissions-policy"
-      },
-      "severity": "minor",
-      "title": "Missing Permissions Policy"
-    },
-    {
-      "category": "security-headers",
-      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
-      "id": "f73b722c9db2",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "security-headers-missing-permissions-policy",
-      "scanner": "security-headers",
-      "scannerData": {
-        "headerName": "permissions-policy"
-      },
-      "severity": "minor",
-      "title": "Missing Permissions Policy"
-    },
-    {
-      "category": "security-headers",
-      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
-      "id": "2c31145a65f6",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "security-headers-missing-permissions-policy",
-      "scanner": "security-headers",
-      "scannerData": {
-        "headerName": "permissions-policy"
-      },
-      "severity": "minor",
-      "title": "Missing Permissions Policy"
     },
     {
       "category": "accessibility",
@@ -1632,237 +1131,223 @@
     }
   ],
   "meta": {
-    "completedAt": "2026-07-26T04:15:06.415Z",
-    "durationMs": 37638,
+    "completedAt": "2026-07-26T04:25:08.234Z",
+    "durationMs": 39789,
     "jobId": "demo",
-    "scannedAt": "2026-07-26T04:14:28.777Z"
+    "scannedAt": "2026-07-26T04:24:28.445Z"
   },
   "pages": [
     {
       "bySeverity": {
         "critical": 0,
         "info": 12,
-        "minor": 1,
-        "moderate": 2,
-        "serious": 4
+        "minor": 0,
+        "moderate": 3,
+        "serious": 1
       },
-      "durationMs": 52973.05,
-      "finishedAt": "2026-07-26T04:14:49.293Z",
+      "durationMs": 55270.83,
+      "finishedAt": "2026-07-26T04:24:49.904Z",
       "id": "url-1",
-      "issueCount": 19,
+      "issueCount": 16,
       "pageOverview": {
         "elements": [
           {
             "height": 74,
-            "heightPercent": 1.43,
+            "heightPercent": 1.41,
             "issueId": "6d53fef4a054",
             "nodeIndex": 0,
             "ruleId": "color-contrast",
             "selector": ".gauge__val",
             "severity": "serious",
-            "width": 130,
-            "widthPercent": 5.08,
-            "x": 1443,
-            "xPercent": 56.38,
-            "y": 708,
-            "yPercent": 13.79
+            "width": 115,
+            "widthPercent": 4.48,
+            "x": 1451,
+            "xPercent": 56.68,
+            "y": 751,
+            "yPercent": 14.37
           },
           {
             "height": 40,
-            "heightPercent": 0.79,
+            "heightPercent": 0.77,
             "issueId": "794ae4ac82a7",
             "nodeIndex": 0,
             "ruleId": "color-contrast",
             "selector": ".gauge__cap",
             "severity": "serious",
-            "width": 130,
-            "widthPercent": 5.08,
-            "x": 1443,
-            "xPercent": 56.38,
-            "y": 791,
-            "yPercent": 15.42
+            "width": 115,
+            "widthPercent": 4.48,
+            "x": 1451,
+            "xPercent": 56.68,
+            "y": 834,
+            "yPercent": 15.97
           }
         ],
-        "pageHeight": 5130,
+        "pageHeight": 5224,
         "pageWidth": 2560,
         "screenshotFilename": "page-overview-url-1.webp"
       },
       "path": "/",
-      "startedAt": "2026-07-26T04:14:30.237Z",
+      "startedAt": "2026-07-26T04:24:29.261Z",
       "url": "https://stageflow.org/"
     },
     {
       "bySeverity": {
         "critical": 0,
         "info": 13,
-        "minor": 1,
+        "minor": 0,
         "moderate": 1,
-        "serious": 5
+        "serious": 1
       },
-      "durationMs": 40626.19,
-      "finishedAt": "2026-07-26T04:15:06.397Z",
+      "durationMs": 43149.44,
+      "finishedAt": "2026-07-26T04:25:08.204Z",
       "id": "url-3",
-      "issueCount": 20,
+      "issueCount": 15,
       "pageOverview": {
         "elements": [],
-        "pageHeight": 2542,
+        "pageHeight": 3438,
         "pageWidth": 2560,
         "screenshotFilename": "page-overview-url-3.webp"
       },
       "path": "/playground",
-      "startedAt": "2026-07-26T04:14:30.254Z",
+      "startedAt": "2026-07-26T04:24:29.264Z",
       "url": "https://stageflow.org/playground"
     },
     {
       "bySeverity": {
         "critical": 0,
         "info": 13,
-        "minor": 1,
+        "minor": 0,
         "moderate": 2,
-        "serious": 4
+        "serious": 1
       },
-      "durationMs": 36385.4,
-      "finishedAt": "2026-07-26T04:14:57.495Z",
+      "durationMs": 41050.83,
+      "finishedAt": "2026-07-26T04:24:58.296Z",
       "id": "url-2",
-      "issueCount": 20,
+      "issueCount": 16,
       "pageOverview": {
         "elements": [],
-        "pageHeight": 1984,
+        "pageHeight": 1988,
         "pageWidth": 2560,
         "screenshotFilename": "page-overview-url-2.webp"
       },
       "path": "/projects",
-      "startedAt": "2026-07-26T04:14:30.253Z",
+      "startedAt": "2026-07-26T04:24:29.262Z",
       "url": "https://stageflow.org/projects"
     }
   ],
   "scanners": [
     {
-      "completedAt": "2026-07-26T04:14:42.678Z",
-      "durationMs": 13901,
+      "completedAt": "2026-07-26T04:24:42.183Z",
+      "durationMs": 13738,
       "id": "axe",
       "issueCount": 2,
       "name": "Axe Accessibility Scanner",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/axe/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/axe/results.json",
       "severity": {
         "critical": 0,
         "minor": 0,
         "moderate": 2,
         "serious": 0
       },
-      "startedAt": "2026-07-26T04:14:28.777Z",
+      "startedAt": "2026-07-26T04:24:28.445Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:15:06.415Z",
-      "durationMs": 37331,
+      "completedAt": "2026-07-26T04:25:08.234Z",
+      "durationMs": 38981,
       "id": "lighthouse",
-      "issueCount": 43,
+      "issueCount": 36,
       "name": "Google Lighthouse",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/lighthouse/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/lighthouse/results.json",
       "severity": {
         "critical": 0,
         "info": 33,
         "minor": 0,
         "moderate": 0,
-        "serious": 10
+        "serious": 3
       },
-      "startedAt": "2026-07-26T04:14:29.084Z",
+      "startedAt": "2026-07-26T04:24:29.253Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:14:40.619Z",
-      "durationMs": 10965,
+      "completedAt": "2026-07-26T04:24:40.682Z",
+      "durationMs": 10709,
       "id": "link-checker",
       "issueCount": 0,
       "name": "Link Checker Scanner",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/link-checker/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/link-checker/results.json",
       "severity": {
         "critical": 0,
         "minor": 0,
         "moderate": 0,
         "serious": 0
       },
-      "startedAt": "2026-07-26T04:14:29.654Z",
+      "startedAt": "2026-07-26T04:24:29.973Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:14:34.758Z",
-      "durationMs": 4518,
+      "completedAt": "2026-07-26T04:24:34.124Z",
+      "durationMs": 3758,
       "id": "open-graph",
       "issueCount": 0,
       "name": "Open Graph Scanner",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/open-graph/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/open-graph/results.json",
       "severity": {
         "critical": 0,
         "minor": 0,
         "moderate": 0,
         "serious": 0
       },
-      "startedAt": "2026-07-26T04:14:30.24Z",
+      "startedAt": "2026-07-26T04:24:30.366Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:14:34.322Z",
-      "durationMs": 4371,
+      "completedAt": "2026-07-26T04:24:36.076Z",
+      "durationMs": 4501,
       "id": "security-headers",
-      "issueCount": 9,
+      "issueCount": 3,
       "name": "Security Headers Scanner",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/security-headers/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/security-headers/results.json",
       "severity": {
         "critical": 0,
         "info": 3,
-        "minor": 3,
+        "minor": 0,
         "moderate": 0,
-        "serious": 3
+        "serious": 0
       },
-      "startedAt": "2026-07-26T04:14:29.951Z",
+      "startedAt": "2026-07-26T04:24:31.575Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:14:34.558Z",
-      "durationMs": 4223,
+      "completedAt": "2026-07-26T04:24:37.243Z",
+      "durationMs": 5429,
       "id": "seo",
-      "issueCount": 5,
+      "issueCount": 6,
       "name": "SEO Scanner",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/seo/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/seo/results.json",
       "severity": {
         "critical": 0,
         "info": 2,
         "minor": 0,
-        "moderate": 3,
+        "moderate": 4,
         "serious": 0
       },
-      "startedAt": "2026-07-26T04:14:30.335Z",
+      "startedAt": "2026-07-26T04:24:31.814Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:14:35.093Z",
-      "durationMs": 4256,
+      "completedAt": "2026-07-26T04:24:37.16Z",
+      "durationMs": 4867,
       "id": "spelling-grammar",
       "issueCount": 0,
       "name": "Spelling and Grammar Scanner",
-      "reportPath": "6de328d3-9530-40d7-b327-1232897384e4/spelling-grammar/report.html",
-      "resultsPath": "6de328d3-9530-40d7-b327-1232897384e4/spelling-grammar/results.json",
       "severity": {
         "critical": 0,
         "minor": 0,
         "moderate": 0,
         "serious": 0
       },
-      "startedAt": "2026-07-26T04:14:30.837Z",
+      "startedAt": "2026-07-26T04:24:32.293Z",
       "status": "success",
       "toolVersion": "0.1.0"
     }
@@ -1870,16 +1355,16 @@
   "summary": {
     "byScanner": {
       "axe": 2,
-      "lighthouse": 43,
-      "security-headers": 9,
-      "seo": 5
+      "lighthouse": 36,
+      "security-headers": 3,
+      "seo": 6
     },
     "bySeverity": {
       "critical": 0,
       "info": 38,
-      "minor": 3,
-      "moderate": 5,
-      "serious": 13
+      "minor": 0,
+      "moderate": 6,
+      "serious": 3
     },
     "lighthouseCategories": [
       {
@@ -1888,7 +1373,7 @@
         "title": "Accessibility"
       },
       {
-        "avgScore": 0.77,
+        "avgScore": 1,
         "id": "best-practices",
         "title": "Best Practices"
       },
@@ -1900,9 +1385,9 @@
     ],
     "pagesScanned": 3,
     "pagesWithIssues": 3,
-    "score": 38,
-    "scoreGrade": "F",
-    "totalIssues": 59
+    "score": 63,
+    "scoreGrade": "D",
+    "totalIssues": 47
   },
   "version": "2.1.0"
 }

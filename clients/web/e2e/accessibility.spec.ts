@@ -48,6 +48,18 @@ const SURFACES: Surface[] = [
 		}
 	},
 	{
+		/*
+		 * The demo renders the full report viewer off committed static assets,
+		 * so it is the one surface here that exercises the real thing with no
+		 * mocked API in front of it.
+		 */
+		name: 'demo report',
+		path: '/demo',
+		ready: async (page) => {
+			await expect(page.getByRole('tab', { name: /Findings/ })).toBeVisible();
+		}
+	},
+	{
 		name: 'issue modal',
 		path: `/scan/${jobId}/report?section=issues&issue=${encodeURIComponent(issueId)}`,
 		ready: async (page) => {

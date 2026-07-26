@@ -3,10 +3,10 @@
 # Regenerate clients/web/public/demo — the static report /demo renders.
 #
 # StageFlow scans StageFlow. The stack is already the thing being demonstrated,
-# so pointing it at its own frontend container is both the honest fixture and a
-# standing integration test of the whole pipeline. Same dogfooding move as the
-# self-scan step in .github/workflows/golden-regression.yml, with two
-# deliberate differences:
+# so pointing it at the deployed site is both the honest fixture and a standing
+# integration test of the whole pipeline. Same dogfooding move as the self-scan
+# step in .github/workflows/golden-regression.yml, with two deliberate
+# differences:
 #
 #   - Every scanner runs, not just axe. The gate workflow narrows to axe so a
 #     broken outbound link cannot fail an accessibility claim. Here the whole
@@ -32,12 +32,21 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 out_dir="${repo_root}/clients/web/public/demo"
 
-# The URL the SCANNERS resolve. With the default host-netns local stack
-# (POD_NETNS_MODE=host, what `just demo` gives you) a scanner shares the host's
-# loopback, so localhost:3020 is the frontend container. On a pod-networked
-# stack it has its own netns and this has to be the service name instead --
-# hence PROBE, which is what *this script* curls to check the target is up.
-base="${BASE:-http://localhost:3020}"
+# The deployed site, not the local container.
+#
+# A local container is served over plain http on a private address, and half of
+# what the scanners then report is about that rather than about the site:
+# "Does not use HTTPS", "Does not redirect HTTP traffic to HTTPS", a robots.txt
+# that resolves differently. Rewriting the origin afterwards would leave a
+# fixture claiming to be a scan of https://stageflow.org while carrying
+# findings that are only true of a container on loopback -- which is precisely
+# the fabricated-evidence problem this fixture exists to avoid.
+#
+# BASE is still overridable for a local target; PROBE is what this script curls
+# to check reachability, and differs from BASE only when the scanners resolve
+# names the host does not (a pod-networked stack, where the target is a
+# service name).
+base="${BASE:-https://stageflow.org}"
 probe="${PROBE:-$base}"
 api="${API:-http://localhost:8080}"
 # The URL the committed fixture claims to have scanned. Nobody wants a
@@ -97,13 +106,21 @@ scanners="$(curl -fsS "${api}/api/v1/scanners" |
 [[ -n "$scanners" ]] || die "the catalog reports no enabled scanners"
 
 echo "==> Scanning ${#targets[@]} pages with ${scanners} (this takes a few minutes)"
-# --allow-private-targets because the target is a container on a private
-# network. No --fail-on at all: a demo fixture wants findings, and exiting
-# non-zero on the severities it exists to display would be self-defeating.
+# No --fail-on at all: a demo fixture wants findings, and exiting non-zero on
+# the severities it exists to display would be self-defeating.
+# --allow-private-targets only when it is actually needed, so a typo in BASE
+# cannot silently scan something on the local network.
+private_flag=()
+case "$base" in
+http://localhost* | http://127.* | https://localhost* | http://*:3020*)
+	private_flag=(--allow-private-targets)
+	;;
+esac
+
 stageflow scan "${targets[@]}" \
 	--api "$api" \
 	--scanner "$scanners" \
-	--allow-private-targets \
+	"${private_flag[@]}" \
 	--screenshot \
 	--format json \
 	>"${work}/cli.json" || die "scan failed; see ${work}/cli.json"
@@ -131,7 +148,9 @@ echo "==> Rewriting the report"
 #   - the scanned origin, so the fixture reads as a scan of the real site
 #   - the API origin, which the scanned page calls and Lighthouse records
 #   - meta.jobId, so review verdicts key on 'demo' rather than a dead job id
-#   - artifacts[].path, which are object-store keys that mean nothing statically
+#   - every object-store key (artifacts[].path, scanners[].reportPath and
+#     .resultsPath), which are dead references AND carry the real job id that
+#     meta.jobId was just rewritten to hide
 jq \
 	--arg base "$base" \
 	--arg origin "$public_origin" \
@@ -141,7 +160,8 @@ jq \
 	'.report
 	 | walk(if type == "string" then gsub($base; $origin) | gsub($api; $apiorigin) else . end)
 	 | .meta.jobId = $jobid
-	 | if has("artifacts") then .artifacts |= map(del(.path)) else . end' \
+	 | if has("artifacts") then .artifacts |= map(del(.path)) else . end
+	 | if has("scanners") then .scanners |= map(del(.reportPath, .resultsPath)) else . end' \
 	"${work}/cli.json" >"${out_dir}/report.json"
 
 echo "==> Downloading and compressing page overviews"

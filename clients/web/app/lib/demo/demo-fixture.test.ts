@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { buildOccurrenceModeReport } from '../report';
 import { isUnifiedReport } from '../projects';
 import { getPageOverviewUrl } from '../report/screenshots';
+import { DEMO_SUMMARY } from './demo-summary';
 import type { ScreenshotArtifact } from '../types/scan';
 import type { UnifiedReport } from '../types/unified-report';
 
@@ -111,6 +112,30 @@ describe('the committed /demo fixture', () => {
 		// a legitimate outcome of scanning a site that has been fixed, and this
 		// fixture is a real scan, not a staged one.
 		expect(markers, 'no page has a single overlay marker').toBeGreaterThan(0);
+	});
+
+	it('carries no dead object-store references', () => {
+		// These are keys into a bucket, so they are useless statically -- and they
+		// embed the real job id that meta.jobId was rewritten to hide.
+		const raw = JSON.stringify(report);
+		expect(raw).not.toContain('resultsPath');
+		expect(raw).not.toContain('reportPath');
+	});
+
+	it('matches the figures the home page prints', () => {
+		// DEMO_SUMMARY is duplicated on purpose: the home page will not pull 90 KB
+		// of JSON in to print four numbers. This is what stops the duplicate from
+		// silently describing an older scan.
+		const displayed = buildOccurrenceModeReport(report);
+		expect(DEMO_SUMMARY.pages).toBe(report.pages.length);
+		expect(DEMO_SUMMARY.scannersRun).toBe(report.scanners.length);
+		expect(DEMO_SUMMARY.totalIssues).toBe(displayed.issues.length);
+		expect(DEMO_SUMMARY.serious).toBe(
+			displayed.issues.filter((issue) => issue.severity === 'serious').length
+		);
+		expect(DEMO_SUMMARY.moderate).toBe(
+			displayed.issues.filter((issue) => issue.severity === 'moderate').length
+		);
 	});
 
 	it('leaks nothing from the machine that generated it', () => {
