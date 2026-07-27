@@ -115,31 +115,11 @@
 	}
 }
 
-/* fail note */
-.note {
-	display: flex;
-	gap: 0.55rem;
-	align-items: flex-start;
-	padding: 0.75rem 0.9rem;
-	border-radius: var(--r-sm);
+/* fail note: base in instrument.css; the run page sets it smaller and clear
+   of the meter above it */
+.run .note {
 	font-size: var(--fs-3);
-	line-height: 1.45;
 	margin-top: 1rem;
-}
-.note--err {
-	background: var(--sev-critical-wash);
-	border: 1px solid var(--sev-critical-edge);
-	color: var(--sev-critical-ink-strong);
-}
-.note__ic {
-	font-weight: 700;
-	flex-shrink: 0;
-}
-.note__actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
-	margin-top: 0.65rem;
 }
 
 .grid {

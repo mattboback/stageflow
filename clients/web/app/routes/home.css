@@ -1,15 +1,5 @@
 /* ---- page-local: home (Daylight Gauge, light scan-first) ---- */
 
-/* Local severity dots (the report stylesheet isn't loaded on home) */
-.sev-dot {
-	display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%;
-	background: var(--ink-faint); flex: 0 0 auto;
-}
-.sev-dot.sev-critical { background: var(--sev-critical); }
-.sev-dot.sev-serious  { background: var(--sev-serious); }
-.sev-dot.sev-moderate { background: var(--sev-moderate); }
-.sev-dot.sev-minor    { background: var(--sev-minor); }
-
 /* ------------------------------------------------------------------ hero */
 .hero {
 	position: relative;

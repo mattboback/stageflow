@@ -424,7 +424,7 @@
 	margin-top: 0.15rem;
 }
 .readybox--go {
-	background: var(--sev-minor-wash);
+	background: var(--sev-pass-wash);
 	color: var(--sev-pass-ink);
 }
 .readybox--go b {
@@ -498,28 +498,7 @@
 	display: none;
 }
 
-/* error / status note */
-.note {
-	display: flex;
-	gap: 0.55rem;
-	align-items: flex-start;
-	padding: 0.75rem 0.9rem;
-	border-radius: var(--r-sm);
-	font-size: var(--fs-4);
-	line-height: 1.45;
-}
-.note--err {
-	background: var(--sev-critical-wash);
-	border: 1px solid var(--sev-critical-edge);
-	color: var(--sev-critical-ink-strong);
-}
-.note__ic {
-	font-weight: 700;
-	flex-shrink: 0;
-}
-.note--inset {
-	margin: 0.85rem 1rem;
-}
+/* .note / .note--err / .note--inset live in instrument.css */
 
 @media (max-width: 880px) {
 	.console {
@@ -654,7 +633,7 @@
 	padding: 0.3rem 0.65rem;
 	border: 1px solid var(--sev-pass-edge);
 	border-radius: var(--r-pill);
-	background: var(--sev-minor-wash);
+	background: var(--sev-pass-wash);
 	font-size: var(--fs-2);
 	font-weight: 600;
 	color: var(--sev-pass-ink);

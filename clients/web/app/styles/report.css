@@ -35,22 +35,8 @@
 	border-color: var(--sev-info-edge);
 }
 
-/* ------------------------------------------------------------------------- */
-/*  Severity dot (small circle, used in row headers / counts)                 */
-/* ------------------------------------------------------------------------- */
-.sev-dot {
-	display: inline-block;
-	width: 0.6rem;
-	height: 0.6rem;
-	border-radius: 50%;
-	background: var(--ink-faint);
-	flex: 0 0 auto;
-}
-.sev-dot.sev-critical { background: var(--sev-critical); }
-.sev-dot.sev-serious  { background: var(--sev-serious); }
-.sev-dot.sev-moderate { background: var(--sev-moderate); }
-.sev-dot.sev-minor    { background: var(--sev-minor); }
-.sev-dot.sev-info     { background: var(--sev-info); }
+/* The severity dot lives in instrument.css: it is the one severity mark that
+   also appears outside report surfaces (home's preview panel). */
 
 /* ------------------------------------------------------------------------- */
 /*  Severity badge (tinted pill with severity-colored text)                   */

@@ -128,6 +128,7 @@
 	--sev-moderate-wash: light-dark(oklch(0.968 0.028 85), oklch(0.27 0.04 85));
 	--sev-minor-wash:    light-dark(oklch(0.966 0.024 140), oklch(0.27 0.04 140));
 	--sev-info-wash:     light-dark(oklch(0.963 0.018 245), oklch(0.27 0.04 245));
+	--sev-pass-wash:     light-dark(oklch(0.965 0.022 160), oklch(0.27 0.04 168));
 
 	/* light: base already clears 4.5:1 except amber and green, which darken.
 	   dark: every -ink rises past its own base. */
@@ -516,6 +517,8 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .panel__head h2, .panel__head h3 { font-size: var(--fs-6); font-weight: 700; }
 .panel__body { padding: 1.15rem; }
+/* Flush body: the panel's child manages its own edges (lists, tab strips). */
+.panel__body--flush { padding: 0; }
 
 /* ------------------------------------------------------------- underline tabs */
 .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--line); overflow-x: auto; }
@@ -553,33 +556,18 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .gauge__cap { font-size: var(--fs-2); font-weight: 600; color: var(--ink-muted); margin-top: 0.3rem; }
 
-/* --------------------------------------------------- severity scale chip */
-.sevscale { display: grid; gap: 0.15rem; }
-.sevrow {
-	display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 0.6rem;
-	padding: 0.45rem 0.6rem; border-radius: var(--r-sm);
-	transition: background var(--dur-1) var(--ease);
+/* --------------------------------------------------------- severity dot
+   The one severity mark that appears outside the report stylesheet (home's
+   preview panel), so it lives here rather than being defined per route. */
+.sev-dot {
+	display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%;
+	background: var(--ink-faint); flex: 0 0 auto;
 }
-.sevrow:hover { background: var(--surface-sunk); }
-.sevrow__dot { width: 10px; height: 10px; border-radius: 50%; }
-.sevrow__name { min-width: 0; font-size: var(--fs-4); font-weight: 500; color: var(--ink); }
-.sevrow__count {
-	font-weight: 700; font-variant-numeric: tabular-nums;
-	font-size: var(--fs-4); color: var(--ink-strong);
-}
-.sev-critical .sevrow__dot { background: var(--sev-critical); }
-.sev-serious  .sevrow__dot { background: var(--sev-serious); }
-.sev-moderate .sevrow__dot { background: var(--sev-moderate); }
-.sev-minor    .sevrow__dot { background: var(--sev-minor); }
-.sev-info     .sevrow__dot { background: var(--sev-info); }
-
-/* ------------------------------------------------------------- data readouts */
-.readout { display: flex; flex-direction: column; gap: 0.2rem; }
-.readout__val {
-	font-weight: 700; font-variant-numeric: tabular-nums;
-	color: var(--ink-strong); font-size: var(--fs-8); line-height: 1.1;
-}
-.readout__lab { font-size: var(--fs-3); font-weight: 500; color: var(--ink-muted); }
+.sev-dot.sev-critical { background: var(--sev-critical); }
+.sev-dot.sev-serious  { background: var(--sev-serious); }
+.sev-dot.sev-moderate { background: var(--sev-moderate); }
+.sev-dot.sev-minor    { background: var(--sev-minor); }
+.sev-dot.sev-info     { background: var(--sev-info); }
 
 /* ------------------------------------------------------------- status pill */
 .pill {
@@ -592,23 +580,26 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .pill__led { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .pill--live { color: var(--signal-ink); border-color: var(--signal-edge); background: var(--signal-wash); }
 .pill--live .pill__led { background: var(--signal); animation: blink 1.2s steps(2, jump-none) infinite; }
-.pill--done { color: var(--sev-pass-ink); border-color: var(--sev-pass-edge); background: var(--sev-minor-wash); }
+.pill--done { color: var(--sev-pass-ink); border-color: var(--sev-pass-edge); background: var(--sev-pass-wash); }
 .pill--done .pill__led { background: var(--sev-pass); }
 .pill--queued { color: var(--ink-muted); }
 .pill--error { color: var(--sev-critical-ink); border-color: var(--sev-critical-edge); background: var(--sev-critical-wash); }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-/* Severity badge: filled wash pill, label always textual */
-.sevbadge {
-	display: inline-flex; align-items: center; gap: 0.35rem;
-	font-size: var(--fs-2); font-weight: 700; line-height: 1;
-	padding: 0.32rem 0.65rem; border-radius: var(--r-pill);
+/* ------------------------------------------------------------ status note */
+.note {
+	display: flex; gap: 0.55rem; align-items: flex-start;
+	padding: 0.75rem 0.9rem; border-radius: var(--r-sm);
+	font-size: var(--fs-4); line-height: 1.45;
 }
-.sevbadge--critical { color: var(--sev-critical-ink); background: var(--sev-critical-wash); }
-.sevbadge--serious  { color: var(--sev-serious-ink);  background: var(--sev-serious-wash); }
-.sevbadge--moderate { color: var(--sev-moderate-ink); background: var(--sev-moderate-wash); }
-.sevbadge--minor    { color: var(--sev-minor-ink);    background: var(--sev-minor-wash); }
-.sevbadge--info     { color: var(--sev-info-ink);     background: var(--sev-info-wash); }
+.note--err {
+	background: var(--sev-critical-wash);
+	border: 1px solid var(--sev-critical-edge);
+	color: var(--sev-critical-ink-strong);
+}
+.note__ic { font-weight: 700; flex-shrink: 0; }
+.note__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.65rem; }
+.note--inset { margin: 0.85rem 1rem; }
 
 /* ------------------------------------------------------------- input field */
 .field { display: flex; flex-direction: column; gap: 0.45rem; }
@@ -721,7 +712,6 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .delta--flat { color: var(--ink-muted); }
 
 /* -------------------------------------------------------------- utilities */
-.divider { height: 1px; background: var(--line); border: 0; }
 .code-well {
 	display: block; margin: 0;
 	font-family: var(--mono); font-size: var(--fs-3); line-height: 1.6;
