@@ -7,25 +7,7 @@
 	gap: var(--sp-6);
 }
 
-.projects-page__head {
-	display: flex;
-	align-items: end;
-	justify-content: space-between;
-	gap: var(--sp-5);
-	flex-wrap: wrap;
-}
-
-.projects-page__head h1 {
-	font-size: var(--fs-9);
-	margin-top: var(--sp-1);
-}
-
-.projects-page__head > div:first-child > p:last-child {
-	color: var(--ink-muted);
-	font-size: var(--fs-6);
-	max-width: 60ch;
-	margin-top: var(--sp-3);
-}
+/* page head: shared .page-head from instrument.css */
 
 .projects-local-note {
 	display: flex;

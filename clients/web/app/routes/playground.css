@@ -5,37 +5,17 @@
 	background: var(--ground);
 }
 
-/* page head */
-.console__head {
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	gap: var(--sp-5) var(--sp-5);
-	margin: 0 auto var(--sp-5);
-	flex-wrap: wrap;
+/* One local cap on the shell wrap (the .run__wrap pattern): the form reads
+   better narrower than the 96rem app shell, and capping here instead of on
+   each block keeps head, notice, and grid on the same edge. */
+.console__wrap {
 	max-width: 84rem;
 }
-.console__head h1 {
-	font-size: var(--fs-9);
-	letter-spacing: var(--track-display);
-	line-height: 1.1;
-	text-wrap: balance;
-	margin: 0;
-}
-.console__head p {
-	color: var(--ink-muted);
-	margin: 0.55rem 0 0;
-	max-width: 52ch;
-	font-size: var(--fs-5);
-	line-height: 1.55;
-	text-wrap: pretty;
-}
 
-.console__head-actions {
-	display: flex;
-	align-items: center;
-	gap: var(--sp-2);
-	flex-wrap: wrap;
+/* page head: shared .page-head from instrument.css; the console only adds
+   its clearance from the grid below */
+.console__head {
+	margin-bottom: var(--sp-5);
 }
 
 .console__project-label {
@@ -68,8 +48,7 @@
 }
 
 .console__project-notice {
-	max-width: 84rem;
-	margin: calc(-1 * var(--sp-3)) auto var(--sp-4);
+	margin: calc(-1 * var(--sp-3)) 0 var(--sp-4);
 	color: var(--signal-ink);
 	font-size: var(--fs-4);
 	font-weight: 600;
@@ -83,8 +62,6 @@
 	gap: var(--sp-6);
 	align-items: start;
 	justify-content: center;
-	margin: 0 auto;
-	max-width: 84rem;
 }
 .console__main {
 	display: grid;

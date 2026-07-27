@@ -10,6 +10,7 @@ import {
 } from 'react-router';
 
 import { SiteHeader } from '../components/SiteHeader';
+import { SiteFooter } from '../components/SiteFooter';
 import { RouteFault } from '../components/RouteFault';
 import { ArtifactsView } from '../components/report/ArtifactsView';
 import { LocalBaselineComparison } from '../components/report/LocalBaselineComparison';
@@ -234,6 +235,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 					/>
 				}
 			/>
+			<SiteFooter slim />
 		</>
 	);
 }
@@ -266,6 +268,7 @@ export function ErrorBoundary() {
 					</>
 				}
 			/>
+			<SiteFooter slim />
 		</>
 	);
 }

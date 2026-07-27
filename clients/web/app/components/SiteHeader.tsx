@@ -4,7 +4,7 @@ import { BrandMark } from './BrandMark';
 import { MobileNav } from './MobileNav';
 import { ThemeToggle } from './ThemeToggle';
 
-type Current = 'home' | 'projects' | 'playground' | undefined;
+type Current = 'home' | 'projects' | 'playground' | 'demo' | undefined;
 
 /* Application chrome for scan/report workflows: brand, current section, and a
    back action. Marketing nav and GitHub stay on marketing pages only. */
@@ -51,7 +51,7 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 			>
 				Configure scan
 			</Link>
-			<Link className="navlink" to="/demo">
+			<Link className="navlink" to="/demo" aria-current={current === 'demo' ? 'page' : undefined}>
 				Demo report
 			</Link>
 			<Link className="navlink" to="/#scanners">
@@ -65,7 +65,9 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 
 	return (
 		<header className="site-header">
-			<div className="wrap site-header__bar">
+			{/* Same shell width as the content below it: the brand and the page's
+			    h1 share a left edge on every surface, marketing included. */}
+			<div className="wrap wrap--app site-header__bar">
 				<Link className="brand" to="/" aria-label={`${SITE_NAME} home`}>
 					<BrandMark />
 					<span className="brand__name">{SITE_NAME}</span>

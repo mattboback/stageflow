@@ -1,11 +1,7 @@
 /* ---- page-local: scan report viewer (Daylight Gauge) ----
    The report is an application workspace, not a marketing page: it uses the
-   wide app shell, fills the viewport, and has no marketing footer. */
+   wide app shell (.wrap--app, shared gutter and all) and fills the viewport. */
 .report { padding-block: var(--sp-4) var(--sp-5); }
-.report .wrap {
-	max-width: var(--maxw-app);
-	padding-inline: clamp(1.25rem, 2.5vw, 2.5rem);
-}
 
 /* ---- browser-local project baseline ----------------------------------- */
 .local-baseline {

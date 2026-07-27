@@ -169,7 +169,7 @@ export function ReportView({
 
 	return (
 		<main id="main" className="report">
-			<div className="wrap">
+			<div className="wrap wrap--app">
 				{displayReport ? (
 					<>
 						{banner}

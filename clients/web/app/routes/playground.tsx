@@ -109,11 +109,14 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 			<SiteHeader current="playground" />
 
 			<main id="main" className="console">
-				<div className="wrap wrap--app">
-					<div className="console__head">
+				<div className="wrap wrap--app console__wrap">
+					<div className="page-head console__head">
 						<div>
 							{project ? (
 								<>
+									{/* The editable name replaces the visible h1, but the page
+									    still needs one for heading order and landmarks. */}
+									<h1 className="sr-only">{projectName || 'Configure a scan'}</h1>
 									<span className="console__project-label">
 										<FolderKanban size={16} aria-hidden="true" /> Local project
 									</span>
@@ -131,13 +134,13 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 							) : (
 								<h1>Configure a scan</h1>
 							)}
-							<p>
+							<p className="page-head__lede">
 								{project
 									? 'Configure repeatable URL scans here. Credentials and AI input values are prompted per run and never saved with the project.'
 									: 'Point StageFlow at any public URL or a static-site archive, choose the scanners you need, and run. No account, no install.'}
 							</p>
 						</div>
-						<div className="console__head-actions">
+						<div className="page-head__actions">
 							{project && (
 								<>
 									<Link className="btn btn--ghost btn--sm" to="/projects">

@@ -7,6 +7,7 @@ import {
 } from 'react-router';
 
 import { SiteHeader } from '../components/SiteHeader';
+import { SiteFooter } from '../components/SiteFooter';
 import { RouteFault } from '../components/RouteFault';
 import { DemoArtifactsPanel } from '../components/report/DemoArtifactsPanel';
 import { ReportView } from '../components/report/ReportView';
@@ -62,7 +63,9 @@ export default function Demo() {
 
 	return (
 		<>
-			<SiteHeader app={{ backTo: '/', backLabel: 'Home', section: 'Demo report' }} />
+			{/* Marketing header, not the workflow back-bar: a visitor lands here
+			    from the front door and should keep the primary navigation. */}
+			<SiteHeader current="demo" />
 			<ReportView
 				jobId={DEMO_JOB_ID}
 				report={report}
@@ -72,6 +75,7 @@ export default function Demo() {
 				banner={null}
 				artifactsPanel={<DemoArtifactsPanel />}
 			/>
+			<SiteFooter slim />
 		</>
 	);
 }
@@ -83,7 +87,7 @@ export function ErrorBoundary() {
 
 	return (
 		<>
-			<SiteHeader app={{ backTo: '/', backLabel: 'Home', section: 'Demo report' }} />
+			<SiteHeader current="demo" />
 			<RouteFault
 				status={status}
 				title="The demo report can't be shown."
@@ -104,6 +108,7 @@ export function ErrorBoundary() {
 					</>
 				}
 			/>
+			<SiteFooter slim />
 		</>
 	);
 }

@@ -123,11 +123,11 @@ export default function Projects() {
 			<SiteHeader current="projects" />
 			<main id="main" className="projects-page">
 				<div className="wrap wrap--app projects-page__wrap">
-					<header className="projects-page__head">
+					<header className="page-head">
 						<div>
 							<p className="label">Regression workspace</p>
 							<h1>Local projects</h1>
-							<p>
+							<p className="page-head__lede">
 								Group repeat scans, promote a known-good report, and see what changed on the next
 								run.
 							</p>

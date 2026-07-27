@@ -436,7 +436,8 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 }
 .navmenu__panel .navlink {
 	display: flex; align-items: center;
-	min-height: 48px; padding-inline: clamp(1.1rem, 3vw, 2rem);
+	/* Matches the .wrap--app gutter so panel links stay flush with the bar. */
+	min-height: 48px; padding-inline: clamp(1.25rem, 3vw, 2.75rem);
 	border-radius: 0; font-size: var(--fs-5);
 }
 .navmenu__panel .navlink:hover { background: var(--surface-sunk); }
@@ -507,6 +508,27 @@ code, pre { font-family: var(--mono); font-variant-ligatures: none; }
 .btn:disabled:hover .ar { transform: none; }
 
 /* ------------------------------------------------------------------ panel */
+/* -------------------------------------------------------------- page head
+   Standard page opening: eyebrow label + h1 + lede on the left, secondary
+   actions or a side note on the right. The home hero, the live run status
+   head (.shead), and the report identity head (.rhead) are deliberately not
+   this pattern — they open instruments, not pages. */
+.page-head {
+	display: flex; align-items: end; justify-content: space-between;
+	gap: var(--sp-5); flex-wrap: wrap;
+}
+.page-head h1 {
+	font-size: var(--fs-9); letter-spacing: var(--track-display);
+	line-height: 1.1; text-wrap: balance; margin: 0;
+}
+.page-head .label + h1 { margin-top: var(--sp-1); }
+.page-head__lede {
+	color: var(--ink-muted); margin: var(--sp-3) 0 0;
+	max-width: 60ch; font-size: var(--fs-6); line-height: 1.55;
+	text-wrap: pretty;
+}
+.page-head__actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+
 .panel {
 	background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
 	box-shadow: var(--shadow-sm);
