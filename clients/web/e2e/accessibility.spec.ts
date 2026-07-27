@@ -214,3 +214,67 @@ test('an explicit theme choice survives a reload without a flash of the wrong on
 	expect(scriptAt, 'the theme init script is missing from the served document').toBeGreaterThan(-1);
 	expect(scriptAt, 'the theme init script must run before <body> is parsed').toBeLessThan(bodyAt);
 });
+
+/*
+ * The narrow-viewport nav, which the surface matrix cannot reach: axe only
+ * grades what is painted, and the panel does not exist until it is opened.
+ * Below 640px this IS the primary navigation -- the links are display:none --
+ * so a regression here removes every route off the home page on a phone.
+ */
+test.describe('the narrow-screen menu', () => {
+	test.use({ viewport: { width: 390, height: 844 } });
+
+	test('is the primary navigation, traps focus, and closes on Escape', async ({ page }) => {
+		await page.goto('/');
+
+		// Scoped to the header: the footer sitemap carries the same link names and
+		// is visible at every width.
+		const header = page.locator('.site-header');
+		const trigger = page.getByRole('button', { name: 'Menu' });
+		await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		// The inline row is hidden at this width, so the menu is the only way through.
+		await expect(header.getByRole('link', { name: 'Configure scan' })).toBeHidden();
+
+		await trigger.click();
+		await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+		await expect(header.getByRole('link', { name: 'Configure scan' })).toBeVisible();
+		await expect(header.getByRole('link', { name: 'Demo report' })).toBeVisible();
+
+		await expectNoSeriousViolations(page, 'mobile menu (light)');
+		await page.evaluate(() => {
+			document.documentElement.dataset.theme = 'dark';
+		});
+		await page.waitForFunction(
+			() => getComputedStyle(document.documentElement).colorScheme === 'dark'
+		);
+		await expectNoSeriousViolations(page, 'mobile menu (dark)');
+
+		// Focus starts inside the panel and Tab cycles rather than escaping to the
+		// page behind it.
+		await expect(header.getByRole('link', { name: 'Projects' })).toBeFocused();
+		for (let i = 0; i < 8; i += 1) await page.keyboard.press('Tab');
+		await expect(page.locator('.navmenu__panel :focus')).toHaveCount(1);
+
+		await page.keyboard.press('Escape');
+		await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+		// Focus comes home, or the next Tab restarts from the top of the document.
+		await expect(trigger).toBeFocused();
+	});
+
+	test('a link navigates and leaves the menu closed behind it', async ({ page }) => {
+		await page.goto('/');
+		const header = page.locator('.site-header');
+
+		await page.getByRole('button', { name: 'Menu' }).click();
+		await header.getByRole('link', { name: 'Projects' }).click();
+		await expect(page).toHaveURL(/\/projects$/);
+
+		// /projects keeps the marketing header, so the trigger is still there and
+		// the panel must not have survived the navigation.
+		await expect(page.getByRole('button', { name: 'Menu' })).toHaveAttribute(
+			'aria-expanded',
+			'false'
+		);
+		await expect(page.locator('.navmenu__panel')).toHaveCount(0);
+	});
+});

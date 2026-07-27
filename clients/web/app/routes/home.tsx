@@ -6,6 +6,7 @@ import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
 import { Pill } from '../components/Pill';
 import { DEMO_SUMMARY } from '../lib/demo/demo-summary';
+import { SCANNER_META } from '../lib/report/scanner-identity';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import {
 	buildSiteMeta,
@@ -275,24 +276,43 @@ export default function Home() {
 					</div>
 				</section>
 
-				{/* SCANNERS — condensed summary; the full list lives on the configure page */}
+				{/* SCANNERS — the list the /#scanners anchor has always promised */}
 				<section className="section section--band" id="scanners" aria-labelledby="scanners-heading">
-					<div className="wrap wrap--app scansum">
-						<div className="scansum__copy">
-							<h2 id="scanners-heading">Eight scanners, one merged report</h2>
-							<p>
-								Accessibility, performance, SEO, security headers, link health, social previews, and
-								spelling — plus an opt-in AI navigator. Each runs in an isolated container and
-								merges into a single severity-ranked report, the same shape from the CLI, CI, or the
-								browser.
-							</p>
+					<div className="wrap wrap--app">
+						<div className="scansum">
+							<div className="scansum__copy">
+								<h2 id="scanners-heading">Eight scanners, one merged report</h2>
+								<p>
+									Each runs in its own rootless container and merges into a single severity-ranked
+									report — the same shape from the CLI, from CI, or from the browser.
+								</p>
+							</div>
+							<Link className="btn btn--ghost scansum__cta" to="/playground">
+								Configure a scan{' '}
+								<span className="ar" aria-hidden="true">
+									→
+								</span>
+							</Link>
 						</div>
-						<Link className="btn btn--ghost scansum__cta" to="/playground">
-							View all scanners{' '}
-							<span className="ar" aria-hidden="true">
-								→
-							</span>
-						</Link>
+
+						{/* Straight from SCANNER_META, the same map the configure page and the
+						    report read. The anchor promised a list and delivered a paragraph;
+						    duplicating the names in prose would have been a third place for
+						    them to drift. */}
+						<ul className="scanlist">
+							{Object.entries(SCANNER_META).map(([id, meta]) => {
+								const Icon = meta.icon;
+								return (
+									<li key={id} className="scanlist__item">
+										<Icon className="scanlist__icon" size={18} aria-hidden="true" />
+										<div>
+											<h3 className="scanlist__name">{meta.label}</h3>
+											<p className="scanlist__desc">{meta.description}</p>
+										</div>
+									</li>
+								);
+							})}
+						</ul>
 					</div>
 				</section>
 

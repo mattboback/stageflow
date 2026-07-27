@@ -21,7 +21,7 @@ It is **not** responsible for:
 
 ## Stack
 
-React Router 7 in SPA mode (`ssr: false`; `/` and `/playground` are
+React Router 8 in SPA mode (`ssr: false`; `/` and `/playground` are
 prerendered to static HTML), Vite, TypeScript, Bun. Design tokens are
 canonical in `app/styles/instrument.css` — see
 [docs/design.md](../../docs/design.md) for the visual system and

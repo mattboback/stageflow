@@ -271,6 +271,25 @@
 }
 .scansum__cta { flex-shrink: 0; }
 
+/* The eight scanners, from SCANNER_META. auto-fit rather than a fixed column
+   count so the grid reflows without a media query per breakpoint. */
+.scanlist {
+	list-style: none; margin: var(--sp-6) 0 0; padding: 0;
+	display: grid; gap: var(--sp-4) var(--sp-5);
+	grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+.scanlist__item {
+	display: grid; grid-template-columns: auto 1fr; gap: var(--sp-3);
+	align-items: start;
+	padding-top: var(--sp-4); border-top: 1px solid var(--line);
+}
+.scanlist__icon { color: var(--signal-ink); margin-top: 0.15rem; }
+.scanlist__name { font-size: var(--fs-5); margin: 0; line-height: 1.3; }
+.scanlist__desc {
+	margin: 0.3rem 0 0; font-size: var(--fs-3); line-height: 1.5;
+	color: var(--ink-muted); text-wrap: pretty;
+}
+
 /* path steps */
 .path__steps {
 	list-style: none;
