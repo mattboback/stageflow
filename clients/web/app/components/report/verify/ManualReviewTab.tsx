@@ -39,11 +39,7 @@ export function ManualReviewTab({ issue, jobId }: Props) {
 							Reviewed · {verdict.verdict}
 						</span>
 						<span className="vfy__verdict-meta mono">{formatVerdictTime(verdict.at)}</span>
-						<button
-							type="button"
-							className="vfy__btn vfy__btn--ghost"
-							onClick={() => clearVerdict(issue.id)}
-						>
+						<button type="button" className="btn btn--quiet" onClick={() => clearVerdict(issue.id)}>
 							Clear verdict
 						</button>
 					</>
@@ -52,14 +48,14 @@ export function ManualReviewTab({ issue, jobId }: Props) {
 						<span className="vfy__verdict-ask">Does this check pass on this page?</span>
 						<button
 							type="button"
-							className="vfy__btn vfy__btn--pass"
+							className="btn btn--verdict-pass"
 							onClick={() => setVerdict(issue.id, { verdict: 'pass' })}
 						>
 							Mark pass
 						</button>
 						<button
 							type="button"
-							className="vfy__btn vfy__btn--fail"
+							className="btn btn--verdict-fail"
 							onClick={() => setVerdict(issue.id, { verdict: 'fail' })}
 						>
 							Mark fail

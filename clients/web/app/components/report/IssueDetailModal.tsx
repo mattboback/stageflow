@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useRovingTabList } from '../../lib/hooks/useRovingTabList';
 
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
@@ -188,23 +190,10 @@ export function IssueDetailModal({
 
 	const pageLabel = page?.path ?? page?.url ?? null;
 	const severity = normalizeSeverity(issue.severity) ?? 'info';
-	const moveTabFocus = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
-		let nextIndex: number | null = null;
-		if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
-		if (event.key === 'ArrowLeft')
-			nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
-		if (event.key === 'Home') nextIndex = 0;
-		if (event.key === 'End') nextIndex = availableTabs.length - 1;
-		if (nextIndex === null) return;
-		event.preventDefault();
-		const nextTab = availableTabs[nextIndex];
-		if (!nextTab) return;
-		setTabState({ issueId: issue.id, tab: nextTab });
-		event.currentTarget.parentElement
-			?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-			.item(nextIndex)
-			.focus();
-	};
+	const moveTabFocus = useRovingTabList(availableTabs.length, (index) => {
+		const nextTab = availableTabs[index];
+		if (nextTab) setTabState({ issueId: issue.id, tab: nextTab });
+	});
 
 	return (
 		<div
@@ -246,36 +235,36 @@ export function IssueDetailModal({
 								<>
 									<button
 										type="button"
-										className="imodal__nav-btn"
+										className="btn btn--icon"
 										onClick={() => navigate(-1)}
 										disabled={!hasPrev}
 										aria-label="Previous issue (k)"
 										title="Previous (k)"
 									>
-										‹
+										<ChevronLeft size={18} aria-hidden="true" />
 									</button>
 									<span className="imodal__nav-count">
 										{currentIndex + 1} of {totalCount}
 									</span>
 									<button
 										type="button"
-										className="imodal__nav-btn"
+										className="btn btn--icon"
 										onClick={() => navigate(1)}
 										disabled={!hasNext}
 										aria-label="Next issue (j)"
 										title="Next (j)"
 									>
-										›
+										<ChevronRight size={18} aria-hidden="true" />
 									</button>
 								</>
 							)}
 							<button
 								type="button"
-								className="imodal__close"
+								className="btn btn--icon"
 								onClick={onClose}
 								aria-label="Close modal"
 							>
-								×
+								<X size={18} aria-hidden="true" />
 							</button>
 						</div>
 					</div>
@@ -288,7 +277,7 @@ export function IssueDetailModal({
 					)}
 				</header>
 
-				<nav className="imodal__tabs" role="tablist">
+				<nav className="tabs imodal__tabs" role="tablist">
 					{availableTabs.map((tab, index) => (
 						<button
 							key={tab}
@@ -298,7 +287,7 @@ export function IssueDetailModal({
 							aria-selected={activeTab === tab}
 							aria-controls={`issue-panel-${tab}`}
 							tabIndex={activeTab === tab ? 0 : -1}
-							className="imodal__tab"
+							className="tab"
 							onClick={() => setTabState({ issueId: issue.id, tab })}
 							onKeyDown={(event) => moveTabFocus(event, index)}
 						>

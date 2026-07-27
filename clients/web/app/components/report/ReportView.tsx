@@ -306,13 +306,13 @@ export function ReportView({
 						)}
 					</>
 				) : status === 'failed' || status === 'error' ? (
-					<div className="rsection-placeholder" role="alert">
+					<div className="blankslate blankslate--framed rsection-placeholder" role="alert">
 						<h2>Scan failed</h2>
 						<p>{error || 'The scan did not produce a report.'}</p>
 					</div>
 				) : (
 					<div
-						className="rsection-placeholder rsection-placeholder--loading"
+						className="blankslate blankslate--framed rsection-placeholder"
 						role="status"
 						aria-live="polite"
 					>

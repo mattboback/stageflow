@@ -102,11 +102,7 @@
 	content: '';
 	position: absolute;
 	inset: 0;
-	background: repeating-linear-gradient(
-		45deg,
-		transparent 0 8px,
-		var(--stripe) 8px 16px
-	);
+	background: repeating-linear-gradient(45deg, transparent 0 8px, var(--stripe) 8px 16px);
 	animation: slide 0.95s linear infinite;
 }
 @keyframes slide {

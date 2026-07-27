@@ -168,6 +168,9 @@ for (const viewport of [
 	test(`${viewport.name} product surfaces pass serious accessibility checks in both themes`, async ({
 		page
 	}) => {
+		/* Six surfaces × two themes = twelve axe runs in one body; under parallel
+		   workers that legitimately brushes the default 30s and flakes. */
+		test.slow();
 		await page.setViewportSize(viewport);
 		await mockCatalog(page);
 		await mockReport(page);

@@ -311,7 +311,7 @@ export function VisualReviewPanel({
 
 	if (!selectedPage) {
 		return (
-			<div className="vrev__empty">
+			<div className="blankslate">
 				<p>No pages with screenshots available for visual review.</p>
 			</div>
 		);
@@ -382,23 +382,17 @@ export function VisualReviewPanel({
 				{canRenderScreenshot && (
 					<div className="vrev__stage-bar">
 						<div className="vrev__zoom" role="group" aria-label="Zoom">
+							<div className="seg">
+								<button type="button" aria-pressed={zoom === 'fit'} onClick={() => setZoom('fit')}>
+									Fit width
+								</button>
+								<button type="button" aria-pressed={zoom === 1} onClick={() => setZoom(1)}>
+									100%
+								</button>
+							</div>
 							<button
 								type="button"
-								className={`vrev__zoom-btn${zoom === 'fit' ? ' vrev__zoom-btn--on' : ''}`}
-								onClick={() => setZoom('fit')}
-							>
-								Fit width
-							</button>
-							<button
-								type="button"
-								className={`vrev__zoom-btn${zoom === 1 ? ' vrev__zoom-btn--on' : ''}`}
-								onClick={() => setZoom(1)}
-							>
-								100%
-							</button>
-							<button
-								type="button"
-								className="vrev__zoom-btn vrev__zoom-btn--icon"
+								className="btn btn--icon"
 								onClick={() => zoomBy(1 / ZOOM_STEP)}
 								aria-label="Zoom out"
 							>
@@ -406,7 +400,7 @@ export function VisualReviewPanel({
 							</button>
 							<button
 								type="button"
-								className="vrev__zoom-btn vrev__zoom-btn--icon"
+								className="btn btn--icon"
 								onClick={() => zoomBy(ZOOM_STEP)}
 								aria-label="Zoom in"
 							>
@@ -439,18 +433,18 @@ export function VisualReviewPanel({
 					</div>
 				)}
 				{!canRenderScreenshot ? (
-					<div className="vrev__empty">
+					<div className="blankslate">
 						<p>
 							No page-overview screenshot is available for this page yet. Visual review will appear
 							here once captured.
 						</p>
 					</div>
 				) : screenshotLoadFailed ? (
-					<div className="vrev__empty">
+					<div className="blankslate">
 						<p>The page-overview screenshot could not be loaded.</p>
 					</div>
 				) : !screenshotReady ? (
-					<div className="vrev__empty">
+					<div className="blankslate">
 						<p>Loading page-overview screenshot...</p>
 					</div>
 				) : (
@@ -522,7 +516,9 @@ export function VisualReviewPanel({
 					<span className="vrev__issues-count">{pageIssues.length}</span>
 				</header>
 				{pageIssues.length === 0 ? (
-					<p className="vrev__empty-msg">No findings match the current scanner filter.</p>
+					<p className="blankslate vrev__empty-msg">
+						No findings match the current scanner filter.
+					</p>
 				) : (
 					<ul className="vrev__issues-list">
 						{issueGroups.map((group) => {

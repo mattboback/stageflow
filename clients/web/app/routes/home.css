@@ -82,7 +82,10 @@
 	border-radius: var(--r-lg);
 	justify-self: stretch;
 }
-.hero__preview-arrow { color: var(--signal-ink); font-weight: 700; }
+.hero__preview-arrow {
+	color: var(--signal-ink);
+	font-weight: 700;
+}
 /* the regression story: what StageFlow adds over a one-shot checker */
 .preview__reg {
 	display: grid;
@@ -90,26 +93,47 @@
 	min-width: 0;
 }
 .preview__reg-title {
-	display: flex; align-items: center; gap: var(--sp-2);
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
 	margin: 0;
-	font-weight: 600; color: var(--ink-strong); font-size: var(--fs-5);
+	font-weight: 600;
+	color: var(--ink-strong);
+	font-size: var(--fs-5);
 }
 .preview__reg-rows {
-	list-style: none; margin: 0; padding: 0;
-	display: grid; gap: var(--sp-2);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: var(--sp-2);
 }
 .preview__reg-rows li {
-	display: flex; align-items: baseline; justify-content: space-between;
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
 	gap: var(--sp-4);
-	font-size: var(--fs-4); color: var(--ink-muted);
+	font-size: var(--fs-4);
+	color: var(--ink-muted);
 }
-.preview__reg-rows .num { color: var(--ink-strong); font-weight: 600; }
-.preview__reg-sev { color: var(--sev-serious-ink); font-weight: 600; }
+.preview__reg-rows .num {
+	color: var(--ink-strong);
+	font-weight: 600;
+}
+.preview__reg-sev {
+	color: var(--sev-serious-ink);
+	font-weight: 600;
+}
 .preview__reg-note {
-	margin: 0; font-size: var(--fs-3); line-height: 1.5;
-	color: var(--ink-muted); text-wrap: pretty;
+	margin: 0;
+	font-size: var(--fs-3);
+	line-height: 1.5;
+	color: var(--ink-muted);
+	text-wrap: pretty;
 }
-.preview__reg .btn { justify-self: start; }
+.preview__reg .btn {
+	justify-self: start;
+}
 
 /* --------------------------------------------------------------- sections */
 /* Section rhythm.
@@ -139,7 +163,9 @@
 }
 /* the footer follows immediately — its own border marks the boundary */
 .section--foot + * .site-footer,
-.section--foot ~ .site-footer { margin-top: 0; }
+.section--foot ~ .site-footer {
+	margin-top: 0;
+}
 .section__head {
 	max-width: 56ch;
 	margin-bottom: var(--sp-5);
@@ -213,7 +239,9 @@
 	background: var(--signal-wash);
 	border-color: var(--signal-edge);
 }
-.basetrack__node--key .basetrack__card h3 { color: var(--signal-ink); }
+.basetrack__node--key .basetrack__card h3 {
+	color: var(--signal-ink);
+}
 .basetrack__score {
 	font-size: var(--fs-9);
 	font-weight: 800;
@@ -221,7 +249,9 @@
 	color: var(--ink-strong);
 	font-variant-numeric: tabular-nums;
 }
-.basetrack__score .delta { font-size: var(--fs-8); }
+.basetrack__score .delta {
+	font-size: var(--fs-8);
+}
 .basetrack__card h3 {
 	font-size: var(--fs-6);
 	margin: 0;
@@ -244,7 +274,9 @@
 	gap: clamp(1.5rem, 3vw, 3rem);
 	flex-wrap: wrap;
 }
-.scansum__copy { max-width: 62ch; }
+.scansum__copy {
+	max-width: 62ch;
+}
 .scansum__copy h2 {
 	font-size: var(--fs-8);
 	letter-spacing: var(--track-display);
@@ -259,25 +291,43 @@
 	line-height: 1.55;
 	text-wrap: pretty;
 }
-.scansum__cta { flex-shrink: 0; }
+.scansum__cta {
+	flex-shrink: 0;
+}
 
 /* The eight scanners, from SCANNER_META. auto-fit rather than a fixed column
    count so the grid reflows without a media query per breakpoint. */
 .scanlist {
-	list-style: none; margin: var(--sp-6) 0 0; padding: 0;
-	display: grid; gap: var(--sp-4) var(--sp-5);
+	list-style: none;
+	margin: var(--sp-6) 0 0;
+	padding: 0;
+	display: grid;
+	gap: var(--sp-4) var(--sp-5);
 	grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
 }
 .scanlist__item {
-	display: grid; grid-template-columns: auto 1fr; gap: var(--sp-3);
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: var(--sp-3);
 	align-items: start;
-	padding-top: var(--sp-4); border-top: 1px solid var(--line);
+	padding-top: var(--sp-4);
+	border-top: 1px solid var(--line);
 }
-.scanlist__icon { color: var(--signal-ink); margin-top: 0.15rem; }
-.scanlist__name { font-size: var(--fs-5); margin: 0; line-height: 1.3; }
+.scanlist__icon {
+	color: var(--signal-ink);
+	margin-top: 0.15rem;
+}
+.scanlist__name {
+	font-size: var(--fs-5);
+	margin: 0;
+	line-height: 1.3;
+}
 .scanlist__desc {
-	margin: 0.3rem 0 0; font-size: var(--fs-3); line-height: 1.5;
-	color: var(--ink-muted); text-wrap: pretty;
+	margin: 0.3rem 0 0;
+	font-size: var(--fs-3);
+	line-height: 1.5;
+	color: var(--ink-muted);
+	text-wrap: pretty;
 }
 
 /* path steps */
@@ -343,7 +393,9 @@
 	gap: var(--sp-6);
 	margin-bottom: var(--sp-5);
 }
-.path__steps--row::before { display: none; }
+.path__steps--row::before {
+	display: none;
+}
 
 /* ------------------------------------------------ terminal + self-host */
 .foot {
@@ -488,7 +540,9 @@
 		grid-template-columns: 1fr;
 		gap: var(--sp-4);
 	}
-	.path__steps--row::before { display: block; }
+	.path__steps--row::before {
+		display: block;
+	}
 }
 
 @media (max-width: 520px) {

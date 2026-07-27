@@ -27,14 +27,6 @@
 	flex: 0 0 auto;
 }
 
-.projects-alert {
-	padding: var(--sp-3) var(--sp-4);
-	border: 1px solid var(--sev-critical-edge);
-	border-radius: var(--r-sm);
-	background: var(--sev-critical-wash);
-	color: var(--sev-critical);
-}
-
 .projects-grid {
 	display: grid;
 	grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
@@ -120,36 +112,18 @@
 	flex: 0 0 auto;
 }
 
+/* .btn--icon with a visible border and a danger hover — deletion is the one
+   card action that should announce itself before it is pressed */
 .project-card__delete {
-	display: inline-grid;
-	place-items: center;
 	width: 40px;
 	height: 40px;
-	border: 1px solid var(--line);
-	border-radius: var(--r-sm);
-	color: var(--ink-muted);
+	border-color: var(--line);
 }
 
 .project-card__delete:hover {
 	color: var(--sev-critical);
 	border-color: var(--sev-critical-edge);
 	background: var(--sev-critical-wash);
-}
-
-.project-empty {
-	display: grid;
-	place-items: center;
-	gap: var(--sp-2);
-	min-height: 12rem;
-	padding: var(--sp-6);
-	border: 1px dashed var(--line-strong);
-	border-radius: var(--r-md);
-	color: var(--ink-muted);
-	text-align: center;
-}
-
-.project-empty strong {
-	color: var(--ink-strong);
 }
 
 @media (max-width: 900px) {

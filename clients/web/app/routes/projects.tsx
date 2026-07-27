@@ -139,7 +139,7 @@ export default function Projects() {
 					</header>
 
 					{storageError && (
-						<div className="projects-alert" role="alert">
+						<div className="note note--err" role="alert">
 							<strong>Local storage is unavailable.</strong> {storageError}
 						</div>
 					)}
@@ -195,11 +195,11 @@ export default function Projects() {
 								{!loading && <span className="num muted">{items.length}</span>}
 							</div>
 							{loading ? (
-								<div className="project-empty" role="status">
+								<div className="blankslate blankslate--framed" role="status">
 									Loading local projects…
 								</div>
 							) : items.length === 0 ? (
-								<div className="project-empty">
+								<div className="blankslate blankslate--framed">
 									<Gauge size={24} aria-hidden="true" />
 									<strong>No projects yet</strong>
 									<span>Create one to turn your next good scan into a baseline.</span>
@@ -241,7 +241,7 @@ export default function Projects() {
 														</Link>
 													)}
 													<button
-														className="project-card__delete"
+														className="btn btn--icon project-card__delete"
 														type="button"
 														onClick={() => setPendingDelete(project)}
 														aria-label={`Delete ${project.name}`}

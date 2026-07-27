@@ -109,42 +109,7 @@
 	display: grid;
 	gap: 0.9rem;
 }
-.seg {
-	display: inline-flex;
-	background: var(--surface-sunk);
-	border: 1px solid var(--line);
-	border-radius: var(--r-sm);
-	padding: 2px;
-	gap: 2px;
-	flex-shrink: 0;
-}
-.seg button {
-	font-size: var(--fs-3);
-	font-weight: 600;
-	padding: 0.4rem 0.8rem;
-	border-radius: calc(var(--r-sm) - 2px);
-	color: var(--ink-muted);
-	background: transparent;
-	border: 0;
-	cursor: pointer;
-	transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
-}
-.seg button:hover {
-	color: var(--ink-strong);
-}
-.seg button[aria-pressed='true'] {
-	background: var(--surface);
-	color: var(--ink-strong);
-	box-shadow: var(--shadow-sm);
-}
-.seg button:disabled {
-	opacity: 0.45;
-	cursor: not-allowed;
-}
-.seg button:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
+/* .seg lives in instrument.css */
 
 .addurls {
 	display: grid;
@@ -166,48 +131,18 @@
 	font-weight: 500;
 	color: var(--sev-critical);
 }
-.urlrow button.rm {
+/* remove-row: .btn--icon with the top offset that aligns it to its input */
+.urlrow .rm {
 	margin-top: 0.3rem;
-	color: var(--ink-muted);
-	padding: 0.55rem 0.6rem;
-	border-radius: var(--r-sm);
-	border: 0;
-	background: transparent;
-	cursor: pointer;
-	line-height: 1;
-	font-size: var(--fs-5);
 }
-.urlrow button.rm:hover {
-	color: var(--ink-strong);
-	background: var(--ground-deep);
-}
-.urlrow button.rm:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
-/* a real secondary action, not minor text */
+/* a real secondary action, not minor text — a ghost button in signal ink */
 .addmore {
 	justify-self: start;
-	font-size: var(--fs-4);
-	font-weight: 600;
 	color: var(--signal-ink);
-	display: inline-flex;
-	align-items: center;
-	gap: 0.35rem;
-	padding: 0.5rem 0.9rem;
-	background: var(--surface);
-	border: 1px solid var(--line-strong);
-	border-radius: var(--r-sm);
-	cursor: pointer;
-	transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 .addmore:hover {
 	border-color: var(--signal);
 	background: var(--signal-wash);
-}
-.addmore:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
 }
 /* quiet caption — the add action outranks it */
 .intake__note {
@@ -236,7 +171,9 @@
 	justify-items: center;
 	cursor: pointer;
 	background: var(--surface);
-	transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+	transition:
+		border-color var(--dur-1) var(--ease),
+		background var(--dur-1) var(--ease);
 	width: 100%;
 	font: inherit;
 	color: var(--ink-muted);
@@ -245,10 +182,6 @@
 	border-color: var(--signal);
 	background: var(--signal-wash);
 	color: var(--signal-ink);
-}
-.drop:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
 }
 .drop__hint {
 	font-size: var(--fs-2);
@@ -273,27 +206,7 @@
 	font-weight: 600;
 	color: var(--ink-muted);
 }
-/* bulk toggle is a secondary shortcut: quiet text action, not a button */
-.chanhead__bulk-btn {
-	color: var(--ink-muted);
-	background: transparent;
-	border: 0;
-	padding: 0.4rem 0.2rem;
-	cursor: pointer;
-	font: inherit;
-	font-size: var(--fs-3);
-	font-weight: 600;
-	text-decoration: underline;
-	text-underline-offset: 3px;
-	transition: color var(--dur-1) var(--ease);
-}
-.chanhead__bulk-btn:hover {
-	color: var(--ink-strong);
-}
-.chanhead__bulk-btn:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
+/* bulk toggle is a secondary shortcut: .btn--quiet at the small size */
 
 /* scanner rack */
 .rack {
@@ -323,9 +236,11 @@
 .chan:hover {
 	background: var(--ground);
 }
+/* Documented exception to the global ring: the row butts against the rack's
+   rounded clip, so the ring is drawn inset to stay fully visible. */
 .chan:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: -2px;
+	outline: 2.5px solid var(--signal);
+	outline-offset: -2.5px;
 	z-index: 1;
 }
 .chan__icon {
@@ -675,7 +590,9 @@
 	color: var(--ink-strong);
 	font-family: inherit;
 	font-size: var(--fs-4);
-	transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+	transition:
+		border-color var(--dur-1) var(--ease),
+		box-shadow var(--dur-1) var(--ease);
 }
 .pai__field textarea {
 	font-family: inherit;
@@ -721,10 +638,6 @@
 	color: var(--ink-strong);
 	background: var(--ground-deep);
 }
-.pauth__pwd-eye:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
 .pauth__adv-toggle {
 	background: transparent;
 	border: 0;
@@ -737,11 +650,6 @@
 }
 .pauth__adv-toggle:hover {
 	color: var(--ink-strong);
-}
-.pauth__adv-toggle:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
-	border-radius: var(--r-xs);
 }
 .pauth__adv {
 	display: grid;
@@ -815,10 +723,6 @@
 	border-color: var(--line-strong);
 	background: var(--ground-deep);
 }
-.pai__remove:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
 .pai__add {
 	justify-self: start;
 	background: transparent;
@@ -835,10 +739,6 @@
 	color: var(--ink-strong);
 	border-color: var(--ink-faint);
 	background: var(--ground);
-}
-.pai__add:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

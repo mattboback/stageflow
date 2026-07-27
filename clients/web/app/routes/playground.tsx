@@ -8,7 +8,8 @@ import {
 	KeyRound,
 	Layers,
 	Save,
-	Target
+	Target,
+	X
 } from 'lucide-react';
 
 import { SiteHeader } from '../components/SiteHeader';
@@ -229,16 +230,20 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 														</div>
 														<button
 															type="button"
-															className="rm"
+															className="btn btn--icon rm"
 															aria-label={`Remove URL ${i + 1}`}
 															onClick={() => removeUrlRow(i)}
 														>
-															✕
+															<X size={16} aria-hidden="true" />
 														</button>
 													</div>
 												))}
 											</div>
-											<button type="button" className="addmore" onClick={addUrlRow}>
+											<button
+												type="button"
+												className="btn btn--ghost btn--sm addmore"
+												onClick={addUrlRow}
+											>
 												+ Add another URL
 											</button>
 											<p className="intake__note">
@@ -294,7 +299,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 										{!catalogLoading && !catalogError && (
 											<button
 												type="button"
-												className="chanhead__bulk-btn"
+												className="btn btn--quiet btn--sm"
 												onClick={() => setAllScanners(armed < total)}
 											>
 												{armed < total ? 'Enable all' : 'Disable all'}
@@ -302,7 +307,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 										)}
 									</div>
 								</div>
-								<div className="panel__body" style={{ padding: 0 }}>
+								<div className="panel__body panel__body--flush">
 									{catalogError ? (
 										<div className="note note--err note--inset" role="status">
 											<span className="note__ic" aria-hidden="true">
