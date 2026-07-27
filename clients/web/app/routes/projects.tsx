@@ -226,7 +226,8 @@ export default function Projects() {
 														className="btn btn--primary btn--sm"
 														to={`/playground?project=${encodeURIComponent(project.id)}`}
 													>
-														Configure & run
+														{/* Honest per state: nothing to run "again" before a first run. */}
+														{runs.length === 0 ? 'Configure a scan' : 'Run again'}
 													</Link>
 													{latest && (
 														<Link

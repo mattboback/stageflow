@@ -97,7 +97,7 @@ export function ErrorBoundary() {
 				actions={
 					<>
 						<Link className="btn btn--primary" to="/playground">
-							Run a real scan{' '}
+							Configure a scan{' '}
 							<span className="ar" aria-hidden="true">
 								→
 							</span>

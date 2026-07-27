@@ -236,11 +236,11 @@ test.describe('the narrow-screen menu', () => {
 		const trigger = page.getByRole('button', { name: 'Menu' });
 		await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 		// The inline row is hidden at this width, so the menu is the only way through.
-		await expect(header.getByRole('link', { name: 'Configure scan' })).toBeHidden();
+		await expect(header.getByRole('link', { name: 'Configure a scan' })).toBeHidden();
 
 		await trigger.click();
 		await expect(trigger).toHaveAttribute('aria-expanded', 'true');
-		await expect(header.getByRole('link', { name: 'Configure scan' })).toBeVisible();
+		await expect(header.getByRole('link', { name: 'Configure a scan' })).toBeVisible();
 		await expect(header.getByRole('link', { name: 'Demo report' })).toBeVisible();
 
 		await expectNoSeriousViolations(page, 'mobile menu (light)');

@@ -148,7 +148,7 @@ export default function Home() {
 									)}
 								</div>
 								<button className="btn btn--ghost btn--lg" type="submit">
-									Configure & run{' '}
+									Configure a scan{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>

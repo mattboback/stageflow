@@ -49,7 +49,7 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 				to="/playground"
 				aria-current={current === 'playground' ? 'page' : undefined}
 			>
-				Configure scan
+				Configure a scan
 			</Link>
 			<Link className="navlink" to="/demo" aria-current={current === 'demo' ? 'page' : undefined}>
 				Demo report

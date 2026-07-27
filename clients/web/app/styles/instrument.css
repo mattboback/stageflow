@@ -615,7 +615,7 @@ pre {
 	}
 	/* The links move into the disclosure panel rather than disappearing. Before
 	   this they were hidden with nothing in their place, so a phone had no route
-	   to Projects, Configure scan, Scanners or Docs at all. */
+	   to Projects, Configure a scan, Scanners or Docs at all. */
 	.site-header:not(.site-header--app) .navlinks {
 		display: none;
 	}

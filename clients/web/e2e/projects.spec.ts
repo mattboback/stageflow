@@ -333,7 +333,7 @@ test('SPA project query changes discard project association and execution-only s
 	await page
 		.getByRole('article')
 		.filter({ hasText: 'Alpha project' })
-		.getByRole('link', { name: 'Configure & run' })
+		.getByRole('link', { name: 'Configure a scan' })
 		.click();
 	await expect(page.getByLabel('Project name')).toHaveValue('Alpha project');
 

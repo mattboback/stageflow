@@ -7,7 +7,7 @@ import { cycleTabFocus, focusableWithin } from '../lib/utils/focus-trap';
  * The narrow-viewport primary nav.
  *
  * Below 640px the marketing links were simply `display: none` with nothing in
- * their place, so a phone had no route to Projects, Configure scan, Scanners or
+ * their place, so a phone had no route to Projects, Configure a scan, Scanners or
  * Docs at all -- the brand mark and a GitHub button were the entire nav. This
  * is that navigation, not an extra affordance.
  *

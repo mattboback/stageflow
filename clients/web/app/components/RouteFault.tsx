@@ -54,7 +54,7 @@ export function RouteFault({
 									</span>
 								</Link>
 								<Link className="btn btn--ghost" to="/playground">
-									Run a new scan
+									Configure a scan
 								</Link>
 							</>
 						)}
