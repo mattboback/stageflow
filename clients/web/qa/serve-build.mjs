@@ -13,6 +13,7 @@ const contentTypes = {
 	'.json': 'application/json; charset=utf-8',
 	'.png': 'image/png',
 	'.svg': 'image/svg+xml',
+	'.webp': 'image/webp',
 	'.txt': 'text/plain; charset=utf-8',
 	'.webmanifest': 'application/manifest+json',
 	/* Not optional. This server sends X-Content-Type-Options: nosniff, so a

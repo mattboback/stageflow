@@ -49,14 +49,14 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 				<header className="artifacts__head">
 					<h3>Aggregated report links</h3>
 					{onRefreshArtifacts && (
-						<button type="button" className="artifacts__refresh" onClick={onRefreshArtifacts}>
+						<button type="button" className="btn btn--ghost btn--sm" onClick={onRefreshArtifacts}>
 							Refresh links
 						</button>
 					)}
 				</header>
 				<div className="artifacts__body">
 					{aggregatedLinks.length === 0 ? (
-						<p className="artifacts__empty">No aggregated artifacts yet.</p>
+						<p className="blankslate">No aggregated artifacts yet.</p>
 					) : (
 						<ul className="artifacts__links">
 							{aggregatedLinks.map((link) => (
@@ -81,7 +81,7 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 				</header>
 				<div className="artifacts__body">
 					{scannerEntries.length === 0 ? (
-						<p className="artifacts__empty">No scanner artifacts available yet.</p>
+						<p className="blankslate">No scanner artifacts available yet.</p>
 					) : (
 						<ul className="artifacts__scanners">
 							{scannerEntries.map(([scannerId, item]) => {

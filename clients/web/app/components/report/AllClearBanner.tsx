@@ -34,7 +34,7 @@ export function AllClearBanner({ report }: { report: UnifiedReport }) {
 				)}
 			</div>
 			<Link className="btn btn--ghost allclear__cta" to="/playground">
-				Run another scan{' '}
+				Configure a scan{' '}
 				<span className="ar" aria-hidden="true">
 					→
 				</span>

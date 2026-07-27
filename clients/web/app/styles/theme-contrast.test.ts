@@ -131,7 +131,7 @@ const SEVERITIES = [
 	{ name: 'moderate', wash: '--sev-moderate-wash', fill: '--sev-moderate-ink' },
 	{ name: 'minor', wash: '--sev-minor-wash', fill: '--sev-minor-ink' },
 	{ name: 'info', wash: '--sev-info-wash', fill: '--sev-info' },
-	{ name: 'pass', wash: '--sev-minor-wash', fill: '--sev-pass-ink' }
+	{ name: 'pass', wash: '--sev-pass-wash', fill: '--sev-pass-ink' }
 ] as const;
 
 const OBLIGATIONS: Obligation[] = [
@@ -230,7 +230,7 @@ const OBLIGATIONS: Obligation[] = [
 	},
 	{
 		fg: '--sev-pass-ink-strong',
-		bg: '--sev-minor-wash',
+		bg: '--sev-pass-wash',
 		level: 'AA',
 		size: 'normal',
 		why: 'pass verdict button'

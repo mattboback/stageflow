@@ -123,11 +123,11 @@ export default function Projects() {
 			<SiteHeader current="projects" />
 			<main id="main" className="projects-page">
 				<div className="wrap wrap--app projects-page__wrap">
-					<header className="projects-page__head">
+					<header className="page-head">
 						<div>
 							<p className="label">Regression workspace</p>
 							<h1>Local projects</h1>
-							<p>
+							<p className="page-head__lede">
 								Group repeat scans, promote a known-good report, and see what changed on the next
 								run.
 							</p>
@@ -139,7 +139,7 @@ export default function Projects() {
 					</header>
 
 					{storageError && (
-						<div className="projects-alert" role="alert">
+						<div className="note note--err" role="alert">
 							<strong>Local storage is unavailable.</strong> {storageError}
 						</div>
 					)}
@@ -195,11 +195,11 @@ export default function Projects() {
 								{!loading && <span className="num muted">{items.length}</span>}
 							</div>
 							{loading ? (
-								<div className="project-empty" role="status">
+								<div className="blankslate blankslate--framed" role="status">
 									Loading local projects…
 								</div>
 							) : items.length === 0 ? (
-								<div className="project-empty">
+								<div className="blankslate blankslate--framed">
 									<Gauge size={24} aria-hidden="true" />
 									<strong>No projects yet</strong>
 									<span>Create one to turn your next good scan into a baseline.</span>
@@ -226,7 +226,8 @@ export default function Projects() {
 														className="btn btn--primary btn--sm"
 														to={`/playground?project=${encodeURIComponent(project.id)}`}
 													>
-														Configure & run
+														{/* Honest per state: nothing to run "again" before a first run. */}
+														{runs.length === 0 ? 'Configure a scan' : 'Run again'}
 													</Link>
 													{latest && (
 														<Link
@@ -241,7 +242,7 @@ export default function Projects() {
 														</Link>
 													)}
 													<button
-														className="project-card__delete"
+														className="btn btn--icon project-card__delete"
 														type="button"
 														onClick={() => setPendingDelete(project)}
 														aria-label={`Delete ${project.name}`}

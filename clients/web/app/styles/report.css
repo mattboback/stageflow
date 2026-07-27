@@ -35,22 +35,8 @@
 	border-color: var(--sev-info-edge);
 }
 
-/* ------------------------------------------------------------------------- */
-/*  Severity dot (small circle, used in row headers / counts)                 */
-/* ------------------------------------------------------------------------- */
-.sev-dot {
-	display: inline-block;
-	width: 0.6rem;
-	height: 0.6rem;
-	border-radius: 50%;
-	background: var(--ink-faint);
-	flex: 0 0 auto;
-}
-.sev-dot.sev-critical { background: var(--sev-critical); }
-.sev-dot.sev-serious  { background: var(--sev-serious); }
-.sev-dot.sev-moderate { background: var(--sev-moderate); }
-.sev-dot.sev-minor    { background: var(--sev-minor); }
-.sev-dot.sev-info     { background: var(--sev-info); }
+/* The severity dot lives in instrument.css: it is the one severity mark that
+   also appears outside report surfaces (home's preview panel). */
 
 /* ------------------------------------------------------------------------- */
 /*  Severity badge (tinted pill with severity-colored text)                   */
@@ -67,11 +53,26 @@
 	color: var(--ink-muted);
 	background: var(--surface-sunk);
 }
-.sev-badge.sev-critical { color: var(--sev-critical-ink); background: var(--sev-critical-wash); }
-.sev-badge.sev-serious  { color: var(--sev-serious-ink);  background: var(--sev-serious-wash); }
-.sev-badge.sev-moderate { color: var(--sev-moderate-ink); background: var(--sev-moderate-wash); }
-.sev-badge.sev-minor    { color: var(--sev-minor-ink);    background: var(--sev-minor-wash); }
-.sev-badge.sev-info     { color: var(--sev-info-ink);     background: var(--sev-info-wash); }
+.sev-badge.sev-critical {
+	color: var(--sev-critical-ink);
+	background: var(--sev-critical-wash);
+}
+.sev-badge.sev-serious {
+	color: var(--sev-serious-ink);
+	background: var(--sev-serious-wash);
+}
+.sev-badge.sev-moderate {
+	color: var(--sev-moderate-ink);
+	background: var(--sev-moderate-wash);
+}
+.sev-badge.sev-minor {
+	color: var(--sev-minor-ink);
+	background: var(--sev-minor-wash);
+}
+.sev-badge.sev-info {
+	color: var(--sev-info-ink);
+	background: var(--sev-info-wash);
+}
 
 /* ------------------------------------------------------------------------- */
 /*  Severity border (highlighted card border for selection / focus states)    */
@@ -80,11 +81,26 @@
 	border: 1px solid var(--line);
 	background: var(--surface);
 }
-.sev-border.sev-critical { border-color: var(--sev-critical); background: var(--sev-critical-wash); }
-.sev-border.sev-serious  { border-color: var(--sev-serious);  background: var(--sev-serious-wash); }
-.sev-border.sev-moderate { border-color: var(--sev-moderate); background: var(--sev-moderate-wash); }
-.sev-border.sev-minor    { border-color: var(--sev-minor);    background: var(--sev-minor-wash); }
-.sev-border.sev-info     { border-color: var(--sev-info);     background: var(--sev-info-wash); }
+.sev-border.sev-critical {
+	border-color: var(--sev-critical);
+	background: var(--sev-critical-wash);
+}
+.sev-border.sev-serious {
+	border-color: var(--sev-serious);
+	background: var(--sev-serious-wash);
+}
+.sev-border.sev-moderate {
+	border-color: var(--sev-moderate);
+	background: var(--sev-moderate-wash);
+}
+.sev-border.sev-minor {
+	border-color: var(--sev-minor);
+	background: var(--sev-minor-wash);
+}
+.sev-border.sev-info {
+	border-color: var(--sev-info);
+	background: var(--sev-info-wash);
+}
 
 /* ------------------------------------------------------------------------- */
 /*  Severity overlay (screenshot marker rectangle on visual review)           */
@@ -131,7 +147,10 @@
 	font-weight: 600;
 	text-transform: capitalize;
 	cursor: pointer;
-	transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+	transition:
+		background-color 0.12s,
+		border-color 0.12s,
+		color 0.12s;
 	white-space: nowrap;
 	font-family: inherit;
 }
@@ -143,11 +162,6 @@
 	background: var(--surface-sunk);
 	border-color: var(--ink-faint);
 }
-.sev-chip:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
-}
-
 /* Active state — severity-coloured fill. The label sits ON the fill, so it
  * takes --on-severity, which flips to dark ink when the fills go light. The
  * amber and green fills use their -ink value rather than the base: the base
@@ -157,11 +171,26 @@
 	background: var(--ink-strong);
 	border-color: var(--ink-strong);
 }
-.sev-chip.sev-critical.active { background: var(--sev-critical); border-color: var(--sev-critical); }
-.sev-chip.sev-serious.active  { background: var(--sev-serious);  border-color: var(--sev-serious); }
-.sev-chip.sev-moderate.active { background: var(--sev-moderate-ink); border-color: var(--sev-moderate-ink); }
-.sev-chip.sev-minor.active    { background: var(--sev-minor-ink);    border-color: var(--sev-minor-ink); }
-.sev-chip.sev-info.active     { background: var(--sev-info);     border-color: var(--sev-info); }
+.sev-chip.sev-critical.active {
+	background: var(--sev-critical);
+	border-color: var(--sev-critical);
+}
+.sev-chip.sev-serious.active {
+	background: var(--sev-serious);
+	border-color: var(--sev-serious);
+}
+.sev-chip.sev-moderate.active {
+	background: var(--sev-moderate-ink);
+	border-color: var(--sev-moderate-ink);
+}
+.sev-chip.sev-minor.active {
+	background: var(--sev-minor-ink);
+	border-color: var(--sev-minor-ink);
+}
+.sev-chip.sev-info.active {
+	background: var(--sev-info);
+	border-color: var(--sev-info);
+}
 
 /* Inactive tinted state — severity-colored text so the mapping reads before
  * toggling. */
@@ -169,24 +198,34 @@
 	color: var(--sev-critical-ink);
 	border-color: var(--sev-critical-edge);
 }
-.sev-chip.sev-critical:not(.active):hover { background: var(--sev-critical-wash); }
+.sev-chip.sev-critical:not(.active):hover {
+	background: var(--sev-critical-wash);
+}
 .sev-chip.sev-serious:not(.active) {
 	color: var(--sev-serious-ink);
 	border-color: var(--sev-serious-edge);
 }
-.sev-chip.sev-serious:not(.active):hover { background: var(--sev-serious-wash); }
+.sev-chip.sev-serious:not(.active):hover {
+	background: var(--sev-serious-wash);
+}
 .sev-chip.sev-moderate:not(.active) {
 	color: var(--sev-moderate-ink);
 	border-color: var(--sev-moderate-edge);
 }
-.sev-chip.sev-moderate:not(.active):hover { background: var(--sev-moderate-wash); }
+.sev-chip.sev-moderate:not(.active):hover {
+	background: var(--sev-moderate-wash);
+}
 .sev-chip.sev-minor:not(.active) {
 	color: var(--sev-minor-ink);
 	border-color: var(--sev-minor-edge);
 }
-.sev-chip.sev-minor:not(.active):hover { background: var(--sev-minor-wash); }
+.sev-chip.sev-minor:not(.active):hover {
+	background: var(--sev-minor-wash);
+}
 .sev-chip.sev-info:not(.active) {
 	color: var(--sev-info-ink);
 	border-color: var(--sev-info-edge);
 }
-.sev-chip.sev-info:not(.active):hover { background: var(--sev-info-wash); }
+.sev-chip.sev-info:not(.active):hover {
+	background: var(--sev-info-wash);
+}

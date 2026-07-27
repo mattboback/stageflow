@@ -4,8 +4,9 @@ import { Check } from 'lucide-react';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
-import { Gauge } from '../components/Gauge';
 import { Pill } from '../components/Pill';
+import { DEMO_SUMMARY } from '../lib/demo/demo-summary';
+import { SCANNER_META } from '../lib/report/scanner-identity';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import {
 	buildSiteMeta,
@@ -147,7 +148,7 @@ export default function Home() {
 									)}
 								</div>
 								<button className="btn btn--ghost btn--lg" type="submit">
-									Configure & run{' '}
+									Configure a scan{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>
@@ -158,43 +159,52 @@ export default function Home() {
 							</p>
 						</div>
 
-						{/* The output side of the scanbar: one regression story, one CTA */}
-						<aside className="panel hero__preview" aria-label="Sample report preview">
+						{/* The output side of the scanbar. Every number below comes from the
+						    committed demo report and is asserted against it in
+						    app/lib/demo/demo-fixture.test.ts. */}
+						<aside className="panel hero__preview" aria-label="Demo report summary">
 							<div className="panel__head">
 								<span className="label">
 									<span className="hero__preview-arrow" aria-hidden="true">
 										→
 									</span>{' '}
-									What comes back · example.com
+									What comes back
 								</span>
 								<Pill variant="done">Completed</Pill>
 							</div>
 							<div className="panel__body">
-								<div className="preview__top">
-									<Gauge value={88} caption="Site score" size={132} valFontSize="2.3rem" />
-									<div className="preview__reg">
-										<p className="preview__reg-title">
-											<span className="sev-dot sev-serious" aria-hidden="true" /> Regressed since
-											baseline
-										</p>
-										<ul className="preview__reg-rows">
-											<li>
-												<span>Site score</span>
-												<span className="num">
-													94 → 88 <Delta value={-6} />
-												</span>
-											</li>
-											<li>
-												<span>New serious issues</span>
-												<span className="num">
-													3 <Delta value={3} improvedWhenPositive={false} />
-												</span>
-											</li>
-										</ul>
-										<Link className="preview__reg-cta" to="/projects">
-											View evidence <span aria-hidden="true">→</span>
-										</Link>
-									</div>
+								<div className="preview__reg">
+									<p className="preview__reg-title">
+										<span className="sev-dot sev-serious" aria-hidden="true" /> A real report, not a
+										screenshot
+									</p>
+									<ul className="preview__reg-rows">
+										<li>
+											<span>Pages scanned</span>
+											<span className="num">{DEMO_SUMMARY.pages}</span>
+										</li>
+										<li>
+											<span>Scanners merged</span>
+											<span className="num">{DEMO_SUMMARY.scannersRun}</span>
+										</li>
+										<li>
+											<span>Findings</span>
+											<span className="num">
+												{DEMO_SUMMARY.totalIssues}{' '}
+												<span className="preview__reg-sev">{DEMO_SUMMARY.serious} serious</span>
+											</span>
+										</li>
+									</ul>
+									<p className="preview__reg-note">
+										StageFlow scanning stageflow.org, findings and all. The viewer below is the same
+										one a scan of your site opens.
+									</p>
+									<Link className="btn btn--primary" to="/demo">
+										Open the report{' '}
+										<span className="ar" aria-hidden="true">
+											→
+										</span>
+									</Link>
 								</div>
 							</div>
 						</aside>
@@ -266,24 +276,43 @@ export default function Home() {
 					</div>
 				</section>
 
-				{/* SCANNERS — condensed summary; the full list lives on the configure page */}
+				{/* SCANNERS — the list the /#scanners anchor has always promised */}
 				<section className="section section--band" id="scanners" aria-labelledby="scanners-heading">
-					<div className="wrap wrap--app scansum">
-						<div className="scansum__copy">
-							<h2 id="scanners-heading">Eight scanners, one merged report</h2>
-							<p>
-								Accessibility, performance, SEO, security headers, link health, social previews, and
-								spelling — plus an opt-in AI navigator. Each runs in an isolated container and
-								merges into a single severity-ranked report, the same shape from the CLI, CI, or the
-								browser.
-							</p>
+					<div className="wrap wrap--app">
+						<div className="scansum">
+							<div className="scansum__copy">
+								<h2 id="scanners-heading">Eight scanners, one merged report</h2>
+								<p>
+									Each runs in its own rootless container and merges into a single severity-ranked
+									report — the same shape from the CLI, from CI, or from the browser.
+								</p>
+							</div>
+							<Link className="btn btn--ghost scansum__cta" to="/playground">
+								Configure a scan{' '}
+								<span className="ar" aria-hidden="true">
+									→
+								</span>
+							</Link>
 						</div>
-						<Link className="btn btn--ghost scansum__cta" to="/playground">
-							View all scanners{' '}
-							<span className="ar" aria-hidden="true">
-								→
-							</span>
-						</Link>
+
+						{/* Straight from SCANNER_META, the same map the configure page and the
+						    report read. The anchor promised a list and delivered a paragraph;
+						    duplicating the names in prose would have been a third place for
+						    them to drift. */}
+						<ul className="scanlist">
+							{Object.entries(SCANNER_META).map(([id, meta]) => {
+								const Icon = meta.icon;
+								return (
+									<li key={id} className="scanlist__item">
+										<Icon className="scanlist__icon" size={18} aria-hidden="true" />
+										<div>
+											<h3 className="scanlist__name">{meta.label}</h3>
+											<p className="scanlist__desc">{meta.description}</p>
+										</div>
+									</li>
+								);
+							})}
+						</ul>
 					</div>
 				</section>
 

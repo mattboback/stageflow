@@ -79,7 +79,7 @@ describe('AllClearBanner', () => {
 
 		expect(screen.getByRole('heading', { name: 'All clear.' })).toBeTruthy();
 		expect(screen.getByText('0 findings')).toBeTruthy();
-		expect(screen.getByRole('link', { name: /Run another scan/ })).toBeTruthy();
+		expect(screen.getByRole('link', { name: /Configure a scan/ })).toBeTruthy();
 		expect(screen.queryByText(/check the Artifacts tab/)).toBeNull();
 	});
 

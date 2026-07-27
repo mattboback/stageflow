@@ -436,6 +436,10 @@ deploy:
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
     @{{repo_root}}/devtools/scripts/install-cli.sh "{{BIN_DIR}}" "{{BIN_NAME}}"
 
+[group('tools'), doc('Regenerate the committed /demo report by scanning StageFlow with StageFlow')]
+demo-fixture BASE='http://localhost:3020' API='http://localhost:8080':
+    @BASE="{{BASE}}" API="{{API}}" {{repo_root}}/devtools/scripts/build-demo-fixture.sh
+
 [group('run'), doc('Run a service locally (SERVICE=clients/web|api|orchestrator MODE=dev|preview)')]
 run SERVICE MODE='dev':
     #!/usr/bin/env bash

@@ -1,5 +1,6 @@
 import { useLocation, type MetaFunction } from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
+import { SiteFooter } from '../components/SiteFooter';
 import { RouteFault } from '../components/RouteFault';
 import { pageTitle } from '../lib/site-metadata';
 
@@ -21,6 +22,7 @@ export default function NotFound() {
 				traceLine={`route ${pathname} not matched`}
 				traceHint="no record · check the job id or run a new scan"
 			/>
+			<SiteFooter slim />
 		</>
 	);
 }

@@ -41,16 +41,7 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 						</span>
 					)}
 					{showPageUrl && issue.pageUrl && (
-						<span
-							className="irow__meta-item"
-							title={issue.pageUrl}
-							style={{
-								maxWidth: '20rem',
-								overflow: 'hidden',
-								textOverflow: 'ellipsis',
-								whiteSpace: 'nowrap'
-							}}
-						>
+						<span className="irow__meta-item irow__meta-item--url" title={issue.pageUrl}>
 							{issue.pageUrl}
 						</span>
 					)}
@@ -70,19 +61,7 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 
 	if (onSelect) {
 		return (
-			<button
-				type="button"
-				className="irow"
-				onClick={() => onSelect(issue)}
-				style={{
-					width: '100%',
-					textAlign: 'left',
-					background: 'transparent',
-					border: 0,
-					font: 'inherit',
-					cursor: 'pointer'
-				}}
-			>
+			<button type="button" className="irow" onClick={() => onSelect(issue)}>
 				{content}
 			</button>
 		);

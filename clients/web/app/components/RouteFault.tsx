@@ -25,12 +25,10 @@ export function RouteFault({
 
 	return (
 		<main id="main" className="fault">
-			<div className="panel fault__panel" style={{ boxShadow: 'var(--shadow-md)' }}>
+			<div className="panel fault__panel">
 				<div className="fault__top">
 					<span className="label">Fault</span>
-					<Pill variant="error" style={{ marginLeft: 'auto' }}>
-						{status}
-					</Pill>
+					<Pill variant="error">{status}</Pill>
 				</div>
 				<div className="fault__code" aria-hidden="true">
 					{digits.map((digit, i) => (i === accent ? <span key={i}>{digit}</span> : digit))}
@@ -56,7 +54,7 @@ export function RouteFault({
 									</span>
 								</Link>
 								<Link className="btn btn--ghost" to="/playground">
-									Run a new scan
+									Configure a scan
 								</Link>
 							</>
 						)}

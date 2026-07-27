@@ -145,22 +145,16 @@ export function IssueFilterSidebar({
 				</div>
 			)}
 
-			<div className="isidebar__group" style={{ marginTop: 'auto' }}>
-				<p
-					style={{
-						margin: '0 0 0.6rem',
-						fontSize: '0.84rem',
-						color: 'var(--ink-muted)'
-					}}
-				>
-					Showing{' '}
-					<b style={{ color: 'var(--ink-strong)', fontVariantNumeric: 'tabular-nums' }}>
-						{filteredCount}
-					</b>{' '}
-					of {totalCount}
+			<div className="isidebar__group isidebar__group--footer">
+				<p className="isidebar__tally">
+					Showing <b className="num">{filteredCount}</b> of {totalCount}
 				</p>
 				{hasActiveFilters && (
-					<button type="button" className="isidebar__clear" onClick={onClear}>
+					<button
+						type="button"
+						className="btn btn--quiet btn--sm isidebar__clear"
+						onClick={onClear}
+					>
 						Clear filters
 					</button>
 				)}
