@@ -172,11 +172,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 								: ''}{' '}
 							· {formatVerdictTime(verdict.at)}
 						</span>
-						<button
-							type="button"
-							className="vfy__btn vfy__btn--ghost"
-							onClick={() => clearVerdict(issue.id)}
-						>
+						<button type="button" className="btn btn--quiet" onClick={() => clearVerdict(issue.id)}>
 							Clear verdict
 						</button>
 					</>
@@ -190,7 +186,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 						)}
 						<button
 							type="button"
-							className="vfy__btn vfy__btn--pass"
+							className="btn btn--verdict-pass"
 							onClick={() => {
 								/* Marking against the measurement deserves a pause. */
 								// Narrow on `ratio` rather than asserting: measuredPasses is only
@@ -215,7 +211,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 						</button>
 						<button
 							type="button"
-							className="vfy__btn vfy__btn--fail"
+							className="btn btn--verdict-fail"
 							onClick={() => {
 								if (
 									ratio !== null &&

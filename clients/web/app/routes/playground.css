@@ -5,37 +5,17 @@
 	background: var(--ground);
 }
 
-/* page head */
-.console__head {
-	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	gap: var(--sp-5) var(--sp-5);
-	margin: 0 auto var(--sp-5);
-	flex-wrap: wrap;
+/* One local cap on the shell wrap (the .run__wrap pattern): the form reads
+   better narrower than the 96rem app shell, and capping here instead of on
+   each block keeps head, notice, and grid on the same edge. */
+.console__wrap {
 	max-width: 84rem;
 }
-.console__head h1 {
-	font-size: var(--fs-9);
-	letter-spacing: var(--track-display);
-	line-height: 1.1;
-	text-wrap: balance;
-	margin: 0;
-}
-.console__head p {
-	color: var(--ink-muted);
-	margin: 0.55rem 0 0;
-	max-width: 52ch;
-	font-size: var(--fs-5);
-	line-height: 1.55;
-	text-wrap: pretty;
-}
 
-.console__head-actions {
-	display: flex;
-	align-items: center;
-	gap: var(--sp-2);
-	flex-wrap: wrap;
+/* page head: shared .page-head from instrument.css; the console only adds
+   its clearance from the grid below */
+.console__head {
+	margin-bottom: var(--sp-5);
 }
 
 .console__project-label {
@@ -68,8 +48,7 @@
 }
 
 .console__project-notice {
-	max-width: 84rem;
-	margin: calc(-1 * var(--sp-3)) auto var(--sp-4);
+	margin: calc(-1 * var(--sp-3)) 0 var(--sp-4);
 	color: var(--signal-ink);
 	font-size: var(--fs-4);
 	font-weight: 600;
@@ -83,8 +62,6 @@
 	gap: var(--sp-6);
 	align-items: start;
 	justify-content: center;
-	margin: 0 auto;
-	max-width: 84rem;
 }
 .console__main {
 	display: grid;
@@ -132,42 +109,7 @@
 	display: grid;
 	gap: 0.9rem;
 }
-.seg {
-	display: inline-flex;
-	background: var(--surface-sunk);
-	border: 1px solid var(--line);
-	border-radius: var(--r-sm);
-	padding: 2px;
-	gap: 2px;
-	flex-shrink: 0;
-}
-.seg button {
-	font-size: var(--fs-3);
-	font-weight: 600;
-	padding: 0.4rem 0.8rem;
-	border-radius: calc(var(--r-sm) - 2px);
-	color: var(--ink-muted);
-	background: transparent;
-	border: 0;
-	cursor: pointer;
-	transition: color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
-}
-.seg button:hover {
-	color: var(--ink-strong);
-}
-.seg button[aria-pressed='true'] {
-	background: var(--surface);
-	color: var(--ink-strong);
-	box-shadow: var(--shadow-sm);
-}
-.seg button:disabled {
-	opacity: 0.45;
-	cursor: not-allowed;
-}
-.seg button:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
+/* .seg lives in instrument.css */
 
 .addurls {
 	display: grid;
@@ -189,48 +131,18 @@
 	font-weight: 500;
 	color: var(--sev-critical);
 }
-.urlrow button.rm {
+/* remove-row: .btn--icon with the top offset that aligns it to its input */
+.urlrow .rm {
 	margin-top: 0.3rem;
-	color: var(--ink-muted);
-	padding: 0.55rem 0.6rem;
-	border-radius: var(--r-sm);
-	border: 0;
-	background: transparent;
-	cursor: pointer;
-	line-height: 1;
-	font-size: var(--fs-5);
 }
-.urlrow button.rm:hover {
-	color: var(--ink-strong);
-	background: var(--ground-deep);
-}
-.urlrow button.rm:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
-/* a real secondary action, not minor text */
+/* a real secondary action, not minor text — a ghost button in signal ink */
 .addmore {
 	justify-self: start;
-	font-size: var(--fs-4);
-	font-weight: 600;
 	color: var(--signal-ink);
-	display: inline-flex;
-	align-items: center;
-	gap: 0.35rem;
-	padding: 0.5rem 0.9rem;
-	background: var(--surface);
-	border: 1px solid var(--line-strong);
-	border-radius: var(--r-sm);
-	cursor: pointer;
-	transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
 }
 .addmore:hover {
 	border-color: var(--signal);
 	background: var(--signal-wash);
-}
-.addmore:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
 }
 /* quiet caption — the add action outranks it */
 .intake__note {
@@ -259,7 +171,9 @@
 	justify-items: center;
 	cursor: pointer;
 	background: var(--surface);
-	transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+	transition:
+		border-color var(--dur-1) var(--ease),
+		background var(--dur-1) var(--ease);
 	width: 100%;
 	font: inherit;
 	color: var(--ink-muted);
@@ -268,10 +182,6 @@
 	border-color: var(--signal);
 	background: var(--signal-wash);
 	color: var(--signal-ink);
-}
-.drop:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
 }
 .drop__hint {
 	font-size: var(--fs-2);
@@ -296,27 +206,7 @@
 	font-weight: 600;
 	color: var(--ink-muted);
 }
-/* bulk toggle is a secondary shortcut: quiet text action, not a button */
-.chanhead__bulk-btn {
-	color: var(--ink-muted);
-	background: transparent;
-	border: 0;
-	padding: 0.4rem 0.2rem;
-	cursor: pointer;
-	font: inherit;
-	font-size: var(--fs-3);
-	font-weight: 600;
-	text-decoration: underline;
-	text-underline-offset: 3px;
-	transition: color var(--dur-1) var(--ease);
-}
-.chanhead__bulk-btn:hover {
-	color: var(--ink-strong);
-}
-.chanhead__bulk-btn:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
+/* bulk toggle is a secondary shortcut: .btn--quiet at the small size */
 
 /* scanner rack */
 .rack {
@@ -346,9 +236,11 @@
 .chan:hover {
 	background: var(--ground);
 }
+/* Documented exception to the global ring: the row butts against the rack's
+   rounded clip, so the ring is drawn inset to stay fully visible. */
 .chan:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: -2px;
+	outline: 2.5px solid var(--signal);
+	outline-offset: -2.5px;
 	z-index: 1;
 }
 .chan__icon {
@@ -424,7 +316,7 @@
 	margin-top: 0.15rem;
 }
 .readybox--go {
-	background: var(--sev-minor-wash);
+	background: var(--sev-pass-wash);
 	color: var(--sev-pass-ink);
 }
 .readybox--go b {
@@ -498,28 +390,7 @@
 	display: none;
 }
 
-/* error / status note */
-.note {
-	display: flex;
-	gap: 0.55rem;
-	align-items: flex-start;
-	padding: 0.75rem 0.9rem;
-	border-radius: var(--r-sm);
-	font-size: var(--fs-4);
-	line-height: 1.45;
-}
-.note--err {
-	background: var(--sev-critical-wash);
-	border: 1px solid var(--sev-critical-edge);
-	color: var(--sev-critical-ink-strong);
-}
-.note__ic {
-	font-weight: 700;
-	flex-shrink: 0;
-}
-.note--inset {
-	margin: 0.85rem 1rem;
-}
+/* .note / .note--err / .note--inset live in instrument.css */
 
 @media (max-width: 880px) {
 	.console {
@@ -654,7 +525,7 @@
 	padding: 0.3rem 0.65rem;
 	border: 1px solid var(--sev-pass-edge);
 	border-radius: var(--r-pill);
-	background: var(--sev-minor-wash);
+	background: var(--sev-pass-wash);
 	font-size: var(--fs-2);
 	font-weight: 600;
 	color: var(--sev-pass-ink);
@@ -719,7 +590,9 @@
 	color: var(--ink-strong);
 	font-family: inherit;
 	font-size: var(--fs-4);
-	transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+	transition:
+		border-color var(--dur-1) var(--ease),
+		box-shadow var(--dur-1) var(--ease);
 }
 .pai__field textarea {
 	font-family: inherit;
@@ -765,10 +638,6 @@
 	color: var(--ink-strong);
 	background: var(--ground-deep);
 }
-.pauth__pwd-eye:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
 .pauth__adv-toggle {
 	background: transparent;
 	border: 0;
@@ -781,11 +650,6 @@
 }
 .pauth__adv-toggle:hover {
 	color: var(--ink-strong);
-}
-.pauth__adv-toggle:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 2px;
-	border-radius: var(--r-xs);
 }
 .pauth__adv {
 	display: grid;
@@ -859,10 +723,6 @@
 	border-color: var(--line-strong);
 	background: var(--ground-deep);
 }
-.pai__remove:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
-}
 .pai__add {
 	justify-self: start;
 	background: transparent;
@@ -879,10 +739,6 @@
 	color: var(--ink-strong);
 	border-color: var(--ink-faint);
 	background: var(--ground);
-}
-.pai__add:focus-visible {
-	outline: 2px solid var(--signal);
-	outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 
 import type { IssueDetail, PageSummary, UnifiedReport } from '../../lib/types/unified-report';
 import {
@@ -163,7 +164,7 @@ export function IssuesView({
 				/>
 				<button
 					type="button"
-					className="iview__filters-btn"
+					className="btn btn--ghost iview__filters-btn"
 					onClick={() => setFiltersOpen(true)}
 					aria-expanded={filtersOpen}
 				>
@@ -173,7 +174,7 @@ export function IssuesView({
 					<div className="iview__chips" aria-label="Active filters">
 						{activeChips.map((chip) => (
 							<button key={chip.key} type="button" className="iview__chip" onClick={chip.onClear}>
-								{chip.label} <span aria-hidden="true">×</span>
+								{chip.label} <X size={12} aria-hidden="true" />
 							</button>
 						))}
 					</div>
@@ -199,8 +200,8 @@ export function IssuesView({
 				</button>
 			</div>
 
-			<div className="iview__panel" style={{ padding: 0 }}>
-				<div className="ilist__head" style={{ padding: '0.7rem 1.1rem 0.85rem' }}>
+			<div className="iview__panel iview__panel--flush">
+				<div className="ilist__head">
 					<span className="ilist__head-count">
 						<b>{filteredCount}</b> finding{filteredCount === 1 ? '' : 's'}
 						{groupingUseful && groupByRule && groups.length > 0 && (
@@ -212,15 +213,7 @@ export function IssuesView({
 					</span>
 					<div className="ilist__sort">
 						{groupingUseful && (
-							<label
-								style={{
-									display: 'inline-flex',
-									alignItems: 'center',
-									gap: '0.35rem',
-									fontSize: '0.78rem',
-									color: 'var(--ink-muted)'
-								}}
-							>
+							<label className="ilist__group-toggle">
 								<input
 									type="checkbox"
 									checked={groupByRule}
@@ -232,11 +225,10 @@ export function IssuesView({
 								Group by rule
 							</label>
 						)}
-						<label className="ilist__sort" style={{ gap: '0.4rem' }}>
+						<label className="ilist__sort">
 							<span>Sort</span>
 							<select
-								className="isidebar__select"
-								style={{ width: 'auto', padding: '0.2rem 0.4rem' }}
+								className="isidebar__select ilist__sort-select"
 								value={sortKey}
 								onChange={(e) => {
 									const next = e.target.value;
@@ -255,7 +247,7 @@ export function IssuesView({
 				</div>
 
 				{filteredCount === 0 ? (
-					<div className="ilist__empty">
+					<div className="blankslate">
 						<p>No findings match the current filters.</p>
 						<small>
 							{totalCount === 0

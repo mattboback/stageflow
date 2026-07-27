@@ -41,7 +41,7 @@ describe('RouteFault', () => {
 		renderFault();
 
 		expect(screen.getByRole('link', { name: /back to home/i })).toBeTruthy();
-		expect(screen.getByRole('link', { name: 'Run a new scan' })).toBeTruthy();
+		expect(screen.getByRole('link', { name: 'Configure a scan' })).toBeTruthy();
 	});
 
 	it('renders custom actions in place of the defaults', () => {

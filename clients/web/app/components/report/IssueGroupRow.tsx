@@ -38,15 +38,7 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 					<span>
 						{occurrenceCount > 1 && (
 							<>
-								<b
-									style={{
-										color: 'var(--ink-strong)',
-										fontVariantNumeric: 'tabular-nums'
-									}}
-								>
-									{occurrenceCount}
-								</b>{' '}
-								×{' · '}
+								<b className="num igroup__count">{occurrenceCount}</b> ×{' · '}
 							</>
 						)}
 						{pageCount} page{pageCount === 1 ? '' : 's'}
@@ -77,22 +69,15 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 											}
 										: undefined
 								}
-								style={onSelectOccurrence ? { cursor: 'pointer' } : undefined}
 							>
-								<span aria-hidden="true" style={{ color: 'var(--ink-faint)' }}>
+								<span className="igroup__occ-dot" aria-hidden="true">
 									·
 								</span>
 								<span className="igroup__occ-page">
 									<strong>{pageLabel}</strong>
 									{occ.pageUrl}
 								</span>
-								<span
-									style={{
-										fontSize: '0.8125rem',
-										fontVariantNumeric: 'tabular-nums',
-										color: 'var(--ink-muted)'
-									}}
-								>
+								<span className="num igroup__occ-count">
 									{occ.elementCount > 1 ? `${occ.elementCount}×` : ''}
 								</span>
 							</div>

@@ -340,6 +340,9 @@ test('a zero-finding report celebrates the all-clear instead of an empty queue',
 	await expect(page.getByRole('heading', { name: 'All clear.' })).toBeVisible();
 	await expect(page.getByText('0 findings')).toBeVisible();
 	await expect(page.getByText('nothing to fix')).toBeVisible();
-	await expect(page.getByRole('link', { name: /Run another scan/ })).toBeVisible();
+	/* Scoped to the banner: the slim footer also links "Configure a scan". */
+	await expect(
+		page.locator('.allclear').getByRole('link', { name: /Configure a scan/ })
+	).toBeVisible();
 	await expect(page.getByText(/findings need review/)).toHaveCount(0);
 });

@@ -32,11 +32,6 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 		label: 'SEO',
 		description: 'Meta tags, headings, and SEO optimization'
 	},
-	'ai-navigator': {
-		icon: Bot,
-		label: 'AI Navigator',
-		description: 'LLM-powered agent that navigates toward a goal'
-	},
 	'open-graph': {
 		icon: Globe,
 		label: 'Open Graph',
@@ -46,6 +41,13 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 		icon: CheckCircle,
 		label: 'Spelling & Grammar',
 		description: 'AI-powered spelling, grammar, and content quality checks'
+	},
+	/* Last on purpose: insertion order is what the home page lists, and this is
+	   the only scanner that is opt-in rather than on by default. */
+	'ai-navigator': {
+		icon: Bot,
+		label: 'AI Navigator',
+		description: 'LLM-powered agent that navigates toward a goal'
 	}
 };
 

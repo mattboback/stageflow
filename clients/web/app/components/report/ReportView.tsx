@@ -9,6 +9,7 @@ import { IssuesView } from './IssuesView';
 import { LighthouseSummary } from './LighthouseSummary';
 import { ReportHeader } from './ReportHeader';
 import { ReportSectionNav, type ReportSection } from './ReportSectionNav';
+import { PagesView } from './PagesView';
 import { ReportStatStrip } from './ReportStatStrip';
 import { VisualReviewPanel } from './VisualReviewPanel';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
@@ -22,16 +23,19 @@ import {
 import type { ScanStatus, ScreenshotArtifact } from '../../lib/types/scan';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 
-const SECTIONS: readonly ReportSection[] = ['review', 'issues', 'artifacts'];
+const SECTIONS: readonly ReportSection[] = ['review', 'pages', 'issues', 'artifacts'];
 
 function isSection(value: string | null): value is ReportSection {
 	return value !== null && (SECTIONS as readonly string[]).includes(value);
 }
 
-/* Old links used ?section=overview / ?section=pages — both fold into review. */
-function resolveSection(raw: string | null): ReportSection {
+/* ?section=overview predates the current nav and folds into review. ?section=pages
+   is a real section again, but only when there is more than one page to compare --
+   a one-page report resolves it back to review rather than showing an empty tab
+   somebody deep-linked to. */
+function resolveSection(raw: string | null, pageCount: number): ReportSection {
+	if (raw === 'pages') return pageCount > 1 ? 'pages' : 'review';
 	if (isSection(raw)) return raw;
-	if (raw === 'overview' || raw === 'pages') return 'review';
 	return 'review';
 }
 
@@ -92,7 +96,10 @@ export function ReportView({
 		[report]
 	);
 
-	const section: ReportSection = resolveSection(searchParams.get('section'));
+	const section: ReportSection = resolveSection(
+		searchParams.get('section'),
+		displayReport?.pages.length ?? 0
+	);
 	const activeScanner = searchParams.get('scanner');
 	const activeSeverity = searchParams.get('severity');
 	const activePage = searchParams.get('page');
@@ -162,7 +169,7 @@ export function ReportView({
 
 	return (
 		<main id="main" className="report">
-			<div className="wrap">
+			<div className="wrap wrap--app">
 				{displayReport ? (
 					<>
 						{banner}
@@ -221,6 +228,18 @@ export function ReportView({
 									getReviewVerdict={getVerdict}
 									onSelectPage={(pageId) => updateParams({ page: pageId })}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+								/>
+							</section>
+						)}
+
+						{section === 'pages' && (
+							<section id="report-panel-pages" role="tabpanel" aria-labelledby="report-tab-pages">
+								<PagesView
+									report={displayReport}
+									screenshots={screenshots}
+									/* Straight into visual review for that page, which is the
+									   question the card was asked. */
+									onSelectPage={(pageId) => updateParams({ section: null, page: pageId })}
 								/>
 							</section>
 						)}
@@ -287,13 +306,13 @@ export function ReportView({
 						)}
 					</>
 				) : status === 'failed' || status === 'error' ? (
-					<div className="rsection-placeholder" role="alert">
+					<div className="blankslate blankslate--framed rsection-placeholder" role="alert">
 						<h2>Scan failed</h2>
 						<p>{error || 'The scan did not produce a report.'}</p>
 					</div>
 				) : (
 					<div
-						className="rsection-placeholder rsection-placeholder--loading"
+						className="blankslate blankslate--framed rsection-placeholder"
 						role="status"
 						aria-live="polite"
 					>

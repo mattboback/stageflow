@@ -12,7 +12,7 @@ import { BrandMark } from './BrandMark';
    sitemap is noise (scan progress, report). */
 export function SiteFooter({ slim = false }: { slim?: boolean }) {
 	const meta = (
-		<div className="wrap site-footer__meta">
+		<div className="wrap wrap--app site-footer__meta">
 			<span>MIT licensed</span>
 			<span>
 				{IS_HOSTED_DEMO
@@ -30,7 +30,7 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 
 	return (
 		<footer className="site-footer">
-			<div className="wrap site-footer__inner">
+			<div className="wrap wrap--app site-footer__inner">
 				<div className="site-footer__brand">
 					<Link className="brand" to="/">
 						<BrandMark />
@@ -42,7 +42,7 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 					<nav aria-label="Product" className="site-footer__col">
 						<span className="label">Product</span>
 						<Link to="/projects">Projects</Link>
-						<Link to="/playground">Configure scan</Link>
+						<Link to="/playground">Configure a scan</Link>
 						<Link to="/#scanners">Scanners</Link>
 						<a href={DOCS_URL}>Documentation</a>
 					</nav>

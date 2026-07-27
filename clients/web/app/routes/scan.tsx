@@ -251,7 +251,7 @@ export default function Scan() {
 										{transportLabel}
 									</span>
 								</div>
-								<div className="panel__body" style={{ padding: 0 }}>
+								<div className="panel__body panel__body--flush">
 									{channels.length === 0 ? (
 										<div className="ch">
 											<span className="ch__led" aria-hidden="true" />
@@ -358,7 +358,7 @@ export function ErrorBoundary() {
 				actions={
 					<>
 						<Link className="btn btn--primary" to="/playground">
-							Run a new scan{' '}
+							Configure a scan{' '}
 							<span className="ar" aria-hidden="true">
 								→
 							</span>
