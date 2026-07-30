@@ -14,7 +14,7 @@ import (
 
 // The hidden command is registered by the test rather than borrowed from the
 // real command set: the CLI has no hidden commands of its own at the moment,
-// and pinning this behaviour to whichever one happens to be hidden means the
+// and pinning this behavior to whichever one happens to be hidden means the
 // coverage disappears the next time that command does.
 func TestGenerateMarkdownDocsOmitsHiddenRegisteredCommands(t *testing.T) {
 	root := newRootCmd(testsupport.StubEnv, io.Discard, io.Discard)
@@ -60,14 +60,4 @@ func TestVerifyGeneratedCommandDocsReportsMissingRegisteredCommandDocs(t *testin
 	if !strings.Contains(err.Error(), "stageflow_scan.md") {
 		t.Fatalf("expected missing docs error to name stageflow_scan.md; got %v", err)
 	}
-}
-
-func findChildCommand(root *cobra.Command, name string) *cobra.Command {
-	for _, child := range root.Commands() {
-		if child.Name() == name {
-			return child
-		}
-	}
-
-	return nil
 }
