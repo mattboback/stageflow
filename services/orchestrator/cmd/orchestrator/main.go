@@ -144,13 +144,13 @@ func run() int {
 		ScannerImage:         cfg.ScannerImage,
 		ScannerImageOverride: cfg.ScannerImageOverride,
 		// Timeouts use defaults (5min extraction, 30min scan)
-		PodNetwork:           cfg.PodNetwork,
-		PodNetnsMode:         cfg.PodNetnsMode,
-		PodHostMappings:      cfg.PodHostMappings,
+		PodNetwork:      cfg.PodNetwork,
+		PodNetnsMode:    cfg.PodNetnsMode,
+		PodHostMappings: cfg.PodHostMappings,
 		PageLoadTimeout: cfg.PageLoadTimeout,
 		ScrollTimeout:   cfg.ScrollTimeout,
 		StagingStorage:  minioClient,
-		Storage:              minioClient,
+		Storage:         minioClient,
 	})
 
 	consumer := messaging.NewConsumer(natsClient, orch)

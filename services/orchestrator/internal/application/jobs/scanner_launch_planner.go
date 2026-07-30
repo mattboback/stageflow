@@ -27,17 +27,17 @@ const (
 )
 
 type ScannerLaunchPlannerConfig struct {
-	ScannerRegistry      *scanners.Registry
-	DefaultScannerImage  string
-	NatsHost             string
-	MinioHost            string
-	MinioAccessKey       string
-	MinioSecretKey       string
-	MinioUseSSL          bool
-	PageLoadTimeout      int
-	ScrollTimeout        int
-	PodNetnsMode         string
-	DefaultScannerUser   string
+	ScannerRegistry     *scanners.Registry
+	DefaultScannerImage string
+	NatsHost            string
+	MinioHost           string
+	MinioAccessKey      string
+	MinioSecretKey      string
+	MinioUseSSL         bool
+	PageLoadTimeout     int
+	ScrollTimeout       int
+	PodNetnsMode        string
+	DefaultScannerUser  string
 	// HostEnv is the source of truth for env-var values forwarded into the
 	// scanner-runner pod. The planner only ever reads names that appear in the
 	// auth recipe's from_env references; arbitrary passthrough is forbidden.
