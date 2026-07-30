@@ -74,12 +74,9 @@ type Orchestrator struct {
 	podNetwork           string
 	podNetnsMode         string
 	podHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
-	pageLoadTimeout      int
-	scrollTimeout        int
-	openRouterAPIKey     string
-	openRouterAppTitle   string
-	openRouterAppReferer string
-	stagingStorage       storage.Deleter
+	pageLoadTimeout int
+	scrollTimeout   int
+	stagingStorage  storage.Deleter
 	storage              storage.Client // Full storage access for report generation
 	deadlinePollInterval time.Duration
 	deadlineSweepOnce    sync.Once
@@ -109,12 +106,9 @@ type Config struct {
 	PodNetwork           string
 	PodNetnsMode         string   // Pod network namespace mode for job pods (bridge|host). Host mode is local-only.
 	PodHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
-	PageLoadTimeout      int
-	ScrollTimeout        int
-	OpenRouterAPIKey     string
-	OpenRouterAppTitle   string
-	OpenRouterAppReferer string
-	StagingStorage       storage.Deleter
+	PageLoadTimeout int
+	ScrollTimeout   int
+	StagingStorage  storage.Deleter
 	Storage              storage.Client // Full storage for report generation
 	DeadlinePollInterval time.Duration
 }
@@ -221,12 +215,9 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		podNetwork:           config.PodNetwork,
 		podNetnsMode:         podNetnsMode,
 		podHostMappings:      config.PodHostMappings,
-		pageLoadTimeout:      pageLoadTimeout,
-		scrollTimeout:        scrollTimeout,
-		openRouterAPIKey:     config.OpenRouterAPIKey,
-		openRouterAppTitle:   config.OpenRouterAppTitle,
-		openRouterAppReferer: config.OpenRouterAppReferer,
-		stagingStorage:       config.StagingStorage,
+		pageLoadTimeout: pageLoadTimeout,
+		scrollTimeout:   scrollTimeout,
+		stagingStorage:  config.StagingStorage,
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,
 		metrics:              metrics.New(),

@@ -10,14 +10,14 @@ import {
 } from './projects';
 
 describe('local project configuration', () => {
-	it('removes credentials and AI input values before persistence', () => {
+	it('removes credentials and execution-only input values before persistence', () => {
 		const safe = sanitizeProjectConfiguration({
 			urls: ['https://b.example', 'https://a.example'],
 			browser: 'chromium',
 			highlightStyle: 'solid',
 			scanners: [
 				{
-					id: 'ai-navigator',
+					id: 'example-scanner',
 					enabled: true,
 					config: {
 						goal: { objective: 'Complete checkout', inputValues: { email: 'secret@example.com' } },
@@ -44,7 +44,7 @@ describe('local project configuration', () => {
 			highlightStyle: 'solid',
 			scanners: [
 				{
-					id: 'ai-navigator',
+					id: 'example-scanner',
 					enabled: true,
 					config: {
 						goal: {

@@ -41,7 +41,7 @@ describe('worker validation (contract)', () => {
 
 		expect(() => {
 			assertScannerOptionsMatchSchema({
-				manifestId: 'ai-navigator',
+				manifestId: 'example-scanner',
 				schema,
 				options: {},
 				strict: true
@@ -64,7 +64,7 @@ describe('worker validation (contract)', () => {
 
 		expect(() => {
 			assertScannerOptionsMatchSchema({
-				manifestId: 'ai-navigator',
+				manifestId: 'example-scanner',
 				schema,
 				options: { goal: { objective: 'Reach checkout' } },
 				strict: true
@@ -105,7 +105,7 @@ describe('worker validation (contract)', () => {
 
 		expect(() => {
 			assertScannerOptionsMatchSchema({
-				manifestId: 'ai-navigator',
+				manifestId: 'example-scanner',
 				schema,
 				options: undefined,
 				strict: true

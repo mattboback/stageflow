@@ -55,7 +55,7 @@ func TestMarshalPayloadRedactsLiteralFormAuthAndAIInputValues(t *testing.T) {
 		InputType: "urls",
 		URLs:      []string{"https://example.com"},
 		Config: models.JobConfig{
-			Modules: []string{"ai-navigator"},
+			Modules: []string{"example-scanner"},
 			Auth: json.RawMessage(`{
 				"mode":"form",
 				"login_url":"https://example.com/login",
@@ -66,7 +66,7 @@ func TestMarshalPayloadRedactsLiteralFormAuthAndAIInputValues(t *testing.T) {
 				"success":{"type":"load"}
 			}`),
 			ScannerConfigs: map[string]map[string]any{
-				"ai-navigator": {
+				"example-scanner": {
 					"goal": map[string]any{
 						"objective":        "Submit the form with " + aiInputCanary,
 						"successCriterion": "Welcome " + passwordCanary,

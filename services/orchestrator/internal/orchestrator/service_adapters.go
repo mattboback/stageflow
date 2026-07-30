@@ -44,12 +44,9 @@ func (o *Orchestrator) newService() *appjobs.Service {
 			MinioUseSSL:          o.minioUseSSL,
 			PageLoadTimeout:      o.pageLoadTimeout,
 			ScrollTimeout:        o.scrollTimeout,
-			PodNetnsMode:         o.podNetnsMode,
-			DefaultScannerUser:   "0",
-			OpenRouterAPIKey:     o.openRouterAPIKey,
-			OpenRouterAppTitle:   o.openRouterAppTitle,
-			OpenRouterAppReferer: o.openRouterAppReferer,
-			HostEnv:              os.Getenv,
+			PodNetnsMode:       o.podNetnsMode,
+			DefaultScannerUser: "0",
+			HostEnv:            os.Getenv,
 		})),
 	)
 }

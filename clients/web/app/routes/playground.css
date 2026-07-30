@@ -5,12 +5,11 @@
 	background: var(--ground);
 }
 
-/* One local cap on the shell wrap (the .run__wrap pattern): the form reads
-   better narrower than the 96rem app shell, and capping here instead of on
-   each block keeps head, notice, and grid on the same edge. */
-.console__wrap {
-	max-width: 84rem;
-}
+/* No local cap on the shell wrap. Capping it re-centred the whole block inside
+   the 96rem app shell, so past ~1370px the page h1 drifted ~96px inboard of the
+   header brand -- breaking the one left edge every other surface shares. The
+   readable measure the cap was reaching for lives on .console__grid instead,
+   which already centres its own tracks. */
 
 /* page head: shared .page-head from instrument.css; the console only adds
    its clearance from the grid below */
@@ -261,14 +260,20 @@
 	color: var(--ink-strong);
 	font-size: var(--fs-5);
 }
-/* one short line per scanner; the full sentence lives in the title tooltip */
+/* Two lines per scanner, not one. Clipping to a single line hid 60% of the
+   longest catalog descriptions, and the title tooltip that was meant to carry
+   the rest is unreachable by touch and unreliable from the keyboard -- on a
+   control whose whole job is deciding which scanners to run. Two lines fits
+   every current description; the tooltip stays as a supplement. */
 .chan__desc {
 	font-size: var(--fs-4);
 	color: var(--ink-muted);
 	line-height: 1.4;
 	overflow: hidden;
-	white-space: nowrap;
-	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 .chan__cat {
 	font-size: var(--fs-2);

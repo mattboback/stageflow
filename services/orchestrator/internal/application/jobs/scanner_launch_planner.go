@@ -38,9 +38,6 @@ type ScannerLaunchPlannerConfig struct {
 	ScrollTimeout        int
 	PodNetnsMode         string
 	DefaultScannerUser   string
-	OpenRouterAPIKey     string
-	OpenRouterAppTitle   string
-	OpenRouterAppReferer string
 	// HostEnv is the source of truth for env-var values forwarded into the
 	// scanner-runner pod. The planner only ever reads names that appear in the
 	// auth recipe's from_env references; arbitrary passthrough is forbidden.
@@ -125,8 +122,6 @@ func (p *ScannerLaunchPlanner) Plan(
 	if err := p.applyScannerConfig(env, job, scannerType); err != nil {
 		return nil, err
 	}
-
-	p.applyAINavigatorEnv(env, scannerType)
 
 	if err := p.applyAuth(env, job); err != nil {
 		return nil, err
@@ -257,24 +252,6 @@ func (p *ScannerLaunchPlanner) applyScannerConfig(
 	return nil
 }
 
-func (p *ScannerLaunchPlanner) applyAINavigatorEnv(env map[string]string, scannerType string) {
-	if scannerType != "ai-navigator" {
-		return
-	}
-
-	if p.config.OpenRouterAPIKey != "" {
-		env["OPENROUTER_API_KEY"] = p.config.OpenRouterAPIKey
-	}
-
-	if p.config.OpenRouterAppTitle != "" {
-		env["OPENROUTER_APP_TITLE"] = p.config.OpenRouterAppTitle
-	}
-
-	if p.config.OpenRouterAppReferer != "" {
-		env["OPENROUTER_APP_REFERER"] = p.config.OpenRouterAppReferer
-	}
-}
-
 // applyAuth wires the optional Provenance.auth block into the scanner-runner
 // pod's environment.
 //
@@ -376,34 +353,30 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 // them via {from_env: "NAME"}: doing so would let a recipe pull a value off the
 // orchestrator host env and have the scanner pod interpret it as Chromium launch
 // flags, a CSP bypass, a result-subject override, a data path, or a resource
-// limit. The list is intentionally broader than the vars baseEnv()/
-// applyAINavigatorEnv() set today, so the invariant holds even for controls the
-// scanner reads directly from its environment (see scanner-runner
-// src/core/config-loader.ts).
+// limit. The list is intentionally broader than the vars baseEnv() sets today,
+// so the invariant holds even for controls the scanner reads directly from its
+// environment (see scanner-runner src/core/config-loader.ts).
 var reservedScannerEnvNames = map[string]struct{}{
-	"JOB_ID":                 {},
-	"SCANNER_TYPE":           {},
-	"NATS_URL":               {},
-	"MINIO_ENDPOINT":         {},
-	"MINIO_ACCESS_KEY":       {},
-	"MINIO_SECRET_KEY":       {},
-	"MINIO_USE_SSL":          {},
-	"MINIO_ARTIFACT_BUCKET":  {},
-	"PROVENANCE_PATH":        {},
-	"PROVENANCE_AUTH_JSON":   {},
-	"RESULTS_DIR":            {},
-	"PAGE_LOAD_TIMEOUT":      {},
-	"A11Y_SCROLL_TIMEOUT":    {},
-	"A11Y_SHOT_ENABLED":      {},
-	"A11Y_HIGHLIGHT_STYLE":   {},
-	"ALLOW_PRIVATE_TARGETS":  {},
-	"REQUEST_ID":             {},
-	"RUN_ID":                 {},
-	"SCAN_URLS":              {},
-	"SCANNER_OPTIONS":        {},
-	"OPENROUTER_API_KEY":     {},
-	"OPENROUTER_APP_TITLE":   {},
-	"OPENROUTER_APP_REFERER": {},
+	"JOB_ID":                {},
+	"SCANNER_TYPE":          {},
+	"NATS_URL":              {},
+	"MINIO_ENDPOINT":        {},
+	"MINIO_ACCESS_KEY":      {},
+	"MINIO_SECRET_KEY":      {},
+	"MINIO_USE_SSL":         {},
+	"MINIO_ARTIFACT_BUCKET": {},
+	"PROVENANCE_PATH":       {},
+	"PROVENANCE_AUTH_JSON":  {},
+	"RESULTS_DIR":           {},
+	"PAGE_LOAD_TIMEOUT":     {},
+	"A11Y_SCROLL_TIMEOUT":   {},
+	"A11Y_SHOT_ENABLED":     {},
+	"A11Y_HIGHLIGHT_STYLE":  {},
+	"ALLOW_PRIVATE_TARGETS": {},
+	"REQUEST_ID":            {},
+	"RUN_ID":                {},
+	"SCAN_URLS":             {},
+	"SCANNER_OPTIONS":       {},
 
 	// Headless-browser controls: arbitrary Chromium flags or a CSP bypass would
 	// undermine the browser sandbox if an attacker could inject them; the engine

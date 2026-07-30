@@ -109,25 +109,15 @@ baseline.
 | `VITE_SITE_URL`                   | yes      | `http://localhost:3000`                                         | Canonical site URL used for metadata/share cards. |
 | `VITE_GITHUB_URL`                 | no       | `https://github.com/mattboback/stageflow`                       | GitHub link shown in UI.                          |
 | `VITE_TAGLINE`                    | no       | `Self-hostable frontend quality regression scanning`             | Product-capability phrase used in marketing and metadata; omit the product name and trailing punctuation. |
-| `VITE_AI_NAVIGATOR_DEFAULT_MODEL` | no       | `openai/gpt-4o-mini`                                            | Default model shown for AI navigator flows.       |
 | `VITE_DEPLOYMENT_MODE`            | no       | `self-hosted`                                                   | Set to `hosted-demo` only for the public-demo privacy and retention notices. |
 
 The frontend container builds the React Router app to static files and serves them with nginx on port `3020`.
-
-### AI Navigator (Optional)
-
-| Variable                     | Required                     | Default in `.env.example` | Purpose                                                     |
-| ---------------------------- | ---------------------------- | ------------------------- | ----------------------------------------------------------- |
-| `OPENROUTER_API_KEY`         | only if AI navigator enabled | empty                     | API key for OpenRouter model calls.                         |
-| `OPENROUTER_APP_TITLE`       | no                           | `StageFlow`               | OpenRouter request attribution title.                       |
-| `OPENROUTER_APP_REFERER`     | no                           | `http://localhost:3000`   | OpenRouter request attribution referer.                     |
-| `AI_NAVIGATOR_DEFAULT_MODEL` | no                           | `openai/gpt-4o-mini`      | Default backend model when scanner options do not override. |
 
 ### Scanner Registry Overrides
 
 Built-in scanner metadata is embedded from `libs/go/scannercatalog/manifests/*/manifest.json`. The checked-in compose files mount `infra/scanners/scanners.yaml` into both Platform API and Orchestrator as `/data/scanners.yaml`; `just setup` creates that local file from `infra/scanners/scanners.example.yaml` when needed. Use that tracked example as the public template for deployments that need to disable scanners, override images, or tune resource limits without editing embedded manifests. `services/orchestrator/config/scanners.yaml` is a service-local example/default, not the setup template.
 
-Current built-in scanner IDs are: `axe`, `lighthouse`, `seo`, `security-headers`, `link-checker`, `open-graph`, `spelling-grammar`, and `ai-navigator`.
+Current built-in scanner IDs are: `axe`, `lighthouse`, `seo`, `security-headers`, `link-checker`, `open-graph`, and `spelling-grammar`.
 
 ### Caddy (Edge)
 

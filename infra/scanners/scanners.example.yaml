@@ -16,10 +16,6 @@ scanners:
       maxMemoryMB: 2048
       maxTimeoutMs: 60000
 
-  # Disabled by default (enable explicitly when needed).
-  ai-navigator:
-    enabled: false
-
   link-checker:
     enabled: false
 
