@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Updated vulnerable transitive JavaScript dependencies used by the web and scanner-runner workspaces, including the scanner runtime image.
 - Removed authentication recipes from public Provenance, redacted raw and URL-encoded input values from AI traces and terminal job/event/audit records, and masked sensitive browser controls before values are entered or screenshots are captured.
 - Added an idempotent upgrade migration that scrubs existing terminal job, audit, and outbox records before the orchestrator begins consuming events.
 - Added explicit hosted-demo warnings for literal form credentials and documented the residual 72-hour file-backed `job.created` queue retention.
