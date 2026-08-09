@@ -115,7 +115,7 @@ The service sits between clients and backend infrastructure:
 - **Orchestrator Admin API** provides current job state used by the status projection
 - **MinIO** stores report and screenshot artifacts that this API presigns
 - **SQLite** stores named projects and promoted baselines
-- **Scanner registry** defines which scanners/modules are allowed and how config is validated
+- **Scanner registry** defines which scanners/modules are enabled and advertises their capabilities
 
 ## Local run and test commands
 
