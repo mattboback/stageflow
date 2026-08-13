@@ -1,4 +1,3 @@
-import { AI_NAVIGATOR_DEFAULT_MODEL } from '../site-metadata';
 import type { ScannerDefinition, ScannerSelection } from '../types/scan';
 import { normalizeUrlInput, validateHttpUrl } from '../url';
 
@@ -60,34 +59,6 @@ export function buildFormAuthConfig(config: AuthFormConfig): Record<string, unkn
 	};
 }
 
-export interface AiInputValue {
-	key: string;
-	value: string;
-}
-
-export interface AiSuccessCriterion {
-	type: string;
-	value: string;
-}
-
-export interface AiConfigState {
-	objective: string;
-	maxSteps: number;
-	maxWallTimeMs: number;
-	model: string;
-	inputValues: AiInputValue[];
-	successCriteria: AiSuccessCriterion[];
-}
-
-export const DEFAULT_AI_CONFIG: AiConfigState = {
-	objective: '',
-	maxSteps: 12,
-	maxWallTimeMs: 120_000,
-	model: AI_NAVIGATOR_DEFAULT_MODEL,
-	inputValues: [],
-	successCriteria: []
-};
-
 export type PlaygroundMode = 'url' | 'zip';
 
 export interface PlaygroundValidation {
@@ -105,8 +76,6 @@ interface PlaygroundValidationInput {
 	file: Pick<File, 'name' | 'size'> | null;
 	selections: ScannerSelection[];
 	auth: AuthFormConfig;
-	ai: AiConfigState;
-	aiEnabled: boolean;
 	// Explicit `| undefined` throughout: exactOptionalPropertyTypes separates an
 	// absent property from one present-but-undefined, and callers build this
 	// object from optional state rather than omitting keys.
@@ -131,8 +100,6 @@ export function validatePlaygroundConfiguration({
 	file,
 	selections,
 	auth,
-	ai,
-	aiEnabled,
 	catalogLoading = false,
 	catalogError = null,
 	projectName
@@ -197,56 +164,6 @@ export function validatePlaygroundConfiguration({
 				'auth-success-selector',
 				validUrls
 			);
-		}
-	}
-
-	if (aiEnabled) {
-		if (!ai.objective.trim())
-			return invalidValidation('Enter an AI Navigator objective.', 'ai-objective', validUrls);
-		if (!ai.model.trim())
-			return invalidValidation('Enter an AI Navigator model.', 'ai-model', validUrls);
-		if (!Number.isInteger(ai.maxSteps) || ai.maxSteps < 1 || ai.maxSteps > 50) {
-			return invalidValidation(
-				'AI Navigator max steps must be between 1 and 50.',
-				'ai-max-steps',
-				validUrls
-			);
-		}
-		if (
-			!Number.isFinite(ai.maxWallTimeMs) ||
-			ai.maxWallTimeMs < 10_000 ||
-			ai.maxWallTimeMs > 600_000
-		) {
-			return invalidValidation(
-				'AI Navigator wall time must be between 10,000 and 600,000 ms.',
-				'ai-wall-time',
-				validUrls
-			);
-		}
-		for (const [index, input] of ai.inputValues.entries()) {
-			if (input.key.trim() && !input.value.trim()) {
-				return invalidValidation(
-					'Complete or remove the empty AI input value.',
-					`ai-input-value-${index}`,
-					validUrls
-				);
-			}
-			if (!input.key.trim() && input.value.trim()) {
-				return invalidValidation(
-					'Complete or remove the empty AI input key.',
-					`ai-input-key-${index}`,
-					validUrls
-				);
-			}
-		}
-		for (const [index, criterion] of ai.successCriteria.entries()) {
-			if (!criterion.value.trim()) {
-				return invalidValidation(
-					'Complete or remove the empty success criterion.',
-					`ai-criterion-value-${index}`,
-					validUrls
-				);
-			}
 		}
 	}
 
@@ -318,46 +235,4 @@ export function validateZipUploadFile(file: Pick<File, 'name' | 'size'>): string
 	}
 
 	return null;
-}
-
-export function buildAiNavigatorConfig(params: {
-	objective: string;
-	maxSteps: number;
-	maxWallTimeMs: number;
-	model: string;
-	inputValues: AiInputValue[];
-	successCriteria: AiSuccessCriterion[];
-}): Record<string, unknown> {
-	const config: Record<string, unknown> = {
-		goal: {
-			objective: params.objective.trim(),
-			maxSteps: params.maxSteps,
-			maxWallTimeMs: params.maxWallTimeMs
-		},
-		vision: {
-			provider: 'openrouter',
-			model: params.model
-		}
-	};
-
-	const inputValuesObj = params.inputValues
-		.filter((item) => item.key.trim() && item.value.trim())
-		.reduce<Record<string, string>>((acc, item) => {
-			acc[item.key.trim()] = item.value.trim();
-			return acc;
-		}, {});
-
-	if (Object.keys(inputValuesObj).length > 0) {
-		(config.goal as Record<string, unknown>).inputValues = inputValuesObj;
-	}
-
-	const criteria = params.successCriteria
-		.filter((item) => item.type && item.value.trim())
-		.map((item) => ({ type: item.type, value: item.value.trim() }));
-
-	if (criteria.length > 0) {
-		(config.goal as Record<string, unknown>).successCriteria = criteria;
-	}
-
-	return config;
 }

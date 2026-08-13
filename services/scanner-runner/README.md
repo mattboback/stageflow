@@ -48,7 +48,7 @@ Uploads (MinIO / artifacts bucket):
 - `${JOB_ID}/${scannerId}/report.html` (only if it exists)
 - `${JOB_ID}/${scannerId}/${pageId}/screenshots/*` (only if `<pageId>/screenshots/` exists)
 
-Some scanners upload additional per-page files (for example `ai-navigator` uploads `${JOB_ID}/ai-navigator/${pageId}/ai-trace.json`).
+Scanners may upload additional per-page files alongside these.
 
 ## SCANNER_OPTIONS validation
 

@@ -17,7 +17,6 @@ Start with the [repository README](../README.md) for the product overview and fa
 - [Contract Architecture](#contract-architecture)
 - [Unified Report](#unified-report)
 - [Scanner Plugin System](#scanner-plugin-system)
-- [AI Navigator](#ai-navigator)
 - [Security Model](#security-model)
 - [Authenticated Scanning](#authenticated-scanning)
 - [Storage Model](#storage-model)
@@ -116,7 +115,7 @@ Runs only for ZIP jobs, inside the job pod. Lifecycle: download the ZIP from the
 
 ### Scanner Runner (`services/scanner-runner`)
 
-TypeScript/Bun runtime that executes one scanner per container using Playwright. `ScannerBase` defines the lifecycle: `initialize()` → concurrent page iteration (publishing `scan.page.completed` per page) → `writeResults()` → `uploadArtifacts()` → `scan.completed`. Plugins are discovered from embedded built-ins and mounted plugin paths (see [Scanner Plugin System](#scanner-plugin-system)). Eight built-in scanners: axe, lighthouse, seo, security-headers, link-checker, open-graph, spelling-grammar, ai-navigator.
+TypeScript/Bun runtime that executes one scanner per container using Playwright. `ScannerBase` defines the lifecycle: `initialize()` → concurrent page iteration (publishing `scan.page.completed` per page) → `writeResults()` → `uploadArtifacts()` → `scan.completed`. Plugins are discovered from embedded built-ins and mounted plugin paths (see [Scanner Plugin System](#scanner-plugin-system)). Seven built-in scanners: axe, lighthouse, seo, security-headers, link-checker, open-graph, spelling-grammar.
 
 ---
 
@@ -248,14 +247,6 @@ Scanners are plugins described by a `manifest.json` conforming to the scanner-ma
 4. `PLUGIN_PATHS` (colon-separated).
 
 `libs/go/scannerregistry` provides runtime resolution — by ID or alias, lenient (`ResolveModules`, unknown tokens pass through) or strict (`ResolveModulesStrict`) — and a public `Info` projection that strips internal fields (image, aliases, config, requirements) from API responses. The default module is `axe`.
-
----
-
-## AI Navigator
-
-The `ai-navigator` scanner is a vision-model-driven browser agent: given a goal, it loops — screenshot → extract interactive elements → vision-model page analysis → vision-model action decision → execute (click/fill/scroll) → check goal criteria → detect navigation loops (same URL 3+ times in the last 6 steps) — until the goal is met or step/wall-time/token budgets are exhausted, producing a step trace with screenshots.
-
-It calls OpenRouter over raw HTTP (no vendor SDK), with image compression, a concurrency semaphore, and exponential backoff (`vision-client.ts`). The platform validates that a goal and model are configured at intake, and the orchestrator injects `OPENROUTER_API_KEY` (plus attribution vars) into only the scanner containers that need it.
 
 ---
 

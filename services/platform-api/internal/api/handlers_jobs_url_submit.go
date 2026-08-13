@@ -380,12 +380,6 @@ func (s *Server) normalizeURLSubmitModules(w http.ResponseWriter, req jobURLSubm
 		return nil, false
 	}
 
-	if scannerConfigDetail := validateScannerConfigs(modules, req.ScannerConfigs); scannerConfigDetail != nil {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, *scannerConfigDetail)
-
-		return nil, false
-	}
-
 	return modules, true
 }
 

@@ -4,9 +4,9 @@
 	padding-block: clamp(1.5rem, 3vw, 2.25rem) 4rem;
 	background: var(--ground);
 }
-.run__wrap {
-	max-width: 66rem;
-}
+/* The status page shares the app shell rather than capping itself: a 66rem cap
+   on the narrower plain .wrap gutter put this page's h1 further inboard of the
+   header brand than any other surface. */
 
 /* status header */
 .shead {

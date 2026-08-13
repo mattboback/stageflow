@@ -28,9 +28,9 @@ terminal/JSON workflow, not their main surface.
 
 ## Product Purpose
 
-StageFlow is a self-hostable **frontend quality platform**. It ships eight built-in
+StageFlow is a self-hostable **frontend quality platform**. It ships seven built-in
 scanners — accessibility, performance, SEO, links, security headers, social metadata,
-content quality, and agent-driven navigation — behind a single report contract, and
+and content quality — behind a single report contract, and
 remembers a **baseline per project** so CI can answer the question that matters:
 _did this change make the frontend worse?_
 

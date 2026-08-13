@@ -96,26 +96,23 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 
 	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
 	if err := registry.Register(&scanners.Definition{
-		ID:      "ai-navigator",
-		Name:    "ai navigator",
+		ID:      "axe",
+		Name:    "axe",
 		Enabled: true,
 	}); err != nil {
 		t.Fatalf("Register() error = %v", err)
 	}
 
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
-		ScannerRegistry:      registry,
-		NatsHost:             "nats",
-		MinioHost:            "minio",
-		MinioAccessKey:       "minioadmin",
-		MinioSecretKey:       "secret",
-		PageLoadTimeout:      15000,
-		ScrollTimeout:        300,
-		PodNetnsMode:         PodNetnsModeHost,
-		DefaultScannerUser:   "0",
-		OpenRouterAPIKey:     "openrouter-key",
-		OpenRouterAppTitle:   "StageFlow",
-		OpenRouterAppReferer: "https://stageflow.org",
+		ScannerRegistry:    registry,
+		NatsHost:           "nats",
+		MinioHost:          "minio",
+		MinioAccessKey:     "minioadmin",
+		MinioSecretKey:     "secret",
+		PageLoadTimeout:    15000,
+		ScrollTimeout:      300,
+		PodNetnsMode:       PodNetnsModeHost,
+		DefaultScannerUser: "0",
 	})
 
 	job := &models.Job{
@@ -123,17 +120,14 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 		InputType: models.JobInputTypeURLs,
 		URLs:      []string{"http://localhost:3000"},
 		Config: models.JobConfig{
-			Modules:             []string{"ai-navigator"},
+			Modules:             []string{"axe"},
 			HighlightStyle:      "solid",
 			Browser:             "firefox",
 			AllowPrivateTargets: true,
-			ScannerConfigs: map[string]map[string]any{
-				"ai-navigator": {"model": "openai/gpt-5"},
-			},
 		},
 	}
 
-	plan, err := planner.Plan(context.Background(), job, "ai-navigator")
+	plan, err := planner.Plan(context.Background(), job, "axe")
 	if err != nil {
 		t.Fatalf("Plan() error = %v", err)
 	}
@@ -146,16 +140,12 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 		t.Fatalf("plan.Env[MINIO_ENDPOINT] = %q, want %q", got, want)
 	}
 
-	if got, want := plan.Env["PROVENANCE_PATH"], "/results/ai-navigator/provenance.json"; got != want {
+	if got, want := plan.Env["PROVENANCE_PATH"], "/results/axe/provenance.json"; got != want {
 		t.Fatalf("plan.Env[PROVENANCE_PATH] = %q, want %q", got, want)
 	}
 
 	if got, want := plan.Env["ALLOW_PRIVATE_TARGETS"], "true"; got != want {
 		t.Fatalf("plan.Env[ALLOW_PRIVATE_TARGETS] = %q, want %q", got, want)
-	}
-
-	if got, want := plan.Env["OPENROUTER_API_KEY"], "openrouter-key"; got != want {
-		t.Fatalf("plan.Env[OPENROUTER_API_KEY] = %q, want %q", got, want)
 	}
 
 	if got, want := plan.Env["A11Y_HIGHLIGHT_STYLE"], "solid"; got != want {

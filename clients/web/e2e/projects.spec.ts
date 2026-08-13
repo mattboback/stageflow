@@ -19,15 +19,17 @@ secondReport.issues.push({
 secondReport.summary.totalIssues += 1;
 
 interface MockProjectApiOptions {
-	includeAiNavigator?: boolean;
+	/* A second scanner the catalog can gain and lose mid-test, standing in for
+	   any scanner a deployment enables or disables between runs. */
+	includeOptionalScanner?: boolean;
 }
 
 async function mockProjectApi(
 	page: Page,
-	{ includeAiNavigator = false }: MockProjectApiOptions = {}
+	{ includeOptionalScanner = false }: MockProjectApiOptions = {}
 ) {
 	let submissionCount = 0;
-	let aiNavigatorAvailable = includeAiNavigator;
+	let optionalScannerAvailable = includeOptionalScanner;
 	let catalogGate: Promise<void> | null = null;
 	await page.route('**/api/v1/scanners', async (route) => {
 		const gate = catalogGate;
@@ -48,14 +50,14 @@ async function mockProjectApi(
 						builtIn: true,
 						capabilities: {}
 					},
-					...(aiNavigatorAvailable
+					...(optionalScannerAvailable
 						? [
 								{
-									id: 'ai-navigator',
-									name: 'AI Navigator',
+									id: 'seo',
+									name: 'SEO',
 									version: '1.0.0',
-									description: 'Goal-driven browser navigation',
-									categories: ['custom'],
+									description: 'Meta tags and headings',
+									categories: ['seo'],
 									aliases: [],
 									enabled: true,
 									builtIn: true,
@@ -64,7 +66,7 @@ async function mockProjectApi(
 							]
 						: [])
 				],
-				categories: aiNavigatorAvailable ? ['accessibility', 'custom'] : ['accessibility']
+				categories: optionalScannerAvailable ? ['accessibility', 'seo'] : ['accessibility']
 			})
 		});
 	});
@@ -110,8 +112,8 @@ async function mockProjectApi(
 	}
 
 	return {
-		setAiNavigatorAvailable(available: boolean) {
-			aiNavigatorAvailable = available;
+		setOptionalScannerAvailable(available: boolean) {
+			optionalScannerAvailable = available;
 		},
 		holdNextCatalog() {
 			if (catalogGate) throw new Error('A scanner catalog request is already held.');
@@ -233,7 +235,7 @@ test('local project creates a run and promotes its report without persisting cre
 });
 
 test('temporarily unavailable scanners remain stored but are not submitted', async ({ page }) => {
-	const api = await mockProjectApi(page, { includeAiNavigator: true });
+	const api = await mockProjectApi(page, { includeOptionalScanner: true });
 	await page.goto('/projects');
 
 	await page.getByLabel('Project name').fill('Catalog evolution');
@@ -245,18 +247,17 @@ test('temporarily unavailable scanners remain stored but are not submitted', asy
 	expect(projectId).toBeTruthy();
 	if (!projectId) throw new Error('Expected a local project id.');
 
-	const aiScanner = page.getByRole('checkbox', { name: /AI Navigator/ });
-	if ((await aiScanner.getAttribute('aria-checked')) !== 'true') {
-		await aiScanner.click();
+	const optionalScanner = page.getByRole('checkbox', { name: /SEO/ });
+	if ((await optionalScanner.getAttribute('aria-checked')) !== 'true') {
+		await optionalScanner.click();
 	}
-	await page.getByLabel(/Objective/).fill('Retain this scanner configuration');
 	await page.getByRole('button', { name: 'Save project' }).click();
 	await expect(page.getByText('Project configuration saved locally.')).toBeVisible();
 
-	api.setAiNavigatorAvailable(false);
+	api.setOptionalScannerAvailable(false);
 	await page.reload();
 	await expect(page.getByLabel('Project name')).toHaveValue('Catalog evolution');
-	await expect(page.getByRole('checkbox', { name: /AI Navigator/ })).toHaveCount(0);
+	await expect(page.getByRole('checkbox', { name: /SEO/ })).toHaveCount(0);
 
 	const submission = page.waitForRequest(
 		(request) => request.method() === 'POST' && request.url().includes('/api/v1/jobs/urls/')
@@ -287,27 +288,19 @@ test('temporarily unavailable scanners remain stored but are not submitted', asy
 			request.onerror = () => reject(request.error ?? new Error('IndexedDB request failed'));
 		});
 		database.close();
-		return project.configuration.scanners.find((scanner) => scanner.id === 'ai-navigator');
+		return project.configuration.scanners.find((scanner) => scanner.id === 'seo');
 	}, projectId);
-	expect(storedScannerConfig).toMatchObject({
-		id: 'ai-navigator',
-		enabled: true,
-		config: { goal: { objective: 'Retain this scanner configuration' } }
-	});
+	expect(storedScannerConfig).toMatchObject({ id: 'seo', enabled: true });
 
-	api.setAiNavigatorAvailable(true);
+	api.setOptionalScannerAvailable(true);
 	await page.goto(`/playground?project=${projectId}`);
-	await expect(page.getByRole('checkbox', { name: /AI Navigator/ })).toHaveAttribute(
-		'aria-checked',
-		'true'
-	);
-	await expect(page.getByLabel(/Objective/)).toHaveValue('Retain this scanner configuration');
+	await expect(page.getByRole('checkbox', { name: /SEO/ })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('SPA project query changes discard project association and execution-only state', async ({
 	page
 }) => {
-	const api = await mockProjectApi(page, { includeAiNavigator: true });
+	const api = await mockProjectApi(page, { includeOptionalScanner: true });
 	await page.goto('/projects');
 
 	await page.getByLabel('Project name').fill('Alpha project');
@@ -344,11 +337,6 @@ test('SPA project query changes discard project association and execution-only s
 	await page.getByLabel(/Login URL/).fill('https://alpha.example.com/login');
 	await page.getByLabel(/Username \/ email/).fill('alpha-secret@example.com');
 	await page.getByLabel(/Password/).fill('alpha-project-password');
-	await page.getByRole('checkbox', { name: /AI Navigator/ }).click();
-	await page.getByLabel(/Objective/).fill('Use alpha execution state');
-	await page.getByRole('button', { name: '+ Add input' }).click();
-	await page.locator('#ai-input-key-0').fill('private-token');
-	await page.locator('#ai-input-value-0').fill('alpha-ai-secret');
 
 	const releaseBetaCatalog = api.holdNextCatalog();
 	await navigateWithinApp(page, `/playground?project=${betaProjectId}`);
@@ -356,7 +344,6 @@ test('SPA project query changes discard project association and execution-only s
 	releaseBetaCatalog();
 	await expect(page.getByLabel('Project name')).toHaveValue('Beta project');
 	await expect(page.getByRole('button', { name: /Set up/ })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'AI Navigator' })).toHaveCount(0);
 	await expect(page.getByRole('textbox', { name: 'URL 1', exact: true })).toHaveValue(
 		'https://beta.example.com'
 	);
@@ -377,11 +364,6 @@ test('SPA project query changes discard project association and execution-only s
 	await page.getByLabel(/Login URL/).fill('https://standalone.example.com/login');
 	await page.getByLabel(/Username \/ email/).fill('standalone-secret@example.com');
 	await page.getByLabel(/Password/).fill('standalone-project-password');
-	await page.getByRole('checkbox', { name: /AI Navigator/ }).click();
-	await page.getByLabel(/Objective/).fill('Use standalone execution state');
-	await page.getByRole('button', { name: '+ Add input' }).click();
-	await page.locator('#ai-input-key-0').fill('private-token');
-	await page.locator('#ai-input-value-0').fill('standalone-ai-secret');
 	await page.getByRole('button', { name: 'ZIP upload' }).click();
 	await page.locator('input[type="file"]').setInputFiles({
 		name: 'private-build.zip',
@@ -410,9 +392,6 @@ test('SPA project query changes discard project association and execution-only s
 	await expect(page.locator('.drop__file')).toHaveText('Choose a ZIP archive');
 	await expect(page.locator('input[type="file"]')).toHaveValue('');
 
-	await page.getByRole('checkbox', { name: /AI Navigator/ }).click();
-	await expect(page.getByLabel(/Objective/)).toHaveValue('');
-	await expect(page.locator('[id^="ai-input-key-"]')).toHaveCount(0);
 	const formValues = await page
 		.locator('input, textarea')
 		.evaluateAll((fields) =>
@@ -420,10 +399,8 @@ test('SPA project query changes discard project association and execution-only s
 		);
 	expect(formValues).not.toContain('alpha-secret@example.com');
 	expect(formValues).not.toContain('alpha-project-password');
-	expect(formValues).not.toContain('alpha-ai-secret');
 	expect(formValues).not.toContain('standalone-secret@example.com');
 	expect(formValues).not.toContain('standalone-project-password');
-	expect(formValues).not.toContain('standalone-ai-secret');
 });
 
 test('project deletion is confirmed in a dialog instead of window.confirm', async ({ page }) => {

@@ -141,7 +141,7 @@ func TestHandleScanFailedDoesNotPersistEncodedConfiguredSecrets(t *testing.T) {
 		Config: models.JobConfig{
 			Modules: []string{"axe"},
 			ScannerConfigs: map[string]map[string]any{
-				"ai-navigator": {
+				"example-scanner": {
 					"goal": map[string]any{
 						"inputValues": map[string]any{"password": secret},
 					},

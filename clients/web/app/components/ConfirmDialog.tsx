@@ -1,11 +1,12 @@
 import { useEffect, useId, useRef } from 'react';
 
+import { useScrollLock } from '../lib/hooks/useScrollLock';
 import { cycleTabFocus, focusableWithin } from '../lib/utils/focus-trap';
 
 /* Design-system replacement for window.confirm: a small modal panel with the
-   same focus and Escape behavior as IssueDetailModal — literally the same, via
-   the shared focus-trap helper. Cancel receives initial focus so a stray Enter
-   never confirms a destructive action. */
+   same focus, scroll and Escape behavior as IssueDetailModal — literally the
+   same, via the shared focus-trap and scroll-lock helpers. Cancel receives
+   initial focus so a stray Enter never confirms a destructive action. */
 export function ConfirmDialog({
 	title,
 	detail,
@@ -28,6 +29,8 @@ export function ConfirmDialog({
 	const titleId = useId();
 	const dialogRef = useRef<HTMLDivElement>(null);
 	const cancelRef = useRef<HTMLButtonElement>(null);
+
+	useScrollLock();
 
 	useEffect(() => {
 		const previousActiveElement = document.activeElement as HTMLElement | null;

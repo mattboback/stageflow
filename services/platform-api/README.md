@@ -77,7 +77,7 @@ Security-sensitive behavior worth inspecting:
 - `internal/api/handlers_jobs_url_submit.go` limits body size, URL count, and URL length before publishing a job-created event
 - the anonymous public route rejects auth, while the browser-auth route rejects storage state, environment references, and private targets; both share a stricter public-submission limiter
 - `internal/api/handlers_jobs_zip_upload.go` constrains multipart upload size and validates required form parts before enqueueing work
-- `internal/api/scanner_configs.go` validates per-scanner config payloads against the registry
+- scanner configs are opaque per-scanner option maps forwarded on the job; the API does not schema-validate them
 - `internal/api/object_keys.go` and the job artifact handlers only presign job-scoped object keys
 
 ### Trusted proxies and `X-Forwarded-For`
@@ -115,7 +115,7 @@ The service sits between clients and backend infrastructure:
 - **Orchestrator Admin API** provides current job state used by the status projection
 - **MinIO** stores report and screenshot artifacts that this API presigns
 - **SQLite** stores named projects and promoted baselines
-- **Scanner registry** defines which scanners/modules are allowed and how config is validated
+- **Scanner registry** defines which scanners/modules are enabled and advertises their capabilities
 
 ## Local run and test commands
 

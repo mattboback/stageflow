@@ -167,8 +167,23 @@
 }
 
 @media (max-width: 720px) {
+	/* This block is the tallest thing between the app bar and the section tabs
+	   -- four stacked rows on a generous gap -- and on a short viewport it was
+	   pushing the tabs, and so the whole task, off the first screen. Tighten the
+	   rhythm rather than hide anything: every row here is a real answer to
+	   "did this run get better or worse". */
 	.local-baseline {
-		padding-inline: var(--sp-4);
+		padding: var(--sp-3) var(--sp-4);
+		gap: var(--sp-3);
+		margin-bottom: var(--sp-3);
+	}
+
+	.local-baseline__head {
+		gap: var(--sp-3);
+	}
+
+	.local-baseline__head h2 {
+		font-size: var(--fs-6);
 	}
 
 	.local-baseline__stats {
@@ -304,11 +319,23 @@
 }
 
 /* ---- section nav: canonical .tabs/.tab from instrument.css; this wrapper
-   only adds clearance and quiet horizontal scrolling on narrow screens ---- */
+   adds clearance, quiet horizontal scrolling on narrow screens, and the sticky
+   behaviour that keeps the sections reachable ---- */
 .rnav {
 	margin-top: var(--sp-5);
 	-webkit-overflow-scrolling: touch;
 	scrollbar-width: none;
+	/* The chrome above these tabs (baseline banner + score header) can run past
+	   700px on a local-project report, which put the tabs below the fold and
+	   left them there for the whole length of an issue list. */
+	position: sticky;
+	top: 64px; /* the app bar's height; cf. .isidebar's 64 + 24 breathing room */
+	/* One below --z-sticky on purpose: .site-header carries that value and this
+	   comes later in the document, so an equal z-index would paint the tabs over
+	   the header they are supposed to sit beneath. */
+	z-index: calc(var(--z-sticky) - 1);
+	/* .tabs is transparent; without a background the content scrolls through it. */
+	background: var(--ground);
 }
 .rnav::-webkit-scrollbar {
 	display: none;
@@ -372,7 +399,9 @@
 /* ---- filter sidebar ---- */
 .isidebar {
 	position: sticky;
-	top: 88px;
+	/* Clears the app bar (64px) and the sticky section tabs beneath it, which
+	   the filters would otherwise slide under. */
+	top: 136px;
 	display: grid;
 	gap: var(--sp-5);
 }
@@ -1984,11 +2013,14 @@ button.irow {
 	border-top: 0;
 	padding-top: 0;
 }
+/* Outranks the links beneath it. At the same size and weight as four repeated
+   generic labels, the one word that says which scanner this is got lost in
+   them, and the list read as an undifferentiated wall. */
 .artifacts__scanner-name {
 	margin: 0 0 var(--sp-2);
 	font-weight: 600;
 	color: var(--ink-strong);
-	font-size: var(--fs-4);
+	font-size: var(--fs-5);
 }
 
 /* ---- errors view ---- */
@@ -2113,6 +2145,10 @@ button.irow {
 @media (max-width: 880px) {
 	.rhead {
 		grid-template-columns: 1fr;
+		/* Second-biggest contributor to the pre-tabs column, after the baseline
+		   banner. The score and stats both stay; only the padding gives. */
+		padding: var(--sp-3) var(--sp-4);
+		gap: var(--sp-3);
 	}
 	.rhead__stats {
 		padding-left: 0;

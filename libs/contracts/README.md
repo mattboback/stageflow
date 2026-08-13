@@ -18,7 +18,7 @@ CI and `just setup`). Generated code is intentionally not committed.
 scanner's findings are aggregated into, whatever the scanner measures —
 axe accessibility violations, Lighthouse scores, broken links, or LLM
 navigation results. That single contract is what lets one CLI renderer, one
-web UI, and one baseline-diff engine serve all eight scanners.
+web UI, and one baseline-diff engine serve all seven scanners.
 
 Committed fixtures are contract documentation you can execute:
 

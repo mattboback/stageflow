@@ -4,14 +4,11 @@ import { useNavigate } from 'react-router';
 import { fetchScanners, getDefaultScannerSelections, submitScanJob } from '../api/client';
 import { getLocalProject, saveLocalProject, saveLocalRun } from '../local-project-store';
 import {
-	buildAiNavigatorConfig,
 	buildFormAuthConfig,
-	DEFAULT_AI_CONFIG,
 	estimateScanRuntime,
 	isAuthConfigComplete,
 	validatePlaygroundConfiguration,
 	validateZipUploadFile,
-	type AiConfigState,
 	type AuthFormConfig
 } from '../playground/playground-utils';
 import {
@@ -48,33 +45,6 @@ function preserveUnavailableProjectSelections(
 ): ScannerSelection[] {
 	const availableIds = new Set(catalog.map((scanner) => scanner.id));
 	return [...current, ...stored.filter((selection) => !availableIds.has(selection.id))];
-}
-
-function aiStateFromSelections(selections: ScannerSelection[]): AiConfigState {
-	const config = selections.find((selection) => selection.id === 'ai-navigator')?.config;
-	const goal = config?.goal as Record<string, unknown> | undefined;
-	const vision = config?.vision as Record<string, unknown> | undefined;
-	const criteria = Array.isArray(goal?.successCriteria)
-		? goal.successCriteria.flatMap((criterion) => {
-				if (!criterion || typeof criterion !== 'object') return [];
-				const candidate = criterion as Record<string, unknown>;
-				return typeof candidate.type === 'string' && typeof candidate.value === 'string'
-					? [{ type: candidate.type, value: candidate.value }]
-					: [];
-			})
-		: [];
-
-	return {
-		objective: typeof goal?.objective === 'string' ? goal.objective : DEFAULT_AI_CONFIG.objective,
-		maxSteps: typeof goal?.maxSteps === 'number' ? goal.maxSteps : DEFAULT_AI_CONFIG.maxSteps,
-		maxWallTimeMs:
-			typeof goal?.maxWallTimeMs === 'number'
-				? goal.maxWallTimeMs
-				: DEFAULT_AI_CONFIG.maxWallTimeMs,
-		model: typeof vision?.model === 'string' ? vision.model : DEFAULT_AI_CONFIG.model,
-		inputValues: [],
-		successCriteria: criteria
-	};
 }
 
 /**
@@ -124,9 +94,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	});
 	const isAuthValid = isAuthConfigComplete(authConfig);
 
-	const [aiConfig, setAiConfig] = useState<AiConfigState>(DEFAULT_AI_CONFIG);
-	const isAiNavigatorEnabled = selections.some((s) => s.id === 'ai-navigator' && s.enabled);
-
 	useEffect(() => {
 		const controller = new AbortController();
 		Promise.all([
@@ -146,7 +113,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 					setMode('url');
 					setUrls([...storedProject.configuration.urls, '']);
 					setSelections(mergeProjectSelections(res.scanners, storedProject.configuration.scanners));
-					setAiConfig(aiStateFromSelections(storedProject.configuration.scanners));
 				} else {
 					setSelections(getDefaultScannerSelections(res.scanners));
 				}
@@ -213,16 +179,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		setFile(f);
 	}
 
-	function selectionsForCurrentConfiguration(): ScannerSelection[] {
-		return isAiNavigatorEnabled
-			? selections.map((selection) =>
-					selection.id === 'ai-navigator'
-						? { ...selection, config: buildAiNavigatorConfig(aiConfig) }
-						: selection
-				)
-			: selections;
-	}
-
 	function selectionsForProjectPersistence(current: ScannerSelection[]): ScannerSelection[] {
 		return project
 			? preserveUnavailableProjectSelections(catalog, current, project.configuration.scanners)
@@ -275,7 +231,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 
 		setSavingProject(true);
 		try {
-			const currentSelections = selectionsForCurrentConfiguration();
+			const currentSelections = selections;
 			const saved = await saveLocalProject({
 				...project,
 				name: projectName,
@@ -307,7 +263,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 
 		const validUrls = validation.validUrls;
 		const auth = mode === 'url' ? buildFormAuthConfig(authConfig) : null;
-		const scannersForSubmit = selectionsForCurrentConfiguration();
+		const scannersForSubmit = selections;
 
 		setSubmitting(true);
 		try {
@@ -364,8 +320,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		file,
 		selections,
 		auth: authConfig,
-		ai: aiConfig,
-		aiEnabled: isAiNavigatorEnabled,
 		catalogLoading,
 		catalogError,
 		projectName: project ? projectName : undefined
@@ -383,7 +337,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		enabledById,
 		toggleScanner,
 		setAllScanners,
-		isAiNavigatorEnabled,
 		/** Enabled scanner count and catalog size, for the "3 of 8 armed" summary. */
 		armed,
 		total,
@@ -400,12 +353,10 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		fileInputRef,
 		onFilePicked,
 
-		// Auth and AI configuration
+		// Auth configuration
 		authConfig,
 		setAuthConfig,
 		isAuthValid,
-		aiConfig,
-		setAiConfig,
 
 		// Local project
 		project,
