@@ -33,10 +33,10 @@ func sensitiveTerminalConfig(t *testing.T) models.JobConfig {
 	}`)
 
 	return models.JobConfig{
-		Modules: []string{"ai-navigator"},
+		Modules: []string{"example-scanner"},
 		Auth:    auth,
 		ScannerConfigs: map[string]map[string]any{
-			"ai-navigator": {
+			"example-scanner": {
 				"goal": map[string]any{
 					"objective": "Complete the flow using " + terminalAICanary,
 					"inputValues": map[string]any{
@@ -92,7 +92,7 @@ func assertTerminalJobConfigRedacted(t *testing.T, database *Database, jobID str
 		t.Fatalf("terminal config retained auth recipe: %s", job.Config.Auth)
 	}
 
-	goal, _ := job.Config.ScannerConfigs["ai-navigator"]["goal"].(map[string]any)
+	goal, _ := job.Config.ScannerConfigs["example-scanner"]["goal"].(map[string]any)
 
 	inputValues, _ := goal["inputValues"].(map[string]any)
 	if got := inputValues["email"]; got != redactedConfigValue {
@@ -199,7 +199,7 @@ func TestFailJobWithTerminalEventScrubsEncodedFailureText(t *testing.T) {
 	)
 
 	config := sensitiveTerminalConfig(t)
-	config.ScannerConfigs["ai-navigator"]["goal"] = map[string]any{
+	config.ScannerConfigs["example-scanner"]["goal"] = map[string]any{
 		"objective": "Submit the form",
 		"inputValues": map[string]any{
 			"password":          secret,
@@ -409,7 +409,7 @@ func TestSanitizeLegacyTerminalRecordsBackfillsExistingSecrets(t *testing.T) {
 	`,
 		"failed with "+terminalAICanary,
 		"details "+terminalPasswordCanary,
-		`{"ai-navigator":{"error":"`+terminalUserCanary+`"}}`,
+		`{"example-scanner":{"error":"`+terminalUserCanary+`"}}`,
 		jobID,
 	); err != nil {
 		t.Fatalf("seed legacy failure text: %v", err)
@@ -419,7 +419,7 @@ func TestSanitizeLegacyTerminalRecordsBackfillsExistingSecrets(t *testing.T) {
 		"job_id":"` + jobID + `",
 		"auth":{"mode":"form","steps":[{"type":"fill","value":"` + terminalPasswordCanary + `"}]},
 		"pages":[{"pre_scan_actions":[{"type":"fill","value":"` + terminalUserCanary + `"}]}],
-		"scanner_configs":{"ai-navigator":{"goal":{"inputValues":{"email":"` + terminalAICanary + `"}}}}
+		"scanner_configs":{"example-scanner":{"goal":{"inputValues":{"email":"` + terminalAICanary + `"}}}}
 	}`
 	if err := database.InsertJobEvent(ctx, &JobEventInsert{
 		JobID:         jobID,

@@ -1,4 +1,4 @@
-import { Bot, CheckCircle, Globe, Link2, Search, Shield, Zap } from 'lucide-react';
+import { CheckCircle, Globe, Link2, Search, Shield, Zap } from 'lucide-react';
 
 export interface ScannerMeta {
 	icon: typeof Shield;
@@ -41,13 +41,6 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 		icon: CheckCircle,
 		label: 'Spelling & Grammar',
 		description: 'AI-powered spelling, grammar, and content quality checks'
-	},
-	/* Last on purpose: insertion order is what the home page lists, and this is
-	   the only scanner that is opt-in rather than on by default. */
-	'ai-navigator': {
-		icon: Bot,
-		label: 'AI Navigator',
-		description: 'LLM-powered agent that navigates toward a goal'
 	}
 };
 

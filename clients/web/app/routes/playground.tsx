@@ -16,7 +16,6 @@ import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
 import { PlaygroundAuthConfig } from '../components/playground/PlaygroundAuthConfig';
-import { PlaygroundAiConfig } from '../components/playground/PlaygroundAiConfig';
 import { usePlaygroundSession } from '../lib/hooks/usePlaygroundSession';
 import { SCANNER_META, scannerLabel } from '../lib/report/scanner-identity';
 import { buildSiteMeta, PLAYGROUND_DESCRIPTION, PLAYGROUND_TITLE } from '../lib/site-metadata';
@@ -33,8 +32,7 @@ export const meta: MetaFunction = () =>
 
 const CATEGORY_LABELS: Record<string, string> = {
 	seo: 'SEO',
-	ai: 'AI',
-	custom: 'AI, opt-in'
+	custom: 'Custom'
 };
 
 function categoryLabel(s: string): string {
@@ -52,7 +50,7 @@ interface PlaygroundSessionProps {
  *
  * React Router reuses this route component when only the query string changes.
  * Keying the stateful session makes a project switch (including removing the
- * query) synchronously discard credentials, AI inputs, files, and draft form
+ * query) synchronously discard credentials, files, and draft form
  * values before the next project's asynchronous load starts.
  */
 export default function Playground() {
@@ -72,7 +70,6 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 		enabledById,
 		toggleScanner,
 		setAllScanners,
-		isAiNavigatorEnabled,
 		armed,
 		total,
 		mode,
@@ -88,8 +85,6 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 		authConfig,
 		setAuthConfig,
 		isAuthValid,
-		aiConfig,
-		setAiConfig,
 		project,
 		projectName,
 		setProjectName,
@@ -110,7 +105,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 			<SiteHeader current="playground" />
 
 			<main id="main" className="console">
-				<div className="wrap wrap--app console__wrap">
+				<div className="wrap wrap--app">
 					<div className="page-head console__head">
 						<div>
 							{project ? (
@@ -137,7 +132,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 							)}
 							<p className="page-head__lede">
 								{project
-									? 'Configure repeatable URL scans here. Credentials and AI input values are prompted per run and never saved with the project.'
+									? 'Configure repeatable URL scans here. Credentials are prompted per run and never saved with the project.'
 									: 'Point StageFlow at any public URL or a static-site archive, choose the scanners you need, and run. No account, no install.'}
 							</p>
 						</div>
@@ -371,10 +366,6 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 									isValid={isAuthValid}
 									onConfigChange={setAuthConfig}
 								/>
-							)}
-
-							{isAiNavigatorEnabled && (
-								<PlaygroundAiConfig config={aiConfig} onConfigChange={setAiConfig} />
 							)}
 						</div>
 

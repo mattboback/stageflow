@@ -262,9 +262,6 @@ services:
       NATS_HOST: "nats"
       MINIO_HOST: "minio"
       POD_NETWORK: ${STAGEFLOW_NETWORK_NAME:-stageflow_net}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      OPENROUTER_APP_TITLE: ${OPENROUTER_APP_TITLE}
-      OPENROUTER_APP_REFERER: ${OPENROUTER_APP_REFERER}
     healthcheck:
       test: ["CMD", "/usr/local/bin/orchestrator-healthcheck"]
       interval: 15s
@@ -307,7 +304,6 @@ services:
         VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3020}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
         VITE_TAGLINE: ${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}
-        VITE_AI_NAVIGATOR_DEFAULT_MODEL: ${VITE_AI_NAVIGATOR_DEFAULT_MODEL:-openai/gpt-4o-mini}
         VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-self-hosted}
     image: localhost/stageflow/frontend-react:latest
     healthcheck:

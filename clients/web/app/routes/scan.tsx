@@ -159,7 +159,7 @@ export default function Scan() {
 			/>
 
 			<main id="main" className="run">
-				<div className="wrap run__wrap">
+				<div className="wrap wrap--app">
 					{/* status header: the one progress model */}
 					<div className={`shead${isFailed ? ' shead--failed' : ''}`}>
 						<div>

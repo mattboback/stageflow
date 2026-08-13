@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-	DEFAULT_AI_CONFIG,
 	estimateScanRuntime,
 	validatePlaygroundConfiguration,
 	type AuthFormConfig
@@ -108,23 +107,19 @@ describe('validatePlaygroundConfiguration', () => {
 			urls: [' example.com ', ''],
 			file: null,
 			selections,
-			auth,
-			ai: DEFAULT_AI_CONFIG,
-			aiEnabled: false
+			auth
 		});
 		expect(result.ready).toBe(true);
 		expect(result.validUrls).toEqual(['https://example.com']);
 	});
 
-	it('blocks invalid targets, incomplete form auth, and invalid AI bounds', () => {
+	it('blocks invalid targets and incomplete form auth', () => {
 		const invalidUrl = validatePlaygroundConfiguration({
 			mode: 'url',
 			urls: ['ftp://example.com'],
 			file: null,
 			selections,
-			auth,
-			ai: DEFAULT_AI_CONFIG,
-			aiEnabled: false
+			auth
 		});
 		expect(invalidUrl.focusId).toBe('url-input-0');
 
@@ -133,22 +128,9 @@ describe('validatePlaygroundConfiguration', () => {
 			urls: ['https://example.com'],
 			file: null,
 			selections,
-			auth: { ...auth, enabled: true, loginUrl: 'https://example.com/login' },
-			ai: DEFAULT_AI_CONFIG,
-			aiEnabled: false
+			auth: { ...auth, enabled: true, loginUrl: 'https://example.com/login' }
 		});
 		expect(incompleteAuth.focusId).toBe('auth-username');
-
-		const invalidAi = validatePlaygroundConfiguration({
-			mode: 'url',
-			urls: ['https://example.com'],
-			file: null,
-			selections: [{ id: 'ai-navigator', enabled: true }],
-			auth,
-			ai: { ...DEFAULT_AI_CONFIG, objective: 'Checkout', maxSteps: 51 },
-			aiEnabled: true
-		});
-		expect(invalidAi.focusId).toBe('ai-max-steps');
 	});
 });
 

@@ -609,13 +609,17 @@ pre {
 	min-height: 44px;
 }
 
-@media (max-width: 640px) {
+/* Nav layout, on its own breakpoint. The inline row is brand + five links +
+   the three-label theme control + the GitHub button, none of which shrink or
+   wrap, and together they need ~950px. Swapping at 640px left the whole
+   641-950px band overflowing sideways -- every tablet, iPad portrait included.
+   The links move into the disclosure panel rather than disappearing: before
+   the panel existed they were hidden with nothing in their place, so a narrow
+   screen had no route to Projects, Configure a scan, Scanners or Docs at all. */
+@media (max-width: 960px) {
 	.nav {
 		gap: 0.4rem;
 	}
-	/* The links move into the disclosure panel rather than disappearing. Before
-	   this they were hidden with nothing in their place, so a phone had no route
-	   to Projects, Configure a scan, Scanners or Docs at all. */
 	.site-header:not(.site-header--app) .navlinks {
 		display: none;
 	}
@@ -628,6 +632,9 @@ pre {
 	.site-header__bar {
 		gap: 0.75rem;
 	}
+}
+
+@media (max-width: 640px) {
 	/* Touch targets: keep visuals compact, guarantee ~44px hit areas */
 	.nav a.navlink,
 	.btn--sm {

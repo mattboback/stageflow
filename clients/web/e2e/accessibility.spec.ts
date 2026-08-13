@@ -221,7 +221,7 @@ test('an explicit theme choice survives a reload without a flash of the wrong on
 /*
  * The narrow-viewport nav, which the surface matrix cannot reach: axe only
  * grades what is painted, and the panel does not exist until it is opened.
- * Below 640px this IS the primary navigation -- the links are display:none --
+ * Below 960px this IS the primary navigation -- the links are display:none --
  * so a regression here removes every route off the home page on a phone.
  */
 test.describe('the narrow-screen menu', () => {
@@ -279,5 +279,44 @@ test.describe('the narrow-screen menu', () => {
 			'false'
 		);
 		await expect(page.locator('.navmenu__panel')).toHaveCount(0);
+	});
+});
+
+/*
+ * The band between the phone tests above and the 1440px surface matrix, which
+ * neither one covered. The inline row needs ~950px to lay out and nothing in it
+ * shrinks or wraps, so while the swap sat at 640px every width from 641 to ~950
+ * -- iPad portrait included -- pushed the GitHub button off-screen and scrolled
+ * the whole page sideways. Both ends of the swap are pinned here because moving
+ * the breakpoint in either direction reintroduces one side of the bug.
+ */
+test.describe('the nav swap band', () => {
+	const horizontalOverflow = (page: Page) =>
+		page.evaluate(
+			() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+		);
+
+	for (const width of [700, 768, 820, 900] as const) {
+		test(`at ${width}px the menu replaces the inline row and nothing overflows`, async ({
+			page
+		}) => {
+			await page.setViewportSize({ width, height: 900 });
+			await page.goto('/');
+
+			const header = page.locator('.site-header');
+			await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible();
+			await expect(header.getByRole('link', { name: 'Configure a scan' })).toBeHidden();
+			expect(await horizontalOverflow(page)).toBe(0);
+		});
+	}
+
+	test('at 1024px the inline row is back and the trigger is gone', async ({ page }) => {
+		await page.setViewportSize({ width: 1024, height: 900 });
+		await page.goto('/');
+
+		const header = page.locator('.site-header');
+		await expect(header.getByRole('link', { name: 'Configure a scan' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Menu' })).toBeHidden();
+		expect(await horizontalOverflow(page)).toBe(0);
 	});
 });

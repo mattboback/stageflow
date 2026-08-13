@@ -74,7 +74,7 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 				</Link>
 				<nav className="nav" aria-label="Primary">
 					{/* One definition, two placements. Only ever one of them is
-					    interactive: the inline row is display:none below 640px, which
+					    interactive: the inline row is display:none below 960px, which
 					    takes it out of the tab order, and the panel's children do not
 					    exist at all until it is opened. */}
 					<div className="navlinks">{links}</div>

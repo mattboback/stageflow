@@ -144,51 +144,12 @@ export default function Projects() {
 						</div>
 					)}
 
+					{/* The list leads, in the source as well as on screen: a returning
+					    visitor's projects are the reason they came back, and stacking the
+					    form first pushed every card below the fold on a short viewport.
+					    Ordering it here rather than with CSS `order` keeps the tab order
+					    matching what the eye sees at both widths. */}
 					<div className="projects-grid">
-						<section className="panel project-create" aria-labelledby="create-project-heading">
-							<div className="panel__head">
-								<h2 id="create-project-heading">Create a project</h2>
-								<FolderPlus size={19} aria-hidden="true" />
-							</div>
-							<form
-								className="panel__body project-create__form"
-								onSubmit={(event) => {
-									void onCreate(event);
-								}}
-								noValidate
-							>
-								<label className="field">
-									<span className="label">Project name</span>
-									<input
-										className="input"
-										value={name}
-										onChange={(event) => setName(event.target.value)}
-										maxLength={80}
-										autoComplete="off"
-									/>
-								</label>
-								<label className="field">
-									<span className="label">Website URL</span>
-									<input
-										className="input"
-										type="url"
-										value={url}
-										onChange={(event) => setUrl(event.target.value)}
-										autoComplete="url"
-									/>
-								</label>
-								{formError && (
-									<p className="project-create__error" role="alert">
-										{formError}
-									</p>
-								)}
-								<button className="btn btn--primary" type="submit" disabled={creating}>
-									{creating ? 'Creating…' : 'Create and configure'}
-									<ArrowRight size={17} aria-hidden="true" />
-								</button>
-							</form>
-						</section>
-
 						<section className="project-list" aria-labelledby="saved-projects-heading">
 							<div className="project-list__head">
 								<h2 id="saved-projects-heading">Your projects</h2>
@@ -255,6 +216,50 @@ export default function Projects() {
 									})}
 								</div>
 							)}
+						</section>
+
+						<section className="panel project-create" aria-labelledby="create-project-heading">
+							<div className="panel__head">
+								<h2 id="create-project-heading">Create a project</h2>
+								<FolderPlus size={19} aria-hidden="true" />
+							</div>
+							<form
+								className="panel__body project-create__form"
+								onSubmit={(event) => {
+									void onCreate(event);
+								}}
+								noValidate
+							>
+								<label className="field">
+									<span className="label">Project name</span>
+									<input
+										className="input"
+										value={name}
+										onChange={(event) => setName(event.target.value)}
+										maxLength={80}
+										autoComplete="off"
+									/>
+								</label>
+								<label className="field">
+									<span className="label">Website URL</span>
+									<input
+										className="input"
+										type="url"
+										value={url}
+										onChange={(event) => setUrl(event.target.value)}
+										autoComplete="url"
+									/>
+								</label>
+								{formError && (
+									<p className="project-create__error" role="alert">
+										{formError}
+									</p>
+								)}
+								<button className="btn btn--primary" type="submit" disabled={creating}>
+									{creating ? 'Creating…' : 'Create and configure'}
+									<ArrowRight size={17} aria-hidden="true" />
+								</button>
+							</form>
 						</section>
 					</div>
 				</div>

@@ -208,6 +208,32 @@ func TestPlanRejectsCollisionWithReservedEnvName(t *testing.T) {
 	}
 }
 
+func TestPlanRejectsRetiredProviderEnvReferences(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{
+		"OPENROUTER_API_KEY",
+		"OPENROUTER_APP_TITLE",
+		"OPENROUTER_APP_REFERER",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			authJSON := `{"mode":"form","login_url":"https://x","steps":[{"type":"fill","selector":"#a","value":{"from_env":"` + name + `"}}],"success":{"type":"load"}}`
+			planner := newAuthPlanner(t, map[string]string{name: "retired-provider-value"})
+
+			_, err := planner.Plan(context.Background(), newAuthJob(t, authJSON), "axe")
+			if err == nil {
+				t.Fatalf("expected Plan() to reject retired provider env var %q", name)
+			}
+
+			if !strings.Contains(err.Error(), "reserved") {
+				t.Errorf("error should mention reserved name for %q; got: %v", name, err)
+			}
+		})
+	}
+}
+
 // TestPlanRejectsBrowserAndResultSubjectEnvCollisions guards the security
 // reservation for env vars the scanner-runner interprets directly: Chromium
 // launch controls and result-subject overrides must not be settable via a

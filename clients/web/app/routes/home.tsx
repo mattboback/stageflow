@@ -111,7 +111,7 @@ export default function Home() {
 								.
 							</h1>
 							<p className="hero__lede">
-								{SITE_NAME} runs eight scanners, compares each release against the baseline you
+								{SITE_NAME} runs seven scanners, compares each release against the baseline you
 								promoted, and shows exactly what changed. Local projects work without an account and
 								stay in your browser.
 							</p>
@@ -281,7 +281,7 @@ export default function Home() {
 					<div className="wrap wrap--app">
 						<div className="scansum">
 							<div className="scansum__copy">
-								<h2 id="scanners-heading">Eight scanners, one merged report</h2>
+								<h2 id="scanners-heading">Seven scanners, one merged report</h2>
 								<p>
 									Each runs in its own rootless container and merges into a single severity-ranked
 									report — the same shape from the CLI, from CI, or from the browser.
@@ -333,7 +333,7 @@ export default function Home() {
 									{'\n'}
 									<span className="terminal__ok">✓</span> lighthouse{'       '}82 issues · 82.6s
 									{'\n'}
-									<span className="terminal__ok">✓</span> 6 more scanners{'  '}completed
+									<span className="terminal__ok">✓</span> 5 more scanners{'  '}completed
 									{'\n'}
 									{'\n'}
 									Score: 88 (B) · serious 2 · moderate 5 · minor 11

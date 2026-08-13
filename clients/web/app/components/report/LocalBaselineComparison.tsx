@@ -56,8 +56,12 @@ export function LocalBaselineComparison({
 					>
 						Run again <ArrowRight size={16} aria-hidden="true" />
 					</Link>
+					{/* Ghost, not primary: this sits above the score, the severity counts
+					    and the review queue, so styling it as the page's call to action
+					    invited promoting a baseline before seeing what was in it. The
+					    page's one primary is "Start review", further down. */}
 					<button
-						className="btn btn--primary btn--sm"
+						className="btn btn--ghost btn--sm"
 						type="button"
 						onClick={onPromote}
 						disabled={promoting || isCurrentBaseline}

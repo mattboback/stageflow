@@ -309,6 +309,17 @@ export function VisualReviewPanel({
 		scrollToElement(next);
 	};
 
+	/* Selecting an issue has to move the canvas to it, not just mark it active.
+	   Small screens open at 100% rather than fit-width -- a desktop capture
+	   scaled to fit a phone is unreadable -- so the viewport starts on the
+	   top-left corner of the page and a marker chosen from the list is almost
+	   always outside it. Without this, picking an issue looked like nothing
+	   happened, with no hint of which way to pan. */
+	const revealIssue = (issueId: string) => {
+		const element = walkOrder.find((el) => el.issueId === issueId);
+		if (element) scrollToElement(element);
+	};
+
 	if (!selectedPage) {
 		return (
 			<div className="blankslate">
@@ -327,7 +338,10 @@ export function VisualReviewPanel({
 
 	const zoomBy = (factor: number) => {
 		setZoom((prev) => {
-			const current = prev === 'fit' ? 1 : prev;
+			// Same rule as the wheel handler: leaving 'fit' has to start from the
+			// scale that was on screen. Assuming 1 made the first + on a wide
+			// capture jump from ~30% straight to 125%.
+			const current = prev === 'fit' ? renderedScaleRef.current : prev;
 			return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current * factor));
 		});
 	};
@@ -539,6 +553,7 @@ export function VisualReviewPanel({
 										className={`vrev__issue-btn${isActive ? ' vrev__issue-btn--active' : ''}`}
 										onClick={() => {
 											setActiveIssueId(first.id);
+											revealIssue(first.id);
 											onIssueSelect(first);
 										}}
 									>

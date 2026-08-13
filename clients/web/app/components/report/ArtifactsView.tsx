@@ -1,5 +1,6 @@
 import type { ScanResult } from '../../lib/types/scan';
 import { buildApiUrl } from '../../lib/api/utils';
+import { scannerLabel } from '../../lib/report/scanner-identity';
 
 interface Props {
 	jobId: string;
@@ -94,7 +95,10 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 								if (item.scan_recipe) links.push({ href: item.scan_recipe, label: 'Scan recipe' });
 								return (
 									<li key={scannerId}>
-										<p className="artifacts__scanner-name">{scannerId}</p>
+										{/* The scanner name is the only thing distinguishing one of these
+										    rows from the next -- the four link labels repeat verbatim down
+										    the whole list -- so it gets the real name, not the raw id. */}
+										<p className="artifacts__scanner-name">{scannerLabel(scannerId)}</p>
 										<ul className="artifacts__links artifacts__links--inline">
 											{links.map((link) => (
 												<li key={link.label}>

@@ -2,7 +2,6 @@ const DEFAULT_SITE_NAME = 'StageFlow';
 const DEFAULT_SITE_URL = 'https://stageflow.org';
 const DEFAULT_GITHUB_URL = 'https://github.com/mattboback/stageflow';
 const DEFAULT_TAGLINE = 'Self-hostable frontend quality regression scanning';
-const DEFAULT_AI_MODEL = 'openai/gpt-4o-mini';
 
 function envText(value: unknown, fallback: string): string {
 	return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -26,10 +25,6 @@ export const SITE_URL = absoluteUrl(import.meta.env.VITE_SITE_URL, DEFAULT_SITE_
 export const GITHUB_URL = absoluteUrl(import.meta.env.VITE_GITHUB_URL, DEFAULT_GITHUB_URL);
 export const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
 export const SITE_TAGLINE = envText(import.meta.env.VITE_TAGLINE, DEFAULT_TAGLINE);
-export const AI_NAVIGATOR_DEFAULT_MODEL = envText(
-	import.meta.env.VITE_AI_NAVIGATOR_DEFAULT_MODEL,
-	DEFAULT_AI_MODEL
-);
 // Vite injects VITE_* as untyped values, so read it as unknown and narrow rather
 // than calling .trim() on an implicit any.
 const rawDeploymentMode: unknown = import.meta.env.VITE_DEPLOYMENT_MODE;

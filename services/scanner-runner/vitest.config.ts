@@ -13,7 +13,6 @@ export default defineConfig({
 			exclude: [
 				"dist/**",
 				"node_modules/**",
-				"src/ai/**",
 				"src/screenshots/**",
 				"src/types/**",
 				"src/index.ts",

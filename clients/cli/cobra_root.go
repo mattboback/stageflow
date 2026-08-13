@@ -64,7 +64,6 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	rootCmd.AddCommand(newReportCmd(opts))
 	rootCmd.AddCommand(newScannersCmd(opts))
 	rootCmd.AddCommand(newAuthCmd(opts))
-	rootCmd.AddCommand(newAICmd(opts))
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newCompletionCmd())
 	rootCmd.AddCommand(newDocsCmd())

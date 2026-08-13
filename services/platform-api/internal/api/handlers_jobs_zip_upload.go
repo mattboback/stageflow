@@ -301,10 +301,6 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 		screenshot = *state.screenshot
 	}
 
-	if detail := validateScannerConfigs(modules, state.scannerConfigs); detail != nil {
-		return nil, newClientDetailError(*detail)
-	}
-
 	return &zipJobRequest{
 		jobID:          jobID,
 		runID:          runID,
@@ -427,7 +423,7 @@ func handleScannerConfigsPart(ctx context.Context, part *multipart.Part, state *
 		return newClientDetailError(httputil.NewValidationError(
 			"scanner_configs",
 			"Invalid scanner_configs JSON",
-			`Provide a JSON object mapping scanner IDs to option objects, e.g. {"ai-navigator":{"goal":{"objective":"Reach checkout"},"vision":{"model":"openai/gpt-4o-mini"}}}`,
+			`Provide a JSON object mapping scanner IDs to option objects, e.g. {"axe":{"rules":{"color-contrast":{"enabled":false}}}}`,
 		))
 	}
 

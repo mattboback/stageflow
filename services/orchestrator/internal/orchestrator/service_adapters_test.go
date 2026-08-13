@@ -54,8 +54,8 @@ func TestOrchestratorRuntimeCreateJobPodDelegatesWithoutRecordingInternalEvents(
 func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
 	if err := registry.Register(&scanners.Definition{
-		ID:      "ai-navigator",
-		Name:    "AI Navigator",
+		ID:      "axe",
+		Name:    "axe",
 		Enabled: true,
 	}); err != nil {
 		t.Fatalf("Register() error = %v", err)
@@ -66,9 +66,6 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
 		config.PodNetnsMode = podNetnsModeHost
 		config.ScannerRegistry = registry
-		config.OpenRouterAPIKey = "test-openrouter-key"
-		config.OpenRouterAppTitle = "StageFlow Test"
-		config.OpenRouterAppReferer = "https://example.com"
 		config.PodmanClient = &mockPodmanClient{
 			inspectVolumeFunc: func(_ context.Context, name string) (*podman.VolumeInfo, error) {
 				return &podman.VolumeInfo{Name: name, Mountpoint: "/volumes/" + name}, nil
@@ -92,7 +89,7 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 		InputPath: "staging/job-configured-planner/site.zip",
 		PodID:     "pod-123",
 		Config: models.JobConfig{
-			Modules: []string{"ai-navigator"},
+			Modules: []string{"axe"},
 		},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -120,10 +117,6 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 
 	if got, want := gotReq.Env["MINIO_ENDPOINT"], hostNetnsMinioEndpoint; got != want {
 		t.Fatalf("MINIO_ENDPOINT = %q, want %q", got, want)
-	}
-
-	if got, want := gotReq.Env["OPENROUTER_API_KEY"], "test-openrouter-key"; got != want {
-		t.Fatalf("OPENROUTER_API_KEY = %q, want %q", got, want)
 	}
 }
 

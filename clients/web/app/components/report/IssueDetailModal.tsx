@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useRovingTabList } from '../../lib/hooks/useRovingTabList';
+import { useScrollLock } from '../../lib/hooks/useScrollLock';
 
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
@@ -131,6 +132,8 @@ export function IssueDetailModal({
 	};
 
 	const modalRef = useRef<HTMLDivElement>(null);
+
+	useScrollLock();
 
 	useEffect(() => {
 		const previousActiveElement = document.activeElement as HTMLElement | null;

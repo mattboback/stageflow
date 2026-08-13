@@ -8,9 +8,6 @@
 defaultImage: localhost/stageflow/scanner-runner:latest
 
 scanners:
-  ai-navigator:
-    image: localhost/stageflow/scanner-runner:latest
-
   axe:
     image: localhost/stageflow/scanner-runner:latest
 

@@ -2,7 +2,6 @@ import type { ScannerSelection } from '../../types/scan';
 
 export type ScannerPreset = 'coverage' | 'quick' | 'custom';
 
-const aiNavigatorId = 'ai-navigator';
 const axeId = 'axe';
 
 function getQuickScannerId(scanners: ScannerSelection[]): string | undefined {
@@ -15,10 +14,6 @@ function getQuickScannerId(scanners: ScannerSelection[]): string | undefined {
 	}
 
 	return scanners[0]?.id;
-}
-
-function hasNonAiScanner(scanners: ScannerSelection[]): boolean {
-	return scanners.some((scanner) => scanner.id !== aiNavigatorId);
 }
 
 export function applyScannerPreset(
@@ -37,19 +32,7 @@ export function applyScannerPreset(
 		}));
 	}
 
-	const allowNonAiOnly = hasNonAiScanner(scanners);
-	let updated = scanners.map((scanner) => ({
-		...scanner,
-		enabled: allowNonAiOnly ? scanner.id !== aiNavigatorId : false
-	}));
-
-	if (!updated.some((scanner) => scanner.enabled)) {
-		const fallbackId = scanners[0]?.id;
-		updated = scanners.map((scanner) => ({
-			...scanner,
-			enabled: scanner.id === fallbackId
-		}));
-	}
-
-	return updated;
+	// 'coverage': every scanner the catalog offered. It used to carve out the
+	// opt-in AI navigator, which no longer exists.
+	return scanners.map((scanner) => ({ ...scanner, enabled: true }));
 }

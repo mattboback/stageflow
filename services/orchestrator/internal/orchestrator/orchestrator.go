@@ -76,9 +76,6 @@ type Orchestrator struct {
 	podHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	pageLoadTimeout      int
 	scrollTimeout        int
-	openRouterAPIKey     string
-	openRouterAppTitle   string
-	openRouterAppReferer string
 	stagingStorage       storage.Deleter
 	storage              storage.Client // Full storage access for report generation
 	deadlinePollInterval time.Duration
@@ -111,9 +108,6 @@ type Config struct {
 	PodHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	PageLoadTimeout      int
 	ScrollTimeout        int
-	OpenRouterAPIKey     string
-	OpenRouterAppTitle   string
-	OpenRouterAppReferer string
 	StagingStorage       storage.Deleter
 	Storage              storage.Client // Full storage for report generation
 	DeadlinePollInterval time.Duration
@@ -223,9 +217,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		podHostMappings:      config.PodHostMappings,
 		pageLoadTimeout:      pageLoadTimeout,
 		scrollTimeout:        scrollTimeout,
-		openRouterAPIKey:     config.OpenRouterAPIKey,
-		openRouterAppTitle:   config.OpenRouterAppTitle,
-		openRouterAppReferer: config.OpenRouterAppReferer,
 		stagingStorage:       config.StagingStorage,
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,

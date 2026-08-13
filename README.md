@@ -3,10 +3,9 @@
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-StageFlow is a self-hostable **frontend quality platform**. It ships eight
+StageFlow is a self-hostable **frontend quality platform**. It ships seven
 built-in scanners — accessibility, performance, SEO, links, security headers,
-social metadata, content quality, and agent-driven navigation — behind a single
-report contract, and remembers a **baseline per project** so every scan can
+social metadata, and content quality — behind a single report contract, and remembers a **baseline per project** so every scan can
 answer the question that matters in CI: _did this change make the frontend
 worse?_
 
@@ -149,13 +148,11 @@ Built-in scanners:
 - `link-checker` for internal and external link health
 - `open-graph` for social preview metadata
 - `spelling-grammar` for content quality
-- `ai-navigator` for natural-language navigation objectives through an LLM
 
 Scanner enablement and resource overrides are configured through
 [infra/scanners/scanners.example.yaml](infra/scanners/scanners.example.yaml).
 The local example enables a smaller default set for resource use; request or
-enable additional scanners when you need them. The AI Navigator is optional and
-requires `OPENROUTER_API_KEY` when enabled.
+enable additional scanners when you need them.
 
 ## Repository Map
 

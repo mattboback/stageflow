@@ -23,7 +23,6 @@ func TestBuiltinManifests(t *testing.T) {
 	sort.Strings(gotIDs)
 
 	want := []string{
-		"ai-navigator",
 		"axe",
 		"lighthouse",
 		"link-checker",

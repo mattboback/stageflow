@@ -7,7 +7,6 @@ import type { ScannerBase } from '../core/scanner-base';
 
 import { validateManifest } from '../core/manifest';
 import {
-	AiNavigatorScanner,
 	AxeScanner,
 	LighthouseScanner,
 	LinkCheckerScanner,
@@ -18,7 +17,6 @@ import {
 } from './index';
 
 export const BUILTIN_SCANNER_IDS = [
-	'ai-navigator',
 	'axe',
 	'lighthouse',
 	'link-checker',
@@ -47,7 +45,6 @@ export interface ResolvedBuiltinScanner {
 }
 
 const BUILTIN_SCANNERS: readonly BuiltinScannerDefinition[] = [
-	{ id: 'ai-navigator', create: () => new AiNavigatorScanner() },
 	{ id: 'axe', create: () => new AxeScanner() },
 	{ id: 'lighthouse', create: () => new LighthouseScanner() },
 	{ id: 'link-checker', create: () => new LinkCheckerScanner() },
