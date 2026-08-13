@@ -72,7 +72,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@sentry/node": "9.47.1",
+    "@sentry/node": "10.70.0",
     "@types/node": "^24.13.3",
     "@vitest/coverage-v8": "4.1.6",
     "@vitest/eslint-plugin": "^1.6.24",
