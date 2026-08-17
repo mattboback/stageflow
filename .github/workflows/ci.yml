@@ -168,7 +168,7 @@ jobs:
       # intermittently failed with "no release for just matching version specifier"
       # on a version that is in fact published, reddening unrelated PRs.
       - name: Setup just
-        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         with:
           tool: just@${{ env.JUST_VERSION }}
 
@@ -314,7 +314,7 @@ jobs:
         working-directory: clients/web
 
       - name: Setup just
-        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
+        uses: taiki-e/install-action@82cd3e7658a6f96c86c0234aeeda1748937cb0a1 # v2.85.13
         with:
           tool: just@${{ env.JUST_VERSION }}
 
