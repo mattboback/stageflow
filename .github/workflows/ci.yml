@@ -168,7 +168,7 @@ jobs:
       # intermittently failed with "no release for just matching version specifier"
       # on a version that is in fact published, reddening unrelated PRs.
       - name: Setup just
-        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
+        uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with:
           tool: just@${{ env.JUST_VERSION }}
 
@@ -314,7 +314,7 @@ jobs:
         working-directory: clients/web
 
       - name: Setup just
-        uses: taiki-e/install-action@7572810d7dd469b651bb7793945692cf78da5dd7 # v2.85.0
+        uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with:
           tool: just@${{ env.JUST_VERSION }}
 
@@ -439,7 +439,7 @@ jobs:
         run: docker build -f "${{ matrix.image.dockerfile }}" -t "stageflow/${{ matrix.image.name }}:ci" .
 
       - name: Generate SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: stageflow/${{ matrix.image.name }}:ci
           artifact-name: sbom-${{ matrix.image.name }}
