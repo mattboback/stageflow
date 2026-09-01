@@ -14,11 +14,13 @@ import { SiteFooter } from '../components/SiteFooter';
 import { RouteFault } from '../components/RouteFault';
 import { ArtifactsView } from '../components/report/ArtifactsView';
 import { LocalBaselineComparison } from '../components/report/LocalBaselineComparison';
+import { ReportJobActions } from '../components/report/ReportJobActions';
 import { ReportView } from '../components/report/ReportView';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
 import {
+	createLocalProject,
 	getLocalBaseline,
 	getLocalProject,
 	getLocalRun,
@@ -26,13 +28,16 @@ import {
 	saveLocalRun
 } from '../lib/local-project-store';
 import {
+	buildArchivedLocalRun,
 	fingerprintProjectConfiguration,
 	isUnifiedReport,
 	type LocalBaseline,
 	type LocalProject,
+	type LocalProjectConfiguration,
 	type LocalRun
 } from '../lib/projects';
 import { pageTitle, SITE_NAME } from '../lib/site-metadata';
+import type { UnifiedReport } from '../lib/types/unified-report';
 
 export const links = () => [
 	{ rel: 'stylesheet', href: severityStyles },
@@ -71,7 +76,18 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 	const [projectMessage, setProjectMessage] = useState<string | null>(null);
 	const [promotingBaseline, setPromotingBaseline] = useState(false);
 
-	const { status, report, job, error, screenshots, refreshArtifacts } = useScanReport(id);
+	const {
+		status,
+		report: liveReport,
+		job,
+		error,
+		screenshots,
+		refreshArtifacts
+	} = useScanReport(id);
+	const archivedReport =
+		!liveReport && localRun?.report && isUnifiedReport(localRun.report) ? localRun.report : null;
+	const report = liveReport ?? archivedReport;
+	const viewingArchived = Boolean(archivedReport && !liveReport);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -113,22 +129,9 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 	}, [id, requestedProjectId]);
 
 	useEffect(() => {
-		if (
-			!report ||
-			!localRun ||
-			localRun.status === 'complete' ||
-			report.meta.jobId !== id ||
-			localRun.jobId !== id
-		) {
-			return;
-		}
-		const completedRun: LocalRun = {
-			...localRun,
-			status: 'complete',
-			completedAt: new Date().toISOString(),
-			...(report.summary.score == null ? {} : { score: report.summary.score }),
-			totalIssues: report.summary.totalIssues
-		};
+		if (!report || !localRun) return;
+		const completedRun = buildArchivedLocalRun(localRun, report, id);
+		if (!completedRun) return;
 		saveLocalRun(completedRun)
 			.then(() => setLocalRun(completedRun))
 			.catch((saveError: unknown) => {
@@ -193,21 +196,71 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		[setSearchParams]
 	);
 
+	async function saveOneOffProject(name: string) {
+		if (!report || !isUnifiedReport(report)) {
+			throw new Error(`This report does not match the supported ${SITE_NAME} report contract.`);
+		}
+		const configuration = configurationFromReport(report);
+		const project = await createLocalProject(name, configuration);
+		const run: LocalRun = {
+			jobId: id,
+			projectId: project.id,
+			configFingerprint: await fingerprintProjectConfiguration(configuration),
+			status: 'complete',
+			createdAt: report.meta.scannedAt ?? new Date().toISOString(),
+			completedAt: report.meta.completedAt ?? new Date().toISOString(),
+			...(report.summary.score == null ? {} : { score: report.summary.score }),
+			totalIssues: report.summary.totalIssues,
+			report
+		};
+		await saveLocalRun(run);
+		await saveLocalBaseline({
+			projectId: project.id,
+			jobId: id,
+			configFingerprint: run.configFingerprint,
+			report,
+			createdAt: new Date().toISOString()
+		});
+		setLocalProject(project);
+		setLocalRun(run);
+		setLocalBaseline(await getLocalBaseline(project.id));
+		setSearchParams(
+			(prev) => {
+				const next = new URLSearchParams(prev);
+				next.set('project', project.id);
+				return next;
+			},
+			{ replace: true, preventScrollReset: true }
+		);
+		setProjectMessage('Saved in this browser and promoted as the local baseline.');
+	}
+
 	/* Raw, not occurrence-expanded: LocalBaselineComparison and saveLocalBaseline
 	   both persist and diff the report exactly as it arrived from the API. */
-	const banner =
-		localProject && localRun && report ? (
-			<LocalBaselineComparison
-				project={localProject}
-				run={localRun}
-				baseline={localBaseline}
+	const banner = report ? (
+		<>
+			<ReportJobActions
+				jobId={id}
 				report={report}
-				promoting={promotingBaseline}
-				message={projectMessage}
-				onPromote={() => void promoteAsBaseline()}
-				onOpenIssue={openIssue}
+				archived={viewingArchived}
+				canDelete={!viewingArchived}
+				showSave={!localProject}
+				onSaveProject={saveOneOffProject}
 			/>
-		) : null;
+			{localProject && localRun ? (
+				<LocalBaselineComparison
+					project={localProject}
+					run={localRun}
+					baseline={localBaseline}
+					report={report}
+					promoting={promotingBaseline}
+					message={projectMessage}
+					onPromote={() => void promoteAsBaseline()}
+					onOpenIssue={openIssue}
+				/>
+			) : null}
+		</>
+	) : null;
 
 	return (
 		<>
@@ -227,17 +280,33 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 				banner={banner}
 				artifactsPanel={
 					<ArtifactsView
-						jobId={id}
-						job={job}
-						onRefreshArtifacts={() => {
-							void refreshArtifacts();
-						}}
+						jobId={viewingArchived ? '' : id}
+						job={viewingArchived ? null : job}
+						{...(viewingArchived
+							? {}
+							: {
+									onRefreshArtifacts: () => {
+										void refreshArtifacts();
+									}
+								})}
 					/>
 				}
 			/>
 			<SiteFooter slim />
 		</>
 	);
+}
+
+function configurationFromReport(report: UnifiedReport): LocalProjectConfiguration {
+	const urls = report.meta.baseUrl
+		? [report.meta.baseUrl]
+		: report.pages.map((page) => page.url).filter(Boolean);
+	return {
+		urls: urls.length > 0 ? urls : ['https://example.com'],
+		scanners: report.scanners.map((scanner) => ({ id: scanner.id, enabled: true })),
+		browser: 'chromium',
+		highlightStyle: 'solid'
+	};
 }
 
 export function ErrorBoundary() {

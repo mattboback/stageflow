@@ -310,6 +310,14 @@ export function ReportView({
 						<h2>Scan failed</h2>
 						<p>{error || 'The scan did not produce a report.'}</p>
 					</div>
+				) : status === 'cancelled' ? (
+					<div className="blankslate blankslate--framed rsection-placeholder" role="status">
+						<h2>Scan cancelled</h2>
+						<p>
+							{error ||
+								'This run was stopped before a report was produced. Hosted artifacts can be deleted from the scan page.'}
+						</p>
+					</div>
 				) : (
 					<div
 						className="blankslate blankslate--framed rsection-placeholder"
@@ -317,11 +325,11 @@ export function ReportView({
 						aria-live="polite"
 					>
 						<Pill variant="queued">Loading</Pill>
-						<h2>Preparing report…</h2>
+						<h2>{status === 'complete' ? 'Preparing report…' : 'Scan still running'}</h2>
 						<p>
 							{status === 'complete'
 								? 'Scan complete — aggregating report.'
-								: 'Waiting for the scan to finish.'}
+								: 'This report is not ready yet. Delete is available after the scan finishes or is cancelled.'}
 						</p>
 					</div>
 				)}

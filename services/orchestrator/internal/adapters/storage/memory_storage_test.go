@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -38,6 +39,17 @@ func (m *memoryStorage) DownloadFile(_ context.Context, bucket, path string) (io
 
 func (m *memoryStorage) DeleteFile(_ context.Context, bucket, path string) error {
 	delete(m.objects, m.key(bucket, path))
+	return nil
+}
+
+func (m *memoryStorage) DeletePrefix(_ context.Context, bucket, prefix string) error {
+	needle := m.key(bucket, prefix)
+	for key := range m.objects {
+		if strings.HasPrefix(key, needle) {
+			delete(m.objects, key)
+		}
+	}
+
 	return nil
 }
 

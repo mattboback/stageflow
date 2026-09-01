@@ -1,5 +1,9 @@
 # Contributing
 
+By contributing, you agree that your work is licensed under the [MIT License](LICENSE)
+that already covers this repository. This project follows the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Development Setup
 
 Choose the smallest loop that matches the change:

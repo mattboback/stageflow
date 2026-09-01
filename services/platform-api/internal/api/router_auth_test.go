@@ -71,6 +71,7 @@ func TestRouterRequiresAPIKeyAcrossProtectedAndEdgeAuthenticatedRoutes(t *testin
 			body:   `{}`,
 		},
 		{name: "projects", method: http.MethodGet, path: "/api/v1/projects"},
+		{name: "job delete", method: http.MethodDelete, path: "/api/v1/jobs/job-123"},
 		{
 			name:   "project baseline diff",
 			method: http.MethodGet,

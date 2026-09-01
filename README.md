@@ -92,6 +92,8 @@ stageflow project promote marketing-site --job-id <id>  # accept a run as the ne
 ```
 
 The full lifecycle, a CI gate snippet, and auth details are in the [CLI guide](docs/cli.md#projects-and-baselines).
+API-owned projects and CI gates need a caller key on a self-hosted StageFlow;
+the public demo accepts anonymous one-off scans only.
 
 Prefer the browser? The `/projects` workspace keeps named projects, completed
 runs, and manually promoted baselines in your browser's IndexedDB. It requires

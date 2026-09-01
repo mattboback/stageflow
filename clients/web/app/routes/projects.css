@@ -59,8 +59,13 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	gap: var(--sp-3);
 	border-bottom: 1px solid var(--line);
 	padding-bottom: var(--sp-3);
+}
+
+.project-import {
+	margin-left: auto;
 }
 
 .project-list__head h2 {

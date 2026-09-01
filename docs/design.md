@@ -10,7 +10,7 @@ Exact tokens and shared primitives live in `clients/web/app/styles/instrument.cs
 - Use borders and tonal steps for structure; reserve shadows for elements that actually float.
 - Keep controls compact and exact rather than soft or decorative.
 - Use rounded corners from the shared scale; do not invent local radii.
-- Use dark surfaces only for terminal-like output.
+- Offer a full light and dark theme. Keep terminal-like output dark in both.
 - Treat severity as a calibrated scale, not an alarm.
 
 Avoid generic cream SaaS dashboards, gradient text, glass cards, fake browser chrome, icon-card grids, gamified scores, red-everywhere security styling, and decorative page-load choreography.

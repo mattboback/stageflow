@@ -225,6 +225,27 @@ func (s *Store) DeleteProjectJob(ctx context.Context, jobID string) error {
 	return err
 }
 
+func (s *Store) TombstoneJob(ctx context.Context, jobID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO deleted_jobs (job_id, deleted_at) VALUES (?, ?)
+		 ON CONFLICT(job_id) DO NOTHING`,
+		jobID, time.Now().UTC(),
+	)
+
+	return err
+}
+
+func (s *Store) JobIsDeleted(ctx context.Context, jobID string) (bool, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM deleted_jobs WHERE job_id = ?`, jobID).
+		Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 func (s *Store) GetProjectForJob(ctx context.Context, jobID string) (*Project, error) {
 	row := s.db.QueryRowContext(ctx,
 		`SELECT p.id, p.slug, p.name, p.urls, p.scanners, p.baseline_job_id, p.created_at, p.updated_at

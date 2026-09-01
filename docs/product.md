@@ -59,8 +59,9 @@ What StageFlow's web UI must **not** look like:
 - Alarmist security-scanner aesthetics — red-everywhere, scare-tactic "THREATS DETECTED"
   urgency, gamified scores, confetti.
 - Fake browser chrome; brand-colored scanner logos used as decoration.
-- Cool-slate "developer-tool dark dashboard." StageFlow is light-only cool graphite;
-  dark is reserved for the intentional terminal/automation islands only.
+- Cool-slate "developer-tool dark dashboard" as the default. StageFlow is cool
+  graphite in light and dark; the visitor chooses. Terminal/automation islands
+  stay dark in both themes.
 - Heavy marketing-page reveal choreography on a tool that should feel instant and honest.
 
 ## Design Principles
@@ -95,5 +96,6 @@ What StageFlow's web UI must **not** look like:
   label, icon, or text.
 - **Reduced motion** is honored on every animation; no entrance fades on form fields (axe
   races partial opacity).
-- Light-only by design; keyboard and screen-reader support are first-class — the product
-  is itself an accessibility scanner.
+- Light and dark themes are first-class and contrast-checked; keyboard and
+  screen-reader support are first-class — the product is itself an accessibility
+  scanner.

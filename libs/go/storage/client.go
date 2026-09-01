@@ -20,6 +20,7 @@ type Downloader interface {
 // Deleter abstracts object cleanup for stages.
 type Deleter interface {
 	DeleteFile(ctx context.Context, bucket, path string) error
+	DeletePrefix(ctx context.Context, bucket, prefix string) error
 }
 
 // Presigner generates user-facing URLs without exposing credentials.

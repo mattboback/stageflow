@@ -130,10 +130,20 @@ This does not start the local dev server. A useful sequence is local validation 
 
 ## CI Gate
 
+Anonymous one-off scans against the public demo work without a key:
+
+```bash
+stageflow scan https://example.com --fail-on serious --api https://stageflow.org
+```
+
+`project create`, `project scan`, `project promote`, and `/diff` need a caller API
+key. The hosted demo does not issue those keys. Point CI project gates at your
+own StageFlow API:
+
 ```yaml
 - name: StageFlow regression gate
   env:
-    STAGEFLOW_API_URL: https://stageflow.org
+    STAGEFLOW_API_URL: https://stageflow.example.com
     STAGEFLOW_API_KEY: ${{ secrets.STAGEFLOW_API_KEY }}
   run: stageflow project scan marketing-site --fail-on serious
 ```
@@ -143,7 +153,7 @@ This does not start the local dev server. A useful sequence is local validation 
 ```bash
 stageflow report <job-id> --format json
 stageflow diff baseline.json current.json
-stageflow diff baseline.json https://example.com --api https://stageflow.org
+stageflow diff baseline.json https://example.com --api http://localhost:8080
 ```
 
 Use `--fail-on-new` to gate newly introduced issues and `--fail-on-regression` to include score regressions.

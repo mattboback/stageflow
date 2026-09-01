@@ -42,6 +42,8 @@ export function normalizeStatus(raw: string | undefined): ScanStatus {
 
 	if (value === 'failed') return 'failed';
 
+	if (value === 'cancelled' || value === 'canceled') return 'cancelled';
+
 	if (value === 'pending' || value === 'ready_to_scan') return 'pending';
 
 	if (value === 'scanning' || value === 'extracting' || value === 'completing') {
@@ -98,6 +100,8 @@ export function getLogMessage(normalizedState: string, data: StatusLike): string
 			const errorMessage = data.error ?? 'Unknown error';
 			return `CRITICAL: Job failed - ${errorMessage}${details ? ` (${details})` : ''}`;
 		}
+		case 'CANCELLED':
+			return 'Scan cancelled. Scanner pods are being torn down.';
 		default:
 			return null;
 	}

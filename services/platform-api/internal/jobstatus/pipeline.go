@@ -149,6 +149,17 @@ func (p *Pipeline) Current(ctx context.Context, jobID string) (*status.JobRecord
 	return nil, status.ErrJobNotFound
 }
 
+func (p *Pipeline) Forget(jobID string) {
+	if p == nil || jobID == "" {
+		return
+	}
+
+	unlock := p.lockJob(jobID)
+	defer unlock()
+
+	p.cache.delete(jobID)
+}
+
 func (p *Pipeline) Watch(ctx context.Context, jobID string) (*status.JobRecord, Subscription, error) {
 	sub := p.broker.Subscribe(jobID)
 

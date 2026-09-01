@@ -51,6 +51,7 @@ The process boot sequence is:
 | `GET /api/v1/jobs/:id/stream`             | SSE stream for live updates                       |
 | `GET /api/v1/jobs/:id/report`             | Redirect to the HTML report artifact              |
 | `GET /api/v1/jobs/:id/results`            | Redirect to the normalized JSON report artifact   |
+| `DELETE /api/v1/jobs/:id`                 | Delete artifacts and hide the job (bearer job id) |
 | `GET /api/v1/jobs/:id/diff`               | Diff a project scan against its promoted baseline |
 | `GET/POST /api/v1/projects`               | List or create named projects                     |
 | `GET/PATCH/DELETE /api/v1/projects/:slug` | Inspect, update, or delete a project              |

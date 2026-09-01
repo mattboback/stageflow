@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 )
@@ -49,6 +50,20 @@ func (m *memoryStorage) DeleteFile(_ context.Context, bucket, path string) error
 	defer m.mu.Unlock()
 
 	delete(m.objects, m.key(bucket, path))
+
+	return nil
+}
+
+func (m *memoryStorage) DeletePrefix(_ context.Context, bucket, prefix string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	needle := m.key(bucket, prefix)
+	for key := range m.objects {
+		if strings.HasPrefix(key, needle) {
+			delete(m.objects, key)
+		}
+	}
 
 	return nil
 }

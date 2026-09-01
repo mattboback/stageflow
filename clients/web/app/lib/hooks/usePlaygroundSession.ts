@@ -48,7 +48,7 @@ function preserveUnavailableProjectSelections(
 }
 
 /**
- * All configure-page state: the scanner catalog, the target list, auth and AI
+ * All configure-page state: the scanner catalog, the target list, auth
  * settings, local-project persistence, and submission.
  *
  * Extracted from routes/playground.tsx, where a single component held seventeen
@@ -337,7 +337,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		enabledById,
 		toggleScanner,
 		setAllScanners,
-		/** Enabled scanner count and catalog size, for the "3 of 8 armed" summary. */
+		/** Enabled scanner count and catalog size, for the "3 of 7 armed" summary. */
 		armed,
 		total,
 

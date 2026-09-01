@@ -1,4 +1,9 @@
 import {
+	buildLocalProjectExport,
+	parseLocalProjectExport,
+	type LocalProjectExport
+} from './local-project-export';
+import {
 	LOCAL_PROJECT_SCHEMA_VERSION,
 	sanitizeProjectConfiguration,
 	type LocalBaseline,
@@ -237,4 +242,57 @@ export async function saveLocalRun(run: LocalRun): Promise<void> {
 		}
 		await transactionComplete(transaction);
 	});
+}
+
+export async function exportLocalProject(projectId: string): Promise<LocalProjectExport> {
+	const project = await getLocalProject(projectId);
+	if (!project) {
+		throw new LocalProjectStoreUnavailableError('That local project is no longer in this browser.');
+	}
+
+	const [baseline, runs] = await Promise.all([
+		getLocalBaseline(projectId),
+		listLocalProjectRuns(projectId)
+	]);
+	return buildLocalProjectExport(project, baseline, runs);
+}
+
+export async function importLocalProject(value: unknown): Promise<LocalProject> {
+	const parsed = parseLocalProjectExport(value);
+	if (!parsed) {
+		throw new LocalProjectStoreUnavailableError(
+			'That file is not a StageFlow local project export.'
+		);
+	}
+
+	const now = new Date().toISOString();
+	const project: LocalProject = {
+		...parsed.project,
+		schemaVersion: LOCAL_PROJECT_SCHEMA_VERSION,
+		configuration: sanitizeProjectConfiguration(parsed.project.configuration),
+		updatedAt: now
+	};
+
+	await withDatabase(async (database) => {
+		const transaction = database.transaction(
+			[PROJECTS_STORE, BASELINES_STORE, RUNS_STORE],
+			'readwrite'
+		);
+		transaction.objectStore(PROJECTS_STORE).put(project);
+		if (parsed.baseline) {
+			transaction.objectStore(BASELINES_STORE).put({
+				...parsed.baseline,
+				projectId: project.id
+			});
+		}
+		for (const run of parsed.runs) {
+			transaction.objectStore(RUNS_STORE).put({
+				...run,
+				projectId: project.id
+			});
+		}
+		await transactionComplete(transaction);
+	});
+
+	return project;
 }

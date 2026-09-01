@@ -4,10 +4,59 @@ import { describe, expect, it } from 'vitest';
 
 import type { UnifiedReport } from './types/unified-report';
 import {
+	buildArchivedLocalRun,
 	computeProjectDiff,
 	fingerprintProjectConfiguration,
 	sanitizeProjectConfiguration
 } from './projects';
+
+const fixture = JSON.parse(
+	fs.readFileSync(
+		path.resolve('../../libs/contracts/report/fixtures/unified-report.v2.all-scans.json'),
+		'utf8'
+	)
+) as UnifiedReport;
+
+describe('local run report archival', () => {
+	it('backfills a completed run without replacing its completion timestamp', () => {
+		const report = { ...fixture, meta: { ...fixture.meta, jobId: 'job-archive' } };
+		const archived = buildArchivedLocalRun(
+			{
+				jobId: 'job-archive',
+				projectId: 'project-1',
+				configFingerprint: 'fingerprint',
+				status: 'complete',
+				createdAt: '2026-01-01T00:00:00.000Z',
+				completedAt: '2026-01-01T00:01:00.000Z'
+			},
+			report,
+			'job-archive',
+			'2026-08-13T00:00:00.000Z'
+		);
+
+		expect(archived?.report).toBe(report);
+		expect(archived?.completedAt).toBe('2026-01-01T00:01:00.000Z');
+		expect(archived?.status).toBe('complete');
+	});
+
+	it('does not rewrite a completed run that already has a report', () => {
+		const report = { ...fixture, meta: { ...fixture.meta, jobId: 'job-archive' } };
+		expect(
+			buildArchivedLocalRun(
+				{
+					jobId: 'job-archive',
+					projectId: 'project-1',
+					configFingerprint: 'fingerprint',
+					status: 'complete',
+					createdAt: '2026-01-01T00:00:00.000Z',
+					report
+				},
+				report,
+				'job-archive'
+			)
+		).toBeNull();
+	});
+});
 
 describe('local project configuration', () => {
 	it('removes credentials and execution-only input values before persistence', () => {

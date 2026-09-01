@@ -45,6 +45,7 @@ type fakeMinioClient struct {
 		opts minio.GetObjectOptions,
 	) (minioObject, error)
 	RemoveObjectFn func(ctx context.Context, bucketName, objectName string, opts minio.RemoveObjectOptions) error
+	ListObjectsFn  func() <-chan minio.ObjectInfo
 	StatObjectFn   func(
 		ctx context.Context,
 		bucketName string,
@@ -148,6 +149,21 @@ func (f *fakeMinioClient) StatObject(
 	}
 
 	return minio.ObjectInfo{}, nil
+}
+
+func (f *fakeMinioClient) ListObjects(
+	_ context.Context,
+	_ string,
+	_ minio.ListObjectsOptions,
+) <-chan minio.ObjectInfo {
+	if f.ListObjectsFn != nil {
+		return f.ListObjectsFn()
+	}
+
+	ch := make(chan minio.ObjectInfo)
+	close(ch)
+
+	return ch
 }
 
 type fakeObject struct {
@@ -430,6 +446,38 @@ func TestDeleteFile_MissingObjectDeleteIsIdempotent(t *testing.T) {
 
 	if fake.removeObjectCalls != 2 {
 		t.Fatalf("remove calls = %d, want 2", fake.removeObjectCalls)
+	}
+}
+
+func TestDeletePrefix_RemovesListedObjectsAndRejectsEmptyPrefix(t *testing.T) {
+	t.Parallel()
+
+	listed := make(chan minio.ObjectInfo, 2)
+	listed <- minio.ObjectInfo{Key: "job-1/report.json"}
+	listed <- minio.ObjectInfo{Key: "job-1/axe/results.json"}
+	close(listed)
+
+	fake := &fakeMinioClient{
+		ListObjectsFn: func() <-chan minio.ObjectInfo {
+			return listed
+		},
+	}
+	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
+
+	if err := client.DeletePrefix(context.Background(), "scanner-artifacts", "job-1/"); err != nil {
+		t.Fatalf("DeletePrefix: %v", err)
+	}
+
+	if fake.removeObjectCalls != 2 {
+		t.Fatalf("remove calls = %d, want 2", fake.removeObjectCalls)
+	}
+
+	if err := client.DeletePrefix(context.Background(), "scanner-artifacts", ""); err == nil {
+		t.Fatal("expected empty prefix to be rejected")
+	}
+
+	if err := client.DeletePrefix(context.Background(), "scanner-artifacts", "../escape"); err == nil {
+		t.Fatal("expected parent prefix to be rejected")
 	}
 }
 

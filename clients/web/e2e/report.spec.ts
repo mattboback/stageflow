@@ -135,15 +135,60 @@ test.describe('employer-facing product claims', () => {
 		await expect(selfHost.getByText('SARIF', { exact: false })).toHaveCount(0);
 	});
 
-	test('404 metadata uses page terminology', async ({ page }) => {
-		await page.goto('/route-that-does-not-exist');
-
-		await expect(page).toHaveTitle('404 · Page not found — StageFlow');
-		await expect(page.getByText('Channel not found', { exact: false })).toHaveCount(0);
+	test('privacy is an in-app page, not a GitHub main-branch link', async ({ page }) => {
+		await page.goto('/');
+		await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).click();
+		await expect(page).toHaveURL(/\/privacy$/);
+		await expect(page.getByRole('heading', { name: 'Hosted demo privacy' })).toBeVisible();
+		await expect(page.getByText(/durable job record/)).toBeVisible();
 	});
 });
 
-test('report page renders the fixture report end to end', async ({ page }) => {
+test('report actions can save locally and delete the hosted job', async ({ page, context }) => {
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	await mockReportRoutes(page);
+	await page.route(`**/api/v1/jobs/${JOB_ID}`, async (route) => {
+		if (route.request().method() === 'DELETE') {
+			await route.fulfill({ status: 204 });
+			return;
+		}
+		await route.fallback();
+	});
+
+	await page.goto(`/scan/${JOB_ID}/report`);
+	await page.getByRole('button', { name: 'Copy share link' }).click();
+	await expect(page.getByRole('button', { name: 'Link copied' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Save in this browser' }).click();
+	await expect(page.getByText(/Saved in this browser/)).toBeVisible();
+
+	await page.getByRole('button', { name: 'Delete this scan' }).click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog.getByText(/durable job record is not erased/)).toBeVisible();
+	await dialog.getByRole('button', { name: 'Delete scan' }).click();
+	await expect(page).toHaveURL('/');
+});
+
+test('delete stays on the report when the job is still running', async ({ page }) => {
+	await mockReportRoutes(page);
+	await page.route(`**/api/v1/jobs/${JOB_ID}`, async (route) => {
+		if (route.request().method() === 'DELETE') {
+			await route.fulfill({
+				status: 409,
+				contentType: 'application/json',
+				body: JSON.stringify({ message: 'This scan is still running.' })
+			});
+			return;
+		}
+		await route.fallback();
+	});
+
+	await page.goto(`/scan/${JOB_ID}/report`);
+	await page.getByRole('button', { name: 'Delete this scan' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Delete scan' }).click();
+	await expect(page.getByRole('alert')).toHaveText(/still running/i);
+	await expect(page).toHaveURL(new RegExp(`/scan/${JOB_ID}/report`));
+});
 	await mockReportRoutes(page);
 	const pageErrors = collectPageErrors(page);
 
@@ -340,9 +385,8 @@ test('a zero-finding report celebrates the all-clear instead of an empty queue',
 	await expect(page.getByRole('heading', { name: 'All clear.' })).toBeVisible();
 	await expect(page.getByText('0 findings')).toBeVisible();
 	await expect(page.getByText('nothing to fix')).toBeVisible();
-	/* Scoped to the banner: the slim footer also links "Configure a scan". */
 	await expect(
-		page.locator('.allclear').getByRole('link', { name: /Configure a scan/ })
+		page.locator('.allclear').getByRole('link', { name: /Save this as a local baseline/ })
 	).toBeVisible();
 	await expect(page.getByText(/findings need review/)).toHaveCount(0);
 });

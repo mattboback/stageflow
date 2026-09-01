@@ -40,7 +40,7 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 	'spelling-grammar': {
 		icon: CheckCircle,
 		label: 'Spelling & Grammar',
-		description: 'AI-powered spelling, grammar, and content quality checks'
+		description: 'Rule-based spelling and content-quality checks'
 	}
 };
 

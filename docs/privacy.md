@@ -23,13 +23,15 @@ Operational metadata has a separate lifecycle. The durable job record includes t
 
 Buckets are private. The Platform API returns short-lived signed artifact URLs rather than exposing objects anonymously. On the no-account demo, a job ID is an unguessable bearer-style reference: anyone who receives the job or report URL may retrieve its status and report until the data expires. A signed artifact URL may likewise be used by anyone who receives it until that signature expires.
 
-StageFlow does not currently provide an immediate user-triggered deletion endpoint. If immediate deletion is a requirement, do not use the hosted demo.
+A visitor who has the job URL can delete that scan with `DELETE /api/v1/jobs/{id}` or the **Delete this scan** control on the report. Deletion removes staging and artifact objects and hides the job from later reads. It does not erase the durable job record: submitted URL, selected scanner configuration, state, and timing information remain until operator retention applies, the same boundary as automatic 24-hour object expiry. Promoted API project baselines are not deleted by this action.
+
+A running scan can be stopped with `POST /api/v1/jobs/{id}/cancel` or **Cancel scan**. Cancel marks the job cancelled and tears down scanner pods. It does not delete artifacts; use Delete after the job has stopped. If you need operator-controlled retention or legal hold, self-host.
 
 ## Authentication Data
 
 Storage-state authentication uploads can contain session cookies or tokens. StageFlow stores them under the job prefix, passes only an artifact reference through events, writes hydrated files with restricted permissions inside the scanner workspace, and removes the local hydrated copy during scanner cleanup. The object-store copy remains subject to the 24-hour lifecycle.
 
-On a trusted self-hosted scanner, form recipes should reference credentials through explicitly allow-listed environment variables. The hosted browser form accepts literal credentials only to support throwaway demo accounts. Those values cross the file-backed `job.created` queue, whose maximum age is 72 hours, and remain in the live job configuration until terminal cleanup. Terminal job, audit, and outbox records, public Provenance, AI traces, screenshots of sensitive controls, and reports are redacted. During an upgrade, the orchestrator runs an idempotent scrub of existing terminal records before it starts consuming events. That containment does not turn the demo into a credential vault. Never enter a personal, reused, customer, or production password.
+On a trusted self-hosted scanner, form recipes should reference credentials through explicitly allow-listed environment variables. The hosted browser form accepts literal credentials only to support throwaway demo accounts. Those values cross the file-backed `job.created` queue, whose maximum age is 72 hours, and remain in the live job configuration until terminal cleanup. Terminal job, audit, and outbox records, public Provenance, screenshots of sensitive controls, and reports are redacted. During an upgrade, the orchestrator runs an idempotent scrub of existing terminal records before it starts consuming events. That containment does not turn the demo into a credential vault. Never enter a personal, reused, customer, or production password.
 
 ## Self-Hosted Configuration
 

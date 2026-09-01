@@ -32,7 +32,6 @@ export function applyScannerPreset(
 		}));
 	}
 
-	// 'coverage': every scanner the catalog offered. It used to carve out the
-	// opt-in AI navigator, which no longer exists.
+	// 'coverage': every scanner the catalog offered.
 	return scanners.map((scanner) => ({ ...scanner, enabled: true }));
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -56,6 +57,11 @@ type minioAPI interface {
 		objectName string,
 		opts minio.StatObjectOptions,
 	) (minio.ObjectInfo, error)
+	ListObjects(
+		ctx context.Context,
+		bucketName string,
+		opts minio.ListObjectsOptions,
+	) <-chan minio.ObjectInfo
 }
 
 type minioClientAdapter struct {
@@ -121,6 +127,14 @@ func (a *minioClientAdapter) StatObject(
 	opts minio.StatObjectOptions,
 ) (minio.ObjectInfo, error) {
 	return a.client.StatObject(ctx, bucketName, objectName, opts)
+}
+
+func (a *minioClientAdapter) ListObjects(
+	ctx context.Context,
+	bucketName string,
+	opts minio.ListObjectsOptions,
+) <-chan minio.ObjectInfo {
+	return a.client.ListObjects(ctx, bucketName, opts)
 }
 
 // BucketNames are the stable MinIO buckets StageFlow expects.
@@ -335,6 +349,33 @@ func (c *MinIOClient) DownloadFile(ctx context.Context, bucket, path string) (io
 	}
 
 	return obj, nil
+}
+
+// DeletePrefix removes every object under prefix. An empty or parent-escaping
+// prefix is rejected so a caller cannot wipe a bucket.
+func (c *MinIOClient) DeletePrefix(ctx context.Context, bucket, prefix string) error {
+	normalized := strings.TrimSpace(strings.ReplaceAll(prefix, "\\", "/"))
+	normalized = strings.TrimPrefix(normalized, "/")
+	if normalized == "" || normalized == "." || strings.Contains(normalized, "..") {
+		return fmt.Errorf("refusing to delete unsafe object prefix %q in %s", prefix, bucket)
+	}
+
+	objects := c.client.ListObjects(ctx, bucket, minio.ListObjectsOptions{
+		Prefix:    normalized,
+		Recursive: true,
+	})
+
+	for object := range objects {
+		if object.Err != nil {
+			return fmt.Errorf("list objects under %s/%s: %w", bucket, normalized, object.Err)
+		}
+
+		if err := c.DeleteFile(ctx, bucket, object.Key); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DeleteFile removes an object from MinIO.

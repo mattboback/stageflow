@@ -550,3 +550,34 @@ func TestScanners(t *testing.T) {
 		t.Errorf("expected empty scanners after clear, got %v", got.Scanners)
 	}
 }
+
+func TestTombstoneJobIsIdempotent(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+
+	deleted, err := s.JobIsDeleted(ctx, "job-gone")
+	if err != nil {
+		t.Fatalf("JobIsDeleted: %v", err)
+	}
+
+	if deleted {
+		t.Fatal("expected job to be live before tombstone")
+	}
+
+	if err := s.TombstoneJob(ctx, "job-gone"); err != nil {
+		t.Fatalf("TombstoneJob: %v", err)
+	}
+
+	if err := s.TombstoneJob(ctx, "job-gone"); err != nil {
+		t.Fatalf("replayed TombstoneJob: %v", err)
+	}
+
+	deleted, err = s.JobIsDeleted(ctx, "job-gone")
+	if err != nil {
+		t.Fatalf("JobIsDeleted after tombstone: %v", err)
+	}
+
+	if !deleted {
+		t.Fatal("expected job to be deleted")
+	}
+}

@@ -199,7 +199,9 @@ test('local project creates a run and promotes its report without persisting cre
 	await expect(page.getByText('This report is now the local baseline.')).toBeVisible();
 
 	await navigateWithinApp(page, `/scan/${SECOND_JOB_ID}/report`);
-	await expect(page.getByRole('tab', { name: 'Findings 9' })).toBeVisible();
+	await expect(
+		page.getByRole('tab', { name: `Findings ${secondReport.summary.totalIssues}` })
+	).toBeVisible();
 	await expect(page.locator('.local-baseline')).toHaveCount(0);
 	await expect(page.getByRole('heading', { name: 'Storefront regression' })).toHaveCount(0);
 
@@ -207,7 +209,9 @@ test('local project creates a run and promotes its report without persisting cre
 	await expect(page.getByRole('heading', { name: 'Storefront regression' })).toBeVisible();
 
 	await navigateWithinApp(page, `/scan/${SECOND_JOB_ID}/report?project=missing-project`);
-	await expect(page.getByRole('tab', { name: 'Findings 9' })).toBeVisible();
+	await expect(
+		page.getByRole('tab', { name: `Findings ${secondReport.summary.totalIssues}` })
+	).toBeVisible();
 	await expect(page.locator('.local-baseline')).toHaveCount(0);
 	await expect(page.getByRole('heading', { name: 'Storefront regression' })).toHaveCount(0);
 
@@ -403,7 +407,33 @@ test('SPA project query changes discard project association and execution-only s
 	expect(formValues).not.toContain('standalone-project-password');
 });
 
-test('project deletion is confirmed in a dialog instead of window.confirm', async ({ page }) => {
+test('local projects can be exported and imported as JSON', async ({ page }) => {
+	await mockProjectApi(page);
+	await page.goto('/projects');
+
+	await page.getByLabel('Project name').fill('Portable project');
+	await page.getByLabel('Website URL').fill('https://portable.example.com');
+	await page.getByRole('button', { name: 'Create and configure' }).click();
+	await expect(page).toHaveURL(/\/playground\?project=/);
+
+	await page.goto('/projects');
+	const card = page.getByRole('article').filter({ hasText: 'Portable project' });
+	await expect(card).toBeVisible();
+
+	const downloadPromise = page.waitForEvent('download');
+	await card.getByRole('button', { name: 'Export' }).click();
+	const download = await downloadPromise;
+	expect(download.suggestedFilename()).toMatch(/portable-project/i);
+	const exportPath = await download.path();
+	expect(exportPath).toBeTruthy();
+
+	await card.getByRole('button', { name: 'Delete Portable project' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Delete project' }).click();
+	await expect(page.getByText('No projects yet')).toBeVisible();
+
+	await page.locator('.project-import input[type="file"]').setInputFiles(exportPath as string);
+	await expect(page.getByRole('article').filter({ hasText: 'Portable project' })).toBeVisible();
+});
 	await mockProjectApi(page);
 	await page.goto('/projects');
 

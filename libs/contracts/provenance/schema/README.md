@@ -30,4 +30,4 @@ narrow public browser-auth route accepts literal form steps for throwaway demo
 accounts, then strips auth from public Provenance and artifacts. Literal values
 necessarily cross the file-backed `job.created` event and remain in live job
 configuration until terminal cleanup; terminal audit records, reports, scanner
-stage logs, AI traces, and sensitive screenshots are redacted.
+stage logs, and sensitive screenshots are redacted.
