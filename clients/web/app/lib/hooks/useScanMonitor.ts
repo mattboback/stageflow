@@ -61,7 +61,9 @@ const REPORT_RETRY_MS = 2000;
 const REPORT_MAX_ATTEMPTS = 30;
 
 function isTerminal(status: ScanStatus): boolean {
-	return status === 'complete' || status === 'failed' || status === 'error' || status === 'cancelled';
+	return (
+		status === 'complete' || status === 'failed' || status === 'error' || status === 'cancelled'
+	);
 }
 
 function addLog<T extends { logs: string[] }>(snapshot: T, message: string | null): T {

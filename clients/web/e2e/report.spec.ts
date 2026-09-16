@@ -140,7 +140,7 @@ test.describe('employer-facing product claims', () => {
 		await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).click();
 		await expect(page).toHaveURL(/\/privacy$/);
 		await expect(page.getByRole('heading', { name: 'Hosted demo privacy' })).toBeVisible();
-		await expect(page.getByText(/durable job record/)).toBeVisible();
+		await expect(page.getByText(/^The durable job record/)).toBeVisible();
 	});
 });
 
@@ -169,26 +169,32 @@ test('report actions can save locally and delete the hosted job', async ({ page,
 	await expect(page).toHaveURL('/');
 });
 
-test('delete stays on the report when the job is still running', async ({ page }) => {
-	await mockReportRoutes(page);
-	await page.route(`**/api/v1/jobs/${JOB_ID}`, async (route) => {
-		if (route.request().method() === 'DELETE') {
-			await route.fulfill({
-				status: 409,
-				contentType: 'application/json',
-				body: JSON.stringify({ message: 'This scan is still running.' })
-			});
-			return;
-		}
-		await route.fallback();
-	});
+test.describe('delete conflict', () => {
+	test.use({ allowedBrowserErrors: [/status of 409 \(Conflict\)/] });
 
-	await page.goto(`/scan/${JOB_ID}/report`);
-	await page.getByRole('button', { name: 'Delete this scan' }).click();
-	await page.getByRole('dialog').getByRole('button', { name: 'Delete scan' }).click();
-	await expect(page.getByRole('alert')).toHaveText(/still running/i);
-	await expect(page).toHaveURL(new RegExp(`/scan/${JOB_ID}/report`));
+	test('delete stays on the report when the job is still running', async ({ page }) => {
+		await mockReportRoutes(page);
+		await page.route(`**/api/v1/jobs/${JOB_ID}`, async (route) => {
+			if (route.request().method() === 'DELETE') {
+				await route.fulfill({
+					status: 409,
+					contentType: 'application/json',
+					body: JSON.stringify({ message: 'This scan is still running.' })
+				});
+				return;
+			}
+			await route.fallback();
+		});
+
+		await page.goto(`/scan/${JOB_ID}/report`);
+		await page.getByRole('button', { name: 'Delete this scan' }).click();
+		await page.getByRole('dialog').getByRole('button', { name: 'Delete scan' }).click();
+		await expect(page.getByRole('alert')).toHaveText(/still running/i);
+		await expect(page).toHaveURL(new RegExp(`/scan/${JOB_ID}/report`));
+	});
 });
+
+test('report page renders the fixture report end to end', async ({ page }) => {
 	await mockReportRoutes(page);
 	const pageErrors = collectPageErrors(page);
 

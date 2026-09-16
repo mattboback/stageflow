@@ -70,10 +70,15 @@ interface ScanReportSessionProps {
  */
 function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 	const [, setSearchParams] = useSearchParams();
+	const location = useLocation();
 	const [localProject, setLocalProject] = useState<LocalProject | null>(null);
 	const [localRun, setLocalRun] = useState<LocalRun | null>(null);
 	const [localBaseline, setLocalBaseline] = useState<LocalBaseline | null>(null);
-	const [projectMessage, setProjectMessage] = useState<string | null>(null);
+	// Saving adds ?project=, which remounts this session; the confirmation
+	// arrives through navigation state.
+	const [projectMessage, setProjectMessage] = useState<string | null>(() =>
+		readProjectMessage(location.state)
+	);
 	const [promotingBaseline, setPromotingBaseline] = useState(false);
 
 	const {
@@ -230,9 +235,12 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 				next.set('project', project.id);
 				return next;
 			},
-			{ replace: true, preventScrollReset: true }
+			{
+				replace: true,
+				preventScrollReset: true,
+				state: { projectMessage: 'Saved in this browser and promoted as the local baseline.' }
+			}
 		);
-		setProjectMessage('Saved in this browser and promoted as the local baseline.');
 	}
 
 	/* Raw, not occurrence-expanded: LocalBaselineComparison and saveLocalBaseline
@@ -307,6 +315,11 @@ function configurationFromReport(report: UnifiedReport): LocalProjectConfigurati
 		browser: 'chromium',
 		highlightStyle: 'solid'
 	};
+}
+
+function readProjectMessage(state: unknown): string | null {
+	if (typeof state !== 'object' || state === null || !('projectMessage' in state)) return null;
+	return typeof state.projectMessage === 'string' ? state.projectMessage : null;
 }
 
 export function ErrorBoundary() {

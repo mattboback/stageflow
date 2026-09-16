@@ -33,7 +33,7 @@ function renderActions(
 					archived={false}
 					canDelete
 					showSave
-					onSaveProject={vi.fn(async () => undefined)}
+					onSaveProject={vi.fn().mockResolvedValue(undefined)}
 					{...props}
 				/>
 			)
@@ -46,7 +46,7 @@ function renderActions(
 
 describe('ReportJobActions', () => {
 	it('copies the current report URL', async () => {
-		const writeText = vi.fn(async () => undefined);
+		const writeText = vi.fn().mockResolvedValue(undefined);
 		vi.stubGlobal('navigator', { clipboard: { writeText } });
 		renderActions();
 
@@ -59,14 +59,12 @@ describe('ReportJobActions', () => {
 	});
 
 	it('shows a save error without leaving the report', async () => {
-		const onSaveProject = vi.fn(async () => {
-			throw new Error('IndexedDB is unavailable');
-		});
+		const onSaveProject = vi.fn().mockRejectedValue(new Error('IndexedDB is unavailable'));
 		renderActions({ onSaveProject });
 
 		fireEvent.click(screen.getByRole('button', { name: 'Save in this browser' }));
 
-		expect(await screen.findByRole('alert')).toHaveTextContent('IndexedDB is unavailable');
+		expect((await screen.findByRole('alert')).textContent).toContain('IndexedDB is unavailable');
 		expect(onSaveProject).toHaveBeenCalled();
 	});
 
@@ -91,7 +89,7 @@ describe('ReportJobActions', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Delete this scan' }));
 		fireEvent.click(screen.getByRole('button', { name: 'Delete scan' }));
 
-		expect(await screen.findByRole('alert')).toHaveTextContent('This scan is still running.');
+		expect((await screen.findByRole('alert')).textContent).toContain('This scan is still running.');
 		expect(screen.getByRole('button', { name: 'Delete this scan' })).toBeTruthy();
 	});
 

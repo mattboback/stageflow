@@ -26,14 +26,19 @@ export function loadReportFixture(): UnifiedReport {
 	return JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as UnifiedReport;
 }
 
-export const test = base.extend<{ browserErrors: void }>({
+export const test = base.extend<{ allowedBrowserErrors: RegExp[]; browserErrors: void }>({
+	// Specs that deliberately mock an error response opt out of its console entry.
+	allowedBrowserErrors: [[], { option: true }],
 	browserErrors: [
-		async ({ context, page }, use) => {
+		async ({ allowedBrowserErrors, context, page }, use) => {
 			const errors: string[] = [];
 			const monitor = (candidate: typeof page) => {
 				candidate.on('pageerror', (error) => errors.push(`pageerror: ${String(error)}`));
 				candidate.on('console', (message) => {
-					if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+					const text = message.text();
+					if (message.type() !== 'error') return;
+					if (allowedBrowserErrors.some((pattern) => pattern.test(text))) return;
+					errors.push(`console: ${text}`);
 				});
 			};
 			monitor(page);

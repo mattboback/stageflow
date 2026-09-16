@@ -75,8 +75,8 @@ export default function Privacy() {
 							baselines are not deleted by this action.
 						</p>
 						<p>
-							<strong>Cancel scan</strong> stops an in-flight job and tears down scanner pods. Cancel
-							does not delete artifacts; use Delete after the job has stopped.
+							<strong>Cancel scan</strong> stops an in-flight job and tears down scanner pods.
+							Cancel does not delete artifacts; use Delete after the job has stopped.
 						</p>
 					</section>
 
@@ -90,8 +90,7 @@ export default function Privacy() {
 					</section>
 
 					<p className="privacy__source">
-						Canonical operator documentation lives in{' '}
-						<a href={sourceHref}>docs/privacy.md</a>.{' '}
+						Canonical operator documentation lives in <a href={sourceHref}>docs/privacy.md</a>.{' '}
 						<Link to="/">Back to the demo</Link>.
 					</p>
 				</div>

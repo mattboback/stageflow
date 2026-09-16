@@ -431,9 +431,11 @@ test('local projects can be exported and imported as JSON', async ({ page }) => 
 	await page.getByRole('dialog').getByRole('button', { name: 'Delete project' }).click();
 	await expect(page.getByText('No projects yet')).toBeVisible();
 
-	await page.locator('.project-import input[type="file"]').setInputFiles(exportPath as string);
+	await page.locator('.project-import input[type="file"]').setInputFiles(exportPath);
 	await expect(page.getByRole('article').filter({ hasText: 'Portable project' })).toBeVisible();
 });
+
+test('project deletion is confirmed in a dialog instead of window.confirm', async ({ page }) => {
 	await mockProjectApi(page);
 	await page.goto('/projects');
 
