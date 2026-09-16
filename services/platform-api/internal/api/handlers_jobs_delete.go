@@ -20,6 +20,7 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/jobs/")
+
 	parts := strings.Split(path, "/")
 	if len(parts) != 1 || parts[0] == "" {
 		httputil.RespondNotFound(w, "Endpoint")
@@ -100,8 +101,11 @@ func (s *Server) deleteJobObjects(ctx context.Context, jobID string) error {
 	}
 
 	prefix := jobID + "/"
-	if err := s.config.Storage.DeletePrefix(ctx, storage.BucketStaging, prefix); err != nil {
-		return err
+	// ZIP uploads live under staging/{jobID}/ (see handleJobZipUpload).
+	for _, stagingPrefix := range []string{prefix, "staging/" + prefix} {
+		if err := s.config.Storage.DeletePrefix(ctx, storage.BucketStaging, stagingPrefix); err != nil {
+			return err
+		}
 	}
 
 	return s.config.Storage.DeletePrefix(ctx, storage.BucketArtifacts, prefix)

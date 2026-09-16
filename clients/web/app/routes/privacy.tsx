@@ -10,7 +10,7 @@ export const links = () => [{ rel: 'stylesheet', href: privacyStyles }];
 export const meta: MetaFunction = () =>
 	buildSiteMeta({
 		title: `${SITE_NAME} — Hosted demo data handling`,
-		description: `${SITE_NAME} hosted-demo retention, delete, and cancel boundaries. Artifacts expire after 24 hours; durable job records are not erased by Delete.`,
+		description: `${SITE_NAME} hosted-demo retention and delete boundaries. Artifacts expire after 24 hours; durable job records are not erased by Delete.`,
 		path: '/privacy'
 	});
 
@@ -68,15 +68,11 @@ export default function Privacy() {
 					</section>
 
 					<section>
-						<h2>Delete and cancel</h2>
+						<h2>Delete</h2>
 						<p>
 							<strong>Delete this scan</strong> removes staging and artifact objects and hides the
 							job from later reads. It does not erase the durable job record. Promoted API project
 							baselines are not deleted by this action.
-						</p>
-						<p>
-							<strong>Cancel scan</strong> stops an in-flight job and tears down scanner pods.
-							Cancel does not delete artifacts; use Delete after the job has stopped.
 						</p>
 					</section>
 

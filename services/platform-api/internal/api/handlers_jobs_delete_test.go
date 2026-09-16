@@ -63,6 +63,17 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 		t.Fatalf("upload artifact: %v", err)
 	}
 
+	zipKey := "staging/" + jobID + "/site.zip"
+	if err := objectStore.UploadFile(
+		context.Background(),
+		storagepkg.BucketStaging,
+		zipKey,
+		bytes.NewReader([]byte("zip")),
+		3,
+	); err != nil {
+		t.Fatalf("upload staging zip: %v", err)
+	}
+
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/jobs/"+jobID, http.NoBody)
 	rr := httptest.NewRecorder()
 	server.handleJobDelete(rr, req)
@@ -78,6 +89,15 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 
 	if exists {
 		t.Fatal("expected artifact prefix to be removed")
+	}
+
+	zipExists, err := objectStore.FileExists(context.Background(), storagepkg.BucketStaging, zipKey)
+	if err != nil {
+		t.Fatalf("FileExists staging: %v", err)
+	}
+
+	if zipExists {
+		t.Fatal("expected uploaded ZIP to be removed")
 	}
 
 	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, http.NoBody)
@@ -145,6 +165,8 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 	}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
 			rr := httptest.NewRecorder()
 			server.Router().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, http.NoBody))
 
@@ -182,6 +204,7 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 		rr,
 		httptest.NewRequest(http.MethodDelete, "/api/v1/jobs/"+jobID, http.NoBody),
 	)
+
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("want 500, got %d: %s", rr.Code, rr.Body.String())
 	}
@@ -194,6 +217,7 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FileExists: %v", err)
 	}
+
 	if !exists {
 		t.Fatal("artifact was deleted after tombstone lookup failed")
 	}

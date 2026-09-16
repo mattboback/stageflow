@@ -25,7 +25,7 @@ Buckets are private. The Platform API returns short-lived signed artifact URLs r
 
 A visitor who has the job URL can delete that scan with `DELETE /api/v1/jobs/{id}` or the **Delete this scan** control on the report. Deletion removes staging and artifact objects and hides the job from later reads. It does not erase the durable job record: submitted URL, selected scanner configuration, state, and timing information remain until operator retention applies, the same boundary as automatic 24-hour object expiry. Promoted API project baselines are not deleted by this action.
 
-A running scan can be stopped with `POST /api/v1/jobs/{id}/cancel` or **Cancel scan**. Cancel marks the job cancelled and tears down scanner pods. It does not delete artifacts; use Delete after the job has stopped. If you need operator-controlled retention or legal hold, self-host.
+A running scan cannot be deleted; delete it after it finishes. If you need operator-controlled retention or legal hold, self-host.
 
 ## Authentication Data
 

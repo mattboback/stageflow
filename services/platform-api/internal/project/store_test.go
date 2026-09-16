@@ -564,11 +564,11 @@ func TestTombstoneJobIsIdempotent(t *testing.T) {
 		t.Fatal("expected job to be live before tombstone")
 	}
 
-	if err := s.TombstoneJob(ctx, "job-gone"); err != nil {
+	if err = s.TombstoneJob(ctx, "job-gone"); err != nil {
 		t.Fatalf("TombstoneJob: %v", err)
 	}
 
-	if err := s.TombstoneJob(ctx, "job-gone"); err != nil {
+	if err = s.TombstoneJob(ctx, "job-gone"); err != nil {
 		t.Fatalf("replayed TombstoneJob: %v", err)
 	}
 

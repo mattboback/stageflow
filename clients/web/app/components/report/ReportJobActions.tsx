@@ -34,7 +34,7 @@ export function ReportJobActions({
 	const [deleteError, setDeleteError] = useState<string | null>(null);
 	const completedAt = report.meta.completedAt ?? report.meta.scannedAt;
 	const expiryLabel = formatHostedExpiry(completedAt);
-	const evidenceExpired = hostedEvidenceExpired(completedAt);
+	const evidenceExpired = IS_HOSTED_DEMO && hostedEvidenceExpired(completedAt);
 
 	async function copyShareLink() {
 		const url = window.location.href;

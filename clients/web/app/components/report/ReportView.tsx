@@ -313,10 +313,7 @@ export function ReportView({
 				) : status === 'cancelled' ? (
 					<div className="blankslate blankslate--framed rsection-placeholder" role="status">
 						<h2>Scan cancelled</h2>
-						<p>
-							{error ||
-								'This run was stopped before a report was produced. Hosted artifacts can be deleted from the scan page.'}
-						</p>
+						<p>{error || 'This run was stopped before a report was produced.'}</p>
 					</div>
 				) : (
 					<div
@@ -329,7 +326,7 @@ export function ReportView({
 						<p>
 							{status === 'complete'
 								? 'Scan complete — aggregating report.'
-								: 'This report is not ready yet. Delete is available after the scan finishes or is cancelled.'}
+								: 'This report is not ready yet.'}
 						</p>
 					</div>
 				)}

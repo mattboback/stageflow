@@ -77,3 +77,19 @@ initialization smoke test until the upstream dependency graph can be upgraded.
 Dependabot checks the scanner-runner weekly. When Lighthouse/Sentry updates,
 remove the exact ignore from CI and `just ci`, refresh the lockfile, and verify
 that an unfiltered `bun audit --audit-level=moderate` passes.
+
+## GHSA-vcc3-ghjq-m6fr and GHSA-528h-pc64-c93x
+
+| Field | Value |
+| --- | --- |
+| Status | Temporarily accepted |
+| Reviewed | 2026-09-16 |
+| Owner | StageFlow maintainers |
+| Dependency path | `minio` 8.0.7 → `query-string` → `decode-uri-component` 0.2.x; `minio` → `stream-json` 1.x |
+| CI scope | Scanner-runner moderate audit only; exact `--ignore` waivers |
+| Removal trigger | Remove when a `minio` release depends on `decode-uri-component` 0.5+ and `stream-json` 3.5+. |
+
+Both advisories are denial-of-service issues on crafted input. The scanner's
+MinIO client only parses responses from the deployment's own internal MinIO
+service, never untrusted input, and the fixes exist only in major versions the
+current `minio` release does not accept.

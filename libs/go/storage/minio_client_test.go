@@ -453,8 +453,11 @@ func TestDeletePrefix_RemovesListedObjectsAndRejectsEmptyPrefix(t *testing.T) {
 	t.Parallel()
 
 	listed := make(chan minio.ObjectInfo, 2)
+
 	listed <- minio.ObjectInfo{Key: "job-1/report.json"}
+
 	listed <- minio.ObjectInfo{Key: "job-1/axe/results.json"}
+
 	close(listed)
 
 	fake := &fakeMinioClient{

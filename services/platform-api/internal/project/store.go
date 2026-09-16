@@ -237,6 +237,7 @@ func (s *Store) TombstoneJob(ctx context.Context, jobID string) error {
 
 func (s *Store) JobIsDeleted(ctx context.Context, jobID string) (bool, error) {
 	var count int
+
 	err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM deleted_jobs WHERE job_id = ?`, jobID).
 		Scan(&count)
 	if err != nil {

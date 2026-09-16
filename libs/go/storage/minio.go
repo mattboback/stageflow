@@ -356,6 +356,7 @@ func (c *MinIOClient) DownloadFile(ctx context.Context, bucket, path string) (io
 func (c *MinIOClient) DeletePrefix(ctx context.Context, bucket, prefix string) error {
 	normalized := strings.TrimSpace(strings.ReplaceAll(prefix, "\\", "/"))
 	normalized = strings.TrimPrefix(normalized, "/")
+
 	if normalized == "" || normalized == "." || strings.Contains(normalized, "..") {
 		return fmt.Errorf("refusing to delete unsafe object prefix %q in %s", prefix, bucket)
 	}

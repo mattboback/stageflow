@@ -278,19 +278,27 @@ export async function importLocalProject(value: unknown): Promise<LocalProject> 
 			[PROJECTS_STORE, BASELINES_STORE, RUNS_STORE],
 			'readwrite'
 		);
+		// Importing replaces the project: clear its old baseline and runs first,
+		// and write the imported ones only after the run cursor has finished.
+		const baselines = transaction.objectStore(BASELINES_STORE);
+		const runs = transaction.objectStore(RUNS_STORE);
 		transaction.objectStore(PROJECTS_STORE).put(project);
-		if (parsed.baseline) {
-			transaction.objectStore(BASELINES_STORE).put({
-				...parsed.baseline,
-				projectId: project.id
-			});
-		}
-		for (const run of parsed.runs) {
-			transaction.objectStore(RUNS_STORE).put({
-				...run,
-				projectId: project.id
-			});
-		}
+		baselines.delete(project.id);
+		const cursorRequest = runs.index('projectId').openKeyCursor(IDBKeyRange.only(project.id));
+		cursorRequest.onsuccess = () => {
+			const cursor = cursorRequest.result;
+			if (cursor) {
+				runs.delete(cursor.primaryKey);
+				cursor.continue();
+				return;
+			}
+			if (parsed.baseline) {
+				baselines.put({ ...parsed.baseline, projectId: project.id });
+			}
+			for (const run of parsed.runs) {
+				runs.put({ ...run, projectId: project.id });
+			}
+		};
 		await transactionComplete(transaction);
 	});
 

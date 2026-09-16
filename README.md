@@ -129,7 +129,7 @@ local project history.
 
 ## Self-Host Locally
 
-With Go 1.26.5, Node.js 24, Bun 1.3.8, Podman Compose, and `just` installed:
+With Go 1.26.6, Node.js 24, Bun 1.3.8, Podman Compose, and `just` installed:
 
 ```bash
 cp .env.example .env
