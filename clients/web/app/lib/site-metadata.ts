@@ -45,7 +45,7 @@ export function buildHomeDescription(siteName: string, tagline: string): string 
 
 export const HOME_DESCRIPTION = buildHomeDescription(SITE_NAME, SITE_TAGLINE);
 
-export const PLAYGROUND_TITLE = `${SITE_NAME} Playground — Run frontend quality scans`;
+export const PLAYGROUND_TITLE = pageTitle('Configure a scan');
 export const PLAYGROUND_DESCRIPTION = `Run ${SITE_NAME} scans against public URLs or uploaded static sites, choose scanners, stream progress, and inspect one merged quality report.`;
 
 export function pageTitle(title: string): string {

@@ -8,6 +8,8 @@ import { SiteHeader } from '../components/SiteHeader';
 import {
 	createLocalProject,
 	deleteLocalProject,
+	exportLocalProject,
+	importLocalProject,
 	listLocalProjects,
 	listLocalProjectRuns
 } from '../lib/local-project-store';
@@ -42,12 +44,13 @@ export default function Projects() {
 	const [items, setItems] = useState<ProjectListItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [storageError, setStorageError] = useState<string | null>(null);
-	const [name, setName] = useState('My website');
-	const [url, setUrl] = useState('https://example.com');
+	const [name, setName] = useState('');
+	const [url, setUrl] = useState('');
 	const [formError, setFormError] = useState<string | null>(null);
 	const [creating, setCreating] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<LocalProject | null>(null);
 	const [deleting, setDeleting] = useState(false);
+	const [importing, setImporting] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -104,6 +107,38 @@ export default function Projects() {
 		}
 	}
 
+	async function onExport(project: LocalProject) {
+		try {
+			const payload = await exportLocalProject(project.id);
+			const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `${project.name.replaceAll(/[^\w.-]+/g, '-') || 'project'}.stageflow.json`;
+			link.click();
+			window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+		} catch (error) {
+			setStorageError(error instanceof Error ? error.message : 'Could not export the project.');
+		}
+	}
+
+	async function onImport(file: File | undefined) {
+		if (!file) return;
+		setImporting(true);
+		try {
+			const parsed: unknown = JSON.parse(await file.text());
+			await importLocalProject(parsed);
+			setItems(await loadProjectList());
+			setStorageError(null);
+		} catch (error) {
+			setStorageError(
+				error instanceof Error ? error.message : 'Could not import that project file.'
+			);
+		} finally {
+			setImporting(false);
+		}
+	}
+
 	async function onDelete(project: LocalProject) {
 		setDeleting(true);
 		try {
@@ -134,7 +169,10 @@ export default function Projects() {
 						</div>
 						<div className="projects-local-note">
 							<LockKeyhole size={18} aria-hidden="true" />
-							<span>Stored only in this browser. Projects are not uploaded or synchronized.</span>
+							<span>
+								Stored only in this browser. Export a project JSON if you want to move machines or
+								keep a copy.
+							</span>
 						</div>
 					</header>
 
@@ -154,6 +192,20 @@ export default function Projects() {
 							<div className="project-list__head">
 								<h2 id="saved-projects-heading">Your projects</h2>
 								{!loading && <span className="num muted">{items.length}</span>}
+								<label className="btn btn--ghost btn--sm project-import">
+									{importing ? 'Importing…' : 'Import'}
+									<input
+										type="file"
+										accept="application/json,.json"
+										hidden
+										disabled={importing}
+										onChange={(event) => {
+											const file = event.target.files?.[0];
+											event.target.value = '';
+											void onImport(file);
+										}}
+									/>
+								</label>
 							</div>
 							{loading ? (
 								<div className="blankslate blankslate--framed" role="status">
@@ -203,6 +255,13 @@ export default function Projects() {
 														</Link>
 													)}
 													<button
+														className="btn btn--ghost btn--sm"
+														type="button"
+														onClick={() => void onExport(project)}
+													>
+														Export
+													</button>
+													<button
 														className="btn btn--icon project-card__delete"
 														type="button"
 														onClick={() => setPendingDelete(project)}
@@ -234,6 +293,7 @@ export default function Projects() {
 									<span className="label">Project name</span>
 									<input
 										className="input"
+										placeholder="My website"
 										value={name}
 										onChange={(event) => setName(event.target.value)}
 										maxLength={80}
@@ -245,6 +305,7 @@ export default function Projects() {
 									<input
 										className="input"
 										type="url"
+										placeholder="https://example.com"
 										value={url}
 										onChange={(event) => setUrl(event.target.value)}
 										autoComplete="url"

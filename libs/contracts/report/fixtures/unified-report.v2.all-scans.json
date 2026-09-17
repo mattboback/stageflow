@@ -10,21 +10,22 @@
 	"summary": {
 		"score": 82,
 		"scoreGrade": "B",
-		"totalIssues": 8,
+		"totalIssues": 9,
 		"bySeverity": {
 			"critical": 1,
 			"serious": 2,
-			"moderate": 3,
-			"minor": 1,
-			"info": 1
+			"moderate": 4,
+			"minor": 2,
+			"info": 0
 		},
 		"byScanner": {
-			"ai-navigator": 1,
 			"axe": 3,
 			"lighthouse": 1,
 			"link-checker": 1,
+			"open-graph": 1,
 			"security-headers": 1,
-			"seo": 1
+			"seo": 1,
+			"spelling-grammar": 1
 		},
 		"pagesScanned": 2,
 		"pagesWithIssues": 2,
@@ -36,25 +37,6 @@
 		]
 	},
 	"scanners": [
-		{
-			"id": "ai-navigator",
-			"name": "AI Navigator",
-			"status": "success",
-			"issueCount": 1,
-			"severity": {
-				"critical": 0,
-				"serious": 0,
-				"moderate": 0,
-				"minor": 0,
-				"info": 1
-			},
-			"toolVersion": "0.1.0",
-			"startedAt": "2025-12-22T00:00:00Z",
-			"completedAt": "2025-12-22T00:00:02Z",
-			"durationMs": 2000,
-			"resultsPath": "job-123/ai-navigator/results.json",
-			"reportPath": "job-123/ai-navigator/report.html"
-		},
 		{
 			"id": "axe",
 			"name": "Axe",
@@ -149,6 +131,44 @@
 			"durationMs": 2000,
 			"resultsPath": "job-123/seo/results.json",
 			"reportPath": "job-123/seo/report.html"
+		},
+		{
+			"id": "open-graph",
+			"name": "Open Graph",
+			"status": "success",
+			"issueCount": 1,
+			"severity": {
+				"critical": 0,
+				"serious": 0,
+				"moderate": 1,
+				"minor": 0,
+				"info": 0
+			},
+			"toolVersion": "0.1.0",
+			"startedAt": "2025-12-22T00:00:10Z",
+			"completedAt": "2025-12-22T00:00:11Z",
+			"durationMs": 1000,
+			"resultsPath": "job-123/open-graph/results.json",
+			"reportPath": "job-123/open-graph/report.html"
+		},
+		{
+			"id": "spelling-grammar",
+			"name": "Spelling & Grammar",
+			"status": "success",
+			"issueCount": 1,
+			"severity": {
+				"critical": 0,
+				"serious": 0,
+				"moderate": 0,
+				"minor": 1,
+				"info": 0
+			},
+			"toolVersion": "0.1.0",
+			"startedAt": "2025-12-22T00:00:11Z",
+			"completedAt": "2025-12-22T00:00:12Z",
+			"durationMs": 1000,
+			"resultsPath": "job-123/spelling-grammar/results.json",
+			"reportPath": "job-123/spelling-grammar/report.html"
 		}
 	],
 	"pages": [
@@ -172,13 +192,13 @@
 			"id": "page-2",
 			"url": "http://localhost:8080/about.html",
 			"path": "/about.html",
-			"issueCount": 3,
+			"issueCount": 4,
 			"bySeverity": {
 				"critical": 0,
 				"serious": 0,
-				"moderate": 1,
-				"minor": 1,
-				"info": 1
+				"moderate": 2,
+				"minor": 2,
+				"info": 0
 			},
 			"durationMs": 5500,
 			"startedAt": "2025-12-22T00:00:06Z",
@@ -334,31 +354,53 @@
 			"category": "seo"
 		},
 		{
-			"id": "ai-navigator-keyboard-path-suggestion-page-2",
-			"scanner": "ai-navigator",
-			"ruleId": "keyboard-navigation-path",
-			"severity": "info",
-			"title": "Consider adding a clearer keyboard navigation path",
-			"description": "AI review suggests adding a visible skip link and ensuring consistent focus order for primary navigation.",
-			"helpUrl": "https://example.com/rules/keyboard-navigation-path",
-			"wcagTags": ["wcag2a", "2.4.1"],
+			"id": "open-graph-missing-og-image-page-2",
+			"scanner": "open-graph",
+			"ruleId": "og-image",
+			"severity": "moderate",
+			"title": "Missing required Open Graph tag: og:image",
+			"description": "og:image is missing from the page metadata, which can reduce the quality of social sharing previews.",
+			"helpUrl": "https://ogp.me/",
+			"wcagTags": [],
 			"pageId": "page-2",
 			"pageUrl": "http://localhost:8080/about.html",
 			"elementCount": 1,
 			"elementsTruncated": false,
 			"occurrences": [],
-			"category": "custom",
+			"category": "seo"
+		},
+		{
+			"id": "spelling-grammar-the-page-2",
+			"scanner": "spelling-grammar",
+			"ruleId": "common-misspelling",
+			"severity": "minor",
+			"title": "Potential spelling issue: teh",
+			"description": "Found 1 potential occurrence(s) that may need review. Suggested replacement: the.",
+			"wcagTags": [],
+			"pageId": "page-2",
+			"pageUrl": "http://localhost:8080/about.html",
+			"elementCount": 1,
+			"elementsTruncated": false,
+			"occurrences": [],
+			"category": "content-quality",
 			"scannerData": {
-				"model": "gpt-4.1-mini",
-				"confidence": 0.62
+				"matchCount": 1,
+				"suggestion": "the",
+				"sample": ["teh"]
 			}
 		}
 	],
 	"artifacts": [
 		{
-			"id": "report-ai-navigator",
+			"id": "report-open-graph",
 			"type": "html",
-			"path": "job-123/ai-navigator/report.html",
+			"path": "job-123/open-graph/report.html",
+			"mime": "text/html"
+		},
+		{
+			"id": "report-spelling-grammar",
+			"type": "html",
+			"path": "job-123/spelling-grammar/report.html",
 			"mime": "text/html"
 		},
 		{

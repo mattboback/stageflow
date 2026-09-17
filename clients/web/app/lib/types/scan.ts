@@ -80,6 +80,7 @@ export type ScanStatus =
 	| 'completing'
 	| 'complete'
 	| 'failed'
+	| 'cancelled'
 	| 'loading'
 	| 'error';
 

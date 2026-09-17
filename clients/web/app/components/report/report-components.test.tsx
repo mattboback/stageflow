@@ -74,12 +74,12 @@ describe('AllClearBanner', () => {
 		return render(<Stub initialEntries={['/']} />);
 	}
 
-	it('celebrates a clean run and offers a next scan', () => {
+	it('celebrates a clean run and points at saving a local baseline', () => {
 		renderBanner(cleanReport());
 
 		expect(screen.getByRole('heading', { name: 'All clear.' })).toBeTruthy();
 		expect(screen.getByText('0 findings')).toBeTruthy();
-		expect(screen.getByRole('link', { name: /Configure a scan/ })).toBeTruthy();
+		expect(screen.getByRole('link', { name: /Save this as a local baseline/ })).toBeTruthy();
 		expect(screen.queryByText(/check the Artifacts tab/)).toBeNull();
 	});
 

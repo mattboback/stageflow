@@ -34,6 +34,8 @@ type ProjectStore interface {
 	DeleteProject(ctx context.Context, id string) error
 	RecordProjectJob(ctx context.Context, projectID, jobID string) error
 	DeleteProjectJob(ctx context.Context, jobID string) error
+	TombstoneJob(ctx context.Context, jobID string) error
+	JobIsDeleted(ctx context.Context, jobID string) (bool, error)
 	GetProjectForJob(ctx context.Context, jobID string) (*project.Project, error)
 	SetBaseline(ctx context.Context, projectID, jobID string) error
 	JobBelongsToProject(ctx context.Context, projectID, jobID string) (bool, error)

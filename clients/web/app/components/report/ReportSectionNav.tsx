@@ -16,8 +16,20 @@ interface TabSpec {
 	count: string | null;
 }
 
+function countDistinctArtifacts(report: UnifiedReport): number {
+	const distinctPaths = new Set<string>();
+	if (report.artifacts) {
+		for (const artifact of report.artifacts) {
+			const key = artifact.path || artifact.dataUri || artifact.id;
+			if (key) distinctPaths.add(key);
+		}
+	}
+	const errorCount = report.errors?.length ?? 0;
+	return distinctPaths.size + errorCount;
+}
+
 export function ReportSectionNav({ report, section, onSectionChange }: Props) {
-	const artifactCount = (report.artifacts?.length ?? 0) + (report.errors?.length ?? 0);
+	const artifactCount = countDistinctArtifacts(report);
 	const pages = report.summary.pagesScanned ?? 0;
 	const issues = report.summary.totalIssues ?? 0;
 

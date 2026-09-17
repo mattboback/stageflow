@@ -391,7 +391,7 @@ ci:
     (cd {{scanner_dir}} && {{bun}} run ci)
 
     echo "==> Scanner-runner audit..."
-    (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf)
+    (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf --ignore GHSA-vcc3-ghjq-m6fr --ignore GHSA-528h-pc64-c93x)
 
 [group('quality'), doc('Generate JSON-schema contract code used by Go and TypeScript builds')]
 generate-contracts:

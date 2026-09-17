@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/library/golang:1.26.5 AS builder
+FROM docker.io/library/golang:1.26.6 AS builder
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 WORKDIR /src
@@ -11,7 +11,7 @@ RUN mkdir -p libs/contracts/report/generated/go \
     && go run github.com/atombender/go-jsonschema@v0.20.0 --package report --tags json --struct-name-from-title \
       libs/contracts/report/schema/unified-report.v2.schema.json > libs/contracts/report/generated/go/report_schema.go \
     && gofmt -w libs/contracts/report/generated/go/report_schema.go \
-    && printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.5\n" \
+    && printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.6\n" \
       > libs/contracts/report/generated/go/go.mod
 
 COPY libs/contracts/scanner-manifest/go.mod libs/contracts/scanner-manifest/go.sum ./libs/contracts/scanner-manifest/

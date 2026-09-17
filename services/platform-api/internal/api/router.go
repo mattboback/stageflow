@@ -73,6 +73,12 @@ func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/v1/jobs/")
 	parts := strings.Split(path, "/")
 
+	if r.Method == http.MethodDelete {
+		s.withMiddleware(s.handleJobDelete)(w, r)
+
+		return
+	}
+
 	if len(parts) >= 2 && parts[1] == "stream" {
 		// SSE endpoint - no timeout middleware (long-lived connection).
 		s.withStreamMiddleware(s.handleJobStream)(w, r)

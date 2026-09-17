@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildHomeDescription } from './site-metadata';
+import { buildHomeDescription, PLAYGROUND_TITLE, pageTitle } from './site-metadata';
 
 describe('site metadata', () => {
 	it('builds a grammatical description from the shipped tagline contract', () => {
@@ -20,5 +20,9 @@ describe('site metadata', () => {
 		expect(buildHomeDescription('StageFlow', 'Quality scanning.')).toContain(
 			'StageFlow — Quality scanning. Run accessibility'
 		);
+	});
+
+	it('sets the playground title to Configure a scan', () => {
+		expect(PLAYGROUND_TITLE).toBe(pageTitle('Configure a scan'));
 	});
 });

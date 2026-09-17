@@ -11,6 +11,8 @@
 # method/path pairs receive it at the edge; every other API request is proxied
 # unchanged and must carry a caller-owned credential. Keep this snippet in
 # sync with platform-api's public submission policies and router tests.
+# Public pairs: anonymous/browser-auth URL POST, ZIP POST, scanners GET,
+# job GET (status/stream/report/results), and job DELETE.
 (stageflow_api) {
 	@publicURLSubmission {
 		method POST
@@ -59,6 +61,17 @@
 		path_regexp public_job_read "^/api/v1/jobs/[A-Za-z0-9_-]{1,64}(?:/(?:stream|report|results))?$"
 	}
 	handle @publicJobRead {
+		reverse_proxy 127.0.0.1:8100 {
+			header_up X-Api-Key "{$PLATFORM_API_TOKEN}"
+			header_up -Authorization
+		}
+	}
+
+	@publicJobDelete {
+		method DELETE
+		path_regexp public_job_delete "^/api/v1/jobs/[A-Za-z0-9_-]{1,64}$"
+	}
+	handle @publicJobDelete {
 		reverse_proxy 127.0.0.1:8100 {
 			header_up X-Api-Key "{$PLATFORM_API_TOKEN}"
 			header_up -Authorization

@@ -52,6 +52,16 @@ func (c *snapshotCache) get(jobID string) (*status.JobRecord, bool) {
 	return cloneJobRecord(entry.record), true
 }
 
+func (c *snapshotCache) delete(jobID string) {
+	if c == nil || jobID == "" {
+		return
+	}
+
+	c.mu.Lock()
+	delete(c.jobs, jobID)
+	c.mu.Unlock()
+}
+
 func (c *snapshotCache) put(record *status.JobRecord) {
 	if c == nil || record == nil || record.JobID == "" {
 		return

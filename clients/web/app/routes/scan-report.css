@@ -42,6 +42,47 @@
 	flex-wrap: wrap;
 }
 
+.report-job-actions {
+	display: grid;
+	gap: var(--sp-3);
+	margin-bottom: var(--sp-4);
+	padding: var(--sp-4) var(--sp-5);
+	border: 1px solid var(--line);
+	border-radius: var(--r-md);
+	background: var(--surface);
+}
+
+.report-job-actions__meta,
+.report-job-actions__save {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: var(--sp-3);
+	flex-wrap: wrap;
+}
+
+.report-job-actions__meta p,
+.report-job-actions__error {
+	margin: 0;
+	color: var(--ink-muted);
+	font-size: var(--fs-4);
+}
+
+.report-job-actions__error {
+	color: var(--sev-critical);
+}
+
+.report-job-actions__buttons {
+	display: flex;
+	gap: var(--sp-2);
+	flex-wrap: wrap;
+}
+
+.report-job-actions__save .field {
+	min-width: min(100%, 16rem);
+	flex: 1;
+}
+
 .local-baseline__message {
 	padding: var(--sp-2) var(--sp-3);
 	border-radius: var(--r-xs);
@@ -339,6 +380,12 @@
 }
 .rnav::-webkit-scrollbar {
 	display: none;
+}
+@media (max-width: 640px) {
+	.rnav {
+		mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+		-webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+	}
 }
 
 /* ---- issues view: sidebar + list grid ---- */
@@ -1998,29 +2045,45 @@ button.irow {
 	margin: var(--sp-4) 0 0;
 	line-height: 1.5;
 }
-.artifacts__scanners {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: grid;
-	gap: var(--sp-4);
+.artifacts__matrix-wrap {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
 }
-.artifacts__scanners > li {
-	padding: var(--sp-3) 0 0;
-	border-top: 1px solid var(--line);
+.artifacts__matrix {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--fs-4);
+	text-align: left;
 }
-.artifacts__scanners > li:first-child {
-	border-top: 0;
-	padding-top: 0;
+.artifacts__matrix th,
+.artifacts__matrix td {
+	padding: var(--sp-3) var(--sp-4);
+	border-bottom: 1px solid var(--line);
+	white-space: nowrap;
 }
-/* Outranks the links beneath it. At the same size and weight as four repeated
-   generic labels, the one word that says which scanner this is got lost in
-   them, and the list read as an undifferentiated wall. */
-.artifacts__scanner-name {
-	margin: 0 0 var(--sp-2);
+.artifacts__matrix thead th {
+	font-size: var(--fs-3);
+	font-weight: 600;
+	color: var(--ink-muted);
+	text-transform: uppercase;
+	letter-spacing: var(--track-wider);
+	background: var(--surface-sunk);
+}
+.artifacts__matrix tbody tr:last-child th,
+.artifacts__matrix tbody tr:last-child td {
+	border-bottom: 0;
+}
+.artifacts__matrix-scanner {
 	font-weight: 600;
 	color: var(--ink-strong);
-	font-size: var(--fs-5);
+}
+.artifacts__matrix a {
+	color: var(--signal-ink);
+	font-weight: 500;
+	text-decoration: none;
+}
+.artifacts__matrix a:hover {
+	text-decoration: underline;
 }
 
 /* ---- errors view ---- */

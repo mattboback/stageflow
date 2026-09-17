@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	artifactTypeScreenshot = "screenshot"
-	scannerTypeAxe         = "axe"
-	occurrenceIDDelimiter  = "--occ-"
+	artifactTypePageOverview = "page-overview"
+	artifactTypeScreenshot   = "screenshot"
+	scannerTypeAxe           = "axe"
+	occurrenceIDDelimiter    = "--occ-"
 )
 
 func buildDerivedIssueID(baseIssueID string, occurrenceIndex int) string {
@@ -101,15 +102,32 @@ func (s *Server) extractScreenshotsFromReport(
 
 	for _, page := range results.Pages {
 		overviewScanner := defaultScanner
+		overviewArtifactPath := ""
+
 		if overviewScanner == "" {
-			overviewScanner = resolveOverviewScannerV2(results.Issues, page.Id)
+			var found bool
+
+			overviewScanner, overviewArtifactPath, found = resolveOverviewArtifactV2(
+				results.Artifacts,
+				results.Scanners,
+				page.Id,
+			)
+			if !found {
+				overviewScanner = resolveOverviewScannerV2(results.Issues, page.Id)
+			}
 		}
 
 		if overviewScanner == "" {
 			overviewScanner = scannerTypeAxe
 		}
 
-		if overviewShot, ok := s.buildPageOverviewScreenshotV2(ctx, jobID, overviewScanner, page); ok {
+		if overviewShot, ok := s.buildPageOverviewScreenshotV2(
+			ctx,
+			jobID,
+			overviewScanner,
+			overviewArtifactPath,
+			page,
+		); ok {
 			screenshots = append(screenshots, overviewShot)
 		}
 	}
@@ -346,6 +364,47 @@ func buildViolationScreenshotArtifact(
 	}, true
 }
 
+func resolveOverviewArtifactV2(
+	artifacts []report.ReportArtifact,
+	scanners []report.ScannerSummary,
+	pageID string,
+) (scannerID, artifactPath string, ok bool) {
+	if pageID == "" {
+		return "", "", false
+	}
+
+	pathsByID := make(map[string]string, len(artifacts))
+
+	for _, artifact := range artifacts {
+		if artifact.Type != artifactTypePageOverview || artifact.Id == "" || artifact.Path == nil ||
+			*artifact.Path == "" {
+			continue
+		}
+
+		pathsByID[artifact.Id] = *artifact.Path
+	}
+
+	candidates := make([]string, 0, len(scanners)+1)
+	candidates = append(candidates, scannerTypeAxe)
+
+	for _, scanner := range scanners {
+		if scanner.Id == "" || scanner.Id == scannerTypeAxe {
+			continue
+		}
+
+		candidates = append(candidates, scanner.Id)
+	}
+
+	for _, candidate := range candidates {
+		artifactID := fmt.Sprintf("page-overview-%s-%s", candidate, pageID)
+		if path, exists := pathsByID[artifactID]; exists {
+			return candidate, path, true
+		}
+	}
+
+	return "", "", false
+}
+
 func resolveOverviewScannerV2(issues []report.IssueDetail, pageID string) string {
 	for _, issue := range issues {
 		if issue.PageId == pageID && issue.Scanner == scannerTypeAxe {
@@ -370,19 +429,25 @@ func (s *Server) buildPageOverviewScreenshotV2(
 	ctx context.Context,
 	jobID string,
 	scannerType string,
+	artifactPath string,
 	page report.PageSummary,
 ) (models.ScreenshotArtifact, bool) {
 	if page.PageOverview == nil || page.PageOverview.ScreenshotFilename == "" {
 		return models.ScreenshotArtifact{}, false
 	}
 
-	overviewKey, ok := jobScopedJoin(jobID, scannerType, page.Id, "screenshots", page.PageOverview.ScreenshotFilename)
+	overviewPath := artifactPath
+	if overviewPath == "" {
+		overviewPath = "screenshots/" + page.PageOverview.ScreenshotFilename
+	}
+
+	overviewKey, ok := jobScopedJoin(jobID, scannerType, page.Id, overviewPath)
 	if !ok {
 		logging.Warn(ctx, "Refusing to presign non-job-scoped page overview screenshot key",
 			"job_id", jobID,
 			"scanner_type", scannerType,
 			"page_id", page.Id,
-			"filename", page.PageOverview.ScreenshotFilename,
+			"artifact_path", overviewPath,
 		)
 
 		return models.ScreenshotArtifact{}, false

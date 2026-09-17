@@ -2,6 +2,7 @@
   "name": "web-react",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
@@ -52,7 +53,7 @@
   },
   "overrides": {
     "brace-expansion": "5.0.9",
-    "nanoid": "3.3.17",
+    "nanoid": "3.3.18",
     "undici": "7.29.0"
   }
 }

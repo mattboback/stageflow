@@ -1,0 +1,46 @@
+/* ---- page-local: hosted-demo privacy notice ---- */
+.privacy {
+	padding-block: clamp(2rem, 5vw, 4rem);
+}
+
+.privacy h1 {
+	font-size: var(--fs-9);
+	line-height: 1.1;
+	letter-spacing: var(--track-hero);
+	margin: 0 0 var(--sp-4);
+	text-wrap: balance;
+}
+
+.privacy .lede {
+	font-size: var(--fs-6);
+	line-height: 1.55;
+	color: var(--ink-muted);
+	max-width: 58ch;
+	margin: 0 0 var(--sp-7);
+}
+
+.privacy section {
+	max-width: 62ch;
+	margin-bottom: var(--sp-7);
+}
+
+.privacy h2 {
+	font-size: var(--fs-6);
+	margin: 0 0 var(--sp-3);
+}
+
+.privacy p,
+.privacy li {
+	line-height: 1.6;
+}
+
+.privacy ul {
+	margin: 0 0 var(--sp-4);
+	padding-left: 1.2rem;
+}
+
+.privacy__source {
+	max-width: 62ch;
+	color: var(--ink-muted);
+	font-size: var(--fs-4);
+}

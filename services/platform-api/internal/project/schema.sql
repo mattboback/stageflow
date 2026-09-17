@@ -43,3 +43,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_baseline_operations_active_promotion
     ON baseline_operations(project_id) WHERE kind = 'promote';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_baseline_operations_active_project_delete
     ON baseline_operations(project_id) WHERE kind = 'delete_project';
+
+-- Public job IDs are bearer tokens. A row here hides the job from anonymous
+-- reads after the visitor asks to delete it, even if orchestrator metadata
+-- has not yet aged out.
+CREATE TABLE IF NOT EXISTS deleted_jobs (
+    job_id TEXT PRIMARY KEY,
+    deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

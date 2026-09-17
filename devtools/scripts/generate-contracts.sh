@@ -72,7 +72,7 @@ EOF
       "$dir/schema/unified-report.v2.schema.json" > "$report_go_temp"
     gofmt -w "$report_go_temp"
     mv -f "$report_go_temp" "$dir/generated/go/report_schema.go"
-    printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.5\n" \
+    printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.6\n" \
       | write_atomic "$dir/generated/go/go.mod"
   fi
 }

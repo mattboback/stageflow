@@ -290,6 +290,29 @@ export async function fetchScanners(signal?: AbortSignal): Promise<ScannersRespo
 	}
 }
 
+export async function deleteScanJob(jobId: string, signal?: AbortSignal): Promise<void> {
+	const response = await fetchWithTimeout(
+		buildApiUrl(`/api/v1/jobs/${encodeURIComponent(jobId)}`),
+		{
+			method: 'DELETE',
+			signal: signal ?? null
+		},
+		15000
+	);
+
+	if (response.status === 204 || response.status === 404) {
+		return;
+	}
+
+	const data = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+	const serverMessage = readApiErrorMessage(data);
+	if (response.status === 409) {
+		throw new Error(serverMessage ?? 'This scan is still running.');
+	}
+
+	throw new Error(serverMessage ?? 'Could not delete this scan.');
+}
+
 export function getDefaultScannerSelections(scanners: ScannerDefinition[]): ScannerSelection[] {
 	const enabledScanners = scanners.filter((scanner) => scanner.enabled);
 	if (enabledScanners.length === 0) {
