@@ -1,0 +1,22 @@
+# StageFlow - Frontend quality platform
+# https://stageflow.org
+
+User-agent: *
+Allow: /
+Allow: /projects
+Allow: /playground
+Allow: /demo
+Allow: /privacy
+Allow: /llms.txt
+
+# Disallow dynamic job runs and private/bearer scan results
+Disallow: /scan/
+
+# Disallow backend API and storage proxies
+Disallow: /api/
+Disallow: /scanner-artifacts/
+Disallow: /scanner-staging/
+Disallow: /__spa-fallback.html
+
+# Sitemap
+Sitemap: https://stageflow.org/sitemap.xml

@@ -10,6 +10,11 @@ It is responsible for:
 - Rendering the unified report: a Review workspace with screenshot overlays and
   human decisions, a searchable Findings view with evidence and remediation,
   and Artifacts downloads.
+- Browser-local named projects (`/projects`) with baseline promotion, report
+  diffs, and export/import. Project metadata stays in IndexedDB with no
+  StageFlow account or cloud sync.
+- The employer-facing `/demo` report, driven by the committed unified-report
+  fixture rather than a live scan.
 
 It is **not** responsible for:
 
@@ -33,14 +38,14 @@ all-scans fixture there is the canonical example of a full report.
 
 ## Layout
 
-| Path                     | Purpose                                                  |
-| ------------------------ | -------------------------------------------------------- |
-| `app/routes/`            | Pages: home, playground, scan submission, status, report |
-| `app/components/report/` | Report UI: Review, Findings, Artifacts, and evidence     |
-| `app/lib/api/`           | Fetch + SSE clients over the platform API                |
-| `app/lib/report/`        | Pure report logic: severity, grouping, filters, scoring  |
-| `app/lib/hooks/`         | Scan status/report monitors (SSE with polling fallback)  |
-| `e2e/`                   | Playwright smoke against a preview build with mocked API |
+| Path                     | Purpose                                                                   |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `app/routes/`            | Pages: home, projects, playground, demo, scan, report, privacy            |
+| `app/components/report/` | Report UI: Review, Findings, Artifacts, job actions, and evidence         |
+| `app/lib/api/`           | Fetch + SSE clients over the platform API                                 |
+| `app/lib/report/`        | Pure report logic: severity, grouping, filters, scoring                   |
+| `app/lib/hooks/`         | Scan status/report monitors (SSE with polling fallback)                   |
+| `e2e/`                   | Playwright smoke against a preview build with mocked API                  |
 
 ## Develop
 

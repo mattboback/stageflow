@@ -39,6 +39,32 @@ export interface LocalRun {
 	completedAt?: string;
 	score?: number;
 	totalIssues?: number;
+	/** Full report kept so a hosted job can be reopened after artifacts expire. */
+	report?: UnifiedReport;
+}
+
+export function buildArchivedLocalRun(
+	run: LocalRun,
+	report: UnifiedReport,
+	jobId: string,
+	completedAt = new Date().toISOString()
+): LocalRun | null {
+	if (
+		run.jobId !== jobId ||
+		report.meta.jobId !== jobId ||
+		(run.status === 'complete' && run.report)
+	) {
+		return null;
+	}
+
+	return {
+		...run,
+		status: 'complete',
+		completedAt: run.completedAt ?? completedAt,
+		...(report.summary.score == null ? {} : { score: report.summary.score }),
+		totalIssues: report.summary.totalIssues,
+		report
+	};
 }
 
 export interface ProjectDiffSide {

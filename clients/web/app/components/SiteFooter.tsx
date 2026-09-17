@@ -19,7 +19,7 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 					? 'Hosted demo — submitted targets and scan data are processed by this deployment'
 					: 'Self-hosted — scan data is processed by your deployment'}
 			</span>
-			<a href={`${GITHUB_URL}/blob/main/docs/privacy.md`}>Privacy</a>
+			<Link to="/privacy">Privacy</Link>
 			<a href={GITHUB_URL}>Source on GitHub</a>
 		</div>
 	);

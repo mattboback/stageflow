@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Desktop/mobile axe coverage, console-error enforcement, keyboard-operable report tabs and visual findings, a skip link, deployment-aware privacy notices, and complete Open Graph/manifest metadata.
 - An all-clear success state on zero-finding reports, so a clean scan celebrates the result and suggests promoting it as a baseline instead of showing an empty review queue.
 - Branded error pages: the root, scan, and report error boundaries now keep the site header/footer and offer recovery actions instead of dropping to an unstyled page.
+- Public `DELETE /api/v1/jobs/{id}` so a visitor who has the job URL can erase hosted artifacts immediately.
+- Local project export/import and stored run reports so a hosted visitor can reopen findings after the 24-hour object window.
+
+### Removed
+
+- Retired the experimental AI Navigator scanner, `stageflow ai` CLI, playground AI config, and OpenRouter host wiring. Residual `OPENROUTER_*` names stay on the scanner-launch denylist so leftover host credentials cannot ride an auth recipe.
 
 ### Changed
 
@@ -35,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Updated vulnerable transitive JavaScript dependencies used by the web and scanner-runner workspaces, including the scanner runtime image.
-- Removed authentication recipes from public Provenance, redacted raw and URL-encoded input values from AI traces and terminal job/event/audit records, and masked sensitive browser controls before values are entered or screenshots are captured.
+- Removed authentication recipes from public Provenance, redacted raw and URL-encoded input values from terminal job/event/audit records, and masked sensitive browser controls before values are entered or screenshots are captured.
 - Added an idempotent upgrade migration that scrubs existing terminal job, audit, and outbox records before the orchestrator begins consuming events.
 - Added explicit hosted-demo warnings for literal form credentials and documented the residual 72-hour file-backed `job.created` queue retention.
 

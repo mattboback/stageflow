@@ -12,6 +12,8 @@ interface Props {
 export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props) {
 	const [showPassword, setShowPassword] = useState(false);
 	const [showAdvanced, setShowAdvanced] = useState(false);
+	const [throwawayAcknowledged, setThrowawayAcknowledged] = useState(false);
+	const credentialsUnlocked = !IS_HOSTED_DEMO || throwawayAcknowledged;
 
 	const update = (patch: Partial<AuthFormConfig>) => {
 		onConfigChange({ ...config, ...patch });
@@ -72,15 +74,28 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 
 			{config.enabled && (
 				<div className="pauth__body">
-					<div className="sensitive-data-warning" role="note">
+					<div className="sensitive-data-warning" role={IS_HOSTED_DEMO ? 'alert' : 'note'}>
 						<strong>
 							{IS_HOSTED_DEMO
 								? 'Hosted demo: use a throwaway test account.'
 								: 'Use a dedicated test account.'}
 						</strong>{' '}
 						Credentials are sent to this deployment to execute the login and can remain in its job
-						queue for up to 72 hours. Never enter a personal or production password.
+						queue for up to 72 hours. Never enter a personal, reused, customer, or production
+						password. Prefer a self-hosted stack for any real login.
 					</div>
+					{IS_HOSTED_DEMO && (
+						<label className="pauth__ack">
+							<input
+								type="checkbox"
+								checked={throwawayAcknowledged}
+								onChange={(event) => setThrowawayAcknowledged(event.target.checked)}
+							/>
+							<span>
+								I am using a throwaway test account, not a personal or production password.
+							</span>
+						</label>
+					)}
 					<label className="pauth__field">
 						<span className="label">
 							Login URL <span className="pauth__req">*</span>
@@ -91,6 +106,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 							autoComplete="off"
 							placeholder="https://app.example.com/login"
 							value={config.loginUrl}
+							disabled={!credentialsUnlocked}
 							aria-invalid={config.enabled && !config.loginUrl.trim() ? true : undefined}
 							aria-required="true"
 							onChange={(e) => update({ loginUrl: e.target.value })}
@@ -106,6 +122,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								type="text"
 								autoComplete="off"
 								value={config.username}
+								disabled={!credentialsUnlocked}
 								aria-invalid={config.enabled && !config.username.trim() ? true : undefined}
 								aria-required="true"
 								onChange={(e) => update({ username: e.target.value })}
@@ -121,6 +138,7 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 									type={showPassword ? 'text' : 'password'}
 									autoComplete="off"
 									value={config.password}
+									disabled={!credentialsUnlocked}
 									aria-invalid={config.enabled && !config.password.trim() ? true : undefined}
 									aria-required="true"
 									onChange={(e) => update({ password: e.target.value })}

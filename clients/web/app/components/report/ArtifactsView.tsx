@@ -84,34 +84,64 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 					{scannerEntries.length === 0 ? (
 						<p className="blankslate">No scanner artifacts available yet.</p>
 					) : (
-						<ul className="artifacts__scanners">
-							{scannerEntries.map(([scannerId, item]) => {
-								const links: Link[] = [];
-								if (item.results_json)
-									links.push({ href: item.results_json, label: 'JSON results' });
-								if (item.report_html) links.push({ href: item.report_html, label: 'HTML report' });
-								if (item.scan_stage_log)
-									links.push({ href: item.scan_stage_log, label: 'Stage log' });
-								if (item.scan_recipe) links.push({ href: item.scan_recipe, label: 'Scan recipe' });
-								return (
-									<li key={scannerId}>
-										{/* The scanner name is the only thing distinguishing one of these
-										    rows from the next -- the four link labels repeat verbatim down
-										    the whole list -- so it gets the real name, not the raw id. */}
-										<p className="artifacts__scanner-name">{scannerLabel(scannerId)}</p>
-										<ul className="artifacts__links artifacts__links--inline">
-											{links.map((link) => (
-												<li key={link.label}>
-													<a href={link.href} target="_blank" rel="noopener noreferrer">
-														{link.label} ↗
+						<div className="artifacts__matrix-wrap">
+							<table className="artifacts__matrix">
+								<thead>
+									<tr>
+										<th scope="col">Scanner</th>
+										<th scope="col">JSON Results</th>
+										<th scope="col">HTML Report</th>
+										<th scope="col">Stage Log</th>
+										<th scope="col">Scan Recipe</th>
+									</tr>
+								</thead>
+								<tbody>
+									{scannerEntries.map(([scannerId, item]) => (
+										<tr key={scannerId}>
+											<th scope="row" className="artifacts__matrix-scanner">
+												{scannerLabel(scannerId)}
+											</th>
+											<td>
+												{item.results_json ? (
+													<a href={item.results_json} target="_blank" rel="noopener noreferrer">
+														JSON ↗
 													</a>
-												</li>
-											))}
-										</ul>
-									</li>
-								);
-							})}
-						</ul>
+												) : (
+													<span className="muted">—</span>
+												)}
+											</td>
+											<td>
+												{item.report_html ? (
+													<a href={item.report_html} target="_blank" rel="noopener noreferrer">
+														HTML ↗
+													</a>
+												) : (
+													<span className="muted">—</span>
+												)}
+											</td>
+											<td>
+												{item.scan_stage_log ? (
+													<a href={item.scan_stage_log} target="_blank" rel="noopener noreferrer">
+														Log ↗
+													</a>
+												) : (
+													<span className="muted">—</span>
+												)}
+											</td>
+											<td>
+												{item.scan_recipe ? (
+													<a href={item.scan_recipe} target="_blank" rel="noopener noreferrer">
+														Recipe ↗
+													</a>
+												) : (
+													<span className="muted">—</span>
+												)}
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
 					)}
 				</div>
 			</section>

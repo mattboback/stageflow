@@ -115,12 +115,6 @@ export default function Home() {
 								promoted, and shows exactly what changed. Local projects work without an account and
 								stay in your browser.
 							</p>
-							<div className="hero__actions">
-								<Link className="btn btn--primary btn--lg" to="/projects">
-									Create a local project <span aria-hidden="true">→</span>
-								</Link>
-								<span>or run a one-off scan</span>
-							</div>
 							<form className="scanbar" onSubmit={onScan} noValidate>
 								<label className="sr-only" htmlFor="url">
 									URL to scan
@@ -147,15 +141,21 @@ export default function Home() {
 										</span>
 									)}
 								</div>
-								<button className="btn btn--ghost btn--lg" type="submit">
-									Configure a scan{' '}
+								<button className="btn btn--primary btn--lg" type="submit">
+									Scan{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>
 								</button>
 							</form>
 							<p className="hero__note muted">
-								No account, no install. Or run the same scan from the CLI in CI.
+								{IS_HOSTED_DEMO
+									? 'No account. Artifacts expire after 24 hours. Local projects stay in this browser.'
+									: 'No account, no install. Save a local project after the first report if you want a baseline.'}
+							</p>
+							<p className="hero__note muted">
+								<Link to="/projects">Create a local project</Link> when you are ready to compare
+								releases.
 							</p>
 						</div>
 
@@ -266,11 +266,14 @@ export default function Home() {
 							))}
 						</ol>
 						<div className="path__actions">
-							<Link className="btn btn--primary" to="/projects">
-								Create a local project{' '}
+							<Link className="btn btn--primary" to="/playground">
+								Configure a scan{' '}
 								<span className="ar" aria-hidden="true">
 									→
 								</span>
+							</Link>
+							<Link className="btn btn--ghost" to="/projects">
+								Or create a local project
 							</Link>
 						</div>
 					</div>

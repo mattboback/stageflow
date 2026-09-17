@@ -109,6 +109,7 @@ assert_headers GET '/api/v1/jobs/job-123' edge-only-token '' "${caller[@]}"
 assert_headers GET '/api/v1/jobs/job-123/stream' edge-only-token '' "${caller[@]}"
 assert_headers GET '/api/v1/jobs/job-123/report' edge-only-token '' "${caller[@]}"
 assert_headers GET '/api/v1/jobs/job-123/results?download=1' edge-only-token '' "${caller[@]}"
+assert_headers DELETE '/api/v1/jobs/job-123' edge-only-token '' "${caller[@]}"
 
 # Protected resources, method variants, and suffix aliases preserve only the
 # caller's credential; the edge token must never enter these requests.
@@ -120,6 +121,7 @@ assert_headers GET '/api/v1/jobs/urls/anonymous' caller-token 'Bearer caller-tok
 assert_headers GET '/api/v1/jobs/zip' caller-token 'Bearer caller-token' "${caller[@]}"
 assert_headers POST '/api/v1/scanners' caller-token 'Bearer caller-token' "${caller[@]}"
 assert_headers POST '/api/v1/jobs/job-123/results' caller-token 'Bearer caller-token' "${caller[@]}"
+assert_headers DELETE '/api/v1/jobs/job-123/report' caller-token 'Bearer caller-token' "${caller[@]}"
 assert_headers POST '/api/v1/jobs/urls/anonymous/' caller-token 'Bearer caller-token' "${caller[@]}"
 assert_headers POST '/api/v1/jobs/urls/browser-auth/extra' caller-token 'Bearer caller-token' "${caller[@]}"
 assert_headers GET '/api/v1/jobs/job-123/results/' caller-token 'Bearer caller-token' "${caller[@]}"

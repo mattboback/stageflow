@@ -60,6 +60,10 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.respondIfJobDeleted(w, r, jobID) {
+		return
+	}
+
 	if len(parts) > 1 {
 		if len(parts) != 2 {
 			httputil.RespondNotFound(w, "Endpoint")

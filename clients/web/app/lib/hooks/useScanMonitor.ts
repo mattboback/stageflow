@@ -61,7 +61,9 @@ const REPORT_RETRY_MS = 2000;
 const REPORT_MAX_ATTEMPTS = 30;
 
 function isTerminal(status: ScanStatus): boolean {
-	return status === 'complete' || status === 'failed' || status === 'error';
+	return (
+		status === 'complete' || status === 'failed' || status === 'error' || status === 'cancelled'
+	);
 }
 
 function addLog<T extends { logs: string[] }>(snapshot: T, message: string | null): T {
@@ -112,6 +114,10 @@ function statusLog(data: ScanResult): string | null {
 	const status = normalizeStatus(data.state);
 	if (status === 'failed') {
 		return failureMessage(data);
+	}
+
+	if (status === 'cancelled') {
+		return 'Scan cancelled. Scanner pods are being torn down.';
 	}
 
 	return getLogMessage((data.state || '').toUpperCase(), data);
@@ -513,7 +519,8 @@ export function useScanReport(jobId: string) {
 										(current.job?.id === jobId ? current.screenshots : []),
 									report:
 										current.report?.meta.jobId === jobId &&
-										normalizeStatus(update.state) !== 'failed'
+										normalizeStatus(update.state) !== 'failed' &&
+										normalizeStatus(update.state) !== 'cancelled'
 											? current.report
 											: null
 								},

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { submitScanJob } from './client';
+import { deleteScanJob, submitScanJob } from './client';
 
 const baseParams = {
 	mode: 'url' as const,
@@ -75,5 +75,31 @@ describe('browser URL submission boundary', () => {
 			requestUrl(fetchMock.mock.calls[0]?.[0]).endsWith('/api/v1/jobs/urls/browser-auth')
 		).toBe(true);
 		expect(JSON.parse(requestBody(fetchMock.mock.calls[0]?.[1]))).toMatchObject({ auth });
+	});
+});
+
+describe('deleteScanJob', () => {
+	it('treats 204 as success', async () => {
+		const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+			() => Promise.resolve(new Response(null, { status: 204 }))
+		);
+		vi.stubGlobal('fetch', fetchMock);
+
+		await expect(deleteScanJob('job-1')).resolves.toBeUndefined();
+		expect(requestUrl(fetchMock.mock.calls[0]?.[0]).endsWith('/api/v1/jobs/job-1')).toBe(true);
+		expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('DELETE');
+	});
+
+	it('maps 409 to a still-running error', async () => {
+		vi.stubGlobal('fetch', () =>
+			Promise.resolve(
+				new Response(JSON.stringify({ error: 'Job is still running' }), {
+					status: 409,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		await expect(deleteScanJob('job-running')).rejects.toThrow(/still running/i);
 	});
 });

@@ -1,5 +1,4 @@
 import { CheckCircle2 } from 'lucide-react';
-import { Link } from 'react-router';
 
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Pill } from '../Pill';
@@ -33,12 +32,12 @@ export function AllClearBanner({ report }: { report: UnifiedReport }) {
 					</p>
 				)}
 			</div>
-			<Link className="btn btn--ghost allclear__cta" to="/playground">
-				Configure a scan{' '}
+			<a className="btn btn--ghost allclear__cta" href="#report-actions">
+				Save this as a local baseline{' '}
 				<span className="ar" aria-hidden="true">
 					→
 				</span>
-			</Link>
+			</a>
 		</div>
 	);
 }

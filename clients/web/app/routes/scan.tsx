@@ -14,7 +14,7 @@ import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
 import { RouteFault } from '../components/RouteFault';
 import { useScanStatus } from '../lib/hooks/useScanMonitor';
-import { pageTitle } from '../lib/site-metadata';
+import { IS_HOSTED_DEMO, pageTitle } from '../lib/site-metadata';
 import { scannerLabel } from '../lib/report';
 import scanStyles from './scan.css?url';
 
@@ -177,6 +177,12 @@ export default function Scan() {
 									</span>
 								)}
 							</div>
+							{IS_HOSTED_DEMO && (
+								<p className="shead__leave">
+									On the hosted demo, this report stays available for 24 hours. Save it to a local
+									project if you want to come back later.
+								</p>
+							)}
 							<div
 								className="meter"
 								role="progressbar"

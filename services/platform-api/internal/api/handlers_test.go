@@ -1027,6 +1027,18 @@ func (f *fakeStorage) DeleteFile(_ context.Context, bucket, path string) error {
 	return nil
 }
 
+func (f *fakeStorage) DeletePrefix(_ context.Context, bucket, prefix string) error {
+	needle := fmt.Sprintf("%s::%s", bucket, prefix)
+	for key := range f.uploads {
+		if strings.HasPrefix(key, needle) {
+			f.deletes = append(f.deletes, key)
+			delete(f.uploads, key)
+		}
+	}
+
+	return nil
+}
+
 func (f *fakeStorage) FileExists(_ context.Context, bucket, path string) (bool, error) {
 	key := fmt.Sprintf("%s::%s", bucket, path)
 	_, ok := f.uploads[key]

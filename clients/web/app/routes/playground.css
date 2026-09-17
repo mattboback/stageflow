@@ -566,6 +566,17 @@
 	font-size: var(--fs-3);
 	line-height: 1.5;
 }
+.pauth__ack {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.6rem;
+	font-size: var(--fs-3);
+	line-height: 1.45;
+	color: var(--ink-strong);
+}
+.pauth__ack input {
+	margin-top: 0.2rem;
+}
 .pauth__row,
 .pai__row {
 	display: grid;

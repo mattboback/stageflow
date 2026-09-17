@@ -415,7 +415,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 												<small>{armed === total ? 'All enabled' : 'Partial selection'}</small>
 											</span>
 											<b className="num">
-												{armed} of {total || 8}
+												{armed} of {total || 7}
 											</b>
 										</li>
 										{mode === 'url' && (
@@ -486,7 +486,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 							: file
 								? '1 archive'
 								: 'No archive'}{' '}
-						· {armed} of {total || 8} scanners · auth{' '}
+						· {armed} of {total || 7} scanners · auth{' '}
 						{mode === 'url' && authConfig.enabled ? (isAuthValid ? 'on' : 'incomplete') : 'off'} ·{' '}
 						{runtimeEstimate.label}
 					</span>

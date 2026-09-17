@@ -400,6 +400,10 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.respondIfJobDeleted(w, r, jobID) {
+		return
+	}
+
 	ctx := logging.WithJobID(r.Context(), jobID)
 
 	rec, sub, ok := s.watchJobStream(ctx, w, jobID)
