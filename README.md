@@ -1,7 +1,5 @@
 # StageFlow
 
-[![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
-[![Golden Regression](https://github.com/mattboback/stageflow/actions/workflows/golden-regression.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/golden-regression.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 StageFlow is a self-hostable **frontend quality platform**. It ships seven
