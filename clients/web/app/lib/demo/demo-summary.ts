@@ -22,7 +22,7 @@ export interface DemoSummary {
 export const DEMO_SUMMARY: DemoSummary = {
 	pages: 3,
 	scannersRun: 7,
-	totalIssues: 47,
+	totalIssues: 14,
 	serious: 3,
 	moderate: 6
 };

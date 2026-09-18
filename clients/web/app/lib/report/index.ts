@@ -11,6 +11,7 @@ export * from './score-band';
 export * from './contextual-fix';
 export * from './contrast-verify';
 export * from './issue-kind';
+export * from './manual-checks';
 export * from './review';
 export * from './review-verdict';
 export * from './screenshot-sampling';

@@ -7,6 +7,7 @@ import { ErrorsView } from './ErrorsView';
 import { IssueDetailModal } from './IssueDetailModal';
 import { IssuesView } from './IssuesView';
 import { LighthouseSummary } from './LighthouseSummary';
+import { ManualChecksPanel } from './ManualChecksPanel';
 import { ReportHeader } from './ReportHeader';
 import { ReportSectionNav, type ReportSection } from './ReportSectionNav';
 import { PagesView } from './PagesView';
@@ -18,6 +19,7 @@ import {
 	isIssueSortKey,
 	needsHumanReview,
 	sortIssues,
+	splitManualChecks,
 	type IssueSortKey
 } from '../../lib/report';
 import type { ScanStatus, ScreenshotArtifact } from '../../lib/types/scan';
@@ -91,10 +93,14 @@ export function ReportView({
 }: ReportViewProps) {
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const displayReport = useMemo(
-		() => (report ? buildOccurrenceModeReport(report) : null),
-		[report]
-	);
+	const { displayReport, manualChecks } = useMemo(() => {
+		if (!report) return { displayReport: null, manualChecks: [] };
+		const split = splitManualChecks(report);
+		return {
+			displayReport: buildOccurrenceModeReport(split.report),
+			manualChecks: split.manualChecks
+		};
+	}, [report]);
 
 	const section: ReportSection = resolveSection(
 		searchParams.get('section'),
@@ -272,6 +278,10 @@ export function ReportView({
 										})
 									}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+								/>
+								<ManualChecksPanel
+									checks={manualChecks}
+									pagesScanned={displayReport.pages.length}
 								/>
 							</section>
 						)}
