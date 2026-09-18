@@ -14,6 +14,7 @@ export interface StatusLike {
 	scanner_type?: string;
 	pages_scanned?: number;
 	violations?: number;
+	scanner_violations?: number;
 	timing?: ScannerTiming;
 	error?: string;
 	error_details?: string;
@@ -65,7 +66,8 @@ export function getLogMessage(normalizedState: string, data: StatusLike): string
 			if (data.type === 'scanner_complete' && data.scanner_type) {
 				const timing = formatScannerTiming(data.timing);
 				const pages = data.pages_scanned;
-				const issues = data.violations;
+				// `violations` is the job's running total; this line is about one scanner.
+				const issues = data.scanner_violations;
 				const details = [
 					timing,
 					pages !== undefined ? `${pages} page${pages === 1 ? '' : 's'}` : null,
