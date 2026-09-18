@@ -8,6 +8,7 @@ import type { UnifiedReport } from '../../lib/types/unified-report';
 
 import { AllClearBanner } from './AllClearBanner';
 import { IssueRowCard } from './IssueRowCard';
+import { LighthouseSummary } from './LighthouseSummary';
 import { ReportHeader } from './ReportHeader';
 import { ReportStatStrip } from './ReportStatStrip';
 import { ScannerText } from './ScannerText';
@@ -152,6 +153,17 @@ describe('IssueRowCard', () => {
 
 		fireEvent.click(screen.getByRole('button'));
 		expect(onSelect).toHaveBeenCalledWith(issue);
+	});
+});
+
+describe('LighthouseSummary', () => {
+	it('shows the 0–1 contract score as a 0–100 Lighthouse score', () => {
+		render(
+			<LighthouseSummary
+				categories={[{ id: 'accessibility', title: 'Accessibility', avgScore: 0.92 }]}
+			/>
+		);
+		expect(screen.getByText('92')).toBeTruthy();
 	});
 });
 

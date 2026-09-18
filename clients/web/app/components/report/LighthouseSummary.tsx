@@ -22,7 +22,8 @@ export function LighthouseSummary({ categories }: Props) {
 		<div className="lh__grid">
 			{categories.map((cat) => {
 				const raw = cat.avgScore;
-				const score = typeof raw === 'number' ? Math.round(raw) : null;
+				// The contract carries Lighthouse's native 0–1 score; bands are 0–100.
+				const score = typeof raw === 'number' ? Math.round(raw * 100) : null;
 				const band = scoreBandFor(score);
 				const label = CATEGORY_LABELS[cat.id] ?? cat.title ?? cat.id;
 				return (
