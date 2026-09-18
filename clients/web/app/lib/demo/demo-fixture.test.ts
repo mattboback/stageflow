@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { buildOccurrenceModeReport } from '../report';
+import { buildOccurrenceModeReport, splitManualChecks } from '../report';
 import { isUnifiedReport } from '../projects';
 import { getPageOverviewUrl } from '../report/screenshots';
 import { DEMO_SUMMARY } from './demo-summary';
@@ -126,7 +126,9 @@ describe('the committed /demo fixture', () => {
 		// DEMO_SUMMARY is duplicated on purpose: the home page will not pull 90 KB
 		// of JSON in to print four numbers. This is what stops the duplicate from
 		// silently describing an older scan.
-		const displayed = buildOccurrenceModeReport(report);
+		// Through the same transforms ReportView applies, so the home page and
+		// /demo agree on what counts as a finding.
+		const displayed = buildOccurrenceModeReport(splitManualChecks(report).report);
 		expect(DEMO_SUMMARY.pages).toBe(report.pages.length);
 		expect(DEMO_SUMMARY.scannersRun).toBe(report.scanners.length);
 		expect(DEMO_SUMMARY.totalIssues).toBe(displayed.issues.length);

@@ -1136,11 +1136,13 @@ button.irow {
 	padding: 0.05em 0.3em;
 }
 .imodal__desc a,
-.imodal__fix a {
+.imodal__fix a,
+.mchecks__desc a {
 	color: var(--signal-ink);
 }
 .imodal__desc a:hover,
-.imodal__fix a:hover {
+.imodal__fix a:hover,
+.mchecks__desc a:hover {
 	text-decoration: underline;
 }
 .imodal__tags {
@@ -1988,6 +1990,56 @@ button.irow {
 	display: grid;
 	gap: var(--sp-5);
 	margin-top: var(--sp-5);
+}
+/* Manual checks: the Lighthouse checklist, kept out of the findings list. */
+.mchecks {
+	margin-top: var(--sp-5);
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: var(--r-md);
+	box-shadow: var(--shadow-sm);
+}
+.mchecks__head {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	padding: var(--sp-4);
+	cursor: pointer;
+}
+.mchecks__head h3 {
+	font-size: var(--fs-6);
+	margin: 0;
+}
+.mchecks__count,
+.mchecks__meta {
+	color: var(--ink-muted);
+	font-size: var(--fs-3);
+}
+.mchecks__lede {
+	margin: 0;
+	padding: 0 var(--sp-4) var(--sp-4);
+	color: var(--ink-muted);
+	font-size: var(--fs-4);
+	max-width: 72ch;
+}
+.mchecks__list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.mchecks__row {
+	padding: var(--sp-4);
+	border-top: 1px solid var(--line);
+	font-size: var(--fs-4);
+}
+.mchecks__title {
+	margin: 0;
+	font-weight: 600;
+	color: var(--ink-strong);
+}
+.mchecks__desc,
+.mchecks__meta {
+	margin: var(--sp-1) 0 0;
 }
 .rsection-artifacts {
 	display: grid;
