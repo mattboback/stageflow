@@ -286,6 +286,16 @@ describe('LighthouseScanner', () => {
 			expect(result).toContain('button-name');
 		});
 
+		it('uses the audit description link when the audit is not in the table', () => {
+			const result = callPrivateMethod(
+				scanner,
+				'getHelpUrl',
+				'robots-txt',
+				'Malformed robots.txt. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).'
+			) as string;
+			expect(result).toBe('https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/');
+		});
+
 		it('returns overview URL for unknown audits', () => {
 			const result = callPrivateMethod(scanner, 'getHelpUrl', 'unknown-audit') as string;
 			expect(result).toContain('overview');

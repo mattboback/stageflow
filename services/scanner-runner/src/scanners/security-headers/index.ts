@@ -71,14 +71,6 @@ const SECURITY_HEADERS: SecurityHeader[] = [
 		description:
 			'Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.',
 		helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy'
-	},
-	{
-		name: 'x-xss-protection',
-		severity: 'info',
-		title: 'Missing X-XSS-Protection',
-		description:
-			'Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP.',
-		helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection'
 	}
 ];
 

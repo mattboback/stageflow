@@ -10,7 +10,7 @@ import {
 	mapScoreToSeverity
 } from './result-parser';
 
-export function getHelpUrl(auditId: string): string {
+export function getHelpUrl(auditId: string, description?: string): string {
 	const docsBase = 'https://developer.chrome.com/docs/lighthouse';
 	const accessibilityAudits: Record<string, string> = {
 		accesskeys: `${docsBase}/accessibility/accesskeys/`,
@@ -46,7 +46,10 @@ export function getHelpUrl(auditId: string): string {
 		'video-caption': `${docsBase}/accessibility/video-caption/`
 	};
 
-	return accessibilityAudits[auditId] ?? `${docsBase}/overview/`;
+	// Every Lighthouse audit description ends in its own "Learn more" link.
+	const learnMore = description?.match(/\]\((https:\/\/[^\s)]+)\)/)?.[1];
+
+	return accessibilityAudits[auditId] ?? learnMore ?? `${docsBase}/overview/`;
 }
 
 export function extractIssuesFromResult(deps: {
@@ -96,7 +99,7 @@ export function extractIssuesFromResult(deps: {
 				category: category ?? 'manual-review',
 				title: audit.title,
 				description: `Manual verification required: ${audit.description}`,
-				helpUrl: getHelpUrl(auditId),
+				helpUrl: getHelpUrl(auditId, audit.description),
 				metadata: {
 					score: audit.score,
 					scoreDisplayMode: audit.scoreDisplayMode,
@@ -130,7 +133,7 @@ export function extractIssuesFromResult(deps: {
 			category: category ?? 'general',
 			title: audit.title,
 			description: audit.description,
-			helpUrl: getHelpUrl(auditId),
+			helpUrl: getHelpUrl(auditId, audit.description),
 			metadata: {
 				score: audit.score,
 				scoreDisplayMode: audit.scoreDisplayMode,
