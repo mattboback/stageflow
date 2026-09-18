@@ -5,9 +5,9 @@ Neither workflow contacts the hosted StageFlow service or a scanned website.
 
 ## Review workspace
 
-The capture script builds the web client, starts a loopback-only preview,
-mocks the API from the Unified Report v2 fixture, and creates its page evidence
-from inline deterministic HTML:
+The capture script builds the web client, serves it on loopback, and
+screenshots `/demo`, which renders the report committed under
+`clients/web/public/demo` without calling an API:
 
 ```bash
 node clients/web/qa/capture-report-review.mjs docs/images/report-review.png

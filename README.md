@@ -1,17 +1,20 @@
 # StageFlow
 
 [![CI](https://github.com/mattboback/stageflow/actions/workflows/ci.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/ci.yml)
+[![Golden Regression](https://github.com/mattboback/stageflow/actions/workflows/golden-regression.yml/badge.svg)](https://github.com/mattboback/stageflow/actions/workflows/golden-regression.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 StageFlow is a self-hostable **frontend quality platform**. It ships seven
 built-in scanners — accessibility, performance, SEO, links, security headers,
-social metadata, and content quality — behind a single report contract, and remembers a **baseline per project** so every scan can
-answer the question that matters in CI: _did this change make the frontend
-worse?_
+social metadata, and content quality — behind a single report contract, and
+remembers a **baseline per project** so every scan can answer the question that
+matters in CI: _did this change make the frontend worse?_
 
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any public URL and
 explore a real, interactive report in the browser. No StageFlow account is
 required on the demo; uploads and generated artifacts expire after 24 hours.
+
+![StageFlow Review workspace for a scan of stageflow.org: site score, severity and scanner filters, page list, screenshot evidence, and the findings on the selected page](docs/images/report-review.png)
 
 Reviewing this codebase? The [code tour](docs/code-tour.md) maps contracts, SSRF guards, the job state machine, and the test strategy into a 5–15 minute path.
 
@@ -66,8 +69,6 @@ Every scan — CLI or browser — produces one unified report built for triage. 
 Review for page screenshots, overlays, and human decisions; Findings for
 searchable issues grouped by scanner and rule; and Artifacts for owned HTML and
 JSON report downloads.
-
-![StageFlow Review workspace showing page navigation, screenshot evidence, bounding-box overlays, and grouped findings](docs/images/report-review.png)
 
 When a scanner supplies element-location evidence, StageFlow overlays the
 finding on a full-page screenshot. Select a bounding box in Review to open that
