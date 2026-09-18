@@ -665,6 +665,11 @@ pre {
 		min-height: 38px;
 		padding-inline: 0.55rem;
 	}
+	/* Brand + section + back link + theme control need 392px, two more than a
+	   390px phone has. The page heading already says which screen this is. */
+	.site-header__section {
+		display: none;
+	}
 }
 
 /* ----------------------------------------------------------------- button */
