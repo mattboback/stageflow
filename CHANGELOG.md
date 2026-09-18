@@ -20,10 +20,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The security-headers scanner no longer reports a missing `X-XSS-Protection` header. Browsers have removed the filter it controlled, so the finding recommended a header sites should not send.
 - Retired the experimental AI Navigator scanner, `stageflow ai` CLI, playground AI config, and OpenRouter host wiring. Residual `OPENROUTER_*` names stay on the scanner-launch denylist so leftover host credentials cannot ride an auth recipe.
 
 ### Changed
 
+- Lighthouse manual audits are no longer counted as findings in the web report. They are the same checklist for every page of every site, so the report lists each once under "Manual checks" in Findings, and the headline total, severity and scanner chips, per-page counts and review queue describe only what the scanners found on the scanned site.
+- Lighthouse findings link to the audit's own documentation page instead of the Lighthouse overview.
 - Made regression memory the primary web workflow, added centralized submission validation and truthful runtime ranges, and aligned the favicon/social card around the StageFlow score gauge.
 - Reframed the landing headline around the baseline promise (calm, not alarmist), replaced the native `window.confirm` project-delete prompt with a design-system dialog, made the scan page's retry re-subscribe in place instead of reloading the document, unified the playground toggle-switch skin, and added Projects to the footer product navigation.
 - Restricted Caddy credential injection to an exact method/path allowlist and split public browser intake into anonymous and form-auth endpoints with a shared per-client token bucket.
@@ -33,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The scan and report pages scrolled sideways on phones 390px wide and narrower; the app bar no longer shows its section label at that width.
+- The report's Lighthouse category averages showed a perfect score as "1 · Failing": the 0–1 contract score was rendered as if it were 0–100.
+- The live scan log printed the job's running total as each scanner's issue count; it now prints the scanner's own count.
 - Prevented concurrent job-status events from overwriting scanner progress, propagated HTTP listener failures at startup, and made timeout handling panic-safe with bounded buffering.
 - Enforced the 100 MiB ZIP-file limit independently of multipart overhead, extended the socket read deadline only for uploads, and removed staged uploads on malformed, duplicate, canceled, timed-out, or failed submissions.
 - Recovered scanner containers before opening event intake, tied monitor lifetimes to graceful shutdown, and made baseline reconciliation continue across independent object failures so one project cannot starve another.
