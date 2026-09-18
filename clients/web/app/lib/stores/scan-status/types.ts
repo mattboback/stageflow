@@ -8,6 +8,7 @@ export interface SSEUpdate {
 	totalPages?: number;
 	pages_scanned?: number;
 	violations?: number;
+	scanner_violations?: number;
 	timing?: ScannerTiming;
 	error?: string;
 	error_details?: string;
