@@ -18,6 +18,7 @@ require (
 	github.com/mattboback/stageflow/libs/go/storage v0.0.0-00010101000000-000000000000
 	github.com/mattn/go-sqlite3 v1.14.44
 	github.com/nats-io/nats-server/v2 v2.14.0
+	golang.org/x/net v0.56.0
 )
 
 require (
@@ -46,7 +47,6 @@ require (
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.15.0 // indirect

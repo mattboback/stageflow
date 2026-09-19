@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { fetchScanners, getDefaultScannerSelections, submitScanJob } from '../api/client';
+import {
+	discoverPages,
+	fetchScanners,
+	getDefaultScannerSelections,
+	submitScanJob
+} from '../api/client';
 import { getLocalProject, saveLocalProject, saveLocalRun } from '../local-project-store';
 import {
 	buildFormAuthConfig,
@@ -81,6 +86,8 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	const [error, setError] = useState<string | null>(null);
 	const [urlRowErrors, setUrlRowErrors] = useState<Record<number, string>>({});
 	const [submitting, setSubmitting] = useState(false);
+	const [discovering, setDiscovering] = useState(false);
+	const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
 
 	const [authConfig, setAuthConfig] = useState<AuthFormConfig>({
 		enabled: false,
@@ -168,6 +175,36 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		setUrls(next);
 		setUrlRowErrors({});
 		return true;
+	}
+
+	/** Replaces the first filled row with the pages found on that site, for the user to prune. */
+	async function discoverUrls() {
+		const index = urls.findIndex((u) => u.trim() !== '');
+		const siteUrl = urls[index]?.trim();
+		if (!siteUrl) {
+			setUrlRowErrors({ 0: 'Enter the site URL to discover its pages' });
+			return;
+		}
+
+		setDiscovering(true);
+		setDiscoverNotice(null);
+		try {
+			const found = await discoverPages(siteUrl);
+			const next = mergePastedUrls(urls, index, found.urls.join('\n'));
+			if (!next) {
+				setDiscoverNotice('No other pages found on this site.');
+				return;
+			}
+			setUrls(next);
+			setUrlRowErrors({});
+			setDiscoverNotice(
+				`Found ${found.urls.length} pages from the ${found.source === 'sitemap' ? 'sitemap' : "site's links"}${found.truncated ? ' (first 100 shown)' : ''}. Remove any you don't want scanned.`
+			);
+		} catch (err) {
+			setUrlRowErrors({ [index]: err instanceof Error ? err.message : 'Could not discover pages' });
+		} finally {
+			setDiscovering(false);
+		}
 	}
 
 	function addUrlRow() {
@@ -362,6 +399,9 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		urls,
 		updateUrl,
 		pasteUrls,
+		discoverUrls,
+		discovering,
+		discoverNotice,
 		addUrlRow,
 		removeUrlRow,
 		targetCount,

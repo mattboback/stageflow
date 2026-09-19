@@ -77,6 +77,9 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 		urls,
 		updateUrl,
 		pasteUrls,
+		discoverUrls,
+		discovering,
+		discoverNotice,
 		addUrlRow,
 		removeUrlRow,
 		targetCount,
@@ -246,6 +249,19 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 											>
 												+ Add another URL
 											</button>
+											<button
+												type="button"
+												className="btn btn--ghost btn--sm addmore"
+												disabled={discovering}
+												onClick={() => void discoverUrls()}
+											>
+												{discovering ? 'Discovering pages…' : 'Discover pages'}
+											</button>
+											{discoverNotice && (
+												<p className="intake__note" role="status">
+													{discoverNotice}
+												</p>
+											)}
 											<p className="intake__note">
 												<Info size={15} aria-hidden="true" />
 												Each URL is scanned as its own page — add every page you want covered. Paste

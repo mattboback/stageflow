@@ -65,9 +65,11 @@ type Server struct {
 	projectStore    ProjectStore
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
-	baselineMu      sync.Mutex
-	baselineWG      sync.WaitGroup
-	legacySweepDue  atomic.Bool
+	// discoveryMode is public outside tests, which crawl a loopback httptest server.
+	discoveryMode  targetValidationMode
+	baselineMu     sync.Mutex
+	baselineWG     sync.WaitGroup
+	legacySweepDue atomic.Bool
 }
 
 // ServerConfig provides dependencies and endpoints for the public API.

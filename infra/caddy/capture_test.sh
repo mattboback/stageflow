@@ -102,6 +102,7 @@ caller=(-H 'X-Api-Key: caller-token' -H 'Authorization: Bearer caller-token')
 
 # Exact browser submission and read routes overwrite caller credentials.
 assert_headers POST '/api/v1/jobs/urls/anonymous?source=test' edge-only-token '' "${caller[@]}"
+assert_headers POST '/api/v1/discover' edge-only-token '' "${caller[@]}"
 assert_headers POST '/api/v1/jobs/urls/browser-auth' edge-only-token '' "${caller[@]}"
 assert_headers POST '/api/v1/jobs/zip' edge-only-token '' "${caller[@]}"
 assert_headers GET '/api/v1/scanners' edge-only-token '' "${caller[@]}"
