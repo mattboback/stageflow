@@ -27,8 +27,10 @@ import {
 } from './issue-mapper';
 import {
 	DEFAULT_DYNAMIC_CONTENT_WAIT_MS,
+	LOADING_INDICATOR_WAIT_MS,
 	NETWORKIDLE_TIMEOUT_MS,
 	parseAxeOptions,
+	SCRIPTLESS_FRAME_SELECTOR,
 	withTimeoutFallback,
 	type AxeOptions
 } from './options';
@@ -63,6 +65,30 @@ export class AxeScanner extends ScannerBase {
 		});
 	}
 
+	/**
+	 * Route-change loading bars (`role="progressbar"`) linger for a few hundred
+	 * milliseconds while they fade out. Catching one mid-fade produced a `region`
+	 * finding on some runs and not others, which churned baselines. A progressbar
+	 * that is still visible after the wait is real page content and gets scanned.
+	 */
+	private async waitForLoadingIndicators(page: ScanContext['page']): Promise<void> {
+		await page
+			.waitForFunction(
+				() =>
+					Array.from(document.querySelectorAll('[role="progressbar"]')).every((el) => {
+						const style = getComputedStyle(el);
+						return (
+							style.display === 'none' ||
+							style.visibility === 'hidden' ||
+							Number(style.opacity) === 0
+						);
+					}),
+				undefined,
+				{ timeout: LOADING_INDICATOR_WAIT_MS }
+			)
+			.catch(() => undefined);
+	}
+
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
 		const { page, pageEntry, resultsDir, logger } = context;
 		const startedAt = new Date().toISOString();
@@ -90,12 +116,14 @@ export class AxeScanner extends ScannerBase {
 				await page.waitForTimeout(waitMs);
 			}
 
+			await this.waitForLoadingIndicators(page);
+
 			logger.debug('Running axe-core analysis', {
 				url: pageEntry.url,
 				dynamicContentWaitMs: waitMs
 			});
 
-			let axe = new AxeBuilder({ page });
+			let axe = new AxeBuilder({ page }).exclude(SCRIPTLESS_FRAME_SELECTOR);
 
 			// Apply disabled rules if configured
 			if (this.options.disabledRules && this.options.disabledRules.length > 0) {

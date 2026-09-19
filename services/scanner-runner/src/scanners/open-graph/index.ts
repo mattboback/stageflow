@@ -1,5 +1,6 @@
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
+import { waitForPageSettled } from '../../core/page-settle';
 import { ScannerBase } from '../../core/scanner-base';
 import { SCANNER_VERSION } from '../version';
 
@@ -18,6 +19,7 @@ export class OpenGraphScanner extends ScannerBase {
 		const startTime = Date.now();
 
 		try {
+			await waitForPageSettled(page);
 			const ogTags = await page.evaluate(() => {
 				const tags: Record<string, string> = {};
 				const metaTags = document.querySelectorAll('meta[property^="og:"]');

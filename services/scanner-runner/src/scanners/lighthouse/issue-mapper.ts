@@ -1,6 +1,6 @@
 import type { ScanStageLogger } from '../../core/scan-stage-logger';
 import type { Issue, ScannerLogger } from '../../core/types';
-import type { LighthouseIssueNode, LighthouseResult } from './types';
+import type { LighthouseAudit, LighthouseIssueNode, LighthouseResult } from './types';
 
 import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
 import {
@@ -77,7 +77,16 @@ export function extractIssuesFromResult(deps: {
 	let skippedInformative = 0;
 	const skippedManual = 0;
 
+	const cspAlreadyInConsole = consoleReportsCspViolation(lhResult.audits?.['errors-in-console']);
+
 	for (const [auditId, audit] of auditEntries) {
+		// DevTools raises a CSP violation both as a console error and as an
+		// "issue". The console entry names the directive and blocked script; the
+		// inspector entry only says "Content security policy", so it adds nothing.
+		if (auditId === 'inspector-issues' && cspAlreadyInConsole && isCspOnlyInspectorAudit(audit)) {
+			continue;
+		}
+
 		// Skip passed audits, informational, or not applicable
 		if (audit.score === 1) {
 			skippedPassed++;
@@ -168,6 +177,23 @@ export function extractIssuesFromResult(deps: {
 	});
 
 	return issues;
+}
+
+function auditItems(audit: LighthouseAudit | undefined): Record<string, unknown>[] {
+	const items = (audit?.details as { items?: unknown } | undefined)?.items;
+	return Array.isArray(items) ? (items as Record<string, unknown>[]) : [];
+}
+
+function consoleReportsCspViolation(audit: LighthouseAudit | undefined): boolean {
+	return auditItems(audit).some(
+		(item) =>
+			typeof item.description === 'string' && item.description.includes('Content Security Policy')
+	);
+}
+
+function isCspOnlyInspectorAudit(audit: LighthouseAudit): boolean {
+	const items = auditItems(audit);
+	return items.length > 0 && items.every((item) => item.issueType === 'Content security policy');
 }
 
 export async function enrichIssuesWithContext(

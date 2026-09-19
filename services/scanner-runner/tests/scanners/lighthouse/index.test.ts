@@ -318,6 +318,51 @@ describe('LighthouseScanner', () => {
 			audits
 		});
 
+		it('reports a CSP violation once, not as both a console error and an inspector issue', () => {
+			const failing = { score: 0, scoreDisplayMode: 'binary', description: '' };
+			const consoleAudit = {
+				...failing,
+				id: 'errors-in-console',
+				title: 'Browser errors were logged to the console',
+				details: {
+					items: [
+						{
+							source: 'security',
+							description:
+								"Executing inline script violates the following Content Security Policy directive 'script-src 'self''."
+						}
+					]
+				}
+			};
+			const inspector = (issueTypes: string[]) => ({
+				...failing,
+				id: 'inspector-issues',
+				title: 'Issues were logged in the Issues panel',
+				details: { items: issueTypes.map((issueType) => ({ issueType })) }
+			});
+			const ids = (audits: Record<string, unknown>) =>
+				(
+					callPrivateMethod(scanner, 'extractIssues', createMockLighthouseResult(audits)) as {
+						id: string;
+					}[]
+				).map((issue) => issue.id);
+
+			expect(
+				ids({
+					'errors-in-console': consoleAudit,
+					'inspector-issues': inspector(['Content security policy'])
+				})
+			).toEqual(['errors-in-console']);
+
+			// Other inspector issues are not duplicates and must survive.
+			expect(
+				ids({
+					'errors-in-console': consoleAudit,
+					'inspector-issues': inspector(['Content security policy', 'Mixed content'])
+				})
+			).toEqual(['errors-in-console', 'inspector-issues']);
+		});
+
 		it('extracts issues from failing audits', () => {
 			const lhResult = createMockLighthouseResult({
 				'color-contrast': {

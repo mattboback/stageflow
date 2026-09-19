@@ -47,6 +47,14 @@ function isAriaHidden(html: string): boolean {
 	return /\baria-hidden\s*=\s*["']?true\b/i.test(openingTag);
 }
 
+/**
+ * SVG text is painted with `fill`, but axe measures the CSS `color` property,
+ * so an incomplete contrast result on it cannot be confirmed either way.
+ */
+function isSvgText(html: string): boolean {
+	return /^<(text|tspan|textPath)[\s>]/.test(html.trimStart());
+}
+
 /** Text with no letter or digit: separators such as "·", "|" or "→". */
 function isPunctuationOnly(html: string): boolean {
 	const text = html.replace(/<[^>]*>/g, '');
@@ -65,7 +73,7 @@ function isVerifiableContrastIncomplete(node: AxeNode): boolean {
 	}
 
 	const html = node.html ?? '';
-	if (isAriaHidden(html)) {
+	if (isAriaHidden(html) || isSvgText(html)) {
 		return false;
 	}
 	return !(messageKey === 'shortTextContent' && isPunctuationOnly(html));

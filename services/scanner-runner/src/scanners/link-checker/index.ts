@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 import type { LinkCheckResult, LinkInfo } from './types';
 
+import { waitForPageSettled } from '../../core/page-settle';
 import { ScannerBase } from '../../core/scanner-base';
 import { AxeScreenshotService } from '../../screenshots/axe-screenshot-service';
 import { capturePageOverviewFromIssues } from '../../screenshots/page-overview-from-issues';
@@ -67,6 +68,7 @@ export class LinkCheckerScanner extends ScannerBase {
 		const issues: Issue[] = [];
 
 		try {
+			await waitForPageSettled(page);
 			const links = await this.extractLinks(page, pageEntry.url);
 			logger.info('Extracted links', {
 				count: links.length,
@@ -98,7 +100,6 @@ export class LinkCheckerScanner extends ScannerBase {
 			this.addBrokenLinkIssues(issues, brokenLinks);
 			this.addUnverifiedLinkIssue(issues, unverifiedLinks);
 			this.addRedirectChainIssue(issues, redirectChains);
-			this.addSlowLinkIssue(issues, slowLinks);
 
 			const emptyLinks = await this.checkEmptyLinks(page);
 			if (emptyLinks.length > 0) {
@@ -166,6 +167,9 @@ export class LinkCheckerScanner extends ScannerBase {
 					externalLinks: links.filter((l) => !l.isInternal).length,
 					brokenCount: brokenLinks.length,
 					redirectChainCount: redirectChains.length,
+					// Not a finding: a link target's latency says nothing about this page and
+					// varies run to run, which made baselines churn.
+					slowLinkCount: slowLinks.length,
 					averageResponseTime:
 						results.length > 0
 							? Math.round(results.reduce((sum, r) => sum + r.responseTime, 0) / results.length)
@@ -270,27 +274,6 @@ export class LinkCheckerScanner extends ScannerBase {
 					url: l.url,
 					redirectCount: l.redirects.length,
 					chain: l.redirects
-				}))
-			}
-		});
-	}
-
-	private addSlowLinkIssue(issues: Issue[], slowLinks: LinkCheckResult[]): void {
-		if (slowLinks.length === 0) {
-			return;
-		}
-
-		issues.push({
-			id: `${this.metadata.name}-slow-responses`,
-			scanner: this.metadata.name,
-			severity: 'minor',
-			category: 'performance',
-			title: 'Slow Link Responses',
-			description: `Found ${slowLinks.length} link(s) with response times over 3 seconds. Slow external resources can impact page performance.`,
-			metadata: {
-				links: slowLinks.slice(0, 5).map((l) => ({
-					url: l.url,
-					responseTime: l.responseTime
 				}))
 			}
 		});
