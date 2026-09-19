@@ -450,6 +450,18 @@ export class BrowserManager {
 
 		try {
 			await page.addStyleTag({ content: SENSITIVE_FIELD_MASK_CSS });
+			return;
+		} catch {
+			// A `style-src` policy without 'unsafe-inline' blocks the <style> element.
+			// Constructed stylesheets are CSSOM, which CSP does not govern.
+		}
+
+		try {
+			await page.evaluate((css) => {
+				const sheet = new CSSStyleSheet();
+				sheet.replaceSync(css);
+				document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+			}, SENSITIVE_FIELD_MASK_CSS);
 		} catch (error) {
 			throw new Error('Failed to install sensitive-field masking; refusing to continue', {
 				cause: error

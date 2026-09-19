@@ -610,11 +610,31 @@ describe('BrowserManager', () => {
 			expect(mockPage.fill).not.toHaveBeenCalled();
 		});
 
+		it('masks through a constructed stylesheet when CSP blocks the style element', async () => {
+			vi.mocked(mockPage.addStyleTag).mockRejectedValueOnce(
+				new Error('style-src blocks inline styles')
+			);
+
+			await browserManager.executePreScanActions(
+				mockPage,
+				[{ type: 'fill', selector: '#account-password', value: 'csp-fallback-canary-9d2e' }],
+				undefined,
+				{ maskInputValues: true }
+			);
+
+			expect(mockPage.evaluate).toHaveBeenCalledWith(
+				expect.any(Function),
+				expect.stringContaining('input[type="password"]')
+			);
+			expect(mockPage.fill).toHaveBeenCalled();
+		});
+
 		it('does not write a sensitive value when mask CSS injection fails', async () => {
 			const inputCanary = 'mask-css-input-canary-3b17';
 			vi.mocked(mockPage.addStyleTag).mockRejectedValueOnce(
 				new Error('style-src blocks inline styles')
 			);
+			vi.mocked(mockPage.evaluate).mockRejectedValueOnce(new Error('execution context destroyed'));
 
 			await expect(
 				browserManager.executePreScanActions(
@@ -751,6 +771,9 @@ describe('BrowserManager', () => {
 				vi.mocked(mockPage.evaluateHandle).mockResolvedValue(fakeHandle(element));
 				vi.mocked(mockPage.addStyleTag).mockRejectedValueOnce(
 					new Error('style-src blocks inline styles')
+				);
+				vi.mocked(mockPage.evaluate).mockRejectedValueOnce(
+					new Error('execution context destroyed')
 				);
 
 				await expect(
