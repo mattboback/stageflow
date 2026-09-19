@@ -47,6 +47,21 @@ describe('splitManualChecks', () => {
 		]);
 	});
 
+	it('reads the checklist from the report when the aggregator already separated it', () => {
+		const finding = issue({ id: 'seo-1', scanner: 'seo', ruleId: 'seo-thin-content' });
+		const { report, manualChecks } = splitManualChecks({
+			issues: [finding],
+			manualChecks: [
+				{ scanner: 'lighthouse', ruleId: 'focus-traps', title: 'Focus traps', pageCount: 22 }
+			]
+		} as UnifiedReport);
+
+		expect(report.issues).toEqual([finding]);
+		expect(manualChecks).toEqual([
+			{ ruleId: 'focus-traps', title: 'Focus traps', description: '', pageCount: 22 }
+		]);
+	});
+
 	it('keeps Lighthouse findings that are not manual audits', () => {
 		const failed = issue({ id: 'c', ruleId: 'robots-txt', severity: 'serious' });
 		const { report, manualChecks } = splitManualChecks(reportWith([failed]));

@@ -33,6 +33,11 @@
     "errors": {
       "type": "array",
       "items": { "$ref": "#/definitions/ReportError" }
+    },
+    "manualChecks": {
+      "description": "Checklist items a scanner cannot test (Lighthouse manual audits). They are the same for every site, so they are listed once here and never counted as issues.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/ManualCheck" }
     }
   },
   "definitions": {
@@ -333,6 +338,19 @@
         "path": { "type": "string" },
         "mime": { "type": "string" },
         "dataUri": { "type": "string" }
+      }
+    },
+    "ManualCheck": {
+      "type": "object",
+      "required": ["scanner", "ruleId", "title", "pageCount"],
+      "additionalProperties": false,
+      "properties": {
+        "scanner": { "type": "string", "minLength": 1 },
+        "ruleId": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "helpUrl": { "type": "string" },
+        "pageCount": { "type": "integer", "minimum": 1 }
       }
     },
     "ReportError": {
