@@ -76,7 +76,8 @@ const createScannerConfig = (): ScannerConfig => ({
 const createMockPage = (): Page =>
 	({
 		waitForLoadState: vi.fn().mockResolvedValue(undefined),
-		waitForTimeout: vi.fn().mockResolvedValue(undefined)
+		waitForTimeout: vi.fn().mockResolvedValue(undefined),
+		waitForFunction: vi.fn().mockResolvedValue(undefined)
 	}) as unknown as Page;
 
 const createMockContext = (resultsDir: string): ScanContext => {

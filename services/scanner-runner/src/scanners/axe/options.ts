@@ -10,6 +10,8 @@ export const DEFAULT_DYNAMIC_CONTENT_WAIT_MS = 50;
  * Prevents hanging on sites with persistent connections (WebSockets, long-polling).
  */
 export const NETWORKIDLE_TIMEOUT_MS = 5_000;
+/** Upper bound on waiting for a fading route-change loading bar to disappear. */
+export const LOADING_INDICATOR_WAIT_MS = 3_000;
 
 /**
  * Options for the axe scanner.
