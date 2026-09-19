@@ -41,24 +41,25 @@ The process boot sequence is:
 
 `internal/api/router.go` registers the public surface:
 
-| Route                                     | Purpose                                           |
-| ----------------------------------------- | ------------------------------------------------- |
-| `POST /api/v1/jobs/urls`                  | Submit a caller-authenticated URL scan            |
-| `POST /api/v1/jobs/urls/anonymous`        | Submit a URL scan without an authentication recipe |
-| `POST /api/v1/jobs/urls/browser-auth`     | Submit a public URL scan with a literal form login |
-| `POST /api/v1/jobs/zip`                   | Submit a ZIP upload job                           |
-| `GET /api/v1/jobs/:id`                    | Current job status snapshot                       |
-| `GET /api/v1/jobs/:id/stream`             | SSE stream for live updates                       |
-| `GET /api/v1/jobs/:id/report`             | Redirect to the HTML report artifact              |
-| `GET /api/v1/jobs/:id/results`            | Redirect to the normalized JSON report artifact   |
-| `DELETE /api/v1/jobs/:id`                 | Delete artifacts and hide the job (bearer job id) |
-| `GET /api/v1/jobs/:id/diff`               | Diff a project scan against its promoted baseline |
-| `GET/POST /api/v1/projects`               | List or create named projects                     |
-| `GET/PATCH/DELETE /api/v1/projects/:slug` | Inspect, update, or delete a project              |
-| `POST /api/v1/projects/:slug/scan`        | Launch a scan from stored project config          |
-| `POST /api/v1/projects/:slug/promote`     | Promote a completed scan to the project baseline  |
-| `GET /api/v1/scanners`                    | List enabled scanners and capabilities            |
-| `GET /healthz`                            | Liveness check                                    |
+| Route                                     | Purpose                                              |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `POST /api/v1/jobs/urls`                  | Submit a caller-authenticated URL scan               |
+| `POST /api/v1/jobs/urls/anonymous`        | Submit a URL scan without an authentication recipe   |
+| `POST /api/v1/discover`                   | List a site's pages from its sitemap or a link crawl |
+| `POST /api/v1/jobs/urls/browser-auth`     | Submit a public URL scan with a literal form login   |
+| `POST /api/v1/jobs/zip`                   | Submit a ZIP upload job                              |
+| `GET /api/v1/jobs/:id`                    | Current job status snapshot                          |
+| `GET /api/v1/jobs/:id/stream`             | SSE stream for live updates                          |
+| `GET /api/v1/jobs/:id/report`             | Redirect to the HTML report artifact                 |
+| `GET /api/v1/jobs/:id/results`            | Redirect to the normalized JSON report artifact      |
+| `DELETE /api/v1/jobs/:id`                 | Delete artifacts and hide the job (bearer job id)    |
+| `GET /api/v1/jobs/:id/diff`               | Diff a project scan against its promoted baseline    |
+| `GET/POST /api/v1/projects`               | List or create named projects                        |
+| `GET/PATCH/DELETE /api/v1/projects/:slug` | Inspect, update, or delete a project                 |
+| `POST /api/v1/projects/:slug/scan`        | Launch a scan from stored project config             |
+| `POST /api/v1/projects/:slug/promote`     | Promote a completed scan to the project baseline     |
+| `GET /api/v1/scanners`                    | List enabled scanners and capabilities               |
+| `GET /healthz`                            | Liveness check                                       |
 
 ## Middleware and boundary rules
 

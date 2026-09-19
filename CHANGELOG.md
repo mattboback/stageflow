@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Public `DELETE /api/v1/jobs/{id}` so a visitor who has the job URL can erase hosted artifacts immediately.
 - Local project export/import and stored run reports so a hosted visitor can reopen findings after the 24-hour object window.
 
+- "Discover pages" in the playground and `POST /api/v1/discover`: given a site URL, StageFlow lists its pages from the sitemap (or a shallow same-host link crawl when there is none) and fills the URL rows, up to the 100-URL job limit.
 - Pasting a list of URLs into a scan target field fills one row per URL, up to the 100-URL job limit.
 
 ### Removed

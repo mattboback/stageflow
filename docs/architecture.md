@@ -98,6 +98,7 @@ All long-running containers and per-job pods run rootless with `no-new-privilege
 
 The public HTTP boundary. Every request passes a middleware stack of logging → CORS → API-key auth → rate limiting → timeout (SSE excepted). It validates intake (request shape, URL count ≤ 100, SSRF classification, scanner configs against manifests), publishes `job.created` to NATS, and answers status queries from an event-sourced SQLite projection updated by job events. It also owns project CRUD, baseline promotion, and the on-demand diff engine (`libs/go/diff`). Key surfaces:
 
+- `POST /api/v1/discover` — page discovery for a site URL: `robots.txt` sitemaps, then `/sitemap.xml` (validated by XML root, since single-page apps answer it with 200 HTML), then a depth-2 same-host link crawl; at most 100 same-host URLs. It is the only place the Platform API fetches a user-supplied URL, through a client whose dialer re-checks the connected IP against the SSRF policy on every hop, and it shares the public-submission limiter
 - `POST /api/v1/jobs/urls`, `POST /api/v1/jobs/urls/anonymous`, `POST /api/v1/jobs/urls/browser-auth`, and `POST /api/v1/jobs/zip` — intake; the browser-auth route is the deliberately narrow public form-login flow, while storage state and environment references require a caller API key
 - `GET /api/v1/jobs/{id}` / `…/stream` (SSE) / `…/report` / `…/results` / `…/diff`
 - `GET|POST|PATCH|DELETE /api/v1/projects…`, `POST …/{slug}/scan`, `POST …/{slug}/promote`

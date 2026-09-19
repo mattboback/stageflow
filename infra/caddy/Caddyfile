@@ -11,12 +11,12 @@
 # method/path pairs receive it at the edge; every other API request is proxied
 # unchanged and must carry a caller-owned credential. Keep this snippet in
 # sync with platform-api's public submission policies and router tests.
-# Public pairs: anonymous/browser-auth URL POST, ZIP POST, scanners GET,
+# Public pairs: anonymous/browser-auth URL POST, page discovery POST, ZIP POST, scanners GET,
 # job GET (status/stream/report/results), and job DELETE.
 (stageflow_api) {
 	@publicURLSubmission {
 		method POST
-		path /api/v1/jobs/urls/anonymous /api/v1/jobs/urls/browser-auth
+		path /api/v1/jobs/urls/anonymous /api/v1/jobs/urls/browser-auth /api/v1/discover
 	}
 	handle @publicURLSubmission {
 		reverse_proxy 127.0.0.1:8100 {
