@@ -97,16 +97,21 @@ export default function Scan() {
 		[result?.remaining_scanners]
 	);
 
+	/* `remaining_scanners` is just expected minus completed, so it cannot tell
+	   queued from running. The orchestrator launches every scanner together when
+	   the job enters `scanning`, so that transition is the signal. */
+	const scannersLaunched = status === 'scanning' || status === 'completing';
+
 	const channels = expected.map((scannerId) => {
 		let state: ChannelState;
 		if (completed.has(scannerId)) {
 			state = 'done';
 		} else if (isFailed) {
 			state = 'err';
-		} else if (remaining.has(scannerId)) {
-			state = 'queue';
-		} else {
+		} else if (scannersLaunched && remaining.has(scannerId)) {
 			state = 'run';
+		} else {
+			state = 'queue';
 		}
 		return { id: scannerId, state };
 	});

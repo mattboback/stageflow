@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
@@ -21,6 +22,7 @@ type reportAggregation struct {
 	errors               []report.ReportError
 	artifactsByID        map[string]report.ReportArtifact
 	issues               []report.IssueDetail
+	manualChecks         map[string]*report.ManualCheck
 	hadSuccess           bool
 	baseURL              string
 	scannedAt            *time.Time
@@ -36,6 +38,7 @@ func newReportAggregation(aggregator *Aggregator, job *models.Job) *reportAggreg
 		byScanner:     make(map[string]int),
 		artifactsByID: make(map[string]report.ReportArtifact),
 		issues:        make([]report.IssueDetail, 0),
+		manualChecks:  make(map[string]*report.ManualCheck),
 	}
 }
 
@@ -202,6 +205,11 @@ func (a *reportAggregation) absorbIssues(
 			issue.Scanner = scannerID
 		}
 
+		if isManualCheck(issue) {
+			a.absorbManualCheck(issue)
+			continue
+		}
+
 		a.issues = append(a.issues, issue)
 		addSeverity(severity, issue.Severity)
 
@@ -209,6 +217,58 @@ func (a *reportAggregation) absorbIssues(
 	}
 
 	return scannerIssues
+}
+
+// manualCheckDescriptionPrefix is how the Lighthouse scanner labels a manual
+// audit; the checklist already says so, so the prefix is dropped.
+const manualCheckDescriptionPrefix = "Manual verification required: "
+
+// isManualCheck reports whether a scanner issue is a Lighthouse manual audit: a
+// fixed checklist item emitted for every page of every site, not a finding.
+func isManualCheck(issue report.IssueDetail) bool {
+	manual, _ := issue.ScannerData["lighthouseManual"].(bool)
+	return manual
+}
+
+// absorbManualCheck lists a manual audit once per rule instead of once per
+// page, keeping it out of issue totals, severity counts, and baselines.
+func (a *reportAggregation) absorbManualCheck(issue report.IssueDetail) {
+	key := issue.Scanner + "|" + issue.RuleId
+	if existing, ok := a.manualChecks[key]; ok {
+		existing.PageCount++
+		return
+	}
+
+	check := &report.ManualCheck{
+		Scanner:   issue.Scanner,
+		RuleId:    issue.RuleId,
+		Title:     issue.Title,
+		HelpUrl:   issue.HelpUrl,
+		PageCount: 1,
+	}
+
+	if description := strings.TrimPrefix(issue.Description, manualCheckDescriptionPrefix); description != "" {
+		check.Description = stringPtr(description)
+	}
+
+	a.manualChecks[key] = check
+}
+
+func (a *reportAggregation) sortedManualChecks() []report.ManualCheck {
+	checks := make([]report.ManualCheck, 0, len(a.manualChecks))
+	for _, check := range a.manualChecks {
+		checks = append(checks, *check)
+	}
+
+	sort.Slice(checks, func(i, j int) bool {
+		if checks[i].Scanner != checks[j].Scanner {
+			return checks[i].Scanner < checks[j].Scanner
+		}
+
+		return checks[i].RuleId < checks[j].RuleId
+	})
+
+	return checks
 }
 
 func (a *reportAggregation) absorbPages(scannerID string, pages []report.PageSummary) {
@@ -282,7 +342,14 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 		LighthouseCategories: a.lighthouseCategories,
 	}
 	if totalIssues > 0 {
-		score, grade := calculateAccessibilityScore(dedupedSeverity)
+		scoredSeverity := report.SeverityCounts{}
+		for _, issue := range deduplicatedIssues {
+			if !needsHumanReview(issue) {
+				addSeverity(&scoredSeverity, issue.Severity)
+			}
+		}
+
+		score, grade := calculateAccessibilityScore(scoredSeverity, len(pages))
 		summary.Score = intPtr(score)
 		summary.ScoreGrade = stringPtr(grade)
 	}
@@ -307,6 +374,8 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 		Issues:    deduplicatedIssues,
 		Artifacts: flattenArtifacts(a.artifactsByID),
 		Errors:    a.errors,
+
+		ManualChecks: a.sortedManualChecks(),
 	}
 }
 

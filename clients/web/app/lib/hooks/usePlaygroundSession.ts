@@ -7,6 +7,7 @@ import {
 	buildFormAuthConfig,
 	estimateScanRuntime,
 	isAuthConfigComplete,
+	mergePastedUrls,
 	validatePlaygroundConfiguration,
 	validateZipUploadFile,
 	type AuthFormConfig
@@ -153,6 +154,20 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 			delete next[index];
 			return next;
 		});
+	}
+
+	/**
+	 * Spreads a pasted list (one URL per line, or space/comma separated) across
+	 * rows starting at `index`. Returns false for a single value so the browser
+	 * pastes it normally.
+	 */
+	function pasteUrls(index: number, text: string): boolean {
+		const next = mergePastedUrls(urls, index, text);
+		if (!next) return false;
+
+		setUrls(next);
+		setUrlRowErrors({});
+		return true;
 	}
 
 	function addUrlRow() {
@@ -346,6 +361,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		setMode,
 		urls,
 		updateUrl,
+		pasteUrls,
 		addUrlRow,
 		removeUrlRow,
 		targetCount,

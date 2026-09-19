@@ -426,6 +426,45 @@ describe('AxeScanner.scanPage', () => {
 		expect(result.issues[0]?.metadata).toMatchObject({ incompleteNodeIndex: 0 });
 	});
 
+	it('drops aria-hidden and punctuation-only incompletes but keeps short real text', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: [
+				{
+					id: 'color-contrast',
+					impact: 'serious',
+					tags: ['cat.color', 'wcag2aa', 'wcag143'],
+					nodes: [
+						{
+							target: ['li > span[aria-hidden="true"]'],
+							html: '<span aria-hidden="true" class="pr-2">·</span>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'shortTextContent' } }]
+						},
+						{
+							target: ['.divider'],
+							html: '<span class="divider">|</span>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'shortTextContent' } }]
+						},
+						{
+							target: ['svg > text'],
+							html: '<text x="26" y="270">A</text>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'shortTextContent' } }]
+						}
+					]
+				}
+			]
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.issues).toHaveLength(1);
+		expect(result.issues[0]).toMatchObject({ location: { selector: 'svg > text' } });
+	});
+
 	it('does not promote non-contrast incomplete results', async () => {
 		const { AxeScanner } = await import('../../../src/scanners/axe');
 		axeAnalyzeMock.mockResolvedValue({

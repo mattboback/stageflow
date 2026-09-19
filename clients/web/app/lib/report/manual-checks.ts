@@ -20,10 +20,11 @@ export function isLighthouseManualCheck(issue: Pick<IssueDetail, 'scannerData'>)
 const MANUAL_DESCRIPTION_PREFIX = 'Manual verification required: ';
 
 /**
- * Separates the manual-audit checklist from findings, listing each check once
- * rather than once per page. Run this before any count is derived, so the
- * headline, severity chips, scanner chips and per-page totals describe only
- * what the scanners actually found on this site.
+ * Returns the manual-audit checklist separately from findings. Current reports
+ * carry it in `manualChecks`; reports saved to a local project before that
+ * field existed still hold one info issue per page, so those are split out
+ * here. Run this before any count is derived, so the headline, severity chips,
+ * scanner chips and per-page totals describe only what the scanners found.
  */
 export function splitManualChecks(report: UnifiedReport): {
 	report: UnifiedReport;
@@ -31,6 +32,15 @@ export function splitManualChecks(report: UnifiedReport): {
 } {
 	const findings: IssueDetail[] = [];
 	const checksByRule = new Map<string, ManualCheck>();
+	for (const check of report.manualChecks ?? []) {
+		checksByRule.set(check.ruleId, {
+			ruleId: check.ruleId,
+			title: check.title,
+			description: check.description ?? '',
+			...(check.helpUrl ? { helpUrl: check.helpUrl } : {}),
+			pageCount: check.pageCount
+		});
+	}
 
 	for (const issue of report.issues) {
 		if (!isLighthouseManualCheck(issue)) {

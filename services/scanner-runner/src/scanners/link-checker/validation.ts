@@ -87,6 +87,50 @@ export function getSeverityForStatus(status: number): IssueSeverity {
 }
 
 /**
+ * Statuses a HEAD request gets from servers that simply don't serve HEAD (or
+ * gate it behind a bot wall); only a GET says whether the link works.
+ */
+const HEAD_RETRY_STATUSES = new Set([403, 405, 501]);
+
+/**
+ * True when the response says "I won't tell a scanner", not "this is broken":
+ * auth walls, rate limits, and non-standard bot-wall codes such as LinkedIn's
+ * 999. A person clicking the link usually gets the page. A 401/403 from the
+ * scanned site itself is not excused: the scan already carries that site's
+ * session, so its own link refusing it is a real finding.
+ */
+export function isUnverifiableStatus(status: number, isInternal = false): boolean {
+	if (status === 401 || status === 403) {
+		return !isInternal;
+	}
+	return status === 429 || status >= 600;
+}
+
+async function requestLink(
+	url: string,
+	method: 'HEAD' | 'GET',
+	targetValidationPolicy: TargetValidationPolicy
+): Promise<{ status: number; redirects: string[] }> {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => {
+		controller.abort();
+	}, REQUEST_TIMEOUT);
+	try {
+		const { response, redirects } = await fetchWithValidatedRedirects(
+			url,
+			method,
+			controller.signal,
+			targetValidationPolicy
+		);
+		// Only the status matters; don't download GET bodies.
+		void response.body?.cancel();
+		return { status: response.status, redirects };
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+
+/**
  * Checks a single URL for availability, using HEAD with GET fallback.
  */
 export async function checkSingleLink(
@@ -94,73 +138,41 @@ export async function checkSingleLink(
 	targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
 ): Promise<LinkCheckResult> {
 	const startTime = Date.now();
+	const done = (
+		status: number | null,
+		error: string | null,
+		redirects: string[]
+	): LinkCheckResult => ({
+		url,
+		status,
+		error,
+		redirects,
+		responseTime: Date.now() - startTime
+	});
 
+	let refusedHead: { status: number; redirects: string[] } | null = null;
 	try {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => {
-			controller.abort();
-		}, REQUEST_TIMEOUT);
-		try {
-			const { response, redirects } = await fetchWithValidatedRedirects(
-				url,
-				'HEAD',
-				controller.signal,
-				targetValidationPolicy
-			);
-
-			return {
-				url,
-				status: response.status,
-				error: null,
-				redirects,
-				responseTime: Date.now() - startTime
-			};
-		} finally {
-			clearTimeout(timeoutId);
+		const head = await requestLink(url, 'HEAD', targetValidationPolicy);
+		if (!HEAD_RETRY_STATUSES.has(head.status)) {
+			return done(head.status, null, head.redirects);
 		}
+		refusedHead = head;
 	} catch (headError) {
 		if (headError instanceof BlockedTargetError) {
-			return {
-				url,
-				status: null,
-				error: headError.message,
-				redirects: [],
-				responseTime: Date.now() - startTime
-			};
+			return done(null, headError.message, []);
 		}
+		// HEAD failed outright; some servers only answer GET.
+	}
 
-		// If HEAD fails, try GET (some servers don't support HEAD)
-		try {
-			const controller = new AbortController();
-			const timeoutId = setTimeout(() => {
-				controller.abort();
-			}, REQUEST_TIMEOUT);
-			try {
-				const { response, redirects } = await fetchWithValidatedRedirects(
-					url,
-					'GET',
-					controller.signal,
-					targetValidationPolicy
-				);
-
-				return {
-					url,
-					status: response.status,
-					error: null,
-					redirects,
-					responseTime: Date.now() - startTime
-				};
-			} finally {
-				clearTimeout(timeoutId);
-			}
-		} catch (getError) {
-			return {
-				url,
-				status: null,
-				error: getError instanceof Error ? getError.message : 'Connection failed',
-				redirects: [],
-				responseTime: Date.now() - startTime
-			};
+	try {
+		const get = await requestLink(url, 'GET', targetValidationPolicy);
+		return done(get.status, null, get.redirects);
+	} catch (getError) {
+		// Bot walls often answer HEAD with 403 and then stall the GET. The server
+		// did respond, so report its status rather than a connection error.
+		if (refusedHead) {
+			return done(refusedHead.status, null, refusedHead.redirects);
 		}
+		return done(null, getError instanceof Error ? getError.message : 'Connection failed', []);
 	}
 }

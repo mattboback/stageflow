@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	estimateScanRuntime,
+	mergePastedUrls,
 	validatePlaygroundConfiguration,
 	type AuthFormConfig
 } from './playground-utils';
@@ -156,5 +157,31 @@ describe('estimateScanRuntime', () => {
 		expect(estimateScanRuntime([scanner('axe')], selections, 1, 'url').label).toBe(
 			'Varies by site'
 		);
+	});
+});
+
+describe('mergePastedUrls', () => {
+	it('spreads a pasted list across rows and drops the empty ones', () => {
+		expect(
+			mergePastedUrls(
+				['https://example.com', ''],
+				0,
+				'https://a.example/\nhttps://a.example/b\n  https://a.example/c, https://a.example/d\n'
+			)
+		).toEqual([
+			'https://a.example/',
+			'https://a.example/b',
+			'https://a.example/c',
+			'https://a.example/d'
+		]);
+	});
+
+	it('leaves a single pasted value to the browser', () => {
+		expect(mergePastedUrls([''], 0, ' https://a.example/ ')).toBeNull();
+	});
+
+	it('caps the list at the API limit of 100 URLs', () => {
+		const list = Array.from({ length: 150 }, (_, i) => `https://a.example/${i}`).join('\n');
+		expect(mergePastedUrls([''], 0, list)).toHaveLength(100);
 	});
 });

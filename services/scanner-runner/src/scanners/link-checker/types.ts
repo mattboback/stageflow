@@ -18,6 +18,8 @@ export interface LinkCheckResult {
 	error: string | null;
 	redirects: string[];
 	responseTime: number;
+	/** Same host as the scanned page; set by the scanner, not by the request. */
+	isInternal?: boolean;
 	/** CSS selector for the originating anchor, carried through for visual evidence. */
 	selector?: string;
 }
