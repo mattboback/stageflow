@@ -8,7 +8,7 @@ export const IMAGE_CHECKS: SEOCheck[] = [
 		category: 'images',
 		helpUrl: 'https://moz.com/learn/seo/alt-text',
 		check: (data) => {
-			const missingAlt = data.images.filter((img) => !img.alt);
+			const missingAlt = data.images.filter((img) => img.alt === null);
 			if (missingAlt.length > 0) {
 				return {
 					passed: false,

@@ -170,7 +170,7 @@ describe('SEO checks', () => {
 
 	// === IMAGE CHECKS ===
 	describe('image checks', () => {
-		it('flags images missing alt text', () => {
+		it('flags images with no alt attribute, but not decorative alt=""', () => {
 			const result = getCheck('images-missing-alt').check(
 				baseData({
 					images: [
@@ -191,7 +191,8 @@ describe('SEO checks', () => {
 			);
 			expect(result).not.toBeNull();
 			expect(result?.passed).toBe(false);
-			expect(result?.message).toContain('2 image(s)');
+			expect(result?.message).toContain('1 image(s)');
+			expect(result?.details).toEqual({ images: ['https://example.com/b.png'] });
 		});
 
 		it('passes when all images have alt text', () => {

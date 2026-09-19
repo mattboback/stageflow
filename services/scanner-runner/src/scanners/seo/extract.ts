@@ -23,7 +23,9 @@ export async function extractSEOData(page: Page, url: string): Promise<PageSEODa
 		for (const el of document.querySelectorAll('img')) {
 			images.push({
 				src: el.src,
-				alt: el.alt || null,
+				// `alt=""` marks a decorative image and is correct; only an absent
+				// attribute is missing alt text.
+				alt: el.getAttribute('alt'),
 				width: el.naturalWidth || null,
 				height: el.naturalHeight || null
 			});
