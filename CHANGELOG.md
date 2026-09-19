@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Broken-link findings use one stable rule ID (`link-checker-broken`) instead of one per status code, and each broken link is its own finding naming the URL and status, so a link whose status changes between runs no longer appears as a new regression and fixing one link resolves exactly one finding. Existing baselines containing `link-checker-broken-<status>` findings re-key once.
 - Axe no longer asks for manual contrast verification of `aria-hidden` elements or punctuation-only separators; a 22-page scan produced 93 such findings on decorative "·" characters.
 - The site score is averaged over the pages scanned and ignores unverified contrast checks. Previously a template-level issue counted once per page, so multi-page scans collapsed to 0. Scores from before this change are not comparable; a multi-page baseline scored under the old formula will show a one-time score increase.
+- Two timing-dependent findings no longer churn baselines: axe waits up to 3 seconds for a visible `role="progressbar"` page-loading bar to disappear before analysing, and the link checker no longer raises `link-checker-slow-responses` (the slow-link count stays in the scanner's raw results).
+- Axe no longer asks for manual contrast verification of SVG `<text>` labels; a 22-page scan produced 106 such items on one-character diagram labels.
+- Lighthouse no longer reports a Content-Security-Policy violation twice: the `inspector-issues` audit is dropped when it lists only CSP issues that `errors-in-console` already names.
+- `seo-thin-content` fires below 100 words instead of 300, so contact and index pages are not flagged, and title/description length advice is rated minor.
+- The report's issue dialog steps through findings worst first, so opening the most severe finding shows "1 of N".
 - The scan page showed running scanners as "Waiting" until they finished.
 - The playground runtime estimate for Lighthouse was roughly double the observed time per page.
 - The scan and report pages scrolled sideways on phones 390px wide and narrower; the app bar no longer shows its section label at that width.
