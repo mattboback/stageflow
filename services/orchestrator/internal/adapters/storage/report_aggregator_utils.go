@@ -291,12 +291,19 @@ const (
 //
 // Grade thresholds use standard academic grading (97+ = A+, 93+ = A, etc.).
 //
+// The penalty is averaged over the pages scanned, so the score describes a
+// typical page. Without that, one template-level issue repeated on every page
+// of a 22-page scan counted 22 times and drove any multi-page scan to 0.
+//
 // See https://www.w3.org/WAI/WCAG22/Understanding/ for WCAG severity context.
-func calculateAccessibilityScore(counts report.SeverityCounts) (score int, grade string) {
+func calculateAccessibilityScore(counts report.SeverityCounts, pagesScanned int) (score int, grade string) {
 	penalty := float64(counts.Critical)*scorePenaltyCritical +
 		float64(counts.Serious)*scorePenaltySerious +
 		float64(counts.Moderate)*scorePenaltyModerate +
 		float64(counts.Minor)*scorePenaltyMinor
+	if pagesScanned > 1 {
+		penalty /= float64(pagesScanned)
+	}
 
 	if penalty <= 0 {
 		return 100, "A+"
@@ -315,6 +322,14 @@ func calculateAccessibilityScore(counts report.SeverityCounts) (score int, grade
 	grade = scoreGrade(score)
 
 	return score, grade
+}
+
+// needsHumanReview reports whether a finding is an unverified observation
+// rather than a confirmed defect (axe "incomplete" contrast checks). Those stay
+// in the report for review but must not lower the score.
+func needsHumanReview(issue report.IssueDetail) bool {
+	incomplete, _ := issue.ScannerData["axeIncomplete"].(bool)
+	return incomplete
 }
 
 func scoreGrade(score int) string {

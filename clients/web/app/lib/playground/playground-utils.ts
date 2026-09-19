@@ -177,6 +177,23 @@ export function validatePlaygroundConfiguration({
 	};
 }
 
+// Mirrors maxURLCount in platform-api's URL submit handler.
+const MAX_URLS_PER_SCAN = 100;
+
+/**
+ * Spreads a pasted list (one URL per line, or space/comma separated) across the
+ * URL rows, replacing the row pasted into. Returns null for a single value so
+ * the browser pastes it normally.
+ */
+export function mergePastedUrls(rows: string[], index: number, text: string): string[] | null {
+	const pasted = text.split(/[\s,]+/).filter(Boolean);
+	if (pasted.length < 2) return null;
+
+	return [...rows.slice(0, index), ...pasted, ...rows.slice(index + 1)]
+		.filter((url) => url.trim() !== '')
+		.slice(0, MAX_URLS_PER_SCAN);
+}
+
 export interface RuntimeEstimate {
 	label: string;
 	detail: string;

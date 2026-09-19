@@ -16,7 +16,7 @@ import { ScannerBase } from '../../core/scanner-base';
 import { AxeScreenshotService } from '../../screenshots/axe-screenshot-service';
 import { capturePageOverviewFromIssues } from '../../screenshots/page-overview-from-issues';
 import { SCANNER_VERSION } from '../version';
-import { checkSingleLink, getSeverityForStatus, groupByStatus } from './validation';
+import { checkSingleLink, getSeverityForStatus, isUnverifiableStatus } from './validation';
 
 /** Located link element: a CSS selector plus a trimmed HTML snippet. */
 interface LocatedElement {
@@ -44,7 +44,12 @@ function nodesFromSelectors(
 
 export type { LinkCheckResult, LinkInfo } from './types';
 // Re-export for backwards compatibility and testing
-export { checkSingleLink, getSeverityForStatus, groupByStatus } from './validation';
+export {
+	checkSingleLink,
+	getSeverityForStatus,
+	groupByStatus,
+	isUnverifiableStatus
+} from './validation';
 
 export class LinkCheckerScanner extends ScannerBase {
 	readonly metadata = {
@@ -74,11 +79,14 @@ export class LinkCheckerScanner extends ScannerBase {
 			);
 
 			const brokenLinks: LinkCheckResult[] = [];
+			const unverifiedLinks: LinkCheckResult[] = [];
 			const redirectChains: LinkCheckResult[] = [];
 			const slowLinks: LinkCheckResult[] = [];
 
 			for (const result of results) {
-				if (result.error || (result.status && result.status >= 400)) {
+				if (result.status && isUnverifiableStatus(result.status, result.isInternal)) {
+					unverifiedLinks.push(result);
+				} else if (result.error || (result.status && result.status >= 400)) {
 					brokenLinks.push(result);
 				} else if (result.redirects.length > 2) {
 					redirectChains.push(result);
@@ -88,6 +96,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			}
 
 			this.addBrokenLinkIssues(issues, brokenLinks);
+			this.addUnverifiedLinkIssue(issues, unverifiedLinks);
 			this.addRedirectChainIssue(issues, redirectChains);
 			this.addSlowLinkIssue(issues, slowLinks);
 
@@ -190,29 +199,57 @@ export class LinkCheckerScanner extends ScannerBase {
 		}
 	}
 
+	// One issue per broken URL, all under one rule ID. The fingerprint is built from
+	// the rule ID and the link's selector, so fixing one link resolves exactly one
+	// issue, and a status that flaps between runs (404 -> 503) is not a new issue.
 	private addBrokenLinkIssues(issues: Issue[], brokenLinks: LinkCheckResult[]): void {
-		if (brokenLinks.length === 0) {
-			return;
-		}
-
-		const grouped = groupByStatus(brokenLinks);
-		for (const [status, links] of Object.entries(grouped)) {
-			const severity = getSeverityForStatus(Number.parseInt(status, 10));
+		for (const link of brokenLinks) {
+			const outcome = link.status
+				? `returned HTTP ${link.status}`
+				: `could not be reached (connection error${link.error ? `: ${link.error}` : ''})`;
 			issues.push({
-				id: `${this.metadata.name}-broken-${status}`,
+				id: `${this.metadata.name}-broken`,
 				scanner: this.metadata.name,
-				severity,
+				severity: getSeverityForStatus(link.status ?? 0),
 				category: 'links',
-				title: `Broken Links (${status === '0' ? 'Connection Error' : `HTTP ${status}`})`,
-				description: `Found ${links.length} link(s) returning ${status === '0' ? 'connection errors' : `HTTP ${status}`}. Broken links hurt user experience and SEO.`,
+				title: `Broken link (${link.status ? `HTTP ${link.status}` : 'connection error'})`,
+				description: `${link.url} ${outcome}. Broken links hurt user experience and SEO.`,
 				helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status',
 				metadata: {
-					links: links.slice(0, 10).map((l) => ({ url: l.url, error: l.error })),
-					totalCount: links.length,
-					nodes: nodesFromSelectors(links.map((l) => ({ selector: l.selector, html: l.url })))
+					links: [{ url: link.url, status: link.status, error: link.error }],
+					totalCount: 1,
+					// The formatter surfaces the first node's failureSummary as the fix guidance.
+					nodes: nodesFromSelectors([{ selector: link.selector, html: link.url }]).map((node) => ({
+						...node,
+						failureSummary:
+							'Update the href to a working URL, restore or redirect the missing destination, or remove the link.'
+					}))
 				}
 			});
 		}
+	}
+
+	private addUnverifiedLinkIssue(issues: Issue[], unverifiedLinks: LinkCheckResult[]): void {
+		if (unverifiedLinks.length === 0) {
+			return;
+		}
+
+		issues.push({
+			id: `${this.metadata.name}-unverified`,
+			scanner: this.metadata.name,
+			severity: 'info',
+			category: 'links',
+			title: 'Links that could not be verified',
+			description: `${unverifiedLinks.length} link(s) refused an automated check (login wall, rate limit, or bot protection). They usually work in a browser — open each one to confirm.`,
+			helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Status',
+			metadata: {
+				links: unverifiedLinks.slice(0, 10).map((l) => ({ url: l.url, status: l.status })),
+				totalCount: unverifiedLinks.length,
+				nodes: nodesFromSelectors(
+					unverifiedLinks.map((l) => ({ selector: l.selector, html: l.url }))
+				)
+			}
+		});
 	}
 
 	private addRedirectChainIssue(issues: Issue[], redirectChains: LinkCheckResult[]): void {
@@ -349,7 +386,10 @@ export class LinkCheckerScanner extends ScannerBase {
 			const batch = links.slice(i, i + this.maxConcurrentRequests);
 			const batchResults = await Promise.all(
 				batch.map(async (link) => {
-					const result = await checkSingleLink(link.href, targetValidationPolicy);
+					const result = {
+						...(await checkSingleLink(link.href, targetValidationPolicy)),
+						isInternal: link.isInternal
+					};
 					return link.selector !== undefined ? { ...result, selector: link.selector } : result;
 				})
 			);

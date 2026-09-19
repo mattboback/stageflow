@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Public `DELETE /api/v1/jobs/{id}` so a visitor who has the job URL can erase hosted artifacts immediately.
 - Local project export/import and stored run reports so a hosted visitor can reopen findings after the 24-hour object window.
 
+- Pasting a list of URLs into a scan target field fills one row per URL, up to the 100-URL job limit.
+
 ### Removed
 
 - The security-headers scanner no longer reports a missing `X-XSS-Protection` header. Browsers have removed the filter it controlled, so the finding recommended a header sites should not send.
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The aggregated report lists Lighthouse manual audits once under a new optional `manualChecks` field instead of emitting one info issue per page, so CLI totals, per-scanner counts, and baselines no longer carry them. The web report reads the field and still separates the checklist out of reports saved before it existed.
 - Lighthouse manual audits are no longer counted as findings in the web report. They are the same checklist for every page of every site, so the report lists each once under "Manual checks" in Findings, and the headline total, severity and scanner chips, per-page counts and review queue describe only what the scanners found on the scanned site.
 - Lighthouse findings link to the audit's own documentation page instead of the Lighthouse overview.
 - Made regression memory the primary web workflow, added centralized submission validation and truthful runtime ranges, and aligned the favicon/social card around the StageFlow score gauge.
@@ -36,6 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The link checker reported working links as broken: it never retried with GET when a server answered HEAD with 403, 405 or 501, and it graded non-standard codes such as LinkedIn's 999 as critical. External links behind a login wall, rate limit or bot protection (401, 403, 429, 999) are now one informational "could not be verified" finding; a 401 or 403 from the scanned site's own links still counts as broken.
+- Broken-link findings use one stable rule ID (`link-checker-broken`) instead of one per status code, and each broken link is its own finding naming the URL and status, so a link whose status changes between runs no longer appears as a new regression and fixing one link resolves exactly one finding. Existing baselines containing `link-checker-broken-<status>` findings re-key once.
+- Axe no longer asks for manual contrast verification of `aria-hidden` elements or punctuation-only separators; a 22-page scan produced 93 such findings on decorative "·" characters.
+- The site score is averaged over the pages scanned and ignores unverified contrast checks. Previously a template-level issue counted once per page, so multi-page scans collapsed to 0. Scores from before this change are not comparable; a multi-page baseline scored under the old formula will show a one-time score increase.
+- The scan page showed running scanners as "Waiting" until they finished.
+- The playground runtime estimate for Lighthouse was roughly double the observed time per page.
 - The scan and report pages scrolled sideways on phones 390px wide and narrower; the app bar no longer shows its section label at that width.
 - The report's Lighthouse category averages showed a perfect score as "1 · Failing": the 0–1 contract score was rendered as if it were 0–100.
 - The live scan log printed the job's running total as each scanner's issue count; it now prints the scanner's own count.

@@ -76,6 +76,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 		setMode,
 		urls,
 		updateUrl,
+		pasteUrls,
 		addUrlRow,
 		removeUrlRow,
 		targetCount,
@@ -216,6 +217,10 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 																aria-invalid={urlRowErrors[i] ? true : undefined}
 																aria-describedby={urlRowErrors[i] ? `urlrow-err-${i}` : undefined}
 																onChange={(e) => updateUrl(i, e.target.value)}
+																onPaste={(e) => {
+																	if (pasteUrls(i, e.clipboardData.getData('text')))
+																		e.preventDefault();
+																}}
 															/>
 															{urlRowErrors[i] && (
 																<span className="urlrow__err" id={`urlrow-err-${i}`} role="alert">
@@ -243,7 +248,8 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 											</button>
 											<p className="intake__note">
 												<Info size={15} aria-hidden="true" />
-												Each URL is scanned as its own page — add every page you want covered.
+												Each URL is scanned as its own page — add every page you want covered. Paste
+												a list to fill several rows at once.
 											</p>
 										</>
 									) : (
@@ -394,9 +400,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 											</span>
 											<span className="sumlist__lab">
 												Targets
-												<small>
-													{mode === 'url' ? 'Starting points for the scan' : 'Static-site archive'}
-												</small>
+												<small>{mode === 'url' ? 'Pages to scan' : 'Static-site archive'}</small>
 											</span>
 											<b className="num">
 												{mode === 'url'

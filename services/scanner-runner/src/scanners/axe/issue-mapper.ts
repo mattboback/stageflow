@@ -41,10 +41,34 @@ export function isColorContrastRule(ruleId: string | undefined): boolean {
  */
 const NON_VERIFIABLE_CONTRAST_MESSAGE_KEYS = new Set(['nonBmp']);
 
+/** The node's own opening tag marks it as hidden from assistive technology. */
+function isAriaHidden(html: string): boolean {
+	const openingTag = /^<[^>]*>/.exec(html)?.[0] ?? '';
+	return /\baria-hidden\s*=\s*["']?true\b/i.test(openingTag);
+}
+
+/** Text with no letter or digit: separators such as "·", "|" or "→". */
+function isPunctuationOnly(html: string): boolean {
+	const text = html.replace(/<[^>]*>/g, '');
+	return text.trim().length > 0 && !/[\p{L}\p{N}]/u.test(text);
+}
+
+/**
+ * Drops incomplete nodes that carry nothing a reader could miss. A real scan of
+ * a 22-page marketing site produced 206 contrast findings, none of them
+ * violations: 93 sat on `aria-hidden` decorative "·" separators.
+ */
 function isVerifiableContrastIncomplete(node: AxeNode): boolean {
 	const messageKey = extractContrastData(node)?.messageKey;
+	if (typeof messageKey === 'string' && NON_VERIFIABLE_CONTRAST_MESSAGE_KEYS.has(messageKey)) {
+		return false;
+	}
 
-	return typeof messageKey !== 'string' || !NON_VERIFIABLE_CONTRAST_MESSAGE_KEYS.has(messageKey);
+	const html = node.html ?? '';
+	if (isAriaHidden(html)) {
+		return false;
+	}
+	return !(messageKey === 'shortTextContent' && isPunctuationOnly(html));
 }
 
 /**

@@ -15,7 +15,7 @@
 		"requiresBrowser": true,
 		"supportsOffline": false,
 		"maxConcurrency": 1,
-		"estimatedTimePerPage": 30000
+		"estimatedTimePerPage": 15000
 	},
 	"requirements": {
 		"browser": {

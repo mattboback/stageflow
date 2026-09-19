@@ -5,6 +5,7 @@ import (
 	"time"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 func TestPageKey(t *testing.T) {
@@ -250,7 +251,7 @@ func TestCalculateAccessibilityScore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			score, grade := calculateAccessibilityScore(tt.counts)
+			score, grade := calculateAccessibilityScore(tt.counts, 1)
 			if score != tt.wantScore {
 				t.Errorf("score = %d, want %d", score, tt.wantScore)
 			}
@@ -262,10 +263,49 @@ func TestCalculateAccessibilityScore(t *testing.T) {
 	}
 
 	// Verify ordering: 100 minor issues should score higher than 5 critical issues.
-	minorScore, _ := calculateAccessibilityScore(report.SeverityCounts{Minor: 100})
-	criticalScore, _ := calculateAccessibilityScore(report.SeverityCounts{Critical: 5})
+	minorScore, _ := calculateAccessibilityScore(report.SeverityCounts{Minor: 100}, 1)
+	criticalScore, _ := calculateAccessibilityScore(report.SeverityCounts{Critical: 5}, 1)
+
+	// A sitewide issue repeated on every page scores like one page with it.
+	onePage, _ := calculateAccessibilityScore(report.SeverityCounts{Serious: 4}, 1)
+	manyPages, _ := calculateAccessibilityScore(report.SeverityCounts{Serious: 88}, 22)
+
+	if onePage != manyPages {
+		t.Errorf("22 pages with 4 serious each (%d) should score like 1 page with 4 (%d)", manyPages, onePage)
+	}
 
 	if minorScore <= criticalScore {
 		t.Errorf("100 minor (%d) should score higher than 5 critical (%d)", minorScore, criticalScore)
+	}
+}
+
+func TestAbsorbIssuesListsManualChecksOncePerRule(t *testing.T) {
+	agg := newReportAggregation(nil, &models.Job{})
+	manual := func(pageID string) report.IssueDetail {
+		return report.IssueDetail{
+			RuleId:      "logical-tab-order",
+			Title:       "The page has a logical tab order",
+			Description: "Manual verification required: Tabbing should follow the visual layout.",
+			Severity:    report.IssueSeverityInfo,
+			PageId:      pageID,
+			ScannerData: map[string]interface{}{"lighthouseManual": true},
+		}
+	}
+	finding := report.IssueDetail{RuleId: "is-crawlable", Title: "Blocked", Severity: report.IssueSeveritySerious}
+
+	severity := report.SeverityCounts{}
+	counted := agg.absorbIssues("lighthouse", []report.IssueDetail{manual("url-1"), manual("url-2"), finding}, &severity)
+
+	if counted != 1 || len(agg.issues) != 1 || severity.Serious != 1 {
+		t.Fatalf("counted = %d, issues = %d, serious = %d; want 1 finding only", counted, len(agg.issues), severity.Serious)
+	}
+
+	checks := agg.sortedManualChecks()
+	if len(checks) != 1 || checks[0].PageCount != 2 || checks[0].Scanner != "lighthouse" {
+		t.Fatalf("manual checks = %+v, want one lighthouse check seen on 2 pages", checks)
+	}
+
+	if got := stringValue(checks[0].Description); got != "Tabbing should follow the visual layout." {
+		t.Errorf("description = %q, want the prefix removed", got)
 	}
 }
