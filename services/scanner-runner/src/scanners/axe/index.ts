@@ -30,6 +30,7 @@ import {
 	LOADING_INDICATOR_WAIT_MS,
 	NETWORKIDLE_TIMEOUT_MS,
 	parseAxeOptions,
+	SCRIPTLESS_FRAME_SELECTOR,
 	withTimeoutFallback,
 	type AxeOptions
 } from './options';
@@ -122,7 +123,7 @@ export class AxeScanner extends ScannerBase {
 				dynamicContentWaitMs: waitMs
 			});
 
-			let axe = new AxeBuilder({ page });
+			let axe = new AxeBuilder({ page }).exclude(SCRIPTLESS_FRAME_SELECTOR);
 
 			// Apply disabled rules if configured
 			if (this.options.disabledRules && this.options.disabledRules.length > 0) {

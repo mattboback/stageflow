@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageEntry, ScanContext, ScannerConfig, ScannerLogger } from '../../../src/core';
 
 const axeAnalyzeMock = vi.hoisted(() => vi.fn());
+const axeExcludeMock = vi.hoisted(() => vi.fn());
 const capturePageOverviewMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@axe-core/playwright', () => {
@@ -19,6 +20,11 @@ vi.mock('@axe-core/playwright', () => {
 		withTags = vi.fn(function (this: MockAxeBuilder) {
 			return this;
 		});
+
+		exclude = (selector: string): this => {
+			axeExcludeMock(selector);
+			return this;
+		};
 
 		analyze = axeAnalyzeMock;
 	}
@@ -280,6 +286,20 @@ describe('AxeScanner.scanPage', () => {
 
 		expect(result.issues).toHaveLength(1);
 		expect(result.issues[0]?.metadata?.contrastData).toBeUndefined();
+	});
+
+	it('excludes frames whose sandbox forbids scripts, which axe cannot enter', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: []
+		});
+
+		await new AxeScanner().scanPage(createMockContext(resultsDir));
+
+		expect(axeExcludeMock).toHaveBeenCalledWith('iframe[sandbox]:not([sandbox~="allow-scripts"])');
 	});
 
 	it('attaches first-node contrast data to color-contrast violations', async () => {
