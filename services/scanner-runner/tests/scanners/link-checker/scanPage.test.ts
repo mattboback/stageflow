@@ -12,6 +12,11 @@ import type { PageEntry, ScanContext, ScannerConfig, ScannerLogger } from '../..
 
 import { LinkCheckerScanner } from '../../../src/scanners/link-checker';
 
+// Settling waits on real time; it has its own tests.
+vi.mock('../../../src/core/page-settle', () => ({
+	waitForPageSettled: vi.fn().mockResolvedValue(undefined)
+}));
+
 // Helper to create mock logger
 const createMockLogger = (): ScannerLogger => ({
 	info: vi.fn(),
@@ -25,8 +30,6 @@ const createMockPage = (overrides: Partial<Page> = {}): Page => {
 	const mockPage = {
 		goto: vi.fn().mockResolvedValue(null),
 		evaluate: vi.fn(),
-		waitForLoadState: vi.fn().mockResolvedValue(undefined),
-		waitForFunction: vi.fn().mockResolvedValue(undefined),
 		url: vi.fn().mockReturnValue('https://example.com'),
 		...overrides
 	} as unknown as Page;
