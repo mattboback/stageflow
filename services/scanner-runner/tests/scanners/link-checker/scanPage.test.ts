@@ -265,11 +265,11 @@ describe('LinkCheckerScanner.scanPage', () => {
 
 			expect(result.issues).toHaveLength(1);
 			expect(result.issues[0]).toMatchObject({
-				id: 'link-checker-broken-404',
+				id: 'link-checker-broken',
 				scanner: 'link-checker',
 				severity: 'serious',
 				category: 'links',
-				title: expect.stringContaining('404')
+				description: expect.stringContaining('HTTP 404')
 			});
 		});
 
@@ -304,8 +304,9 @@ describe('LinkCheckerScanner.scanPage', () => {
 
 			expect(result.issues).toHaveLength(1);
 			expect(result.issues[0]).toMatchObject({
+				id: 'link-checker-broken',
 				severity: 'critical',
-				title: expect.stringContaining('500')
+				description: expect.stringContaining('HTTP 500')
 			});
 		});
 
@@ -336,9 +337,155 @@ describe('LinkCheckerScanner.scanPage', () => {
 
 			expect(result.issues).toHaveLength(1);
 			expect(result.issues[0]).toMatchObject({
-				id: 'link-checker-broken-0',
+				id: 'link-checker-broken',
 				severity: 'serious',
-				title: expect.stringContaining('Connection Error')
+				description: expect.stringContaining('connection error')
+			});
+		});
+
+		it('retries with GET when the server rejects HEAD, and trusts the GET answer', async () => {
+			globalThis.fetch = vi
+				.fn()
+				.mockImplementation((_url: string, init: { method: string }) =>
+					Promise.resolve({ status: init.method === 'HEAD' ? 405 : 200 })
+				);
+
+			const mockPage = createMockPage({
+				evaluate: vi
+					.fn()
+					.mockResolvedValueOnce([
+						{
+							href: 'https://example.com/get-only',
+							text: 'Get only',
+							isInternal: true,
+							element: 'a'
+						}
+					])
+					.mockResolvedValueOnce([])
+					.mockResolvedValueOnce([])
+			});
+
+			const resultPromise = new LinkCheckerScanner().scanPage(
+				createMockContext({ page: mockPage })
+			);
+			await vi.advanceTimersByTimeAsync(200);
+			const result = await resultPromise;
+
+			expect(result.issues).toHaveLength(0);
+		});
+
+		it('reports bot-wall statuses as unverified info, not broken', async () => {
+			globalThis.fetch = vi
+				.fn()
+				.mockImplementation((_url: string, init: { method: string }) =>
+					Promise.resolve({ status: init.method === 'HEAD' ? 405 : 999 })
+				);
+
+			const mockPage = createMockPage({
+				evaluate: vi
+					.fn()
+					.mockResolvedValueOnce([
+						{
+							href: 'https://www.linkedin.com/in/someone/',
+							text: 'LinkedIn',
+							isInternal: false,
+							element: 'a'
+						}
+					])
+					.mockResolvedValueOnce([])
+					.mockResolvedValueOnce([])
+			});
+
+			const resultPromise = new LinkCheckerScanner().scanPage(
+				createMockContext({ page: mockPage })
+			);
+			await vi.advanceTimersByTimeAsync(200);
+			const result = await resultPromise;
+
+			expect(result.issues).toHaveLength(1);
+			expect(result.issues[0]).toMatchObject({
+				id: 'link-checker-unverified',
+				severity: 'info'
+			});
+		});
+
+		it('keeps the HEAD status when the GET retry fails, so a bot wall stays unverified', async () => {
+			globalThis.fetch = vi
+				.fn()
+				.mockImplementation((_url: string, init: { method: string }) =>
+					init.method === 'HEAD'
+						? Promise.resolve({ status: 403 })
+						: Promise.reject(new Error('socket hang up'))
+				);
+
+			const mockPage = createMockPage({
+				evaluate: vi
+					.fn()
+					.mockResolvedValueOnce([
+						{
+							href: 'https://www.linkedin.com/in/stalled/',
+							text: 'Profile',
+							isInternal: false,
+							element: 'a'
+						}
+					])
+					.mockResolvedValueOnce([])
+					.mockResolvedValueOnce([])
+			});
+
+			const resultPromise = new LinkCheckerScanner().scanPage(
+				createMockContext({ page: mockPage })
+			);
+			await vi.advanceTimersByTimeAsync(200);
+			const result = await resultPromise;
+
+			expect(result.issues.map((issue) => issue.id)).toEqual(['link-checker-unverified']);
+		});
+
+		it('reports each broken link as its own issue, and an internal 403 as broken', async () => {
+			globalThis.fetch = vi
+				.fn()
+				.mockImplementation((url: string) =>
+					Promise.resolve({ status: url.includes('forbidden') ? 403 : 404 })
+				);
+
+			const mockPage = createMockPage({
+				evaluate: vi
+					.fn()
+					.mockResolvedValueOnce([
+						{
+							href: 'https://example.com/forbidden',
+							text: 'Forbidden',
+							isInternal: true,
+							element: 'a',
+							selector: 'nav > a:nth-of-type(1)'
+						},
+						{
+							href: 'https://example.com/missing',
+							text: 'Missing',
+							isInternal: true,
+							element: 'a',
+							selector: 'nav > a:nth-of-type(2)'
+						}
+					])
+					.mockResolvedValueOnce([])
+					.mockResolvedValueOnce([])
+			});
+
+			const resultPromise = new LinkCheckerScanner().scanPage(
+				createMockContext({ page: mockPage })
+			);
+			await vi.advanceTimersByTimeAsync(200);
+			const result = await resultPromise;
+
+			expect(result.issues.map((issue) => issue.id)).toEqual([
+				'link-checker-broken',
+				'link-checker-broken'
+			]);
+			expect(result.issues[0]?.description).toContain('https://example.com/forbidden');
+			expect(result.issues[0]?.description).toContain('HTTP 403');
+			expect(result.issues[1]?.metadata).toMatchObject({
+				nodes: [{ selector: 'nav > a:nth-of-type(2)' }]
 			});
 		});
 
@@ -594,7 +741,7 @@ describe('LinkCheckerScanner.scanPage', () => {
 			});
 		});
 
-		it('limits links in metadata to 10 items', async () => {
+		it('does not cap the number of broken-link issues', async () => {
 			globalThis.fetch = vi.fn().mockResolvedValue({
 				status: 404,
 				redirected: false,
@@ -623,12 +770,8 @@ describe('LinkCheckerScanner.scanPage', () => {
 			await vi.advanceTimersByTimeAsync(1000);
 			const result = await resultPromise;
 
-			const metadata = result.issues[0]?.metadata as {
-				links: unknown[];
-				totalCount: number;
-			};
-			expect(metadata.links).toHaveLength(10);
-			expect(metadata.totalCount).toBe(15);
+			expect(result.issues).toHaveLength(15);
+			expect(result.issues.every((issue) => issue.id === 'link-checker-broken')).toBe(true);
 		});
 	});
 });
