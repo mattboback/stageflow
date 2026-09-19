@@ -58,8 +58,11 @@ RUN mkdir -p /data && chown 65532:65532 /data
 # healthchecks through /bin/sh -c, and distroless images do not provide /bin/sh.
 FROM docker.io/library/debian:bookworm-slim
 
+# ca-certificates: page discovery fetches HTTPS sites; without a CA bundle every
+# fetch fails certificate verification and discovery returns only the start URL.
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binaries
