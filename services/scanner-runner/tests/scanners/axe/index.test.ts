@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageEntry, ScanContext, ScannerConfig, ScannerLogger } from '../../../src/core';
 
 const axeAnalyzeMock = vi.hoisted(() => vi.fn());
+const axeExcludeMock = vi.hoisted(() => vi.fn());
 const capturePageOverviewMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@axe-core/playwright', () => {
@@ -19,6 +20,11 @@ vi.mock('@axe-core/playwright', () => {
 		withTags = vi.fn(function (this: MockAxeBuilder) {
 			return this;
 		});
+
+		exclude = (selector: string): this => {
+			axeExcludeMock(selector);
+			return this;
+		};
 
 		analyze = axeAnalyzeMock;
 	}
@@ -76,7 +82,8 @@ const createScannerConfig = (): ScannerConfig => ({
 const createMockPage = (): Page =>
 	({
 		waitForLoadState: vi.fn().mockResolvedValue(undefined),
-		waitForTimeout: vi.fn().mockResolvedValue(undefined)
+		waitForTimeout: vi.fn().mockResolvedValue(undefined),
+		waitForFunction: vi.fn().mockResolvedValue(undefined)
 	}) as unknown as Page;
 
 const createMockContext = (resultsDir: string): ScanContext => {
@@ -281,6 +288,20 @@ describe('AxeScanner.scanPage', () => {
 		expect(result.issues[0]?.metadata?.contrastData).toBeUndefined();
 	});
 
+	it('excludes frames whose sandbox forbids scripts, which axe cannot enter', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [],
+			inapplicable: [],
+			incomplete: []
+		});
+
+		await new AxeScanner().scanPage(createMockContext(resultsDir));
+
+		expect(axeExcludeMock).toHaveBeenCalledWith('iframe[sandbox]:not([sandbox~="allow-scripts"])');
+	});
+
 	it('attaches first-node contrast data to color-contrast violations', async () => {
 		const { AxeScanner } = await import('../../../src/scanners/axe');
 		axeAnalyzeMock.mockResolvedValue({
@@ -426,7 +447,7 @@ describe('AxeScanner.scanPage', () => {
 		expect(result.issues[0]?.metadata).toMatchObject({ incompleteNodeIndex: 0 });
 	});
 
-	it('drops aria-hidden and punctuation-only incompletes but keeps short real text', async () => {
+	it('drops aria-hidden, punctuation-only and SVG text incompletes but keeps short real text', async () => {
 		const { AxeScanner } = await import('../../../src/scanners/axe');
 		axeAnalyzeMock.mockResolvedValue({
 			violations: [],
@@ -452,6 +473,16 @@ describe('AxeScanner.scanPage', () => {
 							target: ['svg > text'],
 							html: '<text x="26" y="270">A</text>',
 							any: [{ id: 'color-contrast', data: { messageKey: 'shortTextContent' } }]
+						},
+						{
+							target: ['svg > text:nth-of-type(2)'],
+							html: '<text x="40" y="12" fill="#999">Request flow</text>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'imgNode' } }]
+						},
+						{
+							target: ['.badge'],
+							html: '<span class="badge">A</span>',
+							any: [{ id: 'color-contrast', data: { messageKey: 'shortTextContent' } }]
 						}
 					]
 				}
@@ -462,7 +493,7 @@ describe('AxeScanner.scanPage', () => {
 		const result = await scanner.scanPage(createMockContext(resultsDir));
 
 		expect(result.issues).toHaveLength(1);
-		expect(result.issues[0]).toMatchObject({ location: { selector: 'svg > text' } });
+		expect(result.issues[0]).toMatchObject({ location: { selector: '.badge' } });
 	});
 
 	it('does not promote non-contrast incomplete results', async () => {

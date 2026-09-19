@@ -10,6 +10,13 @@ export const DEFAULT_DYNAMIC_CONTENT_WAIT_MS = 50;
  * Prevents hanging on sites with persistent connections (WebSockets, long-polling).
  */
 export const NETWORKIDLE_TIMEOUT_MS = 5_000;
+/** Upper bound on waiting for a fading route-change loading bar to disappear. */
+export const LOADING_INDICATOR_WAIT_MS = 3_000;
+/**
+ * Frames whose sandbox forbids scripts. axe-core cannot be injected into them, and
+ * the attempt never returns, which hung the whole scan on a page with one.
+ */
+export const SCRIPTLESS_FRAME_SELECTOR = 'iframe[sandbox]:not([sandbox~="allow-scripts"])';
 
 /**
  * Options for the axe scanner.

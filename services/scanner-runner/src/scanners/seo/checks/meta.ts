@@ -22,7 +22,8 @@ export const META_CHECKS: SEOCheck[] = [
 	{
 		id: 'title-length',
 		title: 'Title Tag Length',
-		severity: 'moderate',
+		// Length is advice about search-result truncation, not a defect on the page.
+		severity: 'minor',
 		category: 'meta',
 		helpUrl: 'https://moz.com/learn/seo/title-tag',
 		check: (data) => {
@@ -69,7 +70,7 @@ export const META_CHECKS: SEOCheck[] = [
 	{
 		id: 'description-length',
 		title: 'Meta Description Length',
-		severity: 'moderate',
+		severity: 'minor',
 		category: 'meta',
 		helpUrl: 'https://moz.com/learn/seo/meta-description',
 		check: (data) => {

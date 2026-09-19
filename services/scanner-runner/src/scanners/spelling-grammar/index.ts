@@ -1,5 +1,6 @@
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
+import { waitForPageSettled } from '../../core/page-settle';
 import { ScannerBase } from '../../core/scanner-base';
 import { SCANNER_VERSION } from '../version';
 
@@ -20,6 +21,7 @@ export class SpellingGrammarScanner extends ScannerBase {
 		const startTime = Date.now();
 
 		try {
+			await waitForPageSettled(page);
 			const textContent = await page.evaluate(() => document.body.innerText);
 			const issues: Issue[] = [];
 

@@ -25,6 +25,7 @@ const createMockPage = (overrides: Partial<Page> = {}): Page => {
 	const mockPage = {
 		goto: vi.fn().mockResolvedValue(null),
 		evaluate: vi.fn(),
+		waitForLoadState: vi.fn().mockResolvedValue(undefined),
 		url: vi.fn().mockReturnValue('https://example.com'),
 		...overrides
 	} as unknown as Page;
@@ -181,6 +182,7 @@ describe('LinkCheckerScanner.scanPage', () => {
 				externalLinks: 1,
 				brokenCount: 0,
 				redirectChainCount: 0,
+				slowLinkCount: 0,
 				averageResponseTime: expect.any(Number),
 				pageOverview: null
 			});

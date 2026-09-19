@@ -163,10 +163,16 @@ export function ReportView({
 	}, [reviewQueue, getVerdict]);
 	const nextReviewIssue =
 		reviewQueue.find((issue) => !getVerdict(issue.id)) ?? reviewQueue[0] ?? null;
+	/* Report order is scanner-by-scanner, so the worst finding used to open as
+	   "78 of 84". Step through findings worst first, like the lists do. */
+	const issuesBySeverity = useMemo(
+		() => (displayReport ? sortIssues(displayReport.issues, 'severity') : []),
+		[displayReport]
+	);
 	const modalIssues =
 		section === 'review' && activeIssue && needsHumanReview(activeIssue)
 			? reviewQueue
-			: (displayReport?.issues ?? []);
+			: issuesBySeverity;
 
 	const activeIssuePage = useMemo(() => {
 		if (!activeIssue || !displayReport) return null;
