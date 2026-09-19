@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 import type { LinkCheckResult, LinkInfo } from './types';
 
+import { waitForPageSettled } from '../../core/page-settle';
 import { ScannerBase } from '../../core/scanner-base';
 import { AxeScreenshotService } from '../../screenshots/axe-screenshot-service';
 import { capturePageOverviewFromIssues } from '../../screenshots/page-overview-from-issues';
@@ -67,6 +68,7 @@ export class LinkCheckerScanner extends ScannerBase {
 		const issues: Issue[] = [];
 
 		try {
+			await waitForPageSettled(page);
 			const links = await this.extractLinks(page, pageEntry.url);
 			logger.info('Extracted links', {
 				count: links.length,

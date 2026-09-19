@@ -7,6 +7,7 @@
 
 import type { Issue, PageScanResult, ScanContext } from '../../core/types';
 
+import { waitForPageSettled } from '../../core/page-settle';
 import { ScannerBase } from '../../core/scanner-base';
 import { SCANNER_VERSION } from '../version';
 import { SEO_CHECKS } from './checks';
@@ -25,6 +26,7 @@ export class SEOScanner extends ScannerBase {
 		const issues: Issue[] = [];
 
 		try {
+			await waitForPageSettled(page);
 			const seoData = await extractSEOData(page, pageEntry.url);
 
 			for (const check of SEO_CHECKS) {
