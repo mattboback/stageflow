@@ -59,6 +59,12 @@ func TestRouterRequiresAPIKeyAcrossProtectedAndEdgeAuthenticatedRoutes(t *testin
 			body:   literalBrowserAuthBody,
 		},
 		{
+			name:   "page discovery",
+			method: http.MethodPost,
+			path:   "/api/v1/discover",
+			body:   `{"url":"https://example.com"}`,
+		},
+		{
 			name:   "anonymous trailing slash alias",
 			method: http.MethodPost,
 			path:   "/api/v1/jobs/urls/anonymous/",
