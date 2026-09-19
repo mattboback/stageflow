@@ -286,6 +286,10 @@ describe('SEO checks', () => {
 			expect(result?.passed).toBe(false);
 		});
 
+		it('does not flag short but complete pages such as a contact form', () => {
+			expect(getCheck('thin-content').check(baseData({ wordCount: 267 }))).toBeNull();
+		});
+
 		it('passes with sufficient content', () => {
 			const result = getCheck('thin-content').check(baseData());
 			expect(result).toBeNull();
