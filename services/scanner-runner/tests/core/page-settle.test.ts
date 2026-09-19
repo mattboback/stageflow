@@ -10,17 +10,34 @@ describe('waitForPageSettled', () => {
 	});
 
 	it('returns once the network is idle', async () => {
-		const page = { waitForLoadState: vi.fn().mockResolvedValue(undefined) } as unknown as Page;
+		const page = {
+			waitForLoadState: vi.fn().mockResolvedValue(undefined),
+			waitForFunction: vi.fn().mockResolvedValue(undefined)
+		} as unknown as Page;
 
 		await waitForPageSettled(page);
 
 		expect(page.waitForLoadState).toHaveBeenCalledWith('networkidle');
+		expect(page.waitForFunction).toHaveBeenCalledWith(expect.any(Function), 1_000, {
+			polling: 250,
+			timeout: 5_000
+		});
+	});
+
+	it('carries on when the text never stops changing', async () => {
+		const page = {
+			waitForLoadState: vi.fn().mockResolvedValue(undefined),
+			waitForFunction: vi.fn().mockRejectedValue(new Error('Timeout 5000ms exceeded'))
+		} as unknown as Page;
+
+		await expect(waitForPageSettled(page)).resolves.toBeUndefined();
 	});
 
 	it('gives up after five seconds on a page that never goes idle', async () => {
 		vi.useFakeTimers();
 		const page = {
-			waitForLoadState: vi.fn().mockReturnValue(new Promise(() => undefined))
+			waitForLoadState: vi.fn().mockReturnValue(new Promise(() => undefined)),
+			waitForFunction: vi.fn().mockResolvedValue(undefined)
 		} as unknown as Page;
 
 		let settled = false;
