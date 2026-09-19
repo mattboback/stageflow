@@ -249,6 +249,32 @@ export async function submitScanJob({
 	return data;
 }
 
+export interface DiscoverPagesResponse {
+	urls: string[];
+	source: 'sitemap' | 'crawl';
+	truncated: boolean;
+}
+
+/** Lists a site's pages from its sitemap, or a shallow link crawl when it has none. */
+export async function discoverPages(url: string): Promise<DiscoverPagesResponse> {
+	// The server spends up to 45s crawling a site that has no sitemap.
+	const response = await fetchWithTimeout(
+		buildApiUrl('/api/v1/discover'),
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ url })
+		},
+		60000
+	);
+	const data = (await response.json().catch(() => null)) as
+		(DiscoverPagesResponse & ApiErrorResponse) | null;
+	if (!response.ok || !data) {
+		throw new Error(readApiErrorMessage(data) ?? 'Could not discover pages. Please try again.');
+	}
+	return data;
+}
+
 export async function fetchScanners(signal?: AbortSignal): Promise<ScannersResponse> {
 	try {
 		const response = await fetchWithTimeout(
