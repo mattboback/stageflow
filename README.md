@@ -25,7 +25,7 @@ it at the hosted demo — nothing to clone, nothing to deploy:
 
 ```bash
 # Linux amd64 shown; macOS (darwin) and Windows assets ship on the same release.
-version=v0.4.1
+version=v0.4.2
 curl -fsSL "https://github.com/mattboback/stageflow/releases/download/${version}/stageflow_${version}_linux_amd64.tar.gz" | tar -xz
 install -m 0755 stageflow ~/.local/bin/stageflow   # any directory on your PATH
 
