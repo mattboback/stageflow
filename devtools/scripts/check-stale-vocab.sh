@@ -12,7 +12,7 @@ grep_args=(
     --exclude-dir='.git' --exclude-dir='node_modules'
     --exclude-dir='vendor' --exclude-dir='.superpowers'
     --exclude-dir='superpowers'
-    --exclude='bun.lock' --exclude='go.sum' --exclude='go.work.sum'
+    --exclude='bun.lock' --exclude='go.sum'
     --exclude='check-stale-vocab.sh' --exclude='stale-vocab.test.sh'
 )
 

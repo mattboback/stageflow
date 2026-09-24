@@ -12,9 +12,9 @@ trap cleanup EXIT
 
 generated_dir="$tmp_dir/stageflow.generated"
 
-(cd "$root_dir" && go run ./clients/cli docs --out-dir "$generated_dir")
+(cd "$root_dir" && go run ./clients/cli/cmd/stageflow docs --out-dir "$generated_dir")
 
 if ! diff -ru "$docs_dir" "$generated_dir"; then
-	echo "CLI docs are stale. Run: go run ./clients/cli docs --out-dir docs/reference/cli/stageflow" >&2
+	echo "CLI docs are stale. Run: go run ./clients/cli/cmd/stageflow docs --out-dir docs/reference/cli/stageflow" >&2
 	exit 1
 fi

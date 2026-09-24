@@ -1,5 +1,5 @@
 // Package buildinfo holds the version identifiers stamped into release
-// binaries via -ldflags (see .github/workflows/release-stageflow-cli.yml and
+// binaries via -ldflags (see devtools/scripts/build-cli-release.sh and
 // devtools/scripts/install-cli.sh).
 package buildinfo
 

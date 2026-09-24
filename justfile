@@ -11,7 +11,6 @@ repo_root := justfile_directory()
 # Paths
 web_dir := 'clients/web'
 scanner_dir := 'services/scanner-runner'
-go_work := 'go.work'
 
 [group('meta'), doc('Show available recipes')]
 help:
@@ -38,11 +37,8 @@ deps:
     echo "==> Ensuring scanner config exists..."
     ./infra/scripts/ensure-scanner-config.sh
 
-    echo "==> Generating schema contracts..."
-    just generate-contracts
-
-    echo "==> Syncing Go workspace..."
-    {{go}} work sync
+    echo "==> Downloading Go modules..."
+    {{go}} mod download
 
     echo "==> Installing clients/web dependencies..."
     (cd {{web_dir}} && {{bun}} install --frozen-lockfile)
@@ -355,24 +351,25 @@ ci:
     echo "==> Internal Markdown links..."
     node devtools/scripts/check-markdown-links.mjs
 
-    echo "==> Generating schema contracts..."
-    just generate-contracts
-
-    echo "==> Syncing Go workspace..."
-    {{go}} work sync
+    echo "==> Generated contracts..."
+    ./devtools/scripts/check-contracts-generated.sh
 
     echo "==> Ensuring Go lint and vuln tools..."
     {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
     {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     export PATH="$({{go}} env GOPATH)/bin:$PATH"
 
-    bash devtools/scripts/go/run-in-work-dirs.sh Building {{go}} build ./...
+    echo "==> Go build..."
+    {{go}} build ./...
 
-    bash devtools/scripts/go/run-in-work-dirs.sh Linting golangci-lint run --allow-parallel-runners
+    echo "==> Go lint..."
+    golangci-lint run --allow-parallel-runners ./...
 
-    bash devtools/scripts/go/run-in-work-dirs.sh Testing {{go}} test -race ./...
+    echo "==> Go test..."
+    {{go}} test -race ./...
 
-    bash devtools/scripts/go/run-in-work-dirs.sh Vulncheck govulncheck ./...
+    echo "==> Go vulncheck..."
+    govulncheck ./...
 
     echo "==> CLI docs..."
     ./devtools/scripts/check-cli-docs-generated.sh
@@ -393,7 +390,12 @@ ci:
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf --ignore GHSA-vcc3-ghjq-m6fr --ignore GHSA-528h-pc64-c93x)
 
-[group('quality'), doc('Generate JSON-schema contract code used by Go and TypeScript builds')]
+[group('release'), doc('Publish CLI release VERSION (vX.Y.Z) by hand: tag HEAD first and push the tag')]
+cli-release VERSION:
+    ./devtools/scripts/build-cli-release.sh {{VERSION}}
+    gh release create {{VERSION}} --verify-tag --generate-notes --title "StageFlow CLI {{VERSION}}" artifacts/cli-release/{{VERSION}}/*
+
+[group('quality'), doc('Regenerate the committed JSON-schema contract code (Go and TypeScript)')]
 generate-contracts:
     @./devtools/scripts/generate-contracts.sh
 
@@ -404,7 +406,8 @@ build:
 
     just deps
 
-    bash devtools/scripts/go/run-in-work-dirs.sh Building {{go}} build ./...
+    echo "==> Building Go..."
+    {{go}} build ./...
 
     echo "==> Building clients/web..."
     (cd {{web_dir}} && {{bun}} run build)
@@ -491,7 +494,7 @@ shell-tests:
     bash devtools/scripts/tests/stale-vocab.test.sh
     bash infra/minio/provision_test.sh
 
-[group('quality'), doc('Measure Go coverage per module and check it against the baseline')]
+[group('quality'), doc('Measure Go coverage per directory and check it against the baseline')]
 coverage:
     @bash devtools/scripts/go/coverage.sh
 
@@ -526,11 +529,8 @@ clean MODE='all':
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
     find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" -o -name ".impeccable" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
     rm -rf .cache artifacts output .patchright-cli .playwright-cli
-    rm -rf libs/contracts/report/generated libs/contracts/provenance/generated libs/contracts/scanner-manifest/generated
-    rm -f libs/contracts/scanner-manifest/scanner_manifest.go
     rm -f cli job-status-cli suite-runner scan_result.json stageflow stageflow-cli sbom-*.spdx.json
     rm -f clients/cli/cli clients/cli/report.json clients/cli/stageflow clients/cli/stageflow-cli
-    rm -f clients/cli/stageflow_*.tar.gz clients/cli/stageflow_*.zip
     rm -f devtools/ops/job-status-cli/job-status-cli devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then

@@ -29,23 +29,13 @@ COPY libs/contracts/report/package.json libs/contracts/report/bun.lock* ./
 RUN bun install --frozen-lockfile --ignore-scripts || bun install --ignore-scripts
 COPY libs/contracts/report/tsconfig.json ./tsconfig.json
 COPY libs/contracts/report/schema ./schema
-RUN mkdir -p generated/typescript \
-  && bun x json-schema-to-typescript schema/unified-report.v2.schema.json -o generated/typescript/unified-report.v2.ts --unreachableDefinitions \
-  && printf "export * from './unified-report.v2';\nexport type { UnifiedReportV2 as UnifiedReport } from './unified-report.v2';\n" > generated/typescript/index.ts
+COPY libs/contracts/report/generated/typescript ./generated/typescript
 RUN bun x tsc
 
 # --- Build scanner-runner ---
 WORKDIR /repo/services/scanner-runner
 COPY libs/contracts/scanner-manifest /repo/libs/contracts/scanner-manifest
 COPY libs/contracts/provenance /repo/libs/contracts/provenance
-RUN cd /repo/libs/contracts/scanner-manifest \
-  && mkdir -p generated/typescript \
-  && bun x json-schema-to-typescript schema/scanner-manifest.schema.json -o generated/typescript/scanner-manifest.ts --unreachableDefinitions \
-  && printf "export * from './scanner-manifest';\n" > generated/typescript/index.ts \
-  && cd /repo/libs/contracts/provenance \
-  && mkdir -p generated/typescript \
-  && bun x json-schema-to-typescript schema/provenance.schema.json -o generated/typescript/provenance.ts --unreachableDefinitions \
-  && printf "export * from './provenance';\n" > generated/typescript/index.ts
 COPY services/scanner-runner/package.json services/scanner-runner/bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY services/scanner-runner/tsconfig.json ./tsconfig.json

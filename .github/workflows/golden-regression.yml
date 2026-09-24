@@ -73,8 +73,7 @@ jobs:
 
       - name: Prepare dependencies
         run: |
-          ./devtools/scripts/generate-contracts.sh
-          go work sync
+          go mod download
           (cd clients/web && bun install --frozen-lockfile)
           (cd services/scanner-runner && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 bun install --frozen-lockfile)
 
@@ -88,7 +87,7 @@ jobs:
 
       - name: Build stageflow CLI
         run: |
-          go build -o /tmp/stageflow ./clients/cli
+          go build -o /tmp/stageflow ./clients/cli/cmd/stageflow
           sudo install -m 0755 /tmp/stageflow /usr/local/bin/stageflow
 
       - name: Build container images

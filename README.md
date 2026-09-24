@@ -25,17 +25,16 @@ it at the hosted demo — nothing to clone, nothing to deploy:
 
 ```bash
 # Linux amd64 shown; macOS (darwin) and Windows assets ship on the same release.
-version=v0.4.0
-curl -fsSL "https://github.com/mattboback/stageflow/releases/download/clients/cli/${version}/stageflow_${version}_linux_amd64.tar.gz" | tar -xz
+version=v0.4.1
+curl -fsSL "https://github.com/mattboback/stageflow/releases/download/${version}/stageflow_${version}_linux_amd64.tar.gz" | tar -xz
 install -m 0755 stageflow ~/.local/bin/stageflow   # any directory on your PATH
 
 stageflow scan https://example.com --api https://stageflow.org
 ```
 
-Working from a clone instead? `just cli-install` builds and installs the same
-binary. (The CLI compiles against generated schema contracts, which is why the
-install path is a release binary or `just cli-install` rather than a plain
-`go install …@latest`.)
+With Go 1.26 installed, `go install github.com/mattboback/stageflow/clients/cli/cmd/stageflow@latest`
+installs it too. Working from a clone instead? `just cli-install` builds and
+installs the same binary.
 
 Prefer a browser? Submit the same scan at [stageflow.org](https://stageflow.org)
 and watch it stream live.

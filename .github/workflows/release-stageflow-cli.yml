@@ -3,8 +3,7 @@ name: Release StageFlow CLI
 on:
   push:
     tags:
-      - "clients/cli/v*"
-  workflow_dispatch: {}
+      - "v*"
 
 permissions:
   contents: read
@@ -19,22 +18,14 @@ concurrency:
 
 env:
   GO_VERSION: "1.26.6"
-  NODE_VERSION: "24"
-  BUN_VERSION: "1.3.8"
 
 jobs:
-  build:
-    name: Build artifacts
+  release:
+    name: Build and publish
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: windows
-            goarch: arm64
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
 
@@ -43,92 +34,15 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-          cache-dependency-path: "**/*.sum"
+          cache-dependency-path: go.sum
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+      # The same script `just cli-release` runs by hand.
+      - name: Build assets
+        run: ./devtools/scripts/build-cli-release.sh "${GITHUB_REF_NAME}"
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Generate schema contracts
-        run: ./devtools/scripts/generate-contracts.sh
-
-      - name: Build StageFlow CLI
-        id: build
-        shell: bash
-        working-directory: clients/cli
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-
-          tag="${GITHUB_REF_NAME}"
-          version="${tag##*/}" # vX.Y.Z (tag prefix is clients/cli/)
-          goos="${{ matrix.goos }}"
-          goarch="${{ matrix.goarch }}"
-
-          bin="stageflow"
-          ext=""
-          if [[ "$goos" == "windows" ]]; then
-            ext=".exe"
-          fi
-
-          build_dir="dist"
-          mkdir -p "$build_dir"
-
-          out_bin="${bin}${ext}"
-          build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          ldflags="-s -w -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Version=${version} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Commit=${GITHUB_SHA} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Date=${build_date}"
-
-          CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
-            go build -trimpath -ldflags "$ldflags" -o "${build_dir}/${out_bin}" .
-
-          asset="${bin}_${version}_${goos}_${goarch}"
-          if [[ "$goos" == "windows" ]]; then
-            (cd "$build_dir" && zip -9 "../${asset}.zip" "${out_bin}")
-            rm -f "${build_dir}/${out_bin}"
-            echo "asset=${asset}.zip" >> "$GITHUB_OUTPUT"
-          else
-            tar -C "$build_dir" -czf "${asset}.tar.gz" "${out_bin}"
-            rm -f "${build_dir}/${out_bin}"
-            echo "asset=${asset}.tar.gz" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ steps.build.outputs.asset }}
-          path: clients/cli/${{ steps.build.outputs.asset }}
-          if-no-files-found: error
-          retention-days: 7
-
-  release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Generate checksums
-        run: |
-          set -euo pipefail
-          cd dist
-          sha256sum ./* > checksums.txt
-
-      - name: Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
-        with:
-          files: |
-            dist/*
-          generate_release_notes: true
+          gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes \
+            --title "StageFlow CLI ${GITHUB_REF_NAME}" "artifacts/cli-release/${GITHUB_REF_NAME}"/*

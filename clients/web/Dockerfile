@@ -23,12 +23,8 @@ COPY clients/web/package.json clients/web/bun.lock ./
 # Install dependencies
 RUN bun install --frozen-lockfile
 
-# Copy the required monorepo libs contracts
+# Copy the required monorepo libs contracts (generated code is committed)
 COPY libs/contracts /libs/contracts
-RUN mkdir -p /libs/contracts/report/generated/typescript \
-    && bun x json-schema-to-typescript /libs/contracts/report/schema/unified-report.v2.schema.json \
-      -o /libs/contracts/report/generated/typescript/unified-report.v2.ts \
-      --unreachableDefinitions
 
 # Copy React source code and configurations.
 #

@@ -72,8 +72,6 @@ EOF
       "$dir/schema/unified-report.v2.schema.json" > "$report_go_temp"
     gofmt -w "$report_go_temp"
     mv -f "$report_go_temp" "$dir/generated/go/report_schema.go"
-    printf "module github.com/mattboback/stageflow/libs/contracts/report/generated/go\n\ngo 1.26.6\n" \
-      | write_atomic "$dir/generated/go/go.mod"
   fi
 }
 
@@ -88,19 +86,18 @@ EOF
   fi
 
   # No Go output. This used to emit a full module at
-  # libs/contracts/provenance/generated/go, but go.work never included it and no
+  # libs/contracts/provenance/generated/go, but no build ever included it and no
   # Go file ever imported it -- 18 generated types that were never compiled,
   # linted, or tested, regenerated in every job that runs this script. Go services
   # read provenance through the hand-written libs/go/models/provenance.go instead.
   #
   # Compare the two siblings that do earn their generation:
-  # report/generated/go is in go.work with 38 importers, and scanner-manifest is a
-  # real module consumed by libs/go/scannercatalog.
+  # report/generated/go has 38 importers, and scanner-manifest is consumed by
+  # libs/go/scannercatalog.
   #
-  # Removing it loses no drift protection, because an unbuilt module provides
-  # none. Getting that protection means making libs/go/models use these types and
-  # adding the module to go.work -- a deliberate change, not a side effect of a
-  # generator nobody reads.
+  # Removing it loses no drift protection, because an unbuilt package provides
+  # none. Getting that protection means making libs/go/models use these types --
+  # a deliberate change, not a side effect of a generator nobody reads.
 }
 
 generate_scanner_manifest() {

@@ -5,15 +5,12 @@ ARG TARGETOS=linux
 ARG TARGETARCH=amd64
 WORKDIR /src
 
-# Copy module definitions first for better layer caching
-COPY libs/go ./libs/go/
-COPY services/archive-extractor/go.mod services/archive-extractor/go.sum ./services/archive-extractor/
-
-# Download dependencies (cached layer)
+# One module for the repo: download its dependencies first (cached layer).
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
-    cd services/archive-extractor && GOWORK=off go mod download
+    go mod download
 
-# Copy source code
+# The packages this service imports. Contract code is committed, not generated here.
 COPY libs/go ./libs/go
 COPY services/archive-extractor ./services/archive-extractor
 
@@ -21,9 +18,8 @@ COPY services/archive-extractor ./services/archive-extractor
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     mkdir -p /go/pkg/mod /root/.cache/go-build && \
-    cd services/archive-extractor && \
     CGO_ENABLED=0 GOOS="$TARGETOS" GOARCH="$TARGETARCH" \
-    GOWORK=off go build -ldflags="-s -w" -o /out/extractor ./cmd/server
+    go build -ldflags="-s -w" -o /out/extractor ./services/archive-extractor/cmd/server
 
 # Runtime stage
 FROM docker.io/library/alpine:3.22

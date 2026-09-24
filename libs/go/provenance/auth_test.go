@@ -41,13 +41,13 @@ func mustFindRepoRoot(t *testing.T) string {
 	}
 
 	for {
-		if _, statErr := os.Stat(filepath.Join(dir, "go.work")); statErr == nil {
+		if _, statErr := os.Stat(filepath.Join(dir, "go.mod")); statErr == nil {
 			return dir
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatalf("repo root (go.work) not found from cwd")
+			t.Fatalf("repo root (go.mod) not found from cwd")
 		}
 
 		dir = parent

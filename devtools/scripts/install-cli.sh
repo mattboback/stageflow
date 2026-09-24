@@ -13,15 +13,12 @@ mkdir -p "$bin_dir"
 tmp="$(mktemp -t stageflow-cli.XXXXXX)"
 trap 'rm -f "$tmp"' EXIT
 
-echo "==> Generating schema contracts..."
-(cd "${REPO_ROOT}" && ./devtools/scripts/generate-contracts.sh go)
-
 echo "==> Building StageFlow CLI..."
-version="$(cd "${REPO_ROOT}" && git describe --tags --always --dirty 2>/dev/null || echo dev)"
+version="$(cd "${REPO_ROOT}" && git describe --tags --match 'v*' --always --dirty 2>/dev/null || echo dev)"
 commit="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo "")"
 build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ldflags="-s -w -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Version=${version} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Commit=${commit} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Date=${build_date}"
-(cd "${REPO_ROOT}/clients/cli" && go build -trimpath -ldflags "$ldflags" -o "$tmp" .)
+(cd "${REPO_ROOT}" && go build -trimpath -ldflags "$ldflags" -o "$tmp" ./clients/cli/cmd/stageflow)
 
 echo "==> Installing: $dest"
 install -m 0755 "$tmp" "$dest"
