@@ -1457,7 +1457,7 @@ describe('LighthouseScanner', () => {
 			expect(result.issues).toEqual([]);
 		});
 
-		it('uses BrowserManager.navigateToPage for re-navigation when available', async () => {
+		it('re-navigates through BrowserManager with the scan target policy', async () => {
 			const testScanner = new LighthouseScanner();
 			const logger = createMockLogger();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
@@ -1504,14 +1504,19 @@ describe('LighthouseScanner', () => {
 			).browserManager = { navigateToPage };
 
 			const page = createMockPage();
-			const context = createMockContext({ page, logger });
+			// A ZIP job's policy: without it the extractor's loopback origin is blocked.
+			const targetValidationPolicy = { allowedOrigins: ['http://127.0.0.1:43210'] };
+			const context = { ...createMockContext({ page, logger }), targetValidationPolicy };
 
 			const result = await testScanner.scanPage(context);
 
 			expect(result.success).toBe(true);
-			expect(navigateToPage).toHaveBeenCalledWith(page, context.pageEntry.url, {
-				type: 'domcontentloaded'
-			});
+			expect(navigateToPage).toHaveBeenCalledWith(
+				page,
+				context.pageEntry.url,
+				{ type: 'domcontentloaded' },
+				targetValidationPolicy
+			);
 			expect(page.goto).not.toHaveBeenCalled();
 		});
 	});

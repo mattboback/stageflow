@@ -6,10 +6,16 @@ import (
 	"strings"
 )
 
+// ProvenanceModeStatic marks provenance for an extracted site served on the job
+// pod's loopback. Scanners allow that exact origin and block every other
+// private address.
+const ProvenanceModeStatic = "static"
+
 type Provenance struct {
 	Version string `json:"version"`
 	JobID   string `json:"job_id"`
 	BaseURL string `json:"base_url"`
+	Mode    string `json:"mode,omitempty"`
 	Pages   []Page `json:"pages"`
 }
 

@@ -47,6 +47,7 @@ func (g *Generator) Generate(
 		Version: provenanceVersion,
 		JobID:   jobID,
 		BaseURL: baseURL,
+		Mode:    models.ProvenanceModeStatic,
 		Pages:   provenancePages,
 	}
 

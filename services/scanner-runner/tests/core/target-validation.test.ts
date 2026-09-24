@@ -182,6 +182,34 @@ describe('target validation', () => {
 		).rejects.toBeInstanceOf(BlockedTargetError);
 	});
 
+	// ZIP jobs: the archive extractor serves the site on 127.0.0.1:<port> and
+	// writes mode "static". Without ALLOW_PRIVATE_TARGETS the scanner must reach
+	// that origin and nothing else private an uploaded page tries to load.
+	it.each([
+		['RFC1918 10/8', 'http://10.0.0.1/'],
+		['RFC1918 192.168/16', 'http://192.168.1.1/'],
+		['another loopback port (MinIO)', 'http://127.0.0.1:9000/'],
+		['link-local metadata', 'http://169.254.169.254/latest/meta-data']
+	])('blocks %s for extractor static provenance', async (_label, targetURL) => {
+		delete process.env.ALLOW_PRIVATE_TARGETS;
+
+		const policy = buildTargetValidationPolicy({
+			version: '1.0.0',
+			job_id: 'job-1',
+			base_url: 'http://127.0.0.1:43210',
+			mode: 'static',
+			pages: []
+		});
+
+		expect(policy.allowedOrigins).toEqual(['http://127.0.0.1:43210']);
+		await expect(
+			validateTargetURLForPolicy('http://127.0.0.1:43210/about/index.html', policy)
+		).resolves.toBeUndefined();
+		await expect(validateTargetURLForPolicy(targetURL, policy)).rejects.toBeInstanceOf(
+			BlockedTargetError
+		);
+	});
+
 	it('does not allow private live provenance origins without allow_private_targets', async () => {
 		delete process.env.ALLOW_PRIVATE_TARGETS;
 

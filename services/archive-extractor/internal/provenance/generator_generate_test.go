@@ -1,7 +1,9 @@
 package provenance
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/services/archive-extractor/internal/discovery"
@@ -34,6 +36,17 @@ func TestGenerate_Basic(t *testing.T) {
 
 	if prov.BaseURL != baseURL {
 		t.Errorf("Expected BaseURL %s, got %s", baseURL, prov.BaseURL)
+	}
+
+	// Scanners allow the loopback base origin only for static provenance, so a
+	// missing mode would block the site's own pages.
+	written, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read provenance: %v", err)
+	}
+
+	if !strings.Contains(string(written), `"mode": "static"`) {
+		t.Errorf(`written provenance lacks "mode": "static": %s`, written)
 	}
 
 	if len(prov.Pages) != 2 {

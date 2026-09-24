@@ -67,8 +67,8 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 		t.Fatal("expected scanner_configs.axe to be set")
 	}
 
-	if !payload.Config.AllowPrivateTargets {
-		t.Fatal("zip jobs must set allow_private_targets: scanners target the pod-internal loopback server")
+	if payload.Config.AllowPrivateTargets {
+		t.Fatal("zip jobs must not set allow_private_targets: uploaded pages could then load internal addresses")
 	}
 }
 

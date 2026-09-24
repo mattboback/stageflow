@@ -493,10 +493,9 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 			Screenshot:     req.screenshot,
 			HighlightStyle: req.highlightStyle,
 			Browser:        req.browser,
-			// ZIP jobs scan the pod-internal static server on loopback, so the
-			// scanner-side private-target guard must not block their own pages.
-			// This is not a user-controlled target; no SSRF surface is added.
-			AllowPrivateTargets: true,
+			// No AllowPrivateTargets: scanners allow the extractor's loopback
+			// origin from its "static" provenance, and block every other private
+			// address an uploaded page tries to load.
 		},
 	}
 

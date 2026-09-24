@@ -13,6 +13,7 @@ import {
 	ScannerBase,
 	type ScannerMetadata
 } from '../../core';
+import type { TargetValidationPolicy } from '../../core/target-validation';
 import {
 	AxeScreenshotService,
 	type PageOverviewViolation
@@ -97,7 +98,7 @@ export class LighthouseScanner extends ScannerBase {
 			await mkdir(screenshotsDir, { recursive: true });
 
 			const lhResult = await this.runLighthouse(page, pageEntry.url);
-			await this.renavigateAfterLighthouse(page, pageEntry.url);
+			await this.renavigateAfterLighthouse(page, pageEntry.url, context.targetValidationPolicy);
 
 			const issues = this.extractIssues(lhResult);
 			await this.enrichWithTimeout(page, issues);
@@ -154,15 +155,23 @@ export class LighthouseScanner extends ScannerBase {
 
 	// --- scanPage helpers ---
 
+	// The policy carries a ZIP job's loopback origin; without it the re-navigation
+	// to the extracted site would be blocked as a private address.
 	private async renavigateAfterLighthouse(
 		page: import('playwright').Page,
-		url: string
+		url: string,
+		targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
 	): Promise<void> {
 		try {
 			this.logger.debug('Re-navigating Playwright page after Lighthouse', { url });
 			const browserManager = this.browserManager;
 			if (browserManager) {
-				await browserManager.navigateToPage(page, url, { type: 'domcontentloaded' });
+				await browserManager.navigateToPage(
+					page,
+					url,
+					{ type: 'domcontentloaded' },
+					targetValidationPolicy
+				);
 			} else {
 				await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 });
 			}
