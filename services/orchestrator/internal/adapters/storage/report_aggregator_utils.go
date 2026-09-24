@@ -328,8 +328,9 @@ func calculateAccessibilityScore(counts report.SeverityCounts, pagesScanned int)
 // rather than a confirmed defect (axe "incomplete" contrast checks). Those stay
 // in the report for review but must not lower the score.
 func needsHumanReview(issue report.IssueDetail) bool {
-	incomplete, _ := issue.ScannerData["axeIncomplete"].(bool)
-	return incomplete
+	incomplete, ok := issue.ScannerData["axeIncomplete"].(bool)
+
+	return ok && incomplete
 }
 
 func scoreGrade(score int) string {

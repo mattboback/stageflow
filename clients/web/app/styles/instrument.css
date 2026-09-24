@@ -344,7 +344,10 @@
 	margin: 0;
 }
 html {
+	/* Firefox drops the -webkit- form; keep both so the standard property lands
+	   there and Safari keeps the prefixed one it still requires. */
 	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
 }
 body {
 	font-family: var(--sans);

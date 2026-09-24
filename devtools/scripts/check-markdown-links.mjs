@@ -45,7 +45,9 @@ function localTarget(rawTarget) {
 function backtickedPath(rawTarget, file) {
 	// Changelog entries intentionally preserve paths from the release in which
 	// they existed; later removals must not rewrite that historical record.
-	if (file.endsWith('/CHANGELOG.md') || file === 'CHANGELOG.md') {
+	// Plans name paths that later PRs create or delete, and line-anchored
+	// references such as `docs/privacy.md:34`.
+	if (file.endsWith('/CHANGELOG.md') || file === 'CHANGELOG.md' || file.startsWith('docs/plans/')) {
 		return null;
 	}
 

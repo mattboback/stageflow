@@ -48,7 +48,12 @@ func (s *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validateTargetURLsWithResolver already parsed this URL successfully.
-	start, _ := url.Parse(target)
+	start, err := url.Parse(target)
+	if err != nil {
+		httputil.RespondError(w, http.StatusBadRequest, "Invalid URL")
+
+		return
+	}
 
 	httputil.RespondOK(w, discoverPages(r.Context(), newDiscoveryClient(s.discoveryMode), start))
 }

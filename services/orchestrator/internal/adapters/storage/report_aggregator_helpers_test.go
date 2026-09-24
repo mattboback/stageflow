@@ -294,10 +294,19 @@ func TestAbsorbIssuesListsManualChecksOncePerRule(t *testing.T) {
 	finding := report.IssueDetail{RuleId: "is-crawlable", Title: "Blocked", Severity: report.IssueSeveritySerious}
 
 	severity := report.SeverityCounts{}
-	counted := agg.absorbIssues("lighthouse", []report.IssueDetail{manual("url-1"), manual("url-2"), finding}, &severity)
+	counted := agg.absorbIssues(
+		"lighthouse",
+		[]report.IssueDetail{manual("url-1"), manual("url-2"), finding},
+		&severity,
+	)
 
 	if counted != 1 || len(agg.issues) != 1 || severity.Serious != 1 {
-		t.Fatalf("counted = %d, issues = %d, serious = %d; want 1 finding only", counted, len(agg.issues), severity.Serious)
+		t.Fatalf(
+			"counted = %d, issues = %d, serious = %d; want 1 finding only",
+			counted,
+			len(agg.issues),
+			severity.Serious,
+		)
 	}
 
 	checks := agg.sortedManualChecks()

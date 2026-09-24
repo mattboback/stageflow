@@ -226,8 +226,9 @@ const manualCheckDescriptionPrefix = "Manual verification required: "
 // isManualCheck reports whether a scanner issue is a Lighthouse manual audit: a
 // fixed checklist item emitted for every page of every site, not a finding.
 func isManualCheck(issue report.IssueDetail) bool {
-	manual, _ := issue.ScannerData["lighthouseManual"].(bool)
-	return manual
+	manual, ok := issue.ScannerData["lighthouseManual"].(bool)
+
+	return ok && manual
 }
 
 // absorbManualCheck lists a manual audit once per rule instead of once per
@@ -343,6 +344,7 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 	}
 	if totalIssues > 0 {
 		scoredSeverity := report.SeverityCounts{}
+
 		for _, issue := range deduplicatedIssues {
 			if !needsHumanReview(issue) {
 				addSeverity(&scoredSeverity, issue.Severity)

@@ -202,8 +202,8 @@ func (d *discoverer) fromSitemaps(ctx context.Context) []string {
 
 		// An index is followed one level only; nested indexes are ignored.
 		for _, child := range children {
-			childURL, ok := d.normalize(child)
-			if !ok || fetched[childURL] || len(fetched) > discoveryMaxSitemaps {
+			childURL, childOK := d.normalize(child)
+			if !childOK || fetched[childURL] || len(fetched) > discoveryMaxSitemaps {
 				continue
 			}
 
@@ -259,7 +259,7 @@ func (d *discoverer) readSitemap(ctx context.Context, sitemapURL string) (pages,
 	}
 
 	var doc sitemapDocument
-	if err := xml.Unmarshal(body, &doc); err != nil {
+	if unmarshalErr := xml.Unmarshal(body, &doc); unmarshalErr != nil {
 		return nil, nil
 	}
 
@@ -321,19 +321,23 @@ func extractLinks(body []byte) []string {
 
 	tokenizer := html.NewTokenizer(bytes.NewReader(body))
 	for {
-		switch tokenizer.Next() {
-		case html.ErrorToken:
+		tokenType := tokenizer.Next()
+		if tokenType == html.ErrorToken {
 			return links
-		case html.StartTagToken, html.SelfClosingTagToken:
-			token := tokenizer.Token()
-			if token.Data != "a" {
-				continue
-			}
+		}
 
-			for _, attr := range token.Attr {
-				if attr.Key == "href" {
-					links = append(links, attr.Val)
-				}
+		if tokenType != html.StartTagToken && tokenType != html.SelfClosingTagToken {
+			continue
+		}
+
+		token := tokenizer.Token()
+		if token.Data != "a" {
+			continue
+		}
+
+		for _, attr := range token.Attr {
+			if attr.Key == "href" {
+				links = append(links, attr.Val)
 			}
 		}
 	}
