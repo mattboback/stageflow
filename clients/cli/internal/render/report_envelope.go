@@ -97,16 +97,9 @@ func BuildReportEnvelope(
 const timeFormatRFC3339 = "2006-01-02T15:04:05Z07:00"
 
 func currentCLIMeta() CLIMeta {
-	v := strings.TrimSpace(buildinfo.Version)
-	if v == "" {
-		v = "dev"
-	}
+	version, commit, date := buildinfo.Resolved()
 
-	return CLIMeta{
-		Version: v,
-		Commit:  strings.TrimSpace(buildinfo.Commit),
-		Date:    strings.TrimSpace(buildinfo.Date),
-	}
+	return CLIMeta{Version: version, Commit: commit, Date: date}
 }
 
 func buildAPILink(baseURL, apiPath string) (string, error) {
