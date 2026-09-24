@@ -72,6 +72,9 @@ EOF
       "$dir/schema/unified-report.v2.schema.json" > "$report_go_temp"
     gofmt -w "$report_go_temp"
     mv -f "$report_go_temp" "$dir/generated/go/report_schema.go"
+    # This used to write a go.mod here. One left over in an older checkout makes
+    # the directory its own module, so the root module cannot build the package.
+    rm -f "$dir/generated/go/go.mod" "$dir/generated/go/go.sum"
   fi
 }
 
