@@ -58,9 +58,6 @@ jobs:
       - name: Lint workflows
         run: actionlint -color -shellcheck="$(command -v shellcheck)"
 
-      - name: Test Caddy credential boundary
-        run: PODMAN=docker ./infra/caddy/capture_test.sh
-
       - name: Check stale vocabulary
         run: ./devtools/scripts/check-stale-vocab.sh
 

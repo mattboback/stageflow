@@ -149,6 +149,7 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 	t.Parallel()
 
 	server, _, _ := newTestServer(t)
+	server.config.APIToken = "caller-token" // the baseline diff requires it
 	jobID := "job-tombstone-error"
 	seedReadableJob(t, server, jobID, models.JobStateDone)
 	server.projectStore = &failingJobDeletionStore{
@@ -167,8 +168,11 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 
+			req := httptest.NewRequest(http.MethodGet, path, http.NoBody)
+			req.Header.Set("X-Api-Key", "caller-token")
+
 			rr := httptest.NewRecorder()
-			server.Router().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, path, http.NoBody))
+			server.Router().ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusInternalServerError {
 				t.Fatalf("want 500, got %d: %s", rr.Code, rr.Body.String())

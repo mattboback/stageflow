@@ -80,8 +80,8 @@ func TestNormalizeJobAuth_FormPassThrough(t *testing.T) {
 		t.Fatalf("normalizeJobAuth: %v", err)
 	}
 
-	if !strings.Contains(string(out), `"from_env":"STAGEFLOW_AUTH_USER"`) {
-		t.Errorf("from_env reference must survive normalization: %s", out)
+	if !strings.Contains(string(out), `"value":"demo@example.com"`) {
+		t.Errorf("form recipe must survive normalization: %s", out)
 	}
 }
 

@@ -204,120 +204,51 @@ func TestLoggingResponseWriter_ImplementsFlusher(t *testing.T) {
 	}
 }
 
-func TestAPIKeyMiddleware_NoToken_AllowsRequest(t *testing.T) {
-	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	handler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rr.Code)
+func TestRequireAPIKey(t *testing.T) {
+	tests := []struct {
+		name       string
+		token      string
+		header     string
+		value      string
+		wantStatus int
+	}{
+		{
+			name:       "no token configured rejects everyone",
+			header:     "X-Api-Key",
+			value:      "anything",
+			wantStatus: http.StatusUnauthorized,
+		},
+		{name: "missing key", token: "secret", wantStatus: http.StatusUnauthorized},
+		{name: "wrong key", token: "secret", header: "X-Api-Key", value: "wrong", wantStatus: http.StatusUnauthorized},
+		{name: "matching X-Api-Key", token: "secret", header: "X-Api-Key", value: "secret", wantStatus: http.StatusOK},
+		{
+			name:       "matching bearer",
+			token:      "secret",
+			header:     "Authorization",
+			value:      "Bearer secret",
+			wantStatus: http.StatusOK,
+		},
 	}
-}
 
-func TestAPIKeyMiddleware_WithToken_RejectsMissingKey(t *testing.T) {
-	t.Setenv("PLATFORM_API_TOKEN", "secret")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := &Server{config: &ServerConfig{APIToken: tt.token}}
+			handler := server.identifyAPIKeyCaller(requireAPIKey(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
 
-	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+			req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+			if tt.header != "" {
+				req.Header.Set(tt.header, tt.value)
+			}
 
-	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-	rr := httptest.NewRecorder()
+			rr := httptest.NewRecorder()
+			handler(rr, req)
 
-	handler(rr, req)
-
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
-	}
-}
-
-func TestAPIKeyMiddleware_WithToken_AllowsMatchingKey(t *testing.T) {
-	t.Setenv("PLATFORM_API_TOKEN", "secret")
-
-	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-	req.Header.Set("X-Api-Key", "secret")
-
-	rr := httptest.NewRecorder()
-
-	handler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rr.Code)
-	}
-}
-
-func TestAPIKeyMiddleware_WithToken_RejectsWrongKey(t *testing.T) {
-	t.Setenv("PLATFORM_API_TOKEN", "secret")
-
-	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-	req.Header.Set("X-Api-Key", "wrong")
-
-	rr := httptest.NewRecorder()
-
-	handler(rr, req)
-
-	if rr.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", rr.Code)
-	}
-}
-
-func TestAPIKeyMiddleware_AuthDisabled_AllowsMissingKey(t *testing.T) {
-	// Regression for F4: PLATFORM_API_AUTH_DISABLED=true must bypass auth at the
-	// request path even when PLATFORM_API_TOKEN is set (the shipped local default).
-	t.Setenv("PLATFORM_API_TOKEN", "secret")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "true")
-
-	handler := apiKeyMiddleware(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	handler(rr, req)
-
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200 with PLATFORM_API_AUTH_DISABLED=true and no key, got %d", rr.Code)
-	}
-}
-
-func TestValidateAuthConfig_MissingTokenFails(t *testing.T) {
-	t.Setenv("PLATFORM_API_TOKEN", "")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
-
-	if err := ValidateAuthConfig(); err == nil {
-		t.Fatalf("expected error when PLATFORM_API_TOKEN is unset")
-	}
-}
-
-func TestValidateAuthConfig_ExplicitDisableAllowed(t *testing.T) {
-	t.Setenv("PLATFORM_API_TOKEN", "")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "true")
-
-	if err := ValidateAuthConfig(); err != nil {
-		t.Fatalf("expected nil error with PLATFORM_API_AUTH_DISABLED=true, got %v", err)
-	}
-}
-
-func TestValidateAuthConfig_TokenSet(t *testing.T) {
-	t.Setenv("PLATFORM_API_TOKEN", "secret")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
-
-	if err := ValidateAuthConfig(); err != nil {
-		t.Fatalf("expected nil error with token set, got %v", err)
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", rr.Code, tt.wantStatus)
+			}
+		})
 	}
 }
 
@@ -568,27 +499,16 @@ func TestPublicSubmissionRateLimitMiddlewareReturnsRetryAfter(t *testing.T) {
 	}
 }
 
-func TestValidateCORSConfig_WildcardWithAuthFails(t *testing.T) {
+func TestValidateCORSConfig_WildcardFails(t *testing.T) {
 	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://stageflow.org,*")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
 
 	if err := ValidateCORSConfig(); err == nil {
-		t.Fatal("expected error for wildcard CORS while auth is enabled")
-	}
-}
-
-func TestValidateCORSConfig_WildcardWithAuthDisabledWarnsOnly(t *testing.T) {
-	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "*")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "true")
-
-	if err := ValidateCORSConfig(); err != nil {
-		t.Fatalf("expected no error for wildcard CORS when auth is disabled, got %v", err)
+		t.Fatal("expected error for wildcard CORS")
 	}
 }
 
 func TestValidateCORSConfig_ExplicitOriginsOK(t *testing.T) {
 	t.Setenv("PLATFORM_API_CORS_ALLOW_ORIGINS", "https://stageflow.org,https://www.stageflow.org")
-	t.Setenv("PLATFORM_API_AUTH_DISABLED", "")
 
 	if err := ValidateCORSConfig(); err != nil {
 		t.Fatalf("expected no error for explicit origins, got %v", err)

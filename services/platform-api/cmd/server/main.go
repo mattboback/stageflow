@@ -32,15 +32,11 @@ func main() {
 	}
 }
 
-// validateSecurityPolicies validates the security, auth, and CORS
-// configuration before the server starts accepting traffic.
+// validateSecurityPolicies validates the security and CORS configuration
+// before the server starts accepting traffic.
 func validateSecurityPolicies() error {
 	if err := api.ValidateSecurityConfig(); err != nil {
 		return fmt.Errorf("invalid security policy configuration: %w", err)
-	}
-
-	if err := api.ValidateAuthConfig(); err != nil {
-		return fmt.Errorf("invalid authentication configuration: %w", err)
 	}
 
 	if err := api.ValidateCORSConfig(); err != nil {
@@ -123,6 +119,7 @@ func run() error {
 		ProjectStore:        projectStore,
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
+		APIToken:            cfg.APIToken,
 		MinIOEndpoint:       cfg.MinIO.Endpoint,
 		MinIOPublicEndpoint: cfg.MinIO.PublicEndpoint,
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,

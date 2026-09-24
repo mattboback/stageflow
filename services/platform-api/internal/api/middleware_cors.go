@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -34,36 +33,19 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// ValidateAuthConfig enforces that PLATFORM_API_TOKEN is set at process
-// startup. Operators can opt out explicitly by setting
-// PLATFORM_API_AUTH_DISABLED=true, which makes the misconfiguration visible
-
-// ValidateCORSConfig rejects a wildcard CORS origin when authentication is
-// enabled. With "*" configured, corsMiddleware echoes back any Origin, so an
-// authenticated API would accept credentialed cross-origin requests from any
-// site — a CSRF anti-pattern. Operators must enumerate explicit origins. When
-// authentication is disabled the wildcard is only warned about, since there are
-// no credentials to steal in that mode.
+// ValidateCORSConfig rejects a wildcard CORS origin. With "*" configured,
+// corsMiddleware echoes back any Origin, so any site could drive the API from a
+// visitor's browser, including with a token a page has been given. Operators
+// must enumerate explicit origins.
 func ValidateCORSConfig() error {
 	origins := parseAllowedOrigins(os.Getenv("PLATFORM_API_CORS_ALLOW_ORIGINS"))
 	if !origins["*"] {
 		return nil
 	}
 
-	authDisabled := strings.EqualFold(strings.TrimSpace(os.Getenv("PLATFORM_API_AUTH_DISABLED")), "true")
-	if !authDisabled {
-		return errors.New(
-			"PLATFORM_API_CORS_ALLOW_ORIGINS=* is not allowed while authentication is enabled; " +
-				"enumerate explicit origins (e.g. https://stageflow.org)",
-		)
-	}
-
-	slog.Warn(
-		"SECURITY: PLATFORM_API_CORS_ALLOW_ORIGINS=* echoes back any Origin. " +
-			"This is tolerated only because authentication is disabled; set explicit origins before enabling auth.",
+	return errors.New(
+		"PLATFORM_API_CORS_ALLOW_ORIGINS=* is not allowed; enumerate explicit origins (e.g. https://stageflow.org)",
 	)
-
-	return nil
 }
 
 func parseAllowedOrigins(raw string) map[string]bool {
@@ -86,5 +68,3 @@ func parseAllowedOrigins(raw string) map[string]bool {
 
 	return out
 }
-
-// timeoutMiddleware wraps a handler with a context deadline.

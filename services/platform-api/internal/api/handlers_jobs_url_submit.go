@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -32,8 +31,6 @@ const (
 	authModeStorageState = "storage_state"
 )
 
-var authFromEnvNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
-
 var errAuthStorageUnavailable = errors.New("auth storage backend unavailable")
 
 type jobURLSubmitRequest struct {
@@ -55,10 +52,9 @@ type jobURLSubmitRequest struct {
 // it to MinIO under the job's prefix, then forwards only an artifact_key in
 // JobConfig.Auth. Raw storage-state bytes must not cross the NATS boundary.
 //
-// For form, values are either literal strings or {from_env: NAME} references.
-// The platform-api does NOT resolve from_env (it has no business doing so); it
-// forwards the recipe untouched and the orchestrator builds the env-var
-// allow-list at scanner-launch time.
+// For form, every step value is a literal string. {from_env: NAME} references
+// are rejected at intake (validateLiteralAuthValues): the server never reads
+// credentials from its own environment.
 type jobURLAuthInput struct {
 	Mode         string                       `json:"mode"`
 	StorageState *jobURLAuthStorageStateInput `json:"storage_state,omitempty"`
@@ -78,26 +74,34 @@ type jobURLAuthFormRecipe struct {
 type jobURLSubmitPolicy uint8
 
 const (
+	// jobURLSubmitPolicyAuthenticated is an API token caller on the main URL
+	// endpoint: it may also opt into private targets where the instance allows.
 	jobURLSubmitPolicyAuthenticated jobURLSubmitPolicy = iota
+	// jobURLSubmitPolicyPublic is anyone else on the main URL endpoint: any
+	// auth recipe with literal values, public targets only.
+	jobURLSubmitPolicyPublic
 	jobURLSubmitPolicyAnonymous
 	jobURLSubmitPolicyBrowserAuth
 )
 
+// handleJobURLSubmit is the main URL intake, used by the CLI and API callers.
 func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
-	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyAuthenticated)
+	policy := jobURLSubmitPolicyPublic
+	if isAPIKeyCaller(r.Context()) {
+		policy = jobURLSubmitPolicyAuthenticated
+	}
+
+	s.handleJobURLSubmitWithPolicy(w, r, policy)
 }
 
-// handleAnonymousJobURLSubmit serves public browser scans that do not need a
-// login. The trusted edge authenticates this exact route with its server-side
-// token, so it must reject every auth recipe and private-network opt-in.
+// handleAnonymousJobURLSubmit serves the web's scans that do not need a login.
+// It rejects every auth recipe and private-network opt-in.
 func (s *Server) handleAnonymousJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyAnonymous)
 }
 
-// handleBrowserAuthJobURLSubmit is the deliberately narrow authenticated-page
-// browser flow. It accepts only literal form-fill values; storage state and
-// from_env references remain available solely through the caller-authenticated
-// URL endpoint.
+// handleBrowserAuthJobURLSubmit is the web's authenticated-page flow. It accepts
+// only a form recipe; storage state goes through the main URL endpoint.
 func (s *Server) handleBrowserAuthJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyBrowserAuth)
 }
@@ -195,6 +199,10 @@ func validateJobURLSubmitPolicy(
 	req jobURLSubmitRequest,
 	policy jobURLSubmitPolicy,
 ) *httputil.ErrorDetail {
+	if detail := validateLiteralAuthValues(req.Auth); detail != nil {
+		return detail
+	}
+
 	if policy == jobURLSubmitPolicyAuthenticated {
 		return nil
 	}
@@ -202,11 +210,15 @@ func validateJobURLSubmitPolicy(
 	if req.AllowPrivateTargets {
 		detail := httputil.NewValidationError(
 			"allow_private_targets",
-			"Public browser scan endpoints do not permit private target scans",
-			"Use a public http/https target or submit through the caller-authenticated URL endpoint.",
+			"Private target scans require the API token",
+			"Use a public http/https target.",
 		)
 
 		return &detail
+	}
+
+	if policy == jobURLSubmitPolicyPublic {
+		return nil
 	}
 
 	if policy == jobURLSubmitPolicyAnonymous {
@@ -237,7 +249,7 @@ func validateJobURLSubmitPolicy(
 		detail := httputil.NewValidationError(
 			"auth.mode",
 			`The browser-auth endpoint accepts only auth.mode="form"`,
-			"Use the caller-authenticated URL endpoint for storage state or environment references.",
+			"Use POST /api/v1/jobs/urls for storage state.",
 		)
 
 		return &detail
@@ -247,7 +259,7 @@ func validateJobURLSubmitPolicy(
 		detail := httputil.NewValidationError(
 			"auth.storage_state",
 			"Storage state is not accepted by the browser-auth endpoint",
-			"Use the caller-authenticated URL endpoint to submit storage state.",
+			"Use POST /api/v1/jobs/urls to submit storage state.",
 		)
 
 		return &detail
@@ -263,7 +275,19 @@ func validateJobURLSubmitPolicy(
 		return &detail
 	}
 
-	for i, step := range req.Auth.Form.Steps {
+	return nil
+}
+
+// validateLiteralAuthValues rejects every non-string form step value, whatever
+// the step type, including {from_env: NAME}. The server never reads credentials
+// from its own environment: a recipe that could name a server env var would let
+// any caller have the scanner type that secret into a page the caller controls.
+func validateLiteralAuthValues(auth *jobURLAuthInput) *httputil.ErrorDetail {
+	if auth == nil || auth.Form == nil {
+		return nil
+	}
+
+	for i, step := range auth.Form.Steps {
 		value, hasValue := step["value"]
 		if !hasValue {
 			continue
@@ -275,8 +299,8 @@ func validateJobURLSubmitPolicy(
 
 		detail := httputil.NewValidationError(
 			fmt.Sprintf("auth.form.steps[%d].value", i),
-			"The browser-auth endpoint accepts only literal form values",
-			"Use a literal string here or submit environment references through the caller-authenticated URL endpoint.",
+			"Form step values must be literal strings; {from_env} references are not accepted",
+			"Send the value itself. StageFlow does not read credentials from its server environment.",
 		)
 
 		return &detail
@@ -571,10 +595,9 @@ func (s *Server) cleanupUploadedAuthState(key string) {
 // submit request and returns its canonical JSON form (Provenance.auth shape)
 // for storage in JobConfig.Auth.
 //
-// The platform-api enforces structure but never resolves credentials: form
-// recipes round-trip with from_env references intact, and storage_state returns
-// decoded bytes to the handler so it can upload them before publishing the
-// job.created event.
+// The platform-api enforces structure: form recipes round-trip with their
+// literal values, and storage_state returns decoded bytes to the handler so it
+// can upload them before publishing the job.created event.
 func normalizeJobURLAuth(
 	ctx context.Context,
 	resolver ipAddrResolver,
@@ -767,27 +790,9 @@ func validateAuthStep(step map[string]any) error {
 }
 
 func validateAuthStepValue(raw any) error {
-	switch v := raw.(type) {
-	case string:
+	if _, literal := raw.(string); literal {
 		return nil
-	case map[string]any:
-		name, ok := v["from_env"].(string)
-		if !ok {
-			return errors.New(`step.value object must be {from_env: NAME}`)
-		}
-
-		if !authFromEnvNamePattern.MatchString(name) {
-			return fmt.Errorf("step.value.from_env %q must match %s", name, authFromEnvNamePattern.String())
-		}
-
-		for k := range v {
-			if k != "from_env" {
-				return fmt.Errorf(`step.value object has unexpected key %q (only "from_env" is allowed)`, k)
-			}
-		}
-
-		return nil
-	default:
-		return fmt.Errorf("step.value must be a string or {from_env: NAME} object (got %T)", raw)
 	}
+
+	return fmt.Errorf("step.value must be a string (got %T)", raw)
 }

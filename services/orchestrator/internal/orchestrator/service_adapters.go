@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -46,7 +45,6 @@ func (o *Orchestrator) newService() *appjobs.Service {
 			ScrollTimeout:       o.scrollTimeout,
 			PodNetnsMode:        o.podNetnsMode,
 			DefaultScannerUser:  "0",
-			HostEnv:             os.Getenv,
 		})),
 	)
 }

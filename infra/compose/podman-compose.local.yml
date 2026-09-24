@@ -23,10 +23,9 @@ services:
 
   platform-api:
     environment:
-      # Repo-local dev stack runs unauthenticated on loopback so `just demo`,
-      # the printed CLI/curl commands, and the Web UI work without a key. The
-      # base compose keeps auth enabled for self-host deployments.
-      PLATFORM_API_AUTH_DISABLED: "true"
+      # Public scans need no key. Private targets (the golden fixtures on
+      # localhost) also need PLATFORM_API_TOKEN from .env, sent by the CLI as
+      # STAGEFLOW_API_KEY.
       PLATFORM_API_ALLOW_PRIVATE_TARGETS: "true"
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"
       MINIO_PUBLIC_USE_SSL: "false"

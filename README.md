@@ -166,7 +166,7 @@ enable additional scanners when you need them.
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |
 | `libs/contracts`             | JSON Schema contracts; Go/TypeScript types are generated during setup/CI       |
-| `infra`                      | Compose, Caddy, MinIO, Grafana, scanner, and security examples                 |
+| `infra`                      | Compose, MinIO, Grafana, scanner, and security examples                 |
 | `docs`                       | Canonical architecture, CLI, self-hosting, design, and reference documentation |
 
 ## Development

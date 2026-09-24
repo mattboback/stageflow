@@ -169,8 +169,16 @@ func (l *inMemoryRateLimiter) evictStaleLocked(now time.Time) {
 
 var apiRateLimiter = newInMemoryRateLimiter(defaultRateLimitRequestsPerMinute)
 
+// rateLimitMiddleware and publicSubmissionRateLimitMiddleware both let an API
+// token caller through unmetered; lifting limits is what the token is for.
 func rateLimitMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if isAPIKeyCaller(r.Context()) {
+			next.ServeHTTP(w, r)
+
+			return
+		}
+
 		key := rateLimitKey(r)
 
 		allowed, retryAfter := apiRateLimiter.allow(key, time.Now().UTC())
@@ -327,6 +335,12 @@ func publicSubmissionRateLimitMiddleware(
 	next http.HandlerFunc,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if isAPIKeyCaller(r.Context()) {
+			next.ServeHTTP(w, r)
+
+			return
+		}
+
 		allowed, retryAfter := limiter.allow(rateLimitKey(r), time.Now().UTC())
 		if !allowed {
 			detail := httputil.NewRateLimitError(

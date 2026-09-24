@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/mattboback/stageflow/libs/go/logging"
@@ -38,11 +37,6 @@ type ScannerLaunchPlannerConfig struct {
 	ScrollTimeout       int
 	PodNetnsMode        string
 	DefaultScannerUser  string
-	// HostEnv is the source of truth for env-var values forwarded into the
-	// scanner-runner pod. The planner only ever reads names that appear in the
-	// auth recipe's from_env references; arbitrary passthrough is forbidden.
-	// Tests inject a stub map; production wires os.Getenv at startup.
-	HostEnv func(name string) string
 }
 
 type ScannerLaunchPlanner struct {
@@ -253,23 +247,12 @@ func (p *ScannerLaunchPlanner) applyScannerConfig(
 }
 
 // applyAuth wires the optional Provenance.auth block into the scanner-runner
-// pod's environment.
+// pod's environment as PROVENANCE_AUTH_JSON: the canonical Provenance.auth JSON
+// the scanner-runner attaches to its synthesized Provenance. Form recipes carry
+// literal values; storage_state carries an artifact_key, never raw bytes.
 //
-// Two outputs:
-//
-//  1. PROVENANCE_AUTH_JSON: the canonical Provenance.auth JSON the scanner-runner
-//     attaches to its synthesized Provenance. Carries from_env references for
-//     form mode and an artifact_key for storage_state mode; never raw bytes,
-//     never resolved credentials.
-//  2. Forwarded env vars: exactly the names referenced by Provenance.auth.form.steps
-//     via {from_env: NAME}. The planner reads them from the orchestrator host
-//     (HostEnv) and injects them into the pod env. Anything else from the host
-//     environment stays out of the pod.
-//
-// If a referenced env var is unset on the orchestrator host we fail fast with
-// a structured error before the pod starts; producing a clean axe report
-// against the login page is the worst possible outcome and the recipe is the
-// place to surface this.
+// Nothing from the orchestrator's own environment ever reaches the pod through
+// a recipe: {from_env} references are refused here as well as at intake.
 func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job) error {
 	if len(job.Config.Auth) == 0 {
 		return nil
@@ -282,6 +265,10 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 
 	if err := provenance.ValidateAuth(&auth); err != nil {
 		return fmt.Errorf("auth: %w", err)
+	}
+
+	if err := rejectFromEnvReferences(&auth); err != nil {
+		return err
 	}
 
 	if auth.Mode == provenance.AuthModeStorageState && auth.StorageState != nil &&
@@ -303,109 +290,28 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 
 	env["PROVENANCE_AUTH_JSON"] = string(compactJSON)
 
-	allowList := provenance.CollectFromEnvReferences(&auth)
-	if len(allowList) == 0 {
-		return nil
-	}
-
-	hostEnv := p.config.HostEnv
-	if hostEnv == nil {
-		hostEnv = os.Getenv
-	}
-
-	missing := make([]string, 0)
-
-	for _, name := range allowList {
-		// Refuse to overwrite operationally critical env vars even if a
-		// recipe accidentally references them. The scanner-runner sets these
-		// via baseEnv and they must not be co-opted by an auth recipe.
-		if _, reserved := reservedScannerEnvNames[name]; reserved {
-			return fmt.Errorf(
-				"auth: from_env reference %q collides with a reserved scanner env var; "+
-					"choose a different env var name in the recipe",
-				name,
-			)
-		}
-
-		value := hostEnv(name)
-		if value == "" {
-			missing = append(missing, name)
-
-			continue
-		}
-
-		env[name] = value
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf(
-			"auth: from_env references not set on orchestrator host: %v "+
-				"(set them in the orchestrator deployment env, or remove them from the recipe)",
-			missing,
-		)
-	}
-
 	return nil
 }
 
-// reservedScannerEnvNames are env vars the scanner-runner interprets as
-// infrastructure or behavior controls, plus retired provider settings that may
-// still contain credentials on an orchestrator host. An auth recipe must not be
-// able to set them via {from_env: "NAME"}: doing so would let a recipe pull a
-// value off the orchestrator host env and inject it into the scanner pod. The
-// list is intentionally broader than the vars baseEnv() sets today, so the
-// invariant holds even for controls the scanner reads directly from its
-// environment (see scanner-runner src/core/config-loader.ts).
-var reservedScannerEnvNames = map[string]struct{}{
-	"JOB_ID":                {},
-	"SCANNER_TYPE":          {},
-	"NATS_URL":              {},
-	"MINIO_ENDPOINT":        {},
-	"MINIO_ACCESS_KEY":      {},
-	"MINIO_SECRET_KEY":      {},
-	"MINIO_USE_SSL":         {},
-	"MINIO_ARTIFACT_BUCKET": {},
-	"PROVENANCE_PATH":       {},
-	"PROVENANCE_AUTH_JSON":  {},
-	"RESULTS_DIR":           {},
-	"PAGE_LOAD_TIMEOUT":     {},
-	"A11Y_SCROLL_TIMEOUT":   {},
-	"A11Y_SHOT_ENABLED":     {},
-	"A11Y_HIGHLIGHT_STYLE":  {},
-	"ALLOW_PRIVATE_TARGETS": {},
-	"REQUEST_ID":            {},
-	"RUN_ID":                {},
-	"SCAN_URLS":             {},
-	"SCANNER_OPTIONS":       {},
+// rejectFromEnvReferences refuses a {from_env} value on any step, whatever its
+// type. The platform-api rejects them at intake; this second check means a
+// queued or replayed job can never have the scanner type a value from the
+// orchestrator's environment into a page.
+func rejectFromEnvReferences(auth *provenance.Auth) error {
+	if auth.Form == nil {
+		return nil
+	}
 
-	// Retired AI Navigator provider settings remain denied so lingering host
-	// credentials cannot be forwarded through an auth recipe.
-	"OPENROUTER_API_KEY":     {},
-	"OPENROUTER_APP_TITLE":   {},
-	"OPENROUTER_APP_REFERER": {},
+	for i, step := range auth.Form.Steps {
+		if step.Value != nil && step.Value.FromEnv != nil {
+			return fmt.Errorf(
+				"auth: form.steps[%d].value is a from_env reference; only literal values are accepted",
+				i,
+			)
+		}
+	}
 
-	// Headless-browser controls: arbitrary Chromium flags or a CSP bypass would
-	// undermine the browser sandbox if an attacker could inject them; the engine
-	// is an orchestrator-set, validated job field, not a recipe-supplied value.
-	"BROWSER_ARGS":       {},
-	"BROWSER_BYPASS_CSP": {},
-	"BROWSER_HEADLESS":   {},
-	"BROWSER_ENGINE":     {},
-
-	// Result-subject overrides: redirecting these would let a recipe forge or
-	// suppress scan-result events on arbitrary NATS subjects.
-	"NATS_SUBJECT_PAGE_COMPLETED": {},
-	"NATS_SUBJECT_SCAN_COMPLETED": {},
-	"NATS_SUBJECT_SCAN_FAILED":    {},
-
-	// Data path and resource limits: control where the pod writes and how much
-	// CPU/memory/time it can consume.
-	"SCANNER_DATA_DIR": {},
-	"SCAN_CONCURRENCY": {},
-	"MAX_RETRIES":      {},
-	"DEFAULT_TIMEOUT":  {},
-	"VIEWPORT_WIDTH":   {},
-	"VIEWPORT_HEIGHT":  {},
+	return nil
 }
 
 func (p *ScannerLaunchPlanner) scannerImage(scannerType string) string {

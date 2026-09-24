@@ -9,6 +9,7 @@ type Config struct {
 	OrchestratorAPIToken string
 	ScannerConfigPath    string
 	AllowPrivateTargets  bool
+	APIToken             string
 	ProjectDBPath        string
 	NATS                 config.NATSConfig
 	MinIO                config.MinIOConfig
@@ -21,6 +22,7 @@ func loadConfig() *Config {
 		OrchestratorAPIToken: config.GetEnv("ORCHESTRATOR_API_TOKEN", ""),
 		ScannerConfigPath:    config.GetEnv("SCANNER_CONFIG_PATH", ""),
 		AllowPrivateTargets:  config.GetEnvBool("PLATFORM_API_ALLOW_PRIVATE_TARGETS", false),
+		APIToken:             config.GetEnv("PLATFORM_API_TOKEN", ""),
 		ProjectDBPath:        config.GetEnv("PROJECT_DB_PATH", "./projects.db"),
 		NATS:                 config.LoadNATSConfig(),
 		MinIO:                config.LoadMinIOConfig(),

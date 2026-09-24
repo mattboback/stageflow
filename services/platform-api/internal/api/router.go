@@ -6,6 +6,9 @@ import (
 )
 
 // Router returns the HTTP router with all public routes configured.
+//
+// Every route is public except projects and the project baseline diff, which
+// require the API token. See middleware_auth.go for what else the token does.
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 	publicSubmissionLimiter := newPublicSubmissionRateLimiterFromEnv()
@@ -15,7 +18,10 @@ func (s *Server) Router() http.Handler {
 		uploadRequestTimeout,
 		s.withPublicUploadMiddleware(s.handleJobZipUpload, publicSubmissionLimiter),
 	))
-	mux.HandleFunc("/api/v1/jobs/urls", s.withMiddleware(s.handleJobURLSubmit))
+	mux.HandleFunc("/api/v1/jobs/urls", s.withPublicSubmissionMiddleware(
+		s.handleJobURLSubmit,
+		publicSubmissionLimiter,
+	))
 	mux.HandleFunc("/api/v1/jobs/urls/anonymous", s.withPublicSubmissionMiddleware(
 		s.handleAnonymousJobURLSubmit,
 		publicSubmissionLimiter,
@@ -29,8 +35,8 @@ func (s *Server) Router() http.Handler {
 		publicSubmissionLimiter,
 	))
 	mux.HandleFunc("/api/v1/jobs/", s.handleJobsRoute)
-	mux.HandleFunc("/api/v1/projects", s.withMiddleware(s.handleProjects))
-	mux.HandleFunc("/api/v1/projects/", s.withMiddleware(s.handleProjects))
+	mux.HandleFunc("/api/v1/projects", s.withMiddleware(requireAPIKey(s.handleProjects)))
+	mux.HandleFunc("/api/v1/projects/", s.withMiddleware(requireAPIKey(s.handleProjects)))
 	mux.HandleFunc("/api/v1/scanners", s.withMiddleware(s.handleListScanners))
 	mux.HandleFunc("/healthz", s.handleHealth)
 
@@ -43,7 +49,7 @@ func (s *Server) withPublicSubmissionMiddleware(
 ) http.HandlerFunc {
 	return loggingMiddleware(
 		corsMiddleware(
-			apiKeyMiddleware(
+			s.identifyAPIKeyCaller(
 				rateLimitMiddleware(
 					publicSubmissionRateLimitMiddleware(
 						limiter,
@@ -61,7 +67,7 @@ func (s *Server) withPublicUploadMiddleware(
 ) http.HandlerFunc {
 	return loggingMiddleware(
 		corsMiddleware(
-			apiKeyMiddleware(
+			s.identifyAPIKeyCaller(
 				rateLimitMiddleware(
 					publicSubmissionRateLimitMiddleware(
 						limiter,
@@ -90,13 +96,20 @@ func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(parts) >= 2 && parts[1] == "diff" {
+		// The baseline diff belongs to projects, which require the token.
+		s.withMiddleware(requireAPIKey(s.handleJobStatus))(w, r)
+
+		return
+	}
+
 	s.withMiddleware(s.handleJobStatus)(w, r)
 }
 
 func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return loggingMiddleware(
 		corsMiddleware(
-			apiKeyMiddleware(
+			s.identifyAPIKeyCaller(
 				rateLimitMiddleware(timeoutMiddleware(defaultRequestTimeout, next)),
 			),
 		),
@@ -106,7 +119,7 @@ func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func (s *Server) withStreamMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return loggingMiddleware(
 		corsMiddleware(
-			apiKeyMiddleware(rateLimitMiddleware(next)),
+			s.identifyAPIKeyCaller(rateLimitMiddleware(next)),
 		),
 	)
 }

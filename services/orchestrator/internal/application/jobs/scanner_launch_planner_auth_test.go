@@ -11,12 +11,12 @@ import (
 
 const (
 	authStateKey      = "job-auth-test/auth/storage-state.json"
-	authFormFixture   = `{"mode":"form","login_url":"https://app.example.com/login","steps":[{"type":"fill","selector":"input[name=email]","value":{"from_env":"STAGEFLOW_AUTH_USER"}},{"type":"fill","selector":"input[name=password]","value":{"from_env":"STAGEFLOW_AUTH_PASSWORD"}},{"type":"click","selector":"button[type=submit]"}],"success":{"type":"selector","selector":"[data-test=signed-in]","timeout":15000}}`
+	authFormFixture   = `{"mode":"form","login_url":"https://app.example.com/login","steps":[{"type":"fill","selector":"input[name=email]","value":"demo@example.com"},{"type":"fill","selector":"input[name=password]","value":"throwaway-password"},{"type":"click","selector":"button[type=submit]"}],"success":{"type":"selector","selector":"[data-test=signed-in]","timeout":15000}}`
 	authStorageFixed  = `{"mode":"storage_state","artifact_key":"` + authStateKey + `"}`
 	authStorageInline = `{"mode":"storage_state","content_b64":"eyJjb29raWVzIjpbXSwib3JpZ2lucyI6W119"}`
 )
 
-func newAuthPlanner(t *testing.T, hostEnv map[string]string) *ScannerLaunchPlanner {
+func newAuthPlanner(t *testing.T) *ScannerLaunchPlanner {
 	t.Helper()
 
 	return NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
@@ -28,9 +28,6 @@ func newAuthPlanner(t *testing.T, hostEnv map[string]string) *ScannerLaunchPlann
 		ScrollTimeout:      300,
 		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
-		HostEnv: func(name string) string {
-			return hostEnv[name]
-		},
 	})
 }
 
@@ -48,82 +45,55 @@ func newAuthJob(t *testing.T, authJSON string) *models.Job {
 	}
 }
 
-func TestPlanForwardsOnlyFromEnvAllowList(t *testing.T) {
+func TestPlanForwardsFormRecipeAsProvenanceAuth(t *testing.T) {
 	t.Parallel()
 
-	host := map[string]string{
-		"STAGEFLOW_AUTH_USER":     "demo@example.com",
-		"STAGEFLOW_AUTH_PASSWORD": "redacted-password-NOT-leaked",
-		"OTHER_HOST_SECRET":       "must-not-leak",
-		"AWS_SESSION_TOKEN":       "must-not-leak-either",
-	}
-
-	planner := newAuthPlanner(t, host)
-
-	plan, err := planner.Plan(context.Background(), newAuthJob(t, authFormFixture), "axe")
+	plan, err := newAuthPlanner(t).Plan(context.Background(), newAuthJob(t, authFormFixture), "axe")
 	if err != nil {
 		t.Fatalf("Plan() error = %v", err)
 	}
 
-	// Allow-listed env vars are forwarded.
-	if got := plan.Env["STAGEFLOW_AUTH_USER"]; got != "demo@example.com" {
-		t.Errorf("STAGEFLOW_AUTH_USER = %q, want demo@example.com", got)
-	}
-
-	if got := plan.Env["STAGEFLOW_AUTH_PASSWORD"]; got != "redacted-password-NOT-leaked" {
-		t.Errorf("STAGEFLOW_AUTH_PASSWORD = %q, want forwarded literal", got)
-	}
-
-	// Anything outside the recipe's allow-list stays out of the pod env.
-	for _, name := range []string{"OTHER_HOST_SECRET", "AWS_SESSION_TOKEN"} {
-		if _, leaked := plan.Env[name]; leaked {
-			t.Errorf("env var %q leaked into pod env from orchestrator host", name)
-		}
-	}
-
-	// PROVENANCE_AUTH_JSON carries from_env references but never resolved values.
 	authEnv, has := plan.Env["PROVENANCE_AUTH_JSON"]
 	if !has {
 		t.Fatal("PROVENANCE_AUTH_JSON not set")
 	}
 
-	if !strings.Contains(authEnv, `"from_env":"STAGEFLOW_AUTH_USER"`) {
-		t.Errorf("PROVENANCE_AUTH_JSON missing from_env reference: %s", authEnv)
-	}
-
-	if strings.Contains(authEnv, "demo@example.com") || strings.Contains(authEnv, "redacted-password-NOT-leaked") {
-		t.Errorf("resolved credentials leaked into PROVENANCE_AUTH_JSON: %s", authEnv)
+	if !strings.Contains(authEnv, `"value":"demo@example.com"`) {
+		t.Errorf("PROVENANCE_AUTH_JSON missing the literal form value: %s", authEnv)
 	}
 }
 
-func TestPlanFailsFastWhenFromEnvIsUnset(t *testing.T) {
-	t.Parallel()
+// TestPlanRejectsFromEnvReferences is the orchestrator half of the from_env
+// fix: whatever the name or step type, no recipe may pull a value out of the
+// orchestrator's environment and into a scanner pod.
+func TestPlanRejectsFromEnvReferences(t *testing.T) {
+	t.Setenv("POSTGRES_PASSWORD", "host-secret-must-not-leak")
 
-	// Only USER is set; PASSWORD is missing on the host.
-	host := map[string]string{"STAGEFLOW_AUTH_USER": "demo@example.com"}
+	for _, step := range []string{
+		`{"type":"fill","selector":"#a","value":{"from_env":"POSTGRES_PASSWORD"}}`,
+		`{"type":"select","selector":"#a","value":{"from_env":"DATABASE_URL"}}`,
+		`{"type":"click","selector":"#a","value":{"from_env":"ORCHESTRATOR_API_TOKEN"}}`,
+		`{"type":"fill","selector":"#a","value":{"from_env":"NATS_URL"}}`,
+	} {
+		t.Run(step, func(t *testing.T) {
+			authJSON := `{"mode":"form","login_url":"https://x","steps":[` + step + `],"success":{"type":"load"}}`
 
-	planner := newAuthPlanner(t, host)
+			plan, err := newAuthPlanner(t).Plan(context.Background(), newAuthJob(t, authJSON), "axe")
+			if err == nil {
+				t.Fatalf("expected Plan() to refuse a from_env reference; env = %v", plan.Env)
+			}
 
-	_, err := planner.Plan(context.Background(), newAuthJob(t, authFormFixture), "axe")
-	if err == nil {
-		t.Fatal("expected Plan() to fail when a from_env reference is unset on the host")
-	}
-
-	if !strings.Contains(err.Error(), "STAGEFLOW_AUTH_PASSWORD") {
-		t.Errorf("error should name the missing env var; got: %v", err)
-	}
-
-	if !strings.Contains(err.Error(), "from_env references not set") {
-		t.Errorf("error should be the structured 'from_env references not set' message; got: %v", err)
+			if !strings.Contains(err.Error(), "from_env") {
+				t.Errorf("error should name from_env; got: %v", err)
+			}
+		})
 	}
 }
 
 func TestPlanStorageStateForwardsArtifactKey(t *testing.T) {
 	t.Parallel()
 
-	host := map[string]string{"OTHER_HOST_SECRET": "must-not-leak"}
-
-	planner := newAuthPlanner(t, host)
+	planner := newAuthPlanner(t)
 
 	plan, err := planner.Plan(context.Background(), newAuthJob(t, authStorageFixed), "axe")
 	if err != nil {
@@ -138,19 +108,12 @@ func TestPlanStorageStateForwardsArtifactKey(t *testing.T) {
 	if !strings.Contains(authEnv, `"artifact_key":"`+authStateKey+`"`) {
 		t.Errorf("PROVENANCE_AUTH_JSON missing artifact_key: %s", authEnv)
 	}
-
-	// storage_state mode must not forward any host env vars.
-	for _, name := range []string{"OTHER_HOST_SECRET", "STAGEFLOW_AUTH_USER", "STAGEFLOW_AUTH_PASSWORD"} {
-		if _, leaked := plan.Env[name]; leaked {
-			t.Errorf("env var %q leaked into pod env in storage_state mode", name)
-		}
-	}
 }
 
 func TestPlanStorageStateRejectsInlineContentAtLaunchTime(t *testing.T) {
 	t.Parallel()
 
-	planner := newAuthPlanner(t, nil)
+	planner := newAuthPlanner(t)
 
 	_, err := planner.Plan(context.Background(), newAuthJob(t, authStorageInline), "axe")
 	if err == nil {
@@ -165,7 +128,7 @@ func TestPlanStorageStateRejectsInlineContentAtLaunchTime(t *testing.T) {
 func TestPlanWithoutAuthIsByteIdentical(t *testing.T) {
 	t.Parallel()
 
-	planner := newAuthPlanner(t, map[string]string{"STAGEFLOW_AUTH_USER": "set-but-recipe-absent"})
+	planner := newAuthPlanner(t)
 
 	job := &models.Job{
 		ID:        "job-no-auth",
@@ -183,85 +146,5 @@ func TestPlanWithoutAuthIsByteIdentical(t *testing.T) {
 
 	if _, has := plan.Env["PROVENANCE_AUTH_JSON"]; has {
 		t.Errorf("PROVENANCE_AUTH_JSON must not be set when auth is absent")
-	}
-
-	if _, leaked := plan.Env["STAGEFLOW_AUTH_USER"]; leaked {
-		t.Errorf("host env var leaked into pod when no auth recipe")
-	}
-}
-
-func TestPlanRejectsCollisionWithReservedEnvName(t *testing.T) {
-	t.Parallel()
-
-	// A pathological recipe that tries to overwrite NATS_URL via from_env.
-	authJSON := `{"mode":"form","login_url":"https://x","steps":[{"type":"fill","selector":"#a","value":{"from_env":"NATS_URL"}}],"success":{"type":"load"}}`
-
-	planner := newAuthPlanner(t, map[string]string{"NATS_URL": "evil://attacker"})
-
-	_, err := planner.Plan(context.Background(), newAuthJob(t, authJSON), "axe")
-	if err == nil {
-		t.Fatal("expected Plan() to reject from_env collision with reserved scanner env vars")
-	}
-
-	if !strings.Contains(err.Error(), "reserved") {
-		t.Errorf("error should mention reserved name; got: %v", err)
-	}
-}
-
-func TestPlanRejectsRetiredProviderEnvReferences(t *testing.T) {
-	t.Parallel()
-
-	for _, name := range []string{
-		"OPENROUTER_API_KEY",
-		"OPENROUTER_APP_TITLE",
-		"OPENROUTER_APP_REFERER",
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			authJSON := `{"mode":"form","login_url":"https://x","steps":[{"type":"fill","selector":"#a","value":{"from_env":"` + name + `"}}],"success":{"type":"load"}}`
-			planner := newAuthPlanner(t, map[string]string{name: "retired-provider-value"})
-
-			_, err := planner.Plan(context.Background(), newAuthJob(t, authJSON), "axe")
-			if err == nil {
-				t.Fatalf("expected Plan() to reject retired provider env var %q", name)
-			}
-
-			if !strings.Contains(err.Error(), "reserved") {
-				t.Errorf("error should mention reserved name for %q; got: %v", name, err)
-			}
-		})
-	}
-}
-
-// TestPlanRejectsBrowserAndResultSubjectEnvCollisions guards the security
-// reservation for env vars the scanner-runner interprets directly: Chromium
-// launch controls and result-subject overrides must not be settable via a
-// from_env auth reference.
-func TestPlanRejectsBrowserAndResultSubjectEnvCollisions(t *testing.T) {
-	t.Parallel()
-
-	for _, name := range []string{
-		"BROWSER_ARGS",
-		"BROWSER_BYPASS_CSP",
-		"NATS_SUBJECT_SCAN_COMPLETED",
-		"SCANNER_DATA_DIR",
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			authJSON := `{"mode":"form","login_url":"https://x","steps":[{"type":"fill","selector":"#a","value":{"from_env":"` + name + `"}}],"success":{"type":"load"}}`
-
-			planner := newAuthPlanner(t, map[string]string{name: "attacker-controlled"})
-
-			_, err := planner.Plan(context.Background(), newAuthJob(t, authJSON), "axe")
-			if err == nil {
-				t.Fatalf("expected Plan() to reject from_env collision with reserved env var %q", name)
-			}
-
-			if !strings.Contains(err.Error(), "reserved") {
-				t.Errorf("error should mention reserved name for %q; got: %v", name, err)
-			}
-		})
 	}
 }

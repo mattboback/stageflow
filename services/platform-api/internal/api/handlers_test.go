@@ -190,17 +190,19 @@ func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
 	}
 }
 
-func TestHandleJobURLSubmitPrivateTargetSucceedsWhenBothOptInsEnabled(t *testing.T) {
+func TestHandleJobURLSubmitPrivateTargetSucceedsForTokenCallerWhenServerAllows(t *testing.T) {
 	server, _, publisher := newTestServer(t)
 	server.config.AllowPrivateTargets = true
+	server.config.APIToken = "caller-token"
 
 	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"],"allow_private_targets":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Api-Key", "caller-token")
 
 	rr := httptest.NewRecorder()
 
-	server.handleJobURLSubmit(rr, req)
+	server.identifyAPIKeyCaller(server.handleJobURLSubmit)(rr, req)
 
 	if rr.Code != http.StatusCreated {
 		t.Fatalf("expected 201, got %d", rr.Code)

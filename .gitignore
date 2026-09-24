@@ -74,8 +74,6 @@ output/
 .gitcleanup/
 .agent-harness/
 .kiro/
-# Local-only Caddy snippets (secrets)
-infra/caddy/snippets/monitoring-basicauth*.caddy
 # Root-only local runtime data (avoid ignoring real source folders named "data")
 /data/
 .go/
