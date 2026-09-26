@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 GO_JSONSCHEMA="github.com/atombender/go-jsonschema@v0.20.0"
-JSON_SCHEMA_TO_TYPESCRIPT="json-schema-to-typescript@15.0.4"
+JSON_SCHEMA_TO_TYPESCRIPT="json-schema-to-typescript@16.0.0"
 LOCK_DIR="$ROOT_DIR/.cache/generate-contracts.lock"
 
 MODE="${1:-all}"
