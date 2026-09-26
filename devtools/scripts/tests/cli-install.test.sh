@@ -65,12 +65,35 @@ run_bin_dir_missing_from_path_case() {
 	assert_contains "${out_file}" "is not on PATH" "cli-install should explain how to fix a missing PATH entry"
 }
 
+run_static_install_case() {
+	local temp_dir="$1"
+	local out_file="${temp_dir}/static-install.out"
+	local install_bin="${temp_dir}/static-bin"
+	local bin_name="stageflow-static-test"
+
+	mkdir -p "${install_bin}"
+
+	set +e
+	CGO_ENABLED=1 PATH="${install_bin}:${PATH}" \
+		"${REPO_ROOT}/devtools/scripts/install-cli.sh" "${install_bin}" "${bin_name}" >"${out_file}" 2>&1
+	local rc=$?
+	set -e
+
+	assert_exit_code "${rc}" 0 "cli-install should install and execute the portable binary"
+	if [[ "${rc}" -eq 0 ]]; then
+		go version -m "${install_bin}/${bin_name}" >"${temp_dir}/build-info.out"
+		assert_contains "${temp_dir}/build-info.out" "CGO_ENABLED=0" \
+			"cli-install should disable cgo even when the caller enables it"
+	fi
+}
+
 main() {
 	local temp_dir
 	temp_dir="$(mktemp -d)"
 	trap 'rm -rf "${temp_dir:-}"' EXIT
 
 	cd "${REPO_ROOT}"
+	run_static_install_case "${temp_dir}"
 	run_shadowed_path_case "${temp_dir}"
 	run_bin_dir_missing_from_path_case "${temp_dir}"
 

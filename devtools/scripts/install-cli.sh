@@ -18,7 +18,8 @@ version="$(cd "${REPO_ROOT}" && git describe --tags --match 'v*' --always --dirt
 commit="$(cd "${REPO_ROOT}" && git rev-parse --short HEAD 2>/dev/null || echo "")"
 build_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ldflags="-s -w -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Version=${version} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Commit=${commit} -X github.com/mattboback/stageflow/clients/cli/internal/buildinfo.Date=${build_date}"
-(cd "${REPO_ROOT}" && go build -trimpath -ldflags "$ldflags" -o "$tmp" ./clients/cli/cmd/stageflow)
+# The host-installed binary is also mounted into Alpine containers.
+(cd "${REPO_ROOT}" && CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o "$tmp" ./clients/cli/cmd/stageflow)
 
 echo "==> Installing: $dest"
 install -m 0755 "$tmp" "$dest"
