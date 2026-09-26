@@ -113,33 +113,6 @@ func (s *Server) recoverPanic(next http.Handler) http.Handler {
 	})
 }
 
-// statusRecorder captures the response status code so it can be recorded as a
-// metric. It defaults to 200 because handlers that never call WriteHeader still
-// emit a 200 once the body is written.
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
-
-func (r *statusRecorder) WriteHeader(code int) {
-	r.status = code
-	r.ResponseWriter.WriteHeader(code)
-}
-
-func (s *Server) recordMetrics(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.metrics == nil {
-			next.ServeHTTP(w, r)
-
-			return
-		}
-
-		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rec, r)
-		s.metrics.ObserveHTTP(rec.status)
-	})
-}
-
 func (s *Server) rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.rateLimiter != nil && r.URL.Path != "/healthz" {

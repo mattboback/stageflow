@@ -31,11 +31,6 @@ func (o *Orchestrator) startPlannedScanner(
 			"job_id",
 			job.ID,
 		)
-		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
-			"component":    "scanner",
-			"scanner_type": scannerType,
-			"container_id": result.ContainerID,
-		})
 	}
 
 	if result != nil && result.ContainerID != "" && result.Existing {
@@ -45,11 +40,6 @@ func (o *Orchestrator) startPlannedScanner(
 			"container_id", result.ContainerID,
 			"job_id", job.ID,
 		)
-		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.adopted", map[string]any{
-			"component":    "scanner",
-			"scanner_type": scannerType,
-			"container_id": result.ContainerID,
-		})
 	}
 
 	if err != nil {
@@ -67,11 +57,6 @@ func (o *Orchestrator) startPlannedScanner(
 			"container_id", result.ContainerID,
 			"job_id", job.ID,
 		)
-		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
-			"component":    "scanner",
-			"scanner_type": scannerType,
-			"container_id": result.ContainerID,
-		})
 	} else {
 		slog.Info(
 			"Reattached terminal scanner container without restarting it",
@@ -79,11 +64,6 @@ func (o *Orchestrator) startPlannedScanner(
 			"container_id", result.ContainerID,
 			"job_id", job.ID,
 		)
-		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.reattached", map[string]any{
-			"component":    "scanner",
-			"scanner_type": scannerType,
-			"container_id": result.ContainerID,
-		})
 	}
 
 	o.spawnMonitorContainer(o.backgroundWithCorrelation(ctx), result.ContainerID, job.ID, "scanner-"+scannerType)

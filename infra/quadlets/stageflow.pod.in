@@ -16,7 +16,6 @@ NetworkAlias=postgres
 NetworkAlias=orchestrator
 NetworkAlias=platform-api
 NetworkAlias=frontend
-NetworkAlias=grafana
 NetworkAlias=stageflow-web-react
 NetworkAlias=stageflow-api
 NetworkAlias=stageflow-artifacts

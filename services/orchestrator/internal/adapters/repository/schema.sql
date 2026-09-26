@@ -86,46 +86,6 @@ CREATE TABLE IF NOT EXISTS scanner_launches (
     CHECK (state IN ('pending', 'launching', 'launched', 'failed'))
 );
 
--- Job events table logs all events for a job.
-CREATE TABLE IF NOT EXISTS job_events (
-    id BIGSERIAL PRIMARY KEY,
-    job_id TEXT,
-    payload_job_id TEXT,
-    event TEXT NOT NULL,
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    payload_json TEXT,
-    request_id TEXT,
-    run_id TEXT,
-    producer TEXT,
-    nats_subject TEXT,
-    nats_stream TEXT,
-    nats_consumer TEXT,
-    nats_stream_seq BIGINT,
-    nats_consumer_seq BIGINT,
-    nats_deliveries BIGINT,
-    nats_stored_at TIMESTAMP,
-    handler_status TEXT,
-    handler_error TEXT,
-    duration_ms BIGINT,
-    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
-);
-
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS request_id TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS run_id TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS producer TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_subject TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_stream TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_consumer TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_stream_seq BIGINT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_consumer_seq BIGINT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_deliveries BIGINT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS nats_stored_at TIMESTAMP;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_status TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS handler_error TEXT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS duration_ms BIGINT;
-ALTER TABLE job_events ADD COLUMN IF NOT EXISTS payload_job_id TEXT;
-ALTER TABLE job_events ALTER COLUMN job_id DROP NOT NULL;
-
 -- Terminal event outbox stores job.completed/job.failed until they are
 -- successfully published to NATS.
 CREATE TABLE IF NOT EXISTS terminal_events (
@@ -149,8 +109,5 @@ CREATE TABLE IF NOT EXISTS maintenance_migrations (
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_completed_at ON jobs(completed_at);
-CREATE INDEX IF NOT EXISTS idx_job_events_job_id ON job_events(job_id);
-CREATE INDEX IF NOT EXISTS idx_job_events_job_id_timestamp ON job_events(job_id, timestamp);
-CREATE INDEX IF NOT EXISTS idx_job_events_timestamp ON job_events(timestamp);
 CREATE INDEX IF NOT EXISTS idx_terminal_events_unpublished ON terminal_events(published_at, created_at);
 CREATE INDEX IF NOT EXISTS idx_scanner_launches_state ON scanner_launches(state, updated_at);

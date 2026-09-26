@@ -82,7 +82,7 @@ func (d *Database) CompleteJobWithTerminalEvent(
 		return sanitizeErr
 	}
 
-	if sanitizeErr := sanitizeTerminalAuditRecordsTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
+	if sanitizeErr := sanitizeTerminalOutboxTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
 		return sanitizeErr
 	}
 
@@ -189,7 +189,7 @@ func (d *Database) FailJobWithTerminalEvent(
 		return false, sanitizeErr
 	}
 
-	if sanitizeErr := sanitizeTerminalAuditRecordsTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
+	if sanitizeErr := sanitizeTerminalOutboxTx(ctx, tx, jobID, secrets); sanitizeErr != nil {
 		return false, sanitizeErr
 	}
 

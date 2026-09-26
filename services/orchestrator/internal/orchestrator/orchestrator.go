@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/events"
+	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
@@ -15,7 +16,6 @@ import (
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
-	"github.com/mattboback/stageflow/services/orchestrator/internal/metrics"
 )
 
 const (
@@ -81,7 +81,6 @@ type Orchestrator struct {
 	deadlinePollInterval time.Duration
 	deadlineSweepOnce    sync.Once
 	lifecycleCtx         context.Context
-	metrics              *metrics.Collector
 }
 
 // Config wires dependencies and optional overrides into a new Orchestrator.
@@ -220,7 +219,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		stagingStorage:       config.StagingStorage,
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,
-		metrics:              metrics.New(),
 	}
 
 	orch.refreshJobRuntime()
@@ -228,10 +226,25 @@ func NewOrchestrator(config *Config) *Orchestrator {
 	return orch
 }
 
-// Metrics exposes the orchestrator's in-memory metrics collector so the API
-// server can render it on the /metrics endpoint.
-func (o *Orchestrator) Metrics() *metrics.Collector {
-	return o.metrics
+func (o *Orchestrator) backgroundWithCorrelation(ctx context.Context) context.Context {
+	bg := context.Background()
+	if o != nil && o.lifecycleCtx != nil {
+		bg = o.lifecycleCtx
+	}
+
+	if jobID := logging.JobID(ctx); jobID != "" {
+		bg = logging.WithJobID(bg, jobID)
+	}
+
+	if requestID := logging.RequestID(ctx); requestID != "" {
+		bg = logging.WithRequestID(bg, requestID)
+	}
+
+	if runID := logging.RunID(ctx); runID != "" {
+		bg = logging.WithRunID(bg, runID)
+	}
+
+	return bg
 }
 
 func (o *Orchestrator) canTransition(from, to models.JobState) bool {

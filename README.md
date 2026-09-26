@@ -134,7 +134,7 @@ just diagnose
 just demo
 ```
 
-The web UI starts at `http://localhost:3000`, the API at `http://localhost:8080`, and Grafana at `http://localhost:3001`. See [Self-hosting](docs/self-hosting.md) for private-target development, manual lifecycle commands, public edge guidance, and required hardening.
+The web UI starts at `http://localhost:3000` and the API at `http://localhost:8080`. See [Self-hosting](docs/self-hosting.md) for private-target development, manual lifecycle commands, public edge guidance, and required hardening.
 
 ## What StageFlow Runs
 
@@ -164,7 +164,7 @@ enable additional scanners when you need them.
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |
 | `libs/contracts`             | JSON Schema contracts with committed generated Go/TypeScript types       |
-| `infra`                      | Compose, MinIO, Grafana, scanner, and security examples                 |
+| `infra`                      | Compose, MinIO, scanner, and security examples                 |
 | `docs`                       | Canonical architecture, CLI, self-hosting, design, and reference documentation |
 
 ## Development

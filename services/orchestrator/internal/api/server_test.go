@@ -16,49 +16,13 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/models"
 	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
-	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
-
-type fakePodmanClient struct {
-	pods     []podman.PodInfo
-	podsByID map[string]podman.PodInfo
-}
 
 var apiTestSchemaCounter uint64
 
 const testAPIToken = "test-token"
 
-func newFakePodmanClient() *fakePodmanClient {
-	pods := []podman.PodInfo{
-		{ID: "pod-1", Name: "job-123", Status: "running"},
-		{ID: "pod-2", Name: "misc", Status: "exited"},
-	}
-
-	podsByID := make(map[string]podman.PodInfo, len(pods))
-	for _, pod := range pods {
-		podsByID[pod.ID] = pod
-	}
-
-	return &fakePodmanClient{
-		pods:     pods,
-		podsByID: podsByID,
-	}
-}
-
-func (f *fakePodmanClient) ListPods(_ context.Context) ([]podman.PodInfo, error) {
-	return f.pods, nil
-}
-
-func (f *fakePodmanClient) InspectPod(_ context.Context, podID string) (*podman.PodInfo, error) {
-	pod, ok := f.podsByID[podID]
-	if !ok {
-		return nil, errors.New("pod not found")
-	}
-
-	return &pod, nil
-}
-
-// newTestDatabase creates an isolated PostgreSQL schema and seeds two jobs plus a single event.
+// newTestDatabase creates an isolated PostgreSQL schema and seeds two jobs.
 func newTestDatabase(t *testing.T) (*db.Database, func()) {
 	t.Helper()
 
@@ -109,15 +73,6 @@ func newTestDatabase(t *testing.T) (*db.Database, func()) {
 		}
 	}
 
-	if insertErr := database.InsertJobEvent(context.Background(), &db.JobEventInsert{
-		JobID:     "123",
-		Event:     "job.created",
-		Timestamp: time.Now().UTC(),
-		Payload:   "{}",
-	}); insertErr != nil {
-		t.Fatalf("seed job event: %v", insertErr)
-	}
-
 	cleanup := func() {
 		_ = database.Close()
 		dropSchemaQuery := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quoteIdentifier(schema))
@@ -128,18 +83,16 @@ func newTestDatabase(t *testing.T) (*db.Database, func()) {
 	return database, cleanup
 }
 
-// newTestServer wires a Server with a temporary database and Podman test double.
+// newTestServer wires a Server with a temporary database.
 func newTestServer(t *testing.T) (*Server, func()) {
 	t.Helper()
 
 	dbase, databaseCleanup := newTestDatabase(t)
-	podClient := newFakePodmanClient()
 
 	server := NewServer(&Config{
-		Database:     dbase,
-		PodmanClient: podClient,
-		APIToken:     testAPIToken,
-		Port:         "0",
+		Database: dbase,
+		APIToken: testAPIToken,
+		Port:     "0",
 	})
 
 	cleanup := func() {
@@ -433,42 +386,6 @@ func TestShutdownBoundsHandlerDrainAfterForceClose(t *testing.T) {
 	}
 }
 
-func TestHandleListJobsFiltersAndPagination(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs?state=PENDING&limit=1&offset=0")
-	rec := httptest.NewRecorder()
-
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	var resp struct {
-		Jobs   []*models.Job `json:"jobs"`
-		Total  int           `json:"total"`
-		Limit  int           `json:"limit"`
-		Offset int           `json:"offset"`
-	}
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	if resp.Total != 1 {
-		t.Fatalf("expected total 1 pending job, got %d", resp.Total)
-	}
-
-	if len(resp.Jobs) != 1 || resp.Jobs[0].ID != "123" {
-		t.Fatalf("unexpected jobs payload: %+v", resp.Jobs)
-	}
-
-	if resp.Limit != 1 || resp.Offset != 0 {
-		t.Fatalf("limit/offset not echoed back (limit=%d offset=%d)", resp.Limit, resp.Offset)
-	}
-}
-
 func TestHandleJobRoutes_GetJob(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
@@ -493,41 +410,6 @@ func TestHandleJobRoutes_GetJob(t *testing.T) {
 	}
 }
 
-func TestHandleJobRoutes_GetJobEvents(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs/123/events?limit=10&offset=0")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	var resp struct {
-		JobID  string        `json:"job_id"`
-		Events []db.JobEvent `json:"events"`
-		Limit  int           `json:"limit"`
-		Offset int           `json:"offset"`
-	}
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	if resp.JobID != "123" {
-		t.Fatalf("expected job_id 123, got %q", resp.JobID)
-	}
-
-	if resp.Limit != 10 || resp.Offset != 0 {
-		t.Fatalf("limit/offset not echoed back (limit=%d offset=%d)", resp.Limit, resp.Offset)
-	}
-
-	if len(resp.Events) != 1 || resp.Events[0].Event != "job.created" {
-		t.Fatalf("unexpected events payload: %#v", resp.Events)
-	}
-}
-
 func TestHandleJobRoutes_JobNotFound(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
@@ -538,107 +420,6 @@ func TestHandleJobRoutes_JobNotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d", rec.Code)
-	}
-}
-
-func TestHandleListPodsEnrichesJobState(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/pods")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	var resp struct {
-		Pods  []map[string]any `json:"pods"`
-		Total int              `json:"total"`
-	}
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	if resp.Total != 2 {
-		t.Fatalf("expected 2 pods, got %d", resp.Total)
-	}
-
-	first := resp.Pods[0]
-	if got := first["job_id"]; got != "123" {
-		t.Fatalf("expected pod to map to job 123, got %#v", got)
-	}
-
-	if got := first["job_state"]; got != string(models.JobStatePending) {
-		t.Fatalf("expected job_state %q, got %#v", models.JobStatePending, got)
-	}
-}
-
-func TestHandlePodDetails(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/pods/pod-1")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	var pod podman.PodInfo
-	if err := json.NewDecoder(rec.Body).Decode(&pod); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	if pod.ID != "pod-1" || pod.Name != "job-123" {
-		t.Fatalf("unexpected pod payload: %#v", pod)
-	}
-}
-
-func TestHandleSystemStatusAggregatesCounts(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/status")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	var resp map[string]any
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	jobs, ok := resp["jobs"].(map[string]any)
-	if !ok {
-		t.Fatalf("jobs payload missing or wrong type: %#v", resp["jobs"])
-	}
-
-	if total := intFromAny(jobs["total"]); total != 2 {
-		t.Fatalf("expected total jobs 2, got %d", total)
-	}
-
-	byState, ok := jobs["by_state"].(map[string]any)
-	if !ok {
-		t.Fatalf("by_state payload missing")
-	}
-
-	if pending := intFromAny(byState[string(models.JobStatePending)]); pending != 1 {
-		t.Fatalf("expected 1 pending job, got %d", pending)
-	}
-
-	pods, ok := resp["pods"].(map[string]any)
-	if !ok {
-		t.Fatalf("pods payload missing")
-	}
-
-	if totalPods := intFromAny(pods["total"]); totalPods != 2 {
-		t.Fatalf("expected 2 pods, got %d", totalPods)
 	}
 }
 
@@ -664,11 +445,11 @@ func TestHandleHealth(t *testing.T) {
 	}
 }
 
-func TestHandleListJobsRejectsWrongMethod(t *testing.T) {
+func TestHandleGetJobRejectsWrongMethod(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
 
-	req := newAuthedRequest(http.MethodPost, "/api/v1/jobs")
+	req := newAuthedRequest(http.MethodPost, "/api/v1/jobs/123")
 	rec := httptest.NewRecorder()
 	srv.server.Handler.ServeHTTP(rec, req)
 
@@ -724,38 +505,48 @@ func TestRateLimitMiddlewareRejectsExcessRequests(t *testing.T) {
 	}
 }
 
-func TestHandleMetrics(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
+func TestRemovedRoutesReturnNotFound(t *testing.T) {
+	t.Parallel()
 
-	req := newAuthedRequest(http.MethodGet, "/metrics")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	body := rec.Body.String()
-	for _, want := range []string{
-		"stageflow_orchestrator_jobs_total 2",
-		"stageflow_orchestrator_jobs_by_state{state=\"PENDING\"} 1",
-		"stageflow_orchestrator_pods_total 2",
+	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	for _, path := range []string{
+		"/api/v1/jobs", "/api/v1/jobs/",
+		"/api/v1/jobs/123/events", "/api/v1/jobs/123/events/",
+		"/api/v1/pods", "/api/v1/pods/", "/api/v1/pods/pod-1",
+		"/api/v1/status", "/api/v1/status/", "/metrics", "/metrics/",
 	} {
-		if !strings.Contains(body, want) {
-			t.Fatalf("metrics body missing %q; body:\n%s", want, body)
+		for _, token := range []string{"", testAPIToken} {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			req.Header.Set("X-Api-Key", token)
+
+			rec := httptest.NewRecorder()
+			srv.server.Handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Errorf("GET %s with token %q: got %d, want 404", path, token, rec.Code)
+			}
+
+			if location := rec.Header().Get("Location"); location != "" {
+				t.Errorf("GET %s redirected to %q", path, location)
+			}
 		}
 	}
 }
 
-// intFromAny safely converts JSON numbers to int for assertions.
-func intFromAny(v any) int {
-	switch value := v.(type) {
-	case float64:
-		return int(value)
-	case int:
-		return value
-	default:
-		return 0
+func TestJobReadRequiresToken(t *testing.T) {
+	t.Parallel()
+
+	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+
+	for _, token := range []string{"", "wrong-token"} {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/123", nil)
+		req.Header.Set("X-Api-Key", token)
+
+		rec := httptest.NewRecorder()
+		srv.server.Handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("got %d, want 401", rec.Code)
+		}
 	}
 }

@@ -15,10 +15,6 @@ services:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
 
-  grafana:
-    ports:
-      - "127.0.0.1:3001:3001"
-
   platform-api:
     environment:
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"

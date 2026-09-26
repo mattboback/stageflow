@@ -67,12 +67,6 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 		return
 	}
 
-	o.recordInternalEvent(ctx, jobID, "orchestrator.container.exited", map[string]any{
-		"component":    component,
-		"container_id": containerID,
-		"exit_code":    waitResp.StatusCode,
-	})
-
 	if waitResp.StatusCode != 0 {
 		logs, logErr := o.podmanClient.GetContainerLogs(ctx, containerID, true, true)
 		logsAvailable := logErr == nil && logs != ""
@@ -104,13 +98,6 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 				len(logs),
 			)
 		}
-
-		o.recordInternalEvent(ctx, jobID, "orchestrator.container.exit_error", map[string]any{
-			"component":      component,
-			"container_id":   containerID,
-			"exit_code":      waitResp.StatusCode,
-			"logs_available": logsAvailable,
-		})
 
 		// Fail the job to ensure we don't hang if the worker couldn't publish failure (e.g. NATS down)
 		errorMsg := fmt.Sprintf("%s container exited with code %d", component, waitResp.StatusCode)

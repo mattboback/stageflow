@@ -101,7 +101,6 @@ check_default_ports() {
 	local port
 	local required_ports=(
 		"3000:frontend demo"
-		"3001:Grafana"
 		"3020:local frontend overlay"
 		"4222:NATS"
 		"8080:Platform API"
@@ -143,7 +142,6 @@ check_network_alias_conflicts() {
 		"orchestrator"
 		"platform-api"
 		"frontend"
-		"grafana"
 	)
 
 	alias_format="{{range (index .NetworkSettings.Networks \"${network}\").Aliases}}{{println .}}{{end}}"

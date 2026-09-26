@@ -62,7 +62,6 @@ demo URL='https://example.com':
     demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-http://localhost:3000}"
     demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:3020,http://127.0.0.1:3020}"
     demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-localhost}"
-    demo_grafana_url="${STAGEFLOW_DEMO_GF_SERVER_ROOT_URL:-http://localhost:3001}"
 
     wait_for_http() {
         local url="$1"
@@ -105,7 +104,6 @@ demo URL='https://example.com':
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
-    GF_SERVER_ROOT_URL="$demo_grafana_url" \
     just images
 
     echo "==> Restarting MinIO..."
@@ -113,14 +111,12 @@ demo URL='https://example.com':
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
-    GF_SERVER_ROOT_URL="$demo_grafana_url" \
     just dev down
 
     VITE_API_URL="$demo_vite_api_url" \
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
-    GF_SERVER_ROOT_URL="$demo_grafana_url" \
     just dev up dev http://127.0.0.1:9000 minio
 
     wait_for_http "http://127.0.0.1:9000/minio/health/live" "MinIO" 120
@@ -133,7 +129,6 @@ demo URL='https://example.com':
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
-    GF_SERVER_ROOT_URL="$demo_grafana_url" \
     just dev up
 
     wait_for_http "http://127.0.0.1:8080/healthz" "Platform API" 120
@@ -144,7 +139,6 @@ demo URL='https://example.com':
     echo "==> Demo ready"
     echo "UI:      http://localhost:3000"
     echo "API:     http://localhost:8080"
-    echo "Grafana: http://localhost:3001"
     echo ""
     echo "Try the web UI, or run:"
     echo "  just cli-install"
@@ -530,9 +524,9 @@ clean MODE='all':
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
     find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" -o -name ".impeccable" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
     rm -rf .cache artifacts output .patchright-cli .playwright-cli
-    rm -f cli job-status-cli suite-runner scan_result.json stageflow stageflow-cli sbom-*.spdx.json
+    rm -f cli suite-runner scan_result.json stageflow stageflow-cli sbom-*.spdx.json
     rm -f clients/cli/cli clients/cli/report.json clients/cli/stageflow clients/cli/stageflow-cli
-    rm -f devtools/ops/job-status-cli/job-status-cli devtools/qa/suite-runner/suite-runner
+    rm -f devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then
         echo "==> Removing node_modules..."

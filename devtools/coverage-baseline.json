@@ -1,6 +1,5 @@
 {
   "clients/cli": 68.4,
-  "devtools/ops/job-status-cli": 50.5,
   "devtools/qa/suite-runner": 13.5,
   "libs/contracts/scanner-manifest": 13.6,
   "libs/go/bootstrap": 100.0,

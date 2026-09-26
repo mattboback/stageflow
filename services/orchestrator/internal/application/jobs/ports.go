@@ -48,7 +48,6 @@ type JobStore interface {
 	) (transitioned bool, err error)
 	ListUnpublishedTerminalEvents(ctx context.Context, jobID string) ([]TerminalEvent, error)
 	MarkTerminalEventPublished(ctx context.Context, jobID, event string) error
-	RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error
 }
 
 type TerminalEvent struct {

@@ -12,12 +12,6 @@ import (
 
 const terminalSecretMigration = "2026-07-terminal-secret-sanitization-v1"
 
-type storedAuditEvent struct {
-	id           int64
-	payload      sql.NullString
-	handlerError sql.NullString
-}
-
 type storedTerminalEvent struct {
 	event   string
 	payload string
@@ -122,7 +116,7 @@ func (d *Database) sanitizeLegacyTerminalJob(ctx context.Context, jobID string) 
 		return err
 	}
 
-	if err = sanitizeTerminalAuditRecordsTx(ctx, tx, jobID, secrets); err != nil {
+	if err = sanitizeTerminalOutboxTx(ctx, tx, jobID, secrets); err != nil {
 		return err
 	}
 
@@ -173,35 +167,12 @@ func sanitizeTerminalJobTextFieldsTx(
 	return nil
 }
 
-func sanitizeTerminalAuditRecordsTx(
+func sanitizeTerminalOutboxTx(
 	ctx context.Context,
 	tx *sql.Tx,
 	jobID string,
 	secrets []string,
 ) error {
-	auditEvents, err := loadStoredAuditEventsTx(ctx, tx, jobID)
-	if err != nil {
-		return err
-	}
-
-	for _, event := range auditEvents {
-		payload := any(nil)
-		if event.payload.Valid {
-			payload = sanitizeStoredPayloadJSON(event.payload.String, secrets)
-		}
-
-		handlerError := any(nil)
-		if event.handlerError.Valid {
-			handlerError = redactKnownConfigSecrets(event.handlerError.String, secrets)
-		}
-
-		if _, err = tx.ExecContext(ctx, bindPostgresParams(`
-			UPDATE job_events SET payload_json = ?, handler_error = ? WHERE id = ?
-		`), payload, handlerError, event.id); err != nil {
-			return fmt.Errorf("sanitize job event %d: %w", event.id, err)
-		}
-	}
-
 	terminalEvents, err := loadStoredTerminalEventsTx(ctx, tx, jobID)
 	if err != nil {
 		return err
@@ -217,43 +188,6 @@ func sanitizeTerminalAuditRecordsTx(
 	}
 
 	return nil
-}
-
-func loadStoredAuditEventsTx(
-	ctx context.Context,
-	tx *sql.Tx,
-	jobID string,
-) ([]storedAuditEvent, error) {
-	rows, err := tx.QueryContext(ctx, bindPostgresParams(`
-		SELECT id, payload_json, handler_error FROM job_events
-		WHERE job_id = ? OR payload_job_id = ?
-		ORDER BY id FOR UPDATE
-	`), jobID, jobID)
-	if err != nil {
-		return nil, fmt.Errorf("load job events for terminal sanitization: %w", err)
-	}
-	defer rows.Close()
-
-	var events []storedAuditEvent
-
-	for rows.Next() {
-		var event storedAuditEvent
-		if scanErr := rows.Scan(&event.id, &event.payload, &event.handlerError); scanErr != nil {
-			return nil, fmt.Errorf("scan job event for terminal sanitization: %w", scanErr)
-		}
-
-		events = append(events, event)
-	}
-
-	if rowsErr := rows.Err(); rowsErr != nil {
-		return nil, fmt.Errorf("iterate job events for terminal sanitization: %w", rowsErr)
-	}
-
-	if closeErr := rows.Close(); closeErr != nil {
-		return nil, fmt.Errorf("close job events for terminal sanitization: %w", closeErr)
-	}
-
-	return events, nil
 }
 
 func loadStoredTerminalEventsTx(
@@ -294,25 +228,25 @@ func loadStoredTerminalEventsTx(
 func sanitizeStoredPayloadJSON(raw string, secrets []string) string {
 	var value any
 	if err := json.Unmarshal([]byte(raw), &value); err != nil {
-		return `{"redacted":true,"reason":"invalid legacy audit payload"}`
+		return `{"redacted":true,"reason":"invalid legacy terminal payload"}`
 	}
 
-	encoded, err := json.Marshal(sanitizeStoredAuditValue(value, secrets))
+	encoded, err := json.Marshal(sanitizeStoredTerminalValue(value, secrets))
 	if err != nil {
-		return `{"redacted":true,"reason":"audit payload could not be sanitized"}`
+		return `{"redacted":true,"reason":"terminal payload could not be sanitized"}`
 	}
 
 	return string(encoded)
 }
 
-func sanitizeStoredAuditValue(value any, secrets []string) any {
+func sanitizeStoredTerminalValue(value any, secrets []string) any {
 	switch typed := value.(type) {
 	case string:
 		return redactKnownConfigSecrets(typed, secrets)
 	case []any:
 		out := make([]any, len(typed))
 		for index, entry := range typed {
-			out[index] = sanitizeStoredAuditValue(entry, secrets)
+			out[index] = sanitizeStoredTerminalValue(entry, secrets)
 		}
 
 		return out
@@ -329,7 +263,7 @@ func sanitizeStoredAuditValue(value any, secrets []string) any {
 			case "contentb64", "password", "passwd", "username":
 				out[key] = redactedConfigValue
 			default:
-				out[key] = sanitizeStoredAuditValue(entry, secrets)
+				out[key] = sanitizeStoredTerminalValue(entry, secrets)
 			}
 		}
 

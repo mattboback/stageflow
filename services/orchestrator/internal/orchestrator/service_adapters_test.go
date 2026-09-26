@@ -8,11 +8,10 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
-func TestOrchestratorRuntimeCreateJobPodDelegatesWithoutRecordingInternalEvents(t *testing.T) {
+func TestOrchestratorRuntimeCreateJobPodDelegates(t *testing.T) {
 	orch, database, _, _ := setupTestOrchestratorWithConfig(t, func(config *Config) {
 		config.PodmanClient = &mockPodmanClient{
 			createPodFunc: func(_ context.Context, _ *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
@@ -39,15 +38,6 @@ func TestOrchestratorRuntimeCreateJobPodDelegatesWithoutRecordingInternalEvents(
 
 	if podID != "pod-123" {
 		t.Fatalf("CreateJobPod() podID = %q, want %q", podID, "pod-123")
-	}
-
-	events, err := database.ListJobEvents(context.Background(), job.ID, db.ListJobEventsOptions{Limit: 10})
-	if err != nil {
-		t.Fatalf("ListJobEvents() error = %v", err)
-	}
-
-	if len(events) != 0 {
-		t.Fatalf("ListJobEvents() returned %d events, want 0", len(events))
 	}
 }
 

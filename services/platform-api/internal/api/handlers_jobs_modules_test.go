@@ -1,12 +1,10 @@
 package api
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func TestSplitCSV(t *testing.T) {
@@ -269,19 +267,6 @@ func TestListSupportedModuleIDs(t *testing.T) {
 func newTestServerForModules(t *testing.T) *Server {
 	t.Helper()
 
-	dir := t.TempDir()
-
-	store, err := status.NewStore(&status.Config{Path: filepath.Join(dir, "status.db")})
-	if err != nil {
-		t.Fatalf("new store: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if closeErr := store.Close(); closeErr != nil {
-			t.Fatalf("close store: %v", closeErr)
-		}
-	})
-
 	defaultConfig, err := scannerregistry.DefaultConfig()
 	if err != nil {
 		t.Fatalf("load default config: %v", err)
@@ -294,10 +279,9 @@ func newTestServerForModules(t *testing.T) *Server {
 
 	return &Server{
 		config: &ServerConfig{
-			StatusReader:    store,
 			ScannerRegistry: registry,
 		},
-		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: store}),
+		jobStatus:       jobstatus.New(nil),
 		scannerRegistry: registry,
 	}
 }

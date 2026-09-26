@@ -34,12 +34,6 @@ func (s *orderedConsumerStopper) StopConsumers() {
 	*s.order = append(*s.order, "consumers")
 }
 
-type orderedDatabaseStopper struct{ order *[]string }
-
-func (s *orderedDatabaseStopper) StopBackgroundTasks() {
-	*s.order = append(*s.order, "database")
-}
-
 type orderedMonitorWaiter struct{ order *[]string }
 
 func (s *orderedMonitorWaiter) WaitForMonitors() {
@@ -84,11 +78,10 @@ func TestStopEventProcessingDrainsDependenciesInOrder(t *testing.T) {
 	stopEventProcessing(
 		cancel,
 		&orderedConsumerStopper{order: &order},
-		&orderedDatabaseStopper{order: &order},
 		&orderedMonitorWaiter{order: &order},
 	)
 
-	want := []string{"cancel", "consumers", "database", "monitors"}
+	want := []string{"cancel", "consumers", "monitors"}
 	if len(order) != len(want) {
 		t.Fatalf("shutdown order = %v, want %v", order, want)
 	}
@@ -113,14 +106,13 @@ func TestShutdownServiceCancelsBeforeHTTPAndJoinsAfterward(t *testing.T) {
 		cancel,
 		&orderedAPIShutdowner{order: &order, err: expectedErr},
 		&orderedConsumerStopper{order: &order},
-		&orderedDatabaseStopper{order: &order},
 		&orderedMonitorWaiter{order: &order},
 	)
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("shutdownService() error = %v, want %v", err, expectedErr)
 	}
 
-	want := []string{"cancel", "api", "consumers", "database", "monitors"}
+	want := []string{"cancel", "api", "consumers", "monitors"}
 	if len(order) != len(want) {
 		t.Fatalf("shutdown order = %v, want %v", order, want)
 	}

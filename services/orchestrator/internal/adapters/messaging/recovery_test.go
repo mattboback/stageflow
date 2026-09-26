@@ -1,7 +1,9 @@
 package messaging
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -11,7 +13,14 @@ import (
 )
 
 func TestRecoveringHandlerReturnsErrorOnPanic(t *testing.T) {
-	t.Parallel()
+	const secret = "panic-secret-canary-51c9"
+
+	var logs bytes.Buffer
+
+	previous := slog.Default()
+
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
 
 	ctx := sharedmsg.WithReceivedEventMeta(context.Background(), &sharedmsg.ReceivedEventMeta{
 		Event:       sharedmsg.SubjectJobCreated,
@@ -25,7 +34,7 @@ func TestRecoveringHandlerReturnsErrorOnPanic(t *testing.T) {
 	})
 
 	handler := recoveringHandler(sharedmsg.SubjectJobCreated, func(context.Context, *events.JobCreatedPayload) error {
-		panic("boom")
+		panic(secret)
 	})
 
 	err := handler(ctx, &events.JobCreatedPayload{
@@ -38,8 +47,17 @@ func TestRecoveringHandlerReturnsErrorOnPanic(t *testing.T) {
 		t.Fatal("recoveringHandler() error = nil, want panic error")
 	}
 
-	if !strings.Contains(err.Error(), "panic handling "+sharedmsg.SubjectJobCreated) ||
-		!strings.Contains(err.Error(), "boom") {
-		t.Fatalf("recoveringHandler() error = %q, want panic details", err.Error())
+	if got, want := err.Error(), "panic handling "+sharedmsg.SubjectJobCreated; got != want {
+		t.Fatalf("recoveringHandler() error = %q, want %q", got, want)
+	}
+
+	if strings.Contains(err.Error(), secret) || strings.Contains(logs.String(), secret) {
+		t.Fatal("panic recovery exposed the secret canary")
+	}
+
+	for _, expected := range []string{`"panic_type":"string"`, `"job_id":"job-panic"`, `"stack":`} {
+		if !strings.Contains(logs.String(), expected) {
+			t.Fatalf("recovery log missing %s", expected)
+		}
 	}
 }

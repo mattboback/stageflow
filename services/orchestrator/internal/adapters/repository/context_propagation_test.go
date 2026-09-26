@@ -30,8 +30,8 @@ func TestDatabaseOperations_RespectCanceledContext(t *testing.T) {
 		t.Fatalf("GetJob should respect canceled context, got: %v", err)
 	}
 
-	if _, err := db.ListJobs(canceledCtx, ListJobsOptions{}); !errors.Is(err, context.Canceled) {
-		t.Fatalf("ListJobs should respect canceled context, got: %v", err)
+	if _, err := db.ListJobsByState(canceledCtx, models.JobStatePending); !errors.Is(err, context.Canceled) {
+		t.Fatalf("ListJobsByState should respect canceled context, got: %v", err)
 	}
 
 	if err := db.UpdateJobState(canceledCtx, job.ID, models.JobStateScanning); !errors.Is(err, context.Canceled) {
@@ -66,14 +66,5 @@ func TestDatabaseOperations_RespectExpiredDeadline(t *testing.T) {
 
 	if err := db.CreateJob(expiredCtx, job); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("CreateJob should respect expired deadline, got: %v", err)
-	}
-
-	if err := db.InsertJobEvent(expiredCtx, &JobEventInsert{
-		JobID:     "job-context-deadline",
-		Event:     "job.created",
-		Timestamp: time.Now().UTC(),
-		Payload:   "{}",
-	}); !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("InsertJobEvent should respect expired deadline, got: %v", err)
 	}
 }

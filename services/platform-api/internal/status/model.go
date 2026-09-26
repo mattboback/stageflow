@@ -1,13 +1,17 @@
-// Package status defines the projection store models.
+// Package status defines job status projection models.
 package status
 
 import (
+	"errors"
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
-// JobRecord mirrors the persisted projection row.
+// ErrJobNotFound is returned when a job is missing from a status source.
+var ErrJobNotFound = errors.New("job not found")
+
+// JobRecord represents a job status projection.
 type JobRecord struct {
 	JobID                 string
 	State                 models.JobState

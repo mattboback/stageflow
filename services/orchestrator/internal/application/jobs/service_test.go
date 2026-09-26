@@ -546,7 +546,6 @@ type fakeJobStore struct {
 	listUnpublishedTerminalEventsCalls int
 	markTerminalEventPublishedCalls    int
 	pendingTerminalEvents              []TerminalEvent
-	recordInternalEventCalls           int
 	lastExpectedScanners               []string
 	lastStateUpdates                   []models.JobState
 	lastPodID                          string
@@ -746,11 +745,6 @@ func (f *fakeJobStore) ListUnpublishedTerminalEvents(_ context.Context, _ string
 
 func (f *fakeJobStore) MarkTerminalEventPublished(_ context.Context, _, _ string) error {
 	f.markTerminalEventPublishedCalls++
-	return nil
-}
-
-func (f *fakeJobStore) RecordInternalEvent(_ context.Context, _ string, _ string, _ any) error {
-	f.recordInternalEventCalls++
 	return nil
 }
 

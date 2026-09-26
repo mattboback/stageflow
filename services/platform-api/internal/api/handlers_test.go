@@ -24,7 +24,6 @@ import (
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 )
 
@@ -944,21 +943,12 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 	t.Helper()
 	dir := t.TempDir()
 
-	store, err := status.NewStore(&status.Config{Path: filepath.Join(dir, "status.db")})
-	if err != nil {
-		t.Fatalf("new store: %v", err)
-	}
-
 	tombstoneStore, err := tombstone.NewStore(filepath.Join(dir, "projects.db"))
 	if err != nil {
 		t.Fatalf("new tombstone store: %v", err)
 	}
 
 	t.Cleanup(func() {
-		if closeErr := store.Close(); closeErr != nil {
-			t.Fatalf("close store: %v", closeErr)
-		}
-
 		if closeErr := tombstoneStore.Close(); closeErr != nil {
 			t.Fatalf("close tombstone store: %v", closeErr)
 		}
@@ -980,7 +970,6 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 	server := NewServer(&ServerConfig{
 		Storage:         storage,
 		Publisher:       publisher,
-		StatusReader:    store,
 		TombstoneStore:  tombstoneStore,
 		ScannerRegistry: registry,
 	})

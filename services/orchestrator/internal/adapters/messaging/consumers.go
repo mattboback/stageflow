@@ -111,11 +111,8 @@ func (c *Consumer) subscribeScanFailed(ctx context.Context) error {
 	})
 }
 
-// recoveringHandler wraps an event handler with panic recovery. This is the
-// outer of two recovery layers: it converts a panic into an error so the NATS
-// message is NAK'd and redelivered (the safety net). The inner layer in
-// orchestrator.withInboundEvent records the panic to the job-event audit trail.
-// Both run on every event so a handler panic is both recoverable and observable.
+// recoveringHandler converts panics to errors so NATS can redeliver the message.
+// Panic values may contain credentials; log only their type and the stack.
 func recoveringHandler[T any](
 	eventName string,
 	next func(context.Context, *T) error,
@@ -128,11 +125,11 @@ func recoveringHandler[T any](
 			}
 
 			meta, _ := sharedmsg.ReceivedEventMetaFromContext(ctx)
-			err = fmt.Errorf("panic handling %s: %v", eventName, panicValue)
+			err = fmt.Errorf("panic handling %s", eventName)
 
 			attrs := []any{
 				"event", eventName,
-				"panic", panicValue,
+				"panic_type", fmt.Sprintf("%T", panicValue),
 				"stack", string(debug.Stack()),
 			}
 			if meta != nil {

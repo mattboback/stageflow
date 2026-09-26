@@ -295,57 +295,6 @@ func (d *Database) ListJobsByState(ctx context.Context, state models.JobState) (
 	return d.scanJobs(rows)
 }
 
-// ListJobsOptions contains options for listing jobs.
-type ListJobsOptions struct {
-	State  *models.JobState // Optional filter by state
-	Limit  int              // Max number of results (0 = no limit)
-	Offset int              // Number of results to skip
-}
-
-// ListJobs retrieves jobs with optional filtering and pagination.
-func (d *Database) ListJobs(ctx context.Context, opts ListJobsOptions) ([]*models.Job, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-			FROM jobs
-	`, jobSelectColumns)
-
-	var args []any
-
-	// Add state filter if provided
-	if opts.State != nil {
-		query += " WHERE state = ?"
-
-		args = append(args, *opts.State)
-	}
-
-	// Order by created_at descending (newest first)
-	query += " ORDER BY created_at DESC"
-
-	// Add pagination
-	if opts.Limit > 0 {
-		query += " LIMIT ?"
-
-		args = append(args, opts.Limit)
-	}
-
-	if opts.Offset > 0 {
-		query += " OFFSET ?"
-
-		args = append(args, opts.Offset)
-	}
-
-	rows, err := d.queryContext(ctx, query, args...) //nolint:rowserrcheck // rows.Err() is checked in scanJobs
-	if err != nil {
-		return nil, fmt.Errorf("failed to list jobs: %w", err)
-	}
-
-	defer func() {
-		_ = rows.Close()
-	}()
-
-	return d.scanJobs(rows)
-}
-
 func (d *Database) scanJobs(rows jobRows) ([]*models.Job, error) {
 	var jobs []*models.Job
 
@@ -363,26 +312,4 @@ func (d *Database) scanJobs(rows jobRows) ([]*models.Job, error) {
 	}
 
 	return jobs, nil
-}
-
-// CountJobs counts total jobs, optionally filtered by state.
-func (d *Database) CountJobs(ctx context.Context, state *models.JobState) (int, error) {
-	query := "SELECT COUNT(*) FROM jobs"
-
-	var args []any
-
-	if state != nil {
-		query += " WHERE state = ?"
-
-		args = append(args, *state)
-	}
-
-	var count int
-
-	err := d.queryRowContext(ctx, query, args...).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count jobs: %w", err)
-	}
-
-	return count, nil
 }

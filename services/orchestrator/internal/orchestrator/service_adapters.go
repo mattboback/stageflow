@@ -265,11 +265,6 @@ func (o *Orchestrator) MarkTerminalEventPublished(ctx context.Context, jobID, ev
 	return o.database.MarkTerminalEventPublished(ctx, jobID, event)
 }
 
-func (o *Orchestrator) RecordInternalEvent(ctx context.Context, jobID, event string, payload any) error {
-	o.recordInternalEvent(ctx, jobID, event, payload)
-	return nil
-}
-
 func (o *Orchestrator) PodNetnsMode() string {
 	return o.jobRuntime.PodNetnsMode()
 }
@@ -308,10 +303,6 @@ func (o *Orchestrator) StartExtractionWorker(ctx context.Context, job *models.Jo
 				"job_id",
 				job.ID,
 			)
-			o.recordInternalEvent(ctx, job.ID, "orchestrator.container.created", map[string]any{
-				"component":    "extraction-worker",
-				"container_id": started.result.ContainerID,
-			})
 		}
 
 		if started.err != nil {
@@ -325,10 +316,7 @@ func (o *Orchestrator) StartExtractionWorker(ctx context.Context, job *models.Jo
 			"job_id",
 			job.ID,
 		)
-		o.recordInternalEvent(ctx, job.ID, "orchestrator.container.started", map[string]any{
-			"component":    "extraction-worker",
-			"container_id": started.result.ContainerID,
-		})
+
 		o.spawnMonitorContainer(
 			o.backgroundWithCorrelation(ctx),
 			started.result.ContainerID,

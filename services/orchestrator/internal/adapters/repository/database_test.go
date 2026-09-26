@@ -2,10 +2,9 @@ package db
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"testing"
-	"time"
+
+	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 func TestNewDatabase(t *testing.T) {
@@ -29,7 +28,7 @@ func TestNewDatabase_RequiresURL(t *testing.T) {
 func TestInitSchema(t *testing.T) {
 	db := setupTestDB(t)
 
-	tables := []string{"jobs", "job_events"}
+	tables := []string{"jobs", "scanner_launches", "terminal_events", "maintenance_migrations"}
 
 	for _, table := range tables {
 		query := `
@@ -48,96 +47,65 @@ func TestInitSchema(t *testing.T) {
 	}
 }
 
-func TestInitSchemaDropsLegacyJobEventsJobIDNotNull(t *testing.T) {
-	admin, err := sql.Open("pgx", testDatabaseURL)
-	if err != nil {
-		t.Fatalf("Failed to connect admin database: %v", err)
+func TestInitSchemaDoesNotCreateJobEvents(t *testing.T) {
+	database := setupTestDB(t)
+
+	var exists bool
+	if err := database.db.QueryRowContext(context.Background(), `
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables
+  WHERE table_schema = current_schema() AND table_name = 'job_events')
+ `).Scan(&exists); err != nil {
+		t.Fatal(err)
 	}
 
-	t.Cleanup(func() {
-		if closeErr := admin.Close(); closeErr != nil {
-			t.Fatalf("Failed to close admin database: %v", closeErr)
-		}
-	})
+	if exists {
+		t.Fatal("fresh database contains retired job_events table")
+	}
+}
 
-	schema := fmt.Sprintf("legacy_events_%d", time.Now().UnixNano())
-	quotedSchema := quoteIdentifier(schema)
+func TestInitSchemaPreservesDormantJobEvents(t *testing.T) {
+	database := setupTestDB(t)
+	ctx := context.Background()
 
-	if _, execErr := admin.ExecContext(
-		context.Background(),
-		fmt.Sprintf("CREATE SCHEMA %s", quotedSchema),
-	); execErr != nil {
-		t.Fatalf("Failed to create legacy schema %q: %v", schema, execErr)
+	createSensitiveTerminalJob(t, database, "legacy-audit-job", models.JobStateFailed)
+	// An old audit table may remain through rollback. Deliberately omit newer
+	// audit columns so any accidental application access fails this test.
+	if _, err := database.db.ExecContext(ctx, `
+  CREATE TABLE job_events (job_id TEXT NOT NULL, payload_json TEXT);
+  INSERT INTO job_events VALUES ('legacy-audit-job', 'retained rollback evidence');
+ `); err != nil {
+		t.Fatal(err)
 	}
 
-	t.Cleanup(func() {
-		if _, dropErr := admin.ExecContext(
-			context.Background(),
-			fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quotedSchema),
-		); dropErr != nil {
-			t.Fatalf("Failed to drop legacy schema %q: %v", schema, dropErr)
-		}
-	})
-
-	legacyDDL := fmt.Sprintf(`
-		SET search_path TO %s;
-		CREATE TABLE jobs (
-			id TEXT PRIMARY KEY,
-			state TEXT NOT NULL DEFAULT 'PENDING',
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			completed_at TIMESTAMP
-		);
-		CREATE TABLE job_events (
-			id BIGSERIAL PRIMARY KEY,
-			job_id TEXT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
-			event TEXT NOT NULL,
-			timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			payload_json TEXT
-		);
-	`, quotedSchema)
-	if _, execErr := admin.ExecContext(context.Background(), legacyDDL); execErr != nil {
-		t.Fatalf("Failed to create legacy job_events schema: %v", execErr)
+	if err := database.initSchema(); err != nil {
+		t.Fatal(err)
 	}
 
-	dbURL := fmt.Sprintf("%s&search_path=%s", testDatabaseURL, schema)
-
-	database, err := NewDatabase(&Config{URL: dbURL})
-	if err != nil {
-		t.Fatalf("NewDatabase failed on legacy schema: %v", err)
+	if _, err := database.SanitizeLegacyTerminalRecords(ctx); err != nil {
+		t.Fatal(err)
 	}
 
-	t.Cleanup(func() {
-		if closeErr := database.Close(); closeErr != nil {
-			t.Fatalf("Failed to close migrated database: %v", closeErr)
-		}
-	})
+	assertTerminalJobConfigRedacted(t, database, "legacy-audit-job")
 
-	if insertErr := database.InsertJobEvent(context.Background(), &JobEventInsert{
-		JobID:     "missing-job",
-		Event:     "scan.failed",
-		Timestamp: time.Now().UTC(),
-		Payload:   `{"job_id":"missing-job"}`,
-	}); insertErr != nil {
-		t.Fatalf("InsertJobEvent after legacy migration failed: %v", insertErr)
+	var payload string
+	if err := database.db.QueryRowContext(ctx, `SELECT payload_json FROM job_events`).Scan(&payload); err != nil {
+		t.Fatal(err)
 	}
 
-	var jobIDIsNullable string
-
-	nullabilityQuery := `
-			SELECT is_nullable
-			FROM information_schema.columns
-		WHERE table_schema = $1
-			  AND table_name = 'job_events'
-			  AND column_name = 'job_id'
-		`
-
-	row := admin.QueryRowContext(context.Background(), nullabilityQuery, schema)
-	if scanErr := row.Scan(&jobIDIsNullable); scanErr != nil {
-		t.Fatalf("Failed to read migrated job_id nullability: %v", scanErr)
+	if payload != "retained rollback evidence" {
+		t.Fatalf("dormant audit row changed: %q", payload)
 	}
 
-	if jobIDIsNullable != "YES" {
-		t.Fatalf("job_events.job_id is_nullable = %q, want YES", jobIDIsNullable)
+	var nullable string
+	if err := database.db.QueryRowContext(ctx, `
+  SELECT is_nullable FROM information_schema.columns
+  WHERE table_schema = current_schema() AND table_name = 'job_events' AND column_name = 'job_id'
+ `).Scan(&nullable); err != nil {
+		t.Fatal(err)
+	}
+
+	if nullable != "NO" {
+		t.Fatalf("dormant audit schema changed: nullable=%s", nullable)
 	}
 }
 

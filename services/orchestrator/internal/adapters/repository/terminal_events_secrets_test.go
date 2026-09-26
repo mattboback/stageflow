@@ -415,22 +415,6 @@ func TestSanitizeLegacyTerminalRecordsBackfillsExistingSecrets(t *testing.T) {
 		t.Fatalf("seed legacy failure text: %v", err)
 	}
 
-	legacyPayload := `{
-		"job_id":"` + jobID + `",
-		"auth":{"mode":"form","steps":[{"type":"fill","value":"` + terminalPasswordCanary + `"}]},
-		"pages":[{"pre_scan_actions":[{"type":"fill","value":"` + terminalUserCanary + `"}]}],
-		"scanner_configs":{"example-scanner":{"goal":{"inputValues":{"email":"` + terminalAICanary + `"}}}}
-	}`
-	if err := database.InsertJobEvent(ctx, &JobEventInsert{
-		JobID:         jobID,
-		Event:         events.EventJobCreated,
-		Payload:       legacyPayload,
-		HandlerStatus: "error",
-		HandlerError:  "handler echoed " + terminalPasswordCanary,
-	}); err != nil {
-		t.Fatalf("seed legacy job event: %v", err)
-	}
-
 	terminalPayload := `{"job_id":"` + jobID + `","status":"failed","error":"` +
 		terminalAICanary + `","error_details":"` + terminalPasswordCanary + `"}`
 	if _, err := database.execContext(ctx, `
@@ -447,7 +431,7 @@ func TestSanitizeLegacyTerminalRecordsBackfillsExistingSecrets(t *testing.T) {
 
 	assertTerminalJobConfigRedacted(t, database, jobID)
 
-	var jobText, auditPayload, handlerError, outboxPayload string
+	var jobText, outboxPayload string
 	if err = database.queryRowContext(ctx, `
 		SELECT COALESCE(error, '') || COALESCE(error_details, '') || COALESCE(scanner_results, '')
 		FROM jobs WHERE id = ?
@@ -456,27 +440,16 @@ func TestSanitizeLegacyTerminalRecordsBackfillsExistingSecrets(t *testing.T) {
 	}
 
 	if err = database.queryRowContext(ctx, `
-		SELECT COALESCE(payload_json, ''), COALESCE(handler_error, '')
-		FROM job_events WHERE job_id = ?
-	`, jobID).Scan(&auditPayload, &handlerError); err != nil {
-		t.Fatalf("load sanitized audit event: %v", err)
-	}
-
-	if err = database.queryRowContext(ctx, `
 		SELECT payload_json FROM terminal_events WHERE job_id = ? AND event = ?
 	`, jobID, events.EventJobFailed).Scan(&outboxPayload); err != nil {
 		t.Fatalf("load sanitized terminal event: %v", err)
 	}
 
-	combined := jobText + auditPayload + handlerError + outboxPayload
+	combined := jobText + outboxPayload
 	for _, canary := range []string{terminalUserCanary, terminalPasswordCanary, terminalAICanary} {
 		if strings.Contains(combined, canary) {
 			t.Fatalf("legacy terminal records retained canary %q: %s", canary, combined)
 		}
-	}
-
-	if !strings.Contains(auditPayload, `"pre_scan_actions":{"configured":true,"redacted":true}`) {
-		t.Fatalf("legacy page actions were not summarized: %s", auditPayload)
 	}
 
 	count, err = database.SanitizeLegacyTerminalRecords(ctx)

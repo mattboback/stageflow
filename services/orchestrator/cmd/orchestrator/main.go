@@ -108,12 +108,6 @@ func run() int {
 		logger.Info("Sanitized legacy terminal records", "jobs", sanitizedJobs)
 	}
 
-	if prunerErr := startJobEventsPruner(backgroundCtx, logger, database, cfg); prunerErr != nil {
-		logger.Error("Failed to start job events pruner", "error", prunerErr)
-
-		return 1
-	}
-
 	podmanClient, err := podman.NewClient(&podman.Config{
 		SocketPath:            cfg.PodmanSocket,
 		RequestTimeout:        cfg.PodmanRequestTimeout,
@@ -157,19 +151,17 @@ func run() int {
 
 	if startErr := startEventProcessing(backgroundCtx, orch, consumer); startErr != nil {
 		logger.Error("Failed to start consumer", "error", startErr)
-		stopEventProcessing(stopBackground, natsClient, database, orch)
+		stopEventProcessing(stopBackground, natsClient, orch)
 
 		return 1
 	}
 
 	apiServer := api.NewServer(&api.Config{
 		Database:            database,
-		PodmanClient:        podmanClient,
 		APIToken:            cfg.APIToken,
 		Port:                cfg.APIPort,
 		AdminRateLimitRPS:   cfg.AdminRateLimitRPS,
 		AdminRateLimitBurst: cfg.AdminRateLimitBurst,
-		Metrics:             orch.Metrics(),
 	})
 
 	sigChan := make(chan os.Signal, 1)
@@ -199,7 +191,6 @@ func run() int {
 		stopBackground,
 		apiServer,
 		natsClient,
-		database,
 		orch,
 	)
 	if shutdownErr != nil {
@@ -232,10 +223,6 @@ type consumerStopper interface {
 	StopConsumers()
 }
 
-type databaseTaskStopper interface {
-	StopBackgroundTasks()
-}
-
 type monitorWaiter interface {
 	WaitForMonitors()
 }
@@ -259,28 +246,25 @@ func startEventProcessing(
 
 // stopEventProcessing closes intake before waiting on anything that callbacks
 // may create. This ordering prevents sync.WaitGroup Add calls from racing Wait
-// and keeps the database alive until every message and maintenance task exits.
+// and keeps the database alive until every message handler and monitor exits.
 func stopEventProcessing(
 	cancel context.CancelFunc,
 	consumers consumerStopper,
-	database databaseTaskStopper,
 	monitors monitorWaiter,
 ) {
 	cancel()
 	consumers.StopConsumers()
-	database.StopBackgroundTasks()
 	monitors.WaitForMonitors()
 }
 
 // shutdownService cancels background intake before the bounded HTTP drain.
 // Server.Shutdown owns the HTTP handler barrier; only after it returns do the
-// message, database-maintenance, and monitor barriers release dependencies.
+// message and monitor barriers release dependencies.
 func shutdownService(
 	ctx context.Context,
 	cancel context.CancelFunc,
 	api apiShutdowner,
 	consumers consumerStopper,
-	database databaseTaskStopper,
 	monitors monitorWaiter,
 ) error {
 	cancel()
@@ -288,30 +272,9 @@ func shutdownService(
 	shutdownErr := api.Shutdown(ctx)
 
 	consumers.StopConsumers()
-	database.StopBackgroundTasks()
 	monitors.WaitForMonitors()
 
 	return shutdownErr
-}
-
-func startJobEventsPruner(
-	ctx context.Context,
-	logger *slog.Logger,
-	database *db.Database,
-	cfg *Config,
-) error {
-	if cfg.JobEventsRetentionDays <= 0 {
-		logger.Info("Job events pruner disabled", "retention_days", cfg.JobEventsRetentionDays)
-
-		return nil
-	}
-
-	return database.StartJobEventsPruner(ctx, db.JobEventsPrunerConfig{
-		Retention: time.Duration(cfg.JobEventsRetentionDays) * 24 * time.Hour,
-		Interval:  time.Duration(cfg.JobEventsPruneIntervalMinutes) * time.Minute,
-		BatchSize: cfg.JobEventsPruneBatchSize,
-		Logger:    logger.With("component", "job-events-pruner"),
-	})
 }
 
 func waitForShutdown(signals <-chan os.Signal, apiErrors <-chan error) error {

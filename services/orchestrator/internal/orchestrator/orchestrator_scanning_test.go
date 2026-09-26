@@ -9,7 +9,6 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 )
 
 func TestHandleScanCompleted(t *testing.T) {
@@ -169,15 +168,6 @@ func TestHandleScanFailedDoesNotPersistEncodedConfiguredSecrets(t *testing.T) {
 		t.Fatalf("HandleScanFailed() error = %v", err)
 	}
 
-	eventRows, err := database.ListJobEvents(
-		context.Background(),
-		jobID,
-		db.ListJobEventsOptions{Limit: 100},
-	)
-	if err != nil {
-		t.Fatalf("ListJobEvents() error = %v", err)
-	}
-
 	storedJob, err := database.GetJob(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("GetJob() error = %v", err)
@@ -188,14 +178,9 @@ func TestHandleScanFailedDoesNotPersistEncodedConfiguredSecrets(t *testing.T) {
 	combined.WriteString(storedJob.Error)
 	combined.WriteString(storedJob.ErrorDetails)
 
-	for _, event := range eventRows {
-		combined.WriteString(event.Payload)
-		combined.WriteString(event.HandlerError)
-	}
-
 	for _, value := range []string{secret, queryEncoded, formEncoded, strings.ToLower(formEncoded)} {
 		if strings.Contains(combined.String(), value) {
-			t.Fatalf("terminal job or final audit row leaked %q: %s", value, combined.String())
+			t.Fatalf("terminal job leaked %q: %s", value, combined.String())
 		}
 	}
 }

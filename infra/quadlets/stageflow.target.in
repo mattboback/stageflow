@@ -7,7 +7,6 @@ Wants=stageflow-postgres.service
 Wants=stageflow-orchestrator.service
 Wants=stageflow-platform-api.service
 Wants=stageflow-frontend-react.service
-Wants=stageflow-grafana.service
 After=stageflow-pod.service
 After=stageflow-nats.service
 After=stageflow-minio.service
@@ -15,7 +14,6 @@ After=stageflow-postgres.service
 After=stageflow-orchestrator.service
 After=stageflow-platform-api.service
 After=stageflow-frontend-react.service
-After=stageflow-grafana.service
 
 [Install]
 WantedBy=default.target

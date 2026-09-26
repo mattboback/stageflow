@@ -10,30 +10,27 @@ import (
 
 // Config captures orchestrator runtime configuration.
 type Config struct {
-	NATS                          config.NATSConfig
-	MinIO                         config.MinIOConfig
-	PodmanSocket                  string
-	PodmanRequestTimeout          time.Duration
-	PodmanResponseHeaderTimeout   time.Duration
-	PodmanDialTimeout             time.Duration
-	DatabaseURL                   string
-	ExtractionImage               string
-	ScannerImage                  string
-	ScannerImageOverride          string
-	APIPort                       string
-	APIToken                      string
-	PodNetwork                    string
-	PodNetnsMode                  string   // Pod network namespace mode (bridge|host). Host mode is local-only.
-	PodHostMappings               []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
-	NatsHost                      string
-	MinioHost                     string
-	PageLoadTimeout               int
-	ScrollTimeout                 int
-	JobEventsRetentionDays        int
-	JobEventsPruneIntervalMinutes int
-	JobEventsPruneBatchSize       int
-	AdminRateLimitRPS             int
-	AdminRateLimitBurst           int
+	NATS                        config.NATSConfig
+	MinIO                       config.MinIOConfig
+	PodmanSocket                string
+	PodmanRequestTimeout        time.Duration
+	PodmanResponseHeaderTimeout time.Duration
+	PodmanDialTimeout           time.Duration
+	DatabaseURL                 string
+	ExtractionImage             string
+	ScannerImage                string
+	ScannerImageOverride        string
+	APIPort                     string
+	APIToken                    string
+	PodNetwork                  string
+	PodNetnsMode                string   // Pod network namespace mode (bridge|host). Host mode is local-only.
+	PodHostMappings             []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
+	NatsHost                    string
+	MinioHost                   string
+	PageLoadTimeout             int
+	ScrollTimeout               int
+	AdminRateLimitRPS           int
+	AdminRateLimitBurst         int
 }
 
 func loadConfig() *Config {
@@ -63,30 +60,27 @@ func loadConfig() *Config {
 	databaseURL := strings.TrimSpace(config.GetEnv("DATABASE_URL", ""))
 
 	return &Config{
-		NATS:                          natsCfg,
-		MinIO:                         minioCfg,
-		PodmanSocket:                  config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
-		PodmanRequestTimeout:          config.MustGetEnvDuration("PODMAN_REQUEST_TIMEOUT", 120*time.Second),
-		PodmanResponseHeaderTimeout:   config.MustGetEnvDuration("PODMAN_RESPONSE_HEADER_TIMEOUT", 60*time.Second),
-		PodmanDialTimeout:             config.MustGetEnvDuration("PODMAN_DIAL_TIMEOUT", 5*time.Second),
-		DatabaseURL:                   databaseURL,
-		ExtractionImage:               config.GetEnv("EXTRACTION_IMAGE", "localhost/stageflow/extractor:latest"),
-		ScannerImage:                  scannerImage,
-		ScannerImageOverride:          scannerImageEnv,
-		APIPort:                       config.GetEnv("API_PORT", "8081"),
-		APIToken:                      strings.TrimSpace(config.GetEnv("ORCHESTRATOR_API_TOKEN", "")),
-		PodNetwork:                    config.GetEnv("POD_NETWORK", ""),
-		PodNetnsMode:                  config.GetEnv("POD_NETNS_MODE", "bridge"),
-		PodHostMappings:               podHostMappings,
-		NatsHost:                      config.GetEnv("NATS_HOST", "nats"),
-		MinioHost:                     config.GetEnv("MINIO_HOST", "minio"),
-		PageLoadTimeout:               config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
-		ScrollTimeout:                 config.GetEnvInt("A11Y_SCROLL_TIMEOUT", 300),
-		JobEventsRetentionDays:        config.GetEnvInt("JOB_EVENTS_RETENTION_DAYS", 30),
-		JobEventsPruneIntervalMinutes: config.GetEnvInt("JOB_EVENTS_PRUNE_INTERVAL_MINUTES", 60),
-		JobEventsPruneBatchSize:       config.GetEnvInt("JOB_EVENTS_PRUNE_BATCH_SIZE", 1000),
-		AdminRateLimitRPS:             config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS", 0),
-		AdminRateLimitBurst:           config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST", 0),
+		NATS:                        natsCfg,
+		MinIO:                       minioCfg,
+		PodmanSocket:                config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
+		PodmanRequestTimeout:        config.MustGetEnvDuration("PODMAN_REQUEST_TIMEOUT", 120*time.Second),
+		PodmanResponseHeaderTimeout: config.MustGetEnvDuration("PODMAN_RESPONSE_HEADER_TIMEOUT", 60*time.Second),
+		PodmanDialTimeout:           config.MustGetEnvDuration("PODMAN_DIAL_TIMEOUT", 5*time.Second),
+		DatabaseURL:                 databaseURL,
+		ExtractionImage:             config.GetEnv("EXTRACTION_IMAGE", "localhost/stageflow/extractor:latest"),
+		ScannerImage:                scannerImage,
+		ScannerImageOverride:        scannerImageEnv,
+		APIPort:                     config.GetEnv("API_PORT", "8081"),
+		APIToken:                    strings.TrimSpace(config.GetEnv("ORCHESTRATOR_API_TOKEN", "")),
+		PodNetwork:                  config.GetEnv("POD_NETWORK", ""),
+		PodNetnsMode:                config.GetEnv("POD_NETNS_MODE", "bridge"),
+		PodHostMappings:             podHostMappings,
+		NatsHost:                    config.GetEnv("NATS_HOST", "nats"),
+		MinioHost:                   config.GetEnv("MINIO_HOST", "minio"),
+		PageLoadTimeout:             config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
+		ScrollTimeout:               config.GetEnvInt("A11Y_SCROLL_TIMEOUT", 300),
+		AdminRateLimitRPS:           config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS", 0),
+		AdminRateLimitBurst:         config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST", 0),
 	}
 }
 
@@ -128,7 +122,6 @@ func (c *Config) Validate() error {
 	}
 
 	errs = append(errs, c.validatePodmanConfig()...)
-	errs = append(errs, c.validateJobEventsConfig()...)
 	errs = append(errs, c.validateRateLimitConfig()...)
 
 	return config.ValidateAll(errs...)
@@ -156,33 +149,6 @@ func (c *Config) validatePodmanConfig() []error {
 		errs = append(errs, errors.New(
 			"PODMAN_RESPONSE_HEADER_TIMEOUT must be <= PODMAN_REQUEST_TIMEOUT",
 		))
-	}
-
-	return errs
-}
-
-// validateJobEventsConfig checks the job-event retention/pruning settings.
-func (c *Config) validateJobEventsConfig() []error {
-	var errs []error
-
-	if c.JobEventsRetentionDays < 0 {
-		errs = append(errs, errors.New("JOB_EVENTS_RETENTION_DAYS must be >= 0"))
-	}
-
-	if c.JobEventsPruneIntervalMinutes < 0 {
-		errs = append(errs, errors.New("JOB_EVENTS_PRUNE_INTERVAL_MINUTES must be >= 0"))
-	}
-
-	if c.JobEventsPruneBatchSize < 0 {
-		errs = append(errs, errors.New("JOB_EVENTS_PRUNE_BATCH_SIZE must be >= 0"))
-	}
-
-	if c.JobEventsRetentionDays > 0 && c.JobEventsPruneIntervalMinutes == 0 {
-		errs = append(errs, errors.New("JOB_EVENTS_PRUNE_INTERVAL_MINUTES must be > 0 when retention is enabled"))
-	}
-
-	if c.JobEventsRetentionDays > 0 && c.JobEventsPruneBatchSize == 0 {
-		errs = append(errs, errors.New("JOB_EVENTS_PRUNE_BATCH_SIZE must be > 0 when retention is enabled"))
 	}
 
 	return errs

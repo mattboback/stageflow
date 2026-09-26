@@ -83,16 +83,3 @@ func mustCreateJob(t *testing.T, db *Database, job *models.Job) {
 		t.Fatalf("Failed to create job: %v", err)
 	}
 }
-
-func mustLogEvent(t *testing.T, db *Database, jobID, event, payload string) {
-	t.Helper()
-
-	if err := db.InsertJobEvent(context.Background(), &JobEventInsert{
-		JobID:     jobID,
-		Event:     event,
-		Timestamp: time.Now().UTC(),
-		Payload:   payload,
-	}); err != nil {
-		t.Fatalf("Failed to log event: %v", err)
-	}
-}
