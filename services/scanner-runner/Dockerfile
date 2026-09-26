@@ -9,7 +9,7 @@ ARG NODE_MAJOR=24
 FROM docker.io/oven/bun:1.3.8@sha256:371d30538b69303ced927bb5915697ac7e2fa8cb409ee332c66009de64de5aa3 AS bun-bin
 FROM docker.io/library/node:24.18.0-bookworm-slim AS node-bin
 
-FROM mcr.microsoft.com/playwright:v1.60.0-noble AS builder
+FROM mcr.microsoft.com/playwright:v1.63.0-noble AS builder
 WORKDIR /repo
 
 # Install bun from pinned image stage (no curl|bash installer)
@@ -54,7 +54,7 @@ RUN rm -rf node_modules \
   && cp -R /repo/libs/contracts/provenance node_modules/@stageflow/contracts-provenance
 
 # Runtime stage
-FROM mcr.microsoft.com/playwright:v1.60.0-noble
+FROM mcr.microsoft.com/playwright:v1.63.0-noble
 WORKDIR /app
 
 ENV NODE_ENV=production \

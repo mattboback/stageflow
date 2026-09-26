@@ -75,7 +75,7 @@
         "description": "Images must have alternative text describing their content.",
         "elementCount": 1,
         "elementsTruncated": false,
-        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/image-alt?application=playwright",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/image-alt?application=playwright",
         "howToFix": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
         "id": "13ed81627c04",
         "locationInfo": {
@@ -126,7 +126,7 @@
         "description": "Form inputs must have associated labels.",
         "elementCount": 1,
         "elementsTruncated": false,
-        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/label?application=playwright",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/label?application=playwright",
         "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
         "id": "1471cd3d6e06",
         "occurrences": [
@@ -172,7 +172,7 @@
         "description": "Ensure text/background contrast meets WCAG AA ratios.",
         "elementCount": 1,
         "elementsTruncated": false,
-        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
         "howToFix": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
         "id": "74cd9a0218af",
         "locationInfo": {
