@@ -232,7 +232,6 @@ dev:
 	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/dev-doctor@v1", "payload.Schema")
 	testsupport.RequireEqual(t, payload.Passed, true, "payload.Passed")
 	testsupport.RequireEqual(t, payload.AutoAllowPrivateTargets, true, "payload.AutoAllowPrivateTargets")
-	testsupport.RequireEqual(t, payload.RemoteProject.Configured, false, "payload.RemoteProject.Configured")
 
 	if len(payload.Checks) != 3 {
 		t.Fatalf("expected 3 checks, got %d", len(payload.Checks))
@@ -252,7 +251,6 @@ func TestWriteDevDoctorJSONComputesPassedFromChecks(t *testing.T) {
 		"/project/.stageflow/config.yaml",
 		"http://localhost:8080",
 		[]string{"https://example.com"},
-		projectmode.StageflowConfig{},
 		false,
 		[]projectDoctorCheck{
 			{Name: "config", Status: "passed"},
@@ -264,69 +262,6 @@ func TestWriteDevDoctorJSONComputesPassedFromChecks(t *testing.T) {
 	var payload devDoctorEnvelope
 	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
 	testsupport.RequireEqual(t, payload.Passed, false, "payload.Passed")
-}
-
-func TestAbbreviateIDHandlesShortIDs(t *testing.T) {
-	t.Parallel()
-
-	testsupport.RequireEqual(t, abbreviateID("", 8), "", "empty id")
-	testsupport.RequireEqual(t, abbreviateID("short", 8), "short", "short id")
-	testsupport.RequireEqual(t, abbreviateID("123456789", 8), "12345678", "long id")
-	testsupport.RequireEqual(t, abbreviateID("short", 0), "short", "zero max")
-}
-
-func TestRunDevDoctorCommand_SkipDevJSONRemoteProject(t *testing.T) {
-	root := t.TempDir()
-
-	testsupport.WriteProjectConfig(t, root, `version: 2
-stageflow:
-  api_url: http://localhost:8080
-  project: hosted-demo
-scan:
-  urls:
-    - https://example.com
-  scanners: [axe]
-dev:
-  start:
-    cmd: ["echo", "dev"]
-  ready:
-    url: http://127.0.0.1:5173
-`)
-
-	var stdout bytes.Buffer
-
-	cmd := &cobra.Command{}
-	cmd.SetOut(&stdout)
-	cmd.SetErr(&bytes.Buffer{})
-
-	err := runDevDoctorCommand(
-		cmd,
-		[]string{root},
-		&rootOptions{apiURL: "http://localhost:8080", outputFormatRaw: "json"},
-		func(string) string { return "" },
-		&devDoctorCmdOptions{
-			Timeout: time.Minute,
-			SkipDev: true,
-		},
-	)
-	testsupport.RequireNoErr(t, err)
-
-	var payload devDoctorEnvelope
-	testsupport.RequireNoErr(t, json.NewDecoder(bytes.NewReader(stdout.Bytes())).Decode(&payload))
-	testsupport.RequireEqual(t, payload.RemoteProject.Configured, true, "payload.RemoteProject.Configured")
-	testsupport.RequireEqual(t, payload.RemoteProject.Slug, "hosted-demo", "payload.RemoteProject.Slug")
-	testsupport.RequireEqual(
-		t,
-		payload.RemoteProject.RecommendedScanCommand,
-		`stageflow project scan hosted-demo --format json`,
-		"payload.RemoteProject.RecommendedScanCommand",
-	)
-	testsupport.RequireEqual(
-		t,
-		payload.RemoteProject.PromoteCommandTemplate,
-		`stageflow project promote hosted-demo --job-id <job-id>`,
-		"payload.RemoteProject.PromoteCommandTemplate",
-	)
 }
 
 func TestRunDevDoctorCommand_PlaceholderSkippedWithSkipDev(t *testing.T) {
@@ -401,4 +336,44 @@ func TestResolveProjectStageflowExplicitAPIWins(t *testing.T) {
 	)
 
 	testsupport.RequireEqual(t, apiURL, "https://explicit.stageflow.example", "apiURL")
+}
+
+func TestDevCommandsAcceptRetiredProjectConfigWithoutRemoteHints(t *testing.T) {
+	root := t.TempDir()
+	testsupport.WriteProjectConfig(t, root, `version: 2
+stageflow:
+  api_url: http://localhost:8080
+  project: retired-project
+scan:
+  urls: [https://example.com]
+  scanners: [axe]
+dev:
+  start:
+    cmd: ["echo", "dev"]
+  ready:
+    url: http://127.0.0.1:5173
+`)
+
+	for _, args := range [][]string{
+		{"stageflow", "dev", "doctor", root, "--skip-dev", "--format=json"},
+		{"stageflow", "dev", "init", root, "--format=json"},
+	} {
+		stdout, stderr, exit := runCLI(t, args...)
+		if exit != 0 {
+			t.Fatalf("%v: exit=%d stdout=%q stderr=%q", args, exit, stdout, stderr)
+		}
+
+		var payload map[string]json.RawMessage
+		testsupport.RequireNoErr(t, json.Unmarshal([]byte(stdout), &payload))
+
+		if _, exists := payload["remoteProject"]; exists {
+			t.Fatalf("retired project appeared in dev output: %s", stdout)
+		}
+
+		for _, hint := range []string{"retired-project", "stageflow.project", "stageflow project"} {
+			if strings.Contains(stdout, hint) {
+				t.Fatalf("retired project hint %q appeared in dev output: %s", hint, stdout)
+			}
+		}
+	}
 }

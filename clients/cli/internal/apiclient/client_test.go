@@ -12,12 +12,12 @@ import (
 func TestClientBuildURLResolvesAPIPaths(t *testing.T) {
 	client := NewClient("https://api.example.com/root/", "", nil)
 
-	got, err := client.BuildURL("/api/v1/projects/a%2Fb")
+	got, err := client.BuildURL("/api/v1/jobs/a%2Fb")
 	if err != nil {
 		t.Fatalf("BuildURL() error = %v", err)
 	}
 
-	if got.String() != "https://api.example.com/api/v1/projects/a%2Fb" {
+	if got.String() != "https://api.example.com/api/v1/jobs/a%2Fb" {
 		t.Fatalf("BuildURL() = %q", got.String())
 	}
 }
@@ -77,14 +77,14 @@ func TestClientJSONHelpers(t *testing.T) {
 	if err := client.SendJSON(
 		context.Background(),
 		http.MethodPatch,
-		"/api/v1/projects/demo",
+		"/api/v1/jobs/demo",
 		map[string]string{"name": "Demo"},
 		&resp,
 	); err != nil {
 		t.Fatalf("SendJSON() error = %v", err)
 	}
 
-	if gotMethod != http.MethodPatch || gotPath != "/api/v1/projects/demo" {
+	if gotMethod != http.MethodPatch || gotPath != "/api/v1/jobs/demo" {
 		t.Fatalf("request = %s %s", gotMethod, gotPath)
 	}
 
@@ -110,31 +110,6 @@ func TestClientErrorBodies(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "status 400") || !strings.Contains(err.Error(), "bad thing") {
 		t.Fatalf("GetJSON() err = %q, want status and body", err.Error())
-	}
-}
-
-func TestProjectEndpointPathEscaping(t *testing.T) {
-	var gotPath string
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.EscapedPath()
-
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(
-			`{"id":"1","slug":"a/b","name":"Demo","urls":["https://example.com"],` +
-				`"created_at":"2026-05-30T00:00:00Z","updated_at":"2026-05-30T00:00:00Z"}`,
-		))
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "", server.Client())
-
-	if _, err := client.GetProject(context.Background(), "a/b"); err != nil {
-		t.Fatalf("GetProject() error = %v", err)
-	}
-
-	if gotPath != "/api/v1/projects/a%2Fb" {
-		t.Fatalf("path = %q, want escaped slug", gotPath)
 	}
 }
 

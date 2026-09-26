@@ -78,16 +78,12 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.projectStore != nil {
-		if tombstoneErr := s.projectStore.TombstoneJob(ctx, jobID); tombstoneErr != nil {
+	if s.tombstoneStore != nil {
+		if tombstoneErr := s.tombstoneStore.TombstoneJob(ctx, jobID); tombstoneErr != nil {
 			logging.Error(ctx, "Failed to tombstone deleted job", "error", tombstoneErr)
 			httputil.RespondStructuredError(w, http.StatusInternalServerError, httputil.NewDatabaseError())
 
 			return
-		}
-
-		if unmapErr := s.projectStore.DeleteProjectJob(ctx, jobID); unmapErr != nil {
-			logging.Error(ctx, "Failed to detach deleted job from project", "error", unmapErr)
 		}
 	}
 
@@ -112,11 +108,11 @@ func (s *Server) deleteJobObjects(ctx context.Context, jobID string) error {
 }
 
 func (s *Server) jobDeleted(ctx context.Context, jobID string) (bool, error) {
-	if s.projectStore == nil {
+	if s.tombstoneStore == nil {
 		return false, nil
 	}
 
-	return s.projectStore.JobIsDeleted(ctx, jobID)
+	return s.tombstoneStore.JobIsDeleted(ctx, jobID)
 }
 
 func (s *Server) respondIfJobDeleted(w http.ResponseWriter, r *http.Request, jobID string) bool {

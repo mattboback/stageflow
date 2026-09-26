@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Start your free trial of Acme Ledger invoicing today</title>
+		<meta
+			name="description"
+			content="Try Acme Ledger free for 30 days. No card needed: send your first invoice in five minutes and decide at the end of the month whether to keep it."
+		/>
+		<link rel="canonical" href="https://acme-ledger.example/signup.html" />
+		<meta property="og:title" content="Start your free trial of Acme Ledger invoicing today" />
+		<meta property="og:description" content="Thirty days free, no card needed." />
+		<meta property="og:image" content="https://acme-ledger.example/og-image.png" />
+		<link rel="stylesheet" href="styles.css" />
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebPage",
+				"name": "Acme Ledger free trial"
+			}
+		</script>
+	</head>
+	<body>
+		<header class="site-header">
+			<a class="brand" href="index.html"><img src="logo.svg" alt="" width="32" height="32" /> Acme Ledger</a>
+			<nav aria-label="Main">
+				<ul>
+					<li><a href="pricing.html">Pricing</a></li>
+					<li><a href="about.html">About</a></li>
+					<li><a class="button" href="signup.html">Start free trial</a></li>
+				</ul>
+			</nav>
+		</header>
+		<main>
+			<h1>Start your 30-day free trial</h1>
+			<p>
+				Create an account and send your first invoice in about five minutes. You do not need a card
+				to start, and nothing is charged when the trial ends unless you choose a plan.
+			</p>
+			<form action="signup.html" method="get">
+				<div class="field">
+					<label for="signup-name">Full name</label>
+					<input id="signup-name" name="name" type="text" autocomplete="name" />
+				</div>
+				<div class="field">
+					<input id="signup-email" name="email" type="email" autocomplete="email" />
+				</div>
+				<div class="field">
+					<label for="signup-workspace">Workspace name</label>
+					<div class="workspace-row">
+						<input id="signup-workspace" name="workspace" type="text" autocomplete="organization" />
+						<button id="suggest-workspace" class="icon-button" type="button"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="2" /><circle cx="12" cy="12" r="3" fill="currentColor" /></svg></button>
+					</div>
+				</div>
+				<button class="button" type="submit">Create account</button>
+			</form>
+			<section>
+				<h2>What happens next</h2>
+				<p>
+					We will email you a short checklist: add your logo, import your clients from a spreadsheet,
+					and connect your bank feed. Each step takes a few minutes, and you can skip any of them
+					until you are ready. If you get stuck, reply to that email and a person on our team will
+					answer the same working day.
+				</p>
+			</section>
+		</main>
+		<footer class="site-footer">
+			<p>Acme Ledger is a fictional company. This site is StageFlow's sample project.</p>
+			<ul>
+				<li><a href="pricing.html">Pricing</a></li>
+				<li><a href="about.html">About</a></li>
+				<li><a href="signup.html">Sign up</a></li>
+			</ul>
+		</footer>
+	</body>
+</html>

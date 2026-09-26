@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/url"
+	"slices"
 	"testing"
 	"time"
 
@@ -204,8 +205,8 @@ func TestEnsureBuckets_DoesNotCreateWhenExists(t *testing.T) {
 		t.Fatalf("EnsureBuckets: %v", err)
 	}
 
-	if got := len(fake.bucketExistsBuckets); got != 3 {
-		t.Fatalf("expected 3 BucketExists calls, got %d", got)
+	if !slices.Equal(fake.bucketExistsBuckets, []string{BucketStaging, BucketArtifacts}) {
+		t.Fatalf("unexpected buckets checked: %v", fake.bucketExistsBuckets)
 	}
 
 	if len(fake.makeBucketBuckets) != 0 {
@@ -223,8 +224,8 @@ func TestEnsureBuckets_CreatesMissingBuckets(t *testing.T) {
 		t.Fatalf("EnsureBuckets: %v", err)
 	}
 
-	if got := len(fake.makeBucketBuckets); got != 3 {
-		t.Fatalf("expected 3 MakeBucket calls, got %d", got)
+	if !slices.Equal(fake.makeBucketBuckets, []string{BucketStaging, BucketArtifacts}) {
+		t.Fatalf("unexpected buckets created: %v", fake.makeBucketBuckets)
 	}
 }
 
@@ -436,11 +437,11 @@ func TestDeleteFile_MissingObjectDeleteIsIdempotent(t *testing.T) {
 	}
 	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
 
-	if err := client.DeleteFile(context.Background(), "scanner-baselines", "missing/report.json"); err != nil {
+	if err := client.DeleteFile(context.Background(), BucketArtifacts, "missing/report.json"); err != nil {
 		t.Fatalf("first missing-object delete: %v", err)
 	}
 
-	if err := client.DeleteFile(context.Background(), "scanner-baselines", "missing/report.json"); err != nil {
+	if err := client.DeleteFile(context.Background(), BucketArtifacts, "missing/report.json"); err != nil {
 		t.Fatalf("replayed missing-object delete: %v", err)
 	}
 

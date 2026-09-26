@@ -107,42 +107,6 @@ func TestRouterPublicRoutesIgnoreMissingOrWrongKey(t *testing.T) {
 	}
 }
 
-func TestRouterProjectsRequireAPIKey(t *testing.T) {
-	tests := []struct {
-		name        string
-		configured  string
-		presented   string
-		path        string
-		wantAllowed bool
-	}{
-		{name: "projects without key", configured: testAPIToken, path: "/api/v1/projects"},
-		{name: "projects with wrong key", configured: testAPIToken, presented: "wrong", path: "/api/v1/projects"},
-		{
-			name:        "projects with key",
-			configured:  testAPIToken,
-			presented:   testAPIToken,
-			path:        "/api/v1/projects",
-			wantAllowed: true,
-		},
-		{name: "projects when no token is configured", presented: testAPIToken, path: "/api/v1/projects"},
-		{name: "project subpath without key", configured: testAPIToken, path: "/api/v1/projects/demo"},
-		{name: "baseline diff without key", configured: testAPIToken, path: "/api/v1/jobs/job-123/diff"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server, _, _ := newTestServer(t)
-			server.config.APIToken = tt.configured
-
-			rr := routeCall(t, server, http.MethodGet, tt.path, "", tt.presented)
-
-			if allowed := rr.Code != http.StatusUnauthorized; allowed != tt.wantAllowed {
-				t.Fatalf("status = %d, want allowed=%v: %s", rr.Code, tt.wantAllowed, rr.Body.String())
-			}
-		})
-	}
-}
-
 func TestPublicSubmissionLimitAppliesOnlyToCallersWithoutKey(t *testing.T) {
 	t.Setenv(publicSubmissionRateEnv, "1")
 	t.Setenv(publicSubmissionBurstEnv, "1")
@@ -573,5 +537,21 @@ func assertLiteralBrowserAuthPublished(t *testing.T, publisher *fakePublisher) {
 
 	if !strings.Contains(string(created.Config.Auth), `"value":"throwaway-password"`) {
 		t.Fatalf("literal form recipe was not preserved for execution: %s", created.Config.Auth)
+	}
+}
+
+func TestRemovedProjectRoutesReturnNotFound(t *testing.T) {
+	for _, path := range []string{"/api/v1/projects", "/api/v1/projects/demo", "/api/v1/jobs/job-123/diff"} {
+		for _, key := range []string{"", "wrong-token", testAPIToken} {
+			t.Run(path+" key="+key, func(t *testing.T) {
+				server, _, _ := newTestServer(t)
+				server.config.APIToken = testAPIToken
+
+				rr := routeCall(t, server, http.MethodGet, path, "", key)
+				if rr.Code != http.StatusNotFound {
+					t.Fatalf("status = %d, want 404: %s", rr.Code, rr.Body.String())
+				}
+			})
+		}
 	}
 }

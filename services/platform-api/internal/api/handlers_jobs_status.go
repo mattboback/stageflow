@@ -11,12 +11,10 @@ import (
 	"time"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
-	"github.com/mattboback/stageflow/libs/go/diff"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
@@ -78,10 +76,6 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 			return
 		case "results":
 			s.handleJobResults(w, r, jobID)
-
-			return
-		case "diff":
-			s.handleJobDiff(w, r, jobID)
 
 			return
 		}
@@ -232,125 +226,6 @@ func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func (s *Server) handleJobDiff(w http.ResponseWriter, r *http.Request, jobID string) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-
-		return
-	}
-
-	ctx := logging.WithJobID(r.Context(), jobID)
-
-	p, err := s.projectStore.GetProjectForJob(ctx, jobID)
-	if err != nil {
-		if errors.Is(err, project.ErrNotFound) {
-			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.ErrorDetail{
-				Code:    httputil.ErrCodeNotFound,
-				Message: "Not a project scan",
-				Details: "This job is not associated with any project. Diff is only available for project scans.",
-			})
-
-			return
-		}
-
-		logging.Error(ctx, "Failed to look up project for job", "error", err)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to look up project")
-
-		return
-	}
-
-	if p.BaselineJobID == "" {
-		httputil.RespondStructuredError(w, http.StatusNotFound, httputil.ErrorDetail{
-			Code:       httputil.ErrCodeNotFound,
-			Message:    "No baseline set",
-			Details:    fmt.Sprintf("Project %q has no baseline. Promote a scan first.", p.Slug),
-			Suggestion: fmt.Sprintf("POST /api/v1/projects/%s/promote with {\"job_id\": \"%s\"}", p.Slug, jobID),
-		})
-
-		return
-	}
-
-	if p.BaselineJobID == jobID {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.ErrorDetail{
-			Code:    httputil.ErrCodeInvalidRequest,
-			Message: "Cannot diff against self",
-			Details: "This job is the current baseline. Run a new scan to compare.",
-		})
-
-		return
-	}
-
-	currentRec, err := s.jobStatus.Current(ctx, jobID)
-	if err != nil {
-		httputil.RespondError(w, http.StatusNotFound, "Current job not found")
-
-		return
-	}
-
-	if currentRec.State != models.JobStateDone {
-		httputil.RespondError(w, http.StatusBadRequest, "Current job is not completed")
-
-		return
-	}
-
-	if err = s.ensureBaselineCopy(ctx, p); err != nil {
-		logging.Error(ctx, "Failed to preserve baseline report", "error", err)
-
-		if errors.Is(err, ErrBaselineUnavailable) ||
-			errors.Is(err, errInvalidBaselineReport) ||
-			errors.Is(err, project.ErrBaselineSuperseded) {
-			httputil.RespondError(w, http.StatusConflict,
-				"Promoted baseline report is unavailable; promote a new completed job")
-		} else {
-			httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch baseline report")
-		}
-
-		return
-	}
-
-	currentReport, err := s.downloadReport(ctx, jobID, currentRec.ReportJSONKey)
-	if err != nil {
-		logging.Error(ctx, "Failed to download current report", "error", err)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch current report")
-
-		return
-	}
-
-	baselineReport, err := s.downloadBaselineReport(ctx, p.ID, p.BaselineJobID)
-	if err != nil {
-		logging.Error(ctx, "Failed to download baseline report", "error", err)
-
-		if errors.Is(err, errInvalidBaselineReport) {
-			httputil.RespondError(w, http.StatusConflict,
-				"Promoted baseline report is invalid; promote a new completed job")
-		} else {
-			httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch baseline report")
-		}
-
-		return
-	}
-
-	result := diff.ComputeDiff(p.BaselineJobID, baselineReport, jobID, currentReport)
-
-	type diffResponse struct {
-		diff.Result
-		Project projectMeta `json:"project"`
-	}
-
-	httputil.RespondOK(w, diffResponse{
-		Result: result,
-		Project: projectMeta{
-			Slug: p.Slug,
-			Name: p.Name,
-		},
-	})
-}
-
-type projectMeta struct {
-	Slug string `json:"slug"`
-	Name string `json:"name"`
-}
-
 func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string) (report.UnifiedReportV2, error) {
 	if reportJSONKey == "" {
 		return report.UnifiedReportV2{}, fmt.Errorf("no report JSON key for job %s", jobID)
@@ -372,7 +247,7 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 		return report.UnifiedReportV2{}, fmt.Errorf("read report for %s: %w", jobID, err)
 	}
 
-	rpt, err := decodeBaselineReport(data, jobID)
+	rpt, err := decodeReport(data, jobID)
 	if err != nil {
 		return report.UnifiedReportV2{}, fmt.Errorf("parse report for %s: %w", jobID, err)
 	}

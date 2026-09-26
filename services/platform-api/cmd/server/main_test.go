@@ -12,45 +12,9 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
 )
-
-type fakeBaselineMaintainer struct {
-	err               error
-	reconcilerStarted bool
-}
-
-func (f *fakeBaselineMaintainer) ReconcileProjectBaselines(
-	context.Context,
-) (api.BaselineReconcileSummary, error) {
-	return api.BaselineReconcileSummary{JournalReplayed: 2}, f.err
-}
-
-func (f *fakeBaselineMaintainer) StartBaselineReconciler(context.Context) {
-	f.reconcilerStarted = true
-}
-
-func TestStartBaselineMaintenanceStartsRetryLoopAfterTransientFailure(t *testing.T) {
-	t.Parallel()
-
-	expected := errors.New("temporary object-store failure")
-	maintainer := &fakeBaselineMaintainer{err: expected}
-
-	summary, err := startBaselineMaintenance(context.Background(), maintainer)
-	if !errors.Is(err, expected) {
-		t.Fatalf("reconciliation error = %v, want %v", err, expected)
-	}
-
-	if summary.JournalReplayed != 2 {
-		t.Fatalf("reconciliation summary = %#v", summary)
-	}
-
-	if !maintainer.reconcilerStarted {
-		t.Fatal("background reconciler was not started after degraded startup")
-	}
-}
 
 func TestStartHTTPServerReturnsBindFailure(t *testing.T) {
 	t.Parallel()

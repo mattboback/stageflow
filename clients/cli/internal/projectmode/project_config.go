@@ -25,7 +25,10 @@ type Config struct {
 type StageflowConfig struct {
 	APIURL    string `yaml:"api_url"`
 	APIKeyEnv string `yaml:"api_key_env"`
-	Project   string `yaml:"project"`
+
+	// LegacyProject accepts the retired key in existing dev configs until dev is removed.
+	// It is ignored: remote project commands and behavior no longer exist.
+	LegacyProject string `yaml:"project" json:"-"`
 }
 
 type ScanConfig struct {
@@ -260,23 +263,6 @@ func ValidateConfig(cfg Config) error {
 	return validateOptionalHTTPURL("stageflow.api_url", cfg.Stageflow.APIURL)
 }
 
-// ValidateScanConfig checks only what `stageflow project scan` needs
-// from .stageflow/config.yaml: a remote project slug. The dev-loop fields
-// required by ValidateConfig may be absent in a remote-only config.
-func ValidateScanConfig(cfg Config) error {
-	if cfg.Version != 2 {
-		return fmt.Errorf("version must be 2 (got %d)", cfg.Version)
-	}
-
-	if strings.TrimSpace(cfg.Stageflow.Project) == "" {
-		return errors.New(
-			"stageflow.project is not set; pass a slug (`stageflow project scan <slug>`) or set it",
-		)
-	}
-
-	return validateOptionalHTTPURL("stageflow.api_url", cfg.Stageflow.APIURL)
-}
-
 func validateOptionalHTTPURL(fieldName string, raw string) error {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
@@ -332,27 +318,4 @@ const DefaultScanScanners = "axe,lighthouse,seo,link-checker"
 // --scanner flag default.
 func DefaultScanScannerList() []string {
 	return strings.Split(DefaultScanScanners, ",")
-}
-
-func LoadScanConfig(projectRoot string) (Config, string, error) {
-	cfg, cfgPath, err := ReadConfig(projectRoot)
-	if err != nil {
-		var missingErr MissingConfigError
-		if errors.As(err, &missingErr) {
-			return Config{}, "", fmt.Errorf(
-				"no slug given and no .stageflow/config.yaml found under %s; "+
-					"pass a slug (`stageflow project scan <slug>`) or run `stageflow dev init` "+
-					"and set stageflow.project",
-				projectRoot,
-			)
-		}
-
-		return Config{}, "", err
-	}
-
-	if validationErr := ValidateScanConfig(cfg); validationErr != nil {
-		return Config{}, "", fmt.Errorf("invalid %s: %w", cfgPath, validationErr)
-	}
-
-	return cfg, cfgPath, nil
 }

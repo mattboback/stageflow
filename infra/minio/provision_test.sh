@@ -46,16 +46,13 @@ printf '%s\n' "$@" >"$TEST_PODMAN_LOG"
 EOF
 chmod +x "$temp_dir/bin/fake-podman"
 
-# The upgrade preparation command is commonly run alongside an existing .env.
-# Explicit command-line values must win so a file default cannot accidentally
-# enable short artifact lifecycles before legacy baselines are copied.
+# Explicit command-line retention values must win over an existing .env.
 mkdir -p "$temp_dir/launcher"
 cat >"$temp_dir/launcher/.env" <<'EOF'
 MINIO_ROOT_USER=file-root
 MINIO_ROOT_PASSWORD=file-secret
 MINIO_STAGING_RETENTION_DAYS=1
 MINIO_ARTIFACT_RETENTION_DAYS=1
-MINIO_APPLY_LIFECYCLES=true
 EOF
 (
 	cd "$temp_dir/launcher"
@@ -63,17 +60,11 @@ EOF
 		PODMAN="$temp_dir/bin/fake-podman" \
 		MINIO_STAGING_RETENTION_DAYS=7 \
 		MINIO_ARTIFACT_RETENTION_DAYS=9 \
-		MINIO_APPLY_LIFECYCLES=false \
 		"$SCRIPT_DIR/init-buckets.sh"
 )
 grep -Fxq 'MINIO_ROOT_USER=file-root' "$temp_dir/podman.log"
 grep -Fxq 'MINIO_STAGING_RETENTION_DAYS=7' "$temp_dir/podman.log"
 grep -Fxq 'MINIO_ARTIFACT_RETENTION_DAYS=9' "$temp_dir/podman.log"
-grep -Fxq 'MINIO_APPLY_LIFECYCLES=false' "$temp_dir/podman.log"
-if grep -Fxq 'MINIO_APPLY_LIFECYCLES=true' "$temp_dir/podman.log"; then
-	echo "explicit lifecycle override was replaced by .env" >&2
-	exit 1
-fi
 
 run_provision() {
 	PATH="$temp_dir/bin:$PATH" \
@@ -99,8 +90,7 @@ grep -Fq '"ID": "stageflow-staging-retention"' "$temp_dir/imports/scanner-stagin
 grep -Fq '"Expiration": { "Days": 2 }' "$temp_dir/imports/scanner-staging.json"
 grep -Fq '"ID": "stageflow-artifact-retention"' "$temp_dir/imports/scanner-artifacts.json"
 grep -Fq '"Expiration": { "Days": 3 }' "$temp_dir/imports/scanner-artifacts.json"
-grep -Fq 'anonymous set none stageflow/scanner-baselines' "$temp_dir/mc.log"
-[[ ! -e "$temp_dir/imports/scanner-baselines.json" ]]
+[[ "$(grep -c 'anonymous set none' "$temp_dir/mc.log")" -eq 4 ]]
 
 PATH="$temp_dir/bin:$PATH" \
 TEST_MC_LOG="$temp_dir/policy.log" \
@@ -112,31 +102,9 @@ MINIO_SECRET_KEY=app-secret \
 MINIO_STAGING_RETENTION_DAYS=2 \
 MINIO_ARTIFACT_RETENTION_DAYS=3 \
 "$SCRIPT_DIR/provision.sh" >/dev/null
-grep -Fq '"arn:aws:s3:::scanner-baselines"' "$temp_dir/imports/app-policy.json"
-grep -Fq '"arn:aws:s3:::scanner-baselines/*"' "$temp_dir/imports/app-policy.json"
-
-# Migration preparation must create buckets and refresh the app policy without
-# changing existing lifecycle rules. This lets operators preserve legacy
-# baseline reports before enabling short artifact retention.
-: >"$temp_dir/prepare.log"
-rm -f "$temp_dir/imports/scanner-staging.json" "$temp_dir/imports/scanner-artifacts.json"
-PATH="$temp_dir/bin:$PATH" \
-TEST_MC_LOG="$temp_dir/prepare.log" \
-TEST_IMPORT_DIR="$temp_dir/imports" \
-MINIO_ROOT_USER=root \
-MINIO_ROOT_PASSWORD=secret \
-MINIO_ACCESS_KEY=stageflow \
-MINIO_SECRET_KEY=app-secret \
-MINIO_APPLY_LIFECYCLES=false \
-"$SCRIPT_DIR/provision.sh" >/dev/null
-grep -Fq 'anonymous set none stageflow/scanner-baselines' "$temp_dir/prepare.log"
-grep -Fq '"arn:aws:s3:::scanner-baselines/*"' "$temp_dir/imports/app-policy.json"
-if grep -Fq 'ilm rule import' "$temp_dir/prepare.log"; then
-	echo "prepare-only provisioning must not import lifecycle rules" >&2
-	exit 1
-fi
-[[ ! -e "$temp_dir/imports/scanner-staging.json" ]]
-[[ ! -e "$temp_dir/imports/scanner-artifacts.json" ]]
+grep -Fq '"arn:aws:s3:::scanner-staging"' "$temp_dir/imports/app-policy.json"
+grep -Fq '"arn:aws:s3:::scanner-artifacts/*"' "$temp_dir/imports/app-policy.json"
+[[ "$(grep -c 'arn:aws:s3:::' "$temp_dir/imports/app-policy.json")" -eq 4 ]]
 
 if PATH="$temp_dir/bin:$PATH" \
 	TEST_MC_LOG="$temp_dir/invalid.log" \

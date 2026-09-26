@@ -204,54 +204,6 @@ func TestLoggingResponseWriter_ImplementsFlusher(t *testing.T) {
 	}
 }
 
-func TestRequireAPIKey(t *testing.T) {
-	tests := []struct {
-		name       string
-		token      string
-		header     string
-		value      string
-		wantStatus int
-	}{
-		{
-			name:       "no token configured rejects everyone",
-			header:     "X-Api-Key",
-			value:      "anything",
-			wantStatus: http.StatusUnauthorized,
-		},
-		{name: "missing key", token: "secret", wantStatus: http.StatusUnauthorized},
-		{name: "wrong key", token: "secret", header: "X-Api-Key", value: "wrong", wantStatus: http.StatusUnauthorized},
-		{name: "matching X-Api-Key", token: "secret", header: "X-Api-Key", value: "secret", wantStatus: http.StatusOK},
-		{
-			name:       "matching bearer",
-			token:      "secret",
-			header:     "Authorization",
-			value:      "Bearer secret",
-			wantStatus: http.StatusOK,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server := &Server{config: &ServerConfig{APIToken: tt.token}}
-			handler := server.identifyAPIKeyCaller(requireAPIKey(func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			}))
-
-			req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-			if tt.header != "" {
-				req.Header.Set(tt.header, tt.value)
-			}
-
-			rr := httptest.NewRecorder()
-			handler(rr, req)
-
-			if rr.Code != tt.wantStatus {
-				t.Fatalf("status = %d, want %d", rr.Code, tt.wantStatus)
-			}
-		})
-	}
-}
-
 func TestRateLimit_XForwardedFor_UntrustedIgnored(t *testing.T) {
 	original := apiRateLimiter
 	apiRateLimiter = newInMemoryRateLimiter(1)
@@ -808,4 +760,41 @@ func asError(value any) error {
 	err, _ := value.(error)
 
 	return err
+}
+
+func TestIdentifyAPIKeyCaller(t *testing.T) {
+	tests := []struct {
+		name, configured, header, value string
+		want                            bool
+	}{
+		{name: "no token configured", header: "X-Api-Key", value: "anything"},
+		{name: "missing key", configured: "secret"},
+		{name: "wrong key", configured: "secret", header: "X-Api-Key", value: "wrong"},
+		{name: "matching key", configured: "secret", header: "X-Api-Key", value: "secret", want: true},
+		{name: "matching bearer", configured: "secret", header: "Authorization", value: "Bearer secret", want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := &Server{config: &ServerConfig{APIToken: tt.configured}}
+			handler := server.identifyAPIKeyCaller(func(w http.ResponseWriter, r *http.Request) {
+				if got := isAPIKeyCaller(r.Context()); got != tt.want {
+					t.Errorf("matched=%v, want %v", got, tt.want)
+				}
+
+				w.WriteHeader(http.StatusOK)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+			if tt.header != "" {
+				req.Header.Set(tt.header, tt.value)
+			}
+
+			rr := httptest.NewRecorder()
+			handler(rr, req)
+
+			if rr.Code != http.StatusOK {
+				t.Fatalf("public handler status=%d, want 200", rr.Code)
+			}
+		})
+	}
 }

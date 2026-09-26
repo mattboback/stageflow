@@ -151,7 +151,10 @@ describe('local project configuration', () => {
 
 function loadGoldenReport(name: string): UnifiedReport {
 	const fixture = JSON.parse(
-		fs.readFileSync(path.resolve(process.cwd(), `../../qa/fixtures/project-golden/${name}`), 'utf8')
+		fs.readFileSync(
+			path.resolve(process.cwd(), `../../qa/fixtures/scan-diff-golden/${name}`),
+			'utf8'
+		)
 	) as { report: UnifiedReport };
 	return fixture.report;
 }
@@ -162,7 +165,10 @@ describe('computeProjectDiff', () => {
 		const current = loadGoldenReport('golden-regression-report.json');
 		const expected = JSON.parse(
 			fs.readFileSync(
-				path.resolve(process.cwd(), '../../qa/fixtures/project-golden/golden-regression-diff.json'),
+				path.resolve(
+					process.cwd(),
+					'../../qa/fixtures/scan-diff-golden/golden-regression-diff.json'
+				),
 				'utf8'
 			)
 		) as {

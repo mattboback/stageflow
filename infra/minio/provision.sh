@@ -2,8 +2,8 @@
 set -eu
 
 # Provisions MinIO buckets, app policy, and app user. Runs *inside* the official
-# minio/mc container (mc on PATH). Used both by the prod stageflow-minio-init
-# Quadlet and by the host launcher init-buckets.sh. Idempotent and safe to re-run.
+# minio/mc container (mc on PATH), launched by init-buckets.sh.
+# Idempotent and safe to re-run.
 
 MINIO_ENDPOINT="${MINIO_ENDPOINT:-http://127.0.0.1:9000}"
 MINIO_ALIAS="${MINIO_ALIAS:-stageflow}"
@@ -12,7 +12,6 @@ MINIO_ACCESS_KEY="${MINIO_ACCESS_KEY:-}"
 MINIO_SECRET_KEY="${MINIO_SECRET_KEY:-}"
 MINIO_STAGING_RETENTION_DAYS="${MINIO_STAGING_RETENTION_DAYS:-1}"
 MINIO_ARTIFACT_RETENTION_DAYS="${MINIO_ARTIFACT_RETENTION_DAYS:-1}"
-MINIO_APPLY_LIFECYCLES="${MINIO_APPLY_LIFECYCLES:-true}"
 
 : "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}"
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}"
@@ -36,14 +35,6 @@ validate_retention_days() {
 
 validate_retention_days MINIO_STAGING_RETENTION_DAYS "$MINIO_STAGING_RETENTION_DAYS"
 validate_retention_days MINIO_ARTIFACT_RETENTION_DAYS "$MINIO_ARTIFACT_RETENTION_DAYS"
-
-case "$MINIO_APPLY_LIFECYCLES" in
-	true | false) ;;
-	*)
-		echo "[minio] MINIO_APPLY_LIFECYCLES must be true or false (got: ${MINIO_APPLY_LIFECYCLES})" >&2
-		exit 1
-		;;
-esac
 
 case "$MINIO_ENDPOINT" in
 	http://* | https://*) url="$MINIO_ENDPOINT" ;;
@@ -95,7 +86,7 @@ artifact_lifecycle_file="${temp_dir}/scanner-artifacts-lifecycle.json"
 write_lifecycle_config "$staging_lifecycle_file" "stageflow-staging-retention" "$MINIO_STAGING_RETENTION_DAYS"
 write_lifecycle_config "$artifact_lifecycle_file" "stageflow-artifact-retention" "$MINIO_ARTIFACT_RETENTION_DAYS"
 
-for bucket in scanner-staging scanner-artifacts scanner-baselines; do
+for bucket in scanner-staging scanner-artifacts; do
 	if mc ls "${MINIO_ALIAS}/${bucket}" >/dev/null 2>&1; then
 		echo "[minio] Bucket ${bucket} already present"
 	else
@@ -108,14 +99,10 @@ done
 
 # Importing the complete desired lifecycle document replaces the existing
 # StageFlow bucket policy instead of appending duplicate rules on every run.
-if [ "$MINIO_APPLY_LIFECYCLES" = "true" ]; then
-	echo "[minio] Enforcing ${MINIO_STAGING_RETENTION_DAYS}-day retention on scanner-staging"
-	mc ilm rule import "${MINIO_ALIAS}/scanner-staging" <"$staging_lifecycle_file"
-	echo "[minio] Enforcing ${MINIO_ARTIFACT_RETENTION_DAYS}-day retention on scanner-artifacts"
-	mc ilm rule import "${MINIO_ALIAS}/scanner-artifacts" <"$artifact_lifecycle_file"
-else
-	echo "[minio] Lifecycle updates deferred; buckets and application policy only"
-fi
+echo "[minio] Enforcing ${MINIO_STAGING_RETENTION_DAYS}-day retention on scanner-staging"
+mc ilm rule import "${MINIO_ALIAS}/scanner-staging" <"$staging_lifecycle_file"
+echo "[minio] Enforcing ${MINIO_ARTIFACT_RETENTION_DAYS}-day retention on scanner-artifacts"
+mc ilm rule import "${MINIO_ALIAS}/scanner-artifacts" <"$artifact_lifecycle_file"
 
 if [ -z "$MINIO_ACCESS_KEY" ] || [ -z "$MINIO_SECRET_KEY" ]; then
 	echo "[minio] MINIO_ACCESS_KEY/SECRET_KEY not set; skipping app user/policy"
@@ -142,8 +129,7 @@ cat >"$policy_file" <<'EOF'
       ],
       "Resource": [
         "arn:aws:s3:::scanner-staging",
-        "arn:aws:s3:::scanner-artifacts",
-        "arn:aws:s3:::scanner-baselines"
+        "arn:aws:s3:::scanner-artifacts"
       ]
     },
     {
@@ -157,8 +143,7 @@ cat >"$policy_file" <<'EOF'
       ],
       "Resource": [
         "arn:aws:s3:::scanner-staging/*",
-        "arn:aws:s3:::scanner-artifacts/*",
-        "arn:aws:s3:::scanner-baselines/*"
+        "arn:aws:s3:::scanner-artifacts/*"
       ]
     }
   ]

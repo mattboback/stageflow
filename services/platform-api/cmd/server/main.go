@@ -19,8 +19,8 @@ import (
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
-	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/statussource"
+	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 )
 
 func main() {
@@ -91,18 +91,18 @@ func run() error {
 		return fmt.Errorf("failed to initialize orchestrator status source: %w", err)
 	}
 
-	projectStore, err := project.NewStore(cfg.ProjectDBPath)
+	tombstoneStore, err := tombstone.NewStore(cfg.TombstoneDBPath)
 	if err != nil {
-		return fmt.Errorf("failed to initialize project store: %w", err)
+		return fmt.Errorf("failed to initialize tombstone store: %w", err)
 	}
 
 	defer func() {
-		if cerr := projectStore.Close(); cerr != nil {
-			slog.Error("Failed to close project store", "error", cerr)
+		if cerr := tombstoneStore.Close(); cerr != nil {
+			slog.Error("Failed to close tombstone store", "error", cerr)
 		}
 	}()
 
-	slog.Info("Project store initialized", "path", cfg.ProjectDBPath)
+	slog.Info("Tombstone store initialized", "path", cfg.TombstoneDBPath)
 
 	msgService := messaging.NewService(natsClient)
 	scannerRegistry := loadScannerRegistry(slog.Default(), cfg.ScannerConfigPath)
@@ -116,7 +116,7 @@ func run() error {
 		Storage:             minioClient,
 		Publisher:           msgService,
 		StatusReader:        statusReader,
-		ProjectStore:        projectStore,
+		TombstoneStore:      tombstoneStore,
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		APIToken:            cfg.APIToken,
@@ -124,24 +124,6 @@ func run() error {
 		MinIOPublicEndpoint: cfg.MinIO.PublicEndpoint,
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
-
-	baselineSummary, reconcileErr := startBaselineMaintenance(ctx, server)
-	if reconcileErr != nil {
-		slog.Warn(
-			"Project baseline reconciliation is degraded; durable operations will retry in the background",
-			"error", reconcileErr,
-			"journal_replayed", baselineSummary.JournalReplayed,
-		)
-	} else {
-		slog.Info(
-			"Project baseline reconciliation complete",
-			"journal_replayed", baselineSummary.JournalReplayed,
-			"legacy_present", baselineSummary.LegacyPresent,
-			"legacy_copied", baselineSummary.LegacyCopied,
-			"missing_legacy_count", len(baselineSummary.MissingLegacyProjects),
-			"missing_legacy_projects", baselineSummary.MissingLegacyProjects,
-		)
-	}
 
 	if subscribeErr := subscribeStatusEvents(ctx, msgService, server.JobStatus()); subscribeErr != nil {
 		return subscribeErr
@@ -179,8 +161,6 @@ func run() error {
 		slog.Error("Server shutdown error", "error", shutdownErr)
 	}
 
-	server.WaitForBaselineReconciler()
-
 	slog.Info("Server stopped")
 
 	return nil
@@ -204,21 +184,6 @@ func startHTTPServer(server *http.Server) (<-chan error, error) {
 
 type statusEventSubscriber interface {
 	SubscribeToStatusEvents(context.Context, messaging.EventHandler) error
-}
-
-type baselineMaintainer interface {
-	ReconcileProjectBaselines(context.Context) (api.BaselineReconcileSummary, error)
-	StartBaselineReconciler(context.Context)
-}
-
-func startBaselineMaintenance(
-	ctx context.Context,
-	maintainer baselineMaintainer,
-) (api.BaselineReconcileSummary, error) {
-	summary, err := maintainer.ReconcileProjectBaselines(ctx)
-	maintainer.StartBaselineReconciler(ctx)
-
-	return summary, err
 }
 
 func subscribeStatusEvents(

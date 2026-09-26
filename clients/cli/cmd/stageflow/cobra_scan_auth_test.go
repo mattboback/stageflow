@@ -267,29 +267,3 @@ func TestScanAuth_MutuallyExclusiveFlags(t *testing.T) {
 		t.Errorf("expected mutually-exclusive error in stderr; got %q", stderr)
 	}
 }
-
-func TestProjectScanRejectsAuthFlags(t *testing.T) {
-	tmp := t.TempDir()
-	statePath := filepath.Join(tmp, "s.json")
-
-	if err := os.WriteFile(statePath, []byte(`{"cookies":[]}`), 0o600); err != nil {
-		t.Fatalf("write state: %v", err)
-	}
-
-	stdout, stderr, exitCode := runCLI(
-		t,
-		"stageflow",
-		"project",
-		"scan",
-		"demo-site",
-		"--auth-state",
-		statePath,
-	)
-	if exitCode != 2 {
-		t.Fatalf("expected exit 2; stdout=%q stderr=%q", stdout, stderr)
-	}
-
-	if !strings.Contains(stderr, "unknown flag: --auth-state") {
-		t.Errorf("expected unknown-flag rejection in stderr; got %q", stderr)
-	}
-}

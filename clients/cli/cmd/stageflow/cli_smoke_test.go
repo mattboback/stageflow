@@ -3,9 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,10 +14,7 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
-	"github.com/mattboback/stageflow/clients/cli/internal/projectscan"
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
-	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
-	"github.com/mattboback/stageflow/libs/go/diff"
 )
 
 func TestCLIHelpAndVersionSmoke(t *testing.T) {
@@ -224,111 +219,6 @@ func TestCLIApiCommandsSmoke(t *testing.T) {
 	}
 }
 
-func TestCLIRemoteProjectScanJSONEnvelope(t *testing.T) {
-	server, jobID := newCLIProjectScanAPIServer(t)
-	defer server.Close()
-
-	stdout, stderr, exitCode := runCLI(
-		t,
-		"stageflow",
-		"--api",
-		server.URL,
-		"--format",
-		"json",
-		"project",
-		"scan",
-		"demo-site",
-		"--no-stream",
-		"--summary-only",
-	)
-	if exitCode != 1 {
-		t.Fatalf("exitCode=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
-	}
-
-	if !strings.Contains(stderr, "Waiting for completion") {
-		t.Fatalf("unexpected scan stderr: %q", stderr)
-	}
-
-	decoder := json.NewDecoder(strings.NewReader(stdout))
-
-	var payload projectscan.Envelope
-	testsupport.RequireNoErr(t, decoder.Decode(&payload))
-
-	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
-	testsupport.RequireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
-	testsupport.RequireEqual(
-		t,
-		payload.Project.Baseline.Status,
-		projectscan.BaselineStatusAvailable,
-		"payload.Project.Baseline.Status",
-	)
-	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
-	testsupport.RequireEqual(t, payload.Decision.Passed, false, "payload.Decision.Passed")
-	testsupport.RequireEqual(t, payload.Report.Schema, "stageflow-cli/report@v1", "payload.Report.Schema")
-
-	if payload.Diff == nil {
-		t.Fatalf("expected diff payload")
-	}
-
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		t.Fatalf("expected a single JSON document, got err=%v", err)
-	}
-
-	testsupport.RequireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
-}
-
-func TestCLIProjectScanFromConfigJSONEnvelope(t *testing.T) {
-	server, jobID := newCLIProjectScanAPIServer(t)
-	defer server.Close()
-
-	root := t.TempDir()
-	testsupport.WriteProjectConfig(t, root, `version: 2
-stageflow:
-  project: demo-site
-`)
-
-	cleanup := withWorkingDir(t, root)
-	defer cleanup()
-
-	stdout, stderr, exitCode := runCLI(
-		t,
-		"stageflow",
-		"--api",
-		server.URL,
-		"--format",
-		"json",
-		"project",
-		"scan",
-		"--no-stream",
-		"--summary-only",
-	)
-	if exitCode != 1 {
-		t.Fatalf("exitCode=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
-	}
-
-	if !strings.Contains(stderr, `Using project "demo-site" from`) {
-		t.Fatalf("unexpected project scan stderr: %q", stderr)
-	}
-
-	if !strings.Contains(stderr, "Waiting for completion") {
-		t.Fatalf("unexpected project scan stderr: %q", stderr)
-	}
-
-	decoder := json.NewDecoder(strings.NewReader(stdout))
-
-	var payload projectscan.Envelope
-	testsupport.RequireNoErr(t, decoder.Decode(&payload))
-
-	testsupport.RequireEqual(t, payload.Schema, "stageflow-cli/project-scan@v1", "payload.Schema")
-	testsupport.RequireEqual(t, payload.Project.Slug, "demo-site", "payload.Project.Slug")
-	testsupport.RequireEqual(t, payload.Report.Job.ID, jobID, "payload.Report.Job.ID")
-	testsupport.RequireEqual(t, payload.Decision.Regressed, true, "payload.Decision.Regressed")
-
-	if payload.Diff == nil {
-		t.Fatalf("expected diff payload")
-	}
-}
-
 func runCLI(t *testing.T, args ...string) (string, string, int) {
 	t.Helper()
 
@@ -420,58 +310,6 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 						Version:    "1.0.0",
 						BuiltIn:    true,
 					},
-				},
-			})
-		default:
-			http.NotFound(w, r)
-		}
-	})
-
-	return httptest.NewServer(handler), jobID
-}
-
-func newCLIProjectScanAPIServer(t *testing.T) (*httptest.Server, string) {
-	t.Helper()
-
-	jobID := "job-project"
-	currentDoc := testsupport.SampleReport(jobID)
-	baselineDoc := testsupport.SampleReport("job-baseline")
-	baselineDoc.Issues = []report.IssueDetail{baselineDoc.Issues[1]}
-	baselineScore := 84
-	baselineDoc.Summary.Score = &baselineScore
-	baselineDoc.Summary.TotalIssues = len(baselineDoc.Issues)
-	diffResult := diff.ComputeDiff("job-baseline", baselineDoc, jobID, currentDoc)
-
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/projects/demo-site/scan":
-			writeJSONResponse(t, w, http.StatusAccepted, apiclient.SubmitJobResponse{JobID: jobID, Status: "accepted"})
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
-			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
-				ID:                jobID,
-				State:             apiclient.JobStateDone,
-				ExpectedScanners:  []string{"axe"},
-				CompletedScanners: []string{"axe"},
-				CreatedAt:         time.Unix(1700001000, 0).UTC(),
-				UpdatedAt:         time.Unix(1700001030, 0).UTC(),
-			})
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID+"/results":
-			writeJSONResponse(t, w, http.StatusOK, currentDoc)
-		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID+"/diff":
-			writeJSONResponse(t, w, http.StatusOK, struct {
-				diff.Result
-				Project struct {
-					Slug string `json:"slug"`
-					Name string `json:"name"`
-				} `json:"project"`
-			}{
-				Result: diffResult,
-				Project: struct {
-					Slug string `json:"slug"`
-					Name string `json:"name"`
-				}{
-					Slug: "demo-site",
-					Name: "Demo Site",
 				},
 			})
 		default:

@@ -24,8 +24,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
+	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 )
 
 func TestHandleHealth(t *testing.T) {
@@ -784,164 +784,6 @@ func TestZipUploadBodyTooLarge(t *testing.T) {
 	}
 }
 
-func TestCreateProjectBodyTooLarge(t *testing.T) {
-	server, _, _ := newTestServer(t)
-
-	oversized := strings.Repeat("a", maxProjectRequestBodySize+1024)
-	body := strings.NewReader(`{"slug":"oversized-project","name":"` + oversized + `","urls":["https://example.com"]}`)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects", body)
-	rr := httptest.NewRecorder()
-
-	server.handleCreateProject(rr, req)
-
-	if rr.Code != http.StatusRequestEntityTooLarge {
-		t.Fatalf("expected 413, got %d", rr.Code)
-	}
-}
-
-func TestHandleProjectScanRecordsMappingBeforePublish(t *testing.T) {
-	server, _, publisher := newTestServer(t)
-
-	p := createTestProject(t, server, "mapped-scan")
-
-	publisher.onPublish = func(envelope *events.Envelope) error {
-		payload, ok := envelope.Payload.(*events.JobCreatedPayload)
-		if !ok || payload == nil {
-			t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
-		}
-
-		belongs, err := server.projectStore.JobBelongsToProject(context.Background(), p.ID, payload.JobID)
-		if err != nil {
-			t.Fatalf("check project mapping during publish: %v", err)
-		}
-
-		if !belongs {
-			t.Fatalf("expected project job mapping to be durable before publish")
-		}
-
-		return nil
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+p.Slug+"/scan", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	server.handleProjectScan(rr, req, p.Slug)
-
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 job.created published, got %d", len(publisher.envelopes))
-	}
-}
-
-func TestHandleProjectScanMappingFailureReturnsErrorBeforePublish(t *testing.T) {
-	server, _, publisher := newTestServer(t)
-
-	p := createTestProject(t, server, "mapping-fails")
-	baseStore := requireProjectStore(t, server)
-	server.projectStore = &failingRecordProjectStore{
-		Store:     baseStore,
-		recordErr: errors.New("project_jobs unavailable"),
-	}
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+p.Slug+"/scan", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	server.handleProjectScan(rr, req, p.Slug)
-
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("expected no job.created publish when mapping fails, got %d", len(publisher.envelopes))
-	}
-}
-
-func TestHandleProjectScanPublishFailureDeletesMapping(t *testing.T) {
-	server, _, publisher := newTestServer(t)
-	publisher.err = errors.New("nats down")
-
-	p := createTestProject(t, server, "publish-fails")
-	trackingStore := &trackingProjectStore{Store: requireProjectStore(t, server)}
-	server.projectStore = trackingStore
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/projects/"+p.Slug+"/scan", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	server.handleProjectScan(rr, req, p.Slug)
-
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	if len(trackingStore.deleted) != 1 {
-		t.Fatalf("expected 1 project mapping cleanup, got %d", len(trackingStore.deleted))
-	}
-
-	belongs, err := trackingStore.JobBelongsToProject(context.Background(), p.ID, trackingStore.deleted[0])
-	if err != nil {
-		t.Fatalf("check cleaned project mapping: %v", err)
-	}
-
-	if belongs {
-		t.Fatalf("expected project job mapping to be deleted after publish failure")
-	}
-}
-
-// Helpers
-
-type failingRecordProjectStore struct {
-	*project.Store
-	recordErr error
-}
-
-func (s *failingRecordProjectStore) RecordProjectJob(context.Context, string, string) error {
-	return s.recordErr
-}
-
-type trackingProjectStore struct {
-	*project.Store
-	deleted []string
-}
-
-func (s *trackingProjectStore) DeleteProjectJob(ctx context.Context, jobID string) error {
-	s.deleted = append(s.deleted, jobID)
-
-	return s.Store.DeleteProjectJob(ctx, jobID)
-}
-
-func createTestProject(t *testing.T, server *Server, slug string) *project.Project {
-	t.Helper()
-
-	p := &project.Project{
-		Slug:     slug,
-		Name:     slug,
-		URLs:     []string{"https://example.com"},
-		Scanners: []string{scannerTypeAxe},
-	}
-
-	if err := server.projectStore.CreateProject(context.Background(), p); err != nil {
-		t.Fatalf("create project: %v", err)
-	}
-
-	return p
-}
-
-func requireProjectStore(t *testing.T, server *Server) *project.Store {
-	t.Helper()
-
-	store, ok := server.projectStore.(*project.Store)
-	if !ok {
-		t.Fatalf("expected test server project store to be *project.Store, got %T", server.projectStore)
-	}
-
-	return store
-}
-
 type fakeStorage struct {
 	uploads map[string][]byte
 	deletes []string
@@ -1107,9 +949,9 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 		t.Fatalf("new store: %v", err)
 	}
 
-	projectStore, err := project.NewStore(filepath.Join(dir, "projects.db"))
+	tombstoneStore, err := tombstone.NewStore(filepath.Join(dir, "projects.db"))
 	if err != nil {
-		t.Fatalf("new project store: %v", err)
+		t.Fatalf("new tombstone store: %v", err)
 	}
 
 	t.Cleanup(func() {
@@ -1117,8 +959,8 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 			t.Fatalf("close store: %v", closeErr)
 		}
 
-		if closeErr := projectStore.Close(); closeErr != nil {
-			t.Fatalf("close project store: %v", closeErr)
+		if closeErr := tombstoneStore.Close(); closeErr != nil {
+			t.Fatalf("close tombstone store: %v", closeErr)
 		}
 	})
 
@@ -1139,7 +981,7 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 		Storage:         storage,
 		Publisher:       publisher,
 		StatusReader:    store,
-		ProjectStore:    projectStore,
+		TombstoneStore:  tombstoneStore,
 		ScannerRegistry: registry,
 	})
 	server.ipResolver = defaultSecurityTestResolver(t)

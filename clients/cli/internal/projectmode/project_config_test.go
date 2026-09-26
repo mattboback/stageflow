@@ -18,7 +18,7 @@ func TestLoadProjectConfig_Success(t *testing.T) {
 stageflow:
   api_url: http://localhost:8080
   api_key_env: STAGEFLOW_API_KEY
-  project: hosted-demo
+  project: retired-project
 scan:
   urls:
     - http://localhost:3000
@@ -57,7 +57,6 @@ dev:
 	testsupport.RequireDeepEqual(t, cfg.Dev.Start.Cmd, []string{"npm", "run", "dev"}, "cfg.Dev.Start.Cmd")
 
 	testsupport.RequireEqual(t, cfg.Dev.Ready.URL, "http://localhost:3000/health", "cfg.Dev.Ready.URL")
-	testsupport.RequireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
 }
 
 func TestLoadProjectConfig_MissingFile(t *testing.T) {
@@ -89,55 +88,6 @@ func TestLoadProjectConfig_MissingFileTypedError(t *testing.T) {
 	testsupport.RequireEqual(t, missingErr.ProjectRoot, root, "missingErr.ProjectRoot")
 }
 
-func TestLoadProjectScanConfig_Minimal(t *testing.T) {
-	root := t.TempDir()
-
-	configPath := testsupport.WriteProjectConfig(t, root, `version: 2
-stageflow:
-  project: hosted-demo
-  api_url: https://hosted.stageflow.example
-`)
-
-	cfg, gotPath, err := LoadScanConfig(root)
-	testsupport.RequireNoErr(t, err)
-
-	testsupport.RequireEqual(t, gotPath, configPath, "config path")
-	testsupport.RequireEqual(t, cfg.Version, 2, "cfg.Version")
-	testsupport.RequireEqual(t, cfg.Stageflow.Project, "hosted-demo", "cfg.Stageflow.Project")
-	testsupport.RequireEqual(t, cfg.Stageflow.APIURL, "https://hosted.stageflow.example", "cfg.Stageflow.APIURL")
-}
-
-func TestLoadProjectScanConfig_RequiresProject(t *testing.T) {
-	root := t.TempDir()
-
-	testsupport.WriteProjectConfig(t, root, `version: 2
-stageflow:
-  api_url: https://hosted.stageflow.example
-`)
-
-	_, _, err := LoadScanConfig(root)
-	if err == nil {
-		t.Fatalf("loadProjectScanConfig err = nil, want non-nil")
-	}
-
-	if !strings.Contains(err.Error(), "stageflow.project is not set") {
-		t.Fatalf("loadProjectScanConfig err = %q, want stageflow.project guidance", err.Error())
-	}
-}
-
-func TestLoadProjectScanConfig_MissingConfigSuggestsDevInit(t *testing.T) {
-	root := t.TempDir()
-
-	_, _, err := LoadScanConfig(root)
-	if err == nil {
-		t.Fatalf("loadProjectScanConfig err = nil, want non-nil")
-	}
-
-	if !strings.Contains(err.Error(), "stageflow dev init") {
-		t.Fatalf("loadProjectScanConfig err = %q, want dev init hint", err.Error())
-	}
-}
-
 func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 	root := t.TempDir()
 
@@ -165,10 +115,6 @@ func TestScaffoldProjectConfig_CreatesConfig(t *testing.T) {
 
 	if !strings.Contains(text, ScaffoldDevStartCommandPlaceholder) {
 		t.Fatalf("scaffolded config missing dev command placeholder")
-	}
-
-	if !strings.Contains(text, "# project: your-project-slug") {
-		t.Fatalf("scaffolded config missing project guidance")
 	}
 
 	cfg, gotPath, err := LoadConfig(root)
@@ -200,10 +146,6 @@ func TestScaffoldProjectGuide_CreatesReadme(t *testing.T) {
 
 	if !strings.Contains(text, "just dev up local") {
 		t.Fatalf("guide missing localhost setup guidance")
-	}
-
-	if !strings.Contains(text, "stageflow.project") {
-		t.Fatalf("guide missing remote project guidance")
 	}
 
 	if !strings.Contains(text, "stageflow dev doctor --format json") {

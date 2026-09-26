@@ -249,7 +249,7 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
         init)
             echo "==> Initializing MinIO buckets ($endpoint)..."
             declare -A env_overrides=()
-            for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_STAGING_RETENTION_DAYS MINIO_ARTIFACT_RETENTION_DAYS MINIO_APPLY_LIFECYCLES MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
+            for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_STAGING_RETENTION_DAYS MINIO_ARTIFACT_RETENTION_DAYS MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
                 if [[ -v "$name" ]]; then
                     env_overrides["$name"]="${!name}"
                 fi
@@ -493,6 +493,7 @@ shell-tests:
     bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/stale-vocab.test.sh
     bash infra/minio/provision_test.sh
+    bash qa/e2e/scan-helpers.test.sh
 
 [group('quality'), doc('Measure Go coverage per directory and check it against the baseline')]
 coverage:
@@ -513,11 +514,11 @@ dead-code:
     (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
     exit "$status"
 
-[group('quality'), doc('Run the project baseline->promote->diff golden flow against the local overlay')]
-project-golden:
+[group('quality'), doc('Run ZIP sample scans and compare their regression diff against goldens')]
+scan-diff-golden:
     #!/usr/bin/env bash
     set -euo pipefail
-    bash qa/e2e/project-scan-golden.sh
+    bash qa/e2e/scan-diff-golden.sh
 
 [group('cleanup'), doc('Remove artifacts (MODE=all|deep)')]
 clean MODE='all':

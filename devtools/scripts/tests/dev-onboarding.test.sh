@@ -138,7 +138,6 @@ MINIO_ROOT_USER=file-root
 MINIO_ROOT_PASSWORD=file-secret
 MINIO_STAGING_RETENTION_DAYS=1
 MINIO_ARTIFACT_RETENTION_DAYS=1
-MINIO_APPLY_LIFECYCLES=true
 EOF
 
 	: >"$log_file"
@@ -146,16 +145,11 @@ EOF
 		PODMAN="${temp_dir}/podman" \
 		MINIO_STAGING_RETENTION_DAYS=7 \
 		MINIO_ARTIFACT_RETENTION_DAYS=9 \
-		MINIO_APPLY_LIFECYCLES=false \
 		"$REAL_JUST" --justfile "$REPO_ROOT/justfile" --working-directory "$work_dir" dev init
 
 	assert_contains "$log_file" "MINIO_STAGING_RETENTION_DAYS=7" "dev init should preserve an explicit staging-retention override"
 	assert_contains "$log_file" "MINIO_ARTIFACT_RETENTION_DAYS=9" "dev init should preserve an explicit artifact-retention override"
-	assert_contains "$log_file" "MINIO_APPLY_LIFECYCLES=false" "dev init should preserve the migration-safe lifecycle override"
-	if grep -Fq -- "MINIO_APPLY_LIFECYCLES=true" "$log_file"; then
-		echo "FAIL: dev init replaced the explicit lifecycle override with .env" >&2
-		failures=$((failures + 1))
-	fi
+
 }
 
 run_demo_order_case() {

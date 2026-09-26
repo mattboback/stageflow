@@ -3,14 +3,11 @@ package api
 import (
 	"context"
 	"net"
-	"sync"
-	"sync/atomic"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
@@ -24,52 +21,21 @@ type JobStatusReader interface {
 	GetJob(ctx context.Context, jobID string) (*status.JobRecord, error)
 }
 
-// ProjectStore abstracts project persistence for handler tests and runtime wiring.
-type ProjectStore interface {
-	CreateProject(ctx context.Context, p *project.Project) error
-	GetProjectBySlug(ctx context.Context, slug string) (*project.Project, error)
-	GetProjectByID(ctx context.Context, id string) (*project.Project, error)
-	ListProjects(ctx context.Context) ([]project.Project, error)
-	UpdateProject(ctx context.Context, id string, u project.Update) error
-	DeleteProject(ctx context.Context, id string) error
-	RecordProjectJob(ctx context.Context, projectID, jobID string) error
-	DeleteProjectJob(ctx context.Context, jobID string) error
-	TombstoneJob(ctx context.Context, jobID string) error
-	JobIsDeleted(ctx context.Context, jobID string) (bool, error)
-	GetProjectForJob(ctx context.Context, jobID string) (*project.Project, error)
-	SetBaseline(ctx context.Context, projectID, jobID string) error
-	JobBelongsToProject(ctx context.Context, projectID, jobID string) (bool, error)
-	QueueBaselinePromotion(
-		ctx context.Context,
-		projectID, previousJobID, jobID, sourceKey string,
-	) (*project.BaselineOperation, error)
-	QueueBaselineBackfill(
-		ctx context.Context,
-		projectID, jobID, sourceKey string,
-	) (*project.BaselineOperation, error)
-	QueueProjectDeletion(
-		ctx context.Context,
-		projectID string,
-	) (*project.BaselineOperation, error)
-	ListBaselineOperations(ctx context.Context) ([]project.BaselineOperation, error)
-	MarkBaselineOperationObjectReady(ctx context.Context, id int64) error
-	RecordBaselineOperationFailure(ctx context.Context, id int64, cause string) error
-	CompleteBaselinePromotion(ctx context.Context, op project.BaselineOperation) error
-	CompleteBaselineOperation(ctx context.Context, op project.BaselineOperation) error
+// TombstoneStore preserves deletion across cache expiry and API restarts.
+type TombstoneStore interface {
+	TombstoneJob(context.Context, string) error
+	JobIsDeleted(context.Context, string) (bool, error)
 }
 
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
 type Server struct {
 	config          *ServerConfig
 	jobStatus       *jobstatus.Pipeline
-	projectStore    ProjectStore
+	tombstoneStore  TombstoneStore
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
 	// discoveryMode is public outside tests, which crawl a loopback httptest server.
-	discoveryMode  targetValidationMode
-	baselineMu     sync.Mutex
-	baselineWG     sync.WaitGroup
-	legacySweepDue atomic.Bool
+	discoveryMode targetValidationMode
 }
 
 // ServerConfig provides dependencies and endpoints for the public API.
@@ -78,7 +44,7 @@ type ServerConfig struct {
 	Storage             storage.Client
 	Publisher           JobPublisher
 	StatusReader        JobStatusReader
-	ProjectStore        ProjectStore
+	TombstoneStore      TombstoneStore
 	ScannerRegistry     *scannerregistry.Registry
 	AllowPrivateTargets bool
 	APIToken            string // Optional; see middleware_auth.go
@@ -92,11 +58,10 @@ func NewServer(config *ServerConfig) *Server {
 	server := &Server{
 		config:          config,
 		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: config.StatusReader}),
-		projectStore:    config.ProjectStore,
+		tombstoneStore:  config.TombstoneStore,
 		scannerRegistry: config.ScannerRegistry,
 		ipResolver:      net.DefaultResolver,
 	}
-	server.legacySweepDue.Store(true)
 
 	return server
 }

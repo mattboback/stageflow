@@ -31,7 +31,7 @@ env:
 
 jobs:
   golden:
-    name: Golden Baseline Promote Diff
+    name: Golden ZIP Scan Diff
     runs-on: ubuntu-latest
     # Chain off CI only for real code movement on main. CI also runs on a daily
     # cron, and this suite has its own nightly schedule, so without the `event`
@@ -132,9 +132,9 @@ jobs:
           done
 
       - name: Run golden regression script
-        run: bash qa/e2e/project-scan-golden.sh
+        run: bash qa/e2e/scan-diff-golden.sh
         env:
-          PROJECT_GOLDEN_ARTIFACT_DIR: artifacts/project-golden
+          SCAN_DIFF_GOLDEN_ARTIFACT_DIR: artifacts/scan-diff-golden
           STAGEFLOW_API_KEY: ci-platform-api-token
 
       # docs/product.md claims WCAG 2.1 AA is verified "plus StageFlow
@@ -194,18 +194,18 @@ jobs:
       - name: Capture stack logs
         if: failure()
         run: |
-          mkdir -p artifacts/project-golden
+          mkdir -p artifacts/scan-diff-golden
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
             -f infra/compose/podman-compose.local.yml \
-            --env-file .env logs --no-color > artifacts/project-golden/compose.log || true
+            --env-file .env logs --no-color > artifacts/scan-diff-golden/compose.log || true
 
       - name: Upload golden artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: golden-regression-artifacts
-          path: artifacts/project-golden
+          path: artifacts/scan-diff-golden
           if-no-files-found: ignore
           retention-days: 7
 

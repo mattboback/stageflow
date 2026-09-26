@@ -72,8 +72,6 @@ version: 2
 
 stageflow:
   api_url: %s
-  # Optional: link this repo to a remote StageFlow project for baseline diffs.
-  # project: your-project-slug
 
 scan:
   # Set this to the page URL your dev server serves.
@@ -108,6 +106,7 @@ This folder configures `+"`stageflow dev`"+` for this repository.
 3. Set `+"`dev.ready.url`"+` to the URL that returns HTTP 2xx or 3xx when your app is ready.
 4. Set `+"`scan.urls`"+` to the page URLs you want scanned.
 5. Run `+"`stageflow dev scan`"+`.
+6. Run `+"`stageflow dev doctor --format json`"+` for structured setup/readiness details.
 
 ## Example dev commands
 
@@ -124,14 +123,6 @@ For local targets like `+"`localhost`"+` and `+"`127.0.0.1`"+`:
    - `+"`just dev up local`"+`
    - `+"`just dev init local`"+`
 2. Re-run `+"`stageflow dev scan`"+`.
-
-## Baseline diffs against a remote project (optional)
-
-To compare scans against a promoted baseline, link this repo to a remote project:
-
-- Set `+"`stageflow.project`"+` to the remote project slug.
-- Run `+"`stageflow project scan --format json`"+` to scan it without starting local dev.
-- Run `+"`stageflow dev doctor --format json`"+` when agents need structured setup/readiness details.
 
 ## Troubleshooting
 

@@ -11,7 +11,6 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/project"
 	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
@@ -20,7 +19,7 @@ type staticJobReader struct {
 }
 
 type failingJobDeletionStore struct {
-	*project.Store
+	TombstoneStore
 	err error
 }
 
@@ -149,19 +148,17 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 	t.Parallel()
 
 	server, _, _ := newTestServer(t)
-	server.config.APIToken = "caller-token" // the baseline diff requires it
 	jobID := "job-tombstone-error"
 	seedReadableJob(t, server, jobID, models.JobStateDone)
-	server.projectStore = &failingJobDeletionStore{
-		Store: requireProjectStore(t, server),
-		err:   errors.New("tombstone database unavailable"),
+	server.tombstoneStore = &failingJobDeletionStore{
+		TombstoneStore: server.tombstoneStore,
+		err:            errors.New("tombstone database unavailable"),
 	}
 
 	paths := []string{
 		"/api/v1/jobs/" + jobID,
 		"/api/v1/jobs/" + jobID + "/report",
 		"/api/v1/jobs/" + jobID + "/results",
-		"/api/v1/jobs/" + jobID + "/diff",
 		"/api/v1/jobs/" + jobID + "/stream",
 	}
 	for _, path := range paths {
@@ -169,7 +166,6 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 			t.Parallel()
 
 			req := httptest.NewRequest(http.MethodGet, path, http.NoBody)
-			req.Header.Set("X-Api-Key", "caller-token")
 
 			rr := httptest.NewRecorder()
 			server.Router().ServeHTTP(rr, req)
@@ -187,9 +183,9 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 	server, objectStore, _ := newTestServer(t)
 	jobID := "job-delete-lookup-error"
 	seedReadableJob(t, server, jobID, models.JobStateDone)
-	server.projectStore = &failingJobDeletionStore{
-		Store: requireProjectStore(t, server),
-		err:   errors.New("tombstone database unavailable"),
+	server.tombstoneStore = &failingJobDeletionStore{
+		TombstoneStore: server.tombstoneStore,
+		err:            errors.New("tombstone database unavailable"),
 	}
 
 	const artifact = "report.json"

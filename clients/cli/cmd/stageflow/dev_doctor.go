@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -25,17 +24,7 @@ type devDoctorEnvelope struct {
 	APIURL                  string               `json:"apiUrl"`
 	URLs                    []string             `json:"urls"`
 	AutoAllowPrivateTargets bool                 `json:"autoAllowPrivateTargets"`
-	RemoteProject           remoteProjectLink    `json:"remoteProject"`
 	Checks                  []projectDoctorCheck `json:"checks"`
-}
-
-// remoteProjectLink describes the remote project (if any) this repo links to
-// via stageflow.project, plus ready-to-run commands for its baseline loop.
-type remoteProjectLink struct {
-	Configured             bool   `json:"configured"`
-	Slug                   string `json:"slug,omitempty"`
-	RecommendedScanCommand string `json:"recommendedScanCommand,omitempty"`
-	PromoteCommandTemplate string `json:"promoteCommandTemplate,omitempty"`
 }
 
 type projectDoctorCheck struct {
@@ -48,7 +37,6 @@ func writeProjectDoctorJSON(
 	out io.Writer,
 	projectRoot, configPath, apiURL string,
 	urls []string,
-	stageflowCfg projectmode.StageflowConfig,
 	autoAllowPrivateTargets bool,
 	checks []projectDoctorCheck,
 ) error {
@@ -60,7 +48,6 @@ func writeProjectDoctorJSON(
 		APIURL:                  apiURL,
 		URLs:                    urls,
 		AutoAllowPrivateTargets: autoAllowPrivateTargets,
-		RemoteProject:           buildRemoteProjectLink(stageflowCfg),
 		Checks:                  checks,
 	}
 
@@ -78,20 +65,6 @@ func allProjectDoctorChecksPassed(checks []projectDoctorCheck) bool {
 	}
 
 	return true
-}
-
-func buildRemoteProjectLink(cfg projectmode.StageflowConfig) remoteProjectLink {
-	slug := strings.TrimSpace(cfg.Project)
-	if slug == "" {
-		return remoteProjectLink{}
-	}
-
-	return remoteProjectLink{
-		Configured:             true,
-		Slug:                   slug,
-		RecommendedScanCommand: fmt.Sprintf("stageflow project scan %s --format json", slug),
-		PromoteCommandTemplate: fmt.Sprintf("stageflow project promote %s --job-id <job-id>", slug),
-	}
 }
 
 func writeJSONEnvelope(out io.Writer, payload any) error {
@@ -125,7 +98,6 @@ func writeProjectDoctorResult(
 	out io.Writer,
 	projectRoot, cfgPath, apiURL string,
 	urls []string,
-	stageflowCfg projectmode.StageflowConfig,
 	autoAllowPrivateTargets bool,
 	checks []projectDoctorCheck,
 	format render.Format,
@@ -138,7 +110,6 @@ func writeProjectDoctorResult(
 			cfgPath,
 			apiURL,
 			urls,
-			stageflowCfg,
 			autoAllowPrivateTargets,
 			checks,
 		)
@@ -200,7 +171,7 @@ func runDevDoctorCommand(
 	if autoAllowPrivateTargets {
 		fmt.Fprintln(
 			cmd.ErrOrStderr(),
-			"Detected private/loopback targets; project scans will auto-enable allow_private_targets=true.",
+			"Detected private/loopback targets; dev scans will auto-enable allow_private_targets=true.",
 		)
 	}
 
@@ -227,7 +198,6 @@ func runDevDoctorCommand(
 			cfgPath,
 			apiURL,
 			urls,
-			cfg.Stageflow,
 			autoAllowPrivateTargets,
 			checks,
 			format,
@@ -267,7 +237,6 @@ func runDevDoctorCommand(
 		cfgPath,
 		apiURL,
 		urls,
-		cfg.Stageflow,
 		autoAllowPrivateTargets,
 		checks,
 		format,

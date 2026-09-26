@@ -1,0 +1,530 @@
+{
+  "api": {
+    "base_url": "https://api.invalid"
+  },
+  "cli": {
+    "commit": "NORMALIZED",
+    "date": "NORMALIZED",
+    "version": "NORMALIZED"
+  },
+  "filters": {
+    "issues_returned": 5,
+    "issues_total": 5,
+    "max_issues": 0,
+    "sort": "severity_desc, scanner_asc, rule_id_asc, page_url_asc, id_asc",
+    "truncated": false
+  },
+  "job": {
+    "created_at": "2000-01-01T00:00:00.000Z",
+    "id": "NORMALIZED",
+    "state": "DONE",
+    "updated_at": "2000-01-01T00:00:00.000Z"
+  },
+  "links": {
+    "job": "https://api.invalid/job",
+    "results": "https://api.invalid/results"
+  },
+  "report": {
+    "artifacts": [
+      {
+        "id": "page-overview-axe-page-001",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "page-overview"
+      },
+      {
+        "id": "page-overview-axe-page-002",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "page-overview"
+      },
+      {
+        "id": "page-overview-axe-page-003",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "page-overview"
+      },
+      {
+        "id": "page-overview-axe-page-004",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "page-overview"
+      },
+      {
+        "id": "ss-1471cd3d6e06",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "screenshot"
+      },
+      {
+        "id": "ss-2b9345de2405",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "screenshot"
+      },
+      {
+        "id": "ss-4091e74b22b6",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "screenshot"
+      },
+      {
+        "id": "ss-74cd9a0218af",
+        "mime": "image/webp",
+        "path": "https://artifacts.invalid/NORMALIZED",
+        "type": "screenshot"
+      }
+    ],
+    "issues": [
+      {
+        "category": "wcag2a",
+        "description": "Buttons must have discernible accessible names.",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/button-name?application=playwright",
+        "howToFix": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+        "id": "2b9345de2405",
+        "occurrences": [
+          {
+            "ancestorPath": "... > main > form > div.field > div.workspace-row > button#suggest-workspace.icon-button",
+            "artifactIds": [
+              "ss-2b9345de2405"
+            ],
+            "contextHtml": "<div class=\"workspace-row\">\n  <input id=\"signup-workspace\" name=\"workspace\" type=\"text\" autocomplete=\"organization\">\n  <button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle></svg></button> <!-- TARGET -->\n</div>",
+            "elementId": "2b9345de2405-el-0",
+            "failureSummary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+            "html": "<button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\">",
+            "selector": "#suggest-workspace",
+            "target": [
+              "#suggest-workspace"
+            ]
+          }
+        ],
+        "pageId": "page-004",
+        "pageUrl": "https://sample.invalid/signup.html",
+        "ruleId": "button-name",
+        "scanner": "axe",
+        "severity": "critical",
+        "severityRaw": "critical",
+        "title": "Buttons must have discernible text",
+        "userImpact": {
+          "affectedGroups": [
+            "blind"
+          ],
+          "severity": "blocking",
+          "statement": "Screen reader users cannot determine what action this button performs.",
+          "userStory": "I hear 'button' but have no idea what clicking it will do. I might accidentally delete something or navigate away."
+        },
+        "wcagTags": [
+          "wcag2a",
+          "wcag412",
+          "WCAG 4.1.2"
+        ]
+      },
+      {
+        "category": "wcag2a",
+        "description": "Form inputs must have associated labels.",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/label?application=playwright",
+        "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+        "id": "1471cd3d6e06",
+        "occurrences": [
+          {
+            "ancestorPath": "body > main > form > div.field > input#signup-email",
+            "artifactIds": [
+              "ss-1471cd3d6e06"
+            ],
+            "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"> <!-- TARGET -->\n</div>",
+            "elementId": "1471cd3d6e06-el-0",
+            "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+            "html": "<input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\">",
+            "selector": "#signup-email",
+            "target": [
+              "#signup-email"
+            ]
+          }
+        ],
+        "pageId": "page-004",
+        "pageUrl": "https://sample.invalid/signup.html",
+        "ruleId": "label",
+        "scanner": "axe",
+        "severity": "critical",
+        "severityRaw": "critical",
+        "title": "Form elements must have labels",
+        "userImpact": {
+          "affectedGroups": [
+            "blind",
+            "cognitive"
+          ],
+          "severity": "blocking",
+          "statement": "Screen reader users cannot identify what information to enter in this form field.",
+          "userStory": "When I focus on this input, I don't know what information is expected. Is it my email? Phone number? I have to guess."
+        },
+        "wcagTags": [
+          "wcag2a",
+          "wcag412",
+          "WCAG 1.3.1"
+        ]
+      },
+      {
+        "category": "wcag2a",
+        "description": "Ensure select element has an accessible name",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/select-name?application=playwright",
+        "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+        "id": "e3af3e13d504",
+        "occurrences": [
+          {
+            "ancestorPath": "html > body > main > select#billing-cycle",
+            "contextHtml": "<main>\n  <!-- ... -->\n  <p>Choose your billing cycle:</p>\n  <select id=\"billing-cycle\" name=\"billing-cycle\"><option>Monthly billing</option><option>Annual billing</option></select> <!-- TARGET -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <!-- ... -->\n</main>",
+            "elementId": "e3af3e13d504-el-0",
+            "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+            "html": "<select id=\"billing-cycle\" name=\"billing-cycle\"><option>Monthly billing</option><option>Annual billing</option></select>",
+            "selector": "#billing-cycle",
+            "target": [
+              "#billing-cycle"
+            ]
+          }
+        ],
+        "pageId": "page-003",
+        "pageUrl": "https://sample.invalid/pricing.html",
+        "ruleId": "select-name",
+        "scanner": "axe",
+        "severity": "critical",
+        "severityRaw": "critical",
+        "title": "Select element must have an accessible name",
+        "userImpact": {
+          "affectedGroups": [
+            "blind"
+          ],
+          "severity": "blocking",
+          "statement": "Screen reader users cannot understand what this dropdown is for."
+        },
+        "wcagTags": [
+          "wcag2a",
+          "wcag412"
+        ]
+      },
+      {
+        "category": "wcag2aa",
+        "description": "Ensure text/background contrast meets WCAG AA ratios.",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
+        "howToFix": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
+        "id": "74cd9a0218af",
+        "locationInfo": {
+          "docHeight": 887,
+          "position": 0.40586245772266066,
+          "scrollY": 0,
+          "viewportHeight": 720
+        },
+        "occurrences": [
+          {
+            "ancestorPath": "html > body > main > p#pricing-footnote.fineprint",
+            "artifactIds": [
+              "ss-74cd9a0218af"
+            ],
+            "contextHtml": "<main>\n  <!-- ... -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p> <!-- TARGET -->\n</main>",
+            "elementId": "74cd9a0218af-el-0",
+            "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
+            "html": "<p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p>",
+            "selector": "#pricing-footnote",
+            "target": [
+              "#pricing-footnote"
+            ]
+          }
+        ],
+        "pageId": "page-003",
+        "pageUrl": "https://sample.invalid/pricing.html",
+        "ruleId": "color-contrast",
+        "scanner": "axe",
+        "scannerData": {
+          "contrastData": {
+            "bgColor": "#ffffff",
+            "contrastRatio": 2.07,
+            "expectedContrastRatio": "4.5:1",
+            "fgColor": "#b4b4b4",
+            "fontSize": "10.5pt (14px)",
+            "fontWeight": "normal"
+          }
+        },
+        "severity": "serious",
+        "severityRaw": "serious",
+        "title": "Elements must meet minimum color contrast ratio thresholds",
+        "userImpact": {
+          "affectedGroups": [
+            "low-vision",
+            "all"
+          ],
+          "severity": "degraded",
+          "statement": "Low vision users and users in bright sunlight cannot read this text.",
+          "userStory": "The text is too faint for me to read comfortably. I have to strain my eyes or zoom in significantly."
+        },
+        "wcagTags": [
+          "wcag2aa",
+          "wcag143",
+          "WCAG 1.4.3"
+        ]
+      },
+      {
+        "category": "wcag2a",
+        "description": "Links need discernible text or aria-labels.",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/link-name?application=playwright",
+        "howToFix": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
+        "id": "4091e74b22b6",
+        "occurrences": [
+          {
+            "ancestorPath": "body > main > section > p > a#careers-link",
+            "artifactIds": [
+              "ss-4091e74b22b6"
+            ],
+            "contextHtml": "<p>\n  <a id=\"careers-link\" href=\"careers.html\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a> <!-- TARGET -->\n</p>",
+            "elementId": "4091e74b22b6-el-0",
+            "failureSummary": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
+            "html": "<a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a>",
+            "selector": "#careers-link",
+            "target": [
+              "#careers-link"
+            ]
+          }
+        ],
+        "pageId": "page-001",
+        "pageUrl": "https://sample.invalid/about.html",
+        "ruleId": "link-name",
+        "scanner": "axe",
+        "severity": "serious",
+        "severityRaw": "serious",
+        "title": "Links must have discernible text",
+        "userImpact": {
+          "affectedGroups": [
+            "blind"
+          ],
+          "severity": "blocking",
+          "statement": "Screen reader users cannot determine where this link goes or what it does.",
+          "userStory": "My screen reader announces 'link' but doesn't tell me what the link is for. I have to guess or skip it entirely."
+        },
+        "wcagTags": [
+          "wcag2a",
+          "wcag244",
+          "wcag412",
+          "WCAG 2.4.4"
+        ]
+      }
+    ],
+    "meta": {
+      "baseUrl": "https://sample.invalid",
+      "completedAt": "2000-01-01T00:00:00.000Z",
+      "durationMs": 0,
+      "jobId": "NORMALIZED",
+      "scannedAt": "2000-01-01T00:00:00.000Z"
+    },
+    "pages": [
+      {
+        "bySeverity": {
+          "critical": 0,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 1
+        },
+        "durationMs": 0,
+        "finishedAt": "2000-01-01T00:00:00.000Z",
+        "id": "page-001",
+        "issueCount": 1,
+        "pageOverview": {
+          "elements": [
+            {
+              "height": 42,
+              "heightPercent": 2.92,
+              "issueId": "4091e74b22b6",
+              "nodeIndex": 0,
+              "ruleId": "link-name",
+              "selector": "#careers-link",
+              "severity": "serious",
+              "width": 48,
+              "widthPercent": 1.88,
+              "x": 1103,
+              "xPercent": 43.1,
+              "y": 998,
+              "yPercent": 69.32
+            }
+          ],
+          "pageHeight": 1440,
+          "pageWidth": 2560,
+          "screenshotFilename": "page-overview-page-001.webp"
+        },
+        "path": "/about.html",
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "url": "https://sample.invalid/about.html"
+      },
+      {
+        "durationMs": 0,
+        "finishedAt": "2000-01-01T00:00:00.000Z",
+        "id": "page-002",
+        "issueCount": 0,
+        "pageOverview": {
+          "elements": [],
+          "pageHeight": 2590,
+          "pageWidth": 2560,
+          "screenshotFilename": "page-overview-page-002.webp"
+        },
+        "path": "/index.html",
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "url": "https://sample.invalid/index.html"
+      },
+      {
+        "bySeverity": {
+          "critical": 1,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 1
+        },
+        "durationMs": 0,
+        "finishedAt": "2000-01-01T00:00:00.000Z",
+        "id": "page-003",
+        "issueCount": 2,
+        "pageOverview": {
+          "elements": [
+            {
+              "height": 45,
+              "heightPercent": 2.52,
+              "issueId": "74cd9a0218af",
+              "nodeIndex": 0,
+              "ruleId": "color-contrast",
+              "selector": "#pricing-footnote",
+              "severity": "serious",
+              "width": 1824,
+              "widthPercent": 71.25,
+              "x": 368,
+              "xPercent": 14.37,
+              "y": 1378,
+              "yPercent": 77.68
+            },
+            {
+              "height": 82,
+              "heightPercent": 4.62,
+              "issueId": "e3af3e13d504",
+              "nodeIndex": 0,
+              "ruleId": "select-name",
+              "selector": "#billing-cycle",
+              "severity": "critical",
+              "width": 298,
+              "widthPercent": 11.64,
+              "x": 368,
+              "xPercent": 14.37,
+              "y": 661,
+              "yPercent": 37.28
+            }
+          ],
+          "pageHeight": 1774,
+          "pageWidth": 2560,
+          "screenshotFilename": "page-overview-page-003.webp"
+        },
+        "path": "/pricing.html",
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "url": "https://sample.invalid/pricing.html"
+      },
+      {
+        "bySeverity": {
+          "critical": 2,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 0
+        },
+        "durationMs": 0,
+        "finishedAt": "2000-01-01T00:00:00.000Z",
+        "id": "page-004",
+        "issueCount": 2,
+        "pageOverview": {
+          "elements": [
+            {
+              "height": 90,
+              "heightPercent": 4.95,
+              "issueId": "2b9345de2405",
+              "nodeIndex": 0,
+              "ruleId": "button-name",
+              "selector": "#suggest-workspace",
+              "severity": "critical",
+              "width": 80,
+              "widthPercent": 3.13,
+              "x": 1128,
+              "xPercent": 44.06,
+              "y": 934,
+              "yPercent": 51.18
+            },
+            {
+              "height": 90,
+              "heightPercent": 4.95,
+              "issueId": "1471cd3d6e06",
+              "nodeIndex": 0,
+              "ruleId": "label",
+              "selector": "#signup-email",
+              "severity": "critical",
+              "width": 840,
+              "widthPercent": 32.81,
+              "x": 368,
+              "xPercent": 14.37,
+              "y": 754,
+              "yPercent": 41.28
+            }
+          ],
+          "pageHeight": 1826,
+          "pageWidth": 2560,
+          "screenshotFilename": "page-overview-page-004.webp"
+        },
+        "path": "/signup.html",
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "url": "https://sample.invalid/signup.html"
+      }
+    ],
+    "scanners": [
+      {
+        "completedAt": "2000-01-01T00:00:00.000Z",
+        "durationMs": 0,
+        "id": "axe",
+        "issueCount": 5,
+        "name": "Axe Accessibility Scanner",
+        "reportPath": "NORMALIZED",
+        "resultsPath": "NORMALIZED",
+        "severity": {
+          "critical": 3,
+          "minor": 0,
+          "moderate": 0,
+          "serious": 2
+        },
+        "startedAt": "2000-01-01T00:00:00.000Z",
+        "status": "success",
+        "toolVersion": "0.1.0"
+      }
+    ],
+    "summary": {
+      "byScanner": {
+        "axe": 5
+      },
+      "bySeverity": {
+        "critical": 3,
+        "minor": 0,
+        "moderate": 0,
+        "serious": 2
+      },
+      "pagesScanned": 4,
+      "pagesWithIssues": 3,
+      "score": 70,
+      "scoreGrade": "C-",
+      "totalIssues": 5
+    },
+    "version": "2.1.0"
+  },
+  "schema": "stageflow-cli/report@v1",
+  "urls": [
+    "https://sample.invalid",
+    "https://sample.invalid/about.html",
+    "https://sample.invalid/index.html",
+    "https://sample.invalid/pricing.html",
+    "https://sample.invalid/signup.html"
+  ]
+}

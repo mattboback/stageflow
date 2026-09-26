@@ -7,8 +7,7 @@ import (
 
 // Router returns the HTTP router with all public routes configured.
 //
-// Every route is public except projects and the project baseline diff, which
-// require the API token. See middleware_auth.go for what else the token does.
+// Routes are public. See middleware_auth.go for the optional API token policy.
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
 	publicSubmissionLimiter := newPublicSubmissionRateLimiterFromEnv()
@@ -35,8 +34,6 @@ func (s *Server) Router() http.Handler {
 		publicSubmissionLimiter,
 	))
 	mux.HandleFunc("/api/v1/jobs/", s.handleJobsRoute)
-	mux.HandleFunc("/api/v1/projects", s.withMiddleware(requireAPIKey(s.handleProjects)))
-	mux.HandleFunc("/api/v1/projects/", s.withMiddleware(requireAPIKey(s.handleProjects)))
 	mux.HandleFunc("/api/v1/scanners", s.withMiddleware(s.handleListScanners))
 	mux.HandleFunc("/healthz", s.handleHealth)
 
@@ -92,13 +89,6 @@ func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
 	if len(parts) >= 2 && parts[1] == "stream" {
 		// SSE endpoint - no timeout middleware (long-lived connection).
 		s.withStreamMiddleware(s.handleJobStream)(w, r)
-
-		return
-	}
-
-	if len(parts) >= 2 && parts[1] == "diff" {
-		// The baseline diff belongs to projects, which require the token.
-		s.withMiddleware(requireAPIKey(s.handleJobStatus))(w, r)
 
 		return
 	}

@@ -151,40 +151,6 @@ func (c *Client) PostJSON(ctx context.Context, apiPath string, body any, dest an
 	return c.SendJSON(ctx, http.MethodPost, apiPath, body, dest)
 }
 
-func (c *Client) PatchJSON(ctx context.Context, apiPath string, body any, dest any) error {
-	return c.SendJSON(ctx, http.MethodPatch, apiPath, body, dest)
-}
-
-func (c *Client) DeleteJSON(ctx context.Context, apiPath string) error {
-	reqURL, err := c.BuildURL(apiPath)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, reqURL.String(), http.NoBody)
-	if err != nil {
-		return err
-	}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
-	}
-
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		bodyBytes, readErr := readResponseBody(resp.Body)
-		if readErr != nil {
-			return readErr
-		}
-
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return nil
-}
-
 func readResponseBody(reader io.Reader) ([]byte, error) {
 	body, err := io.ReadAll(reader)
 	if err != nil {

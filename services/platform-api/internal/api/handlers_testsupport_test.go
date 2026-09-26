@@ -1,8 +1,3 @@
-// Shared helpers for the api package's handler tests. They were previously
-// defined in handlers_coverage_test.go while being used from
-// baseline_storage_test.go and handlers_jobs_zip_upload_regression_test.go too,
-// so their home did not reflect their scope.
-
 package api
 
 import (

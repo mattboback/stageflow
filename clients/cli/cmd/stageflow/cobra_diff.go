@@ -95,7 +95,7 @@ func runDiffCommand(
 	result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
 	d := diffrender.FromResult(result, baselinePath, currentFile)
 
-	regressed, err := diffrender.EvaluateRegression(
+	shouldFail, err := diffrender.EvaluateRegression(
 		d,
 		failOnRegression,
 		failOnNew,
@@ -105,7 +105,7 @@ func runDiffCommand(
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	d.Regressed = regressed
+	d.Regressed = diffrender.IsRegressed(d)
 
 	format, err := root.renderFormat()
 	if err != nil {
@@ -122,7 +122,7 @@ func runDiffCommand(
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	if regressed {
+	if shouldFail {
 		return exitcode.Error{Code: 1}
 	}
 
@@ -257,6 +257,20 @@ func loadReportFile(path string) (render.ReportEnvelope, error) {
 	err = json.Unmarshal(data, &env)
 	if err != nil {
 		return render.ReportEnvelope{}, fmt.Errorf("parse %s: %w", path, err)
+	}
+
+	if env.Schema != "stageflow-cli/report@v1" || env.Report.Version == "" {
+		return render.ReportEnvelope{}, fmt.Errorf(
+			"parse %s: expected a scan --format json report envelope (stageflow-cli/report@v1)",
+			path,
+		)
+	}
+
+	if env.Filters.Truncated || env.Report.Summary.TotalIssues != len(env.Report.Issues) {
+		return render.ReportEnvelope{}, fmt.Errorf(
+			"parse %s: incomplete report; save scan output with --format json --max-issues 0, without severity/category filters or --summary-only",
+			path,
+		)
 	}
 
 	return env, nil

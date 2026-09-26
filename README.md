@@ -5,7 +5,7 @@
 StageFlow is a self-hostable **frontend quality platform**. It ships seven
 built-in scanners — accessibility, performance, SEO, links, security headers,
 social metadata, and content quality — behind a single report contract, and
-remembers a **baseline per project** so every scan can answer the question that
+compares **saved scan reports** so every deployment can answer the question that
 matters in CI: _did this change make the frontend worse?_
 
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any public URL and
@@ -79,19 +79,18 @@ open the committed fixture
 
 ## Regression Memory: The Headline Capability
 
-Register a project once, promote a known-good scan as its baseline, and every
-later scan diffs against it — new issues or a tripped severity gate exit
-non-zero, so it drops straight into CI:
+Save a known-good scan as a baseline, then compare each deployment's report:
 
 ```bash
-stageflow project create marketing-site --url https://example.com --scanner axe --scanner seo
-stageflow project scan marketing-site --format json     # streams live, then diffs vs. baseline
-stageflow project promote marketing-site --job-id <id>  # accept a run as the new reference
+stageflow scan ./dist --api https://stageflow.org --format json --max-issues 0 > baseline.json
+# After changing and rebuilding the site:
+stageflow scan ./dist --api https://stageflow.org --format json --max-issues 0 > current.json
+stageflow diff baseline.json current.json --fail-on-new=any
 ```
 
-The full lifecycle, a CI gate snippet, and auth details are in the [CLI guide](docs/cli.md#projects-and-baselines).
-API-owned projects and CI gates need a caller key on a self-hosted StageFlow;
-the public demo accepts anonymous one-off scans only.
+The comparison runs locally and exits `1` when the selected regression gate
+trips. Store baseline files in your repository or CI artifacts; replace them
+explicitly when accepting a change. See the [CLI guide](docs/cli.md#baselines-and-comparisons).
 
 Prefer the browser? The `/projects` workspace keeps named projects, completed
 runs, and manually promoted baselines in your browser's IndexedDB. It requires
@@ -100,7 +99,7 @@ local project history.
 
 ## Going Deeper
 
-- **CLI workflows** — one-off scans, local dev loops, registered projects, baselines, and CI gates: [docs/cli.md](docs/cli.md).
+- **CLI workflows** — one-off scans, local dev loops, saved baselines, and CI gates: [docs/cli.md](docs/cli.md).
 - **Architecture** — clients → Platform API → NATS JetStream → Orchestrator →
   per-job rootless Podman pods, with SSRF and ZIP-bomb guards at the trust
   boundaries: [docs/architecture.md](docs/architecture.md).
@@ -160,11 +159,11 @@ enable additional scanners when you need them.
 | ---------------------------- | ------------------------------------------------------------------------------ |
 | `clients/cli`                | Go CLI for scans, the dev loop, baselines, reports, and docs generation        |
 | `clients/web`                | React Router/Vite app for hosted/local browser workflows                       |
-| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, projects, reports            |
+| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, deletion tombstones, reports            |
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence              |
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |
-| `libs/contracts`             | JSON Schema contracts; Go/TypeScript types are generated during setup/CI       |
+| `libs/contracts`             | JSON Schema contracts with committed generated Go/TypeScript types       |
 | `infra`                      | Compose, MinIO, Grafana, scanner, and security examples                 |
 | `docs`                       | Canonical architecture, CLI, self-hosting, design, and reference documentation |
 
@@ -176,9 +175,8 @@ Install dependencies and local config:
 just setup
 ```
 
-From a fresh checkout, run `just setup` or `just generate-contracts` before
-running focused Go or TypeScript build commands directly; generated contract
-code is intentionally ignored.
+Generated contract code is committed. Run `just generate-contracts` after changing
+a schema; `just ci` checks that the generated code is current.
 
 Run the repository quality gate:
 
@@ -198,7 +196,7 @@ just shell-tests
 (cd services/scanner-runner && bun run ci)
 just dead-code
 just coverage
-just project-golden
+just scan-diff-golden
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for pull request expectations and

@@ -51,15 +51,13 @@ export default function Privacy() {
 						<h2>Retention and access</h2>
 						<p>
 							The hosted demo expires staging uploads and ordinary completed scan artifacts after{' '}
-							<strong>24 hours</strong>. Object-store deletion is asynchronous. Reports promoted as
-							project baselines stay in private persistent storage until replaced or the project is
-							deleted.
+							<strong>24 hours</strong>. Object-store deletion is asynchronous. Browser-local
+							project reports and baseline files stay on your device until you remove them.
 						</p>
 						<p>
 							The durable job record — submitted URL, scanner configuration, state, and timing — is
 							not automatically deleted in this release. The 24-hour promise applies to uploaded
-							files and ordinary generated object-store artifacts, not database records or promoted
-							baselines.
+							files and ordinary generated object-store artifacts, not database records.
 						</p>
 						<p>
 							A job ID is an unguessable bearer-style reference: anyone with the job or report URL
@@ -71,8 +69,8 @@ export default function Privacy() {
 						<h2>Delete</h2>
 						<p>
 							<strong>Delete this scan</strong> removes staging and artifact objects and hides the
-							job from later reads. It does not erase the durable job record. Promoted API project
-							baselines are not deleted by this action.
+							job from later reads. It does not erase the durable job record. Browser-saved reports
+							and local baseline files are not deleted by this action.
 						</p>
 					</section>
 

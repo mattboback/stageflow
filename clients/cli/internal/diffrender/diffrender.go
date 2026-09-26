@@ -1,6 +1,5 @@
 // Package diffrender owns the CLI-facing Diff envelope types along with all
-// rendering and pure regression evaluation logic used by `stageflow diff` and
-// the project-scan flows.
+// rendering and pure regression evaluation logic used by `stageflow diff`.
 package diffrender
 
 import (

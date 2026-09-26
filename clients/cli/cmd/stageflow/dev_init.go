@@ -158,7 +158,6 @@ func writeDevInitJSON(
 		NextSteps: []string{
 			"Read .stageflow/README.md.",
 			"Update dev.start.cmd, dev.ready.url, and scan.urls in .stageflow/config.yaml.",
-			"Optional: set stageflow.project to link a remote project for baseline diffs.",
 			"For localhost/private scans, start the local StageFlow stack with just dev up local and just dev init local.",
 			"Run stageflow dev doctor, then stageflow dev scan.",
 		},

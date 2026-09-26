@@ -16,15 +16,11 @@ services:
         VITE_TAGLINE: ${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}
     ports:
       - "127.0.0.1:3020:3020"
-    volumes:
-      # Golden-regression fixtures are mounted only in this local acceptance
-      # overlay; they are intentionally absent from the production web image.
-      - ../../qa/fixtures/project-golden/site:/usr/share/nginx/html/qa:ro,z
 
   platform-api:
     environment:
-      # Public scans need no key. Private targets (the golden fixtures on
-      # localhost) also need PLATFORM_API_TOKEN from .env, sent by the CLI as
+      # Public scans need no key. Private targets (local development URLs)
+      # also need PLATFORM_API_TOKEN from .env, sent by the CLI as
       # STAGEFLOW_API_KEY.
       PLATFORM_API_ALLOW_PRIVATE_TARGETS: "true"
       MINIO_PUBLIC_ENDPOINT: "localhost:9000"
