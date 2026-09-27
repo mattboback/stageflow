@@ -103,7 +103,7 @@ success: {type: load}
 func TestLoadRecipeFile_ServerOwnsSemanticValidation(t *testing.T) {
 	for _, body := range []string{
 		`{"login_url":"https://x","steps":[],"success":{"type":"load"}}`,
-		`{"mode":"unknown","steps":[{"type":"unknown","value":12}]}`,
+		`{"mode":"unknown","steps":[{"type":"unknown","value":"12"}]}`,
 		`{"mode":"form","steps":[{"type":"fill","value":{"unknown":"value"}}]}`,
 	} {
 		path := writeFile(t, t.TempDir(), "recipe.json", body)
@@ -144,6 +144,41 @@ func TestLoadRecipeFile_SafeResolutionErrors(t *testing.T) {
 		if strings.Contains(err.Error(), canary) {
 			t.Fatal("error disclosed recipe content")
 		}
+	}
+}
+
+func TestLoadRecipeFile_RejectsCoercedScalars(t *testing.T) {
+	for _, value := range []string{"123456", "00123", "1e3", "true", "2024-01-01", "null", "~"} {
+		path := writeFile(t, t.TempDir(), "recipe.yaml", "mode: form\nsteps:\n  - {type: fill, value: "+value+"}\n")
+
+		_, err := LoadRecipeFile(path)
+		if err == nil {
+			t.Fatalf("unquoted %s: expected a string-value error", value)
+		}
+
+		if !strings.Contains(err.Error(), "steps[0]") || strings.Contains(err.Error(), value) {
+			t.Fatalf("unquoted %s: unexpected error %q", value, err)
+		}
+	}
+
+	for _, value := range []string{"'123456'", `"00123"`, "'2024-01-01'", "plain-text"} {
+		path := writeFile(t, t.TempDir(), "recipe.yaml", "mode: form\nsteps:\n  - {type: fill, value: "+value+"}\n")
+
+		got, err := LoadRecipeFile(path)
+		testsupport.RequireNoErr(t, err)
+		testsupport.RequireEqual(t, got.Form.Steps[0]["value"], any(strings.Trim(value, `'"`)), "quoted value")
+	}
+}
+
+func TestLoadRecipeFile_UnsetErrorNamesVariable(t *testing.T) {
+	t.Setenv("STAGEFLOW_AUTH_NAMED_TEST", "")
+	testsupport.RequireNoErr(t, os.Unsetenv("STAGEFLOW_AUTH_NAMED_TEST"))
+
+	path := writeFile(t, t.TempDir(), "recipe.yaml", "steps: [{value: {from_env: STAGEFLOW_AUTH_NAMED_TEST}}]\n")
+
+	_, err := LoadRecipeFile(path)
+	if err == nil || !strings.Contains(err.Error(), "STAGEFLOW_AUTH_NAMED_TEST") {
+		t.Fatalf("expected the unset variable to be named, got %v", err)
 	}
 }
 

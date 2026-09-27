@@ -47,6 +47,17 @@ func LoadRecipeFile(path string) (*apiclient.JobAuthInput, error) {
 		return nil, errors.New("cannot decode --auth-recipe YAML/JSON")
 	}
 
+	// Check before the JSON round trip, which turns a YAML timestamp into a string.
+	if steps, ok := parsed["steps"].([]any); ok {
+		for i, raw := range steps {
+			if step, isMap := raw.(map[string]any); isMap {
+				if scalarErr := requireStringScalar(step); scalarErr != nil {
+					return nil, fmt.Errorf("--auth-recipe steps[%d]: %w", i, scalarErr)
+				}
+			}
+		}
+	}
+
 	wire, err := json.Marshal(parsed)
 	if err != nil {
 		return nil, errors.New("cannot encode --auth-recipe as JSON")
@@ -87,12 +98,29 @@ func resolveStepValue(step map[string]any) error {
 
 	value, present := os.LookupEnv(name)
 	if !present {
-		return errors.New("from_env variable is unset")
+		return fmt.Errorf("from_env variable %q is unset", name)
 	}
 
 	step["value"] = value
 
 	return nil
+}
+
+// requireStringScalar rejects the scalars YAML decodes as numbers, booleans,
+// timestamps or null. Unquoted, 00123 would be sent as 83 and a date would be
+// rewritten, so the scanner would type something the caller did not write.
+func requireStringScalar(step map[string]any) error {
+	value, hasValue := step["value"]
+	if !hasValue {
+		return nil
+	}
+
+	switch value.(type) {
+	case string, map[string]any, []any:
+		return nil
+	default:
+		return errors.New("value must be a string; quote it in YAML")
+	}
 }
 
 func readAuthFile(path, flag string) ([]byte, error) {

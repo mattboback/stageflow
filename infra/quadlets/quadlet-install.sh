@@ -24,7 +24,7 @@ SCANNER_OVERRIDES="${REPO_ROOT}/infra/scanners/scanners.yaml"
 
 # Units run the images tagged IMAGE_TAG. The control plane passes the commit
 # SHA it built; without one, render what is deployed now (the state file's
-# first line, which the control plane writes).
+# current= line, which the control plane writes).
 STATE_FILE="${STAGEFLOW_STATE_FILE:-${XDG_STATE_HOME:-${HOME}/.local/state}/stageflow/image-tags}"
 if [[ -z "${IMAGE_TAG:-}" && -f "${STATE_FILE}" ]]; then
   IMAGE_TAG="$(sed -n 's/^current=//p' "${STATE_FILE}")"

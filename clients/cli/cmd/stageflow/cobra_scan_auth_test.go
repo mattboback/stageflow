@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -303,7 +304,7 @@ func TestScanAuthRecipe_UnsetVariablePreventsHTTP(t *testing.T) {
 		"--auth-recipe",
 		path,
 	)
-	if code != 2 || !strings.Contains(stderr, "from_env variable is unset") {
+	if code != 2 || !strings.Contains(stderr, fmt.Sprintf("from_env variable %q is unset", name)) {
 		t.Fatalf("expected unset-variable failure; code=%d", code)
 	}
 
