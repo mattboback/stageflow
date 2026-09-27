@@ -55,19 +55,6 @@ async function fetchWithValidatedRedirects(
 }
 
 /**
- * Groups link check results by HTTP status code.
- */
-export function groupByStatus(links: LinkCheckResult[]): Record<string, LinkCheckResult[]> {
-	const grouped: Record<string, LinkCheckResult[]> = {};
-	for (const link of links) {
-		const status = String(link.status ?? 0);
-		grouped[status] ??= [];
-		grouped[status].push(link);
-	}
-	return grouped;
-}
-
-/**
  * Maps HTTP status code to issue severity.
  */
 export function getSeverityForStatus(status: number): IssueSeverity {

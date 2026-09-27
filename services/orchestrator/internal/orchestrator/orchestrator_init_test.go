@@ -14,10 +14,6 @@ func TestNewOrchestrator(t *testing.T) {
 	if orch == nil {
 		t.Fatal("Expected orchestrator to be non-nil")
 	}
-
-	if !orch.canTransition("PENDING", "EXTRACTING") {
-		t.Error("Expected domain transition helper to be initialized")
-	}
 }
 
 func TestNewOrchestratorInitializesStableRuntime(t *testing.T) {

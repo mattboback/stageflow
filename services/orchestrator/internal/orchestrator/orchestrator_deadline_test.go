@@ -64,7 +64,9 @@ func sweepJobInState(t *testing.T, state models.JobState, age time.Duration) (*m
 		Database:             db,
 		Publisher:            publisher,
 		DeadlinePollInterval: 5 * time.Millisecond,
-		SetupTimeout:         15 * time.Millisecond,
+		// The recent-job case must allow time for real Postgres I/O on a busy
+		// host. Expired fixtures are one minute old, so no wall-clock wait is needed.
+		SetupTimeout: 30 * time.Second,
 	})
 
 	job := &models.Job{

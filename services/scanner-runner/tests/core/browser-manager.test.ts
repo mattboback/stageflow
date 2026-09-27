@@ -41,7 +41,6 @@ vi.mock('node:fs', () => ({
 }));
 
 vi.mock('../../src/core/target-validation', () => ({
-	shouldEnforceRuntimeTargetValidation: vi.fn().mockReturnValue(true),
 	validateTargetURLForPolicy: vi.fn().mockResolvedValue(undefined)
 }));
 

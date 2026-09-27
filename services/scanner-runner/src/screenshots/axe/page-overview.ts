@@ -39,7 +39,6 @@ import {
    well left two exports that nothing resolved. */
 export { loadPageOverviewConfig } from './page-overview-config';
 export type { PageOverviewConfigInput } from './page-overview-config';
-export { clipPageOverviewBounds, computeScreenshotScaleFactor } from './page-overview-geometry';
 
 const DEBUG_SCREENSHOTS = getEnvBool('A11Y_DEBUG_SCREENSHOTS', false);
 const log = createLogger('PageOverview');

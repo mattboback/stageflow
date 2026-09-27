@@ -7,110 +7,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LinkCheckerScanner } from '../../../src/scanners/link-checker';
 import {
-	type LinkCheckResult,
-	LinkCheckerScanner,
 	checkSingleLink,
-	getSeverityForStatus,
-	groupByStatus
-} from '../../../src/scanners/link-checker';
+	getSeverityForStatus
+} from '../../../src/scanners/link-checker/validation';
 
 const scanner = new LinkCheckerScanner();
 
 describe('LinkCheckerScanner', () => {
-	describe('groupByStatus', () => {
-		it('groups links by HTTP status code', () => {
-			const links: LinkCheckResult[] = [
-				{
-					url: 'http://a.com',
-					status: 200,
-					error: null,
-					redirects: [],
-					responseTime: 100
-				},
-				{
-					url: 'http://b.com',
-					status: 200,
-					error: null,
-					redirects: [],
-					responseTime: 50
-				},
-				{
-					url: 'http://c.com',
-					status: 404,
-					error: null,
-					redirects: [],
-					responseTime: 200
-				}
-			];
-
-			const result = groupByStatus(links);
-
-			expect(result['200']).toHaveLength(2);
-			expect(result['404']).toHaveLength(1);
-		});
-
-		it('groups connection errors as status 0', () => {
-			const links: LinkCheckResult[] = [
-				{
-					url: 'http://a.com',
-					status: null,
-					error: 'ECONNREFUSED',
-					redirects: [],
-					responseTime: 0
-				},
-				{
-					url: 'http://b.com',
-					status: null,
-					error: 'Timeout',
-					redirects: [],
-					responseTime: 0
-				}
-			];
-
-			const result = groupByStatus(links);
-
-			expect(result['0']).toHaveLength(2);
-		});
-
-		it('handles empty input', () => {
-			const result = groupByStatus([]);
-			expect(Object.keys(result)).toHaveLength(0);
-		});
-
-		it('groups 5xx errors together', () => {
-			const links: LinkCheckResult[] = [
-				{
-					url: 'http://a.com',
-					status: 500,
-					error: null,
-					redirects: [],
-					responseTime: 100
-				},
-				{
-					url: 'http://b.com',
-					status: 502,
-					error: null,
-					redirects: [],
-					responseTime: 100
-				},
-				{
-					url: 'http://c.com',
-					status: 503,
-					error: null,
-					redirects: [],
-					responseTime: 100
-				}
-			];
-
-			const result = groupByStatus(links);
-
-			expect(result['500']).toHaveLength(1);
-			expect(result['502']).toHaveLength(1);
-			expect(result['503']).toHaveLength(1);
-		});
-	});
-
 	describe('getSeverityForStatus', () => {
 		it("returns 'serious' for connection errors (status 0)", () => {
 			expect(getSeverityForStatus(0)).toBe('serious');

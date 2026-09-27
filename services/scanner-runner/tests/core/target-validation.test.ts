@@ -4,7 +4,6 @@ import {
 	BlockedTargetError,
 	type TargetAddressResolver,
 	buildTargetValidationPolicy,
-	shouldEnforceRuntimeTargetValidation,
 	validateTargetURLForPolicy,
 	validateRuntimeTargetURL
 } from '../../src/core/target-validation';
@@ -255,13 +254,5 @@ describe('target validation', () => {
 		await expect(validateTargetURLForPolicy(targetURL, policy)).rejects.toBeInstanceOf(
 			BlockedTargetError
 		);
-	});
-
-	it('enforces validation only for URL jobs', () => {
-		process.env.SCAN_URLS = '["https://example.com"]';
-		expect(shouldEnforceRuntimeTargetValidation()).toBe(true);
-
-		delete process.env.SCAN_URLS;
-		expect(shouldEnforceRuntimeTargetValidation()).toBe(false);
 	});
 });

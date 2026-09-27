@@ -5,8 +5,6 @@ on:
   workflow_run:
     workflows: ['CI']
     types: [completed]
-  schedule:
-    - cron: '23 8 * * *'
 
 permissions:
   contents: read
@@ -33,9 +31,7 @@ jobs:
   golden:
     name: Golden ZIP Scan Diff
     runs-on: ubuntu-latest
-    # Chain off CI only for real code movement on main. CI also runs on a daily
-    # cron, and this suite has its own nightly schedule, so without the `event`
-    # check a scheduled CI run would trigger a second full stack run each day.
+    # Chain off successful pushes; manual CI runs do not trigger another stack.
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&

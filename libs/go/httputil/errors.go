@@ -69,15 +69,6 @@ func NewValidationError(field, message, suggestion string) ErrorDetail {
 	}
 }
 
-// NewNotFoundError returns a consistent not-found payload for resources.
-func NewNotFoundError(resource string) ErrorDetail {
-	return ErrorDetail{
-		Code:       ErrCodeNotFound,
-		Message:    resource + " not found",
-		Suggestion: "Please verify the ID is correct or check if the resource still exists.",
-	}
-}
-
 // NewJobNotFoundError includes job ID context for client UX.
 func NewJobNotFoundError(jobID string) ErrorDetail {
 	return ErrorDetail{
@@ -103,19 +94,6 @@ func NewRateLimitError(retryAfterSeconds int, limit, window string) ErrorDetail 
 	}
 }
 
-// NewPayloadTooLargeError reports max size in metadata for debugging.
-func NewPayloadTooLargeError(maxSize string) ErrorDetail {
-	return ErrorDetail{
-		Code:       ErrCodePayloadTooLarge,
-		Message:    "Request payload is too large",
-		Details:    "Maximum allowed size: " + maxSize,
-		Suggestion: "Reduce the size of your upload or split it into smaller files.",
-		Meta: map[string]string{
-			"max_size": maxSize,
-		},
-	}
-}
-
 // NewUnsupportedModuleError lists supported modules for self-serve correction.
 func NewUnsupportedModuleError(module string, supported []string) ErrorDetail {
 	supportedStr := strings.Join(supported, ", ")
@@ -129,41 +107,11 @@ func NewUnsupportedModuleError(module string, supported []string) ErrorDetail {
 	}
 }
 
-// NewInvalidFormatError reports expected formats for client correction.
-func NewInvalidFormatError(field, expected string) ErrorDetail {
-	return ErrorDetail{
-		Code:       ErrCodeInvalidFormat,
-		Message:    "Invalid format for " + field,
-		Details:    "Expected format: " + expected,
-		Field:      field,
-		Suggestion: "Please check the API documentation for the correct format.",
-	}
-}
-
-// NewInternalError is the fallback for unclassified failures.
-func NewInternalError(details string) ErrorDetail {
-	return ErrorDetail{
-		Code:       ErrCodeInternalError,
-		Message:    "An internal error occurred while processing your request",
-		Details:    details,
-		Suggestion: "Please try again later. If the problem persists, contact support.",
-	}
-}
-
 // NewDatabaseError returns a generic database failure payload.
 func NewDatabaseError() ErrorDetail {
 	return ErrorDetail{
 		Code:       ErrCodeDatabaseError,
 		Message:    "A database error occurred",
-		Suggestion: "Please try again. If the problem persists, contact support.",
-	}
-}
-
-// NewStorageError returns a generic storage failure payload.
-func NewStorageError(operation string) ErrorDetail {
-	return ErrorDetail{
-		Code:       ErrCodeStorageError,
-		Message:    "A storage error occurred during " + operation,
 		Suggestion: "Please try again. If the problem persists, contact support.",
 	}
 }

@@ -173,55 +173,6 @@ func TestGetEnvBool(t *testing.T) {
 	}
 }
 
-func TestGetEnvDuration(t *testing.T) {
-	tests := []struct {
-		name         string
-		key          string
-		defaultValue time.Duration
-		envValue     string
-		want         time.Duration
-	}{
-		{
-			name:         "returns parsed duration when valid",
-			key:          "TEST_DURATION",
-			defaultValue: 5 * time.Minute,
-			envValue:     "10m",
-			want:         10 * time.Minute,
-		},
-		{
-			name:         "returns default when not set",
-			key:          "TEST_DURATION",
-			defaultValue: 5 * time.Minute,
-			envValue:     "",
-			want:         5 * time.Minute,
-		},
-		{
-			name:         "returns default when invalid",
-			key:          "TEST_DURATION",
-			defaultValue: 5 * time.Minute,
-			envValue:     "invalid",
-			want:         5 * time.Minute,
-		},
-		{
-			name:         "parses complex duration",
-			key:          "TEST_DURATION",
-			defaultValue: 1 * time.Second,
-			envValue:     "1h30m45s",
-			want:         1*time.Hour + 30*time.Minute + 45*time.Second,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(tt.key, tt.envValue)
-
-			if got := GetEnvDuration(tt.key, tt.defaultValue); got != tt.want {
-				t.Errorf("GetEnvDuration() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestStrictEnvHelpersRejectMalformedExplicitValues(t *testing.T) {
 	t.Run("int", func(t *testing.T) {
 		t.Setenv("TEST_STRICT_INT", "nope")

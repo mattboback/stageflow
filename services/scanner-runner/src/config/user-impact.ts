@@ -15,26 +15,6 @@ export interface UserImpact {
 	userStory?: string;
 }
 
-const userGroupLabels: Record<UserGroup, string> = {
-	blind: 'Blind users',
-	'low-vision': 'Low vision users',
-	motor: 'Motor-impaired users',
-	cognitive: 'Cognitive disability users',
-	deaf: 'Deaf/hard of hearing users',
-	vestibular: 'Vestibular disorder users',
-	all: 'All users'
-};
-
-const userGroupIcons: Record<UserGroup, string> = {
-	blind: '👁️',
-	'low-vision': '🔍',
-	motor: '🖐️',
-	cognitive: '🧠',
-	deaf: '👂',
-	vestibular: '💫',
-	all: '👥'
-};
-
 /**
  * Mapping of axe-core rule IDs to user impact information.
  * Based on common accessibility violations and their real-world effects.
@@ -424,37 +404,4 @@ export function getUserImpact(ruleId: string | undefined): UserImpact {
 		return defaultImpact;
 	}
 	return ruleImpacts[ruleId] ?? defaultImpact;
-}
-
-/**
- * Get icon for a user group
- */
-export function getUserGroupIcon(group: UserGroup): string {
-	return userGroupIcons[group];
-}
-
-/**
- * Format affected groups as a readable string
- */
-export function formatAffectedGroups(groups: UserGroup[]): string {
-	if (groups.includes('all')) {
-		return 'All users';
-	}
-
-	const labels = groups.map((group) => userGroupLabels[group]);
-	if (labels.length === 0) {
-		return '';
-	}
-	if (labels.length === 1) {
-		return labels[0] ?? '';
-	}
-	if (labels.length === 2) {
-		return `${labels[0]} and ${labels[1]}`;
-	}
-
-	const last = labels.pop();
-	if (!last) {
-		return labels.join(', ');
-	}
-	return `${labels.join(', ')}, and ${last}`;
 }

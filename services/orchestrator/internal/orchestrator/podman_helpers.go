@@ -106,37 +106,3 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 		slog.Debug("Container exited successfully", "component", component, "container_id", containerID)
 	}
 }
-
-func truncateLogs(logs string, n int) string {
-	cleaned := sanitizeLogText(logs)
-
-	if n <= 0 {
-		return ""
-	}
-
-	runes := []rune(cleaned)
-	if len(runes) <= n {
-		return cleaned
-	}
-
-	return "..." + string(runes[len(runes)-n:])
-}
-
-func sanitizeLogText(logs string) string {
-	valid := strings.ToValidUTF8(logs, "")
-
-	return strings.Map(func(r rune) rune {
-		switch r {
-		case '\n', '\r', '\t':
-			return r
-		case 0:
-			return -1
-		}
-
-		if r < 0x20 || r == 0x7f {
-			return -1
-		}
-
-		return r
-	}, valid)
-}

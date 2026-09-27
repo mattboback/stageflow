@@ -60,11 +60,6 @@ func IsTerminal(state models.JobState) bool {
 	return state == models.JobStateDone || state == models.JobStateFailed
 }
 
-// IsLaterThan compares lifecycle ranks using Order.
-func IsLaterThan(a, b models.JobState) bool {
-	return Order(a) > Order(b)
-}
-
 // StateRankSQL returns a CASE expression mirroring Order for DB queries.
 func StateRankSQL() string {
 	return `(CASE state
@@ -85,14 +80,4 @@ func CanTransition(from, to models.JobState) bool {
 	}
 
 	return slices.Contains(allowed, to)
-}
-
-// AllowedTransitions exposes the lifecycle contract for callers.
-func AllowedTransitions(from models.JobState) []models.JobState {
-	allowed, ok := allowedTransitions[from]
-	if !ok {
-		return []models.JobState{}
-	}
-
-	return allowed
 }

@@ -149,15 +149,28 @@ async function expectNoSeriousViolations(page: Page, surface: string) {
  * the palette, and routing it through React would make a rendering bug in the
  * control look like a contrast failure on every surface.
  */
-async function auditBothThemes(page: Page, surface: string) {
-	await expectNoSeriousViolations(page, `${surface} (light)`);
-
+async function switchToDarkTheme(page: Page) {
 	await page.evaluate(() => {
 		document.documentElement.dataset.theme = 'dark';
 	});
 	await page.waitForFunction(
 		() => getComputedStyle(document.documentElement).colorScheme === 'dark'
 	);
+	// color-scheme switches immediately, but controls animate their foreground
+	// and background colors. Audit the final palette after those transitions.
+	await page.waitForFunction(() =>
+		document
+			.getAnimations()
+			.every(
+				(animation) => !(animation instanceof CSSTransition) || animation.playState !== 'running'
+			)
+	);
+}
+
+async function auditBothThemes(page: Page, surface: string) {
+	await expectNoSeriousViolations(page, `${surface} (light)`);
+
+	await switchToDarkTheme(page);
 	await expectNoSeriousViolations(page, `${surface} (dark)`);
 }
 
@@ -244,12 +257,7 @@ test.describe('the narrow-screen menu', () => {
 		await expect(header.getByRole('link', { name: 'Demo report' })).toBeVisible();
 
 		await expectNoSeriousViolations(page, 'mobile menu (light)');
-		await page.evaluate(() => {
-			document.documentElement.dataset.theme = 'dark';
-		});
-		await page.waitForFunction(
-			() => getComputedStyle(document.documentElement).colorScheme === 'dark'
-		);
+		await switchToDarkTheme(page);
 		await expectNoSeriousViolations(page, 'mobile menu (dark)');
 
 		// Focus starts inside the panel and Tab cycles rather than escaping to the

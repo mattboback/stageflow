@@ -2,29 +2,12 @@ package messaging
 
 import (
 	"context"
-	"errors"
 	"time"
 )
 
-// Delivery disposition for messages whose handler returned an error.
-//
-// Every durable consumer is created with MaxDeliver, after which JetStream stops
-// redelivering. Until now the subscriber NAK'd unconditionally, so a permanent
-// failure simply stopped happening: no log at the boundary, no advisory, and any
-// state the handler had not finished writing stayed as it was. A production job
-// spent its whole delivery budget failing and was left in PENDING indefinitely.
-//
-// Two things address that here, and neither changes behavior for a handler that
-// does nothing:
-//
-//   - The final delivery is terminated with a reason instead of NAK'd. That is a
-//     no-op as far as redelivery goes -- JetStream was going to drop it anyway --
-//     but it is loud, and the server publishes the reason on its terminated
-//     advisory subject.
-//   - Handlers that can record their own terminal outcome can ask whether they
-//     are on the last attempt (IsFinalDelivery) or declare an error permanent
-//     (Terminal), rather than burning the remaining budget on a retry that cannot
-//     succeed.
+// Failed deliveries retry with an escalating delay until MaxDeliver. The final
+// delivery is terminated with a reason so exhausted jobs do not disappear
+// silently. Handlers can use IsFinalDelivery to persist their terminal outcome.
 
 // MaxDeliver is the delivery ceiling every durable consumer is created with.
 // Exported so handlers can reason about their own retry budget.
@@ -32,33 +15,6 @@ const MaxDeliver = defaultConsumerMaxDeliver
 
 // maxConsumerNAKDelay caps the escalating redelivery delay.
 const maxConsumerNAKDelay = 2 * time.Minute
-
-// terminalError marks an error as permanent.
-type terminalError struct{ err error }
-
-func (e *terminalError) Error() string { return e.err.Error() }
-func (e *terminalError) Unwrap() error { return e.err }
-
-// Terminal marks err as permanent, so the subscriber terminates the message
-// instead of NAK-ing it for redelivery.
-//
-// Use it when retrying provably cannot help -- a malformed payload, or work whose
-// terminal outcome the handler has already recorded. Retryable failures should be
-// returned bare so they keep their delivery budget.
-func Terminal(err error) error {
-	if err == nil {
-		return nil
-	}
-
-	return &terminalError{err: err}
-}
-
-// IsTerminal reports whether err was marked permanent with Terminal.
-func IsTerminal(err error) bool {
-	var terminal *terminalError
-
-	return errors.As(err, &terminal)
-}
 
 // IsFinalDelivery reports whether the message being handled is on its last
 // attempt, so a handler can record a terminal outcome instead of letting the
@@ -111,13 +67,8 @@ const (
 	dispositionTerminate
 )
 
-// decideDisposition terminates on the final delivery or on an explicitly terminal
-// error, and retries otherwise.
-func decideDisposition(deliveries uint64, handleErr error) disposition {
-	if IsTerminal(handleErr) {
-		return dispositionTerminate
-	}
-
+// decideDisposition terminates on the final delivery and retries otherwise.
+func decideDisposition(deliveries uint64) disposition {
 	// deliveries is 0 when metadata is unavailable; treat that as retryable rather
 	// than guessing that the budget is spent.
 	if deliveries >= MaxDeliver {

@@ -6,8 +6,6 @@ import type { BrowserContext, Page } from 'playwright';
 
 import type { TargetValidationPolicy } from './target-validation';
 
-export type WaitStrategyType = 'load' | 'domcontentloaded' | 'networkidle' | 'selector' | 'timeout';
-
 export interface WaitStrategyLoad {
 	type: 'load';
 }
@@ -39,8 +37,6 @@ export type WaitStrategy =
 	| WaitStrategyTimeout;
 
 export const DEFAULT_WAIT_STRATEGY: WaitStrategy = { type: 'load' };
-
-export type ActionType = 'click' | 'fill' | 'select' | 'hover' | 'wait' | 'scroll' | 'keyboard';
 
 /**
  * Reference to an environment variable resolved at execution time inside the
@@ -344,8 +340,3 @@ export interface ScannerMetadata {
 	version: string;
 	description?: string;
 }
-
-export type ScannerCategory =
-	'accessibility' | 'performance' | 'security' | 'seo' | 'quality' | 'custom';
-
-export type OutputFormat = 'json' | 'html' | 'csv';

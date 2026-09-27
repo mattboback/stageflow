@@ -176,10 +176,6 @@ export function redactURLUserInfo(rawURL: string): string {
 	}
 }
 
-export function shouldEnforceRuntimeTargetValidation(): boolean {
-	return Boolean(process.env.SCAN_URLS);
-}
-
 function normalizeOrigin(rawURL: string): string | null {
 	try {
 		const target = parseTargetURL(rawURL);

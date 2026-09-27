@@ -322,7 +322,7 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
 
     exit "$refresh_status"
 
-[group('quality'), doc('Run local CI: lint + test + vuln')]
+[group('quality'), doc('Run local CI: contracts, lint, tests, vulnerabilities, secrets, dead code, and browser e2e')]
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -333,10 +333,34 @@ ci:
     echo "==> Generated contracts..."
     ./devtools/scripts/check-contracts-generated.sh
 
-    echo "==> Ensuring Go lint and vuln tools..."
+    echo "==> Contract fixtures and TypeScript packages..."
+    (cd libs/contracts/events && {{bun}} install --frozen-lockfile && {{bun}} run validate:fixtures)
+    for dir in libs/contracts/report libs/contracts/provenance libs/contracts/scanner-manifest; do
+        (cd "$dir" && {{bun}} install --frozen-lockfile && {{bun}} run build && {{bun}} run typecheck)
+    done
+
+    echo "==> Ensuring pinned quality tools..."
     {{go}} install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
     {{go}} install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+    {{go}} install github.com/zricethezav/gitleaks/v8@v8.30.1
+    {{go}} install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
     export PATH="$({{go}} env GOPATH)/bin:$PATH"
+
+    echo "==> Workflow lint..."
+    command -v shellcheck >/dev/null
+    actionlint -color -shellcheck="$(command -v shellcheck)"
+
+    echo "==> Full Git history secrets scan..."
+    if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+        echo "Full-history secret scanning requires a complete checkout; run git fetch --unshallow." >&2
+        exit 1
+    fi
+    gitleaks git --redact --no-banner --log-opts=--all
+
+    echo "==> Pre-commit hooks..."
+    python3 -m venv .cache/pre-commit
+    .cache/pre-commit/bin/python -m pip install --disable-pip-version-check 'pre-commit==4.6.0'
+    .cache/pre-commit/bin/pre-commit run --all-files
 
     echo "==> Go build..."
     {{go}} build ./...
@@ -370,6 +394,12 @@ ci:
 
     echo "==> Scanner-runner audit..."
     (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf --ignore GHSA-vcc3-ghjq-m6fr --ignore GHSA-528h-pc64-c93x)
+
+    echo "==> Production dead-code gates..."
+    just dead-code
+
+    echo "==> Frontend browser e2e..."
+    just web-e2e
 
 [group('release'), doc('Publish CLI release VERSION (vX.Y.Z) by hand: tag HEAD first and push the tag')]
 cli-release VERSION:
@@ -464,19 +494,28 @@ shell-tests:
     bash devtools/scripts/tests/build-images.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
+    bash devtools/scripts/tests/secrets-gate.test.sh
+    node --test devtools/scripts/tests/check-knip.test.mjs
     bash infra/minio/provision_test.sh
     bash qa/e2e/scan-helpers.test.sh
 
-[group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
+[group('quality'), doc('Run production Knip and Go deadcode with reviewed temporary allowances')]
 dead-code:
     #!/usr/bin/env bash
-    set -uo pipefail
-    status=0
-    echo "==> scanner-runner..."
-    (cd {{scanner_dir}} && {{bun}} run find-dead-code) || status=$?
-    echo "==> clients/web..."
-    (cd {{web_dir}} && {{bun}} run find-dead-code) || status=$?
-    exit "$status"
+    set -euo pipefail
+    {{go}} install golang.org/x/tools/cmd/deadcode@v0.47.0
+    export PATH="$({{go}} env GOPATH)/bin:$PATH"
+    node devtools/scripts/check-knip.mjs
+    ./devtools/scripts/check-go-deadcode.py --self-test
+    ./devtools/scripts/check-go-deadcode.py
+
+[group('quality'), doc('Run browser e2e against a fresh production web build')]
+web-e2e:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{web_dir}}
+    {{bun}} x playwright install chromium
+    CI=1 PORT=4173 {{bun}} run test:e2e
 
 [group('quality'), doc('Run ZIP sample scans and compare their regression diff against goldens')]
 scan-diff-golden:

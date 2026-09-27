@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-	SEVERITY_LEVELS,
-	incrementSeverityCount,
-	normalizeSeverity
-} from '../../src/utils/severity';
+import { SEVERITY_LEVELS, normalizeSeverity } from '../../src/utils/severity';
 
 describe('SEVERITY_LEVELS', () => {
 	it('contains all expected severity levels', () => {
@@ -55,48 +51,5 @@ describe('normalizeSeverity', () => {
 	it('returns fallback for empty string', () => {
 		expect(normalizeSeverity('')).toBe('info');
 		expect(normalizeSeverity('   ')).toBe('info');
-	});
-});
-
-describe('incrementSeverityCount', () => {
-	it('increments critical count', () => {
-		const counts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-		incrementSeverityCount(counts, 'critical');
-		expect(counts.critical).toBe(1);
-	});
-
-	it('increments serious count', () => {
-		const counts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-		incrementSeverityCount(counts, 'serious');
-		expect(counts.serious).toBe(1);
-	});
-
-	it('increments moderate count', () => {
-		const counts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-		incrementSeverityCount(counts, 'moderate');
-		expect(counts.moderate).toBe(1);
-	});
-
-	it('increments minor count', () => {
-		const counts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-		incrementSeverityCount(counts, 'minor');
-		expect(counts.minor).toBe(1);
-	});
-
-	it('skips info severity', () => {
-		const counts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-		incrementSeverityCount(counts, 'info');
-		expect(counts).toEqual({ critical: 0, serious: 0, moderate: 0, minor: 0 });
-	});
-
-	it('accumulates multiple increments', () => {
-		const counts = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-		incrementSeverityCount(counts, 'critical');
-		incrementSeverityCount(counts, 'critical');
-		incrementSeverityCount(counts, 'minor');
-		incrementSeverityCount(counts, 'info');
-		incrementSeverityCount(counts, 'serious');
-
-		expect(counts).toEqual({ critical: 2, serious: 1, moderate: 0, minor: 1 });
 	});
 });

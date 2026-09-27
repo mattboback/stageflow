@@ -5,7 +5,8 @@ import { join } from 'node:path';
 
 import type { ScannerLogger, StorageConfig } from '../../src/core/types';
 
-import { MinioStorageProvider, parseMinioEndpoint } from '../../src/core/storage-provider';
+import { MinioStorageProvider } from '../../src/core/storage-provider';
+import { parseMinioEndpoint } from '../../src/core/storage-provider/endpoint';
 
 const fileMocks = vi.hoisted(() => ({
 	getFileSize: vi.fn().mockResolvedValue(123),

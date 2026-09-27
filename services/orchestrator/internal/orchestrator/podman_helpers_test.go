@@ -9,36 +9,6 @@ import (
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
-func TestTruncateLogsPreservesUTF8Runes(t *testing.T) {
-	t.Parallel()
-
-	got := truncateLogs("alpha🙂beta", 5)
-
-	want := "...🙂beta"
-	if got != want {
-		t.Fatalf("truncateLogs() = %q, want %q", got, want)
-	}
-}
-
-func TestTruncateLogsSanitizesInvalidUTF8AndControls(t *testing.T) {
-	t.Parallel()
-
-	got := truncateLogs("ok\x00\xff\x01\nend", 20)
-
-	want := "ok\nend"
-	if got != want {
-		t.Fatalf("truncateLogs() = %q, want %q", got, want)
-	}
-}
-
-func TestTruncateLogsHandlesNonPositiveLimit(t *testing.T) {
-	t.Parallel()
-
-	if got := truncateLogs("abc", 0); got != "" {
-		t.Fatalf("truncateLogs() = %q, want empty string", got)
-	}
-}
-
 func TestSpawnMonitorContainerBoundsScannerWait(t *testing.T) {
 	t.Parallel()
 

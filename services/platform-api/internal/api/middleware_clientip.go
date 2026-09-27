@@ -32,11 +32,6 @@ func trustedProxies() []*net.IPNet {
 	return trustedProxiesVal
 }
 
-func resetTrustedProxiesForTest() {
-	trustedProxiesOnce = sync.Once{}
-	trustedProxiesVal = nil
-}
-
 func loadTrustedProxies() []*net.IPNet {
 	raw := strings.TrimSpace(os.Getenv("PLATFORM_API_TRUSTED_PROXIES"))
 	if raw == "" {

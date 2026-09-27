@@ -106,52 +106,6 @@ func TestCanTransition(t *testing.T) {
 	}
 }
 
-func TestAllowedTransitions(t *testing.T) {
-	pending := AllowedTransitions(models.JobStatePending)
-	if len(pending) != 3 {
-		t.Errorf("AllowedTransitions(PENDING) = %d items, want 3", len(pending))
-	}
-
-	done := AllowedTransitions(models.JobStateDone)
-	if len(done) != 0 {
-		t.Errorf("AllowedTransitions(DONE) = %d items, want 0", len(done))
-	}
-
-	failed := AllowedTransitions(models.JobStateFailed)
-	if len(failed) != 0 {
-		t.Errorf("AllowedTransitions(FAILED) = %d items, want 0", len(failed))
-	}
-
-	unknown := AllowedTransitions("UNKNOWN")
-	if len(unknown) != 0 {
-		t.Errorf("AllowedTransitions(UNKNOWN) = %d items, want 0", len(unknown))
-	}
-}
-
-func TestIsLaterThan(t *testing.T) {
-	tests := []struct {
-		a, b     models.JobState
-		expected bool
-	}{
-		{models.JobStateExtracting, models.JobStatePending, true},
-		{models.JobStateReady, models.JobStateExtracting, true},
-		{models.JobStateDone, models.JobStateScanning, true},
-		{models.JobStatePending, models.JobStateExtracting, false},
-		{models.JobStatePending, models.JobStatePending, false},
-		{models.JobStateDone, models.JobStateFailed, false},
-	}
-
-	for _, tt := range tests {
-		name := string(tt.a) + " > " + string(tt.b)
-		t.Run(name, func(t *testing.T) {
-			got := IsLaterThan(tt.a, tt.b)
-			if got != tt.expected {
-				t.Errorf("IsLaterThan(%s, %s) = %v, want %v", tt.a, tt.b, got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestStateRankSQL(t *testing.T) {
 	sql := StateRankSQL()
 	if sql == "" {

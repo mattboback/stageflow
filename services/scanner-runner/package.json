@@ -54,7 +54,7 @@
     "ci": "bun run format:check && bun run lint:strict && bun run type-check && bun run smoke:runtime && bun run test:coverage",
     "smoke:runtime": "node scripts/smoke-lighthouse-runtime.mjs",
     "knip": "knip",
-    "find-dead-code": "knip --cache --cache-location ../../.cache/knip-scanner",
+    "find-dead-code": "node ../../devtools/scripts/check-knip.mjs services/scanner-runner",
     "test": "bun run prepare:contracts && vitest run",
     "test:coverage": "bun run prepare:contracts && vitest run --coverage --no-file-parallelism"
   },
@@ -79,7 +79,7 @@
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
-    "knip": "^6.36.0",
+    "knip": "6.36.0",
     "prettier": "^3.9.8",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.0",

@@ -44,13 +44,6 @@ function nodesFromSelectors(
 }
 
 export type { LinkCheckResult, LinkInfo } from './types';
-// Re-export for backwards compatibility and testing
-export {
-	checkSingleLink,
-	getSeverityForStatus,
-	groupByStatus,
-	isUnverifiableStatus
-} from './validation';
 
 export class LinkCheckerScanner extends ScannerBase {
 	readonly metadata = {

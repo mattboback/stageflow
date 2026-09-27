@@ -9,13 +9,11 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/logging"
-	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
 	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
-	domainjobs "github.com/mattboback/stageflow/services/orchestrator/internal/domain/jobs"
 )
 
 const (
@@ -245,10 +243,6 @@ func (o *Orchestrator) backgroundWithCorrelation(ctx context.Context) context.Co
 	}
 
 	return bg
-}
-
-func (o *Orchestrator) canTransition(from, to models.JobState) bool {
-	return domainjobs.CanTransitionTo(from, to)
 }
 
 // Start launches background maintenance loops.

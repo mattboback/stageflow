@@ -104,22 +104,6 @@ func TestNewValidationError(t *testing.T) {
 	}
 }
 
-func TestNewNotFoundError(t *testing.T) {
-	err := NewNotFoundError("Job")
-
-	if err.Code != ErrCodeNotFound {
-		t.Errorf("expected code %s, got %s", ErrCodeNotFound, err.Code)
-	}
-
-	if err.Message != "Job not found" {
-		t.Errorf("expected message 'Job not found', got '%s'", err.Message)
-	}
-
-	if err.Suggestion == "" {
-		t.Error("expected suggestion to be set")
-	}
-}
-
 func TestNewJobNotFoundError(t *testing.T) {
 	err := NewJobNotFoundError("job-123")
 
@@ -160,22 +144,6 @@ func TestNewRateLimitError(t *testing.T) {
 	}
 }
 
-func TestNewPayloadTooLargeError(t *testing.T) {
-	err := NewPayloadTooLargeError("100MB")
-
-	if err.Code != ErrCodePayloadTooLarge {
-		t.Errorf("expected code %s, got %s", ErrCodePayloadTooLarge, err.Code)
-	}
-
-	if err.Details != "Maximum allowed size: 100MB" {
-		t.Errorf("expected details to contain max size, got '%s'", err.Details)
-	}
-
-	if err.Meta == nil || err.Meta["max_size"] != "100MB" {
-		t.Error("expected Meta to contain max_size")
-	}
-}
-
 func TestNewUnsupportedModuleError(t *testing.T) {
 	err := NewUnsupportedModuleError("unknown-scanner", []string{"axe", "lighthouse", "seo"})
 
@@ -196,42 +164,6 @@ func TestNewUnsupportedModuleError(t *testing.T) {
 	}
 }
 
-func TestNewInvalidFormatError(t *testing.T) {
-	err := NewInvalidFormatError("date", "YYYY-MM-DD")
-
-	if err.Code != ErrCodeInvalidFormat {
-		t.Errorf("expected code %s, got %s", ErrCodeInvalidFormat, err.Code)
-	}
-
-	if err.Message != "Invalid format for date" {
-		t.Errorf("expected message, got '%s'", err.Message)
-	}
-
-	if err.Details != "Expected format: YYYY-MM-DD" {
-		t.Errorf("expected details to contain format, got '%s'", err.Details)
-	}
-
-	if err.Field != "date" {
-		t.Errorf("expected field 'date', got '%s'", err.Field)
-	}
-}
-
-func TestNewInternalError(t *testing.T) {
-	err := NewInternalError("Database connection failed")
-
-	if err.Code != ErrCodeInternalError {
-		t.Errorf("expected code %s, got %s", ErrCodeInternalError, err.Code)
-	}
-
-	if err.Details != "Database connection failed" {
-		t.Errorf("expected details, got '%s'", err.Details)
-	}
-
-	if err.Suggestion == "" {
-		t.Error("expected suggestion to be set")
-	}
-}
-
 func TestNewDatabaseError(t *testing.T) {
 	err := NewDatabaseError()
 
@@ -241,22 +173,6 @@ func TestNewDatabaseError(t *testing.T) {
 
 	if err.Message == "" {
 		t.Error("expected message to be set")
-	}
-
-	if err.Suggestion == "" {
-		t.Error("expected suggestion to be set")
-	}
-}
-
-func TestNewStorageError(t *testing.T) {
-	err := NewStorageError("upload")
-
-	if err.Code != ErrCodeStorageError {
-		t.Errorf("expected code %s, got %s", ErrCodeStorageError, err.Code)
-	}
-
-	if err.Message != "A storage error occurred during upload" {
-		t.Errorf("expected message to contain operation, got '%s'", err.Message)
 	}
 
 	if err.Suggestion == "" {

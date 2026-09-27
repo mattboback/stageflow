@@ -2,47 +2,9 @@ package messaging
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 )
-
-func TestTerminalWrapsAndUnwraps(t *testing.T) {
-	t.Parallel()
-
-	base := errors.New("malformed payload")
-	wrapped := Terminal(base)
-
-	if !IsTerminal(wrapped) {
-		t.Fatal("expected the wrapped error to be reported as terminal")
-	}
-
-	if !errors.Is(wrapped, base) {
-		t.Fatal("expected the original error to remain unwrappable")
-	}
-
-	if wrapped.Error() != base.Error() {
-		t.Fatalf("Error() = %q, want the original message %q", wrapped.Error(), base.Error())
-	}
-
-	if IsTerminal(base) {
-		t.Fatal("a bare error must not be treated as terminal")
-	}
-
-	if Terminal(nil) != nil {
-		t.Fatal("Terminal(nil) must stay nil so handlers can wrap unconditionally")
-	}
-}
-
-func TestIsTerminalFindsAWrappedTerminalError(t *testing.T) {
-	t.Parallel()
-
-	// Handlers wrap errors on the way out; the marker has to survive that.
-	err := errors.Join(errors.New("context"), Terminal(errors.New("permanent")))
-	if !IsTerminal(err) {
-		t.Fatal("expected a terminal error nested in a chain to be found")
-	}
-}
 
 func TestIsFinalDelivery(t *testing.T) {
 	t.Parallel()
@@ -125,24 +87,20 @@ func TestNakDelayGivesTheBudgetRoomToRecover(t *testing.T) {
 func TestDecideDisposition(t *testing.T) {
 	t.Parallel()
 
-	retryable := errors.New("podman socket unavailable")
-
 	for _, testCase := range []struct {
 		name       string
 		deliveries uint64
-		err        error
 		want       disposition
 	}{
-		{name: "retryable, budget left", deliveries: 1, err: retryable, want: dispositionRetry},
-		{name: "retryable, one left", deliveries: MaxDeliver - 1, err: retryable, want: dispositionRetry},
-		{name: "retryable, budget spent", deliveries: MaxDeliver, err: retryable, want: dispositionTerminate},
-		{name: "terminal on first attempt", deliveries: 1, err: Terminal(retryable), want: dispositionTerminate},
-		{name: "no metadata is retryable", deliveries: 0, err: retryable, want: dispositionRetry},
+		{name: "retryable, budget left", deliveries: 1, want: dispositionRetry},
+		{name: "retryable, one left", deliveries: MaxDeliver - 1, want: dispositionRetry},
+		{name: "retryable, budget spent", deliveries: MaxDeliver, want: dispositionTerminate},
+		{name: "no metadata is retryable", deliveries: 0, want: dispositionRetry},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := decideDisposition(testCase.deliveries, testCase.err); got != testCase.want {
+			if got := decideDisposition(testCase.deliveries); got != testCase.want {
 				t.Fatalf("decideDisposition(%d) = %v, want %v", testCase.deliveries, got, testCase.want)
 			}
 		})

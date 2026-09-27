@@ -70,6 +70,17 @@ EOF
 grep -Fxq 'MINIO_ROOT_USER=file-root' "$temp_dir/podman.log"
 grep -Fxq 'MINIO_STAGING_RETENTION_DAYS=7' "$temp_dir/podman.log"
 grep -Fxq 'MINIO_ARTIFACT_RETENTION_DAYS=9' "$temp_dir/podman.log"
+# Bootstrap reuses the pinned Compose server image, which includes mc.
+grep -Fxq 'docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z' "$temp_dir/podman.log"
+(
+	cd "$temp_dir/launcher"
+	TEST_PODMAN_LOG="$temp_dir/custom-image.log" \
+		PODMAN="$temp_dir/bin/fake-podman" \
+		MC_IMAGE=localhost/minio-client:custom \
+		"$SCRIPT_DIR/init-buckets.sh"
+)
+grep -Fxq 'localhost/minio-client:custom' "$temp_dir/custom-image.log"
+
 
 # A selected external file replaces .env, including optional values it omits.
 cat >>"$temp_dir/launcher/.env" <<'EOF'

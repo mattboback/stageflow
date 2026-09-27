@@ -285,14 +285,13 @@ func disposeFailedMessage(
 		deliveries = meta.NumDelivered
 	}
 
-	if decideDisposition(deliveries, handleErr) == dispositionTerminate {
+	if decideDisposition(deliveries) == dispositionTerminate {
 		slog.Error("Terminating message; giving up",
 			"stream", stream,
 			"subject", subject,
 			"consumer", consumerName,
 			"deliveries", deliveries,
 			"max_deliveries", MaxDeliver,
-			"terminal_error", IsTerminal(handleErr),
 			"error", handleErr,
 		)
 

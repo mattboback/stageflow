@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-# Provisions MinIO buckets, app policy, and app user. Runs *inside* the official
-# minio/mc container (mc on PATH), launched by init-buckets.sh.
+# Provisions MinIO buckets, app policy, and app user. Runs inside the pinned
+# MinIO image (mc on PATH), launched by init-buckets.sh.
 # Idempotent and safe to re-run.
 
 MINIO_ENDPOINT="${MINIO_ENDPOINT:-http://127.0.0.1:9000}"

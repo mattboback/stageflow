@@ -29,7 +29,7 @@ func TestRecoveredPanicIsRedelivered(t *testing.T) {
 		func(ctx context.Context, _ *events.JobCreatedPayload) error {
 			meta, ok := sharedmsg.ReceivedEventMetaFromContext(ctx)
 			if !ok || meta == nil {
-				return sharedmsg.Terminal(context.Canceled)
+				return context.Canceled
 			}
 
 			deliveries <- *meta

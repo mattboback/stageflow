@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Host launcher: provisions required MinIO buckets, app policy, and app user by
-# running provision.sh inside the official MinIO client container. The actual
-# provisioning logic lives in provision.sh.
+# running provision.sh with mc bundled in the same pinned image as Compose.
+# MC_IMAGE can override that image; it must provide mc and a POSIX shell.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -32,7 +32,7 @@ for name in "${!env_overrides[@]}"; do
 done
 
 PODMAN=${PODMAN:-podman}
-MC_IMAGE=${MC_IMAGE:-docker.io/minio/mc}
+MC_IMAGE=${MC_IMAGE:-docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z}
 MC_NETWORK=${MC_NETWORK:-host}
 MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://127.0.0.1:9000}
 

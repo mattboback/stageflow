@@ -3,11 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PageOverviewViolation } from '../../../src/screenshots/axe/types';
 
 import {
-	clipPageOverviewBounds,
 	collectPageOverviewTargets,
-	computeScreenshotScaleFactor,
 	loadPageOverviewConfig
 } from '../../../src/screenshots/axe/page-overview';
+
+import {
+	clipPageOverviewBounds,
+	computeScreenshotScaleFactor
+} from '../../../src/screenshots/axe/page-overview-geometry';
 
 describe('collectPageOverviewTargets', () => {
 	it('respects maxElements and skips missing selectors', () => {

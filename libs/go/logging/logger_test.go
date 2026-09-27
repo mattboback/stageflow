@@ -53,18 +53,6 @@ func TestContextHelpers(t *testing.T) {
 	if got := RunID(ctx); got != "run-789" {
 		t.Errorf("RunID() = %q, want %q", got, "run-789")
 	}
-
-	// Test WithScanner
-	ctx = WithScanner(ctx, "axe")
-	if got := Scanner(ctx); got != "axe" {
-		t.Errorf("Scanner() = %q, want %q", got, "axe")
-	}
-
-	// Test WithComponent
-	ctx = WithComponent(ctx, "orchestrator")
-	if got := Component(ctx); got != "orchestrator" {
-		t.Errorf("Component() = %q, want %q", got, "orchestrator")
-	}
 }
 
 func TestContextHelpersEmptyContext(t *testing.T) {
@@ -81,14 +69,6 @@ func TestContextHelpersEmptyContext(t *testing.T) {
 	if got := RunID(ctx); got != "" {
 		t.Errorf("RunID() = %q, want empty string", got)
 	}
-
-	if got := Scanner(ctx); got != "" {
-		t.Errorf("Scanner() = %q, want empty string", got)
-	}
-
-	if got := Component(ctx); got != "" {
-		t.Errorf("Component() = %q, want empty string", got)
-	}
 }
 
 func TestFromContext(t *testing.T) {
@@ -96,11 +76,10 @@ func TestFromContext(t *testing.T) {
 	ctx = WithJobID(ctx, "job-123")
 	ctx = WithRequestID(ctx, "req-456")
 	ctx = WithRunID(ctx, "run-789")
-	ctx = WithScanner(ctx, "lighthouse")
 
 	attrs := FromContext(ctx)
-	if len(attrs) != 4 {
-		t.Errorf("FromContext() returned %d attrs, want 4", len(attrs))
+	if len(attrs) != 3 {
+		t.Errorf("FromContext() returned %d attrs, want 3", len(attrs))
 	}
 
 	// Check that expected attributes are present
@@ -119,10 +98,6 @@ func TestFromContext(t *testing.T) {
 
 	if attrMap["run_id"] != "run-789" {
 		t.Errorf("run_id = %q, want %q", attrMap["run_id"], "run-789")
-	}
-
-	if attrMap["scanner_type"] != "lighthouse" {
-		t.Errorf("scanner_type = %q, want %q", attrMap["scanner_type"], "lighthouse")
 	}
 }
 
@@ -145,7 +120,6 @@ func TestLWithContext(t *testing.T) {
 
 	ctx := context.Background()
 	ctx = WithJobID(ctx, "job-test")
-	ctx = WithScanner(ctx, "axe")
 
 	L(ctx).Info("test message")
 
@@ -161,10 +135,6 @@ func TestLWithContext(t *testing.T) {
 
 	if logEntry["job_id"] != "job-test" {
 		t.Errorf("job_id = %v, want %q", logEntry["job_id"], "job-test")
-	}
-
-	if logEntry["scanner_type"] != "axe" {
-		t.Errorf("scanner_type = %v, want %q", logEntry["scanner_type"], "axe")
 	}
 }
 

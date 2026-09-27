@@ -1,6 +1,6 @@
 // Package logging provides structured logging utilities for StageFlow services.
 // It wraps Go's log/slog package to provide consistent JSON logging with
-// domain-specific context fields like job_id, scanner_type, and request_id.
+// domain-specific context fields like job_id, run_id, and request_id.
 package logging
 
 import (
@@ -15,8 +15,6 @@ const (
 	jobIDKey     contextKey = "job_id"
 	requestIDKey contextKey = "request_id"
 	runIDKey     contextKey = "run_id"
-	scannerKey   contextKey = "scanner_type"
-	componentKey contextKey = "component"
 )
 
 // Config controls JSON slog behavior shared across services.
@@ -75,16 +73,6 @@ func WithRunID(ctx context.Context, runID string) context.Context {
 	return context.WithValue(ctx, runIDKey, runID)
 }
 
-// WithScanner attaches scanner_type to context for structured logging.
-func WithScanner(ctx context.Context, scannerType string) context.Context {
-	return context.WithValue(ctx, scannerKey, scannerType)
-}
-
-// WithComponent attaches component to context for structured logging.
-func WithComponent(ctx context.Context, component string) context.Context {
-	return context.WithValue(ctx, componentKey, component)
-}
-
 // JobID reads job_id from context, returning "" when absent.
 func JobID(ctx context.Context) string {
 	if v := ctx.Value(jobIDKey); v != nil {
@@ -118,28 +106,6 @@ func RunID(ctx context.Context) string {
 	return ""
 }
 
-// Scanner reads scanner_type from context, returning "" when absent.
-func Scanner(ctx context.Context) string {
-	if v := ctx.Value(scannerKey); v != nil {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-
-	return ""
-}
-
-// Component reads component from context, returning "" when absent.
-func Component(ctx context.Context) string {
-	if v := ctx.Value(componentKey); v != nil {
-		if s, ok := v.(string); ok {
-			return s
-		}
-	}
-
-	return ""
-}
-
 // FromContext extracts context values and returns slog attributes for them.
 // This allows callers to include context values in their log entries.
 func FromContext(ctx context.Context) []slog.Attr {
@@ -155,14 +121,6 @@ func FromContext(ctx context.Context) []slog.Attr {
 
 	if runID := RunID(ctx); runID != "" {
 		attrs = append(attrs, slog.String("run_id", runID))
-	}
-
-	if scanner := Scanner(ctx); scanner != "" {
-		attrs = append(attrs, slog.String("scanner_type", scanner))
-	}
-
-	if component := Component(ctx); component != "" {
-		attrs = append(attrs, slog.String("component", component))
 	}
 
 	return attrs

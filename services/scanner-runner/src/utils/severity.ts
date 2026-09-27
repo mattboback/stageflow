@@ -17,13 +17,3 @@ export function normalizeSeverity(
 
 	return fallback;
 }
-
-export function incrementSeverityCount(
-	counts: Record<Exclude<IssueSeverity, 'info'>, number>,
-	severity: IssueSeverity
-): void {
-	if (severity === 'info') {
-		return;
-	}
-	counts[severity] += 1;
-}
