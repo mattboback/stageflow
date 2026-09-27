@@ -15,6 +15,7 @@ const (
 	ErrCodeInvalidRequest    ErrorCode = "INVALID_REQUEST"
 	ErrCodeValidationFailed  ErrorCode = "VALIDATION_FAILED"
 	ErrCodeNotFound          ErrorCode = "NOT_FOUND"
+	ErrCodeMethodNotAllowed  ErrorCode = "METHOD_NOT_ALLOWED"
 	ErrCodeUnauthorized      ErrorCode = "UNAUTHORIZED"
 	ErrCodeForbidden         ErrorCode = "FORBIDDEN"
 	ErrCodeRateLimitExceeded ErrorCode = "RATE_LIMIT_EXCEEDED"
@@ -28,6 +29,7 @@ const (
 	// Server errors (5xx).
 	ErrCodeInternalError      ErrorCode = "INTERNAL_ERROR"
 	ErrCodeServiceUnavailable ErrorCode = "SERVICE_UNAVAILABLE"
+	ErrCodeRequestTimeout     ErrorCode = "REQUEST_TIMEOUT"
 	ErrCodeDatabaseError      ErrorCode = "DATABASE_ERROR"
 	ErrCodeStorageError       ErrorCode = "STORAGE_ERROR"
 	ErrCodeMessagingError     ErrorCode = "MESSAGING_ERROR"
@@ -85,7 +87,7 @@ func NewRateLimitError(retryAfterSeconds int, limit, window string) ErrorDetail 
 		Code:       ErrCodeRateLimitExceeded,
 		Message:    "Rate limit exceeded",
 		Details:    "You have exceeded the allowed number of requests.",
-		Suggestion: "Please wait before submitting another request. Consider upgrading your plan for higher limits.",
+		Suggestion: "Wait for the Retry-After interval, then try again.",
 		RetryAfter: retryAfterSeconds,
 		Meta: map[string]string{
 			"limit":  limit,
@@ -114,4 +116,32 @@ func NewDatabaseError() ErrorDetail {
 		Message:    "A database error occurred",
 		Suggestion: "Please try again. If the problem persists, contact support.",
 	}
+}
+
+// codeForStatus gives RespondError's plain messages a machine-readable code.
+func codeForStatus(statusCode int) ErrorCode {
+	switch statusCode {
+	case http.StatusBadRequest:
+		return ErrCodeInvalidRequest
+	case http.StatusUnauthorized:
+		return ErrCodeUnauthorized
+	case http.StatusForbidden:
+		return ErrCodeForbidden
+	case http.StatusNotFound:
+		return ErrCodeNotFound
+	case http.StatusMethodNotAllowed:
+		return ErrCodeMethodNotAllowed
+	case http.StatusRequestEntityTooLarge:
+		return ErrCodePayloadTooLarge
+	case http.StatusTooManyRequests:
+		return ErrCodeRateLimitExceeded
+	case http.StatusServiceUnavailable:
+		return ErrCodeServiceUnavailable
+	}
+
+	if statusCode >= http.StatusInternalServerError {
+		return ErrCodeInternalError
+	}
+
+	return ErrCodeInvalidRequest
 }

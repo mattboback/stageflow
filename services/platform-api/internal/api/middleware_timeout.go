@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const timeoutBody = `{"error":"request timeout","code":"REQUEST_TIMEOUT"}`
+const timeoutBody = `{"error":{"code":"REQUEST_TIMEOUT","message":"Request timed out"}}`
 
 // requestReadDeadlineMiddleware overrides the server-wide request-body
 // deadline for endpoints that intentionally accept longer uploads. Keeping

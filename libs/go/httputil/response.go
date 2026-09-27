@@ -16,11 +16,10 @@ func RespondJSON(w http.ResponseWriter, statusCode int, data any) {
 	}
 }
 
-// RespondError is a minimal {"error": "..."} helper for endpoints that don't use structured errors.
+// RespondError writes the structured error shape with a code derived from the
+// status, for errors that need no field, details or suggestion.
 func RespondError(w http.ResponseWriter, statusCode int, message string) {
-	RespondJSON(w, statusCode, map[string]string{
-		"error": message,
-	})
+	RespondStructuredError(w, statusCode, ErrorDetail{Code: codeForStatus(statusCode), Message: message})
 }
 
 // RespondOK is a convenience wrapper for 200 JSON responses.

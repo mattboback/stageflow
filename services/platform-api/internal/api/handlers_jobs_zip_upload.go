@@ -125,7 +125,7 @@ type zipUploadState struct {
 
 func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 
 		return
 	}
@@ -282,12 +282,8 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 
 	modules, err := s.normalizeModules(state.modulesValues)
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported scanner module") {
-			supported := s.listSupportedModuleIDs()
-
-			return nil, newClientDetailError(
-				httputil.NewUnsupportedModuleError(extractModuleName(err.Error()), supported),
-			)
+		if detail, ok := s.unsupportedModuleDetail(err); ok {
+			return nil, newClientDetailError(detail)
 		}
 
 		return nil, newClientMessageError(err.Error())

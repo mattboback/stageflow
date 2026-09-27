@@ -20,7 +20,7 @@ type discoverRequest struct {
 // never opts into private targets.
 func (s *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 
 		return
 	}

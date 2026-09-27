@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
@@ -189,7 +190,7 @@ func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
 func getFlusher(w http.ResponseWriter) (http.Flusher, bool) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		httputil.RespondError(w, http.StatusInternalServerError, "Streaming not supported")
 
 		return nil, false
 	}
@@ -226,7 +227,7 @@ func (s *Server) sendInitialStatus(
 	data, marshalErr := json.Marshal(job)
 	if marshalErr != nil {
 		logging.Error(ctx, "Failed to marshal initial status for SSE", "error", marshalErr)
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		httputil.RespondError(w, http.StatusInternalServerError, "Internal error")
 
 		return false
 	}
@@ -288,10 +289,10 @@ func (s *Server) watchJobStream(
 	rec, sub, err := s.jobStatus.Watch(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
-			http.Error(w, "Job not found", http.StatusNotFound)
+			httputil.RespondError(w, http.StatusNotFound, "Job not found")
 		} else {
 			logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
-			http.Error(w, "Internal error", http.StatusInternalServerError)
+			httputil.RespondError(w, http.StatusInternalServerError, "Internal error")
 		}
 
 		return nil, nil, false
@@ -388,14 +389,14 @@ func (s *Server) streamJobUpdates(
 // handleJobStream provides Server-Sent Events for real-time job status updates.
 func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 
 		return
 	}
 
 	jobID, ok := jobIDFromJobPath(r.URL.Path, "stream")
 	if !ok {
-		http.Error(w, "Invalid path", http.StatusBadRequest)
+		httputil.RespondError(w, http.StatusBadRequest, "Invalid path")
 
 		return
 	}

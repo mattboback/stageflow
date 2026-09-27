@@ -10,7 +10,7 @@ import (
 // handleListScanners returns scanner metadata from the shared scanner registry.
 func (s *Server) handleListScanners(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 
 		return
 	}

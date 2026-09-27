@@ -2,8 +2,10 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"strings"
+
+	"github.com/mattboback/stageflow/libs/go/httputil"
+	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 func splitCSV(raw string) []string {
@@ -38,18 +40,22 @@ func (s *Server) normalizeModules(explicit []string) ([]string, error) {
 		return []string{scannerTypeAxe}, nil
 	}
 
-	resolved, err := s.scannerRegistry.ResolveModulesStrict(explicit)
-	if err != nil {
-		supportedIDs := s.listSupportedModuleIDs()
+	return s.scannerRegistry.ResolveModulesStrict(explicit)
+}
 
-		return nil, fmt.Errorf(
-			"unsupported scanner module '%s' (supported: %s)",
-			extractModuleName(err.Error()),
-			strings.Join(supportedIDs, ", "),
-		)
+// unsupportedModuleDetail describes a registry ModuleError for the client.
+func (s *Server) unsupportedModuleDetail(err error) (httputil.ErrorDetail, bool) {
+	var moduleErr *scannerregistry.ModuleError
+	if !errors.As(err, &moduleErr) {
+		return httputil.ErrorDetail{}, false
 	}
 
-	return resolved, nil
+	module := moduleErr.Module
+	if module == "" {
+		module = "unknown"
+	}
+
+	return httputil.NewUnsupportedModuleError(module, s.listSupportedModuleIDs()), true
 }
 
 func (s *Server) listSupportedModuleIDs() []string {
@@ -65,19 +71,4 @@ func (s *Server) listSupportedModuleIDs() []string {
 	}
 
 	return ids
-}
-
-// extractModuleName assumes unsupported-module errors wrap the name in single quotes.
-func extractModuleName(errMsg string) string {
-	start := strings.Index(errMsg, "'")
-	if start == -1 {
-		return "unknown"
-	}
-
-	end := strings.Index(errMsg[start+1:], "'")
-	if end == -1 {
-		return "unknown"
-	}
-
-	return errMsg[start+1 : start+1+end]
 }

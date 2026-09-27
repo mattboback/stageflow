@@ -52,18 +52,38 @@ func (r *Registry) resolveToken(token string) tokenResolution {
 	return tokenResolution{}
 }
 
+// ModuleError reports a requested module the registry cannot run. Module is
+// empty when the request selected no scanner at all.
+type ModuleError struct {
+	Module  string
+	message string
+}
+
+func (e *ModuleError) Error() string {
+	return e.message
+}
+
 func (r *Registry) resolveStrictToken(token string) ([]string, error) {
 	res := r.resolveToken(token)
 	if !res.ok {
-		return nil, fmt.Errorf("unknown scanner module '%s'", token)
+		return nil, &ModuleError{
+			Module:  token,
+			message: fmt.Sprintf("unknown scanner module '%s'", token),
+		}
 	}
 
 	if res.kind == tokenKindScanner && len(res.ids) == 0 {
-		return nil, fmt.Errorf("scanner '%s' is disabled", res.disabledID)
+		return nil, &ModuleError{
+			Module:  res.disabledID,
+			message: fmt.Sprintf("scanner '%s' is disabled", res.disabledID),
+		}
 	}
 
 	if res.kind == tokenKindCategory && len(res.ids) == 0 {
-		return nil, fmt.Errorf("no enabled scanners in category '%s'", token)
+		return nil, &ModuleError{
+			Module:  token,
+			message: fmt.Sprintf("no enabled scanners in category '%s'", token),
+		}
 	}
 
 	return res.ids, nil

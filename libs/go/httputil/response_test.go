@@ -40,13 +40,13 @@ func TestRespondError(t *testing.T) {
 		t.Errorf("expected status 400, got %d", w.Code)
 	}
 
-	var result map[string]string
+	var result ErrorResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 
-	if result["error"] != "invalid input" {
-		t.Errorf("expected error 'invalid input', got %q", result["error"])
+	if result.Error.Message != "invalid input" || result.Error.Code != "INVALID_REQUEST" {
+		t.Errorf("expected INVALID_REQUEST %q, got %+v", "invalid input", result.Error)
 	}
 }
 
@@ -99,12 +99,12 @@ func TestRespondNotFound(t *testing.T) {
 		t.Errorf("expected status 404, got %d", w.Code)
 	}
 
-	var result map[string]string
+	var result ErrorResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 
-	if result["error"] != "Job not found" {
-		t.Errorf("expected error 'Job not found', got %q", result["error"])
+	if result.Error.Message != "Job not found" || result.Error.Code != "NOT_FOUND" {
+		t.Errorf("expected NOT_FOUND %q, got %+v", "Job not found", result.Error)
 	}
 }

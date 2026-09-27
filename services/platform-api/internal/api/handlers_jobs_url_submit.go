@@ -74,7 +74,7 @@ type jobURLAuthFormRecipe struct {
 // handleJobURLSubmit accepts public URL jobs with optional literal authentication.
 func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
 
 		return
 	}
@@ -289,11 +289,8 @@ func (s *Server) validateJobURLSubmitRequest(
 func (s *Server) normalizeURLSubmitModules(w http.ResponseWriter, req jobURLSubmitRequest) ([]string, bool) {
 	modules, err := s.normalizeModules(req.Modules)
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported scanner module") {
-			supported := s.listSupportedModuleIDs()
-
-			httputil.RespondStructuredError(w, http.StatusBadRequest,
-				httputil.NewUnsupportedModuleError(extractModuleName(err.Error()), supported))
+		if detail, ok := s.unsupportedModuleDetail(err); ok {
+			httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
 		} else {
 			httputil.RespondError(w, http.StatusBadRequest, err.Error())
 		}

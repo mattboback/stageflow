@@ -1,7 +1,6 @@
 package scannerregistry
 
 import (
-	"errors"
 	"sort"
 	"strings"
 )
@@ -66,7 +65,7 @@ func (r *Registry) ResolveModulesStrict(modules []string) ([]string, error) {
 			return []string{defaultModuleAxe}, nil
 		}
 
-		return nil, errors.New("no scanners selected")
+		return nil, &ModuleError{message: "no scanners selected"}
 	}
 
 	seen := make(map[string]bool)
@@ -92,7 +91,7 @@ func (r *Registry) ResolveModulesStrict(modules []string) ([]string, error) {
 	}
 
 	if len(result) == 0 {
-		return nil, errors.New("no scanners selected")
+		return nil, &ModuleError{message: "no scanners selected"}
 	}
 
 	sort.Strings(result)

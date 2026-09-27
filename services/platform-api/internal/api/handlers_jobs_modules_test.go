@@ -1,8 +1,15 @@
 package api
 
 import (
+	"bytes"
+	"encoding/json"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
@@ -82,54 +89,6 @@ func TestSplitCSV(t *testing.T) {
 				if result[i] != v {
 					t.Errorf("at index %d: expected %q, got %q", i, v, result[i])
 				}
-			}
-		})
-	}
-}
-
-func TestExtractModuleName(t *testing.T) {
-	tests := []struct {
-		name     string
-		errMsg   string
-		expected string
-	}{
-		{
-			name:     "extracts name from quoted error",
-			errMsg:   "unsupported module 'badscanner'",
-			expected: "badscanner",
-		},
-		{
-			name:     "extracts first quoted section",
-			errMsg:   "module 'foo' is invalid, check 'bar'",
-			expected: "foo",
-		},
-		{
-			name:     "returns unknown when no quotes",
-			errMsg:   "module badscanner is invalid",
-			expected: "unknown",
-		},
-		{
-			name:     "returns unknown when only opening quote",
-			errMsg:   "module 'badscanner is invalid",
-			expected: "unknown",
-		},
-		{
-			name:     "handles empty quoted string",
-			errMsg:   "module '' is invalid",
-			expected: "",
-		},
-		{
-			name:     "handles complex module names",
-			errMsg:   "unsupported module 'my-scanner-v2'",
-			expected: "my-scanner-v2",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := extractModuleName(tt.errMsg)
-			if result != tt.expected {
-				t.Errorf("expected %q, got %q", tt.expected, result)
 			}
 		})
 	}
@@ -283,5 +242,50 @@ func newTestServerForModules(t *testing.T) *Server {
 		},
 		jobStatus:       jobstatus.New(nil),
 		scannerRegistry: registry,
+	}
+}
+
+func TestIntakeRejectsUnknownModuleWithTypedError(t *testing.T) {
+	server, _, _ := newTestServer(t)
+
+	urlReq := httptest.NewRequest(
+		http.MethodPost,
+		"/api/v1/jobs/urls",
+		strings.NewReader(`{"urls":["https://example.com"],"modules":["axe","no-such-scanner"]}`),
+	)
+	urlReq.Header.Set("Content-Type", "application/json")
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	addZipFile(t, writer, "site.zip", buildTestZip(t))
+	writeField(t, writer, "modules", "axe,no-such-scanner")
+
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	zipReq := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
+	zipReq.Header.Set("Content-Type", writer.FormDataContentType())
+
+	for name, run := range map[string]func(*httptest.ResponseRecorder){
+		"url": func(rr *httptest.ResponseRecorder) { server.handleJobURLSubmit(rr, urlReq) },
+		"zip": func(rr *httptest.ResponseRecorder) { server.handleJobZipUpload(rr, zipReq) },
+	} {
+		rr := httptest.NewRecorder()
+		run(rr)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("%s: status = %d, want 400: %s", name, rr.Code, rr.Body.String())
+		}
+
+		var got httputil.ErrorResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+			t.Fatalf("%s: decode error body: %v", name, err)
+		}
+
+		if got.Error.Code != httputil.ErrCodeUnsupportedModule ||
+			got.Error.Message != "Unsupported scanner module: no-such-scanner" {
+			t.Fatalf("%s: unexpected error %+v", name, got.Error)
+		}
 	}
 }
