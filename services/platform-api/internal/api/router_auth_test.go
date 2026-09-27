@@ -67,16 +67,16 @@ func TestRouterPublicRoutesIgnoreMissingOrWrongKey(t *testing.T) {
 			wantStatus: http.StatusCreated,
 		},
 		{
-			name:       "anonymous URL intake",
+			name:       "URL intake with storage state",
 			method:     http.MethodPost,
-			path:       "/api/v1/jobs/urls/anonymous",
-			body:       `{"urls":["https://example.com"]}`,
+			path:       "/api/v1/jobs/urls",
+			body:       storageStateBody,
 			wantStatus: http.StatusCreated,
 		},
 		{
-			name:       "browser auth URL intake",
+			name:       "URL intake with literal form auth",
 			method:     http.MethodPost,
-			path:       "/api/v1/jobs/urls/browser-auth",
+			path:       "/api/v1/jobs/urls",
 			body:       literalBrowserAuthBody,
 			wantStatus: http.StatusCreated,
 		},
@@ -151,6 +151,7 @@ type urlSubmissionPolicyCase struct {
 	allowPrivate   bool
 	wantStatus     int
 	wantErrorField string
+	forbidResponse string
 }
 
 const (
@@ -185,6 +186,61 @@ func TestURLSubmissionPolicy(t *testing.T) {
 		{name: "no key, literal form recipe", body: literalBrowserAuthBody, wantStatus: http.StatusCreated},
 		{name: "no key, storage state", body: storageStateBody, wantStatus: http.StatusCreated},
 		{
+			name:       "key, no auth",
+			body:       `{"urls":["https://example.com"]}`,
+			apiKey:     testAPIToken,
+			wantStatus: http.StatusCreated,
+		},
+		{
+			name:       "key, literal form recipe",
+			body:       literalBrowserAuthBody,
+			apiKey:     testAPIToken,
+			wantStatus: http.StatusCreated,
+		},
+		{name: "key, storage state", body: storageStateBody, apiKey: testAPIToken, wantStatus: http.StatusCreated},
+		{
+			name: "login URL embedded credentials",
+			body: strings.Replace(
+				literalBrowserAuthBody,
+				"https://example.com/login",
+				"https://demo:login-password-canary-828f@example.com/login",
+				1,
+			),
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: "auth",
+			forbidResponse: "login-password-canary-828f",
+		},
+		{
+			name: "private login URL without opt-in",
+			body: strings.Replace(
+				literalBrowserAuthBody,
+				"https://example.com/login",
+				"http://127.0.0.1/login",
+				1,
+			),
+			apiKey:         testAPIToken,
+			allowPrivate:   true,
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: "auth",
+		},
+		{
+			name:           "form recipe missing form",
+			body:           `{"urls":["https://example.com"],"auth":{"mode":"form"}}`,
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: "auth",
+		},
+		{
+			name: "form recipe with conflicting storage state",
+			body: strings.Replace(
+				literalBrowserAuthBody,
+				`"mode":"form"`,
+				`"mode":"form","storage_state":{"content_b64":"e30="}`,
+				1,
+			),
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: "auth",
+		},
+		{
 			name:           "no key, from_env reference",
 			body:           fromEnvFillBody,
 			wantStatus:     http.StatusBadRequest,
@@ -200,6 +256,13 @@ func TestURLSubmissionPolicy(t *testing.T) {
 		{
 			name:           "no key, from_env on a click step",
 			body:           fromEnvClickBody,
+			wantStatus:     http.StatusBadRequest,
+			wantErrorField: "auth.form.steps[0].value",
+		},
+		{
+			name:           "key, from_env on a click step",
+			body:           fromEnvClickBody,
+			apiKey:         testAPIToken,
 			wantStatus:     http.StatusBadRequest,
 			wantErrorField: "auth.form.steps[0].value",
 		},
@@ -236,7 +299,7 @@ func TestURLSubmissionPolicy(t *testing.T) {
 func assertURLSubmissionPolicy(t *testing.T, tt urlSubmissionPolicyCase) {
 	t.Helper()
 
-	server, _, publisher := newTestServer(t)
+	server, storage, publisher := newTestServer(t)
 	server.config.APIToken = testAPIToken
 	server.config.AllowPrivateTargets = tt.allowPrivate
 
@@ -245,12 +308,24 @@ func assertURLSubmissionPolicy(t *testing.T, tt urlSubmissionPolicyCase) {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, tt.wantStatus, rr.Body.String())
 	}
 
+	if tt.forbidResponse != "" && strings.Contains(rr.Body.String(), tt.forbidResponse) {
+		t.Fatal("error response disclosed rejected credentials")
+	}
+
 	if tt.wantStatus == http.StatusCreated {
 		if len(publisher.envelopes) != 1 {
 			t.Fatalf("expected one published job, got %d", len(publisher.envelopes))
 		}
 
+		if tt.body == literalBrowserAuthBody {
+			assertLiteralAuthPublished(t, publisher)
+		}
+
 		return
+	}
+
+	if len(storage.uploads) != 0 {
+		t.Fatalf("rejected request uploaded %d objects", len(storage.uploads))
 	}
 
 	if len(publisher.envelopes) != 0 {
@@ -268,86 +343,6 @@ func assertURLSubmissionPolicy(t *testing.T, tt urlSubmissionPolicyCase) {
 
 	if strings.Contains(rr.Body.String(), "POSTGRES_PASSWORD") || strings.Contains(rr.Body.String(), "DATABASE_URL") {
 		t.Fatalf("error response echoed the env reference: %s", rr.Body.String())
-	}
-}
-
-func TestAnonymousURLSubmissionAcceptsOnlyPublicUnauthenticatedJobs(t *testing.T) {
-	t.Setenv(publicSubmissionBurstEnv, "20")
-
-	tests := []struct {
-		name           string
-		body           string
-		allowPrivate   bool
-		wantStatus     int
-		wantErrorField string
-	}{
-		{
-			name:       "public job",
-			body:       `{"urls":["https://example.com"]}`,
-			wantStatus: http.StatusCreated,
-		},
-		{
-			name:           "form auth",
-			body:           literalBrowserAuthBody,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "auth",
-		},
-		{
-			name:           "storage state auth",
-			body:           `{"urls":["https://example.com"],"auth":{"mode":"storage_state","storage_state":{"content_b64":"e30="}}}`,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "auth",
-		},
-		{
-			name:           "private target opt-in even when server allows it",
-			body:           `{"urls":["http://127.0.0.1"],"allow_private_targets":true}`,
-			allowPrivate:   true,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "allow_private_targets",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server, _, publisher := newTestServer(t)
-			server.config.AllowPrivateTargets = tt.allowPrivate
-
-			req := httptest.NewRequest(
-				http.MethodPost,
-				"/api/v1/jobs/urls/anonymous",
-				strings.NewReader(tt.body),
-			)
-			req.Header.Set("Content-Type", "application/json")
-
-			rr := httptest.NewRecorder()
-
-			server.Router().ServeHTTP(rr, req)
-
-			if rr.Code != tt.wantStatus {
-				t.Fatalf("expected %d, got %d: %s", tt.wantStatus, rr.Code, rr.Body.String())
-			}
-
-			if tt.wantStatus == http.StatusCreated {
-				if len(publisher.envelopes) != 1 {
-					t.Fatalf("expected one published job, got %d", len(publisher.envelopes))
-				}
-
-				return
-			}
-
-			if len(publisher.envelopes) != 0 {
-				t.Fatalf("rejected request published %d jobs", len(publisher.envelopes))
-			}
-
-			var response httputil.ErrorResponse
-			if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
-				t.Fatalf("decode error response: %v", err)
-			}
-
-			if response.Error.Field != tt.wantErrorField {
-				t.Fatalf("error field = %q, want %q", response.Error.Field, tt.wantErrorField)
-			}
-		})
 	}
 }
 
@@ -382,7 +377,7 @@ func TestURLSubmissionParseErrorsDoNotEchoEmbeddedCredentials(t *testing.T) {
 
 			req := httptest.NewRequest(
 				http.MethodPost,
-				"/api/v1/jobs/urls/anonymous",
+				"/api/v1/jobs/urls",
 				strings.NewReader(string(body)),
 			)
 			req.Header.Set("Content-Type", "application/json")
@@ -405,125 +400,7 @@ func TestURLSubmissionParseErrorsDoNotEchoEmbeddedCredentials(t *testing.T) {
 	}
 }
 
-type browserAuthSubmissionTestCase struct {
-	name           string
-	body           string
-	allowPrivate   bool
-	wantStatus     int
-	wantErrorField string
-	forbidResponse string
-}
-
-func TestBrowserAuthURLSubmissionAcceptsOnlyLiteralPublicFormRecipes(t *testing.T) {
-	t.Setenv(publicSubmissionBurstEnv, "20")
-
-	privateTargetBody := strings.Replace(
-		literalBrowserAuthBody,
-		`"urls":["https://example.com/dashboard"]`,
-		`"urls":["http://127.0.0.1"],"allow_private_targets":true`,
-		1,
-	)
-
-	tests := []browserAuthSubmissionTestCase{
-		{name: "literal form recipe", body: literalBrowserAuthBody, wantStatus: http.StatusCreated},
-		{
-			name:           "missing auth",
-			body:           `{"urls":["https://example.com"]}`,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "auth",
-		},
-		{
-			name:           "storage state",
-			body:           `{"urls":["https://example.com"],"auth":{"mode":"storage_state","storage_state":{"content_b64":"e30="}}}`,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "auth.mode",
-		},
-		{
-			name: "environment reference",
-			body: `{
-				"urls":["https://example.com"],
-				"auth":{"mode":"form","form":{
-					"login_url":"https://example.com/login",
-					"steps":[{"type":"fill","selector":"#password","value":{"from_env":"DEMO_PASSWORD"}}],
-					"success":{"type":"url_matches","pattern":"/dashboard"}
-				}}
-			}`,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "auth.form.steps[0].value",
-		},
-		{
-			name: "login URL embedded credentials",
-			body: strings.Replace(
-				literalBrowserAuthBody,
-				"https://example.com/login",
-				"https://demo:login-password-canary-828f@example.com/login",
-				1,
-			),
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "auth",
-			forbidResponse: "login-password-canary-828f",
-		},
-		{
-			name:           "private target opt-in even when server allows it",
-			body:           privateTargetBody,
-			allowPrivate:   true,
-			wantStatus:     http.StatusBadRequest,
-			wantErrorField: "allow_private_targets",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assertBrowserAuthSubmission(t, tt)
-		})
-	}
-}
-
-func assertBrowserAuthSubmission(t *testing.T, tt browserAuthSubmissionTestCase) {
-	t.Helper()
-
-	server, _, publisher := newTestServer(t)
-	server.config.AllowPrivateTargets = tt.allowPrivate
-
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/api/v1/jobs/urls/browser-auth?source=browser",
-		strings.NewReader(tt.body),
-	)
-	req.Header.Set("Content-Type", "application/json")
-
-	rr := httptest.NewRecorder()
-	server.Router().ServeHTTP(rr, req)
-
-	if rr.Code != tt.wantStatus {
-		t.Fatalf("expected %d, got %d: %s", tt.wantStatus, rr.Code, rr.Body.String())
-	}
-
-	if tt.forbidResponse != "" && strings.Contains(rr.Body.String(), tt.forbidResponse) {
-		t.Fatalf("error response leaked rejected credentials: %s", rr.Body.String())
-	}
-
-	if tt.wantStatus == http.StatusCreated {
-		assertLiteralBrowserAuthPublished(t, publisher)
-
-		return
-	}
-
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("rejected request published %d jobs", len(publisher.envelopes))
-	}
-
-	var response httputil.ErrorResponse
-	if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
-		t.Fatalf("decode error response: %v", err)
-	}
-
-	if response.Error.Field != tt.wantErrorField {
-		t.Fatalf("error field = %q, want %q", response.Error.Field, tt.wantErrorField)
-	}
-}
-
-func assertLiteralBrowserAuthPublished(t *testing.T, publisher *fakePublisher) {
+func assertLiteralAuthPublished(t *testing.T, publisher *fakePublisher) {
 	t.Helper()
 
 	if len(publisher.envelopes) != 1 {
@@ -550,6 +427,26 @@ func TestRemovedProjectRoutesReturnNotFound(t *testing.T) {
 				rr := routeCall(t, server, http.MethodGet, path, "", key)
 				if rr.Code != http.StatusNotFound {
 					t.Fatalf("status = %d, want 404: %s", rr.Code, rr.Body.String())
+				}
+			})
+		}
+	}
+}
+
+func TestRemovedURLSubmissionRoutesDoNotPublish(t *testing.T) {
+	for _, path := range []string{"/api/v1/jobs/urls/anonymous", "/api/v1/jobs/urls/browser-auth"} {
+		for _, key := range []string{"", "wrong-token", testAPIToken} {
+			t.Run(path+" key="+key, func(t *testing.T) {
+				server, storage, publisher := newTestServer(t)
+				server.config.APIToken = testAPIToken
+
+				rr := routeCall(t, server, http.MethodPost, path, literalBrowserAuthBody, key)
+				if rr.Code != http.StatusMethodNotAllowed {
+					t.Fatalf("removed route status = %d, want405", rr.Code)
+				}
+
+				if len(publisher.envelopes) != 0 || len(storage.uploads) != 0 {
+					t.Fatal("removed submission route created a job or uploaded auth state")
 				}
 			})
 		}

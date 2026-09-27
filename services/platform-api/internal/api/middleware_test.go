@@ -255,11 +255,11 @@ func TestRateLimitKey_DefaultLoopbackProxyUsesForwardedClient(t *testing.T) {
 	resetTrustedProxiesForTest()
 	t.Cleanup(resetTrustedProxiesForTest)
 
-	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
 	first.RemoteAddr = "127.0.0.1:41001"
 	first.Header.Set("X-Forwarded-For", "198.51.100.10")
 
-	second := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	second := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
 	second.RemoteAddr = "127.0.0.1:41002"
 	second.Header.Set("X-Forwarded-For", "198.51.100.11")
 
@@ -274,7 +274,7 @@ func TestRateLimitKey_TrustedProxyRejectsSpoofedLeftmostForwardingValue(t *testi
 	resetTrustedProxiesForTest()
 	t.Cleanup(resetTrustedProxiesForTest)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
 	req.RemoteAddr = "10.0.0.1:41001"
 	req.Header.Set("X-Forwarded-For", "192.0.2.200, 203.0.113.25")
 
@@ -288,7 +288,7 @@ func TestRateLimitKey_InvalidForwardingChainFallsBackToProxy(t *testing.T) {
 	resetTrustedProxiesForTest()
 	t.Cleanup(resetTrustedProxiesForTest)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
 	req.RemoteAddr = "10.0.0.1:41001"
 	req.Header.Set("X-Forwarded-For", "not-an-ip")
 
@@ -415,7 +415,7 @@ func TestPublicSubmissionRateLimitMiddlewareReturnsRetryAfter(t *testing.T) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
-	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/anonymous", http.NoBody)
+	first := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", http.NoBody)
 	first.RemoteAddr = "127.0.0.1:1234"
 	firstResponse := httptest.NewRecorder()
 	handler(firstResponse, first)
@@ -424,7 +424,7 @@ func TestPublicSubmissionRateLimitMiddlewareReturnsRetryAfter(t *testing.T) {
 		t.Fatalf("first request: expected 201, got %d", firstResponse.Code)
 	}
 
-	second := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls/browser-auth", http.NoBody)
+	second := httptest.NewRequest(http.MethodPost, "/api/v1/discover", http.NoBody)
 	second.RemoteAddr = "127.0.0.1:5678"
 	secondResponse := httptest.NewRecorder()
 	handler(secondResponse, second)

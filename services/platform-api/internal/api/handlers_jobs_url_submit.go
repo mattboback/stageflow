@@ -71,46 +71,8 @@ type jobURLAuthFormRecipe struct {
 	Success  map[string]any   `json:"success"`
 }
 
-type jobURLSubmitPolicy uint8
-
-const (
-	// jobURLSubmitPolicyAuthenticated is an API token caller on the main URL
-	// endpoint: it may also opt into private targets where the instance allows.
-	jobURLSubmitPolicyAuthenticated jobURLSubmitPolicy = iota
-	// jobURLSubmitPolicyPublic is anyone else on the main URL endpoint: any
-	// auth recipe with literal values, public targets only.
-	jobURLSubmitPolicyPublic
-	jobURLSubmitPolicyAnonymous
-	jobURLSubmitPolicyBrowserAuth
-)
-
-// handleJobURLSubmit is the main URL intake, used by the CLI and API callers.
+// handleJobURLSubmit accepts public URL jobs with optional literal authentication.
 func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
-	policy := jobURLSubmitPolicyPublic
-	if isAPIKeyCaller(r.Context()) {
-		policy = jobURLSubmitPolicyAuthenticated
-	}
-
-	s.handleJobURLSubmitWithPolicy(w, r, policy)
-}
-
-// handleAnonymousJobURLSubmit serves the web's scans that do not need a login.
-// It rejects every auth recipe and private-network opt-in.
-func (s *Server) handleAnonymousJobURLSubmit(w http.ResponseWriter, r *http.Request) {
-	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyAnonymous)
-}
-
-// handleBrowserAuthJobURLSubmit is the web's authenticated-page flow. It accepts
-// only a form recipe; storage state goes through the main URL endpoint.
-func (s *Server) handleBrowserAuthJobURLSubmit(w http.ResponseWriter, r *http.Request) {
-	s.handleJobURLSubmitWithPolicy(w, r, jobURLSubmitPolicyBrowserAuth)
-}
-
-func (s *Server) handleJobURLSubmitWithPolicy(
-	w http.ResponseWriter,
-	r *http.Request,
-	policy jobURLSubmitPolicy,
-) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 
@@ -122,7 +84,7 @@ func (s *Server) handleJobURLSubmitWithPolicy(
 		return
 	}
 
-	if detail := validateJobURLSubmitPolicy(req, policy); detail != nil {
+	if detail := validateJobURLSubmitPolicy(req, isAPIKeyCaller(r.Context())); detail != nil {
 		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
 
 		return
@@ -195,81 +157,16 @@ func (s *Server) handleJobURLSubmitWithPolicy(
 	})
 }
 
-func validateJobURLSubmitPolicy(
-	req jobURLSubmitRequest,
-	policy jobURLSubmitPolicy,
-) *httputil.ErrorDetail {
+func validateJobURLSubmitPolicy(req jobURLSubmitRequest, apiKeyCaller bool) *httputil.ErrorDetail {
 	if detail := validateLiteralAuthValues(req.Auth); detail != nil {
 		return detail
 	}
 
-	if policy == jobURLSubmitPolicyAuthenticated {
-		return nil
-	}
-
-	if req.AllowPrivateTargets {
+	if req.AllowPrivateTargets && !apiKeyCaller {
 		detail := httputil.NewValidationError(
 			"allow_private_targets",
 			"Private target scans require the API token",
 			"Use a public http/https target.",
-		)
-
-		return &detail
-	}
-
-	if policy == jobURLSubmitPolicyPublic {
-		return nil
-	}
-
-	if policy == jobURLSubmitPolicyAnonymous {
-		if req.Auth == nil {
-			return nil
-		}
-
-		detail := httputil.NewValidationError(
-			"auth",
-			"Authentication recipes are not accepted by the anonymous scan endpoint",
-			"Remove auth or use the browser-auth endpoint for a literal form login.",
-		)
-
-		return &detail
-	}
-
-	if req.Auth == nil {
-		detail := httputil.NewValidationError(
-			"auth",
-			"A form authentication recipe is required by the browser-auth endpoint",
-			"Provide auth.mode=form and a form recipe, or use the anonymous endpoint.",
-		)
-
-		return &detail
-	}
-
-	if req.Auth.Mode != authModeForm {
-		detail := httputil.NewValidationError(
-			"auth.mode",
-			`The browser-auth endpoint accepts only auth.mode="form"`,
-			"Use POST /api/v1/jobs/urls for storage state.",
-		)
-
-		return &detail
-	}
-
-	if req.Auth.StorageState != nil {
-		detail := httputil.NewValidationError(
-			"auth.storage_state",
-			"Storage state is not accepted by the browser-auth endpoint",
-			"Use POST /api/v1/jobs/urls to submit storage state.",
-		)
-
-		return &detail
-	}
-
-	if req.Auth.Form == nil {
-		detail := httputil.NewValidationError(
-			"auth.form",
-			`auth.form is required when auth.mode="form"`,
-			"Provide a login URL, form steps, and success condition.",
 		)
 
 		return &detail

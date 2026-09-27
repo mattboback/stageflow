@@ -21,14 +21,6 @@ func (s *Server) Router() http.Handler {
 		s.handleJobURLSubmit,
 		publicSubmissionLimiter,
 	))
-	mux.HandleFunc("/api/v1/jobs/urls/anonymous", s.withPublicSubmissionMiddleware(
-		s.handleAnonymousJobURLSubmit,
-		publicSubmissionLimiter,
-	))
-	mux.HandleFunc("/api/v1/jobs/urls/browser-auth", s.withPublicSubmissionMiddleware(
-		s.handleBrowserAuthJobURLSubmit,
-		publicSubmissionLimiter,
-	))
 	mux.HandleFunc("/api/v1/discover", s.withPublicSubmissionMiddleware(
 		s.handleDiscover,
 		publicSubmissionLimiter,

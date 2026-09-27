@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 describe('browser URL submission boundary', () => {
-	it('uses the anonymous route when no authentication recipe is present', async () => {
+	it('uses the canonical route without auth or an API key when no recipe is present', async () => {
 		const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
 			() =>
 				Promise.resolve(
@@ -51,12 +51,23 @@ describe('browser URL submission boundary', () => {
 
 		await submitScanJob(baseParams);
 
-		expect(requestUrl(fetchMock.mock.calls[0]?.[0]).endsWith('/api/v1/jobs/urls/anonymous')).toBe(
-			true
+		expect(new URL(requestUrl(fetchMock.mock.calls[0]?.[0]), 'https://web.test').pathname).toBe(
+			'/api/v1/jobs/urls'
 		);
+		const request = fetchMock.mock.calls[0]?.[1];
+		expect(request?.method).toBe('POST');
+		expect(request?.headers).toEqual({ 'Content-Type': 'application/json' });
+		expect(JSON.parse(requestBody(request))).toEqual({
+			urls: baseParams.urls,
+			modules: ['axe'],
+			scanner_configs: {},
+			screenshot: true,
+			highlight_style: 'solid',
+			browser: 'chromium'
+		});
 	});
 
-	it('uses the constrained browser-auth route when form authentication is present', async () => {
+	it('uses the canonical route with the unchanged literal form payload', async () => {
 		const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
 			() =>
 				Promise.resolve(
@@ -67,13 +78,20 @@ describe('browser URL submission boundary', () => {
 				)
 		);
 		vi.stubGlobal('fetch', fetchMock);
-		const auth = { mode: 'form', form: { login_url: 'https://example.com/login', steps: [] } };
+		const auth = {
+			mode: 'form',
+			form: {
+				login_url: 'https://example.com/login',
+				steps: [{ type: 'fill', selector: '#password', value: 'literal p@ss+word' }]
+			}
+		};
 
 		await submitScanJob({ ...baseParams, auth });
 
-		expect(
-			requestUrl(fetchMock.mock.calls[0]?.[0]).endsWith('/api/v1/jobs/urls/browser-auth')
-		).toBe(true);
+		expect(new URL(requestUrl(fetchMock.mock.calls[0]?.[0]), 'https://web.test').pathname).toBe(
+			'/api/v1/jobs/urls'
+		);
+		expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({ 'Content-Type': 'application/json' });
 		expect(JSON.parse(requestBody(fetchMock.mock.calls[0]?.[1]))).toMatchObject({ auth });
 	});
 });

@@ -205,10 +205,7 @@ export async function submitScanJob({
 		if (urls.length === 0) {
 			throw new Error('Enter a URL');
 		}
-		const browserSubmissionPath = auth
-			? '/api/v1/jobs/urls/browser-auth'
-			: '/api/v1/jobs/urls/anonymous';
-		response = await fetchWithTimeout(buildApiUrl(browserSubmissionPath), {
+		response = await fetchWithTimeout(buildApiUrl('/api/v1/jobs/urls'), {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({

@@ -70,12 +70,14 @@ async function mockProjectApi(
 			})
 		});
 	});
-	await page.route(/\/api\/v1\/jobs\/urls(?:\/[^?]*)?(?:\?.*)?$/, (route) =>
-		route.fulfill({
-			status: 200,
-			contentType: 'application/json',
-			body: JSON.stringify({ job_id: submissionCount++ === 0 ? JOB_ID : SECOND_JOB_ID })
-		})
+	await page.route(
+		(url) => url.pathname === '/api/v1/jobs/urls',
+		(route) =>
+			route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({ job_id: submissionCount++ === 0 ? JOB_ID : SECOND_JOB_ID })
+			})
 	);
 	for (const [jobId, jobReport] of [
 		[JOB_ID, report],
@@ -264,7 +266,8 @@ test('temporarily unavailable scanners remain stored but are not submitted', asy
 	await expect(page.getByRole('checkbox', { name: /SEO/ })).toHaveCount(0);
 
 	const submission = page.waitForRequest(
-		(request) => request.method() === 'POST' && request.url().includes('/api/v1/jobs/urls/')
+		(request) =>
+			request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/jobs/urls'
 	);
 	await page
 		.locator('.dock')
