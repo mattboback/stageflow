@@ -17,7 +17,6 @@ const (
 	rateLimitWindow                   = time.Minute
 	unknownRateLimitKey               = "unknown"
 	rateLimiterMaxEntries             = 10000
-	maxTimeoutResponseBytes           = 72 * 1024 * 1024
 
 	defaultPublicSubmissionRequestsPerMinute = 6
 	defaultPublicSubmissionBurst             = 3

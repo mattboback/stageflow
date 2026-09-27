@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"time"
 )
 
 // Router returns the HTTP router with all public routes configured.
@@ -10,62 +11,39 @@ import (
 // Routes are public. See middleware_auth.go for the optional API token policy.
 func (s *Server) Router() http.Handler {
 	mux := http.NewServeMux()
-	publicSubmissionLimiter := newPublicSubmissionRateLimiterFromEnv()
+	submissions := newPublicSubmissionRateLimiterFromEnv()
 
-	// Upload endpoints get extended timeout for large file transfers.
+	// Uploads get a longer read deadline and handler timeout.
 	mux.HandleFunc("/api/v1/jobs/zip", requestReadDeadlineMiddleware(
 		uploadRequestTimeout,
-		s.withPublicUploadMiddleware(s.handleJobZipUpload, publicSubmissionLimiter),
+		s.publicRoute(uploadRequestTimeout, submissions, s.handleJobZipUpload),
 	))
-	mux.HandleFunc("/api/v1/jobs/urls", s.withPublicSubmissionMiddleware(
-		s.handleJobURLSubmit,
-		publicSubmissionLimiter,
-	))
-	mux.HandleFunc("/api/v1/discover", s.withPublicSubmissionMiddleware(
-		s.handleDiscover,
-		publicSubmissionLimiter,
-	))
+	mux.HandleFunc("/api/v1/jobs/urls", s.publicRoute(defaultRequestTimeout, submissions, s.handleJobURLSubmit))
+	mux.HandleFunc("/api/v1/discover", s.publicRoute(defaultRequestTimeout, submissions, s.handleDiscover))
 	mux.HandleFunc("/api/v1/jobs/", s.handleJobsRoute)
-	mux.HandleFunc("/api/v1/scanners", s.withMiddleware(s.handleListScanners))
+	mux.HandleFunc("/api/v1/scanners", s.publicRoute(defaultRequestTimeout, nil, s.handleListScanners))
 	mux.HandleFunc("/healthz", s.handleHealth)
 
 	return mux
 }
 
-func (s *Server) withPublicSubmissionMiddleware(
+// publicRoute wraps a public handler in logging, CORS, the optional API token
+// and the general rate limit. A non-nil submissions limiter adds the stricter
+// intake budget. A zero timeout leaves the handler unbounded, for SSE.
+func (s *Server) publicRoute(
+	timeout time.Duration,
+	submissions *clientTokenBucketLimiter,
 	next http.HandlerFunc,
-	limiter *clientTokenBucketLimiter,
 ) http.HandlerFunc {
-	return loggingMiddleware(
-		corsMiddleware(
-			s.identifyAPIKeyCaller(
-				rateLimitMiddleware(
-					publicSubmissionRateLimitMiddleware(
-						limiter,
-						timeoutMiddleware(defaultRequestTimeout, next),
-					),
-				),
-			),
-		),
-	)
-}
+	if timeout > 0 {
+		next = timeoutMiddleware(timeout, next)
+	}
 
-func (s *Server) withPublicUploadMiddleware(
-	next http.HandlerFunc,
-	limiter *clientTokenBucketLimiter,
-) http.HandlerFunc {
-	return loggingMiddleware(
-		corsMiddleware(
-			s.identifyAPIKeyCaller(
-				rateLimitMiddleware(
-					publicSubmissionRateLimitMiddleware(
-						limiter,
-						timeoutMiddleware(uploadRequestTimeout, next),
-					),
-				),
-			),
-		),
-	)
+	if submissions != nil {
+		next = publicSubmissionRateLimitMiddleware(submissions, next)
+	}
+
+	return loggingMiddleware(corsMiddleware(s.identifyAPIKeyCaller(rateLimitMiddleware(next))))
 }
 
 func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
@@ -73,35 +51,16 @@ func (s *Server) handleJobsRoute(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(path, "/")
 
 	if r.Method == http.MethodDelete {
-		s.withMiddleware(s.handleJobDelete)(w, r)
+		s.publicRoute(defaultRequestTimeout, nil, s.handleJobDelete)(w, r)
 
 		return
 	}
 
 	if len(parts) >= 2 && parts[1] == "stream" {
-		// SSE endpoint - no timeout middleware (long-lived connection).
-		s.withStreamMiddleware(s.handleJobStream)(w, r)
+		s.publicRoute(0, nil, s.handleJobStream)(w, r)
 
 		return
 	}
 
-	s.withMiddleware(s.handleJobStatus)(w, r)
-}
-
-func (s *Server) withMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return loggingMiddleware(
-		corsMiddleware(
-			s.identifyAPIKeyCaller(
-				rateLimitMiddleware(timeoutMiddleware(defaultRequestTimeout, next)),
-			),
-		),
-	)
-}
-
-func (s *Server) withStreamMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return loggingMiddleware(
-		corsMiddleware(
-			s.identifyAPIKeyCaller(rateLimitMiddleware(next)),
-		),
-	)
+	s.publicRoute(defaultRequestTimeout, nil, s.handleJobStatus)(w, r)
 }

@@ -730,11 +730,33 @@ func TestTimeoutMiddleware_TimesOutAndIgnoresLateWrites(t *testing.T) {
 		t.Fatalf("expected late writes to be ignored, got body %q", got)
 	}
 
+	if got := rr.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("expected a JSON timeout response, got Content-Type %q", got)
+	}
+
+	if !strings.Contains(rr.Body.String(), "REQUEST_TIMEOUT") {
+		t.Fatalf("expected the timeout body, got %q", rr.Body.String())
+	}
+
 	select {
 	case <-lateWriteDone:
 		// ok
 	case <-time.After(250 * time.Millisecond):
 		t.Fatalf("expected handler goroutine to finish")
+	}
+}
+
+func TestTimeoutMiddleware_KeepsHandlerContentTypeOn503(t *testing.T) {
+	handler := timeoutMiddleware(time.Second, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+	})
+
+	rr := httptest.NewRecorder()
+	handler(rr, httptest.NewRequest(http.MethodGet, "/busy", http.NoBody))
+
+	if got := rr.Header().Get("Content-Type"); got != "text/plain; charset=utf-8" {
+		t.Fatalf("handler Content-Type was replaced: %q", got)
 	}
 }
 
