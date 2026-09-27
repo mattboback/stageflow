@@ -20,7 +20,6 @@ type Result struct {
 
 type WaitOptions struct {
 	Progress io.Writer
-	NoStream bool
 }
 
 func SubmitURLsAndWait(
@@ -62,7 +61,7 @@ func WaitForReport(
 	jobID string,
 	opts WaitOptions,
 ) (Result, error) {
-	if err := jobstream.WaitJobState(ctx, client, jobID, opts.Progress, opts.NoStream); err != nil {
+	if err := jobstream.WaitJobState(ctx, client, jobID, opts.Progress); err != nil {
 		return Result{}, fmt.Errorf("wait for completion: %w", err)
 	}
 

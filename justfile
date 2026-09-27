@@ -376,9 +376,6 @@ ci:
     echo "==> Go vulncheck..."
     govulncheck ./...
 
-    echo "==> CLI docs..."
-    ./devtools/scripts/check-cli-docs-generated.sh
-
     echo "==> Shell regression tests..."
     just shell-tests
 

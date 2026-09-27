@@ -114,7 +114,7 @@ clients/web/playwright-report/
 .gocache/
 **/.gocache/
 
-# StageFlow project config (generated per-repo by `stageflow project init`)
+# Legacy CLI project config (preserve local-only user files)
 .stageflow/
 
 # AI agent instructions (local-only)

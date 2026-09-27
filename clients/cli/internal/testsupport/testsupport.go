@@ -2,8 +2,6 @@
 package testsupport
 
 import (
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -118,28 +116,4 @@ func RequireDeepEqual(t *testing.T, got, want any, label string) {
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("%s = %#v, want %#v", label, got, want)
 	}
-}
-
-func RequireBoolPtr(t *testing.T, got *bool, want bool, label string) {
-	t.Helper()
-
-	if got == nil {
-		t.Fatalf("%s = nil, want %v", label, want)
-	}
-
-	if *got != want {
-		t.Fatalf("%s = %v, want %v", label, *got, want)
-	}
-}
-
-func WriteProjectConfig(t *testing.T, root string, yaml string) string {
-	t.Helper()
-
-	configDir := filepath.Join(root, ".stageflow")
-	RequireNoErr(t, os.MkdirAll(configDir, 0o750))
-
-	configPath := filepath.Join(configDir, "config.yaml")
-	RequireNoErr(t, os.WriteFile(configPath, []byte(yaml), 0o600))
-
-	return configPath
 }

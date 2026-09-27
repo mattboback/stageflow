@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,6 +30,9 @@ func TestSubmitURLsAndWait(t *testing.T) {
 			}
 
 			writeJSON(t, w, apiclient.SubmitJobResponse{JobID: jobID})
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID+"/stream":
+			w.Header().Set("Content-Type", "text/event-stream")
+			fmt.Fprint(w, "event: status\ndata: {\"id\":\"job-123\",\"state\":\"DONE\"}\n\n")
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
 			writeJSON(t, w, apiclient.JobStatus{ID: jobID, State: apiclient.JobStateDone})
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID+"/results":
@@ -47,7 +51,7 @@ func TestSubmitURLsAndWait(t *testing.T) {
 		apiclient.NewClient(server.URL, "", server.Client()),
 		request,
 		time.Second,
-		WaitOptions{Progress: &progress, NoStream: true},
+		WaitOptions{Progress: &progress},
 	)
 	testsupport.RequireNoErr(t, err)
 	testsupport.RequireEqual(t, result.Status.ID, jobID, "status ID")
@@ -73,7 +77,7 @@ func TestSubmitURLsAndWaitEnhancesPrivateTargetError(t *testing.T) {
 		apiclient.NewClient(server.URL, "", server.Client()),
 		apiclient.SubmitJobRequest{URLs: []string{"http://127.0.0.1"}},
 		time.Second,
-		WaitOptions{Progress: &bytes.Buffer{}, NoStream: true},
+		WaitOptions{Progress: &bytes.Buffer{}},
 	)
 	if err == nil || !strings.Contains(err.Error(), "local/private targets require allow_private_targets") {
 		t.Fatalf("error = %v", err)
@@ -83,7 +87,12 @@ func TestSubmitURLsAndWaitEnhancesPrivateTargetError(t *testing.T) {
 func TestWaitForReportRejectsFailedTerminalState(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/stream") {
+			http.NotFound(w, r)
+			return
+		}
+
 		writeJSON(t, w, apiclient.JobStatus{ID: "failed-job", State: apiclient.JobStateFailed, Error: "boom"})
 	}))
 	defer server.Close()
@@ -92,7 +101,7 @@ func TestWaitForReportRejectsFailedTerminalState(t *testing.T) {
 		context.Background(),
 		apiclient.NewClient(server.URL, "", server.Client()),
 		"failed-job",
-		WaitOptions{Progress: &bytes.Buffer{}, NoStream: true},
+		WaitOptions{Progress: &bytes.Buffer{}},
 	)
 	if err == nil || err.Error() != "job failed: boom" {
 		t.Fatalf("error = %v", err)

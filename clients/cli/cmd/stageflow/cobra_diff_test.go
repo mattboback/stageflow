@@ -28,7 +28,6 @@ func TestDiffLiveTarget_NormalizesAndAllowsPrivateTargetsForLocalAPI(t *testing.
 		"diff",
 		baselinePath,
 		"127.0.0.1:5173",
-		"--no-stream",
 	)
 	if exitCode != 0 {
 		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
@@ -62,7 +61,6 @@ func TestDiffLiveTarget_RejectsPrivateTargetsForRemoteAPI(t *testing.T) {
 				"diff",
 				baselinePath,
 				target,
-				"--no-stream",
 			)
 			if exitCode != 2 {
 				t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout, stderr)

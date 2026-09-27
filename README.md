@@ -58,7 +58,7 @@ stageflow scan ./dist --api https://stageflow.org
 
 ![StageFlow CLI streaming a live scan and printing the machine-readable JSON envelope](docs/images/demo.gif)
 
-Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API error. Release binaries are on [GitHub Releases](https://github.com/mattboback/stageflow/releases); see the [CLI guide](docs/cli.md) for workflows and the [generated reference](docs/reference/cli/stageflow/stageflow.md) for exact flags.
+Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API error. Release binaries are on [GitHub Releases](https://github.com/mattboback/stageflow/releases); see the [CLI guide](docs/cli.md) for workflows and run `stageflow --help` or `stageflow <command> --help` for exact flags.
 
 ## The Report
 
@@ -99,7 +99,7 @@ local project history.
 
 ## Going Deeper
 
-- **CLI workflows** — one-off scans, local dev loops, saved baselines, and CI gates: [docs/cli.md](docs/cli.md).
+- **CLI workflows** — URL and static-build scans, saved baselines, and CI gates: [docs/cli.md](docs/cli.md).
 - **Architecture** — clients → Platform API → NATS JetStream → Orchestrator →
   per-job rootless Podman pods, with SSRF and ZIP-bomb guards at the trust
   boundaries: [docs/architecture.md](docs/architecture.md).
@@ -157,7 +157,7 @@ enable additional scanners when you need them.
 
 | Path                         | Purpose                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------ |
-| `clients/cli`                | Go CLI for scans, the dev loop, baselines, reports, and docs generation        |
+| `clients/cli`                | Go CLI for scans, baselines, reports, and shell completion        |
 | `clients/web`                | React Router/Vite app for hosted/local browser workflows                       |
 | `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, deletion tombstones, reports            |
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence              |

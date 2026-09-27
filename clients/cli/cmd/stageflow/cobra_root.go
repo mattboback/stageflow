@@ -27,9 +27,7 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 			"There are a few ways to scan:\n\n" +
 			"  stageflow scan <url>        one-off scan of any URL\n" +
 			"  stageflow scan <dir|zip>    scan a local build directory or ZIP archive\n" +
-			"  stageflow dev scan          start your local dev server, then scan it\n" +
 			"  stageflow diff base.json current.json   compare saved scan reports\n\n" +
-			"`stageflow stack` manages a local self-hosted compose stack (up/down/status).\n\n" +
 			"Exit codes: 0 success, 1 policy failure (--fail-on threshold or regression),\n" +
 			"2 usage or API error.",
 		SilenceUsage:  true,
@@ -57,15 +55,12 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	)
 
 	rootCmd.AddCommand(newScanCmd(opts))
-	rootCmd.AddCommand(newDevCmd(opts, getenv))
-	rootCmd.AddCommand(newStackCmd(getenv))
 	rootCmd.AddCommand(newDiffCmd(opts))
 	rootCmd.AddCommand(newReportCmd(opts))
 	rootCmd.AddCommand(newScannersCmd(opts))
 	rootCmd.AddCommand(newAuthCmd(opts))
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newCompletionCmd())
-	rootCmd.AddCommand(newDocsCmd())
 
 	return rootCmd
 }

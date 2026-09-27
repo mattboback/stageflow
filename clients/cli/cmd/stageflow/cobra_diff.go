@@ -23,7 +23,6 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 		failOnNew        string
 		failOnRegression bool
 		timeout          time.Duration
-		noStream         bool
 	)
 
 	cmd := &cobra.Command{
@@ -38,7 +37,6 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 				args[0],
 				args[1],
 				timeout,
-				noStream,
 				failOnNew,
 				failOnRegression,
 			)
@@ -60,8 +58,6 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 		"Exit 1 if score dropped or new issues appeared",
 	)
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time for live scan")
-	cmd.Flags().BoolVar(&noStream, "no-stream", false, "Poll instead of SSE for live scan")
-	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
 	return cmd
 }
@@ -71,7 +67,6 @@ func runDiffCommand(
 	root *rootOptions,
 	baselinePath, currentTarget string,
 	timeout time.Duration,
-	noStream bool,
 	failOnNew string,
 	failOnRegression bool,
 ) error {
@@ -86,7 +81,6 @@ func runDiffCommand(
 		baselineEnv,
 		currentTarget,
 		timeout,
-		noStream,
 	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
@@ -135,7 +129,6 @@ func loadCurrentDiffTarget(
 	baselineEnv render.ReportEnvelope,
 	currentTarget string,
 	timeout time.Duration,
-	noStream bool,
 ) (render.ReportEnvelope, string, string, error) {
 	if !diffrender.IsRemoteTarget(currentTarget) {
 		currentEnv, err := loadReportFile(currentTarget)
@@ -158,7 +151,7 @@ func loadCurrentDiffTarget(
 		}
 	}
 
-	currentEnv, jobID, err := runLiveDiffScan(cmd, root, baselineEnv, currentTarget, timeout, noStream)
+	currentEnv, jobID, err := runLiveDiffScan(cmd, root, baselineEnv, currentTarget, timeout)
 	if err != nil {
 		return render.ReportEnvelope{}, "", "", err
 	}
@@ -178,7 +171,6 @@ func runLiveDiffScan(
 	baselineEnv render.ReportEnvelope,
 	currentTarget string,
 	timeout time.Duration,
-	noStream bool,
 ) (render.ReportEnvelope, string, error) {
 	urls, err := urlcheck.NormalizeTargets([]string{currentTarget})
 	if err != nil {
@@ -210,7 +202,7 @@ func runLiveDiffScan(
 		client,
 		req,
 		timeout,
-		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: noStream},
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr()},
 	)
 	if err != nil {
 		return render.ReportEnvelope{}, "", err
@@ -249,8 +241,6 @@ func loadReportFile(path string) (render.ReportEnvelope, error) {
 	if err != nil {
 		return render.ReportEnvelope{}, fmt.Errorf("read %s: %w", path, err)
 	}
-
-	data = apiclient.SanitizeReportJSON(data)
 
 	var env render.ReportEnvelope
 

@@ -12,7 +12,6 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/authintake"
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
-	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/staticsite"
@@ -26,7 +25,6 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		screenshot     = true
 		allowPrivate   bool
 		timeout        time.Duration
-		noStream       bool
 		authStatePath  string
 		authRecipePath string
 		reportOpts     render.ReportFlags
@@ -47,7 +45,6 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 				screenshot:     screenshot,
 				allowPrivate:   allowPrivate,
 				timeout:        timeout,
-				noStream:       noStream,
 				authStatePath:  authStatePath,
 				authRecipePath: authRecipePath,
 				reportOpts:     reportOpts,
@@ -60,7 +57,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	cmd.Flags().StringSliceVar(
 		&scanners,
 		"scanner",
-		projectmode.DefaultScanScannerList(),
+		DefaultScanScannerList(),
 		"Scanner module (repeatable or comma-separated)",
 	)
 	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
@@ -87,8 +84,6 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	)
 	cmd.MarkFlagsMutuallyExclusive("auth-state", "auth-recipe")
 	render.BindReportFlags(cmd, &reportOpts, true)
-	cmd.Flags().BoolVar(&noStream, "no-stream", false, "Poll instead of SSE")
-	cobra.CheckErr(cmd.Flags().MarkHidden("no-stream"))
 
 	return cmd
 }
@@ -98,7 +93,6 @@ type scanCommandOptions struct {
 	screenshot     bool
 	allowPrivate   bool
 	timeout        time.Duration
-	noStream       bool
 	authStatePath  string
 	authRecipePath string
 	reportOpts     render.ReportFlags
@@ -131,7 +125,7 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		root.apiURL,
 		opts,
 		args,
-		cobraFlagChanged(cmd, "allow-private-targets"),
+		cmd.Flags().Changed("allow-private-targets"),
 		cmd.ErrOrStderr(),
 	)
 	if err != nil {
@@ -145,7 +139,7 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		client,
 		req,
 		opts.timeout,
-		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: opts.noStream},
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr()},
 	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
@@ -220,7 +214,7 @@ func runStaticScan(cmd *cobra.Command, root *rootOptions, opts scanCommandOption
 		opCtx,
 		client,
 		jobID,
-		scanflow.WaitOptions{Progress: cmd.ErrOrStderr(), NoStream: opts.noStream},
+		scanflow.WaitOptions{Progress: cmd.ErrOrStderr()},
 	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}

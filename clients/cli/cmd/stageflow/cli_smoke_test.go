@@ -7,13 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
-	"github.com/mattboback/stageflow/clients/cli/internal/projectmode"
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
@@ -52,125 +50,28 @@ func TestCLICompletionSmoke(t *testing.T) {
 	}
 }
 
-func TestCLIDocsSmoke(t *testing.T) {
-	outDir := t.TempDir()
-
-	_, stderr, exitCode := runCLI(t, "stageflow", "docs", "--out-dir", outDir)
-	if exitCode != 0 {
-		t.Fatalf("exitCode=%d stderr=%q", exitCode, stderr)
-	}
-
-	if _, statErr := os.Stat(filepath.Join(outDir, "stageflow.md")); statErr != nil {
-		t.Fatalf("expected generated docs: %v", statErr)
+func TestCLIRemovedCommandsAreRejected(t *testing.T) {
+	for _, command := range []string{"dev", "stack", "docs"} {
+		t.Run(command, func(t *testing.T) {
+			_, stderr, code := runCLI(t, "stageflow", command)
+			if code != 2 || !strings.Contains(stderr, "unknown command") {
+				t.Fatalf("removed command returned exitCode=%d stderr=%q", code, stderr)
+			}
+		})
 	}
 }
 
-func TestCheckedInCLIDocsUseCurrentDefaultScannerList(t *testing.T) {
-	repoRoot := mustFindRepoRoot(t)
-	docPath := filepath.Join(repoRoot, "docs", "reference", "cli", "stageflow", "stageflow_scan.md")
-
-	data, err := os.ReadFile(docPath)
-	testsupport.RequireNoErr(t, err)
-
-	if !strings.Contains(string(data), projectmode.DefaultScanScanners) {
-		t.Fatalf("expected %s to contain current default scanner list %q", docPath, projectmode.DefaultScanScanners)
-	}
-}
-
-func TestToolsReadmeUsesCurrentDefaultScannerList(t *testing.T) {
-	repoRoot := mustFindRepoRoot(t)
-	readmePath := filepath.Join(repoRoot, "clients", "cli", "README.md")
-
-	data, err := os.ReadFile(readmePath)
-	testsupport.RequireNoErr(t, err)
-
-	scannerListYAML := "scanners: [" + strings.Join(projectmode.DefaultScanScannerList(), ", ") + "]"
-	if !strings.Contains(string(data), scannerListYAML) {
-		t.Fatalf("expected %s to contain current default scanner list %q", readmePath, scannerListYAML)
-	}
-}
-
-func TestRepoProjectBootstrapSuggestionUsesLocalSelfScanDefaults(t *testing.T) {
-	repoRoot := mustFindRepoRoot(t)
-	suggestion, err := projectmode.DetectBootstrapSuggestion(repoRoot)
-	testsupport.RequireNoErr(t, err)
-
-	if suggestion.IsPlaceholder {
-		t.Fatalf("expected repo bootstrap suggestion, got placeholder")
-	}
-
-	template := projectmode.DefaultConfigTemplate("http://localhost:8080", suggestion)
-	for _, expected := range []string{
-		`cmd: ["just", "run", "clients/web"]`,
-		`url: http://127.0.0.1:5173`,
+func TestCLIRemovedNoStreamFlagIsRejected(t *testing.T) {
+	for _, args := range [][]string{
+		{"stageflow", "scan", "https://example.com", "--no-stream"},
+		{"stageflow", "diff", "baseline.json", "current.json", "--no-stream"},
 	} {
-		if !strings.Contains(template, expected) {
-			t.Fatalf("expected template to contain %q", expected)
-		}
-	}
-}
-
-func TestCLIDevCommandsSmoke(t *testing.T) {
-	root := t.TempDir()
-
-	err := os.WriteFile(filepath.Join(root, "justfile"), []byte("run SERVICE:\n\t@true\n"), 0o600)
-	testsupport.RequireNoErr(t, err)
-
-	err = os.MkdirAll(filepath.Join(root, "clients", "web"), 0o750)
-	testsupport.RequireNoErr(t, err)
-
-	err = os.WriteFile(
-		filepath.Join(root, "clients", "web", "package.json"),
-		[]byte(`{"scripts":{"dev":"vite dev"}}`),
-		0o600,
-	)
-	testsupport.RequireNoErr(t, err)
-
-	err = os.WriteFile(filepath.Join(root, "clients", "web", "vite.config.ts"), []byte("export default {}\n"), 0o600)
-	testsupport.RequireNoErr(t, err)
-
-	stdout, stderr, exitCode := runCLI(t, "stageflow", "dev", "init", root)
-	if exitCode != 0 {
-		t.Fatalf("exitCode=%d stderr=%q", exitCode, stderr)
-	}
-
-	if !strings.Contains(stdout, "Created StageFlow dev-loop bootstrap") {
-		t.Fatalf("unexpected init output: %q", stdout)
-	}
-
-	data, err := os.ReadFile(filepath.Join(root, ".stageflow", "config.yaml"))
-	testsupport.RequireNoErr(t, err)
-
-	contents := string(data)
-	if !strings.Contains(contents, `cmd: ["just", "run", "clients/web"]`) {
-		t.Fatalf("expected inferred command in config: %q", contents)
-	}
-
-	if !strings.Contains(contents, "url: http://127.0.0.1:5173") {
-		t.Fatalf("expected inferred URL in config: %q", contents)
-	}
-}
-
-func TestCLIDevDoctorRepoSmoke(t *testing.T) {
-	repoDir := os.Getenv("STAGEFLOW_TEST_REPO_DIR")
-	if repoDir == "" {
-		t.Skip("skipping: set STAGEFLOW_TEST_REPO_DIR to the repo root")
-	}
-
-	if _, err := os.Stat(repoDir); err != nil {
-		t.Skipf("skipping: %s not found", repoDir)
-	}
-
-	cleanup := withWorkingDir(t, repoDir)
-	defer cleanup()
-
-	stdout, stderr, exitCode := runCLI(t, "stageflow", "dev", "doctor", "--skip-dev")
-	if exitCode != 0 {
-		t.Fatalf("exitCode=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
-	}
-
-	if !strings.Contains(stdout, "Doctor checks passed") {
-		t.Fatalf("unexpected doctor output: %q", stdout)
+		t.Run(args[1], func(t *testing.T) {
+			_, stderr, code := runCLI(t, args...)
+			if code != 2 || !strings.Contains(stderr, "unknown flag: --no-stream") {
+				t.Fatalf("removed flag returned exitCode=%d stderr=%q", code, stderr)
+			}
+		})
 	}
 }
 
@@ -203,7 +104,6 @@ func TestCLIApiCommandsSmoke(t *testing.T) {
 		server.URL,
 		"scan",
 		"https://example.com",
-		"--no-stream",
 		"--summary-only",
 	)
 	if exitCode != 0 {
@@ -212,6 +112,10 @@ func TestCLIApiCommandsSmoke(t *testing.T) {
 
 	if !strings.Contains(stderr, "Waiting for completion") {
 		t.Fatalf("unexpected scan stderr: %q", stderr)
+	}
+
+	if !strings.Contains(stderr, "stream lost, falling back to polling...") {
+		t.Fatalf("expected automatic polling fallback after rejected SSE request: %q", stderr)
 	}
 
 	if !strings.Contains(stdout, "Job: "+jobID) {
@@ -252,22 +156,6 @@ func withWorkingDir(t *testing.T, dir string) func() {
 	}
 }
 
-func mustFindRepoRoot(t *testing.T) string {
-	t.Helper()
-
-	wd, err := os.Getwd()
-	testsupport.RequireNoErr(t, err)
-
-	root, ok, err := projectmode.FindGitRoot(wd)
-	testsupport.RequireNoErr(t, err)
-
-	if !ok {
-		t.Fatalf("expected to find git root from %s", wd)
-	}
-
-	return root
-}
-
 func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 
@@ -278,6 +166,8 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v1/jobs/urls":
 			writeJSONResponse(t, w, http.StatusAccepted, apiclient.SubmitJobResponse{JobID: jobID, Status: "accepted"})
+		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID+"/stream":
+			http.NotFound(w, r)
 		case r.Method == http.MethodGet && r.URL.Path == "/api/v1/jobs/"+jobID:
 			writeJSONResponse(t, w, http.StatusOK, apiclient.JobStatus{
 				ID:                jobID,

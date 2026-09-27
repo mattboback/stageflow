@@ -255,11 +255,7 @@ func emitScannerCompletionsFromStatus(out io.Writer, state *streamState, status 
 		return nil
 	}
 
-	state.remainingScanners = deriveRemainingScanners(
-		status.ExpectedScanners,
-		status.CompletedScanners,
-		status.RemainingScanners,
-	)
+	state.remainingScanners = cloneStrings(status.RemainingScanners)
 
 	for _, scannerType := range status.CompletedScanners {
 		if scannerType == "" {
@@ -305,40 +301,6 @@ func (s *streamState) markScannerComplete(scannerType string) []string {
 	s.remainingScanners = next
 
 	return cloneStrings(next)
-}
-
-func deriveRemainingScanners(expected, completed, provided []string) []string {
-	if len(provided) > 0 {
-		return cloneStrings(provided)
-	}
-
-	if len(expected) == 0 {
-		return nil
-	}
-
-	completedSet := make(map[string]struct{}, len(completed))
-	for _, scannerType := range completed {
-		if scannerType == "" {
-			continue
-		}
-
-		completedSet[scannerType] = struct{}{}
-	}
-
-	remaining := make([]string, 0, len(expected))
-	for _, scannerType := range expected {
-		if scannerType == "" {
-			continue
-		}
-
-		if _, done := completedSet[scannerType]; done {
-			continue
-		}
-
-		remaining = append(remaining, scannerType)
-	}
-
-	return remaining
 }
 
 func cloneStrings(values []string) []string {

@@ -1,10 +1,6 @@
 # Generated, byte-compared, or vendored. Formatting anything here breaks a CI
 # check or churns a file nobody edits by hand.
 
-# devtools/scripts/check-cli-docs-generated.sh byte-compares these against
-# `go run ./clients/cli/cmd/stageflow docs` output. Reformatting them fails CI permanently.
-docs/reference/
-
 # Committed output of devtools/scripts/generate-contracts.sh, byte-checked by
 # check-contracts-generated.sh.
 libs/contracts/*/generated/

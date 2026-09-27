@@ -187,3 +187,25 @@ func TestSSEJobStateEscapesJobIDAndClosesBodyAfterStatusError(t *testing.T) {
 		t.Fatal("expected SSE response body to be closed")
 	}
 }
+
+func TestStatusRemainingScannersIsAuthoritative(t *testing.T) {
+	t.Parallel()
+
+	state := newStreamState()
+
+	var out bytes.Buffer
+
+	status := &apiclient.JobStatus{
+		State:             "SCANNING",
+		ExpectedScanners:  []string{"axe", "lighthouse"},
+		CompletedScanners: []string{"axe"},
+		RemainingScanners: []string{},
+	}
+	if err := emitScannerCompletionsFromStatus(&out, state, status); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(state.remainingScanners) != 0 || bytes.Contains(out.Bytes(), []byte("lighthouse")) {
+		t.Fatalf("empty remaining_scanners must not be inferred from expected scanners: %q", out.String())
+	}
+}
