@@ -15,6 +15,11 @@
 		"maxConcurrency": 10,
 		"estimatedTimePerPage": 2000
 	},
+	"requirements": {
+		"resources": {
+			"maxMemoryMB": 512
+		}
+	},
 	"entry": {
 		"module": "./index.js",
 		"exportName": "SecurityHeadersScanner"

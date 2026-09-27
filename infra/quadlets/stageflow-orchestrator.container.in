@@ -22,10 +22,8 @@ NoNewPrivileges=true
 Tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m
 SecurityLabelDisable=true
 Volume=%t/podman/podman.sock:/run/user/1000/podman/podman.sock:z
-Volume=@REPO_ROOT@/infra/scanners/scanners.yaml:/data/scanners.yaml:ro
 Environment=NATS_URL=nats://nats:4222
 Environment=PODMAN_SOCKET=/run/user/1000/podman/podman.sock
-Environment=SCANNER_CONFIG_PATH=/data/scanners.yaml
 Environment=MINIO_ENDPOINT=minio:9000
 Environment=MINIO_USE_SSL=false
 Environment=EXTRACTION_IMAGE=localhost/stageflow/extractor:@IMAGE_TAG@

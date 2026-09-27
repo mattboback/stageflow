@@ -1286,22 +1286,6 @@
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:24:34.124Z",
-      "durationMs": 3758,
-      "id": "open-graph",
-      "issueCount": 0,
-      "name": "Open Graph Scanner",
-      "severity": {
-        "critical": 0,
-        "minor": 0,
-        "moderate": 0,
-        "serious": 0
-      },
-      "startedAt": "2026-07-26T04:24:30.366Z",
-      "status": "success",
-      "toolVersion": "0.1.0"
-    },
-    {
       "completedAt": "2026-07-26T04:24:36.076Z",
       "durationMs": 4501,
       "id": "security-headers",
@@ -1332,22 +1316,6 @@
         "serious": 0
       },
       "startedAt": "2026-07-26T04:24:31.814Z",
-      "status": "success",
-      "toolVersion": "0.1.0"
-    },
-    {
-      "completedAt": "2026-07-26T04:24:37.16Z",
-      "durationMs": 4867,
-      "id": "spelling-grammar",
-      "issueCount": 0,
-      "name": "Spelling and Grammar Scanner",
-      "severity": {
-        "critical": 0,
-        "minor": 0,
-        "moderate": 0,
-        "serious": 0
-      },
-      "startedAt": "2026-07-26T04:24:32.293Z",
       "status": "success",
       "toolVersion": "0.1.0"
     }

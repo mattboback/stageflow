@@ -35,6 +35,8 @@ export interface PlaygroundSessionOptions {
 	seedUrl: string | null;
 }
 
+// Selections follow the catalog: a stored ID the catalog no longer has is
+// dropped, and the next save forgets it.
 function mergeProjectSelections(
 	catalog: ScannerDefinition[],
 	stored: ScannerSelection[]
@@ -42,15 +44,6 @@ function mergeProjectSelections(
 	if (stored.length === 0) return getDefaultScannerSelections(catalog);
 	const storedById = new Map(stored.map((selection) => [selection.id, selection]));
 	return catalog.map((scanner) => storedById.get(scanner.id) ?? { id: scanner.id, enabled: false });
-}
-
-function preserveUnavailableProjectSelections(
-	catalog: ScannerDefinition[],
-	current: ScannerSelection[],
-	stored: ScannerSelection[]
-): ScannerSelection[] {
-	const availableIds = new Set(catalog.map((scanner) => scanner.id));
-	return [...current, ...stored.filter((selection) => !availableIds.has(selection.id))];
 }
 
 /**
@@ -231,12 +224,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		setFile(f);
 	}
 
-	function selectionsForProjectPersistence(current: ScannerSelection[]): ScannerSelection[] {
-		return project
-			? preserveUnavailableProjectSelections(catalog, current, project.configuration.scanners)
-			: current;
-	}
-
 	function collectValidUrls(): { valid: string[]; rowErrors: Record<number, string> } {
 		const rowErrors: Record<number, string> = {};
 		const valid: string[] = [];
@@ -283,14 +270,10 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 
 		setSavingProject(true);
 		try {
-			const currentSelections = selections;
 			const saved = await saveLocalProject({
 				...project,
 				name: projectName,
-				configuration: currentProjectConfiguration(
-					valid,
-					selectionsForProjectPersistence(currentSelections)
-				)
+				configuration: currentProjectConfiguration(valid, selections)
 			});
 			setProject(saved);
 			setProjectName(saved.name);
@@ -321,18 +304,14 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		try {
 			let configFingerprint: string | null = null;
 			if (project) {
-				const runConfiguration = currentProjectConfiguration(validUrls, scannersForSubmit);
-				const savedConfiguration = currentProjectConfiguration(
-					validUrls,
-					selectionsForProjectPersistence(scannersForSubmit)
-				);
+				const configuration = currentProjectConfiguration(validUrls, scannersForSubmit);
 				const saved = await saveLocalProject({
 					...project,
 					name: projectName,
-					configuration: savedConfiguration
+					configuration
 				});
 				setProject(saved);
-				configFingerprint = await fingerprintProjectConfiguration(runConfiguration);
+				configFingerprint = await fingerprintProjectConfiguration(configuration);
 			}
 			const { job_id } = await submitScanJob({
 				mode,

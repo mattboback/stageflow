@@ -38,7 +38,7 @@ export const meta: MetaFunction = () => [
 	{ title: pageTitle('Live report demo') },
 	{
 		name: 'description',
-		content: `A real ${SITE_NAME} report you can explore without running a scan: three pages, seven scanners, one merged and severity-ranked result.`
+		content: `A real ${SITE_NAME} report you can explore without running a scan: three pages, five scanners, one merged and severity-ranked result.`
 	}
 ];
 

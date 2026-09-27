@@ -240,7 +240,7 @@ test('local project creates a run and promotes its report without persisting cre
 	await expect(page.getByRole('link', { name: 'Latest report' })).toBeVisible();
 });
 
-test('temporarily unavailable scanners remain stored but are not submitted', async ({ page }) => {
+test('removed scanners are dropped from the project and not submitted', async ({ page }) => {
 	const api = await mockProjectApi(page, { includeOptionalScanner: true });
 	await page.goto('/projects');
 
@@ -297,11 +297,15 @@ test('temporarily unavailable scanners remain stored but are not submitted', asy
 		database.close();
 		return project.configuration.scanners.find((scanner) => scanner.id === 'seo');
 	}, projectId);
-	expect(storedScannerConfig).toMatchObject({ id: 'seo', enabled: true });
+	// Running the scan saved the project, which forgot the removed scanner.
+	expect(storedScannerConfig).toBeUndefined();
 
 	api.setOptionalScannerAvailable(true);
 	await page.goto(`/playground?project=${projectId}`);
-	await expect(page.getByRole('checkbox', { name: /SEO/ })).toHaveAttribute('aria-checked', 'true');
+	await expect(page.getByRole('checkbox', { name: /SEO/ })).toHaveAttribute(
+		'aria-checked',
+		'false'
+	);
 });
 
 test('SPA project query changes discard project association and execution-only state', async ({

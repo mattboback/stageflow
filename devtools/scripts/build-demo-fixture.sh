@@ -97,10 +97,7 @@ for path in "${paths[@]}"; do
 	targets+=("${base}${path}")
 done
 
-# Every scanner the deployment has enabled, asked for by name. --scanner
-# defaults to four, and the four it picks leave the security-headers,
-# open-graph and spelling panels empty on the one page whose job is to show
-# them full.
+# Every scanner the deployment has enabled, asked for by name.
 scanners="$(curl -fsS "${api}/api/v1/scanners" |
 	jq -r '[.scanners[] | select(.enabled) | .id] | join(",")')"
 [[ -n "$scanners" ]] || die "the catalog reports no enabled scanners"

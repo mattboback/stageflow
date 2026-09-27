@@ -22,11 +22,3 @@ func normalizeScannerList(scanners []string) ([]string, error) {
 
 	return normalized, nil
 }
-
-const DefaultScanScanners = "axe,lighthouse,seo,link-checker"
-
-// DefaultScanScannerList is the slice form of DefaultScanScanners, used as the
-// --scanner flag default.
-func DefaultScanScannerList() []string {
-	return strings.Split(DefaultScanScanners, ",")
-}

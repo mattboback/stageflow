@@ -295,7 +295,7 @@
 	flex-shrink: 0;
 }
 
-/* The seven scanners, from SCANNER_META. auto-fit rather than a fixed column
+/* The five scanners, from SCANNER_META. auto-fit rather than a fixed column
    count so the grid reflows without a media query per breakpoint. */
 .scanlist {
 	list-style: none;

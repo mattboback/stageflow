@@ -10,20 +10,16 @@ import {
 	AxeScanner,
 	LighthouseScanner,
 	LinkCheckerScanner,
-	OpenGraphScanner,
 	SecurityHeadersScanner,
-	SEOScanner,
-	SpellingGrammarScanner
+	SEOScanner
 } from './index';
 
 export const BUILTIN_SCANNER_IDS = [
 	'axe',
 	'lighthouse',
 	'link-checker',
-	'open-graph',
 	'security-headers',
-	'seo',
-	'spelling-grammar'
+	'seo'
 ] as const;
 
 type BuiltinScannerId = (typeof BUILTIN_SCANNER_IDS)[number];
@@ -48,10 +44,8 @@ const BUILTIN_SCANNERS: readonly BuiltinScannerDefinition[] = [
 	{ id: 'axe', create: () => new AxeScanner() },
 	{ id: 'lighthouse', create: () => new LighthouseScanner() },
 	{ id: 'link-checker', create: () => new LinkCheckerScanner() },
-	{ id: 'open-graph', create: () => new OpenGraphScanner() },
 	{ id: 'security-headers', create: () => new SecurityHeadersScanner() },
-	{ id: 'seo', create: () => new SEOScanner() },
-	{ id: 'spelling-grammar', create: () => new SpellingGrammarScanner() }
+	{ id: 'seo', create: () => new SEOScanner() }
 ];
 
 export class BuiltinScannerRegistry {

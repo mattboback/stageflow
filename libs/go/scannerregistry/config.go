@@ -1,129 +1,16 @@
 package scannerregistry
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"sort"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
-// Config is the in-memory scanner registry configuration (built-ins + overrides).
+// Config is the in-memory scanner registry configuration, built from the
+// embedded manifests in libs/go/scannercatalog.
 type Config struct {
-	DefaultImage string                 `yaml:"defaultImage"`
-	Scanners     map[string]*Definition `yaml:"scanners"`
-}
-
-// Overrides describes partial scanner overrides loaded from YAML.
-// Built-in scanner metadata comes from the embedded manifests in libs/go/scannercatalog.
-type Overrides struct {
-	DefaultImage string                    `yaml:"defaultImage"`
-	Scanners     map[string]*ScannerConfig `yaml:"scanners"`
-}
-
-// ScannerConfig contains per-scanner overrides.
-type ScannerConfig struct {
-	Enabled      *bool                 `yaml:"enabled,omitempty"`
-	Image        string                `yaml:"image,omitempty"`
-	Capabilities *CapabilitiesOverride `yaml:"capabilities,omitempty"`
-	Requirements *RequirementsOverride `yaml:"requirements,omitempty"`
-}
-
-// CapabilitiesOverride allows overriding runtime limits.
-type CapabilitiesOverride struct {
-	MaxConcurrency       *int `yaml:"maxConcurrency,omitempty"`
-	EstimatedTimePerPage *int `yaml:"estimatedTimePerPage,omitempty"`
-}
-
-// RequirementsOverride allows overriding runtime resource constraints.
-type RequirementsOverride struct {
-	MaxMemoryMB  *int `yaml:"maxMemoryMB,omitempty"`
-	MaxTimeoutMs *int `yaml:"maxTimeoutMs,omitempty"`
-}
-
-// LoadOverrides loads scanner overrides from a YAML file.
-func LoadOverrides(configPath string) (*Overrides, error) {
-	cleanPath := filepath.Clean(configPath)
-	// #nosec G304 -- config path is user-supplied; we clean it before reading.
-	data, err := os.ReadFile(cleanPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-
-	var overrides Overrides
-	if unmarshalErr := yaml.Unmarshal(data, &overrides); unmarshalErr != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", unmarshalErr)
-	}
-
-	return &overrides, nil
-}
-
-// LoadOverridesFromDir loads overrides from a directory.
-// Looks for scanners.yaml, scanners.yml, or config/scanners.yaml.
-func LoadOverridesFromDir(dir string) (*Overrides, error) {
-	candidates := []string{
-		filepath.Join(dir, "scanners.yaml"),
-		filepath.Join(dir, "scanners.yml"),
-		filepath.Join(dir, "config", "scanners.yaml"),
-		filepath.Join(dir, "config", "scanners.yml"),
-	}
-
-	for _, path := range candidates {
-		if _, err := os.Stat(path); err == nil {
-			return LoadOverrides(path)
-		}
-	}
-
-	return nil, fmt.Errorf("no scanner overrides found in %s", dir)
-}
-
-func applyCapabilitiesOverride(def *Definition, override *CapabilitiesOverride) {
-	if override == nil {
-		return
-	}
-
-	if override.MaxConcurrency != nil {
-		def.Capabilities.MaxConcurrency = *override.MaxConcurrency
-	}
-
-	if override.EstimatedTimePerPage != nil {
-		def.Capabilities.EstimatedTimePerPage = *override.EstimatedTimePerPage
-	}
-}
-
-func applyRequirementsOverride(def *Definition, override *RequirementsOverride) {
-	if override == nil {
-		return
-	}
-
-	if override.MaxMemoryMB != nil {
-		def.Requirements.MaxMemoryMB = *override.MaxMemoryMB
-	}
-
-	if override.MaxTimeoutMs != nil {
-		def.Requirements.MaxTimeoutMs = *override.MaxTimeoutMs
-	}
-}
-
-func applyScannerOverride(def *Definition, override *ScannerConfig) {
-	if def == nil || override == nil {
-		return
-	}
-
-	if override.Enabled != nil {
-		def.Enabled = *override.Enabled
-	}
-
-	if override.Image != "" {
-		def.Image = override.Image
-	}
-
-	applyCapabilitiesOverride(def, override.Capabilities)
-	applyRequirementsOverride(def, override.Requirements)
+	DefaultImage string
+	Scanners     map[string]*Definition
 }
 
 func boolOrFalse(value *bool) bool {
@@ -161,54 +48,6 @@ func toStringSlice[T ~string](values []T) []string {
 	}
 
 	return out
-}
-
-// ApplyOverrides applies YAML overrides to a registry config in place.
-func ApplyOverrides(config *Config, overrides *Overrides) *Config {
-	updated, _ := ApplyOverridesChecked(config, overrides)
-
-	return updated
-}
-
-// ApplyOverridesChecked applies YAML overrides and reports scanner IDs that do
-// not match built-in scanner definitions.
-func ApplyOverridesChecked(config *Config, overrides *Overrides) (*Config, []string) {
-	if config == nil || overrides == nil {
-		return config, nil
-	}
-
-	if overrides.DefaultImage != "" {
-		config.DefaultImage = overrides.DefaultImage
-	}
-
-	var unknown []string
-
-	for id, scanner := range overrides.Scanners {
-		def, ok := config.Scanners[id]
-		if !ok {
-			unknown = append(unknown, id)
-
-			continue
-		}
-
-		applyScannerOverride(def, scanner)
-	}
-
-	sort.Strings(unknown)
-
-	return config, unknown
-}
-
-// ErrUnknownScannerOverride is returned when overrides name scanner IDs that
-// are not in the built-in scanner catalog.
-var ErrUnknownScannerOverride = errors.New("unknown scanner override IDs")
-
-func FormatUnknownScannerOverrides(unknown []string) error {
-	if len(unknown) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf("%w: %v", ErrUnknownScannerOverride, unknown)
 }
 
 // InitializeRegistry creates and populates a registry from config.

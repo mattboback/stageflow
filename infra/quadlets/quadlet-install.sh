@@ -11,16 +11,11 @@ OUTPUT_DIR="${QUADLET_DIR:-${HOME}/.config/containers/systemd}"
 USER_SYSTEMD_DIR="${USER_SYSTEMD_DIR:-${HOME}/.config/systemd/user}"
 SKIP_STAGEFLOW_TARGET_BACKUP="${SKIP_STAGEFLOW_TARGET_BACKUP:-0}"
 
-# REPO_ROOT is the checkout whose files the units bind-mount (scanner config).
-REPO_ROOT="${STAGEFLOW_REPO_ROOT:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
-
 ENV_FILE="${ENV_FILE:-${XDG_CONFIG_HOME:-${HOME}/.config}/stageflow/production.env}"
 APP_ENV_FILE="${APP_ENV_FILE:-${ENV_FILE}}"
 NETWORK_NAME="${STAGEFLOW_NETWORK_NAME:-${NETWORK_NAME:-stageflow_net}}"
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
-SCANNER_OVERRIDES_EXAMPLE="${REPO_ROOT}/infra/scanners/scanners.example.yaml"
-SCANNER_OVERRIDES="${REPO_ROOT}/infra/scanners/scanners.yaml"
 
 # Units run the images tagged IMAGE_TAG. The control plane passes the commit
 # SHA it built; without one, render what is deployed now (the state file's
@@ -36,12 +31,6 @@ if [[ ! "${IMAGE_TAG}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
   exit 1
 fi
 
-if [[ ! -f "${REPO_ROOT}/justfile" ]]; then
-  echo "quadlet-install: cannot find stageflow repo at ${REPO_ROOT}" >&2
-  echo "Set STAGEFLOW_REPO_ROOT to the stageflow application directory." >&2
-  exit 1
-fi
-
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "quadlet-install: missing env file: ${ENV_FILE}" >&2
   exit 1
@@ -50,17 +39,6 @@ fi
 if [[ ! -f "${APP_ENV_FILE}" ]]; then
   echo "quadlet-install: missing app env file: ${APP_ENV_FILE}" >&2
   exit 1
-fi
-
-if [[ ! -f "${SCANNER_OVERRIDES}" ]]; then
-  if [[ ! -f "${SCANNER_OVERRIDES_EXAMPLE}" ]]; then
-    echo "quadlet-install: missing scanner overrides example: ${SCANNER_OVERRIDES_EXAMPLE}" >&2
-    exit 1
-  fi
-
-  mkdir -p "$(dirname "${SCANNER_OVERRIDES}")"
-  cp "${SCANNER_OVERRIDES_EXAMPLE}" "${SCANNER_OVERRIDES}"
-  echo "Created ${SCANNER_OVERRIDES} from ${SCANNER_OVERRIDES_EXAMPLE}"
 fi
 
 mkdir -p "${OUTPUT_DIR}"
@@ -89,7 +67,6 @@ escape_sed() {
   printf '%s' "$1" | sed -e 's/[&|]/\\&/g'
 }
 
-REPO_ROOT_ESC="$(escape_sed "${REPO_ROOT}")"
 ENV_FILE_ESC="$(escape_sed "${ENV_FILE}")"
 APP_ENV_FILE_ESC="$(escape_sed "${APP_ENV_FILE}")"
 NETWORK_NAME_ESC="$(escape_sed "${NETWORK_NAME}")"
@@ -102,7 +79,6 @@ for template in "${TEMPLATE_DIR}"/*.in; do
 
   output_path="${OUTPUT_DIR}/${filename%.in}"
   sed \
-    -e "s|@REPO_ROOT@|${REPO_ROOT_ESC}|g" \
     -e "s|@ENV_FILE@|${ENV_FILE_ESC}|g" \
     -e "s|@APP_ENV_FILE@|${APP_ENV_FILE_ESC}|g" \
     -e "s|@NETWORK_NAME@|${NETWORK_NAME_ESC}|g" \

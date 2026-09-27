@@ -150,14 +150,15 @@ func TestNormalizeModules_NoRegistry(t *testing.T) {
 func TestNormalizeModules_WithRegistry(t *testing.T) {
 	server := newTestServerForModules(t)
 
-	t.Run("empty explicit uses registry defaults", func(t *testing.T) {
+	t.Run("empty explicit selects every built-in scanner", func(t *testing.T) {
 		result, err := server.normalizeModules(nil)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		if len(result) == 0 {
-			t.Error("expected non-empty result")
+		want := "axe,lighthouse,link-checker,security-headers,seo"
+		if got := strings.Join(result, ","); got != want {
+			t.Errorf("normalizeModules(nil) = %s, want %s", got, want)
 		}
 	})
 

@@ -7,7 +7,6 @@ type Config struct {
 	Port                 int
 	OrchestratorAPIURL   string
 	OrchestratorAPIToken string
-	ScannerConfigPath    string
 	AllowPrivateTargets  bool
 	APIToken             string
 	TombstoneDBPath      string
@@ -20,7 +19,6 @@ func loadConfig() *Config {
 		Port:                 config.GetEnvInt("PORT", 8080),
 		OrchestratorAPIURL:   config.GetEnv("ORCHESTRATOR_API_URL", "http://localhost:8081"),
 		OrchestratorAPIToken: config.GetEnv("ORCHESTRATOR_API_TOKEN", ""),
-		ScannerConfigPath:    config.GetEnv("SCANNER_CONFIG_PATH", ""),
 		AllowPrivateTargets:  config.GetEnvBool("PLATFORM_API_ALLOW_PRIVATE_TARGETS", false),
 		APIToken:             config.GetEnv("PLATFORM_API_TOKEN", ""),
 		// Keep the existing database path so deployed deletion history survives.

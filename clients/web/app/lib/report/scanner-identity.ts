@@ -1,4 +1,4 @@
-import { CheckCircle, Globe, Link2, Search, Shield, Zap } from 'lucide-react';
+import { Link2, Search, Shield, Zap } from 'lucide-react';
 
 export interface ScannerMeta {
 	icon: typeof Shield;
@@ -31,16 +31,6 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 		icon: Search,
 		label: 'SEO',
 		description: 'Meta tags, headings, and SEO optimization'
-	},
-	'open-graph': {
-		icon: Globe,
-		label: 'Open Graph',
-		description: 'Social preview metadata validation for OG tags and Twitter cards'
-	},
-	'spelling-grammar': {
-		icon: CheckCircle,
-		label: 'Spelling & Grammar',
-		description: 'Rule-based spelling and content-quality checks'
 	}
 };
 

@@ -3,7 +3,7 @@ package scannerregistry
 import "testing"
 
 const (
-	moduleAxe             = defaultModuleAxe
+	moduleAxe             = "axe"
 	moduleAxeAlias        = "axe-core"
 	moduleLighthouse      = "lighthouse"
 	moduleSEO             = "seo"
@@ -58,12 +58,12 @@ func newRegistryWithDisabled(t *testing.T) *Registry {
 	return reg
 }
 
-func TestRegistry_ResolveModules_EmptyDefaultsToAxe(t *testing.T) {
+func TestRegistry_ResolveModules_EmptyDefaultsToEnabled(t *testing.T) {
 	reg := newRegistryWithDefaults(t)
 
 	result := reg.ResolveModules(nil)
-	if len(result) != 1 || result[0] != moduleAxe {
-		t.Errorf("expected [%s], got %v", moduleAxe, result)
+	if len(result) != 2 || result[0] != moduleAxe || result[1] != moduleLighthouse {
+		t.Errorf("expected [%s %s] (seo is disabled), got %v", moduleAxe, moduleLighthouse, result)
 	}
 }
 
@@ -154,7 +154,7 @@ func TestRegistry_ResolveModules_Sorted(t *testing.T) {
 	}
 }
 
-func TestRegistry_ResolveModulesStrict_EmptyDefaultsToAxe(t *testing.T) {
+func TestRegistry_ResolveModulesStrict_EmptyDefaultsToEnabled(t *testing.T) {
 	reg := newRegistryWithDisabled(t)
 
 	result, err := reg.ResolveModulesStrict(nil)
@@ -163,7 +163,7 @@ func TestRegistry_ResolveModulesStrict_EmptyDefaultsToAxe(t *testing.T) {
 	}
 
 	if len(result) != 1 || result[0] != moduleAxe {
-		t.Errorf("expected [%s], got %v", moduleAxe, result)
+		t.Errorf("expected [%s] (the only enabled scanner), got %v", moduleAxe, result)
 	}
 }
 
@@ -207,19 +207,17 @@ func TestRegistry_ResolveModulesStrict_AllTokensEmpty(t *testing.T) {
 	}
 }
 
-func TestRegistry_ResolveModules_NoDefaultAxe(t *testing.T) {
+func TestRegistry_ResolveModules_EmptyRegistry(t *testing.T) {
 	reg := NewRegistry("")
-	// No axe registered
 
 	result := reg.ResolveModules([]string{})
 	if result != nil {
-		t.Errorf("expected nil when axe not available, got %v", result)
+		t.Errorf("expected nil with no scanners registered, got %v", result)
 	}
 }
 
-func TestRegistry_ResolveModulesStrict_NoDefaultAxe(t *testing.T) {
+func TestRegistry_ResolveModulesStrict_EmptyRegistry(t *testing.T) {
 	reg := NewRegistry("")
-	// No axe registered
 
 	_, err := reg.ResolveModulesStrict([]string{})
 	if err == nil {

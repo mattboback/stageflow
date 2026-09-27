@@ -15,6 +15,11 @@
 		"maxConcurrency": 3,
 		"estimatedTimePerPage": 10000
 	},
+	"requirements": {
+		"resources": {
+			"maxMemoryMB": 2176
+		}
+	},
 	"entry": {
 		"module": "./index.js",
 		"exportName": "LinkCheckerScanner"

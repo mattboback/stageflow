@@ -125,7 +125,6 @@ services:
     environment:
       PORT: "8080"
       NATS_URL: "nats://nats:4222"
-      SCANNER_CONFIG_PATH: "/data/scanners.yaml"
       MINIO_ENDPOINT: "minio:9000"
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:${MINIO_PORT:-9000}}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
@@ -143,7 +142,6 @@ services:
       ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
     volumes:
       - web_server_data:/data
-      - ../../infra/scanners/scanners.yaml:/data/scanners.yaml:ro
     healthcheck:
       test: ["CMD", "/usr/local/bin/platform-api-healthcheck"]
       interval: 15s
@@ -199,7 +197,6 @@ services:
       - no-new-privileges:true
     volumes:
       - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock:z
-      - ../../infra/scanners/scanners.yaml:/data/scanners.yaml:ro
     environment:
       NATS_URL: "nats://nats:4222"
       PODMAN_SOCKET: "/run/podman/podman.sock"
@@ -211,7 +208,6 @@ services:
       PODMAN_RESPONSE_HEADER_TIMEOUT: "${PODMAN_RESPONSE_HEADER_TIMEOUT:-60s}"
       PODMAN_DIAL_TIMEOUT: "${PODMAN_DIAL_TIMEOUT:-5s}"
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
-      SCANNER_CONFIG_PATH: "/data/scanners.yaml"
       MINIO_ENDPOINT: "minio:9000"
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}

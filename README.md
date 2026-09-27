@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-StageFlow is a self-hostable **frontend quality platform**. It ships seven
-built-in scanners — accessibility, performance, SEO, links, security headers,
-social metadata, and content quality — behind a single report contract, and
+StageFlow is a self-hostable **frontend quality platform**. It ships five
+built-in scanners — accessibility, performance, SEO, links, and security
+headers — behind a single report contract, and
 compares **saved scan reports** so every deployment can answer the question that
 matters in CI: _did this change make the frontend worse?_
 
@@ -145,13 +145,10 @@ Built-in scanners:
 - `seo` for title, metadata, heading, and structured-data checks
 - `security-headers` for common HTTP response-header policy
 - `link-checker` for internal and external link health
-- `open-graph` for social preview metadata
-- `spelling-grammar` for content quality
 
-Scanner enablement and resource overrides are configured through
-[infra/scanners/scanners.example.yaml](infra/scanners/scanners.example.yaml).
-The local example enables a smaller default set for resource use; request or
-enable additional scanners when you need them.
+A scan runs all five unless you pick some with `--scanner` (CLI) or `modules`
+(API). Each scanner's memory limit is set in its manifest under
+`libs/go/scannercatalog/manifests/`.
 
 ## Repository Map
 

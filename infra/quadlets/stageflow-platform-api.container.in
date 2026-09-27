@@ -20,10 +20,8 @@ NoNewPrivileges=true
 ReadOnly=true
 Tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m
 Volume=stageflow_web_server_data:/data
-Volume=@REPO_ROOT@/infra/scanners/scanners.yaml:/data/scanners.yaml:ro
 Environment=PORT=8080
 Environment=NATS_URL=nats://nats:4222
-Environment=SCANNER_CONFIG_PATH=/data/scanners.yaml
 Environment=MINIO_ENDPOINT=minio:9000
 Environment=MINIO_USE_SSL=false
 Environment=MINIO_PUBLIC_USE_SSL=true

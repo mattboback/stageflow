@@ -33,13 +33,10 @@ setup:
 
     just deps
 
-[group('setup'), doc('Install Go/Bun dependencies and default local config')]
+[group('setup'), doc('Install Go/Bun dependencies')]
 deps:
     #!/usr/bin/env bash
     set -euo pipefail
-
-    echo "==> Ensuring scanner config exists..."
-    ./infra/scripts/ensure-scanner-config.sh
 
     echo "==> Downloading Go modules..."
     {{go}} mod download
@@ -182,9 +179,6 @@ dev CMD='up' ENV='dev' ENDPOINT='' SERVICES='':
 
     echo "==> Ensuring $network network exists..."
     {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
-
-    echo "==> Ensuring scanner config exists..."
-    ./infra/scripts/ensure-scanner-config.sh
 
     env_file="${ENV_FILE:-$root_dir/.env}"
     env_args=()

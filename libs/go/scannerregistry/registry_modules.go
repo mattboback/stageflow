@@ -5,20 +5,31 @@ import (
 	"strings"
 )
 
-const defaultModuleAxe = "axe"
+// enabledIDsLocked returns every enabled scanner ID, sorted: the default set when
+// a request names no modules. The caller holds r.mu.
+func (r *Registry) enabledIDsLocked() []string {
+	var ids []string
 
-// ResolveModules converts module names to scanner IDs.
-// Tokens may be scanner IDs, aliases, or category names. Unknown tokens are passed through.
+	for id, def := range r.scanners {
+		if def.Enabled {
+			ids = append(ids, id)
+		}
+	}
+
+	sort.Strings(ids)
+
+	return ids
+}
+
+// ResolveModules converts module names to scanner IDs; no modules means every
+// enabled scanner. Tokens may be scanner IDs, aliases, or category names.
+// Unknown tokens are passed through.
 func (r *Registry) ResolveModules(modules []string) []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	if len(modules) == 0 {
-		if def, ok := r.scanners[defaultModuleAxe]; ok && def.Enabled {
-			return []string{defaultModuleAxe}
-		}
-
-		return nil
+		return r.enabledIDsLocked()
 	}
 
 	seen := make(map[string]bool)
@@ -54,15 +65,16 @@ func (r *Registry) ResolveModules(modules []string) []string {
 	return result
 }
 
-// ResolveModulesStrict converts module names to enabled scanner IDs.
-// Tokens may be scanner IDs, aliases, or category names.
+// ResolveModulesStrict converts module names to enabled scanner IDs; no modules
+// means every enabled scanner. Tokens may be scanner IDs, aliases, or category
+// names.
 func (r *Registry) ResolveModulesStrict(modules []string) ([]string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	if len(modules) == 0 {
-		if def, ok := r.scanners[defaultModuleAxe]; ok && def.Enabled {
-			return []string{defaultModuleAxe}, nil
+		if ids := r.enabledIDsLocked(); len(ids) > 0 {
+			return ids, nil
 		}
 
 		return nil, &ModuleError{message: "no scanners selected"}

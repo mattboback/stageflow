@@ -21,7 +21,7 @@ export interface DemoSummary {
 
 export const DEMO_SUMMARY: DemoSummary = {
 	pages: 3,
-	scannersRun: 7,
+	scannersRun: 5,
 	totalIssues: 14,
 	serious: 3,
 	moderate: 6

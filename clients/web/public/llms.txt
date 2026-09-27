@@ -1,6 +1,6 @@
 # StageFlow
 
-> StageFlow is a self-hostable frontend quality platform that runs accessibility, performance, SEO, security, link, spelling, and optional AI checks in rootless containers, then merges findings into one report.
+> StageFlow is a self-hostable frontend quality platform that runs accessibility, performance, SEO, security, link, and optional AI checks in rootless containers, then merges findings into one report.
 
 ## Core pages
 

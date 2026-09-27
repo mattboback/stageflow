@@ -2,6 +2,7 @@ package scannerregistry
 
 import (
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/scannercatalog"
@@ -46,8 +47,15 @@ func assertDefaultModules(t *testing.T, registry *Registry) {
 		t.Fatalf("ResolveModulesStrict(nil) error: %v", err)
 	}
 
-	if len(defaultModules) != 1 || defaultModules[0] != defaultModuleAxe {
-		t.Fatalf("expected default module %q, got %v", defaultModuleAxe, defaultModules)
+	want := make([]string, 0, len(registry.List()))
+	for _, def := range registry.List() {
+		want = append(want, def.ID)
+	}
+
+	sort.Strings(want)
+
+	if strings.Join(defaultModules, ",") != strings.Join(want, ",") {
+		t.Fatalf("default modules = %v, want the whole catalog %v", defaultModules, want)
 	}
 }
 
@@ -82,31 +90,4 @@ func TestDefaultConfigMatchesBuiltinCatalog(t *testing.T) {
 
 	assertDefaultModules(t, registry)
 	assertCategoryResolution(t, registry)
-}
-
-func TestApplyOverridesCheckedReportsUnknownScannerIDs(t *testing.T) {
-	cfg, err := DefaultConfig()
-	if err != nil {
-		t.Fatalf("DefaultConfig() error: %v", err)
-	}
-
-	enabled := false
-	updated, unknown := ApplyOverridesChecked(cfg, &Overrides{
-		Scanners: map[string]*ScannerConfig{
-			"axe":             {Enabled: &enabled},
-			"typo-scanner-id": {Enabled: &enabled},
-		},
-	})
-
-	if updated.Scanners["axe"].Enabled {
-		t.Fatal("expected axe override to be applied")
-	}
-
-	if len(unknown) != 1 || unknown[0] != "typo-scanner-id" {
-		t.Fatalf("unknown overrides = %v", unknown)
-	}
-
-	if formatErr := FormatUnknownScannerOverrides(unknown); formatErr == nil {
-		t.Fatal("FormatUnknownScannerOverrides() err = nil, want non-nil")
-	}
 }

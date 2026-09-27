@@ -57,8 +57,8 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 	cmd.Flags().StringSliceVar(
 		&scanners,
 		"scanner",
-		DefaultScanScannerList(),
-		"Scanner module (repeatable or comma-separated)",
+		nil,
+		"Scanner module (repeatable or comma-separated; default: all scanners)",
 	)
 	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
 	cmd.Flags().BoolVar(

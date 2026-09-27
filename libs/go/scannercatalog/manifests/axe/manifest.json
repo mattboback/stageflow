@@ -23,7 +23,7 @@
 			"headless": true
 		},
 		"resources": {
-			"maxMemoryMB": 4096,
+			"maxMemoryMB": 1792,
 			"maxTimeoutMs": 300000
 		}
 	},

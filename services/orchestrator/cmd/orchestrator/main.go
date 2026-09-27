@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
-	"github.com/mattboback/stageflow/libs/go/config"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/adapters/messaging"
 	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
@@ -290,57 +289,11 @@ func waitForShutdown(signals <-chan os.Signal, apiErrors <-chan error) error {
 	}
 }
 
-// loadScannerRegistry loads the scanner registry from configuration files or defaults.
-// It looks for scanner overrides in the following order:
-// 1. SCANNER_CONFIG_PATH environment variable
-// 2. ./config/scanners.yaml (relative to working directory)
-// 3. Default built-in configuration.
+// loadScannerRegistry builds the scanner registry from the built-in manifests.
 func loadScannerRegistry(logger *slog.Logger, defaultImage string) (*scanners.Registry, error) {
-	configPath := config.GetEnv("SCANNER_CONFIG_PATH", "")
-
 	registryConfig, cfgErr := scanners.DefaultConfig()
 	if cfgErr != nil {
 		return nil, fmt.Errorf("load default scanner config: %w", cfgErr)
-	}
-
-	var scannerOverrides *scanners.Overrides
-
-	if configPath != "" {
-		overrides, err := scanners.LoadOverrides(configPath)
-		if err != nil {
-			logger.Warn("Failed to load scanner overrides from path, using defaults",
-				"path", configPath, "error", err)
-		} else {
-			logger.Info("Loaded scanner overrides", "path", configPath)
-
-			scannerOverrides = overrides
-		}
-	}
-
-	if scannerOverrides == nil {
-		wd, wdErr := os.Getwd()
-		if wdErr == nil {
-			overrides, err := scanners.LoadOverridesFromDir(wd)
-			if err != nil {
-				logger.Debug("No scanner overrides found in working directory, using defaults",
-					"dir", wd, "error", err)
-			} else {
-				logger.Info("Loaded scanner overrides from working directory")
-
-				scannerOverrides = overrides
-			}
-		}
-	}
-
-	if scannerOverrides != nil {
-		var unknown []string
-
-		registryConfig, unknown = scanners.ApplyOverridesChecked(registryConfig, scannerOverrides)
-		if err := scanners.FormatUnknownScannerOverrides(unknown); err != nil {
-			return nil, fmt.Errorf("apply scanner overrides: %w", err)
-		}
-
-		logger.Info("Applied scanner overrides", "override_count", len(scannerOverrides.Scanners))
 	}
 
 	if defaultImage != "" {

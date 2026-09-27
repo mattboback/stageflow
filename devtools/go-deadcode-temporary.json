@@ -1,8 +1,1 @@
-[
-  {
-    "package": "github.com/mattboback/stageflow/libs/go/scannerregistry",
-    "function": "ApplyOverrides",
-    "owner": "1.7a",
-    "reason": "Remove the unchecked override wrapper with scanner YAML configuration."
-  }
-]
+[]

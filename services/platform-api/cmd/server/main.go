@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -105,7 +104,7 @@ func run() error {
 	slog.Info("Tombstone store initialized", "path", cfg.TombstoneDBPath)
 
 	msgService := messaging.NewService(natsClient)
-	scannerRegistry := loadScannerRegistry(slog.Default(), cfg.ScannerConfigPath)
+	scannerRegistry := loadScannerRegistry(slog.Default())
 
 	if scannerRegistry == nil {
 		return errors.New("failed to initialize scanner registry")
@@ -214,26 +213,12 @@ func newHTTPServer(port int, handler http.Handler) *http.Server {
 	}
 }
 
-func loadScannerRegistry(logger *slog.Logger, configPath string) *scannerregistry.Registry {
+// loadScannerRegistry builds the scanner registry from the built-in manifests.
+func loadScannerRegistry(logger *slog.Logger) *scannerregistry.Registry {
 	registryConfig, err := scannerregistry.DefaultConfig()
 	if err != nil {
 		logger.Error("Failed to load default scanner config", "error", err)
 		return nil
-	}
-
-	scannerOverrides := loadScannerOverrides(logger, configPath)
-
-	if scannerOverrides != nil {
-		var unknown []string
-
-		registryConfig, unknown = scannerregistry.ApplyOverridesChecked(registryConfig, scannerOverrides)
-		if formatErr := scannerregistry.FormatUnknownScannerOverrides(unknown); formatErr != nil {
-			logger.Error("Failed to apply scanner overrides", "error", formatErr)
-
-			return nil
-		}
-
-		logger.Info("Applied scanner overrides", "override_count", len(scannerOverrides.Scanners))
 	}
 
 	registry, err := scannerregistry.InitializeRegistry(registryConfig)
@@ -253,36 +238,4 @@ func loadScannerRegistry(logger *slog.Logger, configPath string) *scannerregistr
 	}
 
 	return registry
-}
-
-func loadScannerOverrides(logger *slog.Logger, configPath string) *scannerregistry.Overrides {
-	path := strings.TrimSpace(configPath)
-	if path != "" {
-		overrides, err := scannerregistry.LoadOverrides(path)
-		if err != nil {
-			logger.Warn("Failed to load scanner overrides from path, using defaults", "path", path, "error", err)
-
-			return nil
-		}
-
-		logger.Info("Loaded scanner overrides", "path", path)
-
-		return overrides
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil
-	}
-
-	overrides, err := scannerregistry.LoadOverridesFromDir(wd)
-	if err != nil {
-		logger.Debug("No scanner overrides found in working directory, using defaults", "dir", wd, "error", err)
-
-		return nil
-	}
-
-	logger.Info("Loaded scanner overrides from working directory")
-
-	return overrides
 }
