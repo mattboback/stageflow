@@ -7,7 +7,11 @@ export const LOCAL_PROJECT_DIFF_SCHEMA = 'stageflow/diff@v1' as const;
 export interface LocalProjectConfiguration {
 	urls: string[];
 	scanners: ScannerSelection[];
-	browser: 'chromium' | 'firefox' | 'webkit';
+	/**
+	 * Always 'chromium': scans run on one engine. The key stays in the stored
+	 * shape and in the fingerprint so saved baselines keep matching.
+	 */
+	browser: 'chromium';
 	highlightStyle: 'solid' | 'dashed';
 }
 
@@ -195,7 +199,7 @@ export function sanitizeProjectConfiguration(
 		scanners: sanitizeScannerSelections(configuration.scanners).sort((a, b) =>
 			a.id.localeCompare(b.id)
 		),
-		browser: configuration.browser,
+		browser: 'chromium',
 		highlightStyle: configuration.highlightStyle
 	};
 }

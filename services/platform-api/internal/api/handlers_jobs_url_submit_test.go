@@ -70,75 +70,52 @@ func TestHandleJobURLSubmitInvalidHighlightStyleFallsBackToDefault(t *testing.T)
 	}
 }
 
-func TestHandleJobURLSubmitNormalizesBrowserEngine(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+func TestHandleJobURLSubmitAcceptsOmittedOrChromiumBrowser(t *testing.T) {
+	for _, body := range []string{
+		`{"urls":["https://example.com"]}`,
+		`{"urls":["https://example.com"],"browser":"chromium"}`,
+		`{"urls":["https://example.com"],"browser":"  CHROMIUM  "}`,
+	} {
+		server, _, publisher := newTestServer(t)
 
-	body := bytes.NewBufferString(`{"urls":["https://example.com"],"browser":"  FIREFOX  "}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
-	req.Header.Set("Content-Type", "application/json")
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewBufferString(body))
+		req.Header.Set("Content-Type", "application/json")
 
-	rr := httptest.NewRecorder()
-	server.handleJobURLSubmit(rr, req)
+		rr := httptest.NewRecorder()
+		server.handleJobURLSubmit(rr, req)
 
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
-	}
+		if rr.Code != http.StatusCreated {
+			t.Fatalf("%s: expected 201, got %d: %s", body, rr.Code, rr.Body.String())
+		}
 
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected payload type *events.JobCreatedPayload")
-	}
-
-	if created.Config.Browser != "firefox" {
-		t.Fatalf("Browser = %q, want %q", created.Config.Browser, "firefox")
-	}
-}
-
-func TestHandleJobURLSubmitInvalidBrowserEngineFallsBackToDefault(t *testing.T) {
-	server, _, publisher := newTestServer(t)
-
-	body := bytes.NewBufferString(`{"urls":["https://example.com"],"browser":"opera"}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
-	req.Header.Set("Content-Type", "application/json")
-
-	rr := httptest.NewRecorder()
-	server.handleJobURLSubmit(rr, req)
-
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected payload type *events.JobCreatedPayload")
-	}
-
-	if created.Config.Browser != defaultBrowserEngine {
-		t.Fatalf("Browser = %q, want %q", created.Config.Browser, defaultBrowserEngine)
+		if len(publisher.envelopes) != 1 {
+			t.Fatalf("%s: expected 1 envelope, got %d", body, len(publisher.envelopes))
+		}
 	}
 }
 
-func TestHandleJobURLSubmitDefaultsBrowserEngineWhenOmitted(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+func TestHandleJobURLSubmitRejectsOtherBrowserEngines(t *testing.T) {
+	for _, engine := range []string{"firefox", "webkit", "opera"} {
+		server, _, publisher := newTestServer(t)
 
-	body := bytes.NewBufferString(`{"urls":["https://example.com"]}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
-	req.Header.Set("Content-Type", "application/json")
+		body := bytes.NewBufferString(`{"urls":["https://example.com"],"browser":"` + engine + `"}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
+		req.Header.Set("Content-Type", "application/json")
 
-	rr := httptest.NewRecorder()
-	server.handleJobURLSubmit(rr, req)
+		rr := httptest.NewRecorder()
+		server.handleJobURLSubmit(rr, req)
 
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
-	}
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("%s: expected 400, got %d: %s", engine, rr.Code, rr.Body.String())
+		}
 
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected payload type *events.JobCreatedPayload")
-	}
+		if !strings.Contains(rr.Body.String(), "browser") {
+			t.Fatalf("%s: expected a browser validation error, got %s", engine, rr.Body.String())
+		}
 
-	if created.Config.Browser != defaultBrowserEngine {
-		t.Fatalf("Browser = %q, want %q (omitted browser should default)", created.Config.Browser, defaultBrowserEngine)
+		if len(publisher.envelopes) != 0 {
+			t.Fatalf("%s: expected no job to be published, got %d", engine, len(publisher.envelopes))
+		}
 	}
 }
 

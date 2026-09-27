@@ -100,8 +100,13 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if detail, supported := checkBrowserEngine(req.Browser); !supported {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
+
+		return
+	}
+
 	highlightStyle := normalizeHighlightStyle(req.HighlightStyle)
-	browserEngine := normalizeBrowserEngine(req.Browser)
 	screenshot := defaultScreenshot
 
 	if req.Screenshot != nil {
@@ -127,7 +132,6 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 			ScannerConfigs:      req.ScannerConfigs,
 			Screenshot:          screenshot,
 			HighlightStyle:      highlightStyle,
-			Browser:             browserEngine,
 			AllowPrivateTargets: req.AllowPrivateTargets,
 			Auth:                authRaw,
 		},

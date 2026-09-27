@@ -14,6 +14,34 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 )
 
+func TestZipUploadRejectsNonChromiumBrowser(t *testing.T) {
+	server, _, publisher := newTestServer(t)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	addZipFile(t, writer, "site.zip", buildTestZip(t))
+	writeField(t, writer, "browser", "firefox")
+	writer.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/zip", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rr := httptest.NewRecorder()
+	server.handleJobZipUpload(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
+	}
+
+	if !strings.Contains(rr.Body.String(), "browser") {
+		t.Fatalf("expected a browser validation error, got %s", rr.Body.String())
+	}
+
+	if len(publisher.envelopes) != 0 {
+		t.Fatalf("expected no job to be published, got %d", len(publisher.envelopes))
+	}
+}
+
 func TestZipUploadWithScannerConfigsField(t *testing.T) {
 	server, store, publisher := newTestServer(t)
 
@@ -23,7 +51,7 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 	writeField(t, writer, "modules", "axe")
 	writeField(t, writer, "scanner_configs", `{"axe":{"rules":["color-contrast"]}}`)
 	writeField(t, writer, "highlight_style", "solid")
-	writeField(t, writer, "browser", "webkit")
+	writeField(t, writer, "browser", "chromium")
 	writeField(t, writer, "screenshot", "true")
 	writeField(t, writer, "unknown_field", "ignored")
 	writer.Close()
@@ -53,10 +81,6 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 
 	if payload.Config.HighlightStyle != "solid" {
 		t.Fatalf("expected highlight_style=solid, got %q", payload.Config.HighlightStyle)
-	}
-
-	if payload.Config.Browser != "webkit" {
-		t.Fatalf("expected browser=webkit, got %q", payload.Config.Browser)
 	}
 
 	if !payload.Config.Screenshot {

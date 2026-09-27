@@ -247,7 +247,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		return {
 			urls: validUrls,
 			scanners,
-			browser: project?.configuration.browser ?? 'chromium',
+			browser: 'chromium',
 			highlightStyle: project?.configuration.highlightStyle ?? 'solid'
 		};
 	}
@@ -319,7 +319,6 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 				urls: validUrls,
 				scanners: scannersForSubmit,
 				highlightStyle: project?.configuration.highlightStyle ?? 'solid',
-				engine: project?.configuration.browser ?? 'chromium',
 				auth
 			});
 			if (project && configFingerprint) {

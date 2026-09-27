@@ -189,7 +189,6 @@ func (p *ScannerLaunchPlanner) baseEnv(
 		"A11Y_SCROLL_TIMEOUT":   strconv.Itoa(p.config.ScrollTimeout),
 		"A11Y_SHOT_ENABLED":     strconv.FormatBool(job.Config.Screenshot),
 		"A11Y_HIGHLIGHT_STYLE":  highlightStyle(job.Config.HighlightStyle),
-		"BROWSER_ENGINE":        browserEngine(job.Config.Browser),
 	}
 
 	if job.Config.AllowPrivateTargets {
@@ -358,17 +357,4 @@ func highlightStyle(style string) string {
 	}
 
 	return style
-}
-
-// browserEngine normalizes the job's Playwright engine for the scanner env.
-// The Platform API already validates this field, but BROWSER_ENGINE is a
-// reserved/security-sensitive var, so we defensively re-validate here: anything
-// outside the known set (including empty) falls back to chromium.
-func browserEngine(engine string) string {
-	switch engine {
-	case "firefox", "webkit":
-		return engine
-	default:
-		return "chromium"
-	}
 }

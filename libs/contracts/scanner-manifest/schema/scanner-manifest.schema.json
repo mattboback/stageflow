@@ -185,7 +185,7 @@
 			"properties": {
 				"type": {
 					"type": "string",
-					"enum": ["chromium", "firefox", "webkit"]
+					"enum": ["chromium"]
 				},
 				"headless": {
 					"type": "boolean"

@@ -62,8 +62,7 @@ describe('browser URL submission boundary', () => {
 			modules: ['axe'],
 			scanner_configs: {},
 			screenshot: true,
-			highlight_style: 'solid',
-			browser: 'chromium'
+			highlight_style: 'solid'
 		});
 	});
 

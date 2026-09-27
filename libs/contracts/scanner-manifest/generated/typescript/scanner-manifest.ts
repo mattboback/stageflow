@@ -99,7 +99,7 @@ export interface ManifestRequirements {
  * via the `definition` "BrowserRequirement".
  */
 export interface BrowserRequirement {
-  type: "chromium" | "firefox" | "webkit";
+  type: "chromium";
   headless?: boolean;
   args?: string[];
 }

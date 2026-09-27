@@ -21,13 +21,9 @@ type BrowserRequirement struct {
 type BrowserRequirementType string
 
 const BrowserRequirementTypeChromium BrowserRequirementType = "chromium"
-const BrowserRequirementTypeFirefox BrowserRequirementType = "firefox"
-const BrowserRequirementTypeWebkit BrowserRequirementType = "webkit"
 
 var enumValues_BrowserRequirementType = []interface{}{
 	"chromium",
-	"firefox",
-	"webkit",
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

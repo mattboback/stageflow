@@ -57,7 +57,7 @@ func TestServiceCreateJobDuplicatePendingRetriesWorkflow(t *testing.T) {
 	}
 }
 
-func TestServiceCreateJobCarriesBrowserEngineFromPayload(t *testing.T) {
+func TestServiceCreateJobCopiesConfigFromPayload(t *testing.T) {
 	t.Parallel()
 
 	var operationLog []string
@@ -79,9 +79,10 @@ func TestServiceCreateJobCarriesBrowserEngineFromPayload(t *testing.T) {
 		InputType: string(models.JobInputTypeURLs),
 		URLs:      []string{"https://example.com"},
 		Config: models.JobConfig{
-			Modules:        []string{"axe"},
-			Browser:        "firefox",
-			HighlightStyle: "solid",
+			Modules:             []string{"axe"},
+			Screenshot:          true,
+			HighlightStyle:      "solid",
+			AllowPrivateTargets: true,
 		},
 	}
 
@@ -94,10 +95,14 @@ func TestServiceCreateJobCarriesBrowserEngineFromPayload(t *testing.T) {
 	}
 
 	// Regression: the orchestrator rebuilds JobConfig field-by-field from the
-	// event payload, so a new Config field must be copied here too — Browser was
-	// dropped while HighlightStyle was carried, sending every scan to Chromium.
-	if got := store.lastCreatedJob.Config.Browser; got != "firefox" {
-		t.Fatalf("persisted Config.Browser = %q, want %q", got, "firefox")
+	// event payload, so a new Config field must be copied here too. A field once
+	// went missing here while the field next to it was carried.
+	if !store.lastCreatedJob.Config.Screenshot {
+		t.Fatal("persisted Config.Screenshot = false, want true")
+	}
+
+	if !store.lastCreatedJob.Config.AllowPrivateTargets {
+		t.Fatal("persisted Config.AllowPrivateTargets = false, want true")
 	}
 
 	if got := store.lastCreatedJob.Config.HighlightStyle; got != "solid" {

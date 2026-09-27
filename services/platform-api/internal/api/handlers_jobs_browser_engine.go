@@ -1,23 +1,27 @@
 package api
 
-import "strings"
+import (
+	"strings"
 
-const defaultBrowserEngine = "chromium"
+	"github.com/mattboback/stageflow/libs/go/httputil"
+)
 
-var allowedBrowserEngines = map[string]struct{}{
-	"chromium": {},
-	"firefox":  {},
-	"webkit":   {},
-}
+// supportedBrowserEngine is the only engine the scanner image ships. Released
+// clients may still send `browser`, so an omitted or chromium value is
+// accepted and dropped; any other engine is a client error.
+const supportedBrowserEngine = "chromium"
 
-// normalizeBrowserEngine validates the requested Playwright engine, defaulting
-// unknown or empty values to chromium. This is the single trusted gate: the
-// orchestrator forwards the result as the reserved BROWSER_ENGINE env var.
-func normalizeBrowserEngine(value string) string {
+// checkBrowserEngine reports whether a request's browser field is acceptable
+// and, when it is not, the validation detail to answer with.
+func checkBrowserEngine(value string) (httputil.ErrorDetail, bool) {
 	key := strings.ToLower(strings.TrimSpace(value))
-	if _, ok := allowedBrowserEngines[key]; ok {
-		return key
+	if key == "" || key == supportedBrowserEngine {
+		return httputil.ErrorDetail{}, true
 	}
 
-	return defaultBrowserEngine
+	return httputil.NewValidationError(
+		"browser",
+		"Only the chromium browser engine is available",
+		"Omit browser or set it to chromium.",
+	), false
 }

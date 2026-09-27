@@ -6,13 +6,7 @@
 
 import { join } from 'node:path';
 
-import type {
-	BrowserConfig,
-	BrowserEngine,
-	MessagingConfig,
-	ScannerConfig,
-	StorageConfig
-} from './types';
+import type { BrowserConfig, MessagingConfig, ScannerConfig, StorageConfig } from './types';
 
 import { parseEnvBool, parseEnvInt, parseEnvNumber } from '../utils/env';
 
@@ -62,21 +56,8 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 	return config;
 }
 
-const BROWSER_ENGINES: readonly BrowserEngine[] = ['chromium', 'firefox', 'webkit'];
-
-/**
- * Parse the orchestrator-supplied BROWSER_ENGINE. Unknown or empty values fall
- * back to chromium, mirroring the platform-api's normalizeBrowserEngine so an
- * invalid engine degrades gracefully rather than failing the launch.
- */
-function parseBrowserEngine(value: string | undefined): BrowserEngine {
-	const normalized = value?.trim().toLowerCase();
-	return BROWSER_ENGINES.find((engine) => engine === normalized) ?? 'chromium';
-}
-
 function loadBrowserConfig(): BrowserConfig {
 	return {
-		engine: parseBrowserEngine(process.env.BROWSER_ENGINE),
 		headless: getEnvBool('BROWSER_HEADLESS', true),
 		args: [
 			'--no-sandbox',

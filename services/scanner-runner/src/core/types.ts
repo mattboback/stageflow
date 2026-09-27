@@ -143,11 +143,7 @@ export interface Provenance {
 	metadata?: Record<string, unknown>;
 }
 
-/** The Playwright engine a scan runs on. Chromium is the default. */
-export type BrowserEngine = 'chromium' | 'firefox' | 'webkit';
-
 export interface BrowserConfig {
-	engine: BrowserEngine;
 	headless: boolean;
 	args: string[];
 	defaultViewport: { width: number; height: number };
