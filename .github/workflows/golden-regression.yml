@@ -83,6 +83,9 @@ jobs:
           {
             printf 'ORCHESTRATOR_API_TOKEN=ci-orchestrator-token\n'
             printf 'PLATFORM_API_TOKEN=ci-platform-api-token\n'
+            printf 'STAGEFLOW_NETWORK_NAME=stageflow_net\n'
+            printf 'FRONTEND_PORT=3020\nVITE_SITE_URL=http://localhost:3020\n'
+            printf 'PLATFORM_API_ALLOW_PRIVATE_TARGETS=true\nPOD_NETNS_MODE=host\nPOD_NETWORK=\n'
           } >> .env
 
       - name: Build stageflow CLI
@@ -100,7 +103,6 @@ jobs:
           # cannot pass until the app user exists (same sequence as `just demo`).
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
-            -f infra/compose/podman-compose.local.yml \
             --env-file .env up -d minio
           for _ in {1..60}; do
             if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then
@@ -111,7 +113,6 @@ jobs:
           MINIO_ENDPOINT=http://127.0.0.1:9000 ./infra/minio/init-buckets.sh
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
-            -f infra/compose/podman-compose.local.yml \
             --env-file .env up -d
 
       - name: Wait for stack
@@ -197,7 +198,6 @@ jobs:
           mkdir -p artifacts/scan-diff-golden
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
-            -f infra/compose/podman-compose.local.yml \
             --env-file .env logs --no-color > artifacts/scan-diff-golden/compose.log || true
 
       - name: Upload golden artifacts
@@ -214,5 +214,4 @@ jobs:
         run: |
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
-            -f infra/compose/podman-compose.local.yml \
             --env-file .env down

@@ -29,6 +29,27 @@ func writeFakePodman(t *testing.T, logPath string, exitOn map[string]int) string
 		fmt.Fprintf(&b, "case \"$*\" in\n  %q*) exit %d ;;\nesac\n", prefix, code)
 	}
 
+	b.WriteString(`case "$*" in
+  compose*config)
+    if [ -n "$FAKE_COMPOSE_CONFIG" ]; then
+      printf '%s' "$FAKE_COMPOSE_CONFIG"
+    else
+      cat <<EOF
+name: ${COMPOSE_PROJECT_NAME:-stageflow_dev}
+networks:
+  stageflow_net:
+    name: ${COMPOSE_PROJECT_NAME:-stageflow_dev}_net
+services:
+  orchestrator:
+    environment:
+      EXTRACTION_IMAGE: localhost/stageflow/extractor:latest
+      SCANNER_IMAGE: localhost/stageflow/scanner-runner:latest
+EOF
+    fi
+    ;;
+esac
+`)
+
 	b.WriteString("exit 0\n")
 
 	if err := os.WriteFile(scriptPath, []byte(b.String()), 0o700); err != nil {
@@ -82,13 +103,13 @@ func TestUpHappyPathStreamsComposeUp(t *testing.T) {
 
 	calls := readLog(t, logPath)
 
-	if len(calls) != 4 {
-		t.Fatalf("expected 4 podman invocations (network inspect, image exists x2, compose up), got %d: %v",
+	if len(calls) != 5 {
+		t.Fatalf("expected 5 calls (config, network inspect, image exists x2, up), got %d: %v",
 			len(calls), calls)
 	}
 
-	if !strings.HasPrefix(calls[0], "network inspect stageflow_test_net") {
-		t.Fatalf("call[0] = %q, want network inspect", calls[0])
+	if !strings.HasPrefix(calls[1], "network inspect stageflow_test_net") {
+		t.Fatalf("call[1] = %q, want network inspect", calls[1])
 	}
 
 	last := calls[len(calls)-1]
@@ -96,8 +117,8 @@ func TestUpHappyPathStreamsComposeUp(t *testing.T) {
 		t.Fatalf("final call = %q, want a compose up -d invocation", last)
 	}
 
-	if !strings.Contains(last, "podman-compose.test.yml") {
-		t.Fatalf("final call = %q, want the dev overlay file", last)
+	if strings.Count(last, " -f ") != 1 || !strings.Contains(last, "podman-compose.yml") {
+		t.Fatalf("final call = %q, want only the base compose file", last)
 	}
 }
 
@@ -127,6 +148,137 @@ func TestUpCreatesNetworkWhenMissing(t *testing.T) {
 	}
 }
 
+func TestUpResolvesProjectFromSelectedEnvironmentFile(t *testing.T) {
+	for _, external := range []bool{false, true} {
+		t.Run(fmt.Sprintf("external=%t", external), func(t *testing.T) {
+			t.Setenv("COMPOSE_PROJECT_NAME", "")
+			t.Setenv("FAKE_COMPOSE_CONFIG", `name: file_project
+networks:
+  stageflow_net:
+    name: file_project_net
+services:
+  orchestrator:
+    environment:
+      EXTRACTION_IMAGE: localhost/stageflow/extractor:latest
+      SCANNER_IMAGE: localhost/stageflow/scanner-runner:latest
+`)
+			logPath := filepath.Join(t.TempDir(), "calls.log")
+			opts := testOptions(t, writeFakePodman(t, logPath, nil))
+			opts.Project = ""
+			envFile := filepath.Join(opts.Root, ".env")
+
+			if external {
+				envFile = filepath.Join(t.TempDir(), "selected.env")
+				opts.EnvFile = envFile
+			}
+
+			if err := os.WriteFile(envFile, []byte("COMPOSE_PROJECT_NAME=file_project\n"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			var stdout, stderr bytes.Buffer
+			if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
+				t.Fatalf("Up() error = %v", err)
+			}
+
+			calls := readLog(t, logPath)
+			if strings.Contains(calls[0], " -p ") || !strings.Contains(calls[0], "--env-file "+envFile+" config") {
+				t.Fatalf("config must let selected file determine project: %s", calls[0])
+			}
+
+			last := calls[len(calls)-1]
+			if !strings.Contains(last, "compose -p file_project ") ||
+				!strings.Contains(last, "--env-file "+envFile+" up -d") {
+				t.Fatalf("up must preserve rendered project and selected file: %s", last)
+			}
+		})
+	}
+}
+
+func TestUpUsesDefaultRenderedProject(t *testing.T) {
+	t.Setenv("COMPOSE_PROJECT_NAME", "")
+	logPath := filepath.Join(t.TempDir(), "calls.log")
+	opts := testOptions(t, writeFakePodman(t, logPath, nil))
+	opts.Project = ""
+
+	var stdout, stderr bytes.Buffer
+	if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
+		t.Fatalf("Up() error = %v", err)
+	}
+
+	calls := readLog(t, logPath)
+	if last := calls[len(calls)-1]; !strings.Contains(last, "compose -p "+DefaultProject+" ") {
+		t.Fatalf("up must use rendered default project: %s", last)
+	}
+}
+
+func TestUpUsesRenderedNetworkAndJobImages(t *testing.T) {
+	t.Setenv("FAKE_COMPOSE_CONFIG", `name: stageflow_test
+networks:
+  stageflow_net:
+    name: configured_network
+services:
+  orchestrator:
+    environment:
+      EXTRACTION_IMAGE: localhost/stageflow/extractor:custom-tag
+      SCANNER_IMAGE: localhost/stageflow/scanner-runner:custom-tag
+`)
+	logPath := filepath.Join(t.TempDir(), "calls.log")
+	podman := writeFakePodman(t, logPath, map[string]int{"network inspect": 1})
+	opts := testOptions(t, podman)
+	opts.Env = EnvLocal
+	envFile := filepath.Join(opts.Root, ".env")
+	envContent := []byte("IMAGE_TAG=custom-tag\nSTAGEFLOW_NETWORK_NAME=configured_network\n")
+
+	if err := os.WriteFile(envFile, envContent, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := Up(context.Background(), opts, &stdout, &stderr); err != nil {
+		t.Fatalf("Up() error = %v", err)
+	}
+
+	calls := strings.Join(readLog(t, logPath), "\n")
+	for _, want := range []string{
+		"--env-file " + envFile + " config",
+		"--env-file " + envFile + " up -d",
+		"network inspect configured_network",
+		"network create configured_network",
+		"image exists localhost/stageflow/extractor:custom-tag",
+		"image exists localhost/stageflow/scanner-runner:custom-tag",
+	} {
+		if !strings.Contains(calls, want) {
+			t.Errorf("calls missing %q: %s", want, calls)
+		}
+	}
+}
+
+func TestUpRejectsInvalidRenderedConfiguration(t *testing.T) {
+	for _, config := range []string{"services: {}", "networks:\n  stageflow_net:\n    name: [private-secret]"} {
+		t.Run(config, func(t *testing.T) {
+			t.Setenv("FAKE_COMPOSE_CONFIG", config)
+			logPath := filepath.Join(t.TempDir(), "calls.log")
+			opts := testOptions(t, writeFakePodman(t, logPath, nil))
+
+			var stdout, stderr bytes.Buffer
+
+			err := Up(context.Background(), opts, &stdout, &stderr)
+			if err == nil {
+				t.Fatal("Up() succeeded with invalid rendered configuration")
+			}
+
+			if strings.Contains(err.Error()+stdout.String()+stderr.String(), "private-secret") {
+				t.Fatal("rendered configuration value leaked in diagnostic")
+			}
+
+			if calls := readLog(t, logPath); len(calls) != 1 || !strings.HasSuffix(calls[0], " config") {
+				t.Fatalf("invalid configuration must stop before network or stack mutations: %v", calls)
+			}
+		})
+	}
+}
+
 func TestUpFailsFastWhenJobImagesAreMissing(t *testing.T) {
 	logPath := filepath.Join(t.TempDir(), "calls.log")
 	podman := writeFakePodman(t, logPath, map[string]int{"image exists": 1})
@@ -145,7 +297,7 @@ func TestUpFailsFastWhenJobImagesAreMissing(t *testing.T) {
 
 	calls := readLog(t, logPath)
 	for _, c := range calls {
-		if strings.Contains(c, "compose") {
+		if strings.Contains(c, " up ") {
 			t.Fatalf("expected compose up to be skipped when images are missing, got call: %q", c)
 		}
 	}

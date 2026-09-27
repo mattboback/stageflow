@@ -18,7 +18,7 @@ func newStackCmd(getenv getenvFunc) *cobra.Command {
 		Use:   "stack",
 		Short: "Manage the local self-hosted StageFlow compose stack",
 		Long: "Start, stop, and inspect the Podman Compose stack used to self-host " +
-			"StageFlow locally — the same compose files `just dev`/`just demo` drive.\n\n" +
+			"StageFlow locally — the same compose file `just dev`/`just demo` drive.\n\n" +
 			"Run from inside a stageflow checkout with `.env` configured and job images " +
 			"already built (`just images`); `stageflow stack` manages the compose " +
 			"lifecycle, it does not build images or scaffold config.",
@@ -28,12 +28,17 @@ func newStackCmd(getenv getenvFunc) *cobra.Command {
 		},
 	}
 
-	cmd.PersistentFlags().StringVar(&cmdOpts.env, "env", stack.EnvDev, "Compose overlay: dev or local")
+	cmd.PersistentFlags().StringVar(
+		&cmdOpts.env,
+		"env",
+		stack.EnvDev,
+		"Compatibility alias: dev or local (settings from .env)",
+	)
 	cmd.PersistentFlags().StringVar(
 		&cmdOpts.project,
 		"project",
 		"",
-		"Compose project name (default: $COMPOSE_PROJECT_NAME or stageflow_dev)",
+		"Compose project name (default: shell, .env/ENV_FILE, then stageflow_dev)",
 	)
 
 	cmd.AddCommand(

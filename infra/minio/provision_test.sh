@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# The invoking Just process may have loaded its checkout's .env.
+unset ENV_FILE MINIO_ENDPOINT MINIO_ROOT_USER MINIO_ROOT_PASSWORD \
+	MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_STAGING_RETENTION_DAYS \
+	MINIO_ARTIFACT_RETENTION_DAYS MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE MC_NETWORK
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 temp_dir="$(mktemp -d)"
 trap 'rm -rf "$temp_dir"' EXIT
@@ -65,6 +70,29 @@ EOF
 grep -Fxq 'MINIO_ROOT_USER=file-root' "$temp_dir/podman.log"
 grep -Fxq 'MINIO_STAGING_RETENTION_DAYS=7' "$temp_dir/podman.log"
 grep -Fxq 'MINIO_ARTIFACT_RETENTION_DAYS=9' "$temp_dir/podman.log"
+
+# A selected external file replaces .env, including optional values it omits.
+cat >>"$temp_dir/launcher/.env" <<'EOF'
+MINIO_APP_POLICY=local-only-policy
+EOF
+cat >"$temp_dir/external.env" <<'EOF'
+MINIO_ROOT_USER=external-root
+MINIO_ROOT_PASSWORD=external-secret
+MINIO_STAGING_RETENTION_DAYS=4
+EOF
+(
+	cd "$temp_dir/launcher"
+	ENV_FILE="$temp_dir/external.env" \
+		TEST_PODMAN_LOG="$temp_dir/external-podman.log" \
+		PODMAN="$temp_dir/bin/fake-podman" \
+		MINIO_ARTIFACT_RETENTION_DAYS=8 \
+		"$SCRIPT_DIR/init-buckets.sh"
+)
+grep -Fxq 'MINIO_ROOT_USER=external-root' "$temp_dir/external-podman.log"
+grep -Fxq 'MINIO_ROOT_PASSWORD=external-secret' "$temp_dir/external-podman.log"
+grep -Fxq 'MINIO_STAGING_RETENTION_DAYS=4' "$temp_dir/external-podman.log"
+grep -Fxq 'MINIO_ARTIFACT_RETENTION_DAYS=8' "$temp_dir/external-podman.log"
+grep -Fxq 'MINIO_APP_POLICY=stageflow-app' "$temp_dir/external-podman.log"
 
 run_provision() {
 	PATH="$temp_dir/bin:$PATH" \

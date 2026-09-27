@@ -8,7 +8,9 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/stack"
 )
 
-func TestResolveStackOptions(t *testing.T) {
+func stackCheckout(t *testing.T) string {
+	t.Helper()
+
 	root := t.TempDir()
 
 	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
@@ -30,13 +32,12 @@ func TestResolveStackOptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
+	return root
+}
 
+func TestResolveStackOptions(t *testing.T) {
+	root := stackCheckout(t)
 	t.Chdir(root)
-	t.Cleanup(func() { _ = os.Chdir(wd) })
 
 	t.Run("resolves root and defaults", func(t *testing.T) {
 		opts, resolveErr := resolveStackOptions(
@@ -55,8 +56,8 @@ func TestResolveStackOptions(t *testing.T) {
 			t.Fatalf("Root = %q, want %q", opts.Root, root)
 		}
 
-		if opts.Project != stack.DefaultProject {
-			t.Fatalf("Project = %q, want %q", opts.Project, stack.DefaultProject)
+		if opts.Project != "" {
+			t.Fatalf("Project = %q, want unset so Compose can read .env", opts.Project)
 		}
 
 		if len(opts.Services) != 1 || opts.Services[0] != "platform-api" {
@@ -64,9 +65,11 @@ func TestResolveStackOptions(t *testing.T) {
 		}
 	})
 
-	t.Run("project flag overrides default", func(t *testing.T) {
+	t.Run("project flag overrides shell and preserves env file", func(t *testing.T) {
+		env := map[string]string{"COMPOSE_PROJECT_NAME": "shell_project", "ENV_FILE": "/tmp/selected.env"}
+
 		opts, resolveErr := resolveStackOptions(
-			func(string) string { return "" },
+			func(key string) string { return env[key] },
 			&stackCmdOptions{env: stack.EnvLocal, project: "custom"},
 			nil,
 		)
@@ -80,6 +83,10 @@ func TestResolveStackOptions(t *testing.T) {
 
 		if opts.Env != stack.EnvLocal {
 			t.Fatalf("Env = %q, want %q", opts.Env, stack.EnvLocal)
+		}
+
+		if opts.EnvFile != "/tmp/selected.env" {
+			t.Fatalf("EnvFile = %q, want selected external env file", opts.EnvFile)
 		}
 	})
 }

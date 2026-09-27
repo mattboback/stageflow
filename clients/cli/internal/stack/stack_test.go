@@ -32,10 +32,9 @@ func writeStageflowCheckout(t *testing.T) string {
 		t.Fatal(err)
 	}
 
-	for _, name := range []string{"podman-compose.yml", "podman-compose.test.yml", "podman-compose.local.yml"} {
-		if err := os.WriteFile(filepath.Join(composeDir, name), []byte("services: {}\n"), 0o600); err != nil {
-			t.Fatal(err)
-		}
+	composeFile := filepath.Join(composeDir, "podman-compose.yml")
+	if err := os.WriteFile(composeFile, []byte("services: {}\n"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 
 	return root
@@ -88,8 +87,8 @@ func TestComposeFiles(t *testing.T) {
 		t.Fatalf("ComposeFiles(dev) error = %v", err)
 	}
 
-	want := []string{"/repo/infra/compose/podman-compose.yml", "/repo/infra/compose/podman-compose.test.yml"}
-	if len(files) != 2 || files[0] != want[0] || files[1] != want[1] {
+	want := []string{"/repo/infra/compose/podman-compose.yml"}
+	if len(files) != 1 || files[0] != want[0] {
 		t.Fatalf("ComposeFiles(dev) = %v, want %v", files, want)
 	}
 
@@ -98,8 +97,7 @@ func TestComposeFiles(t *testing.T) {
 		t.Fatalf("ComposeFiles(local) error = %v", err)
 	}
 
-	want = []string{"/repo/infra/compose/podman-compose.yml", "/repo/infra/compose/podman-compose.local.yml"}
-	if len(files) != 2 || files[0] != want[0] || files[1] != want[1] {
+	if len(files) != 1 || files[0] != want[0] {
 		t.Fatalf("ComposeFiles(local) = %v, want %v", files, want)
 	}
 
@@ -173,8 +171,8 @@ func TestNewOptions(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
 		opts := NewOptions(func(string) string { return "" })
 
-		if opts.Project != DefaultProject {
-			t.Fatalf("Project = %q, want %q", opts.Project, DefaultProject)
+		if opts.Project != "" {
+			t.Fatalf("Project = %q, want unset so Compose can read .env", opts.Project)
 		}
 
 		if opts.PodmanBin != DefaultPodman {
@@ -187,7 +185,11 @@ func TestNewOptions(t *testing.T) {
 	})
 
 	t.Run("env overrides", func(t *testing.T) {
-		env := map[string]string{"COMPOSE_PROJECT_NAME": "custom_project", "PODMAN": "/usr/bin/podman-remote"}
+		env := map[string]string{
+			"COMPOSE_PROJECT_NAME": "custom_project",
+			"PODMAN":               "/usr/bin/podman-remote",
+			"ENV_FILE":             "/tmp/custom.env",
+		}
 		opts := NewOptions(func(key string) string { return env[key] })
 
 		if opts.Project != "custom_project" {
@@ -196,6 +198,10 @@ func TestNewOptions(t *testing.T) {
 
 		if opts.PodmanBin != "/usr/bin/podman-remote" {
 			t.Fatalf("PodmanBin = %q, want /usr/bin/podman-remote", opts.PodmanBin)
+		}
+
+		if opts.EnvFile != "/tmp/custom.env" {
+			t.Fatalf("EnvFile = %q, want /tmp/custom.env", opts.EnvFile)
 		}
 	})
 }

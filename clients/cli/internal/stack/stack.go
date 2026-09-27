@@ -13,34 +13,22 @@ import (
 )
 
 const (
-	// EnvDev pairs the base compose file with podman-compose.test.yml.
-	EnvDev = "dev"
-	// EnvLocal pairs the base compose file with podman-compose.local.yml.
+	// EnvDev and EnvLocal are compatibility aliases for the same Compose file.
+	EnvDev   = "dev"
 	EnvLocal = "local"
 
 	DefaultProject = "stageflow_dev"
 	DefaultPodman  = "podman"
 )
 
-// RequiredJobImages are built by `just images` (not by `compose up --build`)
-// because they run as per-job pods launched by the orchestrator, not as
-// long-lived compose services.
-var RequiredJobImages = []string{
-	"localhost/stageflow/extractor:latest",
-	"localhost/stageflow/scanner-runner:latest",
-}
-
 // Options configures how stack commands locate and drive the compose stack.
 type Options struct {
 	Root      string
 	Env       string
+	EnvFile   string
 	Project   string
 	PodmanBin string
 	Services  []string
-}
-
-func (o Options) networkName() string {
-	return o.Project + "_net"
 }
 
 // NewOptions builds Options from environment defaults, matching the
@@ -48,7 +36,8 @@ func (o Options) networkName() string {
 func NewOptions(getenv func(string) string) Options {
 	return Options{
 		Env:       EnvDev,
-		Project:   getenvOr(getenv, "COMPOSE_PROJECT_NAME", DefaultProject),
+		EnvFile:   getenvOr(getenv, "ENV_FILE", ""),
+		Project:   getenvOr(getenv, "COMPOSE_PROJECT_NAME", ""),
 		PodmanBin: getenvOr(getenv, "PODMAN", DefaultPodman),
 	}
 }
@@ -94,24 +83,17 @@ func FindRoot(startDir string) (string, error) {
 	return gitRoot, nil
 }
 
-// ComposeFiles resolves the base + overlay compose files for env, matching
-// the justfile's `dev` recipe (dev -> podman-compose.test.yml, local ->
-// podman-compose.local.yml).
+// ComposeFiles resolves the sole Compose file. Both compatibility aliases use
+// settings from .env, matching the justfile's dev recipe.
 func ComposeFiles(root, env string) ([]string, error) {
-	var overlay string
-
 	switch env {
-	case EnvDev:
-		overlay = "podman-compose.test.yml"
-	case EnvLocal:
-		overlay = "podman-compose.local.yml"
+	case EnvDev, EnvLocal:
 	default:
 		return nil, fmt.Errorf("env must be %q or %q (got %q)", EnvDev, EnvLocal, env)
 	}
 
 	return []string{
 		filepath.Join(root, "infra", "compose", "podman-compose.yml"),
-		filepath.Join(root, "infra", "compose", overlay),
 	}, nil
 }
 

@@ -10,8 +10,6 @@ JUST_BIN="${JUST:-just}"
 CURL_BIN="${CURL:-curl}"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
 SCANNER_CONFIG_FILE="${SCANNER_CONFIG_FILE:-$REPO_ROOT/infra/scanners/scanners.yaml}"
-COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-stageflow_dev}"
-LOCAL_NETWORK="${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME}_net}"
 EXPECTED_GO_MIN="1.26.6"
 EXPECTED_BUN_MIN="1.3.8"
 EXPECTED_NODE_MIN_MAJOR="24"
@@ -70,6 +68,7 @@ read_env_value() {
 	local key="$1"
 	local line
 
+	[[ -f "$ENV_FILE" ]] || return 1
 	line="$(grep -E "^${key}=" "$ENV_FILE" | tail -n1 || true)"
 	[[ -n "$line" ]] || return 1
 	printf '%s' "${line#*=}"
@@ -94,18 +93,38 @@ port_in_use() {
 	return 2
 }
 
+# Match Compose precedence without sourcing an arbitrary environment file.
+effective_env_value() {
+	local key="$1"
+	local fallback="$2"
+	local value
+	if [[ -v "$key" ]]; then
+		printf '%s' "${!key}"
+		return
+	fi
+	if ! value="$(read_env_value "$key")"; then
+		printf '%s' "$fallback"
+		return
+	fi
+	value="${value%\"}"
+	value="${value#\"}"
+	value="${value%\'}"
+	value="${value#\'}"
+	printf '%s' "$value"
+}
+
 check_default_ports() {
 	local conflicts=0
 	local entry
 	local label
 	local port
 	local required_ports=(
-		"3000:frontend demo"
-		"3020:local frontend overlay"
-		"4222:NATS"
-		"8080:Platform API"
-		"9000:MinIO API"
-		"9001:MinIO console"
+		"$(effective_env_value FRONTEND_PORT 3000):frontend"
+		"$(effective_env_value NATS_PORT 4222):NATS"
+		"$(effective_env_value PLATFORM_API_PORT 8080):Platform API"
+		"$(effective_env_value ORCHESTRATOR_PORT 8081):orchestrator"
+		"$(effective_env_value MINIO_PORT 9000):MinIO API"
+		"$(effective_env_value MINIO_CONSOLE_PORT 9001):MinIO console"
 	)
 
 	if ! command -v ss >/dev/null 2>&1 && ! command -v lsof >/dev/null 2>&1; then
@@ -124,7 +143,7 @@ check_default_ports() {
 	done
 
 	if (( conflicts == 0 )); then
-		pass "Default local stack ports are free"
+		pass "Configured local stack ports are free"
 	fi
 }
 
@@ -164,6 +183,9 @@ check_network_alias_conflicts() {
 		pass "No existing StageFlow service aliases detected on Podman network \`${network}\`"
 	fi
 }
+
+COMPOSE_PROJECT_NAME="$(effective_env_value COMPOSE_PROJECT_NAME stageflow_dev)"
+LOCAL_NETWORK="$(effective_env_value STAGEFLOW_NETWORK_NAME "${COMPOSE_PROJECT_NAME}_net")"
 
 say "==> StageFlow local diagnose"
 
@@ -242,27 +264,38 @@ if command -v "$PODMAN_BIN" >/dev/null 2>&1; then
 		warn "Podman network \`${LOCAL_NETWORK}\` is missing. \`just setup\` will create it."
 	fi
 
-	check_image "localhost/stageflow/extractor:latest"
-	check_image "localhost/stageflow/scanner-runner:latest"
+	image_tag="$(effective_env_value IMAGE_TAG latest)"
+	check_image "localhost/stageflow/extractor:$image_tag"
+	check_image "localhost/stageflow/scanner-runner:$image_tag"
 fi
 
 check_default_ports
 
+if [[ "$(effective_env_value POD_NETNS_MODE bridge)" == "host" ]]; then
+	if [[ "$(effective_env_value NATS_PORT 4222)" != "4222" || "$(effective_env_value MINIO_PORT 9000)" != "9000" ]]; then
+		fail "Host-mode job pods require NATS_PORT=4222 and MINIO_PORT=9000. Use bridge mode for alternate infrastructure ports."
+	fi
+	pod_network="$(effective_env_value POD_NETWORK __unset__)"
+	if [[ -n "$pod_network" ]]; then
+		fail "Host-mode job pods require an explicitly empty POD_NETWORK= in .env."
+	fi
+fi
+
 if [[ -f "$ENV_FILE" ]]; then
 	pass "Found $(basename "$ENV_FILE")"
 
-	vite_api_url="$(read_env_value VITE_API_URL || true)"
-	vite_site_url="$(read_env_value VITE_SITE_URL || true)"
-	public_domain="$(read_env_value STAGEFLOW_PUBLIC_DOMAIN || true)"
-	minio_root_user="$(read_env_value MINIO_ROOT_USER || true)"
-	minio_access_key="$(read_env_value MINIO_ACCESS_KEY || true)"
+	vite_api_url="$(effective_env_value VITE_API_URL "")"
+	vite_site_url="$(effective_env_value VITE_SITE_URL "")"
+	public_domain="$(effective_env_value STAGEFLOW_PUBLIC_DOMAIN "")"
+	minio_root_user="$(effective_env_value MINIO_ROOT_USER "")"
+	minio_access_key="$(effective_env_value MINIO_ACCESS_KEY "")"
 
 	if [[ -n "$vite_api_url" && ! "$vite_api_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then
-		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. \`just demo\` overrides this for the containerized demo, but \`just run clients/web\` and \`stageflow dev scan\` expect http://localhost:8080 for repo-local work."
+		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. For repo-local work, set VITE_API_URL to the configured API address; \`just demo\` uses this value unless STAGEFLOW_DEMO_VITE_API_URL overrides it."
 	fi
 
 	if [[ -n "$vite_site_url" && ! "$vite_site_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then
-		warn "$(basename "$ENV_FILE") still points VITE_SITE_URL at a hosted endpoint. For repo-local work, prefer http://localhost:3020."
+		warn "$(basename "$ENV_FILE") still points VITE_SITE_URL at a hosted endpoint. For repo-local work, set VITE_SITE_URL to the configured frontend address."
 	fi
 
 	if [[ -n "$public_domain" && "$public_domain" != "localhost" ]]; then
@@ -294,11 +327,13 @@ fi
 say "StageFlow local diagnose passed with $warn_count warning(s)."
 say "Fastest local smoke test:"
 say "  just demo"
-say "    guided wrapper for the default dev stack on http://localhost:3000"
+say "    guided wrapper using the local settings in .env"
 say ""
 say "Manual bootstrap:"
 say "  just setup"
 say "  just images"
-say "  just dev up dev      # default demo/UI stack on http://localhost:3000"
-say "  just dev up local    # localhost/private-target scan overlay on http://localhost:3020"
+say "  just dev up          # settings come from .env"
 say "  just dev init"
+
+say "For localhost scans, set PLATFORM_API_ALLOW_PRIVATE_TARGETS=true,"
+say "POD_NETNS_MODE=host and POD_NETWORK= in .env; keep NATS_PORT=4222 and MINIO_PORT=9000."

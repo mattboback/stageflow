@@ -1,6 +1,10 @@
 # StageFlow justfile
 # Opinionated, small CLI surface (favor big commands).
 
+# Load local settings once; explicit environment variables take precedence.
+set dotenv-load := true
+set dotenv-path := x'${ENV_FILE:-.env}'
+
 # Variables
 go := env_var_or_default('GO', 'go')
 podman := env_var_or_default('PODMAN', 'podman')
@@ -58,10 +62,13 @@ demo URL='https://example.com':
     url="{{URL}}"
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
-    demo_vite_api_url="${STAGEFLOW_DEMO_VITE_API_URL:-http://localhost:8080}"
-    demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-http://localhost:3000}"
-    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:3020,http://127.0.0.1:3020}"
-    demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-localhost}"
+    demo_vite_api_url="${STAGEFLOW_DEMO_VITE_API_URL:-${VITE_API_URL:-http://localhost:${PLATFORM_API_PORT:-8080}}}"
+    demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-${VITE_SITE_URL:-http://localhost:${FRONTEND_PORT:-3000}}}"
+    demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-${PLATFORM_API_CORS_ALLOW_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${PLATFORM_API_PORT:-8080},http://localhost:3020,http://127.0.0.1:3020}}"
+    demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-${STAGEFLOW_PUBLIC_DOMAIN:-localhost}}"
+    minio_endpoint="http://127.0.0.1:${MINIO_PORT:-9000}"
+    api_endpoint="http://127.0.0.1:${PLATFORM_API_PORT:-8080}"
+    frontend_endpoint="http://127.0.0.1:${FRONTEND_PORT:-3000}"
 
     wait_for_http() {
         local url="$1"
@@ -88,8 +95,9 @@ demo URL='https://example.com':
         exit 1
     fi
 
-    if [[ ! -f "$root_dir/.env" ]]; then
-        echo "Missing .env: copy .env.example to .env first" >&2
+    env_file="${ENV_FILE:-$root_dir/.env}"
+    if [[ ! -f "$env_file" ]]; then
+        echo "Missing $env_file: copy .env.example to your environment file first" >&2
         exit 1
     fi
 
@@ -117,12 +125,12 @@ demo URL='https://example.com':
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
-    just dev up dev http://127.0.0.1:9000 minio
+    just dev up dev "$minio_endpoint" minio
 
-    wait_for_http "http://127.0.0.1:9000/minio/health/live" "MinIO" 120
+    wait_for_http "$minio_endpoint/minio/health/live" "MinIO" 120
 
     echo "==> Initializing MinIO buckets..."
-    just dev init
+    just dev init dev "$minio_endpoint"
 
     echo "==> Starting stack..."
     VITE_API_URL="$demo_vite_api_url" \
@@ -131,32 +139,33 @@ demo URL='https://example.com':
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
     just dev up
 
-    wait_for_http "http://127.0.0.1:8080/healthz" "Platform API" 120
+    wait_for_http "$api_endpoint/healthz" "Platform API" 120
 
-    wait_for_http "http://127.0.0.1:3000/" "Frontend" 120
+    wait_for_http "$frontend_endpoint/" "Frontend" 120
 
     echo ""
     echo "==> Demo ready"
-    echo "UI:      http://localhost:3000"
-    echo "API:     http://localhost:8080"
+    echo "UI:      $demo_site_url"
+    echo "API:     $demo_vite_api_url"
     echo ""
     echo "Try the web UI, or run:"
     echo "  just cli-install"
     echo "  stageflow scan $url"
     echo ""
     echo "Raw API:"
-    echo "curl -sS -X POST http://localhost:8080/api/v1/jobs/urls \\"
+    echo "curl -sS -X POST $demo_vite_api_url/api/v1/jobs/urls \\"
     echo "  -H 'content-type: application/json' \\"
     echo "  -d '{\"urls\":[\"$url\"]}'"
 
-[group('dev'), doc('Local stack: up/down/restart/logs/init (ENV=dev|local)')]
-dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
+[group('dev'), doc('Local stack: up/down/restart/logs/init (dev/local aliases; settings from .env)')]
+dev CMD='up' ENV='dev' ENDPOINT='' SERVICES='':
     #!/usr/bin/env bash
     set -euo pipefail
 
     cmd="{{CMD}}"
     env="{{ENV}}"
     endpoint="{{ENDPOINT}}"
+    endpoint="${endpoint:-http://127.0.0.1:${MINIO_PORT:-9000}}"
     services="{{SERVICES}}"
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
@@ -177,16 +186,13 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
     echo "==> Ensuring scanner config exists..."
     ./infra/scripts/ensure-scanner-config.sh
 
+    env_file="${ENV_FILE:-$root_dir/.env}"
     env_args=()
-    [[ -f "$root_dir/.env" ]] && env_args=(--env-file "$root_dir/.env")
+    [[ -f "$env_file" ]] && env_args=(--env-file "$env_file")
 
-    files=()
+    files=(-f "$root_dir/infra/compose/podman-compose.yml")
     case "$env" in
-        dev)
-            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.test.yml")
-            ;;
-        local)
-            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.local.yml")
+        dev|local)
             ;;
         *)
             echo "ENV must be dev or local (got: $env)" >&2
@@ -199,8 +205,8 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
         local image
 
         for image in \
-            "localhost/stageflow/extractor:latest" \
-            "localhost/stageflow/scanner-runner:latest"
+            "localhost/stageflow/extractor:${IMAGE_TAG:-latest}" \
+            "localhost/stageflow/scanner-runner:${IMAGE_TAG:-latest}"
         do
             if ! {{podman}} image exists "$image"; then
                 missing+=("$image")
@@ -242,21 +248,6 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
             ;;
         init)
             echo "==> Initializing MinIO buckets ($endpoint)..."
-            declare -A env_overrides=()
-            for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_STAGING_RETENTION_DAYS MINIO_ARTIFACT_RETENTION_DAYS MINIO_APP_POLICY MINIO_ALIAS MC_IMAGE PODMAN; do
-                if [[ -v "$name" ]]; then
-                    env_overrides["$name"]="${!name}"
-                fi
-            done
-
-            set -a
-            [[ -f "$root_dir/.env" ]] && . "$root_dir/.env"
-            set +a
-
-            for name in "${!env_overrides[@]}"; do
-                export "$name=${env_overrides[$name]}"
-            done
-
             MINIO_ENDPOINT="$endpoint" ./infra/minio/init-buckets.sh
             ;;
         *)
@@ -265,7 +256,7 @@ dev CMD='up' ENV='dev' ENDPOINT='http://127.0.0.1:9000' SERVICES='':
             ;;
     esac
 
-[group('dev'), doc('Rebuild and recreate selected compose services (ENV=dev|local SERVICES="platform-api orchestrator frontend-react")')]
+[group('dev'), doc('Rebuild selected services (dev/local aliases; settings from .env)')]
 dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
     #!/usr/bin/env bash
     set -euo pipefail
@@ -293,16 +284,13 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
     echo "==> Ensuring $network network exists..."
     {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
 
+    env_file="${ENV_FILE:-$root_dir/.env}"
     env_args=()
-    [[ -f "$root_dir/.env" ]] && env_args=(--env-file "$root_dir/.env")
+    [[ -f "$env_file" ]] && env_args=(--env-file "$env_file")
 
-    files=()
+    files=(-f "$root_dir/infra/compose/podman-compose.yml")
     case "$env" in
-        dev)
-            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.test.yml")
-            ;;
-        local)
-            files=(-f "$root_dir/infra/compose/podman-compose.yml" -f "$root_dir/infra/compose/podman-compose.local.yml")
+        dev|local)
             ;;
         *)
             echo "ENV must be dev or local (got: $env)" >&2
@@ -354,6 +342,8 @@ ci:
     {{go}} build ./...
 
     echo "==> Go lint..."
+    # Analysis cache positions contain absolute paths; isolate worktree caches.
+    export GOLANGCI_LINT_CACHE="{{repo_root}}/.cache/golangci-lint"
     golangci-lint run --allow-parallel-runners ./...
 
     echo "==> Go test..."
@@ -441,14 +431,6 @@ run SERVICE MODE='dev':
 
     service="{{SERVICE}}"
     mode="{{MODE}}"
-    root_dir="{{repo_root}}"
-
-    if [[ -f "$root_dir/.env" ]]; then
-        set -a
-        # shellcheck disable=SC1091
-        source "$root_dir/.env"
-        set +a
-    fi
 
     case "$service" in
         clients/web)
@@ -479,6 +461,7 @@ shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/build-images.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
     bash infra/minio/provision_test.sh

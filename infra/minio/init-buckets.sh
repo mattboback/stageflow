@@ -7,7 +7,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Explicit command-line environment values must win over .env.
+# Explicit command-line environment values must win over the selected env file.
+ENV_FILE="${ENV_FILE:-.env}"
 declare -A env_overrides=()
 for name in \
 	PODMAN MC_IMAGE MC_NETWORK MINIO_ENDPOINT \
@@ -19,10 +20,10 @@ for name in \
 	fi
 done
 
-if [[ -f .env ]]; then
+if [[ -f "$ENV_FILE" ]]; then
 	set -a
 	# shellcheck source=/dev/null
-	source .env
+	source "$ENV_FILE"
 	set +a
 fi
 
@@ -35,8 +36,8 @@ MC_IMAGE=${MC_IMAGE:-docker.io/minio/mc}
 MC_NETWORK=${MC_NETWORK:-host}
 MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://127.0.0.1:9000}
 
-: "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set, or provide it in .env}"
-: "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set, or provide it in .env}"
+: "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set, or provide it in the selected env file}"
+: "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set, or provide it in the selected env file}"
 
 exec "$PODMAN" run --rm --network "$MC_NETWORK" \
 	-e MINIO_ENDPOINT="$MINIO_ENDPOINT" \

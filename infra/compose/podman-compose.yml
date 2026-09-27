@@ -1,9 +1,13 @@
-# StageFlow Base Compose
-# No host ports are exposed here; apply an overlay (prod/test/local) to bind ports.
+# StageFlow Compose: local settings come from .env.
+# Host ports bind to loopback; use a reverse proxy for public deployments.
+
+name: ${COMPOSE_PROJECT_NAME:-stageflow_dev}
 
 services:
   # --- Infrastructure ---
   nats:
+    ports:
+      - "127.0.0.1:${NATS_PORT:-4222}:4222"
     image: docker.io/library/nats:2.12.2-alpine
     command: ["-js", "-sd", "/data", "-m", "8222"]
     volumes:
@@ -38,12 +42,15 @@ services:
         max-file: "3"
 
   minio:
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     image: docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
-      MINIO_DOMAIN: ${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org}
+      MINIO_DOMAIN: ${STAGEFLOW_PUBLIC_DOMAIN:-localhost}
     volumes:
       - minio_data:/data
     healthcheck:
@@ -109,26 +116,29 @@ services:
         max-file: "3"
 
   platform-api:
+    ports:
+      - "127.0.0.1:${PLATFORM_API_PORT:-8080}:8080"
     build:
       context: ../..
       dockerfile: services/platform-api/Dockerfile
-    image: localhost/stageflow/platform-api:latest
+    image: localhost/stageflow/platform-api:${IMAGE_TAG:-latest}
     environment:
       PORT: "8080"
       NATS_URL: "nats://nats:4222"
       SCANNER_CONFIG_PATH: "/data/scanners.yaml"
       MINIO_ENDPOINT: "minio:9000"
-      MINIO_PUBLIC_ENDPOINT: ${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:${MINIO_PORT:-9000}}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
       MINIO_USE_SSL: "false"
-      MINIO_PUBLIC_USE_SSL: "true"
-      MINIO_USE_PROXY_URLS: "true"
+      MINIO_PUBLIC_USE_SSL: "${MINIO_PUBLIC_USE_SSL:-false}"
+      MINIO_USE_PROXY_URLS: "${MINIO_USE_PROXY_URLS:-false}"
+      PLATFORM_API_ALLOW_PRIVATE_TARGETS: "${PLATFORM_API_ALLOW_PRIVATE_TARGETS:-false}"
       PLATFORM_API_TOKEN: ${PLATFORM_API_TOKEN:-}
       PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM:-6}
       PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST:-3}
       PLATFORM_API_TRUSTED_PROXIES: ${PLATFORM_API_TRUSTED_PROXIES:-127.0.0.1/32,::1/128}
-      PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-https://${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org},https://www.${STAGEFLOW_PUBLIC_DOMAIN:-stageflow.org}}
+      PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:3020,http://127.0.0.1:3020}
       ORCHESTRATOR_API_URL: "http://orchestrator:8081"
       ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
     volumes:
@@ -168,10 +178,12 @@ services:
         max-file: "5"
 
   orchestrator:
+    ports:
+      - "127.0.0.1:${ORCHESTRATOR_PORT:-8081}:8081"
     build:
       context: ../..
       dockerfile: services/orchestrator/Dockerfile
-    image: localhost/stageflow/orchestrator:latest
+    image: localhost/stageflow/orchestrator:${IMAGE_TAG:-latest}
     # The orchestrator owns job pod creation and needs write access to the
     # mounted Podman socket. Run as the mapped host user (keep-id) rather than
     # in-container root: under rootless Podman keep-id maps container uid 1000 ->
@@ -204,13 +216,15 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
       MINIO_USE_SSL: "false"
-      EXTRACTION_IMAGE: "localhost/stageflow/extractor:latest"
-      SCANNER_IMAGE: "localhost/stageflow/scanner-runner:latest"
+      EXTRACTION_IMAGE: "localhost/stageflow/extractor:${IMAGE_TAG:-latest}"
+      SCANNER_IMAGE: "localhost/stageflow/scanner-runner:${IMAGE_TAG:-latest}"
       API_PORT: "8081"
       ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
       NATS_HOST: "nats"
       MINIO_HOST: "minio"
-      POD_NETWORK: ${STAGEFLOW_NETWORK_NAME:-stageflow_net}
+      POD_NETNS_MODE: ${POD_NETNS_MODE:-bridge}
+      # An explicitly empty POD_NETWORK is required for host mode.
+      POD_NETWORK: ${POD_NETWORK-${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_net}}
     healthcheck:
       test: ["CMD", "/usr/local/bin/orchestrator-healthcheck"]
       interval: 15s
@@ -244,17 +258,19 @@ services:
 
   # --- Frontend ---
   frontend-react:
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3020"
     build:
       context: ../..
       dockerfile: clients/web/Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:${PLATFORM_API_PORT:-8080}}
         VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
-        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:3020}
+        VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:${FRONTEND_PORT:-3000}}
         VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
         VITE_TAGLINE: ${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}
         VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-self-hosted}
-    image: localhost/stageflow/frontend-react:latest
+    image: localhost/stageflow/frontend-react:${IMAGE_TAG:-latest}
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3020/ || exit 1"]
       interval: 30s
@@ -294,4 +310,4 @@ volumes:
 networks:
   stageflow_net:
     external: true
-    name: ${STAGEFLOW_NETWORK_NAME:-stageflow_net}
+    name: ${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_net}

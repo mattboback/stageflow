@@ -4,36 +4,45 @@ set -Eeuo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
-PODMAN="${PODMAN:-podman}"
+# Explicit shell settings (including deploy SHA tags and demo URLs) take
+# precedence over the selected environment file, matching Compose and Just.
+declare -A env_overrides=()
+for name in PODMAN IMAGE_TAG PODMAN_BUILD_NETWORK PODMAN_BUILD_FORMAT PODMAN_BUILD_NO_CACHE \
+  VITE_API_URL VITE_SITE_TITLE VITE_SITE_URL VITE_GITHUB_URL VITE_TAGLINE VITE_DEPLOYMENT_MODE \
+  PLATFORM_API_PORT FRONTEND_PORT; do
+  if [[ -v "$name" ]]; then
+    env_overrides["$name"]="${!name}"
+  fi
+done
+
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
-PODMAN_BUILD_NETWORK="${PODMAN_BUILD_NETWORK:-host}"
-PODMAN_BUILD_FORMAT="${PODMAN_BUILD_FORMAT:-docker}"
-PODMAN_BUILD_NO_CACHE="${PODMAN_BUILD_NO_CACHE:-0}"
-PODMAN_BUILD_ARGS=(--format "$PODMAN_BUILD_FORMAT" --network "$PODMAN_BUILD_NETWORK")
-# Every image gets this one tag. Production deploys pass the commit SHA, so a
-# build never swaps the tag running units or the next job use; local dev keeps
-# the default.
-IMAGE_TAG="${IMAGE_TAG:-latest}"
-
-if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
-  echo "[images] invalid IMAGE_TAG: $IMAGE_TAG" >&2
-  exit 1
-fi
-
-if [[ "$PODMAN_BUILD_NO_CACHE" == "1" ]]; then
-  PODMAN_BUILD_ARGS+=(--no-cache)
-fi
-
-if [[ ! -f "$REPO_ROOT/justfile" ]]; then
-  echo "[images] repo root resolution failed: expected $REPO_ROOT/justfile" >&2
-  exit 1
-fi
-
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090
   source "$ENV_FILE"
   set +a
+fi
+for name in "${!env_overrides[@]}"; do
+  export "$name=${env_overrides[$name]}"
+done
+
+PODMAN="${PODMAN:-podman}"
+IMAGE_TAG="${IMAGE_TAG:-latest}"
+PODMAN_BUILD_NETWORK="${PODMAN_BUILD_NETWORK:-host}"
+PODMAN_BUILD_FORMAT="${PODMAN_BUILD_FORMAT:-docker}"
+PODMAN_BUILD_NO_CACHE="${PODMAN_BUILD_NO_CACHE:-0}"
+PODMAN_BUILD_ARGS=(--format "$PODMAN_BUILD_FORMAT" --network "$PODMAN_BUILD_NETWORK")
+
+if [[ ! "$IMAGE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+  echo "[images] invalid IMAGE_TAG: $IMAGE_TAG" >&2
+  exit 1
+fi
+if [[ "$PODMAN_BUILD_NO_CACHE" == "1" ]]; then
+  PODMAN_BUILD_ARGS+=(--no-cache)
+fi
+if [[ ! -f "$REPO_ROOT/justfile" ]]; then
+  echo "[images] repo root resolution failed: expected $REPO_ROOT/justfile" >&2
+  exit 1
 fi
 
 build() {
@@ -52,9 +61,9 @@ build orchestrator orchestrator services/orchestrator/Dockerfile
 
 echo "[images] Building React frontend..."
 build frontend-react frontend-react clients/web/Dockerfile \
-  --build-arg VITE_API_URL="${VITE_API_URL:-http://localhost:8080}" \
+  --build-arg VITE_API_URL="${VITE_API_URL:-http://localhost:${PLATFORM_API_PORT:-8080}}" \
   --build-arg VITE_SITE_TITLE="${VITE_SITE_TITLE:-StageFlow}" \
-  --build-arg VITE_SITE_URL="${VITE_SITE_URL:-http://localhost:3020}" \
+  --build-arg VITE_SITE_URL="${VITE_SITE_URL:-http://localhost:${FRONTEND_PORT:-3000}}" \
   --build-arg VITE_GITHUB_URL="${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}" \
   --build-arg VITE_TAGLINE="${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}" \
   --build-arg VITE_DEPLOYMENT_MODE="${VITE_DEPLOYMENT_MODE:-self-hosted}"
