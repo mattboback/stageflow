@@ -297,14 +297,15 @@ func waitForRetry(ctx context.Context, delay time.Duration) error {
 
 // UploadFile uploads to MinIO, using streaming when size is unknown.
 func (c *MinIOClient) UploadFile(ctx context.Context, bucket, path string, reader io.Reader, size int64) error {
+	opts := minio.PutObjectOptions{ContentType: "application/octet-stream"}
+
 	objectSize := size
 	if objectSize < 0 {
 		objectSize = -1 // enable streaming uploads when size unknown
+		opts.PartSize = unknownSizePartSize
 	}
 
-	info, err := c.client.PutObject(ctx, bucket, path, reader, objectSize, minio.PutObjectOptions{
-		ContentType: "application/octet-stream",
-	})
+	info, err := c.client.PutObject(ctx, bucket, path, reader, objectSize, opts)
 	if err != nil {
 		return fmt.Errorf("failed to upload file to %s/%s: %w", bucket, path, err)
 	}
@@ -313,6 +314,13 @@ func (c *MinIOClient) UploadFile(ctx context.Context, bucket, path string, reade
 
 	return nil
 }
+
+// unknownSizePartSize bounds the part buffer minio-go allocates for an upload
+// of unknown length. Left unset, the client sizes parts for a 5 TiB object and
+// allocates about 528 MiB before reading a byte, which exceeded the platform
+// API's memory limit during ZIP intake. 16 MiB parts still allow objects up to
+// 160 GiB (10,000 parts), far above the 100 MiB ZIP limit.
+const unknownSizePartSize = 16 << 20
 
 // GetPresignedURL generates a presigned URL for downloading a file. When a
 // public endpoint is configured, the URL is signed against that endpoint so

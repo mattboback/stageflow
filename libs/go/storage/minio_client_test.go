@@ -270,7 +270,15 @@ func TestEnsureBucketWithRetry_RespectsContextCancellation(t *testing.T) {
 }
 
 func TestUploadFile_UsesStreamingWhenSizeUnknown(t *testing.T) {
-	fake := &fakeMinioClient{}
+	var gotOpts minio.PutObjectOptions
+
+	fake := &fakeMinioClient{
+		PutObjectFn: func(_ context.Context, _, _ string, _ *bytes.Reader, size int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+			gotOpts = opts
+
+			return minio.UploadInfo{Size: size}, nil
+		},
+	}
 
 	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
 	if err := client.UploadFile(context.Background(), "bucket", "path", bytes.NewReader([]byte("x")), -1); err != nil {
@@ -280,10 +288,24 @@ func TestUploadFile_UsesStreamingWhenSizeUnknown(t *testing.T) {
 	if got := fake.putObjectSizes; len(got) != 1 || got[0] != -1 {
 		t.Fatalf("expected size -1, got %v", got)
 	}
+
+	// Unknown-length uploads must bound the part buffer; minio-go otherwise
+	// allocates about 528 MiB up front (parts sized for a 5 TiB object).
+	if gotOpts.PartSize != unknownSizePartSize {
+		t.Fatalf("expected part size %d for unknown size, got %d", unknownSizePartSize, gotOpts.PartSize)
+	}
 }
 
 func TestUploadFile_PassesProvidedSize(t *testing.T) {
-	fake := &fakeMinioClient{}
+	var gotOpts minio.PutObjectOptions
+
+	fake := &fakeMinioClient{
+		PutObjectFn: func(_ context.Context, _, _ string, _ *bytes.Reader, size int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+			gotOpts = opts
+
+			return minio.UploadInfo{Size: size}, nil
+		},
+	}
 
 	client := &MinIOClient{client: fake, config: &MinIOConfig{}}
 	if err := client.UploadFile(context.Background(), "bucket", "path", bytes.NewReader([]byte("x")), 123); err != nil {
@@ -292,6 +314,10 @@ func TestUploadFile_PassesProvidedSize(t *testing.T) {
 
 	if got := fake.putObjectSizes; len(got) != 1 || got[0] != 123 {
 		t.Fatalf("expected size 123, got %v", got)
+	}
+
+	if gotOpts.PartSize != 0 {
+		t.Fatalf("expected minio-go's own part sizing for a known size, got %d", gotOpts.PartSize)
 	}
 }
 
