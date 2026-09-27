@@ -25,9 +25,7 @@ export default defineConfig({
 			]
 			// Deliberately no `thresholds` yet. A number chosen before anyone has read
 			// the report is a number nobody can defend — which is the objection to
-			// scanner-runner's `statements: 60`. The Go side ratchets against a
-			// checked-in baseline instead (devtools/scripts/go/coverage.sh); this
-			// follows the same route once a baseline exists here.
+			// scanner-runner's `statements: 60`. Coverage remains report-only here.
 		}
 	}
 });

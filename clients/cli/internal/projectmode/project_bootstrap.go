@@ -269,7 +269,7 @@ func detectJustRunFrontend(projectRoot string) (string, bool, error) {
 		command string
 	}{
 		{"clients/web", "just run clients/web"},
-		{"frontend", "just run frontend"}, // stale-vocab-ok: generic fallback for non-StageFlow projects
+		{"frontend", "just run frontend"}, // generic fallback for non-StageFlow projects
 	}
 
 	for _, c := range frontendCandidates {

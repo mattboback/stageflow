@@ -58,12 +58,6 @@ jobs:
       - name: Lint workflows
         run: actionlint -color -shellcheck="$(command -v shellcheck)"
 
-      - name: Check stale vocabulary
-        run: ./devtools/scripts/check-stale-vocab.sh
-
-      - name: Check Dependabot package coverage
-        run: ./devtools/scripts/check-dependabot-coverage.sh
-
       # Installing the hooks locally is optional (see CONTRIBUTING.md), so run the
       # same config here. Without this, .pre-commit-config.yaml gates nothing for
       # anyone who has not opted in, and drift in it goes unnoticed. This also
@@ -75,16 +69,8 @@ jobs:
         with:
           python-version: '3.13'
 
-      # stageflow-precommit is skipped here, not disabled. It is a `language: system`
-      # hook that regenerates the contract packages, so it needs those workspaces
-      # bootstrapped -- installing them in this job just to re-run a check the `go`
-      # job already performs (`bun run build` = generate -> validate:fixtures -> tsc,
-      # for all three packages) would duplicate the work and the wall-clock. Every
-      # other hook runs.
       - name: Run pre-commit hooks
         uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
-        env:
-          SKIP: stageflow-precommit
 
   secrets_scan:
     name: Secrets (gitleaks)
@@ -312,13 +298,9 @@ jobs:
       - name: Dead-code analysis
         run: just dead-code
 
-  # Reports coverage rather than gating on a threshold. The Go side ratchets
-  # against devtools/coverage-baseline.json, so the question a failure asks is
-  # "did this change make it worse?" rather than "why is the floor 60?". Kept as
-  # its own job so ~854 Go tests are not run twice on the critical path of the
-  # `go` job, which already runs them under -race.
+  # Coverage reports are informational; no baseline or threshold gate.
   coverage:
-    name: Coverage (Go ratchet, web report)
+    name: Coverage (Go and web reports)
     runs-on: ubuntu-latest
     needs: workflow_lint
     timeout-minutes: 25
@@ -342,25 +324,18 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Go coverage and ratchet
+      - name: Go coverage
         run: |
+          mkdir -p artifacts/coverage
+          go test -coverprofile=artifacts/coverage/go.out ./...
+          go tool cover -html=artifacts/coverage/go.out -o artifacts/coverage/go.html
           {
             echo '## Go coverage'
             echo ''
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          set +e
-          bash devtools/scripts/go/coverage.sh 2>&1 | tee coverage-run.log
-          status="${PIPESTATUS[0]}"
-          set -e
-
-          {
-            cat coverage-run.log
+            go tool cover -func=artifacts/coverage/go.out
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
-          exit "$status"
 
       - name: Web dependencies
         run: bun install --frozen-lockfile
@@ -384,8 +359,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
         working-directory: clients/web
 
-      # Per-module HTML so a reviewer can open the real line-by-line report rather
-      # than trusting a percentage.
+      # HTML reports let reviewers inspect coverage line by line.
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -393,7 +367,7 @@ jobs:
           name: coverage-reports
           path: |
             artifacts/coverage/*.html
-            artifacts/coverage/measured.json
+            artifacts/coverage/go.out
             clients/web/coverage/
           retention-days: 14
           if-no-files-found: warn

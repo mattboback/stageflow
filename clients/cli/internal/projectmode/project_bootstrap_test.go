@@ -55,9 +55,9 @@ func TestDetectProjectBootstrapSuggestion_UsesJustRunFrontendForWorkspace(t *tes
 	testsupport.RequireEqual(
 		t,
 		suggestion.Command,
-		"just run frontend", // stale-vocab-ok: tests generic fallback
+		"just run frontend", // tests generic fallback
 		"suggestion.Command",
-	) // stale-vocab-ok: tests generic fallback
+	) // tests generic fallback
 	testsupport.RequireEqual(t, suggestion.URL, "http://127.0.0.1:5173", "suggestion.URL")
 
 	if suggestion.IsPlaceholder {

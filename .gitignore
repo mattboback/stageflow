@@ -81,7 +81,6 @@ log.duff
 
 # Generated root-level showcase/demo artifacts
 /cli
-/suite-runner
 /scan_result.json
 /stageflow-home*.yaml
 /stageflow-report*.yaml
@@ -99,7 +98,6 @@ services/platform-api/platform-api
 services/platform-api/platform-api-healthcheck
 services/orchestrator/orchestrator
 services/archive-extractor/extractor
-devtools/qa/suite-runner/suite-runner
 clients/cli/stageflow
 clients/cli/stageflow-cli
 /.local/

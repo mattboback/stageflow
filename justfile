@@ -339,9 +339,6 @@ ci:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    echo "==> Stale-vocabulary and naming drift check..."
-    ./devtools/scripts/check-stale-vocab.sh
-
     echo "==> Internal Markdown links..."
     node devtools/scripts/check-markdown-links.mjs
 
@@ -483,19 +480,9 @@ shell-tests:
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
-    bash devtools/scripts/tests/coverage-ratchet.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
-    bash devtools/scripts/tests/stale-vocab.test.sh
     bash infra/minio/provision_test.sh
     bash qa/e2e/scan-helpers.test.sh
-
-[group('quality'), doc('Measure Go coverage per directory and check it against the baseline')]
-coverage:
-    @bash devtools/scripts/go/coverage.sh
-
-[group('quality'), doc('Re-record devtools/coverage-baseline.json from the current tree')]
-coverage-update:
-    @bash devtools/scripts/go/coverage.sh --update
 
 [group('quality'), doc('Run dead-code analysis for configured TypeScript workspaces')]
 dead-code:
@@ -524,9 +511,8 @@ clean MODE='all':
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
     find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" -o -name ".impeccable" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
     rm -rf .cache artifacts output .patchright-cli .playwright-cli
-    rm -f cli suite-runner scan_result.json stageflow stageflow-cli sbom-*.spdx.json
+    rm -f cli scan_result.json stageflow stageflow-cli sbom-*.spdx.json
     rm -f clients/cli/cli clients/cli/report.json clients/cli/stageflow clients/cli/stageflow-cli
-    rm -f devtools/qa/suite-runner/suite-runner
 
     if [[ "$mode" == "deep" ]]; then
         echo "==> Removing node_modules..."

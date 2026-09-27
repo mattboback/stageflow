@@ -195,7 +195,7 @@ just shell-tests
 (cd clients/web && bun run ci)
 (cd services/scanner-runner && bun run ci)
 just dead-code
-just coverage
+go test -cover ./...
 just scan-diff-golden
 ```
 
