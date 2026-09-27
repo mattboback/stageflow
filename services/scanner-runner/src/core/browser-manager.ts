@@ -18,7 +18,6 @@ import {
 
 import { createLogger } from '../utils/logger';
 import { resolvePlaywrightImageChromiumExecutablePath } from '../utils/playwright';
-import { type SecretsResolver } from './secrets-resolver';
 import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';
 import {
 	type BrowserConfig,
@@ -76,6 +75,8 @@ function isHTTPURL(rawURL: string): boolean {
 export class BrowserManager {
 	private browser: Browser | null = null;
 	private readonly config: BrowserConfig;
+	private readonly pageRedactors = new WeakMap<Page, (value: string) => string>();
+
 	private readonly logger: ScannerLogger;
 	private readonly runtimeValidationRoutes = new WeakSet<Page>();
 	private readonly blockedNavigationErrors = new WeakMap<Page, Error>();
@@ -211,16 +212,18 @@ export class BrowserManager {
 		page: Page,
 		url: string,
 		waitStrategy?: WaitStrategy,
-		targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
+		targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] },
+		redact: (value: string) => string = this.pageRedactors.get(page) ?? ((value) => value)
 	): Promise<void> {
-		await this.ensureRuntimeTargetValidationRouting(page, targetValidationPolicy);
+		this.pageRedactors.set(page, redact);
+		await this.ensureRuntimeTargetValidationRouting(page, targetValidationPolicy, redact);
 		this.blockedNavigationErrors.delete(page);
 		await validateTargetURLForPolicy(url, targetValidationPolicy);
 
 		const strategy = waitStrategy ?? DEFAULT_WAIT_STRATEGY;
 
 		this.logger.debug('Navigating to page', {
-			url,
+			url: redact(url),
 			waitStrategy: strategy.type
 		});
 
@@ -255,7 +258,8 @@ export class BrowserManager {
 
 	private async ensureRuntimeTargetValidationRouting(
 		page: Page,
-		targetValidationPolicy: TargetValidationPolicy
+		targetValidationPolicy: TargetValidationPolicy,
+		redact: (value: string) => string
 	): Promise<void> {
 		if (this.runtimeValidationRoutes.has(page)) {
 			return;
@@ -284,8 +288,8 @@ export class BrowserManager {
 
 				this.logger.warn('Blocked browser request', {
 					resourceType: request.resourceType(),
-					url: requestURL,
-					error: error.message
+					url: redact(requestURL),
+					error: redact(error.message)
 				});
 
 				await route.abort('blockedbyclient');
@@ -296,7 +300,6 @@ export class BrowserManager {
 	async executePreScanActions(
 		page: Page,
 		actions: PreScanAction[],
-		secretsResolver?: SecretsResolver,
 		options?: { maskInputValues?: boolean }
 	): Promise<void> {
 		if (actions.length === 0) {
@@ -306,14 +309,13 @@ export class BrowserManager {
 		this.logger.debug('Executing pre-scan actions', { count: actions.length });
 
 		for (const action of actions) {
-			await this.executeAction(page, action, secretsResolver, options?.maskInputValues === true);
+			await this.executeAction(page, action, options?.maskInputValues === true);
 		}
 	}
 
 	private async executeAction(
 		page: Page,
 		action: PreScanAction,
-		secretsResolver: SecretsResolver | undefined,
 		maskInputValue: boolean
 	): Promise<void> {
 		const timeout =
@@ -328,7 +330,7 @@ export class BrowserManager {
 			typeof action.selector === 'string' &&
 			action.selector.startsWith(AUTO_SELECTOR_PREFIX)
 		) {
-			await this.executeAutoLoginAction(page, action, secretsResolver, timeout, maskInputValue);
+			await this.executeAutoLoginAction(page, action, timeout, maskInputValue);
 			return;
 		}
 
@@ -340,7 +342,7 @@ export class BrowserManager {
 				if (maskInputValue) {
 					await this.markSensitiveField(page, action.selector);
 				}
-				const value = resolveActionValue(action.value, secretsResolver);
+				const value = resolveActionValue(action.value);
 				await page.fill(action.selector, value, { timeout });
 				return;
 			}
@@ -348,7 +350,7 @@ export class BrowserManager {
 				if (maskInputValue) {
 					await this.markSensitiveField(page, action.selector);
 				}
-				const value = resolveActionValue(action.value, secretsResolver);
+				const value = resolveActionValue(action.value);
 				await page.selectOption(action.selector, value, { timeout });
 				return;
 			}
@@ -389,7 +391,6 @@ export class BrowserManager {
 	private async executeAutoLoginAction(
 		page: Page,
 		action: PreScanAction,
-		secretsResolver: SecretsResolver | undefined,
 		timeout: number,
 		maskInputValue: boolean
 	): Promise<void> {
@@ -417,7 +418,7 @@ export class BrowserManager {
 						node.setAttribute('data-stageflow-sensitive', 'true');
 					});
 				}
-				const value = resolveActionValue(action.value, secretsResolver);
+				const value = resolveActionValue(action.value);
 				await element.fill(value, { timeout });
 			} finally {
 				await element.dispose();
@@ -627,20 +628,9 @@ function findLoginFieldInPage(field: string): HTMLElement | null {
 	return null;
 }
 
-function resolveActionValue(
-	value: PreScanActionValue,
-	secretsResolver: SecretsResolver | undefined
-): string {
-	if (typeof value === 'string') {
-		return value;
+function resolveActionValue(value: PreScanActionValue): string {
+	if (typeof value !== 'string') {
+		throw new Error('Pre-scan action values must be literal strings');
 	}
-
-	if (!secretsResolver) {
-		throw new Error(
-			'PreScanAction value contains a from_env reference, but no SecretsResolver was provided. ' +
-				'PageIterator must build a resolver from the recipe before invoking executePreScanActions.'
-		);
-	}
-
-	return secretsResolver.resolveValue(value);
+	return value;
 }

@@ -34,11 +34,8 @@ type JobAuthStorageStateInput struct {
 	ContentBase64 string `json:"content_b64"`
 }
 
-// JobAuthFormRecipe is a declarative login replay. Step values are either
-// literal strings or {from_env: NAME} references resolved at scanner-runner
-// execution time against an explicit allow-list derived from this recipe.
-// Resolved credential values never appear in stored Provenance, the unified
-// report, the scan stage log, or NATS payloads.
+// JobAuthFormRecipe is a declarative login replay. The CLI resolves local
+// environment references before submission; the API accepts literal values only.
 type JobAuthFormRecipe struct {
 	LoginURL string           `json:"login_url"`
 	Steps    []map[string]any `json:"steps"`

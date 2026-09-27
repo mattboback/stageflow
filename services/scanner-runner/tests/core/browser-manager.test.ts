@@ -555,6 +555,26 @@ describe('BrowserManager', () => {
 		});
 	});
 
+	it('redacts credential-bearing navigation URLs in browser logs', async () => {
+		const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+		const manager = new BrowserManager(undefined, logger);
+		const secret = 'browser-navigation-canary';
+		await manager.navigateToPage(
+			mockPage,
+			`https://example.com/?value=${secret}`,
+			undefined,
+			{ allowedOrigins: [] },
+			(value) => value.replaceAll(secret, '[REDACTED]')
+		);
+		await manager.navigateToPage(mockPage, `https://example.com/again?value=${secret}`);
+
+		expect(JSON.stringify(logger.debug.mock.calls)).not.toContain(secret);
+		expect(logger.debug).toHaveBeenCalledWith(
+			'Navigating to page',
+			expect.objectContaining({ url: 'https://example.com/?value=[REDACTED]' })
+		);
+	});
+
 	describe('executePreScanActions', () => {
 		it('should execute click action', async () => {
 			const actions: PreScanAction[] = [{ type: 'click', selector: '#button' }];
@@ -576,6 +596,15 @@ describe('BrowserManager', () => {
 			});
 		});
 
+		it('rejects object action values without consulting scanner environment', async () => {
+			await expect(
+				browserManager.executePreScanActions(mockPage, [
+					{ type: 'fill', selector: '#password', value: { from_env: 'PATH' } }
+				] as never)
+			).rejects.toThrow('Pre-scan action values must be literal strings');
+			expect(mockPage.fill).not.toHaveBeenCalled();
+		});
+
 		it('marks execution-only input values so screenshots mask them', async () => {
 			const evaluate = vi.fn().mockResolvedValue(undefined);
 			vi.mocked(mockPage.locator).mockReturnValue({ evaluate } as never);
@@ -583,7 +612,6 @@ describe('BrowserManager', () => {
 			await browserManager.executePreScanActions(
 				mockPage,
 				[{ type: 'fill', selector: '#account-password', value: 'literal-canary' }],
-				undefined,
 				{ maskInputValues: true }
 			);
 
@@ -602,7 +630,6 @@ describe('BrowserManager', () => {
 				browserManager.executePreScanActions(
 					mockPage,
 					[{ type: 'fill', selector: '#account-password', value: inputCanary }],
-					undefined,
 					{ maskInputValues: true }
 				)
 			).rejects.toThrow('detached input');
@@ -617,7 +644,6 @@ describe('BrowserManager', () => {
 			await browserManager.executePreScanActions(
 				mockPage,
 				[{ type: 'fill', selector: '#account-password', value: 'csp-fallback-canary-9d2e' }],
-				undefined,
 				{ maskInputValues: true }
 			);
 
@@ -639,7 +665,6 @@ describe('BrowserManager', () => {
 				browserManager.executePreScanActions(
 					mockPage,
 					[{ type: 'fill', selector: '#account-password', value: inputCanary }],
-					undefined,
 					{ maskInputValues: true }
 				)
 			).rejects.toThrow('Failed to install sensitive-field masking; refusing to continue');
@@ -785,7 +810,6 @@ describe('BrowserManager', () => {
 								value: 'auto-mask-canary-51a8'
 							}
 						],
-						undefined,
 						{ maskInputValues: true }
 					)
 				).rejects.toThrow('Failed to install sensitive-field masking; refusing to continue');

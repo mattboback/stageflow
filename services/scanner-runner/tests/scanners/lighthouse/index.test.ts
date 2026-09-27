@@ -1374,6 +1374,7 @@ describe('LighthouseScanner', () => {
 	describe('scanPage resilience', () => {
 		it('continues when re-navigation and screenshot capture fail', async () => {
 			const testScanner = new LighthouseScanner();
+			const canary = 'lighthouse-literal-canary-42';
 			const logger = createMockLogger();
 			(testScanner as unknown as { logger: ScannerLogger }).logger = logger;
 
@@ -1412,15 +1413,23 @@ describe('LighthouseScanner', () => {
 					};
 				}
 			).screenshotService = {
-				capturePageOverview: vi.fn().mockRejectedValue(new Error('screenshot failed'))
+				capturePageOverview: vi.fn().mockRejectedValue(new Error(`screenshot failed ${canary}`))
 			};
 
 			const page = createMockPage({
-				goto: vi.fn().mockRejectedValue(new Error('navigation failed'))
+				goto: vi.fn().mockRejectedValue(new Error(`navigation failed ${canary}`))
 			});
-			const context = createMockContext({ page, logger });
+			const context = createMockContext({
+				page,
+				logger,
+				redact: (value) => value.replaceAll(canary, '[REDACTED]')
+			});
 
+			context.pageEntry.url = `https://example.com/?password=${canary}`;
 			const result = await testScanner.scanPage(context);
+			expect(JSON.stringify([logger.debug.mock.calls, logger.warn.mock.calls])).not.toContain(
+				canary
+			);
 			const rawResults = result.rawResults as {
 				pageOverview: unknown;
 				finalUrl: string;
@@ -1433,11 +1442,11 @@ describe('LighthouseScanner', () => {
 			expect(rawResults.finalUrl).toBe('https://example.com/page');
 			expect(logger.warn).toHaveBeenCalledWith(
 				'Failed to re-navigate page after Lighthouse, continuing with stale page',
-				expect.objectContaining({ error: 'navigation failed' })
+				expect.objectContaining({ error: 'navigation failed [REDACTED]' })
 			);
 			expect(logger.warn).toHaveBeenCalledWith(
 				'Screenshot capture failed or timed out, continuing without screenshot',
-				expect.objectContaining({ error: 'screenshot failed' })
+				expect.objectContaining({ error: 'screenshot failed [REDACTED]' })
 			);
 		});
 
@@ -1515,7 +1524,8 @@ describe('LighthouseScanner', () => {
 				page,
 				context.pageEntry.url,
 				{ type: 'domcontentloaded' },
-				targetValidationPolicy
+				targetValidationPolicy,
+				expect.any(Function)
 			);
 			expect(page.goto).not.toHaveBeenCalled();
 		});

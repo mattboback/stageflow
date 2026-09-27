@@ -38,25 +38,8 @@ export type WaitStrategy =
 
 export const DEFAULT_WAIT_STRATEGY: WaitStrategy = { type: 'load' };
 
-/**
- * Reference to an environment variable resolved at execution time inside the
- * scanner-runner pod. Persisted Provenance only carries the reference, never
- * the resolved value, so credentials never appear in stored artifacts.
- */
-export interface FromEnvReference {
-	from_env: string;
-}
-
-/**
- * A PreScanAction value is either a literal string or a typed `from_env`
- * reference. The shape mirrors the JSON schema in
- * `libs/contracts/provenance/schema/provenance.schema.json`.
- */
-export type PreScanActionValue = string | FromEnvReference;
-
-export function isFromEnvReference(value: PreScanActionValue): value is FromEnvReference {
-	return typeof value === 'object' && typeof value.from_env === 'string';
-}
+/** Execution receives literal action values resolved by the client. */
+export type PreScanActionValue = string;
 
 export interface ActionClick {
 	type: 'click';
@@ -131,8 +114,8 @@ export interface PageEntry {
  *   MinIO prefix; resolved via StorageProvider at hydration time.
  * - `form`: a declarative login replay built from the existing PreScanAction
  *   shape. `success` is a WaitStrategy that signals a completed login. Any
- *   string value can also be a `from_env` reference; resolved values never
- *   appear in stored Provenance, the unified report, or the scan stage log.
+ *   string value is a client-resolved literal; credential values never
+ *   appear in public Provenance, the unified report, or the scan stage log.
  */
 export interface ProvenanceAuthStorageState {
 	mode: 'storage_state';
@@ -280,6 +263,8 @@ export interface ScanContext {
 	resultsDir: string;
 	config: ScannerConfig;
 	logger: ScannerLogger;
+	/** Execution-only masking; never serialized in reports or recipes. */
+	redact?: (value: string) => string;
 	targetValidationPolicy?: TargetValidationPolicy;
 }
 

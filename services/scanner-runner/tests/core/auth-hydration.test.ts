@@ -2,14 +2,14 @@
  * Hydrate-then-iterate test (mocked Playwright surface).
  *
  * Asserts the design contract: hydrateAuth runs once per scanner before page
- * iteration, the secrets resolver replaces from_env references at execution
+ * iteration, literal credentials are used only at execution
  * time, and an auth_hydrated audit event is emitted with the post-login URL
  * only (never credentials).
  */
 
 import type { BrowserContext, Page } from 'playwright';
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type {
@@ -124,29 +124,11 @@ function createHarness(): MockHarness {
 }
 
 describe('hydrate-then-iterate', () => {
-	const originalUser = process.env.STAGEFLOW_AUTH_USER;
-	const originalPassword = process.env.STAGEFLOW_AUTH_PASSWORD;
-
-	beforeEach(() => {
-		process.env.STAGEFLOW_AUTH_USER = SECRET_USER;
-		process.env.STAGEFLOW_AUTH_PASSWORD = SECRET_PASSWORD;
-	});
-
 	afterEach(() => {
-		if (originalUser === undefined) {
-			delete process.env.STAGEFLOW_AUTH_USER;
-		} else {
-			process.env.STAGEFLOW_AUTH_USER = originalUser;
-		}
-		if (originalPassword === undefined) {
-			delete process.env.STAGEFLOW_AUTH_PASSWORD;
-		} else {
-			process.env.STAGEFLOW_AUTH_PASSWORD = originalPassword;
-		}
 		vi.clearAllMocks();
 	});
 
-	it('runs form hydration once before iterating pages and resolves from_env', async () => {
+	it('runs form hydration once before iterating pages and uses literal credentials', async () => {
 		const harness = createHarness();
 		const formEncodedPassword = new URLSearchParams([['password', SECRET_PASSWORD]])
 			.toString()
@@ -176,12 +158,12 @@ describe('hydrate-then-iterate', () => {
 					{
 						type: 'fill',
 						selector: 'input[name=email]',
-						value: { from_env: 'STAGEFLOW_AUTH_USER' }
+						value: SECRET_USER
 					},
 					{
 						type: 'fill',
 						selector: 'input[name=password]',
-						value: { from_env: 'STAGEFLOW_AUTH_PASSWORD' }
+						value: SECRET_PASSWORD
 					},
 					{ type: 'fill', selector: 'input[name=tenant]', value: LITERAL_SECRET },
 					{ type: 'click', selector: 'button[type=submit]' }
@@ -222,19 +204,12 @@ describe('hydrate-then-iterate', () => {
 			'https://app.example.com/settings'
 		]);
 
-		// hydration replayed steps via executePreScanActions with secrets resolver
-		expect(harness.browserManager.executePreScanActions).toHaveBeenCalledTimes(1);
-		const [, , resolver] = (
-			harness.browserManager.executePreScanActions as ReturnType<typeof vi.fn>
-		).mock.calls[0]!;
-		expect(typeof resolver).toBe('object');
-		expect(resolver).not.toBeNull();
-		const r = resolver as {
-			resolve: (ref: { from_env: string }) => string;
-			allowList: readonly string[];
-		};
-		expect(r.allowList).toEqual(['STAGEFLOW_AUTH_PASSWORD', 'STAGEFLOW_AUTH_USER']);
-		expect(r.resolve({ from_env: 'STAGEFLOW_AUTH_USER' })).toBe(SECRET_USER);
+		// Hydration replays literal steps with input masking enabled.
+		expect(harness.browserManager.executePreScanActions).toHaveBeenCalledExactlyOnceWith(
+			expect.anything(),
+			provenance.auth?.mode === 'form' ? provenance.auth.steps : [],
+			{ maskInputValues: true }
+		);
 
 		// audit event has post-login URL but no credentials
 		expect(auditEvents).toContainEqual(

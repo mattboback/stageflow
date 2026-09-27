@@ -11,252 +11,152 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
 )
 
-func writeFile(t *testing.T, dir, name string, contents string) string {
+func writeFile(t *testing.T, dir, name, contents string) string {
 	t.Helper()
 
-	p := filepath.Join(dir, name)
-	if err := os.WriteFile(p, []byte(contents), 0o600); err != nil {
-		t.Fatalf("write %s: %v", p, err)
-	}
+	path := filepath.Join(dir, name)
+	testsupport.RequireNoErr(t, os.WriteFile(path, []byte(contents), 0o600))
 
-	return p
+	return path
 }
 
-func TestLoadAuthStateFile_HappyPath(t *testing.T) {
-	tmp := t.TempDir()
-	body := `{"cookies":[{"name":"sid","value":"abc","domain":".example.com","path":"/","expires":-1,"httpOnly":true,"secure":true,"sameSite":"Lax"}],"origins":[]}`
-	path := writeFile(t, tmp, "state.json", body)
+func TestLoadStateFile_PreservesBytesForServerValidation(t *testing.T) {
+	for _, body := range []string{`{"cookies":[{"value":"state-secret"}],"origins":[]}`, "invalid JSON", ""} {
+		path := writeFile(t, t.TempDir(), "state.json", body)
+		got, err := LoadStateFile(path)
+		testsupport.RequireNoErr(t, err)
+		testsupport.RequireEqual(t, got.Mode, "storage_state", "mode")
 
-	got, err := LoadStateFile(path)
-	testsupport.RequireNoErr(t, err)
-
-	testsupport.RequireEqual(t, got.Mode, "storage_state", "mode")
-
-	if got.StorageState == nil {
-		t.Fatalf("StorageState is nil")
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(got.StorageState.ContentBase64)
-	testsupport.RequireNoErr(t, err)
-
-	if string(decoded) != body {
-		t.Fatalf("decoded body mismatch:\n got=%q\nwant=%q", string(decoded), body)
-	}
-
-	if got.Form != nil {
-		t.Fatalf("expected Form to be nil for storage_state mode")
+		decoded, err := base64.StdEncoding.DecodeString(got.StorageState.ContentBase64)
+		testsupport.RequireNoErr(t, err)
+		testsupport.RequireEqual(t, string(decoded), body, "storage state bytes")
 	}
 }
 
-func TestLoadAuthStateFile_RejectsMissing(t *testing.T) {
-	_, err := LoadStateFile(filepath.Join(t.TempDir(), "no-such-file.json"))
-	if err == nil {
-		t.Fatal("expected error for missing file")
+func TestLoadAuthFiles_BoundedRead(t *testing.T) {
+	for _, state := range []bool{false, true} {
+		for _, path := range []string{
+			"",
+			filepath.Join(t.TempDir(), "missing"),
+			writeFile(t, t.TempDir(), "oversize", strings.Repeat("x", maxAuthFileBytes+1)),
+		} {
+			var err error
+			if state {
+				_, err = LoadStateFile(path)
+			} else {
+				_, err = LoadRecipeFile(path)
+			}
+
+			if err == nil {
+				t.Fatal("expected file intake failure")
+			}
+		}
 	}
 }
 
-func TestLoadAuthStateFile_RejectsEmpty(t *testing.T) {
-	tmp := t.TempDir()
-	path := writeFile(t, tmp, "empty.json", "")
+func TestLoadRecipeFile_ResolvesYAMLAndJSONExactly(t *testing.T) {
+	const secret = "  password\n雪 ${OTHER_SECRET} &+%  "
+	t.Setenv("STAGEFLOW_AUTH_SECRET", secret)
+	t.Setenv("STAGEFLOW_AUTH_EMPTY", "")
 
-	_, err := LoadStateFile(path)
-	if err == nil || !strings.Contains(err.Error(), "is empty") {
-		t.Fatalf("expected empty error, got %v", err)
-	}
-}
-
-func TestLoadAuthStateFile_RejectsNonJSON(t *testing.T) {
-	tmp := t.TempDir()
-	path := writeFile(t, tmp, "bad.json", "not json at all")
-
-	_, err := LoadStateFile(path)
-	if err == nil || !strings.Contains(err.Error(), "not valid JSON") {
-		t.Fatalf("expected JSON error, got %v", err)
-	}
-}
-
-func TestLoadAuthStateFile_RejectsOversize(t *testing.T) {
-	tmp := t.TempDir()
-	bigCookie := strings.Repeat("x", maxAuthStateBytes+1024)
-	body := `{"cookies":[],"origins":[],"pad":"` + bigCookie + `"}`
-	path := writeFile(t, tmp, "huge.json", body)
-
-	_, err := LoadStateFile(path)
-	if err == nil || !strings.Contains(err.Error(), "exceeds the") {
-		t.Fatalf("expected size-limit error, got %v", err)
-	}
-}
-
-func TestLoadAuthRecipeFile_YAMLForm(t *testing.T) {
-	tmp := t.TempDir()
-	yaml := `
-mode: form
+	for _, body := range []string{
+		`mode: form
 login_url: https://app.example.com/login
 steps:
-  - type: fill
-    selector: input[name=email]
-    value:
-      from_env: STAGEFLOW_AUTH_USER
-  - type: fill
-    selector: input[name=password]
-    value:
-      from_env: STAGEFLOW_AUTH_PASSWORD
-  - type: click
-    selector: button[type=submit]
-success:
-  type: selector
-  selector: '[data-test=signed-in]'
-  timeout: 15000
-`
+  - {type: fill, selector: '#password', value: {from_env: STAGEFLOW_AUTH_SECRET}}
+  - {type: select, selector: '#empty', value: {from_env: STAGEFLOW_AUTH_EMPTY}}
+  - {type: click, selector: '#go', value: {from_env: STAGEFLOW_AUTH_SECRET}}
+  - {type: fill, selector: '#literal', value: '  $STAGEFLOW_AUTH_SECRET  '}
+success: {type: load}
+`,
+		`{"mode":"form","login_url":"https://app.example.com/login","steps":[
+{"type":"fill","selector":"#password","value":{"from_env":"STAGEFLOW_AUTH_SECRET"}},
+{"type":"select","selector":"#empty","value":{"from_env":"STAGEFLOW_AUTH_EMPTY"}},
+{"type":"click","selector":"#go","value":{"from_env":"STAGEFLOW_AUTH_SECRET"}},
+{"type":"fill","selector":"#literal","value":"  $STAGEFLOW_AUTH_SECRET  "}],"success":{"type":"load"}}`,
+	} {
+		path := writeFile(t, t.TempDir(), "recipe", body)
+		got, err := LoadRecipeFile(path)
+		testsupport.RequireNoErr(t, err)
+		testsupport.RequireEqual(t, got.Mode, "form", "mode")
+		testsupport.RequireEqual(t, got.Form.LoginURL, "https://app.example.com/login", "login URL")
 
-	path := writeFile(t, tmp, "recipe.yaml", yaml)
+		for i, want := range []string{secret, "", secret, "  $STAGEFLOW_AUTH_SECRET  "} {
+			if got.Form.Steps[i]["value"] != want {
+				t.Fatalf("step %d literal was changed", i)
+			}
+		}
 
-	got, err := LoadRecipeFile(path)
-	testsupport.RequireNoErr(t, err)
+		wire, err := json.Marshal(got)
+		testsupport.RequireNoErr(t, err)
 
-	testsupport.RequireEqual(t, got.Mode, "form", "mode")
+		if strings.Contains(string(wire), "from_env") {
+			t.Fatal("environment reference survived serialization")
+		}
 
-	if got.Form == nil {
-		t.Fatal("Form is nil")
-	}
-
-	if got.Form.LoginURL != "https://app.example.com/login" {
-		t.Fatalf("login_url = %q", got.Form.LoginURL)
-	}
-
-	if len(got.Form.Steps) != 3 {
-		t.Fatalf("steps len = %d, want 3", len(got.Form.Steps))
-	}
-
-	emailStep := got.Form.Steps[0]
-	if emailStep["type"] != "fill" {
-		t.Fatalf("steps[0].type = %v, want fill", emailStep["type"])
-	}
-
-	emailValue, ok := emailStep["value"].(map[string]any)
-	if !ok {
-		t.Fatalf("steps[0].value not a map: %T", emailStep["value"])
-	}
-
-	if emailValue["from_env"] != "STAGEFLOW_AUTH_USER" {
-		t.Fatalf("from_env = %v", emailValue["from_env"])
-	}
-
-	// Round-trip through JSON to confirm it survives the wire shape.
-	wire, err := json.Marshal(got)
-	testsupport.RequireNoErr(t, err)
-
-	if !strings.Contains(string(wire), `"from_env":"STAGEFLOW_AUTH_USER"`) {
-		t.Fatalf("from_env reference missing from JSON: %s", wire)
+		original, err := os.ReadFile(path)
+		testsupport.RequireNoErr(t, err)
+		testsupport.RequireEqual(t, string(original), body, "source recipe")
 	}
 }
 
-func TestLoadAuthRecipeFile_JSONForm(t *testing.T) {
-	tmp := t.TempDir()
-	body := `{
-  "mode": "form",
-  "login_url": "https://demo.local/login",
-  "steps": [
-    { "type": "fill", "selector": "input[name=email]", "value": "demo@example.com" },
-    { "type": "click", "selector": "button[type=submit]" }
-  ],
-  "success": { "type": "load" }
-}`
-	path := writeFile(t, tmp, "recipe.json", body)
+func TestLoadRecipeFile_ServerOwnsSemanticValidation(t *testing.T) {
+	for _, body := range []string{
+		`{"login_url":"https://x","steps":[],"success":{"type":"load"}}`,
+		`{"mode":"unknown","steps":[{"type":"unknown","value":12}]}`,
+		`{"mode":"form","steps":[{"type":"fill","value":{"unknown":"value"}}]}`,
+	} {
+		path := writeFile(t, t.TempDir(), "recipe.json", body)
+		got, err := LoadRecipeFile(path)
+		testsupport.RequireNoErr(t, err)
 
-	got, err := LoadRecipeFile(path)
-	testsupport.RequireNoErr(t, err)
-
-	testsupport.RequireEqual(t, got.Mode, "form", "mode")
-
-	if got.Form.Steps[0]["value"] != "demo@example.com" {
-		t.Fatalf("expected literal string value, got %v", got.Form.Steps[0]["value"])
+		var original struct {
+			Mode string `json:"mode"`
+		}
+		testsupport.RequireNoErr(t, json.Unmarshal([]byte(body), &original))
+		testsupport.RequireEqual(t, got.Mode, original.Mode, "mode passed to server")
 	}
 }
 
-func TestLoadAuthRecipeFile_RejectsMissingMode(t *testing.T) {
-	tmp := t.TempDir()
-	path := writeFile(t, tmp, "recipe.yaml", "login_url: https://x\nsteps: []\nsuccess: {type: load}\n")
+func TestLoadRecipeFile_SafeResolutionErrors(t *testing.T) {
+	const canary = "private-recipe-canary"
+	t.Setenv("STAGEFLOW_AUTH_UNUSED", canary)
+	t.Setenv("STAGEFLOW_AUTH_MISSING_TEST", "")
+	testsupport.RequireNoErr(t, os.Unsetenv("STAGEFLOW_AUTH_MISSING_TEST"))
 
-	_, err := LoadRecipeFile(path)
-	if err == nil || !strings.Contains(err.Error(), `mode must be "form"`) {
-		t.Fatalf("expected mode error, got %v", err)
+	for _, body := range []string{
+		`steps: [{value: {from_env: STAGEFLOW_AUTH_MISSING_TEST}}]`,
+		`steps: [{value: {from_env: "", extra: ` + canary + `}}]`,
+		`steps: [{value: {from_env: [` + canary + `]}}]`,
+		`steps: [{value: {from_env: STAGEFLOW_AUTH_UNUSED, extra: ` + canary + `}}]`,
+		`steps: [` + canary,
+		`steps: ` + canary,
+		`login_url: {` + canary + `: value}`,
+		`steps: [{value: {123: ` + canary + `}}]`,
+	} {
+		path := writeFile(t, t.TempDir(), "recipe", body)
+
+		_, err := LoadRecipeFile(path)
+		if err == nil {
+			t.Fatal("expected decode/resolution failure")
+		}
+
+		if strings.Contains(err.Error(), canary) {
+			t.Fatal("error disclosed recipe content")
+		}
 	}
 }
 
-func TestLoadAuthRecipeFile_RejectsBadEnvVarName(t *testing.T) {
-	tmp := t.TempDir()
-	body := `mode: form
-login_url: https://x
-steps:
-  - type: fill
-    selector: '#email'
-    value:
-      from_env: lower_case_not_allowed
-success:
-  type: load
-`
-	path := writeFile(t, tmp, "recipe.yaml", body)
-
-	_, err := LoadRecipeFile(path)
-	if err == nil || !strings.Contains(err.Error(), "from_env") {
-		t.Fatalf("expected from_env validation error, got %v", err)
-	}
-}
-
-func TestLoadAuthRecipeFile_RejectsExtraValueKey(t *testing.T) {
-	tmp := t.TempDir()
-	body := `mode: form
-login_url: https://x
-steps:
-  - type: fill
-    selector: '#email'
-    value:
-      from_env: USER
-      literal: surprise
-success:
-  type: load
-`
-	path := writeFile(t, tmp, "recipe.yaml", body)
-
-	_, err := LoadRecipeFile(path)
-	if err == nil || !strings.Contains(err.Error(), "unexpected key") {
-		t.Fatalf("expected unexpected-key error, got %v", err)
-	}
-}
-
-func TestLoadAuthRecipeFile_RejectsEmptySteps(t *testing.T) {
-	tmp := t.TempDir()
-	body := `mode: form
-login_url: https://x
-steps: []
-success:
-  type: load
-`
-	path := writeFile(t, tmp, "recipe.yaml", body)
-
-	_, err := LoadRecipeFile(path)
-	if err == nil || !strings.Contains(err.Error(), "at least one step") {
-		t.Fatalf("expected empty-steps error, got %v", err)
-	}
-}
-
-func TestLoadAuthInputFromFlags_MutuallyExclusive(t *testing.T) {
+func TestLoadFromFlags(t *testing.T) {
 	_, _, err := LoadFromFlags("/x", "/y")
 	if err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
-		t.Fatalf("expected mutually-exclusive error, got %v", err)
+		t.Fatal("expected mutually-exclusive error")
 	}
-}
 
-func TestLoadAuthInputFromFlags_NeitherSet(t *testing.T) {
 	got, hasAuth, err := LoadFromFlags("", "")
 	testsupport.RequireNoErr(t, err)
 
-	if hasAuth {
-		t.Fatal("expected hasAuth=false when no flags set")
-	}
-
-	if got != nil {
-		t.Fatalf("expected nil JobAuthInput when no flags set, got %#v", got)
+	if hasAuth || got != nil {
+		t.Fatal("expected no authentication without flags")
 	}
 }

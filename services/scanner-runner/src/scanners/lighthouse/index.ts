@@ -13,6 +13,8 @@ import {
 	ScannerBase,
 	type ScannerMetadata
 } from '../../core';
+import { createRedactedLogger } from '../../core/page-iterator-redaction';
+import type { ScannerLogger } from '../../core/types';
 import type { TargetValidationPolicy } from '../../core/target-validation';
 import {
 	AxeScreenshotService,
@@ -89,6 +91,8 @@ export class LighthouseScanner extends ScannerBase {
 
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
 		const { page, pageEntry, resultsDir } = context;
+		const redact = context.redact ?? ((value: string) => value);
+		const logger = createRedactedLogger(this.logger, redact);
 		const startedAt = new Date().toISOString();
 		const hrStart = process.hrtime.bigint();
 
@@ -97,17 +101,24 @@ export class LighthouseScanner extends ScannerBase {
 			const screenshotsDir = join(resultsDir, 'screenshots');
 			await mkdir(screenshotsDir, { recursive: true });
 
-			const lhResult = await this.runLighthouse(page, pageEntry.url);
-			await this.renavigateAfterLighthouse(page, pageEntry.url, context.targetValidationPolicy);
+			const lhResult = await this.runLighthouse(page, pageEntry.url, logger, redact);
+			await this.renavigateAfterLighthouse(
+				page,
+				pageEntry.url,
+				context.targetValidationPolicy,
+				logger,
+				redact
+			);
 
-			const issues = this.extractIssues(lhResult);
-			await this.enrichWithTimeout(page, issues);
+			const issues = this.extractIssues(lhResult, logger);
+			await this.enrichWithTimeout(page, issues, logger);
 
 			const pageOverview = await this.captureScreenshotWithTimeout(
 				page,
 				issues,
 				screenshotsDir,
-				pageEntry.id
+				pageEntry.id,
+				logger
 			);
 
 			const finishedAt = new Date().toISOString();
@@ -160,30 +171,37 @@ export class LighthouseScanner extends ScannerBase {
 	private async renavigateAfterLighthouse(
 		page: import('playwright').Page,
 		url: string,
-		targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
+		targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] },
+		logger: ScannerLogger = this.logger,
+		redact: (value: string) => string = (value) => value
 	): Promise<void> {
 		try {
-			this.logger.debug('Re-navigating Playwright page after Lighthouse', { url });
+			logger.debug('Re-navigating Playwright page after Lighthouse', { url });
 			const browserManager = this.browserManager;
 			if (browserManager) {
 				await browserManager.navigateToPage(
 					page,
 					url,
 					{ type: 'domcontentloaded' },
-					targetValidationPolicy
+					targetValidationPolicy,
+					redact
 				);
 			} else {
 				await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 });
 			}
 		} catch (navError) {
-			this.logger.warn('Failed to re-navigate page after Lighthouse, continuing with stale page', {
+			logger.warn('Failed to re-navigate page after Lighthouse, continuing with stale page', {
 				url,
 				error: navError instanceof Error ? navError.message : String(navError)
 			});
 		}
 	}
 
-	private async enrichWithTimeout(page: import('playwright').Page, issues: Issue[]): Promise<void> {
+	private async enrichWithTimeout(
+		page: import('playwright').Page,
+		issues: Issue[],
+		logger: ScannerLogger = this.logger
+	): Promise<void> {
 		try {
 			await Promise.race([
 				enrichIssuesWithContextFn(page, issues),
@@ -194,7 +212,7 @@ export class LighthouseScanner extends ScannerBase {
 				})
 			]);
 		} catch (enrichError) {
-			this.logger.warn('Context enrichment failed or timed out, continuing without enrichment', {
+			logger.warn('Context enrichment failed or timed out, continuing without enrichment', {
 				error: enrichError instanceof Error ? enrichError.message : String(enrichError)
 			});
 		}
@@ -204,7 +222,8 @@ export class LighthouseScanner extends ScannerBase {
 		page: import('playwright').Page,
 		issues: Issue[],
 		screenshotsDir: string,
-		pageId: string
+		pageId: string,
+		logger: ScannerLogger = this.logger
 	): Promise<Awaited<ReturnType<typeof this.screenshotService.capturePageOverview>> | null> {
 		const violations: PageOverviewViolation[] = issues.map((issue) => {
 			const issueNodes = (issue.metadata?.nodes as LighthouseIssueNode[] | undefined)?.map((n) => ({
@@ -229,7 +248,7 @@ export class LighthouseScanner extends ScannerBase {
 				})
 			]);
 		} catch (screenshotError) {
-			this.logger.warn('Screenshot capture failed or timed out, continuing without screenshot', {
+			logger.warn('Screenshot capture failed or timed out, continuing without screenshot', {
 				error: screenshotError instanceof Error ? screenshotError.message : String(screenshotError)
 			});
 			return null;
@@ -240,7 +259,9 @@ export class LighthouseScanner extends ScannerBase {
 
 	private async runLighthouse(
 		page: import('playwright').Page,
-		url: string
+		url: string,
+		logger: ScannerLogger = this.logger,
+		redact: (value: string) => string = (value) => value
 	): Promise<LighthouseResult> {
 		const lighthouseModule = await this.loadLighthouseModule();
 		const lighthouse = lighthouseModule.default;
@@ -248,7 +269,7 @@ export class LighthouseScanner extends ScannerBase {
 		return this.runSerialized(async () => {
 			const chrome = await this.ensureChrome();
 			const categories = this.options.categories ?? DEFAULT_LIGHTHOUSE_CATEGORIES;
-			const cdpBrowser = await this.hydrateLighthouseBrowserState(page, chrome.port);
+			const cdpBrowser = await this.hydrateLighthouseBrowserState(page, chrome.port, logger);
 			const disableStorageReset = cdpBrowser !== null;
 
 			try {
@@ -258,12 +279,13 @@ export class LighthouseScanner extends ScannerBase {
 					categories,
 					disableStorageReset,
 					lighthouse,
-					logger: this.logger,
+					logger,
+					redact,
 					scanStageLogger: this.scanStageLogger
 				});
 			} finally {
 				if (cdpBrowser !== null) {
-					await this.closeCdpConnection(cdpBrowser);
+					await this.closeCdpConnection(cdpBrowser, logger);
 				}
 			}
 		});
@@ -271,7 +293,8 @@ export class LighthouseScanner extends ScannerBase {
 
 	private async hydrateLighthouseBrowserState(
 		page: import('playwright').Page,
-		port: number
+		port: number,
+		logger: ScannerLogger = this.logger
 	): Promise<Browser | null> {
 		const storageState = await page.context().storageState();
 		if (!hasStorageStateEntries(storageState)) {
@@ -283,14 +306,14 @@ export class LighthouseScanner extends ScannerBase {
 		});
 		const [defaultContext] = browser.contexts();
 		if (!defaultContext) {
-			await this.closeCdpConnection(browser);
+			await this.closeCdpConnection(browser, logger);
 			throw new Error(
 				'Unable to hydrate Lighthouse auth state: CDP browser has no default context'
 			);
 		}
 
 		await defaultContext.setStorageState(storageState);
-		this.logger.debug('Hydrated Lighthouse browser state from Playwright context', {
+		logger.debug('Hydrated Lighthouse browser state from Playwright context', {
 			cookies: storageState.cookies.length,
 			origins: storageState.origins.length
 		});
@@ -298,11 +321,14 @@ export class LighthouseScanner extends ScannerBase {
 		return browser;
 	}
 
-	private async closeCdpConnection(browser: Browser): Promise<void> {
+	private async closeCdpConnection(
+		browser: Browser,
+		logger: ScannerLogger = this.logger
+	): Promise<void> {
 		try {
 			await browser.close({ reason: 'Lighthouse auth state hydration complete' });
 		} catch (error) {
-			this.logger.warn('Failed to close Lighthouse CDP connection', {
+			logger.warn('Failed to close Lighthouse CDP connection', {
 				error: error instanceof Error ? error.message : String(error)
 			});
 		}
@@ -396,11 +422,11 @@ export class LighthouseScanner extends ScannerBase {
 		});
 	}
 
-	private extractIssues(lhResult: LighthouseResult): Issue[] {
+	private extractIssues(lhResult: LighthouseResult, logger: ScannerLogger = this.logger): Issue[] {
 		return extractIssuesFromResult({
 			lhResult,
 			scannerName: this.metadata.name,
-			logger: this.logger,
+			logger,
 			scanStageLogger: this.scanStageLogger
 		});
 	}

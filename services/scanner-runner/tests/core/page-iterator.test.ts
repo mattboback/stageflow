@@ -280,7 +280,8 @@ describe('PageIterator', () => {
 				mockPage,
 				'http://localhost:4173/index.html',
 				{ type: 'load' },
-				{ allowedOrigins: ['http://localhost:4173'] }
+				{ allowedOrigins: ['http://localhost:4173'] },
+				expect.any(Function)
 			);
 			expect(callback).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -373,7 +374,6 @@ describe('PageIterator', () => {
 			expect(mockBrowserManager.executePreScanActions).toHaveBeenCalledWith(
 				mockPage,
 				[{ type: 'fill', selector: '#private-field', value: inputCanary }],
-				expect.objectContaining({ allowList: [] }),
 				{ maskInputValues: true }
 			);
 		});
@@ -403,31 +403,37 @@ describe('PageIterator', () => {
 			const onPageStart = vi.fn().mockResolvedValue(undefined);
 			const onPageComplete = vi.fn().mockResolvedValue(undefined);
 			const onPageError = vi.fn().mockResolvedValue(undefined);
-			const callback = vi.fn<PageScanCallback>().mockResolvedValue(
-				makeResult({
-					pageId: 'page-1',
-					url: `https://example.com/result?value=${formEncodedCanary}`,
-					path: '/index.html',
-					success: false,
-					retryable: false,
-					error: `scanner returned ${inputCanary}`,
-					issues: [
-						{
-							id: 'canary-result',
-							scanner: 'test-scanner',
-							severity: 'critical',
-							category: 'test',
-							title: 'Sensitive result',
-							description: `Nested ${formEncodedCanary}`,
-							metadata: {
-								nested: [inputCanary, { encoded: formEncodedCanary }],
-								[formEncodedCanary]: inputCanary
+			const callback = vi.fn<PageScanCallback>().mockImplementation((context) => {
+				context.logger.warn(`scanner ${inputCanary}`, {
+					url: formEncodedCanary,
+					[inputCanary]: inputCanary
+				});
+				return Promise.resolve(
+					makeResult({
+						pageId: 'page-1',
+						url: `https://example.com/result?value=${formEncodedCanary}`,
+						path: '/index.html',
+						success: false,
+						retryable: false,
+						error: `scanner returned ${inputCanary}`,
+						issues: [
+							{
+								id: 'canary-result',
+								scanner: 'test-scanner',
+								severity: 'critical',
+								category: 'test',
+								title: 'Sensitive result',
+								description: `Nested ${formEncodedCanary}`,
+								metadata: {
+									nested: [inputCanary, { encoded: formEncodedCanary }],
+									[formEncodedCanary]: inputCanary
+								}
 							}
-						}
-					],
-					rawResults: { raw: inputCanary, encoded: formEncodedCanary }
-				})
-			);
+						],
+						rawResults: { raw: inputCanary, encoded: formEncodedCanary }
+					})
+				);
+			});
 
 			const results = await iterator.iteratePages(provenance, callback, {
 				onPageStart,

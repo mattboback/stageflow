@@ -7,7 +7,7 @@ import { buildPublicProvenance } from '../../src/core/public-provenance';
 const USER_CANARY = 'provenance-user-canary-a17e';
 const PASSWORD_CANARY = 'provenance-password-canary-c92b';
 const PAGE_LITERAL_CANARY = 'page-literal-canary-f81d';
-const PAGE_ENV_CANARY = 'PRIVATE_PAGE_VALUE_CANARY_73B9';
+const PAGE_SELECT_CANARY = 'PRIVATE_PAGE_VALUE_CANARY_73B9';
 
 describe('buildPublicProvenance', () => {
 	it('omits the complete form recipe while retaining safe auth metadata', () => {
@@ -25,7 +25,7 @@ describe('buildPublicProvenance', () => {
 						{
 							type: 'select',
 							selector: '#private-choice',
-							value: { from_env: PAGE_ENV_CANARY }
+							value: PAGE_SELECT_CANARY
 						}
 					]
 				}
@@ -53,7 +53,7 @@ describe('buildPublicProvenance', () => {
 		expect(serialized).not.toContain(USER_CANARY);
 		expect(serialized).not.toContain(PASSWORD_CANARY);
 		expect(serialized).not.toContain(PAGE_LITERAL_CANARY);
-		expect(serialized).not.toContain(PAGE_ENV_CANARY);
+		expect(serialized).not.toContain(PAGE_SELECT_CANARY);
 		expect(serialized).not.toContain('login_url');
 		expect(serialized).not.toContain('steps');
 		expect(publicProvenance.pages[0]).not.toHaveProperty('pre_scan_actions');

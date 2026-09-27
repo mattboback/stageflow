@@ -9,8 +9,7 @@ import (
 )
 
 // loadAuthFromFixture reads a Provenance fixture and returns its auth block.
-// The fixtures are shared with the TypeScript implementation so the Go and TS
-// CollectFromEnvReferences must agree on identical inputs.
+// The fixtures use the canonical contract shape.
 func loadAuthFromFixture(t *testing.T, name string) *Auth {
 	t.Helper()
 
@@ -51,92 +50,6 @@ func mustFindRepoRoot(t *testing.T) string {
 		}
 
 		dir = parent
-	}
-}
-
-func TestCollectFromEnvReferences_FromFormFixture(t *testing.T) {
-	t.Parallel()
-
-	auth := loadAuthFromFixture(t, "provenance.auth-form.json")
-	if auth == nil {
-		t.Fatal("expected auth block in fixture")
-	}
-
-	got := CollectFromEnvReferences(auth)
-	want := []string{"STAGEFLOW_AUTH_PASSWORD", "STAGEFLOW_AUTH_USER"}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %v, want %v (must match the TypeScript secrets-resolver output)", got, want)
-	}
-}
-
-func TestCollectFromEnvReferences_FromStorageStateFixture(t *testing.T) {
-	t.Parallel()
-
-	auth := loadAuthFromFixture(t, "provenance.auth-storage-state.json")
-
-	got := CollectFromEnvReferences(auth)
-	if len(got) != 0 {
-		t.Fatalf("storage_state must produce no env refs; got %v", got)
-	}
-}
-
-func TestCollectFromEnvReferences_FormLiteralFixture(t *testing.T) {
-	t.Parallel()
-
-	auth := loadAuthFromFixture(t, "provenance.auth-form-literal.json")
-
-	got := CollectFromEnvReferences(auth)
-	if len(got) != 0 {
-		t.Fatalf("literal-only recipe must produce no env refs; got %v", got)
-	}
-}
-
-func TestCollectFromEnvReferences_NoAuthFixture(t *testing.T) {
-	t.Parallel()
-
-	auth := loadAuthFromFixture(t, "provenance.no-auth.json")
-	if auth != nil {
-		t.Fatalf("expected nil auth, got %#v", auth)
-	}
-
-	got := CollectFromEnvReferences(auth)
-	if len(got) != 0 {
-		t.Fatalf("absent auth must produce no env refs; got %v", got)
-	}
-}
-
-// TestCollectFromEnvReferences_DedupesAndSortsAcrossFormSteps mirrors the
-// TypeScript test that walks multiple from_env references and asserts the
-// deduplicated, sorted output.
-func TestCollectFromEnvReferences_DedupesAndSortsAcrossFormSteps(t *testing.T) {
-	t.Parallel()
-
-	user := "STAGEFLOW_AUTH_USER"
-	password := "STAGEFLOW_AUTH_PASSWORD"
-	tenant := "TENANT_TOKEN"
-
-	auth := &Auth{
-		Mode: AuthModeForm,
-		Form: &FormRecipe{
-			LoginURL: "https://app.example.com/login",
-			Steps: []FormStep{
-				{Type: "fill", Selector: "#email", Value: &FormStepValue{FromEnv: &user}},
-				{Type: "fill", Selector: "#password", Value: &FormStepValue{FromEnv: &password}},
-				// Duplicate to confirm dedup.
-				{Type: "select", Selector: "#tenant", Value: &FormStepValue{FromEnv: &tenant}},
-				{Type: "select", Selector: "#tenant2", Value: &FormStepValue{FromEnv: &tenant}},
-				{Type: "click", Selector: "button"},
-			},
-			Success: map[string]any{"type": "load"},
-		},
-	}
-
-	got := CollectFromEnvReferences(auth)
-	want := []string{password, user, tenant}
-
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %v, want %v", got, want)
 	}
 }
 
@@ -213,8 +126,8 @@ func TestAuthRoundTripFromFormFixture(t *testing.T) {
 		t.Fatalf("unmarshal: %v", unmarshalErr)
 	}
 
-	if !reflect.DeepEqual(CollectFromEnvReferences(auth), CollectFromEnvReferences(&roundtrip)) {
-		t.Fatal("from_env refs differ after round-trip")
+	if !reflect.DeepEqual(auth.Compact(), roundtrip.Compact()) {
+		t.Fatal("auth fields differ after round-trip")
 	}
 }
 

@@ -1,7 +1,7 @@
 /**
  * Redaction test.
  *
- * Build-fails if the resolved value of any allow-listed env var leaks into
+ * Build-fails if a literal credential leaks into
  * persisted artifacts: stored Provenance, the auth_hydrated audit event,
  * the serialized scan stage log, the recipe, or the synthetic
  * auth-hydration-failed issue.
@@ -15,7 +15,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Provenance, ScannerConfig, StorageProvider } from '../../src/core/types';
 
 import { ScanStageLogger } from '../../src/core/scan-stage-logger';
-import { createSecretsResolver, collectFromEnvReferences } from '../../src/core/secrets-resolver';
+import { buildPublicProvenance } from '../../src/core/public-provenance';
+import { createLiteralRedactor } from '../../src/core/page-iterator-redaction';
 
 class InMemoryStorageProvider implements StorageProvider {
 	uploads: { bucket: string; key: string; path: string; body: string }[] = [];
@@ -47,12 +48,12 @@ function makeProvenance(): Provenance {
 				{
 					type: 'fill',
 					selector: 'input[name=email]',
-					value: { from_env: 'STAGEFLOW_AUTH_USER' }
+					value: SECRET_USER
 				},
 				{
 					type: 'fill',
 					selector: 'input[name=password]',
-					value: { from_env: 'STAGEFLOW_AUTH_PASSWORD' }
+					value: SECRET_PASSWORD
 				},
 				{ type: 'click', selector: 'button[type=submit]' }
 			],
@@ -77,31 +78,26 @@ describe('Auth redaction', () => {
 		await rm(tmpDir, { recursive: true, force: true });
 	});
 
-	it('keeps resolved env values out of persisted Provenance', () => {
-		const provenance = makeProvenance();
-		const serialized = JSON.stringify(provenance);
-		expect(serialized).toContain('STAGEFLOW_AUTH_USER');
-		expect(serialized).toContain('STAGEFLOW_AUTH_PASSWORD');
+	it('strips literal auth from public Provenance', () => {
+		const serialized = JSON.stringify(buildPublicProvenance(makeProvenance()));
 		expectNoSecrets(serialized);
+		expect(JSON.parse(serialized).auth).toBeUndefined();
 	});
 
-	it('keeps resolved env values out of the SecretsResolver allow-list view', () => {
-		const allowList = collectFromEnvReferences(makeProvenance());
-		const resolver = createSecretsResolver({
-			allowList,
-			env: {
-				STAGEFLOW_AUTH_USER: SECRET_USER,
-				STAGEFLOW_AUTH_PASSWORD: SECRET_PASSWORD
-			}
+	it('collects form and all page literals before execution', () => {
+		const provenance = makeProvenance();
+		provenance.pages.push({
+			id: 'later',
+			path: '/',
+			url: 'https://app.example.com/',
+			pre_scan_actions: [{ type: 'select', selector: '#token', value: 'later literal+value' }]
 		});
-
-		expect(resolver.resolve({ from_env: 'STAGEFLOW_AUTH_USER' })).toBe(SECRET_USER);
-
-		expectNoSecrets(JSON.stringify(resolver.allowList));
-		expectNoSecrets(JSON.stringify({ allowList: resolver.allowList }));
+		const redact = createLiteralRedactor(provenance);
+		expectNoSecrets(redact(`${SECRET_USER} ${SECRET_PASSWORD}`));
+		expect(redact('later%20literal%2Bvalue')).toBe('[REDACTED]');
 	});
 
-	it('keeps resolved env values out of the serialized scan stage log and recipe', async () => {
+	it('keeps literal values out of the serialized scan stage log and recipe', async () => {
 		const config: ScannerConfig = {
 			jobId: 'job-redact',
 			provenancePath: join(tmpDir, 'provenance.json'),
@@ -163,7 +159,11 @@ describe('Auth redaction', () => {
 
 		// Defensive: write the Provenance as the orchestrator would and check.
 		const persistedProvenancePath = join(tmpDir, 'provenance.json');
-		await writeFile(persistedProvenancePath, JSON.stringify(makeProvenance(), null, 2), 'utf8');
+		await writeFile(
+			persistedProvenancePath,
+			JSON.stringify(buildPublicProvenance(makeProvenance()), null, 2),
+			'utf8'
+		);
 		const persistedProvenanceText = await readFile(persistedProvenancePath, 'utf8');
 		expectNoSecrets(persistedProvenanceText);
 	});

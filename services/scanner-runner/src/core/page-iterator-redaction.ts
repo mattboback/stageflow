@@ -3,9 +3,12 @@
  * leaves the iterator with secret values already masked.
  */
 
-import { redactDynamicStringValues, redactStringValues } from '../utils/secret-redaction';
-import type { createSecretsResolver } from './secrets-resolver';
-import type { PageEntry, PageScanResult } from './types';
+import {
+	redactDynamicStringValues,
+	redactStringValues,
+	redactSecretValues
+} from '../utils/secret-redaction';
+import type { PageEntry, PageScanResult, Provenance, ScannerLogger } from './types';
 
 export function redactPageEntry(
 	pageEntry: PageEntry,
@@ -38,13 +41,33 @@ export function redactPageScanResult(
 	return safeResult;
 }
 
-export function registerPageLiteralValues(
-	pageEntry: PageEntry,
-	secretsResolver: ReturnType<typeof createSecretsResolver>
-): void {
-	for (const action of pageEntry.pre_scan_actions ?? []) {
+/** Collect all values before any navigation, including actions on later pages. */
+export function createLiteralRedactor(provenance: Provenance): (value: string) => string {
+	const values = new Set<string>();
+	const actions = [
+		...(provenance.auth?.mode === 'form' ? provenance.auth.steps : []),
+		...provenance.pages.flatMap((page) => page.pre_scan_actions ?? [])
+	];
+	for (const action of actions) {
 		if ((action.type === 'fill' || action.type === 'select') && typeof action.value === 'string') {
-			secretsResolver.resolveValue(action.value);
+			values.add(action.value);
 		}
 	}
+	return (value) => redactSecretValues(value, values);
+}
+
+/** Wrap a page's logger without mutating shared scanner state during parallel scans. */
+export function createRedactedLogger(
+	logger: ScannerLogger,
+	redact: (value: string) => string
+): ScannerLogger {
+	const log =
+		(level: keyof ScannerLogger) =>
+		(message: string, meta?: Record<string, unknown>): void => {
+			logger[level](
+				redact(message),
+				meta === undefined ? undefined : redactDynamicStringValues(meta, redact)
+			);
+		};
+	return { debug: log('debug'), info: log('info'), warn: log('warn'), error: log('error') };
 }

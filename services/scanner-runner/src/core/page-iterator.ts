@@ -23,9 +23,9 @@ import { attachAuthFromEnv, normalizeUrl, parseScanUrls } from './page-iterator-
 import {
 	redactPageEntry,
 	redactPageScanResult,
-	registerPageLiteralValues
+	createLiteralRedactor,
+	createRedactedLogger
 } from './page-iterator-redaction';
-import { collectFromEnvReferences, createSecretsResolver } from './secrets-resolver';
 import { buildTargetValidationPolicy, redactURLUserInfo } from './target-validation';
 import {
 	DEFAULT_WAIT_STRATEGY,
@@ -106,21 +106,16 @@ export class PageIterator {
 				}))
 			};
 
-			attachAuthFromEnv(provenance, this.logger);
-
 			await ensureDir(dirname(provenancePath));
 			await writeJson(provenancePath, provenance, { spaces: 2 });
+			attachAuthFromEnv(provenance, this.logger);
 			return provenance;
 		}
 
 		const provenanceRaw = await readJson(provenancePath);
 		const normalized = this.normalizeProvenance(provenanceRaw as Provenance);
 
-		// The orchestrator may also emit PROVENANCE_AUTH_JSON for ZIP-input
-		// jobs that opt into authenticated scanning post-extraction. If the
-		// loaded Provenance does not already carry an auth block, attach the
-		// orchestrator's; if it does, leave it alone (the file is the source
-		// of truth in that case).
+		// Attach canonical auth only in memory when the input has no auth block.
 		if (!normalized.auth) {
 			attachAuthFromEnv(normalized, this.logger);
 		}
@@ -138,15 +133,13 @@ export class PageIterator {
 		const activePromises = new Set<Promise<void>>();
 		const targetValidationPolicy = buildTargetValidationPolicy(provenance);
 
-		const allowList = collectFromEnvReferences(provenance);
-		const secretsResolver = createSecretsResolver({ allowList });
+		const redact = createLiteralRedactor(provenance);
 
 		this.logger.info('Starting page iteration', {
 			totalPages: pages.length,
 			concurrency: this.config.concurrency,
-			allowedTargetOrigins: targetValidationPolicy.allowedOrigins,
-			authMode: provenance.auth?.mode ?? 'none',
-			fromEnvAllowList: allowList
+			allowedTargetOrigins: targetValidationPolicy.allowedOrigins.map(redact),
+			authMode: provenance.auth?.mode ?? 'none'
 		});
 
 		let authHydrated = false;
@@ -170,7 +163,7 @@ export class PageIterator {
 					}
 				});
 			} catch (err) {
-				return this.synthesizeAuthFailureResults(pages, err, provenance.auth, callbacks);
+				return this.synthesizeAuthFailureResults(pages, err, provenance.auth, redact, callbacks);
 			}
 		}
 
@@ -186,21 +179,25 @@ export class PageIterator {
 						context,
 						browserManager: this.browserManager,
 						targetValidationPolicy,
-						secretsResolver,
+						redact,
 						logger: this.logger
 					});
 					callbacks?.onAuditEvent?.({
 						type: 'auth_hydrated',
 						details: {
 							mode: 'form',
-							login_url: secretsResolver.redactKnownValues(
-								redactURLUserInfo(provenance.auth.login_url)
-							),
+							login_url: redact(redactURLUserInfo(provenance.auth.login_url)),
 							post_login_url: postLoginUrl
 						}
 					});
 				} catch (err) {
-					return await this.synthesizeAuthFailureResults(pages, err, provenance.auth, callbacks);
+					return await this.synthesizeAuthFailureResults(
+						pages,
+						err,
+						provenance.auth,
+						redact,
+						callbacks
+					);
 				}
 				authHydrated = true;
 			}
@@ -214,7 +211,7 @@ export class PageIterator {
 					provenance,
 					authHydrated,
 					targetValidationPolicy,
-					secretsResolver,
+					redact,
 					scanCallback,
 					callbacks
 				).then((result) => {
@@ -238,7 +235,7 @@ export class PageIterator {
 				label: 'browser context',
 				timeoutMs: 10_000,
 				logger: this.logger,
-				redactError: (value) => secretsResolver.redactKnownValues(value)
+				redactError: (value) => redact(value)
 			});
 			this.logger.info('Browser context closed');
 		}
@@ -268,9 +265,10 @@ export class PageIterator {
 		pages: PageEntry[],
 		error: unknown,
 		auth: ProvenanceAuth,
+		redact: (value: string) => string,
 		callbacks?: PageIteratorCallbacks
 	): Promise<PageScanResult[]> {
-		const hydrationError =
+		const rawError =
 			error instanceof AuthHydrationError
 				? error
 				: new AuthHydrationError(
@@ -281,6 +279,16 @@ export class PageIterator {
 							cause: error
 						}
 					);
+
+		const hydrationError = new AuthHydrationError(redact(rawError.message), {
+			mode: rawError.mode,
+			...(rawError.loginUrl !== undefined
+				? { loginUrl: redact(redactURLUserInfo(rawError.loginUrl)) }
+				: {}),
+			...(rawError.postLoginUrl !== undefined
+				? { postLoginUrl: redact(redactURLUserInfo(rawError.postLoginUrl)) }
+				: {})
+		});
 
 		this.logger.error('Auth hydration failed; skipping page iteration', {
 			mode: hydrationError.mode,
@@ -325,9 +333,9 @@ export class PageIterator {
 			};
 
 			const result: PageScanResult = {
-				pageId: pageEntry.id,
-				url: pageEntry.url,
-				path: pageEntry.path,
+				pageId: redact(pageEntry.id),
+				url: redact(pageEntry.url),
+				path: redact(pageEntry.path),
 				success: false,
 				issues: [issue],
 				durationMs: 0,
@@ -392,14 +400,12 @@ export class PageIterator {
 		provenance: Provenance,
 		authHydrated: boolean,
 		targetValidationPolicy: ReturnType<typeof buildTargetValidationPolicy>,
-		secretsResolver: ReturnType<typeof createSecretsResolver>,
+		redact: (value: string) => string,
 		scanCallback: PageScanCallback,
 		callbacks?: PageIteratorCallbacks
 	): Promise<PageScanResult> {
 		const startedAt = new Date().toISOString();
 		const hrStart = process.hrtime.bigint();
-		registerPageLiteralValues(pageEntry, secretsResolver);
-		const redact = (value: string): string => secretsResolver.redactKnownValues(value);
 		const safePageEntry = redactPageEntry(pageEntry, redact);
 
 		this.logger.info(`Scanning page ${index + 1}/${total}`, {
@@ -431,7 +437,8 @@ export class PageIterator {
 					page,
 					pageEntry.url,
 					waitStrategy,
-					targetValidationPolicy
+					targetValidationPolicy,
+					redact
 				);
 
 				const authWallIssue = await detectAuthWall({
@@ -444,12 +451,9 @@ export class PageIterator {
 				});
 
 				if (pageEntry.pre_scan_actions?.length) {
-					await this.browserManager.executePreScanActions(
-						page,
-						pageEntry.pre_scan_actions,
-						secretsResolver,
-						{ maskInputValues: true }
-					);
+					await this.browserManager.executePreScanActions(page, pageEntry.pre_scan_actions, {
+						maskInputValues: true
+					});
 				}
 
 				const pageResultsDir = join(this.config.resultsDir, pageEntry.id);
@@ -461,7 +465,8 @@ export class PageIterator {
 					pageEntry,
 					resultsDir: pageResultsDir,
 					config: this.config,
-					logger: this.logger,
+					logger: createRedactedLogger(this.logger, redact),
+					redact,
 					targetValidationPolicy
 				};
 

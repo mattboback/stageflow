@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func TestScanAuthState_AttachesBase64StorageState(t *testing.T) {
 
 	tmp := t.TempDir()
 	statePath := filepath.Join(tmp, "state.json")
-	body := `{"cookies":[],"origins":[]}`
+	body := `{"cookies":[{"value":"private-storage-state-canary"}],"origins":[]}`
 
 	if err := os.WriteFile(statePath, []byte(body), 0o600); err != nil {
 		t.Fatalf("write state: %v", err)
@@ -130,13 +131,26 @@ func TestScanAuthState_AttachesBase64StorageState(t *testing.T) {
 		t.Errorf("submitted body mismatch:\n got=%q\nwant=%q", string(decoded), body)
 	}
 
+	if strings.Contains(stdout+stderr, "private-storage-state-canary") ||
+		strings.Contains(stdout+stderr, captured.body.Auth.StorageState.ContentBase64) {
+		t.Fatal("CLI output disclosed storage-state contents")
+	}
+
 	// The form recipe path should not be set when --auth-state is used.
 	if captured.body.Auth.Form != nil {
 		t.Errorf("Form should be nil for storage_state mode")
 	}
 }
 
-func TestScanAuthRecipe_AttachesFormRecipeWithFromEnv(t *testing.T) {
+func TestScanAuthRecipe_AttachesLocallyResolvedLiterals(t *testing.T) {
+	const (
+		user     = "cli-canary-user@example.com"
+		password = "  cli-canary-password &+雪\n  "
+	)
+
+	t.Setenv("STAGEFLOW_AUTH_USER", user)
+	t.Setenv("STAGEFLOW_AUTH_PASSWORD", password)
+
 	server, captured := newCapturingScanAPI(t)
 	defer server.Close()
 
@@ -201,29 +215,18 @@ success:
 		t.Fatalf("steps len = %d", len(captured.body.Auth.Form.Steps))
 	}
 
-	// Re-marshal to JSON and assert the from_env references survive the wire
-	// shape unchanged. Concretely: we must NOT see resolved values, only refs.
-	wire, err := json.Marshal(captured.body.Auth)
-	if err != nil {
-		t.Fatalf("marshal Auth: %v", err)
+	if captured.hits != 1 {
+		t.Fatalf("expected one submission, got %d", captured.hits)
 	}
 
-	wireStr := string(wire)
-	if !strings.Contains(wireStr, `"from_env":"STAGEFLOW_AUTH_USER"`) {
-		t.Errorf("USER from_env reference missing: %s", wireStr)
-	}
+	for i, want := range []string{user, password} {
+		if captured.body.Auth.Form.Steps[i]["value"] != want {
+			t.Fatalf("step %d did not contain the exact local literal", i)
+		}
 
-	if !strings.Contains(wireStr, `"from_env":"STAGEFLOW_AUTH_PASSWORD"`) {
-		t.Errorf("PASSWORD from_env reference missing: %s", wireStr)
-	}
-
-	// Defensive: prove that no resolved literal credential appears, even if
-	// the host environment defines those vars.
-	t.Setenv("STAGEFLOW_AUTH_USER", "demo@example.com")
-	t.Setenv("STAGEFLOW_AUTH_PASSWORD", "hunter2-not-on-the-wire")
-
-	if strings.Contains(wireStr, "demo@example.com") || strings.Contains(wireStr, "hunter2-not-on-the-wire") {
-		t.Errorf("resolved credentials leaked into submitted Auth: %s", wireStr)
+		if strings.Contains(stdout+stderr, want) {
+			t.Fatal("CLI output disclosed resolved credentials")
+		}
 	}
 }
 
@@ -263,5 +266,89 @@ func TestScanAuth_MutuallyExclusiveFlags(t *testing.T) {
 	if !strings.Contains(stderr, "mutually exclusive") &&
 		!strings.Contains(stderr, "if any flags in the group") {
 		t.Errorf("expected mutually-exclusive error in stderr; got %q", stderr)
+	}
+}
+
+func TestScanAuthRecipe_UnsetVariablePreventsHTTP(t *testing.T) {
+	const (
+		name   = "STAGEFLOW_AUTH_MISSING_CLI_TEST"
+		canary = "resolved-secret-before-missing-variable"
+	)
+
+	t.Setenv(name, "")
+	testsupport.RequireNoErr(t, os.Unsetenv(name))
+	t.Setenv("STAGEFLOW_AUTH_PRESENT", canary)
+
+	var hits atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	path := filepath.Join(t.TempDir(), "recipe.json")
+	body := `{"mode":"form","login_url":"https://example.com/login","steps":[
+{"type":"fill","selector":"#user","value":{"from_env":"STAGEFLOW_AUTH_PRESENT"}},
+{"type":"fill","selector":"#password","value":{"from_env":"` + name + `"}}],"success":{"type":"load"}}`
+	testsupport.RequireNoErr(t, os.WriteFile(path, []byte(body), 0o600))
+
+	stdout, stderr, code := runCLI(
+		t,
+		"stageflow",
+		"--api",
+		server.URL,
+		"scan",
+		"https://example.com",
+		"--auth-recipe",
+		path,
+	)
+	if code != 2 || !strings.Contains(stderr, "from_env variable is unset") {
+		t.Fatalf("expected unset-variable failure; code=%d", code)
+	}
+
+	if hits.Load() != 0 {
+		t.Fatal("unset environment reference reached HTTP")
+	}
+
+	if strings.Contains(stdout+stderr, canary) {
+		t.Fatal("failed scan disclosed an already resolved credential")
+	}
+}
+
+func TestScanAuthRecipe_InvalidModeIsNotLogged(t *testing.T) {
+	const canary = "private-mode-value"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req apiclient.SubmitJobRequest
+		testsupport.RequireNoErr(t, json.NewDecoder(r.Body).Decode(&req))
+
+		if req.Auth == nil || req.Auth.Mode != canary {
+			t.Error("CLI did not preserve mode for server validation")
+		}
+
+		http.Error(w, `{"error":"Authentication configuration is invalid"}`, http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	path := filepath.Join(t.TempDir(), "recipe.json")
+	testsupport.RequireNoErr(t, os.WriteFile(path, []byte(`{"mode":"`+canary+`","steps":[]}`), 0o600))
+
+	stdout, stderr, code := runCLI(
+		t,
+		"stageflow",
+		"--api",
+		server.URL,
+		"scan",
+		"https://example.com",
+		"--auth-recipe",
+		path,
+	)
+	if code == 0 {
+		t.Fatal("expected API rejection")
+	}
+
+	if strings.Contains(stdout+stderr, canary) {
+		t.Fatal("CLI logged untrusted recipe mode")
 	}
 }

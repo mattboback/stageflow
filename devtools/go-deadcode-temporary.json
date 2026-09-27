@@ -1,11 +1,5 @@
 [
   {
-    "package": "github.com/mattboback/stageflow/libs/go/provenance",
-    "function": "CollectFromEnvReferences",
-    "owner": "1.5b",
-    "reason": "Remove server-side from_env residue with local CLI auth resolution."
-  },
-  {
     "package": "github.com/mattboback/stageflow/libs/go/scannerregistry",
     "function": "ApplyOverrides",
     "owner": "1.7a",

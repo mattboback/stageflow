@@ -4,7 +4,7 @@
  *
  * Spins up a Node http fixture login app on 127.0.0.1, drives the full
  * scanner-runner pipeline against it for both Provenance.auth modes
- * (`form` with `from_env` references, and `storage_state` captured by
+ * (`form` with literal credentials, and `storage_state` captured by
  * first replaying the form flow), and asserts:
  *
  *   - Inside the scan callback, @axe-core/playwright runs against the
@@ -28,7 +28,7 @@
 import type { AddressInfo } from 'node:net';
 
 import AxeBuilder from '@axe-core/playwright';
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import http, { type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -350,11 +350,8 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 	const { jobId, provenance, resultsDir, browserManager, storageProvider } = opts;
 	const config = makeConfig(jobId, resultsDir);
 
-	// Persist Provenance to disk first so PageIterator.loadProvenance reads
-	// the file (matches the canonical flow where the orchestrator writes
-	// the document into the scanner-runner workspace before it starts).
+	// Exercise the real URL synthesis path: auth stays in memory, never on disk.
 	await mkdir(resultsDir, { recursive: true });
-	await writeFile(config.provenancePath, JSON.stringify(provenance, null, 2), 'utf8');
 
 	const stageStorage = new CapturingStorageProvider();
 	const stageLogger = new ScanStageLogger(config, stageStorage);
@@ -367,7 +364,25 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 		storageProvider !== undefined ? { storageProvider } : undefined
 	);
 
-	const loadedProvenance = await iterator.loadProvenance();
+	const previousUrls = process.env.SCAN_URLS;
+	const previousAuth = process.env.PROVENANCE_AUTH_JSON;
+	let loadedProvenance: Provenance;
+	try {
+		process.env.SCAN_URLS = JSON.stringify(provenance.pages.map((page) => page.url));
+		process.env.PROVENANCE_AUTH_JSON = JSON.stringify(provenance.auth);
+		loadedProvenance = await iterator.loadProvenance();
+	} finally {
+		if (previousUrls === undefined) {
+			delete process.env.SCAN_URLS;
+		} else {
+			process.env.SCAN_URLS = previousUrls;
+		}
+		if (previousAuth === undefined) {
+			delete process.env.PROVENANCE_AUTH_JSON;
+		} else {
+			process.env.PROVENANCE_AUTH_JSON = previousAuth;
+		}
+	}
 
 	const publisher = new CapturingPublisher();
 	const auditEvents: PageIteratorAuditEvent[] = [];
@@ -595,8 +610,6 @@ async function runLighthouseAgainstPostLogin(opts: {
 
 describe('Authenticated scan, real browser end-to-end', () => {
 	const originalAllowPrivate = process.env.ALLOW_PRIVATE_TARGETS;
-	const originalUser = process.env.STAGEFLOW_AUTH_USER;
-	const originalPassword = process.env.STAGEFLOW_AUTH_PASSWORD;
 
 	let fixture: FixtureApp;
 	let workspaceDir: string;
@@ -608,8 +621,6 @@ describe('Authenticated scan, real browser end-to-end', () => {
 		// production guard is unchanged: ALLOW_PRIVATE_TARGETS is the same
 		// flag operators set when scanning a localhost service.
 		process.env.ALLOW_PRIVATE_TARGETS = 'true';
-		process.env.STAGEFLOW_AUTH_USER = SECRET_USER;
-		process.env.STAGEFLOW_AUTH_PASSWORD = SECRET_PASSWORD;
 
 		fixture = await startFixtureLoginApp();
 		workspaceDir = await mkdtemp(join(tmpdir(), 'stageflow-e2e-auth-'));
@@ -642,16 +653,6 @@ describe('Authenticated scan, real browser end-to-end', () => {
 		} else {
 			process.env.ALLOW_PRIVATE_TARGETS = originalAllowPrivate;
 		}
-		if (originalUser === undefined) {
-			delete process.env.STAGEFLOW_AUTH_USER;
-		} else {
-			process.env.STAGEFLOW_AUTH_USER = originalUser;
-		}
-		if (originalPassword === undefined) {
-			delete process.env.STAGEFLOW_AUTH_PASSWORD;
-		} else {
-			process.env.STAGEFLOW_AUTH_PASSWORD = originalPassword;
-		}
 	}, REAL_BROWSER_TIMEOUT_MS);
 
 	it(
@@ -673,12 +674,12 @@ describe('Authenticated scan, real browser end-to-end', () => {
 						{
 							type: 'fill',
 							selector: 'input[name=email]',
-							value: { from_env: 'STAGEFLOW_AUTH_USER' }
+							value: SECRET_USER
 						},
 						{
 							type: 'fill',
 							selector: 'input[name=password]',
-							value: { from_env: 'STAGEFLOW_AUTH_PASSWORD' }
+							value: SECRET_PASSWORD
 						},
 						{ type: 'click', selector: 'button[type=submit]' }
 					],

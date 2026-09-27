@@ -7,8 +7,7 @@
  *   - `storage_state`: fetch a Playwright storage-state JSON file via the
  *     existing StorageProvider and feed its path into context creation.
  *   - `form`: open a single internal page, replay the recipe steps via the
- *     existing PreScanAction executor (with `from_env` resolved through the
- *     SecretsResolver), wait for the success strategy, then discard the page.
+ *     existing literal PreScanAction executor, wait for the success strategy, then discard the page.
  *
  * Failures throw {@link AuthHydrationError}. PageIterator turns that error
  * into an `auth-hydration-failed` issue at `severity: critical` for every
@@ -21,7 +20,6 @@ import { chmod } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
-import type { SecretsResolver } from './secrets-resolver';
 import { redactURLUserInfo, type TargetValidationPolicy } from './target-validation';
 import type {
 	ProvenanceAuth,
@@ -95,7 +93,7 @@ interface HydrateFormOptions {
 	context: BrowserContext;
 	browserManager: BrowserManager;
 	targetValidationPolicy: TargetValidationPolicy;
-	secretsResolver: SecretsResolver;
+	redact: (value: string) => string;
 	logger: ScannerLogger;
 }
 
@@ -104,16 +102,13 @@ interface HydrateFormResult {
 }
 
 export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateFormResult> {
-	const { auth, context, browserManager, targetValidationPolicy, secretsResolver, logger } =
-		options;
+	const { auth, context, browserManager, targetValidationPolicy, redact, logger } = options;
 
 	const page = await context.newPage();
 	let capturedPostLoginUrl: string | undefined;
-	const redact = (value: string): string => secretsResolver.redactKnownValues(value);
 	const sanitizeUrl = (value: string): string => redact(redactURLUserInfo(value));
 
 	try {
-		registerFormActionValues(auth, secretsResolver);
 		logger.info('Hydrating auth via form recipe', {
 			loginUrl: sanitizeUrl(auth.login_url),
 			steps: auth.steps.length,
@@ -124,10 +119,11 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 			page,
 			auth.login_url,
 			{ type: 'load' },
-			targetValidationPolicy
+			targetValidationPolicy,
+			sanitizeUrl
 		);
 
-		await browserManager.executePreScanActions(page, auth.steps, secretsResolver, {
+		await browserManager.executePreScanActions(page, auth.steps, {
 			maskInputValues: true
 		});
 
@@ -178,17 +174,6 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 			logger.warn('Failed to close auth hydration page', {
 				error: redact(closeErr instanceof Error ? closeErr.message : String(closeErr))
 			});
-		}
-	}
-}
-
-function registerFormActionValues(
-	auth: ProvenanceAuthForm,
-	secretsResolver: SecretsResolver
-): void {
-	for (const action of auth.steps) {
-		if (action.type === 'fill' || action.type === 'select') {
-			secretsResolver.resolveValue(action.value);
 		}
 	}
 }

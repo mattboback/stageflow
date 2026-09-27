@@ -75,7 +75,7 @@ export type PreScanAction =
       key: string;
     };
 /**
- * Either a literal string or a typed {from_env: NAME} reference resolved at execution time. Persisted Provenance only ever contains the literal string or the {from_env} reference, never the resolved value.
+ * Either a literal string or a typed {from_env: NAME} reference in a client recipe. The CLI resolves references locally before submission; the API and orchestrator reject unresolved references. Public Provenance omits sensitive action values.
  *
  * This interface was referenced by `Provenance`'s JSON-Schema
  * via the `definition` "PreScanActionValue".
@@ -86,7 +86,7 @@ export type PreScanActionValue =
       from_env: string;
     };
 /**
- * Optional authentication block, discriminated by mode. Prefer {from_env} references for caller-authenticated form recipes. A literal form value is execution-only sensitive data and must be stripped from public Provenance and terminal records. storage_state holds an artifact key, not the credentials that produced it.
+ * Optional authentication block, discriminated by mode. The CLI resolves {from_env} references locally; server-side form values must be literal strings. A literal form value is execution-only sensitive data and must be stripped from public Provenance and terminal records. storage_state holds an artifact key, not the credentials that produced it.
  *
  * This interface was referenced by `Provenance`'s JSON-Schema
  * via the `definition` "ProvenanceAuthBlock".
@@ -177,7 +177,7 @@ export interface ProvenanceAuthForm {
    */
   login_url: string;
   /**
-   * Login replay. Reuses the existing PreScanAction shape so any value field can be a literal string or a {from_env} reference.
+   * Login replay. Reuses the existing PreScanAction shape with literal step values at execution. Client recipe references must be resolved before submission.
    *
    * @minItems 1
    */

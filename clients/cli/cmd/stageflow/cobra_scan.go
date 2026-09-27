@@ -80,7 +80,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		"auth-recipe",
 		"",
 		"Path to a YAML/JSON form-auth recipe (Provenance.auth.form shape). "+
-			"Step values may be literal strings or {from_env: NAME} references.",
+			"Step values may be literals or {from_env: NAME} resolved from the CLI environment; unset variables fail.",
 	)
 	cmd.MarkFlagsMutuallyExclusive("auth-state", "auth-recipe")
 	render.BindReportFlags(cmd, &reportOpts, true)
@@ -267,7 +267,7 @@ func buildScanRequest(
 		fmt.Fprintf(
 			stderr,
 			"Attaching auth block (mode=%s) to scan submission.\n",
-			authInput.Mode,
+			authNoticeMode(opts),
 		)
 	}
 
@@ -290,4 +290,13 @@ func effectiveAllowPrivateTargets(
 	)
 
 	return true
+}
+
+// Use fixed labels: a malformed recipe mode is untrusted input, validated by the API.
+func authNoticeMode(opts scanCommandOptions) string {
+	if opts.authStatePath != "" {
+		return "storage_state"
+	}
+
+	return "form"
 }

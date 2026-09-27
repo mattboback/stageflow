@@ -1,24 +1,7 @@
 /**
- * Full-pipeline auth-redaction guard.
- *
- * This is the PR-2 task-10 stand-in: it exercises both Provenance.auth modes
- * through PageIterator end-to-end (with a mocked Playwright surface), captures
- * every artifact and event the runtime would persist or publish, and asserts
- * no resolved env var value appears anywhere.
- *
- *  Captured surfaces:
- *
- *    - Stored Provenance JSON (the file the iterator writes to disk).
- *    - The synthesized PROVENANCE_AUTH_JSON env var attached by the
- *      orchestrator (its content matches what the unified report references).
- *    - Scan stage log + recipe (uploaded to MinIO via ScanStageLogger).
- *    - "NATS payloads" — captured via a stub ScanEventPublisher to mimic the
- *      real nats publisher.
- *    - Audit events emitted during page iteration (auth_hydrated &c.).
- *
- *  A real-browser end-to-end test against a fixture login app is left as
- *  follow-up work; this redaction guard is the build-failure backstop the
- *  plan calls out as the primary correctness invariant.
+ * Exercise both auth modes through PageIterator with captured artifacts/events.
+ * Literal credentials must stay out of reports, public provenance and logs.
+ * Real-browser login coverage lives in integration/auth-scan-real-browser.test.ts.
  */
 
 import type { BrowserContext, Page } from 'playwright';
@@ -27,6 +10,8 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { buildPublicProvenance } from '../../src/core/public-provenance';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type {
@@ -272,32 +257,16 @@ async function runFullPipeline(
 }
 
 describe('Auth pipeline redaction (form mode)', () => {
-	const originalUser = process.env.STAGEFLOW_AUTH_USER;
-	const originalPassword = process.env.STAGEFLOW_AUTH_PASSWORD;
 	const originalAuthEnv = process.env.PROVENANCE_AUTH_JSON;
 
 	let tmp: string;
 
 	beforeEach(async () => {
 		tmp = await mkdtemp(join(tmpdir(), 'stageflow-pipeline-'));
-		process.env.STAGEFLOW_AUTH_USER = SECRET_USER;
-		process.env.STAGEFLOW_AUTH_PASSWORD = SECRET_PASSWORD;
 	});
 
 	afterEach(async () => {
 		await rm(tmp, { recursive: true, force: true });
-
-		if (originalUser === undefined) {
-			delete process.env.STAGEFLOW_AUTH_USER;
-		} else {
-			process.env.STAGEFLOW_AUTH_USER = originalUser;
-		}
-
-		if (originalPassword === undefined) {
-			delete process.env.STAGEFLOW_AUTH_PASSWORD;
-		} else {
-			process.env.STAGEFLOW_AUTH_PASSWORD = originalPassword;
-		}
 
 		if (originalAuthEnv === undefined) {
 			delete process.env.PROVENANCE_AUTH_JSON;
@@ -325,12 +294,12 @@ describe('Auth pipeline redaction (form mode)', () => {
 					{
 						type: 'fill',
 						selector: 'input[name=email]',
-						value: { from_env: 'STAGEFLOW_AUTH_USER' }
+						value: SECRET_USER
 					},
 					{
 						type: 'fill',
 						selector: 'input[name=password]',
-						value: { from_env: 'STAGEFLOW_AUTH_PASSWORD' }
+						value: SECRET_PASSWORD
 					},
 					{ type: 'click', selector: 'button[type=submit]' }
 				],
@@ -341,7 +310,11 @@ describe('Auth pipeline redaction (form mode)', () => {
 		const formRun = await runFullPipeline(tmp, formProvenance);
 
 		// 1. Stored Provenance file (we synthesize on disk in the test by re-emitting).
-		await writeFile(join(tmp, 'provenance.json'), JSON.stringify(formProvenance, null, 2), 'utf8');
+		await writeFile(
+			join(tmp, 'provenance.json'),
+			JSON.stringify(buildPublicProvenance(formProvenance), null, 2),
+			'utf8'
+		);
 		expectNoSecrets('stored Provenance', await readFile(join(tmp, 'provenance.json'), 'utf8'));
 
 		// 2. Stage log + recipe uploaded via the stage logger.
@@ -365,7 +338,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 		// 4. PageIterator audit events.
 		expectNoSecrets('audit events', JSON.stringify(formRun.auditEvents));
 
-		// 5. Sanity: from_env references survived.
+		// 5. Sanity: Literal auth was executed.
 		expect(JSON.stringify(formRun.auditEvents)).toContain('auth_hydrated');
 		// The hydration ran the form login flow, not the redirect target.
 		expect(formRun.harness.browserManager.executePreScanActions).toHaveBeenCalledTimes(1);
@@ -416,6 +389,32 @@ describe('Auth pipeline redaction (form mode)', () => {
 		});
 	});
 
+	it.each([
+		[`{"credential":"${SECRET_PASSWORD}"`, 'PROVENANCE_AUTH_JSON is not valid JSON'],
+		['', 'PROVENANCE_AUTH_JSON is not valid JSON'],
+		[
+			JSON.stringify({ [SECRET_PASSWORD]: 'invalid' }),
+			'PROVENANCE_AUTH_JSON did not match Provenance.auth shape'
+		]
+	])(
+		'fails closed on invalid auth transport (%#) without exposing credentials',
+		async (raw, message) => {
+			const oldUrls = process.env.SCAN_URLS;
+			process.env.SCAN_URLS = JSON.stringify(['https://app.example.com/profile']);
+			process.env.PROVENANCE_AUTH_JSON = raw;
+			try {
+				const iterator = new PageIterator(createBrowserHarness().browserManager, makeConfig(tmp));
+				await expect(iterator.loadProvenance()).rejects.toEqual(new Error(message));
+			} finally {
+				if (oldUrls === undefined) {
+					delete process.env.SCAN_URLS;
+				} else {
+					process.env.SCAN_URLS = oldUrls;
+				}
+			}
+		}
+	);
+
 	it('attaches Provenance.auth from PROVENANCE_AUTH_JSON when synthesizing Provenance from SCAN_URLS', async () => {
 		// This is the orchestrator → scanner-runner glue. We don't run the full
 		// iterator (no SCAN_URLS configured here); instead we exercise the
@@ -423,7 +422,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 		process.env.PROVENANCE_AUTH_JSON = JSON.stringify({
 			mode: 'form',
 			login_url: 'https://app.example.com/login',
-			steps: [{ type: 'fill', selector: '#u', value: { from_env: 'STAGEFLOW_AUTH_USER' } }],
+			steps: [{ type: 'fill', selector: '#u', value: SECRET_USER }],
 			success: { type: 'load' }
 		});
 		// SCAN_URLS forces the synthesize-from-env path.
@@ -442,7 +441,8 @@ describe('Auth pipeline redaction (form mode)', () => {
 
 			const persisted = await readFile(join(tmp, 'provenance.json'), 'utf8');
 			expectNoSecrets('persisted synthesized Provenance', persisted);
-			expect(persisted).toContain('STAGEFLOW_AUTH_USER');
+			expect(JSON.parse(persisted).auth).toBeUndefined();
+			expect(JSON.stringify(provenance.auth)).toContain(SECRET_USER);
 		} finally {
 			if (originalScanUrls === undefined) {
 				delete process.env.SCAN_URLS;

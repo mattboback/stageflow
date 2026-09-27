@@ -1,14 +1,8 @@
-// Package provenance is a small Go-side mirror of the parts of the Provenance
-// contract the orchestrator and platform-api need to reason about: the auth
-// block and its from_env references.
-//
-// The canonical schema lives at libs/contracts/provenance/schema/provenance.schema.json
-// and the scanner-runner consumes it through its TypeScript types and
-// secrets-resolver.ts. The collectFromEnvReferences algorithm here is a direct
-// port of the TypeScript implementation in
-// services/scanner-runner/src/core/secrets-resolver.ts; both implementations
-// must produce identical output for the same Provenance and are kept in sync by
-// shared fixtures (see fixtures-driven tests under tests/contracts/).
+// Package provenance mirrors the authentication contract used by the
+// orchestrator. The canonical schema lives at
+// libs/contracts/provenance/schema/provenance.schema.json.
+// Reference values remain decodable so the launch planner can reject them;
+// only the CLI resolves references, before submitting literal values.
 package provenance
 
 import (
@@ -16,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
 )
 
 // AuthMode is the discriminator on Provenance.auth.
@@ -53,7 +46,7 @@ type FormRecipe struct {
 // FormStep is one step in a login replay. It mirrors PreScanAction in the
 // schema. Type-specific fields are kept generic so the scanner-runner remains
 // the single source of truth for action semantics; the orchestrator only needs
-// Type and Value to derive the env-var allow-list.
+// Type and Value to reject unresolved references.
 type FormStep struct {
 	Type     string         `json:"type"`
 	Selector string         `json:"selector,omitempty"`
@@ -160,53 +153,6 @@ func stepsToWire(steps []FormStep) []map[string]any {
 	}
 
 	return out
-}
-
-// CollectFromEnvReferences walks the auth block and returns a deduplicated,
-// sorted list of env-var names referenced via {from_env: NAME}. The result is
-// the allow-list the orchestrator forwards into the scanner-runner pod.
-//
-// The algorithm is a direct port of collectFromEnvReferences from
-// services/scanner-runner/src/core/secrets-resolver.ts:
-//
-//   - storage_state mode produces an empty list (no env refs).
-//   - form mode walks every step's value field; only fill and select have a
-//     value field, but FormStepValue is empty for other types so they are
-//     ignored uniformly.
-//   - Names are deduplicated and sorted ascii-ascending.
-func CollectFromEnvReferences(auth *Auth) []string {
-	if auth == nil || auth.Mode != AuthModeForm || auth.Form == nil {
-		return nil
-	}
-
-	seen := make(map[string]struct{})
-
-	for _, step := range auth.Form.Steps {
-		if step.Value == nil || step.Value.FromEnv == nil {
-			continue
-		}
-
-		// fill and select are the only step types with a value in the schema,
-		// but defensive: any step that carries a from_env ref counts.
-		if step.Type != "" && step.Type != "fill" && step.Type != "select" {
-			continue
-		}
-
-		seen[*step.Value.FromEnv] = struct{}{}
-	}
-
-	if len(seen) == 0 {
-		return nil
-	}
-
-	names := make([]string, 0, len(seen))
-	for name := range seen {
-		names = append(names, name)
-	}
-
-	sort.Strings(names)
-
-	return names
 }
 
 // ValidateAuth performs the structural checks the orchestrator needs before

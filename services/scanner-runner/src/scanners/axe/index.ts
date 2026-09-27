@@ -9,7 +9,8 @@ import {
 	type PageScanResult,
 	type ScanContext,
 	ScannerBase,
-	type ScannerMetadata
+	type ScannerMetadata,
+	type ScannerLogger
 } from '../../core';
 import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
 import {
@@ -174,7 +175,12 @@ export class AxeScanner extends ScannerBase {
 			const processViolation = async (violation: AxeViolationResult) => {
 				const [screenshotResult, enrichedNodes] = await Promise.all([
 					withTimeoutFallback(
-						this.captureViolationScreenshot(page, violation as AxeViolation, screenshotsDir),
+						this.captureViolationScreenshot(
+							page,
+							violation as AxeViolation,
+							screenshotsDir,
+							logger
+						),
 						SCREENSHOT_TIMEOUT,
 						() => null
 					),
@@ -303,7 +309,8 @@ export class AxeScanner extends ScannerBase {
 	private async captureViolationScreenshot(
 		page: Page,
 		violation: AxeViolation,
-		screenshotsDir: string
+		screenshotsDir: string,
+		logger: ScannerLogger
 	): Promise<EnhancedScreenshotResult | null> {
 		try {
 			const outcome = await this.screenshotService.captureViolationScreenshot(
@@ -312,14 +319,14 @@ export class AxeScanner extends ScannerBase {
 				screenshotsDir
 			);
 			if (outcome.status === 'captured') {
-				this.logScreenshotFallbacks(violation.id, outcome.fallbacks);
+				this.logScreenshotFallbacks(violation.id, outcome.fallbacks, logger);
 
 				return outcome.screenshot;
 			}
 
 			if (outcome.status === 'failed') {
-				this.logScreenshotFallbacks(violation.id, outcome.fallbacks);
-				this.logger.debug('Screenshot capture failed', {
+				this.logScreenshotFallbacks(violation.id, outcome.fallbacks, logger);
+				logger.debug('Screenshot capture failed', {
 					ruleId: violation.id,
 					step: outcome.failure.step,
 					reason: outcome.failure.reason,
@@ -329,14 +336,14 @@ export class AxeScanner extends ScannerBase {
 				return null;
 			}
 
-			this.logger.debug('Screenshot capture skipped', {
+			logger.debug('Screenshot capture skipped', {
 				ruleId: violation.id,
 				reason: outcome.reason
 			});
 
 			return null;
 		} catch {
-			this.logger.debug('Screenshot capture threw unexpected error', {
+			logger.debug('Screenshot capture threw unexpected error', {
 				ruleId: violation.id
 			});
 
@@ -370,10 +377,11 @@ export class AxeScanner extends ScannerBase {
 
 	private logScreenshotFallbacks(
 		ruleID: string | undefined,
-		fallbacks: ViolationCaptureFailure[]
+		fallbacks: ViolationCaptureFailure[],
+		logger: ScannerLogger
 	): void {
 		for (const fallback of fallbacks) {
-			this.logger.debug('Screenshot strategy fallback', {
+			logger.debug('Screenshot strategy fallback', {
 				ruleId: ruleID,
 				step: fallback.step,
 				reason: fallback.reason,

@@ -404,8 +404,8 @@ export async function capturePageOverviewRaw(
 			elements: elementsWithBounds,
 			buffer: Buffer.from(screenshotBuffer)
 		};
-	} catch (error) {
-		debugLog('Capture failed', { error: String(error) });
+	} catch {
+		debugLog('Capture failed');
 		return null;
 	}
 }

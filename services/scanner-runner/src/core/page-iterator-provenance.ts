@@ -37,36 +37,24 @@ export function parseScanUrls(raw: string): string[] {
 /**
  * Attaches a Provenance.auth block from PROVENANCE_AUTH_JSON when present.
  *
- * The orchestrator emits this env var with the canonical auth shape (form
- * recipe with from_env references, or storage_state with an artifact_key)
- * derived from JobConfig.Auth. Resolved credential values are never present in
- * this env var; only the recipe shape is.
- *
- * Behavior is byte-identical to today when PROVENANCE_AUTH_JSON is unset: no
- * auth block is attached and the synthesized Provenance matches the pre-auth
- * shape on disk.
+ * The orchestrator transports canonical literal auth. Keep it in memory;
+ * synthesized execution provenance and public artifacts omit this block.
  */
 export function attachAuthFromEnv(provenance: Provenance, logger: ScannerLogger): void {
 	const raw = process.env.PROVENANCE_AUTH_JSON;
-	if (!raw) {
+	if (raw === undefined) {
 		return;
 	}
 
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(raw);
-	} catch (err) {
-		logger.warn('PROVENANCE_AUTH_JSON is not valid JSON; ignoring auth env var', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-		return;
+	} catch {
+		throw new Error('PROVENANCE_AUTH_JSON is not valid JSON');
 	}
 
 	if (!isProvenanceAuth(parsed)) {
-		logger.warn('PROVENANCE_AUTH_JSON did not match Provenance.auth shape; ignoring', {
-			parsed: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : typeof parsed
-		});
-		return;
+		throw new Error('PROVENANCE_AUTH_JSON did not match Provenance.auth shape');
 	}
 
 	provenance.auth = parsed;
