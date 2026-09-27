@@ -13,29 +13,16 @@ export interface ScannerTiming {
 	finalization_ms: number;
 }
 
-interface BaseScreenshotArtifact {
+/** One full-page overview per scanned page; the report crops it per finding. */
+export interface ScreenshotArtifact {
+	kind: 'page_overview';
 	artifact_id: string;
 	scanner_id: string;
 	page_id: string;
 	page_url?: string;
 	url: string;
-	thumbnail_url?: string;
 	captured_at?: string;
 }
-
-export interface ViolationScreenshotArtifact extends BaseScreenshotArtifact {
-	kind: 'violation';
-	issue_id: string;
-	occurrence_index: number;
-}
-
-export interface PageOverviewScreenshotArtifact extends BaseScreenshotArtifact {
-	kind: 'page_overview';
-	issue_id?: never;
-	occurrence_index?: never;
-}
-
-export type ScreenshotArtifact = ViolationScreenshotArtifact | PageOverviewScreenshotArtifact;
 
 interface ScannerArtifactBundle {
 	scanner_type: string;

@@ -49,30 +49,6 @@
         "mime": "image/webp",
         "path": "https://artifacts.invalid/NORMALIZED",
         "type": "page-overview"
-      },
-      {
-        "id": "ss-1471cd3d6e06",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
-      },
-      {
-        "id": "ss-2b9345de2405",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
-      },
-      {
-        "id": "ss-4091e74b22b6",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
-      },
-      {
-        "id": "ss-74cd9a0218af",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
       }
     ],
     "issues": [
@@ -87,10 +63,7 @@
         "occurrences": [
           {
             "ancestorPath": "... > main > form > div.field > div.workspace-row > button#suggest-workspace.icon-button",
-            "artifactIds": [
-              "ss-2b9345de2405"
-            ],
-            "contextHtml": "<div class=\"workspace-row\">\n  <input id=\"signup-workspace\" name=\"workspace\" type=\"text\" autocomplete=\"organization\">\n  <button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle></svg></button> <!-- TARGET -->\n</div>",
+            "contextHtml": "<div class=\"workspace-row\">\n  <input id=\"signup-workspace\" name=\"workspace\" type=\"text\" autocomplete=\"organization\">\n  <button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle></svg></button> <!-- TARGET -->\n</div>",
             "elementId": "2b9345de2405-el-0",
             "failureSummary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
             "html": "<button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\">",
@@ -132,10 +105,7 @@
         "occurrences": [
           {
             "ancestorPath": "body > main > form > div.field > input#signup-email",
-            "artifactIds": [
-              "ss-1471cd3d6e06"
-            ],
-            "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"> <!-- TARGET -->\n</div>",
+            "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\"> <!-- TARGET -->\n</div>",
             "elementId": "1471cd3d6e06-el-0",
             "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
             "html": "<input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\">",
@@ -215,18 +185,9 @@
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
         "howToFix": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
         "id": "74cd9a0218af",
-        "locationInfo": {
-          "docHeight": 887,
-          "position": 0.40586245772266066,
-          "scrollY": 0,
-          "viewportHeight": 720
-        },
         "occurrences": [
           {
             "ancestorPath": "html > body > main > p#pricing-footnote.fineprint",
-            "artifactIds": [
-              "ss-74cd9a0218af"
-            ],
             "contextHtml": "<main>\n  <!-- ... -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p> <!-- TARGET -->\n</main>",
             "elementId": "74cd9a0218af-el-0",
             "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
@@ -280,10 +241,7 @@
         "occurrences": [
           {
             "ancestorPath": "body > main > section > p > a#careers-link",
-            "artifactIds": [
-              "ss-4091e74b22b6"
-            ],
-            "contextHtml": "<p>\n  <a id=\"careers-link\" href=\"careers.html\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a> <!-- TARGET -->\n</p>",
+            "contextHtml": "<p>\n  <a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a> <!-- TARGET -->\n</p>",
             "elementId": "4091e74b22b6-el-0",
             "failureSummary": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
             "html": "<a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a>",

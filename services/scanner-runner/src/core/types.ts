@@ -204,7 +204,6 @@ export interface Issue {
 	description: string;
 	helpUrl?: string;
 	location?: IssueLocation;
-	screenshot?: string;
 	metadata?: Record<string, unknown>;
 }
 

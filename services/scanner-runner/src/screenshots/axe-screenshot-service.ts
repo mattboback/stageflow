@@ -1,61 +1,26 @@
 import type { Page } from 'playwright';
 
-import type {
-	AxeScreenshotConfig,
-	AxeViolation,
-	PageOverviewResult,
-	PageOverviewViolation,
-	ViolationScreenshotCaptureResult
-} from './axe/types';
+import type { AxeScreenshotConfig, PageOverviewResult, PageOverviewViolation } from './axe/types';
 
 import { createLogger } from '../utils/logger';
 import { loadAxeScreenshotConfig } from './axe/config';
 import { saveScreenshot } from './axe/image';
 import { capturePageOverviewRaw, loadPageOverviewConfig } from './axe/page-overview';
-import { captureViolationScreenshot } from './axe/violation-capture';
 
-export type {
-	AxeViolation,
-	EnhancedScreenshotResult,
-	PageOverviewViolation,
-	ViolationCaptureFailure
-} from './axe/types';
+export type { PageOverviewViolation } from './axe/types';
 
 const log = createLogger('AxeScreenshotService');
 
 /**
- * AxeScreenshotService encapsulates the screenshot strategy used for
- * accessibility violations:
- *
- * - Injects temporary highlight CSS around violation targets.
- * - Attempts a union-of-bounding-boxes crop over multiple targets.
- * - Falls back to a clipped viewport around the first target.
- * - Falls back to an element-only screenshot.
- * - Finally falls back to a small viewport screenshot.
+ * AxeScreenshotService captures one full-page overview per page, with every
+ * finding's elements located by percentage bounds. The report crops that
+ * image per finding, so there is no per-violation capture.
  */
 export class AxeScreenshotService {
 	private readonly cfg: AxeScreenshotConfig;
 
 	constructor(config?: Partial<AxeScreenshotConfig>) {
 		this.cfg = loadAxeScreenshotConfig(config);
-	}
-
-	/**
-	 * Capture a contextual screenshot highlighting the violation targets.
-	 *
-	 * Returns a typed capture outcome: captured, skipped, or failed with reason.
-	 */
-	async captureViolationScreenshot(
-		page: Page,
-		violation: AxeViolation,
-		resultsDir: string
-	): Promise<ViolationScreenshotCaptureResult> {
-		return captureViolationScreenshot({
-			page,
-			violation,
-			resultsDir,
-			cfg: this.cfg
-		});
 	}
 
 	/**

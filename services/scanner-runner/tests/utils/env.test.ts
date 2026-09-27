@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	getEnvBool,
 	getEnvInt,
-	getEnvNumber,
 	getEnvString,
 	parseEnvBool,
 	parseEnvInt,
@@ -36,13 +35,11 @@ describe('env utils', () => {
 		expect(getEnvBool('FLAG', true)).toBe(true);
 	});
 
-	it('parses numbers and ints safely', () => {
+	it('parses ints safely', () => {
 		process.env.VALUE = '3.14';
-		expect(getEnvNumber('VALUE', 1)).toBe(3.14);
 		expect(getEnvInt('VALUE', 1)).toBe(3);
 
 		process.env.VALUE = 'nope';
-		expect(getEnvNumber('VALUE', 2)).toBe(2);
 		expect(getEnvInt('VALUE', 2)).toBe(2);
 	});
 

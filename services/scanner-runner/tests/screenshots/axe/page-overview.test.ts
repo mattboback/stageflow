@@ -35,6 +35,26 @@ describe('collectPageOverviewTargets', () => {
 		expect(targets[1]?.selector).toBe('#b');
 	});
 
+	it('gives every finding its first node before any finding gets a second', () => {
+		const violations: PageOverviewViolation[] = [
+			{ id: 'r1', impact: 'critical', nodes: [{ target: ['#a'] }, { target: ['#b'] }] },
+			{ id: 'r2', impact: 'serious', nodes: [{ target: ['#c'] }] }
+		];
+
+		const capped = collectPageOverviewTargets(violations, 2);
+		expect(capped.map((t) => [t.ruleId, t.selector, t.nodeIndex])).toEqual([
+			['r1', '#a', 0],
+			['r2', '#c', 0]
+		]);
+
+		const all = collectPageOverviewTargets(violations, 10);
+		expect(all.map((t) => [t.ruleId, t.selector, t.nodeIndex])).toEqual([
+			['r1', '#a', 0],
+			['r2', '#c', 0],
+			['r1', '#b', 1]
+		]);
+	});
+
 	it('returns empty when maxElements is 0', () => {
 		const violations: PageOverviewViolation[] = [
 			{ id: 'r1', impact: 'minor', nodes: [{ target: ['#a'] }] }

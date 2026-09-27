@@ -1,37 +1,12 @@
 import type { ScreenshotArtifact } from '../types/scan';
 import type { PageOverviewElement, PageSummary } from '../types/unified-report';
 
-interface IssueScreenshotParams {
-	screenshots: ScreenshotArtifact[];
-	scannerId: string;
-	issueId: string;
-	pageId: string;
-}
-
-export function getIssueScreenshotUrl({
-	screenshots,
-	scannerId,
-	issueId,
-	pageId
-}: IssueScreenshotParams): string | null {
-	const exactMatch = screenshots.find(
-		(shot) =>
-			shot.kind === 'violation' &&
-			shot.issue_id === issueId &&
-			shot.page_id === pageId &&
-			shot.scanner_id === scannerId
-	);
-	return exactMatch?.url ?? null;
-}
-
 export function getPageOverviewUrl(
 	screenshots: ScreenshotArtifact[],
 	pageId: string,
 	preferredScannerOrder: string[] = ['axe']
 ): string | null {
-	const matches = screenshots.filter(
-		(shot) => shot.kind === 'page_overview' && shot.page_id === pageId
-	);
+	const matches = screenshots.filter((shot) => shot.page_id === pageId);
 	if (matches.length === 0) return null;
 
 	for (const scannerId of preferredScannerOrder) {

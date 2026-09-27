@@ -5,7 +5,7 @@
  *
  * - The `getEnv*` helpers here are **lenient**: an unrecognized value falls back
  *   to the caller's default. They suit optional presentation tuning, where a typo
- *   should not stop a scan (screenshot geometry, overlay styling).
+ *   should not stop a scan (screenshot format, page-overview scrolling).
  * - `core/config-loader.ts` wraps the same parsers **fail-fast**: an unrecognized
  *   value throws. That is right for job configuration, where silently scanning
  *   with the wrong settings produces a plausible-looking but wrong report.
@@ -89,11 +89,6 @@ export function parseEnvInt(raw: string | undefined): number | undefined {
 /** Lenient boolean: falls back to `defaultValue` on an unrecognized value. */
 export function getEnvBool(name: string, defaultValue: boolean): boolean {
 	return parseEnvBool(process.env[name]) ?? defaultValue;
-}
-
-/** Lenient number: falls back to `defaultValue` on an unparseable value. */
-export function getEnvNumber(name: string, defaultValue: number): number {
-	return parseEnvNumber(process.env[name]) ?? defaultValue;
 }
 
 /**

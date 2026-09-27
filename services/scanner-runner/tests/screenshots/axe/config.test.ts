@@ -17,45 +17,26 @@ describe('loadAxeScreenshotConfig', () => {
 	});
 
 	it('uses sensible defaults', () => {
-		Reflect.deleteProperty(process.env, 'A11Y_HIGHLIGHT_STYLE');
+		Reflect.deleteProperty(process.env, 'A11Y_SHOT_ENABLED');
 		Reflect.deleteProperty(process.env, 'A11Y_SCREENSHOT_FORMAT');
-		Reflect.deleteProperty(process.env, 'A11Y_OVERLAY_METHOD');
-		Reflect.deleteProperty(process.env, 'A11Y_SEMANTIC_OVERLAY_ENABLED');
-		Reflect.deleteProperty(process.env, 'A11Y_SEMANTIC_OVERLAY_MAX_HEADINGS');
-		Reflect.deleteProperty(process.env, 'A11Y_SEMANTIC_OVERLAY_MAX_LABEL');
-		Reflect.deleteProperty(process.env, 'A11Y_SEMANTIC_OVERLAY_LEGEND');
+		Reflect.deleteProperty(process.env, 'A11Y_SCREENSHOT_QUALITY');
 
-		const cfg = loadAxeScreenshotConfig();
-		expect(cfg.highlightStyle).toBe('solid');
-		expect(cfg.outputFormat).toBe('webp');
-		expect(cfg.overlayMethod).toBe('sharp-composite');
-		expect(cfg.semanticOverlayEnabled).toBe(true);
-		expect(cfg.semanticOverlayMaxHeadings).toBe(30);
-		expect(cfg.semanticOverlayMaxLabelLength).toBe(60);
-		expect(cfg.semanticOverlayLegendEnabled).toBe(true);
+		expect(loadAxeScreenshotConfig()).toEqual({
+			screenshotsEnabled: true,
+			outputFormat: 'webp',
+			webpQuality: 80
+		});
 	});
 
-	it('parses known enums and clamps numeric values', () => {
-		process.env.A11Y_HIGHLIGHT_STYLE = 'dashed';
-		process.env.A11Y_SCREENSHOT_FORMAT = 'png';
-		process.env.A11Y_OVERLAY_METHOD = 'css-injection';
-		process.env.A11Y_SHOT_MAX_TARGETS = '-10';
+	it('parses the format and clamps the quality', () => {
+		process.env.A11Y_SHOT_ENABLED = 'false';
+		process.env.A11Y_SCREENSHOT_FORMAT = 'PNG';
 		process.env.A11Y_SCREENSHOT_QUALITY = '999';
-		process.env.A11Y_SEMANTIC_OVERLAY_MAX_HEADINGS = '-5';
-		process.env.A11Y_SEMANTIC_OVERLAY_MAX_LABEL = '-9';
-		process.env.A11Y_SEMANTIC_OVERLAY_ENABLED = 'false';
-		process.env.A11Y_SEMANTIC_OVERLAY_LEGEND = 'false';
 
 		const cfg = loadAxeScreenshotConfig();
-		expect(cfg.highlightStyle).toBe('dashed');
+		expect(cfg.screenshotsEnabled).toBe(false);
 		expect(cfg.outputFormat).toBe('png');
-		expect(cfg.overlayMethod).toBe('css-injection');
-		expect(cfg.unionMaxTargets).toBe(0);
 		expect(cfg.webpQuality).toBe(100);
-		expect(cfg.semanticOverlayEnabled).toBe(false);
-		expect(cfg.semanticOverlayLegendEnabled).toBe(false);
-		expect(cfg.semanticOverlayMaxHeadings).toBe(0);
-		expect(cfg.semanticOverlayMaxLabelLength).toBe(0);
 	});
 
 	it('applies overrides last', () => {

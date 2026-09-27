@@ -81,7 +81,6 @@ func TestServiceCreateJobCopiesConfigFromPayload(t *testing.T) {
 		Config: models.JobConfig{
 			Modules:             []string{"axe"},
 			Screenshot:          true,
-			HighlightStyle:      "solid",
 			AllowPrivateTargets: true,
 		},
 	}
@@ -103,10 +102,6 @@ func TestServiceCreateJobCopiesConfigFromPayload(t *testing.T) {
 
 	if !store.lastCreatedJob.Config.AllowPrivateTargets {
 		t.Fatal("persisted Config.AllowPrivateTargets = false, want true")
-	}
-
-	if got := store.lastCreatedJob.Config.HighlightStyle; got != "solid" {
-		t.Fatalf("persisted Config.HighlightStyle = %q, want %q", got, "solid")
 	}
 }
 

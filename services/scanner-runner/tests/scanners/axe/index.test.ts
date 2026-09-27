@@ -10,7 +10,6 @@ import type { PageEntry, ScanContext, ScannerConfig, ScannerLogger } from '../..
 const axeAnalyzeMock = vi.hoisted(() => vi.fn());
 const axeExcludeMock = vi.hoisted(() => vi.fn());
 const capturePageOverviewMock = vi.hoisted(() => vi.fn());
-const captureViolationScreenshotMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@axe-core/playwright', () => {
 	class MockAxeBuilder {
@@ -36,8 +35,6 @@ vi.mock('@axe-core/playwright', () => {
 vi.mock('../../../src/screenshots/axe-screenshot-service', () => ({
 	AxeScreenshotService: class MockAxeScreenshotService {
 		capturePageOverview = capturePageOverviewMock;
-
-		captureViolationScreenshot = captureViolationScreenshotMock;
 	}
 }));
 
@@ -110,7 +107,6 @@ describe('AxeScanner.scanPage', () => {
 	beforeEach(async () => {
 		resultsDir = await mkdtemp(path.join(os.tmpdir(), 'stageflow-axe-test-'));
 		capturePageOverviewMock.mockResolvedValue(null);
-		captureViolationScreenshotMock.mockResolvedValue({ reason: 'test', status: 'skipped' });
 		axeAnalyzeMock.mockResolvedValue({
 			violations: [],
 			passes: [],
@@ -122,37 +118,6 @@ describe('AxeScanner.scanPage', () => {
 	afterEach(async () => {
 		await rm(resultsDir, { force: true, recursive: true });
 		vi.clearAllMocks();
-	});
-
-	it('uses the per-page redacted logger for screenshot failures and fallbacks', async () => {
-		const { AxeScanner } = await import('../../../src/scanners/axe');
-		const { createRedactedLogger } = await import('../../../src/core/page-iterator-redaction');
-		const { redactSecretValues } = await import('../../../src/utils/secret-redaction');
-		const canary = 'literal-axe-password+private';
-		const failure = { step: 'capture', reason: 'browser-error', message: `failed ${canary}` };
-		captureViolationScreenshotMock.mockResolvedValue({
-			status: 'failed',
-			failure,
-			fallbacks: [failure]
-		});
-		axeAnalyzeMock.mockResolvedValue({
-			violations: [{ id: 'image-alt', impact: 'serious', tags: [], nodes: [] }],
-			incomplete: [],
-			passes: [],
-			inapplicable: []
-		});
-		const context = createMockContext(resultsDir);
-		const sink = createMockLogger();
-		context.logger = createRedactedLogger(sink, (value) => redactSecretValues(value, [canary]));
-		const result = await new AxeScanner().scanPage(context);
-		expect(result.success).toBe(true);
-		for (const message of ['Screenshot strategy fallback', 'Screenshot capture failed']) {
-			expect(sink.debug).toHaveBeenCalledWith(
-				message,
-				expect.objectContaining({ message: 'failed [REDACTED]' })
-			);
-		}
-		expect(JSON.stringify(vi.mocked(sink.debug).mock.calls)).not.toContain(canary);
 	});
 
 	it('promotes incomplete color-contrast nodes to review issues', async () => {

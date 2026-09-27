@@ -6,7 +6,6 @@
 import { getRuleBehavior } from '../../config/rule-behaviors';
 import { getUserImpact } from '../../config/user-impact';
 import type { Issue } from '../../core';
-import type { EnhancedScreenshotResult } from '../../screenshots/axe-screenshot-service';
 import { normalizeSeverity } from '../../utils/severity';
 import type { AxeNode, AxeViolationResult } from './types';
 
@@ -222,7 +221,6 @@ export function mapIncompleteNodeToIssue(
 
 export function mapViolationToIssue(
 	violation: AxeViolationResult,
-	screenshotResult: EnhancedScreenshotResult | null | undefined,
 	enrichedNodes: AxeNode[],
 	scannerName: string
 ): Issue {
@@ -255,9 +253,6 @@ export function mapViolationToIssue(
 		description: behavior.summary ?? violation.description ?? '',
 		...(Object.keys(location).length > 0 ? { location } : {}),
 		...(violation.helpUrl !== undefined ? { helpUrl: violation.helpUrl } : {}),
-		...(screenshotResult?.screenshot !== undefined
-			? { screenshot: screenshotResult.screenshot }
-			: {}),
 		metadata: {
 			impact: violation.impact,
 			tags: violation.tags,
@@ -271,10 +266,6 @@ export function mapViolationToIssue(
 			})),
 			ruleBehavior: behavior,
 			...(contrastData !== undefined ? { contrastData } : {}),
-			friendlyNode: screenshotResult?.friendlyNode,
-			locationInfo: screenshotResult?.locationInfo,
-			thumbnail: screenshotResult?.thumbnail,
-			elementBounds: screenshotResult?.elementBounds,
 			// User impact for stakeholder communication
 			userImpact: {
 				statement: userImpact.statement,

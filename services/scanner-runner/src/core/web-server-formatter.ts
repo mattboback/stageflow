@@ -1,10 +1,4 @@
-import type {
-	BoundingBox,
-	FriendlyNodeInfo,
-	LocationInfo,
-	UnifiedReportV2,
-	UserImpact
-} from '@stageflow/contracts-report';
+import type { BoundingBox, UnifiedReportV2, UserImpact } from '@stageflow/contracts-report';
 
 import { createHash } from 'node:crypto';
 import path from 'node:path';
@@ -77,9 +71,6 @@ export class WebServerFormatter {
 
 				const issueMetadata = (issue.metadata ?? {}) as {
 					impact?: unknown;
-					thumbnail?: string;
-					friendlyNode?: unknown;
-					locationInfo?: unknown;
 					userImpact?: unknown;
 					nodes?: {
 						target?: string[];
@@ -137,19 +128,6 @@ export class WebServerFormatter {
 							...(boundingBox !== undefined ? { boundingBox } : {})
 						};
 					});
-
-				if (issue.screenshot) {
-					const artifactId = `ss-${issueId}`;
-					artifacts.push({
-						id: artifactId,
-						type: 'screenshot',
-						path: `screenshots/${issue.screenshot}`,
-						mime: this.guessScreenshotMime(issue.screenshot)
-					});
-					for (const occurrence of occurrences) {
-						occurrence.artifactIds = [artifactId];
-					}
-				}
 
 				issues.push({
 					id: issueId,
@@ -285,18 +263,7 @@ export class WebServerFormatter {
 			return undefined;
 		}
 
-		const omit = new Set([
-			'impact',
-			'thumbnail',
-			'friendlyNode',
-			'locationInfo',
-			'userImpact',
-			'nodes',
-			'nodeCount',
-			'tags',
-			'ruleBehavior',
-			'elementBounds'
-		]);
+		const omit = new Set(['impact', 'userImpact', 'nodes', 'nodeCount', 'tags', 'ruleBehavior']);
 
 		const data: Record<string, unknown> = {};
 		for (const [key, value] of Object.entries(metadata)) {
@@ -316,8 +283,6 @@ export class WebServerFormatter {
 		issue: PageScanResult['issues'][number];
 		issueMetadata: {
 			impact?: unknown;
-			friendlyNode?: unknown;
-			locationInfo?: unknown;
 			userImpact?: unknown;
 		};
 		nodes: {
@@ -327,16 +292,6 @@ export class WebServerFormatter {
 	}): Partial<UnifiedReportV2['issues'][number]> {
 		const severityRaw =
 			typeof input.issueMetadata.impact === 'string' ? input.issueMetadata.impact : undefined;
-		const friendlyNode =
-			typeof input.issueMetadata.friendlyNode === 'object' &&
-			input.issueMetadata.friendlyNode !== null
-				? (input.issueMetadata.friendlyNode as FriendlyNodeInfo)
-				: undefined;
-		const locationInfo =
-			typeof input.issueMetadata.locationInfo === 'object' &&
-			input.issueMetadata.locationInfo !== null
-				? (input.issueMetadata.locationInfo as LocationInfo)
-				: undefined;
 		const userImpact =
 			typeof input.issueMetadata.userImpact === 'object' && input.issueMetadata.userImpact !== null
 				? (input.issueMetadata.userImpact as UserImpact)
@@ -350,8 +305,6 @@ export class WebServerFormatter {
 		return {
 			...(severityRaw !== undefined ? { severityRaw } : {}),
 			...(helpUrl !== undefined ? { helpUrl } : {}),
-			...(friendlyNode !== undefined ? { friendlyNode } : {}),
-			...(locationInfo !== undefined ? { locationInfo } : {}),
 			...(userImpact !== undefined ? { userImpact } : {}),
 			...(howToFix !== undefined ? { howToFix } : {}),
 			...(input.scannerData !== undefined ? { scannerData: input.scannerData } : {})

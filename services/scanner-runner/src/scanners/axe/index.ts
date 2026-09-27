@@ -9,16 +9,12 @@ import {
 	type PageScanResult,
 	type ScanContext,
 	ScannerBase,
-	type ScannerMetadata,
-	type ScannerLogger
+	type ScannerMetadata
 } from '../../core';
 import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
 import {
 	AxeScreenshotService,
-	type AxeViolation,
-	type EnhancedScreenshotResult,
-	type PageOverviewViolation,
-	type ViolationCaptureFailure
+	type PageOverviewViolation
 } from '../../screenshots/axe-screenshot-service';
 import { SCANNER_VERSION } from '../version';
 import {
@@ -169,28 +165,15 @@ export class AxeScanner extends ScannerBase {
 
 			// Process violations in parallel batches for better performance
 			const BATCH_SIZE = 5;
-			const SCREENSHOT_TIMEOUT = 10_000;
 			const ENRICHMENT_TIMEOUT = 5_000;
 
 			const processViolation = async (violation: AxeViolationResult) => {
-				const [screenshotResult, enrichedNodes] = await Promise.all([
-					withTimeoutFallback(
-						this.captureViolationScreenshot(
-							page,
-							violation as AxeViolation,
-							screenshotsDir,
-							logger
-						),
-						SCREENSHOT_TIMEOUT,
-						() => null
-					),
-					withTimeoutFallback(
-						this.enrichNodesWithContext(page, violation.nodes ?? []),
-						ENRICHMENT_TIMEOUT,
-						() => [...(violation.nodes ?? [])]
-					)
-				]);
-				return { violation, screenshotResult, enrichedNodes };
+				const enrichedNodes = await withTimeoutFallback(
+					this.enrichNodesWithContext(page, violation.nodes ?? []),
+					ENRICHMENT_TIMEOUT,
+					() => [...(violation.nodes ?? [])]
+				);
+				return { violation, enrichedNodes };
 			};
 
 			// Process in batches to avoid overwhelming the browser
@@ -200,13 +183,8 @@ export class AxeScanner extends ScannerBase {
 
 				for (const result of results) {
 					if (result.status === 'fulfilled') {
-						const { violation, screenshotResult, enrichedNodes } = result.value;
-						const issue = mapViolationToIssue(
-							violation,
-							screenshotResult,
-							enrichedNodes,
-							this.metadata.name
-						);
+						const { violation, enrichedNodes } = result.value;
+						const issue = mapViolationToIssue(violation, enrichedNodes, this.metadata.name);
 						issues.push(issue);
 					}
 				}
@@ -306,51 +284,6 @@ export class AxeScanner extends ScannerBase {
 		}
 	}
 
-	private async captureViolationScreenshot(
-		page: Page,
-		violation: AxeViolation,
-		screenshotsDir: string,
-		logger: ScannerLogger
-	): Promise<EnhancedScreenshotResult | null> {
-		try {
-			const outcome = await this.screenshotService.captureViolationScreenshot(
-				page,
-				violation,
-				screenshotsDir
-			);
-			if (outcome.status === 'captured') {
-				this.logScreenshotFallbacks(violation.id, outcome.fallbacks, logger);
-
-				return outcome.screenshot;
-			}
-
-			if (outcome.status === 'failed') {
-				this.logScreenshotFallbacks(violation.id, outcome.fallbacks, logger);
-				logger.debug('Screenshot capture failed', {
-					ruleId: violation.id,
-					step: outcome.failure.step,
-					reason: outcome.failure.reason,
-					message: outcome.failure.message
-				});
-
-				return null;
-			}
-
-			logger.debug('Screenshot capture skipped', {
-				ruleId: violation.id,
-				reason: outcome.reason
-			});
-
-			return null;
-		} catch {
-			logger.debug('Screenshot capture threw unexpected error', {
-				ruleId: violation.id
-			});
-
-			return null;
-		}
-	}
-
 	private async mapIncompleteResultsToIssues(
 		page: Page,
 		incompleteResults: AxeViolationResult[]
@@ -373,21 +306,6 @@ export class AxeScanner extends ScannerBase {
 		}
 
 		return issues;
-	}
-
-	private logScreenshotFallbacks(
-		ruleID: string | undefined,
-		fallbacks: ViolationCaptureFailure[],
-		logger: ScannerLogger
-	): void {
-		for (const fallback of fallbacks) {
-			logger.debug('Screenshot strategy fallback', {
-				ruleId: ruleID,
-				step: fallback.step,
-				reason: fallback.reason,
-				message: fallback.message
-			});
-		}
 	}
 
 	/**

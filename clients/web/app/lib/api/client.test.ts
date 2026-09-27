@@ -6,8 +6,7 @@ const baseParams = {
 	mode: 'url' as const,
 	file: null,
 	urls: ['https://example.com'],
-	scanners: [{ id: 'axe', enabled: true }],
-	highlightStyle: 'solid' as const
+	scanners: [{ id: 'axe', enabled: true }]
 };
 
 /**
@@ -61,8 +60,7 @@ describe('browser URL submission boundary', () => {
 			urls: baseParams.urls,
 			modules: ['axe'],
 			scanner_configs: {},
-			screenshot: true,
-			highlight_style: 'solid'
+			screenshot: true
 		});
 	});
 

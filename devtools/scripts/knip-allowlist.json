@@ -1,22 +1,6 @@
 [
 	{
 		"workspace": "services/scanner-runner",
-		"file": "src/core/screenshots.ts",
-		"kind": "files",
-		"symbol": "",
-		"owner": "1.7c",
-		"reason": "Remove the unused alternate highlighted screenshot service with the evidence-path consolidation."
-	},
-	{
-		"workspace": "services/scanner-runner",
-		"file": "src/screenshots/axe/page-overview-overlay.ts",
-		"kind": "files",
-		"symbol": "",
-		"owner": "1.7c",
-		"reason": "The roadmap explicitly removes this overlay during evidence-path consolidation."
-	},
-	{
-		"workspace": "services/scanner-runner",
 		"file": "src/config/rule-behaviors.ts",
 		"kind": "exports",
 		"symbol": "shouldCaptureScreenshot",

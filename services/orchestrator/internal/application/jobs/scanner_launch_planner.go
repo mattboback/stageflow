@@ -188,7 +188,6 @@ func (p *ScannerLaunchPlanner) baseEnv(
 		"PAGE_LOAD_TIMEOUT":     strconv.Itoa(p.config.PageLoadTimeout),
 		"A11Y_SCROLL_TIMEOUT":   strconv.Itoa(p.config.ScrollTimeout),
 		"A11Y_SHOT_ENABLED":     strconv.FormatBool(job.Config.Screenshot),
-		"A11Y_HIGHLIGHT_STYLE":  highlightStyle(job.Config.HighlightStyle),
 	}
 
 	if job.Config.AllowPrivateTargets {
@@ -349,12 +348,4 @@ func (p *ScannerLaunchPlanner) resourceLimits(scannerType string) ResourceLimits
 		MemoryLimitMB: defaultScannerMemoryMB,
 		MemorySwapMB:  defaultScannerMemoryMB,
 	}
-}
-
-func highlightStyle(style string) string {
-	if style == "" {
-		return "dashed"
-	}
-
-	return style
 }

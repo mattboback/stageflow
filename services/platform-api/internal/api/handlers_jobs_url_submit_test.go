@@ -14,62 +14,6 @@ import (
 	"github.com/mattboback/stageflow/libs/go/events"
 )
 
-func TestHandleJobURLSubmitNormalizesHighlightStyle(t *testing.T) {
-	server, _, publisher := newTestServer(t)
-
-	body := bytes.NewBufferString(`{"urls":["https://example.com"],"highlight_style":"  SOLID  "}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
-	req.Header.Set("Content-Type", "application/json")
-
-	rr := httptest.NewRecorder()
-	server.handleJobURLSubmit(rr, req)
-
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
-	}
-
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected payload type *events.JobCreatedPayload")
-	}
-
-	if created.Config.HighlightStyle != "solid" {
-		t.Fatalf("HighlightStyle = %q, want %q", created.Config.HighlightStyle, "solid")
-	}
-}
-
-func TestHandleJobURLSubmitInvalidHighlightStyleFallsBackToDefault(t *testing.T) {
-	server, _, publisher := newTestServer(t)
-
-	body := bytes.NewBufferString(`{"urls":["https://example.com"],"highlight_style":"dotted"}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
-	req.Header.Set("Content-Type", "application/json")
-
-	rr := httptest.NewRecorder()
-	server.handleJobURLSubmit(rr, req)
-
-	if rr.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
-	}
-
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected payload type *events.JobCreatedPayload")
-	}
-
-	if created.Config.HighlightStyle != defaultHighlightStyle {
-		t.Fatalf("HighlightStyle = %q, want %q", created.Config.HighlightStyle, defaultHighlightStyle)
-	}
-}
-
 func TestHandleJobURLSubmitAcceptsOmittedOrChromiumBrowser(t *testing.T) {
 	for _, body := range []string{
 		`{"urls":["https://example.com"]}`,

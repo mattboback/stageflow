@@ -89,7 +89,6 @@ interface SubmitJobParams {
 	file: File | null;
 	urls: string[];
 	scanners: ScannerSelection[];
-	highlightStyle: 'solid' | 'dashed';
 	screenshot?: boolean;
 	auth?: Record<string, unknown> | null;
 	signal?: AbortSignal;
@@ -157,7 +156,6 @@ export async function submitScanJob({
 	file,
 	urls,
 	scanners,
-	highlightStyle,
 	screenshot = true,
 	auth = null,
 	signal
@@ -179,7 +177,6 @@ export async function submitScanJob({
 		}
 		const formData = new FormData();
 		formData.append('file', file);
-		formData.append('highlight_style', highlightStyle);
 		formData.append('modules', modules.join(','));
 		formData.append('screenshot', screenshot ? 'true' : 'false');
 		if (Object.keys(scannerConfigs).length > 0) {
@@ -207,7 +204,6 @@ export async function submitScanJob({
 				modules,
 				scanner_configs: scannerConfigs,
 				screenshot,
-				highlight_style: highlightStyle,
 				...(auth ? { auth } : {})
 			}),
 			signal: signal ?? null

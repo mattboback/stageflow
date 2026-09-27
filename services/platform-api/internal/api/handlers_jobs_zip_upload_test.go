@@ -50,7 +50,6 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 	addZipFile(t, writer, "site.zip", buildTestZip(t))
 	writeField(t, writer, "modules", "axe")
 	writeField(t, writer, "scanner_configs", `{"axe":{"rules":["color-contrast"]}}`)
-	writeField(t, writer, "highlight_style", "solid")
 	writeField(t, writer, "browser", "chromium")
 	writeField(t, writer, "screenshot", "true")
 	writeField(t, writer, "unknown_field", "ignored")
@@ -77,10 +76,6 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 	payload, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
 	if !ok {
 		t.Fatal("expected JobCreatedPayload")
-	}
-
-	if payload.Config.HighlightStyle != "solid" {
-		t.Fatalf("expected highlight_style=solid, got %q", payload.Config.HighlightStyle)
 	}
 
 	if !payload.Config.Screenshot {

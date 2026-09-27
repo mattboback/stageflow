@@ -66,10 +66,6 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		t.Fatalf("plan.Env[PROVENANCE_PATH] = %q, want %q", got, want)
 	}
 
-	if got, want := plan.Env["A11Y_HIGHLIGHT_STYLE"], "dashed"; got != want {
-		t.Fatalf("plan.Env[A11Y_HIGHLIGHT_STYLE] = %q, want %q", got, want)
-	}
-
 	if got, want := plan.Env["REQUEST_ID"], "req-123"; got != want {
 		t.Fatalf("plan.Env[REQUEST_ID] = %q, want %q", got, want)
 	}
@@ -117,7 +113,6 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 		URLs:      []string{"http://localhost:3000"},
 		Config: models.JobConfig{
 			Modules:             []string{"axe"},
-			HighlightStyle:      "solid",
 			AllowPrivateTargets: true,
 		},
 	}
@@ -141,10 +136,6 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 
 	if got, want := plan.Env["ALLOW_PRIVATE_TARGETS"], "true"; got != want {
 		t.Fatalf("plan.Env[ALLOW_PRIVATE_TARGETS] = %q, want %q", got, want)
-	}
-
-	if got, want := plan.Env["A11Y_HIGHLIGHT_STYLE"], "solid"; got != want {
-		t.Fatalf("plan.Env[A11Y_HIGHLIGHT_STYLE] = %q, want %q", got, want)
 	}
 
 	var urls []string

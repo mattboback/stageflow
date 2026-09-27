@@ -92,12 +92,13 @@ export function collectPageOverviewTargets(
 	}
 
 	const maxNodesPerViolation = 5; // Keep in sync with WebServerFormatter occurrences slice.
-	let elementCount = 0;
 
-	for (const violation of violations) {
+	// Every finding gets its first located node before any finding gets a
+	// second one, so a cap never leaves a finding without an element to crop.
+	const locatedPerViolation = violations.map((violation) => {
 		const ruleId = violation.id || 'unknown';
 		const severity = normalizeSeverity(violation.impact, 'minor');
-		const nodes = violation.nodes ?? [];
+		const nodes = (violation.nodes ?? []).slice(0, maxNodesPerViolation);
 
 		const primarySelectorRaw = nodes[0]?.target?.[0];
 		const primarySelector = typeof primarySelectorRaw === 'string' ? primarySelectorRaw : '';
@@ -106,32 +107,27 @@ export function collectPageOverviewTargets(
 		// Keep all overlay elements for the same rule mapped to that single issue.
 		const issueId = generateIssueFingerprint(scanner, ruleId, pageId, primarySelector);
 
-		for (
-			let nodeIndex = 0;
-			nodeIndex < nodes.length && nodeIndex < maxNodesPerViolation;
-			nodeIndex++
-		) {
-			if (elementCount >= maxElements) {
-				return targets;
-			}
-
-			const node = nodes[nodeIndex];
-			const selector = (node?.target ?? [])
+		return nodes.flatMap((node, nodeIndex) => {
+			const selector = (node.target ?? [])
 				.map((t) => (typeof t === 'string' ? t.trim() : String(t).trim()))
 				.find((t) => t.length > 0);
 
-			if (!selector) {
+			return selector ? [{ issueId, ruleId, severity, selector, nodeIndex }] : [];
+		});
+	});
+
+	for (let round = 0; round < maxNodesPerViolation; round++) {
+		for (const located of locatedPerViolation) {
+			const target = located[round];
+			if (!target) {
 				continue;
 			}
 
-			targets.push({
-				issueId,
-				ruleId,
-				severity,
-				selector,
-				nodeIndex
-			});
-			elementCount += 1;
+			if (targets.length >= maxElements) {
+				return targets;
+			}
+
+			targets.push(target);
 		}
 	}
 

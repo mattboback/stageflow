@@ -35,7 +35,6 @@ func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPaylo
 			Modules:             payload.Config.Modules,
 			ScannerConfigs:      payload.Config.ScannerConfigs,
 			Screenshot:          payload.Config.Screenshot,
-			HighlightStyle:      payload.Config.HighlightStyle,
 			AllowPrivateTargets: payload.Config.AllowPrivateTargets,
 			Auth:                authRaw,
 		},

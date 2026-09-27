@@ -38,6 +38,10 @@ describe('BrowserManager', () => {
 	let mockPage: Page;
 
 	beforeEach(() => {
+		// The fallback resolver honours PLAYWRIGHT_BROWSERS_PATH before the image
+		// default /ms-playwright, which the fallback tests assert. Hide any host value.
+		vi.stubEnv('PLAYWRIGHT_BROWSERS_PATH', undefined);
+
 		// Setup mock browser
 		mockPage = {
 			goto: vi.fn().mockResolvedValue(undefined),
@@ -79,6 +83,7 @@ describe('BrowserManager', () => {
 	});
 
 	afterEach(() => {
+		vi.unstubAllEnvs();
 		vi.clearAllMocks();
 	});
 

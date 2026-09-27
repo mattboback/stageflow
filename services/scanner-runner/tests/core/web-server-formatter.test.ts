@@ -45,7 +45,6 @@ describe('WebServerFormatter', () => {
 							title: 'Elements must have sufficient color contrast',
 							description: 'Text must have sufficient contrast against its background.',
 							helpUrl: 'https://example.com/rules/color-contrast',
-							screenshot: 'issue-1.png',
 							metadata: {
 								impact: 'CRITICAL',
 								tags: ['wcag2aa', 'cat.color'],
@@ -116,21 +115,14 @@ describe('WebServerFormatter', () => {
 		expect(occurrences).toHaveLength(2);
 
 		const artifacts = formatted.artifacts ?? [];
-		expect(artifacts).toHaveLength(2);
-		const artifact = artifacts.find((entry) => entry.type === 'screenshot');
-		expect(artifact).toBeDefined();
-		if (!artifact) {
-			throw new Error('expected screenshot artifact');
-		}
-		expect(artifact.type).toBe('screenshot');
-		expect(artifact.path).toBe('screenshots/issue-1.png');
-		expect(artifact.mime).toBe('image/png');
-		expect(occurrences[0]!.artifactIds).toEqual([artifact.id]);
-		expect(occurrences[1]!.artifactIds).toEqual([artifact.id]);
+		expect(artifacts).toHaveLength(1);
+		expect(occurrences[0]!.artifactIds).toBeUndefined();
+		expect(occurrences[1]!.artifactIds).toBeUndefined();
 
 		const overviewArtifact = artifacts.find((entry) => entry.type === 'page-overview');
 		expect(overviewArtifact).toBeDefined();
 		expect(overviewArtifact?.path).toBe('screenshots/overview.png');
+		expect(overviewArtifact?.mime).toBe('image/png');
 
 		const formatted2 = new WebServerFormatter().format(provenance, results, metadata);
 		expect(formatted2.issues[0]!.id).toBe(issue.id);
@@ -242,10 +234,17 @@ describe('WebServerFormatter', () => {
 							title: 'Contrast',
 							description: 'Contrast',
 							helpUrl: '',
-							screenshot: 'violation-color-contrast-123.webp',
 							metadata: { nodes: [{ target: ['#a'], selector: '#a' }] }
 						}
-					]
+					],
+					rawResults: {
+						pageOverview: {
+							screenshotFilename: 'overview-123.webp',
+							pageWidth: 1280,
+							pageHeight: 720,
+							elements: []
+						}
+					}
 				}
 			],
 			summary: {

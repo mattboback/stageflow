@@ -10,7 +10,6 @@ import {
 	generateContextualFix,
 	getIssueKind,
 	getIssueKindLabel,
-	getIssueScreenshotUrl,
 	getPageOverviewUrl,
 	getSeverityDotClass,
 	normalizeSeverity,
@@ -64,19 +63,6 @@ export function IssueDetailModal({
 		() => generateContextualFix(issue, primaryOccurrence),
 		[issue, primaryOccurrence]
 	);
-	const screenshotUrl = useMemo(
-		() =>
-			issue.pageId
-				? getIssueScreenshotUrl({
-						screenshots,
-						scannerId: issue.scanner,
-						issueId: issue.id,
-						pageId: issue.pageId
-					})
-				: null,
-		[screenshots, issue.scanner, issue.id, issue.pageId]
-	);
-
 	const pageOverviewUrl = useMemo(
 		() =>
 			page
@@ -90,7 +76,6 @@ export function IssueDetailModal({
 	);
 
 	const hasEvidence = Boolean(
-		screenshotUrl ||
 		hasOverviewCrop ||
 		primaryOccurrence?.selector ||
 		primaryOccurrence?.ancestorPath ||
@@ -368,12 +353,7 @@ export function IssueDetailModal({
 							role="tabpanel"
 							aria-labelledby="issue-tab-evidence"
 						>
-							<IssueEvidenceSection
-								issue={issue}
-								page={page}
-								screenshotUrl={screenshotUrl}
-								pageOverviewUrl={pageOverviewUrl}
-							/>
+							<IssueEvidenceSection issue={issue} page={page} pageOverviewUrl={pageOverviewUrl} />
 						</div>
 					)}
 					{activeTab === 'verify' && (

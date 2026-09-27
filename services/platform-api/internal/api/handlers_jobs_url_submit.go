@@ -38,7 +38,6 @@ type jobURLSubmitRequest struct {
 	Modules             []string                  `json:"modules"`
 	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
 	Screenshot          *bool                     `json:"screenshot"`
-	HighlightStyle      string                    `json:"highlight_style"`
 	Browser             string                    `json:"browser"`
 	AllowPrivateTargets bool                      `json:"allow_private_targets"`
 	Auth                *jobURLAuthInput          `json:"auth,omitempty"`
@@ -106,7 +105,6 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	highlightStyle := normalizeHighlightStyle(req.HighlightStyle)
 	screenshot := defaultScreenshot
 
 	if req.Screenshot != nil {
@@ -131,7 +129,6 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 			Modules:             modules,
 			ScannerConfigs:      req.ScannerConfigs,
 			Screenshot:          screenshot,
-			HighlightStyle:      highlightStyle,
 			AllowPrivateTargets: req.AllowPrivateTargets,
 			Auth:                authRaw,
 		},
@@ -231,7 +228,7 @@ func decodeJobURLSubmitRequest(w http.ResponseWriter, r *http.Request) (jobURLSu
 			httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
 				field,
 				fmt.Sprintf("unknown field %q", field),
-				"Supported fields: urls, modules, scanner_configs, screenshot, highlight_style, browser, allow_private_targets, auth",
+				"Supported fields: urls, modules, scanner_configs, screenshot, browser, allow_private_targets, auth",
 			))
 
 			return jobURLSubmitRequest{}, false

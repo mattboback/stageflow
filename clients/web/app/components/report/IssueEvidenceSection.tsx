@@ -10,7 +10,6 @@ import { ElementCrop } from './ElementCrop';
 interface Props {
 	issue: IssueDetail;
 	page: PageSummary | null;
-	screenshotUrl: string | null;
 	pageOverviewUrl: string | null;
 }
 
@@ -42,7 +41,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 	);
 }
 
-export function IssueEvidenceSection({ issue, page, screenshotUrl, pageOverviewUrl }: Props) {
+export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
 	const primary = issue.occurrences?.[0] ?? null;
 	const selector = primary?.selector ?? null;
 	const html = primary?.html ?? primary?.contextHtml ?? null;
@@ -53,13 +52,11 @@ export function IssueEvidenceSection({ issue, page, screenshotUrl, pageOverviewU
 	const canCrop = Boolean(page && pageOverviewUrl && overviewElement);
 
 	/* Evidence order follows the rule kind: element findings are visual, so
-	   the crop leads; document/page findings are structural, so markup leads
-	   and a full-page screenshot of nothing is suppressed. */
+	   the crop leads; document/page findings are structural, so markup leads. */
 	const kind = getIssueKind(issue);
 	const screenshotLeads = kind === 'element' && canCrop;
-	const documentLevel = !canCrop && (selector === 'html' || kind === 'page' || kind === 'manual');
 
-	const hasAny = canCrop || selector || html || failureSummary || screenshotUrl || pageLabel;
+	const hasAny = canCrop || selector || html || failureSummary || pageLabel;
 
 	if (!hasAny) {
 		return <p className="evidence__empty">No DOM evidence was captured for this finding.</p>;
@@ -77,16 +74,6 @@ export function IssueEvidenceSection({ issue, page, screenshotUrl, pageOverviewU
 				<figcaption>
 					Element in context ·{' '}
 					<a href={pageOverviewUrl} target="_blank" rel="noopener noreferrer">
-						Full screenshot ↗
-					</a>
-				</figcaption>
-			</figure>
-		) : screenshotUrl && !documentLevel ? (
-			<figure className="evidence__shot">
-				<img src={screenshotUrl} alt={`Screenshot evidence for ${issue.title}`} />
-				<figcaption>
-					Scanner-captured screenshot ·{' '}
-					<a href={screenshotUrl} target="_blank" rel="noopener noreferrer">
 						Full screenshot ↗
 					</a>
 				</figcaption>

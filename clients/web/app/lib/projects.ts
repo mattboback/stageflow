@@ -12,7 +12,8 @@ export interface LocalProjectConfiguration {
 	 * shape and in the fingerprint so saved baselines keep matching.
 	 */
 	browser: 'chromium';
-	highlightStyle: 'solid' | 'dashed';
+	/** Always 'solid'; kept in the stored shape and fingerprint like `browser`. */
+	highlightStyle: 'solid';
 }
 
 export interface LocalProject {
@@ -200,7 +201,7 @@ export function sanitizeProjectConfiguration(
 			a.id.localeCompare(b.id)
 		),
 		browser: 'chromium',
-		highlightStyle: configuration.highlightStyle
+		highlightStyle: 'solid'
 	};
 }
 

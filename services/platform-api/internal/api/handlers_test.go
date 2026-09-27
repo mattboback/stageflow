@@ -501,80 +501,28 @@ func buildStructuredScreenshotReport(jobID string, now time.Time) report.Unified
 				PageUrl:      "http://example.com",
 				ElementCount: 2,
 				Occurrences: []report.IssueOccurrence{
-					{ElementId: strPtr("issue-abc-el-0"), ArtifactIds: []string{"ss-issue-abc"}},
-					{ElementId: strPtr("issue-abc-el-1"), ArtifactIds: []string{"ss-issue-abc"}},
+					{ElementId: strPtr("issue-abc-el-0")},
+					{ElementId: strPtr("issue-abc-el-1")},
 				},
 			},
 		},
-		Artifacts: []report.ReportArtifact{
-			{
-				Id:   "ss-issue-abc",
-				Type: "screenshot",
-				Path: strPtr("screenshots/issue-abc.webp"),
-			},
-		},
-		Errors: []report.ReportError{},
+		Artifacts: []report.ReportArtifact{},
+		Errors:    []report.ReportError{},
 	}
 }
 
 func assertStructuredScreenshots(t *testing.T, screenshots []models.ScreenshotArtifact) {
 	t.Helper()
 
-	if len(screenshots) != 3 {
-		t.Fatalf("expected 3 screenshots (2 violation + 1 overview), got %d", len(screenshots))
+	if len(screenshots) != 1 {
+		t.Fatalf("expected 1 page overview screenshot, got %d", len(screenshots))
 	}
 
-	var (
-		hasPrimary   bool
-		hasSecondary bool
-		hasOverview  bool
-	)
-
-	for _, shot := range screenshots {
-		switch {
-		case shot.Kind == models.ScreenshotKindViolation && shot.IssueID == "issue-abc":
-			assertPrimaryScreenshot(t, shot)
-
-			hasPrimary = true
-		case shot.Kind == models.ScreenshotKindViolation && shot.IssueID == "issue-abc--occ-2":
-			assertSecondaryScreenshot(t, shot)
-
-			hasSecondary = true
-		case shot.Kind == models.ScreenshotKindPageOverview:
-			assertOverviewScreenshot(t, shot)
-
-			hasOverview = true
-		}
+	if screenshots[0].Kind != models.ScreenshotKindPageOverview {
+		t.Fatalf("expected a page overview screenshot, got kind %q", screenshots[0].Kind)
 	}
 
-	if !hasPrimary || !hasSecondary || !hasOverview {
-		t.Fatalf(
-			"missing expected screenshots: primary=%v secondary=%v overview=%v",
-			hasPrimary,
-			hasSecondary,
-			hasOverview,
-		)
-	}
-}
-
-func assertPrimaryScreenshot(t *testing.T, shot models.ScreenshotArtifact) {
-	t.Helper()
-
-	if shot.ScannerID != "axe" || shot.PageID != "page-1" || shot.ArtifactID != "ss-issue-abc" {
-		t.Fatalf("unexpected primary screenshot payload: %+v", shot)
-	}
-
-	if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 0 {
-		t.Fatalf("expected primary occurrence_index=0, got %+v", shot.OccurrenceIndex)
-	}
-}
-
-func assertSecondaryScreenshot(t *testing.T, shot models.ScreenshotArtifact) {
-	t.Helper()
-
-	if shot.OccurrenceIndex == nil || *shot.OccurrenceIndex != 1 {
-		t.Fatalf("expected secondary occurrence_index=1, got %+v", shot.OccurrenceIndex)
-	}
+	assertOverviewScreenshot(t, screenshots[0])
 }
 
 func assertOverviewScreenshot(t *testing.T, shot models.ScreenshotArtifact) {

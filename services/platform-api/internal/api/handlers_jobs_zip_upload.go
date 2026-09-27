@@ -109,13 +109,11 @@ type zipJobRequest struct {
 	modules        []string
 	scannerConfigs map[string]map[string]any
 	screenshot     bool
-	highlightStyle string
 }
 
 type zipUploadState struct {
 	fileUploaded   bool
 	modulesValues  []string
-	highlightStyle string
 	screenshot     *bool
 	zipPath        string
 	scannerConfigs map[string]map[string]any
@@ -287,7 +285,6 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 		return nil, newClientMessageError(err.Error())
 	}
 
-	style := normalizeHighlightStyle(state.highlightStyle)
 	screenshot := defaultScreenshot
 
 	if state.screenshot != nil {
@@ -301,7 +298,6 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 		modules:        modules,
 		scannerConfigs: state.scannerConfigs,
 		screenshot:     screenshot,
-		highlightStyle: style,
 	}, nil
 }
 
@@ -313,11 +309,9 @@ func (s *Server) processZipPart(ctx context.Context, part *multipart.Part, jobID
 		return handleModulesPart(ctx, part, state)
 	case "scanner_configs":
 		return handleScannerConfigsPart(ctx, part, state)
-	case "highlight_style":
-		return handleHighlightStylePart(ctx, part, state)
 	case "browser":
 		return handleBrowserEnginePart(ctx, part)
-	case artifactTypeScreenshot:
+	case "screenshot":
 		return handleScreenshotPart(ctx, part, state)
 	default:
 		drainUnknownPart(ctx, part)
@@ -424,19 +418,6 @@ func handleScannerConfigsPart(ctx context.Context, part *multipart.Part, state *
 	return nil
 }
 
-func handleHighlightStylePart(ctx context.Context, part *multipart.Part, state *zipUploadState) error {
-	value, err := readFormValue(part, 32)
-	if err != nil {
-		logging.Error(ctx, "Failed to read highlight_style value", "error", err)
-
-		return formReadClientError("highlight_style", err)
-	}
-
-	state.highlightStyle = value
-
-	return nil
-}
-
 func handleBrowserEnginePart(ctx context.Context, part *multipart.Part) error {
 	value, err := readFormValue(part, 32)
 	if err != nil {
@@ -485,7 +466,6 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 			Modules:        req.modules,
 			ScannerConfigs: req.scannerConfigs,
 			Screenshot:     req.screenshot,
-			HighlightStyle: req.highlightStyle,
 			// No AllowPrivateTargets: scanners allow the extractor's loopback
 			// origin from its "static" provenance, and block every other private
 			// address an uploaded page tries to load.

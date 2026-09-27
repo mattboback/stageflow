@@ -49,24 +49,6 @@
         "mime": "image/webp",
         "path": "https://artifacts.invalid/NORMALIZED",
         "type": "page-overview"
-      },
-      {
-        "id": "ss-13ed81627c04",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
-      },
-      {
-        "id": "ss-1471cd3d6e06",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
-      },
-      {
-        "id": "ss-74cd9a0218af",
-        "mime": "image/webp",
-        "path": "https://artifacts.invalid/NORMALIZED",
-        "type": "screenshot"
       }
     ],
     "issues": [
@@ -78,18 +60,9 @@
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/image-alt?application=playwright",
         "howToFix": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
         "id": "13ed81627c04",
-        "locationInfo": {
-          "docHeight": 1295,
-          "position": 0.277992277992278,
-          "scrollY": 0,
-          "viewportHeight": 720
-        },
         "occurrences": [
           {
             "ancestorPath": "html > body > main > section.hero > img#hero-image",
-            "artifactIds": [
-              "ss-13ed81627c04"
-            ],
             "contextHtml": "<section class=\"hero\">\n  <!-- ... -->\n  <p>\n\t\t\t\t\tAcme Ledger sends your invoices, reminds clients before and after the due date, and\n\t\t\t\t\tmatches every payment to the line on your bank statement it belongs to. Small teams use\n\t\t\t\t\tit to ...\n  <img id=\"hero-image\" src=\"hero.svg\" width=\"640\" height=\"320\"> <!-- TARGET -->\n  <p><a class=\"button\" href=\"signup.html\">Start your 30-day free trial</a></p>\n</section>",
             "elementId": "13ed81627c04-el-0",
             "failureSummary": "Fix any of the following:\n  Element does not have an alt attribute\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
@@ -132,10 +105,7 @@
         "occurrences": [
           {
             "ancestorPath": "body > main > form > div.field > input#signup-email",
-            "artifactIds": [
-              "ss-1471cd3d6e06"
-            ],
-            "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\" data-sf-violation-overlay=\"sf-semantic-NORMALIZED\"> <!-- TARGET -->\n</div>",
+            "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\"> <!-- TARGET -->\n</div>",
             "elementId": "1471cd3d6e06-el-0",
             "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
             "html": "<input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\">",
@@ -175,18 +145,9 @@
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
         "howToFix": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
         "id": "74cd9a0218af",
-        "locationInfo": {
-          "docHeight": 802,
-          "position": 0.4488778054862843,
-          "scrollY": 0,
-          "viewportHeight": 720
-        },
         "occurrences": [
           {
             "ancestorPath": "html > body > main > p#pricing-footnote.fineprint",
-            "artifactIds": [
-              "ss-74cd9a0218af"
-            ],
             "contextHtml": "<main>\n  <!-- ... -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p> <!-- TARGET -->\n</main>",
             "elementId": "74cd9a0218af-el-0",
             "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
