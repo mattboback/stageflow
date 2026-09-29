@@ -120,6 +120,22 @@ describe('AxeScanner.scanPage', () => {
 		vi.clearAllMocks();
 	});
 
+	it('keeps only the page overview in rawResults', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [],
+			passes: [{ id: 'document-title', nodes: [{ target: ['html'], html: '<html>' }] }],
+			incomplete: [],
+			inapplicable: [{ id: 'accesskeys', nodes: [] }]
+		});
+
+		const scanner = new AxeScanner();
+		const result = await scanner.scanPage(createMockContext(resultsDir));
+
+		expect(result.success).toBe(true);
+		expect(result.rawResults).toEqual({ pageOverview: null });
+	});
+
 	it('promotes incomplete color-contrast nodes to review issues', async () => {
 		const { AxeScanner } = await import('../../../src/scanners/axe');
 		axeAnalyzeMock.mockResolvedValue({

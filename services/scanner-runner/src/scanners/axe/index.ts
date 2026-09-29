@@ -253,8 +253,10 @@ export class AxeScanner extends ScannerBase {
 				startedAt,
 				finishedAt,
 				artifacts: pageOverview ? [pageOverview.screenshotPath] : [],
+				// Only the overview is read downstream. The full axe output (passes,
+				// inapplicable, node HTML) stayed in memory for every page until the
+				// scan ended, and a 26-page scan hit the container memory limit.
 				rawResults: {
-					...axeResults,
 					pageOverview: pageOverview
 						? {
 								screenshotFilename: pageOverview.screenshotFilename,
