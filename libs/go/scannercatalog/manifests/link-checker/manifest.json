@@ -17,7 +17,7 @@
 	},
 	"requirements": {
 		"resources": {
-			"maxMemoryMB": 2176
+			"maxMemoryMB": 2688
 		}
 	},
 	"entry": {

@@ -362,3 +362,28 @@ func TestBuildContainerCreateBodyMountOptions(t *testing.T) {
 		t.Fatalf("results mount options = %v, want [rbind ro]", resultOpts)
 	}
 }
+
+func TestContainerInfoReadsOOMKilledFromInspectState(t *testing.T) {
+	t.Parallel()
+
+	var inspected ContainerInfo
+	if err := json.Unmarshal(
+		[]byte(`{"Id":"abc","State":{"Status":"exited","OOMKilled":true}}`),
+		&inspected,
+	); err != nil {
+		t.Fatalf("decode inspect response: %v", err)
+	}
+
+	if inspected.State != "exited" || !inspected.OOMKilled {
+		t.Fatalf("inspect = %+v, want exited and OOMKilled", inspected)
+	}
+
+	var listed ContainerInfo
+	if err := json.Unmarshal([]byte(`{"Id":"abc","State":"running"}`), &listed); err != nil {
+		t.Fatalf("decode list entry: %v", err)
+	}
+
+	if listed.State != "running" || listed.OOMKilled {
+		t.Fatalf("list entry = %+v, want running and not OOMKilled", listed)
+	}
+}

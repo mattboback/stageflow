@@ -86,6 +86,40 @@ type ContainerInfo struct {
 	Config struct {
 		Labels map[string]string `json:"Labels,omitempty"`
 	} `json:"Config,omitempty"`
+	// OOMKilled is set from the inspect State object. List responses carry
+	// State as a string, so it stays false there.
+	OOMKilled bool `json:"-"`
+}
+
+func (c *ContainerInfo) UnmarshalJSON(data []byte) error {
+	type plain ContainerInfo
+
+	var info plain
+	if err := json.Unmarshal(data, &info); err != nil {
+		return err
+	}
+
+	var raw struct {
+		State json.RawMessage `json:"State"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("decode container state: %w", err)
+	}
+
+	var state struct {
+		OOMKilled bool `json:"OOMKilled"`
+	}
+	// A string State has no OOMKilled; only the object form is decoded.
+	if len(raw.State) > 0 && raw.State[0] == '{' {
+		if err := json.Unmarshal(raw.State, &state); err != nil {
+			return fmt.Errorf("decode container state: %w", err)
+		}
+	}
+
+	*c = ContainerInfo(info)
+	c.OOMKilled = state.OOMKilled
+
+	return nil
 }
 
 func (c *ContainerInfo) labels() map[string]string {

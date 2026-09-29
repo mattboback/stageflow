@@ -7,6 +7,8 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/mattboback/stageflow/libs/go/events"
 )
 
 func (o *Orchestrator) spawnMonitorContainer(ctx context.Context, containerID, jobID, component string) {
@@ -99,10 +101,70 @@ func (o *Orchestrator) monitorContainer(ctx context.Context, containerID, jobID,
 			)
 		}
 
-		// Fail the job to ensure we don't hang if the worker couldn't publish failure (e.g. NATS down)
-		errorMsg := fmt.Sprintf("%s container exited with code %d", component, waitResp.StatusCode)
-		o.failJobSafe(ctx, jobID, component, errorMsg)
+		o.handleContainerFailure(ctx, containerID, jobID, component, waitResp.StatusCode)
 	} else {
 		slog.Debug("Container exited successfully", "component", component, "container_id", containerID)
 	}
+}
+
+const scannerComponentPrefix = "scanner-"
+
+// handleContainerFailure covers a container that exited before it could
+// publish its own failure (killed, crashed, or NATS down). A scanner fails
+// only itself, so the job keeps the other scanners' results. Anything else
+// fails the job.
+func (o *Orchestrator) handleContainerFailure(
+	ctx context.Context,
+	containerID, jobID, component string,
+	exitCode int,
+) {
+	errorMsg := fmt.Sprintf("%s container exited with code %d", component, exitCode)
+
+	scannerType, isScanner := strings.CutPrefix(component, scannerComponentPrefix)
+	if !isScanner || scannerType == "" {
+		o.failJobSafe(ctx, jobID, component, errorMsg)
+
+		return
+	}
+
+	if o.containerOOMKilled(ctx, containerID) {
+		errorMsg = o.outOfMemoryMessage(scannerType)
+	}
+
+	payload := &events.ScanFailedPayload{
+		JobID:       jobID,
+		ScannerType: scannerType,
+		Error:       errorMsg,
+	}
+
+	if err := o.newService().RecordScannerFailure(ctx, payload); err != nil {
+		slog.Error(
+			"Failed to record scanner failure; failing the job",
+			"component", component,
+			"job_id", jobID,
+			"error", err,
+		)
+		o.failJobSafe(ctx, jobID, component, errorMsg)
+	}
+}
+
+func (o *Orchestrator) containerOOMKilled(ctx context.Context, containerID string) bool {
+	info, err := o.podmanClient.InspectContainer(ctx, containerID)
+	if err != nil {
+		slog.Debug("Could not inspect exited container", "container_id", containerID, "error", err)
+
+		return false
+	}
+
+	return info != nil && info.OOMKilled
+}
+
+func (o *Orchestrator) outOfMemoryMessage(scannerType string) string {
+	if o.scannerRegistry != nil {
+		if def, ok := o.scannerRegistry.Get(scannerType); ok && def.Requirements.MaxMemoryMB > 0 {
+			return fmt.Sprintf("%s ran out of memory (limit %d MB)", scannerType, def.Requirements.MaxMemoryMB)
+		}
+	}
+
+	return scannerType + " ran out of memory"
 }
