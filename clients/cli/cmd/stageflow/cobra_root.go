@@ -29,7 +29,8 @@ func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 			"  stageflow scan <dir|zip>    scan a local build directory or ZIP archive\n" +
 			"  stageflow diff base.json current.json   compare saved scan reports\n\n" +
 			"Exit codes: 0 success, 1 policy failure (--fail-on threshold or regression),\n" +
-			"2 usage or API error.",
+			"2 usage or API error, or a scan whose report is partial because a scanner\n" +
+			"did not finish (see --allow-partial).",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(*cobra.Command, []string) error {

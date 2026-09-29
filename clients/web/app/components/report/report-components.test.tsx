@@ -58,6 +58,44 @@ describe('ReportHeader', () => {
 	});
 });
 
+describe('ReportHeader on a partial report', () => {
+	const unscoredSummary = { ...report.summary };
+	delete unscoredSummary.score;
+	delete unscoredSummary.scoreGrade;
+	const partial: UnifiedReport = {
+		...report,
+		summary: unscoredSummary,
+		scanners: [
+			...report.scanners.filter((scanner) => scanner.id !== 'axe'),
+			{ id: 'axe', status: 'failed', error: 'axe ran out of memory (limit 3072 MB)' }
+		]
+	};
+
+	it('says which scanner did not finish and shows no score', () => {
+		render(
+			<ReportHeader report={partial} reviewProgress={{ total: 0, reviewed: 0, pending: 0 }} />
+		);
+
+		expect(screen.getByText('Partial')).toBeTruthy();
+		expect(screen.queryByText('Completed')).toBeNull();
+		expect(screen.getByRole('status').textContent).toContain('did not finish');
+		expect(screen.queryByText(/Site score/)).toBeNull();
+	});
+
+	it('reads Completed when every scanner finished', () => {
+		const complete: UnifiedReport = {
+			...report,
+			scanners: report.scanners.map((scanner) => ({ ...scanner, status: 'success' as const }))
+		};
+		render(
+			<ReportHeader report={complete} reviewProgress={{ total: 0, reviewed: 0, pending: 0 }} />
+		);
+
+		expect(screen.getByText('Completed')).toBeTruthy();
+		expect(screen.queryByText('Partial')).toBeNull();
+	});
+});
+
 describe('AllClearBanner', () => {
 	function cleanReport(errors: UnifiedReport['errors'] = []): UnifiedReport {
 		return {

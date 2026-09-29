@@ -221,4 +221,66 @@ describe('computeProjectDiff', () => {
 		expect(result.new.map((issue) => issue.id)).toEqual(['a-new', 'z-new']);
 		expect(result.fixed.map((issue) => issue.id)).toEqual(['z-fixed']);
 	});
+
+	// Mirrors TestComputeDiff_SkipsScannersThatDidNotFinish in libs/go/diff.
+	it('skips scanners that did not finish in either report, like the Go implementation', () => {
+		const base = loadGoldenReport('golden-regression-report.json');
+		const first = base.issues[0];
+		if (!first) {
+			throw new Error('golden-regression-report.json must contain at least one issue');
+		}
+		const issue = (id: string, scanner: string) => ({ ...first, id, scanner });
+		const baseline = {
+			...base,
+			summary: { ...base.summary, score: 80, totalIssues: 3 },
+			scanners: [
+				{ id: 'axe', status: 'success' as const },
+				{ id: 'seo', status: 'success' as const },
+				{ id: 'lighthouse', status: 'skipped' as const }
+			],
+			issues: [issue('axe-1', 'axe'), issue('axe-2', 'axe'), issue('seo-1', 'seo')]
+		};
+		const current = {
+			...base,
+			summary: { ...base.summary, score: 95, totalIssues: 2 },
+			scanners: [
+				{ id: 'axe', status: 'failed' as const },
+				{ id: 'seo', status: 'success' as const },
+				{ id: 'lighthouse', status: 'success' as const }
+			],
+			issues: [issue('seo-2', 'seo'), issue('lh-1', 'lighthouse')]
+		};
+
+		const result = computeProjectDiff('baseline-job', baseline, 'current-job', current);
+
+		expect(result.skippedScanners).toEqual(['axe', 'lighthouse']);
+		expect(result.fixed.map((entry) => entry.id)).toEqual(['seo-1']);
+		expect(result.new.map((entry) => entry.id)).toEqual(['seo-2']);
+		expect(result.delta.scoreDelta).toBeUndefined();
+		expect(result.baseline.score).toBe(80);
+		expect(result.current.score).toBe(95);
+	});
+
+	it('compares nothing from the golden pair once axe failed in the current report', () => {
+		const baseline = loadGoldenReport('golden-baseline-report.json');
+		const golden = loadGoldenReport('golden-regression-report.json');
+		const current = {
+			...golden,
+			scanners: golden.scanners.map((scanner) =>
+				scanner.id === 'axe' ? { ...scanner, status: 'failed' as const } : scanner
+			)
+		};
+
+		const result = computeProjectDiff('baseline-job', baseline, 'current-job', current);
+
+		expect(result.skippedScanners).toEqual(['axe']);
+		expect(result.delta).toEqual({ newIssues: 0, fixedIssues: 0, unchangedIssues: 0 });
+	});
+
+	it('leaves skippedScanners out when every scanner finished', () => {
+		const baseline = loadGoldenReport('golden-baseline-report.json');
+		const current = loadGoldenReport('golden-regression-report.json');
+
+		expect(computeProjectDiff('b', baseline, 'c', current)).not.toHaveProperty('skippedScanners');
+	});
 });

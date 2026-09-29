@@ -1,4 +1,5 @@
 import type { ScannerSelection } from './types/scan';
+import { incompleteScanners } from './report/scanner-status';
 import type { IssueDetail, UnifiedReport } from './types/unified-report';
 
 export const LOCAL_PROJECT_SCHEMA_VERSION = 1 as const;
@@ -90,6 +91,8 @@ export interface ProjectDiff {
 	};
 	new: IssueDetail[];
 	fixed: IssueDetail[];
+	/** Did not finish in one of the reports, so their issues are not compared. */
+	skippedScanners?: string[];
 }
 
 const SECRET_KEYS = new Set([
@@ -251,8 +254,20 @@ export function computeProjectDiff(
 	currentJobId: string,
 	currentReport: UnifiedReport
 ): ProjectDiff {
-	const baselineById = new Map(baselineReport.issues.map((issue) => [issue.id, issue]));
-	const currentById = new Map(currentReport.issues.map((issue) => [issue.id, issue]));
+	// Same rule as diff.ComputeDiff in libs/go/diff: a scanner that did not
+	// finish in either report is compared in neither, or its baseline findings
+	// would all look fixed.
+	const skipped = new Set([
+		...incompleteScanners(baselineReport.scanners),
+		...incompleteScanners(currentReport.scanners)
+	]);
+	const compared = (issue: IssueDetail) => !skipped.has(issue.scanner);
+	const baselineById = new Map(
+		baselineReport.issues.filter(compared).map((issue) => [issue.id, issue])
+	);
+	const currentById = new Map(
+		currentReport.issues.filter(compared).map((issue) => [issue.id, issue])
+	);
 
 	const newIssues = [...currentById.values()]
 		.filter((issue) => !baselineById.has(issue.id))
@@ -265,6 +280,9 @@ export function computeProjectDiff(
 	).length;
 	const baselineScore = reportScore(baselineReport);
 	const currentScore = reportScore(currentReport);
+	// A score covers every scanner, so it cannot be compared across a skip.
+	const scoreComparable =
+		skipped.size === 0 && baselineScore !== undefined && currentScore !== undefined;
 
 	return {
 		schema: LOCAL_PROJECT_DIFF_SCHEMA,
@@ -279,15 +297,14 @@ export function computeProjectDiff(
 			totalIssues: currentReport.summary.totalIssues
 		},
 		delta: {
-			...(baselineScore === undefined || currentScore === undefined
-				? {}
-				: { scoreDelta: currentScore - baselineScore }),
+			...(scoreComparable ? { scoreDelta: currentScore - baselineScore } : {}),
 			newIssues: newIssues.length,
 			fixedIssues: fixedIssues.length,
 			unchangedIssues
 		},
 		new: newIssues,
-		fixed: fixedIssues
+		fixed: fixedIssues,
+		...(skipped.size === 0 ? {} : { skippedScanners: [...skipped].sort() })
 	};
 }
 

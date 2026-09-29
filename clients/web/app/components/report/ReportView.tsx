@@ -16,6 +16,7 @@ import { VisualReviewPanel } from './VisualReviewPanel';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 import {
 	buildOccurrenceModeReport,
+	incompleteScanners,
 	isIssueSortKey,
 	needsHumanReview,
 	sortIssues,
@@ -194,9 +195,10 @@ export function ReportView({
 
 						{section === 'review' && (
 							<section id="report-panel-review" role="tabpanel" aria-labelledby="report-tab-review">
-								{displayReport.summary.totalIssues === 0 && (
-									<AllClearBanner report={displayReport} />
-								)}
+								{displayReport.summary.totalIssues === 0 &&
+									incompleteScanners(displayReport.scanners).length === 0 && (
+										<AllClearBanner report={displayReport} />
+									)}
 								{reviewQueue.length > 0 && (
 									<div className="rnext">
 										<div className="rnext__copy">

@@ -3,7 +3,12 @@ import { AlertTriangle, Eye, FileText } from 'lucide-react';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Gauge } from '../Gauge';
 import { Pill } from '../Pill';
-import { scoreBandFor, type ReviewProgress } from '../../lib/report';
+import {
+	incompleteScanners,
+	scannerLabel,
+	scoreBandFor,
+	type ReviewProgress
+} from '../../lib/report';
 
 interface Props {
 	report: UnifiedReport;
@@ -69,6 +74,9 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 	})();
 
 	const grade = report.summary.scoreGrade ?? band?.label ?? null;
+	const missing = incompleteScanners(report.scanners).map((id) =>
+		scannerLabel(id, report.scanners.find((scanner) => scanner.id === id)?.name)
+	);
 
 	return (
 		<header className="rhead">
@@ -89,7 +97,11 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 						</a>
 					)}
 					<div className="rhead__meta">
-						<Pill variant="done">Completed</Pill>
+						{missing.length > 0 ? (
+							<Pill variant="error">Partial</Pill>
+						) : (
+							<Pill variant="done">Completed</Pill>
+						)}
 						{(scannedAt || duration || report.meta.jobId) && (
 							<details className="rhead__details">
 								<summary>Run details</summary>
@@ -105,6 +117,12 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 							</details>
 						)}
 					</div>
+					{missing.length > 0 && (
+						<p className="rhead__partial" role="status">
+							{missing.join(', ')} did not finish, so {missing.length === 1 ? 'its' : 'their'}{' '}
+							findings are missing and no site score is given.
+						</p>
+					)}
 				</div>
 			</div>
 			<dl className="rhead__stats" aria-label="Scan totals">

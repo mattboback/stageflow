@@ -7,6 +7,7 @@ import (
 	"time"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/libs/go/diff"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -342,7 +343,12 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 		PagesWithIssues:      pagesWithIssues,
 		LighthouseCategories: a.lighthouseCategories,
 	}
-	if totalIssues > 0 {
+	scanners := flattenScannerStats(a.scannerStats)
+
+	// A score from a partial run would describe only the scanners that
+	// finished, so a crashed accessibility scanner would raise it. Leave it
+	// out and let the scanner list say what is missing.
+	if totalIssues > 0 && len(diff.IncompleteScanners(scanners)) == 0 {
 		scoredSeverity := report.SeverityCounts{}
 
 		for _, issue := range deduplicatedIssues {
@@ -371,7 +377,7 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 			DurationMs:  duration,
 		},
 		Summary:   summary,
-		Scanners:  flattenScannerStats(a.scannerStats),
+		Scanners:  scanners,
 		Pages:     pages,
 		Issues:    deduplicatedIssues,
 		Artifacts: flattenArtifacts(a.artifactsByID),

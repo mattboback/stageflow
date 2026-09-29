@@ -110,6 +110,13 @@ export function LocalBaselineComparison({
 				</div>
 			) : diff ? (
 				<>
+					{diff.skippedScanners && diff.skippedScanners.length > 0 && (
+						<p className="local-baseline__message" role="status">
+							Not compared: {diff.skippedScanners.join(', ')} did not finish in this run or the
+							baseline, so {diff.skippedScanners.length === 1 ? 'its' : 'their'} findings are left
+							out.
+						</p>
+					)}
 					<div className="local-baseline__stats" aria-label="Changes from baseline">
 						<div>
 							<span>Score change</span>

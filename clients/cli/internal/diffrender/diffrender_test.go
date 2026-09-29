@@ -180,3 +180,36 @@ func TestRender_ScoreFormat(t *testing.T) {
 		t.Fatalf("missing score format: %s", buf.String())
 	}
 }
+
+func TestRender_SkippedScanners(t *testing.T) {
+	env := Envelope{Schema: "x", SkippedScanners: []string{"axe"}}
+
+	var buf bytes.Buffer
+	if err := Render(&buf, env, FormatText); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), "Not compared: axe did not finish") {
+		t.Fatalf("text missing skipped scanners: %s", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := Render(&buf, env, FormatMarkdown); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(buf.String(), "> Not compared: axe") {
+		t.Fatalf("markdown missing skipped scanners: %s", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := Render(&buf, Envelope{Schema: "x"}, FormatText); err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(buf.String(), "Not compared") {
+		t.Fatalf("text mentions skipped scanners when there are none: %s", buf.String())
+	}
+}

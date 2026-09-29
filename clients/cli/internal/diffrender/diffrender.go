@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/diff"
@@ -21,6 +22,9 @@ type Envelope struct {
 	New       []report.IssueDetail `json:"new"`
 	Fixed     []report.IssueDetail `json:"fixed"`
 	Regressed bool                 `json:"regressed"`
+	// SkippedScanners did not finish in one of the reports and were not
+	// compared.
+	SkippedScanners []string `json:"skippedScanners,omitempty"`
 }
 
 type BaselineMeta struct {
@@ -73,8 +77,9 @@ func FromResult(r diff.Result, baselineFile, currentFile string) Envelope {
 			FixedIssues:     r.Delta.FixedIssues,
 			UnchangedIssues: r.Delta.UnchangedIssues,
 		},
-		New:   r.New,
-		Fixed: r.Fixed,
+		New:             r.New,
+		Fixed:           r.Fixed,
+		SkippedScanners: r.SkippedScanners,
 	}
 }
 
@@ -147,7 +152,29 @@ func writeText(out io.Writer, env Envelope, isMarkdown bool) error {
 		return err
 	}
 
+	if err := writeSkippedScanners(out, env.SkippedScanners, isMarkdown); err != nil {
+		return err
+	}
+
 	return writeNewIssueSection(out, env.New, isMarkdown)
+}
+
+func writeSkippedScanners(out io.Writer, skipped []string, isMarkdown bool) error {
+	if len(skipped) == 0 {
+		return nil
+	}
+
+	line := fmt.Sprintf(
+		"Not compared: %s did not finish in one of the reports, so its findings are left out.",
+		strings.Join(skipped, ", "),
+	)
+	if isMarkdown {
+		line = "> " + line
+	}
+
+	_, err := fmt.Fprintf(out, "%s\n\n", line)
+
+	return err
 }
 
 func writeHeading(out io.Writer, isMarkdown bool) error {

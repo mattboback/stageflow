@@ -50,9 +50,17 @@ func newReportCmd(root *rootOptions) *cobra.Command {
 				return exitcode.Error{Code: 2, Err: err}
 			}
 
-			return render.WrapError(
+			renderErr := render.WrapError(
 				render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, reportOpts.RenderOptions(format)),
 			)
+
+			// Only a warning here: reports are also rendered for display, where
+			// a partial one is still worth showing.
+			if _, warnErr := render.WarnIfPartial(cmd.ErrOrStderr(), doc); warnErr != nil {
+				return exitcode.Error{Code: 2, Err: warnErr}
+			}
+
+			return renderErr
 		},
 	}
 	render.BindReportFlags(cmd, &reportOpts, false)

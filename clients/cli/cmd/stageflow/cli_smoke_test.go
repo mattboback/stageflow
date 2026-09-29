@@ -13,6 +13,7 @@ import (
 
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/testsupport"
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
 func TestCLIHelpAndVersionSmoke(t *testing.T) {
@@ -160,7 +161,12 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 
 	jobID := "job-smoke"
-	reportDoc := testsupport.SampleReport(jobID)
+
+	return newCLIAPIServerWithReport(t, jobID, testsupport.SampleReport(jobID)), jobID
+}
+
+func newCLIAPIServerWithReport(t *testing.T, jobID string, reportDoc report.UnifiedReportV2) *httptest.Server {
+	t.Helper()
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -207,7 +213,7 @@ func newCLISmokeAPIServer(t *testing.T) (*httptest.Server, string) {
 		}
 	})
 
-	return httptest.NewServer(handler), jobID
+	return httptest.NewServer(handler)
 }
 
 func writeJSONResponse(t *testing.T, w http.ResponseWriter, status int, payload any) {
@@ -219,5 +225,80 @@ func writeJSONResponse(t *testing.T, w http.ResponseWriter, status int, payload 
 	encodeErr := json.NewEncoder(w).Encode(payload)
 	if encodeErr != nil {
 		panic(fmt.Sprintf("encode response: %v", encodeErr))
+	}
+}
+
+func partialSampleReport(jobID string) report.UnifiedReportV2 {
+	doc := testsupport.SampleReport(jobID)
+	doc.Summary.Score = nil
+	doc.Summary.ScoreGrade = nil
+	doc.Scanners = append(doc.Scanners, report.ScannerSummary{
+		Id:     "lighthouse",
+		Status: report.ScannerStatusFailed,
+		Error:  testsupport.StringPtr("lighthouse ran out of memory (limit 2560 MB)"),
+	})
+
+	return doc
+}
+
+func TestCLIScanPartialReportExitsTwo(t *testing.T) {
+	jobID := "job-partial"
+
+	server := newCLIAPIServerWithReport(t, jobID, partialSampleReport(jobID))
+	defer server.Close()
+
+	stdout, stderr, code := runCLI(t, "stageflow", "--api", server.URL, "scan", "https://example.com", "--summary-only")
+	if code != 2 {
+		t.Fatalf("exitCode=%d, want 2 for a partial report; stderr=%q", code, stderr)
+	}
+
+	if !strings.Contains(stdout, "Job: "+jobID) {
+		t.Fatalf("the report should still be written: %q", stdout)
+	}
+
+	for _, want := range []string{
+		"lighthouse: lighthouse ran out of memory (limit 2560 MB)",
+		"partial report: lighthouse did not finish; pass --allow-partial",
+	} {
+		if !strings.Contains(stderr, want) {
+			t.Fatalf("stderr missing %q: %q", want, stderr)
+		}
+	}
+
+	_, stderr, code = runCLI(
+		t, "stageflow", "--api", server.URL, "scan", "https://example.com", "--summary-only", "--allow-partial",
+	)
+	if code != 0 || !strings.Contains(stderr, "Warning: partial report") {
+		t.Fatalf("with --allow-partial: exitCode=%d stderr=%q, want 0 and the warning", code, stderr)
+	}
+}
+
+func TestCLIScanPartialReportOutranksFailOn(t *testing.T) {
+	jobID := "job-partial-gate"
+
+	server := newCLIAPIServerWithReport(t, jobID, partialSampleReport(jobID))
+	defer server.Close()
+
+	_, stderr, code := runCLI(
+		t, "stageflow", "--api", server.URL, "scan", "https://example.com", "--summary-only", "--fail-on", "critical",
+	)
+	if code != 2 {
+		t.Fatalf("exitCode=%d, want 2 (partial) over 1 (--fail-on); stderr=%q", code, stderr)
+	}
+}
+
+func TestCLIReportPartialWarnsAndExitsZero(t *testing.T) {
+	jobID := "job-partial-report"
+
+	server := newCLIAPIServerWithReport(t, jobID, partialSampleReport(jobID))
+	defer server.Close()
+
+	stdout, stderr, code := runCLI(t, "stageflow", "--api", server.URL, "report", jobID, "--summary-only")
+	if code != 0 {
+		t.Fatalf("exitCode=%d, want 0: report is also used for display; stderr=%q", code, stderr)
+	}
+
+	if !strings.Contains(stdout, "Job: "+jobID) || !strings.Contains(stderr, "Warning: partial report") {
+		t.Fatalf("stdout=%q stderr=%q, want the report and a warning", stdout, stderr)
 	}
 }

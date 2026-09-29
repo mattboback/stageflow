@@ -15,6 +15,9 @@ type Result struct {
 	Delta    Delta                `json:"delta"`
 	New      []report.IssueDetail `json:"new"`
 	Fixed    []report.IssueDetail `json:"fixed"`
+	// SkippedScanners did not finish in one of the reports, so their issues
+	// are left out of New, Fixed and Unchanged.
+	SkippedScanners []string `json:"skippedScanners,omitempty"`
 }
 
 // ScanMeta identifies one side of the diff.
@@ -32,23 +35,57 @@ type Delta struct {
 	UnchangedIssues int  `json:"unchangedIssues"`
 }
 
+// IncompleteScanners returns, sorted, the scanners that did not finish: they
+// failed, or the job expected them and no result came back. A report with any
+// of them is partial. `partial` means the scanner ran and some pages failed,
+// so it still counts as finished.
+func IncompleteScanners(scanners []report.ScannerSummary) []string {
+	ids := make([]string, 0)
+
+	for _, scanner := range scanners {
+		if scanner.Status == report.ScannerStatusFailed || scanner.Status == report.ScannerStatusSkipped {
+			ids = append(ids, scanner.Id)
+		}
+	}
+
+	sort.Strings(ids)
+
+	return ids
+}
+
 // ComputeDiff compares two reports by stable issue ID and returns the diff.
 // Issues present in current but not baseline are new.
 // Issues present in baseline but not current are fixed.
+// A scanner that did not finish in either report is compared in neither:
+// otherwise its baseline findings would all look fixed, or its current ones
+// new.
 func ComputeDiff(
 	baselineJobID string,
 	baseline report.UnifiedReportV2,
 	currentJobID string,
 	current report.UnifiedReportV2,
 ) Result {
+	skipped := make(map[string]struct{})
+	for _, id := range IncompleteScanners(baseline.Scanners) {
+		skipped[id] = struct{}{}
+	}
+
+	for _, id := range IncompleteScanners(current.Scanners) {
+		skipped[id] = struct{}{}
+	}
+
 	baselineMap := make(map[string]report.IssueDetail, len(baseline.Issues))
 	for _, issue := range baseline.Issues {
-		baselineMap[issue.Id] = issue
+		if _, skip := skipped[issue.Scanner]; !skip {
+			baselineMap[issue.Id] = issue
+		}
 	}
 
 	currentMap := make(map[string]report.IssueDetail, len(current.Issues))
 	for _, issue := range current.Issues {
-		currentMap[issue.Id] = issue
+		if _, skip := skipped[issue.Scanner]; !skip {
+			currentMap[issue.Id] = issue
+		}
 	}
 
 	newIssues := make([]report.IssueDetail, 0)
@@ -76,7 +113,8 @@ func ComputeDiff(
 
 	var scoreDelta *int
 
-	if baseline.Summary.Score != nil && current.Summary.Score != nil {
+	// A score covers every scanner, so it cannot be compared across a skip.
+	if len(skipped) == 0 && baseline.Summary.Score != nil && current.Summary.Score != nil {
 		delta := *current.Summary.Score - *baseline.Summary.Score
 		scoreDelta = &delta
 	}
@@ -99,7 +137,23 @@ func ComputeDiff(
 			FixedIssues:     len(fixedIssues),
 			UnchangedIssues: unchangedCount,
 		},
-		New:   newIssues,
-		Fixed: fixedIssues,
+		New:             newIssues,
+		Fixed:           fixedIssues,
+		SkippedScanners: sortedKeys(skipped),
 	}
+}
+
+func sortedKeys(set map[string]struct{}) []string {
+	if len(set) == 0 {
+		return nil
+	}
+
+	keys := make([]string, 0, len(set))
+	for key := range set {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	return keys
 }

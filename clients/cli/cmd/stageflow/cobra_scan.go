@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		timeout        time.Duration
 		authStatePath  string
 		authRecipePath string
+		allowPartial   bool
 		reportOpts     render.ReportFlags
 	)
 
@@ -47,6 +49,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 				timeout:        timeout,
 				authStatePath:  authStatePath,
 				authRecipePath: authRecipePath,
+				allowPartial:   allowPartial,
 				reportOpts:     reportOpts,
 			}
 
@@ -83,6 +86,12 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 			"Step values may be literals or {from_env: NAME} resolved from the CLI environment; unset variables fail.",
 	)
 	cmd.MarkFlagsMutuallyExclusive("auth-state", "auth-recipe")
+	cmd.Flags().BoolVar(
+		&allowPartial,
+		"allow-partial",
+		false,
+		"Exit 0 even when a scanner did not finish (by default a partial report exits 2)",
+	)
 	render.BindReportFlags(cmd, &reportOpts, true)
 
 	return cmd
@@ -95,6 +104,7 @@ type scanCommandOptions struct {
 	timeout        time.Duration
 	authStatePath  string
 	authRecipePath string
+	allowPartial   bool
 	reportOpts     render.ReportFlags
 }
 
@@ -160,9 +170,25 @@ func renderScanReport(
 		return exitcode.Error{Code: 2, Err: err}
 	}
 
-	return render.WrapError(
+	renderErr := render.WrapError(
 		render.UnifiedReport(cmd.OutOrStdout(), root.apiURL, status, doc, opts.reportOpts.RenderOptions(format)),
 	)
+
+	incomplete, warnErr := render.WarnIfPartial(cmd.ErrOrStderr(), doc)
+	if warnErr != nil {
+		return exitcode.Error{Code: 2, Err: warnErr}
+	}
+
+	// A partial report cannot pass a --fail-on gate: the missing scanner's
+	// findings were never checked. That outranks the gate's own result.
+	if len(incomplete) > 0 && !opts.allowPartial {
+		return exitcode.Error{Code: 2, Err: fmt.Errorf(
+			"partial report: %s did not finish; pass --allow-partial to accept it",
+			strings.Join(incomplete, ", "),
+		)}
+	}
+
+	return renderErr
 }
 
 // runStaticScan uploads a local directory or ZIP archive to the platform's
