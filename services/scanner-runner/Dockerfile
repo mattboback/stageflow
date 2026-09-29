@@ -90,6 +90,12 @@ COPY --from=builder --chown=pwuser:pwuser /repo/services/scanner-runner/package.
 # The installed browser must match the playwright package the code loads.
 RUN test "$(node -p "require('./node_modules/playwright/package.json').version")" = "${PLAYWRIGHT_VERSION}"
 
+# glibc gives each thread its own malloc arena, and freed screenshot buffers
+# fragment them: Node's resident memory grew about 5 MB per page while its
+# heap stayed flat. Two arenas keep it level. Set here, after the browser
+# layer, so that layer stays cached.
+ENV MALLOC_ARENA_MAX=2
+
 USER pwuser
 
 VOLUME ["/data"]
