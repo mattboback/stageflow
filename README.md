@@ -148,13 +148,13 @@ The web UI starts at `http://localhost:3000` and the API at `http://localhost:80
 Built-in scanners:
 
 - `axe` for accessibility
-- `lighthouse` for accessibility, best-practices, and SEO; performance audits are opt-in
+- `lighthouse` for accessibility, best-practices, and SEO audits
 - `seo` for title, metadata, heading, and structured-data checks
 - `security-headers` for common HTTP response-header policy
 - `link-checker` for internal and external link health
 
-Lighthouse skips its expensive performance category by default; enable it in
-scanner configuration when needed. PWA is not a supported Lighthouse audit category.
+StageFlow does not measure performance: Lighthouse's performance category is
+not run.
 
 A scan runs all five unless you pick some with `--scanner` (CLI) or `modules`
 (API). Each scanner's memory limit is set in its manifest under

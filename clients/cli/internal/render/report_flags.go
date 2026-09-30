@@ -57,7 +57,7 @@ func BindReportFlags(cmd *cobra.Command, opts *ReportFlags, hideAdvanced bool) {
 		&opts.RawCategories,
 		"category",
 		"",
-		"Filter displayed findings by category (comma-separated: accessibility,performance,seo,security,best-practices)",
+		"Filter displayed findings by category (comma-separated: accessibility,seo,security,best-practices)",
 	)
 	cmd.Flags().StringVar(
 		&opts.FailSeverity,

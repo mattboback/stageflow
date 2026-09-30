@@ -17,7 +17,6 @@ var validSeverities = map[report.IssueSeverity]int{
 
 var validCategories = map[string]struct{}{
 	"accessibility":  {},
-	"performance":    {},
 	"seo":            {},
 	"security":       {},
 	"best-practices": {},
@@ -68,7 +67,7 @@ func normalizeCategories(values []string) ([]string, error) {
 		category := strings.ToLower(strings.TrimSpace(raw))
 		if _, ok := validCategories[category]; !ok {
 			return nil, fmt.Errorf(
-				"invalid category %q (expected accessibility, performance, seo, security, or best-practices)",
+				"invalid category %q (expected accessibility, seo, security, or best-practices)",
 				strings.TrimSpace(raw),
 			)
 		}

@@ -62,17 +62,13 @@ export interface LighthouseModule {
 }
 
 export interface LighthouseOptions {
-	/**
-	 * Lighthouse categories to audit. Defaults to accessibility, best-practices, and seo.
-	 * Add "performance" for full audits (warning: adds ~2 minutes per page).
-	 */
+	/** Lighthouse categories to audit. Defaults to accessibility, best-practices, and seo. */
 	categories?: string[];
 }
 
-// Default categories: skip performance by default since it's expensive (~2 min overhead).
-// Performance can be enabled via SCANNER_OPTIONS: { "categories": ["accessibility", "best-practices", "seo", "performance"] }
+// StageFlow does not measure performance, so its category is never run.
 export const DEFAULT_LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices', 'seo'];
-const VALID_LIGHTHOUSE_CATEGORIES = ['accessibility', 'best-practices', 'seo', 'performance'];
+const VALID_LIGHTHOUSE_CATEGORIES = DEFAULT_LIGHTHOUSE_CATEGORIES;
 
 export function parseLighthouseOptions(raw: unknown): LighthouseOptions {
 	if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {

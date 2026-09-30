@@ -15,7 +15,7 @@ export const SCANNER_META: Record<string, ScannerMeta> = {
 	lighthouse: {
 		icon: Zap,
 		label: 'Lighthouse',
-		description: 'Performance, SEO, and best practices audits'
+		description: 'Accessibility, SEO, and best-practices audits'
 	},
 	'link-checker': {
 		icon: Link2,

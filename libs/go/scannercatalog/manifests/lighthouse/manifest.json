@@ -2,13 +2,13 @@
 	"id": "lighthouse",
 	"name": "Google Lighthouse",
 	"version": "1.0.0",
-	"description": "Performance, accessibility, SEO, and best practices auditing using Google Lighthouse.",
-	"aliases": ["performance", "best-practices", "pwa"],
+	"description": "Accessibility, SEO, and best-practices auditing using Google Lighthouse.",
+	"aliases": ["best-practices"],
 	"author": "Stageflow",
 	"license": "MIT",
 	"homepage": "https://developers.google.com/web/tools/lighthouse",
 	"capabilities": {
-		"categories": ["performance", "accessibility", "seo", "quality"],
+		"categories": ["accessibility", "seo", "quality"],
 		"outputFormats": ["json", "html"],
 		"supportsScreenshots": false,
 		"supportsConcurrency": false,
@@ -38,38 +38,10 @@
 				"type": "array",
 				"items": {
 					"type": "string",
-					"enum": [
-						"performance",
-						"accessibility",
-						"best-practices",
-						"seo",
-						"pwa"
-					]
+					"enum": ["accessibility", "best-practices", "seo"]
 				},
-				"default": ["performance", "accessibility", "best-practices", "seo"],
+				"default": ["accessibility", "best-practices", "seo"],
 				"description": "Lighthouse categories to audit"
-			},
-			"throttling": {
-				"type": "string",
-				"enum": ["mobile", "desktop", "none"],
-				"default": "mobile",
-				"description": "Network/CPU throttling preset"
-			},
-			"formFactor": {
-				"type": "string",
-				"enum": ["mobile", "desktop"],
-				"default": "mobile",
-				"description": "Device form factor for emulation"
-			},
-			"onlyAudits": {
-				"type": "array",
-				"items": { "type": "string" },
-				"description": "Only run these specific audits"
-			},
-			"skipAudits": {
-				"type": "array",
-				"items": { "type": "string" },
-				"description": "Skip these specific audits"
 			}
 		}
 	},

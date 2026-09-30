@@ -1042,7 +1042,7 @@ describe('LighthouseScanner', () => {
 			expect(options.categories).toEqual(['accessibility', 'best-practices', 'seo']);
 		});
 
-		it('retains only valid categories from mixed input', async () => {
+		it('retains only supported categories from mixed input', async () => {
 			const testScanner = new LighthouseScanner();
 
 			vi.spyOn(
@@ -1057,7 +1057,7 @@ describe('LighthouseScanner', () => {
 			await callPrivateMethod(testScanner, 'initialize');
 
 			const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
-			expect(options.categories).toEqual(['performance', 'seo']);
+			expect(options.categories).toEqual(['seo']);
 		});
 
 		it('prewarms Lighthouse runtime when LIGHTHOUSE_PREWARM is enabled', async () => {
