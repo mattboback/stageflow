@@ -1,18 +1,30 @@
 import { useState } from 'react';
 
 import type { IssueDetail, IssueGroup, PageSummary } from '../../lib/types/unified-report';
-import { SCANNER_META, getSeverityBadgeClass, getSeverityDotClass } from '../../lib/report';
+import {
+	SCANNER_META,
+	getSeverityBadgeClass,
+	getSeverityDotClass,
+	getIssueKind
+} from '../../lib/report';
 
 interface Props {
 	group: IssueGroup;
 	pageById: Map<string, PageSummary>;
 	defaultOpen?: boolean;
+	newIssueIds?: ReadonlySet<string> | undefined;
 	// Explicitly `| undefined`: exactOptionalPropertyTypes distinguishes an absent
 	// prop from one passed as undefined, and callers forward an optional handler.
 	onSelectOccurrence?: ((occurrence: IssueDetail) => void) | undefined;
 }
 
-export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOccurrence }: Props) {
+export function IssueGroupRow({
+	group,
+	pageById,
+	defaultOpen = false,
+	onSelectOccurrence,
+	newIssueIds
+}: Props) {
 	const [open, setOpen] = useState(defaultOpen);
 	const scannerLabel = SCANNER_META[group.scanner]?.label ?? group.scanner;
 	const occurrenceCount = group.occurrences.length;
@@ -31,7 +43,10 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 				</span>
 				<span className={getSeverityDotClass(group.severity)} aria-hidden="true" />
 				<span className="igroup__title" title={group.title}>
-					{group.title}
+					{group.title}{' '}
+					{group.occurrences.some((issue) => newIssueIds?.has(issue.id)) && (
+						<span className="issue-new">NEW</span>
+					)}
 				</span>
 				<span className="igroup__meta">
 					<span className={getSeverityBadgeClass(group.severity)}>{group.severity}</span>
@@ -78,7 +93,9 @@ export function IssueGroupRow({ group, pageById, defaultOpen = false, onSelectOc
 									{occ.pageUrl}
 								</span>
 								<span className="num igroup__occ-count">
-									{occ.elementCount > 1 ? `${occ.elementCount}×` : ''}
+									{getIssueKind(occ) === 'element' && occ.elementCount > 1
+										? `${occ.elementCount}×`
+										: ''}
 								</span>
 							</div>
 						);

@@ -1,6 +1,5 @@
 import type { BoundingBox, UnifiedReportV2, UserImpact } from '@stageflow/contracts-report';
 
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import type {
@@ -13,6 +12,7 @@ import type {
 
 import { normalizeSeverity } from '../utils/severity';
 import { resultsPath } from './artifact-paths';
+import { issueFingerprint, occurrenceFingerprint } from './finding-identity';
 
 type SeverityCounts = Record<IssueSeverity, number>;
 
@@ -95,7 +95,7 @@ export class WebServerFormatter {
 				const tags = this.normalizeStringArray(issueMetadata.tags);
 				const wcagTags = this.extractWcagTags(tags, issueMetadata.ruleBehavior);
 
-				const issueId = this.generateIssueFingerprint(
+				const issueId = issueFingerprint(
 					scannerId,
 					issue.id,
 					page.pageId,
@@ -104,20 +104,24 @@ export class WebServerFormatter {
 
 				const scannerData = this.extractScannerData(issue.metadata);
 
-				const occurrences: NonNullable<UnifiedReportV2['issues'][number]['occurrences']> = nodes
-					.slice(0, 5)
-					.map((node, idx) => {
+				const occurrences: NonNullable<UnifiedReportV2['issues'][number]['occurrences']> =
+					nodes.map((node, index) => {
 						const target = node.target?.filter((t) => typeof t === 'string');
 						const selector = node.selector ?? node.target?.[0];
-						const html = node.html;
-						const contextHtml = node.contextHtml;
+						const html = index < 5 ? node.html : undefined;
+						const contextHtml = index < 5 ? node.contextHtml : undefined;
 						const ancestorPath = node.ancestorPath;
 						const failureSummary = node.failureSummary;
 						const textSnippet = node.textSnippet;
-						const boundingBox = this.asBoundingBox(node.boundingBox);
+						const boundingBox = index < 5 ? this.asBoundingBox(node.boundingBox) : undefined;
 
 						return {
-							elementId: `${issueId}-el-${idx}`,
+							elementId: occurrenceFingerprint(
+								scannerId,
+								issue.id,
+								page.pageId,
+								target ?? (selector ? [selector] : [])
+							),
 							...(target !== undefined ? { target } : {}),
 							...(selector !== undefined ? { selector } : {}),
 							...(html !== undefined ? { html } : {}),
@@ -140,7 +144,7 @@ export class WebServerFormatter {
 					pageId: page.pageId,
 					pageUrl: page.url,
 					elementCount: nodeCount,
-					elementsTruncated: nodes.length < nodeCount,
+					elementsTruncated: nodes.length > 5 || nodes.length < nodeCount,
 					occurrences,
 					category: issue.category,
 					...this.buildIssueOptionalFields({
@@ -234,19 +238,9 @@ export class WebServerFormatter {
 		};
 	}
 
-	private generateIssueFingerprint(
-		scanner: string,
-		ruleId: string,
-		pageId: string,
-		selector: string
-	): string {
-		const data = `${scanner}|${ruleId}|${pageId}|${selector}`.toLowerCase();
-		return createHash('sha256').update(data).digest('hex').slice(0, 12);
-	}
-
 	private extractWcagTags(tags: string[], ruleBehavior?: { tags?: string[] }): string[] {
 		const allTags = [...tags, ...(ruleBehavior?.tags ?? [])];
-		return allTags.filter((tag) => /^wcag/i.test(tag) || /^level\\s+(aaa|aa|a)$/i.test(tag));
+		return allTags.filter((tag) => /^wcag/i.test(tag) || /^level\s+(aaa|aa|a)$/i.test(tag));
 	}
 
 	private normalizeStringArray(value: unknown): string[] {
@@ -300,7 +294,7 @@ export class WebServerFormatter {
 			typeof input.issue.helpUrl === 'string' && input.issue.helpUrl.trim().length > 0
 				? input.issue.helpUrl
 				: undefined;
-		const howToFix = input.nodes[0]?.failureSummary;
+		const howToFix = input.issue.howToFix ?? input.nodes[0]?.failureSummary;
 
 		return {
 			...(severityRaw !== undefined ? { severityRaw } : {}),

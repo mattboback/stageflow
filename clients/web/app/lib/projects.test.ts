@@ -197,17 +197,42 @@ describe('computeProjectDiff', () => {
 			...base,
 			summary: { ...base.summary, score: 92, totalIssues: 2 },
 			issues: [
-				{ ...first, id: 'z-fixed' },
-				{ ...first, id: 'shared' }
+				{
+					...first,
+					id: 'z-fixed',
+					pageId: 'page-v2-test',
+					occurrences: [{ elementId: 'occ-v2-z-fixed', selector: '#z-fixed' }]
+				},
+				{
+					...first,
+					id: 'shared',
+					pageId: 'page-v2-test',
+					occurrences: [{ elementId: 'occ-v2-shared', selector: '#shared' }]
+				}
 			]
 		};
 		const current = {
 			...base,
 			summary: { ...base.summary, score: 88, totalIssues: 3 },
 			issues: [
-				{ ...first, id: 'shared' },
-				{ ...first, id: 'z-new' },
-				{ ...first, id: 'a-new' }
+				{
+					...first,
+					id: 'shared',
+					pageId: 'page-v2-test',
+					occurrences: [{ elementId: 'occ-v2-shared', selector: '#shared' }]
+				},
+				{
+					...first,
+					id: 'z-new',
+					pageId: 'page-v2-test',
+					occurrences: [{ elementId: 'occ-v2-z-new', selector: '#z-new' }]
+				},
+				{
+					...first,
+					id: 'a-new',
+					pageId: 'page-v2-test',
+					occurrences: [{ elementId: 'occ-v2-a-new', selector: '#a-new' }]
+				}
 			]
 		};
 
@@ -229,7 +254,13 @@ describe('computeProjectDiff', () => {
 		if (!first) {
 			throw new Error('golden-regression-report.json must contain at least one issue');
 		}
-		const issue = (id: string, scanner: string) => ({ ...first, id, scanner });
+		const issue = (id: string, scanner: string) => ({
+			...first,
+			id,
+			scanner,
+			pageId: 'page-v2-test',
+			occurrences: [{ elementId: `occ-v2-${id}`, selector: `#${id}` }]
+		});
 		const baseline = {
 			...base,
 			summary: { ...base.summary, score: 80, totalIssues: 3 },
@@ -257,8 +288,8 @@ describe('computeProjectDiff', () => {
 		expect(result.fixed.map((entry) => entry.id)).toEqual(['seo-1']);
 		expect(result.new.map((entry) => entry.id)).toEqual(['seo-2']);
 		expect(result.delta.scoreDelta).toBeUndefined();
-		expect(result.baseline.score).toBe(80);
-		expect(result.current.score).toBe(95);
+		expect(result.baseline.score).toBeUndefined();
+		expect(result.current.score).toBeUndefined();
 	});
 
 	it('compares nothing from the golden pair once axe failed in the current report', () => {
@@ -282,5 +313,70 @@ describe('computeProjectDiff', () => {
 		const current = loadGoldenReport('golden-regression-report.json');
 
 		expect(computeProjectDiff('b', baseline, 'c', current)).not.toHaveProperty('skippedScanners');
+	});
+});
+
+describe('complete occurrence comparisons', () => {
+	it('counts one new occurrence when a sixth failing image is added', () => {
+		const base = loadGoldenReport('golden-regression-report.json');
+		const first = base.issues[0]!;
+		const occurrences = Array.from({ length: 5 }, (_, index) => ({
+			elementId: `occ-v2-${index}`,
+			selector: `#image-${index}`
+		}));
+		const baseline = {
+			...base,
+			issues: [{ ...first, id: 'image-alt', pageId: 'page-v2-root', occurrences }]
+		};
+		const current = {
+			...base,
+			issues: [
+				{
+					...first,
+					id: 'image-alt',
+					pageId: 'page-v2-root',
+					occurrences: [...occurrences, { elementId: 'occ-v2-5', selector: '#image-5' }]
+				}
+			]
+		};
+		const result = computeProjectDiff('b', baseline, 'c', current);
+		expect(result.delta.newIssues).toBe(1);
+		expect(result.delta.fixedIssues).toBe(0);
+		expect(result.delta.unchangedIssues).toBe(5);
+		expect(result.new[0]?.occurrences?.[0]?.elementId).toBe('occ-v2-5');
+	});
+	it('excludes partial page coverage on both sides without apparent fixes', () => {
+		const base = loadGoldenReport('golden-regression-report.json');
+		const scanner = base.issues[0]!.scanner;
+		const current = {
+			...base,
+			scanners: base.scanners.map((value) =>
+				value.id === scanner ? { ...value, status: 'partial' as const } : value
+			),
+			issues: base.issues.filter((issue) => issue.scanner !== scanner)
+		};
+		const result = computeProjectDiff('b', base, 'c', current);
+		expect(result.skippedScanners).toContain(scanner);
+		expect(result.fixed).toHaveLength(0);
+		expect(result.delta.scoreDelta).toBeUndefined();
+	});
+	it('requires a fresh baseline when stable identity replaces positional IDs', () => {
+		const base = loadGoldenReport('golden-regression-report.json');
+		const legacy = {
+			...base,
+			pages: base.pages.map((page, index) => ({ ...page, id: `url-${index + 1}` })),
+			issues: base.issues.map((issue, index) => ({
+				...issue,
+				pageId: 'url-1',
+				occurrences: (issue.occurrences ?? []).map((occurrence) => ({
+					...occurrence,
+					elementId: `legacy-${index}`
+				}))
+			}))
+		};
+		const result = computeProjectDiff('b', legacy, 'c', base);
+		expect(result.incompatibleIdentity).toBe(true);
+		expect(result.new).toHaveLength(0);
+		expect(result.fixed).toHaveLength(0);
 	});
 });

@@ -25,7 +25,7 @@ const zeroSeverity: UnifiedReport['summary']['bySeverity'] = {
 
 describe('ReportHeader', () => {
 	it('renders the title and scan totals from the fixture', () => {
-		render(<ReportHeader report={report} reviewProgress={{ total: 2, reviewed: 0, pending: 2 }} />);
+		render(<ReportHeader report={report} />);
 
 		expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
@@ -33,15 +33,7 @@ describe('ReportHeader', () => {
 		expect(totals.textContent).toContain('Findings');
 		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
 		expect(totals.textContent).toContain('Pages scanned');
-		expect(totals.textContent).toContain('Human review');
-	});
-
-	it('shows completed human reviews without pending copy', () => {
-		render(<ReportHeader report={report} reviewProgress={{ total: 2, reviewed: 2, pending: 0 }} />);
-
-		const totals = screen.getByLabelText('Scan totals');
-		expect(totals.textContent).toContain('all 2 findings reviewed');
-		expect(totals.textContent).not.toContain('need a human check');
+		expect(totals.textContent).not.toContain('Human review');
 	});
 
 	it('reads "nothing to fix" instead of severity counts on a clean report', () => {
@@ -50,7 +42,7 @@ describe('ReportHeader', () => {
 			issues: [],
 			summary: { ...report.summary, totalIssues: 0, bySeverity: zeroSeverity }
 		};
-		render(<ReportHeader report={clean} reviewProgress={{ total: 0, reviewed: 0, pending: 0 }} />);
+		render(<ReportHeader report={clean} />);
 
 		const totals = screen.getByLabelText('Scan totals');
 		expect(totals.textContent).toContain('nothing to fix');
@@ -72,9 +64,7 @@ describe('ReportHeader on a partial report', () => {
 	};
 
 	it('says which scanner did not finish and shows no score', () => {
-		render(
-			<ReportHeader report={partial} reviewProgress={{ total: 0, reviewed: 0, pending: 0 }} />
-		);
+		render(<ReportHeader report={partial} />);
 
 		expect(screen.getByText('Partial')).toBeTruthy();
 		expect(screen.queryByText('Completed')).toBeNull();
@@ -87,9 +77,7 @@ describe('ReportHeader on a partial report', () => {
 			...report,
 			scanners: report.scanners.map((scanner) => ({ ...scanner, status: 'success' as const }))
 		};
-		render(
-			<ReportHeader report={complete} reviewProgress={{ total: 0, reviewed: 0, pending: 0 }} />
-		);
+		render(<ReportHeader report={complete} />);
 
 		expect(screen.getByText('Completed')).toBeTruthy();
 		expect(screen.queryByText('Partial')).toBeNull();

@@ -13,11 +13,14 @@ import { BlockedTargetError, type TargetValidationPolicy } from '../../core/targ
 const REQUEST_TIMEOUT = 10000;
 const USER_AGENT = 'Stageflow-LinkChecker/1.0';
 
+export type CookieProvider = (url: string) => Promise<string>;
+
 async function fetchWithValidatedRedirects(
 	url: string,
 	method: 'HEAD' | 'GET',
 	signal: AbortSignal,
-	targetValidationPolicy: TargetValidationPolicy
+	targetValidationPolicy: TargetValidationPolicy,
+	cookiesForURL?: CookieProvider
 ): Promise<{ response: Response; redirects: string[] }> {
 	// A 303 downgrades the method to GET for the remainder of the chain, per
 	// RFC 9110. That is specific to this scanner, which may start with HEAD.
@@ -27,12 +30,15 @@ async function fetchWithValidatedRedirects(
 		url,
 		targetValidationPolicy,
 		async (currentURL) => {
+			// Ask the browser cookie jar for each destination, including redirect hops.
+			const cookie = await cookiesForURL?.(currentURL);
 			const hopResponse = await fetch(currentURL, {
 				method: currentMethod,
 				redirect: 'manual',
 				signal,
 				headers: {
-					'User-Agent': USER_AGENT
+					'User-Agent': USER_AGENT,
+					...(cookie ? { Cookie: cookie } : {})
 				}
 			});
 
@@ -57,7 +63,7 @@ async function fetchWithValidatedRedirects(
 /**
  * Maps HTTP status code to issue severity.
  */
-export function getSeverityForStatus(status: number): IssueSeverity {
+export function getSeverityForStatus(status: number, isInternal = true): IssueSeverity {
 	if (status === 0) {
 		return 'serious';
 	}
@@ -65,7 +71,7 @@ export function getSeverityForStatus(status: number): IssueSeverity {
 		return 'serious';
 	}
 	if (status >= 500) {
-		return 'critical';
+		return isInternal ? 'critical' : 'moderate';
 	}
 	if (status >= 400) {
 		return 'moderate';
@@ -96,7 +102,8 @@ export function isUnverifiableStatus(status: number, isInternal = false): boolea
 async function requestLink(
 	url: string,
 	method: 'HEAD' | 'GET',
-	targetValidationPolicy: TargetValidationPolicy
+	targetValidationPolicy: TargetValidationPolicy,
+	cookiesForURL?: CookieProvider
 ): Promise<{ status: number; redirects: string[] }> {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => {
@@ -107,7 +114,8 @@ async function requestLink(
 			url,
 			method,
 			controller.signal,
-			targetValidationPolicy
+			targetValidationPolicy,
+			cookiesForURL
 		);
 		// Only the status matters; don't download GET bodies.
 		void response.body?.cancel();
@@ -122,8 +130,12 @@ async function requestLink(
  */
 export async function checkSingleLink(
 	url: string,
-	targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] }
+	targetValidationPolicy: TargetValidationPolicy = { allowedOrigins: [] },
+	cookiesForURL?: CookieProvider
 ): Promise<LinkCheckResult> {
+	const normalizedURL = new URL(url);
+	normalizedURL.hash = '';
+	url = normalizedURL.href;
 	const startTime = Date.now();
 	const done = (
 		status: number | null,
@@ -139,7 +151,7 @@ export async function checkSingleLink(
 
 	let refusedHead: { status: number; redirects: string[] } | null = null;
 	try {
-		const head = await requestLink(url, 'HEAD', targetValidationPolicy);
+		const head = await requestLink(url, 'HEAD', targetValidationPolicy, cookiesForURL);
 		if (!HEAD_RETRY_STATUSES.has(head.status)) {
 			return done(head.status, null, head.redirects);
 		}
@@ -152,7 +164,7 @@ export async function checkSingleLink(
 	}
 
 	try {
-		const get = await requestLink(url, 'GET', targetValidationPolicy);
+		const get = await requestLink(url, 'GET', targetValidationPolicy, cookiesForURL);
 		return done(get.status, null, get.redirects);
 	} catch (getError) {
 		// Bot walls often answer HEAD with 403 and then stall the GET. The server

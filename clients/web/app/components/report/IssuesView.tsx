@@ -25,6 +25,9 @@ interface Props {
 	searchQuery: string;
 	sortKey: IssueSortKey;
 	groupByRule: boolean;
+	newIssueIds?: ReadonlySet<string> | undefined;
+	newOnly?: boolean;
+	onNewOnlyChange?: (next: boolean) => void;
 	onScannerChange: (next: string | null) => void;
 	onSeverityChange: (next: string | null) => void;
 	onPageChange: (next: string | null) => void;
@@ -45,6 +48,9 @@ export function IssuesView({
 	searchQuery,
 	sortKey,
 	groupByRule,
+	newIssueIds,
+	newOnly = false,
+	onNewOnlyChange,
 	onScannerChange,
 	onSeverityChange,
 	onPageChange,
@@ -73,14 +79,28 @@ export function IssuesView({
 
 	const filtered = useMemo(
 		() =>
-			filterIssues(report.issues, {
-				scannerId: activeScanner,
-				pageId: activePage,
-				severity: activeSeverity,
-				category: activeCategory,
-				query: searchQuery
-			}),
-		[report.issues, activeScanner, activePage, activeSeverity, activeCategory, searchQuery]
+			filterIssues(
+				newOnly && newIssueIds
+					? report.issues.filter((issue) => newIssueIds.has(issue.id))
+					: report.issues,
+				{
+					scannerId: activeScanner,
+					pageId: activePage,
+					severity: activeSeverity,
+					category: activeCategory,
+					query: searchQuery
+				}
+			),
+		[
+			report.issues,
+			activeScanner,
+			activePage,
+			activeSeverity,
+			activeCategory,
+			searchQuery,
+			newOnly,
+			newIssueIds
+		]
 	);
 
 	const sorted = useMemo(() => sortIssues(filtered, sortKey), [filtered, sortKey]);
@@ -212,6 +232,16 @@ export function IssuesView({
 						)}
 					</span>
 					<div className="ilist__sort">
+						{newIssueIds && onNewOnlyChange && (
+							<label className="ilist__group-toggle">
+								<input
+									type="checkbox"
+									checked={newOnly}
+									onChange={(event) => onNewOnlyChange(event.target.checked)}
+								/>
+								New in this deploy
+							</label>
+						)}
 						{groupingUseful && (
 							<label className="ilist__group-toggle">
 								<input
@@ -260,6 +290,7 @@ export function IssuesView({
 						<IssueGroupRow
 							key={group.fingerprint}
 							group={group}
+							newIssueIds={newIssueIds}
 							pageById={pageById}
 							defaultOpen={index === 0}
 							onSelectOccurrence={onIssueSelect}
@@ -267,7 +298,12 @@ export function IssuesView({
 					))
 				) : (
 					sorted.map((issue) => (
-						<IssueRowCard key={issue.id} issue={issue} onSelect={onIssueSelect} />
+						<IssueRowCard
+							key={issue.id}
+							issue={issue}
+							isNew={newIssueIds?.has(issue.id) ?? false}
+							onSelect={onIssueSelect}
+						/>
 					))
 				)}
 			</div>

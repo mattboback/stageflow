@@ -2,10 +2,12 @@ import { CheckCircle2 } from 'lucide-react';
 
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Pill } from '../Pill';
+import { incompleteScanners } from '../../lib/report';
 
 /* Positive zero-findings state for the review tab: without it, a clean scan
    ends in an empty review queue that reads as an anticlimax. */
 export function AllClearBanner({ report }: { report: UnifiedReport }) {
+	if (incompleteScanners(report.scanners).length > 0) return null;
 	const pages = report.summary.pagesScanned;
 	const scanners = report.scanners.length;
 	const errorCount = report.errors?.length ?? 0;

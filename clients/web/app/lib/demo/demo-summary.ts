@@ -1,28 +1,16 @@
-/*
- * Headline figures from the committed /demo report.
- *
- * Duplicated here rather than read from public/demo/report.json because the
- * home page would otherwise pull 90 KB of JSON into its bundle to print four
- * numbers. app/lib/demo/demo-fixture.test.ts asserts every field against the
- * real fixture, so a regeneration that changes the report fails CI instead of
- * quietly leaving the marketing page describing an older scan.
- *
- * The previous hero card said "94 → 88 ▼6" for example.com and none of it had
- * ever happened. Fabricated numbers in a hero are the first thing a reviewer
- * discounts, and everything below is checked.
- */
-export interface DemoSummary {
-	pages: number;
-	scannersRun: number;
-	totalIssues: number;
-	serious: number;
-	moderate: number;
-}
-
-export const DEMO_SUMMARY: DemoSummary = {
-	pages: 3,
+// Generated from real sample-site scans by just demo-fixture.
+export const DEMO_SUMMARY = {
+	pages: 4,
 	scannersRun: 5,
-	totalIssues: 14,
-	serious: 3,
-	moderate: 6
-};
+	totalIssues: 33,
+	serious: 14,
+	moderate: 8,
+	newIssues: 3,
+	fixedIssues: 1,
+	unchangedIssues: 30,
+	baselineScore: 60,
+	currentScore: 57,
+	scoreDelta: -3,
+	terminal:
+		'stageflow diff baseline.json current.json --fail-on-new=any\nNew: 3 · Fixed: 1 · Unchanged: 30'
+} as const;

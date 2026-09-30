@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -307,7 +308,7 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 	pages := a.sortedPages()
 
 	// Deduplicate issues that are flagged by multiple scanners.
-	deduplicatedIssues := deduplicateIssues(a.issues)
+	deduplicatedIssues := a.coverageFilteredIssues(pages)
 
 	// Recalculate severity counts after deduplication.
 	dedupedSeverity := report.SeverityCounts{}
@@ -322,6 +323,8 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 	for _, issue := range deduplicatedIssues {
 		dedupedByScanner[issue.Scanner]++
 	}
+
+	a.recomputeScannerCounts(deduplicatedIssues, dedupedByScanner)
 
 	// Recompute page-level counts from deduplicated issues so they stay
 	// consistent with the summary totals.
@@ -348,7 +351,7 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 	// A score from a partial run would describe only the scanners that
 	// finished, so a crashed accessibility scanner would raise it. Leave it
 	// out and let the scanner list say what is missing.
-	if totalIssues > 0 && len(diff.IncompleteScanners(scanners)) == 0 {
+	if len(scanners) > 0 && len(diff.IncompleteScanners(scanners)) == 0 {
 		scoredSeverity := report.SeverityCounts{}
 
 		for _, issue := range deduplicatedIssues {
@@ -407,4 +410,106 @@ func (a *reportAggregation) sortedPages() []report.PageSummary {
 	})
 
 	return pages
+}
+
+func (a *reportAggregation) recomputeScannerCounts(issues []report.IssueDetail, counts map[string]int) {
+	severities := make(map[string]report.SeverityCounts)
+	for _, issue := range issues {
+		severity := severities[issue.Scanner]
+		addSeverity(&severity, issue.Severity)
+		severities[issue.Scanner] = severity
+	}
+
+	for scannerID, stat := range a.scannerStats {
+		if stat.Status != report.ScannerStatusSuccess && stat.Status != report.ScannerStatusPartial {
+			continue
+		}
+
+		severity := severities[scannerID]
+		stat.IssueCount = intPtr(counts[scannerID])
+		stat.Severity = &severity
+	}
+}
+
+// coverageFilteredIssues assigns proven overlapping concerns to a successful
+// specialist. An incomplete or unselected specialist must never hide fallback
+// findings. SEO description, H1, canonical and viewport checks remain independent:
+// they are not equivalent to axe's checks.
+func (a *reportAggregation) coverageFilteredIssues(pages []report.PageSummary) []report.IssueDetail {
+	axeSuccess := a.scannerStats["axe"] != nil && a.scannerStats["axe"].Status == report.ScannerStatusSuccess
+	origins, robotsPage := robotsRepresentatives(pages, a.issues)
+	seenRobots := make(map[string]bool)
+
+	issues := make([]report.IssueDetail, 0, len(a.issues))
+	for _, issue := range a.issues {
+		if axeSuccess && axeReplacesIssue(issue) {
+			continue
+		}
+
+		if issue.Scanner == "lighthouse" && issue.RuleId == "robots-txt" {
+			if origin := origins[issue.PageId]; origin != "" {
+				if issue.PageId != robotsPage[origin] || seenRobots[origin] {
+					continue
+				}
+
+				seenRobots[origin] = true
+			}
+		}
+
+		issues = append(issues, issue)
+	}
+
+	return issues
+}
+
+func axeReplacesIssue(issue report.IssueDetail) bool {
+	switch issue.Scanner {
+	case "lighthouse":
+		return stringValue(issue.Category) == "accessibility" || ruleEquivalences["axe:"+issue.RuleId] != ""
+	case "seo":
+		switch strings.TrimPrefix(issue.RuleId, "seo-") {
+		case "missing-title", "missing-language", "images-missing-alt", "heading-hierarchy":
+			return true
+		}
+	case "link-checker":
+		return strings.TrimPrefix(issue.RuleId, "link-checker-") == "no-text-links"
+	}
+
+	return false
+}
+
+// robotsRepresentatives chooses a stable page per origin so URL ordering cannot
+// move an origin-wide finding to another page between runs.
+func robotsRepresentatives(
+	pages []report.PageSummary,
+	issues []report.IssueDetail,
+) (map[string]string, map[string]string) {
+	origins := make(map[string]string, len(pages))
+
+	pageURLs := make(map[string]string, len(pages))
+	for _, page := range pages {
+		pageURLs[page.Id] = page.Url
+		if parsed, err := url.Parse(page.Url); err == nil && parsed.Host != "" {
+			origins[page.Id] = parsed.Scheme + "://" + parsed.Host
+		}
+	}
+
+	robotsPage := make(map[string]string)
+
+	for _, issue := range issues {
+		if issue.Scanner != "lighthouse" || issue.RuleId != "robots-txt" {
+			continue
+		}
+
+		origin := origins[issue.PageId]
+		if origin == "" {
+			continue
+		}
+
+		if selected, ok := robotsPage[origin]; !ok || pageURLs[issue.PageId] < pageURLs[selected] {
+			robotsPage[origin] = issue.PageId
+		}
+	}
+
+	return origins, robotsPage
 }

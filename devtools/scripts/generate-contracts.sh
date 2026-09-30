@@ -130,5 +130,10 @@ EOF
 }
 
 generate_report
+# Serve the exact source contract as a static frontend asset.
+write_atomic "$ROOT_DIR/clients/web/public/schemas/unified-report.v2.json" < "$ROOT_DIR/libs/contracts/report/schema/unified-report.v2.schema.json"
+# mktemp creates mode 0600. Static assets must be readable by nginx's worker UID.
+chmod 0755 "$ROOT_DIR/clients/web/public/schemas"
+chmod 0644 "$ROOT_DIR/clients/web/public/schemas/unified-report.v2.json"
 generate_provenance
 generate_scanner_manifest

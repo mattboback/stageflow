@@ -20,7 +20,6 @@ type Options struct {
 	Categories     []string
 	FailSeverity   string
 	SummaryOnly    bool
-	GroupBy        string
 }
 
 func UnifiedReport(
@@ -69,9 +68,7 @@ func writeRenderedReport(
 		return writeJSONReport(out, apiBaseURL, status, doc, filters, opts.SummaryOnly)
 	case FormatMarkdown:
 		return writeMarkdownReport(out, apiBaseURL, status, doc, filters, markdownRenderOptions{
-			MaxOccurrences: opts.MaxOccurrences,
-			SummaryOnly:    opts.SummaryOnly,
-			GroupBy:        opts.GroupBy,
+			SummaryOnly: opts.SummaryOnly,
 		})
 	default:
 		return fmt.Errorf("unsupported output format %q", opts.Format)

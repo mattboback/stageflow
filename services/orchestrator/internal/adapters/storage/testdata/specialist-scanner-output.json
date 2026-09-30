@@ -1,0 +1,378 @@
+{
+  "seo": {
+    "version": "2.1.0",
+    "meta": {
+      "jobId": "coverage-fixture",
+      "scannedAt": "2026-09-30T00:00:00.000Z",
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 0,
+      "baseUrl": "https://example.com/"
+    },
+    "summary": {
+      "totalIssues": 11,
+      "bySeverity": {
+        "critical": 1,
+        "serious": 4,
+        "moderate": 4,
+        "minor": 1,
+        "info": 1
+      },
+      "byScanner": {
+        "seo": 11
+      },
+      "pagesScanned": 1,
+      "pagesWithIssues": 1
+    },
+    "scanners": [
+      {
+        "id": "seo",
+        "name": "seo",
+        "status": "success",
+        "issueCount": 11,
+        "severity": {
+          "critical": 1,
+          "serious": 4,
+          "moderate": 4,
+          "minor": 1,
+          "info": 1
+        },
+        "toolVersion": "0.1.0",
+        "startedAt": "2026-09-30T00:00:00.000Z",
+        "completedAt": "2026-09-30T00:00:00.000Z",
+        "durationMs": 0,
+        "resultsPath": "coverage-fixture/seo/results.json"
+      }
+    ],
+    "pages": [
+      {
+        "id": "fixture-page",
+        "url": "https://example.com/",
+        "issueCount": 11,
+        "bySeverity": {
+          "critical": 1,
+          "serious": 4,
+          "moderate": 4,
+          "minor": 1,
+          "info": 1
+        },
+        "durationMs": 0,
+        "startedAt": "2026-09-30T00:00:00.000Z",
+        "finishedAt": "2026-09-30T00:00:00.000Z",
+        "path": "/"
+      }
+    ],
+    "issues": [
+      {
+        "id": "062e604be27b8e6c",
+        "scanner": "seo",
+        "ruleId": "seo-missing-title",
+        "severity": "critical",
+        "title": "Missing Page Title",
+        "description": "Page is missing a title tag. Title tags are crucial for SEO and user experience.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "meta",
+        "helpUrl": "https://moz.com/learn/seo/title-tag",
+        "howToFix": "Add <title>Page topic | Site name</title> inside <head>, with a unique title describing this page."
+      },
+      {
+        "id": "2e9c9555c13fbb74",
+        "scanner": "seo",
+        "ruleId": "seo-missing-description",
+        "severity": "serious",
+        "title": "Missing Meta Description",
+        "description": "Page is missing a meta description. This affects click-through rates from search results.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "meta",
+        "helpUrl": "https://moz.com/learn/seo/meta-description",
+        "howToFix": "Add <meta name=\"description\" content=\"A concise, accurate summary of this page.\"> inside <head>."
+      },
+      {
+        "id": "5dda4c4a51d00cd1",
+        "scanner": "seo",
+        "ruleId": "seo-missing-h1",
+        "severity": "serious",
+        "title": "Missing H1 Heading",
+        "description": "Page is missing an H1 heading. Every page should have exactly one H1.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "headings",
+        "helpUrl": "https://moz.com/learn/seo/headings",
+        "howToFix": "Add <h1>Main topic of this page</h1> as the visible primary heading."
+      },
+      {
+        "id": "8a19d60c140a5636",
+        "scanner": "seo",
+        "ruleId": "seo-heading-hierarchy",
+        "severity": "minor",
+        "title": "Heading Hierarchy",
+        "description": "Heading hierarchy skips levels (H2 followed by H4). This may confuse screen readers and search engines.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "headings",
+        "howToFix": "Nest sections in order: <h1>Page</h1>, <h2>Section</h2>, <h3>Subsection</h3>. Choose heading levels for structure rather than size.",
+        "scannerData": {
+          "headings": [
+            {
+              "level": 2,
+              "text": "Section"
+            },
+            {
+              "level": 4,
+              "text": "Skipped level"
+            }
+          ]
+        }
+      },
+      {
+        "id": "4a83ae04531390f2",
+        "scanner": "seo",
+        "ruleId": "seo-images-missing-alt",
+        "severity": "serious",
+        "title": "Images Missing Alt Text",
+        "description": "1 image(s) are missing alt text. Alt text is important for accessibility and SEO.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "images",
+        "helpUrl": "https://moz.com/learn/seo/alt-text",
+        "howToFix": "Add <img src=\"…\" alt=\"Describe the information in this image\">. Use alt=\"\" for decorative images.",
+        "scannerData": {
+          "images": [
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+          ]
+        }
+      },
+      {
+        "id": "3fcf78b5ac9866a9",
+        "scanner": "seo",
+        "ruleId": "seo-missing-og-tags",
+        "severity": "moderate",
+        "title": "Missing Open Graph Tags",
+        "description": "Missing Open Graph tags: og:title, og:description, og:image. These improve social media sharing.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "social",
+        "helpUrl": "https://ogp.me/",
+        "howToFix": "Add <meta property=\"og:title\" content=\"Page title\">, <meta property=\"og:description\" content=\"Page summary\"> and <meta property=\"og:image\" content=\"https://your-site.example/share.jpg\"> inside <head>.",
+        "scannerData": {
+          "missing": [
+            "og:title",
+            "og:description",
+            "og:image"
+          ],
+          "present": []
+        }
+      },
+      {
+        "id": "cb95dcbb2e29af15",
+        "scanner": "seo",
+        "ruleId": "seo-missing-canonical",
+        "severity": "moderate",
+        "title": "Missing Canonical URL",
+        "description": "Page is missing a canonical URL. This helps prevent duplicate content issues.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "technical",
+        "helpUrl": "https://moz.com/learn/seo/canonicalization",
+        "howToFix": "Add <link rel=\"canonical\" href=\"https://your-site.example/this-page\"> inside <head>, using the preferred public URL of this page."
+      },
+      {
+        "id": "ef054270696f4719",
+        "scanner": "seo",
+        "ruleId": "seo-missing-viewport",
+        "severity": "serious",
+        "title": "Missing Viewport Meta Tag",
+        "description": "Page is missing viewport meta tag. This affects mobile usability and SEO.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "technical",
+        "howToFix": "Add <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> inside <head>. Do not disable zoom."
+      },
+      {
+        "id": "d040646b4b9c4dd4",
+        "scanner": "seo",
+        "ruleId": "seo-missing-language",
+        "severity": "moderate",
+        "title": "Missing Language Attribute",
+        "description": "HTML element is missing lang attribute. This helps search engines and screen readers.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "technical",
+        "howToFix": "Set <html lang=\"en\"> to the language actually used by this page; use the correct language code."
+      },
+      {
+        "id": "404252d59682eb58",
+        "scanner": "seo",
+        "ruleId": "seo-missing-structured-data",
+        "severity": "info",
+        "title": "Missing Structured Data",
+        "description": "No structured data (JSON-LD) found. Structured data can improve rich snippets in search results.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "technical",
+        "helpUrl": "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data",
+        "howToFix": "When the page represents a supported entity, add <script type=\"application/ld+json\"> with valid schema.org data describing its actual content. Validate it before publishing."
+      },
+      {
+        "id": "33601a338caf8ae1",
+        "scanner": "seo",
+        "ruleId": "seo-thin-content",
+        "severity": "moderate",
+        "title": "Thin Content",
+        "description": "Page has only 3 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": true,
+        "occurrences": [],
+        "category": "content",
+        "howToFix": "Add the information visitors need to complete this page’s purpose. Remove empty placeholder sections; a useful contact or utility page does not need filler text.",
+        "scannerData": {
+          "wordCount": 3,
+          "recommended": "100+"
+        }
+      }
+    ],
+    "artifacts": [],
+    "errors": []
+  },
+  "link-checker": {
+    "version": "2.1.0",
+    "meta": {
+      "jobId": "coverage-fixture",
+      "scannedAt": "2026-09-30T00:00:00.000Z",
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 0,
+      "baseUrl": "https://example.com/"
+    },
+    "summary": {
+      "totalIssues": 1,
+      "bySeverity": {
+        "critical": 0,
+        "serious": 1,
+        "moderate": 0,
+        "minor": 0,
+        "info": 0
+      },
+      "byScanner": {
+        "link-checker": 1
+      },
+      "pagesScanned": 1,
+      "pagesWithIssues": 1
+    },
+    "scanners": [
+      {
+        "id": "link-checker",
+        "name": "link-checker",
+        "status": "success",
+        "issueCount": 1,
+        "severity": {
+          "critical": 0,
+          "serious": 1,
+          "moderate": 0,
+          "minor": 0,
+          "info": 0
+        },
+        "toolVersion": "0.1.0",
+        "startedAt": "2026-09-30T00:00:00.000Z",
+        "completedAt": "2026-09-30T00:00:00.000Z",
+        "durationMs": 0,
+        "resultsPath": "coverage-fixture/link-checker/results.json"
+      }
+    ],
+    "pages": [
+      {
+        "id": "fixture-page",
+        "url": "https://example.com/",
+        "issueCount": 1,
+        "bySeverity": {
+          "critical": 0,
+          "serious": 1,
+          "moderate": 0,
+          "minor": 0,
+          "info": 0
+        },
+        "durationMs": 0,
+        "startedAt": "2026-09-30T00:00:00.000Z",
+        "finishedAt": "2026-09-30T00:00:00.000Z",
+        "path": "/"
+      }
+    ],
+    "issues": [
+      {
+        "id": "110f6bb3c15bc540",
+        "scanner": "link-checker",
+        "ruleId": "link-checker-no-text-links",
+        "severity": "serious",
+        "title": "Links Without Accessible Text",
+        "description": "Found 1 link(s) without accessible text content. Screen reader users won't know where these links lead.",
+        "wcagTags": [],
+        "pageId": "fixture-page",
+        "pageUrl": "https://example.com/",
+        "elementCount": 1,
+        "elementsTruncated": false,
+        "occurrences": [
+          {
+            "elementId": "occ-v2-31f08b909aca4b3b",
+            "target": [
+              "main > a"
+            ],
+            "selector": "main > a",
+            "html": "<a href=\"/docs\"></a>"
+          }
+        ],
+        "category": "accessibility",
+        "helpUrl": "https://www.w3.org/WAI/WCAG21/Understanding/link-purpose-in-context.html",
+        "scannerData": {
+          "links": [
+            "<a href=\"/docs\"></a>"
+          ]
+        }
+      }
+    ],
+    "artifacts": [],
+    "errors": []
+  }
+}

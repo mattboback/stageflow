@@ -1,11 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { buildOccurrenceModeReport, splitManualChecks } from '../report';
-import { isUnifiedReport } from '../projects';
+import { computeProjectDiff, hasStableReportIdentity, isUnifiedReport } from '../projects';
 import { getPageOverviewUrl } from '../report/screenshots';
 import { DEMO_SUMMARY } from './demo-summary';
+import { DEMO_CROP } from './demo-crop';
 import type { ScreenshotArtifact } from '../types/scan';
 import type { UnifiedReport } from '../types/unified-report';
 
@@ -36,11 +38,67 @@ function readJson<T>(name: string): T {
 }
 
 const report = readJson<UnifiedReport>('report.json');
+const baseline = readJson<UnifiedReport>('baseline.json');
+const comparison = computeProjectDiff('demo-baseline', baseline, 'demo', report);
 const screenshots = readJson<ScreenshotArtifact[]>('screenshots.json');
 
 describe('the committed /demo fixture', () => {
 	it('is a report the app would accept from the API', () => {
 		expect(isUnifiedReport(report)).toBe(true);
+		expect(isUnifiedReport(baseline)).toBe(true);
+	});
+
+	it('validates both real reports against the shared schema and integrity checks', () => {
+		const validator = path.resolve(process.cwd(), '../../libs/contracts/report/schema/validate.js');
+		for (const name of ['baseline.json', 'report.json']) {
+			expect(() =>
+				execFileSync('node', [validator, path.join(DEMO_DIR, name)], { stdio: 'pipe' })
+			).not.toThrow();
+		}
+	});
+
+	it('runs all five supported scanners to completion in both versions', () => {
+		for (const fixture of [baseline, report]) {
+			expect(fixture.scanners.map((scanner) => scanner.id).sort()).toEqual([
+				'axe',
+				'lighthouse',
+				'link-checker',
+				'security-headers',
+				'seo'
+			]);
+			expect(fixture.scanners.every((scanner) => scanner.status === 'success')).toBe(true);
+			expect(hasStableReportIdentity(fixture)).toBe(true);
+		}
+	});
+
+	it('shows real regressions and fixes without excluded scanners', () => {
+		expect(comparison.delta.newIssues).toBeGreaterThan(0);
+		expect(comparison.delta.fixedIssues).toBeGreaterThan(0);
+		expect(comparison.skippedScanners ?? []).toEqual([]);
+		expect(comparison.incompatibleIdentity).toBeUndefined();
+	});
+
+	it('lets successful axe scans own overlapping accessibility rules in both real reports', () => {
+		const duplicateRules = new Set([
+			'seo-images-missing-alt',
+			'seo-missing-title',
+			'seo-missing-language',
+			'seo-heading-hierarchy',
+			'link-checker-no-text-links'
+		]);
+		for (const fixture of [baseline, report]) {
+			if (
+				!fixture.scanners.some((scanner) => scanner.id === 'axe' && scanner.status === 'success')
+			) {
+				continue;
+			}
+			expect(
+				fixture.issues
+					.filter((issue) => duplicateRules.has(issue.ruleId))
+					.map((issue) => issue.ruleId),
+				`${fixture.meta.jobId}: overlapping scanner rules survived a successful axe scan`
+			).toEqual([]);
+		}
 	});
 
 	it('is not addressed as a live job', () => {
@@ -48,6 +106,7 @@ describe('the committed /demo fixture', () => {
 		// /scan/<id>/report and get a 404, and would key review verdicts on a
 		// job that no longer exists.
 		expect(report.meta.jobId).toBe('demo');
+		expect(baseline.meta.jobId).toBe('demo-baseline');
 	});
 
 	it('has findings to show', () => {
@@ -117,7 +176,7 @@ describe('the committed /demo fixture', () => {
 	it('carries no dead object-store references', () => {
 		// These are keys into a bucket, so they are useless statically -- and they
 		// embed the real job id that meta.jobId was rewritten to hide.
-		const raw = JSON.stringify(report);
+		const raw = JSON.stringify([baseline, report]);
 		expect(raw).not.toContain('resultsPath');
 		expect(raw).not.toContain('reportPath');
 	});
@@ -135,14 +194,55 @@ describe('the committed /demo fixture', () => {
 		expect(DEMO_SUMMARY.serious).toBe(
 			displayed.issues.filter((issue) => issue.severity === 'serious').length
 		);
+		expect(DEMO_SUMMARY.newIssues).toBe(comparison.delta.newIssues);
+		expect(DEMO_SUMMARY.fixedIssues).toBe(comparison.delta.fixedIssues);
+		expect(DEMO_SUMMARY.unchangedIssues).toBe(comparison.delta.unchangedIssues);
+		expect(DEMO_SUMMARY.baselineScore).toBe(baseline.summary.score ?? null);
+		expect(DEMO_SUMMARY.currentScore).toBe(report.summary.score ?? null);
+		expect(DEMO_SUMMARY.scoreDelta).toBe(comparison.delta.scoreDelta ?? null);
+		expect(DEMO_SUMMARY.terminal).toBe(
+			`stageflow diff baseline.json current.json --fail-on-new=any\nNew: ${comparison.delta.newIssues} · Fixed: ${comparison.delta.fixedIssues} · Unchanged: ${comparison.delta.unchangedIssues}`
+		);
 		expect(DEMO_SUMMARY.moderate).toBe(
 			displayed.issues.filter((issue) => issue.severity === 'moderate').length
 		);
 	});
 
+	it('shows a screenshot crop for a real new occurrence on the home page', () => {
+		const crop = DEMO_CROP;
+		expect(crop).not.toBeNull();
+		if (!crop) throw new Error('The sample deployment needs a captured new finding');
+		const displayed = buildOccurrenceModeReport(splitManualChecks(report).report);
+		const issue = displayed.issues.find((value) => value.id === crop.issueId);
+		expect(issue).toBeTruthy();
+		const newIds = new Set(
+			comparison.new.flatMap(
+				(value) => value.occurrences?.map((occurrence) => occurrence.elementId) ?? []
+			)
+		);
+		expect(issue?.occurrences?.some((occurrence) => newIds.has(occurrence.elementId))).toBe(true);
+		const page = displayed.pages.find((value) => value.id === issue?.pageId);
+		expect(page?.pageOverview?.pageWidth).toBe(crop.pageWidth);
+		expect(page?.pageOverview?.pageHeight).toBe(crop.pageHeight);
+		expect(page?.pageOverview?.elements).toContainEqual(crop.element);
+		expect(
+			screenshots.some((shot) => shot.url === crop.screenshot && shot.page_id === issue?.pageId)
+		).toBe(true);
+		expect(existsSync(path.join(DEMO_DIR, path.basename(crop.screenshot)))).toBe(true);
+	});
+
 	it('leaks nothing from the machine that generated it', () => {
-		const raw = `${JSON.stringify(report)}${JSON.stringify(screenshots)}`;
-		for (const forbidden of ['localhost', '127.0.0.1', 'X-Amz-', 'minio']) {
+		const raw = `${JSON.stringify(baseline)}${JSON.stringify(report)}${JSON.stringify(screenshots)}`;
+		for (const forbidden of [
+			'localhost',
+			'127.0.0.1',
+			'X-Amz-',
+			'minio',
+			'/workspace/',
+			'"storage_state":',
+			'"auth":',
+			'"password":'
+		]) {
 			expect(raw, `${forbidden} survived into the committed fixture`).not.toContain(forbidden);
 		}
 	});

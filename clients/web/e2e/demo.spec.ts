@@ -1,3 +1,4 @@
+import { DEMO_SUMMARY } from '../app/lib/demo/demo-summary';
 import { expect, test } from './fixtures';
 
 /*
@@ -11,10 +12,12 @@ import { expect, test } from './fixtures';
 test.describe('the demo report', () => {
 	test('opens from the home page and renders a real scan', async ({ page }) => {
 		await page.goto('/');
-		await page.getByRole('link', { name: /Open the report/ }).click();
+		await page.getByRole('link', { name: /See what changed/ }).click();
 
 		await expect(page).toHaveURL(/\/demo$/);
-		await expect(page.getByRole('heading', { level: 1, name: 'stageflow.org' })).toBeVisible();
+		await expect(
+			page.getByRole('heading', { level: 1, name: 'sample.stageflow.org' })
+		).toBeVisible();
 		// Findings, not "no findings" -- the empty branch is the failure mode.
 		await expect(page.getByRole('tab', { name: /Findings/ })).toBeVisible();
 		await expect(page.getByRole('tab', { name: /Artifacts/ })).toBeVisible();
@@ -41,13 +44,43 @@ test.describe('the demo report', () => {
 		const next = page.getByRole('button', { name: /Next finding on this page/ });
 		await expect(next).toBeVisible();
 
-		// The active marker is the one drawn with the heavier stroke, which is the
-		// only externally visible signal that the walk moved. Asserting zero first
-		// is what makes the second assertion mean anything.
-		const active = page.locator('.vrev__marker[stroke-width="6"]');
+		// NEW markers are already emphasized; the selected marker has its own state.
+		const active = page.locator('.vrev__marker--active');
 		await expect(active).toHaveCount(0);
 		await next.click();
 		await expect(active).toHaveCount(1);
+		await expect(active).toHaveAttribute('stroke-width', '6');
+	});
+
+	test('prerenders the real comparison and exposes NEW filters and findings', async ({ page }) => {
+		const response = await page.request.get('/demo');
+		const html = await response.text();
+		expect(html).toContain('New in this deploy');
+		expect(html).not.toContain('Loading demo report');
+		await page.goto('/demo');
+		await expect(
+			page.getByRole('heading', {
+				name: `New in this deploy (${DEMO_SUMMARY.newIssues}) · Fixed (${DEMO_SUMMARY.fixedIssues})`
+			})
+		).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
+		await expect(page.locator('.vrev__marker--new').first()).toBeVisible();
+		await page.getByRole('tab', { name: /Findings/ }).click();
+		const filter = page.getByRole('checkbox', { name: 'New in this deploy' });
+		await filter.click();
+		await expect(filter).toBeChecked();
+		await expect(page).toHaveURL(/[?&]new=1/);
+		await expect(page.locator('.irow, .igroup').first()).toContainText('NEW');
+	});
+
+	test('the home page crop opens the new finding from the real comparison', async ({ page }) => {
+		await page.goto('/');
+		const crop = page.locator('.preview__evidence');
+		await expect(crop.getByText('NEW', { exact: true })).toBeVisible();
+		await expect(crop.getByRole('img', { name: /Evidence:/ })).toBeVisible();
+		await crop.click();
+		await expect(page).toHaveURL(/\/demo\?section=issues&issue=/);
+		await expect(page.getByRole('dialog', { name: 'Issue details' })).toBeVisible();
 	});
 
 	test('serves the fixture it claims to render', async ({ page }) => {

@@ -31,6 +31,10 @@ describe('LinkCheckerScanner', () => {
 			expect(getSeverityForStatus(503)).toBe('critical');
 		});
 
+		it('treats external server errors as moderate', () => {
+			expect(getSeverityForStatus(503, false)).toBe('moderate');
+		});
+
 		it("returns 'moderate' for other 4xx client errors", () => {
 			expect(getSeverityForStatus(400)).toBe('moderate');
 			expect(getSeverityForStatus(401)).toBe('moderate');
@@ -71,6 +75,30 @@ describe('LinkCheckerScanner', () => {
 
 			expect(result.status).toBe(200);
 			expect(result.error).toBeNull();
+		});
+
+		it('reselects cookies for every redirect destination without leaking the first session', async () => {
+			const fetchMock = vi
+				.fn()
+				.mockResolvedValueOnce({
+					status: 302,
+					headers: new Headers({ location: 'https://other.example/final' })
+				})
+				.mockResolvedValueOnce({ status: 200, headers: new Headers() });
+			globalThis.fetch = fetchMock;
+			const cookiesForURL = vi.fn((url: string) =>
+				Promise.resolve(new URL(url).origin === 'https://example.com' ? 'session=secret' : '')
+			);
+			const result = await checkSingleLink(
+				'https://example.com/start#anchor',
+				{ allowedOrigins: ['https://example.com', 'https://other.example'] },
+				cookiesForURL
+			);
+			expect(result.status).toBe(200);
+			expect(fetchMock.mock.calls[0]?.[0]).toBe('https://example.com/start');
+			expect(fetchMock.mock.calls[0]?.[1].headers.Cookie).toBe('session=secret');
+			expect(fetchMock.mock.calls[1]?.[1].headers.Cookie).toBeUndefined();
+			expect(cookiesForURL).toHaveBeenCalledWith('https://other.example/final');
 		});
 
 		it('returns error for network failure', async () => {

@@ -1,22 +1,22 @@
 import { useState } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
-import { Check } from 'lucide-react';
+
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
 import { Pill } from '../components/Pill';
+import { DEMO_CROP } from '../lib/demo/demo-crop';
+import { getCroppedViewBox } from '../lib/report/screenshot-crop';
 import { DEMO_SUMMARY } from '../lib/demo/demo-summary';
+import { submitScanJob } from '../lib/api/client';
 import { SCANNER_META } from '../lib/report/scanner-identity';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import {
 	buildSiteMeta,
-	DOCS_URL,
-	GITHUB_URL,
 	HOME_DESCRIPTION,
 	HOME_TITLE,
 	IS_HOSTED_DEMO,
 	SITE_NAME,
-	SITE_TAGLINE,
 	SITE_URL
 } from '../lib/site-metadata';
 import homeStyles from './home.css?url';
@@ -42,21 +42,25 @@ export const meta: MetaFunction = () => [
 
 const BASELINE_TRACK = [
 	{
-		score: '92',
-		title: 'Establish a baseline',
-		body: 'Pick a known-good run as your point of reference.'
+		score: String(DEMO_SUMMARY.baselineScore ?? '—'),
+		title: 'Save a baseline',
+		body: 'Choose a reviewed scan as your point of reference.'
 	},
 	{
-		score: '88',
-		title: 'Scan every deploy',
-		body: 'Each new scan is compared against that baseline.'
+		score: String(DEMO_SUMMARY.currentScore ?? '—'),
+		title: 'Scan your next build',
+		body: 'Inspect confirmed problems and actionable fixes.'
 	},
 	{
-		delta: -4,
-		title: 'Review only what changed',
-		body: 'New or worsened findings are highlighted; everything else stays quiet.'
+		delta: DEMO_SUMMARY.scoreDelta ?? 0,
+		title: 'Review what changed',
+		body: `${DEMO_SUMMARY.newIssues} new · ${DEMO_SUMMARY.fixedIssues} fixed in the real sample deployment.`
 	}
 ] as const;
+
+const cropView = DEMO_CROP
+	? getCroppedViewBox(DEMO_CROP.pageWidth, DEMO_CROP.pageHeight, DEMO_CROP.element)
+	: null;
 
 const PATH_STEPS = [
 	{
@@ -67,7 +71,7 @@ const PATH_STEPS = [
 	{
 		n: '2',
 		title: 'Run',
-		body: 'Each scanner runs in an isolated rootless container.'
+		body: 'Review problems with page evidence and specific fixes.'
 	},
 	{
 		n: '3',
@@ -78,10 +82,11 @@ const PATH_STEPS = [
 
 export default function Home() {
 	const navigate = useNavigate();
-	const [url, setUrl] = useState('https://example.com');
+	const [url, setUrl] = useState('');
+	const [submitting, setSubmitting] = useState(false);
 	const [urlError, setUrlError] = useState<string | null>(null);
 
-	function onScan(e: React.SyntheticEvent) {
+	async function onScan(e: React.SyntheticEvent) {
 		e.preventDefault();
 		const normalized = normalizeUrlInput(url);
 		if (!normalized) {
@@ -94,7 +99,21 @@ export default function Home() {
 			return;
 		}
 		setUrlError(null);
-		void navigate(`/playground?url=${encodeURIComponent(checked.url)}`);
+		setSubmitting(true);
+		try {
+			const job = await submitScanJob({
+				mode: 'url',
+				file: null,
+				urls: [checked.url],
+				scanners: Object.keys(SCANNER_META).map((id) => ({ id, enabled: true })),
+				screenshot: true
+			});
+			await navigate(`/scan/${encodeURIComponent(job.job_id)}`);
+		} catch (error) {
+			setUrlError(error instanceof Error ? error.message : 'Could not submit the scan.');
+		} finally {
+			setSubmitting(false);
+		}
 	}
 
 	return (
@@ -107,15 +126,13 @@ export default function Home() {
 					<div className="wrap wrap--app hero__grid">
 						<div className="hero__copy">
 							<h1 id="hero-heading">
-								Every deploy, measured against your <span className="verdict">last known-good</span>
-								.
+								Find what to fix. See what your <span className="verdict">deployment changed</span>.
 							</h1>
 							<p className="hero__lede">
-								{SITE_NAME} runs five scanners, compares each release against the baseline you
-								promoted, and shows exactly what changed. Local projects work without an account and
-								stay in your browser.
+								{SITE_NAME} checks accessibility, SEO, links, and security. Start with a prioritized
+								fix list, then compare the next run with your saved baseline.
 							</p>
-							<form className="scanbar" onSubmit={onScan} noValidate>
+							<form className="scanbar" onSubmit={(event) => void onScan(event)} noValidate>
 								<label className="sr-only" htmlFor="url">
 									URL to scan
 								</label>
@@ -141,8 +158,8 @@ export default function Home() {
 										</span>
 									)}
 								</div>
-								<button className="btn btn--primary btn--lg" type="submit">
-									Scan{' '}
+								<button className="btn btn--primary btn--lg" type="submit" disabled={submitting}>
+									{submitting ? 'Starting…' : 'Scan'}{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>
@@ -154,8 +171,8 @@ export default function Home() {
 									: 'No account, no install. Save a local project after the first report if you want a baseline.'}
 							</p>
 							<p className="hero__note muted">
-								<Link to="/projects">Create a local project</Link> when you are ready to compare
-								releases.
+								<Link to="/playground">Configure a scan</Link> ·{' '}
+								<Link to="/projects">Compare releases in a local project</Link>
 							</p>
 						</div>
 
@@ -175,32 +192,61 @@ export default function Home() {
 							<div className="panel__body">
 								<div className="preview__reg">
 									<p className="preview__reg-title">
-										<span className="sev-dot sev-serious" aria-hidden="true" /> A real report, not a
-										screenshot
+										<span className="sev-dot sev-serious" aria-hidden="true" /> Sample deployment
+										comparison
 									</p>
+									{DEMO_CROP && cropView && (
+										<Link
+											className="preview__evidence"
+											to={`/demo?section=issues&issue=${encodeURIComponent(DEMO_CROP.issueId)}`}
+										>
+											<span className="preview__new">NEW</span>
+											<span>{DEMO_CROP.title}</span>
+											<svg
+												viewBox={`${cropView.x} ${cropView.y} ${cropView.width} ${cropView.height}`}
+												role="img"
+												aria-label={`Evidence: ${DEMO_CROP.title}`}
+											>
+												<image
+													href={DEMO_CROP.screenshot}
+													width={DEMO_CROP.pageWidth}
+													height={DEMO_CROP.pageHeight}
+												/>
+												<rect
+													x={DEMO_CROP.element.x}
+													y={DEMO_CROP.element.y}
+													width={DEMO_CROP.element.width}
+													height={DEMO_CROP.element.height}
+													fill="transparent"
+													stroke="#dc2626"
+													strokeWidth={3}
+												/>
+											</svg>
+										</Link>
+									)}
 									<ul className="preview__reg-rows">
 										<li>
-											<span>Pages scanned</span>
-											<span className="num">{DEMO_SUMMARY.pages}</span>
+											<span>New in this deploy</span>
+											<strong>{DEMO_SUMMARY.newIssues}</strong>
 										</li>
 										<li>
-											<span>Scanners merged</span>
-											<span className="num">{DEMO_SUMMARY.scannersRun}</span>
+											<span>Fixed</span>
+											<strong>{DEMO_SUMMARY.fixedIssues}</strong>
 										</li>
 										<li>
-											<span>Findings</span>
-											<span className="num">
-												{DEMO_SUMMARY.totalIssues}{' '}
-												<span className="preview__reg-sev">{DEMO_SUMMARY.serious} serious</span>
-											</span>
+											<span>Score</span>
+											<strong>
+												{DEMO_SUMMARY.baselineScore ?? '—'} → {DEMO_SUMMARY.currentScore ?? '—'}
+											</strong>
 										</li>
 									</ul>
 									<p className="preview__reg-note">
-										StageFlow scanning stageflow.org, findings and all. The viewer below is the same
-										one a scan of your site opens.
+										Two real scans of the same sample site: inspect new problems, their evidence,
+										and fixes.
 									</p>
+
 									<Link className="btn btn--primary" to="/demo">
-										Open the report{' '}
+										See what changed{' '}
 										<span className="ar" aria-hidden="true">
 											→
 										</span>
@@ -327,67 +373,20 @@ export default function Home() {
 								CLI
 							</h2>
 							<pre className="terminal__pre">
-								<code>
-									<span className="terminal__prompt">$</span> stageflow scan https://example.com
-									--fail-on serious
-									{'\n'}
-									{'\n'}
-									<span className="terminal__ok">✓</span> axe{'              '}21 issues · 36.8s
-									{'\n'}
-									<span className="terminal__ok">✓</span> lighthouse{'       '}82 issues · 82.6s
-									{'\n'}
-									<span className="terminal__ok">✓</span> 5 more scanners{'  '}completed
-									{'\n'}
-									{'\n'}
-									Score: 88 (B) · serious 2 · moderate 5 · minor 11
-									{'\n'}
-									Baseline: May 5 →{' '}
-									<span className="terminal__warn">3 new serious regressions</span>
-									{'\n'}
-									Report: reports/example-2026-07-10.html
-								</code>
+								<code>{DEMO_SUMMARY.terminal}</code>
 							</pre>
 						</div>
 
-						<div className="panel selfhost">
+						<div className="panel">
 							<div className="panel__body">
-								<h2>{SITE_TAGLINE}.</h2>
+								<h2>Put regressions in your CI summary.</h2>
 								<p className="muted">
-									{IS_HOSTED_DEMO
-										? `This hosted ${SITE_NAME} demo processes submitted targets and scan data. Self-host it when data residency matters.`
-										: `${SITE_NAME} processes scans in your deployment. Use the UI for exploration or the CLI for automation.`}
+									Scan a build, compare it with the reviewed baseline, and open the full report for
+									evidence and fixes.
 								</p>
-								<ul className="selfhost__list">
-									<li>
-										<span className="selfhost__mark" aria-hidden="true">
-											<Check size={13} />
-										</span>
-										Rootless Podman isolation
-									</li>
-									<li>
-										<span className="selfhost__mark" aria-hidden="true">
-											<Check size={13} />
-										</span>
-										Self-host on supported Linux infrastructure
-									</li>
-									<li>
-										<span className="selfhost__mark" aria-hidden="true">
-											<Check size={13} />
-										</span>
-										Reports you own: HTML and JSON
-									</li>
-								</ul>
-								<div className="selfhost__actions">
-									<a className="btn btn--primary" href={DOCS_URL}>
-										Documentation{' '}
-										<span className="ar" aria-hidden="true">
-											→
-										</span>
-									</a>
-									<a className="btn btn--ghost" href={GITHUB_URL}>
-										GitHub ↗
-									</a>
-								</div>
+								<Link className="btn btn--primary" to="/demo">
+									Explore the comparison →
+								</Link>
 							</div>
 						</div>
 					</div>

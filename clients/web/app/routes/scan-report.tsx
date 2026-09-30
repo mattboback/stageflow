@@ -29,6 +29,7 @@ import {
 } from '../lib/local-project-store';
 import {
 	buildArchivedLocalRun,
+	computeProjectDiff,
 	fingerprintProjectConfiguration,
 	isUnifiedReport,
 	type LocalBaseline,
@@ -270,6 +271,14 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		</>
 	) : null;
 
+	const comparison =
+		report &&
+		localRun &&
+		localBaseline &&
+		localBaseline.configFingerprint === localRun.configFingerprint
+			? computeProjectDiff(localBaseline.jobId, localBaseline.report, id, report)
+			: null;
+
 	return (
 		<>
 			<SiteHeader
@@ -281,6 +290,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 			/>
 			<ReportView
 				jobId={id}
+				comparison={comparison}
 				report={report}
 				screenshots={screenshots}
 				status={status}

@@ -4,12 +4,6 @@ import type { ReviewVerdict } from './review-verdict';
 import { isAxeIncompleteIssue, isColorContrastIssue } from './contrast-verify';
 import { isManualReviewIssue } from './issue-kind';
 
-export interface ReviewProgress {
-	total: number;
-	reviewed: number;
-	pending: number;
-}
-
 export interface ReviewGroupStatus {
 	label: string;
 	tone: 'pending' | 'pass' | 'fail' | 'mixed';

@@ -3,10 +3,12 @@ import {
 	SCANNER_META,
 	getSeverityBadgeClass,
 	getSeverityDotClass,
+	getIssueKind,
 	rewriteIssueTitle
 } from '../../lib/report';
 
 import { ScannerText } from './ScannerText';
+import { TruncatedEvidence } from './TruncatedEvidence';
 
 interface Props {
 	issue: IssueDetail;
@@ -14,12 +16,13 @@ interface Props {
 	// `| undefined` for props that callers forward from their own optional prop.
 	onSelect?: ((issue: IssueDetail) => void) | undefined;
 	showPageUrl?: boolean;
+	isNew?: boolean;
 }
 
-export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
+export function IssueRowCard({ issue, onSelect, showPageUrl = true, isNew = false }: Props) {
 	const scannerLabel = SCANNER_META[issue.scanner]?.label ?? issue.scanner;
 	const title = rewriteIssueTitle(issue);
-	const occCount = issue.elementCount ?? issue.occurrences?.length ?? 1;
+	const occCount = issue.elementCount ?? issue.occurrences?.length ?? 0;
 
 	const content = (
 		<>
@@ -27,7 +30,9 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 				<span className={getSeverityDotClass(issue.severity)} />
 			</div>
 			<div className="irow__main">
-				<h3 className="irow__title">{title}</h3>
+				<h3 className="irow__title">
+					{title} {isNew && <span className="issue-new">NEW</span>}
+				</h3>
 				<div className="irow__meta">
 					<span className={getSeverityBadgeClass(issue.severity)}>{issue.severity}</span>
 					<span className="irow__meta-item">
@@ -51,11 +56,14 @@ export function IssueRowCard({ issue, onSelect, showPageUrl = true }: Props) {
 						<ScannerText text={issue.description} links={false} />
 					</p>
 				)}
+				<TruncatedEvidence issue={issue} />
 			</div>
-			<div className="irow__right">
-				<span className="irow__count">{occCount}</span>
-				<span className="irow__count-lab">{occCount === 1 ? 'occurrence' : 'occurrences'}</span>
-			</div>
+			{getIssueKind(issue) === 'element' && occCount > 0 && (
+				<div className="irow__right">
+					<span className="irow__count">{occCount}</span>
+					<span className="irow__count-lab">{occCount === 1 ? 'occurrence' : 'occurrences'}</span>
+				</div>
+			)}
 		</>
 	);
 

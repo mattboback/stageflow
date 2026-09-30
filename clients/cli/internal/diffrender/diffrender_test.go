@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+	"github.com/mattboback/stageflow/libs/go/diff"
 )
 
 func intPtr(i int) *int { return &i }
@@ -169,6 +170,7 @@ func TestRender_ScoreFormat(t *testing.T) {
 	env := Envelope{
 		Baseline: BaselineMeta{Score: intPtr(90)},
 		Current:  CurrentMeta{Score: intPtr(85)},
+		Delta:    Delta{ScoreDelta: intPtr(-5)},
 	}
 
 	var buf bytes.Buffer
@@ -211,5 +213,47 @@ func TestRender_SkippedScanners(t *testing.T) {
 
 	if strings.Contains(buf.String(), "Not compared") {
 		t.Fatalf("text mentions skipped scanners when there are none: %s", buf.String())
+	}
+}
+
+func TestRenderDoesNotInferScoreAcrossIncompleteCoverage(t *testing.T) {
+	for _, format := range []Format{FormatText, FormatMarkdown} {
+		env := Envelope{
+			Baseline:        BaselineMeta{Score: intPtr(90)},
+			Current:         CurrentMeta{Score: intPtr(85)},
+			SkippedScanners: []string{"axe"},
+			Delta:           Delta{ScoreDelta: intPtr(-5)},
+		}
+
+		var buf bytes.Buffer
+		if err := Render(&buf, env, format); err != nil {
+			t.Fatal(err)
+		}
+
+		if !strings.Contains(buf.String(), "N/A") || strings.Contains(buf.String(), "(-5)") {
+			t.Fatalf("incomplete score comparison rendered: %s", buf.String())
+		}
+	}
+}
+
+func TestIncompatibleIdentityPropagatesAndRenders(t *testing.T) {
+	env := FromResult(diff.Result{IncompatibleIdentity: true}, "baseline.json", "current.json")
+	if !env.IncompatibleIdentity {
+		t.Fatal("identity incompatibility lost in envelope")
+	}
+
+	for _, format := range []Format{FormatText, FormatMarkdown, FormatJSON} {
+		var buf bytes.Buffer
+		if err := Render(&buf, env, format); err != nil {
+			t.Fatal(err)
+		}
+
+		if format == FormatJSON {
+			if !strings.Contains(buf.String(), `"incompatibleIdentity": true`) {
+				t.Fatalf("JSON missing incompatibility: %s", buf.String())
+			}
+		} else if !strings.Contains(buf.String(), "replacement baseline") || strings.Contains(buf.String(), "No new issues detected") {
+			t.Fatalf("misleading incompatible comparison: %s", buf.String())
+		}
 	}
 }

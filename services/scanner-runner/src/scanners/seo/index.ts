@@ -12,6 +12,7 @@ import { ScannerBase } from '../../core/scanner-base';
 import { SCANNER_VERSION } from '../version';
 import { SEO_CHECKS } from './checks';
 import { extractSEOData } from './extract';
+import { SEO_FIXES } from './fix-guidance';
 
 export class SEOScanner extends ScannerBase {
 	readonly metadata = {
@@ -41,6 +42,7 @@ export class SEOScanner extends ScannerBase {
 							title: check.title,
 							description: result.message,
 							...(check.helpUrl !== undefined ? { helpUrl: check.helpUrl } : {}),
+							...(SEO_FIXES[check.id] ? { howToFix: SEO_FIXES[check.id] } : {}),
 							...(result.details !== undefined ? { metadata: result.details } : {})
 						});
 					}

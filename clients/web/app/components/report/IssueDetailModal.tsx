@@ -21,6 +21,7 @@ import {
 } from '../../lib/report';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 
+import { TruncatedEvidence } from './TruncatedEvidence';
 import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueOccurrenceCard } from './IssueOccurrenceCard';
 import { ScannerText } from './ScannerText';
@@ -60,7 +61,7 @@ export function IssueDetailModal({
 	const primaryOccurrence = issue.occurrences?.[0] ?? null;
 	const occurrenceCount = issue.occurrences?.length ?? 0;
 	const contextualFix = useMemo(
-		() => generateContextualFix(issue, primaryOccurrence),
+		() => issue.howToFix || generateContextualFix(issue, primaryOccurrence),
 		[issue, primaryOccurrence]
 	);
 	const pageOverviewUrl = useMemo(
@@ -81,7 +82,8 @@ export function IssueDetailModal({
 		primaryOccurrence?.ancestorPath ||
 		primaryOccurrence?.contextHtml ||
 		primaryOccurrence?.html ||
-		primaryOccurrence?.failureSummary
+		primaryOccurrence?.failureSummary ||
+		(issue.scanner === 'lighthouse' && issue.scannerData?.details)
 	);
 
 	const canVerifyContrast = isColorContrastIssue(issue);
@@ -319,6 +321,32 @@ export function IssueDetailModal({
 									</p>
 								)}
 							</section>
+							{issue.userImpact &&
+								(issue.userImpact.statement ||
+									issue.userImpact.affectedGroups?.length ||
+									issue.userImpact.userStory) && (
+									<section>
+										<h3 className="imodal__pane-h">Who this affects</h3>
+										{issue.userImpact.statement && (
+											<p>
+												<ScannerText text={issue.userImpact.statement} />
+											</p>
+										)}
+										{issue.userImpact.affectedGroups &&
+											issue.userImpact.affectedGroups.length > 0 && (
+												<p>
+													{issue.userImpact.affectedGroups
+														.map((group) => group.replaceAll('-', ' '))
+														.join(', ')}
+												</p>
+											)}
+										{issue.userImpact.userStory && (
+											<p>
+												<ScannerText text={issue.userImpact.userStory} />
+											</p>
+										)}
+									</section>
+								)}
 							<section>
 								<h3 className="imodal__pane-h">About this rule</h3>
 								<p className="imodal__desc">
@@ -379,10 +407,13 @@ export function IssueDetailModal({
 							aria-labelledby="issue-tab-occurrences"
 						>
 							<h3 className="imodal__pane-h">
-								{occurrenceCount === 1
-									? 'Affected element'
-									: `Affected elements (${occurrenceCount})`}
+								{issueKind !== 'element'
+									? 'Reported locations'
+									: occurrenceCount === 1
+										? 'Affected element'
+										: `Affected elements (${occurrenceCount})`}
 							</h3>
+							<TruncatedEvidence issue={issue} />
 							<div className="imodal__occs">
 								{(issue.occurrences ?? []).map((occ, idx) => (
 									<IssueOccurrenceCard

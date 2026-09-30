@@ -120,19 +120,52 @@ function collectPageErrors(page: Page): string[] {
 }
 
 test.describe('employer-facing product claims', () => {
-	test('homepage describes the supported runtime and owned report formats', async ({ page }) => {
+	test('homepage leads with real regressions and a direct URL submission', async ({ page }) => {
 		await page.goto('/');
+		await expect(page.getByRole('heading', { name: /Find what to fix/ })).toBeVisible();
+		await expect(page.getByLabel('URL to scan')).toHaveValue('');
+		await expect(page.getByLabel('URL to scan')).toHaveAttribute(
+			'placeholder',
+			'https://example.com'
+		);
+		await expect(
+			page.getByLabel('Demo report summary').getByText('New in this deploy')
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: /See what changed/ })).toBeVisible();
+		await expect(page.locator('.selfhost')).toHaveCount(0);
+	});
 
-		const selfHost = page.locator('.selfhost');
-		await expect(selfHost.getByText('Rootless Podman isolation', { exact: true })).toBeVisible();
-		await expect(
-			selfHost.getByText('Self-host on supported Linux infrastructure', { exact: true })
-		).toBeVisible();
-		await expect(
-			selfHost.getByText('Reports you own: HTML and JSON', { exact: true })
-		).toBeVisible();
-		await expect(selfHost.getByText('Docker-based', { exact: false })).toHaveCount(0);
-		await expect(selfHost.getByText('SARIF', { exact: false })).toHaveCount(0);
+	test('homepage submits the URL and lands on live progress using the mocked API', async ({
+		page
+	}) => {
+		let submitted: Record<string, unknown> | null = null;
+		await page.route('**/api/v1/jobs/urls', async (route) => {
+			submitted = route.request().postDataJSON() as Record<string, unknown>;
+			await route.fulfill({
+				status: 201,
+				contentType: 'application/json',
+				body: JSON.stringify({ job_id: 'home-url-job' })
+			});
+		});
+		await page.route('**/api/v1/jobs/home-url-job', (route) =>
+			route.fulfill({
+				status: 200,
+				contentType: 'application/json',
+				body: JSON.stringify({
+					id: 'home-url-job',
+					state: 'scanning',
+					created_at: '2026-09-30T00:00:00Z'
+				})
+			})
+		);
+		await page.route('**/api/v1/jobs/home-url-job/stream**', (route) =>
+			route.fulfill({ status: 200, contentType: 'text/event-stream', body: ': waiting\n\n' })
+		);
+		await page.goto('/');
+		await page.getByLabel('URL to scan').fill('example.com');
+		await page.getByRole('button', { name: /^Scan/ }).click();
+		await expect(page).toHaveURL(/\/scan\/home-url-job$/);
+		expect(submitted).toMatchObject({ urls: ['https://example.com'] });
 	});
 
 	test('privacy is an in-app page, not a GitHub main-branch link', async ({ page }) => {
@@ -208,7 +241,7 @@ test('report page renders the fixture report end to end', async ({ page }) => {
 	await expect(
 		totals.getByText(`${report.summary.pagesWithIssues.toLocaleString()} with findings`)
 	).toBeVisible();
-	await expect(totals.getByText('Human review')).toBeVisible();
+	await expect(totals.getByText('Human review')).toHaveCount(0);
 
 	// Review landing: review-next CTA, filter toolbar, three-panel visual review.
 	await expect(page.getByText(/findings need review|findings reviewed/)).toBeVisible();
@@ -223,7 +256,7 @@ test('review queue records contrast and generic human decisions', async ({ page 
 	await mockReportRoutes(page);
 	await page.goto(`/scan/${JOB_ID}/report`);
 
-	await page.getByRole('button', { name: /Start review/ }).click();
+	await page.getByRole('button', { name: /Review human checks/ }).click();
 	await expect(page.getByRole('tab', { name: 'Verify' })).toHaveAttribute('aria-selected', 'true');
 	await page.getByRole('button', { name: 'Mark pass' }).click();
 
@@ -237,7 +270,7 @@ test('review queue records contrast and generic human decisions', async ({ page 
 
 	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
 	const totals = page.getByLabel('Scan totals');
-	await expect(totals.getByText('all 2 findings reviewed')).toBeVisible();
+	await expect(totals.getByText('Human review')).toHaveCount(0);
 	await expect(totals.getByText(/need a human check/)).toHaveCount(0);
 	await expect(page.getByText('needs review', { exact: true })).toHaveCount(0);
 	// Both findings were marked pass above, and both are attached to the same page,
@@ -254,7 +287,7 @@ test('review decisions synchronize without loss across browser tabs', async ({ c
 		otherPage.goto(`/scan/${JOB_ID}/report`)
 	]);
 
-	await page.getByRole('button', { name: /Start review/ }).click();
+	await page.getByRole('button', { name: /Review human checks/ }).click();
 	await page.getByRole('button', { name: 'Mark pass' }).click();
 	await page.getByRole('button', { name: 'Close modal' }).click();
 
@@ -275,14 +308,17 @@ test('review decisions synchronize without loss across browser tabs', async ({ c
 test.describe('mobile report (390×844)', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
-	test('review tab leads with the review-next CTA', async ({ page }) => {
+	test('review tab leads with confirmed fixes and keeps human checks secondary', async ({
+		page
+	}) => {
 		await mockReportRoutes(page);
 		const pageErrors = collectPageErrors(page);
 
 		await page.goto(`/scan/${JOB_ID}/report`);
 
 		await expect(page.getByText(/findings need review/)).toBeVisible();
-		await expect(page.getByRole('button', { name: /Start review/ })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
+		await expect(page.getByRole('button', { name: /Review human checks/ })).toBeVisible();
 
 		expect(pageErrors).toEqual([]);
 	});
@@ -358,6 +394,7 @@ test('a zero-finding report celebrates the all-clear instead of an empty queue',
 	const CLEAN_JOB_ID = 'e2e-clean-run';
 	cleanReport.meta.jobId = CLEAN_JOB_ID;
 	cleanReport.issues = [];
+	cleanReport.scanners = cleanReport.scanners.map((scanner) => ({ ...scanner, status: 'success' }));
 	cleanReport.errors = [];
 	cleanReport.summary.totalIssues = 0;
 	cleanReport.summary.pagesWithIssues = 0;

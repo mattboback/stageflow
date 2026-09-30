@@ -27,25 +27,25 @@
   "report": {
     "artifacts": [
       {
-        "id": "page-overview-axe-page-001",
+        "id": "page-overview-axe-page-v2-213456c5dc963e03",
         "mime": "image/webp",
         "path": "https://artifacts.invalid/NORMALIZED",
         "type": "page-overview"
       },
       {
-        "id": "page-overview-axe-page-002",
+        "id": "page-overview-axe-page-v2-78421f5b8fea2d9d",
         "mime": "image/webp",
         "path": "https://artifacts.invalid/NORMALIZED",
         "type": "page-overview"
       },
       {
-        "id": "page-overview-axe-page-003",
+        "id": "page-overview-axe-page-v2-9ac7a7b2ed8ccf33",
         "mime": "image/webp",
         "path": "https://artifacts.invalid/NORMALIZED",
         "type": "page-overview"
       },
       {
-        "id": "page-overview-axe-page-004",
+        "id": "page-overview-axe-page-v2-db5b16407156eab2",
         "mime": "image/webp",
         "path": "https://artifacts.invalid/NORMALIZED",
         "type": "page-overview"
@@ -59,12 +59,12 @@
         "elementsTruncated": false,
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/button-name?application=playwright",
         "howToFix": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
-        "id": "2b9345de2405",
+        "id": "deeed76d8515997f",
         "occurrences": [
           {
             "ancestorPath": "... > main > form > div.field > div.workspace-row > button#suggest-workspace.icon-button",
             "contextHtml": "<div class=\"workspace-row\">\n  <input id=\"signup-workspace\" name=\"workspace\" type=\"text\" autocomplete=\"organization\">\n  <button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle></svg></button> <!-- TARGET -->\n</div>",
-            "elementId": "2b9345de2405-el-0",
+            "elementId": "occ-v2-6b78ecd3969069a6",
             "failureSummary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
             "html": "<button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\">",
             "selector": "#suggest-workspace",
@@ -73,7 +73,7 @@
             ]
           }
         ],
-        "pageId": "page-004",
+        "pageId": "page-v2-78421f5b8fea2d9d",
         "pageUrl": "https://sample.invalid/signup.html",
         "ruleId": "button-name",
         "scanner": "axe",
@@ -101,12 +101,12 @@
         "elementsTruncated": false,
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/label?application=playwright",
         "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
-        "id": "1471cd3d6e06",
+        "id": "617730f9c5f1b11d",
         "occurrences": [
           {
             "ancestorPath": "body > main > form > div.field > input#signup-email",
             "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\"> <!-- TARGET -->\n</div>",
-            "elementId": "1471cd3d6e06-el-0",
+            "elementId": "occ-v2-01db558ae5bd6017",
             "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
             "html": "<input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\">",
             "selector": "#signup-email",
@@ -115,7 +115,7 @@
             ]
           }
         ],
-        "pageId": "page-004",
+        "pageId": "page-v2-78421f5b8fea2d9d",
         "pageUrl": "https://sample.invalid/signup.html",
         "ruleId": "label",
         "scanner": "axe",
@@ -134,7 +134,8 @@
         "wcagTags": [
           "wcag2a",
           "wcag412",
-          "WCAG 1.3.1"
+          "WCAG 1.3.1",
+          "Level A"
         ]
       },
       {
@@ -144,12 +145,12 @@
         "elementsTruncated": false,
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/select-name?application=playwright",
         "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
-        "id": "e3af3e13d504",
+        "id": "694f89df99f744f2",
         "occurrences": [
           {
             "ancestorPath": "html > body > main > select#billing-cycle",
             "contextHtml": "<main>\n  <!-- ... -->\n  <p>Choose your billing cycle:</p>\n  <select id=\"billing-cycle\" name=\"billing-cycle\"><option>Monthly billing</option><option>Annual billing</option></select> <!-- TARGET -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <!-- ... -->\n</main>",
-            "elementId": "e3af3e13d504-el-0",
+            "elementId": "occ-v2-9ee5ca4a5765c626",
             "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
             "html": "<select id=\"billing-cycle\" name=\"billing-cycle\"><option>Monthly billing</option><option>Annual billing</option></select>",
             "selector": "#billing-cycle",
@@ -158,7 +159,7 @@
             ]
           }
         ],
-        "pageId": "page-003",
+        "pageId": "page-v2-9ac7a7b2ed8ccf33",
         "pageUrl": "https://sample.invalid/pricing.html",
         "ruleId": "select-name",
         "scanner": "axe",
@@ -184,12 +185,12 @@
         "elementsTruncated": false,
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
         "howToFix": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
-        "id": "74cd9a0218af",
+        "id": "789c19f1c4b7f09d",
         "occurrences": [
           {
             "ancestorPath": "html > body > main > p#pricing-footnote.fineprint",
             "contextHtml": "<main>\n  <!-- ... -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p> <!-- TARGET -->\n</main>",
-            "elementId": "74cd9a0218af-el-0",
+            "elementId": "occ-v2-8e87cd4aa71cc1d5",
             "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
             "html": "<p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p>",
             "selector": "#pricing-footnote",
@@ -198,7 +199,7 @@
             ]
           }
         ],
-        "pageId": "page-003",
+        "pageId": "page-v2-9ac7a7b2ed8ccf33",
         "pageUrl": "https://sample.invalid/pricing.html",
         "ruleId": "color-contrast",
         "scanner": "axe",
@@ -227,7 +228,8 @@
         "wcagTags": [
           "wcag2aa",
           "wcag143",
-          "WCAG 1.4.3"
+          "WCAG 1.4.3",
+          "Level AA"
         ]
       },
       {
@@ -237,12 +239,12 @@
         "elementsTruncated": false,
         "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/link-name?application=playwright",
         "howToFix": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
-        "id": "4091e74b22b6",
+        "id": "0764c92e71494d27",
         "occurrences": [
           {
             "ancestorPath": "body > main > section > p > a#careers-link",
             "contextHtml": "<p>\n  <a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a> <!-- TARGET -->\n</p>",
-            "elementId": "4091e74b22b6-el-0",
+            "elementId": "occ-v2-87dd74631d32d60f",
             "failureSummary": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
             "html": "<a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a>",
             "selector": "#careers-link",
@@ -251,7 +253,7 @@
             ]
           }
         ],
-        "pageId": "page-001",
+        "pageId": "page-v2-db5b16407156eab2",
         "pageUrl": "https://sample.invalid/about.html",
         "ruleId": "link-name",
         "scanner": "axe",
@@ -291,14 +293,14 @@
         },
         "durationMs": 0,
         "finishedAt": "2000-01-01T00:00:00.000Z",
-        "id": "page-001",
+        "id": "page-v2-db5b16407156eab2",
         "issueCount": 1,
         "pageOverview": {
           "elements": [
             {
               "height": 42,
               "heightPercent": 2.92,
-              "issueId": "4091e74b22b6",
+              "issueId": "0764c92e71494d27",
               "nodeIndex": 0,
               "ruleId": "link-name",
               "selector": "#careers-link",
@@ -313,7 +315,7 @@
           ],
           "pageHeight": 1440,
           "pageWidth": 2560,
-          "screenshotFilename": "page-overview-page-001.webp"
+          "screenshotFilename": "page-overview-page-v2-db5b16407156eab2.webp"
         },
         "path": "/about.html",
         "startedAt": "2000-01-01T00:00:00.000Z",
@@ -322,13 +324,13 @@
       {
         "durationMs": 0,
         "finishedAt": "2000-01-01T00:00:00.000Z",
-        "id": "page-002",
+        "id": "page-v2-213456c5dc963e03",
         "issueCount": 0,
         "pageOverview": {
           "elements": [],
           "pageHeight": 2590,
           "pageWidth": 2560,
-          "screenshotFilename": "page-overview-page-002.webp"
+          "screenshotFilename": "page-overview-page-v2-213456c5dc963e03.webp"
         },
         "path": "/index.html",
         "startedAt": "2000-01-01T00:00:00.000Z",
@@ -343,14 +345,14 @@
         },
         "durationMs": 0,
         "finishedAt": "2000-01-01T00:00:00.000Z",
-        "id": "page-003",
+        "id": "page-v2-9ac7a7b2ed8ccf33",
         "issueCount": 2,
         "pageOverview": {
           "elements": [
             {
               "height": 45,
               "heightPercent": 2.52,
-              "issueId": "74cd9a0218af",
+              "issueId": "789c19f1c4b7f09d",
               "nodeIndex": 0,
               "ruleId": "color-contrast",
               "selector": "#pricing-footnote",
@@ -365,7 +367,7 @@
             {
               "height": 82,
               "heightPercent": 4.62,
-              "issueId": "e3af3e13d504",
+              "issueId": "694f89df99f744f2",
               "nodeIndex": 0,
               "ruleId": "select-name",
               "selector": "#billing-cycle",
@@ -380,7 +382,7 @@
           ],
           "pageHeight": 1774,
           "pageWidth": 2560,
-          "screenshotFilename": "page-overview-page-003.webp"
+          "screenshotFilename": "page-overview-page-v2-9ac7a7b2ed8ccf33.webp"
         },
         "path": "/pricing.html",
         "startedAt": "2000-01-01T00:00:00.000Z",
@@ -395,14 +397,14 @@
         },
         "durationMs": 0,
         "finishedAt": "2000-01-01T00:00:00.000Z",
-        "id": "page-004",
+        "id": "page-v2-78421f5b8fea2d9d",
         "issueCount": 2,
         "pageOverview": {
           "elements": [
             {
               "height": 90,
               "heightPercent": 4.95,
-              "issueId": "2b9345de2405",
+              "issueId": "deeed76d8515997f",
               "nodeIndex": 0,
               "ruleId": "button-name",
               "selector": "#suggest-workspace",
@@ -417,7 +419,7 @@
             {
               "height": 90,
               "heightPercent": 4.95,
-              "issueId": "1471cd3d6e06",
+              "issueId": "617730f9c5f1b11d",
               "nodeIndex": 0,
               "ruleId": "label",
               "selector": "#signup-email",
@@ -432,7 +434,7 @@
           ],
           "pageHeight": 1826,
           "pageWidth": 2560,
-          "screenshotFilename": "page-overview-page-004.webp"
+          "screenshotFilename": "page-overview-page-v2-78421f5b8fea2d9d.webp"
         },
         "path": "/signup.html",
         "startedAt": "2000-01-01T00:00:00.000Z",

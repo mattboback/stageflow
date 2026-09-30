@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -22,6 +23,7 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 	var (
 		failOnNew        string
 		failOnRegression bool
+		allowPartial     bool
 		timeout          time.Duration
 	)
 
@@ -39,6 +41,7 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 				timeout,
 				failOnNew,
 				failOnRegression,
+				allowPartial,
 			)
 		},
 	}
@@ -57,6 +60,8 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 		false,
 		"Exit 1 if score dropped or new issues appeared",
 	)
+	cmd.Flags().
+		BoolVar(&allowPartial, "allow-partial", false, "Compare completed scanners even when either report has incomplete coverage")
 	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time for live scan")
 
 	return cmd
@@ -69,6 +74,7 @@ func runDiffCommand(
 	timeout time.Duration,
 	failOnNew string,
 	failOnRegression bool,
+	allowPartial bool,
 ) error {
 	baselineEnv, err := loadReportFile(baselinePath)
 	if err != nil {
@@ -114,6 +120,23 @@ func runDiffCommand(
 	err = diffrender.Render(cmd.OutOrStdout(), d, diffFormat)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: err}
+	}
+
+	if result.IncompatibleIdentity {
+		return exitcode.Error{
+			Code: 2,
+			Err:  errors.New("baseline identity format is incompatible; scan again and save a fresh baseline"),
+		}
+	}
+
+	if len(result.SkippedScanners) > 0 && !allowPartial {
+		return exitcode.Error{
+			Code: 2,
+			Err: fmt.Errorf(
+				"incomplete comparison: %s; use --allow-partial to accept available coverage",
+				strings.Join(result.SkippedScanners, ", "),
+			),
+		}
 	}
 
 	if shouldFail {

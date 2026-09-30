@@ -9,6 +9,7 @@ import type { BrowserContext, Page } from 'playwright';
 import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
+import { hasMultipleOrigins, stablePageId } from './finding-identity';
 
 import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
 import { createLogger } from '../utils/logger';
@@ -88,7 +89,8 @@ export class PageIterator {
 
 			this.logger.info('Creating provenance from SCAN_URLS environment variable');
 
-			const urls = parseScanUrls(scanUrls);
+			const urls = parseScanUrls(scanUrls).map(normalizeUrl);
+			const includeOrigin = hasMultipleOrigins(urls);
 
 			const provenance: Provenance = {
 				version: '1.0.0',
@@ -99,8 +101,8 @@ export class PageIterator {
 				// with WebSockets, long-polling, or analytics pings. The scanner's own
 				// waitForLoadState('networkidle') in scanPage provides SPA hydration time.
 				default_wait_for: { type: 'domcontentloaded' as const },
-				pages: urls.map((url, index) => ({
-					id: `url-${index + 1}`,
+				pages: urls.map((url) => ({
+					id: stablePageId(url, includeOrigin),
 					path: '',
 					url: normalizeUrl(url)
 				}))
@@ -356,12 +358,16 @@ export class PageIterator {
 	}
 
 	private normalizeProvenance(provenance: Provenance): Provenance {
+		const includeOrigin = hasMultipleOrigins(
+			provenance.pages.map((page) => this.resolvePageUrl(provenance.base_url, page))
+		);
 		const normalizedPages = provenance.pages.map((page) => {
 			const { wait_for: _pageWaitFor, ...pageWithoutWaitFor } = page;
 			const waitFor = page.wait_for ?? provenance.default_wait_for;
 
 			return {
 				...pageWithoutWaitFor,
+				id: stablePageId(this.resolvePageUrl(provenance.base_url, page), includeOrigin),
 				url: this.resolvePageUrl(provenance.base_url, page),
 				...(waitFor !== undefined ? { wait_for: waitFor } : {})
 			};

@@ -79,18 +79,18 @@ for name in baseline regression; do
 done
 jq -e '
   [.report.issues[] | [.ruleId, .id]] | sort == [
-    ["color-contrast", "74cd9a0218af"],
-    ["image-alt", "13ed81627c04"],
-    ["label", "1471cd3d6e06"]
+    ["color-contrast", "789c19f1c4b7f09d"],
+    ["image-alt", "b863cc8fc122405a"],
+    ["label", "617730f9c5f1b11d"]
   ]
 ' "${WORK_DIR}/baseline-raw.json" >/dev/null
 jq -e '
   [.report.issues[] | [.ruleId, .id]] | sort == [
-    ["button-name", "2b9345de2405"],
-    ["color-contrast", "74cd9a0218af"],
-    ["label", "1471cd3d6e06"],
-    ["link-name", "4091e74b22b6"],
-    ["select-name", "e3af3e13d504"]
+    ["button-name", "deeed76d8515997f"],
+    ["color-contrast", "789c19f1c4b7f09d"],
+    ["label", "617730f9c5f1b11d"],
+    ["link-name", "0764c92e71494d27"],
+    ["select-name", "694f89df99f744f2"]
   ]
 ' "${WORK_DIR}/regression-raw.json" >/dev/null
 

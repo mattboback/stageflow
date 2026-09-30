@@ -106,17 +106,25 @@ function normalizeOccurrence(
 		...(boundingBox !== undefined ? { boundingBox } : {}),
 		...(label !== undefined ? { label } : {}),
 		...(artifactIds !== undefined ? { artifactIds } : {}),
-		elementId: `${derivedIssueId}-el-0`,
+		elementId: asOptionalString(source.elementId) ?? `${derivedIssueId}-el-0`,
 		pageId: elementPageId
 	};
 }
 
-function buildDerivedIssueId(baseIssueId: string, occurrenceIndex: number): string {
+function buildDerivedIssueId(
+	baseIssueId: string,
+	occurrenceIndex: number,
+	occurrence: unknown
+): string {
 	if (occurrenceIndex === 0) {
 		return baseIssueId;
 	}
 
-	return `${baseIssueId}${OCCURRENCE_ID_DELIMITER}${occurrenceIndex + 1}`;
+	const stableId =
+		typeof occurrence === 'object' && occurrence !== null
+			? asOptionalString((occurrence as Record<string, unknown>).elementId)
+			: undefined;
+	return `${baseIssueId}${OCCURRENCE_ID_DELIMITER}${stableId?.startsWith('occ-v2-') ? stableId : occurrenceIndex + 1}`;
 }
 
 interface ExpandedIssues {
@@ -139,14 +147,27 @@ function expandIssuesByOccurrence(issues: IssueDetail[]): ExpandedIssues {
 		const derivedIds: string[] = [];
 		for (let occurrenceIndex = 0; occurrenceIndex < occurrences.length; occurrenceIndex += 1) {
 			const occurrence = occurrences[occurrenceIndex];
-			const derivedIssueId = buildDerivedIssueId(issue.id, occurrenceIndex);
+			const derivedIssueId = buildDerivedIssueId(issue.id, occurrenceIndex, occurrence);
 			const normalizedOccurrence = normalizeOccurrence(occurrence, derivedIssueId, issue.pageId);
 
 			expanded.push({
 				...issue,
 				id: derivedIssueId,
 				elementCount: 1,
-				elementsTruncated: false,
+				elementsTruncated: occurrenceIndex === 0 && Boolean(issue.elementsTruncated),
+				...(occurrenceIndex === 0 && issue.elementsTruncated
+					? {
+							scannerData: {
+								...issue.scannerData,
+								evidenceCapture: {
+									totalElements: issue.elementCount,
+									capturedElements: occurrences.filter((item) =>
+										Boolean(item.html || item.contextHtml || item.boundingBox)
+									).length
+								}
+							}
+						}
+					: {}),
 				occurrences: [normalizedOccurrence]
 			});
 

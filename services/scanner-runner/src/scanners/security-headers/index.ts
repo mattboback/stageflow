@@ -22,6 +22,20 @@ interface SecurityHeader {
 	validator?: (value: string) => boolean;
 }
 
+const HEADER_FIXES: Record<string, string> = {
+	'content-security-policy':
+		"Start with Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'. Test in report-only mode and allow the sources your application needs before enforcing it.",
+	'strict-transport-security':
+		'After verifying HTTPS works for every route, send Strict-Transport-Security: max-age=31536000. Add includeSubDomains only when all subdomains support HTTPS.',
+	'x-frame-options':
+		"Send Content-Security-Policy: frame-ancestors 'self' (or 'none' when framing is unnecessary), or X-Frame-Options: SAMEORIGIN.",
+	'x-content-type-options':
+		'Send X-Content-Type-Options: nosniff and serve resources with their correct Content-Type.',
+	'referrer-policy': 'Send Referrer-Policy: strict-origin-when-cross-origin.',
+	'permissions-policy':
+		'Send Permissions-Policy: camera=(), microphone=(), geolocation=(). Enable only the features and origins your application needs.'
+};
+
 const SECURITY_HEADERS: SecurityHeader[] = [
 	{
 		name: 'content-security-policy',
@@ -130,6 +144,13 @@ export class SecurityHeadersScanner extends ScannerBase {
 				const hasHeader = headerKeys.has(headerName);
 				const headerValue = headers[headerName];
 
+				if (
+					headerName === 'x-frame-options' &&
+					/(?:^|;)\s*frame-ancestors\s+[^;]+/i.test(headers['content-security-policy'] ?? '')
+				) {
+					continue;
+				}
+
 				if (!hasHeader) {
 					issues.push(this.createIssue(check, 'missing'));
 				} else if (check.validator && !check.validator(headerValue ?? '')) {
@@ -137,7 +158,8 @@ export class SecurityHeadersScanner extends ScannerBase {
 				}
 			}
 
-			const mixedContent = await this.checkMixedContent(page);
+			const mixedContent =
+				new URL(finalURL).protocol === 'https:' ? await this.checkMixedContent(page) : [];
 			if (mixedContent.length > 0) {
 				issues.push({
 					id: `${this.metadata.name}-mixed-content`,
@@ -147,6 +169,8 @@ export class SecurityHeadersScanner extends ScannerBase {
 					title: 'Mixed Content Detected',
 					description: `Page loads ${mixedContent.length} insecure resource(s) over HTTP. This can compromise the security of HTTPS pages.`,
 					helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/Security/Mixed_content',
+					howToFix:
+						'Replace each http:// resource URL with a working https:// URL, or serve the resource from your HTTPS origin.',
 					metadata: {
 						resources: mixedContent.slice(0, 10),
 						totalCount: mixedContent.length
@@ -162,8 +186,10 @@ export class SecurityHeadersScanner extends ScannerBase {
 					severity: 'moderate',
 					category: 'security',
 					title: 'Insecure Cookie Configuration',
-					description: `Found ${insecureCookies.length} cookie(s) without recommended security flags (Secure, HttpOnly, SameSite).`,
+					description: `Found ${insecureCookies.length} cookie(s) without recommended security flags (Secure, SameSite).`,
 					helpUrl: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#security',
+					howToFix:
+						'For cookies on HTTPS, send Set-Cookie: name=value; Secure; SameSite=Lax; Path=/. Add HttpOnly for session cookies that JavaScript does not need. Cross-site cookies need SameSite=None; Secure.',
 					metadata: {
 						cookies: insecureCookies
 					}
@@ -231,6 +257,7 @@ export class SecurityHeadersScanner extends ScannerBase {
 			title,
 			description,
 			helpUrl: check.helpUrl,
+			...(HEADER_FIXES[check.name] ? { howToFix: HEADER_FIXES[check.name] } : {}),
 			metadata: {
 				headerName: check.name,
 				...(value && { headerValue: value })
@@ -273,7 +300,7 @@ export class SecurityHeadersScanner extends ScannerBase {
 	): { name: string; issues: string[] }[] {
 		const setCookieHeaders = Object.entries(headers)
 			.filter(([k]) => k.toLowerCase() === 'set-cookie')
-			.map(([, v]) => v);
+			.flatMap(([, v]) => v.split('\n'));
 
 		const insecureCookies: { name: string; issues: string[] }[] = [];
 
@@ -288,9 +315,6 @@ export class SecurityHeadersScanner extends ScannerBase {
 
 			if (!parts.some((p) => p === 'secure')) {
 				issues.push('Missing Secure flag');
-			}
-			if (!parts.some((p) => p === 'httponly')) {
-				issues.push('Missing HttpOnly flag');
 			}
 			if (!parts.some((p) => p.startsWith('samesite'))) {
 				issues.push('Missing SameSite attribute');

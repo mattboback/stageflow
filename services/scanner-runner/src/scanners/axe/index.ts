@@ -11,6 +11,7 @@ import {
 	ScannerBase,
 	type ScannerMetadata
 } from '../../core';
+import { waitForPageSettled } from '../../core/page-settle';
 import { extractContextSnippet } from '../../screenshots/axe/context-snippet';
 import {
 	AxeScreenshotService,
@@ -25,7 +26,6 @@ import {
 import {
 	DEFAULT_DYNAMIC_CONTENT_WAIT_MS,
 	LOADING_INDICATOR_WAIT_MS,
-	NETWORKIDLE_TIMEOUT_MS,
 	parseAxeOptions,
 	SCRIPTLESS_FRAME_SELECTOR,
 	withTimeoutFallback,
@@ -92,21 +92,7 @@ export class AxeScanner extends ScannerBase {
 		const hrStart = process.hrtime.bigint();
 
 		try {
-			// Wait for networkidle with timeout to handle sites with persistent connections.
-			// If timeout is reached, proceed anyway - the page is likely ready enough for scanning.
-			try {
-				await withTimeoutFallback(
-					page.waitForLoadState('networkidle'),
-					NETWORKIDLE_TIMEOUT_MS,
-					() => undefined
-				);
-			} catch {
-				// Ignore networkidle timeout - page may still be scannable
-				logger.debug('Networkidle wait timed out, proceeding with scan', {
-					url: pageEntry.url,
-					timeoutMs: NETWORKIDLE_TIMEOUT_MS
-				});
-			}
+			await waitForPageSettled(page);
 
 			const waitMs = this.options.dynamicContentWaitMs ?? DEFAULT_DYNAMIC_CONTENT_WAIT_MS;
 			if (waitMs > 0) {
@@ -345,6 +331,10 @@ export class AxeScanner extends ScannerBase {
 			}
 		}
 
-		return enrichedNodes;
+		// Keep every selector for comparison identity; only enrich the first five.
+		return [
+			...enrichedNodes,
+			...nodes.slice(5).map((node) => (node.target ? { target: node.target } : {}))
+		];
 	}
 }

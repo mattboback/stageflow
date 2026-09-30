@@ -16,14 +16,14 @@ type rootOptions struct {
 
 func newRootCmd(getenv getenvFunc, stdout, stderr io.Writer) *cobra.Command {
 	opts := &rootOptions{
-		apiURL: envOr(getenv, "STAGEFLOW_API_URL", "http://localhost:8080"),
+		apiURL: envOr(getenv, "STAGEFLOW_API_URL", "https://stageflow.org"),
 		apiKey: envOr(getenv, "STAGEFLOW_API_KEY", ""),
 	}
 
 	rootCmd := &cobra.Command{
 		Use:   "stageflow",
 		Short: "StageFlow CLI",
-		Long: "StageFlow CLI — scan web pages for accessibility, performance, and SEO issues.\n\n" +
+		Long: "StageFlow CLI — scan web pages for accessibility, SEO, links, and security issues.\n\n" +
 			"There are a few ways to scan:\n\n" +
 			"  stageflow scan <url>        one-off scan of any URL\n" +
 			"  stageflow scan <dir|zip>    scan a local build directory or ZIP archive\n" +

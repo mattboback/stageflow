@@ -183,10 +183,6 @@ export function extractAuditNodes(audit: LighthouseAudit): LighthouseIssueNode[]
 			...(ancestorPath !== undefined ? { ancestorPath } : {}),
 			...(failureSummary !== undefined ? { failureSummary } : {})
 		});
-
-		if (nodes.length >= 5) {
-			break;
-		}
 	}
 
 	return nodes;

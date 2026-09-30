@@ -21,7 +21,6 @@ type ReportFlags struct {
 	RawCategories  string
 	FailSeverity   string
 	SummaryOnly    bool
-	GroupBy        string
 }
 
 func (o ReportFlags) RenderOptions(format Format) Options {
@@ -33,7 +32,6 @@ func (o ReportFlags) RenderOptions(format Format) Options {
 		Categories:     splitCSV(o.RawCategories),
 		FailSeverity:   o.FailSeverity,
 		SummaryOnly:    o.SummaryOnly,
-		GroupBy:        o.GroupBy,
 	}
 }
 
@@ -65,12 +63,6 @@ func BindReportFlags(cmd *cobra.Command, opts *ReportFlags, hideAdvanced bool) {
 		"Exit 1 if any displayed issue is at or above this severity (critical,serious,moderate,minor,info)",
 	)
 	cmd.Flags().BoolVar(&opts.SummaryOnly, "summary-only", false, "Only show summary, skip detailed findings")
-	cmd.Flags().StringVar(
-		&opts.GroupBy,
-		"group-by",
-		"",
-		"Group findings by: none, category, scanner (default: category for markdown, none for text)",
-	)
 
 	if !hideAdvanced {
 		return
@@ -80,7 +72,6 @@ func BindReportFlags(cmd *cobra.Command, opts *ReportFlags, hideAdvanced bool) {
 	cobra.CheckErr(cmd.Flags().MarkHidden("severity"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("category"))
 	cobra.CheckErr(cmd.Flags().MarkHidden("summary-only"))
-	cobra.CheckErr(cmd.Flags().MarkHidden("group-by"))
 }
 
 func WrapError(err error) error {

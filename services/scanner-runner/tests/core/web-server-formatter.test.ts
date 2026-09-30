@@ -126,6 +126,31 @@ describe('WebServerFormatter', () => {
 
 		const formatted2 = new WebServerFormatter().format(provenance, results, metadata);
 		expect(formatted2.issues[0]!.id).toBe(issue.id);
+
+		// Adding a sixth failing element retains every identity without expanding
+		// the expensive HTML and screenshot evidence budget.
+		const scanIssue = results.pages[0]!.issues[0]!;
+		scanIssue.howToFix = 'Increase the foreground/background contrast ratio.';
+		scanIssue.metadata = {
+			...scanIssue.metadata,
+			nodeCount: 6,
+			ruleBehavior: { tags: ['Level AA', 'Level AAA', 'Level A'] },
+			nodes: Array.from({ length: 6 }, (_, index) => ({
+				selector: `#element-${index}`,
+				target: [`#element-${index}`],
+				html: '<a>Link</a>',
+				contextHtml: '<nav><a>Link</a></nav>'
+			}))
+		};
+		const withSix = formatter.format(provenance, results, metadata).issues[0]!;
+		expect(withSix.occurrences).toHaveLength(6);
+		expect(new Set(withSix.occurrences?.map((node) => node.elementId)).size).toBe(6);
+		expect(withSix.occurrences?.[5]?.elementId).toMatch(/^occ-v2-/);
+		expect(withSix.occurrences?.[5]?.html).toBeUndefined();
+		expect(withSix.occurrences?.[5]?.contextHtml).toBeUndefined();
+		expect(withSix.elementsTruncated).toBe(true);
+		expect(withSix.howToFix).toBe(scanIssue.howToFix);
+		expect(withSix.wcagTags).toEqual(expect.arrayContaining(['Level AA', 'Level AAA', 'Level A']));
 	});
 
 	it('reports page scan failures and marks mixed scanner results as partial', () => {

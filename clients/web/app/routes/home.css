@@ -566,3 +566,7 @@
 		transition: none;
 	}
 }
+
+.preview__evidence { display: block; margin: 1rem 0; color: inherit; }
+.preview__evidence svg { display: block; width: 100%; max-height: 160px; border-radius: 6px; margin-top: .5rem; background: white; }
+.preview__new { font-size: .75rem; font-weight: 700; color: #b91c1c; margin-right: .5rem; }

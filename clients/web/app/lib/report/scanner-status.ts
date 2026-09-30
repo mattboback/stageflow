@@ -32,15 +32,13 @@ export function formatScannerStatus(status?: ScannerStatus | null): string {
 	}
 }
 
-/**
- * Scanners that did not finish: they failed, or the job expected them and no
- * result came back. A report with any of them is partial. `partial` means the
- * scanner ran and some pages failed, so it still counts as finished. Matches
- * `diff.IncompleteScanners` in libs/go/diff.
- */
+/** Incomplete page coverage is excluded on both sides of a comparison. Matches Go diff. */
 export function incompleteScanners(scanners: readonly ScannerSummary[] | undefined): string[] {
 	return (scanners ?? [])
-		.filter((scanner) => scanner.status === 'failed' || scanner.status === 'skipped')
+		.filter(
+			(scanner) =>
+				scanner.status === 'failed' || scanner.status === 'skipped' || scanner.status === 'partial'
+		)
 		.map((scanner) => scanner.id)
 		.sort();
 }

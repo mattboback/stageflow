@@ -2,11 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-StageFlow is a self-hostable **frontend quality platform**. It ships five
-built-in scanners — accessibility, performance, SEO, links, and security
-headers — behind a single report contract, and
-compares **saved scan reports** so every deployment can answer the question that
-matters in CI: _did this change make the frontend worse?_
+StageFlow helps developers **audit a frontend and compare deployments**.
+Run five built-in scanners to find accessibility, SEO, link, and security-header
+problems, inspect page evidence, and choose what to fix first. Compare saved scan
+reports to spot new regressions and verify fixes in the browser or CI.
 
 **▶ Live demo: [stageflow.org](https://stageflow.org)** — scan any public URL and
 explore a real, interactive report in the browser. No StageFlow account is
@@ -58,7 +57,7 @@ stageflow scan ./dist --api https://stageflow.org
 
 ![StageFlow CLI streaming a live scan and printing the machine-readable JSON envelope](docs/images/demo.gif)
 
-Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API error. Release binaries are on [GitHub Releases](https://github.com/mattboback/stageflow/releases); see the [CLI guide](docs/cli.md) for workflows and run `stageflow --help` or `stageflow <command> --help` for exact flags.
+Exit codes are machine-readable: `0` clean, `1` threshold tripped, `2` CLI/API error, incomplete scanner coverage, or incompatible baseline identity. Release binaries are on [GitHub Releases](https://github.com/mattboback/stageflow/releases); see the [CLI guide](docs/cli.md) for workflows and run `stageflow --help` or `stageflow <command> --help` for exact flags.
 
 ## The Report
 
@@ -75,7 +74,7 @@ findings remain available for triage even when no visual overlay exists.
 The report shape is a versioned contract. To see it without running a scan,
 open the committed fixture
 [`libs/contracts/report/fixtures/unified-report.v2.all-scans.json`](libs/contracts/report/fixtures/unified-report.v2.all-scans.json)
-— a full multi-scanner report validated against the v2 schema.
+— a full multi-scanner report validated against the [public v2 schema](https://stageflow.org/schemas/unified-report.v2.json).
 
 ## Regression Memory: The Headline Capability
 
@@ -91,6 +90,14 @@ stageflow diff baseline.json current.json --fail-on-new=any
 The comparison runs locally and exits `1` when the selected regression gate
 trips. Store baseline files in your repository or CI artifacts; replace them
 explicitly when accepting a change. See the [CLI guide](docs/cli.md#baselines-and-comparisons).
+
+For a GitHub step summary, after building the site and reviewing a baseline:
+
+```bash
+stageflow scan ./dist --format json --max-issues 0 > current.json && stageflow diff baseline.json current.json --format markdown --fail-on-new=any >> "$GITHUB_STEP_SUMMARY"
+```
+
+Incomplete scanner coverage exits `2`; accept it explicitly with `--allow-partial` on scan and diff. Baselines saved before stable identity support require a fresh reviewed scan. A [minimal composite action](action.yml) provides the same regression gate.
 
 Prefer the browser? The `/projects` workspace keeps named projects, completed
 runs, and manually promoted baselines in your browser's IndexedDB. It requires
@@ -141,10 +148,13 @@ The web UI starts at `http://localhost:3000` and the API at `http://localhost:80
 Built-in scanners:
 
 - `axe` for accessibility
-- `lighthouse` for performance, best-practices, and PWA signals
+- `lighthouse` for accessibility, best-practices, and SEO; performance audits are opt-in
 - `seo` for title, metadata, heading, and structured-data checks
 - `security-headers` for common HTTP response-header policy
 - `link-checker` for internal and external link health
+
+Lighthouse skips its expensive performance category by default; enable it in
+scanner configuration when needed. PWA is not a supported Lighthouse audit category.
 
 A scan runs all five unless you pick some with `--scanner` (CLI) or `modules`
 (API). Each scanner's memory limit is set in its manifest under
@@ -154,14 +164,14 @@ A scan runs all five unless you pick some with `--scanner` (CLI) or `modules`
 
 | Path                         | Purpose                                                                        |
 | ---------------------------- | ------------------------------------------------------------------------------ |
-| `clients/cli`                | Go CLI for scans, baselines, reports, and shell completion        |
+| `clients/cli`                | Go CLI for scans, baselines, reports, and shell completion                     |
 | `clients/web`                | React Router/Vite app for hosted/local browser workflows                       |
-| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, deletion tombstones, reports            |
+| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, deletion tombstones, reports |
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence              |
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |
-| `libs/contracts`             | JSON Schema contracts with committed generated Go/TypeScript types       |
-| `infra`                      | Compose, MinIO, scanner, and security examples                 |
+| `libs/contracts`             | JSON Schema contracts with committed generated Go/TypeScript types             |
+| `infra`                      | Compose, MinIO, scanner, and security examples                                 |
 | `docs`                       | Canonical architecture, CLI, self-hosting, design, and reference documentation |
 
 ## Development

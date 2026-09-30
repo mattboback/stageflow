@@ -203,6 +203,7 @@ export interface Issue {
 	title: string;
 	description: string;
 	helpUrl?: string;
+	howToFix?: string;
 	location?: IssueLocation;
 	metadata?: Record<string, unknown>;
 }

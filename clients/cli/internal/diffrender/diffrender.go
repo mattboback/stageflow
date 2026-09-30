@@ -24,7 +24,8 @@ type Envelope struct {
 	Regressed bool                 `json:"regressed"`
 	// SkippedScanners did not finish in one of the reports and were not
 	// compared.
-	SkippedScanners []string `json:"skippedScanners,omitempty"`
+	SkippedScanners      []string `json:"skippedScanners,omitempty"`
+	IncompatibleIdentity bool     `json:"incompatibleIdentity,omitempty"`
 }
 
 type BaselineMeta struct {
@@ -77,9 +78,10 @@ func FromResult(r diff.Result, baselineFile, currentFile string) Envelope {
 			FixedIssues:     r.Delta.FixedIssues,
 			UnchangedIssues: r.Delta.UnchangedIssues,
 		},
-		New:             r.New,
-		Fixed:           r.Fixed,
-		SkippedScanners: r.SkippedScanners,
+		New:                  r.New,
+		Fixed:                r.Fixed,
+		SkippedScanners:      r.SkippedScanners,
+		IncompatibleIdentity: r.IncompatibleIdentity,
 	}
 }
 
@@ -145,6 +147,17 @@ func writeJSON(out io.Writer, env Envelope) error {
 
 func writeText(out io.Writer, env Envelope, isMarkdown bool) error {
 	if err := writeHeading(out, isMarkdown); err != nil {
+		return err
+	}
+
+	if env.IncompatibleIdentity {
+		line := "Baseline identity format is incompatible. Review a fresh scan and save it as the replacement baseline."
+		if isMarkdown {
+			line = "> " + line
+		}
+
+		_, err := fmt.Fprintln(out, line)
+
 		return err
 	}
 
@@ -220,11 +233,13 @@ func writeSummary(out io.Writer, env Envelope, isMarkdown bool) error {
 }
 
 func formatScore(env Envelope) string {
-	if env.Baseline.Score == nil || env.Current.Score == nil {
+	if len(env.SkippedScanners) > 0 || env.IncompatibleIdentity || env.Delta.ScoreDelta == nil ||
+		env.Baseline.Score == nil ||
+		env.Current.Score == nil {
 		return "N/A"
 	}
 
-	delta := *env.Current.Score - *env.Baseline.Score
+	delta := *env.Delta.ScoreDelta
 	sign := ""
 
 	if delta > 0 {

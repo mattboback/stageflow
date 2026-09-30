@@ -1,5 +1,5 @@
 import { GITHUB_URL } from '../../lib/site-metadata';
-import { DEMO_REPORT_URL } from '../../lib/hooks/useDemoReport';
+const DEMO_REPORT_URL = '/demo/report.json';
 
 /*
  * The artifacts tab on /demo.
@@ -25,11 +25,7 @@ export function DemoArtifactsPanel() {
 							</a>
 						</li>
 						<li>
-							<a
-								href={`${GITHUB_URL}/blob/main/libs/contracts/report/schemas/unified-report.v2.schema.json`}
-								target="_blank"
-								rel="noopener noreferrer"
-							>
+							<a href="/schemas/unified-report.v2.json" target="_blank" rel="noopener noreferrer">
 								The schema it validates against ↗
 							</a>
 						</li>

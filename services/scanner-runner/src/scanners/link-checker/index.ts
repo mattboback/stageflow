@@ -17,7 +17,12 @@ import { ScannerBase } from '../../core/scanner-base';
 import { AxeScreenshotService } from '../../screenshots/axe-screenshot-service';
 import { capturePageOverviewFromIssues } from '../../screenshots/page-overview-from-issues';
 import { SCANNER_VERSION } from '../version';
-import { checkSingleLink, getSeverityForStatus, isUnverifiableStatus } from './validation';
+import {
+	checkSingleLink,
+	getSeverityForStatus,
+	isUnverifiableStatus,
+	type CookieProvider
+} from './validation';
 
 /** Located link element: a CSS selector plus a trimmed HTML snippet. */
 interface LocatedElement {
@@ -35,11 +40,10 @@ function nodesFromSelectors(
 }[] {
 	return items
 		.filter((item): item is { selector: string; html?: string } => Boolean(item.selector))
-		.slice(0, 5)
-		.map((item) => ({
+		.map((item, index) => ({
 			target: [item.selector],
 			selector: item.selector,
-			...(item.html !== undefined ? { html: item.html } : {})
+			...(index < 5 && item.html !== undefined ? { html: item.html } : {})
 		}));
 }
 
@@ -54,6 +58,8 @@ export class LinkCheckerScanner extends ScannerBase {
 
 	private readonly maxConcurrentRequests = 5;
 	private readonly screenshotService = new AxeScreenshotService();
+	private readonly linkCache = new Map<string, Promise<LinkCheckResult>>();
+	private cacheJobId: string | undefined;
 
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
 		const { page, pageEntry, logger, resultsDir } = context;
@@ -62,15 +68,27 @@ export class LinkCheckerScanner extends ScannerBase {
 
 		try {
 			await waitForPageSettled(page);
-			const links = await this.extractLinks(page, pageEntry.url);
+			const currentURL = page.url();
+			const baseURL = /^https?:/.test(currentURL) ? currentURL : pageEntry.url;
+			const links = await this.extractLinks(page, baseURL);
 			logger.info('Extracted links', {
 				count: links.length,
 				url: pageEntry.url
 			});
 
+			if (this.cacheJobId !== context.config.jobId) {
+				this.linkCache.clear();
+				this.cacheJobId = context.config.jobId;
+			}
+			const cookiesForURL: CookieProvider = async (url) => {
+				const cookies =
+					typeof context.context.cookies === 'function' ? await context.context.cookies(url) : [];
+				return cookies.map(({ name, value }) => `${name}=${value}`).join('; ');
+			};
 			const results = await this.checkLinks(
 				links,
-				context.targetValidationPolicy ?? { allowedOrigins: [] }
+				context.targetValidationPolicy ?? { allowedOrigins: [] },
+				cookiesForURL
 			);
 
 			const brokenLinks: LinkCheckResult[] = [];
@@ -102,7 +120,7 @@ export class LinkCheckerScanner extends ScannerBase {
 					severity: 'moderate',
 					category: 'links',
 					title: 'Empty or Placeholder Links',
-					description: `Found ${emptyLinks.length} link(s) with empty href, javascript:void(0), or # placeholders. These provide poor user experience and accessibility.`,
+					description: `Found ${emptyLinks.length} link(s) with javascript: or # placeholders. These provide poor user experience and accessibility.`,
 					metadata: {
 						links: emptyLinks.slice(0, 10).map((l) => l.html),
 						nodes: nodesFromSelectors(emptyLinks)
@@ -207,7 +225,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			issues.push({
 				id: `${this.metadata.name}-broken`,
 				scanner: this.metadata.name,
-				severity: getSeverityForStatus(link.status ?? 0),
+				severity: getSeverityForStatus(link.status ?? 0, link.isInternal),
 				category: 'links',
 				title: `Broken link (${link.status ? `HTTP ${link.status}` : 'connection error'})`,
 				description: `${link.url} ${outcome}. Broken links hurt user experience and SEO.`,
@@ -304,10 +322,10 @@ export class LinkCheckerScanner extends ScannerBase {
 				element: string;
 				selector: string;
 			}[] = [];
-			const currentHost = new URL(base).host;
+			const currentOrigin = new URL(base).origin;
 
 			for (const el of document.querySelectorAll('a[href]')) {
-				const href = el.getAttribute('href') ?? '';
+				const href = (el.getAttribute('href') ?? '').trim();
 
 				if (
 					!href ||
@@ -325,9 +343,13 @@ export class LinkCheckerScanner extends ScannerBase {
 				let isInternal: boolean;
 
 				try {
-					const parsed = new URL(href, base);
+					const parsed = new URL((el as HTMLAnchorElement).href || href, base);
+					if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+						continue;
+					}
+					parsed.hash = '';
 					absoluteUrl = parsed.href;
-					isInternal = parsed.host === currentHost;
+					isInternal = parsed.origin === currentOrigin;
 				} catch {
 					continue;
 				}
@@ -341,20 +363,14 @@ export class LinkCheckerScanner extends ScannerBase {
 				});
 			}
 
-			const seen = new Set<string>();
-			return links.filter((link) => {
-				if (seen.has(link.href)) {
-					return false;
-				}
-				seen.add(link.href);
-				return true;
-			});
+			return links;
 		}, baseUrl);
 	}
 
 	private async checkLinks(
 		links: LinkInfo[],
-		targetValidationPolicy: NonNullable<ScanContext['targetValidationPolicy']>
+		targetValidationPolicy: NonNullable<ScanContext['targetValidationPolicy']>,
+		cookiesForURL: CookieProvider
 	): Promise<LinkCheckResult[]> {
 		const results: LinkCheckResult[] = [];
 
@@ -362,8 +378,15 @@ export class LinkCheckerScanner extends ScannerBase {
 			const batch = links.slice(i, i + this.maxConcurrentRequests);
 			const batchResults = await Promise.all(
 				batch.map(async (link) => {
+					const cookie = await cookiesForURL(link.href);
+					const cacheKey = `${link.href}\n${cookie}`;
+					let pending = this.linkCache.get(cacheKey);
+					if (!pending) {
+						pending = checkSingleLink(link.href, targetValidationPolicy, cookiesForURL);
+						this.linkCache.set(cacheKey, pending);
+					}
 					const result = {
-						...(await checkSingleLink(link.href, targetValidationPolicy)),
+						...(await pending),
 						isInternal: link.isInternal
 					};
 					return link.selector !== undefined ? { ...result, selector: link.selector } : result;
@@ -407,13 +430,7 @@ export class LinkCheckerScanner extends ScannerBase {
 			const emptyLinks: { selector: string; html: string }[] = [];
 			for (const el of document.querySelectorAll('a')) {
 				const href = el.getAttribute('href');
-				if (
-					!href ||
-					href === '#' ||
-					href === 'javascript:void(0)' ||
-					href === 'javascript:;' ||
-					href === 'javascript:void(0);'
-				) {
+				if (href?.trim() === '#' || /^javascript:/i.test(href?.trim() ?? '')) {
 					emptyLinks.push({ selector: cssPath(el), html: el.outerHTML.slice(0, 200) });
 				}
 			}
@@ -451,9 +468,15 @@ export class LinkCheckerScanner extends ScannerBase {
 				const text = (el.textContent || '').trim();
 				const ariaLabel = el.getAttribute('aria-label')?.trim() ?? '';
 				const title = el.getAttribute('title')?.trim() ?? '';
-				const hasImage = el.querySelector('img[alt]') !== null;
+				const hasImage = Array.from(el.querySelectorAll('img[alt]')).some((img) =>
+					Boolean(img.getAttribute('alt')?.trim())
+				);
+				const labelledBy = (el.getAttribute('aria-labelledby') ?? '')
+					.split(/\s+/)
+					.some((id) => Boolean(document.getElementById(id)?.textContent.trim()));
+				const svgTitle = el.querySelector('svg title')?.textContent.trim();
 
-				if (!text && !ariaLabel && !title && !hasImage) {
+				if (!text && !ariaLabel && !title && !hasImage && !labelledBy && !svgTitle) {
 					noTextLinks.push({ selector: cssPath(el), html: el.outerHTML.slice(0, 200) });
 				}
 			}

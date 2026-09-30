@@ -5,6 +5,8 @@ import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 
 import { findOverviewElement, getIssueKind, humanizeFailureSummary } from '../../lib/report';
 
+import { TruncatedEvidence } from './TruncatedEvidence';
+import { LighthouseDetails } from './LighthouseDetails';
 import { ElementCrop } from './ElementCrop';
 
 interface Props {
@@ -56,7 +58,13 @@ export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
 	const kind = getIssueKind(issue);
 	const screenshotLeads = kind === 'element' && canCrop;
 
-	const hasAny = canCrop || selector || html || failureSummary || pageLabel;
+	const hasAny =
+		canCrop ||
+		selector ||
+		html ||
+		failureSummary ||
+		pageLabel ||
+		(issue.scanner === 'lighthouse' && issue.scannerData?.details);
 
 	if (!hasAny) {
 		return <p className="evidence__empty">No DOM evidence was captured for this finding.</p>;
@@ -130,6 +138,8 @@ export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
 				)}
 			</dl>
 
+			{issue.scanner === 'lighthouse' && <LighthouseDetails details={issue.scannerData?.details} />}
+			<TruncatedEvidence issue={issue} />
 			{!screenshotLeads && shot}
 		</div>
 	);

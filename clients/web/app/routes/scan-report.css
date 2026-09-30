@@ -329,7 +329,7 @@
 }
 .rhead__stats {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(8rem, auto));
+	grid-template-columns: repeat(2, minmax(8rem, auto));
 	gap: var(--sp-6);
 	margin: 0;
 	padding-left: var(--sp-6);
@@ -1747,8 +1747,8 @@ button.irow {
 	justify-content: space-between;
 	flex-shrink: 0;
 }
-.vrev__pages-head h3,
-.vrev__issues-head h3 {
+.vrev__pages-head h2,
+.vrev__issues-head h2 {
 	font-size: var(--fs-6);
 	color: var(--ink-strong);
 	margin: 0;
@@ -2276,7 +2276,7 @@ button.irow {
 		border-left: 0;
 		padding-top: var(--sp-4);
 		border-top: 1px solid var(--line);
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: var(--sp-4);
 	}
 	.rhead__score {

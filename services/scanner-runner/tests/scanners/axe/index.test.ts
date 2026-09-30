@@ -11,6 +11,10 @@ const axeAnalyzeMock = vi.hoisted(() => vi.fn());
 const axeExcludeMock = vi.hoisted(() => vi.fn());
 const capturePageOverviewMock = vi.hoisted(() => vi.fn());
 
+vi.mock('../../../src/core/page-settle', () => ({
+	waitForPageSettled: vi.fn().mockResolvedValue(undefined)
+}));
+
 vi.mock('@axe-core/playwright', () => {
 	class MockAxeBuilder {
 		disableRules = vi.fn(function (this: MockAxeBuilder) {
@@ -118,6 +122,30 @@ describe('AxeScanner.scanPage', () => {
 	afterEach(async () => {
 		await rm(resultsDir, { force: true, recursive: true });
 		vi.clearAllMocks();
+	});
+
+	it('retains a sixth occurrence while capping rich element evidence', async () => {
+		const { AxeScanner } = await import('../../../src/scanners/axe');
+		axeAnalyzeMock.mockResolvedValue({
+			violations: [
+				{
+					id: 'image-alt',
+					nodes: Array.from({ length: 6 }, (_, index) => ({
+						target: [`#image-${index}`],
+						html: '<img>'
+					}))
+				}
+			],
+			passes: [],
+			incomplete: [],
+			inapplicable: []
+		});
+		const result = await new AxeScanner().scanPage(createMockContext(resultsDir));
+		expect(result.success).toBe(true);
+		const nodes = result.issues[0]?.metadata?.nodes as { target: string[]; html?: string }[];
+		expect(nodes).toHaveLength(6);
+		expect(nodes[5]).toEqual({ target: ['#image-5'] });
+		expect(nodes[0]?.html).toBe('<img>');
 	});
 
 	it('keeps only the page overview in rawResults', async () => {

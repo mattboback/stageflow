@@ -93,6 +93,7 @@ export interface ProjectDiff {
 	fixed: IssueDetail[];
 	/** Did not finish in one of the reports, so their issues are not compared. */
 	skippedScanners?: string[];
+	incompatibleIdentity?: boolean;
 }
 
 const SECRET_KEYS = new Set([
@@ -241,7 +242,7 @@ export async function fingerprintProjectConfiguration(
 	};
 	const canonical = JSON.stringify(stableValue(fingerprintInput));
 	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical));
-	return bytesToHex(new Uint8Array(digest));
+	return `identity-v2:${bytesToHex(new Uint8Array(digest))}`;
 }
 
 function reportScore(report: UnifiedReport): number | undefined {
@@ -261,28 +262,42 @@ export function computeProjectDiff(
 		...incompleteScanners(baselineReport.scanners),
 		...incompleteScanners(currentReport.scanners)
 	]);
-	const compared = (issue: IssueDetail) => !skipped.has(issue.scanner);
-	const baselineById = new Map(
-		baselineReport.issues.filter(compared).map((issue) => [issue.id, issue])
-	);
-	const currentById = new Map(
-		currentReport.issues.filter(compared).map((issue) => [issue.id, issue])
-	);
+	const baselineScanners = new Set(baselineReport.scanners?.map((scanner) => scanner.id));
+	const currentScanners = new Set(currentReport.scanners?.map((scanner) => scanner.id));
+	for (const id of baselineScanners) if (!currentScanners.has(id)) skipped.add(id);
+	for (const id of currentScanners) if (!baselineScanners.has(id)) skipped.add(id);
 
-	const newIssues = [...currentById.values()]
-		.filter((issue) => !baselineById.has(issue.id))
-		.sort((left, right) => left.id.localeCompare(right.id));
-	const fixedIssues = [...baselineById.values()]
-		.filter((issue) => !currentById.has(issue.id))
-		.sort((left, right) => left.id.localeCompare(right.id));
+	const compared = (issue: IssueDetail) => !skipped.has(issue.scanner);
+	const baselineById = new Map(baselineReport.issues.filter(compared).flatMap(occurrenceFindings));
+	const currentById = new Map(currentReport.issues.filter(compared).flatMap(occurrenceFindings));
+
+	const incompatibleIdentity =
+		hasStableReportIdentity(baselineReport) !== hasStableReportIdentity(currentReport);
+	if (incompatibleIdentity) {
+		baselineById.clear();
+		currentById.clear();
+	}
+	const newIssues = [...currentById.entries()]
+		.filter(([key]) => !baselineById.has(key))
+		.map(([, issue]) => issue)
+		.sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
+	const fixedIssues = [...baselineById.entries()]
+		.filter(([key]) => !currentById.has(key))
+		.map(([, issue]) => issue)
+		.sort((left, right) => findingSortKey(left).localeCompare(findingSortKey(right)));
 	const unchangedIssues = [...currentById.keys()].filter((issueId) =>
 		baselineById.has(issueId)
 	).length;
-	const baselineScore = reportScore(baselineReport);
-	const currentScore = reportScore(currentReport);
+	const baselineScore =
+		skipped.size === 0 && !incompatibleIdentity ? reportScore(baselineReport) : undefined;
+	const currentScore =
+		skipped.size === 0 && !incompatibleIdentity ? reportScore(currentReport) : undefined;
 	// A score covers every scanner, so it cannot be compared across a skip.
 	const scoreComparable =
-		skipped.size === 0 && baselineScore !== undefined && currentScore !== undefined;
+		!incompatibleIdentity &&
+		skipped.size === 0 &&
+		baselineScore !== undefined &&
+		currentScore !== undefined;
 
 	return {
 		schema: LOCAL_PROJECT_DIFF_SCHEMA,
@@ -304,7 +319,8 @@ export function computeProjectDiff(
 		},
 		new: newIssues,
 		fixed: fixedIssues,
-		...(skipped.size === 0 ? {} : { skippedScanners: [...skipped].sort() })
+		...(skipped.size === 0 ? {} : { skippedScanners: [...skipped].sort() }),
+		...(incompatibleIdentity ? { incompatibleIdentity: true } : {})
 	};
 }
 
@@ -317,4 +333,29 @@ export function isUnifiedReport(value: unknown): value is UnifiedReport {
 		Array.isArray(candidate.issues) &&
 		Boolean(candidate.summary && typeof candidate.summary.totalIssues === 'number')
 	);
+}
+
+export function hasStableReportIdentity(report: UnifiedReport): boolean {
+	return (
+		report.pages.some((page) => page.id.startsWith('page-v2-')) ||
+		report.issues.some((issue) => issue.pageId.startsWith('page-v2-'))
+	);
+}
+
+function occurrenceFindings(issue: IssueDetail): [string, IssueDetail][] {
+	if (!issue.pageId.startsWith('page-v2-') || !issue.occurrences?.length)
+		return [[issue.id, issue]];
+	return issue.occurrences.map((occurrence) => [
+		occurrence.elementId ?? issue.id,
+		{
+			...issue,
+			occurrences: [occurrence],
+			elementCount: 1,
+			elementsTruncated: false
+		}
+	]);
+}
+
+function findingSortKey(issue: IssueDetail): string {
+	return `${issue.id}:${issue.occurrences?.[0]?.elementId ?? ''}`;
 }

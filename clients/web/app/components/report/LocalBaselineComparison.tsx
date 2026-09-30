@@ -1,9 +1,10 @@
 import { ArrowRight, Check, GitCompareArrows, RotateCcw, Save } from 'lucide-react';
 import { Link } from 'react-router';
 
-import { Delta } from '../Delta';
+import { BaselineDiffSummary } from './BaselineDiffSummary';
 import {
 	computeProjectDiff,
+	hasStableReportIdentity,
 	type LocalBaseline,
 	type LocalProject,
 	type LocalRun
@@ -32,7 +33,10 @@ export function LocalBaselineComparison({
 	onOpenIssue
 }: LocalBaselineComparisonProps) {
 	const isCurrentBaseline = baseline?.jobId === run.jobId;
-	const compatible = baseline?.configFingerprint === run.configFingerprint;
+	const compatible =
+		baseline?.configFingerprint === run.configFingerprint &&
+		baseline != null &&
+		hasStableReportIdentity(baseline.report) === hasStableReportIdentity(report);
 	const diff =
 		baseline && compatible
 			? computeProjectDiff(baseline.jobId, baseline.report, run.jobId, report)
@@ -59,7 +63,7 @@ export function LocalBaselineComparison({
 					{/* Ghost, not primary: this sits above the score, the severity counts
 					    and the review queue, so styling it as the page's call to action
 					    invited promoting a baseline before seeing what was in it. The
-					    page's one primary is "Start review", further down. */}
+					    confirmed fixes lead the report further down. */}
 					<button
 						className="btn btn--ghost btn--sm"
 						type="button"
@@ -103,79 +107,13 @@ export function LocalBaselineComparison({
 					<div>
 						<strong>Project configuration changed</strong>
 						<p>
-							The URL, scanner selection, or browser options differ from the saved baseline. Review
-							this report and promote it to start a compatible comparison.
+							The URL, scanner selection, browser options, or finding identities differ from the
+							saved baseline. Review this report and promote it to start a compatible comparison.
 						</p>
 					</div>
 				</div>
 			) : diff ? (
-				<>
-					{diff.skippedScanners && diff.skippedScanners.length > 0 && (
-						<p className="local-baseline__message" role="status">
-							Not compared: {diff.skippedScanners.join(', ')} did not finish in this run or the
-							baseline, so {diff.skippedScanners.length === 1 ? 'its' : 'their'} findings are left
-							out.
-						</p>
-					)}
-					<div className="local-baseline__stats" aria-label="Changes from baseline">
-						<div>
-							<span>Score change</span>
-							<strong>
-								{diff.delta.scoreDelta === undefined ? (
-									'—'
-								) : (
-									<Delta value={diff.delta.scoreDelta} />
-								)}
-							</strong>
-						</div>
-						<div className={diff.delta.newIssues > 0 ? 'local-baseline__stat--bad' : ''}>
-							<span>New issues</span>
-							<strong className="num">{diff.delta.newIssues}</strong>
-						</div>
-						<div className={diff.delta.fixedIssues > 0 ? 'local-baseline__stat--good' : ''}>
-							<span>Fixed</span>
-							<strong className="num">{diff.delta.fixedIssues}</strong>
-						</div>
-						<div>
-							<span>Unchanged</span>
-							<strong className="num">{diff.delta.unchangedIssues}</strong>
-						</div>
-					</div>
-
-					{(diff.new.length > 0 || diff.fixed.length > 0) && (
-						<div className="local-baseline__changes">
-							{diff.new.length > 0 && (
-								<div>
-									<h3>New in this run</h3>
-									<ul>
-										{diff.new.slice(0, 5).map((issue) => (
-											<li key={issue.id}>
-												<button type="button" onClick={() => onOpenIssue(issue.id)}>
-													<span className={`sev-dot sev-${issue.severity}`} aria-hidden="true" />
-													{issue.title}
-												</button>
-											</li>
-										))}
-									</ul>
-								</div>
-							)}
-							{diff.fixed.length > 0 && (
-								<div>
-									<h3>Fixed since baseline</h3>
-									<ul>
-										{diff.fixed.slice(0, 5).map((issue) => (
-											<li key={issue.id}>
-												<span className="local-baseline__fixed-item">
-													<Check size={15} aria-hidden="true" /> {issue.title}
-												</span>
-											</li>
-										))}
-									</ul>
-								</div>
-							)}
-						</div>
-					)}
-				</>
+				<BaselineDiffSummary diff={diff} onOpenIssue={onOpenIssue} />
 			) : null}
 		</section>
 	);

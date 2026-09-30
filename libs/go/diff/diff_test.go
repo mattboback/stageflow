@@ -2,6 +2,7 @@ package diff
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -208,20 +209,24 @@ func TestComputeDiff_SkipsScannersThatDidNotFinish(t *testing.T) {
 		t.Fatalf("new: got %v, want only seo-2 (lighthouse did not run in baseline)", issueIDs(result.New))
 	}
 
+	if result.Baseline.Score != nil || result.Current.Score != nil {
+		t.Fatal("incomplete comparison exposed scores that cannot be compared")
+	}
+
 	if result.Delta.ScoreDelta != nil {
 		t.Fatalf("score delta: got %d, want none across a skipped scanner", *result.Delta.ScoreDelta)
 	}
 }
 
-func TestComputeDiff_PartialScannerIsCompared(t *testing.T) {
+func TestComputeDiff_PartialScannerIsExcluded(t *testing.T) {
 	scanners := []report.ScannerSummary{{Id: "axe", Status: report.ScannerStatusPartial}}
 	baseline := report.UnifiedReportV2{Scanners: scanners, Issues: []report.IssueDetail{{Id: "a", Scanner: "axe"}}}
 	current := report.UnifiedReportV2{Scanners: scanners}
 
 	result := ComputeDiff("", baseline, "", current)
 
-	if len(result.SkippedScanners) != 0 || result.Delta.FixedIssues != 1 {
-		t.Fatalf("skipped=%v fixed=%d, want a scanner that ran on some pages compared",
+	if len(result.SkippedScanners) != 1 || result.Delta.FixedIssues != 0 {
+		t.Fatalf("skipped=%v fixed=%d, want incomplete page coverage excluded",
 			result.SkippedScanners, result.Delta.FixedIssues)
 	}
 }
@@ -269,3 +274,41 @@ func TestComputeDiff_GoldenPairWithAxeFailed(t *testing.T) {
 		t.Fatalf("score delta: got %d, want none", *result.Delta.ScoreDelta)
 	}
 }
+
+func TestComputeDiff_SixthOccurrenceIsOneNew(t *testing.T) {
+	issue := report.IssueDetail{Id: "images", PageId: "page-v2-root", Scanner: "axe", RuleId: "image-alt"}
+	for i := range 5 {
+		issue.Occurrences = append(
+			issue.Occurrences,
+			report.IssueOccurrence{ElementId: strPtr(fmt.Sprintf("occ-v2-%d", i))},
+		)
+	}
+
+	baseline := report.UnifiedReportV2{Issues: []report.IssueDetail{issue}}
+	issue.Occurrences = append(
+		append([]report.IssueOccurrence{}, issue.Occurrences...),
+		report.IssueOccurrence{ElementId: strPtr("occ-v2-5")},
+	)
+	current := report.UnifiedReportV2{Issues: []report.IssueDetail{issue}}
+
+	result := ComputeDiff("b", baseline, "c", current)
+	if result.Delta.NewIssues != 1 || result.Delta.UnchangedIssues != 5 || result.Delta.FixedIssues != 0 {
+		t.Fatalf("unexpected delta: %+v", result.Delta)
+	}
+
+	if len(result.New) != 1 || *result.New[0].Occurrences[0].ElementId != "occ-v2-5" {
+		t.Fatalf("new occurrence: %+v", result.New)
+	}
+}
+
+func TestComputeDiff_IncompatibleIdentityNeedsFreshBaseline(t *testing.T) {
+	baseline := report.UnifiedReportV2{Pages: []report.PageSummary{{Id: "url-1"}}}
+	current := report.UnifiedReportV2{Pages: []report.PageSummary{{Id: "page-v2-root"}}}
+
+	result := ComputeDiff("", baseline, "", current)
+	if !result.IncompatibleIdentity || result.Delta.ScoreDelta != nil {
+		t.Fatalf("expected identity incompatibility: %+v", result)
+	}
+}
+
+func strPtr(value string) *string { return &value }

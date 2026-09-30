@@ -100,6 +100,52 @@ describe('LinkCheckerScanner.scanPage', () => {
 		vi.useRealTimers();
 	});
 
+	it('caches repeated destinations across pages, scoped to job and session', async () => {
+		const fetchMock = vi.fn().mockResolvedValue({ status: 200, headers: new Headers() });
+		globalThis.fetch = fetchMock;
+		const scanner = new LinkCheckerScanner();
+		let session = 'one';
+		const context = createMockContext({
+			context: {
+				cookies: vi.fn(() => Promise.resolve([{ name: 'session', value: session }]))
+			} as unknown as BrowserContext
+		});
+		const run = async () => {
+			context.page = createMockPage({
+				evaluate: vi
+					.fn()
+					.mockResolvedValueOnce([
+						{
+							href: 'https://example.com/about',
+							text: 'About',
+							isInternal: true,
+							element: 'a',
+							selector: '#one'
+						},
+						{
+							href: 'https://example.com/about',
+							text: 'About again',
+							isInternal: true,
+							element: 'a',
+							selector: '#two'
+						}
+					])
+					.mockResolvedValueOnce([])
+					.mockResolvedValueOnce([])
+			});
+			expect((await scanner.scanPage(context)).success).toBe(true);
+		};
+		await run();
+		await run();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+		session = 'two';
+		await run();
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+		context.config.jobId = 'another-job';
+		await run();
+		expect(fetchMock).toHaveBeenCalledTimes(3);
+	});
+
 	describe('success path', () => {
 		it('returns a valid PageScanResult on successful scan', async () => {
 			globalThis.fetch = vi.fn().mockResolvedValue({

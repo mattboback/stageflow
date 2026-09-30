@@ -1,343 +1,231 @@
 {
   "artifacts": [
     {
-      "id": "page-overview-axe-url-1",
+      "id": "page-overview-axe-page-v2-213456c5dc963e03",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-axe-url-2",
+      "id": "page-overview-axe-page-v2-78421f5b8fea2d9d",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-axe-url-3",
+      "id": "page-overview-axe-page-v2-9ac7a7b2ed8ccf33",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-lighthouse-url-1",
+      "id": "page-overview-axe-page-v2-db5b16407156eab2",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-lighthouse-url-2",
+      "id": "page-overview-lighthouse-page-v2-213456c5dc963e03",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-lighthouse-url-3",
+      "id": "page-overview-lighthouse-page-v2-78421f5b8fea2d9d",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-link-checker-url-1",
+      "id": "page-overview-lighthouse-page-v2-9ac7a7b2ed8ccf33",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-link-checker-url-2",
+      "id": "page-overview-lighthouse-page-v2-db5b16407156eab2",
       "mime": "image/webp",
       "type": "page-overview"
     },
     {
-      "id": "page-overview-link-checker-url-3",
+      "id": "page-overview-link-checker-page-v2-213456c5dc963e03",
+      "mime": "image/webp",
+      "type": "page-overview"
+    },
+    {
+      "id": "page-overview-link-checker-page-v2-78421f5b8fea2d9d",
+      "mime": "image/webp",
+      "type": "page-overview"
+    },
+    {
+      "id": "page-overview-link-checker-page-v2-9ac7a7b2ed8ccf33",
+      "mime": "image/webp",
+      "type": "page-overview"
+    },
+    {
+      "id": "page-overview-link-checker-page-v2-db5b16407156eab2",
       "mime": "image/webp",
       "type": "page-overview"
     }
   ],
   "issues": [
     {
-      "category": "seo",
-      "description": "If your robots.txt file is malformed, crawlers may not be able to understand how you want your website to be crawled or indexed. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).",
-      "elementCount": 5,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "cc948647d698",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "robots-txt",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "index",
-              "label": "Line #",
-              "valueType": "text"
-            },
-            {
-              "key": "line",
-              "label": "Content",
-              "valueType": "code"
-            },
-            {
-              "key": "message",
-              "label": "Error",
-              "valueType": "code"
-            }
-          ],
-          "items": [
-            {
-              "index": "1",
-              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"modulepreload\" href=\"/assets/manifest-a349b864.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-CgaGDe0R.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-B1lWS_qw.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-r4D9kZde.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-DfXA2TCv.js\"/><link rel=\"stylesheet\" href=\"/assets/root-BO-tQCIj.css\"/></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><span class=\"brand__mark\" aria-hidden=\"true\"></span><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-a349b864.js\";",
-              "message": "Syntax not understood"
-            },
-            {
-              "index": "2",
-              "line": "import * as route0 from \"/assets/root-CgaGDe0R.js\";",
-              "message": "Syntax not understood"
-            },
-            {
-              "index": "4",
-              "line": "  window.__reactRouterRouteModules = {\"root\":route0};",
-              "message": "Unknown directive"
-            },
-            {
-              "index": "6",
-              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496\" integrity=\"sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"db38df7d4969432bacde1055556ce9e7\",\"r\":1}' crossorigin=\"anonymous\"></script>",
-              "message": "Unknown directive"
-            },
-            {
-              "index": "7",
-              "line": "</body></html>",
-              "message": "Syntax not understood"
-            }
-          ],
-          "type": "table"
-        },
-        "displayValue": "5 errors found",
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "robots.txt is not valid"
-    },
-    {
-      "category": "seo",
-      "description": "If your robots.txt file is malformed, crawlers may not be able to understand how you want your website to be crawled or indexed. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).",
-      "elementCount": 5,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "33dd6425caf2",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "robots-txt",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "index",
-              "label": "Line #",
-              "valueType": "text"
-            },
-            {
-              "key": "line",
-              "label": "Content",
-              "valueType": "code"
-            },
-            {
-              "key": "message",
-              "label": "Error",
-              "valueType": "code"
-            }
-          ],
-          "items": [
-            {
-              "index": "1",
-              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"modulepreload\" href=\"/assets/manifest-a349b864.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-CgaGDe0R.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-B1lWS_qw.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-r4D9kZde.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-DfXA2TCv.js\"/><link rel=\"stylesheet\" href=\"/assets/root-BO-tQCIj.css\"/></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><span class=\"brand__mark\" aria-hidden=\"true\"></span><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-a349b864.js\";",
-              "message": "Syntax not understood"
-            },
-            {
-              "index": "2",
-              "line": "import * as route0 from \"/assets/root-CgaGDe0R.js\";",
-              "message": "Syntax not understood"
-            },
-            {
-              "index": "4",
-              "line": "  window.__reactRouterRouteModules = {\"root\":route0};",
-              "message": "Unknown directive"
-            },
-            {
-              "index": "6",
-              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496\" integrity=\"sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"db38df7d4969432bacde1055556ce9e7\",\"r\":1}' crossorigin=\"anonymous\"></script>",
-              "message": "Unknown directive"
-            },
-            {
-              "index": "7",
-              "line": "</body></html>",
-              "message": "Syntax not understood"
-            }
-          ],
-          "type": "table"
-        },
-        "displayValue": "5 errors found",
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "robots.txt is not valid"
-    },
-    {
-      "category": "seo",
-      "description": "If your robots.txt file is malformed, crawlers may not be able to understand how you want your website to be crawled or indexed. [Learn more about robots.txt](https://developer.chrome.com/docs/lighthouse/seo/invalid-robots-txt/).",
-      "elementCount": 5,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "b42a3d0c0a18",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "robots-txt",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "details": {
-          "headings": [
-            {
-              "key": "index",
-              "label": "Line #",
-              "valueType": "text"
-            },
-            {
-              "key": "line",
-              "label": "Content",
-              "valueType": "code"
-            },
-            {
-              "key": "message",
-              "label": "Error",
-              "valueType": "code"
-            }
-          ],
-          "items": [
-            {
-              "index": "1",
-              "line": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"icon\" href=\"/favicon.svg\" type=\"image/svg+xml\"/><link rel=\"manifest\" href=\"/site.webmanifest\"/><link rel=\"modulepreload\" href=\"/assets/manifest-a349b864.js\"/><link rel=\"modulepreload\" href=\"/assets/entry.client-Dd7JiZnj.js\"/><link rel=\"modulepreload\" href=\"/assets/jsx-runtime-BTBB2Rr_.js\"/><link rel=\"modulepreload\" href=\"/assets/root-CgaGDe0R.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteHeader-B1lWS_qw.js\"/><link rel=\"modulepreload\" href=\"/assets/SiteFooter-r4D9kZde.js\"/><link rel=\"modulepreload\" href=\"/assets/Pill-b5hhGlZP.js\"/><link rel=\"modulepreload\" href=\"/assets/RouteFault-DfXA2TCv.js\"/><link rel=\"stylesheet\" href=\"/assets/root-BO-tQCIj.css\"/></head><body><a class=\"skip-link\" href=\"#main\">Skip to main content</a><header class=\"site-header\"><div class=\"wrap site-header__bar\"><a class=\"brand\" aria-label=\"StageFlow home\" href=\"/\" data-discover=\"true\"><span class=\"brand__mark\" aria-hidden=\"true\"></span><span class=\"brand__name\">StageFlow</span></a><nav class=\"nav\" aria-label=\"Primary\"><a class=\"navlink\" href=\"/projects\" data-discover=\"true\">Projects</a><a class=\"navlink\" href=\"/playground\" data-discover=\"true\">Configure scan</a><a class=\"navlink\" href=\"/#scanners\" data-discover=\"true\">Scanners</a><a class=\"navlink\" href=\"https://github.com/mattboback/stageflow/tree/main/docs\">Docs</a><a class=\"btn btn--ghost btn--sm\" href=\"https://github.com/mattboback/stageflow\">GitHub ↗</a></nav></div></header><main id=\"main\" class=\"hydrate-fallback\" role=\"status\" aria-live=\"polite\"><div class=\"hydrate-fallback__panel\"><span class=\"pill pill--queued\"><span class=\"pill__led\"></span>Loading</span><h1>Loading StageFlow…</h1><p>Fetching this page.</p></div></main><footer class=\"site-footer site-footer--slim\"><div class=\"wrap site-footer__meta\"><span>MIT licensed</span><span>Self-hosted — scan data is processed by your deployment</span><a href=\"https://github.com/mattboback/stageflow/blob/main/docs/privacy.md\">Privacy</a><a href=\"https://github.com/mattboback/stageflow\">Source on GitHub</a></div></footer><script>window.__reactRouterContext = {\"basename\":\"/\",\"future\":{\"unstable_enableNodeReadableStream\":false,\"unstable_optimizeDeps\":false},\"routeDiscovery\":{\"mode\":\"initial\"},\"ssr\":false,\"isSpaMode\":true};window.__reactRouterContext.stream = new ReadableStream({start(controller){window.__reactRouterContext.streamController = controller;}}).pipeThrough(new TextEncoderStream());</script><script type=\"module\" async=\"\">import \"/assets/manifest-a349b864.js\";",
-              "message": "Syntax not understood"
-            },
-            {
-              "index": "2",
-              "line": "import * as route0 from \"/assets/root-CgaGDe0R.js\";",
-              "message": "Syntax not understood"
-            },
-            {
-              "index": "4",
-              "line": "  window.__reactRouterRouteModules = {\"root\":route0};",
-              "message": "Unknown directive"
-            },
-            {
-              "index": "6",
-              "line": "import(\"/assets/entry.client-Dd7JiZnj.js\");</script><!--$--><script>window.__reactRouterContext.streamController.enqueue(\"[{\\\"_1\\\":2,\\\"_3\\\":-5,\\\"_4\\\":-5},\\\"loaderData\\\",{},\\\"actionData\\\",\\\"errors\\\"]\\n\");</script><!--$--><script>window.__reactRouterContext.streamController.close();</script><!--/$--><!--/$--><script type=\"module\" src=\"https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496\" integrity=\"sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==\" data-cf-beacon='{\"version\":\"2024.11.0\",\"token\":\"db38df7d4969432bacde1055556ce9e7\",\"r\":1}' crossorigin=\"anonymous\"></script>",
-              "message": "Unknown directive"
-            },
-            {
-              "index": "7",
-              "line": "</body></html>",
-              "message": "Syntax not understood"
-            }
-          ],
-          "type": "table"
-        },
-        "displayValue": "5 errors found",
-        "score": 0,
-        "scoreDisplayMode": "binary"
-      },
-      "severity": "serious",
-      "title": "robots.txt is not valid"
-    },
-    {
-      "category": "wcag2aa",
-      "description": "axe-core could not determine the background color for this text, so StageFlow cannot treat it as a pass. Review the actual foreground and background contrast.",
+      "category": "wcag2a",
+      "description": "Buttons must have discernible accessible names.",
       "elementCount": 1,
       "elementsTruncated": false,
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
-      "howToFix": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element",
-      "id": "6d53fef4a054",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/button-name?application=playwright",
+      "howToFix": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+      "id": "deeed76d8515997f",
       "occurrences": [
         {
-          "ancestorPath": "... > div.panel__body > div.preview__top > div.gauge > div.gauge__num > span.gauge__val",
-          "contextHtml": "<div class=\"gauge__num\">\n  <span class=\"gauge__val\" style=\"font-size:2.3rem\">88</span> <!-- TARGET -->\n  <span class=\"gauge__cap\">Site score</span>\n</div>",
-          "elementId": "6d53fef4a054-el-0",
-          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element",
-          "html": "<span class=\"gauge__val\" style=\"font-size:2.3rem\">88</span>",
-          "selector": ".gauge__val",
+          "ancestorPath": "... > main > form > div.field > div.workspace-row > button#suggest-workspace.icon-button",
+          "contextHtml": "<div class=\"workspace-row\">\n  <input id=\"signup-workspace\" name=\"workspace\" type=\"text\" autocomplete=\"organization\">\n  <button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path><circle cx=\"12\" cy=\"12\" r=\"3\" fill=\"currentColor\"></circle></svg></button> <!-- TARGET -->\n</div>",
+          "elementId": "occ-v2-6b78ecd3969069a6",
+          "failureSummary": "Fix any of the following:\n  Element does not have inner text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+          "html": "<button id=\"suggest-workspace\" class=\"icon-button\" type=\"button\">",
+          "selector": "#suggest-workspace",
           "target": [
-            ".gauge__val"
+            "#suggest-workspace"
           ]
         }
       ],
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "color-contrast",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "button-name",
       "scanner": "axe",
-      "scannerData": {
-        "axeIncomplete": true,
-        "contrastData": {
-          "contrastRatio": 0,
-          "expectedContrastRatio": "3:1",
-          "fontSize": "27.6pt (36.8px)",
-          "fontWeight": "bold",
-          "messageKey": "bgOverlap"
-        },
-        "incompleteNodeIndex": 0
-      },
-      "severity": "moderate",
-      "severityRaw": "serious",
-      "title": "Color contrast needs manual verification",
+      "severity": "critical",
+      "severityRaw": "critical",
+      "title": "Buttons must have discernible text",
       "userImpact": {
         "affectedGroups": [
-          "low-vision",
-          "all"
+          "blind"
         ],
-        "severity": "degraded",
-        "statement": "Low vision users and users in bright sunlight cannot read this text.",
-        "userStory": "The text is too faint for me to read comfortably. I have to strain my eyes or zoom in significantly."
+        "severity": "blocking",
+        "statement": "Screen reader users cannot determine what action this button performs.",
+        "userStory": "I hear 'button' but have no idea what clicking it will do. I might accidentally delete something or navigate away."
       },
       "wcagTags": [
-        "wcag2aa",
-        "wcag143",
-        "WCAG 1.4.3"
+        "wcag2a",
+        "wcag412",
+        "WCAG 4.1.2"
+      ]
+    },
+    {
+      "category": "wcag2a",
+      "description": "Form inputs must have associated labels.",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/label?application=playwright",
+      "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+      "id": "617730f9c5f1b11d",
+      "occurrences": [
+        {
+          "ancestorPath": "body > main > form > div.field > input#signup-email",
+          "contextHtml": "<div class=\"field\">\n  <input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\"> <!-- TARGET -->\n</div>",
+          "elementId": "occ-v2-01db558ae5bd6017",
+          "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+          "html": "<input id=\"signup-email\" name=\"email\" type=\"email\" autocomplete=\"email\">",
+          "selector": "#signup-email",
+          "target": [
+            "#signup-email"
+          ]
+        }
+      ],
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "label",
+      "scanner": "axe",
+      "severity": "critical",
+      "severityRaw": "critical",
+      "title": "Form elements must have labels",
+      "userImpact": {
+        "affectedGroups": [
+          "blind",
+          "cognitive"
+        ],
+        "severity": "blocking",
+        "statement": "Screen reader users cannot identify what information to enter in this form field.",
+        "userStory": "When I focus on this input, I don't know what information is expected. Is it my email? Phone number? I have to guess."
+      },
+      "wcagTags": [
+        "wcag2a",
+        "wcag412",
+        "WCAG 1.3.1",
+        "Level A"
+      ]
+    },
+    {
+      "category": "wcag2a",
+      "description": "Ensure select element has an accessible name",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/select-name?application=playwright",
+      "howToFix": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+      "id": "694f89df99f744f2",
+      "occurrences": [
+        {
+          "ancestorPath": "html > body > main > select#billing-cycle",
+          "contextHtml": "<main>\n  <!-- ... -->\n  <p>Choose your billing cycle:</p>\n  <select id=\"billing-cycle\" name=\"billing-cycle\"><option>Monthly billing</option><option>Annual billing</option></select> <!-- TARGET -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <!-- ... -->\n</main>",
+          "elementId": "occ-v2-9ee5ca4a5765c626",
+          "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+          "html": "<select id=\"billing-cycle\" name=\"billing-cycle\"><option>Monthly billing</option><option>Annual billing</option></select>",
+          "selector": "#billing-cycle",
+          "target": [
+            "#billing-cycle"
+          ]
+        }
+      ],
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "select-name",
+      "scanner": "axe",
+      "severity": "critical",
+      "severityRaw": "critical",
+      "title": "Select element must have an accessible name",
+      "userImpact": {
+        "affectedGroups": [
+          "blind"
+        ],
+        "severity": "blocking",
+        "statement": "Screen reader users cannot understand what this dropdown is for."
+      },
+      "wcagTags": [
+        "wcag2a",
+        "wcag412"
       ]
     },
     {
       "category": "wcag2aa",
-      "description": "axe-core could not determine the background color for this text, so StageFlow cannot treat it as a pass. Review the actual foreground and background contrast.",
+      "description": "Ensure text/background contrast meets WCAG AA ratios.",
       "elementCount": 1,
       "elementsTruncated": false,
-      "helpUrl": "https://dequeuniversity.com/rules/axe/4.12/color-contrast?application=playwright",
-      "howToFix": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element",
-      "id": "794ae4ac82a7",
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=playwright",
+      "howToFix": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "id": "789c19f1c4b7f09d",
       "occurrences": [
         {
-          "ancestorPath": "... > div.panel__body > div.preview__top > div.gauge > div.gauge__num > span.gauge__cap",
-          "contextHtml": "<div class=\"gauge__num\">\n  <span class=\"gauge__val\" style=\"font-size:2.3rem\">88</span>\n  <span class=\"gauge__cap\">Site score</span> <!-- TARGET -->\n</div>",
-          "elementId": "794ae4ac82a7-el-0",
-          "failureSummary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element",
-          "html": "<span class=\"gauge__cap\">Site score</span>",
-          "selector": ".gauge__cap",
+          "ancestorPath": "html > body > main > p#pricing-footnote.fineprint",
+          "contextHtml": "<main>\n  <!-- ... -->\n  <div class=\"plans\">\n\t\t\t\t<section class=\"plan\">\n\t\t\t\t\t<h2>Solo</h2>\n\t\t\t\t\t<p class=\"price\">$12 a month</p>\n\t\t\t\t\t<p>For freelancers who send a handful of invoices each month and want them paid on time....\n  <p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p> <!-- TARGET -->\n</main>",
+          "elementId": "occ-v2-8e87cd4aa71cc1d5",
+          "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 2.07 (foreground color: #b4b4b4, background color: #ffffff, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1",
+          "html": "<p id=\"pricing-footnote\" class=\"fineprint\">\n\t\t\t\tPrices exclude sales tax. Annual plans are billed once a year and can be cancelled within 30\n\t\t\t\tdays for a full refund.\n\t\t\t</p>",
+          "selector": "#pricing-footnote",
           "target": [
-            ".gauge__cap"
+            "#pricing-footnote"
           ]
         }
       ],
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
       "ruleId": "color-contrast",
       "scanner": "axe",
       "scannerData": {
-        "axeIncomplete": true,
         "contrastData": {
-          "contrastRatio": 0,
+          "bgColor": "#ffffff",
+          "contrastRatio": 2.07,
           "expectedContrastRatio": "4.5:1",
-          "fontSize": "9.8pt (13px)",
-          "fontWeight": "normal",
-          "messageKey": "bgOverlap"
-        },
-        "incompleteNodeIndex": 1
+          "fgColor": "#b4b4b4",
+          "fontSize": "10.5pt (14px)",
+          "fontWeight": "normal"
+        }
       },
-      "severity": "moderate",
+      "severity": "serious",
       "severityRaw": "serious",
-      "title": "Color contrast needs manual verification",
+      "title": "Elements must meet minimum color contrast ratio thresholds",
       "userImpact": {
         "affectedGroups": [
           "low-vision",
@@ -350,1012 +238,980 @@
       "wcagTags": [
         "wcag2aa",
         "wcag143",
-        "WCAG 1.4.3"
+        "WCAG 1.4.3",
+        "Level AA"
       ]
+    },
+    {
+      "category": "wcag2a",
+      "description": "Links need discernible text or aria-labels.",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/link-name?application=playwright",
+      "howToFix": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
+      "id": "0764c92e71494d27",
+      "occurrences": [
+        {
+          "ancestorPath": "body > main > section > p > a#careers-link",
+          "contextHtml": "<p>\n  <a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a> <!-- TARGET -->\n</p>",
+          "elementId": "occ-v2-87dd74631d32d60f",
+          "failureSummary": "Fix all of the following:\n  Element is in tab order and does not have accessible text\n\nFix any of the following:\n  Element does not have text that is visible to screen readers\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute",
+          "html": "<a id=\"careers-link\" href=\"careers.html\"><svg aria-hidden=\"true\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\"><path d=\"M5 12h14m-6-6 6 6-6 6\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"></path></svg></a>",
+          "selector": "#careers-link",
+          "target": [
+            "#careers-link"
+          ]
+        }
+      ],
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "link-name",
+      "scanner": "axe",
+      "severity": "serious",
+      "severityRaw": "serious",
+      "title": "Links must have discernible text",
+      "userImpact": {
+        "affectedGroups": [
+          "blind"
+        ],
+        "severity": "blocking",
+        "statement": "Screen reader users cannot determine where this link goes or what it does.",
+        "userStory": "My screen reader announces 'link' but doesn't tell me what the link is for. I have to guess or skip it entirely."
+      },
+      "wcagTags": [
+        "wcag2a",
+        "wcag244",
+        "wcag412",
+        "WCAG 2.4.4"
+      ]
+    },
+    {
+      "category": "best-practices",
+      "description": "Errors logged to the console indicate unresolved problems. They can come from network request failures and other browser concerns. [Learn more about this errors in console diagnostic audit](https://developer.chrome.com/docs/lighthouse/best-practices/errors-in-console/)",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/best-practices/errors-in-console/",
+      "id": "2eecdb9e71d9ff39",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "errors-in-console",
+      "scanner": "lighthouse",
+      "scannerData": {
+        "details": {
+          "headings": [
+            {
+              "key": "sourceLocation",
+              "label": "Source",
+              "valueType": "source-location"
+            },
+            {
+              "key": "description",
+              "label": "Description",
+              "valueType": "code"
+            }
+          ],
+          "items": [
+            {
+              "description": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+              "source": "network",
+              "sourceLocation": {
+                "column": 0,
+                "line": 0,
+                "type": "source-location",
+                "url": "https://sample.stageflow.org/favicon.ico",
+                "urlProvider": "network"
+              }
+            }
+          ],
+          "type": "table"
+        },
+        "score": 0,
+        "scoreDisplayMode": "binary"
+      },
+      "severity": "serious",
+      "title": "Browser errors were logged to the console"
+    },
+    {
+      "category": "seo",
+      "description": "Meta descriptions may be included in search results to concisely summarize page content. [Learn more about the meta description](https://developer.chrome.com/docs/lighthouse/seo/meta-description/).",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/seo/meta-description/",
+      "id": "61a8b7eb8a19fc55",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "meta-description",
+      "scanner": "lighthouse",
+      "scannerData": {
+        "score": 0,
+        "scoreDisplayMode": "binary"
+      },
+      "severity": "serious",
+      "title": "Document does not have a meta description"
+    },
+    {
+      "category": "links",
+      "description": "https://sample.stageflow.org/careers.html returned HTTP 404. Broken links hurt user experience and SEO.",
+      "elementCount": 1,
+      "elementsTruncated": false,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Status",
+      "howToFix": "Update the href to a working URL, restore or redirect the missing destination, or remove the link.",
+      "id": "8c52bec3ef167591",
+      "occurrences": [
+        {
+          "elementId": "occ-v2-80a9bbd93bf80155",
+          "failureSummary": "Update the href to a working URL, restore or redirect the missing destination, or remove the link.",
+          "html": "https://sample.stageflow.org/careers.html",
+          "selector": "#careers-link",
+          "target": [
+            "#careers-link"
+          ]
+        }
+      ],
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "link-checker-broken",
+      "scanner": "link-checker",
+      "scannerData": {
+        "links": [
+          {
+            "error": null,
+            "status": 404,
+            "url": "https://sample.stageflow.org/careers.html"
+          }
+        ],
+        "totalCount": 1
+      },
+      "severity": "serious",
+      "title": "Broken link (HTTP 404)"
+    },
+    {
+      "category": "security-headers",
+      "description": "CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+      "howToFix": "Start with Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'. Test in report-only mode and allow the sources your application needs before enforcing it.",
+      "id": "a1ff8d0289fa700e",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "security-headers-missing-content-security-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "content-security-policy"
+      },
+      "severity": "serious",
+      "title": "Missing Content Security Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+      "howToFix": "Start with Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'. Test in report-only mode and allow the sources your application needs before enforcing it.",
+      "id": "6eac982d12270bad",
+      "pageId": "page-v2-213456c5dc963e03",
+      "pageUrl": "https://sample.stageflow.org/index.html",
+      "ruleId": "security-headers-missing-content-security-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "content-security-policy"
+      },
+      "severity": "serious",
+      "title": "Missing Content Security Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+      "howToFix": "Start with Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'. Test in report-only mode and allow the sources your application needs before enforcing it.",
+      "id": "2f83eccfb7769d12",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "security-headers-missing-content-security-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "content-security-policy"
+      },
+      "severity": "serious",
+      "title": "Missing Content Security Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "CSP helps prevent XSS attacks by specifying allowed content sources. Without it, your site is more vulnerable to cross-site scripting attacks.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP",
+      "howToFix": "Start with Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'. Test in report-only mode and allow the sources your application needs before enforcing it.",
+      "id": "03b154633fd65095",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "security-headers-missing-content-security-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "content-security-policy"
+      },
+      "severity": "serious",
+      "title": "Missing Content Security Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
+      "howToFix": "After verifying HTTPS works for every route, send Strict-Transport-Security: max-age=31536000. Add includeSubDomains only when all subdomains support HTTPS.",
+      "id": "575413e65cc5d89b",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "security-headers-missing-strict-transport-security",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "strict-transport-security"
+      },
+      "severity": "serious",
+      "title": "Missing HSTS Header"
+    },
+    {
+      "category": "security-headers",
+      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
+      "howToFix": "After verifying HTTPS works for every route, send Strict-Transport-Security: max-age=31536000. Add includeSubDomains only when all subdomains support HTTPS.",
+      "id": "991e21a432f6c808",
+      "pageId": "page-v2-213456c5dc963e03",
+      "pageUrl": "https://sample.stageflow.org/index.html",
+      "ruleId": "security-headers-missing-strict-transport-security",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "strict-transport-security"
+      },
+      "severity": "serious",
+      "title": "Missing HSTS Header"
+    },
+    {
+      "category": "security-headers",
+      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
+      "howToFix": "After verifying HTTPS works for every route, send Strict-Transport-Security: max-age=31536000. Add includeSubDomains only when all subdomains support HTTPS.",
+      "id": "971fd6d618a9ef14",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "security-headers-missing-strict-transport-security",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "strict-transport-security"
+      },
+      "severity": "serious",
+      "title": "Missing HSTS Header"
+    },
+    {
+      "category": "security-headers",
+      "description": "HSTS ensures browsers only connect via HTTPS, protecting against protocol downgrade attacks and cookie hijacking.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
+      "howToFix": "After verifying HTTPS works for every route, send Strict-Transport-Security: max-age=31536000. Add includeSubDomains only when all subdomains support HTTPS.",
+      "id": "12b2c1d585d4b727",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "security-headers-missing-strict-transport-security",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "strict-transport-security"
+      },
+      "severity": "serious",
+      "title": "Missing HSTS Header"
     },
     {
       "category": "meta",
-      "description": "Meta description is too long (223 characters). It may be truncated. Recommended: 120-160 characters.",
+      "description": "Page is missing a meta description. This affects click-through rates from search results.",
       "elementCount": 1,
       "elementsTruncated": true,
       "helpUrl": "https://moz.com/learn/seo/meta-description",
-      "id": "476002d4e20a",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "seo-description-length",
+      "howToFix": "Add <meta name=\"description\" content=\"A concise, accurate summary of this page.\"> inside <head>.",
+      "id": "d28d6bea4455f29a",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "seo-missing-description",
       "scanner": "seo",
-      "scannerData": {
-        "length": 223,
-        "recommended": "120-160"
-      },
-      "severity": "moderate",
-      "title": "Meta Description Length"
-    },
-    {
-      "category": "content",
-      "description": "Page has only 200 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "id": "9bbeea68edac",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "seo-thin-content",
-      "scanner": "seo",
-      "scannerData": {
-        "recommended": "300+",
-        "wordCount": 200
-      },
-      "severity": "moderate",
-      "title": "Thin Content"
-    },
-    {
-      "category": "content",
-      "description": "Page has only 114 words. Pages with thin content may rank poorly. Consider adding more valuable content.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "id": "7aedbc4314f2",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "seo-thin-content",
-      "scanner": "seo",
-      "scannerData": {
-        "recommended": "300+",
-        "wordCount": 114
-      },
-      "severity": "moderate",
-      "title": "Thin Content"
-    },
-    {
-      "category": "meta",
-      "description": "Title is too short (26 characters). Recommended: 50-60 characters.",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://moz.com/learn/seo/title-tag",
-      "id": "1b693bd067ae",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "seo-title-length",
-      "scanner": "seo",
-      "scannerData": {
-        "length": 26,
-        "recommended": "50-60"
-      },
-      "severity": "moderate",
-      "title": "Title Tag Length"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls have associated labels, provided by aria-label or aria-labelledby. [Learn more about custom controls and labels](https://developer.chrome.com/docs/lighthouse/accessibility/custom-controls-labels/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "1b6c8c508315",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "custom-controls-labels",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Custom controls have associated labels"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls have associated labels, provided by aria-label or aria-labelledby. [Learn more about custom controls and labels](https://developer.chrome.com/docs/lighthouse/accessibility/custom-controls-labels/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "b284778aad0a",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "custom-controls-labels",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Custom controls have associated labels"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls have associated labels, provided by aria-label or aria-labelledby. [Learn more about custom controls and labels](https://developer.chrome.com/docs/lighthouse/accessibility/custom-controls-labels/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "b2dcdcd8e940",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "custom-controls-labels",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Custom controls have associated labels"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls have appropriate ARIA roles. [Learn how to add roles to custom controls](https://developer.chrome.com/docs/lighthouse/accessibility/custom-control-roles/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "a51c698e7b5f",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "custom-controls-roles",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Custom controls have ARIA roles"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls have appropriate ARIA roles. [Learn how to add roles to custom controls](https://developer.chrome.com/docs/lighthouse/accessibility/custom-control-roles/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "ea9133fe80b3",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "custom-controls-roles",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Custom controls have ARIA roles"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls have appropriate ARIA roles. [Learn how to add roles to custom controls](https://developer.chrome.com/docs/lighthouse/accessibility/custom-control-roles/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "e6b8401ae3f6",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "custom-controls-roles",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Custom controls have ARIA roles"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: A user can tab into and out of any control or region without accidentally trapping their focus. [Learn how to avoid focus traps](https://developer.chrome.com/docs/lighthouse/accessibility/focus-traps/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "14c5595463a0",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "focus-traps",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "User focus is not accidentally trapped in a region"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: A user can tab into and out of any control or region without accidentally trapping their focus. [Learn how to avoid focus traps](https://developer.chrome.com/docs/lighthouse/accessibility/focus-traps/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "890875b0b909",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "focus-traps",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "User focus is not accidentally trapped in a region"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: A user can tab into and out of any control or region without accidentally trapping their focus. [Learn how to avoid focus traps](https://developer.chrome.com/docs/lighthouse/accessibility/focus-traps/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "914b31ae098c",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "focus-traps",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "User focus is not accidentally trapped in a region"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls are keyboard focusable and display a focus indicator. [Learn how to make custom controls focusable](https://developer.chrome.com/docs/lighthouse/accessibility/focusable-controls/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "8f7fa2208abd",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "focusable-controls",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Interactive controls are keyboard focusable"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls are keyboard focusable and display a focus indicator. [Learn how to make custom controls focusable](https://developer.chrome.com/docs/lighthouse/accessibility/focusable-controls/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "93e367cc8585",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "focusable-controls",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Interactive controls are keyboard focusable"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Custom interactive controls are keyboard focusable and display a focus indicator. [Learn how to make custom controls focusable](https://developer.chrome.com/docs/lighthouse/accessibility/focusable-controls/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "78f86b621592",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "focusable-controls",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Interactive controls are keyboard focusable"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Interactive elements, such as links and buttons, should indicate their state and be distinguishable from non-interactive elements. [Learn how to decorate interactive elements with affordance hints](https://developer.chrome.com/docs/lighthouse/accessibility/interactive-element-affordance/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "e3d9ad01ccb7",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "interactive-element-affordance",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Interactive elements indicate their purpose and state"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Interactive elements, such as links and buttons, should indicate their state and be distinguishable from non-interactive elements. [Learn how to decorate interactive elements with affordance hints](https://developer.chrome.com/docs/lighthouse/accessibility/interactive-element-affordance/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "2d4291a5ff78",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "interactive-element-affordance",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Interactive elements indicate their purpose and state"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Interactive elements, such as links and buttons, should indicate their state and be distinguishable from non-interactive elements. [Learn how to decorate interactive elements with affordance hints](https://developer.chrome.com/docs/lighthouse/accessibility/interactive-element-affordance/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "3019abd1ac1a",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "interactive-element-affordance",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Interactive elements indicate their purpose and state"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Tabbing through the page follows the visual layout. Users cannot focus elements that are offscreen. [Learn more about logical tab ordering](https://developer.chrome.com/docs/lighthouse/accessibility/logical-tab-order/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "495ff6dc9e46",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "logical-tab-order",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "The page has a logical tab order"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Tabbing through the page follows the visual layout. Users cannot focus elements that are offscreen. [Learn more about logical tab ordering](https://developer.chrome.com/docs/lighthouse/accessibility/logical-tab-order/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "dde223d517ee",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "logical-tab-order",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "The page has a logical tab order"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Tabbing through the page follows the visual layout. Users cannot focus elements that are offscreen. [Learn more about logical tab ordering](https://developer.chrome.com/docs/lighthouse/accessibility/logical-tab-order/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "ac6c90fb99b6",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "logical-tab-order",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "The page has a logical tab order"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: If new content, such as a dialog, is added to the page, the user's focus is directed to it. [Learn how to direct focus to new content](https://developer.chrome.com/docs/lighthouse/accessibility/managed-focus/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "120d18391d76",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "managed-focus",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "The user's focus is directed to new content added to the page"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: If new content, such as a dialog, is added to the page, the user's focus is directed to it. [Learn how to direct focus to new content](https://developer.chrome.com/docs/lighthouse/accessibility/managed-focus/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "ce494c477248",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "managed-focus",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "The user's focus is directed to new content added to the page"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: If new content, such as a dialog, is added to the page, the user's focus is directed to it. [Learn how to direct focus to new content](https://developer.chrome.com/docs/lighthouse/accessibility/managed-focus/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "6dce0302e497",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "managed-focus",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "The user's focus is directed to new content added to the page"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Offscreen content is hidden with display: none or aria-hidden=true. [Learn how to properly hide offscreen content](https://developer.chrome.com/docs/lighthouse/accessibility/offscreen-content-hidden/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "70727ffd4c4a",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "offscreen-content-hidden",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Offscreen content is hidden from assistive technology"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Offscreen content is hidden with display: none or aria-hidden=true. [Learn how to properly hide offscreen content](https://developer.chrome.com/docs/lighthouse/accessibility/offscreen-content-hidden/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "2b2b1e6f946e",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "offscreen-content-hidden",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Offscreen content is hidden from assistive technology"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Offscreen content is hidden with display: none or aria-hidden=true. [Learn how to properly hide offscreen content](https://developer.chrome.com/docs/lighthouse/accessibility/offscreen-content-hidden/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "9af15c4b26d1",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "offscreen-content-hidden",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Offscreen content is hidden from assistive technology"
-    },
-    {
-      "category": "seo",
-      "description": "Manual verification required: Run the [Structured Data Testing Tool](https://developers.google.com/search/docs/appearance/structured-data/) to validate structured data. [Learn more about Structured Data](https://developer.chrome.com/docs/lighthouse/seo/structured-data/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "b252e3c9dc58",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "structured-data",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Structured data is valid"
-    },
-    {
-      "category": "seo",
-      "description": "Manual verification required: Run the [Structured Data Testing Tool](https://developers.google.com/search/docs/appearance/structured-data/) to validate structured data. [Learn more about Structured Data](https://developer.chrome.com/docs/lighthouse/seo/structured-data/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "0cae388eef3e",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "structured-data",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Structured data is valid"
-    },
-    {
-      "category": "seo",
-      "description": "Manual verification required: Run the [Structured Data Testing Tool](https://developers.google.com/search/docs/appearance/structured-data/) to validate structured data. [Learn more about Structured Data](https://developer.chrome.com/docs/lighthouse/seo/structured-data/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "1262967fa29c",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "structured-data",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Structured data is valid"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Landmark elements (`<main>`, `<nav>`, etc.) are used to improve the keyboard navigation of the page for assistive technology. [Learn more about landmark elements](https://developer.chrome.com/docs/lighthouse/accessibility/use-landmarks/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "cf7cf65ada1e",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "use-landmarks",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "HTML5 landmark elements are used to improve navigation"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Landmark elements (`<main>`, `<nav>`, etc.) are used to improve the keyboard navigation of the page for assistive technology. [Learn more about landmark elements](https://developer.chrome.com/docs/lighthouse/accessibility/use-landmarks/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "3aa6221ac964",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "use-landmarks",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "HTML5 landmark elements are used to improve navigation"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: Landmark elements (`<main>`, `<nav>`, etc.) are used to improve the keyboard navigation of the page for assistive technology. [Learn more about landmark elements](https://developer.chrome.com/docs/lighthouse/accessibility/use-landmarks/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "028836e522b8",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "use-landmarks",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "HTML5 landmark elements are used to improve navigation"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: DOM order matches the visual order, improving navigation for assistive technology. [Learn more about DOM and visual ordering](https://developer.chrome.com/docs/lighthouse/accessibility/visual-order-follows-dom/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "98aa54b8407c",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "visual-order-follows-dom",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Visual order on the page follows DOM order"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: DOM order matches the visual order, improving navigation for assistive technology. [Learn more about DOM and visual ordering](https://developer.chrome.com/docs/lighthouse/accessibility/visual-order-follows-dom/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "1389b1054482",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "visual-order-follows-dom",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Visual order on the page follows DOM order"
-    },
-    {
-      "category": "accessibility",
-      "description": "Manual verification required: DOM order matches the visual order, improving navigation for assistive technology. [Learn more about DOM and visual ordering](https://developer.chrome.com/docs/lighthouse/accessibility/visual-order-follows-dom/).",
-      "elementCount": 1,
-      "elementsTruncated": true,
-      "helpUrl": "https://developer.chrome.com/docs/lighthouse/overview/",
-      "id": "012237c25173",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "visual-order-follows-dom",
-      "scanner": "lighthouse",
-      "scannerData": {
-        "lighthouseManual": true,
-        "score": null,
-        "scoreDisplayMode": "manual"
-      },
-      "severity": "info",
-      "title": "Visual order on the page follows DOM order"
+      "severity": "serious",
+      "title": "Missing Meta Description"
     },
     {
       "category": "security-headers",
-      "description": "Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP.",
+      "description": "Prevents MIME type sniffing attacks by ensuring browsers respect the declared Content-Type.",
       "elementCount": 1,
       "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection",
-      "id": "8d4b82a87c63",
-      "pageId": "url-1",
-      "pageUrl": "https://stageflow.org/",
-      "ruleId": "security-headers-missing-x-xss-protection",
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options",
+      "howToFix": "Send X-Content-Type-Options: nosniff and serve resources with their correct Content-Type.",
+      "id": "6f3eb14052aa4410",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "security-headers-missing-x-content-type-options",
       "scanner": "security-headers",
       "scannerData": {
-        "headerName": "x-xss-protection"
+        "headerName": "x-content-type-options"
       },
-      "severity": "info",
-      "title": "Missing X-XSS-Protection"
+      "severity": "moderate",
+      "title": "Missing X-Content-Type-Options"
     },
     {
       "category": "security-headers",
-      "description": "Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP.",
+      "description": "Prevents MIME type sniffing attacks by ensuring browsers respect the declared Content-Type.",
       "elementCount": 1,
       "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection",
-      "id": "3bf398689520",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "security-headers-missing-x-xss-protection",
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options",
+      "howToFix": "Send X-Content-Type-Options: nosniff and serve resources with their correct Content-Type.",
+      "id": "c1cb44e58ab13782",
+      "pageId": "page-v2-213456c5dc963e03",
+      "pageUrl": "https://sample.stageflow.org/index.html",
+      "ruleId": "security-headers-missing-x-content-type-options",
       "scanner": "security-headers",
       "scannerData": {
-        "headerName": "x-xss-protection"
+        "headerName": "x-content-type-options"
       },
-      "severity": "info",
-      "title": "Missing X-XSS-Protection"
+      "severity": "moderate",
+      "title": "Missing X-Content-Type-Options"
     },
     {
       "category": "security-headers",
-      "description": "Legacy header that enabled browser XSS filtering. Modern browsers have deprecated this in favor of CSP.",
+      "description": "Prevents MIME type sniffing attacks by ensuring browsers respect the declared Content-Type.",
       "elementCount": 1,
       "elementsTruncated": true,
-      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection",
-      "id": "06141672e222",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "security-headers-missing-x-xss-protection",
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options",
+      "howToFix": "Send X-Content-Type-Options: nosniff and serve resources with their correct Content-Type.",
+      "id": "c18e3c1873f1ced0",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "security-headers-missing-x-content-type-options",
       "scanner": "security-headers",
       "scannerData": {
-        "headerName": "x-xss-protection"
+        "headerName": "x-content-type-options"
       },
-      "severity": "info",
-      "title": "Missing X-XSS-Protection"
+      "severity": "moderate",
+      "title": "Missing X-Content-Type-Options"
     },
     {
-      "category": "technical",
-      "description": "No structured data (JSON-LD) found. Structured data can improve rich snippets in search results.",
+      "category": "security-headers",
+      "description": "Prevents MIME type sniffing attacks by ensuring browsers respect the declared Content-Type.",
       "elementCount": 1,
       "elementsTruncated": true,
-      "helpUrl": "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data",
-      "id": "edd43b701db4",
-      "pageId": "url-3",
-      "pageUrl": "https://stageflow.org/playground",
-      "ruleId": "seo-missing-structured-data",
-      "scanner": "seo",
-      "severity": "info",
-      "title": "Missing Structured Data"
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options",
+      "howToFix": "Send X-Content-Type-Options: nosniff and serve resources with their correct Content-Type.",
+      "id": "11706652bc3ec477",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "security-headers-missing-x-content-type-options",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "x-content-type-options"
+      },
+      "severity": "moderate",
+      "title": "Missing X-Content-Type-Options"
     },
     {
-      "category": "technical",
-      "description": "No structured data (JSON-LD) found. Structured data can improve rich snippets in search results.",
+      "category": "security-headers",
+      "description": "Prevents clickjacking by controlling whether the page can be embedded in iframes on other sites.",
       "elementCount": 1,
       "elementsTruncated": true,
-      "helpUrl": "https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data",
-      "id": "9667f3122fa0",
-      "pageId": "url-2",
-      "pageUrl": "https://stageflow.org/projects",
-      "ruleId": "seo-missing-structured-data",
-      "scanner": "seo",
-      "severity": "info",
-      "title": "Missing Structured Data"
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+      "howToFix": "Send Content-Security-Policy: frame-ancestors 'self' (or 'none' when framing is unnecessary), or X-Frame-Options: SAMEORIGIN.",
+      "id": "2a44a1bb16e4e539",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "security-headers-missing-x-frame-options",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "x-frame-options"
+      },
+      "severity": "moderate",
+      "title": "Missing X-Frame-Options"
+    },
+    {
+      "category": "security-headers",
+      "description": "Prevents clickjacking by controlling whether the page can be embedded in iframes on other sites.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+      "howToFix": "Send Content-Security-Policy: frame-ancestors 'self' (or 'none' when framing is unnecessary), or X-Frame-Options: SAMEORIGIN.",
+      "id": "57ef7ec74112ec8a",
+      "pageId": "page-v2-213456c5dc963e03",
+      "pageUrl": "https://sample.stageflow.org/index.html",
+      "ruleId": "security-headers-missing-x-frame-options",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "x-frame-options"
+      },
+      "severity": "moderate",
+      "title": "Missing X-Frame-Options"
+    },
+    {
+      "category": "security-headers",
+      "description": "Prevents clickjacking by controlling whether the page can be embedded in iframes on other sites.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+      "howToFix": "Send Content-Security-Policy: frame-ancestors 'self' (or 'none' when framing is unnecessary), or X-Frame-Options: SAMEORIGIN.",
+      "id": "7ffe7eb56519d18d",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "security-headers-missing-x-frame-options",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "x-frame-options"
+      },
+      "severity": "moderate",
+      "title": "Missing X-Frame-Options"
+    },
+    {
+      "category": "security-headers",
+      "description": "Prevents clickjacking by controlling whether the page can be embedded in iframes on other sites.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+      "howToFix": "Send Content-Security-Policy: frame-ancestors 'self' (or 'none' when framing is unnecessary), or X-Frame-Options: SAMEORIGIN.",
+      "id": "28072ed4809cb701",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "security-headers-missing-x-frame-options",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "x-frame-options"
+      },
+      "severity": "moderate",
+      "title": "Missing X-Frame-Options"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+      "howToFix": "Send Permissions-Policy: camera=(), microphone=(), geolocation=(). Enable only the features and origins your application needs.",
+      "id": "6542d54d494f8291",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "security-headers-missing-permissions-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "permissions-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Permissions Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+      "howToFix": "Send Permissions-Policy: camera=(), microphone=(), geolocation=(). Enable only the features and origins your application needs.",
+      "id": "99cef13542c38cd3",
+      "pageId": "page-v2-213456c5dc963e03",
+      "pageUrl": "https://sample.stageflow.org/index.html",
+      "ruleId": "security-headers-missing-permissions-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "permissions-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Permissions Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+      "howToFix": "Send Permissions-Policy: camera=(), microphone=(), geolocation=(). Enable only the features and origins your application needs.",
+      "id": "7ff78758cc6c74df",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "security-headers-missing-permissions-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "permissions-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Permissions Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls which browser features (camera, microphone, geolocation, etc.) can be used by the page.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy",
+      "howToFix": "Send Permissions-Policy: camera=(), microphone=(), geolocation=(). Enable only the features and origins your application needs.",
+      "id": "45e3a74bedd7bdbc",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "security-headers-missing-permissions-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "permissions-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Permissions Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls how much referrer information is sent with requests, helping protect user privacy.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy",
+      "howToFix": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+      "id": "6cb8df64117d49b5",
+      "pageId": "page-v2-db5b16407156eab2",
+      "pageUrl": "https://sample.stageflow.org/about.html",
+      "ruleId": "security-headers-missing-referrer-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "referrer-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Referrer Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls how much referrer information is sent with requests, helping protect user privacy.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy",
+      "howToFix": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+      "id": "2cb5c17617b0449f",
+      "pageId": "page-v2-213456c5dc963e03",
+      "pageUrl": "https://sample.stageflow.org/index.html",
+      "ruleId": "security-headers-missing-referrer-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "referrer-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Referrer Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls how much referrer information is sent with requests, helping protect user privacy.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy",
+      "howToFix": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+      "id": "be9b7d5c687af7a9",
+      "pageId": "page-v2-9ac7a7b2ed8ccf33",
+      "pageUrl": "https://sample.stageflow.org/pricing.html",
+      "ruleId": "security-headers-missing-referrer-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "referrer-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Referrer Policy"
+    },
+    {
+      "category": "security-headers",
+      "description": "Controls how much referrer information is sent with requests, helping protect user privacy.",
+      "elementCount": 1,
+      "elementsTruncated": true,
+      "helpUrl": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy",
+      "howToFix": "Send Referrer-Policy: strict-origin-when-cross-origin.",
+      "id": "ba3f1e7353543b28",
+      "pageId": "page-v2-78421f5b8fea2d9d",
+      "pageUrl": "https://sample.stageflow.org/signup.html",
+      "ruleId": "security-headers-missing-referrer-policy",
+      "scanner": "security-headers",
+      "scannerData": {
+        "headerName": "referrer-policy"
+      },
+      "severity": "minor",
+      "title": "Missing Referrer Policy"
+    }
+  ],
+  "manualChecks": [
+    {
+      "description": "Custom interactive controls have associated labels, provided by aria-label or aria-labelledby. [Learn more about custom controls and labels](https://developer.chrome.com/docs/lighthouse/accessibility/custom-controls-labels/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/custom-controls-labels/",
+      "pageCount": 4,
+      "ruleId": "custom-controls-labels",
+      "scanner": "lighthouse",
+      "title": "Custom controls have associated labels"
+    },
+    {
+      "description": "Custom interactive controls have appropriate ARIA roles. [Learn how to add roles to custom controls](https://developer.chrome.com/docs/lighthouse/accessibility/custom-control-roles/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/custom-control-roles/",
+      "pageCount": 4,
+      "ruleId": "custom-controls-roles",
+      "scanner": "lighthouse",
+      "title": "Custom controls have ARIA roles"
+    },
+    {
+      "description": "A user can tab into and out of any control or region without accidentally trapping their focus. [Learn how to avoid focus traps](https://developer.chrome.com/docs/lighthouse/accessibility/focus-traps/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/focus-traps/",
+      "pageCount": 4,
+      "ruleId": "focus-traps",
+      "scanner": "lighthouse",
+      "title": "User focus is not accidentally trapped in a region"
+    },
+    {
+      "description": "Custom interactive controls are keyboard focusable and display a focus indicator. [Learn how to make custom controls focusable](https://developer.chrome.com/docs/lighthouse/accessibility/focusable-controls/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/focusable-controls/",
+      "pageCount": 4,
+      "ruleId": "focusable-controls",
+      "scanner": "lighthouse",
+      "title": "Interactive controls are keyboard focusable"
+    },
+    {
+      "description": "Interactive elements, such as links and buttons, should indicate their state and be distinguishable from non-interactive elements. [Learn how to decorate interactive elements with affordance hints](https://developer.chrome.com/docs/lighthouse/accessibility/interactive-element-affordance/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/interactive-element-affordance/",
+      "pageCount": 4,
+      "ruleId": "interactive-element-affordance",
+      "scanner": "lighthouse",
+      "title": "Interactive elements indicate their purpose and state"
+    },
+    {
+      "description": "Tabbing through the page follows the visual layout. Users cannot focus elements that are offscreen. [Learn more about logical tab ordering](https://developer.chrome.com/docs/lighthouse/accessibility/logical-tab-order/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/logical-tab-order/",
+      "pageCount": 4,
+      "ruleId": "logical-tab-order",
+      "scanner": "lighthouse",
+      "title": "The page has a logical tab order"
+    },
+    {
+      "description": "If new content, such as a dialog, is added to the page, the user's focus is directed to it. [Learn how to direct focus to new content](https://developer.chrome.com/docs/lighthouse/accessibility/managed-focus/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/managed-focus/",
+      "pageCount": 4,
+      "ruleId": "managed-focus",
+      "scanner": "lighthouse",
+      "title": "The user's focus is directed to new content added to the page"
+    },
+    {
+      "description": "Offscreen content is hidden with display: none or aria-hidden=true. [Learn how to properly hide offscreen content](https://developer.chrome.com/docs/lighthouse/accessibility/offscreen-content-hidden/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/offscreen-content-hidden/",
+      "pageCount": 4,
+      "ruleId": "offscreen-content-hidden",
+      "scanner": "lighthouse",
+      "title": "Offscreen content is hidden from assistive technology"
+    },
+    {
+      "description": "Run the [Structured Data Testing Tool](https://developers.google.com/search/docs/appearance/structured-data/) to validate structured data. [Learn more about Structured Data](https://developer.chrome.com/docs/lighthouse/seo/structured-data/).",
+      "helpUrl": "https://developers.google.com/search/docs/appearance/structured-data/",
+      "pageCount": 4,
+      "ruleId": "structured-data",
+      "scanner": "lighthouse",
+      "title": "Structured data is valid"
+    },
+    {
+      "description": "Landmark elements (`<main>`, `<nav>`, etc.) are used to improve the keyboard navigation of the page for assistive technology. [Learn more about landmark elements](https://developer.chrome.com/docs/lighthouse/accessibility/use-landmarks/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/use-landmarks/",
+      "pageCount": 4,
+      "ruleId": "use-landmarks",
+      "scanner": "lighthouse",
+      "title": "HTML5 landmark elements are used to improve navigation"
+    },
+    {
+      "description": "DOM order matches the visual order, improving navigation for assistive technology. [Learn more about DOM and visual ordering](https://developer.chrome.com/docs/lighthouse/accessibility/visual-order-follows-dom/).",
+      "helpUrl": "https://developer.chrome.com/docs/lighthouse/accessibility/visual-order-follows-dom/",
+      "pageCount": 4,
+      "ruleId": "visual-order-follows-dom",
+      "scanner": "lighthouse",
+      "title": "Visual order on the page follows DOM order"
     }
   ],
   "meta": {
-    "completedAt": "2026-07-26T04:25:08.234Z",
-    "durationMs": 39789,
+    "baseUrl": "https://sample.stageflow.org",
+    "completedAt": "2026-09-30T00:00:00.000Z",
+    "durationMs": 31677,
     "jobId": "demo",
-    "scannedAt": "2026-07-26T04:24:28.445Z"
+    "scannedAt": "2026-09-30T00:00:00.000Z"
   },
   "pages": [
     {
       "bySeverity": {
         "critical": 0,
-        "info": 12,
-        "minor": 0,
-        "moderate": 3,
-        "serious": 1
+        "minor": 2,
+        "moderate": 2,
+        "serious": 7
       },
-      "durationMs": 55270.83,
-      "finishedAt": "2026-07-26T04:24:49.904Z",
-      "id": "url-1",
-      "issueCount": 16,
+      "durationMs": 21300.39,
+      "finishedAt": "2026-09-30T00:00:00.000Z",
+      "id": "page-v2-db5b16407156eab2",
+      "issueCount": 11,
       "pageOverview": {
         "elements": [
           {
-            "height": 74,
-            "heightPercent": 1.41,
-            "issueId": "6d53fef4a054",
+            "height": 42,
+            "heightPercent": 2.92,
+            "issueId": "0764c92e71494d27",
             "nodeIndex": 0,
-            "ruleId": "color-contrast",
-            "selector": ".gauge__val",
+            "ruleId": "link-name",
+            "selector": "#careers-link",
             "severity": "serious",
-            "width": 115,
-            "widthPercent": 4.48,
-            "x": 1451,
-            "xPercent": 56.68,
-            "y": 751,
-            "yPercent": 14.37
-          },
-          {
-            "height": 40,
-            "heightPercent": 0.77,
-            "issueId": "794ae4ac82a7",
-            "nodeIndex": 0,
-            "ruleId": "color-contrast",
-            "selector": ".gauge__cap",
-            "severity": "serious",
-            "width": 115,
-            "widthPercent": 4.48,
-            "x": 1451,
-            "xPercent": 56.68,
-            "y": 834,
-            "yPercent": 15.97
+            "width": 48,
+            "widthPercent": 1.88,
+            "x": 1103,
+            "xPercent": 43.1,
+            "y": 998,
+            "yPercent": 69.32
           }
         ],
-        "pageHeight": 5224,
+        "pageHeight": 1440,
         "pageWidth": 2560,
-        "screenshotFilename": "page-overview-url-1.webp"
+        "screenshotFilename": "page-overview-page-v2-db5b16407156eab2.webp"
       },
-      "path": "/",
-      "startedAt": "2026-07-26T04:24:29.261Z",
-      "url": "https://stageflow.org/"
+      "path": "/about.html",
+      "startedAt": "2026-09-30T00:00:00.000Z",
+      "url": "https://sample.stageflow.org/about.html"
     },
     {
       "bySeverity": {
         "critical": 0,
-        "info": 13,
-        "minor": 0,
-        "moderate": 1,
-        "serious": 1
-      },
-      "durationMs": 43149.44,
-      "finishedAt": "2026-07-26T04:25:08.204Z",
-      "id": "url-3",
-      "issueCount": 15,
-      "pageOverview": {
-        "elements": [],
-        "pageHeight": 3438,
-        "pageWidth": 2560,
-        "screenshotFilename": "page-overview-url-3.webp"
-      },
-      "path": "/playground",
-      "startedAt": "2026-07-26T04:24:29.264Z",
-      "url": "https://stageflow.org/playground"
-    },
-    {
-      "bySeverity": {
-        "critical": 0,
-        "info": 13,
-        "minor": 0,
+        "minor": 2,
         "moderate": 2,
-        "serious": 1
+        "serious": 2
       },
-      "durationMs": 41050.83,
-      "finishedAt": "2026-07-26T04:24:58.296Z",
-      "id": "url-2",
-      "issueCount": 16,
+      "durationMs": 19547.659999999996,
+      "finishedAt": "2026-09-30T00:00:00.000Z",
+      "id": "page-v2-213456c5dc963e03",
+      "issueCount": 6,
       "pageOverview": {
         "elements": [],
-        "pageHeight": 1988,
+        "pageHeight": 2590,
         "pageWidth": 2560,
-        "screenshotFilename": "page-overview-url-2.webp"
+        "screenshotFilename": "page-overview-page-v2-213456c5dc963e03.webp"
       },
-      "path": "/projects",
-      "startedAt": "2026-07-26T04:24:29.262Z",
-      "url": "https://stageflow.org/projects"
+      "path": "/index.html",
+      "startedAt": "2026-09-30T00:00:00.000Z",
+      "url": "https://sample.stageflow.org/index.html"
+    },
+    {
+      "bySeverity": {
+        "critical": 1,
+        "minor": 2,
+        "moderate": 2,
+        "serious": 3
+      },
+      "durationMs": 19020.86,
+      "finishedAt": "2026-09-30T00:00:00.000Z",
+      "id": "page-v2-9ac7a7b2ed8ccf33",
+      "issueCount": 8,
+      "pageOverview": {
+        "elements": [
+          {
+            "height": 45,
+            "heightPercent": 2.52,
+            "issueId": "789c19f1c4b7f09d",
+            "nodeIndex": 0,
+            "ruleId": "color-contrast",
+            "selector": "#pricing-footnote",
+            "severity": "serious",
+            "width": 1824,
+            "widthPercent": 71.25,
+            "x": 368,
+            "xPercent": 14.37,
+            "y": 1378,
+            "yPercent": 77.68
+          },
+          {
+            "height": 82,
+            "heightPercent": 4.62,
+            "issueId": "694f89df99f744f2",
+            "nodeIndex": 0,
+            "ruleId": "select-name",
+            "selector": "#billing-cycle",
+            "severity": "critical",
+            "width": 298,
+            "widthPercent": 11.64,
+            "x": 368,
+            "xPercent": 14.37,
+            "y": 661,
+            "yPercent": 37.28
+          }
+        ],
+        "pageHeight": 1774,
+        "pageWidth": 2560,
+        "screenshotFilename": "page-overview-page-v2-9ac7a7b2ed8ccf33.webp"
+      },
+      "path": "/pricing.html",
+      "startedAt": "2026-09-30T00:00:00.000Z",
+      "url": "https://sample.stageflow.org/pricing.html"
+    },
+    {
+      "bySeverity": {
+        "critical": 2,
+        "minor": 2,
+        "moderate": 2,
+        "serious": 2
+      },
+      "durationMs": 17507.6,
+      "finishedAt": "2026-09-30T00:00:00.000Z",
+      "id": "page-v2-78421f5b8fea2d9d",
+      "issueCount": 8,
+      "pageOverview": {
+        "elements": [
+          {
+            "height": 90,
+            "heightPercent": 4.95,
+            "issueId": "deeed76d8515997f",
+            "nodeIndex": 0,
+            "ruleId": "button-name",
+            "selector": "#suggest-workspace",
+            "severity": "critical",
+            "width": 80,
+            "widthPercent": 3.13,
+            "x": 1128,
+            "xPercent": 44.06,
+            "y": 934,
+            "yPercent": 51.18
+          },
+          {
+            "height": 90,
+            "heightPercent": 4.95,
+            "issueId": "617730f9c5f1b11d",
+            "nodeIndex": 0,
+            "ruleId": "label",
+            "selector": "#signup-email",
+            "severity": "critical",
+            "width": 840,
+            "widthPercent": 32.81,
+            "x": 368,
+            "xPercent": 14.37,
+            "y": 754,
+            "yPercent": 41.28
+          }
+        ],
+        "pageHeight": 1826,
+        "pageWidth": 2560,
+        "screenshotFilename": "page-overview-page-v2-78421f5b8fea2d9d.webp"
+      },
+      "path": "/signup.html",
+      "startedAt": "2026-09-30T00:00:00.000Z",
+      "url": "https://sample.stageflow.org/signup.html"
     }
   ],
   "scanners": [
     {
-      "completedAt": "2026-07-26T04:24:42.183Z",
-      "durationMs": 13738,
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 5999,
       "id": "axe",
-      "issueCount": 2,
+      "issueCount": 5,
       "name": "Axe Accessibility Scanner",
       "severity": {
-        "critical": 0,
+        "critical": 3,
         "minor": 0,
-        "moderate": 2,
-        "serious": 0
+        "moderate": 0,
+        "serious": 2
       },
-      "startedAt": "2026-07-26T04:24:28.445Z",
+      "startedAt": "2026-09-30T00:00:00.000Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:25:08.234Z",
-      "durationMs": 38981,
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 31386,
       "id": "lighthouse",
-      "issueCount": 36,
+      "issueCount": 2,
       "name": "Google Lighthouse",
       "severity": {
         "critical": 0,
-        "info": 33,
         "minor": 0,
         "moderate": 0,
-        "serious": 3
+        "serious": 2
       },
-      "startedAt": "2026-07-26T04:24:29.253Z",
+      "startedAt": "2026-09-30T00:00:00.000Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:24:40.682Z",
-      "durationMs": 10709,
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 7433,
       "id": "link-checker",
-      "issueCount": 0,
+      "issueCount": 1,
       "name": "Link Checker Scanner",
       "severity": {
         "critical": 0,
         "minor": 0,
         "moderate": 0,
-        "serious": 0
+        "serious": 1
       },
-      "startedAt": "2026-07-26T04:24:29.973Z",
+      "startedAt": "2026-09-30T00:00:00.000Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:24:36.076Z",
-      "durationMs": 4501,
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 935,
       "id": "security-headers",
-      "issueCount": 3,
+      "issueCount": 24,
       "name": "Security Headers Scanner",
       "severity": {
         "critical": 0,
-        "info": 3,
-        "minor": 0,
-        "moderate": 0,
-        "serious": 0
+        "minor": 8,
+        "moderate": 8,
+        "serious": 8
       },
-      "startedAt": "2026-07-26T04:24:31.575Z",
+      "startedAt": "2026-09-30T00:00:00.000Z",
       "status": "success",
       "toolVersion": "0.1.0"
     },
     {
-      "completedAt": "2026-07-26T04:24:37.243Z",
-      "durationMs": 5429,
+      "completedAt": "2026-09-30T00:00:00.000Z",
+      "durationMs": 2548,
       "id": "seo",
-      "issueCount": 6,
+      "issueCount": 1,
       "name": "SEO Scanner",
       "severity": {
         "critical": 0,
-        "info": 2,
         "minor": 0,
-        "moderate": 4,
-        "serious": 0
+        "moderate": 0,
+        "serious": 1
       },
-      "startedAt": "2026-07-26T04:24:31.814Z",
+      "startedAt": "2026-09-30T00:00:00.000Z",
       "status": "success",
       "toolVersion": "0.1.0"
     }
   ],
   "summary": {
     "byScanner": {
-      "axe": 2,
-      "lighthouse": 36,
-      "security-headers": 3,
-      "seo": 6
+      "axe": 5,
+      "lighthouse": 2,
+      "link-checker": 1,
+      "security-headers": 24,
+      "seo": 1
     },
     "bySeverity": {
-      "critical": 0,
-      "info": 38,
-      "minor": 0,
-      "moderate": 6,
-      "serious": 3
+      "critical": 3,
+      "minor": 8,
+      "moderate": 8,
+      "serious": 14
     },
     "lighthouseCategories": [
       {
-        "avgScore": 1,
+        "avgScore": 0.93,
         "id": "accessibility",
         "title": "Accessibility"
       },
       {
-        "avgScore": 1,
+        "avgScore": 0.99,
         "id": "best-practices",
         "title": "Best Practices"
       },
       {
-        "avgScore": 0.92,
+        "avgScore": 0.98,
         "id": "seo",
         "title": "SEO"
       }
     ],
-    "pagesScanned": 3,
-    "pagesWithIssues": 3,
-    "score": 63,
-    "scoreGrade": "D",
-    "totalIssues": 47
+    "pagesScanned": 4,
+    "pagesWithIssues": 4,
+    "score": 57,
+    "scoreGrade": "F",
+    "totalIssues": 33
   },
   "version": "2.1.0"
 }

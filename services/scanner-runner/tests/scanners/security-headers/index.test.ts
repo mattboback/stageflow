@@ -185,7 +185,7 @@ describe('SecurityHeadersScanner', () => {
 			expect(result[0]?.issues).toContain('Missing Secure flag');
 		});
 
-		it('flags cookies without HttpOnly flag', () => {
+		it('allows JavaScript-readable cookies when Secure and SameSite are present', () => {
 			const headers = {
 				'set-cookie': 'session=abc123; Secure; SameSite=Strict'
 			};
@@ -194,8 +194,7 @@ describe('SecurityHeadersScanner', () => {
 				issues: string[];
 			}[];
 
-			expect(result).toHaveLength(1);
-			expect(result[0]?.issues).toContain('Missing HttpOnly flag');
+			expect(result).toHaveLength(0);
 		});
 
 		it('flags cookies without SameSite attribute', () => {
@@ -240,6 +239,43 @@ describe('SecurityHeadersScanner', () => {
 
 			expect(result[0]?.name).toBe('user_prefs');
 		});
+	});
+
+	it('checks each Set-Cookie line independently, preserving Expires commas', () => {
+		const result = callPrivateMethod(scanner, 'checkCookieSecurity', {
+			'set-cookie':
+				'good=1; Secure; SameSite=Lax; Expires=Wed, 01 Jan 2030 00:00:00 GMT\nunsafe=2; HttpOnly'
+		});
+		expect(result).toEqual([
+			{ name: 'unsafe', issues: ['Missing Secure flag', 'Missing SameSite attribute'] }
+		]);
+	});
+
+	it('accepts enforced CSP frame-ancestors instead of X-Frame-Options', async () => {
+		const { page } = createMockPage({
+			responseHeaders: { 'content-security-policy': "default-src 'self'; frame-ancestors 'none'" }
+		});
+		const result = await new SecurityHeadersScanner().scanPage(createMockContext({ page }));
+		expect(result.issues.some((issue) => issue.id.endsWith('x-frame-options'))).toBe(false);
+	});
+
+	it('does not treat report-only CSP as framing protection', async () => {
+		const { page } = createMockPage({
+			responseHeaders: { 'content-security-policy-report-only': "frame-ancestors 'none'" }
+		});
+		const result = await new SecurityHeadersScanner().scanPage(createMockContext({ page }));
+		expect(result.issues.some((issue) => issue.id.endsWith('x-frame-options'))).toBe(true);
+	});
+
+	it('does not flag HTTP resources as mixed content on HTTP pages', async () => {
+		const { page } = createMockPage({
+			currentUrl: 'http://example.com/',
+			mixedContent: ['http://example.com/app.js']
+		});
+		const result = await new SecurityHeadersScanner().scanPage(createMockContext({ page }));
+		expect(result.success).toBe(true);
+		expect(result.issues.some((issue) => issue.id.endsWith('mixed-content'))).toBe(false);
+		expect(page.evaluate).not.toHaveBeenCalled();
 	});
 
 	describe('scanPage', () => {
@@ -405,7 +441,7 @@ describe('SecurityHeadersScanner', () => {
 			expect(cookieIssue?.metadata?.cookies).toEqual([
 				{
 					name: 'session',
-					issues: ['Missing Secure flag', 'Missing HttpOnly flag', 'Missing SameSite attribute']
+					issues: ['Missing Secure flag', 'Missing SameSite attribute']
 				}
 			]);
 		});

@@ -820,7 +820,7 @@ describe('LighthouseScanner', () => {
 			expect(nodes[1]!.selector).toBe('#unique');
 		});
 
-		it('limits results to 5 nodes maximum', () => {
+		it('retains every selector for occurrence comparisons', () => {
 			const items = Array.from({ length: 10 }, (_, i) => ({
 				node: { selector: `#element-${i}` }
 			}));
@@ -830,8 +830,8 @@ describe('LighthouseScanner', () => {
 				selector: string;
 			}[];
 
-			expect(nodes).toHaveLength(5);
-			expect(nodes[4]!.selector).toBe('#element-4');
+			expect(nodes).toHaveLength(10);
+			expect(nodes[9]!.selector).toBe('#element-9');
 		});
 
 		it('extracts HTML snippet from multiple locations', () => {

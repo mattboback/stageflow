@@ -132,8 +132,14 @@ describe('PageIterator', () => {
 			expect(provenance).toMatchObject({
 				job_id: 'test-job',
 				pages: expect.arrayContaining([
-					expect.objectContaining({ id: 'page-1' }),
-					expect.objectContaining({ id: 'page-2' })
+					expect.objectContaining({
+						id: expect.stringMatching(/^page-v2-/),
+						url: 'https://example.com/index.html'
+					}),
+					expect.objectContaining({
+						id: expect.stringMatching(/^page-v2-/),
+						url: 'https://example.com/about.html'
+					})
 				])
 			});
 		});

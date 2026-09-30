@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { ChevronRight, Maximize2, Minus, Plus } from 'lucide-react';
 
 import type { IssueDetail, UnifiedReport } from '../../lib/types/unified-report';
@@ -21,6 +21,7 @@ interface Props {
 	screenshots: ScreenshotArtifact[];
 	activeScanner: string | null;
 	activePage: string | null;
+	newIssueIds?: ReadonlySet<string> | undefined;
 	getReviewVerdict: (issueId: string) => ReviewVerdict | null;
 	onSelectPage: (pageId: string) => void;
 	onIssueSelect: (issue: IssueDetail) => void;
@@ -44,6 +45,17 @@ const ZOOM_MAX = 4;
    pixels of tremor while clicking a 6px-stroked rect is normal. */
 const DRAG_SLOP = 4;
 
+function subscribeViewport(listener: () => void) {
+	window.addEventListener('resize', listener);
+	return () => window.removeEventListener('resize', listener);
+}
+function narrowViewport() {
+	return window.innerWidth <= 880;
+}
+function serverViewport() {
+	return false;
+}
+
 function prefersReducedMotion(): boolean {
 	if (typeof window === 'undefined') return false;
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -54,6 +66,7 @@ export function VisualReviewPanel({
 	screenshots,
 	activeScanner,
 	activePage,
+	newIssueIds,
 	getReviewVerdict,
 	onSelectPage,
 	onIssueSelect
@@ -128,9 +141,9 @@ export function VisualReviewPanel({
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
 	/* Fit-width of a desktop capture on a phone renders the page at ~30% —
 	   unreadable. Small screens start at 100% and pan instead. */
-	const [zoom, setZoom] = useState<Zoom>(() =>
-		typeof window !== 'undefined' && window.innerWidth <= 880 ? 1 : 'fit'
-	);
+	const isNarrow = useSyncExternalStore(subscribeViewport, narrowViewport, serverViewport);
+	const [zoomOverride, setZoom] = useState<Zoom | null>(null);
+	const zoom: Zoom = zoomOverride ?? (isNarrow ? 1 : 'fit');
 	// Both load states are keyed by URL so switching pages needs no reset.
 	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
 	const [failedOverviewUrl, setFailedOverviewUrl] = useState<string | null>(null);
@@ -235,7 +248,8 @@ export function VisualReviewPanel({
 			if (!event.ctrlKey && !event.metaKey) return;
 			event.preventDefault();
 			setZoom((prev) => {
-				const current = prev === 'fit' ? renderedScaleRef.current : prev;
+				const selectedZoom = prev ?? (narrowViewport() ? 1 : 'fit');
+				const current = selectedZoom === 'fit' ? renderedScaleRef.current : selectedZoom;
 				const next = current * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
 				return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
 			});
@@ -341,7 +355,8 @@ export function VisualReviewPanel({
 			// Same rule as the wheel handler: leaving 'fit' has to start from the
 			// scale that was on screen. Assuming 1 made the first + on a wide
 			// capture jump from ~30% straight to 125%.
-			const current = prev === 'fit' ? renderedScaleRef.current : prev;
+			const selectedZoom = prev ?? (narrowViewport() ? 1 : 'fit');
+			const current = selectedZoom === 'fit' ? renderedScaleRef.current : selectedZoom;
 			return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current * factor));
 		});
 	};
@@ -352,7 +367,7 @@ export function VisualReviewPanel({
 		<div className="vrev">
 			<aside className="vrev__pages">
 				<header className="vrev__pages-head">
-					<h3>Pages</h3>
+					<h2>Pages</h2>
 				</header>
 				<ul className="vrev__pages-list">
 					{report.pages.map((page) => {
@@ -488,35 +503,48 @@ export function VisualReviewPanel({
 							{overlayElements.map((el) => {
 								const isActive = el.issueId === activeIssueId;
 								return (
-									<rect
-										key={`${el.issueId}-${el.nodeIndex}`}
-										x={el.x}
-										y={el.y}
-										width={el.width}
-										height={el.height}
-										fill={getSeverityFillColor(el.severity)}
-										stroke={getSeverityStrokeColor(el.severity)}
-										strokeWidth={isActive ? 6 : 3}
-										className="vrev__marker"
-										role="button"
-										tabIndex={0}
-										aria-label={`Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
-										style={{ cursor: 'pointer' }}
-										onClick={() => handleMarkerClick(el.issueId)}
-										onFocus={() => {
-											setActiveIssueId(el.issueId);
-											/* Tab already walks the markers; without this the
+									<g key={`${el.issueId}-${el.nodeIndex}`}>
+										<rect
+											key={`${el.issueId}-${el.nodeIndex}`}
+											x={el.x}
+											y={el.y}
+											width={el.width}
+											height={el.height}
+											fill={getSeverityFillColor(el.severity)}
+											stroke={getSeverityStrokeColor(el.severity)}
+											strokeWidth={isActive || newIssueIds?.has(el.issueId) ? 6 : 3}
+											strokeDasharray={newIssueIds?.has(el.issueId) ? '12 5' : undefined}
+											className={`vrev__marker${isActive ? ' vrev__marker--active' : ''}${newIssueIds?.has(el.issueId) ? ' vrev__marker--new' : ''}`}
+											role="button"
+											tabIndex={0}
+											aria-label={`${newIssueIds?.has(el.issueId) ? 'NEW. ' : ''}Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
+											style={{ cursor: 'pointer' }}
+											onClick={() => handleMarkerClick(el.issueId)}
+											onFocus={() => {
+												setActiveIssueId(el.issueId);
+												/* Tab already walks the markers; without this the
 											   focused one is routinely off screen, which is the
 											   same as having no keyboard support at all. */
-											scrollToElement(el);
-										}}
-										onKeyDown={(event) => {
-											if (event.key === 'Enter' || event.key === ' ') {
-												event.preventDefault();
-												handleMarkerClick(el.issueId);
-											}
-										}}
-									/>
+												scrollToElement(el);
+											}}
+											onKeyDown={(event) => {
+												if (event.key === 'Enter' || event.key === ' ') {
+													event.preventDefault();
+													handleMarkerClick(el.issueId);
+												}
+											}}
+										/>
+										{newIssueIds?.has(el.issueId) && (
+											<text
+												x={el.x + 4}
+												y={Math.max(18, el.y + 20)}
+												className="vrev__new-label"
+												aria-hidden="true"
+											>
+												NEW
+											</text>
+										)}
+									</g>
 								);
 							})}
 						</svg>
@@ -526,7 +554,7 @@ export function VisualReviewPanel({
 
 			<aside className="vrev__issues" aria-label="Findings on this page">
 				<header className="vrev__issues-head">
-					<h3>Findings on this page</h3>
+					<h2>Findings on this page</h2>
 					<span className="vrev__issues-count">{pageIssues.length}</span>
 				</header>
 				{pageIssues.length === 0 ? (
@@ -559,7 +587,12 @@ export function VisualReviewPanel({
 									>
 										<span className={getSeverityDotClass(group.severity)} aria-hidden="true" />
 										<span className="vrev__issue-body">
-											<span className="vrev__issue-title">{group.title}</span>
+											<span className="vrev__issue-title">
+												{group.title}{' '}
+												{group.issues.some((issue) => newIssueIds?.has(issue.id)) && (
+													<span className="issue-new">NEW</span>
+												)}
+											</span>
 											<span className="vrev__issue-meta">
 												{reviewStatus && (
 													<span

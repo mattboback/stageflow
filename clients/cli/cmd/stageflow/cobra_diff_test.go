@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
+
 	"github.com/mattboback/stageflow/clients/cli/internal/apiclient"
 	"github.com/mattboback/stageflow/clients/cli/internal/diffrender"
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
@@ -257,5 +259,83 @@ func TestDiffRequiresCompleteRenderedReport(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDiffIncompleteCoverageRendersBeforeExitAndHonorsAllowPartial(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		flags []string
+		want  int
+	}{
+		{"default", nil, 2}, {"accepted", []string{"--allow-partial"}, 0}, {"accepted regression", []string{"--allow-partial", "--fail-on-new=any"}, 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			baseline := render.ReportEnvelope{
+				Schema: "stageflow-cli/report@v1",
+				Report: testsupport.SampleReport("baseline"),
+			}
+			current := render.ReportEnvelope{
+				Schema: "stageflow-cli/report@v1",
+				Report: testsupport.SampleReport("current"),
+			}
+			baseline.Report.Issues = nil
+			baseline.Report.Summary.TotalIssues = 0
+			current.Report.Scanners = append(
+				current.Report.Scanners,
+				report.ScannerSummary{Id: "unavailable", Status: report.ScannerStatusPartial},
+			)
+			baseline.Report.Scanners = append(
+				baseline.Report.Scanners,
+				report.ScannerSummary{Id: "unavailable", Status: report.ScannerStatusSuccess},
+			)
+			dir := t.TempDir()
+			paths := []string{filepath.Join(dir, "baseline.json"), filepath.Join(dir, "current.json")}
+
+			for i, env := range []render.ReportEnvelope{baseline, current} {
+				data, err := json.Marshal(env)
+				testsupport.RequireNoErr(t, err)
+				testsupport.RequireNoErr(t, os.WriteFile(paths[i], data, 0600))
+			}
+
+			args := append([]string{"stageflow", "diff", paths[0], paths[1], "--format=json"}, tt.flags...)
+
+			stdout, stderr, code := runCLI(t, args...)
+			if code != tt.want {
+				t.Fatalf("exit=%d want=%d stderr=%s", code, tt.want, stderr)
+			}
+
+			if !strings.Contains(stdout, "unavailable") {
+				t.Fatalf("comparison was not rendered: %s", stdout)
+			}
+		})
+	}
+}
+
+func TestDiffIncompatibleIdentityRendersJSONBeforeExit(t *testing.T) {
+	baseline := render.ReportEnvelope{Schema: "stageflow-cli/report@v1", Report: testsupport.SampleReport("baseline")}
+
+	current := render.ReportEnvelope{Schema: "stageflow-cli/report@v1", Report: testsupport.SampleReport("current")}
+	for i := range current.Report.Pages {
+		current.Report.Pages[i].Id = "page-v2-root"
+	}
+
+	for i := range current.Report.Issues {
+		current.Report.Issues[i].PageId = "page-v2-root"
+	}
+
+	dir := t.TempDir()
+	paths := []string{filepath.Join(dir, "baseline.json"), filepath.Join(dir, "current.json")}
+
+	for i, env := range []render.ReportEnvelope{baseline, current} {
+		data, err := json.Marshal(env)
+		testsupport.RequireNoErr(t, err)
+		testsupport.RequireNoErr(t, os.WriteFile(paths[i], data, 0600))
+	}
+
+	stdout, stderr, code := runCLI(t, "stageflow", "diff", paths[0], paths[1], "--format=json", "--allow-partial")
+	if code != 2 || !strings.Contains(stdout, `"incompatibleIdentity": true`) ||
+		!strings.Contains(stderr, "fresh baseline") {
+		t.Fatalf("exit=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
 }

@@ -1,18 +1,12 @@
-import { AlertTriangle, Eye, FileText } from 'lucide-react';
+import { AlertTriangle, FileText } from 'lucide-react';
 
 import type { UnifiedReport } from '../../lib/types/unified-report';
 import { Gauge } from '../Gauge';
 import { Pill } from '../Pill';
-import {
-	incompleteScanners,
-	scannerLabel,
-	scoreBandFor,
-	type ReviewProgress
-} from '../../lib/report';
+import { incompleteScanners, scannerLabel, scoreBandFor } from '../../lib/report';
 
 interface Props {
 	report: UnifiedReport;
-	reviewProgress: ReviewProgress;
 }
 
 function formatDuration(ms: number | undefined): string | null {
@@ -27,31 +21,24 @@ function formatScannedAt(iso: string | undefined): string | null {
 	if (!iso) return null;
 	const date = new Date(iso);
 	if (Number.isNaN(date.getTime())) return null;
-	return date.toLocaleString(undefined, {
+	return date.toLocaleString('en-US', {
+		timeZone: 'UTC',
 		month: 'short',
 		day: 'numeric',
 		year: 'numeric',
 		hour: 'numeric',
-		minute: '2-digit'
+		minute: '2-digit',
+		timeZoneName: 'short'
 	});
 }
 
-export function ReportHeader({ report, reviewProgress }: Props) {
+export function ReportHeader({ report }: Props) {
 	const score = typeof report.summary.score === 'number' ? Math.round(report.summary.score) : null;
 	const band = scoreBandFor(score);
 	const totals = report.summary.bySeverity;
 	const critical = totals.critical ?? 0;
 	const serious = totals.serious ?? 0;
 	const total = report.summary.totalIssues ?? 0;
-	const pendingCopy =
-		reviewProgress.pending === 1
-			? '1 finding needs a human check'
-			: `${reviewProgress.pending} findings need a human check`;
-	const reviewedCopy =
-		reviewProgress.reviewed === 1
-			? 'all 1 finding reviewed'
-			: `all ${reviewProgress.reviewed} findings reviewed`;
-
 	const scannedAt = formatScannedAt(report.meta.completedAt ?? report.meta.scannedAt);
 	const duration = formatDuration(report.meta.durationMs);
 	const baseUrl = (() => {
@@ -81,7 +68,7 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 	return (
 		<header className="rhead">
 			<div className="rhead__score">
-				{score !== null && (
+				{score !== null && missing.length === 0 && (
 					<Gauge
 						value={score}
 						caption={grade ? `${grade} · Site score` : 'Site score'}
@@ -117,6 +104,11 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 							</details>
 						)}
 					</div>
+					{score !== null && missing.length === 0 && (
+						<p className="rhead__score-explanation">
+							Site score weights confirmed findings by severity; human checks need separate review.
+						</p>
+					)}
 					{missing.length > 0 && (
 						<p className="rhead__partial" role="status">
 							{missing.join(', ')} did not finish, so {missing.length === 1 ? 'its' : 'their'}{' '}
@@ -134,24 +126,10 @@ export function ReportHeader({ report, reviewProgress }: Props) {
 					<dd className="rhead__stat-val">{total.toLocaleString()}</dd>
 					<dd className="rhead__stat-sub">
 						{total === 0
-							? 'nothing to fix'
+							? missing.length > 0
+								? 'coverage incomplete'
+								: 'nothing to fix'
 							: `${critical.toLocaleString()} critical · ${serious.toLocaleString()} serious`}
-					</dd>
-				</div>
-				<div className="rhead__stat">
-					<dt className="rhead__stat-lab">
-						<Eye size={16} aria-hidden="true" />
-						Human review
-					</dt>
-					<dd className="rhead__stat-val">{reviewProgress.total.toLocaleString()}</dd>
-					<dd className="rhead__stat-sub">
-						{reviewProgress.pending > 0
-							? reviewProgress.reviewed > 0
-								? `${reviewProgress.reviewed} reviewed · ${pendingCopy}`
-								: pendingCopy
-							: reviewProgress.total > 0
-								? reviewedCopy
-								: 'nothing to verify'}
 					</dd>
 				</div>
 				<div className="rhead__stat">

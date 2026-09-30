@@ -1,6 +1,6 @@
 import type { Page } from 'playwright';
 
-import { createHash } from 'node:crypto';
+import { issueFingerprint } from '../../core/finding-identity';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import sharp from 'sharp';
@@ -54,20 +54,6 @@ function debugLog(message: string, data?: unknown): void {
 	}
 }
 
-/**
- * Generate the same issue fingerprint used by WebServerFormatter.
- * This ensures overlay element IDs match the final report issue IDs.
- */
-function generateIssueFingerprint(
-	scanner: string,
-	ruleId: string,
-	pageId: string,
-	selector: string
-): string {
-	const data = `${scanner}|${ruleId}|${pageId}|${selector}`.toLowerCase();
-	return createHash('sha256').update(data).digest('hex').slice(0, 12);
-}
-
 export function collectPageOverviewTargets(
 	violations: PageOverviewViolation[],
 	maxElements: number,
@@ -91,7 +77,7 @@ export function collectPageOverviewTargets(
 		return targets;
 	}
 
-	const maxNodesPerViolation = 5; // Keep in sync with WebServerFormatter occurrences slice.
+	const maxNodesPerViolation = 5; // Rich screenshot evidence stays bounded independently of occurrence IDs.
 
 	// Every finding gets its first located node before any finding gets a
 	// second one, so a cap never leaves a finding without an element to crop.
@@ -105,7 +91,7 @@ export function collectPageOverviewTargets(
 
 		// WebServerFormatter generates issue IDs using the FIRST node selector/target.
 		// Keep all overlay elements for the same rule mapped to that single issue.
-		const issueId = generateIssueFingerprint(scanner, ruleId, pageId, primarySelector);
+		const issueId = issueFingerprint(scanner, ruleId, pageId, primarySelector);
 
 		return nodes.flatMap((node, nodeIndex) => {
 			const selector = (node.target ?? [])

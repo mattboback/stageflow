@@ -117,7 +117,9 @@ export function extractIssuesFromResult(deps: {
 					numericUnit: audit.numericUnit,
 					details: audit.details,
 					nodeCount,
-					nodes: nodes.slice(0, 5),
+					nodes: nodes.map((node, index) =>
+						index < 5 ? node : { selector: node.selector, target: node.target }
+					),
 					lighthouseManual: true
 				}
 			});
@@ -151,7 +153,9 @@ export function extractIssuesFromResult(deps: {
 				numericUnit: audit.numericUnit,
 				details: audit.details,
 				nodeCount,
-				nodes: nodes.slice(0, 5)
+				nodes: nodes.map((node, index) =>
+					index < 5 ? node : { selector: node.selector, target: node.target }
+				)
 			}
 		};
 

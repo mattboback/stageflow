@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router';
 
 import { Pill } from '../Pill';
 import { AllClearBanner } from './AllClearBanner';
+import { FixTheseFirst } from './FixTheseFirst';
+import type { ProjectDiff } from '../../lib/projects';
 import { ErrorsView } from './ErrorsView';
 import { IssueDetailModal } from './IssueDetailModal';
 import { IssuesView } from './IssuesView';
@@ -59,7 +61,7 @@ export interface ReportViewProps {
 	 * fetched, not about how it is displayed.
 	 */
 	error: string | null;
-	/** Above the report header. Local-project comparison on a live scan, null on /demo. */
+	/** Above the report header: local-project or demo comparison, or null. */
 	banner: ReactNode;
 	/**
 	 * The artifacts tab's download list. A slot rather than a prop because a
@@ -67,6 +69,10 @@ export interface ReportViewProps {
 	 * inventing a synthetic job to satisfy the shape would emit links that 404.
 	 */
 	artifactsPanel: ReactNode;
+	/** Raw comparison findings; occurrence identities map to the displayed report. */
+	comparison?: ProjectDiff | null;
+	/** Optional override containing IDs from the expanded display report. */
+	newIssueIds?: ReadonlySet<string>;
 }
 
 /*
@@ -90,7 +96,9 @@ export function ReportView({
 	status,
 	error,
 	banner,
-	artifactsPanel
+	artifactsPanel,
+	comparison,
+	newIssueIds
 }: ReportViewProps) {
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -102,6 +110,30 @@ export function ReportView({
 			manualChecks: split.manualChecks
 		};
 	}, [report]);
+
+	const regressionIds = useMemo(() => {
+		if (newIssueIds) return newIssueIds;
+		const ids = new Set<string>();
+		for (const finding of comparison?.new ?? []) {
+			const occurrenceIds = new Set(
+				finding.occurrences?.map((occurrence) => occurrence.elementId).filter(Boolean) ?? []
+			);
+			for (const issue of displayReport?.issues ?? []) {
+				if (
+					occurrenceIds.size > 0
+						? issue.occurrences?.some(
+								(occurrence) => occurrence.elementId && occurrenceIds.has(occurrence.elementId)
+							)
+						: issue.id === finding.id
+				)
+					ids.add(issue.id);
+			}
+		}
+		return ids;
+	}, [newIssueIds, comparison, displayReport]);
+
+	const hasComparison = comparison != null || newIssueIds != null;
+	const onlyNew = hasComparison && searchParams.get('new') === '1';
 
 	const section: ReportSection = resolveSection(
 		searchParams.get('section'),
@@ -147,11 +179,16 @@ export function ReportView({
 
 	const activeIssue = useMemo(() => {
 		if (!activeIssueId || !displayReport) return null;
-		return displayReport.issues.find((i) => i.id === activeIssueId) ?? null;
+		return (
+			displayReport.issues.find(
+				(i) =>
+					i.id === activeIssueId ||
+					i.occurrences?.some((occurrence) => occurrence.elementId === activeIssueId)
+			) ?? null
+		);
 	}, [activeIssueId, displayReport]);
 
-	/* The human-review queue is the report's primary workflow: highest
-	   severity first, resume at the first finding without a verdict. */
+	/* Human checks retain their separate review workflow. */
 	const { getVerdict } = useReviewVerdicts(jobId);
 	const reviewQueue = useMemo(
 		() =>
@@ -186,7 +223,7 @@ export function ReportView({
 				{displayReport ? (
 					<>
 						{banner}
-						<ReportHeader report={displayReport} reviewProgress={reviewProgress} />
+						<ReportHeader report={displayReport} />
 						<ReportSectionNav
 							report={displayReport}
 							section={section}
@@ -199,8 +236,18 @@ export function ReportView({
 									incompleteScanners(displayReport.scanners).length === 0 && (
 										<AllClearBanner report={displayReport} />
 									)}
+								<FixTheseFirst
+									issues={displayReport.issues}
+									newIssueIds={regressionIds}
+									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
+								/>
+								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+									<LighthouseSummary
+										categories={displayReport.summary.lighthouseCategories ?? []}
+									/>
+								)}
 								{reviewQueue.length > 0 && (
-									<div className="rnext">
+									<div className="rnext rnext--secondary">
 										<div className="rnext__copy">
 											<p className="rnext__count">
 												{reviewProgress.pending === 0
@@ -216,10 +263,10 @@ export function ReportView({
 										{nextReviewIssue && reviewProgress.pending > 0 && (
 											<button
 												type="button"
-												className="btn btn--primary btn--lg"
+												className="btn btn--ghost btn--sm"
 												onClick={() => updateParams({ issue: nextReviewIssue.id })}
 											>
-												{reviewProgress.reviewed > 0 ? 'Continue review' : 'Start review'}{' '}
+												{reviewProgress.reviewed > 0 ? 'Continue review' : 'Review human checks'}{' '}
 												<span className="ar" aria-hidden="true">
 													→
 												</span>
@@ -239,6 +286,7 @@ export function ReportView({
 									screenshots={screenshots}
 									activeScanner={activeScanner}
 									activePage={activePage}
+									newIssueIds={regressionIds}
 									getReviewVerdict={getVerdict}
 									onSelectPage={(pageId) => updateParams({ page: pageId })}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
@@ -262,6 +310,9 @@ export function ReportView({
 							<section id="report-panel-issues" role="tabpanel" aria-labelledby="report-tab-issues">
 								<IssuesView
 									report={displayReport}
+									newIssueIds={hasComparison ? regressionIds : undefined}
+									newOnly={onlyNew}
+									onNewOnlyChange={(enabled) => updateParams({ new: enabled ? '1' : null })}
 									activeScanner={activeScanner}
 									activeSeverity={activeSeverity}
 									activePage={activePage}
@@ -282,7 +333,8 @@ export function ReportView({
 											severity: null,
 											page: null,
 											category: null,
-											q: null
+											q: null,
+											new: null
 										})
 									}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}

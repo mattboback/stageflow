@@ -257,13 +257,19 @@ export function mapViolationToIssue(
 			impact: violation.impact,
 			tags: violation.tags,
 			nodeCount: nodes.length,
-			nodes: enrichedNodes.slice(0, 5).map((node) => ({
-				target: node.target,
-				html: node.html,
-				failureSummary: node.failureSummary,
-				contextHtml: node.contextHtml,
-				ancestorPath: node.ancestorPath
-			})),
+			nodes: nodes.map((original, index) => {
+				const node = enrichedNodes[index] ?? original;
+				if (index >= 5) {
+					return { target: node.target };
+				}
+				return {
+					target: node.target,
+					html: node.html,
+					failureSummary: node.failureSummary,
+					contextHtml: node.contextHtml,
+					ancestorPath: node.ancestorPath
+				};
+			}),
 			ruleBehavior: behavior,
 			...(contrastData !== undefined ? { contrastData } : {}),
 			// User impact for stakeholder communication
