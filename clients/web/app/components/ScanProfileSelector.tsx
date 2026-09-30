@@ -1,3 +1,5 @@
+import './ScanProfileSelector.css';
+
 export function ScanProfileSelector({
 	profile,
 	onChange,

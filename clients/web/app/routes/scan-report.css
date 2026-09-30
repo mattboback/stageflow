@@ -122,6 +122,18 @@
 	margin-top: var(--sp-1);
 }
 
+/* the diff summary above a compared report: heading, notices, stats, lists */
+.baseline-diff {
+	display: grid;
+	gap: var(--sp-3);
+	margin-bottom: var(--sp-4);
+}
+
+.baseline-diff h2 {
+	font-size: var(--fs-7);
+	margin: 0;
+}
+
 .local-baseline__stats {
 	display: grid;
 	grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -142,7 +154,7 @@
 	border-left: 0;
 }
 
-.local-baseline__stats span {
+.local-baseline__stats > div > span {
 	color: var(--ink-muted);
 	font-size: var(--fs-2);
 	font-weight: 600;

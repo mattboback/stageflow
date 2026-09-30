@@ -6,9 +6,8 @@ import { DiscoveryPreview } from '../components/DiscoveryPreview';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
-import { Pill } from '../components/Pill';
 import { DEMO_CROP } from '../lib/demo/demo-crop';
-import { getCroppedViewBox } from '../lib/report/screenshot-crop';
+import { clamp, type Rect, type ViewBox } from '../lib/report/screenshot-crop';
 import { DEMO_SUMMARY } from '../lib/demo/demo-summary';
 import { discoverPages, submitScanJob, type DiscoverPagesResponse } from '../lib/api/client';
 import { SCANNER_META } from '../lib/report/scanner-identity';
@@ -60,9 +59,26 @@ const BASELINE_TRACK = [
 	}
 ] as const;
 
+// The report's element crop centres a small window on the finding. At hero
+// width that upscales a 48px icon into a blur, so show a card-sized window of
+// the page instead, ending just past the element: in a left-to-right page the
+// text that explains an element sits before it and above it.
+function heroCrop(pageWidth: number, pageHeight: number, element: Rect): ViewBox {
+	const width = Math.min(pageWidth, 1000);
+	const height = Math.min(pageHeight, 270);
+	return {
+		x: clamp(element.x + element.width + 160 - width, 0, pageWidth - width),
+		y: clamp(element.y + element.height / 2 - height * 0.66, 0, pageHeight - height),
+		width,
+		height
+	};
+}
+
 const cropView = DEMO_CROP
-	? getCroppedViewBox(DEMO_CROP.pageWidth, DEMO_CROP.pageHeight, DEMO_CROP.element)
+	? heroCrop(DEMO_CROP.pageWidth, DEMO_CROP.pageHeight, DEMO_CROP.element)
 	: null;
+
+const [terminalCommand = '', ...terminalOutput] = DEMO_SUMMARY.terminal.split('\n');
 
 const PATH_STEPS = [
 	{
@@ -197,15 +213,17 @@ export default function Home() {
 									</span>
 								</button>
 							</form>
-							<button
-								type="button"
-								className="btn btn--ghost btn--sm"
-								disabled={discovering || submitting}
-								onClick={() => void onScanWebsite()}
-							>
-								{discovering ? 'Discovering website…' : 'Scan website'}
-							</button>
-							<ScanProfileSelector profile={profile} onChange={setProfile} />
+							<div className="scanbar__opts">
+								<button
+									type="button"
+									className="btn btn--ghost btn--sm"
+									disabled={discovering || submitting}
+									onClick={() => void onScanWebsite()}
+								>
+									{discovering ? 'Discovering website…' : 'Scan website'}
+								</button>
+								<ScanProfileSelector profile={profile} onChange={setProfile} />
+							</div>
 							{discoveryPreview && (
 								<DiscoveryPreview
 									key={JSON.stringify(discoveryPreview)}
@@ -238,23 +256,47 @@ export default function Home() {
 									</span>{' '}
 									What comes back
 								</span>
-								<Pill variant="done">Completed</Pill>
+								<span className="hero__preview-site">sample.stageflow.org</span>
 							</div>
 							<div className="panel__body">
 								<div className="preview__reg">
-									<p className="preview__reg-title">
-										<span className="sev-dot sev-serious" aria-hidden="true" /> Sample deployment
-										comparison
-									</p>
+									<ul className="preview__stats" aria-label="Changes from baseline">
+										<li className={DEMO_SUMMARY.newIssues > 0 ? 'preview__stat--bad' : undefined}>
+											<span>New in this deploy</span>
+											<strong className="num">{DEMO_SUMMARY.newIssues}</strong>
+										</li>
+										<li
+											className={DEMO_SUMMARY.fixedIssues > 0 ? 'preview__stat--good' : undefined}
+										>
+											<span>Fixed</span>
+											<strong className="num">{DEMO_SUMMARY.fixedIssues}</strong>
+										</li>
+										<li>
+											<span>Score</span>
+											<strong className="num">
+												{DEMO_SUMMARY.currentScore ?? '—'}{' '}
+												{DEMO_SUMMARY.scoreDelta !== null && (
+													<Delta value={DEMO_SUMMARY.scoreDelta} />
+												)}
+											</strong>
+											<small>baseline {DEMO_SUMMARY.baselineScore ?? '—'}</small>
+										</li>
+									</ul>
 									{DEMO_CROP && cropView && (
 										<Link
 											className="preview__evidence"
 											to={`/demo?section=issues&issue=${encodeURIComponent(DEMO_CROP.issueId)}`}
 										>
-											<span className="preview__new">NEW</span>
-											<span>{DEMO_CROP.title}</span>
+											<span className="preview__evidence-head">
+												<span className="preview__new">NEW</span>
+												<span className="preview__evidence-title">{DEMO_CROP.title}</span>
+												<span className="preview__evidence-open" aria-hidden="true">
+													Open →
+												</span>
+											</span>
 											<svg
 												viewBox={`${cropView.x} ${cropView.y} ${cropView.width} ${cropView.height}`}
+												style={{ aspectRatio: `${cropView.width} / ${cropView.height}` }}
 												role="img"
 												aria-label={`Evidence: ${DEMO_CROP.title}`}
 											>
@@ -264,33 +306,16 @@ export default function Home() {
 													height={DEMO_CROP.pageHeight}
 												/>
 												<rect
-													x={DEMO_CROP.element.x}
-													y={DEMO_CROP.element.y}
-													width={DEMO_CROP.element.width}
-													height={DEMO_CROP.element.height}
-													fill="transparent"
-													stroke="#dc2626"
-													strokeWidth={3}
+													className="preview__mark"
+													x={DEMO_CROP.element.x - 8}
+													y={DEMO_CROP.element.y - 8}
+													width={DEMO_CROP.element.width + 16}
+													height={DEMO_CROP.element.height + 16}
+													rx={6}
 												/>
 											</svg>
 										</Link>
 									)}
-									<ul className="preview__reg-rows">
-										<li>
-											<span>New in this deploy</span>
-											<strong>{DEMO_SUMMARY.newIssues}</strong>
-										</li>
-										<li>
-											<span>Fixed</span>
-											<strong>{DEMO_SUMMARY.fixedIssues}</strong>
-										</li>
-										<li>
-											<span>Score</span>
-											<strong>
-												{DEMO_SUMMARY.baselineScore ?? '—'} → {DEMO_SUMMARY.currentScore ?? '—'}
-											</strong>
-										</li>
-									</ul>
 									<p className="preview__reg-note">
 										Two real scans of the same sample site: inspect new problems, their evidence,
 										and fixes.
@@ -424,11 +449,15 @@ export default function Home() {
 								CLI
 							</h2>
 							<pre className="terminal__pre">
-								<code>{DEMO_SUMMARY.terminal}</code>
+								<code>
+									<span className="terminal__prompt">$</span> {terminalCommand}
+									{'\n'}
+									{terminalOutput.join('\n')}
+								</code>
 							</pre>
 						</div>
 
-						<div className="panel">
+						<div className="panel foot__panel">
 							<div className="panel__body">
 								<h2>Put regressions in your CI summary.</h2>
 								<p className="muted">

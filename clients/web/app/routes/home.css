@@ -76,6 +76,28 @@
 	margin: var(--sp-3) 0 0;
 	font-size: var(--fs-4);
 }
+.hero__note a {
+	color: var(--signal-ink);
+	font-weight: 500;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+	text-underline-offset: 0.2em;
+}
+.hero__note a:hover {
+	text-decoration-color: currentColor;
+}
+/* secondary scan options sit under the bar, never between it and its button */
+.scanbar__opts {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--sp-2) var(--sp-4);
+	margin-top: var(--sp-3);
+	max-width: 38rem;
+}
+.scanbar__opts .scan-profile {
+	flex: 1 1 16rem;
+}
 
 /* report preview — the output side of the scanbar */
 .hero__preview {
@@ -92,37 +114,120 @@
 	gap: var(--sp-3);
 	min-width: 0;
 }
-.preview__reg-title {
-	display: flex;
-	align-items: center;
-	gap: var(--sp-2);
-	margin: 0;
-	font-weight: 600;
-	color: var(--ink-strong);
-	font-size: var(--fs-5);
+.hero__preview-site {
+	font-family: var(--mono);
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+	white-space: nowrap;
 }
-.preview__reg-rows {
+/* the same stat strip the comparison opens on, so the promise matches /demo */
+.preview__stats {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 	display: grid;
-	gap: var(--sp-2);
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	overflow: hidden;
 }
-.preview__reg-rows li {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: var(--sp-4);
-	font-size: var(--fs-4);
+.preview__stats li {
+	display: grid;
+	align-content: start;
+	gap: var(--sp-1);
+	padding: var(--sp-3) var(--sp-4);
+	border-left: 1px solid var(--line);
+	min-width: 0;
+}
+.preview__stats li:first-child {
+	border-left: 0;
+}
+.preview__stats span {
+	font-size: var(--fs-2);
+	font-weight: 600;
 	color: var(--ink-muted);
 }
-.preview__reg-rows .num {
+.preview__stats strong {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: var(--sp-2);
+	font-size: var(--fs-8);
+	line-height: 1.1;
 	color: var(--ink-strong);
-	font-weight: 600;
 }
-.preview__reg-sev {
-	color: var(--sev-serious-ink);
+.preview__stats strong .delta {
+	font-size: var(--fs-4);
+}
+.preview__stats small {
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+}
+.preview__stat--bad strong {
+	color: var(--sev-critical-ink);
+}
+.preview__stat--good strong {
+	color: var(--sev-pass-ink);
+}
+/* one real new finding, cropped wide enough to read at card width */
+.preview__evidence {
+	display: grid;
+	gap: var(--sp-2);
+	color: inherit;
+	text-decoration: none;
+}
+.preview__evidence-head {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-2);
+	font-size: var(--fs-4);
 	font-weight: 600;
+	color: var(--ink-strong);
+}
+.preview__evidence-title {
+	flex: 1;
+	min-width: 0;
+}
+.preview__evidence-open {
+	font-size: var(--fs-3);
+	color: var(--signal-ink);
+	white-space: nowrap;
+}
+.preview__new {
+	display: inline-flex;
+	flex: none;
+	padding: 0.1rem 0.35rem;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font-size: 0.65rem;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	color: var(--sev-serious-ink);
+	background: var(--sev-serious-wash);
+}
+/* The screenshot is of a light page, so the crop stays light in dark mode:
+   color-scheme resolves the highlight tokens to their light values too. */
+.preview__evidence svg {
+	color-scheme: light;
+	display: block;
+	width: 100%;
+	height: auto;
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: white;
+	transition: border-color var(--dur-1) var(--ease);
+}
+.preview__evidence:hover svg,
+.preview__evidence:focus-visible svg {
+	border-color: var(--signal);
+}
+.preview__evidence:hover .preview__evidence-title {
+	color: var(--signal-ink);
+}
+.preview__mark {
+	fill: color-mix(in oklch, var(--sev-critical) 12%, transparent);
+	stroke: var(--sev-critical);
+	stroke-width: 4;
 }
 .preview__reg-note {
 	margin: 0;
@@ -172,7 +277,7 @@
 }
 .section__head h2,
 .baseline__intro h2,
-.selfhost h2 {
+.foot__panel h2 {
 	font-size: var(--fs-8);
 	letter-spacing: var(--track-display);
 	line-height: 1.15;
@@ -398,7 +503,7 @@
 	display: none;
 }
 
-/* ------------------------------------------------ terminal + self-host */
+/* --------------------------------------------------- terminal + CI panel */
 .foot {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -443,58 +548,26 @@
 	font-weight: 500;
 }
 
-.selfhost {
-	min-height: 100%;
+.foot__panel {
 	border-radius: var(--r-lg);
 }
-.selfhost .panel__body {
+.foot__panel .panel__body {
 	display: flex;
 	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
 	height: 100%;
 	gap: var(--sp-4);
 	padding: clamp(1.35rem, 2.5vw, 1.75rem);
 }
-.selfhost h2 {
+.foot__panel h2 {
 	max-width: 22ch;
 }
-.selfhost .panel__body > p.muted {
+.foot__panel .panel__body > p {
 	margin: 0;
 	font-size: var(--fs-5);
 	line-height: 1.55;
 	max-width: 46ch;
-}
-.selfhost__list {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: grid;
-	gap: var(--sp-3);
-}
-.selfhost__list li {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--sp-2);
-	font-size: var(--fs-5);
-	color: var(--ink);
-	line-height: 1.45;
-}
-.selfhost__mark {
-	display: grid;
-	place-items: center;
-	width: 1.25rem;
-	height: 1.25rem;
-	border-radius: 50%;
-	background: var(--signal-wash);
-	color: var(--signal-ink);
-	margin-top: 0.1rem;
-	flex-shrink: 0;
-}
-.selfhost__actions {
-	margin-top: auto;
-	padding-top: var(--sp-2);
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--sp-3);
 }
 
 /* ---------------------------------------------------------- responsive */
@@ -559,6 +632,12 @@
 	.hero h1 {
 		font-size: var(--fs-9);
 	}
+	.hero__preview-site {
+		display: none;
+	}
+	.preview__stats li {
+		padding: var(--sp-3);
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -567,7 +646,3 @@
 		transition: none;
 	}
 }
-
-.preview__evidence { display: block; margin: 1rem 0; color: inherit; }
-.preview__evidence svg { display: block; width: 100%; max-height: 160px; border-radius: 6px; margin-top: .5rem; background: white; }
-.preview__new { font-size: .75rem; font-weight: 700; color: #b91c1c; margin-right: .5rem; }
