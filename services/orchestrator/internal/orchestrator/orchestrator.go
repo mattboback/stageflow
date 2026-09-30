@@ -73,7 +73,6 @@ type Orchestrator struct {
 	podNetnsMode         string
 	podHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	pageLoadTimeout      int
-	scrollTimeout        int
 	stagingStorage       storage.Deleter
 	storage              storage.Client // Full storage access for report generation
 	deadlinePollInterval time.Duration
@@ -104,7 +103,6 @@ type Config struct {
 	PodNetnsMode         string   // Pod network namespace mode for job pods (bridge|host). Host mode is local-only.
 	PodHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	PageLoadTimeout      int
-	ScrollTimeout        int
 	StagingStorage       storage.Deleter
 	Storage              storage.Client // Full storage for report generation
 	DeadlinePollInterval time.Duration
@@ -154,11 +152,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 	pageLoadTimeout := config.PageLoadTimeout
 	if pageLoadTimeout == 0 {
 		pageLoadTimeout = 15_000
-	}
-
-	scrollTimeout := config.ScrollTimeout
-	if scrollTimeout == 0 {
-		scrollTimeout = 300
 	}
 
 	deadlinePollInterval := config.DeadlinePollInterval
@@ -213,7 +206,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		podNetnsMode:         podNetnsMode,
 		podHostMappings:      config.PodHostMappings,
 		pageLoadTimeout:      pageLoadTimeout,
-		scrollTimeout:        scrollTimeout,
 		stagingStorage:       config.StagingStorage,
 		storage:              config.Storage,
 		deadlinePollInterval: deadlinePollInterval,

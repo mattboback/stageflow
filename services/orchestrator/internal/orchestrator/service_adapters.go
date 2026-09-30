@@ -42,7 +42,6 @@ func (o *Orchestrator) newService() *appjobs.Service {
 			MinioSecretKey:      o.minioSecretKey,
 			MinioUseSSL:         o.minioUseSSL,
 			PageLoadTimeout:     o.pageLoadTimeout,
-			ScrollTimeout:       o.scrollTimeout,
 			PodNetnsMode:        o.podNetnsMode,
 			DefaultScannerUser:  "0",
 		})),

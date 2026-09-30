@@ -25,7 +25,6 @@ func newAuthPlanner(t *testing.T) *ScannerLaunchPlanner {
 		MinioAccessKey:     "k",
 		MinioSecretKey:     "s",
 		PageLoadTimeout:    15000,
-		ScrollTimeout:      300,
 		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
 	})

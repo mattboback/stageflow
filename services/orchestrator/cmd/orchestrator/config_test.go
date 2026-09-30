@@ -81,7 +81,6 @@ func validTestConfig() *Config {
 		NatsHost:                    "nats",
 		MinioHost:                   "minio",
 		PageLoadTimeout:             15000,
-		ScrollTimeout:               300,
 	}
 }
 

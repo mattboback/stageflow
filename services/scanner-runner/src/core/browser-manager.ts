@@ -14,7 +14,6 @@ import {
 } from 'playwright';
 
 import { createLogger } from '../utils/logger';
-import { resolvePlaywrightImageChromiumExecutablePath } from '../utils/playwright';
 import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';
 import {
 	type BrowserConfig,
@@ -96,64 +95,21 @@ export class BrowserManager {
 		return this.browser;
 	}
 
-	/**
-	 * Launch Chromium. The hardened container needs several fallbacks: a
-	 * bundled-Chrome executablePath when the default download is missing, and a
-	 * single-process retry for constrained sandboxes.
-	 */
 	private async launchChromium(): Promise<Browser> {
-		const fallbackExecutable = resolvePlaywrightImageChromiumExecutablePath();
+		this.logger.info('Launching browser', {
+			headless: this.config.headless,
+			args: this.config.args
+		});
 
-		const launchAttempts = [
-			{ name: 'default', opts: {} },
-			{
-				name: 'fallback-chrome',
-				opts: fallbackExecutable ? { executablePath: fallbackExecutable } : null
-			},
-			{
-				name: 'single-process',
-				opts: { args: [...this.config.args, '--single-process'] }
+		return chromium.launch({
+			headless: this.config.headless,
+			args: this.config.args,
+			chromiumSandbox: false,
+			env: {
+				...process.env,
+				DBUS_SESSION_BUS_ADDRESS: 'disabled'
 			}
-		].filter((attempt) => attempt.opts !== null) as {
-			name: string;
-			opts: Record<string, unknown>;
-		}[];
-
-		let lastError: unknown;
-		for (const attempt of launchAttempts) {
-			try {
-				const attemptArgs = Array.isArray(attempt.opts.args)
-					? (attempt.opts.args as string[])
-					: this.config.args;
-				const executablePath =
-					typeof attempt.opts.executablePath === 'string' ? attempt.opts.executablePath : undefined;
-
-				this.logger.info('Launching browser', {
-					attempt: attempt.name,
-					headless: this.config.headless,
-					args: attempt.opts.args ?? this.config.args
-				});
-
-				return await chromium.launch({
-					headless: this.config.headless,
-					args: attemptArgs,
-					chromiumSandbox: false,
-					env: {
-						...process.env,
-						DBUS_SESSION_BUS_ADDRESS: 'disabled'
-					},
-					...(executablePath !== undefined ? { executablePath } : {})
-				});
-			} catch (err) {
-				lastError = err;
-				this.logger.warn('Browser launch attempt failed', {
-					attempt: attempt.name,
-					error: err instanceof Error ? err.message : String(err)
-				});
-			}
-		}
-
-		throw lastError instanceof Error ? lastError : new Error(String(lastError));
+		});
 	}
 
 	async createContext(

@@ -32,7 +32,6 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		MinioAccessKey:     "minioadmin",
 		MinioSecretKey:     "secret",
 		PageLoadTimeout:    15000,
-		ScrollTimeout:      300,
 		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
 	})
@@ -102,7 +101,6 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 		MinioAccessKey:     "minioadmin",
 		MinioSecretKey:     "secret",
 		PageLoadTimeout:    15000,
-		ScrollTimeout:      300,
 		PodNetnsMode:       PodNetnsModeHost,
 		DefaultScannerUser: "0",
 	})
@@ -162,7 +160,6 @@ func TestScannerLaunchPlannerPlanWithoutRegistryUsesDefaultScannerImage(t *testi
 		MinioAccessKey:      "minioadmin",
 		MinioSecretKey:      "secret",
 		PageLoadTimeout:     15000,
-		ScrollTimeout:       300,
 		PodNetnsMode:        PodNetnsModeBridge,
 		DefaultScannerUser:  "0",
 	})

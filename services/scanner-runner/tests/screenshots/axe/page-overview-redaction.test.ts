@@ -9,13 +9,11 @@ vi.mock('../../../src/screenshots/axe/page-preparation', () => ({
 }));
 
 afterEach(() => {
-	vi.unstubAllEnvs();
 	vi.restoreAllMocks();
 	vi.resetModules();
 });
 
-it('omits raw browser errors even when screenshot diagnostics are enabled', async () => {
-	vi.stubEnv('A11Y_DEBUG_SCREENSHOTS', 'true');
+it('omits raw browser errors when capture fails', async () => {
 	const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 	const { capturePageOverviewRaw } = await import('../../../src/screenshots/axe/page-overview');
 	const { loadAxeScreenshotConfig } = await import('../../../src/screenshots/axe/config');
@@ -35,7 +33,6 @@ it('omits raw browser errors even when screenshot diagnostics are enabled', asyn
 			{ enabled: true }
 		);
 		expect(result).toBeNull();
-		expect(log).toHaveBeenCalledWith(expect.stringContaining('Capture failed'));
 		expect(JSON.stringify(log.mock.calls)).not.toContain(canary);
 	} finally {
 		await rm(dir, { recursive: true, force: true });

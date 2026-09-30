@@ -5,28 +5,14 @@ import type { ScanStageLogger } from '../../core/scan-stage-logger';
 import type { ScannerLogger } from '../../core/types';
 import type { LaunchedChrome } from './types';
 
-import { resolvePlaywrightImageChromiumExecutablePath } from '../../utils/playwright';
-
+// Lighthouse drives the Chromium that the runner image installs for Playwright.
 export function resolveChromePath(): string {
-	const envPath =
-		process.env.LIGHTHOUSE_CHROME_PATH?.trim() ?? process.env.CHROME_PATH?.trim() ?? '';
-	if (envPath && fs.existsSync(envPath)) {
-		return envPath;
-	}
-
 	const playwrightPath = chromium.executablePath();
 	if (playwrightPath && fs.existsSync(playwrightPath)) {
 		return playwrightPath;
 	}
 
-	const fallbackExecutable = resolvePlaywrightImageChromiumExecutablePath();
-	if (fallbackExecutable) {
-		return fallbackExecutable;
-	}
-
-	throw new Error(
-		'Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.'
-	);
+	throw new Error('Unable to locate the Playwright Chromium executable for Lighthouse.');
 }
 
 export async function launchChromeForLighthouse(deps: {

@@ -39,13 +39,13 @@ describe('config-loader', () => {
 	it('parses scanner options from JSON and applies defaults', () => {
 		setRequiredRuntimeEnv();
 		process.env.JOB_ID = 'job-123';
-		process.env.SCAN_CONCURRENCY = '2';
-		process.env.MAX_RETRIES = '5';
 		process.env.SCANNER_OPTIONS = JSON.stringify({ locale: 'en-US' });
 
 		const config = loadConfigFromEnv({
 			scannerName: 'axe',
 			defaults: {
+				concurrency: 2,
+				maxRetries: 5,
 				resultsDir: '/tmp/results',
 				provenancePath: '/tmp/provenance.json'
 			}
@@ -142,10 +142,10 @@ describe('config-loader', () => {
 	it('throws when explicit env values are malformed', () => {
 		setRequiredRuntimeEnv();
 		process.env.JOB_ID = 'job-123';
-		process.env.BROWSER_HEADLESS = 'treu';
+		process.env.MINIO_USE_SSL = 'treu';
 
 		expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
-			'Invalid boolean environment variable BROWSER_HEADLESS'
+			'Invalid boolean environment variable MINIO_USE_SSL'
 		);
 	});
 

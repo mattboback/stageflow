@@ -21,7 +21,6 @@ const (
 	HostNetnsMinioEndpoint   = "127.0.0.1:9000"
 	defaultScannerMemoryMB   = 2048
 	defaultPageLoadTimeoutMs = 15_000
-	defaultScrollTimeoutMs   = 300
 	defaultScannerUser       = "0"
 )
 
@@ -34,7 +33,6 @@ type ScannerLaunchPlannerConfig struct {
 	MinioSecretKey      string
 	MinioUseSSL         bool
 	PageLoadTimeout     int
-	ScrollTimeout       int
 	PodNetnsMode        string
 	DefaultScannerUser  string
 }
@@ -75,10 +73,6 @@ func NewScannerLaunchPlanner(config ScannerLaunchPlannerConfig) *ScannerLaunchPl
 
 	if config.PageLoadTimeout == 0 {
 		config.PageLoadTimeout = defaultPageLoadTimeoutMs
-	}
-
-	if config.ScrollTimeout == 0 {
-		config.ScrollTimeout = defaultScrollTimeoutMs
 	}
 
 	if config.PodNetnsMode == "" {
@@ -186,7 +180,6 @@ func (p *ScannerLaunchPlanner) baseEnv(
 		"PROVENANCE_PATH":       provenancePath,
 		"RESULTS_DIR":           resultsDir,
 		"PAGE_LOAD_TIMEOUT":     strconv.Itoa(p.config.PageLoadTimeout),
-		"A11Y_SCROLL_TIMEOUT":   strconv.Itoa(p.config.ScrollTimeout),
 		"A11Y_SHOT_ENABLED":     strconv.FormatBool(job.Config.Screenshot),
 	}
 

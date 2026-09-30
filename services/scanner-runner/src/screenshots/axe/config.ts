@@ -1,18 +1,15 @@
-import type { AxeScreenshotConfig, OutputFormat } from './types';
+import type { AxeScreenshotConfig } from './types';
 
-import { getEnvBool, getEnvInt, getEnvString } from '../../utils/env';
-
-function parseOutputFormat(raw: string): OutputFormat {
-	return raw.toLowerCase() === 'png' ? 'png' : 'webp';
-}
+import { getEnvBool } from '../../utils/env';
 
 export function loadAxeScreenshotConfig(
 	overrides?: Partial<AxeScreenshotConfig>
 ): AxeScreenshotConfig {
 	return {
+		// The orchestrator sets this from the job's screenshot option.
 		screenshotsEnabled: getEnvBool('A11Y_SHOT_ENABLED', true),
-		outputFormat: parseOutputFormat(getEnvString('A11Y_SCREENSHOT_FORMAT', 'webp')),
-		webpQuality: Math.min(100, Math.max(1, getEnvInt('A11Y_SCREENSHOT_QUALITY', 80))),
+		outputFormat: 'webp',
+		webpQuality: 80,
 		...overrides
 	};
 }

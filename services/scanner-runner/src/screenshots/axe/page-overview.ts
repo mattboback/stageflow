@@ -8,13 +8,10 @@ import sharp from 'sharp';
 import type { IssueSeverity } from '../../core/types';
 import type {
 	AxeScreenshotConfig,
-	PageOverviewDiagnostics,
 	PageOverviewElement,
 	PageOverviewResult,
 	PageOverviewViolation
 } from './types';
-import { getEnvBool } from '../../utils/env';
-import { createLogger } from '../../utils/logger';
 import { normalizeSeverity } from '../../utils/severity';
 import { loadPageOverviewConfig, type PageOverviewConfigInput } from './page-overview-config';
 import {
@@ -39,20 +36,6 @@ import {
    well left two exports that nothing resolved. */
 export { loadPageOverviewConfig } from './page-overview-config';
 export type { PageOverviewConfigInput } from './page-overview-config';
-
-const DEBUG_SCREENSHOTS = getEnvBool('A11Y_DEBUG_SCREENSHOTS', false);
-const log = createLogger('PageOverview');
-
-function debugLog(message: string, data?: unknown): void {
-	if (!DEBUG_SCREENSHOTS) {
-		return;
-	}
-	if (data !== undefined) {
-		log.info(message, { data });
-	} else {
-		log.info(message);
-	}
-}
 
 export function collectPageOverviewTargets(
 	violations: PageOverviewViolation[],
@@ -147,52 +130,13 @@ export async function capturePageOverviewRaw(
 	const screenshotFilename = `page-overview-${pageId}${ext}`;
 	const screenshotPath = join(resultsDir, screenshotFilename);
 
-	// Initialize diagnostics collection
-	const diagnostics: PageOverviewDiagnostics = {
-		animationFinishedCount: 0,
-		animationPausedCount: 0,
-		assetWaitStatus: 'skipped',
-		contentVisibilityElementCount: 0,
-		contentVisibilityForced: false,
-		cssPageWidth: 0,
-		cssPageHeight: 0,
-		fontWaitStatus: 'not_supported',
-		lazyMediaCount: 0,
-		screenshotWidth: 0,
-		screenshotHeight: 0,
-		scaleX: 1,
-		scaleY: 1,
-		devicePixelRatio: 1,
-		captureHeight: 0,
-		elementCount: elementTargets.length,
-		preScrollAfterHeight: 0,
-		preScrollBeforeHeight: 0,
-		preScrollCompleted: false,
-		preScrollSteps: 0,
-		wasClipped: false,
-		elements: []
-	};
-
 	try {
 		// Step 1: Realize lazy/revealed page content before measurements and capture.
-		const preparation = await preparePageForOverview(page, resolvedOverviewCfg);
-		diagnostics.assetWaitStatus = preparation.assetWaitStatus;
-		diagnostics.contentVisibilityElementCount = preparation.contentVisibilityElementCount;
-		diagnostics.contentVisibilityForced = preparation.contentVisibilityForced;
-		diagnostics.fontWaitStatus = preparation.fontWaitStatus;
-		diagnostics.lazyMediaCount = preparation.lazyMediaCount;
-		diagnostics.preScrollAfterHeight = preparation.preScrollAfterHeight;
-		diagnostics.preScrollBeforeHeight = preparation.preScrollBeforeHeight;
-		diagnostics.preScrollCompleted = preparation.preScrollCompleted;
-		diagnostics.preScrollSteps = preparation.preScrollSteps;
-
-		const scrollExpansion = await expandScrollableContainersForOverview(page);
-		debugLog('Expanded scrollable containers before page overview capture', scrollExpansion);
+		await preparePageForOverview(page, resolvedOverviewCfg);
+		await expandScrollableContainersForOverview(page);
 
 		// Step 2: Stabilize moving parts without forcing reveal animations back to hidden states.
-		const stabilization = await stabilizePageForScreenshot(page, resolvedOverviewCfg);
-		diagnostics.animationFinishedCount = stabilization.animationFinishedCount;
-		diagnostics.animationPausedCount = stabilization.animationPausedCount;
+		await stabilizePageForScreenshot(page, resolvedOverviewCfg);
 		await waitInPage(page, 50);
 		await waitForStablePaint(page);
 
@@ -213,20 +157,6 @@ export async function capturePageOverviewRaw(
 				: pageInfo.height;
 		const wasClipped = resolvedOverviewCfg.maxHeight > 0 && captureHeight < pageInfo.height;
 
-		diagnostics.cssPageWidth = pageInfo.width;
-		diagnostics.cssPageHeight = pageInfo.height;
-		diagnostics.captureHeight = captureHeight;
-		diagnostics.devicePixelRatio = pageInfo.devicePixelRatio;
-		diagnostics.wasClipped = wasClipped;
-
-		debugLog('Page dimensions', {
-			cssWidth: pageInfo.width,
-			cssHeight: pageInfo.height,
-			captureHeight,
-			devicePixelRatio: pageInfo.devicePixelRatio,
-			wasClipped
-		});
-
 		// Step 4: CRITICAL - Collect ALL bounding boxes BEFORE taking screenshot
 		// This prevents layout drift between screenshot capture and coordinate collection
 		const rawBoundingBoxes = new Map<number, BoundingBox | null>();
@@ -234,34 +164,11 @@ export async function capturePageOverviewRaw(
 		for (const [i, target] of elementTargets.entries()) {
 			try {
 				const locator = page.locator(target.selector).first();
-				const box = await locator.boundingBox();
-				rawBoundingBoxes.set(i, box);
-
-				if (DEBUG_SCREENSHOTS) {
-					diagnostics.elements.push({
-						selector: target.selector,
-						rawBox: box ? { x: box.x, y: box.y, width: box.width, height: box.height } : null,
-						scaledBox: null,
-						percentBounds: null,
-						skipped: false
-					});
-				}
+				rawBoundingBoxes.set(i, await locator.boundingBox());
 			} catch {
 				rawBoundingBoxes.set(i, null);
-				if (DEBUG_SCREENSHOTS) {
-					diagnostics.elements.push({
-						selector: target.selector,
-						rawBox: null,
-						scaledBox: null,
-						percentBounds: null,
-						skipped: true,
-						skipReason: 'locator_error'
-					});
-				}
 			}
 		}
-
-		debugLog(`Collected ${rawBoundingBoxes.size} bounding boxes BEFORE screenshot`);
 
 		// Step 5: Take the screenshot (after bounding boxes are captured)
 		const clip = wasClipped
@@ -280,40 +187,13 @@ export async function capturePageOverviewRaw(
 		const scaleX = computeScreenshotScaleFactor(screenshotWidth, pageInfo.width);
 		const scaleY = computeScreenshotScaleFactor(screenshotHeight, captureHeight);
 
-		diagnostics.screenshotWidth = screenshotWidth;
-		diagnostics.screenshotHeight = screenshotHeight;
-		diagnostics.scaleX = scaleX;
-		diagnostics.scaleY = scaleY;
-
-		debugLog('Screenshot captured', {
-			screenshotWidth,
-			screenshotHeight,
-			scaleX,
-			scaleY,
-			expectedScaleFromDPR: pageInfo.devicePixelRatio
-		});
-
 		// Step 7: Convert pre-captured bounding boxes to screenshot coordinates
 		const elementsWithBounds: PageOverviewElement[] = [];
 
 		for (const [i, target] of elementTargets.entries()) {
 			const box = rawBoundingBoxes.get(i);
 
-			if (!box) {
-				const diagnosticElement = diagnostics.elements[i];
-				if (DEBUG_SCREENSHOTS && diagnosticElement) {
-					diagnosticElement.skipped = true;
-					diagnosticElement.skipReason = diagnosticElement.skipReason ?? 'no_box';
-				}
-				continue;
-			}
-
-			if (box.y > captureHeight) {
-				const diagnosticElement = diagnostics.elements[i];
-				if (DEBUG_SCREENSHOTS && diagnosticElement) {
-					diagnosticElement.skipped = true;
-					diagnosticElement.skipReason = 'below_capture_area';
-				}
+			if (!box || box.y > captureHeight) {
 				continue;
 			}
 
@@ -328,12 +208,6 @@ export async function capturePageOverviewRaw(
 			const clippedBox = clipPageOverviewBounds(scaledBox, screenshotWidth, screenshotHeight);
 
 			if (!clippedBox) {
-				const diagnosticElement = diagnostics.elements[i];
-				if (DEBUG_SCREENSHOTS && diagnosticElement) {
-					diagnosticElement.scaledBox = scaledBox;
-					diagnosticElement.skipped = true;
-					diagnosticElement.skipReason = 'clipped_out';
-				}
 				continue;
 			}
 
@@ -341,19 +215,6 @@ export async function capturePageOverviewRaw(
 			const yPercent = clampPercent((clippedBox.y / screenshotHeight) * 100);
 			const widthPercent = clampPercent((clippedBox.width / screenshotWidth) * 100);
 			const heightPercent = clampPercent((clippedBox.height / screenshotHeight) * 100);
-
-			{
-				const diagnosticElement = diagnostics.elements[i];
-				if (DEBUG_SCREENSHOTS && diagnosticElement) {
-					diagnosticElement.scaledBox = clippedBox;
-					diagnosticElement.percentBounds = {
-						x: roundPercent(xPercent),
-						y: roundPercent(yPercent),
-						width: roundPercent(widthPercent),
-						height: roundPercent(heightPercent)
-					};
-				}
-			}
 
 			elementsWithBounds.push({
 				issueId: target.issueId,
@@ -372,12 +233,6 @@ export async function capturePageOverviewRaw(
 			});
 		}
 
-		debugLog(`Final elements with bounds: ${elementsWithBounds.length}/${elementTargets.length}`);
-
-		if (DEBUG_SCREENSHOTS) {
-			debugLog('Full diagnostics', diagnostics);
-		}
-
 		return {
 			screenshotPath,
 			screenshotFilename,
@@ -387,7 +242,6 @@ export async function capturePageOverviewRaw(
 			buffer: Buffer.from(screenshotBuffer)
 		};
 	} catch {
-		debugLog('Capture failed');
 		return null;
 	}
 }

@@ -156,18 +156,7 @@ describe('loadPageOverviewConfig', () => {
 		process.env = originalEnv;
 	});
 
-	it('returns default values when no environment variables are set', () => {
-		process.env.A11Y_PAGE_OVERVIEW_ENABLED = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_FINISH_ANIMATIONS = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_FORCE_CONTENT_VISIBILITY = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_MAX_ELEMENTS = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_MAX_HEIGHT = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_MAX_SCROLL_STEPS = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_PRE_SCROLL = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_SCROLL_PAUSE_MS = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_SCROLL_SETTLE_MS = undefined;
-		process.env.A11Y_PAGE_OVERVIEW_SCROLL_STEP_PX = undefined;
-
+	it('returns the default values', () => {
 		const config = loadPageOverviewConfig();
 
 		expect(config.enabled).toBe(true);
@@ -182,65 +171,7 @@ describe('loadPageOverviewConfig', () => {
 		expect(config.scrollStepPx).toBe(800);
 	});
 
-	it('reads enabled from A11Y_PAGE_OVERVIEW_ENABLED env var', () => {
-		process.env.A11Y_PAGE_OVERVIEW_ENABLED = 'false';
-		expect(loadPageOverviewConfig().enabled).toBe(false);
-
-		process.env.A11Y_PAGE_OVERVIEW_ENABLED = 'true';
-		expect(loadPageOverviewConfig().enabled).toBe(true);
-
-		process.env.A11Y_PAGE_OVERVIEW_ENABLED = '0';
-		expect(loadPageOverviewConfig().enabled).toBe(false);
-
-		process.env.A11Y_PAGE_OVERVIEW_ENABLED = '1';
-		expect(loadPageOverviewConfig().enabled).toBe(true);
-	});
-
-	it('reads maxElements from A11Y_PAGE_OVERVIEW_MAX_ELEMENTS env var', () => {
-		process.env.A11Y_PAGE_OVERVIEW_MAX_ELEMENTS = '100';
-		expect(loadPageOverviewConfig().maxElements).toBe(100);
-
-		process.env.A11Y_PAGE_OVERVIEW_MAX_ELEMENTS = '25';
-		expect(loadPageOverviewConfig().maxElements).toBe(25);
-	});
-
-	it('clamps maxElements to minimum of 0', () => {
-		process.env.A11Y_PAGE_OVERVIEW_MAX_ELEMENTS = '-10';
-		expect(loadPageOverviewConfig().maxElements).toBe(0);
-	});
-
-	it('reads maxHeight from A11Y_PAGE_OVERVIEW_MAX_HEIGHT env var', () => {
-		process.env.A11Y_PAGE_OVERVIEW_MAX_HEIGHT = '10000';
-		expect(loadPageOverviewConfig().maxHeight).toBe(10000);
-
-		process.env.A11Y_PAGE_OVERVIEW_MAX_HEIGHT = '0';
-		expect(loadPageOverviewConfig().maxHeight).toBe(0);
-	});
-
-	it('reads page preparation env vars', () => {
-		process.env.A11Y_PAGE_OVERVIEW_PRE_SCROLL = 'false';
-		process.env.A11Y_PAGE_OVERVIEW_FORCE_CONTENT_VISIBILITY = 'false';
-		process.env.A11Y_PAGE_OVERVIEW_FINISH_ANIMATIONS = 'false';
-		process.env.A11Y_PAGE_OVERVIEW_SCROLL_STEP_PX = '1200';
-		process.env.A11Y_PAGE_OVERVIEW_SCROLL_PAUSE_MS = '25';
-		process.env.A11Y_PAGE_OVERVIEW_SCROLL_SETTLE_MS = '40';
-		process.env.A11Y_PAGE_OVERVIEW_MAX_SCROLL_STEPS = '12';
-
-		const config = loadPageOverviewConfig();
-
-		expect(config.preScroll).toBe(false);
-		expect(config.forceContentVisibility).toBe(false);
-		expect(config.finishAnimations).toBe(false);
-		expect(config.scrollStepPx).toBe(1200);
-		expect(config.scrollPauseMs).toBe(25);
-		expect(config.scrollSettleMs).toBe(40);
-		expect(config.maxScrollSteps).toBe(12);
-	});
-
-	it('allows overrides to take precedence over environment variables', () => {
-		process.env.A11Y_PAGE_OVERVIEW_ENABLED = 'true';
-		process.env.A11Y_PAGE_OVERVIEW_MAX_ELEMENTS = '100';
-
+	it('applies overrides over the defaults', () => {
 		const config = loadPageOverviewConfig({
 			enabled: false,
 			maxElements: 25
@@ -248,8 +179,7 @@ describe('loadPageOverviewConfig', () => {
 
 		expect(config.enabled).toBe(false);
 		expect(config.maxElements).toBe(25);
-		// Non-overridden values should still come from env
-		expect(config.maxHeight).toBe(0); // default, not in env
+		expect(config.maxHeight).toBe(0); // default
 	});
 
 	it('handles partial overrides correctly', () => {

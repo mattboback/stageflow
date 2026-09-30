@@ -7,7 +7,7 @@
 
 import fs from 'node:fs';
 import { type BrowserContext, type Page, chromium } from 'playwright';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
 	Issue,
@@ -25,12 +25,8 @@ import {
 	getAuditCategory,
 	mapScoreToSeverity
 } from '../../../src/scanners/lighthouse/result-parser';
-import * as playwrightUtils from '../../../src/utils/playwright';
 
 const scanner = new LighthouseScanner();
-const originalLighthouseChromePath = process.env.LIGHTHOUSE_CHROME_PATH;
-const originalChromePath = process.env.CHROME_PATH;
-const originalLighthousePrewarm = process.env.LIGHTHOUSE_PREWARM;
 
 // Helper to access private methods for testing
 function callPrivateMethod(
@@ -125,27 +121,7 @@ const createMockContext = (overrides: Partial<ScanContext> = {}): ScanContext =>
 };
 
 describe('LighthouseScanner', () => {
-	beforeEach(() => {
-		delete process.env.LIGHTHOUSE_CHROME_PATH;
-		delete process.env.CHROME_PATH;
-	});
-
 	afterEach(() => {
-		if (originalLighthouseChromePath === undefined) {
-			delete process.env.LIGHTHOUSE_CHROME_PATH;
-		} else {
-			process.env.LIGHTHOUSE_CHROME_PATH = originalLighthouseChromePath;
-		}
-		if (originalChromePath === undefined) {
-			delete process.env.CHROME_PATH;
-		} else {
-			process.env.CHROME_PATH = originalChromePath;
-		}
-		if (originalLighthousePrewarm === undefined) {
-			delete process.env.LIGHTHOUSE_PREWARM;
-		} else {
-			process.env.LIGHTHOUSE_PREWARM = originalLighthousePrewarm;
-		}
 		vi.useRealTimers();
 		vi.restoreAllMocks();
 	});
@@ -1059,25 +1035,6 @@ describe('LighthouseScanner', () => {
 			const options = (testScanner as unknown as { options: { categories?: string[] } }).options;
 			expect(options.categories).toEqual(['seo']);
 		});
-
-		it('prewarms Lighthouse runtime when LIGHTHOUSE_PREWARM is enabled', async () => {
-			const testScanner = new LighthouseScanner();
-			process.env.LIGHTHOUSE_PREWARM = 'true';
-
-			vi.spyOn(
-				ScannerBase.prototype as unknown as { initialize: () => Promise<void> },
-				'initialize'
-			).mockResolvedValue(undefined);
-			const prewarmSpy = vi
-				.spyOn(testScanner as unknown as { prewarmRuntime: () => void }, 'prewarmRuntime')
-				.mockImplementation(() => undefined);
-
-			(testScanner as unknown as { config: ScannerConfig }).config = createScannerConfig();
-
-			await callPrivateMethod(testScanner, 'initialize');
-
-			expect(prewarmSpy).toHaveBeenCalledTimes(1);
-		});
 	});
 
 	describe('runSerialized', () => {
@@ -1119,68 +1076,27 @@ describe('LighthouseScanner', () => {
 	});
 
 	describe('resolveChromePath', () => {
-		it('uses LIGHTHOUSE_CHROME_PATH when it exists', () => {
-			const testScanner = new LighthouseScanner();
-			process.env.LIGHTHOUSE_CHROME_PATH = '/custom/chrome';
-
-			const existsSyncSpy = vi
-				.spyOn(fs, 'existsSync')
-				.mockImplementation((filePath) => filePath === '/custom/chrome');
-			const playwrightSpy = vi
-				.spyOn(chromium, 'executablePath')
-				.mockReturnValue('/playwright/chrome');
-			const fallbackSpy = vi
-				.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath')
-				.mockReturnValue('/fallback/chrome');
-
-			const resolvedPath = callPrivateMethod(testScanner, 'resolveChromePath') as string;
-
-			expect(resolvedPath).toBe('/custom/chrome');
-			expect(existsSyncSpy).toHaveBeenCalledWith('/custom/chrome');
-			expect(playwrightSpy).not.toHaveBeenCalled();
-			expect(fallbackSpy).not.toHaveBeenCalled();
-		});
-
-		it('falls back to Playwright executable path when env path is absent', () => {
+		it('uses the Playwright Chromium executable', () => {
 			const testScanner = new LighthouseScanner();
 
 			vi.spyOn(fs, 'existsSync').mockImplementation(
 				(filePath) => filePath === '/playwright/chrome'
 			);
 			vi.spyOn(chromium, 'executablePath').mockReturnValue('/playwright/chrome');
-			vi.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath').mockReturnValue(
-				'/fallback/chrome'
-			);
 
 			const resolvedPath = callPrivateMethod(testScanner, 'resolveChromePath') as string;
 
 			expect(resolvedPath).toBe('/playwright/chrome');
 		});
 
-		it('falls back to Playwright image path when env and Playwright path are unavailable', () => {
+		it('throws when the Playwright Chromium executable is missing', () => {
 			const testScanner = new LighthouseScanner();
 
 			vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 			vi.spyOn(chromium, 'executablePath').mockReturnValue('/playwright/chrome');
-			vi.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath').mockReturnValue(
-				'/image/chrome'
-			);
-
-			const resolvedPath = callPrivateMethod(testScanner, 'resolveChromePath') as string;
-			expect(resolvedPath).toBe('/image/chrome');
-		});
-
-		it('throws when no Chrome executable can be found', () => {
-			const testScanner = new LighthouseScanner();
-
-			vi.spyOn(fs, 'existsSync').mockReturnValue(false);
-			vi.spyOn(chromium, 'executablePath').mockReturnValue('');
-			vi.spyOn(playwrightUtils, 'resolvePlaywrightImageChromiumExecutablePath').mockReturnValue(
-				null
-			);
 
 			expect(() => callPrivateMethod(testScanner, 'resolveChromePath')).toThrow(
-				'Unable to locate a Chromium/Chrome executable for Lighthouse. Set LIGHTHOUSE_CHROME_PATH.'
+				'Unable to locate the Playwright Chromium executable for Lighthouse.'
 			);
 		});
 	});

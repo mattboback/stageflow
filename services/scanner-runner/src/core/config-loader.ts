@@ -8,7 +8,7 @@ import { join } from 'node:path';
 
 import type { BrowserConfig, MessagingConfig, ScannerConfig, StorageConfig } from './types';
 
-import { parseEnvBool, parseEnvInt, parseEnvNumber } from '../utils/env';
+import { parseEnvBool, parseEnvInt } from '../utils/env';
 
 export interface ConfigLoaderOptions {
 	scannerName: string;
@@ -39,8 +39,8 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 			process.env.PROVENANCE_PATH ?? defaults?.provenancePath ?? join(dataDir, 'provenance.json'),
 		resultsDir: process.env.RESULTS_DIR ?? defaults?.resultsDir ?? join(dataDir, 'results'),
 		scannerName,
-		concurrency: getEnvInt('SCAN_CONCURRENCY', defaults?.concurrency ?? 4),
-		maxRetries: getEnvInt('MAX_RETRIES', defaults?.maxRetries ?? 3),
+		concurrency: defaults?.concurrency ?? 4,
+		maxRetries: defaults?.maxRetries ?? 3,
 		browser,
 		storage,
 		messaging,
@@ -58,22 +58,14 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 
 function loadBrowserConfig(): BrowserConfig {
 	return {
-		headless: getEnvBool('BROWSER_HEADLESS', true),
-		args: [
-			'--no-sandbox',
-			'--disable-setuid-sandbox',
-			'--disable-dev-shm-usage',
-			'--disable-gpu',
-			...(process.env.BROWSER_ARGS?.split(',').filter(Boolean) ?? [])
-		],
-		defaultViewport: {
-			width: getEnvInt('VIEWPORT_WIDTH', 1280),
-			height: getEnvInt('VIEWPORT_HEIGHT', 720)
-		},
-		deviceScaleFactor: getEnvNumber('DEVICE_SCALE_FACTOR', 2),
-		defaultTimeout: getEnvInt('DEFAULT_TIMEOUT', 30_000),
+		headless: true,
+		args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+		defaultViewport: { width: 1280, height: 720 },
+		deviceScaleFactor: 2,
+		defaultTimeout: 30_000,
+		// The orchestrator sets this from its own configuration.
 		pageLoadTimeout: getEnvInt('PAGE_LOAD_TIMEOUT', 15_000),
-		bypassCSP: getEnvBool('BROWSER_BYPASS_CSP', false)
+		bypassCSP: false
 	};
 }
 
@@ -139,19 +131,6 @@ function getEnvBool(name: string, defaultValue: boolean): boolean {
 	const parsed = parseEnvBool(raw);
 	if (parsed === undefined) {
 		throw new Error(`Invalid boolean environment variable ${name}: ${raw}`);
-	}
-
-	return parsed;
-}
-
-function getEnvNumber(name: string, defaultValue: number): number {
-	const raw = process.env[name];
-	if (!raw) {
-		return defaultValue;
-	}
-	const parsed = parseEnvNumber(raw);
-	if (parsed === undefined) {
-		throw new Error(`Invalid numeric environment variable ${name}: ${raw}`);
 	}
 
 	return parsed;

@@ -28,7 +28,6 @@ type Config struct {
 	NatsHost                    string
 	MinioHost                   string
 	PageLoadTimeout             int
-	ScrollTimeout               int
 	AdminRateLimitRPS           int
 	AdminRateLimitBurst         int
 }
@@ -78,7 +77,6 @@ func loadConfig() *Config {
 		NatsHost:                    config.GetEnv("NATS_HOST", "nats"),
 		MinioHost:                   config.GetEnv("MINIO_HOST", "minio"),
 		PageLoadTimeout:             config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
-		ScrollTimeout:               config.GetEnvInt("A11Y_SCROLL_TIMEOUT", 300),
 		AdminRateLimitRPS:           config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS", 0),
 		AdminRateLimitBurst:         config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST", 0),
 	}
@@ -115,10 +113,6 @@ func (c *Config) Validate() error {
 
 	if c.PageLoadTimeout < 0 {
 		errs = append(errs, errors.New("PAGE_LOAD_TIMEOUT must be >= 0"))
-	}
-
-	if c.ScrollTimeout < 0 {
-		errs = append(errs, errors.New("A11Y_SCROLL_TIMEOUT must be >= 0"))
 	}
 
 	errs = append(errs, c.validatePodmanConfig()...)

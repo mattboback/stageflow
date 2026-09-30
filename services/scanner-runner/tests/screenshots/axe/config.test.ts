@@ -18,8 +18,6 @@ describe('loadAxeScreenshotConfig', () => {
 
 	it('uses sensible defaults', () => {
 		Reflect.deleteProperty(process.env, 'A11Y_SHOT_ENABLED');
-		Reflect.deleteProperty(process.env, 'A11Y_SCREENSHOT_FORMAT');
-		Reflect.deleteProperty(process.env, 'A11Y_SCREENSHOT_QUALITY');
 
 		expect(loadAxeScreenshotConfig()).toEqual({
 			screenshotsEnabled: true,
@@ -28,15 +26,10 @@ describe('loadAxeScreenshotConfig', () => {
 		});
 	});
 
-	it('parses the format and clamps the quality', () => {
+	it('follows the job screenshot setting', () => {
 		process.env.A11Y_SHOT_ENABLED = 'false';
-		process.env.A11Y_SCREENSHOT_FORMAT = 'PNG';
-		process.env.A11Y_SCREENSHOT_QUALITY = '999';
 
-		const cfg = loadAxeScreenshotConfig();
-		expect(cfg.screenshotsEnabled).toBe(false);
-		expect(cfg.outputFormat).toBe('png');
-		expect(cfg.webpQuality).toBe(100);
+		expect(loadAxeScreenshotConfig().screenshotsEnabled).toBe(false);
 	});
 
 	it('applies overrides last', () => {

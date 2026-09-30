@@ -4,7 +4,6 @@
  * Comprehensive tests for Playwright browser management.
  */
 
-import fs from 'node:fs';
 import { type Browser, type BrowserContext, type Page, chromium } from 'playwright';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,17 +12,10 @@ import type { PreScanAction, WaitStrategy } from '../../src/core/types';
 import { BrowserManager } from '../../src/core/browser-manager';
 import { validateTargetURLForPolicy } from '../../src/core/target-validation';
 
-// Mock Playwright and fs
+// Mock Playwright
 vi.mock('playwright', () => ({
 	chromium: {
 		launch: vi.fn()
-	}
-}));
-
-vi.mock('node:fs', () => ({
-	default: {
-		existsSync: vi.fn(),
-		readdirSync: vi.fn()
 	}
 }));
 
@@ -76,8 +68,6 @@ describe('BrowserManager', () => {
 		} as unknown as Browser;
 
 		vi.mocked(chromium.launch).mockResolvedValue(mockBrowser);
-		vi.mocked(fs.existsSync).mockReturnValue(false);
-		vi.mocked(fs.readdirSync).mockReturnValue([]);
 
 		browserManager = new BrowserManager();
 	});
@@ -133,45 +123,11 @@ describe('BrowserManager', () => {
 			expect(chromium.launch).toHaveBeenCalledTimes(1);
 		});
 
-		it('should attempt fallback chrome executable if exists', async () => {
-			vi.mocked(fs.existsSync).mockReturnValue(true);
-			vi.mocked(fs.readdirSync).mockReturnValue(['chromium-1200']);
-			vi.mocked(chromium.launch).mockRejectedValueOnce(new Error('Launch failed'));
+		it('should throw error if the launch fails', async () => {
+			vi.mocked(chromium.launch).mockRejectedValue(new Error('Launch failed'));
 
-			const browser = await browserManager.launch();
-
-			expect(browser).toBe(mockBrowser);
-			expect(chromium.launch).toHaveBeenCalledTimes(2);
-			expect(chromium.launch).toHaveBeenNthCalledWith(
-				2,
-				expect.objectContaining({
-					executablePath: '/ms-playwright/chromium-1200/chrome-linux/chrome'
-				})
-			);
-		});
-
-		it('should try single-process mode as final fallback', async () => {
-			vi.mocked(fs.existsSync).mockReturnValue(true);
-			vi.mocked(fs.readdirSync).mockReturnValue(['chromium-1200']);
-			vi.mocked(chromium.launch).mockRejectedValueOnce(new Error('Default failed'));
-			vi.mocked(chromium.launch).mockRejectedValueOnce(new Error('Fallback failed'));
-
-			const browser = await browserManager.launch();
-
-			expect(browser).toBe(mockBrowser);
-			expect(chromium.launch).toHaveBeenCalledTimes(3);
-			expect(chromium.launch).toHaveBeenNthCalledWith(
-				3,
-				expect.objectContaining({
-					args: expect.arrayContaining(['--single-process'])
-				})
-			);
-		});
-
-		it('should throw error if all launch attempts fail', async () => {
-			vi.mocked(chromium.launch).mockRejectedValue(new Error('All attempts failed'));
-
-			await expect(browserManager.launch()).rejects.toThrow('All attempts failed');
+			await expect(browserManager.launch()).rejects.toThrow('Launch failed');
+			expect(chromium.launch).toHaveBeenCalledTimes(1);
 		});
 	});
 

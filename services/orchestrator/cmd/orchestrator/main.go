@@ -141,7 +141,6 @@ func run() int {
 		PodNetnsMode:    cfg.PodNetnsMode,
 		PodHostMappings: cfg.PodHostMappings,
 		PageLoadTimeout: cfg.PageLoadTimeout,
-		ScrollTimeout:   cfg.ScrollTimeout,
 		StagingStorage:  minioClient,
 		Storage:         minioClient,
 	})

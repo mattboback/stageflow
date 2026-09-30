@@ -35,7 +35,6 @@ import {
 	loadLighthouseModule as loadLighthouseModuleFn,
 	runLighthouseInvocation
 } from './lighthouse-invoker';
-import { isLighthousePrewarmEnabled } from './prewarm';
 import {
 	DEFAULT_LIGHTHOUSE_CATEGORIES,
 	type LaunchedChrome,
@@ -84,10 +83,6 @@ export class LighthouseScanner extends ScannerBase {
 		this.logger.info('Lighthouse options', {
 			categories: this.options.categories
 		});
-
-		if (isLighthousePrewarmEnabled()) {
-			this.prewarmRuntime();
-		}
 	}
 
 	async scanPage(context: ScanContext): Promise<PageScanResult> {
@@ -397,16 +392,6 @@ export class LighthouseScanner extends ScannerBase {
 		this.lighthouseModulePromise ??= loadLighthouseModuleFn();
 
 		return this.lighthouseModulePromise;
-	}
-
-	private prewarmRuntime(): void {
-		this.logger.info('Prewarming Lighthouse runtime');
-		void this.loadLighthouseModule();
-		void this.ensureChrome().catch((error: unknown) => {
-			this.logger.warn('Failed to prewarm Lighthouse runtime', {
-				error: error instanceof Error ? error.message : String(error)
-			});
-		});
 	}
 
 	private async closeChrome(): Promise<void> {

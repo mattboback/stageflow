@@ -1,18 +1,1 @@
-[
-	{
-		"workspace": "services/scanner-runner",
-		"file": "src/config/rule-behaviors.ts",
-		"kind": "exports",
-		"symbol": "shouldCaptureScreenshot",
-		"owner": "1.7e",
-		"reason": "Remove with the rule-behaviors loader scheduled for scanner-internals cleanup."
-	},
-	{
-		"workspace": "services/scanner-runner",
-		"file": "src/config/rule-behaviors.ts",
-		"kind": "exports",
-		"symbol": "shouldCaptureSemanticScreenshot",
-		"owner": "1.7e",
-		"reason": "Remove with the rule-behaviors loader scheduled for scanner-internals cleanup."
-	}
-]
+[]
