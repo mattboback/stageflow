@@ -22,27 +22,33 @@ const contentTypes = {
 	'.woff2': 'font/woff2'
 };
 
+// Mirrors nginx.conf: real files and prerendered pages, the SPA shell for
+// scan routes, and a 404 carrying the shell for anything else.
+const spaRoute = /^\/scan\/[^/]+(?:\/report)?\/?$/;
+
 function candidateFor(pathname) {
+	if (spaRoute.test(pathname)) return { file: fallback, status: 200 };
 	const decoded = decodeURIComponent(pathname);
 	const relative = normalize(decoded).replace(/^[/\\]+/, '');
 	const candidate = resolve(root, relative);
 	if (candidate !== root && !candidate.startsWith(`${root}/`)) return null;
-	if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+	if (existsSync(candidate) && statSync(candidate).isFile()) return { file: candidate, status: 200 };
 	const index = join(candidate, 'index.html');
-	if (existsSync(index) && statSync(index).isFile()) return index;
-	return fallback;
+	if (existsSync(index) && statSync(index).isFile()) return { file: index, status: 200 };
+	return { file: fallback, status: 404 };
 }
 
 createServer((request, response) => {
 	try {
 		const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
-		const file = candidateFor(url.pathname);
-		if (!file || !existsSync(file)) {
+		const match = candidateFor(url.pathname);
+		if (!match || !existsSync(match.file)) {
 			response.writeHead(404).end('Not found');
 			return;
 		}
+		const { file, status } = match;
 		const type = contentTypes[extname(file)] || 'application/octet-stream';
-		response.writeHead(200, {
+		response.writeHead(status, {
 			'Content-Type': type,
 			'Cache-Control': type.startsWith('text/html') ? 'no-cache' : 'public, max-age=0',
 			'X-Content-Type-Options': 'nosniff',
