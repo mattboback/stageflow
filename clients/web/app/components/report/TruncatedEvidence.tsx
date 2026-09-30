@@ -1,7 +1,8 @@
 import type { IssueDetail } from '../../lib/types/unified-report';
+import { getIssueKind } from '../../lib/report/issue-kind';
 
 export function TruncatedEvidence({ issue }: { issue: IssueDetail }) {
-	if (!issue.elementsTruncated) return null;
+	if (!issue.elementsTruncated || getIssueKind(issue) !== 'element') return null;
 	const capture = issue.scannerData?.evidenceCapture;
 	const meta =
 		typeof capture === 'object' && capture !== null ? (capture as Record<string, unknown>) : null;

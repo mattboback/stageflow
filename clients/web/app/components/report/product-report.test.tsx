@@ -9,6 +9,7 @@ import { AllClearBanner } from './AllClearBanner';
 import { BaselineDiffSummary } from './BaselineDiffSummary';
 import { FixTheseFirst } from './FixTheseFirst';
 import { IssueDetailModal } from './IssueDetailModal';
+import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueRowCard } from './IssueRowCard';
 import { LighthouseDetails } from './LighthouseDetails';
 import { ReportHeader } from './ReportHeader';
@@ -114,12 +115,32 @@ describe('product report priorities', () => {
 		expect(container.textContent).not.toContain('nothing to fix');
 	});
 	it('does not invent element counts for node-less findings', () => {
+		const pageIssue = finding({
+			scanner: 'lighthouse',
+			ruleId: 'link-text',
+			occurrences: [],
+			elementCount: 1,
+			elementsTruncated: true,
+			scannerData: {
+				details: {
+					type: 'table',
+					headings: [{ key: 'text', label: 'Link Text', valueType: 'text' }],
+					items: [{ text: 'Learn more' }]
+				}
+			}
+		});
 		const { container } = render(
-			<IssueRowCard
-				issue={finding({ scanner: 'security-headers', occurrences: [], elementCount: 1 })}
-			/>
+			<>
+				<IssueRowCard
+					issue={finding({ scanner: 'security-headers', occurrences: [], elementCount: 1 })}
+				/>
+				<IssueRowCard issue={pageIssue} />
+				<IssueEvidenceSection issue={pageIssue} page={null} pageOverviewUrl={null} />
+			</>
 		);
 		expect(container.querySelector('.irow__count')).toBeNull();
+		expect(screen.getByRole('cell', { name: 'Learn more' })).toBeTruthy();
+		expect(screen.queryByText(/more elements without captured HTML or crops/)).toBeNull();
 	});
 	it('renders scanner guidance and curated impact in the default fix dialog', () => {
 		render(
