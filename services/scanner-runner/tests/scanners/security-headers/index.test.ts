@@ -446,7 +446,7 @@ describe('SecurityHeadersScanner', () => {
 			]);
 		});
 
-		it('includes only tracked security headers in raw results', async () => {
+		it('keeps no raw results', async () => {
 			const headers = {
 				'content-security-policy': "default-src 'self'",
 				'strict-transport-security': 'max-age=31536000',
@@ -461,20 +461,8 @@ describe('SecurityHeadersScanner', () => {
 			const integrationScanner = new SecurityHeadersScanner();
 
 			const result = await integrationScanner.scanPage(context);
-			const rawResults = result.rawResults as {
-				headers: Record<string, string>;
-				statusCode: number;
-				mixedContentCount: number;
-			};
-
-			expect(rawResults.statusCode).toBe(201);
-			expect(rawResults.mixedContentCount).toBe(0);
-			expect(rawResults.headers).toEqual({
-				'content-security-policy': "default-src 'self'",
-				'strict-transport-security': 'max-age=31536000',
-				'x-content-type-options': 'nosniff'
-			});
-			expect(rawResults.headers.server).toBeUndefined();
+			expect(result.success).toBe(true);
+			expect(result.rawResults).toBeUndefined();
 		});
 
 		it('returns an error result when fetch throws', async () => {

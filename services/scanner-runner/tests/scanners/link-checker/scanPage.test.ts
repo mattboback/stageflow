@@ -185,7 +185,7 @@ describe('LinkCheckerScanner.scanPage', () => {
 			expect(result.finishedAt).toBeDefined();
 		});
 
-		it('calculates correct rawResults statistics', async () => {
+		it('keeps only the page overview in rawResults', async () => {
 			globalThis.fetch = vi.fn().mockResolvedValue({
 				status: 200,
 				redirected: false,
@@ -226,16 +226,7 @@ describe('LinkCheckerScanner.scanPage', () => {
 			await vi.advanceTimersByTimeAsync(500);
 			const result = await resultPromise;
 
-			expect(result.rawResults).toEqual({
-				totalLinks: 3,
-				internalLinks: 2,
-				externalLinks: 1,
-				brokenCount: 0,
-				redirectChainCount: 0,
-				slowLinkCount: 0,
-				averageResponseTime: expect.any(Number),
-				pageOverview: null
-			});
+			expect(result.rawResults).toEqual({ pageOverview: null });
 		});
 
 		it('logs extraction and completion info', async () => {
@@ -698,56 +689,7 @@ describe('LinkCheckerScanner.scanPage', () => {
 
 			expect(result.success).toBe(true);
 			expect(result.issues).toHaveLength(0);
-			expect(result.rawResults).toMatchObject({
-				totalLinks: 0,
-				internalLinks: 0,
-				externalLinks: 0,
-				averageResponseTime: 0
-			});
-		});
-
-		it('calculates correct average response time', async () => {
-			let callCount = 0;
-			globalThis.fetch = vi.fn().mockImplementation(() => {
-				callCount++;
-				return Promise.resolve({
-					status: 200,
-					redirected: false,
-					url: `https://example.com/page${callCount}`
-				});
-			});
-
-			const mockPage = createMockPage({
-				evaluate: vi
-					.fn()
-					.mockResolvedValueOnce([
-						{
-							href: 'https://example.com/page1',
-							text: 'Page 1',
-							isInternal: true,
-							element: 'a'
-						},
-						{
-							href: 'https://example.com/page2',
-							text: 'Page 2',
-							isInternal: true,
-							element: 'a'
-						}
-					])
-					.mockResolvedValueOnce([])
-					.mockResolvedValueOnce([])
-			});
-
-			const context = createMockContext({ page: mockPage });
-			const scanner = new LinkCheckerScanner();
-
-			const resultPromise = scanner.scanPage(context);
-			await vi.advanceTimersByTimeAsync(500);
-			const result = await resultPromise;
-
-			expect(result.rawResults).toHaveProperty('averageResponseTime');
-			const rawResults = result.rawResults as { averageResponseTime: number };
-			expect(rawResults.averageResponseTime).toBeGreaterThanOrEqual(0);
+			expect(result.rawResults).toEqual({ pageOverview: null });
 		});
 	});
 

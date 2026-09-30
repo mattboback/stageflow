@@ -1348,14 +1348,15 @@ describe('LighthouseScanner', () => {
 			);
 			const rawResults = result.rawResults as {
 				pageOverview: unknown;
-				finalUrl: string;
+				categories?: unknown;
 			};
 
 			expect(result.success).toBe(true);
 			expect(result.issues).toHaveLength(1);
 			expect(result.artifacts).toEqual([]);
 			expect(rawResults.pageOverview).toBeNull();
-			expect(rawResults.finalUrl).toBe('https://example.com/page');
+			expect(Object.keys(rawResults).sort()).toEqual(['categories', 'pageOverview']);
+			expect(result.finalUrl).toBe('https://example.com/page');
 			expect(logger.warn).toHaveBeenCalledWith(
 				'Failed to re-navigate page after Lighthouse, continuing with stale page',
 				expect.objectContaining({ error: 'navigation failed [REDACTED]' })

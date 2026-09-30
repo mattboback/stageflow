@@ -249,16 +249,7 @@ export class SecurityHeadersScanner extends ScannerBase {
 				issues,
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),
-				finishedAt: new Date().toISOString(),
-				rawResults: {
-					headers: Object.fromEntries(
-						Object.entries(headers).filter(([k]) =>
-							SECURITY_HEADERS.some((h) => h.name === k.toLowerCase())
-						)
-					),
-					statusCode,
-					mixedContentCount: mixedContent.length
-				}
+				finishedAt: new Date().toISOString()
 			};
 		} catch (error) {
 			logger.error('Security scan failed', {

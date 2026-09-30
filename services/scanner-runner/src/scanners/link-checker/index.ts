@@ -96,7 +96,6 @@ export class LinkCheckerScanner extends ScannerBase {
 			const brokenLinks: LinkCheckResult[] = [];
 			const unverifiedLinks: LinkCheckResult[] = [];
 			const redirectChains: LinkCheckResult[] = [];
-			const slowLinks: LinkCheckResult[] = [];
 
 			for (const result of results) {
 				if (result.status && isUnverifiableStatus(result.status, result.isInternal)) {
@@ -105,8 +104,6 @@ export class LinkCheckerScanner extends ScannerBase {
 					brokenLinks.push(result);
 				} else if (result.redirects.length > 2) {
 					redirectChains.push(result);
-				} else if (result.responseTime > 3000) {
-					slowLinks.push(result);
 				}
 			}
 
@@ -244,18 +241,6 @@ export class LinkCheckerScanner extends ScannerBase {
 				finishedAt: new Date().toISOString(),
 				artifacts: pageOverview ? [pageOverview.screenshotPath] : [],
 				rawResults: {
-					totalLinks: links.length,
-					internalLinks: links.filter((l) => l.isInternal).length,
-					externalLinks: links.filter((l) => !l.isInternal).length,
-					brokenCount: brokenLinks.length,
-					redirectChainCount: redirectChains.length,
-					// Not a finding: a link target's latency says nothing about this page and
-					// varies run to run, which made baselines churn.
-					slowLinkCount: slowLinks.length,
-					averageResponseTime:
-						results.length > 0
-							? Math.round(results.reduce((sum, r) => sum + r.responseTime, 0) / results.length)
-							: 0,
 					pageOverview: pageOverview
 						? {
 								screenshotFilename: pageOverview.screenshotFilename,

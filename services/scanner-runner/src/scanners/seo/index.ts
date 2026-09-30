@@ -74,18 +74,7 @@ export class SEOScanner extends ScannerBase {
 				issues,
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),
-				finishedAt: new Date().toISOString(),
-				rawResults: {
-					title: seoData.title,
-					description: seoData.description,
-					canonical: seoData.canonical,
-					h1Count: seoData.headings.filter((h) => h.level === 1).length,
-					imageCount: seoData.images.length,
-					imagesWithoutAlt: seoData.images.filter((i) => !i.alt).length,
-					wordCount: seoData.wordCount,
-					hasStructuredData: seoData.structuredData.length > 0,
-					ogTags: Object.keys(seoData.ogTags)
-				}
+				finishedAt: new Date().toISOString()
 			};
 		} catch (error) {
 			logger.error('SEO scan failed', {

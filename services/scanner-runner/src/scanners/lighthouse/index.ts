@@ -132,8 +132,10 @@ export class LighthouseScanner extends ScannerBase {
 				startedAt,
 				finishedAt,
 				artifacts: pageOverview ? [pageOverview.screenshotPath] : [],
+				// Only the category scores are aggregated; the full result stays out of
+				// memory once this page's issues are built.
 				rawResults: {
-					...lhResult,
+					categories: lhResult.categories,
 					pageOverview: pageOverview
 						? {
 								screenshotFilename: pageOverview.screenshotFilename,
