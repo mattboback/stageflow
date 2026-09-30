@@ -143,3 +143,68 @@ func assertSpecialistFixtureCoverage(t *testing.T, result report.UnifiedReportV2
 		t.Error("independent SEO checks disappeared")
 	}
 }
+
+func TestFailedVerificationRetainsTargetedScopeWithoutScannerContext(t *testing.T) {
+	for _, identity := range []string{"", "path", "origin"} {
+		t.Run(identity, func(t *testing.T) {
+			job := &models.Job{ID: "targeted-failed", InputType: models.JobInputTypeZip,
+				Config: models.JobConfig{
+					IdentityScope: identity,
+					Auth:          json.RawMessage(`{"mode":"storage_state"}`),
+					Verification: &models.VerificationConfig{
+						SourceJobID: "original",
+						PageID:      "affected-page",
+						Scanner:     "axe",
+						RuleID:      "image-alt",
+					},
+				}}
+			a := newReportAggregation(&Aggregator{}, job)
+			a.scannerStats["axe"] = &report.ScannerSummary{Id: "axe", Status: report.ScannerStatusFailed}
+			result := a.buildReport()
+
+			assertFailedVerificationContext(t, result.Meta.ScanContext, identity)
+
+			if result.Summary.Score != nil || result.Summary.ScoreGrade != nil {
+				t.Fatal("targeted failed scan received a site score")
+			}
+
+			originalContext := &report.ScanContext{
+				Purpose:                   report.ScanContextPurposeVerification,
+				ScannerConfigFingerprints: map[string]string{"axe": "captured"},
+			}
+
+			a.scanContext = originalContext
+			if a.buildReport().Meta.ScanContext != originalContext {
+				t.Fatal("recorded scanner context was replaced")
+			}
+		})
+	}
+
+	ordinary := newReportAggregation(&Aggregator{}, &models.Job{ID: "full-failed"}).buildReport()
+	if ordinary.Meta.ScanContext != nil {
+		t.Fatal("untargeted run received invented verification context")
+	}
+}
+
+func assertFailedVerificationContext(t *testing.T, context *report.ScanContext, identity string) {
+	t.Helper()
+
+	if context == nil || context.Purpose != report.ScanContextPurposeVerification ||
+		len(context.ExpectedPages) != 1 ||
+		context.ExpectedPages[0] != "affected-page" ||
+		context.InputType != report.ScanContextInputTypeZip ||
+		!context.Authenticated {
+		t.Fatalf("failed targeted run lost scope: %#v", context)
+	}
+
+	wantIdentity := report.ScanContextIdentityScopePath
+	if identity == "origin" {
+		wantIdentity = report.ScanContextIdentityScopeOrigin
+	}
+
+	if context.IdentityScope != wantIdentity || context.ScannerConfigFingerprints == nil ||
+		len(context.ScannerConfigFingerprints) != 0 ||
+		len(context.PageConfigFingerprints) != 0 {
+		t.Fatalf("fallback invented execution coverage: %#v", context)
+	}
+}

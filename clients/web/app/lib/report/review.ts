@@ -20,7 +20,7 @@ export function getReviewGroupStatus(
 ): ReviewGroupStatus | null {
 	const reviewIssues = issues.filter(needsHumanReview);
 	if (reviewIssues.length === 0) return null;
-	const pending = reviewIssues.filter((issue) => !getVerdict(issue.id)).length;
+	const pending = reviewIssues.filter((issue) => !getVerdict(issue.id)?.verdict).length;
 	if (pending > 0) {
 		return { label: pending === 1 ? 'needs review' : `${pending} need review`, tone: 'pending' };
 	}

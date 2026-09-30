@@ -51,6 +51,22 @@
         "type": "page-overview"
       }
     ],
+    "assessment": {
+      "actionable": 5,
+      "dispositionByIssue": {
+        "0764c92e71494d27": "actionable",
+        "617730f9c5f1b11d": "actionable",
+        "694f89df99f744f2": "actionable",
+        "789c19f1c4b7f09d": "actionable",
+        "deeed76d8515997f": "actionable"
+      },
+      "expected": 0,
+      "needsReview": 0,
+      "policyVersion": "indexing-v1",
+      "profile": "production",
+      "score": 70,
+      "scoreGrade": "C-"
+    },
     "issues": [
       {
         "category": "wcag2a",
@@ -281,6 +297,42 @@
       "completedAt": "2000-01-01T00:00:00.000Z",
       "durationMs": 0,
       "jobId": "NORMALIZED",
+      "policyVersion": "indexing-v1",
+      "profile": "production",
+      "scanContext": {
+        "authenticated": false,
+        "expectedPages": [
+          "page-v2-213456c5dc963e03",
+          "page-v2-78421f5b8fea2d9d",
+          "page-v2-9ac7a7b2ed8ccf33",
+          "page-v2-db5b16407156eab2"
+        ],
+        "identityScope": "path",
+        "inputType": "zip",
+        "pageConfigFingerprints": {
+          "page-v2-213456c5dc963e03": "06361a8dec086afabaa5ed5b2a3315ae65a64f7969fce2fe1949d68aac3ef728",
+          "page-v2-78421f5b8fea2d9d": "06361a8dec086afabaa5ed5b2a3315ae65a64f7969fce2fe1949d68aac3ef728",
+          "page-v2-9ac7a7b2ed8ccf33": "06361a8dec086afabaa5ed5b2a3315ae65a64f7969fce2fe1949d68aac3ef728",
+          "page-v2-db5b16407156eab2": "06361a8dec086afabaa5ed5b2a3315ae65a64f7969fce2fe1949d68aac3ef728"
+        },
+        "purpose": "full",
+        "scannerConfigFingerprints": {
+          "axe": "81684df9ec90883a21806fe2c726b04f4013028caac75d5bfe72e30c1014747a"
+        },
+        "scannerConfigurations": {
+          "axe": {}
+        },
+        "verificationEligiblePages": {
+          "page-v2-213456c5dc963e03": true,
+          "page-v2-78421f5b8fea2d9d": true,
+          "page-v2-9ac7a7b2ed8ccf33": true,
+          "page-v2-db5b16407156eab2": true
+        },
+        "viewport": {
+          "height": 720,
+          "width": 1280
+        }
+      },
       "scannedAt": "2000-01-01T00:00:00.000Z"
     },
     "pages": [
@@ -448,6 +500,1491 @@
         "id": "axe",
         "issueCount": 5,
         "name": "Axe Accessibility Scanner",
+        "pages": [
+          {
+            "finalUrl": "https://sample.invalid/about.html",
+            "pageId": "page-v2-db5b16407156eab2",
+            "rules": [
+              {
+                "outcome": "fail",
+                "ruleId": "link-name",
+                "subjectIds": [
+                  "occ-v2-87dd74631d32d60f"
+                ]
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-allowed-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-conditional-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-hidden-body"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-hidden-focus"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-prohibited-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr-value"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "bypass"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "color-contrast"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "document-title"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "empty-heading"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "heading-order"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-has-lang"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-lang-valid"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-redundant-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-banner-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-contentinfo-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-main-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-banner"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-contentinfo"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-one-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-unique"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "link-name"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "list"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "listitem"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport-large"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "page-has-heading-one"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "presentation-role-conflict"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "region"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "accesskeys"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "area-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-allowed-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-braille-equivalent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-command-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-deprecated-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-dialog-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-input-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-meter-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-progressbar-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-children"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-parent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-roles"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tab-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-text"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-toggle-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tooltip-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-treeitem-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "autocomplete-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "avoid-inline-spacing"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "blink"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "definition-list"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "dlitem"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "duplicate-id-aria"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "empty-table-header"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "form-field-multiple-labels"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-focusable-content"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-tested"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title-unique"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "html-xml-lang-mismatch"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-image-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "label-title-only"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "label"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "link-in-text-block"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "marquee"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "meta-refresh"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "nested-interactive"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "object-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "role-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scope-attr-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scrollable-region-focusable"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "select-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "server-side-image-map"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "skip-link"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "summary-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "svg-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "tabindex"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "table-duplicate-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "td-headers-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "th-has-data-cells"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "valid-lang"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "video-caption"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "no-autoplay-audio"
+              }
+            ],
+            "status": "success"
+          },
+          {
+            "finalUrl": "https://sample.invalid/",
+            "pageId": "page-v2-213456c5dc963e03",
+            "rules": [
+              {
+                "outcome": "pass",
+                "ruleId": "aria-allowed-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-conditional-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-hidden-body"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-prohibited-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr-value"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "bypass"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "color-contrast"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "document-title"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "empty-heading"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "heading-order"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-has-lang"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-lang-valid"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-redundant-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-banner-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-contentinfo-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-main-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-banner"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-contentinfo"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-one-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-unique"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "link-name"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "list"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "listitem"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport-large"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "nested-interactive"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "page-has-heading-one"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "presentation-role-conflict"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "region"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "accesskeys"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "area-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-allowed-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-braille-equivalent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-command-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-deprecated-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-dialog-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-hidden-focus"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-input-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-meter-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-progressbar-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-children"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-parent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-roles"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tab-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-text"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-toggle-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tooltip-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-treeitem-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "autocomplete-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "avoid-inline-spacing"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "blink"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "definition-list"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "dlitem"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "duplicate-id-aria"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "empty-table-header"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "form-field-multiple-labels"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-focusable-content"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-tested"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title-unique"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "html-xml-lang-mismatch"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-image-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "label-title-only"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "label"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "link-in-text-block"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "marquee"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "meta-refresh"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "object-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "role-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scope-attr-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scrollable-region-focusable"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "select-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "server-side-image-map"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "skip-link"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "summary-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "svg-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "tabindex"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "table-duplicate-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "td-headers-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "th-has-data-cells"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "valid-lang"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "video-caption"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "no-autoplay-audio"
+              }
+            ],
+            "status": "success"
+          },
+          {
+            "finalUrl": "https://sample.invalid/pricing.html",
+            "pageId": "page-v2-9ac7a7b2ed8ccf33",
+            "rules": [
+              {
+                "outcome": "fail",
+                "ruleId": "color-contrast",
+                "subjectIds": [
+                  "occ-v2-8e87cd4aa71cc1d5"
+                ]
+              },
+              {
+                "outcome": "fail",
+                "ruleId": "select-name",
+                "subjectIds": [
+                  "occ-v2-9ee5ca4a5765c626"
+                ]
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-allowed-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-conditional-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-hidden-body"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-prohibited-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr-value"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "bypass"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "color-contrast"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "document-title"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "empty-heading"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "form-field-multiple-labels"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "heading-order"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-has-lang"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-lang-valid"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-redundant-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "label-title-only"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-banner-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-contentinfo-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-main-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-banner"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-contentinfo"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-one-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-unique"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "link-name"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "list"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "listitem"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport-large"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "nested-interactive"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "page-has-heading-one"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "presentation-role-conflict"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "region"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "accesskeys"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "area-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-allowed-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-braille-equivalent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-command-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-deprecated-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-dialog-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-hidden-focus"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-input-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-meter-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-progressbar-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-children"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-parent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-roles"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tab-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-text"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-toggle-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tooltip-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-treeitem-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "autocomplete-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "avoid-inline-spacing"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "blink"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "definition-list"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "dlitem"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "duplicate-id-aria"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "empty-table-header"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-focusable-content"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-tested"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title-unique"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "html-xml-lang-mismatch"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-image-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "label"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "link-in-text-block"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "marquee"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "meta-refresh"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "object-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "role-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scope-attr-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scrollable-region-focusable"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "server-side-image-map"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "skip-link"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "summary-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "svg-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "tabindex"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "table-duplicate-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "td-headers-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "th-has-data-cells"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "valid-lang"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "video-caption"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "no-autoplay-audio"
+              }
+            ],
+            "status": "success"
+          },
+          {
+            "finalUrl": "https://sample.invalid/signup.html",
+            "pageId": "page-v2-78421f5b8fea2d9d",
+            "rules": [
+              {
+                "outcome": "fail",
+                "ruleId": "button-name",
+                "subjectIds": [
+                  "occ-v2-6b78ecd3969069a6"
+                ]
+              },
+              {
+                "outcome": "fail",
+                "ruleId": "label",
+                "subjectIds": [
+                  "occ-v2-01db558ae5bd6017"
+                ]
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-allowed-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-conditional-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-hidden-body"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-hidden-focus"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-prohibited-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr-value"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "aria-valid-attr"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "autocomplete-valid"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "button-name"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "bypass"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "color-contrast"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "document-title"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "duplicate-id-aria"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "empty-heading"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "form-field-multiple-labels"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "heading-order"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-has-lang"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "html-lang-valid"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "image-redundant-alt"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "label-title-only"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "label"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-banner-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-contentinfo-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-main-is-top-level"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-banner"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-contentinfo"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-no-duplicate-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-one-main"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "landmark-unique"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "link-name"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "list"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "listitem"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport-large"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "meta-viewport"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "nested-interactive"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "page-has-heading-one"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "presentation-role-conflict"
+              },
+              {
+                "outcome": "pass",
+                "ruleId": "region"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "accesskeys"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "area-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-allowed-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-braille-equivalent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-command-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-deprecated-role"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-dialog-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-input-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-meter-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-progressbar-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-children"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-required-parent"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-roles"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tab-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-text"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-toggle-field-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-tooltip-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "aria-treeitem-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "avoid-inline-spacing"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "blink"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "definition-list"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "dlitem"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "empty-table-header"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-focusable-content"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-tested"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title-unique"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "frame-title"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "html-xml-lang-mismatch"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-button-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "input-image-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "link-in-text-block"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "marquee"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "meta-refresh"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "object-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "role-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scope-attr-valid"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "scrollable-region-focusable"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "select-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "server-side-image-map"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "skip-link"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "summary-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "svg-img-alt"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "tabindex"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "table-duplicate-name"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "td-headers-attr"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "th-has-data-cells"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "valid-lang"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "video-caption"
+              },
+              {
+                "outcome": "inapplicable",
+                "ruleId": "no-autoplay-audio"
+              }
+            ],
+            "status": "success"
+          }
+        ],
         "reportPath": "NORMALIZED",
         "resultsPath": "NORMALIZED",
         "severity": {
@@ -458,7 +1995,7 @@
         },
         "startedAt": "2000-01-01T00:00:00.000Z",
         "status": "success",
-        "toolVersion": "0.1.0"
+        "toolVersion": "0.2.0"
       }
     ],
     "summary": {
@@ -477,7 +2014,7 @@
       "scoreGrade": "C-",
       "totalIssues": 5
     },
-    "version": "2.1.0"
+    "version": "2.2.0"
   },
   "schema": "stageflow-cli/report@v1",
   "urls": [

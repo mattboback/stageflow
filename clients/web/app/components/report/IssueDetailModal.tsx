@@ -21,6 +21,7 @@ import {
 } from '../../lib/report';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 
+import { ReviewNotesPanel } from './ReviewNotesPanel';
 import { TruncatedEvidence } from './TruncatedEvidence';
 import { IssueEvidenceSection } from './IssueEvidenceSection';
 import { IssueOccurrenceCard } from './IssueOccurrenceCard';
@@ -36,6 +37,8 @@ interface Props {
 	screenshots: ScreenshotArtifact[];
 	onClose: () => void;
 	onNavigate?: (issueId: string) => void;
+	onVerify?: () => void;
+	verificationUnavailable?: string | null;
 }
 
 type TabId = 'review' | 'fix' | 'evidence' | 'verify' | 'occurrences';
@@ -47,7 +50,9 @@ export function IssueDetailModal({
 	issues,
 	screenshots,
 	onClose,
-	onNavigate
+	onNavigate,
+	onVerify,
+	verificationUnavailable
 }: Props) {
 	const currentIndex = issues.findIndex((i) => i.id === issue.id);
 	const totalCount = issues.length;
@@ -203,7 +208,7 @@ export function IssueDetailModal({
 								{severity}
 							</span>
 							<span className="imodal__kind">{kindLabel}</span>
-							{reviewVerdict ? (
+							{reviewVerdict?.verdict ? (
 								<span className={`imodal__verdict imodal__verdict--${reviewVerdict.verdict}`}>
 									Reviewed · {reviewVerdict.verdict}
 								</span>
@@ -265,6 +270,19 @@ export function IssueDetailModal({
 							verification — no concrete DOM target was reported.
 						</p>
 					)}
+					{onVerify && (
+						<div>
+							<button
+								type="button"
+								className="btn btn--secondary"
+								disabled={Boolean(verificationUnavailable)}
+								onClick={onVerify}
+							>
+								Verify this fix
+							</button>
+							{verificationUnavailable && <p className="imodal__sub">{verificationUnavailable}</p>}
+						</div>
+					)}
 				</header>
 
 				<nav className="tabs imodal__tabs" role="tablist">
@@ -292,6 +310,7 @@ export function IssueDetailModal({
 				</nav>
 
 				<div className="imodal__body">
+					<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
 					{activeTab === 'review' && (
 						<div
 							className="imodal__pane"

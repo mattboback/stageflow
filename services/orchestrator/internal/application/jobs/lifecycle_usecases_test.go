@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/events"
@@ -79,6 +80,16 @@ func TestServiceCreateJobCopiesConfigFromPayload(t *testing.T) {
 		InputType: string(models.JobInputTypeURLs),
 		URLs:      []string{"https://example.com"},
 		Config: models.JobConfig{
+			Profile:       "staging",
+			IdentityScope: "origin",
+			Verification: &models.VerificationConfig{
+				SourceJobID: "source-job",
+				PageID:      "page-1",
+				RuleID:      "image-alt",
+				Scanner:     "axe",
+				SubjectID:   "subject-1",
+			},
+			PagePaths:           []string{"/index.html"},
 			Modules:             []string{"axe"},
 			Screenshot:          true,
 			AllowPrivateTargets: true,
@@ -96,6 +107,15 @@ func TestServiceCreateJobCopiesConfigFromPayload(t *testing.T) {
 	// Regression: the orchestrator rebuilds JobConfig field-by-field from the
 	// event payload, so a new Config field must be copied here too. A field once
 	// went missing here while the field next to it was carried.
+	config := store.lastCreatedJob.Config
+	if config.Profile != payload.Config.Profile || config.IdentityScope != payload.Config.IdentityScope ||
+		!reflect.DeepEqual(
+			config.Verification,
+			payload.Config.Verification,
+		) || !reflect.DeepEqual(config.PagePaths, payload.Config.PagePaths) {
+		t.Fatal("persisted product configuration differs from the job-created payload")
+	}
+
 	if !store.lastCreatedJob.Config.Screenshot {
 		t.Fatal("persisted Config.Screenshot = false, want true")
 	}

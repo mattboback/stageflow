@@ -1,3 +1,5 @@
+import { occurrenceFingerprint } from '../../core/finding-identity';
+import { boundRuleEvaluations } from '../../core/rule-evaluations';
 /**
  * Link Checker Scanner
  *
@@ -167,6 +169,75 @@ export class LinkCheckerScanner extends ScannerBase {
 				url: pageEntry.url,
 				path: pageEntry.path,
 				success: true,
+				finalUrl: page.url(),
+				rules: boundRuleEvaluations([
+					{
+						ruleId: `${this.metadata.name}-broken`,
+						outcome: brokenLinks.length
+							? 'fail'
+							: unverifiedLinks.length
+								? 'incomplete'
+								: links.length
+									? 'pass'
+									: 'inapplicable',
+						subjectIds: brokenLinks
+							.slice(0, 32)
+							.flatMap((link) =>
+								link.selector
+									? [
+											occurrenceFingerprint(
+												this.metadata.name,
+												`${this.metadata.name}-broken`,
+												pageEntry.id,
+												[link.selector]
+											)
+										]
+									: []
+							)
+					},
+					{
+						ruleId: `${this.metadata.name}-unverified`,
+						outcome: unverifiedLinks.length ? 'incomplete' : 'pass'
+					},
+					{
+						ruleId: `${this.metadata.name}-redirect-chains`,
+						outcome: redirectChains.length
+							? 'fail'
+							: unverifiedLinks.length || brokenLinks.length
+								? 'incomplete'
+								: links.length
+									? 'pass'
+									: 'inapplicable'
+					},
+					{
+						ruleId: `${this.metadata.name}-empty-links`,
+						outcome: emptyLinks.length ? 'fail' : 'pass',
+						subjectIds: emptyLinks
+							.slice(0, 32)
+							.map((link) =>
+								occurrenceFingerprint(
+									this.metadata.name,
+									`${this.metadata.name}-empty-links`,
+									pageEntry.id,
+									[link.selector]
+								)
+							)
+					},
+					{
+						ruleId: `${this.metadata.name}-no-text-links`,
+						outcome: noTextLinks.length ? 'fail' : 'pass',
+						subjectIds: noTextLinks
+							.slice(0, 32)
+							.map((link) =>
+								occurrenceFingerprint(
+									this.metadata.name,
+									`${this.metadata.name}-no-text-links`,
+									pageEntry.id,
+									[link.selector]
+								)
+							)
+					}
+				]),
 				issues,
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),

@@ -7,6 +7,11 @@
 
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
+ * via the `definition` "ScanProfile".
+ */
+export type ScanProfile = "production" | "staging";
+/**
+ * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
  * via the `definition` "ScannerStatus".
  */
 export type ScannerStatus = "success" | "partial" | "failed" | "skipped";
@@ -30,6 +35,11 @@ export type UserImpactSeverity = "blocking" | "degraded" | "inconvenient";
  * via the `definition` "ErrorScope".
  */
 export type ErrorScope = "scanner" | "page" | "global";
+/**
+ * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
+ * via the `definition` "FindingDisposition".
+ */
+export type FindingDisposition = "actionable" | "expected" | "needs-review";
 
 /**
  * Unified accessibility and quality scan report schema aggregating results from multiple scanners
@@ -50,6 +60,7 @@ export interface UnifiedReportV2 {
    * Checklist items a scanner cannot test (Lighthouse manual audits). They are the same for every site, so they are listed once here and never counted as issues.
    */
   manualChecks?: ManualCheck[];
+  assessment?: ReportAssessment;
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
@@ -61,6 +72,38 @@ export interface ReportMeta {
   scannedAt?: string;
   completedAt?: string;
   durationMs?: number;
+  profile?: ScanProfile;
+  policyVersion?: string;
+  scanContext?: ScanContext;
+}
+/**
+ * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
+ * via the `definition` "ScanContext".
+ */
+export interface ScanContext {
+  expectedPages: string[];
+  identityScope: "path" | "origin";
+  scannerConfigFingerprints: {
+    [k: string]: string;
+  };
+  viewport?: {
+    width: number;
+    height: number;
+  };
+  purpose: "full" | "verification";
+  authenticated: boolean;
+  inputType: "urls" | "zip";
+  scannerConfigurations?: {
+    [k: string]: {
+      [k: string]: unknown;
+    };
+  };
+  pageConfigFingerprints?: {
+    [k: string]: string;
+  };
+  verificationEligiblePages?: {
+    [k: string]: boolean;
+  };
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
@@ -115,6 +158,26 @@ export interface ScannerSummary {
   durationMs?: number;
   resultsPath?: string;
   reportPath?: string;
+  pages?: ScannerPageCoverage[];
+}
+/**
+ * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
+ * via the `definition` "ScannerPageCoverage".
+ */
+export interface ScannerPageCoverage {
+  pageId: string;
+  status: "success" | "failed" | "skipped";
+  finalUrl?: string;
+  rules?: RuleEvaluation[];
+}
+/**
+ * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
+ * via the `definition` "RuleEvaluation".
+ */
+export interface RuleEvaluation {
+  ruleId: string;
+  outcome: "pass" | "fail" | "incomplete" | "inapplicable" | "error";
+  subjectIds?: string[];
 }
 /**
  * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
@@ -289,4 +352,21 @@ export interface ManualCheck {
   description?: string;
   helpUrl?: string;
   pageCount: number;
+  pageIds?: string[];
+}
+/**
+ * This interface was referenced by `UnifiedReportV2`'s JSON-Schema
+ * via the `definition` "ReportAssessment".
+ */
+export interface ReportAssessment {
+  profile: ScanProfile;
+  policyVersion: string;
+  actionable: number;
+  expected: number;
+  needsReview: number;
+  dispositionByIssue: {
+    [k: string]: FindingDisposition;
+  };
+  score?: number;
+  scoreGrade?: string;
 }

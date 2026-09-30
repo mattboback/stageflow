@@ -1,7 +1,10 @@
+import { parsePortableAudit, PORTABLE_AUDIT_SCHEMA } from './portable-audit';
+import { parseVerificationRequest } from './verification';
+import { normalizeReviewVerdicts, type ReviewVerdictsByJob } from './report/review-verdict';
 import type { LocalBaseline, LocalProject, LocalProjectConfiguration, LocalRun } from './projects';
 import { isUnifiedReport, sanitizeProjectConfiguration } from './projects';
 
-export const LOCAL_PROJECT_EXPORT_SCHEMA = 'stageflow/local-project@v1' as const;
+export const LOCAL_PROJECT_EXPORT_SCHEMA = 'stageflow/local-project@v2' as const;
 
 const LOCAL_RUN_STATUSES = new Set(['submitted', 'complete', 'failed']);
 
@@ -11,12 +14,14 @@ export interface LocalProjectExport {
 	project: LocalProject;
 	baseline: LocalBaseline | null;
 	runs: LocalRun[];
+	reviews: ReviewVerdictsByJob;
 }
 
 export function buildLocalProjectExport(
 	project: LocalProject,
 	baseline: LocalBaseline | null,
-	runs: LocalRun[]
+	runs: LocalRun[],
+	reviews: ReviewVerdictsByJob = {}
 ): LocalProjectExport {
 	return {
 		schema: LOCAL_PROJECT_EXPORT_SCHEMA,
@@ -26,14 +31,23 @@ export function buildLocalProjectExport(
 			configuration: sanitizeProjectConfiguration(project.configuration)
 		},
 		baseline,
-		runs
+		runs: runs.map((run) => {
+			const { verification, ...rest } = run;
+			const safe = parseVerificationRequest(verification);
+			return { ...rest, ...(safe?.jobId === run.jobId ? { verification: safe } : {}) };
+		}),
+		reviews: normalizeReviewVerdicts(reviews)
 	};
 }
 
 export function parseLocalProjectExport(value: unknown): LocalProjectExport | null {
 	if (!value || typeof value !== 'object') return null;
-	const candidate = value as Partial<LocalProjectExport>;
-	if (candidate.schema !== LOCAL_PROJECT_EXPORT_SCHEMA) return null;
+	const candidate = value as Omit<Partial<LocalProjectExport>, 'schema'> & { schema?: string };
+	if (
+		candidate.schema !== LOCAL_PROJECT_EXPORT_SCHEMA &&
+		candidate.schema !== 'stageflow/local-project@v1'
+	)
+		return null;
 	if (!candidate.project || typeof candidate.project !== 'object') return null;
 	if (typeof candidate.project.id !== 'string' || typeof candidate.project.name !== 'string') {
 		return null;
@@ -60,7 +74,12 @@ export function parseLocalProjectExport(value: unknown): LocalProjectExport | nu
 			configuration: sanitizeProjectConfiguration(candidate.project.configuration)
 		},
 		baseline,
-		runs
+		runs: runs.map((run) => {
+			const { verification, ...rest } = run;
+			const safe = parseVerificationRequest(verification);
+			return { ...rest, ...(safe?.jobId === run.jobId ? { verification: safe } : {}) };
+		}),
+		reviews: normalizeReviewVerdicts(candidate.reviews)
 	};
 }
 
@@ -80,8 +99,30 @@ function parseLocalRun(value: unknown): LocalRun | null {
 		return null;
 	}
 	if (typeof candidate.createdAt !== 'string') return null;
-	if (candidate.report !== undefined && !isUnifiedReport(candidate.report)) return null;
-	return candidate as LocalRun;
+	if (
+		candidate.report !== undefined &&
+		(!isUnifiedReport(candidate.report) || candidate.report.meta?.jobId !== candidate.jobId)
+	)
+		return null;
+	if (candidate.screenshots !== undefined) {
+		if (
+			!candidate.report ||
+			!parsePortableAudit({
+				schema: PORTABLE_AUDIT_SCHEMA,
+				jobId: candidate.jobId,
+				createdAt: candidate.createdAt,
+				report: candidate.report,
+				screenshots: candidate.screenshots,
+				reviews: {},
+				missingArtifacts: []
+			})
+		)
+			return null;
+	}
+	const { verification, ...rest } = candidate;
+	const safe = parseVerificationRequest(verification);
+	if (verification !== undefined && (!safe || safe.jobId !== candidate.jobId)) return null;
+	return { ...rest, ...(safe ? { verification: safe } : {}) } as LocalRun;
 }
 
 function parseLocalBaseline(
@@ -90,6 +131,13 @@ function parseLocalBaseline(
 	if (value == null) return null;
 	if (typeof value !== 'object') return undefined;
 	if (typeof value.projectId !== 'string' || typeof value.jobId !== 'string') return undefined;
-	if (!isUnifiedReport(value.report)) return undefined;
+	if (
+		!isUnifiedReport(value.report) ||
+		value.report.meta?.jobId !== value.jobId ||
+		value.report.meta.scanContext?.purpose === 'verification'
+	)
+		return undefined;
+	if (typeof value.configFingerprint !== 'string' || typeof value.createdAt !== 'string')
+		return undefined;
 	return value;
 }

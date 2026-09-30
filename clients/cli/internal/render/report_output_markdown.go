@@ -32,6 +32,30 @@ func writeMarkdownReport(
 		return err
 	}
 
+	if doc.Assessment != nil {
+		assessment := doc.Assessment
+		if _, err = fmt.Fprintf(
+			out,
+			"**Profile:** %s · %d actionable · %d expected · %d need human review\n\n",
+			assessment.Profile,
+			assessment.Actionable,
+			assessment.Expected,
+			assessment.NeedsReview,
+		); err != nil {
+			return err
+		}
+
+		if assessment.Score != nil {
+			if _, err = fmt.Fprintf(
+				out,
+				"**Automated profile score:** %d (raw observations remain below)\n\n",
+				*assessment.Score,
+			); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err = writeMarkdownScanTotals(out, doc, filters); err != nil {
 		return err
 	}

@@ -87,3 +87,27 @@ describe('normalizeReviewVerdicts', () => {
 		).toEqual({});
 	});
 });
+
+describe('review annotations', () => {
+	it('preserves note-only records and bounds imported notes', () => {
+		const normalized = normalizeReviewVerdicts({
+			job: {
+				issue: {
+					at: '2026-09-30',
+					note: 'x'.repeat(5000),
+					subjectKey: 'stable',
+					evidenceSignature: 'digest'
+				}
+			}
+		});
+		expect(normalized.job?.issue?.note).toHaveLength(4000);
+		expect(normalized.job?.issue?.verdict).toBeUndefined();
+		expect(normalized.job?.issue?.subjectKey).toBe('stable');
+		expect(normalized.job?.issue?.evidenceSignature).toBe('digest');
+	});
+	it('does not count blank notes as review records', () => {
+		expect(normalizeReviewVerdicts({ job: { issue: { at: '2026-09-30', note: '   ' } } })).toEqual(
+			{}
+		);
+	});
+});

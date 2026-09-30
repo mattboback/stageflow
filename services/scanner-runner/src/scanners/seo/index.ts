@@ -25,6 +25,7 @@ export class SEOScanner extends ScannerBase {
 		const { page, pageEntry, logger } = context;
 		const startTime = Date.now();
 		const issues: Issue[] = [];
+		const rules: NonNullable<PageScanResult['rules']> = [];
 
 		try {
 			await waitForPageSettled(page);
@@ -33,6 +34,10 @@ export class SEOScanner extends ScannerBase {
 			for (const check of SEO_CHECKS) {
 				try {
 					const result = check.check(seoData);
+					rules.push({
+						ruleId: `${this.metadata.name}-${check.id}`,
+						outcome: result ? (result.passed ? 'pass' : 'fail') : 'inapplicable'
+					});
 					if (result && !result.passed) {
 						issues.push({
 							id: `${this.metadata.name}-${check.id}`,
@@ -47,6 +52,7 @@ export class SEOScanner extends ScannerBase {
 						});
 					}
 				} catch (err) {
+					rules.push({ ruleId: `${this.metadata.name}-${check.id}`, outcome: 'error' });
 					logger.warn(`SEO check failed: ${check.id}`, {
 						error: err instanceof Error ? err.message : String(err)
 					});
@@ -63,6 +69,8 @@ export class SEOScanner extends ScannerBase {
 				url: pageEntry.url,
 				path: pageEntry.path,
 				success: true,
+				finalUrl: page.url(),
+				rules,
 				issues,
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),

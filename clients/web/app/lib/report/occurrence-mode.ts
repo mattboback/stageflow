@@ -316,6 +316,21 @@ export function buildOccurrenceModeReport(report: UnifiedReport): UnifiedReport 
 		},
 		scanners,
 		pages,
-		issues: occurrenceIssues
+		issues: occurrenceIssues,
+		...(report.assessment
+			? {
+					assessment: {
+						...report.assessment,
+						dispositionByIssue: Object.fromEntries(
+							[...derivedIdsByIssueId].flatMap(([original, ids]) =>
+								ids.map((id) => [
+									id,
+									report.assessment?.dispositionByIssue[original] ?? 'actionable'
+								])
+							)
+						)
+					}
+				}
+			: {})
 	};
 }

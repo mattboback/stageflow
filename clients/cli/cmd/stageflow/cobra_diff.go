@@ -16,12 +16,14 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/render"
 	"github.com/mattboback/stageflow/clients/cli/internal/scanflow"
 	"github.com/mattboback/stageflow/clients/cli/internal/urlcheck"
+	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/diff"
 )
 
 func newDiffCmd(root *rootOptions) *cobra.Command {
 	var (
 		failOnNew        string
+		gatePolicy       string
 		failOnRegression bool
 		allowPartial     bool
 		timeout          time.Duration
@@ -46,6 +48,7 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVar(&gatePolicy, "gate-policy", "raw", "Finding policy for regression gates: raw or actionable")
 	cmd.Flags().StringVar(
 		&failOnNew,
 		"fail-on-new",
@@ -95,8 +98,18 @@ func runDiffCommand(
 	result := diff.ComputeDiff("", baselineEnv.Report, currentJobID, currentEnv.Report)
 	d := diffrender.FromResult(result, baselinePath, currentFile)
 
+	gatePolicy, policyErr := diffGatePolicy(cmd)
+	if policyErr != nil {
+		return exitcode.Error{Code: 2, Err: policyErr}
+	}
+
+	gateResult, policyErr := actionableDiffGate(gatePolicy, baselineEnv.Report, currentEnv.Report, d)
+	if policyErr != nil {
+		return exitcode.Error{Code: 2, Err: policyErr}
+	}
+
 	shouldFail, err := diffrender.EvaluateRegression(
-		d,
+		gateResult,
 		failOnRegression,
 		failOnNew,
 		render.HasIssuesAtOrAbove,
@@ -129,7 +142,7 @@ func runDiffCommand(
 		}
 	}
 
-	if len(result.SkippedScanners) > 0 && !allowPartial {
+	if (len(result.SkippedScanners) > 0 || len(result.NotComparedPages) > 0) && !allowPartial {
 		return exitcode.Error{
 			Code: 2,
 			Err: fmt.Errorf(
@@ -220,6 +233,14 @@ func runLiveDiffScan(
 		AllowPrivateTargets: allowPrivateTargets,
 	}
 
+	if baselineEnv.Report.Meta.Profile != nil {
+		req.Profile = string(*baselineEnv.Report.Meta.Profile)
+	}
+
+	if context := baselineEnv.Report.Meta.ScanContext; context != nil {
+		req.ScannerConfigs = context.ScannerConfigurations
+	}
+
 	result, err := scanflow.SubmitURLsAndWait(
 		cmd.Context(),
 		client,
@@ -287,4 +308,37 @@ func loadReportFile(path string) (render.ReportEnvelope, error) {
 	}
 
 	return env, nil
+}
+
+func diffGatePolicy(cmd *cobra.Command) (string, error) {
+	if cmd.Flags().Lookup("gate-policy") == nil {
+		return "raw", nil
+	}
+
+	return cmd.Flags().GetString("gate-policy")
+}
+
+func actionableDiffGate(
+	gatePolicy string,
+	baseline, current report.UnifiedReportV2,
+	d diffrender.Envelope,
+) (diffrender.Envelope, error) {
+	gateResult := d
+	if gatePolicy != "" && gatePolicy != "raw" && gatePolicy != "actionable" {
+		return d, errors.New("--gate-policy must be raw or actionable")
+	}
+
+	if gatePolicy == "actionable" {
+		gateResult.New = render.ActionableIssues(current, d.New)
+
+		gateResult.Delta.NewIssues = len(gateResult.New)
+		if d.Delta.ScoreDelta != nil && baseline.Assessment != nil && current.Assessment != nil &&
+			baseline.Assessment.Score != nil &&
+			current.Assessment.Score != nil {
+			delta := *current.Assessment.Score - *baseline.Assessment.Score
+			gateResult.Delta.ScoreDelta = &delta
+		}
+	}
+
+	return gateResult, nil
 }

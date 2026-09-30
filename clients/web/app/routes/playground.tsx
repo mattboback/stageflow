@@ -1,3 +1,4 @@
+import { ScanProfileSelector } from '../components/ScanProfileSelector';
 import { Link, useSearchParams, type MetaFunction } from 'react-router';
 import {
 	CircleCheck,
@@ -12,6 +13,7 @@ import {
 	X
 } from 'lucide-react';
 
+import { DiscoveryPreview } from '../components/DiscoveryPreview';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
@@ -64,6 +66,8 @@ export default function Playground() {
 
 function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 	const {
+		profile,
+		setProfile,
 		catalog,
 		catalogError,
 		catalogLoading,
@@ -80,6 +84,9 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 		discoverUrls,
 		discovering,
 		discoverNotice,
+		discoveryPreview,
+		applyDiscoveredUrls,
+		cancelDiscovery,
 		addUrlRow,
 		removeUrlRow,
 		targetCount,
@@ -204,6 +211,7 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 									</div>
 								</div>
 								<div className="panel__body intake">
+									<ScanProfileSelector profile={profile} onChange={setProfile} />
 									{mode === 'url' ? (
 										<>
 											<div className="addurls">
@@ -257,6 +265,14 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 											>
 												{discovering ? 'Discovering pages…' : 'Discover pages'}
 											</button>
+											{discoveryPreview && (
+												<DiscoveryPreview
+													key={JSON.stringify(discoveryPreview.result)}
+													result={discoveryPreview.result}
+													onConfirm={applyDiscoveredUrls}
+													onCancel={cancelDiscovery}
+												/>
+											)}
 											{discoverNotice && (
 												<p className="intake__note" role="status">
 													{discoverNotice}

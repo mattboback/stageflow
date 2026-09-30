@@ -59,6 +59,7 @@ describe('browser URL submission boundary', () => {
 		expect(JSON.parse(requestBody(request))).toEqual({
 			urls: baseParams.urls,
 			modules: ['axe'],
+			profile: 'production',
 			scanner_configs: {},
 			screenshot: true
 		});

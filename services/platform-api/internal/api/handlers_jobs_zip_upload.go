@@ -103,6 +103,10 @@ func newClientStatusMessageError(status int, message string) *clientError {
 }
 
 type zipJobRequest struct {
+	profile        string
+	identityScope  string
+	verification   *models.VerificationConfig
+	pagePaths      []string
 	jobID          string
 	runID          string
 	zipPath        string
@@ -112,6 +116,10 @@ type zipJobRequest struct {
 }
 
 type zipUploadState struct {
+	profile        string
+	identityScope  string
+	verification   *models.VerificationConfig
+	pagePaths      []string
 	fileUploaded   bool
 	modulesValues  []string
 	screenshot     *bool
@@ -285,6 +293,10 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 		return nil, newClientMessageError(err.Error())
 	}
 
+	if detail := validateProductConfig(state.profile, state.identityScope, state.verification, modules); detail != nil {
+		return nil, newClientDetailError(*detail)
+	}
+
 	screenshot := defaultScreenshot
 
 	if state.screenshot != nil {
@@ -292,6 +304,10 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 	}
 
 	return &zipJobRequest{
+		profile:        state.profile,
+		identityScope:  state.identityScope,
+		verification:   state.verification,
+		pagePaths:      state.pagePaths,
 		jobID:          jobID,
 		runID:          runID,
 		zipPath:        state.zipPath,
@@ -303,6 +319,8 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 
 func (s *Server) processZipPart(ctx context.Context, part *multipart.Part, jobID string, state *zipUploadState) error {
 	switch part.FormName() {
+	case "profile", "identity_scope", "verification", "page_paths":
+		return handleProductConfigPart(part, state)
 	case "file":
 		return s.handleZipFilePart(ctx, part, jobID, state)
 	case "modules":
@@ -463,6 +481,10 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 		InputType: "zip",
 		InputPath: req.zipPath,
 		Config: models.JobConfig{
+			Profile:        req.profile,
+			IdentityScope:  req.identityScope,
+			Verification:   req.verification,
+			PagePaths:      req.pagePaths,
 			Modules:        req.modules,
 			ScannerConfigs: req.scannerConfigs,
 			Screenshot:     req.screenshot,
@@ -507,4 +529,38 @@ func (s *Server) cleanupStagedZip(key string) {
 	if err := s.config.Storage.DeleteFile(ctx, storage.BucketStaging, key); err != nil {
 		logging.Warn(ctx, "Failed to clean up staged ZIP", "key", key, "error", err)
 	}
+}
+
+func handleProductConfigPart(part *multipart.Part, state *zipUploadState) error {
+	value, err := io.ReadAll(io.LimitReader(part, 8193))
+	if err != nil || len(value) > 8192 {
+		return newClientMessageError("Invalid or oversized product configuration")
+	}
+
+	switch part.FormName() {
+	case "profile":
+		state.profile = strings.TrimSpace(string(value))
+	case "identity_scope":
+		state.identityScope = strings.TrimSpace(string(value))
+	case "verification":
+		if decodeErr := json.Unmarshal(value, &state.verification); decodeErr != nil {
+			return newClientMessageError("Invalid verification JSON")
+		}
+	case "page_paths":
+		if decodeErr := json.Unmarshal(
+			value,
+			&state.pagePaths,
+		); decodeErr != nil ||
+			len(state.pagePaths) > maxURLCount {
+			return newClientMessageError("Invalid page_paths JSON")
+		}
+
+		for _, target := range state.pagePaths {
+			if !strings.HasPrefix(target, "/") || len(target) > maxURLLength {
+				return newClientMessageError("Invalid page path")
+			}
+		}
+	}
+
+	return nil
 }

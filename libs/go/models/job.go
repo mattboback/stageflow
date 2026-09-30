@@ -105,7 +105,20 @@ type ScannerResult struct {
 }
 
 // JobConfig contains configuration for a scan job.
+// VerificationConfig identifies an original finding without carrying credentials.
+type VerificationConfig struct {
+	SourceJobID string `json:"source_job_id"`
+	PageID      string `json:"page_id"`
+	RuleID      string `json:"rule_id"`
+	Scanner     string `json:"scanner"`
+	SubjectID   string `json:"subject_id,omitempty"`
+}
+
 type JobConfig struct {
+	Profile             string                    `json:"profile,omitempty"`
+	IdentityScope       string                    `json:"identity_scope,omitempty"`
+	Verification        *VerificationConfig       `json:"verification,omitempty"`
+	PagePaths           []string                  `json:"page_paths,omitempty"`
 	Modules             []string                  `json:"modules"` // e.g., ["axe", "keyboard"]
 	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
 	Screenshot          bool                      `json:"screenshot"`

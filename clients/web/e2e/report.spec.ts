@@ -163,7 +163,7 @@ test.describe('employer-facing product claims', () => {
 		);
 		await page.goto('/');
 		await page.getByLabel('URL to scan').fill('example.com');
-		await page.getByRole('button', { name: /^Scan/ }).click();
+		await page.getByRole('button', { name: 'Scan', exact: true }).click();
 		await expect(page).toHaveURL(/\/scan\/home-url-job$/);
 		expect(submitted).toMatchObject({ urls: ['https://example.com'] });
 	});

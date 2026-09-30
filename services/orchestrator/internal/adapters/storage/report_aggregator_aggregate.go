@@ -29,6 +29,7 @@ type reportAggregation struct {
 	baseURL              string
 	scannedAt            *time.Time
 	completedAt          *time.Time
+	scanContext          *report.ScanContext
 }
 
 func newReportAggregation(aggregator *Aggregator, job *models.Job) *reportAggregation {
@@ -114,6 +115,7 @@ func (a *reportAggregation) aggregateScanner(ctx context.Context, scannerID stri
 	a.hadSuccess = true
 
 	a.absorbMeta(doc.Meta)
+	a.absorbScanContext(doc.Meta.ScanContext)
 	a.absorbScannerMetadata(scannerID, stat, doc)
 	a.absorbLighthouseCategories(doc.Summary.LighthouseCategories)
 
@@ -171,6 +173,7 @@ func (a *reportAggregation) absorbScannerMetadata(
 		}
 
 		stat.ToolVersion = s.ToolVersion
+		stat.Pages = s.Pages
 		stat.StartedAt = s.StartedAt
 		stat.CompletedAt = s.CompletedAt
 		stat.DurationMs = s.DurationMs
@@ -239,6 +242,10 @@ func (a *reportAggregation) absorbManualCheck(issue report.IssueDetail) {
 	key := issue.Scanner + "|" + issue.RuleId
 	if existing, ok := a.manualChecks[key]; ok {
 		existing.PageCount++
+		if issue.PageId != "" {
+			existing.PageIds = append(existing.PageIds, issue.PageId)
+		}
+
 		return
 	}
 
@@ -248,6 +255,7 @@ func (a *reportAggregation) absorbManualCheck(issue report.IssueDetail) {
 		Title:     issue.Title,
 		HelpUrl:   issue.HelpUrl,
 		PageCount: 1,
+		PageIds:   []string{issue.PageId},
 	}
 
 	if description := strings.TrimPrefix(issue.Description, manualCheckDescriptionPrefix); description != "" {
@@ -260,6 +268,7 @@ func (a *reportAggregation) absorbManualCheck(issue report.IssueDetail) {
 func (a *reportAggregation) sortedManualChecks() []report.ManualCheck {
 	checks := make([]report.ManualCheck, 0, len(a.manualChecks))
 	for _, check := range a.manualChecks {
+		sort.Strings(check.PageIds)
 		checks = append(checks, *check)
 	}
 
@@ -351,7 +360,7 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 	// A score from a partial run would describe only the scanners that
 	// finished, so a crashed accessibility scanner would raise it. Leave it
 	// out and let the scanner list say what is missing.
-	if len(scanners) > 0 && len(diff.IncompleteScanners(scanners)) == 0 {
+	if a.job.Config.Verification == nil && len(scanners) > 0 && len(diff.IncompleteScanners(scanners)) == 0 {
 		scoredSeverity := report.SeverityCounts{}
 
 		for _, issue := range deduplicatedIssues {
@@ -370,14 +379,36 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 		duration = floatPtr(durationMs(a.scannedAt, a.completedAt))
 	}
 
+	scanContext := a.scanContext
+	if scanContext == nil && a.job.Config.Verification != nil {
+		identityScope := report.ScanContextIdentityScopePath
+		if a.job.Config.IdentityScope == "origin" {
+			identityScope = report.ScanContextIdentityScopeOrigin
+		}
+
+		// A scanner may fail before reading provenance. Keep this run explicitly
+		// targeted without inventing successful coverage or execution fingerprints.
+		scanContext = &report.ScanContext{
+			ExpectedPages:             []string{a.job.Config.Verification.PageID},
+			Purpose:                   report.ScanContextPurposeVerification,
+			IdentityScope:             identityScope,
+			InputType:                 report.ScanContextInputType(a.job.InputType),
+			Authenticated:             len(a.job.Config.Auth) > 0,
+			ScannerConfigFingerprints: map[string]string{},
+		}
+	}
+
 	return report.UnifiedReportV2{
 		Version: reportVersion,
 		Meta: report.ReportMeta{
-			JobId:       a.job.ID,
-			BaseUrl:     stringPtr(a.baseURL),
-			ScannedAt:   a.scannedAt,
-			CompletedAt: a.completedAt,
-			DurationMs:  duration,
+			JobId:         a.job.ID,
+			Profile:       profilePointer(a.job.Config.Profile),
+			PolicyVersion: stringPtr("indexing-v1"),
+			ScanContext:   scanContext,
+			BaseUrl:       stringPtr(a.baseURL),
+			ScannedAt:     a.scannedAt,
+			CompletedAt:   a.completedAt,
+			DurationMs:    duration,
 		},
 		Summary:   summary,
 		Scanners:  scanners,
@@ -387,6 +418,7 @@ func (a *reportAggregation) buildReport() report.UnifiedReportV2 {
 		Errors:    a.errors,
 
 		ManualChecks: a.sortedManualChecks(),
+		Assessment:   buildAssessment(a.job.Config.Profile, deduplicatedIssues, summary, len(pages)),
 	}
 }
 
@@ -512,4 +544,52 @@ func robotsRepresentatives(
 	}
 
 	return origins, robotsPage
+}
+
+func (a *reportAggregation) absorbScanContext(context *report.ScanContext) {
+	if context == nil {
+		return
+	}
+
+	if a.scanContext == nil {
+		contextCopy := *context
+		contextCopy.ScannerConfigFingerprints = make(map[string]string)
+		contextCopy.ScannerConfigurations = make(map[string]map[string]interface{})
+		contextCopy.PageConfigFingerprints = make(map[string]string)
+		contextCopy.VerificationEligiblePages = make(map[string]bool)
+		a.scanContext = &contextCopy
+	}
+
+	for key, value := range context.ScannerConfigurations {
+		a.scanContext.ScannerConfigurations[key] = value
+	}
+
+	for key, value := range context.VerificationEligiblePages {
+		a.scanContext.VerificationEligiblePages[key] = value
+	}
+
+	for key, value := range context.PageConfigFingerprints {
+		a.scanContext.PageConfigFingerprints[key] = value
+	}
+
+	for key, value := range context.ScannerConfigFingerprints {
+		a.scanContext.ScannerConfigFingerprints[key] = value
+	}
+
+	for _, id := range context.ExpectedPages {
+		found := false
+
+		for _, existing := range a.scanContext.ExpectedPages {
+			if existing == id {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			a.scanContext.ExpectedPages = append(a.scanContext.ExpectedPages, id)
+		}
+	}
+
+	sort.Strings(a.scanContext.ExpectedPages)
 }

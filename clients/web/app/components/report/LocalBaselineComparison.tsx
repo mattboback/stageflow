@@ -34,7 +34,8 @@ export function LocalBaselineComparison({
 }: LocalBaselineComparisonProps) {
 	const isCurrentBaseline = baseline?.jobId === run.jobId;
 	const compatible =
-		baseline?.configFingerprint === run.configFingerprint &&
+		(baseline?.configFingerprint === run.configFingerprint ||
+			Boolean(baseline?.report.meta.scanContext && report.meta.scanContext)) &&
 		baseline != null &&
 		hasStableReportIdentity(baseline.report) === hasStableReportIdentity(report);
 	const diff =

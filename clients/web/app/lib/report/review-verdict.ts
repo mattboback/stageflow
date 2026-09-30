@@ -9,12 +9,22 @@ export interface ReviewMeasurement {
 }
 
 export interface ReviewVerdict {
-	verdict: ReviewDecision;
+	verdict?: ReviewDecision;
+	note?: string;
+	subjectKey?: string;
+	evidenceSignature?: string;
+	executionSignature?: string;
+	scannerVersion?: string;
+	screenshotDigest?: string;
+	sourceJobId?: string;
+	carriedFrom?: string;
 	at: string;
 	measurement?: ReviewMeasurement;
 }
 
 export type ReviewVerdictsByJob = Record<string, Record<string, ReviewVerdict>>;
+
+export const MAX_REVIEW_NOTE_LENGTH = 4000;
 
 export const REVIEW_VERDICTS_STORAGE_KEY = 'review-verdicts-v1';
 export const LEGACY_CONTRAST_VERDICTS_STORAGE_KEY = 'contrast-verdicts';
@@ -45,7 +55,11 @@ function normalizeMeasurement(value: unknown): ReviewMeasurement | undefined {
 
 function normalizeVerdict(value: unknown): ReviewVerdict | null {
 	if (!isRecord(value)) return null;
-	if (value.verdict !== 'pass' && value.verdict !== 'fail') return null;
+	if (value.verdict !== undefined && value.verdict !== 'pass' && value.verdict !== 'fail')
+		return null;
+	const note =
+		typeof value.note === 'string' ? value.note.slice(0, MAX_REVIEW_NOTE_LENGTH) : undefined;
+	if (!value.verdict && !note?.trim()) return null;
 	if (typeof value.at !== 'string' || value.at.length === 0) return null;
 
 	const measurement =
@@ -53,7 +67,19 @@ function normalizeVerdict(value: unknown): ReviewVerdict | null {
 		normalizeMeasurement({ fg: value.fg, bg: value.bg, ratio: value.ratio });
 
 	return {
-		verdict: value.verdict,
+		...(value.verdict === 'pass' || value.verdict === 'fail' ? { verdict: value.verdict } : {}),
+		...(note ? { note } : {}),
+		...Object.fromEntries(
+			[
+				'subjectKey',
+				'evidenceSignature',
+				'executionSignature',
+				'scannerVersion',
+				'screenshotDigest',
+				'sourceJobId',
+				'carriedFrom'
+			].flatMap((key) => (typeof value[key] === 'string' ? [[key, value[key]]] : []))
+		),
 		at: value.at,
 		...(measurement ? { measurement } : {})
 	};
@@ -70,9 +96,21 @@ export function normalizeReviewVerdicts(value: unknown): ReviewVerdictsByJob {
 		for (const [issueId, rawVerdict] of Object.entries(rawJob)) {
 			if (!issueId) continue;
 			const verdict = normalizeVerdict(rawVerdict);
-			if (verdict) verdicts[issueId] = verdict;
+			if (verdict)
+				Object.defineProperty(verdicts, issueId, {
+					value: verdict,
+					enumerable: true,
+					writable: true,
+					configurable: true
+				});
 		}
-		if (Object.keys(verdicts).length > 0) jobs[jobId] = verdicts;
+		if (Object.keys(verdicts).length > 0)
+			Object.defineProperty(jobs, jobId, {
+				value: verdicts,
+				enumerable: true,
+				writable: true,
+				configurable: true
+			});
 	}
 	return jobs;
 }

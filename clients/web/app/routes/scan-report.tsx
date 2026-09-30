@@ -1,3 +1,18 @@
+import { VerifyFindingDialog } from '../components/report/VerifyFindingDialog';
+import { VerificationResultBanner } from '../components/report/VerificationResultBanner';
+import { PortableAuditExportButton } from '../components/report/PortableAuditExportButton';
+import {
+	ReviewVerdictProvider,
+	createReviewContext,
+	getBrowserReviewStore
+} from '../lib/hooks/useReviewVerdicts';
+import type { ReviewContext } from '../lib/report/review-context';
+import type { ReviewVerdictStore } from '../lib/report/review-verdict-store';
+import { loadProjectReviewStore } from '../lib/local-project-store';
+import { fetchWithTimeout } from '../lib/api/client';
+import { buildApiUrl } from '../lib/api/utils';
+import { preparePortableAudit, portableScreenshotDigests } from '../lib/portable-audit';
+import type { ScanResult } from '../lib/types/scan';
 import { useCallback, useEffect, useState } from 'react';
 import {
 	Link,
@@ -38,7 +53,7 @@ import {
 	type LocalRun
 } from '../lib/projects';
 import { pageTitle, SITE_NAME } from '../lib/site-metadata';
-import type { UnifiedReport } from '../lib/types/unified-report';
+import type { IssueDetail, UnifiedReport } from '../lib/types/unified-report';
 
 export const links = () => [
 	{ rel: 'stylesheet', href: severityStyles },
@@ -81,6 +96,14 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		readProjectMessage(location.state)
 	);
 	const [promotingBaseline, setPromotingBaseline] = useState(false);
+	const [verificationIssue, setVerificationIssue] = useState<IssueDetail | null>(null);
+	const [projectContextLoaded, setProjectContextLoaded] = useState(false);
+	const [reviewLoadError, setReviewLoadError] = useState<string | null>(null);
+	const [reviewLoadAttempt, setReviewLoadAttempt] = useState(0);
+	const [reviewSession, setReviewSession] = useState<{
+		store: ReviewVerdictStore;
+		context: ReviewContext;
+	} | null>(null);
 
 	const {
 		status,
@@ -91,16 +114,85 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		refreshArtifacts
 	} = useScanReport(id);
 	const archivedReport =
-		!liveReport && localRun?.report && isUnifiedReport(localRun.report) ? localRun.report : null;
-	const report = liveReport ?? archivedReport;
-	const viewingArchived = Boolean(archivedReport && !liveReport);
+		(localRun?.archived || !liveReport) && localRun?.report && isUnifiedReport(localRun.report)
+			? localRun.report
+			: null;
+	const report = archivedReport ?? liveReport;
+	const viewingArchived = Boolean(archivedReport);
+	useEffect(() => {
+		let cancelled = false;
+		if (!report || !projectContextLoaded) return;
+		const reportForContext = report;
+		async function loadReviews() {
+			try {
+				const contrastPages = new Set(
+					reportForContext.issues
+						.filter(
+							(issue) =>
+								issue.ruleId === 'color-contrast' && issue.scannerData?.axeIncomplete === true
+						)
+						.map((issue) => issue.pageId)
+				);
+				const evidenceShots = (
+					viewingArchived ? (localRun?.screenshots ?? []) : screenshots
+				).filter((shot) => contrastPages.has(shot.page_id) && shot.scanner_id === 'axe');
+				const screenshotDigests = evidenceShots.length
+					? await portableScreenshotDigests(
+							(
+								await preparePortableAudit({
+									jobId: id,
+									report: reportForContext,
+									screenshots: evidenceShots
+								})
+							).screenshots
+						)
+					: {};
+				const [store, context] = await Promise.all([
+					localProject
+						? loadProjectReviewStore(localProject.id, (error) =>
+								setProjectMessage(error instanceof Error ? error.message : String(error))
+							)
+						: Promise.resolve(getBrowserReviewStore()),
+					createReviewContext(
+						reportForContext,
+						localProject?.id,
+						localRun?.configFingerprint,
+						screenshotDigests
+					)
+				]);
+				if (!cancelled) {
+					setReviewLoadError(null);
+					setReviewSession({ store, context });
+				}
+			} catch (error) {
+				if (!cancelled)
+					setReviewLoadError(
+						error instanceof Error ? error.message : 'Could not load saved reviews.'
+					);
+			}
+		}
+		void loadReviews();
+		return () => {
+			cancelled = true;
+		};
+	}, [
+		report,
+		localProject,
+		localRun?.configFingerprint,
+		id,
+		viewingArchived,
+		localRun?.screenshots,
+		screenshots,
+		projectContextLoaded,
+		reviewLoadAttempt
+	]);
 
 	useEffect(() => {
 		let cancelled = false;
 		async function loadProjectContext() {
 			try {
-				const storedRun = await getLocalRun(id);
-				const projectId = storedRun?.projectId ?? requestedProjectId;
+				const storedRun = await getLocalRun(id, requestedProjectId ?? undefined);
+				const projectId = requestedProjectId ?? storedRun?.projectId;
 				if (!projectId) return;
 				const project = await getLocalProject(projectId);
 				if (!project || cancelled) return;
@@ -126,6 +218,8 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 							: 'Could not load the local project context.'
 					);
 				}
+			} finally {
+				if (!cancelled) setProjectContextLoaded(true);
 			}
 		}
 		void loadProjectContext();
@@ -149,6 +243,10 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 
 	async function promoteAsBaseline() {
 		if (!report || !localProject || !localRun) return;
+		if (report.meta.scanContext?.purpose === 'verification') {
+			setProjectMessage('Targeted verification cannot replace a complete baseline.');
+			return;
+		}
 		if (
 			report.meta.jobId !== id ||
 			localRun.jobId !== id ||
@@ -203,6 +301,8 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 	);
 
 	async function saveOneOffProject(name: string) {
+		if (report?.meta.scanContext?.purpose === 'verification')
+			throw new Error('Targeted verification cannot become a complete baseline.');
 		if (!report || !isUnifiedReport(report)) {
 			throw new Error(`This report does not match the supported ${SITE_NAME} report contract.`);
 		}
@@ -244,6 +344,15 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		);
 	}
 
+	const comparison =
+		report &&
+		localRun &&
+		localBaseline &&
+		(localBaseline.configFingerprint === localRun.configFingerprint ||
+			Boolean(localBaseline.report.meta.scanContext && report.meta.scanContext))
+			? computeProjectDiff(localBaseline.jobId, localBaseline.report, id, report)
+			: null;
+
 	/* Raw, not occurrence-expanded: LocalBaselineComparison and saveLocalBaseline
 	   both persist and diff the report exactly as it arrived from the API. */
 	const banner = report ? (
@@ -253,10 +362,31 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 				report={report}
 				archived={viewingArchived}
 				canDelete={!viewingArchived}
-				showSave={!localProject}
+				showSave={!localProject && report.meta.scanContext?.purpose !== 'verification'}
 				onSaveProject={saveOneOffProject}
 			/>
-			{localProject && localRun ? (
+			<PortableAuditExportButton
+				jobId={id}
+				report={report}
+				{...(localRun?.verification ? { verification: localRun.verification } : {})}
+				{...(comparison ? { comparison } : {})}
+				screenshots={viewingArchived ? (localRun?.screenshots ?? []) : screenshots}
+				{...(localProject ? { configuration: localProject.configuration } : {})}
+				{...(localBaseline ? { baseline: localBaseline.report } : {})}
+				{...(!viewingArchived
+					? {
+							refreshScreenshots: async () => {
+								const response = await fetchWithTimeout(
+									buildApiUrl(`/api/v1/jobs/${encodeURIComponent(id)}`)
+								);
+								if (!response.ok) throw new Error('Could not refresh screenshot links');
+								const current = (await response.json()) as ScanResult;
+								return current.artifacts?.screenshots ?? [];
+							}
+						}
+					: {})}
+			/>
+			{localProject && localRun && report.meta.scanContext?.purpose !== 'verification' ? (
 				<LocalBaselineComparison
 					project={localProject}
 					run={localRun}
@@ -271,14 +401,6 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		</>
 	) : null;
 
-	const comparison =
-		report &&
-		localRun &&
-		localBaseline &&
-		localBaseline.configFingerprint === localRun.configFingerprint
-			? computeProjectDiff(localBaseline.jobId, localBaseline.report, id, report)
-			: null;
-
 	return (
 		<>
 			<SiteHeader
@@ -288,40 +410,89 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 					section: 'Report'
 				}}
 			/>
-			<ReportView
-				jobId={id}
-				comparison={comparison}
+			<VerificationResultBanner
 				report={report}
-				screenshots={screenshots}
+				jobId={id}
 				status={status}
-				error={error || job?.error || null}
-				banner={banner}
-				artifactsPanel={
-					<ArtifactsView
-						jobId={viewingArchived ? '' : id}
-						job={viewingArchived ? null : job}
-						{...(viewingArchived
-							? {}
-							: {
-									onRefreshArtifacts: () => {
-										void refreshArtifacts();
-									}
-								})}
-					/>
-				}
+				{...(localRun?.verification ? { context: localRun.verification } : {})}
 			/>
+			<ReviewVerdictProvider
+				store={reviewSession?.store ?? getBrowserReviewStore()}
+				{...(reviewSession ? { context: reviewSession.context } : {})}
+			>
+				{!report ||
+				(projectContextLoaded &&
+					reviewSession?.context.jobId === id &&
+					reviewSession.context.projectId === localProject?.id) ? (
+					<ReportView
+						jobId={id}
+						onVerify={setVerificationIssue}
+						comparison={comparison}
+						report={report}
+						screenshots={viewingArchived ? (localRun?.screenshots ?? []) : screenshots}
+						status={status}
+						error={error || job?.error || null}
+						banner={banner}
+						artifactsPanel={
+							<ArtifactsView
+								jobId={viewingArchived ? '' : id}
+								job={viewingArchived ? null : job}
+								{...(viewingArchived
+									? {}
+									: {
+											onRefreshArtifacts: () => {
+												void refreshArtifacts();
+											}
+										})}
+							/>
+						}
+					/>
+				) : (
+					<div>
+						{reviewLoadError ? (
+							<>
+								<p role="alert">{reviewLoadError}</p>
+								<button
+									className="btn btn--secondary"
+									type="button"
+									onClick={() => {
+										setReviewLoadError(null);
+										setReviewLoadAttempt((value) => value + 1);
+									}}
+								>
+									Retry loading reviews
+								</button>
+							</>
+						) : (
+							<p role="status">Loading saved reviews…</p>
+						)}
+					</div>
+				)}
+			</ReviewVerdictProvider>
+			{report && verificationIssue && (
+				<VerifyFindingDialog
+					report={report}
+					issue={verificationIssue}
+					onClose={() => setVerificationIssue(null)}
+				/>
+			)}
 			<SiteFooter slim />
 		</>
 	);
 }
 
 function configurationFromReport(report: UnifiedReport): LocalProjectConfiguration {
-	const urls = report.meta.baseUrl
-		? [report.meta.baseUrl]
-		: report.pages.map((page) => page.url).filter(Boolean);
+	const urls = report.pages.map((page) => page.url).filter(Boolean);
 	return {
 		urls: urls.length > 0 ? urls : ['https://example.com'],
-		scanners: report.scanners.map((scanner) => ({ id: scanner.id, enabled: true })),
+		...(report.meta.profile === 'staging' ? { profile: 'staging' as const } : {}),
+		scanners: report.scanners.map((scanner) => ({
+			id: scanner.id,
+			enabled: true,
+			...(report.meta.scanContext?.scannerConfigurations?.[scanner.id]
+				? { config: report.meta.scanContext.scannerConfigurations[scanner.id] }
+				: {})
+		})),
 		browser: 'chromium',
 		highlightStyle: 'solid'
 	};

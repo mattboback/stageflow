@@ -1,4 +1,5 @@
-import type { ScannerSelection } from './types/scan';
+import type { ScannerSelection, ScreenshotArtifact } from './types/scan';
+import type { VerificationRequest } from './verification';
 import { incompleteScanners } from './report/scanner-status';
 import type { IssueDetail, UnifiedReport } from './types/unified-report';
 
@@ -15,6 +16,7 @@ export interface LocalProjectConfiguration {
 	browser: 'chromium';
 	/** Always 'solid'; kept in the stored shape and fingerprint like `browser`. */
 	highlightStyle: 'solid';
+	profile?: 'production' | 'staging';
 }
 
 export interface LocalProject {
@@ -47,6 +49,9 @@ export interface LocalRun {
 	totalIssues?: number;
 	/** Full report kept so a hosted job can be reopened after artifacts expire. */
 	report?: UnifiedReport;
+	screenshots?: ScreenshotArtifact[];
+	archived?: boolean;
+	verification?: VerificationRequest;
 }
 
 export function buildArchivedLocalRun(
@@ -94,6 +99,8 @@ export interface ProjectDiff {
 	/** Did not finish in one of the reports, so their issues are not compared. */
 	skippedScanners?: string[];
 	incompatibleIdentity?: boolean;
+	notComparedPages?: string[];
+	contextLimited?: boolean;
 }
 
 const SECRET_KEYS = new Set([
@@ -205,7 +212,8 @@ export function sanitizeProjectConfiguration(
 			a.id.localeCompare(b.id)
 		),
 		browser: 'chromium',
-		highlightStyle: 'solid'
+		highlightStyle: 'solid',
+		...(configuration.profile === 'staging' ? { profile: 'staging' as const } : {})
 	};
 }
 
@@ -238,7 +246,8 @@ export async function fingerprintProjectConfiguration(
 				...(scanner.config ? { config: scanner.config } : {})
 			})),
 		browser: safe.browser,
-		highlightStyle: safe.highlightStyle
+		highlightStyle: safe.highlightStyle,
+		...(safe.profile === 'staging' ? { profile: safe.profile } : {})
 	};
 	const canonical = JSON.stringify(stableValue(fingerprintInput));
 	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical));
@@ -247,6 +256,18 @@ export async function fingerprintProjectConfiguration(
 
 function reportScore(report: UnifiedReport): number | undefined {
 	return report.summary.score ?? undefined;
+}
+
+function coverageLocation(report: UnifiedReport, location: string): string {
+	const context = report.meta.scanContext;
+	if (!context || (context.identityScope === 'origin' && context.inputType !== 'zip'))
+		return location;
+	try {
+		const parsed = new URL(location);
+		return `${parsed.pathname}?${parsed.search.slice(1)}`;
+	} catch {
+		return location;
+	}
 }
 
 export function computeProjectDiff(
@@ -259,15 +280,119 @@ export function computeProjectDiff(
 	// finish in either report is compared in neither, or its baseline findings
 	// would all look fixed.
 	const skipped = new Set([
-		...incompleteScanners(baselineReport.scanners),
-		...incompleteScanners(currentReport.scanners)
+		...incompleteScanners(
+			baselineReport.scanners.filter(
+				(scanner) =>
+					!(
+						scanner.status === 'partial' &&
+						baselineReport.meta.scanContext &&
+						scanner.pages?.length
+					)
+			)
+		),
+		...incompleteScanners(
+			currentReport.scanners.filter(
+				(scanner) =>
+					!(scanner.status === 'partial' && currentReport.meta.scanContext && scanner.pages?.length)
+			)
+		)
 	]);
 	const baselineScanners = new Set(baselineReport.scanners?.map((scanner) => scanner.id));
 	const currentScanners = new Set(currentReport.scanners?.map((scanner) => scanner.id));
 	for (const id of baselineScanners) if (!currentScanners.has(id)) skipped.add(id);
 	for (const id of currentScanners) if (!baselineScanners.has(id)) skipped.add(id);
 
-	const compared = (issue: IssueDetail) => !skipped.has(issue.scanner);
+	const pageSet = (report: UnifiedReport) =>
+		new Set([
+			...report.pages.map((page) => page.id),
+			...report.issues.map((issue) => issue.pageId),
+			...(report.meta.scanContext?.expectedPages ?? [])
+		]);
+	const beforePages = pageSet(baselineReport),
+		afterPages = pageSet(currentReport);
+	const common = new Set([...beforePages].filter((id) => afterPages.has(id)));
+	const notComparedPages = new Set([...beforePages, ...afterPages].filter((id) => !common.has(id)));
+	const leftContext = baselineReport.meta.scanContext,
+		rightContext = currentReport.meta.scanContext;
+	if (leftContext && rightContext) {
+		for (const scanner of currentReport.scanners) {
+			const previous = baselineReport.scanners.find((item) => item.id === scanner.id);
+			if (
+				previous?.toolVersion !== scanner.toolVersion ||
+				leftContext.scannerConfigFingerprints[scanner.id] !==
+					rightContext.scannerConfigFingerprints[scanner.id]
+			)
+				skipped.add(scanner.id);
+		}
+		for (const id of common)
+			if (
+				leftContext.authenticated !== rightContext.authenticated ||
+				leftContext.pageConfigFingerprints?.[id] !== rightContext.pageConfigFingerprints?.[id]
+			) {
+				common.delete(id);
+				notComparedPages.add(id);
+			}
+	}
+	const completeCoverage =
+		incompleteScanners(baselineReport.scanners).length === 0 &&
+		incompleteScanners(currentReport.scanners).length === 0;
+	const sameContext =
+		Boolean(leftContext) === Boolean(rightContext) &&
+		(baselineReport.meta.profile ?? 'production') ===
+			(currentReport.meta.profile ?? 'production') &&
+		baselineReport.meta.policyVersion === currentReport.meta.policyVersion &&
+		(!leftContext ||
+			!rightContext ||
+			(leftContext.identityScope === rightContext.identityScope &&
+				leftContext.authenticated === rightContext.authenticated &&
+				leftContext.inputType === rightContext.inputType &&
+				leftContext.purpose === rightContext.purpose &&
+				leftContext.purpose !== 'verification' &&
+				JSON.stringify(leftContext.viewport) === JSON.stringify(rightContext.viewport)));
+	const evaluated = (report: UnifiedReport, issue: IssueDetail) => {
+		const scanner = report.scanners.find((scanner) => scanner.id === issue.scanner);
+		if (!scanner?.pages?.length)
+			return report.meta.scanContext ? null : { status: 'success', finalUrl: undefined };
+		const page = scanner.pages.find((page) => page.pageId === issue.pageId) ?? null;
+		if (page?.rules?.length && issue.ruleId) {
+			const rules = page.rules.filter((rule) => rule.ruleId === issue.ruleId);
+			if (!rules.length || rules.some((rule) => rule.outcome === 'error')) return null;
+		}
+		return page;
+	};
+	for (const id of common)
+		for (const scanner of baselineReport.scanners) {
+			const probe = { scanner: scanner.id, pageId: id } as IssueDetail;
+			const before = evaluated(baselineReport, probe),
+				after = evaluated(currentReport, probe);
+			if (
+				before?.status !== 'success' ||
+				after?.status !== 'success' ||
+				(before.finalUrl &&
+					after.finalUrl &&
+					coverageLocation(baselineReport, before.finalUrl) !==
+						coverageLocation(currentReport, after.finalUrl))
+			) {
+				notComparedPages.add(id);
+				break;
+			}
+		}
+	const compared = (issue: IssueDetail) => {
+		if (skipped.has(issue.scanner) || !common.has(issue.pageId)) return false;
+		const before = evaluated(baselineReport, issue),
+			after = evaluated(currentReport, issue);
+		return (
+			before?.status === 'success' &&
+			after?.status === 'success' &&
+			(!before.finalUrl ||
+				!after.finalUrl ||
+				coverageLocation(baselineReport, before.finalUrl) ===
+					coverageLocation(currentReport, after.finalUrl))
+		);
+	};
+	for (const issue of [...baselineReport.issues, ...currentReport.issues]) {
+		if (common.has(issue.pageId) && !compared(issue)) notComparedPages.add(issue.pageId);
+	}
 	const baselineById = new Map(baselineReport.issues.filter(compared).flatMap(occurrenceFindings));
 	const currentById = new Map(currentReport.issues.filter(compared).flatMap(occurrenceFindings));
 
@@ -289,9 +414,21 @@ export function computeProjectDiff(
 		baselineById.has(issueId)
 	).length;
 	const baselineScore =
-		skipped.size === 0 && !incompatibleIdentity ? reportScore(baselineReport) : undefined;
+		completeCoverage &&
+		skipped.size === 0 &&
+		!incompatibleIdentity &&
+		notComparedPages.size === 0 &&
+		sameContext
+			? reportScore(baselineReport)
+			: undefined;
 	const currentScore =
-		skipped.size === 0 && !incompatibleIdentity ? reportScore(currentReport) : undefined;
+		completeCoverage &&
+		skipped.size === 0 &&
+		!incompatibleIdentity &&
+		notComparedPages.size === 0 &&
+		sameContext
+			? reportScore(currentReport)
+			: undefined;
 	// A score covers every scanner, so it cannot be compared across a skip.
 	const scoreComparable =
 		!incompatibleIdentity &&
@@ -320,7 +457,9 @@ export function computeProjectDiff(
 		new: newIssues,
 		fixed: fixedIssues,
 		...(skipped.size === 0 ? {} : { skippedScanners: [...skipped].sort() }),
-		...(incompatibleIdentity ? { incompatibleIdentity: true } : {})
+		...(incompatibleIdentity ? { incompatibleIdentity: true } : {}),
+		...(notComparedPages.size ? { notComparedPages: [...notComparedPages].sort() } : {}),
+		...(!leftContext || !rightContext ? { contextLimited: true } : {})
 	};
 }
 

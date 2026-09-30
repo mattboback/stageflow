@@ -20,6 +20,8 @@ type Result struct {
 	// are left out of New, Fixed and Unchanged.
 	SkippedScanners      []string `json:"skippedScanners,omitempty"`
 	IncompatibleIdentity bool     `json:"incompatibleIdentity,omitempty"`
+	NotComparedPages     []string `json:"notComparedPages,omitempty"`
+	ContextLimited       bool     `json:"contextLimited,omitempty"`
 }
 
 // ScanMeta identifies one side of the diff.
@@ -66,9 +68,23 @@ func ComputeDiff(
 	currentJobID string,
 	current report.UnifiedReportV2,
 ) Result {
-	skipped := comparisonExclusions(baseline.Scanners, current.Scanners)
+	skipped := comparisonExclusions(baseline, current)
+	contextualScannerExclusions(baseline, current, skipped)
+	common, notComparedPages := commonPages(baseline, current)
 	baselineMap := comparedFindings(baseline.Issues, skipped)
+
 	currentMap := comparedFindings(current.Issues, skipped)
+	for id, issue := range baselineMap {
+		if !common[issue.PageId] || !evaluatedOnBoth(baseline, current, issue) {
+			delete(baselineMap, id)
+		}
+	}
+
+	for id, issue := range currentMap {
+		if !common[issue.PageId] || !evaluatedOnBoth(baseline, current, issue) {
+			delete(currentMap, id)
+		}
+	}
 
 	incompatible := hasStableIdentity(baseline) != hasStableIdentity(current)
 	if incompatible {
@@ -88,7 +104,7 @@ func ComputeDiff(
 	baselineScore := baseline.Summary.Score
 	currentScore := current.Summary.Score
 
-	if incompatible || len(skipped) > 0 {
+	if incompatible || !scoresComparable(baseline, current, skipped, notComparedPages) {
 		baselineScore = nil
 		currentScore = nil
 	}
@@ -96,7 +112,7 @@ func ComputeDiff(
 	var scoreDelta *int
 
 	// A score covers every scanner, so it cannot be compared across a skip.
-	if !incompatible && len(skipped) == 0 && baseline.Summary.Score != nil && current.Summary.Score != nil {
+	if baselineScore != nil && currentScore != nil {
 		delta := *current.Summary.Score - *baseline.Summary.Score
 		scoreDelta = &delta
 	}
@@ -123,6 +139,8 @@ func ComputeDiff(
 		Fixed:                fixedIssues,
 		SkippedScanners:      sortedKeys(skipped),
 		IncompatibleIdentity: incompatible,
+		NotComparedPages:     notComparedPages,
+		ContextLimited:       baseline.Meta.ScanContext == nil || current.Meta.ScanContext == nil,
 	}
 }
 
@@ -193,13 +211,17 @@ func findingSortKey(issue report.IssueDetail) string {
 	return key
 }
 
-func comparisonExclusions(baseline, current []report.ScannerSummary) map[string]struct{} {
+func comparisonExclusions(baseline, current report.UnifiedReportV2) map[string]struct{} {
 	skipped := make(map[string]struct{})
 	presence := make(map[string]int)
 
-	for side, scanners := range [][]report.ScannerSummary{baseline, current} {
-		for _, id := range IncompleteScanners(scanners) {
-			skipped[id] = struct{}{}
+	for side, doc := range []report.UnifiedReportV2{baseline, current} {
+		scanners := doc.Scanners
+		for _, scanner := range scanners {
+			if scanner.Status == report.ScannerStatusFailed || scanner.Status == report.ScannerStatusSkipped ||
+				(scanner.Status == report.ScannerStatusPartial && (doc.Meta.ScanContext == nil || len(scanner.Pages) == 0)) {
+				skipped[scanner.Id] = struct{}{}
+			}
 		}
 
 		for _, scanner := range scanners {

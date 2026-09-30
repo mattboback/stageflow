@@ -1,8 +1,16 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import {
+	createContext,
+	createElement,
+	useContext,
+	useCallback,
+	useSyncExternalStore,
+	type ReactNode
+} from 'react';
 
 import { REVIEW_VERDICTS_STORAGE_KEY, type ReviewVerdict } from '../report/review-verdict';
 import {
 	createReviewVerdictStore,
+	type ReviewVerdictStore,
 	type ReviewVerdictStorage
 } from '../report/review-verdict-store';
 
@@ -16,6 +24,27 @@ const browserStorage: ReviewVerdictStorage = {
 };
 
 const store = createReviewVerdictStore(browserStorage);
+export { createReviewContext } from '../report/review-context';
+import { findPriorReview, type ReviewContext } from '../report/review-context';
+const ProviderContext = createContext<{
+	store: ReviewVerdictStore;
+	context?: ReviewContext;
+} | null>(null);
+export function ReviewVerdictProvider({
+	store,
+	context,
+	children
+}: {
+	store: ReviewVerdictStore;
+	context?: ReviewContext;
+	children: ReactNode;
+}) {
+	return createElement(
+		ProviderContext.Provider,
+		{ value: { store, ...(context ? { context } : {}) } },
+		children
+	);
+}
 let activeSubscriptions = 0;
 
 function handleStorage(event: StorageEvent) {
@@ -45,12 +74,15 @@ function subscribe(listener: () => void): () => void {
 }
 
 export function useReviewVerdicts(jobId: string) {
+	const provider = useContext(ProviderContext);
+	const activeStore = provider?.store ?? store;
+	const context = provider?.context;
 	// Wrapped rather than passed as bare method references: unbound-method flags
 	// those because a detached method could observe the wrong `this`.
 	const verdicts = useSyncExternalStore(
-		subscribe,
-		() => store.getSnapshot(),
-		() => store.getServerSnapshot()
+		activeStore === store ? subscribe : activeStore.subscribe,
+		() => activeStore.getSnapshot(),
+		() => activeStore.getServerSnapshot()
 	);
 
 	const getVerdict = useCallback(
@@ -60,17 +92,62 @@ export function useReviewVerdicts(jobId: string) {
 
 	const setVerdict = useCallback(
 		(issueId: string, verdict: Omit<ReviewVerdict, 'at'>) => {
-			store.setVerdict(jobId, issueId, verdict);
+			activeStore.setVerdict(jobId, issueId, {
+				...verdicts[jobId]?.[issueId],
+				...verdict,
+				...context?.subjects[issueId],
+				sourceJobId: jobId
+			});
 		},
-		[jobId]
+		[jobId, activeStore, context, verdicts]
 	);
 
 	const clearVerdict = useCallback(
 		(issueId: string) => {
-			store.clearVerdict(jobId, issueId);
+			const current = verdicts[jobId]?.[issueId];
+			if (current?.note) {
+				const record = { ...current };
+				delete record.verdict;
+				delete record.measurement;
+				activeStore.setVerdict(jobId, issueId, record);
+			} else activeStore.clearVerdict(jobId, issueId);
 		},
-		[jobId]
+		[jobId, activeStore, verdicts]
 	);
 
-	return { getVerdict, setVerdict, clearVerdict };
+	const getPriorReview = (issueId: string) =>
+		context?.projectId
+			? findPriorReview(verdicts, jobId, issueId, context.subjects[issueId])
+			: null;
+	const confirmPriorReview = (issueId: string) => {
+		const prior = getPriorReview(issueId);
+		if (!prior || prior.stale) return;
+		setVerdict(issueId, { ...prior.review, carriedFrom: prior.jobId });
+	};
+	const setNote = (issueId: string, note: string) => {
+		const previous = getVerdict(issueId);
+		if (!note.trim() && !previous?.verdict) {
+			activeStore.clearVerdict(jobId, issueId);
+			return;
+		}
+		setVerdict(issueId, { ...previous, note: note.slice(0, 4000) });
+	};
+	return { getVerdict, setVerdict, clearVerdict, getPriorReview, confirmPriorReview, setNote };
+}
+
+export function useReviewReportContext() {
+	return useContext(ProviderContext)?.context;
+}
+
+export function getBrowserReviewStore() {
+	return store;
+}
+export function useReviewSnapshot() {
+	const provider = useContext(ProviderContext);
+	const activeStore = provider?.store ?? store;
+	return useSyncExternalStore(
+		activeStore === store ? subscribe : activeStore.subscribe,
+		() => activeStore.getSnapshot(),
+		() => activeStore.getServerSnapshot()
+	);
 }

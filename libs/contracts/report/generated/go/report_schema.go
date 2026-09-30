@@ -87,6 +87,38 @@ func (j *ErrorScope) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
+type FindingDisposition string
+
+const FindingDispositionActionable FindingDisposition = "actionable"
+const FindingDispositionExpected FindingDisposition = "expected"
+const FindingDispositionNeedsReview FindingDisposition = "needs-review"
+
+var enumValues_FindingDisposition = []interface{}{
+	"actionable",
+	"expected",
+	"needs-review",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *FindingDisposition) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_FindingDisposition {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_FindingDisposition, v)
+	}
+	*j = FindingDisposition(v)
+	return nil
+}
+
 type FriendlyNodeInfo struct {
 	// Label corresponds to the JSON schema field "label".
 	Label *string `json:"label,omitempty"`
@@ -441,6 +473,9 @@ type ManualCheck struct {
 	// PageCount corresponds to the JSON schema field "pageCount".
 	PageCount int `json:"pageCount"`
 
+	// PageIds corresponds to the JSON schema field "pageIds".
+	PageIds []string `json:"pageIds,omitempty"`
+
 	// RuleId corresponds to the JSON schema field "ruleId".
 	RuleId string `json:"ruleId"`
 
@@ -789,6 +824,80 @@ func (j *ReportArtifact) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
+type ReportAssessment struct {
+	// Actionable corresponds to the JSON schema field "actionable".
+	Actionable int `json:"actionable"`
+
+	// DispositionByIssue corresponds to the JSON schema field "dispositionByIssue".
+	DispositionByIssue map[string]FindingDisposition `json:"dispositionByIssue"`
+
+	// Expected corresponds to the JSON schema field "expected".
+	Expected int `json:"expected"`
+
+	// NeedsReview corresponds to the JSON schema field "needsReview".
+	NeedsReview int `json:"needsReview"`
+
+	// PolicyVersion corresponds to the JSON schema field "policyVersion".
+	PolicyVersion string `json:"policyVersion"`
+
+	// Profile corresponds to the JSON schema field "profile".
+	Profile ScanProfile `json:"profile"`
+
+	// Score corresponds to the JSON schema field "score".
+	Score *int `json:"score,omitempty"`
+
+	// ScoreGrade corresponds to the JSON schema field "scoreGrade".
+	ScoreGrade *string `json:"scoreGrade,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ReportAssessment) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["actionable"]; raw != nil && !ok {
+		return fmt.Errorf("field actionable in ReportAssessment: required")
+	}
+	if _, ok := raw["dispositionByIssue"]; raw != nil && !ok {
+		return fmt.Errorf("field dispositionByIssue in ReportAssessment: required")
+	}
+	if _, ok := raw["expected"]; raw != nil && !ok {
+		return fmt.Errorf("field expected in ReportAssessment: required")
+	}
+	if _, ok := raw["needsReview"]; raw != nil && !ok {
+		return fmt.Errorf("field needsReview in ReportAssessment: required")
+	}
+	if _, ok := raw["policyVersion"]; raw != nil && !ok {
+		return fmt.Errorf("field policyVersion in ReportAssessment: required")
+	}
+	if _, ok := raw["profile"]; raw != nil && !ok {
+		return fmt.Errorf("field profile in ReportAssessment: required")
+	}
+	type Plain ReportAssessment
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	if 0 > plain.Actionable {
+		return fmt.Errorf("field %s: must be >= %v", "actionable", 0)
+	}
+	if 0 > plain.Expected {
+		return fmt.Errorf("field %s: must be >= %v", "expected", 0)
+	}
+	if 0 > plain.NeedsReview {
+		return fmt.Errorf("field %s: must be >= %v", "needsReview", 0)
+	}
+	if plain.Score != nil && 100 < *plain.Score {
+		return fmt.Errorf("field %s: must be <= %v", "score", 100)
+	}
+	if plain.Score != nil && 0 > *plain.Score {
+		return fmt.Errorf("field %s: must be >= %v", "score", 0)
+	}
+	*j = ReportAssessment(plain)
+	return nil
+}
+
 type ReportError struct {
 	// Code corresponds to the JSON schema field "code".
 	Code string `json:"code"`
@@ -854,6 +963,15 @@ type ReportMeta struct {
 
 	// JobId corresponds to the JSON schema field "jobId".
 	JobId string `json:"jobId"`
+
+	// PolicyVersion corresponds to the JSON schema field "policyVersion".
+	PolicyVersion *string `json:"policyVersion,omitempty"`
+
+	// Profile corresponds to the JSON schema field "profile".
+	Profile *ScanProfile `json:"profile,omitempty"`
+
+	// ScanContext corresponds to the JSON schema field "scanContext".
+	ScanContext *ScanContext `json:"scanContext,omitempty"`
 
 	// ScannedAt corresponds to the JSON schema field "scannedAt".
 	ScannedAt *time.Time `json:"scannedAt,omitempty"`
@@ -957,6 +1075,365 @@ func (j *ReportSummary) UnmarshalJSON(value []byte) error {
 	return nil
 }
 
+type RuleEvaluation struct {
+	// Outcome corresponds to the JSON schema field "outcome".
+	Outcome RuleEvaluationOutcome `json:"outcome"`
+
+	// RuleId corresponds to the JSON schema field "ruleId".
+	RuleId string `json:"ruleId"`
+
+	// SubjectIds corresponds to the JSON schema field "subjectIds".
+	SubjectIds []string `json:"subjectIds,omitempty"`
+}
+
+type RuleEvaluationOutcome string
+
+const RuleEvaluationOutcomeError RuleEvaluationOutcome = "error"
+const RuleEvaluationOutcomeFail RuleEvaluationOutcome = "fail"
+const RuleEvaluationOutcomeInapplicable RuleEvaluationOutcome = "inapplicable"
+const RuleEvaluationOutcomeIncomplete RuleEvaluationOutcome = "incomplete"
+const RuleEvaluationOutcomePass RuleEvaluationOutcome = "pass"
+
+var enumValues_RuleEvaluationOutcome = []interface{}{
+	"pass",
+	"fail",
+	"incomplete",
+	"inapplicable",
+	"error",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *RuleEvaluationOutcome) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_RuleEvaluationOutcome {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_RuleEvaluationOutcome, v)
+	}
+	*j = RuleEvaluationOutcome(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *RuleEvaluation) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["outcome"]; raw != nil && !ok {
+		return fmt.Errorf("field outcome in RuleEvaluation: required")
+	}
+	if _, ok := raw["ruleId"]; raw != nil && !ok {
+		return fmt.Errorf("field ruleId in RuleEvaluation: required")
+	}
+	type Plain RuleEvaluation
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = RuleEvaluation(plain)
+	return nil
+}
+
+type ScanContext struct {
+	// Authenticated corresponds to the JSON schema field "authenticated".
+	Authenticated bool `json:"authenticated"`
+
+	// ExpectedPages corresponds to the JSON schema field "expectedPages".
+	ExpectedPages []string `json:"expectedPages"`
+
+	// IdentityScope corresponds to the JSON schema field "identityScope".
+	IdentityScope ScanContextIdentityScope `json:"identityScope"`
+
+	// InputType corresponds to the JSON schema field "inputType".
+	InputType ScanContextInputType `json:"inputType"`
+
+	// PageConfigFingerprints corresponds to the JSON schema field
+	// "pageConfigFingerprints".
+	PageConfigFingerprints map[string]string `json:"pageConfigFingerprints,omitempty"`
+
+	// Purpose corresponds to the JSON schema field "purpose".
+	Purpose ScanContextPurpose `json:"purpose"`
+
+	// ScannerConfigFingerprints corresponds to the JSON schema field
+	// "scannerConfigFingerprints".
+	ScannerConfigFingerprints map[string]string `json:"scannerConfigFingerprints"`
+
+	// ScannerConfigurations corresponds to the JSON schema field
+	// "scannerConfigurations".
+	ScannerConfigurations map[string]map[string]interface{} `json:"scannerConfigurations,omitempty"`
+
+	// VerificationEligiblePages corresponds to the JSON schema field
+	// "verificationEligiblePages".
+	VerificationEligiblePages map[string]bool `json:"verificationEligiblePages,omitempty"`
+
+	// Viewport corresponds to the JSON schema field "viewport".
+	Viewport *ScanContextViewport `json:"viewport,omitempty"`
+}
+
+type ScanContextIdentityScope string
+
+const ScanContextIdentityScopeOrigin ScanContextIdentityScope = "origin"
+const ScanContextIdentityScopePath ScanContextIdentityScope = "path"
+
+var enumValues_ScanContextIdentityScope = []interface{}{
+	"path",
+	"origin",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScanContextIdentityScope) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ScanContextIdentityScope {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ScanContextIdentityScope, v)
+	}
+	*j = ScanContextIdentityScope(v)
+	return nil
+}
+
+type ScanContextInputType string
+
+const ScanContextInputTypeUrls ScanContextInputType = "urls"
+const ScanContextInputTypeZip ScanContextInputType = "zip"
+
+var enumValues_ScanContextInputType = []interface{}{
+	"urls",
+	"zip",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScanContextInputType) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ScanContextInputType {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ScanContextInputType, v)
+	}
+	*j = ScanContextInputType(v)
+	return nil
+}
+
+type ScanContextPurpose string
+
+const ScanContextPurposeFull ScanContextPurpose = "full"
+const ScanContextPurposeVerification ScanContextPurpose = "verification"
+
+var enumValues_ScanContextPurpose = []interface{}{
+	"full",
+	"verification",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScanContextPurpose) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ScanContextPurpose {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ScanContextPurpose, v)
+	}
+	*j = ScanContextPurpose(v)
+	return nil
+}
+
+type ScanContextViewport struct {
+	// Height corresponds to the JSON schema field "height".
+	Height int `json:"height"`
+
+	// Width corresponds to the JSON schema field "width".
+	Width int `json:"width"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScanContextViewport) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["height"]; raw != nil && !ok {
+		return fmt.Errorf("field height in ScanContextViewport: required")
+	}
+	if _, ok := raw["width"]; raw != nil && !ok {
+		return fmt.Errorf("field width in ScanContextViewport: required")
+	}
+	type Plain ScanContextViewport
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	if 1 > plain.Height {
+		return fmt.Errorf("field %s: must be >= %v", "height", 1)
+	}
+	if 1 > plain.Width {
+		return fmt.Errorf("field %s: must be >= %v", "width", 1)
+	}
+	*j = ScanContextViewport(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScanContext) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["authenticated"]; raw != nil && !ok {
+		return fmt.Errorf("field authenticated in ScanContext: required")
+	}
+	if _, ok := raw["expectedPages"]; raw != nil && !ok {
+		return fmt.Errorf("field expectedPages in ScanContext: required")
+	}
+	if _, ok := raw["identityScope"]; raw != nil && !ok {
+		return fmt.Errorf("field identityScope in ScanContext: required")
+	}
+	if _, ok := raw["inputType"]; raw != nil && !ok {
+		return fmt.Errorf("field inputType in ScanContext: required")
+	}
+	if _, ok := raw["purpose"]; raw != nil && !ok {
+		return fmt.Errorf("field purpose in ScanContext: required")
+	}
+	if _, ok := raw["scannerConfigFingerprints"]; raw != nil && !ok {
+		return fmt.Errorf("field scannerConfigFingerprints in ScanContext: required")
+	}
+	type Plain ScanContext
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ScanContext(plain)
+	return nil
+}
+
+type ScanProfile string
+
+const ScanProfileProduction ScanProfile = "production"
+const ScanProfileStaging ScanProfile = "staging"
+
+var enumValues_ScanProfile = []interface{}{
+	"production",
+	"staging",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScanProfile) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ScanProfile {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ScanProfile, v)
+	}
+	*j = ScanProfile(v)
+	return nil
+}
+
+type ScannerPageCoverage struct {
+	// FinalUrl corresponds to the JSON schema field "finalUrl".
+	FinalUrl *string `json:"finalUrl,omitempty"`
+
+	// PageId corresponds to the JSON schema field "pageId".
+	PageId string `json:"pageId"`
+
+	// Rules corresponds to the JSON schema field "rules".
+	Rules []RuleEvaluation `json:"rules,omitempty"`
+
+	// Status corresponds to the JSON schema field "status".
+	Status ScannerPageCoverageStatus `json:"status"`
+}
+
+type ScannerPageCoverageStatus string
+
+const ScannerPageCoverageStatusFailed ScannerPageCoverageStatus = "failed"
+const ScannerPageCoverageStatusSkipped ScannerPageCoverageStatus = "skipped"
+const ScannerPageCoverageStatusSuccess ScannerPageCoverageStatus = "success"
+
+var enumValues_ScannerPageCoverageStatus = []interface{}{
+	"success",
+	"failed",
+	"skipped",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScannerPageCoverageStatus) UnmarshalJSON(value []byte) error {
+	var v string
+	if err := json.Unmarshal(value, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ScannerPageCoverageStatus {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ScannerPageCoverageStatus, v)
+	}
+	*j = ScannerPageCoverageStatus(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ScannerPageCoverage) UnmarshalJSON(value []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(value, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["pageId"]; raw != nil && !ok {
+		return fmt.Errorf("field pageId in ScannerPageCoverage: required")
+	}
+	if _, ok := raw["status"]; raw != nil && !ok {
+		return fmt.Errorf("field status in ScannerPageCoverage: required")
+	}
+	type Plain ScannerPageCoverage
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	*j = ScannerPageCoverage(plain)
+	return nil
+}
+
 type ScannerStatus string
 
 const ScannerStatusFailed ScannerStatus = "failed"
@@ -1009,6 +1486,9 @@ type ScannerSummary struct {
 
 	// Name corresponds to the JSON schema field "name".
 	Name *string `json:"name,omitempty"`
+
+	// Pages corresponds to the JSON schema field "pages".
+	Pages []ScannerPageCoverage `json:"pages,omitempty"`
 
 	// ReportPath corresponds to the JSON schema field "reportPath".
 	ReportPath *string `json:"reportPath,omitempty"`
@@ -1123,6 +1603,9 @@ func (j *SeverityCounts) UnmarshalJSON(value []byte) error {
 type UnifiedReportV2 struct {
 	// Artifacts corresponds to the JSON schema field "artifacts".
 	Artifacts []ReportArtifact `json:"artifacts,omitempty"`
+
+	// Assessment corresponds to the JSON schema field "assessment".
+	Assessment *ReportAssessment `json:"assessment,omitempty"`
 
 	// Errors corresponds to the JSON schema field "errors".
 	Errors []ReportError `json:"errors,omitempty"`

@@ -26,6 +26,8 @@ type Envelope struct {
 	// compared.
 	SkippedScanners      []string `json:"skippedScanners,omitempty"`
 	IncompatibleIdentity bool     `json:"incompatibleIdentity,omitempty"`
+	NotComparedPages     []string `json:"notComparedPages,omitempty"`
+	ContextLimited       bool     `json:"contextLimited,omitempty"`
 }
 
 type BaselineMeta struct {
@@ -82,6 +84,8 @@ func FromResult(r diff.Result, baselineFile, currentFile string) Envelope {
 		Fixed:                r.Fixed,
 		SkippedScanners:      r.SkippedScanners,
 		IncompatibleIdentity: r.IncompatibleIdentity,
+		NotComparedPages:     r.NotComparedPages,
+		ContextLimited:       r.ContextLimited,
 	}
 }
 
@@ -159,6 +163,25 @@ func writeText(out io.Writer, env Envelope, isMarkdown bool) error {
 		_, err := fmt.Fprintln(out, line)
 
 		return err
+	}
+
+	if len(env.NotComparedPages) > 0 {
+		if _, err := fmt.Fprintf(
+			out,
+			"Not compared: %d pages were omitted, added or have incompatible settings; omitted findings are not fixes.\n\n",
+			len(env.NotComparedPages),
+		); err != nil {
+			return err
+		}
+	}
+
+	if env.ContextLimited {
+		if _, err := fmt.Fprintln(
+			out,
+			"Legacy report context is limited; execution settings could not be verified.",
+		); err != nil {
+			return err
+		}
 	}
 
 	if err := writeSummary(out, env, isMarkdown); err != nil {

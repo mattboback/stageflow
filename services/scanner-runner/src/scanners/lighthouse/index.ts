@@ -1,3 +1,4 @@
+import { lighthouseRuleEvaluations } from './rule-evaluations';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
@@ -129,6 +130,8 @@ export class LighthouseScanner extends ScannerBase {
 				url: pageEntry.url,
 				path: pageEntry.path,
 				success: true,
+				finalUrl: lhResult.finalUrl,
+				rules: lighthouseRuleEvaluations(lhResult, pageEntry.id),
 				issues,
 				durationMs: Math.round(durationMs * 100) / 100,
 				startedAt,

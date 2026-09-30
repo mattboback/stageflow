@@ -159,6 +159,15 @@ function loadGoldenReport(name: string): UnifiedReport {
 	return fixture.report;
 }
 
+// Synthetic findings below exercise reports saved before explicit coverage.
+// Keep the committed goldens' modern context for the integration comparison.
+function legacyGoldenReport(name: string): UnifiedReport {
+	const report = loadGoldenReport(name);
+	delete report.meta.scanContext;
+	for (const scanner of report.scanners) delete scanner.pages;
+	return report;
+}
+
 describe('computeProjectDiff', () => {
 	it('matches the committed Go golden regression semantics', () => {
 		const baseline = loadGoldenReport('golden-baseline-report.json');
@@ -188,7 +197,7 @@ describe('computeProjectDiff', () => {
 	});
 
 	it('sorts issue IDs and computes score changes like the Go implementation', () => {
-		const base = loadGoldenReport('golden-regression-report.json');
+		const base = legacyGoldenReport('golden-regression-report.json');
 		const first = base.issues[0];
 		if (!first) {
 			throw new Error('golden-regression-report.json must contain at least one issue');
@@ -249,7 +258,7 @@ describe('computeProjectDiff', () => {
 
 	// Mirrors TestComputeDiff_SkipsScannersThatDidNotFinish in libs/go/diff.
 	it('skips scanners that did not finish in either report, like the Go implementation', () => {
-		const base = loadGoldenReport('golden-regression-report.json');
+		const base = legacyGoldenReport('golden-regression-report.json');
 		const first = base.issues[0];
 		if (!first) {
 			throw new Error('golden-regression-report.json must contain at least one issue');
@@ -318,7 +327,7 @@ describe('computeProjectDiff', () => {
 
 describe('complete occurrence comparisons', () => {
 	it('counts one new occurrence when a sixth failing image is added', () => {
-		const base = loadGoldenReport('golden-regression-report.json');
+		const base = legacyGoldenReport('golden-regression-report.json');
 		const first = base.issues[0]!;
 		const occurrences = Array.from({ length: 5 }, (_, index) => ({
 			elementId: `occ-v2-${index}`,
@@ -345,8 +354,8 @@ describe('complete occurrence comparisons', () => {
 		expect(result.delta.unchangedIssues).toBe(5);
 		expect(result.new[0]?.occurrences?.[0]?.elementId).toBe('occ-v2-5');
 	});
-	it('excludes partial page coverage on both sides without apparent fixes', () => {
-		const base = loadGoldenReport('golden-regression-report.json');
+	it('excludes legacy partial scanners without explicit page coverage or apparent fixes', () => {
+		const base = legacyGoldenReport('golden-regression-report.json');
 		const scanner = base.issues[0]!.scanner;
 		const current = {
 			...base,
@@ -363,7 +372,7 @@ describe('complete occurrence comparisons', () => {
 	it('requires a fresh baseline when stable identity replaces positional IDs', () => {
 		const base = loadGoldenReport('golden-regression-report.json');
 		const legacy = {
-			...base,
+			...legacyGoldenReport('golden-regression-report.json'),
 			pages: base.pages.map((page, index) => ({ ...page, id: `url-${index + 1}` })),
 			issues: base.issues.map((issue, index) => ({
 				...issue,

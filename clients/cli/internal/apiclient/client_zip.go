@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -19,6 +20,7 @@ func (c *Client) SubmitZipJob(
 	zipPath string,
 	modules []string,
 	screenshot bool,
+	fields ...map[string]string,
 ) (SubmitJobResponse, error) {
 	reqURL, err := c.BuildURL("/api/v1/jobs/zip")
 	if err != nil {
@@ -30,7 +32,7 @@ func (c *Client) SubmitZipJob(
 		return SubmitJobResponse{}, fmt.Errorf("open archive: %w", err)
 	}
 
-	bodyReader, contentType := zipUploadBody(file, filepath.Base(zipPath), modules, screenshot)
+	bodyReader, contentType := zipUploadBody(file, filepath.Base(zipPath), modules, screenshot, fields...)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL.String(), bodyReader)
 	if err != nil {
@@ -63,12 +65,13 @@ func zipUploadBody(
 	filename string,
 	modules []string,
 	screenshot bool,
+	fields ...map[string]string,
 ) (io.Reader, string) {
 	pr, pw := io.Pipe()
 	writer := multipart.NewWriter(pw)
 
 	go func() {
-		err := writeZipUploadParts(writer, archive, filename, modules, screenshot)
+		err := writeZipUploadParts(writer, archive, filename, modules, screenshot, fields...)
 
 		_ = archive.Close()
 
@@ -84,7 +87,23 @@ func writeZipUploadParts(
 	filename string,
 	modules []string,
 	screenshot bool,
+	fields ...map[string]string,
 ) error {
+	for _, extra := range fields {
+		keys := make([]string, 0, len(extra))
+		for key := range extra {
+			keys = append(keys, key)
+		}
+
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			if err := writer.WriteField(key, extra[key]); err != nil {
+				return err
+			}
+		}
+	}
+
 	part, err := writer.CreateFormFile("file", filename)
 	if err != nil {
 		return err

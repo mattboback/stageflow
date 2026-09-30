@@ -1,6 +1,8 @@
+import { ScanProfileSelector } from '../components/ScanProfileSelector';
 import { useState } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
 
+import { DiscoveryPreview } from '../components/DiscoveryPreview';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { Delta } from '../components/Delta';
@@ -8,7 +10,7 @@ import { Pill } from '../components/Pill';
 import { DEMO_CROP } from '../lib/demo/demo-crop';
 import { getCroppedViewBox } from '../lib/report/screenshot-crop';
 import { DEMO_SUMMARY } from '../lib/demo/demo-summary';
-import { submitScanJob } from '../lib/api/client';
+import { discoverPages, submitScanJob, type DiscoverPagesResponse } from '../lib/api/client';
 import { SCANNER_META } from '../lib/report/scanner-identity';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
 import {
@@ -83,28 +85,35 @@ const PATH_STEPS = [
 export default function Home() {
 	const navigate = useNavigate();
 	const [url, setUrl] = useState('');
+	const [profile, setProfile] = useState<'production' | 'staging'>('production');
 	const [submitting, setSubmitting] = useState(false);
 	const [urlError, setUrlError] = useState<string | null>(null);
+	const [discovering, setDiscovering] = useState(false);
+	const [discoveryPreview, setDiscoveryPreview] = useState<DiscoverPagesResponse | null>(null);
 
-	async function onScan(e: React.SyntheticEvent) {
-		e.preventDefault();
+	function checkedSeed(): string | null {
 		const normalized = normalizeUrlInput(url);
 		if (!normalized) {
 			setUrlError('Enter a URL to scan.');
-			return;
+			return null;
 		}
 		const checked = validateHttpUrl(normalized);
 		if (!checked.ok) {
 			setUrlError(checked.reason);
-			return;
+			return null;
 		}
 		setUrlError(null);
+		return checked.url;
+	}
+	async function submitURLs(targets: string[]) {
 		setSubmitting(true);
+		setUrlError(null);
 		try {
 			const job = await submitScanJob({
 				mode: 'url',
 				file: null,
-				urls: [checked.url],
+				urls: targets,
+				profile,
 				scanners: Object.keys(SCANNER_META).map((id) => ({ id, enabled: true })),
 				screenshot: true
 			});
@@ -113,6 +122,24 @@ export default function Home() {
 			setUrlError(error instanceof Error ? error.message : 'Could not submit the scan.');
 		} finally {
 			setSubmitting(false);
+		}
+	}
+	async function onScan(event: React.SyntheticEvent) {
+		event.preventDefault();
+		const seed = checkedSeed();
+		if (seed) await submitURLs([seed]);
+	}
+	async function onScanWebsite() {
+		const seed = checkedSeed();
+		if (!seed) return;
+		setDiscovering(true);
+		setDiscoveryPreview(null);
+		try {
+			setDiscoveryPreview(await discoverPages(seed));
+		} catch (error) {
+			setUrlError(error instanceof Error ? error.message : 'Could not discover website pages.');
+		} finally {
+			setDiscovering(false);
 		}
 	}
 
@@ -145,6 +172,7 @@ export default function Home() {
 										autoComplete="url"
 										placeholder="https://example.com"
 										value={url}
+										disabled={submitting || discovering}
 										aria-invalid={urlError ? true : undefined}
 										aria-describedby={urlError ? 'url-error' : undefined}
 										onChange={(e) => {
@@ -158,13 +186,36 @@ export default function Home() {
 										</span>
 									)}
 								</div>
-								<button className="btn btn--primary btn--lg" type="submit" disabled={submitting}>
+								<button
+									className="btn btn--primary btn--lg"
+									type="submit"
+									disabled={submitting || discovering}
+								>
 									{submitting ? 'Starting…' : 'Scan'}{' '}
 									<span className="ar" aria-hidden="true">
 										→
 									</span>
 								</button>
 							</form>
+							<button
+								type="button"
+								className="btn btn--ghost btn--sm"
+								disabled={discovering || submitting}
+								onClick={() => void onScanWebsite()}
+							>
+								{discovering ? 'Discovering website…' : 'Scan website'}
+							</button>
+							<ScanProfileSelector profile={profile} onChange={setProfile} />
+							{discoveryPreview && (
+								<DiscoveryPreview
+									key={JSON.stringify(discoveryPreview)}
+									result={discoveryPreview}
+									confirmLabel="Scan selected pages"
+									busy={submitting}
+									onConfirm={(selected) => void submitURLs(selected)}
+									onCancel={() => setDiscoveryPreview(null)}
+								/>
+							)}
 							<p className="hero__note muted">
 								{IS_HOSTED_DEMO
 									? 'No account. Artifacts expire after 24 hours. Local projects stay in this browser.'

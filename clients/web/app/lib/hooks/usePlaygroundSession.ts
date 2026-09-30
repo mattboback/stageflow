@@ -5,7 +5,8 @@ import {
 	discoverPages,
 	fetchScanners,
 	getDefaultScannerSelections,
-	submitScanJob
+	submitScanJob,
+	type DiscoverPagesResponse
 } from '../api/client';
 import { getLocalProject, saveLocalProject, saveLocalRun } from '../local-project-store';
 import {
@@ -70,6 +71,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	const [projectNotice, setProjectNotice] = useState<string | null>(null);
 
 	const [mode, setMode] = useState<Mode>('url');
+	const [profile, setProfile] = useState<'production' | 'staging'>('production');
 	const [urls, setUrls] = useState<string[]>(() => {
 		return seedUrl ? [seedUrl, ''] : ['https://example.com', ''];
 	});
@@ -81,6 +83,10 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	const [submitting, setSubmitting] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
 	const [discoverNotice, setDiscoverNotice] = useState<string | null>(null);
+	const [discoveryPreview, setDiscoveryPreview] = useState<{
+		result: DiscoverPagesResponse;
+		seed: string;
+	} | null>(null);
 
 	const [authConfig, setAuthConfig] = useState<AuthFormConfig>({
 		enabled: false,
@@ -110,6 +116,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 					setError('That local project was not found. It may have been deleted in this browser.');
 				} else if (storedProject) {
 					setProject(storedProject);
+					setProfile(storedProject.configuration.profile ?? 'production');
 					setProjectName(storedProject.name);
 					setMode('url');
 					setUrls([...storedProject.configuration.urls, '']);
@@ -172,32 +179,60 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 
 	/** Replaces the first filled row with the pages found on that site, for the user to prune. */
 	async function discoverUrls() {
-		const index = urls.findIndex((u) => u.trim() !== '');
-		const siteUrl = urls[index]?.trim();
+		if (authConfig.enabled) {
+			setDiscoverNotice(
+				'Website discovery supports public pages only. Keep explicit URLs for authenticated scans.'
+			);
+			return;
+		}
+		const siteUrl = urls.find((value) => value.trim())?.trim();
 		if (!siteUrl) {
 			setUrlRowErrors({ 0: 'Enter the site URL to discover its pages' });
 			return;
 		}
-
+		const checked = validateHttpUrl(normalizeUrlInput(siteUrl) ?? siteUrl);
+		if (!checked.ok) {
+			setUrlRowErrors({ 0: checked.reason });
+			return;
+		}
 		setDiscovering(true);
 		setDiscoverNotice(null);
+		setDiscoveryPreview(null);
 		try {
-			const found = await discoverPages(siteUrl);
-			const next = mergePastedUrls(urls, index, found.urls.join('\n'));
-			if (!next) {
-				setDiscoverNotice('No other pages found on this site.');
-				return;
-			}
-			setUrls(next);
-			setUrlRowErrors({});
-			setDiscoverNotice(
-				`Found ${found.urls.length} pages from the ${found.source === 'sitemap' ? 'sitemap' : "site's links"}${found.truncated ? ' (first 100 shown)' : ''}. Remove any you don't want scanned.`
-			);
+			const result = await discoverPages(checked.url);
+			setDiscoveryPreview({ result, seed: checked.url });
 		} catch (err) {
-			setUrlRowErrors({ [index]: err instanceof Error ? err.message : 'Could not discover pages' });
+			setDiscoverNotice(err instanceof Error ? err.message : 'Could not discover pages');
 		} finally {
 			setDiscovering(false);
 		}
+	}
+	function applyDiscoveredUrls(selected: string[]) {
+		if (!discoveryPreview) return;
+		const canonical = (value: string) => {
+			try {
+				return new URL(normalizeUrlInput(value) ?? value).href;
+			} catch {
+				return value.trim();
+			}
+		};
+		const seed = canonical(discoveryPreview.seed);
+		const manual = urls.filter((value) => value.trim() && canonical(value) !== seed);
+		const merged = [
+			...new Map([...selected, ...manual].map((value) => [canonical(value), value])).values()
+		];
+		if (merged.length > 100) {
+			setDiscoverNotice(
+				'A scan can contain at most 100 URLs. Select fewer discovered pages or remove existing URLs.'
+			);
+			return;
+		}
+		setUrls(merged);
+		setUrlRowErrors({});
+		setDiscoveryPreview(null);
+		setDiscoverNotice(
+			`Added ${selected.length} selected pages. Existing manual URLs are preserved.`
+		);
 	}
 
 	function addUrlRow() {
@@ -248,7 +283,8 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 			urls: validUrls,
 			scanners,
 			browser: 'chromium',
-			highlightStyle: 'solid'
+			highlightStyle: 'solid',
+			...(profile === 'staging' ? { profile } : {})
 		};
 	}
 
@@ -318,6 +354,7 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 				file,
 				urls: validUrls,
 				scanners: scannersForSubmit,
+				profile,
 				auth
 			});
 			if (project && configFingerprint) {
@@ -357,6 +394,8 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	const readyDetail = validation.message;
 	const runtimeEstimate = estimateScanRuntime(catalog, selections, targetCount, mode);
 	return {
+		profile,
+		setProfile,
 		// Scanner catalog
 		catalog,
 		selections,
@@ -379,6 +418,9 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		discoverUrls,
 		discovering,
 		discoverNotice,
+		discoveryPreview,
+		applyDiscoveredUrls,
+		cancelDiscovery: () => setDiscoveryPreview(null),
 		addUrlRow,
 		removeUrlRow,
 		targetCount,

@@ -7,11 +7,13 @@ import (
 
 // SubmitJobRequest represents the payload for POST /api/v1/jobs/urls.
 type SubmitJobRequest struct {
-	URLs                []string      `json:"urls"`
-	Modules             []string      `json:"modules,omitempty"`
-	Screenshot          bool          `json:"screenshot"`
-	AllowPrivateTargets bool          `json:"allow_private_targets,omitempty"`
-	Auth                *JobAuthInput `json:"auth,omitempty"`
+	Profile             string                    `json:"profile,omitempty"`
+	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
+	URLs                []string                  `json:"urls"`
+	Modules             []string                  `json:"modules,omitempty"`
+	Screenshot          bool                      `json:"screenshot"`
+	AllowPrivateTargets bool                      `json:"allow_private_targets,omitempty"`
+	Auth                *JobAuthInput             `json:"auth,omitempty"`
 }
 
 // JobAuthInput is the optional authentication block carried alongside a URL job

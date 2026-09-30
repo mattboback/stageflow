@@ -68,6 +68,11 @@ function isHTTPURL(rawURL: string): boolean {
  * Manages Playwright browser instances for scanner operations.
  */
 export class BrowserManager {
+	private readonly navigationStatuses = new WeakMap<Page, number>();
+
+	getNavigationStatus(page: Page): number | undefined {
+		return this.navigationStatuses.get(page);
+	}
 	private browser: Browser | null = null;
 	private readonly config: BrowserConfig;
 	private readonly pageRedactors = new WeakMap<Page, (value: string) => string>();
@@ -197,10 +202,13 @@ export class BrowserManager {
 		const waitUntil = this.getPlaywrightWaitUntil(strategy);
 
 		try {
-			await page.goto(url, {
+			const response = await page.goto(url, {
 				waitUntil,
 				timeout: this.config.pageLoadTimeout
 			});
+			if (response) {
+				this.navigationStatuses.set(page, response.status());
+			}
 		} catch (err) {
 			const blockedError = this.blockedNavigationErrors.get(page);
 			if (blockedError) {

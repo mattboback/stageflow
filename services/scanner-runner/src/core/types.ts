@@ -209,6 +209,8 @@ export interface Issue {
 }
 
 export interface PageScanResult {
+	finalUrl?: string;
+	rules?: import('@stageflow/contracts-report').RuleEvaluation[];
 	pageId: string;
 	url: string;
 	path?: string;
@@ -241,6 +243,7 @@ export interface ScanSummary {
 }
 
 export interface ScanResults {
+	context?: import('@stageflow/contracts-report').ScanContext;
 	jobId: string;
 	scanner: string;
 	version: string;

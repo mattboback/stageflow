@@ -40,10 +40,12 @@ function pruneJobs(next: ReviewVerdictsByJob): ReviewVerdictsByJob {
 
 export function createReviewVerdictStore(
 	storage: ReviewVerdictStorage | null,
-	now: () => string = () => new Date().toISOString()
+	now: () => string = () => new Date().toISOString(),
+	initialReviews: ReviewVerdictsByJob = {},
+	onChange?: (reviews: ReviewVerdictsByJob) => void
 ) {
-	let cache: ReviewVerdictsByJob = {};
-	let cacheLoaded = false;
+	let cache: ReviewVerdictsByJob = normalizeReviewVerdicts(initialReviews);
+	let cacheLoaded = storage === null;
 	const listeners = new Set<() => void>();
 
 	const readPersisted = (): ReviewVerdictsByJob => {
@@ -67,7 +69,8 @@ export function createReviewVerdictStore(
 	};
 
 	const persist = (mutate: (fresh: ReviewVerdictsByJob) => ReviewVerdictsByJob) => {
-		const next = pruneJobs(mutate(readPersisted()));
+		const updated = normalizeReviewVerdicts(mutate(readPersisted()));
+		const next = storage ? pruneJobs(updated) : updated;
 		cache = next;
 		cacheLoaded = true;
 		try {
@@ -75,16 +78,17 @@ export function createReviewVerdictStore(
 		} catch {
 			// Quota or private-mode failures lose persistence, not session state.
 		}
+		onChange?.(next);
 		notify();
 	};
 
 	return {
-		subscribe(listener: () => void): () => void {
+		subscribe(this: void, listener: () => void): () => void {
 			listeners.add(listener);
 			return () => listeners.delete(listener);
 		},
 
-		getSnapshot(): ReviewVerdictsByJob {
+		getSnapshot(this: void): ReviewVerdictsByJob {
 			if (!cacheLoaded) {
 				cache = readPersisted();
 				cacheLoaded = true;
@@ -92,7 +96,7 @@ export function createReviewVerdictStore(
 			return cache;
 		},
 
-		getServerSnapshot(): ReviewVerdictsByJob {
+		getServerSnapshot(this: void): ReviewVerdictsByJob {
 			return cache;
 		},
 
@@ -130,4 +134,40 @@ export function createReviewVerdictStore(
 			});
 		}
 	};
+}
+
+export type ReviewVerdictStore = ReturnType<typeof createReviewVerdictStore>;
+
+/** Rebase this tab's edits on fresh persisted records without erasing another tab. */
+export function mergeReviewChanges(
+	persisted: ReviewVerdictsByJob,
+	previous: ReviewVerdictsByJob,
+	next: ReviewVerdictsByJob
+): ReviewVerdictsByJob {
+	const merged = normalizeReviewVerdicts(persisted);
+	for (const jobId of new Set([...Object.keys(previous), ...Object.keys(next)])) {
+		const prior = previous[jobId] ?? {};
+		const updated = next[jobId] ?? {};
+		const records = { ...merged[jobId] };
+		for (const issueId of new Set([...Object.keys(prior), ...Object.keys(updated)])) {
+			if (JSON.stringify(prior[issueId]) === JSON.stringify(updated[issueId])) continue;
+			if (updated[issueId])
+				Object.defineProperty(records, issueId, {
+					value: updated[issueId],
+					enumerable: true,
+					configurable: true,
+					writable: true
+				});
+			else delete records[issueId];
+		}
+		if (Object.keys(records).length)
+			Object.defineProperty(merged, jobId, {
+				value: records,
+				enumerable: true,
+				configurable: true,
+				writable: true
+			});
+		else delete merged[jobId];
+	}
+	return merged;
 }

@@ -85,7 +85,17 @@ export async function fetchWithTimeout(
 }
 
 interface SubmitJobParams {
+	identityScope?: 'path' | 'origin';
+	pagePaths?: string[];
+	verification?: {
+		source_job_id: string;
+		page_id: string;
+		rule_id: string;
+		scanner: string;
+		subject_id?: string;
+	};
 	mode: 'zip' | 'url';
+	profile?: 'production' | 'staging';
 	file: File | null;
 	urls: string[];
 	scanners: ScannerSelection[];
@@ -152,11 +162,15 @@ function isAbortError(error: unknown): boolean {
 }
 
 export async function submitScanJob({
+	identityScope,
+	pagePaths,
+	verification,
 	mode,
 	file,
 	urls,
 	scanners,
 	screenshot = true,
+	profile = 'production',
 	auth = null,
 	signal
 }: SubmitJobParams): Promise<SubmitJobResponse> {
@@ -179,6 +193,10 @@ export async function submitScanJob({
 		formData.append('file', file);
 		formData.append('modules', modules.join(','));
 		formData.append('screenshot', screenshot ? 'true' : 'false');
+		if (identityScope) formData.append('identity_scope', identityScope);
+		if (pagePaths) formData.append('page_paths', JSON.stringify(pagePaths));
+		if (verification) formData.append('verification', JSON.stringify(verification));
+		formData.append('profile', profile);
 		if (Object.keys(scannerConfigs).length > 0) {
 			formData.append('scanner_configs', JSON.stringify(scannerConfigs));
 		}
@@ -203,6 +221,9 @@ export async function submitScanJob({
 				urls,
 				modules,
 				scanner_configs: scannerConfigs,
+				...(identityScope ? { identity_scope: identityScope } : {}),
+				...(verification ? { verification } : {}),
+				profile,
 				screenshot,
 				...(auth ? { auth } : {})
 			}),
@@ -239,9 +260,13 @@ export interface DiscoverPagesResponse {
 	urls: string[];
 	source: 'sitemap' | 'crawl';
 	truncated: boolean;
+	sources?: ('sitemap' | 'crawl')[];
+	complete?: boolean;
+	stopReasons?: string[];
+	warnings?: string[];
 }
 
-/** Lists a site's pages from its sitemap, or a shallow link crawl when it has none. */
+/** Discovers verified public HTML pages from sitemaps and same-origin links. */
 export async function discoverPages(url: string): Promise<DiscoverPagesResponse> {
 	// The server spends up to 45s crawling a site that has no sitemap.
 	const response = await fetchWithTimeout(

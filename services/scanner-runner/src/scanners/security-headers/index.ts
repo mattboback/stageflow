@@ -121,6 +121,7 @@ export class SecurityHeadersScanner extends ScannerBase {
 		const { page, pageEntry, logger } = context;
 		const startTime = Date.now();
 		const issues: Issue[] = [];
+		const rules: NonNullable<PageScanResult['rules']> = [];
 
 		try {
 			const currentPageURL = page.url();
@@ -148,9 +149,27 @@ export class SecurityHeadersScanner extends ScannerBase {
 					headerName === 'x-frame-options' &&
 					/(?:^|;)\s*frame-ancestors\s+[^;]+/i.test(headers['content-security-policy'] ?? '')
 				) {
+					rules.push(
+						{ ruleId: `${this.metadata.name}-missing-${check.name}`, outcome: 'pass' },
+						{ ruleId: `${this.metadata.name}-invalid-${check.name}`, outcome: 'pass' }
+					);
 					continue;
 				}
 
+				rules.push(
+					{
+						ruleId: `${this.metadata.name}-missing-${check.name}`,
+						outcome: hasHeader ? 'pass' : 'fail'
+					},
+					{
+						ruleId: `${this.metadata.name}-invalid-${check.name}`,
+						outcome: !hasHeader
+							? 'inapplicable'
+							: check.validator && !check.validator(headerValue ?? '')
+								? 'fail'
+								: 'pass'
+					}
+				);
 				if (!hasHeader) {
 					issues.push(this.createIssue(check, 'missing'));
 				} else if (check.validator && !check.validator(headerValue ?? '')) {
@@ -196,6 +215,21 @@ export class SecurityHeadersScanner extends ScannerBase {
 				});
 			}
 
+			rules.push(
+				{
+					ruleId: `${this.metadata.name}-mixed-content`,
+					outcome:
+						new URL(finalURL).protocol !== 'https:'
+							? 'inapplicable'
+							: mixedContent.length
+								? 'fail'
+								: 'pass'
+				},
+				{
+					ruleId: `${this.metadata.name}-insecure-cookies`,
+					outcome: insecureCookies.length ? 'fail' : 'pass'
+				}
+			);
 			logger.info('Security scan complete', {
 				url: pageEntry.url,
 				finalURL,
@@ -209,6 +243,9 @@ export class SecurityHeadersScanner extends ScannerBase {
 				url: pageEntry.url,
 				path: pageEntry.path,
 				success: true,
+				finalUrl: finalURL,
+				rules:
+					statusCode >= 400 ? rules.map((rule) => ({ ...rule, outcome: 'error' as const })) : rules,
 				issues,
 				durationMs: Date.now() - startTime,
 				startedAt: new Date(startTime).toISOString(),

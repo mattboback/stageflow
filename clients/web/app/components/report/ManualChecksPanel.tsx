@@ -1,3 +1,5 @@
+import { useReviewReportContext, useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
+import { ReviewNotesPanel } from './ReviewNotesPanel';
 import { ScannerText } from './ScannerText';
 import type { ManualCheck } from '../../lib/report';
 
@@ -7,6 +9,7 @@ interface Props {
 }
 
 export function ManualChecksPanel({ checks, pagesScanned }: Props) {
+	const context = useReviewReportContext();
 	if (checks.length === 0) return null;
 
 	return (
@@ -27,6 +30,15 @@ export function ManualChecksPanel({ checks, pagesScanned }: Props) {
 						<p className="mchecks__desc">
 							<ScannerText text={check.description} />
 						</p>
+						{context &&
+							check.pageIds?.map((pageId) => (
+								<ManualPageReview
+									key={pageId}
+									jobId={context.jobId}
+									subject={`manual:${check.ruleId}:${pageId}`}
+									label={context.pageLabels?.[pageId] ?? pageId}
+								/>
+							))}
 						<p className="mchecks__meta">
 							lighthouse · {check.ruleId}
 							{check.pageCount < pagesScanned && (
@@ -39,6 +51,67 @@ export function ManualChecksPanel({ checks, pagesScanned }: Props) {
 					</li>
 				))}
 			</ul>
+		</details>
+	);
+}
+
+function ManualPageReview({
+	jobId,
+	subject,
+	label
+}: {
+	jobId: string;
+	subject: string;
+	label: string;
+}) {
+	const { getVerdict, setVerdict, clearVerdict } = useReviewVerdicts(jobId);
+	const review = getVerdict(subject);
+	return (
+		<details>
+			<summary>
+				{label}
+				{review?.verdict ? ` · ${review.verdict}` : ' · needs review'}
+			</summary>
+			{review?.verdict ? (
+				<button
+					type="button"
+					className="btn btn--quiet"
+					onClick={() => {
+						if (review.note) setVerdict(subject, { note: review.note });
+						else clearVerdict(subject);
+					}}
+				>
+					Clear verdict
+				</button>
+			) : (
+				<>
+					<button
+						type="button"
+						className="btn btn--ghost btn--sm"
+						onClick={() =>
+							setVerdict(subject, {
+								...(review?.note ? { note: review.note } : {}),
+								verdict: 'pass'
+							})
+						}
+					>
+						Mark pass
+					</button>
+					<button
+						type="button"
+						className="btn btn--ghost btn--sm"
+						onClick={() =>
+							setVerdict(subject, {
+								...(review?.note ? { note: review.note } : {}),
+								verdict: 'fail'
+							})
+						}
+					>
+						Mark fail
+					</button>
+				</>
+			)}
+			<ReviewNotesPanel jobId={jobId} issueId={subject} />
 		</details>
 	);
 }

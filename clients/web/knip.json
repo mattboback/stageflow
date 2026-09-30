@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/knip/schema.json",
-	"entry": ["app/root.tsx!"],
+	"entry": ["app/root.tsx!", "app/offline/entry.tsx!"],
 	"project": [
 		"app/**/*.{ts,tsx}!",
 		"!app/**/*.test.{ts,tsx}",

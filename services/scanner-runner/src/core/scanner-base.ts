@@ -1,3 +1,4 @@
+import { createScanContext } from './scan-context';
 import type { Stats } from 'node:fs';
 
 import { readdir, stat, writeFile } from 'node:fs/promises';
@@ -325,6 +326,7 @@ export abstract class ScannerBase {
 			scanner: this.metadata.name,
 			version: this.metadata.version,
 			totalPages: provenance.pages.length,
+			context: createScanContext(this.config, provenance),
 			pages: pageResults,
 			summary,
 			startedAt: this.scanStartedAt,

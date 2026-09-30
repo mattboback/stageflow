@@ -190,6 +190,27 @@ func (p *ScannerLaunchPlanner) baseEnv(
 		"A11Y_SHOT_ENABLED":     strconv.FormatBool(job.Config.Screenshot),
 	}
 
+	if job.Config.IdentityScope != "" {
+		env["SCAN_IDENTITY_SCOPE"] = job.Config.IdentityScope
+	}
+
+	if len(job.Config.PagePaths) > 0 {
+		data, marshalErr := json.Marshal(job.Config.PagePaths)
+		if marshalErr != nil {
+			logging.Error(ctx, "Failed to encode verification page paths", "error", marshalErr)
+		}
+
+		env["SCAN_PAGE_PATHS"] = string(data)
+	}
+
+	if job.Config.Verification != nil {
+		env["SCAN_PURPOSE"] = "verification"
+	}
+
+	if job.Config.Profile != "" {
+		env["SCAN_PROFILE"] = job.Config.Profile
+	}
+
 	if job.Config.AllowPrivateTargets {
 		env["ALLOW_PRIVATE_TARGETS"] = strconv.FormatBool(true)
 	}

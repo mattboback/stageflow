@@ -105,13 +105,14 @@ func TestComputeDiff_NoChanges(t *testing.T) {
 func TestComputeDiff_EmptyBaseline(t *testing.T) {
 	baseline := report.UnifiedReportV2{
 		Summary: report.ReportSummary{TotalIssues: 0},
+		Pages:   []report.PageSummary{{Id: "page-a"}},
 	}
 
 	current := report.UnifiedReportV2{
 		Summary: report.ReportSummary{TotalIssues: 2},
 		Issues: []report.IssueDetail{
-			{Id: "a"},
-			{Id: "b"},
+			{Id: "a", PageId: "page-a"},
+			{Id: "b", PageId: "page-a"},
 		},
 	}
 
@@ -134,13 +135,14 @@ func TestComputeDiff_EmptyCurrent(t *testing.T) {
 	baseline := report.UnifiedReportV2{
 		Summary: report.ReportSummary{Score: intPtr(50), TotalIssues: 2},
 		Issues: []report.IssueDetail{
-			{Id: "a"},
-			{Id: "b"},
+			{Id: "a", PageId: "page-a"},
+			{Id: "b", PageId: "page-a"},
 		},
 	}
 
 	current := report.UnifiedReportV2{
 		Summary: report.ReportSummary{Score: intPtr(100), TotalIssues: 0},
+		Pages:   []report.PageSummary{{Id: "page-a"}},
 	}
 
 	result := ComputeDiff("b", baseline, "c", current)
@@ -312,3 +314,42 @@ func TestComputeDiff_IncompatibleIdentityNeedsFreshBaseline(t *testing.T) {
 }
 
 func strPtr(value string) *string { return &value }
+
+func TestComputeDiff_OmittedPageNeverFixed(t *testing.T) {
+	before := report.UnifiedReportV2{
+		Pages:   []report.PageSummary{{Id: "page-v2-a"}, {Id: "page-v2-b"}},
+		Issues:  []report.IssueDetail{{Id: "a", PageId: "page-v2-a"}, {Id: "b", PageId: "page-v2-b"}},
+		Summary: report.ReportSummary{Score: intPtr(70)},
+	}
+	after := report.UnifiedReportV2{
+		Pages:   []report.PageSummary{{Id: "page-v2-a"}},
+		Summary: report.ReportSummary{Score: intPtr(100)},
+	}
+
+	result := ComputeDiff("before", before, "after", after)
+	if len(result.Fixed) != 1 || result.Fixed[0].Id != "a" || len(result.NotComparedPages) != 1 ||
+		result.NotComparedPages[0] != "page-v2-b" ||
+		result.Delta.ScoreDelta != nil {
+		t.Fatalf("unsafe omitted-page diff: %+v", result)
+	}
+}
+
+func TestComputeDiff_ProfileChangesDoNotFixRawFindings(t *testing.T) {
+	production, staging := report.ScanProfileProduction, report.ScanProfileStaging
+	issue := report.IssueDetail{Id: "noindex", PageId: "page-v2-a"}
+	before := report.UnifiedReportV2{
+		Meta:    report.ReportMeta{Profile: &production},
+		Pages:   []report.PageSummary{{Id: "page-v2-a"}},
+		Issues:  []report.IssueDetail{issue},
+		Summary: report.ReportSummary{Score: intPtr(80)},
+	}
+	after := before
+	after.Meta.Profile = &staging
+	after.Summary.Score = intPtr(100)
+
+	result := ComputeDiff("before", before, "after", after)
+	if len(result.Fixed) != 0 || len(result.New) != 0 || result.Delta.UnchangedIssues != 1 ||
+		result.Delta.ScoreDelta != nil {
+		t.Fatalf("unsafe profile diff: %+v", result)
+	}
+}

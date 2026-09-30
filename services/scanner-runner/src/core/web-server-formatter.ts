@@ -13,6 +13,7 @@ import type {
 import { normalizeSeverity } from '../utils/severity';
 import { resultsPath } from './artifact-paths';
 import { issueFingerprint, occurrenceFingerprint } from './finding-identity';
+import { boundRuleEvaluations } from './rule-evaluations';
 
 type SeverityCounts = Record<IssueSeverity, number>;
 
@@ -178,20 +179,34 @@ export class WebServerFormatter {
 					message: page.error ?? 'Page scan failed',
 					retryable: page.retryable ?? false
 				});
+			} else if (page.rules?.some((rule) => rule.outcome === 'error')) {
+				errors.push({
+					scope: 'page',
+					scannerId,
+					pageId: page.pageId,
+					code: 'rule_evaluation_failed',
+					message: 'One or more rule checks failed to evaluate.',
+					retryable: false
+				});
 			}
 		}
 
 		const scannerStatus =
 			results.summary.pagesFailed === 0
-				? 'success'
+				? errors.length > 0
+					? 'partial'
+					: 'success'
 				: results.summary.pagesFailed >= results.pages.length
 					? 'failed'
 					: 'partial';
 
 		return {
-			version: '2.1.0',
+			version: '2.2.0',
 			meta: {
 				jobId: results.jobId,
+				...(results.context ? { scanContext: results.context } : {}),
+				profile: process.env.SCAN_PROFILE === 'staging' ? 'staging' : 'production',
+				policyVersion: 'indexing-v1',
 				scannedAt: results.startedAt,
 				completedAt: results.completedAt,
 				durationMs: results.durationMs,
@@ -218,7 +233,13 @@ export class WebServerFormatter {
 					startedAt: results.startedAt,
 					completedAt: results.completedAt,
 					durationMs: results.durationMs,
-					resultsPath: resultsPath(results.jobId, scannerId)
+					resultsPath: resultsPath(results.jobId, scannerId),
+					pages: results.pages.map((page) => ({
+						pageId: page.pageId,
+						status: page.success ? ('success' as const) : ('failed' as const),
+						...(page.finalUrl ? { finalUrl: page.finalUrl } : {}),
+						...(page.rules ? { rules: boundRuleEvaluations(page.rules) } : {})
+					}))
 				}
 			],
 			pages,

@@ -152,7 +152,7 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 			{/* Decision bar sticks to the bottom of the modal scroller: the question,
 			    the live result, and the actions stay adjacent while evidence scrolls. */}
 			<div className="vfy__verdictbar">
-				{verdict ? (
+				{verdict?.verdict ? (
 					<>
 						<span
 							className={`vfy__level-pill vfy__level-pill--${verdict.verdict === 'pass' ? 'pass' : 'fail'}`}

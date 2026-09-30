@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "react-router dev",
-    "build": "react-router build",
+    "build": "react-router build && bun run build:offline",
     "preview": "vite preview",
     "typecheck": "react-router typegen && tsc -b",
     "lint": "eslint . --max-warnings 0",
@@ -17,7 +17,8 @@
     "format": "prettier --write \"app/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"*.ts\" \"*.js\"",
     "format:check": "prettier --check \"app/**/*.{ts,tsx}\" \"e2e/**/*.ts\" \"*.ts\" \"*.js\"",
     "knip": "knip",
-    "find-dead-code": "node ../../devtools/scripts/check-knip.mjs clients/web"
+    "find-dead-code": "node ../../devtools/scripts/check-knip.mjs clients/web",
+    "build:offline": "vite build --config vite.offline.config.ts"
   },
   "dependencies": {
     "@react-router/node": "^8.3.0",

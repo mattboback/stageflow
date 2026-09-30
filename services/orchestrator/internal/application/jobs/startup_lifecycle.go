@@ -32,6 +32,10 @@ func (s *Service) CreateJob(ctx context.Context, payload *events.JobCreatedPaylo
 		InputPath: payload.InputPath,
 		URLs:      payload.URLs,
 		Config: models.JobConfig{
+			Profile:             payload.Config.Profile,
+			IdentityScope:       payload.Config.IdentityScope,
+			Verification:        payload.Config.Verification,
+			PagePaths:           payload.Config.PagePaths,
 			Modules:             payload.Config.Modules,
 			ScannerConfigs:      payload.Config.ScannerConfigs,
 			Screenshot:          payload.Config.Screenshot,

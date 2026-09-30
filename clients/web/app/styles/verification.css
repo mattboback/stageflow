@@ -1,0 +1,20 @@
+.verification-dialog {
+	width: min(48rem, calc(100vw - 2rem));
+	max-height: calc(100dvh - 2rem);
+	overflow: auto;
+	padding: 1.5rem;
+}
+
+.verification-dialog > p {
+	overflow-wrap: anywhere;
+}
+
+.verification-dialog textarea,
+.verification-dialog input {
+	max-width: 100%;
+}
+
+.verification-result {
+	padding: 1.25rem;
+	margin-bottom: 1.5rem;
+}

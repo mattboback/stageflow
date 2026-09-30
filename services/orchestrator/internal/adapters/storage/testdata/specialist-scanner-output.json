@@ -1,8 +1,10 @@
 {
   "seo": {
-    "version": "2.1.0",
+    "version": "2.2.0",
     "meta": {
       "jobId": "coverage-fixture",
+      "profile": "production",
+      "policyVersion": "indexing-v1",
       "scannedAt": "2026-09-30T00:00:00.000Z",
       "completedAt": "2026-09-30T00:00:00.000Z",
       "durationMs": 0,
@@ -36,11 +38,76 @@
           "minor": 1,
           "info": 1
         },
-        "toolVersion": "0.1.0",
+        "toolVersion": "0.2.0",
         "startedAt": "2026-09-30T00:00:00.000Z",
         "completedAt": "2026-09-30T00:00:00.000Z",
         "durationMs": 0,
-        "resultsPath": "coverage-fixture/seo/results.json"
+        "resultsPath": "coverage-fixture/seo/results.json",
+        "pages": [
+          {
+            "pageId": "fixture-page",
+            "status": "success",
+            "finalUrl": "about:blank",
+            "rules": [
+              {
+                "ruleId": "seo-missing-title",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-title-length",
+                "outcome": "inapplicable"
+              },
+              {
+                "ruleId": "seo-missing-description",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-description-length",
+                "outcome": "inapplicable"
+              },
+              {
+                "ruleId": "seo-missing-h1",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-multiple-h1",
+                "outcome": "inapplicable"
+              },
+              {
+                "ruleId": "seo-heading-hierarchy",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-images-missing-alt",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-missing-og-tags",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-missing-canonical",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-missing-viewport",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-missing-language",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-missing-structured-data",
+                "outcome": "fail"
+              },
+              {
+                "ruleId": "seo-thin-content",
+                "outcome": "fail"
+              }
+            ]
+          }
+        ]
       }
     ],
     "pages": [
@@ -279,9 +346,11 @@
     "errors": []
   },
   "link-checker": {
-    "version": "2.1.0",
+    "version": "2.2.0",
     "meta": {
       "jobId": "coverage-fixture",
+      "profile": "production",
+      "policyVersion": "indexing-v1",
       "scannedAt": "2026-09-30T00:00:00.000Z",
       "completedAt": "2026-09-30T00:00:00.000Z",
       "durationMs": 0,
@@ -315,11 +384,43 @@
           "minor": 0,
           "info": 0
         },
-        "toolVersion": "0.1.0",
+        "toolVersion": "0.2.0",
         "startedAt": "2026-09-30T00:00:00.000Z",
         "completedAt": "2026-09-30T00:00:00.000Z",
         "durationMs": 0,
-        "resultsPath": "coverage-fixture/link-checker/results.json"
+        "resultsPath": "coverage-fixture/link-checker/results.json",
+        "pages": [
+          {
+            "pageId": "fixture-page",
+            "status": "success",
+            "finalUrl": "about:blank",
+            "rules": [
+              {
+                "ruleId": "link-checker-broken",
+                "outcome": "pass"
+              },
+              {
+                "ruleId": "link-checker-unverified",
+                "outcome": "pass"
+              },
+              {
+                "ruleId": "link-checker-redirect-chains",
+                "outcome": "pass"
+              },
+              {
+                "ruleId": "link-checker-empty-links",
+                "outcome": "pass"
+              },
+              {
+                "ruleId": "link-checker-no-text-links",
+                "outcome": "fail",
+                "subjectIds": [
+                  "occ-v2-31f08b909aca4b3b"
+                ]
+              }
+            ]
+          }
+        ]
       }
     ],
     "pages": [

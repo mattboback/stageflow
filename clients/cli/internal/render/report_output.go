@@ -2,6 +2,7 @@ package render
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 )
 
 type Options struct {
+	GatePolicy     string
 	Format         Format
 	MaxIssues      int
 	MaxOccurrences int
@@ -29,6 +31,10 @@ func UnifiedReport(
 	doc report.UnifiedReportV2,
 	opts Options,
 ) error {
+	if opts.GatePolicy != "" && opts.GatePolicy != "raw" && opts.GatePolicy != "actionable" {
+		return errors.New("--gate-policy must be raw or actionable")
+	}
+
 	selectedIssues, filters, err := ValidatedIssueSelection(doc.Issues, opts)
 	if err != nil {
 		return err
@@ -41,7 +47,12 @@ func UnifiedReport(
 		return renderErr
 	}
 
-	fail, err := ShouldFailForSeverity(selectedIssues, opts.FailSeverity)
+	gateIssues := selectedIssues
+	if opts.GatePolicy == "actionable" {
+		gateIssues = ActionableIssues(doc, doc.Issues)
+	}
+
+	fail, err := ShouldFailForSeverity(gateIssues, opts.FailSeverity)
 	if err != nil {
 		return err
 	}
@@ -136,6 +147,19 @@ func buildSummaryLines(
 
 	if status.State != apiclient.JobStateDone {
 		lines = append(lines, "State: "+status.State)
+	}
+
+	if doc.Assessment != nil {
+		lines = append(
+			lines,
+			fmt.Sprintf(
+				"Profile: %s · %d actionable · %d expected · %d need review",
+				doc.Assessment.Profile,
+				doc.Assessment.Actionable,
+				doc.Assessment.Expected,
+				doc.Assessment.NeedsReview,
+			),
+		)
 	}
 
 	urls := collectReportURLs(doc)
@@ -390,4 +414,24 @@ func infoCount(counts report.SeverityCounts) int {
 	}
 
 	return *counts.Info
+}
+
+func ActionableIssues(doc report.UnifiedReportV2, issues []report.IssueDetail) []report.IssueDetail {
+	selected := make([]report.IssueDetail, 0, len(issues))
+	for _, issue := range issues {
+		if doc.Assessment != nil {
+			if value, ok := doc.Assessment.DispositionByIssue[issue.Id]; ok &&
+				value != report.FindingDispositionActionable {
+				continue
+			}
+		}
+
+		if incomplete, ok := issue.ScannerData["axeIncomplete"].(bool); ok && incomplete {
+			continue
+		}
+
+		selected = append(selected, issue)
+	}
+
+	return selected
 }

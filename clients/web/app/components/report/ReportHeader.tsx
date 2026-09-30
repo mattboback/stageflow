@@ -33,7 +33,11 @@ function formatScannedAt(iso: string | undefined): string | null {
 }
 
 export function ReportHeader({ report }: Props) {
-	const score = typeof report.summary.score === 'number' ? Math.round(report.summary.score) : null;
+	const selectedScore = report.assessment?.score ?? report.summary.score;
+	const score =
+		report.meta.scanContext?.purpose !== 'verification' && typeof selectedScore === 'number'
+			? Math.round(selectedScore)
+			: null;
 	const band = scoreBandFor(score);
 	const totals = report.summary.bySeverity;
 	const critical = totals.critical ?? 0;
@@ -60,7 +64,7 @@ export function ReportHeader({ report }: Props) {
 		}
 	})();
 
-	const grade = report.summary.scoreGrade ?? band?.label ?? null;
+	const grade = report.assessment?.scoreGrade ?? report.summary.scoreGrade ?? band?.label ?? null;
 	const missing = incompleteScanners(report.scanners).map((id) =>
 		scannerLabel(id, report.scanners.find((scanner) => scanner.id === id)?.name)
 	);
@@ -71,7 +75,11 @@ export function ReportHeader({ report }: Props) {
 				{score !== null && missing.length === 0 && (
 					<Gauge
 						value={score}
-						caption={grade ? `${grade} · Site score` : 'Site score'}
+						caption={
+							grade
+								? `${grade} · ${report.assessment ? 'Automated score' : 'Site score'}`
+								: 'Site score'
+						}
 						size={92}
 						valFontSize="1.7rem"
 					/>
@@ -84,6 +92,14 @@ export function ReportHeader({ report }: Props) {
 						</a>
 					)}
 					<div className="rhead__meta">
+						{report.meta.profile && (
+							<Pill variant="done">
+								{report.meta.profile === 'staging' ? 'Staging profile' : 'Production profile'}
+							</Pill>
+						)}
+						{report.meta.scanContext?.purpose === 'verification' && (
+							<Pill variant="error">Targeted verification</Pill>
+						)}
 						{missing.length > 0 ? (
 							<Pill variant="error">Partial</Pill>
 						) : (
@@ -106,7 +122,14 @@ export function ReportHeader({ report }: Props) {
 					</div>
 					{score !== null && missing.length === 0 && (
 						<p className="rhead__score-explanation">
-							Site score weights confirmed findings by severity; human checks need separate review.
+							Automated score weights actionable findings by severity; expected staging observations
+							and human checks need separate review.
+						</p>
+					)}
+					{report.assessment && (
+						<p>
+							{report.assessment.actionable} actionable · {report.assessment.expected} expected ·{' '}
+							{report.assessment.needsReview} need human review
 						</p>
 					)}
 					{missing.length > 0 && (

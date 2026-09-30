@@ -4,7 +4,14 @@
   "title": "UnifiedReportV2",
   "description": "Unified accessibility and quality scan report schema aggregating results from multiple scanners",
   "type": "object",
-  "required": ["version", "meta", "summary", "scanners", "pages", "issues"],
+  "required": [
+    "version",
+    "meta",
+    "summary",
+    "scanners",
+    "pages",
+    "issues"
+  ],
   "additionalProperties": false,
   "properties": {
     "version": {
@@ -12,45 +19,90 @@
       "pattern": "^2\\.\\d+\\.\\d+$",
       "description": "Schema version (semver format, major version 2)"
     },
-    "meta": { "$ref": "#/definitions/ReportMeta" },
-    "summary": { "$ref": "#/definitions/ReportSummary" },
+    "meta": {
+      "$ref": "#/definitions/ReportMeta"
+    },
+    "summary": {
+      "$ref": "#/definitions/ReportSummary"
+    },
     "scanners": {
       "type": "array",
-      "items": { "$ref": "#/definitions/ScannerSummary" }
+      "items": {
+        "$ref": "#/definitions/ScannerSummary"
+      }
     },
     "pages": {
       "type": "array",
-      "items": { "$ref": "#/definitions/PageSummary" }
+      "items": {
+        "$ref": "#/definitions/PageSummary"
+      }
     },
     "issues": {
       "type": "array",
-      "items": { "$ref": "#/definitions/IssueDetail" }
+      "items": {
+        "$ref": "#/definitions/IssueDetail"
+      }
     },
     "artifacts": {
       "type": "array",
-      "items": { "$ref": "#/definitions/ReportArtifact" }
+      "items": {
+        "$ref": "#/definitions/ReportArtifact"
+      }
     },
     "errors": {
       "type": "array",
-      "items": { "$ref": "#/definitions/ReportError" }
+      "items": {
+        "$ref": "#/definitions/ReportError"
+      }
     },
     "manualChecks": {
       "description": "Checklist items a scanner cannot test (Lighthouse manual audits). They are the same for every site, so they are listed once here and never counted as issues.",
       "type": "array",
-      "items": { "$ref": "#/definitions/ManualCheck" }
+      "items": {
+        "$ref": "#/definitions/ManualCheck"
+      }
+    },
+    "assessment": {
+      "$ref": "#/definitions/ReportAssessment"
     }
   },
   "definitions": {
     "ReportMeta": {
       "type": "object",
-      "required": ["jobId"],
+      "required": [
+        "jobId"
+      ],
       "additionalProperties": false,
       "properties": {
-        "jobId": { "type": "string", "minLength": 1 },
-        "baseUrl": { "type": "string", "format": "uri" },
-        "scannedAt": { "type": "string", "format": "date-time" },
-        "completedAt": { "type": "string", "format": "date-time" },
-        "durationMs": { "type": "number", "minimum": 0 }
+        "jobId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "baseUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "scannedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durationMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "profile": {
+          "$ref": "#/definitions/ScanProfile"
+        },
+        "policyVersion": {
+          "type": "string"
+        },
+        "scanContext": {
+          "$ref": "#/definitions/ScanContext"
+        }
       }
     },
     "ReportSummary": {
@@ -63,37 +115,84 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
-        "scoreGrade": { "type": "string", "pattern": "^[A-F][+-]?$" },
-        "totalIssues": { "type": "integer", "minimum": 0 },
-        "bySeverity": { "$ref": "#/definitions/SeverityCounts" },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scoreGrade": {
+          "type": "string",
+          "pattern": "^[A-F][+-]?$"
+        },
+        "totalIssues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bySeverity": {
+          "$ref": "#/definitions/SeverityCounts"
+        },
         "byScanner": {
           "type": "object",
-          "additionalProperties": { "type": "integer", "minimum": 0 }
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
         },
-        "pagesScanned": { "type": "integer", "minimum": 0 },
-        "pagesWithIssues": { "type": "integer", "minimum": 0 },
+        "pagesScanned": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pagesWithIssues": {
+          "type": "integer",
+          "minimum": 0
+        },
         "lighthouseCategories": {
           "type": "array",
-          "items": { "$ref": "#/definitions/LighthouseCategorySummary" }
+          "items": {
+            "$ref": "#/definitions/LighthouseCategorySummary"
+          }
         }
       }
     },
     "SeverityCounts": {
       "type": "object",
-      "required": ["critical", "serious", "moderate", "minor"],
+      "required": [
+        "critical",
+        "serious",
+        "moderate",
+        "minor"
+      ],
       "additionalProperties": false,
       "properties": {
-        "critical": { "type": "integer", "minimum": 0 },
-        "serious": { "type": "integer", "minimum": 0 },
-        "moderate": { "type": "integer", "minimum": 0 },
-        "minor": { "type": "integer", "minimum": 0 },
-        "info": { "type": "integer", "minimum": 0 }
+        "critical": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serious": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "moderate": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minor": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "info": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "LighthouseCategorySummary": {
       "type": "object",
-      "required": ["id", "title", "avgScore"],
+      "required": [
+        "id",
+        "title",
+        "avgScore"
+      ],
       "additionalProperties": false,
       "properties": {
         "id": {
@@ -106,60 +205,155 @@
             "pwa"
           ]
         },
-        "title": { "type": "string", "minLength": 1 },
-        "avgScore": { "type": "number", "minimum": 0, "maximum": 1 }
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "avgScore": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "ScannerSummary": {
       "type": "object",
-      "required": ["id", "status"],
+      "required": [
+        "id",
+        "status"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "name": { "type": "string" },
-        "status": { "$ref": "#/definitions/ScannerStatus" },
-        "error": { "type": "string" },
-        "issueCount": { "type": "integer", "minimum": 0 },
-        "severity": { "$ref": "#/definitions/SeverityCounts" },
-        "toolVersion": { "type": "string" },
-        "startedAt": { "type": "string", "format": "date-time" },
-        "completedAt": { "type": "string", "format": "date-time" },
-        "durationMs": { "type": "number", "minimum": 0 },
-        "resultsPath": { "type": "string" },
-        "reportPath": { "type": "string" }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/ScannerStatus"
+        },
+        "error": {
+          "type": "string"
+        },
+        "issueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "severity": {
+          "$ref": "#/definitions/SeverityCounts"
+        },
+        "toolVersion": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "durationMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "resultsPath": {
+          "type": "string"
+        },
+        "reportPath": {
+          "type": "string"
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ScannerPageCoverage"
+          }
+        }
       }
     },
     "ScannerStatus": {
       "type": "string",
-      "enum": ["success", "partial", "failed", "skipped"]
+      "enum": [
+        "success",
+        "partial",
+        "failed",
+        "skipped"
+      ]
     },
     "PageSummary": {
       "type": "object",
-      "required": ["id", "url", "issueCount", "durationMs"],
+      "required": [
+        "id",
+        "url",
+        "issueCount",
+        "durationMs"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "url": { "type": "string", "format": "uri" },
-        "path": { "type": "string" },
-        "issueCount": { "type": "integer", "minimum": 0 },
-        "bySeverity": { "$ref": "#/definitions/SeverityCounts" },
-        "durationMs": { "type": "number", "minimum": 0 },
-        "startedAt": { "type": "string", "format": "date-time" },
-        "finishedAt": { "type": "string", "format": "date-time" },
-        "pageOverview": { "$ref": "#/definitions/PageOverview" }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "path": {
+          "type": "string"
+        },
+        "issueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bySeverity": {
+          "$ref": "#/definitions/SeverityCounts"
+        },
+        "durationMs": {
+          "type": "number",
+          "minimum": 0
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "pageOverview": {
+          "$ref": "#/definitions/PageOverview"
+        }
       }
     },
     "PageOverview": {
       "type": "object",
-      "required": ["screenshotFilename", "pageWidth", "pageHeight", "elements"],
+      "required": [
+        "screenshotFilename",
+        "pageWidth",
+        "pageHeight",
+        "elements"
+      ],
       "additionalProperties": false,
       "properties": {
-        "screenshotFilename": { "type": "string", "minLength": 1 },
-        "pageWidth": { "type": "number", "minimum": 0 },
-        "pageHeight": { "type": "number", "minimum": 0 },
+        "screenshotFilename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pageWidth": {
+          "type": "number",
+          "minimum": 0
+        },
+        "pageHeight": {
+          "type": "number",
+          "minimum": 0
+        },
         "elements": {
           "type": "array",
-          "items": { "$ref": "#/definitions/PageOverviewElement" }
+          "items": {
+            "$ref": "#/definitions/PageOverviewElement"
+          }
         }
       }
     },
@@ -182,19 +376,60 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "issueId": { "type": "string", "minLength": 1 },
-        "ruleId": { "type": "string", "minLength": 1 },
-        "severity": { "$ref": "#/definitions/IssueSeverity" },
-        "selector": { "type": "string" },
-        "nodeIndex": { "type": "integer", "minimum": 0 },
-        "xPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "yPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "widthPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "heightPercent": { "type": "number", "minimum": 0, "maximum": 100 },
-        "x": { "type": "number", "minimum": 0 },
-        "y": { "type": "number", "minimum": 0 },
-        "width": { "type": "number", "minimum": 0 },
-        "height": { "type": "number", "minimum": 0 }
+        "issueId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ruleId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "$ref": "#/definitions/IssueSeverity"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "nodeIndex": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "xPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "yPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "widthPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "heightPercent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "x": {
+          "type": "number",
+          "minimum": 0
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
     "IssueDetail": {
@@ -212,38 +447,100 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "scanner": { "type": "string", "minLength": 1 },
-        "ruleId": { "type": "string", "minLength": 1 },
-        "severity": { "$ref": "#/definitions/IssueSeverity" },
-        "severityRaw": { "type": "string" },
-        "title": { "type": "string", "minLength": 1 },
-        "description": { "type": "string", "minLength": 1 },
-        "helpUrl": { "type": "string", "format": "uri" },
-        "wcagTags": { "type": "array", "items": { "type": "string" } },
-        "pageId": { "type": "string", "minLength": 1 },
-        "pageUrl": { "type": "string", "format": "uri" },
-        "elementCount": { "type": "integer", "minimum": 0 },
-        "elementsTruncated": { "type": "boolean" },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scanner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ruleId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "$ref": "#/definitions/IssueSeverity"
+        },
+        "severityRaw": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "helpUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "wcagTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pageUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "elementCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "elementsTruncated": {
+          "type": "boolean"
+        },
         "occurrences": {
           "type": "array",
-          "items": { "$ref": "#/definitions/IssueOccurrence" }
+          "items": {
+            "$ref": "#/definitions/IssueOccurrence"
+          }
         },
-        "category": { "type": "string" },
-        "friendlyNode": { "$ref": "#/definitions/FriendlyNodeInfo" },
-        "locationInfo": { "$ref": "#/definitions/LocationInfo" },
-        "userImpact": { "$ref": "#/definitions/UserImpact" },
-        "howToFix": { "type": "string" },
-        "scannerData": { "type": "object", "additionalProperties": true }
+        "category": {
+          "type": "string"
+        },
+        "friendlyNode": {
+          "$ref": "#/definitions/FriendlyNodeInfo"
+        },
+        "locationInfo": {
+          "$ref": "#/definitions/LocationInfo"
+        },
+        "userImpact": {
+          "$ref": "#/definitions/UserImpact"
+        },
+        "howToFix": {
+          "type": "string"
+        },
+        "scannerData": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     },
     "IssueOccurrence": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "target": { "type": "array", "items": { "type": "string" } },
-        "selector": { "type": "string" },
-        "html": { "type": "string" },
+        "target": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selector": {
+          "type": "string"
+        },
+        "html": {
+          "type": "string"
+        },
         "contextHtml": {
           "type": "string",
           "description": "HTML snippet with ancestor chain and siblings for debugging context (bounded size)"
@@ -252,60 +549,127 @@
           "type": "string",
           "description": "Breadcrumb path of ancestor elements (e.g., 'html > body > main > div.container')"
         },
-        "failureSummary": { "type": "string" },
-        "textSnippet": { "type": "string" },
-        "boundingBox": { "$ref": "#/definitions/BoundingBox" },
-        "elementId": { "type": "string" },
-        "pageId": { "type": "string" },
-        "label": { "type": "string" },
-        "artifactIds": { "type": "array", "items": { "type": "string" } }
+        "failureSummary": {
+          "type": "string"
+        },
+        "textSnippet": {
+          "type": "string"
+        },
+        "boundingBox": {
+          "$ref": "#/definitions/BoundingBox"
+        },
+        "elementId": {
+          "type": "string"
+        },
+        "pageId": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "artifactIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "BoundingBox": {
       "type": "object",
-      "required": ["x", "y", "width", "height"],
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
       "additionalProperties": false,
       "properties": {
-        "x": { "type": "number" },
-        "y": { "type": "number" },
-        "width": { "type": "number", "minimum": 0 },
-        "height": { "type": "number", "minimum": 0 }
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     },
     "FriendlyNodeInfo": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "label": { "type": "string" },
-        "tagName": { "type": "string" },
-        "role": { "type": "string" },
-        "name": { "type": "string" },
-        "region": { "type": "string" },
-        "textSnippet": { "type": "string" },
-        "selector": { "type": "string" }
+        "label": {
+          "type": "string"
+        },
+        "tagName": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "textSnippet": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        }
       }
     },
     "LocationInfo": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "scrollY": { "type": "number", "minimum": 0 },
-        "viewportHeight": { "type": "number", "minimum": 0 },
-        "docHeight": { "type": "number", "minimum": 0 },
-        "position": { "type": "number", "minimum": 0, "maximum": 1 }
+        "scrollY": {
+          "type": "number",
+          "minimum": 0
+        },
+        "viewportHeight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "docHeight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "position": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     },
     "UserImpact": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "statement": { "type": "string" },
+        "statement": {
+          "type": "string"
+        },
         "affectedGroups": {
           "type": "array",
-          "items": { "$ref": "#/definitions/UserGroup" }
+          "items": {
+            "$ref": "#/definitions/UserGroup"
+          }
         },
-        "severity": { "$ref": "#/definitions/UserImpactSeverity" },
-        "userStory": { "type": "string" }
+        "severity": {
+          "$ref": "#/definitions/UserImpactSeverity"
+        },
+        "userStory": {
+          "type": "string"
+        }
       }
     },
     "UserGroup": {
@@ -322,53 +686,335 @@
     },
     "UserImpactSeverity": {
       "type": "string",
-      "enum": ["blocking", "degraded", "inconvenient"]
+      "enum": [
+        "blocking",
+        "degraded",
+        "inconvenient"
+      ]
     },
     "IssueSeverity": {
       "type": "string",
-      "enum": ["critical", "serious", "moderate", "minor", "info"]
+      "enum": [
+        "critical",
+        "serious",
+        "moderate",
+        "minor",
+        "info"
+      ]
     },
     "ReportArtifact": {
       "type": "object",
-      "required": ["id", "type"],
+      "required": [
+        "id",
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "type": { "type": "string", "minLength": 1 },
-        "path": { "type": "string" },
-        "mime": { "type": "string" },
-        "dataUri": { "type": "string" }
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string"
+        },
+        "mime": {
+          "type": "string"
+        },
+        "dataUri": {
+          "type": "string"
+        }
       }
     },
     "ManualCheck": {
       "type": "object",
-      "required": ["scanner", "ruleId", "title", "pageCount"],
+      "required": [
+        "scanner",
+        "ruleId",
+        "title",
+        "pageCount"
+      ],
       "additionalProperties": false,
       "properties": {
-        "scanner": { "type": "string", "minLength": 1 },
-        "ruleId": { "type": "string", "minLength": 1 },
-        "title": { "type": "string", "minLength": 1 },
-        "description": { "type": "string" },
-        "helpUrl": { "type": "string" },
-        "pageCount": { "type": "integer", "minimum": 1 }
+        "scanner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ruleId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "helpUrl": {
+          "type": "string"
+        },
+        "pageCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pageIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "ReportError": {
       "type": "object",
-      "required": ["scope", "code", "message", "retryable"],
+      "required": [
+        "scope",
+        "code",
+        "message",
+        "retryable"
+      ],
       "additionalProperties": false,
       "properties": {
-        "scope": { "$ref": "#/definitions/ErrorScope" },
-        "scannerId": { "type": "string" },
-        "pageId": { "type": "string" },
-        "code": { "type": "string", "minLength": 1 },
-        "message": { "type": "string", "minLength": 1 },
-        "retryable": { "type": "boolean" }
+        "scope": {
+          "$ref": "#/definitions/ErrorScope"
+        },
+        "scannerId": {
+          "type": "string"
+        },
+        "pageId": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retryable": {
+          "type": "boolean"
+        }
       }
     },
     "ErrorScope": {
       "type": "string",
-      "enum": ["scanner", "page", "global"]
+      "enum": [
+        "scanner",
+        "page",
+        "global"
+      ]
+    },
+    "ScanProfile": {
+      "type": "string",
+      "enum": [
+        "production",
+        "staging"
+      ]
+    },
+    "FindingDisposition": {
+      "type": "string",
+      "enum": [
+        "actionable",
+        "expected",
+        "needs-review"
+      ]
+    },
+    "ScanContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expectedPages",
+        "identityScope",
+        "scannerConfigFingerprints",
+        "purpose",
+        "authenticated",
+        "inputType"
+      ],
+      "properties": {
+        "expectedPages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "identityScope": {
+          "type": "string",
+          "enum": [
+            "path",
+            "origin"
+          ]
+        },
+        "scannerConfigFingerprints": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "width",
+            "height"
+          ],
+          "properties": {
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "full",
+            "verification"
+          ]
+        },
+        "authenticated": {
+          "type": "boolean"
+        },
+        "inputType": {
+          "type": "string",
+          "enum": [
+            "urls",
+            "zip"
+          ]
+        },
+        "scannerConfigurations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "pageConfigFingerprints": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "verificationEligiblePages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "RuleEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ruleId",
+        "outcome"
+      ],
+      "properties": {
+        "ruleId": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail",
+            "incomplete",
+            "inapplicable",
+            "error"
+          ]
+        },
+        "subjectIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ScannerPageCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pageId",
+        "status"
+      ],
+      "properties": {
+        "pageId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "success",
+            "failed",
+            "skipped"
+          ]
+        },
+        "finalUrl": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleEvaluation"
+          }
+        }
+      }
+    },
+    "ReportAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "policyVersion",
+        "actionable",
+        "expected",
+        "needsReview",
+        "dispositionByIssue"
+      ],
+      "properties": {
+        "profile": {
+          "$ref": "#/definitions/ScanProfile"
+        },
+        "policyVersion": {
+          "type": "string"
+        },
+        "actionable": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "needsReview": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "dispositionByIssue": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FindingDisposition"
+          }
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "scoreGrade": {
+          "type": "string"
+        }
+      }
     }
   }
 }

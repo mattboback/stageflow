@@ -1,3 +1,4 @@
+import { scanIdentityIncludesOrigin } from './scan-context';
 /**
  * Page Iterator
  *
@@ -9,7 +10,7 @@ import type { BrowserContext, Page } from 'playwright';
 import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
-import { hasMultipleOrigins, stablePageId } from './finding-identity';
+import { stablePageId } from './finding-identity';
 
 import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
 import { createLogger } from '../utils/logger';
@@ -90,7 +91,7 @@ export class PageIterator {
 			this.logger.info('Creating provenance from SCAN_URLS environment variable');
 
 			const urls = parseScanUrls(scanUrls).map(normalizeUrl);
-			const includeOrigin = hasMultipleOrigins(urls);
+			const includeOrigin = scanIdentityIncludesOrigin(urls);
 
 			const provenance: Provenance = {
 				version: '1.0.0',
@@ -358,10 +359,27 @@ export class PageIterator {
 	}
 
 	private normalizeProvenance(provenance: Provenance): Provenance {
-		const includeOrigin = hasMultipleOrigins(
+		const includeOrigin = scanIdentityIncludesOrigin(
 			provenance.pages.map((page) => this.resolvePageUrl(provenance.base_url, page))
 		);
-		const normalizedPages = provenance.pages.map((page) => {
+		const requestedPaths: unknown = process.env.SCAN_PAGE_PATHS
+			? JSON.parse(process.env.SCAN_PAGE_PATHS)
+			: null;
+		if (
+			requestedPaths !== null &&
+			(!Array.isArray(requestedPaths) || requestedPaths.some((item) => typeof item !== 'string'))
+		) {
+			throw new Error('Invalid SCAN_PAGE_PATHS');
+		}
+		const selectedPages = Array.isArray(requestedPaths)
+			? provenance.pages.filter((page) =>
+					requestedPaths.includes(new URL(this.resolvePageUrl(provenance.base_url, page)).pathname)
+				)
+			: provenance.pages;
+		if (selectedPages.length === 0) {
+			throw new Error('No requested pages exist in this fresh build');
+		}
+		const normalizedPages = selectedPages.map((page) => {
 			const { wait_for: _pageWaitFor, ...pageWithoutWaitFor } = page;
 			const waitFor = page.wait_for ?? provenance.default_wait_for;
 
@@ -477,6 +495,15 @@ export class PageIterator {
 				};
 
 				result = await scanCallback(scanContext);
+				const navigationStatus = this.browserManager.getNavigationStatus(page);
+				if (navigationStatus !== undefined && navigationStatus >= 400) {
+					result.success = false;
+					result.error = `The intended page returned HTTP ${navigationStatus}.`;
+					result.retryable = false;
+					if (result.rules) {
+						result.rules = result.rules.map((rule) => ({ ...rule, outcome: 'error' }));
+					}
+				}
 				if (authWallIssue) {
 					result.issues = [...result.issues, authWallIssue];
 				}

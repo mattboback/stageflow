@@ -1,3 +1,15 @@
+import { parsePortableAudit } from './portable-audit';
+import {
+	createReviewVerdictStore,
+	mergeReviewChanges,
+	type ReviewVerdictStore
+} from './report/review-verdict-store';
+import {
+	normalizeReviewVerdicts,
+	REVIEW_VERDICTS_STORAGE_KEY,
+	LEGACY_CONTRAST_VERDICTS_STORAGE_KEY,
+	type ReviewVerdictsByJob
+} from './report/review-verdict';
 import {
 	buildLocalProjectExport,
 	parseLocalProjectExport,
@@ -6,6 +18,7 @@ import {
 import {
 	LOCAL_PROJECT_SCHEMA_VERSION,
 	sanitizeProjectConfiguration,
+	fingerprintProjectConfiguration,
 	type LocalBaseline,
 	type LocalProject,
 	type LocalProjectConfiguration,
@@ -13,10 +26,11 @@ import {
 } from './projects';
 
 const DATABASE_NAME = 'stageflow-local-projects';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const PROJECTS_STORE = 'projects';
 const BASELINES_STORE = 'baselines';
-const RUNS_STORE = 'runs';
+const RUNS_STORE = 'projectRuns';
+const REVIEWS_STORE = 'reviews';
 const MAX_RECENT_RUNS = 10;
 
 export class LocalProjectStoreUnavailableError extends Error {
@@ -60,9 +74,24 @@ async function openDatabase(): Promise<IDBDatabase> {
 			database.createObjectStore(BASELINES_STORE, { keyPath: 'projectId' });
 		}
 		if (!database.objectStoreNames.contains(RUNS_STORE)) {
-			const runs = database.createObjectStore(RUNS_STORE, { keyPath: 'jobId' });
+			const runs = database.createObjectStore(RUNS_STORE, { keyPath: ['projectId', 'jobId'] });
+			runs.createIndex('jobId', 'jobId');
 			runs.createIndex('projectId', 'projectId');
 			runs.createIndex('createdAt', 'createdAt');
+		}
+		if (!database.objectStoreNames.contains(REVIEWS_STORE))
+			database.createObjectStore(REVIEWS_STORE);
+		if (database.objectStoreNames.contains('runs') && request.transaction) {
+			const transaction = request.transaction;
+			const cursor = transaction.objectStore('runs').openCursor();
+			cursor.onsuccess = () => {
+				if (!cursor.result) {
+					database.deleteObjectStore('runs');
+					return;
+				}
+				transaction.objectStore(RUNS_STORE).put(cursor.result.value);
+				cursor.result.continue();
+			};
 		}
 	};
 	return requestResult(request);
@@ -155,11 +184,15 @@ export async function saveLocalProject(project: LocalProject): Promise<LocalProj
 export async function deleteLocalProject(projectId: string): Promise<void> {
 	await withDatabase(async (database) => {
 		const transaction = database.transaction(
-			[PROJECTS_STORE, BASELINES_STORE, RUNS_STORE],
+			[PROJECTS_STORE, BASELINES_STORE, RUNS_STORE, REVIEWS_STORE],
 			'readwrite'
 		);
 		transaction.objectStore(PROJECTS_STORE).delete(projectId);
 		transaction.objectStore(BASELINES_STORE).delete(projectId);
+		transaction.objectStore(REVIEWS_STORE).delete(projectId);
+		projectReviewStores.delete(projectId);
+		projectReviewSubscriptions.get(projectId)?.();
+		projectReviewSubscriptions.delete(projectId);
 
 		const runIndex = transaction.objectStore(RUNS_STORE).index('projectId');
 		const cursorRequest = runIndex.openKeyCursor(IDBKeyRange.only(projectId));
@@ -194,11 +227,15 @@ export async function saveLocalBaseline(baseline: LocalBaseline): Promise<void> 
 	});
 }
 
-export async function getLocalRun(jobId: string): Promise<LocalRun | null> {
+export async function getLocalRun(jobId: string, projectId?: string): Promise<LocalRun | null> {
 	return withDatabase(async (database) => {
 		const transaction = database.transaction(RUNS_STORE, 'readonly');
 		const run = await requestResult(
-			transaction.objectStore(RUNS_STORE).get(jobId) as IDBRequest<LocalRun | undefined>
+			(projectId
+				? transaction.objectStore(RUNS_STORE).get([projectId, jobId])
+				: transaction.objectStore(RUNS_STORE).index('jobId').get(jobId)) as IDBRequest<
+				LocalRun | undefined
+			>
 		);
 		await transactionComplete(transaction);
 		return run ?? null;
@@ -231,7 +268,7 @@ export async function saveLocalRun(run: LocalRun): Promise<void> {
 			.filter((candidate) => candidate.jobId !== run.jobId)
 			.sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 			.slice(MAX_RECENT_RUNS - 1)
-			.forEach((candidate) => runStore.delete(candidate.jobId));
+			.forEach((candidate) => runStore.delete([candidate.projectId, candidate.jobId]));
 
 		const projectStore = transaction.objectStore(PROJECTS_STORE);
 		const project = await requestResult(
@@ -250,24 +287,85 @@ export async function exportLocalProject(projectId: string): Promise<LocalProjec
 		throw new LocalProjectStoreUnavailableError('That local project is no longer in this browser.');
 	}
 
-	const [baseline, runs] = await Promise.all([
+	const [baseline, runs, reviews] = await Promise.all([
 		getLocalBaseline(projectId),
-		listLocalProjectRuns(projectId)
+		listLocalProjectRuns(projectId),
+		getLocalProjectReviews(projectId)
 	]);
-	return buildLocalProjectExport(project, baseline, runs);
+	return buildLocalProjectExport(project, baseline, runs, reviews);
 }
 
 export async function importLocalProject(value: unknown): Promise<LocalProject> {
-	const parsed = parseLocalProjectExport(value);
+	let parsed = parseLocalProjectExport(value);
+	const audit = parsed ? null : parsePortableAudit(value);
+	if (audit) {
+		if (audit.baseline?.meta.scanContext?.purpose === 'verification')
+			throw new LocalProjectStoreUnavailableError(
+				'Targeted verification cannot become a complete baseline.'
+			);
+		const now = new Date().toISOString();
+		const configuration = audit.configuration ?? {
+			urls: audit.report.pages.map((page) => page.url),
+			scanners: audit.report.scanners.map((scanner) => ({ id: scanner.id, enabled: true })),
+			browser: 'chromium' as const,
+			highlightStyle: 'solid' as const,
+			profile: audit.report.meta.profile ?? 'production'
+		};
+		const project: LocalProject = {
+			id: 'import',
+			schemaVersion: LOCAL_PROJECT_SCHEMA_VERSION,
+			name: `Imported audit: ${audit.report.meta.baseUrl ?? audit.jobId}`,
+			configuration,
+			createdAt: now,
+			updatedAt: now
+		};
+		const configFingerprint = await fingerprintProjectConfiguration(configuration);
+		const importedReports =
+			audit.baseline && audit.baseline.meta.jobId !== audit.report.meta.jobId
+				? [audit.baseline, audit.report]
+				: [audit.report];
+		const runs: LocalRun[] = importedReports.map((report) => ({
+			projectId: project.id,
+			jobId: report.meta.jobId,
+			configFingerprint,
+			status: 'complete',
+			createdAt: report.meta.scannedAt ?? now,
+			report,
+			archived: true,
+			...(report === audit.report
+				? {
+						screenshots: audit.screenshots,
+						...(audit.verification?.jobId === report.meta.jobId
+							? { verification: audit.verification }
+							: {})
+					}
+				: {})
+		}));
+		parsed = buildLocalProjectExport(
+			project,
+			audit.baseline
+				? {
+						projectId: project.id,
+						jobId: audit.baseline.meta.jobId,
+						configFingerprint,
+						report: audit.baseline,
+						createdAt: now
+					}
+				: null,
+			runs,
+			audit.reviews
+		);
+	}
 	if (!parsed) {
 		throw new LocalProjectStoreUnavailableError(
-			'That file is not a StageFlow local project export.'
+			'That file is not a StageFlow project or portable audit JSON.'
 		);
 	}
 
 	const now = new Date().toISOString();
 	const project: LocalProject = {
 		...parsed.project,
+		id: newProjectId(),
 		schemaVersion: LOCAL_PROJECT_SCHEMA_VERSION,
 		configuration: sanitizeProjectConfiguration(parsed.project.configuration),
 		updatedAt: now
@@ -275,32 +373,164 @@ export async function importLocalProject(value: unknown): Promise<LocalProject> 
 
 	await withDatabase(async (database) => {
 		const transaction = database.transaction(
-			[PROJECTS_STORE, BASELINES_STORE, RUNS_STORE],
+			[PROJECTS_STORE, BASELINES_STORE, RUNS_STORE, REVIEWS_STORE],
 			'readwrite'
 		);
-		// Importing replaces the project: clear its old baseline and runs first,
-		// and write the imported ones only after the run cursor has finished.
+		// A fresh project ID preserves existing projects and their run history.
+		transaction.objectStore(REVIEWS_STORE).put(parsed.reviews, project.id);
 		const baselines = transaction.objectStore(BASELINES_STORE);
 		const runs = transaction.objectStore(RUNS_STORE);
 		transaction.objectStore(PROJECTS_STORE).put(project);
-		baselines.delete(project.id);
-		const cursorRequest = runs.index('projectId').openKeyCursor(IDBKeyRange.only(project.id));
-		cursorRequest.onsuccess = () => {
-			const cursor = cursorRequest.result;
-			if (cursor) {
-				runs.delete(cursor.primaryKey);
-				cursor.continue();
-				return;
-			}
-			if (parsed.baseline) {
-				baselines.put({ ...parsed.baseline, projectId: project.id });
-			}
-			for (const run of parsed.runs) {
-				runs.put({ ...run, projectId: project.id });
-			}
-		};
+		if (parsed.baseline) baselines.put({ ...parsed.baseline, projectId: project.id });
+		for (const run of parsed.runs) runs.put({ ...run, projectId: project.id, archived: true });
 		await transactionComplete(transaction);
 	});
 
 	return project;
+}
+
+export async function getLocalProjectReviews(projectId: string): Promise<ReviewVerdictsByJob> {
+	const cached = projectReviewStores.get(projectId);
+	if (cached) return cached.getSnapshot();
+	return readProjectReviewsFromDatabase(projectId);
+}
+
+async function readProjectReviewsFromDatabase(projectId: string): Promise<ReviewVerdictsByJob> {
+	return withDatabase(async (database) => {
+		const transaction = database.transaction(REVIEWS_STORE, 'readonly');
+		const value = await requestResult(
+			transaction.objectStore(REVIEWS_STORE).get(projectId) as IDBRequest<unknown>
+		);
+		await transactionComplete(transaction);
+		return normalizeReviewVerdicts(value);
+	});
+}
+
+const projectReviewStores = new Map<string, ReviewVerdictStore>();
+const projectReviewSubscriptions = new Map<string, () => void>();
+let reviewBroadcast: BroadcastChannel | null | undefined;
+function getReviewBroadcast(): BroadcastChannel | null {
+	if (reviewBroadcast !== undefined) return reviewBroadcast;
+	try {
+		reviewBroadcast =
+			typeof window !== 'undefined' && typeof window.BroadcastChannel === 'function'
+				? new window.BroadcastChannel('stageflow-project-reviews')
+				: null;
+	} catch {
+		reviewBroadcast = null;
+	}
+	return reviewBroadcast;
+}
+export async function loadProjectReviewStore(
+	projectId: string,
+	onError?: (error: unknown) => void
+): Promise<ReviewVerdictStore> {
+	const cached = projectReviewStores.get(projectId);
+	if (cached) return cached;
+	const [saved, runs, baseline] = await Promise.all([
+		getLocalProjectReviews(projectId),
+		listLocalProjectRuns(projectId),
+		getLocalBaseline(projectId)
+	]);
+	const existingStore = projectReviewStores.get(projectId);
+	if (existingStore) return existingStore;
+	let historical: ReviewVerdictsByJob = {};
+	try {
+		const raw =
+			typeof window !== 'undefined'
+				? (window.localStorage.getItem(REVIEW_VERDICTS_STORAGE_KEY) ??
+					window.localStorage.getItem(LEGACY_CONTRAST_VERDICTS_STORAGE_KEY))
+				: null;
+		const old = normalizeReviewVerdicts(raw ? JSON.parse(raw) : {});
+		const jobs = new Set(runs.map((run) => run.jobId));
+		if (baseline) jobs.add(baseline.jobId);
+		historical = Object.fromEntries(Object.entries(old).filter(([jobId]) => jobs.has(jobId)));
+	} catch {
+		/* Existing decisions remain in their original localStorage. */
+	}
+	const initial = mergeReviewChanges(historical, {}, saved);
+	let saving: Promise<void> = Promise.resolve();
+	let previous = saved;
+	let revision = 0;
+	const store = createReviewVerdictStore(
+		null,
+		() => new Date().toISOString(),
+		initial,
+		(reviews) => {
+			const before = previous;
+			previous = reviews;
+			const currentRevision = ++revision;
+			saving = saving
+				.then(async () => {
+					const merged = await persistProjectReviewChanges(projectId, before, reviews);
+					try {
+						getReviewBroadcast()?.postMessage({ projectId });
+					} catch {
+						/* Persistence does not depend on cross-tab notifications. */
+					}
+					if (currentRevision === revision) {
+						previous = merged;
+						store.sync(JSON.stringify(merged));
+					}
+				})
+				.catch((error: unknown) => {
+					onError?.(error);
+				});
+		}
+	);
+	projectReviewStores.set(projectId, store);
+	const channel = getReviewBroadcast();
+	if (channel) {
+		const refresh = (event: MessageEvent<unknown>) => {
+			const payload = event.data;
+			if (
+				!payload ||
+				typeof payload !== 'object' ||
+				!('projectId' in payload) ||
+				payload.projectId !== projectId ||
+				projectReviewStores.get(projectId) !== store
+			)
+				return;
+			void saving
+				.then(async () => {
+					const currentRevision = revision;
+					const currentSnapshot = store.getSnapshot();
+					const fresh = await readProjectReviewsFromDatabase(projectId);
+					if (revision === currentRevision && store.getSnapshot() === currentSnapshot) {
+						previous = fresh;
+						store.sync(JSON.stringify(fresh));
+					}
+				})
+				.catch((error: unknown) => onError?.(error));
+		};
+		channel.addEventListener('message', refresh);
+		projectReviewSubscriptions.set(projectId, () =>
+			channel.removeEventListener('message', refresh)
+		);
+	}
+	return store;
+}
+
+async function persistProjectReviewChanges(
+	projectId: string,
+	previous: ReviewVerdictsByJob,
+	reviews: ReviewVerdictsByJob
+): Promise<ReviewVerdictsByJob> {
+	return withDatabase(async (database) => {
+		const transaction = database.transaction([REVIEWS_STORE, PROJECTS_STORE], 'readwrite');
+		const project = await requestResult(
+			transaction.objectStore(PROJECTS_STORE).get(projectId) as IDBRequest<unknown>
+		);
+		if (!project) {
+			await transactionComplete(transaction);
+			return reviews;
+		}
+		const persisted = await requestResult(
+			transaction.objectStore(REVIEWS_STORE).get(projectId) as IDBRequest<unknown>
+		);
+		const merged = mergeReviewChanges(normalizeReviewVerdicts(persisted), previous, reviews);
+		transaction.objectStore(REVIEWS_STORE).put(merged, projectId);
+		await transactionComplete(transaction);
+		return merged;
+	});
 }

@@ -1,3 +1,5 @@
+import type { IssueDetail } from '../../lib/types/unified-report';
+import { verificationUnavailableReason } from '../../lib/verification';
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 
@@ -73,6 +75,7 @@ export interface ReportViewProps {
 	comparison?: ProjectDiff | null;
 	/** Optional override containing IDs from the expanded display report. */
 	newIssueIds?: ReadonlySet<string>;
+	onVerify?: (issue: IssueDetail) => void;
 }
 
 /*
@@ -98,7 +101,8 @@ export function ReportView({
 	banner,
 	artifactsPanel,
 	comparison,
-	newIssueIds
+	newIssueIds,
+	onVerify
 }: ReportViewProps) {
 	const [searchParams, setSearchParams] = useSearchParams();
 
@@ -196,11 +200,11 @@ export function ReportView({
 		[displayReport]
 	);
 	const reviewProgress = useMemo(() => {
-		const reviewed = reviewQueue.filter((issue) => getVerdict(issue.id)).length;
+		const reviewed = reviewQueue.filter((issue) => getVerdict(issue.id)?.verdict).length;
 		return { total: reviewQueue.length, reviewed, pending: reviewQueue.length - reviewed };
 	}, [reviewQueue, getVerdict]);
 	const nextReviewIssue =
-		reviewQueue.find((issue) => !getVerdict(issue.id)) ?? reviewQueue[0] ?? null;
+		reviewQueue.find((issue) => !getVerdict(issue.id)?.verdict) ?? reviewQueue[0] ?? null;
 	/* Report order is scanner-by-scanner, so the worst finding used to open as
 	   "78 of 84". Step through findings worst first, like the lists do. */
 	const issuesBySeverity = useMemo(
@@ -224,6 +228,29 @@ export function ReportView({
 					<>
 						{banner}
 						<ReportHeader report={displayReport} />
+						{displayReport.assessment && displayReport.assessment.expected > 0 && (
+							<section className="fix-first" aria-labelledby="expected-heading">
+								<h2 id="expected-heading">
+									Expected on staging ({displayReport.assessment.expected})
+								</h2>
+								<p>
+									These pages intentionally block indexing. Check their robots directives again
+									before production. Raw observations remain in All issues.
+								</p>
+								<button
+									className="btn btn--ghost"
+									type="button"
+									onClick={() => {
+										const issue = displayReport.issues.find(
+											(item) => displayReport.assessment?.dispositionByIssue[item.id] === 'expected'
+										);
+										if (issue) updateParams({ issue: issue.id });
+									}}
+								>
+									Inspect indexing evidence
+								</button>
+							</section>
+						)}
 						<ReportSectionNav
 							report={displayReport}
 							section={section}
@@ -237,7 +264,9 @@ export function ReportView({
 										<AllClearBanner report={displayReport} />
 									)}
 								<FixTheseFirst
-									issues={displayReport.issues}
+									issues={displayReport.issues.filter(
+										(issue) => displayReport.assessment?.dispositionByIssue[issue.id] !== 'expected'
+									)}
 									newIssueIds={regressionIds}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 								/>
@@ -370,6 +399,22 @@ export function ReportView({
 								page={activeIssuePage}
 								issues={modalIssues}
 								screenshots={screenshots}
+								{...(onVerify
+									? {
+											onVerify: () => {
+												updateParams({ issue: null });
+												onVerify(activeIssue);
+											}
+										}
+									: {})}
+								{...(onVerify
+									? {
+											verificationUnavailable: verificationUnavailableReason(
+												displayReport,
+												activeIssue
+											)
+										}
+									: {})}
 								onClose={() => updateParams({ issue: null })}
 								onNavigate={(issueId) => updateParams({ issue: issueId })}
 							/>

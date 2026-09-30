@@ -15,6 +15,7 @@ const (
 )
 
 type ReportFlags struct {
+	GatePolicy     string
 	MaxIssues      int
 	MaxOccurrences int
 	RawSeverities  string
@@ -26,6 +27,7 @@ type ReportFlags struct {
 func (o ReportFlags) RenderOptions(format Format) Options {
 	return Options{
 		Format:         format,
+		GatePolicy:     o.GatePolicy,
 		MaxIssues:      o.MaxIssues,
 		MaxOccurrences: o.MaxOccurrences,
 		Severities:     splitCSV(o.RawSeverities),
@@ -36,6 +38,7 @@ func (o ReportFlags) RenderOptions(format Format) Options {
 }
 
 func BindReportFlags(cmd *cobra.Command, opts *ReportFlags, hideAdvanced bool) {
+	cmd.Flags().StringVar(&opts.GatePolicy, "gate-policy", "raw", "Finding policy for gates: raw or actionable")
 	cmd.Flags().
 		IntVar(&opts.MaxIssues, "max-issues", DefaultMaxIssues, "Max issues to include in output (0 = unlimited)")
 	cmd.Flags().IntVar(

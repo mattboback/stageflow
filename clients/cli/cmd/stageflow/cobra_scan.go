@@ -29,6 +29,8 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		authStatePath  string
 		authRecipePath string
 		allowPartial   bool
+		discover       bool
+		profile        string
 		reportOpts     render.ReportFlags
 	)
 
@@ -50,6 +52,8 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 				authStatePath:  authStatePath,
 				authRecipePath: authRecipePath,
 				allowPartial:   allowPartial,
+				discover:       discover,
+				profile:        profile,
 				reportOpts:     reportOpts,
 			}
 
@@ -63,6 +67,9 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		nil,
 		"Scanner module (repeatable or comma-separated; default: all scanners)",
 	)
+	cmd.Flags().StringVar(&profile, "profile", "production", "Scan assessment profile: production or staging")
+	cmd.Flags().
+		BoolVar(&discover, "discover", false, "Discover public website pages before scanning (one seed; no authentication)")
 	cmd.Flags().BoolVar(&screenshot, "screenshot", true, "Capture screenshots")
 	cmd.Flags().BoolVar(
 		&allowPrivate,
@@ -105,12 +112,27 @@ type scanCommandOptions struct {
 	authStatePath  string
 	authRecipePath string
 	allowPartial   bool
+	discover       bool
+	profile        string
 	reportOpts     render.ReportFlags
 }
 
 func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, args []string) error {
+	if opts.profile != "" && opts.profile != "production" && opts.profile != "staging" {
+		return exitcode.Error{Code: 2, Err: errors.New("--profile must be production or staging")}
+	}
+
 	if opts.reportOpts.MaxIssues < 0 {
 		return exitcode.Error{Code: 2, Err: errors.New("--max-issues must be >= 0")}
+	}
+
+	if opts.discover {
+		discovered, err := discoverScanTargets(cmd, root, opts, args)
+		if err != nil {
+			return err
+		}
+
+		args = discovered
 	}
 
 	pathTargets := 0
@@ -142,6 +164,10 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 		return err
 	}
 
+	if opts.profile == "staging" {
+		req.Profile = opts.profile
+	}
+
 	client := apiclient.NewClient(root.apiURL, root.apiKey, nil)
 
 	result, err := scanflow.SubmitURLsAndWait(
@@ -156,6 +182,40 @@ func runScanCmd(cmd *cobra.Command, root *rootOptions, opts scanCommandOptions, 
 	}
 
 	return renderScanReport(cmd, root, opts, result.Status, result.Report)
+}
+
+func discoverScanTargets(
+	cmd *cobra.Command,
+	root *rootOptions,
+	opts scanCommandOptions,
+	args []string,
+) ([]string, error) {
+	if opts.authStatePath != "" || opts.authRecipePath != "" || opts.allowPrivate {
+		return nil, exitcode.Error{
+			Code: 2,
+			Err: errors.New(
+				"--discover supports public pages only; authentication and private-target flags are not supported",
+			),
+		}
+	}
+
+	seed, err := publicDiscoverySeed(args)
+	if err != nil {
+		return nil, exitcode.Error{Code: 2, Err: err}
+	}
+
+	found, err := apiclient.NewClient(root.apiURL, root.apiKey, nil).DiscoverPages(cmd.Context(), seed)
+	if err != nil {
+		return nil, exitcode.Error{Code: 2, Err: err}
+	}
+
+	writeDiscoveryNotice(cmd.ErrOrStderr(), found)
+
+	if len(found.URLs) == 0 {
+		return nil, exitcode.Error{Code: 2, Err: errors.New("discovery found no scannable HTML pages")}
+	}
+
+	return found.URLs, nil
 }
 
 func renderScanReport(
@@ -224,7 +284,13 @@ func runStaticScan(cmd *cobra.Command, root *rootOptions, opts scanCommandOption
 	opCtx, cancel := context.WithTimeout(cmd.Context(), opts.timeout)
 	defer cancel()
 
-	resp, err := client.SubmitZipJob(opCtx, target.ZipPath, modules, opts.screenshot)
+	resp, err := client.SubmitZipJob(
+		opCtx,
+		target.ZipPath,
+		modules,
+		opts.screenshot,
+		map[string]string{"profile": defaultProfile(opts.profile)},
+	)
 	if err != nil {
 		return exitcode.Error{Code: 2, Err: fmt.Errorf("submit zip job: %w", err)}
 	}
@@ -325,4 +391,12 @@ func authNoticeMode(opts scanCommandOptions) string {
 	}
 
 	return "form"
+}
+
+func defaultProfile(value string) string {
+	if value == "staging" {
+		return value
+	}
+
+	return "production"
 }

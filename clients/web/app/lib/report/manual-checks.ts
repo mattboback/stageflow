@@ -11,6 +11,7 @@ export interface ManualCheck {
 	description: string;
 	helpUrl?: string;
 	pageCount: number;
+	pageIds?: string[];
 }
 
 export function isLighthouseManualCheck(issue: Pick<IssueDetail, 'scannerData'>): boolean {
@@ -38,7 +39,8 @@ export function splitManualChecks(report: UnifiedReport): {
 			title: check.title,
 			description: check.description ?? '',
 			...(check.helpUrl ? { helpUrl: check.helpUrl } : {}),
-			pageCount: check.pageCount
+			pageCount: check.pageCount,
+			...(check.pageIds?.length ? { pageIds: [...check.pageIds] } : {})
 		});
 	}
 
@@ -50,6 +52,7 @@ export function splitManualChecks(report: UnifiedReport): {
 		const existing = checksByRule.get(issue.ruleId);
 		if (existing) {
 			existing.pageCount++;
+			existing.pageIds = [...new Set([...(existing.pageIds ?? []), issue.pageId])];
 			continue;
 		}
 		const description = issue.description ?? '';
@@ -60,7 +63,8 @@ export function splitManualChecks(report: UnifiedReport): {
 				? description.slice(MANUAL_DESCRIPTION_PREFIX.length)
 				: description,
 			...(issue.helpUrl ? { helpUrl: issue.helpUrl } : {}),
-			pageCount: 1
+			pageCount: 1,
+			pageIds: [issue.pageId]
 		});
 	}
 

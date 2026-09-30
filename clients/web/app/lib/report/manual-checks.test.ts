@@ -42,7 +42,8 @@ describe('splitManualChecks', () => {
 				ruleId: 'focus-traps',
 				title: 'User focus is not accidentally trapped in a region',
 				description: 'Check focus. [Learn more](https://example.com/focus).',
-				pageCount: 2
+				pageCount: 2,
+				pageIds: ['page-1', 'page-2']
 			}
 		]);
 	});

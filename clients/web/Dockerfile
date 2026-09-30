@@ -33,7 +33,7 @@ COPY libs/contracts /libs/contracts
 # needs the whole chain resolvable or it fails with a bare "Tsconfig not found".
 # /app/../.. is /, which is where the root config has to land.
 COPY tsconfig.strict.json /tsconfig.strict.json
-COPY clients/web/eslint.config.js clients/web/vite.config.ts clients/web/react-router.config.ts clients/web/tsconfig.app.json clients/web/tsconfig.json clients/web/tsconfig.node.json clients/web/tsconfig.e2e.json ./
+COPY clients/web/eslint.config.js clients/web/vite.config.ts clients/web/vite.offline.config.ts clients/web/react-router.config.ts clients/web/tsconfig.app.json clients/web/tsconfig.json clients/web/tsconfig.node.json clients/web/tsconfig.e2e.json ./
 COPY clients/web/app ./app
 COPY clients/web/public ./public
 
@@ -55,7 +55,8 @@ ENV VITE_API_URL=${VITE_API_URL} \
 
 # Build the application via node (not bun) so react-dom's `node` export
 # condition is used and renderToPipeableStream resolves correctly.
-RUN node ./node_modules/.bin/react-router build
+RUN node ./node_modules/.bin/react-router build \
+    && node ./node_modules/.bin/vite build --config vite.offline.config.ts
 
 # Stage 2: Production server
 FROM docker.io/library/nginx:1.29-alpine AS runner

@@ -74,6 +74,7 @@ describe('PageIterator', () => {
 		mockBrowserManager = {
 			createContext: vi.fn().mockResolvedValue(mockContext),
 			navigateToPage: vi.fn().mockResolvedValue(undefined),
+			getNavigationStatus: vi.fn().mockReturnValue(200),
 			executePreScanActions: vi.fn().mockResolvedValue(undefined)
 		} as unknown as BrowserManager;
 
@@ -254,6 +255,7 @@ describe('PageIterator', () => {
 
 		beforeEach(() => {
 			vi.clearAllMocks();
+			mockScanCallback.mockResolvedValue(makeResult());
 		});
 
 		it('should iterate through all pages', async () => {
@@ -262,6 +264,18 @@ describe('PageIterator', () => {
 			expect(results).toHaveLength(2);
 			expect(mockScanCallback).toHaveBeenCalledTimes(2);
 			expect(mockContext.close).toHaveBeenCalled();
+		});
+
+		it('marks HTTP error pages failed even when an engine returns passing rules', async () => {
+			vi.mocked(mockBrowserManager.getNavigationStatus).mockReturnValue(404);
+			mockScanCallback.mockResolvedValue(
+				makeResult({ rules: [{ ruleId: 'image-alt', outcome: 'pass' }] })
+			);
+			const results = await pageIterator.iteratePages(mockProvenance, mockScanCallback);
+			expect(results.every((result) => !result.success && result.error?.includes('HTTP 404'))).toBe(
+				true
+			);
+			expect(results[0]?.rules?.[0]?.outcome).toBe('error');
 		});
 
 		it('should pass target validation policy to navigation and scanners', async () => {

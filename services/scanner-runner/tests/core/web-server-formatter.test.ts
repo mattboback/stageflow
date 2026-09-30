@@ -92,7 +92,7 @@ describe('WebServerFormatter', () => {
 		const formatter = new WebServerFormatter();
 		const formatted = formatter.format(provenance, results, metadata);
 
-		expect(formatted.version).toBe('2.1.0');
+		expect(formatted.version).toBe('2.2.0');
 		expect(formatted.meta.jobId).toBe('job-123');
 		expect(formatted.meta.baseUrl).toBe('http://localhost:8080');
 
@@ -151,6 +151,78 @@ describe('WebServerFormatter', () => {
 		expect(withSix.elementsTruncated).toBe(true);
 		expect(withSix.howToFix).toBe(scanIssue.howToFix);
 		expect(withSix.wcagTags).toEqual(expect.arrayContaining(['Level AA', 'Level AAA', 'Level A']));
+	});
+
+	it('marks rule evaluation errors partial without discarding successful page coverage', () => {
+		const results: ScanResults = {
+			jobId: 'rule-errors',
+			scanner: 'seo',
+			version: '0.1.0',
+			totalPages: 1,
+			startedAt: '2026-09-30T00:00:00Z',
+			completedAt: '2026-09-30T00:00:01Z',
+			durationMs: 1000,
+			pages: [
+				{
+					pageId: 'page-ok',
+					url: 'https://sample.invalid/',
+					finalUrl: 'https://sample.invalid/',
+					success: true,
+					durationMs: 1000,
+					startedAt: '2026-09-30T00:00:00Z',
+					finishedAt: '2026-09-30T00:00:01Z',
+					issues: [],
+					rules: [
+						{ ruleId: 'title', outcome: 'pass' },
+						{ ruleId: 'description', outcome: 'error' },
+						{ ruleId: 'canonical', outcome: 'error' }
+					]
+				}
+			],
+			summary: {
+				totalIssues: 0,
+				bySeverity: { critical: 0, serious: 0, moderate: 0, minor: 0, info: 0 },
+				byCategory: {},
+				pagesScanned: 1,
+				pagesFailed: 0,
+				pagesWithIssues: 0,
+				avgDurationMs: 1000
+			}
+		};
+		const provenance: Provenance = { version: '1.0.0', job_id: results.jobId, pages: [] };
+		const report = new WebServerFormatter().format(provenance, results, {
+			name: 'seo',
+			version: '0.1.0'
+		});
+		expect(report.scanners[0]?.status).toBe('partial');
+		expect(report.scanners[0]?.pages?.[0]).toMatchObject({
+			status: 'success',
+			rules: [
+				{ ruleId: 'title', outcome: 'pass' },
+				{ ruleId: 'description', outcome: 'error' },
+				{ ruleId: 'canonical', outcome: 'error' }
+			]
+		});
+		expect(report.errors).toEqual([
+			{
+				scope: 'page',
+				scannerId: 'seo',
+				pageId: 'page-ok',
+				code: 'rule_evaluation_failed',
+				message: 'One or more rule checks failed to evaluate.',
+				retryable: false
+			}
+		]);
+		results.pages[0]!.success = false;
+		results.pages[0]!.error = 'Navigation failed';
+		results.summary.pagesFailed = 1;
+		const failed = new WebServerFormatter().format(provenance, results, {
+			name: 'seo',
+			version: '0.1.0'
+		});
+		expect(failed.scanners[0]?.status).toBe('failed');
+		expect(failed.errors).toHaveLength(1);
+		expect(failed.errors?.[0]?.code).toBe('page_scan_failed');
 	});
 
 	it('reports page scan failures and marks mixed scanner results as partial', () => {

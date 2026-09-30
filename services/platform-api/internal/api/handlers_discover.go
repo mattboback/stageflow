@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,13 +29,26 @@ func (s *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxDiscoverBodySize)
 
 	var req discoverRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&req); err != nil {
 		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
 
 		return
 	}
 
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		httputil.RespondError(w, http.StatusBadRequest, "Invalid JSON body")
+		return
+	}
+
 	target := strings.TrimSpace(req.URL)
+	if len(target) > maxURLLength {
+		httputil.RespondError(w, http.StatusBadRequest, "Site URL exceeds the 2048 character limit")
+		return
+	}
 
 	err := validateTargetURLsWithResolver(r.Context(), s.ipResolver, []string{target}, s.discoveryMode)
 	if err != nil {

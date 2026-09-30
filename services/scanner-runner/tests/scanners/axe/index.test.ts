@@ -83,6 +83,7 @@ const createScannerConfig = (): ScannerConfig => ({
 
 const createMockPage = (): Page =>
 	({
+		url: vi.fn().mockReturnValue('https://example.com'),
 		waitForLoadState: vi.fn().mockResolvedValue(undefined),
 		waitForTimeout: vi.fn().mockResolvedValue(undefined),
 		waitForFunction: vi.fn().mockResolvedValue(undefined)

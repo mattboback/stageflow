@@ -34,13 +34,16 @@ const (
 var errAuthStorageUnavailable = errors.New("auth storage backend unavailable")
 
 type jobURLSubmitRequest struct {
-	URLs                []string                  `json:"urls"`
-	Modules             []string                  `json:"modules"`
-	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
-	Screenshot          *bool                     `json:"screenshot"`
-	Browser             string                    `json:"browser"`
-	AllowPrivateTargets bool                      `json:"allow_private_targets"`
-	Auth                *jobURLAuthInput          `json:"auth,omitempty"`
+	Profile             string                     `json:"profile,omitempty"`
+	IdentityScope       string                     `json:"identity_scope,omitempty"`
+	Verification        *models.VerificationConfig `json:"verification,omitempty"`
+	URLs                []string                   `json:"urls"`
+	Modules             []string                   `json:"modules"`
+	ScannerConfigs      map[string]map[string]any  `json:"scanner_configs,omitempty"`
+	Screenshot          *bool                      `json:"screenshot"`
+	Browser             string                     `json:"browser"`
+	AllowPrivateTargets bool                       `json:"allow_private_targets"`
+	Auth                *jobURLAuthInput           `json:"auth,omitempty"`
 }
 
 // jobURLAuthInput mirrors the wire shape the CLI ships in
@@ -80,6 +83,11 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 
 	req, ok := decodeJobURLSubmitRequest(w, r)
 	if !ok {
+		return
+	}
+
+	if detail := validateProductConfig(req.Profile, req.IdentityScope, req.Verification, req.Modules); detail != nil {
+		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
 		return
 	}
 
@@ -126,6 +134,9 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		InputType: "urls",
 		URLs:      req.URLs,
 		Config: models.JobConfig{
+			Profile:             req.Profile,
+			IdentityScope:       req.IdentityScope,
+			Verification:        req.Verification,
 			Modules:             modules,
 			ScannerConfigs:      req.ScannerConfigs,
 			Screenshot:          screenshot,
@@ -228,7 +239,7 @@ func decodeJobURLSubmitRequest(w http.ResponseWriter, r *http.Request) (jobURLSu
 			httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.NewValidationError(
 				field,
 				fmt.Sprintf("unknown field %q", field),
-				"Supported fields: urls, modules, scanner_configs, screenshot, browser, allow_private_targets, auth",
+				"Supported fields: urls, modules, scanner_configs, screenshot, browser, allow_private_targets, auth, profile, identity_scope, verification",
 			))
 
 			return jobURLSubmitRequest{}, false

@@ -1,3 +1,4 @@
+import { MAX_AUDIT_BYTES } from '../lib/portable-audit';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
 import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2 } from 'lucide-react';
@@ -126,6 +127,8 @@ export default function Projects() {
 		if (!file) return;
 		setImporting(true);
 		try {
+			if (file.size > MAX_AUDIT_BYTES)
+				throw new Error('Project imports must be no larger than 96 MiB.');
 			const parsed: unknown = JSON.parse(await file.text());
 			await importLocalProject(parsed);
 			setItems(await loadProjectList());

@@ -143,13 +143,34 @@ export function extractAuditNodes(audit: LighthouseAudit): LighthouseIssueNode[]
 		const relatedNode = getDetailNode(item.relatedNode);
 		const auditDisplayValue = audit.displayValue;
 
-		const selector = extractAuditSelector({
+		let selector = extractAuditSelector({
 			item,
 			...(node !== undefined ? { node } : {}),
 			...(element !== undefined ? { element } : {}),
 			...(source !== undefined ? { source } : {}),
 			...(relatedNode !== undefined ? { relatedNode } : {})
 		});
+		const html = extractAuditHtmlSnippet({
+			auditDisplayValue,
+			item,
+			...(node !== undefined ? { node } : {}),
+			...(element !== undefined ? { element } : {})
+		});
+		if (
+			audit.id === 'is-crawlable' &&
+			selector &&
+			/^(?:head\s*>\s*)?meta$/i.test(selector.trim())
+		) {
+			const name = html
+				?.match(/\bname\s*=\s*["']?(robots|googlebot|bingbot)(?:["'\s>])/i)?.[1]
+				?.toLowerCase();
+			// Lighthouse's generic head > meta can resolve to the charset node.
+			// Keep the structured audit evidence when no exact robots node is known.
+			if (!name) {
+				continue;
+			}
+			selector = `meta[name="${name}" i]`;
+		}
 
 		if (!selector) {
 			continue;
@@ -159,13 +180,6 @@ export function extractAuditNodes(audit: LighthouseAudit): LighthouseIssueNode[]
 			continue;
 		}
 		seenSelectors.add(selector);
-
-		const html = extractAuditHtmlSnippet({
-			auditDisplayValue,
-			item,
-			...(node !== undefined ? { node } : {}),
-			...(element !== undefined ? { element } : {})
-		});
 
 		const ancestorPath = extractAuditAncestorPath({
 			item,

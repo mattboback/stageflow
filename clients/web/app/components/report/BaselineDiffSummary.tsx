@@ -31,6 +31,17 @@ export function BaselineDiffSummary({
 					the baseline. Missing findings are not counted as fixed.
 				</p>
 			)}
+			{diff.notComparedPages && diff.notComparedPages.length > 0 && (
+				<p className="local-baseline__message" role="status">
+					Not compared: {diff.notComparedPages.length} pages were added, omitted or have different
+					settings. Omitted findings are not fixes.
+				</p>
+			)}
+			{diff.contextLimited && (
+				<p className="local-baseline__message">
+					This older report does not record complete execution settings.
+				</p>
+			)}
 			<div className="local-baseline__stats" aria-label="Changes from baseline">
 				<div>
 					<span>Score change</span>

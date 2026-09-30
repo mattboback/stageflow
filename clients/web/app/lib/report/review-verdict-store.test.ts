@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { REVIEW_VERDICTS_STORAGE_KEY } from './review-verdict';
-import { createReviewVerdictStore, type ReviewVerdictStorage } from './review-verdict-store';
+import {
+	mergeReviewChanges,
+	createReviewVerdictStore,
+	type ReviewVerdictStorage
+} from './review-verdict-store';
 
 class MemoryStorage implements ReviewVerdictStorage {
 	private values = new Map<string, string>();
@@ -87,5 +91,20 @@ describe('createReviewVerdictStore', () => {
 
 		expect(staleEventValue).not.toBe(storage.getItem(REVIEW_VERDICTS_STORAGE_KEY));
 		expect(Object.keys(storeB.getSnapshot()['job-1'] ?? {})).toEqual(['issue-a', 'issue-b']);
+	});
+});
+
+describe('project review rebasing', () => {
+	it('keeps another tab notes while applying this tab edits and removals', () => {
+		const previous = {
+			job: { first: { note: 'old', at: 'before' }, removed: { note: 'remove', at: 'before' } }
+		};
+		const fresh = {
+			job: { ...previous.job, second: { note: 'written in another tab', at: 'later' } }
+		};
+		const next = { job: { first: { note: 'new', at: 'now' } } };
+		expect(mergeReviewChanges(fresh, previous, next)).toEqual({
+			job: { first: next.job.first, second: fresh.job.second }
+		});
 	});
 });

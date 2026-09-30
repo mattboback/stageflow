@@ -1,3 +1,4 @@
+import { axeRuleEvaluations } from '../../core/rule-evaluations';
 import type { Page } from 'playwright';
 
 import AxeBuilder from '@axe-core/playwright';
@@ -231,6 +232,8 @@ export class AxeScanner extends ScannerBase {
 
 			return {
 				pageId: pageEntry.id,
+				finalUrl: page.url(),
+				rules: axeRuleEvaluations(axeResults, pageEntry.id),
 				url: pageEntry.url,
 				path: pageEntry.path,
 				success: true,

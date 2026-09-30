@@ -33,7 +33,7 @@ export function ManualReviewTab({ issue, jobId }: Props) {
 			)}
 
 			<div className="vfy__verdictbar">
-				{verdict ? (
+				{verdict?.verdict ? (
 					<>
 						<span className={`vfy__level-pill vfy__level-pill--${verdict.verdict}`}>
 							Reviewed · {verdict.verdict}
