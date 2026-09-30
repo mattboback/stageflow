@@ -40,17 +40,11 @@ COPY clients/web/public ./public
 # Build arguments for environment variables.
 # These are baked into the static build at image build-time.
 ARG VITE_API_URL
-ARG VITE_SITE_TITLE
 ARG VITE_SITE_URL
-ARG VITE_GITHUB_URL
-ARG VITE_TAGLINE
 ARG VITE_DEPLOYMENT_MODE
 
 ENV VITE_API_URL=${VITE_API_URL} \
-    VITE_SITE_TITLE=${VITE_SITE_TITLE} \
     VITE_SITE_URL=${VITE_SITE_URL} \
-    VITE_GITHUB_URL=${VITE_GITHUB_URL} \
-    VITE_TAGLINE=${VITE_TAGLINE} \
     VITE_DEPLOYMENT_MODE=${VITE_DEPLOYMENT_MODE}
 
 # Build the application via node (not bun) so react-dom's `node` export

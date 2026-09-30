@@ -148,9 +148,8 @@ export function ReportView({
 	const activePage = searchParams.get('page');
 	const activeCategory = searchParams.get('category');
 	const searchQuery = searchParams.get('q') ?? '';
-	const sortKey: IssueSortKey = isIssueSortKey(searchParams.get('sort'))
-		? (searchParams.get('sort') as IssueSortKey)
-		: 'severity';
+	const rawSort = searchParams.get('sort');
+	const sortKey: IssueSortKey = isIssueSortKey(rawSort) ? rawSort : 'severity';
 	const groupByRule = searchParams.get('group') !== 'flat';
 	const activeIssueId = searchParams.get('issue');
 

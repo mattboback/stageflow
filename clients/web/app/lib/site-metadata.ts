@@ -1,7 +1,4 @@
-const DEFAULT_SITE_NAME = 'StageFlow';
 const DEFAULT_SITE_URL = 'https://stageflow.org';
-const DEFAULT_GITHUB_URL = 'https://github.com/mattboback/stageflow';
-const DEFAULT_TAGLINE = 'Self-hostable frontend quality regression scanning';
 
 function envText(value: unknown, fallback: string): string {
 	return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -19,12 +16,11 @@ function absoluteUrl(value: unknown, fallback: string): string {
 	}
 }
 
-export const SITE_TITLE = envText(import.meta.env.VITE_SITE_TITLE, DEFAULT_SITE_NAME);
-export const SITE_NAME = SITE_TITLE.split(/\s+[—-]\s+/u)[0]?.trim() || DEFAULT_SITE_NAME;
+export const SITE_NAME = 'StageFlow';
 export const SITE_URL = absoluteUrl(import.meta.env.VITE_SITE_URL, DEFAULT_SITE_URL);
-export const GITHUB_URL = absoluteUrl(import.meta.env.VITE_GITHUB_URL, DEFAULT_GITHUB_URL);
+export const GITHUB_URL = 'https://github.com/mattboback/stageflow';
 export const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
-export const SITE_TAGLINE = envText(import.meta.env.VITE_TAGLINE, DEFAULT_TAGLINE);
+export const SITE_TAGLINE = 'Audit a frontend and catch regressions between deployments';
 // Vite injects VITE_* as untyped values, so read it as unknown and narrow rather
 // than calling .trim() on an implicit any.
 const rawDeploymentMode: unknown = import.meta.env.VITE_DEPLOYMENT_MODE;
@@ -35,8 +31,7 @@ export const DEPLOYMENT_MODE =
 export const IS_HOSTED_DEMO = DEPLOYMENT_MODE === 'hosted-demo';
 export const SHARE_IMAGE_URL = `${SITE_URL}/social/stageflow-og.png`;
 
-export const HOME_TITLE =
-	SITE_TITLE === SITE_NAME ? `${SITE_NAME} — Frontend quality regression scanning` : SITE_TITLE;
+export const HOME_TITLE = `${SITE_NAME} — Frontend quality regression scanning`;
 
 export function buildHomeDescription(siteName: string, tagline: string): string {
 	const taglinePhrase = tagline.trim().replace(/[.!?]+$/u, '');

@@ -15,7 +15,7 @@ export const ISSUE_SORT_LABELS: Record<IssueSortKey, string> = {
 };
 
 export function isIssueSortKey(value?: string | null): value is IssueSortKey {
-	return ISSUE_SORTS.includes((value ?? 'severity') as IssueSortKey);
+	return value != null && ISSUE_SORTS.includes(value as IssueSortKey);
 }
 
 export function sortIssues(issues: IssueDetail[], sortKey: IssueSortKey): IssueDetail[] {

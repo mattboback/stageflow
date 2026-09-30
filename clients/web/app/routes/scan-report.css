@@ -976,13 +976,15 @@ button.irow {
 	font-variant-numeric: tabular-nums;
 	margin: 0;
 }
-.lh__cell[data-tone='good'] .lh__cell-score {
+.lh__cell[data-tone='strong'] .lh__cell-score {
 	color: var(--sev-pass-ink);
 }
-.lh__cell[data-tone='warn'] .lh__cell-score {
+.lh__cell[data-tone='watch'] .lh__cell-score,
+.lh__cell[data-tone='needs-work'] .lh__cell-score {
 	color: var(--sev-moderate-ink);
 }
-.lh__cell[data-tone='poor'] .lh__cell-score {
+.lh__cell[data-tone='high-risk'] .lh__cell-score,
+.lh__cell[data-tone='failing'] .lh__cell-score {
 	color: var(--sev-critical);
 }
 .lh__cell-band {

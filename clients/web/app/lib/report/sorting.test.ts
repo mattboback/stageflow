@@ -43,9 +43,9 @@ describe('isIssueSortKey', () => {
 		expect(isIssueSortKey('by-vibes')).toBe(false);
 	});
 
-	it('accepts null and undefined, which fall back to the default sort', () => {
-		expect(isIssueSortKey(null)).toBe(true);
-		expect(isIssueSortKey(undefined)).toBe(true);
+	it('rejects null and undefined, so callers fall back to the default sort', () => {
+		expect(isIssueSortKey(null)).toBe(false);
+		expect(isIssueSortKey(undefined)).toBe(false);
 	});
 
 	it('has a label for every key, so the UI cannot render undefined', () => {

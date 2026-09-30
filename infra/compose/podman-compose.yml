@@ -261,10 +261,7 @@ services:
       dockerfile: clients/web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:${PLATFORM_API_PORT:-8080}}
-        VITE_SITE_TITLE: ${VITE_SITE_TITLE:-StageFlow}
         VITE_SITE_URL: ${VITE_SITE_URL:-http://localhost:${FRONTEND_PORT:-3000}}
-        VITE_GITHUB_URL: ${VITE_GITHUB_URL:-https://github.com/mattboback/stageflow}
-        VITE_TAGLINE: ${VITE_TAGLINE:-Self-hostable frontend quality regression scanning}
         VITE_DEPLOYMENT_MODE: ${VITE_DEPLOYMENT_MODE:-self-hosted}
     image: localhost/stageflow/frontend-react:${IMAGE_TAG:-latest}
     healthcheck:
