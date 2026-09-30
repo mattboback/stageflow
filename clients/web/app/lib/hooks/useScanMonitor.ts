@@ -28,16 +28,6 @@ interface StatusSnapshot {
 	error: string | null;
 }
 
-interface ReportSnapshot {
-	status: ScanStatus;
-	job: ScanResult | null;
-	report: UnifiedReport | null;
-	screenshots: ScreenshotArtifact[];
-	logs: string[];
-	transport: TransportState;
-	error: string | null;
-}
-
 const emptyStatusSnapshot: StatusSnapshot = {
 	status: 'loading',
 	job: null,
@@ -47,15 +37,9 @@ const emptyStatusSnapshot: StatusSnapshot = {
 	error: null
 };
 
-const emptyReportSnapshot: ReportSnapshot = {
-	status: 'loading',
-	job: null,
-	report: null,
-	screenshots: [],
-	logs: [],
-	transport: 'idle',
-	error: null
-};
+/* Callers pass screenshots into effect dependencies, so "none" must keep one
+   identity across renders. */
+const NO_SCREENSHOTS: ScreenshotArtifact[] = [];
 
 const REPORT_RETRY_MS = 2000;
 const REPORT_MAX_ATTEMPTS = 30;
@@ -132,10 +116,12 @@ function updateLog(update: SSEUpdate): string | null {
 	return getLogMessage((update.state || '').toUpperCase(), update);
 }
 
-export function useScanStatus(jobId: string) {
+export function useScanStatus(jobId: string, options: { trackElapsed?: boolean } = {}) {
+	const trackElapsed = options.trackElapsed ?? true;
 	const [snapshot, setSnapshot] = useState<StatusSnapshot>(emptyStatusSnapshot);
 	const [attempt, setAttempt] = useState(0);
 	const pollRef = useRef<number | null>(null);
+	const applyRef = useRef<((result: ScanResult) => void) | null>(null);
 
 	/* Tears down and re-subscribes the whole monitor (stream, polling, timer)
 	   without a document reload. */
@@ -166,13 +152,15 @@ export function useScanStatus(jobId: string) {
 				);
 			}
 		});
-		const timer = window.setInterval(() => {
-			setSnapshot((current) =>
-				isTerminal(current.status)
-					? current
-					: { ...current, elapsedSeconds: current.elapsedSeconds + 1 }
-			);
-		}, 1000);
+		const timer = trackElapsed
+			? window.setInterval(() => {
+					setSnapshot((current) =>
+						isTerminal(current.status)
+							? current
+							: { ...current, elapsedSeconds: current.elapsedSeconds + 1 }
+					);
+				}, 1000)
+			: null;
 
 		const applyStatus = (result: ScanResult) => {
 			if (!isCurrentResult(result)) {
@@ -197,6 +185,7 @@ export function useScanStatus(jobId: string) {
 				stream?.close();
 			}
 		};
+		applyRef.current = applyStatus;
 
 		const refresh = async () => {
 			try {
@@ -310,11 +299,16 @@ export function useScanStatus(jobId: string) {
 
 		return () => {
 			closed = true;
-			window.clearInterval(timer);
+			applyRef.current = null;
+			if (timer !== null) window.clearInterval(timer);
 			stream?.close();
 			clearPoll();
 		};
-	}, [attempt, clearPoll, jobId]);
+	}, [attempt, clearPoll, jobId, trackElapsed]);
+
+	/* Feeds a status fetched outside the monitor (an artifact refresh) through
+	   the same job-id guard and terminal handling as the stream. */
+	const applyResult = useCallback((result: ScanResult) => applyRef.current?.(result), []);
 
 	return {
 		status: snapshot.status,
@@ -323,288 +317,106 @@ export function useScanStatus(jobId: string) {
 		logs: snapshot.logs,
 		transport: snapshot.transport,
 		error: snapshot.error,
-		retry
+		retry,
+		applyResult
 	};
 }
 
+/*
+ * The status monitor plus the aggregated report, which exists only once the job
+ * is complete and may lag the DONE event by a few seconds.
+ */
 export function useScanReport(jobId: string) {
-	const [snapshot, setSnapshot] = useState<ReportSnapshot>(emptyReportSnapshot);
-	const pollRef = useRef<number | null>(null);
-	const reportRetryRef = useRef<number | null>(null);
+	const {
+		status,
+		result,
+		logs,
+		transport,
+		error: statusError,
+		applyResult
+	} = useScanStatus(jobId, { trackElapsed: false });
+	const [loaded, setLoaded] = useState<{
+		jobId: string;
+		report: UnifiedReport | null;
+		error: string | null;
+	}>({ jobId, report: null, error: null });
 
-	const clearPoll = useCallback(() => {
-		if (pollRef.current !== null) {
-			window.clearInterval(pollRef.current);
-			pollRef.current = null;
+	useEffect(() => {
+		if (status !== 'complete') {
+			return;
 		}
-	}, []);
 
-	const clearReportRetry = useCallback(() => {
-		if (reportRetryRef.current !== null) {
-			window.clearTimeout(reportRetryRef.current);
-			reportRetryRef.current = null;
-		}
-	}, []);
+		let cancelled = false;
+		let attempts = 0;
+		let retryTimer: number | null = null;
 
+		const load = async () => {
+			try {
+				const report = await fetchReport(jobId);
+				if (cancelled || (report && report.meta.jobId !== jobId)) {
+					return;
+				}
+				if (report) {
+					setLoaded({ jobId, report, error: null });
+					return;
+				}
+				if (attempts >= REPORT_MAX_ATTEMPTS) {
+					setLoaded({
+						jobId,
+						report: null,
+						error: 'Aggregated report is taking longer than expected. Refresh to retry.'
+					});
+					return;
+				}
+				attempts += 1;
+				retryTimer = window.setTimeout(() => void load(), REPORT_RETRY_MS);
+			} catch (error) {
+				if (cancelled) {
+					return;
+				}
+				const message = error instanceof Error ? error.message : 'Failed to load report';
+				setLoaded({ jobId, report: null, error: `${message}. Refresh to retry.` });
+			}
+		};
+
+		void load();
+
+		return () => {
+			cancelled = true;
+			if (retryTimer !== null) window.clearTimeout(retryTimer);
+		};
+	}, [jobId, status]);
+
+	const [refreshError, setRefreshError] = useState<{ jobId: string; message: string } | null>(null);
 	const refreshArtifacts = useCallback(async () => {
 		if (!jobId) {
 			return;
 		}
 
 		try {
-			const result = await fetchStatus(jobId);
-			setSnapshot((current) => ({
-				...current,
-				status: normalizeStatus(result.state),
-				job: result,
-				screenshots:
-					result.artifacts?.screenshots ?? (current.job?.id === jobId ? current.screenshots : []),
-				error: null
-			}));
+			applyResult(await fetchStatus(jobId));
+			setRefreshError(null);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Failed to fetch job status';
-			setSnapshot((current) =>
-				addLog({ ...current, error: message }, `ERROR: ${message}. Refresh to retry.`)
-			);
+			setRefreshError({ jobId, message });
 		}
-	}, [jobId]);
+	}, [applyResult, jobId]);
 
-	useEffect(() => {
-		if (!jobId) {
-			return;
-		}
-
-		let closed = false;
-		let stream: { close(): void } | null = null;
-		let reportRetryAttempts = 0;
-		const isActive = () => !closed;
-		const isCurrentResult = (result: ScanResult) => isActive() && result.id === jobId;
-		queueMicrotask(() => {
-			if (isActive()) {
-				setSnapshot(emptyReportSnapshot);
-			}
-		});
-
-		const scheduleReportRetry = () => {
-			if (!isActive() || reportRetryRef.current !== null) {
-				return;
-			}
-
-			if (reportRetryAttempts >= REPORT_MAX_ATTEMPTS) {
-				const message = 'Aggregated report is taking longer than expected. Refresh to retry.';
-				setSnapshot((current) => addLog({ ...current, error: message }, `WARN: ${message}`));
-				return;
-			}
-
-			reportRetryAttempts += 1;
-			reportRetryRef.current = window.setTimeout(() => {
-				reportRetryRef.current = null;
-				void loadReport();
-			}, REPORT_RETRY_MS);
-		};
-
-		const loadReport = async () => {
-			if (!isActive()) {
-				return;
-			}
-
-			try {
-				const report = await fetchReport(jobId);
-				if (!isActive() || (report && report.meta.jobId !== jobId)) {
-					return;
-				}
-				if (!report) {
-					scheduleReportRetry();
-					return;
-				}
-				clearPoll();
-				clearReportRetry();
-				setSnapshot((current) => ({ ...current, report, error: null }));
-			} catch (error) {
-				if (!isActive()) {
-					return;
-				}
-				const message = error instanceof Error ? error.message : 'Failed to load report';
-				setSnapshot((current) =>
-					addLog(
-						{ ...current, error: `${message}. Refresh to retry.` },
-						`ERROR: ${message}. Refresh to retry.`
-					)
-				);
-			}
-		};
-
-		const applyStatus = (result: ScanResult) => {
-			if (!isCurrentResult(result)) {
-				return;
-			}
-
-			const nextStatus = normalizeStatus(result.state);
-			setSnapshot((current) =>
-				addLog(
-					{
-						...current,
-						status: nextStatus,
-						job: result,
-						screenshots:
-							result.artifacts?.screenshots ??
-							(current.job?.id === jobId ? current.screenshots : []),
-						report:
-							nextStatus === 'failed' || nextStatus === 'error'
-								? null
-								: current.report?.meta.jobId === jobId
-									? current.report
-									: null,
-						error: null
-					},
-					statusLog(result)
-				)
-			);
-
-			if (nextStatus === 'complete') {
-				clearPoll();
-				void loadReport();
-			} else if (isTerminal(nextStatus)) {
-				clearReportRetry();
-				clearPoll();
-			}
-
-			if (isTerminal(nextStatus)) {
-				stream?.close();
-			}
-		};
-
-		const refresh = async () => {
-			try {
-				const result = await fetchStatus(jobId);
-				applyStatus(result);
-			} catch (error) {
-				if (!isActive()) {
-					return;
-				}
-				const message = error instanceof Error ? error.message : 'Failed to fetch job status';
-				setSnapshot((current) =>
-					addLog(
-						{ ...current, status: 'error', error: message },
-						`ERROR: ${message}. Refresh to retry.`
-					)
-				);
-			}
-		};
-
-		void refresh();
-
-		if (typeof EventSource !== 'undefined') {
-			stream = createSSEStream<ScanResult, SSEUpdate>(
-				jobId,
-				{
-					onStatus: applyStatus,
-					onUpdate(update) {
-						if (!isActive()) {
-							return;
-						}
-
-						setSnapshot((current) => {
-							const job =
-								current.job?.id === jobId
-									? applyScannerCompletionUpdate(applySseUpdate(current.job, update), update)
-									: null;
-							return addLog(
-								{
-									...current,
-									status: normalizeStatus(update.state),
-									job,
-									screenshots:
-										job?.artifacts?.screenshots ??
-										(current.job?.id === jobId ? current.screenshots : []),
-									report:
-										current.report?.meta.jobId === jobId &&
-										normalizeStatus(update.state) !== 'failed' &&
-										normalizeStatus(update.state) !== 'cancelled'
-											? current.report
-											: null
-								},
-								updateLog(update)
-							);
-						});
-						if (isTerminal(normalizeStatus(update.state))) {
-							void refresh();
-						}
-					},
-					onDone: () => undefined,
-					onError(error) {
-						if (!isActive()) {
-							return;
-						}
-
-						if (error.kind === 'transient') {
-							setSnapshot((current) =>
-								addLog(current, 'WARN: Lost connection to live updates. Reconnecting...')
-							);
-							void refresh();
-							return;
-						}
-
-						stream?.close();
-						setSnapshot((current) =>
-							addLog(
-								{ ...current, transport: 'polling' },
-								'WARN: Connection lost. Switching to polling...'
-							)
-						);
-						if (pollRef.current === null) {
-							pollRef.current = window.setInterval(() => {
-								void refresh();
-							}, 5000);
-						}
-						void refresh();
-					}
-				},
-				{
-					sourceName: 'scan-report',
-					onOpen: () => {
-						if (!isActive()) {
-							return;
-						}
-
-						clearPoll();
-						setSnapshot((current) => ({ ...current, transport: 'streaming' }));
-					}
-				}
-			);
-		} else {
-			queueMicrotask(() => {
-				if (!isActive()) {
-					return;
-				}
-
-				setSnapshot((current) => ({ ...current, transport: 'polling' }));
-			});
-			pollRef.current = window.setInterval(() => {
-				void refresh();
-			}, 5000);
-		}
-
-		return () => {
-			closed = true;
-			stream?.close();
-			clearPoll();
-			clearReportRetry();
-		};
-	}, [clearPoll, clearReportRetry, jobId]);
-
-	const isCurrentJob = !snapshot.job || snapshot.job.id === jobId;
-	const job = isCurrentJob ? snapshot.job : null;
-	const report = snapshot.report?.meta.jobId === jobId ? snapshot.report : null;
+	const job = result?.id === jobId ? result : null;
+	const isCurrentJob = !result || job !== null;
+	const current = loaded.jobId === jobId ? loaded : null;
+	const report = status === 'complete' ? (current?.report ?? null) : null;
+	const error =
+		(refreshError?.jobId === jobId ? refreshError.message : null) ?? current?.error ?? statusError;
 
 	return {
-		status: isCurrentJob ? snapshot.status : 'loading',
+		status: isCurrentJob ? status : 'loading',
 		job,
 		report,
-		screenshots: job ? snapshot.screenshots : [],
-		logs: isCurrentJob ? snapshot.logs : [],
-		transport: isCurrentJob ? snapshot.transport : 'idle',
-		error: isCurrentJob ? snapshot.error : null,
+		screenshots: job?.artifacts?.screenshots ?? NO_SCREENSHOTS,
+		logs: isCurrentJob ? logs : [],
+		transport: isCurrentJob ? transport : 'idle',
+		error: isCurrentJob ? error : null,
 		refreshArtifacts
 	};
 }
