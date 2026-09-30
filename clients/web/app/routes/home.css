@@ -385,6 +385,7 @@
 }
 .path__actions {
 	display: flex;
+	flex-wrap: wrap;
 	gap: var(--sp-3);
 }
 /* three steps read left-to-right when there's room */
