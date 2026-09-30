@@ -37,8 +37,7 @@
 			},
 			"toolVersion": "0.1.0",
 			"durationMs": 1000,
-			"resultsPath": "job-123/axe/results.json",
-			"reportPath": "job-123/axe/report.html"
+			"resultsPath": "job-123/axe/results.json"
 		}
 	],
 	"pages": [

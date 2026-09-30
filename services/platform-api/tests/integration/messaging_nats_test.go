@@ -48,16 +48,15 @@ func TestServiceIntegrationWithNATS(t *testing.T) {
 			Status: "success",
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: jobID + "/report.json",
-				ReportHTML: jobID + "/report.html",
 			},
 		}),
 	)
 
 	final := waitForRecord(t, fixture.pipe, jobID, func(rec *status.JobRecord) bool {
-		return rec.State == "DONE" && rec.ReportJSONKey != "" && rec.ReportKey != ""
+		return rec.State == "DONE" && rec.ReportJSONKey != ""
 	})
 
-	if final.ReportJSONKey == "" || final.ReportKey == "" {
+	if final.ReportJSONKey == "" {
 		t.Fatalf("expected artifacts to be set, got %+v", final)
 	}
 }
@@ -111,7 +110,6 @@ func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
 			JobID:             jobID,
 			ScannerType:       "axe",
 			ResultsPath:       jobID + "/axe/results.json",
-			ReportPath:        jobID + "/axe/report.html",
 			TotalPagesScanned: 2,
 			Summary: events.ScanSummary{
 				TotalViolations: 0,
@@ -130,13 +128,11 @@ func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
 			Status: "success",
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: jobID + "/report.json",
-				ReportHTML: jobID + "/report.html",
 			},
 			ScannerArtifacts: map[string]events.ScannerArtifacts{
 				"axe": {
 					ScannerType: "axe",
 					ResultsPath: jobID + "/axe/results.json",
-					ReportPath:  jobID + "/axe/report.html",
 				},
 			},
 		}),
@@ -154,7 +150,7 @@ func TestServiceIntegrationWithNATSURLJobs(t *testing.T) {
 		t.Fatalf("expected axe scanner artifacts, got %#v", final.ScannerArtifacts)
 	}
 
-	if artifact.ResultsKey != jobID+"/axe/results.json" || artifact.ReportKey != jobID+"/axe/report.html" {
+	if artifact.ResultsKey != jobID+"/axe/results.json" {
 		t.Fatalf("unexpected axe scanner artifact keys: %#v", artifact)
 	}
 }
@@ -211,7 +207,6 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 			Status: "success",
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: jobID + "/late/report.json",
-				ReportHTML: jobID + "/late/report.html",
 			},
 		}),
 	)
@@ -223,7 +218,6 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 	requireStableRecord(t, fixture.pipe, jobID, 500*time.Millisecond, func(rec *status.JobRecord) bool {
 		return rec.State == models.JobStateFailed &&
 			rec.ReportJSONKey == "" &&
-			rec.ReportKey == "" &&
 			rec.Error == "browser crashed" &&
 			rec.LastErrorDetails == "playwright lost connection"
 	})
@@ -237,7 +231,7 @@ func TestServiceIntegrationFailureRemainsStickyAfterLateSuccess(t *testing.T) {
 		t.Fatalf("late success should not override failure state, got %+v", final)
 	}
 
-	if final.ReportJSONKey != "" || final.ReportKey != "" {
+	if final.ReportJSONKey != "" {
 		t.Fatalf("late success should not backfill success artifacts onto failed job, got %+v", final)
 	}
 
@@ -315,7 +309,6 @@ func assertScanLifecycle(
 			JobID:             jobID,
 			ScannerType:       "axe",
 			ResultsPath:       jobID + "/axe/results.json",
-			ReportPath:        jobID + "/axe/report.html",
 			TotalPagesScanned: 3,
 			Summary: events.ScanSummary{
 				TotalViolations: 1,
@@ -357,7 +350,6 @@ func assertScanLifecycle(
 			JobID:             jobID,
 			ScannerType:       "lighthouse",
 			ResultsPath:       jobID + "/lighthouse/results.json",
-			ReportPath:        jobID + "/lighthouse/report.html",
 			TotalPagesScanned: 3,
 			Summary: events.ScanSummary{
 				TotalViolations: 1,

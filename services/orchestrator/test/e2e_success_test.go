@@ -71,7 +71,6 @@ func TestE2E_SuccessfulJobFlow(t *testing.T) {
 		JobID:             jobID,
 		ScannerType:       "axe",
 		ResultsPath:       jobID + "/axe/results.json",
-		ReportPath:        jobID + "/axe/report.html",
 		TotalPagesScanned: 5,
 		Summary: events.ScanSummary{
 			TotalViolations: 12,

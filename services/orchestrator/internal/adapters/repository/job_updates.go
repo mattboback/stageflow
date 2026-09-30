@@ -385,7 +385,7 @@ func (d *Database) UpdateJobExtractionArtifacts(
 // UpdateJobCompletionArtifacts stores primary completion artifacts and summary totals.
 func (d *Database) UpdateJobCompletionArtifacts(
 	ctx context.Context,
-	jobID, reportJSONKey, reportKey, stageLogKey, recipeKey string,
+	jobID, reportJSONKey, stageLogKey, recipeKey string,
 	totalViolations int,
 ) error {
 	query := `
@@ -393,10 +393,6 @@ func (d *Database) UpdateJobCompletionArtifacts(
 		SET report_json_key = CASE
 		        WHEN ? <> '' THEN ?
 		        ELSE report_json_key
-		    END,
-		    report_key = CASE
-		        WHEN ? <> '' THEN ?
-		        ELSE report_key
 		    END,
 		    scan_stage_log_key = CASE
 		        WHEN ? <> '' THEN ?
@@ -421,8 +417,6 @@ func (d *Database) UpdateJobCompletionArtifacts(
 		query,
 		reportJSONKey,
 		reportJSONKey,
-		reportKey,
-		reportKey,
 		stageLogKey,
 		stageLogKey,
 		recipeKey,

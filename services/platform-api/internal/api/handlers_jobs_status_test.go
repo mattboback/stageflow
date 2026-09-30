@@ -59,12 +59,12 @@ func TestHandleJobStatusMethodNotAllowed(t *testing.T) {
 	}
 }
 
-// --- handleJobReport ---
+// --- /report route removed in PR 1.7d ---
 
-func TestHandleJobReportNotCompleted(t *testing.T) {
+func TestHandleJobReportRouteGone(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
-	jobID := "job-report-pending"
+	jobID := "job-report-gone"
 	applyTestSignal(t, server, jobstatus.Signal{
 		Kind: jobstatus.SignalJobCreated,
 		JobCreated: &events.JobCreatedPayload{
@@ -77,61 +77,10 @@ func TestHandleJobReportNotCompleted(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
 
-	server.handleJobReport(rr, req, jobID)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", rr.Code, rr.Body.String())
-	}
-}
-
-func TestHandleJobReportNotFound(t *testing.T) {
-	server, _, _ := newTestServer(t)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing/report", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	server.handleJobReport(rr, req, "missing")
+	server.Router().ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", rr.Code)
-	}
-}
-
-func TestHandleJobReportRedirect(t *testing.T) {
-	server, _, _ := newTestServer(t)
-
-	jobID := "job-report-redirect"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCompleted,
-		JobCompleted: &events.JobCompletedPayload{
-			JobID: jobID,
-			Artifacts: events.ArtifactLocations{
-				ReportHTML: jobID + "/report.html",
-				ReportJSON: jobID + "/report.json",
-			},
-		},
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	server.handleJobReport(rr, req, jobID)
-
-	if rr.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected 307, got %d: %s", rr.Code, rr.Body.String())
-	}
-
-	loc := rr.Header().Get("Location")
-	if loc == "" {
-		t.Fatal("expected Location header for redirect")
+		t.Fatalf("expected 404 for the removed report route, got %d: %s", rr.Code, rr.Body.String())
 	}
 }
 

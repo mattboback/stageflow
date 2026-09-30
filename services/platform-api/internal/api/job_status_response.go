@@ -64,19 +64,6 @@ func (s *Server) buildArtifactsForDoneJob(
 
 	artifactSet = set || artifactSet
 
-	set, err = s.setRequiredArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ReportHTML,
-		rec.ReportKey,
-		"Refusing to presign non-job-scoped report HTML key",
-	)
-	if err != nil {
-		return nil, false, err
-	}
-
-	artifactSet = set || artifactSet
-
 	artifactSet = s.setOptionalArtifactURL(
 		ctx,
 		rec.JobID,
@@ -213,15 +200,6 @@ func (s *Server) buildPerScannerArtifacts(
 			&scannerArt.ResultsJSON,
 			sa.ResultsKey,
 			"Failed to generate presigned URL for scanner results",
-			"scanner_type",
-			scannerType,
-		)
-		_ = s.setOptionalArtifactURL(
-			ctx,
-			rec.JobID,
-			&scannerArt.ReportHTML,
-			sa.ReportKey,
-			"Failed to generate presigned URL for scanner report",
 			"scanner_type",
 			scannerType,
 		)

@@ -314,10 +314,6 @@ export default function Scan() {
 										<span className="ic">JSON</span>
 										Unified report{artifacts?.report_json ? '' : ' · pending'}
 									</div>
-									<div className={`artifact${artifacts?.report_html ? '' : ' pending'}`}>
-										<span className="ic">HTML</span>
-										Report bundle{artifacts?.report_html ? '' : ' · pending'}
-									</div>
 								</div>
 							</div>
 						</aside>

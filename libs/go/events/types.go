@@ -181,7 +181,6 @@ type ScanCompletedPayload struct {
 	JobID             string      `json:"job_id"`
 	ScannerType       string      `json:"scanner_type,omitempty"` // e.g., "axe", "lighthouse"
 	ResultsPath       string      `json:"results_path"`           // MinIO object key for JSON results
-	ReportPath        string      `json:"report_path"`            // MinIO object key for HTML report
 	StageLogPath      string      `json:"stage_log_path,omitempty"`
 	RecipePath        string      `json:"recipe_path,omitempty"`
 	TotalPagesScanned int         `json:"total_pages_scanned"`
@@ -204,10 +203,6 @@ func (p *ScanCompletedPayload) Validate() error {
 
 	if p.ScannerType == "" {
 		return errors.New("events: ScanCompletedPayload.scanner_type is required")
-	}
-
-	if p.ReportPath == "" {
-		return errors.New("events: ScanCompletedPayload.report_path is required")
 	}
 
 	if p.TotalPagesScanned < 0 {
@@ -369,7 +364,6 @@ func (p *JobCompletedPayload) Validate() error {
 
 type ArtifactLocations struct {
 	ReportJSON     string `json:"report_json"` // MinIO path or presigned URL
-	ReportHTML     string `json:"report_html"` // MinIO path or presigned URL
 	ScanStageLog   string `json:"scan_stage_log,omitempty"`
 	ScanRecipe     string `json:"scan_recipe,omitempty"`
 	ProvenanceJSON string `json:"provenance_json,omitempty"`
@@ -384,17 +378,12 @@ func (a *ArtifactLocations) Validate() error {
 		return errors.New("events: ArtifactLocations.report_json is required")
 	}
 
-	if a.ReportHTML == "" {
-		return errors.New("events: ArtifactLocations.report_html is required")
-	}
-
 	return nil
 }
 
 type ScannerArtifacts struct {
 	ScannerType  string `json:"scanner_type"`
 	ResultsPath  string `json:"results_path"`
-	ReportPath   string `json:"report_path"`
 	StageLogPath string `json:"stage_log_path,omitempty"`
 	RecipePath   string `json:"recipe_path,omitempty"`
 }
@@ -410,10 +399,6 @@ func (s *ScannerArtifacts) Validate() error {
 
 	if s.ResultsPath == "" {
 		return errors.New("events: ScannerArtifacts.results_path is required")
-	}
-
-	if s.ReportPath == "" {
-		return errors.New("events: ScannerArtifacts.report_path is required")
 	}
 
 	return nil

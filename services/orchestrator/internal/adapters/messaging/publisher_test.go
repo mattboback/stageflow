@@ -35,7 +35,6 @@ func TestEnvelopeConstruction(t *testing.T) {
 			Status: "success",
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: "job-123/report.json",
-				ReportHTML: "job-123/report.html",
 			},
 		}
 

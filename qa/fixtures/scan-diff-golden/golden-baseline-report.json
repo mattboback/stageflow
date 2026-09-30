@@ -1861,7 +1861,6 @@
             "status": "success"
           }
         ],
-        "reportPath": "NORMALIZED",
         "resultsPath": "NORMALIZED",
         "severity": {
           "critical": 2,

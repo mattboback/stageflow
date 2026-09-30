@@ -37,7 +37,6 @@ func TestHandleScanCompleted(t *testing.T) {
 		JobID:             "job-123",
 		ScannerType:       "axe",
 		ResultsPath:       "job-123/axe/results.json",
-		ReportPath:        "job-123/axe/report.html",
 		TotalPagesScanned: 3,
 		Summary: events.ScanSummary{
 			TotalViolations: 5,
@@ -215,7 +214,6 @@ func TestHandleMultipleScanners(t *testing.T) {
 		JobID:             "job-multi",
 		ScannerType:       "axe",
 		ResultsPath:       "job-multi/axe/results.json",
-		ReportPath:        "job-multi/axe/report.html",
 		TotalPagesScanned: 3,
 		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
@@ -231,7 +229,6 @@ func TestHandleMultipleScanners(t *testing.T) {
 		JobID:             "job-multi",
 		ScannerType:       "lighthouse",
 		ResultsPath:       "job-multi/lighthouse/results.json",
-		ReportPath:        "job-multi/lighthouse/report.html",
 		TotalPagesScanned: 3,
 		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
@@ -365,7 +362,6 @@ func TestHandlePartialScannerSuccess(t *testing.T) {
 		JobID:             "job-partial",
 		ScannerType:       "axe",
 		ResultsPath:       "job-partial/axe/results.json",
-		ReportPath:        "job-partial/axe/report.html",
 		TotalPagesScanned: 3,
 		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}
@@ -464,7 +460,6 @@ func TestHandleScanCompleted_IgnoresMissingJob(t *testing.T) {
 		JobID:             "missing-job",
 		ScannerType:       "axe",
 		ResultsPath:       "missing-job/axe/results.json",
-		ReportPath:        "missing-job/axe/report.html",
 		TotalPagesScanned: 1,
 		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}

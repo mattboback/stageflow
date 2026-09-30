@@ -282,7 +282,6 @@ func applyJobCompleted(rec *status.JobRecord, payload *events.JobCompletedPayloa
 
 	rec.State = models.JobStateDone
 	rec.ReportJSONKey = payload.Artifacts.ReportJSON
-	rec.ReportKey = payload.Artifacts.ReportHTML
 	rec.ScanStageLogKey = payload.Artifacts.ScanStageLog
 	rec.ScanRecipeKey = payload.Artifacts.ScanRecipe
 	rec.ProvenanceKey = coalesceString(payload.Artifacts.ProvenanceJSON, rec.ProvenanceKey)
@@ -303,7 +302,6 @@ func applyJobCompleted(rec *status.JobRecord, payload *events.JobCompletedPayloa
 			rec.ScannerArtifacts[scannerType] = &status.ScannerArtifactRecord{
 				ScannerType: artifact.ScannerType,
 				ResultsKey:  artifact.ResultsPath,
-				ReportKey:   artifact.ReportPath,
 				StageLogKey: artifact.StageLogPath,
 				RecipeKey:   artifact.RecipePath,
 			}

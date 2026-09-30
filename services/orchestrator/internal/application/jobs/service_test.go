@@ -75,7 +75,6 @@ func TestServiceRecordScannerFailureCompletesWithPartialResults(t *testing.T) {
 						ScannerType: "axe",
 						Success:     true,
 						ResultsPath: "job-fail/axe/results.json",
-						ReportPath:  "job-fail/axe/report.html",
 					},
 				},
 			},
@@ -89,7 +88,6 @@ func TestServiceRecordScannerFailureCompletesWithPartialResults(t *testing.T) {
 						ScannerType: "axe",
 						Success:     true,
 						ResultsPath: "job-fail/axe/results.json",
-						ReportPath:  "job-fail/axe/report.html",
 					},
 					"lighthouse": {
 						ScannerType: "lighthouse",
@@ -145,7 +143,6 @@ func TestServiceRecordScannerCompletionWaitsForRemainingScanners(t *testing.T) {
 		JobID:             "job-scan",
 		ScannerType:       "axe",
 		ResultsPath:       "job-scan/axe/results.json",
-		ReportPath:        "job-scan/axe/report.html",
 		TotalPagesScanned: 2,
 		Summary: events.ScanSummary{
 			TotalViolations: 4,
@@ -179,7 +176,6 @@ func TestServiceRecordScannerCompletionDoesNotCompleteWithoutOwnership(t *testin
 						ScannerType: "axe",
 						Success:     true,
 						ResultsPath: "job-race/axe/results.json",
-						ReportPath:  "job-race/axe/report.html",
 					},
 				},
 			},
@@ -192,7 +188,6 @@ func TestServiceRecordScannerCompletionDoesNotCompleteWithoutOwnership(t *testin
 						ScannerType: "axe",
 						Success:     true,
 						ResultsPath: "job-race/axe/results.json",
-						ReportPath:  "job-race/axe/report.html",
 					},
 				},
 			},
@@ -207,7 +202,6 @@ func TestServiceRecordScannerCompletionDoesNotCompleteWithoutOwnership(t *testin
 		JobID:             "job-race",
 		ScannerType:       "axe",
 		ResultsPath:       "job-race/axe/results.json",
-		ReportPath:        "job-race/axe/report.html",
 		TotalPagesScanned: 1,
 		Summary:           events.ScanSummary{TotalViolations: 0, BySeverity: map[string]int{}},
 	}
@@ -293,7 +287,6 @@ func TestServiceCompleteJobCompletingRedeliveryResumesWithoutPendingTerminalEven
 			"axe": {
 				ScannerType: "axe",
 				Success:     true,
-				ReportPath:  "job-redelivery/axe/report.html",
 			},
 		},
 	}
@@ -389,7 +382,6 @@ func TestServicePublishesPendingTerminalEventForDuplicateTerminalScanEvent(t *te
 		JobID:             "job-terminal",
 		ScannerType:       "axe",
 		ResultsPath:       "job-terminal/axe/results.json",
-		ReportPath:        "job-terminal/axe/report.html",
 		TotalPagesScanned: 1,
 		Summary:           events.ScanSummary{TotalViolations: 0, BySeverity: map[string]int{}},
 	}
@@ -646,7 +638,6 @@ func (f *fakeJobStore) UpdateJobPodID(_ context.Context, _, podID string) error 
 
 func (f *fakeJobStore) UpdateJobCompletionArtifacts(
 	_ context.Context,
-	_,
 	_,
 	_,
 	_,

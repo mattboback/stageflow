@@ -136,7 +136,6 @@ func toJobRecord(job *models.Job) *status.JobRecord {
 		CurrentPage:           job.CurrentPage,
 		TotalViolations:       job.TotalViolations,
 		ReportJSONKey:         job.ReportJSONKey,
-		ReportKey:             job.ReportKey,
 		ScanStageLogKey:       job.ScanStageLogKey,
 		ScanRecipeKey:         job.ScanRecipeKey,
 		ExtractionStageLogKey: job.ExtractionStageLogKey,
@@ -156,7 +155,6 @@ func toJobRecord(job *models.Job) *status.JobRecord {
 			rec.ScannerArtifacts[scannerType] = &status.ScannerArtifactRecord{
 				ScannerType: result.ScannerType,
 				ResultsKey:  result.ResultsPath,
-				ReportKey:   result.ReportPath,
 				StageLogKey: result.StageLogPath,
 				RecipeKey:   result.RecipePath,
 			}

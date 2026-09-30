@@ -273,7 +273,7 @@ describe('ScannerBase', () => {
 			expect.anything(),
 			expect.anything()
 		);
-		expect(mocks.mockStorageProviderInstance.upload.mock.calls.length).toBeGreaterThanOrEqual(2);
+		expect(mocks.mockStorageProviderInstance.upload.mock.calls.length).toBeGreaterThanOrEqual(1);
 
 		expect(mocks.mockEventPublisherInstance.publishScanCompleted).toHaveBeenCalled();
 		expect(mocks.mockEventPublisherInstance.publishPageCompleted).toHaveBeenCalledTimes(2);
@@ -330,7 +330,7 @@ describe('ScannerBase', () => {
 		await scanner.run(mockConfig);
 
 		expect(mocks.mockBrowserManagerInstance.createContext).not.toHaveBeenCalled();
-		expect(mocks.mockStorageProviderInstance.upload.mock.calls.length).toBeGreaterThanOrEqual(2);
+		expect(mocks.mockStorageProviderInstance.upload.mock.calls.length).toBeGreaterThanOrEqual(1);
 	});
 
 	it('validates provenance required fields and URL constraints', () => {

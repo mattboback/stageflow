@@ -122,14 +122,13 @@ func (o *Orchestrator) UpdateJobPodID(ctx context.Context, jobID, podID string) 
 
 func (o *Orchestrator) UpdateJobCompletionArtifacts(
 	ctx context.Context,
-	jobID, reportJSONPath, reportHTMLPath, stageLogPath, recipePath string,
+	jobID, reportJSONPath, stageLogPath, recipePath string,
 	totalIssues int,
 ) error {
 	return o.database.UpdateJobCompletionArtifacts(
 		ctx,
 		jobID,
 		reportJSONPath,
-		reportHTMLPath,
 		stageLogPath,
 		recipePath,
 		totalIssues,

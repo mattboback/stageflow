@@ -21,7 +21,7 @@ import type {
 } from './types';
 
 import { createLogger } from '../utils/logger';
-import { reportPath, resultsPath } from './artifact-paths';
+import { resultsPath } from './artifact-paths';
 
 const DEFAULT_SUBJECTS = {
 	pageCompleted: 'scan.events.page.completed',
@@ -109,14 +109,12 @@ export class NatsEventPublisher implements ScanEventPublisher {
 		artifacts?: {
 			stageLogPath?: string;
 			recipePath?: string;
-			reportPath?: string;
 		}
 	): Promise<void> {
 		await this.publish(this.subjects.scanCompleted, 'scan.completed', {
 			job_id: this.jobId,
 			scanner_type: this.scannerName,
 			results_path: resultsPath(this.jobId, this.scannerName),
-			report_path: artifacts?.reportPath ?? reportPath(this.jobId, this.scannerName),
 			total_pages_scanned: results.pages.length,
 			summary: {
 				total_violations: results.summary.totalIssues,
@@ -238,7 +236,6 @@ export class NoOpEventPublisher implements ScanEventPublisher {
 		_artifacts?: {
 			stageLogPath?: string;
 			recipePath?: string;
-			reportPath?: string;
 		}
 	): Promise<void> {
 		return Promise.resolve();

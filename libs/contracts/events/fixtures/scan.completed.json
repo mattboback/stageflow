@@ -7,7 +7,6 @@
 		"job_id": "job-123",
 		"scanner_type": "axe",
 		"results_path": "job-123/axe/results.json",
-		"report_path": "job-123/axe/report.html",
 		"total_pages_scanned": 3,
 		"summary": {
 			"total_violations": 7,

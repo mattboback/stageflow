@@ -112,7 +112,6 @@ func TestCompleteJobWithTerminalEventScrubsExecutionOnlyConfig(t *testing.T) {
 			Status: events.JobStatusSuccess,
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: "job-complete-redacted/report.json",
-				ReportHTML: "job-complete-redacted/report.html",
 			},
 		},
 	)

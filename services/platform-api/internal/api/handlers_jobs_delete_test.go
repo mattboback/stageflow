@@ -135,7 +135,7 @@ func TestHandleJobDeleteRejectsSuffixPaths(t *testing.T) {
 	t.Parallel()
 
 	server, _, _ := newTestServer(t)
-	req := httptest.NewRequest(http.MethodDelete, "/api/v1/jobs/job-1/report", http.NoBody)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/jobs/job-1/results", http.NoBody)
 	rr := httptest.NewRecorder()
 	server.handleJobDelete(rr, req)
 
@@ -157,7 +157,6 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 
 	paths := []string{
 		"/api/v1/jobs/" + jobID,
-		"/api/v1/jobs/" + jobID + "/report",
 		"/api/v1/jobs/" + jobID + "/results",
 		"/api/v1/jobs/" + jobID + "/stream",
 	}

@@ -90,7 +90,6 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 									<tr>
 										<th scope="col">Scanner</th>
 										<th scope="col">JSON Results</th>
-										<th scope="col">HTML Report</th>
 										<th scope="col">Stage Log</th>
 										<th scope="col">Scan Recipe</th>
 									</tr>
@@ -105,15 +104,6 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 												{item.results_json ? (
 													<a href={item.results_json} target="_blank" rel="noopener noreferrer">
 														JSON ↗
-													</a>
-												) : (
-													<span className="muted">—</span>
-												)}
-											</td>
-											<td>
-												{item.report_html ? (
-													<a href={item.report_html} target="_blank" rel="noopener noreferrer">
-														HTML ↗
 													</a>
 												) : (
 													<span className="muted">—</span>

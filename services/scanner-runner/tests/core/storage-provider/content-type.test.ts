@@ -12,7 +12,7 @@ describe('guessContentType', () => {
 
 	describe('HTML files', () => {
 		it('returns text/html for .html files', () => {
-			expect(guessContentType('report.html')).toBe('text/html');
+			expect(guessContentType('page.html')).toBe('text/html');
 			expect(guessContentType('/reports/index.html')).toBe('text/html');
 		});
 

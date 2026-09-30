@@ -197,7 +197,6 @@ func (s *Service) RecordScannerFailure(ctx context.Context, payload *events.Scan
 		ctx,
 		payload.JobID,
 		"",
-		"",
 		payload.StageLogPath,
 		payload.RecipePath,
 		0,
@@ -277,7 +276,6 @@ func (s *Service) RecordScannerCompletion(ctx context.Context, payload *events.S
 	allComplete, err := s.store.RecordScannerCompletion(ctx, payload.JobID, &models.ScannerResult{
 		ScannerType:    scannerType,
 		ResultsPath:    payload.ResultsPath,
-		ReportPath:     payload.ReportPath,
 		StageLogPath:   payload.StageLogPath,
 		RecipePath:     payload.RecipePath,
 		Success:        true,
@@ -372,14 +370,13 @@ func (s *Service) finalizeJobCompletion(ctx context.Context, job *models.Job) er
 		return fmt.Errorf("failed to record scan complete: %w", recordErr)
 	}
 
-	primaryReportPath, primaryStageLogPath, primaryRecipePath, totalIssues := summarizeSuccessfulScannerArtifacts(job)
+	primaryStageLogPath, primaryRecipePath, totalIssues := summarizeSuccessfulScannerArtifacts(job)
 	scannerArtifacts := buildScannerArtifacts(job)
 
 	if artifactsErr := s.store.UpdateJobCompletionArtifacts(
 		ctx,
 		job.ID,
 		reportJSONPath,
-		primaryReportPath,
 		primaryStageLogPath,
 		primaryRecipePath,
 		totalIssues,
@@ -392,7 +389,6 @@ func (s *Service) finalizeJobCompletion(ctx context.Context, job *models.Job) er
 		Status: "success",
 		Artifacts: events.ArtifactLocations{
 			ReportJSON:     reportJSONPath,
-			ReportHTML:     primaryReportPath,
 			ScanStageLog:   primaryStageLogPath,
 			ScanRecipe:     primaryRecipePath,
 			ProvenanceJSON: job.ProvenanceKey,
@@ -573,9 +569,9 @@ func (s *Service) persistExtractionReadyMetadata(
 	return nil
 }
 
-func summarizeSuccessfulScannerArtifacts(job *models.Job) (string, string, string, int) {
+func summarizeSuccessfulScannerArtifacts(job *models.Job) (string, string, int) {
 	if job == nil {
-		return "", "", "", 0
+		return "", "", 0
 	}
 
 	successfulScanners := make([]string, 0, len(job.ScannerResults))
@@ -592,15 +588,15 @@ func summarizeSuccessfulScannerArtifacts(job *models.Job) (string, string, strin
 
 	primaryScanner, ok := domainjobs.SelectPrimaryScanner(job, successfulScanners)
 	if !ok {
-		return "", "", "", totalIssues
+		return "", "", totalIssues
 	}
 
 	result := job.ScannerResults[primaryScanner]
 	if result == nil {
-		return "", "", "", totalIssues
+		return "", "", totalIssues
 	}
 
-	return result.ReportPath, result.StageLogPath, result.RecipePath, totalIssues
+	return result.StageLogPath, result.RecipePath, totalIssues
 }
 
 func buildScannerArtifacts(job *models.Job) map[string]events.ScannerArtifacts {
@@ -618,7 +614,6 @@ func buildScannerArtifacts(job *models.Job) map[string]events.ScannerArtifacts {
 		scannerArtifacts[scannerType] = events.ScannerArtifacts{
 			ScannerType:  scannerType,
 			ResultsPath:  result.ResultsPath,
-			ReportPath:   result.ReportPath,
 			StageLogPath: result.StageLogPath,
 			RecipePath:   result.RecipePath,
 		}

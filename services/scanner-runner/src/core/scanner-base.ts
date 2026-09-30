@@ -1,7 +1,7 @@
 import { createScanContext } from './scan-context';
 import type { Stats } from 'node:fs';
 
-import { readdir, stat, writeFile } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 
 import type {
@@ -22,17 +22,13 @@ import type {
 
 import { createLogger } from '../utils/logger';
 import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
-import {
-	reportPath as artifactReportPath,
-	resultsPath as artifactResultsPath
-} from './artifact-paths';
+import { resultsPath as artifactResultsPath } from './artifact-paths';
 import { BrowserManager } from './browser-manager';
 import { NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
 import { PageIterator } from './page-iterator';
 import { buildPublicProvenance } from './public-provenance';
 import { ScanStageLogger } from './scan-stage-logger';
 import { buildScanCompletedTiming, withPublishCompletedTiming } from './scan-lifecycle';
-import { buildStandaloneReportHTML } from './standalone-report-template';
 import { MinioStorageProvider } from './storage-provider';
 import { WebServerFormatter } from './web-server-formatter';
 
@@ -121,8 +117,7 @@ export abstract class ScannerBase {
 			await this.publishScanCompleted(results, {
 				pageIterationMs,
 				writeResultsMs,
-				uploadArtifactsMs,
-				reportPath: artifactReportPath(this.config.jobId, this.metadata.name)
+				uploadArtifactsMs
 			});
 
 			await this.hooks.onScanEnd?.(results);
@@ -196,7 +191,6 @@ export abstract class ScannerBase {
 			pageIterationMs: number;
 			writeResultsMs: number;
 			uploadArtifactsMs: number;
-			reportPath: string;
 		}
 	): Promise<{ publishCompletedMs: number }> {
 		// The five timing components are disjoint phases that must sum to <= totalMs
@@ -214,7 +208,6 @@ export abstract class ScannerBase {
 
 		const { durationMs: publishCompletedMs } = await this.runPhase('publishScanCompleted', () =>
 			this.eventPublisher.publishScanCompleted(results, timingForEvent, {
-				reportPath: timing.reportPath,
 				...(this.scanStageLogPath ? { stageLogPath: this.scanStageLogPath } : {}),
 				...(this.scanRecipePath ? { recipePath: this.scanRecipePath } : {})
 			})
@@ -427,21 +420,12 @@ export abstract class ScannerBase {
 		}));
 	}
 
-	protected async writeResults(
-		provenance: Provenance,
-		results: ScanResults
-	): Promise<{ reportPath: string }> {
+	protected async writeResults(provenance: Provenance, results: ScanResults): Promise<void> {
 		const webServerFormat = new WebServerFormatter().format(provenance, results, this.metadata);
 
 		const resultsPath = join(this.config.resultsDir, 'results.json');
 		await writeJson(resultsPath, webServerFormat, { spaces: 2 });
 		this.logger.info('Wrote results file', { path: resultsPath });
-
-		const reportPath = join(this.config.resultsDir, 'report.html');
-		await writeFile(reportPath, this.buildStandaloneReportHTML(results), 'utf8');
-		this.logger.info('Wrote standalone report file', { path: reportPath });
-
-		return { reportPath };
 	}
 
 	protected async uploadArtifacts(): Promise<void> {
@@ -455,15 +439,7 @@ export abstract class ScannerBase {
 			join(this.config.resultsDir, 'results.json')
 		);
 
-		const reportKey = artifactReportPath(this.config.jobId, this.metadata.name);
-		await this.storageProvider.upload(
-			bucket,
-			reportKey,
-			join(this.config.resultsDir, 'report.html'),
-			'text/html; charset=utf-8'
-		);
-
-		let uploadedCount = 2;
+		let uploadedCount = 1;
 
 		const entries = await readdir(this.config.resultsDir, {
 			withFileTypes: true
@@ -601,10 +577,6 @@ export abstract class ScannerBase {
 		}
 
 		return uploadedCount;
-	}
-
-	private buildStandaloneReportHTML(results: ScanResults): string {
-		return buildStandaloneReportHTML(results, this.metadata);
 	}
 
 	private async uploadProvenanceArtifactIfNeeded(provenance: Provenance): Promise<void> {

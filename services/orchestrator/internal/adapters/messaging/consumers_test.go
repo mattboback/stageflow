@@ -183,7 +183,6 @@ func TestEventHandlerInterface(t *testing.T) {
 			JobID:             "job-scan-1",
 			ScannerType:       "axe",
 			ResultsPath:       "job-scan-1/results.json",
-			ReportPath:        "job-scan-1/report.html",
 			TotalPagesScanned: 10,
 			Summary: events.ScanSummary{
 				TotalViolations: 25,
@@ -338,14 +337,13 @@ func TestEventPayloadStructures(t *testing.T) {
 			JobID:             "job-3",
 			ScannerType:       "axe",
 			ResultsPath:       "job-3/results.json",
-			ReportPath:        "job-3/report.html",
 			TotalPagesScanned: 5,
 			Summary: events.ScanSummary{
 				TotalViolations: 12,
 			},
 		}
 
-		if payload.ResultsPath == "" || payload.ReportPath == "" {
+		if payload.ResultsPath == "" {
 			t.Error("artifact paths should not be empty")
 		}
 
@@ -405,7 +403,6 @@ func TestMockHandlerConcurrency(t *testing.T) {
 						JobID:             "job",
 						ScannerType:       "axe",
 						ResultsPath:       "job/axe/results.json",
-						ReportPath:        "job/axe/report.html",
 						TotalPagesScanned: 1,
 						Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 					})

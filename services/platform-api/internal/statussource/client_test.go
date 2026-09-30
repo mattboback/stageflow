@@ -53,7 +53,6 @@ func TestClientGetJobMapsRecord(t *testing.T) {
 				CurrentPage:       5,
 				TotalViolations:   7,
 				ReportJSONKey:     "job-1/report.json",
-				ReportKey:         "job-1/report.html",
 				ScanStageLogKey:   "job-1/stage.log",
 				ScanRecipeKey:     "job-1/recipe.json",
 				ProvenanceKey:     "job-1/provenance.json",
@@ -63,7 +62,6 @@ func TestClientGetJobMapsRecord(t *testing.T) {
 					"axe": {
 						ScannerType: "axe",
 						ResultsPath: "job-1/axe/results.json",
-						ReportPath:  "job-1/axe/report.html",
 					},
 				},
 			},

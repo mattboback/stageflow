@@ -75,7 +75,6 @@ type Job struct {
 	CurrentPage           int                       `json:"current_page,omitempty"`
 	TotalViolations       int                       `json:"violations,omitempty"`
 	ReportJSONKey         string                    `json:"report_json_key,omitempty"`
-	ReportKey             string                    `json:"report_key,omitempty"`
 	ScanStageLogKey       string                    `json:"scan_stage_log_key,omitempty"`
 	ScanRecipeKey         string                    `json:"scan_recipe_key,omitempty"`
 	ExtractionStageLogKey string                    `json:"extraction_stage_log_key,omitempty"`
@@ -91,7 +90,6 @@ type Job struct {
 type ScannerResult struct {
 	ScannerType    string `json:"scanner_type"`
 	ResultsPath    string `json:"results_path"`
-	ReportPath     string `json:"report_path"`
 	StageLogPath   string `json:"stage_log_path,omitempty"`
 	RecipePath     string `json:"recipe_path,omitempty"`
 	Success        bool   `json:"success"`
@@ -161,7 +159,6 @@ type JobProgress struct {
 // ArtifactLocation contains URLs to download artifacts.
 type ArtifactLocation struct {
 	ReportJSON         string                       `json:"report_json"` // Presigned URL
-	ReportHTML         string                       `json:"report_html"` // Presigned URL
 	ScanStageLog       string                       `json:"scan_stage_log,omitempty"`
 	ScanRecipe         string                       `json:"scan_recipe,omitempty"`
 	ExtractionStageLog string                       `json:"extraction_stage_log,omitempty"`
@@ -175,7 +172,6 @@ type ArtifactLocation struct {
 type ScannerArtifacts struct {
 	ScannerType  string `json:"scanner_type"`
 	ResultsJSON  string `json:"results_json"`
-	ReportHTML   string `json:"report_html"`
 	ScanStageLog string `json:"scan_stage_log,omitempty"`
 	ScanRecipe   string `json:"scan_recipe,omitempty"`
 }

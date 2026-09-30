@@ -53,7 +53,6 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 			JobID:             jobID,
 			ScannerType:       "axe",
 			ResultsPath:       jobID + "/axe/results.json",
-			ReportPath:        jobID + "/axe/report.html",
 			TotalPagesScanned: 1,
 			Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 		}

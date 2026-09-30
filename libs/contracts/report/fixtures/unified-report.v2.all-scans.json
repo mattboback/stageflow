@@ -51,8 +51,7 @@
 			"startedAt": "2025-12-22T00:00:02Z",
 			"completedAt": "2025-12-22T00:00:05Z",
 			"durationMs": 3000,
-			"resultsPath": "job-123/axe/results.json",
-			"reportPath": "job-123/axe/report.html"
+			"resultsPath": "job-123/axe/results.json"
 		},
 		{
 			"id": "lighthouse",
@@ -70,8 +69,7 @@
 			"startedAt": "2025-12-22T00:00:05Z",
 			"completedAt": "2025-12-22T00:00:08Z",
 			"durationMs": 3000,
-			"resultsPath": "job-123/lighthouse/results.json",
-			"reportPath": "job-123/lighthouse/report.html"
+			"resultsPath": "job-123/lighthouse/results.json"
 		},
 		{
 			"id": "link-checker",
@@ -89,8 +87,7 @@
 			"startedAt": "2025-12-22T00:00:08Z",
 			"completedAt": "2025-12-22T00:00:09Z",
 			"durationMs": 1000,
-			"resultsPath": "job-123/link-checker/results.json",
-			"reportPath": "job-123/link-checker/report.html"
+			"resultsPath": "job-123/link-checker/results.json"
 		},
 		{
 			"id": "security-headers",
@@ -108,8 +105,7 @@
 			"startedAt": "2025-12-22T00:00:09Z",
 			"completedAt": "2025-12-22T00:00:10Z",
 			"durationMs": 1000,
-			"resultsPath": "job-123/security-headers/results.json",
-			"reportPath": "job-123/security-headers/report.html"
+			"resultsPath": "job-123/security-headers/results.json"
 		},
 		{
 			"id": "seo",
@@ -127,8 +123,7 @@
 			"startedAt": "2025-12-22T00:00:10Z",
 			"completedAt": "2025-12-22T00:00:12Z",
 			"durationMs": 2000,
-			"resultsPath": "job-123/seo/results.json",
-			"reportPath": "job-123/seo/report.html"
+			"resultsPath": "job-123/seo/results.json"
 		}
 	],
 	"pages": [
@@ -315,36 +310,6 @@
 		}
 	],
 	"artifacts": [
-		{
-			"id": "report-axe",
-			"type": "html",
-			"path": "job-123/axe/report.html",
-			"mime": "text/html"
-		},
-		{
-			"id": "report-lighthouse",
-			"type": "html",
-			"path": "job-123/lighthouse/report.html",
-			"mime": "text/html"
-		},
-		{
-			"id": "report-link-checker",
-			"type": "html",
-			"path": "job-123/link-checker/report.html",
-			"mime": "text/html"
-		},
-		{
-			"id": "report-security-headers",
-			"type": "html",
-			"path": "job-123/security-headers/report.html",
-			"mime": "text/html"
-		},
-		{
-			"id": "report-seo",
-			"type": "html",
-			"path": "job-123/seo/report.html",
-			"mime": "text/html"
-		},
 		{
 			"id": "ss-axe-color-contrast-page-1",
 			"type": "screenshot",

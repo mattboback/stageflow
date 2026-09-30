@@ -108,7 +108,6 @@ func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
 			Status: events.JobStatusSuccess,
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: sseTestJobID + "/report.json",
-				ReportHTML: sseTestJobID + "/report.html",
 			},
 		},
 	}); err != nil {

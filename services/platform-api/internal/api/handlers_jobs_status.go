@@ -63,18 +63,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(parts) > 1 {
-		if len(parts) != 2 {
-			httputil.RespondNotFound(w, "Endpoint")
-
-			return
-		}
-
-		switch parts[1] {
-		case "report":
-			s.handleJobReport(w, r, jobID)
-
-			return
-		case "results":
+		if len(parts) == 2 && parts[1] == "results" {
 			s.handleJobResults(w, r, jobID)
 
 			return
@@ -110,72 +99,6 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.RespondOK(w, job)
-}
-
-func (s *Server) handleJobReport(w http.ResponseWriter, r *http.Request, jobID string) {
-	ctx := logging.WithJobID(r.Context(), jobID)
-
-	rec, err := s.jobStatus.Current(ctx, jobID)
-	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
-			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
-
-			return
-		}
-
-		logging.Error(ctx, "Failed to fetch job status", "error", err)
-		httputil.RespondStructuredError(w, http.StatusInternalServerError, httputil.NewDatabaseError())
-
-		return
-	}
-
-	if rec.State != models.JobStateDone {
-		httputil.RespondStructuredError(w, http.StatusBadRequest, httputil.ErrorDetail{
-			Code:       httputil.ErrCodeInvalidRequest,
-			Message:    "Job is not completed yet",
-			Details:    "Current state: " + string(rec.State),
-			Suggestion: "Wait for the job to complete before requesting the report. Check job status at GET /api/v1/jobs/" + jobID,
-		})
-
-		return
-	}
-
-	if rec.ReportKey == "" {
-		details := "No standalone HTML report artifact is available for this job."
-		suggestion := "Use GET /api/v1/jobs/" + jobID + "/results or open /scan/" + jobID + "/report."
-
-		if rec.ReportJSONKey == "" {
-			details = "No report artifacts have been generated for this job."
-			suggestion = "This job may have failed report generation. Check GET /api/v1/jobs/" + jobID + "."
-		}
-
-		httputil.RespondStructuredError(w, http.StatusNotFound, httputil.ErrorDetail{
-			Code:       httputil.ErrCodeNotFound,
-			Message:    "Report not found",
-			Details:    details,
-			Suggestion: suggestion,
-		})
-
-		return
-	}
-
-	reportKey, ok := jobScopedKey(jobID, rec.ReportKey)
-	if !ok {
-		logging.Warn(ctx, "Refusing to presign non-job-scoped report key", "key", rec.ReportKey)
-		httputil.RespondNotFound(w, "Report")
-
-		return
-	}
-
-	url, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, reportKey, 15*time.Minute)
-	if err != nil {
-		logging.Error(ctx, "Failed to generate presigned URL", "error", err, "report_key", rec.ReportKey)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to generate download URL")
-
-		return
-	}
-
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID string) {

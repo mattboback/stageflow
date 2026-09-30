@@ -35,7 +35,6 @@ func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 			JobID: jobID,
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: jobID + "/report.json",
-				ReportHTML: jobID + "/report.html",
 			},
 		},
 	})
@@ -56,10 +55,6 @@ func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 
 	if job.Artifacts.ReportJSON == "" {
 		t.Fatal("expected report JSON URL")
-	}
-
-	if job.Artifacts.ReportHTML == "" {
-		t.Fatal("expected report HTML URL")
 	}
 }
 
@@ -120,7 +115,6 @@ func TestBuildJobStatusResponse_DoneUsesAggregatedReportIssueCount(t *testing.T)
 		State:           models.JobStateDone,
 		TotalViolations: 6,
 		ReportJSONKey:   reportKey,
-		ReportKey:       jobID + "/report.html",
 	}
 
 	job, err := server.buildJobStatusResponse(context.Background(), rec)
@@ -171,7 +165,6 @@ func TestBuildPerScannerArtifacts(t *testing.T) {
 			"axe": {
 				ScannerType: "axe",
 				ResultsKey:  "test-per-scanner/axe/results.json",
-				ReportKey:   "test-per-scanner/axe/report.html",
 				StageLogKey: "test-per-scanner/axe/scan-stage-log.json",
 				RecipeKey:   "test-per-scanner/axe/scan-recipe.json",
 			},

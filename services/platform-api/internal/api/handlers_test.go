@@ -384,15 +384,13 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 
 	completeJobWithArtifacts(t, server.jobStatus, jobID, events.ArtifactLocations{
 		ReportJSON: jobID + "/report.json",
-		ReportHTML: jobID + "/report.html",
 	})
 
 	job := assertJobStatusDone(t, server, jobID)
-	if job.Artifacts == nil || job.Artifacts.ReportHTML == "" {
+	if job.Artifacts == nil || job.Artifacts.ReportJSON == "" {
 		t.Fatalf("expected artifacts populated")
 	}
 
-	assertJobReportRedirect(t, server, jobID)
 	assertJobResultsRedirect(t, server, jobID)
 
 	if len(publisher.envelopes) != 1 {
@@ -434,7 +432,6 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 			JobID: jobID,
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: reportKey,
-				ReportHTML: jobID + "/report.html",
 			},
 		},
 	}); completeErr != nil {
@@ -642,18 +639,6 @@ func assertJobStatusDone(t *testing.T, server *Server, jobID string) models.JobS
 	return job
 }
 
-func assertJobReportRedirect(t *testing.T, server *Server, jobID string) {
-	t.Helper()
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
-	rr := httptest.NewRecorder()
-	server.handleJobReport(rr, req, jobID)
-
-	if rr.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected 307, got %d", rr.Code)
-	}
-}
-
 func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
 	t.Helper()
 
@@ -663,56 +648,6 @@ func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
 
 	if rr.Code != http.StatusTemporaryRedirect {
 		t.Fatalf("expected 307, got %d", rr.Code)
-	}
-}
-
-func TestJobReportReturnsNotFoundWhenHTMLMissing(t *testing.T) {
-	server, _, _ := newTestServer(t)
-
-	jobID := "job-report-fallback"
-	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCreated,
-		ObservedAt: time.Now().UTC(),
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
-
-	// Mark the job complete with an aggregated JSON report, but no HTML report artifact.
-	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCompleted,
-		ObservedAt: time.Now().UTC(),
-		JobCompleted: &events.JobCompletedPayload{
-			JobID: jobID,
-			Artifacts: events.ArtifactLocations{
-				ReportJSON: jobID + "/report.json",
-				ReportHTML: "",
-			},
-		},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
-	rr := httptest.NewRecorder()
-
-	server.handleJobReport(rr, req, jobID)
-
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", rr.Code)
-	}
-
-	var parsed httputil.ErrorResponse
-	if err := json.NewDecoder(rr.Body).Decode(&parsed); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	if parsed.Error.Code != httputil.ErrCodeNotFound {
-		t.Fatalf("expected NOT_FOUND code, got %q", parsed.Error.Code)
 	}
 }
 

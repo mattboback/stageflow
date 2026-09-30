@@ -27,14 +27,12 @@ export interface ScreenshotArtifact {
 interface ScannerArtifactBundle {
 	scanner_type: string;
 	results_json?: string;
-	report_html?: string;
 	scan_stage_log?: string;
 	scan_recipe?: string;
 }
 
 interface ScanArtifacts {
 	report_json: string;
-	report_html: string;
 	scan_stage_log?: string;
 	scan_recipe?: string;
 	extraction_stage_log?: string;

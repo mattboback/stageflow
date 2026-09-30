@@ -92,13 +92,10 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 				CompletedAt: &now,
 				DurationMs:  floatPtr(100),
 				ResultsPath: stringPtr("job-1/axe/results.json"),
-				ReportPath:  stringPtr("job-1/axe/report.html"),
 			},
 		},
-		Artifacts: []report.ReportArtifact{
-			{Id: "axe-report", Type: "html", Path: stringPtr("job-1/axe/report.html"), Mime: stringPtr("text/html")},
-		},
-		Errors: nil,
+		Artifacts: nil,
+		Errors:    nil,
 	}
 
 	lighthouseResults := report.UnifiedReportV2{
@@ -173,18 +170,10 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 				CompletedAt: &now,
 				DurationMs:  floatPtr(200),
 				ResultsPath: stringPtr("job-1/lighthouse/results.json"),
-				ReportPath:  stringPtr("job-1/lighthouse/report.html"),
 			},
 		},
-		Artifacts: []report.ReportArtifact{
-			{
-				Id:   "lh-report",
-				Type: "html",
-				Path: stringPtr("job-1/lighthouse/report.html"),
-				Mime: stringPtr("text/html"),
-			},
-		},
-		Errors: nil,
+		Artifacts: nil,
+		Errors:    nil,
 	}
 
 	axeBytes, err := json.Marshal(axeResults)
@@ -207,13 +196,11 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 			"axe": {
 				ScannerType: "axe",
 				ResultsPath: "job-1/axe/results.json",
-				ReportPath:  "job-1/axe/report.html",
 				Success:     true,
 			},
 			"lighthouse": {
 				ScannerType: "lighthouse",
 				ResultsPath: "job-1/lighthouse/results.json",
-				ReportPath:  "job-1/lighthouse/report.html",
 				Success:     true,
 			},
 		},

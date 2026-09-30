@@ -111,7 +111,6 @@ func (a *reportAggregation) aggregateScanner(ctx context.Context, scannerID stri
 
 	stat.Status = report.ScannerStatusSuccess
 	stat.ResultsPath = stringPtr(result.ResultsPath)
-	stat.ReportPath = stringPtr(result.ReportPath)
 	a.hadSuccess = true
 
 	a.absorbMeta(doc.Meta)

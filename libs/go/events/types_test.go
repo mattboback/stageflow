@@ -201,7 +201,6 @@ func TestScanCompletedPayload_Validate_AndJSONOmitEmpty(t *testing.T) {
 		JobID:             "job-123",
 		ScannerType:       "axe",
 		ResultsPath:       "job-123/axe/results.json",
-		ReportPath:        "job-123/axe/report.html",
 		TotalPagesScanned: 10,
 		Summary: ScanSummary{
 			TotalViolations: 25,
@@ -221,7 +220,7 @@ func TestScanCompletedPayload_Validate_AndJSONOmitEmpty(t *testing.T) {
 	b := mustMarshal(t, p)
 	m := mustUnmarshalMap(t, b)
 
-	for _, k := range []string{"job_id", "results_path", "report_path", "total_pages_scanned", "summary"} {
+	for _, k := range []string{"job_id", "results_path", "total_pages_scanned", "summary"} {
 		if _, exists := m[k]; !exists {
 			t.Fatalf("expected key %q in JSON: %s", k, string(b))
 		}
@@ -279,13 +278,11 @@ func TestJobCompletedPayload_Validate(t *testing.T) {
 		Status: JobStatusSuccess,
 		Artifacts: ArtifactLocations{
 			ReportJSON: "/results/report.json",
-			ReportHTML: "/results/report.html",
 		},
 		ScannerArtifacts: map[string]ScannerArtifacts{
 			"axe": {
 				ScannerType: "axe",
 				ResultsPath: "/axe/results.json",
-				ReportPath:  "/axe/report.html",
 			},
 		},
 	}

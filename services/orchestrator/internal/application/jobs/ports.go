@@ -23,7 +23,7 @@ type JobStore interface {
 	UpdateJobPodID(ctx context.Context, jobID, podID string) error
 	UpdateJobCompletionArtifacts(
 		ctx context.Context,
-		jobID, reportJSONPath, reportHTMLPath, stageLogPath, recipePath string,
+		jobID, reportJSONPath, stageLogPath, recipePath string,
 		totalIssues int,
 	) error
 	UpdateJobMetrics(

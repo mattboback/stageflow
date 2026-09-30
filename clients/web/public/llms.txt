@@ -17,6 +17,5 @@
 ## API
 
 - `GET /api/v1/jobs/{jobId}/results`: Unified JSON report for a completed scan.
-- `GET /api/v1/jobs/{jobId}/report`: Standalone HTML report for a completed scan.
 
 The hosted demo processes submitted targets and scan data on its deployment. Self-host StageFlow when data residency or private-target scanning matters.

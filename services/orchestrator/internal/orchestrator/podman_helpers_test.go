@@ -105,7 +105,6 @@ func completeScanner(t *testing.T, orch *Orchestrator, mem *memoryStorage, jobID
 		JobID:             jobID,
 		ScannerType:       scanner,
 		ResultsPath:       jobID + "/" + scanner + "/results.json",
-		ReportPath:        jobID + "/" + scanner + "/report.html",
 		TotalPagesScanned: 1,
 		Summary:           events.ScanSummary{BySeverity: map[string]int{}},
 	}

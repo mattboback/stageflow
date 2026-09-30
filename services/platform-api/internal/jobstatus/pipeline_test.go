@@ -221,7 +221,6 @@ func TestPipelineApplyAccumulatesScannerCompletionViolations(t *testing.T) {
 			JobID:             "job-watch",
 			ScannerType:       "axe",
 			ResultsPath:       "job-watch/axe/results.json",
-			ReportPath:        "job-watch/axe/report.html",
 			TotalPagesScanned: 1,
 			Summary: events.ScanSummary{
 				TotalViolations: 3,
@@ -252,7 +251,6 @@ func TestPipelineApplyAccumulatesScannerCompletionViolations(t *testing.T) {
 			JobID:             "job-watch",
 			ScannerType:       "lighthouse",
 			ResultsPath:       "job-watch/lighthouse/results.json",
-			ReportPath:        "job-watch/lighthouse/report.html",
 			TotalPagesScanned: 1,
 			Summary: events.ScanSummary{
 				TotalViolations: 2,
@@ -281,7 +279,6 @@ func TestPipelineApplyAccumulatesScannerCompletionViolations(t *testing.T) {
 			JobID:             "job-watch",
 			ScannerType:       "axe",
 			ResultsPath:       "job-watch/axe/results.json",
-			ReportPath:        "job-watch/axe/report.html",
 			TotalPagesScanned: 1,
 			Summary: events.ScanSummary{
 				TotalViolations: 3,
@@ -393,7 +390,6 @@ func TestPipelineApplyKeepsFailureStickyAgainstLateSuccess(t *testing.T) {
 			Status: events.JobStatusSuccess,
 			Artifacts: events.ArtifactLocations{
 				ReportJSON: "job-sticky/report.json",
-				ReportHTML: "job-sticky/report.html",
 			},
 		},
 	})

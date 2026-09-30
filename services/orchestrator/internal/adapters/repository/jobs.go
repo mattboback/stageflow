@@ -11,7 +11,7 @@ import (
 )
 
 const jobSelectColumns = `
-id, state, input_type, input_path, urls, pod_id, config_json, created_at, updated_at, completed_at, error, error_details, last_stage, total_pages, current_page, total_violations, report_json_key, report_key, scan_stage_log_key, scan_recipe_key, extraction_stage_log_key, extraction_recipe_key, provenance_path, provenance_key, expected_scanners, completed_scanners, scanner_results
+id, state, input_type, input_path, urls, pod_id, config_json, created_at, updated_at, completed_at, error, error_details, last_stage, total_pages, current_page, total_violations, report_json_key, scan_stage_log_key, scan_recipe_key, extraction_stage_log_key, extraction_recipe_key, provenance_path, provenance_key, expected_scanners, completed_scanners, scanner_results
 `
 
 type rowScanner interface {
@@ -113,7 +113,6 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		currentPage           sql.NullInt64
 		totalViolations       sql.NullInt64
 		reportJSONKey         sql.NullString
-		reportKey             sql.NullString
 		scanStageLogKey       sql.NullString
 		scanRecipeKey         sql.NullString
 		extractionStageLogKey sql.NullString
@@ -143,7 +142,6 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		&currentPage,
 		&totalViolations,
 		&reportJSONKey,
-		&reportKey,
 		&scanStageLogKey,
 		&scanRecipeKey,
 		&extractionStageLogKey,
@@ -191,10 +189,6 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 
 	if reportJSONKey.Valid {
 		job.ReportJSONKey = reportJSONKey.String
-	}
-
-	if reportKey.Valid {
-		job.ReportKey = reportKey.String
 	}
 
 	if scanStageLogKey.Valid {

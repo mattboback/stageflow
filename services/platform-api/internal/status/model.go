@@ -24,7 +24,6 @@ type JobRecord struct {
 	CurrentPage           int
 	TotalViolations       int
 	ReportJSONKey         string
-	ReportKey             string
 	ScanStageLogKey       string
 	ScanRecipeKey         string
 	ExtractionStageLogKey string
@@ -41,7 +40,6 @@ type JobRecord struct {
 type ScannerArtifactRecord struct {
 	ScannerType string `json:"scanner_type"`
 	ResultsKey  string `json:"results_key"`
-	ReportKey   string `json:"report_key"`
 	StageLogKey string `json:"stage_log_key,omitempty"`
 	RecipeKey   string `json:"recipe_key,omitempty"`
 }
