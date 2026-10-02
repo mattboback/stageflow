@@ -24,11 +24,11 @@ it at the hosted demo — nothing to clone, nothing to deploy:
 
 ```bash
 # Linux amd64 shown; macOS (darwin) and Windows assets ship on the same release.
-version=v0.4.2
+version=v0.5.0
 curl -fsSL "https://github.com/mattboback/stageflow/releases/download/${version}/stageflow_${version}_linux_amd64.tar.gz" | tar -xz
 install -m 0755 stageflow ~/.local/bin/stageflow   # any directory on your PATH
 
-stageflow scan https://example.com --api https://stageflow.org
+stageflow scan https://example.com
 ```
 
 With Go 1.26 installed, `go install github.com/mattboback/stageflow/clients/cli/cmd/stageflow@latest`
@@ -42,17 +42,17 @@ Common CLI workflows:
 
 ```bash
 # Choose scanners and return JSON for automation.
-stageflow scan https://example.com --scanner axe,seo --format json --api https://stageflow.org
+stageflow scan https://example.com --scanner axe,seo --format json
 
 # Fail the command (exit 1) when serious-or-worse issues are found — a CI gate.
-stageflow scan https://example.com --fail-on serious --api https://stageflow.org
+stageflow scan https://example.com --fail-on serious
 
 # Scan several routes in one job.
-stageflow scan https://example.com https://example.com/about --format markdown --api https://stageflow.org
+stageflow scan https://example.com https://example.com/about --format markdown
 
 # Scan a local build before it ships anywhere: the directory is zipped,
 # uploaded, and served by the platform — no dev server or public URL needed.
-stageflow scan ./dist --api https://stageflow.org
+stageflow scan ./dist
 ```
 
 ![StageFlow CLI streaming a live scan and printing the machine-readable JSON envelope](docs/images/demo.gif)
@@ -81,9 +81,9 @@ open the committed fixture
 Save a known-good scan as a baseline, then compare each deployment's report:
 
 ```bash
-stageflow scan ./dist --api https://stageflow.org --format json --max-issues 0 > baseline.json
+stageflow scan ./dist --format json --max-issues 0 > baseline.json
 # After changing and rebuilding the site:
-stageflow scan ./dist --api https://stageflow.org --format json --max-issues 0 > current.json
+stageflow scan ./dist --format json --max-issues 0 > current.json
 stageflow diff baseline.json current.json --fail-on-new=any
 ```
 
