@@ -9,7 +9,7 @@
 
 import type { BrowserContext, Page } from 'playwright';
 
-import { describe, expect, it, vi } from 'vitest';
+import { type Mock, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type {
@@ -67,17 +67,12 @@ const baseScannerConfig: ScannerConfig = {
 const SECRET_USER = 'user+tag@example.com';
 const SECRET_PASSWORD = 'p@ss word+1';
 
-function makeLogger(): ScannerLogger & {
-	info: ReturnType<typeof vi.fn>;
-	warn: ReturnType<typeof vi.fn>;
-	error: ReturnType<typeof vi.fn>;
-	debug: ReturnType<typeof vi.fn>;
-} {
+function makeLogger(): { [Level in keyof ScannerLogger]: Mock<ScannerLogger[Level]> } {
 	return {
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		debug: vi.fn()
+		info: vi.fn<ScannerLogger['info']>(),
+		warn: vi.fn<ScannerLogger['warn']>(),
+		error: vi.fn<ScannerLogger['error']>(),
+		debug: vi.fn<ScannerLogger['debug']>()
 	};
 }
 

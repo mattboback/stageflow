@@ -31,8 +31,10 @@ func TestLiveContract_JobNetworkCannotReachOtherNetworks(t *testing.T) {
 
 	createPodmanNetwork(t, stackNetwork)
 	defer removePodmanNetwork(t, stackNetwork)
+
 	createPodmanNetwork(t, plainNetwork)
 	defer removePodmanNetwork(t, plainNetwork)
+
 	createPodmanNetwork(t, jobNetwork, "--opt", "isolate=strict")
 	defer removePodmanNetwork(t, jobNetwork)
 
@@ -140,8 +142,8 @@ func runProbePod(
 		t.Fatalf("CreateContainer(%s): %v", name, err)
 	}
 
-	if err := client.StartContainer(ctx, container.ID); err != nil {
-		t.Fatalf("StartContainer(%s): %v", name, err)
+	if startErr := client.StartContainer(ctx, container.ID); startErr != nil {
+		t.Fatalf("StartContainer(%s): %v", name, startErr)
 	}
 
 	return waitForExit(t, container.ID)

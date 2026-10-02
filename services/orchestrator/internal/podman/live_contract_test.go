@@ -4,7 +4,6 @@ package podman
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 )
@@ -62,61 +61,17 @@ func TestLiveContract_MountReadOnlyEncodedViaOptions(t *testing.T) {
 	}
 	defer removeContainer(ctrResp.ID)
 
-	// Inspect via the raw API so we can validate the mount record.
-	resp, err := client.doLibpodRequest(ctx, "GET", "/containers/"+ctrResp.ID+"/json", nil)
-	if err != nil {
-		t.Fatalf("inspect request: %v", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	var inspect map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&inspect); err != nil {
-		t.Fatalf("decode inspect: %v", err)
-	}
-
-	// Podman inspect includes Mounts as an array of objects; ensure our bind mount is read-only.
-	mountsAny, ok := inspect["Mounts"]
-	if !ok {
-		t.Fatalf("inspect missing Mounts field")
-	}
-	mounts, ok := mountsAny.([]any)
-	if !ok || len(mounts) == 0 {
-		t.Fatalf("inspect Mounts has unexpected type/value: %T", mountsAny)
-	}
-
-	found := false
-	for _, m := range mounts {
-		mm, ok := m.(map[string]any)
-		if !ok {
+	for _, mount := range inspectContainer(ctx, t, client, ctrResp.ID).Mounts {
+		if mount.Destination != "/workspace" {
 			continue
 		}
-		if mm["Destination"] != "/workspace" {
-			continue
-		}
-		found = true
 
-		// Most Podman inspect outputs include RW (bool) on mounts.
-		if rw, ok := mm["RW"].(bool); ok {
-			if rw {
-				t.Fatalf("expected /workspace mount to be read-only (RW=false), got RW=true")
-			}
-			return
+		if mount.RW == nil || *mount.RW {
+			t.Fatalf("expected /workspace mount to be read-only, got RW=%v", mount.RW)
 		}
 
-		// Fallback: check for "ro" in mount Options if RW isn't present.
-		if opts, ok := mm["Options"].([]any); ok {
-			for _, o := range opts {
-				if s, ok := o.(string); ok && s == "ro" {
-					return
-				}
-			}
-			t.Fatalf("expected /workspace mount options to include ro, got %v", opts)
-		}
-
-		t.Fatalf("found /workspace mount but could not validate read-only fields: %v", mm)
+		return
 	}
 
-	if !found {
-		t.Fatalf("did not find /workspace mount in inspect Mounts")
-	}
+	t.Fatalf("did not find /workspace mount in inspect Mounts")
 }

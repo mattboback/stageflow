@@ -1,4 +1,4 @@
-import Ajv, { type ValidateFunction } from 'ajv';
+import Ajv, { type SchemaObject, type ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,12 +22,17 @@ interface ProvenanceLike {
 		  };
 }
 
-function loadSchema(): unknown {
-	return JSON.parse(readFileSync(schemaPath, 'utf8')) as unknown;
+function loadSchema(): SchemaObject {
+	return JSON.parse(readFileSync(schemaPath, 'utf8')) as SchemaObject;
 }
 
 function loadFixture(name: string): ProvenanceLike {
 	return JSON.parse(readFileSync(join(fixturesDir, name), 'utf8')) as ProvenanceLike;
+}
+
+/** A fixture as plain JSON, for tests that break its shape on purpose. */
+function loadRawFixture(name: string): Record<string, unknown> {
+	return JSON.parse(readFileSync(join(fixturesDir, name), 'utf8')) as Record<string, unknown>;
 }
 
 function makeValidator(): ValidateFunction<ProvenanceLike> {
@@ -87,14 +92,14 @@ describe('Provenance contract', () => {
 	});
 
 	it('rejects a form auth missing the success strategy', () => {
-		const fixture = loadFixture('provenance.auth-form.json') as Record<string, unknown>;
+		const fixture = loadRawFixture('provenance.auth-form.json');
 		const auth = { ...(fixture.auth as Record<string, unknown>) };
 		delete auth.success;
 		expect(validate({ ...fixture, auth })).toBe(false);
 	});
 
 	it('rejects unknown discriminator on auth.mode', () => {
-		const fixture = loadFixture('provenance.no-auth.json') as Record<string, unknown>;
+		const fixture = loadRawFixture('provenance.no-auth.json');
 		expect(validate({ ...fixture, auth: { mode: 'oauth', token: 'x' } })).toBe(false);
 	});
 });

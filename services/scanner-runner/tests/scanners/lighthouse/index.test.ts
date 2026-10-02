@@ -1328,9 +1328,9 @@ describe('LighthouseScanner', () => {
 
 			context.pageEntry.url = `https://example.com/?password=${canary}`;
 			const result = await testScanner.scanPage(context);
-			expect(JSON.stringify([logger.debug.mock.calls, logger.warn.mock.calls])).not.toContain(
-				canary
-			);
+			expect(
+				JSON.stringify([vi.mocked(logger.debug).mock.calls, vi.mocked(logger.warn).mock.calls])
+			).not.toContain(canary);
 			const rawResults = result.rawResults as {
 				pageOverview: unknown;
 				categories?: unknown;

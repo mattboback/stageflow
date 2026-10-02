@@ -11,7 +11,7 @@ import (
 )
 
 // Real Podman, real 409. The unit tests inject the conflict; this proves the
-// recovery works against the daemon's actual behaviour and error shape, which is
+// recovery works against the daemon's actual behavior and error shape, which is
 // the part a fake cannot vouch for.
 func TestLiveContract_CreateJobPodIsIdempotent(t *testing.T) {
 	socket := liveSocketPath(t)
@@ -24,6 +24,7 @@ func TestLiveContract_CreateJobPodIsIdempotent(t *testing.T) {
 	)
 
 	job := &models.Job{ID: "idem-" + liveSuffix()}
+
 	t.Cleanup(func() {
 		_ = exec.Command("podman", "pod", "rm", "-f", JobPodName(job.ID)).Run()
 	})
@@ -72,7 +73,7 @@ func TestLiveContract_CreateJobPodRefusesAForeignPod(t *testing.T) {
 
 	t.Cleanup(func() { _ = exec.Command("podman", "pod", "rm", "-f", name).Run() })
 
-	if _, err := runtime.CreateJobPod(context.Background(), job); err == nil {
-		t.Fatal("expected adoption to be refused for a pod labelled with another job")
+	if _, adoptErr := runtime.CreateJobPod(context.Background(), job); adoptErr == nil {
+		t.Fatal("expected adoption to be refused for a pod labeled with another job")
 	}
 }

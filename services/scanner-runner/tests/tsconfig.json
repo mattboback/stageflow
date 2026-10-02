@@ -1,8 +1,15 @@
 {
+	// The tests' project, for tsc and ESLint alike. Vitest loads tests as ES
+	// modules resolved like a bundler, so the types must resolve the same way:
+	// under the service's node16 settings, extensionless imports degrade to any.
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
 		"noEmit": true,
-		"rootDir": ".."
+		"rootDir": "..",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"declaration": false,
+		"declarationMap": false
 	},
 	"include": ["./**/*.ts", "../src/**/*.ts", "../vitest.config.ts"]
 }

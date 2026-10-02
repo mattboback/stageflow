@@ -37,6 +37,7 @@ func liveClient(t *testing.T, socket string) *Client {
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
+
 	return client
 }
 
@@ -53,6 +54,7 @@ func podmanImageExists(image string) bool {
 // tests never pull: a missing image fails with the command that fixes it.
 func liveImage(t *testing.T) string {
 	t.Helper()
+
 	candidates := []string{
 		os.Getenv("STAGEFLOW_LIVE_IMAGE"),
 		"docker.io/library/busybox:latest",
@@ -65,8 +67,10 @@ func liveImage(t *testing.T) string {
 			return c
 		}
 	}
+
 	t.Fatalf("no local image for the live contract tests; run `podman pull docker.io/library/alpine:3.22` " +
 		"or set STAGEFLOW_LIVE_IMAGE")
+
 	return ""
 }
 
@@ -77,10 +81,12 @@ func createPodmanNetwork(t *testing.T, name string, options ...string) {
 
 func runPodman(t *testing.T, args ...string) string {
 	t.Helper()
+
 	out, err := exec.Command("podman", args...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("podman %v: %v (%s)", args, err, string(out))
 	}
+
 	return string(out)
 }
 
@@ -115,29 +121,64 @@ func removeVolume(name string) { _ = exec.Command("podman", "volume", "rm", "-f"
 
 func removePodmanNetwork(t *testing.T, name string) {
 	t.Helper()
+
 	cmd := exec.Command("podman", "network", "rm", name)
 	_ = cmd.Run()
 }
 
-func decodeJSONBody(t *testing.T, respBody any, out any) {
-	t.Helper()
-	data, err := json.Marshal(respBody)
-	if err != nil {
-		t.Fatalf("marshal JSON: %v", err)
-	}
-	if err := json.Unmarshal(data, out); err != nil {
-		t.Fatalf("unmarshal JSON: %v", err)
-	}
-}
-
 func getLibpodJSON(ctx context.Context, t *testing.T, client *Client, suffix string, out any) {
 	t.Helper()
-	resp, err := client.doLibpodRequest(ctx, "GET", suffix, nil)
-	if err != nil {
-		t.Fatalf("GET %s: %v", suffix, err)
+
+	resp, requestErr := client.doLibpodRequest(ctx, "GET", suffix, nil)
+	if requestErr != nil {
+		t.Fatalf("GET %s: %v", suffix, requestErr)
 	}
+
 	defer func() { _ = resp.Body.Close() }()
+
 	if err := parseResponse(resp, out); err != nil {
 		t.Fatalf("parse %s: %v", suffix, err)
 	}
+}
+
+// inspectedPod and inspectedContainer hold the parts of Podman's inspect
+// output the live tests check. A field Podman stops sending fails the decode
+// or the assertion instead of passing as a zero value.
+type inspectedPod struct {
+	InfraConfig struct {
+		HostAdd  []string
+		Networks []string
+	}
+}
+
+type inspectedContainer struct {
+	Mounts []struct {
+		Destination string
+		RW          *bool
+	}
+	HostConfig struct {
+		Memory     int64
+		MemorySwap int64
+	}
+	NetworkSettings struct {
+		Networks map[string]json.RawMessage
+	}
+}
+
+func inspectPod(ctx context.Context, t *testing.T, client *Client, id string) inspectedPod {
+	t.Helper()
+
+	var pod inspectedPod
+	getLibpodJSON(ctx, t, client, "/pods/"+id+"/json", &pod)
+
+	return pod
+}
+
+func inspectContainer(ctx context.Context, t *testing.T, client *Client, id string) inspectedContainer {
+	t.Helper()
+
+	var container inspectedContainer
+	getLibpodJSON(ctx, t, client, "/containers/"+id+"/json", &container)
+
+	return container
 }

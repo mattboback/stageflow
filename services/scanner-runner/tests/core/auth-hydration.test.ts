@@ -39,8 +39,7 @@ const fsMock: {
 	chmod: ReturnType<typeof vi.fn>;
 } = {
 	ensureDir: fsHelperMocks.ensureDir,
-	chmod: chmodMock,
-	copyFile: vi.fn().mockResolvedValue(undefined)
+	chmod: chmodMock
 };
 
 const SECRET_USER = 'hydrate-test-user-9j2n3kl12';

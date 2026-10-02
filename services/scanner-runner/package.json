@@ -49,7 +49,7 @@
     "lint:staged": "bun run prepare:contracts && eslint --fix --cache --cache-location ../../.cache/eslint-scanner",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "type-check": "bun run prepare:contracts && tsc -p tsconfig.json --noEmit",
+    "type-check": "bun run prepare:contracts && tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json",
     "check:all": "bun run lint && bun run type-check && bun run test",
     "ci": "bun run format:check && bun run lint:strict && bun run type-check && bun run smoke:runtime && bun run test:coverage",
     "smoke:runtime": "node scripts/smoke-lighthouse-runtime.mjs",

@@ -189,7 +189,12 @@ describe('WebServerFormatter', () => {
 				avgDurationMs: 1000
 			}
 		};
-		const provenance: Provenance = { version: '1.0.0', job_id: results.jobId, pages: [] };
+		const provenance: Provenance = {
+			version: '1.0.0',
+			job_id: results.jobId,
+			base_url: '',
+			pages: []
+		};
 		const report = new WebServerFormatter().format(provenance, results, {
 			name: 'seo',
 			version: '0.1.0'

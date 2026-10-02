@@ -4,13 +4,25 @@
  * Comprehensive tests for Playwright browser management.
  */
 
-import { type Browser, type BrowserContext, type Page, chromium } from 'playwright';
+import {
+	type Browser,
+	type BrowserContext,
+	type Disposable,
+	type Page,
+	chromium
+} from 'playwright';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PreScanAction, WaitStrategy } from '../../src/core/types';
 
 import { BrowserManager } from '../../src/core/browser-manager';
 import { validateTargetURLForPolicy } from '../../src/core/target-validation';
+
+/** What page.route resolves to; the tests never remove a route. */
+const registeredRoute: Disposable = {
+	dispose: () => Promise.resolve(),
+	[Symbol.asyncDispose]: () => Promise.resolve()
+};
 
 // Mock Playwright
 vi.mock('playwright', () => ({
@@ -421,7 +433,7 @@ describe('BrowserManager', () => {
 				Promise.reject(new Error('route handler not registered'));
 			vi.mocked(mockPage.route).mockImplementation((_pattern, callback) => {
 				handler = callback as typeof handler;
-				return Promise.resolve();
+				return Promise.resolve(registeredRoute);
 			});
 			const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 			const manager = new BrowserManager(undefined, logger);
@@ -450,7 +462,7 @@ describe('BrowserManager', () => {
 				Promise.reject(new Error('route handler not registered'));
 			vi.mocked(mockPage.route).mockImplementation((_pattern, callback) => {
 				handler = callback as typeof handler;
-				return Promise.resolve();
+				return Promise.resolve(registeredRoute);
 			});
 			await browserManager.navigateToPage(mockPage, 'https://example.com');
 			const abort = vi.fn();

@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Page } from 'playwright';
 import { afterEach, expect, it, vi } from 'vitest';
 
 const preparation = vi.hoisted(() => vi.fn());
@@ -24,13 +25,13 @@ it('omits raw browser errors when capture fails', async () => {
 	const dir = await mkdtemp(join(tmpdir(), 'stageflow-overview-redaction-'));
 	try {
 		const result = await capturePageOverviewRaw(
-			{},
+			{} as Page,
 			[],
 			dir,
 			'page-1',
 			'axe',
 			loadAxeScreenshotConfig({ screenshotsEnabled: true }),
-			{ enabled: true }
+			{ enabled: true, maxElements: 50, maxHeight: 0 }
 		);
 		expect(result).toBeNull();
 		expect(JSON.stringify(log.mock.calls)).not.toContain(canary);

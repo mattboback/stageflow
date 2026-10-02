@@ -4,6 +4,7 @@ package podman
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ func TestLiveContract_PodNetworkAndHostAddPropagateToContainer(t *testing.T) {
 
 	suffix := liveSuffix()
 	networkName := "stageflow-contract-net-" + suffix
+
 	createPodmanNetwork(t, networkName)
 	defer removePodmanNetwork(t, networkName)
 
@@ -41,68 +43,13 @@ func TestLiveContract_PodNetworkAndHostAddPropagateToContainer(t *testing.T) {
 	}
 	defer func() { _ = client.RemovePod(context.Background(), podResp.ID, true) }()
 
-	var podInspect map[string]any
-	getLibpodJSON(ctx, t, client, "/pods/"+podResp.ID+"/json", &podInspect)
-
-	infraAny, ok := podInspect["InfraConfig"]
-	if !ok {
-		t.Fatalf("pod inspect missing InfraConfig")
-	}
-	infra, ok := infraAny.(map[string]any)
-	if !ok {
-		t.Fatalf("pod inspect InfraConfig has unexpected type: %T", infraAny)
+	infra := inspectPod(ctx, t, client, podResp.ID).InfraConfig
+	if !slices.Contains(infra.HostAdd, hostEntry) {
+		t.Fatalf("expected InfraConfig.HostAdd to include %q, got %v", hostEntry, infra.HostAdd)
 	}
 
-	if hostAddAny, ok := infra["HostAdd"]; ok {
-		hostAdd, ok := hostAddAny.([]any)
-		if !ok {
-			t.Fatalf("InfraConfig.HostAdd has unexpected type: %T", hostAddAny)
-		}
-		found := false
-		for _, v := range hostAdd {
-			if s, ok := v.(string); ok && s == hostEntry {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("expected InfraConfig.HostAdd to include %q, got %v", hostEntry, hostAddAny)
-		}
-	} else {
-		t.Fatalf("pod inspect InfraConfig missing HostAdd")
-	}
-
-	if networksAny, ok := infra["Networks"]; ok {
-		found := false
-		switch v := networksAny.(type) {
-		case map[string]any:
-			_, found = v[networkName]
-		case []any:
-			for _, item := range v {
-				if s, ok := item.(string); ok && s == networkName {
-					found = true
-					break
-				}
-				if m, ok := item.(map[string]any); ok {
-					if name, ok := m["Name"].(string); ok && name == networkName {
-						found = true
-						break
-					}
-					if name, ok := m["name"].(string); ok && name == networkName {
-						found = true
-						break
-					}
-				}
-			}
-		default:
-			t.Fatalf("InfraConfig.Networks has unexpected type: %T", networksAny)
-		}
-
-		if !found {
-			t.Fatalf("expected pod to include network %q, got %v", networkName, networksAny)
-		}
-	} else {
-		t.Fatalf("pod inspect InfraConfig missing Networks")
+	if !slices.Contains(infra.Networks, networkName) {
+		t.Fatalf("expected pod to include network %q, got %v", networkName, infra.Networks)
 	}
 
 	image := liveImage(t)
@@ -121,8 +68,8 @@ func TestLiveContract_PodNetworkAndHostAddPropagateToContainer(t *testing.T) {
 	}
 	defer removeContainer(ctrResp.ID)
 
-	if err := client.StartContainer(ctx, ctrResp.ID); err != nil {
-		t.Fatalf("StartContainer: %v", err)
+	if startErr := client.StartContainer(ctx, ctrResp.ID); startErr != nil {
+		t.Fatalf("StartContainer: %v", startErr)
 	}
 
 	if code := waitForExit(t, ctrResp.ID); code != 0 {
@@ -135,27 +82,8 @@ func TestLiveContract_PodNetworkAndHostAddPropagateToContainer(t *testing.T) {
 		t.Fatalf("expected logs to contain host mapping %s -> %s; logs=%q", hostName, hostIP, logs)
 	}
 
-	var ctrInspect map[string]any
-	getLibpodJSON(ctx, t, client, "/containers/"+ctrResp.ID+"/json", &ctrInspect)
-
-	netSettingsAny, ok := ctrInspect["NetworkSettings"]
-	if !ok {
-		t.Fatalf("container inspect missing NetworkSettings")
-	}
-	netSettings, ok := netSettingsAny.(map[string]any)
-	if !ok {
-		t.Fatalf("container inspect NetworkSettings has unexpected type: %T", netSettingsAny)
-	}
-
-	networksAny, ok := netSettings["Networks"]
-	if !ok {
-		t.Fatalf("container inspect missing NetworkSettings.Networks")
-	}
-	networks, ok := networksAny.(map[string]any)
-	if !ok {
-		t.Fatalf("container inspect NetworkSettings.Networks has unexpected type: %T", networksAny)
-	}
-	if _, ok := networks[networkName]; !ok {
+	networks := inspectContainer(ctx, t, client, ctrResp.ID).NetworkSettings.Networks
+	if _, attached := networks[networkName]; !attached {
 		t.Fatalf("expected container to be attached to network %q, got %v", networkName, networks)
 	}
 }
