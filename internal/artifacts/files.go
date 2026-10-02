@@ -1,3 +1,4 @@
+// Package artifacts stores job inputs and results as files under one data directory.
 package artifacts
 
 import (
@@ -16,17 +17,39 @@ import (
 )
 
 const (
-	BucketStaging          = "input"
-	BucketArtifacts        = "artifacts"
+	// MaxArtifactBytes bounds every file a job produces: reports, results, auth state.
 	MaxArtifactBytes int64 = 64 << 20
-	MaxInputBytes    int64 = 512 << 20
+	// MaxInputBytes bounds an uploaded ZIP.
+	MaxInputBytes int64 = 512 << 20
+	// MinFreeDiskBytes is the free space intake and claiming require.
+	MinFreeDiskBytes = uint64(2 << 30)
+
+	inputName = "input.zip"
 )
 
 var safeJob = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
 var ErrLowDisk = errors.New("less than 2 GB of disk space is available")
 
-const MinFreeDiskBytes = uint64(2 << 30)
+// Files confines all operations to the jobs directory using os.Root. Every
+// file lives at "<job ID>/<path>". Writers publish complete files with rename,
+// so readers never observe partial reports.
+type Files struct{ root *os.Root }
+
+func NewFiles(dataDir string) (*Files, error) {
+	if err := os.MkdirAll(path.Join(dataDir, "jobs"), 0o700); err != nil {
+		return nil, err
+	}
+
+	root, err := os.OpenRoot(path.Join(dataDir, "jobs"))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Files{root: root}, nil
+}
+
+func (f *Files) Close() error { return f.root.Close() }
 
 func (f *Files) CheckDisk(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
@@ -50,6 +73,17 @@ func (f *Files) CheckDisk(ctx context.Context) error {
 	return nil
 }
 
+// Write stores one job file of at most MaxArtifactBytes.
+func (f *Files) Write(ctx context.Context, key string, reader io.Reader) error {
+	return f.write(ctx, key, reader, MaxArtifactBytes)
+}
+
+// WriteInput stores a job's uploaded ZIP, of at most MaxInputBytes.
+func (f *Files) WriteInput(ctx context.Context, jobID string, reader io.Reader) error {
+	return f.write(ctx, jobID+"/"+inputName, reader, MaxInputBytes)
+}
+
+// OpenInput opens a job's uploaded ZIP.
 func (f *Files) OpenInput(ctx context.Context, jobID string) (*os.File, error) {
 	if !safeJob.MatchString(jobID) {
 		return nil, errors.New("invalid job ID")
@@ -59,27 +93,54 @@ func (f *Files) OpenInput(ctx context.Context, jobID string) (*os.File, error) {
 		return nil, err
 	}
 
-	return f.openRegularFile(jobID + "/input.zip")
+	return f.openRegularFile(jobID + "/" + inputName)
 }
 
-// Files confines all operations to the jobs directory using os.Root. Writers
-// publish complete files with rename, so readers never observe partial reports.
-type Files struct{ root *os.Root }
+// Open opens one job file for reading.
+func (f *Files) Open(ctx context.Context, key string) (io.ReadCloser, error) {
+	key, scopeErr := scoped(key)
+	if scopeErr != nil {
+		return nil, scopeErr
+	}
 
-func NewFiles(dataDir string) (*Files, error) {
-	if err := os.MkdirAll(path.Join(dataDir, "jobs"), 0o700); err != nil {
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	root, err := os.OpenRoot(path.Join(dataDir, "jobs"))
-	if err != nil {
-		return nil, err
-	}
-
-	return &Files{root: root}, nil
+	return f.openRegularFile(key)
 }
 
-func (f *Files) Close() error { return f.root.Close() }
+// Remove deletes one job file. A file that is already gone is not an error.
+func (f *Files) Remove(ctx context.Context, key string) error {
+	key, scopeErr := scoped(key)
+	if scopeErr != nil {
+		return scopeErr
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	err := f.root.Remove(key)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	return err
+}
+
+// RemoveJob deletes everything a job stored.
+func (f *Files) RemoveJob(ctx context.Context, jobID string) error {
+	if !safeJob.MatchString(jobID) {
+		return errors.New("deletion requires a job ID")
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	return f.root.RemoveAll(jobID)
+}
 
 func scoped(key string) (string, error) {
 	parts := strings.Split(key, "/")
@@ -96,19 +157,10 @@ func scoped(key string) (string, error) {
 	return key, nil
 }
 
-func (f *Files) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, size int64) error {
+func (f *Files) write(ctx context.Context, key string, reader io.Reader, limit int64) error {
 	key, scopeErr := scoped(key)
 	if scopeErr != nil {
 		return scopeErr
-	}
-
-	limit := MaxArtifactBytes
-	if bucket == BucketStaging {
-		limit = MaxInputBytes
-	}
-
-	if size > limit {
-		return fmt.Errorf("file exceeds %d byte limit", limit)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -164,19 +216,6 @@ func (f *Files) removeTemporary(name string) {
 	}
 }
 
-func (f *Files) DownloadFile(ctx context.Context, _ string, key string) (io.ReadCloser, error) {
-	key, scopeErr := scoped(key)
-	if scopeErr != nil {
-		return nil, scopeErr
-	}
-
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-
-	return f.openRegularFile(key)
-}
-
 // openRegularFile walks without following links at any component. Confining
 // access to the volume alone would allow a worker's public result to link to
 // another job's private auth file inside that same volume.
@@ -215,55 +254,6 @@ func (f *Files) openRegularFile(key string) (*os.File, error) {
 	}
 
 	return dir, nil
-}
-
-func (f *Files) FileExists(ctx context.Context, _ string, key string) (bool, error) {
-	key, scopeErr := scoped(key)
-	if scopeErr != nil {
-		return false, scopeErr
-	}
-
-	if err := ctx.Err(); err != nil {
-		return false, err
-	}
-
-	_, err := f.root.Stat(key)
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
-
-	return err == nil, err
-}
-
-func (f *Files) DeleteFile(ctx context.Context, _ string, key string) error {
-	key, scopeErr := scoped(key)
-	if scopeErr != nil {
-		return scopeErr
-	}
-
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	err := f.root.Remove(key)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	return err
-}
-
-func (f *Files) DeletePrefix(ctx context.Context, _ string, prefix string) error {
-	prefix = strings.TrimSuffix(prefix, "/")
-	if !safeJob.MatchString(prefix) {
-		return errors.New("deletion requires a job ID")
-	}
-
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	return f.root.RemoveAll(prefix)
 }
 
 // PublicPath is the single allow-list used by the API file route.

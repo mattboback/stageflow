@@ -15,13 +15,22 @@ import (
 	"github.com/mattboback/stageflow/libs/go/logging"
 )
 
+// jobRelative returns key's path inside the job's directory.
+func jobRelative(jobID, key string) (string, bool) {
+	if jobID == "" {
+		return "", false
+	}
+
+	return strings.CutPrefix(key, jobID+"/")
+}
+
+// publicArtifactURL returns the API route that serves one of a job's public files.
 func publicArtifactURL(jobID, key string) (string, error) {
-	key, ok := jobScopedKey(jobID, key)
+	relative, ok := jobRelative(jobID, key)
 	if !ok {
 		return "", errors.New("artifact is not job scoped")
 	}
 
-	relative := strings.TrimPrefix(key, jobID+"/")
 	if !artifacts.PublicPath(relative) {
 		return "", errors.New("artifact is private")
 	}
@@ -51,7 +60,7 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request, jobID, re
 		return
 	}
 
-	reader, err := s.config.Storage.DownloadFile(r.Context(), artifacts.BucketArtifacts, jobID+"/"+relative)
+	reader, err := s.config.Files.Open(r.Context(), jobID+"/"+relative)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			httputil.RespondNotFound(w, "File")

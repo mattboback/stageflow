@@ -128,19 +128,6 @@ describe('useScanReport', () => {
 		expect(result.current.status).toBe('complete');
 	});
 
-	it('refreshes artifacts on demand', async () => {
-		mockApi(
-			[job('DONE'), job('DONE', { artifacts: { screenshots: [SHOT] } })],
-			[{ body: REPORT, status: 200 }]
-		);
-		const { result } = renderHook(() => useScanReport(JOB));
-
-		await waitFor(() => expect(result.current.report).not.toBeNull());
-		expect(result.current.screenshots).toEqual([]);
-		await act(async () => result.current.refreshArtifacts());
-		expect(result.current.screenshots).toEqual([SHOT]);
-	});
-
 	it('keeps one screenshots identity across renders when there are none', async () => {
 		mockApi([job('DONE')], [{ body: REPORT, status: 200 }]);
 		const { result, rerender } = renderHook(() => useScanReport(JOB));

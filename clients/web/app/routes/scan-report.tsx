@@ -105,14 +105,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		context: ReviewContext;
 	} | null>(null);
 
-	const {
-		status,
-		report: liveReport,
-		job,
-		error,
-		screenshots,
-		refreshArtifacts
-	} = useScanReport(id);
+	const { status, report: liveReport, job, error, screenshots } = useScanReport(id);
 	const archivedReport =
 		(localRun?.archived || !liveReport) && localRun?.report && isUnifiedReport(localRun.report)
 			? localRun.report
@@ -434,17 +427,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 						error={error || job?.error || null}
 						banner={banner}
 						artifactsPanel={
-							<ArtifactsView
-								jobId={viewingArchived ? '' : id}
-								job={viewingArchived ? null : job}
-								{...(viewingArchived
-									? {}
-									: {
-											onRefreshArtifacts: () => {
-												void refreshArtifacts();
-											}
-										})}
-							/>
+							<ArtifactsView jobId={viewingArchived ? '' : id} job={viewingArchived ? null : job} />
 						}
 					/>
 				) : (

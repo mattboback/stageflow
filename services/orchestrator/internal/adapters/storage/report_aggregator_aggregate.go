@@ -102,7 +102,7 @@ func (a *reportAggregation) aggregateScanner(ctx context.Context, scannerID stri
 		return
 	}
 
-	doc, err := a.aggregator.downloadScanResults(ctx, result.ResultsPath)
+	doc, err := a.aggregator.readScanResults(ctx, result.ResultsPath)
 	if err != nil {
 		a.recordScannerFailure(scannerID, stat, "download_failed", err.Error(), true)
 

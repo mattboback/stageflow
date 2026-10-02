@@ -1,14 +1,12 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
@@ -49,26 +47,8 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 	jobID := "job-delete-1"
 	seedReadableJob(t, server, jobID, models.JobStateDone)
 
-	if err := objectStore.UploadFile(
-		context.Background(),
-		artifacts.BucketArtifacts,
-		jobID+"/report.json",
-		bytes.NewReader([]byte(`{"ok":true}`)),
-		10,
-	); err != nil {
-		t.Fatalf("upload artifact: %v", err)
-	}
-
-	zipKey := jobID + "/input.zip"
-	if err := objectStore.UploadFile(
-		context.Background(),
-		artifacts.BucketStaging,
-		zipKey,
-		bytes.NewReader([]byte("zip")),
-		3,
-	); err != nil {
-		t.Fatalf("upload staging zip: %v", err)
-	}
+	objectStore.uploads[jobID+"/report.json"] = []byte(`{"ok":true}`)
+	objectStore.uploads[jobID+"/input.zip"] = []byte("zip")
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/jobs/"+jobID, http.NoBody)
 	rr := httptest.NewRecorder()
@@ -78,22 +58,8 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 		t.Fatalf("delete status: want 204, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	exists, err := objectStore.FileExists(context.Background(), artifacts.BucketArtifacts, jobID+"/report.json")
-	if err != nil {
-		t.Fatalf("FileExists: %v", err)
-	}
-
-	if exists {
-		t.Fatal("expected artifact prefix to be removed")
-	}
-
-	zipExists, err := objectStore.FileExists(context.Background(), artifacts.BucketStaging, zipKey)
-	if err != nil {
-		t.Fatalf("FileExists staging: %v", err)
-	}
-
-	if zipExists {
-		t.Fatal("expected uploaded ZIP to be removed")
+	if len(objectStore.uploads) != 0 {
+		t.Fatalf("job files left after delete: %d", len(objectStore.uploads))
 	}
 
 	statusReq := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, http.NoBody)
@@ -185,15 +151,8 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 	}
 
 	const artifact = "report.json"
-	if err := objectStore.UploadFile(
-		context.Background(),
-		artifacts.BucketArtifacts,
-		jobID+"/"+artifact,
-		bytes.NewReader([]byte(`{"ok":true}`)),
-		10,
-	); err != nil {
-		t.Fatalf("upload artifact: %v", err)
-	}
+
+	objectStore.uploads[jobID+"/"+artifact] = []byte(`{"ok":true}`)
 
 	rr := httptest.NewRecorder()
 	server.Router().ServeHTTP(
@@ -205,16 +164,7 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 		t.Fatalf("want 500, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	exists, err := objectStore.FileExists(
-		context.Background(),
-		artifacts.BucketArtifacts,
-		jobID+"/"+artifact,
-	)
-	if err != nil {
-		t.Fatalf("FileExists: %v", err)
-	}
-
-	if !exists {
+	if _, exists := objectStore.uploads[jobID+"/"+artifact]; !exists {
 		t.Fatal("artifact was deleted after database lookup failed")
 	}
 }

@@ -121,7 +121,6 @@ export function useScanStatus(jobId: string, options: { trackElapsed?: boolean }
 	const [snapshot, setSnapshot] = useState<StatusSnapshot>(emptyStatusSnapshot);
 	const [attempt, setAttempt] = useState(0);
 	const pollRef = useRef<number | null>(null);
-	const applyRef = useRef<((result: ScanResult) => void) | null>(null);
 
 	/* Tears down and re-subscribes the whole monitor (stream, polling, timer)
 	   without a document reload. */
@@ -185,7 +184,6 @@ export function useScanStatus(jobId: string, options: { trackElapsed?: boolean }
 				stream?.close();
 			}
 		};
-		applyRef.current = applyStatus;
 
 		const refresh = async () => {
 			try {
@@ -299,16 +297,11 @@ export function useScanStatus(jobId: string, options: { trackElapsed?: boolean }
 
 		return () => {
 			closed = true;
-			applyRef.current = null;
 			if (timer !== null) window.clearInterval(timer);
 			stream?.close();
 			clearPoll();
 		};
 	}, [attempt, clearPoll, jobId, trackElapsed]);
-
-	/* Feeds a status fetched outside the monitor (an artifact refresh) through
-	   the same job-id guard and terminal handling as the stream. */
-	const applyResult = useCallback((result: ScanResult) => applyRef.current?.(result), []);
 
 	return {
 		status: snapshot.status,
@@ -317,8 +310,7 @@ export function useScanStatus(jobId: string, options: { trackElapsed?: boolean }
 		logs: snapshot.logs,
 		transport: snapshot.transport,
 		error: snapshot.error,
-		retry,
-		applyResult
+		retry
 	};
 }
 
@@ -332,8 +324,7 @@ export function useScanReport(jobId: string) {
 		result,
 		logs,
 		transport,
-		error: statusError,
-		applyResult
+		error: statusError
 	} = useScanStatus(jobId, { trackElapsed: false });
 	const [loaded, setLoaded] = useState<{
 		jobId: string;
@@ -387,27 +378,11 @@ export function useScanReport(jobId: string) {
 		};
 	}, [jobId, status]);
 
-	const [refreshError, setRefreshError] = useState<{ jobId: string; message: string } | null>(null);
-	const refreshArtifacts = useCallback(async () => {
-		if (!jobId) {
-			return;
-		}
-
-		try {
-			applyResult(await fetchStatus(jobId));
-			setRefreshError(null);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : 'Failed to fetch job status';
-			setRefreshError({ jobId, message });
-		}
-	}, [applyResult, jobId]);
-
 	const job = result?.id === jobId ? result : null;
 	const isCurrentJob = !result || job !== null;
 	const current = loaded.jobId === jobId ? loaded : null;
 	const report = status === 'complete' ? (current?.report ?? null) : null;
-	const error =
-		(refreshError?.jobId === jobId ? refreshError.message : null) ?? current?.error ?? statusError;
+	const error = current?.error ?? statusError;
 
 	return {
 		status: isCurrentJob ? status : 'loading',
@@ -416,7 +391,6 @@ export function useScanReport(jobId: string) {
 		screenshots: job?.artifacts?.screenshots ?? NO_SCREENSHOTS,
 		logs: isCurrentJob ? logs : [],
 		transport: isCurrentJob ? transport : 'idle',
-		error: isCurrentJob ? error : null,
-		refreshArtifacts
+		error: isCurrentJob ? error : null
 	};
 }

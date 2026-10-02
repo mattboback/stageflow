@@ -10,7 +10,6 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -145,8 +144,8 @@ func TestAggregatedReportValidatesPublicSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mem := newMemoryStorage()
-	mem.objects[mem.key(artifacts.BucketArtifacts, "job-123/axe/results.json")] = fixture
+	mem := newMemoryFiles()
+	mem.files["job-123/axe/results.json"] = fixture
 
 	registry := scanners.NewRegistry("scanner-runner")
 	if registerErr := registry.Register(
@@ -168,5 +167,5 @@ func TestAggregatedReportValidatesPublicSchema(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	validatePublicReport(t, schema, mem.objects[mem.key(artifacts.BucketArtifacts, key)])
+	validatePublicReport(t, schema, mem.files[key])
 }

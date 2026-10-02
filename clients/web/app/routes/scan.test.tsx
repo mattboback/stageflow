@@ -24,8 +24,7 @@ function renderScanning(scannerStatuses?: ScanResult['scanner_statuses']) {
 		logs: [],
 		transport: 'streaming',
 		error: null,
-		retry: vi.fn(),
-		applyResult: vi.fn()
+		retry: vi.fn()
 	});
 	const Routes = createRoutesStub([{ path: '/scan/:id', Component: Scan }]);
 	render(<Routes initialEntries={['/scan/test-scan']} />);

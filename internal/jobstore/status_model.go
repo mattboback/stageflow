@@ -12,38 +12,32 @@ var ErrJobNotFound = errors.New("job not found")
 
 // JobRecord represents a job status projection.
 type JobRecord struct {
-	CleanupPending        bool
-	ClaimedAt             *time.Time
-	JobID                 string
-	State                 models.JobState
-	InputType             string
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
-	CompletedAt           *time.Time
-	Error                 string
-	TotalPages            int
-	CurrentPage           int
-	TotalViolations       int
-	ReportJSONKey         string
-	ScanStageLogKey       string
-	ScanRecipeKey         string
-	ExtractionStageLogKey string
-	ExtractionRecipeKey   string
-	ProvenanceKey         string
-	LastStage             string
-	LastErrorDetails      string
-	ExpectedScanners      []string
-	CompletedScanners     []string
-	ScannerStatuses       map[string]models.ScannerStatus
-	ScannerArtifacts      map[string]*ScannerArtifactRecord // Per-scanner artifact keys
+	CleanupPending    bool
+	ClaimedAt         *time.Time
+	JobID             string
+	State             models.JobState
+	InputType         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	CompletedAt       *time.Time
+	Error             string
+	TotalPages        int
+	CurrentPage       int
+	TotalViolations   int
+	ReportJSONKey     string
+	ProvenanceKey     string
+	LastStage         string
+	LastErrorDetails  string
+	ExpectedScanners  []string
+	CompletedScanners []string
+	ScannerStatuses   map[string]models.ScannerStatus
+	ScannerArtifacts  map[string]*ScannerArtifactRecord // Per-scanner artifact keys
 }
 
 // ScannerArtifactRecord holds Job-scoped file paths for a single scanner's artifacts.
 type ScannerArtifactRecord struct {
 	ScannerType string `json:"scanner_type"`
 	ResultsKey  string `json:"results_key"`
-	StageLogKey string `json:"stage_log_key,omitempty"`
-	RecipeKey   string `json:"recipe_key,omitempty"`
 }
 
 // ToModel converts the record into the API-friendly JobStatus payload.

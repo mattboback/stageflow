@@ -79,7 +79,7 @@ func run() error {
 
 	server := api.NewServer(&api.ServerConfig{
 		Port:       cfg.Port,
-		Storage:    artifactFiles,
+		Files:      artifactFiles,
 		JobDeleter: statusReader,
 		Admitter:   statusReader,
 		CheckDisk:  artifactFiles.CheckDisk,

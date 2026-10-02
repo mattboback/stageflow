@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/logging"
@@ -100,9 +99,9 @@ func (s *Server) extractScannerScreenshots(
 	ctx context.Context,
 	jobID, scannerType, resultsKey string,
 ) ([]models.ScreenshotArtifact, error) {
-	reader, err := s.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, resultsKey)
+	reader, err := s.config.Files.Open(ctx, resultsKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to download results.json: %w", err)
+		return nil, fmt.Errorf("failed to open results.json: %w", err)
 	}
 
 	defer func() {
@@ -121,9 +120,9 @@ func (s *Server) extractReportScreenshots(
 	ctx context.Context,
 	jobID, reportKey string,
 ) ([]models.ScreenshotArtifact, error) {
-	reader, err := s.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, reportKey)
+	reader, err := s.config.Files.Open(ctx, reportKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to download report.json: %w", err)
+		return nil, fmt.Errorf("failed to open report.json: %w", err)
 	}
 
 	defer func() {
@@ -215,28 +214,13 @@ func (s *Server) buildPageOverviewScreenshotV2(
 		overviewPath = "screenshots/" + page.PageOverview.ScreenshotFilename
 	}
 
-	overviewKey, ok := jobScopedJoin(jobID, scannerType, page.Id, overviewPath)
-	if !ok {
-		logging.Warn(ctx, "Refusing to presign non-job-scoped page overview screenshot key",
-			"job_id", jobID,
-			"scanner_type", scannerType,
-			"page_id", page.Id,
-			"artifact_path", overviewPath,
-		)
-
-		return models.ScreenshotArtifact{}, false
-	}
+	// The scanner wrote this path, so it is served only if it is exactly a
+	// screenshot inside this scanner's page directory.
+	overviewKey := jobID + "/" + scannerType + "/" + page.Id + "/" + overviewPath
 
 	overviewURL, err := publicArtifactURL(jobID, overviewKey)
 	if err != nil {
-		logging.Warn(
-			ctx,
-			"Failed to generate presigned URL for page overview screenshot",
-			"error",
-			err,
-			"key",
-			overviewKey,
-		)
+		logging.Warn(ctx, "Leaving a page overview screenshot out of the job status", "key", overviewKey, "error", err)
 
 		return models.ScreenshotArtifact{}, false
 	}

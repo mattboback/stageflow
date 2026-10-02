@@ -90,7 +90,7 @@ func (s *Server) cleanupRejectedJob(id string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := s.deleteJobObjects(ctx, id); err != nil {
+	if err := s.removeJobFiles(ctx, id); err != nil {
 		logging.Warn(ctx, "Failed to clean rejected job files", "job_id", id, "error", err)
 	}
 }

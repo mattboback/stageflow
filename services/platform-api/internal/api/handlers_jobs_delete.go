@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
@@ -41,7 +40,7 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, jobstore.ErrJobNotFound) {
-			if cleanupErr := s.deleteJobObjects(ctx, jobID); cleanupErr != nil {
+			if cleanupErr := s.removeJobFiles(ctx, jobID); cleanupErr != nil {
 				httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete scan artifacts")
 				return
 			}
@@ -81,7 +80,7 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if cleanupErr := s.deleteJobObjects(cleanupCtx, jobID); cleanupErr != nil {
+	if cleanupErr := s.removeJobFiles(cleanupCtx, jobID); cleanupErr != nil {
 		logging.Error(ctx, "Failed to delete scan artifacts", "error", cleanupErr)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete scan artifacts")
 
@@ -91,15 +90,10 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) deleteJobObjects(ctx context.Context, jobID string) error {
-	if s.config == nil || s.config.Storage == nil {
+func (s *Server) removeJobFiles(ctx context.Context, jobID string) error {
+	if s.config == nil || s.config.Files == nil {
 		return nil
 	}
 
-	prefix := jobID + "/"
-	if err := s.config.Storage.DeletePrefix(ctx, artifacts.BucketStaging, prefix); err != nil {
-		return err
-	}
-
-	return s.config.Storage.DeletePrefix(ctx, artifacts.BucketArtifacts, prefix)
+	return s.config.Files.RemoveJob(ctx, jobID)
 }

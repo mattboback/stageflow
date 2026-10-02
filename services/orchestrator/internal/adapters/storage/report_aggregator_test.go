@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -15,7 +14,7 @@ import (
 //nolint:gocyclo // Test function covers multiple aggregation scenarios
 func TestBuildAggregatedReportSuccess(t *testing.T) {
 	ctx := context.Background()
-	mem := newMemoryStorage()
+	mem := newMemoryFiles()
 	registry := scanners.NewRegistry("scanner-runner")
 	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
 	_ = registry.Register(&scanners.Definition{ID: "lighthouse", Name: "Lighthouse", Enabled: true})
@@ -186,8 +185,8 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 		t.Fatalf("marshal lighthouse results: %v", err)
 	}
 
-	mem.objects[mem.key(artifacts.BucketArtifacts, "job-1/axe/results.json")] = axeBytes
-	mem.objects[mem.key(artifacts.BucketArtifacts, "job-1/lighthouse/results.json")] = lhBytes
+	mem.files["job-1/axe/results.json"] = axeBytes
+	mem.files["job-1/lighthouse/results.json"] = lhBytes
 
 	job := &models.Job{
 		ID:               "job-1",
@@ -215,7 +214,7 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 		t.Fatalf("expected report key job-1/report.json, got %s", reportKey)
 	}
 
-	reportBytes := mem.objects[mem.key(artifacts.BucketArtifacts, reportKey)]
+	reportBytes := mem.files[reportKey]
 
 	var aggReport report.UnifiedReportV2
 	if unmarshalErr := json.Unmarshal(reportBytes, &aggReport); unmarshalErr != nil {
@@ -256,7 +255,7 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 
 func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 	ctx := context.Background()
-	mem := newMemoryStorage()
+	mem := newMemoryFiles()
 	registry := scanners.NewRegistry("scanner-runner")
 	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
 	_ = registry.Register(&scanners.Definition{ID: "lighthouse", Name: "Lighthouse", Enabled: true})
@@ -372,8 +371,8 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 
 	axeBytes, _ := json.Marshal(axeResults)
 	lhBytes, _ := json.Marshal(lighthouseResults)
-	mem.objects[mem.key(artifacts.BucketArtifacts, "job-dedup/axe/results.json")] = axeBytes
-	mem.objects[mem.key(artifacts.BucketArtifacts, "job-dedup/lighthouse/results.json")] = lhBytes
+	mem.files["job-dedup/axe/results.json"] = axeBytes
+	mem.files["job-dedup/lighthouse/results.json"] = lhBytes
 
 	job := &models.Job{
 		ID:               "job-dedup",
@@ -389,7 +388,7 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 		t.Fatalf("buildAggregatedReport: %v", err)
 	}
 
-	reportBytes := mem.objects[mem.key(artifacts.BucketArtifacts, reportKey)]
+	reportBytes := mem.files[reportKey]
 
 	var aggReport report.UnifiedReportV2
 	if unmarshalErr := json.Unmarshal(reportBytes, &aggReport); unmarshalErr != nil {
@@ -452,7 +451,7 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 
 func TestBuildAggregatedReportNoSuccess(t *testing.T) {
 	ctx := context.Background()
-	mem := newMemoryStorage()
+	mem := newMemoryFiles()
 	registry := scanners.NewRegistry("scanner-runner")
 
 	aggregator := NewAggregator(mem, registry)

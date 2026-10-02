@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/internal/archive"
-	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -224,7 +223,7 @@ func TestHandleJobURLSubmitWritesStorageStateBeforeAdmission(t *testing.T) {
 	jobs.onAdmit = func(job *models.Job) error {
 		expectedKey := job.ID + "/auth.json"
 
-		uploaded := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, expectedKey)]
+		uploaded := storage.uploads[expectedKey]
 		if string(uploaded) != storageState {
 			t.Fatalf("auth state was not written before admission; got %q, want %q", uploaded, storageState)
 		}
@@ -273,7 +272,7 @@ func TestHandleJobURLSubmitWritesStorageStateBeforeAdmission(t *testing.T) {
 		t.Fatalf("dispatch leaked session metadata: %s", authWire)
 	}
 
-	uploaded := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, expectedKey)]
+	uploaded := storage.uploads[expectedKey]
 	if string(uploaded) != storageState {
 		t.Fatalf("uploaded storage state = %q, want %q", uploaded, storageState)
 	}
@@ -389,8 +388,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 		t.Fatalf("marshal report: %v", err)
 	}
 
-	uploadKey := fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, reportKey)
-	objectStore.uploads[uploadKey] = reportBytes
+	objectStore.uploads[reportKey] = reportBytes
 
 	testJobs(server).finish(t, jobID, reportKey)
 
@@ -544,7 +542,7 @@ func uploadZipAndGetJobID(t *testing.T, server *Server, zipBytes []byte, modules
 	return jobID
 }
 
-func assertUploadCount(t *testing.T, storage *fakeStorage, expected int) {
+func assertUploadCount(t *testing.T, storage *fakeFiles, expected int) {
 	t.Helper()
 
 	if len(storage.uploads) != expected {
@@ -602,33 +600,32 @@ func TestZipUploadBodyTooLarge(t *testing.T) {
 	}
 }
 
-type fakeStorage struct {
+// fakeFiles keeps job files in memory, keyed "<job ID>/<path>".
+type fakeFiles struct {
 	uploads map[string][]byte
 	deletes []string
 }
 
-func newFakeStorage() *fakeStorage {
-	return &fakeStorage{uploads: make(map[string][]byte)}
+func newFakeFiles() *fakeFiles {
+	return &fakeFiles{uploads: make(map[string][]byte)}
 }
 
-func (f *fakeStorage) UploadFile(_ context.Context, bucket, path string, reader io.Reader, _ int64) error {
+func (f *fakeFiles) Write(_ context.Context, key string, reader io.Reader) error {
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return err
 	}
 
-	key := fmt.Sprintf("%s::%s", bucket, path)
 	f.uploads[key] = data
 
 	return nil
 }
 
-func (f *fakeStorage) GetPresignedURL(_ context.Context, bucket, path string, expiry time.Duration) (string, error) {
-	return fmt.Sprintf("https://storage.local/%s/%s?exp=%d", bucket, path, int(expiry.Seconds())), nil
+func (f *fakeFiles) WriteInput(ctx context.Context, jobID string, reader io.Reader) error {
+	return f.Write(ctx, jobID+"/input.zip", reader)
 }
 
-func (f *fakeStorage) DownloadFile(_ context.Context, bucket, path string) (io.ReadCloser, error) {
-	key := fmt.Sprintf("%s::%s", bucket, path)
+func (f *fakeFiles) Open(_ context.Context, key string) (io.ReadCloser, error) {
 	if data, ok := f.uploads[key]; ok {
 		return io.NopCloser(bytes.NewReader(data)), nil
 	}
@@ -637,7 +634,7 @@ func (f *fakeStorage) DownloadFile(_ context.Context, bucket, path string) (io.R
 	results := report.UnifiedReportV2{
 		Version: "2.0.0",
 		Meta: report.ReportMeta{
-			JobId:       path,
+			JobId:       key,
 			ScannedAt:   &now,
 			CompletedAt: &now,
 		},
@@ -681,31 +678,22 @@ func (f *fakeStorage) DownloadFile(_ context.Context, bucket, path string) (io.R
 	return io.NopCloser(bytes.NewReader(data)), nil
 }
 
-func (f *fakeStorage) DeleteFile(_ context.Context, bucket, path string) error {
-	key := fmt.Sprintf("%s::%s", bucket, path)
+func (f *fakeFiles) Remove(_ context.Context, key string) error {
 	f.deletes = append(f.deletes, key)
 	delete(f.uploads, key)
 
 	return nil
 }
 
-func (f *fakeStorage) DeletePrefix(_ context.Context, bucket, prefix string) error {
-	needle := fmt.Sprintf("%s::%s", bucket, prefix)
+func (f *fakeFiles) RemoveJob(_ context.Context, jobID string) error {
 	for key := range f.uploads {
-		if strings.HasPrefix(key, needle) {
+		if strings.HasPrefix(key, jobID+"/") {
 			f.deletes = append(f.deletes, key)
 			delete(f.uploads, key)
 		}
 	}
 
 	return nil
-}
-
-func (f *fakeStorage) FileExists(_ context.Context, bucket, path string) (bool, error) {
-	key := fmt.Sprintf("%s::%s", bucket, path)
-	_, ok := f.uploads[key]
-
-	return ok, nil
 }
 
 func TestReadLimitedReportJSON(t *testing.T) {
@@ -736,10 +724,10 @@ func strPtr(value string) *string {
 	return &value
 }
 
-func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobs) {
+func newTestServer(t *testing.T) (*Server, *fakeFiles, *fakeJobs) {
 	t.Helper()
 
-	storage := newFakeStorage()
+	storage := newFakeFiles()
 	jobs := newFakeJobs()
 
 	defaultConfig, err := scannerregistry.DefaultConfig()
@@ -754,12 +742,12 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobs) {
 
 	server := NewServer(&ServerConfig{
 		StatusReader: jobs,
-		Storage:      storage,
+		Files:        storage,
 		Admitter:     jobs,
 		JobDeleter:   jobs,
 		CheckDisk:    func(context.Context) error { return nil },
 		ValidateZIP: func(_ context.Context, id string) error {
-			data, exists := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketStaging, id+"/input.zip")]
+			data, exists := storage.uploads[id+"/input.zip"]
 			if !exists {
 				return errors.New("input ZIP missing")
 			}

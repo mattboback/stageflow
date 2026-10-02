@@ -109,7 +109,7 @@ func testUncertainAdmission(t *testing.T, database *jobstore.Database, input str
 
 	admission := &lostCommitAdmission{database: database, delayed: delayed}
 	server.config.Admitter = admission
-	server.config.Storage = files
+	server.config.Files = files
 	server.statusReader = jobstore.StatusReader{Database: database}
 	server.config.ValidateZIP = func(ctx context.Context, id string) error { return validateUncertainZIP(ctx, files, id) }
 
@@ -138,7 +138,7 @@ func testUncertainAdmission(t *testing.T, database *jobstore.Database, input str
 
 	validateUncertainResponse(t, database, admission, response, delayed)
 
-	reader, err := files.DownloadFile(ctx, artifacts.BucketStaging, admission.job.ID+"/"+expectedFile)
+	reader, err := files.Open(ctx, admission.job.ID+"/"+expectedFile)
 	if err != nil {
 		t.Fatalf("uncertain commit deleted %s: %v", expectedFile, err)
 	}

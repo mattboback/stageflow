@@ -3,9 +3,9 @@ package storage
 import (
 	"context"
 	"errors"
+	"io"
 	"sort"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
@@ -14,14 +14,20 @@ const (
 	reportVersion = "2.2.0"
 )
 
+// JobFiles reads and writes job files. Keys are "<job ID>/<path>".
+type JobFiles interface {
+	Open(ctx context.Context, key string) (io.ReadCloser, error)
+	Write(ctx context.Context, key string, reader io.Reader) error
+}
+
 type Aggregator struct {
-	storage         artifacts.Client
+	files           JobFiles
 	scannerRegistry *scanners.Registry
 }
 
-func NewAggregator(storageClient artifacts.Client, scannerRegistry *scanners.Registry) *Aggregator {
+func NewAggregator(files JobFiles, scannerRegistry *scanners.Registry) *Aggregator {
 	return &Aggregator{
-		storage:         storageClient,
+		files:           files,
 		scannerRegistry: scannerRegistry,
 	}
 }
@@ -31,8 +37,8 @@ func (a *Aggregator) BuildAggregatedReport(ctx context.Context, job *models.Job)
 		return "", errors.New("job is required")
 	}
 
-	if a.storage == nil {
-		return "", errors.New("storage client is required for report aggregation")
+	if a.files == nil {
+		return "", errors.New("job files are required for report aggregation")
 	}
 
 	if len(job.ScannerResults) == 0 {
@@ -62,7 +68,7 @@ func (a *Aggregator) BuildAggregatedReport(ctx context.Context, job *models.Job)
 	report := agg.buildReport()
 	reportKey := job.ID + "/report.json"
 
-	if err := a.uploadAggregatedReport(ctx, reportKey, report); err != nil {
+	if err := a.writeAggregatedReport(ctx, reportKey, report); err != nil {
 		return "", err
 	}
 

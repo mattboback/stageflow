@@ -105,7 +105,7 @@ func run() int {
 		PodNetnsMode:    cfg.PodNetnsMode,
 		PodHostMappings: cfg.PodHostMappings,
 		PageLoadTimeout: cfg.PageLoadTimeout,
-		Storage:         artifactFiles,
+		Files:           artifactFiles,
 		CheckDisk:       artifactFiles.CheckDisk,
 	})
 

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -32,7 +31,7 @@ type PodmanClient interface {
 type Config struct {
 	Database                                                                 *jobstore.Database
 	PodmanClient                                                             PodmanClient
-	Storage                                                                  artifacts.Client
+	Files                                                                    adapterstorage.JobFiles
 	DataDir, DataVolume                                                      string
 	DirectoryOwner                                                           func(string) error
 	ScannerRegistry                                                          *scanners.Registry
@@ -118,7 +117,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		config:     cfg,
 		runtime:    runtime,
 		planner:    planner,
-		aggregator: adapterstorage.NewAggregator(cfg.Storage, cfg.ScannerRegistry),
+		aggregator: adapterstorage.NewAggregator(cfg.Files, cfg.ScannerRegistry),
 	}
 }
 

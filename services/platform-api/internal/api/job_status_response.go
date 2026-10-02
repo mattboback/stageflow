@@ -24,204 +24,73 @@ func (s *Server) buildJobStatusResponse(ctx context.Context, rec *jobstore.JobRe
 		}
 	}
 
-	artifacts, artifactSet, err := s.buildArtifactsForDoneJob(ctx, rec)
+	links, err := s.jobFileLinks(ctx, rec)
 	if err != nil {
 		return nil, err
 	}
 
-	screenshots := s.collectJobScreenshots(ctx, rec)
-	if len(screenshots) > 0 {
-		artifacts.Screenshots = screenshots
-		artifactSet = true
-	}
-
-	if artifactSet {
-		job.Artifacts = artifacts
+	if links.ReportJSON != "" || links.ProvenanceJSON != "" || len(links.ScannerArtifacts) > 0 ||
+		len(links.Screenshots) > 0 {
+		job.Artifacts = links
 	}
 
 	return job, nil
 }
 
-func (s *Server) buildArtifactsForDoneJob(
-	ctx context.Context,
-	rec *jobstore.JobRecord,
-) (*models.ArtifactLocation, bool, error) {
-	artifacts := &models.ArtifactLocation{}
-	artifactSet := false
+// jobFileLinks lists the API routes that serve a finished job's public files.
+func (s *Server) jobFileLinks(ctx context.Context, rec *jobstore.JobRecord) (*models.ArtifactLocation, error) {
+	links := &models.ArtifactLocation{}
 
-	set, err := s.setRequiredArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ReportJSON,
-		rec.ReportJSONKey,
-		"Refusing to presign non-job-scoped report JSON key",
-	)
-	if err != nil {
-		return nil, false, err
+	if _, inJob := jobRelative(rec.JobID, rec.ReportJSONKey); inJob {
+		url, err := publicArtifactURL(rec.JobID, rec.ReportJSONKey)
+		if err != nil {
+			return nil, err
+		}
+
+		links.ReportJSON = url
+	} else if rec.ReportJSONKey != "" {
+		logging.Warn(ctx, "Report JSON key is outside the job", "key", rec.ReportJSONKey)
 	}
 
-	artifactSet = set || artifactSet
-
-	artifactSet = s.setOptionalArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ScanStageLog,
-		rec.ScanStageLogKey,
-		"Failed to generate presigned URL for scan stage log",
-		"key",
-		rec.ScanStageLogKey,
-	) ||
-		artifactSet
-	artifactSet = s.setOptionalArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ScanRecipe,
-		rec.ScanRecipeKey,
-		"Failed to generate presigned URL for scan recipe",
-		"key",
-		rec.ScanRecipeKey,
-	) ||
-		artifactSet
-	artifactSet = s.setOptionalArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ExtractionStageLog,
-		rec.ExtractionStageLogKey,
-		"Failed to generate presigned URL for extraction stage log",
-		"key",
-		rec.ExtractionStageLogKey,
-	) ||
-		artifactSet
-	artifactSet = s.setOptionalArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ExtractionRecipe,
-		rec.ExtractionRecipeKey,
-		"Failed to generate presigned URL for extraction recipe",
-		"key",
-		rec.ExtractionRecipeKey,
-	) ||
-		artifactSet
-	artifactSet = s.setOptionalArtifactURL(
-		ctx,
-		rec.JobID,
-		&artifacts.ProvenanceJSON,
-		rec.ProvenanceKey,
-		"Failed to generate presigned URL for provenance",
-		"key",
-		rec.ProvenanceKey,
-	) ||
-		artifactSet
+	links.ProvenanceJSON = optionalFileLink(ctx, rec.JobID, rec.ProvenanceKey)
 
 	if len(rec.ScannerArtifacts) > 0 {
-		perScanner, ok := s.buildPerScannerArtifacts(ctx, rec)
-		if ok {
-			artifacts.ScannerArtifacts = perScanner
-			artifactSet = true
-		}
+		links.ScannerArtifacts = scannerFileLinks(ctx, rec)
 	}
 
-	return artifacts, artifactSet, nil
+	if screenshots := s.collectJobScreenshots(ctx, rec); len(screenshots) > 0 {
+		links.Screenshots = screenshots
+	}
+
+	return links, nil
 }
 
-func (s *Server) setOptionalArtifactURL(
-	ctx context.Context,
-	jobID string,
-	dest *string,
-	key, warnMsg string,
-	args ...any,
-) bool {
-	if key == "" {
-		return false
-	}
-
-	scopedKey, ok := jobScopedKey(jobID, key)
-	if !ok {
-		logging.Warn(ctx, "Refusing to presign non-job-scoped artifact key", "key", key)
-
-		return false
-	}
-
-	url, err := publicArtifactURL(jobID, scopedKey)
-	if err != nil {
-		logging.Warn(ctx, warnMsg, append([]any{"error", err}, args...)...)
-
-		return false
-	}
-
-	*dest = url
-
-	return true
-}
-
-func (s *Server) setRequiredArtifactURL(
-	ctx context.Context,
-	jobID string,
-	dest *string,
-	key, refuseMsg string,
-) (bool, error) {
-	if key == "" {
-		return false, nil
-	}
-
-	scopedKey, ok := jobScopedKey(jobID, key)
-	if !ok {
-		logging.Warn(ctx, refuseMsg, "key", key)
-
-		return false, nil
-	}
-
-	url, err := publicArtifactURL(jobID, scopedKey)
-	if err != nil {
-		return false, err
-	}
-
-	*dest = url
-
-	return true, nil
-}
-
-func (s *Server) buildPerScannerArtifacts(
-	ctx context.Context,
-	rec *jobstore.JobRecord,
-) (map[string]*models.ScannerArtifacts, bool) {
+func scannerFileLinks(ctx context.Context, rec *jobstore.JobRecord) map[string]*models.ScannerArtifacts {
 	perScanner := make(map[string]*models.ScannerArtifacts, len(rec.ScannerArtifacts))
 
-	for scannerType, sa := range rec.ScannerArtifacts {
-		scannerArt := &models.ScannerArtifacts{
-			ScannerType: sa.ScannerType,
+	for scannerType, files := range rec.ScannerArtifacts {
+		perScanner[scannerType] = &models.ScannerArtifacts{
+			ScannerType: files.ScannerType,
+			ResultsJSON: optionalFileLink(ctx, rec.JobID, files.ResultsKey),
 		}
-
-		_ = s.setOptionalArtifactURL(
-			ctx,
-			rec.JobID,
-			&scannerArt.ResultsJSON,
-			sa.ResultsKey,
-			"Failed to generate presigned URL for scanner results",
-			"scanner_type",
-			scannerType,
-		)
-		_ = s.setOptionalArtifactURL(
-			ctx,
-			rec.JobID,
-			&scannerArt.ScanStageLog,
-			sa.StageLogKey,
-			"Failed to generate presigned URL for scanner stage log",
-			"scanner_type",
-			scannerType,
-		)
-		_ = s.setOptionalArtifactURL(
-			ctx,
-			rec.JobID,
-			&scannerArt.ScanRecipe,
-			sa.RecipeKey,
-			"Failed to generate presigned URL for scanner recipe",
-			"scanner_type",
-			scannerType,
-		)
-
-		perScanner[scannerType] = scannerArt
 	}
 
-	return perScanner, len(perScanner) > 0
+	return perScanner
+}
+
+// optionalFileLink returns the API route for key, or "" when the job has no
+// such public file.
+func optionalFileLink(ctx context.Context, jobID, key string) string {
+	if key == "" {
+		return ""
+	}
+
+	url, err := publicArtifactURL(jobID, key)
+	if err != nil {
+		logging.Warn(ctx, "Leaving a file out of the job status", "key", key, "error", err)
+
+		return ""
+	}
+
+	return url
 }

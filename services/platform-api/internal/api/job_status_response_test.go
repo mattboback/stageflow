@@ -5,11 +5,9 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -91,7 +89,7 @@ func TestBuildJobStatusResponse_DoneUsesAggregatedReportIssueCount(t *testing.T)
 		t.Fatalf("marshal report: %v", err)
 	}
 
-	storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, reportKey)] = reportBytes
+	storage.uploads[reportKey] = reportBytes
 
 	rec := &jobstore.JobRecord{
 		JobID:           jobID,
@@ -131,9 +129,28 @@ func TestBuildJobStatusResponse_UnfinishedJobHasNoArtifacts(t *testing.T) {
 	}
 }
 
-func TestBuildPerScannerArtifacts(t *testing.T) {
+func TestBuildJobStatusResponse_ReportKeyMustBeThisJobsPublicFile(t *testing.T) {
 	server, _, _ := newTestServer(t)
+	ctx := context.Background()
 
+	outside := &jobstore.JobRecord{JobID: "job-a", State: models.JobStateDone, ReportJSONKey: "job-b/report.json"}
+
+	job, err := server.buildJobStatusResponse(ctx, outside)
+	if err != nil {
+		t.Fatalf("report key of another job: %v", err)
+	}
+
+	if job.Artifacts != nil {
+		t.Fatalf("linked another job's report: %+v", job.Artifacts)
+	}
+
+	private := &jobstore.JobRecord{JobID: "job-a", State: models.JobStateDone, ReportJSONKey: "job-a/auth.json"}
+	if _, err = server.buildJobStatusResponse(ctx, private); err == nil {
+		t.Fatal("a private file was accepted as the report")
+	}
+}
+
+func TestScannerFileLinks(t *testing.T) {
 	rec := &jobstore.JobRecord{
 		JobID: "test-per-scanner",
 		State: models.JobStateDone,
@@ -141,24 +158,25 @@ func TestBuildPerScannerArtifacts(t *testing.T) {
 			"axe": {
 				ScannerType: "axe",
 				ResultsKey:  "test-per-scanner/axe/results.json",
-				StageLogKey: "test-per-scanner/axe/scan-stage-log.json",
-				RecipeKey:   "test-per-scanner/axe/scan-recipe.json",
 			},
+			// A scanner that failed before writing results has no file to link.
+			"seo": {ScannerType: "seo"},
 		},
 	}
 
-	perScanner, ok := server.buildPerScannerArtifacts(context.Background(), rec)
-	if !ok {
-		t.Fatal("expected buildPerScannerArtifacts to return ok=true")
-	}
+	perScanner := scannerFileLinks(context.Background(), rec)
 
 	axeArtifacts, exists := perScanner["axe"]
 	if !exists {
 		t.Fatal("expected axe artifacts")
 	}
 
-	if axeArtifacts.ResultsJSON == "" {
-		t.Fatal("expected results JSON URL for axe")
+	if axeArtifacts.ResultsJSON != "/api/v1/jobs/test-per-scanner/files/axe/results.json" {
+		t.Fatalf("axe results link = %q", axeArtifacts.ResultsJSON)
+	}
+
+	if seo := perScanner["seo"]; seo == nil || seo.ResultsJSON != "" {
+		t.Fatalf("seo without results = %+v", seo)
 	}
 
 	if axeArtifacts.ScannerType != "axe" {

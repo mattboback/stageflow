@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -437,19 +436,13 @@ func (s *Server) normalizeAndStoreJobURLAuth(
 		return raw, "", err
 	}
 
-	if s == nil || s.config == nil || s.config.Storage == nil {
+	if s == nil || s.config == nil || s.config.Files == nil {
 		return nil, "", errAuthStorageUnavailable
 	}
 
 	key := jobID + "/auth.json"
-	if uploadErr := s.config.Storage.UploadFile(
-		ctx,
-		artifacts.BucketArtifacts,
-		key,
-		bytes.NewReader(decodedStorageState),
-		int64(len(decodedStorageState)),
-	); uploadErr != nil {
-		return nil, "", fmt.Errorf("%w: %w", errAuthStorageUnavailable, uploadErr)
+	if writeErr := s.config.Files.Write(ctx, key, bytes.NewReader(decodedStorageState)); writeErr != nil {
+		return nil, "", fmt.Errorf("%w: %w", errAuthStorageUnavailable, writeErr)
 	}
 
 	out := map[string]any{
@@ -467,14 +460,14 @@ func (s *Server) normalizeAndStoreJobURLAuth(
 }
 
 func (s *Server) cleanupUploadedAuthState(key string) {
-	if key == "" || s == nil || s.config == nil || s.config.Storage == nil {
+	if key == "" || s == nil || s.config == nil || s.config.Files == nil {
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := s.config.Storage.DeleteFile(ctx, artifacts.BucketArtifacts, key); err != nil {
+	if err := s.config.Files.Remove(ctx, key); err != nil {
 		logging.Warn(ctx, "Failed to clean up uploaded auth state", "key", key, "error", err)
 	}
 }

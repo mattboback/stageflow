@@ -104,7 +104,7 @@ func TestBuildPageOverviewArtifactID(t *testing.T) {
 func TestExtractScreenshotsFromReportUsesOverviewArtifactOwner(t *testing.T) {
 	t.Parallel()
 
-	server := &Server{config: &ServerConfig{Storage: newFakeStorage()}}
+	server := &Server{config: &ServerConfig{Files: newFakeFiles()}}
 	artifactPath := "screenshots/page-overview-page-1.webp"
 	results := report.UnifiedReportV2{
 		Scanners: []report.ScannerSummary{

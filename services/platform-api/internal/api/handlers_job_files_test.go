@@ -7,19 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 func TestJobFileRequiresLiveJobAndAllowlistedPath(t *testing.T) {
 	server, files, _ := newTestServer(t)
-	if err := files.UploadFile(
-		context.Background(),
-		artifacts.BucketArtifacts,
-		"job/report.json",
-		strings.NewReader(`{"ok":true}`),
-		11,
-	); err != nil {
+	if err := files.Write(context.Background(), "job/report.json", strings.NewReader(`{"ok":true}`)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,5 +46,40 @@ func TestJobFileRequiresLiveJobAndAllowlistedPath(t *testing.T) {
 		if response.Code != http.StatusNotFound {
 			t.Fatalf("private path %s returned %d", path, response.Code)
 		}
+	}
+}
+
+func TestPublicArtifactURLServesOnlyThisJobsPublicFiles(t *testing.T) {
+	t.Parallel()
+
+	for key, want := range map[string]string{
+		"job/report.json":                          "/api/v1/jobs/job/files/report.json",
+		"job/axe/results.json":                     "/api/v1/jobs/job/files/axe/results.json",
+		"job/axe/page-1/screenshots/overview.webp": "/api/v1/jobs/job/files/axe/page-1/screenshots/overview.webp",
+	} {
+		if got, err := publicArtifactURL("job", key); err != nil || got != want {
+			t.Errorf("publicArtifactURL(%q) = %q, %v; want %q", key, got, err, want)
+		}
+	}
+
+	for _, key := range []string{
+		"",
+		"report.json",
+		"other/report.json",
+		"job/auth.json",
+		"job/../other/report.json",
+		"job/axe/page-1/../../report.json",
+		"job/axe/page-1//screenshots/overview.webp",
+		"job/axe/page-1/./screenshots/overview.webp",
+		"/job/report.json",
+		"job//report.json",
+	} {
+		if got, err := publicArtifactURL("job", key); err == nil {
+			t.Errorf("publicArtifactURL(%q) = %q, want an error", key, got)
+		}
+	}
+
+	if got, err := publicArtifactURL("", "/report.json"); err == nil {
+		t.Errorf("empty job ID produced %q", got)
 	}
 }

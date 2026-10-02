@@ -83,7 +83,6 @@ func decodeJob(row rowScanner) (*models.Job, error) {
 	j.ScannerStates = map[string]string{}
 	j.ScannerAttempts = map[string]int{}
 	j.ScannerContainerIDs = map[string]string{}
-	j.ProvenancePath = "/job/provenance.json"
 	j.ProvenanceKey = j.ID + "/provenance.json"
 
 	return j, nil

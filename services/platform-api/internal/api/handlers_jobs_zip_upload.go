@@ -14,7 +14,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -374,7 +373,7 @@ func (s *Server) handleZipFilePart(
 	}
 
 	limited := &io.LimitedReader{R: part, N: maxZipFileSize + 1}
-	if err := s.config.Storage.UploadFile(ctx, artifacts.BucketStaging, path, limited, -1); err != nil {
+	if err := s.config.Files.WriteInput(ctx, jobID, limited); err != nil {
 		logging.Error(ctx, "Failed to store ZIP", "error", err)
 
 		return fmt.Errorf("failed to store file: %w", err)

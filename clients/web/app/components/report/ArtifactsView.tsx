@@ -5,7 +5,6 @@ import { scannerLabel } from '../../lib/report/scanner-identity';
 interface Props {
 	jobId: string;
 	job: ScanResult | null;
-	onRefreshArtifacts?: () => void;
 }
 
 function formatTimestamp(iso?: string | null): string | null {
@@ -15,7 +14,7 @@ function formatTimestamp(iso?: string | null): string | null {
 	return d.toLocaleString();
 }
 
-export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
+export function ArtifactsView({ jobId, job }: Props) {
 	const aggregatedJsonUrl = jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null;
 	const updatedLabel = formatTimestamp(job?.updated_at);
 	const scannerEntries = job?.artifacts?.scanner_artifacts
@@ -27,11 +26,6 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 			<section className="artifacts__card">
 				<header className="artifacts__head">
 					<h3>Aggregated report</h3>
-					{onRefreshArtifacts && (
-						<button type="button" className="btn btn--ghost btn--sm" onClick={onRefreshArtifacts}>
-							Refresh links
-						</button>
-					)}
 				</header>
 				<div className="artifacts__body">
 					{aggregatedJsonUrl ? (

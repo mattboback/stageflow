@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
@@ -130,15 +129,15 @@ func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID 
 		return
 	}
 
-	reportJSONKey, ok := jobScopedKey(jobID, rec.ReportJSONKey)
+	relative, ok := jobRelative(jobID, rec.ReportJSONKey)
 	if !ok {
-		logging.Warn(ctx, "Refusing to presign non-job-scoped report JSON key", "key", rec.ReportJSONKey)
+		logging.Warn(ctx, "Report JSON key is outside the job", "key", rec.ReportJSONKey)
 		httputil.RespondNotFound(w, "Report JSON")
 
 		return
 	}
 
-	s.handleJobFile(w, r, jobID, strings.TrimPrefix(reportJSONKey, jobID+"/"))
+	s.handleJobFile(w, r, jobID, relative)
 }
 
 func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string) (report.UnifiedReportV2, error) {
@@ -146,14 +145,13 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 		return report.UnifiedReportV2{}, fmt.Errorf("no report JSON key for job %s", jobID)
 	}
 
-	key, ok := jobScopedKey(jobID, reportJSONKey)
-	if !ok {
-		return report.UnifiedReportV2{}, fmt.Errorf("non-job-scoped report key for %s", jobID)
+	if _, ok := jobRelative(jobID, reportJSONKey); !ok {
+		return report.UnifiedReportV2{}, fmt.Errorf("report key for %s is outside the job", jobID)
 	}
 
-	reader, err := s.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, key)
+	reader, err := s.config.Files.Open(ctx, reportJSONKey)
 	if err != nil {
-		return report.UnifiedReportV2{}, fmt.Errorf("download report for %s: %w", jobID, err)
+		return report.UnifiedReportV2{}, fmt.Errorf("open report for %s: %w", jobID, err)
 	}
 	defer reader.Close()
 

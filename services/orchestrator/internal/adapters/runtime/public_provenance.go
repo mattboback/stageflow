@@ -75,11 +75,5 @@ func (r *JobRuntime) publishURLProvenance(ctx context.Context, job *models.Job) 
 		return err
 	}
 
-	return files.UploadFile(
-		ctx,
-		artifacts.BucketArtifacts,
-		job.ID+"/provenance.json",
-		bytes.NewReader(data),
-		int64(len(data)),
-	)
+	return files.Write(ctx, job.ID+"/provenance.json", bytes.NewReader(data))
 }

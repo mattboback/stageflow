@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
+	"io"
 	"net"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -18,6 +18,16 @@ type JobAdmitter interface {
 // JobStatusReader fetches current job status snapshots.
 type JobStatusReader interface {
 	GetJob(ctx context.Context, jobID string) (*jobstore.JobRecord, error)
+}
+
+// JobFiles stores a job's files: the uploaded ZIP, stored auth state, and the
+// results the orchestrator writes. Keys are "<job ID>/<path>".
+type JobFiles interface {
+	Write(ctx context.Context, key string, reader io.Reader) error
+	WriteInput(ctx context.Context, jobID string, reader io.Reader) error
+	Open(ctx context.Context, key string) (io.ReadCloser, error)
+	Remove(ctx context.Context, key string) error
+	RemoveJob(ctx context.Context, jobID string) error
 }
 
 // Server wires HTTP handlers to file storage, job admission and job status.
@@ -36,7 +46,7 @@ type ServerConfig struct {
 		DeleteJob(context.Context, string) error
 	}
 	Port                int
-	Storage             artifacts.Client
+	Files               JobFiles
 	Admitter            JobAdmitter
 	CheckDisk           func(context.Context) error
 	ValidateZIP         func(context.Context, string) error

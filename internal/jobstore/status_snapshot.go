@@ -29,9 +29,7 @@ func Snapshot(job *models.Job) *JobRecord {
 		JobID: job.ID, State: job.State, InputType: job.InputType, CreatedAt: job.CreatedAt,
 		UpdatedAt: job.UpdatedAt, CompletedAt: job.CompletedAt, Error: redact(job.Error),
 		LastStage: job.LastStage, LastErrorDetails: redact(job.ErrorDetails), TotalPages: job.TotalPages,
-		ReportJSONKey: job.ReportJSONKey, ScanStageLogKey: job.ScanStageLogKey,
-		ScanRecipeKey: job.ScanRecipeKey, ExtractionStageLogKey: job.ExtractionStageLogKey,
-		ExtractionRecipeKey: job.ExtractionRecipeKey, ProvenanceKey: job.ProvenanceKey,
+		ReportJSONKey: job.ReportJSONKey, ProvenanceKey: job.ProvenanceKey,
 		ExpectedScanners: CloneStrings(job.ExpectedScanners),
 		ScannerStatuses:  make(map[string]models.ScannerStatus),
 		ScannerArtifacts: make(map[string]*ScannerArtifactRecord),
@@ -70,8 +68,6 @@ func Snapshot(job *models.Job) *JobRecord {
 			r.ScannerArtifacts[name] = &ScannerArtifactRecord{
 				ScannerType: name,
 				ResultsKey:  result.ResultsPath,
-				StageLogKey: result.StageLogPath,
-				RecipeKey:   result.RecipePath,
 			}
 		}
 

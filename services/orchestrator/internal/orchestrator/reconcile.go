@@ -276,14 +276,8 @@ func (o *Orchestrator) prepareExtracted(ctx context.Context, job *models.Job, co
 			return o.fail(ctx, job, "extraction", "extractor published invalid page coverage")
 		}
 
-		if uploadFileErr := o.config.Storage.UploadFile(
-			ctx,
-			artifacts.BucketArtifacts,
-			job.ID+"/provenance.json",
-			bytes.NewReader(data),
-			int64(len(data)),
-		); uploadFileErr != nil {
-			return uploadFileErr
+		if writeErr := o.config.Files.Write(ctx, job.ID+"/provenance.json", bytes.NewReader(data)); writeErr != nil {
+			return writeErr
 		}
 
 		if updateScannerProgressErr := o.config.Database.UpdateScannerProgress(
@@ -417,7 +411,7 @@ func (o *Orchestrator) aggregate(ctx context.Context, job *models.Job) error {
 		return err
 	}
 
-	reader, err := o.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, key)
+	reader, err := o.config.Files.Open(ctx, key)
 	if err != nil {
 		return err
 	}

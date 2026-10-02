@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -18,7 +17,7 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 	t.Helper()
 
 	ctx := context.Background()
-	mem := newMemoryStorage()
+	mem := newMemoryFiles()
 	registry := scanners.NewRegistry("scanner-runner")
 	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
 	_ = registry.Register(&scanners.Definition{ID: "seo", Name: "SEO", Enabled: true})
@@ -52,7 +51,7 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 		t.Fatalf("marshal seo results: %v", err)
 	}
 
-	mem.objects[mem.key(artifacts.BucketArtifacts, "job-p/seo/results.json")] = data
+	mem.files["job-p/seo/results.json"] = data
 
 	job := &models.Job{
 		ID:               "job-p",
@@ -70,7 +69,7 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 		t.Fatalf("BuildAggregatedReport: %v", err)
 	}
 
-	blob := mem.objects[mem.key(artifacts.BucketArtifacts, key)]
+	blob := mem.files[key]
 
 	var aggregated report.UnifiedReportV2
 	if decodeErr := json.Unmarshal(blob, &aggregated); decodeErr != nil {

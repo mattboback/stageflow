@@ -191,7 +191,7 @@ func TestAdmittedJobIsImmediatelyPendingWithSelectedScanners(t *testing.T) {
 
 func TestOrphanPublicFileCannotBeServedWithoutJobRow(t *testing.T) {
 	server, files, _ := newTestServer(t)
-	files.uploads[artifacts.BucketArtifacts+"::missing/report.json"] = []byte(`{"orphan":true}`)
+	files.uploads["missing/report.json"] = []byte(`{"orphan":true}`)
 	response := httptest.NewRecorder()
 	server.Router().
 		ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing/files/report.json", http.NoBody))
@@ -222,7 +222,7 @@ func TestDeleteCannotRemoveArtifactsWhileCleanupOwnsJob(t *testing.T) {
 	seedReadableJob(t, server, "pending-cleanup", "DONE")
 
 	store.deleteErr = jobstore.ErrCleanupPending
-	files.uploads[artifacts.BucketArtifacts+"::pending-cleanup/report.json"] = []byte(`{"retained":true}`)
+	files.uploads["pending-cleanup/report.json"] = []byte(`{"retained":true}`)
 	response := httptest.NewRecorder()
 	server.handleJobDelete(
 		response,

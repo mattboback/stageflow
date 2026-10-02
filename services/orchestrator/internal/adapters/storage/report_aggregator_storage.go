@@ -6,12 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
-func (a *Aggregator) downloadScanResults(ctx context.Context, resultsPath string) (*report.UnifiedReportV2, error) {
-	reader, err := a.storage.DownloadFile(ctx, artifacts.BucketArtifacts, resultsPath)
+func (a *Aggregator) readScanResults(ctx context.Context, resultsPath string) (*report.UnifiedReportV2, error) {
+	reader, err := a.files.Open(ctx, resultsPath)
 	if err != nil {
 		return nil, fmt.Errorf("download results.json: %w", err)
 	}
@@ -28,7 +27,7 @@ func (a *Aggregator) downloadScanResults(ctx context.Context, resultsPath string
 	return &results, nil
 }
 
-func (a *Aggregator) uploadAggregatedReport(
+func (a *Aggregator) writeAggregatedReport(
 	ctx context.Context,
 	key string,
 	aggregatedReport report.UnifiedReportV2,
@@ -38,14 +37,8 @@ func (a *Aggregator) uploadAggregatedReport(
 		return fmt.Errorf("marshal aggregated report: %w", err)
 	}
 
-	if uploadErr := a.storage.UploadFile(
-		ctx,
-		artifacts.BucketArtifacts,
-		key,
-		bytes.NewReader(blob),
-		int64(len(blob)),
-	); uploadErr != nil {
-		return fmt.Errorf("upload aggregated report: %w", uploadErr)
+	if writeErr := a.files.Write(ctx, key, bytes.NewReader(blob)); writeErr != nil {
+		return fmt.Errorf("write aggregated report: %w", writeErr)
 	}
 
 	return nil

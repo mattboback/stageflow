@@ -141,7 +141,7 @@ func testOrchestrator(t *testing.T) (*Orchestrator, *fakeRuntime) {
 		&Config{
 			Database:       database,
 			PodmanClient:   runtime,
-			Storage:        files,
+			Files:          files,
 			DataDir:        dir,
 			DirectoryOwner: func(string) error { return nil },
 		},
@@ -383,17 +383,17 @@ func TestInvalidOutcomeFailsCoverage(t *testing.T) {
 	}
 }
 
-type interruptedStorage struct {
-	artifacts.Client
+type interruptedFiles struct {
+	adapterstorage.JobFiles
 	failReport bool
 }
 
-func (s *interruptedStorage) UploadFile(ctx context.Context, bucket, key string, reader io.Reader, size int64) error {
+func (s *interruptedFiles) Write(ctx context.Context, key string, reader io.Reader) error {
 	if s.failReport && filepath.Base(key) == "report.json" {
 		return errors.New("interrupted report write")
 	}
 
-	return s.Client.UploadFile(ctx, bucket, key, reader, size)
+	return s.JobFiles.Write(ctx, key, reader)
 }
 
 //nolint:gocyclo // Verifies fault, restart, partial coverage and terminal replay in one lifecycle.
@@ -414,14 +414,8 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 	}
 
 	key := job.ID + "/axe/results.json"
-	if uploadFileErr := o.config.Storage.UploadFile(
-		ctx,
-		artifacts.BucketArtifacts,
-		key,
-		bytes.NewReader(data),
-		int64(len(data)),
-	); uploadFileErr != nil {
-		t.Fatal(uploadFileErr)
+	if writeErr := o.config.Files.Write(ctx, key, bytes.NewReader(data)); writeErr != nil {
+		t.Fatal(writeErr)
 	}
 
 	if recordScannerResultErr := o.config.Database.RecordScannerResult(
@@ -443,9 +437,9 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 		t.Fatal(beginStageErr)
 	}
 
-	storage := &interruptedStorage{Client: o.config.Storage, failReport: true}
+	files := &interruptedFiles{JobFiles: o.config.Files, failReport: true}
 
-	o.aggregator = adapterstorage.NewAggregator(storage, nil)
+	o.aggregator = adapterstorage.NewAggregator(files, nil)
 	if reconcileOnceErr := o.ReconcileOnce(ctx); reconcileOnceErr == nil {
 		t.Fatal("missing interrupted aggregation error")
 	}
@@ -455,7 +449,7 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 		t.Fatal("failed report write settled terminal")
 	}
 
-	storage.failReport = false
+	files.failReport = false
 	restarted := NewOrchestrator(&o.config)
 
 	restarted.config.CheckDisk = func(context.Context) error { return artifacts.ErrLowDisk }
@@ -468,7 +462,7 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 		t.Fatalf("recovery %#v", after)
 	}
 
-	reader, err := o.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, after.ReportJSONKey)
+	reader, err := o.config.Files.Open(ctx, after.ReportJSONKey)
 	if err != nil {
 		t.Fatal(err)
 	}
