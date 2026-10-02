@@ -19,8 +19,8 @@ import (
 	"github.com/mattboback/stageflow/internal/testpostgres"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
-	adapterstorage "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/storage"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/aggregate"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/podman"
 )
 
 var testURL string
@@ -384,7 +384,7 @@ func TestInvalidOutcomeFailsCoverage(t *testing.T) {
 }
 
 type interruptedFiles struct {
-	adapterstorage.JobFiles
+	aggregate.JobFiles
 	failReport bool
 }
 
@@ -439,7 +439,7 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 
 	files := &interruptedFiles{JobFiles: o.config.Files, failReport: true}
 
-	o.aggregator = adapterstorage.NewAggregator(files)
+	o.aggregator = aggregate.New(files)
 	if reconcileOnceErr := o.ReconcileOnce(ctx); reconcileOnceErr == nil {
 		t.Fatal("missing interrupted aggregation error")
 	}

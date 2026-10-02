@@ -527,4 +527,4 @@ clean MODE='all':
 
 [group('quality'), doc('Verify isolated rootless Podman runtime contracts')]
 test-podman-live:
-    {{go}} test -tags=podmanlive ./services/orchestrator/internal/adapters/runtime -run '^TestLiveContract_'
+    {{go}} test -tags=podmanlive ./services/orchestrator/internal/podman -run '^TestLiveContract_'

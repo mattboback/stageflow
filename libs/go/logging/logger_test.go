@@ -19,10 +19,16 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewDefault(t *testing.T) {
-	logger := NewDefault("test-service")
-	if logger == nil {
-		t.Fatal("expected logger to be non-nil")
+// Code that logs through the package-level slog functions has to pick up the
+// service-tagged logger, so Setup's side effect is the point.
+func TestSetupInstallsServiceLogger(t *testing.T) {
+	previous := slog.Default()
+
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	logger := Setup("test-service")
+	if logger == nil || slog.Default() != logger {
+		t.Fatal("Setup did not install its logger as slog.Default")
 	}
 }
 

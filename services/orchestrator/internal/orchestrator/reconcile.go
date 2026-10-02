@@ -17,7 +17,7 @@ import (
 	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/podman"
 )
 
 // ReconcileOnce is also boot recovery: every side effect can be retried from

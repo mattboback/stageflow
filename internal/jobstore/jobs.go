@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	jobdomain "github.com/mattboback/stageflow/libs/go/domain/job"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -499,7 +498,7 @@ func (d *Database) BeginStage(ctx context.Context, id string, state models.JobSt
 		return err
 	}
 
-	if previous != state && !jobdomain.CanTransition(previous, state) {
+	if previous != state && !canTransition(previous, state) {
 		return fmt.Errorf("invalid job transition %s -> %s", previous, state)
 	}
 
@@ -512,8 +511,8 @@ func (d *Database) BeginStage(ctx context.Context, id string, state models.JobSt
 		query += `,scan_started_at=COALESCE(scan_started_at,CURRENT_TIMESTAMP)`
 	}
 
-	query += ` WHERE id=$1 AND ` + jobdomain.StateRankSQL() + ` <= $3 AND state NOT IN ('DONE','FAILED')`
-	if err = changed(tx.ExecContext(ctx, query, id, state, jobdomain.Order(state))); err != nil {
+	query += ` WHERE id=$1 AND ` + stateRankSQL + ` <= $3 AND state NOT IN ('DONE','FAILED')`
+	if err = changed(tx.ExecContext(ctx, query, id, state, stateRank(state))); err != nil {
 		return err
 	}
 
@@ -714,7 +713,7 @@ func (d *Database) MarkTerminal(
 		return tx.Commit()
 	}
 
-	if !jobdomain.CanTransition(previous, state) {
+	if !canTransition(previous, state) {
 		return fmt.Errorf("invalid job transition %s -> %s", previous, state)
 	}
 
@@ -730,7 +729,7 @@ func (d *Database) MarkTerminal(
 	if err = changed(
 		tx.ExecContext(
 			ctx,
-			`UPDATE jobs SET state=$2,config_json=$3,error=$4,error_details=$5,last_stage=$6,report_json_key=$7,total_violations=$8,completed_at=COALESCE(completed_at,CURRENT_TIMESTAMP),cleanup_pending=TRUE,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND state NOT IN ('DONE','FAILED') AND `+jobdomain.StateRankSQL()+` <= $9`,
+			`UPDATE jobs SET state=$2,config_json=$3,error=$4,error_details=$5,last_stage=$6,report_json_key=$7,total_violations=$8,completed_at=COALESCE(completed_at,CURRENT_TIMESTAMP),cleanup_pending=TRUE,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND state NOT IN ('DONE','FAILED') AND `+stateRankSQL+` <= $9`,
 			id,
 			state,
 			config,
@@ -739,7 +738,7 @@ func (d *Database) MarkTerminal(
 			stage,
 			report,
 			total,
-			jobdomain.Order(state),
+			stateRank(state),
 		),
 	); err != nil {
 		return err

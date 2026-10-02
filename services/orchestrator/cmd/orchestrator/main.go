@@ -12,10 +12,10 @@ import (
 
 	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
-	"github.com/mattboback/stageflow/libs/go/bootstrap"
-	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
+	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/api"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/podman"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 }
 
 func run() int {
-	logger := bootstrap.SetupLogging("orchestrator")
+	logger := logging.Setup("orchestrator")
 
 	logger.Info("Starting Orchestrator service...")
 

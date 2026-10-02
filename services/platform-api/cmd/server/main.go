@@ -16,12 +16,12 @@ import (
 	"github.com/mattboback/stageflow/internal/archive"
 	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
-	"github.com/mattboback/stageflow/libs/go/bootstrap"
+	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 )
 
 func main() {
-	bootstrap.SetupLogging("platform-api")
+	logging.Setup("platform-api")
 
 	if err := run(); err != nil {
 		slog.Error("Platform API exited with error", "error", err)

@@ -44,18 +44,13 @@ func New(cfg *Config) *slog.Logger {
 	return logger.With(slog.String("service", cfg.ServiceName))
 }
 
-// NewDefault creates a logger with sensible defaults for production.
-func NewDefault(serviceName string) *slog.Logger {
-	return New(&Config{
-		Level:       slog.LevelInfo,
-		AddSource:   false,
-		ServiceName: serviceName,
-	})
-}
-
-// SetDefault installs the logger as slog.Default().
-func SetDefault(logger *slog.Logger) {
+// Setup builds the service's production logger and installs it as
+// slog.Default, so the package-level slog functions log with its service tag.
+func Setup(serviceName string) *slog.Logger {
+	logger := New(&Config{Level: slog.LevelInfo, ServiceName: serviceName})
 	slog.SetDefault(logger)
+
+	return logger
 }
 
 // WithJobID attaches job_id to context for structured logging.

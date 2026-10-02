@@ -16,7 +16,7 @@ import (
 	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/podman"
 )
 
 const maxOutcomeBytes = 1 << 20

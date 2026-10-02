@@ -120,7 +120,7 @@ describe('specialist rule coverage', () => {
 			expect(linkReport.issues.map(({ ruleId }) => ruleId)).toContain('link-checker-no-text-links');
 			const fixture = { seo: seoReport, 'link-checker': linkReport };
 			const fixtureURL = new URL(
-				'../../../orchestrator/internal/adapters/storage/testdata/specialist-scanner-output.json',
+				'../../../orchestrator/internal/aggregate/testdata/specialist-scanner-output.json',
 				import.meta.url
 			);
 			if (process.env.UPDATE_GOLDENS === '1') {

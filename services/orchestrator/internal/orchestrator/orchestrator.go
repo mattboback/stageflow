@@ -9,28 +9,26 @@ import (
 
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
-	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
-	adapterstorage "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/storage"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/aggregate"
+	"github.com/mattboback/stageflow/services/orchestrator/internal/podman"
 )
 
 type PodmanClient interface {
 	CreatePod(context.Context, *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
 	InspectPod(context.Context, string) (*podman.PodInfo, error)
-	StopPod(context.Context, string) error
 	RemovePod(context.Context, string, bool) error
 	CreateVolume(context.Context, string) error
 	InspectVolume(context.Context, string) (*podman.VolumeInfo, error)
 	CreateContainer(context.Context, *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
 	InspectContainer(context.Context, string) (*podman.ContainerInfo, error)
 	StartContainer(context.Context, string) error
-	RemoveContainer(context.Context, string, bool) error
 	ListJobContainers(context.Context) ([]podman.ContainerInfo, error)
 }
 
 type Config struct {
 	Database                                                                 *jobstore.Database
 	PodmanClient                                                             PodmanClient
-	Files                                                                    adapterstorage.JobFiles
+	Files                                                                    aggregate.JobFiles
 	DataDir, DataVolume                                                      string
 	DirectoryOwner                                                           func(string) error
 	ExtractionImage, ScannerImage                                            string
@@ -45,7 +43,7 @@ type Orchestrator struct {
 	config        Config
 	runtime       *podman.JobRuntime
 	planner       *podman.ScannerLaunchPlanner
-	aggregator    *adapterstorage.Aggregator
+	aggregator    *aggregate.Aggregator
 	once          sync.Once
 	wg            sync.WaitGroup
 	tickMu        sync.Mutex
@@ -108,7 +106,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		config:     cfg,
 		runtime:    runtime,
 		planner:    planner,
-		aggregator: adapterstorage.NewAggregator(cfg.Files),
+		aggregator: aggregate.New(cfg.Files),
 	}
 }
 

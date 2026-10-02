@@ -1,0 +1,102 @@
+package jobstore
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/mattboback/stageflow/libs/go/models"
+)
+
+func TestStateRank(t *testing.T) {
+	tests := []struct {
+		state    models.JobState
+		expected int
+	}{
+		{models.JobStatePending, 0},
+		{models.JobStateExtracting, 1},
+		{models.JobStateReady, 2},
+		{models.JobStateScanning, 3},
+		{models.JobStateCompleting, 4},
+		{models.JobStateDone, 5},
+		{models.JobStateFailed, 5},
+		{"UNKNOWN", -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.state), func(t *testing.T) {
+			got := stateRank(tt.state)
+			if got != tt.expected {
+				t.Errorf("stateRank(%s) = %d, want %d", tt.state, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCanTransition(t *testing.T) {
+	validTransitions := []struct {
+		from, to models.JobState
+	}{
+		{models.JobStatePending, models.JobStateExtracting},
+		{models.JobStatePending, models.JobStateReady},
+		{models.JobStatePending, models.JobStateFailed},
+		{models.JobStateExtracting, models.JobStateReady},
+		{models.JobStateExtracting, models.JobStateFailed},
+		{models.JobStateReady, models.JobStateScanning},
+		{models.JobStateReady, models.JobStateFailed},
+		{models.JobStateScanning, models.JobStateCompleting},
+		{models.JobStateScanning, models.JobStateFailed},
+		{models.JobStateCompleting, models.JobStateDone},
+		{models.JobStateCompleting, models.JobStateFailed},
+	}
+
+	for _, tt := range validTransitions {
+		name := string(tt.from) + " -> " + string(tt.to)
+		t.Run(name, func(t *testing.T) {
+			if !canTransition(tt.from, tt.to) {
+				t.Errorf("canTransition(%s, %s) = false, want true", tt.from, tt.to)
+			}
+		})
+	}
+
+	invalidTransitions := []struct {
+		from, to models.JobState
+	}{
+		{models.JobStateDone, models.JobStatePending},
+		{models.JobStateDone, models.JobStateFailed},
+		{models.JobStateFailed, models.JobStatePending},
+		{models.JobStateFailed, models.JobStateDone},
+		{models.JobStatePending, models.JobStateScanning},
+		{models.JobStatePending, models.JobStateCompleting},
+		{models.JobStatePending, models.JobStateDone},
+		{models.JobStateExtracting, models.JobStateScanning},
+		{models.JobStateReady, models.JobStateCompleting},
+		{models.JobStateScanning, models.JobStateDone},
+	}
+
+	for _, tt := range invalidTransitions {
+		name := string(tt.from) + " -> " + string(tt.to)
+		t.Run(name, func(t *testing.T) {
+			if canTransition(tt.from, tt.to) {
+				t.Errorf("canTransition(%s, %s) = true, want false", tt.from, tt.to)
+			}
+		})
+	}
+}
+
+// The SQL guard has to rank states exactly as stateRank does.
+func TestStateRankSQLMatchesStateRank(t *testing.T) {
+	for state, rank := range stateRanks {
+		if rank == stateRank(models.JobStateDone) {
+			continue // terminal states fall to ELSE
+		}
+
+		if want := fmt.Sprintf("WHEN '%s' THEN %d", state, rank); !strings.Contains(stateRankSQL, want) {
+			t.Errorf("stateRankSQL lacks %q", want)
+		}
+	}
+
+	if want := fmt.Sprintf("ELSE %d", stateRank(models.JobStateDone)); !strings.Contains(stateRankSQL, want) {
+		t.Errorf("stateRankSQL lacks %q", want)
+	}
+}

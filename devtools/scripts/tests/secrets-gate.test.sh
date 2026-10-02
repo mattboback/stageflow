@@ -29,10 +29,10 @@ scan() {
 
 scan
 git switch -q -c canary
-mkdir -p services/orchestrator/internal/adapters/runtime
+mkdir -p services/orchestrator/internal/podman
 canary_suffix="$(printf 'stageflow synthetic secret gate canary' | sha256sum | cut -c1-36)"
-printf 'token = "ghp_%s"\n' "$canary_suffix" > services/orchestrator/internal/adapters/runtime/client.go
-git add services/orchestrator/internal/adapters/runtime/client.go
+printf 'token = "ghp_%s"\n' "$canary_suffix" > services/orchestrator/internal/podman/client.go
+git add services/orchestrator/internal/podman/client.go
 git -c commit.gpgsign=false commit -q -m 'Synthetic canary'
 git switch -q main
 
