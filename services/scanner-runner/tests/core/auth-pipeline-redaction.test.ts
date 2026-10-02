@@ -1,6 +1,6 @@
 /**
- * Exercise both auth modes through PageIterator with captured artifacts/events.
- * Literal credentials must stay out of reports, public provenance and logs.
+ * Exercise both auth modes through PageIterator and the files a scanner writes
+ * for the orchestrator. Literal credentials must stay out of all of them.
  * Real-browser login coverage lives in integration/auth-scan-real-browser.test.ts.
  */
 
@@ -22,50 +22,13 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
-import type {
-	PageScanResult,
-	Provenance,
-	ScanEventPublisher,
-	ScanResults,
-	ScannerConfig,
-	ScanTiming
-} from '../../src/core/types';
+import type { PageScanResult, Provenance, ScanResults, ScannerConfig } from '../../src/core/types';
 
-import {
-	PageIterator,
-	type PageIteratorAuditEvent,
-	type PageScanCallback
-} from '../../src/core/page-iterator';
-import { ScanStageLogger } from '../../src/core/scan-stage-logger';
+import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
+import { ScannerFiles } from '../../src/core/scanner-files';
 
 const SECRET_USER = 'leak-canary-user-r4ndom-7c2x';
 const SECRET_PASSWORD = 'leak-canary-password-q9p1z';
-
-class CapturingPublisher implements ScanEventPublisher {
-	pageCompleted: PageScanResult[] = [];
-	scanCompleted: { results: ScanResults; timing?: ScanTiming }[] = [];
-	scanFailed: { error: string; details?: string }[] = [];
-
-	publishPageCompleted = (result: PageScanResult): Promise<void> => {
-		this.pageCompleted.push(JSON.parse(JSON.stringify(result)) as PageScanResult);
-		return Promise.resolve();
-	};
-
-	publishScanCompleted = (results: ScanResults, timing?: ScanTiming): Promise<void> => {
-		this.scanCompleted.push({
-			results: JSON.parse(JSON.stringify(results)) as ScanResults,
-			...(timing !== undefined ? { timing: JSON.parse(JSON.stringify(timing)) as ScanTiming } : {})
-		});
-		return Promise.resolve();
-	};
-
-	publishScanFailed = (error: string, details?: string): Promise<void> => {
-		this.scanFailed.push({ error, ...(details !== undefined ? { details } : {}) });
-		return Promise.resolve();
-	};
-
-	close = (): Promise<void> => Promise.resolve();
-}
 
 interface BrowserHarness {
 	pages: Page[];
@@ -159,9 +122,8 @@ async function runFullPipeline(
 	tmp: string,
 	provenance: Provenance
 ): Promise<{
-	auditEvents: PageIteratorAuditEvent[];
-	publisher: CapturingPublisher;
-	stageScratchDir: string;
+	progress: string;
+	outcome: string;
 	results: PageScanResult[];
 	harness: BrowserHarness;
 }> {
@@ -169,11 +131,7 @@ async function runFullPipeline(
 
 	const config = makeConfig(tmp);
 	const iterator = new PageIterator(harness.browserManager, config);
-
-	const auditEvents: PageIteratorAuditEvent[] = [];
-	const publisher = new CapturingPublisher();
-	const stageLogger = new ScanStageLogger(config);
-	await stageLogger.start();
+	const files = new ScannerFiles(config.resultsDir);
 
 	const scanCallback: PageScanCallback = (ctx) =>
 		Promise.resolve<PageScanResult>({
@@ -188,23 +146,9 @@ async function runFullPipeline(
 		});
 
 	const results = await iterator.iteratePages(provenance, scanCallback, {
-		onAuditEvent: (event) => {
-			auditEvents.push(event);
-			stageLogger.recordEvent(event.type, event.details ?? {});
-		}
+		onPageComplete: (result, index, total) => files.recordPage(result, index + 1, total)
 	});
-
-	stageLogger.setMetrics({
-		pages_total: results.length,
-		pages_scanned: results.length,
-		total_issues: 0
-	});
-	stageLogger.setArtifacts({ results_key: `${config.jobId}/axe/results.json` });
-	await stageLogger.finalizeSuccess();
-
-	for (const r of results) {
-		await publisher.publishPageCompleted(r, 0, results.length);
-	}
+	await files.close();
 
 	const aggregate: ScanResults = {
 		jobId: config.jobId,
@@ -225,12 +169,11 @@ async function runFullPipeline(
 		completedAt: new Date(1).toISOString(),
 		durationMs: 1
 	};
-	await publisher.publishScanCompleted(aggregate);
+	await files.writeCompleted(aggregate);
 
 	return {
-		auditEvents,
-		publisher,
-		stageScratchDir: join(tmpdir(), 'stageflow', config.jobId, config.scannerName),
+		progress: await readFile(join(tmp, 'progress.jsonl'), 'utf8'),
+		outcome: await readFile(join(tmp, 'outcome.json'), 'utf8'),
 		results,
 		harness
 	};
@@ -257,7 +200,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 		vi.clearAllMocks();
 	});
 
-	it('runs both auth modes end-to-end and keeps every persisted/published surface free of resolved credential values', async () => {
+	it('runs both auth modes end-to-end and keeps the scanner files free of credential values', async () => {
 		// ---- Form mode ------------------------------------------------------
 		const formProvenance: Provenance = {
 			version: '1.0.0',
@@ -289,34 +232,15 @@ describe('Auth pipeline redaction (form mode)', () => {
 
 		const formRun = await runFullPipeline(tmp, formProvenance);
 
-		// 2. Stage log + recipe uploaded via the stage logger.
+		// The files the orchestrator reads, and the results the report is built from.
+		expectNoSecrets('progress.jsonl', formRun.progress);
+		expectNoSecrets('outcome.json', formRun.outcome);
+		expectNoSecrets('page results', JSON.stringify(formRun.results));
 
-		const stageLogText = await readFile(
-			join(tmpdir(), 'stageflow', 'job-redact-pipeline', 'axe', 'stages', 'scan.log.json'),
-			'utf8'
-		);
-		const recipeText = await readFile(
-			join(tmpdir(), 'stageflow', 'job-redact-pipeline', 'axe', 'recipes', 'scan.json'),
-			'utf8'
-		);
-		expectNoSecrets('scan stage log', stageLogText);
-		expectNoSecrets('scan recipe', recipeText);
-		// The auth_hydrated event must be there with the post-login URL.
-		expect(stageLogText).toContain('auth_hydrated');
-		expect(stageLogText).toContain('https://app.example.com/profile');
-
-		// 3. Completion payloads (publisher captures).
-		expectNoSecrets('Completion page-completed', JSON.stringify(formRun.publisher.pageCompleted));
-		expectNoSecrets('Completion scan-completed', JSON.stringify(formRun.publisher.scanCompleted));
-		expectNoSecrets('Completion scan-failed', JSON.stringify(formRun.publisher.scanFailed));
-
-		// 4. PageIterator audit events.
-		expectNoSecrets('audit events', JSON.stringify(formRun.auditEvents));
-
-		// 5. Sanity: Literal auth was executed.
-		expect(JSON.stringify(formRun.auditEvents)).toContain('auth_hydrated');
-		// The hydration ran the form login flow, not the redirect target.
+		// Sanity: the form login ran and both pages were scanned after it.
 		expect(formRun.harness.browserManager.executePreScanActions).toHaveBeenCalledTimes(1);
+		expect(JSON.parse(formRun.outcome)).toMatchObject({ status: 'success', pages_scanned: 2 });
+		expect(formRun.progress.trim().split('\n')).toHaveLength(2);
 
 		// ---- Storage_state mode --------------------------------------------
 		const storageStatePath = join(tmp, 'auth', 'storage-state.json');
@@ -339,15 +263,10 @@ describe('Auth pipeline redaction (form mode)', () => {
 			storageStatePath.split('auth/').pop() ?? ''
 		);
 
-		// All persisted/published surfaces remain free of secrets in storage_state mode.
-		expectNoSecrets('ss audit events', JSON.stringify(ssRun.auditEvents));
-		expectNoSecrets('ss completion', JSON.stringify(ssRun.publisher.pageCompleted));
-
-		// auth_hydrated event names the artifact_key but no credential bytes.
-		const ssAuthEvent = ssRun.auditEvents.find((e) => e.type === 'auth_hydrated');
-		expect(ssAuthEvent?.details).toMatchObject({
-			mode: 'storage_state'
-		});
+		expectNoSecrets('ss progress.jsonl', ssRun.progress);
+		expectNoSecrets('ss outcome.json', ssRun.outcome);
+		expectNoSecrets('ss page results', JSON.stringify(ssRun.results));
+		expect(JSON.parse(ssRun.outcome)).toMatchObject({ status: 'success', pages_scanned: 1 });
 	});
 
 	it.each([

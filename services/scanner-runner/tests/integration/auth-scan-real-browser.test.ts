@@ -13,11 +13,10 @@
  *   - When E2E_LIGHTHOUSE=1, real Lighthouse is run against the
  *     post-login URL via chrome-launcher and the audited `requestedUrl`
  *     is the post-login URL, not /login.
- *   - The redaction grep extends across stored Provenance, the
- *     synthesized unified report, the scan stage log, captured stage
- *     uploads, captured completion payloads, and audit events: no canary
- *     credential value (USER, PASSWORD, or session cookie value)
- *     appears anywhere in any of them.
+ *   - The redaction grep covers stored Provenance, the page results the
+ *     report is built from, and the progress and outcome files the scanner
+ *     writes for the orchestrator: no canary credential value (USER,
+ *     PASSWORD, or session cookie value) appears anywhere in any of them.
  *
  * The canary credentials are reused from
  * tests/core/auth-pipeline-redaction.test.ts so both the unit-level
@@ -45,22 +44,11 @@ import { dirname, join } from 'node:path';
 import { type BrowserContext, type Page, chromium } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import type {
-	PageScanResult,
-	Provenance,
-	ScanEventPublisher,
-	ScanResults,
-	ScanTiming,
-	ScannerConfig
-} from '../../src/core/types';
+import type { PageScanResult, Provenance, ScanResults, ScannerConfig } from '../../src/core/types';
 
 import { BrowserManager } from '../../src/core/browser-manager';
-import {
-	PageIterator,
-	type PageIteratorAuditEvent,
-	type PageScanCallback
-} from '../../src/core/page-iterator';
-import { ScanStageLogger } from '../../src/core/scan-stage-logger';
+import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
+import { ScannerFiles } from '../../src/core/scanner-files';
 
 // Reused verbatim from tests/core/auth-pipeline-redaction.test.ts so the
 // build-failure backstop is unified across the redaction guard and this
@@ -218,32 +206,6 @@ function profilePageHtml(): string {
 </html>`;
 }
 
-class CapturingPublisher implements ScanEventPublisher {
-	pageCompleted: PageScanResult[] = [];
-	scanCompleted: { results: ScanResults; timing?: ScanTiming }[] = [];
-	scanFailed: { error: string; details?: string }[] = [];
-
-	publishPageCompleted = (result: PageScanResult): Promise<void> => {
-		this.pageCompleted.push(JSON.parse(JSON.stringify(result)) as PageScanResult);
-		return Promise.resolve();
-	};
-
-	publishScanCompleted = (results: ScanResults, timing?: ScanTiming): Promise<void> => {
-		this.scanCompleted.push({
-			results: JSON.parse(JSON.stringify(results)) as ScanResults,
-			...(timing !== undefined ? { timing: JSON.parse(JSON.stringify(timing)) as ScanTiming } : {})
-		});
-		return Promise.resolve();
-	};
-
-	publishScanFailed = (error: string, details?: string): Promise<void> => {
-		this.scanFailed.push({ error, ...(details !== undefined ? { details } : {}) });
-		return Promise.resolve();
-	};
-
-	close = (): Promise<void> => Promise.resolve();
-}
-
 function makeConfig(jobId: string, resultsDir: string): ScannerConfig {
 	return {
 		jobId,
@@ -289,11 +251,8 @@ function assertNoCanaryLeak(label: string, haystack: string): void {
 
 interface PipelineRun {
 	results: PageScanResult[];
-	auditEvents: PageIteratorAuditEvent[];
-	publisher: CapturingPublisher;
-	stageScratchDir: string;
-	stageLogPath: string;
-	recipePath: string;
+	progress: string;
+	outcome: string;
 	provenancePath: string;
 	axeViolations: AxeViolationCapture[];
 }
@@ -321,9 +280,6 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 	// Exercise the real URL synthesis path: auth stays in memory, never on disk.
 	await mkdir(resultsDir, { recursive: true });
 
-	const stageLogger = new ScanStageLogger(config);
-	const { recipePath } = await stageLogger.start();
-
 	const iterator = new PageIterator(browserManager, config);
 
 	const previousUrls = process.env.SCAN_URLS;
@@ -346,8 +302,7 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 		}
 	}
 
-	const publisher = new CapturingPublisher();
-	const auditEvents: PageIteratorAuditEvent[] = [];
+	const files = new ScannerFiles(resultsDir);
 	const axeViolations: AxeViolationCapture[] = [];
 
 	const scanCallback: PageScanCallback = async (ctx) => {
@@ -383,14 +338,9 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 	};
 
 	const results = await iterator.iteratePages(loadedProvenance, scanCallback, {
-		onPageComplete: async (r, i, total) => {
-			await publisher.publishPageCompleted(r, i, total);
-		},
-		onAuditEvent: (event) => {
-			auditEvents.push(event);
-			stageLogger.recordEvent(event.type, event.details ?? {});
-		}
+		onPageComplete: (r, i, total) => files.recordPage(r, i + 1, total)
 	});
+	await files.close();
 
 	const aggregate: ScanResults = {
 		jobId: config.jobId,
@@ -412,25 +362,12 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 		durationMs: 1
 	};
 
-	stageLogger.setMetrics({
-		pages_total: results.length,
-		pages_scanned: results.length,
-		total_issues: 0
-	});
-	stageLogger.setArtifacts({
-		results_key: `${config.jobId}/${config.scannerName}/results.json`
-	});
-	const { stageLogPath } = await stageLogger.finalizeSuccess();
-
-	await publisher.publishScanCompleted(aggregate);
+	await files.writeCompleted(aggregate);
 
 	return {
 		results,
-		auditEvents,
-		publisher,
-		stageScratchDir: join(tmpdir(), 'stageflow', config.jobId, config.scannerName),
-		stageLogPath,
-		recipePath,
+		progress: await readFile(join(resultsDir, 'progress.jsonl'), 'utf8'),
+		outcome: await readFile(join(resultsDir, 'outcome.json'), 'utf8'),
 		provenancePath: config.provenancePath,
 		axeViolations
 	};
@@ -660,13 +597,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 			expect(run.results[0]?.success).toBe(true);
 			expect(run.results[0]?.url).toBe(fixture.profileUrl);
 
-			const authEvent = run.auditEvents.find((e) => e.type === 'auth_hydrated');
-			expect(authEvent).toBeDefined();
-			expect(authEvent?.details).toMatchObject({
-				mode: 'form',
-				login_url: fixture.loginUrl,
-				post_login_url: fixture.profileUrl
-			});
+			expect(JSON.parse(run.outcome)).toMatchObject({ status: 'success', pages_scanned: 1 });
 
 			// The deliberate axe violation lives only on the post-login DOM.
 			// If the scanner had audited /login (a redirect target), no
@@ -750,10 +681,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 			expect(run.results[0]?.success).toBe(true);
 			expect(run.results[0]?.url).toBe(fixture.profileUrl);
 
-			const authEvent = run.auditEvents.find((e) => e.type === 'auth_hydrated');
-			expect(authEvent?.details).toMatchObject({
-				mode: 'storage_state'
-			});
+			expect(JSON.parse(run.outcome)).toMatchObject({ status: 'success', pages_scanned: 1 });
 
 			const imageAltViolations = run.axeViolations.filter((v) => v.ruleId === 'image-alt');
 			expect(imageAltViolations.length).toBeGreaterThan(0);
@@ -784,37 +712,20 @@ describe('Authenticated scan, real browser end-to-end', () => {
 
 /**
  * Assert no canary credential value (USER, PASSWORD, session cookie value)
- * appears in any surface the scanner-runner persists or publishes during the
- * run: stored Provenance, scan recipe, scan stage log, captured stage
- * uploads, captured completion payloads (page-completed, scan-completed,
- * scan-failed), the synthesized unified report aggregate, and the audit
- * event stream the iterator emits.
+ * appears in anything the scanner-runner keeps from the run: no stored
+ * Provenance, the page results the report is built from, the progress and
+ * outcome files the orchestrator reads, and the axe violations.
  *
  * This extends the per-surface backstop from
  * tests/core/auth-pipeline-redaction.test.ts with the bytes a real-browser
- * pipeline produces: real axe rawResults, a real cookie-bearing storage
- * state in the storage_state mode, and a real post-login URL recorded into
- * the auth_hydrated event.
+ * pipeline produces: real axe rawResults and a real cookie-bearing storage
+ * state in the storage_state mode.
  */
 async function assertNoCanariesAcrossSurfaces(run: PipelineRun): Promise<void> {
 	await expect(readFile(run.provenancePath)).rejects.toThrow();
 
-	for (const file of ['recipes/scan.json', 'stages/scan.log.json']) {
-		assertNoCanaryLeak(file, await readFile(join(run.stageScratchDir, file), 'utf8'));
-	}
-
-	assertNoCanaryLeak(
-		'Completion publishPageCompleted payloads',
-		JSON.stringify(run.publisher.pageCompleted)
-	);
-	assertNoCanaryLeak(
-		'Completion publishScanCompleted payloads (unified report aggregate)',
-		JSON.stringify(run.publisher.scanCompleted)
-	);
-	assertNoCanaryLeak(
-		'Completion publishScanFailed payloads',
-		JSON.stringify(run.publisher.scanFailed)
-	);
-	assertNoCanaryLeak('PageIterator audit events', JSON.stringify(run.auditEvents));
+	assertNoCanaryLeak('page results', JSON.stringify(run.results));
+	assertNoCanaryLeak('progress.jsonl', run.progress);
+	assertNoCanaryLeak('outcome.json', run.outcome);
 	assertNoCanaryLeak('axe violation captures', JSON.stringify(run.axeViolations));
 }

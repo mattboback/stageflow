@@ -97,7 +97,7 @@ export class LighthouseScanner extends ScannerBase {
 			const screenshotsDir = join(resultsDir, 'screenshots');
 			await mkdir(screenshotsDir, { recursive: true });
 
-			const lhResult = await this.runLighthouse(page, pageEntry.url, logger, redact);
+			const lhResult = await this.runLighthouse(page, pageEntry.url, logger);
 			await this.renavigateAfterLighthouse(
 				page,
 				pageEntry.url,
@@ -260,8 +260,7 @@ export class LighthouseScanner extends ScannerBase {
 	private async runLighthouse(
 		page: import('playwright').Page,
 		url: string,
-		logger: ScannerLogger = this.logger,
-		redact: (value: string) => string = (value) => value
+		logger: ScannerLogger = this.logger
 	): Promise<LighthouseResult> {
 		const lighthouseModule = await this.loadLighthouseModule();
 		const lighthouse = lighthouseModule.default;
@@ -279,9 +278,7 @@ export class LighthouseScanner extends ScannerBase {
 					categories,
 					disableStorageReset,
 					lighthouse,
-					logger,
-					redact,
-					scanStageLogger: this.scanStageLogger
+					logger
 				});
 			} finally {
 				if (cdpBrowser !== null) {
@@ -385,8 +382,7 @@ export class LighthouseScanner extends ScannerBase {
 		const chromePath = this.resolveChromePath();
 		return launchChromeForLighthouse({
 			chromePath,
-			logger: this.logger,
-			scanStageLogger: this.scanStageLogger
+			logger: this.logger
 		});
 	}
 
@@ -407,8 +403,7 @@ export class LighthouseScanner extends ScannerBase {
 
 		await closeLaunchedChrome({
 			chrome,
-			logger: this.logger,
-			scanStageLogger: this.scanStageLogger
+			logger: this.logger
 		});
 	}
 
@@ -416,8 +411,7 @@ export class LighthouseScanner extends ScannerBase {
 		return extractIssuesFromResult({
 			lhResult,
 			scannerName: this.metadata.name,
-			logger,
-			scanStageLogger: this.scanStageLogger
+			logger
 		});
 	}
 

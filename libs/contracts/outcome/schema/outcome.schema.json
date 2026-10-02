@@ -106,7 +106,6 @@
 				"total_ms",
 				"page_iteration_ms",
 				"write_results_ms",
-				"publish_completed_ms",
 				"finalization_ms"
 			],
 			"properties": {
@@ -119,10 +118,6 @@
 					"minimum": 0
 				},
 				"write_results_ms": {
-					"type": "integer",
-					"minimum": 0
-				},
-				"publish_completed_ms": {
 					"type": "integer",
 					"minimum": 0
 				},

@@ -319,7 +319,7 @@ ci:
     ./devtools/scripts/check-contracts-generated.sh
 
     echo "==> Contract fixtures and TypeScript packages..."
-    (cd libs/contracts/events && {{bun}} install --frozen-lockfile && {{bun}} run validate:fixtures)
+    (cd libs/contracts/outcome && {{bun}} install --frozen-lockfile && {{bun}} run validate:fixtures)
     for dir in libs/contracts/report libs/contracts/provenance libs/contracts/scanner-manifest; do
         (cd "$dir" && {{bun}} install --frozen-lockfile && {{bun}} run build && {{bun}} run typecheck)
     done

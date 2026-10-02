@@ -44,16 +44,10 @@ import {
 
 export type PageScanCallback = (context: ScanContext) => Promise<PageScanResult>;
 
-export interface PageIteratorAuditEvent {
-	type: string;
-	details?: Record<string, unknown>;
-}
-
 export interface PageIteratorCallbacks {
 	onPageStart?: (pageEntry: PageEntry, index: number, total: number) => Promise<void>;
 	onPageComplete?: (result: PageScanResult, index: number, total: number) => Promise<void>;
 	onPageError?: (error: Error, pageEntry: PageEntry, attempt: number) => Promise<void>;
-	onAuditEvent?: (event: PageIteratorAuditEvent) => void;
 }
 
 export class PageIterator {
@@ -142,12 +136,6 @@ export class PageIterator {
 				});
 				storageStatePath = result.storageStatePath;
 				authHydrated = true;
-				callbacks?.onAuditEvent?.({
-					type: 'auth_hydrated',
-					details: {
-						mode: 'storage_state'
-					}
-				});
 			} catch (err) {
 				return this.synthesizeAuthFailureResults(pages, err, provenance.auth, redact, callbacks);
 			}
@@ -160,21 +148,13 @@ export class PageIterator {
 		try {
 			if (provenance.auth?.mode === 'form') {
 				try {
-					const { postLoginUrl } = await hydrateForm({
+					await hydrateForm({
 						auth: provenance.auth,
 						context,
 						browserManager: this.browserManager,
 						targetValidationPolicy,
 						redact,
 						logger: this.logger
-					});
-					callbacks?.onAuditEvent?.({
-						type: 'auth_hydrated',
-						details: {
-							mode: 'form',
-							login_url: redact(redactURLUserInfo(provenance.auth.login_url)),
-							post_login_url: postLoginUrl
-						}
 					});
 				} catch (err) {
 					return await this.synthesizeAuthFailureResults(
@@ -271,18 +251,6 @@ export class PageIterator {
 			loginUrl: hydrationError.loginUrl,
 			postLoginUrl: hydrationError.postLoginUrl,
 			error: hydrationError.message
-		});
-
-		callbacks?.onAuditEvent?.({
-			type: 'auth_hydration_failed',
-			details: {
-				mode: hydrationError.mode,
-				...(hydrationError.loginUrl !== undefined ? { login_url: hydrationError.loginUrl } : {}),
-				...(hydrationError.postLoginUrl !== undefined
-					? { post_login_url: hydrationError.postLoginUrl }
-					: {}),
-				error: hydrationError.message
-			}
 		});
 
 		const now = new Date().toISOString();

@@ -285,10 +285,9 @@ func validateOutcomeDocument(data []byte) error {
 		return err
 	}
 
-	return check(
-		timing,
-		[]string{"total_ms", "page_iteration_ms", "write_results_ms", "publish_completed_ms", "finalization_ms"},
-	)
+	// Runner images before 2.4c also wrote publish_completed_ms. It is ignored,
+	// so a scan that was running across a deploy still settles.
+	return check(timing, []string{"total_ms", "page_iteration_ms", "write_results_ms", "finalization_ms"})
 }
 
 // Rejected uploads and interrupted DELETEs have no row. Their directories are

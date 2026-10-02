@@ -1,4 +1,3 @@
-import type { ScanStageLogger } from '../../core/scan-stage-logger';
 import type { Issue, ScannerLogger } from '../../core/types';
 import type { LighthouseAudit, LighthouseIssueNode, LighthouseResult } from './types';
 
@@ -56,9 +55,8 @@ export function extractIssuesFromResult(deps: {
 	lhResult: LighthouseResult;
 	scannerName: string;
 	logger: ScannerLogger;
-	scanStageLogger: ScanStageLogger | null;
 }): Issue[] {
-	const { lhResult, scannerName, logger, scanStageLogger } = deps;
+	const { lhResult, scannerName, logger } = deps;
 	const issues: Issue[] = [];
 
 	const auditEntries = Object.entries(lhResult.audits ?? {});
@@ -168,16 +166,6 @@ export function extractIssuesFromResult(deps: {
 		skippedNotApplicable,
 		skippedInformative,
 		skippedManual
-	});
-
-	// Record extraction stats to stage log
-	scanStageLogger?.recordEvent('lighthouse_extraction', {
-		issuesFound: issues.length,
-		skippedPassed,
-		skippedNotApplicable,
-		skippedInformative,
-		skippedManual,
-		totalProcessed: auditEntries.length
 	});
 
 	return issues;

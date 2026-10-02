@@ -8,7 +8,6 @@ import type {
 	PageScanResult,
 	Provenance,
 	ScanContext,
-	ScanEventPublisher,
 	ScanResults,
 	ScanSummary,
 	ScannerConfig,
@@ -19,14 +18,12 @@ import type {
 
 import { createLogger } from '../utils/logger';
 import { ensureDir, writeJson } from '../utils/fs';
-import { resultsPath as artifactResultsPath } from './artifact-paths';
 import { BrowserManager } from './browser-manager';
 import { ScannerFiles } from './scanner-files';
 import { enforceOutputBudget } from './output-budget';
 import { createLiteralRedactor } from './page-iterator-redaction';
 import { PageIterator } from './page-iterator';
-import { ScanStageLogger } from './scan-stage-logger';
-import { buildScanCompletedTiming, withPublishCompletedTiming } from './scan-lifecycle';
+import { buildScanTiming } from './scan-lifecycle';
 import { WebServerFormatter } from './web-server-formatter';
 
 export type { ScannerMetadata } from './types';
@@ -35,16 +32,13 @@ export abstract class ScannerBase {
 	protected config!: ScannerConfig;
 	protected browserManager: BrowserManager | null = null;
 	protected pageIterator!: PageIterator;
-	protected eventPublisher!: ScanEventPublisher;
+	private files!: ScannerFiles;
 	protected logger: ScannerLogger;
 	protected hooks: ScannerLifecycleHooks;
 	protected scanStartedAt!: string;
 	private runStartedAt!: number;
 	private redactError: (value: string) => string = (value) => value;
 	private providedLogger: boolean;
-	protected scanStageLogger: ScanStageLogger | null = null;
-	private scanStageLogPath = '';
-	private scanRecipePath = '';
 
 	abstract readonly metadata: ScannerMetadata;
 	abstract scanPage(context: ScanContext): Promise<PageScanResult>;
@@ -58,7 +52,7 @@ export abstract class ScannerBase {
 	async run(config: ScannerConfig): Promise<ScanResults> {
 		this.ensureLogger();
 		this.config = config;
-		this.eventPublisher = new ScannerFiles(config.resultsDir, this.logger);
+		this.files = new ScannerFiles(config.resultsDir, this.logger);
 		this.scanStartedAt = new Date().toISOString();
 		this.runStartedAt = Date.now();
 
@@ -74,41 +68,17 @@ export abstract class ScannerBase {
 			const provenance = await this.pageIterator.loadProvenance();
 			this.redactError = createLiteralRedactor(provenance);
 			this.validateProvenance(provenance);
-			this.scanStageLogger?.recordEvent('provenance_loaded', {
-				pages: provenance.pages.filter((p) => !p.skip).length
-			});
-			this.scanStageLogger?.setMetrics({
-				pages_total: provenance.pages.filter((p) => !p.skip).length
-			});
 
 			const { pageResults, pageIterationMs } = await this.iteratePages(provenance);
 
 			const results = this.buildResults(provenance, pageResults);
-			this.scanStageLogger?.setMetrics({
-				pages_scanned: results.pages.length,
-				total_issues: results.summary.totalIssues
-			});
 
 			const { durationMs: writeResultsMs } = await this.runPhase('writeResults', () =>
 				this.writeResults(provenance, results)
 			);
 
-			if (this.scanStageLogger) {
-				const artifacts = {
-					results_key: artifactResultsPath(this.config.jobId, this.metadata.name)
-				};
-
-				this.scanStageLogger.setArtifacts(artifacts);
-
-				const { stageLogPath } = await this.scanStageLogger.finalizeSuccess();
-				this.scanStageLogPath = stageLogPath;
-			}
-
 			await enforceOutputBudget(this.config.resultsDir);
-			await this.publishScanCompleted(results, {
-				pageIterationMs,
-				writeResultsMs
-			});
+			await this.writeCompletedOutcome(results, { pageIterationMs, writeResultsMs });
 
 			await this.hooks.onScanEnd?.(results);
 
@@ -138,15 +108,11 @@ export abstract class ScannerBase {
 		provenance: Provenance
 	): Promise<{ pageResults: PageScanResult[]; pageIterationMs: number }> {
 		const hooks = this.hooks;
-		const stageLogger = this.scanStageLogger;
 		const pageIteratorCallbacks = {
 			onPageComplete: async (result: PageScanResult, index: number, total: number) => {
 				await enforceOutputBudget(this.config.resultsDir);
-				await this.eventPublisher.publishPageCompleted(result, index + 1, total);
+				await this.files.recordPage(result, index + 1, total);
 				await hooks.onPageEnd?.(result);
-			},
-			onAuditEvent: (event: { type: string; details?: Record<string, unknown> }) => {
-				stageLogger?.recordEvent(event.type, event.details);
 			},
 			...(hooks.onPageStart
 				? {
@@ -176,70 +142,26 @@ export abstract class ScannerBase {
 		return { pageResults, pageIterationMs };
 	}
 
-	private async publishScanCompleted(
+	private async writeCompletedOutcome(
 		results: ScanResults,
-		timing: {
-			pageIterationMs: number;
-			writeResultsMs: number;
-		}
-	): Promise<{ publishCompletedMs: number }> {
-		// The five timing components are disjoint phases that must sum to <= totalMs
-		// (enforced by the scan.completed contract validator). publishCompletedMs is 0
-		// here because we are still inside the publish phase, and finalizationMs is the
-		// unaccounted remainder (provenance load/upload, stage-log finalize, teardown)
-		// rather than a roll-up of the write/upload phases — double-counting those made
-		// the component sum exceed totalMs and the orchestrator rejected the event.
-		const timingForEvent = buildScanCompletedTiming({
+		phases: { pageIterationMs: number; writeResultsMs: number }
+	): Promise<void> {
+		const timing = buildScanTiming({
 			totalMs: Date.now() - this.runStartedAt,
-			pageIterationMs: timing.pageIterationMs,
-			writeResultsMs: timing.writeResultsMs
+			pageIterationMs: phases.pageIterationMs,
+			writeResultsMs: phases.writeResultsMs
 		});
 
-		const { durationMs: publishCompletedMs } = await this.runPhase('publishScanCompleted', () =>
-			this.eventPublisher.publishScanCompleted(results, timingForEvent, {
-				...(this.scanStageLogPath ? { stageLogPath: this.scanStageLogPath } : {}),
-				...(this.scanRecipePath ? { recipePath: this.scanRecipePath } : {})
-			})
-		);
+		await this.runPhase('writeOutcome', () => this.files.writeCompleted(results, timing));
 
-		this.logPipelineTiming(withPublishCompletedTiming(timingForEvent, publishCompletedMs));
-
-		return { publishCompletedMs };
+		this.logger.info('Scan timing summary', { jobId: this.config.jobId, ...timing });
 	}
 
 	private async handleRunError(error: unknown): Promise<void> {
 		const errorMessage = this.redactError(error instanceof Error ? error.message : String(error));
 		this.logger.error('Scanner failed', { error: errorMessage });
 
-		if (this.scanStageLogger) {
-			try {
-				this.scanStageLogger.recordEvent('scan_failed', {
-					error: errorMessage
-				});
-				const failure = {
-					stage: 'scan',
-					message: errorMessage,
-					...(error instanceof Error && error.stack !== undefined
-						? { details: this.redactError(error.stack) }
-						: {})
-				};
-				const { stageLogPath } = await this.scanStageLogger.finalizeFailure(failure);
-				this.scanStageLogPath = stageLogPath;
-			} catch (stageErr) {
-				this.logger.warn('Failed to finalize scan stage log', {
-					error: stageErr instanceof Error ? stageErr.message : String(stageErr)
-				});
-			}
-		}
-
-		await this.eventPublisher.publishScanFailed(
-			errorMessage,
-			error instanceof Error && error.stack ? this.redactError(error.stack) : undefined,
-			{
-				...(this.scanStageLogPath ? { stageLogPath: this.scanStageLogPath } : {}),
-				...(this.scanRecipePath ? { recipePath: this.scanRecipePath } : {})
-			}
-		);
+		await this.files.writeFailed(errorMessage);
 
 		if (this.hooks.onError) {
 			await this.hooks.onError(error instanceof Error ? error : new Error(errorMessage));
@@ -253,10 +175,6 @@ export abstract class ScannerBase {
 		this.browserManager = browserManager;
 
 		this.pageIterator = new PageIterator(browserManager, this.config, this.logger);
-
-		this.scanStageLogger = new ScanStageLogger(this.config);
-		const { recipePath } = await this.scanStageLogger.start();
-		this.scanRecipePath = recipePath;
 	}
 
 	protected validateProvenance(provenance: Provenance): void {
@@ -404,24 +322,7 @@ export abstract class ScannerBase {
 			await this.browserManager.close();
 			this.browserManager = null;
 		}
-		await this.eventPublisher.close();
-	}
-
-	private logPipelineTiming(phases: {
-		totalMs: number;
-		pageIterationMs: number;
-		writeResultsMs: number;
-		publishCompletedMs: number;
-		finalizationMs: number;
-	}): void {
-		this.logger.info('Scan timing summary', {
-			jobId: this.config.jobId,
-			totalMs: phases.totalMs,
-			pageIterationMs: phases.pageIterationMs,
-			finalizationMs: phases.finalizationMs,
-			writeResultsMs: phases.writeResultsMs,
-			publishCompletedMs: phases.publishCompletedMs
-		});
+		await this.files.close();
 	}
 
 	private async runPhase<T>(

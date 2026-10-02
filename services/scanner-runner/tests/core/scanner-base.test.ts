@@ -14,8 +14,7 @@ const fsHelperMocks = vi.hoisted(() => ({
 
 const fsPromiseMocks = vi.hoisted(() => ({
 	readdir: vi.fn(),
-	stat: vi.fn(),
-	writeFile: vi.fn()
+	stat: vi.fn()
 }));
 
 vi.mock('../../src/utils/fs', () => fsHelperMocks);
@@ -24,8 +23,7 @@ vi.mock('node:fs/promises', async () => {
 	return {
 		...actual,
 		readdir: fsPromiseMocks.readdir,
-		stat: fsPromiseMocks.stat,
-		writeFile: fsPromiseMocks.writeFile
+		stat: fsPromiseMocks.stat
 	};
 });
 
@@ -94,18 +92,17 @@ const mocks = vi.hoisted(() => {
 			)
 	};
 
-	const mockEventPublisherInstance = {
-		connect: vi.fn().mockResolvedValue(undefined),
-		publishPageCompleted: vi.fn().mockResolvedValue(undefined),
-		publishScanCompleted: vi.fn().mockResolvedValue(undefined),
-		publishScanFailed: vi.fn().mockResolvedValue(undefined),
+	const mockFilesInstance = {
+		recordPage: vi.fn().mockResolvedValue(undefined),
+		writeCompleted: vi.fn().mockResolvedValue(undefined),
+		writeFailed: vi.fn().mockResolvedValue(undefined),
 		close: vi.fn().mockResolvedValue(undefined)
 	};
 
 	return {
 		mockBrowserManagerInstance,
 		mockPageIteratorInstance,
-		mockEventPublisherInstance
+		mockFilesInstance
 	};
 });
 
@@ -144,7 +141,7 @@ vi.mock('../../src/core/scanner-files', async () => {
 	return {
 		...actual,
 		ScannerFiles: vi.fn().mockImplementation(function ScannerFilesMock() {
-			return mocks.mockEventPublisherInstance;
+			return mocks.mockFilesInstance;
 		})
 	};
 });
@@ -206,7 +203,6 @@ describe('ScannerBase', () => {
 
 		fsHelperMocks.ensureDir.mockResolvedValue(undefined);
 		fsHelperMocks.writeJson.mockResolvedValue(undefined);
-		fsPromiseMocks.writeFile.mockResolvedValue(undefined);
 		fsHelperMocks.readJson.mockResolvedValue({});
 		fsPromiseMocks.stat.mockResolvedValue({
 			isDirectory: () => false,
@@ -240,31 +236,25 @@ describe('ScannerBase', () => {
 			expect.anything()
 		);
 
-		expect(mocks.mockEventPublisherInstance.publishScanCompleted).toHaveBeenCalled();
-		expect(mocks.mockEventPublisherInstance.publishPageCompleted).toHaveBeenCalledTimes(2);
+		expect(mocks.mockFilesInstance.writeCompleted).toHaveBeenCalled();
+		expect(mocks.mockFilesInstance.recordPage).toHaveBeenCalledTimes(2);
 	});
 
-	it('emits scan.completed timing whose disjoint components do not exceed total_ms', async () => {
+	it('writes outcome timing whose phases do not exceed total_ms', async () => {
 		await scanner.run(mockConfig);
 
-		const call = mocks.mockEventPublisherInstance.publishScanCompleted.mock.calls[0];
+		const call = mocks.mockFilesInstance.writeCompleted.mock.calls[0];
 		expect(call).toBeDefined();
 		const timing = call![1] as {
 			totalMs: number;
 			pageIterationMs: number;
 			writeResultsMs: number;
-			publishCompletedMs: number;
 			finalizationMs: number;
 		};
 
-		// The Go scan.completed validator treats the five phase fields as disjoint and
-		// rejects the event when their sum exceeds total_ms. finalizationMs must therefore
-		// be the unaccounted remainder, never a roll-up of write_results + upload_artifacts.
-		const componentSum =
-			timing.pageIterationMs +
-			timing.writeResultsMs +
-			timing.publishCompletedMs +
-			timing.finalizationMs;
+		// The orchestrator rejects an outcome whose phases add up to more than
+		// total_ms, so finalizationMs is the unmeasured remainder.
+		const componentSum = timing.pageIterationMs + timing.writeResultsMs + timing.finalizationMs;
 		expect(componentSum).toBeLessThanOrEqual(timing.totalMs);
 		expect(timing.finalizationMs).toBeGreaterThanOrEqual(0);
 	});
@@ -279,11 +269,7 @@ describe('ScannerBase', () => {
 
 		await expect(scanner.run(mockConfig)).rejects.toThrow('Provenance missing');
 
-		expect(mocks.mockEventPublisherInstance.publishScanFailed).toHaveBeenCalledWith(
-			'Provenance missing',
-			expect.anything(),
-			{}
-		);
+		expect(mocks.mockFilesInstance.writeFailed).toHaveBeenCalledWith('Provenance missing');
 	});
 
 	it('validates provenance required fields and URL constraints', () => {

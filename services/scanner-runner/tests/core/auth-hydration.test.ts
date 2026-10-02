@@ -2,9 +2,8 @@
  * Hydrate-then-iterate test (mocked Playwright surface).
  *
  * Asserts the design contract: hydrateAuth runs once per scanner before page
- * iteration, literal credentials are used only at execution
- * time, and an auth_hydrated audit event is emitted with the post-login URL
- * only (never credentials).
+ * iteration, and literal credentials are used only at execution time and never
+ * logged.
  */
 
 import type { BrowserContext, Page } from 'playwright';
@@ -14,11 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/types';
 
-import {
-	PageIterator,
-	type PageIteratorAuditEvent,
-	type PageScanCallback
-} from '../../src/core/page-iterator';
+import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
 
 const fsHelperMocks = vi.hoisted(() => ({
 	pathExists: vi.fn().mockResolvedValue(false),
@@ -163,12 +158,8 @@ describe('hydrate-then-iterate', () => {
 			}
 		};
 
-		const auditEvents: PageIteratorAuditEvent[] = [];
-		const onAuditEvent = (event: PageIteratorAuditEvent): void => {
-			auditEvents.push(event);
-		};
-
-		const iterator = new PageIterator(harness.browserManager, baseConfig);
+		const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+		const iterator = new PageIterator(harness.browserManager, baseConfig, logger);
 		const scanCallback = vi.fn<PageScanCallback>().mockImplementation((ctx) =>
 			Promise.resolve<PageScanResult>({
 				pageId: ctx.pageEntry.id,
@@ -182,7 +173,7 @@ describe('hydrate-then-iterate', () => {
 			})
 		);
 
-		const results = await iterator.iteratePages(provenance, scanCallback, { onAuditEvent });
+		const results = await iterator.iteratePages(provenance, scanCallback);
 
 		// hydration ran exactly once before any page navigation
 		expect(harness.browserManager.navigateToPage).toHaveBeenCalledTimes(3);
@@ -202,25 +193,21 @@ describe('hydrate-then-iterate', () => {
 			{ maskInputValues: true }
 		);
 
-		// audit event has post-login URL but no credentials
-		expect(auditEvents).toContainEqual(
-			expect.objectContaining({
-				type: 'auth_hydrated',
-				details: expect.objectContaining({
-					mode: 'form',
-					login_url: 'https://app.example.com/login?prefill=[REDACTED]&tenant=[REDACTED]',
-					post_login_url: 'https://app.example.com/profile?username=[REDACTED]&password=[REDACTED]'
-				})
-			})
-		);
-		const audit = JSON.stringify(auditEvents);
-		expect(audit).not.toContain(SECRET_USER);
-		expect(audit).not.toContain(SECRET_PASSWORD);
-		expect(audit).not.toContain(encodeURIComponent(SECRET_USER));
-		expect(audit).not.toContain(encodeURIComponent(SECRET_PASSWORD));
-		expect(audit).not.toContain(formEncodedPassword);
-		expect(audit).not.toContain(LITERAL_SECRET);
-		expect(audit).not.toContain(encodeURIComponent(LITERAL_SECRET));
+		// The logs name the login URL with its literals redacted, and no credentials.
+		const logged = JSON.stringify([
+			logger.debug.mock.calls,
+			logger.info.mock.calls,
+			logger.warn.mock.calls,
+			logger.error.mock.calls
+		]);
+		expect(logged).toContain('https://app.example.com/login?prefill=[REDACTED]&tenant=[REDACTED]');
+		expect(logged).not.toContain(SECRET_USER);
+		expect(logged).not.toContain(SECRET_PASSWORD);
+		expect(logged).not.toContain(encodeURIComponent(SECRET_USER));
+		expect(logged).not.toContain(encodeURIComponent(SECRET_PASSWORD));
+		expect(logged).not.toContain(formEncodedPassword);
+		expect(logged).not.toContain(LITERAL_SECRET);
+		expect(logged).not.toContain(encodeURIComponent(LITERAL_SECRET));
 
 		// page scans succeeded
 		expect(results).toHaveLength(2);
@@ -293,7 +280,6 @@ describe('hydrate-then-iterate', () => {
 			auth: { mode: 'storage_state' }
 		};
 
-		const auditEvents: PageIteratorAuditEvent[] = [];
 		const iterator = new PageIterator(harness.browserManager, baseConfig);
 		const scanCallback = vi.fn<PageScanCallback>().mockImplementation((ctx) =>
 			Promise.resolve<PageScanResult>({
@@ -308,9 +294,7 @@ describe('hydrate-then-iterate', () => {
 			})
 		);
 
-		const results = await iterator.iteratePages(provenance, scanCallback, {
-			onAuditEvent: (event) => auditEvents.push(event)
-		});
+		const results = await iterator.iteratePages(provenance, scanCallback);
 
 		expect(fsMock.chmod).toHaveBeenCalledWith(expect.any(String), 0o600);
 
@@ -318,15 +302,6 @@ describe('hydrate-then-iterate', () => {
 			undefined,
 			expect.objectContaining({
 				storageStatePath: expect.stringContaining('storage-state.json')
-			})
-		);
-
-		expect(auditEvents).toContainEqual(
-			expect.objectContaining({
-				type: 'auth_hydrated',
-				details: expect.objectContaining({
-					mode: 'storage_state'
-				})
 			})
 		);
 

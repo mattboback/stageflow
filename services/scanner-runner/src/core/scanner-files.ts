@@ -1,12 +1,6 @@
 import { appendFile, mkdir, open, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import type {
-	PageScanResult,
-	ScanEventPublisher,
-	ScanResults,
-	ScanTiming,
-	ScannerLogger
-} from './types';
+import type { PageScanResult, ScanResults, ScanTiming, ScannerLogger } from './types';
 import { createLogger } from '../utils/logger';
 
 export const MAX_PROGRESS_BYTES = 8 * 1024 * 1024;
@@ -29,12 +23,15 @@ export interface ScannerOutcome {
 		total_ms: number;
 		page_iteration_ms: number;
 		write_results_ms: number;
-		publish_completed_ms: number;
 		finalization_ms: number;
 	};
 }
-/** Progress is disposable; a terminal outcome must reach disk before exit. */
-export class ScannerFiles implements ScanEventPublisher {
+/**
+ * Writes the two files the orchestrator reads from a scanner's output
+ * directory: progress.jsonl while pages finish and outcome.json at the end.
+ * Progress is disposable; a terminal outcome must reach disk before exit.
+ */
+export class ScannerFiles {
 	private progressBytes = 0;
 	private progressInitialized = false;
 	private pagesScanned = 0;
@@ -47,7 +44,7 @@ export class ScannerFiles implements ScanEventPublisher {
 	) {
 		this.logger = logger ?? createLogger('ScannerFiles');
 	}
-	publishPageCompleted(result: PageScanResult, index: number, total: number): Promise<void> {
+	recordPage(result: PageScanResult, index: number, total: number): Promise<void> {
 		this.pagesScanned += 1;
 		const line =
 			JSON.stringify({
@@ -89,7 +86,7 @@ export class ScannerFiles implements ScanEventPublisher {
 		});
 		return Promise.resolve();
 	}
-	async publishScanCompleted(results: ScanResults, timing?: ScanTiming): Promise<void> {
+	async writeCompleted(results: ScanResults, timing?: ScanTiming): Promise<void> {
 		const severity = results.summary.bySeverity;
 		await this.writeOutcome({
 			status: results.summary.pagesFailed > 0 ? 'partial' : 'success',
@@ -108,7 +105,7 @@ export class ScannerFiles implements ScanEventPublisher {
 			timing: this.timing(timing)
 		});
 	}
-	async publishScanFailed(error: string): Promise<void> {
+	async writeFailed(error: string): Promise<void> {
 		await this.writeOutcome({
 			status: 'failed',
 			error: Buffer.from(error).subarray(0, MAX_ERROR_BYTES).toString('utf8'),
@@ -130,7 +127,6 @@ export class ScannerFiles implements ScanEventPublisher {
 			total_ms: timing?.totalMs ?? Date.now() - this.startedAt,
 			page_iteration_ms: timing?.pageIterationMs ?? 0,
 			write_results_ms: timing?.writeResultsMs ?? 0,
-			publish_completed_ms: 0,
 			finalization_ms: timing?.finalizationMs ?? 0
 		};
 	}

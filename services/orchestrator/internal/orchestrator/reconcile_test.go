@@ -574,16 +574,20 @@ func TestConcurrentSchedulersDoNotRaceLaunchOwnership(t *testing.T) {
 
 func TestDurableOutcomeSuppliesSuccessfulAndFailedTotals(t *testing.T) {
 	for _, status := range []string{"success", "failed"} {
-		t.Run(status, func(t *testing.T) { testDurableOutcome(t, status) })
+		t.Run(status, func(t *testing.T) { testDurableOutcome(t, status, false) })
 	}
+
+	// A scanner image from before 2.4c may still be running when the
+	// orchestrator restarts on a new image.
+	t.Run("legacy publish timing", func(t *testing.T) { testDurableOutcome(t, "success", true) })
 }
-func testDurableOutcome(t *testing.T, status string) {
+func testDurableOutcome(t *testing.T, status string, legacyPublishTiming bool) {
 	t.Helper()
 	o, runtime := testOrchestrator(t)
 	job := active(t, o, "outcome")
 	runtime.containers = []podman.ContainerInfo{scanner(job.ID, "exited", 0)}
 
-	data, err := os.ReadFile("../../../../libs/contracts/events/fixtures/outcome.json")
+	data, err := os.ReadFile("../../../../libs/contracts/outcome/fixtures/outcome.json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -596,6 +600,15 @@ func testDurableOutcome(t *testing.T, status string) {
 	outcome["status"] = status
 	if status == "failed" {
 		outcome["error"] = "scanner stopped after a page"
+	}
+
+	if legacyPublishTiming {
+		timing, ok := outcome["timing"].(map[string]any)
+		if !ok {
+			t.Fatal("outcome fixture has no timing object")
+		}
+
+		timing["publish_completed_ms"] = 0
 	}
 
 	data, _ = json.Marshal(outcome)

@@ -1,5 +1,3 @@
-import { redactDynamicStringValues } from '../../utils/secret-redaction';
-import type { ScanStageLogger } from '../../core/scan-stage-logger';
 import type { ScannerLogger } from '../../core/types';
 import type { LighthouseModule, LighthouseResult } from './types';
 
@@ -14,24 +12,10 @@ export async function runLighthouseInvocation(deps: {
 	disableStorageReset: boolean;
 	lighthouse: LighthouseModule['default'];
 	logger: ScannerLogger;
-	redact?: (value: string) => string;
-	scanStageLogger: ScanStageLogger | null;
 }): Promise<LighthouseResult> {
-	const { url, port, categories, disableStorageReset, lighthouse, logger, scanStageLogger } = deps;
-
-	const redact = deps.redact ?? ((value: string) => value);
-	const recordEvent = (type: string, details: Record<string, unknown>): void => {
-		scanStageLogger?.recordEvent(type, redactDynamicStringValues(details, redact));
-	};
+	const { url, port, categories, disableStorageReset, lighthouse, logger } = deps;
 
 	logger.info('Running Lighthouse', {
-		url,
-		port,
-		categories
-	});
-
-	// Record diagnostic info to stage log for debugging
-	recordEvent('lighthouse_start', {
 		url,
 		port,
 		categories
@@ -106,15 +90,6 @@ export async function runLighthouseInvocation(deps: {
 			categoryIds
 		});
 
-		// Record to stage log for debugging
-		recordEvent('lighthouse_completed', {
-			finalUrl: lhr.finalUrl,
-			requestedUrl: lhr.requestedUrl,
-			auditsCount,
-			categoriesCount,
-			categoryIds
-		});
-
 		// Log a sample of audit results for debugging
 		const audits = lhr.audits ?? {};
 		const auditKeys = Object.keys(audits);
@@ -128,12 +103,8 @@ export async function runLighthouseInvocation(deps: {
 				};
 			});
 			logger.info('Sample audits', { sampleAudits });
-			recordEvent('lighthouse_sample_audits', {
-				sampleAudits
-			});
 		} else {
 			logger.warn('No audits returned from Lighthouse');
-			recordEvent('lighthouse_no_audits', {});
 		}
 
 		return lhr;
@@ -142,9 +113,6 @@ export async function runLighthouseInvocation(deps: {
 		logger.error('Lighthouse execution failed', {
 			error: errorMessage,
 			stack: error instanceof Error ? error.stack : undefined
-		});
-		recordEvent('lighthouse_error', {
-			error: errorMessage
 		});
 		throw error;
 	}

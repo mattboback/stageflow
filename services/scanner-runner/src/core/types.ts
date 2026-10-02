@@ -115,7 +115,7 @@ export interface PageEntry {
  * - `form`: a declarative login replay built from the existing PreScanAction
  *   shape. `success` is a WaitStrategy that signals a completed login. Any
  *   string value is a client-resolved literal; credential values never
- *   appear in public Provenance, the unified report, or the scan stage log.
+ *   appear in public Provenance or the unified report.
  */
 export interface ProvenanceAuthStorageState {
 	mode: 'storage_state';
@@ -262,30 +262,10 @@ export interface ScannerLogger {
 	debug(message: string, meta?: Record<string, unknown>): void;
 }
 
-export interface ScanEventPublisher {
-	publishPageCompleted(result: PageScanResult, index: number, total: number): Promise<void>;
-	publishScanCompleted(
-		results: ScanResults,
-		timing?: ScanTiming,
-		artifacts?: {
-			stageLogPath?: string;
-			recipePath?: string;
-			reportPath?: string;
-		}
-	): Promise<void>;
-	publishScanFailed(
-		error: string,
-		details?: string,
-		artifacts?: { stageLogPath?: string; recipePath?: string }
-	): Promise<void>;
-	close(): Promise<void>;
-}
-
 export interface ScanTiming {
 	totalMs: number;
 	pageIterationMs: number;
 	writeResultsMs: number;
-	publishCompletedMs: number;
 	finalizationMs: number;
 }
 

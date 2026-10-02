@@ -4,13 +4,9 @@ interface ScanProgress {
 	percentage: number;
 }
 
+/** The API reports only a scanner's total run time. */
 export interface ScannerTiming {
 	total_ms: number;
-	page_iteration_ms: number;
-	write_results_ms: number;
-	upload_artifacts_ms: number;
-	publish_completed_ms: number;
-	finalization_ms: number;
 }
 
 /** One full-page overview per scanned page; the report crops it per finding. */

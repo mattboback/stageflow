@@ -3,9 +3,8 @@
  *
  * Asserts the contract from the design note: when auth hydration fails the
  * iterator does not run page scans, every page surfaces an
- * `auth-hydration-failed` issue at severity `critical`, the scanner audit log
- * sees an `auth_hydration_failed` event, and the post-login URL captured at
- * failure is included in the issue metadata.
+ * `auth-hydration-failed` issue at severity `critical`, and the post-login URL
+ * captured at failure is included in the issue metadata.
  */
 
 import type { BrowserContext, Page } from 'playwright';
@@ -20,11 +19,7 @@ import type {
 	ScannerLogger
 } from '../../src/core/types';
 
-import {
-	PageIterator,
-	type PageIteratorAuditEvent,
-	type PageScanCallback
-} from '../../src/core/page-iterator';
+import { PageIterator, type PageScanCallback } from '../../src/core/page-iterator';
 
 const fsHelperMocks = vi.hoisted(() => ({
 	pathExists: vi.fn().mockResolvedValue(false),
@@ -131,15 +126,10 @@ describe('PageIterator auth hydration failure path', () => {
 		};
 
 		const browserManager = makeBrowserManager();
-		const auditEvents: PageIteratorAuditEvent[] = [];
-		const onAuditEvent = (event: PageIteratorAuditEvent): void => {
-			auditEvents.push(event);
-		};
-
 		const iterator = new PageIterator(browserManager, baseScannerConfig);
 		const scanCallback = vi.fn<PageScanCallback>();
 
-		const results = await iterator.iteratePages(provenance, scanCallback, { onAuditEvent });
+		const results = await iterator.iteratePages(provenance, scanCallback);
 
 		expect(scanCallback).not.toHaveBeenCalled();
 		expect(browserManager.createContext).not.toHaveBeenCalled();
@@ -157,10 +147,6 @@ describe('PageIterator auth hydration failure path', () => {
 			expect(issue.scanner).toBe('axe');
 			expect(issue.metadata).toMatchObject({ mode: 'storage_state' });
 		}
-
-		expect(auditEvents).toHaveLength(1);
-		expect(auditEvents[0]?.type).toBe('auth_hydration_failed');
-		expect(auditEvents[0]?.details).toMatchObject({ mode: 'storage_state' });
 
 		expect(fsMock.ensureDir).toHaveBeenCalled();
 	});
@@ -221,13 +207,10 @@ describe('PageIterator auth hydration failure path', () => {
 			},
 			{ url: vi.fn().mockReturnValue(capturedUrl) }
 		);
-		const auditEvents: PageIteratorAuditEvent[] = [];
 		const logger = makeLogger();
 		const iterator = new PageIterator(browserManager, baseScannerConfig, logger);
 
-		const results = await iterator.iteratePages(provenance, vi.fn<PageScanCallback>(), {
-			onAuditEvent: (event) => auditEvents.push(event)
-		});
+		const results = await iterator.iteratePages(provenance, vi.fn<PageScanCallback>());
 
 		expect(results[0]?.issues[0]?.metadata).toMatchObject({
 			mode: 'form',
@@ -235,7 +218,6 @@ describe('PageIterator auth hydration failure path', () => {
 		});
 		const recorded = JSON.stringify({
 			results,
-			auditEvents,
 			logs: {
 				info: logger.info.mock.calls,
 				warn: logger.warn.mock.calls,
@@ -285,15 +267,12 @@ describe('PageIterator auth hydration failure path', () => {
 				return Promise.resolve();
 			})
 		});
-		const auditEvents: PageIteratorAuditEvent[] = [];
 		const iterator = new PageIterator(browserManager, baseScannerConfig);
 		const scanCallback = vi.fn<PageScanCallback>();
 
 		let results: PageScanResult[];
 		try {
-			results = await iterator.iteratePages(provenance, scanCallback, {
-				onAuditEvent: (event) => auditEvents.push(event)
-			});
+			results = await iterator.iteratePages(provenance, scanCallback);
 		} finally {
 			vi.useRealTimers();
 		}
@@ -313,17 +292,5 @@ describe('PageIterator auth hydration failure path', () => {
 				postLoginUrl: 'https://app.example.com/login'
 			}
 		});
-
-		expect(auditEvents).toContainEqual(
-			expect.objectContaining({
-				type: 'auth_hydration_failed',
-				details: expect.objectContaining({
-					mode: 'form',
-					login_url: 'https://app.example.com/login',
-					post_login_url: 'https://app.example.com/login'
-				})
-			})
-		);
-		expect(auditEvents.some((event) => event.type === 'auth_hydrated')).toBe(false);
 	});
 });

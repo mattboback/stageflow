@@ -1,28 +1,19 @@
 import type { ScanTiming } from './types';
 
-export type ScanLifecyclePhaseDurations = Pick<ScanTiming, 'pageIterationMs' | 'writeResultsMs'>;
-
-export function buildScanCompletedTiming(
-	input: ScanLifecyclePhaseDurations & { totalMs: number }
-): ScanTiming {
-	const measuredMs = input.pageIterationMs + input.writeResultsMs;
-
+/**
+ * finalizationMs is whatever the measured phases leave over (provenance load,
+ * teardown), so the phases never add up to more than totalMs. The orchestrator
+ * rejects an outcome whose phases do.
+ */
+export function buildScanTiming(input: {
+	totalMs: number;
+	pageIterationMs: number;
+	writeResultsMs: number;
+}): ScanTiming {
 	return {
 		totalMs: input.totalMs,
 		pageIterationMs: input.pageIterationMs,
 		writeResultsMs: input.writeResultsMs,
-		publishCompletedMs: 0,
-		finalizationMs: Math.max(0, input.totalMs - measuredMs)
-	};
-}
-
-export function withPublishCompletedTiming(
-	timing: ScanTiming,
-	publishCompletedMs: number
-): ScanTiming {
-	return {
-		...timing,
-		publishCompletedMs,
-		finalizationMs: timing.finalizationMs + publishCompletedMs
+		finalizationMs: Math.max(0, input.totalMs - input.pageIterationMs - input.writeResultsMs)
 	};
 }

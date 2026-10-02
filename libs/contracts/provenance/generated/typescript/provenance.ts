@@ -93,7 +93,7 @@ export type PreScanActionValue =
  */
 export type ProvenanceAuth = ProvenanceAuthStorageState | ProvenanceAuthForm;
 /**
- * Wait strategy that signals a successful login. The post-login URL captured at this point is recorded in the auth_hydrated event and in any AuthHydrationError.
+ * Wait strategy that signals a successful login. The post-login URL captured at this point is recorded in any AuthHydrationError.
  */
 export type WaitStrategy1 =
   | {

@@ -9,8 +9,7 @@ const baseDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(baseDir, '..');
 const fixturesDir = path.join(rootDir, 'fixtures');
 
-const schemaByEvent = { outcome: 'outcome.schema.json'
-};
+const schemaByFixture = { outcome: 'outcome.schema.json' };
 
 async function readJson(filePath) {
 	const raw = await readFile(filePath, 'utf8');
@@ -30,8 +29,8 @@ async function main() {
 	const ajv = new Ajv2020({ strict: false, allErrors: true, verbose: true });
 	addFormats(ajv);
 
-	for (const [eventName, schemaFile] of Object.entries(schemaByEvent)) {
-		const fixtureFile = `${eventName}.json`;
+	for (const [fixtureName, schemaFile] of Object.entries(schemaByFixture)) {
+		const fixtureFile = `${fixtureName}.json`;
 		const fixturePath = path.join(fixturesDir, fixtureFile);
 		const schemaPath = path.join(baseDir, schemaFile);
 

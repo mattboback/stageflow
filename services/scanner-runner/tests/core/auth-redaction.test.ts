@@ -1,20 +1,13 @@
 /**
- * Redaction test.
- *
- * Build-fails if a literal credential leaks into
- * persisted artifacts: stored Provenance, the auth_hydrated audit event,
- * the serialized scan stage log, the recipe, or the synthetic
- * auth-hydration-failed issue.
+ * Redaction test: the literal redactor knows every form and page literal
+ * before any of them is used. The files a scanner writes are covered by
+ * auth-pipeline-redaction.test.ts.
  */
 
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type { Provenance, ScannerConfig } from '../../src/core/types';
+import type { Provenance } from '../../src/core/types';
 
-import { ScanStageLogger } from '../../src/core/scan-stage-logger';
 import { createLiteralRedactor } from '../../src/core/page-iterator-redaction';
 
 const SECRET_USER = 'auth-test-user-aljkfhqwouihasdf';
@@ -53,16 +46,6 @@ function expectNoSecrets(haystack: string): void {
 }
 
 describe('Auth redaction', () => {
-	let tmpDir: string;
-
-	beforeEach(async () => {
-		tmpDir = await mkdtemp(join(tmpdir(), 'stageflow-redaction-'));
-	});
-
-	afterEach(async () => {
-		await rm(tmpDir, { recursive: true, force: true });
-	});
-
 	it('collects form and all page literals before execution', () => {
 		const provenance = makeProvenance();
 		provenance.pages.push({
@@ -74,63 +57,5 @@ describe('Auth redaction', () => {
 		const redact = createLiteralRedactor(provenance);
 		expectNoSecrets(redact(`${SECRET_USER} ${SECRET_PASSWORD}`));
 		expect(redact('later%20literal%2Bvalue')).toBe('[REDACTED]');
-	});
-
-	it('keeps literal values out of the serialized scan stage log and recipe', async () => {
-		const config: ScannerConfig = {
-			jobId: 'job-redact',
-			provenancePath: join(tmpDir, 'provenance.json'),
-			resultsDir: tmpDir,
-			scannerName: 'axe',
-			concurrency: 1,
-			maxRetries: 1,
-			browser: {
-				headless: true,
-				args: [],
-				defaultViewport: { width: 1280, height: 720 },
-				deviceScaleFactor: 1,
-				defaultTimeout: 30_000,
-				pageLoadTimeout: 15_000
-			}
-		};
-
-		const stageLogger = new ScanStageLogger(config);
-		await stageLogger.start();
-
-		// Same auth_hydrated event detail that PageIterator emits on success.
-		stageLogger.recordEvent('auth_hydrated', {
-			mode: 'form',
-			login_url: 'https://app.example.com/login',
-			post_login_url: 'https://app.example.com/profile'
-		});
-
-		stageLogger.setMetrics({ pages_total: 1, pages_scanned: 1, total_issues: 0 });
-		stageLogger.setArtifacts({ results_key: 'job-redact/axe/results.json' });
-		await stageLogger.finalizeSuccess();
-
-		const stageLogPath = join(
-			tmpdir(),
-			'stageflow',
-			config.jobId,
-			config.scannerName,
-			'stages',
-			'scan.log.json'
-		);
-		const recipePath = join(
-			tmpdir(),
-			'stageflow',
-			config.jobId,
-			config.scannerName,
-			'recipes',
-			'scan.json'
-		);
-
-		const stageLogText = await readFile(stageLogPath, 'utf8');
-		const recipeText = await readFile(recipePath, 'utf8');
-
-		expectNoSecrets(stageLogText);
-		expectNoSecrets(recipeText);
-		expect(stageLogText).toContain('auth_hydrated');
-		expect(stageLogText).toContain('https://app.example.com/profile');
 	});
 });

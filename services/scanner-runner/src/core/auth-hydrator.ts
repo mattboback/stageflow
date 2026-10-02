@@ -93,11 +93,7 @@ interface HydrateFormOptions {
 	logger: ScannerLogger;
 }
 
-interface HydrateFormResult {
-	postLoginUrl: string;
-}
-
-export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateFormResult> {
+export async function hydrateForm(options: HydrateFormOptions): Promise<void> {
 	const { auth, context, browserManager, targetValidationPolicy, redact, logger } = options;
 
 	const page = await context.newPage();
@@ -147,8 +143,6 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 				}
 			);
 		}
-
-		capturedPostLoginUrl = leftLoginFormUrl;
 	} catch (err) {
 		primaryFailure = true;
 		const capturedUrl = sanitizeUrl(capturedPostLoginUrl ?? safeUrl(page) ?? auth.login_url);
@@ -184,7 +178,6 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 	if (cleanupFailure) {
 		throw cleanupFailure;
 	}
-	return { postLoginUrl: sanitizeUrl(capturedPostLoginUrl) };
 }
 
 function sanitizeAuthHydrationError(

@@ -21,7 +21,6 @@
 		"total_ms": 50,
 		"page_iteration_ms": 30,
 		"write_results_ms": 5,
-		"publish_completed_ms": 0,
 		"finalization_ms": 15
 	}
 }

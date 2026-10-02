@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-import type { ScanStageLogger } from '../../core/scan-stage-logger';
 import type { ScannerLogger } from '../../core/types';
 import type { LaunchedChrome } from './types';
 
@@ -18,9 +17,8 @@ export function resolveChromePath(): string {
 export async function launchChromeForLighthouse(deps: {
 	chromePath: string;
 	logger: ScannerLogger;
-	scanStageLogger: ScanStageLogger | null;
 }): Promise<LaunchedChrome> {
-	const { chromePath, logger, scanStageLogger } = deps;
+	const { chromePath, logger } = deps;
 
 	const chromeLauncherModule = (await import('chrome-launcher')) as unknown as {
 		launch?: (opts: Record<string, unknown>) => Promise<LaunchedChrome>;
@@ -35,11 +33,8 @@ export async function launchChromeForLighthouse(deps: {
 	}
 
 	logger.info('Launching Chrome for Lighthouse', { chromePath });
-	scanStageLogger?.recordEvent('lighthouse_chrome_launch', {
-		chromePath
-	});
 
-	const chrome = await launch({
+	return launch({
 		chromePath,
 		// Use a dedicated, headless Chrome process for Lighthouse.
 		chromeFlags: [
@@ -60,28 +55,16 @@ export async function launchChromeForLighthouse(deps: {
 			'--mute-audio'
 		]
 	});
-
-	scanStageLogger?.recordEvent('lighthouse_chrome_ready', {
-		port: chrome.port,
-		pid: chrome.pid ?? null
-	});
-
-	return chrome;
 }
 
 export async function closeLaunchedChrome(deps: {
 	chrome: LaunchedChrome;
 	logger: ScannerLogger;
-	scanStageLogger: ScanStageLogger | null;
 }): Promise<void> {
-	const { chrome, logger, scanStageLogger } = deps;
+	const { chrome, logger } = deps;
 
 	try {
 		await chrome.kill();
-		scanStageLogger?.recordEvent('lighthouse_chrome_closed', {
-			port: chrome.port,
-			pid: chrome.pid ?? null
-		});
 	} catch (error) {
 		logger.warn('Failed to close Lighthouse Chrome', {
 			error: error instanceof Error ? error.message : String(error)

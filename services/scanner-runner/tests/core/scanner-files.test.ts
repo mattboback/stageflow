@@ -2,7 +2,7 @@ import { mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promise
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020';
-import schema from '../../../../libs/contracts/events/schema/outcome.schema.json';
+import schema from '../../../../libs/contracts/outcome/schema/outcome.schema.json';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	MAX_OUTCOME_BYTES,
@@ -48,11 +48,10 @@ describe('scanner disk outcomes', () => {
 		const dir = await output();
 		await writeFile(join(dir, 'outcome.json'), '{}');
 		const files = new ScannerFiles(dir);
-		await files.publishScanCompleted(results(), {
+		await files.writeCompleted(results(), {
 			totalMs: 50,
 			pageIterationMs: 30,
 			writeResultsMs: 5,
-			publishCompletedMs: 0,
 			finalizationMs: 15
 		});
 		const outcome = JSON.parse(await readFile(join(dir, 'outcome.json'), 'utf8')) as ScannerOutcome;
@@ -69,7 +68,7 @@ describe('scanner disk outcomes', () => {
 	});
 	it('marks incomplete page auditing partial', async () => {
 		const dir = await output();
-		await new ScannerFiles(dir).publishScanCompleted(results(1));
+		await new ScannerFiles(dir).writeCompleted(results(1));
 		expect(JSON.parse(await readFile(join(dir, 'outcome.json'), 'utf8'))).toMatchObject({
 			status: 'partial',
 			error: '1 page audits failed'
@@ -82,10 +81,10 @@ describe('scanner disk outcomes', () => {
 		await rm(join(dir, 'progress.jsonl'));
 		const invalidProgressDir = join(dir, 'missing');
 		const files = new ScannerFiles(invalidProgressDir, logger);
-		await files.publishPageCompleted({ pageId: 'home' } as PageScanResult, 1, 1);
+		await files.recordPage({ pageId: 'home' } as PageScanResult, 1, 1);
 		await files.close();
 		expect(logger.warn).toHaveBeenCalled();
-		await files.publishScanCompleted(results());
+		await files.writeCompleted(results());
 		expect(
 			JSON.parse(await readFile(join(invalidProgressDir, 'outcome.json'), 'utf8')).status
 		).toBe('success');
@@ -93,7 +92,7 @@ describe('scanner disk outcomes', () => {
 	it('records failure even with zero pages and bounds error content', async () => {
 		const dir = await output();
 		const files = new ScannerFiles(dir);
-		await files.publishScanFailed('x'.repeat(MAX_OUTCOME_BYTES));
+		await files.writeFailed('x'.repeat(MAX_OUTCOME_BYTES));
 		const data = await readFile(join(dir, 'outcome.json'));
 		const outcome = JSON.parse(data.toString()) as ScannerOutcome;
 		expect(outcome.status).toBe('failed');
@@ -101,18 +100,18 @@ describe('scanner disk outcomes', () => {
 		expect(outcome.error.length).toBe(4096);
 		expect(data.byteLength).toBeLessThan(MAX_OUTCOME_BYTES);
 	});
-	it('requires successful terminal publication even when progress can be dropped', async () => {
+	it('fails when the outcome cannot be written, unlike progress', async () => {
 		const dir = await output();
 		const file = join(dir, 'file');
 		await writeFile(file, '');
-		await expect(new ScannerFiles(file).publishScanFailed('failure')).rejects.toThrow();
+		await expect(new ScannerFiles(file).writeFailed('failure')).rejects.toThrow();
 	});
 	it('caps progress across scanner restarts', async () => {
 		const dir = await output();
 		const path = join(dir, 'progress.jsonl');
 		await writeFile(path, 'x'.repeat(MAX_PROGRESS_BYTES));
 		const files = new ScannerFiles(dir);
-		await files.publishPageCompleted({ pageId: 'home' } as PageScanResult, 1, 1);
+		await files.recordPage({ pageId: 'home' } as PageScanResult, 1, 1);
 		await files.close();
 		expect((await stat(path)).size).toBe(MAX_PROGRESS_BYTES);
 	});
@@ -120,7 +119,7 @@ describe('scanner disk outcomes', () => {
 	it('appends bounded progress without including page contents or credentials', async () => {
 		const dir = await output();
 		const files = new ScannerFiles(dir);
-		await files.publishPageCompleted(
+		await files.recordPage(
 			{
 				pageId: 'home',
 				url: 'https://secret@example.com',
