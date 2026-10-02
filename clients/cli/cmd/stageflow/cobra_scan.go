@@ -77,7 +77,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		false,
 		"Allow private/loopback targets (requires API instance to permit it)",
 	)
-	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time")
+	cmd.Flags().DurationVar(&timeout, "timeout", defaultScanWaitTimeout, "Max wait time including queue and scan")
 	cmd.Flags().StringVar(
 		&authStatePath,
 		"auth-state",

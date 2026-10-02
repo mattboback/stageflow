@@ -51,12 +51,12 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 		}
 	}
 
-	containers, err := o.config.PodmanClient.ListJobContainers(ctx)
-	if err != nil {
-		return fmt.Errorf("observe job containers: %w", err)
-	}
-
 	var errs []error
+
+	containers, observationErr := o.config.PodmanClient.ListJobContainers(ctx)
+	if observationErr != nil {
+		errs = append(errs, fmt.Errorf("observe job containers: %w", observationErr))
+	}
 
 	for _, job := range jobs {
 		if job.State.IsTerminal() {
@@ -71,7 +71,9 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 			continue
 		}
 
-		if job.ClaimedAt == nil {
+		// Durable deadlines and retention remain enforceable while Podman is
+		// unavailable. Observation and new launches require a complete listing.
+		if observationErr != nil || job.ClaimedAt == nil {
 			continue
 		}
 
@@ -81,8 +83,10 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 	}
 	// The database includes terminal cleanup reservations in its capacity count;
 	// timing out a job never releases memory capacity before its pod is removed.
-	if claimErr := o.claimNext(ctx, containers); claimErr != nil {
-		errs = append(errs, claimErr)
+	if observationErr == nil {
+		if claimErr := o.claimNext(ctx, containers); claimErr != nil {
+			errs = append(errs, claimErr)
+		}
 	}
 
 	if o.lastRetention.IsZero() || now.Sub(o.lastRetention) >= 10*time.Minute {

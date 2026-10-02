@@ -50,11 +50,17 @@ type ServerConfig struct {
 	ValidateZIP         func(context.Context, string) error
 	StatusReader        JobStatusReader
 	AllowPrivateTargets bool
+	MaxPages            int
+	DisableZIPUploads   bool
 	APIToken            string // Optional; see middleware_auth.go
 }
 
 // NewServer constructs an API server with injected dependencies.
 func NewServer(config *ServerConfig) *Server {
+	if config.MaxPages <= 0 {
+		config.MaxPages = maxURLCount
+	}
+
 	server := &Server{
 		config:       config,
 		statusReader: config.StatusReader,

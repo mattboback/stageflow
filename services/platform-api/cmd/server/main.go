@@ -92,6 +92,8 @@ func run() error {
 		},
 		StatusReader:        jobstore.StatusReader{Database: statusReader},
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
+		MaxPages:            cfg.MaxPages,
+		DisableZIPUploads:   !cfg.ZIPUploadEnabled,
 		APIToken:            cfg.APIToken,
 	})
 

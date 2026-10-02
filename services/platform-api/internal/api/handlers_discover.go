@@ -69,5 +69,5 @@ func (s *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.RespondOK(w, discoverPages(r.Context(), newDiscoveryClient(s.discoveryMode), start))
+	httputil.RespondOK(w, discoverPages(r.Context(), newDiscoveryClient(s.discoveryMode), start, s.config.MaxPages))
 }

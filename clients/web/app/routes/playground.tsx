@@ -1,3 +1,4 @@
+import { ZIP_UPLOAD_ENABLED, MAX_SCAN_PAGES } from '../lib/scan-policy';
 import { ScanProfileSelector } from '../components/ScanProfileSelector';
 import { Link, useSearchParams, type MetaFunction } from 'react-router';
 import {
@@ -144,7 +145,9 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 							<p className="page-head__lede">
 								{project
 									? 'Configure repeatable URL scans here. Credentials are prompted per run and never saved with the project.'
-									: 'Point StageFlow at any public URL or a static-site archive, choose the scanners you need, and run. No account, no install.'}
+									: ZIP_UPLOAD_ENABLED
+										? 'Point StageFlow at any public URL or a static-site archive, choose the scanners you need, and run. No account, no install.'
+										: 'Scan up to 25 public URLs, choose the scanners you need, and run. No account, no install.'}
 							</p>
 						</div>
 						<div className="page-head__actions">
@@ -186,7 +189,9 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 											Target
 										</h2>
 										<p className="panel__sub">
-											Add one or more URLs to scan, or upload a static-site archive.
+											{ZIP_UPLOAD_ENABLED
+												? 'Add one or more URLs to scan, or upload a static-site archive.'
+												: `Add up to ${MAX_SCAN_PAGES} public URLs to scan.`}
 										</p>
 									</div>
 									<div className="seg" role="group" aria-label="Target type">
@@ -197,17 +202,19 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 										>
 											URL
 										</button>
-										<button
-											type="button"
-											aria-pressed={mode === 'zip'}
-											onClick={() => setMode('zip')}
-											disabled={Boolean(project)}
-											title={
-												project ? 'Local projects support URL scans in this release.' : undefined
-											}
-										>
-											ZIP upload
-										</button>
+										{ZIP_UPLOAD_ENABLED && (
+											<button
+												type="button"
+												aria-pressed={mode === 'zip'}
+												onClick={() => setMode('zip')}
+												disabled={Boolean(project)}
+												title={
+													project ? 'Local projects support URL scans in this release.' : undefined
+												}
+											>
+												ZIP upload
+											</button>
+										)}
 									</div>
 								</div>
 								<div className="panel__body intake">

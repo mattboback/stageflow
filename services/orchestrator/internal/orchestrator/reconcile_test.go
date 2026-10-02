@@ -44,6 +44,7 @@ type fakeRuntime struct {
 	createEntered chan struct{}
 	releaseCreate chan struct{}
 	inspectErr    error
+	listErr       error
 
 	containers    []podman.ContainerInfo
 	missingImages map[string]bool
@@ -102,7 +103,7 @@ func (f *fakeRuntime) StartContainer(context.Context, string) error        { ret
 func (f *fakeRuntime) RemoveContainer(context.Context, string, bool) error { return nil }
 func (f *fakeRuntime) ListJobContainers(context.Context) ([]podman.ContainerInfo, error) {
 	f.lists++
-	return f.containers, nil
+	return f.containers, f.listErr
 }
 func (f *fakeRuntime) ImageExists(_ context.Context, name string) (bool, error) {
 	return !f.missingImages[name], nil
@@ -335,6 +336,180 @@ func TestAbsoluteDeadlineIgnoresRecentProgress(t *testing.T) {
 	expired, stage := o.expired(job, time.Now())
 	if !expired || stage != "scanning" {
 		t.Fatal("recent progress extended absolute scan deadline")
+	}
+}
+
+func reconciledJob(t *testing.T, o *Orchestrator, id string) *models.Job {
+	t.Helper()
+
+	job, err := o.config.Database.GetJob(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return job
+}
+
+func seedExpiredAuthenticatedJob(t *testing.T, o *Orchestrator, id string, scanning bool) {
+	t.Helper()
+
+	ctx := context.Background()
+
+	job := &models.Job{
+		ID: id, InputType: models.JobInputTypeURLs,
+		CreatedAt: time.Now().Add(-2 * time.Hour),
+		Config: models.JobConfig{Modules: []string{"axe"},
+			Auth: json.RawMessage(`{"mode":"form","steps":[{"type":"fill","value":"outage-secret"}]}`)},
+	}
+	if err := o.config.Database.AdmitJob(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+
+	if scanning {
+		if claimed, err := o.config.Database.ClaimNext(ctx); err != nil || claimed == nil || claimed.ID != id {
+			t.Fatalf("claim scan: %v %v", claimed, err)
+		}
+
+		for _, state := range []models.JobState{models.JobStateReady, models.JobStateScanning} {
+			if err := o.config.Database.BeginStage(ctx, id, state); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	if err := o.config.Files.Write(ctx, id+"/auth.json", strings.NewReader("outage-secret")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertExpiredAuthenticatedJob(t *testing.T, o *Orchestrator, id, stage string) {
+	t.Helper()
+
+	job := reconciledJob(t, o, id)
+	if job.State != models.JobStateFailed || job.LastStage != stage || !job.CleanupPending ||
+		len(job.Config.Auth) != 0 {
+		t.Fatalf("%s did not expire and scrub credentials while reserving cleanup: %+v", id, job)
+	}
+
+	if _, err := os.Stat(filepath.Join(o.config.DataDir, "jobs", id, "auth.json")); err != nil {
+		t.Fatalf("%s files removed before pod cleanup: %v", id, err)
+	}
+}
+
+func TestListingOutageExpiresJobsAndPreservesCleanupUntilRecovery(t *testing.T) {
+	o, runtime := testOrchestrator(t)
+	ctx := context.Background()
+	o.config.ScanTimeout = time.Nanosecond
+
+	seedExpiredAuthenticatedJob(t, o, "scan", true)
+	seedExpiredAuthenticatedJob(t, o, "queue", false)
+
+	admit(t, o, "waiting")
+
+	runtime.listErr = errors.New("Podman listing unavailable")
+	runtime.removeErr = errors.New("Podman removal unavailable")
+
+	if err := o.ReconcileOnce(ctx); !errors.Is(err, runtime.listErr) {
+		t.Fatalf("listing failure was lost: %v", err)
+	}
+
+	assertExpiredAuthenticatedJob(t, o, "scan", "scanning")
+	assertExpiredAuthenticatedJob(t, o, "queue", "queue")
+
+	// Restoring observation must not admit a new job while pod removal fails.
+	runtime.listErr = nil
+
+	if err := o.ReconcileOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	waiting := reconciledJob(t, o, "waiting")
+	if waiting.ClaimedAt != nil || runtime.pods != 0 || runtime.creates != 0 {
+		t.Fatal("cleanup reservation released prematurely")
+	}
+
+	runtime.removeErr = nil
+
+	if err := o.ReconcileOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, id := range []string{"scan", "queue"} {
+		job := reconciledJob(t, o, id)
+		if job.CleanupPending {
+			t.Fatalf("%s cleanup did not recover", id)
+		}
+
+		if _, err := os.Stat(
+			filepath.Join(o.config.DataDir, "jobs", id, "auth.json"),
+		); !errors.Is(
+			err,
+			os.ErrNotExist,
+		) {
+			t.Fatalf("%s auth file survived cleanup: %v", id, err)
+		}
+	}
+
+	waiting = reconciledJob(t, o, "waiting")
+	if waiting.ClaimedAt == nil || runtime.pods != 1 {
+		t.Fatal("claim did not resume after cleanup")
+	}
+}
+
+func TestListingOutageAppliesRetentionWithoutClaimingAndRecovers(t *testing.T) {
+	o, runtime := testOrchestrator(t)
+	ctx := context.Background()
+	old := time.Now().Add(-25 * time.Hour)
+
+	job := &models.Job{
+		ID: "old", InputType: models.JobInputTypeURLs, CreatedAt: old, CompletedAt: &old,
+		Config: models.JobConfig{Modules: []string{"axe"}},
+	}
+	if err := o.config.Database.AdmitJob(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := o.fail(ctx, job, "queue", "expired"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := o.config.Database.MarkCleaned(ctx, job.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := o.config.Files.Write(ctx, "old/report.json", strings.NewReader(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	admit(t, o, "waiting")
+
+	runtime.listErr = errors.New("Podman listing unavailable")
+	if err := o.ReconcileOnce(ctx); !errors.Is(err, runtime.listErr) {
+		t.Fatalf("listing failure was lost: %v", err)
+	}
+
+	if exists, err := o.config.Database.JobExists(ctx, "old"); err != nil || exists {
+		t.Fatalf("eligible report row survived outage: %v %v", exists, err)
+	}
+
+	if _, err := os.Stat(filepath.Join(o.config.DataDir, "jobs", "old")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("eligible report files survived outage: %v", err)
+	}
+
+	waiting := reconciledJob(t, o, "waiting")
+	if waiting.ClaimedAt != nil || runtime.pods != 0 || runtime.creates != 0 {
+		t.Fatal("job claimed without observation")
+	}
+
+	runtime.listErr = nil
+
+	if err := o.ReconcileOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	waiting = reconciledJob(t, o, "waiting")
+	if waiting.ClaimedAt == nil || runtime.pods != 1 {
+		t.Fatal("claim did not recover")
 	}
 }
 

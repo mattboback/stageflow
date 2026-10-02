@@ -1,3 +1,4 @@
+import { MAX_SCAN_PAGES, ZIP_UPLOAD_ENABLED } from '../scan-policy';
 import type { ScannerDefinition, ScannerSelection } from '../types/scan';
 import { normalizeUrlInput, validateHttpUrl } from '../url';
 
@@ -134,10 +135,22 @@ export function validatePlaygroundConfiguration({
 				urlRowErrors
 			);
 		}
+		if (validUrls.length > MAX_SCAN_PAGES) {
+			return invalidValidation(
+				`A scan can contain at most ${MAX_SCAN_PAGES} URLs. Remove URLs before running.`,
+				'url-input-0',
+				validUrls
+			);
+		}
 		if (validUrls.length === 0) {
 			return invalidValidation('Add at least one URL to scan.', 'url-input-0');
 		}
 	} else {
+		if (!ZIP_UPLOAD_ENABLED)
+			return invalidValidation(
+				'ZIP uploads are unavailable on the hosted service. Scan public URLs instead.',
+				null
+			);
 		if (!file) return invalidValidation('Choose a ZIP archive to scan.', 'zip-picker');
 		const fileError = validateZipUploadFile(file);
 		if (fileError) return invalidValidation(fileError, 'zip-picker');
@@ -177,9 +190,6 @@ export function validatePlaygroundConfiguration({
 	};
 }
 
-// Mirrors maxURLCount in platform-api's URL submit handler.
-const MAX_URLS_PER_SCAN = 100;
-
 /**
  * Spreads a pasted list (one URL per line, or space/comma separated) across the
  * URL rows, replacing the row pasted into. Returns null for a single value so
@@ -189,9 +199,9 @@ export function mergePastedUrls(rows: string[], index: number, text: string): st
 	const pasted = text.split(/[\s,]+/).filter(Boolean);
 	if (pasted.length < 2) return null;
 
-	return [...rows.slice(0, index), ...pasted, ...rows.slice(index + 1)]
-		.filter((url) => url.trim() !== '')
-		.slice(0, MAX_URLS_PER_SCAN);
+	return [...rows.slice(0, index), ...pasted, ...rows.slice(index + 1)].filter(
+		(url) => url.trim() !== ''
+	);
 }
 
 export interface RuntimeEstimate {

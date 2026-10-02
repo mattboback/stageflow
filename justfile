@@ -483,6 +483,10 @@ shell-tests:
     node --test devtools/scripts/tests/check-knip.test.mjs
     bash qa/e2e/scan-helpers.test.sh
 
+[group('quality'), doc('Verify sanitized backups with local PostgreSQL server/client tools on PATH')]
+backup-tests:
+    @bash devtools/scripts/tests/backup-snapshot.test.sh
+
 [group('quality'), doc('Run production Knip and Go deadcode with reviewed temporary allowances')]
 dead-code:
     #!/usr/bin/env bash

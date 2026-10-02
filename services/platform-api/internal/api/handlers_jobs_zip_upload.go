@@ -132,6 +132,16 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.config.DisableZIPUploads {
+		httputil.RespondError(
+			w,
+			http.StatusForbidden,
+			"ZIP uploads are disabled on this deployment. Scan public URLs instead.",
+		)
+
+		return
+	}
+
 	if !s.ensureAdmissionDisk(r.Context(), w) {
 		return
 	}

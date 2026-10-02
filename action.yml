@@ -1,13 +1,16 @@
 name: StageFlow regression summary
-description: Scan a built site and compare a reviewed JSON baseline in the GitHub step summary.
+description: Scan a deployed site and compare a reviewed JSON baseline in the GitHub step summary.
 inputs:
   baseline:
     description: Path to a complete StageFlow JSON scan envelope used as the baseline.
     required: true
   target:
-    description: Built site directory, ZIP archive, or public URL to scan.
+    description: Public preview URL to scan. Self-hosted APIs may also accept a built directory or ZIP.
+    required: true
+  profile:
+    description: Scan assessment profile (production or staging). Use staging for preview deployments.
     required: false
-    default: ./dist
+    default: production
 runs:
   using: composite
   steps:
@@ -20,6 +23,7 @@ runs:
       env:
         STAGEFLOW_BASELINE: ${{ inputs.baseline }}
         STAGEFLOW_TARGET: ${{ inputs.target }}
+        STAGEFLOW_PROFILE: ${{ inputs.profile }}
       run: |
         set -euo pipefail
         cli="$(mktemp "$RUNNER_TEMP/stageflow-cli.XXXXXX")"
@@ -27,7 +31,7 @@ runs:
         trap 'rm -f "$cli" "$current"' EXIT
         go build -C "$GITHUB_ACTION_PATH" -o "$cli" ./clients/cli/cmd/stageflow
         scan_status=0
-        "$cli" scan "$STAGEFLOW_TARGET" --format json --max-issues 0 > "$current" || scan_status=$?
+        "$cli" scan "$STAGEFLOW_TARGET" --profile "$STAGEFLOW_PROFILE" --format json --max-issues 0 > "$current" || scan_status=$?
         if [[ ! -s "$current" ]]; then
           printf '## StageFlow\n\nScan failed before a report was available. See the step logs.\n' >> "$GITHUB_STEP_SUMMARY"
           if (( scan_status == 0 )); then scan_status=2; fi

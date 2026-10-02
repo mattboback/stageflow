@@ -1,3 +1,4 @@
+import { MAX_SCAN_PAGES } from '../lib/scan-policy';
 import { ScanProfileSelector } from '../components/ScanProfileSelector';
 import { useState } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
@@ -84,7 +85,7 @@ const PATH_STEPS = [
 	{
 		n: '1',
 		title: 'Configure',
-		body: 'Point at a URL or upload a ZIP archive.'
+		body: 'Point at a public URL and choose pages to scan.'
 	},
 	{
 		n: '2',
@@ -122,6 +123,10 @@ export default function Home() {
 		return checked.url;
 	}
 	async function submitURLs(targets: string[]) {
+		if (targets.length > MAX_SCAN_PAGES) {
+			setUrlError(`A scan can contain at most ${MAX_SCAN_PAGES} URLs. Select fewer pages.`);
+			return;
+		}
 		setSubmitting(true);
 		setUrlError(null);
 		try {

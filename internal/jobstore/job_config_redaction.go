@@ -1,6 +1,7 @@
 package jobstore
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -30,8 +31,31 @@ func sanitizeTerminalJobConfig(raw string) (string, []string, error) {
 }
 
 func redactKnownConfigSecretsInMap(value map[string]any, secrets []string) {
-	for key, entry := range value {
-		value[key] = redactKnownConfigSecretsInValue(entry, secrets)
+	keys := make([]string, 0, len(value))
+	for key := range value {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	redacted := make(map[string]any, len(value))
+
+	for _, key := range keys {
+		redactedKey := redactKnownConfigSecrets(key, secrets)
+		if _, exists := redacted[redactedKey]; exists {
+			// A collision must not retain either original value. Sorting makes
+			// the result independent of Go's randomized map iteration.
+			redacted[redactedKey] = redactedConfigValue
+			continue
+		}
+
+		redacted[redactedKey] = redactKnownConfigSecretsInValue(value[key], secrets)
+	}
+
+	clear(value)
+
+	for key, entry := range redacted {
+		value[key] = entry
 	}
 }
 
@@ -91,7 +115,10 @@ func collectAuthSecretValues(value any, secrets *[]string) {
 
 	for key, entry := range auth {
 		switch normalizeConfigKey(key) {
-		case "contentb64", "password", "passwd", "username":
+		case "contentb64":
+			collectStringValues(entry, secrets)
+			collectStorageStateSecrets(entry, secrets)
+		case "password", "passwd", "username":
 			collectStringValues(entry, secrets)
 		case "steps":
 			steps, isSteps := entry.([]any)
@@ -162,6 +189,10 @@ func uniqueSensitiveValues(values []string) []string {
 	}
 
 	sort.Slice(out, func(i, j int) bool {
+		if len(out[i]) == len(out[j]) {
+			return out[i] < out[j]
+		}
+
 		return len(out[i]) > len(out[j])
 	})
 
@@ -214,7 +245,13 @@ func encodedSecretRepresentations(secrets []string) []string {
 		}
 	}
 
-	sort.Slice(values, func(i, j int) bool { return len(values[i]) > len(values[j]) })
+	sort.Slice(values, func(i, j int) bool {
+		if len(values[i]) == len(values[j]) {
+			return values[i] < values[j]
+		}
+
+		return len(values[i]) > len(values[j])
+	})
 
 	return values
 }
@@ -293,4 +330,42 @@ func normalizeConfigKey(key string) string {
 	replacer := strings.NewReplacer("_", "", "-", "", " ", "")
 
 	return replacer.Replace(strings.ToLower(key))
+}
+
+// Storage state is carried as base64 JSON; cookie and local-storage values can
+// also appear in navigation failures and therefore need literal redaction.
+func collectStorageStateSecrets(value any, secrets *[]string) {
+	encoded, ok := value.(string)
+	if !ok {
+		return
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return
+	}
+
+	var state struct {
+		Cookies []struct {
+			Value string `json:"value"`
+		} `json:"cookies"`
+		Origins []struct {
+			LocalStorage []struct {
+				Value string `json:"value"`
+			} `json:"localStorage"`
+		} `json:"origins"`
+	}
+	if json.Unmarshal(decoded, &state) != nil {
+		return
+	}
+
+	for _, cookie := range state.Cookies {
+		collectStringValues(cookie.Value, secrets)
+	}
+
+	for _, origin := range state.Origins {
+		for _, entry := range origin.LocalStorage {
+			collectStringValues(entry.Value, secrets)
+		}
+	}
 }

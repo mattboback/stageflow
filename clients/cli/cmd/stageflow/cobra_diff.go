@@ -65,7 +65,7 @@ func newDiffCmd(root *rootOptions) *cobra.Command {
 	)
 	cmd.Flags().
 		BoolVar(&allowPartial, "allow-partial", false, "Compare completed scanners even when either report has incomplete coverage")
-	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Max wait time for live scan")
+	cmd.Flags().DurationVar(&timeout, "timeout", defaultScanWaitTimeout, "Max wait time including queue and live scan")
 
 	return cmd
 }

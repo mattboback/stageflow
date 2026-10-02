@@ -105,15 +105,16 @@ type discoveryCandidate struct {
 	source string
 }
 type discoverer struct {
-	client *http.Client
-	start  *url.URL
-	result discoveryResult
-	seen   map[string]bool
-	queue  []discoveryCandidate
-	robots []robotsRule
+	client   *http.Client
+	start    *url.URL
+	result   discoveryResult
+	seen     map[string]bool
+	queue    []discoveryCandidate
+	robots   []robotsRule
+	maxPages int
 }
 
-func discoverPages(ctx context.Context, client *http.Client, start *url.URL) discoveryResult {
+func discoverPages(ctx context.Context, client *http.Client, start *url.URL, maxPages int) discoveryResult {
 	ctx, cancel := context.WithTimeout(ctx, discoveryBudget)
 	defer cancel()
 
@@ -124,14 +125,20 @@ func discoverPages(ctx context.Context, client *http.Client, start *url.URL) dis
 		start.Path = "/"
 	}
 
-	d := &discoverer{client: client, start: start, seen: make(map[string]bool), result: discoveryResult{
-		URLs:        []string{},
-		Source:      discoverySourceCrawl,
-		Sources:     []string{},
-		Complete:    true,
-		StopReasons: []string{},
-		Warnings:    []string{},
-	}}
+	d := &discoverer{
+		maxPages: maxPages,
+		client:   client,
+		start:    start,
+		seen:     make(map[string]bool),
+		result: discoveryResult{
+			URLs:        []string{},
+			Source:      discoverySourceCrawl,
+			Sources:     []string{},
+			Complete:    true,
+			StopReasons: []string{},
+			Warnings:    []string{},
+		},
+	}
 
 	sitemaps, robotsOK := d.readRobots(ctx)
 	if !robotsOK {
@@ -409,7 +416,7 @@ func (d *discoverer) crawl(ctx context.Context) {
 
 		final := finalURL.String()
 		if !accepted[final] {
-			if len(d.result.URLs) >= maxURLCount {
+			if len(d.result.URLs) >= d.maxPages {
 				d.stop("url_limit", "Discovery reached its URL limit.")
 				break
 			}

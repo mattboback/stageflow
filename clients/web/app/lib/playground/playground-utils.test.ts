@@ -180,8 +180,8 @@ describe('mergePastedUrls', () => {
 		expect(mergePastedUrls([''], 0, ' https://a.example/ ')).toBeNull();
 	});
 
-	it('caps the list at the API limit of 100 URLs', () => {
+	it('preserves the pasted list so the caller can reject oversized scans without dropping URLs', () => {
 		const list = Array.from({ length: 150 }, (_, i) => `https://a.example/${i}`).join('\n');
-		expect(mergePastedUrls([''], 0, list)).toHaveLength(100);
+		expect(mergePastedUrls([''], 0, list)).toHaveLength(150);
 	});
 });

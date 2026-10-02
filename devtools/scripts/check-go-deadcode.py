@@ -16,6 +16,7 @@ MAINS = {
     MODULE + path
     for path in (
         "clients/cli/cmd/stageflow",
+        "devtools/cmd/sanitize-backup",
         "services/archive-extractor/cmd/server",
         "services/orchestrator/cmd/orchestrator",
         "services/orchestrator/cmd/healthcheck",

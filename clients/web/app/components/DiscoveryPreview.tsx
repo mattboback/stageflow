@@ -1,3 +1,4 @@
+import { MAX_SCAN_PAGES } from '../lib/scan-policy';
 import { useState } from 'react';
 import type { DiscoverPagesResponse } from '../lib/api/client';
 import './DiscoveryPreview.css';
@@ -17,14 +18,15 @@ export function DiscoveryPreview({
 	confirmLabel = 'Use selected pages',
 	busy = false
 }: DiscoveryPreviewProps) {
-	const [selected, setSelected] = useState(() => new Set(result.urls));
+	const [selected, setSelected] = useState(() => new Set(result.urls.slice(0, MAX_SCAN_PAGES)));
 	const complete = result.complete ?? !result.truncated;
 	const warnings = result.warnings ?? [];
 	return (
 		<section className="discovery-preview" aria-label="Website discovery preview">
 			<h3>Choose pages to scan</h3>
 			<p>
-				{result.urls.length} public HTML pages found. {selected.size} selected.
+				{result.urls.length} public HTML pages found. {selected.size} selected (maximum{' '}
+				{MAX_SCAN_PAGES}).
 			</p>
 			{!complete && (
 				<p role="status">
@@ -44,7 +46,7 @@ export function DiscoveryPreview({
 						<input
 							type="checkbox"
 							checked={selected.has(url)}
-							disabled={busy}
+							disabled={busy || (!selected.has(url) && selected.size >= MAX_SCAN_PAGES)}
 							onChange={(event) => {
 								setSelected((previous) => {
 									const next = new Set(previous);

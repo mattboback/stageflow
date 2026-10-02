@@ -269,7 +269,7 @@ func (s *Server) validateJobURLSubmitRequest(
 	r *http.Request,
 	req jobURLSubmitRequest,
 ) (targetValidationMode, bool) {
-	if detail := validateURLSubmitRequest(req.URLs); detail != nil {
+	if detail := validateURLSubmitRequest(req.URLs, s.config.MaxPages); detail != nil {
 		httputil.RespondStructuredError(w, http.StatusBadRequest, *detail)
 
 		return targetValidationModePublic, false
@@ -369,7 +369,7 @@ func (s *Server) admitURLJob(ctx context.Context, w http.ResponseWriter, job *mo
 	return true
 }
 
-func validateURLSubmitRequest(urls []string) *httputil.ErrorDetail {
+func validateURLSubmitRequest(urls []string, maxPages int) *httputil.ErrorDetail {
 	if len(urls) == 0 {
 		detail := httputil.NewValidationError(
 			"urls",
@@ -380,11 +380,11 @@ func validateURLSubmitRequest(urls []string) *httputil.ErrorDetail {
 		return &detail
 	}
 
-	if len(urls) > maxURLCount {
+	if len(urls) > maxPages {
 		detail := httputil.NewValidationError(
 			"urls",
-			fmt.Sprintf("Too many URLs (max %d)", maxURLCount),
-			fmt.Sprintf("Please provide at most %d URLs per job.", maxURLCount),
+			fmt.Sprintf("Too many URLs (max %d)", maxPages),
+			fmt.Sprintf("Please provide at most %d URLs per job.", maxPages),
 		)
 
 		return &detail

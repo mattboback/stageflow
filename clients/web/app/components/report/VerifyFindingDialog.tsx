@@ -1,3 +1,4 @@
+import { ZIP_UPLOAD_ENABLED } from '../../lib/scan-policy';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { PlaygroundAuthConfig } from '../playground/PlaygroundAuthConfig';
@@ -48,7 +49,10 @@ export function VerifyFindingDialog({
 		successStrategy: 'auto',
 		successSelector: ''
 	});
-	const unavailable = verificationUnavailableReason(report, issue);
+	const unavailable =
+		zip && !ZIP_UPLOAD_ENABLED
+			? 'ZIP verification is unavailable on the hosted service. Deploy the updated build to a public URL and scan it, or use a self-hosted StageFlow instance.'
+			: verificationUnavailableReason(report, issue);
 	const freshAuthValid = !authRequired || (auth.enabled && isAuthConfigComplete(auth));
 	const zipError = zip
 		? file
@@ -130,7 +134,7 @@ export function VerifyFindingDialog({
 					selected finding; it does not replace a complete audit or baseline.
 				</p>
 				{unavailable && <p role="alert">{unavailable}</p>}
-				{zip && (
+				{zip && ZIP_UPLOAD_ENABLED && (
 					<div>
 						<label htmlFor="verification-build">Fresh ZIP build</label>
 						<input

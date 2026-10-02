@@ -25,6 +25,8 @@ Environment=HOME=/tmp
 Volume=stageflow_data:/data
 Environment=PORT=8080
 Environment=PLATFORM_API_ALLOW_PRIVATE_TARGETS=false
+Environment=PLATFORM_API_MAX_PAGES=25
+Environment=PLATFORM_API_ZIP_UPLOAD_ENABLED=false
 # The gateway on the ingress network; platform-api keys rate limits on its X-Forwarded-For.
 Environment=PLATFORM_API_TRUSTED_PROXIES=10.89.4.0/24
 

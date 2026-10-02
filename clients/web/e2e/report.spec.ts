@@ -173,7 +173,7 @@ test.describe('employer-facing product claims', () => {
 		await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).click();
 		await expect(page).toHaveURL(/\/privacy$/);
 		await expect(page.getByRole('heading', { name: 'Hosted demo privacy' })).toBeVisible();
-		await expect(page.getByText(/^The durable job record/)).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Retention and access' })).toBeVisible();
 	});
 });
 

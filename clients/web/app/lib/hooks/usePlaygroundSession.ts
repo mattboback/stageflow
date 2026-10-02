@@ -24,6 +24,7 @@ import {
 	type LocalProjectConfiguration
 } from '../projects';
 import type { ScannerDefinition, ScannerSelection } from '../types/scan';
+import { MAX_SCAN_PAGES, ZIP_UPLOAD_ENABLED } from '../scan-policy';
 import { normalizeUrlInput, validateHttpUrl } from '../url';
 
 export type PlaygroundMode = 'url' | 'zip';
@@ -171,6 +172,10 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	function pasteUrls(index: number, text: string): boolean {
 		const next = mergePastedUrls(urls, index, text);
 		if (!next) return false;
+		if (next.length > MAX_SCAN_PAGES) {
+			setError(`A scan can contain at most ${MAX_SCAN_PAGES} URLs. Paste a smaller list.`);
+			return true;
+		}
 
 		setUrls(next);
 		setUrlRowErrors({});
@@ -221,9 +226,9 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 		const merged = [
 			...new Map([...selected, ...manual].map((value) => [canonical(value), value])).values()
 		];
-		if (merged.length > 100) {
+		if (merged.length > MAX_SCAN_PAGES) {
 			setDiscoverNotice(
-				'A scan can contain at most 100 URLs. Select fewer discovered pages or remove existing URLs.'
+				`A scan can contain at most ${MAX_SCAN_PAGES} URLs. Select fewer discovered pages or remove existing URLs.`
 			);
 			return;
 		}
@@ -236,6 +241,10 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 	}
 
 	function addUrlRow() {
+		if (urls.length >= MAX_SCAN_PAGES) {
+			setError(`A scan can contain at most ${MAX_SCAN_PAGES} URLs.`);
+			return;
+		}
 		setUrls((prev) => [...prev, '']);
 	}
 
@@ -411,7 +420,9 @@ export function usePlaygroundSession({ projectId, seedUrl }: PlaygroundSessionOp
 
 		// Targets
 		mode,
-		setMode,
+		setMode: (next: Mode) => {
+			if (next === 'url' || ZIP_UPLOAD_ENABLED) setMode(next);
+		},
 		urls,
 		updateUrl,
 		pasteUrls,

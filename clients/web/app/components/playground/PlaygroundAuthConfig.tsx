@@ -80,9 +80,12 @@ export function PlaygroundAuthConfig({ config, isValid, onConfigChange }: Props)
 								? 'Hosted demo: use a throwaway test account.'
 								: 'Use a dedicated test account.'}
 						</strong>{' '}
-						Credentials are sent to this deployment to execute the login and can remain in its job
-						queue for up to 72 hours. Never enter a personal, reused, customer, or production
-						password. Prefer a self-hosted stack for any real login.
+						Credentials are sent to this deployment to execute the login and stay with the job until
+						it ends.
+						{IS_HOSTED_DEMO &&
+							' New hosted backups exclude login credentials. Older backups can retain them until their 14-day retention expires.'}{' '}
+						Never enter a personal, reused, customer, or production password. Prefer a self-hosted
+						stack for any real login.
 					</div>
 					{IS_HOSTED_DEMO && (
 						<label className="pauth__ack">
