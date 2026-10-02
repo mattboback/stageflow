@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
@@ -291,6 +291,8 @@ func setupTestOrchestratorWithConfig(
 	}
 	configure(config)
 
+	config.DataDir = t.TempDir()
+	config.DirectoryOwner = func(string) error { return nil }
 	orchestrator := NewOrchestrator(config)
 
 	// Wait for monitor goroutines before schema teardown to prevent deadlock.

@@ -20,8 +20,8 @@ type SubmitJobRequest struct {
 // submission. Discriminated by mode, it mirrors the shape of Provenance.auth in
 // libs/contracts/provenance/schema/provenance.schema.json with one wire-level
 // adaptation: storage_state ships a base64-encoded blob inline; the platform-api
-// uploads it to MinIO before publishing the job, and the rest of the pipeline
-// references it via artifact_key. Form recipes are inlined as-is.
+// writes it to private job storage before publishing mode-only metadata. Workers
+// read the mounted file. Form recipes are inlined as-is.
 type JobAuthInput struct {
 	Mode         string                    `json:"mode"`
 	StorageState *JobAuthStorageStateInput `json:"storage_state,omitempty"`
@@ -30,8 +30,7 @@ type JobAuthInput struct {
 
 // JobAuthStorageStateInput carries a captured Playwright storage-state file
 // inline as base64. It is ephemeral on the wire: the platform-api validates and
-// uploads to MinIO under the job's prefix, and only the artifact_key is
-// published/persisted afterwards.
+// writes to a private job-scoped file. Only mode metadata is published afterwards.
 type JobAuthStorageStateInput struct {
 	ContentBase64 string `json:"content_b64"`
 }

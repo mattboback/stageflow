@@ -3,8 +3,11 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -31,19 +34,15 @@ func (o *Orchestrator) newService() *appjobs.Service {
 		o,
 		adapterstorage.NewAggregator(o.storage, o.scannerRegistry),
 		o.publisher,
-		appjobs.WithAuthUploader(adapterstorage.NewAuthStorageStateUploader(o.storage)),
-		appjobs.WithAuthCleaner(adapterstorage.NewAuthStorageStateCleaner(o.storage)),
+		appjobs.WithAuthCleaner(authFileCleaner{o.storage}),
 		appjobs.WithScannerLaunchPlanner(appjobs.NewScannerLaunchPlanner(appjobs.ScannerLaunchPlannerConfig{
 			ScannerRegistry:     o.scannerRegistry,
+			DataVolume:          o.dataVolume,
 			DefaultScannerImage: defaultScannerImage,
 			NatsHost:            o.natsHost,
-			MinioHost:           o.minioHost,
-			MinioAccessKey:      o.minioAccessKey,
-			MinioSecretKey:      o.minioSecretKey,
-			MinioUseSSL:         o.minioUseSSL,
 			PageLoadTimeout:     o.pageLoadTimeout,
 			PodNetnsMode:        o.podNetnsMode,
-			DefaultScannerUser:  "0",
+			DefaultScannerUser:  "65532",
 		})),
 	)
 }
@@ -51,16 +50,15 @@ func (o *Orchestrator) newService() *appjobs.Service {
 func (o *Orchestrator) refreshJobRuntime() {
 	o.jobRuntime = podman.NewJobRuntime(podman.JobRuntimeConfig{
 		Client:          o.podmanClient,
+		DataDir:         o.dataDir,
+		DirectoryOwner:  o.directoryOwner,
+		DataVolume:      o.dataVolume,
 		ScannerRegistry: o.scannerRegistry,
 		ExtractionImage: o.extractionImage,
 		PodNetwork:      o.podNetwork,
 		PodNetnsMode:    o.podNetnsMode,
 		PodHostMappings: append([]string(nil), o.podHostMappings...),
 		NatsHost:        o.natsHost,
-		MinioHost:       o.minioHost,
-		MinioAccessKey:  o.minioAccessKey,
-		MinioSecretKey:  o.minioSecretKey,
-		MinioUseSSL:     o.minioUseSSL,
 	})
 }
 
@@ -358,10 +356,26 @@ func (o *Orchestrator) CleanupJob(ctx context.Context, job *models.Job) error {
 		return err
 	}
 
-	o.cleanupVolumes(ctx, job.ID)
-	o.cleanupStaging(ctx, job)
+	root, err := os.OpenRoot(filepath.Join(o.dataDir, "jobs", job.ID))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
 
-	return nil
+	if err != nil {
+		return err
+	}
+
+	defer root.Close()
+
+	var errs []error
+
+	for _, name := range []string{"input.zip", "site", "auth.json", ".provenance"} {
+		if removeErr := root.RemoveAll(name); removeErr != nil {
+			errs = append(errs, removeErr)
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 func (o *Orchestrator) UpdateScannerProgress(ctx context.Context, id, scanner string, page, total int) error {

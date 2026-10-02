@@ -28,9 +28,6 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		ScannerRegistry:    registry,
 		NatsHost:           "nats",
-		MinioHost:          "minio",
-		MinioAccessKey:     "minioadmin",
-		MinioSecretKey:     "secret",
 		PageLoadTimeout:    15000,
 		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
@@ -61,7 +58,7 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		t.Fatalf("plan.Env[NATS_URL] = %q, want %q", got, want)
 	}
 
-	if got, want := plan.Env["PROVENANCE_PATH"], "/workspace/provenance.json"; got != want {
+	if got, want := plan.Env["PROVENANCE_PATH"], "/job/provenance.json"; got != want {
 		t.Fatalf("plan.Env[PROVENANCE_PATH] = %q, want %q", got, want)
 	}
 
@@ -77,7 +74,8 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		t.Fatalf("len(plan.Volumes) = %d, want 2", len(plan.Volumes))
 	}
 
-	if plan.Volumes[0].Name != "workspace-job-123" || !plan.Volumes[0].ReadOnly {
+	if plan.Volumes[0].Name != "stageflow_data" || plan.Volumes[0].Subpath != "jobs/job-123" ||
+		!plan.Volumes[0].ReadOnly {
 		t.Fatalf("workspace volume = %+v, want read-only workspace-job-123", plan.Volumes[0])
 	}
 }
@@ -97,9 +95,6 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		ScannerRegistry:    registry,
 		NatsHost:           "nats",
-		MinioHost:          "minio",
-		MinioAccessKey:     "minioadmin",
-		MinioSecretKey:     "secret",
 		PageLoadTimeout:    15000,
 		PodNetnsMode:       PodNetnsModeHost,
 		DefaultScannerUser: "0",
@@ -124,11 +119,7 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 		t.Fatalf("plan.Env[NATS_URL] = %q, want %q", got, want)
 	}
 
-	if got, want := plan.Env["MINIO_ENDPOINT"], "127.0.0.1:9000"; got != want {
-		t.Fatalf("plan.Env[MINIO_ENDPOINT] = %q, want %q", got, want)
-	}
-
-	if got, want := plan.Env["PROVENANCE_PATH"], "/results/axe/provenance.json"; got != want {
+	if got, want := plan.Env["PROVENANCE_PATH"], "/tmp/provenance.json"; got != want {
 		t.Fatalf("plan.Env[PROVENANCE_PATH] = %q, want %q", got, want)
 	}
 
@@ -156,9 +147,6 @@ func TestScannerLaunchPlannerPlanWithoutRegistryUsesDefaultScannerImage(t *testi
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		DefaultScannerImage: "localhost/stageflow/scanner-runner:latest",
 		NatsHost:            "nats",
-		MinioHost:           "minio",
-		MinioAccessKey:      "minioadmin",
-		MinioSecretKey:      "secret",
 		PageLoadTimeout:     15000,
 		PodNetnsMode:        PodNetnsModeBridge,
 		DefaultScannerUser:  "0",

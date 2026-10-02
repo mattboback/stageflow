@@ -201,8 +201,8 @@ func TestZipUploadSanitizesUploadedFilename(t *testing.T) {
 		t.Fatalf("uploaded object path must not contain path traversal segments: %q", uploadedPath)
 	}
 
-	if !strings.HasSuffix(uploadedPath, "/passwd.zip") {
-		t.Fatalf("uploaded object path = %q, want suffix %q", uploadedPath, "/passwd.zip")
+	if !strings.HasSuffix(uploadedPath, "/input.zip") {
+		t.Fatalf("uploaded object path = %q, want suffix %q", uploadedPath, "/input.zip")
 	}
 }
 

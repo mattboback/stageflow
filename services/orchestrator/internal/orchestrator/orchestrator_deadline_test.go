@@ -11,7 +11,7 @@ import (
 func TestRunDeadlineSweepFailsStuckJob(t *testing.T) {
 	db := newInMemoryDB(t)
 	publisher := &mockPublisher{}
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient:         &mockPodmanClient{},
 		Database:             db,
 		Publisher:            publisher,
@@ -59,7 +59,7 @@ func sweepJobInState(t *testing.T, state models.JobState, age time.Duration) (*m
 
 	db := newInMemoryDB(t)
 	publisher := &mockPublisher{}
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient:         &mockPodmanClient{},
 		Database:             db,
 		Publisher:            publisher,

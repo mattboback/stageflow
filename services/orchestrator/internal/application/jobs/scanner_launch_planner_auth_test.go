@@ -12,7 +12,7 @@ import (
 const (
 	authStateKey      = "job-auth-test/auth/storage-state.json"
 	authFormFixture   = `{"mode":"form","login_url":"https://app.example.com/login","steps":[{"type":"fill","selector":"input[name=email]","value":"demo@example.com"},{"type":"fill","selector":"input[name=password]","value":"throwaway-password"},{"type":"click","selector":"button[type=submit]"}],"success":{"type":"selector","selector":"[data-test=signed-in]","timeout":15000}}`
-	authStorageFixed  = `{"mode":"storage_state","artifact_key":"` + authStateKey + `"}`
+	authStorageFixed  = `{"mode":"storage_state"}`
 	authStorageInline = `{"mode":"storage_state","content_b64":"eyJjb29raWVzIjpbXSwib3JpZ2lucyI6W119"}`
 )
 
@@ -21,9 +21,6 @@ func newAuthPlanner(t *testing.T) *ScannerLaunchPlanner {
 
 	return NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		NatsHost:           "nats",
-		MinioHost:          "minio",
-		MinioAccessKey:     "k",
-		MinioSecretKey:     "s",
 		PageLoadTimeout:    15000,
 		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
@@ -57,8 +54,8 @@ func TestPlanForwardsFormRecipeAsProvenanceAuth(t *testing.T) {
 		t.Fatal("PROVENANCE_AUTH_JSON not set")
 	}
 
-	if !strings.Contains(authEnv, `"value":"demo@example.com"`) {
-		t.Errorf("PROVENANCE_AUTH_JSON missing the literal form value: %s", authEnv)
+	if !strings.Contains(authEnv, `"mode":"form"`) || !strings.Contains(authEnv, `"login_url"`) {
+		t.Fatalf("missing form recipe: %s", authEnv)
 	}
 }
 
@@ -89,7 +86,7 @@ func TestPlanRejectsFromEnvReferences(t *testing.T) {
 	}
 }
 
-func TestPlanStorageStateForwardsArtifactKey(t *testing.T) {
+func TestPlanStorageStateUsesMountedAuth(t *testing.T) {
 	t.Parallel()
 
 	planner := newAuthPlanner(t)
@@ -104,8 +101,8 @@ func TestPlanStorageStateForwardsArtifactKey(t *testing.T) {
 		t.Fatal("PROVENANCE_AUTH_JSON not set")
 	}
 
-	if !strings.Contains(authEnv, `"artifact_key":"`+authStateKey+`"`) {
-		t.Errorf("PROVENANCE_AUTH_JSON missing artifact_key: %s", authEnv)
+	if authEnv != `{"mode":"storage_state"}` {
+		t.Fatalf("execution session path exposed: %s", authEnv)
 	}
 }
 

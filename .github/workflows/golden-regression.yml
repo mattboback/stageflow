@@ -95,18 +95,6 @@ jobs:
       - name: Start stack
         run: |
           podman network inspect stageflow_net >/dev/null 2>&1 || podman network create stageflow_net
-          # MinIO first, then provision the app user; platform-api's healthcheck
-          # cannot pass until the app user exists (same sequence as `just demo`).
-          podman compose -p stageflow \
-            -f infra/compose/podman-compose.yml \
-            --env-file .env up -d minio
-          for _ in {1..60}; do
-            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then
-              break
-            fi
-            sleep 2
-          done
-          MINIO_ENDPOINT=http://127.0.0.1:9000 ./infra/minio/init-buckets.sh
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
             --env-file .env up -d
@@ -114,7 +102,6 @@ jobs:
       - name: Wait for stack
         run: |
           for url in \
-            http://127.0.0.1:9000/minio/health/live \
             http://127.0.0.1:8080/healthz \
             http://127.0.0.1:3020/
           do

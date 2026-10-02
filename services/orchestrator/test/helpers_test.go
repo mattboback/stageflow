@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
 )
 
@@ -104,6 +104,7 @@ func setupE2ETest(
 	mem := newMemoryStorage()
 
 	orch = orchestrator.NewOrchestrator(&orchestrator.Config{
+		DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient:   podmanClient,
 		Database:       database,
 		Publisher:      publisher,

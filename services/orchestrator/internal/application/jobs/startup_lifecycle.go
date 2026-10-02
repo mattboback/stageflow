@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -288,7 +287,7 @@ func describeTransition(from, to models.JobState) string {
 // Before we persist the job, upload those bytes to the artifacts bucket and
 // rewrite Auth to carry only the artifact_key. Form recipes pass through
 // untouched.
-func (s *Service) normalizeJobAuth(ctx context.Context, payload *events.JobCreatedPayload) ([]byte, error) {
+func (s *Service) normalizeJobAuth(_ context.Context, payload *events.JobCreatedPayload) ([]byte, error) {
 	if len(payload.Config.Auth) == 0 {
 		return nil, nil
 	}
@@ -302,26 +301,8 @@ func (s *Service) normalizeJobAuth(ctx context.Context, payload *events.JobCreat
 		return nil, fmt.Errorf("invalid JobConfig.Auth on job.created: %w", err)
 	}
 
-	if auth.Mode == provenanceauth.AuthModeStorageState && auth.StorageState != nil &&
-		auth.StorageState.ContentBase64 != "" {
-		if s.authUploader == nil {
-			return nil, errors.New(
-				"storage_state auth received but the orchestrator has no AuthUploader configured; " +
-					"set up the storage-state upload adapter or use form-mode auth instead",
-			)
-		}
-
-		decoded, decodeErr := base64.StdEncoding.DecodeString(auth.StorageState.ContentBase64)
-		if decodeErr != nil {
-			return nil, fmt.Errorf("auth.storage_state content_b64 is not valid base64: %w", decodeErr)
-		}
-
-		key, uploadErr := s.authUploader.UploadAuthStorageState(ctx, payload.JobID, decoded)
-		if uploadErr != nil {
-			return nil, fmt.Errorf("failed to upload auth storage_state: %w", uploadErr)
-		}
-
-		auth.StorageState = &provenanceauth.StorageStateBlock{ArtifactKey: key}
+	if auth.Mode == provenanceauth.AuthModeStorageState && auth.StorageState.ContentBase64 != "" {
+		return nil, errors.New("inline storage state must be stored by intake before dispatch")
 	}
 
 	out, err := json.Marshal(auth.Compact())

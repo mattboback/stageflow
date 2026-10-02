@@ -22,7 +22,6 @@ type scanTiming struct {
 	TotalMs            int64 `json:"total_ms"`
 	PageIterationMs    int64 `json:"page_iteration_ms"`
 	WriteResultsMs     int64 `json:"write_results_ms"`
-	UploadArtifactsMs  int64 `json:"upload_artifacts_ms"`
 	PublishCompletedMs int64 `json:"publish_completed_ms"`
 	FinalizationMs     int64 `json:"finalization_ms"`
 }

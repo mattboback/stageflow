@@ -83,7 +83,7 @@ func newScanCmd(root *rootOptions) *cobra.Command {
 		"auth-state",
 		"",
 		"Path to a Playwright storage-state JSON captured via stageflow auth capture. "+
-			"Uploaded under the job's MinIO prefix and referenced from Provenance.auth.",
+			"Stored in a private job file and mounted only into authenticated scanners.",
 	)
 	cmd.Flags().StringVar(
 		&authRecipePath,

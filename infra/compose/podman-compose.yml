@@ -41,42 +41,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  minio:
-    ports:
-      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
-    image: docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
-      MINIO_DOMAIN: ${STAGEFLOW_PUBLIC_DOMAIN:-localhost}
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: "2.0"
-        reservations:
-          memory: 128M
-    restart: unless-stopped
-    init: true
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - stageflow_net
-    logging:
-      driver: json-file
-      options:
-        max-size: "20m"
-        max-file: "3"
 
   postgres:
     image: docker.io/library/postgres:17-alpine
@@ -122,16 +86,15 @@ services:
       context: ../..
       dockerfile: services/platform-api/Dockerfile
     image: localhost/stageflow/platform-api:${IMAGE_TAG:-latest}
+    user: "65532:65532"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m
     environment:
+      HOME: "/tmp"
+      PROJECT_DB_PATH: "/data/deletions.db"
       PORT: "8080"
       NATS_URL: "nats://nats:4222"
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:${MINIO_PORT:-9000}}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
-      MINIO_USE_SSL: "false"
-      MINIO_PUBLIC_USE_SSL: "${MINIO_PUBLIC_USE_SSL:-false}"
-      MINIO_USE_PROXY_URLS: "${MINIO_USE_PROXY_URLS:-false}"
       PLATFORM_API_ALLOW_PRIVATE_TARGETS: "${PLATFORM_API_ALLOW_PRIVATE_TARGETS:-false}"
       PLATFORM_API_TOKEN: ${PLATFORM_API_TOKEN:-}
       PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM:-6}
@@ -140,7 +103,7 @@ services:
       PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:3020,http://127.0.0.1:3020}
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
     volumes:
-      - web_server_data:/data
+      - stageflow_data:/data
     healthcheck:
       test: ["CMD", "/usr/local/bin/platform-api-healthcheck"]
       interval: 15s
@@ -156,8 +119,6 @@ services:
           memory: 128M
     depends_on:
       nats:
-        condition: service_healthy
-      minio:
         condition: service_healthy
       orchestrator:
         condition: service_healthy
@@ -181,13 +142,8 @@ services:
       context: ../..
       dockerfile: services/orchestrator/Dockerfile
     image: localhost/stageflow/orchestrator:${IMAGE_TAG:-latest}
-    # The orchestrator owns job pod creation and needs write access to the
-    # mounted Podman socket. Run as the mapped host user (keep-id) rather than
-    # in-container root: under rootless Podman keep-id maps container uid 1000 ->
-    # host uid 1000 (the socket owner), so socket access is preserved without the
-    # process running as uid 0 inside the container.
-    user: "1000:1000"
-    userns_mode: "keep-id"
+    # Rootless container root maps to the host socket owner.
+    user: "0:0"
     security_opt:
       # label=disable is required so the container can access the relabeled
       # rootless Podman socket; SELinux confinement cannot be scoped per-mount in
@@ -195,6 +151,7 @@ services:
       - label=disable
       - no-new-privileges:true
     volumes:
+      - stageflow_data:/data
       - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock:z
     environment:
       NATS_URL: "nats://nats:4222"
@@ -207,15 +164,11 @@ services:
       PODMAN_RESPONSE_HEADER_TIMEOUT: "${PODMAN_RESPONSE_HEADER_TIMEOUT:-60s}"
       PODMAN_DIAL_TIMEOUT: "${PODMAN_DIAL_TIMEOUT:-5s}"
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
-      MINIO_USE_SSL: "false"
+      STAGEFLOW_DATA_VOLUME: ${STAGEFLOW_DATA_VOLUME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_data}
       EXTRACTION_IMAGE: "localhost/stageflow/extractor:${IMAGE_TAG:-latest}"
       SCANNER_IMAGE: "localhost/stageflow/scanner-runner:${IMAGE_TAG:-latest}"
       API_PORT: "8081"
       NATS_HOST: "nats"
-      MINIO_HOST: "minio"
       POD_NETNS_MODE: ${POD_NETNS_MODE:-bridge}
       # An explicitly empty POD_NETWORK is required for host mode.
       POD_NETWORK: ${POD_NETWORK-${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_net}}
@@ -234,8 +187,6 @@ services:
           memory: 128M
     depends_on:
       nats:
-        condition: service_healthy
-      minio:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -294,9 +245,9 @@ services:
 
 volumes:
   nats_data:
-  minio_data:
   postgres_data:
-  web_server_data:
+  stageflow_data:
+    name: ${STAGEFLOW_DATA_VOLUME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_data}
 
 networks:
   stageflow_net:

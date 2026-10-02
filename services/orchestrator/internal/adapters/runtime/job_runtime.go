@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/libs/go/storage"
 	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
 
@@ -25,6 +25,9 @@ type jobRuntimeClient interface {
 }
 
 type JobRuntimeConfig struct {
+	DataVolume      string
+	DirectoryOwner  func(string) error
+	DataDir         string
 	Client          jobRuntimeClient
 	ScannerRegistry *scanners.Registry
 	ExtractionImage string
@@ -32,13 +35,12 @@ type JobRuntimeConfig struct {
 	PodNetnsMode    string
 	PodHostMappings []string
 	NatsHost        string
-	MinioHost       string
-	MinioAccessKey  string
-	MinioSecretKey  string
-	MinioUseSSL     bool
 }
 
 type JobRuntime struct {
+	dataVolume      string
+	directoryOwner  func(string) error
+	dataDir         string
 	client          jobRuntimeClient
 	scannerRegistry *scanners.Registry
 	extractionImage string
@@ -46,10 +48,6 @@ type JobRuntime struct {
 	podNetnsMode    string
 	podHostMappings []string
 	natsHost        string
-	minioHost       string
-	minioAccessKey  string
-	minioSecretKey  string
-	minioUseSSL     bool
 }
 
 type ContainerLaunchResult struct {
@@ -69,12 +67,21 @@ func NewJobRuntime(config JobRuntimeConfig) *JobRuntime {
 		natsHost = "nats"
 	}
 
-	minioHost := config.MinioHost
-	if minioHost == "" {
-		minioHost = "minio"
+	if config.DataDir == "" {
+		config.DataDir = "/data"
+	}
+
+	if config.DirectoryOwner == nil {
+		config.DirectoryOwner = func(name string) error { return os.Chown(name, 65532, 65532) }
+	}
+
+	if config.DataVolume == "" {
+		config.DataVolume = "stageflow_data"
 	}
 
 	return &JobRuntime{
+		dataVolume:      config.DataVolume,
+		directoryOwner:  config.DirectoryOwner,
 		client:          config.Client,
 		scannerRegistry: config.ScannerRegistry,
 		extractionImage: config.ExtractionImage,
@@ -82,13 +89,9 @@ func NewJobRuntime(config JobRuntimeConfig) *JobRuntime {
 		podNetnsMode:    podNetnsMode,
 		podHostMappings: append([]string(nil), config.PodHostMappings...),
 		natsHost:        natsHost,
-		minioHost:       minioHost,
-		minioAccessKey:  config.MinioAccessKey,
-		minioSecretKey:  config.MinioSecretKey,
-		minioUseSSL:     config.MinioUseSSL,
+		dataDir:         config.DataDir,
 	}
 }
-
 func (r *JobRuntime) PodNetnsMode() string {
 	if r == nil {
 		return appjobs.PodNetnsModeBridge
@@ -219,9 +222,9 @@ func (r *JobRuntime) StartExtractionWorker(
 		return nil, errors.New("job is nil")
 	}
 
-	workspaceVolume, err := r.ensureVolume(ctx, "workspace-"+job.ID)
+	jobSource, err := r.jobSource(ctx, job.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare workspace volume: %w", err)
+		return nil, err
 	}
 
 	req := &ContainerCreateRequest{
@@ -232,14 +235,15 @@ func (r *JobRuntime) StartExtractionWorker(
 		Mounts: []VolumeMount{
 			{
 				Type:        "bind",
-				Source:      workspaceVolume.Mountpoint,
-				Destination: "/workspace",
-				// The extractor image runs as a non-root user; the fresh
-				// volume mountpoint is owned by container-root, so have
-				// Podman chown it to the extractor at start.
-				ChownToContainerUser: true,
+				Source:      filepath.Join(jobSource, "input.zip"),
+				Destination: "/job/input.zip",
+				ReadOnly:    true,
 			},
+			{Type: "bind", Source: filepath.Join(jobSource, "site"), Destination: "/site"},
+			{Type: "bind", Source: filepath.Join(jobSource, ".provenance"), Destination: "/provenance"},
 		},
+		User: "65532",
+
 		Labels: map[string]string{
 			"managed_by": "orchestrator",
 			"job_id":     job.ID,
@@ -382,9 +386,30 @@ func (r *JobRuntime) StartScanner(
 
 	scannerType := plan.Labels["scanner_type"]
 
+	jobSource, err := r.jobSource(ctx, job.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if provenanceErr := r.publishURLProvenance(ctx, job); provenanceErr != nil {
+		return nil, provenanceErr
+	}
+
 	mounts, err := r.resolveVolumeMounts(ctx, plan.Volumes)
 	if err != nil {
 		return nil, err
+	}
+
+	if _, statErr := os.Stat(filepath.Join(r.dataDir, "jobs", job.ID, "auth.json")); statErr == nil {
+		mounts = append(
+			mounts,
+			VolumeMount{
+				Type:        "bind",
+				Source:      filepath.Join(jobSource, "auth.json"),
+				Destination: "/run/stageflow/storage-state.json",
+				ReadOnly:    true,
+			},
+		)
 	}
 
 	req := &ContainerCreateRequest{
@@ -410,18 +435,16 @@ func (r *JobRuntime) StartScanner(
 }
 
 func (r *JobRuntime) extractionEnv(ctx context.Context, job *models.Job) map[string]string {
-	natsURL, minioEndpoint := r.serviceEndpoints()
+	natsURL := r.serviceEndpoints()
 	env := map[string]string{
-		"JOB_ID":                job.ID,
-		"INPUT_PATH":            job.InputPath,
-		"NATS_URL":              natsURL,
-		"MINIO_ENDPOINT":        minioEndpoint,
-		"MINIO_ACCESS_KEY":      r.minioAccessKey,
-		"MINIO_SECRET_KEY":      r.minioSecretKey,
-		"MINIO_USE_SSL":         strconv.FormatBool(r.minioUseSSL),
-		"WORKSPACE":             "/workspace",
-		"PORT":                  "8080",
-		"MINIO_ARTIFACT_BUCKET": storage.BucketArtifacts,
+		"JOB_ID":          job.ID,
+		"INPUT_PATH":      "/job/input.zip",
+		"SITE_DIR":        "/site/content",
+		"PROVENANCE_PATH": "/provenance/provenance.json",
+		"HOME":            "/tmp",
+		"NATS_URL":        natsURL,
+
+		"PORT": "8080",
 	}
 
 	if requestID := logging.RequestID(ctx); requestID != "" {
@@ -435,12 +458,32 @@ func (r *JobRuntime) extractionEnv(ctx context.Context, job *models.Job) map[str
 	return env
 }
 
-func (r *JobRuntime) serviceEndpoints() (string, string) {
+func (r *JobRuntime) serviceEndpoints() string {
 	if r.PodNetnsMode() == appjobs.PodNetnsModeHost {
-		return appjobs.HostNetnsNATSURL, appjobs.HostNetnsMinioEndpoint
+		return appjobs.HostNetnsNATSURL
 	}
 
-	return "nats://" + r.natsHost + ":4222", r.minioHost + ":9000"
+	return "nats://" + r.natsHost + ":4222"
+}
+
+func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error) {
+	volume, err := r.ensureVolume(ctx, r.dataVolume)
+	if err != nil {
+		return "", err
+	}
+
+	for _, name := range []string{"", "site", ".provenance", "axe", "lighthouse", "link-checker", "security-headers", "seo"} {
+		dir := filepath.Join(r.dataDir, "jobs", jobID, name)
+		if mkdirErr := os.MkdirAll(dir, 0o700); mkdirErr != nil {
+			return "", mkdirErr
+		}
+
+		if ownershipErr := r.directoryOwner(dir); ownershipErr != nil {
+			return "", ownershipErr
+		}
+	}
+
+	return filepath.Join(volume.Mountpoint, "jobs", jobID), nil
 }
 
 func (r *JobRuntime) ensureVolume(ctx context.Context, name string) (*VolumeInfo, error) {
@@ -469,7 +512,7 @@ func (r *JobRuntime) resolveVolumeMounts(
 
 		mounts = append(mounts, VolumeMount{
 			Type:        "bind",
-			Source:      volumeInfo.Mountpoint,
+			Source:      filepath.Join(volumeInfo.Mountpoint, volume.Subpath),
 			Destination: volume.Destination,
 			ReadOnly:    volume.ReadOnly,
 		})

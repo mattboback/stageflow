@@ -8,14 +8,13 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const maxReportJSONBytes = 64 * 1024 * 1024
@@ -63,6 +62,11 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(parts) > 1 {
+		if len(parts) >= 3 && parts[1] == "files" {
+			s.handleJobFile(w, r, jobID, strings.Join(parts[2:], "/"))
+			return
+		}
+
 		if len(parts) == 2 && parts[1] == "results" {
 			s.handleJobResults(w, r, jobID)
 
@@ -138,15 +142,7 @@ func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID 
 		return
 	}
 
-	url, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, reportJSONKey, 15*time.Minute)
-	if err != nil {
-		logging.Error(ctx, "Failed to generate presigned URL", "error", err, "report_json_key", rec.ReportJSONKey)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to generate download URL")
-
-		return
-	}
-
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	s.handleJobFile(w, r, jobID, strings.TrimPrefix(reportJSONKey, jobID+"/"))
 }
 
 func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string) (report.UnifiedReportV2, error) {

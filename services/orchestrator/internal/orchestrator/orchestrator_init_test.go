@@ -5,7 +5,7 @@ import "testing"
 func TestNewOrchestrator(t *testing.T) {
 	database := newInMemoryDB(t)
 
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient: &mockPodmanClient{},
 		Database:     database,
 		Publisher:    &mockPublisher{},
@@ -19,7 +19,7 @@ func TestNewOrchestrator(t *testing.T) {
 func TestNewOrchestratorInitializesStableRuntime(t *testing.T) {
 	database := newInMemoryDB(t)
 
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient: &mockPodmanClient{},
 		Database:     database,
 		Publisher:    &mockPublisher{},

@@ -93,7 +93,7 @@ func TestValidateAuth_RejectsBadFromEnvName(t *testing.T) {
 	}
 }
 
-func TestValidateAuth_RejectsStorageStateWithoutKeyOrBytes(t *testing.T) {
+func TestValidateAuth_AcceptsMountedStorageState(t *testing.T) {
 	t.Parallel()
 
 	auth := &Auth{
@@ -101,8 +101,8 @@ func TestValidateAuth_RejectsStorageStateWithoutKeyOrBytes(t *testing.T) {
 		StorageState: &StorageStateBlock{},
 	}
 
-	if err := ValidateAuth(auth); err == nil {
-		t.Fatal("expected validation error for empty storage_state")
+	if err := ValidateAuth(auth); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -137,7 +137,6 @@ func TestAuthCompactStripsContentB64(t *testing.T) {
 	auth := &Auth{
 		Mode: AuthModeStorageState,
 		StorageState: &StorageStateBlock{
-			ArtifactKey:   "job-1/auth/storage-state.json",
 			ContentBase64: "aGVsbG8gd29ybGQ=",
 		},
 	}
@@ -148,7 +147,22 @@ func TestAuthCompactStripsContentB64(t *testing.T) {
 		t.Fatalf("Compact() must strip content_b64; got %v", out)
 	}
 
-	if out["artifact_key"] != "job-1/auth/storage-state.json" {
-		t.Fatalf("Compact() lost artifact_key; got %v", out)
+	if len(out) != 1 || out["mode"] != AuthModeStorageState {
+		t.Fatalf("Compact leaked execution state: %v", out)
+	}
+}
+
+func TestLegacyStorageStateReferenceIsReadableButNotRepublished(t *testing.T) {
+	var auth Auth
+	if err := json.Unmarshal([]byte(`{"mode":"storage_state","artifact_key":"old/auth.json"}`), &auth); err != nil {
+		t.Fatal(err)
+	}
+
+	if auth.StorageState == nil || auth.StorageState.ArtifactKey != "old/auth.json" {
+		t.Fatal("legacy reference was not read")
+	}
+
+	if !reflect.DeepEqual(auth.Compact(), map[string]any{"mode": AuthModeStorageState}) {
+		t.Fatal("legacy reference leaked into new execution metadata")
 	}
 }

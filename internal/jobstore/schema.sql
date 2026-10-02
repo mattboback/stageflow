@@ -113,3 +113,5 @@ CREATE INDEX IF NOT EXISTS idx_terminal_events_unpublished ON terminal_events(pu
 CREATE INDEX IF NOT EXISTS idx_scanner_launches_state ON scanner_launches(state, updated_at);
 
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS scanner_progress TEXT NOT NULL DEFAULT '{}';
+
+CREATE TABLE IF NOT EXISTS deleted_jobs (id TEXT PRIMARY KEY, deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);

@@ -86,7 +86,7 @@ export type PreScanActionValue =
       from_env: string;
     };
 /**
- * Optional authentication block, discriminated by mode. The CLI resolves {from_env} references locally; server-side form values must be literal strings. A literal form value is execution-only sensitive data and must be stripped from public Provenance and terminal records. storage_state holds an artifact key, not the credentials that produced it.
+ * Optional authentication metadata. Server-side form values must be literal and private. New storage-state writers emit mode-only metadata; legacy artifact keys remain readable.
  *
  * This interface was referenced by `Provenance`'s JSON-Schema
  * via the `definition` "ProvenanceAuthBlock".
@@ -162,9 +162,9 @@ export interface PageEntry {
 export interface ProvenanceAuthStorageState {
   mode: "storage_state";
   /**
-   * Object key relative to the job's MinIO bucket. Resolved via StorageProvider at hydration time.
+   * Legacy read-only artifact reference; new writers omit it and use a private mounted auth file.
    */
-  artifact_key: string;
+  artifact_key?: string;
 }
 /**
  * This interface was referenced by `Provenance`'s JSON-Schema

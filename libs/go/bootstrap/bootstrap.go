@@ -9,18 +9,11 @@ import (
 	"github.com/mattboback/stageflow/libs/go/config"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/messaging"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 // NATSOptions controls optional setup behavior for NATS clients.
 type NATSOptions struct {
 	EnsureStreams       bool
-	IgnoreEnsureFailure bool
-}
-
-// MinIOOptions controls optional setup behavior for MinIO clients.
-type MinIOOptions struct {
-	EnsureBuckets       bool
 	IgnoreEnsureFailure bool
 }
 
@@ -49,27 +42,6 @@ func NewNATSClient(ctx context.Context, cfg config.NATSConfig, opts NATSOptions)
 			_ = client.Close()
 
 			return nil, fmt.Errorf("ensure NATS streams: %w", ensureErr)
-		}
-	}
-
-	return client, nil
-}
-
-// NewMinIOClient builds a MinIO client and optionally ensures buckets exist.
-// If IgnoreEnsureFailure is true, the client is returned even when bucket setup fails.
-func NewMinIOClient(ctx context.Context, cfg config.MinIOConfig, opts MinIOOptions) (*storage.MinIOClient, error) {
-	client, err := storage.NewMinIOClient(&cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	if opts.EnsureBuckets {
-		if ensureErr := client.EnsureBuckets(ctx); ensureErr != nil {
-			if opts.IgnoreEnsureFailure {
-				return client, ensureErr
-			}
-
-			return nil, fmt.Errorf("ensure MinIO buckets: %w", ensureErr)
 		}
 	}
 

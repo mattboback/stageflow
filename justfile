@@ -63,7 +63,7 @@ demo URL='https://example.com':
     demo_site_url="${STAGEFLOW_DEMO_VITE_SITE_URL:-${VITE_SITE_URL:-http://localhost:${FRONTEND_PORT:-3000}}}"
     demo_cors="${STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS:-${PLATFORM_API_CORS_ALLOW_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:${PLATFORM_API_PORT:-8080},http://localhost:3020,http://127.0.0.1:3020}}"
     demo_domain="${STAGEFLOW_DEMO_PUBLIC_DOMAIN:-${STAGEFLOW_PUBLIC_DOMAIN:-localhost}}"
-    minio_endpoint="http://127.0.0.1:${MINIO_PORT:-9000}"
+
     api_endpoint="http://127.0.0.1:${PLATFORM_API_PORT:-8080}"
     frontend_endpoint="http://127.0.0.1:${FRONTEND_PORT:-3000}"
 
@@ -111,23 +111,12 @@ demo URL='https://example.com':
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
     just images
 
-    echo "==> Restarting MinIO..."
+    echo "==> Restarting local stack..."
     VITE_API_URL="$demo_vite_api_url" \
     VITE_SITE_URL="$demo_site_url" \
     STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
     PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
     just dev down
-
-    VITE_API_URL="$demo_vite_api_url" \
-    VITE_SITE_URL="$demo_site_url" \
-    STAGEFLOW_PUBLIC_DOMAIN="$demo_domain" \
-    PLATFORM_API_CORS_ALLOW_ORIGINS="$demo_cors" \
-    just dev up dev "$minio_endpoint" minio
-
-    wait_for_http "$minio_endpoint/minio/health/live" "MinIO" 120
-
-    echo "==> Initializing MinIO buckets..."
-    just dev init dev "$minio_endpoint"
 
     echo "==> Starting stack..."
     VITE_API_URL="$demo_vite_api_url" \
@@ -154,15 +143,13 @@ demo URL='https://example.com':
     echo "  -H 'content-type: application/json' \\"
     echo "  -d '{\"urls\":[\"$url\"]}'"
 
-[group('dev'), doc('Local stack: up/down/restart/logs/init (dev/local aliases; settings from .env)')]
-dev CMD='up' ENV='dev' ENDPOINT='' SERVICES='':
+[group('dev'), doc('Local stack: up/down/restart/logs (dev/local aliases; settings from .env)')]
+dev CMD='up' ENV='dev' SERVICES='':
     #!/usr/bin/env bash
     set -euo pipefail
 
     cmd="{{CMD}}"
     env="{{ENV}}"
-    endpoint="{{ENDPOINT}}"
-    endpoint="${endpoint:-http://127.0.0.1:${MINIO_PORT:-9000}}"
     services="{{SERVICES}}"
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
@@ -240,12 +227,8 @@ dev CMD='up' ENV='dev' ENDPOINT='' SERVICES='':
         logs)
             {{podman}} compose -p "$project" "${files[@]}" "${env_args[@]}" logs -f
             ;;
-        init)
-            echo "==> Initializing MinIO buckets ($endpoint)..."
-            MINIO_ENDPOINT="$endpoint" ./infra/minio/init-buckets.sh
-            ;;
         *)
-            echo "CMD must be up, down, restart, logs, or init (got: $cmd)" >&2
+            echo "CMD must be up, down, restart, or logs (got: $cmd)" >&2
             exit 2
             ;;
     esac
@@ -384,7 +367,7 @@ ci:
     (cd {{scanner_dir}} && {{bun}} run ci)
 
     echo "==> Scanner-runner audit..."
-    (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf --ignore GHSA-vcc3-ghjq-m6fr --ignore GHSA-528h-pc64-c93x)
+    (cd {{scanner_dir}} && {{bun}} audit --audit-level=moderate --ignore GHSA-8988-4f7v-96qf)
 
     echo "==> Production dead-code gates..."
     just dead-code
@@ -487,7 +470,6 @@ shell-tests:
     bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/secrets-gate.test.sh
     node --test devtools/scripts/tests/check-knip.test.mjs
-    bash infra/minio/provision_test.sh
     bash qa/e2e/scan-helpers.test.sh
 
 [group('quality'), doc('Run production Knip and Go deadcode with reviewed temporary allowances')]
@@ -533,3 +515,7 @@ clean MODE='all':
         echo "==> Cleaning Go caches..."
         {{go}} clean -cache -modcache -testcache
     fi
+
+[group('quality'), doc('Verify isolated rootless Podman runtime contracts')]
+test-podman-live:
+    {{go}} test -tags=podmanlive ./services/orchestrator/internal/adapters/runtime -run '^TestLiveContract_'

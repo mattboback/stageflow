@@ -193,7 +193,7 @@ func (d *Database) UpdateJobProvenance(ctx context.Context, jobID, path string) 
 	return nil
 }
 
-// UpdateJobProvenanceKey stores the MinIO object key for provenance.json.
+// UpdateJobProvenanceKey stores the Job-scoped path for provenance.json.
 func (d *Database) UpdateJobProvenanceKey(ctx context.Context, jobID, key string) error {
 	query := `
 		UPDATE jobs

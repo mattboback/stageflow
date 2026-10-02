@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (
@@ -228,7 +227,7 @@ func (s *Server) buildPageOverviewScreenshotV2(
 		return models.ScreenshotArtifact{}, false
 	}
 
-	overviewURL, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, overviewKey, 15*time.Minute)
+	overviewURL, err := publicArtifactURL(jobID, overviewKey)
 	if err != nil {
 		logging.Warn(
 			ctx,

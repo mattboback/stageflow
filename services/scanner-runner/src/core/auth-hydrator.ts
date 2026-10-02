@@ -4,8 +4,8 @@
  * Two modes, both designed to run once per scanner before page iteration so
  * every downstream scanner inherits the authenticated context for free:
  *
- *   - `storage_state`: fetch a Playwright storage-state JSON file via the
- *     existing StorageProvider and feed its path into context creation.
+ *   - `storage_state`: copy the fixed read-only Playwright session mount into
+ *     private tmpfs scratch and feed that path into context creation.
  *   - `form`: open a single internal page, replay the recipe steps via the
  *     existing literal PreScanAction executor, wait for the success strategy, then discard the page.
  *
@@ -16,7 +16,8 @@
 
 import type { BrowserContext } from 'playwright';
 
-import { chmod } from 'node:fs/promises';
+import { chmod, copyFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
@@ -25,8 +26,7 @@ import type {
 	ProvenanceAuth,
 	ProvenanceAuthForm,
 	ProvenanceAuthStorageState,
-	ScannerLogger,
-	StorageProvider
+	ScannerLogger
 } from './types';
 import { ensureDir } from '../utils/fs';
 import { sameOriginAndPath } from '../utils/url-compare';
@@ -57,8 +57,6 @@ export class AuthHydrationError extends Error {
 
 interface HydrateStorageStateOptions {
 	auth: ProvenanceAuthStorageState;
-	storageProvider: StorageProvider;
-	bucket: string;
 	destPath: string;
 	logger: ScannerLogger;
 }
@@ -70,19 +68,17 @@ interface HydrateStorageStateResult {
 export async function hydrateStorageState(
 	options: HydrateStorageStateOptions
 ): Promise<HydrateStorageStateResult> {
-	const { auth, storageProvider, bucket, destPath, logger } = options;
+	const { destPath, logger } = options;
 
 	try {
 		await ensureDir(dirname(destPath));
-		await storageProvider.download(bucket, auth.artifact_key, destPath);
+		await copyFile('/run/stageflow/storage-state.json', destPath);
 		await chmod(destPath, 0o600);
-		logger.info('Downloaded auth storage state', { artifactKey: auth.artifact_key });
+		logger.info('Loaded mounted auth storage state');
 		return { storageStatePath: destPath };
 	} catch (err) {
 		throw new AuthHydrationError(
-			`Failed to download storage state artifact "${auth.artifact_key}": ${
-				err instanceof Error ? err.message : String(err)
-			}`,
+			`Failed to read mounted storage state: ${err instanceof Error ? err.message : String(err)}`,
 			{ mode: 'storage_state', cause: err }
 		);
 	}
@@ -106,6 +102,8 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 
 	const page = await context.newPage();
 	let capturedPostLoginUrl: string | undefined;
+	let primaryFailure = false;
+	let cleanupFailure: AuthHydrationError | undefined;
 	const sanitizeUrl = (value: string): string => redact(redactURLUserInfo(value));
 
 	try {
@@ -151,8 +149,8 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 		}
 
 		capturedPostLoginUrl = leftLoginFormUrl;
-		return { postLoginUrl: sanitizeUrl(capturedPostLoginUrl) };
 	} catch (err) {
+		primaryFailure = true;
 		const capturedUrl = sanitizeUrl(capturedPostLoginUrl ?? safeUrl(page) ?? auth.login_url);
 		if (err instanceof AuthHydrationError) {
 			throw sanitizeAuthHydrationError(err, redact);
@@ -169,13 +167,24 @@ export async function hydrateForm(options: HydrateFormOptions): Promise<HydrateF
 		);
 	} finally {
 		try {
-			await page.close();
+			await browserManager.closePage(page);
 		} catch (closeErr) {
+			if (!primaryFailure) {
+				cleanupFailure = new AuthHydrationError(
+					`Auth page cleanup failed: ${redact(closeErr instanceof Error ? closeErr.message : String(closeErr))}`,
+					{ mode: 'form' }
+				);
+			}
 			logger.warn('Failed to close auth hydration page', {
 				error: redact(closeErr instanceof Error ? closeErr.message : String(closeErr))
 			});
 		}
 	}
+
+	if (cleanupFailure) {
+		throw cleanupFailure;
+	}
+	return { postLoginUrl: sanitizeUrl(capturedPostLoginUrl) };
 }
 
 function sanitizeAuthHydrationError(
@@ -233,12 +242,11 @@ function safeUrl(page: import('playwright').Page): string | undefined {
 }
 
 /**
- * Default destination for a downloaded storage-state artifact within the
- * scanner's results directory. The file is written with mode 0600 and is
- * cleaned up by ScannerBase.cleanup() at end of run.
+ * Private tmpfs destination for the mounted storage state. The file uses mode
+ * 0600 and disappears with the scanner container.
  */
-export function defaultStorageStatePath(resultsDir: string): string {
-	return join(resultsDir, 'auth', 'storage-state.json');
+export function defaultStorageStatePath(_resultsDir: string): string {
+	return join(tmpdir(), 'stageflow-auth', 'storage-state.json');
 }
 
 // Grace period for a client-side post-login redirect to complete. An SPA route

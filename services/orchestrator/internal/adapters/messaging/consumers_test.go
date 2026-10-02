@@ -137,7 +137,7 @@ func TestEventHandlerInterface(t *testing.T) {
 		handler := &MockEventHandler{}
 		payload := &events.ExtractionReadyPayload{
 			JobID:          "job-456",
-			ProvenancePath: "/workspace/provenance.json",
+			ProvenancePath: "/job/provenance.json",
 			BaseURL:        "http://localhost:8080",
 			TotalPages:     5,
 		}
@@ -310,7 +310,7 @@ func TestEventPayloadStructures(t *testing.T) {
 	t.Run("ExtractionReadyPayload fields", func(t *testing.T) {
 		payload := events.ExtractionReadyPayload{
 			JobID:          "job-2",
-			ProvenancePath: "/workspace/provenance.json",
+			ProvenancePath: "/job/provenance.json",
 			BaseURL:        "http://localhost:8080",
 			TotalPages:     5,
 		}
@@ -384,7 +384,7 @@ func TestMockHandlerConcurrency(t *testing.T) {
 				case 1:
 					_ = handler.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{
 						JobID:          "job",
-						ProvenancePath: "/workspace/provenance.json",
+						ProvenancePath: "/job/provenance.json",
 						BaseURL:        "http://127.0.0.1:8080",
 						TotalPages:     1,
 					})

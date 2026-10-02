@@ -1,20 +1,16 @@
 import type { ScanTiming } from './types';
 
-export type ScanLifecyclePhaseDurations = Pick<
-	ScanTiming,
-	'pageIterationMs' | 'writeResultsMs' | 'uploadArtifactsMs'
->;
+export type ScanLifecyclePhaseDurations = Pick<ScanTiming, 'pageIterationMs' | 'writeResultsMs'>;
 
 export function buildScanCompletedTiming(
 	input: ScanLifecyclePhaseDurations & { totalMs: number }
 ): ScanTiming {
-	const measuredMs = input.pageIterationMs + input.writeResultsMs + input.uploadArtifactsMs;
+	const measuredMs = input.pageIterationMs + input.writeResultsMs;
 
 	return {
 		totalMs: input.totalMs,
 		pageIterationMs: input.pageIterationMs,
 		writeResultsMs: input.writeResultsMs,
-		uploadArtifactsMs: input.uploadArtifactsMs,
 		publishCompletedMs: 0,
 		finalizationMs: Math.max(0, input.totalMs - measuredMs)
 	};

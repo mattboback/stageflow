@@ -411,7 +411,7 @@
 		},
 		"ProvenanceAuthBlock": {
 			"title": "ProvenanceAuth",
-			"description": "Optional authentication block, discriminated by mode. The CLI resolves {from_env} references locally; server-side form values must be literal strings. A literal form value is execution-only sensitive data and must be stripped from public Provenance and terminal records. storage_state holds an artifact key, not the credentials that produced it.",
+			"description": "Optional authentication metadata. Server-side form values must be literal and private. New storage-state writers emit mode-only metadata; legacy artifact keys remain readable.",
 			"oneOf": [
 				{
 					"$ref": "#/definitions/ProvenanceAuthStorageState"
@@ -425,8 +425,7 @@
 			"title": "ProvenanceAuthStorageState",
 			"type": "object",
 			"required": [
-				"mode",
-				"artifact_key"
+				"mode"
 			],
 			"additionalProperties": false,
 			"properties": {
@@ -439,7 +438,7 @@
 				"artifact_key": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Object key relative to the job's MinIO bucket. Resolved via StorageProvider at hydration time."
+					"description": "Legacy read-only artifact reference; new writers omit it and use a private mounted auth file."
 				}
 			}
 		},

@@ -130,7 +130,6 @@ export class NatsEventPublisher implements ScanEventPublisher {
 						total_ms: timing.totalMs,
 						page_iteration_ms: timing.pageIterationMs,
 						write_results_ms: timing.writeResultsMs,
-						upload_artifacts_ms: timing.uploadArtifactsMs,
 						publish_completed_ms: timing.publishCompletedMs,
 						finalization_ms: timing.finalizationMs
 					}

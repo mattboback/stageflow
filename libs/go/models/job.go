@@ -61,7 +61,7 @@ type Job struct {
 	ID                    string                    `json:"id"`
 	State                 JobState                  `json:"state"`
 	InputType             string                    `json:"input_type"`     // "zip" or "urls"
-	InputPath             string                    `json:"input_path"`     // MinIO path (for zip)
+	InputPath             string                    `json:"input_path"`     // Job-scoped file path (for zip)
 	URLs                  []string                  `json:"urls,omitempty"` // URLs to scan (for urls type)
 	PodID                 string                    `json:"pod_id,omitempty"`
 	Config                JobConfig                 `json:"config"`

@@ -14,12 +14,12 @@ import (
 
 	"github.com/google/uuid"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (
@@ -369,7 +369,7 @@ func (s *Server) handleZipFilePart(
 		)
 	}
 
-	path := fmt.Sprintf("staging/%s/%s", jobID, filename)
+	path := jobID + "/input.zip"
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -377,7 +377,7 @@ func (s *Server) handleZipFilePart(
 
 	limited := &io.LimitedReader{R: part, N: maxZipFileSize + 1}
 	if err := s.config.Storage.UploadFile(ctx, storage.BucketStaging, path, limited, -1); err != nil {
-		logging.Error(ctx, "Failed to upload file to MinIO", "error", err)
+		logging.Error(ctx, "Failed to store ZIP", "error", err)
 
 		return fmt.Errorf("failed to store file: %w", err)
 	}

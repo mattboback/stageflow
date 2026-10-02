@@ -10,17 +10,15 @@ describe('scan lifecycle timing', () => {
 		const timing = buildScanCompletedTiming({
 			totalMs: 1000,
 			pageIterationMs: 400,
-			writeResultsMs: 100,
-			uploadArtifactsMs: 200
+			writeResultsMs: 100
 		});
 
 		expect(timing).toEqual({
 			totalMs: 1000,
 			pageIterationMs: 400,
 			writeResultsMs: 100,
-			uploadArtifactsMs: 200,
 			publishCompletedMs: 0,
-			finalizationMs: 300
+			finalizationMs: 500
 		});
 	});
 
@@ -28,8 +26,7 @@ describe('scan lifecycle timing', () => {
 		const timing = buildScanCompletedTiming({
 			totalMs: 100,
 			pageIterationMs: 80,
-			writeResultsMs: 40,
-			uploadArtifactsMs: 20
+			writeResultsMs: 40
 		});
 
 		expect(timing.finalizationMs).toBe(0);
@@ -39,15 +36,14 @@ describe('scan lifecycle timing', () => {
 		const timingForEvent = buildScanCompletedTiming({
 			totalMs: 1000,
 			pageIterationMs: 400,
-			writeResultsMs: 100,
-			uploadArtifactsMs: 200
+			writeResultsMs: 100
 		});
 
 		const timingForLog = withPublishCompletedTiming(timingForEvent, 50);
 
 		expect(timingForEvent.publishCompletedMs).toBe(0);
-		expect(timingForEvent.finalizationMs).toBe(300);
+		expect(timingForEvent.finalizationMs).toBe(500);
 		expect(timingForLog.publishCompletedMs).toBe(50);
-		expect(timingForLog.finalizationMs).toBe(350);
+		expect(timingForLog.finalizationMs).toBe(550);
 	});
 });

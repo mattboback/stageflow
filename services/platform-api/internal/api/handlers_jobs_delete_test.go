@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
-	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 )
 
 type staticJobReader struct {
@@ -61,7 +61,7 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 		t.Fatalf("upload artifact: %v", err)
 	}
 
-	zipKey := "staging/" + jobID + "/site.zip"
+	zipKey := jobID + "/input.zip"
 	if err := objectStore.UploadFile(
 		context.Background(),
 		storagepkg.BucketStaging,

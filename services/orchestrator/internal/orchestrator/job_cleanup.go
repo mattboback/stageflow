@@ -4,10 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
-	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
@@ -23,7 +20,7 @@ func (o *Orchestrator) cleanupPod(ctx context.Context, podID string) error {
 
 	// Cleanup runs on paths that cannot know whether a pod was ever created, so an
 	// absent pod is the desired end state rather than a failure. Treating it as an
-	// error here would abort before the volumes and staging below.
+	// error here would abort before private input cleanup.
 	if err := o.podmanClient.RemovePod(ctx, podID, true); err != nil && !podman.IsNotFound(err) {
 		return fmt.Errorf("failed to remove pod: %w", err)
 	}
@@ -31,36 +28,6 @@ func (o *Orchestrator) cleanupPod(ctx context.Context, podID string) error {
 	slog.Debug("Cleaned up pod", "pod_id", podID)
 
 	return nil
-}
-
-func (o *Orchestrator) cleanupVolumes(ctx context.Context, jobID string) {
-	volumes := []string{
-		"workspace-" + jobID,
-		"results-" + jobID,
-	}
-
-	for _, vol := range volumes {
-		if err := o.podmanClient.RemoveVolume(ctx, vol, true); err != nil {
-			slog.Warn("Failed to remove volume", "volume", vol, "error", err)
-		}
-	}
-}
-
-func (o *Orchestrator) cleanupStaging(ctx context.Context, job *models.Job) {
-	if job == nil || job.InputType != "zip" || job.InputPath == "" {
-		return
-	}
-
-	if o.stagingStorage == nil {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if err := o.stagingStorage.DeleteFile(ctx, storage.BucketStaging, job.InputPath); err != nil {
-		slog.Warn("Failed to delete staging object", "path", job.InputPath, "error", err)
-	}
 }
 
 func (o *Orchestrator) failJobSafe(ctx context.Context, jobID, stage, message string) {

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -49,11 +50,18 @@ func run() int {
 
 	defer stopBackground()
 
-	minioClient, err := bootstrap.NewMinIOClient(ctx, cfg.MinIO, bootstrap.MinIOOptions{})
+	artifactFiles, err := storage.NewFiles(cfg.DataDir)
 	if err != nil {
-		logger.Error("Failed to create MinIO client", "error", err)
-
+		logger.Error("Open job files", "error", err)
 		return 1
+	}
+	defer artifactFiles.Close()
+
+	for _, directory := range []string{cfg.DataDir, cfg.DataDir + "/jobs"} {
+		if ownershipErr := os.Chown(directory, 65532, 65532); ownershipErr != nil {
+			logger.Error("Initialize data directory permissions", "directory", directory, "error", ownershipErr)
+			return 1
+		}
 	}
 
 	natsClient, err := bootstrap.NewNATSClient(ctx, cfg.NATS, bootstrap.NATSOptions{
@@ -122,17 +130,14 @@ func run() int {
 	publisher := messaging.NewPublisher(natsClient)
 
 	orch := orchestrator.NewOrchestrator(&orchestrator.Config{
+		DataDir:              cfg.DataDir,
+		DataVolume:           cfg.DataVolume,
 		PodmanClient:         podmanClient,
 		Database:             database,
 		Publisher:            publisher,
 		ScannerRegistry:      scannerRegistry,
 		NatsURL:              cfg.NATS.URL,
-		MinIOEndpoint:        cfg.MinIO.Endpoint,
-		MinIOAccessKey:       cfg.MinIO.AccessKey,
-		MinIOSecretKey:       cfg.MinIO.SecretKey,
-		MinIOUseSSL:          cfg.MinIO.UseSSL,
 		NatsHost:             cfg.NatsHost,
-		MinioHost:            cfg.MinioHost,
 		ExtractionImage:      cfg.ExtractionImage,
 		ScannerImage:         cfg.ScannerImage,
 		ScannerImageOverride: cfg.ScannerImageOverride,
@@ -141,8 +146,8 @@ func run() int {
 		PodNetnsMode:    cfg.PodNetnsMode,
 		PodHostMappings: cfg.PodHostMappings,
 		PageLoadTimeout: cfg.PageLoadTimeout,
-		StagingStorage:  minioClient,
-		Storage:         minioClient,
+		StagingStorage:  artifactFiles,
+		Storage:         artifactFiles,
 	})
 
 	consumer := messaging.NewConsumer(natsClient, orch)

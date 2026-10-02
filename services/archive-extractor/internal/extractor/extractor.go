@@ -12,10 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	"github.com/minio/minio-go/v7"
-
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (
@@ -27,112 +23,26 @@ const (
 	maxZipNameLen               = 4096
 )
 
-type objectDownloader interface {
-	DownloadFile(ctx context.Context, bucket, path string) (io.ReadCloser, error)
-}
+// Extractor validates and unpacks job ZIPs from the scoped read-only job mount.
+type Extractor struct{}
 
-type objectStatReader interface {
-	Stat() (minio.ObjectInfo, error)
-}
+func NewExtractor() *Extractor { return &Extractor{} }
 
-// Extractor downloads job ZIPs from staging and extracts them safely.
-type Extractor struct {
-	storageClient objectDownloader
-}
-
-// NewExtractor wires a shared MinIO client into an Extractor.
-func NewExtractor(storageClient *storage.MinIOClient) *Extractor {
-	return &Extractor{
-		storageClient: storageClient,
-	}
-}
-
-// Extract downloads, validates, and safely unpacks a ZIP into destDir.
-func (e *Extractor) Extract(ctx context.Context, bucket, objectPath, destDir string) error {
-	tmpFile, err := os.CreateTemp("", "scanner-*.zip")
+func (e *Extractor) Extract(_ context.Context, zipPath, destDir string) error {
+	info, err := os.Stat(zipPath)
 	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
+		return fmt.Errorf("stat ZIP: %w", err)
 	}
 
-	defer func() {
-		if cerr := os.Remove(tmpFile.Name()); cerr != nil {
-			slog.Warn("failed to remove temp file", "path", tmpFile.Name(), "error", cerr)
-		}
-	}()
-	defer func() {
-		if cerr := tmpFile.Close(); cerr != nil {
-			slog.Warn("failed to close temp file", "error", cerr)
-		}
-	}()
-
-	obj, err := e.storageClient.DownloadFile(ctx, bucket, objectPath)
-	if err != nil {
-		return fmt.Errorf("failed to get object from MinIO: %w", err)
+	if !info.Mode().IsRegular() {
+		return errors.New("ZIP input must be a regular file")
 	}
 
-	defer func() {
-		if cerr := obj.Close(); cerr != nil {
-			slog.Warn("failed to close MinIO object", "error", cerr)
-		}
-	}()
-
-	if statErr := enforceCompressedZIPObjectMetadataLimit(obj, maxZipCompressedSize); statErr != nil {
-		return statErr
+	if validationErr := validateZIP(zipPath, info.Size()); validationErr != nil {
+		return validationErr
 	}
 
-	size, err := copyCompressedZIPObject(tmpFile, obj, maxZipCompressedSize)
-	if err != nil {
-		return fmt.Errorf("failed to download ZIP: %w", err)
-	}
-
-	if validateErr := validateZIP(tmpFile.Name(), size); validateErr != nil {
-		return fmt.Errorf("ZIP validation failed: %w", validateErr)
-	}
-
-	if extractErr := extractZIP(tmpFile.Name(), destDir); extractErr != nil {
-		return fmt.Errorf("failed to extract ZIP: %w", extractErr)
-	}
-
-	return nil
-}
-
-func enforceCompressedZIPObjectMetadataLimit(obj io.Reader, maxBytes int64) error {
-	statReader, ok := obj.(objectStatReader)
-	if !ok {
-		return nil
-	}
-
-	info, err := statReader.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to stat ZIP object: %w", err)
-	}
-
-	if info.Size > maxBytes {
-		return fmt.Errorf(
-			"compressed ZIP object too large (%d bytes > %d byte limit)",
-			info.Size,
-			maxBytes,
-		)
-	}
-
-	return nil
-}
-
-func copyCompressedZIPObject(dst io.Writer, src io.Reader, maxBytes int64) (int64, error) {
-	n, err := io.Copy(dst, io.LimitReader(src, maxBytes+1))
-	if err != nil {
-		return n, err
-	}
-
-	if n > maxBytes {
-		return n, fmt.Errorf(
-			"compressed ZIP object too large (%d bytes > %d byte limit)",
-			n,
-			maxBytes,
-		)
-	}
-
-	return n, nil
+	return extractZIP(zipPath, destDir)
 }
 
 // validateZIP checks for ZIP bombs and path traversal.

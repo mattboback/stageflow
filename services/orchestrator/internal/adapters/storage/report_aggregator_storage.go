@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
-	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 )
 
 func (a *Aggregator) downloadScanResults(ctx context.Context, resultsPath string) (*report.UnifiedReportV2, error) {

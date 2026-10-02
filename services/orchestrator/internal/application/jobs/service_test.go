@@ -37,7 +37,7 @@ func TestServicePrepareExtractedJobStartsScanning(t *testing.T) {
 		JobID:                  "job-123",
 		StageLogPath:           "job-123/extraction/stage.log",
 		RecipePath:             "job-123/extraction/recipe.json",
-		ProvenancePath:         "/workspace/provenance.json",
+		ProvenancePath:         "/job/provenance.json",
 		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: "job-123/provenance.json",
 		TotalPages:             3,

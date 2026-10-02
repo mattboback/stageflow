@@ -7,12 +7,12 @@ import { scanIdentityIncludesOrigin } from './scan-context';
 
 import type { BrowserContext, Page } from 'playwright';
 
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 import type { BrowserManager } from './browser-manager';
 import { stablePageId } from './finding-identity';
 
-import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
+import { ensureDir, pathExists, readJson } from '../utils/fs';
 import { createLogger } from '../utils/logger';
 import {
 	AuthHydrationError,
@@ -39,7 +39,6 @@ import {
 	type ScanContext,
 	type ScannerConfig,
 	type ScannerLogger,
-	type StorageProvider,
 	type WaitStrategy
 } from './types';
 
@@ -57,26 +56,15 @@ export interface PageIteratorCallbacks {
 	onAuditEvent?: (event: PageIteratorAuditEvent) => void;
 }
 
-interface PageIteratorOptions {
-	storageProvider?: StorageProvider;
-}
-
 export class PageIterator {
 	private readonly browserManager: BrowserManager;
 	private readonly config: ScannerConfig;
 	private readonly logger: ScannerLogger;
-	private readonly storageProvider: StorageProvider | undefined;
 
-	constructor(
-		browserManager: BrowserManager,
-		config: ScannerConfig,
-		logger?: ScannerLogger,
-		options?: PageIteratorOptions
-	) {
+	constructor(browserManager: BrowserManager, config: ScannerConfig, logger?: ScannerLogger) {
 		this.browserManager = browserManager;
 		this.config = config;
 		this.logger = logger ?? createLogger('PageIterator');
-		this.storageProvider = options?.storageProvider;
 	}
 
 	async loadProvenance(): Promise<Provenance> {
@@ -109,8 +97,6 @@ export class PageIterator {
 				}))
 			};
 
-			await ensureDir(dirname(provenancePath));
-			await writeJson(provenancePath, provenance, { spaces: 2 });
 			attachAuthFromEnv(provenance, this.logger);
 			return provenance;
 		}
@@ -151,8 +137,6 @@ export class PageIterator {
 			try {
 				const result = await hydrateStorageState({
 					auth: provenance.auth,
-					storageProvider: this.requireStorageProvider(),
-					bucket: this.config.storage.bucket,
 					destPath: defaultStorageStatePath(this.config.resultsDir),
 					logger: this.logger
 				});
@@ -161,8 +145,7 @@ export class PageIterator {
 				callbacks?.onAuditEvent?.({
 					type: 'auth_hydrated',
 					details: {
-						mode: 'storage_state',
-						artifact_key: provenance.auth.artifact_key
+						mode: 'storage_state'
 					}
 				});
 			} catch (err) {
@@ -252,16 +235,6 @@ export class PageIterator {
 		});
 
 		return results;
-	}
-
-	private requireStorageProvider(): StorageProvider {
-		if (!this.storageProvider) {
-			throw new AuthHydrationError(
-				'StorageProvider not configured: cannot resolve storage_state artifact.',
-				{ mode: 'storage_state' }
-			);
-		}
-		return this.storageProvider;
 	}
 
 	private async synthesizeAuthFailureResults(

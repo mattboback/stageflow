@@ -2,12 +2,10 @@ package api
 
 import (
 	"context"
-	"time"
 
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 func (s *Server) buildJobStatusResponse(ctx context.Context, rec *status.JobRecord) (*models.JobStatus, error) {
@@ -144,7 +142,7 @@ func (s *Server) setOptionalArtifactURL(
 		return false
 	}
 
-	url, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, scopedKey, 15*time.Minute)
+	url, err := publicArtifactURL(jobID, scopedKey)
 	if err != nil {
 		logging.Warn(ctx, warnMsg, append([]any{"error", err}, args...)...)
 
@@ -173,7 +171,7 @@ func (s *Server) setRequiredArtifactURL(
 		return false, nil
 	}
 
-	url, err := s.config.Storage.GetPresignedURL(ctx, storage.BucketArtifacts, scopedKey, 15*time.Minute)
+	url, err := publicArtifactURL(jobID, scopedKey)
 	if err != nil {
 		return false, err
 	}

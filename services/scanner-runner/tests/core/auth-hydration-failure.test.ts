@@ -17,8 +17,7 @@ import type {
 	PageScanResult,
 	Provenance,
 	ScannerConfig,
-	ScannerLogger,
-	StorageProvider
+	ScannerLogger
 } from '../../src/core/types';
 
 import {
@@ -67,13 +66,6 @@ const baseScannerConfig: ScannerConfig = {
 		deviceScaleFactor: 1,
 		defaultTimeout: 30_000,
 		pageLoadTimeout: 15_000
-	},
-	storage: {
-		endpoint: 'localhost:9000',
-		accessKey: 'k',
-		secretKey: 's',
-		useSSL: false,
-		bucket: 'test-bucket'
 	},
 	messaging: {
 		url: '',
@@ -143,16 +135,7 @@ describe('PageIterator auth hydration failure path', () => {
 				{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' },
 				{ id: 'settings', path: '/settings', url: 'https://app.example.com/settings' }
 			],
-			auth: { mode: 'storage_state', artifact_key: 'test-job/auth/storage-state.json' }
-		};
-
-		const storageProvider: StorageProvider = {
-			ensureBucket: vi.fn(),
-			upload: vi.fn(),
-			uploadBuffer: vi.fn(),
-			uploadDirectory: vi.fn().mockResolvedValue(0),
-			download: vi.fn().mockRejectedValue(new Error('NoSuchKey: object missing')),
-			exists: vi.fn().mockResolvedValue(false)
+			auth: { mode: 'storage_state' }
 		};
 
 		const browserManager = makeBrowserManager();
@@ -161,9 +144,7 @@ describe('PageIterator auth hydration failure path', () => {
 			auditEvents.push(event);
 		};
 
-		const iterator = new PageIterator(browserManager, baseScannerConfig, undefined, {
-			storageProvider
-		});
+		const iterator = new PageIterator(browserManager, baseScannerConfig);
 		const scanCallback = vi.fn<PageScanCallback>();
 
 		const results = await iterator.iteratePages(provenance, scanCallback, { onAuditEvent });
@@ -175,7 +156,7 @@ describe('PageIterator auth hydration failure path', () => {
 		for (const result of results) {
 			expect(result.success).toBe(false);
 			expect(result.retryable).toBe(false);
-			expect(result.error).toMatch(/Failed to download storage state artifact/);
+			expect(result.error).toMatch(/Failed to read mounted storage state/);
 			expect(result.issues).toHaveLength(1);
 			const issue = result.issues[0]!;
 			expect(issue.id).toBe('auth-hydration-failed');
@@ -192,13 +173,13 @@ describe('PageIterator auth hydration failure path', () => {
 		expect(fsMock.ensureDir).toHaveBeenCalled();
 	});
 
-	it('rejects storage_state when no StorageProvider is configured', async () => {
+	it('rejects storage_state when its read-only mount is absent', async () => {
 		const provenance: Provenance = {
 			version: '1.0.0',
 			job_id: 'test-job',
 			base_url: 'https://app.example.com',
 			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
-			auth: { mode: 'storage_state', artifact_key: 'test-job/auth/storage-state.json' }
+			auth: { mode: 'storage_state' }
 		};
 
 		const browserManager = makeBrowserManager();
@@ -210,7 +191,7 @@ describe('PageIterator auth hydration failure path', () => {
 		expect(results).toHaveLength(1);
 		expect(results[0]!.success).toBe(false);
 		expect(results[0]!.issues[0]!.id).toBe('auth-hydration-failed');
-		expect(results[0]!.issues[0]!.description).toMatch(/StorageProvider not configured/);
+		expect(results[0]!.issues[0]!.description).toMatch(/Failed to read mounted storage state/);
 		expect(browserManager.createContext).not.toHaveBeenCalled();
 	});
 

@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
-import type { ScannerConfig, StorageProvider } from './types';
+import type { ScannerConfig } from './types';
 
 import { ensureDir } from '../utils/fs';
 
@@ -73,8 +74,6 @@ interface ScanStageLog {
 
 export class ScanStageLogger {
 	private readonly config: ScannerConfig;
-	private readonly bucket: string;
-	private readonly storage: StorageProvider;
 
 	private readonly startedAt: Date;
 	private readonly recipeObjectPath: string;
@@ -87,18 +86,30 @@ export class ScanStageLogger {
 	private metrics: ScanStageMetrics = {};
 	private artifacts: ScanStageArtifacts = {};
 
-	constructor(config: ScannerConfig, storage: StorageProvider, options?: { bucket?: string }) {
+	constructor(config: ScannerConfig) {
 		this.config = config;
-		this.bucket = options?.bucket ?? config.storage.bucket;
-		this.storage = storage;
 
 		this.startedAt = new Date();
 
 		this.recipeObjectPath = `${config.jobId}/recipes/scan.${config.scannerName}.json`;
 		this.stageLogObjectPath = `${config.jobId}/stages/scan.${config.scannerName}.log.json`;
 
-		this.recipeLocalPath = join(config.resultsDir, 'recipes', 'scan.json');
-		this.stageLogLocalPath = join(config.resultsDir, 'stages', 'scan.log.json');
+		this.recipeLocalPath = join(
+			tmpdir(),
+			'stageflow',
+			config.jobId,
+			config.scannerName,
+			'recipes',
+			'scan.json'
+		);
+		this.stageLogLocalPath = join(
+			tmpdir(),
+			'stageflow',
+			config.jobId,
+			config.scannerName,
+			'stages',
+			'scan.log.json'
+		);
 	}
 
 	async start(): Promise<{ recipePath: string }> {
@@ -117,10 +128,7 @@ export class ScanStageLogger {
 			},
 			results_dir: this.config.resultsDir,
 			environment: {
-				nats_url: this.config.messaging.url,
-				minio_endpoint: this.config.storage.endpoint,
-				minio_use_ssl: this.config.storage.useSSL,
-				artifacts_bucket: this.bucket
+				nats_url: this.config.messaging.url
 			}
 		};
 
@@ -131,19 +139,12 @@ export class ScanStageLogger {
 			mode: 0o600
 		});
 
-		await this.storage.upload(
-			this.bucket,
-			this.recipeObjectPath,
-			this.recipeLocalPath,
-			'application/json'
-		);
-
 		this.events.push({
 			ts: this.startedAt.toISOString(),
 			type: 'stage_started'
 		});
 
-		return { recipePath: this.recipeObjectPath };
+		return { recipePath: '' };
 	}
 
 	recordEvent(type: string, details?: Record<string, unknown>): void {
@@ -198,7 +199,7 @@ export class ScanStageLogger {
 			completed_at: completedAt.toISOString(),
 			duration_ms: completedAt.getTime() - this.startedAt.getTime(),
 			recipe_ref: {
-				bucket: this.bucket,
+				bucket: '',
 				path: this.recipeObjectPath,
 				sha256: this.recipeHash
 			},
@@ -214,14 +215,7 @@ export class ScanStageLogger {
 			mode: 0o600
 		});
 
-		await this.storage.upload(
-			this.bucket,
-			this.stageLogObjectPath,
-			this.stageLogLocalPath,
-			'application/json'
-		);
-
-		return { stageLogPath: this.stageLogObjectPath };
+		return { stageLogPath: '' };
 	}
 }
 

@@ -11,27 +11,22 @@ import (
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/provenance"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (
 	PodNetnsModeBridge       = "bridge"
 	PodNetnsModeHost         = "host"
 	HostNetnsNATSURL         = "nats://127.0.0.1:4222"
-	HostNetnsMinioEndpoint   = "127.0.0.1:9000"
 	defaultScannerMemoryMB   = 2048
 	defaultPageLoadTimeoutMs = 15_000
-	defaultScannerUser       = "0"
+	defaultScannerUser       = "65532"
 )
 
 type ScannerLaunchPlannerConfig struct {
+	DataVolume          string
 	ScannerRegistry     *scanners.Registry
 	DefaultScannerImage string
 	NatsHost            string
-	MinioHost           string
-	MinioAccessKey      string
-	MinioSecretKey      string
-	MinioUseSSL         bool
 	PageLoadTimeout     int
 	PodNetnsMode        string
 	DefaultScannerUser  string
@@ -42,6 +37,7 @@ type ScannerLaunchPlanner struct {
 }
 
 type VolumeRequirement struct {
+	Subpath     string
 	Name        string
 	Destination string
 	ReadOnly    bool
@@ -67,10 +63,6 @@ func NewScannerLaunchPlanner(config ScannerLaunchPlannerConfig) *ScannerLaunchPl
 		config.NatsHost = "nats"
 	}
 
-	if config.MinioHost == "" {
-		config.MinioHost = "minio"
-	}
-
 	if config.PageLoadTimeout == 0 {
 		config.PageLoadTimeout = defaultPageLoadTimeoutMs
 	}
@@ -81,6 +73,10 @@ func NewScannerLaunchPlanner(config ScannerLaunchPlannerConfig) *ScannerLaunchPl
 
 	if config.DefaultScannerUser == "" {
 		config.DefaultScannerUser = defaultScannerUser
+	}
+
+	if config.DataVolume == "" {
+		config.DataVolume = "stageflow_data"
 	}
 
 	return &ScannerLaunchPlanner{config: config}
@@ -99,9 +95,9 @@ func (p *ScannerLaunchPlanner) Plan(
 		return nil, errors.New("scanner type is required")
 	}
 
-	natsURL, minioEndpoint := p.serviceEndpoints()
+	natsURL := p.serviceEndpoints()
 	resultsDir, provenancePath := scannerPaths(job, scannerType)
-	env := p.baseEnv(ctx, job, scannerType, natsURL, minioEndpoint, resultsDir, provenancePath)
+	env := p.baseEnv(ctx, job, scannerType, natsURL, resultsDir, provenancePath)
 
 	if err := p.applyURLInputs(env, job); err != nil {
 		return nil, err
@@ -128,36 +124,35 @@ func (p *ScannerLaunchPlanner) Plan(
 		},
 		Volumes: []VolumeRequirement{
 			{
-				Name:        "workspace-" + job.ID,
-				Destination: "/workspace",
+				Name:        p.config.DataVolume,
+				Subpath:     "jobs/" + job.ID,
+				Destination: "/job",
 				ReadOnly:    true,
 			},
 			{
-				Name:        "results-" + job.ID,
-				Destination: "/results",
+				Name:        p.config.DataVolume,
+				Subpath:     "jobs/" + job.ID + "/" + scannerType,
+				Destination: "/out",
 			},
 		},
 		ResourceLimits: p.resourceLimits(scannerType),
 	}, nil
 }
 
-func (p *ScannerLaunchPlanner) serviceEndpoints() (string, string) {
-	natsURL := "nats://" + p.config.NatsHost + ":4222"
-	minioEndpoint := p.config.MinioHost + ":9000"
-
+func (p *ScannerLaunchPlanner) serviceEndpoints() string {
 	if p.config.PodNetnsMode == PodNetnsModeHost {
-		return HostNetnsNATSURL, HostNetnsMinioEndpoint
+		return HostNetnsNATSURL
 	}
 
-	return natsURL, minioEndpoint
+	return "nats://" + p.config.NatsHost + ":4222"
 }
 
-func scannerPaths(job *models.Job, scannerType string) (string, string) {
-	resultsDir := "/results/" + scannerType
-	provenancePath := "/workspace/provenance.json"
+func scannerPaths(job *models.Job, _ string) (string, string) {
+	resultsDir := "/out"
+	provenancePath := "/job/provenance.json"
 
 	if job.InputType == models.JobInputTypeURLs {
-		provenancePath = resultsDir + "/provenance.json"
+		provenancePath = "/tmp/provenance.json"
 	}
 
 	return resultsDir, provenancePath
@@ -166,21 +161,16 @@ func scannerPaths(job *models.Job, scannerType string) (string, string) {
 func (p *ScannerLaunchPlanner) baseEnv(
 	ctx context.Context,
 	job *models.Job,
-	scannerType, natsURL, minioEndpoint, resultsDir, provenancePath string,
+	scannerType, natsURL, resultsDir, provenancePath string,
 ) map[string]string {
 	env := map[string]string{
-		"JOB_ID":                job.ID,
-		"SCANNER_TYPE":          scannerType,
-		"NATS_URL":              natsURL,
-		"MINIO_ENDPOINT":        minioEndpoint,
-		"MINIO_ACCESS_KEY":      p.config.MinioAccessKey,
-		"MINIO_SECRET_KEY":      p.config.MinioSecretKey,
-		"MINIO_USE_SSL":         strconv.FormatBool(p.config.MinioUseSSL),
-		"MINIO_ARTIFACT_BUCKET": storage.BucketArtifacts,
-		"PROVENANCE_PATH":       provenancePath,
-		"RESULTS_DIR":           resultsDir,
-		"PAGE_LOAD_TIMEOUT":     strconv.Itoa(p.config.PageLoadTimeout),
-		"A11Y_SHOT_ENABLED":     strconv.FormatBool(job.Config.Screenshot),
+		"JOB_ID":            job.ID,
+		"SCANNER_TYPE":      scannerType,
+		"NATS_URL":          natsURL,
+		"PROVENANCE_PATH":   provenancePath,
+		"RESULTS_DIR":       resultsDir,
+		"PAGE_LOAD_TIMEOUT": strconv.Itoa(p.config.PageLoadTimeout),
+		"A11Y_SHOT_ENABLED": strconv.FormatBool(job.Config.Screenshot),
 	}
 
 	if job.Config.IdentityScope != "" {
@@ -291,7 +281,7 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 		// with inline content is a wiring bug; refuse rather than leak.
 		return errors.New(
 			"auth.storage_state still has inline content_b64 at scanner-launch time; " +
-				"it must be uploaded to MinIO and replaced with an artifact_key first",
+				"it must be stored as a private auth file by intake first",
 		)
 	}
 

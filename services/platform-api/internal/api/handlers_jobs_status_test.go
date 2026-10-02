@@ -174,13 +174,12 @@ func TestHandleJobResultsRedirect(t *testing.T) {
 
 	server.handleJobResults(rr, req, jobID)
 
-	if rr.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected 307, got %d: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	loc := rr.Header().Get("Location")
-	if loc == "" {
-		t.Fatal("expected Location header for redirect")
+	if rr.Header().Get("Content-Type") != "application/json" || rr.Body.Len() == 0 {
+		t.Fatal("expected JSON report body")
 	}
 }
 

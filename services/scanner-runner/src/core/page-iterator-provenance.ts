@@ -70,7 +70,7 @@ function isProvenanceAuth(value: unknown): value is ProvenanceAuth {
 
 	const v = value as Record<string, unknown>;
 	if (v.mode === 'storage_state') {
-		return typeof v.artifact_key === 'string' && v.artifact_key.length > 0;
+		return true;
 	}
 
 	if (v.mode === 'form') {

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -73,12 +74,11 @@ func run() error {
 
 	slog.Info("NATS streams initialized")
 
-	minioClient, err := bootstrap.NewMinIOClient(ctx, cfg.MinIO, bootstrap.MinIOOptions{EnsureBuckets: true})
+	artifactFiles, err := storage.NewFiles(cfg.DataDir)
 	if err != nil {
-		return fmt.Errorf("failed to connect to MinIO: %w", err)
+		return err
 	}
-
-	slog.Info("MinIO buckets initialized")
+	defer artifactFiles.Close()
 
 	statusReader, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL})
 	if err != nil {
@@ -108,7 +108,8 @@ func run() error {
 
 	server := api.NewServer(&api.ServerConfig{
 		Port:                cfg.Port,
-		Storage:             minioClient,
+		Storage:             artifactFiles,
+		JobDeleter:          statusReader,
 		Publisher:           msgService,
 		PendingJobs:         statusReader,
 		StatusReader:        db.StatusReader{Database: statusReader},
@@ -116,9 +117,6 @@ func run() error {
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		APIToken:            cfg.APIToken,
-		MinIOEndpoint:       cfg.MinIO.Endpoint,
-		MinIOPublicEndpoint: cfg.MinIO.PublicEndpoint,
-		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
 
 	httpServer := newHTTPServer(cfg.Port, server.Router())

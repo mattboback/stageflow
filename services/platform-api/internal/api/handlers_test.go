@@ -17,13 +17,13 @@ import (
 	"testing"
 	"time"
 
+	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
@@ -234,7 +234,7 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 			t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
 		}
 
-		expectedKey := created.JobID + "/auth/storage-state.json"
+		expectedKey := created.JobID + "/auth.json"
 
 		uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
 		if string(uploaded) != storageState {
@@ -282,9 +282,10 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 		t.Fatalf("published auth leaked storage-state content: %s", authWire)
 	}
 
-	expectedKey := created.JobID + "/auth/storage-state.json"
-	if !strings.Contains(authWire, `"artifact_key":"`+expectedKey+`"`) {
-		t.Fatalf("published auth missing artifact_key %q: %s", expectedKey, authWire)
+	expectedKey := created.JobID + "/auth.json"
+
+	if authWire != `{"mode":"storage_state"}` {
+		t.Fatalf("dispatch leaked session metadata: %s", authWire)
 	}
 
 	uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
@@ -647,8 +648,8 @@ func assertJobResultsRedirect(t *testing.T, server *Server, jobID string) {
 	rr := httptest.NewRecorder()
 	server.handleJobResults(rr, req, jobID)
 
-	if rr.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("expected 307, got %d", rr.Code)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 }
 

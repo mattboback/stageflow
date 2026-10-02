@@ -27,7 +27,7 @@ func TestE2E_ScanFailureFlow(t *testing.T) {
 
 	extractionReady := &events.ExtractionReadyPayload{
 		JobID:          jobID,
-		ProvenancePath: "/workspace/provenance.json",
+		ProvenancePath: "/job/provenance.json",
 		BaseURL:        "http://127.0.0.1:8080",
 		TotalPages:     3,
 	}

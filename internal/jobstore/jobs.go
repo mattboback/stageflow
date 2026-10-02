@@ -82,8 +82,22 @@ func (d *Database) CreateJobIfAbsent(ctx context.Context, job *models.Job) (crea
 	}
 	defer rollbackOnError(tx, &err, "create job")
 
-	if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", job.ID); err != nil {
-		return false, err
+	if _, lockErr := tx.ExecContext(
+		ctx,
+		"SELECT pg_advisory_xact_lock(hashtextextended($1,0))",
+		job.ID,
+	); lockErr != nil {
+		return false, lockErr
+	}
+
+	var deleted bool
+	if readErr := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM deleted_jobs WHERE id=$1)", job.ID).
+		Scan(&deleted); readErr != nil {
+		return false, readErr
+	}
+
+	if deleted {
+		return false, tx.Commit()
 	}
 
 	result, err := tx.ExecContext(ctx, bindPostgresParams(query),

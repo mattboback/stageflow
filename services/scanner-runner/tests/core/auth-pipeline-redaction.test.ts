@@ -4,14 +4,22 @@
  * Real-browser login coverage lives in integration/auth-scan-real-browser.test.ts.
  */
 
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		copyFile: vi.fn(async (_src: string, dest: string) => {
+			await actual.writeFile(dest, JSON.stringify({ cookies: [], origins: [] }));
+		})
+	};
+});
+
 import type { BrowserContext, Page } from 'playwright';
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { buildPublicProvenance } from '../../src/core/public-provenance';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
 import type {
@@ -20,8 +28,7 @@ import type {
 	ScanEventPublisher,
 	ScanResults,
 	ScannerConfig,
-	ScanTiming,
-	StorageProvider
+	ScanTiming
 } from '../../src/core/types';
 
 import {
@@ -58,23 +65,6 @@ class CapturingPublisher implements ScanEventPublisher {
 	};
 
 	close = (): Promise<void> => Promise.resolve();
-}
-
-class CapturingStorageProvider implements StorageProvider {
-	uploads: { bucket: string; key: string; body: string }[] = [];
-
-	ensureBucket = (): Promise<void> => Promise.resolve();
-	upload = async (bucket: string, key: string, filePath: string): Promise<void> => {
-		const body = await readFile(filePath, 'utf8');
-		this.uploads.push({ bucket, key, body });
-	};
-	uploadBuffer = (bucket: string, key: string, data: Buffer): Promise<void> => {
-		this.uploads.push({ bucket, key, body: data.toString('utf8') });
-		return Promise.resolve();
-	};
-	uploadDirectory = (): Promise<number> => Promise.resolve(0);
-	download = (): Promise<void> => Promise.resolve();
-	exists = (): Promise<boolean> => Promise.resolve(false);
 }
 
 interface BrowserHarness {
@@ -154,13 +144,6 @@ function makeConfig(tmp: string): ScannerConfig {
 			defaultTimeout: 30_000,
 			pageLoadTimeout: 15_000
 		},
-		storage: {
-			endpoint: 'localhost:9000',
-			accessKey: 'k',
-			secretKey: 's',
-			useSSL: false,
-			bucket: 'job-redact-pipeline'
-		},
 		messaging: {
 			url: '',
 			subjects: { pageCompleted: 'a', scanCompleted: 'b', scanFailed: 'c' }
@@ -178,29 +161,22 @@ function expectNoSecrets(label: string, haystack: string): void {
 
 async function runFullPipeline(
 	tmp: string,
-	provenance: Provenance,
-	storageProvider?: StorageProvider
+	provenance: Provenance
 ): Promise<{
 	auditEvents: PageIteratorAuditEvent[];
 	publisher: CapturingPublisher;
-	stageStorage: CapturingStorageProvider;
+	stageScratchDir: string;
 	results: PageScanResult[];
 	harness: BrowserHarness;
 }> {
 	const harness = createBrowserHarness();
 
 	const config = makeConfig(tmp);
-	const iterator = new PageIterator(
-		harness.browserManager,
-		config,
-		undefined,
-		storageProvider ? { storageProvider } : undefined
-	);
+	const iterator = new PageIterator(harness.browserManager, config);
 
 	const auditEvents: PageIteratorAuditEvent[] = [];
 	const publisher = new CapturingPublisher();
-	const stageStorage = new CapturingStorageProvider();
-	const stageLogger = new ScanStageLogger(config, stageStorage);
+	const stageLogger = new ScanStageLogger(config);
 	await stageLogger.start();
 
 	const scanCallback: PageScanCallback = (ctx) =>
@@ -255,7 +231,13 @@ async function runFullPipeline(
 	};
 	await publisher.publishScanCompleted(aggregate);
 
-	return { auditEvents, publisher, stageStorage, results, harness };
+	return {
+		auditEvents,
+		publisher,
+		stageScratchDir: join(tmpdir(), 'stageflow', config.jobId, config.scannerName),
+		results,
+		harness
+	};
 }
 
 describe('Auth pipeline redaction (form mode)', () => {
@@ -311,21 +293,16 @@ describe('Auth pipeline redaction (form mode)', () => {
 
 		const formRun = await runFullPipeline(tmp, formProvenance);
 
-		// 1. Stored Provenance file (we synthesize on disk in the test by re-emitting).
-		await writeFile(
-			join(tmp, 'provenance.json'),
-			JSON.stringify(buildPublicProvenance(formProvenance), null, 2),
+		// 2. Stage log + recipe uploaded via the stage logger.
+
+		const stageLogText = await readFile(
+			join(tmpdir(), 'stageflow', 'job-redact-pipeline', 'axe', 'stages', 'scan.log.json'),
 			'utf8'
 		);
-		expectNoSecrets('stored Provenance', await readFile(join(tmp, 'provenance.json'), 'utf8'));
-
-		// 2. Stage log + recipe uploaded via the stage logger.
-		for (const upload of formRun.stageStorage.uploads) {
-			expectNoSecrets(`stage upload ${upload.key}`, upload.body);
-		}
-
-		const stageLogText = await readFile(join(tmp, 'stages', 'scan.log.json'), 'utf8');
-		const recipeText = await readFile(join(tmp, 'recipes', 'scan.json'), 'utf8');
+		const recipeText = await readFile(
+			join(tmpdir(), 'stageflow', 'job-redact-pipeline', 'axe', 'recipes', 'scan.json'),
+			'utf8'
+		);
 		expectNoSecrets('scan stage log', stageLogText);
 		expectNoSecrets('scan recipe', recipeText);
 		// The auth_hydrated event must be there with the post-login URL.
@@ -347,17 +324,6 @@ describe('Auth pipeline redaction (form mode)', () => {
 
 		// ---- Storage_state mode --------------------------------------------
 		const storageStatePath = join(tmp, 'auth', 'storage-state.json');
-		const storageProvider: StorageProvider = {
-			ensureBucket: vi.fn(),
-			upload: vi.fn(),
-			uploadBuffer: vi.fn(),
-			uploadDirectory: vi.fn().mockResolvedValue(0),
-			download: vi.fn().mockImplementation(async (_b: string, _k: string, dest: string) => {
-				await mkdir(join(tmp, 'auth'), { recursive: true });
-				await writeFile(dest, JSON.stringify({ cookies: [], origins: [] }), 'utf8');
-			}),
-			exists: vi.fn().mockResolvedValue(true)
-		};
 
 		const ssProvenance: Provenance = {
 			version: '1.0.0',
@@ -365,12 +331,11 @@ describe('Auth pipeline redaction (form mode)', () => {
 			base_url: 'https://app.example.com',
 			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
 			auth: {
-				mode: 'storage_state',
-				artifact_key: 'job-redact-pipeline/auth/storage-state.json'
+				mode: 'storage_state'
 			}
 		};
 
-		const ssRun = await runFullPipeline(tmp, ssProvenance, storageProvider);
+		const ssRun = await runFullPipeline(tmp, ssProvenance);
 
 		// Storage state path was threaded into createContext.
 		expect(ssRun.harness.storageStatePathSeen).toBeDefined();
@@ -381,13 +346,11 @@ describe('Auth pipeline redaction (form mode)', () => {
 		// All persisted/published surfaces remain free of secrets in storage_state mode.
 		expectNoSecrets('ss audit events', JSON.stringify(ssRun.auditEvents));
 		expectNoSecrets('ss NATS', JSON.stringify(ssRun.publisher.pageCompleted));
-		expectNoSecrets('ss stage uploads', JSON.stringify(ssRun.stageStorage.uploads));
 
 		// auth_hydrated event names the artifact_key but no credential bytes.
 		const ssAuthEvent = ssRun.auditEvents.find((e) => e.type === 'auth_hydrated');
 		expect(ssAuthEvent?.details).toMatchObject({
-			mode: 'storage_state',
-			artifact_key: 'job-redact-pipeline/auth/storage-state.json'
+			mode: 'storage_state'
 		});
 	});
 
@@ -441,9 +404,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 			expect(provenance.auth).toBeDefined();
 			expect(provenance.auth?.mode).toBe('form');
 
-			const persisted = await readFile(join(tmp, 'provenance.json'), 'utf8');
-			expectNoSecrets('persisted synthesized Provenance', persisted);
-			expect(JSON.parse(persisted).auth).toBeUndefined();
+			await expect(readFile(join(tmp, 'provenance.json'))).rejects.toThrow();
 			expect(JSON.stringify(provenance.auth)).toContain(SECRET_USER);
 		} finally {
 			if (originalScanUrls === undefined) {

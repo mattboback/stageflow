@@ -146,7 +146,7 @@ func TestExtractScreenshotsFromReportUsesOverviewArtifactOwner(t *testing.T) {
 		t.Fatalf("artifact ID: want %q, got %q", want, got)
 	}
 
-	wantPath := "/job-1/lighthouse/page-1/screenshots/page-overview-page-1.webp"
+	wantPath := "/jobs/job-1/files/lighthouse/page-1/screenshots/page-overview-page-1.webp"
 	if !strings.Contains(overview.URL, wantPath) {
 		t.Fatalf("overview URL %q does not contain %q", overview.URL, wantPath)
 	}

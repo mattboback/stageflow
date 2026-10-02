@@ -173,7 +173,6 @@ func TestScanTiming_Validate_ComponentSum(t *testing.T) {
 		TotalMs:            5000,
 		PageIterationMs:    3000,
 		WriteResultsMs:     500,
-		UploadArtifactsMs:  1000,
 		PublishCompletedMs: 100,
 		FinalizationMs:     400,
 	}
@@ -185,7 +184,6 @@ func TestScanTiming_Validate_ComponentSum(t *testing.T) {
 		TotalMs:            10,
 		PageIterationMs:    10,
 		WriteResultsMs:     10,
-		UploadArtifactsMs:  10,
 		PublishCompletedMs: 10,
 		FinalizationMs:     10,
 	}
@@ -235,7 +233,6 @@ func TestScanCompletedPayload_Validate_AndJSONOmitEmpty(t *testing.T) {
 		TotalMs:            100,
 		PageIterationMs:    10,
 		WriteResultsMs:     10,
-		UploadArtifactsMs:  10,
 		PublishCompletedMs: 10,
 		FinalizationMs:     10,
 	}

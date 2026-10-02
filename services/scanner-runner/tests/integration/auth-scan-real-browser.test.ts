@@ -25,15 +25,25 @@
  * build-failure-grade source of truth.
  */
 
+const mountedAuth = vi.hoisted(() => ({ source: '' }));
+vi.mock('node:fs/promises', async () => {
+	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+	return {
+		...actual,
+		copyFile: async (src: string, dest: string) =>
+			actual.copyFile(src === '/run/stageflow/storage-state.json' ? mountedAuth.source : src, dest)
+	};
+});
+
 import type { AddressInfo } from 'node:net';
 
 import AxeBuilder from '@axe-core/playwright';
-import { copyFile, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import http, { type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { type BrowserContext, type Page, chromium } from 'playwright';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type {
 	PageScanResult,
@@ -41,8 +51,7 @@ import type {
 	ScanEventPublisher,
 	ScanResults,
 	ScanTiming,
-	ScannerConfig,
-	StorageProvider
+	ScannerConfig
 } from '../../src/core/types';
 
 import { BrowserManager } from '../../src/core/browser-manager';
@@ -235,35 +244,6 @@ class CapturingPublisher implements ScanEventPublisher {
 	close = (): Promise<void> => Promise.resolve();
 }
 
-class CapturingStorageProvider implements StorageProvider {
-	uploads: { bucket: string; key: string; body: string }[] = [];
-	downloadFromPath: string | undefined;
-
-	ensureBucket = (): Promise<void> => Promise.resolve();
-
-	upload = async (bucket: string, key: string, filePath: string): Promise<void> => {
-		const body = await readFile(filePath, 'utf8');
-		this.uploads.push({ bucket, key, body });
-	};
-
-	uploadBuffer = (bucket: string, key: string, data: Buffer): Promise<void> => {
-		this.uploads.push({ bucket, key, body: data.toString('utf8') });
-		return Promise.resolve();
-	};
-
-	uploadDirectory = (): Promise<number> => Promise.resolve(0);
-
-	download = async (_bucket: string, _key: string, dest: string): Promise<void> => {
-		if (this.downloadFromPath === undefined) {
-			throw new Error('CapturingStorageProvider.download called without downloadFromPath set');
-		}
-		await mkdir(dirname(dest), { recursive: true });
-		await copyFile(this.downloadFromPath, dest);
-	};
-
-	exists = (): Promise<boolean> => Promise.resolve(true);
-}
-
 function makeConfig(jobId: string, resultsDir: string): ScannerConfig {
 	return {
 		jobId,
@@ -284,13 +264,6 @@ function makeConfig(jobId: string, resultsDir: string): ScannerConfig {
 			deviceScaleFactor: 1,
 			defaultTimeout: 30_000,
 			pageLoadTimeout: 30_000
-		},
-		storage: {
-			endpoint: 'localhost:9000',
-			accessKey: 'k',
-			secretKey: 's',
-			useSSL: false,
-			bucket: jobId
 		},
 		messaging: {
 			url: '',
@@ -322,7 +295,7 @@ interface PipelineRun {
 	results: PageScanResult[];
 	auditEvents: PageIteratorAuditEvent[];
 	publisher: CapturingPublisher;
-	stageStorage: CapturingStorageProvider;
+	stageScratchDir: string;
 	stageLogPath: string;
 	recipePath: string;
 	provenancePath: string;
@@ -342,27 +315,20 @@ interface RunPipelineOptions {
 	provenance: Provenance;
 	resultsDir: string;
 	browserManager: BrowserManager;
-	storageProvider?: StorageProvider;
 	auxStorageStateFile?: string;
 }
 
 async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<PipelineRun> {
-	const { jobId, provenance, resultsDir, browserManager, storageProvider } = opts;
+	const { jobId, provenance, resultsDir, browserManager } = opts;
 	const config = makeConfig(jobId, resultsDir);
 
 	// Exercise the real URL synthesis path: auth stays in memory, never on disk.
 	await mkdir(resultsDir, { recursive: true });
 
-	const stageStorage = new CapturingStorageProvider();
-	const stageLogger = new ScanStageLogger(config, stageStorage);
+	const stageLogger = new ScanStageLogger(config);
 	const { recipePath } = await stageLogger.start();
 
-	const iterator = new PageIterator(
-		browserManager,
-		config,
-		undefined,
-		storageProvider !== undefined ? { storageProvider } : undefined
-	);
+	const iterator = new PageIterator(browserManager, config);
 
 	const previousUrls = process.env.SCAN_URLS;
 	const previousAuth = process.env.PROVENANCE_AUTH_JSON;
@@ -466,7 +432,7 @@ async function runRealBrowserPipeline(opts: RunPipelineOptions): Promise<Pipelin
 		results,
 		auditEvents,
 		publisher,
-		stageStorage,
+		stageScratchDir: join(tmpdir(), 'stageflow', config.jobId, config.scannerName),
 		stageLogPath,
 		recipePath,
 		provenancePath: config.provenancePath,
@@ -749,7 +715,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 
 			// Capture a real Playwright storage-state JSON by replaying the
 			// form once in a separate ephemeral browser, then feed the file
-			// to PageIterator via a stub StorageProvider.
+			// through the fixed read-only session mount.
 			const captureDir = join(workspaceDir, 'capture');
 			const captureFile = join(captureDir, 'storage-state.json');
 			await captureStorageStateViaForm({ fixture, destPath: captureFile });
@@ -763,8 +729,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 			const sessionCookie = captured.cookies.find((c) => c.name === SESSION_COOKIE_NAME);
 			expect(sessionCookie?.value).toBe(SESSION_COOKIE_VALUE);
 
-			const storageProvider = new CapturingStorageProvider();
-			storageProvider.downloadFromPath = captureFile;
+			mountedAuth.source = captureFile;
 
 			const provenance: Provenance = {
 				version: '1.0.0',
@@ -774,8 +739,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 				default_wait_for: { type: 'load' },
 				pages: [{ id: 'profile', path: '/profile', url: fixture.profileUrl }],
 				auth: {
-					mode: 'storage_state',
-					artifact_key: `${jobId}/auth/storage-state.json`
+					mode: 'storage_state'
 				}
 			};
 
@@ -783,8 +747,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 				jobId,
 				provenance,
 				resultsDir,
-				browserManager,
-				storageProvider
+				browserManager
 			});
 
 			expect(run.results).toHaveLength(1);
@@ -793,8 +756,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
 
 			const authEvent = run.auditEvents.find((e) => e.type === 'auth_hydrated');
 			expect(authEvent?.details).toMatchObject({
-				mode: 'storage_state',
-				artifact_key: `${jobId}/auth/storage-state.json`
+				mode: 'storage_state'
 			});
 
 			const imageAltViolations = run.axeViolations.filter((v) => v.ruleId === 'image-alt');
@@ -839,11 +801,10 @@ describe('Authenticated scan, real browser end-to-end', () => {
  * the auth_hydrated event.
  */
 async function assertNoCanariesAcrossSurfaces(run: PipelineRun): Promise<void> {
-	const provenanceText = await readFile(run.provenancePath, 'utf8');
-	assertNoCanaryLeak('stored Provenance', provenanceText);
+	await expect(readFile(run.provenancePath)).rejects.toThrow();
 
-	for (const upload of run.stageStorage.uploads) {
-		assertNoCanaryLeak(`stage upload ${upload.key}`, upload.body);
+	for (const file of ['recipes/scan.json', 'stages/scan.log.json']) {
+		assertNoCanaryLeak(file, await readFile(join(run.stageScratchDir, file), 'utf8'));
 	}
 
 	assertNoCanaryLeak(

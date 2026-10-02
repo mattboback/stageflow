@@ -122,8 +122,6 @@ check_default_ports() {
 		"$(effective_env_value NATS_PORT 4222):NATS"
 		"$(effective_env_value PLATFORM_API_PORT 8080):Platform API"
 		"$(effective_env_value ORCHESTRATOR_PORT 8081):orchestrator"
-		"$(effective_env_value MINIO_PORT 9000):MinIO API"
-		"$(effective_env_value MINIO_CONSOLE_PORT 9001):MinIO console"
 	)
 
 	if ! command -v ss >/dev/null 2>&1 && ! command -v lsof >/dev/null 2>&1; then
@@ -155,7 +153,6 @@ check_network_alias_conflicts() {
 	local conflict_count=0
 	local service_aliases=(
 		"nats"
-		"minio"
 		"postgres"
 		"orchestrator"
 		"platform-api"
@@ -271,8 +268,8 @@ fi
 check_default_ports
 
 if [[ "$(effective_env_value POD_NETNS_MODE bridge)" == "host" ]]; then
-	if [[ "$(effective_env_value NATS_PORT 4222)" != "4222" || "$(effective_env_value MINIO_PORT 9000)" != "9000" ]]; then
-		fail "Host-mode job pods require NATS_PORT=4222 and MINIO_PORT=9000. Use bridge mode for alternate infrastructure ports."
+	if [[ "$(effective_env_value NATS_PORT 4222)" != "4222" ]]; then
+		fail "Host-mode job pods require NATS_PORT=4222."
 	fi
 	pod_network="$(effective_env_value POD_NETWORK __unset__)"
 	if [[ -n "$pod_network" ]]; then
@@ -286,8 +283,6 @@ if [[ -f "$ENV_FILE" ]]; then
 	vite_api_url="$(effective_env_value VITE_API_URL "")"
 	vite_site_url="$(effective_env_value VITE_SITE_URL "")"
 	public_domain="$(effective_env_value STAGEFLOW_PUBLIC_DOMAIN "")"
-	minio_root_user="$(effective_env_value MINIO_ROOT_USER "")"
-	minio_access_key="$(effective_env_value MINIO_ACCESS_KEY "")"
 
 	if [[ -n "$vite_api_url" && ! "$vite_api_url" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?$ ]]; then
 		warn "$(basename "$ENV_FILE") still points VITE_API_URL at a hosted endpoint. For repo-local work, set VITE_API_URL to the configured API address; \`just demo\` uses this value unless STAGEFLOW_DEMO_VITE_API_URL overrides it."
@@ -301,9 +296,6 @@ if [[ -f "$ENV_FILE" ]]; then
 		warn "$(basename "$ENV_FILE") still uses STAGEFLOW_PUBLIC_DOMAIN=$public_domain. For repo-local work, prefer localhost."
 	fi
 
-	if [[ -n "$minio_root_user" && -n "$minio_access_key" && "$minio_root_user" == "$minio_access_key" ]]; then
-		fail "$(basename "$ENV_FILE") sets MINIO_ACCESS_KEY equal to MINIO_ROOT_USER. Use separate app-user credentials before running \`just dev init\`."
-	fi
 else
 	fail "Missing $(basename "$ENV_FILE"). Copy .env.example to .env before starting the stack."
 fi
@@ -327,4 +319,3 @@ say "  just dev up          # settings come from .env"
 say "  just dev init"
 
 say "For localhost scans, set PLATFORM_API_ALLOW_PRIVATE_TARGETS=true,"
-say "POD_NETNS_MODE=host and POD_NETWORK= in .env; keep NATS_PORT=4222 and MINIO_PORT=9000."

@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
+	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
 

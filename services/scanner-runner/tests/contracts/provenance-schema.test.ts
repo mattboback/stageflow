@@ -13,7 +13,7 @@ interface ProvenanceLike {
 	job_id: string;
 	base_url: string;
 	auth?:
-		| { mode: 'storage_state'; artifact_key: string }
+		| { mode: 'storage_state' }
 		| {
 				mode: 'form';
 				login_url: string;
@@ -49,9 +49,7 @@ describe('Provenance contract', () => {
 		const fixture = loadFixture('provenance.auth-storage-state.json');
 		expect(validate(fixture)).toBe(true);
 		expect(fixture.auth?.mode).toBe('storage_state');
-		expect((fixture.auth as { mode: 'storage_state'; artifact_key: string }).artifact_key).toMatch(
-			/storage-state\.json$/
-		);
+		expect(fixture.auth).toEqual({ mode: 'storage_state' });
 	});
 
 	it('accepts a form auth document with from_env references', () => {

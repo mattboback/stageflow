@@ -5,9 +5,9 @@ import (
 	"errors"
 	"sort"
 
+	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (

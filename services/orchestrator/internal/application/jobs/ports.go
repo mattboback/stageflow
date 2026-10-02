@@ -70,15 +70,6 @@ type Artifacts interface {
 	BuildAggregatedReport(ctx context.Context, job *models.Job) (string, error)
 }
 
-// AuthUploader uploads an inline storage-state blob from legacy job.created
-// producers to the job's MinIO prefix so the bytes never get persisted in
-// Postgres or re-emitted on subsequent NATS events. Current platform-api
-// producers upload before publish. Returns the canonical artifact key
-// (relative to the artifacts bucket) the rest of the pipeline references.
-type AuthUploader interface {
-	UploadAuthStorageState(ctx context.Context, jobID string, content []byte) (string, error)
-}
-
 // AuthCleaner removes a job-scoped storage-state object after the scan reaches
 // a terminal state. It intentionally accepts only the already-normalized object
 // key so credential cleanup stays independent from public artifact cleanup.

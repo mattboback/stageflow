@@ -28,7 +28,7 @@ func TestHandleExtractionReady(t *testing.T) {
 
 	payload := &events.ExtractionReadyPayload{
 		JobID:                  "job-123",
-		ProvenancePath:         "/workspace/provenance.json",
+		ProvenancePath:         "/job/provenance.json",
 		BaseURL:                "http://localhost:8080",
 		TotalPages:             3,
 		ProvenanceArtifactPath: "job-123/provenance.json",
@@ -49,7 +49,7 @@ func TestHandleExtractionReady(t *testing.T) {
 		t.Errorf("Expected state SCANNING, got %s", updatedJob.State)
 	}
 
-	if updatedJob.ProvenancePath != "/workspace/provenance.json" {
+	if updatedJob.ProvenancePath != "/job/provenance.json" {
 		t.Errorf("Expected provenance path to be persisted, got %q", updatedJob.ProvenancePath)
 	}
 
@@ -64,7 +64,7 @@ func TestHandleExtractionReady_IgnoresMissingJob(t *testing.T) {
 
 	payload := &events.ExtractionReadyPayload{
 		JobID:                  "missing-job",
-		ProvenancePath:         "/workspace/provenance.json",
+		ProvenancePath:         "/job/provenance.json",
 		BaseURL:                "http://localhost:8080",
 		TotalPages:             1,
 		ProvenanceArtifactPath: "missing-job/provenance.json",

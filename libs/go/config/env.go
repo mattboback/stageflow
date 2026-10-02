@@ -67,31 +67,6 @@ func GetEnvBool(key string, defaultValue bool) bool {
 	return defaultValue
 }
 
-func GetEnvBoolStrict(key string, defaultValue bool) (bool, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue, nil
-	}
-
-	switch value {
-	case "1", "true", "TRUE", "True":
-		return true, nil
-	case "0", "false", "FALSE", "False":
-		return false, nil
-	default:
-		return false, fmt.Errorf("%s must be a boolean (true/false or 1/0)", key)
-	}
-}
-
-func MustGetEnvBool(key string, defaultValue bool) bool {
-	value, err := GetEnvBoolStrict(key, defaultValue)
-	if err != nil {
-		panic(err)
-	}
-
-	return value
-}
-
 func GetEnvDurationStrict(key string, defaultValue time.Duration) (time.Duration, error) {
 	value := os.Getenv(key)
 	if value == "" {

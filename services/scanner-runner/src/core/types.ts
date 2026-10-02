@@ -110,8 +110,8 @@ export interface PageEntry {
  * Authentication block carried on Provenance. When absent, the scanner-runner
  * behaves byte-identically to the pre-auth shape. Discriminated by `mode`.
  *
- * - `storage_state`: a Playwright storage-state JSON file uploaded to the job's
- *   MinIO prefix; resolved via StorageProvider at hydration time.
+ * - `storage_state`: a Playwright storage-state JSON file mounted read-only at
+ *   /run/stageflow/storage-state.json and copied into private tmpfs scratch.
  * - `form`: a declarative login replay built from the existing PreScanAction
  *   shape. `success` is a WaitStrategy that signals a completed login. Any
  *   string value is a client-resolved literal; credential values never
@@ -119,7 +119,6 @@ export interface PageEntry {
  */
 export interface ProvenanceAuthStorageState {
 	mode: 'storage_state';
-	artifact_key: string;
 }
 
 export interface ProvenanceAuthForm {
@@ -153,14 +152,6 @@ export interface BrowserConfig {
 	bypassCSP?: boolean;
 }
 
-export interface StorageConfig {
-	endpoint: string;
-	accessKey: string;
-	secretKey: string;
-	useSSL: boolean;
-	bucket: string;
-}
-
 export interface MessagingConfig {
 	url: string;
 	subjects: {
@@ -180,7 +171,6 @@ export interface ScannerConfig {
 	concurrency: number;
 	maxRetries: number;
 	browser: BrowserConfig;
-	storage: StorageConfig;
 	messaging: MessagingConfig;
 	options?: Record<string, unknown>;
 }
@@ -305,18 +295,8 @@ export interface ScanTiming {
 	totalMs: number;
 	pageIterationMs: number;
 	writeResultsMs: number;
-	uploadArtifactsMs: number;
 	publishCompletedMs: number;
 	finalizationMs: number;
-}
-
-export interface StorageProvider {
-	ensureBucket(bucket: string): Promise<void>;
-	upload(bucket: string, key: string, filePath: string, contentType?: string): Promise<void>;
-	uploadBuffer(bucket: string, key: string, data: Buffer, contentType?: string): Promise<void>;
-	uploadDirectory(bucket: string, prefix: string, localDir: string): Promise<number>;
-	download(bucket: string, key: string, destPath: string): Promise<void>;
-	exists(bucket: string, key: string): Promise<boolean>;
 }
 
 export interface ScannerMetadata {

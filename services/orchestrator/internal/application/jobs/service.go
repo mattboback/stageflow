@@ -13,13 +13,12 @@ import (
 )
 
 type Service struct {
-	store        JobStore
-	runtime      Runtime
-	artifacts    Artifacts
-	authUploader AuthUploader
-	authCleaner  AuthCleaner
-	publisher    Publisher
-	planner      *ScannerLaunchPlanner
+	store       JobStore
+	runtime     Runtime
+	artifacts   Artifacts
+	authCleaner AuthCleaner
+	publisher   Publisher
+	planner     *ScannerLaunchPlanner
 }
 
 type ServiceOption func(*Service)
@@ -28,20 +27,6 @@ func WithScannerLaunchPlanner(planner *ScannerLaunchPlanner) ServiceOption {
 	return func(service *Service) {
 		if planner != nil {
 			service.planner = planner
-		}
-	}
-}
-
-// WithAuthUploader plugs in the orchestrator-side compatibility uploader used
-// during CreateJob to move inline storage-state blobs from legacy job-created
-// producers to MinIO before the job is persisted. Current platform-api
-// producers upload before publish. If unset, JobConfig.Auth payloads with
-// inline content_b64 fail fast with a clear setup error rather than silently
-// landing in Postgres.
-func WithAuthUploader(uploader AuthUploader) ServiceOption {
-	return func(service *Service) {
-		if uploader != nil {
-			service.authUploader = uploader
 		}
 	}
 }

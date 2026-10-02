@@ -93,7 +93,7 @@ func TestHandleJobCreated_DuplicatePendingRetriesThenIgnoresExtracting(t *testin
 		},
 	}
 
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient:   podmanClient,
 		Database:       database,
 		Publisher:      publisher,

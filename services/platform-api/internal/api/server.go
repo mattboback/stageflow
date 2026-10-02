@@ -4,11 +4,11 @@ import (
 	"context"
 	"net"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 // JobPublisher abstracts job.created publishing for dependency injection.
@@ -45,6 +45,9 @@ type Server struct {
 
 // ServerConfig provides dependencies and endpoints for the public API.
 type ServerConfig struct {
+	JobDeleter interface {
+		DeleteJob(context.Context, string) error
+	}
 	Port                int
 	Storage             storage.Client
 	Publisher           JobPublisher
@@ -54,9 +57,6 @@ type ServerConfig struct {
 	ScannerRegistry     *scannerregistry.Registry
 	AllowPrivateTargets bool
 	APIToken            string // Optional; see middleware_auth.go
-	MinIOEndpoint       string // Internal MinIO endpoint (e.g., "minio:9000")
-	MinIOPublicEndpoint string // Public endpoint (e.g., "stageflow.org")
-	MinIOPublicUseSSL   bool   // Whether to use HTTPS for public URLs
 }
 
 // NewServer constructs an API server with injected dependencies.

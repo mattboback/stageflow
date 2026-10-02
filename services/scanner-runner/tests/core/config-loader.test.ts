@@ -12,10 +12,6 @@ function resetEnv(): void {
 }
 
 function setRequiredRuntimeEnv(): void {
-	process.env.MINIO_ENDPOINT = 'minio.example.com:9000';
-	process.env.MINIO_ACCESS_KEY = 'access';
-	process.env.MINIO_SECRET_KEY = 'secret';
-	process.env.MINIO_ARTIFACT_BUCKET = 'artifacts';
 	process.env.NATS_URL = 'nats://nats.example.com:4222';
 }
 
@@ -55,31 +51,9 @@ describe('config-loader', () => {
 		expect(config.concurrency).toBe(2);
 		expect(config.maxRetries).toBe(5);
 		expect(config.options).toEqual({ locale: 'en-US' });
-		expect(config.storage.bucket).toBe('artifacts');
 	});
 
 	describe('runtime environment validation', () => {
-		it('throws when MINIO_ENDPOINT is missing', () => {
-			process.env.JOB_ID = 'job-123';
-			setRequiredRuntimeEnv();
-			delete process.env.MINIO_ENDPOINT;
-
-			expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
-				'Required environment variable MINIO_ENDPOINT is not set'
-			);
-		});
-
-		it('throws when MINIO access key aliases are missing', () => {
-			process.env.JOB_ID = 'job-123';
-			setRequiredRuntimeEnv();
-			delete process.env.MINIO_ACCESS_KEY;
-			delete process.env.MINIO_ROOT_USER;
-
-			expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
-				'Required environment variable not set (expected one of: MINIO_ACCESS_KEY, MINIO_ROOT_USER)'
-			);
-		});
-
 		it('throws when NATS_URL is missing', () => {
 			process.env.JOB_ID = 'job-123';
 			setRequiredRuntimeEnv();
@@ -96,26 +70,7 @@ describe('config-loader', () => {
 
 			const config = loadConfigFromEnv({ scannerName: 'axe' });
 
-			expect(config.storage.endpoint).toBe('minio.example.com:9000');
-			expect(config.storage.accessKey).toBe('access');
 			expect(config.messaging.url).toBe('nats://nats.example.com:4222');
-		});
-	});
-
-	describe('required aliases', () => {
-		it('accepts MINIO_ROOT_USER and MINIO_ROOT_PASSWORD aliases', () => {
-			process.env.JOB_ID = 'job-123';
-			process.env.MINIO_ENDPOINT = 'minio.example.com:9000';
-			process.env.MINIO_ROOT_USER = 'root-access';
-			process.env.MINIO_ROOT_PASSWORD = 'root-secret';
-			delete process.env.MINIO_ACCESS_KEY;
-			delete process.env.MINIO_SECRET_KEY;
-			process.env.MINIO_ARTIFACT_BUCKET = 'artifacts';
-			process.env.NATS_URL = 'nats://nats.example.com:4222';
-
-			const config = loadConfigFromEnv({ scannerName: 'axe' });
-			expect(config.storage.accessKey).toBe('root-access');
-			expect(config.storage.secretKey).toBe('root-secret');
 		});
 	});
 
@@ -136,16 +91,6 @@ describe('config-loader', () => {
 
 		expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
 			'SCANNER_OPTIONS must be a JSON object'
-		);
-	});
-
-	it('throws when explicit env values are malformed', () => {
-		setRequiredRuntimeEnv();
-		process.env.JOB_ID = 'job-123';
-		process.env.MINIO_USE_SSL = 'treu';
-
-		expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
-			'Invalid boolean environment variable MINIO_USE_SSL'
 		);
 	});
 
@@ -174,13 +119,6 @@ describe('config-loader', () => {
 				deviceScaleFactor: 2,
 				defaultTimeout: 1000,
 				pageLoadTimeout: 1000
-			},
-			storage: {
-				endpoint: 'localhost:9000',
-				accessKey: 'minio',
-				secretKey: 'minio',
-				useSSL: false,
-				bucket: 'bucket'
 			},
 			messaging: {
 				url: 'nats://localhost:4222',

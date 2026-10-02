@@ -4,18 +4,14 @@
  * Loads scanner configuration from environment variables.
  */
 
-import { join } from 'node:path';
+import type { BrowserConfig, MessagingConfig, ScannerConfig } from './types';
 
-import type { BrowserConfig, MessagingConfig, ScannerConfig, StorageConfig } from './types';
-
-import { parseEnvBool, parseEnvInt } from '../utils/env';
+import { parseEnvInt } from '../utils/env';
 
 export interface ConfigLoaderOptions {
 	scannerName: string;
 	defaults?: Partial<ScannerConfig>;
 }
-
-const DEFAULT_DATA_DIR = join(process.cwd(), 'data');
 
 export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 	const { scannerName, defaults } = options;
@@ -24,10 +20,8 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 	const jobId = requireEnv('JOB_ID');
 	const requestId = process.env.REQUEST_ID;
 	const runId = process.env.RUN_ID;
-	const dataDir = process.env.SCANNER_DATA_DIR ?? DEFAULT_DATA_DIR;
 
 	const browser = loadBrowserConfig();
-	const storage = loadStorageConfig();
 	const messaging = loadMessagingConfig();
 	const trimmedRequestId = requestId?.trim();
 	const trimmedRunId = runId?.trim();
@@ -36,13 +30,12 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 		...defaultConfig,
 		jobId,
 		provenancePath:
-			process.env.PROVENANCE_PATH ?? defaults?.provenancePath ?? join(dataDir, 'provenance.json'),
-		resultsDir: process.env.RESULTS_DIR ?? defaults?.resultsDir ?? join(dataDir, 'results'),
+			process.env.PROVENANCE_PATH ?? defaults?.provenancePath ?? '/job/provenance.json',
+		resultsDir: process.env.RESULTS_DIR ?? defaults?.resultsDir ?? '/out',
 		scannerName,
 		concurrency: defaults?.concurrency ?? 4,
 		maxRetries: defaults?.maxRetries ?? 3,
 		browser,
-		storage,
 		messaging,
 		...(trimmedRequestId !== undefined ? { requestId: trimmedRequestId } : {}),
 		...(trimmedRunId !== undefined ? { runId: trimmedRunId } : {})
@@ -69,21 +62,6 @@ function loadBrowserConfig(): BrowserConfig {
 	};
 }
 
-function loadStorageConfig(): StorageConfig {
-	const endpoint = requireEnv('MINIO_ENDPOINT');
-	const accessKey = requireAnyEnv(['MINIO_ACCESS_KEY', 'MINIO_ROOT_USER']);
-	const secretKey = requireAnyEnv(['MINIO_SECRET_KEY', 'MINIO_ROOT_PASSWORD']);
-	const bucket = requireEnv('MINIO_ARTIFACT_BUCKET');
-
-	return {
-		endpoint,
-		accessKey,
-		secretKey,
-		useSSL: getEnvBool('MINIO_USE_SSL', false),
-		bucket
-	};
-}
-
 function loadMessagingConfig(): MessagingConfig {
 	const url = requireEnv('NATS_URL');
 
@@ -105,17 +83,6 @@ function requireEnv(name: string): string {
 	return value;
 }
 
-function requireAnyEnv(names: readonly string[]): string {
-	for (const name of names) {
-		const value = process.env[name];
-		if (value) {
-			return value;
-		}
-	}
-
-	throw new Error(`Required environment variable not set (expected one of: ${names.join(', ')})`);
-}
-
 /*
  * Fail-fast wrappers over the shared parsers in utils/env.ts.
  *
@@ -123,19 +90,6 @@ function requireAnyEnv(names: readonly string[]): string {
  * defaults quietly yields a scan that looks successful but measured the wrong
  * thing. The lenient getEnv* variants in utils/env.ts are for presentation knobs.
  */
-function getEnvBool(name: string, defaultValue: boolean): boolean {
-	const raw = process.env[name];
-	if (!raw) {
-		return defaultValue;
-	}
-	const parsed = parseEnvBool(raw);
-	if (parsed === undefined) {
-		throw new Error(`Invalid boolean environment variable ${name}: ${raw}`);
-	}
-
-	return parsed;
-}
-
 function getEnvInt(name: string, defaultValue: number): number {
 	const raw = process.env[name];
 	if (!raw) {

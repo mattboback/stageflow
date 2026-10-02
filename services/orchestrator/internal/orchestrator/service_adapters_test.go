@@ -89,7 +89,7 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 	err := orch.HandleExtractionReady(context.Background(), &events.ExtractionReadyPayload{
 		JobID:                  job.ID,
 		TotalPages:             1,
-		ProvenancePath:         "/workspace/provenance.json",
+		ProvenancePath:         "/job/provenance.json",
 		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: job.ID + "/provenance.json",
 	})
@@ -103,10 +103,6 @@ func TestHandleExtractionReadyUsesConfiguredScannerLaunchPlanner(t *testing.T) {
 
 	if got, want := gotReq.Env["NATS_URL"], hostNetnsNATSURL; got != want {
 		t.Fatalf("NATS_URL = %q, want %q", got, want)
-	}
-
-	if got, want := gotReq.Env["MINIO_ENDPOINT"], hostNetnsMinioEndpoint; got != want {
-		t.Fatalf("MINIO_ENDPOINT = %q, want %q", got, want)
 	}
 }
 
@@ -158,7 +154,7 @@ func TestHandleExtractionReadyUsesRegistryDefaultScannerImageWhenNoOverride(t *t
 	err := orch.HandleExtractionReady(context.Background(), &events.ExtractionReadyPayload{
 		JobID:                  job.ID,
 		TotalPages:             1,
-		ProvenancePath:         "/workspace/provenance.json",
+		ProvenancePath:         "/job/provenance.json",
 		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: job.ID + "/provenance.json",
 	})
@@ -224,7 +220,7 @@ func TestHandleExtractionReadyUsesExplicitScannerImageOverride(t *testing.T) {
 	err := orch.HandleExtractionReady(context.Background(), &events.ExtractionReadyPayload{
 		JobID:                  job.ID,
 		TotalPages:             1,
-		ProvenancePath:         "/workspace/provenance.json",
+		ProvenancePath:         "/job/provenance.json",
 		BaseURL:                "http://127.0.0.1:8080",
 		ProvenanceArtifactPath: job.ID + "/provenance.json",
 	})

@@ -13,12 +13,12 @@ import (
 
 	"github.com/google/uuid"
 
+	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const (
@@ -50,8 +50,8 @@ type jobURLSubmitRequest struct {
 // SubmitJobRequest.Auth. Discriminated by mode.
 //
 // For storage_state the CLI base64-encodes the captured Playwright JSON
-// inline; the platform-api validates it parses + enforces a 1 MiB cap, uploads
-// it to MinIO under the job's prefix, then forwards only an artifact_key in
+// inline; the platform-api validates it parses + enforces a 1 MiB cap, writes
+// it to a private job file, then forwards only mode metadata in
 // JobConfig.Auth. Raw storage-state bytes must not cross the NATS boundary.
 //
 // For form, every step value is a literal string. {from_env: NAME} references
@@ -454,7 +454,7 @@ func (s *Server) normalizeAndStoreJobURLAuth(
 		return nil, "", errAuthStorageUnavailable
 	}
 
-	key := jobID + "/auth/storage-state.json"
+	key := jobID + "/auth.json"
 	if uploadErr := s.config.Storage.UploadFile(
 		ctx,
 		sharedstorage.BucketArtifacts,
@@ -466,8 +466,7 @@ func (s *Server) normalizeAndStoreJobURLAuth(
 	}
 
 	out := map[string]any{
-		"mode":         authModeStorageState,
-		"artifact_key": key,
+		"mode": authModeStorageState,
 	}
 
 	normalized, marshalErr := json.Marshal(out)

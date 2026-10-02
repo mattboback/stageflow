@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/libs/go/storage"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
@@ -20,8 +20,7 @@ const (
 	podNetnsModeBridge = appjobs.PodNetnsModeBridge
 	podNetnsModeHost   = appjobs.PodNetnsModeHost
 
-	hostNetnsNATSURL       = appjobs.HostNetnsNATSURL
-	hostNetnsMinioEndpoint = appjobs.HostNetnsMinioEndpoint
+	hostNetnsNATSURL = appjobs.HostNetnsNATSURL
 )
 
 // Publisher abstracts job completion/failure emissions for testability.
@@ -49,6 +48,9 @@ type PodmanClient interface {
 
 // Orchestrator owns the job FSM, Podman pod/container lifecycle, and final aggregation.
 type Orchestrator struct {
+	directoryOwner       func(string) error
+	dataVolume           string
+	dataDir              string
 	podmanClient         PodmanClient
 	jobRuntime           *podman.JobRuntime
 	database             *db.Database
@@ -57,12 +59,7 @@ type Orchestrator struct {
 	monitorWG            sync.WaitGroup
 	maintenanceWG        sync.WaitGroup
 	natsURL              string
-	minioEndpoint        string
-	minioAccessKey       string
-	minioSecretKey       string
-	minioUseSSL          bool
 	natsHost             string // NATS hostname for job containers
-	minioHost            string // MinIO hostname for job containers
 	setupTimeout         time.Duration
 	extractionTimeout    time.Duration
 	scanTimeout          time.Duration
@@ -82,17 +79,15 @@ type Orchestrator struct {
 
 // Config wires dependencies and optional overrides into a new Orchestrator.
 type Config struct {
+	DirectoryOwner       func(string) error
+	DataVolume           string
+	DataDir              string
 	PodmanClient         PodmanClient
 	Database             *db.Database
 	Publisher            Publisher
 	ScannerRegistry      *scanners.Registry // Optional: scanner registry (if nil, uses default config)
 	NatsURL              string
-	MinIOEndpoint        string
-	MinIOAccessKey       string
-	MinIOSecretKey       string
-	MinIOUseSSL          bool
 	NatsHost             string // NATS hostname for job containers on POD_NETWORK
-	MinioHost            string // MinIO hostname for job containers on POD_NETWORK
 	SetupTimeout         time.Duration
 	ExtractionTimeout    time.Duration
 	ScanTimeout          time.Duration
@@ -144,11 +139,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		natsHost = "nats"
 	}
 
-	minioHost := config.MinioHost
-	if minioHost == "" {
-		minioHost = "minio"
-	}
-
 	pageLoadTimeout := config.PageLoadTimeout
 	if pageLoadTimeout == 0 {
 		pageLoadTimeout = 15_000
@@ -185,17 +175,15 @@ func NewOrchestrator(config *Config) *Orchestrator {
 	}
 
 	orch := &Orchestrator{
+		directoryOwner:       config.DirectoryOwner,
+		dataVolume:           config.DataVolume,
+		dataDir:              config.DataDir,
 		podmanClient:         config.PodmanClient,
 		database:             config.Database,
 		publisher:            config.Publisher,
 		scannerRegistry:      registry,
 		natsURL:              config.NatsURL,
-		minioEndpoint:        config.MinIOEndpoint,
-		minioAccessKey:       config.MinIOAccessKey,
-		minioSecretKey:       config.MinIOSecretKey,
-		minioUseSSL:          config.MinIOUseSSL,
 		natsHost:             natsHost,
-		minioHost:            minioHost,
 		setupTimeout:         setupTimeout,
 		extractionTimeout:    extractionTimeout,
 		scanTimeout:          scanTimeout,
@@ -250,7 +238,8 @@ func (o *Orchestrator) Start(ctx context.Context) {
 			slog.Warn("Scanner launch startup reconciliation failed", "error", err)
 		}
 
-		o.maintenanceWG.Add(1)
+		o.maintenanceWG.Add(2)
+		go func() { defer o.maintenanceWG.Done(); o.maintainArtifacts(ctx) }()
 
 		go func() {
 			defer o.maintenanceWG.Done()

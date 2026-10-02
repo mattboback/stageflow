@@ -12,12 +12,7 @@ import type { BrowserContext, Page } from 'playwright';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { BrowserManager } from '../../src/core/browser-manager';
-import type {
-	PageScanResult,
-	Provenance,
-	ScannerConfig,
-	StorageProvider
-} from '../../src/core/types';
+import type { PageScanResult, Provenance, ScannerConfig } from '../../src/core/types';
 
 import {
 	PageIterator,
@@ -39,14 +34,19 @@ vi.mock('node:fs/promises', async () => {
 	const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
 	return {
 		...actual,
-		chmod: chmodMock
+		chmod: chmodMock,
+		copyFile: vi.fn().mockResolvedValue(undefined)
 	};
 });
 
 const fsMock: {
 	ensureDir: ReturnType<typeof vi.fn>;
 	chmod: ReturnType<typeof vi.fn>;
-} = { ensureDir: fsHelperMocks.ensureDir, chmod: chmodMock };
+} = {
+	ensureDir: fsHelperMocks.ensureDir,
+	chmod: chmodMock,
+	copyFile: vi.fn().mockResolvedValue(undefined)
+};
 
 const SECRET_USER = 'hydrate-test-user-9j2n3kl12';
 const SECRET_PASSWORD = 'p@ss word+1';
@@ -66,13 +66,6 @@ const baseConfig: ScannerConfig = {
 		deviceScaleFactor: 1,
 		defaultTimeout: 30_000,
 		pageLoadTimeout: 15_000
-	},
-	storage: {
-		endpoint: 'localhost:9000',
-		accessKey: 'k',
-		secretKey: 's',
-		useSSL: false,
-		bucket: 'job-hydrate'
 	},
 	messaging: {
 		url: '',
@@ -241,27 +234,16 @@ describe('hydrate-then-iterate', () => {
 	it('runs storage_state hydration once before context creation', async () => {
 		const harness = createHarness();
 
-		const storageProvider: StorageProvider = {
-			ensureBucket: vi.fn(),
-			upload: vi.fn(),
-			uploadBuffer: vi.fn(),
-			uploadDirectory: vi.fn().mockResolvedValue(0),
-			download: vi.fn().mockResolvedValue(undefined),
-			exists: vi.fn().mockResolvedValue(true)
-		};
-
 		const provenance: Provenance = {
 			version: '1.0.0',
 			job_id: 'job-hydrate',
 			base_url: 'https://app.example.com',
 			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
-			auth: { mode: 'storage_state', artifact_key: 'job-hydrate/auth/storage-state.json' }
+			auth: { mode: 'storage_state' }
 		};
 
 		const auditEvents: PageIteratorAuditEvent[] = [];
-		const iterator = new PageIterator(harness.browserManager, baseConfig, undefined, {
-			storageProvider
-		});
+		const iterator = new PageIterator(harness.browserManager, baseConfig);
 		const scanCallback = vi.fn<PageScanCallback>().mockImplementation((ctx) =>
 			Promise.resolve<PageScanResult>({
 				pageId: ctx.pageEntry.id,
@@ -279,11 +261,6 @@ describe('hydrate-then-iterate', () => {
 			onAuditEvent: (event) => auditEvents.push(event)
 		});
 
-		expect(storageProvider.download).toHaveBeenCalledWith(
-			'job-hydrate',
-			'job-hydrate/auth/storage-state.json',
-			expect.stringContaining('storage-state.json')
-		);
 		expect(fsMock.chmod).toHaveBeenCalledWith(expect.any(String), 0o600);
 
 		expect(harness.browserManager.createContext).toHaveBeenCalledWith(
@@ -297,8 +274,7 @@ describe('hydrate-then-iterate', () => {
 			expect.objectContaining({
 				type: 'auth_hydrated',
 				details: expect.objectContaining({
-					mode: 'storage_state',
-					artifact_key: 'job-hydrate/auth/storage-state.json'
+					mode: 'storage_state'
 				})
 			})
 		);

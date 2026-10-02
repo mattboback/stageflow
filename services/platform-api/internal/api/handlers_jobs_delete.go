@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
+	storage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
-	"github.com/mattboback/stageflow/libs/go/storage"
 )
 
 func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +46,11 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if deleted {
+		if deleteErr := s.deleteJobRecord(ctx, jobID); deleteErr != nil {
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete job record")
+			return
+		}
+
 		w.WriteHeader(http.StatusNoContent)
 
 		return
@@ -87,6 +92,11 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if deleteErr := s.deleteJobRecord(ctx, jobID); deleteErr != nil {
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete job record")
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -96,11 +106,8 @@ func (s *Server) deleteJobObjects(ctx context.Context, jobID string) error {
 	}
 
 	prefix := jobID + "/"
-	// ZIP uploads live under staging/{jobID}/ (see handleJobZipUpload).
-	for _, stagingPrefix := range []string{prefix, "staging/" + prefix} {
-		if err := s.config.Storage.DeletePrefix(ctx, storage.BucketStaging, stagingPrefix); err != nil {
-			return err
-		}
+	if err := s.config.Storage.DeletePrefix(ctx, storage.BucketStaging, prefix); err != nil {
+		return err
 	}
 
 	return s.config.Storage.DeletePrefix(ctx, storage.BucketArtifacts, prefix)
@@ -130,4 +137,12 @@ func (s *Server) respondIfJobDeleted(w http.ResponseWriter, r *http.Request, job
 	httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
 
 	return true
+}
+
+func (s *Server) deleteJobRecord(ctx context.Context, jobID string) error {
+	if s.config.JobDeleter == nil {
+		return nil
+	}
+
+	return s.config.JobDeleter.DeleteJob(ctx, jobID)
 }

@@ -37,7 +37,7 @@ type JobRecord struct {
 	ScannerArtifacts      map[string]*ScannerArtifactRecord // Per-scanner artifact keys
 }
 
-// ScannerArtifactRecord holds MinIO keys for a single scanner's artifacts.
+// ScannerArtifactRecord holds Job-scoped file paths for a single scanner's artifacts.
 type ScannerArtifactRecord struct {
 	ScannerType string `json:"scanner_type"`
 	ResultsKey  string `json:"results_key"`

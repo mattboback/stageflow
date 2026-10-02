@@ -95,13 +95,6 @@ describe('PageIterator', () => {
 				defaultTimeout: 30_000,
 				pageLoadTimeout: 15_000
 			},
-			storage: {
-				endpoint: 'localhost:9000',
-				accessKey: 'test-access-key',
-				secretKey: 'test-secret-key',
-				useSSL: false,
-				bucket: 'test-bucket'
-			},
 			messaging: {
 				url: 'nats://localhost:4222',
 				subjects: {
@@ -183,7 +176,7 @@ describe('PageIterator', () => {
 			expect(provenance.pages[0]!.url).toBe('https://example.com');
 			expect(provenance.pages[1]!.url).toBe('https://example.com/page2');
 			expect(provenance.default_wait_for).toEqual({ type: 'domcontentloaded' });
-			expect(fsMock.writeJson).toHaveBeenCalled();
+			expect(fsMock.writeJson).not.toHaveBeenCalled();
 
 			delete process.env.SCAN_URLS;
 		});

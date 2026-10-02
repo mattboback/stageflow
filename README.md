@@ -171,7 +171,7 @@ A scan runs all five unless you pick some with `--scanner` (CLI) or `modules`
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |
 | `libs/contracts`             | JSON Schema contracts with committed generated Go/TypeScript types             |
-| `infra`                      | Compose, MinIO, scanner, and security examples                                 |
+| `infra`                      | Compose, scanner, and security examples                                 |
 | `docs`                       | Canonical architecture, CLI, self-hosting, design, and reference documentation |
 
 ## Development

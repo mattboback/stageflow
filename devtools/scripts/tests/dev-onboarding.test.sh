@@ -107,12 +107,12 @@ run_network_project_case() {
 	local log_file="${temp_dir}/podman.log"
 
 	: >"$log_file"
-	COMPOSE_PROJECT_NAME=stageflow_fresh_audit run_just_with_fake_podman "$temp_dir" dev up dev http://127.0.0.1:9000 minio
+	COMPOSE_PROJECT_NAME=stageflow_fresh_audit run_just_with_fake_podman "$temp_dir" dev up dev postgres
 
 	assert_contains "$log_file" "podman network inspect stageflow_fresh_audit_net" "dev should derive the network from COMPOSE_PROJECT_NAME"
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=stageflow_fresh_audit_net" "dev should export the project-derived network"
 	assert_contains "$log_file" "podman compose -p stageflow_fresh_audit" "dev should use COMPOSE_PROJECT_NAME as compose project"
-	assert_contains "$log_file" "up -d minio" "dev should pass an explicit service list through to compose up"
+	assert_contains "$log_file" "up -d postgres" "dev should pass an explicit service list through to compose up"
 }
 
 run_network_override_case() {
@@ -126,29 +126,6 @@ run_network_override_case() {
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=custom_net" "dev should export the explicit network override"
 }
 
-run_minio_lifecycle_override_case() {
-	local temp_dir="$1"
-	local work_dir="${temp_dir}/work"
-	local log_file="${temp_dir}/podman.log"
-
-	cat >"$work_dir/.env" <<'EOF'
-MINIO_ROOT_USER=file-root
-MINIO_ROOT_PASSWORD=file-secret
-MINIO_STAGING_RETENTION_DAYS=1
-MINIO_ARTIFACT_RETENTION_DAYS=1
-EOF
-
-	: >"$log_file"
-	STAGEFLOW_TEST_LOG="$log_file" \
-		PODMAN="${temp_dir}/podman" \
-		MINIO_STAGING_RETENTION_DAYS=7 \
-		MINIO_ARTIFACT_RETENTION_DAYS=9 \
-		"$REAL_JUST" --justfile "$work_dir/justfile" --working-directory "$work_dir" dev init
-
-	assert_contains "$log_file" "MINIO_STAGING_RETENTION_DAYS=7" "dev init should preserve an explicit staging-retention override"
-	assert_contains "$log_file" "MINIO_ARTIFACT_RETENTION_DAYS=9" "dev init should preserve an explicit artifact-retention override"
-
-}
 
 run_env_settings_case() {
 	local temp_dir="$1"
@@ -157,11 +134,8 @@ run_env_settings_case() {
 COMPOSE_PROJECT_NAME=from_file
 STAGEFLOW_NETWORK_NAME=file_net
 FRONTEND_PORT=13000
-MINIO_PORT=19000
 POD_NETWORK=
 IMAGE_TAG=isolated-test
-MINIO_ROOT_USER=file-root
-MINIO_ROOT_PASSWORD=file-secret
 EOF
 	: >"$log_file"
 	run_just_with_fake_podman "$temp_dir" dev up local
@@ -175,11 +149,7 @@ EOF
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=shell_net" "refresh should honor shell network over .env"
 
 	: >"$log_file"
-	run_just_with_fake_podman "$temp_dir" dev init
-	assert_contains "$log_file" "MINIO_ENDPOINT=http://127.0.0.1:19000" "init should use the configured MinIO port"
 	: >"$log_file"
-	run_just_with_fake_podman "$temp_dir" dev init local http://127.0.0.1:29000
-	assert_contains "$log_file" "MINIO_ENDPOINT=http://127.0.0.1:29000" "explicit init endpoint should override the configured MinIO port"
 }
 
 run_external_env_case() {
@@ -227,15 +197,10 @@ EOF
 	STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS=http://override-site.example \
 	run_just_with_fake_podman "$temp_dir" demo >"$temp_dir/demo.out"
 	assert_contains "$log_file" "demo-env API=http://override-api.example SITE=http://override-site.example CORS=http://override-site.example" "demo should pass explicit overrides to builds and compose"
-	assert_contains "$log_file" "just dev up dev http://127.0.0.1:19000 minio" "demo should start MinIO with the configured endpoint"
-	assert_contains "$log_file" "just dev init dev http://127.0.0.1:19000" "demo should initialize the same MinIO endpoint"
-	assert_contains "$log_file" "curl -fsS http://127.0.0.1:19000/minio/health/live" "demo should check the configured MinIO port"
 	assert_contains "$log_file" "curl -fsS http://127.0.0.1:18080/healthz" "demo should check the configured API port"
 	assert_contains "$log_file" "curl -fsS http://127.0.0.1:13000/" "demo should check the configured frontend port"
 	assert_contains "$temp_dir/demo.out" "UI:      http://override-site.example" "demo should print the effective UI URL"
 	assert_contains "$temp_dir/demo.out" "API:     http://override-api.example" "demo should print the effective API URL"
-	assert_line_before "$log_file" "just dev up dev http://127.0.0.1:19000 minio" "just dev init dev http://127.0.0.1:19000" "demo should start MinIO before initialization"
-	assert_line_before "$log_file" "just dev init dev http://127.0.0.1:19000" "just dev up" "demo should initialize MinIO before starting the full stack"
 	assert_line_before "$log_file" "just dev up" "curl -fsS http://127.0.0.1:18080/healthz" "demo should start the stack before waiting for the API"
 
 	: >"$log_file"
@@ -251,13 +216,11 @@ EOF
 
 main() {
 	# Just exports the invoking checkout's .env; fixtures must not inherit it.
+	unset FRONTEND_PORT PLATFORM_API_PORT VITE_API_URL VITE_SITE_URL STAGEFLOW_DATA_VOLUME
 	unset ENV_FILE COMPOSE_PROJECT_NAME STAGEFLOW_NETWORK_NAME POD_NETWORK IMAGE_TAG \
-		FRONTEND_PORT PLATFORM_API_PORT MINIO_PORT VITE_API_URL VITE_SITE_URL \
 		PLATFORM_API_CORS_ALLOW_ORIGINS STAGEFLOW_PUBLIC_DOMAIN STAGEFLOW_PROTECTED_HOST \
 		STAGEFLOW_DEMO_VITE_API_URL STAGEFLOW_DEMO_VITE_SITE_URL \
-		STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS STAGEFLOW_DEMO_PUBLIC_DOMAIN \
-		MINIO_ROOT_USER MINIO_ROOT_PASSWORD MINIO_ACCESS_KEY MINIO_SECRET_KEY \
-		MINIO_STAGING_RETENTION_DAYS MINIO_ARTIFACT_RETENTION_DAYS
+		STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS STAGEFLOW_DEMO_PUBLIC_DOMAIN
 
 	local temp_dir
 	temp_dir="$(mktemp -d)"
@@ -271,7 +234,6 @@ main() {
 	run_network_default_case "$temp_dir"
 	run_network_project_case "$temp_dir"
 	run_network_override_case "$temp_dir"
-	run_minio_lifecycle_override_case "$temp_dir"
 	run_env_settings_case "$temp_dir"
 	run_external_env_case "$temp_dir"
 	run_demo_settings_case "$temp_dir"

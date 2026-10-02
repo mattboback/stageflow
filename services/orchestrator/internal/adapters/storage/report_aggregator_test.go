@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 )
 
 //nolint:gocyclo // Test function covers multiple aggregation scenarios

@@ -36,7 +36,7 @@ func TestCleanupPod(t *testing.T) {
 
 	database := newInMemoryDB(t)
 
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient: mockClient,
 		Database:     database,
 		Publisher:    &mockPublisher{},
@@ -53,42 +53,5 @@ func TestCleanupPod(t *testing.T) {
 
 	if !removeCalled {
 		t.Error("Expected RemovePod to be called")
-	}
-}
-
-func TestCleanupVolumes(t *testing.T) {
-	var removed []string
-
-	mockClient := &mockPodmanClient{
-		removeVolumeFunc: func(_ context.Context, name string, force bool) error {
-			removed = append(removed, name)
-
-			if !force {
-				t.Error("expected force=true")
-			}
-
-			return nil
-		},
-	}
-
-	database := newInMemoryDB(t)
-
-	orch := NewOrchestrator(&Config{
-		PodmanClient: mockClient,
-		Database:     database,
-		Publisher:    &mockPublisher{},
-	})
-
-	orch.cleanupVolumes(context.Background(), "job-xyz")
-
-	expected := []string{"workspace-job-xyz", "results-job-xyz"}
-	if len(removed) != len(expected) {
-		t.Fatalf("expected %d volumes removed, got %d", len(expected), len(removed))
-	}
-
-	for i, name := range expected {
-		if removed[i] != name {
-			t.Errorf("expected %s, got %s", name, removed[i])
-		}
 	}
 }

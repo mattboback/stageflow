@@ -42,7 +42,7 @@ func TestE2E_MultipleJobsConcurrent(t *testing.T) {
 
 		if err := orch.HandleExtractionReady(ctx, &events.ExtractionReadyPayload{
 			JobID:          jobID,
-			ProvenancePath: "/workspace/provenance.json",
+			ProvenancePath: "/job/provenance.json",
 			BaseURL:        "http://127.0.0.1:8080",
 			TotalPages:     1,
 		}); err != nil {

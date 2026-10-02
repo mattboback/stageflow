@@ -10,10 +10,10 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 
+	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
 )
 
 const reportContractRoot = "../../../../../"

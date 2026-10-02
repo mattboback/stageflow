@@ -36,7 +36,7 @@ const (
 type JobCreatedPayload struct {
 	JobID     string           `json:"job_id"`
 	InputType string           `json:"input_type"` // "zip" or "urls"
-	InputPath string           `json:"input_path"` // MinIO path for zip
+	InputPath string           `json:"input_path"` // Job-scoped file path for zip
 	URLs      []string         `json:"urls,omitempty"`
 	Config    models.JobConfig `json:"config"`
 }
@@ -82,7 +82,7 @@ type ExtractionReadyPayload struct {
 	TotalPages             int    `json:"total_pages"`
 	StageLogPath           string `json:"stage_log_path,omitempty"`
 	RecipePath             string `json:"recipe_path,omitempty"`
-	ProvenanceArtifactPath string `json:"provenance_artifact_path,omitempty"` // MinIO path for provenance.json
+	ProvenanceArtifactPath string `json:"provenance_artifact_path,omitempty"` // Job-scoped file path for provenance.json
 }
 
 func (p *ExtractionReadyPayload) Validate() error {
@@ -180,7 +180,7 @@ func (p *ScanPageCompletedPayload) Validate() error {
 type ScanCompletedPayload struct {
 	JobID             string      `json:"job_id"`
 	ScannerType       string      `json:"scanner_type,omitempty"` // e.g., "axe", "lighthouse"
-	ResultsPath       string      `json:"results_path"`           // MinIO object key for JSON results
+	ResultsPath       string      `json:"results_path"`           // Job-scoped file path for JSON results
 	StageLogPath      string      `json:"stage_log_path,omitempty"`
 	RecipePath        string      `json:"recipe_path,omitempty"`
 	TotalPagesScanned int         `json:"total_pages_scanned"`
@@ -263,7 +263,7 @@ type ScanTiming struct {
 	TotalMs            int64 `json:"total_ms"`
 	PageIterationMs    int64 `json:"page_iteration_ms"`
 	WriteResultsMs     int64 `json:"write_results_ms"`
-	UploadArtifactsMs  int64 `json:"upload_artifacts_ms"`
+	UploadArtifactsMs  int64 `json:"upload_artifacts_ms,omitempty"`
 	PublishCompletedMs int64 `json:"publish_completed_ms"`
 	FinalizationMs     int64 `json:"finalization_ms"`
 }
@@ -363,7 +363,7 @@ func (p *JobCompletedPayload) Validate() error {
 }
 
 type ArtifactLocations struct {
-	ReportJSON     string `json:"report_json"` // MinIO path or presigned URL
+	ReportJSON     string `json:"report_json"` // Job-scoped report path or API URL
 	ScanStageLog   string `json:"scan_stage_log,omitempty"`
 	ScanRecipe     string `json:"scan_recipe,omitempty"`
 	ProvenanceJSON string `json:"provenance_json,omitempty"`

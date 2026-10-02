@@ -1,8 +1,6 @@
 import { createScanContext } from './scan-context';
-import type { Stats } from 'node:fs';
 
-import { readdir, stat } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { join } from 'node:path';
 
 import type {
 	IssueSeverity,
@@ -16,20 +14,17 @@ import type {
 	ScannerConfig,
 	ScannerLifecycleHooks,
 	ScannerLogger,
-	ScannerMetadata,
-	StorageProvider
+	ScannerMetadata
 } from './types';
 
 import { createLogger } from '../utils/logger';
-import { ensureDir, pathExists, readJson, writeJson } from '../utils/fs';
+import { ensureDir, writeJson } from '../utils/fs';
 import { resultsPath as artifactResultsPath } from './artifact-paths';
 import { BrowserManager } from './browser-manager';
 import { NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
 import { PageIterator } from './page-iterator';
-import { buildPublicProvenance } from './public-provenance';
 import { ScanStageLogger } from './scan-stage-logger';
 import { buildScanCompletedTiming, withPublishCompletedTiming } from './scan-lifecycle';
-import { MinioStorageProvider } from './storage-provider';
 import { WebServerFormatter } from './web-server-formatter';
 
 export type { ScannerMetadata } from './types';
@@ -38,7 +33,6 @@ export abstract class ScannerBase {
 	protected config!: ScannerConfig;
 	protected browserManager: BrowserManager | null = null;
 	protected pageIterator!: PageIterator;
-	protected storageProvider!: StorageProvider;
 	protected eventPublisher: ScanEventPublisher = new NoOpEventPublisher();
 	protected logger: ScannerLogger;
 	protected hooks: ScannerLifecycleHooks;
@@ -48,8 +42,6 @@ export abstract class ScannerBase {
 	protected scanStageLogger: ScanStageLogger | null = null;
 	private scanStageLogPath = '';
 	private scanRecipePath = '';
-	private provenanceArtifactKey = '';
-	private static readonly extraArtifactsManifest = '.stageflow-artifacts.json';
 
 	abstract readonly metadata: ScannerMetadata;
 	abstract scanPage(context: ScanContext): Promise<PageScanResult>;
@@ -84,8 +76,6 @@ export abstract class ScannerBase {
 				pages_total: provenance.pages.filter((p) => !p.skip).length
 			});
 
-			await this.uploadProvenanceArtifactIfNeeded(provenance);
-
 			const { pageResults, pageIterationMs } = await this.iteratePages(provenance);
 
 			const results = this.buildResults(provenance, pageResults);
@@ -98,14 +88,9 @@ export abstract class ScannerBase {
 				this.writeResults(provenance, results)
 			);
 
-			const { durationMs: uploadArtifactsMs } = await this.runPhase('uploadArtifacts', () =>
-				this.uploadArtifacts()
-			);
-
 			if (this.scanStageLogger) {
 				const artifacts = {
-					results_key: artifactResultsPath(this.config.jobId, this.metadata.name),
-					...(this.provenanceArtifactKey ? { provenance_key: this.provenanceArtifactKey } : {})
+					results_key: artifactResultsPath(this.config.jobId, this.metadata.name)
 				};
 
 				this.scanStageLogger.setArtifacts(artifacts);
@@ -116,8 +101,7 @@ export abstract class ScannerBase {
 
 			await this.publishScanCompleted(results, {
 				pageIterationMs,
-				writeResultsMs,
-				uploadArtifactsMs
+				writeResultsMs
 			});
 
 			await this.hooks.onScanEnd?.(results);
@@ -190,7 +174,6 @@ export abstract class ScannerBase {
 		timing: {
 			pageIterationMs: number;
 			writeResultsMs: number;
-			uploadArtifactsMs: number;
 		}
 	): Promise<{ publishCompletedMs: number }> {
 		// The five timing components are disjoint phases that must sum to <= totalMs
@@ -202,8 +185,7 @@ export abstract class ScannerBase {
 		const timingForEvent = buildScanCompletedTiming({
 			totalMs: Date.now() - this.runStartedAt,
 			pageIterationMs: timing.pageIterationMs,
-			writeResultsMs: timing.writeResultsMs,
-			uploadArtifactsMs: timing.uploadArtifactsMs
+			writeResultsMs: timing.writeResultsMs
 		});
 
 		const { durationMs: publishCompletedMs } = await this.runPhase('publishScanCompleted', () =>
@@ -261,14 +243,9 @@ export abstract class ScannerBase {
 		const browserManager = new BrowserManager(this.config.browser, this.logger);
 		this.browserManager = browserManager;
 
-		this.storageProvider = new MinioStorageProvider(this.config.storage, this.logger);
-		await this.storageProvider.ensureBucket(this.config.storage.bucket);
+		this.pageIterator = new PageIterator(browserManager, this.config, this.logger);
 
-		this.pageIterator = new PageIterator(browserManager, this.config, this.logger, {
-			storageProvider: this.storageProvider
-		});
-
-		this.scanStageLogger = new ScanStageLogger(this.config, this.storageProvider);
+		this.scanStageLogger = new ScanStageLogger(this.config);
 		const { recipePath } = await this.scanStageLogger.start();
 		this.scanRecipePath = recipePath;
 
@@ -428,172 +405,6 @@ export abstract class ScannerBase {
 		this.logger.info('Wrote results file', { path: resultsPath });
 	}
 
-	protected async uploadArtifacts(): Promise<void> {
-		const bucket = this.config.storage.bucket;
-		const prefix = `${this.config.jobId}/${this.metadata.name}`;
-
-		const resultsKey = artifactResultsPath(this.config.jobId, this.metadata.name);
-		await this.storageProvider.upload(
-			bucket,
-			resultsKey,
-			join(this.config.resultsDir, 'results.json')
-		);
-
-		let uploadedCount = 1;
-
-		const entries = await readdir(this.config.resultsDir, {
-			withFileTypes: true
-		});
-		for (const entry of entries) {
-			if (!entry.isDirectory()) {
-				continue;
-			}
-
-			const screenshotsDir = join(this.config.resultsDir, entry.name, 'screenshots');
-			if (!(await pathExists(screenshotsDir))) {
-				continue;
-			}
-
-			uploadedCount += await this.storageProvider.uploadDirectory(
-				bucket,
-				`${prefix}/${entry.name}/screenshots`,
-				screenshotsDir
-			);
-		}
-
-		uploadedCount += await this.uploadExtraArtifacts(bucket, prefix);
-
-		this.logger.info('Uploaded artifacts', {
-			bucket,
-			prefix,
-			fileCount: uploadedCount
-		});
-	}
-
-	private async uploadExtraArtifacts(bucket: string, prefix: string): Promise<number> {
-		const manifestPath = join(this.config.resultsDir, ScannerBase.extraArtifactsManifest);
-
-		if (!(await pathExists(manifestPath))) {
-			return 0;
-		}
-
-		let manifest: unknown;
-		try {
-			manifest = await readJson(manifestPath);
-		} catch (err) {
-			this.logger.warn('Failed to read extra artifacts manifest', {
-				path: manifestPath,
-				error: err instanceof Error ? err.message : String(err)
-			});
-			return 0;
-		}
-
-		const manifestObj =
-			manifest && typeof manifest === 'object' ? (manifest as Record<string, unknown>) : {};
-
-		const paths = [
-			...normalizeStringArray(manifestObj.paths),
-			...normalizeStringArray(manifestObj.files),
-			...normalizeStringArray(manifestObj.directories)
-		];
-
-		if (paths.length === 0) {
-			this.logger.warn('Extra artifacts manifest did not contain any paths', {
-				path: manifestPath
-			});
-			return 0;
-		}
-
-		let uploadedCount = 0;
-		const uploadedKeys = new Set<string>();
-
-		for (const relPath of paths) {
-			const absolutePath = resolve(this.config.resultsDir, relPath);
-			const relativePath = relative(this.config.resultsDir, absolutePath);
-
-			if (!relativePath || relativePath.startsWith('..')) {
-				this.logger.warn('Skipping extra artifact outside results directory', {
-					relPath
-				});
-				continue;
-			}
-
-			if (!(await pathExists(absolutePath))) {
-				this.logger.warn('Extra artifact path does not exist', { relPath });
-				continue;
-			}
-
-			let stats: Stats;
-			try {
-				stats = await stat(absolutePath);
-			} catch (err) {
-				this.logger.warn('Failed to stat extra artifact path', {
-					relPath,
-					error: err instanceof Error ? err.message : String(err)
-				});
-				continue;
-			}
-
-			const normalizedPath = relativePath.split('\\').join('/');
-			const objectKey = `${prefix}/${normalizedPath}`;
-
-			if (stats.isDirectory()) {
-				try {
-					uploadedCount += await this.storageProvider.uploadDirectory(
-						bucket,
-						objectKey,
-						absolutePath
-					);
-				} catch (err) {
-					this.logger.error('Failed to upload extra artifact directory', {
-						relPath,
-						error: err instanceof Error ? err.message : String(err)
-					});
-					throw err;
-				}
-				continue;
-			}
-
-			if (!stats.isFile()) {
-				this.logger.warn('Skipping non-file extra artifact path', { relPath });
-				continue;
-			}
-
-			if (uploadedKeys.has(objectKey)) {
-				continue;
-			}
-
-			try {
-				await this.storageProvider.upload(bucket, objectKey, absolutePath);
-				uploadedKeys.add(objectKey);
-				uploadedCount += 1;
-			} catch (err) {
-				this.logger.error('Failed to upload extra artifact file', {
-					relPath,
-					error: err instanceof Error ? err.message : String(err)
-				});
-				throw err;
-			}
-		}
-
-		return uploadedCount;
-	}
-
-	private async uploadProvenanceArtifactIfNeeded(provenance: Provenance): Promise<void> {
-		if (!process.env.SCAN_URLS) {
-			return;
-		}
-
-		const bucket = this.config.storage.bucket;
-		const key = `${this.config.jobId}/provenance.json`;
-		const publicProvenance = buildPublicProvenance(provenance);
-		const data = Buffer.from(JSON.stringify(publicProvenance, null, 2), 'utf8');
-
-		await this.storageProvider.uploadBuffer(bucket, key, data, 'application/json');
-		this.provenanceArtifactKey = key;
-		this.scanStageLogger?.recordEvent('provenance_uploaded', { key });
-	}
-
 	protected async cleanup(): Promise<void> {
 		if (this.browserManager) {
 			await this.browserManager.close();
@@ -606,7 +417,6 @@ export abstract class ScannerBase {
 		totalMs: number;
 		pageIterationMs: number;
 		writeResultsMs: number;
-		uploadArtifactsMs: number;
 		publishCompletedMs: number;
 		finalizationMs: number;
 	}): void {
@@ -616,7 +426,6 @@ export abstract class ScannerBase {
 			pageIterationMs: phases.pageIterationMs,
 			finalizationMs: phases.finalizationMs,
 			writeResultsMs: phases.writeResultsMs,
-			uploadArtifactsMs: phases.uploadArtifactsMs,
 			publishCompletedMs: phases.publishCompletedMs
 		});
 	}
@@ -637,15 +446,4 @@ export abstract class ScannerBase {
 
 		return { value, durationMs };
 	}
-}
-
-function normalizeStringArray(value: unknown): string[] {
-	if (!Array.isArray(value)) {
-		return [];
-	}
-
-	return value
-		.filter((item): item is string => typeof item === 'string')
-		.map((item) => item.trim())
-		.filter((item) => item.length > 0);
 }

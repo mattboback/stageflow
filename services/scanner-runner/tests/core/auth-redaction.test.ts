@@ -7,30 +7,15 @@
  * auth-hydration-failed issue.
  */
 
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import type { Provenance, ScannerConfig, StorageProvider } from '../../src/core/types';
+import type { Provenance, ScannerConfig } from '../../src/core/types';
 
 import { ScanStageLogger } from '../../src/core/scan-stage-logger';
-import { buildPublicProvenance } from '../../src/core/public-provenance';
 import { createLiteralRedactor } from '../../src/core/page-iterator-redaction';
-
-class InMemoryStorageProvider implements StorageProvider {
-	uploads: { bucket: string; key: string; path: string; body: string }[] = [];
-
-	ensureBucket = (): Promise<void> => Promise.resolve();
-	upload = async (bucket: string, key: string, filePath: string): Promise<void> => {
-		const body = await readFile(filePath, 'utf8');
-		this.uploads.push({ bucket, key, path: filePath, body });
-	};
-	uploadBuffer = (): Promise<void> => Promise.resolve();
-	uploadDirectory = (): Promise<number> => Promise.resolve(0);
-	download = (): Promise<void> => Promise.resolve();
-	exists = (): Promise<boolean> => Promise.resolve(false);
-}
 
 const SECRET_USER = 'auth-test-user-aljkfhqwouihasdf';
 const SECRET_PASSWORD = 'auth-test-password-pq3i48hsdfkj2';
@@ -78,12 +63,6 @@ describe('Auth redaction', () => {
 		await rm(tmpDir, { recursive: true, force: true });
 	});
 
-	it('strips literal auth from public Provenance', () => {
-		const serialized = JSON.stringify(buildPublicProvenance(makeProvenance()));
-		expectNoSecrets(serialized);
-		expect(JSON.parse(serialized).auth).toBeUndefined();
-	});
-
 	it('collects form and all page literals before execution', () => {
 		const provenance = makeProvenance();
 		provenance.pages.push({
@@ -113,21 +92,13 @@ describe('Auth redaction', () => {
 				defaultTimeout: 30_000,
 				pageLoadTimeout: 15_000
 			},
-			storage: {
-				endpoint: 'localhost:9000',
-				accessKey: 'k',
-				secretKey: 's',
-				useSSL: false,
-				bucket: 'test-bucket'
-			},
 			messaging: {
 				url: '',
 				subjects: { pageCompleted: 'a', scanCompleted: 'b', scanFailed: 'c' }
 			}
 		};
 
-		const storage = new InMemoryStorageProvider();
-		const stageLogger = new ScanStageLogger(config, storage);
+		const stageLogger = new ScanStageLogger(config);
 		await stageLogger.start();
 
 		// Same auth_hydrated event detail that PageIterator emits on success.
@@ -141,8 +112,22 @@ describe('Auth redaction', () => {
 		stageLogger.setArtifacts({ results_key: 'job-redact/axe/results.json' });
 		await stageLogger.finalizeSuccess();
 
-		const stageLogPath = join(tmpDir, 'stages', 'scan.log.json');
-		const recipePath = join(tmpDir, 'recipes', 'scan.json');
+		const stageLogPath = join(
+			tmpdir(),
+			'stageflow',
+			config.jobId,
+			config.scannerName,
+			'stages',
+			'scan.log.json'
+		);
+		const recipePath = join(
+			tmpdir(),
+			'stageflow',
+			config.jobId,
+			config.scannerName,
+			'recipes',
+			'scan.json'
+		);
 
 		const stageLogText = await readFile(stageLogPath, 'utf8');
 		const recipeText = await readFile(recipePath, 'utf8');
@@ -151,20 +136,5 @@ describe('Auth redaction', () => {
 		expectNoSecrets(recipeText);
 		expect(stageLogText).toContain('auth_hydrated');
 		expect(stageLogText).toContain('https://app.example.com/profile');
-
-		// Anything we uploaded to MinIO must also be free of secrets.
-		for (const upload of storage.uploads) {
-			expectNoSecrets(upload.body);
-		}
-
-		// Defensive: write the Provenance as the orchestrator would and check.
-		const persistedProvenancePath = join(tmpDir, 'provenance.json');
-		await writeFile(
-			persistedProvenancePath,
-			JSON.stringify(buildPublicProvenance(makeProvenance()), null, 2),
-			'utf8'
-		);
-		const persistedProvenanceText = await readFile(persistedProvenancePath, 'utf8');
-		expectNoSecrets(persistedProvenanceText);
 	});
 });

@@ -64,13 +64,6 @@ const createScannerConfig = (): ScannerConfig => ({
 		defaultTimeout: 30000,
 		pageLoadTimeout: 30000
 	},
-	storage: {
-		endpoint: 'localhost:9000',
-		accessKey: 'test',
-		secretKey: 'test',
-		useSSL: false,
-		bucket: 'test'
-	},
 	messaging: {
 		url: 'nats://localhost:4222',
 		subjects: {

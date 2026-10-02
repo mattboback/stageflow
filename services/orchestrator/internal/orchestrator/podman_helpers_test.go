@@ -30,7 +30,7 @@ func TestSpawnMonitorContainerBoundsScannerWait(t *testing.T) {
 		},
 	}
 
-	orch := NewOrchestrator(&Config{
+	orch := NewOrchestrator(&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		PodmanClient: client,
 		ScanTimeout:  25 * time.Millisecond,
 	})
@@ -57,7 +57,9 @@ func TestSpawnMonitorContainerRecoversPanic(t *testing.T) {
 		},
 	}
 
-	orch := NewOrchestrator(&Config{PodmanClient: client})
+	orch := NewOrchestrator(
+		&Config{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil }, PodmanClient: client},
+	)
 
 	// If the panic were not recovered, the goroutine would crash the test
 	// process. Reaching the assertion after WaitForMonitors proves recovery.

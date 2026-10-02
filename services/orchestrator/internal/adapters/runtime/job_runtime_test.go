@@ -3,6 +3,7 @@ package podman
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -83,7 +84,7 @@ func (f *fakeJobRuntimeClient) InspectContainer(ctx context.Context, containerID
 func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 	var gotReq *PodCreateRequest
 
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			createPodFunc: func(_ context.Context, req *PodCreateRequest) (*PodCreateResponse, error) {
 				gotReq = req
@@ -140,7 +141,7 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 		startedID         string
 	)
 
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			createVolumeFunc: func(_ context.Context, name string) error {
 				createVolumeCalls = append(createVolumeCalls, name)
@@ -166,10 +167,6 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 		PodNetnsMode:    appjobs.PodNetnsModeHost,
 		ExtractionImage: "extractor:latest",
 		NatsHost:        "nats.internal",
-		MinioHost:       "minio.internal",
-		MinioAccessKey:  "minio-access",
-		MinioSecretKey:  "minio-secret",
-		MinioUseSSL:     true,
 	})
 
 	result, err := runtime.StartExtractionWorker(context.Background(), &models.Job{
@@ -184,12 +181,12 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 		t.Fatalf("unexpected result: %#v", result)
 	}
 
-	if !reflect.DeepEqual(createVolumeCalls, []string{"workspace-job-123"}) {
+	if !reflect.DeepEqual(createVolumeCalls, []string{"stageflow_data"}) {
 		t.Fatalf("createVolume calls = %#v", createVolumeCalls)
 	}
 
-	if inspectCalls["workspace-job-123"] != 2 {
-		t.Fatalf("inspectVolume call count = %d, want 2", inspectCalls["workspace-job-123"])
+	if inspectCalls["stageflow_data"] != 2 {
+		t.Fatalf("inspectVolume call count = %d, want 2", inspectCalls["stageflow_data"])
 	}
 
 	if startedID != "ctr-extract" {
@@ -216,25 +213,20 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 		t.Fatalf("NATS_URL = %q, want %q", gotReq.Env["NATS_URL"], appjobs.HostNetnsNATSURL)
 	}
 
-	if gotReq.Env["MINIO_ENDPOINT"] != appjobs.HostNetnsMinioEndpoint {
-		t.Fatalf("MINIO_ENDPOINT = %q, want %q", gotReq.Env["MINIO_ENDPOINT"], appjobs.HostNetnsMinioEndpoint)
-	}
+	assertExtractorMountContract(t, gotReq)
 
-	if gotReq.Env["MINIO_USE_SSL"] != "true" {
-		t.Fatalf("MINIO_USE_SSL = %q, want true", gotReq.Env["MINIO_USE_SSL"])
-	}
-
-	if len(gotReq.Mounts) != 1 {
+	if len(gotReq.Mounts) != 3 {
 		t.Fatalf("mount count = %d, want 1", len(gotReq.Mounts))
 	}
 
 	mount := gotReq.Mounts[0]
-	if mount.Source != "/volumes/workspace-job-123" || mount.Destination != "/workspace" || mount.Type != "bind" {
+	if mount.Source != "/volumes/stageflow_data/jobs/job-123/input.zip" || mount.Destination != "/job/input.zip" ||
+		mount.Type != "bind" {
 		t.Fatalf("unexpected workspace mount: %#v", mount)
 	}
 
-	if !mount.ChownToContainerUser {
-		t.Fatalf("workspace mount must chown to the container user (extractor runs non-root): %#v", mount)
+	if mount.ChownToContainerUser || !mount.ReadOnly {
+		t.Fatalf("input mount must remain scoped and read-only: %+v", mount)
 	}
 }
 
@@ -245,7 +237,7 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 		gotReq             *ContainerCreateRequest
 	)
 
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			createVolumeFunc: func(_ context.Context, name string) error {
 				createVolumeCalls = append(createVolumeCalls, name)
@@ -265,7 +257,6 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 		},
 		ExtractionImage: "extractor:latest",
 		NatsHost:        "nats.internal",
-		MinioHost:       "minio.internal",
 	})
 
 	result, err := runtime.StartExtractionWorker(context.Background(), &models.Job{
@@ -280,7 +271,7 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 		t.Fatalf("unexpected result: %#v", result)
 	}
 
-	if !reflect.DeepEqual(inspectVolumeCalls, []string{"workspace-job-123"}) {
+	if !reflect.DeepEqual(inspectVolumeCalls, []string{"stageflow_data"}) {
 		t.Fatalf("inspectVolume calls = %#v", inspectVolumeCalls)
 	}
 
@@ -292,11 +283,12 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 		t.Fatal("expected container create request")
 	}
 
-	if len(gotReq.Mounts) != 1 {
+	if len(gotReq.Mounts) != 3 {
 		t.Fatalf("mount count = %d, want 1", len(gotReq.Mounts))
 	}
 
-	if mount := gotReq.Mounts[0]; mount.Source != "/existing/workspace-job-123" || mount.Destination != "/workspace" {
+	if mount := gotReq.Mounts[0]; mount.Source != "/existing/stageflow_data/jobs/job-123/input.zip" ||
+		mount.Destination != "/job/input.zip" {
 		t.Fatalf("unexpected workspace mount: %#v", mount)
 	}
 }
@@ -312,7 +304,7 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 		startedID         string
 	)
 
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			inspectVolumeFunc: func(_ context.Context, name string) (*VolumeInfo, error) {
 				inspectCalls[name]++
@@ -344,7 +336,7 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 		Env:    map[string]string{"SCAN_URLS": `["https://example.com"]`},
 		Labels: map[string]string{"scanner_type": "axe", "component": "scanner"},
 		Volumes: []appjobs.VolumeRequirement{
-			{Name: "workspace-job-123", Destination: "/workspace", ReadOnly: true},
+			{Name: "stageflow_data", Destination: "/workspace", ReadOnly: true},
 			{Name: "results-job-123", Destination: "/results"},
 		},
 		ResourceLimits: appjobs.ResourceLimits{MemoryLimitMB: 512, MemorySwapMB: 512},
@@ -380,7 +372,7 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 	}
 
 	workspaceMount := gotReq.Mounts[0]
-	if workspaceMount.Source != "/volumes/workspace-job-123" ||
+	if workspaceMount.Source != "/volumes/stageflow_data" ||
 		workspaceMount.Destination != "/workspace" ||
 		!workspaceMount.ReadOnly {
 		t.Fatalf("unexpected workspace mount: %#v", workspaceMount)
@@ -406,7 +398,7 @@ func TestJobRuntimeStartScannerAdoptsDeterministicExistingContainer(t *testing.T
 		startedID   string
 	)
 
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			inspectContainerFunc: func(_ context.Context, name string) (*ContainerInfo, error) {
 				if name != "scanner-axe-job-restart" {
@@ -469,7 +461,7 @@ func TestJobRuntimeStartScannerAdoptsDeterministicExistingContainer(t *testing.T
 }
 
 func TestJobRuntimeStartScannerRejectsContainerWithWrongOwnershipLabels(t *testing.T) {
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			inspectContainerFunc: func(_ context.Context, name string) (*ContainerInfo, error) {
 				return &ContainerInfo{
@@ -511,7 +503,7 @@ func TestJobRuntimeStartScannerRejectsContainerWithWrongOwnershipLabels(t *testi
 
 func TestJobRuntimeStartScannerDoesNotRestartExitedContainer(t *testing.T) {
 	startCalls := 0
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			inspectContainerFunc: func(_ context.Context, name string) (*ContainerInfo, error) {
 				return &ContainerInfo{
@@ -566,7 +558,7 @@ func TestJobRuntimeStartScannerDoesNotRestartExitedContainer(t *testing.T) {
 
 func TestCreateJobPodAdoptsPodPodmanCreatedAfterALostResponse(t *testing.T) {
 	inspected := 0
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			// A transport timeout, not an API status: this is why recovery cannot
 			// be gated on a 409.
@@ -603,7 +595,7 @@ func TestCreateJobPodAdoptsPodPodmanCreatedAfterALostResponse(t *testing.T) {
 }
 
 func TestCreateJobPodAdoptsPodOnConflict(t *testing.T) {
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
 				return nil, &APIError{StatusCode: 409, Body: `{"cause":"pod already exists"}`}
@@ -632,7 +624,7 @@ func TestCreateJobPodAdoptsPodOnConflict(t *testing.T) {
 }
 
 func TestCreateJobPodRefusesToAdoptAPodItDoesNotOwn(t *testing.T) {
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
 				return nil, &APIError{StatusCode: 409, Body: "pod already exists"}
@@ -659,7 +651,7 @@ func TestCreateJobPodRefusesToAdoptAPodItDoesNotOwn(t *testing.T) {
 
 func TestCreateJobPodReportsTheCreateFailureWhenNoPodExists(t *testing.T) {
 	createErr := errors.New("podman socket unavailable")
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			createPodFunc: func(_ context.Context, _ *PodCreateRequest) (*PodCreateResponse, error) {
 				return nil, createErr
@@ -682,7 +674,7 @@ func TestCreateJobPodReportsTheCreateFailureWhenNoPodExists(t *testing.T) {
 
 func TestCreateJobPodDoesNotInspectOnTheHappyPath(t *testing.T) {
 	inspected := 0
-	runtime := NewJobRuntime(JobRuntimeConfig{
+	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil },
 		Client: &fakeJobRuntimeClient{
 			inspectPodFunc: func(_ context.Context, _ string) (*PodInfo, error) {
 				inspected++
@@ -705,5 +697,32 @@ func TestJobPodNameIsDeterministic(t *testing.T) {
 	// Cleanup relies on reconstructing this name when no pod ID was recorded.
 	if got := JobPodName("abc"); got != "job-abc" {
 		t.Fatalf("JobPodName = %q, want %q", got, "job-abc")
+	}
+}
+
+func assertExtractorMountContract(t *testing.T, gotReq *ContainerCreateRequest) {
+	t.Helper()
+
+	if gotReq.Env["INPUT_PATH"] != "/job/input.zip" || gotReq.Env["SITE_DIR"] != "/site/content" {
+		t.Fatalf("extractor input/output contract: %#v", gotReq.Env)
+	}
+
+	for _, obsolete := range []string{"ZIP_PATH", "EXTRACT_DIR"} {
+		if _, ok := gotReq.Env[obsolete]; ok {
+			t.Fatalf("obsolete extractor environment %s", obsolete)
+		}
+	}
+	// Atomic extraction stages and renames siblings. The destination therefore
+	// must be a child of its writable mount, never the mountpoint itself.
+	writableParent := ""
+
+	for _, mount := range gotReq.Mounts {
+		if !mount.ReadOnly && filepath.Dir(gotReq.Env["SITE_DIR"]) == mount.Destination {
+			writableParent = mount.Destination
+		}
+	}
+
+	if writableParent == "" {
+		t.Fatal("atomic extraction has no writable parent mount")
 	}
 }

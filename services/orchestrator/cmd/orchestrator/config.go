@@ -10,8 +10,9 @@ import (
 
 // Config captures orchestrator runtime configuration.
 type Config struct {
+	DataVolume                  string
+	DataDir                     string
 	NATS                        config.NATSConfig
-	MinIO                       config.MinIOConfig
 	PodmanSocket                string
 	PodmanRequestTimeout        time.Duration
 	PodmanResponseHeaderTimeout time.Duration
@@ -25,13 +26,11 @@ type Config struct {
 	PodNetnsMode                string   // Pod network namespace mode (bridge|host). Host mode is local-only.
 	PodHostMappings             []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	NatsHost                    string
-	MinioHost                   string
 	PageLoadTimeout             int
 }
 
 func loadConfig() *Config {
 	natsCfg := config.LoadNATSConfig()
-	minioCfg := config.LoadMinIOConfig()
 
 	scannerImageEnv := strings.TrimSpace(config.GetEnv("SCANNER_IMAGE", ""))
 
@@ -56,8 +55,9 @@ func loadConfig() *Config {
 	databaseURL := strings.TrimSpace(config.GetEnv("DATABASE_URL", ""))
 
 	return &Config{
+		DataVolume:                  config.GetEnv("STAGEFLOW_DATA_VOLUME", "stageflow_data"),
+		DataDir:                     config.GetEnv("STAGEFLOW_DATA_DIR", "/data"),
 		NATS:                        natsCfg,
-		MinIO:                       minioCfg,
 		PodmanSocket:                config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
 		PodmanRequestTimeout:        config.MustGetEnvDuration("PODMAN_REQUEST_TIMEOUT", 120*time.Second),
 		PodmanResponseHeaderTimeout: config.MustGetEnvDuration("PODMAN_RESPONSE_HEADER_TIMEOUT", 60*time.Second),
@@ -71,7 +71,6 @@ func loadConfig() *Config {
 		PodNetnsMode:                config.GetEnv("POD_NETNS_MODE", "bridge"),
 		PodHostMappings:             podHostMappings,
 		NatsHost:                    config.GetEnv("NATS_HOST", "nats"),
-		MinioHost:                   config.GetEnv("MINIO_HOST", "minio"),
 		PageLoadTimeout:             config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
 	}
 }
@@ -80,15 +79,11 @@ func loadConfig() *Config {
 func (c *Config) Validate() error {
 	errs := []error{
 		config.RequireNonEmpty("NATS_URL", c.NATS.URL),
-		config.RequireNonEmpty("MINIO_ENDPOINT", c.MinIO.Endpoint),
-		config.RequireNonEmpty("MINIO_ACCESS_KEY (or MINIO_ROOT_USER)", c.MinIO.AccessKey),
-		config.RequireNonEmpty("MINIO_SECRET_KEY (or MINIO_ROOT_PASSWORD)", c.MinIO.SecretKey),
 		config.RequireNonEmpty("PODMAN_SOCKET", c.PodmanSocket),
 		config.RequireNonEmpty("DATABASE_URL", c.DatabaseURL),
 		config.RequireNonEmpty("EXTRACTION_IMAGE", c.ExtractionImage),
 		config.RequireNonEmpty("API_PORT", c.APIPort),
 		config.RequireNonEmpty("NATS_HOST", c.NatsHost),
-		config.RequireNonEmpty("MINIO_HOST", c.MinioHost),
 	}
 
 	podNetnsMode := strings.TrimSpace(c.PodNetnsMode)

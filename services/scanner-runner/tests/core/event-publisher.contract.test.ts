@@ -88,7 +88,6 @@ describe('event contract (scanner-runner -> Go)', () => {
 			totalMs: 1000,
 			pageIterationMs: 600,
 			writeResultsMs: 150,
-			uploadArtifactsMs: 200,
 			publishCompletedMs: 25,
 			finalizationMs: 25
 		};
@@ -109,7 +108,6 @@ describe('event contract (scanner-runner -> Go)', () => {
 				'page_iteration_ms',
 				'publish_completed_ms',
 				'total_ms',
-				'upload_artifacts_ms',
 				'write_results_ms'
 			].sort()
 		);

@@ -50,7 +50,6 @@
 						"total_ms",
 						"page_iteration_ms",
 						"write_results_ms",
-						"upload_artifacts_ms",
 						"publish_completed_ms",
 						"finalization_ms"
 					],
@@ -58,7 +57,7 @@
 						"total_ms": { "type": "integer", "minimum": 0 },
 						"page_iteration_ms": { "type": "integer", "minimum": 0 },
 						"write_results_ms": { "type": "integer", "minimum": 0 },
-						"upload_artifacts_ms": { "type": "integer", "minimum": 0 },
+						"upload_artifacts_ms": { "type": "integer", "minimum": 0, "description": "Legacy timing, accepted for older worker events." },
 						"publish_completed_ms": { "type": "integer", "minimum": 0 },
 						"finalization_ms": { "type": "integer", "minimum": 0 }
 					}

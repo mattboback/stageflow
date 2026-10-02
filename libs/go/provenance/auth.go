@@ -67,20 +67,18 @@ type FormStepValue struct {
 	FromEnv *string
 }
 
-// StorageStateBlock is the storage_state branch of Provenance.auth. The
-// platform-api uploads a captured Playwright JSON to MinIO and writes its key
-// here before publishing job.created; the orchestrator retains a legacy
-// defensive uploader for older producers. ContentBase64 is only set on the
-// CLI-to-platform wire, never on persisted Provenance.
+// StorageStateBlock carries intake content and a legacy read-only artifact key.
+// New workers read a private mounted file. Compact omits both sensitive content
+// and the legacy reference from execution metadata.
 type StorageStateBlock struct {
-	ArtifactKey   string `json:"artifact_key,omitempty"`
 	ContentBase64 string `json:"content_b64,omitempty"`
+	ArtifactKey   string `json:"artifact_key,omitempty"`
 }
 
 // Compact returns a wire-safe representation suitable for storage in Postgres
 // or for serialization into PROVENANCE_AUTH_JSON. For storage_state, the
 // returned map omits any inline content_b64 so the bytes never leak past the
-// platform-api upload step or the orchestrator's legacy fallback.
+// platform-api private file write.
 func (a *Auth) Compact() map[string]any {
 	if a == nil {
 		return nil
@@ -89,10 +87,6 @@ func (a *Auth) Compact() map[string]any {
 	switch a.Mode {
 	case AuthModeStorageState:
 		out := map[string]any{"mode": AuthModeStorageState}
-		if a.StorageState != nil {
-			out["artifact_key"] = a.StorageState.ArtifactKey
-		}
-
 		return out
 	case AuthModeForm:
 		out := map[string]any{"mode": AuthModeForm}
@@ -180,12 +174,6 @@ func ValidateAuth(auth *Auth) error {
 func validateStorageStateAuth(storageState *StorageStateBlock) error {
 	if storageState == nil {
 		return errors.New("provenance.auth.storage_state is required when mode=storage_state")
-	}
-
-	if storageState.ArtifactKey == "" && storageState.ContentBase64 == "" {
-		return errors.New(
-			"provenance.auth.storage_state must carry either an artifact_key or an inline content_b64 blob",
-		)
 	}
 
 	return nil
@@ -283,6 +271,7 @@ func (a *Auth) UnmarshalJSON(data []byte) error {
 
 func (a *Auth) decodeStorageStateAuth(raw map[string]json.RawMessage) error {
 	ss := &StorageStateBlock{}
+
 	if v, has := raw["artifact_key"]; has {
 		if err := json.Unmarshal(v, &ss.ArtifactKey); err != nil {
 			return fmt.Errorf("provenance.auth.artifact_key: %w", err)

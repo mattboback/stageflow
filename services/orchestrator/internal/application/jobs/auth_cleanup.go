@@ -22,9 +22,7 @@ func (s *Service) cleanupAuthStorageState(ctx context.Context, job *models.Job) 
 		return
 	}
 
-	if auth.Mode != provenanceauth.AuthModeStorageState ||
-		auth.StorageState == nil ||
-		auth.StorageState.ArtifactKey == "" {
+	if auth.Mode != provenanceauth.AuthModeStorageState {
 		return
 	}
 
@@ -36,13 +34,13 @@ func (s *Service) cleanupAuthStorageState(ctx context.Context, job *models.Job) 
 	cleanupCtx, cancel := context.WithTimeout(cleanupCtx, 5*time.Second)
 	defer cancel()
 
-	if err := s.authCleaner.DeleteAuthStorageState(cleanupCtx, auth.StorageState.ArtifactKey); err != nil {
+	if err := s.authCleaner.DeleteAuthStorageState(cleanupCtx, job.ID+"/auth.json"); err != nil {
 		slog.Warn(
 			"Failed to clean up auth storage_state",
 			"job_id",
 			job.ID,
 			"key",
-			auth.StorageState.ArtifactKey,
+			job.ID+"/auth.json",
 			"error",
 			err,
 		)

@@ -141,18 +141,6 @@ vi.mock('../../src/core/page-iterator', async () => {
 	};
 });
 
-vi.mock('../../src/core/storage-provider', async () => {
-	const actual = await vi.importActual<typeof import('../../src/core/storage-provider')>(
-		'../../src/core/storage-provider'
-	);
-	return {
-		...actual,
-		MinioStorageProvider: vi.fn().mockImplementation(function MinioMock() {
-			return mocks.mockStorageProviderInstance;
-		})
-	};
-});
-
 vi.mock('../../src/core/event-publisher', async () => {
 	const actual = await vi.importActual<typeof import('../../src/core/event-publisher')>(
 		'../../src/core/event-publisher'
@@ -218,13 +206,6 @@ describe('ScannerBase', () => {
 				defaultTimeout: 30000,
 				pageLoadTimeout: 30000
 			},
-			storage: {
-				endpoint: 'localhost',
-				accessKey: 'minio',
-				secretKey: 'minio123',
-				useSSL: false,
-				bucket: 'test-bucket'
-			},
 			messaging: {
 				url: 'nats://localhost:4222',
 				subjects: {
@@ -273,7 +254,6 @@ describe('ScannerBase', () => {
 			expect.anything(),
 			expect.anything()
 		);
-		expect(mocks.mockStorageProviderInstance.upload.mock.calls.length).toBeGreaterThanOrEqual(1);
 
 		expect(mocks.mockEventPublisherInstance.publishScanCompleted).toHaveBeenCalled();
 		expect(mocks.mockEventPublisherInstance.publishPageCompleted).toHaveBeenCalledTimes(2);
@@ -288,7 +268,6 @@ describe('ScannerBase', () => {
 			totalMs: number;
 			pageIterationMs: number;
 			writeResultsMs: number;
-			uploadArtifactsMs: number;
 			publishCompletedMs: number;
 			finalizationMs: number;
 		};
@@ -299,7 +278,6 @@ describe('ScannerBase', () => {
 		const componentSum =
 			timing.pageIterationMs +
 			timing.writeResultsMs +
-			timing.uploadArtifactsMs +
 			timing.publishCompletedMs +
 			timing.finalizationMs;
 		expect(componentSum).toBeLessThanOrEqual(timing.totalMs);
@@ -319,18 +297,8 @@ describe('ScannerBase', () => {
 		expect(mocks.mockEventPublisherInstance.publishScanFailed).toHaveBeenCalledWith(
 			'Provenance missing',
 			expect.anything(),
-			expect.objectContaining({
-				stageLogPath: expect.stringContaining('stages/scan.mock-scanner.log.json'),
-				recipePath: expect.stringContaining('recipes/scan.mock-scanner.json')
-			})
+			{}
 		);
-	});
-
-	it('uploads scanner artifacts when scan succeeds', async () => {
-		await scanner.run(mockConfig);
-
-		expect(mocks.mockBrowserManagerInstance.createContext).not.toHaveBeenCalled();
-		expect(mocks.mockStorageProviderInstance.upload.mock.calls.length).toBeGreaterThanOrEqual(1);
 	});
 
 	it('validates provenance required fields and URL constraints', () => {
@@ -477,184 +445,5 @@ describe('ScannerBase', () => {
 		expect(onError).toHaveBeenCalledWith(expect.any(Error), {
 			pageEntry: expect.objectContaining({ id: 'page-1' })
 		});
-	});
-
-	it('uploads screenshot subdirectories for discovered page folders', async () => {
-		fsPromiseMocks.readdir.mockResolvedValue([
-			{ name: 'page-1', isDirectory: () => true },
-			{ name: 'ignored-file', isDirectory: () => false },
-			{ name: 'page-2', isDirectory: () => true }
-		]);
-		fsHelperMocks.pathExists.mockImplementation((path: string) => {
-			if (path.includes('.stageflow-artifacts.json')) {
-				return Promise.resolve(false);
-			}
-			if (path.includes('page-1/screenshots')) {
-				return Promise.resolve(true);
-			}
-			if (path.includes('page-2/screenshots')) {
-				return Promise.resolve(false);
-			}
-			return Promise.resolve(true);
-		});
-		mocks.mockStorageProviderInstance.uploadDirectory.mockResolvedValue(3);
-
-		await scanner.run(mockConfig);
-
-		expect(mocks.mockStorageProviderInstance.uploadDirectory).toHaveBeenCalledWith(
-			mockConfig.storage.bucket,
-			'test-job/mock-scanner/page-1/screenshots',
-			'/tmp/results/page-1/screenshots'
-		);
-	});
-
-	it('handles mixed extra artifact manifest entries', async () => {
-		fsHelperMocks.pathExists.mockImplementation((path: string) => {
-			if (path.includes('.stageflow-artifacts.json')) {
-				return Promise.resolve(true);
-			}
-			if (path.endsWith('missing.txt')) {
-				return Promise.resolve(false);
-			}
-			return Promise.resolve(true);
-		});
-		fsHelperMocks.readJson.mockResolvedValue({
-			paths: [
-				'../outside.txt',
-				'missing.txt',
-				'broken-stat.txt',
-				'socket.bin',
-				'dup.txt',
-				'dup.txt',
-				'dir-ok',
-				'dir-fail'
-			],
-			files: ['file-fail.txt', 123, '   '],
-			directories: ['dir-ok', null]
-		});
-		fsPromiseMocks.stat.mockImplementation((path: string) => {
-			if (path.endsWith('broken-stat.txt')) {
-				throw new Error('stat failed');
-			}
-			if (path.endsWith('socket.bin')) {
-				return Promise.resolve({
-					isDirectory: () => false,
-					isFile: () => false
-				});
-			}
-			if (path.endsWith('dir-ok') || path.endsWith('dir-fail')) {
-				return Promise.resolve({
-					isDirectory: () => true,
-					isFile: () => false
-				});
-			}
-			return Promise.resolve({ isDirectory: () => false, isFile: () => true });
-		});
-		mocks.mockStorageProviderInstance.uploadDirectory.mockImplementation(
-			(_bucket: string, prefix: string) => {
-				if (prefix.endsWith('/dir-fail')) {
-					return Promise.reject(new Error('dir upload failed'));
-				}
-				return Promise.resolve(2);
-			}
-		);
-		mocks.mockStorageProviderInstance.upload.mockImplementation((_bucket: string, key: string) => {
-			if (key.endsWith('/file-fail.txt')) {
-				return Promise.reject(new Error('file upload failed'));
-			}
-			return Promise.resolve(undefined);
-		});
-
-		await expect(scanner.run(mockConfig)).rejects.toThrow('dir upload failed');
-
-		expect(mocks.mockStorageProviderInstance.upload).toHaveBeenCalledWith(
-			mockConfig.storage.bucket,
-			'test-job/mock-scanner/dup.txt',
-			'/tmp/results/dup.txt'
-		);
-		expect(mocks.mockStorageProviderInstance.uploadDirectory).toHaveBeenCalledWith(
-			mockConfig.storage.bucket,
-			'test-job/mock-scanner/dir-ok',
-			'/tmp/results/dir-ok'
-		);
-	});
-
-	it('ignores extra artifact manifests with no usable paths', async () => {
-		fsHelperMocks.pathExists.mockImplementation((path: string) => {
-			if (path.includes('.stageflow-artifacts.json')) {
-				return Promise.resolve(true);
-			}
-			return Promise.resolve(true);
-		});
-		fsHelperMocks.readJson.mockResolvedValue({
-			paths: ['   ', 42],
-			files: null,
-			directories: 'not-an-array'
-		});
-
-		await scanner.run(mockConfig);
-
-		expect(mocks.mockStorageProviderInstance.upload).toHaveBeenCalledWith(
-			mockConfig.storage.bucket,
-			'test-job/mock-scanner/results.json',
-			'/tmp/results/results.json'
-		);
-	});
-
-	it('uploads provenance artifact when SCAN_URLS is set', async () => {
-		process.env.SCAN_URLS = 'https://example.com';
-
-		try {
-			await scanner.run(mockConfig);
-		} finally {
-			delete process.env.SCAN_URLS;
-		}
-
-		expect(mocks.mockStorageProviderInstance.uploadBuffer).toHaveBeenCalledWith(
-			mockConfig.storage.bucket,
-			'test-job/provenance.json',
-			expect.any(Buffer),
-			'application/json'
-		);
-	});
-
-	it('uploads only the public provenance view when form auth contains literals', async () => {
-		const userCanary = 'scanner-base-user-canary-811d';
-		const passwordCanary = 'scanner-base-password-canary-593a';
-		mocks.mockPageIteratorInstance.loadProvenance.mockResolvedValueOnce({
-			version: '1.0.0',
-			job_id: 'test-job',
-			base_url: 'https://example.com',
-			pages: [{ id: 'account', path: '/account', url: 'https://example.com/account' }],
-			auth: {
-				mode: 'form',
-				login_url: 'https://example.com/login',
-				steps: [
-					{ type: 'fill', selector: '#username', value: userCanary },
-					{ type: 'fill', selector: '#password', value: passwordCanary },
-					{ type: 'click', selector: 'button[type=submit]' }
-				],
-				success: { type: 'load' }
-			}
-		});
-		process.env.SCAN_URLS = JSON.stringify(['https://example.com/account']);
-
-		try {
-			await scanner.run(mockConfig);
-		} finally {
-			delete process.env.SCAN_URLS;
-		}
-
-		const provenanceUpload = mocks.mockStorageProviderInstance.uploadBuffer.mock.calls.find(
-			(call) => call[1] === 'test-job/provenance.json'
-		);
-		expect(provenanceUpload).toBeDefined();
-		const serialized = (provenanceUpload?.[2] as Buffer).toString('utf8');
-		expect(serialized).not.toContain(userCanary);
-		expect(serialized).not.toContain(passwordCanary);
-		expect(JSON.parse(serialized)).toMatchObject({
-			metadata: { auth_configured: true, auth_mode: 'form' }
-		});
-		expect(JSON.parse(serialized)).not.toHaveProperty('auth');
 	});
 });
