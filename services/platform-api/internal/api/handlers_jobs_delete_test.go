@@ -8,13 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 type staticJobReader struct {
-	rec *status.JobRecord
+	rec *jobstore.JobRecord
 }
 
 type failingJobDeletionStore struct {
@@ -22,13 +22,13 @@ type failingJobDeletionStore struct {
 	err error
 }
 
-func (s *failingJobDeletionStore) GetJob(context.Context, string) (*status.JobRecord, error) {
+func (s *failingJobDeletionStore) GetJob(context.Context, string) (*jobstore.JobRecord, error) {
 	return nil, s.err
 }
 
-func (r *staticJobReader) GetJob(_ context.Context, jobID string) (*status.JobRecord, error) {
+func (r *staticJobReader) GetJob(_ context.Context, jobID string) (*jobstore.JobRecord, error) {
 	if r.rec == nil || r.rec.JobID != jobID {
-		return nil, status.ErrJobNotFound
+		return nil, jobstore.ErrJobNotFound
 	}
 
 	clone := *r.rec
@@ -39,7 +39,7 @@ func (r *staticJobReader) GetJob(_ context.Context, jobID string) (*status.JobRe
 func seedReadableJob(t *testing.T, server *Server, jobID string, state models.JobState) {
 	t.Helper()
 
-	testPipeline(server).Put(&status.JobRecord{JobID: jobID, State: state})
+	testPipeline(server).Put(&jobstore.JobRecord{JobID: jobID, State: state})
 }
 
 func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
@@ -51,7 +51,7 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 
 	if err := objectStore.UploadFile(
 		context.Background(),
-		storagepkg.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		jobID+"/report.json",
 		bytes.NewReader([]byte(`{"ok":true}`)),
 		10,
@@ -62,7 +62,7 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 	zipKey := jobID + "/input.zip"
 	if err := objectStore.UploadFile(
 		context.Background(),
-		storagepkg.BucketStaging,
+		artifacts.BucketStaging,
 		zipKey,
 		bytes.NewReader([]byte("zip")),
 		3,
@@ -78,7 +78,7 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 		t.Fatalf("delete status: want 204, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	exists, err := objectStore.FileExists(context.Background(), storagepkg.BucketArtifacts, jobID+"/report.json")
+	exists, err := objectStore.FileExists(context.Background(), artifacts.BucketArtifacts, jobID+"/report.json")
 	if err != nil {
 		t.Fatalf("FileExists: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
 		t.Fatal("expected artifact prefix to be removed")
 	}
 
-	zipExists, err := objectStore.FileExists(context.Background(), storagepkg.BucketStaging, zipKey)
+	zipExists, err := objectStore.FileExists(context.Background(), artifacts.BucketStaging, zipKey)
 	if err != nil {
 		t.Fatalf("FileExists staging: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 	const artifact = "report.json"
 	if err := objectStore.UploadFile(
 		context.Background(),
-		storagepkg.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		jobID+"/"+artifact,
 		bytes.NewReader([]byte(`{"ok":true}`)),
 		10,
@@ -207,7 +207,7 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 
 	exists, err := objectStore.FileExists(
 		context.Background(),
-		storagepkg.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		jobID+"/"+artifact,
 	)
 	if err != nil {

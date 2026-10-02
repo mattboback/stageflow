@@ -6,15 +6,15 @@ import (
 	"reflect"
 	"time"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	domainjob "github.com/mattboback/stageflow/libs/go/domain/job"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
-func reduceSnapshot(base *status.JobRecord, signal Signal) (*status.JobRecord, bool, error) {
+func reduceSnapshot(base *jobstore.JobRecord, signal Signal) (*jobstore.JobRecord, bool, error) {
 	if base == nil {
-		base = &status.JobRecord{}
+		base = &jobstore.JobRecord{}
 	}
 
 	before := cloneJobRecord(base)
@@ -36,7 +36,7 @@ func reduceSnapshot(base *status.JobRecord, signal Signal) (*status.JobRecord, b
 	return next, !reflect.DeepEqual(before, next), nil
 }
 
-func applySignal(rec *status.JobRecord, signal Signal, observedAt time.Time) error {
+func applySignal(rec *jobstore.JobRecord, signal Signal, observedAt time.Time) error {
 	switch signal.Kind {
 	case SignalJobCreated:
 		return applyJobCreatedSignal(rec, signal.JobCreated, observedAt)
@@ -60,7 +60,7 @@ func applySignal(rec *status.JobRecord, signal Signal, observedAt time.Time) err
 }
 
 func applyJobCreatedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.JobCreatedPayload,
 	observedAt time.Time,
 ) error {
@@ -74,7 +74,7 @@ func applyJobCreatedSignal(
 }
 
 func applyExtractionReadySignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.ExtractionReadyPayload,
 	observedAt time.Time,
 ) error {
@@ -88,7 +88,7 @@ func applyExtractionReadySignal(
 }
 
 func applyExtractionFailedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.ExtractionFailedPayload,
 	observedAt time.Time,
 ) error {
@@ -102,7 +102,7 @@ func applyExtractionFailedSignal(
 }
 
 func applyScanPageCompletedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.ScanPageCompletedPayload,
 	observedAt time.Time,
 ) error {
@@ -116,7 +116,7 @@ func applyScanPageCompletedSignal(
 }
 
 func applyScanCompletedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.ScanCompletedPayload,
 	observedAt time.Time,
 ) error {
@@ -130,7 +130,7 @@ func applyScanCompletedSignal(
 }
 
 func applyScanFailedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.ScanFailedPayload,
 	observedAt time.Time,
 ) error {
@@ -150,7 +150,7 @@ func applyScanFailedSignal(
 }
 
 func applyJobCompletedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.JobCompletedPayload,
 	observedAt time.Time,
 ) error {
@@ -164,7 +164,7 @@ func applyJobCompletedSignal(
 }
 
 func applyJobFailedSignal(
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 	payload *events.JobFailedPayload,
 	observedAt time.Time,
 ) error {
@@ -177,12 +177,12 @@ func applyJobFailedSignal(
 	return nil
 }
 
-func applyJobCreated(rec *status.JobRecord, payload *events.JobCreatedPayload, observedAt time.Time) {
+func applyJobCreated(rec *jobstore.JobRecord, payload *events.JobCreatedPayload, observedAt time.Time) {
 	rec.InputType = payload.InputType
 	rec.UpdatedAt = observedAt
 
 	if len(payload.Config.Modules) > 0 {
-		rec.ExpectedScanners = status.CloneStrings(payload.Config.Modules)
+		rec.ExpectedScanners = jobstore.CloneStrings(payload.Config.Modules)
 	}
 
 	switch payload.InputType {
@@ -200,7 +200,7 @@ func applyJobCreated(rec *status.JobRecord, payload *events.JobCreatedPayload, o
 	}
 }
 
-func applyExtractionReady(rec *status.JobRecord, payload *events.ExtractionReadyPayload, observedAt time.Time) {
+func applyExtractionReady(rec *jobstore.JobRecord, payload *events.ExtractionReadyPayload, observedAt time.Time) {
 	rec.TotalPages = maxInt(rec.TotalPages, payload.TotalPages)
 	rec.ExtractionStageLogKey = coalesceString(payload.StageLogPath, rec.ExtractionStageLogKey)
 	rec.ExtractionRecipeKey = coalesceString(payload.RecipePath, rec.ExtractionRecipeKey)
@@ -214,20 +214,20 @@ func applyExtractionReady(rec *status.JobRecord, payload *events.ExtractionReady
 	advanceState(rec, models.JobStateReady)
 }
 
-func applyExtractionFailed(rec *status.JobRecord, payload *events.ExtractionFailedPayload, observedAt time.Time) {
+func applyExtractionFailed(rec *jobstore.JobRecord, payload *events.ExtractionFailedPayload, observedAt time.Time) {
 	rec.ExtractionStageLogKey = coalesceString(payload.StageLogPath, rec.ExtractionStageLogKey)
 	rec.ExtractionRecipeKey = coalesceString(payload.RecipePath, rec.ExtractionRecipeKey)
 	applyFailure(rec, events.JobFailStageExtraction, payload.Error, payload.ErrorDetails, observedAt)
 }
 
-func applyScanPageCompleted(rec *status.JobRecord, payload *events.ScanPageCompletedPayload, observedAt time.Time) {
+func applyScanPageCompleted(rec *jobstore.JobRecord, payload *events.ScanPageCompletedPayload, observedAt time.Time) {
 	rec.CurrentPage = maxInt(rec.CurrentPage, payload.PageIndex)
 	rec.TotalPages = maxInt(rec.TotalPages, payload.TotalPages)
 	rec.UpdatedAt = observedAt
 	advanceState(rec, models.JobStateScanning)
 }
 
-func applyScanCompleted(rec *status.JobRecord, payload *events.ScanCompletedPayload, observedAt time.Time) {
+func applyScanCompleted(rec *jobstore.JobRecord, payload *events.ScanCompletedPayload, observedAt time.Time) {
 	rec.TotalPages = maxInt(rec.TotalPages, payload.TotalPagesScanned)
 	rec.CurrentPage = maxInt(rec.CurrentPage, payload.TotalPagesScanned)
 
@@ -246,7 +246,7 @@ func applyScanCompleted(rec *status.JobRecord, payload *events.ScanCompletedPayl
 	advanceState(rec, models.JobStateScanning)
 }
 
-func applyJobCompleted(rec *status.JobRecord, payload *events.JobCompletedPayload, observedAt time.Time) {
+func applyJobCompleted(rec *jobstore.JobRecord, payload *events.JobCompletedPayload, observedAt time.Time) {
 	if rec.State == models.JobStateFailed {
 		return
 	}
@@ -268,9 +268,9 @@ func applyJobCompleted(rec *status.JobRecord, payload *events.JobCompletedPayloa
 	}
 
 	if len(payload.ScannerArtifacts) > 0 {
-		rec.ScannerArtifacts = make(map[string]*status.ScannerArtifactRecord, len(payload.ScannerArtifacts))
+		rec.ScannerArtifacts = make(map[string]*jobstore.ScannerArtifactRecord, len(payload.ScannerArtifacts))
 		for scannerType, artifact := range payload.ScannerArtifacts {
-			rec.ScannerArtifacts[scannerType] = &status.ScannerArtifactRecord{
+			rec.ScannerArtifacts[scannerType] = &jobstore.ScannerArtifactRecord{
 				ScannerType: artifact.ScannerType,
 				ResultsKey:  artifact.ResultsPath,
 				StageLogKey: artifact.StageLogPath,
@@ -280,7 +280,7 @@ func applyJobCompleted(rec *status.JobRecord, payload *events.JobCompletedPayloa
 	}
 }
 
-func applyFailure(rec *status.JobRecord, stage, message, details string, observedAt time.Time) {
+func applyFailure(rec *jobstore.JobRecord, stage, message, details string, observedAt time.Time) {
 	if rec.State == models.JobStateDone {
 		return
 	}
@@ -298,7 +298,7 @@ func applyFailure(rec *status.JobRecord, stage, message, details string, observe
 	}
 }
 
-func advanceState(rec *status.JobRecord, target models.JobState) {
+func advanceState(rec *jobstore.JobRecord, target models.JobState) {
 	if rec == nil || rec.State == models.JobStateDone || rec.State == models.JobStateFailed {
 		return
 	}
@@ -403,7 +403,7 @@ func normalizeObservedAt(observedAt time.Time) time.Time {
 	return observedAt.UTC()
 }
 
-func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
+func cloneJobRecord(rec *jobstore.JobRecord) *jobstore.JobRecord {
 	if rec == nil {
 		return nil
 	}
@@ -415,8 +415,8 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 		cloned.ScannerStatuses[k] = v
 	}
 
-	cloned.ExpectedScanners = status.CloneStrings(rec.ExpectedScanners)
-	cloned.CompletedScanners = status.CloneStrings(rec.CompletedScanners)
+	cloned.ExpectedScanners = jobstore.CloneStrings(rec.ExpectedScanners)
+	cloned.CompletedScanners = jobstore.CloneStrings(rec.CompletedScanners)
 
 	if rec.CompletedAt != nil {
 		completedAt := *rec.CompletedAt
@@ -424,7 +424,7 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 	}
 
 	if rec.ScannerArtifacts != nil {
-		cloned.ScannerArtifacts = make(map[string]*status.ScannerArtifactRecord, len(rec.ScannerArtifacts))
+		cloned.ScannerArtifacts = make(map[string]*jobstore.ScannerArtifactRecord, len(rec.ScannerArtifacts))
 		for scannerType, artifact := range rec.ScannerArtifacts {
 			if artifact == nil {
 				continue

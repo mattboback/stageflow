@@ -15,7 +15,13 @@ import (
 // the part a fake cannot vouch for.
 func TestLiveContract_CreateJobPodIsIdempotent(t *testing.T) {
 	socket := liveSocketPath(t)
-	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil }, Client: liveClient(t, socket)})
+	runtime := NewJobRuntime(
+		JobRuntimeConfig{
+			DataDir:        t.TempDir(),
+			DirectoryOwner: func(string) error { return nil },
+			Client:         liveClient(t, socket),
+		},
+	)
 
 	job := &models.Job{ID: "idem-" + liveSuffix()}
 	t.Cleanup(func() {
@@ -43,7 +49,13 @@ func TestLiveContract_CreateJobPodIsIdempotent(t *testing.T) {
 // refused, not absorbed into this job.
 func TestLiveContract_CreateJobPodRefusesAForeignPod(t *testing.T) {
 	socket := liveSocketPath(t)
-	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil }, Client: liveClient(t, socket)})
+	runtime := NewJobRuntime(
+		JobRuntimeConfig{
+			DataDir:        t.TempDir(),
+			DirectoryOwner: func(string) error { return nil },
+			Client:         liveClient(t, socket),
+		},
+	)
 
 	job := &models.Job{ID: "foreign-" + liveSuffix()}
 	name := JobPodName(job.ID)

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	db "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
@@ -30,9 +30,9 @@ type PodmanClient interface {
 }
 
 type Config struct {
-	Database                                                                 *db.Database
+	Database                                                                 *jobstore.Database
 	PodmanClient                                                             PodmanClient
-	Storage                                                                  storage.Client
+	Storage                                                                  artifacts.Client
 	DataDir, DataVolume                                                      string
 	DirectoryOwner                                                           func(string) error
 	ScannerRegistry                                                          *scanners.Registry
@@ -132,8 +132,8 @@ func (o *Orchestrator) Start(ctx context.Context) {
 			defer ticker.Stop()
 
 			for {
-				if checkErr1 := o.ReconcileOnce(ctx); checkErr1 != nil && !errors.Is(checkErr1, context.Canceled) {
-					slog.Warn("Job reconciliation failed", "error", checkErr1)
+				if err := o.ReconcileOnce(ctx); err != nil && !errors.Is(err, context.Canceled) {
+					slog.Warn("Job reconciliation failed", "error", err)
 				}
 
 				select {
@@ -146,7 +146,8 @@ func (o *Orchestrator) Start(ctx context.Context) {
 	})
 }
 
-func (o *Orchestrator) WaitForMonitors() { o.wg.Wait() }
+// Wait blocks until the reconcile loop has stopped.
+func (o *Orchestrator) Wait() { o.wg.Wait() }
 
 func (o *Orchestrator) Health(ctx context.Context) error {
 	if o.config.CheckDisk != nil {

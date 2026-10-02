@@ -56,7 +56,7 @@ type ContainerState string
 
 func (s *ContainerState) UnmarshalJSON(data []byte) error {
 	var value string
-	if checkErr1 := json.Unmarshal(data, &value); checkErr1 == nil {
+	if err := json.Unmarshal(data, &value); err == nil {
 		*s = ContainerState(value)
 
 		return nil
@@ -65,8 +65,8 @@ func (s *ContainerState) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Status string `json:"Status"`
 	}
-	if checkErr2 := json.Unmarshal(data, &object); checkErr2 != nil {
-		return fmt.Errorf("decode container state: %w", checkErr2)
+	if err := json.Unmarshal(data, &object); err != nil {
+		return fmt.Errorf("decode container state: %w", err)
 	}
 
 	*s = ContainerState(object.Status)
@@ -97,15 +97,15 @@ func (c *ContainerInfo) UnmarshalJSON(data []byte) error {
 	type plain ContainerInfo
 
 	var info plain
-	if checkErr3 := json.Unmarshal(data, &info); checkErr3 != nil {
-		return checkErr3
+	if err := json.Unmarshal(data, &info); err != nil {
+		return err
 	}
 
 	var raw struct {
 		State json.RawMessage `json:"State"`
 	}
-	if checkErr4 := json.Unmarshal(data, &raw); checkErr4 != nil {
-		return fmt.Errorf("decode container state: %w", checkErr4)
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("decode container state: %w", err)
 	}
 
 	var state struct {
@@ -114,8 +114,8 @@ func (c *ContainerInfo) UnmarshalJSON(data []byte) error {
 	}
 	// A string State has no OOMKilled; only the object form is decoded.
 	if len(raw.State) > 0 && raw.State[0] == '{' {
-		if checkErr5 := json.Unmarshal(raw.State, &state); checkErr5 != nil {
-			return fmt.Errorf("decode container state: %w", checkErr5)
+		if err := json.Unmarshal(raw.State, &state); err != nil {
+			return fmt.Errorf("decode container state: %w", err)
 		}
 	}
 
@@ -148,8 +148,8 @@ func (c *Client) ListJobContainers(ctx context.Context) ([]ContainerInfo, error)
 	defer response.Body.Close()
 
 	var containers []ContainerInfo
-	if checkErr6 := parseResponse(response, &containers); checkErr6 != nil {
-		return nil, checkErr6
+	if parseResponseErr := parseResponse(response, &containers); parseResponseErr != nil {
+		return nil, parseResponseErr
 	}
 
 	return containers, nil

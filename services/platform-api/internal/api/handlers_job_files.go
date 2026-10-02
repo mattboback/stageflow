@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
-	jobstore "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 )
@@ -22,7 +22,7 @@ func publicArtifactURL(jobID, key string) (string, error) {
 	}
 
 	relative := strings.TrimPrefix(key, jobID+"/")
-	if !storage.PublicPath(relative) {
+	if !artifacts.PublicPath(relative) {
 		return "", errors.New("artifact is private")
 	}
 
@@ -35,7 +35,7 @@ func publicArtifactURL(jobID, key string) (string, error) {
 }
 
 func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request, jobID, relative string) {
-	if !storage.PublicPath(relative) {
+	if !artifacts.PublicPath(relative) {
 		httputil.RespondNotFound(w, "File")
 		return
 	}
@@ -51,7 +51,7 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request, jobID, re
 		return
 	}
 
-	reader, err := s.config.Storage.DownloadFile(r.Context(), storage.BucketArtifacts, jobID+"/"+relative)
+	reader, err := s.config.Storage.DownloadFile(r.Context(), artifacts.BucketArtifacts, jobID+"/"+relative)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			httputil.RespondNotFound(w, "File")
@@ -80,7 +80,7 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request, jobID, re
 		return
 	}
 
-	if _, copyErr := io.Copy(w, io.LimitReader(reader, storage.MaxArtifactBytes)); copyErr != nil {
+	if _, copyErr := io.Copy(w, io.LimitReader(reader, artifacts.MaxArtifactBytes)); copyErr != nil {
 		logging.Warn(r.Context(), "Artifact download interrupted", "error", copyErr)
 	}
 }

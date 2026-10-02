@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -186,8 +186,8 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 		t.Fatalf("marshal lighthouse results: %v", err)
 	}
 
-	mem.objects[mem.key(sharedstorage.BucketArtifacts, "job-1/axe/results.json")] = axeBytes
-	mem.objects[mem.key(sharedstorage.BucketArtifacts, "job-1/lighthouse/results.json")] = lhBytes
+	mem.objects[mem.key(artifacts.BucketArtifacts, "job-1/axe/results.json")] = axeBytes
+	mem.objects[mem.key(artifacts.BucketArtifacts, "job-1/lighthouse/results.json")] = lhBytes
 
 	job := &models.Job{
 		ID:               "job-1",
@@ -215,7 +215,7 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 		t.Fatalf("expected report key job-1/report.json, got %s", reportKey)
 	}
 
-	reportBytes := mem.objects[mem.key(sharedstorage.BucketArtifacts, reportKey)]
+	reportBytes := mem.objects[mem.key(artifacts.BucketArtifacts, reportKey)]
 
 	var aggReport report.UnifiedReportV2
 	if unmarshalErr := json.Unmarshal(reportBytes, &aggReport); unmarshalErr != nil {
@@ -372,8 +372,8 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 
 	axeBytes, _ := json.Marshal(axeResults)
 	lhBytes, _ := json.Marshal(lighthouseResults)
-	mem.objects[mem.key(sharedstorage.BucketArtifacts, "job-dedup/axe/results.json")] = axeBytes
-	mem.objects[mem.key(sharedstorage.BucketArtifacts, "job-dedup/lighthouse/results.json")] = lhBytes
+	mem.objects[mem.key(artifacts.BucketArtifacts, "job-dedup/axe/results.json")] = axeBytes
+	mem.objects[mem.key(artifacts.BucketArtifacts, "job-dedup/lighthouse/results.json")] = lhBytes
 
 	job := &models.Job{
 		ID:               "job-dedup",
@@ -389,7 +389,7 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 		t.Fatalf("buildAggregatedReport: %v", err)
 	}
 
-	reportBytes := mem.objects[mem.key(sharedstorage.BucketArtifacts, reportKey)]
+	reportBytes := mem.objects[mem.key(artifacts.BucketArtifacts, reportKey)]
 
 	var aggReport report.UnifiedReportV2
 	if unmarshalErr := json.Unmarshal(reportBytes, &aggReport); unmarshalErr != nil {

@@ -13,15 +13,15 @@ import (
 	"strings"
 	"time"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	db "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 
-// ReconcileOnce is also boot recovery: every side effect can be retried using
-// durable rows and atomic scanner files, without waiting for a message replay.
+// ReconcileOnce is also boot recovery: every side effect can be retried from
+// durable rows and atomic scanner files.
 func (o *Orchestrator) ReconcileOnce(ctx context.Context) error {
 	o.tickMu.Lock()
 	defer o.tickMu.Unlock()
@@ -40,13 +40,13 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 
 	for _, job := range jobs {
 		if job.State.IsTerminal() && job.CleanupPending {
-			if checkErr1 := o.cleanupJob(ctx, job); checkErr1 != nil {
-				slog.Warn("Terminal cleanup will retry", "job_id", job.ID, "error", checkErr1)
+			if cleanupJobErr := o.cleanupJob(ctx, job); cleanupJobErr != nil {
+				slog.Warn("Terminal cleanup will retry", "job_id", job.ID, "error", cleanupJobErr)
 				continue
 			}
 
-			if checkErr2 := o.config.Database.MarkCleaned(ctx, job.ID); checkErr2 != nil {
-				return checkErr2
+			if markCleanedErr := o.config.Database.MarkCleaned(ctx, job.ID); markCleanedErr != nil {
+				return markCleanedErr
 			}
 		}
 	}
@@ -64,8 +64,8 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 		}
 
 		if expired, stage := o.expired(job, now); expired {
-			if checkErr3 := o.fail(ctx, job, stage, stage+" exceeded its absolute deadline"); checkErr3 != nil {
-				errs = append(errs, checkErr3)
+			if failErr := o.fail(ctx, job, stage, stage+" exceeded its absolute deadline"); failErr != nil {
+				errs = append(errs, failErr)
 			}
 
 			continue
@@ -75,8 +75,8 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 			continue
 		}
 
-		if checkErr4 := o.reconcileJob(ctx, job, containers); checkErr4 != nil {
-			errs = append(errs, fmt.Errorf("job %s: %w", job.ID, checkErr4))
+		if reconcileJobErr := o.reconcileJob(ctx, job, containers); reconcileJobErr != nil {
+			errs = append(errs, fmt.Errorf("job %s: %w", job.ID, reconcileJobErr))
 		}
 	}
 	// The database includes terminal cleanup reservations in its capacity count;
@@ -86,8 +86,8 @@ func (o *Orchestrator) reconcileDurable(ctx context.Context) error {
 	}
 
 	if o.lastRetention.IsZero() || now.Sub(o.lastRetention) >= 10*time.Minute {
-		if checkErr5 := o.retain(ctx, now); checkErr5 != nil {
-			errs = append(errs, checkErr5)
+		if retainErr := o.retain(ctx, now); retainErr != nil {
+			errs = append(errs, retainErr)
 		} else {
 			o.lastRetention = now
 		}
@@ -171,8 +171,8 @@ func (o *Orchestrator) reconcileJob(ctx context.Context, job *models.Job, contai
 			return err
 		}
 
-		if checkErr6 := o.config.Database.SetPodID(ctx, job.ID, podID); checkErr6 != nil {
-			return checkErr6
+		if setPodIDErr := o.config.Database.SetPodID(ctx, job.ID, podID); setPodIDErr != nil {
+			return setPodIDErr
 		}
 
 		job.PodID = podID
@@ -218,8 +218,8 @@ func (o *Orchestrator) reconcileScanning(
 			continue
 		}
 
-		if checkErr7 := o.reconcileScanner(ctx, job, scanner, containers); checkErr7 != nil {
-			return checkErr7
+		if err := o.reconcileScanner(ctx, job, scanner, containers); err != nil {
+			return err
 		}
 	}
 
@@ -232,8 +232,8 @@ func (o *Orchestrator) reconcileScanning(
 		return nil
 	}
 
-	if checkErr8 := o.config.Database.BeginStage(ctx, job.ID, models.JobStateCompleting); checkErr8 != nil {
-		return checkErr8
+	if beginStageErr := o.config.Database.BeginStage(ctx, job.ID, models.JobStateCompleting); beginStageErr != nil {
+		return beginStageErr
 	}
 
 	return o.aggregate(ctx, refreshed)
@@ -262,42 +262,42 @@ func (o *Orchestrator) prepareExtracted(ctx context.Context, job *models.Job, co
 
 	defer root.Close()
 
-	data, readErr := readBounded(root, ".provenance/provenance.json", storage.MaxArtifactBytes)
+	data, readErr := readBounded(root, ".provenance/provenance.json", artifacts.MaxArtifactBytes)
 	if readErr == nil {
 		var provenance struct {
 			JobID string            `json:"job_id"`
 			Pages []json.RawMessage `json:"pages"`
 		}
-		if checkErr9 := json.Unmarshal(
+		if decodeErr := json.Unmarshal(
 			data,
 			&provenance,
-		); checkErr9 != nil || provenance.JobID != job.ID || len(provenance.Pages) == 0 ||
+		); decodeErr != nil || provenance.JobID != job.ID || len(provenance.Pages) == 0 ||
 			len(provenance.Pages) > 100 {
 			return o.fail(ctx, job, "extraction", "extractor published invalid page coverage")
 		}
 
-		if checkErr10 := o.config.Storage.UploadFile(
+		if uploadFileErr := o.config.Storage.UploadFile(
 			ctx,
-			storage.BucketArtifacts,
+			artifacts.BucketArtifacts,
 			job.ID+"/provenance.json",
 			bytes.NewReader(data),
 			int64(len(data)),
-		); checkErr10 != nil {
-			return checkErr10
+		); uploadFileErr != nil {
+			return uploadFileErr
 		}
 
-		if checkErr11 := o.config.Database.UpdateScannerProgress(
+		if updateScannerProgressErr := o.config.Database.UpdateScannerProgress(
 			ctx,
 			job.ID,
 			job.ExpectedScanners[0],
 			0,
 			len(provenance.Pages),
-		); checkErr11 != nil {
-			return checkErr11
+		); updateScannerProgressErr != nil {
+			return updateScannerProgressErr
 		}
 
-		if checkErr12 := o.config.Database.BeginStage(ctx, job.ID, models.JobStateReady); checkErr12 != nil {
-			return checkErr12
+		if beginStageErr := o.config.Database.BeginStage(ctx, job.ID, models.JobStateReady); beginStageErr != nil {
+			return beginStageErr
 		}
 
 		job.State = models.JobStateReady
@@ -339,8 +339,8 @@ func (o *Orchestrator) reconcileScanner(
 		container = recovered
 	}
 
-	if checkErr13 := o.readProgress(ctx, job, name); checkErr13 != nil {
-		slog.Debug("Scanner progress unavailable", "job_id", job.ID, "scanner", name, "error", checkErr13)
+	if err := o.readProgress(ctx, job, name); err != nil {
+		slog.Debug("Scanner progress unavailable", "job_id", job.ID, "scanner", name, "error", err)
 	}
 
 	outcome, outcomeErr := o.readOutcome(job.ID, name)
@@ -352,8 +352,8 @@ func (o *Orchestrator) reconcileScanner(
 		// A create response or database write may have been lost. The labeled
 		// container proves the launch happened; adopt it without consuming an attempt.
 		if job.ScannerContainerIDs[name] != container.ID {
-			if checkErr14 := o.config.Database.SetScannerContainer(ctx, job.ID, name, container.ID); checkErr14 != nil {
-				return checkErr14
+			if err := o.config.Database.SetScannerContainer(ctx, job.ID, name, container.ID); err != nil {
+				return err
 			}
 		}
 
@@ -372,12 +372,12 @@ func (o *Orchestrator) reconcileScanner(
 		return o.recordFailed(ctx, job, name, "scanner outcome is malformed or exceeds its limit")
 	}
 
-	if _, checkErr15 := o.config.Database.BeginScannerAttempt(ctx, job.ID, name); checkErr15 != nil {
-		if errors.Is(checkErr15, db.ErrAttemptsExhausted) {
+	if _, err := o.config.Database.BeginScannerAttempt(ctx, job.ID, name); err != nil {
+		if errors.Is(err, jobstore.ErrAttemptsExhausted) {
 			return o.recordFailed(ctx, job, name, "scanner could not be launched after two attempts")
 		}
 
-		return checkErr15
+		return err
 	}
 
 	plan, err := o.planner.Plan(ctx, job, name)
@@ -417,15 +417,15 @@ func (o *Orchestrator) aggregate(ctx context.Context, job *models.Job) error {
 		return err
 	}
 
-	reader, err := o.config.Storage.DownloadFile(ctx, storage.BucketArtifacts, key)
+	reader, err := o.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, key)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 
 	var doc report.UnifiedReportV2
-	if checkErr16 := json.NewDecoder(io.LimitReader(reader, storage.MaxArtifactBytes)).Decode(&doc); checkErr16 != nil {
-		return checkErr16
+	if decodeErr := json.NewDecoder(io.LimitReader(reader, artifacts.MaxArtifactBytes)).Decode(&doc); decodeErr != nil {
+		return decodeErr
 	}
 
 	return o.config.Database.MarkTerminal(ctx, job.ID, models.JobStateDone, key, doc.Summary.TotalIssues, "", "", "")
@@ -539,12 +539,12 @@ func (o *Orchestrator) recordOutcomeFailure(
 }
 
 func (o *Orchestrator) claimNext(ctx context.Context, containers []podman.ContainerInfo) error {
-	if checkErr17 := o.Health(ctx); checkErr17 != nil {
-		if errors.Is(checkErr17, storage.ErrLowDisk) {
+	if err := o.Health(ctx); err != nil {
+		if errors.Is(err, artifacts.ErrLowDisk) {
 			return nil
 		}
 
-		return checkErr17
+		return err
 	}
 
 	claimed, err := o.config.Database.ClaimNext(ctx)

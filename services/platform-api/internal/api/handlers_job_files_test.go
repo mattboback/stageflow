@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -15,7 +15,7 @@ func TestJobFileRequiresLiveJobAndAllowlistedPath(t *testing.T) {
 	server, files, _ := newTestServer(t)
 	if err := files.UploadFile(
 		context.Background(),
-		storage.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		"job/report.json",
 		strings.NewReader(`{"ok":true}`),
 		11,

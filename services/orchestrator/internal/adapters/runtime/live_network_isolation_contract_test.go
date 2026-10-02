@@ -74,7 +74,10 @@ func TestLiveContract_JobNetworkCannotReachOtherNetworks(t *testing.T) {
 	}
 
 	if code := probe(plainNetwork, "stageflow-contract-plain", "nc -z -w 5 "+serviceIP+" 8080"); code != 0 {
-		t.Fatalf("plain-network probe exited %d, want 0: without isolation another bridge is reachable by address", code)
+		t.Fatalf(
+			"plain-network probe exited %d, want 0: without isolation another bridge is reachable by address",
+			code,
+		)
 	}
 
 	if code := probe(jobNetwork, "stageflow-contract-ip", "nc -z -w 5 "+serviceIP+" 8080"); code == 0 {

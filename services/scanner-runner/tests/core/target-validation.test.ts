@@ -187,7 +187,7 @@ describe('target validation', () => {
 	it.each([
 		['RFC1918 10/8', 'http://10.0.0.1/'],
 		['RFC1918 192.168/16', 'http://192.168.1.1/'],
-		['another loopback port (MinIO)', 'http://127.0.0.1:9000/'],
+		['another loopback port', 'http://127.0.0.1:9000/'],
 		['link-local metadata', 'http://169.254.169.254/latest/meta-data']
 	])('blocks %s for extractor static provenance', async (_label, targetURL) => {
 		delete process.env.ALLOW_PRIVATE_TARGETS;

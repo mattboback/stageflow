@@ -108,8 +108,8 @@ func (s *Server) waitForRequests(ctx context.Context) error {
 func (s *Server) Start() error {
 	slog.Info("Starting orchestrator API server", "port", s.port)
 
-	if checkErr1 := s.server.ListenAndServe(); checkErr1 != nil && checkErr1 != http.ErrServerClosed {
-		return fmt.Errorf("failed to start server: %w", checkErr1)
+	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return fmt.Errorf("failed to start server: %w", err)
 	}
 
 	return nil
@@ -147,7 +147,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // handleHealth handles GET /healthz.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if s.health != nil {
-		if checkErr2 := s.health(r.Context()); checkErr2 != nil {
+		if err := s.health(r.Context()); err != nil {
 			httputil.RespondError(w, http.StatusServiceUnavailable, "Artifact storage unavailable")
 			return
 		}

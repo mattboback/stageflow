@@ -1,4 +1,4 @@
-// Package storage defines shared storage interfaces used across services.
+// Package artifacts stores job inputs and results as files under one data directory.
 package artifacts
 
 import (

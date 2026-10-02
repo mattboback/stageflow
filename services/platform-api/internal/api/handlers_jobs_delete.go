@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 )
@@ -40,7 +40,7 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 
 	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
+		if errors.Is(err, jobstore.ErrJobNotFound) {
 			if cleanupErr := s.deleteJobObjects(ctx, jobID); cleanupErr != nil {
 				httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete scan artifacts")
 				return
@@ -69,7 +69,7 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if deletionErr := s.config.JobDeleter.DeleteJob(ctx, jobID); deletionErr != nil {
-		if errors.Is(deletionErr, status.ErrCleanupPending) || errors.Is(deletionErr, status.ErrJobBusy) {
+		if errors.Is(deletionErr, jobstore.ErrCleanupPending) || errors.Is(deletionErr, jobstore.ErrJobBusy) {
 			httputil.RespondError(w, http.StatusConflict, "Job cleanup is still running")
 		} else {
 			httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete job record")
@@ -97,9 +97,9 @@ func (s *Server) deleteJobObjects(ctx context.Context, jobID string) error {
 	}
 
 	prefix := jobID + "/"
-	if err := s.config.Storage.DeletePrefix(ctx, storage.BucketStaging, prefix); err != nil {
+	if err := s.config.Storage.DeletePrefix(ctx, artifacts.BucketStaging, prefix); err != nil {
 		return err
 	}
 
-	return s.config.Storage.DeletePrefix(ctx, storage.BucketArtifacts, prefix)
+	return s.config.Storage.DeletePrefix(ctx, artifacts.BucketArtifacts, prefix)
 }

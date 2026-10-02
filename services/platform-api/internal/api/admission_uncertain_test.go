@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/internal/archive"
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	jobstore "github.com/mattboback/stageflow/internal/jobstore"
-	orchtest "github.com/mattboback/stageflow/internal/testpostgres"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/testpostgres"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -29,8 +29,8 @@ type lostCommitAdmission struct {
 func (s *lostCommitAdmission) AdmitJob(ctx context.Context, job *models.Job) error {
 	s.job = job
 	if !s.delayed {
-		if checkErr1 := s.database.AdmitJob(ctx, job); checkErr1 != nil {
-			return checkErr1
+		if err := s.database.AdmitJob(ctx, job); err != nil {
+			return err
 		}
 	}
 
@@ -39,7 +39,7 @@ func (s *lostCommitAdmission) AdmitJob(ctx context.Context, job *models.Job) err
 func uncertainTestDatabase(t *testing.T) *jobstore.Database {
 	t.Helper()
 
-	address, stop, err := orchtest.PostgresForTests("uncertain-admission")
+	address, stop, err := testpostgres.PostgresForTests("uncertain-admission")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func testUncertainAdmission(t *testing.T, database *jobstore.Database, input str
 	ctx := context.Background()
 	server, _, _ := newTestServer(t)
 
-	files, err := storage.NewFiles(t.TempDir())
+	files, err := artifacts.NewFiles(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,7 +138,7 @@ func testUncertainAdmission(t *testing.T, database *jobstore.Database, input str
 
 	validateUncertainResponse(t, database, admission, response, delayed)
 
-	reader, err := files.DownloadFile(ctx, storage.BucketStaging, admission.job.ID+"/"+expectedFile)
+	reader, err := files.DownloadFile(ctx, artifacts.BucketStaging, admission.job.ID+"/"+expectedFile)
 	if err != nil {
 		t.Fatalf("uncertain commit deleted %s: %v", expectedFile, err)
 	}
@@ -157,7 +157,7 @@ func testUncertainAdmission(t *testing.T, database *jobstore.Database, input str
 	assertUncertainJobRunnable(t, database, admission.job.ID)
 }
 
-func validateUncertainZIP(ctx context.Context, files *storage.Files, id string) error {
+func validateUncertainZIP(ctx context.Context, files *artifacts.Files, id string) error {
 	file, err := files.OpenInput(ctx, id)
 	if err != nil {
 		return err
@@ -214,7 +214,7 @@ func assertUncertainJobRunnable(t *testing.T, database *jobstore.Database, id st
 		t.Fatalf("persisted job could not run: %#v %v", claimed, err)
 	}
 
-	if checkErr4 := database.MarkTerminal(
+	if markTerminalErr := database.MarkTerminal(
 		ctx,
 		claimed.ID,
 		models.JobStateFailed,
@@ -223,15 +223,15 @@ func assertUncertainJobRunnable(t *testing.T, database *jobstore.Database, id st
 		"test cleanup",
 		"",
 		"",
-	); checkErr4 != nil {
-		t.Fatal(checkErr4)
+	); markTerminalErr != nil {
+		t.Fatal(markTerminalErr)
 	}
 
-	if checkErr5 := database.MarkCleaned(ctx, claimed.ID); checkErr5 != nil {
-		t.Fatal(checkErr5)
+	if markCleanedErr := database.MarkCleaned(ctx, claimed.ID); markCleanedErr != nil {
+		t.Fatal(markCleanedErr)
 	}
 
-	if checkErr6 := database.DeleteJob(ctx, claimed.ID); checkErr6 != nil {
-		t.Fatal(checkErr6)
+	if deleteJobErr := database.DeleteJob(ctx, claimed.ID); deleteJobErr != nil {
+		t.Fatal(deleteJobErr)
 	}
 }

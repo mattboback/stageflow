@@ -130,14 +130,13 @@ type JobConfig struct {
 	ScannerConfigs      map[string]map[string]any `json:"scanner_configs,omitempty"`
 	Screenshot          bool                      `json:"screenshot"`
 	AllowPrivateTargets bool                      `json:"allow_private_targets,omitempty"`
-	// Auth carries the optional Provenance.auth block. It is omitted entirely
-	// for unauthenticated scans so the persisted JobConfig is byte-identical
-	// to the pre-auth shape on disk. For form recipes Auth carries only
-	// literal strings or {from_env: NAME} references; resolved credentials
-	// never appear here. For storage_state, the Platform API uploads any
-	// inline client blob before publishing job.created so downstream services
-	// should only see the artifact_key. The orchestrator still strips inline
-	// content defensively if an old producer sends it.
+	// Auth carries the optional Provenance.auth block; it is omitted for
+	// unauthenticated scans. Form recipes carry literal values only: the
+	// Platform API and the orchestrator both reject {from_env: NAME}
+	// references. For storage_state the Platform API writes the client's state
+	// to a private job file before admitting the job, so only the mode is
+	// stored here, and the orchestrator refuses to launch a scanner while
+	// inline content is still present.
 	Auth json.RawMessage `json:"auth,omitempty"`
 }
 
@@ -166,15 +165,15 @@ type JobProgress struct {
 	Percentage  int `json:"percentage"`
 }
 
-// ArtifactLocation contains URLs to download artifacts.
+// ArtifactLocation contains the API file routes for a job's public artifacts.
 type ArtifactLocation struct {
-	ReportJSON         string                       `json:"report_json"` // Presigned URL
+	ReportJSON         string                       `json:"report_json"`
 	ScanStageLog       string                       `json:"scan_stage_log,omitempty"`
 	ScanRecipe         string                       `json:"scan_recipe,omitempty"`
 	ExtractionStageLog string                       `json:"extraction_stage_log,omitempty"`
 	ExtractionRecipe   string                       `json:"extraction_recipe,omitempty"`
-	ProvenanceJSON     string                       `json:"provenance_json,omitempty"` // Presigned URL
-	Screenshots        []ScreenshotArtifact         `json:"screenshots,omitempty"`     // Screenshot presigned URLs
+	ProvenanceJSON     string                       `json:"provenance_json,omitempty"`
+	Screenshots        []ScreenshotArtifact         `json:"screenshots,omitempty"`
 	ScannerArtifacts   map[string]*ScannerArtifacts `json:"scanner_artifacts,omitempty"`
 }
 
@@ -197,7 +196,7 @@ type ScreenshotArtifact struct {
 	ScannerID  string         `json:"scanner_id"`
 	PageID     string         `json:"page_id"`
 	PageURL    string         `json:"page_url,omitempty"`
-	URL        string         `json:"url"` // Presigned URL for full-size screenshot
+	URL        string         `json:"url"` // API file route for the full-size screenshot
 }
 
 // ScannerStatus is a durable per-scanner snapshot, including unsuccessful outcomes.

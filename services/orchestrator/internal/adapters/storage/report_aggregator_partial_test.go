@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
@@ -52,7 +52,7 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 		t.Fatalf("marshal seo results: %v", err)
 	}
 
-	mem.objects[mem.key(sharedstorage.BucketArtifacts, "job-p/seo/results.json")] = data
+	mem.objects[mem.key(artifacts.BucketArtifacts, "job-p/seo/results.json")] = data
 
 	job := &models.Job{
 		ID:               "job-p",
@@ -70,7 +70,7 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 		t.Fatalf("BuildAggregatedReport: %v", err)
 	}
 
-	blob := mem.objects[mem.key(sharedstorage.BucketArtifacts, key)]
+	blob := mem.objects[mem.key(artifacts.BucketArtifacts, key)]
 
 	var aggregated report.UnifiedReportV2
 	if decodeErr := json.Unmarshal(blob, &aggregated); decodeErr != nil {

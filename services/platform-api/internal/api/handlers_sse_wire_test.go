@@ -7,20 +7,20 @@ import (
 	"path/filepath"
 	"testing"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 func TestSnapshotUpdatesGolden(t *testing.T) {
 	cases := []struct {
 		name       string
-		prev, next *status.JobRecord
+		prev, next *jobstore.JobRecord
 		ready      bool
 	}{
 		{
 			"scan_progress",
-			&status.JobRecord{State: models.JobStateScanning},
-			&status.JobRecord{
+			&jobstore.JobRecord{State: models.JobStateScanning},
+			&jobstore.JobRecord{
 				State:            models.JobStateScanning,
 				CurrentPage:      2,
 				TotalPages:       5,
@@ -33,8 +33,8 @@ func TestSnapshotUpdatesGolden(t *testing.T) {
 		},
 		{
 			"scan_complete",
-			&status.JobRecord{State: models.JobStateScanning},
-			&status.JobRecord{
+			&jobstore.JobRecord{State: models.JobStateScanning},
+			&jobstore.JobRecord{
 				State:            models.JobStateScanning,
 				TotalViolations:  9,
 				ExpectedScanners: []string{"lighthouse"},
@@ -46,26 +46,26 @@ func TestSnapshotUpdatesGolden(t *testing.T) {
 		},
 		{
 			"extraction_ready",
-			&status.JobRecord{State: models.JobStateReady},
-			&status.JobRecord{State: models.JobStateReady, TotalPages: 8},
+			&jobstore.JobRecord{State: models.JobStateReady},
+			&jobstore.JobRecord{State: models.JobStateReady, TotalPages: 8},
 			false,
 		},
 		{
 			"job_failed",
-			&status.JobRecord{State: models.JobStateScanning},
-			&status.JobRecord{State: models.JobStateFailed, Error: "boom"},
+			&jobstore.JobRecord{State: models.JobStateScanning},
+			&jobstore.JobRecord{State: models.JobStateFailed, Error: "boom"},
 			true,
 		},
 		{
 			"job_complete",
-			&status.JobRecord{State: models.JobStateScanning},
-			&status.JobRecord{State: models.JobStateDone},
+			&jobstore.JobRecord{State: models.JobStateScanning},
+			&jobstore.JobRecord{State: models.JobStateDone},
 			true,
 		},
 		{
 			"one_scanner_failed",
-			&status.JobRecord{State: models.JobStateScanning},
-			&status.JobRecord{
+			&jobstore.JobRecord{State: models.JobStateScanning},
+			&jobstore.JobRecord{
 				State:            models.JobStateScanning,
 				ExpectedScanners: []string{"seo"},
 				ScannerStatuses:  map[string]models.ScannerStatus{"seo": {State: "failed", Error: "browser closed"}},
@@ -85,8 +85,8 @@ func TestSnapshotUpdatesGolden(t *testing.T) {
 	}
 }
 func TestLastScannerAndDoneInOneTick(t *testing.T) {
-	previous := &status.JobRecord{State: models.JobStateScanning}
-	next := &status.JobRecord{
+	previous := &jobstore.JobRecord{State: models.JobStateScanning}
+	next := &jobstore.JobRecord{
 		State:            models.JobStateDone,
 		ExpectedScanners: []string{"axe"},
 		ScannerStatuses:  map[string]models.ScannerStatus{"axe": {State: "completed", PagesScanned: 2}},
@@ -110,8 +110,8 @@ func TestReadyCannotBeSkipped(t *testing.T) {
 	ready := false
 
 	updates := snapshotUpdates(
-		&status.JobRecord{State: models.JobStateExtracting},
-		&status.JobRecord{State: models.JobStateScanning, TotalPages: 30},
+		&jobstore.JobRecord{State: models.JobStateExtracting},
+		&jobstore.JobRecord{State: models.JobStateScanning, TotalPages: 30},
 		&ready,
 	)
 	if len(updates) != 2 || updates[0]["state"] != "READY_TO_SCAN" || !ready {

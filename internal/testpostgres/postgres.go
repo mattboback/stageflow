@@ -1,7 +1,7 @@
-// Package orchtest provides shared test infrastructure for the orchestrator
+// Package testpostgres provides shared test infrastructure for the
 // packages that exercise real PostgreSQL behavior. It is imported only from
 // test code.
-package orchtest
+package testpostgres
 
 import (
 	"context"

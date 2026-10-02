@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
@@ -18,7 +18,7 @@ func (r *JobRuntime) publishURLProvenance(ctx context.Context, job *models.Job) 
 		return nil
 	}
 
-	files, err := storage.NewFiles(r.dataDir)
+	files, err := artifacts.NewFiles(r.dataDir)
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func (r *JobRuntime) publishURLProvenance(ctx context.Context, job *models.Job) 
 	origins := map[string]bool{}
 
 	for _, raw := range job.URLs {
-		if parsed, checkErr1 := url.Parse(raw); checkErr1 == nil {
+		if parsed, parseErr := url.Parse(raw); parseErr == nil {
 			origins[strings.ToLower(parsed.Scheme+"://"+parsed.Host)] = true
 		}
 	}
@@ -77,7 +77,7 @@ func (r *JobRuntime) publishURLProvenance(ctx context.Context, job *models.Job) 
 
 	return files.UploadFile(
 		ctx,
-		storage.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		job.ID+"/provenance.json",
 		bytes.NewReader(data),
 		int64(len(data)),

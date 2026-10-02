@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -17,7 +17,7 @@ const (
 	scannerTypeAxe           = "axe"
 )
 
-func (s *Server) collectJobScreenshots(ctx context.Context, rec *status.JobRecord) []models.ScreenshotArtifact {
+func (s *Server) collectJobScreenshots(ctx context.Context, rec *jobstore.JobRecord) []models.ScreenshotArtifact {
 	var allScreenshots []models.ScreenshotArtifact
 
 	if rec.ReportJSONKey != "" {
@@ -100,7 +100,7 @@ func (s *Server) extractScannerScreenshots(
 	ctx context.Context,
 	jobID, scannerType, resultsKey string,
 ) ([]models.ScreenshotArtifact, error) {
-	reader, err := s.config.Storage.DownloadFile(ctx, storage.BucketArtifacts, resultsKey)
+	reader, err := s.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, resultsKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download results.json: %w", err)
 	}
@@ -121,7 +121,7 @@ func (s *Server) extractReportScreenshots(
 	ctx context.Context,
 	jobID, reportKey string,
 ) ([]models.ScreenshotArtifact, error) {
-	reader, err := s.config.Storage.DownloadFile(ctx, storage.BucketArtifacts, reportKey)
+	reader, err := s.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, reportKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download report.json: %w", err)
 	}

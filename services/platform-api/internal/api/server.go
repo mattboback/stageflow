@@ -4,8 +4,8 @@ import (
 	"context"
 	"net"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
@@ -17,7 +17,7 @@ type JobAdmitter interface {
 
 // JobStatusReader fetches current job status snapshots.
 type JobStatusReader interface {
-	GetJob(ctx context.Context, jobID string) (*status.JobRecord, error)
+	GetJob(ctx context.Context, jobID string) (*jobstore.JobRecord, error)
 }
 
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
@@ -36,7 +36,7 @@ type ServerConfig struct {
 		DeleteJob(context.Context, string) error
 	}
 	Port                int
-	Storage             storage.Client
+	Storage             artifacts.Client
 	Admitter            JobAdmitter
 	CheckDisk           func(context.Context) error
 	ValidateZIP         func(context.Context, string) error

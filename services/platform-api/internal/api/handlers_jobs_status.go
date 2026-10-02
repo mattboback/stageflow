@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
@@ -78,7 +78,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
+		if errors.Is(err, jobstore.ErrJobNotFound) {
 			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
 
 			return
@@ -106,7 +106,7 @@ func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID 
 
 	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
+		if errors.Is(err, jobstore.ErrJobNotFound) {
 			httputil.RespondNotFound(w, "Job")
 
 			return
@@ -151,7 +151,7 @@ func (s *Server) downloadReport(ctx context.Context, jobID, reportJSONKey string
 		return report.UnifiedReportV2{}, fmt.Errorf("non-job-scoped report key for %s", jobID)
 	}
 
-	reader, err := s.config.Storage.DownloadFile(ctx, storage.BucketArtifacts, key)
+	reader, err := s.config.Storage.DownloadFile(ctx, artifacts.BucketArtifacts, key)
 	if err != nil {
 		return report.UnifiedReportV2{}, fmt.Errorf("download report for %s: %w", jobID, err)
 	}

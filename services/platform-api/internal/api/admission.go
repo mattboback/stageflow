@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	jobstore "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -64,7 +64,7 @@ func (s *Server) admitJob(ctx context.Context, job *models.Job) error {
 
 func (s *Server) respondAdmissionError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, jobstore.ErrQueueFull), errors.Is(err, storage.ErrLowDisk):
+	case errors.Is(err, jobstore.ErrQueueFull), errors.Is(err, artifacts.ErrLowDisk):
 		w.Header().Set("Retry-After", "30")
 		httputil.RespondError(
 			w,

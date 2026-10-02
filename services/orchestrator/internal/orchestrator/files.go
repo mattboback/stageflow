@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	artifacts "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
@@ -92,13 +92,13 @@ func (o *Orchestrator) readOutcome(id, name string) (*scannerOutcome, error) {
 		return nil, err
 	}
 
-	if checkErr1 := validateOutcomeDocument(data); checkErr1 != nil {
-		return nil, checkErr1
+	if validateOutcomeDocumentErr := validateOutcomeDocument(data); validateOutcomeDocumentErr != nil {
+		return nil, validateOutcomeDocumentErr
 	}
 
 	var out scannerOutcome
-	if checkErr2 := json.Unmarshal(data, &out); checkErr2 != nil {
-		return nil, checkErr2
+	if decodeErr := json.Unmarshal(data, &out); decodeErr != nil {
+		return nil, decodeErr
 	}
 
 	if out.Status != "success" && out.Status != "partial" && out.Status != "failed" {
@@ -159,8 +159,8 @@ func (o *Orchestrator) readProgress(ctx context.Context, job *models.Job, name s
 		}
 	}
 
-	if checkErr3 := lines.Err(); checkErr3 != nil {
-		return checkErr3
+	if iterErr := lines.Err(); iterErr != nil {
+		return iterErr
 	}
 
 	if total == 0 {
@@ -175,8 +175,8 @@ func (o *Orchestrator) cleanupJob(ctx context.Context, job *models.Job) error {
 		podID = podman.JobPodName(job.ID)
 	}
 
-	if checkErr4 := o.config.PodmanClient.RemovePod(ctx, podID, true); checkErr4 != nil {
-		return checkErr4
+	if err := o.config.PodmanClient.RemovePod(ctx, podID, true); err != nil {
+		return err
 	}
 
 	root, err := os.OpenRoot(filepath.Join(o.config.DataDir, "jobs", job.ID))
@@ -191,8 +191,8 @@ func (o *Orchestrator) cleanupJob(ctx context.Context, job *models.Job) error {
 	defer root.Close()
 
 	for _, name := range []string{"input.zip", "site", "auth.json", "auth", ".provenance"} {
-		if checkErr5 := root.RemoveAll(name); checkErr5 != nil {
-			return checkErr5
+		if removeAllErr := root.RemoveAll(name); removeAllErr != nil {
+			return removeAllErr
 		}
 	}
 
@@ -217,12 +217,12 @@ func (o *Orchestrator) retain(ctx context.Context, now time.Time) error {
 			continue
 		}
 
-		if checkErr6 := o.config.Database.DeleteJob(ctx, job.ID); checkErr6 != nil {
-			return checkErr6
+		if deleteJobErr := o.config.Database.DeleteJob(ctx, job.ID); deleteJobErr != nil {
+			return deleteJobErr
 		}
 
-		if checkErr7 := os.RemoveAll(filepath.Join(o.config.DataDir, "jobs", job.ID)); checkErr7 != nil {
-			return checkErr7
+		if removeAllErr := os.RemoveAll(filepath.Join(o.config.DataDir, "jobs", job.ID)); removeAllErr != nil {
+			return removeAllErr
 		}
 	}
 
@@ -231,8 +231,8 @@ func (o *Orchestrator) retain(ctx context.Context, now time.Time) error {
 
 func validateOutcomeDocument(data []byte) error {
 	var doc map[string]json.RawMessage
-	if checkErr8 := json.Unmarshal(data, &doc); checkErr8 != nil {
-		return checkErr8
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return err
 	}
 
 	for _, field := range []string{"status", "error", "pages_scanned", "summary", "timing"} {
@@ -264,7 +264,7 @@ func validateOutcomeDocument(data []byte) error {
 
 		return nil
 	}
-	if checkErr9 := check(
+	if err := check(
 		summary,
 		[]string{
 			"total_violations",
@@ -274,15 +274,15 @@ func validateOutcomeDocument(data []byte) error {
 			"moderate_issues",
 			"minor_issues",
 		},
-	); checkErr9 != nil {
-		return checkErr9
+	); err != nil {
+		return err
 	}
 
-	if checkErr10 := check(
+	if err := check(
 		severities,
 		[]string{"critical", "serious", "moderate", "minor", "info"},
-	); checkErr10 != nil {
-		return checkErr10
+	); err != nil {
+		return err
 	}
 
 	return check(
@@ -334,8 +334,8 @@ func (o *Orchestrator) retainOrphans(ctx context.Context, now time.Time) error {
 			continue
 		}
 
-		if checkErr11 := root.RemoveAll(entry.Name()); checkErr11 != nil {
-			return checkErr11
+		if removeAllErr := root.RemoveAll(entry.Name()); removeAllErr != nil {
+			return removeAllErr
 		}
 	}
 

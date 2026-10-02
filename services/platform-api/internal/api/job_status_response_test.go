@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
@@ -108,9 +108,9 @@ func TestBuildJobStatusResponse_DoneUsesAggregatedReportIssueCount(t *testing.T)
 		t.Fatalf("marshal report: %v", err)
 	}
 
-	storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, reportKey)] = reportBytes
+	storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, reportKey)] = reportBytes
 
-	rec := &status.JobRecord{
+	rec := &jobstore.JobRecord{
 		JobID:           jobID,
 		State:           models.JobStateDone,
 		TotalViolations: 6,
@@ -158,10 +158,10 @@ func TestBuildJobStatusResponse_Pending(t *testing.T) {
 func TestBuildPerScannerArtifacts(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
-	rec := &status.JobRecord{
+	rec := &jobstore.JobRecord{
 		JobID: "test-per-scanner",
 		State: models.JobStateDone,
-		ScannerArtifacts: map[string]*status.ScannerArtifactRecord{
+		ScannerArtifacts: map[string]*jobstore.ScannerArtifactRecord{
 			"axe": {
 				ScannerType: "axe",
 				ResultsKey:  "test-per-scanner/axe/results.json",

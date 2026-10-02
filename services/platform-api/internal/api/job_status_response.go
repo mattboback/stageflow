@@ -3,12 +3,12 @@ package api
 import (
 	"context"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
-func (s *Server) buildJobStatusResponse(ctx context.Context, rec *status.JobRecord) (*models.JobStatus, error) {
+func (s *Server) buildJobStatusResponse(ctx context.Context, rec *jobstore.JobRecord) (*models.JobStatus, error) {
 	job := rec.ToModel()
 
 	if rec.State != models.JobStateDone {
@@ -44,7 +44,7 @@ func (s *Server) buildJobStatusResponse(ctx context.Context, rec *status.JobReco
 
 func (s *Server) buildArtifactsForDoneJob(
 	ctx context.Context,
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 ) (*models.ArtifactLocation, bool, error) {
 	artifacts := &models.ArtifactLocation{}
 	artifactSet := false
@@ -183,7 +183,7 @@ func (s *Server) setRequiredArtifactURL(
 
 func (s *Server) buildPerScannerArtifacts(
 	ctx context.Context,
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 ) (map[string]*models.ScannerArtifacts, bool) {
 	perScanner := make(map[string]*models.ScannerArtifacts, len(rec.ScannerArtifacts))
 

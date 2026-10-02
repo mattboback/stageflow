@@ -1,5 +1,5 @@
-// Package db provides the durable job queue, scanner state, and status snapshots.
-package db
+// Package jobstore provides the durable job queue, scanner state, and status snapshots.
+package jobstore
 
 import (
 	"context"

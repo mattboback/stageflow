@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 
 	"github.com/mattboback/stageflow/libs/go/models"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
@@ -313,12 +313,12 @@ func TestValidJobID(t *testing.T) {
 
 type errorAfterInitialReader struct{ reads atomic.Int32 }
 
-func (r *errorAfterInitialReader) GetJob(context.Context, string) (*status.JobRecord, error) {
+func (r *errorAfterInitialReader) GetJob(context.Context, string) (*jobstore.JobRecord, error) {
 	if r.reads.Add(1) > 1 {
 		return nil, errors.New("database unavailable")
 	}
 
-	return &status.JobRecord{JobID: sseTestJobID, State: models.JobStateScanning}, nil
+	return &jobstore.JobRecord{JobID: sseTestJobID, State: models.JobStateScanning}, nil
 }
 func TestStreamDatabaseErrorClosesWithoutDeclaringJobFailed(t *testing.T) {
 	server, _, _ := newTestServer(t)
@@ -353,7 +353,7 @@ func TestStreamCancellationStopsSnapshotPolling(t *testing.T) {
 
 func TestTerminalInitialSnapshotDoesNotReplayReady(t *testing.T) {
 	server, _, _ := newTestServer(t)
-	server.statusReader = &staticJobReader{rec: &status.JobRecord{
+	server.statusReader = &staticJobReader{rec: &jobstore.JobRecord{
 		JobID: sseTestJobID, State: models.JobStateDone, TotalPages: 30,
 		ExpectedScanners: []string{"axe"}, CompletedScanners: []string{"axe"},
 		ScannerStatuses: map[string]models.ScannerStatus{"axe": {State: "completed", PagesScanned: 30, TotalPages: 30}},

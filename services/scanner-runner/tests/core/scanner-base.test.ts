@@ -143,7 +143,7 @@ vi.mock('../../src/core/scanner-files', async () => {
 	);
 	return {
 		...actual,
-		ScannerFiles: vi.fn().mockImplementation(function NatsPublisherMock() {
+		ScannerFiles: vi.fn().mockImplementation(function ScannerFilesMock() {
 			return mocks.mockEventPublisherInstance;
 		})
 	};

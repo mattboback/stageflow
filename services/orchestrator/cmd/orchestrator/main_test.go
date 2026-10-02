@@ -7,10 +7,10 @@ import (
 	"testing"
 )
 
-type orderedMonitorWaiter struct{ order *[]string }
+type orderedReconcileWaiter struct{ order *[]string }
 
-func (s *orderedMonitorWaiter) WaitForMonitors() {
-	*s.order = append(*s.order, "monitors")
+func (s *orderedReconcileWaiter) Wait() {
+	*s.order = append(*s.order, "reconciler")
 }
 
 type orderedAPIShutdowner struct {
@@ -36,13 +36,13 @@ func TestShutdownServiceCancelsBeforeHTTPAndJoinsAfterward(t *testing.T) {
 		context.Background(),
 		cancel,
 		&orderedAPIShutdowner{order: &order, err: expectedErr},
-		&orderedMonitorWaiter{order: &order},
+		&orderedReconcileWaiter{order: &order},
 	)
 	if !errors.Is(err, expectedErr) {
 		t.Fatalf("shutdownService() error = %v, want %v", err, expectedErr)
 	}
 
-	want := []string{"cancel", "api", "monitors"}
+	want := []string{"cancel", "api", "reconciler"}
 	if len(order) != len(want) {
 		t.Fatalf("shutdown order = %v, want %v", order, want)
 	}
@@ -63,8 +63,8 @@ func TestWaitForShutdownReturnsAPIServerFailure(t *testing.T) {
 	apiErrors := make(chan error, 1)
 	apiErrors <- expected
 
-	if checkErr1 := waitForShutdown(signals, apiErrors); !errors.Is(checkErr1, expected) {
-		t.Fatalf("waitForShutdown() error = %v, want %v", checkErr1, expected)
+	if err := waitForShutdown(signals, apiErrors); !errors.Is(err, expected) {
+		t.Fatalf("waitForShutdown() error = %v, want %v", err, expected)
 	}
 }
 
@@ -76,8 +76,8 @@ func TestWaitForShutdownAcceptsSignal(t *testing.T) {
 
 	signals <- os.Interrupt
 
-	if checkErr2 := waitForShutdown(signals, apiErrors); checkErr2 != nil {
-		t.Fatalf("waitForShutdown() error = %v, want nil", checkErr2)
+	if err := waitForShutdown(signals, apiErrors); err != nil {
+		t.Fatalf("waitForShutdown() error = %v, want nil", err)
 	}
 }
 
@@ -89,7 +89,7 @@ func TestWaitForShutdownRejectsUnexpectedCleanAPIStop(t *testing.T) {
 	apiErrors := make(chan error, 1)
 	apiErrors <- nil
 
-	if checkErr3 := waitForShutdown(signals, apiErrors); checkErr3 == nil {
+	if err := waitForShutdown(signals, apiErrors); err == nil {
 		t.Fatal("waitForShutdown() error = nil, want unexpected-stop error")
 	}
 }

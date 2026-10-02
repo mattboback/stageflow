@@ -526,7 +526,7 @@ func robotsRepresentatives(
 	pageURLs := make(map[string]string, len(pages))
 	for _, page := range pages {
 		pageURLs[page.Id] = page.Url
-		if parsed, checkErr1 := url.Parse(page.Url); checkErr1 == nil && parsed.Host != "" {
+		if parsed, err := url.Parse(page.Url); err == nil && parsed.Host != "" {
 			origins[page.Id] = parsed.Scheme + "://" + parsed.Host
 		}
 	}

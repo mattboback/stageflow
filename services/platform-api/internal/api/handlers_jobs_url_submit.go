@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
-	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -444,7 +444,7 @@ func (s *Server) normalizeAndStoreJobURLAuth(
 	key := jobID + "/auth.json"
 	if uploadErr := s.config.Storage.UploadFile(
 		ctx,
-		sharedstorage.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		key,
 		bytes.NewReader(decodedStorageState),
 		int64(len(decodedStorageState)),
@@ -474,7 +474,7 @@ func (s *Server) cleanupUploadedAuthState(key string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := s.config.Storage.DeleteFile(ctx, sharedstorage.BucketArtifacts, key); err != nil {
+	if err := s.config.Storage.DeleteFile(ctx, artifacts.BucketArtifacts, key); err != nil {
 		logging.Warn(ctx, "Failed to clean up uploaded auth state", "key", key, "error", err)
 	}
 }
@@ -485,7 +485,7 @@ func (s *Server) cleanupUploadedAuthState(key string) {
 //
 // The platform-api enforces structure: form recipes round-trip with their
 // literal values, and storage_state returns decoded bytes to the handler so it
-// can upload them before publishing the job.created event.
+// can write them to a private job file before admitting the job.
 func normalizeJobURLAuth(
 	ctx context.Context,
 	resolver ipAddrResolver,

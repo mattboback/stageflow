@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 )
 
 func (a *Aggregator) downloadScanResults(ctx context.Context, resultsPath string) (*report.UnifiedReportV2, error) {
-	reader, err := a.storage.DownloadFile(ctx, sharedstorage.BucketArtifacts, resultsPath)
+	reader, err := a.storage.DownloadFile(ctx, artifacts.BucketArtifacts, resultsPath)
 	if err != nil {
 		return nil, fmt.Errorf("download results.json: %w", err)
 	}
@@ -40,7 +40,7 @@ func (a *Aggregator) uploadAggregatedReport(
 
 	if uploadErr := a.storage.UploadFile(
 		ctx,
-		sharedstorage.BucketArtifacts,
+		artifacts.BucketArtifacts,
 		key,
 		bytes.NewReader(blob),
 		int64(len(blob)),

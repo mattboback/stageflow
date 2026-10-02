@@ -68,7 +68,7 @@ func TestPlanRejectsFromEnvReferences(t *testing.T) {
 		`{"type":"fill","selector":"#a","value":{"from_env":"POSTGRES_PASSWORD"}}`,
 		`{"type":"select","selector":"#a","value":{"from_env":"DATABASE_URL"}}`,
 		`{"type":"click","selector":"#a","value":{"from_env":"ORCHESTRATOR_API_TOKEN"}}`,
-		`{"type":"fill","selector":"#a","value":{"from_env":"NATS_URL"}}`,
+		`{"type":"fill","selector":"#a","value":{"from_env":"PLATFORM_API_TOKEN"}}`,
 	} {
 		t.Run(step, func(t *testing.T) {
 			authJSON := `{"mode":"form","login_url":"https://x","steps":[` + step + `],"success":{"type":"load"}}`

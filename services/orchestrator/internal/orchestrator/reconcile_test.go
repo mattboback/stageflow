@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	artifacts "github.com/mattboback/stageflow/internal/artifacts"
-	db "github.com/mattboback/stageflow/internal/jobstore"
-	orchtest "github.com/mattboback/stageflow/internal/testpostgres"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/testpostgres"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
@@ -26,7 +26,7 @@ import (
 var testURL string
 
 func TestMain(m *testing.M) {
-	url, stop, err := orchtest.PostgresForTests("reconcile")
+	url, stop, err := testpostgres.PostgresForTests("reconcile")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -113,11 +113,11 @@ func testOrchestrator(t *testing.T) (*Orchestrator, *fakeRuntime) {
 	}
 
 	schema := fmt.Sprintf("reconcile_%d", time.Now().UnixNano())
-	if _, checkErr1 := admin.ExecContext(ctx, "CREATE SCHEMA "+schema); checkErr1 != nil {
-		t.Fatal(checkErr1)
+	if _, execContextErr := admin.ExecContext(ctx, "CREATE SCHEMA "+schema); execContextErr != nil {
+		t.Fatal(execContextErr)
 	}
 
-	database, err := db.NewDatabase(&db.Config{URL: testURL + "&search_path=" + schema})
+	database, err := jobstore.NewDatabase(&jobstore.Config{URL: testURL + "&search_path=" + schema})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,8 +159,8 @@ func admit(t *testing.T, o *Orchestrator, id string) {
 		ExpectedScanners: []string{"axe"},
 		Config:           models.JobConfig{Modules: []string{"axe"}},
 	}
-	if checkErr2 := o.config.Database.AdmitJob(context.Background(), job); checkErr2 != nil {
-		t.Fatal(checkErr2)
+	if err := o.config.Database.AdmitJob(context.Background(), job); err != nil {
+		t.Fatal(err)
 	}
 }
 func active(t *testing.T, o *Orchestrator, id string) *models.Job {
@@ -175,13 +175,13 @@ func active(t *testing.T, o *Orchestrator, id string) *models.Job {
 	}
 
 	for _, state := range []models.JobState{models.JobStateReady, models.JobStateScanning} {
-		if checkErr3 := o.config.Database.BeginStage(ctx, id, state); checkErr3 != nil {
-			t.Fatal(checkErr3)
+		if beginStageErr := o.config.Database.BeginStage(ctx, id, state); beginStageErr != nil {
+			t.Fatal(beginStageErr)
 		}
 	}
 
-	if checkErr4 := o.config.Database.SetPodID(ctx, id, "pod"); checkErr4 != nil {
-		t.Fatal(checkErr4)
+	if setPodIDErr := o.config.Database.SetPodID(ctx, id, "pod"); setPodIDErr != nil {
+		t.Fatal(setPodIDErr)
 	}
 
 	job, err = o.config.Database.GetJob(ctx, id)
@@ -211,14 +211,14 @@ func TestFailedCleanupRetainsActiveCapacity(t *testing.T) {
 
 	admit(t, o, "second")
 
-	if checkErr5 := o.fail(context.Background(), job, "scanning", "deadline"); checkErr5 != nil {
-		t.Fatal(checkErr5)
+	if err := o.fail(context.Background(), job, "scanning", "deadline"); err != nil {
+		t.Fatal(err)
 	}
 
 	runtime.removeErr = errors.New("pod removal unavailable")
 
-	if checkErr6 := o.ReconcileOnce(context.Background()); checkErr6 != nil {
-		t.Fatal(checkErr6)
+	if err := o.ReconcileOnce(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 
 	queued, err := o.config.Database.GetJob(context.Background(), "second")
@@ -233,8 +233,8 @@ func TestFailedCleanupRetainsActiveCapacity(t *testing.T) {
 	runtime.removeErr = nil
 
 	o.config.CheckDisk = func(context.Context) error { return artifacts.ErrLowDisk }
-	if checkErr7 := o.ReconcileOnce(context.Background()); checkErr7 != nil {
-		t.Fatal(checkErr7)
+	if reconcileOnceErr := o.ReconcileOnce(context.Background()); reconcileOnceErr != nil {
+		t.Fatal(reconcileOnceErr)
 	}
 
 	cleaned, _ := o.config.Database.GetJob(context.Background(), "first")
@@ -253,8 +253,8 @@ func TestRestartAdoptsRunningScannerWithoutAttempt(t *testing.T) {
 	runtime.containers = []podman.ContainerInfo{scanner(job.ID, "running", 0)}
 
 	for range 2 {
-		if checkErr8 := o.ReconcileOnce(context.Background()); checkErr8 != nil {
-			t.Fatal(checkErr8)
+		if err := o.ReconcileOnce(context.Background()); err != nil {
+			t.Fatal(err)
 		}
 	}
 
@@ -275,20 +275,20 @@ func TestExitFailureOverridesCleanOutcome(t *testing.T) {
 	runtime.containers[0].OOMKilled = true
 
 	dir := filepath.Join(o.config.DataDir, "jobs", job.ID, "axe")
-	if checkErr9 := os.MkdirAll(dir, 0700); checkErr9 != nil {
-		t.Fatal(checkErr9)
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
 	}
 
-	if checkErr10 := os.WriteFile(
+	if err := os.WriteFile(
 		filepath.Join(dir, "outcome.json"),
 		[]byte(`{"status":"success","pages_scanned":1,"summary":{},"timing":{}}`),
 		0600,
-	); checkErr10 != nil {
-		t.Fatal(checkErr10)
+	); err != nil {
+		t.Fatal(err)
 	}
 
-	if checkErr11 := o.ReconcileOnce(context.Background()); checkErr11 != nil {
-		t.Fatal(checkErr11)
+	if err := o.ReconcileOnce(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 
 	after, _ := o.config.Database.GetJob(context.Background(), job.ID)
@@ -304,8 +304,8 @@ func TestProgressIgnoresIncompleteTrailingLine(t *testing.T) {
 	data := []byte("{\"pages_scanned\":2,\"total_pages\":4}\n{\"pages_scanned\":3")
 	_ = os.WriteFile(filepath.Join(dir, "progress.jsonl"), data, 0600)
 
-	if checkErr12 := o.readProgress(context.Background(), job, "axe"); checkErr12 != nil {
-		t.Fatal(checkErr12)
+	if err := o.readProgress(context.Background(), job, "axe"); err != nil {
+		t.Fatal(err)
 	}
 
 	after, _ := o.config.Database.GetJob(context.Background(), job.ID)
@@ -339,7 +339,7 @@ func TestTransientInspectDoesNotFailScanner(t *testing.T) {
 			runtime.containers = []podman.ContainerInfo{scanner(job.ID, "exited", 0)}
 			runtime.inspectErr = fault
 
-			if checkErr13 := o.ReconcileOnce(context.Background()); checkErr13 == nil {
+			if err := o.ReconcileOnce(context.Background()); err == nil {
 				t.Fatal("lost transient inspection error")
 			}
 
@@ -350,8 +350,8 @@ func TestTransientInspectDoesNotFailScanner(t *testing.T) {
 
 			runtime.inspectErr = nil
 
-			if checkErr14 := o.ReconcileOnce(context.Background()); checkErr14 != nil {
-				t.Fatal(checkErr14)
+			if err := o.ReconcileOnce(context.Background()); err != nil {
+				t.Fatal(err)
 			}
 
 			after, _ = o.config.Database.GetJob(context.Background(), job.ID)
@@ -371,8 +371,8 @@ func TestInvalidOutcomeFailsCoverage(t *testing.T) {
 			_ = os.MkdirAll(dir, 0700)
 			_ = os.WriteFile(filepath.Join(dir, "outcome.json"), []byte(data), 0600)
 
-			if checkErr15 := o.ReconcileOnce(context.Background()); checkErr15 != nil {
-				t.Fatal(checkErr15)
+			if err := o.ReconcileOnce(context.Background()); err != nil {
+				t.Fatal(err)
 			}
 
 			after, _ := o.config.Database.GetJob(context.Background(), job.ID)
@@ -414,17 +414,17 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 	}
 
 	key := job.ID + "/axe/results.json"
-	if checkErr16 := o.config.Storage.UploadFile(
+	if uploadFileErr := o.config.Storage.UploadFile(
 		ctx,
 		artifacts.BucketArtifacts,
 		key,
 		bytes.NewReader(data),
 		int64(len(data)),
-	); checkErr16 != nil {
-		t.Fatal(checkErr16)
+	); uploadFileErr != nil {
+		t.Fatal(uploadFileErr)
 	}
 
-	if checkErr17 := o.config.Database.RecordScannerResult(
+	if recordScannerResultErr := o.config.Database.RecordScannerResult(
 		ctx,
 		job.ID,
 		"partial",
@@ -435,18 +435,18 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 			PagesScanned: 1,
 			Error:        "a page audit failed",
 		},
-	); checkErr17 != nil {
-		t.Fatal(checkErr17)
+	); recordScannerResultErr != nil {
+		t.Fatal(recordScannerResultErr)
 	}
 
-	if checkErr18 := o.config.Database.BeginStage(ctx, job.ID, models.JobStateCompleting); checkErr18 != nil {
-		t.Fatal(checkErr18)
+	if beginStageErr := o.config.Database.BeginStage(ctx, job.ID, models.JobStateCompleting); beginStageErr != nil {
+		t.Fatal(beginStageErr)
 	}
 
 	storage := &interruptedStorage{Client: o.config.Storage, failReport: true}
 
 	o.aggregator = adapterstorage.NewAggregator(storage, nil)
-	if checkErr19 := o.ReconcileOnce(ctx); checkErr19 == nil {
+	if reconcileOnceErr := o.ReconcileOnce(ctx); reconcileOnceErr == nil {
 		t.Fatal("missing interrupted aggregation error")
 	}
 
@@ -459,8 +459,8 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 	restarted := NewOrchestrator(&o.config)
 
 	restarted.config.CheckDisk = func(context.Context) error { return artifacts.ErrLowDisk }
-	if checkErr20 := restarted.ReconcileOnce(ctx); checkErr20 != nil {
-		t.Fatal(checkErr20)
+	if reconcileOnceErr := restarted.ReconcileOnce(ctx); reconcileOnceErr != nil {
+		t.Fatal(reconcileOnceErr)
 	}
 
 	after, _ = o.config.Database.GetJob(ctx, job.ID)
@@ -475,16 +475,16 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 	defer reader.Close()
 
 	var published report.UnifiedReportV2
-	if checkErr21 := json.NewDecoder(reader).Decode(&published); checkErr21 != nil {
-		t.Fatal(checkErr21)
+	if decodeErr := json.NewDecoder(reader).Decode(&published); decodeErr != nil {
+		t.Fatal(decodeErr)
 	}
 
 	if published.Scanners[0].Status != report.ScannerStatusPartial || published.Summary.Score != nil {
 		t.Fatal("partial outcome was rendered as complete coverage")
 	}
 
-	if checkErr22 := restarted.ReconcileOnce(ctx); checkErr22 != nil {
-		t.Fatal(checkErr22)
+	if reconcileOnceErr := restarted.ReconcileOnce(ctx); reconcileOnceErr != nil {
+		t.Fatal(reconcileOnceErr)
 	}
 
 	again, _ := o.config.Database.GetJob(ctx, job.ID)

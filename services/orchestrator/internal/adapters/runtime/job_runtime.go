@@ -140,9 +140,9 @@ func (r *JobRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string,
 // This mirrors ensureContainerStarted below, for the same reason: the pod name is
 // deterministic, so a create whose response never arrived leaves a pod that every
 // later attempt then collides with. In production a `pods/create` call exceeded
-// the client's response-header timeout, Podman created the pod anyway, and the
-// nine redeliveries that followed each got 409 "pod already exists" until the
-// message was dropped and the job sat in PENDING forever.
+// the client's response-header timeout, Podman created the pod anyway, and every
+// retry that followed got 409 "pod already exists", so the job never left
+// PENDING.
 //
 // Two deliberate differences from the container path:
 //
@@ -151,7 +151,7 @@ func (r *JobRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string,
 //     so the extra round-trip would buy nothing on the happy path.
 //   - Recovery runs on *any* create error, not just a 409. The failure that
 //     started this was a transport timeout, not an API status, so gating on 409
-//     would still lose the first delivery.
+//     would still lose the first attempt.
 func (r *JobRuntime) ensurePod(ctx context.Context, req *PodCreateRequest) (string, error) {
 	if req == nil || req.Name == "" {
 		return "", errors.New("pod name is required")
@@ -318,15 +318,15 @@ func (r *JobRuntime) startExistingContainer(
 	result := &ContainerLaunchResult{ContainerID: container.ID, Existing: true}
 	if isTerminalContainerState(container) {
 		// A scanner may have finished and written its durable outcome just
-		// before the orchestrator exited. Reattach the monitor, but never rerun
-		// the completed container and emit duplicate scan events.
+		// before the orchestrator exited. Adopt the container, but never rerun
+		// it: the reconciler settles the scanner from the outcome on disk.
 		return result, nil
 	}
 
-	if checkErr1 := r.client.StartContainer(ctx, container.ID); checkErr1 != nil {
+	if err := r.client.StartContainer(ctx, container.ID); err != nil {
 		refreshed, inspectErr := r.client.InspectContainer(ctx, container.ID)
 		if inspectErr != nil || refreshed.State != ContainerState("running") {
-			return result, fmt.Errorf("%s: %w", startErrMessage, checkErr1)
+			return result, fmt.Errorf("%s: %w", startErrMessage, err)
 		}
 	}
 
@@ -351,10 +351,10 @@ func (r *JobRuntime) startCreatedContainer(
 	containerID, startErrMessage string,
 ) (*ContainerLaunchResult, error) {
 	result := &ContainerLaunchResult{ContainerID: containerID}
-	if checkErr2 := r.client.StartContainer(ctx, containerID); checkErr2 != nil {
+	if err := r.client.StartContainer(ctx, containerID); err != nil {
 		container, inspectErr := r.client.InspectContainer(ctx, containerID)
 		if inspectErr != nil || container.State != ContainerState("running") {
-			return result, fmt.Errorf("%s: %w", startErrMessage, checkErr2)
+			return result, fmt.Errorf("%s: %w", startErrMessage, err)
 		}
 	}
 
@@ -383,8 +383,8 @@ func (r *JobRuntime) StartScanner(
 		return nil, err
 	}
 
-	if checkErr3 := r.publishURLProvenance(ctx, job); checkErr3 != nil {
-		return nil, checkErr3
+	if publishURLProvenanceErr := r.publishURLProvenance(ctx, job); publishURLProvenanceErr != nil {
+		return nil, publishURLProvenanceErr
 	}
 
 	mounts, err := r.resolveVolumeMounts(ctx, plan.Volumes)
@@ -392,7 +392,7 @@ func (r *JobRuntime) StartScanner(
 		return nil, err
 	}
 
-	if _, checkErr4 := os.Stat(filepath.Join(r.dataDir, "jobs", job.ID, "auth.json")); checkErr4 == nil {
+	if _, statErr := os.Stat(filepath.Join(r.dataDir, "jobs", job.ID, "auth.json")); statErr == nil {
 		mounts = append(
 			mounts,
 			VolumeMount{
@@ -456,12 +456,12 @@ func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error
 
 	for _, name := range []string{"", "site", ".provenance", "axe", "lighthouse", "link-checker", "security-headers", "seo"} {
 		dir := filepath.Join(r.dataDir, "jobs", jobID, name)
-		if checkErr5 := os.MkdirAll(dir, 0o700); checkErr5 != nil {
-			return "", checkErr5
+		if mkdirAllErr := os.MkdirAll(dir, 0o700); mkdirAllErr != nil {
+			return "", mkdirAllErr
 		}
 
-		if checkErr6 := r.directoryOwner(dir); checkErr6 != nil {
-			return "", checkErr6
+		if directoryOwnerErr := r.directoryOwner(dir); directoryOwnerErr != nil {
+			return "", directoryOwnerErr
 		}
 	}
 
@@ -469,12 +469,12 @@ func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error
 }
 
 func (r *JobRuntime) ensureVolume(ctx context.Context, name string) (*VolumeInfo, error) {
-	if info, checkErr7 := r.client.InspectVolume(ctx, name); checkErr7 == nil {
+	if info, err := r.client.InspectVolume(ctx, name); err == nil {
 		return info, nil
 	}
 
-	if checkErr8 := r.client.CreateVolume(ctx, name); checkErr8 != nil {
-		return nil, checkErr8
+	if err := r.client.CreateVolume(ctx, name); err != nil {
+		return nil, err
 	}
 
 	return r.client.InspectVolume(ctx, name)

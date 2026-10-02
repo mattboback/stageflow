@@ -14,15 +14,15 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 	t.Parallel()
 
 	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
-	if checkErr1 := registry.Register(&scanners.Definition{
+	if err := registry.Register(&scanners.Definition{
 		ID:      "axe",
 		Name:    "axe",
 		Enabled: true,
 		Requirements: scanners.Requirements{
 			MaxMemoryMB: 4096,
 		},
-	}); checkErr1 != nil {
-		t.Fatalf("Register() error = %v", checkErr1)
+	}); err != nil {
+		t.Fatalf("Register() error = %v", err)
 	}
 
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
@@ -79,12 +79,12 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 	t.Parallel()
 
 	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
-	if checkErr2 := registry.Register(&scanners.Definition{
+	if err := registry.Register(&scanners.Definition{
 		ID:      "axe",
 		Name:    "axe",
 		Enabled: true,
-	}); checkErr2 != nil {
-		t.Fatalf("Register() error = %v", checkErr2)
+	}); err != nil {
+		t.Fatalf("Register() error = %v", err)
 	}
 
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{

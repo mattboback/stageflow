@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sort"
 
-	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
@@ -15,11 +15,11 @@ const (
 )
 
 type Aggregator struct {
-	storage         sharedstorage.Client
+	storage         artifacts.Client
 	scannerRegistry *scanners.Registry
 }
 
-func NewAggregator(storageClient sharedstorage.Client, scannerRegistry *scanners.Registry) *Aggregator {
+func NewAggregator(storageClient artifacts.Client, scannerRegistry *scanners.Registry) *Aggregator {
 	return &Aggregator{
 		storage:         storageClient,
 		scannerRegistry: scannerRegistry,

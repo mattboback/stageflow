@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 type CurrentReader interface {
-	GetJob(ctx context.Context, jobID string) (*status.JobRecord, error)
+	GetJob(ctx context.Context, jobID string) (*jobstore.JobRecord, error)
 }
 
 type Config struct {
@@ -18,7 +18,7 @@ type Config struct {
 }
 
 type StatusPipeline interface {
-	Apply(context.Context, Signal) (*status.JobRecord, error)
+	Apply(context.Context, Signal) (*jobstore.JobRecord, error)
 }
 
 type BeginJob struct {
@@ -54,7 +54,7 @@ type Signal struct {
 
 type Change struct {
 	JobID      string
-	Snapshot   *status.JobRecord
+	Snapshot   *jobstore.JobRecord
 	Signal     Signal
 	ObservedAt time.Time
 }

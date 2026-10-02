@@ -17,8 +17,8 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/internal/archive"
-	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -235,7 +235,7 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 
 		expectedKey := created.JobID + "/auth.json"
 
-		uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
+		uploaded := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, expectedKey)]
 		if string(uploaded) != storageState {
 			t.Fatalf("auth state was not uploaded before publish; got %q, want %q", uploaded, storageState)
 		}
@@ -287,7 +287,7 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 		t.Fatalf("dispatch leaked session metadata: %s", authWire)
 	}
 
-	uploaded := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, expectedKey)]
+	uploaded := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, expectedKey)]
 	if string(uploaded) != storageState {
 		t.Fatalf("uploaded storage state = %q, want %q", uploaded, storageState)
 	}
@@ -415,7 +415,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 		t.Fatalf("marshal report: %v", err)
 	}
 
-	uploadKey := fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, reportKey)
+	uploadKey := fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, reportKey)
 	objectStore.uploads[uploadKey] = reportBytes
 
 	if _, completeErr := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
@@ -822,7 +822,7 @@ func (f *fakeJobAdmission) AdmitJob(_ context.Context, job *models.Job) error {
 	}
 
 	f.envelopes = append(f.envelopes, envelope)
-	f.snapshots.Put(status.Snapshot(job))
+	f.snapshots.Put(jobstore.Snapshot(job))
 
 	return nil
 }
@@ -860,7 +860,7 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobAdmission) {
 		JobDeleter:   publisher,
 		CheckDisk:    func(context.Context) error { return nil },
 		ValidateZIP: func(_ context.Context, id string) error {
-			data, exists := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketStaging, id+"/input.zip")]
+			data, exists := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketStaging, id+"/input.zip")]
 			if !exists {
 				return errors.New("input ZIP missing")
 			}

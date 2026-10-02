@@ -92,16 +92,16 @@ func (p *ScannerLaunchPlanner) Plan(
 	resultsDir, provenancePath := scannerPaths(job)
 	env := p.baseEnv(ctx, job, scannerType, resultsDir, provenancePath)
 
-	if checkErr1 := p.applyURLInputs(env, job); checkErr1 != nil {
-		return nil, checkErr1
+	if err := p.applyURLInputs(env, job); err != nil {
+		return nil, err
 	}
 
-	if checkErr2 := p.applyScannerConfig(env, job, scannerType); checkErr2 != nil {
-		return nil, checkErr2
+	if err := p.applyScannerConfig(env, job, scannerType); err != nil {
+		return nil, err
 	}
 
-	if checkErr3 := p.applyAuth(env, job); checkErr3 != nil {
-		return nil, checkErr3
+	if err := p.applyAuth(env, job); err != nil {
+		return nil, err
 	}
 
 	return &ScannerLaunchPlan{
@@ -236,7 +236,8 @@ func (p *ScannerLaunchPlanner) applyScannerConfig(
 // applyAuth wires the optional Provenance.auth block into the scanner-runner
 // pod's environment as PROVENANCE_AUTH_JSON: the canonical Provenance.auth JSON
 // the scanner-runner attaches to its synthesized Provenance. Form recipes carry
-// literal values; storage_state carries an artifact_key, never raw bytes.
+// literal values; storage_state carries only its mode, because the state itself
+// is a private job file mounted into the scanner.
 //
 // Nothing from the orchestrator's own environment ever reaches the pod through
 // a recipe: {from_env} references are refused here as well as at intake.
@@ -246,24 +247,23 @@ func (p *ScannerLaunchPlanner) applyAuth(env map[string]string, job *models.Job)
 	}
 
 	var auth provenance.Auth
-	if checkErr4 := json.Unmarshal(job.Config.Auth, &auth); checkErr4 != nil {
-		return fmt.Errorf("auth: invalid JobConfig.Auth payload: %w", checkErr4)
+	if err := json.Unmarshal(job.Config.Auth, &auth); err != nil {
+		return fmt.Errorf("auth: invalid JobConfig.Auth payload: %w", err)
 	}
 
-	if checkErr5 := provenance.ValidateAuth(&auth); checkErr5 != nil {
-		return fmt.Errorf("auth: %w", checkErr5)
+	if err := provenance.ValidateAuth(&auth); err != nil {
+		return fmt.Errorf("auth: %w", err)
 	}
 
-	if checkErr6 := rejectFromEnvReferences(&auth); checkErr6 != nil {
-		return checkErr6
+	if err := rejectFromEnvReferences(&auth); err != nil {
+		return err
 	}
 
 	if auth.Mode == provenance.AuthModeStorageState && auth.StorageState != nil &&
 		auth.StorageState.ContentBase64 != "" {
-		// The platform-api normally uploads storage-state bytes before
-		// job.created is published. The orchestrator also normalizes inline
-		// legacy producer payloads during CreateJob, so reaching scanner launch
-		// with inline content is a wiring bug; refuse rather than leak.
+		// Intake writes storage-state bytes to a private job file before it
+		// admits the job, so inline content at scanner launch is a wiring bug;
+		// refuse rather than leak it into a container's environment.
 		return errors.New(
 			"auth.storage_state still has inline content_b64 at scanner-launch time; " +
 				"it must be stored as a private auth file by intake first",

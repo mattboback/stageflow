@@ -54,9 +54,8 @@ type Config struct {
 // minutes for the same reason.
 //
 // RequestTimeout caps the whole request, so it has to move with the header
-// timeout -- raising only the latter changes nothing but the error text. Both stay
-// well under the consumer AckWait, so a hung socket still cannot outlive a
-// message's ack window and cause concurrent redelivery.
+// timeout -- raising only the latter changes nothing but the error text. It also
+// bounds how long one hung socket can hold up a reconcile tick.
 const (
 	defaultRequestTimeout        = 120 * time.Second
 	defaultDialTimeout           = 5 * time.Second

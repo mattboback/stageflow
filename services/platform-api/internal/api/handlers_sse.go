@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -108,7 +108,7 @@ func (s *Server) sendInitialStatus(
 	ctx context.Context,
 	w http.ResponseWriter,
 	flusher http.Flusher,
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 ) bool {
 	job, buildErr := s.buildJobStatusResponse(ctx, rec)
 	if buildErr != nil {
@@ -189,7 +189,7 @@ func (s *Server) handleJobStreamUpdate(
 
 // snapshotUpdates emits scanner outcomes before the terminal job event, even
 // when completion and DONE become visible in the same database read.
-func snapshotUpdates(previous, next *status.JobRecord, readySent *bool) []map[string]any {
+func snapshotUpdates(previous, next *jobstore.JobRecord, readySent *bool) []map[string]any {
 	var updates []map[string]any
 	if !*readySent && next.TotalPages > 0 && next.State != models.JobStatePending &&
 		next.State != models.JobStateExtracting {
@@ -255,7 +255,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 
 	rec, err := s.statusReader.GetJob(ctx, id)
 	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
+		if errors.Is(err, jobstore.ErrJobNotFound) {
 			httputil.RespondNotFound(w, "Job")
 		} else {
 			httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch job status")
@@ -291,7 +291,7 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 	s.streamSnapshotUpdates(ctx, w, flusher, id, rec)
 }
 
-func scannerCompletePayload(name string, scanner models.ScannerStatus, snapshot *status.JobRecord) map[string]any {
+func scannerCompletePayload(name string, scanner models.ScannerStatus, snapshot *jobstore.JobRecord) map[string]any {
 	payload := map[string]any{"type": "scanner_complete", "state": snapshot.State,
 		"scanner_type": name, "pages_scanned": scanner.PagesScanned, "violations": snapshot.TotalViolations,
 		"scanner_violations": scanner.Violations, "timing": map[string]int64{"total_ms": scanner.TotalMs}}
@@ -303,7 +303,7 @@ func scannerCompletePayload(name string, scanner models.ScannerStatus, snapshot 
 	return payload
 }
 
-func terminalSnapshotPayload(snapshot *status.JobRecord) map[string]any {
+func terminalSnapshotPayload(snapshot *jobstore.JobRecord) map[string]any {
 	payload := map[string]any{"type": "complete", "state": snapshot.State}
 	if snapshot.State != models.JobStateFailed {
 		return payload
@@ -347,11 +347,11 @@ func (s *Server) streamSnapshotUpdates(
 	w http.ResponseWriter,
 	flusher http.Flusher,
 	id string,
-	rec *status.JobRecord,
+	rec *jobstore.JobRecord,
 ) {
 	readySent := false
 
-	empty := &status.JobRecord{State: rec.State, ScannerStatuses: rec.ScannerStatuses}
+	empty := &jobstore.JobRecord{State: rec.State, ScannerStatuses: rec.ScannerStatuses}
 	if !s.sendSnapshotUpdates(ctx, w, flusher, snapshotUpdates(empty, rec, &readySent)) {
 		return
 	}

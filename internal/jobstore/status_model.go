@@ -1,5 +1,4 @@
-// Package status defines job status projection models.
-package db
+package jobstore
 
 import (
 	"errors"

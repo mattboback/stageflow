@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	db "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
@@ -30,8 +30,8 @@ func run() int {
 	logger.Info("Starting Orchestrator service...")
 
 	cfg := loadConfig()
-	if checkErr1 := cfg.Validate(); checkErr1 != nil {
-		logger.Error("Invalid configuration", "error", checkErr1)
+	if err := cfg.Validate(); err != nil {
+		logger.Error("Invalid configuration", "error", err)
 
 		return 1
 	}
@@ -47,7 +47,7 @@ func run() int {
 
 	defer stopBackground()
 
-	artifactFiles, err := storage.NewFiles(cfg.DataDir)
+	artifactFiles, err := artifacts.NewFiles(cfg.DataDir)
 	if err != nil {
 		logger.Error("Open job files", "error", err)
 		return 1
@@ -59,12 +59,12 @@ func run() int {
 		return 1
 	}
 
-	if checkErr2 := os.Chown(cfg.DataDir+"/jobs", 65532, 65532); checkErr2 != nil {
-		logger.Error("Initialize job directory permissions", "error", checkErr2)
+	if chownErr := os.Chown(cfg.DataDir+"/jobs", 65532, 65532); chownErr != nil {
+		logger.Error("Initialize job directory permissions", "error", chownErr)
 		return 1
 	}
 
-	database, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL})
+	database, err := jobstore.NewDatabase(&jobstore.Config{URL: cfg.DatabaseURL})
 	if err != nil {
 		logger.Error("Failed to create database", "error", err)
 
@@ -190,28 +190,28 @@ func newPodmanClient(ctx context.Context, cfg *Config) (*podman.Client, error) {
 	return client, nil
 }
 
-type monitorWaiter interface {
-	WaitForMonitors()
+type reconcileWaiter interface {
+	Wait()
 }
 
 type apiShutdowner interface {
 	Shutdown(context.Context) error
 }
 
-// shutdownService cancels background intake before the bounded HTTP drain.
-// Server.Shutdown owns the HTTP handler barrier; only after it returns do the
-// message and monitor barriers release dependencies.
+// shutdownService cancels the reconcile loop before the bounded HTTP drain.
+// Server.Shutdown owns the HTTP handler barrier; only after it returns does the
+// service wait for the loop to stop, so dependencies outlive both.
 func shutdownService(
 	ctx context.Context,
 	cancel context.CancelFunc,
 	api apiShutdowner,
-	monitors monitorWaiter,
+	reconciler reconcileWaiter,
 ) error {
 	cancel()
 
 	shutdownErr := api.Shutdown(ctx)
 
-	monitors.WaitForMonitors()
+	reconciler.Wait()
 
 	return shutdownErr
 }

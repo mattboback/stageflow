@@ -677,8 +677,8 @@ func TestCreateJobPodDoesNotInspectOnTheHappyPath(t *testing.T) {
 		},
 	})
 
-	if _, checkErr1 := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"}); checkErr1 != nil {
-		t.Fatalf("CreateJobPod error: %v", checkErr1)
+	if _, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"}); err != nil {
+		t.Fatalf("CreateJobPod error: %v", err)
 	}
 
 	if inspected != 0 {

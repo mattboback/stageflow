@@ -12,8 +12,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	jobstore "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 )
 
 func TestQueueCapacityRejectsAllCallersAndCleansAuthFiles(t *testing.T) {
@@ -50,7 +50,7 @@ func TestLowDiskRefusesBeforeUploadAndAgainBeforeAdmission(t *testing.T) {
 			server.config.CheckDisk = func(context.Context) error {
 				calls++
 				if calls == rejectAt {
-					return storage.ErrLowDisk
+					return artifacts.ErrLowDisk
 				}
 
 				return nil
@@ -191,7 +191,7 @@ func TestAdmittedJobIsImmediatelyPendingWithSelectedScanners(t *testing.T) {
 
 func TestOrphanPublicFileCannotBeServedWithoutJobRow(t *testing.T) {
 	server, files, _ := newTestServer(t)
-	files.uploads[storage.BucketArtifacts+"::missing/report.json"] = []byte(`{"orphan":true}`)
+	files.uploads[artifacts.BucketArtifacts+"::missing/report.json"] = []byte(`{"orphan":true}`)
 	response := httptest.NewRecorder()
 	server.Router().
 		ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/jobs/missing/files/report.json", http.NoBody))
@@ -203,7 +203,7 @@ func TestOrphanPublicFileCannotBeServedWithoutJobRow(t *testing.T) {
 
 func TestLowDiskZIPRequestDoesNotReadBodyOrCreateFiles(t *testing.T) {
 	server, files, store := newTestServer(t)
-	server.config.CheckDisk = func(context.Context) error { return storage.ErrLowDisk }
+	server.config.CheckDisk = func(context.Context) error { return artifacts.ErrLowDisk }
 	request := uploadArchiveRequest(t, buildTestZip(t))
 	response := httptest.NewRecorder()
 	server.handleJobZipUpload(response, request)
@@ -222,7 +222,7 @@ func TestDeleteCannotRemoveArtifactsWhileCleanupOwnsJob(t *testing.T) {
 	seedReadableJob(t, server, "pending-cleanup", "DONE")
 
 	store.deleteErr = jobstore.ErrCleanupPending
-	files.uploads[storage.BucketArtifacts+"::pending-cleanup/report.json"] = []byte(`{"retained":true}`)
+	files.uploads[artifacts.BucketArtifacts+"::pending-cleanup/report.json"] = []byte(`{"retained":true}`)
 	response := httptest.NewRecorder()
 	server.handleJobDelete(
 		response,

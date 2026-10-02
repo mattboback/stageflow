@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/internal/archive"
-	storage "github.com/mattboback/stageflow/internal/artifacts"
-	db "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/artifacts"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
@@ -59,13 +59,13 @@ func run() error {
 	ctx, cancelRun := context.WithCancel(context.Background())
 	defer cancelRun()
 
-	artifactFiles, err := storage.NewFiles(cfg.DataDir)
+	artifactFiles, err := artifacts.NewFiles(cfg.DataDir)
 	if err != nil {
 		return err
 	}
 	defer artifactFiles.Close()
 
-	statusReader, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL, RequireSchema: true})
+	statusReader, err := jobstore.NewDatabase(&jobstore.Config{URL: cfg.DatabaseURL, RequireSchema: true})
 	if err != nil {
 		return fmt.Errorf("connect job status database: %w", err)
 	}
@@ -97,7 +97,7 @@ func run() error {
 
 			return archive.Validate(file, info.Size())
 		},
-		StatusReader:        db.StatusReader{Database: statusReader},
+		StatusReader:        jobstore.StatusReader{Database: statusReader},
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		APIToken:            cfg.APIToken,

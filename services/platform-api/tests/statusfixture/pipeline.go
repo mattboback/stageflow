@@ -5,28 +5,28 @@ import (
 	"context"
 	"sync"
 
-	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 )
 
 type Pipeline struct {
 	mu   sync.Mutex
-	jobs map[string]*status.JobRecord
+	jobs map[string]*jobstore.JobRecord
 }
 
-func New(_ *Config) *Pipeline { return &Pipeline{jobs: make(map[string]*status.JobRecord)} }
-func (p *Pipeline) GetJob(_ context.Context, id string) (*status.JobRecord, error) {
+func New(_ *Config) *Pipeline { return &Pipeline{jobs: make(map[string]*jobstore.JobRecord)} }
+func (p *Pipeline) GetJob(_ context.Context, id string) (*jobstore.JobRecord, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	rec := p.jobs[id]
 	if rec == nil {
-		return nil, status.ErrJobNotFound
+		return nil, jobstore.ErrJobNotFound
 	}
 
 	return cloneJobRecord(rec), nil
 }
-func (p *Pipeline) Apply(_ context.Context, signal Signal) (*status.JobRecord, error) {
+func (p *Pipeline) Apply(_ context.Context, signal Signal) (*jobstore.JobRecord, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -68,7 +68,7 @@ func (p *Pipeline) Apply(_ context.Context, signal Signal) (*status.JobRecord, e
 }
 
 // Put replaces a snapshot to model committed database admission in HTTP tests.
-func (p *Pipeline) Put(rec *status.JobRecord) {
+func (p *Pipeline) Put(rec *jobstore.JobRecord) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
