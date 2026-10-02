@@ -11,7 +11,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
 
 func TestHandleJobStatusFound(t *testing.T) {

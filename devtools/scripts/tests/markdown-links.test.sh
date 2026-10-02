@@ -22,6 +22,13 @@ EOF
 
 (cd "$fixture" && node "$checker" docs/good.md) >/dev/null
 
+mkdir -p "$fixture/internal/jobstore" "$fixture/services/api/internal/handlers"
+cat >"$fixture/services/api/README.md" <<'EOF'
+`internal/handlers`
+`internal/jobstore`
+EOF
+(cd "$fixture" && node "$checker" services/api/README.md) >/dev/null
+
 cat >"$fixture/docs/bad.md" <<'EOF'
 [Missing](not-there.md)
 `docs/also-missing.md`

@@ -3,6 +3,10 @@
     "currentPage": 2,
     "totalPages": 5
   },
+  "scanner_progress": {
+    "currentPage": 2,
+    "totalPages": 5
+  },
   "scanner_type": "axe",
   "state": "SCANNING",
   "type": "progress"

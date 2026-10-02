@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mattboback/stageflow/services/orchestrator/internal/orchtest"
+	orchtest "github.com/mattboback/stageflow/internal/testpostgres"
 )
 
 var testDatabaseURL string

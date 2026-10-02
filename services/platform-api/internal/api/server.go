@@ -4,16 +4,21 @@ import (
 	"context"
 	"net"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
+	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 // JobPublisher abstracts job.created publishing for dependency injection.
 type JobPublisher interface {
 	PublishJobCreated(ctx context.Context, envelope *events.Envelope) error
+}
+
+// PendingJobPublisher seeds durable status and publishes with a protected handoff.
+type PendingJobPublisher interface {
+	PublishPendingJob(context.Context, *models.Job, func(context.Context) error) error
 }
 
 // JobStatusReader fetches current job status snapshots.
@@ -30,7 +35,7 @@ type TombstoneStore interface {
 // Server wires HTTP handlers to storage, status, and publisher dependencies.
 type Server struct {
 	config          *ServerConfig
-	jobStatus       *jobstatus.Pipeline
+	statusReader    JobStatusReader
 	tombstoneStore  TombstoneStore
 	scannerRegistry *scannerregistry.Registry
 	ipResolver      ipAddrResolver
@@ -43,6 +48,7 @@ type ServerConfig struct {
 	Port                int
 	Storage             storage.Client
 	Publisher           JobPublisher
+	PendingJobs         PendingJobPublisher
 	StatusReader        JobStatusReader
 	TombstoneStore      TombstoneStore
 	ScannerRegistry     *scannerregistry.Registry
@@ -57,15 +63,11 @@ type ServerConfig struct {
 func NewServer(config *ServerConfig) *Server {
 	server := &Server{
 		config:          config,
-		jobStatus:       jobstatus.New(&jobstatus.Config{CurrentReader: config.StatusReader}),
+		statusReader:    config.StatusReader,
 		tombstoneStore:  config.TombstoneStore,
 		scannerRegistry: config.ScannerRegistry,
 		ipResolver:      net.DefaultResolver,
 	}
 
 	return server
-}
-
-func (s *Server) JobStatus() *jobstatus.Pipeline {
-	return s.jobStatus
 }

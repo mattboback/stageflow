@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
+	db "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
 )
 

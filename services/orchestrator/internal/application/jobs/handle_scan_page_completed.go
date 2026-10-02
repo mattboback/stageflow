@@ -32,6 +32,22 @@ func (s *Service) HandleScanPageCompleted(
 		return nil
 	}
 
+	if tracker, ok := s.store.(interface {
+		UpdateScannerProgress(context.Context, string, string, int, int) error
+	}); ok {
+		if progressErr := tracker.UpdateScannerProgress(
+			ctx,
+			payload.JobID,
+			payload.ScannerType,
+			payload.PageIndex,
+			payload.TotalPages,
+		); progressErr != nil {
+			return fmt.Errorf("persist scanner progress: %w", progressErr)
+		}
+
+		return nil
+	}
+
 	if updateErr := s.store.UpdateJobProgress(
 		ctx,
 		payload.JobID,

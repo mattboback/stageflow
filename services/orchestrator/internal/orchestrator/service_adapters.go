@@ -363,3 +363,7 @@ func (o *Orchestrator) CleanupJob(ctx context.Context, job *models.Job) error {
 
 	return nil
 }
+
+func (o *Orchestrator) UpdateScannerProgress(ctx context.Context, id, scanner string, page, total int) error {
+	return o.database.UpdateScannerProgress(ctx, id, scanner, page, total)
+}

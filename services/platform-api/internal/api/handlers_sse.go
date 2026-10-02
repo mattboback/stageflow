@@ -6,14 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func jobIDFromJobPath(path, suffix string) (string, bool) {
@@ -63,7 +63,7 @@ func terminalDonePayloadFromUpdate(data []byte) (jobStreamUpdate, bool, error) {
 	}
 
 	isTerminalType := update.Type == "complete" || update.Type == "failed"
-	if !isTerminalType && !update.State.IsTerminal() {
+	if !isTerminalType {
 		return jobStreamUpdate{}, false, nil
 	}
 
@@ -91,100 +91,6 @@ func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
-}
-
-func statusPayload(snapshot *status.JobRecord) map[string]any {
-	return map[string]any{
-		"type":  "status",
-		"state": snapshot.State,
-	}
-}
-
-func mapChangeToSSEPayload(change jobstatus.Change) map[string]any {
-	snapshot := change.Snapshot
-	if snapshot == nil {
-		return map[string]any{}
-	}
-
-	switch change.Signal.Kind {
-	case jobstatus.SignalJobCreated:
-		return statusPayload(snapshot)
-	case jobstatus.SignalScanPageCompleted:
-		payload := map[string]any{
-			"type":  "progress",
-			"state": snapshot.State,
-			"progress": map[string]int{
-				"currentPage": snapshot.CurrentPage,
-				"totalPages":  snapshot.TotalPages,
-			},
-		}
-
-		if change.Signal.ScanPageCompleted != nil && change.Signal.ScanPageCompleted.ScannerType != "" {
-			payload["scanner_type"] = change.Signal.ScanPageCompleted.ScannerType
-		}
-
-		return payload
-	case jobstatus.SignalScanCompleted:
-		payload := map[string]any{
-			"type":          "scanner_complete",
-			"state":         snapshot.State,
-			"pages_scanned": snapshot.CurrentPage,
-			"violations":    snapshot.TotalViolations,
-		}
-
-		if change.Signal.ScanCompleted != nil {
-			payload["scanner_violations"] = change.Signal.ScanCompleted.Summary.TotalViolations
-
-			if change.Signal.ScanCompleted.ScannerType != "" {
-				payload["scanner_type"] = change.Signal.ScanCompleted.ScannerType
-			}
-
-			if change.Signal.ScanCompleted.Timing != nil {
-				payload["timing"] = map[string]int64{
-					"total_ms":             change.Signal.ScanCompleted.Timing.TotalMs,
-					"page_iteration_ms":    change.Signal.ScanCompleted.Timing.PageIterationMs,
-					"write_results_ms":     change.Signal.ScanCompleted.Timing.WriteResultsMs,
-					"upload_artifacts_ms":  change.Signal.ScanCompleted.Timing.UploadArtifactsMs,
-					"publish_completed_ms": change.Signal.ScanCompleted.Timing.PublishCompletedMs,
-					"finalization_ms":      change.Signal.ScanCompleted.Timing.FinalizationMs,
-				}
-			}
-		}
-
-		return payload
-	case jobstatus.SignalExtractionReady:
-		payload := map[string]any{
-			"type":  "status",
-			"state": "READY_TO_SCAN",
-		}
-
-		if snapshot.TotalPages > 0 {
-			payload["totalPages"] = snapshot.TotalPages
-		}
-
-		return payload
-	case jobstatus.SignalExtractionFailed:
-		return map[string]any{
-			"type":          "failed",
-			"state":         snapshot.State,
-			"error":         snapshot.Error,
-			"error_details": snapshot.LastErrorDetails,
-			"stage":         snapshot.LastStage,
-		}
-	case jobstatus.SignalScanFailed, jobstatus.SignalJobFailed:
-		return map[string]any{
-			"type":  "failed",
-			"state": snapshot.State,
-			"error": snapshot.Error,
-		}
-	case jobstatus.SignalJobCompleted:
-		return map[string]any{
-			"type":  "complete",
-			"state": snapshot.State,
-		}
-	default:
-		return statusPayload(snapshot)
-	}
 }
 
 func getFlusher(w http.ResponseWriter) (http.Flusher, bool) {
@@ -281,137 +187,86 @@ func (s *Server) handleJobStreamUpdate(
 	return true, true
 }
 
-func (s *Server) watchJobStream(
-	ctx context.Context,
-	w http.ResponseWriter,
-	jobID string,
-) (*status.JobRecord, jobstatus.Subscription, bool) {
-	rec, sub, err := s.jobStatus.Watch(ctx, jobID)
-	if err != nil {
-		if errors.Is(err, status.ErrJobNotFound) {
-			httputil.RespondError(w, http.StatusNotFound, "Job not found")
-		} else {
-			logging.Error(ctx, "Failed to fetch job status for SSE", "error", err)
-			httputil.RespondError(w, http.StatusInternalServerError, "Internal error")
-		}
-
-		return nil, nil, false
+// snapshotUpdates emits scanner outcomes before the terminal job event, even
+// when completion and DONE become visible in the same database read.
+func snapshotUpdates(previous, next *status.JobRecord, readySent *bool) []map[string]any {
+	var updates []map[string]any
+	if !*readySent && next.TotalPages > 0 && next.State != models.JobStatePending &&
+		next.State != models.JobStateExtracting {
+		updates = append(
+			updates,
+			map[string]any{"type": "status", "state": "READY_TO_SCAN", "totalPages": next.TotalPages},
+		)
+		*readySent = true
 	}
 
-	return rec, sub, true
-}
-
-func (s *Server) writeTerminalStatus(
-	ctx context.Context,
-	w http.ResponseWriter,
-	flusher http.Flusher,
-	rec *status.JobRecord,
-) bool {
-	if !rec.State.IsTerminal() {
-		return false
+	if previous.State != next.State && !next.State.IsTerminal() {
+		updates = append(updates, map[string]any{"type": "status", "state": next.State})
 	}
 
-	done, marshalErr := json.Marshal(jobStreamUpdate{State: rec.State})
-	if marshalErr != nil {
-		logging.Error(ctx, "Failed to marshal done payload for SSE", "error", marshalErr)
+	names := append([]string(nil), next.ExpectedScanners...)
+	sort.Strings(names)
 
-		return true
-	}
+	for _, name := range names {
+		scanner := next.ScannerStatuses[name]
 
-	if writeErr := writeSSEEvent(w, flusher, "done", done); writeErr != nil {
-		return true
-	}
-
-	return true
-}
-
-func (s *Server) handleJobStreamChange(
-	ctx context.Context,
-	w http.ResponseWriter,
-	flusher http.Flusher,
-	change jobstatus.Change,
-) (shouldClose, ok bool) {
-	payload, marshalErr := json.Marshal(mapChangeToSSEPayload(change))
-	if marshalErr != nil {
-		logging.Error(ctx, "Failed to marshal SSE update payload", "error", marshalErr)
-
-		return false, false
-	}
-
-	return s.handleJobStreamUpdate(ctx, w, flusher, payload)
-}
-
-func (s *Server) streamJobUpdates(
-	ctx context.Context,
-	requestCtx context.Context,
-	w http.ResponseWriter,
-	flusher http.Flusher,
-	sub jobstatus.Subscription,
-) {
-	heartbeat := time.NewTicker(15 * time.Second)
-	defer heartbeat.Stop()
-
-	for {
-		select {
-		case <-requestCtx.Done():
-			logging.Debug(ctx, "SSE stream closed by client disconnect")
-
-			return
-		case <-heartbeat.C:
-			if keepaliveErr := writeSSEKeepalive(w, flusher); keepaliveErr != nil {
-				logging.Debug(ctx, "SSE keepalive write failed; closing stream", "error", keepaliveErr)
-
-				return
-			}
-		case change, updatesOpen := <-sub.Updates():
-			if !updatesOpen {
-				logging.Debug(ctx, "status pipeline closed watcher; closing stream")
-
-				return
+		old := previous.ScannerStatuses[name]
+		if scanner.State == "completed" || scanner.State == "failed" {
+			if old.State == scanner.State {
+				continue
 			}
 
-			shouldClose, streamOK := s.handleJobStreamChange(ctx, w, flusher, change)
-			if !streamOK {
-				logging.Debug(ctx, "SSE update write failed; closing stream")
-
-				return
-			}
-
-			if shouldClose {
-				logging.Debug(ctx, "SSE stream closing after terminal update")
-
-				return
-			}
+			payload := scannerCompletePayload(name, scanner, next)
+			updates = append(updates, payload)
+		} else if scanner.PagesScanned != old.PagesScanned {
+			updates = append(updates, map[string]any{
+				"type":         "progress",
+				"state":        next.State,
+				"scanner_type": name,
+				"progress":     map[string]int{"currentPage": next.CurrentPage, "totalPages": next.TotalPages},
+				"scanner_progress": map[string]int{
+					"currentPage": scanner.PagesScanned,
+					"totalPages":  scanner.TotalPages,
+				},
+			})
 		}
 	}
+
+	if next.State.IsTerminal() && !previous.State.IsTerminal() {
+		updates = append(updates, terminalSnapshotPayload(next))
+	}
+
+	return updates
 }
 
-// handleJobStream provides Server-Sent Events for real-time job status updates.
 func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-
 		return
 	}
 
-	jobID, ok := jobIDFromJobPath(r.URL.Path, "stream")
+	id, ok := jobIDFromJobPath(r.URL.Path, "stream")
 	if !ok {
 		httputil.RespondError(w, http.StatusBadRequest, "Invalid path")
-
 		return
 	}
 
-	if s.respondIfJobDeleted(w, r, jobID) {
+	if s.respondIfJobDeleted(w, r, id) {
 		return
 	}
 
-	ctx := logging.WithJobID(r.Context(), jobID)
+	ctx := logging.WithJobID(r.Context(), id)
 
-	rec, sub, ok := s.watchJobStream(ctx, w, jobID)
-	if !ok {
+	rec, err := s.statusReader.GetJob(ctx, id)
+	if err != nil {
+		if errors.Is(err, status.ErrJobNotFound) {
+			httputil.RespondNotFound(w, "Job")
+		} else {
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to fetch job status")
+		}
+
 		return
 	}
-	defer sub.Close()
 
 	setSSEHeaders(w)
 
@@ -424,9 +279,113 @@ func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.writeTerminalStatus(ctx, w, flusher, rec) {
+	if rec.State.IsTerminal() {
+		data, marshalErr := json.Marshal(jobStreamUpdate{State: rec.State})
+		if marshalErr != nil {
+			return
+		}
+
+		if writeErr := writeSSEEvent(w, flusher, "done", data); writeErr != nil {
+			return
+		}
+
 		return
 	}
 
-	s.streamJobUpdates(ctx, r.Context(), w, flusher, sub)
+	s.streamSnapshotUpdates(ctx, w, flusher, id, rec)
+}
+
+func scannerCompletePayload(name string, scanner models.ScannerStatus, snapshot *status.JobRecord) map[string]any {
+	payload := map[string]any{"type": "scanner_complete", "state": snapshot.State,
+		"scanner_type": name, "pages_scanned": scanner.PagesScanned, "violations": snapshot.TotalViolations,
+		"scanner_violations": scanner.Violations, "timing": map[string]int64{"total_ms": scanner.TotalMs}}
+	if scanner.State == "failed" {
+		payload["failed"] = true
+		payload["error"] = scanner.Error
+	}
+
+	return payload
+}
+
+func terminalSnapshotPayload(snapshot *status.JobRecord) map[string]any {
+	payload := map[string]any{"type": "complete", "state": snapshot.State}
+	if snapshot.State != models.JobStateFailed {
+		return payload
+	}
+
+	payload["type"], payload["error"] = "failed", snapshot.Error
+	if snapshot.LastErrorDetails != "" {
+		payload["error_details"] = snapshot.LastErrorDetails
+	}
+
+	if snapshot.LastStage != "" {
+		payload["stage"] = snapshot.LastStage
+	}
+
+	return payload
+}
+
+func (s *Server) sendSnapshotUpdates(
+	ctx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	updates []map[string]any,
+) bool {
+	for _, payload := range updates {
+		data, marshalErr := json.Marshal(payload)
+		if marshalErr != nil {
+			return false
+		}
+
+		closeStream, streamOK := s.handleJobStreamUpdate(ctx, w, flusher, data)
+		if closeStream || !streamOK {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (s *Server) streamSnapshotUpdates(
+	ctx context.Context,
+	w http.ResponseWriter,
+	flusher http.Flusher,
+	id string,
+	rec *status.JobRecord,
+) {
+	readySent := false
+
+	empty := &status.JobRecord{State: rec.State, ScannerStatuses: rec.ScannerStatuses}
+	if !s.sendSnapshotUpdates(ctx, w, flusher, snapshotUpdates(empty, rec, &readySent)) {
+		return
+	}
+
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-heartbeat.C:
+			if writeSSEKeepalive(w, flusher) != nil {
+				return
+			}
+		case <-ticker.C:
+			next, readErr := s.statusReader.GetJob(ctx, id)
+			if readErr != nil {
+				logging.Warn(ctx, "Failed to refresh SSE snapshot", "error", readErr)
+				return
+			}
+
+			if !s.sendSnapshotUpdates(ctx, w, flusher, snapshotUpdates(rec, next, &readySent)) {
+				return
+			}
+
+			rec = next
+		}
+	}
 }

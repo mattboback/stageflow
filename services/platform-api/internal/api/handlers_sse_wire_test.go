@@ -7,121 +7,117 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mattboback/stageflow/libs/go/events"
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
-func TestMapChangeToSSEPayload_Golden(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name   string
-		change jobstatus.Change
+func TestSnapshotUpdatesGolden(t *testing.T) {
+	cases := []struct {
+		name       string
+		prev, next *status.JobRecord
+		ready      bool
 	}{
 		{
-			name: "scan_progress",
-			change: jobstatus.Change{
-				Signal: jobstatus.Signal{
-					Kind: jobstatus.SignalScanPageCompleted,
-					ScanPageCompleted: &events.ScanPageCompletedPayload{
-						ScannerType: "axe",
-						PageID:      "page-1",
-					},
-				},
-				Snapshot: &status.JobRecord{
-					State:       models.JobStateScanning,
-					CurrentPage: 2,
-					TotalPages:  5,
+			"scan_progress",
+			&status.JobRecord{State: models.JobStateScanning},
+			&status.JobRecord{
+				State:            models.JobStateScanning,
+				CurrentPage:      2,
+				TotalPages:       5,
+				ExpectedScanners: []string{"axe"},
+				ScannerStatuses: map[string]models.ScannerStatus{
+					"axe": {State: "running", PagesScanned: 2, TotalPages: 5},
 				},
 			},
+			true,
 		},
 		{
-			name: "scan_complete",
-			change: jobstatus.Change{
-				Signal: jobstatus.Signal{
-					Kind: jobstatus.SignalScanCompleted,
-					ScanCompleted: &events.ScanCompletedPayload{
-						ScannerType:       "lighthouse",
-						TotalPagesScanned: 3,
-						Summary:           events.ScanSummary{TotalViolations: 7},
-						Timing:            &events.ScanTiming{TotalMs: 1234},
-					},
-				},
-				Snapshot: &status.JobRecord{
-					State:           models.JobStateScanning,
-					CurrentPage:     3,
-					TotalViolations: 9,
+			"scan_complete",
+			&status.JobRecord{State: models.JobStateScanning},
+			&status.JobRecord{
+				State:            models.JobStateScanning,
+				TotalViolations:  9,
+				ExpectedScanners: []string{"lighthouse"},
+				ScannerStatuses: map[string]models.ScannerStatus{
+					"lighthouse": {State: "completed", PagesScanned: 3, Violations: 7, TotalMs: 1234},
 				},
 			},
+			true,
 		},
 		{
-			name: "extraction_ready",
-			change: jobstatus.Change{
-				Signal: jobstatus.Signal{Kind: jobstatus.SignalExtractionReady},
-				Snapshot: &status.JobRecord{
-					State:      models.JobStateReady,
-					TotalPages: 8,
-				},
-			},
+			"extraction_ready",
+			&status.JobRecord{State: models.JobStateReady},
+			&status.JobRecord{State: models.JobStateReady, TotalPages: 8},
+			false,
 		},
 		{
-			name: "job_failed",
-			change: jobstatus.Change{
-				Signal: jobstatus.Signal{Kind: jobstatus.SignalJobFailed},
-				Snapshot: &status.JobRecord{
-					State: models.JobStateFailed,
-					Error: "boom",
-				},
-			},
+			"job_failed",
+			&status.JobRecord{State: models.JobStateScanning},
+			&status.JobRecord{State: models.JobStateFailed, Error: "boom"},
+			true,
 		},
 		{
-			name: "job_complete",
-			change: jobstatus.Change{
-				Signal: jobstatus.Signal{Kind: jobstatus.SignalJobCompleted},
-				Snapshot: &status.JobRecord{
-					State: models.JobStateDone,
-				},
+			"job_complete",
+			&status.JobRecord{State: models.JobStateScanning},
+			&status.JobRecord{State: models.JobStateDone},
+			true,
+		},
+		{
+			"one_scanner_failed",
+			&status.JobRecord{State: models.JobStateScanning},
+			&status.JobRecord{
+				State:            models.JobStateScanning,
+				ExpectedScanners: []string{"seo"},
+				ScannerStatuses:  map[string]models.ScannerStatus{"seo": {State: "failed", Error: "browser closed"}},
 			},
+			true,
 		},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			assertSSEPayloadGolden(t, tt.name, mapChangeToSSEPayload(tt.change))
+			updates := snapshotUpdates(tt.prev, tt.next, &tt.ready)
+			if len(updates) != 1 {
+				t.Fatalf("updates=%v", updates)
+			}
+
+			assertSSEPayloadGolden(t, tt.name, updates[0])
 		})
 	}
 }
+func TestLastScannerAndDoneInOneTick(t *testing.T) {
+	previous := &status.JobRecord{State: models.JobStateScanning}
+	next := &status.JobRecord{
+		State:            models.JobStateDone,
+		ExpectedScanners: []string{"axe"},
+		ScannerStatuses:  map[string]models.ScannerStatus{"axe": {State: "completed", PagesScanned: 2}},
+	}
+	ready := true
 
-func TestTerminalDonePayloadFromMappedCompletePayload(t *testing.T) {
-	t.Parallel()
-
-	payload, err := json.Marshal(mapChangeToSSEPayload(jobstatus.Change{
-		Signal: jobstatus.Signal{Kind: jobstatus.SignalJobCompleted},
-		Snapshot: &status.JobRecord{
-			State: models.JobStateDone,
-		},
-	}))
-	if err != nil {
-		t.Fatalf("marshal payload: %v", err)
+	updates := snapshotUpdates(previous, next, &ready)
+	if len(updates) != 2 || updates[0]["type"] != "scanner_complete" || updates[1]["type"] != "complete" {
+		t.Fatalf("wrong ordering: %v", updates)
 	}
 
-	done, isTerminal, parseErr := terminalDonePayloadFromUpdate(payload)
-	if parseErr != nil {
-		t.Fatalf("terminalDonePayloadFromUpdate error = %v", parseErr)
-	}
+	assertSSEPayloadGolden(t, "last_scanner_and_done", map[string]any{"updates": updates})
+	data, _ := json.Marshal(updates[0])
 
-	if !isTerminal {
-		t.Fatal("expected mapped complete payload to be terminal")
-	}
-
-	if done.State != models.JobStateDone {
-		t.Fatalf("done.State = %q, want %q", done.State, models.JobStateDone)
+	_, terminal, err := terminalDonePayloadFromUpdate(data)
+	if terminal || err != nil {
+		t.Fatalf("scanner completion prematurely ends stream: %v %v", terminal, err)
 	}
 }
+func TestReadyCannotBeSkipped(t *testing.T) {
+	ready := false
 
+	updates := snapshotUpdates(
+		&status.JobRecord{State: models.JobStateExtracting},
+		&status.JobRecord{State: models.JobStateScanning, TotalPages: 30},
+		&ready,
+	)
+	if len(updates) != 2 || updates[0]["state"] != "READY_TO_SCAN" || !ready {
+		t.Fatalf("updates=%v", updates)
+	}
+}
 func assertSSEPayloadGolden(t *testing.T, name string, payload map[string]any) {
 	t.Helper()
 

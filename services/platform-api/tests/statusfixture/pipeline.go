@@ -1,0 +1,75 @@
+// Package jobstatus provides in-memory snapshots solely for API handler tests.
+package jobstatus
+
+import (
+	"context"
+	"sync"
+
+	status "github.com/mattboback/stageflow/internal/jobstore"
+	"github.com/mattboback/stageflow/libs/go/models"
+)
+
+type Pipeline struct {
+	mu   sync.Mutex
+	jobs map[string]*status.JobRecord
+}
+
+func New(_ *Config) *Pipeline { return &Pipeline{jobs: make(map[string]*status.JobRecord)} }
+func (p *Pipeline) GetJob(_ context.Context, id string) (*status.JobRecord, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	rec := p.jobs[id]
+	if rec == nil {
+		return nil, status.ErrJobNotFound
+	}
+
+	return cloneJobRecord(rec), nil
+}
+func (p *Pipeline) Apply(_ context.Context, signal Signal) (*status.JobRecord, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	id := signalJobID(signal)
+
+	next, _, err := reduceSnapshot(p.jobs[id], signal)
+	if err != nil {
+		return nil, err
+	}
+
+	if next.ScannerStatuses == nil {
+		next.ScannerStatuses = make(map[string]models.ScannerStatus)
+	}
+
+	if v := signal.ScanPageCompleted; v != nil {
+		next.ScannerStatuses[v.ScannerType] = models.ScannerStatus{
+			State:        "running",
+			PagesScanned: v.PageIndex,
+			TotalPages:   v.TotalPages,
+		}
+	}
+
+	if v := signal.ScanCompleted; v != nil {
+		next.ScannerStatuses[v.ScannerType] = models.ScannerStatus{
+			State:        "completed",
+			PagesScanned: v.TotalPagesScanned,
+			TotalPages:   next.TotalPages,
+			Violations:   v.Summary.TotalViolations,
+		}
+	}
+
+	if v := signal.ScanFailed; v != nil {
+		next.ScannerStatuses[v.ScannerType] = models.ScannerStatus{State: "failed", Error: v.Error}
+	}
+
+	p.jobs[id] = next
+
+	return cloneJobRecord(next), nil
+}
+
+func (p *Pipeline) Put(record *status.JobRecord) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	p.jobs[record.JobID] = cloneJobRecord(record)
+}

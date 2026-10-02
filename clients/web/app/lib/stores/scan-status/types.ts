@@ -4,6 +4,8 @@ export interface SSEUpdate {
 	type: 'status' | 'progress' | 'scanner_complete' | 'complete' | 'failed';
 	state: string;
 	scanner_type?: string;
+	failed?: boolean;
+	scanner_progress?: { currentPage: number; totalPages: number };
 	progress?: { currentPage: number; totalPages: number };
 	totalPages?: number;
 	pages_scanned?: number;

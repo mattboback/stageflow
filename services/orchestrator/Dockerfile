@@ -14,6 +14,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 COPY libs/contracts/report/generated/go ./libs/contracts/report/generated/go
 COPY libs/contracts/scanner-manifest ./libs/contracts/scanner-manifest
 COPY libs/go ./libs/go
+COPY internal ./internal
 COPY services/orchestrator ./services/orchestrator
 
 # Build with optimizations

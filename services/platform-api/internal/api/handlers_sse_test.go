@@ -9,12 +9,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
+
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
+	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
 
 type sseEvent struct {
@@ -81,7 +84,7 @@ func readNextSSEEvent(r *bufio.Reader) (eventType, data string, err error) {
 func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
-	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+	if _, err := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
 		Kind:       jobstatus.SignalJobCreated,
 		ObservedAt: time.Now().UTC(),
 		JobCreated: &events.JobCreatedPayload{
@@ -98,9 +101,9 @@ func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
 
 	eventsCh, done := startJobStream(t, server, sseTestJobID)
 
-	waitForSSEEvent(t, eventsCh, "status", 2*time.Second)
+	waitForSSEEvent(t, eventsCh, "status")
 
-	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+	if _, err := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
 		Kind:       jobstatus.SignalJobCompleted,
 		ObservedAt: time.Now().UTC(),
 		JobCompleted: &events.JobCompletedPayload{
@@ -114,14 +117,24 @@ func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
 		t.Fatalf("Apply() error = %v", err)
 	}
 
-	waitForSSEEvent(t, eventsCh, "update", 2*time.Second)
-	waitForSSEEvent(t, eventsCh, "done", 2*time.Second)
+	waitForSSEEvent(t, eventsCh, "update")
+	waitForSSEEvent(t, eventsCh, "done")
 
 	assertStreamClosed(t, eventsCh, 2*time.Second)
 	assertHandlerDone(t, done, 2*time.Second)
 }
 
 func startJobStream(t *testing.T, server *Server, jobID string) (eventsCh chan sseEvent, done chan struct{}) {
+	t.Helper()
+	return startJobStreamContext(context.Background(), t, server, jobID)
+}
+
+func startJobStreamContext(
+	ctx context.Context,
+	t *testing.T,
+	server *Server,
+	jobID string,
+) (eventsCh chan sseEvent, done chan struct{}) {
 	t.Helper()
 
 	pr, pw := io.Pipe()
@@ -130,7 +143,8 @@ func startJobStream(t *testing.T, server *Server, jobID string) (eventsCh chan s
 		_ = pr.Close()
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/api/v1/jobs/"+jobID+"/stream", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/api/v1/jobs/"+jobID+"/stream", http.NoBody).
+		WithContext(ctx)
 
 	done = make(chan struct{})
 
@@ -164,10 +178,10 @@ func startJobStream(t *testing.T, server *Server, jobID string) (eventsCh chan s
 	return eventsCh, done
 }
 
-func waitForSSEEvent(t *testing.T, eventsCh <-chan sseEvent, want string, timeout time.Duration) {
+func waitForSSEEvent(t *testing.T, eventsCh <-chan sseEvent, want string) {
 	t.Helper()
 
-	deadline := time.NewTimer(timeout)
+	deadline := time.NewTimer(2 * time.Second)
 	defer deadline.Stop()
 
 	for {
@@ -295,4 +309,78 @@ func TestValidJobID(t *testing.T) {
 			t.Fatalf("expected %q to be rejected", bad)
 		}
 	}
+}
+
+type errorAfterInitialReader struct{ reads atomic.Int32 }
+
+func (r *errorAfterInitialReader) GetJob(context.Context, string) (*status.JobRecord, error) {
+	if r.reads.Add(1) > 1 {
+		return nil, errors.New("database unavailable")
+	}
+
+	return &status.JobRecord{JobID: sseTestJobID, State: models.JobStateScanning}, nil
+}
+func TestStreamDatabaseErrorClosesWithoutDeclaringJobFailed(t *testing.T) {
+	server, _, _ := newTestServer(t)
+	reader := &errorAfterInitialReader{}
+	server.statusReader = reader
+	events, done := startJobStream(t, server, sseTestJobID)
+	waitForSSEEvent(t, events, "status")
+	assertStreamClosed(t, events, 2*time.Second)
+	assertHandlerDone(t, done, time.Second)
+
+	if reader.reads.Load() != 2 {
+		t.Fatalf("expected one refresh, got %d", reader.reads.Load())
+	}
+}
+func TestStreamCancellationStopsSnapshotPolling(t *testing.T) {
+	server, _, _ := newTestServer(t)
+	reader := &errorAfterInitialReader{}
+	server.statusReader = reader
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	events, done := startJobStreamContext(ctx, t, server, sseTestJobID)
+	waitForSSEEvent(t, events, "status")
+	cancel()
+	assertHandlerDone(t, done, time.Second)
+
+	if reader.reads.Load() != 1 {
+		t.Fatalf("polled after disconnect: %d", reader.reads.Load())
+	}
+}
+
+func TestTerminalInitialSnapshotDoesNotReplayReady(t *testing.T) {
+	server, _, _ := newTestServer(t)
+	server.statusReader = &staticJobReader{rec: &status.JobRecord{
+		JobID: sseTestJobID, State: models.JobStateDone, TotalPages: 30,
+		ExpectedScanners: []string{"axe"}, CompletedScanners: []string{"axe"},
+		ScannerStatuses: map[string]models.ScannerStatus{"axe": {State: "completed", PagesScanned: 30, TotalPages: 30}},
+	}}
+	events, done := startJobStream(t, server, sseTestJobID)
+
+	for _, want := range []string{"status", "done"} {
+		select {
+		case event := <-events:
+			if event.Event != want {
+				t.Fatalf("got %q, want %q: %s", event.Event, want, event.Data)
+			}
+
+			var payload struct {
+				State models.JobState `json:"state"`
+			}
+			if err := json.Unmarshal([]byte(event.Data), &payload); err != nil {
+				t.Fatal(err)
+			}
+
+			if payload.State != models.JobStateDone {
+				t.Fatalf("state regressed on reload: %s", event.Data)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("missing %s event", want)
+		}
+	}
+
+	assertHandlerDone(t, done, time.Second)
 }

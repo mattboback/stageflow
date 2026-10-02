@@ -21,15 +21,12 @@ type Config struct {
 	ScannerImage                string
 	ScannerImageOverride        string
 	APIPort                     string
-	APIToken                    string
 	PodNetwork                  string
 	PodNetnsMode                string   // Pod network namespace mode (bridge|host). Host mode is local-only.
 	PodHostMappings             []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
 	NatsHost                    string
 	MinioHost                   string
 	PageLoadTimeout             int
-	AdminRateLimitRPS           int
-	AdminRateLimitBurst         int
 }
 
 func loadConfig() *Config {
@@ -70,15 +67,12 @@ func loadConfig() *Config {
 		ScannerImage:                scannerImage,
 		ScannerImageOverride:        scannerImageEnv,
 		APIPort:                     config.GetEnv("API_PORT", "8081"),
-		APIToken:                    strings.TrimSpace(config.GetEnv("ORCHESTRATOR_API_TOKEN", "")),
 		PodNetwork:                  config.GetEnv("POD_NETWORK", ""),
 		PodNetnsMode:                config.GetEnv("POD_NETNS_MODE", "bridge"),
 		PodHostMappings:             podHostMappings,
 		NatsHost:                    config.GetEnv("NATS_HOST", "nats"),
 		MinioHost:                   config.GetEnv("MINIO_HOST", "minio"),
 		PageLoadTimeout:             config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
-		AdminRateLimitRPS:           config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS", 0),
-		AdminRateLimitBurst:         config.GetEnvInt("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST", 0),
 	}
 }
 
@@ -93,7 +87,6 @@ func (c *Config) Validate() error {
 		config.RequireNonEmpty("DATABASE_URL", c.DatabaseURL),
 		config.RequireNonEmpty("EXTRACTION_IMAGE", c.ExtractionImage),
 		config.RequireNonEmpty("API_PORT", c.APIPort),
-		config.RequireNonEmpty("ORCHESTRATOR_API_TOKEN", c.APIToken),
 		config.RequireNonEmpty("NATS_HOST", c.NatsHost),
 		config.RequireNonEmpty("MINIO_HOST", c.MinioHost),
 	}
@@ -116,7 +109,6 @@ func (c *Config) Validate() error {
 	}
 
 	errs = append(errs, c.validatePodmanConfig()...)
-	errs = append(errs, c.validateRateLimitConfig()...)
 
 	return config.ValidateAll(errs...)
 }
@@ -143,25 +135,6 @@ func (c *Config) validatePodmanConfig() []error {
 		errs = append(errs, errors.New(
 			"PODMAN_RESPONSE_HEADER_TIMEOUT must be <= PODMAN_REQUEST_TIMEOUT",
 		))
-	}
-
-	return errs
-}
-
-// validateRateLimitConfig checks the admin API rate-limit settings.
-func (c *Config) validateRateLimitConfig() []error {
-	var errs []error
-
-	if c.AdminRateLimitRPS < 0 {
-		errs = append(errs, errors.New("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS must be >= 0"))
-	}
-
-	if c.AdminRateLimitBurst < 0 {
-		errs = append(errs, errors.New("ORCHESTRATOR_ADMIN_RATE_LIMIT_BURST must be >= 0"))
-	}
-
-	if c.AdminRateLimitRPS == 0 && c.AdminRateLimitBurst > 0 {
-		errs = append(errs, errors.New("ORCHESTRATOR_ADMIN_RATE_LIMIT_RPS must be > 0 when burst is set"))
 	}
 
 	return errs

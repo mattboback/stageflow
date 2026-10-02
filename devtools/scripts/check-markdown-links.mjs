@@ -75,7 +75,12 @@ function backtickedPath(rawTarget, file) {
 		return null;
 	}
 
-	return explicitlyFileRelative || !looksRootRelative ? relativeCandidate : rootCandidate;
+	if (explicitlyFileRelative || !looksRootRelative) {
+		return relativeCandidate;
+	}
+	// A shared root internal/ package must not shadow valid component-local
+	// internal/ paths in service READMEs. Prefer an existing complete target.
+	return existsSync(rootCandidate) || !looksFileRelative ? rootCandidate : relativeCandidate;
 }
 
 function gitIgnored(candidate) {

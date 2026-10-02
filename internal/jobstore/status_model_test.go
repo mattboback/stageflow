@@ -1,4 +1,4 @@
-package status
+package db
 
 import (
 	"testing"

@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
+	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
 
 func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
@@ -39,7 +39,7 @@ func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 		},
 	})
 
-	rec, err := server.jobStatus.Current(context.Background(), jobID)
+	rec, err := server.statusReader.GetJob(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("get job: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestBuildJobStatusResponse_Pending(t *testing.T) {
 		},
 	})
 
-	rec, err := server.jobStatus.Current(context.Background(), jobID)
+	rec, err := server.statusReader.GetJob(context.Background(), jobID)
 	if err != nil {
 		t.Fatalf("get job: %v", err)
 	}

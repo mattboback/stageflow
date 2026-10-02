@@ -20,7 +20,7 @@ export function applySseUpdate(result: ScanResult, update: SSEUpdate): ScanResul
 		...result,
 		state: update.state,
 		...(newProgress !== undefined ? { progress: newProgress } : {}),
-		...(update.error !== undefined ? { error: update.error } : {}),
+		...(update.type === 'failed' && update.error !== undefined ? { error: update.error } : {}),
 		...(update.error_details !== undefined ? { error_details: update.error_details } : {}),
 		...(update.stage !== undefined ? { last_stage: update.stage } : {})
 	};

@@ -111,3 +111,5 @@ CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
 CREATE INDEX IF NOT EXISTS idx_jobs_completed_at ON jobs(completed_at);
 CREATE INDEX IF NOT EXISTS idx_terminal_events_unpublished ON terminal_events(published_at, created_at);
 CREATE INDEX IF NOT EXISTS idx_scanner_launches_state ON scanner_launches(state, updated_at);
+
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS scanner_progress TEXT NOT NULL DEFAULT '{}';

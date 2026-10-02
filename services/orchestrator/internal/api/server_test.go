@@ -2,167 +2,24 @@ package api
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/mattboback/stageflow/libs/go/models"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 )
 
-var apiTestSchemaCounter uint64
-
-const testAPIToken = "test-token"
-
-// newTestDatabase creates an isolated PostgreSQL schema and seeds two jobs.
-func newTestDatabase(t *testing.T) (*db.Database, func()) {
-	t.Helper()
-
-	admin, err := sql.Open("pgx", testDatabaseURL)
-	if err != nil {
-		t.Fatalf("connect admin database: %v", err)
-	}
-
-	schema := fmt.Sprintf("t_%d_%d", time.Now().UnixNano(), atomic.AddUint64(&apiTestSchemaCounter, 1))
-
-	createSchemaQuery := fmt.Sprintf("CREATE SCHEMA %s", quoteIdentifier(schema))
-	if _, execErr := admin.ExecContext(context.Background(), createSchemaQuery); execErr != nil {
-		t.Fatalf("create test schema: %v", execErr)
-	}
-
-	databaseURL := fmt.Sprintf("%s&search_path=%s", testDatabaseURL, schema)
-
-	database, err := db.NewDatabase(&db.Config{URL: databaseURL})
-	if err != nil {
-		t.Fatalf("create test database: %v", err)
-	}
-
-	now := time.Now().UTC().Truncate(time.Second)
-	jobs := []*models.Job{
-		{
-			ID:        "123",
-			State:     models.JobStatePending,
-			InputType: "zip",
-			InputPath: "/tmp/a.zip",
-			Config:    models.JobConfig{Modules: []string{"axe"}, Screenshot: true},
-			CreatedAt: now,
-			UpdatedAt: now,
-		},
-		{
-			ID:        "456",
-			State:     models.JobStateDone,
-			InputType: "urls",
-			URLs:      []string{"https://example.com"},
-			Config:    models.JobConfig{Modules: []string{"axe", "kb"}, Screenshot: false},
-			CreatedAt: now.Add(-time.Minute),
-			UpdatedAt: now.Add(-time.Minute),
-		},
-	}
-
-	for _, job := range jobs {
-		if createErr := database.CreateJob(context.Background(), job); createErr != nil {
-			t.Fatalf("seed job %s: %v", job.ID, createErr)
-		}
-	}
-
-	cleanup := func() {
-		_ = database.Close()
-		dropSchemaQuery := fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", quoteIdentifier(schema))
-		_, _ = admin.ExecContext(context.Background(), dropSchemaQuery)
-		_ = admin.Close()
-	}
-
-	return database, cleanup
-}
-
-// newTestServer wires a Server with a temporary database.
 func newTestServer(t *testing.T) (*Server, func()) {
 	t.Helper()
-
-	dbase, databaseCleanup := newTestDatabase(t)
-
-	server := NewServer(&Config{
-		Database: dbase,
-		APIToken: testAPIToken,
-		Port:     "0",
-	})
-
-	cleanup := func() {
-		databaseCleanup()
-	}
-
-	return server, cleanup
-}
-
-func quoteIdentifier(identifier string) string {
-	return `"` + strings.ReplaceAll(identifier, `"`, `""`) + `"`
-}
-
-func newAuthedRequest(method, target string) *http.Request {
-	req := httptest.NewRequest(method, target, nil)
-	req.Header.Set("X-Api-Key", testAPIToken)
-
-	return req
-}
-
-func TestRequireAuthRejectsEmptyConfiguredToken(t *testing.T) {
-	srv := NewServer(&Config{APIToken: "", Port: "0"})
-	called := false
-	handler := srv.requireAuth(func(w http.ResponseWriter, _ *http.Request) {
-		called = true
-
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	requests := []*http.Request{
-		httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil),
-		httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil),
-		httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil),
-	}
-	requests[1].Header.Set("Authorization", "Bearer ")
-	requests[2].Header.Set("X-Api-Key", "anything")
-
-	for _, req := range requests {
-		called = false
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusUnauthorized {
-			t.Fatalf("expected status 401, got %d", rec.Code)
-		}
-
-		if called {
-			t.Fatal("handler was called with empty configured API token")
-		}
-	}
-}
-
-func TestRequireAuthAllowsValidToken(t *testing.T) {
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
-	handler := srv.requireAuth(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, newAuthedRequest(http.MethodGet, "/api/v1/jobs"))
-
-	if rec.Code != http.StatusNoContent {
-		t.Fatalf("expected status 204, got %d", rec.Code)
-	}
+	return NewServer(&Config{Port: "0"}), func() {}
 }
 
 func TestRequestShutdownGateRejectsNewWorkAndJoinsActiveHandler(t *testing.T) {
 	t.Parallel()
 
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	srv := NewServer(&Config{Port: "0"})
 	started := make(chan struct{})
 	release := make(chan struct{})
 	waited := make(chan struct{})
@@ -216,7 +73,7 @@ func TestRequestShutdownGateRejectsNewWorkAndJoinsActiveHandler(t *testing.T) {
 func TestShutdownForceClosesAndJoinsTimedOutHandler(t *testing.T) {
 	t.Parallel()
 
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	srv := NewServer(&Config{Port: "0"})
 	started := make(chan struct{})
 	exited := make(chan struct{})
 
@@ -292,7 +149,7 @@ func TestShutdownForceClosesAndJoinsTimedOutHandler(t *testing.T) {
 func TestShutdownBoundsHandlerDrainAfterForceClose(t *testing.T) {
 	t.Parallel()
 
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	srv := NewServer(&Config{Port: "0"})
 	srv.forcedDrainWait = 25 * time.Millisecond
 
 	started := make(chan struct{})
@@ -386,43 +243,6 @@ func TestShutdownBoundsHandlerDrainAfterForceClose(t *testing.T) {
 	}
 }
 
-func TestHandleJobRoutes_GetJob(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs/123")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", rec.Code)
-	}
-
-	var resp struct {
-		Job *models.Job `json:"job"`
-	}
-	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-
-	if resp.Job == nil || resp.Job.ID != "123" {
-		t.Fatalf("unexpected job payload: %#v", resp.Job)
-	}
-}
-
-func TestHandleJobRoutes_JobNotFound(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodGet, "/api/v1/jobs/missing")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("expected status 404, got %d", rec.Code)
-	}
-}
-
 func TestHandleHealth(t *testing.T) {
 	srv, cleanup := newTestServer(t)
 	defer cleanup()
@@ -445,77 +265,18 @@ func TestHandleHealth(t *testing.T) {
 	}
 }
 
-func TestHandleGetJobRejectsWrongMethod(t *testing.T) {
-	srv, cleanup := newTestServer(t)
-	defer cleanup()
-
-	req := newAuthedRequest(http.MethodPost, "/api/v1/jobs/123")
-	rec := httptest.NewRecorder()
-	srv.server.Handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405 for POST, got %d", rec.Code)
-	}
-}
-
-func TestRecoveryMiddlewareReturnsStructured500(t *testing.T) {
-	t.Parallel()
-
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
-	handler := srv.recoverPanic(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		panic("boom")
-	}))
-
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/jobs/123", nil))
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("expected status 500, got %d", rec.Code)
-	}
-
-	if !strings.Contains(rec.Body.String(), "Internal server error") {
-		t.Fatalf("expected structured error response, got %q", rec.Body.String())
-	}
-}
-
-func TestRateLimitMiddlewareRejectsExcessRequests(t *testing.T) {
-	t.Parallel()
-
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0", AdminRateLimitRPS: 1, AdminRateLimitBurst: 1})
-	handler := srv.rateLimit(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusNoContent)
-	}))
-
-	first := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil)
-	req.RemoteAddr = "192.0.2.10:12345"
-	handler.ServeHTTP(first, req)
-
-	if first.Code != http.StatusNoContent {
-		t.Fatalf("first request status = %d, want 204", first.Code)
-	}
-
-	second := httptest.NewRecorder()
-	req = httptest.NewRequest(http.MethodGet, "/api/v1/jobs", nil)
-	req.RemoteAddr = "192.0.2.10:54321"
-	handler.ServeHTTP(second, req)
-
-	if second.Code != http.StatusTooManyRequests {
-		t.Fatalf("second request status = %d, want 429", second.Code)
-	}
-}
-
 func TestRemovedRoutesReturnNotFound(t *testing.T) {
 	t.Parallel()
 
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
+	srv := NewServer(&Config{Port: "0"})
+
 	for _, path := range []string{
 		"/api/v1/jobs", "/api/v1/jobs/",
 		"/api/v1/jobs/123/events", "/api/v1/jobs/123/events/",
 		"/api/v1/pods", "/api/v1/pods/", "/api/v1/pods/pod-1",
 		"/api/v1/status", "/api/v1/status/", "/metrics", "/metrics/",
 	} {
-		for _, token := range []string{"", testAPIToken} {
+		for _, token := range []string{"", "obsolete-token"} {
 			req := httptest.NewRequest(http.MethodGet, path, nil)
 			req.Header.Set("X-Api-Key", token)
 
@@ -529,24 +290,6 @@ func TestRemovedRoutesReturnNotFound(t *testing.T) {
 			if location := rec.Header().Get("Location"); location != "" {
 				t.Errorf("GET %s redirected to %q", path, location)
 			}
-		}
-	}
-}
-
-func TestJobReadRequiresToken(t *testing.T) {
-	t.Parallel()
-
-	srv := NewServer(&Config{APIToken: testAPIToken, Port: "0"})
-
-	for _, token := range []string{"", "wrong-token"} {
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/123", nil)
-		req.Header.Set("X-Api-Key", token)
-
-		rec := httptest.NewRecorder()
-		srv.server.Handler.ServeHTTP(rec, req)
-
-		if rec.Code != http.StatusUnauthorized {
-			t.Errorf("got %d, want 401", rec.Code)
 		}
 	}
 }

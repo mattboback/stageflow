@@ -6,40 +6,11 @@ import (
 	"reflect"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	domainjob "github.com/mattboback/stageflow/libs/go/domain/job"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
-
-// beginSnapshot seeds the cache with a PENDING record. It does NOT advance the
-// state; that is the job of Apply + applyJobCreated so the broker detects a
-// change and publishes to SSE watchers.
-func beginSnapshot(cmd BeginJob) (*status.JobRecord, error) {
-	if cmd.Payload == nil {
-		return nil, errors.New("jobstatus: begin payload is required")
-	}
-
-	observedAt := normalizeObservedAt(cmd.ObservedAt)
-	payload := cmd.Payload
-
-	rec := &status.JobRecord{
-		JobID:             payload.JobID,
-		State:             models.JobStatePending,
-		InputType:         payload.InputType,
-		CreatedAt:         observedAt,
-		UpdatedAt:         observedAt,
-		ExpectedScanners:  status.CloneStrings(payload.Config.Modules),
-		CompletedScanners: nil,
-	}
-
-	if payload.InputType == models.JobInputTypeURLs {
-		rec.TotalPages = len(payload.URLs)
-		rec.CurrentPage = 0
-	}
-
-	return rec, nil
-}
 
 func reduceSnapshot(base *status.JobRecord, signal Signal) (*status.JobRecord, bool, error) {
 	if base == nil {
@@ -438,6 +409,12 @@ func cloneJobRecord(rec *status.JobRecord) *status.JobRecord {
 	}
 
 	cloned := *rec
+
+	cloned.ScannerStatuses = make(map[string]models.ScannerStatus, len(rec.ScannerStatuses))
+	for k, v := range rec.ScannerStatuses {
+		cloned.ScannerStatuses[k] = v
+	}
+
 	cloned.ExpectedScanners = status.CloneStrings(rec.ExpectedScanners)
 	cloned.CompletedScanners = status.CloneStrings(rec.CompletedScanners)
 

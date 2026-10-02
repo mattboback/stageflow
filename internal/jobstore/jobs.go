@@ -11,7 +11,7 @@ import (
 )
 
 const jobSelectColumns = `
-id, state, input_type, input_path, urls, pod_id, config_json, created_at, updated_at, completed_at, error, error_details, last_stage, total_pages, current_page, total_violations, report_json_key, scan_stage_log_key, scan_recipe_key, extraction_stage_log_key, extraction_recipe_key, provenance_path, provenance_key, expected_scanners, completed_scanners, scanner_results
+id, state, input_type, input_path, urls, pod_id, config_json, created_at, updated_at, completed_at, error, error_details, last_stage, total_pages, current_page, total_violations, report_json_key, scan_stage_log_key, scan_recipe_key, extraction_stage_log_key, extraction_recipe_key, provenance_path, provenance_key, expected_scanners, completed_scanners, scanner_results, scanner_progress
 `
 
 type rowScanner interface {
@@ -59,7 +59,7 @@ func (d *Database) CreateJob(ctx context.Context, job *models.Job) error {
 }
 
 // CreateJobIfAbsent inserts a new job only when it does not already exist.
-func (d *Database) CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool, error) {
+func (d *Database) CreateJobIfAbsent(ctx context.Context, job *models.Job) (created bool, err error) {
 	configJSON, err := json.Marshal(job.Config)
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal config: %w", err)
@@ -76,7 +76,17 @@ func (d *Database) CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool
 		ON CONFLICT(id) DO NOTHING
 	`
 
-	result, err := d.execContext(ctx, query,
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer rollbackOnError(tx, &err, "create job")
+
+	if _, err = tx.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", job.ID); err != nil {
+		return false, err
+	}
+
+	result, err := tx.ExecContext(ctx, bindPostgresParams(query),
 		job.ID,
 		job.State,
 		job.InputType,
@@ -95,7 +105,7 @@ func (d *Database) CreateJobIfAbsent(ctx context.Context, job *models.Job) (bool
 		return false, fmt.Errorf("failed to read rows affected: %w", err)
 	}
 
-	return rows > 0, nil
+	return rows > 0, tx.Commit()
 }
 
 //nolint:gocognit,gocyclo // Scanning many nullable columns requires multiple nil checks
@@ -122,6 +132,7 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		expectedScannersJSON  sql.NullString
 		completedScannersJSON sql.NullString
 		scannerResultsJSON    sql.NullString
+		scannerProgressJSON   sql.NullString
 	)
 
 	if err := s.Scan(
@@ -151,6 +162,7 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		&expectedScannersJSON,
 		&completedScannersJSON,
 		&scannerResultsJSON,
+		&scannerProgressJSON,
 	); err != nil {
 		return nil, err
 	}
@@ -243,6 +255,12 @@ func scanJobRow(s rowScanner) (*models.Job, error) {
 		}
 	}
 
+	if scannerProgressJSON.Valid && scannerProgressJSON.String != "" {
+		if err := json.Unmarshal([]byte(scannerProgressJSON.String), &job.ScannerProgress); err != nil {
+			return nil, fmt.Errorf("decode scanner progress: %w", err)
+		}
+	}
+
 	return &job, nil
 }
 
@@ -258,7 +276,7 @@ func (d *Database) GetJob(ctx context.Context, jobID string) (*models.Job, error
 
 	job, err := scanJobRow(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("job not found: %s", jobID)
+		return nil, fmt.Errorf("%w: %s", ErrJobNotFound, jobID)
 	}
 
 	if err != nil {

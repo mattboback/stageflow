@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 const (

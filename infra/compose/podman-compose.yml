@@ -138,8 +138,7 @@ services:
       PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_BURST:-3}
       PLATFORM_API_TRUSTED_PROXIES: ${PLATFORM_API_TRUSTED_PROXIES:-127.0.0.1/32,::1/128}
       PLATFORM_API_CORS_ALLOW_ORIGINS: ${PLATFORM_API_CORS_ALLOW_ORIGINS:-http://localhost:${FRONTEND_PORT:-3000},http://127.0.0.1:${FRONTEND_PORT:-3000},http://localhost:3020,http://127.0.0.1:3020}
-      ORCHESTRATOR_API_URL: "http://orchestrator:8081"
-      ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
     volumes:
       - web_server_data:/data
     healthcheck:
@@ -215,7 +214,6 @@ services:
       EXTRACTION_IMAGE: "localhost/stageflow/extractor:${IMAGE_TAG:-latest}"
       SCANNER_IMAGE: "localhost/stageflow/scanner-runner:${IMAGE_TAG:-latest}"
       API_PORT: "8081"
-      ORCHESTRATOR_API_TOKEN: ${ORCHESTRATOR_API_TOKEN:?ORCHESTRATOR_API_TOKEN must be set}
       NATS_HOST: "nats"
       MINIO_HOST: "minio"
       POD_NETNS_MODE: ${POD_NETNS_MODE:-bridge}

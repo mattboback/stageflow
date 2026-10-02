@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 type CurrentReader interface {
@@ -18,10 +18,7 @@ type Config struct {
 }
 
 type StatusPipeline interface {
-	Begin(ctx context.Context, cmd BeginJob) (*status.JobRecord, error)
-	Apply(ctx context.Context, signal Signal) (*status.JobRecord, error)
-	Current(ctx context.Context, jobID string) (*status.JobRecord, error)
-	Watch(ctx context.Context, jobID string) (*status.JobRecord, Subscription, error)
+	Apply(context.Context, Signal) (*status.JobRecord, error)
 }
 
 type BeginJob struct {

@@ -273,7 +273,13 @@ func (s *Service) RecordScannerCompletion(ctx context.Context, payload *events.S
 		return publishErr
 	}
 
+	totalMs := int64(0)
+	if payload.Timing != nil {
+		totalMs = payload.Timing.TotalMs
+	}
+
 	allComplete, err := s.store.RecordScannerCompletion(ctx, payload.JobID, &models.ScannerResult{
+		TotalMs:        totalMs,
 		ScannerType:    scannerType,
 		ResultsPath:    payload.ResultsPath,
 		StageLogPath:   payload.StageLogPath,

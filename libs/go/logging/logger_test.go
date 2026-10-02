@@ -187,16 +187,4 @@ func TestConvenienceFunctions(t *testing.T) {
 	if entry["level"] != "ERROR" {
 		t.Errorf("Error level = %v, want ERROR", entry["level"])
 	}
-
-	// Test Debug
-	buf.Reset()
-	Debug(ctx, "debug message")
-
-	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
-		t.Fatalf("Debug: failed to parse log: %v", err)
-	}
-
-	if entry["level"] != "DEBUG" {
-		t.Errorf("Debug level = %v, want DEBUG", entry["level"])
-	}
 }

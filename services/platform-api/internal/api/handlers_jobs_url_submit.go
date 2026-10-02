@@ -13,12 +13,12 @@ import (
 
 	"github.com/google/uuid"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	sharedstorage "github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 )
 
 const (
@@ -151,13 +151,6 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 
 	if !s.publishJobURLCreated(ctx, w, envelope, authStorageKey) {
 		return
-	}
-
-	if _, beginErr := s.jobStatus.Begin(ctx, jobstatus.BeginJob{
-		Payload:    payload,
-		ObservedAt: envelope.Timestamp,
-	}); beginErr != nil {
-		logging.Warn(ctx, "Failed to seed provisional job status", "error", beginErr)
 	}
 
 	logging.Info(ctx, "Job created", "url_count", len(req.URLs), "input_type", "urls")
@@ -375,8 +368,11 @@ func (s *Server) publishJobURLCreated(
 		return false
 	}
 
-	if publishErr := s.config.Publisher.PublishJobCreated(ctx, envelope); publishErr != nil {
-		s.cleanupUploadedAuthState(authStorageKey)
+	if publishErr := s.publishDurableJob(ctx, envelope); publishErr != nil {
+		if !errors.Is(publishErr, status.ErrIntakeUncertain) {
+			s.cleanupUploadedAuthState(authStorageKey)
+		}
+
 		logging.Error(ctx, "Failed to publish job.created event", "error", publishErr)
 		httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue job")
 

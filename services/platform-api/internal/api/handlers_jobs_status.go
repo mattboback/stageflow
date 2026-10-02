@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 const maxReportJSONBytes = 64 * 1024 * 1024
@@ -76,7 +76,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, err := s.jobStatus.Current(ctx, jobID)
+	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
@@ -104,7 +104,7 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleJobResults(w http.ResponseWriter, r *http.Request, jobID string) {
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	rec, err := s.jobStatus.Current(ctx, jobID)
+	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			httputil.RespondNotFound(w, "Job")

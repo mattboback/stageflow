@@ -1,0 +1,19 @@
+{
+  "updates": [
+    {
+      "pages_scanned": 2,
+      "scanner_type": "axe",
+      "scanner_violations": 0,
+      "state": "DONE",
+      "timing": {
+        "total_ms": 0
+      },
+      "type": "scanner_complete",
+      "violations": 0
+    },
+    {
+      "state": "DONE",
+      "type": "complete"
+    }
+  ]
+}

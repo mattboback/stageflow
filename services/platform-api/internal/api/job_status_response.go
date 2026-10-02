@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func (s *Server) buildJobStatusResponse(ctx context.Context, rec *status.JobRecord) (*models.JobStatus, error) {

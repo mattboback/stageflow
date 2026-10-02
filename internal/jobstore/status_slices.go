@@ -1,4 +1,4 @@
-package status
+package db
 
 // CloneStrings returns a copy of values or nil when the input is empty.
 func CloneStrings(values []string) []string {

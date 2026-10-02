@@ -97,9 +97,22 @@ func (d *Database) CompleteJobWithTerminalEvent(
 	return nil
 }
 
-//nolint:gocyclo // One transaction handles transition, idempotency, scrubbing, and outbox insertion.
 func (d *Database) FailJobWithTerminalEvent(
 	ctx context.Context,
+	jobID, stage, errorMsg, errorDetails string,
+	payload *events.JobFailedPayload,
+) (transitioned bool, err error) {
+	return failJobWithTerminalEvent(ctx, d.db, jobID, stage, errorMsg, errorDetails, payload)
+}
+
+type transactionStarter interface {
+	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
+}
+
+//nolint:gocyclo // Terminal transaction coordinates idempotence, sanitization and the durable outbox.
+func failJobWithTerminalEvent(
+	ctx context.Context,
+	starter transactionStarter,
 	jobID, stage, errorMsg, errorDetails string,
 	payload *events.JobFailedPayload,
 ) (transitioned bool, err error) {
@@ -107,7 +120,7 @@ func (d *Database) FailJobWithTerminalEvent(
 		return false, errors.New("job.failed payload is required")
 	}
 
-	tx, err := d.db.BeginTx(ctx, nil)
+	tx, err := starter.BeginTx(ctx, nil)
 	if err != nil {
 		return false, fmt.Errorf("begin fail job transaction: %w", err)
 	}

@@ -10,6 +10,7 @@ export interface StatusProgressLike {
 
 export interface StatusLike {
 	type?: string;
+	failed?: boolean;
 	progress?: StatusProgressLike;
 	scanner_type?: string;
 	pages_scanned?: number;
@@ -64,6 +65,8 @@ export function getLogMessage(normalizedState: string, data: StatusLike): string
 			return 'Extraction complete. Analyzing directory structure...';
 		case 'SCANNING': {
 			if (data.type === 'scanner_complete' && data.scanner_type) {
+				if (data.failed)
+					return `[${data.scanner_type}] Failed: ${data.error ?? 'Scanner did not finish'}`;
 				const timing = formatScannerTiming(data.timing);
 				const pages = data.pages_scanned;
 				// `violations` is the job's running total; this line is about one scanner.

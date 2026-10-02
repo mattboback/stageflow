@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 )
 

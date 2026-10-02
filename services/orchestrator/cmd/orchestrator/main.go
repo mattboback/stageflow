@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/adapters/messaging"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/api"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
@@ -155,11 +155,7 @@ func run() int {
 	}
 
 	apiServer := api.NewServer(&api.Config{
-		Database:            database,
-		APIToken:            cfg.APIToken,
-		Port:                cfg.APIPort,
-		AdminRateLimitRPS:   cfg.AdminRateLimitRPS,
-		AdminRateLimitBurst: cfg.AdminRateLimitBurst,
+		Port: cfg.APIPort,
 	})
 
 	sigChan := make(chan os.Signal, 1)

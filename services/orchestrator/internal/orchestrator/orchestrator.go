@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
+	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )

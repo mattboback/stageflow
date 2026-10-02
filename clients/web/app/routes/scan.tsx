@@ -97,33 +97,33 @@ export default function Scan() {
 		[result?.remaining_scanners]
 	);
 
-	/* `remaining_scanners` is just expected minus completed, so it cannot tell
-	   queued from running. The orchestrator launches every scanner together when
-	   the job enters `scanning`, so that transition is the signal. */
 	const scannersLaunched = status === 'scanning' || status === 'completing';
-
 	const channels = expected.map((scannerId) => {
+		const scanner = result?.scanner_statuses?.[scannerId];
 		let state: ChannelState;
-		if (completed.has(scannerId)) {
-			state = 'done';
-		} else if (isFailed) {
-			state = 'err';
-		} else if (scannersLaunched && remaining.has(scannerId)) {
+		if (scanner?.state === 'failed') state = 'err';
+		else if (scanner?.state === 'completed' || completed.has(scannerId)) state = 'done';
+		else if (isFailed) state = 'err';
+		else if (scanner?.state === 'running' || (scannersLaunched && remaining.has(scannerId)))
 			state = 'run';
-		} else {
-			state = 'queue';
-		}
-		return { id: scannerId, state };
+		else state = 'queue';
+		const detail =
+			scanner?.state === 'failed'
+				? (scanner.error ?? 'Scanner failed')
+				: scanner && scanner.total_pages > 0
+					? `Page progress: ${scanner.pages_scanned} of ${scanner.total_pages}`
+					: SUB_LABEL[state];
+		return { id: scannerId, state, detail };
 	});
-
 	const doneCount = completed.size;
+	const failedCount = channels.filter((ch) => ch.state === 'err').length;
+	const settledCount = doneCount + failedCount;
 	const totalCount = expected.length;
-	/* One canonical progress number: scanner completion when we know the
-	   roster, backend task progress only before the roster exists. */
-	const pct =
+	const rawPct =
 		totalCount > 0
-			? Math.round((doneCount / totalCount) * 100)
+			? Math.round((settledCount / totalCount) * 100)
 			: Math.round(result?.progress?.percentage ?? 0);
+	const pct = isComplete ? 100 : Math.min(99, rawPct);
 
 	/* Nothing has started yet: one "preparing" message beats seven identical
 	   queued rows that all ask "waiting for what?". */
@@ -151,7 +151,13 @@ export default function Scan() {
 				? 'Checking periodically'
 				: 'Connecting…';
 
-	const heading = isFailed ? 'Scan failed' : isComplete ? 'Scan complete' : 'Scan in progress';
+	const heading = isFailed
+		? 'Scan failed'
+		: isComplete
+			? 'Scan complete'
+			: status === 'completing' || (totalCount > 0 && settledCount === totalCount)
+				? 'Finalizing report'
+				: 'Scan in progress';
 
 	return (
 		<>
@@ -203,7 +209,7 @@ export default function Scan() {
 							</div>
 							<p className="shead__progress num">
 								{totalCount > 0
-									? `${doneCount} of ${totalCount} scanners complete · ${pct}%`
+									? `${settledCount} of ${totalCount} scanners settled · ${doneCount} successful${failedCount > 0 ? ` · ${failedCount} failed` : ''}`
 									: `${pct}%`}
 							</p>
 						</div>
@@ -286,9 +292,7 @@ export default function Scan() {
 												<div>
 													<div className="ch__name">{scannerLabel(ch.id)}</div>
 													{/* queued rows already say "Waiting" in the tag */}
-													{ch.state !== 'done' && ch.state !== 'queue' && (
-														<div className="ch__sub">{SUB_LABEL[ch.state]}</div>
-													)}
+													{ch.state !== 'queue' && <div className="ch__sub">{ch.detail}</div>}
 												</div>
 												<div className="ch__right">
 													<span className="ch__tag">{TAG_LABEL[ch.state]}</span>

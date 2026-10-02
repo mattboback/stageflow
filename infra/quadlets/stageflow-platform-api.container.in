@@ -2,8 +2,8 @@
 Description=StageFlow Platform API
 PartOf=stageflow.target
 Wants=network-online.target
-After=network-online.target stageflow-nats.service stageflow-minio.service stageflow-orchestrator.service
-Requires=stageflow-nats.service stageflow-minio.service stageflow-orchestrator.service
+After=network-online.target stageflow-nats.service stageflow-minio.service stageflow-postgres.service
+Requires=stageflow-nats.service stageflow-minio.service stageflow-postgres.service
 
 [Service]
 EnvironmentFile=@APP_ENV_FILE@
@@ -29,7 +29,7 @@ Environment=MINIO_USE_PROXY_URLS=true
 Environment=PLATFORM_API_ALLOW_PRIVATE_TARGETS=false
 # The gateway on the ingress network; platform-api keys rate limits on its X-Forwarded-For.
 Environment=PLATFORM_API_TRUSTED_PROXIES=10.89.4.0/24
-Environment=ORCHESTRATOR_API_URL=http://orchestrator:8081
+
 HealthCmd=/usr/local/bin/platform-api-healthcheck
 HealthInterval=15s
 HealthTimeout=5s

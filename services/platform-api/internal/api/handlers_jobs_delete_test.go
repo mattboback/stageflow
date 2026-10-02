@@ -8,10 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
 	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 type staticJobReader struct {
@@ -42,7 +41,7 @@ func seedReadableJob(t *testing.T, server *Server, jobID string, state models.Jo
 
 	reader := &staticJobReader{rec: &status.JobRecord{JobID: jobID, State: state}}
 	server.config.StatusReader = reader
-	server.jobStatus = jobstatus.New(&jobstatus.Config{CurrentReader: reader})
+	server.statusReader = reader
 }
 
 func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {

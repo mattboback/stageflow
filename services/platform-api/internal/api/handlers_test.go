@@ -17,14 +17,15 @@ import (
 	"testing"
 	"time"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	storagepkg "github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
+	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
 
 func TestHandleHealth(t *testing.T) {
@@ -382,7 +383,7 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 
 	assertUploadCount(t, storage, 1)
 
-	completeJobWithArtifacts(t, server.jobStatus, jobID, events.ArtifactLocations{
+	completeJobWithArtifacts(t, testPipeline(server), jobID, events.ArtifactLocations{
 		ReportJSON: jobID + "/report.json",
 	})
 
@@ -402,7 +403,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 	server, objectStore, _ := newTestServer(t)
 
 	jobID := "job-structured-screenshots"
-	if _, err := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+	if _, err := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
 		Kind:       jobstatus.SignalJobCreated,
 		ObservedAt: time.Now().UTC(),
 		JobCreated: &events.JobCreatedPayload{
@@ -425,7 +426,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 	uploadKey := fmt.Sprintf("%s::%s", storagepkg.BucketArtifacts, reportKey)
 	objectStore.uploads[uploadKey] = reportBytes
 
-	if _, completeErr := server.jobStatus.Apply(context.Background(), jobstatus.Signal{
+	if _, completeErr := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
 		Kind:       jobstatus.SignalJobCompleted,
 		ObservedAt: time.Now().UTC(),
 		JobCompleted: &events.JobCompletedPayload{
@@ -801,6 +802,7 @@ func strPtr(value string) *string {
 }
 
 type fakePublisher struct {
+	snapshots *jobstatus.Pipeline
 	envelopes []*events.Envelope
 	err       error
 	onPublish func(envelope *events.Envelope) error
@@ -818,6 +820,19 @@ func (f *fakePublisher) PublishJobCreated(_ context.Context, envelope *events.En
 	}
 
 	f.envelopes = append(f.envelopes, envelope)
+	if f.snapshots != nil {
+		_, err := f.snapshots.Apply(
+			context.Background(),
+			jobstatus.Signal{
+				Kind:       jobstatus.SignalJobCreated,
+				ObservedAt: envelope.Timestamp,
+				JobCreated: envelope.Payload.(*events.JobCreatedPayload),
+			},
+		)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -838,7 +853,8 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 	})
 
 	storage := newFakeStorage()
-	publisher := &fakePublisher{}
+	snapshots := jobstatus.New(nil)
+	publisher := &fakePublisher{snapshots: snapshots}
 
 	defaultConfig, err := scannerregistry.DefaultConfig()
 	if err != nil {
@@ -851,8 +867,10 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 	}
 
 	server := NewServer(&ServerConfig{
+		StatusReader:    snapshots,
 		Storage:         storage,
 		Publisher:       publisher,
+		PendingJobs:     fakePendingJobs{snapshots: snapshots},
 		TombstoneStore:  tombstoneStore,
 		ScannerRegistry: registry,
 	})
@@ -883,4 +901,15 @@ func buildTestZip(t *testing.T) []byte {
 	}
 
 	return buf.Bytes()
+}
+
+type fakePendingJobs struct{ snapshots *jobstatus.Pipeline }
+
+func (f fakePendingJobs) PublishPendingJob(
+	ctx context.Context,
+	job *models.Job,
+	publish func(context.Context) error,
+) error {
+	f.snapshots.Put(status.Snapshot(job))
+	return publish(ctx)
 }

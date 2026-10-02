@@ -1,5 +1,5 @@
 // Package status defines job status projection models.
-package status
+package db
 
 import (
 	"errors"
@@ -33,6 +33,7 @@ type JobRecord struct {
 	LastErrorDetails      string
 	ExpectedScanners      []string
 	CompletedScanners     []string
+	ScannerStatuses       map[string]models.ScannerStatus
 	ScannerArtifacts      map[string]*ScannerArtifactRecord // Per-scanner artifact keys
 }
 
@@ -55,7 +56,8 @@ func (r *JobRecord) ToModel() *models.JobStatus {
 		TotalViolations:   r.TotalViolations,
 		ExpectedScanners:  CloneStrings(r.ExpectedScanners),
 		CompletedScanners: CloneStrings(r.CompletedScanners),
-		RemainingScanners: remainingScanners(r.ExpectedScanners, r.CompletedScanners),
+		RemainingScanners: remainingScanners(r.ExpectedScanners, r.settledScanners()),
+		ScannerStatuses:   r.ScannerStatuses,
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
 	}
@@ -123,4 +125,15 @@ func clampPercentage(current, total int) int {
 	default:
 		return value
 	}
+}
+
+func (r *JobRecord) settledScanners() []string {
+	settled := CloneStrings(r.CompletedScanners)
+	for name, scanner := range r.ScannerStatuses {
+		if scanner.State == "failed" {
+			settled = append(settled, name)
+		}
+	}
+
+	return settled
 }

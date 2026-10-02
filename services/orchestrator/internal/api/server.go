@@ -3,17 +3,14 @@ package api
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/mattboback/stageflow/libs/go/httputil"
-	db "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/repository"
 )
 
 const defaultForcedDrainWait = time.Second
@@ -25,11 +22,8 @@ var ErrRequestDrainTimeout = errors.New("orchestrator API handlers did not drain
 
 // Server provides private job status reads and a health endpoint.
 type Server struct {
-	database        *db.Database
-	apiToken        string
 	port            string
 	server          *http.Server
-	rateLimiter     *adminRateLimiter
 	requestsMu      sync.Mutex
 	requestsWG      sync.WaitGroup
 	requestsStop    bool
@@ -38,11 +32,7 @@ type Server struct {
 
 // Config contains configuration for the API server.
 type Config struct {
-	Database            *db.Database
-	APIToken            string
-	Port                string // Default: "8081"
-	AdminRateLimitRPS   int    // 0 disables rate limiting.
-	AdminRateLimitBurst int    // Defaults to AdminRateLimitRPS when rate limiting is enabled.
+	Port string // Default: 8081
 }
 
 // NewServer creates a new API server.
@@ -52,23 +42,17 @@ func NewServer(cfg *Config) *Server {
 	}
 
 	s := &Server{
-		database:        cfg.Database,
-		apiToken:        strings.TrimSpace(cfg.APIToken),
 		port:            cfg.Port,
-		rateLimiter:     newAdminRateLimiter(cfg.AdminRateLimitRPS, cfg.AdminRateLimitBurst),
 		forcedDrainWait: defaultForcedDrainWait,
 	}
 
 	mux := http.NewServeMux()
 
-	// Platform-api reads individual jobs through this private endpoint.
-	mux.HandleFunc("/api/v1/jobs/{job_id}", s.requireAuth(s.handleGetJob))
-
 	mux.HandleFunc("/healthz", s.handleHealth)
 
 	s.server = &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           s.trackRequests(s.recoverPanic(s.rateLimit(mux))),
+		Handler:           s.trackRequests(mux),
 		ReadHeaderTimeout: 15 * time.Second,
 	}
 
@@ -115,53 +99,6 @@ func (s *Server) waitForRequests(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-}
-
-func (s *Server) requireAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if s.apiToken == "" {
-			httputil.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-			return
-		}
-
-		provided := strings.TrimSpace(r.Header.Get("X-Api-Key"))
-		if provided == "" {
-			auth := strings.TrimSpace(r.Header.Get("Authorization"))
-			if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
-				provided = strings.TrimSpace(auth[len("bearer "):])
-			}
-		}
-
-		if subtle.ConstantTimeCompare([]byte(provided), []byte(s.apiToken)) != 1 {
-			httputil.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	}
-}
-
-// handleGetJob handles GET /api/v1/jobs/{job_id}.
-func (s *Server) handleGetJob(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		httputil.RespondError(w, http.StatusMethodNotAllowed, "Method not allowed")
-
-		return
-	}
-
-	jobID := r.PathValue("job_id")
-
-	job, err := s.database.GetJob(r.Context(), jobID)
-	if err != nil {
-		slog.Warn("Job not found", "job_id", jobID, "error", err)
-		httputil.RespondNotFound(w, "Job")
-
-		return
-	}
-
-	httputil.RespondOK(w, map[string]any{
-		"job": job,
-	})
 }
 
 // Start starts the HTTP server.

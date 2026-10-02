@@ -1,0 +1,13 @@
+{
+  "error": "browser closed",
+  "failed": true,
+  "pages_scanned": 0,
+  "scanner_type": "seo",
+  "scanner_violations": 0,
+  "state": "SCANNING",
+  "timing": {
+    "total_ms": 0
+  },
+  "type": "scanner_complete",
+  "violations": 0
+}

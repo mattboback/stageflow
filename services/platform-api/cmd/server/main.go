@@ -13,12 +13,11 @@ import (
 	"syscall"
 	"time"
 
+	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
-	"github.com/mattboback/stageflow/services/platform-api/internal/jobstatus"
 	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
-	"github.com/mattboback/stageflow/services/platform-api/internal/statussource"
 	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 )
 
@@ -81,14 +80,11 @@ func run() error {
 
 	slog.Info("MinIO buckets initialized")
 
-	statusReader, err := statussource.NewClient(&statussource.Config{
-		BaseURL: cfg.OrchestratorAPIURL,
-		Timeout: 5 * time.Second,
-		Token:   cfg.OrchestratorAPIToken,
-	})
+	statusReader, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL})
 	if err != nil {
-		return fmt.Errorf("failed to initialize orchestrator status source: %w", err)
+		return fmt.Errorf("connect job status database: %w", err)
 	}
+	defer statusReader.Close()
 
 	tombstoneStore, err := tombstone.NewStore(cfg.TombstoneDBPath)
 	if err != nil {
@@ -114,7 +110,8 @@ func run() error {
 		Port:                cfg.Port,
 		Storage:             minioClient,
 		Publisher:           msgService,
-		StatusReader:        statusReader,
+		PendingJobs:         statusReader,
+		StatusReader:        db.StatusReader{Database: statusReader},
 		TombstoneStore:      tombstoneStore,
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
@@ -123,10 +120,6 @@ func run() error {
 		MinIOPublicEndpoint: cfg.MinIO.PublicEndpoint,
 		MinIOPublicUseSSL:   cfg.MinIO.PublicUseSSL,
 	})
-
-	if subscribeErr := subscribeStatusEvents(ctx, msgService, server.JobStatus()); subscribeErr != nil {
-		return subscribeErr
-	}
 
 	httpServer := newHTTPServer(cfg.Port, server.Router())
 
@@ -179,25 +172,6 @@ func startHTTPServer(server *http.Server) (<-chan error, error) {
 	}()
 
 	return serverErr, nil
-}
-
-type statusEventSubscriber interface {
-	SubscribeToStatusEvents(context.Context, messaging.EventHandler) error
-}
-
-func subscribeStatusEvents(
-	ctx context.Context,
-	subscriber statusEventSubscriber,
-	pipeline *jobstatus.Pipeline,
-) error {
-	pipelineHandler := jobstatus.NewEventHandler(pipeline)
-	if subscribeErr := subscriber.SubscribeToStatusEvents(ctx, pipelineHandler); subscribeErr != nil {
-		return fmt.Errorf("failed to subscribe to lifecycle events: %w", subscribeErr)
-	}
-
-	slog.Info("Subscribed to lifecycle events")
-
-	return nil
 }
 
 func newHTTPServer(port int, handler http.Handler) *http.Server {

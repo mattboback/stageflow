@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
+	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/storage"
-	"github.com/mattboback/stageflow/services/platform-api/internal/status"
 )
 
 func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rec, err := s.jobStatus.Current(ctx, jobID)
+	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
 			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
@@ -87,7 +87,6 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.jobStatus.Forget(jobID)
 	w.WriteHeader(http.StatusNoContent)
 }
 

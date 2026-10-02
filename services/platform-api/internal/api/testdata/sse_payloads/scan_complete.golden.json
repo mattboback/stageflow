@@ -4,12 +4,7 @@
   "scanner_violations": 7,
   "state": "SCANNING",
   "timing": {
-    "finalization_ms": 0,
-    "page_iteration_ms": 0,
-    "publish_completed_ms": 0,
-    "total_ms": 1234,
-    "upload_artifacts_ms": 0,
-    "write_results_ms": 0
+    "total_ms": 1234
   },
   "type": "scanner_complete",
   "violations": 9

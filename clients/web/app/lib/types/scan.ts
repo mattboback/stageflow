@@ -52,6 +52,7 @@ export interface ScanResult {
 	expected_scanners?: string[];
 	completed_scanners?: string[];
 	remaining_scanners?: string[];
+	scanner_statuses?: Record<string, ScannerStatus>;
 	artifacts?: ScanArtifacts;
 	created_at: string;
 	updated_at: string;
@@ -101,4 +102,13 @@ export interface ScannerSelection {
 export interface ScannersResponse {
 	scanners: ScannerDefinition[];
 	categories: string[];
+}
+
+export interface ScannerStatus {
+	state: 'pending' | 'running' | 'completed' | 'failed';
+	pages_scanned: number;
+	total_pages: number;
+	violations: number;
+	total_ms?: number;
+	error?: string;
 }

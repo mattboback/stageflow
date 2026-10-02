@@ -83,6 +83,7 @@ type Job struct {
 	ProvenanceKey         string                    `json:"provenance_key,omitempty"`
 	ExpectedScanners      []string                  `json:"expected_scanners,omitempty"`
 	CompletedScanners     []string                  `json:"completed_scanners,omitempty"`
+	ScannerProgress       map[string]int            `json:"scanner_progress,omitempty"`
 	ScannerResults        map[string]*ScannerResult `json:"scanner_results,omitempty"`
 }
 
@@ -100,6 +101,7 @@ type ScannerResult struct {
 	SeriousIssues  int    `json:"serious_issues,omitempty"`
 	ModerateIssues int    `json:"moderate_issues,omitempty"`
 	MinorIssues    int    `json:"minor_issues,omitempty"`
+	TotalMs        int64  `json:"total_ms,omitempty"`
 }
 
 // JobConfig contains configuration for a scan job.
@@ -134,19 +136,20 @@ type JobConfig struct {
 
 // JobStatus is the response for job status queries.
 type JobStatus struct {
-	ID                string            `json:"id"`
-	State             JobState          `json:"state"`
-	Progress          *JobProgress      `json:"progress,omitempty"`
-	Artifacts         *ArtifactLocation `json:"artifacts,omitempty"`
-	Error             string            `json:"error,omitempty"`
-	ErrorDetails      string            `json:"error_details,omitempty"`
-	LastStage         string            `json:"last_stage,omitempty"`
-	TotalViolations   int               `json:"violations,omitempty"`
-	ExpectedScanners  []string          `json:"expected_scanners,omitempty"`
-	CompletedScanners []string          `json:"completed_scanners,omitempty"`
-	RemainingScanners []string          `json:"remaining_scanners,omitempty"`
-	CreatedAt         time.Time         `json:"created_at"`
-	UpdatedAt         time.Time         `json:"updated_at"`
+	ID                string                   `json:"id"`
+	State             JobState                 `json:"state"`
+	Progress          *JobProgress             `json:"progress,omitempty"`
+	Artifacts         *ArtifactLocation        `json:"artifacts,omitempty"`
+	Error             string                   `json:"error,omitempty"`
+	ErrorDetails      string                   `json:"error_details,omitempty"`
+	LastStage         string                   `json:"last_stage,omitempty"`
+	TotalViolations   int                      `json:"violations,omitempty"`
+	ExpectedScanners  []string                 `json:"expected_scanners,omitempty"`
+	CompletedScanners []string                 `json:"completed_scanners,omitempty"`
+	RemainingScanners []string                 `json:"remaining_scanners,omitempty"`
+	ScannerStatuses   map[string]ScannerStatus `json:"scanner_statuses,omitempty"`
+	CreatedAt         time.Time                `json:"created_at"`
+	UpdatedAt         time.Time                `json:"updated_at"`
 }
 
 // JobProgress tracks scan progress.
@@ -188,4 +191,14 @@ type ScreenshotArtifact struct {
 	PageID     string         `json:"page_id"`
 	PageURL    string         `json:"page_url,omitempty"`
 	URL        string         `json:"url"` // Presigned URL for full-size screenshot
+}
+
+// ScannerStatus is a durable per-scanner snapshot, including unsuccessful outcomes.
+type ScannerStatus struct {
+	State        string `json:"state"`
+	PagesScanned int    `json:"pages_scanned"`
+	TotalPages   int    `json:"total_pages"`
+	Violations   int    `json:"violations"`
+	TotalMs      int64  `json:"total_ms,omitempty"`
+	Error        string `json:"error,omitempty"`
 }

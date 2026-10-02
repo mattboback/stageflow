@@ -158,8 +158,3 @@ func Warn(ctx context.Context, msg string, args ...any) {
 func Error(ctx context.Context, msg string, args ...any) {
 	L(ctx).Error(msg, args...)
 }
-
-// Debug logs at Debug level with context fields applied.
-func Debug(ctx context.Context, msg string, args ...any) {
-	L(ctx).Debug(msg, args...)
-}
