@@ -1,22 +1,9 @@
 package api
 
 import (
-	"context"
 	"mime/multipart"
 	"testing"
-
-	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
-
-func applyTestSignal(t *testing.T, server *Server, signal jobstatus.Signal) {
-	t.Helper()
-
-	if _, err := testPipeline(server).Apply(context.Background(), signal); err != nil {
-		t.Fatalf("apply signal: %v", err)
-	}
-}
-
-// --- handleListScanners ---
 
 func writeField(t *testing.T, w *multipart.Writer, key, value string) {
 	t.Helper()
@@ -37,8 +24,4 @@ func addZipFile(t *testing.T, w *multipart.Writer, filename string, data []byte)
 	if _, writeErr := part.Write(data); writeErr != nil {
 		t.Fatalf("write file: %v", writeErr)
 	}
-}
-
-func testPipeline(server *Server) *jobstatus.Pipeline {
-	return server.statusReader.(*jobstatus.Pipeline)
 }

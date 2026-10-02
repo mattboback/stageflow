@@ -39,7 +39,7 @@ func (r *staticJobReader) GetJob(_ context.Context, jobID string) (*jobstore.Job
 func seedReadableJob(t *testing.T, server *Server, jobID string, state models.JobState) {
 	t.Helper()
 
-	testPipeline(server).Put(&jobstore.JobRecord{JobID: jobID, State: state})
+	testJobs(server).put(&models.Job{ID: jobID, State: state})
 }
 
 func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {

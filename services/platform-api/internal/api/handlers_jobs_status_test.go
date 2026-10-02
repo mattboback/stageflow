@@ -10,22 +10,13 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestHandleJobStatusFound(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-status-found"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
+	testJobs(server).put(scanningURLJob(jobID))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID, http.NoBody)
 	rr := httptest.NewRecorder()
@@ -65,14 +56,7 @@ func TestHandleJobReportRouteGone(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-report-gone"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
+	testJobs(server).put(scanningURLJob(jobID))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/report", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -90,14 +74,7 @@ func TestHandleJobResultsNotCompleted(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-results-pending"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
+	testJobs(server).put(scanningURLJob(jobID))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -126,18 +103,8 @@ func TestHandleJobResultsCompletedNoReport(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-results-no-report"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind:         jobstatus.SignalJobCompleted,
-		JobCompleted: &events.JobCompletedPayload{JobID: jobID, Artifacts: events.ArtifactLocations{}},
-	})
+	testJobs(server).put(scanningURLJob(jobID))
+	testJobs(server).finish(t, jobID, "")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -153,21 +120,8 @@ func TestHandleJobResultsRedirect(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-results-redirect"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCompleted,
-		JobCompleted: &events.JobCompletedPayload{
-			JobID:     jobID,
-			Artifacts: events.ArtifactLocations{ReportJSON: jobID + "/report.json"},
-		},
-	})
+	testJobs(server).put(scanningURLJob(jobID))
+	testJobs(server).finish(t, jobID, jobID+"/report.json")
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/"+jobID+"/results", http.NoBody)
 	rr := httptest.NewRecorder()

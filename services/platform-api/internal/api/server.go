@@ -20,7 +20,7 @@ type JobStatusReader interface {
 	GetJob(ctx context.Context, jobID string) (*jobstore.JobRecord, error)
 }
 
-// Server wires HTTP handlers to storage, status, and publisher dependencies.
+// Server wires HTTP handlers to file storage, job admission and job status.
 type Server struct {
 	config          *ServerConfig
 	statusReader    JobStatusReader

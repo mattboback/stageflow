@@ -11,7 +11,7 @@ import (
 func TestZipUploadCleansStagedFileWhenLaterFieldIsInvalid(t *testing.T) {
 	t.Parallel()
 
-	server, objectStore, publisher := newTestServer(t)
+	server, objectStore, jobs := newTestServer(t)
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	addZipFile(t, writer, "site.zip", buildTestZip(t))
@@ -32,8 +32,8 @@ func TestZipUploadCleansStagedFileWhenLaterFieldIsInvalid(t *testing.T) {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
 	}
 
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("published envelopes = %d, want 0", len(publisher.envelopes))
+	if len(jobs.admitted) != 0 {
+		t.Fatalf("admitted jobs = %d, want 0", len(jobs.admitted))
 	}
 
 	if len(objectStore.deletes) != 1 {
@@ -48,7 +48,7 @@ func TestZipUploadCleansStagedFileWhenLaterFieldIsInvalid(t *testing.T) {
 func TestZipUploadCleansFirstFileWhenDuplicateFollows(t *testing.T) {
 	t.Parallel()
 
-	server, objectStore, publisher := newTestServer(t)
+	server, objectStore, jobs := newTestServer(t)
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	addZipFile(t, writer, "first.zip", buildTestZip(t))
@@ -69,8 +69,8 @@ func TestZipUploadCleansFirstFileWhenDuplicateFollows(t *testing.T) {
 		t.Fatalf("status = %d, want %d: %s", rr.Code, http.StatusBadRequest, rr.Body.String())
 	}
 
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("published envelopes = %d, want 0", len(publisher.envelopes))
+	if len(jobs.admitted) != 0 {
+		t.Fatalf("admitted jobs = %d, want 0", len(jobs.admitted))
 	}
 
 	if len(objectStore.deletes) != 1 || len(objectStore.uploads) != 0 {

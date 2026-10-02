@@ -10,12 +10,10 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestZipUploadRejectsNonChromiumBrowser(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -37,13 +35,13 @@ func TestZipUploadRejectsNonChromiumBrowser(t *testing.T) {
 		t.Fatalf("expected a browser validation error, got %s", rr.Body.String())
 	}
 
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("expected no job to be published, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 0 {
+		t.Fatalf("expected no job to be admitted, got %d", len(jobs.admitted))
 	}
 }
 
 func TestZipUploadWithScannerConfigsField(t *testing.T) {
-	server, store, publisher := newTestServer(t)
+	server, store, jobs := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -69,14 +67,11 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 		t.Fatalf("expected 1 upload, got %d", len(store.uploads))
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 envelope, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected 1 admitted job, got %d", len(jobs.admitted))
 	}
 
-	payload, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok {
-		t.Fatal("expected JobCreatedPayload")
-	}
+	payload := jobs.admitted[0]
 
 	if !payload.Config.Screenshot {
 		t.Fatal("expected screenshot=true")
@@ -207,7 +202,7 @@ func TestZipUploadSanitizesUploadedFilename(t *testing.T) {
 }
 
 func TestZipUploadDefaultsScreenshotCaptureOn(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -228,16 +223,13 @@ func TestZipUploadDefaultsScreenshotCaptureOn(t *testing.T) {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected 1 admitted job, got %d", len(jobs.admitted))
 	}
 
-	published, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok {
-		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
-	}
+	admitted := jobs.admitted[0]
 
-	if !published.Config.Screenshot {
+	if !admitted.Config.Screenshot {
 		t.Fatal("expected omitted multipart screenshot field to default to true")
 	}
 }

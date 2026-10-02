@@ -14,10 +14,7 @@ import (
 	"time"
 
 	"github.com/mattboback/stageflow/internal/jobstore"
-
 	"github.com/mattboback/stageflow/libs/go/models"
-	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 type sseEvent struct {
@@ -84,38 +81,13 @@ func readNextSSEEvent(r *bufio.Reader) (eventType, data string, err error) {
 func TestHandleJobStream_SendsDoneAndClosesOnTerminalUpdate(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
-	if _, err := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCreated,
-		ObservedAt: time.Now().UTC(),
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     sseTestJobID,
-			InputType: events.InputTypeURLs,
-			URLs:      []string{"https://example.com"},
-			Config: models.JobConfig{
-				Modules: []string{scannerTypeAxe},
-			},
-		},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	testJobs(server).put(scanningURLJob(sseTestJobID, scannerTypeAxe))
 
 	eventsCh, done := startJobStream(t, server, sseTestJobID)
 
 	waitForSSEEvent(t, eventsCh, "status")
 
-	if _, err := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCompleted,
-		ObservedAt: time.Now().UTC(),
-		JobCompleted: &events.JobCompletedPayload{
-			JobID:  sseTestJobID,
-			Status: events.JobStatusSuccess,
-			Artifacts: events.ArtifactLocations{
-				ReportJSON: sseTestJobID + "/report.json",
-			},
-		},
-	}); err != nil {
-		t.Fatalf("Apply() error = %v", err)
-	}
+	testJobs(server).finish(t, sseTestJobID, sseTestJobID+"/report.json")
 
 	waitForSSEEvent(t, eventsCh, "update")
 	waitForSSEEvent(t, eventsCh, "done")

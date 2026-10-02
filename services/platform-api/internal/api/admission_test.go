@@ -35,8 +35,8 @@ func TestQueueCapacityRejectsAllCallersAndCleansAuthFiles(t *testing.T) {
 				t.Fatalf("response=%d %s", response.Code, response.Body.String())
 			}
 
-			if len(store.envelopes) != 0 || len(files.uploads) != 0 {
-				t.Fatalf("rejected job left state: jobs=%d files=%d", len(store.envelopes), len(files.uploads))
+			if len(store.admitted) != 0 || len(files.uploads) != 0 {
+				t.Fatalf("rejected job left state: jobs=%d files=%d", len(store.admitted), len(files.uploads))
 			}
 		})
 	}
@@ -63,7 +63,7 @@ func TestLowDiskRefusesBeforeUploadAndAgainBeforeAdmission(t *testing.T) {
 				t.Fatalf("response=%d %s", response.Code, response.Body.String())
 			}
 
-			if len(store.envelopes) != 0 || len(files.uploads) != 0 {
+			if len(store.admitted) != 0 || len(files.uploads) != 0 {
 				t.Fatal("low-disk rejection admitted a job or retained credentials")
 			}
 		})
@@ -124,7 +124,7 @@ func TestInvalidAndBombArchivesFailBeforeAdmission(t *testing.T) {
 				t.Fatalf("response=%d %s", response.Code, response.Body.String())
 			}
 
-			if len(store.envelopes) != 0 || len(files.uploads) != 0 {
+			if len(store.admitted) != 0 || len(files.uploads) != 0 {
 				t.Fatal("invalid input was admitted or retained")
 			}
 		})
@@ -144,11 +144,11 @@ func TestZipAdmissionCleansCertainRejectionAndPreservesUncertainFailures(t *test
 				expectedFiles = 0
 			}
 
-			if response.Code == http.StatusCreated || len(store.envelopes) != 0 || len(files.uploads) != expectedFiles {
+			if response.Code == http.StatusCreated || len(store.admitted) != 0 || len(files.uploads) != expectedFiles {
 				t.Fatalf(
 					"unexpected intake state: status=%d jobs=%d files=%d",
 					response.Code,
-					len(store.envelopes),
+					len(store.admitted),
 					len(files.uploads),
 				)
 			}
@@ -184,7 +184,7 @@ func TestAdmittedJobIsImmediatelyPendingWithSelectedScanners(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if snapshot.State != "PENDING" || len(snapshot.ExpectedScanners) != 2 || len(store.envelopes) != 1 {
+	if snapshot.State != "PENDING" || len(snapshot.ExpectedScanners) != 2 || len(store.admitted) != 1 {
 		t.Fatalf("job missing pending durable snapshot: %#v", snapshot)
 	}
 }
@@ -212,7 +212,7 @@ func TestLowDiskZIPRequestDoesNotReadBodyOrCreateFiles(t *testing.T) {
 		t.Fatalf("status=%d", response.Code)
 	}
 
-	if len(files.uploads) != 0 || len(store.envelopes) != 0 {
+	if len(files.uploads) != 0 || len(store.admitted) != 0 {
 		t.Fatal("low-disk admission started upload")
 	}
 }
@@ -258,11 +258,11 @@ func TestCancellationBeforeAdmissionCleansUploadedAuth(t *testing.T) {
 	response := httptest.NewRecorder()
 	server.handleJobURLSubmit(response, request)
 
-	if response.Code != http.StatusRequestTimeout || len(store.envelopes) != 0 || len(files.uploads) != 0 {
+	if response.Code != http.StatusRequestTimeout || len(store.admitted) != 0 || len(files.uploads) != 0 {
 		t.Fatalf(
 			"pre-admission cancellation retained state: status=%d jobs=%d files=%d",
 			response.Code,
-			len(store.envelopes),
+			len(store.admitted),
 			len(files.uploads),
 		)
 	}

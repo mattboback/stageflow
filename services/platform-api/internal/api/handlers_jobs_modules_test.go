@@ -11,7 +11,6 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
 )
 
 func TestSplitCSV(t *testing.T) {
@@ -241,7 +240,7 @@ func newTestServerForModules(t *testing.T) *Server {
 		config: &ServerConfig{
 			ScannerRegistry: registry,
 		},
-		statusReader:    jobstatus.New(nil),
+		statusReader:    newFakeJobs(),
 		scannerRegistry: registry,
 	}
 }

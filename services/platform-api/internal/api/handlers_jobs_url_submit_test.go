@@ -10,8 +10,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestHandleJobURLSubmitAcceptsOmittedOrChromiumBrowser(t *testing.T) {
@@ -20,7 +18,7 @@ func TestHandleJobURLSubmitAcceptsOmittedOrChromiumBrowser(t *testing.T) {
 		`{"urls":["https://example.com"],"browser":"chromium"}`,
 		`{"urls":["https://example.com"],"browser":"  CHROMIUM  "}`,
 	} {
-		server, _, publisher := newTestServer(t)
+		server, _, jobs := newTestServer(t)
 
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -32,15 +30,15 @@ func TestHandleJobURLSubmitAcceptsOmittedOrChromiumBrowser(t *testing.T) {
 			t.Fatalf("%s: expected 201, got %d: %s", body, rr.Code, rr.Body.String())
 		}
 
-		if len(publisher.envelopes) != 1 {
-			t.Fatalf("%s: expected 1 envelope, got %d", body, len(publisher.envelopes))
+		if len(jobs.admitted) != 1 {
+			t.Fatalf("%s: expected 1 admitted job, got %d", body, len(jobs.admitted))
 		}
 	}
 }
 
 func TestHandleJobURLSubmitRejectsOtherBrowserEngines(t *testing.T) {
 	for _, engine := range []string{"firefox", "webkit", "opera"} {
-		server, _, publisher := newTestServer(t)
+		server, _, jobs := newTestServer(t)
 
 		body := bytes.NewBufferString(`{"urls":["https://example.com"],"browser":"` + engine + `"}`)
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -57,8 +55,8 @@ func TestHandleJobURLSubmitRejectsOtherBrowserEngines(t *testing.T) {
 			t.Fatalf("%s: expected a browser validation error, got %s", engine, rr.Body.String())
 		}
 
-		if len(publisher.envelopes) != 0 {
-			t.Fatalf("%s: expected no job to be published, got %d", engine, len(publisher.envelopes))
+		if len(jobs.admitted) != 0 {
+			t.Fatalf("%s: expected no job to be admitted, got %d", engine, len(jobs.admitted))
 		}
 	}
 }
@@ -66,7 +64,7 @@ func TestHandleJobURLSubmitRejectsOtherBrowserEngines(t *testing.T) {
 // --- handleJobZipUpload additional paths ---
 
 func TestHandleJobURLSubmitSuccess(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":    []string{"https://example.com"},
@@ -106,22 +104,19 @@ func TestHandleJobURLSubmitSuccess(t *testing.T) {
 		t.Fatalf("URL coverage must be durable before readiness: snapshot=%+v error=%v", initial, readErr)
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected 1 admitted job, got %d", len(jobs.admitted))
 	}
 
-	published, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok {
-		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
-	}
+	admitted := jobs.admitted[0]
 
-	if !published.Config.Screenshot {
+	if !admitted.Config.Screenshot {
 		t.Fatal("expected omitted screenshot field to default to true")
 	}
 }
 
 func TestHandleJobURLSubmitExplicitScreenshotFalse(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	payload := map[string]any{
 		"urls":       []string{"https://example.com"},
@@ -144,16 +139,13 @@ func TestHandleJobURLSubmitExplicitScreenshotFalse(t *testing.T) {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 published event, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected 1 admitted job, got %d", len(jobs.admitted))
 	}
 
-	published, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok {
-		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
-	}
+	admitted := jobs.admitted[0]
 
-	if published.Config.Screenshot {
+	if admitted.Config.Screenshot {
 		t.Fatal("expected explicit screenshot=false to be honored")
 	}
 }

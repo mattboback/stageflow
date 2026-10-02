@@ -18,13 +18,10 @@ import (
 
 	"github.com/mattboback/stageflow/internal/archive"
 	"github.com/mattboback/stageflow/internal/artifacts"
-	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestHandleHealth(t *testing.T) {
@@ -137,7 +134,7 @@ func TestHandleJobURLSubmitBodyTooLarge(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitPrivateTargetWithoutOptInKeepsDefaultBlocking(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"]}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -151,13 +148,13 @@ func TestHandleJobURLSubmitPrivateTargetWithoutOptInKeepsDefaultBlocking(t *test
 		t.Fatalf("expected 400, got %d", rr.Code)
 	}
 
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("expected no job.created published, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 0 {
+		t.Fatalf("expected no job admitted, got %d", len(jobs.admitted))
 	}
 }
 
 func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	body := bytes.NewBufferString(`{"urls":["http://127.0.0.1"],"allow_private_targets":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", body)
@@ -171,8 +168,8 @@ func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
 		t.Fatalf("expected 400, got %d", rr.Code)
 	}
 
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("expected no job.created published, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 0 {
+		t.Fatalf("expected no job admitted, got %d", len(jobs.admitted))
 	}
 
 	var parsed httputil.ErrorResponse
@@ -190,7 +187,7 @@ func TestHandleJobURLSubmitPrivateTargetFlagRequiresServerOptIn(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitPrivateTargetSucceedsForTokenCallerWhenServerAllows(t *testing.T) {
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 	server.config.AllowPrivateTargets = true
 	server.config.APIToken = "caller-token"
 
@@ -207,37 +204,29 @@ func TestHandleJobURLSubmitPrivateTargetSucceedsForTokenCallerWhenServerAllows(t
 		t.Fatalf("expected 201, got %d", rr.Code)
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 job.created published, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected 1 job admitted, got %d", len(jobs.admitted))
 	}
 
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
-	}
+	created := jobs.admitted[0]
 
 	if len(created.URLs) != 1 || created.URLs[0] != "http://127.0.0.1" {
 		t.Fatalf("expected local target to be preserved in payload, got %#v", created.URLs)
 	}
 }
 
-func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
-	server, storage, publisher := newTestServer(t)
+func TestHandleJobURLSubmitWritesStorageStateBeforeAdmission(t *testing.T) {
+	server, storage, jobs := newTestServer(t)
 
 	storageState := `{"cookies":[],"origins":[]}`
 	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
 
-	publisher.onAdmit = func(envelope *events.Envelope) error {
-		created, ok := envelope.Payload.(*events.JobCreatedPayload)
-		if !ok || created == nil {
-			t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
-		}
-
-		expectedKey := created.JobID + "/auth.json"
+	jobs.onAdmit = func(job *models.Job) error {
+		expectedKey := job.ID + "/auth.json"
 
 		uploaded := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, expectedKey)]
 		if string(uploaded) != storageState {
-			t.Fatalf("auth state was not uploaded before publish; got %q, want %q", uploaded, storageState)
+			t.Fatalf("auth state was not written before admission; got %q, want %q", uploaded, storageState)
 		}
 
 		return nil
@@ -267,21 +256,18 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 		t.Fatalf("expected 201, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected 1 job.created published, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected 1 job admitted, got %d", len(jobs.admitted))
 	}
 
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
-	}
+	created := jobs.admitted[0]
 
 	authWire := string(created.Config.Auth)
 	if strings.Contains(authWire, "content_b64") || strings.Contains(authWire, encoded) {
-		t.Fatalf("published auth leaked storage-state content: %s", authWire)
+		t.Fatalf("admitted auth leaked storage-state content: %s", authWire)
 	}
 
-	expectedKey := created.JobID + "/auth.json"
+	expectedKey := created.ID + "/auth.json"
 
 	if authWire != `{"mode":"storage_state"}` {
 		t.Fatalf("dispatch leaked session metadata: %s", authWire)
@@ -294,8 +280,8 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 }
 
 func TestHandleJobURLSubmitKeepsAuthOnUncertainAdmission(t *testing.T) {
-	server, storage, publisher := newTestServer(t)
-	publisher.err = errors.New("database down")
+	server, storage, jobs := newTestServer(t)
+	jobs.err = errors.New("database down")
 
 	storageState := `{"cookies":[],"origins":[]}`
 	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
@@ -330,8 +316,8 @@ func TestHandleJobURLSubmitKeepsAuthOnUncertainAdmission(t *testing.T) {
 }
 
 func TestHandleJobZipUploadKeepsInputOnUncertainAdmission(t *testing.T) {
-	server, storage, publisher := newTestServer(t)
-	publisher.err = errors.New("database down")
+	server, storage, jobs := newTestServer(t)
+	jobs.err = errors.New("database down")
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -369,15 +355,13 @@ func TestHandleJobZipUploadKeepsInputOnUncertainAdmission(t *testing.T) {
 }
 
 func TestZipUploadToArtifactFlow(t *testing.T) {
-	server, storage, publisher := newTestServer(t)
+	server, storage, jobs := newTestServer(t)
 
 	jobID := uploadZipAndGetJobID(t, server, buildTestZip(t), scannerTypeAxe)
 
 	assertUploadCount(t, storage, 1)
 
-	completeJobWithArtifacts(t, testPipeline(server), jobID, events.ArtifactLocations{
-		ReportJSON: jobID + "/report.json",
-	})
+	testJobs(server).finish(t, jobID, jobID+"/report.json")
 
 	job := assertJobStatusDone(t, server, jobID)
 	if job.Artifacts == nil || job.Artifacts.ReportJSON == "" {
@@ -386,8 +370,8 @@ func TestZipUploadToArtifactFlow(t *testing.T) {
 
 	assertJobResultsRedirect(t, server, jobID)
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected job.created published")
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected the job to be admitted")
 	}
 }
 
@@ -395,17 +379,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 	server, objectStore, _ := newTestServer(t)
 
 	jobID := "job-structured-screenshots"
-	if _, err := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCreated,
-		ObservedAt: time.Now().UTC(),
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	}); err != nil {
-		t.Fatalf("create job: %v", err)
-	}
+	testJobs(server).put(scanningURLJob(jobID))
 
 	reportKey := jobID + "/report.json"
 	results := buildStructuredScreenshotReport(jobID, time.Now().UTC())
@@ -418,18 +392,7 @@ func TestHandleJobStatusReturnsStructuredScreenshotArtifacts(t *testing.T) {
 	uploadKey := fmt.Sprintf("%s::%s", artifacts.BucketArtifacts, reportKey)
 	objectStore.uploads[uploadKey] = reportBytes
 
-	if _, completeErr := testPipeline(server).Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCompleted,
-		ObservedAt: time.Now().UTC(),
-		JobCompleted: &events.JobCompletedPayload{
-			JobID: jobID,
-			Artifacts: events.ArtifactLocations{
-				ReportJSON: reportKey,
-			},
-		},
-	}); completeErr != nil {
-		t.Fatalf("complete job: %v", completeErr)
-	}
+	testJobs(server).finish(t, jobID, reportKey)
 
 	job := assertJobStatusDone(t, server, jobID)
 	if job.Artifacts == nil {
@@ -586,26 +549,6 @@ func assertUploadCount(t *testing.T, storage *fakeStorage, expected int) {
 
 	if len(storage.uploads) != expected {
 		t.Fatalf("expected %d upload, got %d", expected, len(storage.uploads))
-	}
-}
-
-func completeJobWithArtifacts(
-	t *testing.T,
-	pipeline jobstatus.StatusPipeline,
-	jobID string,
-	artifacts events.ArtifactLocations,
-) {
-	t.Helper()
-
-	if _, err := pipeline.Apply(context.Background(), jobstatus.Signal{
-		Kind:       jobstatus.SignalJobCompleted,
-		ObservedAt: time.Now().UTC(),
-		JobCompleted: &events.JobCompletedPayload{
-			JobID:     jobID,
-			Artifacts: artifacts,
-		},
-	}); err != nil {
-		t.Fatalf("complete job: %v", err)
 	}
 }
 
@@ -793,55 +736,11 @@ func strPtr(value string) *string {
 	return &value
 }
 
-type fakeJobAdmission struct {
-	snapshots *jobstatus.Pipeline
-	envelopes []*events.Envelope
-	err       error
-	onAdmit   func(envelope *events.Envelope) error
-	deleteErr error
-}
-
-func (f *fakeJobAdmission) AdmitJob(_ context.Context, job *models.Job) error {
-	if f.err != nil {
-		return f.err
-	}
-
-	payload := &events.JobCreatedPayload{
-		JobID:     job.ID,
-		InputType: job.InputType,
-		InputPath: job.InputPath,
-		URLs:      job.URLs,
-		Config:    job.Config,
-	}
-
-	envelope := events.NewEnvelopeAt(events.EventJobCreated, job.ID, "test-admission", payload, job.CreatedAt)
-	if f.onAdmit != nil {
-		if err := f.onAdmit(envelope); err != nil {
-			return err
-		}
-	}
-
-	f.envelopes = append(f.envelopes, envelope)
-	f.snapshots.Put(jobstore.Snapshot(job))
-
-	return nil
-}
-func (f *fakeJobAdmission) DeleteJob(_ context.Context, id string) error {
-	if f.deleteErr != nil {
-		return f.deleteErr
-	}
-
-	f.snapshots.Delete(id)
-
-	return nil
-}
-
-func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobAdmission) {
+func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobs) {
 	t.Helper()
 
 	storage := newFakeStorage()
-	snapshots := jobstatus.New(nil)
-	publisher := &fakeJobAdmission{snapshots: snapshots}
+	jobs := newFakeJobs()
 
 	defaultConfig, err := scannerregistry.DefaultConfig()
 	if err != nil {
@@ -854,10 +753,10 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobAdmission) {
 	}
 
 	server := NewServer(&ServerConfig{
-		StatusReader: snapshots,
+		StatusReader: jobs,
 		Storage:      storage,
-		Admitter:     publisher,
-		JobDeleter:   publisher,
+		Admitter:     jobs,
+		JobDeleter:   jobs,
 		CheckDisk:    func(context.Context) error { return nil },
 		ValidateZIP: func(_ context.Context, id string) error {
 			data, exists := storage.uploads[fmt.Sprintf("%s::%s", artifacts.BucketStaging, id+"/input.zip")]
@@ -871,7 +770,7 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobAdmission) {
 	})
 	server.ipResolver = defaultSecurityTestResolver(t)
 
-	return server, storage, publisher
+	return server, storage, jobs
 }
 
 func buildTestZip(t *testing.T) []byte {

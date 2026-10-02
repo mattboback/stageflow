@@ -13,31 +13,14 @@ import (
 	"github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestBuildJobStatusResponse_DoneWithArtifacts(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	jobID := "job-response-done"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCompleted,
-		JobCompleted: &events.JobCompletedPayload{
-			JobID: jobID,
-			Artifacts: events.ArtifactLocations{
-				ReportJSON: jobID + "/report.json",
-			},
-		},
-	})
+	testJobs(server).put(scanningURLJob(jobID))
+	testJobs(server).finish(t, jobID, jobID+"/report.json")
 
 	rec, err := server.statusReader.GetJob(context.Background(), jobID)
 	if err != nil {
@@ -127,18 +110,11 @@ func TestBuildJobStatusResponse_DoneUsesAggregatedReportIssueCount(t *testing.T)
 	}
 }
 
-func TestBuildJobStatusResponse_Pending(t *testing.T) {
+func TestBuildJobStatusResponse_UnfinishedJobHasNoArtifacts(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
-	jobID := "job-response-pending"
-	applyTestSignal(t, server, jobstatus.Signal{
-		Kind: jobstatus.SignalJobCreated,
-		JobCreated: &events.JobCreatedPayload{
-			JobID:     jobID,
-			InputType: models.JobInputTypeURLs,
-			URLs:      []string{"https://example.com"},
-		},
-	})
+	jobID := "job-response-unfinished"
+	testJobs(server).put(scanningURLJob(jobID))
 
 	rec, err := server.statusReader.GetJob(context.Background(), jobID)
 	if err != nil {
@@ -151,7 +127,7 @@ func TestBuildJobStatusResponse_Pending(t *testing.T) {
 	}
 
 	if job.Artifacts != nil {
-		t.Fatal("expected no artifacts for pending job")
+		t.Fatal("expected no artifacts for an unfinished job")
 	}
 }
 

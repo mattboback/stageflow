@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/httputil"
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 const literalBrowserAuthBody = `{
@@ -299,7 +298,7 @@ func TestURLSubmissionPolicy(t *testing.T) {
 func assertURLSubmissionPolicy(t *testing.T, tt urlSubmissionPolicyCase) {
 	t.Helper()
 
-	server, storage, publisher := newTestServer(t)
+	server, storage, jobs := newTestServer(t)
 	server.config.APIToken = testAPIToken
 	server.config.AllowPrivateTargets = tt.allowPrivate
 
@@ -313,12 +312,12 @@ func assertURLSubmissionPolicy(t *testing.T, tt urlSubmissionPolicyCase) {
 	}
 
 	if tt.wantStatus == http.StatusCreated {
-		if len(publisher.envelopes) != 1 {
-			t.Fatalf("expected one published job, got %d", len(publisher.envelopes))
+		if len(jobs.admitted) != 1 {
+			t.Fatalf("expected one admitted job, got %d", len(jobs.admitted))
 		}
 
 		if tt.body == literalBrowserAuthBody {
-			assertLiteralAuthPublished(t, publisher)
+			assertLiteralAuthAdmitted(t, jobs)
 		}
 
 		return
@@ -328,8 +327,8 @@ func assertURLSubmissionPolicy(t *testing.T, tt urlSubmissionPolicyCase) {
 		t.Fatalf("rejected request uploaded %d objects", len(storage.uploads))
 	}
 
-	if len(publisher.envelopes) != 0 {
-		t.Fatalf("rejected request published %d jobs", len(publisher.envelopes))
+	if len(jobs.admitted) != 0 {
+		t.Fatalf("rejected request admitted %d jobs", len(jobs.admitted))
 	}
 
 	var response httputil.ErrorResponse
@@ -368,7 +367,7 @@ func TestURLSubmissionParseErrorsDoNotEchoEmbeddedCredentials(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			server, _, publisher := newTestServer(t)
+			server, _, jobs := newTestServer(t)
 
 			body, err := json.Marshal(map[string]any{"urls": []string{tt.target}})
 			if err != nil {
@@ -393,24 +392,21 @@ func TestURLSubmissionParseErrorsDoNotEchoEmbeddedCredentials(t *testing.T) {
 				t.Fatalf("error response echoed embedded credentials: %s", rr.Body.String())
 			}
 
-			if len(publisher.envelopes) != 0 {
-				t.Fatalf("rejected target published %d jobs", len(publisher.envelopes))
+			if len(jobs.admitted) != 0 {
+				t.Fatalf("rejected target admitted %d jobs", len(jobs.admitted))
 			}
 		})
 	}
 }
 
-func assertLiteralAuthPublished(t *testing.T, publisher *fakeJobAdmission) {
+func assertLiteralAuthAdmitted(t *testing.T, jobs *fakeJobs) {
 	t.Helper()
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("expected one published job, got %d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("expected one admitted job, got %d", len(jobs.admitted))
 	}
 
-	created, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok || created == nil {
-		t.Fatalf("published payload = %T, want *events.JobCreatedPayload", publisher.envelopes[0].Payload)
-	}
+	created := jobs.admitted[0]
 
 	if !strings.Contains(string(created.Config.Auth), `"value":"throwaway-password"`) {
 		t.Fatalf("literal form recipe was not preserved for execution: %s", created.Config.Auth)
@@ -433,11 +429,11 @@ func TestRemovedProjectRoutesReturnNotFound(t *testing.T) {
 	}
 }
 
-func TestRemovedURLSubmissionRoutesDoNotPublish(t *testing.T) {
+func TestRemovedURLSubmissionRoutesDoNotAdmit(t *testing.T) {
 	for _, path := range []string{"/api/v1/jobs/urls/anonymous", "/api/v1/jobs/urls/browser-auth"} {
 		for _, key := range []string{"", "wrong-token", testAPIToken} {
 			t.Run(path+" key="+key, func(t *testing.T) {
-				server, storage, publisher := newTestServer(t)
+				server, storage, jobs := newTestServer(t)
 				server.config.APIToken = testAPIToken
 
 				rr := routeCall(t, server, http.MethodPost, path, literalBrowserAuthBody, key)
@@ -445,7 +441,7 @@ func TestRemovedURLSubmissionRoutesDoNotPublish(t *testing.T) {
 					t.Fatalf("removed route status = %d, want405", rr.Code)
 				}
 
-				if len(publisher.envelopes) != 0 || len(storage.uploads) != 0 {
+				if len(jobs.admitted) != 0 || len(storage.uploads) != 0 {
 					t.Fatal("removed submission route created a job or uploaded auth state")
 				}
 			})

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestProductConfigURLAndZIPIntake(t *testing.T) {
@@ -112,7 +111,7 @@ func assertProductIntakeConfig(t *testing.T, config models.JobConfig, tc product
 
 func runProductIntakeCase(t *testing.T, inputType string, tc productIntakeCase) {
 	t.Helper()
-	server, _, publisher := newTestServer(t)
+	server, _, jobs := newTestServer(t)
 
 	req := productURLRequest(t, tc)
 	if inputType == "zip" {
@@ -131,21 +130,18 @@ func runProductIntakeCase(t *testing.T, inputType string, tc productIntakeCase) 
 	}
 
 	if tc.status != http.StatusCreated {
-		if len(publisher.envelopes) != 0 {
+		if len(jobs.admitted) != 0 {
 			t.Fatal("invalid product config launched a job")
 		}
 
 		return
 	}
 
-	if len(publisher.envelopes) != 1 {
-		t.Fatalf("published=%d", len(publisher.envelopes))
+	if len(jobs.admitted) != 1 {
+		t.Fatalf("admitted=%d", len(jobs.admitted))
 	}
 
-	payload, ok := publisher.envelopes[0].Payload.(*events.JobCreatedPayload)
-	if !ok {
-		t.Fatalf("payload=%T", publisher.envelopes[0].Payload)
-	}
+	payload := jobs.admitted[0]
 
 	assertProductIntakeConfig(t, payload.Config, tc)
 }
