@@ -9,10 +9,6 @@ version: 2
 # The bun ecosystem is split into two entries because `ignore` applies to a whole
 # entry: the ESLint-linted workspaces have a TypeScript ceiling that the
 # contract packages do not. See docs/dependency-exceptions.md.
-# Paused (2026-09-30): GitHub Actions is billing-locked, so every Dependabot run
-# failed with startup_failure. A limit of 0 disables version updates and keeps
-# the ignore rules; restore the limits (6 each) when Actions runs again
-# (roadmap Phase 6).
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
@@ -21,7 +17,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 6
     groups:
       go-minor-and-patch:
         applies-to: "version-updates"
@@ -42,7 +38,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 6
     groups:
       bun-app-minor-and-patch:
         applies-to: "version-updates"
@@ -75,7 +71,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 6
     groups:
       bun-contracts-minor-and-patch:
         applies-to: "version-updates"
@@ -93,7 +89,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 6
     groups:
       actions-minor-and-patch:
         applies-to: "version-updates"
