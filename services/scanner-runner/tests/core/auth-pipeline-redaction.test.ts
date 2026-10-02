@@ -115,6 +115,8 @@ function createBrowserHarness(): BrowserHarness {
 	};
 
 	const browserManager: BrowserManager = {
+		assertPageHealthy: vi.fn(),
+		closePage: vi.fn().mockImplementation((page: Page) => page.close()),
 		createContext: vi
 			.fn()
 			.mockImplementation((_viewport: unknown, opts?: { storageStatePath?: string }) => {

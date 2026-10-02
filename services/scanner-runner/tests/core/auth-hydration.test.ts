@@ -111,6 +111,8 @@ function createHarness(): MockHarness {
 
 	const browserManager: BrowserManager = {
 		createContext: vi.fn().mockResolvedValue(context),
+		assertPageHealthy: vi.fn(),
+		closePage: vi.fn().mockImplementation((page: Page) => page.close()),
 		navigateToPage: vi.fn().mockImplementation((page: Page, url: string) => {
 			(page as Page & { _setUrl: (u: string) => void })._setUrl(
 				url.startsWith('https://app.example.com/login') ? 'https://app.example.com/profile' : url

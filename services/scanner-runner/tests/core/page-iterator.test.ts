@@ -73,6 +73,8 @@ describe('PageIterator', () => {
 		// Setup mock browser manager
 		mockBrowserManager = {
 			createContext: vi.fn().mockResolvedValue(mockContext),
+			assertPageHealthy: vi.fn(),
+			closePage: vi.fn().mockImplementation((page: Page) => page.close()),
 			navigateToPage: vi.fn().mockResolvedValue(undefined),
 			getNavigationStatus: vi.fn().mockReturnValue(200),
 			executePreScanActions: vi.fn().mockResolvedValue(undefined)
@@ -264,6 +266,41 @@ describe('PageIterator', () => {
 			expect(results).toHaveLength(2);
 			expect(mockScanCallback).toHaveBeenCalledTimes(2);
 			expect(mockContext.close).toHaveBeenCalled();
+		});
+
+		it('marks an otherwise passing page failed when its request handlers cannot close cleanly', async () => {
+			vi.mocked(mockBrowserManager.closePage).mockRejectedValueOnce(
+				new Error('route drain failed')
+			);
+			const results = await pageIterator.iteratePages(
+				{
+					...mockProvenance,
+					pages: [mockProvenance.pages[0]!]
+				},
+				mockScanCallback
+			);
+			expect(results[0]!.success).toBe(false);
+			expect(results[0]!.error).toBe('Page request handlers did not close cleanly.');
+		});
+
+		it('bounds request-handler teardown and fails the page when draining times out', async () => {
+			vi.useFakeTimers();
+			vi.mocked(mockBrowserManager.closePage).mockImplementation(
+				() => new Promise(() => undefined)
+			);
+			try {
+				const pending = pageIterator.iteratePages(
+					{ ...mockProvenance, pages: [mockProvenance.pages[0]!] },
+					mockScanCallback
+				);
+				await vi.advanceTimersByTimeAsync(5_001);
+				const results = await pending;
+				expect(results[0]!.success).toBe(false);
+				expect(results[0]!.error).toBe('Page request handlers did not close cleanly.');
+				expect(mockContext.close).toHaveBeenCalled();
+			} finally {
+				vi.useRealTimers();
+			}
 		});
 
 		it('marks HTTP error pages failed even when an engine returns passing rules', async () => {

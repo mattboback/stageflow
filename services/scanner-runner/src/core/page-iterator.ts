@@ -495,6 +495,7 @@ export class PageIterator {
 				};
 
 				result = await scanCallback(scanContext);
+				this.browserManager.assertPageHealthy(page);
 				const navigationStatus = this.browserManager.getNavigationStatus(page);
 				if (navigationStatus !== undefined && navigationStatus >= 400) {
 					result.success = false;
@@ -554,14 +555,24 @@ export class PageIterator {
 			} finally {
 				const pageToClose = page;
 				if (pageToClose) {
-					await closeWithTimeout({
-						close: () => pageToClose.close(),
+					const closed = await closeWithTimeout({
+						close: () => this.browserManager.closePage(pageToClose),
 						label: 'page',
 						timeoutMs: 5_000,
 						logger: this.logger,
 						meta: { pageId: redact(pageEntry.id) },
 						redactError: redact
 					});
+					if (!closed) {
+						lastError = new Error('Page request handlers did not close cleanly.');
+						result = null;
+					}
+					try {
+						this.browserManager.assertPageHealthy(pageToClose);
+					} catch (err) {
+						lastError = new Error(redact(err instanceof Error ? err.message : String(err)));
+						result = null;
+					}
 				}
 			}
 		}
@@ -611,19 +622,22 @@ async function closeWithTimeout(opts: {
 	logger: ScannerLogger;
 	meta?: Record<string, unknown>;
 	redactError?: (value: string) => string;
-}): Promise<void> {
+}): Promise<boolean> {
 	const { close, label, timeoutMs, logger, meta, redactError } = opts;
 
-	const closePromise = close().catch((err: unknown) => {
-		logger.warn(`Failed to close ${label} gracefully`, {
-			...meta,
-			error: redactError
-				? redactError(err instanceof Error ? err.message : String(err))
-				: err instanceof Error
-					? err.message
-					: String(err)
+	const closePromise = close()
+		.then(() => true)
+		.catch((err: unknown) => {
+			logger.warn(`Failed to close ${label} gracefully`, {
+				...meta,
+				error: redactError
+					? redactError(err instanceof Error ? err.message : String(err))
+					: err instanceof Error
+						? err.message
+						: String(err)
+			});
+			return false;
 		});
-	});
 
 	let timeoutHandle!: ReturnType<typeof setTimeout>;
 	const timeoutPromise = new Promise<'timeout'>((resolve) => {
@@ -632,7 +646,7 @@ async function closeWithTimeout(opts: {
 		}, timeoutMs);
 	});
 
-	const winner = await Promise.race([closePromise.then(() => 'closed' as const), timeoutPromise]);
+	const winner = await Promise.race([closePromise, timeoutPromise]);
 
 	clearTimeout(timeoutHandle);
 
@@ -642,4 +656,5 @@ async function closeWithTimeout(opts: {
 			timeoutMs
 		});
 	}
+	return winner === true;
 }

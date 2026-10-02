@@ -38,6 +38,7 @@ describe('BrowserManager', () => {
 		mockPage = {
 			goto: vi.fn().mockResolvedValue(undefined),
 			route: vi.fn().mockResolvedValue(undefined),
+			isClosed: vi.fn().mockReturnValue(false),
 			url: vi.fn().mockReturnValue(''),
 			click: vi.fn().mockResolvedValue(undefined),
 			fill: vi.fn().mockResolvedValue(undefined),
@@ -58,6 +59,7 @@ describe('BrowserManager', () => {
 		} as unknown as Page;
 
 		mockContext = {
+			route: vi.fn().mockResolvedValue(undefined),
 			newPage: vi.fn().mockResolvedValue(mockPage),
 			close: vi.fn().mockResolvedValue(undefined)
 		} as unknown as BrowserContext;
@@ -398,6 +400,60 @@ describe('BrowserManager', () => {
 
 			expect(continueRequest).not.toHaveBeenCalled();
 			expect(abort).toHaveBeenCalledWith('blockedbyclient');
+		});
+
+		it('does not abort again or label a continuation error as a policy block', async () => {
+			let handler: (route: unknown) => Promise<void> = () =>
+				Promise.reject(new Error('route handler not registered'));
+			vi.mocked(mockPage.route).mockImplementation((_pattern, callback) => {
+				handler = callback as typeof handler;
+				return Promise.resolve();
+			});
+			const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+			const manager = new BrowserManager(undefined, logger);
+			await manager.navigateToPage(mockPage, 'https://example.com');
+			const error = new Error('Unexpected protocol failure');
+			const abort = vi.fn().mockResolvedValue(undefined);
+			await handler({
+				request: () => ({
+					url: () => 'https://example.com/image.png',
+					resourceType: () => 'image',
+					isNavigationRequest: () => false,
+					failure: () => null
+				}),
+				continue: vi.fn().mockRejectedValue(error),
+				abort
+			});
+			expect(abort).not.toHaveBeenCalled();
+			expect(logger.warn).not.toHaveBeenCalledWith('Blocked browser request', expect.anything());
+			expect(() => {
+				manager.assertPageHealthy(mockPage);
+			}).toThrow('Unexpected protocol failure');
+		});
+
+		it('does not treat a cancelled request as a failed audit', async () => {
+			let handler: (route: unknown) => Promise<void> = () =>
+				Promise.reject(new Error('route handler not registered'));
+			vi.mocked(mockPage.route).mockImplementation((_pattern, callback) => {
+				handler = callback as typeof handler;
+				return Promise.resolve();
+			});
+			await browserManager.navigateToPage(mockPage, 'https://example.com');
+			const abort = vi.fn();
+			await handler({
+				request: () => ({
+					url: () => 'https://example.com/image.png',
+					resourceType: () => 'image',
+					isNavigationRequest: () => false,
+					failure: () => ({ errorText: 'net::ERR_ABORTED' })
+				}),
+				continue: vi.fn().mockRejectedValue(new Error('Invalid InterceptionId.')),
+				abort
+			});
+			expect(abort).not.toHaveBeenCalled();
+			expect(() => {
+				browserManager.assertPageHealthy(mockPage);
+			}).not.toThrow();
 		});
 
 		it('should abort and surface blocked navigation from route handler', async () => {
@@ -760,6 +816,47 @@ describe('BrowserManager', () => {
 	});
 
 	describe('close', () => {
+		it('keeps the context guard while page handlers drain and close', async () => {
+			const calls: string[] = [];
+			let guard: ((route: unknown) => Promise<void>) | undefined;
+			const context = {
+				route: vi.fn().mockImplementation((_pattern, callback) => {
+					guard = callback;
+					calls.push('guard');
+					return Promise.resolve();
+				}),
+				unroute: vi.fn().mockImplementation(() => {
+					calls.push('unguard');
+					return Promise.resolve();
+				})
+			};
+			let closed = false;
+			const page = {
+				context: () => context,
+				isClosed: () => closed,
+				unrouteAll: vi.fn().mockImplementation(async (options) => {
+					expect(options).toEqual({ behavior: 'wait' });
+					calls.push('drain');
+					const abort = vi.fn().mockResolvedValue(undefined);
+					await guard?.({
+						request: () => ({ serviceWorker: () => null, frame: () => ({ page: () => page }) }),
+						abort
+					});
+					expect(abort).toHaveBeenCalledWith('blockedbyclient');
+				}),
+				close: () => {
+					closed = true;
+					calls.push('close');
+					return Promise.resolve();
+				}
+			} as unknown as Page;
+			vi.mocked(mockBrowser.newContext).mockResolvedValueOnce(context as unknown as BrowserContext);
+			await browserManager.createContext();
+			await browserManager.closePage(page);
+			expect(calls).toEqual(['guard', 'drain', 'close']);
+			expect(context.unroute).not.toHaveBeenCalled();
+		});
+
 		it('should close browser', async () => {
 			await browserManager.launch();
 			await browserManager.close();

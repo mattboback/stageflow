@@ -125,6 +125,8 @@ function makeBrowserManager(
 
 	return {
 		createContext: vi.fn().mockResolvedValue(mockContext),
+		assertPageHealthy: vi.fn(),
+		closePage: vi.fn().mockImplementation((page: Page) => page.close()),
 		navigateToPage: vi.fn().mockResolvedValue(undefined),
 		executePreScanActions: vi.fn().mockResolvedValue(undefined),
 		...overrides
