@@ -47,8 +47,7 @@
 			"allowedHosts": ["example.com"]
 		},
 		"resources": {
-			"maxMemoryMB": 1024,
-			"maxTimeoutMs": 60000
+			"maxMemoryMB": 1024
 		}
 	},
 	"entry": {

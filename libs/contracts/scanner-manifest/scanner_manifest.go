@@ -360,9 +360,6 @@ func (j *OutputFormat) UnmarshalJSON(value []byte) error {
 type ResourceRequirement struct {
 	// MaxMemoryMB corresponds to the JSON schema field "maxMemoryMB".
 	MaxMemoryMB *int `json:"maxMemoryMB,omitempty"`
-
-	// MaxTimeoutMs corresponds to the JSON schema field "maxTimeoutMs".
-	MaxTimeoutMs *int `json:"maxTimeoutMs,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -374,9 +371,6 @@ func (j *ResourceRequirement) UnmarshalJSON(value []byte) error {
 	}
 	if plain.MaxMemoryMB != nil && 1 > *plain.MaxMemoryMB {
 		return fmt.Errorf("field %s: must be >= %v", "maxMemoryMB", 1)
-	}
-	if plain.MaxTimeoutMs != nil && 1 > *plain.MaxTimeoutMs {
-		return fmt.Errorf("field %s: must be >= %v", "maxTimeoutMs", 1)
 	}
 	*j = ResourceRequirement(plain)
 	return nil

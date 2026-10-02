@@ -242,10 +242,6 @@
 				"maxMemoryMB": {
 					"type": "integer",
 					"minimum": 1
-				},
-				"maxTimeoutMs": {
-					"type": "integer",
-					"minimum": 1
 				}
 			}
 		},

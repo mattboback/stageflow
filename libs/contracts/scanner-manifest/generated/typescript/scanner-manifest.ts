@@ -127,7 +127,6 @@ export interface NetworkRequirement {
  */
 export interface ResourceRequirement {
   maxMemoryMB?: number;
-  maxTimeoutMs?: number;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema
