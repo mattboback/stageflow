@@ -14,6 +14,7 @@ import {
 } from 'playwright';
 
 import { createLogger } from '../utils/logger';
+import { browserEnv } from './browser-env';
 import { type TargetValidationPolicy, validateTargetURLForPolicy } from './target-validation';
 import {
 	type BrowserConfig,
@@ -134,10 +135,7 @@ export class BrowserManager {
 			headless: this.config.headless,
 			args: this.config.args,
 			chromiumSandbox: false,
-			env: {
-				...process.env,
-				DBUS_SESSION_BUS_ADDRESS: 'disabled'
-			}
+			env: browserEnv()
 		});
 	}
 

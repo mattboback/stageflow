@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
+import { browserEnv } from '../../core/browser-env';
 import type { ScannerLogger } from '../../core/types';
 import type { LaunchedChrome } from './types';
 
@@ -36,6 +37,7 @@ export async function launchChromeForLighthouse(deps: {
 
 	return launch({
 		chromePath,
+		envVars: browserEnv(),
 		// Use a dedicated, headless Chrome process for Lighthouse.
 		chromeFlags: [
 			'--headless=new',

@@ -117,6 +117,20 @@ describe('BrowserManager', () => {
 			);
 		});
 
+		it('does not hand the scanner environment to Chromium', async () => {
+			process.env.PROVENANCE_AUTH_JSON = '{"secret":"literal"}';
+			try {
+				await browserManager.launch();
+			} finally {
+				delete process.env.PROVENANCE_AUTH_JSON;
+			}
+
+			const options = vi.mocked(chromium.launch).mock.calls[0]?.[0];
+			expect(options?.env).toBeDefined();
+			expect(options?.env?.PROVENANCE_AUTH_JSON).toBeUndefined();
+			expect(options?.env?.DBUS_SESSION_BUS_ADDRESS).toBe('disabled');
+		});
+
 		it('should return existing browser if already launched', async () => {
 			const browser1 = await browserManager.launch();
 			const browser2 = await browserManager.launch();
