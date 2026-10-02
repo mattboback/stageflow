@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,7 +13,6 @@ import (
 	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/api"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
@@ -32,13 +30,6 @@ func run() int {
 	cfg := loadConfig()
 	if err := cfg.Validate(); err != nil {
 		logger.Error("Invalid configuration", "error", err)
-
-		return 1
-	}
-
-	scannerRegistry, err := loadScannerRegistry(logger, cfg.ScannerImageOverride)
-	if err != nil {
-		logger.Error("Failed to load scanner registry", "error", err)
 
 		return 1
 	}
@@ -92,14 +83,12 @@ func run() int {
 	}
 
 	orch := orchestrator.NewOrchestrator(&orchestrator.Config{
-		DataDir:              cfg.DataDir,
-		DataVolume:           cfg.DataVolume,
-		PodmanClient:         podmanClient,
-		Database:             database,
-		ScannerRegistry:      scannerRegistry,
-		ExtractionImage:      cfg.ExtractionImage,
-		ScannerImage:         cfg.ScannerImage,
-		ScannerImageOverride: cfg.ScannerImageOverride,
+		DataDir:         cfg.DataDir,
+		DataVolume:      cfg.DataVolume,
+		PodmanClient:    podmanClient,
+		Database:        database,
+		ExtractionImage: cfg.ExtractionImage,
+		ScannerImage:    cfg.ScannerImage,
 		// Timeouts use defaults (5min extraction, 30min scan)
 		PodNetwork:      cfg.PodNetwork,
 		PodNetnsMode:    cfg.PodNetnsMode,
@@ -227,27 +216,4 @@ func waitForShutdown(signals <-chan os.Signal, apiErrors <-chan error) error {
 
 		return err
 	}
-}
-
-// loadScannerRegistry builds the scanner registry from the built-in manifests.
-func loadScannerRegistry(logger *slog.Logger, defaultImage string) (*scanners.Registry, error) {
-	registryConfig, cfgErr := scanners.DefaultConfig()
-	if cfgErr != nil {
-		return nil, fmt.Errorf("load default scanner config: %w", cfgErr)
-	}
-
-	if defaultImage != "" {
-		registryConfig.DefaultImage = defaultImage
-	}
-
-	registry, err := scanners.InitializeRegistry(registryConfig)
-	if err != nil {
-		return nil, fmt.Errorf("initialize scanner registry: %w", err)
-	}
-
-	logger.Info("Scanner registry initialized",
-		"scanner_count", registry.Count(),
-		"enabled_count", registry.CountEnabled())
-
-	return registry, nil
 }

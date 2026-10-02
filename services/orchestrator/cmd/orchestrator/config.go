@@ -19,7 +19,6 @@ type Config struct {
 	DatabaseURL                 string
 	ExtractionImage             string
 	ScannerImage                string
-	ScannerImageOverride        string
 	APIPort                     string
 	PodNetwork                  string
 	PodNetnsMode                string   // Pod network namespace mode (bridge|host). Host mode is local-only.
@@ -60,7 +59,6 @@ func loadConfig() *Config {
 		DatabaseURL:                 databaseURL,
 		ExtractionImage:             config.GetEnv("EXTRACTION_IMAGE", "localhost/stageflow/extractor:latest"),
 		ScannerImage:                scannerImage,
-		ScannerImageOverride:        scannerImageEnv,
 		APIPort:                     config.GetEnv("API_PORT", "8081"),
 		PodNetwork:                  strings.TrimSpace(config.GetEnv("POD_NETWORK", "")),
 		PodNetnsMode:                strings.TrimSpace(config.GetEnv("POD_NETNS_MODE", "bridge")),

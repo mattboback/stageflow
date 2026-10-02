@@ -5,11 +5,10 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 func TestBuildAggregatedReportRejectsNilJob(t *testing.T) {
-	aggregator := NewAggregator(newMemoryFiles(), scanners.NewRegistry("scanner-runner"))
+	aggregator := NewAggregator(newMemoryFiles())
 
 	if _, err := aggregator.BuildAggregatedReport(context.Background(), nil); err == nil {
 		t.Fatal("expected error for nil job")
@@ -17,7 +16,7 @@ func TestBuildAggregatedReportRejectsNilJob(t *testing.T) {
 }
 
 func TestBuildAggregatedReportRejectsNilFiles(t *testing.T) {
-	aggregator := NewAggregator(nil, scanners.NewRegistry("scanner-runner"))
+	aggregator := NewAggregator(nil)
 
 	job := &models.Job{
 		ID:             "job-nil-files",
@@ -30,7 +29,7 @@ func TestBuildAggregatedReportRejectsNilFiles(t *testing.T) {
 }
 
 func TestBuildAggregatedReportRejectsEmptyScannerResults(t *testing.T) {
-	aggregator := NewAggregator(newMemoryFiles(), scanners.NewRegistry("scanner-runner"))
+	aggregator := NewAggregator(newMemoryFiles())
 
 	job := &models.Job{ID: "job-no-results"}
 

@@ -8,18 +8,14 @@ import (
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 //nolint:gocyclo // Test function covers multiple aggregation scenarios
 func TestBuildAggregatedReportSuccess(t *testing.T) {
 	ctx := context.Background()
 	mem := newMemoryFiles()
-	registry := scanners.NewRegistry("scanner-runner")
-	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
-	_ = registry.Register(&scanners.Definition{ID: "lighthouse", Name: "Lighthouse", Enabled: true})
 
-	aggregator := NewAggregator(mem, registry)
+	aggregator := NewAggregator(mem)
 
 	now := time.Now().UTC()
 
@@ -256,11 +252,8 @@ func TestBuildAggregatedReportSuccess(t *testing.T) {
 func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 	ctx := context.Background()
 	mem := newMemoryFiles()
-	registry := scanners.NewRegistry("scanner-runner")
-	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
-	_ = registry.Register(&scanners.Definition{ID: "lighthouse", Name: "Lighthouse", Enabled: true})
 
-	aggregator := NewAggregator(mem, registry)
+	aggregator := NewAggregator(mem)
 
 	now := time.Now().UTC()
 
@@ -452,9 +445,8 @@ func TestBuildAggregatedReportDedupByScanner(t *testing.T) {
 func TestBuildAggregatedReportNoSuccess(t *testing.T) {
 	ctx := context.Background()
 	mem := newMemoryFiles()
-	registry := scanners.NewRegistry("scanner-runner")
 
-	aggregator := NewAggregator(mem, registry)
+	aggregator := NewAggregator(mem)
 
 	job := &models.Job{
 		ID:               "job-2",

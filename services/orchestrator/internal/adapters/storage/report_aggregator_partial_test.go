@@ -8,7 +8,6 @@ import (
 
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 // buildPartialTestReport aggregates one successful SEO result with a serious
@@ -18,9 +17,6 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 
 	ctx := context.Background()
 	mem := newMemoryFiles()
-	registry := scanners.NewRegistry("scanner-runner")
-	_ = registry.Register(&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true})
-	_ = registry.Register(&scanners.Definition{ID: "seo", Name: "SEO", Enabled: true})
 
 	now := time.Now().UTC()
 	seoResults := report.UnifiedReportV2{
@@ -64,7 +60,7 @@ func buildPartialTestReport(t *testing.T, axe *models.ScannerResult) report.Unif
 		job.ScannerResults["axe"] = axe
 	}
 
-	key, err := NewAggregator(mem, registry).BuildAggregatedReport(ctx, job)
+	key, err := NewAggregator(mem).BuildAggregatedReport(ctx, job)
 	if err != nil {
 		t.Fatalf("BuildAggregatedReport: %v", err)
 	}

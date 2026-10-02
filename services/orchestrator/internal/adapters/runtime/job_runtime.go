@@ -11,7 +11,7 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 type jobRuntimeClient interface {
@@ -29,7 +29,6 @@ type JobRuntimeConfig struct {
 	DirectoryOwner  func(string) error
 	DataDir         string
 	Client          jobRuntimeClient
-	ScannerRegistry *scanners.Registry
 	ExtractionImage string
 	PodNetwork      string
 	PodNetnsMode    string
@@ -41,7 +40,6 @@ type JobRuntime struct {
 	directoryOwner  func(string) error
 	dataDir         string
 	client          jobRuntimeClient
-	scannerRegistry *scanners.Registry
 	extractionImage string
 	podNetwork      string
 	podNetnsMode    string
@@ -77,7 +75,6 @@ func NewJobRuntime(config JobRuntimeConfig) *JobRuntime {
 		directoryOwner:  config.DirectoryOwner,
 		dataDir:         config.DataDir,
 		dataVolume:      config.DataVolume,
-		scannerRegistry: config.ScannerRegistry,
 		extractionImage: config.ExtractionImage,
 		podNetwork:      config.PodNetwork,
 		podNetnsMode:    podNetnsMode,
@@ -94,14 +91,6 @@ func (r *JobRuntime) PodNetnsMode() string {
 
 func (r *JobRuntime) AllowsLoopbackTargets() bool {
 	return r.PodNetnsMode() == PodNetnsModeHost
-}
-
-func (r *JobRuntime) ResolveScannerTypes(modules []string) []string {
-	if r == nil || r.scannerRegistry == nil {
-		return append([]string(nil), modules...)
-	}
-
-	return r.scannerRegistry.ResolveModules(modules)
 }
 
 // JobPodName returns the deterministic pod name for a job. It is deterministic so
@@ -454,7 +443,7 @@ func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error
 		return "", err
 	}
 
-	for _, name := range []string{"", "site", ".provenance", "axe", "lighthouse", "link-checker", "security-headers", "seo"} {
+	for _, name := range append([]string{"", "site", ".provenance"}, scannercatalog.IDs()...) {
 		dir := filepath.Join(r.dataDir, "jobs", jobID, name)
 		if mkdirAllErr := os.MkdirAll(dir, 0o700); mkdirAllErr != nil {
 			return "", mkdirAllErr

@@ -14,6 +14,8 @@ import (
 	"syscall"
 
 	"github.com/google/uuid"
+
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 const (
@@ -264,10 +266,11 @@ func PublicPath(value string) bool {
 
 	parts := strings.Split(value, "/")
 	if len(parts) == 2 && parts[1] == "results.json" {
-		return scanner(parts[0])
+		return scannercatalog.HasID(parts[0])
 	}
 
-	if len(parts) != 4 || !scanner(parts[0]) || parts[2] != "screenshots" || !safeJob.MatchString(parts[1]) {
+	if len(parts) != 4 || !scannercatalog.HasID(parts[0]) || parts[2] != "screenshots" ||
+		!safeJob.MatchString(parts[1]) {
 		return false
 	}
 
@@ -277,13 +280,4 @@ func PublicPath(value string) bool {
 	default:
 		return false
 	}
-}
-
-func scanner(value string) bool {
-	switch value {
-	case "axe", "lighthouse", "link-checker", "security-headers", "seo":
-		return true
-	}
-
-	return false
 }

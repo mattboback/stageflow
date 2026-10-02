@@ -17,7 +17,6 @@ import (
 	"github.com/mattboback/stageflow/internal/artifacts"
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
-	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
 )
 
@@ -71,12 +70,6 @@ func run() error {
 	}
 	defer statusReader.Close()
 
-	scannerRegistry := loadScannerRegistry(slog.Default())
-
-	if scannerRegistry == nil {
-		return errors.New("failed to initialize scanner registry")
-	}
-
 	server := api.NewServer(&api.ServerConfig{
 		Port:       cfg.Port,
 		Files:      artifactFiles,
@@ -98,7 +91,6 @@ func run() error {
 			return archive.Validate(file, info.Size())
 		},
 		StatusReader:        jobstore.StatusReader{Database: statusReader},
-		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		APIToken:            cfg.APIToken,
 	})
@@ -168,31 +160,4 @@ func newHTTPServer(port int, handler http.Handler) *http.Server {
 		WriteTimeout: 0,
 		IdleTimeout:  60 * time.Second,
 	}
-}
-
-// loadScannerRegistry builds the scanner registry from the built-in manifests.
-func loadScannerRegistry(logger *slog.Logger) *scannerregistry.Registry {
-	registryConfig, err := scannerregistry.DefaultConfig()
-	if err != nil {
-		logger.Error("Failed to load default scanner config", "error", err)
-		return nil
-	}
-
-	registry, err := scannerregistry.InitializeRegistry(registryConfig)
-	if err != nil {
-		logger.Error("Failed to initialize scanner registry", "error", err)
-		return nil
-	}
-
-	if registry != nil {
-		logger.Info(
-			"Scanner registry initialized",
-			"scanner_count",
-			registry.Count(),
-			"enabled_count",
-			registry.CountEnabled(),
-		)
-	}
-
-	return registry
 }

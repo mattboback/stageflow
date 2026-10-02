@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 const (
@@ -21,15 +20,11 @@ type JobFiles interface {
 }
 
 type Aggregator struct {
-	files           JobFiles
-	scannerRegistry *scanners.Registry
+	files JobFiles
 }
 
-func NewAggregator(files JobFiles, scannerRegistry *scanners.Registry) *Aggregator {
-	return &Aggregator{
-		files:           files,
-		scannerRegistry: scannerRegistry,
-	}
+func NewAggregator(files JobFiles) *Aggregator {
+	return &Aggregator{files: files}
 }
 
 func (a *Aggregator) BuildAggregatedReport(ctx context.Context, job *models.Job) (string, error) {

@@ -12,7 +12,6 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannercatalog"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 const reportContractRoot = "../../../../../"
@@ -94,16 +93,6 @@ func TestPublicReportSchemaAndDemoCatalog(t *testing.T) {
 	t.Parallel()
 	schema := loadPublicReportSchema(t)
 
-	manifests, err := scannercatalog.BuiltinManifests()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	catalog := make(map[string]bool, len(manifests))
-	for _, manifest := range manifests {
-		catalog[manifest.Id] = true
-	}
-
 	for _, name := range []string{"baseline.json", "report.json"} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -125,7 +114,7 @@ func TestPublicReportSchemaAndDemoCatalog(t *testing.T) {
 			}
 
 			for _, scanner := range demo.Scanners {
-				if !catalog[scanner.ID] {
+				if !scannercatalog.HasID(scanner.ID) {
 					t.Fatalf("demo references scanner absent from catalog: %s", scanner.ID)
 				}
 			}
@@ -147,13 +136,6 @@ func TestAggregatedReportValidatesPublicSchema(t *testing.T) {
 	mem := newMemoryFiles()
 	mem.files["job-123/axe/results.json"] = fixture
 
-	registry := scanners.NewRegistry("scanner-runner")
-	if registerErr := registry.Register(
-		&scanners.Definition{ID: "axe", Name: "Accessibility", Enabled: true},
-	); registerErr != nil {
-		t.Fatal(registerErr)
-	}
-
 	job := &models.Job{
 		ID:               "job-123",
 		ExpectedScanners: []string{"axe"},
@@ -162,7 +144,7 @@ func TestAggregatedReportValidatesPublicSchema(t *testing.T) {
 		},
 	}
 
-	key, err := NewAggregator(mem, registry).BuildAggregatedReport(context.Background(), job)
+	key, err := NewAggregator(mem).BuildAggregatedReport(context.Background(), job)
 	if err != nil {
 		t.Fatal(err)
 	}

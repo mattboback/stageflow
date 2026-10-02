@@ -10,6 +10,7 @@ import (
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/diff"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 type reportAggregation struct {
@@ -70,10 +71,8 @@ func (a *reportAggregation) scannerStat(id string) *report.ScannerSummary {
 	}
 
 	stat := &report.ScannerSummary{Id: id}
-	if a.aggregator.scannerRegistry != nil {
-		if def, ok := a.aggregator.scannerRegistry.Resolve(id); ok {
-			stat.Name = stringPtr(def.Name)
-		}
+	if scanner, ok := scannercatalog.Lookup(id); ok {
+		stat.Name = stringPtr(scanner.Name)
 	}
 
 	a.scannerStats[id] = stat

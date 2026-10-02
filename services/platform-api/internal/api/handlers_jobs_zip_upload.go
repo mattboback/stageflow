@@ -17,6 +17,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 const (
@@ -285,9 +286,9 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 		))
 	}
 
-	modules, err := s.normalizeModules(state.modulesValues)
+	modules, err := scannercatalog.Select(state.modulesValues)
 	if err != nil {
-		if detail, ok := s.unsupportedModuleDetail(err); ok {
+		if detail, ok := unsupportedModuleDetail(err); ok {
 			return nil, newClientDetailError(detail)
 		}
 

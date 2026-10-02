@@ -20,7 +20,6 @@ import (
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
-	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 func TestHandleHealth(t *testing.T) {
@@ -730,16 +729,6 @@ func newTestServer(t *testing.T) (*Server, *fakeFiles, *fakeJobs) {
 	storage := newFakeFiles()
 	jobs := newFakeJobs()
 
-	defaultConfig, err := scannerregistry.DefaultConfig()
-	if err != nil {
-		t.Fatalf("load default config: %v", err)
-	}
-
-	registry, err := scannerregistry.InitializeRegistry(defaultConfig)
-	if err != nil {
-		t.Fatalf("init scanner registry: %v", err)
-	}
-
 	server := NewServer(&ServerConfig{
 		StatusReader: jobs,
 		Files:        storage,
@@ -754,7 +743,6 @@ func newTestServer(t *testing.T) (*Server, *fakeFiles, *fakeJobs) {
 
 			return archive.Validate(bytes.NewReader(data), int64(len(data)))
 		},
-		ScannerRegistry: registry,
 	})
 	server.ipResolver = defaultSecurityTestResolver(t)
 

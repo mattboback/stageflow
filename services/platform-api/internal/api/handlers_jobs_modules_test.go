@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/httputil"
-	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 )
 
 func TestSplitCSV(t *testing.T) {
@@ -93,158 +92,6 @@ func TestSplitCSV(t *testing.T) {
 	}
 }
 
-func TestNormalizeModules_NoRegistry(t *testing.T) {
-	server := &Server{
-		scannerRegistry: nil,
-	}
-
-	t.Run("empty explicit returns axe", func(t *testing.T) {
-		result, err := server.normalizeModules(nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(result) != 1 || result[0] != scannerTypeAxe {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-
-	t.Run("axe explicit returns axe", func(t *testing.T) {
-		result, err := server.normalizeModules([]string{scannerTypeAxe})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(result) != 1 || result[0] != scannerTypeAxe {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-
-	t.Run("non-axe explicit returns error", func(t *testing.T) {
-		_, err := server.normalizeModules([]string{"lighthouse"})
-		if err == nil {
-			t.Fatal("expected error for non-axe module without registry")
-		}
-	})
-
-	t.Run("mixed modules with non-axe returns error", func(t *testing.T) {
-		_, err := server.normalizeModules([]string{"axe", "lighthouse"})
-		if err == nil {
-			t.Fatal("expected error for mixed modules without registry")
-		}
-	})
-
-	t.Run("handles whitespace and case", func(t *testing.T) {
-		result, err := server.normalizeModules([]string{" " + scannerTypeAxe + " "})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(result) != 1 || result[0] != scannerTypeAxe {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-}
-
-func TestNormalizeModules_WithRegistry(t *testing.T) {
-	server := newTestServerForModules(t)
-
-	t.Run("empty explicit selects every built-in scanner", func(t *testing.T) {
-		result, err := server.normalizeModules(nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		want := "axe,lighthouse,link-checker,security-headers,seo"
-		if got := strings.Join(result, ","); got != want {
-			t.Errorf("normalizeModules(nil) = %s, want %s", got, want)
-		}
-	})
-
-	t.Run("valid module resolves", func(t *testing.T) {
-		result, err := server.normalizeModules([]string{scannerTypeAxe})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if len(result) == 0 {
-			t.Error("expected non-empty result")
-		}
-	})
-
-	t.Run("invalid module returns error with suggestions", func(t *testing.T) {
-		_, err := server.normalizeModules([]string{"nonexistent-scanner"})
-		if err == nil {
-			t.Fatal("expected error for invalid module")
-		}
-		// Error should mention the bad module and list supported ones
-		errStr := err.Error()
-		if errStr == "" {
-			t.Error("expected non-empty error message")
-		}
-	})
-}
-
-func TestListSupportedModuleIDs(t *testing.T) {
-	t.Run("without registry returns axe only", func(t *testing.T) {
-		server := &Server{
-			scannerRegistry: nil,
-		}
-
-		result := server.listSupportedModuleIDs()
-		if len(result) != 1 || result[0] != scannerTypeAxe {
-			t.Errorf("expected [axe], got %v", result)
-		}
-	})
-
-	t.Run("with registry returns all scanner IDs", func(t *testing.T) {
-		server := newTestServerForModules(t)
-
-		result := server.listSupportedModuleIDs()
-		if len(result) == 0 {
-			t.Error("expected at least one module ID")
-		}
-
-		// Should contain axe at minimum
-		hasAxe := false
-
-		for _, id := range result {
-			if id == scannerTypeAxe {
-				hasAxe = true
-
-				break
-			}
-		}
-
-		if !hasAxe {
-			t.Error("expected result to contain 'axe'")
-		}
-	})
-}
-
-// newTestServerForModules creates a test server with scanner registry.
-func newTestServerForModules(t *testing.T) *Server {
-	t.Helper()
-
-	defaultConfig, err := scannerregistry.DefaultConfig()
-	if err != nil {
-		t.Fatalf("load default config: %v", err)
-	}
-
-	registry, err := scannerregistry.InitializeRegistry(defaultConfig)
-	if err != nil {
-		t.Fatalf("init scanner registry: %v", err)
-	}
-
-	return &Server{
-		config: &ServerConfig{
-			ScannerRegistry: registry,
-		},
-		statusReader:    newFakeJobs(),
-		scannerRegistry: registry,
-	}
-}
-
 func TestIntakeRejectsUnknownModuleWithTypedError(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
@@ -284,7 +131,8 @@ func TestIntakeRejectsUnknownModuleWithTypedError(t *testing.T) {
 		}
 
 		if got.Error.Code != httputil.ErrCodeUnsupportedModule ||
-			got.Error.Message != "Unsupported scanner module: no-such-scanner" {
+			got.Error.Message != "Unsupported scanner module: no-such-scanner" ||
+			got.Error.Details != "Supported modules: axe, lighthouse, link-checker, security-headers, seo" {
 			t.Fatalf("%s: unexpected error %+v", name, got.Error)
 		}
 	}

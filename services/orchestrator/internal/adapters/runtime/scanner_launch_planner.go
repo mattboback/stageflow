@@ -10,24 +10,22 @@ import (
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/provenance"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 const (
 	PodNetnsModeBridge       = "bridge"
 	PodNetnsModeHost         = "host"
-	defaultScannerMemoryMB   = 2048
 	defaultPageLoadTimeoutMs = 15_000
 	defaultScannerUser       = "65532"
 )
 
 type ScannerLaunchPlannerConfig struct {
-	DataVolume          string
-	ScannerRegistry     *scanners.Registry
-	DefaultScannerImage string
-	PageLoadTimeout     int
-	PodNetnsMode        string
-	DefaultScannerUser  string
+	DataVolume         string
+	ScannerImage       string
+	PageLoadTimeout    int
+	PodNetnsMode       string
+	DefaultScannerUser string
 }
 
 type ScannerLaunchPlanner struct {
@@ -85,8 +83,9 @@ func (p *ScannerLaunchPlanner) Plan(
 		return nil, errors.New("job is nil")
 	}
 
-	if scannerType == "" {
-		return nil, errors.New("scanner type is required")
+	scanner, ok := scannercatalog.Lookup(scannerType)
+	if !ok || scanner.ID != scannerType {
+		return nil, fmt.Errorf("%q is not a built-in scanner", scannerType)
 	}
 
 	resultsDir, provenancePath := scannerPaths(job)
@@ -106,7 +105,7 @@ func (p *ScannerLaunchPlanner) Plan(
 
 	return &ScannerLaunchPlan{
 		Name:  fmt.Sprintf("scanner-%s-%s", scannerType, job.ID),
-		Image: p.scannerImage(scannerType),
+		Image: p.config.ScannerImage,
 		User:  p.config.DefaultScannerUser,
 		Env:   env,
 		Labels: map[string]string{
@@ -128,7 +127,11 @@ func (p *ScannerLaunchPlanner) Plan(
 				Destination: "/out",
 			},
 		},
-		ResourceLimits: p.resourceLimits(scannerType),
+		// No swap beyond the manifest's limit.
+		ResourceLimits: ScannerResourceLimits{
+			MemoryLimitMB: int64(scanner.MaxMemoryMB),
+			MemorySwapMB:  int64(scanner.MaxMemoryMB),
+		},
 	}, nil
 }
 
@@ -299,42 +302,4 @@ func rejectFromEnvReferences(auth *provenance.Auth) error {
 	}
 
 	return nil
-}
-
-func (p *ScannerLaunchPlanner) scannerImage(scannerType string) string {
-	if p.config.ScannerRegistry != nil {
-		if def, ok := p.config.ScannerRegistry.Get(scannerType); ok && def.Image != "" && def.Image != scannerType {
-			return def.Image
-		}
-	}
-
-	if p.config.DefaultScannerImage != "" {
-		return p.config.DefaultScannerImage
-	}
-
-	if p.config.ScannerRegistry != nil {
-		if image := p.config.ScannerRegistry.GetImage(scannerType); image != "" {
-			return image
-		}
-	}
-
-	return scannerType
-}
-
-func (p *ScannerLaunchPlanner) resourceLimits(scannerType string) ScannerResourceLimits {
-	if p.config.ScannerRegistry != nil {
-		if def, ok := p.config.ScannerRegistry.Get(scannerType); ok && def.Requirements.MaxMemoryMB > 0 {
-			memory := int64(def.Requirements.MaxMemoryMB)
-
-			return ScannerResourceLimits{
-				MemoryLimitMB: memory,
-				MemorySwapMB:  memory,
-			}
-		}
-	}
-
-	return ScannerResourceLimits{
-		MemoryLimitMB: defaultScannerMemoryMB,
-		MemorySwapMB:  defaultScannerMemoryMB,
-	}
 }

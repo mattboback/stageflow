@@ -16,6 +16,7 @@ import (
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 const (
@@ -296,9 +297,9 @@ func (s *Server) validateJobURLSubmitRequest(
 }
 
 func (s *Server) normalizeURLSubmitModules(w http.ResponseWriter, req jobURLSubmitRequest) ([]string, bool) {
-	modules, err := s.normalizeModules(req.Modules)
+	modules, err := scannercatalog.Select(req.Modules)
 	if err != nil {
-		if detail, ok := s.unsupportedModuleDetail(err); ok {
+		if detail, ok := unsupportedModuleDetail(err); ok {
 			httputil.RespondStructuredError(w, http.StatusBadRequest, detail)
 		} else {
 			httputil.RespondError(w, http.StatusBadRequest, err.Error())

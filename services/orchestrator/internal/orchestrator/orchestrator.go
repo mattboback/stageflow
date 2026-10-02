@@ -9,7 +9,6 @@ import (
 
 	"github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	adapterstorage "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/storage"
 )
@@ -34,8 +33,7 @@ type Config struct {
 	Files                                                                    adapterstorage.JobFiles
 	DataDir, DataVolume                                                      string
 	DirectoryOwner                                                           func(string) error
-	ScannerRegistry                                                          *scanners.Registry
-	ExtractionImage, ScannerImage, ScannerImageOverride                      string
+	ExtractionImage, ScannerImage                                            string
 	PodNetwork, PodNetnsMode                                                 string
 	PodHostMappings                                                          []string
 	PageLoadTimeout                                                          int
@@ -90,7 +88,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 			DataDir:         cfg.DataDir,
 			DataVolume:      cfg.DataVolume,
 			DirectoryOwner:  cfg.DirectoryOwner,
-			ScannerRegistry: cfg.ScannerRegistry,
 			ExtractionImage: cfg.ExtractionImage,
 			PodNetwork:      cfg.PodNetwork,
 			PodNetnsMode:    cfg.PodNetnsMode,
@@ -98,18 +95,12 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		},
 	)
 
-	image := cfg.ScannerImageOverride
-	if image == "" {
-		image = cfg.ScannerImage
-	}
-
 	planner := podman.NewScannerLaunchPlanner(
 		podman.ScannerLaunchPlannerConfig{
-			DataVolume:          cfg.DataVolume,
-			ScannerRegistry:     cfg.ScannerRegistry,
-			DefaultScannerImage: image,
-			PageLoadTimeout:     cfg.PageLoadTimeout,
-			PodNetnsMode:        cfg.PodNetnsMode,
+			DataVolume:      cfg.DataVolume,
+			ScannerImage:    cfg.ScannerImage,
+			PageLoadTimeout: cfg.PageLoadTimeout,
+			PodNetnsMode:    cfg.PodNetnsMode,
 		},
 	)
 
@@ -117,7 +108,7 @@ func NewOrchestrator(config *Config) *Orchestrator {
 		config:     cfg,
 		runtime:    runtime,
 		planner:    planner,
-		aggregator: adapterstorage.NewAggregator(cfg.Files, cfg.ScannerRegistry),
+		aggregator: adapterstorage.NewAggregator(cfg.Files),
 	}
 }
 

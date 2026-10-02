@@ -439,7 +439,7 @@ func TestCompletingRetryAfterRestartPublishesOneReport(t *testing.T) {
 
 	files := &interruptedFiles{JobFiles: o.config.Files, failReport: true}
 
-	o.aggregator = adapterstorage.NewAggregator(files, nil)
+	o.aggregator = adapterstorage.NewAggregator(files)
 	if reconcileOnceErr := o.ReconcileOnce(ctx); reconcileOnceErr == nil {
 		t.Fatal("missing interrupted aggregation error")
 	}

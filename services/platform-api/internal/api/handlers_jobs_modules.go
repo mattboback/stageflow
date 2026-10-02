@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/mattboback/stageflow/libs/go/httputil"
-	"github.com/mattboback/stageflow/libs/go/scannerregistry"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 func splitCSV(raw string) []string {
@@ -25,27 +25,9 @@ func splitCSV(raw string) []string {
 	return out
 }
 
-func (s *Server) normalizeModules(explicit []string) ([]string, error) {
-	if s.scannerRegistry == nil {
-		if len(explicit) == 0 {
-			return []string{scannerTypeAxe}, nil
-		}
-
-		for _, mod := range explicit {
-			if strings.ToLower(strings.TrimSpace(mod)) != scannerTypeAxe {
-				return nil, errors.New("scanner registry not configured")
-			}
-		}
-
-		return []string{scannerTypeAxe}, nil
-	}
-
-	return s.scannerRegistry.ResolveModulesStrict(explicit)
-}
-
-// unsupportedModuleDetail describes a registry ModuleError for the client.
-func (s *Server) unsupportedModuleDetail(err error) (httputil.ErrorDetail, bool) {
-	var moduleErr *scannerregistry.ModuleError
+// unsupportedModuleDetail describes a catalog ModuleError for the client.
+func unsupportedModuleDetail(err error) (httputil.ErrorDetail, bool) {
+	var moduleErr *scannercatalog.ModuleError
 	if !errors.As(err, &moduleErr) {
 		return httputil.ErrorDetail{}, false
 	}
@@ -55,20 +37,5 @@ func (s *Server) unsupportedModuleDetail(err error) (httputil.ErrorDetail, bool)
 		module = "unknown"
 	}
 
-	return httputil.NewUnsupportedModuleError(module, s.listSupportedModuleIDs()), true
-}
-
-func (s *Server) listSupportedModuleIDs() []string {
-	if s.scannerRegistry == nil {
-		return []string{scannerTypeAxe}
-	}
-
-	defs := s.scannerRegistry.List()
-
-	ids := make([]string, 0, len(defs))
-	for _, def := range defs {
-		ids = append(ids, def.ID)
-	}
-
-	return ids
+	return httputil.NewUnsupportedModuleError(module, scannercatalog.IDs()), true
 }

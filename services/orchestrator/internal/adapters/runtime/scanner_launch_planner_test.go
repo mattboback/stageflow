@@ -7,26 +7,14 @@ import (
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
-	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
+	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
 
 func TestScannerLaunchPlannerPlan(t *testing.T) {
 	t.Parallel()
 
-	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
-	if err := registry.Register(&scanners.Definition{
-		ID:      "axe",
-		Name:    "axe",
-		Enabled: true,
-		Requirements: scanners.Requirements{
-			MaxMemoryMB: 4096,
-		},
-	}); err != nil {
-		t.Fatalf("Register() error = %v", err)
-	}
-
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
-		ScannerRegistry:    registry,
+		ScannerImage:       "localhost/stageflow/scanner-runner:latest",
 		PageLoadTimeout:    15000,
 		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
@@ -61,8 +49,10 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		t.Fatalf("plan.Env[REQUEST_ID] = %q, want %q", got, want)
 	}
 
-	if got, want := plan.ResourceLimits.MemoryLimitMB, int64(4096); got != want {
-		t.Fatalf("plan.ResourceLimits.MemoryLimitMB = %d, want %d", got, want)
+	axe, _ := scannercatalog.Lookup("axe")
+	if want := int64(axe.MaxMemoryMB); plan.ResourceLimits.MemoryLimitMB != want ||
+		plan.ResourceLimits.MemorySwapMB != want {
+		t.Fatalf("plan.ResourceLimits = %+v, want the manifest's %d MB", plan.ResourceLimits, want)
 	}
 
 	if len(plan.Volumes) != 2 {
@@ -78,17 +68,8 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 	t.Parallel()
 
-	registry := scanners.NewRegistry("localhost/stageflow/scanner-runner:latest")
-	if err := registry.Register(&scanners.Definition{
-		ID:      "axe",
-		Name:    "axe",
-		Enabled: true,
-	}); err != nil {
-		t.Fatalf("Register() error = %v", err)
-	}
-
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
-		ScannerRegistry:    registry,
+		ScannerImage:       "localhost/stageflow/scanner-runner:latest",
 		PageLoadTimeout:    15000,
 		PodNetnsMode:       PodNetnsModeHost,
 		DefaultScannerUser: "0",
@@ -125,36 +106,47 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 	if len(urls) != 1 || urls[0] != "http://localhost:3000" {
 		t.Fatalf("SCAN_URLS = %v, want localhost URL", urls)
 	}
-
-	if plan.ResourceLimits.MemoryLimitMB != 2048 {
-		t.Fatalf("plan.ResourceLimits.MemoryLimitMB = %d, want 2048", plan.ResourceLimits.MemoryLimitMB)
-	}
 }
 
-func TestScannerLaunchPlannerPlanWithoutRegistryUsesDefaultScannerImage(t *testing.T) {
+func TestScannerLaunchPlannerUsesConfiguredImageForEveryScanner(t *testing.T) {
 	t.Parallel()
 
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
-		DefaultScannerImage: "localhost/stageflow/scanner-runner:latest",
-		PageLoadTimeout:     15000,
-		PodNetnsMode:        PodNetnsModeBridge,
-		DefaultScannerUser:  "0",
+		ScannerImage:       "localhost/stageflow/scanner-runner:pr-1",
+		PageLoadTimeout:    15000,
+		PodNetnsMode:       PodNetnsModeBridge,
+		DefaultScannerUser: "0",
 	})
 
 	job := &models.Job{
-		ID:        "job-no-registry",
+		ID:        "job-image",
 		InputType: models.JobInputTypeZip,
-		Config: models.JobConfig{
-			Modules: []string{"axe"},
-		},
+		Config:    models.JobConfig{Modules: scannercatalog.IDs()},
 	}
 
-	plan, err := planner.Plan(context.Background(), job, "axe")
-	if err != nil {
-		t.Fatalf("Plan() error = %v", err)
-	}
+	for _, scannerType := range scannercatalog.IDs() {
+		plan, err := planner.Plan(context.Background(), job, scannerType)
+		if err != nil {
+			t.Fatalf("Plan(%s) error = %v", scannerType, err)
+		}
 
-	if got, want := plan.Image, "localhost/stageflow/scanner-runner:latest"; got != want {
-		t.Fatalf("plan.Image = %q, want %q", got, want)
+		if plan.Image != "localhost/stageflow/scanner-runner:pr-1" {
+			t.Fatalf("Plan(%s).Image = %q", scannerType, plan.Image)
+		}
+	}
+}
+
+// The orchestrator only plans scanners admission accepted, which are catalog
+// IDs; anything else fails that scanner instead of launching a container.
+func TestScannerLaunchPlannerRejectsNonCatalogScanners(t *testing.T) {
+	t.Parallel()
+
+	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{ScannerImage: "image"})
+	job := &models.Job{ID: "job-unknown", InputType: models.JobInputTypeZip}
+
+	for _, scannerType := range []string{"", "a11y", "AXE", "custom-scanner"} {
+		if _, err := planner.Plan(context.Background(), job, scannerType); err == nil {
+			t.Errorf("Plan(%q) planned a container", scannerType)
+		}
 	}
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log/slog"
 	"net"
 	"net/http"
 	"testing"
@@ -89,42 +88,6 @@ func TestNewHTTPServer_DifferentPorts(t *testing.T) {
 				t.Errorf("expected Addr %s, got %s", tt.expectedAddr, server.Addr)
 			}
 		})
-	}
-}
-
-func TestLoadScannerRegistry_LoadsBuiltins(t *testing.T) {
-	logger := slog.Default()
-
-	registry := loadScannerRegistry(logger)
-
-	if registry == nil {
-		t.Fatal("expected registry to be non-nil")
-	}
-
-	// Should have default scanners loaded
-	if registry.Count() == 0 {
-		t.Error("expected registry to have at least one scanner")
-	}
-}
-
-func TestLoadScannerRegistry_CountsScannersCorrectly(t *testing.T) {
-	logger := slog.Default()
-
-	registry := loadScannerRegistry(logger)
-
-	if registry == nil {
-		t.Fatal("expected registry to be non-nil")
-	}
-
-	totalCount := registry.Count()
-	enabledCount := registry.CountEnabled()
-
-	if totalCount == 0 {
-		t.Error("expected at least one scanner in registry")
-	}
-
-	if enabledCount > totalCount {
-		t.Errorf("enabled count (%d) cannot exceed total count (%d)", enabledCount, totalCount)
 	}
 }
 
