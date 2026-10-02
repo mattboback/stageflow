@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -166,6 +167,49 @@ func TestBuildContainerCreateBodyMountOptions(t *testing.T) {
 	resultOpts, _ := mounts[1]["options"].([]string)
 	if !reflect.DeepEqual(resultOpts, []string{"rbind", "ro"}) {
 		t.Fatalf("results mount options = %v, want [rbind ro]", resultOpts)
+	}
+}
+
+func TestBuildContainerCreateBodyHardensEveryContainer(t *testing.T) {
+	for name, limits := range map[string]*ResourceLimits{
+		"no limits":    nil,
+		"memory limit": {MemoryLimitMB: 512, MemorySwapMB: 512},
+	} {
+		body := buildContainerCreateBody(&ContainerCreateRequest{Name: "c", Image: "i", ResourceLimits: limits})
+
+		if !reflect.DeepEqual(body["cap_drop"], []string{"ALL"}) || body["no_new_privileges"] != true {
+			t.Fatalf("%s: privileges = %v %v", name, body["cap_drop"], body["no_new_privileges"])
+		}
+
+		if body["read_only_filesystem"] != true || body["read_write_tmpfs"] != false {
+			t.Fatalf("%s: root filesystem = %v, tmpfs defaults = %v",
+				name, body["read_only_filesystem"], body["read_write_tmpfs"])
+		}
+
+		if _, ok := body["mounts"]; ok {
+			t.Fatalf("%s: mounts = %#v, want none requested", name, body["mounts"])
+		}
+
+		volumes, _ := body["volumes"].([]map[string]any)
+		if len(volumes) != 1 || volumes[0]["Name"] != "" || volumes[0]["Dest"] != "/tmp" {
+			t.Fatalf("%s: volumes = %#v, want only an anonymous /tmp", name, body["volumes"])
+		}
+
+		if options, _ := volumes[0]["Options"].([]string); !slices.Contains(options, "noexec") {
+			t.Fatalf("%s: /tmp options = %v", name, options)
+		}
+
+		resources, ok := body["resource_limits"].(map[string]any)
+		if !ok || !reflect.DeepEqual(resources["pids"], map[string]int64{"limit": jobContainerPidsLimit}) {
+			t.Fatalf("%s: resource_limits = %#v", name, body["resource_limits"])
+		}
+
+		if limits != nil && !reflect.DeepEqual(resources["memory"], map[string]int64{
+			"limit": 512 * 1024 * 1024,
+			"swap":  512 * 1024 * 1024,
+		}) {
+			t.Fatalf("%s: memory = %#v", name, resources["memory"])
+		}
 	}
 }
 

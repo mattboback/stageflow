@@ -242,6 +242,12 @@
 				"maxMemoryMB": {
 					"type": "integer",
 					"minimum": 1
+				},
+				"cpus": {
+					"type": "number",
+					"exclusiveMinimum": 0,
+					"maximum": 8,
+					"description": "CPU cores one run of the scanner may use; the container's CPU quota."
 				}
 			}
 		},

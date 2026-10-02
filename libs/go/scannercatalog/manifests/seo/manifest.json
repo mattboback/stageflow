@@ -17,7 +17,8 @@
 	},
 	"requirements": {
 		"resources": {
-			"maxMemoryMB": 640
+			"maxMemoryMB": 640,
+			"cpus": 1
 		}
 	},
 	"entry": {

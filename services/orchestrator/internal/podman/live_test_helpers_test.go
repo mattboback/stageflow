@@ -114,10 +114,14 @@ func containerLogs(t *testing.T, id string) string {
 }
 
 // removeContainer and removeVolume clean up after a test; a leftover is
-// harmless, so errors are ignored.
-func removeContainer(id string) { _ = exec.Command("podman", "rm", "-f", id).Run() }
+// harmless, so errors are ignored. -v takes the container's anonymous /tmp.
+func removeContainer(id string) { _ = exec.Command("podman", "rm", "-f", "-v", id).Run() }
 
 func removeVolume(name string) { _ = exec.Command("podman", "volume", "rm", "-f", name).Run() }
+
+func volumeExists(name string) bool {
+	return exec.Command("podman", "volume", "exists", name).Run() == nil
+}
 
 func removePodmanNetwork(t *testing.T, name string) {
 	t.Helper()
@@ -153,12 +157,16 @@ type inspectedPod struct {
 
 type inspectedContainer struct {
 	Mounts []struct {
+		Type        string
+		Name        string
 		Destination string
 		RW          *bool
 	}
 	HostConfig struct {
 		Memory     int64
 		MemorySwap int64
+		CpuQuota   int64
+		CpuPeriod  int64
 	}
 	NetworkSettings struct {
 		Networks map[string]json.RawMessage
@@ -181,4 +189,19 @@ func inspectContainer(ctx context.Context, t *testing.T, client *Client, id stri
 	getLibpodJSON(ctx, t, client, "/containers/"+id+"/json", &container)
 
 	return container
+}
+
+// scratchVolumeName returns the anonymous volume Podman created for /tmp.
+func scratchVolumeName(ctx context.Context, t *testing.T, client *Client, id string) string {
+	t.Helper()
+
+	for _, mount := range inspectContainer(ctx, t, client, id).Mounts {
+		if mount.Destination == "/tmp" && mount.Type == "volume" && mount.Name != "" {
+			return mount.Name
+		}
+	}
+
+	t.Fatalf("container %s has no /tmp volume", id)
+
+	return ""
 }

@@ -194,6 +194,13 @@ func adoptPod(pod *PodInfo, expectedLabels map[string]string) (string, error) {
 	return pod.ID, nil
 }
 
+// The extractor's limits. It streams the archive to disk and serves static
+// files, so it needs little; see TestJobMemoryFitsBudget.
+const (
+	extractorMemoryMB = 256
+	extractorCPUs     = 1
+)
+
 func (r *JobRuntime) StartExtractionWorker(
 	ctx context.Context,
 	job *models.Job,
@@ -224,6 +231,14 @@ func (r *JobRuntime) StartExtractionWorker(
 			{Type: "bind", Source: filepath.Join(jobSource, ".provenance"), Destination: "/provenance"},
 		},
 		User: "65532",
+		// The extractor unpacks the ZIP, then serves the site to every scanner
+		// until the job ends, so its limits count alongside theirs.
+		ResourceLimits: &ResourceLimits{
+			MemoryLimitMB: extractorMemoryMB,
+			MemorySwapMB:  extractorMemoryMB,
+			CPUQuota:      cpuQuota(extractorCPUs),
+			CPUPeriod:     cpuPeriod,
+		},
 
 		Labels: map[string]string{
 			"managed_by": "orchestrator",
@@ -404,6 +419,8 @@ func (r *JobRuntime) StartScanner(
 		ResourceLimits: &ResourceLimits{
 			MemoryLimitMB: plan.ResourceLimits.MemoryLimitMB,
 			MemorySwapMB:  plan.ResourceLimits.MemorySwapMB,
+			CPUQuota:      plan.ResourceLimits.CPUQuota,
+			CPUPeriod:     cpuPeriod,
 		},
 	}
 

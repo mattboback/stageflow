@@ -14,7 +14,6 @@ type ResourceLimits struct {
 	MemorySwapMB  int64 `json:"memory_swap_mb,omitempty"`  // Memory + swap limit (same as memory to disable swap)
 	CPUQuota      int64 `json:"cpu_quota,omitempty"`       // CPU quota in microseconds per period
 	CPUPeriod     int64 `json:"cpu_period,omitempty"`      // CPU period (default 100000)
-	CPUShares     int64 `json:"cpu_shares,omitempty"`      // Relative CPU weight
 }
 
 // ContainerCreateRequest models the subset of the Podman Libpod create API StageFlow needs.
@@ -185,13 +184,32 @@ func (c *Client) CreateContainer(ctx context.Context, req *ContainerCreateReques
 	return &result, nil
 }
 
-// buildContainerCreateBody constructs the Podman Libpod API request body with properly nested resource_limits.
+// jobContainerPidsLimit caps the processes and threads in one job container.
+// The most any scanner reached on a 52-URL scan was 285 (Lighthouse), so this
+// stops a fork bomb without coming near a real scan.
+const jobContainerPidsLimit = 1024
+
+// buildContainerCreateBody constructs the Podman Libpod API request body.
 //
-//nolint:gocognit,gocyclo // Container configuration requires multiple optional field checks
+// Every container this client creates handles untrusted input: a page under
+// scan or an uploaded archive. None needs a Linux capability or a setuid
+// binary, so all capabilities are dropped and privilege gain is blocked. The
+// root filesystem is read-only, with writes confined to the job's mounts and
+// /tmp, and the process cap stops a fork bomb from starving the host.
 func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 	body := map[string]any{
-		"name":  req.Name,
-		"image": req.Image,
+		"name":                 req.Name,
+		"image":                req.Image,
+		"cap_drop":             []string{"ALL"},
+		"no_new_privileges":    true,
+		"read_only_filesystem": true,
+		"read_write_tmpfs":     false,
+		"volumes":              scratchVolumes(),
+		"resource_limits":      containerResourceLimits(req.ResourceLimits),
+	}
+
+	if len(req.Mounts) > 0 {
+		body["mounts"] = containerMounts(req.Mounts)
 	}
 
 	if req.Pod != "" {
@@ -207,47 +225,6 @@ func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 		body["env"] = req.Env
 	}
 
-	//nolint:nestif // Mount configuration requires multiple optional field handling
-	if len(req.Mounts) > 0 {
-		// Podman expects OCI runtime-spec mounts (`specs-go.Mount`) where read-only is
-		// expressed via mount options (e.g., "ro"), not a separate boolean field.
-		mounts := make([]map[string]any, 0, len(req.Mounts))
-		for _, m := range req.Mounts {
-			mount := map[string]any{
-				"destination": m.Destination,
-			}
-			if m.Type != "" {
-				mount["type"] = m.Type
-			}
-
-			if m.Source != "" {
-				mount["source"] = m.Source
-			}
-
-			opts := make([]string, 0, 2)
-			// Bind mounts are typically recursive in Podman; be explicit.
-			if m.Type == "bind" {
-				opts = append(opts, "rbind")
-			}
-
-			if m.ReadOnly {
-				opts = append(opts, "ro")
-			}
-
-			if m.ChownToContainerUser {
-				opts = append(opts, "U")
-			}
-
-			if len(opts) > 0 {
-				mount["options"] = opts
-			}
-
-			mounts = append(mounts, mount)
-		}
-
-		body["mounts"] = mounts
-	}
-
 	if len(req.Labels) > 0 {
 		body["labels"] = req.Labels
 	}
@@ -256,45 +233,90 @@ func buildContainerCreateBody(req *ContainerCreateRequest) map[string]any {
 		body["command"] = req.Command
 	}
 
-	// Build nested resource_limits structure for Podman API
-	//nolint:nestif // Resource limits require multiple nested optional fields
-	if req.ResourceLimits != nil {
-		resourceLimits := make(map[string]any)
+	return body
+}
 
-		if req.ResourceLimits.MemoryLimitMB > 0 {
-			memoryLimits := map[string]int64{
-				"limit": req.ResourceLimits.MemoryLimitMB * 1024 * 1024, // Convert MB to bytes
-			}
-			if req.ResourceLimits.MemorySwapMB > 0 {
-				memoryLimits["swap"] = req.ResourceLimits.MemorySwapMB * 1024 * 1024
-			}
+// scratchVolumes gives every job container a writable /tmp, which is also its
+// HOME. The volume is anonymous, so it lives on disk and Podman removes it with
+// the job's pod. It is not a tmpfs: Chromium runs with --disable-dev-shm-usage
+// and keeps its shared memory in /tmp, which filled a 256 MB tmpfs on a 26-URL
+// scan, and tmpfs pages would count against the container's memory limit.
+func scratchVolumes() []map[string]any {
+	// Libpod's NamedVolume has no JSON tags; an empty Name makes it anonymous.
+	return []map[string]any{{"Name": "", "Dest": "/tmp", "Options": []string{"nosuid", "nodev", "noexec"}}}
+}
 
-			resourceLimits["memory"] = memoryLimits
+// containerMounts converts the requested mounts to OCI runtime-spec mounts
+// (`specs-go.Mount`).
+func containerMounts(requested []VolumeMount) []map[string]any {
+	mounts := make([]map[string]any, 0, len(requested))
+	for _, m := range requested {
+		mount := map[string]any{"destination": m.Destination}
+		if m.Type != "" {
+			mount["type"] = m.Type
 		}
 
-		if req.ResourceLimits.CPUQuota > 0 || req.ResourceLimits.CPUShares > 0 {
-			cpuLimits := make(map[string]int64)
-			if req.ResourceLimits.CPUQuota > 0 {
-				cpuLimits["quota"] = req.ResourceLimits.CPUQuota
-			}
-
-			if req.ResourceLimits.CPUPeriod > 0 {
-				cpuLimits["period"] = req.ResourceLimits.CPUPeriod
-			}
-
-			if req.ResourceLimits.CPUShares > 0 {
-				cpuLimits["shares"] = req.ResourceLimits.CPUShares
-			}
-
-			resourceLimits["cpu"] = cpuLimits
+		if m.Source != "" {
+			mount["source"] = m.Source
 		}
 
-		if len(resourceLimits) > 0 {
-			body["resource_limits"] = resourceLimits
+		if options := mountOptions(m); len(options) > 0 {
+			mount["options"] = options
 		}
+
+		mounts = append(mounts, mount)
 	}
 
-	return body
+	return mounts
+}
+
+// mountOptions expresses a mount's flags as OCI mount options: read-only is
+// "ro", not a separate boolean field.
+func mountOptions(m VolumeMount) []string {
+	options := make([]string, 0, 3)
+	// Bind mounts are typically recursive in Podman; be explicit.
+	if m.Type == "bind" {
+		options = append(options, "rbind")
+	}
+
+	if m.ReadOnly {
+		options = append(options, "ro")
+	}
+
+	if m.ChownToContainerUser {
+		options = append(options, "U")
+	}
+
+	return options
+}
+
+// containerResourceLimits builds Podman's nested resource_limits. The process
+// cap applies to every container; memory and CPU come from the request.
+func containerResourceLimits(requested *ResourceLimits) map[string]any {
+	limits := map[string]any{"pids": map[string]int64{"limit": jobContainerPidsLimit}}
+	if requested == nil {
+		return limits
+	}
+
+	if requested.MemoryLimitMB > 0 {
+		memory := map[string]int64{"limit": requested.MemoryLimitMB * 1024 * 1024}
+		if requested.MemorySwapMB > 0 {
+			memory["swap"] = requested.MemorySwapMB * 1024 * 1024
+		}
+
+		limits["memory"] = memory
+	}
+
+	if requested.CPUQuota > 0 {
+		cpu := map[string]int64{"quota": requested.CPUQuota}
+		if requested.CPUPeriod > 0 {
+			cpu["period"] = requested.CPUPeriod
+		}
+
+		limits["cpu"] = cpu
+	}
+
+	return limits
 }
 
 // StartContainer requests Podman to start an existing container.

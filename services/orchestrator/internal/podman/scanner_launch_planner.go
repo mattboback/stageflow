@@ -42,6 +42,16 @@ type VolumeRequirement struct {
 type ScannerResourceLimits struct {
 	MemoryLimitMB int64
 	MemorySwapMB  int64
+	// CPUQuota is microseconds of CPU per cpuPeriod.
+	CPUQuota int64
+}
+
+// cpuPeriod is the CFS period every job container's CPU quota is measured in.
+const cpuPeriod = 100_000
+
+// cpuQuota converts a core count into microseconds per cpuPeriod.
+func cpuQuota(cores float64) int64 {
+	return int64(cores * cpuPeriod)
 }
 
 type ScannerLaunchPlan struct {
@@ -131,6 +141,7 @@ func (p *ScannerLaunchPlanner) Plan(
 		ResourceLimits: ScannerResourceLimits{
 			MemoryLimitMB: int64(scanner.MaxMemoryMB),
 			MemorySwapMB:  int64(scanner.MaxMemoryMB),
+			CPUQuota:      cpuQuota(scanner.CPUs),
 		},
 	}, nil
 }

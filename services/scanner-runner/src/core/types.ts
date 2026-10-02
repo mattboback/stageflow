@@ -111,7 +111,7 @@ export interface PageEntry {
  * behaves byte-identically to the pre-auth shape. Discriminated by `mode`.
  *
  * - `storage_state`: a Playwright storage-state JSON file mounted read-only at
- *   /run/stageflow/storage-state.json and copied into private tmpfs scratch.
+ *   /run/stageflow/storage-state.json and copied into private scratch in /tmp.
  * - `form`: a declarative login replay built from the existing PreScanAction
  *   shape. `success` is a WaitStrategy that signals a completed login. Any
  *   string value is a client-resolved literal; credential values never

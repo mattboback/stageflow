@@ -127,6 +127,10 @@ export interface NetworkRequirement {
  */
 export interface ResourceRequirement {
   maxMemoryMB?: number;
+  /**
+   * CPU cores one run of the scanner may use; the container's CPU quota.
+   */
+  cpus?: number;
 }
 /**
  * This interface was referenced by `ScannerManifest`'s JSON-Schema

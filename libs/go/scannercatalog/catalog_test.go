@@ -138,28 +138,13 @@ func manifestProblem(schema *jsonschema.Schema, data []byte) error {
 	return nil
 }
 
-// maxConcurrentJobs is the job concurrency the memory budget allows for. PR 2.3
-// adds the job cap and starts it at this value.
-const maxConcurrentJobs = 1
-
-// jobMemoryBudgetMB is what concurrent jobs may claim together. A job runs every
-// scanner at once, so a job claims the sum of the manifests' limits.
-const jobMemoryBudgetMB = 10 * 1024
-
-func TestManifestMemoryLimitsFitBudget(t *testing.T) {
-	perJobMB := 0
-
+// The orchestrator applies these limits to every scanner container, and its
+// TestJobMemoryFitsBudget sums them.
+func TestManifestsSetResourceLimits(t *testing.T) {
 	for _, scanner := range All() {
-		if scanner.MaxMemoryMB <= 0 {
-			t.Fatalf("%s: manifest must set requirements.resources.maxMemoryMB", scanner.ID)
+		if scanner.MaxMemoryMB <= 0 || scanner.CPUs <= 0 {
+			t.Fatalf("%s: manifest must set requirements.resources.maxMemoryMB and cpus", scanner.ID)
 		}
-
-		perJobMB += scanner.MaxMemoryMB
-	}
-
-	if total := perJobMB * maxConcurrentJobs; total > jobMemoryBudgetMB {
-		t.Fatalf("scanner memory limits = %d MB per job x %d jobs = %d MB, over the %d MB budget",
-			perJobMB, maxConcurrentJobs, total, jobMemoryBudgetMB)
 	}
 }
 

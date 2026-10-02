@@ -55,6 +55,10 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 		t.Fatalf("plan.ResourceLimits = %+v, want the manifest's %d MB", plan.ResourceLimits, want)
 	}
 
+	if want := cpuQuota(axe.CPUs); plan.ResourceLimits.CPUQuota != want || want <= 0 {
+		t.Fatalf("plan CPU quota = %d, want the manifest's %d", plan.ResourceLimits.CPUQuota, want)
+	}
+
 	if len(plan.Volumes) != 2 {
 		t.Fatalf("len(plan.Volumes) = %d, want 2", len(plan.Volumes))
 	}

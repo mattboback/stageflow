@@ -5,7 +5,7 @@
  * every downstream scanner inherits the authenticated context for free:
  *
  *   - `storage_state`: copy the fixed read-only Playwright session mount into
- *     private tmpfs scratch and feed that path into context creation.
+ *     private scratch in /tmp and feed that path into context creation.
  *   - `form`: open a single internal page, replay the recipe steps via the
  *     existing literal PreScanAction executor, wait for the success strategy, then discard the page.
  *
@@ -235,8 +235,8 @@ function safeUrl(page: import('playwright').Page): string | undefined {
 }
 
 /**
- * Private tmpfs destination for the mounted storage state. The file uses mode
- * 0600 and disappears with the scanner container.
+ * Private scratch destination for the mounted storage state. The file uses mode
+ * 0600, and /tmp is a volume the orchestrator deletes with the job's pod.
  */
 export function defaultStorageStatePath(_resultsDir: string): string {
 	return join(tmpdir(), 'stageflow-auth', 'storage-state.json');

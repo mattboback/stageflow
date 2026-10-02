@@ -222,6 +222,16 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 	if mount.ChownToContainerUser || !mount.ReadOnly {
 		t.Fatalf("input mount must remain scoped and read-only: %+v", mount)
 	}
+
+	want := ResourceLimits{
+		MemoryLimitMB: extractorMemoryMB,
+		MemorySwapMB:  extractorMemoryMB,
+		CPUQuota:      cpuQuota(extractorCPUs),
+		CPUPeriod:     cpuPeriod,
+	}
+	if gotReq.ResourceLimits == nil || *gotReq.ResourceLimits != want {
+		t.Fatalf("extractor limits = %+v, want %+v", gotReq.ResourceLimits, want)
+	}
 }
 
 func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSucceeds(t *testing.T) {
@@ -332,7 +342,7 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 			{Name: "stageflow_data", Destination: "/workspace", ReadOnly: true},
 			{Name: "results-job-123", Destination: "/results"},
 		},
-		ResourceLimits: ScannerResourceLimits{MemoryLimitMB: 512, MemorySwapMB: 512},
+		ResourceLimits: ScannerResourceLimits{MemoryLimitMB: 512, MemorySwapMB: 512, CPUQuota: 150_000},
 	}
 
 	result, err := runtime.StartScanner(context.Background(), &models.Job{ID: "job-123", PodID: "pod-1"}, plan)
@@ -378,10 +388,9 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 		t.Fatalf("unexpected results mount: %#v", resultsMount)
 	}
 
-	if gotReq.ResourceLimits == nil ||
-		gotReq.ResourceLimits.MemoryLimitMB != 512 ||
-		gotReq.ResourceLimits.MemorySwapMB != 512 {
-		t.Fatalf("unexpected resource limits: %#v", gotReq.ResourceLimits)
+	want := ResourceLimits{MemoryLimitMB: 512, MemorySwapMB: 512, CPUQuota: 150_000, CPUPeriod: cpuPeriod}
+	if gotReq.ResourceLimits == nil || *gotReq.ResourceLimits != want {
+		t.Fatalf("resource limits = %+v, want %+v", gotReq.ResourceLimits, want)
 	}
 }
 

@@ -358,6 +358,9 @@ func (j *OutputFormat) UnmarshalJSON(value []byte) error {
 }
 
 type ResourceRequirement struct {
+	// CPU cores one run of the scanner may use; the container's CPU quota.
+	Cpus *float64 `json:"cpus,omitempty"`
+
 	// MaxMemoryMB corresponds to the JSON schema field "maxMemoryMB".
 	MaxMemoryMB *int `json:"maxMemoryMB,omitempty"`
 }
@@ -368,6 +371,12 @@ func (j *ResourceRequirement) UnmarshalJSON(value []byte) error {
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
 		return err
+	}
+	if plain.Cpus != nil && 8 < *plain.Cpus {
+		return fmt.Errorf("field %s: must be <= %v", "cpus", 8)
+	}
+	if plain.Cpus != nil && 0 >= *plain.Cpus {
+		return fmt.Errorf("field %s: must be > %v", "cpus", 0)
 	}
 	if plain.MaxMemoryMB != nil && 1 > *plain.MaxMemoryMB {
 		return fmt.Errorf("field %s: must be >= %v", "maxMemoryMB", 1)

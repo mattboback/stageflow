@@ -30,6 +30,8 @@ type Scanner struct {
 	Capabilities Capabilities
 	// MaxMemoryMB is the container memory limit for one run of the scanner.
 	MaxMemoryMB int
+	// CPUs is the container's CPU quota, in cores.
+	CPUs float64
 }
 
 // Capabilities is the manifest's capability block, in the shape
@@ -139,6 +141,7 @@ func fromManifest(m *scannermanifest.ScannerManifest) Scanner {
 
 	if m.Requirements != nil && m.Requirements.Resources != nil {
 		scanner.MaxMemoryMB = value(m.Requirements.Resources.MaxMemoryMB)
+		scanner.CPUs = value(m.Requirements.Resources.Cpus)
 	}
 
 	return scanner

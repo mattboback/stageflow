@@ -40,6 +40,8 @@ func TestLiveContract_ResourceLimitsMapToInspectHostConfig(t *testing.T) {
 		ResourceLimits: &ResourceLimits{
 			MemoryLimitMB: memoryMB,
 			MemorySwapMB:  memoryMB,
+			CPUQuota:      cpuQuota(0.5),
+			CPUPeriod:     cpuPeriod,
 		},
 		Labels: map[string]string{
 			"managed_by": "stageflow-contract-test",
@@ -61,6 +63,11 @@ func TestLiveContract_ResourceLimitsMapToInspectHostConfig(t *testing.T) {
 	hostConfig := inspectContainer(ctx, t, client, ctrResp.ID).HostConfig
 	if hostConfig.Memory != memoryMB*1024*1024 {
 		t.Fatalf("expected HostConfig.Memory=%d, got %d", memoryMB*1024*1024, hostConfig.Memory)
+	}
+
+	if hostConfig.CpuQuota != cpuQuota(0.5) || hostConfig.CpuPeriod != cpuPeriod {
+		t.Fatalf("expected HostConfig.CpuQuota=%d and CpuPeriod=%d, got %d and %d",
+			cpuQuota(0.5), cpuPeriod, hostConfig.CpuQuota, hostConfig.CpuPeriod)
 	}
 
 	// Podman may omit MemorySwap; when present it must match the request.

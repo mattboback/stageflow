@@ -23,7 +23,8 @@
 			"headless": true
 		},
 		"resources": {
-			"maxMemoryMB": 2560
+			"maxMemoryMB": 2560,
+			"cpus": 2.5
 		}
 	},
 	"entry": {
