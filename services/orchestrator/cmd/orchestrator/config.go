@@ -62,8 +62,8 @@ func loadConfig() *Config {
 		ScannerImage:                scannerImage,
 		ScannerImageOverride:        scannerImageEnv,
 		APIPort:                     config.GetEnv("API_PORT", "8081"),
-		PodNetwork:                  config.GetEnv("POD_NETWORK", ""),
-		PodNetnsMode:                config.GetEnv("POD_NETNS_MODE", "bridge"),
+		PodNetwork:                  strings.TrimSpace(config.GetEnv("POD_NETWORK", "")),
+		PodNetnsMode:                strings.TrimSpace(config.GetEnv("POD_NETNS_MODE", "bridge")),
 		PodHostMappings:             podHostMappings,
 		PageLoadTimeout:             config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
 	}
@@ -89,6 +89,12 @@ func (c *Config) Validate() error {
 
 	if podNetnsMode != "" && podNetnsMode != "bridge" && podNetwork != "" {
 		errs = append(errs, errors.New("POD_NETNS_MODE must be bridge when POD_NETWORK is set"))
+	}
+
+	// Without a named network a bridge-mode pod joins Podman's default bridge,
+	// which can reach every other bridge on the host by address.
+	if (podNetnsMode == "" || podNetnsMode == "bridge") && podNetwork == "" {
+		errs = append(errs, errors.New("POD_NETWORK is required when POD_NETNS_MODE is bridge"))
 	}
 
 	if c.PageLoadTimeout < 0 {

@@ -14,6 +14,7 @@ SKIP_STAGEFLOW_TARGET_BACKUP="${SKIP_STAGEFLOW_TARGET_BACKUP:-0}"
 ENV_FILE="${ENV_FILE:-${XDG_CONFIG_HOME:-${HOME}/.config}/stageflow/production.env}"
 APP_ENV_FILE="${APP_ENV_FILE:-${ENV_FILE}}"
 NETWORK_NAME="${STAGEFLOW_NETWORK_NAME:-${NETWORK_NAME:-stageflow_net}}"
+JOBS_NETWORK_NAME="${STAGEFLOW_JOBS_NETWORK_NAME:-stageflow_jobs}"
 HOST_UID="$(id -u)"
 HOST_GID="$(id -g)"
 
@@ -45,7 +46,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 # Prune: a rendered StageFlow unit whose template is gone is stopped, unmasked
 # and deleted, so removing a template removes the service.
-for rendered in "${OUTPUT_DIR}"/stageflow*.container "${OUTPUT_DIR}"/stageflow*.pod; do
+for rendered in "${OUTPUT_DIR}"/stageflow*.container "${OUTPUT_DIR}"/stageflow*.pod "${OUTPUT_DIR}"/stageflow*.network; do
   [[ -f "${rendered}" ]] || continue
   filename="$(basename "${rendered}")"
   [[ -f "${TEMPLATE_DIR}/${filename}.in" ]] && continue
@@ -53,6 +54,7 @@ for rendered in "${OUTPUT_DIR}"/stageflow*.container "${OUTPUT_DIR}"/stageflow*.
   case "${filename}" in
     *.container) service="${filename%.container}.service" ;;
     *.pod) service="${filename%.pod}-pod.service" ;;
+    *.network) service="${filename%.network}-network.service" ;;
   esac
   if command -v systemctl >/dev/null 2>&1; then
     systemctl --user stop "${service}" >/dev/null 2>&1 || true
@@ -70,6 +72,7 @@ escape_sed() {
 ENV_FILE_ESC="$(escape_sed "${ENV_FILE}")"
 APP_ENV_FILE_ESC="$(escape_sed "${APP_ENV_FILE}")"
 NETWORK_NAME_ESC="$(escape_sed "${NETWORK_NAME}")"
+JOBS_NETWORK_NAME_ESC="$(escape_sed "${JOBS_NETWORK_NAME}")"
 HOST_UID_ESC="$(escape_sed "${HOST_UID}")"
 HOST_GID_ESC="$(escape_sed "${HOST_GID}")"
 IMAGE_TAG_ESC="$(escape_sed "${IMAGE_TAG}")"
@@ -82,6 +85,7 @@ for template in "${TEMPLATE_DIR}"/*.in; do
     -e "s|@ENV_FILE@|${ENV_FILE_ESC}|g" \
     -e "s|@APP_ENV_FILE@|${APP_ENV_FILE_ESC}|g" \
     -e "s|@NETWORK_NAME@|${NETWORK_NAME_ESC}|g" \
+    -e "s|@JOBS_NETWORK_NAME@|${JOBS_NETWORK_NAME_ESC}|g" \
     -e "s|@HOST_UID@|${HOST_UID_ESC}|g" \
     -e "s|@HOST_GID@|${HOST_GID_ESC}|g" \
     -e "s|@IMAGE_TAG@|${IMAGE_TAG_ESC}|g" \

@@ -42,10 +42,7 @@ func TestLiveContract_MountReadOnlyEncodedViaOptions(t *testing.T) {
 	}
 	defer func() { _ = client.RemovePod(context.Background(), podResp.ID, true) }()
 
-	image := pickLiveImage(t, "localhost/stageflow/extractor:latest", "stageflow/extractor:latest", "docker.io/library/alpine:3.20", "docker.io/library/alpine:latest")
-	if image == "" {
-		t.Skip("no suitable local image found for live contract test; build StageFlow images or pull alpine")
-	}
+	image := liveImage(t)
 
 	ctrResp, err := client.CreateContainer(ctx, &ContainerCreateRequest{
 		Name:  "stageflow-contract-ctr-" + suffix,

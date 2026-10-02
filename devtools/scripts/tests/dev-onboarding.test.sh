@@ -67,7 +67,7 @@ case "${1:-}" in
 		fi
 		;;
 	compose)
-		printf 'compose-env STAGEFLOW_NETWORK_NAME=%s POD_NETWORK=%s FRONTEND_PORT=%s\n' "${STAGEFLOW_NETWORK_NAME:-}" "${POD_NETWORK-unset}" "${FRONTEND_PORT:-}" >>"$STAGEFLOW_TEST_LOG"
+		printf 'compose-env STAGEFLOW_NETWORK_NAME=%s POD_NETWORK=%s FRONTEND_PORT=%s JOBS_NETWORK=%s\n' "${STAGEFLOW_NETWORK_NAME:-}" "${POD_NETWORK-unset}" "${FRONTEND_PORT:-}" "${STAGEFLOW_JOBS_NETWORK_NAME:-}" >>"$STAGEFLOW_TEST_LOG"
 		exit 0
 		;;
 	info)
@@ -100,6 +100,8 @@ run_network_default_case() {
 	assert_contains "$log_file" "podman network inspect stageflow_dev_net" "dev should inspect the project-scoped default network"
 	assert_contains "$log_file" "podman network create stageflow_dev_net" "dev should create the project-scoped default network when missing"
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=stageflow_dev_net" "dev should export the effective default network to compose"
+	assert_contains "$log_file" "podman network create --opt isolate=strict stageflow_dev_jobs" "dev should create the isolated job network when missing"
+	assert_contains "$log_file" "JOBS_NETWORK=stageflow_dev_jobs" "dev should export the job network to compose"
 }
 
 run_network_project_case() {
@@ -111,6 +113,7 @@ run_network_project_case() {
 
 	assert_contains "$log_file" "podman network inspect stageflow_fresh_audit_net" "dev should derive the network from COMPOSE_PROJECT_NAME"
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=stageflow_fresh_audit_net" "dev should export the project-derived network"
+	assert_contains "$log_file" "podman network create --opt isolate=strict stageflow_fresh_audit_jobs" "dev should derive the isolated job network from COMPOSE_PROJECT_NAME"
 	assert_contains "$log_file" "podman compose -p stageflow_fresh_audit" "dev should use COMPOSE_PROJECT_NAME as compose project"
 	assert_contains "$log_file" "up -d postgres" "dev should pass an explicit service list through to compose up"
 }
@@ -211,13 +214,14 @@ EOF
 	: >"$log_file"
 	PATH="$temp_dir/bin:$PATH" run_just_with_fake_podman "$temp_dir" setup
 	assert_contains "$log_file" "podman network inspect file_net" "setup should use the network from .env"
+	assert_contains "$log_file" "podman network create --opt isolate=strict from_file_jobs" "setup should create the isolated job network for the project from .env"
 
 }
 
 main() {
 	# Just exports the invoking checkout's .env; fixtures must not inherit it.
 	unset FRONTEND_PORT PLATFORM_API_PORT VITE_API_URL VITE_SITE_URL STAGEFLOW_DATA_VOLUME
-	unset ENV_FILE COMPOSE_PROJECT_NAME STAGEFLOW_NETWORK_NAME POD_NETWORK IMAGE_TAG \
+	unset ENV_FILE COMPOSE_PROJECT_NAME STAGEFLOW_NETWORK_NAME STAGEFLOW_JOBS_NETWORK_NAME POD_NETWORK IMAGE_TAG \
 		PLATFORM_API_CORS_ALLOW_ORIGINS STAGEFLOW_PUBLIC_DOMAIN STAGEFLOW_PROTECTED_HOST \
 		STAGEFLOW_DEMO_VITE_API_URL STAGEFLOW_DEMO_VITE_SITE_URL \
 		STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS STAGEFLOW_DEMO_PUBLIC_DOMAIN

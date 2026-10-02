@@ -1,0 +1,13 @@
+[Unit]
+Description=StageFlow Job Network
+PartOf=stageflow.target
+
+[Network]
+NetworkName=@JOBS_NETWORK_NAME@
+# Job pods load untrusted pages. This network reaches the internet and no other
+# Podman network on the host, so a page cannot reach Postgres, the API or
+# another stack. The orchestrator refuses to start if the option is missing.
+Options=isolate=strict
+
+[Install]
+WantedBy=stageflow.target

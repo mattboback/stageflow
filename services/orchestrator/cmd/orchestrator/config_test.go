@@ -44,3 +44,53 @@ func TestValidatePodmanConfigAcceptsTheDefaults(t *testing.T) {
 		t.Fatalf("errors = %v, want none", errs)
 	}
 }
+
+func TestValidateRequiresANamedNetworkForBridgeModeJobPods(t *testing.T) {
+	valid := func(mode, network string) *Config {
+		return &Config{
+			PodmanSocket:                "/run/podman/podman.sock",
+			PodmanRequestTimeout:        120 * time.Second,
+			PodmanResponseHeaderTimeout: 60 * time.Second,
+			PodmanDialTimeout:           5 * time.Second,
+			DatabaseURL:                 "postgres://stageflow@postgres/stageflow",
+			ExtractionImage:             "localhost/stageflow/extractor:test",
+			APIPort:                     "8081",
+			PodNetnsMode:                mode,
+			PodNetwork:                  network,
+		}
+	}
+
+	tests := []struct {
+		name, mode, network, wantErr string
+	}{
+		{name: "bridge mode on a named network", mode: "bridge", network: "stageflow_jobs"},
+		{name: "host mode without a network", mode: "host"},
+		{
+			// Podman's default bridge can reach every other bridge by address.
+			name: "bridge mode without a network", mode: "bridge",
+			wantErr: "POD_NETWORK is required when POD_NETNS_MODE is bridge",
+		},
+		{name: "an unset mode is bridge mode", wantErr: "POD_NETWORK is required when POD_NETNS_MODE is bridge"},
+		{
+			name: "host mode with a network", mode: "host", network: "stageflow_jobs",
+			wantErr: "POD_NETNS_MODE must be bridge when POD_NETWORK is set",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := valid(test.mode, test.network).Validate()
+			if test.wantErr == "" {
+				if err != nil {
+					t.Fatalf("Validate() error = %v, want nil", err)
+				}
+
+				return
+			}
+
+			if err == nil || !strings.Contains(err.Error(), test.wantErr) {
+				t.Fatalf("Validate() error = %v, want it to contain %q", err, test.wantErr)
+			}
+		})
+	}
+}

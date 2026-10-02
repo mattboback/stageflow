@@ -84,14 +84,9 @@ func run() int {
 		}
 	}()
 
-	podmanClient, err := podman.NewClient(&podman.Config{
-		SocketPath:            cfg.PodmanSocket,
-		RequestTimeout:        cfg.PodmanRequestTimeout,
-		ResponseHeaderTimeout: cfg.PodmanResponseHeaderTimeout,
-		DialTimeout:           cfg.PodmanDialTimeout,
-	})
+	podmanClient, err := newPodmanClient(backgroundCtx, cfg)
 	if err != nil {
-		logger.Error("Failed to create Podman client", "error", err)
+		logger.Error("Failed to prepare the Podman runtime", "error", err)
 
 		return 1
 	}
@@ -165,6 +160,34 @@ func run() int {
 	}
 
 	return 0
+}
+
+// newPodmanClient creates the Podman client and, in bridge mode, verifies the
+// job network before any job can run on it. Host mode has no pod network; it is
+// the local-only private-target setup.
+func newPodmanClient(ctx context.Context, cfg *Config) (*podman.Client, error) {
+	client, err := podman.NewClient(&podman.Config{
+		SocketPath:            cfg.PodmanSocket,
+		RequestTimeout:        cfg.PodmanRequestTimeout,
+		ResponseHeaderTimeout: cfg.PodmanResponseHeaderTimeout,
+		DialTimeout:           cfg.PodmanDialTimeout,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create Podman client: %w", err)
+	}
+
+	if cfg.PodNetwork == "" {
+		return client, nil
+	}
+
+	networkCtx, cancel := context.WithTimeout(ctx, cfg.PodmanRequestTimeout)
+	defer cancel()
+
+	if networkErr := podman.VerifyJobNetwork(networkCtx, client, cfg.PodNetwork); networkErr != nil {
+		return nil, networkErr
+	}
+
+	return client, nil
 }
 
 type monitorWaiter interface {

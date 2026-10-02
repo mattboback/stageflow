@@ -2,8 +2,8 @@
 Description=StageFlow Orchestrator
 PartOf=stageflow.target
 Wants=network-online.target
-After=network-online.target stageflow-postgres.service
-Requires=stageflow-postgres.service
+After=network-online.target stageflow-postgres.service stageflow-jobs-network.service
+Requires=stageflow-postgres.service stageflow-jobs-network.service
 
 [Service]
 EnvironmentFile=@APP_ENV_FILE@
@@ -29,7 +29,7 @@ Environment=SCANNER_IMAGE=localhost/stageflow/scanner-runner:@IMAGE_TAG@
 Environment=API_PORT=8081
 Environment=STAGEFLOW_DATA_VOLUME=stageflow_data
 Environment=POD_NETNS_MODE=bridge
-Environment=POD_NETWORK=@NETWORK_NAME@
+Environment=POD_NETWORK=@JOBS_NETWORK_NAME@
 HealthCmd=/usr/local/bin/orchestrator-healthcheck
 HealthInterval=15s
 HealthTimeout=5s

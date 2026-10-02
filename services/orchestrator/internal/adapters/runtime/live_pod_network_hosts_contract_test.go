@@ -105,10 +105,7 @@ func TestLiveContract_PodNetworkAndHostAddPropagateToContainer(t *testing.T) {
 		t.Fatalf("pod inspect InfraConfig missing Networks")
 	}
 
-	image := pickLiveImage(t, "docker.io/library/busybox:latest", "docker.io/library/alpine:3.20", "docker.io/library/alpine:latest")
-	if image == "" {
-		t.Skip("no suitable local image found for host/network contract test; pull busybox or alpine to run")
-	}
+	image := liveImage(t)
 
 	ctrResp, err := client.CreateContainer(ctx, &ContainerCreateRequest{
 		Name:    "stageflow-contract-ctr-" + suffix,

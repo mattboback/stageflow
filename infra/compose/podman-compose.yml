@@ -128,8 +128,10 @@ services:
       SCANNER_IMAGE: "localhost/stageflow/scanner-runner:${IMAGE_TAG:-latest}"
       API_PORT: "8081"
       POD_NETNS_MODE: ${POD_NETNS_MODE:-bridge}
-      # An explicitly empty POD_NETWORK is required for host mode.
-      POD_NETWORK: ${POD_NETWORK-${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_net}}
+      # Job pods join their own isolated network, never the stack network. The
+      # just recipes create it; the orchestrator refuses one that is not
+      # isolate=strict. An explicitly empty POD_NETWORK is required for host mode.
+      POD_NETWORK: ${POD_NETWORK-${STAGEFLOW_JOBS_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_jobs}}
     healthcheck:
       test: ["CMD", "/usr/local/bin/orchestrator-healthcheck"]
       interval: 15s

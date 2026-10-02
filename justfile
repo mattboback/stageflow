@@ -20,16 +20,18 @@ scanner_dir := 'services/scanner-runner'
 help:
     @just --list
 
-[group('setup'), doc('One-time-ish setup: Podman network + Go/Bun deps')]
+[group('setup'), doc('One-time-ish setup: Podman networks + Go/Bun deps')]
 setup:
     #!/usr/bin/env bash
     set -euo pipefail
 
     project="{{compose_project}}"
     network="${STAGEFLOW_NETWORK_NAME:-${project}_net}"
+    jobs_network="${STAGEFLOW_JOBS_NETWORK_NAME:-${project}_jobs}"
 
-    echo "==> Ensuring $network network exists..."
+    echo "==> Ensuring $network and isolated $jobs_network networks exist..."
     {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
+    {{podman}} network inspect "$jobs_network" >/dev/null 2>&1 || {{podman}} network create --opt isolate=strict "$jobs_network"
 
     just deps
 
@@ -162,10 +164,13 @@ dev CMD='up' ENV='dev' SERVICES='':
 
     project="{{compose_project}}"
     network="${STAGEFLOW_NETWORK_NAME:-${project}_net}"
+    jobs_network="${STAGEFLOW_JOBS_NETWORK_NAME:-${project}_jobs}"
     export STAGEFLOW_NETWORK_NAME="$network"
+    export STAGEFLOW_JOBS_NETWORK_NAME="$jobs_network"
 
-    echo "==> Ensuring $network network exists..."
+    echo "==> Ensuring $network and isolated $jobs_network networks exist..."
     {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
+    {{podman}} network inspect "$jobs_network" >/dev/null 2>&1 || {{podman}} network create --opt isolate=strict "$jobs_network"
 
     env_file="${ENV_FILE:-$root_dir/.env}"
     env_args=()
@@ -256,10 +261,13 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
 
     project="{{compose_project}}"
     network="${STAGEFLOW_NETWORK_NAME:-${project}_net}"
+    jobs_network="${STAGEFLOW_JOBS_NETWORK_NAME:-${project}_jobs}"
     export STAGEFLOW_NETWORK_NAME="$network"
+    export STAGEFLOW_JOBS_NETWORK_NAME="$jobs_network"
 
-    echo "==> Ensuring $network network exists..."
+    echo "==> Ensuring $network and isolated $jobs_network networks exist..."
     {{podman}} network inspect "$network" >/dev/null 2>&1 || {{podman}} network create "$network"
+    {{podman}} network inspect "$jobs_network" >/dev/null 2>&1 || {{podman}} network create --opt isolate=strict "$jobs_network"
 
     env_file="${ENV_FILE:-$root_dir/.env}"
     env_args=()
@@ -467,6 +475,7 @@ shell-tests:
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/build-images.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
+    bash devtools/scripts/tests/quadlet-install.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
     bash devtools/scripts/tests/secrets-gate.test.sh
     node --test devtools/scripts/tests/check-knip.test.mjs

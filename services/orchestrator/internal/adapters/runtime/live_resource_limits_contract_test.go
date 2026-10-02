@@ -28,10 +28,7 @@ func TestLiveContract_ResourceLimitsMapToInspectHostConfig(t *testing.T) {
 	}
 	defer func() { _ = client.RemovePod(context.Background(), podResp.ID, true) }()
 
-	image := pickLiveImage(t, "docker.io/library/busybox:latest", "docker.io/library/alpine:3.20", "docker.io/library/alpine:latest")
-	if image == "" {
-		t.Skip("no suitable local image found for resource limits contract test; pull busybox or alpine to run")
-	}
+	image := liveImage(t)
 
 	const memoryMB int64 = 64
 	expectedBytes := float64(memoryMB * 1024 * 1024)

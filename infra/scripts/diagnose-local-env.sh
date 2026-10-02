@@ -180,6 +180,7 @@ check_network_alias_conflicts() {
 
 COMPOSE_PROJECT_NAME="$(effective_env_value COMPOSE_PROJECT_NAME stageflow_dev)"
 LOCAL_NETWORK="$(effective_env_value STAGEFLOW_NETWORK_NAME "${COMPOSE_PROJECT_NAME}_net")"
+JOBS_NETWORK="$(effective_env_value STAGEFLOW_JOBS_NETWORK_NAME "${COMPOSE_PROJECT_NAME}_jobs")"
 
 say "==> StageFlow local diagnose"
 
@@ -256,6 +257,21 @@ if command -v "$PODMAN_BIN" >/dev/null 2>&1; then
 		check_network_alias_conflicts "$LOCAL_NETWORK"
 	else
 		warn "Podman network \`${LOCAL_NETWORK}\` is missing. \`just setup\` will create it."
+	fi
+
+	# Bridge-mode job pods need their own isolated network; the orchestrator
+	# refuses to start on any other kind.
+	if [[ "$(effective_env_value POD_NETNS_MODE bridge)" != "host" ]]; then
+		job_network="$(effective_env_value POD_NETWORK "$JOBS_NETWORK")"
+		if isolation="$("$PODMAN_BIN" network inspect "$job_network" --format '{{index .Options "isolate"}}' 2>/dev/null)"; then
+			if [[ "$isolation" == "strict" ]]; then
+				pass "Podman job network \`${job_network}\` exists and is isolated"
+			else
+				fail "Podman job network \`${job_network}\` is not isolated. Remove it and run \`just setup\`, which creates it with \`--opt isolate=strict\`."
+			fi
+		else
+			warn "Podman job network \`${job_network}\` is missing. \`just setup\` will create it."
+		fi
 	fi
 
 	image_tag="$(effective_env_value IMAGE_TAG latest)"

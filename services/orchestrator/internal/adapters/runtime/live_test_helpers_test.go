@@ -19,8 +19,10 @@ func liveSocketPath(t *testing.T) string {
 		socket = "/run/user/1000/podman/podman.sock"
 	}
 
+	// The podmanlive tag asks for these tests by name. A skip would read as a
+	// pass in a gate that exists to prove the runtime contract.
 	if _, err := os.Stat(socket); err != nil {
-		t.Skipf("podman socket not available at %s: %v", socket, err)
+		t.Fatalf("podman socket not available at %s: %v (set PODMAN_SOCKET)", socket, err)
 	}
 
 	return socket
@@ -45,22 +47,39 @@ func podmanImageExists(image string) bool {
 	return cmd.Run() == nil
 }
 
-func pickLiveImage(t *testing.T, candidates ...string) string {
+// liveImage returns a small local image with a shell and busybox tools. The
+// tests never pull: a missing image fails with the command that fixes it.
+func liveImage(t *testing.T) string {
 	t.Helper()
+	candidates := []string{
+		os.Getenv("STAGEFLOW_LIVE_IMAGE"),
+		"docker.io/library/busybox:latest",
+		"docker.io/library/alpine:3.22",
+		"docker.io/library/alpine:3.20",
+		"docker.io/library/alpine:latest",
+	}
 	for _, c := range candidates {
 		if c != "" && podmanImageExists(c) {
 			return c
 		}
 	}
+	t.Fatalf("no local image for the live contract tests; run `podman pull docker.io/library/alpine:3.22` " +
+		"or set STAGEFLOW_LIVE_IMAGE")
 	return ""
 }
 
-func createPodmanNetwork(t *testing.T, name string) {
+func createPodmanNetwork(t *testing.T, name string, options ...string) {
 	t.Helper()
-	cmd := exec.Command("podman", "network", "create", name)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("podman network create %s: %v (%s)", name, err, string(out))
+	runPodman(t, append(append([]string{"network", "create"}, options...), name)...)
+}
+
+func runPodman(t *testing.T, args ...string) string {
+	t.Helper()
+	out, err := exec.Command("podman", args...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("podman %v: %v (%s)", args, err, string(out))
 	}
+	return string(out)
 }
 
 func removePodmanNetwork(t *testing.T, name string) {

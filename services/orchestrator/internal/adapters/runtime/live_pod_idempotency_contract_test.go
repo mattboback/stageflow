@@ -13,7 +13,7 @@ import (
 // Real Podman, real 409. The unit tests inject the conflict; this proves the
 // recovery works against the daemon's actual behaviour and error shape, which is
 // the part a fake cannot vouch for.
-func TestLiveContractCreateJobPodIsIdempotent(t *testing.T) {
+func TestLiveContract_CreateJobPodIsIdempotent(t *testing.T) {
 	socket := liveSocketPath(t)
 	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil }, Client: liveClient(t, socket)})
 
@@ -41,7 +41,7 @@ func TestLiveContractCreateJobPodIsIdempotent(t *testing.T) {
 
 // A pod that happens to carry the same name but belongs to something else must be
 // refused, not absorbed into this job.
-func TestLiveContractCreateJobPodRefusesAForeignPod(t *testing.T) {
+func TestLiveContract_CreateJobPodRefusesAForeignPod(t *testing.T) {
 	socket := liveSocketPath(t)
 	runtime := NewJobRuntime(JobRuntimeConfig{DataDir: t.TempDir(), DirectoryOwner: func(string) error { return nil }, Client: liveClient(t, socket)})
 
@@ -55,7 +55,7 @@ func TestLiveContractCreateJobPodRefusesAForeignPod(t *testing.T) {
 		"--label", "job_id=someone-else",
 	).CombinedOutput()
 	if err != nil {
-		t.Skipf("could not create the fixture pod: %v (%s)", err, string(out))
+		t.Fatalf("could not create the fixture pod: %v (%s)", err, string(out))
 	}
 
 	t.Cleanup(func() { _ = exec.Command("podman", "pod", "rm", "-f", name).Run() })
