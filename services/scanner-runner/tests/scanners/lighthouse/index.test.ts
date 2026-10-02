@@ -78,14 +78,6 @@ const createScannerConfig = (options?: unknown): ScannerConfig => ({
 		defaultTimeout: 30000,
 		pageLoadTimeout: 30000
 	},
-	messaging: {
-		url: 'nats://localhost:4222',
-		subjects: {
-			pageCompleted: 'scan.page.completed',
-			scanCompleted: 'scan.completed',
-			scanFailed: 'scan.failed'
-		}
-	},
 	...(options !== undefined ? { options: options as unknown as Record<string, unknown> } : {})
 });
 

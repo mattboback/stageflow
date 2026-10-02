@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	storage "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
@@ -37,29 +38,15 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 
 	ctx := logging.WithJobID(r.Context(), jobID)
 
-	deleted, err := s.jobDeleted(ctx, jobID)
-	if err != nil {
-		logging.Error(ctx, "Failed to check job deletion tombstone", "error", err)
-		httputil.RespondStructuredError(w, http.StatusInternalServerError, httputil.NewDatabaseError())
-
-		return
-	}
-
-	if deleted {
-		if deleteErr := s.deleteJobRecord(ctx, jobID); deleteErr != nil {
-			httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete job record")
-			return
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-
-		return
-	}
-
 	rec, err := s.statusReader.GetJob(ctx, jobID)
 	if err != nil {
 		if errors.Is(err, status.ErrJobNotFound) {
-			httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
+			if cleanupErr := s.deleteJobObjects(ctx, jobID); cleanupErr != nil {
+				httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete scan artifacts")
+				return
+			}
+
+			w.WriteHeader(http.StatusNoContent)
 
 			return
 		}
@@ -76,24 +63,28 @@ func (s *Server) handleJobDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if deleteErr := s.deleteJobObjects(ctx, jobID); deleteErr != nil {
-		logging.Error(ctx, "Failed to delete job objects", "error", deleteErr)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete scan artifacts")
+	if s.config.JobDeleter == nil {
+		httputil.RespondError(w, http.StatusInternalServerError, "Job deletion is unavailable")
+		return
+	}
+
+	if deletionErr := s.config.JobDeleter.DeleteJob(ctx, jobID); deletionErr != nil {
+		if errors.Is(deletionErr, status.ErrCleanupPending) || errors.Is(deletionErr, status.ErrJobBusy) {
+			httputil.RespondError(w, http.StatusConflict, "Job cleanup is still running")
+		} else {
+			httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete job record")
+		}
 
 		return
 	}
 
-	if s.tombstoneStore != nil {
-		if tombstoneErr := s.tombstoneStore.TombstoneJob(ctx, jobID); tombstoneErr != nil {
-			logging.Error(ctx, "Failed to tombstone deleted job", "error", tombstoneErr)
-			httputil.RespondStructuredError(w, http.StatusInternalServerError, httputil.NewDatabaseError())
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-			return
-		}
-	}
+	if cleanupErr := s.deleteJobObjects(cleanupCtx, jobID); cleanupErr != nil {
+		logging.Error(ctx, "Failed to delete scan artifacts", "error", cleanupErr)
+		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete scan artifacts")
 
-	if deleteErr := s.deleteJobRecord(ctx, jobID); deleteErr != nil {
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to delete job record")
 		return
 	}
 
@@ -111,38 +102,4 @@ func (s *Server) deleteJobObjects(ctx context.Context, jobID string) error {
 	}
 
 	return s.config.Storage.DeletePrefix(ctx, storage.BucketArtifacts, prefix)
-}
-
-func (s *Server) jobDeleted(ctx context.Context, jobID string) (bool, error) {
-	if s.tombstoneStore == nil {
-		return false, nil
-	}
-
-	return s.tombstoneStore.JobIsDeleted(ctx, jobID)
-}
-
-func (s *Server) respondIfJobDeleted(w http.ResponseWriter, r *http.Request, jobID string) bool {
-	deleted, err := s.jobDeleted(r.Context(), jobID)
-	if err != nil {
-		logging.Error(r.Context(), "Failed to check job deletion tombstone", "error", err)
-		httputil.RespondStructuredError(w, http.StatusInternalServerError, httputil.NewDatabaseError())
-
-		return true
-	}
-
-	if !deleted {
-		return false
-	}
-
-	httputil.RespondStructuredError(w, http.StatusNotFound, httputil.NewJobNotFoundError(jobID))
-
-	return true
-}
-
-func (s *Server) deleteJobRecord(ctx context.Context, jobID string) error {
-	if s.config.JobDeleter == nil {
-		return nil
-	}
-
-	return s.config.JobDeleter.DeleteJob(ctx, jobID)
 }

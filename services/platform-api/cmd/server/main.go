@@ -13,13 +13,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattboback/stageflow/internal/archive"
 	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
 	"github.com/mattboback/stageflow/services/platform-api/internal/api"
-	"github.com/mattboback/stageflow/services/platform-api/internal/messaging"
-	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 )
 
 func main() {
@@ -45,7 +44,6 @@ func validateSecurityPolicies() error {
 	return nil
 }
 
-//nolint:gocyclo // Startup intentionally validates each dependency and returns its precise failure.
 func run() error {
 	slog.Info("Starting Platform API...")
 
@@ -61,45 +59,18 @@ func run() error {
 	ctx, cancelRun := context.WithCancel(context.Background())
 	defer cancelRun()
 
-	natsClient, err := bootstrap.NewNATSClient(ctx, cfg.NATS, bootstrap.NATSOptions{EnsureStreams: true})
-	if err != nil {
-		return fmt.Errorf("failed to connect to NATS: %w", err)
-	}
-
-	defer func() {
-		if cerr := natsClient.Close(); cerr != nil {
-			slog.Error("Failed to close NATS client", "error", cerr)
-		}
-	}()
-
-	slog.Info("NATS streams initialized")
-
 	artifactFiles, err := storage.NewFiles(cfg.DataDir)
 	if err != nil {
 		return err
 	}
 	defer artifactFiles.Close()
 
-	statusReader, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL})
+	statusReader, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL, RequireSchema: true})
 	if err != nil {
 		return fmt.Errorf("connect job status database: %w", err)
 	}
 	defer statusReader.Close()
 
-	tombstoneStore, err := tombstone.NewStore(cfg.TombstoneDBPath)
-	if err != nil {
-		return fmt.Errorf("failed to initialize tombstone store: %w", err)
-	}
-
-	defer func() {
-		if cerr := tombstoneStore.Close(); cerr != nil {
-			slog.Error("Failed to close tombstone store", "error", cerr)
-		}
-	}()
-
-	slog.Info("Tombstone store initialized", "path", cfg.TombstoneDBPath)
-
-	msgService := messaging.NewService(natsClient)
 	scannerRegistry := loadScannerRegistry(slog.Default())
 
 	if scannerRegistry == nil {
@@ -107,19 +78,33 @@ func run() error {
 	}
 
 	server := api.NewServer(&api.ServerConfig{
-		Port:                cfg.Port,
-		Storage:             artifactFiles,
-		JobDeleter:          statusReader,
-		Publisher:           msgService,
-		PendingJobs:         statusReader,
+		Port:       cfg.Port,
+		Storage:    artifactFiles,
+		JobDeleter: statusReader,
+		Admitter:   statusReader,
+		CheckDisk:  artifactFiles.CheckDisk,
+		ValidateZIP: func(ctx context.Context, id string) error {
+			file, openErr := artifactFiles.OpenInput(ctx, id)
+			if openErr != nil {
+				return openErr
+			}
+			defer file.Close()
+
+			info, statErr := file.Stat()
+			if statErr != nil {
+				return statErr
+			}
+
+			return archive.Validate(file, info.Size())
+		},
 		StatusReader:        db.StatusReader{Database: statusReader},
-		TombstoneStore:      tombstoneStore,
 		ScannerRegistry:     scannerRegistry,
 		AllowPrivateTargets: cfg.AllowPrivateTargets,
 		APIToken:            cfg.APIToken,
 	})
 
 	httpServer := newHTTPServer(cfg.Port, server.Router())
+	httpServer.BaseContext = func(net.Listener) context.Context { return ctx }
 
 	stop := make(chan os.Signal, 1)
 

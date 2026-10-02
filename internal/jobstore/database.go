@@ -1,4 +1,4 @@
-// Package db provides persistence for orchestrator jobs and events.
+// Package db provides the durable job queue, scanner state, and status snapshots.
 package db
 
 import (
@@ -30,7 +30,8 @@ type Database struct {
 
 // Config holds database configuration.
 type Config struct {
-	URL string
+	RequireSchema bool
+	URL           string
 }
 
 // NewDatabase creates a new database connection. The caller is responsible for
@@ -63,7 +64,14 @@ func NewDatabase(config *Config) (*Database, error) {
 	database := &Database{db: db}
 
 	// Initialize schema
-	if schemaErr := database.initSchema(); schemaErr != nil {
+	var schemaErr error
+	if config.RequireSchema {
+		schemaErr = database.checkSchema(ctx)
+	} else {
+		schemaErr = database.initSchema()
+	}
+
+	if schemaErr != nil {
 		_ = db.Close()
 
 		return nil, fmt.Errorf("failed to initialize schema: %w", schemaErr)
@@ -86,19 +94,7 @@ func (d *Database) initSchema() error {
 		return fmt.Errorf("failed to execute schema: %w", execErr)
 	}
 
-	return nil
-}
-
-func (d *Database) execContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return d.db.ExecContext(ctx, bindPostgresParams(query), args...)
-}
-
-func (d *Database) queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	return d.db.QueryContext(ctx, bindPostgresParams(query), args...)
-}
-
-func (d *Database) queryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	return d.db.QueryRowContext(ctx, bindPostgresParams(query), args...)
+	return d.checkSchema(ctx)
 }
 
 // Close closes the database connection.

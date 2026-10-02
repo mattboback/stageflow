@@ -19,8 +19,6 @@ function fixtures(): { config: ScannerConfig; provenance: Provenance } {
 				defaultTimeout: 30000,
 				pageLoadTimeout: 15000
 			},
-			storage: { endpoint: '', accessKey: '', secretKey: '', useSSL: false, bucket: '' },
-			messaging: { url: '', subjects: { pageCompleted: '', scanCompleted: '', scanFailed: '' } },
 			options: {}
 		},
 		provenance: {

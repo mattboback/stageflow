@@ -1,262 +1,161 @@
-// Package orchestrator coordinates the lifecycle of scanning jobs.
 package orchestrator
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
 
 	storage "github.com/mattboback/stageflow/internal/artifacts"
 	db "github.com/mattboback/stageflow/internal/jobstore"
-	"github.com/mattboback/stageflow/libs/go/events"
-	"github.com/mattboback/stageflow/libs/go/logging"
+	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
-	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
+	adapterstorage "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/storage"
 )
 
-const (
-	podNetnsModeBridge = appjobs.PodNetnsModeBridge
-	podNetnsModeHost   = appjobs.PodNetnsModeHost
-
-	hostNetnsNATSURL = appjobs.HostNetnsNATSURL
-)
-
-// Publisher abstracts job completion/failure emissions for testability.
-type Publisher interface {
-	PublishJobCompleted(ctx context.Context, payload *events.JobCompletedPayload) error
-	PublishJobFailed(ctx context.Context, payload *events.JobFailedPayload) error
-}
-
-// PodmanClient abstracts Podman operations so orchestration logic can be unit tested.
 type PodmanClient interface {
-	CreatePod(ctx context.Context, req *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
-	InspectPod(ctx context.Context, podID string) (*podman.PodInfo, error)
-	StopPod(ctx context.Context, podID string) error
-	RemovePod(ctx context.Context, podID string, force bool) error
-	CreateVolume(ctx context.Context, name string) error
-	InspectVolume(ctx context.Context, name string) (*podman.VolumeInfo, error)
-	CreateContainer(ctx context.Context, req *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
-	InspectContainer(ctx context.Context, containerID string) (*podman.ContainerInfo, error)
-	StartContainer(ctx context.Context, containerID string) error
-	WaitContainer(ctx context.Context, containerID string) (*podman.ContainerWaitResponse, error)
-	GetContainerLogs(ctx context.Context, containerID string, stdout, stderr bool) (string, error)
-	RemoveContainer(ctx context.Context, containerID string, force bool) error
-	RemoveVolume(ctx context.Context, name string, force bool) error
+	CreatePod(context.Context, *podman.PodCreateRequest) (*podman.PodCreateResponse, error)
+	InspectPod(context.Context, string) (*podman.PodInfo, error)
+	StopPod(context.Context, string) error
+	RemovePod(context.Context, string, bool) error
+	CreateVolume(context.Context, string) error
+	InspectVolume(context.Context, string) (*podman.VolumeInfo, error)
+	CreateContainer(context.Context, *podman.ContainerCreateRequest) (*podman.ContainerCreateResponse, error)
+	InspectContainer(context.Context, string) (*podman.ContainerInfo, error)
+	StartContainer(context.Context, string) error
+	RemoveContainer(context.Context, string, bool) error
+	ListJobContainers(context.Context) ([]podman.ContainerInfo, error)
 }
 
-// Orchestrator owns the job FSM, Podman pod/container lifecycle, and final aggregation.
-type Orchestrator struct {
-	directoryOwner       func(string) error
-	dataVolume           string
-	dataDir              string
-	podmanClient         PodmanClient
-	jobRuntime           *podman.JobRuntime
-	database             *db.Database
-	publisher            Publisher
-	scannerRegistry      *scanners.Registry
-	monitorWG            sync.WaitGroup
-	maintenanceWG        sync.WaitGroup
-	natsURL              string
-	natsHost             string // NATS hostname for job containers
-	setupTimeout         time.Duration
-	extractionTimeout    time.Duration
-	scanTimeout          time.Duration
-	extractionImage      string
-	scannerImage         string
-	scannerImageOverride string
-	podNetwork           string
-	podNetnsMode         string
-	podHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
-	pageLoadTimeout      int
-	stagingStorage       storage.Deleter
-	storage              storage.Client // Full storage access for report generation
-	deadlinePollInterval time.Duration
-	deadlineSweepOnce    sync.Once
-	lifecycleCtx         context.Context
-}
-
-// Config wires dependencies and optional overrides into a new Orchestrator.
 type Config struct {
-	DirectoryOwner       func(string) error
-	DataVolume           string
-	DataDir              string
-	PodmanClient         PodmanClient
-	Database             *db.Database
-	Publisher            Publisher
-	ScannerRegistry      *scanners.Registry // Optional: scanner registry (if nil, uses default config)
-	NatsURL              string
-	NatsHost             string // NATS hostname for job containers on POD_NETWORK
-	SetupTimeout         time.Duration
-	ExtractionTimeout    time.Duration
-	ScanTimeout          time.Duration
-	ExtractionImage      string
-	ScannerImage         string
-	ScannerImageOverride string
-	PodNetwork           string
-	PodNetnsMode         string   // Pod network namespace mode for job pods (bridge|host). Host mode is local-only.
-	PodHostMappings      []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
-	PageLoadTimeout      int
-	StagingStorage       storage.Deleter
-	Storage              storage.Client // Full storage for report generation
-	DeadlinePollInterval time.Duration
+	Database                                                                 *db.Database
+	PodmanClient                                                             PodmanClient
+	Storage                                                                  storage.Client
+	DataDir, DataVolume                                                      string
+	DirectoryOwner                                                           func(string) error
+	ScannerRegistry                                                          *scanners.Registry
+	ExtractionImage, ScannerImage, ScannerImageOverride                      string
+	PodNetwork, PodNetnsMode                                                 string
+	PodHostMappings                                                          []string
+	PageLoadTimeout                                                          int
+	SetupTimeout, ExtractionTimeout, ScanTimeout, QueueTimeout, PollInterval time.Duration
+	CheckDisk                                                                func(context.Context) error
 }
 
-// NewOrchestrator builds an Orchestrator, applying defaults.
+type Orchestrator struct {
+	config        Config
+	runtime       *podman.JobRuntime
+	planner       *podman.ScannerLaunchPlanner
+	aggregator    *adapterstorage.Aggregator
+	once          sync.Once
+	wg            sync.WaitGroup
+	tickMu        sync.Mutex
+	lastRetention time.Time
+}
+
 func NewOrchestrator(config *Config) *Orchestrator {
-	// Setup covers PENDING and READY_TO_SCAN, before any stage timer starts. It is
-	// deliberately not the extraction timeout: the floor is the consumer's AckWait,
-	// because sweeping a job whose handler still holds an unacked message would
-	// race that handler's own state write.
-	setupTimeout := config.SetupTimeout
-	if setupTimeout == 0 {
-		setupTimeout = 10 * time.Minute
+	cfg := *config
+	if cfg.DataDir == "" {
+		cfg.DataDir = "/data"
 	}
 
-	extractionTimeout := config.ExtractionTimeout
-	if extractionTimeout == 0 {
-		extractionTimeout = 5 * time.Minute
+	if cfg.DataVolume == "" {
+		cfg.DataVolume = "stageflow_data"
 	}
 
-	scanTimeout := config.ScanTimeout
-	if scanTimeout == 0 {
-		scanTimeout = 30 * time.Minute
+	if cfg.SetupTimeout == 0 {
+		cfg.SetupTimeout = 10 * time.Minute
 	}
 
-	extractionImage := config.ExtractionImage
-	if extractionImage == "" {
-		extractionImage = "localhost/stageflow/extractor:latest"
+	if cfg.ExtractionTimeout == 0 {
+		cfg.ExtractionTimeout = 5 * time.Minute
 	}
 
-	scannerImage := config.ScannerImage
-	if scannerImage == "" {
-		scannerImage = "localhost/stageflow/scanner-runner:latest"
+	if cfg.ScanTimeout == 0 {
+		cfg.ScanTimeout = 30 * time.Minute
 	}
 
-	natsHost := config.NatsHost
-	if natsHost == "" {
-		natsHost = "nats"
+	if cfg.QueueTimeout == 0 {
+		cfg.QueueTimeout = 45 * time.Minute
 	}
 
-	pageLoadTimeout := config.PageLoadTimeout
-	if pageLoadTimeout == 0 {
-		pageLoadTimeout = 15_000
+	if cfg.PollInterval == 0 {
+		cfg.PollInterval = time.Second
 	}
 
-	deadlinePollInterval := config.DeadlinePollInterval
-	if deadlinePollInterval == 0 {
-		deadlinePollInterval = 30 * time.Second
+	runtime := podman.NewJobRuntime(
+		podman.JobRuntimeConfig{
+			Client:          cfg.PodmanClient,
+			DataDir:         cfg.DataDir,
+			DataVolume:      cfg.DataVolume,
+			DirectoryOwner:  cfg.DirectoryOwner,
+			ScannerRegistry: cfg.ScannerRegistry,
+			ExtractionImage: cfg.ExtractionImage,
+			PodNetwork:      cfg.PodNetwork,
+			PodNetnsMode:    cfg.PodNetnsMode,
+			PodHostMappings: cfg.PodHostMappings,
+		},
+	)
+
+	image := cfg.ScannerImageOverride
+	if image == "" {
+		image = cfg.ScannerImage
 	}
 
-	podNetnsMode := config.PodNetnsMode
-	if podNetnsMode == "" {
-		podNetnsMode = podNetnsModeBridge
+	planner := podman.NewScannerLaunchPlanner(
+		podman.ScannerLaunchPlannerConfig{
+			DataVolume:          cfg.DataVolume,
+			ScannerRegistry:     cfg.ScannerRegistry,
+			DefaultScannerImage: image,
+			PageLoadTimeout:     cfg.PageLoadTimeout,
+			PodNetnsMode:        cfg.PodNetnsMode,
+		},
+	)
+
+	return &Orchestrator{
+		config:     cfg,
+		runtime:    runtime,
+		planner:    planner,
+		aggregator: adapterstorage.NewAggregator(cfg.Storage, cfg.ScannerRegistry),
 	}
-
-	// Resolve scanner registry; default to built‑ins when unset.
-	registry := config.ScannerRegistry
-	if registry == nil {
-		defaultConfig, cfgErr := scanners.DefaultConfig()
-		if cfgErr != nil {
-			slog.Error("Failed to load default scanner config", "error", cfgErr)
-			// Fallback to empty registry so jobs fail deterministically instead of crashing.
-			registry = scanners.NewRegistry(scannerImage)
-		} else {
-			var err error
-
-			registry, err = scanners.InitializeRegistry(defaultConfig)
-			if err != nil {
-				slog.Error("Failed to initialize default scanner registry", "error", err)
-
-				registry = scanners.NewRegistry(scannerImage)
-			}
-		}
-	}
-
-	orch := &Orchestrator{
-		directoryOwner:       config.DirectoryOwner,
-		dataVolume:           config.DataVolume,
-		dataDir:              config.DataDir,
-		podmanClient:         config.PodmanClient,
-		database:             config.Database,
-		publisher:            config.Publisher,
-		scannerRegistry:      registry,
-		natsURL:              config.NatsURL,
-		natsHost:             natsHost,
-		setupTimeout:         setupTimeout,
-		extractionTimeout:    extractionTimeout,
-		scanTimeout:          scanTimeout,
-		extractionImage:      extractionImage,
-		scannerImage:         scannerImage,
-		scannerImageOverride: config.ScannerImageOverride,
-		podNetwork:           config.PodNetwork,
-		podNetnsMode:         podNetnsMode,
-		podHostMappings:      config.PodHostMappings,
-		pageLoadTimeout:      pageLoadTimeout,
-		stagingStorage:       config.StagingStorage,
-		storage:              config.Storage,
-		deadlinePollInterval: deadlinePollInterval,
-	}
-
-	orch.refreshJobRuntime()
-
-	return orch
 }
 
-func (o *Orchestrator) backgroundWithCorrelation(ctx context.Context) context.Context {
-	bg := context.Background()
-	if o != nil && o.lifecycleCtx != nil {
-		bg = o.lifecycleCtx
-	}
-
-	if jobID := logging.JobID(ctx); jobID != "" {
-		bg = logging.WithJobID(bg, jobID)
-	}
-
-	if requestID := logging.RequestID(ctx); requestID != "" {
-		bg = logging.WithRequestID(bg, requestID)
-	}
-
-	if runID := logging.RunID(ctx); runID != "" {
-		bg = logging.WithRunID(bg, runID)
-	}
-
-	return bg
-}
-
-// Start launches background maintenance loops.
 func (o *Orchestrator) Start(ctx context.Context) {
-	if ctx == nil {
-		return
-	}
-
-	o.deadlineSweepOnce.Do(func() {
-		o.lifecycleCtx = ctx
-
-		if err := o.newService().ReconcileScanningJobs(ctx); err != nil {
-			slog.Warn("Scanner launch startup reconciliation failed", "error", err)
-		}
-
-		o.maintenanceWG.Add(2)
-		go func() { defer o.maintenanceWG.Done(); o.maintainArtifacts(ctx) }()
-
+	o.once.Do(func() {
+		o.wg.Add(1)
 		go func() {
-			defer o.maintenanceWG.Done()
+			defer o.wg.Done()
 
-			o.startDeadlineSweeper(ctx)
+			ticker := time.NewTicker(o.config.PollInterval)
+			defer ticker.Stop()
+
+			for {
+				if checkErr1 := o.ReconcileOnce(ctx); checkErr1 != nil && !errors.Is(checkErr1, context.Canceled) {
+					slog.Warn("Job reconciliation failed", "error", checkErr1)
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+				}
+			}
 		}()
 	})
 }
 
-// WaitForMonitors blocks until container monitors and background maintenance
-// goroutines have returned. This is primarily intended for tests and graceful
-// shutdown paths to avoid database teardown races.
-func (o *Orchestrator) WaitForMonitors() {
-	if o == nil {
-		return
+func (o *Orchestrator) WaitForMonitors() { o.wg.Wait() }
+
+func (o *Orchestrator) Health(ctx context.Context) error {
+	if o.config.CheckDisk != nil {
+		return o.config.CheckDisk(ctx)
 	}
 
-	o.monitorWG.Wait()
-	o.maintenanceWG.Wait()
+	return nil
+}
+
+func (o *Orchestrator) fail(ctx context.Context, job *models.Job, stage, message string) error {
+	return o.config.Database.MarkTerminal(ctx, job.ID, models.JobStateFailed, "", 0, message, "", stage)
 }

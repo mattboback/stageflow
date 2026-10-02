@@ -9,8 +9,6 @@ type Config struct {
 	DatabaseURL         string
 	AllowPrivateTargets bool
 	APIToken            string
-	TombstoneDBPath     string
-	NATS                config.NATSConfig
 }
 
 func loadConfig() *Config {
@@ -20,8 +18,6 @@ func loadConfig() *Config {
 		DatabaseURL:         config.GetEnv("DATABASE_URL", ""),
 		AllowPrivateTargets: config.GetEnvBool("PLATFORM_API_ALLOW_PRIVATE_TARGETS", false),
 		APIToken:            config.GetEnv("PLATFORM_API_TOKEN", ""),
-		TombstoneDBPath:     config.GetEnv("PROJECT_DB_PATH", "./projects.db"),
-		NATS:                config.LoadNATSConfig(),
 	}
 }
 
@@ -29,7 +25,6 @@ func loadConfig() *Config {
 func (c *Config) Validate() error {
 	return config.ValidateAll(
 		config.RequirePositive("PORT", c.Port),
-		config.RequireNonEmpty("NATS_URL", c.NATS.URL),
 		config.RequireNonEmpty("DATABASE_URL", c.DatabaseURL),
 		config.RequireNonEmpty("STAGEFLOW_DATA_DIR", c.DataDir),
 	)

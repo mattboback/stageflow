@@ -119,7 +119,6 @@ check_default_ports() {
 	local port
 	local required_ports=(
 		"$(effective_env_value FRONTEND_PORT 3000):frontend"
-		"$(effective_env_value NATS_PORT 4222):NATS"
 		"$(effective_env_value PLATFORM_API_PORT 8080):Platform API"
 		"$(effective_env_value ORCHESTRATOR_PORT 8081):orchestrator"
 	)
@@ -152,7 +151,6 @@ check_network_alias_conflicts() {
 	local container_name
 	local conflict_count=0
 	local service_aliases=(
-		"nats"
 		"postgres"
 		"orchestrator"
 		"platform-api"
@@ -268,9 +266,6 @@ fi
 check_default_ports
 
 if [[ "$(effective_env_value POD_NETNS_MODE bridge)" == "host" ]]; then
-	if [[ "$(effective_env_value NATS_PORT 4222)" != "4222" ]]; then
-		fail "Host-mode job pods require NATS_PORT=4222."
-	fi
 	pod_network="$(effective_env_value POD_NETWORK __unset__)"
 	if [[ -n "$pod_network" ]]; then
 		fail "Host-mode job pods require an explicitly empty POD_NETWORK= in .env."

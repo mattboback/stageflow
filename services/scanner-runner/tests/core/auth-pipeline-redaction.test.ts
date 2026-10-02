@@ -143,10 +143,6 @@ function makeConfig(tmp: string): ScannerConfig {
 			deviceScaleFactor: 1,
 			defaultTimeout: 30_000,
 			pageLoadTimeout: 15_000
-		},
-		messaging: {
-			url: '',
-			subjects: { pageCompleted: 'a', scanCompleted: 'b', scanFailed: 'c' }
 		}
 	};
 }
@@ -309,10 +305,10 @@ describe('Auth pipeline redaction (form mode)', () => {
 		expect(stageLogText).toContain('auth_hydrated');
 		expect(stageLogText).toContain('https://app.example.com/profile');
 
-		// 3. NATS payloads (publisher captures).
-		expectNoSecrets('NATS page-completed', JSON.stringify(formRun.publisher.pageCompleted));
-		expectNoSecrets('NATS scan-completed', JSON.stringify(formRun.publisher.scanCompleted));
-		expectNoSecrets('NATS scan-failed', JSON.stringify(formRun.publisher.scanFailed));
+		// 3. Completion payloads (publisher captures).
+		expectNoSecrets('Completion page-completed', JSON.stringify(formRun.publisher.pageCompleted));
+		expectNoSecrets('Completion scan-completed', JSON.stringify(formRun.publisher.scanCompleted));
+		expectNoSecrets('Completion scan-failed', JSON.stringify(formRun.publisher.scanFailed));
 
 		// 4. PageIterator audit events.
 		expectNoSecrets('audit events', JSON.stringify(formRun.auditEvents));
@@ -345,7 +341,7 @@ describe('Auth pipeline redaction (form mode)', () => {
 
 		// All persisted/published surfaces remain free of secrets in storage_state mode.
 		expectNoSecrets('ss audit events', JSON.stringify(ssRun.auditEvents));
-		expectNoSecrets('ss NATS', JSON.stringify(ssRun.publisher.pageCompleted));
+		expectNoSecrets('ss completion', JSON.stringify(ssRun.publisher.pageCompleted));
 
 		// auth_hydrated event names the artifact_key but no credential bytes.
 		const ssAuthEvent = ssRun.auditEvents.find((e) => e.type === 'auth_hydrated');

@@ -116,6 +116,12 @@ func (a *reportAggregation) aggregateScanner(ctx context.Context, scannerID stri
 	a.absorbMeta(doc.Meta)
 	a.absorbScanContext(doc.Meta.ScanContext)
 	a.absorbScannerMetadata(scannerID, stat, doc)
+
+	if a.job.ScannerStates[scannerID] == "partial" {
+		stat.Status = report.ScannerStatusPartial
+		stat.Error = stringPtr(result.Error)
+	}
+
 	a.absorbLighthouseCategories(doc.Summary.LighthouseCategories)
 
 	scannerSeverity := report.SeverityCounts{}
@@ -520,7 +526,7 @@ func robotsRepresentatives(
 	pageURLs := make(map[string]string, len(pages))
 	for _, page := range pages {
 		pageURLs[page.Id] = page.Url
-		if parsed, err := url.Parse(page.Url); err == nil && parsed.Host != "" {
+		if parsed, checkErr1 := url.Parse(page.Url); checkErr1 == nil && parsed.Host != "" {
 			origins[page.Id] = parsed.Scheme + "://" + parsed.Host
 		}
 	}

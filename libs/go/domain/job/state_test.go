@@ -31,30 +31,6 @@ func TestOrder(t *testing.T) {
 	}
 }
 
-func TestIsTerminal(t *testing.T) {
-	tests := []struct {
-		state    models.JobState
-		expected bool
-	}{
-		{models.JobStatePending, false},
-		{models.JobStateExtracting, false},
-		{models.JobStateReady, false},
-		{models.JobStateScanning, false},
-		{models.JobStateCompleting, false},
-		{models.JobStateDone, true},
-		{models.JobStateFailed, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(string(tt.state), func(t *testing.T) {
-			got := IsTerminal(tt.state)
-			if got != tt.expected {
-				t.Errorf("IsTerminal(%s) = %v, want %v", tt.state, got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestCanTransition(t *testing.T) {
 	validTransitions := []struct {
 		from, to models.JobState

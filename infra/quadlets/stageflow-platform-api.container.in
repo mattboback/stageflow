@@ -2,8 +2,8 @@
 Description=StageFlow Platform API
 PartOf=stageflow.target
 Wants=network-online.target
-After=network-online.target stageflow-nats.service stageflow-postgres.service stageflow-orchestrator.service
-Requires=stageflow-nats.service stageflow-postgres.service stageflow-orchestrator.service
+After=network-online.target stageflow-postgres.service stageflow-orchestrator.service
+Requires=stageflow-postgres.service stageflow-orchestrator.service
 
 [Service]
 EnvironmentFile=@APP_ENV_FILE@
@@ -19,13 +19,11 @@ Pod=stageflow.pod
 NoNewPrivileges=true
 ReadOnly=true
 Tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m
-Environment=PROJECT_DB_PATH=/data/deletions.db
 User=65532
 Group=65532
 Environment=HOME=/tmp
 Volume=stageflow_data:/data
 Environment=PORT=8080
-Environment=NATS_URL=nats://nats:4222
 Environment=PLATFORM_API_ALLOW_PRIVATE_TARGETS=false
 # The gateway on the ingress network; platform-api keys rate limits on its X-Forwarded-For.
 Environment=PLATFORM_API_TRUSTED_PROXIES=10.89.4.0/24

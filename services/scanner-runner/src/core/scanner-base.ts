@@ -21,7 +21,9 @@ import { createLogger } from '../utils/logger';
 import { ensureDir, writeJson } from '../utils/fs';
 import { resultsPath as artifactResultsPath } from './artifact-paths';
 import { BrowserManager } from './browser-manager';
-import { NatsEventPublisher, NoOpEventPublisher } from './event-publisher';
+import { ScannerFiles } from './scanner-files';
+import { enforceOutputBudget } from './output-budget';
+import { createLiteralRedactor } from './page-iterator-redaction';
 import { PageIterator } from './page-iterator';
 import { ScanStageLogger } from './scan-stage-logger';
 import { buildScanCompletedTiming, withPublishCompletedTiming } from './scan-lifecycle';
@@ -33,11 +35,12 @@ export abstract class ScannerBase {
 	protected config!: ScannerConfig;
 	protected browserManager: BrowserManager | null = null;
 	protected pageIterator!: PageIterator;
-	protected eventPublisher: ScanEventPublisher = new NoOpEventPublisher();
+	protected eventPublisher!: ScanEventPublisher;
 	protected logger: ScannerLogger;
 	protected hooks: ScannerLifecycleHooks;
 	protected scanStartedAt!: string;
 	private runStartedAt!: number;
+	private redactError: (value: string) => string = (value) => value;
 	private providedLogger: boolean;
 	protected scanStageLogger: ScanStageLogger | null = null;
 	private scanStageLogPath = '';
@@ -55,6 +58,7 @@ export abstract class ScannerBase {
 	async run(config: ScannerConfig): Promise<ScanResults> {
 		this.ensureLogger();
 		this.config = config;
+		this.eventPublisher = new ScannerFiles(config.resultsDir, this.logger);
 		this.scanStartedAt = new Date().toISOString();
 		this.runStartedAt = Date.now();
 
@@ -68,6 +72,7 @@ export abstract class ScannerBase {
 			await this.hooks.onScanStart?.(config);
 
 			const provenance = await this.pageIterator.loadProvenance();
+			this.redactError = createLiteralRedactor(provenance);
 			this.validateProvenance(provenance);
 			this.scanStageLogger?.recordEvent('provenance_loaded', {
 				pages: provenance.pages.filter((p) => !p.skip).length
@@ -99,6 +104,7 @@ export abstract class ScannerBase {
 				this.scanStageLogPath = stageLogPath;
 			}
 
+			await enforceOutputBudget(this.config.resultsDir);
 			await this.publishScanCompleted(results, {
 				pageIterationMs,
 				writeResultsMs
@@ -135,6 +141,7 @@ export abstract class ScannerBase {
 		const stageLogger = this.scanStageLogger;
 		const pageIteratorCallbacks = {
 			onPageComplete: async (result: PageScanResult, index: number, total: number) => {
+				await enforceOutputBudget(this.config.resultsDir);
 				await this.eventPublisher.publishPageCompleted(result, index + 1, total);
 				await hooks.onPageEnd?.(result);
 			},
@@ -201,7 +208,7 @@ export abstract class ScannerBase {
 	}
 
 	private async handleRunError(error: unknown): Promise<void> {
-		const errorMessage = error instanceof Error ? error.message : String(error);
+		const errorMessage = this.redactError(error instanceof Error ? error.message : String(error));
 		this.logger.error('Scanner failed', { error: errorMessage });
 
 		if (this.scanStageLogger) {
@@ -212,7 +219,9 @@ export abstract class ScannerBase {
 				const failure = {
 					stage: 'scan',
 					message: errorMessage,
-					...(error instanceof Error && error.stack !== undefined ? { details: error.stack } : {})
+					...(error instanceof Error && error.stack !== undefined
+						? { details: this.redactError(error.stack) }
+						: {})
 				};
 				const { stageLogPath } = await this.scanStageLogger.finalizeFailure(failure);
 				this.scanStageLogPath = stageLogPath;
@@ -225,7 +234,7 @@ export abstract class ScannerBase {
 
 		await this.eventPublisher.publishScanFailed(
 			errorMessage,
-			error instanceof Error ? error.stack : undefined,
+			error instanceof Error && error.stack ? this.redactError(error.stack) : undefined,
 			{
 				...(this.scanStageLogPath ? { stageLogPath: this.scanStageLogPath } : {}),
 				...(this.scanRecipePath ? { recipePath: this.scanRecipePath } : {})
@@ -248,21 +257,6 @@ export abstract class ScannerBase {
 		this.scanStageLogger = new ScanStageLogger(this.config);
 		const { recipePath } = await this.scanStageLogger.start();
 		this.scanRecipePath = recipePath;
-
-		if (this.config.messaging.url) {
-			const publisher = new NatsEventPublisher(
-				this.config.jobId,
-				this.metadata.name,
-				this.config.messaging.subjects,
-				this.logger,
-				{
-					...(this.config.requestId !== undefined ? { requestId: this.config.requestId } : {}),
-					...(this.config.runId !== undefined ? { runId: this.config.runId } : {})
-				}
-			);
-			await publisher.connect(this.config.messaging.url);
-			this.eventPublisher = publisher;
-		}
 	}
 
 	protected validateProvenance(provenance: Provenance): void {

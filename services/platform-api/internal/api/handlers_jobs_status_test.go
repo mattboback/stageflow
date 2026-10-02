@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestHandleJobStatusFound(t *testing.T) {

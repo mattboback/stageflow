@@ -123,6 +123,10 @@ func (c *Client) RemovePod(ctx context.Context, podID string, force bool) error 
 
 	defer func() { _ = resp.Body.Close() }()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+
 	return parseResponse(resp, nil)
 }
 

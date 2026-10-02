@@ -8,8 +8,8 @@ import (
 
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	domainjob "github.com/mattboback/stageflow/libs/go/domain/job"
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func reduceSnapshot(base *status.JobRecord, signal Signal) (*status.JobRecord, bool, error) {

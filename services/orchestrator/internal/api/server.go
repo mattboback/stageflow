@@ -22,6 +22,7 @@ var ErrRequestDrainTimeout = errors.New("orchestrator API handlers did not drain
 
 // Server provides private job status reads and a health endpoint.
 type Server struct {
+	health          func(context.Context) error
 	port            string
 	server          *http.Server
 	requestsMu      sync.Mutex
@@ -32,7 +33,8 @@ type Server struct {
 
 // Config contains configuration for the API server.
 type Config struct {
-	Port string // Default: 8081
+	Health func(context.Context) error
+	Port   string // Default: 8081
 }
 
 // NewServer creates a new API server.
@@ -43,6 +45,7 @@ func NewServer(cfg *Config) *Server {
 
 	s := &Server{
 		port:            cfg.Port,
+		health:          cfg.Health,
 		forcedDrainWait: defaultForcedDrainWait,
 	}
 
@@ -105,8 +108,8 @@ func (s *Server) waitForRequests(ctx context.Context) error {
 func (s *Server) Start() error {
 	slog.Info("Starting orchestrator API server", "port", s.port)
 
-	if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("failed to start server: %w", err)
+	if checkErr1 := s.server.ListenAndServe(); checkErr1 != nil && checkErr1 != http.ErrServerClosed {
+		return fmt.Errorf("failed to start server: %w", checkErr1)
 	}
 
 	return nil
@@ -142,7 +145,14 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 // handleHealth handles GET /healthz.
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if s.health != nil {
+		if checkErr2 := s.health(r.Context()); checkErr2 != nil {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Artifact storage unavailable")
+			return
+		}
+	}
+
 	httputil.RespondOK(w, map[string]string{
 		"status": "healthy",
 	})

@@ -107,7 +107,7 @@ local project history.
 ## Going Deeper
 
 - **CLI workflows** — URL and static-build scans, saved baselines, and CI gates: [docs/cli.md](docs/cli.md).
-- **Architecture** — clients → Platform API → NATS JetStream → Orchestrator →
+- **Architecture** — clients → Platform API → PostgreSQL queue → Orchestrator →
   per-job rootless Podman pods, with SSRF and ZIP-bomb guards at the trust
   boundaries: [docs/architecture.md](docs/architecture.md).
 - **Self-hosting** — local modes, public edge guidance, and the hosted-demo boundary: [docs/self-hosting.md](docs/self-hosting.md).
@@ -119,7 +119,7 @@ local project history.
 - **Engineering case study** — the major architecture, security, contract, and
   delivery tradeoffs, with links to inspectable evidence: [docs/case-study.md](docs/case-study.md).
 
-![StageFlow clients submit through the Platform API and event bus to isolated scanner pods that produce one unified report](docs/images/architecture.svg)
+![StageFlow clients submit through the Platform API and PostgreSQL queue to isolated scanner pods that produce one unified report](docs/images/architecture.svg)
 
 ## Engineering Evidence
 
@@ -166,7 +166,7 @@ A scan runs all five unless you pick some with `--scanner` (CLI) or `modules`
 | ---------------------------- | ------------------------------------------------------------------------------ |
 | `clients/cli`                | Go CLI for scans, baselines, reports, and shell completion                     |
 | `clients/web`                | React Router/Vite app for hosted/local browser workflows                       |
-| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, deletion tombstones, reports |
+| `services/platform-api`      | Public HTTP API, auth, CORS, URL/ZIP intake, SSE, transactional job intake, reports |
 | `services/orchestrator`      | Job state machine, Podman pod lifecycle, aggregation, persistence              |
 | `services/archive-extractor` | Safe ZIP extraction and static serving inside job pods                         |
 | `services/scanner-runner`    | Bun/TypeScript Playwright scanner runtime                                      |

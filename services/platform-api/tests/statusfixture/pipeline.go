@@ -67,9 +67,13 @@ func (p *Pipeline) Apply(_ context.Context, signal Signal) (*status.JobRecord, e
 	return cloneJobRecord(next), nil
 }
 
-func (p *Pipeline) Put(record *status.JobRecord) {
+// Put replaces a snapshot to model committed database admission in HTTP tests.
+func (p *Pipeline) Put(rec *status.JobRecord) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	p.jobs[record.JobID] = cloneJobRecord(record)
+	p.jobs[rec.JobID] = cloneJobRecord(rec)
 }
+
+// Delete removes the durable record; no events can replay it after queue retirement.
+func (p *Pipeline) Delete(id string) { p.mu.Lock(); defer p.mu.Unlock(); delete(p.jobs, id) }

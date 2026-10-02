@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mattboback/stageflow/libs/go/events"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestHandleJobURLSubmitAcceptsOmittedOrChromiumBrowser(t *testing.T) {
@@ -99,6 +99,11 @@ func TestHandleJobURLSubmitSuccess(t *testing.T) {
 
 	if resp["status"] != "pending" {
 		t.Fatalf("expected status=pending, got %v", resp["status"])
+	}
+
+	initial, readErr := server.statusReader.GetJob(req.Context(), resp["job_id"].(string))
+	if readErr != nil || initial == nil || initial.TotalPages != 1 {
+		t.Fatalf("URL coverage must be durable before readiness: snapshot=%+v error=%v", initial, readErr)
 	}
 
 	if len(publisher.envelopes) != 1 {

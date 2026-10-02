@@ -104,7 +104,10 @@ export default function Scan() {
 		if (scanner?.state === 'failed') state = 'err';
 		else if (scanner?.state === 'completed' || completed.has(scannerId)) state = 'done';
 		else if (isFailed) state = 'err';
-		else if (scanner?.state === 'running' || (scannersLaunched && remaining.has(scannerId)))
+		else if (
+			scanner?.state === 'running' ||
+			(!scanner && scannersLaunched && remaining.has(scannerId))
+		)
 			state = 'run';
 		else state = 'queue';
 		const detail =

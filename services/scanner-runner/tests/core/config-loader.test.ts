@@ -11,10 +11,6 @@ function resetEnv(): void {
 	delete process.env.NODE_ENV;
 }
 
-function setRequiredRuntimeEnv(): void {
-	process.env.NATS_URL = 'nats://nats.example.com:4222';
-}
-
 describe('config-loader', () => {
 	beforeEach(() => {
 		resetEnv();
@@ -33,7 +29,6 @@ describe('config-loader', () => {
 	});
 
 	it('parses scanner options from JSON and applies defaults', () => {
-		setRequiredRuntimeEnv();
 		process.env.JOB_ID = 'job-123';
 		process.env.SCANNER_OPTIONS = JSON.stringify({ locale: 'en-US' });
 
@@ -54,28 +49,16 @@ describe('config-loader', () => {
 	});
 
 	describe('runtime environment validation', () => {
-		it('throws when NATS_URL is missing', () => {
-			process.env.JOB_ID = 'job-123';
-			setRequiredRuntimeEnv();
-			delete process.env.NATS_URL;
-
-			expect(() => loadConfigFromEnv({ scannerName: 'axe' })).toThrow(
-				'Required environment variable NATS_URL is not set'
-			);
-		});
-
 		it('succeeds when all required env vars are set', () => {
 			process.env.JOB_ID = 'job-123';
-			setRequiredRuntimeEnv();
 
 			const config = loadConfigFromEnv({ scannerName: 'axe' });
-
-			expect(config.messaging.url).toBe('nats://nats.example.com:4222');
+			expect(config.provenancePath).toBe('/job/provenance.json');
+			expect(config.resultsDir).toBe('/out');
 		});
 	});
 
 	it('throws when scanner options JSON is invalid', () => {
-		setRequiredRuntimeEnv();
 		process.env.JOB_ID = 'job-123';
 		process.env.SCANNER_OPTIONS = '{nope';
 
@@ -85,7 +68,6 @@ describe('config-loader', () => {
 	});
 
 	it('throws when scanner options are not an object', () => {
-		setRequiredRuntimeEnv();
 		process.env.JOB_ID = 'job-123';
 		process.env.SCANNER_OPTIONS = JSON.stringify(['bad']);
 
@@ -95,7 +77,6 @@ describe('config-loader', () => {
 	});
 
 	it('throws when explicit numeric env values are malformed', () => {
-		setRequiredRuntimeEnv();
 		process.env.JOB_ID = 'job-123';
 		process.env.PAGE_LOAD_TIMEOUT = 'abc';
 
@@ -119,14 +100,6 @@ describe('config-loader', () => {
 				deviceScaleFactor: 2,
 				defaultTimeout: 1000,
 				pageLoadTimeout: 1000
-			},
-			messaging: {
-				url: 'nats://localhost:4222',
-				subjects: {
-					pageCompleted: 'page.completed',
-					scanCompleted: 'scan.completed',
-					scanFailed: 'scan.failed'
-				}
 			}
 		} satisfies ScannerConfig;
 

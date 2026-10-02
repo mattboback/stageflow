@@ -23,6 +23,7 @@ func TestJobFileRequiresLiveJobAndAllowlistedPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	originalReader := server.statusReader
 	server.statusReader = &staticJobReader{}
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/jobs/job/files/report.json", http.NoBody)
 	response := httptest.NewRecorder()
@@ -32,6 +33,7 @@ func TestJobFileRequiresLiveJobAndAllowlistedPath(t *testing.T) {
 		t.Fatalf("orphan file returned %d", response.Code)
 	}
 
+	server.statusReader = originalReader
 	seedReadableJob(t, server, "job", models.JobStateDone)
 
 	response = httptest.NewRecorder()

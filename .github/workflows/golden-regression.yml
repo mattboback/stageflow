@@ -77,7 +77,6 @@ jobs:
         run: |
           cp .env.example .env
           {
-            printf 'ORCHESTRATOR_API_TOKEN=ci-orchestrator-token\n'
             printf 'PLATFORM_API_TOKEN=ci-platform-api-token\n'
             printf 'STAGEFLOW_NETWORK_NAME=stageflow_net\n'
             printf 'FRONTEND_PORT=3020\nVITE_SITE_URL=http://localhost:3020\n'
@@ -95,6 +94,17 @@ jobs:
       - name: Start stack
         run: |
           podman network inspect stageflow_net >/dev/null 2>&1 || podman network create stageflow_net
+          # The orchestrator initializes the fresh v2 schema before API startup.
+          podman compose -p stageflow \
+            -f infra/compose/podman-compose.yml \
+            --env-file .env up -d postgres orchestrator
+          for _ in {1..60}; do
+            if curl -fsS http://127.0.0.1:8081/healthz >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8081/healthz >/dev/null
           podman compose -p stageflow \
             -f infra/compose/podman-compose.yml \
             --env-file .env up -d

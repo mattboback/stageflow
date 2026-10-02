@@ -94,14 +94,6 @@ describe('PageIterator', () => {
 				deviceScaleFactor: 1,
 				defaultTimeout: 30_000,
 				pageLoadTimeout: 15_000
-			},
-			messaging: {
-				url: 'nats://localhost:4222',
-				subjects: {
-					pageCompleted: 'stageflow.pages.completed',
-					scanCompleted: 'stageflow.scan.completed',
-					scanFailed: 'stageflow.scan.failed'
-				}
 			}
 		};
 

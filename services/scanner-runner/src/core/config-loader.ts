@@ -4,7 +4,7 @@
  * Loads scanner configuration from environment variables.
  */
 
-import type { BrowserConfig, MessagingConfig, ScannerConfig } from './types';
+import type { BrowserConfig, ScannerConfig } from './types';
 
 import { parseEnvInt } from '../utils/env';
 
@@ -22,7 +22,6 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 	const runId = process.env.RUN_ID;
 
 	const browser = loadBrowserConfig();
-	const messaging = loadMessagingConfig();
 	const trimmedRequestId = requestId?.trim();
 	const trimmedRunId = runId?.trim();
 
@@ -36,7 +35,6 @@ export function loadConfigFromEnv(options: ConfigLoaderOptions): ScannerConfig {
 		concurrency: defaults?.concurrency ?? 4,
 		maxRetries: defaults?.maxRetries ?? 3,
 		browser,
-		messaging,
 		...(trimmedRequestId !== undefined ? { requestId: trimmedRequestId } : {}),
 		...(trimmedRunId !== undefined ? { runId: trimmedRunId } : {})
 	};
@@ -59,19 +57,6 @@ function loadBrowserConfig(): BrowserConfig {
 		// The orchestrator sets this from its own configuration.
 		pageLoadTimeout: getEnvInt('PAGE_LOAD_TIMEOUT', 15_000),
 		bypassCSP: false
-	};
-}
-
-function loadMessagingConfig(): MessagingConfig {
-	const url = requireEnv('NATS_URL');
-
-	return {
-		url,
-		subjects: {
-			pageCompleted: process.env.NATS_SUBJECT_PAGE_COMPLETED ?? 'scan.events.page.completed',
-			scanCompleted: process.env.NATS_SUBJECT_SCAN_COMPLETED ?? 'scan.events.completed',
-			scanFailed: process.env.NATS_SUBJECT_SCAN_FAILED ?? 'scan.events.failed'
-		}
 	};
 }
 

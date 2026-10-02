@@ -15,7 +15,6 @@ import (
 	db "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/bootstrap"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/services/orchestrator/internal/adapters/messaging"
 	podman "github.com/mattboback/stageflow/services/orchestrator/internal/adapters/runtime"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/api"
 	"github.com/mattboback/stageflow/services/orchestrator/internal/orchestrator"
@@ -25,15 +24,14 @@ func main() {
 	os.Exit(run())
 }
 
-//nolint:gocyclo,gocognit // Startup validates each dependency and preserves precise failure logging.
 func run() int {
 	logger := bootstrap.SetupLogging("orchestrator")
 
 	logger.Info("Starting Orchestrator service...")
 
 	cfg := loadConfig()
-	if err := cfg.Validate(); err != nil {
-		logger.Error("Invalid configuration", "error", err)
+	if checkErr1 := cfg.Validate(); checkErr1 != nil {
+		logger.Error("Invalid configuration", "error", checkErr1)
 
 		return 1
 	}
@@ -45,7 +43,6 @@ func run() int {
 		return 1
 	}
 
-	ctx := context.Background()
 	backgroundCtx, stopBackground := context.WithCancel(context.Background())
 
 	defer stopBackground()
@@ -57,32 +54,15 @@ func run() int {
 	}
 	defer artifactFiles.Close()
 
-	for _, directory := range []string{cfg.DataDir, cfg.DataDir + "/jobs"} {
-		if ownershipErr := os.Chown(directory, 65532, 65532); ownershipErr != nil {
-			logger.Error("Initialize data directory permissions", "directory", directory, "error", ownershipErr)
-			return 1
-		}
+	if ownershipErr := os.Chown(cfg.DataDir, 65532, 65532); ownershipErr != nil {
+		logger.Error("Initialize shared volume permissions", "error", ownershipErr)
+		return 1
 	}
 
-	natsClient, err := bootstrap.NewNATSClient(ctx, cfg.NATS, bootstrap.NATSOptions{
-		EnsureStreams:       true,
-		IgnoreEnsureFailure: true,
-	})
-	if err != nil {
-		if natsClient == nil {
-			logger.Error("Failed to create NATS client", "error", err)
-
-			return 1
-		}
-
-		logger.Warn("Failed to ensure streams", "error", err)
+	if checkErr2 := os.Chown(cfg.DataDir+"/jobs", 65532, 65532); checkErr2 != nil {
+		logger.Error("Initialize job directory permissions", "error", checkErr2)
+		return 1
 	}
-
-	defer func() {
-		if closeErr := natsClient.Close(); closeErr != nil {
-			logger.Error("Failed to close NATS client", "error", closeErr)
-		}
-	}()
 
 	database, err := db.NewDatabase(&db.Config{URL: cfg.DatabaseURL})
 	if err != nil {
@@ -104,17 +84,6 @@ func run() int {
 		}
 	}()
 
-	sanitizedJobs, sanitizeErr := database.SanitizeLegacyTerminalRecords(ctx)
-	if sanitizeErr != nil {
-		logger.Error("Failed to sanitize legacy terminal records", "error", sanitizeErr)
-
-		return 1
-	}
-
-	if sanitizedJobs > 0 {
-		logger.Info("Sanitized legacy terminal records", "jobs", sanitizedJobs)
-	}
-
 	podmanClient, err := podman.NewClient(&podman.Config{
 		SocketPath:            cfg.PodmanSocket,
 		RequestTimeout:        cfg.PodmanRequestTimeout,
@@ -127,17 +96,12 @@ func run() int {
 		return 1
 	}
 
-	publisher := messaging.NewPublisher(natsClient)
-
 	orch := orchestrator.NewOrchestrator(&orchestrator.Config{
 		DataDir:              cfg.DataDir,
 		DataVolume:           cfg.DataVolume,
 		PodmanClient:         podmanClient,
 		Database:             database,
-		Publisher:            publisher,
 		ScannerRegistry:      scannerRegistry,
-		NatsURL:              cfg.NATS.URL,
-		NatsHost:             cfg.NatsHost,
 		ExtractionImage:      cfg.ExtractionImage,
 		ScannerImage:         cfg.ScannerImage,
 		ScannerImageOverride: cfg.ScannerImageOverride,
@@ -146,21 +110,15 @@ func run() int {
 		PodNetnsMode:    cfg.PodNetnsMode,
 		PodHostMappings: cfg.PodHostMappings,
 		PageLoadTimeout: cfg.PageLoadTimeout,
-		StagingStorage:  artifactFiles,
 		Storage:         artifactFiles,
+		CheckDisk:       artifactFiles.CheckDisk,
 	})
 
-	consumer := messaging.NewConsumer(natsClient, orch)
-
-	if startErr := startEventProcessing(backgroundCtx, orch, consumer); startErr != nil {
-		logger.Error("Failed to start consumer", "error", startErr)
-		stopEventProcessing(stopBackground, natsClient, orch)
-
-		return 1
-	}
+	orch.Start(backgroundCtx)
 
 	apiServer := api.NewServer(&api.Config{
-		Port: cfg.APIPort,
+		Port:   cfg.APIPort,
+		Health: orch.Health,
 	})
 
 	sigChan := make(chan os.Signal, 1)
@@ -189,7 +147,6 @@ func run() int {
 		shutdownCtx,
 		stopBackground,
 		apiServer,
-		natsClient,
 		orch,
 	)
 	if shutdownErr != nil {
@@ -210,50 +167,12 @@ func run() int {
 	return 0
 }
 
-type orchestratorStarter interface {
-	Start(context.Context)
-}
-
-type consumerStarter interface {
-	Start(context.Context) error
-}
-
-type consumerStopper interface {
-	StopConsumers()
-}
-
 type monitorWaiter interface {
 	WaitForMonitors()
 }
 
 type apiShutdowner interface {
 	Shutdown(context.Context) error
-}
-
-// startEventProcessing completes restart reconciliation before the consumer
-// can redeliver an extraction.ready event. This prevents normal and recovery
-// claim paths from racing over the same deterministic scanner container.
-func startEventProcessing(
-	ctx context.Context,
-	orchestrator orchestratorStarter,
-	consumer consumerStarter,
-) error {
-	orchestrator.Start(ctx)
-
-	return consumer.Start(ctx)
-}
-
-// stopEventProcessing closes intake before waiting on anything that callbacks
-// may create. This ordering prevents sync.WaitGroup Add calls from racing Wait
-// and keeps the database alive until every message handler and monitor exits.
-func stopEventProcessing(
-	cancel context.CancelFunc,
-	consumers consumerStopper,
-	monitors monitorWaiter,
-) {
-	cancel()
-	consumers.StopConsumers()
-	monitors.WaitForMonitors()
 }
 
 // shutdownService cancels background intake before the bounded HTTP drain.
@@ -263,14 +182,12 @@ func shutdownService(
 	ctx context.Context,
 	cancel context.CancelFunc,
 	api apiShutdowner,
-	consumers consumerStopper,
 	monitors monitorWaiter,
 ) error {
 	cancel()
 
 	shutdownErr := api.Shutdown(ctx)
 
-	consumers.StopConsumers()
 	monitors.WaitForMonitors()
 
 	return shutdownErr

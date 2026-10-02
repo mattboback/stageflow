@@ -8,8 +8,9 @@ import (
 	"os"
 	"strings"
 
+	jobstore "github.com/mattboback/stageflow/internal/jobstore"
+
 	storage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 )
@@ -40,13 +41,13 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request, jobID, re
 	}
 
 	job, readErr := s.statusReader.GetJob(r.Context(), jobID)
-	if errors.Is(readErr, status.ErrJobNotFound) || (readErr == nil && job == nil) {
-		httputil.RespondNotFound(w, "Job")
-		return
-	}
+	if readErr != nil || job == nil {
+		if errors.Is(readErr, jobstore.ErrJobNotFound) || (readErr == nil && job == nil) {
+			httputil.RespondNotFound(w, "Job")
+		} else {
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Failed to read job")
+		}
 
-	if readErr != nil {
-		httputil.RespondError(w, http.StatusServiceUnavailable, "Failed to read job")
 		return
 	}
 
@@ -80,6 +81,6 @@ func (s *Server) handleJobFile(w http.ResponseWriter, r *http.Request, jobID, re
 	}
 
 	if _, copyErr := io.Copy(w, io.LimitReader(reader, storage.MaxArtifactBytes)); copyErr != nil {
-		logging.Warn(r.Context(), "Failed to stream job artifact", "job_id", jobID, "error", copyErr)
+		logging.Warn(r.Context(), "Artifact download interrupted", "error", copyErr)
 	}
 }

@@ -94,13 +94,6 @@ const mocks = vi.hoisted(() => {
 			)
 	};
 
-	const mockStorageProviderInstance = {
-		ensureBucket: vi.fn().mockResolvedValue(undefined),
-		upload: vi.fn().mockResolvedValue(undefined),
-		uploadBuffer: vi.fn().mockResolvedValue(undefined),
-		uploadDirectory: vi.fn().mockResolvedValue(0)
-	};
-
 	const mockEventPublisherInstance = {
 		connect: vi.fn().mockResolvedValue(undefined),
 		publishPageCompleted: vi.fn().mockResolvedValue(undefined),
@@ -112,7 +105,6 @@ const mocks = vi.hoisted(() => {
 	return {
 		mockBrowserManagerInstance,
 		mockPageIteratorInstance,
-		mockStorageProviderInstance,
 		mockEventPublisherInstance
 	};
 });
@@ -141,13 +133,17 @@ vi.mock('../../src/core/page-iterator', async () => {
 	};
 });
 
-vi.mock('../../src/core/event-publisher', async () => {
-	const actual = await vi.importActual<typeof import('../../src/core/event-publisher')>(
-		'../../src/core/event-publisher'
+vi.mock('../../src/core/output-budget', () => ({
+	enforceOutputBudget: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('../../src/core/scanner-files', async () => {
+	const actual = await vi.importActual<typeof import('../../src/core/scanner-files')>(
+		'../../src/core/scanner-files'
 	);
 	return {
 		...actual,
-		NatsEventPublisher: vi.fn().mockImplementation(function NatsPublisherMock() {
+		ScannerFiles: vi.fn().mockImplementation(function NatsPublisherMock() {
 			return mocks.mockEventPublisherInstance;
 		})
 	};
@@ -205,14 +201,6 @@ describe('ScannerBase', () => {
 				deviceScaleFactor: 1,
 				defaultTimeout: 30000,
 				pageLoadTimeout: 30000
-			},
-			messaging: {
-				url: 'nats://localhost:4222',
-				subjects: {
-					pageCompleted: 'page.completed',
-					scanCompleted: 'scan.completed',
-					scanFailed: 'scan.failed'
-				}
 			}
 		};
 
@@ -231,9 +219,6 @@ describe('ScannerBase', () => {
 			return Promise.resolve(true);
 		});
 		fsPromiseMocks.readdir.mockResolvedValue([]);
-		mocks.mockStorageProviderInstance.uploadDirectory.mockResolvedValue(0);
-		mocks.mockStorageProviderInstance.upload.mockResolvedValue(undefined);
-		mocks.mockStorageProviderInstance.uploadBuffer.mockResolvedValue(undefined);
 	});
 
 	it('should initialize and run a scan successfully', async () => {

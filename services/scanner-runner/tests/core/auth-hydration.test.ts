@@ -66,10 +66,6 @@ const baseConfig: ScannerConfig = {
 		deviceScaleFactor: 1,
 		defaultTimeout: 30_000,
 		pageLoadTimeout: 15_000
-	},
-	messaging: {
-		url: '',
-		subjects: { pageCompleted: 'a', scanCompleted: 'b', scanFailed: 'c' }
 	}
 };
 
@@ -229,6 +225,61 @@ describe('hydrate-then-iterate', () => {
 		// page scans succeeded
 		expect(results).toHaveLength(2);
 		expect(results.every((res) => res.success)).toBe(true);
+	});
+
+	it('fails hydration when authenticated-page cleanup fails and redacts its error', async () => {
+		const harness = createHarness();
+		vi.mocked(harness.browserManager.closePage).mockRejectedValueOnce(
+			new Error(`cleanup ${SECRET_PASSWORD}`)
+		);
+		const provenance: Provenance = {
+			version: '1',
+			job_id: 'job-hydrate',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [{ type: 'fill', selector: '#password', value: SECRET_PASSWORD }],
+				success: { type: 'load' }
+			}
+		};
+		const scan = vi.fn<PageScanCallback>();
+		const results = await new PageIterator(harness.browserManager, baseConfig).iteratePages(
+			provenance,
+			scan
+		);
+		expect(scan).not.toHaveBeenCalled();
+		expect(results[0]?.success).toBe(false);
+		expect(results[0]?.error).toContain('Auth page cleanup failed');
+		expect(JSON.stringify(results)).not.toContain(SECRET_PASSWORD);
+	});
+	it('preserves the primary hydration failure when page cleanup also fails', async () => {
+		const harness = createHarness();
+		vi.mocked(harness.browserManager.navigateToPage).mockRejectedValueOnce(
+			new Error('primary login failure')
+		);
+		vi.mocked(harness.browserManager.closePage).mockRejectedValueOnce(
+			new Error('secondary cleanup failure')
+		);
+		const provenance: Provenance = {
+			version: '1',
+			job_id: 'job-hydrate',
+			base_url: 'https://app.example.com',
+			pages: [{ id: 'profile', path: '/profile', url: 'https://app.example.com/profile' }],
+			auth: {
+				mode: 'form',
+				login_url: 'https://app.example.com/login',
+				steps: [],
+				success: { type: 'load' }
+			}
+		};
+		const results = await new PageIterator(harness.browserManager, baseConfig).iteratePages(
+			provenance,
+			vi.fn<PageScanCallback>()
+		);
+		expect(results[0]?.error).toContain('primary login failure');
+		expect(results[0]?.error).not.toContain('secondary cleanup failure');
 	});
 
 	it('runs storage_state hydration once before context creation', async () => {

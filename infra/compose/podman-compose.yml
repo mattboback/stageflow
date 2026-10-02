@@ -5,42 +5,6 @@ name: ${COMPOSE_PROJECT_NAME:-stageflow_dev}
 
 services:
   # --- Infrastructure ---
-  nats:
-    ports:
-      - "127.0.0.1:${NATS_PORT:-4222}:4222"
-    image: docker.io/library/nats:2.12.2-alpine
-    command: ["-js", "-sd", "/data", "-m", "8222"]
-    volumes:
-      - nats_data:/data
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget -q --spider http://127.0.0.1:8222/healthz || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
-    init: true
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: "1.0"
-        reservations:
-          memory: 64M
-    restart: unless-stopped
-    networks:
-      - stageflow_net
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
 
   postgres:
     image: docker.io/library/postgres:17-alpine
@@ -49,7 +13,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-stageflow}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_v2_data:/var/lib/postgresql/data
     healthcheck:
       test:
         [
@@ -92,9 +56,7 @@ services:
       - /tmp:rw,noexec,nosuid,nodev,size=64m
     environment:
       HOME: "/tmp"
-      PROJECT_DB_PATH: "/data/deletions.db"
       PORT: "8080"
-      NATS_URL: "nats://nats:4222"
       PLATFORM_API_ALLOW_PRIVATE_TARGETS: "${PLATFORM_API_ALLOW_PRIVATE_TARGETS:-false}"
       PLATFORM_API_TOKEN: ${PLATFORM_API_TOKEN:-}
       PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM: ${PLATFORM_API_PUBLIC_SUBMISSION_RATE_LIMIT_RPM:-6}
@@ -118,8 +80,6 @@ services:
         reservations:
           memory: 128M
     depends_on:
-      nats:
-        condition: service_healthy
       orchestrator:
         condition: service_healthy
     stop_grace_period: 30s
@@ -154,7 +114,6 @@ services:
       - stageflow_data:/data
       - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman/podman.sock:z
     environment:
-      NATS_URL: "nats://nats:4222"
       PODMAN_SOCKET: "/run/podman/podman.sock"
       # Podman control-plane budget. Creating a pod writes the pod record, creates
       # the infra container, and programs the netns, which on a loaded host runs
@@ -168,7 +127,6 @@ services:
       EXTRACTION_IMAGE: "localhost/stageflow/extractor:${IMAGE_TAG:-latest}"
       SCANNER_IMAGE: "localhost/stageflow/scanner-runner:${IMAGE_TAG:-latest}"
       API_PORT: "8081"
-      NATS_HOST: "nats"
       POD_NETNS_MODE: ${POD_NETNS_MODE:-bridge}
       # An explicitly empty POD_NETWORK is required for host mode.
       POD_NETWORK: ${POD_NETWORK-${STAGEFLOW_NETWORK_NAME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_net}}
@@ -186,8 +144,6 @@ services:
         reservations:
           memory: 128M
     depends_on:
-      nats:
-        condition: service_healthy
       postgres:
         condition: service_healthy
     stop_grace_period: 60s
@@ -244,8 +200,7 @@ services:
 
 
 volumes:
-  nats_data:
-  postgres_data:
+  postgres_v2_data:
   stageflow_data:
     name: ${STAGEFLOW_DATA_VOLUME:-${COMPOSE_PROJECT_NAME:-stageflow_dev}_data}
 

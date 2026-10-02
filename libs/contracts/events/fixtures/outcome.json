@@ -1,0 +1,27 @@
+{
+	"status": "success",
+	"error": "",
+	"pages_scanned": 1,
+	"summary": {
+		"total_violations": 3,
+		"by_severity": {
+			"critical": 1,
+			"serious": 2,
+			"moderate": 0,
+			"minor": 0,
+			"info": 0
+		},
+		"pages_scanned": 1,
+		"critical_issues": 1,
+		"serious_issues": 2,
+		"moderate_issues": 0,
+		"minor_issues": 0
+	},
+	"timing": {
+		"total_ms": 50,
+		"page_iteration_ms": 30,
+		"write_results_ms": 5,
+		"publish_completed_ms": 0,
+		"finalization_ms": 15
+	}
+}

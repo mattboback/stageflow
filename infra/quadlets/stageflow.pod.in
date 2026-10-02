@@ -10,7 +10,6 @@ Network=@NETWORK_NAME@
 Network=ingress.network
 
 # Network-scoped aliases for service discovery from job pods and other stacks
-NetworkAlias=nats
 NetworkAlias=postgres
 NetworkAlias=orchestrator
 NetworkAlias=platform-api

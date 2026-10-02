@@ -128,7 +128,7 @@ export class ScanStageLogger {
 			},
 			results_dir: this.config.resultsDir,
 			environment: {
-				nats_url: this.config.messaging.url
+				output_dir: this.config.resultsDir
 			}
 		};
 

@@ -14,19 +14,16 @@ import (
 func TestDurableSnapshotKeepsFailureAcrossReaders(t *testing.T) {
 	database := setupTestDB(t)
 	job := &models.Job{
-		ID:        "snapshot",
-		State:     models.JobStateScanning,
-		InputType: models.JobInputTypeURLs,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:               "snapshot",
+		State:            models.JobStateScanning,
+		InputType:        models.JobInputTypeURLs,
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+		ExpectedScanners: []string{"seo", "axe", "lighthouse"},
 	}
 	mustCreateJob(t, database, job)
 
 	ctx := context.Background()
-	if err := database.SetExpectedScanners(ctx, job.ID, []string{"seo", "axe", "lighthouse"}); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := database.UpdateScannerProgress(ctx, job.ID, "lighthouse", 28, 30); err != nil {
 		t.Fatal(err)
 	}
@@ -35,15 +32,21 @@ func TestDurableSnapshotKeepsFailureAcrossReaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := database.RecordScannerCompletion(
+	if err := database.RecordScannerResult(
 		ctx,
 		job.ID,
+		"success",
 		&models.ScannerResult{ScannerType: "axe", Success: true, PagesScanned: 30, TotalIssues: 9, TotalMs: 50},
 	); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := database.RecordScannerFailure(ctx, job.ID, "seo", "browser closed"); err != nil {
+	if err := database.RecordScannerResult(
+		ctx,
+		job.ID,
+		"failed",
+		&models.ScannerResult{ScannerType: "seo", Error: "browser closed"},
+	); err != nil {
 		t.Fatal(err)
 	}
 

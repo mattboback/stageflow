@@ -34,7 +34,7 @@ func TestExtractRejectsOversizedLocalZIP(t *testing.T) {
 
 	_ = file.Close()
 
-	if extractErr := NewExtractor().Extract(context.Background(), input, t.TempDir()); extractErr == nil {
+	if extractionErr := NewExtractor().Extract(context.Background(), input, t.TempDir()); extractionErr == nil {
 		t.Fatal("oversized ZIP accepted")
 	}
 }

@@ -28,29 +28,6 @@ func GetEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
-func GetEnvIntStrict(key string, defaultValue int) (int, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue, nil
-	}
-
-	i, err := strconv.Atoi(value)
-	if err != nil {
-		return 0, fmt.Errorf("%s must be an integer: %w", key, err)
-	}
-
-	return i, nil
-}
-
-func MustGetEnvInt(key string, defaultValue int) int {
-	value, err := GetEnvIntStrict(key, defaultValue)
-	if err != nil {
-		panic(err)
-	}
-
-	return value
-}
-
 // GetEnvBool reads a boolean env var using a fixed allowlist to avoid surprising coercions.
 // Recognized true values: "1", "true", "TRUE", "True".
 // Recognized false values: "0", "false", "FALSE", "False".

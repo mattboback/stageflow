@@ -57,10 +57,6 @@ func (s *Server) handleJobStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.respondIfJobDeleted(w, r, jobID) {
-		return
-	}
-
 	if len(parts) > 1 {
 		if len(parts) >= 3 && parts[1] == "files" {
 			s.handleJobFile(w, r, jobID, strings.Join(parts[2:], "/"))

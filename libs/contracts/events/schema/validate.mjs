@@ -9,10 +9,7 @@ const baseDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(baseDir, '..');
 const fixturesDir = path.join(rootDir, 'fixtures');
 
-const schemaByEvent = {
-	'scan.completed': 'scan.completed.schema.json',
-	'scan.failed': 'scan.failed.schema.json',
-	'scan.page.completed': 'scan.page.completed.schema.json'
+const schemaByEvent = { outcome: 'outcome.schema.json'
 };
 
 async function readJson(filePath) {

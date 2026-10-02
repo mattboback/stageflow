@@ -67,9 +67,9 @@ type FormStepValue struct {
 	FromEnv *string
 }
 
-// StorageStateBlock carries intake content and a legacy read-only artifact key.
-// New workers read a private mounted file. Compact omits both sensitive content
-// and the legacy reference from execution metadata.
+// StorageStateBlock is the storage_state branch of Provenance.auth.
+// ContentBase64 is only set on the client-to-API wire. The API stores the
+// decoded Playwright state in a private file; workers receive a scoped mount.
 type StorageStateBlock struct {
 	ContentBase64 string `json:"content_b64,omitempty"`
 	ArtifactKey   string `json:"artifact_key,omitempty"`

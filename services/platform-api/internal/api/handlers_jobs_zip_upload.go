@@ -15,8 +15,6 @@ import (
 	"github.com/google/uuid"
 
 	storage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -134,6 +132,10 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.ensureAdmissionDisk(r.Context(), w) {
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
 
 	jobReq, parseErr := s.parseZipUpload(r.Context(), r)
@@ -141,10 +143,10 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queued := false
+	retainFiles := false
 	defer func() {
-		if !queued && jobReq != nil {
-			s.cleanupStagedZip(jobReq.zipPath)
+		if !retainFiles && jobReq != nil {
+			s.cleanupRejectedJob(jobReq.jobID)
 		}
 	}()
 
@@ -160,10 +162,7 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.enqueueZipJob(jobCtx, jobReq); err != nil {
-		if errors.Is(err, status.ErrIntakeUncertain) {
-			queued = true
-		}
-
+		retainFiles = admissionMayBeCommitted(err)
 		if errors.Is(err, context.DeadlineExceeded) {
 			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
 
@@ -176,13 +175,12 @@ func (s *Server) handleJobZipUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		logging.Error(jobCtx, "Failed to queue job", "error", err)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to persist job")
+		s.respondAdmissionError(w, err)
 
 		return
 	}
 
-	queued = true
+	retainFiles = true
 
 	httputil.RespondCreated(w, map[string]any{
 		"job_id":  jobReq.jobID,
@@ -257,7 +255,7 @@ func (s *Server) parseZipUpload(ctx context.Context, r *http.Request) (request *
 	state := &zipUploadState{}
 	defer func() {
 		if requestErr != nil && state.fileUploaded {
-			s.cleanupStagedZip(state.zipPath)
+			s.cleanupRejectedJob(jobID)
 		}
 	}()
 
@@ -383,7 +381,7 @@ func (s *Server) handleZipFilePart(
 	}
 
 	if limited.N == 0 {
-		s.cleanupStagedZip(path)
+		s.cleanupRejectedJob(jobID)
 
 		return newClientStatusMessageError(
 			http.StatusRequestEntityTooLarge,
@@ -480,10 +478,15 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 		ctx = logging.WithRunID(ctx, req.runID)
 	}
 
-	payload := &events.JobCreatedPayload{
-		JobID:     req.jobID,
-		InputType: "zip",
-		InputPath: req.zipPath,
+	now := time.Now().UTC()
+	job := &models.Job{
+		State:            models.JobStatePending,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		ExpectedScanners: append([]string(nil), req.modules...),
+		ID:               req.jobID,
+		InputType:        "zip",
+		InputPath:        req.zipPath,
 		Config: models.JobConfig{
 			Profile:        req.profile,
 			IdentityScope:  req.identityScope,
@@ -498,34 +501,28 @@ func (s *Server) enqueueZipJob(ctx context.Context, req *zipJobRequest) error {
 		},
 	}
 
-	envelope := events.NewEnvelope(events.EventJobCreated, req.jobID, "platform-api", payload)
-	envelope.RequestID = logging.RequestID(ctx)
-	envelope.RunID = logging.RunID(ctx)
-
-	if err := ctx.Err(); err != nil {
-		return err
+	if s.config.ValidateZIP == nil {
+		return errors.New("ZIP validator is unavailable")
 	}
 
-	if err := s.publishDurableJob(ctx, envelope); err != nil {
-		return fmt.Errorf("failed to publish job.created event: %w", err)
+	if validationErr := s.config.ValidateZIP(ctx, req.jobID); validationErr != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return ctxErr
+		}
+
+		return newClientStatusMessageError(
+			http.StatusUnprocessableEntity,
+			"ZIP archive is invalid or exceeds safety limits",
+		)
+	}
+
+	if err := s.admitJob(ctx, job); err != nil {
+		return err
 	}
 
 	logging.Info(ctx, "Job created", "filename", filepath.Base(req.zipPath), "input_type", "zip")
 
 	return nil
-}
-
-func (s *Server) cleanupStagedZip(key string) {
-	if key == "" || s == nil || s.config == nil || s.config.Storage == nil {
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := s.config.Storage.DeleteFile(ctx, storage.BucketStaging, key); err != nil {
-		logging.Warn(ctx, "Failed to clean up staged ZIP", "key", key, "error", err)
-	}
 }
 
 func handleProductConfigPart(part *multipart.Part, state *zipUploadState) error {

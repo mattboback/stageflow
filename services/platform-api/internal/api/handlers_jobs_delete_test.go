@@ -18,12 +18,12 @@ type staticJobReader struct {
 }
 
 type failingJobDeletionStore struct {
-	TombstoneStore
+	JobStatusReader
 	err error
 }
 
-func (s *failingJobDeletionStore) JobIsDeleted(context.Context, string) (bool, error) {
-	return false, s.err
+func (s *failingJobDeletionStore) GetJob(context.Context, string) (*status.JobRecord, error) {
+	return nil, s.err
 }
 
 func (r *staticJobReader) GetJob(_ context.Context, jobID string) (*status.JobRecord, error) {
@@ -39,9 +39,7 @@ func (r *staticJobReader) GetJob(_ context.Context, jobID string) (*status.JobRe
 func seedReadableJob(t *testing.T, server *Server, jobID string, state models.JobState) {
 	t.Helper()
 
-	reader := &staticJobReader{rec: &status.JobRecord{JobID: jobID, State: state}}
-	server.config.StatusReader = reader
-	server.statusReader = reader
+	testPipeline(server).Put(&status.JobRecord{JobID: jobID, State: state})
 }
 
 func TestHandleJobDeleteRemovesArtifactsAndHidesJob(t *testing.T) {
@@ -147,11 +145,11 @@ func TestJobReadsFailClosedWhenDeletionLookupFails(t *testing.T) {
 	t.Parallel()
 
 	server, _, _ := newTestServer(t)
-	jobID := "job-tombstone-error"
+	jobID := "job-read-error"
 	seedReadableJob(t, server, jobID, models.JobStateDone)
-	server.tombstoneStore = &failingJobDeletionStore{
-		TombstoneStore: server.tombstoneStore,
-		err:            errors.New("tombstone database unavailable"),
+	server.statusReader = &failingJobDeletionStore{
+		JobStatusReader: server.statusReader,
+		err:             errors.New("job database unavailable"),
 	}
 
 	paths := []string{
@@ -181,9 +179,9 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 	server, objectStore, _ := newTestServer(t)
 	jobID := "job-delete-lookup-error"
 	seedReadableJob(t, server, jobID, models.JobStateDone)
-	server.tombstoneStore = &failingJobDeletionStore{
-		TombstoneStore: server.tombstoneStore,
-		err:            errors.New("tombstone database unavailable"),
+	server.statusReader = &failingJobDeletionStore{
+		JobStatusReader: server.statusReader,
+		err:             errors.New("job database unavailable"),
 	}
 
 	const artifact = "report.json"
@@ -217,6 +215,6 @@ func TestHandleJobDeleteFailsClosedWhenDeletionLookupFails(t *testing.T) {
 	}
 
 	if !exists {
-		t.Fatal("artifact was deleted after tombstone lookup failed")
+		t.Fatal("artifact was deleted after database lookup failed")
 	}
 }

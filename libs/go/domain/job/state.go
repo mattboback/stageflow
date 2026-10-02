@@ -55,11 +55,6 @@ func Order(state models.JobState) int {
 	return -1
 }
 
-// IsTerminal reports whether a state ends the lifecycle.
-func IsTerminal(state models.JobState) bool {
-	return state == models.JobStateDone || state == models.JobStateFailed
-}
-
 // StateRankSQL returns a CASE expression mirroring Order for DB queries.
 func StateRankSQL() string {
 	return `(CASE state

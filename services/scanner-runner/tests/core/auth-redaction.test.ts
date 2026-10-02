@@ -91,10 +91,6 @@ describe('Auth redaction', () => {
 				deviceScaleFactor: 1,
 				defaultTimeout: 30_000,
 				pageLoadTimeout: 15_000
-			},
-			messaging: {
-				url: '',
-				subjects: { pageCompleted: 'a', scanCompleted: 'b', scanFailed: 'c' }
 			}
 		};
 

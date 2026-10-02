@@ -9,18 +9,17 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/mattboback/stageflow/internal/archive"
 )
 
 const (
-	maxZipEntries               = 5000                   // protect against tiny-file floods
-	maxZipExpansionRatio        = 100                    // 100x expansion max
-	maxZipCompressedSize        = 100 * 1024 * 1024      // mirror platform-api ZIP upload limit
-	maxZipUncompressedSize      = 1 * 1024 * 1024 * 1024 // 1 GiB
-	maxZipEntryUncompressedSize = 250 * 1024 * 1024      // 250 MiB
-	maxZipNameLen               = 4096
+	maxZipEntries               = archive.MaxEntries
+	maxZipCompressedSize        = archive.MaxCompressedSize
+	maxZipUncompressedSize      = archive.MaxUncompressedSize
+	maxZipEntryUncompressedSize = archive.MaxEntryUncompressedSize
 )
 
 // Extractor validates and unpacks job ZIPs from the scoped read-only job mount.
@@ -45,140 +44,17 @@ func (e *Extractor) Extract(_ context.Context, zipPath, destDir string) error {
 	return extractZIP(zipPath, destDir)
 }
 
-// validateZIP checks for ZIP bombs and path traversal.
+// validateZIP shares intake checks with the API; extraction bounds actual bytes too.
 func validateZIP(zipPath string, fileSize int64) error {
-	r, err := zip.OpenReader(zipPath)
+	file, err := os.Open(zipPath)
 	if err != nil {
-		return fmt.Errorf("not a valid ZIP file: %w", err)
+		return err
 	}
+	defer file.Close()
 
-	defer func() {
-		if cerr := r.Close(); cerr != nil {
-			slog.Warn("failed to close validation reader", "error", cerr)
-		}
-	}()
-
-	if len(r.File) > maxZipEntries {
-		return fmt.Errorf("ZIP has too many files (%d > %d)", len(r.File), maxZipEntries)
-	}
-
-	var totalUncompressed uint64
-
-	seenFiles := make(map[string]struct{}, len(r.File))
-	seenDirs := make(map[string]struct{}, len(r.File))
-
-	for _, file := range r.File {
-		if file.Name == "" || len(file.Name) > maxZipNameLen {
-			return fmt.Errorf("invalid entry name length (%d)", len(file.Name))
-		}
-
-		if strings.ContainsRune(file.Name, '\x00') {
-			return fmt.Errorf("invalid entry name (NUL byte): %q", file.Name)
-		}
-
-		cleanName, sanitizeErr := sanitizeZipEntryName(file.Name)
-		if sanitizeErr != nil {
-			return sanitizeErr
-		}
-
-		if collisionErr := trackZipEntryName(cleanName, zipEntryIsDir(file), seenFiles, seenDirs); collisionErr != nil {
-			return collisionErr
-		}
-
-		if file.UncompressedSize64 > maxZipEntryUncompressedSize {
-			return fmt.Errorf(
-				"ZIP entry too large (%s: %d bytes > %d)",
-				file.Name,
-				file.UncompressedSize64,
-				maxZipEntryUncompressedSize,
-			)
-		}
-
-		totalUncompressed += file.UncompressedSize64
-	}
-
-	if fileSize > 0 {
-		ratio := float64(totalUncompressed) / float64(fileSize)
-		if ratio > maxZipExpansionRatio {
-			return fmt.Errorf("ZIP bomb detected: compression ratio %.1fx exceeds limit", ratio)
-		}
-	}
-
-	if totalUncompressed > maxZipUncompressedSize {
-		return fmt.Errorf("ZIP too large: %d bytes uncompressed exceeds 1GB limit", totalUncompressed)
-	}
-
-	return nil
+	return archive.Validate(file, fileSize)
 }
-
-func trackZipEntryName(
-	cleanName string,
-	isDir bool,
-	seenFiles map[string]struct{},
-	seenDirs map[string]struct{},
-) error {
-	if _, ok := seenFiles[cleanName]; ok {
-		return fmt.Errorf("duplicate ZIP entry path after normalization: %s", cleanName)
-	}
-
-	if _, ok := seenDirs[cleanName]; ok {
-		return fmt.Errorf("duplicate ZIP entry path after normalization: %s", cleanName)
-	}
-
-	if isDir {
-		seenDirs[cleanName] = struct{}{}
-
-		return nil
-	}
-
-	for parent := path.Dir(cleanName); parent != "." && parent != "/"; parent = path.Dir(parent) {
-		if _, ok := seenFiles[parent]; ok {
-			return fmt.Errorf("ZIP entry collides with file path: %s", cleanName)
-		}
-	}
-
-	seenFiles[cleanName] = struct{}{}
-
-	return nil
-}
-
-func sanitizeZipEntryName(name string) (string, error) {
-	// ZIP paths use forward slashes, but malicious archives may include backslashes.
-	n := strings.ReplaceAll(name, "\\", "/")
-
-	if strings.HasPrefix(n, "/") {
-		return "", fmt.Errorf("absolute path not allowed: %q", name)
-	}
-
-	for _, segment := range strings.Split(n, "/") {
-		if segment == ".." {
-			return "", fmt.Errorf("path traversal detected: %q", name)
-		}
-
-		if segment == "." {
-			return "", fmt.Errorf("ambiguous path segment not allowed: %q", name)
-		}
-	}
-
-	// Disallow Windows drive letters (C:/...).
-	if len(n) >= 2 {
-		c0 := n[0]
-		if n[1] == ':' && ((c0 >= 'A' && c0 <= 'Z') || (c0 >= 'a' && c0 <= 'z')) {
-			return "", fmt.Errorf("volume name not allowed: %q", name)
-		}
-	}
-
-	clean := path.Clean(n)
-	if clean == "." {
-		return "", fmt.Errorf("invalid entry name: %q", name)
-	}
-
-	if clean == ".." || strings.HasPrefix(clean, "../") {
-		return "", fmt.Errorf("path traversal detected: %q", name)
-	}
-
-	return clean, nil
-}
+func sanitizeZipEntryName(name string) (string, error) { return archive.SanitizeEntryName(name) }
 
 func extractZIP(zipPath, destDir string) error {
 	return extractZIPWithLimits(zipPath, destDir, maxZipUncompressedSize, maxZipEntryUncompressedSize)

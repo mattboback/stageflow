@@ -27,7 +27,7 @@ func (r *JobRuntime) publishURLProvenance(ctx context.Context, job *models.Job) 
 	origins := map[string]bool{}
 
 	for _, raw := range job.URLs {
-		if parsed, parseErr := url.Parse(raw); parseErr == nil {
+		if parsed, checkErr1 := url.Parse(raw); checkErr1 == nil {
 			origins[strings.ToLower(parsed.Scheme+"://"+parsed.Host)] = true
 		}
 	}

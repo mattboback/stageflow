@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestProductConfigURLAndZIPIntake(t *testing.T) {

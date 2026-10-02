@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -55,7 +56,7 @@ type ContainerState string
 
 func (s *ContainerState) UnmarshalJSON(data []byte) error {
 	var value string
-	if err := json.Unmarshal(data, &value); err == nil {
+	if checkErr1 := json.Unmarshal(data, &value); checkErr1 == nil {
 		*s = ContainerState(value)
 
 		return nil
@@ -64,8 +65,8 @@ func (s *ContainerState) UnmarshalJSON(data []byte) error {
 	var object struct {
 		Status string `json:"Status"`
 	}
-	if err := json.Unmarshal(data, &object); err != nil {
-		return fmt.Errorf("decode container state: %w", err)
+	if checkErr2 := json.Unmarshal(data, &object); checkErr2 != nil {
+		return fmt.Errorf("decode container state: %w", checkErr2)
 	}
 
 	*s = ContainerState(object.Status)
@@ -89,37 +90,69 @@ type ContainerInfo struct {
 	// OOMKilled is set from the inspect State object. List responses carry
 	// State as a string, so it stays false there.
 	OOMKilled bool `json:"-"`
+	ExitCode  int  `json:"ExitCode"`
 }
 
 func (c *ContainerInfo) UnmarshalJSON(data []byte) error {
 	type plain ContainerInfo
 
 	var info plain
-	if err := json.Unmarshal(data, &info); err != nil {
-		return err
+	if checkErr3 := json.Unmarshal(data, &info); checkErr3 != nil {
+		return checkErr3
 	}
 
 	var raw struct {
 		State json.RawMessage `json:"State"`
 	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return fmt.Errorf("decode container state: %w", err)
+	if checkErr4 := json.Unmarshal(data, &raw); checkErr4 != nil {
+		return fmt.Errorf("decode container state: %w", checkErr4)
 	}
 
 	var state struct {
 		OOMKilled bool `json:"OOMKilled"`
+		ExitCode  int  `json:"ExitCode"`
 	}
 	// A string State has no OOMKilled; only the object form is decoded.
 	if len(raw.State) > 0 && raw.State[0] == '{' {
-		if err := json.Unmarshal(raw.State, &state); err != nil {
-			return fmt.Errorf("decode container state: %w", err)
+		if checkErr5 := json.Unmarshal(raw.State, &state); checkErr5 != nil {
+			return fmt.Errorf("decode container state: %w", checkErr5)
 		}
 	}
 
 	*c = ContainerInfo(info)
+
 	c.OOMKilled = state.OOMKilled
+	if len(raw.State) > 0 && raw.State[0] == '{' {
+		c.ExitCode = state.ExitCode
+	}
 
 	return nil
+}
+
+// ListJobContainers obtains one label-scoped snapshot for each reconciliation.
+func (c *Client) ListJobContainers(ctx context.Context) ([]ContainerInfo, error) {
+	filter, err := json.Marshal(map[string][]string{"label": {"managed_by=orchestrator"}})
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := c.doLibpodRequest(
+		ctx,
+		http.MethodGet,
+		"/containers/json?all=true&filters="+url.QueryEscape(string(filter)),
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	var containers []ContainerInfo
+	if checkErr6 := parseResponse(response, &containers); checkErr6 != nil {
+		return nil, checkErr6
+	}
+
+	return containers, nil
 }
 
 func (c *ContainerInfo) labels() map[string]string {

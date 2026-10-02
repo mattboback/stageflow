@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 const literalBrowserAuthBody = `{
@@ -89,7 +89,7 @@ func TestRouterPublicRoutesIgnoreMissingOrWrongKey(t *testing.T) {
 		},
 		{name: "scanner catalog", method: http.MethodGet, path: "/api/v1/scanners", wantStatus: http.StatusOK},
 		{name: "job status", method: http.MethodGet, path: "/api/v1/jobs/job-123", wantStatus: http.StatusNotFound},
-		{name: "job delete", method: http.MethodDelete, path: "/api/v1/jobs/job-123", wantStatus: http.StatusNotFound},
+		{name: "job delete", method: http.MethodDelete, path: "/api/v1/jobs/job-123", wantStatus: http.StatusNoContent},
 	}
 
 	for _, tt := range tests {
@@ -400,7 +400,7 @@ func TestURLSubmissionParseErrorsDoNotEchoEmbeddedCredentials(t *testing.T) {
 	}
 }
 
-func assertLiteralAuthPublished(t *testing.T, publisher *fakePublisher) {
+func assertLiteralAuthPublished(t *testing.T, publisher *fakeJobAdmission) {
 	t.Helper()
 
 	if len(publisher.envelopes) != 1 {

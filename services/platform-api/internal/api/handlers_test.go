@@ -12,20 +12,19 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/mattboback/stageflow/internal/archive"
 	storagepkg "github.com/mattboback/stageflow/internal/artifacts"
 	status "github.com/mattboback/stageflow/internal/jobstore"
 	report "github.com/mattboback/stageflow/libs/contracts/report/generated/go"
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/models"
 	"github.com/mattboback/stageflow/libs/go/scannerregistry"
-	"github.com/mattboback/stageflow/services/platform-api/internal/tombstone"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 func TestHandleHealth(t *testing.T) {
@@ -228,7 +227,7 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 	storageState := `{"cookies":[],"origins":[]}`
 	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
 
-	publisher.onPublish = func(envelope *events.Envelope) error {
+	publisher.onAdmit = func(envelope *events.Envelope) error {
 		created, ok := envelope.Payload.(*events.JobCreatedPayload)
 		if !ok || created == nil {
 			t.Fatalf("expected envelope payload to be *events.JobCreatedPayload")
@@ -294,9 +293,9 @@ func TestHandleJobURLSubmitStorageStateAuthUploadsBeforePublish(t *testing.T) {
 	}
 }
 
-func TestHandleJobURLSubmitStorageStateAuthCleanupOnPublishFailure(t *testing.T) {
+func TestHandleJobURLSubmitKeepsAuthOnUncertainAdmission(t *testing.T) {
 	server, storage, publisher := newTestServer(t)
-	publisher.err = errors.New("nats down")
+	publisher.err = errors.New("database down")
 
 	storageState := `{"cookies":[],"origins":[]}`
 	encoded := base64.StdEncoding.EncodeToString([]byte(storageState))
@@ -325,18 +324,14 @@ func TestHandleJobURLSubmitStorageStateAuthCleanupOnPublishFailure(t *testing.T)
 		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	if len(storage.deletes) != 1 {
-		t.Fatalf("expected 1 auth cleanup delete, got %d", len(storage.deletes))
-	}
-
-	if _, ok := storage.uploads[storage.deletes[0]]; ok {
-		t.Fatalf("expected uploaded auth object to be removed")
+	if len(storage.deletes) != 0 || len(storage.uploads) != 1 {
+		t.Fatalf("uncertain admission lost auth: deletes=%d uploads=%d", len(storage.deletes), len(storage.uploads))
 	}
 }
 
-func TestHandleJobZipUploadCleanupOnPublishFailure(t *testing.T) {
+func TestHandleJobZipUploadKeepsInputOnUncertainAdmission(t *testing.T) {
 	server, storage, publisher := newTestServer(t)
-	publisher.err = errors.New("nats down")
+	publisher.err = errors.New("database down")
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -368,12 +363,8 @@ func TestHandleJobZipUploadCleanupOnPublishFailure(t *testing.T) {
 		t.Fatalf("expected 500, got %d: %s", rr.Code, rr.Body.String())
 	}
 
-	if len(storage.deletes) != 1 {
-		t.Fatalf("expected 1 staged ZIP cleanup delete, got %d", len(storage.deletes))
-	}
-
-	if _, ok := storage.uploads[storage.deletes[0]]; ok {
-		t.Fatalf("expected staged ZIP object to be removed")
+	if len(storage.deletes) != 0 || len(storage.uploads) != 1 {
+		t.Fatalf("uncertain admission lost ZIP: deletes=%d uploads=%d", len(storage.deletes), len(storage.uploads))
 	}
 }
 
@@ -802,60 +793,55 @@ func strPtr(value string) *string {
 	return &value
 }
 
-type fakePublisher struct {
+type fakeJobAdmission struct {
 	snapshots *jobstatus.Pipeline
 	envelopes []*events.Envelope
 	err       error
-	onPublish func(envelope *events.Envelope) error
+	onAdmit   func(envelope *events.Envelope) error
+	deleteErr error
 }
 
-func (f *fakePublisher) PublishJobCreated(_ context.Context, envelope *events.Envelope) error {
+func (f *fakeJobAdmission) AdmitJob(_ context.Context, job *models.Job) error {
 	if f.err != nil {
 		return f.err
 	}
 
-	if f.onPublish != nil {
-		if err := f.onPublish(envelope); err != nil {
+	payload := &events.JobCreatedPayload{
+		JobID:     job.ID,
+		InputType: job.InputType,
+		InputPath: job.InputPath,
+		URLs:      job.URLs,
+		Config:    job.Config,
+	}
+
+	envelope := events.NewEnvelopeAt(events.EventJobCreated, job.ID, "test-admission", payload, job.CreatedAt)
+	if f.onAdmit != nil {
+		if err := f.onAdmit(envelope); err != nil {
 			return err
 		}
 	}
 
 	f.envelopes = append(f.envelopes, envelope)
-	if f.snapshots != nil {
-		_, err := f.snapshots.Apply(
-			context.Background(),
-			jobstatus.Signal{
-				Kind:       jobstatus.SignalJobCreated,
-				ObservedAt: envelope.Timestamp,
-				JobCreated: envelope.Payload.(*events.JobCreatedPayload),
-			},
-		)
-		if err != nil {
-			return err
-		}
+	f.snapshots.Put(status.Snapshot(job))
+
+	return nil
+}
+func (f *fakeJobAdmission) DeleteJob(_ context.Context, id string) error {
+	if f.deleteErr != nil {
+		return f.deleteErr
 	}
+
+	f.snapshots.Delete(id)
 
 	return nil
 }
 
-func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
+func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakeJobAdmission) {
 	t.Helper()
-	dir := t.TempDir()
-
-	tombstoneStore, err := tombstone.NewStore(filepath.Join(dir, "projects.db"))
-	if err != nil {
-		t.Fatalf("new tombstone store: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if closeErr := tombstoneStore.Close(); closeErr != nil {
-			t.Fatalf("close tombstone store: %v", closeErr)
-		}
-	})
 
 	storage := newFakeStorage()
 	snapshots := jobstatus.New(nil)
-	publisher := &fakePublisher{snapshots: snapshots}
+	publisher := &fakeJobAdmission{snapshots: snapshots}
 
 	defaultConfig, err := scannerregistry.DefaultConfig()
 	if err != nil {
@@ -868,11 +854,19 @@ func newTestServer(t *testing.T) (*Server, *fakeStorage, *fakePublisher) {
 	}
 
 	server := NewServer(&ServerConfig{
-		StatusReader:    snapshots,
-		Storage:         storage,
-		Publisher:       publisher,
-		PendingJobs:     fakePendingJobs{snapshots: snapshots},
-		TombstoneStore:  tombstoneStore,
+		StatusReader: snapshots,
+		Storage:      storage,
+		Admitter:     publisher,
+		JobDeleter:   publisher,
+		CheckDisk:    func(context.Context) error { return nil },
+		ValidateZIP: func(_ context.Context, id string) error {
+			data, exists := storage.uploads[fmt.Sprintf("%s::%s", storagepkg.BucketStaging, id+"/input.zip")]
+			if !exists {
+				return errors.New("input ZIP missing")
+			}
+
+			return archive.Validate(bytes.NewReader(data), int64(len(data)))
+		},
 		ScannerRegistry: registry,
 	})
 	server.ipResolver = defaultSecurityTestResolver(t)
@@ -902,15 +896,4 @@ func buildTestZip(t *testing.T) []byte {
 	}
 
 	return buf.Bytes()
-}
-
-type fakePendingJobs struct{ snapshots *jobstatus.Pipeline }
-
-func (f fakePendingJobs) PublishPendingJob(
-	ctx context.Context,
-	job *models.Job,
-	publish func(context.Context) error,
-) error {
-	f.snapshots.Put(status.Snapshot(job))
-	return publish(ctx)
 }

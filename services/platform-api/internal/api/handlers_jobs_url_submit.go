@@ -14,8 +14,6 @@ import (
 	"github.com/google/uuid"
 
 	sharedstorage "github.com/mattboback/stageflow/internal/artifacts"
-	status "github.com/mattboback/stageflow/internal/jobstore"
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/httputil"
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
@@ -50,9 +48,9 @@ type jobURLSubmitRequest struct {
 // SubmitJobRequest.Auth. Discriminated by mode.
 //
 // For storage_state the CLI base64-encodes the captured Playwright JSON
-// inline; the platform-api validates it parses + enforces a 1 MiB cap, writes
-// it to a private job file, then forwards only mode metadata in
-// JobConfig.Auth. Raw storage-state bytes must not cross the NATS boundary.
+// inline; the platform-api validates it parses + enforces a 1 MiB cap, uploads
+// it to the private auth.json under the job directory. JobConfig.Auth carries
+// the authentication mode; raw storage-state bytes stay in that private file.
 //
 // For form, every step value is a literal string. {from_env: NAME} references
 // are rejected at intake (validateLiteralAuthValues): the server never reads
@@ -124,15 +122,26 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 	runID := uuid.New().String()[:8]
 	ctx = logging.WithRunID(ctx, runID)
 
-	authRaw, authStorageKey, ok := s.normalizeJobURLSubmitAuth(ctx, w, jobID, req.Auth, validationMode)
-	if !ok {
+	if !s.ensureAdmissionDisk(ctx, w) {
 		return
 	}
 
-	payload := &events.JobCreatedPayload{
-		JobID:     jobID,
-		InputType: "urls",
-		URLs:      req.URLs,
+	authRaw, _, ok := s.normalizeJobURLSubmitAuth(ctx, w, jobID, req.Auth, validationMode)
+	if !ok {
+		s.cleanupRejectedJob(jobID)
+		return
+	}
+
+	now := time.Now().UTC()
+	job := &models.Job{
+		State:            models.JobStatePending,
+		TotalPages:       len(req.URLs),
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		ExpectedScanners: append([]string(nil), modules...),
+		ID:               jobID,
+		InputType:        "urls",
+		URLs:             req.URLs,
 		Config: models.JobConfig{
 			Profile:             req.Profile,
 			IdentityScope:       req.IdentityScope,
@@ -145,11 +154,7 @@ func (s *Server) handleJobURLSubmit(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	envelope := events.NewEnvelope(events.EventJobCreated, jobID, "platform-api", payload)
-	envelope.RequestID = logging.RequestID(ctx)
-	envelope.RunID = logging.RunID(ctx)
-
-	if !s.publishJobURLCreated(ctx, w, envelope, authStorageKey) {
+	if !s.admitURLJob(ctx, w, job) {
 		return
 	}
 
@@ -350,31 +355,13 @@ func (s *Server) normalizeJobURLSubmitAuth(
 	return authRaw, authStorageKey, true
 }
 
-func (s *Server) publishJobURLCreated(
-	ctx context.Context,
-	w http.ResponseWriter,
-	envelope *events.Envelope,
-	authStorageKey string,
-) bool {
-	if ctxErr := ctx.Err(); ctxErr != nil {
-		s.cleanupUploadedAuthState(authStorageKey)
-
-		if errors.Is(ctxErr, context.DeadlineExceeded) {
-			httputil.RespondError(w, http.StatusServiceUnavailable, "Request timeout")
-		} else {
-			httputil.RespondError(w, http.StatusRequestTimeout, "Request canceled")
+func (s *Server) admitURLJob(ctx context.Context, w http.ResponseWriter, job *models.Job) bool {
+	if err := s.admitJob(ctx, job); err != nil {
+		if !admissionMayBeCommitted(err) {
+			s.cleanupRejectedJob(job.ID)
 		}
 
-		return false
-	}
-
-	if publishErr := s.publishDurableJob(ctx, envelope); publishErr != nil {
-		if !errors.Is(publishErr, status.ErrIntakeUncertain) {
-			s.cleanupUploadedAuthState(authStorageKey)
-		}
-
-		logging.Error(ctx, "Failed to publish job.created event", "error", publishErr)
-		httputil.RespondError(w, http.StatusInternalServerError, "Failed to queue job")
+		s.respondAdmissionError(w, err)
 
 		return false
 	}

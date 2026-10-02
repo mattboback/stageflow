@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/models"
-	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
 
 type fakeJobRuntimeClient struct {
@@ -92,7 +91,7 @@ func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 				return &PodCreateResponse{ID: "pod-abc"}, nil
 			},
 		},
-		PodNetnsMode:    appjobs.PodNetnsModeBridge,
+		PodNetnsMode:    PodNetnsModeBridge,
 		PodNetwork:      "job-network",
 		PodHostMappings: []string{"app.local:169.254.1.2"},
 	})
@@ -118,8 +117,8 @@ func TestJobRuntimeCreateJobPodBuildsPodmanRequest(t *testing.T) {
 		t.Fatalf("unexpected labels: %#v", gotReq.Labels)
 	}
 
-	if gotReq.Netns.Nsmode != appjobs.PodNetnsModeBridge {
-		t.Fatalf("netns mode = %q, want %q", gotReq.Netns.Nsmode, appjobs.PodNetnsModeBridge)
+	if gotReq.Netns.Nsmode != PodNetnsModeBridge {
+		t.Fatalf("netns mode = %q, want %q", gotReq.Netns.Nsmode, PodNetnsModeBridge)
 	}
 
 	if !reflect.DeepEqual(gotReq.Networks, map[string]PerNetworkOptions{"job-network": {}}) {
@@ -164,9 +163,8 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 				return nil
 			},
 		},
-		PodNetnsMode:    appjobs.PodNetnsModeHost,
+		PodNetnsMode:    PodNetnsModeHost,
 		ExtractionImage: "extractor:latest",
-		NatsHost:        "nats.internal",
 	})
 
 	result, err := runtime.StartExtractionWorker(context.Background(), &models.Job{
@@ -207,10 +205,6 @@ func TestJobRuntimeStartExtractionWorkerCreatesMissingWorkspaceVolumeAfterInspec
 
 	if gotReq.Pod != "pod-1" {
 		t.Fatalf("container pod = %q", gotReq.Pod)
-	}
-
-	if gotReq.Env["NATS_URL"] != appjobs.HostNetnsNATSURL {
-		t.Fatalf("NATS_URL = %q, want %q", gotReq.Env["NATS_URL"], appjobs.HostNetnsNATSURL)
 	}
 
 	assertExtractorMountContract(t, gotReq)
@@ -256,7 +250,6 @@ func TestJobRuntimeStartExtractionWorkerUsesExistingWorkspaceVolumeWhenInspectSu
 			},
 		},
 		ExtractionImage: "extractor:latest",
-		NatsHost:        "nats.internal",
 	})
 
 	result, err := runtime.StartExtractionWorker(context.Background(), &models.Job{
@@ -329,17 +322,17 @@ func TestJobRuntimeStartScannerPreparesVolumeMounts(t *testing.T) {
 		},
 	})
 
-	plan := &appjobs.ScannerLaunchPlan{
+	plan := &ScannerLaunchPlan{
 		Name:   "scanner-axe-job-123",
 		Image:  "scanner:latest",
 		User:   "0",
 		Env:    map[string]string{"SCAN_URLS": `["https://example.com"]`},
 		Labels: map[string]string{"scanner_type": "axe", "component": "scanner"},
-		Volumes: []appjobs.VolumeRequirement{
+		Volumes: []VolumeRequirement{
 			{Name: "stageflow_data", Destination: "/workspace", ReadOnly: true},
 			{Name: "results-job-123", Destination: "/results"},
 		},
-		ResourceLimits: appjobs.ResourceLimits{MemoryLimitMB: 512, MemorySwapMB: 512},
+		ResourceLimits: ScannerResourceLimits{MemoryLimitMB: 512, MemorySwapMB: 512},
 	}
 
 	result, err := runtime.StartScanner(context.Background(), &models.Job{ID: "job-123", PodID: "pod-1"}, plan)
@@ -431,7 +424,7 @@ func TestJobRuntimeStartScannerAdoptsDeterministicExistingContainer(t *testing.T
 	})
 
 	job := &models.Job{ID: "job-restart", PodID: "pod-restart"}
-	plan := &appjobs.ScannerLaunchPlan{
+	plan := &ScannerLaunchPlan{
 		Name:  "scanner-axe-job-restart",
 		Image: "scanner:latest",
 		Labels: map[string]string{
@@ -480,7 +473,7 @@ func TestJobRuntimeStartScannerRejectsContainerWithWrongOwnershipLabels(t *testi
 	})
 
 	job := &models.Job{ID: "job-restart", PodID: "pod-restart"}
-	plan := &appjobs.ScannerLaunchPlan{
+	plan := &ScannerLaunchPlan{
 		Name:  "scanner-axe-job-restart",
 		Image: "scanner:latest",
 		Labels: map[string]string{
@@ -527,7 +520,7 @@ func TestJobRuntimeStartScannerDoesNotRestartExitedContainer(t *testing.T) {
 	})
 
 	job := &models.Job{ID: "job-restart", PodID: "pod-restart"}
-	plan := &appjobs.ScannerLaunchPlan{
+	plan := &ScannerLaunchPlan{
 		Name:  "scanner-axe-job-restart",
 		Image: "scanner:latest",
 		Labels: map[string]string{
@@ -684,8 +677,8 @@ func TestCreateJobPodDoesNotInspectOnTheHappyPath(t *testing.T) {
 		},
 	})
 
-	if _, err := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"}); err != nil {
-		t.Fatalf("CreateJobPod error: %v", err)
+	if _, checkErr1 := runtime.CreateJobPod(context.Background(), &models.Job{ID: "job-123"}); checkErr1 != nil {
+		t.Fatalf("CreateJobPod error: %v", checkErr1)
 	}
 
 	if inspected != 0 {

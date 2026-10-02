@@ -22,14 +22,6 @@ func setupTestDB(t *testing.T) *Database {
 	return db
 }
 
-func setupTestDBFile(t *testing.T) *Database {
-	t.Helper()
-
-	db := setupIsolatedTestDB(t)
-
-	return db
-}
-
 func setupIsolatedTestDB(t *testing.T) *Database {
 	t.Helper()
 
@@ -79,7 +71,17 @@ func quoteIdentifier(identifier string) string {
 func mustCreateJob(t *testing.T, db *Database, job *models.Job) {
 	t.Helper()
 
-	if err := db.CreateJob(context.Background(), job); err != nil {
+	tx, err := db.db.BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	if err = insertJob(context.Background(), tx, job); err != nil {
 		t.Fatalf("Failed to create job: %v", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
 	}
 }

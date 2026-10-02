@@ -58,14 +58,6 @@ const createMockContext = (overrides: Partial<ScanContext> = {}): ScanContext =>
 			deviceScaleFactor: 1,
 			defaultTimeout: 30000,
 			pageLoadTimeout: 30000
-		},
-		messaging: {
-			url: 'nats://localhost:4222',
-			subjects: {
-				pageCompleted: 'scan.page.completed',
-				scanCompleted: 'scan.completed',
-				scanFailed: 'scan.failed'
-			}
 		}
 	};
 

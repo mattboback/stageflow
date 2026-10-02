@@ -12,7 +12,6 @@ import (
 type Config struct {
 	DataVolume                  string
 	DataDir                     string
-	NATS                        config.NATSConfig
 	PodmanSocket                string
 	PodmanRequestTimeout        time.Duration
 	PodmanResponseHeaderTimeout time.Duration
@@ -25,13 +24,10 @@ type Config struct {
 	PodNetwork                  string
 	PodNetnsMode                string   // Pod network namespace mode (bridge|host). Host mode is local-only.
 	PodHostMappings             []string // Custom host:ip mappings for pods (e.g., "mysite.com:169.254.1.2")
-	NatsHost                    string
 	PageLoadTimeout             int
 }
 
 func loadConfig() *Config {
-	natsCfg := config.LoadNATSConfig()
-
 	scannerImageEnv := strings.TrimSpace(config.GetEnv("SCANNER_IMAGE", ""))
 
 	scannerImage := scannerImageEnv
@@ -57,7 +53,6 @@ func loadConfig() *Config {
 	return &Config{
 		DataVolume:                  config.GetEnv("STAGEFLOW_DATA_VOLUME", "stageflow_data"),
 		DataDir:                     config.GetEnv("STAGEFLOW_DATA_DIR", "/data"),
-		NATS:                        natsCfg,
 		PodmanSocket:                config.GetEnv("PODMAN_SOCKET", "/run/podman/podman.sock"),
 		PodmanRequestTimeout:        config.MustGetEnvDuration("PODMAN_REQUEST_TIMEOUT", 120*time.Second),
 		PodmanResponseHeaderTimeout: config.MustGetEnvDuration("PODMAN_RESPONSE_HEADER_TIMEOUT", 60*time.Second),
@@ -70,7 +65,6 @@ func loadConfig() *Config {
 		PodNetwork:                  config.GetEnv("POD_NETWORK", ""),
 		PodNetnsMode:                config.GetEnv("POD_NETNS_MODE", "bridge"),
 		PodHostMappings:             podHostMappings,
-		NatsHost:                    config.GetEnv("NATS_HOST", "nats"),
 		PageLoadTimeout:             config.GetEnvInt("PAGE_LOAD_TIMEOUT", 15000),
 	}
 }
@@ -78,12 +72,10 @@ func loadConfig() *Config {
 // Validate ensures required configuration is present before startup.
 func (c *Config) Validate() error {
 	errs := []error{
-		config.RequireNonEmpty("NATS_URL", c.NATS.URL),
 		config.RequireNonEmpty("PODMAN_SOCKET", c.PodmanSocket),
 		config.RequireNonEmpty("DATABASE_URL", c.DatabaseURL),
 		config.RequireNonEmpty("EXTRACTION_IMAGE", c.ExtractionImage),
 		config.RequireNonEmpty("API_PORT", c.APIPort),
-		config.RequireNonEmpty("NATS_HOST", c.NatsHost),
 	}
 
 	podNetnsMode := strings.TrimSpace(c.PodNetnsMode)

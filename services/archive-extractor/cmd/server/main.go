@@ -12,8 +12,6 @@ import (
 	"syscall"
 
 	"github.com/mattboback/stageflow/libs/go/config"
-	"github.com/mattboback/stageflow/libs/go/events"
-	sharedmsg "github.com/mattboback/stageflow/libs/go/messaging"
 	"github.com/mattboback/stageflow/services/archive-extractor/internal/discovery"
 	"github.com/mattboback/stageflow/services/archive-extractor/internal/extractor"
 	"github.com/mattboback/stageflow/services/archive-extractor/internal/provenance"
@@ -22,7 +20,6 @@ import (
 
 type Config struct {
 	JobID, InputPath, SiteDir, ProvenancePath, Port string
-	NATS                                            config.NATSConfig
 }
 
 func loadConfig() *Config {
@@ -35,7 +32,6 @@ func loadConfig() *Config {
 		),
 		ProvenancePath: config.GetEnv("PROVENANCE_PATH", "/provenance/provenance.json"),
 		Port:           config.GetEnv("PORT", "8080"),
-		NATS:           config.LoadNATSConfig(),
 	}
 }
 func (c *Config) Validate() error {
@@ -71,30 +67,8 @@ func run() int {
 	return 0
 }
 func runExtraction(ctx context.Context, cfg *Config) (runErr error) {
-	client, err := sharedmsg.NewClient(&cfg.NATS)
-	if err != nil {
+	if err := extractor.NewExtractor().Extract(ctx, cfg.InputPath, cfg.SiteDir); err != nil {
 		return err
-	}
-	defer func() { _ = client.Close() }()
-	defer func() {
-		if runErr != nil {
-			payload := &events.ExtractionFailedPayload{
-				JobID:        cfg.JobID,
-				Error:        "extraction failed",
-				ErrorDetails: runErr.Error(),
-			}
-			if publishErr := client.PublishEvent(
-				context.Background(),
-				sharedmsg.SubjectExtractionFailed,
-				events.NewEnvelope(events.EventExtractionFailed, cfg.JobID, "extractor", payload),
-			); publishErr != nil {
-				slog.Warn("Publish extraction failure", "error", publishErr)
-			}
-		}
-	}()
-
-	if extractErr := extractor.NewExtractor().Extract(ctx, cfg.InputPath, cfg.SiteDir); extractErr != nil {
-		return extractErr
 	}
 
 	pages, err := discovery.DiscoverHTML(cfg.SiteDir)
@@ -115,24 +89,9 @@ func runExtraction(ctx context.Context, cfg *Config) (runErr error) {
 
 	baseURL := "http://" + siteServer.ListenerAddr()
 
-	prov, err := provenance.NewGenerator().Generate(cfg.JobID, baseURL, pages, cfg.ProvenancePath)
+	_, err = provenance.NewGenerator().Generate(cfg.JobID, baseURL, pages, cfg.ProvenancePath)
 	if err != nil {
 		return err
-	}
-
-	payload := &events.ExtractionReadyPayload{
-		JobID:                  cfg.JobID,
-		ProvenancePath:         cfg.ProvenancePath,
-		BaseURL:                baseURL,
-		TotalPages:             len(prov.Pages),
-		ProvenanceArtifactPath: cfg.JobID + "/provenance.json",
-	}
-	if publishErr := client.PublishEvent(
-		ctx,
-		sharedmsg.SubjectExtractionReady,
-		events.NewEnvelope(events.EventExtractionReady, cfg.JobID, "extractor", payload),
-	); publishErr != nil {
-		return publishErr
 	}
 
 	return waitForServer(ctx, siteServer)

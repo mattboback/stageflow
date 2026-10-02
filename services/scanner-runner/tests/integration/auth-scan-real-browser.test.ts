@@ -15,7 +15,7 @@
  *     is the post-login URL, not /login.
  *   - The redaction grep extends across stored Provenance, the
  *     synthesized unified report, the scan stage log, captured stage
- *     uploads, captured NATS payloads, and audit events: no canary
+ *     uploads, captured completion payloads, and audit events: no canary
  *     credential value (USER, PASSWORD, or session cookie value)
  *     appears anywhere in any of them.
  *
@@ -264,10 +264,6 @@ function makeConfig(jobId: string, resultsDir: string): ScannerConfig {
 			deviceScaleFactor: 1,
 			defaultTimeout: 30_000,
 			pageLoadTimeout: 30_000
-		},
-		messaging: {
-			url: '',
-			subjects: { pageCompleted: 'a', scanCompleted: 'b', scanFailed: 'c' }
 		}
 	};
 }
@@ -790,7 +786,7 @@ describe('Authenticated scan, real browser end-to-end', () => {
  * Assert no canary credential value (USER, PASSWORD, session cookie value)
  * appears in any surface the scanner-runner persists or publishes during the
  * run: stored Provenance, scan recipe, scan stage log, captured stage
- * uploads, captured NATS payloads (page-completed, scan-completed,
+ * uploads, captured completion payloads (page-completed, scan-completed,
  * scan-failed), the synthesized unified report aggregate, and the audit
  * event stream the iterator emits.
  *
@@ -808,14 +804,17 @@ async function assertNoCanariesAcrossSurfaces(run: PipelineRun): Promise<void> {
 	}
 
 	assertNoCanaryLeak(
-		'NATS publishPageCompleted payloads',
+		'Completion publishPageCompleted payloads',
 		JSON.stringify(run.publisher.pageCompleted)
 	);
 	assertNoCanaryLeak(
-		'NATS publishScanCompleted payloads (unified report aggregate)',
+		'Completion publishScanCompleted payloads (unified report aggregate)',
 		JSON.stringify(run.publisher.scanCompleted)
 	);
-	assertNoCanaryLeak('NATS publishScanFailed payloads', JSON.stringify(run.publisher.scanFailed));
+	assertNoCanaryLeak(
+		'Completion publishScanFailed payloads',
+		JSON.stringify(run.publisher.scanFailed)
+	);
 	assertNoCanaryLeak('PageIterator audit events', JSON.stringify(run.auditEvents));
 	assertNoCanaryLeak('axe violation captures', JSON.stringify(run.axeViolations));
 }

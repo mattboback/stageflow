@@ -23,7 +23,6 @@
 		"playwright",
 		"quality-gate",
 		"lighthouse",
-		"nats",
 		"seo",
 		"react-router",
 		"monorepo"

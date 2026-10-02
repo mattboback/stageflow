@@ -7,11 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/mattboback/stageflow/libs/go/logging"
 	"github.com/mattboback/stageflow/libs/go/models"
 	scanners "github.com/mattboback/stageflow/libs/go/scannerregistry"
-	appjobs "github.com/mattboback/stageflow/services/orchestrator/internal/application/jobs"
 )
 
 type jobRuntimeClient interface {
@@ -34,7 +34,6 @@ type JobRuntimeConfig struct {
 	PodNetwork      string
 	PodNetnsMode    string
 	PodHostMappings []string
-	NatsHost        string
 }
 
 type JobRuntime struct {
@@ -47,7 +46,6 @@ type JobRuntime struct {
 	podNetwork      string
 	podNetnsMode    string
 	podHostMappings []string
-	natsHost        string
 }
 
 type ContainerLaunchResult struct {
@@ -59,12 +57,7 @@ type ContainerLaunchResult struct {
 func NewJobRuntime(config JobRuntimeConfig) *JobRuntime {
 	podNetnsMode := config.PodNetnsMode
 	if podNetnsMode == "" {
-		podNetnsMode = appjobs.PodNetnsModeBridge
-	}
-
-	natsHost := config.NatsHost
-	if natsHost == "" {
-		natsHost = "nats"
+		podNetnsMode = PodNetnsModeBridge
 	}
 
 	if config.DataDir == "" {
@@ -80,28 +73,27 @@ func NewJobRuntime(config JobRuntimeConfig) *JobRuntime {
 	}
 
 	return &JobRuntime{
-		dataVolume:      config.DataVolume,
-		directoryOwner:  config.DirectoryOwner,
 		client:          config.Client,
+		directoryOwner:  config.DirectoryOwner,
+		dataDir:         config.DataDir,
+		dataVolume:      config.DataVolume,
 		scannerRegistry: config.ScannerRegistry,
 		extractionImage: config.ExtractionImage,
 		podNetwork:      config.PodNetwork,
 		podNetnsMode:    podNetnsMode,
-		podHostMappings: append([]string(nil), config.PodHostMappings...),
-		natsHost:        natsHost,
-		dataDir:         config.DataDir,
+		podHostMappings: config.PodHostMappings,
 	}
 }
 func (r *JobRuntime) PodNetnsMode() string {
 	if r == nil {
-		return appjobs.PodNetnsModeBridge
+		return PodNetnsModeBridge
 	}
 
 	return r.podNetnsMode
 }
 
 func (r *JobRuntime) AllowsLoopbackTargets() bool {
-	return r.PodNetnsMode() == appjobs.PodNetnsModeHost
+	return r.PodNetnsMode() == PodNetnsModeHost
 }
 
 func (r *JobRuntime) ResolveScannerTypes(modules []string) []string {
@@ -134,7 +126,7 @@ func (r *JobRuntime) CreateJobPod(ctx context.Context, job *models.Job) (string,
 		HostAdd: append([]string(nil), r.podHostMappings...),
 	}
 
-	if r.PodNetnsMode() == appjobs.PodNetnsModeBridge && r.podNetwork != "" {
+	if r.PodNetnsMode() == PodNetnsModeBridge && r.podNetwork != "" {
 		podReq.Networks = map[string]PerNetworkOptions{
 			r.podNetwork: {},
 		}
@@ -165,7 +157,7 @@ func (r *JobRuntime) ensurePod(ctx context.Context, req *PodCreateRequest) (stri
 		return "", errors.New("pod name is required")
 	}
 
-	resp, err := r.client.CreatePod(ctx, req)
+	resp, err := retryPodCreate(ctx, r.client, req)
 	if err == nil {
 		if resp == nil || resp.ID == "" {
 			return "", errors.New("created pod has no ID")
@@ -251,7 +243,7 @@ func (r *JobRuntime) StartExtractionWorker(
 		},
 	}
 
-	return r.createAndStartContainer(
+	return r.ensureContainerStarted(
 		ctx,
 		req,
 		"failed to create extraction worker container",
@@ -274,7 +266,7 @@ func (r *JobRuntime) ensureContainerStarted(
 		return nil, fmt.Errorf("failed to inspect existing container %s: %w", req.Name, inspectErr)
 	}
 
-	containerResp, err := r.client.CreateContainer(ctx, req)
+	containerResp, err := retryContainerCreate(ctx, r.client, req)
 	if err == nil {
 		if containerResp == nil || containerResp.ID == "" {
 			return nil, errors.New("created container has no ID")
@@ -325,16 +317,16 @@ func (r *JobRuntime) startExistingContainer(
 
 	result := &ContainerLaunchResult{ContainerID: container.ID, Existing: true}
 	if isTerminalContainerState(container) {
-		// A scanner may have finished and published its durable NATS event just
+		// A scanner may have finished and written its durable outcome just
 		// before the orchestrator exited. Reattach the monitor, but never rerun
 		// the completed container and emit duplicate scan events.
 		return result, nil
 	}
 
-	if err := r.client.StartContainer(ctx, container.ID); err != nil {
+	if checkErr1 := r.client.StartContainer(ctx, container.ID); checkErr1 != nil {
 		refreshed, inspectErr := r.client.InspectContainer(ctx, container.ID)
 		if inspectErr != nil || refreshed.State != ContainerState("running") {
-			return result, fmt.Errorf("%s: %w", startErrMessage, err)
+			return result, fmt.Errorf("%s: %w", startErrMessage, checkErr1)
 		}
 	}
 
@@ -359,10 +351,10 @@ func (r *JobRuntime) startCreatedContainer(
 	containerID, startErrMessage string,
 ) (*ContainerLaunchResult, error) {
 	result := &ContainerLaunchResult{ContainerID: containerID}
-	if err := r.client.StartContainer(ctx, containerID); err != nil {
+	if checkErr2 := r.client.StartContainer(ctx, containerID); checkErr2 != nil {
 		container, inspectErr := r.client.InspectContainer(ctx, containerID)
 		if inspectErr != nil || container.State != ContainerState("running") {
-			return result, fmt.Errorf("%s: %w", startErrMessage, err)
+			return result, fmt.Errorf("%s: %w", startErrMessage, checkErr2)
 		}
 	}
 
@@ -374,7 +366,7 @@ func (r *JobRuntime) startCreatedContainer(
 func (r *JobRuntime) StartScanner(
 	ctx context.Context,
 	job *models.Job,
-	plan *appjobs.ScannerLaunchPlan,
+	plan *ScannerLaunchPlan,
 ) (*ContainerLaunchResult, error) {
 	if job == nil {
 		return nil, errors.New("job is nil")
@@ -391,8 +383,8 @@ func (r *JobRuntime) StartScanner(
 		return nil, err
 	}
 
-	if provenanceErr := r.publishURLProvenance(ctx, job); provenanceErr != nil {
-		return nil, provenanceErr
+	if checkErr3 := r.publishURLProvenance(ctx, job); checkErr3 != nil {
+		return nil, checkErr3
 	}
 
 	mounts, err := r.resolveVolumeMounts(ctx, plan.Volumes)
@@ -400,7 +392,7 @@ func (r *JobRuntime) StartScanner(
 		return nil, err
 	}
 
-	if _, statErr := os.Stat(filepath.Join(r.dataDir, "jobs", job.ID, "auth.json")); statErr == nil {
+	if _, checkErr4 := os.Stat(filepath.Join(r.dataDir, "jobs", job.ID, "auth.json")); checkErr4 == nil {
 		mounts = append(
 			mounts,
 			VolumeMount{
@@ -435,14 +427,12 @@ func (r *JobRuntime) StartScanner(
 }
 
 func (r *JobRuntime) extractionEnv(ctx context.Context, job *models.Job) map[string]string {
-	natsURL := r.serviceEndpoints()
 	env := map[string]string{
 		"JOB_ID":          job.ID,
 		"INPUT_PATH":      "/job/input.zip",
 		"SITE_DIR":        "/site/content",
 		"PROVENANCE_PATH": "/provenance/provenance.json",
 		"HOME":            "/tmp",
-		"NATS_URL":        natsURL,
 
 		"PORT": "8080",
 	}
@@ -458,14 +448,6 @@ func (r *JobRuntime) extractionEnv(ctx context.Context, job *models.Job) map[str
 	return env
 }
 
-func (r *JobRuntime) serviceEndpoints() string {
-	if r.PodNetnsMode() == appjobs.PodNetnsModeHost {
-		return appjobs.HostNetnsNATSURL
-	}
-
-	return "nats://" + r.natsHost + ":4222"
-}
-
 func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error) {
 	volume, err := r.ensureVolume(ctx, r.dataVolume)
 	if err != nil {
@@ -474,12 +456,12 @@ func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error
 
 	for _, name := range []string{"", "site", ".provenance", "axe", "lighthouse", "link-checker", "security-headers", "seo"} {
 		dir := filepath.Join(r.dataDir, "jobs", jobID, name)
-		if mkdirErr := os.MkdirAll(dir, 0o700); mkdirErr != nil {
-			return "", mkdirErr
+		if checkErr5 := os.MkdirAll(dir, 0o700); checkErr5 != nil {
+			return "", checkErr5
 		}
 
-		if ownershipErr := r.directoryOwner(dir); ownershipErr != nil {
-			return "", ownershipErr
+		if checkErr6 := r.directoryOwner(dir); checkErr6 != nil {
+			return "", checkErr6
 		}
 	}
 
@@ -487,12 +469,12 @@ func (r *JobRuntime) jobSource(ctx context.Context, jobID string) (string, error
 }
 
 func (r *JobRuntime) ensureVolume(ctx context.Context, name string) (*VolumeInfo, error) {
-	if info, err := r.client.InspectVolume(ctx, name); err == nil {
+	if info, checkErr7 := r.client.InspectVolume(ctx, name); checkErr7 == nil {
 		return info, nil
 	}
 
-	if err := r.client.CreateVolume(ctx, name); err != nil {
-		return nil, err
+	if checkErr8 := r.client.CreateVolume(ctx, name); checkErr8 != nil {
+		return nil, checkErr8
 	}
 
 	return r.client.InspectVolume(ctx, name)
@@ -500,7 +482,7 @@ func (r *JobRuntime) ensureVolume(ctx context.Context, name string) (*VolumeInfo
 
 func (r *JobRuntime) resolveVolumeMounts(
 	ctx context.Context,
-	volumes []appjobs.VolumeRequirement,
+	volumes []VolumeRequirement,
 ) ([]VolumeMount, error) {
 	mounts := make([]VolumeMount, 0, len(volumes))
 
@@ -521,22 +503,61 @@ func (r *JobRuntime) resolveVolumeMounts(
 	return mounts, nil
 }
 
-func (r *JobRuntime) createAndStartContainer(
+// Create retries are bounded within one persisted launch attempt. Deterministic
+// names and the existing inspect fallback recover a lost response safely.
+func retryPodCreate(ctx context.Context, client jobRuntimeClient, req *PodCreateRequest) (*PodCreateResponse, error) {
+	var (
+		response *PodCreateResponse
+		err      error
+	)
+	for attempt := range 3 {
+		response, err = client.CreatePod(ctx, req)
+		if err == nil || isAPIStatus(err, 409) {
+			return response, err
+		}
+
+		if attempt < 2 {
+			if pauseErr := retryPause(ctx, attempt); pauseErr != nil {
+				return nil, pauseErr
+			}
+		}
+	}
+
+	return response, err
+}
+
+func retryContainerCreate(
 	ctx context.Context,
+	client jobRuntimeClient,
 	req *ContainerCreateRequest,
-	createErrMessage, startErrMessage string,
-) (*ContainerLaunchResult, error) {
-	containerResp, err := r.client.CreateContainer(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", createErrMessage, err)
+) (*ContainerCreateResponse, error) {
+	var (
+		response *ContainerCreateResponse
+		err      error
+	)
+	for attempt := range 3 {
+		response, err = client.CreateContainer(ctx, req)
+		if err == nil || isAPIStatus(err, 409) {
+			return response, err
+		}
+
+		if attempt < 2 {
+			if pauseErr := retryPause(ctx, attempt); pauseErr != nil {
+				return nil, pauseErr
+			}
+		}
 	}
 
-	result := &ContainerLaunchResult{ContainerID: containerResp.ID}
-	if startErr := r.client.StartContainer(ctx, containerResp.ID); startErr != nil {
-		return result, fmt.Errorf("%s: %w", startErrMessage, startErr)
+	return response, err
+}
+func retryPause(ctx context.Context, attempt int) error {
+	timer := time.NewTimer(time.Duration(attempt+1) * 100 * time.Millisecond)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
 	}
-
-	result.Started = true
-
-	return result, nil
 }

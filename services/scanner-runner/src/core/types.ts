@@ -152,15 +152,6 @@ export interface BrowserConfig {
 	bypassCSP?: boolean;
 }
 
-export interface MessagingConfig {
-	url: string;
-	subjects: {
-		pageCompleted: string;
-		scanCompleted: string;
-		scanFailed: string;
-	};
-}
-
 export interface ScannerConfig {
 	jobId: string;
 	requestId?: string;
@@ -171,7 +162,6 @@ export interface ScannerConfig {
 	concurrency: number;
 	maxRetries: number;
 	browser: BrowserConfig;
-	messaging: MessagingConfig;
 	options?: Record<string, unknown>;
 }
 

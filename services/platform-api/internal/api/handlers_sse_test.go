@@ -15,9 +15,9 @@ import (
 
 	status "github.com/mattboback/stageflow/internal/jobstore"
 
-	"github.com/mattboback/stageflow/libs/go/events"
 	"github.com/mattboback/stageflow/libs/go/models"
 	jobstatus "github.com/mattboback/stageflow/services/platform-api/tests/statusfixture"
+	"github.com/mattboback/stageflow/services/platform-api/tests/statusfixture/events"
 )
 
 type sseEvent struct {

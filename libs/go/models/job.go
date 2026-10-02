@@ -58,6 +58,13 @@ func (s JobState) IsTerminal() bool {
 
 // Job is the persisted scan job record shared across services and APIs.
 type Job struct {
+	ClaimedAt             *time.Time                `json:"-"`
+	ExtractionStartedAt   *time.Time                `json:"-"`
+	ScanStartedAt         *time.Time                `json:"-"`
+	CleanupPending        bool                      `json:"-"`
+	ScannerAttempts       map[string]int            `json:"-"`
+	ScannerStates         map[string]string         `json:"-"`
+	ScannerContainerIDs   map[string]string         `json:"-"`
 	ID                    string                    `json:"id"`
 	State                 JobState                  `json:"state"`
 	InputType             string                    `json:"input_type"`     // "zip" or "urls"

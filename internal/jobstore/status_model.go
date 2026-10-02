@@ -13,6 +13,8 @@ var ErrJobNotFound = errors.New("job not found")
 
 // JobRecord represents a job status projection.
 type JobRecord struct {
+	CleanupPending        bool
+	ClaimedAt             *time.Time
 	JobID                 string
 	State                 models.JobState
 	InputType             string

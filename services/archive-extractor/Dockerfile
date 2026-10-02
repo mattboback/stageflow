@@ -12,6 +12,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 
 # The packages this service imports. Contract code is committed, not generated here.
 COPY libs/go ./libs/go
+COPY internal/archive ./internal/archive
 COPY services/archive-extractor ./services/archive-extractor
 
 # Build static binary (no CGO needed)

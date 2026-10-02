@@ -1,0 +1,136 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://stageflow.org/contracts/scanner-outcome.schema.json",
+	"title": "Scanner terminal outcome",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"status",
+		"error",
+		"pages_scanned",
+		"summary",
+		"timing"
+	],
+	"properties": {
+		"status": {
+			"enum": [
+				"success",
+				"partial",
+				"failed"
+			]
+		},
+		"error": {
+			"type": "string",
+			"maxLength": 4096
+		},
+		"pages_scanned": {
+			"type": "integer",
+			"minimum": 0
+		},
+		"summary": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"total_violations",
+				"by_severity",
+				"pages_scanned",
+				"critical_issues",
+				"serious_issues",
+				"moderate_issues",
+				"minor_issues"
+			],
+			"properties": {
+				"total_violations": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"pages_scanned": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"critical_issues": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"serious_issues": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"moderate_issues": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"minor_issues": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"by_severity": {
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"critical",
+						"serious",
+						"moderate",
+						"minor",
+						"info"
+					],
+					"properties": {
+						"critical": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"serious": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"moderate": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"minor": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"info": {
+							"type": "integer",
+							"minimum": 0
+						}
+					}
+				}
+			}
+		},
+		"timing": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"total_ms",
+				"page_iteration_ms",
+				"write_results_ms",
+				"publish_completed_ms",
+				"finalization_ms"
+			],
+			"properties": {
+				"total_ms": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"page_iteration_ms": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"write_results_ms": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"publish_completed_ms": {
+					"type": "integer",
+					"minimum": 0
+				},
+				"finalization_ms": {
+					"type": "integer",
+					"minimum": 0
+				}
+			}
+		}
+	}
+}

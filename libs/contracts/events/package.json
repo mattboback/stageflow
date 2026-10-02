@@ -6,7 +6,7 @@
 	"engines": {
 		"node": "24.x"
 	},
-	"description": "StageFlow event contract schemas and fixtures",
+	"description": "StageFlow scanner outcome contract schema and fixture",
 	"scripts": {
 		"validate:fixtures": "node schema/validate.mjs"
 	},
