@@ -62,9 +62,15 @@ func (s *Server) admitJob(ctx context.Context, job *models.Job) error {
 	return nil
 }
 
+// queueFullMessage is what a caller sees when every waiting slot is taken.
+const queueFullMessage = "StageFlow is busy: the scan queue is full. Retry in 30 seconds."
+
 func (s *Server) respondAdmissionError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, jobstore.ErrQueueFull), errors.Is(err, artifacts.ErrLowDisk):
+	case errors.Is(err, jobstore.ErrQueueFull):
+		w.Header().Set("Retry-After", "30")
+		httputil.RespondError(w, http.StatusServiceUnavailable, queueFullMessage)
+	case errors.Is(err, artifacts.ErrLowDisk):
 		w.Header().Set("Retry-After", "30")
 		httputil.RespondError(
 			w,

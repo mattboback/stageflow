@@ -32,6 +32,8 @@ type JobRecord struct {
 	CompletedScanners []string
 	ScannerStatuses   map[string]models.ScannerStatus
 	ScannerArtifacts  map[string]*ScannerArtifactRecord // Per-scanner artifact keys
+	// QueuePosition counts the jobs that start first; nil once the job is claimed.
+	QueuePosition *int
 }
 
 // ScannerArtifactRecord holds Job-scoped file paths for a single scanner's artifacts.
@@ -55,6 +57,11 @@ func (r *JobRecord) ToModel() *models.JobStatus {
 		ScannerStatuses:   r.ScannerStatuses,
 		CreatedAt:         r.CreatedAt,
 		UpdatedAt:         r.UpdatedAt,
+	}
+
+	if r.QueuePosition != nil {
+		position := *r.QueuePosition
+		job.QueuePosition = &position
 	}
 
 	if r.TotalPages > 0 {

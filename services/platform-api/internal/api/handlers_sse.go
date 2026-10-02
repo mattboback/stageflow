@@ -204,6 +204,12 @@ func snapshotUpdates(previous, next *jobstore.JobRecord, readySent *bool) []map[
 		updates = append(updates, map[string]any{"type": "status", "state": next.State})
 	}
 
+	if queueMoved(previous, next) {
+		updates = append(updates, map[string]any{
+			"type": "queue", "state": next.State, "queue_position": *next.QueuePosition,
+		})
+	}
+
 	names := append([]string(nil), next.ExpectedScanners...)
 	sort.Strings(names)
 
@@ -237,6 +243,16 @@ func snapshotUpdates(previous, next *jobstore.JobRecord, readySent *bool) []map[
 	}
 
 	return updates
+}
+
+// queueMoved reports a waiting job's new place in the queue. A claimed job has
+// no position; its state change already tells the client it left the queue.
+func queueMoved(previous, next *jobstore.JobRecord) bool {
+	if next.State != models.JobStatePending || next.QueuePosition == nil {
+		return false
+	}
+
+	return previous.QueuePosition == nil || *previous.QueuePosition != *next.QueuePosition
 }
 
 func (s *Server) handleJobStream(w http.ResponseWriter, r *http.Request) {
@@ -351,7 +367,11 @@ func (s *Server) streamSnapshotUpdates(
 ) {
 	readySent := false
 
-	empty := &jobstore.JobRecord{State: rec.State, ScannerStatuses: rec.ScannerStatuses}
+	// The status event already carried the state, scanner statuses and queue
+	// position; replay only what it could not express as updates.
+	empty := &jobstore.JobRecord{
+		State: rec.State, ScannerStatuses: rec.ScannerStatuses, QueuePosition: rec.QueuePosition,
+	}
 	if !s.sendSnapshotUpdates(ctx, w, flusher, snapshotUpdates(empty, rec, &readySent)) {
 		return
 	}

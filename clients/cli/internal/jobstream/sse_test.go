@@ -209,3 +209,28 @@ func TestStatusRemainingScannersIsAuthoritative(t *testing.T) {
 		t.Fatalf("empty remaining_scanners must not be inferred from expected scanners: %q", out.String())
 	}
 }
+
+func TestQueuePositionPrintsOncePerChange(t *testing.T) {
+	t.Parallel()
+
+	state := newStreamState()
+	out := &bytes.Buffer{}
+
+	events := []struct{ kind, payload string }{
+		{"status", `{"id":"job-1","state":"PENDING","queue_position":2}`},
+		{"update", `{"type":"queue","state":"PENDING","queue_position":2}`},
+		{"update", `{"type":"queue","state":"PENDING","queue_position":1}`},
+		{"update", `{"type":"queue","state":"PENDING","queue_position":0}`},
+		{"update", `{"type":"status","state":"EXTRACTING"}`},
+	}
+	for _, event := range events {
+		if _, err := handleSSEEvent(event.kind, event.payload, out, state); err != nil {
+			t.Fatalf("handle %s: %v", event.kind, err)
+		}
+	}
+
+	want := "state: PENDING\nqueue: 2 ahead\nqueue: 1 ahead\nqueue: next in line\nstate: EXTRACTING\n"
+	if got := out.String(); got != want {
+		t.Fatalf("output = %q, want %q", got, want)
+	}
+}

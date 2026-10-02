@@ -17,7 +17,17 @@ func (r StatusReader) GetJob(ctx context.Context, id string) (*JobRecord, error)
 		return nil, err
 	}
 
-	return Snapshot(job), nil
+	record := Snapshot(job)
+	if job.State == models.JobStatePending && job.ClaimedAt == nil {
+		ahead, queueErr := r.Database.jobsAhead(ctx, id)
+		if queueErr != nil {
+			return nil, queueErr
+		}
+
+		record.QueuePosition = &ahead
+	}
+
+	return record, nil
 }
 
 // Snapshot is pure: each reader projects the same consistent jobs and scanner snapshot.

@@ -119,3 +119,33 @@ describe('deleteScanJob', () => {
 		await expect(deleteScanJob('job-running')).rejects.toThrow(/still running/i);
 	});
 });
+
+describe('full scan queue', () => {
+	it('shows the server message for a full queue', async () => {
+		vi.stubGlobal('fetch', () =>
+			Promise.resolve(
+				new Response(
+					JSON.stringify({
+						error: {
+							code: 'SERVICE_UNAVAILABLE',
+							message: 'StageFlow is busy: the scan queue is full.'
+						}
+					}),
+					{ status: 503, headers: { 'Content-Type': 'application/json', 'Retry-After': '30' } }
+				)
+			)
+		);
+
+		await expect(submitScanJob(baseParams)).rejects.toThrow(
+			'StageFlow is busy: the scan queue is full.'
+		);
+	});
+
+	it('still says the service is busy when a proxy answers 503 without a body', async () => {
+		vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 503 })));
+
+		await expect(submitScanJob(baseParams)).rejects.toThrow(
+			'StageFlow is busy. Try again in 30 seconds.'
+		);
+	});
+});

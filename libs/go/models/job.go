@@ -137,6 +137,7 @@ type JobConfig struct {
 type JobStatus struct {
 	ID                string                   `json:"id"`
 	State             JobState                 `json:"state"`
+	QueuePosition     *int                     `json:"queue_position,omitempty"` // jobs starting first; none once claimed
 	Progress          *JobProgress             `json:"progress,omitempty"`
 	Artifacts         *ArtifactLocation        `json:"artifacts,omitempty"`
 	Error             string                   `json:"error,omitempty"`

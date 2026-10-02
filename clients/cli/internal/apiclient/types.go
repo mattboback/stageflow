@@ -60,6 +60,7 @@ const (
 type JobStatus struct {
 	ID                string          `json:"id"`
 	State             string          `json:"state"`
+	QueuePosition     *int            `json:"queue_position,omitempty"` // jobs starting first; none once claimed
 	Error             string          `json:"error,omitempty"`
 	Progress          *JobProgress    `json:"progress,omitempty"`
 	ExpectedScanners  []string        `json:"expected_scanners,omitempty"`

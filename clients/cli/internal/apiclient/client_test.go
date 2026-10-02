@@ -113,6 +113,26 @@ func TestClientErrorBodies(t *testing.T) {
 	}
 }
 
+func TestClientShowsTheAPIErrorMessage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Retry-After", "30")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"error":{"code":"SERVICE_UNAVAILABLE",` +
+			`"message":"StageFlow is busy: the scan queue is full. Retry in 30 seconds."}}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "", server.Client())
+
+	err := client.PostJSON(context.Background(), "/api/v1/jobs/urls", map[string]any{}, &struct{}{})
+
+	want := "API request failed with status 503: StageFlow is busy: the scan queue is full. Retry in 30 seconds."
+	if err == nil || err.Error() != want {
+		t.Fatalf("PostJSON() err = %v, want %q", err, want)
+	}
+}
+
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {

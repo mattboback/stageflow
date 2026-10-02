@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	jobStateDone   = "DONE"
-	jobStateFailed = "FAILED"
+	jobStatePending = "PENDING"
+	jobStateDone    = "DONE"
+	jobStateFailed  = "FAILED"
 )
 
 // scanTiming is the scanner timing in a stream update; the API sends only the total.
@@ -24,24 +25,27 @@ type scanTiming struct {
 }
 
 type jobStreamUpdate struct {
-	Type         string      `json:"type"`
-	State        string      `json:"state"`
-	Event        string      `json:"event,omitempty"` // For printing progress
-	ScannerType  string      `json:"scanner_type,omitempty"`
-	PagesScanned *int        `json:"pages_scanned,omitempty"`
-	Violations   *int        `json:"violations,omitempty"`
-	Timing       *scanTiming `json:"timing,omitempty"`
+	Type          string      `json:"type"`
+	State         string      `json:"state"`
+	QueuePosition *int        `json:"queue_position,omitempty"`
+	Event         string      `json:"event,omitempty"` // For printing progress
+	ScannerType   string      `json:"scanner_type,omitempty"`
+	PagesScanned  *int        `json:"pages_scanned,omitempty"`
+	Violations    *int        `json:"violations,omitempty"`
+	Timing        *scanTiming `json:"timing,omitempty"`
 }
 
 type streamState struct {
 	lastState         string
+	lastQueuePosition int
 	seenCompleted     map[string]struct{}
 	remainingScanners []string
 }
 
 func newStreamState() *streamState {
 	return &streamState{
-		seenCompleted: make(map[string]struct{}),
+		lastQueuePosition: -1,
+		seenCompleted:     make(map[string]struct{}),
 	}
 }
 
@@ -219,6 +223,12 @@ func emitStatusSnapshot(out io.Writer, state *streamState, status *apiclient.Job
 		return false, err
 	}
 
+	if status.State == jobStatePending && status.QueuePosition != nil {
+		if err := emitQueuePosition(out, state, *status.QueuePosition); err != nil {
+			return false, err
+		}
+	}
+
 	return isTerminalState(status.State), nil
 }
 
@@ -231,7 +241,34 @@ func emitUpdateEvent(out io.Writer, state *streamState, update jobStreamUpdate) 
 		}
 	}
 
-	return emitStateTransition(out, state, update.State)
+	if err := emitStateTransition(out, state, update.State); err != nil {
+		return err
+	}
+
+	if update.Type == "queue" && update.QueuePosition != nil {
+		return emitQueuePosition(out, state, *update.QueuePosition)
+	}
+
+	return nil
+}
+
+// emitQueuePosition prints how many jobs start first, once per change.
+func emitQueuePosition(out io.Writer, state *streamState, position int) error {
+	if position == state.lastQueuePosition {
+		return nil
+	}
+
+	state.lastQueuePosition = position
+
+	if position == 0 {
+		_, err := fmt.Fprintln(out, "queue: next in line")
+
+		return err
+	}
+
+	_, err := fmt.Fprintf(out, "queue: %d ahead\n", position)
+
+	return err
 }
 
 func emitStateTransition(out io.Writer, state *streamState, nextState string) error {

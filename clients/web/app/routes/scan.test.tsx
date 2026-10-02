@@ -52,3 +52,39 @@ describe('scanner launch status', () => {
 		expect(channel('Lighthouse').getByText('Running')).toBeTruthy();
 	});
 });
+
+describe('queued scan', () => {
+	function renderQueued(queuePosition: number) {
+		vi.mocked(useScanStatus).mockReturnValue({
+			status: 'pending',
+			result: {
+				id: 'test-scan',
+				state: 'PENDING',
+				queue_position: queuePosition,
+				created_at: '2026-10-02T00:00:00Z',
+				updated_at: '2026-10-02T00:00:00Z',
+				expected_scanners: ['axe', 'lighthouse'],
+				remaining_scanners: ['axe', 'lighthouse']
+			},
+			elapsed: 5,
+			logs: [],
+			transport: 'streaming',
+			error: null,
+			retry: vi.fn()
+		});
+		const Routes = createRoutesStub([{ path: '/scan/:id', Component: Scan }]);
+		render(<Routes initialEntries={['/scan/test-scan']} />);
+	}
+
+	it('says how many scans start first', () => {
+		renderQueued(2);
+		expect(screen.getByText('Queued, 2 ahead')).toBeTruthy();
+		expect(screen.getByRole('heading', { name: 'Waiting in the queue' })).toBeTruthy();
+		expect(screen.getByText('Queued')).toBeTruthy();
+	});
+
+	it('says when the scan is next', () => {
+		renderQueued(0);
+		expect(screen.getByText('Queued, next in line')).toBeTruthy();
+	});
+});

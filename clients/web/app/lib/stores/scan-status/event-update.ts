@@ -16,9 +16,15 @@ export function applySseUpdate(result: ScanResult, update: SSEUpdate): ScanResul
 			})()
 		: result.progress;
 
+	// A position only means something while the job waits; claiming ends it.
+	const { queue_position: previousPosition, ...rest } = result;
+	const queuePosition =
+		update.state === 'PENDING' ? (update.queue_position ?? previousPosition) : undefined;
+
 	return {
-		...result,
+		...rest,
 		state: update.state,
+		...(queuePosition !== undefined ? { queue_position: queuePosition } : {}),
 		...(newProgress !== undefined ? { progress: newProgress } : {}),
 		...(update.type === 'failed' && update.error !== undefined ? { error: update.error } : {}),
 		...(update.error_details !== undefined ? { error_details: update.error_details } : {}),

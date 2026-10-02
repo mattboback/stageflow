@@ -518,3 +518,69 @@ func TestConcurrentTerminalScrubRejectsLateScannerSecrets(t *testing.T) {
 		}
 	}
 }
+
+// A waiting job's position counts every job that starts before it: the running
+// job and the unclaimed jobs ClaimNext takes first.
+func TestQueuePositionCountsJobsThatStartFirst(t *testing.T) {
+	d := setupTestDB(t)
+	reader := StatusReader{Database: d}
+	ctx := context.Background()
+
+	position := func(id string) *int {
+		t.Helper()
+
+		record, err := reader.GetJob(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return record.QueuePosition
+	}
+
+	assertAhead := func(id string, want int) {
+		t.Helper()
+
+		if got := position(id); got == nil || *got != want {
+			t.Fatalf("%s: queue position = %v, want %d", id, got, want)
+		}
+	}
+
+	for _, id := range []string{"queued-a", "queued-b", "queued-c"} {
+		if err := d.AdmitJob(ctx, pendingJob(id)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	assertAhead("queued-a", 0)
+	assertAhead("queued-b", 1)
+	assertAhead("queued-c", 2)
+
+	running, err := d.ClaimNext(ctx)
+	if err != nil || running == nil || running.ID != "queued-a" {
+		t.Fatalf("claim: %#v %v", running, err)
+	}
+
+	if got := position("queued-a"); got != nil {
+		t.Fatalf("claimed job still has a queue position: %d", *got)
+	}
+
+	assertAhead("queued-b", 1)
+	assertAhead("queued-c", 2)
+
+	// A finished job no longer counts, even before its cleanup completes.
+	if err = d.MarkTerminal(ctx, running.ID, models.JobStateFailed, "", 0, "failed", "", "setup"); err != nil {
+		t.Fatal(err)
+	}
+
+	assertAhead("queued-b", 0)
+	assertAhead("queued-c", 1)
+
+	record, err := reader.GetJob(ctx, "queued-c")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if status := record.ToModel(); status.QueuePosition == nil || *status.QueuePosition != 1 {
+		t.Fatalf("status response lost the queue position: %+v", status)
+	}
+}

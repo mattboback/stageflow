@@ -356,3 +356,46 @@ func TestTerminalInitialSnapshotDoesNotReplayReady(t *testing.T) {
 
 	assertHandlerDone(t, done, time.Second)
 }
+
+// The status event carries the position; an update follows only when it moves.
+func TestJobStreamSendsTheQueuePositionOncePerMove(t *testing.T) {
+	server, _, jobs := newTestServer(t)
+	jobs.put(&models.Job{ID: "queued", State: models.JobStatePending, ExpectedScanners: []string{"axe"}})
+	jobs.setQueuePosition("queued", 2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	events, done := startJobStreamContext(ctx, t, server, "queued")
+
+	status := <-events
+	if status.Event != "status" || !strings.Contains(status.Data, `"queue_position":2`) {
+		t.Fatalf("first event = %+v, want the status with queue_position 2", status)
+	}
+
+	jobs.setQueuePosition("queued", 1)
+
+	for {
+		select {
+		case event := <-events:
+			if event.Err != nil {
+				t.Fatalf("stream read error: %v", event.Err)
+			}
+
+			if event.Event != "update" {
+				continue
+			}
+
+			if event.Data != `{"queue_position":1,"state":"PENDING","type":"queue"}` {
+				t.Fatalf("first update = %s, want the move to position 1", event.Data)
+			}
+
+			cancel()
+			assertHandlerDone(t, done, 2*time.Second)
+
+			return
+		case <-time.After(3 * time.Second):
+			t.Fatal("no queue update after the position moved")
+		}
+	}
+}

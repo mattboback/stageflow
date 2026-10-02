@@ -63,6 +63,12 @@ func TestSnapshotUpdatesGolden(t *testing.T) {
 			true,
 		},
 		{
+			"queue_moved",
+			&jobstore.JobRecord{State: models.JobStatePending, QueuePosition: intPointer(2)},
+			&jobstore.JobRecord{State: models.JobStatePending, QueuePosition: intPointer(1)},
+			false,
+		},
+		{
 			"one_scanner_failed",
 			&jobstore.JobRecord{State: models.JobStateScanning},
 			&jobstore.JobRecord{
@@ -137,5 +143,27 @@ func assertSSEPayloadGolden(t *testing.T, name string, payload map[string]any) {
 
 	if !bytes.Equal(got, want) {
 		t.Fatalf("golden mismatch for %s\nwant:\n%s\ngot:\n%s", name, want, got)
+	}
+}
+
+func intPointer(value int) *int { return &value }
+
+func TestQueueUpdatesOnlyWhenAWaitingJobMoves(t *testing.T) {
+	for name, tt := range map[string]struct{ prev, next *jobstore.JobRecord }{
+		"same position": {
+			&jobstore.JobRecord{State: models.JobStatePending, QueuePosition: intPointer(1)},
+			&jobstore.JobRecord{State: models.JobStatePending, QueuePosition: intPointer(1)},
+		},
+		"claimed": {
+			&jobstore.JobRecord{State: models.JobStatePending, QueuePosition: intPointer(0)},
+			&jobstore.JobRecord{State: models.JobStateExtracting},
+		},
+	} {
+		ready := false
+		for _, update := range snapshotUpdates(tt.prev, tt.next, &ready) {
+			if update["type"] == "queue" {
+				t.Errorf("%s: sent %v", name, update)
+			}
+		}
 	}
 }

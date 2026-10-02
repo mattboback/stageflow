@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type Client struct {
@@ -74,7 +75,7 @@ func (c *Client) GetJSON(ctx context.Context, apiPath string, dest any) error {
 			return readErr
 		}
 
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, apiErrorMessage(body))
 	}
 
 	decodeErr := json.NewDecoder(resp.Body).Decode(dest)
@@ -105,7 +106,7 @@ func decodeJSONResponse(resp *http.Response, dest any) error {
 			return err
 		}
 
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, apiErrorMessage(bodyBytes))
 	}
 
 	if dest == nil {
@@ -149,6 +150,23 @@ func (c *Client) SendJSON(ctx context.Context, method, apiPath string, body any,
 
 func (c *Client) PostJSON(ctx context.Context, apiPath string, body any, dest any) error {
 	return c.SendJSON(ctx, http.MethodPost, apiPath, body, dest)
+}
+
+// apiErrorMessage returns the message from the API's {"error": {"message"}}
+// body, so a full queue reads "StageFlow is busy: the scan queue is full..."
+// rather than raw JSON. Any other body is returned as text.
+func apiErrorMessage(body []byte) string {
+	var payload struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+
+	if json.Unmarshal(body, &payload) == nil && payload.Error.Message != "" {
+		return payload.Error.Message
+	}
+
+	return strings.TrimSpace(string(body))
 }
 
 func readResponseBody(reader io.Reader) ([]byte, error) {

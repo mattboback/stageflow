@@ -14,6 +14,7 @@ import { SiteFooter } from '../components/SiteFooter';
 import { Pill } from '../components/Pill';
 import { RouteFault } from '../components/RouteFault';
 import { useScanStatus } from '../lib/hooks/useScanMonitor';
+import { queueLabel } from '../lib/stores/scan-status/log-messages';
 import { IS_HOSTED_DEMO, pageTitle } from '../lib/site-metadata';
 import { scannerLabel } from '../lib/report';
 import scanStyles from './scan.css?url';
@@ -132,6 +133,8 @@ export default function Scan() {
 	   queued rows that all ask "waiting for what?". */
 	const isPreparing =
 		isRunning && channels.length > 0 && channels.every((ch) => ch.state === 'queue');
+	/* Set only while the job waits for a free slot; claiming the job clears it. */
+	const queuePosition = result?.state === 'PENDING' ? result.queue_position : undefined;
 
 	const artifacts = result?.artifacts;
 	const shots = artifacts?.screenshots?.length ?? 0;
@@ -143,6 +146,8 @@ export default function Scan() {
 		<Pill variant="error">Failed</Pill>
 	) : status === 'loading' ? (
 		<Pill variant="queued">Connecting</Pill>
+	) : queuePosition !== undefined ? (
+		<Pill variant="queued">Queued</Pill>
 	) : (
 		<Pill variant="live">Running</Pill>
 	);
@@ -160,7 +165,9 @@ export default function Scan() {
 			? 'Scan complete'
 			: status === 'completing' || (totalCount > 0 && settledCount === totalCount)
 				? 'Finalizing report'
-				: 'Scan in progress';
+				: queuePosition !== undefined
+					? 'Waiting in the queue'
+					: 'Scan in progress';
 
 	return (
 		<>
@@ -272,7 +279,15 @@ export default function Scan() {
 									</span>
 								</div>
 								<div className="panel__body panel__body--flush">
-									{channels.length === 0 ? (
+									{queuePosition !== undefined ? (
+										<div className="ch ch--prep">
+											<span className="ch__led" aria-hidden="true" />
+											<div>
+												<div className="ch__name">{queueLabel(queuePosition)}</div>
+												<div className="ch__sub">Scans run one at a time.</div>
+											</div>
+										</div>
+									) : channels.length === 0 ? (
 										<div className="ch">
 											<span className="ch__led" aria-hidden="true" />
 											<div>

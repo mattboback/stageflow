@@ -404,6 +404,19 @@ func (d *Database) AdmitJob(ctx context.Context, j *models.Job) error {
 	return tx.Commit()
 }
 
+// jobsAhead counts the jobs that start before an unclaimed PENDING job: the
+// running job, if any, and every unclaimed PENDING job ClaimNext takes first.
+func (d *Database) jobsAhead(ctx context.Context, id string) (int, error) {
+	var ahead int
+
+	err := d.db.QueryRowContext(ctx, `SELECT count(*) FROM jobs j, (SELECT created_at, id FROM jobs WHERE id=$1) me
+		WHERE j.id <> me.id AND (
+			(j.state='PENDING' AND j.claimed_at IS NULL AND (j.created_at, j.id) < (me.created_at, me.id))
+			OR (j.claimed_at IS NOT NULL AND j.state NOT IN ('DONE','FAILED')))`, id).Scan(&ahead)
+
+	return ahead, err
+}
+
 //nolint:nilnil // A nil job means the durable queue has no claim available.
 func (d *Database) ClaimNext(ctx context.Context) (*models.Job, error) {
 	tx, err := d.db.BeginTx(ctx, nil)

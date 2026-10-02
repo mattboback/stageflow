@@ -34,6 +34,8 @@ interface ScanArtifacts {
 export interface ScanResult {
 	id: string;
 	state: string;
+	/** Jobs that start before this one; present only while it waits unclaimed. */
+	queue_position?: number;
 	error?: string;
 	error_details?: string;
 	last_stage?: string;

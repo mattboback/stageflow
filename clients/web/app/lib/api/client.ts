@@ -244,6 +244,9 @@ export async function submitScanJob({
 		if (response.status === 422) {
 			throw new Error(serverMessage ?? 'Invalid scanner selection or URL format.');
 		}
+		if (response.status === 503) {
+			throw new Error(serverMessage ?? 'StageFlow is busy. Try again in 30 seconds.');
+		}
 		if (response.status >= 500) {
 			throw new Error(serverMessage ?? 'Server error. Please try again in a moment.');
 		}

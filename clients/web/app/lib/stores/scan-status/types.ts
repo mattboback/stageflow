@@ -1,8 +1,9 @@
 import type { ScannerTiming } from '../../types/scan';
 
 export interface SSEUpdate {
-	type: 'status' | 'progress' | 'scanner_complete' | 'complete' | 'failed';
+	type: 'status' | 'queue' | 'progress' | 'scanner_complete' | 'complete' | 'failed';
 	state: string;
+	queue_position?: number;
 	scanner_type?: string;
 	failed?: boolean;
 	scanner_progress?: { currentPage: number; totalPages: number };

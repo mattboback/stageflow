@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/mattboback/stageflow/internal/artifacts"
@@ -31,7 +32,8 @@ func TestQueueCapacityRejectsAllCallersAndCleansAuthFiles(t *testing.T) {
 			response := httptest.NewRecorder()
 			server.Router().ServeHTTP(response, req)
 
-			if response.Code != http.StatusServiceUnavailable || response.Header().Get("Retry-After") != "30" {
+			if response.Code != http.StatusServiceUnavailable || response.Header().Get("Retry-After") != "30" ||
+				!strings.Contains(response.Body.String(), queueFullMessage) {
 				t.Fatalf("response=%d %s", response.Code, response.Body.String())
 			}
 

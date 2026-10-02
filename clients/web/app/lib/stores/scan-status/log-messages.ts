@@ -10,6 +10,7 @@ export interface StatusProgressLike {
 
 export interface StatusLike {
 	type?: string;
+	queue_position?: number;
 	failed?: boolean;
 	progress?: StatusProgressLike;
 	scanner_type?: string;
@@ -19,6 +20,11 @@ export interface StatusLike {
 	timing?: ScannerTiming;
 	error?: string;
 	error_details?: string;
+}
+
+/** "Queued, 2 ahead": how many jobs start before this one. */
+export function queueLabel(position: number): string {
+	return position > 0 ? `Queued, ${position} ahead` : 'Queued, next in line';
 }
 
 function formatScannerTiming(timing?: ScannerTiming): string | null {
@@ -58,7 +64,9 @@ export function normalizeStatus(raw: string | undefined): ScanStatus {
 export function getLogMessage(normalizedState: string, data: StatusLike): string | null {
 	switch (normalizedState) {
 		case 'PENDING':
-			return 'Job queued. Waiting for worker allocation...';
+			return data.queue_position !== undefined
+				? `${queueLabel(data.queue_position)}.`
+				: 'Job queued. Waiting for worker allocation...';
 		case 'EXTRACTING':
 			return 'Worker allocated. Extracting site artifacts...';
 		case 'READY_TO_SCAN':

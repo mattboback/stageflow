@@ -24,6 +24,8 @@ type fakeJobs struct {
 	err       error                       // returned by AdmitJob
 	deleteErr error                       // returned by DeleteJob
 	onAdmit   func(job *models.Job) error // runs before a job is stored
+
+	queuePositions map[string]int // what the job store would count for waiting jobs
 }
 
 func newFakeJobs() *fakeJobs {
@@ -72,7 +74,24 @@ func (f *fakeJobs) GetJob(_ context.Context, id string) (*jobstore.JobRecord, er
 		return nil, jobstore.ErrJobNotFound
 	}
 
-	return jobstore.Snapshot(cloneJob(job)), nil
+	record := jobstore.Snapshot(cloneJob(job))
+	if position, waiting := f.queuePositions[id]; waiting {
+		record.QueuePosition = &position
+	}
+
+	return record, nil
+}
+
+// setQueuePosition sets the place a waiting job's status reports.
+func (f *fakeJobs) setQueuePosition(id string, position int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	if f.queuePositions == nil {
+		f.queuePositions = map[string]int{}
+	}
+
+	f.queuePositions[id] = position
 }
 
 // put stores a row as the orchestrator would have written it.
