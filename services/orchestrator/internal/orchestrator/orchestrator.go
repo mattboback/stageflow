@@ -3,7 +3,9 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +25,7 @@ type PodmanClient interface {
 	InspectContainer(context.Context, string) (*podman.ContainerInfo, error)
 	StartContainer(context.Context, string) error
 	ListJobContainers(context.Context) ([]podman.ContainerInfo, error)
+	ImageExists(context.Context, string) (bool, error)
 }
 
 type Config struct {
@@ -48,7 +51,19 @@ type Orchestrator struct {
 	wg            sync.WaitGroup
 	tickMu        sync.Mutex
 	lastRetention time.Time
+
+	imagesMu        sync.Mutex
+	imagesCheckedAt time.Time
+	imagesErr       error
 }
+
+// ErrImagesMissing means a job image is absent from the host. Claiming waits,
+// because a job claimed now would fail when its containers could not be created.
+var ErrImagesMissing = errors.New("job images are missing")
+
+// imageCheckInterval bounds how often Health asks Podman about the job images:
+// claiming consults it every reconcile tick.
+const imageCheckInterval = 30 * time.Second
 
 func NewOrchestrator(config *Config) *Orchestrator {
 	cfg := *config
@@ -137,12 +152,54 @@ func (o *Orchestrator) Start(ctx context.Context) {
 // Wait blocks until the reconcile loop has stopped.
 func (o *Orchestrator) Wait() { o.wg.Wait() }
 
+// Health reports whether the orchestrator can run a job: enough free disk and
+// both job images present. The healthcheck and claiming both use it.
 func (o *Orchestrator) Health(ctx context.Context) error {
 	if o.config.CheckDisk != nil {
-		return o.config.CheckDisk(ctx)
+		if err := o.config.CheckDisk(ctx); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return o.checkImages(ctx)
+}
+
+func (o *Orchestrator) checkImages(ctx context.Context) error {
+	o.imagesMu.Lock()
+	defer o.imagesMu.Unlock()
+
+	if !o.imagesCheckedAt.IsZero() && time.Since(o.imagesCheckedAt) < imageCheckInterval {
+		return o.imagesErr
+	}
+
+	var missing []string
+
+	for _, image := range []string{o.config.ExtractionImage, o.config.ScannerImage} {
+		exists, err := o.config.PodmanClient.ImageExists(ctx, image)
+		if err != nil {
+			return err
+		}
+
+		if !exists {
+			missing = append(missing, image)
+		}
+	}
+
+	var result error
+	if len(missing) > 0 {
+		result = fmt.Errorf("%w: %s", ErrImagesMissing, strings.Join(missing, ", "))
+	}
+
+	switch {
+	case result != nil && o.imagesErr == nil:
+		slog.Error("Job images are missing; claiming paused", "missing", missing)
+	case result == nil && o.imagesErr != nil:
+		slog.Info("Job images are present; claiming resumed")
+	}
+
+	o.imagesCheckedAt, o.imagesErr = time.Now(), result
+
+	return result
 }
 
 func (o *Orchestrator) fail(ctx context.Context, job *models.Job, stage, message string) error {

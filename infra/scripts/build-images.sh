@@ -76,6 +76,6 @@ echo "[images]    first-time builds download Playwright Chromium and take the lo
   -f services/scanner-runner/Dockerfile \
   "$REPO_ROOT"
 
-IMAGE_TAG="$IMAGE_TAG" ./infra/scripts/verify-image-inventory.sh
-
+# The orchestrator's health check verifies the job images it launches, and
+# claiming waits while either is missing.
 echo "[images] Done."

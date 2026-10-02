@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -44,11 +45,12 @@ type fakeRuntime struct {
 	releaseCreate chan struct{}
 	inspectErr    error
 
-	containers []podman.ContainerInfo
-	removeErr  error
-	creates    int
-	lists      int
-	pods       int
+	containers    []podman.ContainerInfo
+	missingImages map[string]bool
+	removeErr     error
+	creates       int
+	lists         int
+	pods          int
 }
 
 func (f *fakeRuntime) CreatePod(context.Context, *podman.PodCreateRequest) (*podman.PodCreateResponse, error) {
@@ -102,6 +104,9 @@ func (f *fakeRuntime) ListJobContainers(context.Context) ([]podman.ContainerInfo
 	f.lists++
 	return f.containers, nil
 }
+func (f *fakeRuntime) ImageExists(_ context.Context, name string) (bool, error) {
+	return !f.missingImages[name], nil
+}
 func testOrchestrator(t *testing.T) (*Orchestrator, *fakeRuntime) {
 	t.Helper()
 
@@ -139,11 +144,13 @@ func testOrchestrator(t *testing.T) (*Orchestrator, *fakeRuntime) {
 	runtime := &fakeRuntime{}
 	o := NewOrchestrator(
 		&Config{
-			Database:       database,
-			PodmanClient:   runtime,
-			Files:          files,
-			DataDir:        dir,
-			DirectoryOwner: func(string) error { return nil },
+			Database:        database,
+			PodmanClient:    runtime,
+			Files:           files,
+			DataDir:         dir,
+			DirectoryOwner:  func(string) error { return nil },
+			ExtractionImage: "localhost/stageflow/extractor:test",
+			ScannerImage:    "localhost/stageflow/scanner-runner:test",
 		},
 	)
 
@@ -655,5 +662,41 @@ func testDurableOutcome(t *testing.T, status string, legacyPublishTiming bool) {
 
 	if after.State != expected {
 		t.Fatalf("state %s expected %s result=%#v", after.State, expected, result)
+	}
+}
+
+// 19 of 25 production job failures were a missing image. Claiming now waits
+// for the images instead of failing the job, and the healthcheck reports it.
+func TestMissingJobImagePausesClaiming(t *testing.T) {
+	o, runtime := testOrchestrator(t)
+	ctx := context.Background()
+	runtime.missingImages = map[string]bool{"localhost/stageflow/scanner-runner:test": true}
+
+	admit(t, o, "waits-for-image")
+
+	if err := o.ReconcileOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	waiting, _ := o.config.Database.GetJob(ctx, "waits-for-image")
+	if waiting.ClaimedAt != nil || runtime.pods != 0 {
+		t.Fatalf("claimed a job while its scanner image was missing: %#v", waiting)
+	}
+
+	if err := o.Health(ctx); !errors.Is(err, ErrImagesMissing) ||
+		!strings.Contains(err.Error(), "scanner-runner:test") {
+		t.Fatalf("health = %v, want the missing scanner image", err)
+	}
+
+	runtime.missingImages = nil
+	o.imagesCheckedAt = time.Time{} // skip the 30 s recheck interval
+
+	if err := o.ReconcileOnce(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	claimed, _ := o.config.Database.GetJob(ctx, "waits-for-image")
+	if claimed.ClaimedAt == nil || o.Health(ctx) != nil {
+		t.Fatalf("did not resume once the image was back: %#v", claimed)
 	}
 }

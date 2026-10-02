@@ -534,7 +534,7 @@ func (o *Orchestrator) recordOutcomeFailure(
 
 func (o *Orchestrator) claimNext(ctx context.Context, containers []podman.ContainerInfo) error {
 	if err := o.Health(ctx); err != nil {
-		if errors.Is(err, artifacts.ErrLowDisk) {
+		if errors.Is(err, artifacts.ErrLowDisk) || errors.Is(err, ErrImagesMissing) {
 			return nil
 		}
 

@@ -148,7 +148,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if s.health != nil {
 		if err := s.health(r.Context()); err != nil {
-			httputil.RespondError(w, http.StatusServiceUnavailable, "Artifact storage unavailable")
+			httputil.RespondError(w, http.StatusServiceUnavailable, "Not ready: "+err.Error())
 			return
 		}
 	}
