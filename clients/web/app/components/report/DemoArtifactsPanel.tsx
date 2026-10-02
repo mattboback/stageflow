@@ -4,7 +4,7 @@ const DEMO_REPORT_URL = '/demo/report.json';
 /*
  * The artifacts tab on /demo.
  *
- * ArtifactsView lists presigned object-store URLs off a live job. There is no
+ * ArtifactsView links the files of a live job. There is no
  * job here, and fabricating one to satisfy the shape would emit download links
  * that 404 in a portfolio piece -- which is why ReportView takes this panel as
  * a slot rather than taking a job. What it can offer instead is the one
@@ -43,9 +43,9 @@ export function DemoArtifactsPanel() {
 				</header>
 				<div className="artifacts__body">
 					<p className="artifacts__note">
-						A live report lists signed download links here for each scanner&apos;s raw output, the
-						aggregated HTML report, the stage log, and the scan recipe. Those come from the job that
-						produced the report, and this page deliberately has no job behind it.
+						A live report links the aggregated JSON and each scanner&apos;s raw results here, for 24
+						hours. Those files come from the job that produced the report, and this page
+						deliberately has no job behind it.
 					</p>
 					<ul className="artifacts__links">
 						<li>

@@ -67,7 +67,7 @@ export interface ReportViewProps {
 	banner: ReactNode;
 	/**
 	 * The artifacts tab's download list. A slot rather than a prop because a
-	 * live scan lists presigned URLs from a job that /demo does not have, and
+	 * live scan lists the files of a job that /demo does not have, and
 	 * inventing a synthetic job to satisfy the shape would emit links that 404.
 	 */
 	artifactsPanel: ReactNode;

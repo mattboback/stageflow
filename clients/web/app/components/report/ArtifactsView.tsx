@@ -8,11 +8,6 @@ interface Props {
 	onRefreshArtifacts?: () => void;
 }
 
-interface Link {
-	href: string;
-	label: string;
-}
-
 function formatTimestamp(iso?: string | null): string | null {
 	if (!iso) return null;
 	const d = new Date(iso);
@@ -22,33 +17,16 @@ function formatTimestamp(iso?: string | null): string | null {
 
 export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 	const aggregatedJsonUrl = jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/results`) : null;
-	const aggregatedHtmlUrl = jobId ? buildApiUrl(`/api/v1/jobs/${jobId}/report`) : null;
-	const artifacts = job?.artifacts ?? null;
 	const updatedLabel = formatTimestamp(job?.updated_at);
-
-	const aggregatedLinks: Link[] = [];
-	if (aggregatedJsonUrl)
-		aggregatedLinks.push({ href: aggregatedJsonUrl, label: 'Aggregated JSON' });
-	if (aggregatedHtmlUrl)
-		aggregatedLinks.push({ href: aggregatedHtmlUrl, label: 'Primary HTML report' });
-	if (artifacts?.scan_stage_log)
-		aggregatedLinks.push({ href: artifacts.scan_stage_log, label: 'Scan stage log' });
-	if (artifacts?.scan_recipe)
-		aggregatedLinks.push({ href: artifacts.scan_recipe, label: 'Scan recipe' });
-	if (artifacts?.extraction_stage_log)
-		aggregatedLinks.push({ href: artifacts.extraction_stage_log, label: 'Extraction log' });
-	if (artifacts?.extraction_recipe)
-		aggregatedLinks.push({ href: artifacts.extraction_recipe, label: 'Extraction recipe' });
-
-	const scannerEntries = artifacts?.scanner_artifacts
-		? Object.entries(artifacts.scanner_artifacts)
+	const scannerEntries = job?.artifacts?.scanner_artifacts
+		? Object.entries(job.artifacts.scanner_artifacts)
 		: [];
 
 	return (
 		<div className="artifacts">
 			<section className="artifacts__card">
 				<header className="artifacts__head">
-					<h3>Aggregated report links</h3>
+					<h3>Aggregated report</h3>
 					{onRefreshArtifacts && (
 						<button type="button" className="btn btn--ghost btn--sm" onClick={onRefreshArtifacts}>
 							Refresh links
@@ -56,21 +34,19 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 					)}
 				</header>
 				<div className="artifacts__body">
-					{aggregatedLinks.length === 0 ? (
-						<p className="blankslate">No aggregated artifacts yet.</p>
-					) : (
+					{aggregatedJsonUrl ? (
 						<ul className="artifacts__links">
-							{aggregatedLinks.map((link) => (
-								<li key={link.label}>
-									<a href={link.href} target="_blank" rel="noopener noreferrer">
-										{link.label} ↗
-									</a>
-								</li>
-							))}
+							<li>
+								<a href={aggregatedJsonUrl} target="_blank" rel="noopener noreferrer">
+									Aggregated JSON ↗
+								</a>
+							</li>
 						</ul>
+					) : (
+						<p className="blankslate">No aggregated report yet.</p>
 					)}
 					<p className="artifacts__note">
-						Links are signed and can expire. Refresh to regenerate if needed.
+						Scan files are kept for 24 hours.
 						{updatedLabel && <> Last updated {updatedLabel}.</>}
 					</p>
 				</div>
@@ -78,11 +54,11 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 
 			<section className="artifacts__card">
 				<header className="artifacts__head">
-					<h3>Scanner artifacts</h3>
+					<h3>Scanner results</h3>
 				</header>
 				<div className="artifacts__body">
 					{scannerEntries.length === 0 ? (
-						<p className="blankslate">No scanner artifacts available yet.</p>
+						<p className="blankslate">No scanner results available yet.</p>
 					) : (
 						<div className="artifacts__matrix-wrap">
 							<table className="artifacts__matrix">
@@ -90,8 +66,6 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 									<tr>
 										<th scope="col">Scanner</th>
 										<th scope="col">JSON Results</th>
-										<th scope="col">Stage Log</th>
-										<th scope="col">Scan Recipe</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -104,24 +78,6 @@ export function ArtifactsView({ jobId, job, onRefreshArtifacts }: Props) {
 												{item.results_json ? (
 													<a href={item.results_json} target="_blank" rel="noopener noreferrer">
 														JSON ↗
-													</a>
-												) : (
-													<span className="muted">—</span>
-												)}
-											</td>
-											<td>
-												{item.scan_stage_log ? (
-													<a href={item.scan_stage_log} target="_blank" rel="noopener noreferrer">
-														Log ↗
-													</a>
-												) : (
-													<span className="muted">—</span>
-												)}
-											</td>
-											<td>
-												{item.scan_recipe ? (
-													<a href={item.scan_recipe} target="_blank" rel="noopener noreferrer">
-														Recipe ↗
 													</a>
 												) : (
 													<span className="muted">—</span>
