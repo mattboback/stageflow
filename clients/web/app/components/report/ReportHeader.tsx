@@ -75,11 +75,9 @@ export function ReportHeader({ report }: Props) {
 				{score !== null && missing.length === 0 && (
 					<Gauge
 						value={score}
-						caption={
-							grade
-								? `${grade} · ${report.assessment ? 'Automated score' : 'Site score'}`
-								: 'Site score'
-						}
+						// The ring fits a short caption; the explanation below says the
+						// score is automated.
+						caption={grade ? `${grade} · Site score` : 'Site score'}
 						size={92}
 						valFontSize="1.7rem"
 					/>

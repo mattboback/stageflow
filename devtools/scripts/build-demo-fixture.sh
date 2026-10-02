@@ -45,7 +45,9 @@ done
 # One bitmap per page: axe first, then a successful scanner fallback.
 printf '[]\n' >"$work/demo/screenshots.json"
 while IFS=$'\t' read -r page scanner page_url url; do
-  curl -fsS "$url" -o "$work/$page.src"
+  # File links are API paths; MinIO's were absolute presigned URLs.
+  [[ "$url" == http* ]] || url="$api$url"
+  curl -fsS "${auth[@]}" "$url" -o "$work/$page.src"
   magick "$work/$page.src" -resize '1600x>' -quality 72 "$work/demo/$page.webp"
   jq --arg page "$page" --arg scanner "$scanner" \
     --arg page_url "$page_url" --arg file "/demo/$page.webp" '
