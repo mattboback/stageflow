@@ -34,6 +34,16 @@
 	line-height: 1.6;
 }
 
+/* The reset zeroes paragraph margins, which ran a section's paragraphs
+   together into one block. */
+.privacy p + p {
+	margin-top: var(--sp-3);
+}
+
+.privacy p + ul {
+	margin-top: var(--sp-2);
+}
+
 .privacy ul {
 	margin: 0 0 var(--sp-4);
 	padding-left: 1.2rem;
@@ -43,4 +53,18 @@
 	max-width: 62ch;
 	color: var(--ink-muted);
 	font-size: var(--fs-4);
+}
+
+/* The same link treatment as the home page's hero note: in muted text, a link
+   needs an underline to be seen as one. */
+.privacy__source a {
+	color: var(--signal-ink);
+	font-weight: 500;
+	text-decoration: underline;
+	text-decoration-color: color-mix(in oklch, currentColor 40%, transparent);
+	text-underline-offset: 0.2em;
+}
+
+.privacy__source a:hover {
+	text-decoration-color: currentColor;
 }
