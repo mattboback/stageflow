@@ -1,3 +1,4 @@
+import { DEMO_CROP } from '../app/lib/demo/demo-crop';
 import { expect, test } from './fixtures';
 
 /*
@@ -18,6 +19,43 @@ test.describe('routing', () => {
 			const response = await page.request.get(path, { maxRedirects: 0 });
 			expect(response.status(), path).toBe(200);
 		}
+	});
+
+	/*
+	 * The prerendered HTML has no query string. A first render that showed
+	 * something different because of one would not match it, and React would
+	 * discard the page with a hydration error, which the browserErrors fixture
+	 * fails on.
+	 */
+	test.describe('a query string on a prerendered page', () => {
+		test('opens the report section it names', async ({ page }) => {
+			await page.goto('/demo?section=pages');
+			await expect(page.getByRole('tab', { name: /Pages/ })).toHaveAttribute(
+				'aria-selected',
+				'true'
+			);
+		});
+
+		test('opens the issue it names', async ({ page }) => {
+			const issueId = DEMO_CROP?.issueId;
+			expect(issueId, 'the demo fixture has a located finding').toBeDefined();
+			await page.goto(`/demo?section=issues&issue=${issueId ?? ''}`);
+			await expect(page.getByRole('dialog', { name: 'Issue details' })).toBeVisible();
+		});
+
+		test('seeds the scan form with the URL it carries', async ({ page }) => {
+			await page.route('**/api/v1/scanners', (route) =>
+				route.fulfill({
+					status: 200,
+					contentType: 'application/json',
+					body: JSON.stringify({ scanners: [], categories: [] })
+				})
+			);
+			await page.goto(`/playground?url=${encodeURIComponent('https://sample.stageflow.org/')}`);
+			await expect(page.getByRole('textbox', { name: 'URL 1', exact: true })).toHaveValue(
+				'https://sample.stageflow.org/'
+			);
+		});
 	});
 
 	test.describe('an unknown path', () => {

@@ -16,6 +16,7 @@ import { ReportHeader } from './ReportHeader';
 import { ReportSectionNav, type ReportSection } from './ReportSectionNav';
 import { PagesView } from './PagesView';
 import { VisualReviewPanel } from './VisualReviewPanel';
+import { useHydrated } from '../../lib/hooks/useHydrated';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 import {
 	buildOccurrenceModeReport,
@@ -31,6 +32,7 @@ import type { ScanStatus, ScreenshotArtifact } from '../../lib/types/scan';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 
 const SECTIONS: readonly ReportSection[] = ['review', 'pages', 'issues', 'artifacts'];
+const NO_QUERY = new URLSearchParams();
 
 function isSection(value: string | null): value is ReportSection {
 	return value !== null && (SECTIONS as readonly string[]).includes(value);
@@ -110,7 +112,10 @@ export function ReportView({
 	newIssueIds,
 	onVerify
 }: ReportViewProps) {
-	const [searchParams, setSearchParams] = useSearchParams();
+	const [routeParams, setSearchParams] = useSearchParams();
+	// /demo is prerendered without a query string. Reading it before hydration
+	// finishes would not match that HTML, and React would throw the page away.
+	const searchParams = useHydrated() ? routeParams : NO_QUERY;
 
 	const { displayReport, manualChecks, scoreModel } = useMemo(() => {
 		if (!report) return { displayReport: null, manualChecks: [], scoreModel: null };
