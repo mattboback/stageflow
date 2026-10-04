@@ -1,4 +1,4 @@
-import { Link2, Search, Shield, Zap } from 'lucide-react';
+import { Accessibility, Link2, Search, Shield, Zap } from 'lucide-react';
 
 export interface ScannerMeta {
 	icon: typeof Shield;
@@ -8,7 +8,7 @@ export interface ScannerMeta {
 
 export const SCANNER_META: Record<string, ScannerMeta> = {
 	axe: {
-		icon: Shield,
+		icon: Accessibility,
 		label: 'Axe Accessibility',
 		description: 'WCAG accessibility testing with axe-core engine'
 	},

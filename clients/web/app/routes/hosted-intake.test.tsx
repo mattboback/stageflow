@@ -20,8 +20,16 @@ it('hides ZIP upload from hosted configuration', () => {
 		</MemoryRouter>
 	);
 	expect(screen.queryByRole('button', { name: 'ZIP upload' })).toBeNull();
+	// With URL the only target type, there is no toggle to show.
+	expect(screen.queryByRole('group', { name: 'Target type' })).toBeNull();
 	expect(screen.queryByLabelText(/ZIP archive/i)).toBeNull();
 	expect(screen.getByText('Add up to 25 public URLs to scan.')).toBeTruthy();
+	expect(
+		screen.getByRole('button', {
+			name: 'Find pages on this site to scan',
+			description: 'Then pick up to 25 to scan.'
+		})
+	).toBeTruthy();
 });
 
 it('offers public URL guidance instead of a ZIP picker when verifying archived ZIP evidence', () => {

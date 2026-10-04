@@ -194,15 +194,17 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 												: `Add up to ${MAX_SCAN_PAGES} public URLs to scan.`}
 										</p>
 									</div>
-									<div className="seg" role="group" aria-label="Target type">
-										<button
-											type="button"
-											aria-pressed={mode === 'url'}
-											onClick={() => setMode('url')}
-										>
-											URL
-										</button>
-										{ZIP_UPLOAD_ENABLED && (
+									{/* A one-option toggle has nothing to choose, so it shows only
+									    where ZIP upload exists. */}
+									{ZIP_UPLOAD_ENABLED && (
+										<div className="seg" role="group" aria-label="Target type">
+											<button
+												type="button"
+												aria-pressed={mode === 'url'}
+												onClick={() => setMode('url')}
+											>
+												URL
+											</button>
 											<button
 												type="button"
 												aria-pressed={mode === 'zip'}
@@ -214,8 +216,8 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 											>
 												ZIP upload
 											</button>
-										)}
-									</div>
+										</div>
+									)}
 								</div>
 								<div className="panel__body intake">
 									<ScanProfileSelector profile={profile} onChange={setProfile} />
@@ -257,21 +259,28 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 													</div>
 												))}
 											</div>
-											<button
-												type="button"
-												className="btn btn--ghost btn--sm addmore"
-												onClick={addUrlRow}
-											>
-												+ Add another URL
-											</button>
-											<button
-												type="button"
-												className="btn btn--ghost btn--sm addmore"
-												disabled={discovering}
-												onClick={() => void discoverUrls()}
-											>
-												{discovering ? 'Discovering pages…' : 'Discover pages'}
-											</button>
+											<div className="intake__actions">
+												<button
+													type="button"
+													className="btn btn--ghost btn--sm addmore"
+													onClick={addUrlRow}
+												>
+													+ Add another URL
+												</button>
+												<button
+													type="button"
+													className="btn btn--ghost btn--sm addmore"
+													disabled={discovering}
+													aria-label={discovering ? undefined : 'Find pages on this site to scan'}
+													aria-describedby="intake-discover-hint"
+													onClick={() => void discoverUrls()}
+												>
+													{discovering ? 'Finding pages…' : 'Find pages…'}
+												</button>
+												<p id="intake-discover-hint" className="intake__hint">
+													Then pick up to {MAX_SCAN_PAGES} to scan.
+												</p>
+											</div>
 											{discoveryPreview && (
 												<DiscoveryPreview
 													key={JSON.stringify(discoveryPreview.result)}

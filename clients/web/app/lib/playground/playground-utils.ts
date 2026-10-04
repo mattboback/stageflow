@@ -182,7 +182,9 @@ export function validatePlaygroundConfiguration({
 
 	return {
 		ready: true,
-		message: "All set! You're ready to scan.",
+		// The "Ready to run" title says it all, and the summary below it lists
+		// what will run.
+		message: '',
 		error: null,
 		focusId: null,
 		validUrls,
