@@ -2423,7 +2423,7 @@ button.irow {
 	font-weight: 600;
 	color: var(--ink-muted);
 	text-transform: uppercase;
-	letter-spacing: var(--track-wider);
+	letter-spacing: 0.04em;
 	background: var(--surface-sunk);
 }
 .artifacts__matrix tbody tr:last-child th,
@@ -2705,6 +2705,34 @@ button.irow {
 	}
 	.occ__field dt {
 		padding-top: 0;
+	}
+}
+
+/* Phones: a smaller dial beside the site name instead of alone above it. The
+   URL and everything after it run full width underneath, where a long URL
+   has room. Without a dial the stacked layout above stays. */
+@media (max-width: 520px) {
+	.rhead__score:has(.rhead__dial) {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: center;
+		gap: var(--sp-2) var(--sp-3);
+	}
+	.rhead__score:has(.rhead__dial) .rhead__score-meta {
+		display: contents;
+	}
+	.rhead__score:has(.rhead__dial) .rhead__score-meta > :not(h1) {
+		grid-column: 1 / -1;
+	}
+	.rhead__dial .dial {
+		width: 112px;
+		height: 112px;
+	}
+	.rhead__dial .gauge__val {
+		font-size: 1.5rem;
+	}
+	.rhead__dial .gauge__cap {
+		font-size: var(--fs-1);
 	}
 }
 /* Screen pixels: the markers carry vector-effect="non-scaling-stroke". */

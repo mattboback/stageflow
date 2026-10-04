@@ -919,8 +919,8 @@ pre {
 	place-items: center;
 }
 .dial {
-	width: 132px;
-	height: 132px;
+	width: var(--gauge-size, 132px);
+	height: var(--gauge-size, 132px);
 }
 .gauge .track {
 	stroke: var(--ground-deep);
@@ -954,6 +954,7 @@ pre {
 	text-align: center;
 }
 .gauge__val {
+	font-size: var(--gauge-val-size, 2.1rem);
 	font-weight: 800;
 	font-variant-numeric: tabular-nums;
 	color: var(--ink-strong);

@@ -16,6 +16,13 @@ import {
 import { ScoreExplainer } from './ScoreExplainer';
 import { SeverityBar, SeverityLegend } from './SeverityBar';
 
+/** A break opportunity before each dot, so a long host wraps between labels, not mid-word. */
+function breakableHost(host: string) {
+	return host
+		.split('.')
+		.flatMap((label, index) => (index === 0 ? [label] : [<wbr key={index} />, `.${label}`]));
+}
+
 interface Props {
 	report: UnifiedReport;
 	/** explainScore of the report as stored; with it the score says what lowers it. */
@@ -119,7 +126,7 @@ export function ReportHeader({
 					</div>
 				)}
 				<div className="rhead__score-meta">
-					<h1>{host ?? 'Scan report'}</h1>
+					<h1>{host ? breakableHost(host) : 'Scan report'}</h1>
 					{baseUrl && (
 						<a className="rhead__url" href={baseUrl} target="_blank" rel="noopener noreferrer">
 							{baseUrl} ↗

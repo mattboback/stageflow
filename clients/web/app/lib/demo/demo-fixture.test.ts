@@ -147,10 +147,10 @@ describe('the committed /demo fixture', () => {
 	 *
 	 * buildOccurrenceModeReport rewrites element.issueId, falling back to a
 	 * `ruleId|selector` index when the direct mapping misses. A generator that
-	 * blanks `selector` (qa/record-report-gif.mjs does exactly that) kills the
-	 * fallback, and any element whose nodeIndex exceeds the occurrence count
-	 * keeps a stale id. So the assertion has to run POST-remap: checking the raw
-	 * fixture would pass while the rendered page shows nothing.
+	 * blanks `selector` kills the fallback, and any element whose nodeIndex
+	 * exceeds the occurrence count keeps a stale id. So the assertion has to
+	 * run POST-remap: checking the raw fixture would pass while the rendered
+	 * page shows nothing.
 	 */
 	it('resolves every overlay marker to a real issue after occurrence expansion', () => {
 		const displayed = buildOccurrenceModeReport(report);

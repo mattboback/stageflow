@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 const R = 52;
 const CIRC = 2 * Math.PI * R; // 326.7
 
@@ -36,15 +38,16 @@ export function Gauge({
 		baseline !== undefined && baseline > value
 			? (CIRC * (clampScore(baseline) - clampScore(value))) / 100
 			: 0;
+	// Custom properties rather than an inline width and font size, so a
+	// container can still resize the dial from its stylesheet.
+	const sizing = { '--gauge-size': `${size}px`, '--gauge-val-size': valFontSize } as CSSProperties;
 	return (
-		<div className="gauge">
+		<div className="gauge" style={sizing}>
 			<svg
 				className="dial"
 				viewBox="0 0 120 120"
 				width={size}
 				height={size}
-				// Inline, so it wins over the .dial default.
-				style={{ width: size, height: size }}
 				role="img"
 				aria-label={
 					ariaLabel ??
@@ -85,9 +88,7 @@ export function Gauge({
 				)}
 			</svg>
 			<div className="gauge__num">
-				<span className="gauge__val" style={{ fontSize: valFontSize }}>
-					{value}
-				</span>
+				<span className="gauge__val">{value}</span>
 				<span className="gauge__cap">{caption}</span>
 			</div>
 		</div>
