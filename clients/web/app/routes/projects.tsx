@@ -4,12 +4,15 @@ import { Link, useNavigate, type MetaFunction } from 'react-router';
 import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2 } from 'lucide-react';
 
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { Delta } from '../components/Delta';
+import { ScoreHistory } from '../components/ScoreHistory';
 import { SiteFooter } from '../components/SiteFooter';
 import { SiteHeader } from '../components/SiteHeader';
 import {
 	createLocalProject,
 	deleteLocalProject,
 	exportLocalProject,
+	getLocalBaseline,
 	importLocalProject,
 	listLocalProjects,
 	listLocalProjectRuns
@@ -31,13 +34,27 @@ export const meta: MetaFunction = () =>
 interface ProjectListItem {
 	project: LocalProject;
 	runs: LocalRun[];
+	/** Only what the card shows: a stored baseline holds a whole report. */
+	baseline: { jobId: string; score: number | undefined } | null;
 }
 
 async function loadProjectList(): Promise<ProjectListItem[]> {
 	const projects = await listLocalProjects();
-	const runs = await Promise.all(projects.map((project) => listLocalProjectRuns(project.id)));
+	const [runs, baselines] = await Promise.all([
+		Promise.all(projects.map((project) => listLocalProjectRuns(project.id))),
+		Promise.all(projects.map((project) => getLocalBaseline(project.id)))
+	]);
 	// Promise.all preserves order, so runs[index] always pairs with projects[index].
-	return projects.map((project, index) => ({ project, runs: runs[index] ?? [] }));
+	return projects.map((project, index) => {
+		const baseline = baselines[index];
+		return {
+			project,
+			runs: runs[index] ?? [],
+			baseline: baseline
+				? { jobId: baseline.jobId, score: baseline.report.summary.score ?? undefined }
+				: null
+		};
+	});
 }
 
 export default function Projects() {
@@ -219,11 +236,30 @@ export default function Projects() {
 									<Gauge size={24} aria-hidden="true" />
 									<strong>No projects yet</strong>
 									<span>Create one to turn your next good scan into a baseline.</span>
+									<Link className="btn btn--ghost btn--sm" to="/demo">
+										See an example comparison
+									</Link>
 								</div>
 							) : (
 								<div className="project-cards">
-									{items.map(({ project, runs }) => {
+									{items.map(({ project, runs, baseline }) => {
 										const latest = runs[0];
+										// Oldest first. A run that failed or is still going has no score.
+										const history = runs
+											.flatMap((run) =>
+												run.score === undefined
+													? []
+													: [
+															{
+																id: run.jobId,
+																score: run.score,
+																at: run.completedAt ?? run.createdAt
+															}
+														]
+											)
+											.reverse();
+										const latestScore = history.at(-1)?.score;
+										const baselineScore = baseline?.score;
 										return (
 											<article className="project-card" key={project.id}>
 												<div className="project-card__body">
@@ -231,11 +267,37 @@ export default function Projects() {
 													<p className="project-card__url mono">
 														{project.configuration.urls[0] ?? 'No URL configured'}
 													</p>
-													<p className="project-card__meta">
-														{runs.length === 0
-															? 'No runs yet'
-															: `${runs.length} recent run${runs.length === 1 ? '' : 's'}${latest?.score === undefined ? '' : ` · latest score ${latest.score}`}`}
-													</p>
+													{runs.length === 0 ? (
+														<p className="project-card__meta">No runs yet</p>
+													) : (
+														<div className="project-card__trend">
+															<ScoreHistory
+																points={history}
+																baselineId={baseline?.jobId}
+																baselineScore={baselineScore}
+															/>
+															<div>
+																{latestScore !== undefined && (
+																	<p className="project-card__score">
+																		Latest score <strong className="num">{latestScore}</strong>
+																		{baselineScore !== undefined && (
+																			<>
+																				{' '}
+																				<span className="project-card__vs">
+																					<Delta value={latestScore - baselineScore} /> vs baseline{' '}
+																					{baselineScore}
+																				</span>
+																			</>
+																		)}
+																	</p>
+																)}
+																<p className="project-card__meta">
+																	{runs.length} recent run{runs.length === 1 ? '' : 's'}
+																	{latestScore !== undefined && !baseline && ' · no baseline yet'}
+																</p>
+															</div>
+														</div>
+													)}
 												</div>
 												<div className="project-card__actions">
 													<Link

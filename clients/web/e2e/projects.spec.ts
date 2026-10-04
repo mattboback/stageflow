@@ -235,6 +235,14 @@ test('local project creates a run and promotes its report without persisting cre
 	await page.goto('/projects');
 	await expect(page.getByRole('heading', { name: 'Storefront regression' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Latest report' })).toBeVisible();
+	// The second report copies the first plus one issue, so both runs score the same.
+	const score = String(report.summary.score);
+	await expect(
+		projectCard.getByRole('img', {
+			name: `Scores of the last 2 runs, oldest first: ${score} (baseline), ${score}`
+		})
+	).toBeVisible();
+	await expect(projectCard.getByText(`vs baseline ${score}`)).toBeVisible();
 });
 
 test('removed scanners are dropped from the project and not submitted', async ({ page }) => {

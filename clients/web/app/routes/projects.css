@@ -9,7 +9,10 @@
 
 /* page head: shared .page-head from instrument.css */
 
+/* Level with the top of the intro rather than its last line, where .page-head
+   puts it: the note is about the whole page, not the lede beside it. */
 .projects-local-note {
+	align-self: start;
 	display: flex;
 	align-items: center;
 	gap: var(--sp-2);
@@ -50,8 +53,15 @@
 	font-size: var(--fs-4);
 }
 
-.project-list {
+/* Like .projects-grid below 1080px: one column that can shrink below the
+   cards' unbroken URLs, so they truncate instead of widening the page. */
+.project-list,
+.project-cards {
 	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.project-list {
 	gap: var(--sp-4);
 }
 
@@ -72,8 +82,11 @@
 	font-size: var(--fs-7);
 }
 
+.project-list .blankslate .btn {
+	margin-top: var(--sp-2);
+}
+
 .project-cards {
-	display: grid;
 	gap: var(--sp-3);
 }
 
@@ -112,6 +125,41 @@
 	margin-top: var(--sp-2);
 }
 
+/* The score line, then what it ends on: the latest score against the baseline. */
+.project-card__trend {
+	display: flex;
+	align-items: center;
+	gap: var(--sp-3);
+	margin-top: var(--sp-2);
+}
+
+.project-card__trend > div {
+	min-width: 0;
+}
+
+.project-card__trend .project-card__meta {
+	margin-top: 0;
+}
+
+.project-card__score {
+	color: var(--ink-muted);
+	font-size: var(--fs-3);
+}
+
+.project-card__score strong {
+	color: var(--ink-strong);
+	font-size: var(--fs-5);
+}
+
+/* The change and what it is against wrap as one piece. */
+.project-card__vs {
+	white-space: nowrap;
+}
+
+.project-card__score + .project-card__meta {
+	margin-top: var(--sp-1);
+}
+
 .project-card__actions {
 	display: flex;
 	align-items: center;
@@ -137,8 +185,10 @@
    (nowrap buttons in a flex: 0 0 auto cluster), so between 900 and 1080 the rail
    left the list too narrow to hold them and the page scrolled sideways. */
 @media (max-width: 1080px) {
+	/* minmax(0, ...) rather than 1fr, whose floor is the content's min-content
+	   width: a card's unbroken URL would otherwise widen the page past a phone. */
 	.projects-grid {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
 	}
 }
 
@@ -151,7 +201,22 @@
 
 @media (max-width: 680px) {
 	.project-card {
+		position: relative;
 		align-items: stretch;
 		flex-direction: column;
+	}
+
+	/* Three text buttons fill a phone-width row, which left the icon on a row of
+	   its own. The card's top corner keeps it in reach; the name and URL stop
+	   short of it. */
+	.project-card__delete {
+		position: absolute;
+		top: var(--sp-3);
+		right: var(--sp-3);
+	}
+
+	.project-card h3,
+	.project-card__url {
+		padding-right: 2.75rem;
 	}
 }
