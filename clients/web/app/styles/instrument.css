@@ -610,6 +610,7 @@ pre {
 	align-items: center;
 	gap: 0.4rem;
 	min-height: 44px;
+	white-space: nowrap;
 }
 
 /* Nav layout, on its own breakpoint. The inline row is brand + five links +

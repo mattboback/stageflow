@@ -117,15 +117,25 @@ export default function Scan() {
 				: scanner && scanner.total_pages > 0
 					? `Page progress: ${scanner.pages_scanned} of ${scanner.total_pages}`
 					: SUB_LABEL[state];
-		return { id: scannerId, state, detail };
+		// How far this scanner is: settled ones count in full, a running one
+		// by the pages it has finished, a waiting one not at all.
+		const fraction =
+			state === 'done' || state === 'err'
+				? 1
+				: state === 'run' && scanner && scanner.total_pages > 0
+					? Math.min(1, scanner.pages_scanned / scanner.total_pages)
+					: 0;
+		return { id: scannerId, state, detail, fraction };
 	});
 	const doneCount = completed.size;
 	const failedCount = channels.filter((ch) => ch.state === 'err').length;
 	const settledCount = doneCount + failedCount;
 	const totalCount = expected.length;
+	// Page progress, not just settled scanners, so the bar moves while
+	// scanners are still working through pages.
 	const rawPct =
 		totalCount > 0
-			? Math.round((settledCount / totalCount) * 100)
+			? Math.round((channels.reduce((sum, ch) => sum + ch.fraction, 0) / totalCount) * 100)
 			: Math.round(result?.progress?.percentage ?? 0);
 	const pct = isComplete ? 100 : Math.min(99, rawPct);
 
@@ -155,9 +165,11 @@ export default function Scan() {
 	const transportLabel =
 		transport === 'streaming'
 			? 'Live updates on'
-			: transport === 'polling'
-				? 'Checking periodically'
-				: 'Connecting…';
+			: transport === 'reconnecting'
+				? 'Reconnecting…'
+				: transport === 'polling'
+					? 'Checking periodically'
+					: 'Connecting…';
 
 	const heading = isFailed
 		? 'Scan failed'
@@ -183,7 +195,7 @@ export default function Scan() {
 				<div className="wrap wrap--app">
 					{/* status header: the one progress model */}
 					<div className={`shead${isFailed ? ' shead--failed' : ''}`}>
-						<div>
+						<div className="shead__main">
 							<div className="shead__id">
 								<h1>{heading}</h1>
 								{statusPill}
@@ -311,6 +323,12 @@ export default function Scan() {
 													<div className="ch__name">{scannerLabel(ch.id)}</div>
 													{/* queued rows already say "Waiting" in the tag */}
 													{ch.state !== 'queue' && <div className="ch__sub">{ch.detail}</div>}
+													{/* The text above carries the number; the bar shows it at a glance. */}
+													{ch.state === 'run' && ch.fraction > 0 && (
+														<span className="ch__bar" aria-hidden="true">
+															<i style={{ transform: `scaleX(${ch.fraction})` }} />
+														</span>
+													)}
 												</div>
 												<div className="ch__right">
 													<span className="ch__tag">{TAG_LABEL[ch.state]}</span>

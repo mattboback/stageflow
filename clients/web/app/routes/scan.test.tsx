@@ -8,7 +8,10 @@ import { scannerLabel } from '../lib/report';
 
 vi.mock('../lib/hooks/useScanMonitor', () => ({ useScanStatus: vi.fn() }));
 
-function renderScanning(scannerStatuses?: ScanResult['scanner_statuses']) {
+function renderScanning(
+	scannerStatuses?: ScanResult['scanner_statuses'],
+	transport: ReturnType<typeof useScanStatus>['transport'] = 'streaming'
+) {
 	vi.mocked(useScanStatus).mockReturnValue({
 		status: 'scanning',
 		result: {
@@ -22,7 +25,7 @@ function renderScanning(scannerStatuses?: ScanResult['scanner_statuses']) {
 		},
 		elapsed: 5,
 		logs: [],
-		transport: 'streaming',
+		transport,
 		error: null,
 		retry: vi.fn()
 	});
@@ -50,6 +53,23 @@ describe('scanner launch status', () => {
 	it('retains the running fallback for older snapshots without scanner states', () => {
 		renderScanning();
 		expect(channel('Lighthouse').getByText('Running')).toBeTruthy();
+	});
+
+	it('moves the overall bar with page progress, not only settled scanners', () => {
+		renderScanning({
+			axe: { state: 'running', pages_scanned: 1, total_pages: 3, violations: 0 },
+			lighthouse: { state: 'pending', pages_scanned: 0, total_pages: 3, violations: 0 }
+		});
+		// One of three pages for one of two scanners: a sixth of the work.
+		const bar = screen.getByRole('progressbar', { name: 'Overall scan progress' });
+		expect(bar.getAttribute('aria-valuenow')).toBe('17');
+	});
+});
+
+describe('live updates', () => {
+	it('says so while the stream reconnects', () => {
+		renderScanning(undefined, 'reconnecting');
+		expect(screen.getByText('Reconnecting…')).toBeTruthy();
 	});
 });
 

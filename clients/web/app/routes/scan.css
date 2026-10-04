@@ -180,6 +180,23 @@
 	color: var(--ink-muted);
 	margin-top: 0.1rem;
 }
+/* A running scanner's page progress, under the text that gives the number. */
+.ch__bar {
+	display: block;
+	max-width: 12rem;
+	height: 4px;
+	margin-top: 0.4rem;
+	border-radius: var(--r-pill);
+	background: var(--line);
+	overflow: hidden;
+}
+.ch__bar > i {
+	display: block;
+	height: 100%;
+	background: var(--signal);
+	transform-origin: left center;
+	transition: transform 0.55s var(--ease);
+}
 .ch__right {
 	justify-self: end;
 	display: flex;
@@ -375,19 +392,32 @@
 	.side {
 		position: static;
 	}
+	/* The timer sits beside the title instead of in a row of its own, and the
+	   rest of the header runs full width underneath. */
 	.shead {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr) auto;
+		row-gap: 0;
+	}
+	.shead__main {
+		display: contents;
+	}
+	.shead__main > :not(.shead__id) {
+		grid-column: 1 / -1;
 	}
 	.shead__meta {
-		justify-content: flex-start;
+		grid-row: 1;
+		grid-column: 2;
+		flex-wrap: wrap;
+		justify-content: flex-end;
 	}
-	.timer {
-		text-align: left;
+	.timer b {
+		font-size: var(--fs-7);
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.meter > i {
+	.meter > i,
+	.ch__bar > i {
 		transition: none;
 	}
 	.meter > i.live::after,

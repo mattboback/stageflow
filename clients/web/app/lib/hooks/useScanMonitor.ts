@@ -17,7 +17,7 @@ import {
 } from '../stores/scan-status/scanner-progress';
 import type { SSEUpdate } from '../stores/scan-status/types';
 
-type TransportState = 'idle' | 'streaming' | 'polling';
+type TransportState = 'idle' | 'streaming' | 'reconnecting' | 'polling';
 
 interface StatusSnapshot {
 	status: ScanStatus;
@@ -151,13 +151,21 @@ export function useScanStatus(jobId: string, options: { trackElapsed?: boolean }
 				);
 			}
 		});
+		/* Time since the job started, not since this page opened: the page says
+		   it is safe to leave, so coming back must not restart the clock. */
 		const timer = trackElapsed
 			? window.setInterval(() => {
-					setSnapshot((current) =>
-						isTerminal(current.status)
-							? current
-							: { ...current, elapsedSeconds: current.elapsedSeconds + 1 }
-					);
+					const now = Date.now();
+					setSnapshot((current) => {
+						if (isTerminal(current.status)) return current;
+						const startedAt = current.job ? Date.parse(current.job.created_at) : Number.NaN;
+						return {
+							...current,
+							elapsedSeconds: Number.isFinite(startedAt)
+								? Math.max(0, Math.floor((now - startedAt) / 1000))
+								: current.elapsedSeconds + 1
+						};
+					});
 				}, 1000)
 			: null;
 
@@ -258,7 +266,10 @@ export function useScanStatus(jobId: string, options: { trackElapsed?: boolean }
 
 						if (error.kind === 'transient') {
 							setSnapshot((current) =>
-								addLog(current, 'WARN: Lost connection to live updates. Reconnecting...')
+								addLog(
+									{ ...current, transport: 'reconnecting' },
+									'WARN: Lost connection to live updates. Reconnecting...'
+								)
 							);
 							void refresh();
 							return;

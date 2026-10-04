@@ -158,4 +158,32 @@ describe('useScanStatus', () => {
 		await waitFor(() => expect(result.current.status).toBe('complete'));
 		expect(result.current.result?.id).toBe(JOB);
 	});
+
+	it('says it is reconnecting while the stream is down, then live again', async () => {
+		mockApi([job('SCANNING')]);
+		const { result } = renderHook(() => useScanStatus(JOB));
+
+		await waitFor(() => expect(result.current.status).toBe('scanning'));
+		const stream = FakeEventSource.instances[0];
+		act(() => stream?.onopen?.());
+		await waitFor(() => expect(result.current.transport).toBe('streaming'));
+		act(() => stream?.onerror?.({}));
+		await waitFor(() => expect(result.current.transport).toBe('reconnecting'));
+		act(() => stream?.onopen?.());
+		await waitFor(() => expect(result.current.transport).toBe('streaming'));
+	});
+
+	it('counts elapsed time from when the job started, not from page load', async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		vi.setSystemTime(new Date('2026-10-02T00:02:00Z'));
+		mockApi([job('SCANNING', { created_at: '2026-10-02T00:00:00Z' })]);
+		const { result } = renderHook(() => useScanStatus(JOB));
+
+		await waitFor(() => expect(result.current.status).toBe('scanning'));
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(1000);
+		});
+		expect(result.current.elapsed).toBeGreaterThanOrEqual(120);
+		expect(result.current.elapsed).toBeLessThan(130);
+	});
 });
