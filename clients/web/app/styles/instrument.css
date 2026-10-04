@@ -930,6 +930,22 @@ pre {
 	stroke-linecap: round;
 	transition: stroke-dashoffset 1s var(--ease);
 }
+/* Points lost since the baseline, and a tick where the baseline was: ink on
+   a surface halo, so it reads over the arc, the shading and the track alike. */
+.gauge .lost {
+	stroke: var(--sev-critical-edge);
+}
+.gauge .baseline line {
+	vector-effect: non-scaling-stroke;
+}
+.gauge .baseline__halo {
+	stroke: var(--surface);
+	stroke-width: 4px;
+}
+.gauge .baseline__tick {
+	stroke: var(--ink-strong);
+	stroke-width: 2px;
+}
 .gauge__num {
 	position: absolute;
 	inset: 0;

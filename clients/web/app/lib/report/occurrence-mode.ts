@@ -111,6 +111,12 @@ function normalizeOccurrence(
 	};
 }
 
+/** The report issue a display issue was split from (see buildDerivedIssueId). */
+export function rawIssueId(issueId: string): string {
+	const at = issueId.indexOf(OCCURRENCE_ID_DELIMITER);
+	return at === -1 ? issueId : issueId.slice(0, at);
+}
+
 function buildDerivedIssueId(
 	baseIssueId: string,
 	occurrenceIndex: number,

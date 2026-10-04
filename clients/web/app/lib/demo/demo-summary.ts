@@ -10,7 +10,5 @@ export const DEMO_SUMMARY = {
 	unchangedIssues: 30,
 	baselineScore: 60,
 	currentScore: 57,
-	scoreDelta: -3,
-	terminal:
-		'stageflow diff baseline.json current.json --fail-on-new=any\nNew: 3 · Fixed: 1 · Unchanged: 30'
+	scoreDelta: -3
 } as const;

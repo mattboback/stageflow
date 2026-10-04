@@ -13,7 +13,7 @@ import { fetchWithTimeout } from '../lib/api/client';
 import { buildApiUrl } from '../lib/api/utils';
 import { preparePortableAudit, portableScreenshotDigests } from '../lib/portable-audit';
 import type { ScanResult } from '../lib/types/scan';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
 	Link,
 	isRouteErrorResponse,
@@ -31,6 +31,7 @@ import { ArtifactsView } from '../components/report/ArtifactsView';
 import { LocalBaselineComparison } from '../components/report/LocalBaselineComparison';
 import { ReportJobActions } from '../components/report/ReportJobActions';
 import { ReportView } from '../components/report/ReportView';
+import { useOpenIssue } from '../lib/hooks/useOpenIssue';
 import { useScanReport } from '../lib/hooks/useScanMonitor';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
@@ -278,20 +279,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 
 	/* The banner's only navigation. ReportView owns the rest of the query
 	   string; this opens a specific finding from the baseline comparison. */
-	const openIssue = useCallback(
-		(issueId: string) => {
-			setSearchParams(
-				(prev) => {
-					const next = new URLSearchParams(prev);
-					next.set('section', 'issues');
-					next.set('issue', issueId);
-					return next;
-				},
-				{ replace: true, preventScrollReset: true }
-			);
-		},
-		[setSearchParams]
-	);
+	const openIssue = useOpenIssue();
 
 	async function saveOneOffProject(name: string) {
 		if (report?.meta.scanContext?.purpose === 'verification')
@@ -348,51 +336,52 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 
 	/* Raw, not occurrence-expanded: LocalBaselineComparison and saveLocalBaseline
 	   both persist and diff the report exactly as it arrived from the API. */
-	const banner = report ? (
-		<>
-			<ReportJobActions
-				jobId={id}
-				report={report}
-				archived={viewingArchived}
-				canDelete={!viewingArchived}
-				showSave={!localProject && report.meta.scanContext?.purpose !== 'verification'}
-				onSaveProject={saveOneOffProject}
-			/>
-			<PortableAuditExportButton
-				jobId={id}
-				report={report}
-				{...(localRun?.verification ? { verification: localRun.verification } : {})}
-				{...(comparison ? { comparison } : {})}
-				screenshots={viewingArchived ? (localRun?.screenshots ?? []) : screenshots}
-				{...(localProject ? { configuration: localProject.configuration } : {})}
-				{...(localBaseline ? { baseline: localBaseline.report } : {})}
-				{...(!viewingArchived
-					? {
-							refreshScreenshots: async () => {
-								const response = await fetchWithTimeout(
-									buildApiUrl(`/api/v1/jobs/${encodeURIComponent(id)}`)
-								);
-								if (!response.ok) throw new Error('Could not refresh screenshot links');
-								const current = (await response.json()) as ScanResult;
-								return current.artifacts?.screenshots ?? [];
-							}
-						}
-					: {})}
-			/>
-			{localProject && localRun && report.meta.scanContext?.purpose !== 'verification' ? (
-				<LocalBaselineComparison
-					project={localProject}
-					run={localRun}
-					baseline={localBaseline}
+	const toolbar = report ? (
+		<ReportJobActions
+			jobId={id}
+			report={report}
+			archived={viewingArchived}
+			canDelete={!viewingArchived}
+			showSave={!localProject && report.meta.scanContext?.purpose !== 'verification'}
+			onSaveProject={saveOneOffProject}
+			exportAction={
+				<PortableAuditExportButton
+					jobId={id}
 					report={report}
-					promoting={promotingBaseline}
-					message={projectMessage}
-					onPromote={() => void promoteAsBaseline()}
-					onOpenIssue={openIssue}
+					{...(localRun?.verification ? { verification: localRun.verification } : {})}
+					{...(comparison ? { comparison } : {})}
+					screenshots={viewingArchived ? (localRun?.screenshots ?? []) : screenshots}
+					{...(localProject ? { configuration: localProject.configuration } : {})}
+					{...(localBaseline ? { baseline: localBaseline.report } : {})}
+					{...(!viewingArchived
+						? {
+								refreshScreenshots: async () => {
+									const response = await fetchWithTimeout(
+										buildApiUrl(`/api/v1/jobs/${encodeURIComponent(id)}`)
+									);
+									if (!response.ok) throw new Error('Could not refresh screenshot links');
+									const current = (await response.json()) as ScanResult;
+									return current.artifacts?.screenshots ?? [];
+								}
+							}
+						: {})}
 				/>
-			) : null}
-		</>
+			}
+		/>
 	) : null;
+	const comparisonPanel =
+		report && localProject && localRun && report.meta.scanContext?.purpose !== 'verification' ? (
+			<LocalBaselineComparison
+				project={localProject}
+				run={localRun}
+				baseline={localBaseline}
+				report={report}
+				promoting={promotingBaseline}
+				message={projectMessage}
+				onPromote={() => void promoteAsBaseline()}
+				onOpenIssue={openIssue}
+			/>
+		) : null;
 
 	return (
 		<>
@@ -425,7 +414,8 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 						screenshots={viewingArchived ? (localRun?.screenshots ?? []) : screenshots}
 						status={status}
 						error={error || job?.error || null}
-						banner={banner}
+						toolbar={toolbar}
+						comparisonPanel={comparisonPanel}
 						artifactsPanel={
 							<ArtifactsView jobId={viewingArchived ? '' : id} job={viewingArchived ? null : job} />
 						}
@@ -436,7 +426,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 							<>
 								<p role="alert">{reviewLoadError}</p>
 								<button
-									className="btn btn--secondary"
+									className="btn btn--ghost btn--sm"
 									type="button"
 									onClick={() => {
 										setReviewLoadError(null);

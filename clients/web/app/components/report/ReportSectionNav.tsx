@@ -12,7 +12,7 @@ interface Props {
 interface TabSpec {
 	id: ReportSection;
 	label: string;
-	/* Worded, so "Review · 5 pages" can't be confused with an issue count. */
+	/* Worded where it isn't an issue count ("3 files"), so the two can't be confused. */
 	count: string | null;
 }
 
@@ -30,15 +30,11 @@ function countDistinctArtifacts(report: UnifiedReport): number {
 
 export function ReportSectionNav({ report, section, onSectionChange }: Props) {
 	const artifactCount = countDistinctArtifacts(report);
-	const pages = report.summary.pagesScanned ?? 0;
 	const issues = report.summary.totalIssues ?? 0;
 
 	const tabs: TabSpec[] = [
-		{
-			id: 'review',
-			label: 'Review',
-			count: pages > 0 ? `${pages} page${pages === 1 ? '' : 's'}` : null
-		},
+		/* No count: the masthead and the Pages tab already give the page count. */
+		{ id: 'review', label: 'Review', count: null },
 		/* Hidden below two pages: a single-page scan has nothing to compare and a
 		   tab that always reads "1" is furniture. */
 		...(report.pages.length > 1

@@ -46,7 +46,9 @@ export function ElementCrop({ page, overviewUrl, element, ariaLabel, className }
 				height={element.height}
 				fill="transparent"
 				stroke={getSeverityStrokeColor(element.severity)}
-				strokeWidth={3}
+				strokeWidth={2}
+				// Screen pixels, so the box reads the same in a thumbnail and a full crop.
+				vectorEffect="non-scaling-stroke"
 			/>
 		</svg>
 	);

@@ -10,6 +10,7 @@ import { Delta } from '../components/Delta';
 import { DEMO_CROP } from '../lib/demo/demo-crop';
 import { clamp, type Rect, type ViewBox } from '../lib/report/screenshot-crop';
 import { DEMO_SUMMARY } from '../lib/demo/demo-summary';
+import DEMO_TERMINAL from '../lib/demo/demo-terminal.json';
 import { discoverPages, submitScanJob, type DiscoverPagesResponse } from '../lib/api/client';
 import { SCANNER_META } from '../lib/report/scanner-identity';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
@@ -45,13 +46,13 @@ export const meta: MetaFunction = () => [
 const BASELINE_TRACK = [
 	{
 		score: String(DEMO_SUMMARY.baselineScore ?? '—'),
-		title: 'Save a baseline',
-		body: 'Choose a reviewed scan as your point of reference.'
+		title: 'Scan and save a baseline',
+		body: 'Point at a public URL, review the report, and keep it as your reference.'
 	},
 	{
 		score: String(DEMO_SUMMARY.currentScore ?? '—'),
-		title: 'Scan your next build',
-		body: 'Inspect confirmed problems and actionable fixes.'
+		title: 'Scan the next build',
+		body: 'The same pages again, each problem with page evidence and a specific fix.'
 	},
 	{
 		delta: DEMO_SUMMARY.scoreDelta ?? 0,
@@ -79,25 +80,9 @@ const cropView = DEMO_CROP
 	? heroCrop(DEMO_CROP.pageWidth, DEMO_CROP.pageHeight, DEMO_CROP.element)
 	: null;
 
-const [terminalCommand = '', ...terminalOutput] = DEMO_SUMMARY.terminal.split('\n');
-
-const PATH_STEPS = [
-	{
-		n: '1',
-		title: 'Configure',
-		body: 'Point at a public URL and choose pages to scan.'
-	},
-	{
-		n: '2',
-		title: 'Run',
-		body: 'Review problems with page evidence and specific fixes.'
-	},
-	{
-		n: '3',
-		title: 'Ship',
-		body: 'One merged report with severity, evidence, and remediation.'
-	}
-] as const;
+// Captured from the CLI by just demo-fixture; demo_terminal_test.go holds it
+// to what `stageflow diff` prints for the sample deployment.
+const terminalOutput = DEMO_TERMINAL.output.split('\n');
 
 export default function Home() {
 	const navigate = useNavigate();
@@ -219,14 +204,21 @@ export default function Home() {
 								</button>
 							</form>
 							<div className="scanbar__opts">
-								<button
-									type="button"
-									className="btn btn--ghost btn--sm"
-									disabled={discovering || submitting}
-									onClick={() => void onScanWebsite()}
-								>
-									{discovering ? 'Discovering website…' : 'Scan website'}
-								</button>
+								{/* "Scan" checks the one URL; this lists the site's pages to
+								    choose from first. */}
+								<div className="scanbar__discover">
+									<button
+										type="button"
+										className="btn btn--ghost btn--sm"
+										disabled={discovering || submitting}
+										aria-label={discovering ? undefined : 'Find pages on this site to scan'}
+										aria-describedby="discover-hint"
+										onClick={() => void onScanWebsite()}
+									>
+										{discovering ? 'Finding pages…' : 'Find pages…'}
+									</button>
+									<p id="discover-hint">Then pick up to {MAX_SCAN_PAGES} to scan.</p>
+								</div>
 								<ScanProfileSelector profile={profile} onChange={setProfile} />
 							</div>
 							{discoveryPreview && (
@@ -338,14 +330,15 @@ export default function Home() {
 					</div>
 				</section>
 
-				{/* BASELINE IDEA — the review step carries the weight */}
-				<section className="section section--band" aria-labelledby="baseline-heading">
+				{/* HOW IT WORKS — the sample's real scores carry the steps; the review
+				    step carries the weight */}
+				<section className="section section--band" aria-labelledby="how-heading">
 					<div className="wrap wrap--app baseline">
 						<div className="baseline__intro">
-							<h2 id="baseline-heading">The baseline idea</h2>
+							<h2 id="how-heading">How it works</h2>
 							<p>
-								{SITE_NAME} gives every scan a point of reference, so changes are clear and
-								actionable.
+								Save a reviewed scan as your baseline. {SITE_NAME} compares every later scan with
+								it, so each deploy shows what it changed.
 							</p>
 						</div>
 						<ol className="basetrack">
@@ -369,30 +362,7 @@ export default function Home() {
 								</li>
 							))}
 						</ol>
-					</div>
-				</section>
-
-				{/* FROM URL TO REPORT — three steps, then the CTA */}
-				<section className="section" aria-labelledby="path-heading">
-					<div className="wrap wrap--app">
-						<header className="section__head">
-							<h2 id="path-heading">From URL to report</h2>
-							<p>Three steps. No setup required.</p>
-						</header>
-						<ol className="path__steps path__steps--row">
-							{PATH_STEPS.map((s) => (
-								<li className="path__step" key={s.n}>
-									<span className="path__n" aria-hidden="true">
-										{s.n}
-									</span>
-									<div>
-										<h3>{s.title}</h3>
-										<p>{s.body}</p>
-									</div>
-								</li>
-							))}
-						</ol>
-						<div className="path__actions">
+						<div className="baseline__actions">
 							<Link className="btn btn--primary" to="/playground">
 								Configure a scan{' '}
 								<span className="ar" aria-hidden="true">
@@ -407,7 +377,7 @@ export default function Home() {
 				</section>
 
 				{/* SCANNERS — the list the /#scanners anchor has always promised */}
-				<section className="section section--band" id="scanners" aria-labelledby="scanners-heading">
+				<section className="section" id="scanners" aria-labelledby="scanners-heading">
 					<div className="wrap wrap--app">
 						<div className="scansum">
 							<div className="scansum__copy">
@@ -418,7 +388,7 @@ export default function Home() {
 								</p>
 							</div>
 							<Link className="btn btn--ghost scansum__cta" to="/playground">
-								Configure a scan{' '}
+								Choose scanners{' '}
 								<span className="ar" aria-hidden="true">
 									→
 								</span>
@@ -449,15 +419,32 @@ export default function Home() {
 				{/* CLI island + self-host */}
 				<section className="section section--foot" aria-labelledby="cli-heading">
 					<div className="wrap wrap--app foot">
-						<div className="terminal" aria-labelledby="cli-heading">
+						<div className="terminal">
 							<h2 id="cli-heading" className="sr-only">
 								CLI
 							</h2>
+							{/* One block per line, so a wrapped line keeps a hanging indent. */}
 							<pre className="terminal__pre">
 								<code>
-									<span className="terminal__prompt">$</span> {terminalCommand}
-									{'\n'}
-									{terminalOutput.join('\n')}
+									<span className="terminal__line">
+										<span className="terminal__prompt">$</span> {DEMO_TERMINAL.command}
+									</span>
+									{terminalOutput.map((line, index) => (
+										<span
+											key={index}
+											className={`terminal__line${line.startsWith(' ') ? ' terminal__line--detail' : ''}`}
+										>
+											{line}
+										</span>
+									))}
+									<span className="terminal__line">
+										<span className="terminal__prompt">$</span> echo $?
+									</span>
+									<span
+										className={`terminal__line ${DEMO_TERMINAL.exitCode === 0 ? 'terminal__ok' : 'terminal__warn'}`}
+									>
+										{DEMO_TERMINAL.exitCode}
+									</span>
 								</code>
 							</pre>
 						</div>

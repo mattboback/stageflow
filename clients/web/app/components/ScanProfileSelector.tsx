@@ -23,8 +23,8 @@ export function ScanProfileSelector({
 			</select>
 			<p>
 				{profile === 'staging'
-					? 'Intentional noindex directives are expected here. Accessibility, links and security checks still run.'
-					: 'Indexing restrictions are actionable. Human checks need separate review.'}
+					? 'Pages that block search indexing are expected here and not counted. Every other check still counts.'
+					: 'Pages that block search indexing are reported as problems.'}
 			</p>
 		</div>
 	);

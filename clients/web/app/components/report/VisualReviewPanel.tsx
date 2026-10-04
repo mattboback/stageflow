@@ -1,12 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+	useCallback,
+	useEffect,
+	useLayoutEffect,
+	useMemo,
+	useReducer,
+	useRef,
+	useState,
+	useSyncExternalStore
+} from 'react';
 import { ChevronRight, Maximize2, Minus, Plus } from 'lucide-react';
 
 import type { IssueDetail, UnifiedReport } from '../../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
 import type { ReviewVerdict } from '../../lib/report/review-verdict';
 import {
-	SEVERITY_LEVELS,
 	compareSeverity,
+	countIssueSeverities,
+	describeSeverityCounts,
 	getPageOverviewUrl,
 	getReviewGroupStatus,
 	getSeverityDotClass,
@@ -15,6 +25,7 @@ import {
 	needsHumanReview,
 	normalizeSeverity
 } from '../../lib/report';
+import { SeverityBar } from './SeverityBar';
 
 interface Props {
 	report: UnifiedReport;
@@ -38,9 +49,28 @@ interface IssueGroup {
 
 type Zoom = 'fit' | number;
 
+interface Box {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+}
+
+/* What a zoom keeps in place: a point given as a fraction of the screenshot,
+   and where in the viewport that point sits. Fractions rather than page
+   pixels, so the native wheel listener needs nothing from the current page. */
+interface ZoomAnchor {
+	fx: number;
+	fy: number;
+	screenX: number;
+	screenY: number;
+}
+
 const ZOOM_STEP = 1.25;
 const ZOOM_MIN = 0.25;
 const ZOOM_MAX = 4;
+/* Context kept around a finding when zooming to it, in CSS pixels. */
+const FINDING_MARGIN = 48;
 /* Below this, a pointer press is a click on a marker; above it, a pan. Three
    pixels of tremor while clicking a 6px-stroked rect is normal. */
 const DRAG_SLOP = 4;
@@ -59,6 +89,43 @@ function serverViewport() {
 function prefersReducedMotion(): boolean {
 	if (typeof window === 'undefined') return false;
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function clampZoom(value: number): number {
+	return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value));
+}
+
+function anchorAt(
+	viewport: HTMLElement,
+	svg: SVGSVGElement,
+	screenX: number,
+	screenY: number
+): ZoomAnchor {
+	const box = svg.getBoundingClientRect();
+	const view = viewport.getBoundingClientRect();
+	return {
+		fx: (view.left + screenX - box.left) / box.width,
+		fy: (view.top + screenY - box.top) / box.height,
+		screenX,
+		screenY
+	};
+}
+
+function scrollToAnchor(
+	viewport: HTMLElement,
+	svg: SVGSVGElement,
+	anchor: ZoomAnchor,
+	behavior: ScrollBehavior
+) {
+	/* Rect deltas plus current scroll, rather than offsetLeft/offsetTop:
+	   those live on HTMLElement and an SVGSVGElement does not have them. */
+	const box = svg.getBoundingClientRect();
+	const view = viewport.getBoundingClientRect();
+	viewport.scrollTo({
+		left: box.left - view.left + viewport.scrollLeft + anchor.fx * box.width - anchor.screenX,
+		top: box.top - view.top + viewport.scrollTop + anchor.fy * box.height - anchor.screenY,
+		behavior
+	});
 }
 
 export function VisualReviewPanel({
@@ -137,13 +204,21 @@ export function VisualReviewPanel({
 	const pageWidth = selectedPage?.pageOverview?.pageWidth ?? 0;
 	const pageHeight = selectedPage?.pageOverview?.pageHeight ?? 0;
 	const canRenderScreenshot = !!overviewUrl && pageWidth > 0 && pageHeight > 0;
+	/* Captures are taken at deviceScaleFactor 2, so a 1280px viewport arrives
+	   as a 2560px image. Zoom is kept in CSS pixels per image pixel; the label
+	   speaks in page size, where 100% is the page as a visitor saw it. */
+	const viewportWidth = report.meta.scanContext?.viewport?.width ?? 0;
+	const captureScale =
+		viewportWidth > 0 && pageWidth > viewportWidth ? Math.round(pageWidth / viewportWidth) : 1;
+	const actualSize = 1 / captureScale;
 
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
-	/* Fit-width of a desktop capture on a phone renders the page at ~30% —
-	   unreadable. Small screens start at 100% and pan instead. */
 	const isNarrow = useSyncExternalStore(subscribeViewport, narrowViewport, serverViewport);
 	const [zoomOverride, setZoom] = useState<Zoom | null>(null);
-	const zoom: Zoom = zoomOverride ?? (isNarrow ? 1 : 'fit');
+	/* Bumped by every zoom request, so re-centering runs even when the scale
+	   itself does not change: the same zoom, a different finding. */
+	const [zoomRequest, bumpZoomRequest] = useReducer((count: number) => count + 1, 0);
+	const anchorRef = useRef<ZoomAnchor | null>(null);
 	// Both load states are keyed by URL so switching pages needs no reset.
 	const [loadedOverviewUrl, setLoadedOverviewUrl] = useState<string | null>(null);
 	const [failedOverviewUrl, setFailedOverviewUrl] = useState<string | null>(null);
@@ -190,6 +265,43 @@ export function VisualReviewPanel({
 			.sort((a, b) => b.width * b.height - a.width * a.height);
 	}, [selectedPage, issueMap]);
 
+	/* Markers in reading order down the page rather than the paint order, which
+	   is largest-first so big boxes sit behind small ones. */
+	const walkOrder = useMemo(
+		() => [...overlayElements].sort((a, b) => a.y - b.y || a.x - b.x),
+		[overlayElements]
+	);
+
+	/* Findings on the screenshot are numbered, and their pins carry the same
+	   number. Page-level findings (headers, metadata) are listed apart: there
+	   is nothing on the screenshot to point at. */
+	const { locatedGroups, locatedIssueIds, pageLevelGroups, pinByIssue } = useMemo(() => {
+		const located = new Set(overlayElements.map((el) => el.issueId));
+		const onScreenshot = issueGroups.filter((group) =>
+			group.issues.some((issue) => located.has(issue.id))
+		);
+		const pins = new Map<string, { number: number; severity: string }>();
+		onScreenshot.forEach((group, index) => {
+			for (const issue of group.issues) {
+				pins.set(issue.id, { number: index + 1, severity: group.severity });
+			}
+		});
+		return {
+			locatedGroups: onScreenshot,
+			locatedIssueIds: located,
+			pageLevelGroups: issueGroups.filter((group) => !onScreenshot.includes(group)),
+			pinByIssue: pins
+		};
+	}, [issueGroups, overlayElements]);
+
+	/* Fit width of a desktop capture on a phone draws the page at about 15%,
+	   and 100% of the image is twice the page's real size. Small screens open
+	   at real size on the first finding instead (see the layout effect below).
+	   With nothing located, fit width at least shows the whole page, never its
+	   empty top-left margin. */
+	const zoom: Zoom = zoomOverride ?? (isNarrow && walkOrder.length > 0 ? actualSize : 'fit');
+	const activeElement = walkOrder.find((el) => el.issueId === activeIssueId) ?? null;
+
 	/*
 	 * Page coordinates -> rendered pixels.
 	 *
@@ -198,30 +310,47 @@ export function VisualReviewPanel({
 	 * only honest source for the scale is what the browser actually rendered.
 	 * Deriving it from `zoom` would be wrong for the whole 'fit' branch.
 	 */
+	const elementAnchor = useCallback(
+		(element: Box, viewport: HTMLElement): ZoomAnchor => ({
+			fx: (element.x + element.width / 2) / pageWidth,
+			fy: (element.y + element.height / 2) / pageHeight,
+			screenX: viewport.clientWidth / 2,
+			screenY: viewport.clientHeight / 2
+		}),
+		[pageWidth, pageHeight]
+	);
+
 	const scrollToElement = useCallback(
-		(element: { x: number; y: number; width: number; height: number }) => {
+		(element: Box, behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth') => {
 			const viewport = viewportRef.current;
 			const svg = svgRef.current;
-			if (!viewport || !svg || pageWidth <= 0) return;
-
-			/* Rect deltas plus current scroll, rather than offsetLeft/offsetTop:
-			   those live on HTMLElement and an SVGSVGElement does not have them. */
-			const svgRect = svg.getBoundingClientRect();
-			const viewRect = viewport.getBoundingClientRect();
-			const scale = svgRect.width / pageWidth;
-			const originX = svgRect.left - viewRect.left + viewport.scrollLeft;
-			const originY = svgRect.top - viewRect.top + viewport.scrollTop;
-			const centerX = originX + (element.x + element.width / 2) * scale;
-			const centerY = originY + (element.y + element.height / 2) * scale;
-
-			viewport.scrollTo({
-				left: centerX - viewport.clientWidth / 2,
-				top: centerY - viewport.clientHeight / 2,
-				behavior: prefersReducedMotion() ? 'auto' : 'smooth'
-			});
+			if (!viewport || !svg || pageWidth <= 0 || pageHeight <= 0) return;
+			scrollToAnchor(viewport, svg, elementAnchor(element, viewport), behavior);
 		},
-		[pageWidth]
+		[elementAnchor, pageWidth, pageHeight]
 	);
+
+	/* Every zoom keeps something in place: the active finding, the point under
+	   a pinch, or else the middle of the view. The browser on its own keeps the
+	   scroll offset, so each zoom slid away from what was being looked at. */
+	useLayoutEffect(() => {
+		const anchor = anchorRef.current;
+		anchorRef.current = null;
+		const viewport = viewportRef.current;
+		const svg = svgRef.current;
+		if (anchor && viewport && svg) scrollToAnchor(viewport, svg, anchor, 'auto');
+	}, [zoomRequest]);
+
+	/* A screenshot that opens zoomed in (small screens) starts on its first
+	   finding rather than its top-left margin. Once per screenshot: after that
+	   the view belongs to the reader. */
+	const openedUrlRef = useRef<string | null>(null);
+	useLayoutEffect(() => {
+		if (!screenshotReady || openedUrlRef.current === overviewUrl) return;
+		openedUrlRef.current = overviewUrl;
+		const first = walkOrder[0];
+		if (first && zoom !== 'fit') scrollToElement(first, 'auto');
+	}, [screenshotReady, overviewUrl, walkOrder, zoom, scrollToElement]);
 
 	/* Leaving 'fit' has to start from the scale that was on screen, or the first
 	   pinch jumps to 100% before zooming. */
@@ -241,25 +370,34 @@ export function VisualReviewPanel({
 	 * pinch sends -- so ordinary two-finger scrolling still scrolls.
 	 */
 	useEffect(() => {
+		/* The viewport only mounts once the screenshot has loaded, so this has
+		   to re-run then: keyed on [] it ran while the ref was still empty and
+		   pinch zoom was never attached. */
 		const viewport = viewportRef.current;
-		if (!viewport) return;
+		if (!viewport || !screenshotReady) return;
 
 		const onWheel = (event: WheelEvent) => {
 			if (!event.ctrlKey && !event.metaKey) return;
 			event.preventDefault();
+			const svg = svgRef.current;
+			const view = viewport.getBoundingClientRect();
+			// The point under the pinch stays under it.
+			anchorRef.current = svg
+				? anchorAt(viewport, svg, event.clientX - view.left, event.clientY - view.top)
+				: null;
 			setZoom((prev) => {
-				const selectedZoom = prev ?? (narrowViewport() ? 1 : 'fit');
-				const current = selectedZoom === 'fit' ? renderedScaleRef.current : selectedZoom;
-				const next = current * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP);
-				return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+				// Leaving 'fit' or the default starts from the scale on screen.
+				const current = typeof prev === 'number' ? prev : renderedScaleRef.current;
+				return clampZoom(current * (event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP));
 			});
+			bumpZoomRequest();
 		};
 
 		viewport.addEventListener('wheel', onWheel, { passive: false });
 		return () => {
 			viewport.removeEventListener('wheel', onWheel);
 		};
-	}, []);
+	}, [screenshotReady]);
 
 	const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
 		const viewport = viewportRef.current;
@@ -307,13 +445,6 @@ export function VisualReviewPanel({
 		window.addEventListener('pointerup', onUp);
 	};
 
-	/* Markers in reading order down the page rather than the paint order, which
-	   is largest-first so big boxes sit behind small ones. */
-	const walkOrder = useMemo(
-		() => [...overlayElements].sort((a, b) => a.y - b.y || a.x - b.x),
-		[overlayElements]
-	);
-
 	const stepToNextMarker = () => {
 		if (walkOrder.length === 0) return;
 		const current = walkOrder.findIndex((el) => el.issueId === activeIssueId);
@@ -324,11 +455,9 @@ export function VisualReviewPanel({
 	};
 
 	/* Selecting an issue has to move the canvas to it, not just mark it active.
-	   Small screens open at 100% rather than fit-width -- a desktop capture
-	   scaled to fit a phone is unreadable -- so the viewport starts on the
-	   top-left corner of the page and a marker chosen from the list is almost
-	   always outside it. Without this, picking an issue looked like nothing
-	   happened, with no hint of which way to pan. */
+	   Zoomed in, a marker chosen from the list is almost always outside the
+	   viewport. Without this, picking an issue looked like nothing happened,
+	   with no hint of which way to pan. */
 	const revealIssue = (issueId: string) => {
 		const element = walkOrder.find((el) => el.issueId === issueId);
 		if (element) scrollToElement(element);
@@ -350,18 +479,115 @@ export function VisualReviewPanel({
 		onIssueSelect(issue);
 	};
 
-	const zoomBy = (factor: number) => {
-		setZoom((prev) => {
-			// Same rule as the wheel handler: leaving 'fit' has to start from the
-			// scale that was on screen. Assuming 1 made the first + on a wide
-			// capture jump from ~30% straight to 125%.
-			const selectedZoom = prev ?? (narrowViewport() ? 1 : 'fit');
-			const current = selectedZoom === 'fit' ? renderedScaleRef.current : selectedZoom;
-			return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, current * factor));
-		});
+	const requestZoom = (next: Zoom | ((prev: Zoom | null) => Zoom), anchor: ZoomAnchor | null) => {
+		anchorRef.current = anchor;
+		setZoom(next);
+		bumpZoomRequest();
 	};
 
-	const zoomPercent = zoom === 'fit' ? null : `${Math.round(zoom * 100)}%`;
+	/* What a button zoom keeps in place: the active finding, else the middle. */
+	const focusAnchor = (): ZoomAnchor | null => {
+		const viewport = viewportRef.current;
+		const svg = svgRef.current;
+		if (!viewport || !svg) return null;
+		return activeElement
+			? elementAnchor(activeElement, viewport)
+			: anchorAt(viewport, svg, viewport.clientWidth / 2, viewport.clientHeight / 2);
+	};
+
+	const zoomBy = (factor: number) => {
+		// Same rule as the wheel handler: leaving 'fit' has to start from the
+		// scale that was on screen. Assuming 1 made the first + on a wide
+		// capture jump from ~30% straight to 125%.
+		requestZoom(
+			(prev) => clampZoom((typeof prev === 'number' ? prev : renderedScaleRef.current) * factor),
+			focusAnchor()
+		);
+	};
+
+	/* Large enough to show the element with some room around it, never past
+	   the page's real size, and never smaller than fit width. */
+	const zoomToFinding = () => {
+		const viewport = viewportRef.current;
+		if (!activeElement || !viewport) return;
+		const room = (size: number) => Math.max(1, size - 2 * FINDING_MARGIN);
+		const boxScale = Math.min(
+			room(viewport.clientWidth) / activeElement.width,
+			room(viewport.clientHeight) / activeElement.height
+		);
+		const fitScale = viewport.clientWidth / pageWidth;
+		requestZoom(
+			clampZoom(Math.max(fitScale, Math.min(boxScale, actualSize))),
+			elementAnchor(activeElement, viewport)
+		);
+	};
+
+	const zoomPercent = zoom === 'fit' ? null : `${Math.round(zoom * captureScale * 100)}%`;
+
+	const renderGroup = (group: IssueGroup, number: number | null) => {
+		const isActive = group.issues.some((issue) => issue.id === activeIssueId);
+		const reviewStatus = getReviewGroupStatus(group.issues, getReviewVerdict);
+		// A group is on the screenshot when any of its issues is, so pick from
+		// those: an issue without a marker gives the canvas nothing to move to.
+		const located = group.issues.filter((issue) => locatedIssueIds.has(issue.id));
+		const pool = located.length > 0 ? located : group.issues;
+		const first =
+			pool.find((issue) => needsHumanReview(issue) && !getReviewVerdict(issue.id)) ?? pool[0];
+		if (!first) {
+			// A group only exists because an issue was added to it.
+			return null;
+		}
+		return (
+			<li key={group.key}>
+				<button
+					type="button"
+					className={`vrev__issue-btn${isActive ? ' vrev__issue-btn--active' : ''}`}
+					onClick={() => {
+						setActiveIssueId(first.id);
+						revealIssue(first.id);
+						onIssueSelect(first);
+					}}
+				>
+					{number === null ? (
+						<span className={getSeverityDotClass(group.severity)} aria-hidden="true" />
+					) : (
+						<span className={`vrev__num sev-${group.severity}`} aria-hidden="true">
+							{number}
+						</span>
+					)}
+					<span className="vrev__issue-body">
+						<span className="vrev__issue-title">
+							{group.title}{' '}
+							{group.issues.some((issue) => newIssueIds?.has(issue.id)) && (
+								<span className="issue-new">NEW</span>
+							)}
+						</span>
+						<span className="vrev__issue-meta">
+							{reviewStatus && (
+								<span className={`vrev__issue-review vrev__issue-review--${reviewStatus.tone}`}>
+									{reviewStatus.label}
+								</span>
+							)}
+							{group.severity} · {group.scanner} · {group.ruleId}
+						</span>
+					</span>
+					{group.issues.length > 1 && (
+						<span
+							className="vrev__issue-times num"
+							aria-label={`${group.issues.length} occurrences`}
+						>
+							× {group.issues.length}
+						</span>
+					)}
+				</button>
+			</li>
+		);
+	};
+
+	const mostPageFindings = Math.max(
+		0,
+		...report.pages.map((page) => issuesByPage[page.id]?.length ?? 0)
+	);
 
 	return (
 		<div className="vrev">
@@ -373,33 +599,31 @@ export function VisualReviewPanel({
 					{report.pages.map((page) => {
 						const pagePageIssues = issuesByPage[page.id] ?? [];
 						const isActive = page.id === selectedPage.id;
-						const sevCounts = SEVERITY_LEVELS.map((level) => ({
-							level,
-							count: pagePageIssues.filter(
-								(issue) => (normalizeSeverity(issue.severity) ?? 'info') === level
-							).length
-						})).filter((entry) => entry.count > 0);
+						const counts = countIssueSeverities(pagePageIssues);
+						const worst = counts[0];
+						const label = page.path ?? page.url;
+						const findings = `${pagePageIssues.length} ${pagePageIssues.length === 1 ? 'finding' : 'findings'}`;
 						return (
 							<li key={page.id}>
 								<button
 									type="button"
 									className={`vrev__page-btn${isActive ? ' vrev__page-btn--active' : ''}`}
+									aria-current={isActive ? 'true' : undefined}
+									aria-label={`${label}: ${findings}${counts.length > 0 ? `, ${describeSeverityCounts(counts)}` : ''}`}
 									onClick={() => onSelectPage(page.id)}
 								>
-									<span className="vrev__page-main">
-										<span className="vrev__page-label">{page.path ?? page.url}</span>
-										{sevCounts.length > 0 && (
-											<span className="vrev__page-sevs" aria-hidden="true">
-												{sevCounts.map(({ level, count }) => (
-													<span key={level} className="vrev__page-sev">
-														<span className={getSeverityDotClass(level)} />
-														{count}
-													</span>
-												))}
-											</span>
+									<span className="vrev__page-label">{label}</span>
+									{/* Scaled to the page with most findings, so rows compare. */}
+									<SeverityBar counts={counts} scale={mostPageFindings} size="sm" />
+									<span className="vrev__page-meta">
+										<span className="num">{findings}</span>
+										{worst && (
+											<>
+												{' · '}
+												<span className="num">{worst.count}</span> {worst.severity}
+											</>
 										)}
 									</span>
-									<span className="vrev__page-count num">{pagePageIssues.length}</span>
 								</button>
 							</li>
 						);
@@ -412,11 +636,20 @@ export function VisualReviewPanel({
 					<div className="vrev__stage-bar">
 						<div className="vrev__zoom" role="group" aria-label="Zoom">
 							<div className="seg">
-								<button type="button" aria-pressed={zoom === 'fit'} onClick={() => setZoom('fit')}>
+								<button
+									type="button"
+									aria-pressed={zoom === 'fit'}
+									onClick={() => requestZoom('fit', focusAnchor())}
+								>
 									Fit width
 								</button>
-								<button type="button" aria-pressed={zoom === 1} onClick={() => setZoom(1)}>
-									100%
+								<button
+									type="button"
+									onClick={zoomToFinding}
+									disabled={!activeElement}
+									title={activeElement ? undefined : 'Select a finding on the screenshot first'}
+								>
+									Zoom to finding
 								</button>
 							</div>
 							<button
@@ -482,72 +715,104 @@ export function VisualReviewPanel({
 						className={`vrev__viewport${panning ? ' vrev__viewport--panning' : ''}`}
 						onPointerDown={handlePointerDown}
 					>
-						<svg
-							ref={svgRef}
-							className="vrev__svg"
+						<div
+							className="vrev__canvas"
 							style={zoom === 'fit' ? undefined : { width: pageWidth * zoom }}
-							viewBox={`0 0 ${pageWidth} ${pageHeight}`}
-							preserveAspectRatio="xMidYMin meet"
-							role="group"
-							aria-label={`Page overview for ${selectedPage.path ?? selectedPage.url}`}
 						>
-							<image
-								aria-hidden="true"
-								href={overviewUrl ?? undefined}
-								x={0}
-								y={0}
-								width={pageWidth}
-								height={pageHeight}
+							<svg
+								ref={svgRef}
+								className="vrev__svg"
+								viewBox={`0 0 ${pageWidth} ${pageHeight}`}
 								preserveAspectRatio="xMidYMin meet"
-							/>
-							{overlayElements.map((el) => {
-								const isActive = el.issueId === activeIssueId;
-								return (
-									<g key={`${el.issueId}-${el.nodeIndex}`}>
-										<rect
-											key={`${el.issueId}-${el.nodeIndex}`}
-											x={el.x}
-											y={el.y}
-											width={el.width}
-											height={el.height}
-											fill={getSeverityFillColor(el.severity)}
-											stroke={getSeverityStrokeColor(el.severity)}
-											strokeWidth={isActive || newIssueIds?.has(el.issueId) ? 6 : 3}
-											strokeDasharray={newIssueIds?.has(el.issueId) ? '12 5' : undefined}
-											className={`vrev__marker${isActive ? ' vrev__marker--active' : ''}${newIssueIds?.has(el.issueId) ? ' vrev__marker--new' : ''}`}
-											role="button"
-											tabIndex={0}
-											aria-label={`${newIssueIds?.has(el.issueId) ? 'NEW. ' : ''}Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
-											style={{ cursor: 'pointer' }}
-											onClick={() => handleMarkerClick(el.issueId)}
-											onFocus={() => {
-												setActiveIssueId(el.issueId);
-												/* Tab already walks the markers; without this the
+								role="group"
+								aria-label={`Page overview for ${selectedPage.path ?? selectedPage.url}`}
+							>
+								<image
+									aria-hidden="true"
+									href={overviewUrl ?? undefined}
+									x={0}
+									y={0}
+									width={pageWidth}
+									height={pageHeight}
+									preserveAspectRatio="xMidYMin meet"
+								/>
+								{overlayElements.map((el) => {
+									const isActive = el.issueId === activeIssueId;
+									const isNew = newIssueIds?.has(el.issueId) ?? false;
+									return (
+										<g key={`${el.issueId}-${el.nodeIndex}`}>
+											{isActive && (
+												<rect
+													className="vrev__halo"
+													x={el.x}
+													y={el.y}
+													width={el.width}
+													height={el.height}
+													stroke={getSeverityStrokeColor(el.severity)}
+													vectorEffect="non-scaling-stroke"
+													aria-hidden="true"
+												/>
+											)}
+											<rect
+												x={el.x}
+												y={el.y}
+												width={el.width}
+												height={el.height}
+												fill={getSeverityFillColor(el.severity)}
+												stroke={getSeverityStrokeColor(el.severity)}
+												/* Screen pixels, not page pixels: at fit width a 2560px
+											   capture draws at about a third, and 3px strokes thinned
+											   to 1px. */
+												vectorEffect="non-scaling-stroke"
+												strokeWidth={isActive || isNew ? 3 : 2}
+												strokeDasharray={isNew ? '6 3' : undefined}
+												className={`vrev__marker${isActive ? ' vrev__marker--active' : ''}${isNew ? ' vrev__marker--new' : ''}`}
+												role="button"
+												tabIndex={0}
+												aria-label={`${isNew ? 'NEW. ' : ''}Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
+												style={{ cursor: 'pointer' }}
+												onClick={() => handleMarkerClick(el.issueId)}
+												onFocus={() => {
+													setActiveIssueId(el.issueId);
+													/* Tab already walks the markers; without this the
 											   focused one is routinely off screen, which is the
 											   same as having no keyboard support at all. */
-												scrollToElement(el);
+													scrollToElement(el);
+												}}
+												onKeyDown={(event) => {
+													if (event.key === 'Enter' || event.key === ' ') {
+														event.preventDefault();
+														handleMarkerClick(el.issueId);
+													}
+												}}
+											/>
+										</g>
+									);
+								})}
+							</svg>
+							{/* HTML, so pins keep their size at every zoom. The rects stay
+						    the targets; pins only label them with the list number. */}
+							<div className="vrev__pins" aria-hidden="true">
+								{walkOrder.map((el) => {
+									const pin = pinByIssue.get(el.issueId);
+									if (!pin) return null;
+									return (
+										<span
+											key={`${el.issueId}-${el.nodeIndex}`}
+											className={`vrev__pin sev-${pin.severity}${el.issueId === activeIssueId ? ' vrev__pin--active' : ''}`}
+											style={{
+												left: `${el.xPercent}%`,
+												// A box at the very top keeps its pin on the canvas.
+												top: `max(1.75rem, ${el.yPercent}%)`
 											}}
-											onKeyDown={(event) => {
-												if (event.key === 'Enter' || event.key === ' ') {
-													event.preventDefault();
-													handleMarkerClick(el.issueId);
-												}
-											}}
-										/>
-										{newIssueIds?.has(el.issueId) && (
-											<text
-												x={el.x + 4}
-												y={Math.max(18, el.y + 20)}
-												className="vrev__new-label"
-												aria-hidden="true"
-											>
-												NEW
-											</text>
-										)}
-									</g>
-								);
-							})}
-						</svg>
+										>
+											{pin.number}
+											{newIssueIds?.has(el.issueId) && <span className="vrev__pin-new">NEW</span>}
+										</span>
+									);
+								})}
+							</div>
+						</div>
 					</div>
 				)}
 			</section>
@@ -562,61 +827,29 @@ export function VisualReviewPanel({
 						No findings match the current scanner filter.
 					</p>
 				) : (
-					<ul className="vrev__issues-list">
-						{issueGroups.map((group) => {
-							const isActive = group.issues.some((issue) => issue.id === activeIssueId);
-							const reviewStatus = getReviewGroupStatus(group.issues, getReviewVerdict);
-							const first =
-								group.issues.find(
-									(issue) => needsHumanReview(issue) && !getReviewVerdict(issue.id)
-								) ?? group.issues[0];
-							if (!first) {
-								// A group only exists because an issue was added to it.
-								return null;
-							}
-							return (
-								<li key={group.key}>
-									<button
-										type="button"
-										className={`vrev__issue-btn${isActive ? ' vrev__issue-btn--active' : ''}`}
-										onClick={() => {
-											setActiveIssueId(first.id);
-											revealIssue(first.id);
-											onIssueSelect(first);
-										}}
-									>
-										<span className={getSeverityDotClass(group.severity)} aria-hidden="true" />
-										<span className="vrev__issue-body">
-											<span className="vrev__issue-title">
-												{group.title}{' '}
-												{group.issues.some((issue) => newIssueIds?.has(issue.id)) && (
-													<span className="issue-new">NEW</span>
-												)}
+					<div className="vrev__issues-body">
+						{[
+							{ label: 'On the screenshot', groups: locatedGroups, numbered: true },
+							{ label: 'Page-level', groups: pageLevelGroups, numbered: false }
+						].map(
+							({ label, groups, numbered }) =>
+								groups.length > 0 && (
+									<section key={label} className="vrev__issues-part">
+										<h3 className="vrev__issues-sub">
+											{label}{' '}
+											<span className="num">
+												{groups.reduce((sum, group) => sum + group.issues.length, 0)}
 											</span>
-											<span className="vrev__issue-meta">
-												{reviewStatus && (
-													<span
-														className={`vrev__issue-review vrev__issue-review--${reviewStatus.tone}`}
-													>
-														{reviewStatus.label}
-													</span>
-												)}
-												{group.scanner} · {group.ruleId}
-											</span>
-										</span>
-										{group.issues.length > 1 && (
-											<span
-												className="vrev__issue-times num"
-												aria-label={`${group.issues.length} occurrences`}
-											>
-												× {group.issues.length}
-											</span>
-										)}
-									</button>
-								</li>
-							);
-						})}
-					</ul>
+										</h3>
+										<ul className="vrev__issues-list">
+											{groups.map((group, index) =>
+												renderGroup(group, numbered ? index + 1 : null)
+											)}
+										</ul>
+									</section>
+								)
+						)}
+					</div>
 				)}
 			</aside>
 		</div>

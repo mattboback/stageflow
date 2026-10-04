@@ -237,15 +237,18 @@ test('report page renders the fixture report end to end', async ({ page }) => {
 	const host = new URL(report.meta.baseUrl as string).host;
 	const totals = page.getByLabel('Scan totals');
 	await expect(page.getByRole('heading', { name: host })).toBeVisible();
-	await expect(totals.getByText('Pages scanned', { exact: true })).toBeVisible();
+	const pagesScanned = report.summary.pagesScanned;
 	await expect(
-		totals.getByText(`${report.summary.pagesWithIssues.toLocaleString()} with findings`)
+		totals.getByText(
+			`${pagesScanned.toLocaleString()} ${pagesScanned === 1 ? 'page' : 'pages'} scanned · ${report.summary.pagesWithIssues.toLocaleString()} with findings`
+		)
 	).toBeVisible();
 	await expect(totals.getByText('Human review')).toHaveCount(0);
 
 	// Review landing: review-next CTA, filter toolbar, three-panel visual review.
 	await expect(page.getByText(/findings need review|findings reviewed/)).toBeVisible();
-	await expect(page.getByLabel('Scan summary').getByText('Severity')).toBeVisible();
+	// The severity legend is text, and each entry filters Findings.
+	await expect(totals.getByRole('button', { name: /^\d+ critical$/ })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Pages', exact: true })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'Findings on this page' })).toBeVisible();
 
@@ -261,10 +264,9 @@ test('review queue records contrast and generic human decisions', async ({ page 
 	await page.getByRole('button', { name: 'Mark pass' }).click();
 
 	await page.getByRole('button', { name: 'Next issue (j)' }).click();
-	await expect(page.getByRole('tab', { name: 'Review', exact: true })).toHaveAttribute(
-		'aria-selected',
-		'true'
-	);
+	await expect(
+		page.getByRole('dialog').getByRole('tab', { name: 'Review', exact: true })
+	).toHaveAttribute('aria-selected', 'true');
 	await page.getByRole('button', { name: 'Mark pass' }).click();
 	await page.getByRole('button', { name: 'Close modal' }).click();
 
@@ -293,10 +295,9 @@ test('review decisions synchronize without loss across browser tabs', async ({ c
 
 	await expect(otherPage.getByText('1 of 2 findings still need review')).toBeVisible();
 	await otherPage.getByRole('button', { name: /Continue review/ }).click();
-	await expect(otherPage.getByRole('tab', { name: 'Review', exact: true })).toHaveAttribute(
-		'aria-selected',
-		'true'
-	);
+	await expect(
+		otherPage.getByRole('dialog').getByRole('tab', { name: 'Review', exact: true })
+	).toHaveAttribute('aria-selected', 'true');
 	await otherPage.getByRole('button', { name: 'Mark fail' }).click();
 	await otherPage.getByRole('button', { name: 'Close modal' }).click();
 
@@ -426,8 +427,9 @@ test('a zero-finding report celebrates the all-clear instead of an empty queue',
 	await page.goto(`/scan/${CLEAN_JOB_ID}/report`);
 
 	await expect(page.getByRole('heading', { name: 'All clear.' })).toBeVisible();
-	await expect(page.getByText('0 findings')).toBeVisible();
-	await expect(page.getByText('nothing to fix')).toBeVisible();
+	const totals = page.getByLabel('Scan totals');
+	await expect(totals.getByText('0 findings')).toBeVisible();
+	await expect(totals.getByText('nothing to fix')).toBeVisible();
 	await expect(
 		page.locator('.allclear').getByRole('link', { name: /Save this as a local baseline/ })
 	).toBeVisible();

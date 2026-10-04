@@ -1,17 +1,21 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createRoutesStub } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
 import { loadAllScansFixture } from '../../test/load-fixture';
-import { scannerLabel } from '../../lib/report';
+import { explainScore, scannerLabel } from '../../lib/report';
+import type { ProjectDiff } from '../../lib/projects';
 import type { UnifiedReport } from '../../lib/types/unified-report';
 
 import { AllClearBanner } from './AllClearBanner';
 import { IssueRowCard } from './IssueRowCard';
 import { LighthouseSummary } from './LighthouseSummary';
 import { ReportHeader } from './ReportHeader';
-import { ReportStatStrip } from './ReportStatStrip';
 import { ScannerText } from './ScannerText';
+import { SeverityBar, SeverityLegend } from './SeverityBar';
+import { VisualReviewPanel } from './VisualReviewPanel';
 import { ManualReviewTab } from './verify/ManualReviewTab';
 import { VerifyContrastTab } from './verify/VerifyContrastTab';
 
@@ -29,10 +33,9 @@ describe('ReportHeader', () => {
 
 		expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
-		const totals = screen.getByLabelText('Scan totals');
-		expect(totals.textContent).toContain('Findings');
-		expect(totals.textContent).toContain(report.summary.totalIssues.toLocaleString());
-		expect(totals.textContent).toContain('Pages scanned');
+		const totals = screen.getByRole('group', { name: 'Scan totals' });
+		expect(totals.textContent).toContain(`${report.summary.totalIssues.toLocaleString()} findings`);
+		expect(totals.textContent).toContain(`${report.summary.pagesScanned} pages scanned`);
 		expect(totals.textContent).not.toContain('Human review');
 	});
 
@@ -40,13 +43,216 @@ describe('ReportHeader', () => {
 		const clean: UnifiedReport = {
 			...report,
 			issues: [],
-			summary: { ...report.summary, totalIssues: 0, bySeverity: zeroSeverity }
+			summary: { ...report.summary, totalIssues: 0, pagesScanned: 1, bySeverity: zeroSeverity }
 		};
 		render(<ReportHeader report={clean} />);
 
 		const totals = screen.getByLabelText('Scan totals');
-		expect(totals.textContent).toContain('nothing to fix');
+		// The page count stays: with one page there is no Pages tab to give it.
+		expect(totals.textContent).toContain('1 page scanned · nothing to fix');
 		expect(totals.textContent).not.toContain('critical');
+	});
+
+	it('turns severity counts and scanner chips into findings filters', () => {
+		const onReviewSeverity = vi.fn();
+		const onSelectScanner = vi.fn();
+		render(
+			<ReportHeader
+				report={report}
+				onReviewSeverity={onReviewSeverity}
+				onSelectScanner={onSelectScanner}
+			/>
+		);
+
+		const critical = report.summary.bySeverity.critical ?? 0;
+		expect(critical).toBeGreaterThan(0);
+		fireEvent.click(screen.getByRole('button', { name: `${critical} critical` }));
+		expect(onReviewSeverity).toHaveBeenCalledWith('critical');
+
+		const scanners = screen.getByRole('group', { name: 'Scanners' });
+		for (const scanner of report.scanners) {
+			expect(within(scanners).getByText(scannerLabel(scanner.id, scanner.name))).toBeTruthy();
+		}
+		const first = report.scanners[0]!;
+		fireEvent.click(
+			within(scanners).getByText(scannerLabel(first.id, first.name)).closest('button')!
+		);
+		expect(onSelectScanner).toHaveBeenCalledWith(first.id);
+	});
+
+	it('marks the baseline on the dial only when the comparison describes the shown score', () => {
+		const shown = report.summary.score!;
+		const comparison = (current: number): ProjectDiff => ({
+			schema: 'stageflow/diff@v1',
+			baseline: { jobId: 'base', totalIssues: 1, score: shown + 3 },
+			current: { jobId: 'current', totalIssues: 2, score: current },
+			delta: { newIssues: 1, fixedIssues: 0, unchangedIssues: 1, scoreDelta: current - shown - 3 },
+			new: [],
+			fixed: []
+		});
+
+		const view = render(<ReportHeader report={report} comparison={comparison(shown)} />);
+		expect(
+			screen.getByRole('img', {
+				name: new RegExp(`Site score ${shown} of 100, down 3 from baseline ${shown + 3}$`)
+			})
+		).toBeTruthy();
+		expect(view.container.querySelector('.rhead__delta')?.textContent).toBe(`▼ 3 vs ${shown + 3}`);
+
+		view.rerender(<ReportHeader report={report} comparison={comparison(shown - 1)} />);
+		expect(
+			screen.getByRole('img', { name: new RegExp(`Site score ${shown} of 100$`) })
+		).toBeTruthy();
+		expect(view.container.querySelector('.rhead__delta')).toBeNull();
+	});
+
+	it('breaks the score down only when the breakdown reproduces it', () => {
+		const demo = JSON.parse(
+			readFileSync(path.resolve('public/demo/report.json'), 'utf8')
+		) as UnifiedReport;
+		const view = render(<ReportHeader report={demo} scoreModel={explainScore(demo)} />);
+		fireEvent.click(screen.getByText('How is this scored?'));
+		const table = screen.getByRole('table', { name: 'What’s lowering the score' });
+		const rows = within(table)
+			.getAllByRole('row')
+			.slice(1)
+			.map((row) => row.textContent);
+		expect(rows[0]).toBe(`${scannerLabel('axe')}44%67`);
+		expect(rows).toHaveLength(5);
+
+		// The contract fixture's recorded score does not follow from its findings.
+		view.rerender(<ReportHeader report={report} scoreModel={explainScore(report)} />);
+		expect(screen.getByText(/starts at 100/)).toBeTruthy();
+		expect(screen.queryByRole('table')).toBeNull();
+	});
+
+	it('says expected staging observations are left out only when the score leaves them out', () => {
+		const demo = JSON.parse(
+			readFileSync(path.resolve('public/demo/report.json'), 'utf8')
+		) as UnifiedReport;
+		const view = render(<ReportHeader report={demo} />);
+		expect(screen.getByText(/Expected staging observations and findings/)).toBeTruthy();
+
+		// An older report scores from its summary, which counts them.
+		const legacy: UnifiedReport = { ...demo };
+		delete legacy.assessment;
+		view.rerender(<ReportHeader report={legacy} />);
+		expect(screen.queryByText(/Expected staging observations/)).toBeNull();
+		expect(screen.getByText(/Findings that need a human check are left out/)).toBeTruthy();
+	});
+});
+
+describe('VisualReviewPanel', () => {
+	it('selects the occurrence that is on the screenshot when its numbered group is chosen', () => {
+		// Revealing a finding asks whether to animate; jsdom has no matchMedia.
+		vi.stubGlobal('matchMedia', (query: string) => ({
+			matches: false,
+			media: query,
+			addEventListener: () => {},
+			removeEventListener: () => {}
+		}));
+		try {
+			const page = report.pages[0]!;
+			const base = {
+				scanner: 'axe',
+				ruleId: 'image-alt',
+				severity: 'serious' as const,
+				title: 'Images must have alternative text',
+				description: '',
+				pageId: page.id,
+				pageUrl: page.url,
+				elementCount: 1
+			};
+			// The first occurrence has no marker, as when its element was off-screen.
+			const located: UnifiedReport = {
+				...report,
+				issues: [
+					{ ...base, id: 'unlocated' },
+					{ ...base, id: 'located' }
+				],
+				pages: [
+					{
+						...page,
+						pageOverview: {
+							screenshotFilename: 'page.png',
+							pageWidth: 1280,
+							pageHeight: 2400,
+							elements: [
+								{
+									issueId: 'located',
+									ruleId: 'image-alt',
+									severity: 'serious',
+									selector: 'img',
+									nodeIndex: 0,
+									xPercent: 10,
+									yPercent: 10,
+									widthPercent: 10,
+									heightPercent: 5,
+									x: 128,
+									y: 240,
+									width: 128,
+									height: 120
+								}
+							]
+						}
+					}
+				]
+			};
+			const onIssueSelect = vi.fn();
+			render(
+				<VisualReviewPanel
+					report={located}
+					screenshots={[
+						{
+							kind: 'page_overview',
+							artifact_id: 'shot',
+							scanner_id: 'axe',
+							page_id: page.id,
+							url: '/shot.webp'
+						}
+					]}
+					activeScanner={null}
+					activePage={page.id}
+					getReviewVerdict={() => null}
+					onSelectPage={vi.fn()}
+					onIssueSelect={onIssueSelect}
+				/>
+			);
+			const zoom = screen.getByRole<HTMLButtonElement>('button', { name: 'Zoom to finding' });
+			expect(zoom.disabled).toBe(true);
+
+			fireEvent.click(screen.getByRole('button', { name: /Images must have alternative text/ }));
+			expect(onIssueSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'located' }));
+			expect(zoom.disabled).toBe(false);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+});
+
+describe('SeverityBar', () => {
+	const counts = [
+		{ severity: 'critical' as const, count: 1 },
+		{ severity: 'minor' as const, count: 3 }
+	];
+
+	it('is an image only when it is named, and scales against a shared total', () => {
+		const view = render(<SeverityBar counts={counts} scale={8} />);
+		const bar = view.container.querySelector('.sevbar')!;
+		expect(bar.getAttribute('aria-hidden')).toBe('true');
+		const grows = [...bar.children].map((segment) => (segment as HTMLElement).style.flexGrow);
+		expect(grows).toEqual(['0.125', '0.375', '0.5']);
+
+		view.rerender(<SeverityBar counts={counts} label="4 findings: 1 critical and 3 minor" />);
+		expect(screen.getByRole('img', { name: '4 findings: 1 critical and 3 minor' })).toBeTruthy();
+		expect(view.container.querySelector('.sevbar__rest')).toBeNull();
+	});
+
+	it('names each count in text, as buttons when it filters', () => {
+		const select = vi.fn();
+		render(<SeverityLegend counts={counts} onSelect={select} />);
+		fireEvent.click(screen.getByRole('button', { name: '3 minor' }));
+		expect(select).toHaveBeenCalledWith('minor');
 	});
 });
 
@@ -124,39 +330,6 @@ describe('AllClearBanner', () => {
 		);
 
 		expect(screen.getByText(/One report error was noted/)).toBeTruthy();
-	});
-});
-
-describe('ReportStatStrip', () => {
-	const handlers = () => ({
-		onReviewSeverity: vi.fn(),
-		onSelectScanner: vi.fn()
-	});
-
-	it('renders severity pills and scanner chips from the fixture', () => {
-		render(<ReportStatStrip report={report} {...handlers()} />);
-
-		const critical = report.summary.bySeverity.critical ?? 0;
-		expect(critical).toBeGreaterThan(0);
-		expect(screen.getByRole('button', { name: `${critical} critical` })).toBeTruthy();
-		for (const scanner of report.scanners) {
-			expect(screen.getAllByText(scannerLabel(scanner.id, scanner.name)).length).toBeGreaterThan(0);
-		}
-	});
-
-	it('routes severity pills and scanner chips to the issues view', () => {
-		const h = handlers();
-		render(<ReportStatStrip report={report} {...h} />);
-
-		const critical = report.summary.bySeverity.critical ?? 0;
-		fireEvent.click(screen.getByRole('button', { name: `${critical} critical` }));
-		expect(h.onReviewSeverity).toHaveBeenCalledWith('critical');
-
-		const scanner = report.scanners[0]!;
-		fireEvent.click(
-			screen.getAllByText(scannerLabel(scanner.id, scanner.name))[0]!.closest('button')!
-		);
-		expect(h.onSelectScanner).toHaveBeenCalledWith(scanner.id);
 	});
 });
 

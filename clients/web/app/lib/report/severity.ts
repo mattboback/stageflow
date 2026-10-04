@@ -63,6 +63,52 @@ export function getWorstSeverity(values: (string | null | undefined)[]): Severit
 	return worst;
 }
 
+export interface SeverityCount {
+	severity: SeverityLevel;
+	count: number;
+}
+
+/** Severities with at least one finding, worst first. */
+export function severityCounts(
+	counts: Partial<Record<SeverityLevel, number>> | null | undefined
+): SeverityCount[] {
+	if (!counts) return [];
+	return SEVERITY_LEVELS.map((severity) => ({ severity, count: counts[severity] ?? 0 })).filter(
+		({ count }) => count > 0
+	);
+}
+
+/**
+ * Issues counted by severity. An unrecognized severity counts as info, as the
+ * orchestrator's addSeverity does, so the score recomputed from these counts
+ * matches its own.
+ */
+export function tallySeverities(
+	issues: readonly { severity?: string | null }[]
+): Partial<Record<SeverityLevel, number>> {
+	const counts: Partial<Record<SeverityLevel, number>> = {};
+	for (const issue of issues) {
+		const severity = normalizeSeverity(issue.severity) ?? 'info';
+		counts[severity] = (counts[severity] ?? 0) + 1;
+	}
+	return counts;
+}
+
+/** Issues counted by severity, worst first; an unrecognized severity counts as info. */
+export function countIssueSeverities(
+	issues: readonly { severity?: string | null }[]
+): SeverityCount[] {
+	return severityCounts(tallySeverities(issues));
+}
+
+/** "3 critical, 14 serious and 8 minor", for accessible names and summaries. */
+export function describeSeverityCounts(counts: readonly SeverityCount[]): string {
+	const parts = counts.map(({ severity, count }) => `${count.toLocaleString()} ${severity}`);
+	const last = parts.pop();
+	if (last === undefined) return '';
+	return parts.length > 0 ? `${parts.join(', ')} and ${last}` : last;
+}
+
 /** Comparator placing more severe issues first. */
 export function compareSeverity(a?: string | null, b?: string | null): number {
 	return severitySortIndex(a) - severitySortIndex(b);

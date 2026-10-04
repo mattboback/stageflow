@@ -12,13 +12,14 @@ import { RouteFault } from '../components/RouteFault';
 import { DemoArtifactsPanel } from '../components/report/DemoArtifactsPanel';
 import { ReportView } from '../components/report/ReportView';
 import { BaselineDiffSummary } from '../components/report/BaselineDiffSummary';
+import { useOpenIssue } from '../lib/hooks/useOpenIssue';
 import { computeProjectDiff } from '../lib/projects';
+import { shownSiteScore } from '../lib/report';
 import type { UnifiedReport } from '../lib/types/unified-report';
 import type { ScreenshotArtifact } from '../lib/types/scan';
 import currentData from '../../public/demo/report.json';
 import baselineData from '../../public/demo/baseline.json';
 import screenshotData from '../../public/demo/screenshots.json';
-import { useSearchParams } from 'react-router';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
 import { pageTitle, SITE_NAME } from '../lib/site-metadata';
@@ -42,18 +43,7 @@ const screenshots = screenshotData as ScreenshotArtifact[];
 const comparison = computeProjectDiff('demo-baseline', baseline, 'demo', report);
 
 export default function Demo() {
-	const [, setSearchParams] = useSearchParams();
-	const openIssue = (issueId: string) => {
-		setSearchParams(
-			(prev) => {
-				const next = new URLSearchParams(prev);
-				next.set('section', 'issues');
-				next.set('issue', issueId);
-				return next;
-			},
-			{ replace: true, preventScrollReset: true }
-		);
-	};
+	const openIssue = useOpenIssue();
 	return (
 		<>
 			<SiteHeader current="demo" />
@@ -64,7 +54,14 @@ export default function Demo() {
 				status="complete"
 				error={null}
 				comparison={comparison}
-				banner={<BaselineDiffSummary diff={comparison} onOpenIssue={openIssue} />}
+				toolbar={null}
+				comparisonPanel={
+					<BaselineDiffSummary
+						diff={comparison}
+						shownScore={shownSiteScore(report)}
+						onOpenIssue={openIssue}
+					/>
+				}
 				artifactsPanel={<DemoArtifactsPanel />}
 			/>
 			<SiteFooter slim />

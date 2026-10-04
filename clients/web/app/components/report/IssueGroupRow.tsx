@@ -1,12 +1,8 @@
 import { useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 
 import type { IssueDetail, IssueGroup, PageSummary } from '../../lib/types/unified-report';
-import {
-	SCANNER_META,
-	getSeverityBadgeClass,
-	getSeverityDotClass,
-	getIssueKind
-} from '../../lib/report';
+import { SCANNER_META, getSeverityBadgeClass, getIssueKind } from '../../lib/report';
 
 interface Props {
 	group: IssueGroup;
@@ -41,7 +37,6 @@ export function IssueGroupRow({
 				<span className="igroup__caret" aria-hidden="true">
 					▸
 				</span>
-				<span className={getSeverityDotClass(group.severity)} aria-hidden="true" />
 				<span className="igroup__title" title={group.title}>
 					{group.title}{' '}
 					{group.occurrences.some((issue) => newIssueIds?.has(issue.id)) && (
@@ -53,7 +48,7 @@ export function IssueGroupRow({
 					<span>
 						{occurrenceCount > 1 && (
 							<>
-								<b className="num igroup__count">{occurrenceCount}</b> ×{' · '}
+								<b className="num igroup__count">{occurrenceCount}</b> occurrences ·{' '}
 							</>
 						)}
 						{pageCount} page{pageCount === 1 ? '' : 's'}
@@ -85,9 +80,6 @@ export function IssueGroupRow({
 										: undefined
 								}
 							>
-								<span className="igroup__occ-dot" aria-hidden="true">
-									·
-								</span>
 								<span className="igroup__occ-page">
 									<strong>{pageLabel}</strong>
 									{occ.pageUrl}
@@ -97,6 +89,9 @@ export function IssueGroupRow({
 										? `${occ.elementCount}×`
 										: ''}
 								</span>
+								{onSelectOccurrence && (
+									<ChevronRight className="igroup__occ-open" size={16} aria-hidden="true" />
+								)}
 							</div>
 						);
 					})}

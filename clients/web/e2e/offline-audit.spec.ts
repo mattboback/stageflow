@@ -80,8 +80,12 @@ test('interactive HTML opens without a network and preserves edits after downloa
 		await context.setOffline(true);
 		await page.goto(pathToFileURL(filename).href);
 		await expect(page.getByText('Interactive offline audit', { exact: true })).toBeVisible();
+		// The viewer bundle has to carry the report stylesheets, not just the tokens:
+		// without them the review workspace and the modal render as plain flow text.
+		await expect(page.locator('.vrev')).toHaveCSS('display', 'grid');
 		await page.getByRole('button', { name: /Review human checks/ }).click();
 		await expect(page.getByRole('dialog')).toBeVisible();
+		await expect(page.locator('.imodal__backdrop')).toHaveCSS('position', 'fixed');
 		await expect(page.getByRole('tab', { name: 'Verify' })).toHaveAttribute(
 			'aria-selected',
 			'true'

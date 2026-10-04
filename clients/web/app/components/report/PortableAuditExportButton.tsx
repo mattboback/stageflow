@@ -67,7 +67,7 @@ export function PortableAuditExportButton({
 	return (
 		<div className="portable-audit-export">
 			<button
-				className="btn btn--secondary"
+				className="btn btn--ghost btn--sm"
 				type="button"
 				disabled={busy}
 				onClick={() => {

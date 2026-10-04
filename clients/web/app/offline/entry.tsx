@@ -8,7 +8,11 @@ import {
 import { createReviewContext } from '../lib/report/review-context';
 import { createReviewVerdictStore } from '../lib/report/review-verdict-store';
 import { OfflineAudit } from './OfflineAudit';
+/* The in-app report gets these two from route links(), which this entry never
+   renders. Without them the exported audit opened as unstyled text. */
 import '../styles/instrument.css';
+import '../styles/report.css';
+import '../routes/scan-report.css';
 import './offline.css';
 
 async function startOfflineAudit() {

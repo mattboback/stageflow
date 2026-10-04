@@ -27,7 +27,7 @@ test.describe('the demo report', () => {
 		await page.goto('/demo');
 
 		await page.getByRole('tab', { name: /Pages/ }).click();
-		const cards = page.getByRole('button', { name: /findings$/ });
+		const cards = page.getByRole('button', { name: /^Review .+, \d+ findings?\b/ });
 		await expect(cards.first()).toBeVisible();
 		// The tab only exists above one page; a single-page report resolves it
 		// back to review, so this also pins the fixture at more than one page.
@@ -49,7 +49,8 @@ test.describe('the demo report', () => {
 		await expect(active).toHaveCount(0);
 		await next.click();
 		await expect(active).toHaveCount(1);
-		await expect(active).toHaveAttribute('stroke-width', '6');
+		// Strokes are in screen pixels (non-scaling), so this holds at every zoom.
+		await expect(active).toHaveAttribute('stroke-width', '3');
 	});
 
 	test('prerenders the real comparison and exposes NEW filters and findings', async ({ page }) => {
@@ -58,11 +59,11 @@ test.describe('the demo report', () => {
 		expect(html).toContain('New in this deploy');
 		expect(html).not.toContain('Loading demo report');
 		await page.goto('/demo');
-		await expect(
-			page.getByRole('heading', {
-				name: `New in this deploy (${DEMO_SUMMARY.newIssues}) · Fixed (${DEMO_SUMMARY.fixedIssues})`
-			})
-		).toBeVisible();
+		const changes = page.locator('.baseline-diff');
+		await expect(changes.getByText('New in this deploy')).toBeVisible();
+		await expect(changes.getByRole('heading')).toContainText(
+			`${DEMO_SUMMARY.newIssues} new · ${DEMO_SUMMARY.fixedIssues} fixed`
+		);
 		await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
 		await expect(page.locator('.vrev__marker--new').first()).toBeVisible();
 		await page.getByRole('tab', { name: /Findings/ }).click();

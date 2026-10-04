@@ -8,6 +8,7 @@ import { computeProjectDiff, hasStableReportIdentity, isUnifiedReport } from '..
 import { getPageOverviewUrl } from '../report/screenshots';
 import { DEMO_SUMMARY } from './demo-summary';
 import { DEMO_CROP } from './demo-crop';
+import DEMO_TERMINAL from './demo-terminal.json';
 import type { ScreenshotArtifact } from '../types/scan';
 import type { UnifiedReport } from '../types/unified-report';
 
@@ -200,9 +201,16 @@ describe('the committed /demo fixture', () => {
 		expect(DEMO_SUMMARY.baselineScore).toBe(baseline.summary.score ?? null);
 		expect(DEMO_SUMMARY.currentScore).toBe(report.summary.score ?? null);
 		expect(DEMO_SUMMARY.scoreDelta).toBe(comparison.delta.scoreDelta ?? null);
-		expect(DEMO_SUMMARY.terminal).toBe(
-			`stageflow diff baseline.json current.json --fail-on-new=any\nNew: ${comparison.delta.newIssues} · Fixed: ${comparison.delta.fixedIssues} · Unchanged: ${comparison.delta.unchangedIssues}`
+		// demo_terminal_test.go checks the transcript against the CLI itself; this
+		// checks it describes the same comparison as /demo.
+		expect(DEMO_TERMINAL.command).toBe(
+			'stageflow diff baseline.json current.json --fail-on-new=any'
 		);
+		expect(DEMO_TERMINAL.exitCode).toBe(comparison.delta.newIssues > 0 ? 1 : 0);
+		expect(DEMO_TERMINAL.output).toContain(`New issues: ${comparison.delta.newIssues}\n`);
+		expect(DEMO_TERMINAL.output).toContain(`Fixed issues: ${comparison.delta.fixedIssues}\n`);
+		expect(DEMO_TERMINAL.output).toContain(`Unchanged: ${comparison.delta.unchangedIssues}\n`);
+		for (const issue of comparison.new) expect(DEMO_TERMINAL.output).toContain(issue.title);
 		expect(DEMO_SUMMARY.moderate).toBe(
 			displayed.issues.filter((issue) => issue.severity === 'moderate').length
 		);

@@ -3,8 +3,9 @@ import { Check, Copy } from 'lucide-react';
 
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 
-import { findOverviewElement, getIssueKind, humanizeFailureSummary } from '../../lib/report';
+import { findOverviewElement, getIssueKind } from '../../lib/report';
 
+import { GuidanceText } from './GuidanceText';
 import { TruncatedEvidence } from './TruncatedEvidence';
 import { LighthouseDetails } from './LighthouseDetails';
 import { ElementCrop } from './ElementCrop';
@@ -47,7 +48,7 @@ export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
 	const primary = issue.occurrences?.[0] ?? null;
 	const selector = primary?.selector ?? null;
 	const html = primary?.html ?? primary?.contextHtml ?? null;
-	const failureSummary = humanizeFailureSummary(primary?.failureSummary);
+	const failureSummary = primary?.failureSummary?.trim() || null;
 	const pageLabel = page?.path ?? page?.url ?? issue.pageUrl ?? null;
 
 	const overviewElement = findOverviewElement(page, issue.id);
@@ -93,7 +94,7 @@ export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
 			{failureSummary && (
 				<section>
 					<h3 className="imodal__pane-h">What failed</h3>
-					<p className="evidence__summary">{failureSummary}</p>
+					<GuidanceText text={failureSummary} className="evidence__summary" />
 				</section>
 			)}
 

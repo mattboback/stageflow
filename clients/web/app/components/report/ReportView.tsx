@@ -15,11 +15,11 @@ import { ManualChecksPanel } from './ManualChecksPanel';
 import { ReportHeader } from './ReportHeader';
 import { ReportSectionNav, type ReportSection } from './ReportSectionNav';
 import { PagesView } from './PagesView';
-import { ReportStatStrip } from './ReportStatStrip';
 import { VisualReviewPanel } from './VisualReviewPanel';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 import {
 	buildOccurrenceModeReport,
+	explainScore,
 	incompleteScanners,
 	isIssueSortKey,
 	needsHumanReview,
@@ -63,8 +63,13 @@ export interface ReportViewProps {
 	 * fetched, not about how it is displayed.
 	 */
 	error: string | null;
-	/** Above the report header: local-project or demo comparison, or null. */
-	banner: ReactNode;
+	/** Above the report header: job actions, export, verification or offline controls. */
+	toolbar: ReactNode;
+	/**
+	 * Between the header and the tabs: the baseline comparison, or null. It
+	 * follows the header so the site and its score come first.
+	 */
+	comparisonPanel: ReactNode;
 	/**
 	 * The artifacts tab's download list. A slot rather than a prop because a
 	 * live scan lists the files of a job that /demo does not have, and
@@ -83,7 +88,7 @@ export interface ReportViewProps {
  *
  * The seam matters because the report viewer is the most substantial thing in
  * this codebase and it used to be reachable only by starting a scan and
- * waiting a minute and a half for it. Both slots are required rather than
+ * waiting a minute and a half for it. The slots are required rather than
  * optional: under exactOptionalPropertyTypes an optional ReactNode plus a
  * possibly-null value is a type-error dance for nothing, and ReactNode already
  * admits null.
@@ -98,7 +103,8 @@ export function ReportView({
 	screenshots,
 	status,
 	error,
-	banner,
+	toolbar,
+	comparisonPanel,
 	artifactsPanel,
 	comparison,
 	newIssueIds,
@@ -106,12 +112,15 @@ export function ReportView({
 }: ReportViewProps) {
 	const [searchParams, setSearchParams] = useSearchParams();
 
-	const { displayReport, manualChecks } = useMemo(() => {
-		if (!report) return { displayReport: null, manualChecks: [] };
+	const { displayReport, manualChecks, scoreModel } = useMemo(() => {
+		if (!report) return { displayReport: null, manualChecks: [], scoreModel: null };
 		const split = splitManualChecks(report);
 		return {
 			displayReport: buildOccurrenceModeReport(split.report),
-			manualChecks: split.manualChecks
+			manualChecks: split.manualChecks,
+			// The score counts findings as stored: not split per occurrence, and
+			// with any manual checks an older report filed as findings.
+			scoreModel: explainScore(report)
 		};
 	}, [report]);
 
@@ -225,8 +234,17 @@ export function ReportView({
 			<div className="wrap wrap--app">
 				{displayReport ? (
 					<>
-						{banner}
-						<ReportHeader report={displayReport} />
+						{toolbar}
+						<ReportHeader
+							report={displayReport}
+							scoreModel={scoreModel}
+							comparison={comparison}
+							onReviewSeverity={(severity) => updateParams({ section: 'issues', severity })}
+							onSelectScanner={(scannerId) =>
+								updateParams({ section: 'issues', scanner: scannerId })
+							}
+						/>
+						{comparisonPanel}
 						{displayReport.assessment && displayReport.assessment.expected > 0 && (
 							<section className="fix-first" aria-labelledby="expected-heading">
 								<h2 id="expected-heading">
@@ -267,13 +285,11 @@ export function ReportView({
 										(issue) => displayReport.assessment?.dispositionByIssue[issue.id] !== 'expected'
 									)}
 									newIssueIds={regressionIds}
+									scoreModel={scoreModel}
+									pages={displayReport.pages}
+									screenshots={screenshots}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 								/>
-								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
-									<LighthouseSummary
-										categories={displayReport.summary.lighthouseCategories ?? []}
-									/>
-								)}
 								{reviewQueue.length > 0 && (
 									<div className="rnext rnext--secondary">
 										<div className="rnext__copy">
@@ -302,13 +318,6 @@ export function ReportView({
 										)}
 									</div>
 								)}
-								<ReportStatStrip
-									report={displayReport}
-									onReviewSeverity={(severity) => updateParams({ section: 'issues', severity })}
-									onSelectScanner={(scannerId) =>
-										updateParams({ section: 'issues', scanner: scannerId })
-									}
-								/>
 								<VisualReviewPanel
 									report={displayReport}
 									screenshots={screenshots}
@@ -319,6 +328,11 @@ export function ReportView({
 									onSelectPage={(pageId) => updateParams({ page: pageId })}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 								/>
+								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+									<LighthouseSummary
+										categories={displayReport.summary.lighthouseCategories ?? []}
+									/>
+								)}
 							</section>
 						)}
 
@@ -381,11 +395,6 @@ export function ReportView({
 								aria-labelledby="report-tab-artifacts"
 								className="rsection-artifacts"
 							>
-								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
-									<LighthouseSummary
-										categories={displayReport.summary.lighthouseCategories ?? []}
-									/>
-								)}
 								{artifactsPanel}
 								<ErrorsView errors={displayReport.errors} />
 							</section>

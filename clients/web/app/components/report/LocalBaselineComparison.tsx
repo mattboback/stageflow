@@ -2,6 +2,7 @@ import { ArrowRight, Check, GitCompareArrows, RotateCcw, Save } from 'lucide-rea
 import { Link } from 'react-router';
 
 import { BaselineDiffSummary } from './BaselineDiffSummary';
+import { shownSiteScore } from '../../lib/report';
 import {
 	computeProjectDiff,
 	hasStableReportIdentity,
@@ -114,7 +115,11 @@ export function LocalBaselineComparison({
 					</div>
 				</div>
 			) : diff ? (
-				<BaselineDiffSummary diff={diff} onOpenIssue={onOpenIssue} />
+				<BaselineDiffSummary
+					diff={diff}
+					shownScore={shownSiteScore(report)}
+					onOpenIssue={onOpenIssue}
+				/>
 			) : null}
 		</section>
 	);

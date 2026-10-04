@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useNavigate } from 'react-router';
 
 import { ConfirmDialog } from '../ConfirmDialog';
@@ -14,6 +14,8 @@ interface ReportJobActionsProps {
 	canDelete: boolean;
 	showSave: boolean;
 	onSaveProject: (name: string) => Promise<void>;
+	/** The offline-audit download, kept in this row rather than floating between panels. */
+	exportAction?: ReactNode;
 }
 
 export function ReportJobActions({
@@ -22,7 +24,8 @@ export function ReportJobActions({
 	archived,
 	canDelete,
 	showSave,
-	onSaveProject
+	onSaveProject,
+	exportAction
 }: ReportJobActionsProps) {
 	const navigate = useNavigate();
 	const [copied, setCopied] = useState(false);
@@ -88,6 +91,7 @@ export function ReportJobActions({
 					<p>Share the report URL with anyone who should see this run.</p>
 				)}
 				<div className="report-job-actions__buttons">
+					{exportAction}
 					<button
 						className="btn btn--ghost btn--sm"
 						type="button"

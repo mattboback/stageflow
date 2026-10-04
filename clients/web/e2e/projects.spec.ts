@@ -229,10 +229,7 @@ test('local project creates a run and promotes its report without persisting cre
 	await expect(page).toHaveURL(new RegExp(`/scan/${SECOND_JOB_ID}(?:/report)?\\?project=`));
 	const secondProjectQuery = new URL(page.url()).search;
 	await page.goto(`/scan/${SECOND_JOB_ID}/report${secondProjectQuery}`);
-	await expect(page.getByLabel('Changes from baseline').getByText('New issues')).toBeVisible();
-	await expect(
-		page.getByLabel('Changes from baseline').getByText('1', { exact: true })
-	).toBeVisible();
+	await expect(page.locator('.baseline-diff').getByRole('heading')).toContainText(/\b1 new\b/);
 	await expect(page.getByText('New regression from the second project run')).toBeVisible();
 
 	await page.goto('/projects');

@@ -146,6 +146,8 @@ describe('product report priorities', () => {
 		render(
 			<IssueDetailModal
 				issue={finding({
+					scanner: 'security-headers',
+					ruleId: 'security-headers-missing-example',
 					howToFix: 'Add the exact header: Example: safe',
 					userImpact: { statement: 'People using screen readers need meaningful alternatives.' }
 				})}
@@ -158,6 +160,49 @@ describe('product report priorities', () => {
 		expect(screen.getByText('Add the exact header: Example: safe')).toBeTruthy();
 		expect(screen.getByRole('heading', { name: 'Who this affects' })).toBeTruthy();
 		expect(screen.getByText(/People using screen readers/)).toBeTruthy();
+	});
+	it('leads with rule guidance, lists raw axe checks, and puts the note after the fix', () => {
+		const summary =
+			'Fix any of the following:\n  Element has no title attribute\n  aria-label attribute does not exist or is empty';
+		const view = render(
+			<IssueDetailModal
+				issue={finding({
+					ruleId: 'button-name',
+					howToFix: summary,
+					userImpact: { affectedGroups: ['blind', 'low-vision'], userStory: 'I hear button.' }
+				})}
+				page={null}
+				issues={[]}
+				screenshots={[]}
+				onClose={vi.fn()}
+			/>
+		);
+		expect(screen.getByText(/^Provide an accessible name for this button/)).toBeTruthy();
+		expect(screen.queryByText(/Fix any of the following/)).toBeNull();
+		const groups = screen.getByRole('list', { name: 'Affected groups' });
+		expect(within(groups).getByText('Blind users')).toBeTruthy();
+		expect(within(groups).getByText('Low-vision users')).toBeTruthy();
+		const fixPane = screen.getByRole('tabpanel');
+		const note = screen.getByLabelText('Review note (optional)');
+		expect(fixPane.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+		view.rerender(
+			<IssueDetailModal
+				issue={finding({ id: 'other', ruleId: 'input-button-name', howToFix: summary })}
+				page={null}
+				issues={[]}
+				screenshots={[]}
+				onClose={vi.fn()}
+			/>
+		);
+		const lead = screen.getByText('Fixing any one of these resolves it:');
+		// The lists keep the caller's class, so inline code and links are styled as in prose.
+		expect(lead.closest('.imodal__checks')?.classList.contains('imodal__fix')).toBe(true);
+		const checks = within(screen.getByRole('tabpanel')).getAllByRole('listitem');
+		expect(checks.map((item) => item.textContent)).toEqual([
+			'Element has no title attribute',
+			'aria-label attribute does not exist or is empty'
+		]);
 	});
 });
 
@@ -195,12 +240,20 @@ describe('regression presentation', () => {
 	it('opens the precise new occurrence from a reusable comparison summary', () => {
 		const open = vi.fn();
 		const change = finding({ occurrences: [{ elementId: 'occ-v2-new' }] });
-		render(<BaselineDiffSummary diff={diff(change)} onOpenIssue={open} />);
-		expect(
-			screen.getByRole('heading', { name: 'New in this deploy (1) · Fixed (0)' })
-		).toBeTruthy();
+		const view = render(
+			<BaselineDiffSummary diff={diff(change)} shownScore={90} onOpenIssue={open} />
+		);
+		expect(screen.getByText('New in this deploy')).toBeTruthy();
+		expect(screen.getByRole('heading').textContent).toBe(
+			'Score 100 → 90 ▼ 10 · 1 new · 0 fixed · 1 unchanged'
+		);
 		fireEvent.click(screen.getByRole('button', { name: /Missing alternative text/ }));
 		expect(open).toHaveBeenCalledWith('occ-v2-new');
+
+		// A staging dial shows the assessment score; the diff's summary scores
+		// would contradict it, so the panel leaves the score out.
+		view.rerender(<BaselineDiffSummary diff={diff(change)} shownScore={93} onOpenIssue={open} />);
+		expect(screen.getByRole('heading').textContent).toBe('1 new · 0 fixed · 1 unchanged');
 	});
 	it('filters NEW findings by occurrence identity and opens the correct occurrence', () => {
 		const source = finding({
@@ -221,7 +274,8 @@ describe('regression presentation', () => {
 						screenshots={[]}
 						status="complete"
 						error={null}
-						banner={null}
+						toolbar={null}
+						comparisonPanel={null}
 						artifactsPanel={null}
 						comparison={diff(change)}
 					/>

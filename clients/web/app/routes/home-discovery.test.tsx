@@ -45,7 +45,7 @@ describe('homepage discovery', () => {
 		fireEvent.change(screen.getByRole('textbox', { name: 'URL to scan' }), {
 			target: { value: 'https://example.com' }
 		});
-		fireEvent.click(screen.getByRole('button', { name: 'Scan website' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Find pages on this site to scan' }));
 		await screen.findByRole('region', { name: 'Website discovery preview' });
 		expect(submission).toBeNull();
 		expect(fetchMock).toHaveBeenCalledTimes(1);

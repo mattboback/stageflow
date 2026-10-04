@@ -4,7 +4,7 @@ set -Eeuo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 api="${API:-http://localhost:8080}"
 cli="${STAGEFLOW_BIN:-stageflow}"
-for tool in "$cli" jq curl magick bun; do
+for tool in "$cli" jq curl magick bun go; do
   command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 2; }
 done
 export API_URL="$api"
@@ -70,6 +70,6 @@ done
 rm -rf "$repo_root/clients/web/public/demo"
 cp -a "$work/demo" "$repo_root/clients/web/public/demo"
 bun "$repo_root/devtools/scripts/summarize-demo.ts"
-(cd "$repo_root/clients/web" && bun x prettier --write app/lib/demo/demo-summary.ts app/lib/demo/demo-crop.ts)
+(cd "$repo_root/clients/web" && bun x prettier --write app/lib/demo/demo-summary.ts app/lib/demo/demo-crop.ts app/lib/demo/demo-terminal.json)
 (cd "$repo_root/clients/web" && bun x vitest run app/lib/demo/demo-fixture.test.ts)
 echo 'Generated baseline, current report, screenshots and calculated homepage summary.'

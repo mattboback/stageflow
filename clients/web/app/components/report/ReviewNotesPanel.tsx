@@ -10,9 +10,9 @@ export function ReviewNotesPanel({ jobId, issueId }: { jobId: string; issueId: s
 	const note = draft ?? review?.note ?? '';
 	const [saved, setSaved] = useState(false);
 	return (
-		<section className="imodal__pane" aria-label="Review notes">
+		<section className="imodal__notes" aria-label="Review notes">
 			{!review?.verdict && prior && (
-				<div role="status">
+				<div className="imodal__notes-prior" role="status">
 					<p>
 						Previously reviewed {prior.review.verdict ? `· ${prior.review.verdict}` : ''} ·{' '}
 						{formatVerdictTime(prior.review.at)}
@@ -40,26 +40,29 @@ export function ReviewNotesPanel({ jobId, issueId }: { jobId: string; issueId: s
 			<label htmlFor={`review-note-${issueId}`}>Review note (optional)</label>
 			<textarea
 				id={`review-note-${issueId}`}
+				className="input"
 				value={note}
 				maxLength={MAX_REVIEW_NOTE_LENGTH}
 				onChange={(event) => {
 					updateNote(event.target.value);
 					setSaved(false);
 				}}
-				rows={3}
+				rows={2}
 			/>
-			<button
-				type="button"
-				className="btn btn--ghost btn--sm"
-				onClick={() => {
-					setNote(issueId, note);
-					setSaved(true);
-				}}
-			>
-				Save note
-			</button>
-			{saved && <span role="status">Note saved.</span>}
-			<p>Human reviews do not change the automated score or regression checks.</p>
+			<div className="imodal__notes-foot">
+				<p>Human reviews do not change the automated score or regression checks.</p>
+				{saved && <span role="status">Note saved.</span>}
+				<button
+					type="button"
+					className="btn btn--ghost btn--sm"
+					onClick={() => {
+						setNote(issueId, note);
+						setSaved(true);
+					}}
+				>
+					Save note
+				</button>
+			</div>
 		</section>
 	);
 }

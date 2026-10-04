@@ -21,6 +21,8 @@ import {
 } from '../../lib/report';
 import { useReviewVerdicts } from '../../lib/hooks/useReviewVerdicts';
 
+import { Pill } from '../Pill';
+import { GuidanceText } from './GuidanceText';
 import { ReviewNotesPanel } from './ReviewNotesPanel';
 import { TruncatedEvidence } from './TruncatedEvidence';
 import { IssueEvidenceSection } from './IssueEvidenceSection';
@@ -42,6 +44,22 @@ interface Props {
 }
 
 type TabId = 'review' | 'fix' | 'evidence' | 'verify' | 'occurrences';
+
+/* The contract's UserGroup tokens, as the people they stand for. */
+const USER_GROUP_LABELS: Record<string, string> = {
+	blind: 'Blind users',
+	'low-vision': 'Low-vision users',
+	motor: 'Users with motor impairments',
+	cognitive: 'Users with cognitive disabilities',
+	deaf: 'Deaf and hard-of-hearing users',
+	vestibular: 'Users with vestibular disorders',
+	all: 'All users'
+};
+
+function userGroupLabel(group: string): string {
+	const words = group.replaceAll('-', ' ');
+	return USER_GROUP_LABELS[group] ?? words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 export function IssueDetailModal({
 	issue,
@@ -66,7 +84,7 @@ export function IssueDetailModal({
 	const primaryOccurrence = issue.occurrences?.[0] ?? null;
 	const occurrenceCount = issue.occurrences?.length ?? 0;
 	const contextualFix = useMemo(
-		() => issue.howToFix || generateContextualFix(issue, primaryOccurrence),
+		() => generateContextualFix(issue, primaryOccurrence),
 		[issue, primaryOccurrence]
 	);
 	const pageOverviewUrl = useMemo(
@@ -274,7 +292,7 @@ export function IssueDetailModal({
 						<div>
 							<button
 								type="button"
-								className="btn btn--secondary"
+								className="btn btn--ghost btn--sm"
 								disabled={Boolean(verificationUnavailable)}
 								onClick={onVerify}
 							>
@@ -310,7 +328,6 @@ export function IssueDetailModal({
 				</nav>
 
 				<div className="imodal__body">
-					<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
 					{activeTab === 'review' && (
 						<div
 							className="imodal__pane"
@@ -331,9 +348,7 @@ export function IssueDetailModal({
 							<section>
 								<h3 className="imodal__pane-h">How to fix</h3>
 								{contextualFix ? (
-									<p className="imodal__fix">
-										<ScannerText text={contextualFix} />
-									</p>
+									<GuidanceText text={contextualFix} className="imodal__fix" />
 								) : (
 									<p className="imodal__fix imodal__fix--muted">
 										No fix guidance available for this rule yet.
@@ -347,22 +362,24 @@ export function IssueDetailModal({
 									<section>
 										<h3 className="imodal__pane-h">Who this affects</h3>
 										{issue.userImpact.statement && (
-											<p>
+											<p className="imodal__desc">
 												<ScannerText text={issue.userImpact.statement} />
 											</p>
 										)}
 										{issue.userImpact.affectedGroups &&
 											issue.userImpact.affectedGroups.length > 0 && (
-												<p>
-													{issue.userImpact.affectedGroups
-														.map((group) => group.replaceAll('-', ' '))
-														.join(', ')}
-												</p>
+												<ul className="imodal__groups" aria-label="Affected groups">
+													{issue.userImpact.affectedGroups.map((group) => (
+														<li key={group}>
+															<Pill led={false}>{userGroupLabel(group)}</Pill>
+														</li>
+													))}
+												</ul>
 											)}
 										{issue.userImpact.userStory && (
-											<p>
+											<blockquote className="imodal__story">
 												<ScannerText text={issue.userImpact.userStory} />
-											</p>
+											</blockquote>
 										)}
 									</section>
 								)}
@@ -447,6 +464,8 @@ export function IssueDetailModal({
 							</div>
 						</div>
 					)}
+					{/* After the panes: the finding leads, the note is a footnote to it. */}
+					<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
 				</div>
 			</div>
 		</div>

@@ -1,22 +1,13 @@
 import { getPageOverviewUrl } from '../../lib/report/screenshots';
-import { SEVERITY_LEVELS, type SeverityLevel } from '../../lib/report/severity';
+import { describeSeverityCounts, severityCounts } from '../../lib/report/severity';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
 import type { PageSummary, UnifiedReport } from '../../lib/types/unified-report';
+import { SeverityBar, SeverityLegend } from './SeverityBar';
 
 interface Props {
 	report: UnifiedReport;
 	screenshots: ScreenshotArtifact[];
 	onSelectPage: (pageId: string) => void;
-}
-
-/* Severities with at least one finding, worst first, as bar segments. */
-function distribution(page: PageSummary): { severity: SeverityLevel; count: number }[] {
-	const counts = page.bySeverity;
-	if (!counts) return [];
-	return SEVERITY_LEVELS.map((severity) => ({
-		severity,
-		count: counts[severity] ?? 0
-	})).filter((segment) => segment.count > 0);
 }
 
 function label(page: PageSummary): string {
@@ -49,7 +40,7 @@ export function PagesView({ report, screenshots, onSelectPage }: Props) {
 		<ul className="pgrid">
 			{report.pages.map((page) => {
 				const shot = getPageOverviewUrl(screenshots, page.id);
-				const segments = distribution(page);
+				const counts = severityCounts(page.bySeverity);
 				const markers = page.pageOverview?.elements.length ?? 0;
 
 				return (
@@ -58,7 +49,7 @@ export function PagesView({ report, screenshots, onSelectPage }: Props) {
 							type="button"
 							className="pcard"
 							onClick={() => onSelectPage(page.id)}
-							aria-label={`Review ${label(page)}, ${page.issueCount} findings`}
+							aria-label={`Review ${label(page)}, ${page.issueCount} findings${counts.length > 0 ? `: ${describeSeverityCounts(counts)}` : ''}`}
 						>
 							<span className="pcard__shot">
 								{shot ? (
@@ -74,23 +65,6 @@ export function PagesView({ report, screenshots, onSelectPage }: Props) {
 								<span className="pcard__path">{label(page)}</span>
 								<span className="pcard__url">{page.url}</span>
 
-								<span className="pcard__bar" aria-hidden="true">
-									{segments.length === 0 ? (
-										<span className="pcard__bar-clean" />
-									) : (
-										segments.map((segment) => (
-											<span
-												key={segment.severity}
-												className={`pcard__bar-seg sev-${segment.severity}`}
-												/* Width is share of the WORST page, not of this
-												   page's own total, so the bars compare across
-												   cards instead of all filling to 100%. */
-												style={{ flexGrow: segment.count / worst }}
-											/>
-										))
-									)}
-								</span>
-
 								<span className="pcard__meta">
 									<span className="pcard__count num">{page.issueCount}</span>
 									<span>{page.issueCount === 1 ? 'finding' : 'findings'}</span>
@@ -98,6 +72,11 @@ export function PagesView({ report, screenshots, onSelectPage }: Props) {
 										<span className="pcard__markers">· {markers} located on the page</span>
 									)}
 								</span>
+
+								{/* A share of the worst page's total, not this page's own, so
+								    the bars compare across cards instead of all filling up. */}
+								<SeverityBar counts={counts} scale={worst} className="pcard__bar" />
+								{counts.length > 0 && <SeverityLegend counts={counts} inline />}
 							</span>
 						</button>
 					</li>

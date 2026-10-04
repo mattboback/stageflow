@@ -87,16 +87,26 @@
 	text-decoration-color: currentColor;
 }
 /* secondary scan options sit under the bar, never between it and its button */
+/* Two controls, each with its consequence underneath in the same type, so the
+   hints share a baseline. */
 .scanbar__opts {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: flex-start;
-	gap: var(--sp-2) var(--sp-4);
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: start;
+	gap: var(--sp-3) var(--sp-5);
 	margin-top: var(--sp-3);
 	max-width: 38rem;
 }
-.scanbar__opts .scan-profile {
-	flex: 1 1 16rem;
+.scanbar__discover {
+	display: grid;
+	justify-items: start;
+	gap: var(--sp-1);
+}
+.scanbar__discover p {
+	margin: 0;
+	font-size: var(--fs-2);
+	line-height: 1.5;
+	color: var(--ink-muted);
 }
 
 /* report preview — the output side of the scanbar */
@@ -258,24 +268,17 @@
 .section--foot {
 	background: var(--surface);
 	border-top: 1px solid var(--line);
-	margin-top: clamp(3.5rem, 6.5vw, 6rem);
 	padding-block: clamp(3rem, 5vw, 4.5rem);
 }
 /* when it directly follows a band, the band's own border is the seam */
 .section--band + .section--foot {
-	margin-top: 0;
 	border-top: 0;
 }
-/* the footer follows immediately — its own border marks the boundary */
-.section--foot + * .site-footer,
-.section--foot ~ .site-footer {
+/* The footer follows immediately and its own border marks the boundary. It
+   sits outside <main>, so this is the rule that reaches it. */
+main:has(> .section--foot:last-child) + .site-footer {
 	margin-top: 0;
 }
-.section__head {
-	max-width: 56ch;
-	margin-bottom: var(--sp-5);
-}
-.section__head h2,
 .baseline__intro h2,
 .foot__panel h2 {
 	font-size: var(--fs-8);
@@ -284,7 +287,6 @@
 	text-wrap: balance;
 	margin: 0;
 }
-.section__head p,
 .baseline__intro p {
 	color: var(--ink-muted);
 	margin: 0.65rem 0 0;
@@ -299,7 +301,12 @@
 	gap: var(--sp-6);
 }
 .baseline__intro {
-	max-width: 52ch;
+	max-width: 56ch;
+}
+.baseline__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--sp-3);
 }
 .basetrack {
 	list-style: none;
@@ -410,6 +417,12 @@
 	gap: var(--sp-4) var(--sp-5);
 	grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
 }
+/* All five in one row once they fit, rather than four and an orphan. */
+@media (min-width: 1200px) {
+	.scanlist {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+}
 .scanlist__item {
 	display: grid;
 	grid-template-columns: auto 1fr;
@@ -435,80 +448,15 @@
 	text-wrap: pretty;
 }
 
-/* path steps */
-.path__steps {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: grid;
-	gap: var(--sp-4);
-	position: relative;
-}
-/* quiet connector between steps */
-.path__steps::before {
-	content: '';
-	position: absolute;
-	top: 0.9rem;
-	bottom: 0.9rem;
-	left: 0.9rem;
-	width: 1px;
-	background: var(--line);
-	pointer-events: none;
-}
-.path__step {
-	display: grid;
-	grid-template-columns: auto 1fr;
-	gap: var(--sp-3);
-	align-items: start;
-	position: relative;
-}
-.path__n {
-	position: relative;
-	z-index: 1;
-	display: grid;
-	place-items: center;
-	width: 1.8rem;
-	height: 1.8rem;
-	border-radius: 50%;
-	border: 1.5px solid var(--signal-edge);
-	background: var(--signal-wash);
-	color: var(--signal-ink);
-	font-size: var(--fs-3);
-	font-weight: 700;
-	font-variant-numeric: tabular-nums;
-}
-.path__step h3 {
-	font-size: var(--fs-6);
-	margin: 0.1rem 0 0.25rem;
-}
-.path__step p {
-	margin: 0;
-	font-size: var(--fs-4);
-	line-height: 1.5;
-	color: var(--ink-muted);
-	text-wrap: pretty;
-}
-.path__actions {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--sp-3);
-}
-/* three steps read left-to-right when there's room */
-.path__steps--row {
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: var(--sp-6);
-	margin-bottom: var(--sp-5);
-}
-.path__steps--row::before {
-	display: none;
-}
-
 /* --------------------------------------------------- terminal + CI panel */
+/* The terminal gets the wider column: the CLI's longest lines run to ~75
+   characters and read badly wrapped. */
 .foot {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
 	gap: clamp(1.5rem, 3vw, 2.5rem);
-	align-items: stretch;
+	/* The panel keeps its own height beside the taller transcript. */
+	align-items: start;
 }
 
 /* Intentional dark island — real CLI output, the one dark surface on home.
@@ -534,6 +482,21 @@
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 	flex: 1;
+}
+.terminal__line {
+	display: block;
+	/* Keeps a blank line a line tall; matches the line-height above. */
+	min-height: 1.75em;
+	padding-left: 2ch;
+	text-indent: -2ch;
+}
+/* The page and selector under each new finding. A URL is one long word, so
+   without break-all it wraps away from its indent and leaves a blank line. */
+.terminal__line--detail {
+	padding-left: 4ch;
+	text-indent: -4ch;
+	word-break: break-all;
+	color: var(--terminal-ink-faint);
 }
 .terminal__prompt {
 	color: var(--terminal-prompt);
@@ -610,13 +573,6 @@
 	.basetrack__card p {
 		max-width: none;
 	}
-	.path__steps--row {
-		grid-template-columns: 1fr;
-		gap: var(--sp-4);
-	}
-	.path__steps--row::before {
-		display: block;
-	}
 }
 
 @media (max-width: 520px) {
@@ -624,6 +580,9 @@
 		flex-direction: column;
 		align-items: stretch;
 		max-width: none;
+	}
+	.scanbar__opts {
+		grid-template-columns: minmax(0, 1fr);
 	}
 	.scanbar__field,
 	.scanbar .btn {

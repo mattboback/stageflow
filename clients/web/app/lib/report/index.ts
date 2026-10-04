@@ -8,6 +8,7 @@ export * from './severity';
 export * from './screenshot-crop';
 export * from './occurrence-mode';
 export * from './score-band';
+export * from './score';
 export * from './contextual-fix';
 export * from './contrast-verify';
 export * from './issue-kind';

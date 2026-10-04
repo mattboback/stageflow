@@ -1,66 +1,158 @@
-/* Confirmed fixes lead the report; human checks remain a secondary action. */
+/* Confirmed fixes lead the report; human checks remain a secondary action.
+   .fix-first also frames the "Expected on staging" note in ReportView. */
 .fix-first {
-	margin-block: 1.5rem;
-	padding: 1.25rem;
+	margin-block: var(--sp-5);
+	padding: var(--sp-5);
 	border: 1px solid var(--line);
-	border-radius: 12px;
+	border-radius: var(--r-md);
 	background: var(--surface);
 }
 .fix-first h2 {
 	margin: 0;
-	font-size: 1.2rem;
+	font-size: var(--fs-7);
 }
 .fix-first > p {
+	margin: var(--sp-1) 0 0;
+	max-width: 72ch;
+	font-size: var(--fs-4);
 	color: var(--ink-muted);
 }
-.fix-first ol {
-	padding-left: 1.5rem;
-	margin-bottom: 0;
+.fix-first > p.fix-first__projection {
+	color: var(--ink);
 }
-.fix-first li + li {
-	margin-top: 0.75rem;
+.fix-first__projection strong {
+	color: var(--ink-strong);
 }
-.fix-first button {
+/* the "Expected on staging" note's one action */
+.fix-first > .btn {
+	margin-top: var(--sp-3);
+}
+.fix-first__list {
 	display: grid;
-	gap: 0.35rem;
-	width: 100%;
-	padding: 0.75rem;
-	text-align: left;
-	color: inherit;
-	background: var(--surface-sunk);
-	border: 1px solid var(--line);
-	border-radius: 8px;
-	cursor: pointer;
+	gap: var(--sp-2);
+	margin: var(--sp-4) 0 0;
+	padding: 0;
+	list-style: none;
 }
-.fix-first button:hover {
-	border-color: var(--ink-muted);
+/* rank · [thumbnail] · finding · gain · chevron. The gain and chevron are
+   pinned to the last tracks, so rows without a gain still line up. */
+.fix-first__item {
+	display: grid;
+	grid-template-columns: 1.5rem minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: var(--sp-3);
+	width: 100%;
+	padding: var(--sp-3) var(--sp-4);
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition:
+		border-color 0.12s,
+		background-color 0.12s;
+}
+.fix-first__list--thumbs .fix-first__item {
+	grid-template-columns: 1.5rem 6rem minmax(0, 1fr) auto auto;
+}
+.fix-first__item:hover {
+	border-color: var(--line-strong);
+	background: var(--surface-sunk);
+}
+.fix-first__rank {
+	font-size: var(--fs-6);
+	font-weight: 700;
+	color: var(--ink-faint);
+	text-align: center;
+}
+.fix-first__thumb {
+	display: block;
+	aspect-ratio: 5 / 3;
+}
+.fix-first__crop {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 1px solid var(--line);
+	border-radius: var(--r-xs);
+	background: var(--surface-sunk);
+}
+/* Headers and page-level checks have no element to show. */
+.fix-first__crop--none {
+	display: grid;
+	place-items: center;
+	border-style: dashed;
+	background: none;
+	font-size: var(--fs-1);
+	color: var(--ink-muted);
+}
+.fix-first__body {
+	display: grid;
+	gap: var(--sp-1);
+	min-width: 0;
 }
 .fix-first__title {
-	font-weight: 700;
+	font-weight: 600;
+	color: var(--ink-strong);
 }
-.fix-first__meta,
-.fix-first__guidance {
+.fix-first__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--sp-1) var(--sp-2);
+	font-size: var(--fs-3);
 	color: var(--ink-muted);
-	font-size: 0.875rem;
 }
 .fix-first__guidance {
 	overflow: hidden;
 	display: -webkit-box;
-	-webkit-line-clamp: 1;
+	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+}
+.fix-first__gain {
+	grid-column: -3;
+	font-size: var(--fs-5);
+	font-weight: 700;
+	color: var(--sev-pass-ink);
+	white-space: nowrap;
+}
+.fix-first__open {
+	grid-column: -2;
+	color: var(--ink-faint);
+}
+.fix-first__item:hover .fix-first__open {
+	color: var(--ink-strong);
+}
+@media (max-width: 640px) {
+	.fix-first {
+		padding: var(--sp-4);
+	}
+	.fix-first__item,
+	.fix-first__list--thumbs .fix-first__item {
+		grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+		padding: var(--sp-3);
+	}
+	.fix-first__thumb,
+	.fix-first__open {
+		display: none;
+	}
+	.fix-first__gain {
+		grid-column: -2;
+	}
 }
 .rnext.rnext--secondary {
-	padding: 0.75rem 0;
+	padding: var(--sp-3) 0;
 	background: transparent;
 	border: 0;
 }
-.rhead__score-explanation {
-	font-size: 0.8rem;
-	color: var(--ink-muted);
-	max-width: 45rem;
-}
 .issue-new {
 	display: inline-flex;
+	align-items: center;
+	gap: 0.2rem;
 	vertical-align: middle;
 	padding: 0.1rem 0.35rem;
 	border: 1px solid currentColor;
@@ -71,14 +163,9 @@
 	color: var(--sev-serious-ink);
 	background: var(--sev-serious-wash);
 }
-.vrev__new-label {
-	font-size: 18px;
-	font-weight: 800;
-	fill: var(--sev-serious-ink);
-	paint-order: stroke;
-	stroke: var(--surface);
-	stroke-width: 5px;
-	pointer-events: none;
+.issue-new--fixed {
+	color: var(--sev-pass-ink);
+	background: var(--sev-pass-wash);
 }
 .evidence__table-wrap {
 	overflow-x: auto;
@@ -333,4 +420,121 @@
 }
 .sev-chip.sev-info:not(.active):hover {
 	background: var(--sev-info-wash);
+}
+
+/* ------------------------------------------------------------------------- */
+/*  Severity bar and its legend (SeverityBar.tsx)                             */
+/* ------------------------------------------------------------------------- */
+/* No fill of its own: the 2px gaps show the surface between segments, and
+   the part of the scale a row does not reach is a sunk track. The baseline
+   (left) end is square; the data end is rounded. */
+.sevbar {
+	display: flex;
+	gap: 2px;
+	height: 6px;
+	min-width: 0;
+}
+.sevbar--sm {
+	height: 4px;
+}
+.sevbar--lg {
+	height: 8px;
+}
+.sevbar__seg,
+.sevbar__rest,
+.sevbar__clean {
+	display: block;
+	min-width: 4px;
+}
+.sevbar__seg--end,
+.sevbar__clean {
+	border-radius: 0 var(--r-xs) var(--r-xs) 0;
+}
+.sevbar__seg.sev-critical,
+.sevlegend__swatch.sev-critical {
+	background: var(--sev-critical);
+}
+.sevbar__seg.sev-serious,
+.sevlegend__swatch.sev-serious {
+	background: var(--sev-serious);
+}
+.sevbar__seg.sev-moderate,
+.sevlegend__swatch.sev-moderate {
+	background: var(--sev-moderate);
+}
+.sevbar__seg.sev-minor,
+.sevlegend__swatch.sev-minor {
+	background: var(--sev-minor);
+}
+.sevbar__seg.sev-info,
+.sevlegend__swatch.sev-info {
+	background: var(--sev-info);
+}
+.sevbar__rest {
+	background: var(--surface-sunk);
+}
+.sevbar__clean {
+	flex: 1;
+	background: var(--sev-pass);
+}
+/* Forced colours drop backgrounds, which would erase the bar. One ink keeps
+   the proportions; the legend beside it names the severities. */
+@media (forced-colors: active) {
+	.sevbar__seg,
+	.sevbar__clean,
+	.sevlegend__swatch {
+		forced-color-adjust: none;
+		background: CanvasText;
+	}
+	.sevbar__rest {
+		forced-color-adjust: none;
+		background: GrayText;
+	}
+}
+
+.sevlegend {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--sp-1) var(--sp-3);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+}
+.sevlegend__item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	white-space: nowrap;
+}
+.sevlegend__item .num {
+	font-weight: 700;
+	color: var(--ink-strong);
+}
+/* A piece of the bar: same height as the default bar, square ends. */
+.sevlegend__swatch {
+	flex: none;
+	width: 0.75rem;
+	height: 6px;
+}
+.sevlegend--buttons {
+	gap: var(--sp-1);
+	margin-left: calc(-1 * var(--sp-2));
+}
+button.sevlegend__item {
+	min-height: 1.75rem;
+	padding: 0 var(--sp-2);
+	border: 0;
+	border-radius: var(--r-xs);
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+	transition: background-color 0.12s;
+}
+button.sevlegend__item:hover {
+	background: var(--surface-sunk);
+	color: var(--ink-strong);
 }

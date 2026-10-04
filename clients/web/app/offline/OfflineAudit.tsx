@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { MemoryRouter } from 'react-router';
+import { BaselineDiffSummary } from '../components/report/BaselineDiffSummary';
 import { ReportView } from '../components/report/ReportView';
 import { VerificationResultBanner } from '../components/report/VerificationResultBanner';
+import { useOpenIssue } from '../lib/hooks/useOpenIssue';
 import { ReviewVerdictProvider } from '../lib/hooks/useReviewVerdicts';
+import type { ProjectDiff } from '../lib/projects';
 import {
 	downloadAuditFile,
 	portableScanEnvelope,
@@ -10,8 +13,15 @@ import {
 	type OfflineViewerAssets,
 	type PortableAudit
 } from '../lib/portable-audit';
+import { shownSiteScore } from '../lib/report';
 import type { ReviewContext } from '../lib/report/review-context';
 import type { ReviewVerdictStore } from '../lib/report/review-verdict-store';
+
+/* Rendered inside ReportView, so inside the MemoryRouter it opens findings with. */
+function OfflineComparison({ diff, shownScore }: { diff: ProjectDiff; shownScore: number | null }) {
+	const openIssue = useOpenIssue();
+	return <BaselineDiffSummary diff={diff} shownScore={shownScore} onOpenIssue={openIssue} />;
+}
 
 export function OfflineAudit({
 	audit,
@@ -64,7 +74,7 @@ export function OfflineAudit({
 			<h2>Saved audit data</h2>
 			<p>All evidence included in this file is available offline. Live scans run in StageFlow.</p>
 			<button
-				className="btn btn--secondary"
+				className="btn btn--ghost btn--sm"
 				type="button"
 				onClick={() =>
 					downloadAuditFile(
@@ -77,7 +87,7 @@ export function OfflineAudit({
 				Download scan.json
 			</button>{' '}
 			<button
-				className="btn btn--secondary"
+				className="btn btn--ghost btn--sm"
 				type="button"
 				onClick={() =>
 					downloadAuditFile('audit.json', JSON.stringify(updatedAudit), 'application/json')
@@ -89,7 +99,7 @@ export function OfflineAudit({
 				<>
 					{' '}
 					<button
-						className="btn btn--secondary"
+						className="btn btn--ghost btn--sm"
 						type="button"
 						onClick={() =>
 							downloadAuditFile(
@@ -132,7 +142,7 @@ export function OfflineAudit({
 			)}
 		</section>
 	);
-	const banner = (
+	const toolbar = (
 		<>
 			<VerificationResultBanner report={audit.report} context={audit.verification ?? null} />
 			<section className="offline-audit-banner" aria-label="Offline audit controls">
@@ -145,7 +155,7 @@ export function OfflineAudit({
 						? 'Unsaved review changes. Download an updated report to keep them.'
 						: 'Review changes are saved by downloading an updated report.'}
 				</p>
-				<button className="btn" type="button" onClick={downloadUpdated}>
+				<button className="btn btn--ghost btn--sm" type="button" onClick={downloadUpdated}>
 					Download updated report
 				</button>
 				{exportError && <p role="alert">{exportError}</p>}
@@ -153,13 +163,6 @@ export function OfflineAudit({
 					<p>
 						{audit.missingArtifacts.length} evidence items are unavailable. Details are listed under
 						Artifacts.
-					</p>
-				)}
-				{audit.comparison && (
-					<p>
-						Compared with {audit.comparison.baseline.jobId}: {audit.comparison.delta.newIssues} new,{' '}
-						{audit.comparison.delta.fixedIssues} fixed. Use the Issues filters to inspect new
-						findings.
 					</p>
 				)}
 			</section>
@@ -174,7 +177,15 @@ export function OfflineAudit({
 					screenshots={audit.screenshots}
 					status="complete"
 					error={null}
-					banner={banner}
+					toolbar={toolbar}
+					comparisonPanel={
+						audit.comparison ? (
+							<OfflineComparison
+								diff={audit.comparison}
+								shownScore={shownSiteScore(audit.report)}
+							/>
+						) : null
+					}
 					artifactsPanel={artifacts}
 					{...(audit.comparison ? { comparison: audit.comparison } : {})}
 				/>
