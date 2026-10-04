@@ -7,6 +7,5 @@
 		"!app/test/load-fixture.ts",
 		"!app/lib/report/test-issues.ts"
 	],
-	"ignoreExportsUsedInFile": true,
-	"ignoreBinaries": ["ffmpeg"]
+	"ignoreExportsUsedInFile": true
 }
