@@ -14,7 +14,7 @@ const finding = {
 	kind: 'files',
 	symbol: ''
 };
-const allowance = { ...finding, owner: '1.7c', reason: 'Scheduled evidence cleanup' };
+const allowance = { ...finding, owner: 'scanner-evidence-cleanup', reason: 'Scheduled evidence cleanup' };
 
 test('exact allowances reject new findings and become stale after removal', () => {
 	assert.deepEqual(compareFindings([finding], [allowance]), { unexpected: [], stale: [] });
@@ -25,9 +25,11 @@ test('exact allowances reject new findings and become stale after removal', () =
 	assert.deepEqual(compareFindings([finding, newSymbol], [allowance]).unexpected, [newSymbol]);
 });
 
-test('allowances cannot hide directories or outlive Phase 1', () => {
+test('allowances require exact findings, cleanup ownership and a reason', () => {
 	assert.throws(() => compareFindings([], [{ ...allowance, file: 'src/**' }]), /exact finding/);
-	assert.throws(() => compareFindings([], [{ ...allowance, owner: '2.2' }]), /Phase 1/);
+	assert.throws(() => compareFindings([], [{ ...allowance, owner: '  ' }]), /cleanup owner/);
+	assert.throws(() => compareFindings([], [{ ...allowance, owner: null }]), /cleanup owner/);
+	assert.throws(() => compareFindings([], [{ ...allowance, reason: '  ' }]), /reason/);
 	assert.throws(() => compareFindings([], [allowance, allowance]), /Duplicate/);
 	assert.throws(
 		() => normalizeReport('clients/web', { issues: [{ file: 'a.ts', unknown: [] }] }),

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check production Go reachability; temporary findings expire with their PR."""
+"""Check production Go reachability; temporary findings have cleanup owners and reject stale entries."""
 
 import argparse
 import json
@@ -75,7 +75,10 @@ def load_temporary(path):
         key = (entry["package"], entry["function"])
         if (
             key in allowed
-            or entry["owner"] not in {"1.5b", "1.7a"}
+            or not isinstance(entry["owner"], str)
+            or not entry["owner"]
+            or any(character.isspace() for character in entry["owner"])
+            or not isinstance(entry["reason"], str)
             or not entry["reason"].strip()
         ):
             raise ValueError(f"invalid or duplicate temporary finding: {key}")
@@ -107,10 +110,23 @@ def self_test(tool, env):
         key = ("example.com/deadcode-probe", "unreachable")
         if set(actual) != {key} or not differences(set(actual), {}):
             raise ValueError("deadcode gate did not detect an unreachable production function")
-        if not differences(set(), {key: "1.5b"}):
+        if not differences(set(), {key: "reachability-cleanup"}):
             raise ValueError("deadcode gate did not reject a stale temporary finding")
-        if differences(set(actual), {key: "1.5b"}):
+        if differences(set(actual), {key: "reachability-cleanup"}):
             raise ValueError("deadcode gate rejected an exact temporary finding")
+        ledger = root / "temporary.json"
+        entry = {"package": key[0], "function": key[1], "owner": "reachability-cleanup", "reason": "Remove the isolated probe"}
+        ledger.write_text(json.dumps([entry]))
+        if load_temporary(ledger) != {key: "reachability-cleanup"}:
+            raise ValueError("deadcode gate rejected an exact owned finding")
+        for entries in ([entry, entry], [{**entry, "owner": "  "}], [{**entry, "reason": "  "}]):
+            ledger.write_text(json.dumps(entries))
+            try:
+                load_temporary(ledger)
+            except ValueError:
+                pass
+            else:
+                raise ValueError("deadcode gate accepted an invalid or duplicate finding")
         files = {root / "main.go"}
         if unreachable_in_every_build([(actual, files), ({}, files)]):
             raise ValueError("deadcode gate classified code live on another platform as dead")

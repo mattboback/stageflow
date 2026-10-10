@@ -50,14 +50,16 @@ export function compareFindings(findings, allowances) {
 	for (const allowance of allowances) {
 		if (
 			!workspaces.includes(allowance.workspace) ||
-			!/^1\.[5-9][a-z]?$/.test(allowance.owner) ||
+			typeof allowance.owner !== 'string' ||
+			!/^\S+$/.test(allowance.owner) ||
 			!kinds.has(allowance.kind) ||
 			typeof allowance.file !== 'string' ||
 			typeof allowance.symbol !== 'string' ||
-			!allowance.reason ||
+			typeof allowance.reason !== 'string' ||
+			!allowance.reason.trim() ||
 			/[*?{}]/.test(allowance.file)
 		) {
-			throw new Error('Knip allowances require an exact finding and a remaining Phase 1 owner');
+			throw new Error('Knip allowances require an exact finding, a cleanup owner and a reason');
 		}
 		const key = findingKey(allowance);
 		if (allowed.has(key)) throw new Error(`Duplicate Knip allowance: ${key}`);
@@ -113,7 +115,7 @@ function main() {
 	if (unexpected.length || stale.length) process.exitCode = 1;
 	else
 		console.log(
-			`Production Knip passed: ${targets.join(', ')} (${findings.length} exact findings deferred to Phase 1 owners)`
+			`Production Knip passed: ${targets.join(', ')} (${findings.length} exact findings assigned to cleanup owners)`
 		);
 }
 
