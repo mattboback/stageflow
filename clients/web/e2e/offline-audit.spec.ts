@@ -36,7 +36,7 @@ test('hosted export embeds the bundled viewer without requesting obsolete asset 
 	const filename = await (await downloaded).path();
 	expect(filename).toBeTruthy();
 	const [html, javascript, css] = await Promise.all([
-		readFile(filename!, 'utf8'),
+		readFile(filename, 'utf8'),
 		readFile('dist/offline-viewer/offline-viewer.js', 'utf8'),
 		readFile('dist/offline-viewer/offline-viewer.css', 'utf8')
 	]);
