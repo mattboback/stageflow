@@ -25,7 +25,7 @@ COPY tsconfig.strict.json /repo/tsconfig.strict.json
 # --- Build contracts package first (types only, already generated) ---
 WORKDIR /repo/libs/contracts/report
 COPY libs/contracts/report/package.json libs/contracts/report/bun.lock* ./
-RUN bun install --frozen-lockfile --ignore-scripts || bun install --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts
 COPY libs/contracts/report/tsconfig.json ./tsconfig.json
 COPY libs/contracts/report/schema ./schema
 COPY libs/contracts/report/generated/typescript ./generated/typescript

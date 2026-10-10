@@ -39,7 +39,7 @@
   },
   "scripts": {
     "prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs",
-    "build": "bun run prepare:contracts && bun run build:prepared",
+    "build": "bun run build:prepared",
     "build:prepared": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
     "start": "node dist/index.js",
     "dev": "bun src/index.ts",
