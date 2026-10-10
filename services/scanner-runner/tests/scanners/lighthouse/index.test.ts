@@ -1393,12 +1393,6 @@ describe('LighthouseScanner', () => {
 
 			(
 				testScanner as unknown as {
-					enrichIssuesWithContext: (page: Page, currentIssues: Issue[]) => Promise<void>;
-				}
-			).enrichIssuesWithContext = vi.fn().mockResolvedValue(undefined);
-
-			(
-				testScanner as unknown as {
 					screenshotService: {
 						capturePageOverview: (...args: unknown[]) => Promise<unknown>;
 					};

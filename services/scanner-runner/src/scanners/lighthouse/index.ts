@@ -414,11 +414,4 @@ export class LighthouseScanner extends ScannerBase {
 			logger
 		});
 	}
-
-	private async enrichIssuesWithContext(
-		page: import('playwright').Page,
-		issues: Issue[]
-	): Promise<void> {
-		return enrichIssuesWithContextFn(page, issues);
-	}
 }
