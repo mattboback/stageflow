@@ -96,7 +96,7 @@ func enhanceSubmitJobError(err error, req apiclient.SubmitJobRequest) error {
 
 	if req.AllowPrivateTargets {
 		return fmt.Errorf(
-			"%w; this API instance may not permit private target scans. For local development, run `just dev up local` and `just dev init local`",
+			"%w; this API instance may not permit private target scans. For local development, configure private-target scanning in .env (see docs/self-hosting.md#private-target-development), then run `just setup`, `just images`, and `just dev up`",
 			err,
 		)
 	}

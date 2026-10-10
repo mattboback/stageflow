@@ -327,6 +327,5 @@ say "Manual bootstrap:"
 say "  just setup"
 say "  just images"
 say "  just dev up          # settings come from .env"
-say "  just dev init"
 
 say "For localhost scans, set PLATFORM_API_ALLOW_PRIVATE_TARGETS=true,"

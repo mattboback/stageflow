@@ -218,6 +218,50 @@ EOF
 
 }
 
+run_diagnose_guidance_case() {
+	local temp_dir="$1"
+	local output="$temp_dir/diagnose.out"
+	local mock_dir="$temp_dir/diagnose-bin"
+	mkdir -p "$mock_dir"
+	cat >"$mock_dir/go" <<'EOF'
+#!/usr/bin/env bash
+printf 'go version go1.26.6 linux/amd64\n'
+EOF
+	cat >"$mock_dir/bun" <<'EOF'
+#!/usr/bin/env bash
+printf '1.3.8\n'
+EOF
+	cat >"$mock_dir/node" <<'EOF'
+#!/usr/bin/env bash
+printf 'v24.0.0\n'
+EOF
+	cat >"$mock_dir/ss" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+	chmod +x "$mock_dir/"*
+	# A socket inode satisfies diagnosis without starting a service.
+	python3 - "$temp_dir/podman.sock" <<'PYTHON'
+import socket
+import sys
+with socket.socket(socket.AF_UNIX) as sock:
+    sock.bind(sys.argv[1])
+PYTHON
+	PATH="$mock_dir:$PATH" GO="$mock_dir/go" BUN="$mock_dir/bun" NODE="$mock_dir/node" \
+	PODMAN="$temp_dir/podman" PODMAN_SOCKET="$temp_dir/podman.sock" \
+	JUST="$REAL_JUST" CURL=true ENV_FILE="$temp_dir/work/.env" \
+	STAGEFLOW_TEST_LOG="$temp_dir/podman.log" \
+	bash "$REPO_ROOT/infra/scripts/diagnose-local-env.sh" >"$output"
+	assert_contains "$output" "Manual bootstrap:" "diagnose should print manual setup guidance"
+	assert_line_before "$output" "  just setup" "  just images" "diagnose should install dependencies before building images"
+	assert_line_before "$output" "  just images" "  just dev up          # settings come from .env" "diagnose should build images before starting the stack"
+	assert_contains "$output" "PLATFORM_API_ALLOW_PRIVATE_TARGETS=true" "diagnose should preserve local-target guidance"
+	if grep -Fq 'dev init' "$output"; then
+		echo "FAIL: diagnose recommends obsolete dev init" >&2
+		failures=$((failures + 1))
+	fi
+}
+
 main() {
 	# Just exports the invoking checkout's .env; fixtures must not inherit it.
 	unset FRONTEND_PORT PLATFORM_API_PORT VITE_API_URL VITE_SITE_URL STAGEFLOW_DATA_VOLUME
@@ -241,6 +285,7 @@ main() {
 	run_env_settings_case "$temp_dir"
 	run_external_env_case "$temp_dir"
 	run_demo_settings_case "$temp_dir"
+	run_diagnose_guidance_case "$temp_dir"
 
 	if [[ "$failures" -ne 0 ]]; then
 		echo "dev onboarding tests failed: ${failures}" >&2

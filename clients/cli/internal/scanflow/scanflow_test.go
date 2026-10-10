@@ -84,6 +84,34 @@ func TestSubmitURLsAndWaitEnhancesPrivateTargetError(t *testing.T) {
 	}
 }
 
+func TestSubmitURLsAndWaitExplainsPrivateTargetAPISetup(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "allow_private_targets is disabled", http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	_, err := SubmitURLsAndWait(
+		context.Background(),
+		apiclient.NewClient(server.URL, "", server.Client()),
+		apiclient.SubmitJobRequest{URLs: []string{"http://127.0.0.1"}, AllowPrivateTargets: true},
+		time.Second,
+		WaitOptions{Progress: &bytes.Buffer{}},
+	)
+	if err == nil {
+		t.Fatal("expected private-target rejection")
+	}
+	for _, hint := range []string{"allow_private_targets is disabled", "configure private-target scanning in .env", "docs/self-hosting.md#private-target-development", "`just setup`, `just images`, and `just dev up`"} {
+		if !strings.Contains(err.Error(), hint) {
+			t.Errorf("error missing %q: %v", hint, err)
+		}
+	}
+	if strings.Contains(err.Error(), "dev init") {
+		t.Errorf("obsolete setup command: %v", err)
+	}
+}
+
 func TestWaitForReportRejectsFailedTerminalState(t *testing.T) {
 	t.Parallel()
 
