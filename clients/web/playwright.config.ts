@@ -7,7 +7,7 @@ export default defineConfig({
 	timeout: 30_000,
 	// Give each browser the runner's resources in CI; local runs stay parallel.
 	// https://playwright.dev/docs/ci#workers
-	workers: process.env.CI ? 1 : undefined,
+	...(process.env.CI ? { workers: 1 } : {}),
 	use: {
 		baseURL: 'http://127.0.0.1:4173',
 		trace: 'retain-on-failure'
