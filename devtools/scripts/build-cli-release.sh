@@ -5,6 +5,7 @@
 #
 # Usage: build-cli-release.sh vX.Y.Z [out_dir]
 # HEAD must be the commit the tag vX.Y.Z points at, with no tracked changes.
+# Requires Go, Python 3.9+, Git, tar, zip and sha256sum on PATH.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -17,6 +18,13 @@ if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 cd "$root_dir"
+
+for tool in go python3 git tar zip sha256sum; do
+	if ! command -v "$tool" >/dev/null; then
+		echo "build-cli-release: missing prerequisite: ${tool}" >&2
+		exit 2
+	fi
+done
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
 	echo "build-cli-release: refusing: the checkout has tracked changes" >&2
@@ -40,7 +48,10 @@ mkdir -p "$out_dir"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
 
-for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+targets=(linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64)
+python3 "${root_dir}/devtools/scripts/cli-third-party-notices.py" "${work_dir}/THIRD_PARTY_NOTICES" "${targets[@]}"
+
+for target in "${targets[@]}"; do
 	goos="${target%/*}"
 	goarch="${target#*/}"
 	bin="stageflow"
@@ -50,13 +61,15 @@ for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; d
 	echo "==> ${asset}"
 	rm -rf "${work_dir:?}/${asset}"
 	mkdir -p "${work_dir}/${asset}"
+	cp "${root_dir}/LICENSE" "${work_dir}/${asset}/LICENSE"
+	cp "${work_dir}/THIRD_PARTY_NOTICES" "${work_dir}/${asset}/THIRD_PARTY_NOTICES"
 	TZ=UTC CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
 		go build -trimpath -ldflags "$ldflags" -o "${work_dir}/${asset}/${bin}" ./clients/cli/cmd/stageflow
 
 	if [[ "$goos" == "windows" ]]; then
-		(cd "${work_dir}/${asset}" && zip -q -9 "${out_dir}/${asset}.zip" "$bin")
+		(cd "${work_dir}/${asset}" && zip -q -9 "${out_dir}/${asset}.zip" "$bin" LICENSE THIRD_PARTY_NOTICES)
 	else
-		tar -C "${work_dir}/${asset}" -czf "${out_dir}/${asset}.tar.gz" "$bin"
+		tar -C "${work_dir}/${asset}" -czf "${out_dir}/${asset}.tar.gz" "$bin" LICENSE THIRD_PARTY_NOTICES
 	fi
 done
 
