@@ -147,7 +147,7 @@ func runDiffCommand(
 			Code: 2,
 			Err: fmt.Errorf(
 				"incomplete comparison: %s; use --allow-partial to accept available coverage",
-				strings.Join(result.SkippedScanners, ", "),
+				incompleteComparisonReason(result.SkippedScanners, result.NotComparedPages),
 			),
 		}
 	}
@@ -157,6 +157,22 @@ func runDiffCommand(
 	}
 
 	return nil
+}
+
+func incompleteComparisonReason(skippedScanners, notComparedPages []string) string {
+	reasons := make([]string, 0, 2)
+	if len(skippedScanners) > 0 {
+		reasons = append(reasons, "scanners not compared: "+strings.Join(skippedScanners, ", "))
+	}
+
+	if len(notComparedPages) > 0 {
+		reasons = append(reasons, fmt.Sprintf(
+			"pages not compared: %d (omitted, added or incompatible settings)",
+			len(notComparedPages),
+		))
+	}
+
+	return strings.Join(reasons, "; ")
 }
 
 func loadCurrentDiffTarget(

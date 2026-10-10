@@ -52,12 +52,13 @@ func newAuthCaptureCmd(runner authCaptureRunner) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "capture <url>",
 		Short: "Launch a non-headless Chromium and write Playwright storage state on exit",
-		Long: "Opens a non-headless Chromium pointed at <url> using `npx playwright open --save-storage`. " +
+		Long: "Opens a non-headless Chromium pointed at <url> using `npx --yes playwright open --save-storage`. " +
 			"Log in by hand, then close the browser; the resulting storage-state JSON is written to --output " +
 			"with file mode 0600.\n\n" +
 			"Pass that file to `stageflow scan --auth-state <path>` to attach the captured session to a job.\n\n" +
-			"Requires Node.js and Playwright to be installed locally (npm install -g playwright, or run from " +
-			"a project that already has playwright as a dependency). The CLI never sees the password; only the " +
+			"Requires Node.js with npx on PATH and Playwright's Chromium browser installed " +
+			"(npx playwright install chromium). If Playwright is absent from the current project, " +
+			"npx --yes may fetch it into the npm cache without prompting. The CLI never sees the password; only the " +
 			"resulting cookies + localStorage do.",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -158,8 +159,8 @@ func defaultAuthCaptureRunner(cmd *cobra.Command, url, output string, extraArgs 
 		return exitcode.Error{
 			Code: 2,
 			Err: errors.New(
-				"npx not found on PATH. Install Node.js (>= 22) and Playwright " +
-					"(npm install -g playwright, or run from a project that already depends on playwright) " +
+				"npx not found on PATH. Install Node.js (>= 22) with npx and Playwright's Chromium browser " +
+					"(npx playwright install chromium) " +
 					"to use `stageflow auth capture`",
 			),
 		}

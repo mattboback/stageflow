@@ -13,6 +13,19 @@ import (
 	"github.com/mattboback/stageflow/clients/cli/internal/exitcode"
 )
 
+func TestAuthCaptureHelpExplainsPackageAcquisition(t *testing.T) {
+	stdout, stderr, exitCode := runCLI(t, "stageflow", "auth", "capture", "--help")
+	if exitCode != 0 || stderr != "" {
+		t.Fatalf("exit=%d stdout=%q stderr=%q", exitCode, stdout, stderr)
+	}
+
+	for _, explanation := range []string{"npx --yes", "may fetch", "npm cache without prompting", "npx playwright install chromium"} {
+		if !strings.Contains(stdout, explanation) {
+			t.Fatalf("help is missing %q: %q", explanation, stdout)
+		}
+	}
+}
+
 func TestAuthCaptureRequiresOutput(t *testing.T) {
 	stdout, stderr, exitCode := runCLI(
 		t,
