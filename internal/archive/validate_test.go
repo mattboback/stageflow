@@ -3,22 +3,31 @@ package archive
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"testing"
 )
 
 func TestAdmissionRejectsMetadataLargerThanDiskBudget(t *testing.T) {
 	var data bytes.Buffer
 
+	const entrySize = 200 * 1024 * 1024
+	// Six MiB of raw ZIP data keeps the advertised 600 MiB expansion within
+	// the ratio limit, so rejection must come from the aggregate disk budget.
+	compressed := make([]byte, entrySize/MaxExpansionRatio)
+
 	writer := zip.NewWriter(&data)
 	for _, name := range []string{"first", "second", "third"} {
 		entry, err := writer.CreateRaw(
-			&zip.FileHeader{Name: name, Method: zip.Store, CompressedSize64: 1, UncompressedSize64: 200 * 1024 * 1024},
+			&zip.FileHeader{
+				Name: name, Method: zip.Deflate,
+				CompressedSize64: uint64(len(compressed)), UncompressedSize64: entrySize,
+			},
 		)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if _, writeErr := entry.Write([]byte{'x'}); writeErr != nil {
+		if _, writeErr := entry.Write(compressed); writeErr != nil {
 			t.Fatal(writeErr)
 		}
 	}
@@ -27,8 +36,9 @@ func TestAdmissionRejectsMetadataLargerThanDiskBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(bytes.NewReader(data.Bytes()), int64(data.Len())); err == nil {
-		t.Fatal("600 MiB archive exceeds reserved512 MiB site budget")
+	want := fmt.Sprintf("ZIP too large: %d bytes uncompressed exceeds 512 MiB limit", 3*entrySize)
+	if err := Validate(bytes.NewReader(data.Bytes()), int64(data.Len())); err == nil || err.Error() != want {
+		t.Fatalf("600 MiB metadata must exceed the aggregate disk budget: got %v, want %q", err, want)
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,7 @@ func TestIntegration_EndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to discover HTML: %v", err)
 	}
+
 	if len(pages) < 1 {
 		t.Fatal("Expected at least 1 HTML page to be discovered")
 	}
@@ -56,8 +58,8 @@ func TestIntegration_EndToEnd(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := siteServer.Start(ctx); err != nil {
-		t.Fatalf("Failed to start static server: %v", err)
+	if startErr := siteServer.Start(ctx); startErr != nil {
+		t.Fatalf("Failed to start static server: %v", startErr)
 	}
 	defer func() { _ = siteServer.Stop(context.Background()) }()
 
@@ -65,6 +67,7 @@ func TestIntegration_EndToEnd(t *testing.T) {
 	if listenAddr == "" {
 		t.Fatal("Expected server to expose listener address")
 	}
+
 	baseURL := "http://" + listenAddr
 
 	waitForHTTP200(t, baseURL+"/index.html", 5*time.Second)
@@ -81,38 +84,49 @@ func TestIntegration_EndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to read provenance: %v", err)
 	}
+
 	var parsedProv models.Provenance
-	if err := json.Unmarshal(data, &parsedProv); err != nil {
-		t.Fatalf("Provenance is not valid JSON: %v", err)
+	if unmarshalErr := json.Unmarshal(data, &parsedProv); unmarshalErr != nil {
+		t.Fatalf("Provenance is not valid JSON: %v", unmarshalErr)
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
 
 	for _, page := range prov.Pages {
-		resp, err := client.Get(page.URL)
-		if err != nil {
-			t.Errorf("Failed to fetch %s: %v", page.URL, err)
-			continue
-		}
-		body, _ := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status 200 for %s, got %d", page.URL, resp.StatusCode)
-		}
-		if len(body) == 0 {
-			t.Errorf("Empty response for %s", page.URL)
-		}
+		assertServedPage(t, client, page.URL)
 	}
 
 	resp, err := client.Get(baseURL + "/index.html")
 	if err != nil {
 		t.Fatalf("Failed to make CORS check request: %v", err)
 	}
+
 	_ = resp.Body.Close()
 
 	if corsOrigin := resp.Header.Get("Access-Control-Allow-Origin"); corsOrigin != "*" {
 		t.Errorf("Expected CORS origin *, got %s", corsOrigin)
+	}
+}
+
+func assertServedPage(t *testing.T, client *http.Client, pageURL string) {
+	t.Helper()
+
+	resp, err := client.Get(pageURL)
+	if err != nil {
+		t.Errorf("Failed to fetch %s: %v", pageURL, err)
+
+		return
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status 200 for %s, got %d", pageURL, resp.StatusCode)
+	}
+
+	if len(body) == 0 {
+		t.Errorf("Empty response for %s", pageURL)
 	}
 }
 
@@ -125,13 +139,18 @@ func TestIntegration_ZIPSecurity(t *testing.T) {
 	siteDir := filepath.Join(workspace, "site")
 
 	testdataPath := filepath.Join("testdata", "path-traversal.zip")
-	if _, err := os.Stat(testdataPath); os.IsNotExist(err) {
-		t.Skip("Test ZIP not available")
+	if _, err := os.Stat(testdataPath); err != nil {
+		t.Fatalf("required path-traversal fixture is unavailable: %v", err)
 	}
 
-	err := extractor.ExtractZIPToDir(testdataPath, siteDir)
-	if err == nil {
-		t.Fatal("Expected path traversal ZIP to be rejected")
+	err := extractor.NewExtractor().Extract(context.Background(), testdataPath, siteDir)
+	if err == nil || !strings.Contains(err.Error(), "path traversal") {
+		t.Fatalf("Expected path traversal rejection from production extractor, got %v", err)
+	}
+
+	if regularErr := extractor.NewExtractor().Extract(context.Background(), workspace, siteDir); regularErr == nil ||
+		!strings.Contains(regularErr.Error(), "regular file") {
+		t.Fatalf("Expected nonregular input rejection from production extractor, got %v", regularErr)
 	}
 
 	if _, statErr := os.Stat(filepath.Join(workspace, "etc", "evil.html")); !os.IsNotExist(statErr) {
@@ -146,6 +165,7 @@ func waitForHTTP200(t *testing.T, url string, timeout time.Duration) {
 	client := &http.Client{Timeout: 500 * time.Millisecond}
 
 	var lastErr error
+
 	for time.Now().Before(deadline) {
 		resp, err := client.Get(url)
 		if err == nil {
@@ -153,10 +173,12 @@ func waitForHTTP200(t *testing.T, url string, timeout time.Duration) {
 			if resp.StatusCode == http.StatusOK {
 				return
 			}
+
 			lastErr = fmt.Errorf("status %d", resp.StatusCode)
 		} else {
 			lastErr = err
 		}
+
 		time.Sleep(50 * time.Millisecond)
 	}
 
@@ -167,10 +189,12 @@ func createTestSiteZIP(t *testing.T, workspace string) string {
 	t.Helper()
 
 	zipPath := filepath.Join(workspace, "test-site.zip")
+
 	f, err := os.Create(zipPath) // #nosec G304 -- temp path
 	if err != nil {
 		t.Fatalf("create zip: %v", err)
 	}
+
 	defer func() { _ = f.Close() }()
 
 	zw := zip.NewWriter(f)
@@ -178,11 +202,12 @@ func createTestSiteZIP(t *testing.T, workspace string) string {
 	addZipFile(t, zw, "about.html", "<html><body>About</body></html>")
 	addZipFile(t, zw, "docs/guide.html", "<html><body>Guide</body></html>")
 
-	if err := zw.Close(); err != nil {
-		t.Fatalf("close zip writer: %v", err)
+	if closeZipErr := zw.Close(); closeZipErr != nil {
+		t.Fatalf("close zip writer: %v", closeZipErr)
 	}
-	if err := f.Close(); err != nil {
-		t.Fatalf("close zip file: %v", err)
+
+	if closeFileErr := f.Close(); closeFileErr != nil {
+		t.Fatalf("close zip file: %v", closeFileErr)
 	}
 
 	return zipPath
@@ -195,7 +220,8 @@ func addZipFile(t *testing.T, zw *zip.Writer, name, contents string) {
 	if err != nil {
 		t.Fatalf("create zip entry %q: %v", name, err)
 	}
-	if _, err := w.Write([]byte(contents)); err != nil {
-		t.Fatalf("write zip entry %q: %v", name, err)
+
+	if _, writeErr := w.Write([]byte(contents)); writeErr != nil {
+		t.Fatalf("write zip entry %q: %v", name, writeErr)
 	}
 }
