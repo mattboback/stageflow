@@ -44,8 +44,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 		 * Playwright fixture fails every spec on.
 		 *
 		 * This lives in Layout rather than a route because Layout also produces
-		 * __spa-fallback.html, which nginx serves for /scan/* and /demo. One
-		 * place covers every entry document.
+		 * __spa-fallback.html, which nginx serves for /scan/*. It also wraps all
+		 * five prerendered routes, including /demo, covering every entry document.
 		 */
 		<html lang="en" suppressHydrationWarning>
 			<head>

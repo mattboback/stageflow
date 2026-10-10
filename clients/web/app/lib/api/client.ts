@@ -1,7 +1,5 @@
 import type { ScannerDefinition, ScannerSelection, ScannersResponse } from '../types/scan';
 
-import { applyScannerPreset } from '../domain/scanners/presets';
-
 import { buildApiUrl } from './utils';
 
 type AbortSignalAnyFn = (this: typeof AbortSignal, signals: AbortSignal[]) => AbortSignal;
@@ -354,15 +352,7 @@ export async function deleteScanJob(jobId: string, signal?: AbortSignal): Promis
 }
 
 export function getDefaultScannerSelections(scanners: ScannerDefinition[]): ScannerSelection[] {
-	const enabledScanners = scanners.filter((scanner) => scanner.enabled);
-	if (enabledScanners.length === 0) {
-		return [];
-	}
-
-	const selections = enabledScanners.map((scanner) => ({
-		id: scanner.id,
-		enabled: false
-	}));
-
-	return applyScannerPreset(selections, 'coverage');
+	return scanners
+		.filter((scanner) => scanner.enabled)
+		.map((scanner) => ({ id: scanner.id, enabled: true }));
 }

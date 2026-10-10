@@ -14,13 +14,13 @@ export default defineConfig({
 			exclude: [
 				'app/**/*.test.{ts,tsx}',
 				// Test scaffolding, not app code.
-				'app/**/test-*.ts',
+				'app/test/load-fixture.ts',
+				'app/lib/report/test-issues.ts',
 				// App wiring with no logic of its own. The Playwright suite exercises
 				// these against a real production build; jsdom unit tests would only
 				// restate the framework's behavior.
 				'app/root.tsx',
 				'app/routes.ts',
-				'app/entry.client.tsx',
 				'app/**/*.d.ts'
 			]
 			// Deliberately no `thresholds` yet. A number chosen before anyone has read
