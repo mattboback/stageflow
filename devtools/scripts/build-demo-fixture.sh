@@ -61,9 +61,13 @@ done < <(jq -r '
   | sort_by(.page_id, (if .scanner_id == "axe" then 0 else 1 end))
   | unique_by(.page_id)[] | [.page_id, .scanner_id, (.page_url // ""), .url] | @tsv
 ' "$work/v2-status.json")
-if rg -l 'localhost|127\.0\.0\.1|X-Amz-|minio' "$work/demo"/*.json; then
-  echo 'Unsafe runtime references survived demo normalization' >&2; exit 1
-fi
+reference_status=0
+rg -l 'localhost|127\.0\.0\.1|X-Amz-|minio' "$work/demo"/*.json || reference_status=$?
+case "$reference_status" in
+  0) echo 'Unsafe runtime references survived demo normalization' >&2; exit 1 ;;
+  1) ;; # rg completed successfully without matches.
+  *) echo "Could not verify demo runtime references (rg exited $reference_status)" >&2; exit "$reference_status" ;;
+esac
 for report in "$work/demo/baseline.json" "$work/demo/report.json"; do
   node "$repo_root/libs/contracts/report/schema/validate.js" "$report"
 done
