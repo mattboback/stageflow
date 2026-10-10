@@ -665,13 +665,47 @@ pre {
 		white-space: nowrap;
 		border: 0;
 	}
-	.themepick__opt {
-		min-height: 38px;
+	.themepick .themepick__opt {
+		min-width: 44px;
+		min-height: 44px;
+		justify-content: center;
 		padding-inline: 0.55rem;
 	}
-	/* Brand + section + back link + theme control need 392px, two more than a
-	   390px phone has. The page heading already says which screen this is. */
+	.brand {
+		min-width: 44px;
+		min-height: 44px;
+		justify-content: center;
+	}
+	/* The page heading already names the screen; reserve phone header space
+	   for the brand, back action, and all three theme choices. */
 	.site-header__section {
+		display: none;
+	}
+}
+
+@media (max-width: 480px) {
+	.nav a.navlink--back {
+		min-width: 44px;
+		padding-inline: 0;
+		justify-content: center;
+	}
+	/* Keep the back link's accessible name while showing its existing arrow. */
+	.navlink--back .navlink__label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+}
+
+@media (max-width: 380px) {
+	/* The named brand mark keeps the header usable on 320px phones. */
+	.brand__name {
 		display: none;
 	}
 }
@@ -1144,6 +1178,9 @@ pre {
    actually on, not on the group. */
 .themepick {
 	display: inline-flex;
+	/* Preserve the choices instead of squeezing their icons to zero width.
+	   https://developer.mozilla.org/en-US/docs/Web/CSS/flex#values */
+	flex: none;
 	align-items: center;
 	gap: 1px;
 	padding: 2px;
@@ -1157,6 +1194,7 @@ pre {
 	   it all three land on the header's containing block, stacked on one spot. */
 	position: relative;
 	display: inline-flex;
+	flex: none;
 	align-items: center;
 	gap: 0.35rem;
 	padding: 0.32rem 0.6rem;
@@ -1169,6 +1207,9 @@ pre {
 	transition:
 		color var(--dur-1) var(--ease),
 		background var(--dur-1) var(--ease);
+}
+.themepick__opt svg {
+	flex: none;
 }
 /* The radio covers its own pill rather than hiding in a 1px sr-only box: the
    real control is then the thing under the pointer, so the whole pill is the

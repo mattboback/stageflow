@@ -306,6 +306,83 @@ test('review decisions synchronize without loss across browser tabs', async ({ c
 	await expect(page.locator('.rnext__count').getByText('All 2 findings reviewed')).toBeVisible();
 });
 
+test('headers keep all three theme choices usable at narrow widths', async ({ page }) => {
+	await mockReportRoutes(page);
+	for (const path of [`/scan/${JOB_ID}/report`, '/']) {
+		await page.goto(path);
+		const header = page.getByRole('banner');
+		const isReport = path !== '/';
+		await expect(header.getByRole('link', { name: 'StageFlow home' })).toBeVisible();
+		// Wait for the fixture-backed report to replace the prerendered shell.
+		if (isReport)
+			await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
+
+		for (const width of [320, 375, 384, 390, 640, 641, 768, 800, 960, 1440]) {
+			await page.setViewportSize({ width, height: 844 });
+			await expect(header.getByRole('radio')).toHaveCount(3);
+			for (const name of ['Light', 'Dark', 'System']) {
+				const radio = header.getByRole('radio', { name, exact: true });
+				await expect(radio).toBeVisible();
+				const geometry = await radio.evaluate((input) => {
+					const control = input.getBoundingClientRect();
+					const icon = input.closest('label')?.querySelector('svg')?.getBoundingClientRect();
+					return {
+						left: control.left,
+						right: control.right,
+						width: control.width,
+						height: control.height,
+						iconWidth: icon?.width ?? 0,
+						iconHeight: icon?.height ?? 0,
+						viewportWidth: document.documentElement.clientWidth
+					};
+				});
+				expect(geometry.iconWidth, `${name} icon at ${width}px`).toBeGreaterThan(0);
+				expect(geometry.iconHeight, `${name} icon at ${width}px`).toBeGreaterThan(0);
+				expect(geometry.left).toBeGreaterThanOrEqual(0);
+				expect(geometry.right).toBeLessThanOrEqual(geometry.viewportWidth);
+				if (width <= 640) {
+					expect(geometry.width, `${name} touch target at ${width}px`).toBeGreaterThanOrEqual(44);
+					expect(geometry.height).toBeGreaterThanOrEqual(44);
+				}
+			}
+
+			const controls = [header.getByRole('link', { name: 'StageFlow home' })];
+			if (isReport) controls.push(header.getByRole('link', { name: 'Scan status' }));
+			else if (width <= 960) controls.push(header.getByRole('button', { name: 'Menu' }));
+			const headerWidth = await page.evaluate(() => document.documentElement.clientWidth);
+			for (const control of controls) {
+				await expect(control).toBeVisible();
+				const bounds = await control.boundingBox();
+				expect(bounds).not.toBeNull();
+				expect(bounds!.x).toBeGreaterThanOrEqual(0);
+				expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(headerWidth);
+				if (width <= 640) expect(bounds!.height).toBeGreaterThanOrEqual(44);
+			}
+			if (width >= 384) await expect(header.getByText('StageFlow', { exact: true })).toBeVisible();
+			expect(
+				await page.evaluate(
+					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+				),
+				`horizontal overflow at ${width}px`
+			).toBe(0);
+
+			if (isReport && width === 390) {
+				for (const [name, theme] of [
+					['Dark', 'dark'],
+					['Light', 'light'],
+					['System', null]
+				] as const) {
+					const radio = header.getByRole('radio', { name, exact: true });
+					await radio.click();
+					await expect(radio).toBeChecked();
+					if (theme === null) await expect(page.locator('html')).not.toHaveAttribute('data-theme');
+					else await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+				}
+			}
+		}
+	}
+});
+
 test.describe('mobile report (390×844)', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 

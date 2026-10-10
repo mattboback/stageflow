@@ -26,7 +26,8 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 					{app.section && <span className="site-header__section">{app.section}</span>}
 					<nav className="nav" aria-label="Workflow">
 						<Link className="navlink navlink--back" to={app.backTo}>
-							<span aria-hidden="true">←</span> {app.backLabel}
+							<span aria-hidden="true">←</span>
+							<span className="navlink__label">{app.backLabel}</span>
 						</Link>
 						<ThemeToggle />
 					</nav>
