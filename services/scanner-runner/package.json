@@ -67,7 +67,7 @@
     "lighthouse": "^13.4.1",
     "playwright": "1.63.0",
     "playwright-core": "1.63.0",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -100,6 +100,8 @@
     "picomatch": "2.3.2",
     "postcss": "8.5.23",
     "rollup": "4.59.0",
+    "smol-toml": "1.9.0",
+    "source-map-js": "1.2.2",
     "vite": "7.3.5",
     "ws": "8.21.0"
   }
