@@ -4,7 +4,7 @@ set -Eeuo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 api="${API:-http://localhost:8080}"
 cli="${STAGEFLOW_BIN:-stageflow}"
-for tool in "$cli" jq curl magick bun go; do
+for tool in "$cli" jq curl magick bun go rg; do
   command -v "$tool" >/dev/null || { echo "Missing tool: $tool" >&2; exit 2; }
 done
 export API_URL="$api"

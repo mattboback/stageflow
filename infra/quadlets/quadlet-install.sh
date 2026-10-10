@@ -15,8 +15,6 @@ ENV_FILE="${ENV_FILE:-${XDG_CONFIG_HOME:-${HOME}/.config}/stageflow/production.e
 APP_ENV_FILE="${APP_ENV_FILE:-${ENV_FILE}}"
 NETWORK_NAME="${STAGEFLOW_NETWORK_NAME:-${NETWORK_NAME:-stageflow_net}}"
 JOBS_NETWORK_NAME="${STAGEFLOW_JOBS_NETWORK_NAME:-stageflow_jobs}"
-HOST_UID="$(id -u)"
-HOST_GID="$(id -g)"
 
 # Units run the images tagged IMAGE_TAG. The control plane passes the commit
 # SHA it built; without one, render what is deployed now (the state file's
@@ -69,12 +67,9 @@ escape_sed() {
   printf '%s' "$1" | sed -e 's/[&|]/\\&/g'
 }
 
-ENV_FILE_ESC="$(escape_sed "${ENV_FILE}")"
 APP_ENV_FILE_ESC="$(escape_sed "${APP_ENV_FILE}")"
 NETWORK_NAME_ESC="$(escape_sed "${NETWORK_NAME}")"
 JOBS_NETWORK_NAME_ESC="$(escape_sed "${JOBS_NETWORK_NAME}")"
-HOST_UID_ESC="$(escape_sed "${HOST_UID}")"
-HOST_GID_ESC="$(escape_sed "${HOST_GID}")"
 IMAGE_TAG_ESC="$(escape_sed "${IMAGE_TAG}")"
 
 for template in "${TEMPLATE_DIR}"/*.in; do
@@ -82,12 +77,9 @@ for template in "${TEMPLATE_DIR}"/*.in; do
 
   output_path="${OUTPUT_DIR}/${filename%.in}"
   sed \
-    -e "s|@ENV_FILE@|${ENV_FILE_ESC}|g" \
     -e "s|@APP_ENV_FILE@|${APP_ENV_FILE_ESC}|g" \
     -e "s|@NETWORK_NAME@|${NETWORK_NAME_ESC}|g" \
     -e "s|@JOBS_NETWORK_NAME@|${JOBS_NETWORK_NAME_ESC}|g" \
-    -e "s|@HOST_UID@|${HOST_UID_ESC}|g" \
-    -e "s|@HOST_GID@|${HOST_GID_ESC}|g" \
     -e "s|@IMAGE_TAG@|${IMAGE_TAG_ESC}|g" \
     "${template}" > "${output_path}"
   echo "Installed ${output_path}"

@@ -15,8 +15,9 @@
 		"generate:go": "../../../devtools/scripts/generate-contracts.sh go",
 		"validate": "node schema/validate.js",
 		"validate:fixtures": "node schema/validate.js fixtures/scanner-manifest.min.json && node schema/validate.js fixtures/scanner-manifest.full.json",
-		"build": "bun run generate && bun run validate:fixtures && tsc",
-		"typecheck": "tsc --noEmit"
+		"build": "bun run generate && bun run build:prepared",
+		"typecheck": "tsc --noEmit",
+		"build:prepared": "bun run validate:fixtures && tsc"
 	},
 	"exports": {
 		".": {

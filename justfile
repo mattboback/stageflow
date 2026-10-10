@@ -321,7 +321,7 @@ ci:
     echo "==> Contract fixtures and TypeScript packages..."
     (cd libs/contracts/outcome && {{bun}} install --frozen-lockfile && {{bun}} run validate:fixtures)
     for dir in libs/contracts/report libs/contracts/provenance libs/contracts/scanner-manifest; do
-        (cd "$dir" && {{bun}} install --frozen-lockfile && {{bun}} run build && {{bun}} run typecheck)
+        (cd "$dir" && {{bun}} install --frozen-lockfile && {{bun}} run build:prepared && {{bun}} run typecheck)
     done
 
     echo "==> Ensuring pinned quality tools..."
@@ -356,15 +356,20 @@ ci:
     golangci-lint run --allow-parallel-runners ./...
     # The live Podman contract tests compile only under their build tag.
     golangci-lint run --allow-parallel-runners --build-tags podmanlive ./services/orchestrator/internal/podman/...
+    golangci-lint run --allow-parallel-runners --build-tags integration ./services/archive-extractor/...
 
     echo "==> Go test..."
     {{go}} test -race ./...
+    {{go}} test -race -tags integration ./services/archive-extractor/...
 
     echo "==> Go vulncheck..."
     govulncheck ./...
 
     echo "==> Shell regression tests..."
     just shell-tests
+
+    echo "==> Backup restore and sanitization regression..."
+    just backup-tests
 
     echo "==> Frontend CI..."
     (cd {{web_dir}} && {{bun}} run ci)
@@ -476,6 +481,7 @@ shell-tests:
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
     bash devtools/scripts/tests/build-images.test.sh
+    bash devtools/scripts/tests/demo-fixture.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
     bash devtools/scripts/tests/quadlet-install.test.sh
     bash devtools/scripts/tests/markdown-links.test.sh
@@ -485,7 +491,12 @@ shell-tests:
 
 [group('quality'), doc('Verify sanitized backups with local PostgreSQL server/client tools on PATH')]
 backup-tests:
-    @bash devtools/scripts/tests/backup-snapshot.test.sh
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for tool in initdb pg_ctl pg_dump psql createdb; do
+        command -v "$tool" >/dev/null || { echo "Missing PostgreSQL tool: $tool (install PostgreSQL server/client binaries and add their bin directory to PATH)" >&2; exit 2; }
+    done
+    bash devtools/scripts/tests/backup-snapshot.test.sh
 
 [group('quality'), doc('Run production Knip and Go deadcode with reviewed temporary allowances')]
 dead-code:

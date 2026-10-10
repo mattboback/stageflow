@@ -14,8 +14,9 @@
 		"generate:ts": "../../../devtools/scripts/generate-contracts.sh ts",
 		"validate": "node schema/validate.js",
 		"validate:fixtures": "node schema/validate.js fixtures/provenance.no-auth.json && node schema/validate.js fixtures/provenance.auth-storage-state.json && node schema/validate.js fixtures/provenance.auth-form.json && node schema/validate.js fixtures/provenance.auth-form-literal.json",
-		"build": "bun run generate && bun run validate:fixtures && tsc",
-		"typecheck": "tsc --noEmit"
+		"build": "bun run generate && bun run build:prepared",
+		"typecheck": "tsc --noEmit",
+		"build:prepared": "bun run validate:fixtures && tsc"
 	},
 	"exports": {
 		".": {
