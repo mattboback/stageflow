@@ -480,6 +480,7 @@ shell-tests:
     #!/usr/bin/env bash
     set -euo pipefail
     bash devtools/scripts/tests/cli-install.test.sh
+    bash devtools/scripts/tests/cli-release.test.sh
     bash devtools/scripts/tests/build-images.test.sh
     bash devtools/scripts/tests/demo-fixture.test.sh
     bash devtools/scripts/tests/dev-onboarding.test.sh
