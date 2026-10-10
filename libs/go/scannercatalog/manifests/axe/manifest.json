@@ -33,34 +33,24 @@
 	},
 	"configSchema": {
 		"type": "object",
+		"description": "Only the options below affect analysis. Unrecognized historical settings are accepted but ignored.",
+		"additionalProperties": true,
 		"properties": {
-			"rules": {
-				"type": "array",
-				"items": { "type": "string" },
-				"description": "Specific axe rules to enable (empty = all rules)"
-			},
 			"disabledRules": {
 				"type": "array",
 				"items": { "type": "string" },
-				"description": "Specific axe rules to disable"
+				"description": "Specific axe rules to disable (empty = no disabled rules)"
 			},
-			"standard": {
-				"type": "string",
-				"enum": [
-					"wcag2a",
-					"wcag2aa",
-					"wcag2aaa",
-					"wcag21a",
-					"wcag21aa",
-					"wcag22aa"
-				],
-				"default": "wcag21aa",
-				"description": "WCAG conformance level to test against"
+			"runOnlyTags": {
+				"type": "array",
+				"items": { "type": "string" },
+				"description": "Limit analysis to rules with these axe tags (empty = all rules)"
 			},
-			"includeBestPractices": {
-				"type": "boolean",
-				"default": true,
-				"description": "Include best practice rules beyond WCAG"
+			"dynamicContentWaitMs": {
+				"type": "number",
+				"minimum": 0,
+				"default": 50,
+				"description": "Milliseconds to wait for dynamic content before analysis (0 skips the wait)"
 			}
 		}
 	},

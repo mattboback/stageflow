@@ -2,6 +2,8 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { validateOptionsAgainstSchema } from '../../src/core/manifest';
+import { DEFAULT_DYNAMIC_CONTENT_WAIT_MS } from '../../src/scanners/axe/options';
 import { BUILTIN_SCANNER_IDS, loadBuiltinScannerRegistry } from '../../src/scanners/registry';
 
 function escapeRegExp(value: string): string {
@@ -13,6 +15,43 @@ describe('built-in scanner registry', () => {
 		const registry = await loadBuiltinScannerRegistry({ strictValidation: true });
 
 		expect(registry.listIds()).toEqual([...BUILTIN_SCANNER_IDS].sort());
+	});
+
+	it('advertises supported axe options while accepting historical unknown settings', async () => {
+		const registry = await loadBuiltinScannerRegistry({ strictValidation: true });
+		const schema = registry.resolve('axe').manifestConfigSchema;
+		if (!schema || typeof schema !== 'object') {
+			throw new Error('Expected axe config schema');
+		}
+		const properties = schema.properties as Record<string, unknown> | undefined;
+		expect(Object.keys(properties ?? {}).sort()).toEqual([
+			'disabledRules',
+			'dynamicContentWaitMs',
+			'runOnlyTags'
+		]);
+		expect(properties?.dynamicContentWaitMs).toMatchObject({
+			default: DEFAULT_DYNAMIC_CONTENT_WAIT_MS
+		});
+		for (const options of [
+			{},
+			{ disabledRules: [], runOnlyTags: [] },
+			{ disabledRules: ['image-alt'], runOnlyTags: ['wcag2a'], dynamicContentWaitMs: 0 },
+			{ dynamicContentWaitMs: 125.5 },
+			{ rules: ['image-alt'], standard: 'wcag21aa', includeBestPractices: false },
+			{ futureOption: { enabled: true } }
+		]) {
+			expect(validateOptionsAgainstSchema(schema, options)).toEqual({ valid: true, errors: [] });
+		}
+		for (const options of [
+			{ disabledRules: 'image-alt' },
+			{ disabledRules: [42] },
+			{ runOnlyTags: 'wcag2a' },
+			{ runOnlyTags: [false] },
+			{ dynamicContentWaitMs: -1 },
+			{ dynamicContentWaitMs: '50' }
+		]) {
+			expect(validateOptionsAgainstSchema(schema, options).valid).toBe(false);
+		}
 	});
 
 	it('keeps manifest entrypoints aligned with scanner source exports', async () => {

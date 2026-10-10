@@ -6,9 +6,12 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PageEntry, ScanContext, ScannerConfig, ScannerLogger } from '../../../src/core';
+import { AxeScanner } from '../../../src/scanners/axe';
 
 const axeAnalyzeMock = vi.hoisted(() => vi.fn());
 const axeExcludeMock = vi.hoisted(() => vi.fn());
+const axeDisableRulesMock = vi.hoisted(() => vi.fn());
+const axeWithTagsMock = vi.hoisted(() => vi.fn());
 const capturePageOverviewMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../src/core/page-settle', () => ({
@@ -17,13 +20,15 @@ vi.mock('../../../src/core/page-settle', () => ({
 
 vi.mock('@axe-core/playwright', () => {
 	class MockAxeBuilder {
-		disableRules = vi.fn(function (this: MockAxeBuilder) {
+		disableRules(rules: string[]): this {
+			axeDisableRulesMock(rules);
 			return this;
-		});
+		}
 
-		withTags = vi.fn(function (this: MockAxeBuilder) {
+		withTags(tags: string[]): this {
+			axeWithTagsMock(tags);
 			return this;
-		});
+		}
 
 		exclude = (selector: string): this => {
 			axeExcludeMock(selector);
@@ -91,6 +96,23 @@ const createMockContext = (resultsDir: string): ScanContext => {
 	};
 };
 
+async function createConfiguredScanner(resultsDir: string, options?: Record<string, unknown>) {
+	class ConfiguredAxeScanner extends AxeScanner {
+		async configure(): Promise<void> {
+			this.logger = createMockLogger();
+			this.config = {
+				...createScannerConfig(),
+				resultsDir,
+				...(options === undefined ? {} : { options })
+			};
+			await this.initialize();
+		}
+	}
+	const scanner = new ConfiguredAxeScanner();
+	await scanner.configure();
+	return scanner;
+}
+
 describe('AxeScanner.scanPage', () => {
 	let resultsDir: string;
 
@@ -108,6 +130,60 @@ describe('AxeScanner.scanPage', () => {
 	afterEach(async () => {
 		await rm(resultsDir, { force: true, recursive: true });
 		vi.clearAllMocks();
+	});
+
+	it.each([
+		['absent options', undefined],
+		['empty options', {}],
+		['empty filters', { disabledRules: [], runOnlyTags: [] }],
+		[
+			'historical ignored fields',
+			{ rules: ['image-alt'], standard: 'wcag2a', includeBestPractices: false }
+		]
+	])('keeps default rule coverage and the 50ms wait with %s', async (_name, options) => {
+		const scanner = await createConfiguredScanner(resultsDir, options);
+		const context = createMockContext(resultsDir);
+
+		const result = await scanner.scanPage(context);
+
+		expect(result.success).toBe(true);
+		expect(axeAnalyzeMock).toHaveBeenCalledOnce();
+		expect(axeDisableRulesMock).not.toHaveBeenCalled();
+		expect(axeWithTagsMock).not.toHaveBeenCalled();
+		expect(context.page.waitForTimeout).toHaveBeenCalledExactlyOnceWith(50);
+	});
+
+	it('applies advertised disabled rules, tags and dynamic content wait before analysis', async () => {
+		const scanner = await createConfiguredScanner(resultsDir, {
+			disabledRules: ['image-alt', 'region'],
+			runOnlyTags: ['wcag2a', 'wcag2aa'],
+			dynamicContentWaitMs: 125
+		});
+		const context = createMockContext(resultsDir);
+
+		const result = await scanner.scanPage(context);
+
+		expect(result.success).toBe(true);
+		expect(axeDisableRulesMock).toHaveBeenCalledExactlyOnceWith(['image-alt', 'region']);
+		expect(axeWithTagsMock).toHaveBeenCalledExactlyOnceWith(['wcag2a', 'wcag2aa']);
+		expect(context.page.waitForTimeout).toHaveBeenCalledExactlyOnceWith(125);
+		expect(context.page.waitForTimeout).toHaveBeenCalledBefore(axeAnalyzeMock);
+		expect(axeDisableRulesMock).toHaveBeenCalledBefore(axeAnalyzeMock);
+		expect(axeWithTagsMock).toHaveBeenCalledBefore(axeAnalyzeMock);
+	});
+
+	it('skips only the dynamic content wait when configured to zero', async () => {
+		const scanner = await createConfiguredScanner(resultsDir, { dynamicContentWaitMs: 0 });
+		const context = createMockContext(resultsDir);
+
+		const result = await scanner.scanPage(context);
+
+		expect(result.success).toBe(true);
+		expect(context.page.waitForTimeout).not.toHaveBeenCalled();
+		expect(context.page.waitForFunction).toHaveBeenCalled();
+		expect(axeAnalyzeMock).toHaveBeenCalledOnce();
+		expect(axeDisableRulesMock).not.toHaveBeenCalled();
+		expect(axeWithTagsMock).not.toHaveBeenCalled();
 	});
 
 	it('retains a sixth occurrence while capping rich element evidence', async () => {
