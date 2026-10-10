@@ -49,6 +49,8 @@ test('interactive HTML opens without a network and preserves edits after downloa
 	page,
 	context
 }) => {
+	// This full round trip includes editing, downloading, and booting a second offline viewer.
+	test.slow();
 	const directory = await mkdtemp(join(tmpdir(), 'stageflow-offline-'));
 	try {
 		const report = loadReportFixture();
