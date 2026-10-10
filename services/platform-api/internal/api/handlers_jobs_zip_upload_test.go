@@ -5,9 +5,11 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -47,7 +49,9 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 	writer := multipart.NewWriter(body)
 	addZipFile(t, writer, "site.zip", buildTestZip(t))
 	writeField(t, writer, "modules", "axe")
-	writeField(t, writer, "scanner_configs", `{"axe":{"rules":["color-contrast"]}}`)
+
+	const optionsJSON = `{"disabledRules":["color-contrast"],"runOnlyTags":["wcag2a"],"dynamicContentWaitMs":500,"rules":["legacy"]}`
+	writeField(t, writer, "scanner_configs", `{"axe":`+optionsJSON+`}`)
 	writeField(t, writer, "browser", "chromium")
 	writeField(t, writer, "screenshot", "true")
 	writeField(t, writer, "unknown_field", "ignored")
@@ -77,8 +81,13 @@ func TestZipUploadWithScannerConfigsField(t *testing.T) {
 		t.Fatal("expected screenshot=true")
 	}
 
-	if payload.Config.ScannerConfigs["axe"] == nil {
-		t.Fatal("expected scanner_configs.axe to be set")
+	var want map[string]any
+	if err := json.Unmarshal([]byte(optionsJSON), &want); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := payload.Config.ScannerConfigs["axe"]; !reflect.DeepEqual(got, want) {
+		t.Fatalf("scanner options changed at ZIP intake: got %#v, want %#v", got, want)
 	}
 
 	if payload.Config.AllowPrivateTargets {

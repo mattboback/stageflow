@@ -3,6 +3,7 @@ package podman
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/mattboback/stageflow/libs/go/logging"
@@ -109,6 +110,48 @@ func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
 
 	if len(urls) != 1 || urls[0] != "http://localhost:3000" {
 		t.Fatalf("SCAN_URLS = %v, want localhost URL", urls)
+	}
+}
+
+func TestScannerLaunchPlannerForwardsStoredScannerOptions(t *testing.T) {
+	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{ScannerImage: "image"})
+
+	for _, optionsJSON := range []string{
+		`{"disabledRules":["color-contrast"],"runOnlyTags":["wcag2a"],"dynamicContentWaitMs":500}`,
+		`{"disabledRules":[],"runOnlyTags":[]}`,
+		`{"legacyOption":{"value":true},"disabledRules":null}`,
+	} {
+		t.Run(optionsJSON, func(t *testing.T) {
+			var job models.Job
+
+			storedJSON := `{"id":"options","input_type":"urls","urls":["https://example.com"],"config":{"scanner_configs":{"axe":` + optionsJSON + `}}}`
+			if err := json.Unmarshal([]byte(storedJSON), &job); err != nil {
+				t.Fatal(err)
+			}
+
+			plan, err := planner.Plan(context.Background(), &job, "axe")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var got map[string]any
+			if decodeErr := json.Unmarshal([]byte(plan.Env["SCANNER_OPTIONS"]), &got); decodeErr != nil {
+				t.Fatalf("decode forwarded SCANNER_OPTIONS: %v", decodeErr)
+			}
+
+			if want := job.Config.ScannerConfigs["axe"]; !reflect.DeepEqual(got, want) {
+				t.Fatalf("stored scanner options changed during launch: got %#v, want %#v", got, want)
+			}
+
+			other, err := planner.Plan(context.Background(), &job, "lighthouse")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if _, exists := other.Env["SCANNER_OPTIONS"]; exists {
+				t.Fatal("axe options leaked into the Lighthouse launch")
+			}
+		})
 	}
 }
 

@@ -468,17 +468,18 @@ func (a *reportAggregation) recomputeScannerCounts(issues []report.IssueDetail, 
 }
 
 // coverageFilteredIssues assigns proven overlapping concerns to a successful
-// specialist. An incomplete or unselected specialist must never hide fallback
-// findings. SEO description, H1, canonical and viewport checks remain independent:
-// they are not equivalent to axe's checks.
+// specialist with unrestricted coverage. An incomplete, filtered or unselected
+// specialist must never hide fallback findings. SEO description, H1, canonical
+// and viewport checks remain independent: they are not equivalent to axe's checks.
 func (a *reportAggregation) coverageFilteredIssues(pages []report.PageSummary) []report.IssueDetail {
 	axeSuccess := a.scannerStats["axe"] != nil && a.scannerStats["axe"].Status == report.ScannerStatusSuccess
+	axeUnrestricted := axeSuccess && unrestrictedAxeConfiguration(a.job.Config.ScannerConfigs["axe"])
 	origins, robotsPage := robotsRepresentatives(pages, a.issues)
 	seenRobots := make(map[string]bool)
 
 	issues := make([]report.IssueDetail, 0, len(a.issues))
 	for _, issue := range a.issues {
-		if axeSuccess && axeReplacesIssue(issue) {
+		if axeUnrestricted && axeReplacesIssue(issue) {
 			continue
 		}
 
@@ -496,6 +497,35 @@ func (a *reportAggregation) coverageFilteredIssues(pages []report.PageSummary) [
 	}
 
 	return issues
+}
+
+// unrestrictedAxeConfiguration allows only options known to preserve rule
+// coverage. Unknown options remain compatible at intake, but cannot justify
+// suppressing another scanner's findings.
+func unrestrictedAxeConfiguration(options map[string]any) bool {
+	for key, value := range options {
+		switch key {
+		case "dynamicContentWaitMs":
+			continue
+		case "disabledRules", "runOnlyTags":
+			switch filter := value.(type) {
+			case []any: // JSON decoded by intake or PostgreSQL.
+				if filter == nil || len(filter) != 0 {
+					return false
+				}
+			case []string: // Options constructed directly by Go callers.
+				if filter == nil || len(filter) != 0 {
+					return false
+				}
+			default:
+				return false
+			}
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 func axeReplacesIssue(issue report.IssueDetail) bool {

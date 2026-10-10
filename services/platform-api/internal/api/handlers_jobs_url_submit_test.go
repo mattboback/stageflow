@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -112,6 +113,42 @@ func TestHandleJobURLSubmitSuccess(t *testing.T) {
 
 	if !admitted.Config.Screenshot {
 		t.Fatal("expected omitted screenshot field to default to true")
+	}
+}
+
+func TestHandleJobURLSubmitPreservesScannerOptions(t *testing.T) {
+	for _, optionsJSON := range []string{
+		`{"disabledRules":["color-contrast"],"runOnlyTags":["wcag2a"],"dynamicContentWaitMs":500}`,
+		`{"disabledRules":[],"runOnlyTags":[]}`,
+		`{"legacyOption":{"value":true},"disabledRules":null}`,
+	} {
+		t.Run(optionsJSON, func(t *testing.T) {
+			server, _, jobs := newTestServer(t)
+			body := `{"urls":["https://example.com"],"modules":["axe"],"scanner_configs":{"axe":` + optionsJSON + `}}`
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs/urls", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+
+			rr := httptest.NewRecorder()
+			server.handleJobURLSubmit(rr, req)
+
+			if rr.Code != http.StatusCreated || len(jobs.admitted) != 1 {
+				t.Fatalf(
+					"scanner options must reach admission: status=%d jobs=%d body=%s",
+					rr.Code,
+					len(jobs.admitted),
+					rr.Body.String(),
+				)
+			}
+
+			var want map[string]any
+			if err := json.Unmarshal([]byte(optionsJSON), &want); err != nil {
+				t.Fatal(err)
+			}
+
+			if got := jobs.admitted[0].Config.ScannerConfigs["axe"]; !reflect.DeepEqual(got, want) {
+				t.Fatalf("scanner options changed at URL intake: got %#v, want %#v", got, want)
+			}
+		})
 	}
 }
 
