@@ -328,4 +328,4 @@ say "  just setup"
 say "  just images"
 say "  just dev up          # settings come from .env"
 
-say "For localhost scans, set PLATFORM_API_ALLOW_PRIVATE_TARGETS=true,"
+say "For localhost scans, set PLATFORM_API_ALLOW_PRIVATE_TARGETS=true, POD_NETNS_MODE=host, and POD_NETWORK= in .env."

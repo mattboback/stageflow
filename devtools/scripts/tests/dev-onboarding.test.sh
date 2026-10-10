@@ -152,7 +152,6 @@ EOF
 	assert_contains "$log_file" "compose-env STAGEFLOW_NETWORK_NAME=shell_net" "refresh should honor shell network over .env"
 
 	: >"$log_file"
-	: >"$log_file"
 }
 
 run_external_env_case() {
@@ -255,7 +254,7 @@ PYTHON
 	assert_contains "$output" "Manual bootstrap:" "diagnose should print manual setup guidance"
 	assert_line_before "$output" "  just setup" "  just images" "diagnose should install dependencies before building images"
 	assert_line_before "$output" "  just images" "  just dev up          # settings come from .env" "diagnose should build images before starting the stack"
-	assert_contains "$output" "PLATFORM_API_ALLOW_PRIVATE_TARGETS=true" "diagnose should preserve local-target guidance"
+	assert_contains "$output" "For localhost scans, set PLATFORM_API_ALLOW_PRIVATE_TARGETS=true, POD_NETNS_MODE=host, and POD_NETWORK= in .env." "diagnose should explain all localhost settings"
 	if grep -Fq 'dev init' "$output"; then
 		echo "FAIL: diagnose recommends obsolete dev init" >&2
 		failures=$((failures + 1))

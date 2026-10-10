@@ -51,6 +51,19 @@ jobs:
       - uses: taiki-e/install-action@4076c08d76dba979c11a7285295b0716c1d67908 # v2.87.15
         with:
           tool: just@${{ env.JUST_VERSION }}
+      - name: Install PostgreSQL test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql postgresql-client ripgrep shellcheck
+          postgres_bin=
+          for directory in /usr/lib/postgresql/*/bin; do
+            if [[ -x "$directory/initdb" && -x "$directory/pg_dump" ]]; then
+              postgres_bin="$directory"
+              break
+            fi
+          done
+          test -n "$postgres_bin"
+          echo "$postgres_bin" >> "$GITHUB_PATH"
       - name: Install dependencies
         run: |
           command -v shellcheck
