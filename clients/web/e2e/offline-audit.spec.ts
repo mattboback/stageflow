@@ -5,6 +5,46 @@ import { pathToFileURL } from 'node:url';
 import { renderPortableAuditHTML } from '../app/lib/portable-audit';
 import { expect, loadReportFixture, test } from './fixtures';
 
+test('hosted export embeds the bundled viewer without requesting obsolete asset URLs', async ({
+	page
+}) => {
+	const report = loadReportFixture();
+	const jobId = report.meta.jobId;
+	const obsoleteRequests: string[] = [];
+	page.on('request', (request) => {
+		if (/\/assets\/offline-viewer\.(js|css)$/.test(request.url()))
+			obsoleteRequests.push(request.url());
+	});
+	await page.route(`**/api/v1/jobs/${jobId}`, (route) =>
+		route.fulfill({
+			json: {
+				id: jobId,
+				state: 'done',
+				artifacts: {},
+				created_at: '2026-10-05T00:00:00Z',
+				updated_at: '2026-10-05T00:00:12Z'
+			}
+		})
+	);
+	await page.route(`**/api/v1/jobs/${jobId}/results**`, (route) => route.fulfill({ json: report }));
+	await page.route(`**/api/v1/jobs/${jobId}/stream**`, (route) =>
+		route.fulfill({ contentType: 'text/event-stream', body: 'event: done\ndata: {}\n\n' })
+	);
+	await page.goto(`/scan/${jobId}/report`);
+	const downloaded = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Download interactive audit' }).click();
+	const filename = await (await downloaded).path();
+	expect(filename).toBeTruthy();
+	const [html, javascript, css] = await Promise.all([
+		readFile(filename!, 'utf8'),
+		readFile('dist/offline-viewer/offline-viewer.js', 'utf8'),
+		readFile('dist/offline-viewer/offline-viewer.css', 'utf8')
+	]);
+	expect(html).toContain(javascript.replace(/<\/script/gi, '<\\/script'));
+	expect(html).toContain(css.replace(/<\/style/gi, '<\\/style'));
+	expect(obsoleteRequests).toEqual([]);
+});
+
 test('interactive HTML opens without a network and preserves edits after download and reopen', async ({
 	page,
 	context
@@ -46,8 +86,8 @@ test('interactive HTML opens without a network and preserves edits after downloa
 		];
 		report.summary.totalIssues = 1;
 		const [javascript, css] = await Promise.all([
-			readFile('build/client/assets/offline-viewer.js', 'utf8'),
-			readFile('build/client/assets/offline-viewer.css', 'utf8')
+			readFile('dist/offline-viewer/offline-viewer.js', 'utf8'),
+			readFile('dist/offline-viewer/offline-viewer.css', 'utf8')
 		]);
 		const filename = join(directory, 'audit.html');
 		await writeFile(

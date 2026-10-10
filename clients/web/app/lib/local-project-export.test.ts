@@ -173,3 +173,43 @@ it('preserves a targeted request while stripping credential-shaped extra fields'
 	exported.runs[0].verification.jobId = 'different-job';
 	expect(parseLocalProjectExport(exported)).toBeNull();
 });
+
+it('rejects invalid nested archived run and baseline reports in both export versions', () => {
+	const report = loadAllScansFixture();
+	const run: LocalRun = {
+		jobId: report.meta.jobId,
+		projectId: project.id,
+		configFingerprint: 'abc',
+		status: 'complete',
+		createdAt: 'today',
+		report
+	};
+	for (const schema of ['stageflow/local-project@v1', LOCAL_PROJECT_EXPORT_SCHEMA]) {
+		const exported = { ...buildLocalProjectExport(project, null, [run]), schema };
+		expect(parseLocalProjectExport(exported)?.runs[0]?.report).toEqual(report);
+		expect(
+			parseLocalProjectExport({
+				...exported,
+				runs: [{ ...run, report: { ...report, issues: [null] } }]
+			})
+		).toBeNull();
+		expect(
+			parseLocalProjectExport({
+				...exported,
+				baseline: {
+					projectId: project.id,
+					jobId: report.meta.jobId,
+					configFingerprint: 'abc',
+					createdAt: 'today',
+					report: { ...report, pages: [null] }
+				}
+			})
+		).toBeNull();
+		expect(
+			parseLocalProjectExport({
+				...exported,
+				project: { ...project, configuration: { urls: [123], scanners: [null] } }
+			})
+		).toBeNull();
+	}
+});

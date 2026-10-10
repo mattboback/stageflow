@@ -1,8 +1,9 @@
 import { parsePortableAudit, PORTABLE_AUDIT_SCHEMA } from './portable-audit';
 import { parseVerificationRequest } from './verification';
 import { normalizeReviewVerdicts, type ReviewVerdictsByJob } from './report/review-verdict';
-import type { LocalBaseline, LocalProject, LocalProjectConfiguration, LocalRun } from './projects';
-import { isUnifiedReport, sanitizeProjectConfiguration } from './projects';
+import type { LocalBaseline, LocalProject, LocalRun } from './projects';
+import { sanitizeProjectConfiguration } from './projects';
+import { isUnifiedReport, isProjectConfiguration } from './report-validation';
 
 export const LOCAL_PROJECT_EXPORT_SCHEMA = 'stageflow/local-project@v2' as const;
 
@@ -81,12 +82,6 @@ export function parseLocalProjectExport(value: unknown): LocalProjectExport | nu
 		}),
 		reviews: normalizeReviewVerdicts(candidate.reviews)
 	};
-}
-
-function isProjectConfiguration(value: unknown): value is LocalProjectConfiguration {
-	if (!value || typeof value !== 'object') return false;
-	const candidate = value as Partial<LocalProjectConfiguration>;
-	return Array.isArray(candidate.urls) && Array.isArray(candidate.scanners);
 }
 
 function parseLocalRun(value: unknown): LocalRun | null {

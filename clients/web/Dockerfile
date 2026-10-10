@@ -49,8 +49,8 @@ ENV VITE_API_URL=${VITE_API_URL} \
 
 # Build the application via node (not bun) so react-dom's `node` export
 # condition is used and renderToPipeableStream resolves correctly.
-RUN node ./node_modules/.bin/react-router build \
-    && node ./node_modules/.bin/vite build --config vite.offline.config.ts
+RUN node ./node_modules/.bin/vite build --config vite.offline.config.ts \
+    && node ./node_modules/.bin/react-router build
 
 # Stage 2: Production server
 FROM docker.io/library/nginx:1.29-alpine AS runner

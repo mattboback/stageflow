@@ -106,7 +106,15 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		context: ReviewContext;
 	} | null>(null);
 
-	const { status, report: liveReport, job, error, screenshots } = useScanReport(id);
+	const {
+		status,
+		report: liveReport,
+		job,
+		error,
+		screenshots,
+		reportError,
+		retryReport
+	} = useScanReport(id);
 	const archivedReport =
 		(localRun?.archived || !liveReport) && localRun?.report && isUnifiedReport(localRun.report)
 			? localRun.report
@@ -414,6 +422,8 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 						screenshots={viewingArchived ? (localRun?.screenshots ?? []) : screenshots}
 						status={status}
 						error={error || job?.error || null}
+						reportError={reportError}
+						onRetryReport={retryReport}
 						toolbar={toolbar}
 						comparisonPanel={comparisonPanel}
 						artifactsPanel={

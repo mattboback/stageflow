@@ -4,8 +4,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	define: { 'process.env.NODE_ENV': JSON.stringify('production') },
 	build: {
-		outDir: 'build/client/assets',
-		emptyOutDir: false,
+		outDir: 'dist/offline-viewer',
+		emptyOutDir: true,
 		lib: {
 			entry: resolve(import.meta.dirname, 'app/offline/entry.tsx'),
 			name: 'StageFlowOffline',

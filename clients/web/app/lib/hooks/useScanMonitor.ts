@@ -4,6 +4,7 @@ import type { ScanResult, ScanStatus, ScreenshotArtifact } from '../types/scan';
 import type { UnifiedReport } from '../types/unified-report';
 
 import { createSSEStream } from '../api/sse';
+import { isUnifiedReport } from '../report-validation';
 import { buildApiUrl } from '../api/utils';
 import { applySseUpdate } from '../stores/scan-status/event-update';
 import {
@@ -80,9 +81,13 @@ async function fetchReport(jobId: string): Promise<UnifiedReport | null> {
 		throw new Error(`Report fetch failed: ${response.status}`);
 	}
 
-	const report = (await response.json()) as UnifiedReport;
-	if (!report.meta.jobId || !report.version) {
+	const report: unknown = await response.json();
+	if (!isUnifiedReport(report)) {
 		throw new Error('Report JSON did not match the expected aggregated schema.');
+	}
+
+	if (report.meta.jobId !== jobId) {
+		throw new Error('Report job ID did not match the requested scan.');
 	}
 
 	return report;
@@ -342,6 +347,11 @@ export function useScanReport(jobId: string) {
 		report: UnifiedReport | null;
 		error: string | null;
 	}>({ jobId, report: null, error: null });
+	const [reportAttempt, setReportAttempt] = useState(0);
+	const retryReport = useCallback(() => {
+		setLoaded({ jobId, report: null, error: null });
+		setReportAttempt((current) => current + 1);
+	}, [jobId]);
 
 	useEffect(() => {
 		if (status !== 'complete') {
@@ -355,7 +365,7 @@ export function useScanReport(jobId: string) {
 		const load = async () => {
 			try {
 				const report = await fetchReport(jobId);
-				if (cancelled || (report && report.meta.jobId !== jobId)) {
+				if (cancelled) {
 					return;
 				}
 				if (report) {
@@ -366,7 +376,7 @@ export function useScanReport(jobId: string) {
 					setLoaded({
 						jobId,
 						report: null,
-						error: 'Aggregated report is taking longer than expected. Refresh to retry.'
+						error: 'Aggregated report is taking longer than expected. Retry loading the report.'
 					});
 					return;
 				}
@@ -377,7 +387,7 @@ export function useScanReport(jobId: string) {
 					return;
 				}
 				const message = error instanceof Error ? error.message : 'Failed to load report';
-				setLoaded({ jobId, report: null, error: `${message}. Refresh to retry.` });
+				setLoaded({ jobId, report: null, error: `${message}. Retry loading the report.` });
 			}
 		};
 
@@ -387,7 +397,7 @@ export function useScanReport(jobId: string) {
 			cancelled = true;
 			if (retryTimer !== null) window.clearTimeout(retryTimer);
 		};
-	}, [jobId, status]);
+	}, [jobId, status, reportAttempt]);
 
 	const job = result?.id === jobId ? result : null;
 	const isCurrentJob = !result || job !== null;
@@ -402,6 +412,8 @@ export function useScanReport(jobId: string) {
 		screenshots: job?.artifacts?.screenshots ?? NO_SCREENSHOTS,
 		logs: isCurrentJob ? logs : [],
 		transport: isCurrentJob ? transport : 'idle',
-		error: isCurrentJob ? error : null
+		error: isCurrentJob ? error : null,
+		reportError: isCurrentJob && status === 'complete' ? (current?.error ?? null) : null,
+		retryReport
 	};
 }

@@ -2,11 +2,11 @@ import { useReviewSnapshot } from '../../lib/hooks/useReviewVerdicts';
 import { useState } from 'react';
 import {
 	downloadAuditFile,
-	loadOfflineViewerAssets,
 	preparePortableAudit,
 	renderPortableAuditHTML,
 	type PortableAuditInput
 } from '../../lib/portable-audit';
+import { loadOfflineViewerAssets } from '../../lib/load-offline-viewer';
 import type { ScreenshotArtifact } from '../../lib/types/scan';
 import { loadVerificationRequest } from '../../lib/verification';
 

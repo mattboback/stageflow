@@ -65,6 +65,8 @@ export interface ReportViewProps {
 	 * fetched, not about how it is displayed.
 	 */
 	error: string | null;
+	reportError?: string | null;
+	onRetryReport?: () => void;
 	/** Above the report header: job actions, export, verification or offline controls. */
 	toolbar: ReactNode;
 	/**
@@ -105,6 +107,8 @@ export function ReportView({
 	screenshots,
 	status,
 	error,
+	reportError,
+	onRetryReport,
 	toolbar,
 	comparisonPanel,
 	artifactsPanel,
@@ -433,6 +437,16 @@ export function ReportView({
 							/>
 						)}
 					</>
+				) : status === 'complete' && reportError ? (
+					<div className="blankslate blankslate--framed rsection-placeholder" role="alert">
+						<h2>Report unavailable</h2>
+						<p>{reportError}</p>
+						{onRetryReport && (
+							<button type="button" className="btn btn--primary" onClick={onRetryReport}>
+								Retry loading report
+							</button>
+						)}
+					</div>
 				) : status === 'failed' || status === 'error' ? (
 					<div className="blankslate blankslate--framed rsection-placeholder" role="alert">
 						<h2>Scan failed</h2>

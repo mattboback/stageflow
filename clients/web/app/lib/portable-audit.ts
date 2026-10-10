@@ -1,4 +1,5 @@
-import { isUnifiedReport, sanitizeProjectConfiguration } from './projects';
+import { sanitizeProjectConfiguration } from './projects';
+import { isUnifiedReport, isProjectConfiguration, isProjectDiff } from './report-validation';
 import type { LocalProjectConfiguration, ProjectDiff } from './projects';
 import { normalizeReviewVerdicts, type ReviewVerdictsByJob } from './report/review-verdict';
 import type { ScreenshotArtifact } from './types/scan';
@@ -104,23 +105,10 @@ export function parsePortableAudit(value: unknown): PortableAudit | null {
 		!Array.isArray(candidate.missingArtifacts)
 	)
 		return null;
-	if (
-		candidate.configuration &&
-		(!Array.isArray(candidate.configuration.urls) ||
-			!candidate.configuration.urls.every((url) => typeof url === 'string') ||
-			!Array.isArray(candidate.configuration.scanners))
-	)
+	if (candidate.configuration !== undefined && !isProjectConfiguration(candidate.configuration))
 		return null;
-	if (
-		candidate.comparison &&
-		(candidate.comparison.schema !== 'stageflow/diff@v1' ||
-			!candidate.comparison.baseline ||
-			!candidate.comparison.current ||
-			!candidate.comparison.delta ||
-			!Array.isArray(candidate.comparison.new) ||
-			!Array.isArray(candidate.comparison.fixed))
-	)
-		return null;
+	if (candidate.baseline !== undefined && !isUnifiedReport(candidate.baseline)) return null;
+	if (candidate.comparison !== undefined && !isProjectDiff(candidate.comparison)) return null;
 	const screenshots: ScreenshotArtifact[] = [];
 	let mediaSize = 0;
 	for (const screenshot of candidate.screenshots) {
@@ -319,19 +307,4 @@ export async function preparePortableAudit(input: PortableAuditInput): Promise<P
 		...(input.comparison ? { comparison: input.comparison } : {}),
 		...(verification?.jobId === input.jobId ? { verification } : {})
 	};
-}
-
-export async function loadOfflineViewerAssets(): Promise<OfflineViewerAssets> {
-	const signal = AbortSignal.timeout(15_000);
-	const load = async (name: string, max: number) =>
-		new TextDecoder().decode(
-			await boundedBytes(await fetch(`/assets/offline-viewer.${name}`, { signal }), max)
-		);
-	const [javascript, css] = await Promise.all([
-		load('js', 8 * 1024 * 1024),
-		load('css', 1024 * 1024)
-	]);
-	if (!javascript.includes('stageflow-offline-root') || !css.trim())
-		throw new Error('The offline viewer is unavailable. Build or reload StageFlow and try again.');
-	return { javascript, css };
 }

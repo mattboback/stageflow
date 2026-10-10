@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { loadAllScansFixture } from '../../test/load-fixture';
+
 import { useScanReport, useScanStatus } from './useScanMonitor';
 
 type Listener = (event: { data: string }) => void;
@@ -37,7 +39,8 @@ class FakeEventSource {
 
 const JOB = 'job-1';
 const SHOT = { page_id: 'p1', scanner_id: 'axe', url: '/shot.webp' };
-const REPORT = { version: '2.2', meta: { jobId: JOB }, issues: [], pages: [] };
+const fixture = loadAllScansFixture();
+const REPORT = { ...fixture, meta: { ...fixture.meta, jobId: JOB } };
 
 function job(state: string, extra: Record<string, unknown> = {}) {
 	return { id: JOB, state, scanners: {}, ...extra };
@@ -106,6 +109,105 @@ describe('useScanReport', () => {
 			await vi.advanceTimersByTimeAsync(2000);
 		});
 		await waitFor(() => expect(result.current.report).not.toBeNull());
+	});
+
+	it.each([
+		['HTTP failure', {}, 500, 'Report fetch failed: 500'],
+		['invalid schema', { version: '2.2', meta: { jobId: JOB } }, 200, 'expected aggregated schema'],
+		['another job', { ...REPORT, meta: { ...REPORT.meta, jobId: 'other-job' } }, 200, 'job ID']
+	])('exposes report acquisition errors for %s', async (_label, body, status, message) => {
+		mockApi([job('DONE')], [{ body, status }]);
+		const { result } = renderHook(() => useScanReport(JOB));
+		await waitFor(() => expect(result.current.reportError).toContain(message));
+		expect(result.current.status).toBe('complete');
+		expect(result.current.report).toBeNull();
+		expect(result.current.error).toBe(result.current.reportError);
+	});
+
+	it('exposes malformed JSON as a report error', async () => {
+		vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+			(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url).endsWith(
+				'/results'
+			)
+				? Promise.resolve(new Response('{broken-json'))
+				: json(job('DONE'))
+		);
+		const { result } = renderHook(() => useScanReport(JOB));
+		await waitFor(() => expect(result.current.reportError).not.toBeNull());
+		expect(result.current.status).toBe('complete');
+		expect(result.current.report).toBeNull();
+	});
+
+	it('cancels pending report retries on unmount', async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		const calls = mockApi([job('DONE')], [{ body: {}, status: 404 }]);
+		const { result, unmount } = renderHook(() => useScanReport(JOB));
+		await waitFor(() => expect(result.current.status).toBe('complete'));
+		const count = calls.length;
+		unmount();
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(6000);
+		});
+		expect(calls).toHaveLength(count);
+	});
+
+	it('retries report acquisition without resubscribing or submitting another job', async () => {
+		const calls = mockApi(
+			[job('DONE')],
+			[
+				{ body: {}, status: 500 },
+				{ body: REPORT, status: 200 }
+			]
+		);
+		const { result } = renderHook(() => useScanReport(JOB));
+		await waitFor(() => expect(result.current.reportError).not.toBeNull());
+		act(() => result.current.retryReport());
+		expect(result.current.reportError).toBeNull();
+		await waitFor(() => expect(result.current.report).toEqual(REPORT));
+		expect(calls.filter((url) => url.endsWith(`/jobs/${JOB}`))).toHaveLength(1);
+		expect(FakeEventSource.instances).toHaveLength(1);
+	});
+
+	it('exposes exhaustion and restarts the not-ready retry window', async () => {
+		vi.useFakeTimers({ shouldAdvanceTime: true });
+		const calls = mockApi([job('DONE')], [{ body: {}, status: 404 }]);
+		const { result } = renderHook(() => useScanReport(JOB));
+		await waitFor(() => expect(result.current.status).toBe('complete'));
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(60000);
+		});
+		expect(result.current.reportError).toContain('taking longer than expected');
+		const count = calls.length;
+		act(() => result.current.retryReport());
+		await act(async () => {
+			await vi.advanceTimersByTimeAsync(2000);
+		});
+		expect(result.current.reportError).toBeNull();
+		expect(calls.length).toBeGreaterThan(count);
+	});
+
+	it('ignores a late report after navigation to another job', async () => {
+		let resolveReport!: (response: Response) => void;
+		vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+			const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+			if (url.endsWith('/results'))
+				return new Promise((resolve) => {
+					resolveReport = resolve;
+				});
+			return json({ id: url.endsWith('/job-2') ? 'job-2' : JOB, state: 'DONE', scanners: {} });
+		});
+		const { result, rerender } = renderHook(({ id }) => useScanReport(id), {
+			initialProps: { id: JOB }
+		});
+		await waitFor(() => expect(result.current.status).toBe('complete'));
+		const firstResolve = resolveReport;
+		rerender({ id: 'job-2' });
+		await act(async () => {
+			firstResolve(new Response(JSON.stringify(REPORT)));
+			await Promise.resolve();
+		});
+		expect(result.current.report).toBeNull();
+		expect(result.current.reportError).toBeNull();
 	});
 
 	it('never requests a report for a failed job', async () => {

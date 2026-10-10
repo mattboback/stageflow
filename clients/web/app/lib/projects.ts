@@ -463,16 +463,7 @@ export function computeProjectDiff(
 	};
 }
 
-export function isUnifiedReport(value: unknown): value is UnifiedReport {
-	if (!value || typeof value !== 'object') return false;
-	const candidate = value as Partial<UnifiedReport>;
-	return (
-		typeof candidate.version === 'string' &&
-		candidate.version.startsWith('2.') &&
-		Array.isArray(candidate.issues) &&
-		Boolean(candidate.summary && typeof candidate.summary.totalIssues === 'number')
-	);
-}
+export { isUnifiedReport } from './report-validation';
 
 export function hasStableReportIdentity(report: UnifiedReport): boolean {
 	return (

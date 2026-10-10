@@ -181,3 +181,35 @@ it('rejects inconsistent job identity and malformed base64 without opening a bro
 	screenshot.url = 'data:image/png;base64,A';
 	expect(parsePortableAudit({ ...audit(), screenshots: [screenshot] })).toBeNull();
 });
+
+it('rejects supplied malformed baselines and scanner configurations instead of dropping them', () => {
+	for (const baseline of [null, {}, { ...report, issues: [null] }]) {
+		expect(parsePortableAudit({ ...audit(), baseline })).toBeNull();
+	}
+	for (const scanners of [[null], [{ id: 'axe', enabled: true, config: [] }]]) {
+		expect(
+			parsePortableAudit({ ...audit(), configuration: { urls: ['https://example.com'], scanners } })
+		).toBeNull();
+	}
+});
+
+it('rejects malformed comparison findings before rendering imported audit data', () => {
+	const comparison = {
+		schema: 'stageflow/diff@v1',
+		baseline: { jobId: 'before', totalIssues: 0 },
+		current: { jobId: report.meta.jobId, totalIssues: 1 },
+		delta: { newIssues: 1, fixedIssues: 0, unchangedIssues: 0 },
+		new: [report.issues[0]],
+		fixed: []
+	};
+	expect(parsePortableAudit({ ...audit(), comparison })?.comparison).toEqual(comparison);
+	for (const patch of [
+		{ new: [null] },
+		{ fixed: [{}] },
+		{ baseline: { jobId: 'before' } },
+		{ delta: { newIssues: 'one', fixedIssues: 0, unchangedIssues: 0 } },
+		{ skippedScanners: [null] }
+	]) {
+		expect(parsePortableAudit({ ...audit(), comparison: { ...comparison, ...patch } })).toBeNull();
+	}
+});
