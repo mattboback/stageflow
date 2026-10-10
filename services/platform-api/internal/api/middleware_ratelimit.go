@@ -359,6 +359,3 @@ func publicSubmissionRateLimitMiddleware(
 		next.ServeHTTP(w, r)
 	}
 }
-
-// requestReadDeadlineMiddleware overrides the server-wide request-body
-// deadline for endpoints that intentionally accept longer uploads. Keeping
