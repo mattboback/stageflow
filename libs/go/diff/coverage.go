@@ -113,32 +113,12 @@ func profile(doc report.UnifiedReportV2) report.ScanProfile {
 }
 
 func evaluatedOnBoth(baseline, current report.UnifiedReportV2, issue report.IssueDetail) bool {
-	coverage := func(doc report.UnifiedReportV2) (bool, *string) {
-		for _, scanner := range doc.Scanners {
-			if scanner.Id != issue.Scanner {
-				continue
-			}
+	// Older reports have no rule outcomes. Keep their page-level comparison,
+	// but never fall back to it when either side records rule-level evidence.
+	requireRules := issue.RuleId != "" && (hasRuleCoverage(baseline, issue) || hasRuleCoverage(current, issue))
+	before, left := evaluatedCoverage(baseline, issue, requireRules)
 
-			if len(scanner.Pages) == 0 {
-				return doc.Meta.ScanContext == nil, nil
-			}
-
-			for _, page := range scanner.Pages {
-				if page.PageId == issue.PageId {
-					return page.Status == report.ScannerPageCoverageStatusSuccess &&
-						ruleEvaluated(page, issue.RuleId), page.FinalUrl
-				}
-			}
-
-			return false, nil
-		}
-		// Legacy in-memory callers may have no scanner summaries. Real new reports
-		// require explicit successful coverage from the responsible scanner.
-		return doc.Meta.ScanContext == nil, nil
-	}
-	before, left := coverage(baseline)
-
-	after, right := coverage(current)
+	after, right := evaluatedCoverage(current, issue, requireRules)
 	if !before || !after {
 		return false
 	}
@@ -148,6 +128,30 @@ func evaluatedOnBoth(baseline, current report.UnifiedReportV2, issue report.Issu
 	}
 
 	return true
+}
+
+func evaluatedCoverage(doc report.UnifiedReportV2, issue report.IssueDetail, requireRules bool) (bool, *string) {
+	for _, scanner := range doc.Scanners {
+		if scanner.Id != issue.Scanner {
+			continue
+		}
+
+		if len(scanner.Pages) == 0 {
+			return doc.Meta.ScanContext == nil, nil
+		}
+
+		for _, page := range scanner.Pages {
+			if page.PageId == issue.PageId {
+				return page.Status == report.ScannerPageCoverageStatusSuccess &&
+					(!requireRules || len(page.Rules) > 0) && ruleEvaluated(page, issue.RuleId), page.FinalUrl
+			}
+		}
+
+		return false, nil
+	}
+	// Legacy in-memory callers may have no scanner summaries. Real new reports
+	// require explicit successful coverage from the responsible scanner.
+	return doc.Meta.ScanContext == nil, nil
 }
 
 func unevaluatedPages(baseline, current report.UnifiedReportV2, common map[string]bool) []string {
@@ -194,6 +198,20 @@ func scoresComparable(baseline, current report.UnifiedReportV2, skipped map[stri
 		sameScoreContext(baseline, current)
 }
 
+func hasRuleCoverage(doc report.UnifiedReportV2, issue report.IssueDetail) bool {
+	for _, scanner := range doc.Scanners {
+		if scanner.Id == issue.Scanner {
+			for _, page := range scanner.Pages {
+				if page.PageId == issue.PageId {
+					return len(page.Rules) > 0
+				}
+			}
+		}
+	}
+
+	return false
+}
+
 func ruleEvaluated(page report.ScannerPageCoverage, ruleID string) bool {
 	if ruleID == "" || len(page.Rules) == 0 {
 		return true
@@ -203,7 +221,8 @@ func ruleEvaluated(page report.ScannerPageCoverage, ruleID string) bool {
 
 	for _, rule := range page.Rules {
 		if rule.RuleId == ruleID {
-			if rule.Outcome == report.RuleEvaluationOutcomeError {
+			if rule.Outcome == report.RuleEvaluationOutcomeError ||
+				rule.Outcome == report.RuleEvaluationOutcomeIncomplete {
 				return false
 			}
 

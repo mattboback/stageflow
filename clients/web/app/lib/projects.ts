@@ -354,9 +354,20 @@ export function computeProjectDiff(
 		if (!scanner?.pages?.length)
 			return report.meta.scanContext ? null : { status: 'success', finalUrl: undefined };
 		const page = scanner.pages.find((page) => page.pageId === issue.pageId) ?? null;
-		if (page?.rules?.length && issue.ruleId) {
-			const rules = page.rules.filter((rule) => rule.ruleId === issue.ruleId);
-			if (!rules.length || rules.some((rule) => rule.outcome === 'error')) return null;
+		const hasRuleCoverage = [baselineReport, currentReport].some((source) =>
+			source.scanners
+				.find((entry) => entry.id === issue.scanner)
+				?.pages?.some((entry) => entry.pageId === issue.pageId && entry.rules?.length)
+		);
+		// Preserve legacy page-only comparisons unless either report supplies
+		// rule evidence; missing evidence must not turn a finding into a fix.
+		if (hasRuleCoverage && issue.ruleId) {
+			const rules = page?.rules?.filter((rule) => rule.ruleId === issue.ruleId) ?? [];
+			if (
+				!rules.length ||
+				rules.some((rule) => rule.outcome === 'error' || rule.outcome === 'incomplete')
+			)
+				return null;
 		}
 		return page;
 	};
