@@ -13,7 +13,7 @@ const fixture = JSON.parse(
 	baseline: UnifiedReport;
 	cases: {
 		name: string;
-		rules: Page['rules'];
+		rules: NonNullable<Page['rules']>;
 		currentSubjects: string[];
 		omitScanner?: boolean;
 		scannerStatus?: Scanner['status'];
