@@ -1,4 +1,5 @@
 import { parsePortableAudit } from './portable-audit';
+import { buildImportedCliRun, parseCliReport } from './cli-report-import';
 import {
 	createReviewVerdictStore,
 	mergeReviewChanges,
@@ -293,6 +294,59 @@ export async function exportLocalProject(projectId: string): Promise<LocalProjec
 		getLocalProjectReviews(projectId)
 	]);
 	return buildLocalProjectExport(project, baseline, runs, reviews);
+}
+
+/** Keep CLI imports local: envelope API/artifact URLs are never fetched. */
+export async function importCliReport(projectId: string, value: unknown): Promise<LocalRun> {
+	const report = parseCliReport(value);
+	const project = await getLocalProject(projectId);
+	if (!project)
+		throw new LocalProjectStoreUnavailableError('That project is no longer in this browser.');
+	const run = await buildImportedCliRun(project, report);
+	return withDatabase(async (database) => {
+		// Wait for the transaction, not just put() success: quota/abort failures must be visible.
+		// https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB#adding_data_to_the_database
+		const transaction = database.transaction([PROJECTS_STORE, RUNS_STORE], 'readwrite');
+		const completed = transactionComplete(transaction);
+		const projects = transaction.objectStore(PROJECTS_STORE);
+		const runs = transaction.objectStore(RUNS_STORE);
+		try {
+			const current = await requestResult(
+				projects.get(projectId) as IDBRequest<LocalProject | undefined>
+			);
+			if (
+				!current ||
+				JSON.stringify(current.configuration) !== JSON.stringify(project.configuration)
+			)
+				throw new Error('The project settings changed during import. Try again.');
+			const existing = await requestResult(
+				runs.get([projectId, run.jobId]) as IDBRequest<LocalRun | undefined>
+			);
+			if (existing?.report) {
+				await completed;
+				return existing;
+			}
+			runs.put(run);
+			const history = await requestResult(
+				runs.index('projectId').getAll(projectId) as IDBRequest<LocalRun[]>
+			);
+			history
+				.sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+				.slice(MAX_RECENT_RUNS)
+				.forEach((old) => runs.delete([old.projectId, old.jobId]));
+			projects.put({ ...current, updatedAt: new Date().toISOString() });
+			await completed;
+			return run;
+		} catch (error) {
+			try {
+				transaction.abort();
+			} catch {
+				/* It may have already aborted. */
+			}
+			await completed.catch(() => undefined);
+			throw error;
+		}
+	});
 }
 
 export async function importLocalProject(value: unknown): Promise<LocalProject> {
