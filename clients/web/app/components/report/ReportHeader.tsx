@@ -5,6 +5,7 @@ import { Gauge } from '../Gauge';
 import { Pill } from '../Pill';
 import {
 	formatScannerStatus,
+	groupIssuesByRule,
 	getScannerStatusTone,
 	incompleteScanners,
 	scannerLabel,
@@ -69,6 +70,7 @@ export function ReportHeader({
 	const band = scoreBandFor(shownScore);
 	const counts = severityCounts(report.summary.bySeverity);
 	const total = report.summary.totalIssues ?? 0;
+	const ruleGroups = groupIssuesByRule(report.issues).length;
 	const pagesScanned = report.summary.pagesScanned;
 	const scannedAt = formatScannedAt(report.meta.completedAt ?? report.meta.scannedAt);
 	const duration = formatDuration(report.meta.durationMs);
@@ -185,7 +187,10 @@ export function ReportHeader({
 			<div className="rhead__totals" role="group" aria-label="Scan totals">
 				<p className="rhead__total">
 					<span className="rhead__total-val num">{total.toLocaleString()}</span>{' '}
-					{total === 1 ? 'finding' : 'findings'}
+					{total === 1 ? 'occurrence' : 'occurrences'}
+				</p>
+				<p className="rhead__total-sub">
+					{ruleGroups} rule group{ruleGroups === 1 ? '' : 's'}
 				</p>
 				<p className="rhead__total-sub">
 					{pagesScanned.toLocaleString()} {pagesScanned === 1 ? 'page' : 'pages'} scanned ·{' '}

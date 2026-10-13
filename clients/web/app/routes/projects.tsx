@@ -18,6 +18,7 @@ import {
 	listLocalProjectRuns
 } from '../lib/local-project-store';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
+import { shownSiteScore } from '../lib/report';
 import type { LocalProject, LocalRun } from '../lib/projects';
 import { buildSiteMeta, pageTitle, SITE_NAME } from '../lib/site-metadata';
 import projectsStyles from './projects.css?url';
@@ -51,7 +52,7 @@ async function loadProjectList(): Promise<ProjectListItem[]> {
 			project,
 			runs: runs[index] ?? [],
 			baseline: baseline
-				? { jobId: baseline.jobId, score: baseline.report.summary.score ?? undefined }
+				? { jobId: baseline.jobId, score: shownSiteScore(baseline.report) ?? undefined }
 				: null
 		};
 	});
@@ -64,6 +65,7 @@ export default function Projects() {
 	const [storageError, setStorageError] = useState<string | null>(null);
 	const [name, setName] = useState('');
 	const [url, setUrl] = useState('');
+	const [profile, setProfile] = useState<'staging' | 'production'>('staging');
 	const [formError, setFormError] = useState<string | null>(null);
 	const [creating, setCreating] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<LocalProject | null>(null);
@@ -116,7 +118,8 @@ export default function Projects() {
 				urls: [checkedUrl.url],
 				scanners: [],
 				browser: 'chromium',
-				highlightStyle: 'solid'
+				highlightStyle: 'solid',
+				profile
 			});
 			void navigate(`/playground?project=${encodeURIComponent(project.id)}`);
 		} catch (error) {
@@ -246,24 +249,23 @@ export default function Projects() {
 										const latest = runs[0];
 										// Oldest first. A run that failed or is still going has no score.
 										const history = runs
-											.flatMap((run) =>
-												run.score === undefined
+											.flatMap((run) => {
+												const score = run.report ? shownSiteScore(run.report) : run.score;
+												return score == null
 													? []
-													: [
-															{
-																id: run.jobId,
-																score: run.score,
-																at: run.completedAt ?? run.createdAt
-															}
-														]
-											)
+													: [{ id: run.jobId, score, at: run.completedAt ?? run.createdAt }];
+											})
 											.reverse();
 										const latestScore = history.at(-1)?.score;
 										const baselineScore = baseline?.score;
 										return (
 											<article className="project-card" key={project.id}>
 												<div className="project-card__body">
-													<h3>{project.name}</h3>
+													<h3>
+														<Link to={`/projects/${encodeURIComponent(project.id)}`}>
+															{project.name}
+														</Link>
+													</h3>
 													<p className="project-card__url mono">
 														{project.configuration.urls[0] ?? 'No URL configured'}
 													</p>
@@ -302,10 +304,10 @@ export default function Projects() {
 												<div className="project-card__actions">
 													<Link
 														className="btn btn--primary btn--sm"
-														to={`/playground?project=${encodeURIComponent(project.id)}`}
+														to={`/projects/${encodeURIComponent(project.id)}`}
 													>
 														{/* Honest per state: nothing to run "again" before a first run. */}
-														{runs.length === 0 ? 'Configure a scan' : 'Run again'}
+														Open project
 													</Link>
 													{latest && (
 														<Link
@@ -375,6 +377,21 @@ export default function Projects() {
 										onChange={(event) => setUrl(event.target.value)}
 										autoComplete="url"
 									/>
+								</label>
+								<label className="field">
+									<span className="label">Assessment profile</span>
+									<select
+										className="input"
+										value={profile}
+										onChange={(event) => setProfile(event.target.value as 'staging' | 'production')}
+									>
+										<option value="staging">Staging / preview</option>
+										<option value="production">Production</option>
+									</select>
+									<span className="muted">
+										Staging treats confirmed indexing restrictions as expected. Other checks still
+										apply.
+									</span>
 								</label>
 								{formError && (
 									<p className="project-create__error" role="alert">

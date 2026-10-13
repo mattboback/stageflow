@@ -53,8 +53,11 @@ export function LocalBaselineComparison({
 					<p>Baseline history is stored only in this browser.</p>
 				</div>
 				<div className="local-baseline__actions">
-					<Link className="btn btn--ghost btn--sm" to="/projects">
-						All projects
+					<Link
+						className="btn btn--ghost btn--sm"
+						to={`/projects/${encodeURIComponent(project.id)}`}
+					>
+						Project workspace
 					</Link>
 					<Link
 						className="btn btn--ghost btn--sm"

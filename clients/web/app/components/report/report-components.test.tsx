@@ -34,7 +34,9 @@ describe('ReportHeader', () => {
 		expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
 
 		const totals = screen.getByRole('group', { name: 'Scan totals' });
-		expect(totals.textContent).toContain(`${report.summary.totalIssues.toLocaleString()} findings`);
+		expect(totals.textContent).toContain(
+			`${report.summary.totalIssues.toLocaleString()} occurrences`
+		);
 		expect(totals.textContent).toContain(`${report.summary.pagesScanned} pages scanned`);
 		expect(totals.textContent).not.toContain('Human review');
 	});

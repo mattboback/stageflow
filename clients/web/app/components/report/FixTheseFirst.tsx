@@ -116,8 +116,9 @@ export function FixTheseFirst({
 								<span className="fix-first__meta">
 									<span className={getSeverityBadgeClass(group.severity)}>{group.severity}</span>
 									<span>
-										{group.pageIds.length} page{group.pageIds.length === 1 ? '' : 's'} ·{' '}
-										{scannerLabel(group.scanner)}
+										{group.pageIds.length} affected page{group.pageIds.length === 1 ? '' : 's'} ·{' '}
+										{group.occurrences.length} occurrence{group.occurrences.length === 1 ? '' : 's'}{' '}
+										· {scannerLabel(group.scanner)}
 									</span>
 								</span>
 								<span className="fix-first__guidance">

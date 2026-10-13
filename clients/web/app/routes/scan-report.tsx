@@ -114,7 +114,9 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		screenshots,
 		reportError,
 		retryReport
-	} = useScanReport(id);
+		// Resolve local ownership before opening a live connection. Imported reports
+		// may belong to another server and must remain usable entirely offline.
+	} = useScanReport(projectContextLoaded && !localRun?.archived ? id : '');
 	const archivedReport =
 		(localRun?.archived || !liveReport) && localRun?.report && isUnifiedReport(localRun.report)
 			? localRun.report

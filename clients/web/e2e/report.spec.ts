@@ -505,7 +505,7 @@ test('a zero-finding report celebrates the all-clear instead of an empty queue',
 
 	await expect(page.getByRole('heading', { name: 'All clear.' })).toBeVisible();
 	const totals = page.getByLabel('Scan totals');
-	await expect(totals.getByText('0 findings')).toBeVisible();
+	await expect(totals.getByText('0 occurrences')).toBeVisible();
 	await expect(totals.getByText('nothing to fix')).toBeVisible();
 	await expect(
 		page.locator('.allclear').getByRole('link', { name: /Save this as a local baseline/ })

@@ -153,8 +153,11 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 						<div className="page-head__actions">
 							{project && (
 								<>
-									<Link className="btn btn--ghost btn--sm" to="/projects">
-										All projects
+									<Link
+										className="btn btn--ghost btn--sm"
+										to={`/projects/${encodeURIComponent(project.id)}`}
+									>
+										Project workspace
 									</Link>
 									<button
 										className="btn btn--ghost btn--sm"

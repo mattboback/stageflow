@@ -14,8 +14,8 @@ test.describe('routing', () => {
 		});
 	}
 
-	test('scan routes serve the client shell', async ({ page }) => {
-		for (const path of ['/scan/abc123', '/scan/abc123/report']) {
+	test('scan and project workspace routes serve the client shell', async ({ page }) => {
+		for (const path of ['/scan/abc123', '/scan/abc123/report', '/projects/local-project']) {
 			const response = await page.request.get(path, { maxRedirects: 0 });
 			expect(response.status(), path).toBe(200);
 		}

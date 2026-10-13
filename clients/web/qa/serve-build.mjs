@@ -23,8 +23,8 @@ const contentTypes = {
 };
 
 // Mirrors nginx.conf: real files and prerendered pages, the SPA shell for
-// scan routes, and a 404 carrying the shell for anything else.
-const spaRoute = /^\/scan\/[^/]+(?:\/report)?\/?$/;
+// scan and project workspace routes, and a 404 carrying the shell for anything else.
+const spaRoute = /^\/(?:scan\/[^/]+(?:\/report)?|projects\/[^/]+)\/?$/;
 
 function candidateFor(pathname) {
 	if (spaRoute.test(pathname)) return { file: fallback, status: 200 };
@@ -32,7 +32,8 @@ function candidateFor(pathname) {
 	const relative = normalize(decoded).replace(/^[/\\]+/, '');
 	const candidate = resolve(root, relative);
 	if (candidate !== root && !candidate.startsWith(`${root}/`)) return null;
-	if (existsSync(candidate) && statSync(candidate).isFile()) return { file: candidate, status: 200 };
+	if (existsSync(candidate) && statSync(candidate).isFile())
+		return { file: candidate, status: 200 };
 	const index = join(candidate, 'index.html');
 	if (existsSync(index) && statSync(index).isFile()) return { file: index, status: 200 };
 	return { file: fallback, status: 404 };

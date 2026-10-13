@@ -327,6 +327,7 @@ test('SPA project query changes discard project association and execution-only s
 	const alphaProjectId = new URL(page.url()).searchParams.get('project');
 	expect(alphaProjectId).toBeTruthy();
 
+	await page.getByRole('link', { name: 'Project workspace' }).click();
 	await page.getByRole('link', { name: 'All projects' }).click();
 	await expect(page).toHaveURL(/\/projects$/);
 	await page.getByLabel('Project name').fill('Beta project');
@@ -337,13 +338,15 @@ test('SPA project query changes discard project association and execution-only s
 	const betaProjectId = new URL(page.url()).searchParams.get('project');
 	expect(betaProjectId).toBeTruthy();
 
+	await page.getByRole('link', { name: 'Project workspace' }).click();
 	await page.getByRole('link', { name: 'All projects' }).click();
 	await expect(page).toHaveURL(/\/projects$/);
 	await page
 		.getByRole('article')
 		.filter({ hasText: 'Alpha project' })
-		.getByRole('link', { name: 'Configure a scan' })
+		.getByRole('link', { name: 'Open project' })
 		.click();
+	await page.getByRole('link', { name: 'Edit settings' }).click();
 	await expect(page.getByLabel('Project name')).toHaveValue('Alpha project');
 
 	await page
@@ -708,4 +711,167 @@ test('project review edits from two tabs preserve both notes', async ({ page, co
 	);
 	await expect(page.getByLabel('Review note (optional)')).toHaveValue('Second tab note');
 	await other.close();
+});
+
+test('project workspace keeps reviewed pages, baseline and repeat-run navigation', async ({
+	page
+}) => {
+	await mockProjectApi(page);
+	await page.goto('/projects');
+	await page.getByLabel('Project name').fill('Workspace preview');
+	await page.getByLabel('Website URL').fill('https://preview.example.com');
+	await expect(page.getByLabel('Assessment profile')).toHaveValue('staging');
+	await page.getByRole('button', { name: 'Create and configure' }).click();
+	await expect(page).toHaveURL(/\/playground\?project=/);
+	const projectId = new URL(page.url()).searchParams.get('project');
+	await page.getByRole('button', { name: 'Save project' }).click();
+	await expect(page.getByText('Project configuration saved locally.')).toBeVisible();
+	await page.getByRole('link', { name: 'Project workspace' }).click();
+	await expect(page).toHaveURL(`/projects/${projectId}`);
+	await expect(page.getByRole('heading', { name: 'Workspace preview' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: '1 saved page' })).toBeVisible();
+	await expect(page.getByText('Staging', { exact: true })).toBeVisible();
+	await expect(page.getByText('No baseline yet')).toBeVisible();
+	await page.getByRole('link', { name: 'Run scan', exact: true }).click();
+	await page
+		.locator('.dock')
+		.getByRole('button', { name: /Run scan/ })
+		.click();
+	await expect(page).toHaveURL(new RegExp(`/scan/${JOB_ID}(?:/report)?\\?project=`));
+	await page.goto(`/scan/${JOB_ID}/report?project=${projectId}`);
+	await page.getByRole('button', { name: 'Promote as baseline' }).click();
+	await expect(page.getByRole('button', { name: 'Current baseline' })).toBeDisabled();
+	await page.getByRole('link', { name: 'Project workspace' }).click();
+	await expect(
+		page.getByText('The latest scan is your accepted baseline.', { exact: false })
+	).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Review baseline report' })).toBeVisible();
+	await page.reload();
+	await expect(page.getByRole('link', { name: 'Open report' })).toBeVisible();
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(page.getByRole('link', { name: 'Review findings' })).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+		true
+	);
+	const downloadPromise = page.waitForEvent('download');
+	await page.getByRole('button', { name: 'Export project' }).click();
+	const download = await downloadPromise;
+	const exportPath = await download.path();
+	expect(exportPath).toBeTruthy();
+	await page.getByRole('link', { name: 'All projects', exact: true }).click();
+	await page.locator('.project-import input[type="file"]').setInputFiles(exportPath);
+	await expect(page.getByRole('article').filter({ hasText: 'Workspace preview' })).toHaveCount(2);
+});
+
+test('workspace CLI imports are persistent, idempotent and preserve the baseline', async ({
+	page
+}) => {
+	const importedReport = loadReportFixture();
+	importedReport.meta.scanContext = {
+		expectedPages: importedReport.pages.map((page) => page.id),
+		identityScope: 'path',
+		scannerConfigFingerprints: Object.fromEntries(
+			importedReport.scanners.map((scanner) => [scanner.id, 'settings'])
+		),
+		scannerConfigurations: Object.fromEntries(
+			importedReport.scanners.map((scanner) => [scanner.id, {}])
+		),
+		verificationEligiblePages: Object.fromEntries(
+			importedReport.pages.map((page) => [page.id, true])
+		),
+		viewport: { width: 1280, height: 720 },
+		purpose: 'full',
+		authenticated: false,
+		inputType: 'urls'
+	};
+	const configuration = {
+		urls: importedReport.pages.map((page) => page.url),
+		scanners: importedReport.scanners.map((scanner) => ({ id: scanner.id, enabled: true })),
+		browser: 'chromium',
+		highlightStyle: 'solid',
+		profile: importedReport.meta.profile ?? 'production'
+	};
+	const baselineReport = structuredClone(importedReport);
+	baselineReport.meta.jobId = 'accepted-before-import';
+	await page.goto('/projects');
+	await page.locator('.project-import input[type="file"]').setInputFiles({
+		name: 'project.json',
+		mimeType: 'application/json',
+		buffer: Buffer.from(
+			JSON.stringify({
+				schema: 'stageflow/local-project@v2',
+				exportedAt: '2026-10-13',
+				project: {
+					id: 'cli-project',
+					name: 'CLI project',
+					schemaVersion: 1,
+					configuration,
+					createdAt: '2026-10-13',
+					updatedAt: '2026-10-13'
+				},
+				baseline: {
+					projectId: 'cli-project',
+					jobId: baselineReport.meta.jobId,
+					configFingerprint: 'settings',
+					report: baselineReport,
+					createdAt: '2026-10-13'
+				},
+				runs: [],
+				reviews: {}
+			})
+		)
+	});
+	await page.getByRole('link', { name: 'Open project', exact: true }).click();
+	await expect(page).toHaveURL(/\/projects\/[^/]+$/);
+	const workspaceUrl = page.url();
+	const baselineHref = await page
+		.getByRole('link', { name: 'Review baseline report' })
+		.getAttribute('href');
+	const envelope = {
+		schema: 'stageflow-cli/report@v1',
+		job: { id: importedReport.meta.jobId },
+		report: importedReport,
+		filters: {
+			max_issues: 0,
+			issues_total: importedReport.issues.length,
+			issues_returned: importedReport.issues.length,
+			truncated: false
+		}
+	};
+	for (let i = 0; i < 2; i++) {
+		await page.getByLabel('CLI report file').setInputFiles({
+			name: 'report.json',
+			mimeType: 'application/json',
+			buffer: Buffer.from(JSON.stringify(envelope))
+		});
+		await expect(page.getByText('CLI report saved.', { exact: false })).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Open report', exact: true })).toHaveCount(1);
+	}
+	await page.reload();
+	await expect(page.getByRole('link', { name: 'Open report', exact: true })).toHaveCount(1);
+	await expect(page.getByRole('link', { name: 'Review baseline report' })).toHaveAttribute(
+		'href',
+		baselineHref!
+	);
+	for (const url of configuration.urls)
+		await expect(page.getByRole('link', { name: url, exact: true })).toBeVisible();
+	const mismatch = structuredClone(envelope);
+	mismatch.report.meta.profile = configuration.profile === 'production' ? 'staging' : 'production';
+	await page.getByLabel('CLI report file').setInputFiles({
+		name: 'mismatch.json',
+		mimeType: 'application/json',
+		buffer: Buffer.from(JSON.stringify(mismatch))
+	});
+	await expect(page.getByRole('alert')).toContainText('profile');
+	await expect(page).toHaveURL(workspaceUrl);
+	await expect(page.getByRole('link', { name: 'Open report', exact: true })).toHaveCount(1);
+	const apiRequests: string[] = [];
+	await page.route('**/api/**', async (route) => {
+		apiRequests.push(route.request().url());
+		await route.abort();
+	});
+	await page.getByRole('link', { name: 'Open report', exact: true }).click();
+	await expect(page.getByRole('heading', { name: 'CLI project' })).toBeVisible();
+	await expect(page.getByRole('tab', { name: /Findings/ })).toBeVisible();
+	expect(apiRequests).toEqual([]);
 });

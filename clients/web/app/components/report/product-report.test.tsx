@@ -96,7 +96,7 @@ describe('product report priorities', () => {
 		expect(actions).toHaveLength(5);
 		expect(actions[0]?.textContent).toContain('Critical problem');
 		expect(actions[1]?.textContent).toContain('Wide problem');
-		expect(actions[1]?.textContent).toContain('2 pages');
+		expect(actions[1]?.textContent).toContain('2 affected pages · 2 occurrences');
 		expect(screen.queryByText('Verify controls manually')).toBeNull();
 		fireEvent.click(actions[0]!);
 		expect(selected).toHaveBeenCalledWith(critical);
