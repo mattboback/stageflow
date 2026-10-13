@@ -132,7 +132,7 @@ func writeMarkdownScanTotals(out io.Writer, doc report.UnifiedReportV2, filters 
 	if filters.Truncated || len(filters.Severities) > 0 || len(filters.Categories) > 0 {
 		if _, err := fmt.Fprintf(
 			out,
-			"Showing %d of %d findings after output limits and filters; severity totals describe the full scan.\n\n",
+			"Showing %d of %d issue records after output limits and filters; severity totals describe the full scan.\n\n",
 			filters.IssuesReturned,
 			doc.Summary.TotalIssues,
 		); err != nil {
@@ -172,7 +172,11 @@ type markdownRuleGroup struct {
 func writeMarkdownRuleGroups(out io.Writer, issues []report.IssueDetail) error {
 	ordered := groupMarkdownRules(issues)
 
-	if _, err := fmt.Fprint(out, "### Findings\n\n"); err != nil {
+	if _, err := fmt.Fprint(
+		out,
+		"### Findings\n\nRaw issue records grouped by rule; counts are not element occurrences. "+
+			"Expected observations and items needing review remain included.\n\n",
+	); err != nil {
 		return err
 	}
 
@@ -180,7 +184,7 @@ func writeMarkdownRuleGroups(out io.Writer, issues []report.IssueDetail) error {
 		issue := group.issue
 		if _, err := fmt.Fprintf(
 			out,
-			"- **[%s] %s** — %d finding(s) across %d page(s) (%s).\n",
+			"- **[%s] %s** — %d issue record(s) across %d page(s) (%s).\n",
 			issue.Severity,
 			markdownCell(issue.Title),
 			group.count,

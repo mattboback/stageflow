@@ -48,7 +48,7 @@ func TestMarkdownDigestGroupsAcrossPagesAndEscapesMarkup(t *testing.T) {
 	}
 
 	text := out.String()
-	for _, want := range []string{"2 finding(s) across 2 page(s)", "&lt;title&gt;My page&lt;/title&gt;", "[View full report (24h)](https://stageflow.org/scan/digest/report)"} {
+	for _, want := range []string{"2 issue record(s) across 2 page(s)", "&lt;title&gt;My page&lt;/title&gt;", "[View full report (24h)](https://stageflow.org/scan/digest/report)"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("missing %q in %s", want, text)
 		}
