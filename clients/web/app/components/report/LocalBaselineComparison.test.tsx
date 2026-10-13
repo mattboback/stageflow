@@ -44,9 +44,9 @@ it('keeps partial reports reviewable but prevents accepting them as a baseline',
 		}
 	]);
 	render(<Stub initialEntries={['/']} />);
-	expect(
-		(screen.getByRole('button', { name: 'Promote as baseline' }) as HTMLButtonElement).disabled
-	).toBe(true);
+	expect(screen.getByRole('button', { name: 'Promote as baseline' }).hasAttribute('disabled')).toBe(
+		true
+	);
 	expect(screen.getByRole('status').textContent).toContain('incomplete scanner coverage');
 	expect(screen.getByRole('link', { name: /Run again/ })).toBeDefined();
 });
