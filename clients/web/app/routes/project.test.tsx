@@ -47,7 +47,7 @@ describe('project workspace', () => {
 			params: { projectId: 'site' },
 			location: { pathname: '/projects/site', search: '', hash: '', state: null, key: 'default' },
 			matches: [],
-			data: undefined
+			loaderData: undefined
 		});
 		expect(metadata).toContainEqual({ title: 'Project workspace — StageFlow' });
 		expect(metadata).toContainEqual({ name: 'robots', content: 'noindex' });
