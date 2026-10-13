@@ -351,14 +351,16 @@ export function computeProjectDiff(
 				JSON.stringify(leftContext.viewport) === JSON.stringify(rightContext.viewport)));
 	const evaluated = (report: UnifiedReport, issue: IssueDetail) => {
 		const scanner = report.scanners.find((scanner) => scanner.id === issue.scanner);
-		if (!scanner?.pages?.length)
-			return report.meta.scanContext ? null : { status: 'success', finalUrl: undefined };
-		const page = scanner.pages.find((page) => page.pageId === issue.pageId) ?? null;
 		const hasRuleCoverage = [baselineReport, currentReport].some((source) =>
 			source.scanners
 				.find((entry) => entry.id === issue.scanner)
 				?.pages?.some((entry) => entry.pageId === issue.pageId && entry.rules?.length)
 		);
+		if (!scanner?.pages?.length)
+			return report.meta.scanContext || hasRuleCoverage
+				? null
+				: { status: 'success', finalUrl: undefined };
+		const page = scanner.pages.find((page) => page.pageId === issue.pageId) ?? null;
 		// Preserve legacy page-only comparisons unless either report supplies
 		// rule evidence; missing evidence must not turn a finding into a fix.
 		if (hasRuleCoverage && issue.ruleId) {

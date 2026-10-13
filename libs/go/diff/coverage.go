@@ -137,7 +137,7 @@ func evaluatedCoverage(doc report.UnifiedReportV2, issue report.IssueDetail, req
 		}
 
 		if len(scanner.Pages) == 0 {
-			return doc.Meta.ScanContext == nil, nil
+			return doc.Meta.ScanContext == nil && !requireRules, nil
 		}
 
 		for _, page := range scanner.Pages {
@@ -151,7 +151,7 @@ func evaluatedCoverage(doc report.UnifiedReportV2, issue report.IssueDetail, req
 	}
 	// Legacy in-memory callers may have no scanner summaries. Real new reports
 	// require explicit successful coverage from the responsible scanner.
-	return doc.Meta.ScanContext == nil, nil
+	return doc.Meta.ScanContext == nil && !requireRules, nil
 }
 
 func unevaluatedPages(baseline, current report.UnifiedReportV2, common map[string]bool) []string {
