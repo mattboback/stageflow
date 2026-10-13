@@ -85,6 +85,7 @@ func TestCheckBaselineReportVersions(t *testing.T) {
 			baseline := checkTestReport("baseline")
 			baseline.Version = version
 			_, _, err := loadCheckProject(writeCheckProject(t, checkTestConfiguration(), &baseline))
+
 			valid := strings.HasPrefix(version, "2.") && version != "2.invalid"
 			if (err == nil) != valid {
 				t.Fatalf("version %s: valid=%v, error=%v", version, valid, err)
