@@ -57,6 +57,7 @@ func writeCheckProject(t *testing.T, configuration checkConfiguration, baseline 
 
 func checkTestReport(jobID string) report.UnifiedReportV2 {
 	doc := testsupport.SampleReport(jobID)
+	doc.Version = "2.2.0"
 	profile := report.ScanProfileStaging
 	doc.Meta.Profile = &profile
 	doc.Meta.ScanContext = &report.ScanContext{
@@ -76,6 +77,20 @@ func checkTestReport(jobID string) report.UnifiedReportV2 {
 	}
 
 	return doc
+}
+
+func TestCheckBaselineReportVersions(t *testing.T) {
+	for _, version := range []string{"2.0.0", "2.1.0", "2.2.0", "2.12.3", "1.0.0", "3.0.0", "2.invalid"} {
+		t.Run(version, func(t *testing.T) {
+			baseline := checkTestReport("baseline")
+			baseline.Version = version
+			_, _, err := loadCheckProject(writeCheckProject(t, checkTestConfiguration(), &baseline))
+			valid := strings.HasPrefix(version, "2.") && version != "2.invalid"
+			if (err == nil) != valid {
+				t.Fatalf("version %s: valid=%v, error=%v", version, valid, err)
+			}
+		})
+	}
 }
 
 func TestCheckReplaysProjectAndSavesFullReport(t *testing.T) {

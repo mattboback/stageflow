@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode"
@@ -19,6 +20,8 @@ import (
 	"github.com/mattboback/stageflow/libs/go/diff"
 	"github.com/mattboback/stageflow/libs/go/scannercatalog"
 )
+
+var checkReportVersion = regexp.MustCompile(`^2\.\d+\.\d+$`)
 
 type checkScanner struct {
 	ID      string         `json:"id"`
@@ -190,7 +193,7 @@ func (project checkProject) validateBaseline(configuration checkConfiguration) e
 
 	doc := baseline.Report
 	if baseline.ProjectID != project.Project.ID || baseline.JobID == "" || baseline.JobID != doc.Meta.JobId ||
-		doc.Version != "2.0.0" ||
+		!checkReportVersion.MatchString(doc.Version) ||
 		doc.Summary.TotalIssues != len(doc.Issues) {
 		return errors.New("invalid or incomplete baseline report")
 	}
