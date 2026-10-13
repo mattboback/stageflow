@@ -167,7 +167,7 @@ func incompleteComparisonReason(skippedScanners, notComparedPages []string) stri
 
 	if len(notComparedPages) > 0 {
 		reasons = append(reasons, fmt.Sprintf(
-			"pages not compared: %d (omitted, added or incompatible settings)",
+			"pages not compared: %d (missing or inconclusive checks, added pages or incompatible settings)",
 			len(notComparedPages),
 		))
 	}

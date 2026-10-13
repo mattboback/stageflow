@@ -77,8 +77,8 @@ export function BaselineDiffSummary({
 			)}
 			{diff.notComparedPages && diff.notComparedPages.length > 0 && (
 				<p className="local-baseline__message" role="status">
-					Not compared: {diff.notComparedPages.length} pages were added, omitted or have different
-					settings. Omitted findings are not fixes.
+					Not compared: some findings on {diff.notComparedPages.length} page(s) have missing or
+					inconclusive checks, or different settings. Missing findings are not counted as fixed.
 				</p>
 			)}
 			{diff.contextLimited && (
