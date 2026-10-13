@@ -92,6 +92,10 @@ export async function buildImportedCliRun(
 	)
 		throw new Error('The report pages or assessment profile do not match this project.');
 	const enabled = config.scanners.filter((scanner) => scanner.enabled);
+	if (config.scanners.length > 0 && enabled.length === 0)
+		throw new Error(
+			'This project has no enabled scanners. Enable scanners before importing a report.'
+		);
 	const expected = enabled.length ? enabled.map((scanner) => scanner.id).sort() : DEFAULT_SCANNERS;
 	if (
 		!same(expected, report.scanners.map((scanner) => scanner.id).sort()) ||

@@ -53,6 +53,7 @@ import {
 	type LocalProjectConfiguration,
 	type LocalRun
 } from '../lib/projects';
+import { baselineCoverageProblem } from '../lib/report/baseline-coverage';
 import { pageTitle, SITE_NAME } from '../lib/site-metadata';
 import type { IssueDetail, UnifiedReport } from '../lib/types/unified-report';
 
@@ -265,6 +266,11 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 			setProjectMessage(`This report does not match the supported ${SITE_NAME} report contract.`);
 			return;
 		}
+		const coverageProblem = baselineCoverageProblem(report);
+		if (coverageProblem) {
+			setProjectMessage(coverageProblem);
+			return;
+		}
 		setPromotingBaseline(true);
 		setProjectMessage(null);
 		try {
@@ -297,6 +303,8 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		if (!report || !isUnifiedReport(report)) {
 			throw new Error(`This report does not match the supported ${SITE_NAME} report contract.`);
 		}
+		const coverageProblem = baselineCoverageProblem(report);
+		if (coverageProblem) throw new Error(coverageProblem);
 		const configuration = configurationFromReport(report);
 		const project = await createLocalProject(name, configuration);
 		const run: LocalRun = {

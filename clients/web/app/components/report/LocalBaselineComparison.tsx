@@ -2,6 +2,7 @@ import { ArrowRight, Check, GitCompareArrows, RotateCcw, Save } from 'lucide-rea
 import { Link } from 'react-router';
 
 import { BaselineDiffSummary } from './BaselineDiffSummary';
+import { baselineCoverageProblem } from '../../lib/report/baseline-coverage';
 import { shownSiteScore } from '../../lib/report';
 import {
 	computeProjectDiff,
@@ -33,6 +34,7 @@ export function LocalBaselineComparison({
 	onPromote,
 	onOpenIssue
 }: LocalBaselineComparisonProps) {
+	const coverageProblem = baselineCoverageProblem(report);
 	const isCurrentBaseline = baseline?.jobId === run.jobId;
 	const compatible =
 		(baseline?.configFingerprint === run.configFingerprint ||
@@ -73,7 +75,7 @@ export function LocalBaselineComparison({
 						className="btn btn--ghost btn--sm"
 						type="button"
 						onClick={onPromote}
-						disabled={promoting || isCurrentBaseline}
+						disabled={promoting || isCurrentBaseline || Boolean(coverageProblem)}
 					>
 						{isCurrentBaseline ? (
 							<>
@@ -89,6 +91,11 @@ export function LocalBaselineComparison({
 				</div>
 			</div>
 
+			{coverageProblem && (
+				<p className="local-baseline__message" role="status">
+					{coverageProblem}
+				</p>
+			)}
 			{message && (
 				<p className="local-baseline__message" role="status">
 					{message}

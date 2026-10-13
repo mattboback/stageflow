@@ -37,6 +37,14 @@ function fixture() {
 }
 
 describe('CLI report import', () => {
+	it('rejects an explicitly disabled scanner selection instead of treating it as all scanners', async () => {
+		const { project, report } = fixture();
+		project.configuration.scanners = project.configuration.scanners.map((scanner) => ({
+			...scanner,
+			enabled: false
+		}));
+		await expect(buildImportedCliRun(project, report)).rejects.toThrow('no enabled scanners');
+	});
 	it('round trips a complete CLI envelope into an archived run without remote screenshots', async () => {
 		const { project, envelope } = fixture();
 		const run = await buildImportedCliRun(

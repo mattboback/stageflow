@@ -165,7 +165,7 @@ export function ReportHeader({
 					</div>
 					{assessment && assessment.expected + assessment.needsReview > 0 && (
 						<p className="rhead__assessment">
-							{assessment.actionable} actionable · {assessment.expected} expected ·{' '}
+							Issue records: {assessment.actionable} actionable · {assessment.expected} expected ·{' '}
 							{assessment.needsReview} need human review
 						</p>
 					)}
