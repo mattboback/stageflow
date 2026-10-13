@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createRoutesStub } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import Project from './project';
+import Project, { meta } from './project';
 import { loadAllScansFixture } from '../test/load-fixture';
 import {
 	getLocalProject,
@@ -42,6 +42,17 @@ beforeEach(() => {
 	vi.mocked(listLocalProjectRuns).mockResolvedValue([]);
 });
 describe('project workspace', () => {
+	it('provides a stable title before browser-local project data loads', () => {
+		const metadata = meta({
+			params: { projectId: 'site' },
+			location: { pathname: '/projects/site', search: '', hash: '', state: null, key: 'default' },
+			matches: [],
+			data: undefined
+		});
+		expect(metadata).toContainEqual({ title: 'Project workspace — StageFlow' });
+		expect(metadata).toContainEqual({ name: 'robots', content: 'noindex' });
+	});
+
 	it('does not show disabled scanners as selected', async () => {
 		vi.mocked(getLocalProject).mockResolvedValue({
 			...project,

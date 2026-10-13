@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, type MetaFunction } from 'react-router';
 import { SiteHeader } from '../components/SiteHeader';
 import { SiteFooter } from '../components/SiteFooter';
 import { BaselineDiffSummary } from '../components/report/BaselineDiffSummary';
@@ -17,6 +17,7 @@ import {
 	type LocalBaseline,
 	type LocalRun
 } from '../lib/projects';
+import { pageTitle } from '../lib/site-metadata';
 import { MAX_AUDIT_BYTES } from '../lib/portable-audit';
 import { shownSiteScore } from '../lib/report';
 import projectsStyles from './projects.css?url';
@@ -25,6 +26,16 @@ import reportStyles from './scan-report.css?url';
 export const links = () => [
 	{ rel: 'stylesheet', href: projectsStyles },
 	{ rel: 'stylesheet', href: reportStyles }
+];
+
+export const meta: MetaFunction = () => [
+	{ title: pageTitle('Project workspace') },
+	{
+		name: 'description',
+		content:
+			'Review saved scan settings, findings, and baseline comparisons for this browser-local project.'
+	},
+	{ name: 'robots', content: 'noindex' }
 ];
 
 interface Workspace {
