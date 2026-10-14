@@ -1,6 +1,3 @@
-import { useState } from 'react';
-import { Check, Copy } from 'lucide-react';
-
 import type { IssueDetail, PageSummary } from '../../lib/types/unified-report';
 
 import { findOverviewElement, getIssueKind } from '../../lib/report';
@@ -9,39 +6,12 @@ import { GuidanceText } from './GuidanceText';
 import { TruncatedEvidence } from './TruncatedEvidence';
 import { LighthouseDetails } from './LighthouseDetails';
 import { ElementCrop } from './ElementCrop';
+import { EvidenceField } from './EvidenceCode';
 
 interface Props {
 	issue: IssueDetail;
 	page: PageSummary | null;
 	pageOverviewUrl: string | null;
-}
-
-function CopyButton({ value, label }: { value: string; label: string }) {
-	const [copied, setCopied] = useState(false);
-	return (
-		<button
-			type="button"
-			className="codebox__copy"
-			aria-label={label}
-			onClick={() => {
-				// writeText rejects when the document is not focused or clipboard
-				// permission is denied. Swallowing that leaves the button silently
-				// stuck on "Copy", which is the honest signal: nothing was copied.
-				void navigator.clipboard
-					?.writeText(value)
-					.then(() => {
-						setCopied(true);
-						window.setTimeout(() => setCopied(false), 1600);
-					})
-					.catch(() => {
-						setCopied(false);
-					});
-			}}
-		>
-			{copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-			{copied ? 'Copied' : 'Copy'}
-		</button>
-	);
 }
 
 export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
@@ -113,30 +83,8 @@ export function IssueEvidenceSection({ issue, page, pageOverviewUrl }: Props) {
 						{issue.scanner} · <span className="mono">{issue.ruleId}</span>
 					</dd>
 				</div>
-				{selector && (
-					<div className="evidence__field">
-						<dt>Selector</dt>
-						<dd>
-							<div className="codebox">
-								<code className="code-well">{selector}</code>
-								<CopyButton value={selector} label="Copy selector" />
-							</div>
-						</dd>
-					</div>
-				)}
-				{html && (
-					<div className="evidence__field">
-						<dt>HTML</dt>
-						<dd>
-							<div className="codebox">
-								<pre className="code-well">
-									<code>{html}</code>
-								</pre>
-								<CopyButton value={html} label="Copy HTML" />
-							</div>
-						</dd>
-					</div>
-				)}
+				{selector && <EvidenceField label="Selector" value={selector} />}
+				{html && <EvidenceField label="HTML" value={html} multiline />}
 			</dl>
 
 			{issue.scanner === 'lighthouse' && <LighthouseDetails details={issue.scannerData?.details} />}

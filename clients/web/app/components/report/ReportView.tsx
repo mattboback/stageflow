@@ -240,7 +240,7 @@ export function ReportView({
 
 	return (
 		<main id="main" className="report">
-			<div className="wrap wrap--app">
+			<div className={section === 'review' ? 'wrap wrap--app wrap--wide' : 'wrap wrap--app'}>
 				{displayReport ? (
 					<>
 						{toolbar}
@@ -327,6 +327,11 @@ export function ReportView({
 										)}
 									</div>
 								)}
+								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+									<LighthouseSummary
+										categories={displayReport.summary.lighthouseCategories ?? []}
+									/>
+								)}
 								<VisualReviewPanel
 									report={displayReport}
 									screenshots={screenshots}
@@ -337,11 +342,6 @@ export function ReportView({
 									onSelectPage={(pageId) => updateParams({ page: pageId })}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 								/>
-								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
-									<LighthouseSummary
-										categories={displayReport.summary.lighthouseCategories ?? []}
-									/>
-								)}
 							</section>
 						)}
 

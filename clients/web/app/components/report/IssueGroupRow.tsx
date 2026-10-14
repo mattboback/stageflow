@@ -59,9 +59,12 @@ export function IssueGroupRow({
 			{open && (
 				<div className="igroup__body">
 					<div className="igroup__body-label">Affected page{pageCount === 1 ? '' : 's'}</div>
-					{group.occurrences.map((occ) => {
+					{group.occurrences.map((occ, occIndex) => {
 						const page = pageById.get(occ.pageId);
 						const pageLabel = page?.path ?? page?.url ?? occ.pageUrl ?? occ.pageId;
+						const primary = occ.occurrences?.[0];
+						const selector = primary?.selector ?? null;
+						const snippet = primary?.html ? primary.html.replace(/\s+/g, ' ').slice(0, 90) : null;
 						return (
 							<div
 								key={occ.id}
@@ -82,7 +85,18 @@ export function IssueGroupRow({
 							>
 								<span className="igroup__occ-page">
 									<strong>{pageLabel}</strong>
-									{occ.pageUrl}
+									<span className="igroup__occ-detail">
+										<span className="igroup__occ-badge">Occurrence #{occIndex + 1}</span>
+										{selector && (
+											<span className="igroup__occ-selector" title={selector}>
+												{selector}
+											</span>
+										)}
+										{snippet && <span className="igroup__occ-snippet">{snippet}</span>}
+										{!selector && !snippet && occ.pageUrl ? (
+											<span className="igroup__occ-snippet">{occ.pageUrl}</span>
+										) : null}
+									</span>
 								</span>
 								<span className="num igroup__occ-count">
 									{getIssueKind(occ) === 'element' && occ.elementCount > 1

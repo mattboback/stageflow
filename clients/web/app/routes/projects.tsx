@@ -1,7 +1,7 @@
 import { MAX_AUDIT_BYTES } from '../lib/portable-audit';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
-import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2 } from 'lucide-react';
+import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2, Upload } from 'lucide-react';
 
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Delta } from '../components/Delta';
@@ -216,6 +216,7 @@ export default function Projects() {
 								<h2 id="saved-projects-heading">Your projects</h2>
 								{!loading && <span className="num muted">{items.length}</span>}
 								<label className="btn btn--ghost btn--sm project-import">
+									<Upload size={15} aria-hidden="true" />
 									{importing ? 'Importing…' : 'Import'}
 									<input
 										type="file"
@@ -269,6 +270,25 @@ export default function Projects() {
 													<p className="project-card__url mono">
 														{project.configuration.urls[0] ?? 'No URL configured'}
 													</p>
+													<div className="project-card__stats">
+														<span>
+															{project.configuration.urls.length}{' '}
+															{project.configuration.urls.length === 1 ? 'URL' : 'URLs'}
+														</span>
+														<span>
+															{project.configuration.scanners.filter((s) => s.enabled).length ||
+																project.configuration.scanners.length}{' '}
+															scanners
+														</span>
+														{latest && (
+															<span>
+																Last run{' '}
+																{new Date(
+																	latest.completedAt ?? latest.createdAt
+																).toLocaleDateString()}
+															</span>
+														)}
+													</div>
 													{runs.length === 0 ? (
 														<p className="project-card__meta">No runs yet</p>
 													) : (

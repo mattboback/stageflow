@@ -155,7 +155,7 @@ export function IssueFilterSidebar({
 						className="btn btn--quiet btn--sm isidebar__clear"
 						onClick={onClear}
 					>
-						Clear filters
+						Reset filters
 					</button>
 				)}
 			</div>

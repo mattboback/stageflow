@@ -12,7 +12,7 @@
 /* Level with the top of the intro rather than its last line, where .page-head
    puts it: the note is about the whole page, not the lede beside it. */
 .projects-local-note {
-	align-self: start;
+	align-self: center;
 	display: flex;
 	align-items: center;
 	gap: var(--sp-2);
@@ -104,6 +104,18 @@
 
 .project-card__body {
 	min-width: 0;
+	flex: 1;
+}
+.project-card__stats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--sp-1) var(--sp-3);
+	margin-top: var(--sp-2);
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+}
+.project-card__stats span {
+	white-space: nowrap;
 }
 
 .project-card h3 {

@@ -183,12 +183,20 @@ export function IssueDetailModal({
 			if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
 			if (event.metaKey || event.ctrlKey || event.altKey) return;
 
-			if (event.key === 'j' || event.key === 'ArrowDown') {
+			if (event.key === 'p' || event.key === 'P') {
+				modalRef.current?.querySelector<HTMLElement>('[data-shortcut="P"]')?.click();
+				return;
+			}
+			if (event.key === 'f' || event.key === 'F') {
+				modalRef.current?.querySelector<HTMLElement>('[data-shortcut="F"]')?.click();
+				return;
+			}
+			if (event.key === 'j' || event.key === 'ArrowDown' || event.key === 'ArrowRight') {
 				if (hasNext) {
 					event.preventDefault();
 					navigate(1);
 				}
-			} else if (event.key === 'k' || event.key === 'ArrowUp') {
+			} else if (event.key === 'k' || event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
 				if (hasPrev) {
 					event.preventDefault();
 					navigate(-1);
@@ -288,7 +296,7 @@ export function IssueDetailModal({
 							verification — no concrete DOM target was reported.
 						</p>
 					)}
-					{onVerify && (
+					{onVerify && canVerifyContrast && (
 						<div>
 							<button
 								type="button"
@@ -464,9 +472,10 @@ export function IssueDetailModal({
 							</div>
 						</div>
 					)}
-					{/* After the panes: the finding leads, the note is a footnote to it. */}
-					<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
 				</div>
+				<footer className="imodal__foot">
+					<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
+				</footer>
 			</div>
 		</div>
 	);

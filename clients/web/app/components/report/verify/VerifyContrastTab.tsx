@@ -187,6 +187,8 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 						<button
 							type="button"
 							className="btn btn--verdict-pass"
+							data-shortcut="P"
+							title={measuredPasses === false ? 'Pass anyway (P)' : 'Mark pass (P)'}
 							onClick={() => {
 								/* Marking against the measurement deserves a pause. */
 								// Narrow on `ratio` rather than asserting: measuredPasses is only
@@ -212,6 +214,8 @@ export function VerifyContrastTab({ issue, page, pageOverviewUrl, jobId }: Props
 						<button
 							type="button"
 							className="btn btn--verdict-fail"
+							data-shortcut="F"
+							title="Mark fail (F)"
 							onClick={() => {
 								if (
 									ratio !== null &&

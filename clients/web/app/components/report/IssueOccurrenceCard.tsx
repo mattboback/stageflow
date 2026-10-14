@@ -3,6 +3,7 @@ import type { IssueOccurrence, PageSummary } from '../../lib/types/unified-repor
 import { findOverviewElement } from '../../lib/report';
 
 import { ElementCrop } from './ElementCrop';
+import { EvidenceField } from './EvidenceCode';
 
 interface Props {
 	occurrence: IssueOccurrence;
@@ -21,6 +22,7 @@ export function IssueOccurrenceCard({ occurrence, index, page, issueId, pageOver
 	const ancestorPath = occurrence.ancestorPath?.trim() ?? '';
 	const ancestorAddsContext =
 		ancestorPath.length > 0 && ancestorPath !== selector && !selector.endsWith(ancestorPath);
+	const html = occurrence.html ?? occurrence.contextHtml ?? null;
 
 	return (
 		<article className="occ">
@@ -38,30 +40,11 @@ export function IssueOccurrenceCard({ occurrence, index, page, issueId, pageOver
 					className="ecrop ecrop--sm"
 				/>
 			)}
-			{occurrence.selector && (
-				<dl className="occ__field">
-					<dt>Selector</dt>
-					<dd>
-						<code className="code-well">{occurrence.selector}</code>
-					</dd>
-				</dl>
-			)}
-			{ancestorAddsContext && (
-				<details className="occ__dom">
-					<summary>DOM context</summary>
-					<code className="code-well">{ancestorPath}</code>
-				</details>
-			)}
-			{(occurrence.html || occurrence.contextHtml) && (
-				<dl className="occ__field">
-					<dt>HTML</dt>
-					<dd>
-						<pre className="code-well">
-							<code>{occurrence.html ?? occurrence.contextHtml}</code>
-						</pre>
-					</dd>
-				</dl>
-			)}
+			<dl className="evidence__meta">
+				{occurrence.selector && <EvidenceField label="Selector" value={occurrence.selector} />}
+				{ancestorAddsContext && <EvidenceField label="DOM context" value={ancestorPath} />}
+				{html && <EvidenceField label="HTML" value={html} multiline />}
+			</dl>
 		</article>
 	);
 }

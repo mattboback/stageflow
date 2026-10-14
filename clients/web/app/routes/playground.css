@@ -116,6 +116,9 @@
 .addurls {
 	display: grid;
 	gap: 0.5rem;
+	max-height: 360px;
+	overflow-y: auto;
+	padding-right: 8px;
 }
 .urlrow {
 	display: grid;
@@ -133,9 +136,19 @@
 	font-weight: 500;
 	color: var(--sev-critical);
 }
-/* remove-row: .btn--icon with the top offset that aligns it to its input */
+/* remove-row: 32px icon button aligned to its input */
 .urlrow .rm {
-	margin-top: 0.3rem;
+	margin-top: 0.15rem;
+	width: 32px;
+	height: 32px;
+	min-width: 32px;
+	min-height: 32px;
+	border: 1px solid transparent;
+	border-radius: var(--r-sm);
+}
+.urlrow .rm:hover {
+	border-color: var(--line);
+	background: var(--surface-sunk);
 }
 .intake__actions {
 	display: flex;
@@ -290,6 +303,12 @@
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
 }
+.chan__cats {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--sp-1);
+	justify-content: flex-end;
+}
 .chan__cat {
 	font-size: var(--fs-2);
 	font-weight: 600;
@@ -435,7 +454,7 @@
 	.chan {
 		grid-template-columns: auto minmax(0, 1fr) auto;
 	}
-	.chan__cat {
+	.chan__cats {
 		display: none;
 	}
 	.stickyrun {

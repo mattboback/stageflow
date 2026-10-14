@@ -417,6 +417,11 @@ pre {
 	max-width: var(--maxw-app);
 	padding-inline: clamp(1.25rem, 3vw, 2.75rem);
 }
+.wrap--wide {
+	max-width: 100rem;
+	width: calc(100vw - 3rem);
+	padding-inline: 0;
+}
 .mono {
 	font-family: var(--mono);
 }
@@ -624,10 +629,16 @@ pre {
 	.nav {
 		gap: 0.4rem;
 	}
-	.site-header:not(.site-header--app) .navlinks {
+	.navlinks {
 		display: none;
 	}
-	.site-header:not(.site-header--app) .navgh {
+	/* Specificity must beat .btn (defined later) or the GitHub button returns. */
+	.site-header .navgh {
+		display: none;
+	}
+	/* App routes add a back link + menu trigger beside the theme pick; the
+	   section label is the one element the page heading already repeats. */
+	.site-header--app .site-header__section {
 		display: none;
 	}
 	.navmenu__trigger {
@@ -908,6 +919,11 @@ pre {
 	gap: 0.25rem;
 	border-bottom: 1px solid var(--line);
 	overflow-x: auto;
+	overflow-y: hidden;
+	scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+	display: none;
 }
 .tab {
 	display: inline-flex;

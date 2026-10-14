@@ -612,7 +612,9 @@ export function VisualReviewPanel({
 									aria-label={`${label}: ${findings}${counts.length > 0 ? `, ${describeSeverityCounts(counts)}` : ''}`}
 									onClick={() => onSelectPage(page.id)}
 								>
-									<span className="vrev__page-label">{label}</span>
+									<span className="vrev__page-label" title={label}>
+										{label}
+									</span>
 									{/* Scaled to the page with most findings, so rows compare. */}
 									<SeverityBar counts={counts} scale={mostPageFindings} size="sm" />
 									<span className="vrev__page-meta">
@@ -790,27 +792,33 @@ export function VisualReviewPanel({
 									);
 								})}
 							</svg>
+							{activeIssueId ? <div className="vrev__dim" aria-hidden="true" /> : null}
 							{/* HTML, so pins keep their size at every zoom. The rects stay
 						    the targets; pins only label them with the list number. */}
 							<div className="vrev__pins" aria-hidden="true">
-								{walkOrder.map((el) => {
-									const pin = pinByIssue.get(el.issueId);
-									if (!pin) return null;
-									return (
-										<span
-											key={`${el.issueId}-${el.nodeIndex}`}
-											className={`vrev__pin sev-${pin.severity}${el.issueId === activeIssueId ? ' vrev__pin--active' : ''}`}
-											style={{
-												left: `${el.xPercent}%`,
-												// A box at the very top keeps its pin on the canvas.
-												top: `max(1.75rem, ${el.yPercent}%)`
-											}}
-										>
-											{pin.number}
-											{newIssueIds?.has(el.issueId) && <span className="vrev__pin-new">NEW</span>}
-										</span>
-									);
-								})}
+								{(() => {
+									const seen = new Map<string, number>();
+									return walkOrder.map((el) => {
+										const pin = pinByIssue.get(el.issueId);
+										if (!pin) return null;
+										const key = `${Math.round(el.xPercent * 2)}:${Math.round(el.yPercent * 2)}`;
+										const dup = seen.get(key) ?? 0;
+										seen.set(key, dup + 1);
+										return (
+											<span
+												key={`${el.issueId}-${el.nodeIndex}`}
+												className={`vrev__pin sev-${pin.severity}${el.issueId === activeIssueId ? ' vrev__pin--active' : ''}`}
+												style={{
+													left: `calc(${el.xPercent}% + ${dup * 26}px)`,
+													top: `max(1.75rem, ${el.yPercent}%)`
+												}}
+											>
+												{pin.number}
+												{newIssueIds?.has(el.issueId) && <span className="vrev__pin-new">NEW</span>}
+											</span>
+										);
+									});
+								})()}
 							</div>
 						</div>
 					</div>

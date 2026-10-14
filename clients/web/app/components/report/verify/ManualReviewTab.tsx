@@ -49,6 +49,8 @@ export function ManualReviewTab({ issue, jobId }: Props) {
 						<button
 							type="button"
 							className="btn btn--verdict-pass"
+							data-shortcut="P"
+							title="Mark pass (P)"
 							onClick={() => setVerdict(issue.id, { verdict: 'pass' })}
 						>
 							Mark pass
@@ -56,6 +58,8 @@ export function ManualReviewTab({ issue, jobId }: Props) {
 						<button
 							type="button"
 							className="btn btn--verdict-fail"
+							data-shortcut="F"
+							title="Mark fail (F)"
 							onClick={() => setVerdict(issue.id, { verdict: 'fail' })}
 						>
 							Mark fail

@@ -139,10 +139,8 @@ export default function Scan() {
 			: Math.round(result?.progress?.percentage ?? 0);
 	const pct = isComplete ? 100 : Math.min(99, rawPct);
 
-	/* Nothing has started yet: one "preparing" message beats seven identical
-	   queued rows that all ask "waiting for what?". */
-	const isPreparing =
-		isRunning && channels.length > 0 && channels.every((ch) => ch.state === 'queue');
+	/* Render every expected scanner from the first paint in Queued state so
+	   the Scanners card height never changes as runners start (no CLS). */
 	/* Set only while the job waits for a free slot; claiming the job clears it. */
 	const queuePosition = result?.state === 'PENDING' ? result.queue_position : undefined;
 
@@ -307,28 +305,18 @@ export default function Scan() {
 												<div className="ch__sub">Scheduling containers</div>
 											</div>
 										</div>
-									) : isPreparing ? (
-										<div className="ch ch--prep">
-											<span className="ch__led" aria-hidden="true" />
-											<div>
-												<div className="ch__name">Preparing scan runner…</div>
-												<div className="ch__sub">{totalCount} scanners will run in parallel</div>
-											</div>
-										</div>
 									) : (
 										channels.map((ch) => (
 											<div className={`ch ch--${ch.state}`} key={ch.id}>
 												<span className="ch__led" aria-hidden="true" />
 												<div>
 													<div className="ch__name">{scannerLabel(ch.id)}</div>
-													{/* queued rows already say "Waiting" in the tag */}
-													{ch.state !== 'queue' && <div className="ch__sub">{ch.detail}</div>}
-													{/* The text above carries the number; the bar shows it at a glance. */}
-													{ch.state === 'run' && ch.fraction > 0 && (
-														<span className="ch__bar" aria-hidden="true">
-															<i style={{ transform: `scaleX(${ch.fraction})` }} />
-														</span>
-													)}
+													<div className="ch__sub">{ch.detail}</div>
+													{/* Track mounted in every state so row height is constant;
+													    done fills fully, queued stays empty. */}
+													<span className="ch__bar" aria-hidden="true">
+														<i style={{ transform: `scaleX(${ch.fraction})` }} />
+													</span>
 												</div>
 												<div className="ch__right">
 													<span className="ch__tag">{TAG_LABEL[ch.state]}</span>

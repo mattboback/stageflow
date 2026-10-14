@@ -206,14 +206,14 @@
 .ch--done .ch__led {
 	background: var(--sev-pass);
 }
-/* Completed rows go quiet; the unfinished work keeps the visual weight. */
-.ch--done {
-	padding-block: 0.45rem;
+.ch--done .ch__bar > i {
+	background: var(--sev-pass);
 }
+/* Completed rows keep the same height and title weight as active rows. */
 .ch--done .ch__name {
-	font-weight: 500;
-	color: var(--ink-muted);
-	font-size: var(--fs-3);
+	font-weight: 600;
+	color: var(--ink-strong);
+	font-size: var(--fs-4);
 }
 .ch--run {
 	background: var(--signal-wash);
@@ -254,12 +254,11 @@
 .ch--err .ch__tag {
 	color: var(--sev-critical);
 }
-.ch--queue .ch__tag,
-.ch--queue .ch__name {
+.ch--queue .ch__tag {
 	color: var(--ink-muted);
 }
 .ch--queue .ch__name {
-	font-weight: 500;
+	font-weight: 600;
 }
 
 /* log readout — diagnostic detail, collapsed by default */
@@ -321,7 +320,8 @@
 	background: var(--terminal-bg);
 	border-top: 1px solid var(--terminal-edge);
 	color-scheme: dark;
-	padding: 0.9rem 1.15rem;
+	padding: 12px 1.15rem;
+	scroll-padding-top: 12px;
 	font-family: var(--mono);
 	font-size: var(--fs-2);
 	line-height: 1.65;

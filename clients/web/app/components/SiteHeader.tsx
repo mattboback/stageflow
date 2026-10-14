@@ -15,27 +15,6 @@ interface AppBar {
 }
 
 export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }) {
-	if (app) {
-		return (
-			<header className="site-header site-header--app">
-				<div className="wrap wrap--app site-header__bar">
-					<Link className="brand" to="/" aria-label={`${SITE_NAME} home`}>
-						<BrandMark />
-						<span className="brand__name">{SITE_NAME}</span>
-					</Link>
-					{app.section && <span className="site-header__section">{app.section}</span>}
-					<nav className="nav" aria-label="Workflow">
-						<Link className="navlink navlink--back" to={app.backTo}>
-							<span aria-hidden="true">←</span>
-							<span className="navlink__label">{app.backLabel}</span>
-						</Link>
-						<ThemeToggle />
-					</nav>
-				</div>
-			</header>
-		);
-	}
-
 	const links = (
 		<>
 			<Link
@@ -63,6 +42,40 @@ export function SiteHeader({ current, app }: { current?: Current; app?: AppBar }
 			</a>
 		</>
 	);
+
+	if (app) {
+		return (
+			<header className="site-header site-header--app">
+				<div className="wrap wrap--app site-header__bar">
+					<Link className="brand" to="/" aria-label={`${SITE_NAME} home`}>
+						<BrandMark />
+						<span className="brand__name">{SITE_NAME}</span>
+					</Link>
+					{app.section && <span className="site-header__section">{app.section}</span>}
+					<nav className="nav" aria-label="Primary">
+						<div className="navlinks">{links}</div>
+						<Link className="navlink navlink--back" to={app.backTo}>
+							<span aria-hidden="true">←</span>
+							<span className="navlink__label">{app.backLabel}</span>
+						</Link>
+						<ThemeToggle />
+						<a className="btn btn--ghost btn--sm navgh" href={GITHUB_URL}>
+							GitHub ↗
+						</a>
+						<MobileNav>
+							{links}
+							<Link className="navlink" to={app.backTo}>
+								← {app.backLabel}
+							</Link>
+							<a className="navlink" href={GITHUB_URL}>
+								GitHub ↗
+							</a>
+						</MobileNav>
+					</nav>
+				</div>
+			</header>
+		);
+	}
 
 	return (
 		<header className="site-header">

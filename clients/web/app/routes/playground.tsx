@@ -35,7 +35,16 @@ export const meta: MetaFunction = () =>
 
 const CATEGORY_LABELS: Record<string, string> = {
 	seo: 'SEO',
-	custom: 'Custom'
+	custom: 'Custom',
+	accessibility: 'Accessibility',
+	performance: 'Performance',
+	'best-practices': 'Best Practices',
+	security: 'Security'
+};
+
+/* Lighthouse audits across categories; a single Accessibility pill mislabels it. */
+const SCANNER_CATEGORY_OVERRIDES: Record<string, string[]> = {
+	lighthouse: ['Accessibility', 'SEO', 'Best Practices']
 };
 
 function categoryLabel(s: string): string {
@@ -402,8 +411,15 @@ function PlaygroundSession({ projectId, seedUrl }: PlaygroundSessionProps) {
 																{scanner.description || meta?.description || ''}
 															</span>
 														</span>
-														<span className="chan__cat">
-															{categoryLabel(scanner.categories[0] ?? '')}
+														<span className="chan__cats">
+															{(
+																SCANNER_CATEGORY_OVERRIDES[scanner.id] ??
+																scanner.categories.map((c) => categoryLabel(c))
+															).map((label) => (
+																<span className="chan__cat" key={label}>
+																	{label}
+																</span>
+															))}
 														</span>
 														<span
 															className={on ? 'toggle toggle--on' : 'toggle'}

@@ -19,6 +19,15 @@ function label(page: PageSummary): string {
 	}
 }
 
+function relativePath(page: PageSummary): string {
+	try {
+		const url = new URL(page.url);
+		return `${url.pathname}${url.search}${url.hash}` || '/';
+	} catch {
+		return label(page);
+	}
+}
+
 /*
  * The site, rather than the findings.
  *
@@ -63,7 +72,7 @@ export function PagesView({ report, screenshots, onSelectPage }: Props) {
 
 							<span className="pcard__body">
 								<span className="pcard__path">{label(page)}</span>
-								<span className="pcard__url">{page.url}</span>
+								<span className="pcard__url mono">{relativePath(page)}</span>
 
 								<span className="pcard__meta">
 									<span className="pcard__count num">{page.issueCount}</span>
