@@ -44,7 +44,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 /* Lighthouse audits across categories; a single Accessibility pill mislabels it. */
 const SCANNER_CATEGORY_OVERRIDES: Record<string, string[]> = {
-	lighthouse: ['Accessibility', 'SEO', 'Best Practices']
+	lighthouse: ['Performance & Best Practices', 'SEO']
 };
 
 function categoryLabel(s: string): string {

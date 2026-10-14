@@ -114,9 +114,21 @@ export default function Scan() {
 		const detail =
 			scanner?.state === 'failed'
 				? (scanner.error ?? 'Scanner failed')
-				: scanner && scanner.total_pages > 0
-					? `Page progress: ${scanner.pages_scanned} of ${scanner.total_pages}`
-					: SUB_LABEL[state];
+				: state === 'done' && scanner
+					? [
+							scanner.total_ms !== undefined
+								? `Complete in ${(scanner.total_ms / 1000).toFixed(1)}s`
+								: 'Complete',
+							scanner.total_pages > 0
+								? `${scanner.pages_scanned} of ${scanner.total_pages} pages`
+								: null,
+							`${scanner.violations} ${scanner.violations === 1 ? 'issue' : 'issues'}`
+						]
+							.filter(Boolean)
+							.join(' · ')
+					: scanner && scanner.total_pages > 0
+						? `Page progress: ${scanner.pages_scanned} of ${scanner.total_pages}`
+						: SUB_LABEL[state];
 		// How far this scanner is: settled ones count in full, a running one
 		// by the pages it has finished, a waiting one not at all.
 		const fraction =
@@ -125,7 +137,14 @@ export default function Scan() {
 				: state === 'run' && scanner && scanner.total_pages > 0
 					? Math.min(1, scanner.pages_scanned / scanner.total_pages)
 					: 0;
-		return { id: scannerId, state, detail, fraction };
+		return {
+			id: scannerId,
+			state,
+			detail,
+			fraction,
+			violations: scanner?.violations,
+			totalMs: scanner?.total_ms
+		};
 	});
 	const doneCount = completed.size;
 	const failedCount = channels.filter((ch) => ch.state === 'err').length;
@@ -319,6 +338,11 @@ export default function Scan() {
 													</span>
 												</div>
 												<div className="ch__right">
+													{ch.state === 'done' && ch.violations !== undefined && (
+														<span className="ch__issues num">
+															{ch.violations} {ch.violations === 1 ? 'issue' : 'issues'}
+														</span>
+													)}
 													<span className="ch__tag">{TAG_LABEL[ch.state]}</span>
 												</div>
 											</div>

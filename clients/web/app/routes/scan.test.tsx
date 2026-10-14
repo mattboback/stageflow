@@ -66,6 +66,23 @@ describe('scanner launch status', () => {
 	});
 });
 
+describe('completed scanner rows', () => {
+	it('shows duration, page count and issue count when a scanner finishes', () => {
+		renderScanning({
+			axe: {
+				state: 'completed',
+				pages_scanned: 12,
+				total_pages: 12,
+				violations: 60,
+				total_ms: 17700
+			},
+			lighthouse: { state: 'running', pages_scanned: 1, total_pages: 12, violations: 0 }
+		});
+		expect(channel(scannerLabel('axe')).getByText(/Complete in 17\.7s/)).toBeTruthy();
+		expect(channel(scannerLabel('axe')).getAllByText('60 issues').length).toBeGreaterThan(0);
+	});
+});
+
 describe('live updates', () => {
 	it('says so while the stream reconnects', () => {
 		renderScanning(undefined, 'reconnecting');

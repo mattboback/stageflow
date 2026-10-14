@@ -12,6 +12,7 @@ import {
 	type IssueSortKey
 } from '../../lib/report';
 
+import type { ReviewVerdict } from '../../lib/report/review-verdict';
 import { IssueFilterSidebar } from './IssueFilterSidebar';
 import { IssueGroupRow } from './IssueGroupRow';
 import { IssueRowCard } from './IssueRowCard';
@@ -37,6 +38,7 @@ interface Props {
 	onGroupToggle: (next: boolean) => void;
 	onClear: () => void;
 	onIssueSelect?: (issue: IssueDetail) => void;
+	getReviewVerdict?: ((issueId: string) => ReviewVerdict | null) | undefined;
 }
 
 export function IssuesView({
@@ -59,7 +61,8 @@ export function IssuesView({
 	onSortChange,
 	onGroupToggle,
 	onClear,
-	onIssueSelect
+	onIssueSelect,
+	getReviewVerdict
 }: Props) {
 	const [, setBumpKey] = useState(0); // keeps URL→state reactive when groupToggle changes
 
@@ -294,6 +297,8 @@ export function IssuesView({
 							pageById={pageById}
 							defaultOpen={index === 0}
 							onSelectOccurrence={onIssueSelect}
+							totalPages={report.pages.length}
+							{...(getReviewVerdict ? { getVerdict: getReviewVerdict } : {})}
 						/>
 					))
 				) : (

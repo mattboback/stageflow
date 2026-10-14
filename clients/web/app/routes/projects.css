@@ -153,6 +153,34 @@
 	margin-top: 0;
 }
 
+.project-card__band {
+	display: inline-block;
+	margin-left: 0.5rem;
+	padding: 0.15rem 0.55rem;
+	border-radius: var(--r-pill);
+	font-size: var(--fs-1);
+	font-weight: 700;
+	background: var(--surface-sunk);
+	color: var(--ink-muted);
+	vertical-align: middle;
+}
+.project-card__band--strong { color: var(--sev-pass-ink-strong); background: var(--sev-pass-wash); }
+.project-card__band--failing, .project-card__band--high-risk { color: var(--sev-critical); background: var(--sev-critical-wash); }
+.project-card__severities {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+	margin: 0.35rem 0 0;
+}
+.project-card__sev {
+	font-size: var(--fs-1);
+	font-weight: 600;
+	padding: 0.12rem 0.5rem;
+	border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+	color: var(--ink-muted);
+	white-space: nowrap;
+}
 .project-card__score {
 	color: var(--ink-muted);
 	font-size: var(--fs-3);

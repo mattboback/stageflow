@@ -353,7 +353,41 @@ export function IssueDetailModal({
 							role="tabpanel"
 							aria-labelledby="issue-tab-fix"
 						>
-							<section>
+							<dl className="imodal__meta-bar" aria-label="Rule metadata">
+								<div className="imodal__meta-cell">
+									<dt>Rule &amp; scanner</dt>
+									<dd>
+										{issue.scanner} · <span className="mono">{issue.ruleId}</span>
+									</dd>
+								</div>
+								<div className="imodal__meta-cell">
+									<dt>WCAG standard</dt>
+									<dd>
+										{issue.wcagTags && issue.wcagTags.length > 0 ? (
+											issue.wcagTags.join(' · ')
+										) : (
+											<span className="imodal__meta-muted">Not WCAG-mapped</span>
+										)}
+										{issue.helpUrl && (
+											<>
+												{' '}
+												<a href={issue.helpUrl} target="_blank" rel="noopener noreferrer">
+													Docs ↗
+												</a>
+											</>
+										)}
+									</dd>
+								</div>
+								<div className="imodal__meta-cell">
+									<dt>Affected users</dt>
+									<dd>
+										{issue.userImpact?.affectedGroups && issue.userImpact.affectedGroups.length > 0
+											? issue.userImpact.affectedGroups.map(userGroupLabel).join(', ')
+											: 'All users'}
+									</dd>
+								</div>
+							</dl>
+							<section className="imodal__fix-callout">
 								<h3 className="imodal__pane-h">How to fix</h3>
 								{contextualFix ? (
 									<GuidanceText text={contextualFix} className="imodal__fix" />

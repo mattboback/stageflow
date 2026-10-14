@@ -18,7 +18,7 @@ import {
 	listLocalProjectRuns
 } from '../lib/local-project-store';
 import { normalizeUrlInput, validateHttpUrl } from '../lib/url';
-import { shownSiteScore } from '../lib/report';
+import { scoreBandFor, severityCounts, shownSiteScore } from '../lib/report';
 import type { LocalProject, LocalRun } from '../lib/projects';
 import { buildSiteMeta, pageTitle, SITE_NAME } from '../lib/site-metadata';
 import projectsStyles from './projects.css?url';
@@ -259,6 +259,10 @@ export default function Projects() {
 											.reverse();
 										const latestScore = history.at(-1)?.score;
 										const baselineScore = baseline?.score;
+										const band = scoreBandFor(latestScore);
+										const latestSeverities = latest?.report
+											? severityCounts(latest.report.summary.bySeverity)
+											: [];
 										return (
 											<article className="project-card" key={project.id}>
 												<div className="project-card__body">
@@ -302,6 +306,13 @@ export default function Projects() {
 																{latestScore !== undefined && (
 																	<p className="project-card__score">
 																		Latest score <strong className="num">{latestScore}</strong>
+																		{band && (
+																			<span
+																				className={`project-card__band project-card__band--${band.tone}`}
+																			>
+																				{band.label}
+																			</span>
+																		)}
 																		{baselineScore !== undefined && (
 																			<>
 																				{' '}
@@ -311,6 +322,15 @@ export default function Projects() {
 																				</span>
 																			</>
 																		)}
+																	</p>
+																)}
+																{latestSeverities.length > 0 && (
+																	<p className="project-card__severities">
+																		{latestSeverities.map(({ severity, count }) => (
+																			<span key={severity} className="project-card__sev">
+																				{count} {severity}
+																			</span>
+																		))}
 																	</p>
 																)}
 																<p className="project-card__meta">

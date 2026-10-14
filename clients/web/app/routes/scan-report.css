@@ -96,8 +96,8 @@
 
 .report-job-actions__save .field {
 	min-width: min(100%, 16rem);
-	flex: 0 1 20rem;
-	max-width: 320px;
+	flex: 0 1 16.25rem;
+	max-width: 260px;
 }
 .report-job-actions__save {
 	align-items: end;
@@ -366,6 +366,60 @@ button.baseline-diff__row:hover .baseline-diff__name {
 	margin: var(--sp-2) 0 0;
 	font-size: var(--fs-3);
 	color: var(--ink-muted);
+}
+.rhead__triage {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--sp-2);
+	margin-top: var(--sp-2);
+}
+.rhead__triage-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.3rem 0.7rem;
+	border: 1px solid var(--line);
+	border-radius: var(--r-pill);
+	background: var(--surface);
+	font: inherit;
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+	cursor: pointer;
+	white-space: nowrap;
+}
+.rhead__triage-pill:hover {
+	border-color: var(--signal);
+	color: var(--signal-ink);
+}
+.rhead__triage-prog {
+	color: var(--ink-muted);
+	font-size: var(--fs-2);
+}
+.rhead__triage-bar {
+	display: block;
+	flex: 1 1 8rem;
+	min-width: 6rem;
+	height: 6px;
+	border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+	overflow: hidden;
+}
+.rhead__triage-bar > i {
+	display: block;
+	height: 100%;
+	background: var(--signal);
+	transform-origin: left;
+}
+.rhead__totals-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--sp-3);
+}
+.rhead__totals .sevlegend {
+	flex-wrap: nowrap;
+	white-space: nowrap;
+	overflow: hidden;
 }
 .rhead__totals {
 	display: grid;
@@ -892,6 +946,36 @@ button.irow {
 /* The scanner name identifies which tool produced the group, so it is
    informative rather than decorative. Was inline `--ink-faint`, which fell to
    4.35:1 once .igroup__head hovers to --surface-sunk. */
+.igroup__sitewide {
+	font-size: var(--fs-1);
+	font-weight: 700;
+	padding: 0.15rem 0.55rem;
+	border-radius: var(--r-pill);
+	background: var(--signal-wash);
+	color: var(--signal-ink);
+	border: 1px solid var(--signal-edge);
+	white-space: nowrap;
+}
+.igroup__review {
+	font-size: var(--fs-1);
+	font-weight: 700;
+	padding: 0.15rem 0.55rem;
+	border-radius: var(--r-pill);
+	white-space: nowrap;
+}
+.igroup__review--pending {
+	color: var(--signal-ink);
+	background: var(--signal-wash);
+	border: 1px solid var(--signal-edge);
+}
+.igroup__review--pass {
+	color: var(--sev-pass-ink-strong);
+	background: var(--sev-pass-wash);
+}
+.igroup__review--fail {
+	color: var(--sev-critical);
+	background: var(--sev-critical-wash);
+}
 .igroup__scanner {
 	color: var(--ink-muted);
 }
@@ -1304,6 +1388,41 @@ button.irow {
 	font-size: var(--fs-6);
 	margin: 0 0 var(--sp-2);
 }
+.imodal__meta-bar {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: var(--sp-3);
+	margin: 0;
+	padding: var(--sp-3) var(--sp-4);
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface-sunk);
+}
+.imodal__meta-cell dt {
+	font-size: var(--fs-1);
+	font-weight: 700;
+	color: var(--ink-muted);
+	margin: 0 0 0.2rem;
+}
+.imodal__meta-cell dd {
+	margin: 0;
+	font-size: var(--fs-3);
+	color: var(--ink-strong);
+	overflow-wrap: anywhere;
+}
+.imodal__meta-cell dd a {
+	color: var(--signal-ink);
+	font-weight: 600;
+}
+.imodal__meta-muted {
+	color: var(--ink-muted);
+}
+.imodal__fix-callout {
+	padding: var(--sp-4);
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+}
 .imodal__fix {
 	margin: 0;
 	max-width: 72ch;
@@ -1547,7 +1666,7 @@ button.irow {
 }
 .vfy__grid {
 	display: grid;
-	grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+	grid-template-columns: minmax(0, 11fr) minmax(18rem, 9fr);
 	gap: var(--sp-6);
 	align-items: start;
 }
@@ -1693,8 +1812,8 @@ button.irow {
 	gap: var(--sp-2);
 }
 .vfy__swatch {
-	width: 2.3rem;
-	height: 2.3rem;
+	width: 4rem;
+	height: 4rem;
 	flex: 0 0 auto;
 	border: 1px solid var(--line-strong);
 	border-radius: var(--r-xs);
@@ -2145,6 +2264,51 @@ button.irow {
 .vrev__page-btn--active .vrev__page-label {
 	font-weight: 600;
 }
+.vrev__page-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.5rem;
+}
+.vrev__page-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: var(--fs-1);
+	font-weight: 600;
+	color: var(--ink-muted);
+	white-space: nowrap;
+}
+.vrev__issues-toggle {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	gap: var(--sp-1);
+	padding: var(--sp-2) var(--sp-3);
+	background: var(--surface);
+	border-bottom: 1px solid var(--line);
+}
+.vrev__issues-tab {
+	flex: 1;
+	padding: 0.4rem 0.5rem;
+	border: 1px solid var(--line);
+	border-radius: var(--r-sm);
+	background: var(--surface);
+	font: inherit;
+	font-size: var(--fs-2);
+	font-weight: 600;
+	color: var(--ink-muted);
+	cursor: pointer;
+	white-space: nowrap;
+}
+.vrev__issues-tab--active {
+	color: var(--signal-ink);
+	background: var(--signal-wash);
+	border-color: var(--signal-edge);
+}
+.vrev__pin--cluster {
+	font-size: var(--fs-1);
+}
 .vrev__page-meta {
 	font-size: var(--fs-2);
 	color: var(--ink-muted);
@@ -2324,7 +2488,7 @@ button.irow {
 .vrev__dim {
 	position: absolute;
 	inset: 0;
-	background: rgba(15, 23, 42, 0.35);
+	background: rgba(15, 23, 42, 0.45);
 	pointer-events: none;
 }
 .vrev__pins {
@@ -2905,6 +3069,34 @@ button.irow {
 	align-content: start;
 	gap: var(--sp-2);
 	padding: var(--sp-4);
+}
+.pgrid__toolbar {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: var(--sp-5);
+}
+.pgrid__sort {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--sp-2);
+	font-size: var(--fs-3);
+	color: var(--ink-muted);
+}
+.pgrid__sort-select {
+	width: auto;
+}
+.pcard__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--sp-2);
+}
+.pcard__split {
+	display: flex;
+	gap: 0.35rem;
+	font-size: var(--fs-2);
+	color: var(--ink-muted);
+	white-space: nowrap;
 }
 .pcard__path {
 	font-size: var(--fs-5);

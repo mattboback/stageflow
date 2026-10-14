@@ -241,6 +241,15 @@
 		box-shadow: 0 0 0 6px var(--signal-ring-fade);
 	}
 }
+.ch__issues {
+	font-size: var(--fs-1);
+	font-weight: 700;
+	padding: 0.15rem 0.55rem;
+	border-radius: var(--r-pill);
+	background: var(--surface-sunk);
+	color: var(--ink-muted);
+	white-space: nowrap;
+}
 .ch__tag {
 	font-size: var(--fs-2);
 	font-weight: 600;
@@ -320,8 +329,8 @@
 	background: var(--terminal-bg);
 	border-top: 1px solid var(--terminal-edge);
 	color-scheme: dark;
-	padding: 12px 1.15rem;
-	scroll-padding-top: 12px;
+	padding: 14px 16px;
+	scroll-padding: 14px 16px;
 	font-family: var(--mono);
 	font-size: var(--fs-2);
 	line-height: 1.65;

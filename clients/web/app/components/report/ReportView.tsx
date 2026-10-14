@@ -248,10 +248,15 @@ export function ReportView({
 							report={displayReport}
 							scoreModel={scoreModel}
 							comparison={comparison}
+							reviewProgress={reviewProgress}
 							onReviewSeverity={(severity) => updateParams({ section: 'issues', severity })}
 							onSelectScanner={(scannerId) =>
 								updateParams({ section: 'issues', scanner: scannerId })
 							}
+							onTriageSelect={(kind) => {
+								if (kind === 'review') updateParams({ section: null });
+								else updateParams({ section: 'issues' });
+							}}
 						/>
 						{comparisonPanel}
 						{displayReport.assessment && displayReport.assessment.expected > 0 && (
@@ -299,6 +304,11 @@ export function ReportView({
 									screenshots={screenshots}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 								/>
+								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
+									<LighthouseSummary
+										categories={displayReport.summary.lighthouseCategories ?? []}
+									/>
+								)}
 								{reviewQueue.length > 0 && (
 									<div className="rnext rnext--secondary">
 										<div className="rnext__copy">
@@ -326,11 +336,6 @@ export function ReportView({
 											</button>
 										)}
 									</div>
-								)}
-								{(displayReport.summary.lighthouseCategories?.length ?? 0) > 0 && (
-									<LighthouseSummary
-										categories={displayReport.summary.lighthouseCategories ?? []}
-									/>
 								)}
 								<VisualReviewPanel
 									report={displayReport}
@@ -388,6 +393,7 @@ export function ReportView({
 											new: null
 										})
 									}
+									getReviewVerdict={getVerdict}
 									onIssueSelect={(issue) => updateParams({ issue: issue.id })}
 								/>
 								<ManualChecksPanel

@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 import type { IssueDetail, IssueGroup, PageSummary } from '../../lib/types/unified-report';
-import { SCANNER_META, getSeverityBadgeClass, getIssueKind } from '../../lib/report';
+import {
+	SCANNER_META,
+	getSeverityBadgeClass,
+	getIssueKind,
+	needsHumanReview
+} from '../../lib/report';
+import type { ReviewVerdict } from '../../lib/report/review-verdict';
 
 interface Props {
 	group: IssueGroup;
@@ -12,6 +18,8 @@ interface Props {
 	// Explicitly `| undefined`: exactOptionalPropertyTypes distinguishes an absent
 	// prop from one passed as undefined, and callers forward an optional handler.
 	onSelectOccurrence?: ((occurrence: IssueDetail) => void) | undefined;
+	totalPages?: number | undefined;
+	getVerdict?: ((issueId: string) => ReviewVerdict | null) | undefined;
 }
 
 export function IssueGroupRow({
@@ -19,7 +27,9 @@ export function IssueGroupRow({
 	pageById,
 	defaultOpen = false,
 	onSelectOccurrence,
-	newIssueIds
+	newIssueIds,
+	totalPages,
+	getVerdict
 }: Props) {
 	const [open, setOpen] = useState(defaultOpen);
 	const scannerLabel = SCANNER_META[group.scanner]?.label ?? group.scanner;
@@ -53,6 +63,9 @@ export function IssueGroupRow({
 						)}
 						{pageCount} page{pageCount === 1 ? '' : 's'}
 					</span>
+					{totalPages !== undefined && totalPages > 1 && pageCount === totalPages && (
+						<span className="igroup__sitewide">Site-wide (all {totalPages} pages)</span>
+					)}
 					<span className="igroup__scanner">{scannerLabel}</span>
 				</span>
 			</button>
@@ -98,6 +111,20 @@ export function IssueGroupRow({
 										) : null}
 									</span>
 								</span>
+								{(() => {
+									const verdict = getVerdict?.(occ.id)?.verdict;
+									if (verdict === 'pass')
+										return <span className="igroup__review igroup__review--pass">Passed</span>;
+									if (verdict === 'fail')
+										return (
+											<span className="igroup__review igroup__review--fail">Verified fail</span>
+										);
+									if (needsHumanReview(occ))
+										return (
+											<span className="igroup__review igroup__review--pending">Needs review</span>
+										);
+									return null;
+								})()}
 								<span className="num igroup__occ-count">
 									{getIssueKind(occ) === 'element' && occ.elementCount > 1
 										? `${occ.elementCount}×`

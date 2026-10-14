@@ -72,6 +72,47 @@ describe('design fixes', () => {
 		expect(screen.getByText('div.dropdown-toggle-2')).toBeTruthy();
 	});
 
+	it('badges a rule on every page as site-wide', () => {
+		const page: PageSummary = {
+			id: 'page-1',
+			url: 'https://example.com/technology',
+			path: '/technology',
+			issueCount: 1,
+			durationMs: 1
+		};
+		const page2: PageSummary = {
+			id: 'page-2',
+			url: 'https://example.com/about',
+			path: '/about',
+			issueCount: 1,
+			durationMs: 1
+		};
+		const group: IssueGroup = {
+			fingerprint: 'g-wide',
+			ruleId: 'html-has-lang',
+			scanner: 'axe',
+			title: 'Html missing lang',
+			description: 'd',
+			severity: 'serious',
+			occurrences: [finding({ id: 'w1' }), finding({ id: 'w2', pageId: 'page-2' })],
+			pageIds: ['page-1', 'page-2']
+		};
+		render(
+			<IssueGroupRow
+				group={group}
+				pageById={
+					new Map([
+						[page.id, page],
+						[page2.id, page2]
+					])
+				}
+				totalPages={2}
+				defaultOpen
+			/>
+		);
+		expect(screen.getByText('Site-wide (all 2 pages)')).toBeTruthy();
+	});
+
 	it('shows a top-viewport crop with badge for document-level elements', () => {
 		const page: PageSummary = {
 			id: 'page-1',
@@ -110,6 +151,30 @@ describe('design fixes', () => {
 		);
 		expect(screen.getByText(/Document-level finding/)).toBeTruthy();
 		expect(container.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 1280 720');
+	});
+
+	it('shows rule, WCAG and affected-group metadata at the top of Fix', () => {
+		render(
+			<IssueDetailModal
+				issue={finding({
+					wcagTags: ['wcag2a', 'wcag131'],
+					helpUrl: 'https://dequeuniversity.com/rules/axe/image-alt',
+					userImpact: {
+						statement: 'Screen reader users miss the image.',
+						affectedGroups: ['blind'],
+						userStory: ''
+					}
+				})}
+				page={null}
+				issues={[finding()]}
+				screenshots={[]}
+				onClose={vi.fn()}
+			/>
+		);
+		expect(screen.getByText('Rule & scanner')).toBeTruthy();
+		expect(screen.getAllByText(/axe/).length).toBeGreaterThan(0);
+		expect(screen.getAllByText(/wcag131/).length).toBeGreaterThan(0);
+		expect(screen.getAllByText('Blind users').length).toBeGreaterThan(0);
 	});
 
 	it('hides Verify this fix without a Verify tab and keeps Save note in the modal footer', () => {

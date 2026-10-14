@@ -34,6 +34,20 @@ interface Props {
 	onReviewSeverity?: ((severity: string) => void) | undefined;
 	/** Scanner chips become filters for the findings list. */
 	onSelectScanner?: ((scannerId: string) => void) | undefined;
+	/** Human-review progress for the triage pills; omitted hides the progress bar. */
+	reviewProgress?: { reviewed: number; total: number } | undefined;
+	/** Triage pill navigation: actionable → findings, review → review queue. */
+	onTriageSelect?: ((kind: 'actionable' | 'review' | 'expected') => void) | undefined;
+}
+
+function scannerSeverityTone(
+	scanner: UnifiedReport['scanners'][number],
+	issueCount: number
+): 'success' | 'warning' | 'danger' {
+	if (issueCount === 0) return 'success';
+	const worst = severityCounts(scanner.severity)[0]?.severity;
+	if (worst === 'critical' || worst === 'serious') return 'danger';
+	return 'warning';
 }
 
 function formatDuration(ms: number | undefined): string | null {
@@ -64,7 +78,9 @@ export function ReportHeader({
 	scoreModel,
 	comparison,
 	onReviewSeverity,
-	onSelectScanner
+	onSelectScanner,
+	reviewProgress,
+	onTriageSelect
 }: Props) {
 	const shownScore = shownSiteScore(report);
 	const band = scoreBandFor(shownScore);
@@ -164,10 +180,50 @@ export function ReportHeader({
 						)}
 					</div>
 					{assessment && assessment.expected + assessment.needsReview > 0 && (
-						<p className="rhead__assessment">
-							Issue records: {assessment.actionable} actionable · {assessment.expected} expected ·{' '}
-							{assessment.needsReview} need human review
-						</p>
+						<div className="rhead__triage" aria-label="Triage breakdown">
+							<button
+								type="button"
+								className="rhead__triage-pill"
+								onClick={() => onTriageSelect?.('actionable')}
+							>
+								<b className="num">{assessment.actionable}</b> Actionable
+							</button>
+							<button
+								type="button"
+								className="rhead__triage-pill"
+								onClick={() => onTriageSelect?.('review')}
+							>
+								<b className="num">{assessment.needsReview}</b> Need human review
+								{reviewProgress && reviewProgress.total > 0 && (
+									<span className="rhead__triage-prog">
+										{reviewProgress.reviewed} of {reviewProgress.total} reviewed
+									</span>
+								)}
+							</button>
+							<button
+								type="button"
+								className="rhead__triage-pill"
+								onClick={() => onTriageSelect?.('expected')}
+							>
+								<b className="num">{assessment.expected}</b> Expected / ignored
+							</button>
+							{reviewProgress && reviewProgress.total > 0 && (
+								<span
+									className="rhead__triage-bar"
+									role="progressbar"
+									aria-valuenow={reviewProgress.reviewed}
+									aria-valuemin={0}
+									aria-valuemax={reviewProgress.total}
+									aria-label="Triage progress"
+								>
+									<i
+										style={{
+											transform: `scaleX(${reviewProgress.total ? reviewProgress.reviewed / reviewProgress.total : 0})`
+										}}
+									/>
+								</span>
+							)}
+						</div>
 					)}
 					{shownScore !== null && (
 						<ScoreExplainer
@@ -185,13 +241,16 @@ export function ReportHeader({
 				</div>
 			</div>
 			<div className="rhead__totals" role="group" aria-label="Scan totals">
-				<p className="rhead__total">
-					<span className="rhead__total-val num">{total.toLocaleString()}</span>{' '}
-					{total === 1 ? 'occurrence' : 'occurrences'}
-				</p>
-				<p className="rhead__total-sub">
-					{ruleGroups} rule group{ruleGroups === 1 ? '' : 's'}
-				</p>
+				<div className="rhead__totals-grid">
+					<p className="rhead__total">
+						<span className="rhead__total-val num">{ruleGroups.toLocaleString()}</span>{' '}
+						{ruleGroups === 1 ? 'rule group failed' : 'rule groups failed'}
+					</p>
+					<p className="rhead__total">
+						<span className="rhead__total-val num">{total.toLocaleString()}</span>{' '}
+						{total === 1 ? 'occurrence' : 'occurrences'}
+					</p>
+				</div>
 				<p className="rhead__total-sub">
 					{pagesScanned.toLocaleString()} {pagesScanned === 1 ? 'page' : 'pages'} scanned ·{' '}
 					{total > 0
@@ -222,7 +281,11 @@ export function ReportHeader({
 							<>
 								<span
 									className="rhead__scanner-led"
-									data-tone={getScannerStatusTone(scanner.status)}
+									data-tone={
+										failed
+											? getScannerStatusTone(scanner.status)
+											: scannerSeverityTone(scanner, issueCount)
+									}
 									aria-hidden="true"
 								/>
 								<span className="rhead__scanner-name">{name}</span>

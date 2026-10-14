@@ -25,7 +25,6 @@ import {
 	needsHumanReview,
 	normalizeSeverity
 } from '../../lib/report';
-import { SeverityBar } from './SeverityBar';
 
 interface Props {
 	report: UnifiedReport;
@@ -213,6 +212,8 @@ export function VisualReviewPanel({
 	const actualSize = 1 / captureScale;
 
 	const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
+	const [hoveredIssueId, setHoveredIssueId] = useState<string | null>(null);
+	const [rightTab, setRightTab] = useState<'pinned' | 'pagelevel'>('pinned');
 	const isNarrow = useSyncExternalStore(subscribeViewport, narrowViewport, serverViewport);
 	const [zoomOverride, setZoom] = useState<Zoom | null>(null);
 	/* Bumped by every zoom request, so re-centering runs even when the scale
@@ -584,11 +585,6 @@ export function VisualReviewPanel({
 		);
 	};
 
-	const mostPageFindings = Math.max(
-		0,
-		...report.pages.map((page) => issuesByPage[page.id]?.length ?? 0)
-	);
-
 	return (
 		<div className="vrev">
 			<aside className="vrev__pages">
@@ -616,7 +612,14 @@ export function VisualReviewPanel({
 										{label}
 									</span>
 									{/* Scaled to the page with most findings, so rows compare. */}
-									<SeverityBar counts={counts} scale={mostPageFindings} size="sm" />
+									<span className="vrev__page-badges">
+										{counts.map(({ severity, count }) => (
+											<span key={severity} className="vrev__page-badge">
+												<span className={getSeverityDotClass(severity)} aria-hidden="true" />
+												<span className="num">{count}</span> {severity}
+											</span>
+										))}
+									</span>
 									<span className="vrev__page-meta">
 										<span className="num">{findings}</span>
 										{worst && (
@@ -774,6 +777,8 @@ export function VisualReviewPanel({
 												aria-label={`${isNew ? 'NEW. ' : ''}Open finding: ${issueMap[el.issueId]?.title ?? el.issueId}`}
 												style={{ cursor: 'pointer' }}
 												onClick={() => handleMarkerClick(el.issueId)}
+												onMouseEnter={() => setHoveredIssueId(el.issueId)}
+												onMouseLeave={() => setHoveredIssueId(null)}
 												onFocus={() => {
 													setActiveIssueId(el.issueId);
 													/* Tab already walks the markers; without this the
@@ -792,18 +797,38 @@ export function VisualReviewPanel({
 									);
 								})}
 							</svg>
-							{activeIssueId ? <div className="vrev__dim" aria-hidden="true" /> : null}
+							{activeIssueId || hoveredIssueId ? (
+								<div className="vrev__dim" aria-hidden="true" />
+							) : null}
 							{/* HTML, so pins keep their size at every zoom. The rects stay
 						    the targets; pins only label them with the list number. */}
 							<div className="vrev__pins" aria-hidden="true">
 								{(() => {
 									const seen = new Map<string, number>();
+									const clusterSizes = new Map<string, number>();
+									for (const el of walkOrder) {
+										const k = `${Math.round(el.xPercent * 2)}:${Math.round(el.yPercent * 2)}`;
+										clusterSizes.set(k, (clusterSizes.get(k) ?? 0) + 1);
+									}
 									return walkOrder.map((el) => {
 										const pin = pinByIssue.get(el.issueId);
 										if (!pin) return null;
 										const key = `${Math.round(el.xPercent * 2)}:${Math.round(el.yPercent * 2)}`;
 										const dup = seen.get(key) ?? 0;
 										seen.set(key, dup + 1);
+										const clusterSize = clusterSizes.get(key) ?? 1;
+										if (clusterSize >= 3 && dup > 0) return null;
+										if (clusterSize >= 3) {
+											return (
+												<span
+													key={`${el.issueId}-${el.nodeIndex}`}
+													className={`vrev__pin vrev__pin--cluster sev-${pin.severity}`}
+													style={{ left: `${el.xPercent}%`, top: `max(1.75rem, ${el.yPercent}%)` }}
+												>
+													{clusterSize} findings
+												</span>
+											);
+										}
 										return (
 											<span
 												key={`${el.issueId}-${el.nodeIndex}`}
@@ -836,27 +861,59 @@ export function VisualReviewPanel({
 					</p>
 				) : (
 					<div className="vrev__issues-body">
+						<div className="vrev__issues-toggle" role="tablist" aria-label="Finding location">
+							<button
+								type="button"
+								role="tab"
+								aria-selected={rightTab === 'pinned'}
+								className={`vrev__issues-tab${rightTab === 'pinned' ? ' vrev__issues-tab--active' : ''}`}
+								onClick={() => setRightTab('pinned')}
+							>
+								Pinned on page ({locatedGroups.reduce((s, g) => s + g.issues.length, 0)})
+							</button>
+							<button
+								type="button"
+								role="tab"
+								aria-selected={rightTab === 'pagelevel'}
+								className={`vrev__issues-tab${rightTab === 'pagelevel' ? ' vrev__issues-tab--active' : ''}`}
+								onClick={() => setRightTab('pagelevel')}
+							>
+								Page-level ({pageLevelGroups.reduce((s, g) => s + g.issues.length, 0)})
+							</button>
+						</div>
 						{[
-							{ label: 'On the screenshot', groups: locatedGroups, numbered: true },
-							{ label: 'Page-level', groups: pageLevelGroups, numbered: false }
-						].map(
-							({ label, groups, numbered }) =>
-								groups.length > 0 && (
-									<section key={label} className="vrev__issues-part">
-										<h3 className="vrev__issues-sub">
-											{label}{' '}
-											<span className="num">
-												{groups.reduce((sum, group) => sum + group.issues.length, 0)}
-											</span>
-										</h3>
-										<ul className="vrev__issues-list">
-											{groups.map((group, index) =>
-												renderGroup(group, numbered ? index + 1 : null)
-											)}
-										</ul>
-									</section>
-								)
-						)}
+							{
+								key: 'pinned' as const,
+								label: 'On the screenshot',
+								groups: locatedGroups,
+								numbered: true
+							},
+							{
+								key: 'pagelevel' as const,
+								label: 'Page-level',
+								groups: pageLevelGroups,
+								numbered: false
+							}
+						]
+							.filter(({ key }) => key === rightTab)
+							.map(
+								({ label, groups, numbered }) =>
+									groups.length > 0 && (
+										<section key={label} className="vrev__issues-part">
+											<h3 className="vrev__issues-sub">
+												{label}{' '}
+												<span className="num">
+													{groups.reduce((sum, group) => sum + group.issues.length, 0)}
+												</span>
+											</h3>
+											<ul className="vrev__issues-list">
+												{groups.map((group, index) =>
+													renderGroup(group, numbered ? index + 1 : null)
+												)}
+											</ul>
+										</section>
+									)
+							)}
 					</div>
 				)}
 			</aside>
