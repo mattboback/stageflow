@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { createRoutesStub } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -194,5 +194,43 @@ describe('design fixes', () => {
 		expect(foot?.querySelector('button')?.textContent ?? foot?.textContent).toBeTruthy();
 		expect(screen.getByRole('button', { name: 'Save note' })).toBeTruthy();
 		expect(foot?.contains(screen.getByRole('button', { name: 'Save note' }))).toBe(true);
+	});
+
+	it('shares a mobile content region with notes and focuses the close action', () => {
+		const issue = finding();
+		const { container } = render(
+			<IssueDetailModal
+				issue={issue}
+				page={null}
+				issues={[issue]}
+				screenshots={[]}
+				onClose={vi.fn()}
+			/>
+		);
+		const content = container.querySelector('.imodal__content');
+		expect(content?.contains(container.querySelector('.imodal__body'))).toBe(true);
+		expect(content?.contains(screen.getByRole('button', { name: 'Save note' }))).toBe(true);
+		expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close modal' }));
+	});
+
+	it('resets both responsive scroll regions when the finding or tab changes', () => {
+		const issue = finding();
+		const props = { page: null, issues: [issue], screenshots: [], onClose: vi.fn() };
+		const { container, rerender } = render(<IssueDetailModal {...props} issue={issue} />);
+		const regions = container.querySelectorAll<HTMLElement>('.imodal__content, .imodal__body');
+		regions.forEach((region) => {
+			region.scrollTop = 300;
+		});
+		fireEvent.click(screen.getByRole('tab', { name: 'Evidence' }));
+		regions.forEach((region) => {
+			expect(region.scrollTop).toBe(0);
+		});
+		regions.forEach((region) => {
+			region.scrollTop = 300;
+		});
+		rerender(<IssueDetailModal {...props} issue={finding({ id: 'next-finding' })} />);
+		regions.forEach((region) => {
+			expect(region.scrollTop).toBe(0);
+		});
 	});
 });

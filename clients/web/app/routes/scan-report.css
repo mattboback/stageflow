@@ -1359,6 +1359,11 @@ button.irow {
 	flex: 1;
 	min-height: 0;
 }
+/* Keep the desktop evidence pane and notes footer in the existing flex layout.
+   On phones this becomes one scroller, so notes cannot squeeze evidence out. */
+.imodal__content {
+	display: contents;
+}
 .imodal__foot {
 	flex-shrink: 0;
 	border-top: 1px solid var(--line);
@@ -2949,6 +2954,23 @@ button.irow {
 	.imodal__body {
 		padding: var(--sp-4);
 	}
+	.imodal__content {
+		display: block;
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+	}
+	.imodal__head {
+		flex-shrink: 0;
+	}
+	.imodal__body {
+		overflow: visible;
+	}
+	.imodal__foot {
+		padding: var(--sp-4);
+		padding-bottom: calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+	}
 	.imodal__tabs {
 		padding: 0 var(--sp-4);
 		overflow-x: auto;
@@ -2977,6 +2999,34 @@ button.irow {
    URL and everything after it run full width underneath, where a long URL
    has room. Without a dial the stacked layout above stays. */
 @media (max-width: 520px) {
+	/* The mode switch plus two 44px zoom buttons do not fit on one line on a
+	   phone. Wrap inside the toolbar instead of clipping its last controls. */
+	.vrev__zoom {
+		flex: 1 1 100%;
+		min-width: 0;
+		flex-wrap: wrap;
+		gap: var(--sp-2);
+	}
+	.vrev__zoom .seg {
+		flex: 1 1 100%;
+		min-width: 0;
+	}
+	.vrev__zoom .seg button {
+		flex: 1;
+		min-height: 44px;
+	}
+	.vrev__stage-next,
+	.vrev__stage-open {
+		min-height: 44px;
+	}
+	.vrev__stage-open {
+		min-width: 44px;
+		justify-content: center;
+	}
+	/* Rule IDs and WCAG tags need a readable line, not three tiny columns. */
+	.imodal__meta-bar {
+		grid-template-columns: minmax(0, 1fr);
+	}
 	.rhead__score:has(.rhead__dial) {
 		display: grid;
 		grid-template-columns: auto minmax(0, 1fr);

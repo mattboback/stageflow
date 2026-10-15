@@ -146,6 +146,16 @@ export function IssueDetailModal({
 	useScrollLock();
 
 	useEffect(() => {
+		// Both layouts start a newly selected finding/tab at its content, even
+		// when the previous phone pane was scrolled down to the review notes.
+		modalRef.current
+			?.querySelectorAll<HTMLElement>('.imodal__content, .imodal__body')
+			.forEach((region) => {
+				region.scrollTop = 0;
+			});
+	}, [issue.id, activeTab]);
+
+	useEffect(() => {
 		const previousActiveElement = document.activeElement as HTMLElement | null;
 
 		if (modalRef.current) {
@@ -281,7 +291,7 @@ export function IssueDetailModal({
 							)}
 							<button
 								type="button"
-								className="btn btn--icon"
+								className="btn btn--icon imodal__close"
 								onClick={onClose}
 								aria-label="Close modal"
 							>
@@ -335,181 +345,184 @@ export function IssueDetailModal({
 					))}
 				</nav>
 
-				<div className="imodal__body">
-					{activeTab === 'review' && (
-						<div
-							className="imodal__pane"
-							id="issue-panel-review"
-							role="tabpanel"
-							aria-labelledby="issue-tab-review"
-						>
-							<ManualReviewTab issue={issue} jobId={jobId} />
-						</div>
-					)}
-					{activeTab === 'fix' && (
-						<div
-							className="imodal__pane"
-							id="issue-panel-fix"
-							role="tabpanel"
-							aria-labelledby="issue-tab-fix"
-						>
-							<dl className="imodal__meta-bar" aria-label="Rule metadata">
-								<div className="imodal__meta-cell">
-									<dt>Rule &amp; scanner</dt>
-									<dd>
-										{issue.scanner} · <span className="mono">{issue.ruleId}</span>
-									</dd>
-								</div>
-								<div className="imodal__meta-cell">
-									<dt>WCAG standard</dt>
-									<dd>
-										{issue.wcagTags && issue.wcagTags.length > 0 ? (
-											issue.wcagTags.join(' · ')
-										) : (
-											<span className="imodal__meta-muted">Not WCAG-mapped</span>
-										)}
-										{issue.helpUrl && (
-											<>
-												{' '}
-												<a href={issue.helpUrl} target="_blank" rel="noopener noreferrer">
-													Docs ↗
-												</a>
-											</>
-										)}
-									</dd>
-								</div>
-								<div className="imodal__meta-cell">
-									<dt>Affected users</dt>
-									<dd>
-										{issue.userImpact?.affectedGroups && issue.userImpact.affectedGroups.length > 0
-											? issue.userImpact.affectedGroups.map(userGroupLabel).join(', ')
-											: 'All users'}
-									</dd>
-								</div>
-							</dl>
-							<section className="imodal__fix-callout">
-								<h3 className="imodal__pane-h">How to fix</h3>
-								{contextualFix ? (
-									<GuidanceText text={contextualFix} className="imodal__fix" />
-								) : (
-									<p className="imodal__fix imodal__fix--muted">
-										No fix guidance available for this rule yet.
-									</p>
-								)}
-							</section>
-							{issue.userImpact &&
-								(issue.userImpact.statement ||
-									issue.userImpact.affectedGroups?.length ||
-									issue.userImpact.userStory) && (
-									<section>
-										<h3 className="imodal__pane-h">Who this affects</h3>
-										{issue.userImpact.statement && (
-											<p className="imodal__desc">
-												<ScannerText text={issue.userImpact.statement} />
-											</p>
-										)}
-										{issue.userImpact.affectedGroups &&
-											issue.userImpact.affectedGroups.length > 0 && (
-												<ul className="imodal__groups" aria-label="Affected groups">
-													{issue.userImpact.affectedGroups.map((group) => (
-														<li key={group}>
-															<Pill led={false}>{userGroupLabel(group)}</Pill>
-														</li>
-													))}
-												</ul>
-											)}
-										{issue.userImpact.userStory && (
-											<blockquote className="imodal__story">
-												<ScannerText text={issue.userImpact.userStory} />
-											</blockquote>
-										)}
-									</section>
-								)}
-							<section>
-								<h3 className="imodal__pane-h">About this rule</h3>
-								<p className="imodal__desc">
-									<ScannerText text={issue.description} />
-								</p>
-								{issue.wcagTags && issue.wcagTags.length > 0 && (
-									<div className="imodal__tags">
-										{issue.wcagTags.map((tag) => (
-											<span key={tag} className="imodal__tag">
-												{tag}
-											</span>
-										))}
-									</div>
-								)}
-							</section>
-							{issue.helpUrl && (
-								<a
-									className="imodal__help"
-									href={issue.helpUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-								>
-									Learn more about this rule ↗
-								</a>
-							)}
-						</div>
-					)}
-					{activeTab === 'evidence' && (
-						<div
-							className="imodal__pane"
-							id="issue-panel-evidence"
-							role="tabpanel"
-							aria-labelledby="issue-tab-evidence"
-						>
-							<IssueEvidenceSection issue={issue} page={page} pageOverviewUrl={pageOverviewUrl} />
-						</div>
-					)}
-					{activeTab === 'verify' && (
-						<div
-							className="imodal__pane"
-							id="issue-panel-verify"
-							role="tabpanel"
-							aria-labelledby="issue-tab-verify"
-						>
-							<VerifyContrastTab
-								issue={issue}
-								page={page}
-								pageOverviewUrl={pageOverviewUrl}
-								jobId={jobId}
-							/>
-						</div>
-					)}
-					{activeTab === 'occurrences' && (
-						<div
-							className="imodal__pane"
-							id="issue-panel-occurrences"
-							role="tabpanel"
-							aria-labelledby="issue-tab-occurrences"
-						>
-							<h3 className="imodal__pane-h">
-								{issueKind !== 'element'
-									? 'Reported locations'
-									: occurrenceCount === 1
-										? 'Affected element'
-										: `Affected elements (${occurrenceCount})`}
-							</h3>
-							<TruncatedEvidence issue={issue} />
-							<div className="imodal__occs">
-								{(issue.occurrences ?? []).map((occ, idx) => (
-									<IssueOccurrenceCard
-										key={idx}
-										occurrence={occ}
-										index={idx}
-										page={page}
-										issueId={issue.id}
-										pageOverviewUrl={pageOverviewUrl}
-									/>
-								))}
+				<div className="imodal__content">
+					<div className="imodal__body">
+						{activeTab === 'review' && (
+							<div
+								className="imodal__pane"
+								id="issue-panel-review"
+								role="tabpanel"
+								aria-labelledby="issue-tab-review"
+							>
+								<ManualReviewTab issue={issue} jobId={jobId} />
 							</div>
-						</div>
-					)}
+						)}
+						{activeTab === 'fix' && (
+							<div
+								className="imodal__pane"
+								id="issue-panel-fix"
+								role="tabpanel"
+								aria-labelledby="issue-tab-fix"
+							>
+								<dl className="imodal__meta-bar" aria-label="Rule metadata">
+									<div className="imodal__meta-cell">
+										<dt>Rule &amp; scanner</dt>
+										<dd>
+											{issue.scanner} · <span className="mono">{issue.ruleId}</span>
+										</dd>
+									</div>
+									<div className="imodal__meta-cell">
+										<dt>WCAG standard</dt>
+										<dd>
+											{issue.wcagTags && issue.wcagTags.length > 0 ? (
+												issue.wcagTags.join(' · ')
+											) : (
+												<span className="imodal__meta-muted">Not WCAG-mapped</span>
+											)}
+											{issue.helpUrl && (
+												<>
+													{' '}
+													<a href={issue.helpUrl} target="_blank" rel="noopener noreferrer">
+														Docs ↗
+													</a>
+												</>
+											)}
+										</dd>
+									</div>
+									<div className="imodal__meta-cell">
+										<dt>Affected users</dt>
+										<dd>
+											{issue.userImpact?.affectedGroups &&
+											issue.userImpact.affectedGroups.length > 0
+												? issue.userImpact.affectedGroups.map(userGroupLabel).join(', ')
+												: 'All users'}
+										</dd>
+									</div>
+								</dl>
+								<section className="imodal__fix-callout">
+									<h3 className="imodal__pane-h">How to fix</h3>
+									{contextualFix ? (
+										<GuidanceText text={contextualFix} className="imodal__fix" />
+									) : (
+										<p className="imodal__fix imodal__fix--muted">
+											No fix guidance available for this rule yet.
+										</p>
+									)}
+								</section>
+								{issue.userImpact &&
+									(issue.userImpact.statement ||
+										issue.userImpact.affectedGroups?.length ||
+										issue.userImpact.userStory) && (
+										<section>
+											<h3 className="imodal__pane-h">Who this affects</h3>
+											{issue.userImpact.statement && (
+												<p className="imodal__desc">
+													<ScannerText text={issue.userImpact.statement} />
+												</p>
+											)}
+											{issue.userImpact.affectedGroups &&
+												issue.userImpact.affectedGroups.length > 0 && (
+													<ul className="imodal__groups" aria-label="Affected groups">
+														{issue.userImpact.affectedGroups.map((group) => (
+															<li key={group}>
+																<Pill led={false}>{userGroupLabel(group)}</Pill>
+															</li>
+														))}
+													</ul>
+												)}
+											{issue.userImpact.userStory && (
+												<blockquote className="imodal__story">
+													<ScannerText text={issue.userImpact.userStory} />
+												</blockquote>
+											)}
+										</section>
+									)}
+								<section>
+									<h3 className="imodal__pane-h">About this rule</h3>
+									<p className="imodal__desc">
+										<ScannerText text={issue.description} />
+									</p>
+									{issue.wcagTags && issue.wcagTags.length > 0 && (
+										<div className="imodal__tags">
+											{issue.wcagTags.map((tag) => (
+												<span key={tag} className="imodal__tag">
+													{tag}
+												</span>
+											))}
+										</div>
+									)}
+								</section>
+								{issue.helpUrl && (
+									<a
+										className="imodal__help"
+										href={issue.helpUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+									>
+										Learn more about this rule ↗
+									</a>
+								)}
+							</div>
+						)}
+						{activeTab === 'evidence' && (
+							<div
+								className="imodal__pane"
+								id="issue-panel-evidence"
+								role="tabpanel"
+								aria-labelledby="issue-tab-evidence"
+							>
+								<IssueEvidenceSection issue={issue} page={page} pageOverviewUrl={pageOverviewUrl} />
+							</div>
+						)}
+						{activeTab === 'verify' && (
+							<div
+								className="imodal__pane"
+								id="issue-panel-verify"
+								role="tabpanel"
+								aria-labelledby="issue-tab-verify"
+							>
+								<VerifyContrastTab
+									issue={issue}
+									page={page}
+									pageOverviewUrl={pageOverviewUrl}
+									jobId={jobId}
+								/>
+							</div>
+						)}
+						{activeTab === 'occurrences' && (
+							<div
+								className="imodal__pane"
+								id="issue-panel-occurrences"
+								role="tabpanel"
+								aria-labelledby="issue-tab-occurrences"
+							>
+								<h3 className="imodal__pane-h">
+									{issueKind !== 'element'
+										? 'Reported locations'
+										: occurrenceCount === 1
+											? 'Affected element'
+											: `Affected elements (${occurrenceCount})`}
+								</h3>
+								<TruncatedEvidence issue={issue} />
+								<div className="imodal__occs">
+									{(issue.occurrences ?? []).map((occ, idx) => (
+										<IssueOccurrenceCard
+											key={idx}
+											occurrence={occ}
+											index={idx}
+											page={page}
+											issueId={issue.id}
+											pageOverviewUrl={pageOverviewUrl}
+										/>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+					<footer className="imodal__foot">
+						<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
+					</footer>
 				</div>
-				<footer className="imodal__foot">
-					<ReviewNotesPanel key={issue.id} jobId={jobId} issueId={issue.id} />
-				</footer>
 			</div>
 		</div>
 	);

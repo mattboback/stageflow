@@ -695,6 +695,11 @@ pre {
 }
 
 @media (max-width: 480px) {
+	/* Scan/report chrome also carries a back button. Keep all four controls
+	   inside the viewport in the 381–480px band, not just on the tiniest phones. */
+	.site-header--app .brand__name {
+		display: none;
+	}
 	.nav a.navlink--back {
 		min-width: 44px;
 		padding-inline: 0;
