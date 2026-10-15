@@ -8,24 +8,24 @@ export const DEMO_CROP: {
 	pageHeight: number;
 	element: PageOverviewElement;
 } | null = {
-	title: 'Links must have discernible text',
-	issueId: '0764c92e71494d27',
-	screenshot: '/demo/page-v2-db5b16407156eab2.webp',
+	title: 'Select element must have an accessible name',
+	issueId: '694f89df99f744f2',
+	screenshot: '/demo/page-v2-9ac7a7b2ed8ccf33.webp',
 	pageWidth: 2560,
-	pageHeight: 1440,
+	pageHeight: 1774,
 	element: {
-		height: 42,
-		heightPercent: 2.92,
-		issueId: '0764c92e71494d27',
+		height: 82,
+		heightPercent: 4.62,
+		issueId: '694f89df99f744f2',
 		nodeIndex: 0,
-		ruleId: 'link-name',
-		selector: '#careers-link',
-		severity: 'serious',
-		width: 48,
-		widthPercent: 1.88,
-		x: 1103,
-		xPercent: 43.1,
-		y: 998,
-		yPercent: 69.32
+		ruleId: 'select-name',
+		selector: '#billing-cycle',
+		severity: 'critical',
+		width: 298,
+		widthPercent: 11.64,
+		x: 368,
+		xPercent: 14.37,
+		y: 661,
+		yPercent: 37.28
 	}
 };

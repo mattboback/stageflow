@@ -2855,9 +2855,13 @@ button.irow {
 		gap: var(--sp-4);
 	}
 
+	/* Let the list and its sort controls shrink inside narrow phone viewports. */
 	/* Issues tab: filters become a bottom sheet behind one button */
 	.iview {
-		grid-template-columns: 1fr;
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.ilist__sort {
+		flex-wrap: wrap;
 	}
 	.iview__toolbar {
 		display: flex;

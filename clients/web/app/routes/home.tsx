@@ -61,16 +61,14 @@ const BASELINE_TRACK = [
 	}
 ] as const;
 
-// The report's element crop centres a small window on the finding. At hero
-// width that upscales a 48px icon into a blur, so show a card-sized window of
-// the page instead, ending just past the element: in a left-to-right page the
-// text that explains an element sits before it and above it.
+// Keep the billing control and the text above it readable together. A compact
+// context window avoids both a tiny control and an enlarged icon-only crop.
 function heroCrop(pageWidth: number, pageHeight: number, element: Rect): ViewBox {
-	const width = Math.min(pageWidth, 1000);
+	const width = Math.min(pageWidth, 760);
 	const height = Math.min(pageHeight, 270);
 	return {
-		x: clamp(element.x + element.width + 160 - width, 0, pageWidth - width),
-		y: clamp(element.y + element.height / 2 - height * 0.66, 0, pageHeight - height),
+		x: clamp(element.x - 64, 0, pageWidth - width),
+		y: clamp(element.y - 120, 0, pageHeight - height),
 		width,
 		height
 	};

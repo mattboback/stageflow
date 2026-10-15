@@ -78,10 +78,20 @@ test.describe('the demo report', () => {
 		await page.goto('/');
 		const crop = page.locator('.preview__evidence');
 		await expect(crop.getByText('NEW', { exact: true })).toBeVisible();
-		await expect(crop.getByRole('img', { name: /Evidence:/ })).toBeVisible();
+		await expect(
+			crop.getByRole('img', { name: 'Evidence: Select element must have an accessible name' })
+		).toBeVisible();
+		await expect(crop).not.toContainText('Links must have discernible text');
 		await crop.click();
 		await expect(page).toHaveURL(/\/demo\?section=issues&issue=/);
-		await expect(page.getByRole('dialog', { name: 'Issue details' })).toBeVisible();
+		const dialog = page.getByRole('dialog', { name: 'Issue details' });
+		await expect(dialog).toBeVisible();
+		await expect(
+			dialog.getByRole('heading', { name: 'Select element must have an accessible name' })
+		).toBeVisible();
+		await dialog.getByRole('tab', { name: 'Evidence' }).click();
+		await expect(dialog).toContainText('#billing-cycle');
+		await expect(dialog).not.toContainText('#careers-link');
 	});
 
 	test('serves the fixture it claims to render', async ({ page }) => {

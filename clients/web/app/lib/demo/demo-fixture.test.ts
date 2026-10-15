@@ -220,6 +220,11 @@ describe('the committed /demo fixture', () => {
 		const crop = DEMO_CROP;
 		expect(crop).not.toBeNull();
 		if (!crop) throw new Error('The sample deployment needs a captured new finding');
+		// The featured example must stay a recognizable control when regenerated.
+		// The old first-element selection brought the tiny careers arrow back.
+		expect(crop.element.ruleId).toBe('select-name');
+		expect(crop.element.selector).toBe('#billing-cycle');
+		expect(crop.title).toBe('Select element must have an accessible name');
 		const displayed = buildOccurrenceModeReport(splitManualChecks(report).report);
 		const issue = displayed.issues.find((value) => value.id === crop.issueId);
 		expect(issue).toBeTruthy();

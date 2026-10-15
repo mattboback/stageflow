@@ -14,8 +14,15 @@ const screenshots = JSON.parse(readFileSync(`${root}/clients/web/public/demo/scr
 const newElements = new Set(diff.new.flatMap(i => i.occurrences?.map(o => o.elementId) ?? []));
 const expanded = buildOccurrenceModeReport(report);
 const newIssueIds = new Set(expanded.issues.filter(i => i.occurrences?.some(o => newElements.has(o.elementId))).map(i => i.id));
-const cropPage = expanded.pages.find(p => p.pageOverview?.elements.some(e => newIssueIds.has(e.issueId)));
-const cropElement = cropPage?.pageOverview?.elements.find(e => newIssueIds.has(e.issueId));
+// Feature a recognizable form control, not whichever tiny icon happens to be
+// first in page order. Keep the screenshot and finding tied to real scan data.
+const isFeaturedElement = (element: { issueId: string; ruleId: string; selector?: string }) =>
+  newIssueIds.has(element.issueId) && element.ruleId === 'select-name' && element.selector === '#billing-cycle';
+const cropPage = expanded.pages.find(p => p.pageOverview?.elements.some(isFeaturedElement));
+const cropElement = cropPage?.pageOverview?.elements.find(isFeaturedElement);
+if (!cropPage || !cropElement) {
+  throw new Error('The demo must capture the new #billing-cycle select-name finding before generating the homepage preview.');
+}
 const crop = cropPage?.pageOverview && cropElement ? {
   title: expanded.issues.find(i => i.id === cropElement.issueId)?.title ?? cropElement.ruleId,
   issueId: cropElement.issueId,
