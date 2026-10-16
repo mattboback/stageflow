@@ -81,10 +81,11 @@ export class BrowserManager {
 	private readonly runtimeValidationRoutes = new WeakSet<Page>();
 	private readonly blockedNavigationErrors = new WeakMap<Page, Error>();
 	private readonly routeErrors = new WeakMap<Page, Error>();
+	private readonly contextRouteErrors = new WeakMap<BrowserContext, Error>();
 	private readonly closingPages = new WeakSet<Page>();
 
 	assertPageHealthy(page: Page): void {
-		const error = this.routeErrors.get(page);
+		const error = this.routeErrors.get(page) ?? this.contextRouteErrors.get(page.context());
 		if (error) {
 			throw error;
 		}
@@ -141,7 +142,11 @@ export class BrowserManager {
 
 	async createContext(
 		viewport?: { width: number; height: number },
-		options?: { storageStatePath?: string }
+		options?: {
+			storageStatePath?: string;
+			targetValidationPolicy?: TargetValidationPolicy;
+			redact?: (value: string) => string;
+		}
 	): Promise<BrowserContext> {
 		const browser = await this.launch();
 
@@ -154,28 +159,33 @@ export class BrowserManager {
 			});
 		}
 
+		const targetValidationPolicy = options?.targetValidationPolicy ?? { allowedOrigins: [] };
+		const redact = options?.redact ?? ((value: string) => value);
 		const context = await browser.newContext({
 			viewport: vp,
 			deviceScaleFactor: this.config.deviceScaleFactor,
+			// Service-worker interception can bypass Playwright request routing.
+			serviceWorkers: 'block',
 			// We inject small amounts of CSS/JS for scanning + screenshots; some sites have strict CSP that would block it.
 			bypassCSP: this.config.bypassCSP ?? false,
 			...(storageStatePath !== undefined ? { storageState: storageStatePath } : {})
 		});
-		// Install before any navigation. Adding/removing context routes during
-		// page teardown can race existing intercepted requests. This guard stays
-		// underneath page validation routes until the context itself is closed.
+		// Install before any page or auth navigation, including a popup's first
+		// request. Keep the guard installed while page routes drain at teardown.
 		await context.route('**/*', async (route) => {
 			const request = route.request();
 			if (request.serviceWorker()) {
-				await route.fallback();
+				await this.completeRoute(undefined, route, 'abort', context, redact);
 				return;
 			}
-			const page = request.frame().page();
-			if (this.closingPages.has(page)) {
-				await this.completeRoute(page, route, 'abort');
-			} else {
-				await route.fallback();
+			let page: Page | undefined;
+			try {
+				page = request.frame().page();
+			} catch {
+				// Early navigation requests may not have an associated frame yet.
+				// They must still pass the context policy, not fall through unvalidated.
 			}
+			await this.validateBrowserRoute(page, route, targetValidationPolicy, redact, context);
 		});
 		return context;
 	}
@@ -244,43 +254,60 @@ export class BrowserManager {
 		this.runtimeValidationRoutes.add(page);
 
 		await page.route('**/*', async (route: Route) => {
-			const request = route.request();
-			const requestURL = request.url();
-			const isNavigation = request.resourceType() === 'document' && request.isNavigationRequest();
-
-			if (this.closingPages.has(page)) {
-				await this.completeRoute(page, route, 'abort');
-				return;
-			}
-
-			if (isHTTPURL(requestURL)) {
-				try {
-					await validateTargetURLForPolicy(requestURL, targetValidationPolicy);
-				} catch (err) {
-					const error = err instanceof Error ? err : new Error(String(err));
-					if (isNavigation) {
-						this.blockedNavigationErrors.set(page, error);
-					}
-
-					this.logger.warn('Blocked browser request', {
-						resourceType: request.resourceType(),
-						url: redact(requestURL),
-						error: redact(error.message)
-					});
-
-					await this.completeRoute(page, route, 'abort');
-					return;
-				}
-			}
-
-			await this.completeRoute(page, route, this.closingPages.has(page) ? 'abort' : 'continue');
+			await this.validateBrowserRoute(page, route, targetValidationPolicy, redact);
 		});
 	}
 
-	private async completeRoute(
-		page: Page,
+	private async validateBrowserRoute(
+		page: Page | undefined,
 		route: Route,
-		action: 'abort' | 'continue'
+		targetValidationPolicy: TargetValidationPolicy,
+		redact: (value: string) => string,
+		context?: BrowserContext
+	): Promise<void> {
+		if (page && this.closingPages.has(page)) {
+			await this.completeRoute(page, route, 'abort', context, redact);
+			return;
+		}
+
+		const request = route.request();
+		const requestURL = request.url();
+		const isNavigation = request.resourceType() === 'document' && request.isNavigationRequest();
+		if (isHTTPURL(requestURL)) {
+			try {
+				await validateTargetURLForPolicy(requestURL, targetValidationPolicy);
+			} catch (err) {
+				const error = err instanceof Error ? err : new Error(String(err));
+				if (page && isNavigation) {
+					this.blockedNavigationErrors.set(page, error);
+				}
+
+				this.logger.warn('Blocked browser request', {
+					resourceType: request.resourceType(),
+					url: redact(requestURL),
+					error: redact(error.message)
+				});
+
+				await this.completeRoute(page, route, 'abort', context, redact);
+				return;
+			}
+		}
+
+		await this.completeRoute(
+			page,
+			route,
+			page && this.closingPages.has(page) ? 'abort' : 'continue',
+			context,
+			redact
+		);
+	}
+
+	private async completeRoute(
+		page: Page | undefined,
+		route: Route,
+		action: 'abort' | 'continue',
+		context?: BrowserContext,
+		redact: (value: string) => string = (page && this.pageRedactors.get(page)) ?? ((value) => value)
 	): Promise<void> {
 		try {
 			if (action === 'abort') {
@@ -290,12 +317,12 @@ export class BrowserManager {
 			}
 		} catch (err) {
 			const error = err instanceof Error ? err : new Error(String(err));
-			const redact = this.pageRedactors.get(page) ?? ((value: string) => value);
 			const endedWhileClosing =
+				page &&
 				this.closingPages.has(page) &&
 				/^route\.(?:abort|continue): Route is already handled!$/.test(error.message);
 			if (
-				page.isClosed() ||
+				page?.isClosed() ||
 				route.request().failure()?.errorText === 'net::ERR_ABORTED' ||
 				endedWhileClosing
 			) {
@@ -306,8 +333,11 @@ export class BrowserManager {
 			}
 			// Route callbacks execute outside the page scan promise. Retain errors
 			// for its health checks rather than rejecting an unobserved callback.
-			if (!this.routeErrors.has(page)) {
+			if (page && !this.routeErrors.has(page)) {
 				this.routeErrors.set(page, error);
+			}
+			if (context && !this.contextRouteErrors.has(context)) {
+				this.contextRouteErrors.set(context, error);
 			}
 			this.logger.error('Browser request interception failed', { error: redact(error.message) });
 		}

@@ -48,6 +48,7 @@ describe('BrowserManager', () => {
 
 		// Setup mock browser
 		mockPage = {
+			context: () => mockContext,
 			goto: vi.fn().mockResolvedValue(undefined),
 			route: vi.fn().mockResolvedValue(undefined),
 			isClosed: vi.fn().mockReturnValue(false),
@@ -167,6 +168,7 @@ describe('BrowserManager', () => {
 			expect(mockBrowser.newContext).toHaveBeenCalledWith({
 				viewport: { width: 1280, height: 720 },
 				deviceScaleFactor: 2,
+				serviceWorkers: 'block',
 				bypassCSP: false
 			});
 		});
@@ -179,6 +181,7 @@ describe('BrowserManager', () => {
 			expect(mockBrowser.newContext).toHaveBeenCalledWith({
 				viewport: customViewport,
 				deviceScaleFactor: 2,
+				serviceWorkers: 'block',
 				bypassCSP: false
 			});
 		});
@@ -191,6 +194,7 @@ describe('BrowserManager', () => {
 			expect(mockBrowser.newContext).toHaveBeenCalledWith({
 				viewport: { width: 1280, height: 720 },
 				deviceScaleFactor: 2,
+				serviceWorkers: 'block',
 				bypassCSP: true
 			});
 		});

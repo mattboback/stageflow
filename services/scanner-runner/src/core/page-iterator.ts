@@ -142,6 +142,8 @@ export class PageIterator {
 		}
 
 		const context = await this.browserManager.createContext(provenance.default_viewport, {
+			targetValidationPolicy,
+			redact,
 			...(storageStatePath !== undefined ? { storageStatePath } : {})
 		});
 
