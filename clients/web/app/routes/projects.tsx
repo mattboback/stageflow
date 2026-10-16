@@ -1,5 +1,5 @@
 import { MAX_AUDIT_BYTES } from '../lib/portable-audit';
-import { useEffect, useState, type SyntheticEvent } from 'react';
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import { Link, useNavigate, type MetaFunction } from 'react-router';
 import { ArrowRight, FolderPlus, Gauge, LockKeyhole, Trash2, Upload } from 'lucide-react';
 
@@ -71,6 +71,7 @@ export default function Projects() {
 	const [pendingDelete, setPendingDelete] = useState<LocalProject | null>(null);
 	const [deleting, setDeleting] = useState(false);
 	const [importing, setImporting] = useState(false);
+	const importInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -215,10 +216,18 @@ export default function Projects() {
 							<div className="project-list__head">
 								<h2 id="saved-projects-heading">Your projects</h2>
 								{!loading && <span className="num muted">{items.length}</span>}
-								<label className="btn btn--ghost btn--sm project-import">
-									<Upload size={15} aria-hidden="true" />
-									{importing ? 'Importing…' : 'Import'}
+								<div className="project-import">
+									<button
+										type="button"
+										className="btn btn--ghost btn--sm"
+										disabled={importing}
+										onClick={() => importInputRef.current?.click()}
+									>
+										<Upload size={15} aria-hidden="true" />
+										{importing ? 'Importing…' : 'Import'}
+									</button>
 									<input
+										ref={importInputRef}
 										type="file"
 										accept="application/json,.json"
 										hidden
@@ -229,7 +238,7 @@ export default function Projects() {
 											void onImport(file);
 										}}
 									/>
-								</label>
+								</div>
 							</div>
 							{loading ? (
 								<div className="blankslate blankslate--framed" role="status">
@@ -260,6 +269,9 @@ export default function Projects() {
 										const latestScore = history.at(-1)?.score;
 										const baselineScore = baseline?.score;
 										const band = scoreBandFor(latestScore);
+										const scannerCount = project.configuration.scanners.filter(
+											(scanner) => scanner.enabled
+										).length;
 										const latestSeverities = latest?.report
 											? severityCounts(latest.report.summary.bySeverity)
 											: [];
@@ -280,9 +292,9 @@ export default function Projects() {
 															{project.configuration.urls.length === 1 ? 'URL' : 'URLs'}
 														</span>
 														<span>
-															{project.configuration.scanners.filter((s) => s.enabled).length ||
-																project.configuration.scanners.length}{' '}
-															scanners
+															{project.configuration.scanners.length === 0
+																? 'All available scanners'
+																: `${scannerCount} scanner${scannerCount === 1 ? '' : 's'}`}
 														</span>
 														{latest && (
 															<span>

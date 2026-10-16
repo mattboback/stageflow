@@ -94,6 +94,23 @@ function parseLocalRun(value: unknown): LocalRun | null {
 		return null;
 	}
 	if (typeof candidate.createdAt !== 'string') return null;
+	if (candidate.completedAt !== undefined && typeof candidate.completedAt !== 'string') return null;
+	if (
+		candidate.score !== undefined &&
+		(typeof candidate.score !== 'number' ||
+			!Number.isFinite(candidate.score) ||
+			candidate.score < 0 ||
+			candidate.score > 100)
+	)
+		return null;
+	if (
+		candidate.totalIssues !== undefined &&
+		(typeof candidate.totalIssues !== 'number' ||
+			!Number.isSafeInteger(candidate.totalIssues) ||
+			candidate.totalIssues < 0)
+	)
+		return null;
+	if (candidate.archived !== undefined && typeof candidate.archived !== 'boolean') return null;
 	if (
 		candidate.report !== undefined &&
 		(!isUnifiedReport(candidate.report) || candidate.report.meta?.jobId !== candidate.jobId)
@@ -114,10 +131,22 @@ function parseLocalRun(value: unknown): LocalRun | null {
 		)
 			return null;
 	}
-	const { verification, ...rest } = candidate;
-	const safe = parseVerificationRequest(verification);
-	if (verification !== undefined && (!safe || safe.jobId !== candidate.jobId)) return null;
-	return { ...rest, ...(safe ? { verification: safe } : {}) } as LocalRun;
+	const safe = parseVerificationRequest(candidate.verification);
+	if (candidate.verification !== undefined && (!safe || safe.jobId !== candidate.jobId)) return null;
+	return {
+		jobId: candidate.jobId,
+		projectId: candidate.projectId,
+		configFingerprint: candidate.configFingerprint,
+		status: candidate.status,
+		createdAt: candidate.createdAt,
+		...(candidate.completedAt !== undefined ? { completedAt: candidate.completedAt } : {}),
+		...(candidate.score !== undefined ? { score: candidate.score } : {}),
+		...(candidate.totalIssues !== undefined ? { totalIssues: candidate.totalIssues } : {}),
+		...(candidate.archived !== undefined ? { archived: candidate.archived } : {}),
+		...(candidate.report !== undefined ? { report: candidate.report } : {}),
+		...(candidate.screenshots !== undefined ? { screenshots: candidate.screenshots } : {}),
+		...(safe ? { verification: safe } : {})
+	};
 }
 
 function parseLocalBaseline(
