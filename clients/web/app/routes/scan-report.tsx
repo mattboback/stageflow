@@ -124,6 +124,7 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 			: null;
 	const report = archivedReport ?? liveReport;
 	const viewingArchived = Boolean(archivedReport);
+	const archivedWithoutReport = localRun?.archived === true && !report;
 	useEffect(() => {
 		let cancelled = false;
 		if (!report || !projectContextLoaded) return;
@@ -405,22 +406,52 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 		<>
 			<SiteHeader
 				app={{
-					backTo: `/scan/${id}${localProject ? `?project=${encodeURIComponent(localProject.id)}` : ''}`,
-					backLabel: 'Scan status',
+					backTo:
+						archivedWithoutReport && localProject
+							? `/projects/${encodeURIComponent(localProject.id)}`
+							: `/scan/${id}${localProject ? `?project=${encodeURIComponent(localProject.id)}` : ''}`,
+					backLabel: archivedWithoutReport ? 'Project' : 'Scan status',
 					section: 'Report'
 				}}
 			/>
-			<VerificationResultBanner
-				report={report}
-				jobId={id}
-				status={status}
-				{...(localRun?.verification ? { context: localRun.verification } : {})}
-			/>
+			{!archivedWithoutReport && (
+				<VerificationResultBanner
+					report={report}
+					jobId={id}
+					status={status}
+					{...(localRun?.verification ? { context: localRun.verification } : {})}
+				/>
+			)}
 			<ReviewVerdictProvider
 				store={reviewSession?.store ?? getBrowserReviewStore()}
 				{...(reviewSession ? { context: reviewSession.context } : {})}
 			>
-				{!report ||
+				{archivedWithoutReport && localRun ? (
+					<main id="main" className="report">
+						<div className="wrap wrap--app">
+							<section className="blankslate blankslate--framed rsection-placeholder">
+								<p className="label">Archived run · metadata only</p>
+								<h1>Report unavailable in this archive</h1>
+								<p>
+									No report is stored with this imported run. This archived copy stays offline
+									and cannot show the run's current status.
+								</p>
+								<p>Saved status: {localRun.status}</p>
+								<p>Created: {localRun.createdAt}</p>
+								{localRun.completedAt && <p>Completed: {localRun.completedAt}</p>}
+								<p>Import a newer project export or portable audit that includes the report.</p>
+								{localProject && (
+									<Link
+										className="btn btn--primary"
+										to={`/projects/${encodeURIComponent(localProject.id)}`}
+									>
+										Back to project
+									</Link>
+								)}
+							</section>
+						</div>
+					</main>
+				) : !report ||
 				(projectContextLoaded &&
 					reviewSession?.context.jobId === id &&
 					reviewSession.context.projectId === localProject?.id) ? (
