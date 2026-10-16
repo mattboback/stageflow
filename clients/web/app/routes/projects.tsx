@@ -260,6 +260,9 @@ export default function Projects() {
 										const latestScore = history.at(-1)?.score;
 										const baselineScore = baseline?.score;
 										const band = scoreBandFor(latestScore);
+										const scannerCount = project.configuration.scanners.filter(
+											(scanner) => scanner.enabled
+										).length;
 										const latestSeverities = latest?.report
 											? severityCounts(latest.report.summary.bySeverity)
 											: [];
@@ -280,9 +283,9 @@ export default function Projects() {
 															{project.configuration.urls.length === 1 ? 'URL' : 'URLs'}
 														</span>
 														<span>
-															{project.configuration.scanners.filter((s) => s.enabled).length ||
-																project.configuration.scanners.length}{' '}
-															scanners
+															{project.configuration.scanners.length === 0
+																? 'All available scanners'
+																: `${scannerCount} scanner${scannerCount === 1 ? '' : 's'}`}
 														</span>
 														{latest && (
 															<span>
