@@ -73,7 +73,7 @@
     "@eslint/js": "^10.0.1",
     "@sentry/node": "10.75.0",
     "@types/node": "^24.13.5",
-    "@vitest/coverage-v8": "5.0.1",
+    "@vitest/coverage-v8": "5.0.3",
     "@vitest/eslint-plugin": "^1.6.27",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
@@ -81,7 +81,7 @@
     "prettier": "^3.9.8",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.0",
-    "vitest": "5.0.1"
+    "vitest": "5.0.3"
   },
   "overrides": {
     "@opentelemetry/core": "1.30.1",
@@ -102,7 +102,7 @@
     "rollup": "4.59.0",
     "smol-toml": "1.9.0",
     "source-map-js": "1.2.2",
-    "vite": "7.3.5",
+    "vite": "7.3.7",
     "ws": "8.21.0"
   }
 }
