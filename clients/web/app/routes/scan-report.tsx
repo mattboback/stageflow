@@ -433,8 +433,8 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 								<p className="label">Archived run · metadata only</p>
 								<h1>Report unavailable in this archive</h1>
 								<p>
-									No report is stored with this imported run. This archived copy stays offline
-									and cannot show the run's current status.
+									No report is stored with this imported run. This archived copy stays offline and
+									cannot show the run's current status.
 								</p>
 								<p>Saved status: {localRun.status}</p>
 								<p>Created: {localRun.createdAt}</p>
@@ -452,9 +452,9 @@ function ScanReportSession({ id, requestedProjectId }: ScanReportSessionProps) {
 						</div>
 					</main>
 				) : !report ||
-				(projectContextLoaded &&
-					reviewSession?.context.jobId === id &&
-					reviewSession.context.projectId === localProject?.id) ? (
+				  (projectContextLoaded &&
+						reviewSession?.context.jobId === id &&
+						reviewSession.context.projectId === localProject?.id) ? (
 					<ReportView
 						jobId={id}
 						onVerify={setVerificationIssue}

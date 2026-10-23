@@ -132,7 +132,8 @@ function parseLocalRun(value: unknown): LocalRun | null {
 			return null;
 	}
 	const safe = parseVerificationRequest(candidate.verification);
-	if (candidate.verification !== undefined && (!safe || safe.jobId !== candidate.jobId)) return null;
+	if (candidate.verification !== undefined && (!safe || safe.jobId !== candidate.jobId))
+		return null;
 	return {
 		jobId: candidate.jobId,
 		projectId: candidate.projectId,
