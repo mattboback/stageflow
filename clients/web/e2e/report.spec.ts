@@ -119,7 +119,7 @@ function collectPageErrors(page: Page): string[] {
 	return pageErrors;
 }
 
-test.describe('employer-facing product claims', () => {
+test.describe('public product claims', () => {
 	test('homepage leads with real regressions and a direct URL submission', async ({ page }) => {
 		await page.goto('/');
 		await expect(page.getByRole('heading', { name: /Find what to fix/ })).toBeVisible();
@@ -275,8 +275,9 @@ test('review queue records contrast and generic human decisions', async ({ page 
 	await expect(totals.getByText('Human review')).toHaveCount(0);
 	await expect(totals.getByText(/need a human check/)).toHaveCount(0);
 	await expect(page.getByText('needs review', { exact: true })).toHaveCount(0);
-	// Both findings were marked pass above, and both are attached to the same page,
-	// so the visual review list shows a badge for each.
+	// This fixture has no screenshot pins; its findings live in the page-level tab.
+	await page.getByRole('tab', { name: /^Page-level/ }).click();
+	// Both reviewed findings are attached to the selected page.
 	await expect(page.getByText('reviewed · pass', { exact: true })).toHaveCount(2);
 });
 
@@ -317,7 +318,7 @@ test('headers keep all three theme choices usable at narrow widths', async ({ pa
 		if (isReport)
 			await expect(page.getByRole('heading', { name: 'Fix these first' })).toBeVisible();
 
-		for (const width of [320, 375, 384, 390, 640, 641, 768, 800, 960, 1440]) {
+		for (const width of [320, 375, 380, 381, 384, 390, 480, 481, 640, 641, 768, 800, 960, 1440]) {
 			await page.setViewportSize({ width, height: 844 });
 			await expect(header.getByRole('radio')).toHaveCount(3);
 			for (const name of ['Light', 'Dark', 'System']) {
@@ -358,7 +359,9 @@ test('headers keep all three theme choices usable at narrow widths', async ({ pa
 				expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(headerWidth);
 				if (width <= 640) expect(bounds!.height).toBeGreaterThanOrEqual(44);
 			}
-			if (width >= 384) await expect(header.getByText('StageFlow', { exact: true })).toBeVisible();
+			const wordmark = header.getByText('StageFlow', { exact: true });
+			if (width > (isReport ? 480 : 380)) await expect(wordmark).toBeVisible();
+			else await expect(wordmark).toBeHidden();
 			expect(
 				await page.evaluate(
 					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
