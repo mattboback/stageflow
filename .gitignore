@@ -20,9 +20,9 @@ out/
 
 # Environment files
 .env
-.env.local
-.env.*.local
-.env.ci.*
+.env.*
+!.env.example
+.npmrc
 
 # IDE
 .vscode/
@@ -54,30 +54,14 @@ coverage.html
 .cache/
 /artifacts/
 /.patchright-cli/
-.impeccable/
-# Internal pre-fix review notes (not shipped)
-audit.md
-AUDIT.md
-masteraudit.md
 .playwright-mcp/
 .playwright-cli/
-.tech-debt-audit/
 .claude/
-.github/skills/
 output/
-.gitcleanup/
-.agent-harness/
-.kiro/
 # Root-only local runtime data (avoid ignoring real source folders named "data")
 /data/
 .go/
 .direnv/
-repo-context.md
-/plans/
-flattened_repo*.md
-flattened_repo*.json
-pipeline_logs.txt
-log.duff
 
 # Generated root-level showcase/demo artifacts
 /cli
@@ -93,7 +77,7 @@ log.duff
 /sbom-*.spdx.json
 
 # Go build artifacts
-bin/
+/bin/
 services/platform-api/platform-api
 services/platform-api/platform-api-healthcheck
 services/orchestrator/orchestrator
@@ -117,24 +101,31 @@ clients/web/playwright-report/
 # Legacy CLI project config (preserve local-only user files)
 .stageflow/
 
-# AI agent instructions (local-only)
-.junie/
-.pi/
-.opencode/
-
-# Local-only OSS-readiness plan
-/plan/
-
-# Auto-generated internal repo maps (regenerated locally; not shipped)
-**/docs/repo-map.md
-
-# Local design / visual QA artifacts (do not ship)
-/pageimage/
-/gptdesign/
-/stag/
-
-# AI assistant artifacts
-context-snapshot.json
-
 # Host-local SSH authorization backups
 /runner-*-authorized_keys.backup
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.lcov
+junit.xml
+
+# Local databases
+*.db
+*.sqlite*
+*.duckdb
+
+# Editor and OS metadata
+.fleet/
+.history/
+.zed/
+desktop.ini
+._*

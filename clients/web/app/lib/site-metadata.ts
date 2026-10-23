@@ -19,7 +19,7 @@ function absoluteUrl(value: unknown, fallback: string): string {
 export const SITE_NAME = 'StageFlow';
 export const SITE_URL = absoluteUrl(import.meta.env.VITE_SITE_URL, DEFAULT_SITE_URL);
 export const GITHUB_URL = 'https://github.com/mattboback/stageflow';
-export const DOCS_URL = `${GITHUB_URL}/tree/main/docs`;
+export const DOCS_URL = `${GITHUB_URL}#readme`;
 export const SITE_TAGLINE = 'Audit a frontend and catch regressions between deployments';
 // Vite injects VITE_* as untyped values, so read it as unknown and narrow rather
 // than calling .trim() on an implicit any.

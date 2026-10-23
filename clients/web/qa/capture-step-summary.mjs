@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Captures docs/images/step-summary.png: the markdown digest `stageflow diff`
+// Captures assets/step-summary.png: the markdown digest `stageflow diff`
 // writes to a GitHub step summary, rendered by GitHub's own markdown API.
 //
 // The diff compares the committed golden reports (sample site v1 -> v2), so
@@ -19,7 +19,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 const OUT = process.argv[2]
 	? path.resolve(process.argv[2])
-	: path.join(repoRoot, 'docs/images/step-summary.png');
+	: path.join(repoRoot, 'assets/step-summary.png');
 const golden = path.join(repoRoot, 'qa/fixtures/scan-diff-golden');
 
 function run(command, args, input) {

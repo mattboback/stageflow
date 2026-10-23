@@ -52,3 +52,22 @@ tests
 # OS files
 .DS_Store
 Thumbs.db
+
+# Build caches and local state
+**/build
+**/.react-router
+**/.venv
+**/venv
+**/__pycache__
+**/*.py[cod]
+**/*.db
+**/*.sqlite*
+**/*.duckdb
+**/*.pem
+**/*.key
+**/.gocache
+.go
+bin/
+**/coverage.xml
+**/junit.xml
+**/*.pid

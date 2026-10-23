@@ -143,7 +143,7 @@ describe('the committed /demo fixture', () => {
 	});
 
 	/*
-	 * The trap the plan for this fixture called out by name.
+	 * Overlay IDs must remain valid after occurrence expansion.
 	 *
 	 * buildOccurrenceModeReport rewrites element.issueId, falling back to a
 	 * `ruleId|selector` index when the direct mapping misses. A generator that

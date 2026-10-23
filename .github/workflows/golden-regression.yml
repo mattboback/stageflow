@@ -132,9 +132,8 @@ jobs:
           SCAN_DIFF_GOLDEN_ARTIFACT_DIR: artifacts/scan-diff-golden
           STAGEFLOW_API_KEY: ci-platform-api-token
 
-      # docs/product.md claims WCAG 2.1 AA is verified "plus StageFlow
-      # dogfooding". This is that claim. The stack is already up with the real
-      # frontend container on :3020, so scanning it costs one step.
+      # Check the frontend with StageFlow itself. The stack is already up
+      # with the real frontend container on :3020.
       #
       # Scoped to --scanner axe deliberately: the claim being substantiated is an
       # accessibility one. Folding in seo/link-checker/lighthouse would make a

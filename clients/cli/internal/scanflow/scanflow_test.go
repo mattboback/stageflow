@@ -103,7 +103,7 @@ func TestSubmitURLsAndWaitExplainsPrivateTargetAPISetup(t *testing.T) {
 		t.Fatal("expected private-target rejection")
 	}
 
-	for _, hint := range []string{"allow_private_targets is disabled", "configure private-target scanning in .env", "docs/self-hosting.md#private-target-development", "`just setup`, `just images`, and `just dev up`"} {
+	for _, hint := range []string{"allow_private_targets is disabled", "configure private-target scanning in .env", "README.md#private-target-development", "`just setup`, `just images`, and `just dev up`"} {
 		if !strings.Contains(err.Error(), hint) {
 			t.Errorf("error missing %q: %v", hint, err)
 		}

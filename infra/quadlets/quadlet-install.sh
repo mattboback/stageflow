@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Renders the production Quadlet units from the *.in templates next to this
-# script. The control plane in /home/operator/Deployment runs it on every deploy,
+# script. A deployment control plane can run it on every deploy,
 # restart and drift check; production secrets live outside the source tree.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

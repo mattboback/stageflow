@@ -7,7 +7,7 @@
  *
  * This lived twice — once in the link-checker scanner over `fetch`, once in the
  * security-headers scanner over Playwright's `page.request.fetch` — and the two
- * copies had already drifted apart in their error handling. Since SECURITY.md
+ * copies had already drifted apart in their error handling. Since README.md#security-and-privacy
  * names SSRF as an in-scope boundary, the loop, the hop cap, and the location
  * resolution are defined once here, and callers supply only the transport.
  *
@@ -15,7 +15,7 @@
  * the hostname (target-validation.ts checks every returned address against the
  * blocklist) and then hands the URL *string* to the transport, which resolves
  * independently, so a record that changes between the two lookups is not caught
- * here. That is the DNS-rebinding residual risk SECURITY.md already documents, along
+ * here. That is the DNS-rebinding residual risk README.md#security-and-privacy already documents, along
  * with the deployment-level mitigations; closing it would mean pinning the validated
  * address into the connection, which neither transport supports without replacement
  * (`fetch` needs a custom Agent with its own lookup, and Playwright's request API

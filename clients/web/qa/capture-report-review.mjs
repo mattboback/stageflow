@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Captures docs/images/report-review.png: the Review workspace as a visitor
+// Captures assets/report-review.png: the Review workspace as a visitor
 // first sees it at /demo.
 //
 // /demo renders the report committed under public/demo, so no API, mock, or
@@ -21,7 +21,7 @@ const repoRoot = path.resolve(webRoot, '..', '..');
 const args = process.argv.slice(2);
 const skipBuild = args.includes('--no-build');
 const outArg = args.find((arg) => !arg.startsWith('--'));
-const OUT = outArg ? path.resolve(outArg) : path.join(repoRoot, 'docs/images/report-review.png');
+const OUT = outArg ? path.resolve(outArg) : path.join(repoRoot, 'assets/report-review.png');
 
 const PORT = 4175;
 const VIEWPORT = { width: 1600, height: 1266 };

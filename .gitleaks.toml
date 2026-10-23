@@ -2,3 +2,27 @@ title = "StageFlow gitleaks config"
 
 [extend]
 useDefault = true
+
+# Exact synthetic canaries and a Go identifier, scoped to their source files.
+# Keep these independent of commit IDs so history maintenance cannot invalidate them.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Panic redaction test canary"
+condition = "AND"
+paths = ['^services/orchestrator/internal/adapters/messaging/recovery_test\.go$']
+regexes = ['^panic-secret-canary-51c9$']
+
+[[rules.allowlists]]
+description = "Login hydration test password"
+condition = "AND"
+paths = ['^services/scanner-runner/tests/core/auth-hydration\.test\.ts$']
+regexes = ['^hydrate-test-pw-uw7gx48p2j$']
+
+[[rules.allowlists]]
+description = "Podman API route identifier"
+condition = "AND"
+paths = ['^(platform|services)/orchestrator/internal/podman/client\.go$']
+regexTarget = "line"
+regexes = ['^\s*apiPrefix := libpodV4Prefix\s*$']

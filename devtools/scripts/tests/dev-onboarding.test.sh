@@ -261,11 +261,35 @@ PYTHON
 	fi
 }
 
+run_protected_host_case() {
+	local temp_dir="$1"
+	local current_host
+	current_host="$(hostname -f 2>/dev/null || hostname)"
+	local recipe
+	for recipe in demo dev dev-refresh; do
+		: >"$temp_dir/podman.log"
+		if STAGEFLOW_PROTECTED_HOST="$current_host" STAGEFLOW_ALLOW_LOCAL_STACKS=0 \
+			run_just_with_fake_podman "$temp_dir" "$recipe" >"$temp_dir/guard.log" 2>&1; then
+			echo "FAIL: $recipe bypassed the protected-host guard" >&2
+			failures=$((failures + 1))
+		fi
+		assert_contains "$temp_dir/guard.log" "on the protected host" "$recipe must explain the refusal"
+		if [[ -s "$temp_dir/podman.log" ]]; then
+			echo "FAIL: $recipe invoked Podman on the protected host" >&2
+			failures=$((failures + 1))
+		fi
+	done
+	: >"$temp_dir/podman.log"
+	STAGEFLOW_PROTECTED_HOST="$current_host" STAGEFLOW_ALLOW_LOCAL_STACKS=1 \
+		run_just_with_fake_podman "$temp_dir" dev down
+	assert_contains "$temp_dir/podman.log" "podman compose" "the explicit override must allow local stack commands"
+}
+
 main() {
 	# Just exports the invoking checkout's .env; fixtures must not inherit it.
 	unset FRONTEND_PORT PLATFORM_API_PORT VITE_API_URL VITE_SITE_URL STAGEFLOW_DATA_VOLUME
 	unset ENV_FILE COMPOSE_PROJECT_NAME STAGEFLOW_NETWORK_NAME STAGEFLOW_JOBS_NETWORK_NAME POD_NETWORK IMAGE_TAG \
-		PLATFORM_API_CORS_ALLOW_ORIGINS STAGEFLOW_PUBLIC_DOMAIN STAGEFLOW_PROTECTED_HOST \
+		PLATFORM_API_CORS_ALLOW_ORIGINS STAGEFLOW_PUBLIC_DOMAIN STAGEFLOW_PROTECTED_HOST STAGEFLOW_ALLOW_LOCAL_STACKS \
 		STAGEFLOW_DEMO_VITE_API_URL STAGEFLOW_DEMO_VITE_SITE_URL \
 		STAGEFLOW_DEMO_CORS_ALLOW_ORIGINS STAGEFLOW_DEMO_PUBLIC_DOMAIN
 
@@ -278,6 +302,7 @@ main() {
 	ln -s "$REPO_ROOT/infra" "$temp_dir/work/infra"
 	write_fake_podman "${temp_dir}/podman"
 
+	run_protected_host_case "$temp_dir"
 	run_network_default_case "$temp_dir"
 	run_network_project_case "$temp_dir"
 	run_network_override_case "$temp_dir"

@@ -12,7 +12,6 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        exclude: ^(helm/templates/|skaffold/|k8s/).*\.ya?ml$
       # tsconfig files are JSONC: the app/node variants carry comments, so the
       # strict JSON parser cannot read them. Anchored on the tsconfig prefix so
       # tsconfig.app.json and tsconfig.node.json are covered too.

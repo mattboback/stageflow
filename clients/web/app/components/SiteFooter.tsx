@@ -49,8 +49,8 @@ export function SiteFooter({ slim = false }: { slim?: boolean }) {
 					<nav aria-label="Project" className="site-footer__col">
 						<span className="label">Project</span>
 						<a href={GITHUB_URL}>GitHub</a>
-						<a href={`${GITHUB_URL}/blob/main/CHANGELOG.md`}>Changelog</a>
-						<a href={`${GITHUB_URL}/security/policy`}>Security</a>
+						<a href={`${GITHUB_URL}/releases`}>Changelog</a>
+						<a href={`${GITHUB_URL}/security/advisories/new`}>Security</a>
 					</nav>
 				</div>
 			</div>

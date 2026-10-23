@@ -1,6 +1,4 @@
-// The Playwright suite and the root-level tool configs used to sit outside every
-// tsconfig, so `tsc -b` never checked them even though docs/product.md presents
-// the axe E2E suite as a quality gate. They run under Node, not the browser.
+// Type-check the Playwright suite and tool configs under Node.
 {
   "extends": "../../tsconfig.strict.json",
   "compilerOptions": {

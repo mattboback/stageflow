@@ -82,6 +82,9 @@ EOF
 	assert_contains "$orchestrator" "After=network-online.target stageflow-postgres.service stageflow-jobs-network.service" "the orchestrator should start after the job network unit"
 	assert_contains "${temp_dir}/quadlets/stageflow.pod" "Network=stageflow_net" "the stack pod should stay on the stack network"
 	assert_absent "${temp_dir}/quadlets/stageflow.pod" "stageflow_jobs" "the stack pod must not join the job network"
+	assert_absent "${temp_dir}/quadlets/stageflow.pod" "Network=ingress.network" "the stack must not depend on a host-specific ingress network"
+	assert_contains "${temp_dir}/quadlets/stageflow-platform-api.container" "EnvironmentFile=${temp_dir}/production.env" "the API must load operator configuration"
+	assert_absent "${temp_dir}/quadlets/stageflow-platform-api.container" "Environment=PLATFORM_API_TRUSTED_PROXIES=" "the template must not override the operator's trusted proxies"
 
 	if grep -l '@[A-Z_]*@' "${temp_dir}/quadlets"/* >/dev/null 2>&1; then
 		echo "FAIL: rendered units still contain template placeholders" >&2

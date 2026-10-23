@@ -6,7 +6,7 @@ import { expect, test } from './fixtures';
  *
  * Every other spec routes the API and feeds it the contract fixture, which
  * proves the components work on a shape. This proves the shape the generator
- * actually produces still drives them -- and it is the route an employer
+ * actually produces still drives them -- and it is the route a visitor
  * lands on, so a regression here is the one that matters most.
  */
 test.describe('the demo report', () => {

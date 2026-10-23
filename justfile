@@ -88,9 +88,9 @@ demo URL='https://example.com':
         echo "==> ${label} ready (${url})"
     }
 
-    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
-        echo "Refusing to start the repo-local StageFlow stack on the production VPS." >&2
-        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-the external deployment directory} for live operations." >&2
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to start the repo-local StageFlow stack on the protected host." >&2
+        echo "Use your deployment control plane for live operations." >&2
         exit 1
     fi
 
@@ -156,9 +156,9 @@ dev CMD='up' ENV='dev' SERVICES='':
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
-    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
-        echo "Refusing to run repo-local StageFlow dev stacks on the production VPS." >&2
-        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-the external deployment directory} for live operations." >&2
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to run repo-local StageFlow dev stacks on the protected host." >&2
+        echo "Use your deployment control plane for live operations." >&2
         exit 1
     fi
 
@@ -248,9 +248,9 @@ dev-refresh ENV='local' SERVICES='platform-api orchestrator frontend-react':
     root_dir="{{repo_root}}"
     current_host="$(hostname -f 2>/dev/null || hostname)"
 
-    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_VPS_LOCAL_STACKS:-0}" != "1" ]]; then
-        echo "Refusing to run repo-local StageFlow dev refresh on the production VPS." >&2
-        echo "Use ${STAGEFLOW_PROD_DEPLOY_DIR:-the external deployment directory} for live operations." >&2
+    if [[ -n "${STAGEFLOW_PROTECTED_HOST:-}" && "$current_host" == "$STAGEFLOW_PROTECTED_HOST" && "${STAGEFLOW_ALLOW_LOCAL_STACKS:-0}" != "1" ]]; then
+        echo "Refusing to run repo-local StageFlow dev refresh on the protected host." >&2
+        echo "Use your deployment control plane for live operations." >&2
         exit 1
     fi
 
@@ -393,7 +393,7 @@ ci:
 [group('release'), doc('Publish CLI release VERSION (vX.Y.Z) by hand: tag HEAD first and push the tag')]
 cli-release VERSION:
     ./devtools/scripts/build-cli-release.sh {{VERSION}}
-    gh release create {{VERSION}} --verify-tag --generate-notes --title "StageFlow CLI {{VERSION}}" artifacts/cli-release/{{VERSION}}/*
+    gh release create {{VERSION}} --verify-tag --notes-from-tag --title "StageFlow CLI {{VERSION}}" artifacts/cli-release/{{VERSION}}/*
 
 [group('quality'), doc('Regenerate the committed JSON-schema contract code (Go and TypeScript)')]
 generate-contracts:
@@ -419,21 +419,6 @@ build:
 images:
     @echo "==> Building container images..."
     ./infra/scripts/build-images.sh
-
-[group('deploy'), doc('Production deploys run from an external control plane (this recipe only prints the procedure)')]
-deploy:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    control_plane="${STAGEFLOW_PROD_DEPLOY_DIR:-}"
-    echo "StageFlow production deploys are not driven from this repository." >&2
-    if [[ -n "$control_plane" ]]; then
-        echo "Run: cd $control_plane && just check stageflow && just deploy stageflow" >&2
-    else
-        echo "Set STAGEFLOW_PROD_DEPLOY_DIR to your control-plane directory (see .env.example)," >&2
-        echo "then run: just check stageflow && just deploy stageflow from there." >&2
-        echo "Self-hosting without a control plane: see docs/self-hosting.md." >&2
-    fi
-    exit 1
 
 [group('tools'), doc('Build and install stageflow CLI to ~/.local/bin (no stale binaries)')]
 cli-install BIN_DIR='$HOME/.local/bin' BIN_NAME='stageflow':
@@ -531,7 +516,7 @@ clean MODE='all':
     mode="{{MODE}}"
     echo "==> Cleaning artifacts..."
     find . -type f \( -name "coverage.out" -o -name "coverage.html" -o -name "*.coverprofile" \) -not -path "*/node_modules/*" -delete
-    find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" -o -name ".impeccable" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
+    find . -type d \( -name "dist" -o -name "build" -o -name "coverage" -o -name ".react-router" -o -name ".gocache" \) -not -path "*/node_modules/*" -exec rm -rf {} + 2>/dev/null || true
     rm -rf .cache artifacts output .patchright-cli .playwright-cli
     rm -f cli scan_result.json stageflow stageflow-cli sbom-*.spdx.json
     rm -f clients/cli/cli clients/cli/report.json clients/cli/stageflow clients/cli/stageflow-cli

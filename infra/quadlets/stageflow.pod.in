@@ -7,9 +7,8 @@ After=network-online.target
 [Pod]
 PodName=stageflow
 Network=@NETWORK_NAME@
-Network=ingress.network
 
-# Network-scoped aliases for the gateway and other stacks. Job pods run on
+# Service aliases on the stack network. Job pods run on
 # their own isolated network (stageflow-jobs.network) and cannot resolve them.
 NetworkAlias=postgres
 NetworkAlias=orchestrator

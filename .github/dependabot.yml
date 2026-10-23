@@ -8,8 +8,7 @@ version: 2
 #
 # The bun ecosystem is split into two entries because `ignore` applies to a whole
 # entry: the ESLint-linted workspaces have a TypeScript ceiling that the
-# contract packages do not. See docs/dependency-exceptions.md.
-# Keep automatic version-update PRs paused while preparing the public history.
+# contract packages do not.
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
@@ -18,7 +17,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     groups:
       go-minor-and-patch:
         applies-to: "version-updates"
@@ -39,7 +38,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     groups:
       bun-app-minor-and-patch:
         applies-to: "version-updates"
@@ -72,7 +71,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     groups:
       bun-contracts-minor-and-patch:
         applies-to: "version-updates"
@@ -90,7 +89,7 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "Etc/UTC"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 5
     groups:
       actions-minor-and-patch:
         applies-to: "version-updates"

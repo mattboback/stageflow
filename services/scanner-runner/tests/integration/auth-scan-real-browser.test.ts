@@ -1,5 +1,5 @@
 /**
- * End-to-end authenticated-scan integration test (plan task 10, full
+ * End-to-end authenticated-scan integration test (full
  * real-browser version).
  *
  * Spins up a Node http fixture login app on 127.0.0.1, drives the full

@@ -45,5 +45,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes \
+          gh release create "${GITHUB_REF_NAME}" --verify-tag --notes-from-tag \
             --title "StageFlow CLI ${GITHUB_REF_NAME}" "artifacts/cli-release/${GITHUB_REF_NAME}"/*

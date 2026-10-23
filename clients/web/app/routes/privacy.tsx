@@ -15,7 +15,7 @@ export const meta: MetaFunction = () =>
 	});
 
 export default function Privacy() {
-	const sourceHref = `${GITHUB_URL}/blob/main/docs/privacy.md`;
+	const sourceHref = `${GITHUB_URL}#security-and-privacy`;
 
 	return (
 		<>
@@ -89,7 +89,7 @@ export default function Privacy() {
 					</section>
 
 					<p className="privacy__source">
-						Canonical operator documentation lives in <a href={sourceHref}>docs/privacy.md</a>.{' '}
+						For operator guidance, see <a href={sourceHref}>Security and privacy</a> in the README.{' '}
 						<Link to="/">Back to the demo</Link>.
 					</p>
 				</div>

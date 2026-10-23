@@ -6,7 +6,7 @@ const DEMO_REPORT_URL = '/demo/report.json';
  *
  * ArtifactsView links the files of a live job. There is no
  * job here, and fabricating one to satisfy the shape would emit download links
- * that 404 in a portfolio piece -- which is why ReportView takes this panel as
+ * that 404 in a public demo -- which is why ReportView takes this panel as
  * a slot rather than taking a job. What it can offer instead is the one
  * artifact that genuinely exists: the exact JSON this page is rendering.
  */
