@@ -38,9 +38,9 @@
     }
   },
   "scripts": {
-    "prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs",
+    "prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs",
     "build": "bun run build:prepared",
-    "build:prepared": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
+    "build:prepared": "bun run prepare:contracts && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
     "start": "node dist/index.js",
     "dev": "bun src/index.ts",
     "lint": "bun run prepare:contracts && eslint \"src/**/*.ts\" \"tests/**/*.ts\" vitest.config.ts eslint.config.mjs --cache --cache-location ../../.cache/eslint-scanner",
@@ -88,7 +88,7 @@
     "basic-ftp": "5.3.1",
     "brace-expansion": "5.0.12",
     "esbuild": "0.28.1",
-    "fast-uri": "3.1.8",
+    "fast-uri": "3.1.9",
     "fast-xml-parser": "5.8.0",
     "flatted": "3.4.2",
     "ip-address": "10.2.0",
@@ -99,10 +99,12 @@
     "nanoid": "3.3.18",
     "picomatch": "2.3.2",
     "postcss": "8.5.23",
+    "puppeteer-core": "25.13.0",
     "rollup": "4.59.0",
     "smol-toml": "1.9.0",
     "source-map-js": "1.2.2",
     "vite": "7.3.7",
-    "ws": "8.21.0"
+    "ws": "8.21.3",
+    "zod": "4.6.6"
   }
 }

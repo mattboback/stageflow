@@ -17,7 +17,6 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		ScannerImage:       "localhost/stageflow/scanner-runner:latest",
 		PageLoadTimeout:    15000,
-		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
 	})
 
@@ -70,13 +69,12 @@ func TestScannerLaunchPlannerPlan(t *testing.T) {
 	}
 }
 
-func TestScannerLaunchPlannerPlanURLJobHostNetns(t *testing.T) {
+func TestScannerLaunchPlannerPlanURLJobAllowsPrivateTargets(t *testing.T) {
 	t.Parallel()
 
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		ScannerImage:       "localhost/stageflow/scanner-runner:latest",
 		PageLoadTimeout:    15000,
-		PodNetnsMode:       PodNetnsModeHost,
 		DefaultScannerUser: "0",
 	})
 
@@ -161,7 +159,6 @@ func TestScannerLaunchPlannerUsesConfiguredImageForEveryScanner(t *testing.T) {
 	planner := NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		ScannerImage:       "localhost/stageflow/scanner-runner:pr-1",
 		PageLoadTimeout:    15000,
-		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
 	})
 
