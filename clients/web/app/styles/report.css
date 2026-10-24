@@ -190,43 +190,6 @@
 	color: var(--ink-muted);
 }
 
-/*
- * Report viewer — semantic classes that back getSeverityContainerClass /
- * getSeverityDotClass / getSeverityBadgeClass / getSeverityBorderClass /
- * getSeverityOverlayClass / getSeverityChipClass in app/lib/report/severity.ts.
- *
- * All colors are pulled from instrument.css tokens. Severity labels are always
- * text next to color, never color alone.
- */
-
-/* ------------------------------------------------------------------------- */
-/*  Severity container (issue cards, group rows, alerts)                      */
-/* ------------------------------------------------------------------------- */
-.sev-container {
-	border: 1px solid var(--line);
-	background: var(--surface);
-}
-.sev-container.sev-critical {
-	background: var(--sev-critical-wash);
-	border-color: var(--sev-critical-edge);
-}
-.sev-container.sev-serious {
-	background: var(--sev-serious-wash);
-	border-color: var(--sev-serious-edge);
-}
-.sev-container.sev-moderate {
-	background: var(--sev-moderate-wash);
-	border-color: var(--sev-moderate-edge);
-}
-.sev-container.sev-minor {
-	background: var(--sev-minor-wash);
-	border-color: var(--sev-minor-edge);
-}
-.sev-container.sev-info {
-	background: var(--sev-info-wash);
-	border-color: var(--sev-info-edge);
-}
-
 /* The severity dot lives in instrument.css: it is the one severity mark that
    also appears outside report surfaces (home's preview panel). */
 
@@ -264,63 +227,6 @@
 .sev-badge.sev-info {
 	color: var(--sev-info-ink);
 	background: var(--sev-info-wash);
-}
-
-/* ------------------------------------------------------------------------- */
-/*  Severity border (highlighted card border for selection / focus states)    */
-/* ------------------------------------------------------------------------- */
-.sev-border {
-	border: 1px solid var(--line);
-	background: var(--surface);
-}
-.sev-border.sev-critical {
-	border-color: var(--sev-critical);
-	background: var(--sev-critical-wash);
-}
-.sev-border.sev-serious {
-	border-color: var(--sev-serious);
-	background: var(--sev-serious-wash);
-}
-.sev-border.sev-moderate {
-	border-color: var(--sev-moderate);
-	background: var(--sev-moderate-wash);
-}
-.sev-border.sev-minor {
-	border-color: var(--sev-minor);
-	background: var(--sev-minor-wash);
-}
-.sev-border.sev-info {
-	border-color: var(--sev-info);
-	background: var(--sev-info-wash);
-}
-
-/* ------------------------------------------------------------------------- */
-/*  Severity overlay (screenshot marker rectangle on visual review)           */
-/* ------------------------------------------------------------------------- */
-.sev-overlay {
-	border: 2px solid var(--ink-faint);
-	background: var(--sev-neutral-overlay);
-	box-sizing: border-box;
-}
-.sev-overlay.sev-critical {
-	border-color: var(--sev-critical);
-	background: var(--sev-critical-overlay);
-}
-.sev-overlay.sev-serious {
-	border-color: var(--sev-serious);
-	background: var(--sev-serious-overlay);
-}
-.sev-overlay.sev-moderate {
-	border-color: var(--sev-moderate);
-	background: var(--sev-moderate-overlay);
-}
-.sev-overlay.sev-minor {
-	border-color: var(--sev-minor);
-	background: var(--sev-minor-overlay);
-}
-.sev-overlay.sev-info {
-	border-color: var(--sev-info);
-	background: var(--sev-info-overlay);
 }
 
 /* ------------------------------------------------------------------------- */

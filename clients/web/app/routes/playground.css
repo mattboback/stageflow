@@ -485,9 +485,7 @@
 	}
 }
 
-/* ---- auth + ai config panels ---- */
-.pauth,
-.pai {
+.pauth {
 	background: var(--surface);
 	border: 1px solid var(--line);
 	border-radius: var(--r-md);
@@ -496,8 +494,7 @@
 	display: grid;
 	gap: 0.95rem;
 }
-.pauth__head,
-.pai__head {
+.pauth__head {
 	display: flex;
 	align-items: flex-start;
 	gap: 0.75rem;
@@ -506,12 +503,7 @@
 	padding-bottom: 0.85rem;
 	border-bottom: 1px solid var(--line);
 }
-.pai__head {
-	padding-bottom: 0.85rem;
-	border-bottom: 1px solid var(--line);
-}
-.pauth__head > div:first-child,
-.pai__head {
+.pauth__head > div:first-child {
 	flex: 1;
 	min-width: 0;
 }
@@ -523,15 +515,13 @@
 .pauth__head > div:first-child {
 	flex-basis: 16rem;
 }
-.pauth__title,
-.pai__title {
+.pauth__title {
 	font-size: var(--fs-6);
 	font-weight: 700;
 	color: var(--ink-strong);
 	margin: 0;
 }
-.pauth__sub,
-.pai__sub {
+.pauth__sub {
 	font-size: var(--fs-4);
 	color: var(--ink-muted);
 	margin: 0.25rem 0 0;
@@ -593,8 +583,7 @@
 	color: var(--ink-strong);
 }
 
-.pauth__body,
-.pai > * {
+.pauth__body {
 	display: grid;
 	gap: 0.85rem;
 }
@@ -619,27 +608,21 @@
 .pauth__ack input {
 	margin-top: 0.2rem;
 }
-.pauth__row,
-.pai__row {
+.pauth__row {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 	gap: 0.75rem;
 }
-.pauth__field,
-.pai__field {
+.pauth__field {
 	display: grid;
 	gap: 0.35rem;
 }
-.pauth__req,
-.pai__req {
+.pauth__req {
 	color: var(--ink-muted);
 	font-weight: 600;
 }
 .pauth__field input,
-.pauth__field select,
-.pai__field input,
-.pai__field select,
-.pai__field textarea {
+.pauth__field select {
 	width: 100%;
 	padding: 0.55rem 0.75rem;
 	border: 1px solid var(--line-strong);
@@ -652,23 +635,13 @@
 		border-color var(--dur-1) var(--ease),
 		box-shadow var(--dur-1) var(--ease);
 }
-.pai__field textarea {
-	font-family: inherit;
-	resize: vertical;
-	min-height: 4rem;
-	line-height: 1.45;
-}
 .pauth__field input:focus-visible,
-.pauth__field select:focus-visible,
-.pai__field input:focus-visible,
-.pai__field select:focus-visible,
-.pai__field textarea:focus-visible {
+.pauth__field select:focus-visible {
 	outline: none;
 	border-color: var(--signal);
 	box-shadow: 0 0 0 3px var(--signal-wash);
 }
-.pauth__field input[aria-invalid='true'],
-.pai__field textarea[aria-invalid='true'] {
+.pauth__field input[aria-invalid='true'] {
 	border-color: var(--sev-serious);
 	background: var(--sev-serious-wash);
 }
@@ -719,84 +692,6 @@
 .pauth__adv input,
 .pauth__adv select {
 	background: var(--surface);
-}
-
-.pai__group {
-	border: 1px solid var(--line);
-	border-radius: var(--r-sm);
-	padding: 0.85rem;
-	margin: 0;
-	display: grid;
-	gap: 0.5rem;
-}
-.pai__group legend {
-	padding: 0 0.35rem;
-	font-size: var(--fs-2);
-	color: var(--ink-strong);
-	font-weight: 600;
-}
-.pai__hint {
-	font-size: var(--fs-2);
-	color: var(--ink-muted);
-	margin: 0 0 0.25rem;
-	line-height: 1.45;
-}
-.pai__pair {
-	display: grid;
-	grid-template-columns: 1fr 1fr auto;
-	gap: 0.45rem;
-}
-.pai__pair input,
-.pai__pair select {
-	width: 100%;
-	padding: 0.5rem 0.65rem;
-	border: 1px solid var(--line-strong);
-	border-radius: var(--r-sm);
-	background: var(--surface);
-	color: var(--ink-strong);
-	font-family: inherit;
-	font-size: var(--fs-3);
-}
-.pai__pair input:focus-visible,
-.pai__pair select:focus-visible {
-	outline: none;
-	border-color: var(--signal);
-	box-shadow: 0 0 0 3px var(--signal-wash);
-}
-.pai__remove {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 2rem;
-	background: transparent;
-	border: 1px solid var(--line);
-	border-radius: var(--r-sm);
-	color: var(--ink-muted);
-	cursor: pointer;
-	font-size: var(--fs-4);
-	font-family: inherit;
-}
-.pai__remove:hover {
-	color: var(--ink-strong);
-	border-color: var(--line-strong);
-	background: var(--ground-deep);
-}
-.pai__add {
-	justify-self: start;
-	background: transparent;
-	border: 1px dashed var(--line-strong);
-	border-radius: var(--r-sm);
-	padding: 0.4rem 0.75rem;
-	font-size: var(--fs-2);
-	font-weight: 600;
-	color: var(--ink-muted);
-	cursor: pointer;
-	font-family: inherit;
-}
-.pai__add:hover {
-	color: var(--ink-strong);
-	border-color: var(--ink-faint);
-	background: var(--ground);
 }
 
 @media (prefers-reduced-motion: reduce) {
