@@ -315,7 +315,7 @@ button.baseline-diff__row:hover .baseline-diff__name {
 	font-weight: 500;
 	overflow-wrap: anywhere;
 }
-.rhead__url:hover {
+a.rhead__url:hover {
 	text-decoration: underline;
 }
 .rhead__meta {

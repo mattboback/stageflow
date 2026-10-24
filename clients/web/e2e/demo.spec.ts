@@ -1,6 +1,9 @@
 import { DEMO_SUMMARY } from '../app/lib/demo/demo-summary';
 import { expect, test } from './fixtures';
 
+const SITE_URL = (process.env.VITE_SITE_URL || 'https://stageflow.org').replace(/\/$/, '');
+const SHARE_IMAGE_URL = `${SITE_URL}/social/stageflow-og.png`;
+
 /*
  * The only spec that runs against real data with nothing mocked.
  *
@@ -10,6 +13,56 @@ import { expect, test } from './fixtures';
  * lands on, so a regression here is the one that matters most.
  */
 test.describe('the demo report', () => {
+	test('prerenders metadata and keeps it after client navigation', async ({ page }) => {
+		const response = await page.request.get('/demo');
+		expect(response.ok()).toBe(true);
+		const html = await response.text();
+		const metadata = await page.evaluate((html) => {
+			const head = new DOMParser().parseFromString(html, 'text/html').head;
+			return {
+				canonical: [...head.querySelectorAll('link[rel="canonical"]')].map((link) =>
+					link.getAttribute('href')
+				),
+				title: head.querySelector('meta[property="og:title"]')?.getAttribute('content'),
+				description: head.querySelector('meta[property="og:description"]')?.getAttribute('content'),
+				image: head.querySelector('meta[property="og:image"]')?.getAttribute('content')
+			};
+		}, html);
+		expect(metadata.canonical).toEqual([`${SITE_URL}/demo`]);
+		expect(metadata.title).toBe('Live report demo — StageFlow');
+		expect(metadata.description).toContain('explore without running a scan');
+		expect(metadata.image).toBe(SHARE_IMAGE_URL);
+		const image = await page.request.get(new URL(SHARE_IMAGE_URL).pathname);
+		expect(image.ok()).toBe(true);
+		expect(image.headers()['content-type']).toContain('image/png');
+
+		await page.goto('/');
+		await page.getByRole('link', { name: /See what changed/ }).click();
+		await expect(page).toHaveURL(/\/demo$/);
+		await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+		await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${SITE_URL}/demo`);
+		await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+			'content',
+			'Live report demo — StageFlow'
+		);
+		await expect(page.locator('meta[property="og:description"]')).toHaveAttribute(
+			'content',
+			metadata.description ?? ''
+		);
+		await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+			'content',
+			SHARE_IMAGE_URL
+		);
+	});
+
+	test('shows the fixture address as an example, not a live destination', async ({ page }) => {
+		await page.goto('/demo');
+		await expect(page.locator('.rhead__url')).toHaveText(
+			'Example site · https://sample.stageflow.org'
+		);
+		await expect(page.locator('a[href^="https://sample.stageflow.org"]')).toHaveCount(0);
+	});
+
 	test('opens from the home page and renders a real scan', async ({ page }) => {
 		await page.goto('/');
 		await page.getByRole('link', { name: /See what changed/ }).click();

@@ -49,6 +49,8 @@ function resolveSection(raw: string | null, pageCount: number): ReportSection {
 }
 
 export interface ReportViewProps {
+	/** Fixture sources can be shown without implying a live destination. */
+	sourceUrlMode?: 'link' | 'label';
 	/** Keys the review-verdict store, so two reports never share decisions. */
 	jobId: string;
 	/**
@@ -102,6 +104,7 @@ export interface ReportViewProps {
  * deep links to work.
  */
 export function ReportView({
+	sourceUrlMode = 'link',
 	jobId,
 	report,
 	screenshots,
@@ -245,6 +248,7 @@ export function ReportView({
 					<>
 						{toolbar}
 						<ReportHeader
+							sourceUrlMode={sourceUrlMode}
 							report={displayReport}
 							scoreModel={scoreModel}
 							comparison={comparison}
