@@ -6,7 +6,7 @@ Start with the component that owns the behavior you are changing. Keep fixes foc
 
 ## Local setup
 
-The repository uses Go 1.26.10 or later, Node.js 24.x, Bun 1.3.8 and `just`. Rootless Podman with Compose support is required for the local stack and live isolation checks. See the [self-hosting guide](docs/self-hosting.md) for socket and environment setup.
+The repository uses Go 1.26.10 or later, Node.js 24.x (24.15.0 or newer), Bun 1.3.8 and `just`. Rootless Podman with Compose support is required for the local stack and live isolation checks. See the [self-hosting guide](docs/self-hosting.md) for socket and environment setup.
 
 From the repository root, install the Go, web and scanner dependencies:
 

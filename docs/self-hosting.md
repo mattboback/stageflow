@@ -7,7 +7,7 @@ StageFlow runs on rootless Podman. Docker is not supported because the Podman ru
 ## Requirements
 
 - Go 1.26.10 or later
-- Node.js 24.x
+- Node.js 24.x (24.15.0 or newer)
 - Bun 1.3.8
 - Rootless Podman with Compose support and a running user Podman socket
 - `just`
