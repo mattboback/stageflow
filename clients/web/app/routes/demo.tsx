@@ -22,20 +22,19 @@ import baselineData from '../../public/demo/baseline.json';
 import screenshotData from '../../public/demo/screenshots.json';
 import reportStyles from './scan-report.css?url';
 import severityStyles from '../styles/report.css?url';
-import { pageTitle, SITE_NAME } from '../lib/site-metadata';
+import { buildSiteMeta, pageTitle, SITE_NAME } from '../lib/site-metadata';
 
 export const links = () => [
 	{ rel: 'stylesheet', href: severityStyles },
 	{ rel: 'stylesheet', href: reportStyles }
 ];
 
-export const meta: MetaFunction = () => [
-	{ title: pageTitle('Live report demo') },
-	{
-		name: 'description',
-		content: `A real ${SITE_NAME} report you can explore without running a scan: a sample deployment, new and fixed findings, evidence, and concrete fixes.`
-	}
-];
+export const meta: MetaFunction = () =>
+	buildSiteMeta({
+		title: pageTitle('Live report demo'),
+		description: `A real ${SITE_NAME} report you can explore without running a scan: a sample deployment, new and fixed findings, evidence, and concrete fixes.`,
+		path: '/demo'
+	});
 
 const report = currentData as unknown as UnifiedReport;
 const baseline = baselineData as unknown as UnifiedReport;
@@ -48,6 +47,7 @@ export default function Demo() {
 		<>
 			<SiteHeader current="demo" />
 			<ReportView
+				sourceUrlMode="label"
 				jobId="demo"
 				report={report}
 				screenshots={screenshots}

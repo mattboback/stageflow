@@ -53,3 +53,22 @@ describe('ReportView acquisition states', () => {
 		expect(screen.getAllByRole('tab').length).toBeGreaterThan(0);
 	});
 });
+
+describe('report source address', () => {
+	it('keeps real report sources clickable by default', () => {
+		const report = loadAllScansFixture();
+		report.meta.baseUrl = 'https://example.com/';
+		renderView({ report });
+		expect(screen.getByRole('link', { name: 'https://example.com/ ↗' }).getAttribute('href')).toBe(
+			'https://example.com/'
+		);
+	});
+
+	it('labels an example source without linking to a fictional website', () => {
+		const report = loadAllScansFixture();
+		report.meta.baseUrl = 'https://sample.stageflow.org/';
+		renderView({ report, sourceUrlMode: 'label' });
+		expect(screen.getByText('Example site · https://sample.stageflow.org/')).toBeTruthy();
+		expect(screen.queryByRole('link', { name: /https:\/\/sample\.stageflow\.org/ })).toBeNull();
+	});
+});

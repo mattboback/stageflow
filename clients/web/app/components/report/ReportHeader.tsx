@@ -25,6 +25,7 @@ function breakableHost(host: string) {
 }
 
 interface Props {
+	sourceUrlMode?: 'link' | 'label';
 	report: UnifiedReport;
 	/** explainScore of the report as stored; with it the score says what lowers it. */
 	scoreModel?: ScoreModel | null | undefined;
@@ -74,6 +75,7 @@ function formatScannedAt(iso: string | undefined): string | null {
 }
 
 export function ReportHeader({
+	sourceUrlMode = 'link',
 	report,
 	scoreModel,
 	comparison,
@@ -145,11 +147,14 @@ export function ReportHeader({
 				)}
 				<div className="rhead__score-meta">
 					<h1>{host ? breakableHost(host) : 'Scan report'}</h1>
-					{baseUrl && (
-						<a className="rhead__url" href={baseUrl} target="_blank" rel="noopener noreferrer">
-							{baseUrl} ↗
-						</a>
-					)}
+					{baseUrl &&
+						(sourceUrlMode === 'label' ? (
+							<span className="rhead__url">Example site · {baseUrl}</span>
+						) : (
+							<a className="rhead__url" href={baseUrl} target="_blank" rel="noopener noreferrer">
+								{baseUrl} ↗
+							</a>
+						))}
 					<div className="rhead__meta">
 						{report.meta.profile && (
 							<Pill variant="done">
