@@ -89,10 +89,6 @@ func (r *JobRuntime) PodNetnsMode() string {
 	return r.podNetnsMode
 }
 
-func (r *JobRuntime) AllowsLoopbackTargets() bool {
-	return r.PodNetnsMode() == PodNetnsModeHost
-}
-
 // JobPodName returns the deterministic pod name for a job. It is deterministic so
 // that a pod can be found again by name when its create response was lost, and so
 // that cleanup can remove it without knowing its ID.
