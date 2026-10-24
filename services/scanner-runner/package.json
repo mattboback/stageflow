@@ -38,9 +38,9 @@
     }
   },
   "scripts": {
-    "prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs",
+    "prepare:contracts": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs",
     "build": "bun run build:prepared",
-    "build:prepared": "node scripts/prepare-contracts-report-types.mjs && node scripts/prepare-contracts-scanner-manifest.mjs && node scripts/prepare-contracts-provenance.mjs && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
+    "build:prepared": "bun run prepare:contracts && tsc -p tsconfig.build.json && node scripts/copy-builtin-manifests.mjs",
     "start": "node dist/index.js",
     "dev": "bun src/index.ts",
     "lint": "bun run prepare:contracts && eslint \"src/**/*.ts\" \"tests/**/*.ts\" vitest.config.ts eslint.config.mjs --cache --cache-location ../../.cache/eslint-scanner",
@@ -59,29 +59,29 @@
     "test:coverage": "bun run prepare:contracts && vitest run --coverage --no-file-parallelism"
   },
   "dependencies": {
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "^4.14.0",
     "@stageflow/contracts-scanner-manifest": "file:../../libs/contracts/scanner-manifest",
     "ajv": "8.20.0",
     "ajv-formats": "^3.0.1",
-    "chrome-launcher": "^1.2.1",
-    "lighthouse": "^13.4.1",
-    "playwright": "1.63.0",
-    "playwright-core": "1.63.0",
+    "chrome-launcher": "^1.2.2",
+    "lighthouse": "^13.5.0",
+    "playwright": "1.64.1",
+    "playwright-core": "1.64.1",
     "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@sentry/node": "11.8.0",
-    "@types/node": "^24.13.5",
-    "@vitest/coverage-v8": "5.0.3",
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
     "@vitest/eslint-plugin": "^1.6.27",
-    "eslint": "^10.10.0",
-    "globals": "^17.12.0",
-    "knip": "6.36.0",
-    "prettier": "^3.9.8",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "knip": "6.42.1",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.70.0",
-    "vitest": "5.0.3"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "5.0.5"
   },
   "overrides": {
     "@opentelemetry/core": "1.30.1",

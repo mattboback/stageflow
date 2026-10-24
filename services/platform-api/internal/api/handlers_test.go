@@ -588,7 +588,7 @@ func TestZipUploadBodyTooLarge(t *testing.T) {
 	server, _, _ := newTestServer(t)
 
 	rr := httptest.NewRecorder()
-	handled := server.handleZipParseError(context.Background(), rr, &http.MaxBytesError{Limit: maxUploadSize})
+	handled := server.handleZipParseError(context.Background(), rr, &http.MaxBytesError{Limit: maxZipFileSize})
 
 	if !handled {
 		t.Fatalf("expected oversized body error to be handled")

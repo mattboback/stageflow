@@ -43,7 +43,6 @@ type ServerConfig struct {
 	JobDeleter interface {
 		DeleteJob(context.Context, string) error
 	}
-	Port                int
 	Files               JobFiles
 	Admitter            JobAdmitter
 	CheckDisk           func(context.Context) error

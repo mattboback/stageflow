@@ -79,7 +79,9 @@ func TestWriteToFile_InvalidPath(t *testing.T) {
 		Pages:   []models.Page{},
 	}
 
-	invalidPath := "/nonexistent/directory/provenance.json"
+	parentFile := filepath.Join(t.TempDir(), "file")
+	mustWriteFile(t, parentFile, nil)
+	invalidPath := filepath.Join(parentFile, "provenance.json")
 
 	err := gen.WriteToFile(prov, invalidPath)
 	if err == nil {
