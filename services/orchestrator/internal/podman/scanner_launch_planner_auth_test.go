@@ -21,7 +21,6 @@ func newAuthPlanner(t *testing.T) *ScannerLaunchPlanner {
 
 	return NewScannerLaunchPlanner(ScannerLaunchPlannerConfig{
 		PageLoadTimeout:    15000,
-		PodNetnsMode:       PodNetnsModeBridge,
 		DefaultScannerUser: "0",
 	})
 }

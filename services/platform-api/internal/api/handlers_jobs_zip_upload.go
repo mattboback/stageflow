@@ -24,7 +24,6 @@ const (
 	maxZipFileSize       = 100 * 1024 * 1024
 	maxMultipartOverhead = 2 * 1024 * 1024
 	maxUploadRequestSize = maxZipFileSize + maxMultipartOverhead
-	maxUploadSize        = maxZipFileSize // Backward-compatible name used in error tests.
 )
 
 // Note: keep reverse proxies/LB client_max_body_size in sync with maxUploadRequestSize.

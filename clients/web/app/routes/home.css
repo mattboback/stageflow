@@ -35,19 +35,6 @@
 	text-wrap: pretty;
 }
 
-.hero__actions {
-	display: flex;
-	align-items: center;
-	gap: var(--sp-3);
-	margin-top: var(--sp-6);
-	flex-wrap: wrap;
-}
-
-.hero__actions > span {
-	color: var(--ink-muted);
-	font-size: var(--fs-4);
-}
-
 /* scan form — the conversion point matches the headline's weight */
 .scanbar {
 	display: flex;
@@ -596,12 +583,5 @@ main:has(> .section--foot:last-child) + .site-footer {
 	}
 	.preview__stats li {
 		padding: var(--sp-3);
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.array__row,
-	.sevrow {
-		transition: none;
 	}
 }
