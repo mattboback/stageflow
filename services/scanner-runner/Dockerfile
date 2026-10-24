@@ -7,7 +7,7 @@
 # engines.node in package.json. Keep PLAYWRIGHT_VERSION equal to the pinned
 # playwright dependency in package.json; the runtime stage asserts it.
 ARG NODE_MAJOR=24
-ARG PLAYWRIGHT_VERSION=1.63.0
+ARG PLAYWRIGHT_VERSION=1.64.1
 
 FROM docker.io/oven/bun:1.3.8@sha256:371d30538b69303ced927bb5915697ac7e2fa8cb409ee332c66009de64de5aa3 AS bun-bin
 
