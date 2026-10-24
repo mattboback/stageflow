@@ -224,7 +224,7 @@ run_diagnose_guidance_case() {
 	mkdir -p "$mock_dir"
 	cat >"$mock_dir/go" <<'EOF'
 #!/usr/bin/env bash
-printf 'go version go1.26.9 linux/amd64\n'
+printf 'go version go1.26.10 linux/amd64\n'
 EOF
 	cat >"$mock_dir/bun" <<'EOF'
 #!/usr/bin/env bash
