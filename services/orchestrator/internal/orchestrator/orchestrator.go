@@ -113,7 +113,6 @@ func NewOrchestrator(config *Config) *Orchestrator {
 			DataVolume:      cfg.DataVolume,
 			ScannerImage:    cfg.ScannerImage,
 			PageLoadTimeout: cfg.PageLoadTimeout,
-			PodNetnsMode:    cfg.PodNetnsMode,
 		},
 	)
 

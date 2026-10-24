@@ -24,7 +24,6 @@ type ScannerLaunchPlannerConfig struct {
 	DataVolume         string
 	ScannerImage       string
 	PageLoadTimeout    int
-	PodNetnsMode       string
 	DefaultScannerUser string
 }
 
@@ -67,10 +66,6 @@ type ScannerLaunchPlan struct {
 func NewScannerLaunchPlanner(config ScannerLaunchPlannerConfig) *ScannerLaunchPlanner {
 	if config.PageLoadTimeout == 0 {
 		config.PageLoadTimeout = defaultPageLoadTimeoutMs
-	}
-
-	if config.PodNetnsMode == "" {
-		config.PodNetnsMode = PodNetnsModeBridge
 	}
 
 	if config.DefaultScannerUser == "" {

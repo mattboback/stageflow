@@ -23,10 +23,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.26.9'
-  GOTOOLCHAIN: 'go1.26.9'
+  GO_VERSION: '1.26.10'
+  GOTOOLCHAIN: 'go1.26.10'
   NODE_VERSION: '24'
   BUN_VERSION: '1.3.8'
+  STAGEFLOW_API_URL: 'http://127.0.0.1:18080'
 
 jobs:
   golden:
@@ -81,6 +82,8 @@ jobs:
             printf 'PLATFORM_API_TOKEN=ci-platform-api-token\n'
             printf 'STAGEFLOW_NETWORK_NAME=stageflow_net\n'
             printf 'FRONTEND_PORT=3020\nVITE_SITE_URL=http://localhost:3020\n'
+            # Host-network ZIP extractors serve on 8080; keep the API off that port.
+            printf 'PLATFORM_API_PORT=18080\nVITE_API_URL=%s\n' "$STAGEFLOW_API_URL"
             printf 'PLATFORM_API_ALLOW_PRIVATE_TARGETS=true\nPOD_NETNS_MODE=host\nPOD_NETWORK=\n'
           } >> .env
 
@@ -113,7 +116,7 @@ jobs:
       - name: Wait for stack
         run: |
           for url in \
-            http://127.0.0.1:8080/healthz \
+            "${STAGEFLOW_API_URL}/healthz" \
             http://127.0.0.1:3020/
           do
             echo "Waiting for ${url}"
@@ -142,7 +145,7 @@ jobs:
         run: |
           mkdir -p artifacts/self-scan
           stageflow scan http://localhost:3020/ \
-            --api http://localhost:8080 \
+            --api "$STAGEFLOW_API_URL" \
             --scanner axe \
             --allow-private-targets \
             --fail-on serious \

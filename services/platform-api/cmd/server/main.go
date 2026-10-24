@@ -71,7 +71,6 @@ func run() error {
 	defer statusReader.Close()
 
 	server := api.NewServer(&api.ServerConfig{
-		Port:       cfg.Port,
 		Files:      artifactFiles,
 		JobDeleter: statusReader,
 		Admitter:   statusReader,
