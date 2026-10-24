@@ -45,7 +45,7 @@ import sys
 root = Path(os.environ["CLI_RELEASE_FIXTURE_DATA"])
 args = sys.argv[1:]
 if args == ["env", "-json", "GOROOT", "GOVERSION"]:
-    print(json.dumps({"GOROOT": str(root / "goroot"), "GOVERSION": "go1.26.9"}))
+    print(json.dumps({"GOROOT": str(root / "goroot"), "GOVERSION": "go1.26.10"}))
 elif args == ["list", "-deps", "-json", "./clients/cli/cmd/stageflow"]:
     assert os.environ["CGO_ENABLED"] == "0"
     packages = [
@@ -149,7 +149,7 @@ for archive in archives:
     assert notices == expected_notices
     assert checksums[archive.name] == hashlib.sha256(archive.read_bytes()).hexdigest()
 for text in [
-    b"Go runtime and standard library (go1.26.9)", b"Go fixture license\n", b"Go fixture patent notice\n",
+    b"Go runtime and standard library (go1.26.10)", b"Go fixture license\n", b"Go fixture patent notice\n",
     b"Bundled fixture license\n", b"Shared fixture license\n", b"Shared fixture attribution\n",
     b"Shared supplementary license\n", b"Windows fixture license\n", b"Windows fixture patent notice\n",
     b"Replacement fixture license without final newline\n", b"example.com/shared v1.2.3",

@@ -22,19 +22,11 @@ RUN node --version | grep -E "^v${NODE_MAJOR}\."
 # Shared TypeScript base config used by all packages
 COPY tsconfig.strict.json /repo/tsconfig.strict.json
 
-# --- Build contracts package first (types only, already generated) ---
-WORKDIR /repo/libs/contracts/report
-COPY libs/contracts/report/package.json libs/contracts/report/bun.lock* ./
-RUN bun install --frozen-lockfile --ignore-scripts
-COPY libs/contracts/report/tsconfig.json ./tsconfig.json
-COPY libs/contracts/report/schema ./schema
-COPY libs/contracts/report/generated/typescript ./generated/typescript
-RUN bun x tsc
+COPY libs/contracts/report/generated/typescript /repo/libs/contracts/report/generated/typescript
 
 # --- Build scanner-runner ---
 WORKDIR /repo/services/scanner-runner
 COPY libs/contracts/scanner-manifest /repo/libs/contracts/scanner-manifest
-COPY libs/contracts/provenance /repo/libs/contracts/provenance
 COPY services/scanner-runner/package.json services/scanner-runner/bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
 COPY services/scanner-runner/tsconfig.json ./tsconfig.json
@@ -42,15 +34,12 @@ COPY services/scanner-runner/tsconfig.build.json ./tsconfig.build.json
 COPY services/scanner-runner/src ./src
 COPY services/scanner-runner/scripts ./scripts
 COPY libs/go/scannercatalog/manifests /repo/libs/go/scannercatalog/manifests
-COPY libs/contracts/scanner-manifest/schema /repo/libs/contracts/scanner-manifest/schema
 RUN bun run build:prepared
 RUN rm -rf node_modules \
   && bun install --frozen-lockfile --production --ignore-scripts \
   && rm -rf node_modules/@stageflow/contracts-scanner-manifest \
-  && rm -rf node_modules/@stageflow/contracts-provenance \
   && mkdir -p node_modules/@stageflow \
-  && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest \
-  && cp -R /repo/libs/contracts/provenance node_modules/@stageflow/contracts-provenance
+  && cp -R /repo/libs/contracts/scanner-manifest node_modules/@stageflow/contracts-scanner-manifest
 
 # Runtime stage: Node plus Chromium and its system libraries, nothing else.
 FROM docker.io/library/node:24.18.0-bookworm-slim

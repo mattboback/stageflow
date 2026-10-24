@@ -1,6 +1,6 @@
 module github.com/mattboback/stageflow
 
-go 1.26.9
+go 1.26.10
 
 // Bun and npm install trees; never Go packages.
 ignore node_modules
