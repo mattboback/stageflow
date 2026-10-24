@@ -145,6 +145,40 @@ describe('ReportHeader', () => {
 });
 
 describe('VisualReviewPanel', () => {
+	it.each([
+		{ severities: [], counts: '0 findings' },
+		{ severities: ['serious'], counts: '1 serious 1 finding · 1 serious' },
+		{
+			severities: ['serious', 'serious', 'moderate'],
+			counts: '2 serious 1 moderate 3 findings · 2 serious'
+		}
+	] as const)('selects a page by its visible label with $counts', ({ severities, counts }) => {
+		const page = report.pages[0]!;
+		const onSelectPage = vi.fn();
+		render(
+			<VisualReviewPanel
+				report={{
+					...report,
+					pages: [page],
+					issues: severities.map((severity, index) => ({
+						...report.issues[0]!,
+						id: `finding-${index}`,
+						pageId: page.id,
+						severity
+					}))
+				}}
+				screenshots={[]}
+				activeScanner={null}
+				activePage={page.id}
+				getReviewVerdict={() => null}
+				onSelectPage={onSelectPage}
+				onIssueSelect={vi.fn()}
+			/>
+		);
+		fireEvent.click(screen.getByRole('button', { name: `${page.path ?? page.url} ${counts}` }));
+		expect(onSelectPage).toHaveBeenCalledWith(page.id);
+	});
+
 	it('selects the occurrence that is on the screenshot when its numbered group is chosen', () => {
 		// Revealing a finding asks whether to animate; jsdom has no matchMedia.
 		vi.stubGlobal('matchMedia', (query: string) => ({
