@@ -1,4 +1,5 @@
 import {
+	Fragment,
 	useCallback,
 	useEffect,
 	useLayoutEffect,
@@ -16,7 +17,6 @@ import type { ReviewVerdict } from '../../lib/report/review-verdict';
 import {
 	compareSeverity,
 	countIssueSeverities,
-	describeSeverityCounts,
 	getPageOverviewUrl,
 	getReviewGroupStatus,
 	getSeverityDotClass,
@@ -605,21 +605,22 @@ export function VisualReviewPanel({
 									type="button"
 									className={`vrev__page-btn${isActive ? ' vrev__page-btn--active' : ''}`}
 									aria-current={isActive ? 'true' : undefined}
-									aria-label={`${label}: ${findings}${counts.length > 0 ? `, ${describeSeverityCounts(counts)}` : ''}`}
 									onClick={() => onSelectPage(page.id)}
 								>
 									<span className="vrev__page-label" title={label}>
 										{label}
-									</span>
+									</span>{' '}
 									{/* Scaled to the page with most findings, so rows compare. */}
 									<span className="vrev__page-badges">
 										{counts.map(({ severity, count }) => (
-											<span key={severity} className="vrev__page-badge">
-												<span className={getSeverityDotClass(severity)} aria-hidden="true" />
-												<span className="num">{count}</span> {severity}
-											</span>
+											<Fragment key={severity}>
+												<span className="vrev__page-badge">
+													<span className={getSeverityDotClass(severity)} aria-hidden="true" />
+													<span className="num">{count}</span> {severity}
+												</span>{' '}
+											</Fragment>
 										))}
-									</span>
+									</span>{' '}
 									<span className="vrev__page-meta">
 										<span className="num">{findings}</span>
 										{worst && (

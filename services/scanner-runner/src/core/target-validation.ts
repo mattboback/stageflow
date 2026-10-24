@@ -13,7 +13,7 @@ export interface TargetValidationPolicy {
 
 const defaultResolver: TargetAddressResolver = {
 	async resolve(hostname: string): Promise<string[]> {
-		const records = await lookup(hostname, { all: true, verbatim: true });
+		const records = await lookup(hostname, { all: true, order: 'verbatim' });
 		return records.map((record) => record.address);
 	}
 };
