@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -526,5 +528,105 @@ func TestDiscoveryRobotsNormalizesPercentEncodedOctets(t *testing.T) {
 
 	if !robotsAllow(rules, target) {
 		t.Fatal("reserved encoded slash was incorrectly decoded")
+	}
+}
+
+// aliasDiscoveryClient keeps the production redirect policy but dials the test
+// server for every hostname, so apex and www names resolve without DNS.
+func aliasDiscoveryClient(site *httptest.Server) *http.Client {
+	client := newDiscoveryClient(targetValidationModePrivate)
+	client.Transport = &http.Transport{
+		DisableKeepAlives: true,
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, network, site.Listener.Addr().String())
+		},
+	}
+
+	return client
+}
+
+func TestDiscoverFollowsCanonicalHostRedirect(t *testing.T) {
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Host != "www.example.test" {
+			http.Redirect(w, r, "http://www.example.test"+r.URL.Path, http.StatusPermanentRedirect)
+			return
+		}
+
+		switch r.URL.Path {
+		case "/robots.txt":
+			fmt.Fprint(w, "User-agent: *\nDisallow: /private\nSitemap: http://www.example.test/sitemap.xml\n")
+		case "/sitemap.xml":
+			w.Header().Set("Content-Type", "application/xml")
+			fmt.Fprint(w, `<urlset><url><loc>http://www.example.test/about</loc></url></urlset>`)
+		case "/":
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, `<a href="/private">No</a><a href="http://example.test/contact">Apex link</a>`)
+		case "/about", "/contact":
+			w.Header().Set("Content-Type", "text/html")
+			fmt.Fprint(w, "<html></html>")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer site.Close()
+
+	start, _ := url.Parse("http://example.test")
+	result := discoverPages(context.Background(), aliasDiscoveryClient(site), start, 20)
+
+	want := []string{"http://www.example.test/", "http://www.example.test/about"}
+	if !slices.Equal(result.URLs, want) || !result.Complete || len(result.StopReasons) != 0 {
+		t.Fatalf("result=%+v", result)
+	}
+
+	notice := "The site redirects to http://www.example.test; discovery used that address."
+	if !slices.Contains(result.Warnings, notice) {
+		t.Fatalf("warnings=%v", result.Warnings)
+	}
+}
+
+func TestDiscoverDoesNotFollowRedirectToUnrelatedHost(t *testing.T) {
+	requests := []string{}
+
+	site := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.Host+r.URL.Path)
+
+		http.Redirect(w, r, "http://other.test"+r.URL.Path, http.StatusPermanentRedirect)
+	}))
+	defer site.Close()
+
+	start, _ := url.Parse("http://example.test")
+	result := discoverPages(context.Background(), aliasDiscoveryClient(site), start, 20)
+
+	if len(result.URLs) != 0 || !slices.Contains(result.StopReasons, "robots_unavailable") ||
+		!slices.Equal(requests, []string{"example.test/robots.txt"}) {
+		t.Fatalf("result=%+v requests=%v", result, requests)
+	}
+}
+
+func TestDiscoveryOriginAlias(t *testing.T) {
+	for _, tc := range []struct {
+		from, to string
+		want     bool
+	}{
+		{"https://example.com/", "https://www.example.com/robots.txt", true},
+		{"https://www.example.com/", "https://EXAMPLE.com/", true},
+		{"http://example.com/", "https://example.com/", true},
+		{"http://example.com/", "https://www.example.com/", true},
+		{"https://example.com:8443/", "https://www.example.com:8443/", true},
+		{"https://example.com/", "https://example.com/", false},
+		{"https://example.com/", "http://www.example.com/", false},
+		{"https://example.com/", "https://app.example.com/", false},
+		{"https://example.com/", "https://www.example.org/", false},
+		{"https://example.com/", "https://www.example.com:8443/", false},
+		{"http://example.com:8080/", "https://example.com/", false},
+		{"https://example.com/", "https://user@www.example.com/", false},
+		{"https://example.com/", "ftp://www.example.com/", false},
+	} {
+		from, _ := url.Parse(tc.from)
+		to, _ := url.Parse(tc.to)
+
+		if got := isDiscoveryOriginAlias(from, to); got != tc.want {
+			t.Errorf("%s -> %s = %v, want %v", tc.from, tc.to, got, tc.want)
+		}
 	}
 }
