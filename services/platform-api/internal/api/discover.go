@@ -26,6 +26,7 @@ const (
 	discoveryFetchTimeout  = 10 * time.Second
 	discoveryMaxBodyBytes  = 5 << 20
 	discoveryMaxRedirects  = 5
+	discoveryMaxOriginHops = 2
 	discoveryMaxSitemaps   = 10
 	discoveryMaxCrawlPages = 30
 	discoveryCrawlDepth    = 2
@@ -74,11 +75,37 @@ func newDiscoveryClient(mode targetValidationMode) *http.Client {
 		}
 
 		if req.URL.User != nil || !sameDiscoveryOrigin(req.URL, via[0].URL) {
-			return errors.New("redirect outside the discovery origin")
+			return &discoveryOriginRedirectError{target: cloneDiscoveryURL(req.URL)}
 		}
 
 		return nil
 	}}
+}
+
+// discoveryOriginRedirectError reports the refused destination so discovery can
+// recognize a canonical-host redirect without ever following it implicitly.
+type discoveryOriginRedirectError struct{ target *url.URL }
+
+func (*discoveryOriginRedirectError) Error() string { return "redirect outside the discovery origin" }
+
+// isDiscoveryOriginAlias reports whether to is the canonical address of the
+// same site as from: the www/apex counterpart of the host, an http to https
+// upgrade on default ports, or both. Any other host stays out of scope.
+func isDiscoveryOriginAlias(from, to *url.URL) bool {
+	if to.User != nil || sameDiscoveryOrigin(from, to) {
+		return false
+	}
+
+	bare := func(u *url.URL) string { return strings.TrimPrefix(strings.ToLower(u.Hostname()), "www.") }
+	if bare(from) == "" || bare(from) != bare(to) {
+		return false
+	}
+
+	if from.Scheme == to.Scheme {
+		return (to.Scheme == "http" || to.Scheme == "https") && from.Port() == to.Port()
+	}
+
+	return from.Scheme == "http" && to.Scheme == "https" && from.Port() == "" && to.Port() == ""
 }
 
 func sameDiscoveryOrigin(a, b *url.URL) bool {
@@ -144,6 +171,8 @@ func discoverPages(ctx context.Context, client *http.Client, start *url.URL, max
 	if !robotsOK {
 		return d.result
 	}
+	// readRobots may have moved discovery to the site's canonical origin.
+	start = d.start
 	// Enforce robots, same-origin scope and query exclusions before every redirect.
 	guardedClient := *client
 	originalRedirect := client.CheckRedirect
@@ -579,10 +608,31 @@ type robotsRule struct {
 	allow       bool
 }
 
+// readRobots fetches robots.txt for the start origin. A site that redirects its
+// whole origin to a canonical alias (apex to www, http to https) is re-anchored
+// there first, so the rules and every later fetch belong to the origin that
+// actually serves the pages.
 func (d *discoverer) readRobots(ctx context.Context) ([]string, bool) {
-	target := d.start.ResolveReference(&url.URL{Path: "/robots.txt"}).String()
+	var (
+		body []byte
+		err  error
+	)
 
-	body, _, _, err := d.fetch(ctx, target)
+	for hops := 0; ; hops++ {
+		body, _, _, err = d.fetch(ctx, d.start.ResolveReference(&url.URL{Path: "/robots.txt"}).String())
+
+		var redirect *discoveryOriginRedirectError
+		if hops >= discoveryMaxOriginHops || !errors.As(err, &redirect) ||
+			!isDiscoveryOriginAlias(d.start, redirect.target) {
+			break
+		}
+
+		canonical := cloneDiscoveryURL(d.start)
+		canonical.Scheme, canonical.Host = redirect.target.Scheme, redirect.target.Host
+		d.start = canonical
+		d.warn("The site redirects to " + canonical.Scheme + "://" + canonical.Host + "; discovery used that address.")
+	}
+
 	if err != nil {
 		if err.Error() == "HTTP 404" || err.Error() == "HTTP 410" {
 			return nil, true
